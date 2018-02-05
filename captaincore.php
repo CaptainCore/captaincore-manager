@@ -2683,8 +2683,8 @@ function anchor_install_action_callback() {
 		$command = "captaincore deploy production_to_staging_kinsta $install > ~/Tmp/$timestamp-deploy_production_to_staging_kinsta_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_kinsta_$install.txt";
 	}
 	if ($cmd == "remove") {
-		$command = "captaincore config delete --install=$install --domain=$domain ".
-		($homedir ? "--homedir=$homedir " : "" );
+		$command = "captaincore config delete --install=$install --domain=$domain".
+		($homedir ? " --homedir=$homedir " : "" );
 	}
 	if ($cmd == "backup") {
 		date_default_timezone_set('America/New_York');
