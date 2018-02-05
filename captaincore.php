@@ -88,14 +88,14 @@ include "inc/mailgun-api.php";
 require "inc/bulk-actions.php"; // Custom bulk actions.
 
 function captaincore_rewrite() {
-	add_rewrite_rule('^anchor-api/([^/]*)/?','index.php?pagename=anchor-api&callback=$matches[1]','top');
-	add_rewrite_rule('^checkout-express/([^/]*)/?','index.php?pagename=checkout-express&callback=$matches[1]','top');
 	add_rewrite_tag('%site%','([^&]+)');
 	add_rewrite_tag('%sitetoken%','([^&]+)');
 	add_rewrite_tag('%callback%','([^&]+)');
 
 	register_taxonomy("process_role", array("process"), array("hierarchical" => true, "label" => "Roles", "singular_label" => "Role", "rewrite" => true));
 }
+
+add_action( 'init', 'captaincore_rewrite' );
 
 function anchor_disable_gutenberg( $can_edit, $post_type ) {
 	$disabled_post_types = array("website", "domain", "customer", "changelog");
@@ -3208,7 +3208,6 @@ class PageTemplater {
 
 		$this->templates = array();
 
-
 		// Add a filter to the attributes metabox to inject template into the cache.
 		if ( version_compare( floatval( get_bloginfo( 'version' ) ), '4.7', '<' ) ) {
 
@@ -3233,14 +3232,12 @@ class PageTemplater {
 			array( $this, 'register_project_templates' )
 		);
 
-
 		// Add a filter to the template include to determine if the page has our
 		// template assigned and return it's path
 		add_filter(
 			'template_include',
 			array( $this, 'view_project_template')
 		);
-
 
 		// Add your templates to this array.
 		$this->templates = array(
@@ -3329,7 +3326,7 @@ class PageTemplater {
 	}
 
 }
-add_action( 'plugins_loaded', array( 'PageTemplater', 'get_instance' ) );
+add_action( 'plugins_loaded', array( 'PageTemplater', 'get_instance' ), 10 );
 
 /* Filter the single_template with our custom function*/
 

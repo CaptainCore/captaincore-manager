@@ -8,17 +8,16 @@
 	* Received views, storage and server then updates ACF records
 	* Received backup snapshot info (name, size)
 
-	Examples:
+	* Examples:
 
-	# Adding backup snapshot
-	https://anchor.host/anchor-api/anchor.host/?archive=anchorhost1.wpengine.com-2016-10-22.tar.gz&storage=235256&token=token_key
+	* Adding backup snapshot
+	* https://anchor.host/anchor-api/anchor.host/?archive=anchorhost1.wpengine.com-2016-10-22.tar.gz&storage=235256&token=token_key
 
-	# Updating views and storage
-	https://anchor.host/anchor-api/anchor.host/?views=9435345&storage=2334242&token=token_key
+	* Updating views and storage
+	* https://anchor.host/anchor-api/anchor.host/?views=9435345&storage=2334242&token=token_key
 
-	# Assigning server
-	https://anchor.host/anchor-api/anchor.host/?server=104.197.69.102&token=token_key
-
+	* Assigning server
+	* https://anchor.host/anchor-api/anchor.host/?server=104.197.69.102&token=token_key
 
  */
 
