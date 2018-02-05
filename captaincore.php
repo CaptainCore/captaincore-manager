@@ -2727,11 +2727,11 @@ function anchor_install_action_callback() {
 		if ( anchor_verify_permissions( $post_id ) ) {
 
 			// Runs command on remote on production
-			require_once(ABSPATH . '/vendor/autoload.php');
+			require_once( ABSPATH . '/vendor/autoload.php' );
 
-			$ssh = new \phpseclib\Net\SSH2( AH_CLI_ADDRESS, AH_CLI_PORT );
+			$ssh = new \phpseclib\Net\SSH2( CAPTAINCORE_CLI_ADDRESS, CAPTAINCORE_CLI_PORT );
 
-			if (!$ssh->login( AH_CLI_USER, AH_CLI_KEY )) {
+			if ( !$ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
 	  		exit('Login Failed');
 			}
 			echo $ssh->exec( $command );
