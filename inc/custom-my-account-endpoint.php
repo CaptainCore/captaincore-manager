@@ -371,7 +371,11 @@ class Anchor_My_Account_Dns_Endpoint {
 				}
 				$record_count = 0;
 				foreach ($response as $record) {
-					$record_count = $record_count + count( $record->value );
+					if ( is_array($record->value) ) {
+						$record_count = $record_count + count( $record->value );
+					} else {
+						$record_count = $record_count + 1;
+					}
 				};
 				 ?>
 				 <script>
