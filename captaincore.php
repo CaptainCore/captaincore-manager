@@ -842,25 +842,29 @@ function worker_post_type() {
 }
 // add_action( 'init', 'worker_post_type', 0 );
 
-add_action( 'load-edit.php', function(){
+function captaincore_website_tabs() {
 
-   $screen = get_current_screen();
+	$screen = get_current_screen();
 
-    // Only edit post screen:
-   if( 'edit-website' === $screen->id || 'edit-customer' === $screen->id || 'edit-contact' === $screen->id || 'edit-domain' === $screen->id || 'edit-changelog' === $screen->id || 'edit-process' === $screen->id || 'edit-process_log' === $screen->id || 'edit-server' === $screen->id || 'edit-snapshot' === $screen->id)
-   {
-        // Before:
-        add_action( 'all_admin_notices', function(){
-						include "inc/admin-website-tabs.php";
-            echo '';
-        });
+	// Only edit post screen:
+	$pages = array('website','customer','contact','domain','changelog','process','process_log','server','snapshot');
+	if( in_array($screen->post_type, $pages) ) {
+	    // Before:
+	    add_action( 'all_admin_notices', function(){
+					include "inc/admin-website-tabs.php";
+	        echo '';
+	    });
 
-        // After:
-        add_action( 'in_admin_footer', function(){
-            echo '';
-        });
-    }
-});
+	    // After:
+	    add_action( 'in_admin_footer', function(){
+	        echo '';
+	    });
+	}
+};
+
+add_action( 'load-post-new.php', 'captaincore_website_tabs' );
+add_action( 'load-edit.php', 'captaincore_website_tabs' );
+add_action( 'load-post.php', 'captaincore_website_tabs' );
 
 function my_remove_extra_product_data( $data, $post, $context ) {
     // make sure you've got the right custom post type
