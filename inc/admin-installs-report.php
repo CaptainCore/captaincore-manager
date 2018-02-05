@@ -21,6 +21,7 @@
 </style>
 <div class="wrap"><div id="icon-tools" class="icon32"></div>
 <h2>Partners Install Report</h2>
+<?php include "admin-submenu-tabs.php"; ?>
 <?php
 
 // WP_Query arguments
@@ -45,12 +46,12 @@ $posts = $query->get_posts();
 if ( $query->have_posts() ) {
 	echo "<div class='websites'>";
 	while ( $query->have_posts() ) {
-		$query->the_post(); 
+		$query->the_post();
 		$id = get_the_ID();
 		?>
 		<div class="partner">
 			<?php the_title(); ?> - ID# <?php echo get_the_ID(); ?>
-			<?php 
+			<?php
 			/*
 			*  Query posts for a relationship value.
 			*  This method uses the meta_query LIKE to match the string "123" to the database value a:1:{i:0;s:3:"123";} (serialized array)
@@ -76,30 +77,30 @@ if ( $query->have_posts() ) {
 			$customer_count = 0;
 			?>
 			<?php if( $websites ): ?>
-				
-				<?php 
+
+				<?php
 
 				// New array to collect customers IDs
-				$customer_ids = array(); 
+				$customer_ids = array();
 
 				// Loop through websites
 				echo "<ul class='website-list'><li>";
-				foreach( $websites as $website ): 
+				foreach( $websites as $website ):
 					$domain = get_the_title( $website->ID );
 					$customer_id = get_field('customer', $website->ID);
 
 					if (get_field('install',$website->ID)) {
-						the_field('install', $website->ID ); ?> <?php					
+						the_field('install', $website->ID ); ?> <?php
 					}
 
-				endforeach; 
+				endforeach;
 				echo "</li></ul>";
 
 				echo "[";
 
 				$i = 1;
 
-				foreach( $websites as $website ): 
+				foreach( $websites as $website ):
 
 					if (get_field('install',$website->ID)) {
 
@@ -110,16 +111,16 @@ if ( $query->have_posts() ) {
 						}
 
 					}
-					
+
 					$i++;
-					 
-				endforeach; 
+
+				endforeach;
 
 				echo "]<p></p>";
 
 				echo "<pre>";
 
-				foreach( $websites as $website ): 
+				foreach( $websites as $website ):
 
 
 					if (get_field('install',$website->ID)) {
@@ -136,15 +137,15 @@ if ( $query->have_posts() ) {
 					echo "php Sites/backup.anchor.host/api/new.php install=$install domain=$domain username=$username password=".rawurlencode(base64_encode($password))." address=$address protocol=$protocol port=$port preloadusers=$preloadusers token=$token skip=true
 ";
 					}
-				endforeach; 
+				endforeach;
 
 				echo "</pre>";
-				
-				
+
+
 			// End partner loop
 			endif; ?>
 		</div>
-		
+
 		<?php
 	}
 	echo "</div>";
@@ -202,7 +203,7 @@ jQuery(".website").sort(sort_li) // sort elements
                   .appendTo('.websites'); // append again to the list
 // sort function callback
 function sort_li(a, b){
-    return (jQuery(b).data('renewal')) < (jQuery(a).data('renewal')) ? 1 : -1;    
+    return (jQuery(b).data('renewal')) < (jQuery(a).data('renewal')) ? 1 : -1;
 }
 
 </script>

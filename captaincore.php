@@ -129,7 +129,7 @@ function contact_post_type() {
 		'name_admin_bar'        => __( 'Contacts', 'captaincore' ),
 		'archives'              => __( 'Item Archives', 'captaincore' ),
 		'parent_item_colon'     => __( 'Parent Item:', 'captaincore' ),
-		'all_items'             => __( 'All Items', 'captaincore' ),
+		'all_items'             => __( 'Contacts', 'captaincore' ),
 		'add_new_item'          => __( 'Add New Item', 'captaincore' ),
 		'add_new'               => __( 'Add New', 'captaincore' ),
 		'new_item'              => __( 'New Item', 'captaincore' ),
@@ -166,7 +166,7 @@ function contact_post_type() {
 		'hierarchical'          => false,
 		'public'                => true,
 		'show_ui'               => true,
-		'show_in_menu'          => true,
+		'show_in_menu'          => false,
 		'menu_position'         => 5,
 		'menu_icon'             => 'dashicons-admin-users',
 		'show_in_admin_bar'     => true,
@@ -184,6 +184,21 @@ function contact_post_type() {
 }
 add_action( 'init', 'contact_post_type', 0 );
 
+
+function captaincore_admin_menu() {
+    add_menu_page(
+        'CaptainCore',
+        'CaptainCore',
+        'read',
+        'captaincore',
+        '', // Callback, leave empty
+        'dashicons-welcome-widgets-menus',
+				5
+    );
+}
+
+add_action( 'admin_menu', 'captaincore_admin_menu' );
+
 // Register Custom Post Type
 function customer_post_type() {
 
@@ -193,7 +208,7 @@ function customer_post_type() {
 		'menu_name'           => __( 'Customers', 'captaincore' ),
 		'name_admin_bar'      => __( 'Customer', 'captaincore' ),
 		'parent_item_colon'   => __( 'Parent Customer:', 'captaincore' ),
-		'all_items'           => __( 'All Customers', 'captaincore' ),
+		'all_items'           => __( 'Customers', 'captaincore' ),
 		'add_new_item'        => __( 'Add New Customer', 'captaincore' ),
 		'add_new'             => __( 'Add New', 'captaincore' ),
 		'new_item'            => __( 'New Customer', 'captaincore' ),
@@ -221,7 +236,7 @@ function customer_post_type() {
 		'hierarchical'        => false,
 		'public'              => false,
 		'show_ui'             => true,
-		'show_in_menu'        => true,
+		'show_in_menu'        => false,
 		'menu_position'       => 5,
 		'menu_icon'           => 'dashicons-groups',
 		'show_in_admin_bar'   => true,
@@ -248,7 +263,7 @@ function website_post_type() {
 		'singular_name'       => _x( 'Website', 'Post Type Singular Name', 'captaincore' ),
 		'menu_name'           => __( 'Websites', 'captaincore' ),
 		'parent_item_colon'   => __( 'Parent Website:', 'captaincore' ),
-		'all_items'           => __( 'All Websites', 'captaincore' ),
+		'all_items'           => __( 'Websites', 'captaincore' ),
 		'view_item'           => __( 'View Website', 'captaincore' ),
 		'add_new_item'        => __( 'Add New Websites', 'captaincore' ),
 		'add_new'             => __( 'New Websites', 'captaincore' ),
@@ -275,7 +290,7 @@ function website_post_type() {
 		'hierarchical'        => false,
 		'public'              => false,
 		'show_ui'             => true,
-		'show_in_menu'        => true,
+		'show_in_menu'        => 'captaincore',
 		'show_in_nav_menus'   => true,
 		'show_in_admin_bar'   => true,
 		'menu_position'       => 5,
@@ -306,7 +321,7 @@ function domain_post_type() {
 		'archives'              => __( 'Domain Archives', 'captaincore' ),
 		'attributes'            => __( 'Domain Attributes', 'captaincore' ),
 		'parent_item_colon'     => __( 'Parent Domain:', 'captaincore' ),
-		'all_items'             => __( 'All Domains', 'captaincore' ),
+		'all_items'             => __( 'Domains', 'captaincore' ),
 		'add_new_item'          => __( 'Add New Domain', 'captaincore' ),
 		'add_new'               => __( 'Add New', 'captaincore' ),
 		'new_item'              => __( 'New Domain', 'captaincore' ),
@@ -344,7 +359,7 @@ function domain_post_type() {
 		'hierarchical'          => false,
 		'public'                => true,
 		'show_ui'               => true,
-		'show_in_menu'          => true,
+		'show_in_menu'          => false,
 		'menu_position'         => 5,
 		'menu_icon'             => 'dashicons-welcome-widgets-menus',
 		'show_in_admin_bar'     => true,
@@ -385,7 +400,7 @@ function changelog_post_type() {
 		'singular_name'       => _x( 'Website Log', 'Post Type Singular Name', 'captaincore' ),
 		'menu_name'           => __( 'Website Logs', 'captaincore' ),
 		'parent_item_colon'   => __( 'Parent Changelog:', 'captaincore' ),
-		'all_items'           => __( 'All Changelogs', 'captaincore' ),
+		'all_items'           => __( 'Changelogs', 'captaincore' ),
 		'view_item'           => __( 'View Changelog', 'captaincore' ),
 		'add_new_item'        => __( 'Add New Changelog', 'captaincore' ),
 		'add_new'             => __( 'New Changelog', 'captaincore' ),
@@ -412,7 +427,7 @@ function changelog_post_type() {
 		'hierarchical'        => false,
 		'public'              => false,
 		'show_ui'             => true,
-		'show_in_menu'        => true,
+		'show_in_menu'        => false,
 		'show_in_nav_menus'   => true,
 		'show_in_admin_bar'   => true,
 		'menu_position'       => 5,
@@ -443,7 +458,7 @@ function process_post_type() {
 		'name_admin_bar'        => __( 'Process', 'captaincore' ),
 		'archives'              => __( 'Process Archives', 'captaincore' ),
 		'parent_item_colon'     => __( 'Parent Process:', 'captaincore' ),
-		'all_items'             => __( 'All Processes', 'captaincore' ),
+		'all_items'             => __( 'Processes', 'captaincore' ),
 		'add_new_item'          => __( 'Add New Process', 'captaincore' ),
 		'add_new'               => __( 'Add New', 'captaincore' ),
 		'new_item'              => __( 'New Process', 'captaincore' ),
@@ -480,7 +495,7 @@ function process_post_type() {
 		'hierarchical'          => false,
 		'public'                => true,
 		'show_ui'               => true,
-		'show_in_menu'          => true,
+		'show_in_menu'          => false,
 		'menu_position'         => 5,
 		'menu_icon'             => 'dashicons-controls-repeat',
 		'show_in_admin_bar'     => true,
@@ -508,7 +523,7 @@ function process_log_post_type() {
 		'name_admin_bar'        => __( 'Process Log', 'captaincore' ),
 		'archives'              => __( 'Process Log Archives', 'captaincore' ),
 		'parent_item_colon'     => __( 'Parent Process Log:', 'captaincore' ),
-		'all_items'             => __( 'All Process Logs', 'captaincore' ),
+		'all_items'             => __( 'Process Logs', 'captaincore' ),
 		'add_new_item'          => __( 'Add New Process Log', 'captaincore' ),
 		'add_new'               => __( 'Add New', 'captaincore' ),
 		'new_item'              => __( 'New Process Log', 'captaincore' ),
@@ -545,7 +560,7 @@ function process_log_post_type() {
 		'hierarchical'          => false,
 		'public'                => false,
 		'show_ui'               => true,
-		'show_in_menu'          => true,
+		'show_in_menu'          => false,
 		'menu_position'         => 5,
 		'menu_icon'             => 'dashicons-media-spreadsheet',
 		'show_in_admin_bar'     => true,
@@ -574,7 +589,7 @@ function process_item_log_post_type() {
 		'name_admin_bar'        => __( 'Process Item Log', 'captaincore' ),
 		'archives'              => __( 'Process Item Log Archives', 'captaincore' ),
 		'parent_item_colon'     => __( 'Parent Process Item Log:', 'captaincore' ),
-		'all_items'             => __( 'All Process Item Logs', 'captaincore' ),
+		'all_items'             => __( 'Process Item Logs', 'captaincore' ),
 		'add_new_item'          => __( 'Add New Process Item Log', 'captaincore' ),
 		'add_new'               => __( 'Add New', 'captaincore' ),
 		'new_item'              => __( 'New Process Item Log', 'captaincore' ),
@@ -611,7 +626,7 @@ function process_item_log_post_type() {
 		'hierarchical'          => false,
 		'public'                => false,
 		'show_ui'               => true,
-		'show_in_menu'          => true,
+		'show_in_menu'          => false,
 		'menu_position'         => 5,
 		'menu_icon'             => 'dashicons-media-spreadsheet',
 		'show_in_admin_bar'     => true,
@@ -640,7 +655,7 @@ function server_post_type() {
 		'name_admin_bar'        => __( 'Server', 'captaincore' ),
 		'archives'              => __( 'Server Archives', 'captaincore' ),
 		'parent_item_colon'     => __( 'Parent Server:', 'captaincore' ),
-		'all_items'             => __( 'All Servers', 'captaincore' ),
+		'all_items'             => __( 'Servers', 'captaincore' ),
 		'add_new_item'          => __( 'Add New Server', 'captaincore' ),
 		'add_new'               => __( 'Add New', 'captaincore' ),
 		'new_item'              => __( 'New Server', 'captaincore' ),
@@ -677,7 +692,7 @@ function server_post_type() {
 		'hierarchical'          => false,
 		'public'                => false,
 		'show_ui'               => true,
-		'show_in_menu'          => true,
+		'show_in_menu'          => false,
 		'menu_position'         => 10,
 		'menu_icon'             => 'dashicons-building',
 		'show_in_admin_bar'     => true,
@@ -705,7 +720,7 @@ function snapshot_post_type() {
 		'name_admin_bar'        => __( 'Snapshot', 'captaincore' ),
 		'archives'              => __( 'Item Archives', 'captaincore' ),
 		'parent_item_colon'     => __( 'Parent Item:', 'captaincore' ),
-		'all_items'             => __( 'All Items', 'captaincore' ),
+		'all_items'             => __( 'Snapshots', 'captaincore' ),
 		'add_new_item'          => __( 'Add New Item', 'captaincore' ),
 		'add_new'               => __( 'Add New', 'captaincore' ),
 		'new_item'              => __( 'New Item', 'captaincore' ),
@@ -742,7 +757,7 @@ function snapshot_post_type() {
 		'hierarchical'          => false,
 		'public'                => true,
 		'show_ui'               => true,
-		'show_in_menu'          => true,
+		'show_in_menu'          => false,
 		'menu_position'         => 5,
 		'menu_icon'             => 'dashicons-backup',
 		'show_in_admin_bar'     => true,
@@ -771,7 +786,7 @@ function worker_post_type() {
 		'archives'              => __( 'Worker Archives', 'captaincore' ),
 		'attributes'            => __( 'Worker Attributes', 'captaincore' ),
 		'parent_item_colon'     => __( 'Parent Worker:', 'captaincore' ),
-		'all_items'             => __( 'All Workers', 'captaincore' ),
+		'all_items'             => __( 'Workers', 'captaincore' ),
 		'add_new_item'          => __( 'Add New Worker', 'captaincore' ),
 		'add_new'               => __( 'Add New', 'captaincore' ),
 		'new_item'              => __( 'New Worker', 'captaincore' ),
@@ -809,7 +824,7 @@ function worker_post_type() {
 		'hierarchical'          => false,
 		'public'                => true,
 		'show_ui'               => true,
-		'show_in_menu'          => true,
+		'show_in_menu'          => false,
 		'menu_position'         => 5,
 		'menu_icon'             => 'dashicons-backup',
 		'show_in_admin_bar'     => true,
@@ -826,6 +841,26 @@ function worker_post_type() {
 
 }
 // add_action( 'init', 'worker_post_type', 0 );
+
+add_action( 'load-edit.php', function(){
+
+   $screen = get_current_screen();
+
+    // Only edit post screen:
+   if( 'edit-website' === $screen->id || 'edit-customer' === $screen->id || 'edit-contact' === $screen->id || 'edit-domain' === $screen->id || 'edit-changelog' === $screen->id || 'edit-process' === $screen->id || 'edit-process_log' === $screen->id || 'edit-server' === $screen->id || 'edit-snapshot' === $screen->id)
+   {
+        // Before:
+        add_action( 'all_admin_notices', function(){
+						include "inc/admin-website-tabs.php";
+            echo '';
+        });
+
+        // After:
+        add_action( 'in_admin_footer', function(){
+            echo '';
+        });
+    }
+});
 
 function my_remove_extra_product_data( $data, $post, $context ) {
     // make sure you've got the right custom post type
@@ -2850,11 +2885,11 @@ function anchor_download_snapshot_email( $snapshot_id ) {
 add_action('admin_menu' , 'anchor_custom_pages');
 
 function anchor_custom_pages() {
-    add_submenu_page('edit.php?post_type=customer', 'Customer Report', 'Report', 'manage_options', "anchor_report", 'anchor_customer_report_callback');
-    add_submenu_page('edit.php?post_type=customer', 'Partners', 'Partners', 'manage_options', "anchor_partner", 'anchor_partner_report_callback');
-    add_submenu_page('edit.php?post_type=customer', 'Installs', 'Installs', 'manage_options', "anchor_installs", 'anchor_installs_report_callback');
-		add_submenu_page('edit.php?post_type=customer', 'Timeline', 'Timeline', 'manage_options', "anchor_timeline", 'anchor_timeline_report_callback');
-		add_submenu_page('edit.php?post_type=customer', 'KPI', 'KPI', 'manage_options', "anchor_kpi", 'anchor_kpi_report_callback');
+    add_submenu_page('captaincore', 'Customers Report', 'Reports', 'manage_options', "anchor_report", 'anchor_customer_report_callback');
+    add_submenu_page( null, 'Partners Report', 'Partners', 'manage_options', "anchor_partner", 'anchor_partner_report_callback');
+    add_submenu_page( null, 'Installs', 'Installs', 'manage_options', "anchor_installs", 'anchor_installs_report_callback');
+		add_submenu_page( null, 'Customers Timeline', 'Timeline', 'manage_options', "anchor_timeline", 'anchor_timeline_report_callback');
+		add_submenu_page( null, 'KPI', 'KPI', 'manage_options', "anchor_kpi", 'anchor_kpi_report_callback');
 }
 
 function anchor_customer_report_callback() {

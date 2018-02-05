@@ -21,6 +21,8 @@
 </style>
 <div class="wrap"><div id="icon-tools" class="icon32"></div>
 <h2>Partners Report</h2>
+<?php include "admin-submenu-tabs.php"; ?>
+<div class="row metabox-holder">
 <?php
 
 // WP_Query arguments
@@ -45,12 +47,12 @@ $posts = $query->get_posts();
 if ( $query->have_posts() ) {
 	echo "<div class='websites'>";
 	while ( $query->have_posts() ) {
-		$query->the_post(); 
+		$query->the_post();
 		$id = get_the_ID();
 		?>
 		<div class="partner">
 			<?php the_title(); ?> - ID# <?php echo get_the_ID(); ?>
-			<?php 
+			<?php
 			/*
 			*  Query posts for a relationship value.
 			*  This method uses the meta_query LIKE to match the string "123" to the database value a:1:{i:0;s:3:"123";} (serialized array)
@@ -70,34 +72,34 @@ if ( $query->have_posts() ) {
 			$customer_count = 0;
 			?>
 			<?php if( $websites ): ?>
-				
-				<?php 
+
+				<?php
 
 				// New array to collect customers IDs
-				$customer_ids = array(); 
+				$customer_ids = array();
 
 				// Loop through websites
 				echo "<ul class='website-list'>";
-				foreach( $websites as $website ): 
+				foreach( $websites as $website ):
 					$domain = get_the_title( $website->ID );
 					$customer_id = get_field('customer', $website->ID);
 ?>
 					<li>
 						<?php edit_post_link(get_the_title($website->ID), '', '', $website->ID ); ?>
 					</li>
-					<?php					
+					<?php
 
 					// add customer if not already added
 					if (!in_array($customer_id, $customer_ids)) {
 						//$customer_ids[] = $customer_id[0];
 						array_push( $customer_ids, $customer_id[0]);
 					}
-					 
-				endforeach; 
+
+				endforeach;
 				echo "</ul>";
 				if( $customer_ids ): ?>
 				<ul class="customer-list" style="display:none;">
-				<?php 
+				<?php
 
 					// WP_Query arguments
 					$args = array (
@@ -113,7 +115,7 @@ if ( $query->have_posts() ) {
 						while ( $customer_query->have_posts() ) {
 						$customer_query->the_post(); ?>
 						<li data-price="<?php the_field('hosting_price'); ?>" data-terms="<?php the_field('billing_terms'); ?>">
-						    
+
 						    <a href="<?php echo get_permalink(); ?>"><?php the_title(); ?></a>
 						</li>
 						<?php
@@ -124,15 +126,15 @@ if ( $query->have_posts() ) {
 
 					// Restore original Post Data
 					//wp_reset_postdata();
-					?>				
+					?>
 				</ul>
 			<?php endif; ?>
-			
-			<?php 
+
+			<?php
 			// End partner loop
 			endif; ?>
 		</div>
-		
+
 		<?php
 	}
 	echo "</div>";
@@ -190,12 +192,12 @@ jQuery(".website").sort(sort_li) // sort elements
                   .appendTo('.websites'); // append again to the list
 // sort function callback
 function sort_li(a, b){
-    return (jQuery(b).data('renewal')) < (jQuery(a).data('renewal')) ? 1 : -1;    
+    return (jQuery(b).data('renewal')) < (jQuery(a).data('renewal')) ? 1 : -1;
 }
 
 jQuery('.partner').each(function() {
  // Loop through each partner and generate totals
- 
+
  var total_price = 0;
  jQuery(this).find('li').each(function() {
    price = jQuery(this).data('price');
@@ -224,7 +226,5 @@ jQuery('.partner').each(function() {
 	jQuery(this).children("ul").append("<li>Total Price: $"+total_price+ "</li>");
 });
 
-
-
-
 </script>
+</div>

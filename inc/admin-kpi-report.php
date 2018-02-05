@@ -447,7 +447,7 @@ function drawChart() {
 </script>
 <div class="wrap"><div id="icon-tools" class="icon32"></div>
 <h2>KPI Report</h2>
-
+<?php include "admin-submenu-tabs.php"; ?>
 <div id="columnchart_material" style="width: 1200px; height: 400px;"></div>
 
 <div class="activity-log">

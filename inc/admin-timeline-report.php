@@ -151,7 +151,7 @@ var chart_data_year_formatted = [];
 </script>
 <div class="wrap"><div id="icon-tools" class="icon32"></div>
 <h2>Customer Timeline</h2>
-
+<?php include "admin-submenu-tabs.php"; ?>
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
 <div id="chart_div"></div>

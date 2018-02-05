@@ -12,6 +12,8 @@
 </style>
 <div class="wrap"><div id="icon-tools" class="icon32"></div>
 <h2>Customer Report</h2>
+<?php include "admin-submenu-tabs.php"; ?>
+<div class="row metabox-holder">
 <?php
 
 $next_month = $date = date('m', strtotime('+1 month'));
@@ -32,7 +34,7 @@ $posts = $query->get_posts();
 if ( $query->have_posts() ) {
 	echo "<div class='websites'>";
 	while ( $query->have_posts() ) {
-		$query->the_post(); 
+		$query->the_post();
 		$month = date('m', strtotime(get_field('billing_date')));
 		if ($month < $next_month) {
 			$monthyear = $next_year . $month;
@@ -43,7 +45,7 @@ if ( $query->have_posts() ) {
 		<div class="website" data-renewal="<?php echo $monthyear; ?>" data-price="<?php the_field('total_price'); ?>" data-terms="<?php the_field('billing_terms'); ?>">
 			<?php the_title(); ?> - $<?php the_field('total_price'); ?> <?php the_field('billing_terms'); ?>
 		</div>
-		
+
 		<?php
 	}
 	echo "</div>";
@@ -167,7 +169,7 @@ jQuery(".website").sort(sort_li) // sort elements
                   .appendTo('.websites'); // append again to the list
 // sort function callback
 function sort_li(a, b){
-    return (jQuery(b).data('renewal')) < (jQuery(a).data('renewal')) ? 1 : -1;    
+    return (jQuery(b).data('renewal')) < (jQuery(a).data('renewal')) ? 1 : -1;
 }
 
 // print results
@@ -195,7 +197,7 @@ for(var key in renewals){
 
 	jQuery('.websites .website[data-renewal='+ key +']:first').prepend('<div class="heading">'+ parsedDate + ' (' + renewals[key] + ')</div>');
 	jQuery('.websites .website[data-renewal='+ key +']:last').after('<div class="total" data-total="'+total_price+'">Total: $'+ total_price +'</div>');
-    
+
 }
 
 var yearly_total = 0;
@@ -208,3 +210,4 @@ jQuery('#result').html("$"+yearly_total);
 
 
 </script>
+</div>
