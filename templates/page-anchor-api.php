@@ -20,8 +20,7 @@
 	* https://anchor.host/anchor-api/anchor.host/?server=104.197.69.102&token=token_key
 
 	* Load token
-	* https://anchor.host/anchor-api/anchor.host/?auth=auth_key&token=token_key
-
+	* https://anchor.host/anchor-api/anchor.host/?token_key=token_key&token=token_key
 
  */
 
@@ -36,7 +35,7 @@ $core = $_GET['core'];
 $plugins = $_GET['plugins'];
 $themes = $_GET['themes'];
 $token = $_GET['token'];
-$auth = $_GET['auth'];
+$token_key = $_GET['token_key'];
 
 $args = array (
 	'post_type'        => 'website',
@@ -60,7 +59,7 @@ if ( $query->have_posts() ) {
 $result_count = $query->post_count;
 
 // Verifies valid token and site exists with a period
-if (substr_count($site, ".") > 0 and $token == "***REMOVED***") {
+if (substr_count($site, ".") > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 
 	// No website found. Generate a new record.
 	if ($result_count == 0) {
@@ -109,61 +108,15 @@ if (substr_count($site, ".") > 0 and $token == "***REMOVED***") {
 	}
 
 	// Load Token Key
-	if (isset($auth) and isset($token)) {
-		$args = array (
-			'post_type'              => 'website',
-			's'         			 => $callback ,
-			'posts_per_page' 		 => 1
-		);
+	if (isset($token_key)) {
 
-		$query = new WP_Query( $args );
+		// defines the ACF keys to use
+		$token_id = "field_52d16819ac39f";
 
-		// The Loop
-		if ( $query->have_posts() ) {
-			while ( $query->have_posts() ) {
-				$query->the_post();
-				// do something
-				$site_id = get_the_id();
-			}
-		}
+		// update the repeater
+		update_field($token_id,$token_key,$site_id);
+		echo "Adding token key. \n";
 
-		$result_count = $query->post_count;
-
-		// Restore original Post Data
-		wp_reset_postdata();
-
-		// No website found. Generate a new record.
-		if ($result_count == 0) {
-			// Create post object
-			$my_post = array(
-			  'post_title'    => $callback,
-			  'post_type'     => 'website',
-			  'post_status'   => 'publish',
-			  'post_author'   => 2,
-			);
-
-			// Insert the post into the database
-			$site_id = wp_insert_post( $my_post );
-
-			// Update the post into the database
-			anchor_acf_save_post_after($site_id);
-			echo "Generated new website $callback. ";
-		}
-
-		if ($auth == CAPTAINCORE_CLI_AUTH ) {
-
-			// defines the ACF keys to use
-			$token_key = "field_52d16819ac39f";
-
-			// update the repeater
-			update_field($token_key,$token,$site_id);
-			echo "Updating fields. \n";
-
-		 } else {
-			 
-		 	echo "Token Error";
-
-		 }
 	}
 
 	// Generate a new CaptainCore Snapshot
