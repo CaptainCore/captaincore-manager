@@ -3,6 +3,11 @@
  * included in this file.
  */
 
+
+ .content-area .woocommerce-MyAccount-secondary ul {
+	 margin: 0px;
+ }
+
 .woocommerce-account #main header.main {
 	padding: 40px 0 !important;
 	margin-bottom: 20px !important;
