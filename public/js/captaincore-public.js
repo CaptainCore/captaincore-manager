@@ -1,32 +1,45 @@
-(function( $ ) {
-	'use strict';
+jQuery( document ).ready(function() {
 
-	/**
-	 * All of the code for your public-facing JavaScript source
-	 * should reside in this file.
-	 *
-	 * Note: It has been assumed you will write jQuery code here, so the
-	 * $ function reference has been prepared for usage within the scope
-	 * of this function.
-	 *
-	 * This enables you to define handlers, for when the DOM is ready:
-	 *
-	 * $(function() {
-	 *
-	 * });
-	 *
-	 * When the window is loaded:
-	 *
-	 * $( window ).load(function() {
-	 *
-	 * });
-	 *
-	 * ...and/or other possibilities.
-	 *
-	 * Ideally, it is not considered best practise to attach more than a
-	 * single DOM-ready or window-load handler for a particular page.
-	 * Although scripts in the WordPress core, Plugins and Themes may be
-	 * practising this, we should strive to set a better example in our own work.
-	 */
+	jQuery(".started-processes a.process-log-completed").click(function(e){
+		e.preventDefault();
+		var parent_object = jQuery(this).parents(".process-star");
+		var post_id = jQuery(this).parents(".process-star").attr("data-post-id");
+		var data = {
+			'action': 'log_process_completed',
+			'post_id': post_id
+		};
 
-})( jQuery );
+		console.log(data);
+
+		// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+		jQuery.post(ajaxurl, data, function(response) {
+			console.log(response);
+			 if(response == 1) {
+			 	jQuery(parent_object).fadeOut('slow');
+			 } else {
+			 	console.log(response);
+			 }
+		});
+	});
+
+	if ( jQuery('.woocommerce-MyAccount-navigation-link--subscriptions.is-active').length > 0 ||
+ 			 jQuery('.woocommerce-MyAccount-navigation-link--payment-methods.is-active').length > 0 ||
+		   jQuery('.woocommerce-MyAccount-navigation-link--edit-address.is-active').length > 0 ||
+		   jQuery('.woocommerce-MyAccount-navigation-link--orders.is-active').length > 0 ||
+		   jQuery( window.location.pathname.includes("/my-account/view-subscription/") ) ) {
+		jQuery('.woocommerce-MyAccount-content').prepend("<div class='woocommerce-MyAccount-secondary'><ul></ul></div>");
+		$menu_item = jQuery('.woocommerce-MyAccount-navigation li.woocommerce-MyAccount-navigation-link--subscriptions').clone();
+		$menu_item.appendTo('.woocommerce-MyAccount-secondary ul');
+		jQuery('.woocommerce-MyAccount-navigation li.woocommerce-MyAccount-navigation-link--payment-methods').appendTo('.woocommerce-MyAccount-secondary ul');
+		jQuery('.woocommerce-MyAccount-navigation li.woocommerce-MyAccount-navigation-link--edit-address').appendTo('.woocommerce-MyAccount-secondary ul');
+		jQuery('.woocommerce-MyAccount-navigation li.woocommerce-MyAccount-navigation-link--orders').appendTo('.woocommerce-MyAccount-secondary ul');
+	}
+	if ( jQuery('.woocommerce-MyAccount-navigation-link--edit-account.is-active').length > 0 ||
+ 			 jQuery('.woocommerce-MyAccount-navigation-link--configs.is-active').length > 0 ) {
+		jQuery('.woocommerce-MyAccount-content').prepend("<div class='woocommerce-MyAccount-secondary'><ul></ul></div>");
+		$menu_item = jQuery('.woocommerce-MyAccount-navigation li.woocommerce-MyAccount-navigation-link--edit-account').clone();
+		$menu_item.appendTo('.woocommerce-MyAccount-secondary ul');
+		jQuery('.woocommerce-MyAccount-navigation li.woocommerce-MyAccount-navigation-link--configs').appendTo('.woocommerce-MyAccount-secondary ul');
+	}
+
+});
