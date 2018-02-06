@@ -2701,9 +2701,9 @@ function anchor_install_action_callback() {
 		$t=time();
 		$timestamp = date("Y-m-d-hms",$t);
 		if($value) {
-			$command = "captaincore snapshot $domain --email=$value > ~/Tmp/$timestamp-snapshot_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-snapshot_$install.txt";
+			$command = "captaincore snapshot $install --email=$value > ~/Tmp/$timestamp-snapshot_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-snapshot_$install.txt";
 		} else {
-			$command = "captaincore snapshot $domain > ~/Tmp/$timestamp-snapshot_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-snapshot_$install.txt";
+			$command = "captaincore snapshot $install > ~/Tmp/$timestamp-snapshot_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-snapshot_$install.txt";
 		}
 
 	}
