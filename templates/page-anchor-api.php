@@ -19,6 +19,10 @@
 	* Assigning server
 	* https://anchor.host/anchor-api/anchor.host/?server=104.197.69.102&token=token_key
 
+	* Load token
+	* https://anchor.host/anchor-api/anchor.host/?auth=auth_key&token=token_key
+
+
  */
 
 $site = get_query_var('callback');
@@ -32,6 +36,7 @@ $core = $_GET['core'];
 $plugins = $_GET['plugins'];
 $themes = $_GET['themes'];
 $token = $_GET['token'];
+$auth = $_GET['auth'];
 
 $args = array (
 	'post_type'        => 'website',
@@ -103,6 +108,64 @@ if (substr_count($site, ".") > 0 and $token == "***REMOVED***") {
 
 	}
 
+	// Load Token Key
+	if (isset($auth) and isset($token)) {
+		$args = array (
+			'post_type'              => 'website',
+			's'         			 => $callback ,
+			'posts_per_page' 		 => 1
+		);
+
+		$query = new WP_Query( $args );
+
+		// The Loop
+		if ( $query->have_posts() ) {
+			while ( $query->have_posts() ) {
+				$query->the_post();
+				// do something
+				$site_id = get_the_id();
+			}
+		}
+
+		$result_count = $query->post_count;
+
+		// Restore original Post Data
+		wp_reset_postdata();
+
+		// No website found. Generate a new record.
+		if ($result_count == 0) {
+			// Create post object
+			$my_post = array(
+			  'post_title'    => $callback,
+			  'post_type'     => 'website',
+			  'post_status'   => 'publish',
+			  'post_author'   => 2,
+			);
+
+			// Insert the post into the database
+			$site_id = wp_insert_post( $my_post );
+
+			// Update the post into the database
+			anchor_acf_save_post_after($site_id);
+			echo "Generated new website $callback. ";
+		}
+
+		if ($auth == CAPTAINCORE_CLI_AUTH ) {
+
+			// defines the ACF keys to use
+			$token_key = "field_52d16819ac39f";
+
+			// update the repeater
+			update_field($token_key,$token,$site_id);
+			echo "Updating fields. \n";
+
+		 } else {
+			 
+		 	echo "Token Error";
+
+		 }
+	}
+
 	// Generate a new CaptainCore Snapshot
 	if ($core and $plugins and $themes) {
 
@@ -140,12 +203,13 @@ if (substr_count($site, ".") > 0 and $token == "***REMOVED***") {
 		}
 	}
 
-
+	// Updates views and storage usage
 	if (isset($views) and isset($storage)) {
 		update_field("field_57e0b2b17eb2a", $storage, $site_id);
 		update_field("field_57e0b2c07eb2b", $views, $site_id);
 		do_action('acf/save_post', $site_id); // Runs ACF save post hooks
 	}
+
 	if ($server) {
 		echo "Server assign";
 		// args
