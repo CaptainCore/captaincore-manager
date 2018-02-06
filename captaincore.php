@@ -113,6 +113,7 @@ function anchor_my_account_order( $current_menu ) {
 	unset($current_menu["subscriptions"]);
 	$current_menu["subscriptions"] = "Billing";
 	unset($current_menu["customer-logout"]);
+	$current_menu['payment-methods'] = "Payment methods"; // Payment Methods
 	$current_menu["customer-logout"] = "Logout";
 	return $current_menu;
 }

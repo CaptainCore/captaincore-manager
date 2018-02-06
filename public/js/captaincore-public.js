@@ -26,7 +26,9 @@ jQuery( document ).ready(function() {
  			 jQuery('.woocommerce-MyAccount-navigation-link--payment-methods.is-active').length > 0 ||
 		   jQuery('.woocommerce-MyAccount-navigation-link--edit-address.is-active').length > 0 ||
 		   jQuery('.woocommerce-MyAccount-navigation-link--orders.is-active').length > 0 ||
-		   jQuery( window.location.pathname.includes("/my-account/view-subscription/") ) ) {
+		   window.location.pathname.includes("/my-account/view-subscription/") ||
+		   window.location.pathname.includes("/my-account/payment-methods/") ||
+		   window.location.pathname.includes("/my-account/view-order/") ) {
 		jQuery('.woocommerce-MyAccount-content').prepend("<div class='woocommerce-MyAccount-secondary'><ul></ul></div>");
 		$menu_item = jQuery('.woocommerce-MyAccount-navigation li.woocommerce-MyAccount-navigation-link--subscriptions').clone();
 		$menu_item.appendTo('.woocommerce-MyAccount-secondary ul');
