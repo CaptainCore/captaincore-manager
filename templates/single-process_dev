@@ -104,11 +104,11 @@ $i = 0; ?>
 			// If item logs, then display completed date
 			if ( jQuery('.process_log_items li[data-item='+new_selection+']').length > 0 ) {
 				completed = jQuery('.process_log_items li[data-item='+new_selection+']').first().attr('data-completed');
-				jQuery('.task-actions').html(completed + ' <i class="fa fa-check-square" aria-hidden="true"></i>');
+				jQuery('.task-actions').html(completed + ' <i class="fas fa-check-square"></i>');
 			} else if( jQuery('.process-log-progress li[data-id="'+ new_selection +'"]').data('pending') == true ) {
-				jQuery('.task-actions').html('<a href="#">Onward!<i class="fa fa-check-square-o" aria-hidden="true"></i></a>');
+				jQuery('.task-actions').html('<a href="#">Onward!<i class="fas fa-check-square-o"></i></a>');
 			} else {
-				jQuery('.task-actions').html('Finish previous checklist item(s) first.<i class="fa fa-square-o" aria-hidden="true"></i>');
+				jQuery('.task-actions').html('Finish previous checklist item(s) first.<i class="fas fa-square-o"></i>');
 			}
 
 		}
@@ -129,7 +129,7 @@ $i = 0; ?>
 
 <div class="process-log-progress">
 
-<a href="#" class="previous"><i class="fa fa-chevron-left" aria-hidden="true"></i></a> <span class="current"></span>/<span class="total"></span> <a href="#" class="next"><i class="fa fa-chevron-right" aria-hidden="true"></i></a>
+<a href="#" class="previous"><i class="fas fa-chevron-left"></i></a> <span class="current"></span>/<span class="total"></span> <a href="#" class="next"><i class="fas fa-chevron-right"></i></a>
 
  <?php
 
@@ -140,7 +140,7 @@ $i = 0; ?>
 
  <div class="task-actions">
 
-	 <a href="#">Onward!<i class="fa fa-check-square-o" aria-hidden="true"></i></a>
+	 <a href="#">Onward!<i class="fas fa-check-square-o"></i></a>
 
  </div>
 </div>
