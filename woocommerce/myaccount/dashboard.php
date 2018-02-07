@@ -521,21 +521,21 @@ if ($partner and $role_check) {
 											?>
 										<li>
 												<?php echo get_the_title( $website_for_customer->ID ); ?> -
-												<?php if($website_for_customer_storage) { echo '<i class="fa fa-hdd-o" aria-hidden="true"></i> '.round($website_for_customer_storage / 1024 / 1024 / 1024, 1). "GB"; } ?>
-												<?php if($website_for_customer_views) { echo '<i class="fa fa-eye" aria-hidden="true"></i> '. number_format($website_for_customer_views). " views"; } ?>
+												<?php if($website_for_customer_storage) { echo '<i class="fas fa-hdd"></i> '.round($website_for_customer_storage / 1024 / 1024 / 1024, 1). "GB"; } ?>
+												<?php if($website_for_customer_views) { echo '<i class="fas fa-eye"></i> '. number_format($website_for_customer_views). " views"; } ?>
 										</li>
 									<?php endforeach; ?>
 									</ul>
 									<?php if ($storage_gbs != 0) { ?>
 									<div class="usage<?php if ($storage_percent > 100) { echo " over"; } ?>">
-											<i class="fa fa-hdd-o" aria-hidden="true"></i>
+											<i class="fas fa-hdd"></i>
 											<?php echo $storage_percent; ?>% storage
 											<strong><?php echo $storage_gbs; ?>GB/<?php echo $storage_cap; ?>GB</strong>
 									</div>
 									<?php } ?>
 									<?php if ($views != 0) { ?>
 								 	<div class="usage<?php if ($views_percent > 100) { echo " over"; } ?>">
-										<i class="fa fa-eye" aria-hidden="true"></i>
+										<i class="fas fa-eye"></i>
 											<?php echo $views_percent; ?>% traffic
 											<strong><?php echo number_format($views); ?></strong> <small>Yearly Estimate</small>
 									</div>
@@ -569,40 +569,41 @@ if ($partner and $role_check) {
 				Password: <?php the_field('password', $website->ID); ?><br />
 				Protocol: <?php the_field('protocol', $website->ID); ?><br />
 				Port: <?php the_field('port', $website->ID); ?>
-				<?php if ( strpos($production_address, ".kinsta.com") and get_field('database_username', $website->ID) ) { ?>
-					<hr />
-				<p class="small">
-					Database username: <?php the_field('database_username', $website->ID); ?> <br />Database password: <?php the_field('database_password', $website->ID); ?><br />
-					<a href="https://mysqleditor-<?php the_field('database_username', $website->ID); ?>.kinsta.com/" target="_blank">Open MySQL</a>
-				</p>
-				<?php } ?>
-				<?php if (strpos($production_address, ".kinsta.com") ) { ?>
-					<hr /><small>ssh <?php the_field('username', $website->ID); ?>@<?php echo $production_address; ?> -p <?php the_field('port', $website->ID); ?></small>
-				<?php } ?>
 			</div>
 			<div class="usage-stats col s12 m6">
+				<?php if ($provider) { ?>
+			 	<div class="usage">
+					<i class="fas fa-server"></i> <?php echo $provider_label; ?> <strong><?php //echo $server_address ?></strong> <small><?php //echo $server_name ?></small>
+				</div>
+				<?php } ?>
 				<?php if ($storage_gbs != 0) { ?>
 				<div class="usage<?php if ($storage_percent > 100) { echo " over"; } ?>">
-						<i class="fa fa-hdd-o" aria-hidden="true"></i>
+						<i class="fas fa-hdd"></i>
 						<?php echo $storage_percent; ?>% storage
 						<strong><?php echo $storage_gbs; ?>GB/<?php echo $storage_cap; ?>GB</strong>
 				</div>
 				<?php } ?>
 				<?php if ($views != 0) { ?>
 			 	<div class="usage<?php if ($views_percent > 100) { echo " over"; } ?>">
-					<i class="fa fa-eye" aria-hidden="true"></i>
+					<i class="fas fa-eye"></i>
 						<?php echo $views_percent; ?>% traffic
 						<strong><?php echo number_format($views); ?></strong> <small>Yearly Estimate</small>
 				</div>
 				<?php } ?>
-				<?php if ($provider) { ?>
-			 	<div class="usage">
-					<i class="fa fa-server" aria-hidden="true"></i>
-						<?php echo $provider_label; ?> <strong><?php echo $server_address ?></strong> <small><?php echo $server_name ?></small>
-				</div>
-				<?php } ?>
 				<?php if ($views != $website_views or $storage != $website_storage) { ?>
 					<p><small>Plans covers multiple sites, <a href="#view_usage_breakdown_<?php echo $customer_id[0]; ?>" class="modal-trigger">view usage breakdown</a>.</small></p>
+				<?php } ?>
+			</div>
+			<div class="col s12">
+				<?php if ( strpos($production_address, ".kinsta.com") and get_field('database_username', $website->ID) ) { ?>
+					<hr />
+				<p class="small">
+					<a href="https://mysqleditor-<?php the_field('database_username', $website->ID); ?>.kinsta.com/" target="_blank">https://mysqleditor-<?php the_field('database_username', $website->ID); ?>.kinsta.com/</a><br />
+					Database username: <?php the_field('database_username', $website->ID); ?> <br />Database password: <?php the_field('database_password', $website->ID); ?><br />
+				</p>
+				<?php } ?>
+				<?php if (strpos($production_address, ".kinsta.com") ) { ?>
+					<hr /><small>ssh <?php the_field('username', $website->ID); ?>@<?php echo $production_address; ?> -p <?php the_field('port', $website->ID); ?></small>
 				<?php } ?>
 			</div>
 
