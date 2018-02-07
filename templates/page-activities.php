@@ -132,11 +132,11 @@ jQuery(document).ready(function(){
 			    		} else {
 			    			echo "$year-$week";
 			    		 } ?>">
-			    		<i class="fa fa-star" aria-hidden="true">
+			    		<i class="fas fa-star">
 			    		<span class="info">
-			    			<a href="<?php echo get_edit_post_link( $process_log->ID ); ?>" class="alignright"><i class="fa fa-pencil-square-o" aria-hidden="true"></i></a>
+			    			<a href="<?php echo get_edit_post_link( $process_log->ID ); ?>" class="alignright"><i class="fas fa-pencil-square-o"></i></a>
 			    			<?php echo get_the_author_meta("first_name", $process_log->post_author); ?> completed <br />
-			    			<i class="fa fa-link" aria-hidden="true"></i> <a href="<?php echo get_permalink( $process_id ); ?>"><?php echo get_the_title( $process_id ); ?></a><br />
+			    			<i class="fas fa-link"></i> <a href="<?php echo get_permalink( $process_id ); ?>"><?php echo get_the_title( $process_id ); ?></a><br />
 			    			<?php if ($desc) { ?>
 								<div class="desc"> 
 									<?php echo WPCom_Markdown::get_instance()->transform( $desc, array('id'=>false,'unslash'=>false)); ?>
@@ -145,12 +145,12 @@ jQuery(document).ready(function(){
 			    			<?php if (get_field('website', $process_log->ID)) { 
 			    				$website = get_field('website', $process_log->ID);
 			    				foreach( $website as $p ): // variable must NOT be called $post (IMPORTANT) ?>
-			    				<i class="fa fa-link" aria-hidden="true"></i> <a href="<?php echo get_edit_post_link( $p ); ?>"><?php echo get_the_title( $p ); ?></a><br />
+			    				<i class="fas fa-link"></i> <a href="<?php echo get_edit_post_link( $p ); ?>"><?php echo get_the_title( $p ); ?></a><br />
 			    				<?php endforeach;  
 			    			} ?>
 
 			    			<hr />
-			    			<i class="fa fa-calendar" aria-hidden="true"></i>
+			    			<i class="fas fa-calendar"></i>
 			    			<?php echo get_the_date( "M j | g:ia", $process_log->ID ); ?>
 			    		</span></i>
 			    		</div>

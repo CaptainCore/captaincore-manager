@@ -479,9 +479,9 @@ $process_logs = get_posts(array(
 
 	$desc = get_field('description', $process_log->ID); ?>
 		<div class="process-star" data-log-date="<?php echo get_the_date( "U", $process_log->ID ); ?>">
-		<i class="fa fa-star" aria-hidden="true">
+		<i class="fas fa-star">
 		<span class="info">
-			<a href="<?php echo get_edit_post_link( $process_log->ID ); ?>" class="alignright"><i class="fa fa-pencil-square-o" aria-hidden="true"></i></a>
+			<a href="<?php echo get_edit_post_link( $process_log->ID ); ?>" class="alignright"><i class="fas fa-pencil-square-o"></i></a>
 			<?php echo get_the_author_meta("first_name", $process_log->post_author); ?> completed <br />
 			<?php if ($desc) { ?>
 			<div class="desc">
@@ -491,12 +491,12 @@ $process_logs = get_posts(array(
 			<?php if (get_field('website', $process_log->ID)) {
 				$website = get_field('website', $process_log->ID);
 				foreach( $website as $p ): // variable must NOT be called $post (IMPORTANT) ?>
-				<i class="fa fa-link" aria-hidden="true"></i> <a href="<?php echo get_edit_post_link( $p ); ?>" class="website"><?php echo get_the_title( $p ); ?></a><br />
+				<i class="fas fa-link"></i> <a href="<?php echo get_edit_post_link( $p ); ?>" class="website"><?php echo get_the_title( $p ); ?></a><br />
 				<?php endforeach;
 			} ?>
 
 			<hr />
-			<i class="fa fa-calendar" aria-hidden="true"></i>
+			<i class="fas fa-calendar"></i>
 			<?php echo get_the_date( "M j | g:ia", $process_log->ID ); ?>
 		</span></i>
 		</div>
@@ -549,9 +549,9 @@ $process_logs_support_requests = get_posts(array(
 
 	$desc = get_field('description', $process_log_support_requests->ID); ?>
 		<div class="process-star" data-log-date="<?php echo get_the_date( "U", $process_log_support_requests->ID ); ?>">
-		<i class="fa fa-star" aria-hidden="true">
+		<i class="fas fa-star">
 		<span class="info">
-			<a href="<?php echo get_edit_post_link( $process_log_support_requests->ID ); ?>" class="alignright"><i class="fa fa-pencil-square-o" aria-hidden="true"></i></a>
+			<a href="<?php echo get_edit_post_link( $process_log_support_requests->ID ); ?>" class="alignright"><i class="fas fa-pencil-square-o"></i></a>
 			<?php echo get_the_author_meta("first_name", $process_log_support_requests->post_author); ?> completed <br />
 			<?php if ($desc) { ?>
 			<div class="desc">
@@ -561,12 +561,12 @@ $process_logs_support_requests = get_posts(array(
 			<?php if (get_field('website', $process_log_support_requests->ID)) {
 				$website = get_field('website', $process_log_support_requests->ID);
 				foreach( $website as $p ): // variable must NOT be called $post (IMPORTANT) ?>
-				<i class="fa fa-link" aria-hidden="true"></i> <a href="<?php echo get_edit_post_link( $p ); ?>" class="website"><?php echo get_the_title( $p ); ?></a><br />
+				<i class="fas fa-link"></i> <a href="<?php echo get_edit_post_link( $p ); ?>" class="website"><?php echo get_the_title( $p ); ?></a><br />
 				<?php endforeach;
 			} ?>
 
 			<hr />
-			<i class="fa fa-calendar" aria-hidden="true"></i>
+			<i class="fas fa-calendar"></i>
 			<?php echo get_the_date( "M j | g:ia", $process_log_support_requests->ID ); ?>
 		</span></i>
 		</div>
@@ -621,9 +621,9 @@ $process_logs_product_development = get_posts(array(
 
 	$desc = get_field('description', $process_log_product_development->ID); ?>
 		<div class="process-star" data-log-date="<?php echo get_the_date( "U", $process_log_product_development->ID ); ?>">
-		<i class="fa fa-star" aria-hidden="true">
+		<i class="fas fa-star">
 		<span class="info">
-			<a href="<?php echo get_edit_post_link( $process_log_product_development->ID ); ?>" class="alignright"><i class="fa fa-pencil-square-o" aria-hidden="true"></i></a>
+			<a href="<?php echo get_edit_post_link( $process_log_product_development->ID ); ?>" class="alignright"><i class="fas fa-pencil-square-o"></i></a>
 			<?php echo get_the_author_meta("first_name", $process_log_product_development->post_author); ?> completed <br />
 			<?php if ($desc) { ?>
 			<div class="desc">
@@ -633,12 +633,12 @@ $process_logs_product_development = get_posts(array(
 			<?php if (get_field('website', $process_log_product_development->ID)) {
 				$website = get_field('website', $process_log_product_development->ID);
 				foreach( $website as $p ): // variable must NOT be called $post (IMPORTANT) ?>
-				<i class="fa fa-link" aria-hidden="true"></i> <a href="<?php echo get_edit_post_link( $p ); ?>" class="website"><?php echo get_the_title( $p ); ?></a><br />
+				<i class="fas fa-link"></i> <a href="<?php echo get_edit_post_link( $p ); ?>" class="website"><?php echo get_the_title( $p ); ?></a><br />
 				<?php endforeach;
 			} ?>
 
 			<hr />
-			<i class="fa fa-calendar" aria-hidden="true"></i>
+			<i class="fas fa-calendar"></i>
 			<?php echo get_the_date( "M j | g:ia", $process_log_product_development->ID ); ?>
 		</span></i>
 		</div>

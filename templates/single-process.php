@@ -30,7 +30,7 @@ var months = {};
 <?php echo 'var ajaxurl = "' . admin_url('admin-ajax.php') . '";'; ?>
 jQuery(document).ready(function(){
 
-  jQuery('.process-log-update').append('<a href="/company-handbook/" class="close">Back to Company Handbook <i class="fa fa-undo" aria-hidden="true"></i></a>');
+  jQuery('.process-log-update').append('<a href="/company-handbook/" class="close">Back to Company Handbook <i class="fas fa-undo"></i></a>');
 
   jQuery("#log_process").click(function(e){
 	e.preventDefault();
@@ -237,9 +237,9 @@ jQuery(document).ready(function(){
 					$repeat = $field['choices'][ $value ];
 					?>
 					<div class="process-icons">
-					<i class="fa fa-clock-o" aria-hidden="true"></i> <?php the_field('time_estimate'); ?>
-					<i class="fa fa-repeat" aria-hidden="true"></i> <?php echo $repeat; ?>
-					<?php if (get_field('repeat_quantity') and get_field('repeat_quantity') > 1) { ?><i class="fa fa-retweet" aria-hidden="true"></i> <?php the_field('repeat_quantity'); ?> times<?php } ?>
+					<i class="far fa-clock"></i> <?php the_field('time_estimate'); ?>
+					<i class="fas fa-redo"></i> <?php echo $repeat; ?>
+					<?php if (get_field('repeat_quantity') and get_field('repeat_quantity') > 1) { ?><i class="fas fa-retweet"></i> <?php the_field('repeat_quantity'); ?> times<?php } ?>
 					</div>
 						<?php // get_template_part( 'content-post-thumb' ); ?>
 						<span class="overlay"></span>
@@ -283,9 +283,10 @@ jQuery(document).ready(function(){
 
 						$desc = get_field('description', $process_log->ID); ?>
 							<div class="process-star" data-log-date="<?php echo get_the_date( "U", $process_log->ID ); ?>">
-							<i class="fa fa-star" aria-hidden="true">
+							<div class="tooltip">
+							<i class="fas fa-star"></i>
 							<span class="info">
-								<a href="<?php echo get_edit_post_link( $process_log->ID ); ?>" class="alignright"><i class="fa fa-pencil-square-o" aria-hidden="true"></i></a>
+								<a href="<?php echo get_edit_post_link( $process_log->ID ); ?>" class="alignright"><i class="fas fa-edit"></i></a>
 								<?php echo get_the_author_meta("first_name", $process_log->post_author); ?> completed <br />
 								<?php if ($desc) { ?>
 								<div class="desc">
@@ -295,14 +296,14 @@ jQuery(document).ready(function(){
 								<?php if (get_field('website', $process_log->ID)) {
 									$website = get_field('website', $process_log->ID);
 									foreach( $website as $p ): // variable must NOT be called $post (IMPORTANT) ?>
-									<i class="fa fa-link" aria-hidden="true"></i> <a href="<?php echo get_edit_post_link( $p ); ?>" class="website"><?php echo get_the_title( $p ); ?></a><br />
+									<i class="fas fa-link"></i> <a href="<?php echo get_edit_post_link( $p ); ?>" class="website"><?php echo get_the_title( $p ); ?></a><br />
 									<?php endforeach;
 								} ?>
 
 								<hr />
-								<i class="fa fa-calendar" aria-hidden="true"></i>
+								<i class="fas fa-calendar"></i>
 								<?php echo get_the_date( "M j | g:ia", $process_log->ID ); ?>
-							</span></i>
+							</span></div>
 							</div>
 
 						<?php endforeach; ?>

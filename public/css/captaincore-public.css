@@ -915,3 +915,50 @@ article.type-process {
 .process-week-view .process-day:last-child {
 	margin-right: 0%;
 }
+
+.activity-log div.tooltip {
+	position: relative;
+	text-align: left;
+}
+.activity-log div.tooltip span {
+	display: block;
+	visibility: hidden;
+	opacity: 0;
+	transition: visibility 0s, opacity 0.5s ease-in-out;
+	position: absolute;
+	background: #000;
+	border-radius: 10px;
+	color: #fff;
+	padding: 8.5px 12px;
+	font-size: 13px;
+	left: -50%;
+	top: 27px;
+	width: 230px;
+	z-index: 1;
+	font-family: "proxima-nova-soft",sans-serif;
+	font-style: normal;
+	font-weight: 400;
+}
+
+.activity-log div.tooltip:hover span {
+	visibility: visible;
+	opacity: 1;
+	display: block;
+	-webkit-transition: all 0.2s ease-in-out;
+	-moz-transition: all 0.2s ease-in-out;
+	-ms-transition: all 0.2s ease-in-out;
+	-o-transition: all 0.2s ease-in-out;
+	transition: all 0.2s ease-in-out;
+}
+
+.activity-log div.tooltip span:before {
+	content: " ";
+    width: 0;
+    height: 0;
+    border-left: 11px solid transparent;
+    border-bottom: 11px solid #000;
+    border-right: 11px solid transparent;
+    top: -10px;
+    left: 6px;
+    position: absolute;
+}

@@ -442,7 +442,7 @@ class Anchor_My_Account_Dns_Endpoint {
 					 });
 
 					 jQuery('.dns_records .mx a.add-record').click(function( event ) {
-						 jQuery(this).parent().parent("tr").before('<tr class="dns_record" data-status="new-record" data-type="a"><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a></td></tr>');
+						 jQuery(this).parent().parent("tr").before('<tr class="dns_record" data-status="new-record" data-type="a"><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>');
 						 event.preventDefault();
 					 });
 					 jQuery('.dns_records .mx').on("click","a.remove-record", function( event ) {
@@ -450,7 +450,7 @@ class Anchor_My_Account_Dns_Endpoint {
 						 event.preventDefault();
 					 });
 					 jQuery('.dns_records tr[data-type="txt"] a.add-record').click(function( event ) {
-						 jQuery(this).parent().parent("tr").before('<tr><td><input type="text"></td><td><a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a></td></tr>');
+						 jQuery(this).parent().parent("tr").before('<tr><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>');
 						 event.preventDefault();
 					 });
 					 jQuery('.dns_records tr[data-type="txt"] table').on("click","a.remove-record", function( event ) {
@@ -458,7 +458,7 @@ class Anchor_My_Account_Dns_Endpoint {
 						 event.preventDefault();
 					 });
 					 jQuery('.dns_records').on("click",'tr[data-type="a"] a.add-record', function( event ) {
-						 jQuery(this).parent().parent("tr").before('<tr><td><input type="text"></td><td><a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a></td></tr>');
+						 jQuery(this).parent().parent("tr").before('<tr><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>');
 						 event.preventDefault();
 					 });
 					 jQuery('.dns_records tr[data-type="a"] table').on("click","a.remove-record", function( event ) {
@@ -466,7 +466,7 @@ class Anchor_My_Account_Dns_Endpoint {
 						 event.preventDefault();
 					 });
 					 jQuery('.dns_records').on("click",'tr[data-type="srv"] a.add-record', function( event ) {
-						 jQuery(this).parent().parent("tr").before('<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a></td></tr>');
+						 jQuery(this).parent().parent("tr").before('<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>');
 						 event.preventDefault();
 					 });
 					 jQuery('.dns_records tr[data-type="srv"] table').on("click","a.remove-record", function( event ) {
@@ -474,7 +474,7 @@ class Anchor_My_Account_Dns_Endpoint {
 						 event.preventDefault();
 					 });
 					 jQuery('.dns_records tr[data-type="spf"] a.add-record').click(function( event ) {
-						 jQuery(this).parent().parent("tr").before('<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a></td></tr>');
+						 jQuery(this).parent().parent("tr").before('<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>');
 						 event.preventDefault();
 					 });
 					 jQuery('.dns_records tr[data-type="srv"] table').on("click","a.remove-record", function( event ) {
@@ -753,7 +753,7 @@ class Anchor_My_Account_Dns_Endpoint {
 							<?php foreach($record_values as $record) {
 								$record_value = $record->value;
 								$record_level = $record->level;  // Used by MX records ?>
-								<tr><td><input type="text" value="<?php echo $record_level; ?>"></td><td><div class="message">.<?php echo $domain->name; ?></div><input type="text" value="<?php echo $record_value; ?>"></td><td><a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a></td></tr>
+								<tr><td><input type="text" value="<?php echo $record_level; ?>"></td><td><div class="message">.<?php echo $domain->name; ?></div><input type="text" value="<?php echo $record_value; ?>"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
 								<?php } ?>
 									<tr><td colspan="3"><a href="#" class="add-record">Add Additional Record</a></td></tr>
 								 </table>
@@ -794,7 +794,7 @@ class Anchor_My_Account_Dns_Endpoint {
 						<table>
 							<tr><th>Value</th><th></th></tr>
 					<?php foreach($record_values as $record) { ?>
-						<tr><td><input type="text" value='<?php echo $record; ?>'></td><td><a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a></td></tr>
+						<tr><td><input type="text" value='<?php echo $record; ?>'></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
 						<?php } ?>
 							<tr><td colspan="2"><a href="#" class="add-record">Add Additional Record</a></td></tr>
 						 </table>
@@ -816,7 +816,7 @@ class Anchor_My_Account_Dns_Endpoint {
 							<tr><th>Value</th><th></th></tr>
 					<?php foreach($record_values as $record) {
 						$record_value = $record->value; ?>
-						<tr><td><input type="text" value='<?php echo $record_value; ?>'></td><td><a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a></td></tr>
+						<tr><td><input type="text" value='<?php echo $record_value; ?>'></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
 						<?php } ?>
 							<tr><td colspan="2"><a href="#" class="add-record">Add Additional Record</a></td></tr>
 						 </table>
@@ -843,7 +843,7 @@ class Anchor_My_Account_Dns_Endpoint {
 							<?php foreach($record_values as $record) { ?>
 											<tr>
 												<td><input type="text" value="<?php echo $record_priority; ?>"></td><td><input type="text" value="<?php echo $record_weight; ?>"></td><td><input type="text" value="<?php echo $record_port; ?>"></td>
-												<td><input type="text" value="<?php echo $record_value; ?>"></td><td><a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a></td>
+												<td><input type="text" value="<?php echo $record_value; ?>"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td>
 											</tr>
 							<?php } ?>
 									<tr><td colspan="5"><a href="#" class="add-record">Add Additional Record</a></td></tr>
@@ -861,8 +861,8 @@ class Anchor_My_Account_Dns_Endpoint {
 						</div>
 					</td>
 					<td class="actions">
-						<a class="edit-record" href=""><i class="fa fa-pencil-square-o" aria-hidden="true"></i></a>
-						<a class="remove-record"  href=""><i class="fa fa-times" aria-hidden="true"></i></a>
+						<a class="edit-record" href=""><i class="fas fa-edit"></i></a>
+						<a class="remove-record"  href=""><i class="fas fa-times"></i></a>
 					</td>
 				</tr>
 					<?php
@@ -892,11 +892,11 @@ class Anchor_My_Account_Dns_Endpoint {
 					<div class="mx">
 						<table>
 							<tr><th>Priority</th><th>Mail Server</th><th></th></tr>
-							<tr><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a></td></tr>
-							<tr><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a></td></tr>
-							<tr><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a></td></tr>
-							<tr><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a></td></tr>
-							<tr><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a></td></tr>
+							<tr><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+							<tr><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+							<tr><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+							<tr><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+							<tr><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
 							<tr><td colspan="3"><a href="#" class="add-record">Add Additional Record</a></td></tr>
 					 </table>
 					</div>
@@ -904,11 +904,11 @@ class Anchor_My_Account_Dns_Endpoint {
 					<div class="srv">
 						<table>
 							<tr><th>Priority</th><th>Weight</th><th>Port</th><th>Host</th><th></th></tr>
-							<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a></td></tr>
-							<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a></td></tr>
-							<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a></td></tr>
-							<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a></td></tr>
-							<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a></td></tr>
+							<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+							<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+							<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+							<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+							<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
 							<tr><td colspan="5"><a href="#" class="add-record">Add Additional Record</a></td></tr>
 					 </table>
 					</div>
@@ -916,7 +916,7 @@ class Anchor_My_Account_Dns_Endpoint {
 					</td>
 					<td class="ttl"><input type="text" value="1800"></td>
 					<td>
-						<a class="remove-record" href=""><i class="fa fa-times" aria-hidden="true"></i></a>
+						<a class="remove-record" href=""><i class="fas fa-times"></i></a>
 					</td>
 				</tr>
 				<tr data-type="z">
