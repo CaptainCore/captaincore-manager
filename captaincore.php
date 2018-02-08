@@ -2848,7 +2848,7 @@ function anchor_download_snapshot_email( $snapshot_id ) {
 	// Variables for Backblaze
 	$api_url = "https://api001.backblazeb2.com"; // From b2_authorize_account call
 	$auth_token = $output->authorizationToken; // From b2_authorize_account call
-	$bucket_id = CAPTIANCORE_B2_BUCKET_ID; // The file name prefix of files the download authorization will allow
+	$bucket_id = CAPTAINCORE_B2_BUCKET_ID; // The file name prefix of files the download authorization will allow
 	$valid_duration = 604800; // The number of seconds the authorization is valid for
 	$file_name_prefix = "Snapshots/". $domain; // The file name prefix of files the download authorization will allow
 
