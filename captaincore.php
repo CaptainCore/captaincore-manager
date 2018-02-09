@@ -779,6 +779,72 @@ function snapshot_post_type() {
 add_action( 'init', 'snapshot_post_type', 0 );
 
 // Register Custom Post Type
+function captaincore_quicksaves_post_type() {
+
+	$labels = array(
+		'name'                  => _x( 'Quicksaves', 'Post Type General Name', 'captaincore' ),
+		'singular_name'         => _x( 'Quicksave', 'Post Type Singular Name', 'captaincore' ),
+		'menu_name'             => __( 'Quicksave', 'captaincore' ),
+		'name_admin_bar'        => __( 'Quicksave', 'captaincore' ),
+		'archives'              => __( 'Quicksave Archives', 'captaincore' ),
+		'attributes'            => __( 'Quicksave Attributes', 'captaincore' ),
+		'parent_item_colon'     => __( 'Parent Quicksave:', 'captaincore' ),
+		'all_items'             => __( 'All Quicksaves', 'captaincore' ),
+		'add_new_item'          => __( 'Add New Quicksave', 'captaincore' ),
+		'add_new'               => __( 'Add New', 'captaincore' ),
+		'new_item'              => __( 'New Quicksave', 'captaincore' ),
+		'edit_item'             => __( 'Edit Quicksave', 'captaincore' ),
+		'update_item'           => __( 'Update Quicksave', 'captaincore' ),
+		'view_item'             => __( 'View Quicksave', 'captaincore' ),
+		'view_items'            => __( 'View Quicksaves', 'captaincore' ),
+		'search_items'          => __( 'Search Item', 'captaincore' ),
+		'not_found'             => __( 'Not found', 'captaincore' ),
+		'not_found_in_trash'    => __( 'Not found in Trash', 'captaincore' ),
+		'featured_image'        => __( 'Featured Image', 'captaincore' ),
+		'set_featured_image'    => __( 'Set featured image', 'captaincore' ),
+		'remove_featured_image' => __( 'Remove featured image', 'captaincore' ),
+		'use_featured_image'    => __( 'Use as featured image', 'captaincore' ),
+		'insert_into_item'      => __( 'Insert into item', 'captaincore' ),
+		'uploaded_to_this_item' => __( 'Uploaded to this item', 'captaincore' ),
+		'items_list'            => __( 'Items list', 'captaincore' ),
+		'items_list_navigation' => __( 'Items list navigation', 'captaincore' ),
+		'filter_items_list'     => __( 'Filter items list', 'captaincore' ),
+	);
+	$capabilities = array(
+	  'edit_post'             => 'website_edit_post',
+	  'read_post'             => 'website_read_post',
+	  'delete_post'           => 'website_delete_post',
+	  'edit_posts'            => 'website_edit_posts',
+	  'edit_others_posts'     => 'website_edit_others_posts',
+	  'publish_posts'         => 'website_publish_posts',
+	  'read_private_posts'    => 'website_read_private_posts',
+	);
+	$args = array(
+		'label'                 => __( 'Quicksave', 'captaincore' ),
+		'description'           => __( 'Quicksave Description', 'captaincore' ),
+		'labels'                => $labels,
+		'supports'              => array( ),
+		'hierarchical'          => false,
+		'public'                => true,
+		'show_ui'               => true,
+		'show_in_menu'          => false,
+		'menu_position'         => 5,
+		'menu_icon'             => 'dashicons-backup',
+		'show_in_admin_bar'     => true,
+		'show_in_nav_menus'     => true,
+		'can_export'            => true,
+		'has_archive'           => true,
+		'exclude_from_search'   => false,
+		'publicly_queryable'    => true,
+		'capability_type'       => 'page',
+		'capabilities'          => $capabilities,
+	);
+	register_post_type( 'cc_quicksave', $args );
+
+}
+add_action( 'init', 'captaincore_quicksaves_post_type', 0 );
+
+// Register Custom Post Type
 function worker_post_type() {
 
 	$labels = array(
@@ -850,7 +916,7 @@ function captaincore_website_tabs() {
 	$screen = get_current_screen();
 
 	// Only edit post screen:
-	$pages = array('website','customer','contact','domain','changelog','process','process_log','server','snapshot');
+	$pages = array('website','customer','contact','domain','changelog','process','process_log','server','snapshot','cc_quicksave');
 	if( in_array($screen->post_type, $pages) ) {
 	    // Before:
 	    add_action( 'all_admin_notices', function(){

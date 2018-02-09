@@ -22,6 +22,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
 
+function cmp($a, $b) {
+    return strcmp($a->name, $b->name);
+}
+
+
 // Custom filesize function
 function anchorhost_human_filesize($size, $precision = 2) {
     $units = array('B','kB','MB','GB','TB','PB','EB','ZB','YB');
@@ -618,9 +623,11 @@ if ($partner and $role_check) {
 		<div class="row">
       <div class="input-field col s12">
 				<a href="#snapshot<?php echo $website->ID; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">cloud</i>Download backup snapshot</a> <br />
-				<a class="waves-effect waves-light large redeploy" data-post-id="<?php echo $website->ID; ?>"><i class="material-icons left">loop</i>Redeploy users/plugins</a> <br /><?php if( defined('ANCHOR_DEV_MODE') ) { ?><!--
-				<a href="#install-premium-plugin<?php echo $website->ID; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">add</i>Install premium plugin</a> <br />
-				<a class="waves-effect waves-light large"><i class="material-icons left">chrome_reader_mode</i>Maintenance Logs</a>--><?php } ?>
+				<a class="waves-effect waves-light large redeploy" data-post-id="<?php echo $website->ID; ?>"><i class="material-icons left">loop</i>Redeploy users/plugins</a> <br />
+				<a href="#quicksave<?php echo $website->ID; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">chrome_reader_mode</i>Quicksaves (Plugins & Themes)</a>
+				<?php if( defined('ANCHOR_DEV_MODE') ) { ?>
+					<!-- <a href="#install-premium-plugin<?php echo $website->ID; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">add</i>Install premium plugin</a> <br />-->
+				<?php } ?>
 				<?php
 				if( strpos($production_address, ".kinsta.com") ):  ?>
 					<a class="waves-effect waves-light large kinsta-deploy-to-staging" data-post-id="<?php echo $website->ID; ?>"><i class="material-icons left">chrome_reader_mode</i>Kinsta: Push Production to Staging</a>
@@ -700,6 +707,90 @@ $provider = "";
 	</div>
 </div>
 
+<div id="quicksave<?php echo $website->ID; ?>" class="modal bottom-sheet" data-id="<?php echo $website->ID; ?>">
+	<div class="modal-content">
+
+		<h4>Quicksaves <small>(<?php echo get_the_title( $website->ID ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
+		<div class="progress hide">
+				<div class="indeterminate"></div>
+		</div>
+		<div class="row">
+				<?php
+				$quicksaves_for_website = get_posts(array(
+					'post_type' => 'cc_quicksave',
+					'posts_per_page' => '-1',
+					'meta_query' => array(
+						array(
+							'key' => 'website', // name of custom field
+							'value' => '"' . $website->ID . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+							'compare' => 'LIKE'
+						)
+					)
+				));
+				if ($quicksaves_for_website) { ?>
+				<ul class="collapsible" data-collapsible="accordion">
+				<?php
+
+				foreach( $quicksaves_for_website as $quicksave ) {
+
+					$timestamp = get_the_time( "M jS Y g:ia", $quicksave->ID);
+					$plugins = json_decode(get_field( "plugins", $quicksave->ID));
+					$themes = json_decode(get_field( "themes", $quicksave->ID));
+					//usort($plugins, "cmp");
+
+					?>
+					<li>
+				    <div class="collapsible-header">
+				      <span class="material-icons">settings_backup_restore</span> <?php echo $timestamp; ?>
+							<span class="badge">WordPress <?php the_field("core", $quicksave->ID); ?> - <?php echo count($plugins); ?> plugins - <?php echo count($themes); ?> themes</span>
+				    </div>
+				    <div class="collapsible-body">
+							<table class="bordered" id="plugins_<?php echo $website->ID; ?>">
+	              <thead>
+	                <tr>
+	                    <th>Plugin</th>
+	                    <th>Version</th>
+											<th>Status</th>
+	                </tr>
+	              </thead>
+	              <tbody>
+									<?php foreach( $plugins as $plugin ) { ?>
+	                <tr>
+	                  <td><?php if ($plugin->title) { echo $plugin->title; } else { echo $plugin->name; } ?></td>
+	                  <td><?php echo $plugin->version; ?></td>
+										<td><?php echo $plugin->status; ?></td>
+	                </tr>
+									<?php } ?>
+	              </tbody>
+	            </table>
+							<table class="bordered" id="themes_<?php echo $website->ID; ?>">
+	              <thead>
+	                <tr>
+	                    <th>Theme</th>
+	                    <th>Version</th>
+											<th>Status</th>
+	                </tr>
+	              </thead>
+	              <tbody>
+									<?php foreach( $themes as $theme ) { ?>
+	                <tr>
+	                  <td><?php if ($theme->title) { echo $theme->title; } else { echo $theme->name; } ?></td>
+	                  <td><?php echo $theme->version; ?></td>
+										<td><?php echo $theme->status; ?></td>
+	                </tr>
+									<?php } ?>
+	              </tbody>
+	            </table>
+						</div>
+				  </li><?php } ?>
+			</ul>
+		<?php } ?>
+
+    </div>
+
+	</div>
+</div>
+
 <div id="install-premium-plugin<?php echo $website->ID; ?>" class="modal" data-id="<?php echo $website->ID; ?>">
 	<div class="modal-content">
 
@@ -748,4 +839,3 @@ $provider = "";
 	 * @deprecated 2.6.0
 	 */
 	do_action( 'woocommerce_after_my_account' );
-?>

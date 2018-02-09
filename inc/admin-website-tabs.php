@@ -9,6 +9,7 @@
 	<a class="nav-tab dashicons-before dashicons-media-spreadsheet<?php if( $screen->post_type == "process_log") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=process_log" title="Process Log"></a>
 	<a class="nav-tab dashicons-before dashicons-building<?php if( $screen->post_type == "server") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=server" title="Server"></a>
 	<a class="nav-tab dashicons-before dashicons-backup<?php if( $screen->post_type == "snapshot") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=snapshot" title="Snapshots"></a>
+	<a class="nav-tab dashicons-before dashicons-backup<?php if( $screen->post_type == "cc_quicksave") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=cc_quicksave" title="Quicksaves"></a>
 </h2>
 <script>
 jQuery(document).ready(function() {

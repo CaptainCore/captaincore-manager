@@ -10,6 +10,9 @@
 
 	* Examples:
 
+	* Adding Quicksave
+	* https://anchor.host/anchor-api/anchor.host/?git_commit=<git-commit>&core=<version>&plugins=<plugin-data>&themes=<theme-data>&token=token_key
+
 	* Adding backup snapshot
 	* https://anchor.host/anchor-api/anchor.host/?archive=anchorhost1.wpengine.com-2016-10-22.tar.gz&storage=235256&token=token_key
 
@@ -36,6 +39,7 @@ $plugins = $_GET['plugins'];
 $themes = $_GET['themes'];
 $token = $_GET['token'];
 $token_key = $_GET['token_key'];
+$git_commit = $_GET['git_commit'];
 
 $args = array (
 	'post_type'        => 'website',
@@ -119,13 +123,13 @@ if (substr_count($site, ".") > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 
 	}
 
-	// Generate a new CaptainCore Snapshot
-	if ($core and $plugins and $themes) {
+	// Generate a new CaptainCore quicksave
+	if ($git_commit and $core and $plugins and $themes) {
 
 		// Create post object
 		$my_post = array(
-		  'post_title'    => "Snapshot",
-		  'post_type'     => 'captaincore_snapshot',
+		  'post_title'    => "Quicksave",
+		  'post_type'     => 'cc_quicksave',
 		  'post_status'   => 'publish'
 		);
 
@@ -133,6 +137,7 @@ if (substr_count($site, ".") > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 		$snapshot_id = wp_insert_post( $my_post );
 
 		update_field("field_59badaa96686f", $site_id, $snapshot_id);
+		update_field("field_5a7dc6919ed81", $git_commit, $snapshot_id);
 		update_field("field_59bae8d2ec7cc", $core, $snapshot_id);
 		update_field("field_59badadc66871", $plugins, $snapshot_id);
 		update_field("field_59badab866870", $themes, $snapshot_id);
@@ -141,19 +146,11 @@ if (substr_count($site, ".") > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 		// Adds snapshot ID to title
 		$my_post = array(
 		  'ID'			  => $snapshot_id,
-		  'post_title'    => "Snapshot ". $snapshot_id,
+		  'post_title'    => "Quicksave ". $snapshot_id,
 		);
 
 		wp_update_post($my_post);
 
-		// If email found then manually trigger download link
-		if ($email) {
-			$_POST = array(
-				'email' => $email,
-				'snapshot_id' => $snapshot_id
-			);
-			snapshot_email_action_callback();
-		}
 	}
 
 	// Updates views and storage usage
@@ -172,7 +169,6 @@ if (substr_count($site, ".") > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 			'meta_key'		=> 'address',
 			'meta_value'	=> $server
 		);
-
 
 		// query
 		$the_query = new WP_Query( $args );

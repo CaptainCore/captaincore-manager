@@ -124,6 +124,32 @@
     right: -3px;
 }
 
+.content-area ul.collapsible {
+	list-style: none;
+	padding:0px;
+	margin:0px;
+}
+
+.modal.bottom-sheet.open {
+	top: 0px;
+	max-height: 100%;
+	margin: 2em;
+	width: auto;
+}
+
+.bottom-sheet table {
+	display: inline-table;
+	border-collapse: collapse;
+	font-size: 0.8em;
+	width: auto;
+	margin-right: 2em;
+}
+
+.bottom-sheet table th,
+.bottom-sheet table td {
+	padding-right: 10px;
+}
+
 .content-area ul.acf-actions a.button {
 	padding: 5px 20px;
 }
@@ -953,12 +979,12 @@ article.type-process {
 
 .activity-log div.tooltip span:before {
 	content: " ";
-    width: 0;
-    height: 0;
-    border-left: 11px solid transparent;
-    border-bottom: 11px solid #000;
-    border-right: 11px solid transparent;
-    top: -10px;
-    left: 6px;
-    position: absolute;
+	width: 0;
+	height: 0;
+	border-left: 11px solid transparent;
+	border-bottom: 11px solid #000;
+	border-right: 11px solid transparent;
+	top: -10px;
+	left: 6px;
+	position: absolute;
 }
