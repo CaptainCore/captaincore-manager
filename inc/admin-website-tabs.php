@@ -6,12 +6,8 @@ a.nav-tab span {
 	display: none;
 	position: absolute;
 	left: -27px;
-	top: -24px;
-	background: #fff;
-	border-top: 1px solid #ccc;
+	top: -30px;
 	padding: 0px 10px;
-	border-left: 1px solid #ccc;
-	border-right: 1px solid #ccc;
 	border-radius: 4px;
 	z-index: 9999;
 	font-size: 0.8em;
