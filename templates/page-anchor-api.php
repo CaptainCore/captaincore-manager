@@ -40,6 +40,7 @@ $themes = $_GET['themes'];
 $token = $_GET['token'];
 $token_key = $_GET['token_key'];
 $git_commit = $_GET['git_commit'];
+$git_status = $_GET['git_status'];
 
 $args = array (
 	'post_type'        => 'website',
@@ -138,6 +139,7 @@ if (substr_count($site, ".") > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 
 		update_field("field_59badaa96686f", $site_id, $snapshot_id);
 		update_field("field_5a7dc6919ed81", $git_commit, $snapshot_id);
+		update_field("field_5a7f0a55a5086", $git_status, $snapshot_id);
 		update_field("field_59bae8d2ec7cc", $core, $snapshot_id);
 		update_field("field_59badadc66871", $plugins, $snapshot_id);
 		update_field("field_59badab866870", $themes, $snapshot_id);
