@@ -218,6 +218,12 @@ p.small {
       endingTop: '10%', // Ending top style attribute
 		});
 
+		jQuery('.modal.quicksaves').modal({
+			ready: function(modal, trigger) { // Callback for Modal open. Modal and trigger parameters available.
+				quicksave_highlight_changed( modal );
+			}
+		});
+
 		jQuery(".modal-content input#submit").click(function(e){
 
 	  	e.preventDefault();
@@ -334,6 +340,41 @@ p.small {
 
 
 	});
+
+	function quicksave_highlight_changed( modal ) {
+		jQuery('li.quicksave:visible').each(function() {
+
+		current_quicksave = jQuery(this);
+		previous_quicksave = jQuery(this).next();
+
+			// Verify we are not on the last item
+			if ( jQuery(previous_quicksave).hasClass('quicksave') ) {
+
+				// Process plugins
+				jQuery(this).find('.plugin').each(function() {
+					plugin_name = jQuery(this).find("td:first-child").text().trim();
+					plugin_previous = jQuery(previous_quicksave).find('.plugin td:contains('+plugin_name+')').parent();
+
+					if ( jQuery(this).html() != jQuery(plugin_previous).html() ) {
+						jQuery( this ).addClass("changed");
+					}
+
+				});
+
+				// Process themes
+				jQuery(this).find('.theme').each(function() {
+					theme_name = jQuery(this).find("td:first-child").text().trim();
+					theme_previous = jQuery(previous_quicksave).find('.theme td:contains('+theme_name+')').parent();
+
+					if ( jQuery(this).html() != jQuery(theme_previous).html() ) {
+						jQuery( this ).addClass("changed");
+					}
+
+				});
+			}
+
+		});
+	}
 
 	function isEmail(email) {
   	var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$/;
@@ -624,7 +665,7 @@ if ($partner and $role_check) {
       <div class="input-field col s12">
 				<a href="#snapshot<?php echo $website->ID; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">cloud</i>Download backup snapshot</a> <br />
 				<a class="waves-effect waves-light large redeploy" data-post-id="<?php echo $website->ID; ?>"><i class="material-icons left">loop</i>Redeploy users/plugins</a> <br />
-				<a href="#quicksave<?php echo $website->ID; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">chrome_reader_mode</i>Quicksaves (Plugins & Themes)</a><br />
+				<a href="#quicksave<?php echo $website->ID; ?>" class="waves-effect waves-light modal-quicksave modal-trigger large"><i class="material-icons left">chrome_reader_mode</i>Quicksaves (Plugins & Themes)</a><br />
 				<?php if( defined('ANCHOR_DEV_MODE') ) { ?>
 					<!-- <a href="#install-premium-plugin<?php echo $website->ID; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">add</i>Install premium plugin</a> <br />-->
 				<?php } ?>
@@ -739,13 +780,13 @@ $provider = "";
 					//usort($plugins, "cmp");
 
 					?>
-					<li>
+					<li class="quicksave">
 				    <div class="collapsible-header">
 				      <span class="material-icons">settings_backup_restore</span> <?php echo $timestamp; ?>
 							<span class="badge">WordPress <?php the_field("core", $quicksave->ID); ?> - <?php echo count($plugins); ?> plugins - <?php echo count($themes); ?> themes</span>
 				    </div>
 				    <div class="collapsible-body">
-							<table class="bordered" id="plugins_<?php echo $website->ID; ?>">
+							<table class="bordered plugins" id="plugins_<?php echo $website->ID; ?>">
 	              <thead>
 	                <tr>
 	                    <th>Plugin</th>
@@ -755,7 +796,7 @@ $provider = "";
 	              </thead>
 	              <tbody>
 									<?php foreach( $plugins as $plugin ) { ?>
-	                <tr>
+	                <tr class="plugin">
 	                  <td><?php if ($plugin->title) { echo $plugin->title; } else { echo $plugin->name; } ?></td>
 	                  <td><?php echo $plugin->version; ?></td>
 										<td><?php echo $plugin->status; ?></td>
@@ -763,7 +804,7 @@ $provider = "";
 									<?php } ?>
 	              </tbody>
 	            </table>
-							<table class="bordered" id="themes_<?php echo $website->ID; ?>">
+							<table class="bordered themes" id="themes_<?php echo $website->ID; ?>">
 	              <thead>
 	                <tr>
 	                    <th>Theme</th>
@@ -773,7 +814,7 @@ $provider = "";
 	              </thead>
 	              <tbody>
 									<?php foreach( $themes as $theme ) { ?>
-	                <tr>
+	                <tr  class="theme">
 	                  <td><?php if ($theme->title) { echo $theme->title; } else { echo $theme->name; } ?></td>
 	                  <td><?php echo $theme->version; ?></td>
 										<td><?php echo $theme->status; ?></td>

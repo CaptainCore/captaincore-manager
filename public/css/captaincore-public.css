@@ -147,7 +147,13 @@
 
 .bottom-sheet table th,
 .bottom-sheet table td {
-	padding-right: 10px;
+	padding-right: 5px;
+	padding-left: 5px;
+}
+
+.bottom-sheet table tr.changed {
+    background: #5cbad5;
+    color: #fff;
 }
 
 .content-area ul.acf-actions a.button {
