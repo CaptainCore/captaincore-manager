@@ -338,7 +338,6 @@ p.small {
 				}
 			});
 
-
 	});
 
 	function quicksave_highlight_changed( modal ) {

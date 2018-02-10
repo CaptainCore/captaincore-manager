@@ -40,7 +40,7 @@ $themes = $_GET['themes'];
 $token = $_GET['token'];
 $token_key = $_GET['token_key'];
 $git_commit = $_GET['git_commit'];
-$git_status = $_GET['git_status'];
+$git_status = trim(base64_decode($_GET['git_status']));
 
 $args = array (
 	'post_type'        => 'website',
