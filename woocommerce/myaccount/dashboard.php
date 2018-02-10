@@ -624,7 +624,7 @@ if ($partner and $role_check) {
       <div class="input-field col s12">
 				<a href="#snapshot<?php echo $website->ID; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">cloud</i>Download backup snapshot</a> <br />
 				<a class="waves-effect waves-light large redeploy" data-post-id="<?php echo $website->ID; ?>"><i class="material-icons left">loop</i>Redeploy users/plugins</a> <br />
-				<a href="#quicksave<?php echo $website->ID; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">chrome_reader_mode</i>Quicksaves (Plugins & Themes)</a>
+				<a href="#quicksave<?php echo $website->ID; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">chrome_reader_mode</i>Quicksaves (Plugins & Themes)</a><br />
 				<?php if( defined('ANCHOR_DEV_MODE') ) { ?>
 					<!-- <a href="#install-premium-plugin<?php echo $website->ID; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">add</i>Install premium plugin</a> <br />-->
 				<?php } ?>
@@ -707,7 +707,7 @@ $provider = "";
 	</div>
 </div>
 
-<div id="quicksave<?php echo $website->ID; ?>" class="modal bottom-sheet" data-id="<?php echo $website->ID; ?>">
+<div id="quicksave<?php echo $website->ID; ?>" class="modal bottom-sheet quicksaves" data-id="<?php echo $website->ID; ?>">
 	<div class="modal-content">
 
 		<h4>Quicksaves <small>(<?php echo get_the_title( $website->ID ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
