@@ -226,9 +226,9 @@ p.small {
 
 		jQuery('.view_quicksave_changes').click(function(e) {
 			e.preventDefault();
-
+			jQuery(this).hide();
 			quicksave = jQuery(this).parents('.quicksave');
-			jQuery(quicksave).find(".git_status tbody tr:nth-child(2) td").html( '<p></p><div class="preloader-wrapper small active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p></p>' );
+			jQuery(quicksave).find(".git_status").html( '<p></p><div class="preloader-wrapper small active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p></p>' );
 
 			var data = {
 	  		'action': 'anchor_install',
@@ -238,7 +238,7 @@ p.small {
 	  	};
 
 			jQuery.post(ajaxurl, data, function(response) {
-				jQuery(quicksave).find(".git_status tbody tr:nth-child(2) td").html( "<pre>" + response + "</pre>" );
+				jQuery(quicksave).find(".git_status").html( "<pre>" + response + "</pre>" );
 			});
 
 		});
@@ -418,7 +418,7 @@ if ($partner and $role_check) {
 			// Load all websites for administrators
 			$websites = get_posts(array(
 				'post_type' 			=> 'website',
-				'posts_per_page'	=> '-1',
+				'posts_per_page'	=> '100',
 				'order'						=> 'asc',
 				'orderby'					=> 'title',
 				'meta_query'			=> array(
@@ -806,6 +806,8 @@ $provider = "";
 							<span class="badge">WordPress <?php the_field("core", $quicksave->ID); ?> - <?php echo count($plugins); ?> plugins - <?php echo count($themes); ?> themes</span>
 				    </div>
 				    <div class="collapsible-body">
+							<a class="view_quicksave_changes blue right btn">View changes</a>
+							<div class="git_status"></div>
 							<table class="bordered plugins" id="plugins_<?php echo $website->ID; ?>">
 	              <thead>
 	                <tr>
@@ -840,21 +842,6 @@ $provider = "";
 										<td><?php echo $theme->status; ?></td>
 	                </tr>
 									<?php } ?>
-	              </tbody>
-	            </table>
-							<table class="bordered git_status">
-	              <thead>
-	                <tr>
-	                    <th>Status</th>
-	                </tr>
-	              </thead>
-	              <tbody>
-	                <tr>
-	                  <td><?php echo $git_status; ?></td>
-	                </tr>
-									<tr>
-	                  <td><a href="#" class="view_quicksave_changes">View changes</a></td>
-	                </tr>
 	              </tbody>
 	            </table>
 						</div>

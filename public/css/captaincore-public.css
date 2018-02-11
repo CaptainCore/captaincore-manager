@@ -162,14 +162,13 @@ table.bordered.git_status {
   margin: 0px;
 }
 
-table.bordered.git_status td {
+.git_status {
   overflow: scroll;
 }
 
-table.git_status pre {
+.git_status pre {
 	font-size: 0.5em;
 	padding: 1em;
-	background: #fafafa;
 }
 
 .content-area ul.acf-actions a.button {
