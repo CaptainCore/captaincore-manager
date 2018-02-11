@@ -133,8 +133,16 @@
 .modal.bottom-sheet.open {
 	top: 0px;
 	max-height: 100%;
-	margin: 2em;
+	margin: 0em;
 	width: auto;
+}
+
+body.logged-in.admin-bar .modal.bottom-sheet.open {
+	margin-top: 32px;
+}
+
+.quicksave .spinner-blue, .quicksave .spinner-blue-only {
+  border-color: #27c3f3;
 }
 
 .bottom-sheet table {
