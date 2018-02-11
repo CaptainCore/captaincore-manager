@@ -228,6 +228,7 @@ p.small {
 			e.preventDefault();
 
 			quicksave = jQuery(this).parents('.quicksave');
+			jQuery(quicksave).find(".git_status tbody tr:nth-child(2) td").html( '<p></p><div class="preloader-wrapper small active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p></p>' );
 
 			var data = {
 	  		'action': 'anchor_install',
