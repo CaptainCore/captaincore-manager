@@ -802,6 +802,7 @@ $provider = "";
 					<li class="quicksave" data-id="<?php echo $quicksave->ID; ?>" data-git_commit="<?php echo $git_commit; ?>">
 				    <div class="collapsible-header">
 				      <span class="material-icons">settings_backup_restore</span> <?php echo $timestamp; ?>
+							<span class="badge"><?php echo $git_status; ?></span>
 							<span class="badge">WordPress <?php the_field("core", $quicksave->ID); ?> - <?php echo count($plugins); ?> plugins - <?php echo count($themes); ?> themes</span>
 				    </div>
 				    <div class="collapsible-body">
