@@ -418,7 +418,7 @@ if ($partner and $role_check) {
 			// Load all websites for administrators
 			$websites = get_posts(array(
 				'post_type' 			=> 'website',
-				'posts_per_page'	=> '100',
+				'posts_per_page'	=> '-1',
 				'order'						=> 'asc',
 				'orderby'					=> 'title',
 				'meta_query'			=> array(
