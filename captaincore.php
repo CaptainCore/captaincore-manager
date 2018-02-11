@@ -2700,8 +2700,8 @@ function anchor_install_action_callback() {
 	// Disable SSL verification due to self signed cert on other end
 	$arrContextOptions=array(
 	    "ssl"=>array(
-	        "verify_peer"=>false,
-	        "verify_peer_name"=>false,
+      "verify_peer"=>false,
+      "verify_peer_name"=>false,
 	    ),
 	);
 
@@ -2781,6 +2781,13 @@ function anchor_install_action_callback() {
 	}
 	if ($cmd == "activate") {
 		$command = "captaincore site activate $install";
+	}
+
+	if ($cmd == "view_quicksave_changes") {
+		$website_id = get_field('website',$post_id);
+		$install = get_field('install',$website_id[0]);
+		$command = "captaincore get quicksave_changes $install $value";
+		$post_id = $website_id;
 	}
 
 	if ($_SERVER['HTTP_HOST']=='dev.anchor') {

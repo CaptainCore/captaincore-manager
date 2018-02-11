@@ -224,11 +224,28 @@ p.small {
 			}
 		});
 
+		jQuery('.view_quicksave_changes').click(function(e) {
+			e.preventDefault();
+
+			quicksave = jQuery(this).parents('.quicksave');
+
+			var data = {
+	  		'action': 'anchor_install',
+	  		'post_id': quicksave.data('id'),
+	      'command': 'view_quicksave_changes',
+				'value'	: quicksave.data("git_commit")
+	  	};
+
+			jQuery.post(ajaxurl, data, function(response) {
+				jQuery(quicksave).find(".git_status tbody tr:nth-child(2) td").html( "<pre>" + response + "</pre>" );
+			});
+
+		});
+
 		jQuery(".modal-content input#submit").click(function(e){
 
 	  	e.preventDefault();
 
-			//
 			modal_form = jQuery(this).parents('.modal.open');
 
 			jQuery('.modal.open .modal-content .row').hide();
@@ -776,10 +793,12 @@ $provider = "";
 					$timestamp = get_the_time( "M jS Y g:ia", $quicksave->ID);
 					$plugins = json_decode(get_field( "plugins", $quicksave->ID));
 					$themes = json_decode(get_field( "themes", $quicksave->ID));
+					$git_status = get_field( "git_status", $quicksave->ID );
+					$git_commit = get_field( "git_commit", $quicksave->ID );
 					//usort($plugins, "cmp");
 
 					?>
-					<li class="quicksave">
+					<li class="quicksave" data-id="<?php echo $quicksave->ID; ?>" data-git_commit="<?php echo $git_commit; ?>">
 				    <div class="collapsible-header">
 				      <span class="material-icons">settings_backup_restore</span> <?php echo $timestamp; ?>
 							<span class="badge">WordPress <?php the_field("core", $quicksave->ID); ?> - <?php echo count($plugins); ?> plugins - <?php echo count($themes); ?> themes</span>
@@ -819,6 +838,21 @@ $provider = "";
 										<td><?php echo $theme->status; ?></td>
 	                </tr>
 									<?php } ?>
+	              </tbody>
+	            </table>
+							<table class="bordered git_status">
+	              <thead>
+	                <tr>
+	                    <th>Status</th>
+	                </tr>
+	              </thead>
+	              <tbody>
+	                <tr>
+	                  <td><?php echo $git_status; ?></td>
+	                </tr>
+									<tr>
+	                  <td><a href="#" class="view_quicksave_changes">View changes</a></td>
+	                </tr>
 	              </tbody>
 	            </table>
 						</div>

@@ -156,6 +156,22 @@
     color: #fff;
 }
 
+table.bordered.git_status {
+  table-layout: fixed;
+  width: 40%;
+  margin: 0px;
+}
+
+table.bordered.git_status td {
+  overflow: scroll;
+}
+
+table.git_status pre {
+	font-size: 0.5em;
+	padding: 1em;
+	background: #fafafa;
+}
+
 .content-area ul.acf-actions a.button {
 	padding: 5px 20px;
 }
