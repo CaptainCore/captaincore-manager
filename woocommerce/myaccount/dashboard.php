@@ -370,7 +370,7 @@ p.small {
 				// Process plugins
 				jQuery(this).find('.plugin').each(function() {
 					plugin_name = jQuery(this).find("td:first-child").text().trim();
-					plugin_previous = jQuery(previous_quicksave).find('.plugin td:contains('+plugin_name+')').parent();
+					plugin_previous = jQuery(previous_quicksave).find(".plugin[data-plugin-name='"+plugin_name+"']");
 
 					if ( jQuery(this).html() != jQuery(plugin_previous).html() ) {
 						jQuery( this ).addClass("changed");
@@ -381,7 +381,7 @@ p.small {
 				// Process themes
 				jQuery(this).find('.theme').each(function() {
 					theme_name = jQuery(this).find("td:first-child").text().trim();
-					theme_previous = jQuery(previous_quicksave).find('.theme td:contains('+theme_name+')').parent();
+					theme_previous = jQuery(previous_quicksave).find(".theme[data-theme-name='"+theme_name+"']");
 
 					if ( jQuery(this).html() != jQuery(theme_previous).html() ) {
 						jQuery( this ).addClass("changed");
@@ -818,7 +818,7 @@ $provider = "";
 	              </thead>
 	              <tbody>
 									<?php foreach( $plugins as $plugin ) { ?>
-	                <tr class="plugin">
+	                <tr class="plugin" data-plugin-name="<?php if ($plugin->title) { echo $plugin->title; } else { echo $plugin->name; } ?>">
 	                  <td><?php if ($plugin->title) { echo $plugin->title; } else { echo $plugin->name; } ?></td>
 	                  <td><?php echo $plugin->version; ?></td>
 										<td><?php echo $plugin->status; ?></td>
@@ -836,7 +836,7 @@ $provider = "";
 	              </thead>
 	              <tbody>
 									<?php foreach( $themes as $theme ) { ?>
-	                <tr  class="theme">
+	                <tr class="theme" data-theme-name="<?php if ($theme->title) { echo $theme->title; } else { echo $theme->name; } ?>">
 	                  <td><?php if ($theme->title) { echo $theme->title; } else { echo $theme->name; } ?></td>
 	                  <td><?php echo $theme->version; ?></td>
 										<td><?php echo $theme->status; ?></td>
