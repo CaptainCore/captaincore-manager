@@ -682,7 +682,7 @@ if ($partner and $role_check) {
       <div class="input-field col s12">
 				<a href="#snapshot<?php echo $website->ID; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">cloud</i>Download backup snapshot</a> <br />
 				<a class="waves-effect waves-light large redeploy" data-post-id="<?php echo $website->ID; ?>"><i class="material-icons left">loop</i>Redeploy users/plugins</a> <br />
-				<a href="#quicksave<?php echo $website->ID; ?>" class="waves-effect waves-light modal-quicksave modal-trigger large"><i class="material-icons left">chrome_reader_mode</i>Quicksaves (Plugins & Themes)</a><br />
+				<a href="#quicksave<?php echo $website->ID; ?>" class="waves-effect waves-light modal-quicksave modal-trigger large"><i class="material-icons left">settings_backup_restore</i>Quicksaves (Plugins & Themes)</a><br />
 				<?php if( defined('ANCHOR_DEV_MODE') ) { ?>
 					<!-- <a href="#install-premium-plugin<?php echo $website->ID; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">add</i>Install premium plugin</a> <br />-->
 				<?php } ?>
