@@ -509,7 +509,7 @@ if ($partner and $role_check) {
 		if ( in_array( 'administrator', $user->roles) ) {
 
 			// Load all websites for administrators
-			$arguments['posts_per_page'] = '-1';
+			$arguments['posts_per_page'] = '100';
 			$arguments["meta_query"] = array(
 					array(
 						'key'	  	=> 'status',
