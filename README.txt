@@ -22,8 +22,8 @@ This section describes how to install the plugin and get it working.
 e.g.
 
 1. Upload `/captaincore/` to the `/wp-content/plugins/` directory
-1. Activate the plugin through the 'Plugins' menu in WordPress
-1. CaptainCore requires access to a remote server running CaptainCore CLI. (TODO: add instructions for adding keys to wp-config.php)
+2. Activate the plugin through the 'Plugins' menu in WordPress
+3. CaptainCore requires access to a remote server running CaptainCore CLI. (TODO: add instructions for adding keys to wp-config.php)
 
 == Frequently Asked Questions ==
 
@@ -35,5 +35,19 @@ TODO
 
 == Changelog ==
 
+= 0.1.1: February 11, 2018 =
+* New: Moved all admin menu under single CaptainCore menu
+* New: Pulled in CSS styles from original child theme
+* New: Pulled in JS from original child theme
+* New: Quicksaves feature - Daily version history for themes, plugins and core
+* Tweak: Updated delete command format
+* Tweak: Upgraded to FontAwesome v5
+* Tweak: Improved layout of database and ssh info on hosting dashboard
+* Tweak: Improved menu tabs to display on edit/post/list screens
+* Tweak: Consolidated backup template into Anchor API
+* Fix: DNS record count while viewing individual domain
+* Fix: Snapshot from backend
+* Fix: WooCommerce submenu styling issue
+
 = 0.1.0: February 4, 2018 =
-CaptainCore is born.
+* CaptainCore is born.
