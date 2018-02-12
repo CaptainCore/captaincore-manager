@@ -485,47 +485,43 @@ if ($partner and $role_check) {
 	// Loop through each partner assigned to current user
 	foreach ($partner as $partner_id) {
 
+		// Load websites assigned to partner
+		$arguments = array(
+			'post_type' 			=> 'website',
+			'posts_per_page'	=> '-1',
+			'order'						=> 'asc',
+			'orderby'					=> 'title',
+			'meta_query'			=> array(
+				'relation'			=> 'AND',
+				array(
+					'key' => 'partner',
+					'value' => '"' . $partner_id . '"',
+					'compare' => 'LIKE'
+				),
+				array(
+					'key'	  	=> 'status',
+					'value'	  	=> 'closed',
+					'compare' 	=> '!=',
+				),
+			)
+		);
+
 		if ( in_array( 'administrator', $user->roles) ) {
 
 			// Load all websites for administrators
-			$websites = get_posts(array(
-				'post_type' 			=> 'website',
-				'posts_per_page'	=> '100',
-				'order'						=> 'asc',
-				'orderby'					=> 'title',
-				'meta_query'			=> array(
-						array(
-							'key'	  	=> 'status',
-							'value'	  	=> 'closed',
-							'compare' 	=> '!=',
-						),
-				)
-			));
-
-		} else {
-
-			// Load websites assigned to partner
-			$websites = get_posts(array(
-				'post_type' 			=> 'website',
-	      'posts_per_page'	=> '-1',
-				'order'						=> 'asc',
-				'orderby'					=> 'title',
-	      'meta_query'			=> array(
-		      'relation'			=> 'AND',
-						array(
-							'key' => 'partner', // name of custom field
-							'value' => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-							'compare' => 'LIKE'
-						),
-						array(
-							'key'	  	=> 'status',
-							'value'	  	=> 'closed',
-							'compare' 	=> '!=',
-						),
-				)
-			));
+			$arguments['posts_per_page'] = '-1';
+			$arguments["meta_query"] = array(
+					array(
+						'key'	  	=> 'status',
+						'value'	  	=> 'closed',
+						'compare' 	=> '!=',
+					),
+			);
 
 		}
+
+	// Loads websites
+	$websites = get_posts( $arguments );
 
 	if ( count( $websites ) == 0 ) {
 
