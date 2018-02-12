@@ -164,6 +164,16 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
     color: #fff;
 }
 
+.bottom-sheet table tr.version-changed td:nth-child(2) {
+    background: #5cbad5;
+    color: #fff;
+}
+
+.bottom-sheet table tr.status-changed td:nth-child(3) {
+    background: #5cbad5;
+    color: #fff;
+}
+
 table.bordered.git_status {
   table-layout: fixed;
   width: 40%;

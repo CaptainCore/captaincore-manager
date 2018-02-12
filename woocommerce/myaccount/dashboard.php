@@ -369,22 +369,28 @@ p.small {
 
 				// Process plugins
 				jQuery(this).find('.plugin').each(function() {
-					plugin_name = jQuery(this).find("td:first-child").text().trim();
+					plugin_name = jQuery(this).data("plugin-name");
 					plugin_previous = jQuery(previous_quicksave).find(".plugin[data-plugin-name='"+plugin_name+"']");
 
-					if ( jQuery(this).html() != jQuery(plugin_previous).html() ) {
-						jQuery( this ).addClass("changed");
+					if ( jQuery(this).data("plugin-version") != jQuery(plugin_previous).data("plugin-version") ) {
+						jQuery( this ).addClass("version-changed");
+					}
+					if ( jQuery(this).data("plugin-status") != jQuery(plugin_previous).data("plugin-status") ) {
+						jQuery( this ).addClass("status-changed");
 					}
 
 				});
 
 				// Process themes
 				jQuery(this).find('.theme').each(function() {
-					theme_name = jQuery(this).find("td:first-child").text().trim();
+					theme_name = jQuery(this).data("theme-name");
 					theme_previous = jQuery(previous_quicksave).find(".theme[data-theme-name='"+theme_name+"']");
 
-					if ( jQuery(this).html() != jQuery(theme_previous).html() ) {
-						jQuery( this ).addClass("changed");
+					if ( jQuery(this).data("theme-version") != jQuery(theme_previous).data("theme-version") ) {
+						jQuery( this ).addClass("version-changed");
+					}
+					if ( jQuery(this).data("theme-status") != jQuery(theme_previous).data("theme-status") ) {
+						jQuery( this ).addClass("status-changed");
 					}
 
 				});
@@ -418,7 +424,7 @@ if ($partner and $role_check) {
 			// Load all websites for administrators
 			$websites = get_posts(array(
 				'post_type' 			=> 'website',
-				'posts_per_page'	=> '-1',
+				'posts_per_page'	=> '100',
 				'order'						=> 'asc',
 				'orderby'					=> 'title',
 				'meta_query'			=> array(
@@ -818,7 +824,7 @@ $provider = "";
 	              </thead>
 	              <tbody>
 									<?php foreach( $plugins as $plugin ) { ?>
-	                <tr class="plugin" data-plugin-name="<?php if ($plugin->title) { echo $plugin->title; } else { echo $plugin->name; } ?>">
+	                <tr class="plugin" data-plugin-name="<?php echo $plugin->name; ?>" data-plugin-version="<?php echo $plugin->version; ?>" data-plugin-status="<?php echo $plugin->status; ?>">
 	                  <td><?php if ($plugin->title) { echo $plugin->title; } else { echo $plugin->name; } ?></td>
 	                  <td><?php echo $plugin->version; ?></td>
 										<td><?php echo $plugin->status; ?></td>
@@ -836,7 +842,7 @@ $provider = "";
 	              </thead>
 	              <tbody>
 									<?php foreach( $themes as $theme ) { ?>
-	                <tr class="theme" data-theme-name="<?php if ($theme->title) { echo $theme->title; } else { echo $theme->name; } ?>">
+	                <tr class="theme" data-theme-name="<?php echo $theme->name; ?>" data-theme-version="<?php echo $theme->version; ?>" data-theme-status="<?php echo $theme->status; ?>">
 	                  <td><?php if ($theme->title) { echo $theme->title; } else { echo $theme->name; } ?></td>
 	                  <td><?php echo $theme->version; ?></td>
 										<td><?php echo $theme->status; ?></td>
