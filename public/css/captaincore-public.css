@@ -164,14 +164,50 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
     color: #fff;
 }
 
-.bottom-sheet table tr.version-changed td:nth-child(2) {
-    background: #5cbad5;
-    color: #fff;
+.bottom-sheet table tr.version-changed td:nth-child(2) span,
+.bottom-sheet table tr.status-changed td:nth-child(3) span {
+	background: #25c4f3;
+	color: #fff;
+	margin: 0 0 0 -7px;
+	display: inline-block;
+	line-height: 1.6em;
+	padding: 0 7px;
 }
 
-.bottom-sheet table tr.status-changed td:nth-child(3) {
-    background: #5cbad5;
-    color: #fff;
+.bottom-sheet table tr.removed {
+	text-decoration: line-through;
+	opacity: .5;
+	color: #ff0000;
+}
+
+.bottom-sheet table td:nth-child(4) a {
+	background: #25c4f3;
+	color: #fff;
+	padding: 0 10px;
+	top: 3px;
+	position: relative;
+	left: -100%;
+	z-index: 999;
+	display: block;
+	line-height: 2em;
+	margin: 0 9px;
+}
+
+.bottom-sheet table td:nth-child(4) {
+    position: absolute;
+		display:none;
+}
+
+.bottom-sheet table tr:hover td:nth-child(4) {
+	display: block;
+}
+
+.bottom-sheet table tr.removed:hover td:nth-child(4) {
+	display: none;
+}
+
+ .bottom-sheet li.quicksave:first-child table tr:hover td:nth-child(4) {
+	display: none;
 }
 
 table.bordered.git_status {

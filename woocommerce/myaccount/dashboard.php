@@ -243,6 +243,45 @@ p.small {
 
 		});
 
+		jQuery('.rollback').click(function(e) {
+			e.preventDefault();
+
+			quicksave = jQuery(this).parents('.quicksave');
+			quicksave_date = jQuery(quicksave).find('span.timestamp').text();
+			plugin = jQuery(this).data("plugin-name");
+			theme = jQuery(this).data("theme-name");
+
+			if ( theme ) {
+				addon_type = "theme";
+				addon_name = theme;
+			}
+			if ( plugin ) {
+				addon_type = "plugin";
+				addon_name = plugin;
+			}
+
+			confirm_rollback = confirm("Rollback "+ addon_type + " " + addon_name +" to version as of " + quicksave_date);
+
+			if(confirm_rollback) {
+
+				jQuery(quicksave).find(".git_status").html( '<p></p><div class="preloader-wrapper small active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p></p>' );
+
+				var data = {
+		  		'action': 'anchor_install',
+		  		'post_id': quicksave.data('id'),
+		      'command': 'rollback',
+					'value'	: addon_name,
+					'addon_type': addon_type,
+		  	};
+
+				jQuery.post(ajaxurl, data, function(response) {
+					jQuery(quicksave).find(".git_status").html( "<pre>" + response + "</pre>" );
+				});
+
+			}
+
+		});
+
 		jQuery(".modal-content input#submit").click(function(e){
 
 	  	e.preventDefault();
@@ -369,6 +408,7 @@ p.small {
 
 				// Process plugins
 				jQuery(this).find('.plugin').each(function() {
+
 					plugin_name = jQuery(this).data("plugin-name");
 					plugin_previous = jQuery(previous_quicksave).find(".plugin[data-plugin-name='"+plugin_name+"']");
 
@@ -377,6 +417,19 @@ p.small {
 					}
 					if ( jQuery(this).data("plugin-status") != jQuery(plugin_previous).data("plugin-status") ) {
 						jQuery( this ).addClass("status-changed");
+					}
+
+				});
+
+				// Process plugin removals
+				jQuery(previous_quicksave).find('.plugin').each(function() {
+
+					plugin_name = jQuery(this).data("plugin-name");
+					plugin_current_exists = jQuery(current_quicksave).find(".plugin[data-plugin-name='"+plugin_name+"']").length;
+
+					if ( plugin_current_exists == 0 ) {
+						plugin_removed = jQuery(this).clone().addClass("removed");
+						jQuery(current_quicksave).find('table.plugins').append( plugin_removed );
 					}
 
 				});
@@ -391,6 +444,19 @@ p.small {
 					}
 					if ( jQuery(this).data("theme-status") != jQuery(theme_previous).data("theme-status") ) {
 						jQuery( this ).addClass("status-changed");
+					}
+
+				});
+
+				// Process theme removals
+				jQuery(previous_quicksave).find('.theme').each(function() {
+
+					theme_name = jQuery(this).data("theme-name");
+					theme_current_exists = jQuery(current_quicksave).find(".theme[data-theme-name='"+theme_name+"']").length;
+
+					if ( theme_current_exists == 0 ) {
+						theme_removed = jQuery(this).clone().addClass("removed");
+						jQuery(current_quicksave).find('table.themes').append( theme_removed );
 					}
 
 				});
@@ -807,7 +873,7 @@ $provider = "";
 					?>
 					<li class="quicksave" data-id="<?php echo $quicksave->ID; ?>" data-git_commit="<?php echo $git_commit; ?>">
 				    <div class="collapsible-header">
-				      <span class="material-icons">settings_backup_restore</span> <?php echo $timestamp; ?>
+				      <span class="material-icons">settings_backup_restore</span> <span class="timestamp"><?php echo $timestamp; ?></span>
 							<span class="badge"><?php echo $git_status; ?></span>
 							<span class="badge">WordPress <?php the_field("core", $quicksave->ID); ?> - <?php echo count($plugins); ?> plugins - <?php echo count($themes); ?> themes</span>
 				    </div>
@@ -826,8 +892,9 @@ $provider = "";
 									<?php foreach( $plugins as $plugin ) { ?>
 	                <tr class="plugin" data-plugin-name="<?php echo $plugin->name; ?>" data-plugin-version="<?php echo $plugin->version; ?>" data-plugin-status="<?php echo $plugin->status; ?>">
 	                  <td><?php if ($plugin->title) { echo $plugin->title; } else { echo $plugin->name; } ?></td>
-	                  <td><?php echo $plugin->version; ?></td>
-										<td><?php echo $plugin->status; ?></td>
+	                  <td><span><?php echo $plugin->version; ?></span></td>
+										<td><span><?php echo $plugin->status; ?></span></td>
+										<td><a href="#rollback" class="rollback" data-plugin-name="<?php echo $plugin->name; ?>">Rollback</a></td>
 	                </tr>
 									<?php } ?>
 	              </tbody>
@@ -844,8 +911,9 @@ $provider = "";
 									<?php foreach( $themes as $theme ) { ?>
 	                <tr class="theme" data-theme-name="<?php echo $theme->name; ?>" data-theme-version="<?php echo $theme->version; ?>" data-theme-status="<?php echo $theme->status; ?>">
 	                  <td><?php if ($theme->title) { echo $theme->title; } else { echo $theme->name; } ?></td>
-	                  <td><?php echo $theme->version; ?></td>
-										<td><?php echo $theme->status; ?></td>
+	                  <td><span><?php echo $theme->version; ?></span></td>
+										<td><span><?php echo $theme->status; ?></span></td>
+										<td><a href="#rollback" class="rollback" data-theme-name="<?php echo $theme->name; ?>">Rollback</a></td>
 	                </tr>
 									<?php } ?>
 	              </tbody>

@@ -2667,6 +2667,7 @@ function anchor_install_action_callback() {
 	$post_id = intval( $_POST['post_id'] );
 	$cmd = $_POST['command'];
 	$value = $_POST['value'];
+	$addon_type = $_POST['addon_type'];
 
 	$install = get_field('install',$post_id);
 	$domain = get_the_title($post_id);
@@ -2787,6 +2788,14 @@ function anchor_install_action_callback() {
 		$website_id = get_field('website',$post_id);
 		$install = get_field('install',$website_id[0]);
 		$command = "captaincore get quicksave_changes $install $value";
+		$post_id = $website_id;
+	}
+
+	if ($cmd == "rollback") {
+		$git_commit = get_field('git_commit', $post_id);
+		$website_id = get_field('website', $post_id);
+		$install = get_field('install', $website_id[0]);
+		$command = "captaincore rollback $install $git_commit --$addon_type=$value";
 		$post_id = $website_id;
 	}
 
