@@ -36,10 +36,10 @@ TODO
 == Changelog ==
 
 = 0.1.1: February 11, 2018 =
+* New: Quicksaves feature - Daily version history for themes, plugins and core
 * New: Moved all admin menu under single CaptainCore menu
 * New: Pulled in CSS styles from original child theme
 * New: Pulled in JS from original child theme
-* New: Quicksaves feature - Daily version history for themes, plugins and core
 * Tweak: Updated delete command format
 * Tweak: Upgraded to FontAwesome v5
 * Tweak: Improved layout of database and ssh info on hosting dashboard
