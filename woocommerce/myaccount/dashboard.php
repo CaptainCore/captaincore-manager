@@ -488,7 +488,7 @@ if ($partner and $role_check) {
 		// Load websites assigned to partner
 		$arguments = array(
 			'post_type' 			=> 'website',
-			'posts_per_page'	=> '-1',
+			'posts_per_page'	=> '100',
 			'order'						=> 'asc',
 			'orderby'					=> 'title',
 			'meta_query'			=> array(
