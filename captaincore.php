@@ -2792,10 +2792,13 @@ function anchor_install_action_callback() {
 	}
 
 	if ($cmd == "rollback") {
+		date_default_timezone_set('America/New_York');
+		$t=time();
+		$timestamp = date("Y-m-d-hms",$t);
 		$git_commit = get_field('git_commit', $post_id);
 		$website_id = get_field('website', $post_id);
 		$install = get_field('install', $website_id[0]);
-		$command = "captaincore rollback $install $git_commit --$addon_type=$value";
+		$command = "captaincore rollback $install $git_commit --$addon_type=$value > ~/Tmp/$timestamp-rollback_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-rollback_$install.txt";
 		$post_id = $website_id;
 	}
 
