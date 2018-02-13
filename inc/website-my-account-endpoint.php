@@ -94,7 +94,10 @@ class CaptainCore_My_Account_Website_Endpoint {
 
 		if ( $wp_query->query_vars["websites"] ) {
 
-			$domain_id = $wp_query->query_vars["websites"]; ?>
+			$website_id = $wp_query->query_vars["websites"];
+
+			if ( anchor_verify_permissions( $website_id ) ) {
+			//  Display single website page ?>
 
 			<script type="text/javascript">
 
@@ -389,13 +392,13 @@ class CaptainCore_My_Account_Website_Endpoint {
 			<div class="website-group">
 			<?php
 
-				$customer_id = get_field('customer', $domain_id);
+				$customer_id = get_field('customer', $website_id);
 				$hosting_plan = get_field('hosting_plan', $customer_id[0]);
 				$addons = get_field('addons', $customer_id[0]);
 				$storage = get_field('storage', $customer_id[0]);
 				$views = get_field('views', $customer_id[0]);
-				$website_storage = get_field('storage', $domain_id);
-				$website_views = get_field('views', $domain_id);
+				$website_storage = get_field('storage', $website_id);
+				$website_views = get_field('views', $website_id);
 
 				if ($hosting_plan == "basic") {
 					$views_plan_limit = "100000";
@@ -428,9 +431,9 @@ class CaptainCore_My_Account_Website_Endpoint {
 
 				$storage_percent = round($storage_gbs / $storage_cap * 100, 0);
 
-				$production_address = get_field('address', $domain_id);
-				$staging_address = get_field('address_staging', $domain_id);
-				$server = get_field('server', $domain_id);
+				$production_address = get_field('address', $website_id);
+				$staging_address = get_field('address_staging', $website_id);
+				$server = get_field('server', $website_id);
 				if ($server and $server[0]) {
 					$provider = get_field('provider', $server[0]);
 
@@ -508,22 +511,22 @@ class CaptainCore_My_Account_Website_Endpoint {
 			<div class="flip-container">
 			<div class="flipper">
 
-	<?php if (get_field('address', $domain_id)) { ?>
-		<div class="card partner production" data-id="<?php echo get_the_title( $domain_id ); ?>">
+	<?php if (get_field('address', $website_id)) { ?>
+		<div class="card partner production" data-id="<?php echo get_the_title( $website_id ); ?>">
 
 	<div class="card-content">
 		<div class="row">
-		<span class="card-title grey-text text-darken-4 "><a href="http://<?php echo get_the_title( $domain_id ); ?>" target="_blank"><?php echo get_the_title( $domain_id ); ?></a></span>
+		<span class="card-title grey-text text-darken-4 "><a href="http://<?php echo get_the_title( $website_id ); ?>" target="_blank"><?php echo get_the_title( $website_id ); ?></a></span>
 			<div class="col s12 m12">
-				<a href="#snapshot<?php echo $domain_id; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">cloud</i>Download Backup Snapshot</a> <br />
-				<a class="waves-effect waves-light large redeploy" data-post-id="<?php echo $domain_id; ?>"><i class="material-icons left">loop</i>Redeploy users/plugins</a> <br />
-				<a href="#quicksave<?php echo $domain_id; ?>" class="waves-effect waves-light modal-quicksave modal-trigger large"><i class="material-icons left">settings_backup_restore</i>Quicksaves (Plugins & Themes)</a><br />
+				<a href="#snapshot<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">cloud</i>Download Backup Snapshot</a> <br />
+				<a class="waves-effect waves-light large redeploy" data-post-id="<?php echo $website_id; ?>"><i class="material-icons left">loop</i>Redeploy users/plugins</a> <br />
+				<a href="#quicksave<?php echo $website_id; ?>" class="waves-effect waves-light modal-quicksave modal-trigger large"><i class="material-icons left">settings_backup_restore</i>Quicksaves (Plugins & Themes)</a><br />
 				<?php if( defined('ANCHOR_DEV_MODE') ) { ?>
-					<!-- <a href="#install-premium-plugin<?php echo $domain_id; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">add</i>Install premium plugin</a> <br />-->
+					<!-- <a href="#install-premium-plugin<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">add</i>Install premium plugin</a> <br />-->
 				<?php } ?>
 				<?php
 				if( strpos($production_address, ".kinsta.com") ):  ?>
-					<a class="waves-effect waves-light large kinsta-deploy-to-staging" data-post-id="<?php echo $domain_id; ?>"><i class="material-icons left">local_shipping</i>Kinsta: Push Production to Staging</a><br />
+					<a class="waves-effect waves-light large kinsta-deploy-to-staging" data-post-id="<?php echo $website_id; ?>"><i class="material-icons left">local_shipping</i>Kinsta: Push Production to Staging</a><br />
 				<?php endif ?>
 				<?php if ($views != $website_views or $storage != $website_storage) { ?>
 					<a href="#view_usage_breakdown_<?php echo $customer_id[0]; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">chrome_reader_mode</i>View Usage Breakdown</a>
@@ -537,7 +540,7 @@ class CaptainCore_My_Account_Website_Endpoint {
 	<?php } else { ?>
 		<div class="card">
     <div class="card-content">
-      <span class="card-title grey-text text-darken-4"><?php echo get_the_title( $domain_id ); ?> - Part of a multisite network</span>
+      <span class="card-title grey-text text-darken-4"><?php echo get_the_title( $website_id ); ?> - Part of a multisite network</span>
     </div>
   </div>
 	<?php $provider = "";
@@ -548,10 +551,10 @@ class CaptainCore_My_Account_Website_Endpoint {
 
 <a href="/my-account/" class="blue right btn">View All Websites</a>
 
-<div id="snapshot<?php echo $domain_id; ?>" class="modal" data-id="<?php echo $domain_id; ?>">
+<div id="snapshot<?php echo $website_id; ?>" class="modal" data-id="<?php echo $website_id; ?>">
 	<div class="modal-content">
 
-		<h4>Download Snapshot <small>(<?php echo get_the_title( $domain_id ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
+		<h4>Download Snapshot <small>(<?php echo get_the_title( $website_id ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
 		<div class="progress hide">
 				<div class="indeterminate"></div>
 		</div>
@@ -576,10 +579,10 @@ class CaptainCore_My_Account_Website_Endpoint {
 	</div>
 </div>
 
-<div id="quicksave<?php echo $domain_id; ?>" class="modal bottom-sheet quicksaves" data-id="<?php echo $domain_id; ?>">
+<div id="quicksave<?php echo $website_id; ?>" class="modal bottom-sheet quicksaves" data-id="<?php echo $website_id; ?>">
 	<div class="modal-content">
 
-		<h4>Quicksaves <small>(<?php echo get_the_title( $domain_id ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
+		<h4>Quicksaves <small>(<?php echo get_the_title( $website_id ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
 		<div class="progress hide">
 				<div class="indeterminate"></div>
 		</div>
@@ -591,7 +594,7 @@ class CaptainCore_My_Account_Website_Endpoint {
 					'meta_query' => array(
 						array(
 							'key' => 'website', // name of custom field
-							'value' => '"' . $domain_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+							'value' => '"' . $website_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
 							'compare' => 'LIKE'
 						)
 					)
@@ -617,7 +620,7 @@ class CaptainCore_My_Account_Website_Endpoint {
 				    <div class="collapsible-body">
 							<a class="view_quicksave_changes blue right btn">View changes</a>
 							<div class="git_status"></div>
-							<table class="bordered plugins" id="plugins_<?php echo $domain_id; ?>">
+							<table class="bordered plugins" id="plugins_<?php echo $website_id; ?>">
 	              <thead>
 	                <tr>
 	                    <th>Plugin</th>
@@ -636,7 +639,7 @@ class CaptainCore_My_Account_Website_Endpoint {
 									<?php } ?>
 	              </tbody>
 	            </table>
-							<table class="bordered themes" id="themes_<?php echo $domain_id; ?>">
+							<table class="bordered themes" id="themes_<?php echo $website_id; ?>">
 	              <thead>
 	                <tr>
 	                    <th>Theme</th>
@@ -665,10 +668,10 @@ class CaptainCore_My_Account_Website_Endpoint {
 	</div>
 </div>
 
-<div id="install-premium-plugin<?php echo $domain_id; ?>" class="modal" data-id="<?php echo $domain_id; ?>">
+<div id="install-premium-plugin<?php echo $website_id; ?>" class="modal" data-id="<?php echo $website_id; ?>">
 	<div class="modal-content">
 
-		<h4>Install Premium Plugin <small><?php echo get_the_title( $domain_id ); ?></small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
+		<h4>Install Premium Plugin <small><?php echo get_the_title( $website_id ); ?></small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
 
 		<div class="row">
       <div class="input-field col s12">
@@ -681,9 +684,13 @@ class CaptainCore_My_Account_Website_Endpoint {
 
 		</div>
 	<?php
-
-
 		}
+
+	}	else { ?>
+ 		Website not found
+ 		<a href="<?php echo get_site_url(null,'/my-account/'); ?>" class="alignright button">View All Websites</a>
+ 	<?php
+ 	}
 
 	}
 

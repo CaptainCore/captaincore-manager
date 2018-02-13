@@ -3175,10 +3175,11 @@ function test_pre_get_posts( $query ) {
 
 	global $wp;
 
-	$rest_route = $wp->query_vars["rest_route"];
+	if (isset($wp->query_vars["rest_route"])) {
+		$rest_route = $wp->query_vars["rest_route"];
+	}
 
-
-	if ($rest_route == "/wp/v2/process_log") {
+	if (isset($rest_route) and $rest_route == "/wp/v2/process_log") {
 
 			// Filter only logs attached to processes in Growth, Maintenance and Support roles.
 			$meta_query = array(
