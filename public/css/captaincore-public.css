@@ -13,6 +13,10 @@
 	margin-bottom: 20px !important;
 }
 
+.single-process #main header.main {
+	padding: 50px 0 !important;
+}
+
 /* Prep for Subscriptions */
 .woocommerce td.product-name dl.variation dt.variation-billing-terms,
 .woocommerce td.product-name dl.variation dd.variation-billing-terms {

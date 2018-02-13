@@ -211,7 +211,7 @@ jQuery(document).ready(function(){
 				}
 				?>
 
-				<header class="main entry-header <?php echo $c; ?>" style="<?php echo 'background-image: url('.$featured_image[0].');' ?>">
+				<header class="main entry-header <?php echo $c; ?>">
 
 					<?php
 						/* translators: used between list items, there is a space after the comma */
