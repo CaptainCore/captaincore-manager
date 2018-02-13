@@ -81,6 +81,7 @@ function run_captaincore() {
 }
 run_captaincore();
 
+include "inc/website-my-account-endpoint.php";
 include "inc/custom-my-account-endpoint.php";
 include "inc/constellix-api/constellix-api.php";
 include "inc/woocommerce-custom-password-fields.php";
@@ -110,6 +111,7 @@ add_filter( 'gutenberg_can_edit_post_type','anchor_disable_gutenberg', 10, 2 );
 
 // Modify WooCommerce Menu: wc_get_account_menu_items() ;
 function anchor_my_account_order( $current_menu ) {
+	unset($current_menu["websites"]);
 	unset($current_menu["edit-account"]);
 	$current_menu["edit-account"] = "Account";
 	unset($current_menu["subscriptions"]);
@@ -3438,4 +3440,16 @@ function captaincore_custom_template( $single ) {
 
     return $single;
 
+}
+
+// Custom filesize function
+function captaincore_human_filesize($size, $precision = 2) {
+  $units = array('B','kB','MB','GB','TB','PB','EB','ZB','YB');
+  $step = 1024;
+  $i = 0;
+  while (($size / $step) > 0.9) {
+      $size = $size / $step;
+      $i++;
+  }
+  return round($size, $precision).$units[$i];
 }

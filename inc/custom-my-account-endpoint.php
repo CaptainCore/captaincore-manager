@@ -1022,6 +1022,6 @@ register_activation_hook( __FILE__, array( 'Anchor_My_Account_Dns_Endpoint', 'in
 add_action('plugins_loaded','construct_my_class');
 function construct_my_class() {
 	new Anchor_My_Account_Config_Endpoint();
-	new Anchor_My_Account_Handbook_Endpoint();
 	new Anchor_My_Account_Dns_Endpoint();
+	new Anchor_My_Account_Handbook_Endpoint();
 }

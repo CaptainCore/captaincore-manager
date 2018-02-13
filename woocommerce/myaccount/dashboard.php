@@ -22,168 +22,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
 
-function cmp($a, $b) {
-    return strcmp($a->name, $b->name);
-}
-
-
-// Custom filesize function
-function anchorhost_human_filesize($size, $precision = 2) {
-    $units = array('B','kB','MB','GB','TB','PB','EB','ZB','YB');
-    $step = 1024;
-    $i = 0;
-    while (($size / $step) > 0.9) {
-        $size = $size / $step;
-        $i++;
-    }
-    return round($size, $precision).$units[$i];
-}
-
 ?>
 
-<style>
-.toggle-buttons a {
-	z-index: 9999;
-  position: relative;
-  color: #000;
-  opacity: .4;
-  font-weight: normal;
-}
-
-.toggle-buttons a.active {
-	color:#27c3f3;
-	opacity: 1;
-	font-weight: bold;
-}
-.toggle-buttons a:active {
-	outline:none;
-}
-/* entire container, keeps perspective */
-.flip-container {
-	-webkit-perspective: 1000;
-	-moz-perspective: 1000;
-	-ms-perspective: 1000;
-	perspective: 1000;
-	-ms-transform: perspective(1000px);
-	-moz-transform: perspective(1000px);
-	-moz-transform-style: preserve-3d;
-	-ms-transform-style: preserve-3d;
-}
-	/* flip the pane when clicked */
-	.flip-container.toggle .flipper {
-		-webkit-transform: rotateY(180deg);
-	    -moz-transform: rotateY(180deg);
-	    -o-transform: rotateY(180deg);
-	    transform: rotateY(180deg);
-	}
-
-/* flip speed goes here */
-.flipper {
-	-webkit-transition: 0.6s;
-	-webkit-transform-style: preserve-3d;
-	-ms-transition: 0.6s;
-
-	-moz-transition: 0.6s;
-	-moz-transform: perspective(1000px);
-	-moz-transform-style: preserve-3d;
-	-ms-transform-style: preserve-3d;
-
-	transition: 0.6s;
-	transform-style: preserve-3d;
-
-	position: relative;
-}
-
-.card hr {
-	margin: 4px 0;
-	background-color: #eaeaea;
-}
-
-p.small {
-	font-size: 14px;
-	margin: 0px;
-	padding: 0px;
-}
-
-.partner-group .card .btn-floating.btn-large {
-	position: absolute;
-	bottom: 20px;
-	right: 20px;
-}
-
-/* hide back of pane during swap */
-.production, .staging {
-	-webkit-backface-visibility: hidden;
-	-moz-backface-visibility: hidden;
-	-ms-backface-visibility: hidden;
-	backface-visibility: hidden;
-
-    -webkit-transition: 0.6s;
-    -webkit-transform-style: preserve-3d;
-    -webkit-transform: rotateY(0deg);
-
-    -moz-transition: 0.6s;
-    -moz-transform-style: preserve-3d;
-    -moz-transform: rotateY(0deg);
-
-    -o-transition: 0.6s;
-    -o-transform-style: preserve-3d;
-    -o-transform: rotateY(0deg);
-
-    -ms-transition: 0.6s;
-    -ms-transform-style: preserve-3d;
-    -ms-transform: rotateY(0deg);
-
-    transition: 0.6s;
-    transform-style: preserve-3d;
-    transform: rotateY(0deg);
-}
-
- .staging {
- 	position: absolute;
- 	top: 0px;
- 	left: 0px;
-  width: 100%;
-}
-
-.staging p.label {
-	position: absolute;
-	font-weight: bold;
-  left: 10px;
-}
-
-/* front pane, placed above back */
-.production {
-	z-index: 2;
-	/* for firefox 31 */
-	-webkit-transform: rotateY(0deg);
-    -moz-transform: rotateY(0deg);
-    -o-transform: rotateY(0deg);
-    -ms-transform: rotateY(0deg);
-    transform: rotateY(0deg);
-}
-
-/* back, initially hidden pane */
-.staging {
-	-webkit-transform: rotateY(180deg);
-    -moz-transform: rotateY(180deg);
-    -o-transform: rotateY(180deg);
-    transform: rotateY(180deg);
-}
-.toggle-buttons {
-	position: absolute;
-	z-index: 1;
-	right: 10px;
-	top: 0px;
-	font-size: 0.8em;
-	font-weight: bold;
-}
-
-.card-reveal a.btn {
-    font-size: .75em;
-}
-
-</style>
 <script type="text/javascript">
 
 	ajaxurl = "/wp-admin/admin-ajax.php";
@@ -205,7 +45,7 @@ p.small {
 			jQuery(this).parents('.flip-container').removeClass('toggle');
 			return false;
 		});
-		jQuery(".partner-group").each(function() {
+		jQuery(".website-group").each(function() {
 			jQuery(this).children("div.partner").sort(sort_li).appendTo( jQuery(this) );
 		});
 
@@ -488,7 +328,7 @@ if ($partner and $role_check) {
 		// Load websites assigned to partner
 		$arguments = array(
 			'post_type' 			=> 'website',
-			'posts_per_page'	=> '100',
+			'posts_per_page'	=> '-1',
 			'order'						=> 'asc',
 			'orderby'					=> 'title',
 			'meta_query'			=> array(
@@ -509,7 +349,6 @@ if ($partner and $role_check) {
 		if ( in_array( 'administrator', $user->roles) ) {
 
 			// Load all websites for administrators
-			$arguments['posts_per_page'] = '100';
 			$arguments["meta_query"] = array(
 					array(
 						'key'	  	=> 'status',
@@ -558,7 +397,7 @@ if ($partner and $role_check) {
 	<?php } else { ?>
 		<h3>Account: <?php echo get_the_title($partner_id); ?> <small>(<?php echo count($websites);?> sites)</small></h3>
 	<?php } ?>
-			<div class="partner-group">
+			<div class="website-group">
 			<?php foreach( $websites as $website ):
 
 				$customer_id = get_field('customer', $website->ID);
@@ -613,72 +452,6 @@ if ($partner and $role_check) {
 					$server_name = get_field('name', $server[0]);
 					$server_address = get_field('address', $server[0]);
 				}	?>
-				<?php if ($views != $website_views or $storage != $website_storage) { ?>
-
-					<!-- Modal Structure -->
-					<div id="view_usage_breakdown_<?php echo $customer_id[0]; ?>" class="modal modal-fixed-footer">
-						<div class="modal-content">
-							<h4>Usage Breakdown for <?php echo get_the_title($customer_id[0]); ?></h4>
-							<?php
-
-								/*
-								*  Query posts for a relationship value.
-								*  This method uses the meta_query LIKE to match the string "123" to the database value a:1:{i:0;s:3:"123";} (serialized array)
-								*/
-
-								$websites_for_customer = get_posts(array(
-									'post_type' => 'website',
-					        'posts_per_page'         => '-1',
-					        'meta_query' => array(
-										'relation'		=> 'AND',
-				 						array(
-				 	    				'key' => 'status', // name of custom field
-				 	    				'value' => 'active', // matches exaclty "123", not just 123. This prevents a match for "1234"
-				 	    				'compare' => '='
-				 	    			),
-										array(
-											'key' => 'customer', // name of custom field
-											'value' => '"' . $customer_id[0] . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-											'compare' => 'LIKE'
-										)
-									)
-								));
-								?>
-								<?php if( $websites_for_customer ): ?>
-									<ul>
-									<?php foreach( $websites_for_customer as $website_for_customer ):
-										$website_for_customer_storage = get_field('storage', $website_for_customer->ID);
-										$website_for_customer_views = get_field('views', $website_for_customer->ID);
-											?>
-										<li>
-												<?php echo get_the_title( $website_for_customer->ID ); ?> -
-												<?php if($website_for_customer_storage) { echo '<i class="fas fa-hdd"></i> '.round($website_for_customer_storage / 1024 / 1024 / 1024, 1). "GB"; } ?>
-												<?php if($website_for_customer_views) { echo '<i class="fas fa-eye"></i> '. number_format($website_for_customer_views). " views"; } ?>
-										</li>
-									<?php endforeach; ?>
-									</ul>
-									<?php if ($storage_gbs != 0) { ?>
-									<div class="usage<?php if ($storage_percent > 100) { echo " over"; } ?>">
-											<i class="fas fa-hdd"></i>
-											<?php echo $storage_percent; ?>% storage
-											<strong><?php echo $storage_gbs; ?>GB/<?php echo $storage_cap; ?>GB</strong>
-									</div>
-									<?php } ?>
-									<?php if ($views != 0) { ?>
-								 	<div class="usage<?php if ($views_percent > 100) { echo " over"; } ?>">
-										<i class="fas fa-eye"></i>
-											<?php echo $views_percent; ?>% traffic
-											<strong><?php echo number_format($views); ?></strong> <small>Yearly Estimate</small>
-									</div>
-									<?php } ?>
-								<?php endif; ?>
-						</div>
-						<div class="modal-footer">
-							<a href="#!" class="modal-action modal-close waves-effect btn-flat ">Close</a>
-						</div>
-					</div>
-
-				<?php } ?>
 			<div class="flip-container">
 			<div class="flipper">
 
@@ -721,9 +494,6 @@ if ($partner and $role_check) {
 						<strong><?php echo number_format($views); ?></strong> <small>Yearly Estimate</small>
 				</div>
 				<?php } ?>
-				<?php if ($views != $website_views or $storage != $website_storage) { ?>
-					<p><small>Plans covers multiple sites, <a href="#view_usage_breakdown_<?php echo $customer_id[0]; ?>" class="modal-trigger">view usage breakdown</a>.</small></p>
-				<?php } ?>
 			</div>
 			<div class="col s12">
 				<?php if ( strpos($production_address, ".kinsta.com") and get_field('database_username', $website->ID) ) { ?>
@@ -738,34 +508,13 @@ if ($partner and $role_check) {
 				<?php } ?>
 			</div>
 
-			 <a class="btn-floating btn-large blue activator">
-				 <i class="large material-icons">menu</i>
-			 </a>
+			 <a href="/my-account/websites/<?php echo $website->ID; ?>" class="blue right btn">Advanced Options</a>
   </div>
-	</div>
-	<div class="card-reveal">
-		<span class="card-title grey-text text-darken-4"><?php echo get_the_title( $website->ID ); ?><i class="material-icons right">close</i></span>
-		<p></p>
-		<div class="row">
-      <div class="input-field col s12">
-				<a href="#snapshot<?php echo $website->ID; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">cloud</i>Download backup snapshot</a> <br />
-				<a class="waves-effect waves-light large redeploy" data-post-id="<?php echo $website->ID; ?>"><i class="material-icons left">loop</i>Redeploy users/plugins</a> <br />
-				<a href="#quicksave<?php echo $website->ID; ?>" class="waves-effect waves-light modal-quicksave modal-trigger large"><i class="material-icons left">settings_backup_restore</i>Quicksaves (Plugins & Themes)</a><br />
-				<?php if( defined('ANCHOR_DEV_MODE') ) { ?>
-					<!-- <a href="#install-premium-plugin<?php echo $website->ID; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">add</i>Install premium plugin</a> <br />-->
-				<?php } ?>
-				<?php
-				if( strpos($production_address, ".kinsta.com") ):  ?>
-					<a class="waves-effect waves-light large kinsta-deploy-to-staging" data-post-id="<?php echo $website->ID; ?>"><i class="material-icons left">chrome_reader_mode</i>Kinsta: Push Production to Staging</a>
-				<?php endif ?>
-
-			</div>
-		</div>
 	</div>
 </div>
 
-	<?php if (get_field('address_staging', $website->ID)) { ?>
-	<div class="card partner staging" data-id="<?php echo get_the_title( $website->ID ); ?>">
+<?php if (get_field('address_staging', $website->ID)) { ?>
+<div class="card partner staging" data-id="<?php echo get_the_title( $website->ID ); ?>">
 
 	<div class="card-content">
 		<div class="toggle-buttons">
@@ -788,11 +537,9 @@ if ($partner and $role_check) {
 				</div>
 			</div>
 	</div>
-
  <?php
 $provider = "";
 } ?>
-
 	<?php } else { ?>
 		<div class="card">
     <div class="card-content">
@@ -804,139 +551,6 @@ $provider = "";
 
 	</div> <!-- end .flipper -->
 </div> <!-- end .flip-container -->
-
-<div id="snapshot<?php echo $website->ID; ?>" class="modal" data-id="<?php echo $website->ID; ?>">
-	<div class="modal-content">
-
-		<h4>Download Snapshot <small>(<?php echo get_the_title( $website->ID ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
-		<div class="progress hide">
-				<div class="indeterminate"></div>
-		</div>
-		<div class="row">
-
-      <div class="input-field col s12">
-				<label for="email">Email Address</label><br />
-        <input id="email" type="email" class="validate">
-      </div>
-    </div>
-		<div class="row">
-      <div class="input-field col s12">
-				<span class="results red-text text-darken-4"></span>
-			</div>
-		</div>
-		<div class="row">
-      <div class="input-field col s12">
-
-        <input id="submit" value="Download" type="submit">
-      </div>
-    </div>
-	</div>
-</div>
-
-<div id="quicksave<?php echo $website->ID; ?>" class="modal bottom-sheet quicksaves" data-id="<?php echo $website->ID; ?>">
-	<div class="modal-content">
-
-		<h4>Quicksaves <small>(<?php echo get_the_title( $website->ID ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
-		<div class="progress hide">
-				<div class="indeterminate"></div>
-		</div>
-		<div class="row">
-				<?php
-				$quicksaves_for_website = get_posts(array(
-					'post_type' => 'cc_quicksave',
-					'posts_per_page' => '-1',
-					'meta_query' => array(
-						array(
-							'key' => 'website', // name of custom field
-							'value' => '"' . $website->ID . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-							'compare' => 'LIKE'
-						)
-					)
-				));
-				if ($quicksaves_for_website) { ?>
-				<ul class="collapsible" data-collapsible="accordion">
-				<?php
-
-				foreach( $quicksaves_for_website as $quicksave ) {
-
-					$timestamp = get_the_time( "M jS Y g:ia", $quicksave->ID);
-					$plugins = json_decode(get_field( "plugins", $quicksave->ID));
-					$themes = json_decode(get_field( "themes", $quicksave->ID));
-					$git_status = get_field( "git_status", $quicksave->ID );
-					$git_commit = get_field( "git_commit", $quicksave->ID );
-					//usort($plugins, "cmp");
-
-					?>
-					<li class="quicksave" data-id="<?php echo $quicksave->ID; ?>" data-git_commit="<?php echo $git_commit; ?>">
-				    <div class="collapsible-header">
-				      <span class="material-icons">settings_backup_restore</span> <span class="timestamp"><?php echo $timestamp; ?></span>
-							<span class="badge"><?php echo $git_status; ?></span>
-							<span class="badge">WordPress <?php the_field("core", $quicksave->ID); ?> - <?php echo count($plugins); ?> plugins - <?php echo count($themes); ?> themes</span>
-				    </div>
-				    <div class="collapsible-body">
-							<a class="view_quicksave_changes blue right btn">View changes</a>
-							<div class="git_status"></div>
-							<table class="bordered plugins" id="plugins_<?php echo $website->ID; ?>">
-	              <thead>
-	                <tr>
-	                    <th>Plugin</th>
-	                    <th>Version</th>
-											<th>Status</th>
-	                </tr>
-	              </thead>
-	              <tbody>
-									<?php foreach( $plugins as $plugin ) { ?>
-	                <tr class="plugin" data-plugin-name="<?php echo $plugin->name; ?>" data-plugin-version="<?php echo $plugin->version; ?>" data-plugin-status="<?php echo $plugin->status; ?>">
-	                  <td><?php if ($plugin->title) { echo $plugin->title; } else { echo $plugin->name; } ?></td>
-	                  <td><span><?php echo $plugin->version; ?></span></td>
-										<td><span><?php echo $plugin->status; ?></span></td>
-										<td><a href="#rollback" class="rollback" data-plugin-name="<?php echo $plugin->name; ?>">Rollback</a></td>
-	                </tr>
-									<?php } ?>
-	              </tbody>
-	            </table>
-							<table class="bordered themes" id="themes_<?php echo $website->ID; ?>">
-	              <thead>
-	                <tr>
-	                    <th>Theme</th>
-	                    <th>Version</th>
-											<th>Status</th>
-	                </tr>
-	              </thead>
-	              <tbody>
-									<?php foreach( $themes as $theme ) { ?>
-	                <tr class="theme" data-theme-name="<?php echo $theme->name; ?>" data-theme-version="<?php echo $theme->version; ?>" data-theme-status="<?php echo $theme->status; ?>">
-	                  <td><?php if ($theme->title) { echo $theme->title; } else { echo $theme->name; } ?></td>
-	                  <td><span><?php echo $theme->version; ?></span></td>
-										<td><span><?php echo $theme->status; ?></span></td>
-										<td><a href="#rollback" class="rollback" data-theme-name="<?php echo $theme->name; ?>">Rollback</a></td>
-	                </tr>
-									<?php } ?>
-	              </tbody>
-	            </table>
-						</div>
-				  </li><?php } ?>
-			</ul>
-		<?php } ?>
-
-    </div>
-
-	</div>
-</div>
-
-<div id="install-premium-plugin<?php echo $website->ID; ?>" class="modal" data-id="<?php echo $website->ID; ?>">
-	<div class="modal-content">
-
-		<h4>Install Premium Plugin <small><?php echo get_the_title( $website->ID ); ?></small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
-
-		<div class="row">
-      <div class="input-field col s12">
-        <input id="submit" value="Download" type="submit">
-      </div>
-    </div>
-
-	</div>
-</div>
 
 <?php endforeach; ?>
 		</div>

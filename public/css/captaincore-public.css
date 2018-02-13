@@ -247,12 +247,12 @@ form.acf-form {
     margin: 0px;
 }
 
-.partner-group {
+.website-group {
 	max-width: 800px;
 	margin-bottom: 2em;
 }
 
-.partner-group + p {
+.website-group + p {
     max-width: 800px;
 }
 
@@ -1062,4 +1062,150 @@ article.type-process {
 	top: -10px;
 	left: 6px;
 	position: absolute;
+}
+
+.toggle-buttons a {
+	z-index: 9999;
+  position: relative;
+  color: #000;
+  opacity: .4;
+  font-weight: normal;
+}
+
+.toggle-buttons a.active {
+	color:#27c3f3;
+	opacity: 1;
+	font-weight: bold;
+}
+.toggle-buttons a:active {
+	outline:none;
+}
+/* entire container, keeps perspective */
+.flip-container {
+	-webkit-perspective: 1000;
+	-moz-perspective: 1000;
+	-ms-perspective: 1000;
+	perspective: 1000;
+	-ms-transform: perspective(1000px);
+	-moz-transform: perspective(1000px);
+	-moz-transform-style: preserve-3d;
+	-ms-transform-style: preserve-3d;
+}
+	/* flip the pane when clicked */
+	.flip-container.toggle .flipper {
+		-webkit-transform: rotateY(180deg);
+	    -moz-transform: rotateY(180deg);
+	    -o-transform: rotateY(180deg);
+	    transform: rotateY(180deg);
+	}
+
+/* flip speed goes here */
+.flipper {
+	-webkit-transition: 0.6s;
+	-webkit-transform-style: preserve-3d;
+	-ms-transition: 0.6s;
+
+	-moz-transition: 0.6s;
+	-moz-transform: perspective(1000px);
+	-moz-transform-style: preserve-3d;
+	-ms-transform-style: preserve-3d;
+
+	transition: 0.6s;
+	transform-style: preserve-3d;
+
+	position: relative;
+}
+
+.card hr {
+	margin: 4px 0;
+	background-color: #eaeaea;
+}
+
+p.small {
+	font-size: 14px;
+	margin: 0px;
+	padding: 0px;
+}
+
+a.btn.blue {
+	color: #fff !important;
+}
+
+.website-group .card a.blue.right.btn {
+	position: absolute;
+	bottom: 20px;
+	right: 20px;
+}
+
+/* hide back of pane during swap */
+.website-group .production, .website-group .staging {
+	-webkit-backface-visibility: hidden;
+	-moz-backface-visibility: hidden;
+	-ms-backface-visibility: hidden;
+	backface-visibility: hidden;
+
+    -webkit-transition: 0.6s;
+    -webkit-transform-style: preserve-3d;
+    -webkit-transform: rotateY(0deg);
+
+    -moz-transition: 0.6s;
+    -moz-transform-style: preserve-3d;
+    -moz-transform: rotateY(0deg);
+
+    -o-transition: 0.6s;
+    -o-transform-style: preserve-3d;
+    -o-transform: rotateY(0deg);
+
+    -ms-transition: 0.6s;
+    -ms-transform-style: preserve-3d;
+    -ms-transform: rotateY(0deg);
+
+    transition: 0.6s;
+    transform-style: preserve-3d;
+    transform: rotateY(0deg);
+}
+
+ .website-group .staging {
+ 	position: absolute;
+ 	top: 0px;
+ 	left: 0px;
+  width: 100%;
+}
+
+.website-group .staging p.label {
+	position: absolute;
+	font-weight: bold;
+  left: 10px;
+}
+
+/* front pane, placed above back */
+.website-group .production {
+	z-index: 2;
+	/* for firefox 31 */
+	-webkit-transform: rotateY(0deg);
+    -moz-transform: rotateY(0deg);
+    -o-transform: rotateY(0deg);
+    -ms-transform: rotateY(0deg);
+    transform: rotateY(0deg);
+}
+
+/* back, initially hidden pane */
+.website-group .staging {
+	-webkit-transform: rotateY(180deg);
+    -moz-transform: rotateY(180deg);
+    -o-transform: rotateY(180deg);
+    transform: rotateY(180deg);
+}
+
+.website-group .toggle-buttons {
+	position: absolute;
+	z-index: 1;
+	right: 10px;
+	top: 0px;
+	font-size: 0.8em;
+	font-weight: bold;
+}
+
+.card-reveal a.btn {
+    font-size: .75em;
 }
