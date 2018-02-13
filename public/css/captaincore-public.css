@@ -10,13 +10,20 @@
 
 .woocommerce-account #main header.main {
 	padding: 40px 0 !important;
-	margin-bottom: 20px !important;
+
 }
 
 .single-process #main header.main {
 	padding: 50px 0 !important;
 }
 
+.single-process #main header.main .date-author {
+	margin-bottom: 0px !important;
+}
+.single-process #main header.main .btn {
+	margin-top: 1em;
+	font-size: 0.7em;
+}
 /* Prep for Subscriptions */
 .woocommerce td.product-name dl.variation dt.variation-billing-terms,
 .woocommerce td.product-name dl.variation dd.variation-billing-terms {
@@ -1133,6 +1140,10 @@ p.small {
 
 a.btn.blue {
 	color: #fff !important;
+}
+
+a.btn.white {
+	color: #5cbad5 !important;
 }
 
 .website-group .card a.blue.right.btn {

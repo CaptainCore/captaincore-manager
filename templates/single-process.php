@@ -240,20 +240,19 @@ jQuery(document).ready(function(){
 					<i class="far fa-clock"></i> <?php the_field('time_estimate'); ?>
 					<i class="fas fa-redo"></i> <?php echo $repeat; ?>
 					<?php if (get_field('repeat_quantity') and get_field('repeat_quantity') > 1) { ?><i class="fas fa-retweet"></i> <?php the_field('repeat_quantity'); ?> times<?php } ?>
+					<p><a href="#" class="white btn" id="log_process">Log Completion</a></p>
 					</div>
 						<?php // get_template_part( 'content-post-thumb' ); ?>
-						<span class="overlay"></span>
 				</header><!-- .entry-header -->
 
 				<div class="body-wrap">
 				<div class="entry-content">
+
 					<?php the_content(); ?>
 					<a name="activity"></a>
 					<hr />
 					<div class="activity-log">
-					<a href="#" class="alignright button" id="log_process">Log Completion</a>
 					<h4>Activity Log</h4>
-
 					<?php
 
 					date_default_timezone_set('New_York');
