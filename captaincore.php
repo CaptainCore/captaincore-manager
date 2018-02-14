@@ -2800,7 +2800,7 @@ function anchor_install_action_callback() {
 		$git_commit = get_field('git_commit', $post_id);
 		$website_id = get_field('website', $post_id);
 		$install = get_field('install', $website_id[0]);
-		$command = "captaincore rollback $install $git_commit --$addon_type=$value > ~/Tmp/$timestamp-rollback_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-rollback_$install.txt";
+		$command = "captaincore rollback $install $git_commit --$addon_type=$value > ~/Tmp/$timestamp-rollback_$install.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$install.txt";
 		$post_id = $website_id;
 	}
 
