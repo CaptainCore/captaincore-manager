@@ -1146,6 +1146,17 @@ a.btn.white {
 	color: #5cbad5 !important;
 }
 
+.card .pass {
+	display: none;
+}
+
+.card:hover .pass {
+	display: inline-block;
+}
+.card:hover .pass-fake {
+	display: none;
+}
+
 .website-group .card a.blue.right.btn {
 	position: absolute;
 	bottom: 20px;

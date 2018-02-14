@@ -470,7 +470,7 @@ if ($partner and $role_check) {
 			<div class="logins col s12 m6">
 				Address: <?php the_field('address', $website->ID); ?><br />
 				Username: <?php the_field('username', $website->ID); ?><br />
-				Password: <?php the_field('password', $website->ID); ?><br />
+				Password: <span class="pass-fake">****************</span><span class="pass"><?php the_field('password', $website->ID); ?></span><br />
 				Protocol: <?php the_field('protocol', $website->ID); ?><br />
 				Port: <?php the_field('port', $website->ID); ?>
 			</div>
@@ -528,7 +528,7 @@ if ($partner and $role_check) {
 			<div class="logins">
 				Address: <?php the_field('address_staging', $website->ID); ?><br />
 				Username: <?php the_field('username_staging', $website->ID); ?><br />
-				Password: <?php the_field('password_staging', $website->ID); ?><br />
+				Password: <span class="pass-fake">****************</span><span class="pass"><?php the_field('password_staging', $website->ID); ?></span><br />
 				Protocol: <?php the_field('protocol_staging', $website->ID); ?><br />
 				Port: <?php the_field('port_staging', $website->ID); ?>
 				<?php if (strpos($staging_address, ".kinsta.com") ) { ?>
