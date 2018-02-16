@@ -3340,6 +3340,7 @@ class PageTemplater {
 			'templates/page-company-handbook.php' => 'Company Handbook',
 			'templates/page-activities.php' => 'Activities',
 			'templates/page-checkout-express.php' => 'Checkout Express',
+			'templates/page-websites' => 'Website Recommendations'
 		);
 
 	}
