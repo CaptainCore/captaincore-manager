@@ -75,7 +75,7 @@ class Page_Template_Plugin {
 		// Add your templates to this array.
 		$this->templates = array(
 			'page-company-handbook.php'	=> __( 'Company Handbook', $this->plugin_slug ),
-			'page-anchor-api.php'     => __( 'Anchor API', $this->plugin_slug ),
+			'page-captaincore-api.php'     => __( 'CaptainCore API', $this->plugin_slug ),
 		);
 		// adding support for theme templates to be merged and shown in dropdown
 		$templates = wp_get_theme()->get_page_templates();

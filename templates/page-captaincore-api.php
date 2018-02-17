@@ -1,6 +1,6 @@
 <?php
 /**
- * Template Name: Anchor API Endpoint
+ * Template Name: CaptainCore API Endpoint
 
  *	This is a collection of custom functions meant to received from Anchor's custom server.
  *  Currently it handles the follow:
@@ -11,19 +11,19 @@
 	* Examples:
 
 	* Adding Quicksave
-	* https://anchor.host/anchor-api/anchor.host/?git_commit=<git-commit>&core=<version>&plugins=<plugin-data>&themes=<theme-data>&token=token_key
+	* https://anchor.host/captaincore-api/anchor.host/?git_commit=<git-commit>&core=<version>&plugins=<plugin-data>&themes=<theme-data>&token=token_key
 
 	* Adding backup snapshot
-	* https://anchor.host/anchor-api/anchor.host/?archive=anchorhost1.wpengine.com-2016-10-22.tar.gz&storage=235256&token=token_key
+	* https://anchor.host/captaincore-api/anchor.host/?archive=anchorhost1.wpengine.com-2016-10-22.tar.gz&storage=235256&token=token_key
 
 	* Updating views and storage
-	* https://anchor.host/anchor-api/anchor.host/?views=9435345&storage=2334242&token=token_key
+	* https://anchor.host/captaincore-api/anchor.host/?views=9435345&storage=2334242&token=token_key
 
 	* Assigning server
-	* https://anchor.host/anchor-api/anchor.host/?server=104.197.69.102&token=token_key
+	* https://anchor.host/captaincore-api/anchor.host/?server=104.197.69.102&token=token_key
 
 	* Load token
-	* https://anchor.host/anchor-api/anchor.host/?token_key=token_key&token=token_key
+	* https://anchor.host/captaincore-api/anchor.host/?token_key=token_key&token=token_key
 
  */
 
@@ -206,8 +206,6 @@ get_header();  ?>
 			<div class="entry-content">
 					<p><?php _e( 'Not sure where you were trying to go.', 'anchorhost' ); ?></p>
 					<p>Lets <a href="<?php echo get_option('home'); ?>/">start from the beginning</a>.</p>
-
-
 				</div><!-- .page-content -->
 			</div><!-- .error-404 -->
 

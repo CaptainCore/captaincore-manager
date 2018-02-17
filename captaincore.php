@@ -89,7 +89,7 @@ include "inc/mailgun-api.php";
 require "inc/bulk-actions.php"; // Custom bulk actions.
 
 function captaincore_rewrite() {
-	add_rewrite_rule('^anchor-api/([^/]*)/?','index.php?pagename=anchor-api&callback=$matches[1]','top');
+	add_rewrite_rule('^captaincore-api/([^/]*)/?','index.php?pagename=captaincore-api&callback=$matches[1]','top');
 	add_rewrite_rule('^checkout-express/([^/]*)/?','index.php?pagename=checkout-express&callback=$matches[1]','top');
 	add_rewrite_tag('%site%','([^&]+)');
 	add_rewrite_tag('%sitetoken%','([^&]+)');
@@ -3336,7 +3336,7 @@ class PageTemplater {
 
 		// Add your templates to this array.
 		$this->templates = array(
-			'templates/page-anchor-api.php' => 'Anchor API',
+			'templates/page-captaincore-api.php' => 'CaptainCore API',
 			'templates/page-company-handbook.php' => 'Company Handbook',
 			'templates/page-activities.php' => 'Activities',
 			'templates/page-checkout-express.php' => 'Checkout Express',
