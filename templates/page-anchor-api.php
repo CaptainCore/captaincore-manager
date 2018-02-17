@@ -28,19 +28,19 @@
  */
 
 $site = get_query_var('callback');
-$date = $_GET['date'];
-$archive = $_GET['archive'];
-$storage = $_GET['storage'];
-$views = $_GET['views'];
-$email = $_GET['email'];
-$server = $_GET['server'];
-$core = $_GET['core'];
-$plugins = base64_decode($_GET['plugins']);
-$themes = base64_decode($_GET['themes']);
-$token = $_GET['token'];
-$token_key = $_GET['token_key'];
-$git_commit = $_GET['git_commit'];
-$git_status = trim(base64_decode($_GET['git_status']));
+$date = $_POST['date'];
+$archive = $_POST['archive'];
+$storage = $_POST['storage'];
+$views = $_POST['views'];
+$email = $_POST['email'];
+$server = $_POST['server'];
+$core = $_POST['core'];
+$plugins = base64_decode($_POST['plugins']);
+$themes = base64_decode($_POST['themes']);
+$token = $_POST['token'];
+$token_key = $_POST['token_key'];
+$git_commit = $_POST['git_commit'];
+$git_status = trim(base64_decode($_POST['git_status']));
 
 $args = array (
 	'post_type'        => 'website',
@@ -152,6 +152,7 @@ if (substr_count($site, ".") > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 		);
 
 		wp_update_post($my_post);
+		echo "Adding Quicksave \n";
 
 	}
 
@@ -218,4 +219,3 @@ get_header();  ?>
 
 get_footer();
 }
- ?>
