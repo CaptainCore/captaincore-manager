@@ -5,4 +5,5 @@
 	<a class="nav-tab<?php if( $screen->id == "admin_page_anchor_installs") { echo " nav-tab-active"; } ?>" href="/wp-admin/admin.php?page=anchor_installs">Installs</a>
 	<a class="nav-tab<?php if( $screen->id == "admin_page_anchor_timeline") { echo " nav-tab-active"; } ?>" href="/wp-admin/admin.php?page=anchor_timeline">Timeline</a>
 	<a class="nav-tab<?php if( $screen->id == "admin_page_anchor_kpi") { echo " nav-tab-active"; } ?>" href="/wp-admin/admin.php?page=anchor_kpi">KPI</a>
+	<a class="nav-tab<?php if( $screen->id == "admin_page_anchor_quicksaves") { echo " nav-tab-active"; } ?>" href="/wp-admin/admin.php?page=anchor_quicksaves">Quicksaves</a>
 </h2>

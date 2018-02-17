@@ -2984,6 +2984,7 @@ function anchor_custom_pages() {
     add_submenu_page( null, 'Installs', 'Installs', 'manage_options', "anchor_installs", 'anchor_installs_report_callback');
 		add_submenu_page( null, 'Customers Timeline', 'Timeline', 'manage_options', "anchor_timeline", 'anchor_timeline_report_callback');
 		add_submenu_page( null, 'KPI', 'KPI', 'manage_options', "anchor_kpi", 'anchor_kpi_report_callback');
+		add_submenu_page( null, 'Quicksaves', 'Quicksaves', 'manage_options', "anchor_quicksaves", 'anchor_quicksaves_report_callback');
 }
 
 function anchor_customer_report_callback() {
@@ -3009,6 +3010,11 @@ function anchor_timeline_report_callback() {
 function anchor_kpi_report_callback() {
 	// Loads the Customer Report template
 	require_once(dirname(__FILE__) . "/inc/admin-kpi-report.php");
+}
+
+function anchor_quicksaves_report_callback() {
+	// Loads the Quicksaves Report template
+	require_once(dirname(__FILE__) . "/inc/admin-report-quicksaves.php");
 }
 
 // allow SVGs
