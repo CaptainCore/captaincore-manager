@@ -35,6 +35,20 @@ TODO
 
 == Changelog ==
 
+= 0.1.2: February 18, 2018 =
+* New: Rollbacks for quicksave themes and plugins
+* New: Quicksave highligher now displays removed themes and plugins
+* New: On hosting dashboard there is now an advanced option page
+* New: Hide passwords on hosting dashboard with automatic reveal on hover
+* New: Report to track Quicksaves per site
+* Tweak: Improvements to Quicksave highligher
+* Tweak: Moved most of the hosting dashboard features over to the advanced option page
+* Tweak: Improvements to the single process template header. Moved log Completion button into header.
+* Tweak: Renamed Anchor API to CaptainCore API
+* Tweak: Switched CaptainCore API to POST request to handle larger payloads
+* Tweak: Added css versioning directly to file rather then querystring.
+* Fix: Highlight fixes. Only highlight theme/plugin version or status.
+
 = 0.1.1: February 11, 2018 =
 * New: Quicksaves feature - Daily version history for themes, plugins and core
 * New: Moved all admin menu under single CaptainCore menu
