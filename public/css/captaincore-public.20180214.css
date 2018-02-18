@@ -217,10 +217,6 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
 	display: none;
 }
 
- .bottom-sheet li.quicksave:first-child table tr:hover td:nth-child(4) {
-	display: none;
-}
-
 table.bordered.git_status {
   table-layout: fixed;
   width: 40%;
