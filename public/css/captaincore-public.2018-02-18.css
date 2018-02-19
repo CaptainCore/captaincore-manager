@@ -1174,6 +1174,13 @@ a.btn.white {
 
 .website-group .card a.blue.right.btn {
 	position: absolute;
+	bottom: 20px;
+	right: 20px;
+}
+
+.website-group .quicksave .card a.blue.right.btn {
+	position: absolute;
+	bottom: auto;
 	top: 20px;
 	right: 20px;
 }
