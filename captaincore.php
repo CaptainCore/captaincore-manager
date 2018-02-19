@@ -2811,7 +2811,7 @@ function anchor_install_action_callback() {
 		}
 
 		$quicksaves_previous_id = $quicksaves_for_website_ids[$mykey+1];
-		$install = get_field('install',$website_id[0]);
+		$install = get_field('install',$website_id);
 		$commit = get_field('git_commit',$post_id);
 		$commit_previous = get_field('git_commit', $quicksaves_previous_id );
 		$command = "captaincore get quicksave_file_diff $install $commit $commit_previous \"$value\"";
