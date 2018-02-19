@@ -1178,6 +1178,20 @@ a.btn.white {
 	right: 20px;
 }
 
+.file_diff .code {
+	font-size: 0.4em;
+	line-height: 1.5em;
+	padding: 0 2%;
+}
+
+.file_diff .code.remove {
+    background-color: #ff00002b;
+}
+
+.file_diff .code.add {
+    background: #00ff004a;
+}
+
 /* hide back of pane during swap */
 .website-group .production, .website-group .staging {
 	-webkit-backface-visibility: hidden;

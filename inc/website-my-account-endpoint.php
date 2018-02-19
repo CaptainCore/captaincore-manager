@@ -163,6 +163,10 @@ class CaptainCore_My_Account_Website_Endpoint {
 				  	};
 
 						jQuery.post(ajaxurl, data, function(response) {
+//							var response = `M	plugins/captaincore/.revision
+//M	plugins/captaincore/captaincore.php
+//A	plugins/captaincore/inc/admin-report-quicksaves.php
+//M	plugins/captaincore/inc/admin-submenu-tabs.php`;
 							var files = response.split("\n");
 							files.clean("");
 							if (files.length > 0) {
@@ -175,11 +179,8 @@ class CaptainCore_My_Account_Website_Endpoint {
 									jQuery(quicksave).find(".card-reveal .response").append("<a class='file modal-trigger' href='#file_"+i+"'><span class='file_status'>"+file_status+"</span><span class='file_name'>"+file_name+"</span></div>");
 									jQuery(".website-group").append(`<div id="file_`+i+`" class="modal file_diff">
     <div class="modal-content">
-      <h4>`+file_name+`</h4>
+      <h4>`+file_name+` <a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
       <p></p>
-    </div>
-    <div class="modal-footer">
-      <a href="#!" class="modal-action modal-close waves-effect waves-green btn-flat">Agree</a>
     </div>
   </div>`);
 									//
@@ -210,7 +211,32 @@ class CaptainCore_My_Account_Website_Endpoint {
 						};
 
 						jQuery.post(ajaxurl, data, function(response) {
-							jQuery( modal_id ).find("p").html( response );
+//							response=`diff --git a/plugins/captaincore/inc/admin-submenu-tabs.php b/plugins/captaincore/inc/admin-submenu-tabs.php
+//index 7a7da39..f42cf84 100644
+//--- a/plugins/captaincore/inc/admin-submenu-tabs.php
+//+++ b/plugins/captaincore/inc/admin-submenu-tabs.php
+//@@ -5,5 +5,4 @@
+// 	<a class="nav-tab" href="/wp-admin/admin.php?page=anchor_installs">Installs</a>
+// 	<a class="nav-tab" href="/wp-admin/admin.php?page=anchor_timeline">Timeline</a>
+// 	<a class="nav-tab" href="/wp-admin/admin.php?page=anchor_kpi">KPI</a>
+//-	<a class="nav-tab" href="/wp-admin/admin.php?page=anchor_quicksaves">Quicksaves</a>
+// </h2>`;
+							file_diff = response.split("\n");
+							i = 0;
+							jQuery(file_diff).each(function() {
+								diff_code = document.createElement( "div" );
+								jQuery(diff_code).addClass("code").text( file_diff[i] );
+								if( file_diff[i][0] == "-" ) {
+									jQuery(diff_code).addClass("remove");
+						    }
+								if ( file_diff[i][0] == "+" ) {
+									jQuery(diff_code).addClass("add");
+						    }
+								jQuery( modal_id ).find("p").append( diff_code );
+								i++;
+							});
+							jQuery( modal_id ).find(".preloader-wrapper").remove();
+							//jQuery( modal_id ).find("p").text( diff_code );
 						});
 					});
 

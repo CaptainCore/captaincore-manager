@@ -79,8 +79,6 @@ class Captaincore_Public {
 		wp_enqueue_script( 'font-awesome', "https://use.fontawesome.com/releases/v5.0.6/js/all.js", array() );
 		wp_enqueue_script( 'materialize', plugin_dir_url( __FILE__ ) . 'css/materialize-src/js/bin/materialize.js', array(), '2016-12-30', true );
 
-
-
 	}
 
 	/**
