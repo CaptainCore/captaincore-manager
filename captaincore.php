@@ -2794,7 +2794,7 @@ function anchor_install_action_callback() {
 	}
 
 	if ($cmd == "quicksave_file_diff") {
-		$website_id = get_field('website',$post_id)[0];
+		$website_id = get_field('website',$post_id);
 		$quicksaves_for_website_ids = get_posts(array(
 			'fields' => 'ids',
 			'post_type' => 'cc_quicksave',
@@ -2802,7 +2802,7 @@ function anchor_install_action_callback() {
 			'meta_query' => array(
 				array(
 				'key' => 'website',
-				'value' => '"' . $website_id . '"',
+				'value' => '"' . $website_id[0] . '"',
 				'compare' => 'LIKE'
 			))
 		));
@@ -2811,7 +2811,7 @@ function anchor_install_action_callback() {
 		}
 
 		$quicksaves_previous_id = $quicksaves_for_website_ids[$mykey+1];
-		$install = get_field('install',$website_id);
+		$install = get_field('install',$website_id[0]);
 		$commit = get_field('git_commit',$post_id);
 		$commit_previous = get_field('git_commit', $quicksaves_previous_id );
 		$command = "captaincore get quicksave_file_diff $install $commit $commit_previous \"$value\"";
