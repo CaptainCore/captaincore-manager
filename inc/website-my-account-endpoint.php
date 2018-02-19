@@ -103,6 +103,16 @@ class CaptainCore_My_Account_Website_Endpoint {
 
 				ajaxurl = "/wp-admin/admin-ajax.php";
 
+				Array.prototype.clean = function(deleteValue) {
+				  for (var i = 0; i < this.length; i++) {
+				    if (this[i] == deleteValue) {
+				      this.splice(i, 1);
+				      i--;
+				    }
+				  }
+				  return this;
+				};
+
 				function sort_li(a, b){
 				    var va = jQuery(a).data('id').toString().charCodeAt(0);
 				    var vb = jQuery(b).data('id').toString().charCodeAt(0);
@@ -141,9 +151,9 @@ class CaptainCore_My_Account_Website_Endpoint {
 
 					jQuery('.view_quicksave_changes').click(function(e) {
 						e.preventDefault();
-						jQuery(this).hide();
+						jQuery(this).parent().addClass("activator").trigger("click");
 						quicksave = jQuery(this).parents('.quicksave');
-						jQuery(quicksave).find(".git_status").html( '<p></p><div class="preloader-wrapper small active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p></p>' );
+						jQuery(quicksave).find(".card-reveal .response").html( '<p></p><div class="preloader-wrapper small active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p></p>' );
 
 						var data = {
 				  		'action': 'anchor_install',
@@ -153,9 +163,55 @@ class CaptainCore_My_Account_Website_Endpoint {
 				  	};
 
 						jQuery.post(ajaxurl, data, function(response) {
-							jQuery(quicksave).find(".git_status").html( "<pre>" + response + "</pre>" );
+							var files = response.split("\n");
+							files.clean("");
+							if (files.length > 0) {
+								jQuery(quicksave).find(".card-reveal .response").html( "" );
+								i = 0;
+								jQuery(files).each(function() {
+									file_array = files[i].split("\t");
+									file_status = file_array[0];
+									file_name = file_array[1];
+									jQuery(quicksave).find(".card-reveal .response").append("<a class='file modal-trigger' href='#file_"+i+"'><span class='file_status'>"+file_status+"</span><span class='file_name'>"+file_name+"</span></div>");
+									jQuery(".website-group").append(`<div id="file_`+i+`" class="modal file_diff">
+    <div class="modal-content">
+      <h4>`+file_name+`</h4>
+      <p></p>
+    </div>
+    <div class="modal-footer">
+      <a href="#!" class="modal-action modal-close waves-effect waves-green btn-flat">Agree</a>
+    </div>
+  </div>`);
+									//
+
+									i++;
+								});
+
+							}
 						});
 
+					});
+
+					jQuery(".response").on( "click", ".file.modal-trigger", function(e) {
+						//jQuery(".website-group").find(".modal.file_diff").modal();
+						e.preventDefault();
+
+						file_name = jQuery( this ).find("span.file_name").text().trim();
+						quicksave = jQuery( this ).parents('.quicksave');
+						modal_id = jQuery( this ).attr("href");
+						jQuery( modal_id ).modal();
+						jQuery( modal_id ).find("p").html( '<p></p><div class="preloader-wrapper small active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p></p>' );
+						jQuery( modal_id ).modal('open');
+						var data = {
+							'action': 'anchor_install',
+							'post_id': quicksave.data('id'),
+							'command': 'quicksave_file_diff',
+							'value'	: file_name,
+						};
+
+						jQuery.post(ajaxurl, data, function(response) {
+							jQuery( modal_id ).find("p").html( response );
+						});
 					});
 
 					jQuery('.rollback').click(function(e) {
@@ -618,46 +674,55 @@ class CaptainCore_My_Account_Website_Endpoint {
 							<span class="badge">WordPress <?php the_field("core", $quicksave->ID); ?> - <?php echo count($plugins); ?> plugins - <?php echo count($themes); ?> themes</span>
 				    </div>
 				    <div class="collapsible-body">
-							<a class="view_quicksave_changes blue right btn">View changes</a>
-							<div class="git_status"></div>
-							<table class="bordered plugins" id="plugins_<?php echo $website_id; ?>">
-	              <thead>
-	                <tr>
-	                    <th>Plugin</th>
-	                    <th>Version</th>
-											<th>Status</th>
-	                </tr>
-	              </thead>
-	              <tbody>
-									<?php foreach( $plugins as $plugin ) { ?>
-	                <tr class="plugin" data-plugin-name="<?php echo $plugin->name; ?>" data-plugin-version="<?php echo $plugin->version; ?>" data-plugin-status="<?php echo $plugin->status; ?>">
-	                  <td><?php if ($plugin->title) { echo $plugin->title; } else { echo $plugin->name; } ?></td>
-	                  <td><span><?php echo $plugin->version; ?></span></td>
-										<td><span><?php echo $plugin->status; ?></span></td>
-										<td><a href="#rollback" class="rollback" data-plugin-name="<?php echo $plugin->name; ?>">Rollback</a></td>
-	                </tr>
-									<?php } ?>
-	              </tbody>
-	            </table>
-							<table class="bordered themes" id="themes_<?php echo $website_id; ?>">
-	              <thead>
-	                <tr>
-	                    <th>Theme</th>
-	                    <th>Version</th>
-											<th>Status</th>
-	                </tr>
-	              </thead>
-	              <tbody>
-									<?php foreach( $themes as $theme ) { ?>
-	                <tr class="theme" data-theme-name="<?php echo $theme->name; ?>" data-theme-version="<?php echo $theme->version; ?>" data-theme-status="<?php echo $theme->status; ?>">
-	                  <td><?php if ($theme->title) { echo $theme->title; } else { echo $theme->name; } ?></td>
-	                  <td><span><?php echo $theme->version; ?></span></td>
-										<td><span><?php echo $theme->status; ?></span></td>
-										<td><a href="#rollback" class="rollback" data-theme-name="<?php echo $theme->name; ?>">Rollback</a></td>
-	                </tr>
-									<?php } ?>
-	              </tbody>
-	            </table>
+							<div class="card">
+						    <div class="card-content">
+									<a class="view_quicksave_changes blue right btn">View changes</a>
+									<div class="git_status"></div>
+									<table class="bordered plugins" id="plugins_<?php echo $website_id; ?>">
+			              <thead>
+			                <tr>
+			                    <th>Plugin</th>
+			                    <th>Version</th>
+													<th>Status</th>
+			                </tr>
+			              </thead>
+			              <tbody>
+											<?php foreach( $plugins as $plugin ) { ?>
+			                <tr class="plugin" data-plugin-name="<?php echo $plugin->name; ?>" data-plugin-version="<?php echo $plugin->version; ?>" data-plugin-status="<?php echo $plugin->status; ?>">
+			                  <td><?php if ($plugin->title) { echo $plugin->title; } else { echo $plugin->name; } ?></td>
+			                  <td><span><?php echo $plugin->version; ?></span></td>
+												<td><span><?php echo $plugin->status; ?></span></td>
+												<td><a href="#rollback" class="rollback" data-plugin-name="<?php echo $plugin->name; ?>">Rollback</a></td>
+			                </tr>
+											<?php } ?>
+			              </tbody>
+			            </table>
+									<table class="bordered themes" id="themes_<?php echo $website_id; ?>">
+			              <thead>
+			                <tr>
+			                    <th>Theme</th>
+			                    <th>Version</th>
+													<th>Status</th>
+			                </tr>
+			              </thead>
+			              <tbody>
+											<?php foreach( $themes as $theme ) { ?>
+			                <tr class="theme" data-theme-name="<?php echo $theme->name; ?>" data-theme-version="<?php echo $theme->version; ?>" data-theme-status="<?php echo $theme->status; ?>">
+			                  <td><?php if ($theme->title) { echo $theme->title; } else { echo $theme->name; } ?></td>
+			                  <td><span><?php echo $theme->version; ?></span></td>
+												<td><span><?php echo $theme->status; ?></span></td>
+												<td><a href="#rollback" class="rollback" data-theme-name="<?php echo $theme->name; ?>">Rollback</a></td>
+			                </tr>
+											<?php } ?>
+			              </tbody>
+			            </table>
+						    </div>
+						    <div class="card-reveal">
+						      <span class="card-title grey-text text-darken-4"><i class="material-icons right">close</i></span>
+						      <div class="response"></div>
+						    </div>
+						  </div>
+
 						</div>
 				  </li><?php } ?>
 			</ul>

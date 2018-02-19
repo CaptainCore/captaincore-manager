@@ -2793,6 +2793,15 @@ function anchor_install_action_callback() {
 		$post_id = $website_id;
 	}
 
+	if ($cmd == "quicksave_file_diff") {
+		$website_id = get_field('website',$post_id);
+		$install = get_field('install',$website_id[0]);
+		$commit = get_field('git_commit',$post_id);
+		$commit_previous = get_field('git_commit', get_previous_post_id($post_id) );
+		$command = "captaincore get quicksave_file_diff $install $commit $commit_previous \"$value\"";
+		$post_id = $website_id;
+	}
+
 	if ($cmd == "rollback") {
 		date_default_timezone_set('America/New_York');
 		$t=time();
@@ -3460,4 +3469,28 @@ function captaincore_human_filesize($size, $precision = 2) {
       $i++;
   }
   return round($size, $precision).$units[$i];
+}
+
+
+function get_previous_post_id( $post_id ) {
+    // Get a global post reference since get_adjacent_post() references it
+    global $post;
+
+    // Store the existing post object for later so we don't lose it
+    $oldGlobal = $post;
+
+    // Get the post object for the specified post and place it in the global variable
+    $post = get_post( $post_id );
+
+    // Get the post object for the previous post
+    $previous_post = get_previous_post();
+
+    // Reset our global object
+    $post = $oldGlobal;
+
+    if ( '' == $previous_post ) {
+        return 0;
+    }
+
+    return $previous_post->ID;
 }

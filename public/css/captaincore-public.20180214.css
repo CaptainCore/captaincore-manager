@@ -152,11 +152,12 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
 	margin-top: 32px;
 }
 
-.quicksave .spinner-blue, .quicksave .spinner-blue-only {
+.quicksave .spinner-blue,
+.quicksave .spinner-blue-only {
   border-color: #27c3f3;
 }
 
-.bottom-sheet table {
+.quicksave table {
 	display: inline-table;
 	border-collapse: collapse;
 	font-size: 0.8em;
@@ -164,19 +165,19 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
 	margin-right: 2em;
 }
 
-.bottom-sheet table th,
-.bottom-sheet table td {
+.quicksave table th,
+.quicksave table td {
 	padding-right: 5px;
 	padding-left: 5px;
 }
 
-.bottom-sheet table tr.changed {
+.quicksave table tr.changed {
     background: #5cbad5;
     color: #fff;
 }
 
-.bottom-sheet table tr.version-changed td:nth-child(2) span,
-.bottom-sheet table tr.status-changed td:nth-child(3) span {
+.quicksave table tr.version-changed td:nth-child(2) span,
+.quicksave table tr.status-changed td:nth-child(3) span {
 	background: #25c4f3;
 	color: #fff;
 	margin: 0 0 0 -7px;
@@ -185,13 +186,13 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
 	padding: 0 7px;
 }
 
-.bottom-sheet table tr.removed {
+.quicksave table tr.removed {
 	text-decoration: line-through;
 	opacity: .5;
 	color: #ff0000;
 }
 
-.bottom-sheet table td:nth-child(4) a {
+.quicksave table td:nth-child(4) a {
 	background: #25c4f3;
 	color: #fff;
 	padding: 0 10px;
@@ -204,32 +205,50 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
 	margin: 0 9px;
 }
 
-.bottom-sheet table td:nth-child(4) {
+.quicksave table td:nth-child(4) {
     position: absolute;
 		display:none;
 }
 
-.bottom-sheet table tr:hover td:nth-child(4) {
+.quicksave table tr:hover td:nth-child(4) {
 	display: block;
 }
 
-.bottom-sheet table tr.removed:hover td:nth-child(4) {
+.quicksave table tr.removed:hover td:nth-child(4) {
 	display: none;
 }
 
-table.bordered.git_status {
+.quicksave .card-reveal {
   table-layout: fixed;
-  width: 40%;
   margin: 0px;
+	overflow: scroll;
 }
 
-.git_status {
-  overflow: scroll;
-}
-
-.git_status pre {
+.quicksave .card-reveal pre {
 	font-size: 0.5em;
 	padding: 1em;
+}
+
+.quicksave .response {
+	display: inline-block;
+}
+
+.quicksave .file {
+	font-size: 0.5em;
+	padding: 0px 1em;
+	margin: 0px;
+	line-height: 1.6em;
+	display: block;
+}
+
+.quicksave .file:hover {
+	background: #27c3f3;
+	color: #fff;
+	cursor: pointer;
+}
+.quicksave .file_status {
+	min-width: 20px;
+	display: inline-block;
 }
 
 .content-area ul.acf-actions a.button {
@@ -1155,7 +1174,7 @@ a.btn.white {
 
 .website-group .card a.blue.right.btn {
 	position: absolute;
-	bottom: 20px;
+	top: 20px;
 	right: 20px;
 }
 
