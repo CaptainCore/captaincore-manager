@@ -222,6 +222,7 @@ class CaptainCore_My_Account_Website_Endpoint {
 //-	<a class="nav-tab" href="/wp-admin/admin.php?page=anchor_quicksaves">Quicksaves</a>
 // </h2>`;
 							file_diff = response.split("\n");
+							jQuery( modal_id ).find("p").html( "" );
 							i = 0;
 							jQuery(file_diff).each(function() {
 								diff_code = document.createElement( "div" );
@@ -235,7 +236,7 @@ class CaptainCore_My_Account_Website_Endpoint {
 								jQuery( modal_id ).find("p").append( diff_code );
 								i++;
 							});
-							jQuery( modal_id ).find(".preloader-wrapper").remove();
+
 							//jQuery( modal_id ).find("p").text( diff_code );
 						});
 					});
