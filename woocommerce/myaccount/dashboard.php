@@ -520,10 +520,10 @@ if ($partner and $role_check) {
 		<div class="toggle-buttons">
 			<a href="#" class="production-toggle">Production</a> | <a href="#" class="staging-toggle active">Staging</a>
 		</div>
-		<span class="card-title activator grey-text text-darken-4"><?php if ($provider == "kinsta") { ?>
-		<a href="http://staging-<?php the_field('install_staging', $website->ID); ?>.kinsta.com" target="_blank">staging-<?php the_field('install_staging', $website->ID); ?>.kinsta.com</a>
+		<span class="card-title activator grey-text text-darken-4"><?php if (strpos( get_field('address_staging', $website->ID), ".kinsta.com") ) { ?>
+		<a href="https://staging-<?php the_field('install_staging', $website->ID); ?>.kinsta.com" target="_blank">staging-<?php the_field('install_staging', $website->ID); ?>.kinsta.com</a>
 		<?php } else { ?>
-		<a href="http://<?php the_field('install_staging', $website->ID); ?>.staging.wpengine.com" target="_blank"><?php the_field('install_staging', $website->ID); ?>.staging.wpengine.com</a>
+		<a href="https://<?php the_field('install_staging', $website->ID); ?>.staging.wpengine.com" target="_blank"><?php the_field('install_staging', $website->ID); ?>.staging.wpengine.com</a>
 		<?php } ?></span>
 			<div class="logins">
 				Address: <?php the_field('address_staging', $website->ID); ?><br />
