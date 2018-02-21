@@ -280,7 +280,7 @@ class CaptainCore_My_Account_Website_Endpoint {
 
 					});
 
-					jQuery(".modal-content input#submit").click(function(e){
+					jQuery(".snapshot .modal-content input#submit").click(function(e){
 
 				  	e.preventDefault();
 
@@ -314,6 +314,54 @@ class CaptainCore_My_Account_Website_Endpoint {
 
 				  });
 
+					jQuery(".push_to_staging .modal-content input#submit").click(function(e){
+
+				  	e.preventDefault();
+
+						modal_form = jQuery(this).parents('.modal.open');
+
+						jQuery('.modal.open .modal-content .row').hide();
+						jQuery('.modal.open .modal-content .progress').removeClass('hide');
+
+						email_address = modal_form.find('input#email').val();
+
+						if ( isEmail(email_address) ) {
+
+							confirm_deploy = confirm("Kinsta staging site will be overridden. Proceed?");
+
+							if(confirm_deploy) {
+
+								var post_id = jQuery(this).data('post-id');
+
+							  var data = {
+							  	'action': 'anchor_install',
+							  	'post_id': modal_form.data('id'),
+									'command': 'kinsta-deploy-to-staging',
+									'value'	: email_address
+							  };
+
+							  // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+							  jQuery.post(ajaxurl, data, function(response) {
+							  	Materialize.toast('Kinsta staging site being generated.', 4000);
+									jQuery('.modal.open .modal-content input#email').val("");
+									jQuery('.modal.open .modal-content .row').show();
+									jQuery('.modal.open .modal-content .progress').addClass('hide');
+									modal_form.modal('close');
+							  });
+
+							} else {
+								jQuery('.modal.open .modal-content .row').show();
+								jQuery('.modal.open .modal-content .progress').addClass('hide');
+							}
+
+						} else {
+							modal_form.find('.results').html("Please enter a valid email address.");
+							jQuery('.modal.open .modal-content .row').show();
+							jQuery('.modal.open .modal-content .progress').addClass('hide');
+						}
+
+				  });
+
 					jQuery(".redeploy").click(function(e){
 
 						confirm_redeploy = confirm("Redeploy?");
@@ -331,31 +379,6 @@ class CaptainCore_My_Account_Website_Endpoint {
 						  // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 						  jQuery.post(ajaxurl, data, function(response) {
 								Materialize.toast('Redeploy in progress.', 4000);
-						  });
-
-						}
-
-					  e.preventDefault();
-
-					});
-
-					jQuery("a.kinsta-deploy-to-staging").click(function(e){
-
-						confirm_deploy = confirm("Kinsta staging site will be overridden. Proceed?");
-
-						if(confirm_deploy) {
-
-							var post_id = jQuery(this).data('post-id');
-
-						  var data = {
-						  	'action': 'anchor_install',
-						  	'post_id': post_id,
-								'command': 'kinsta-deploy-to-staging'
-						  };
-
-						  // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
-						  jQuery.post(ajaxurl, data, function(response) {
-						  	Materialize.toast('Kinsta staging site being generated.', 4000);
 						  });
 
 						}
@@ -609,7 +632,7 @@ class CaptainCore_My_Account_Website_Endpoint {
 				<?php } ?>
 				<?php
 				if( strpos($production_address, ".kinsta.com") ):  ?>
-					<a class="waves-effect waves-light large kinsta-deploy-to-staging" data-post-id="<?php echo $website_id; ?>"><i class="material-icons left">local_shipping</i>Kinsta: Push Production to Staging</a><br />
+					<a href="#push_to_staging<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large" data-post-id="<?php echo $website_id; ?>"><i class="material-icons left">local_shipping</i>Kinsta: Push Production to Staging</a><br />
 				<?php endif ?>
 				<?php if ($views != $website_views or $storage != $website_storage) { ?>
 					<a href="#view_usage_breakdown_<?php echo $customer_id[0]; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">chrome_reader_mode</i>View Usage Breakdown</a>
@@ -634,7 +657,7 @@ class CaptainCore_My_Account_Website_Endpoint {
 
 <a href="/my-account/" class="blue right btn">View All Websites</a>
 
-<div id="snapshot<?php echo $website_id; ?>" class="modal" data-id="<?php echo $website_id; ?>">
+<div id="snapshot<?php echo $website_id; ?>" class="modal snapshot" data-id="<?php echo $website_id; ?>">
 	<div class="modal-content">
 
 		<h4>Download Snapshot <small>(<?php echo get_the_title( $website_id ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
@@ -661,6 +684,35 @@ class CaptainCore_My_Account_Website_Endpoint {
     </div>
 	</div>
 </div>
+
+<?php if( strpos($production_address, ".kinsta.com") ):  ?>
+<div id="push_to_staging<?php echo $website_id; ?>" class="modal push_to_staging" data-id="<?php echo $website_id; ?>">
+	<div class="modal-content">
+
+		<h4>Push Production to Staging <small>(<?php echo get_the_title( $website_id ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
+		<div class="progress hide">
+				<div class="indeterminate"></div>
+		</div>
+		<div class="row">
+
+      <div class="input-field col s12">
+				<label for="email">Email Address</label><br />
+        <input id="email" type="email" class="validate" value="<?php $current_user = wp_get_current_user(); echo $current_user->user_email; ?>">
+      </div>
+    </div>
+		<div class="row">
+      <div class="input-field col s12">
+				<span class="results red-text text-darken-4"></span>
+			</div>
+		</div>
+		<div class="row">
+      <div class="input-field col s12">
+        <input id="submit" value="Proceed" type="submit">
+      </div>
+    </div>
+	</div>
+</div>
+<?php endif; ?>
 
 <div id="quicksave<?php echo $website_id; ?>" class="modal bottom-sheet quicksaves" data-id="<?php echo $website_id; ?>">
 	<div class="modal-content">
