@@ -30,6 +30,7 @@
 $site = get_query_var('callback');
 $date = $_POST['date'];
 $archive = $_POST['archive'];
+$command = $_POST['command'];
 $storage = $_POST['storage'];
 $views = $_POST['views'];
 $email = $_POST['email'];
@@ -78,6 +79,25 @@ if (substr_count($site, ".") > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 
 		// Insert the post into the database
 		$site_id = wp_insert_post( $my_post );
+	}
+
+	// Kinsta production deploy to staging
+	if ( $command == "production_to_staging_kinsta" and $email ) {
+
+		$install_name = get_field("install", $site_id);
+		$domain_name = get_the_title($site_id);
+		$url = "https://staging-". get_field('install_staging', $site_id) .".kinsta.com";
+
+		// Send out completed email notice
+		$to = $email;
+		$subject = "Anchor Hosting - Deploy to Staging ($domain_name)";
+		$body = 'Deploy to staging completed for '.$domain_name.'.<br /><br /><a href="'.$url.'">'.$url.'</a>';
+		$headers = array('Content-Type: text/html; charset=UTF-8');
+
+		wp_mail( $to, $subject, $body, $headers );
+
+		echo "production_to_staging_kinsta email sent";
+
 	}
 
 	// Generate a new snapshot.
