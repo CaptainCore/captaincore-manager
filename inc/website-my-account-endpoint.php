@@ -301,7 +301,6 @@ class CaptainCore_My_Account_Website_Endpoint {
 							// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 							jQuery.post(ajaxurl, data, function(response) {
 							  Materialize.toast('Backup snapshot in process. Will email once completed.', 4000);
-								jQuery('.modal.open .modal-content input#email').val("");
 								jQuery('.modal.open .modal-content .row').show();
 								jQuery('.modal.open .modal-content .progress').addClass('hide');
 								modal_form.modal('close');
@@ -342,8 +341,7 @@ class CaptainCore_My_Account_Website_Endpoint {
 
 							  // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 							  jQuery.post(ajaxurl, data, function(response) {
-							  	Materialize.toast('Kinsta staging site being generated.', 4000);
-									jQuery('.modal.open .modal-content input#email').val("");
+							  	Materialize.toast('Kinsta push to staging in process. Will email once completed.', 4000);
 									jQuery('.modal.open .modal-content .row').show();
 									jQuery('.modal.open .modal-content .progress').addClass('hide');
 									modal_form.modal('close');
