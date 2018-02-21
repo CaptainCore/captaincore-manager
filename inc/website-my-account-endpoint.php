@@ -645,7 +645,7 @@ class CaptainCore_My_Account_Website_Endpoint {
 
       <div class="input-field col s12">
 				<label for="email">Email Address</label><br />
-        <input id="email" type="email" class="validate">
+        <input id="email" type="email" class="validate" value="<?php $current_user = wp_get_current_user(); echo $current_user->user_email; ?>">
       </div>
     </div>
 		<div class="row">
