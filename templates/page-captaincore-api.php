@@ -100,6 +100,25 @@ if (substr_count($site, ".") > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 
 	}
 
+	// Kinsta staging deploy to production
+	if ( $command == "staging_to_production_kinsta" and $email ) {
+
+		$install_name = get_field("install", $site_id);
+		$domain_name = get_the_title($site_id);
+		$url = "https://". get_field('install', $site_id) .".kinsta.com";
+
+		// Send out completed email notice
+		$to = $email;
+		$subject = "Anchor Hosting - Deploy to Production ($domain_name)";
+		$body = 'Deploy to production completed for '.$domain_name.'.<br /><br /><a href="'.$url.'">'.$domain_name.'</a>';
+		$headers = array('Content-Type: text/html; charset=UTF-8');
+
+		wp_mail( $to, $subject, $body, $headers );
+
+		echo "staging_to_production_kinsta email sent";
+
+	}
+
 	// Generate a new snapshot.
 	if ($archive and $storage) {
 

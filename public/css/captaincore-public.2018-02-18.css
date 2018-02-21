@@ -1161,6 +1161,13 @@ a.btn.white {
 	color: #5cbad5 !important;
 }
 
+i.material-icons.reverse {
+	transform: scaleX(-1);
+	-moz-transform: scaleX(-1);
+	-webkit-transform: scaleX(-1);
+	-ms-transform: scaleX(-1);
+}
+
 .card .pass {
 	display: none;
 }

@@ -2691,7 +2691,9 @@ function anchor_install_action_callback() {
 	$token = "***REMOVED***";
 
 	$partners = get_field('partner', $post_id);
-	$preloadusers = implode(",", $partners);
+	if ($partners) {
+		$preloadusers = implode(",", $partners);
+	}
 
 	// Assume this is a subsite and reconfigure as such
 	if ($install == "") {
@@ -2760,6 +2762,16 @@ function anchor_install_action_callback() {
 			$command = "captaincore deploy production_to_staging_kinsta $install --email=$value > ~/Tmp/$timestamp-deploy_production_to_staging_kinsta_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_kinsta_$install.txt";
 		} else {
 			$command = "captaincore deploy production_to_staging_kinsta $install > ~/Tmp/$timestamp-deploy_production_to_staging_kinsta_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_kinsta_$install.txt";
+		}
+	}
+	if ($cmd == "kinsta-deploy-to-production") {
+		date_default_timezone_set('America/New_York');
+		$t=time();
+		$timestamp = date("Y-m-d-hms",$t);
+		if($value) {
+			$command = "captaincore deploy staging_to_production_kinsta $install --email=$value > ~/Tmp/$timestamp-deploy_staging_to_production_kinsta_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_staging_to_production_kinsta_$install.txt";
+		} else {
+			$command = "captaincore deploy staging_to_production_kinsta $install > ~/Tmp/$timestamp-deploy_staging_to_production_kinsta_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_staging_to_production_kinsta_$install.txt";
 		}
 	}
 	if ($cmd == "remove") {

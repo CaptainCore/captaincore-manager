@@ -360,6 +360,53 @@ class CaptainCore_My_Account_Website_Endpoint {
 
 				  });
 
+					jQuery(".push_to_production .modal-content input#submit").click(function(e){
+
+				  	e.preventDefault();
+
+						modal_form = jQuery(this).parents('.modal.open');
+
+						jQuery('.modal.open .modal-content .row').hide();
+						jQuery('.modal.open .modal-content .progress').removeClass('hide');
+
+						email_address = modal_form.find('input#email').val();
+
+						if ( isEmail(email_address) ) {
+
+							confirm_deploy = confirm("Kinsta production site will be overridden. Proceed?");
+
+							if(confirm_deploy) {
+
+								var post_id = jQuery(this).data('post-id');
+
+							  var data = {
+							  	'action': 'anchor_install',
+							  	'post_id': modal_form.data('id'),
+									'command': 'kinsta-deploy-to-production',
+									'value'	: email_address
+							  };
+
+							  // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+							  jQuery.post(ajaxurl, data, function(response) {
+							  	Materialize.toast('Kinsta push to production in process. Will email once completed.', 4000);
+									jQuery('.modal.open .modal-content .row').show();
+									jQuery('.modal.open .modal-content .progress').addClass('hide');
+									modal_form.modal('close');
+							  });
+
+							} else {
+								jQuery('.modal.open .modal-content .row').show();
+								jQuery('.modal.open .modal-content .progress').addClass('hide');
+							}
+
+						} else {
+							modal_form.find('.results').html("Please enter a valid email address.");
+							jQuery('.modal.open .modal-content .row').show();
+							jQuery('.modal.open .modal-content .progress').addClass('hide');
+						}
+
+				  });
+
 					jQuery(".redeploy").click(function(e){
 
 						confirm_redeploy = confirm("Redeploy?");
@@ -630,7 +677,8 @@ class CaptainCore_My_Account_Website_Endpoint {
 				<?php } ?>
 				<?php
 				if( strpos($production_address, ".kinsta.com") ):  ?>
-					<a href="#push_to_staging<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large" data-post-id="<?php echo $website_id; ?>"><i class="material-icons left">local_shipping</i>Kinsta: Push Production to Staging</a><br />
+					<a href="#push_to_staging<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large" data-post-id="<?php echo $website_id; ?>"><i class="material-icons left">local_shipping</i>Push Production to Staging</a><br />
+					<a href="#push_to_production<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large" data-post-id="<?php echo $website_id; ?>"><i class="material-icons reverse left">local_shipping</i>Push Staging to Production</a><br />
 				<?php endif ?>
 				<?php if ($views != $website_views or $storage != $website_storage) { ?>
 					<a href="#view_usage_breakdown_<?php echo $customer_id[0]; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">chrome_reader_mode</i>View Usage Breakdown</a>
@@ -688,6 +736,33 @@ class CaptainCore_My_Account_Website_Endpoint {
 	<div class="modal-content">
 
 		<h4>Push Production to Staging <small>(<?php echo get_the_title( $website_id ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
+		<div class="progress hide">
+				<div class="indeterminate"></div>
+		</div>
+		<div class="row">
+
+      <div class="input-field col s12">
+				<label for="email">Email Address</label><br />
+        <input id="email" type="email" class="validate" value="<?php $current_user = wp_get_current_user(); echo $current_user->user_email; ?>">
+      </div>
+    </div>
+		<div class="row">
+      <div class="input-field col s12">
+				<span class="results red-text text-darken-4"></span>
+			</div>
+		</div>
+		<div class="row">
+      <div class="input-field col s12">
+        <input id="submit" value="Proceed" type="submit">
+      </div>
+    </div>
+	</div>
+</div>
+
+<div id="push_to_production<?php echo $website_id; ?>" class="modal push_to_production" data-id="<?php echo $website_id; ?>">
+	<div class="modal-content">
+
+		<h4>Push Staging to Production <small>(<?php echo get_the_title( $website_id ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
 		<div class="progress hide">
 				<div class="indeterminate"></div>
 		</div>
