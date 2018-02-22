@@ -1527,6 +1527,30 @@ function anchor_acf_save_post_after( $post_id ){
 	}
 }
 
+add_action( 'rest_api_init', function () {
+  register_rest_route( 'captaincore/v1', '/client', array(
+    'methods' => 'GET',
+    'callback' => 'captaincore_client_options_func',
+  ) );
+} );
+
+function captaincore_client_options_func( WP_REST_Request $request ) {
+
+	$data = array(
+		"profile_image" => get_field("profile_image","option"),
+		"description" => get_field("description","option"),
+		"contact_info" => get_field("contact_info","option"),
+		"business_name" => get_field("business_name","option"),
+		"business_tagline" => get_field("business_tagline","option"),
+		"business_link" => get_field("business_link","option"),
+		"business_logo" => get_field("business_logo","option"),
+		"hosting_dashboard_link" => get_field("hosting_dashboard_link","option"),
+	);
+
+  return $data;
+
+}
+
 // Add meta fields to API
 add_action( 'rest_api_init','slug_register_ah_fields' );
 
@@ -1945,6 +1969,9 @@ function checkApiAuth( $result ){
 
 	// Strips first part of endpoint
 	$endpoint_all = str_replace("wp-json/wp/v2/","",$wp->request);
+	if ( strpos($wp->request, "wp-json/captaincore/v1") !== false ) {
+		return $result;
+	}
 
 	// Breaks apart endpoint into array
 	$endpoint_all = explode('/', $endpoint_all);
