@@ -13,14 +13,14 @@
 
 }
 
-.single-process #main header.main {
+.single-captcore_process #main header.main {
 	padding: 50px 0 !important;
 }
 
-.single-process #main header.main .date-author {
+.single-captcore_process #main header.main .date-author {
 	margin-bottom: 0px !important;
 }
-.single-process #main header.main .btn {
+.single-captcore_process #main header.main .btn {
 	margin-top: 1em;
 	font-size: 0.7em;
 }
@@ -913,7 +913,7 @@ h3.process {
 .process-log-update .acf-field.acf-field-select.acf-field-588bb7bd3cab6 label {
 	display: none;
 }
-article.type-process {
+article.type-captcore_process {
 	z-index: 1;
 	position: relative;
 }

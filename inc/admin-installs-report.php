@@ -26,7 +26,7 @@
 
 // WP_Query arguments
 $args = array (
-	'post_type'              => array( 'customer' ),
+	'post_type'              => array( 'captcore_customer' ),
 	'posts_per_page'         => '-1',
 	'meta_query' => array(
 		array(

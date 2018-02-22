@@ -327,7 +327,7 @@ if ($partner and $role_check) {
 
 		// Load websites assigned to partner
 		$arguments = array(
-			'post_type' 			=> 'website',
+			'post_type' 			=> 'captcore_website',
 			'posts_per_page'	=> '-1',
 			'order'						=> 'asc',
 			'orderby'					=> 'title',
@@ -366,7 +366,7 @@ if ($partner and $role_check) {
 
 		// Load websites assigned to partner
 		$websites = get_posts(array(
-			'post_type' 			=> 'website',
+			'post_type' 			=> 'captcore_website',
 			'posts_per_page'	=> '-1',
 			'order'						=> 'asc',
 			'orderby'					=> 'title',

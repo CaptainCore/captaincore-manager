@@ -460,7 +460,7 @@ $today = date('Ymd');
 $process_id = get_field('kpi_new_customers', 'option');
 if ($process_id) { $process_id = $process_id[0]; }
 $process_logs = get_posts(array(
-	  'post_type' 			=> 'process_log',
+	  'post_type' 			=> 'captcore_processlog',
 		'posts_per_page'  => '-1',
 		'meta_query' 			=> array(
 				array(
@@ -510,7 +510,7 @@ $process_role_support_requests_id = get_field('kpi_support_requests', 'option');
 $process_role_support_requests = get_term($process_role_support_requests_id);
 
 $process_ids = get_posts( array (
-	'post_type'      => array( 'process' ),
+	'post_type'      => array( 'captcore_process' ),
 	'posts_per_page' => '-1',
 	'taxonomy'			 => 'process_role',
 	'term' 					 => $process_role_support_requests->slug,
@@ -529,7 +529,7 @@ foreach ($process_ids as $process_id) {
 // The Query
 
 $process_logs_support_requests = get_posts(array(
-	  'post_type' 			=> 'process_log',
+	  'post_type' 			=> 'captcore_processlog',
 		'posts_per_page'  => '-1',
 		'meta_query' 			=> array(
 			  array_merge(array('relation' => 'OR'), $processRelations)
@@ -580,7 +580,7 @@ $process_role_product_development_id = get_field('kpi_product_development', 'opt
 $process_role_product_development = get_term($process_role_product_development_id);
 
 $process_ids = get_posts( array (
-	'post_type'      => array( 'process' ),
+	'post_type'      => array( 'captcore_process' ),
 	'posts_per_page' => '-1',
 	'taxonomy'			 => 'process_role',
 	'term' 					 => $process_role_product_development->slug,
@@ -601,7 +601,7 @@ foreach ($process_ids as $process_id) {
 // The Query
 
 $process_logs_product_development = get_posts(array(
-	  'post_type' 			=> 'process_log',
+	  'post_type' 			=> 'captcore_processlog',
 		'posts_per_page'  => '-1',
 		'meta_query' 			=> array(
 			  array_merge(array('relation' => 'OR'), $processRelations)

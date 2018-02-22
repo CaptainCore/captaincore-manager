@@ -797,7 +797,7 @@ class CaptainCore_My_Account_Website_Endpoint {
 		<div class="row">
 				<?php
 				$quicksaves_for_website = get_posts(array(
-					'post_type' => 'cc_quicksave',
+					'post_type' => 'captcore_quicksave',
 					'posts_per_page' => '-1',
 					'meta_query' => array(
 						array(

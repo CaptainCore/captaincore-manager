@@ -27,7 +27,7 @@
 
 // WP_Query arguments
 $args = array (
-	'post_type'              => array( 'customer' ),
+	'post_type'              => array( 'captcore_customer' ),
 	'posts_per_page'         => '-1',
 	'meta_query' => array(
 		array(
@@ -104,7 +104,7 @@ if ( $query->have_posts() ) {
 					// WP_Query arguments
 					$args = array (
 						'post__in'      => $customer_ids,
-						'post_type'		=> 'customer'
+						'post_type'		=> 'captcore_customer'
 					);
 
 					// The Query

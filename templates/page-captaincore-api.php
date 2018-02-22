@@ -125,7 +125,7 @@ if (substr_count($site, ".") > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 		// Create post object
 		$my_post = array(
 		  'post_title'    => "Snapshot",
-		  'post_type'     => 'snapshot',
+		  'post_type'     => 'captcore_snapshot',
 		  'post_status'   => 'publish'
 		);
 
@@ -169,7 +169,7 @@ if (substr_count($site, ".") > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 		// Create post object
 		$my_post = array(
 		  'post_title'    => "Quicksave",
-		  'post_type'     => 'cc_quicksave',
+		  'post_type'     => 'captcore_quicksave',
 		  'post_status'   => 'publish'
 		);
 
@@ -207,7 +207,7 @@ if (substr_count($site, ".") > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 		// args
 		$args = array(
 			'numberposts'	=> 1,
-			'post_type'		=> 'server',
+			'post_type'		=> 'captcore_server',
 			'meta_key'		=> 'address',
 			'meta_value'	=> $server
 		);

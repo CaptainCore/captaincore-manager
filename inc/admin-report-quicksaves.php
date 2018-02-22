@@ -30,7 +30,7 @@ $websites = get_posts(array(
 foreach ($websites as $website) {
 
 	$quicksaves = get_posts(array(
-		'post_type' => 'cc_quicksave',
+		'post_type' => 'captcore_quicksave',
 		'posts_per_page'  => '-1',
 		'meta_query' => array(
 			array(

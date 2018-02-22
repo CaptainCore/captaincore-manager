@@ -123,7 +123,7 @@ jQuery(document).ready(function(){
 
 			    	// WP_Query arguments
 			    	$args = array (
-			    		'post_type'              => array( 'process' ),
+			    		'post_type'              => array( 'captcore_process' ),
 			    		'posts_per_page'         => '-1',
 			    		'taxonomy'				 => 'process_role',
 			    		'term' 					 => $term->slug,
@@ -160,7 +160,7 @@ jQuery(document).ready(function(){
 
 
 			    $process_logs = get_posts(array(
-			    	'post_type' 		=> 'process_log',
+			    	'post_type' 		=> 'captcore_processlog',
 			        'posts_per_page'    => '-1',
 			        'date_query'    => array(
 			                'column'  => 'post_date',
@@ -240,7 +240,7 @@ jQuery(document).ready(function(){
 
 
 			    $process_logs = get_posts(array(
-			    	'post_type' 		=> 'process_log',
+			    	'post_type' 		=> 'captcore_processlog',
 			        'posts_per_page'    => '-1',
 			        'author'			=> get_current_user_id(),
 			        'meta_key'			=> 'status',

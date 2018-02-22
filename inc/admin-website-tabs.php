@@ -26,16 +26,16 @@ a.nav-tab.nav-tab-active span {
 
 <?php $screen = get_current_screen(); ?>
 <h2 class="nav-tab-wrapper" style="margin-top:30px;">
-  <a class="nav-tab dashicons-before dashicons-admin-multisite<?php if( $screen->post_type == "website" ) { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=website"><span>Websites</span></a>
-  <a class="nav-tab dashicons-before dashicons-groups<?php if( $screen->post_type == "customer") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=customer"><span>Customers</span></a>
-	<a class="nav-tab dashicons-before dashicons-admin-users<?php if( $screen->post_type == "contact") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=contact"><span>Contacts</span></a>
-	<a class="nav-tab dashicons-before dashicons-welcome-widgets-menus<?php if( $screen->post_type == "domain") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=domain"><span>Domains</span></a>
-	<a class="nav-tab dashicons-before dashicons-media-spreadsheet<?php if( $screen->post_type == "changelog") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=changelog"><span>Web Logs</span></a>
-	<a class="nav-tab dashicons-before dashicons-controls-repeat<?php if( $screen->post_type == "process") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=process"><span>Processes</span></a>
-	<a class="nav-tab dashicons-before dashicons-media-spreadsheet<?php if( $screen->post_type == "process_log") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=process_log"><span>Process Logs</span></a>
-	<a class="nav-tab dashicons-before dashicons-building<?php if( $screen->post_type == "server") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=server"><span>Servers</span></a>
-	<a class="nav-tab dashicons-before dashicons-backup<?php if( $screen->post_type == "snapshot") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=snapshot"><span>Snapshots</span></a>
-	<a class="nav-tab dashicons-before dashicons-backup<?php if( $screen->post_type == "cc_quicksave") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=cc_quicksave"><span>Quicksaves</span></a>
+  <a class="nav-tab dashicons-before dashicons-admin-multisite<?php if( $screen->post_type == "captcore_website" ) { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=captcore_website"><span>Websites</span></a>
+  <a class="nav-tab dashicons-before dashicons-groups<?php if( $screen->post_type == "captcore_customer") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=captcore_customer"><span>Customers</span></a>
+	<a class="nav-tab dashicons-before dashicons-admin-users<?php if( $screen->post_type == "captcore_contact") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=captcore_contact"><span>Contacts</span></a>
+	<a class="nav-tab dashicons-before dashicons-welcome-widgets-menus<?php if( $screen->post_type == "captcore_domain") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=captcore_domain"><span>Domains</span></a>
+	<a class="nav-tab dashicons-before dashicons-media-spreadsheet<?php if( $screen->post_type == "captcore_changelog") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=captcore_changelog"><span>Web Logs</span></a>
+	<a class="nav-tab dashicons-before dashicons-controls-repeat<?php if( $screen->post_type == "captcore_process") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=captcore_process"><span>Processes</span></a>
+	<a class="nav-tab dashicons-before dashicons-media-spreadsheet<?php if( $screen->post_type == "captcore_process_log") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=captcore_processlog"><span>Process Logs</span></a>
+	<a class="nav-tab dashicons-before dashicons-building<?php if( $screen->post_type == "captcore_server") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=captcore_server"><span>Servers</span></a>
+	<a class="nav-tab dashicons-before dashicons-backup<?php if( $screen->post_type == "captcore_snapshot") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=captcore_snapshot"><span>Snapshots</span></a>
+	<a class="nav-tab dashicons-before dashicons-backup<?php if( $screen->post_type == "captcore_quicksave") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=captcore_quicksave"><span>Quicksaves</span></a>
 </h2>
 <script>
 jQuery(document).ready(function() {

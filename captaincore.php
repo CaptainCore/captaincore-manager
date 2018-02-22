@@ -184,7 +184,7 @@ function contact_post_type() {
 		'capabilities'        => $capabilities,
 		'map_meta_cap' 		  => true
 	);
-	register_post_type( 'contact', $args );
+	register_post_type( 'captcore_contact', $args );
 
 }
 add_action( 'init', 'contact_post_type', 0 );
@@ -255,7 +255,7 @@ function customer_post_type() {
 		'capabilities'        => $capabilities,
 		'map_meta_cap' 		  => true
 	);
-	register_post_type( 'customer', $args );
+	register_post_type( 'captcore_customer', $args );
 
 }
 add_action( 'init', 'customer_post_type', 0 );
@@ -309,7 +309,7 @@ function website_post_type() {
 		'capabilities'        => $capabilities,
 		'map_meta_cap'				=> true
 	);
-	register_post_type( 'website', $args );
+	register_post_type( 'captcore_website', $args );
 }
 
 // Hook into the 'init' action
@@ -378,7 +378,7 @@ function domain_post_type() {
 		'capabilities'        => $capabilities,
 		'map_meta_cap'				=> true,
 	);
-	register_post_type( 'domain', $args );
+	register_post_type( 'captcore_domain', $args );
 
 }
 add_action( 'init', 'domain_post_type', 0 );
@@ -446,7 +446,7 @@ function changelog_post_type() {
 		'capabilities'        => $capabilities,
 		'map_meta_cap'				=> true
 	);
-	register_post_type( 'changelog', $args );
+	register_post_type( 'captcore_changelog', $args );
 
 }
 
@@ -513,7 +513,7 @@ function process_post_type() {
 		'capabilities'        => $capabilities,
 		'map_meta_cap' 		  => true
 	);
-	register_post_type( 'process', $args );
+	register_post_type( 'captcore_process', $args );
 
 }
 add_action( 'init', 'process_post_type', 0 );
@@ -579,7 +579,7 @@ function process_log_post_type() {
 		'capabilities'        => $capabilities,
 		'map_meta_cap' 		  => true
 	);
-	register_post_type( 'process_log', $args );
+	register_post_type( 'captcore_processlog', $args );
 
 }
 add_action( 'init', 'process_log_post_type', 0 );
@@ -645,7 +645,7 @@ function process_item_log_post_type() {
 		'capabilities'        => $capabilities,
 		'map_meta_cap' 		  => true
 	);
-	register_post_type( 'process_item_log', $args );
+	register_post_type( 'captcore_processitem', $args );
 
 }
 // add_action( 'init', 'process_item_log_post_type', 0 );
@@ -710,7 +710,7 @@ function server_post_type() {
 		'capabilities'        => $capabilities,
 		'map_meta_cap' 		  => true
 	);
-	register_post_type( 'server', $args );
+	register_post_type( 'captcore_server', $args );
 
 }
 add_action( 'init', 'server_post_type', 0 );
@@ -775,7 +775,7 @@ function snapshot_post_type() {
 		'capabilities'        => $capabilities,
 		'map_meta_cap' 		  => true
 	);
-	register_post_type( 'snapshot', $args );
+	register_post_type( 'captcore_snapshot', $args );
 
 }
 add_action( 'init', 'snapshot_post_type', 0 );
@@ -841,7 +841,7 @@ function captaincore_quicksaves_post_type() {
 		'capability_type'       => 'page',
 		'capabilities'          => $capabilities,
 	);
-	register_post_type( 'cc_quicksave', $args );
+	register_post_type( 'captcore_quicksave', $args );
 
 }
 add_action( 'init', 'captaincore_quicksaves_post_type', 0 );
@@ -851,7 +851,7 @@ function captaincore_website_tabs() {
 	$screen = get_current_screen();
 
 	// Only edit post screen:
-	$pages = array('website','customer','contact','domain','changelog','process','process_log','server','snapshot','cc_quicksave');
+	$pages = array('captcore_website','captcore_customer','captcore_contact','captcore_domain','captcore_changelog','captcore_process','captcore_processlog','captcore_server','captcore_snapshot','captcore_quicksave');
 	if( in_array($screen->post_type, $pages) ) {
 	    // Before:
 	    add_action( 'all_admin_notices', function(){
@@ -872,7 +872,7 @@ add_action( 'load-post.php', 'captaincore_website_tabs' );
 
 function my_remove_extra_product_data( $data, $post, $context ) {
     // make sure you've got the right custom post type
-    if ( 'website' !== $data[ 'type' ] ) {
+    if ( 'captcore_website' !== $data[ 'type' ] ) {
         return $data;
     }
     // now proceed as you saw in the other examples
@@ -915,7 +915,7 @@ function slug_get_paid_by_me( $object, $field_name, $request ) {
 	$post_id = $object['id'];
 
 	$websites = get_posts(array(
-		'post_type' => 'customer',
+		'post_type' => 'captcore_customer',
 	    'posts_per_page'         => '-1',
 	    'meta_query' => array(
         	'relation'		=> 'AND',
@@ -1109,7 +1109,7 @@ function my_acf_validate_save_post() {
 		// Check for duplicate domain.
 		$domain_exists = get_posts( array(
 			'title'						=> $domain,
-			'post_type' 			=> 'domain',
+			'post_type' 			=> 'captcore_domain',
 			'posts_per_page'	=> '-1',
 			'post_status'			=> 'publish',
 			'fields'          => 'ids',
@@ -1134,7 +1134,7 @@ function my_acf_validate_save_post() {
 add_action('acf/save_post', 'anchor_acf_save_post_before', 1);
 function anchor_acf_save_post_before( $post_id ){
 
-	if ( get_post_type( $post_id ) == 'website' ) {
+	if ( get_post_type( $post_id ) == 'captcore_website' ) {
 
 		if ( get_field('launch_date') == "" and $_POST['acf']['field_52d167f4ac39e'] == "") {
 			// No date was entered for Launch Date, assign to today.
@@ -1234,7 +1234,7 @@ add_filter('acf/load_field/key=field_590681f3c0775', 'acf_load_color_field_choic
 add_action('acf/save_post', 'anchor_acf_save_post_after', 20);
 function anchor_acf_save_post_after( $post_id ){
 
-	if ( get_post_type( $post_id ) == 'website' ) {
+	if ( get_post_type( $post_id ) == 'captcore_website' ) {
 	    $custom = get_post_custom($post_id);
 	    $hosting_plan = $custom["hosting_plan"][0];
 	    $hosting_price = $custom["hosting_price"][0];
@@ -1259,7 +1259,7 @@ function anchor_acf_save_post_after( $post_id ){
 	    	// Create customer object
 	    	$my_post = array(
 	    	  'post_title'    => get_the_title( $post_id ),
-	    	  'post_type'     => 'customer',
+	    	  'post_type'     => 'captcore_customer',
 	    	  'post_status'   => 'publish',
 	    	  'post_author'   => 1
 	    	);
@@ -1364,7 +1364,7 @@ function anchor_acf_save_post_after( $post_id ){
 	    	*/
 
 	    	$websites = get_posts(array(
-	    		'post_type' 			=> 'website',
+	    		'post_type' 			=> 'captcore_website',
 	    	  'posts_per_page'  => '-1',
 	    	  'meta_query' 			=> array(
 					 'relation'		=> 'AND',
@@ -1396,7 +1396,7 @@ function anchor_acf_save_post_after( $post_id ){
 	    }
 
 	}
-	if ( get_post_type( $post_id ) == 'customer' ) {
+	if ( get_post_type( $post_id ) == 'captcore_customer' ) {
 		$custom = get_post_custom($post_id);
 		$hosting_price = $custom["hosting_price"][0];
 		$addons = get_field('addons', $post_id);
@@ -1423,7 +1423,7 @@ function anchor_acf_save_post_after( $post_id ){
 	    update_field('field_56181aaed39a9', $total_price, $post_id);
 	}
 
-	if ( get_post_type( $post_id ) == 'domain' ) {
+	if ( get_post_type( $post_id ) == 'captcore_domain' ) {
 
 		if ( get_field('domain_id', $post_id ) == "" ) {
 
@@ -1467,7 +1467,7 @@ function anchor_acf_save_post_after( $post_id ){
 			// Assign domain to customers
 			$args = array(
 				'title' => $domainname,
-				'post_type' => 'website'
+				'post_type' => 'captcore_website'
 			);
 			$website = get_posts( $args );
 			$website_id = $website[0]->ID;
@@ -1485,7 +1485,7 @@ function anchor_acf_save_post_after( $post_id ){
 
 	}
 
-	if ( get_post_type( $post_id ) == 'process_log' ) {
+	if ( get_post_type( $post_id ) == 'captcore_processlog' ) {
 		$custom = get_post_custom($post_id);
 		$process_id = get_field('process', $post_id);
 		$process_id = $process_id[0];
@@ -1501,7 +1501,7 @@ function anchor_acf_save_post_after( $post_id ){
 
 	}
 
-	if ( get_post_type( $post_id ) == 'contact' ) {
+	if ( get_post_type( $post_id ) == 'captcore_contact' ) {
 
 		$first_name = get_field('first_name', $post_id);
 		$last_name = get_field('last_name', $post_id);
@@ -1531,145 +1531,145 @@ function anchor_acf_save_post_after( $post_id ){
 add_action( 'rest_api_init','slug_register_ah_fields' );
 
 function slug_register_ah_fields() {
-	register_rest_field( 'website', 'launch_date',
+	register_rest_field( 'captcore_website', 'launch_date',
 		array(
 		   'get_callback'    => 'slug_get_post_meta_cb',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'website', 'closed_date',
+	register_rest_field( 'captcore_website', 'closed_date',
 		array(
 			 'get_callback'    => 'slug_get_post_meta_cb',
 			 'update_callback' => 'slug_update_post_meta_cb',
 			 'schema'          => null,
 	));
-	register_rest_field( 'website', 'storage',
+	register_rest_field( 'captcore_website', 'storage',
 		array(
 		   'get_callback'    => 'slug_get_post_meta_cb',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'website', 'server',
+	register_rest_field( 'captcore_website', 'server',
 		array(
 		   'get_callback'    => 'slug_get_server',
 		   'update_callback' => 'slug_update_server',
 		   'schema'          => null,
 	));
-	register_rest_field( 'website', 'views',
+	register_rest_field( 'captcore_website', 'views',
 		array(
 		   'get_callback'    => 'slug_get_post_meta_cb',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'customer', 'billing_terms',
+	register_rest_field( 'captcore_customer', 'billing_terms',
 		array(
 		   'get_callback'    => 'slug_get_post_meta_array',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'customer', 'addons',
+	register_rest_field( 'captcore_customer', 'addons',
 		array(
 		   'get_callback'    => 'slug_get_post_meta_array',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'customer', 'preloaded_email',
+	register_rest_field( 'captcore_customer', 'preloaded_email',
 		array(
 		   'get_callback'    => 'slug_get_post_meta_array',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'customer', 'preloaded_users',
+	register_rest_field( 'captcore_customer', 'preloaded_users',
 		array(
 		   'get_callback'    => 'slug_get_post_meta_array',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'customer', 'preloaded_plugins',
+	register_rest_field( 'captcore_customer', 'preloaded_plugins',
 		array(
 		   'get_callback'    => 'slug_get_post_meta_array',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'customer', 'billing_method',
+	register_rest_field( 'captcore_customer', 'billing_method',
 		array(
 		   'get_callback'    => 'slug_get_post_meta_cb',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'customer', 'billing_email',
+	register_rest_field( 'captcore_customer', 'billing_email',
 		array(
 		   'get_callback'    => 'slug_get_post_meta_cb',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'customer', 'billing_date',
+	register_rest_field( 'captcore_customer', 'billing_date',
 		array(
 		   'get_callback'    => 'slug_get_post_meta_cb',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'customer', 'storage',
+	register_rest_field( 'captcore_customer', 'storage',
 		array(
 		   'get_callback'    => 'slug_get_post_meta_cb',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'customer', 'views',
+	register_rest_field( 'captcore_customer', 'views',
 		array(
 		   'get_callback'    => 'slug_get_post_meta_cb',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'customer', 'paid_by',
+	register_rest_field( 'captcore_customer', 'paid_by',
 		array(
 		   'get_callback'    => 'slug_get_post_meta_cb',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'customer', 'paid_by_me',
+	register_rest_field( 'captcore_customer', 'paid_by_me',
 		array(
 		   'get_callback'    => 'slug_get_paid_by_me',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'customer', 'hosting_price',
+	register_rest_field( 'captcore_customer', 'hosting_price',
 		array(
 		   'get_callback'    => 'slug_get_post_meta_cb',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'website', 'status',
+	register_rest_field( 'captcore_website', 'status',
 		array(
 		   'get_callback'    => 'slug_get_post_meta_cb',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'customer', 'hosting_plan',
+	register_rest_field( 'captcore_customer', 'hosting_plan',
 		array(
 		   'get_callback'    => 'slug_get_post_meta_cb',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'customer', 'total_price',
+	register_rest_field( 'captcore_customer', 'total_price',
 		array(
 		   'get_callback'    => 'slug_get_post_meta_cb',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'website', 'customer',
+	register_rest_field( 'captcore_website', 'customer',
 		array(
 		   'get_callback'    => 'slug_get_post_meta_cb',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'process_log', 'description',
+	register_rest_field( 'captcore_processlog', 'description',
 		array(
 		   'get_callback'    => 'slug_get_process_description',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
-	register_rest_field( 'process_log', 'process',
+	register_rest_field( 'captcore_processlog', 'process',
 		array(
 		   'get_callback'    => 'slug_get_process',
 		   'update_callback' => 'slug_update_post_meta_cb',
@@ -1752,7 +1752,7 @@ add_filter( 'ac/column/value', 'captaincore_formatted_acf_value_storage', 10, 3 
 function my_pre_get_posts( $query ) {
 
 	// only modify queries for 'website' post type
-	if( $query->query_vars['post_type'] == 'customer' ) {
+	if( $query->query_vars['post_type'] == 'captcore_customer' ) {
 
 		$orderby = $query->get( 'orderby');
 
@@ -1920,7 +1920,7 @@ function my_relationship_result( $title, $post, $field, $post_id ) {
 }
 
 // filter for every field
-add_filter('acf/fields/relationship/result/name=process_log', 'my_relationship_result', 10, 4);
+add_filter('acf/fields/relationship/result/name=captcore_processlog', 'my_relationship_result', 10, 4);
 
 /**
  * Deregister matching post types.
@@ -1960,7 +1960,7 @@ function checkApiAuth( $result ){
 		}
 
 		// custom auth on changelog endpoint, exlcuding global posts
-		if ( $endpoint == "changelog" and !isset($_GET["global"]) ) {
+		if ( $endpoint == "captcore_changelog" and !isset($_GET["global"]) ) {
 
 			$token = $_GET["token"];
 			$website = $_GET["website"];
@@ -1972,13 +1972,13 @@ function checkApiAuth( $result ){
 				return $result;
 			}
 
-		} elseif (  $endpoint == "changelog" and isset($_GET["global"]) ) {
+		} elseif (  $endpoint == "captcore_changelog" and isset($_GET["global"]) ) {
 			// Return global changelogs for non logged in users
 			return $result;
 		}
 
 		// custom auth on changelog endpoint, exlcuding global posts
-		if ($endpoint == "process_log") {
+		if ($endpoint == "captcore_processlog") {
 
 			$token = $_GET["token"];
 			$website = $_GET["website"];
@@ -1994,7 +1994,7 @@ function checkApiAuth( $result ){
 		}
 
 		// custom auth on website endpoint, excluding global posts
-		if ($endpoint == "website") {
+		if ($endpoint == "captcore_website") {
 
 			$website_id = $endpoint_all[1];
 
@@ -2004,7 +2004,7 @@ function checkApiAuth( $result ){
 			// Token lookup
 			// WP_Query arguments
 			$args = array (
-				'post_type'         => array( 'website' ),
+				'post_type'         => array( 'captcore_website' ),
 				'name'          		=> $domain,
 				'exact'							=> true,
 				'posts_per_page'    => '1',
@@ -2033,7 +2033,7 @@ function checkApiAuth( $result ){
 		}
 
 		// custom auth on customer endpoint, exlcuding global posts
-		if ($endpoint == "customer") {
+		if ($endpoint == "captcore_customer") {
 
 			$token = $_GET["token"];
 			$token_match = false;
@@ -2046,7 +2046,7 @@ function checkApiAuth( $result ){
 
 			// Token lookup. Find all websites attached to customer to find a token match.
 			$websites = get_posts(array(
-				'post_type'				=> 'website',
+				'post_type'				=> 'captcore_website',
 		    'posts_per_page'	=> '-1',
 		    'meta_query' 			=> array(
 			    'relation' => 'OR',
@@ -2084,7 +2084,7 @@ function checkApiAuth( $result ){
 
 		// User logged in so check anchor_verify_permissions
 
-		if ($endpoint == "website") {
+		if ($endpoint == "captcore_website") {
 
 			$website_id = $endpoint_all[1];
 
@@ -2094,7 +2094,7 @@ function checkApiAuth( $result ){
 
 		}
 
-		if ($endpoint == "customer") {
+		if ($endpoint == "captcore_customer") {
 
 			$customer_id = $endpoint_all[1];
 
@@ -2117,7 +2117,7 @@ function get_domains_per_partner ( $partner_id ) {
 
 	// Load websites assigned to partner
 	$websites = get_posts(array(
-		'post_type' 			=> 'website',
+		'post_type' 			=> 'captcore_website',
 		'posts_per_page'	=> '-1',
 		'order'						=> 'asc',
 		'orderby'					=> 'title',
@@ -2156,7 +2156,7 @@ function get_domains_per_partner ( $partner_id ) {
 
 		// Load websites assigned to partner
 		$websites = get_posts(array(
-			'post_type' 			=> 'website',
+			'post_type' 			=> 'captcore_website',
 			'posts_per_page'	=> '-1',
 			'order'						=> 'asc',
 			'orderby'					=> 'title',
@@ -2215,7 +2215,7 @@ function anchor_verify_permissions( $website_id ) {
 			foreach ($partner as $partner_id) {
 
 				$websites = get_posts(array(
-					'post_type' 			=> 'website',
+					'post_type' 			=> 'captcore_website',
 	        'posts_per_page'	=> '-1',
 					'order'						=> 'asc',
 					'orderby'					=> 'title',
@@ -2269,7 +2269,7 @@ function anchor_verify_permissions_customer( $customer_id ) {
 			foreach ($partner as $partner_id) {
 
 				$websites = get_posts(array(
-					'post_type' 			=> 'website',
+					'post_type' 			=> 'captcore_website',
 	        'posts_per_page'	=> '-1',
 					'order'						=> 'asc',
 					'orderby'					=> 'title',
@@ -2312,7 +2312,7 @@ function anchor_verify_permissions_customer( $customer_id ) {
 function anchor_verify_permissions_domain( $domain_id ) {
 
 	$domain_exists = get_posts( array(
-		'post_type' 			=> 'domain',
+		'post_type' 			=> 'captcore_domain',
 		'posts_per_page'	=> '-1',
 		'meta_query'			=> array(
 			 array(
@@ -2341,7 +2341,7 @@ function anchor_verify_permissions_domain( $domain_id ) {
 			foreach ($partner as $partner_id) {
 
 				$websites = get_posts(array(
-					'post_type' 			=> 'website',
+					'post_type' 			=> 'captcore_website',
 	        'posts_per_page'	=> '-1',
 					'order'						=> 'asc',
 					'orderby'					=> 'title',
@@ -2376,7 +2376,7 @@ function anchor_verify_permissions_domain( $domain_id ) {
 			foreach ($partner as $partner_id) {
 
 				$websites = get_posts(array(
-					'post_type' 			=> 'website',
+					'post_type' 			=> 'captcore_website',
 	        'posts_per_page'	=> '-1',
 					'order'						=> 'asc',
 					'orderby'					=> 'title',
@@ -2746,7 +2746,7 @@ function anchor_install_action_callback() {
 		$website_id = get_field('website',$post_id);
 		$quicksaves_for_website_ids = get_posts(array(
 			'fields' => 'ids',
-			'post_type' => 'cc_quicksave',
+			'post_type' => 'captcore_quicksave',
 			'posts_per_page' => '-1',
 			'meta_query' => array(
 				array(
@@ -2824,7 +2824,7 @@ function process_log_action_callback() {
 	// Create post object
 	$my_post = array(
 	  'post_status'   => 'publish',
-	  'post_type'	  => 'process_log',
+	  'post_type'	  => 'captcore_processlog',
 	  'post_author'   => get_current_user_id()
 	);
 
@@ -3145,7 +3145,7 @@ add_filter( 'query_vars', function( $vars ){
 
 add_filter( 'rest_query_vars', 'test_query_vars' );
 function test_query_vars( $vars ){
-    $vars[] = 'website';
+    $vars[] = 'captcore_website';
     $vars[] = 'global';
     return $vars;
 }
@@ -3159,7 +3159,7 @@ function test_pre_get_posts( $query ) {
 		$rest_route = $wp->query_vars["rest_route"];
 	}
 
-	if (isset($rest_route) and $rest_route == "/wp/v2/process_log") {
+	if (isset($rest_route) and $rest_route == "/wp/v2/captcore_processlog") {
 
 			// Filter only logs attached to processes in Growth, Maintenance and Support roles.
 			$meta_query = array(
@@ -3185,7 +3185,7 @@ function test_pre_get_posts( $query ) {
 
 			$meta_query = array(
 		        array(
-		            'key' => 'website',
+		            'key' => 'captcore_website',
 		            'value' => '"' . $_GET["website"] . '"',
 		            'compare' => 'like'
 		        )
@@ -3414,9 +3414,9 @@ function captaincore_custom_template( $single ) {
     global $wp_query, $post;
 
     /* Checks for single template by post type */
-    if ( $post->post_type == 'process' ) {
-        if ( file_exists( plugin_dir_path( __FILE__ ) . '/templates/single-process.php' ) ) {
-            return plugin_dir_path( __FILE__ ) . '/templates/single-process.php';
+    if ( $post->post_type == 'captcore_process' ) {
+        if ( file_exists( plugin_dir_path( __FILE__ ) . '/templates/single-captcore_process.php' ) ) {
+            return plugin_dir_path( __FILE__ ) . '/templates/single-captcore_process.php';
         }
     }
 

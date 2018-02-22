@@ -98,7 +98,7 @@ jQuery(document).ready(function(){
 
 
 			    $process_logs = get_posts(array(
-			    	'post_type' 		=> 'process_log',
+			    	'post_type' 		=> 'captcore_processlog',
 			        'posts_per_page'    => '-1',
 			        
 			    	));

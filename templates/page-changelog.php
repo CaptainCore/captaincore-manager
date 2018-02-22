@@ -3,7 +3,7 @@
  * Template Name: Changelog
  */
 
-get_header(); 
+get_header();
 
 if ( is_user_logged_in() ) {
 
@@ -12,7 +12,7 @@ if ( is_user_logged_in() ) {
 		<main id="main" class="site-main" role="main">
 			<article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
 
-				<header class="main entry-header <?php echo $c; ?>" style="<?php echo 'background-image: url('.$featured_image[0].');' ?>">			
+				<header class="main entry-header <?php echo $c; ?>" style="<?php echo 'background-image: url('.$featured_image[0].');' ?>">
 					<h1><?php echo $website; ?></h1>
 
 					<span class="overlay"></span>
@@ -20,9 +20,9 @@ if ( is_user_logged_in() ) {
 
 				<div class="body-wrap">
 				<div class="entry-content">
-				<?php 
+				<?php
 				$args = array (
-					'post_type'              => 'changelog',
+					'post_type'              => 'captcore_changelog',
 					'posts_per_page' 		 => "-1"
 				);
 
@@ -39,15 +39,15 @@ if ( is_user_logged_in() ) {
 
 						$terms = get_the_terms( $post->ID, 'changelog_website' );
 
-						if ( $terms && ! is_wp_error( $terms ) ) : 
-						 
+						if ( $terms && ! is_wp_error( $terms ) ) :
+
 						    $draught_links = array();
-						 
+
 						    foreach ( $terms as $term ) {
 						        echo $term->name;
 						        if ( $term->name == "Global") {
 						        	echo "<br />- Assigned to Global";
-						        	update_field("field_57df3ebfbfee3", "1", $changelog_id); 
+						        	update_field("field_57df3ebfbfee3", "1", $changelog_id);
 						        } else {
 						        	echo "Lookup up website and assigning";
 						        	$lookup_args = array (
@@ -68,20 +68,20 @@ if ( is_user_logged_in() ) {
 									} else {
 										// no posts found
 									}
- 
+
 									echo $lookup_id;
-						        	update_field("field_57d89e9168500", array($lookup_id), $changelog_id); 
+						        	update_field("field_57d89e9168500", array($lookup_id), $changelog_id);
 						        }
 						    }
-						                         
-						  
-						endif; 
 
-						
+
+						endif;
+
+
 						?>
 
 						<?php the_content(); ?>
-						
+
 				<?php	}
 				} else {
 					// no posts found
@@ -92,13 +92,13 @@ if ( is_user_logged_in() ) {
 				// Restore original Post Data
 				wp_reset_postdata(); ?>
 
-		
+
 			</div><!-- .entry-content -->
 			<footer class="entry-footer">
 
 			</footer><!-- .entry-footer -->
 			</div>
-			
+
 
 		</main><!-- #main -->
 	</div><!-- #primary -->

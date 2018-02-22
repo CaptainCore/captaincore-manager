@@ -9,7 +9,7 @@ $process_log_items = get_posts(array(
 				'meta_query' => array(
 		array(
 			'key' => 'process_log', // name of custom field
-			'value' => '"' . $process_log_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+			'value' => '"' . $process_log_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
 			'compare' => 'LIKE'
 		)
 	)
