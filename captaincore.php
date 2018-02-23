@@ -101,7 +101,7 @@ function captaincore_rewrite() {
 add_action( 'init', 'captaincore_rewrite' );
 
 function anchor_disable_gutenberg( $can_edit, $post_type ) {
-	$disabled_post_types = array("website", "domain", "customer", "changelog");
+	$disabled_post_types = array("captcore_website", "captcore_domain", "captcore_customer", "captcore_changelog");
   if ( in_array($post_type, $disabled_post_types ) ) {
 		return false;
 	}
