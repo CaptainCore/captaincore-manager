@@ -1703,10 +1703,10 @@ function slug_register_ah_fields() {
  };
 
 add_action("manage_posts_custom_column",  "customer_custom_columns");
-add_filter("manage_edit-website_columns", "website_edit_columns");
-add_filter("manage_edit-customer_columns", "customer_edit_columns");
-add_filter("manage_edit-customer_sortable_columns", 'customer_sortable_columns' );
-add_filter("manage_edit-changelog_columns", "changelog_edit_columns");
+add_filter("manage_edit-captcore_website_columns", "website_edit_columns");
+add_filter("manage_edit-captcore_customer_columns", "customer_edit_columns");
+add_filter("manage_edit-captcore_customer_sortable_columns", 'customer_sortable_columns' );
+add_filter("manage_edit-captcore_changelog_columns", "changelog_edit_columns");
 
 function customer_sortable_columns( $columns ) {
 	$columns['hosting_plan'] = 'hosting_plan';
