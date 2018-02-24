@@ -900,6 +900,13 @@ function slug_get_post_meta_revisions( $object, $field_name, $request ) {
 function slug_get_post_meta_cb( $object, $field_name, $request ) {
     return get_post_meta( $object['id'], $field_name );
 }
+function slug_get_paid_by( $object, $field_name, $request ) {
+		$post_id = get_post_meta( $object['id'], $field_name )[0][0];
+		if ($post_id) {
+			$post_title = get_the_title($post_id);
+		}
+    return $post_title;
+}
 function slug_update_post_meta_cb( $value, $object, $field_name ) {
 		if ( is_object($object) ) {
 			$object_id = $object->ID;
@@ -1573,6 +1580,12 @@ function slug_register_ah_fields() {
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
+	register_rest_field( 'captcore_website', 'address',
+		array(
+		   'get_callback'    => 'slug_get_post_meta_cb',
+		   'update_callback' => 'slug_update_post_meta_cb',
+		   'schema'          => null,
+	));
 	register_rest_field( 'captcore_website', 'server',
 		array(
 		   'get_callback'    => 'slug_get_server',
@@ -1647,7 +1660,7 @@ function slug_register_ah_fields() {
 	));
 	register_rest_field( 'captcore_customer', 'paid_by',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_cb',
+		   'get_callback'    => 'slug_get_paid_by',
 		   'update_callback' => 'slug_update_post_meta_cb',
 		   'schema'          => null,
 	));
