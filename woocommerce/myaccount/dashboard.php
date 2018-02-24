@@ -534,7 +534,7 @@ if ($partner and $role_check) {
 				<?php if ( strpos($production_address, ".kinsta.com") and get_field('database_username_staging', $website->ID) ) { ?>
 					<hr />
 				<p class="small">
-					<a href="https://mysqleditor-<?php the_field('database_username_staging', $website->ID); ?>.kinsta.com/" target="_blank">https://mysqleditor-<?php the_field('database_username_staging', $website->ID); ?>.kinsta.com/</a><br />
+					<a href="https://mysqleditor-staging-<?php the_field('database_username_staging', $website->ID); ?>.kinsta.com/" target="_blank">https://mysqleditor-staging-<?php the_field('database_username_staging', $website->ID); ?>.kinsta.com/</a><br />
 					Database username: <?php the_field('database_username_staging', $website->ID); ?> <br />Database password: <?php the_field('database_password_staging', $website->ID); ?><br />
 				</p>
 				<?php } ?>
