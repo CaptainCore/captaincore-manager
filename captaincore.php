@@ -13,7 +13,7 @@
  * @package           Captaincore
  *
  * @wordpress-plugin
- * Plugin Name:       CaptainCore
+ * Plugin Name:       CaptainCore Server
  * Plugin URI:        https://captaincore.io
  * Description:       Toolkit for running your own WordPress hosting business
  * Version:           0.1.2

@@ -1,4 +1,4 @@
-=== CaptainCore ===
+=== CaptainCore Server ===
 Author URI: https://anchor.host
 Plugin URI: https://captaincore.io
 Contributors: austinginder
