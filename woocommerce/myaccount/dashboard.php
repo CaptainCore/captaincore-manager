@@ -531,8 +531,15 @@ if ($partner and $role_check) {
 				Password: <span class="pass-fake">****************</span><span class="pass"><?php the_field('password_staging', $website->ID); ?></span><br />
 				Protocol: <?php the_field('protocol_staging', $website->ID); ?><br />
 				Port: <?php the_field('port_staging', $website->ID); ?>
+				<?php if ( strpos($production_address, ".kinsta.com") and get_field('database_username_staging', $website->ID) ) { ?>
+					<hr />
+				<p class="small">
+					<a href="https://mysqleditor-<?php the_field('database_username_staging', $website->ID); ?>.kinsta.com/" target="_blank">https://mysqleditor-<?php the_field('database_username_staging', $website->ID); ?>.kinsta.com/</a><br />
+					Database username: <?php the_field('database_username_staging', $website->ID); ?> <br />Database password: <?php the_field('database_password_staging', $website->ID); ?><br />
+				</p>
+				<?php } ?>
 				<?php if (strpos($staging_address, ".kinsta.com") ) { ?>
-					<br /><small>ssh <?php the_field('username_staging', $website->ID); ?>@<?php echo $staging_address; ?> -p <?php the_field('port_staging', $website->ID); ?></small>
+					<hr /><small>ssh <?php the_field('username_staging', $website->ID); ?>@<?php echo $staging_address; ?> -p <?php the_field('port_staging', $website->ID); ?></small>
 				<?php } ?>
 				</div>
 			</div>
