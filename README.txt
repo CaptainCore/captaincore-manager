@@ -35,6 +35,20 @@ TODO
 
 == Changelog ==
 
+= 0.1.3: February 25, 2018 =
+* New: Email after Kinsta deployment completed
+* New: Quicksave file diff command
+* New: Preload snapshot dialog with current user email address
+* New: Kinsta push staging to production
+* New: Options to control basic info displayed on CaptainCore Client
+* Tweak: Improvements to Quicksave view changes. It now slides open a separate panel.
+* Tweak: Switched staging urls to https on hosting dashboard
+* Tweak: Standardized custom post type names
+* Tweak: Display staging database info on hosting dashboard
+* Tweak: REST API adjustments for 'paid by' and 'address' fields
+* Tweak: Changed WordPress plugin titles to 'CaptainCore Server'
+* Fix: Kinsta staging urls on hosting dashboard
+
 = 0.1.2: February 18, 2018 =
 * New: Rollbacks for quicksave themes and plugins
 * New: Quicksave highligher now displays removed themes and plugins
