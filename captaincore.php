@@ -2684,8 +2684,9 @@ function anchor_install_action_callback() {
 	);
 
 	if ($cmd == "new") {
-		$command = "captaincore config new".
-		($install ? " --install=$install" : "" ) .
+		$command = "captaincore site new".
+		($install ? " $install" : "" ) .
+		($post_id ? " --id=$post_id" : "" ) .
 		($domain ? " --domain=$domain" : "" ) .
 		($username ? " --username=$username" : "" ) .
 		($password ? " --password=".rawurlencode(base64_encode($password)) : "" ) .
@@ -2706,8 +2707,9 @@ function anchor_install_action_callback() {
 		($s3path ? " --s3path=$s3path" : "" );
 	}
 	if ($cmd == "update") {
-		$command = "captaincore config update".
-		($install ? " --install=$install" : "" ) .
+		$command = "captaincore site update".
+		($install ? " $install" : "" ) .
+		($post_id ? " --id=$post_id" : "" ) .
 		($domain ? " --domain=$domain" : "" ) .
 		($username ? " --username=$username" : "" ) .
 		($password ? " --password=".rawurlencode(base64_encode($password)) : "" ) .
@@ -2748,8 +2750,7 @@ function anchor_install_action_callback() {
 		}
 	}
 	if ($cmd == "remove") {
-		$command = "captaincore config delete --install=$install --domain=$domain".
-		($homedir ? " --homedir=$homedir " : "" );
+		$command = "captaincore site delete $install";
 	}
 	if ($cmd == "backup") {
 		date_default_timezone_set('America/New_York');
