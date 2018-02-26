@@ -41,6 +41,7 @@ $themes = base64_decode($_POST['themes']);
 $token = $_POST['token'];
 $token_key = $_POST['token_key'];
 $git_commit = $_POST['git_commit'];
+$home_url = $_POST['home_url'];
 $git_status = trim(base64_decode($_POST['git_status']));
 
 $args = array (
@@ -165,6 +166,12 @@ if (substr_count($site, ".") > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 
 	// Generate a new CaptainCore quicksave
 	if ($git_commit and $core and $plugins and $themes) {
+
+		// Updates site with latest $plugins, $themes, $core and $home_url
+		update_field("field_5a9421b004ed3", $plugins, $site_id);
+		update_field("field_5a9421b804ed4", $themes, $site_id);
+		update_field("field_5a9421bc04ed5", $core, $site_id);
+		update_field("field_5a944358bf146", $home_url, $site_id);
 
 		// Create post object
 		$my_post = array(
