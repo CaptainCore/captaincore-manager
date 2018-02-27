@@ -2684,7 +2684,7 @@ function anchor_install_action_callback() {
 	);
 
 	if ($cmd == "new") {
-		$command = "captaincore site new".
+		$command = "captaincore site add".
 		($install ? " $install" : "" ) .
 		($post_id ? " --id=$post_id" : "" ) .
 		($domain ? " --domain=$domain" : "" ) .
