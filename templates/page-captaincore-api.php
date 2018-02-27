@@ -45,7 +45,7 @@ $home_url = $_POST['home_url'];
 $git_status = trim(base64_decode($_POST['git_status']));
 
 $args = array (
-	'post_type'        => 'website',
+	'post_type'        => 'captcore_website',
 	's'         			 => $site,
 	'posts_per_page' 	 => 1
 );
@@ -73,7 +73,7 @@ if (substr_count($site, ".") > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 		// Create post object
 		$my_post = array(
 		  'post_title'    => $site,
-		  'post_type'     => 'website',
+		  'post_type'     => 'captcore_website',
 		  'post_status'   => 'publish',
 		  'post_author'   => 2,
 		);
