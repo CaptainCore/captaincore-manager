@@ -200,3 +200,19 @@ function mailgun_verify( $domain ) {
 	return $result->http_response_body->domain->state;
 
 }
+
+function mailgun_events( $mailgun_subdomain ) {
+
+	// Prep to handle remote responses
+	$responses = '';
+
+	// Load Mailgun API client
+	include_once ABSPATH . '/vendor/autoload.php';
+	$mgClient = new \Mailgun\Mailgun( MAILGUN_API_KEY );
+
+	// Fetch all domains from Mailgun
+	$results = $mgClient->get( "$mailgun_subdomain/events" );
+
+	return $results->http_response_body->items;
+
+}

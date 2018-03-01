@@ -550,6 +550,7 @@ class CaptainCore_My_Account_Website_Endpoint {
 				$views = get_field('views', $customer_id[0]);
 				$website_storage = get_field('storage', $website_id);
 				$website_views = get_field('views', $website_id);
+				$mailgun = get_field('mailgun', $website_id);
 
 				if ($hosting_plan == "basic") {
 					$views_plan_limit = "100000";
@@ -681,7 +682,10 @@ class CaptainCore_My_Account_Website_Endpoint {
 					<a href="#push_to_production<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large" data-post-id="<?php echo $website_id; ?>"><i class="material-icons reverse left">local_shipping</i>Push Staging to Production</a><br />
 				<?php endif ?>
 				<?php if ($views != $website_views or $storage != $website_storage) { ?>
-					<a href="#view_usage_breakdown_<?php echo $customer_id[0]; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">chrome_reader_mode</i>View Usage Breakdown</a>
+					<a href="#view_usage_breakdown_<?php echo $customer_id[0]; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">chrome_reader_mode</i>View Usage Breakdown</a><br />
+				<?php } ?>
+				<?php if ($mailgun) { ?>
+					<a href="#mailgun_logs_<?php echo $website_id; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">email</i>View Mailgun Logs</a>
 				<?php } ?>
 			</div>
 
@@ -786,6 +790,46 @@ class CaptainCore_My_Account_Website_Endpoint {
 	</div>
 </div>
 <?php endif; ?>
+
+<?php if ($mailgun) { ?>
+<div id="mailgun_logs_<?php echo $website_id; ?>" class="modal bottom-sheet" data-id="<?php echo $website_id; ?>">
+	<div class="modal-content">
+		<h4>Mailgun Logs <small>(last 30 days)</small> <a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
+
+	<div class="row">
+		<ul class="collapsible" data-collapsible="accordion">
+		<?php $mailgun_events = mailgun_events( $mailgun );
+		foreach($mailgun_events as $mailgun_event ) {
+
+			if ($mailgun_event->envelope) {
+				$mailgun_description = $mailgun_event->event. ": ". $mailgun_event->envelope->sender. " -> ". $mailgun_event->recipient;
+			} else {
+				$mailgun_description = $mailgun_event->event. ": ". $mailgun_event->recipient;
+			}
+			?>
+
+			<li class="mailgun_logs">
+				<div class="collapsible-header">
+					<span class="material-icons">event_note</span> <span class="timestamp"><?php echo date('M jS Y g:ia', $mailgun_event->timestamp); ?></span>
+					<span class="badge"><?php echo $mailgun_description; ?></span>
+				</div>
+				<div class="collapsible-body">
+					<div class="card">
+						<div class="card-content">
+							<pre><?php echo json_encode($mailgun_event, JSON_PRETTY_PRINT); ?></pre>
+						</div>
+
+					</div>
+
+				</div>
+			</li>
+
+		<?php }	?>
+		</ul>
+	</div>
+	</div>
+</div>
+<?php } ?>
 
 <div id="quicksave<?php echo $website_id; ?>" class="modal bottom-sheet quicksaves" data-id="<?php echo $website_id; ?>">
 	<div class="modal-content">

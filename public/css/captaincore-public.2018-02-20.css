@@ -4,9 +4,9 @@
  */
 
 
- .content-area .woocommerce-MyAccount-secondary ul {
-	 margin: 0px;
- }
+.content-area .woocommerce-MyAccount-secondary ul {
+ margin: 0px;
+}
 
 .woocommerce-account #main header.main {
 	padding: 40px 0 !important;
@@ -249,6 +249,21 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
 .quicksave .file_status {
 	min-width: 20px;
 	display: inline-block;
+}
+
+.mailgun_logs pre {
+	background: #fff;
+	font-size: 0.65em;
+	padding: 0px;
+	margin: 0px;
+}
+
+.collapsible .mailgun_logs span.timestamp {
+	min-width: 200px;
+}
+
+.collapsible .mailgun_logs span.badge {
+	margin-left: 2em;
 }
 
 .content-area ul.acf-actions a.button {
@@ -1166,6 +1181,11 @@ i.material-icons.reverse {
 	-moz-transform: scaleX(-1);
 	-webkit-transform: scaleX(-1);
 	-ms-transform: scaleX(-1);
+}
+
+.card i.material-icons {
+	line-height: 1.3em;
+	text-align: center;
 }
 
 .card .pass {
