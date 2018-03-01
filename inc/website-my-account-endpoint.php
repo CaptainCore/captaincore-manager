@@ -799,7 +799,12 @@ class CaptainCore_My_Account_Website_Endpoint {
 	<div class="row">
 		<ul class="collapsible" data-collapsible="accordion">
 		<?php $mailgun_events = mailgun_events( $mailgun );
-		foreach($mailgun_events as $mailgun_event ) {
+		if ( $mailgun_events->paging ) {
+			// TO DO add paging
+			// print_r($mailgun_events->paging);
+		}
+		foreach($mailgun_events->items as $mailgun_event ) {
+
 
 			if ($mailgun_event->envelope) {
 				$mailgun_description = $mailgun_event->event. ": ". $mailgun_event->envelope->sender. " -> ". $mailgun_event->recipient;

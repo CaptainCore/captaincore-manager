@@ -210,9 +210,13 @@ function mailgun_events( $mailgun_subdomain ) {
 	include_once ABSPATH . '/vendor/autoload.php';
 	$mgClient = new \Mailgun\Mailgun( MAILGUN_API_KEY );
 
-	// Fetch all domains from Mailgun
-	$results = $mgClient->get( "$mailgun_subdomain/events" );
+	$queryString = array(
+    'limit'        =>  300,
+	);
 
-	return $results->http_response_body->items;
+	// Fetch all domains from Mailgun
+	$results = $mgClient->get( "$mailgun_subdomain/events", $queryString );
+
+	return $results->http_response_body;
 
 }
