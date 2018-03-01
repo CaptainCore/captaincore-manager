@@ -608,7 +608,7 @@ class CaptainCore_My_Account_Website_Endpoint {
 								*/
 
 								$websites_for_customer = get_posts(array(
-									'post_type' => 'website',
+									'post_type' => 'captcore_website',
 					        'posts_per_page'         => '-1',
 					        'meta_query' => array(
 										'relation'		=> 'AND',
