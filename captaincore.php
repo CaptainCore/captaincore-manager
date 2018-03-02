@@ -2823,7 +2823,7 @@ function anchor_install_action_callback() {
 		$post_id = $website_id;
 	}
 
-	if ($_SERVER['HTTP_HOST']=='dev.anchor') {
+	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
 
 		if ( anchor_verify_permissions( $post_id ) ) {
 
