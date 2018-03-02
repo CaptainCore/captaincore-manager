@@ -833,6 +833,14 @@ h3.process {
 	margin-top: 1em;
 	margin-bottom: 0em;
 }
+
+.page-template-page-company-handbook header.main > h1.entry-title:after {
+	content: "\f02d";
+	font-family: FontAwesome;
+	position: relative;
+	left: 10px;
+	top: 2px;
+}
 .company-handbook i {
 	margin-left: 7px;
 	text-align: left;
