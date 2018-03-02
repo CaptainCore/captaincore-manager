@@ -3152,6 +3152,10 @@ function my_acf_input_admin_footer() {
 			// Copy production port to staging field
 			jQuery('#acf-field_57b7a2772cc64').val(jQuery('#acf-field_5619c99d18f20').val());
 
+			// Copy production database info to staging fields
+			jQuery('#acf-field_5a90ba0c6c61a').val(jQuery('#acf-field_5a69f0a6e9686').val());
+			jQuery('#acf-field_5a90ba1e6c61b').val(jQuery('#acf-field_5a69f0cce9687').val());
+
 			// Copy production home directory to staging field
 			jQuery('#acf-field_5845da68fc2c9').val(jQuery('#acf-field_58422bd538c32').val());
 		}
