@@ -39,14 +39,14 @@ jQuery(document).ready(function(){
 		'post_id': <?php echo $id; ?>
 	};
 
-	// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
-	jQuery.post(ajaxurl, data, function(response) {
-		response = JSON.parse(response);
-		url = response.redirect_url + "?logged=" + response.process_id;
-		top.location.replace(url);
-	});
-  });
+		// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+		jQuery.post(ajaxurl, data, function(response) {
+			response = JSON.parse(response);
+			url = response.redirect_url + "?logged=" + response.process_id;
+			top.location.replace(url);
+		});
 
+  });
 
 	jQuery('.process-star').each(function() {
 
@@ -66,7 +66,6 @@ jQuery(document).ready(function(){
 
 	});
 
-
 	// print results
 	for(var key in months){
 
@@ -82,7 +81,6 @@ jQuery(document).ready(function(){
 		jQuery("#result-"+key).prepend('<div class="heading">'+ parsedDate + ' <span>' + months[key] + '</span></div>');
 
 	}
-
 
 	// calculate and print site count
 	jQuery('.process-stars').each(function() {
@@ -100,7 +98,6 @@ jQuery(document).ready(function(){
 		<main id="main" class="site-main" role="main">
 		<?php if ( isset( $_GET['logged'] ) ) { ?>
 		<div class="process-log-update">
-
 
 			<?php
 			$options = array(
@@ -186,9 +183,7 @@ jQuery(document).ready(function(){
 					the_row();
 					$i++;
 				?>
-
 					<li data-id="<?php echo $i; ?>"><?php the_sub_field( 'item' ); ?></li>
-
 				<?php
 
 				endwhile;
@@ -207,7 +202,7 @@ jQuery(document).ready(function(){
 		<?php
 		while ( have_posts() ) :
 			the_post();
-?>
+			?>
 
 			<article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
 				<?php
@@ -356,8 +351,6 @@ jQuery(document).ready(function(){
 						<?php comments_template(); ?>
 					</div>
 			<?php endif; ?>
-
-
 
 		<?php endwhile; // end of the loop. ?>
 
