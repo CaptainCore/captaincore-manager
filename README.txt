@@ -35,6 +35,16 @@ TODO
 
 == Changelog ==
 
+= 0.1.4: March 4, 2018 =
+* New: Mailgun logs added to hosting dashboard advanced page
+* New: Added fields to sites for plugins, themes, core and home url.
+* Tweak: Revisions to single process template. In header there is now a button to go back to all processes and an icon next to the log completion button.
+* Tweak: Updated CaptainCore API to auto update site info (plugins, themes, core and home url) when making a Quicksave
+* Tweak: Matched CaptainCore CLI changes to `captaincore site` commands
+* Tweak: Prefill database fields on staging
+* Tweak: Reduced header spacing on WooCommerce pages
+* Fix: Incorrect named post types in CaptainCore API
+
 = 0.1.3: February 25, 2018 =
 * New: Email after Kinsta deployment completed
 * New: Quicksave file diff command
