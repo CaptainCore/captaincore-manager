@@ -149,6 +149,23 @@ class CaptainCore_My_Account_Website_Endpoint {
 						}
 					});
 
+					jQuery('.quicksave_manual_check a').click(function(e) {
+						e.preventDefault();
+						var post_id = jQuery(this).data('post-id');
+
+						var data = {
+							'action': 'anchor_install',
+							'post_id': post_id,
+							'command': 'quick_backup'
+						};
+
+						// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+						jQuery.post(ajaxurl, data, function(response) {
+							Materialize.toast('Checking for file changes. If any found a new Quicksave will be added shortly.', 4000);
+						});
+
+					});
+
 					jQuery('.view_quicksave_changes').click(function(e) {
 						e.preventDefault();
 						jQuery(this).parent().addClass("activator").trigger("click");
@@ -839,7 +856,10 @@ class CaptainCore_My_Account_Website_Endpoint {
 <div id="quicksave<?php echo $website_id; ?>" class="modal bottom-sheet quicksaves" data-id="<?php echo $website_id; ?>">
 	<div class="modal-content">
 
-		<h4>Quicksaves <small>(<?php echo get_the_title( $website_id ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
+		<h4>
+			Quicksaves <small>(<?php echo get_the_title( $website_id ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a>
+			<p class="quicksave_manual_check"><a href="" data-post-id="<?php echo $website_id; ?>">Manually check for changes.</a></p>
+		</h4>
 		<div class="progress hide">
 				<div class="indeterminate"></div>
 		</div>

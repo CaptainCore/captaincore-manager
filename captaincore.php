@@ -2756,6 +2756,12 @@ function anchor_install_action_callback() {
 	if ($cmd == "remove") {
 		$command = "captaincore site delete $install";
 	}
+	if ($cmd == "quick_backup") {
+		date_default_timezone_set('America/New_York');
+		$t=time();
+		$timestamp = date("Y-m-d-hms",$t);
+		$command = "captaincore backup $install 2>&1";
+	}
 	if ($cmd == "backup") {
 		date_default_timezone_set('America/New_York');
 		$t=time();

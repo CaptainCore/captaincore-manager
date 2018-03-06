@@ -152,6 +152,15 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
 	margin-top: 32px;
 }
 
+.quicksave_manual_check {
+	display: block;
+	font-size: 0.5em;
+	line-height: 0.5em;
+	text-align: center;
+	margin: 0px;
+	padding: 0px;
+}
+
 .quicksave .spinner-blue,
 .quicksave .spinner-blue-only {
   border-color: #27c3f3;
