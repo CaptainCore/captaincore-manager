@@ -95,7 +95,7 @@ function captaincore_rewrite() {
 	add_rewrite_tag('%sitetoken%','([^&]+)');
 	add_rewrite_tag('%callback%','([^&]+)');
 
-	register_taxonomy("process_role", array("process"), array("hierarchical" => true, "label" => "Roles", "singular_label" => "Role", "rewrite" => true));
+	register_taxonomy("process_role", array("captcore_process"), array("hierarchical" => true, "label" => "Roles", "singular_label" => "Role", "rewrite" => true));
 }
 
 add_action( 'init', 'captaincore_rewrite' );
