@@ -23,7 +23,7 @@ $today = date('Ymd');
 
 // WP_Query arguments
 $websites = get_posts(array(
-	  'post_type' 			=> 'website',
+	  'post_type' 			=> 'captcore_website',
 		'posts_per_page'  => '-1'
 ));
 
