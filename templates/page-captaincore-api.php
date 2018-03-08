@@ -167,6 +167,30 @@ if (substr_count($site, ".") > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 	// Generate a new CaptainCore quicksave
 	if ($git_commit and $core and $plugins and $themes) {
 
+		// Check if Git Commit already entered for this Site ID
+		$args = array(
+			'post_type'      => 'captcore_quicksave',
+			'posts_per_page' => '-1',
+			'fields'         => 'ids',
+			'meta_query'     => array(
+				'relation' => 'AND',
+				array(
+					'key'     => 'git_commit', // name of custom field
+					'value'   => $git_commmit, // matches exaclty "123", not just 123. This prevents a match for "1234"
+					'compare' => '=',
+				),
+				array(
+					'key'     => 'website', // name of custom field
+					'value'   => '"' . $site_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+					'compare' => 'LIKE',
+				),
+			),
+		);
+
+		$quicksave_duplicate_search = get_posts( $args );
+
+		if ( count($quicksave_duplicate_search) == 0 ) {
+
 		// Updates site with latest $plugins, $themes, $core and $home_url
 		update_field("field_5a9421b004ed3", $plugins, $site_id);
 		update_field("field_5a9421b804ed4", $themes, $site_id);
@@ -181,24 +205,25 @@ if (substr_count($site, ".") > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 		);
 
 		// Insert the post into the database
-		$snapshot_id = wp_insert_post( $my_post );
+		$quicksave_id = wp_insert_post( $my_post );
 
-		update_field("field_59badaa96686f", $site_id, $snapshot_id);
-		update_field("field_5a7dc6919ed81", $git_commit, $snapshot_id);
-		update_field("field_5a7f0a55a5086", $git_status, $snapshot_id);
-		update_field("field_59bae8d2ec7cc", $core, $snapshot_id);
-		update_field("field_59badadc66871", $plugins, $snapshot_id);
-		update_field("field_59badab866870", $themes, $snapshot_id);
-
+		update_field("field_59badaa96686f", $site_id, $quicksave_id);
+		update_field("field_5a7dc6919ed81", $git_commit, $quicksave_id);
+		update_field("field_5a7f0a55a5086", $git_status, $quicksave_id);
+		update_field("field_59bae8d2ec7cc", $core, $quicksave_id);
+		update_field("field_59badadc66871", $plugins, $quicksave_id);
+		update_field("field_59badab866870", $themes, $quicksave_id);
 
 		// Adds snapshot ID to title
 		$my_post = array(
-		  'ID'			  => $snapshot_id,
-		  'post_title'    => "Quicksave ". $snapshot_id,
+		  'ID'			  => $quicksave_id,
+		  'post_title'    => "Quicksave ". $quicksave_id,
 		);
 
 		wp_update_post($my_post);
 		echo "Adding Quicksave \n";
+
+		}
 
 	}
 
