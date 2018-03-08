@@ -19,7 +19,9 @@ if ( ! is_user_logged_in() ) {
 }
 acf_form_head();
 get_header();
-jetpack_require_lib( 'markdown' );
+if ( class_exists( 'Jetpack' ) && Jetpack::is_module_active( 'markdown' ) ) :
+	jetpack_require_lib( 'markdown' );
+endif;
 
 $id = get_the_ID();
 ?>
