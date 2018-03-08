@@ -181,6 +181,253 @@ class Anchor_My_Account_Config_Endpoint {
 // Flush rewrite rules on plugin activation.
 register_activation_hook( __FILE__, array( 'Anchor_My_Account_Config_Endpoint', 'install' ) );
 
+class Anchor_My_Account_Logs_Endpoint {
+
+	/**
+	 * Custom endpoint name.
+	 *
+	 * @var string
+	 */
+	public static $endpoint = 'logs';
+
+	/**
+	 * Plugin actions.
+	 */
+	public function __construct() {
+		$user = wp_get_current_user();
+		$role_check = in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles );
+
+		if ($role_check) {
+			// Actions used to insert a new endpoint in the WordPress.
+			add_action( 'init', array( $this, 'add_endpoints' ) );
+			add_filter( 'query_vars', array( $this, 'add_query_vars' ), 0 );
+
+			// Change the My Accout page title.
+			add_filter( 'the_title', array( $this, 'endpoint_title' ) );
+
+			// Insering your new tab/page into the My Account page.
+			add_filter( 'woocommerce_account_menu_items', array( $this, 'new_menu_items' ) );
+			add_action( 'woocommerce_account_' . self::$endpoint .  '_endpoint', array( $this, 'endpoint_content' ) );
+		}
+	}
+
+	/**
+	 * Register new endpoint to use inside My Account page.
+	 *
+	 * @see https://developer.wordpress.org/reference/functions/add_rewrite_endpoint/
+	 */
+	public function add_endpoints() {
+		add_rewrite_endpoint( self::$endpoint, EP_ROOT | EP_PAGES );
+	}
+
+	/**
+	 * Add new query var.
+	 *
+	 * @param array $vars
+	 * @return array
+	 */
+	public function add_query_vars( $vars ) {
+		$vars[] = self::$endpoint;
+
+		return $vars;
+	}
+
+	/**
+	 * Set endpoint title.
+	 *
+	 * @param string $title
+	 * @return string
+	 */
+	public function endpoint_title( $title ) {
+		global $wp_query;
+
+		$is_endpoint = isset( $wp_query->query_vars[ self::$endpoint ] );
+
+		if ( $is_endpoint && ! is_admin() && is_main_query() && in_the_loop() && is_account_page() ) {
+			// New page title.
+			$title = __( 'Website Logs', 'woocommerce' );
+
+			remove_filter( 'the_title', array( $this, 'endpoint_title' ) );
+		}
+
+		return $title;
+	}
+
+	/**
+	 * Insert the new endpoint into the My Account menu.
+	 *
+	 * @param array $items
+	 * @return array
+	 */
+	public function new_menu_items( $items ) {
+
+		// Insert your custom endpoint.
+		$items[ self::$endpoint ] = __( 'Website Logs', 'woocommerce' );
+
+		return $items;
+	}
+
+	/**
+	 * Endpoint HTML content.
+	 */
+	public function endpoint_content() {
+		if ( class_exists( 'Jetpack' ) && Jetpack::is_module_active( 'markdown' ) ) :
+			jetpack_require_lib( 'markdown' );
+		endif;
+		?>
+
+		<div class="col s12">
+          <?php /* <div class="card">
+            <div class="card-content row">
+						<div class="col s12">
+             <p>Yearly activity report</p>
+					 </div>
+						</div>
+					</div>*/ ?>
+						 <?php
+						 $user = wp_get_current_user();
+						 $role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles) + in_array( 'editor', $user->roles );
+						 $partner = get_field('partner', 'user_'. get_current_user_id());
+						 if ($partner and $role_check) {
+
+						 	// Loop through each partner assigned to current user
+						 	foreach ($partner as $partner_id) {
+
+						 		// Load websites assigned to partner
+						 		$arguments = array(
+						 			'post_type' 			=> 'captcore_website',
+						 			'posts_per_page'	=> '-1',
+									'fields'         => 'ids',
+						 			'order'						=> 'asc',
+						 			'orderby'					=> 'title',
+						 			'meta_query'			=> array(
+						 				'relation'			=> 'AND',
+						 				array(
+						 					'key' => 'partner',
+						 					'value' => '"' . $partner_id . '"',
+						 					'compare' => 'LIKE'
+						 				),
+						 				array(
+						 					'key'	  	=> 'status',
+						 					'value'	  	=> 'closed',
+						 					'compare' 	=> '!=',
+						 				),
+						 			)
+						 		);
+
+						 	// Loads websites
+						 	$websites = get_posts( $arguments );
+
+						 	if ( count( $websites ) == 0 ) {
+
+						 		// Load websites assigned to partner
+						 		$websites = get_posts(array(
+						 			'post_type' 			=> 'captcore_website',
+						 			'posts_per_page'	=> '-1',
+									'fields'					=> 'ids',
+						 			'order'						=> 'asc',
+						 			'orderby'					=> 'title',
+						 			'meta_query'			=> array(
+						 				'relation'			=> 'AND',
+						 					array(
+						 						'key' => 'customer', // name of custom field
+						 						'value' => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+						 						'compare' => 'LIKE'
+						 					),
+						 					array(
+						 						'key'	  	=> 'status',
+						 						'value'	  	=> 'closed',
+						 						'compare' 	=> '!=',
+						 					),
+						 			)
+						 		));
+
+						 	}
+
+						 	if( $websites ): ?>
+
+						 		<h3>Account: <?php echo get_the_title($partner_id); ?> <small>(<?php echo count($websites);?> sites)</small></h3>
+
+						 			<div class="website-group">
+						 			<?php //print_r($websites);
+
+									$pattern = '("' . implode('"|"', $websites ) . '")';
+
+									$arguments = array(
+										'post_type'      => 'captcore_processlog',
+										'posts_per_page' => '-1',
+										'meta_query'	=> array(
+											array(
+												'key'	 	=> 'website',
+												'value'	  	=> $pattern,
+												'compare' 	=> 'REGEXP',
+											),
+									));
+
+									$process_logs = get_posts($arguments);
+									$year = '';
+									foreach ($process_logs as $process_log) {
+
+										// filter only for sites within websites
+										$website = get_field("website", $process_log->ID );
+										//print_r($website);
+										//$website = array_intersect_assoc( $website, $websites);
+
+										$description = get_field("description", $process_log->ID );
+										$description = WPCom_Markdown::get_instance()->transform(
+											$description, array(
+												'id'      => false,
+												'unslash' => false,
+											)
+										);
+										$process = get_field("process", $process_log->ID );
+
+										$post_year = date( 'Y', strtotime( $process_log->post_date ) );
+
+										if ( $year != $post_year ) {
+											$currentyear = true;
+											$year        = $post_year;
+											if ( $year <> '' ) {
+												echo '</ul>';
+											}
+											echo '<h3>' . $year . '</h3>';
+											echo "<ul class='changelog'>";
+										} ?>
+										<li>
+											<div class="changelog-item">
+												<div class="title"><?php foreach($website as $website_id) { if ( in_array($website_id, $websites)) echo "<span>". get_the_title($website_id) ."</span>"; } ?> - <?php echo get_the_title( $process[0] ); ?></div>
+												<?php
+												if ( $description ) { ?>
+											<div class="content show"><i class="fas fa-sticky-note"></i> <?php echo $description; ?></div><?php } ?>
+											<div class="author"><i class="far fa-user"></i> <?php echo get_the_author( $process_log->ID ); ?></div>
+											<div class="changelog-date"><?php echo date( 'd M', strtotime( $process_log->post_date ) ); ?></div>
+											</div>
+										</li>
+									<?php } ?>
+									</ul>
+						 		</div>
+						 <?php endif;
+
+						  }
+						 } ?>
+
+        </div>
+		<?php
+
+	}
+
+	/**
+	 * Plugin install action.
+	 * Flush rewrite rules to make our custom endpoint available.
+	 */
+	public static function install() {
+		flush_rewrite_rules();
+	}
+}
+
+// Flush rewrite rules on plugin activation.
+register_activation_hook( __FILE__, array( 'Anchor_My_Account_Logs_Endpoint', 'install' ) );
+
 class Anchor_My_Account_Handbook_Endpoint {
 
 	/**
@@ -936,8 +1183,7 @@ class Anchor_My_Account_Dns_Endpoint {
 	<?php
 	}
 
-} else { // Display DNS listing page
-?>
+} else { // Display DNS listing page ?>
 			<div class="row">
         <div class="col s12">
           <div class="card">
@@ -1023,5 +1269,7 @@ add_action('plugins_loaded','construct_my_class');
 function construct_my_class() {
 	new Anchor_My_Account_Config_Endpoint();
 	new Anchor_My_Account_Dns_Endpoint();
+	new Anchor_My_Account_Logs_Endpoint();
 	new Anchor_My_Account_Handbook_Endpoint();
+
 }

@@ -434,6 +434,10 @@ div.website .actions a {
 .woocommerce-MyAccount-navigation-link--edit-account:before {
 	content: "\f110";
 }
+.woocommerce-MyAccount-navigation-link--logs:before {
+	content: "\f022";
+	font-family: FontAwesome;
+}
 .woocommerce-MyAccount-navigation-link--handbook:before {
 	content: "\f02d";
 	font-family: FontAwesome;
@@ -1314,4 +1318,138 @@ i.material-icons.reverse {
 
 .card-reveal a.btn {
     font-size: .75em;
+}
+
+
+#report {
+	padding: 5px 20px;
+	background: #fff;
+}
+#report .fa-key {
+	cursor: pointer;
+}
+ul.changelog {
+	border-left: 1px solid #ccc;
+	list-style: none;
+	margin: 10px 0 0 14px;
+	padding: 10px 0 1px 10px;
+}
+
+ul.changelog li {
+	padding: 0px 10px;
+	margin-bottom: 10px;
+	display: block;
+	font-size: 18px;
+	position: relative;
+}
+ul.changelog li:before {
+	content: '';
+	width: 15px;
+	height: 15px;
+	background: #ccc;
+	-webkit-border-radius: 10px;
+	-moz-border-radius: 10px;
+	-ms-border-radius: 10px;
+	-o-border-radius: 10px;
+	border-radius: -10px;
+	border: 3px solid #fff;
+	position: absolute;
+	left: -18.5px;
+	top: 8px;
+}
+ul.changelog li .changelog-item {
+	overflow: hidden;
+	padding: 0px 11px;
+	border: 1px solid #F1F1F1;
+	text-decoration: none;
+	border-radius: 19px;
+	display: inline-block;
+	font-size: 14px;
+	max-width: 85%;
+	transition: border 0.1s ease-out;
+	-webkit-transition: border 0.1s ease-out;
+	-moz-transition: border 0.1s ease-out;
+	-o-transition: border 0.1s ease-out;
+}
+ul.changelog li .changelog-item.hascontent {
+	cursor: pointer;
+}
+
+ul.changelog li .changelog-item.hascontent:hover {
+	border: 1px solid #ddd;
+}
+ul.changelog li .changelog-item .title.hascontent {
+	cursor:pointer;
+}
+ul.changelog li .changelog-item .title a {
+	font-size: 11px;
+	margin: 0 0 0 20px;
+	line-height: 18px;
+	position: relative;
+	top: -5px;
+	text-decoration: none;
+	border:0px;
+	text-transform: uppercase;
+}
+ul.changelog li .changelog-item .content {
+	display: none;
+}
+ul.changelog li .changelog-item .content.show {
+    display: inline-block;
+}
+ul.changelog li .changelog-item .content,
+ul.changelog li .changelog-item .content p {
+	font-size: 12px;
+	line-height: 14px;
+	padding-top: 8px;
+	margin: 0px;
+}
+ul.changelog li .changelog-item .content p {
+	padding: 4px 0;
+}
+ul.changelog li .changelog-item .content a {
+	text-decoration: none;
+}
+ul.changelog li .changelog-item .author {
+	font-size: .8em;
+	line-height: 1em;
+	padding-bottom: .7em;
+}
+ul.changelog li .changelog-item .changelog-date {
+	position: absolute;
+	right: 0px;
+	top: 0px;
+	font-size: 14px;
+}
+ul.changelog.domain li {
+	font-size: 14px;
+	padding: 0;
+}
+ul.changelog.domain {
+	border-left: 3px solid #ccc;
+	list-style: none;
+	margin: 0 0 0 12px;
+	padding: 15px 0 10px 20px;
+}
+ul.changelog.domain li:before {
+	content: '';
+	width: 11px;
+	height: 11px;
+	background: #ccc;
+	-webkit-border-radius: 10px;
+	-moz-border-radius: 10px;
+	-ms-border-radius: 10px;
+	-o-border-radius: 10px;
+	border-radius: -10px;
+	border: 3px solid #fff;
+	position: absolute;
+	left: -27px;
+	top: 4px;
+}
+
+.reports {
+	padding: 4px 20px;
+}
+.reports span {
+	float: right;
 }

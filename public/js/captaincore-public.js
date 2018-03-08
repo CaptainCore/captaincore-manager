@@ -1,5 +1,28 @@
 jQuery( document ).ready(function() {
 
+
+	jQuery('ul.changelog li .changelog-item').click(function() {
+
+    if ( jQuery(this).children('.content').hasClass("show") ) {
+        jQuery(this).children('.content').removeClass("show");
+    } else {
+			console.log("hide");
+        jQuery(this).children('.content').addClass("show");
+    }
+
+});
+
+	jQuery('ul.changelog li .changelog-item a').click(function(e) {
+		e.stopPropagation();
+	});
+
+	jQuery('ul.changelog li .changelog-item .title').each(function() {
+      var content = jQuery(this).next().hasClass('content');
+      if ( content ) {
+        jQuery(this).parent().addClass('hascontent');
+      }
+    });
+
 	jQuery(".started-processes a.process-log-completed").click(function(e){
 		e.preventDefault();
 		var parent_object = jQuery(this).parents(".process-star");
