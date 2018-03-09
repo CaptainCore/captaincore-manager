@@ -349,7 +349,7 @@ class Anchor_My_Account_Logs_Endpoint {
 						 		<h3>Account: <?php echo get_the_title($partner_id); ?> <small>(<?php echo count($websites);?> sites)</small></h3>
 
 						 			<div class="website-group">
-						 			<?php //print_r($websites);
+						 			<?php
 
 									$pattern = '("' . implode('"|"', $websites ) . '")';
 
@@ -395,7 +395,7 @@ class Anchor_My_Account_Logs_Endpoint {
 										} ?>
 										<li>
 											<div class="changelog-item">
-												<div class="title"><?php foreach($website as $website_id) { if ( in_array($website_id, $websites)) echo "<span>". get_the_title($website_id) ."</span>"; } ?> - <?php echo get_the_title( $process[0] ); ?></div>
+												<div class="title"><?php foreach($website as $website_id) { if ( in_array($website_id, $websites)) echo get_the_title($website_id) ." "; } ?> - <?php echo get_the_title( $process[0] ); ?></div>
 												<?php
 												if ( $description ) { ?>
 											<div class="content show"><i class="fas fa-sticky-note"></i> <?php echo $description; ?></div><?php } ?>

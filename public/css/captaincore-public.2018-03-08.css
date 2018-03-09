@@ -1444,6 +1444,11 @@ ul.changelog li .changelog-item.hascontent:hover {
   border: 1px solid #ddd;
 }
 
+ul.changelog li .changelog-item .title {
+	line-height: 1em;
+	padding: 0.7em 0 0.7em 0;
+}
+
 ul.changelog li .changelog-item .title.hascontent {
   cursor: pointer;
 }
@@ -1461,16 +1466,18 @@ ul.changelog li .changelog-item .title a {
 
 ul.changelog li .changelog-item .content {
   display: none;
+	line-height: 1.2em;
+	padding: 0 0 1em 0;
+	margin: 0px;
 }
 
 ul.changelog li .changelog-item .content.show {
-  display: inline-block;
+	display: block;
 }
 
 ul.changelog li .changelog-item .content, ul.changelog li .changelog-item .content p {
   font-size: 12px;
   line-height: 14px;
-  padding-top: 8px;
   margin: 0px;
 }
 
