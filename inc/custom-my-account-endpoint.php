@@ -301,16 +301,10 @@ class Anchor_My_Account_Logs_Endpoint {
 						 			'order'						=> 'asc',
 						 			'orderby'					=> 'title',
 						 			'meta_query'			=> array(
-						 				'relation'			=> 'AND',
 						 				array(
 						 					'key' => 'partner',
 						 					'value' => '"' . $partner_id . '"',
 						 					'compare' => 'LIKE'
-						 				),
-						 				array(
-						 					'key'	  	=> 'status',
-						 					'value'	  	=> 'closed',
-						 					'compare' 	=> '!=',
 						 				),
 						 			)
 						 		);
@@ -328,16 +322,10 @@ class Anchor_My_Account_Logs_Endpoint {
 						 			'order'						=> 'asc',
 						 			'orderby'					=> 'title',
 						 			'meta_query'			=> array(
-						 				'relation'			=> 'AND',
 						 					array(
 						 						'key' => 'customer', // name of custom field
 						 						'value' => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
 						 						'compare' => 'LIKE'
-						 					),
-						 					array(
-						 						'key'	  	=> 'status',
-						 						'value'	  	=> 'closed',
-						 						'compare' 	=> '!=',
 						 					),
 						 			)
 						 		));
