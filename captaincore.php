@@ -86,6 +86,7 @@ include "inc/custom-my-account-endpoint.php";
 include "inc/constellix-api/constellix-api.php";
 include "inc/woocommerce-custom-password-fields.php";
 include "inc/mailgun-api.php";
+include "inc/process-functions.php";
 require "inc/bulk-actions.php"; // Custom bulk actions.
 
 function captaincore_rewrite() {
