@@ -35,6 +35,18 @@ TODO
 
 == Changelog ==
 
+= 0.1.5: March 11, 2018 =
+* New: Website logs - displays report of actual work done
+* New: Quicksave link to manually check for file changes
+* New: Merge process functionality `captaincore_merge_process( $process_id_source, $process_id_destination )`
+* Tweak: Added website logs for inactive sites
+* Fix: Renamed process role taxonomy for new CPT name
+* Fix: Only include Jetpack markdown if available
+* Fix: Prevent duplicate quicksaves from being generated
+* Fix: Renamed CPT on quicksave report
+* Fix: Process log menu tab
+* Fix: Website bulk actions for new CPT name
+
 = 0.1.4: March 4, 2018 =
 * New: Mailgun logs added to hosting dashboard advanced page
 * New: Added fields to sites for plugins, themes, core and home url.
