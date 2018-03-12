@@ -185,7 +185,7 @@ class CaptainCore_My_Account_Website_Endpoint {
 					  	};
 
 							jQuery.post(ajaxurl, data, function(response) {
-								jQuery(quicksave).find(".git_status").html( "<pre>" + response + "</pre>" );
+								Materialize.toast('Rollback in process.', 4000);
 							});
 
 						}
