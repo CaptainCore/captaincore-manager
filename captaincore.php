@@ -2830,6 +2830,17 @@ function anchor_install_action_callback() {
 		$post_id = $website_id;
 	}
 
+	if ($cmd == "quicksave_rollback") {
+		date_default_timezone_set('America/New_York');
+		$t=time();
+		$timestamp = date("Y-m-d-hms",$t);
+		$git_commit = get_field('git_commit', $post_id);
+		$website_id = get_field('website', $post_id);
+		$install = get_field('install', $website_id[0]);
+		$command = "captaincore rollback $install $git_commit --all > ~/Tmp/$timestamp-rollback_$install.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$install.txt";
+		$post_id = $website_id;
+	}
+
 	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
 
 		if ( anchor_verify_permissions( $post_id ) ) {

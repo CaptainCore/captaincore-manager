@@ -166,6 +166,32 @@ class CaptainCore_My_Account_Website_Endpoint {
 
 					});
 
+					jQuery('.quicksave_rollback').click(function(e) {
+						e.preventDefault();
+
+						quicksave = jQuery(this).parents('.quicksave');
+						quicksave_date = jQuery(quicksave).find('span.timestamp').text();
+
+						confirm_rollback = confirm("Rollback all themes and plugins to version as of " + quicksave_date);
+
+						if(confirm_rollback) {
+
+							jQuery(quicksave).find(".git_status").html( '<p></p><div class="preloader-wrapper small active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p></p>' );
+
+							var data = {
+					  		'action': 'anchor_install',
+					  		'post_id': quicksave.data('id'),
+					      'command': 'quicksave_rollback',
+					  	};
+
+							jQuery.post(ajaxurl, data, function(response) {
+								jQuery(quicksave).find(".git_status").html( "<pre>" + response + "</pre>" );
+							});
+
+						}
+
+					});
+
 					jQuery('.view_quicksave_changes').click(function(e) {
 						e.preventDefault();
 						jQuery(this).parent().addClass("activator").trigger("click");
@@ -897,7 +923,10 @@ class CaptainCore_My_Account_Website_Endpoint {
 				    <div class="collapsible-body">
 							<div class="card">
 						    <div class="card-content">
-									<a class="view_quicksave_changes blue right btn">View changes</a>
+									<div class="action-buttons">
+										<a class="quicksave_rollback blue btn">Entire Quicksave Rollback</a>
+										<a class="view_quicksave_changes blue btn">View Changes</a>
+									</div>
 									<div class="git_status"></div>
 									<table class="bordered plugins" id="plugins_<?php echo $website_id; ?>">
 			              <thead>

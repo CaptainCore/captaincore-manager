@@ -1289,8 +1289,8 @@ i.material-icons.reverse {
   right: 20px;
 }
 
-.website-group .quicksave .card a.blue.right.btn {
-  position: absolute;
+.website-group .quicksave .card .action-buttons {
+	position: absolute;
   bottom: auto;
   top: 20px;
   right: 20px;
