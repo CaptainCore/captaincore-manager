@@ -2761,7 +2761,7 @@ function anchor_install_action_callback() {
 		date_default_timezone_set('America/New_York');
 		$t=time();
 		$timestamp = date("Y-m-d-hms",$t);
-		$command = "captaincore backup $install 2>&1";
+		$command = "captaincore backup $install > ~/Tmp/$timestamp-backup_$install.txt 2>&1";
 	}
 	if ($cmd == "backup") {
 		date_default_timezone_set('America/New_York');
