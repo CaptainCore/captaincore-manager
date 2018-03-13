@@ -614,8 +614,8 @@ class Anchor_My_Account_Dns_Endpoint {
 				};
 				 ?>
 				 <script>
-				 /*** Copyright 2013 Teun Duynstee Licensed under the Apache License, Version 2.0 ***/
-!function(n,t){"function"==typeof define&&define.amd?define([],t):"object"==typeof exports?module.exports=t():n.firstBy=t()}(this,function(){var n=function(){function n(n){return n}function t(n){return"string"==typeof n?n.toLowerCase():n}function e(e,r){if(r="number"==typeof r?{direction:r}:r||{},"function"!=typeof e){var i=e;e=function(n){return n[i]?n[i]:""}}if(1===e.length){var o=e,f=r.ignoreCase?t:n;e=function(n,t){return f(o(n))<f(o(t))?-1:f(o(n))>f(o(t))?1:0}}return r.direction===-1?function(n,t){return-e(n,t)}:e}function r(n,t){var i="function"==typeof this&&this,o=e(n,t),f=i?function(n,t){return i(n,t)||o(n,t)}:o;return f.thenBy=r,f}return r}();return n});
+//				 /*** Copyright 2013 Teun Duynstee Licensed under the Apache License, Version 2.0 ***/
+//!function(n,t){"function"==typeof define&&define.amd?define([],t):"object"==typeof exports?module.exports=t():n.firstBy=t()}(this,function(){var n=function(){function n(n){return n}function t(n){return"string"==typeof n?n.toLowerCase():n}function e(e,r){if(r="number"==typeof r?{direction:r}:r||{},"function"!=typeof e){var i=e;e=function(n){return n[i]?n[i]:""}}if(1===e.length){var o=e,f=r.ignoreCase?t:n;e=function(n,t){return f(o(n))<f(o(t))?-1:f(o(n))>f(o(t))?1:0}}return //r.direction===-1?function(n,t){return-e(n,t)}:e}function r(n,t){var i="function"==typeof this&&this,o=e(n,t),f=i?function(n,t){return i(n,t)||o(n,t)}:o;return f.thenBy=r,f}return r}();return n});
 				 jQuery(document).ready( function () {
 
 					 ajaxurl = "/wp-admin/admin-ajax.php";
@@ -1255,6 +1255,7 @@ register_activation_hook( __FILE__, array( 'Anchor_My_Account_Dns_Endpoint', 'in
 // Load classes after plugins are loaded
 add_action('plugins_loaded','construct_my_class');
 function construct_my_class() {
+
 	new Anchor_My_Account_Config_Endpoint();
 	new Anchor_My_Account_Dns_Endpoint();
 	new Anchor_My_Account_Logs_Endpoint();

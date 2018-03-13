@@ -82,7 +82,7 @@ function run_captaincore() {
 run_captaincore();
 
 include "inc/website-my-account-endpoint.php";
-include "inc/custom-my-account-endpoint.php";
+include "inc/woocommerce-my-account-endpoints.php";
 include "inc/constellix-api/constellix-api.php";
 include "inc/woocommerce-custom-password-fields.php";
 include "inc/mailgun-api.php";
