@@ -1,3 +1,8 @@
+<?php
+$user = wp_get_current_user();
+$role_check = in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles) + in_array( 'editor', $user->roles );
+$partner = get_field('partner', 'user_'. get_current_user_id());
+if ($partner and $role_check) { ?>
 <script>
 jQuery(document).ready(function() {
 	jQuery('.license input').click(function() {
@@ -55,3 +60,4 @@ jQuery(document).ready(function() {
 <?php endif; ?>
 
 <?php
+}
