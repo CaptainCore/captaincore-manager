@@ -81,7 +81,6 @@ function run_captaincore() {
 }
 run_captaincore();
 
-include "inc/website-my-account-endpoint.php";
 include "inc/woocommerce-my-account-endpoints.php";
 include "inc/constellix-api/constellix-api.php";
 include "inc/woocommerce-custom-password-fields.php";
@@ -112,6 +111,8 @@ add_filter( 'gutenberg_can_edit_post_type','anchor_disable_gutenberg', 10, 2 );
 
 // Modify WooCommerce Menu: wc_get_account_menu_items() ;
 function anchor_my_account_order( $current_menu ) {
+
+
 	unset($current_menu["websites"]);
 	unset($current_menu["edit-account"]);
 	$current_menu["edit-account"] = "Account";
@@ -120,6 +121,21 @@ function anchor_my_account_order( $current_menu ) {
 	unset($current_menu["customer-logout"]);
 	$current_menu['payment-methods'] = "Payment methods"; // Payment Methods
 	$current_menu["customer-logout"] = "Logout";
+
+	$user = wp_get_current_user();
+
+	$role_check_admin = in_array( 'administrator', $user->roles );
+	$role_check_partner = in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles );
+
+	if (!$role_check_admin) {
+		unset($current_menu["handbook"]);
+		unset($current_menu["licenses"]);
+	}
+	if (!$role_check_partner) {
+		unset($current_menu["configs"]);
+		unset($current_menu["anchor-dns"]);
+		unset($current_menu["logs"]);
+	}
 	return $current_menu;
 }
 // Need to run later to allow time for new items to be added to WooCommerce Menu
