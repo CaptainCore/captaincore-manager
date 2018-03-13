@@ -2197,7 +2197,9 @@ function get_domains_per_partner ( $partner_id ) {
 			if ($domains) {
 				foreach( $domains as $domain ):
 					$domain_name = get_the_title( $domain );
-					$all_domains[$domain_name] = $domain;
+					if($domain_name) {
+						$all_domains[$domain_name] = $domain;
+					}
 				endforeach;
 			}
 
