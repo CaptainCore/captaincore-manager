@@ -397,7 +397,7 @@ class CaptainCore_My_Account_Licenses_Endpoint {
 
 		// Insering your new tab/page into the My Account page.
 		add_filter( 'woocommerce_account_menu_items', array( $this, 'new_menu_items' ) );
-		add_action( 'woocommerce_account_' . self::$endpoint .  '_endpoint', array( $this, 'endpoint_content' ) );
+		add_action( 'woocommerce_account_' . self::$endpoint . '_endpoint', array( $this, 'endpoint_content' ) );
 	}
 
 	/**
@@ -497,7 +497,7 @@ class CaptainCore_My_Account_Website_Endpoint {
 
 		// Insering your new tab/page into the My Account page.
 		add_filter( 'woocommerce_account_menu_items', array( $this, 'new_menu_items' ) );
-		add_action( 'woocommerce_account_' . self::$endpoint .  '_endpoint', array( $this, 'endpoint_content' ) );
+		add_action( 'woocommerce_account_' . self::$endpoint . '_endpoint', array( $this, 'endpoint_content' ) );
 	}
 
 	/**
@@ -576,7 +576,7 @@ class CaptainCore_My_Account_Website_Endpoint {
 register_activation_hook( __FILE__, array( 'CaptainCore_My_Account_Website_Endpoint', 'install' ) );
 
 // Load classes after plugins are loaded
-add_action('plugins_loaded','websites_endpoint_construct_my_class');
+add_action( 'plugins_loaded', 'websites_endpoint_construct_my_class' );
 function websites_endpoint_construct_my_class() {
 
 }
