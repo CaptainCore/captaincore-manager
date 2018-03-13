@@ -129,9 +129,9 @@ function anchor_my_account_order( $current_menu ) {
 
 	if (!$role_check_admin) {
 		unset($current_menu["handbook"]);
-		unset($current_menu["licenses"]);
 	}
 	if (!$role_check_partner) {
+		unset($current_menu["licenses"]);
 		unset($current_menu["configs"]);
 		unset($current_menu["dns"]);
 		unset($current_menu["logs"]);
