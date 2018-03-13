@@ -333,7 +333,7 @@ class CaptainCore_My_Account_Dns_Endpoint {
 
 		if ( $is_endpoint && ! is_admin() && is_main_query() && in_the_loop() && is_account_page() ) {
 			// New page title.
-			$title = __( 'Anchor DNS', 'woocommerce' );
+			$title = __( 'Manage DNS', 'woocommerce' );
 
 			remove_filter( 'the_title', array( $this, 'endpoint_title' ) );
 		}
@@ -350,7 +350,7 @@ class CaptainCore_My_Account_Dns_Endpoint {
 	public function new_menu_items( $items ) {
 
 		// Insert your custom endpoint.
-		$items[ self::$endpoint ] = __( 'Anchor DNS', 'woocommerce' );
+		$items[ self::$endpoint ] = __( 'Manage DNS', 'woocommerce' );
 
 		return $items;
 	}
