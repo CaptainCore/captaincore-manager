@@ -2,9 +2,9 @@
 
 global $wp_query;
 
-if ( $wp_query->query_vars["anchor-dns"] ) {
+if ( $wp_query->query_vars["dns"] ) {
 
-	$domain_id = $wp_query->query_vars["anchor-dns"];
+	$domain_id = $wp_query->query_vars["dns"];
 
 	if ( anchor_verify_permissions_domain( $domain_id ) ) {
 	//  Display single DNS page
@@ -616,11 +616,11 @@ if ( $wp_query->query_vars["anchor-dns"] ) {
 		<div class="indeterminate"></div>
 </div>
 	<a class="button save_records">Save Records</a>
-	<a href="<?php echo get_site_url(null,'/my-account/anchor-dns/'); ?>" class="alignright button">View All Domains</a>
+	<a href="<?php echo get_site_url(null,'/my-account/dns/'); ?>" class="alignright button">View All Domains</a>
 <?php
 } else { ?>
 Domain not found
-<a href="<?php echo get_site_url(null,'/my-account/anchor-dns/'); ?>" class="alignright button">View All Domains</a>
+<a href="<?php echo get_site_url(null,'/my-account/dns/'); ?>" class="alignright button">View All Domains</a>
 <?php
 }
 
@@ -668,7 +668,6 @@ if ($partner) {
 			echo '<div class="row dns_records">';
 			foreach( $domains as $domain ): ?>
 
-
 	 <div class="col s12 m6">
 		 <div class="card">
 
@@ -676,7 +675,7 @@ if ($partner) {
 				 <p><span class="card-title"><?php echo get_the_title( $domain ); ?></span></p>
 			 </div>
 			 <div class="card-action">
-				 <a href="<?php echo get_site_url(null,'/my-account/anchor-dns'); ?>/<?php echo get_field("domain_id", $domain ); ?>/">Modify DNS</a>
+				 <a href="<?php echo get_site_url(null,'/my-account/dns'); ?>/<?php echo get_field("domain_id", $domain ); ?>/">Modify DNS</a>
 			 </div>
 		 </div>
 	 </div>

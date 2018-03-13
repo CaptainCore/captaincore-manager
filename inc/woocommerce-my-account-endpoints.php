@@ -1,5 +1,5 @@
 <?php
-class Anchor_My_Account_Config_Endpoint {
+class CaptainCore_My_Account_Config_Endpoint {
 
 	/**
 	 * Custom endpoint name.
@@ -99,9 +99,9 @@ class Anchor_My_Account_Config_Endpoint {
 }
 
 // Flush rewrite rules on plugin activation.
-register_activation_hook( __FILE__, array( 'Anchor_My_Account_Config_Endpoint', 'install' ) );
+register_activation_hook( __FILE__, array( 'CaptainCore_My_Account_Config_Endpoint', 'install' ) );
 
-class Anchor_My_Account_Logs_Endpoint {
+class CaptainCore_My_Account_Logs_Endpoint {
 
 	/**
 	 * Custom endpoint name.
@@ -201,9 +201,9 @@ class Anchor_My_Account_Logs_Endpoint {
 }
 
 // Flush rewrite rules on plugin activation.
-register_activation_hook( __FILE__, array( 'Anchor_My_Account_Logs_Endpoint', 'install' ) );
+register_activation_hook( __FILE__, array( 'CaptainCore_My_Account_Logs_Endpoint', 'install' ) );
 
-class Anchor_My_Account_Handbook_Endpoint {
+class CaptainCore_My_Account_Handbook_Endpoint {
 
 	/**
 	 * Custom endpoint name.
@@ -272,16 +272,16 @@ class Anchor_My_Account_Handbook_Endpoint {
 }
 
 // Flush rewrite rules on plugin activation.
-register_activation_hook( __FILE__, array( 'Anchor_My_Account_Handbook_Endpoint', 'install' ) );
+register_activation_hook( __FILE__, array( 'CaptainCore_My_Account_Handbook_Endpoint', 'install' ) );
 
-class Anchor_My_Account_Dns_Endpoint {
+class CaptainCore_My_Account_Dns_Endpoint {
 
 	/**
 	 * Custom endpoint name.
 	 *
 	 * @var string
 	 */
-	public static $endpoint = 'anchor-dns';
+	public static $endpoint = 'dns';
 
 	/**
 	 * Plugin actions.
@@ -373,9 +373,9 @@ class Anchor_My_Account_Dns_Endpoint {
 
 
 // Flush rewrite rules on plugin activation.
-register_activation_hook( __FILE__, array( 'Anchor_My_Account_Dns_Endpoint', 'install' ) );
+register_activation_hook( __FILE__, array( 'CaptainCore_My_Account_Dns_Endpoint', 'install' ) );
 
-class Anchor_My_Account_Licenses_Endpoint {
+class CaptainCore_My_Account_Licenses_Endpoint {
 
 	/**
 	 * Custom endpoint name.
@@ -473,7 +473,7 @@ class Anchor_My_Account_Licenses_Endpoint {
 }
 
 // Flush rewrite rules on plugin activation.
-register_activation_hook( __FILE__, array( 'Anchor_My_Account_Licenses_Endpoint', 'install' ) );
+register_activation_hook( __FILE__, array( 'CaptainCore_My_Account_Licenses_Endpoint', 'install' ) );
 
 class CaptainCore_My_Account_Website_Endpoint {
 
@@ -583,8 +583,8 @@ function websites_endpoint_construct_my_class() {
 
 // Load classes
 new CaptainCore_My_Account_Website_Endpoint();
-new Anchor_My_Account_Config_Endpoint();
-new Anchor_My_Account_Dns_Endpoint();
-new Anchor_My_Account_Logs_Endpoint();
-new Anchor_My_Account_Handbook_Endpoint();
-new Anchor_My_Account_Licenses_Endpoint();
+new CaptainCore_My_Account_Config_Endpoint();
+new CaptainCore_My_Account_Dns_Endpoint();
+new CaptainCore_My_Account_Logs_Endpoint();
+new CaptainCore_My_Account_Handbook_Endpoint();
+new CaptainCore_My_Account_Licenses_Endpoint();

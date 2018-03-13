@@ -455,7 +455,7 @@ div.website .actions a {
   font-family: FontAwesome;
 }
 
-.woocommerce-MyAccount-navigation-link--anchor-dns:before {
+.woocommerce-MyAccount-navigation-link--dns:before {
   content: "\f116";
 }
 
