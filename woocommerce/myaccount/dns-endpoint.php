@@ -2,72 +2,72 @@
 
 global $wp_query;
 
-if ( $wp_query->query_vars["dns"] ) {
+// Display single DNS page
 
-	$domain_id = $wp_query->query_vars["dns"];
+if ( $wp_query->query_vars['dns'] ) {
+
+	$domain_id = $wp_query->query_vars['dns'];
 
 	if ( anchor_verify_permissions_domain( $domain_id ) ) {
-	//  Display single DNS page
 
-		$domain = constellix_api_get("domains/$domain_id");
-		$response = constellix_api_get("domains/$domain_id/records");
-		if ( !$response->errors ) {
-			array_multisort(array_column($response,'type'), SORT_ASC, array_column($response,'name'), SORT_ASC, $response);
+		$domain   = constellix_api_get( "domains/$domain_id" );
+		$response = constellix_api_get( "domains/$domain_id/records" );
+		if ( ! $response->errors ) {
+			array_multisort( array_column( $response, 'type' ), SORT_ASC, array_column( $response, 'name' ), SORT_ASC, $response );
 		}
 		$record_count = 0;
-		foreach ($response as $record) {
-			if ( is_array($record->value) ) {
+		foreach ( $response as $record ) {
+			if ( is_array( $record->value ) ) {
 				$record_count = $record_count + count( $record->value );
 			} else {
 				$record_count = $record_count + 1;
 			}
-		};
-		 ?>
-		 <script>
-		 /*** Copyright 2013 Teun Duynstee Licensed under the Apache License, Version 2.0 ***/ ! function(n, t) {
-				 "function" == typeof define && define.amd ? define([], t) : "object" == typeof exports ? module.exports = t() : n.firstBy = t()
-		 }(this, function() {
-				 var n = function() {
-						 function n(n) {
-								 return n
-						 }
+		}; ?>
+	 <script>
+	 /*** Copyright 2013 Teun Duynstee Licensed under the Apache License, Version 2.0 ***/ ! function(n, t) {
+			 "function" == typeof define && define.amd ? define([], t) : "object" == typeof exports ? module.exports = t() : n.firstBy = t()
+	 }(this, function() {
+			 var n = function() {
+					 function n(n) {
+							 return n
+					 }
 
-						 function t(n) {
-								 return "string" == typeof n ? n.toLowerCase() : n
-						 }
+					 function t(n) {
+							 return "string" == typeof n ? n.toLowerCase() : n
+					 }
 
-						 function e(e, r) {
-								 if (r = "number" == typeof r ? {
-												 direction: r
-										 } : r || {}, "function" != typeof e) {
-										 var i = e;
-										 e = function(n) {
-												 return n[i] ? n[i] : ""
-										 }
-								 }
-								 if (1 === e.length) {
-										 var o = e,
-												 f = r.ignoreCase ? t : n;
-										 e = function(n, t) {
-												 return f(o(n)) < f(o(t)) ? -1 : f(o(n)) > f(o(t)) ? 1 : 0
-										 }
-								 }
-								 return r.direction === -1 ? function(n, t) {
-										 return -e(n, t)
-								 } : e
-						 }
+					 function e(e, r) {
+							 if (r = "number" == typeof r ? {
+											 direction: r
+									 } : r || {}, "function" != typeof e) {
+									 var i = e;
+									 e = function(n) {
+											 return n[i] ? n[i] : ""
+									 }
+							 }
+							 if (1 === e.length) {
+									 var o = e,
+											 f = r.ignoreCase ? t : n;
+									 e = function(n, t) {
+											 return f(o(n)) < f(o(t)) ? -1 : f(o(n)) > f(o(t)) ? 1 : 0
+									 }
+							 }
+							 return r.direction === -1 ? function(n, t) {
+									 return -e(n, t)
+							 } : e
+					 }
 
-						 function r(n, t) {
-								 var i = "function" == typeof this && this,
-										 o = e(n, t),
-										 f = i ? function(n, t) {
-												 return i(n, t) || o(n, t)
-										 } : o;
-								 return f.thenBy = r, f
-						 }
-						 return r
-				 }();
-				 return n
+					 function r(n, t) {
+							 var i = "function" == typeof this && this,
+									 o = e(n, t),
+									 f = i ? function(n, t) {
+											 return i(n, t) || o(n, t)
+									 } : o;
+							 return f.thenBy = r, f
+					 }
+					 return r
+			 }();
+			 return n
 		 });
 		 jQuery(document).ready( function () {
 
@@ -106,27 +106,6 @@ if ( $wp_query->query_vars["dns"] ) {
 			 jQuery('.dns_records').on("click",'.dns_record[data-status="new-record"] > td:last-child a.remove-record', function( event ) {
 				jQuery(this).parent().parent("tr").remove();
 				event.preventDefault();
-			 });
-
-
-			 jQuery('.dns_records').on("keyup",'tr[data-type="mx"] td.value table td:nth-child(2) input', function( event ) {
-				 value = jQuery(this).val();
-				 if ( value.substring(value.length-1) == "." ) {
-					 jQuery(this).parent().removeClass("display-domain-notice");
-				 } else {
-					 jQuery(this).parent().addClass("display-domain-notice");
-				 }
-				 event.preventDefault();
-			 });
-
-			 jQuery('.dns_records').on("keyup",'tr[data-type="cname"] td.value input', function( event ) {
-				 value = jQuery(this).val();
-				 if ( value.substring(value.length-1) == "." ) {
-					 jQuery(this).parent().removeClass("display-domain-notice");
-				 } else {
-					 jQuery(this).parent().addClass("display-domain-notice");
-				 }
-				 event.preventDefault();
 			 });
 
 			 jQuery('.dns_records .mx a.add-record').click(function( event ) {
@@ -381,22 +360,25 @@ if ( $wp_query->query_vars["dns"] ) {
 		</thead>
 		<tbody>
 		<?php
-		foreach($response as $records) {
-			$record_id = $records->id;
-			$record_name = $records->name;
-			$record_type = $records->type;
-			$record_host = $records->host;  // Used for CNAME records
-			$record_ttl = $records->ttl;
-			$record_url = $records->url;
-			$record_values = $records->value; ?>
-			<tr data-id="<?php echo $record_id; ?>" data-type="<?php echo strtolower($record_type); ?>" class="dns_record">
+		foreach ( $response as $records ) {
+			$record_id     = $records->id;
+			$record_name   = $records->name;
+			$record_type   = $records->type;
+			$record_host   = $records->host;  // Used for CNAME records
+			$record_ttl    = $records->ttl;
+			$record_url    = $records->url;
+			$record_values = $records->value;
+			?>
+			<tr data-id="<?php echo $record_id; ?>" data-type="<?php echo strtolower( $record_type ); ?>" class="dns_record">
 				<td class="type">
 					<div>
-						<?php if ($record_type == "HTTPRedirection") {
-							echo "HTTP Redirect";
+						<?php
+						if ( $record_type == 'HTTPRedirection' ) {
+							echo 'HTTP Redirect';
 						} else {
 							echo $record_type;
-						}  ?>
+						}
+						?>
 					</div>
 					<div class="record-non-editable">
 						<select>
@@ -409,9 +391,7 @@ if ( $wp_query->query_vars["dns"] ) {
 							<option<?php if( $record_type == "SPF" ) { echo " selected"; } ?>>SPF</option>
 							<option<?php if( $record_type == "SRV" ) { echo " selected"; } ?>>SRV</option>
 							<option<?php if( $record_type == "TXT" ) { echo " selected"; } ?>>TXT</option>
-
 						</select>
-
 					</div>
 				</td>
 				<td class="name">
@@ -424,111 +404,129 @@ if ( $wp_query->query_vars["dns"] ) {
 				</td>
 				<td class="value">
 					<?php
-				if ( $records->type == "MX" ) {
-					array_multisort(array_column($record_values,'level'), SORT_ASC, array_column($record_values,'value'), SORT_ASC, $record_values); ?>
-					<div class="mx">
-						<div class="record-view">
-					<?php foreach($record_values as $record) {
-						$record_value = $record->value;
-						$record_level = $record->level;  // Used by MX records ?>
+					if ( $records->type == 'MX' ) {
+						array_multisort( array_column( $record_values, 'level' ), SORT_ASC, array_column( $record_values, 'value' ), SORT_ASC, $record_values );
+					?>
+						<div class="mx">
+							<div class="record-view">
+						<?php
+						foreach ( $record_values as $record ) {
+							$record_value = $record->value;
+							$record_level = $record->level;  // Used by MX records
+							?>
 
-						<p><?php echo $record_level; ?> <?php echo $record_value; ?></p>
+							<p><?php echo $record_level; ?> <?php echo $record_value; ?></p>
+						<?php } ?>
+						</div>
+						<div class="record-editable">
+							<table>
+								<tr><th>Priority</th><th>Mail Server</th><th></th></tr>
+						<?php
+						foreach ( $record_values as $record ) {
+							$record_value = $record->value;
+							$record_level = $record->level;  // Used by MX records
+							?>
+							<tr><td><input type="text" value="<?php echo $record_level; ?>"></td><td><div class="message">.<?php echo $domain->name; ?></div><input type="text" value="<?php echo $record_value; ?>"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+						<?php } ?>
+								<tr><td colspan="3"><a href="#" class="add-record">Add Additional Record</a></td></tr>
+							 </table>
+						 </div>
+					 </div>
+	<?php
+					}
+					if ( $records->type == 'CNAME' or $records->type == 'HTTPRedirection' ) {
+			?>
+							<div class="record-view">
+								<?php echo $record_values; ?>
+							</div>
+							<div class="record-editable">
+								<div class="message">.<?php echo $domain->name; ?></div>
+								<input type="text" value="<?php echo $record_values; ?>">
+							</div>
+		<?php
+					}
+					if ( $records->type == 'AAAA' or $records->type == 'ANAME' ) {
+
+						foreach ( $record_values as $record ) {
+
+							$record_value = $record->value;
+							if ( ! isset( $record->value ) ) {
+								$record_value = $record; }
+					?>
+							<div class="record-view">
+								<?php echo $record_value; ?>
+							</div>
+							<div class="record-editable">
+								<input type="text" value="<?php echo htmlspecialchars( $record_value ); ?>">
+							</div>
+		<?php
+						}
+					}
+					if ( $records->type == 'A' ) {
+			?>
+
+						<div class="record-view">
+					<?php foreach ( $record_values as $record ) { ?>
+				<p><?php echo $record; ?></p>
+			<?php } ?>
+					</div>
+					<div class="record-editable">
+						<table>
+							<tr><th>Value</th><th></th></tr>
+					<?php foreach ( $record_values as $record ) { ?>
+				<tr><td><input type="text" value='<?php echo $record; ?>'></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+				<?php } ?>
+							<tr><td colspan="2"><a href="#" class="add-record">Add Additional Record</a></td></tr>
+						 </table>
+					 </div>
+		<?php
+					}
+					if ( $records->type == 'SPF' or $records->type == 'TXT' ) {
+			?>
+
+						<div class="record-view">
+					<?php
+					foreach ( $record_values as $record ) {
+						$record_value = $record->value;
+							?>
+
+						<p><?php echo $record_value; ?></p>
 					<?php } ?>
 					</div>
 					<div class="record-editable">
 						<table>
-							<tr><th>Priority</th><th>Mail Server</th><th></th></tr>
-					<?php foreach($record_values as $record) {
+					<tr><th>Value</th><th></th></tr>
+					<?php
+					foreach ( $record_values as $record ) {
 						$record_value = $record->value;
-						$record_level = $record->level;  // Used by MX records ?>
-						<tr><td><input type="text" value="<?php echo $record_level; ?>"></td><td><div class="message">.<?php echo $domain->name; ?></div><input type="text" value="<?php echo $record_value; ?>"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
-						<?php } ?>
-							<tr><td colspan="3"><a href="#" class="add-record">Add Additional Record</a></td></tr>
+						?>
+						<tr><td><input type="text" value='<?php echo $record_value; ?>'></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+				<?php } ?>
+							<tr><td colspan="2"><a href="#" class="add-record">Add Additional Record</a></td></tr>
 						 </table>
 					 </div>
-				 </div>
-<?php 		}
-			if ( $records->type == "CNAME" or $records->type == "HTTPRedirection") { ?>
-					<div class="record-view">
-						<?php echo $record_values; ?>
-					</div>
-					<div class="record-editable">
-						<div class="message">.<?php echo $domain->name; ?></div>
-						<input type="text" value="<?php echo $record_values; ?>">
-					</div>
-<?php 		}
-			if ( $records->type == "AAAA" or $records->type == "ANAME" ) {
+		<?php
+					}
+					if ( $records->type == 'SRV' ) {
+			?>
+						<div class="srv">
+							<div class="record-view">
+							<?php
+							foreach ( $record_values as $record ) {
 
-				foreach($record_values as $record) {
+								$record_value    = $record->value;
+								$record_priority = $record->priority;
+								$record_weight   = $record->weight;
+								$record_port     = $record->port;
 
-					$record_value = $record->value;
-					if ( ! isset($record->value) ) { $record_value = $record; } ?>
-					<div class="record-view">
-						<?php echo $record_value; ?>
-					</div>
-					<div class="record-editable">
-						<input type="text" value="<?php echo htmlspecialchars($record_value); ?>">
-					</div>
-<?php 			}
-			}
-			if ( $records->type == "A" ) { ?>
-
-				<div class="record-view">
-			<?php foreach($record_values as $record) { ?>
-				<p><?php echo $record; ?></p>
-			<?php } ?>
-			</div>
-			<div class="record-editable">
-				<table>
-					<tr><th>Value</th><th></th></tr>
-			<?php foreach($record_values as $record) { ?>
-				<tr><td><input type="text" value='<?php echo $record; ?>'></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
-				<?php } ?>
-					<tr><td colspan="2"><a href="#" class="add-record">Add Additional Record</a></td></tr>
-				 </table>
-			 </div>
-<?php
-			}
-			if ( $records->type == "SPF" or $records->type == "TXT" ) { ?>
-
-				<div class="record-view">
-			<?php foreach($record_values as $record) {
-				$record_value = $record->value;
-				 ?>
-
-				<p><?php echo $record_value; ?></p>
-			<?php } ?>
-			</div>
-			<div class="record-editable">
-				<table>
-					<tr><th>Value</th><th></th></tr>
-			<?php foreach($record_values as $record) {
-				$record_value = $record->value; ?>
-				<tr><td><input type="text" value='<?php echo $record_value; ?>'></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
-				<?php } ?>
-					<tr><td colspan="2"><a href="#" class="add-record">Add Additional Record</a></td></tr>
-				 </table>
-			 </div>
-<?php
-			}
-			if ( $records->type == "SRV" ) { ?>
-				<div class="srv">
-					<div class="record-view">
-					<?php foreach($record_values as $record) {
-
-					$record_value = $record->value;
-					$record_priority = $record->priority;
-					$record_weight = $record->weight;
-					$record_port = $record->port;
-
-					?>
-						<p><?php echo $record_value; ?> <?php echo $record_priority; ?> <?php echo $record_weight; ?> <?php echo $record_port; ?></p>
+							?>
+								<p><?php echo $record_value; ?> <?php echo $record_priority; ?> <?php echo $record_weight; ?> <?php echo $record_port; ?></p>
 					<?php } ?>
-				</div>
-				<div class="record-editable">
+						</div>
+						<div class="record-editable">
 					<table>
 						<tr><th>Priority</th><th>Weight</th><th>Port</th><th>Host</th><th></th></tr>
-					<?php foreach($record_values as $record) { ?>
+					<?php foreach ( $record_values as $record ) { ?>
 									<tr>
 										<td><input type="text" value="<?php echo $record_priority; ?>"></td><td><input type="text" value="<?php echo $record_weight; ?>"></td><td><input type="text" value="<?php echo $record_port; ?>"></td>
 										<td><input type="text" value="<?php echo $record_value; ?>"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td>
@@ -537,8 +535,8 @@ if ( $wp_query->query_vars["dns"] ) {
 							<tr><td colspan="5"><a href="#" class="add-record">Add Additional Record</a></td></tr>
 					 </table>
 					</div>
-				</div>
-			<?php } ?>
+						</div>
+					<?php } ?>
 			</td>
 			<td class="ttl">
 				<div class="record-view">
@@ -555,7 +553,8 @@ if ( $wp_query->query_vars["dns"] ) {
 		</tr>
 			<?php
 
-		} ?>
+		}
+		?>
 		<tr class="dns_record" data-status="new-record" data-type="a">
 			<td>
 				<select>
@@ -616,15 +615,19 @@ if ( $wp_query->query_vars["dns"] ) {
 		<div class="indeterminate"></div>
 </div>
 	<a class="button save_records">Save Records</a>
-	<a href="<?php echo get_site_url(null,'/my-account/dns/'); ?>" class="alignright button">View All Domains</a>
+	<a href="<?php echo get_site_url( null, '/my-account/dns/' ); ?>" class="alignright button">View All Domains</a>
 <?php
-} else { ?>
-Domain not found
-<a href="<?php echo get_site_url(null,'/my-account/dns/'); ?>" class="alignright button">View All Domains</a>
-<?php
-}
+	} else {
+?>
+	Domain not found
+	<a href="<?php echo get_site_url( null, '/my-account/dns/' ); ?>" class="alignright button">View All Domains</a>
+	<?php
+	}
 
-} else { // Display DNS listing page ?>
+} // end if ( $wp_query->query_vars['dns'] ) {
+
+ // Display DNS listing page
+if ( !$wp_query->query_vars['dns'] ) { ?>
 	<div class="row">
 		<div class="col s12">
 			<div class="card">
@@ -653,38 +656,38 @@ Domain not found
 
 <?php
 
-$user_id = get_current_user_id();
+	$user_id = get_current_user_id();
 
-$partner = get_field('partner', 'user_'. get_current_user_id() );
-if ($partner) {
-	foreach ($partner as $partner_id) {
-
+	$partner = get_field( 'partner', 'user_' . get_current_user_id() );
+	if ( $partner ) {
+		foreach ( $partner as $partner_id ) {
 
 		// Get all domains partner has access to
 		$domains = get_domains_per_partner( $partner_id );
 
-		if( $domains ):
-			echo '<h3>Account: '. get_the_title($partner_id) .' <small class="alignright">'. count($domains).' domains</small></h3>';
+		if ( $domains ) :
+			echo '<h3>Account: ' . get_the_title( $partner_id ) . ' <small class="alignright">' . count( $domains ) . ' domains</small></h3>';
 			echo '<div class="row dns_records">';
-			foreach( $domains as $domain ): ?>
+			foreach ( $domains as $domain ) :
+			?>
 
-	 <div class="col s12 m6">
-		 <div class="card">
+		 <div class="col s12 m6">
+			 <div class="card">
 
-			 <div class="card-content">
-				 <p><span class="card-title"><?php echo get_the_title( $domain ); ?></span></p>
-			 </div>
-			 <div class="card-action">
-				 <a href="<?php echo get_site_url(null,'/my-account/dns'); ?>/<?php echo get_field("domain_id", $domain ); ?>/">Modify DNS</a>
+				 <div class="card-content">
+					 <p><span class="card-title"><?php echo get_the_title( $domain ); ?></span></p>
+				 </div>
+				 <div class="card-action">
+					 <a href="<?php echo get_site_url( null, '/my-account/dns' ); ?>/<?php echo get_field( 'domain_id', $domain ); ?>/">Modify DNS</a>
+				 </div>
 			 </div>
 		 </div>
-	 </div>
 
-			<?php endforeach;
-			echo "</div>";
+			<?php
+			endforeach;
+			echo '</div>';
 		endif;
 
-	}
-
-} // end foreach ($partner as $partner_id)
+		}
+	} // end foreach ($partner as $partner_id)
 }
