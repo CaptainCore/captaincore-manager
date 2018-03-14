@@ -162,6 +162,27 @@ if ( $wp_query->query_vars['dns'] ) {
 				 jQuery('.progress').css("opacity","1");
 				 jQuery('.dns_records').css("opacity","0.3");
 
+				 // Loop through all records attempt to new duplicates
+				 jQuery('.dns_records tr.dns_record[data-status=new-record][data-type=txt]').each(function() {
+					 current_record = jQuery(this);
+					 current_record_type = jQuery(this).data('type');
+					 current_record_name = jQuery(this).find('.name input').val();
+					 current_record_value = jQuery(this).find('.value input').val();
+					 current_record_ttl = jQuery(this).find('.ttl input').val();
+					 current_record_status = jQuery(this).data('status');
+					 jQuery('.dns_records tr.dns_record[data-type='+current_record_type+'][data-id]').each(function() {
+						 check_record = jQuery(this);
+						 check_record_name = jQuery(this).find('.name input').val();
+						 if ( current_record_name == check_record_name ) {
+							 console.log("Duplicate found");
+							 jQuery( current_record ).remove();
+							 jQuery( check_record ).attr('data-status','edit-record');
+							 jQuery( check_record ).find('.value .record-editable .add-record').click();
+							 jQuery( check_record ).find('.value .record-editable .add-record').parent().parent().prev().find("input[type=text]").val( current_record_value );
+						 }
+					 });
+				 });
+
 				 record_updates = [];
 				 // Loop through all modified dns records
 				 jQuery('.dns_records tr.dns_record[data-status]').each(function() {
@@ -172,6 +193,15 @@ if ( $wp_query->query_vars['dns'] ) {
 						record_value = jQuery(this).find('.value input').val();
 						record_ttl = jQuery(this).find('.ttl input').val();
 						record_status = jQuery(this).data('status');
+
+						if ( record_type == "cname" || record_type == "aname" ) {
+
+							// Check for value ending in period. If not add one.
+							if ( record_value && record_value.substr(record_value.length - 1) != "." ) {
+								record_value = record_value + ".";
+							}
+
+						}
 
 						if (record_type == "mx") {
 
