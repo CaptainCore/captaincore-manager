@@ -180,6 +180,12 @@ if ( $wp_query->query_vars['dns'] ) {
 							jQuery(this).find('tr:has("td")').each(function() {
 								priority = jQuery(this).find("input:first").val();
 								value = jQuery(this).find("input:last").val();
+
+								// Check for MX value ending in period. If not add one.
+								if ( value && value.substr(value.length - 1) != "." ) {
+									value = value + ".";
+								}
+
 								if (priority && value) {
 									record_values.push({
 										"priority": priority,
