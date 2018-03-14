@@ -125,7 +125,8 @@ function anchor_my_account_order( $current_menu ) {
 	$user = wp_get_current_user();
 
 	$role_check_admin = in_array( 'administrator', $user->roles );
-	$role_check_partner = in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles );
+	$role_check_partner = in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles ) in_array( 'editor', $user->roles );
+	$role_check_subscriber = in_array( 'subscriber', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles ) in_array( 'editor', $user->roles );
 
 	if (!$role_check_admin) {
 		unset($current_menu["handbook"]);
@@ -133,6 +134,8 @@ function anchor_my_account_order( $current_menu ) {
 	if (!$role_check_partner) {
 		unset($current_menu["licenses"]);
 		unset($current_menu["configs"]);
+	}
+	if (!$role_check_subscriber){
 		unset($current_menu["dns"]);
 		unset($current_menu["logs"]);
 	}
