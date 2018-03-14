@@ -245,11 +245,12 @@ if ( $wp_query->query_vars['dns'] ) {
 					jQuery(response).each(function() {
 						// Display success
 						if ( this["success"] ) {
-							if( this["success"] == "Record deleted successfully" ) {
+							// Deleted response from Constellix: [{"success":"Record  deleted successfully","domain_id":16519,"record_id":"67925","record_type":"cname"}]
+							if( this["success"] == "Record  deleted successfully" ) {
 								record_id = this["record_id"];
 								jQuery('tr[data-id='+record_id+']').remove();
 							}
-							if( this["success"] == "Record updated successfully" ) {
+							if( this["success"] == "Record  updated successfully" ) {
 								record_id = this["record_id"];
 								record_type = this["record_type"];
 								record_row = jQuery('tr[data-id='+record_id+']');
