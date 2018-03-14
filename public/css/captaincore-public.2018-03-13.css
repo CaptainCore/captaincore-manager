@@ -1064,6 +1064,14 @@ article.type-captcore_process {
   display: block;
 }
 
+body .progress {
+  background-color: #25c4f3;
+}
+
+body .progress .indeterminate {
+  background-color: #075b75;
+}
+
 .process_log_items {
   display: none;
 }
