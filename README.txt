@@ -35,6 +35,17 @@ TODO
 
 == Changelog ==
 
+= 0.1.6: March 18, 2018 =
+* New: Rollback entire quicksave
+* New: Licenses keys page viewable from hosting dashboard for granted users
+* Tweak: Renamed Anchor DNS to Manage DNS
+* Tweak: Reworked custom /my-account/ endpoints to load earlier
+* Tweak: Styled progress bars
+* Tweak: DNS Manager - Automatically add trailing dot when missed for cname and aname records
+* Tweak: DNS Manager - Detect duplicate txt records and autocorrect
+* Fix: Moved custom /my-account/ endpoints checks to load later
+* Fix: DNS Manager - Filter out deleted sites from DNS list
+
 = 0.1.5: March 11, 2018 =
 * New: Website logs - displays report of actual work done
 * New: Quicksave link to manually check for file changes
