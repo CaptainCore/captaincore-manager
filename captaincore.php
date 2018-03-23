@@ -129,6 +129,7 @@ function anchor_my_account_order( $current_menu ) {
 
 	if (!$role_check_admin) {
 		unset($current_menu["handbook"]);
+		unset($current_menu["manage"]);
 	}
 	if (!$role_check_partner) {
 		unset($current_menu["licenses"]);

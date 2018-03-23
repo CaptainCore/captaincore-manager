@@ -449,6 +449,23 @@ div.website .actions a {
   content: "\f022";
   font-family: FontAwesome;
 }
+.woocommerce-MyAccount-navigation-link--handbook,
+.woocommerce-MyAccount-navigation-link--manage {
+	border-left: 10px solid #27c3f3;
+}
+
+.woocommerce-MyAccount-navigation-link--handbook:after,
+.woocommerce-MyAccount-navigation-link--manage:after {
+	content: "admin";
+	font-size: 0.2em;
+	position: absolute;
+	left: -16px;
+	top: 5px;
+	padding: 0px;
+	margin: 0px;
+	transform: rotate(-90deg);
+	color: #fff;
+}
 
 .woocommerce-MyAccount-navigation-link--handbook:before {
   content: "\f02d";
@@ -465,6 +482,11 @@ div.website .actions a {
 
 .woocommerce-MyAccount-navigation-link--licenses:before {
   content: "\f112";
+}
+
+.woocommerce-MyAccount-navigation-link--manage:before {
+  content: "\f0ad";
+  font-family: FontAwesome;
 }
 
 .woocommerce-MyAccount-navigation-link--customer-logout:before {
@@ -1544,4 +1566,102 @@ ul.changelog.domain li:before {
 
 .reports span {
   float: right;
+}
+
+.site-manage {
+	display: none;
+}
+.content-area .site ul {
+	padding:0px;
+	margin:0px;
+	list-style: none;
+}
+
+
+.site .collapsible-body {
+	font-size: .75em;
+	line-height: 1.4em;
+}
+
+.site span.title {
+	margin-right: 1em;
+}
+
+.site span.timestamp {
+	font-size: .75em;
+	line-height: 2em;
+}
+
+.site-manage .card .card-content {
+	padding: 12px;
+}
+
+.site .collapsible-header,
+.site .collapsible-body {
+	border-bottom: 0px;
+}
+
+.site span.badge {
+	line-height: 2.7em;
+}
+
+.site .collapsible-body table td {
+	border-bottom: 1px solid #d0d0d0;
+}
+
+.site-filter {
+	width: 100%;
+	overflow: hidden;
+}
+
+.site-filter select,
+.selected-action select {
+	font-size: .75em;
+	max-width: 220px;
+	text-overflow: ellipsis;
+}
+.site .checkbox-selector {
+	background: #94949412;
+	width: 15px;
+	height: 100%;
+	display: block;
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	cursor: pointer;
+	-webkit-transition: all 0.3s ease-in-out;
+	-moz-transition: all 0.3s ease-in-out;
+	-ms-transition: all 0.3s ease-in-out;
+	-o-transition: all 0.3s ease-in-out;
+	transition: all 0.3s ease-in-out;
+}
+
+.site .checkbox-selector:before {
+	content: "selected";
+	font-size: 0.2em;
+	position: absolute;
+	left: -9px;
+	top: 20px;
+	padding: 0px;
+	margin: 0px;
+	opacity: 0;
+	transform: rotate(-90deg);
+	color: #fff;
+	-webkit-transition: all 0.3s ease-in-out;
+	-moz-transition: all 0.3s ease-in-out;
+	-ms-transition: all 0.3s ease-in-out;
+	-o-transition: all 0.3s ease-in-out;
+	transition: all 0.3s ease-in-out;
+}
+
+.site .checkbox-selector:hover {
+	background: #25c4f361;
+}
+
+.site .checkbox-selector.selected {
+	background: #25c4f3;
+}
+.site .checkbox-selector.selected:before {
+	opacity: 1;
+	color: #fff;
 }
