@@ -35,6 +35,10 @@ TODO
 
 == Changelog ==
 
+= 0.1.7: March 25, 2018 =
+* New: Manage (admins only) - Filter and selecting sites for bulk actions, commands and scripts.
+* Tweak: Visually highlighted admin pages on WooCommerce my account tabs
+
 = 0.1.6: March 18, 2018 =
 * New: Rollback entire quicksave
 * New: Licenses keys page viewable from hosting dashboard for granted users
