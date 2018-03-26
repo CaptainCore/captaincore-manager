@@ -439,6 +439,44 @@ if ( $wp_query->query_vars['dns'] ) {
 			</tr>
 		</thead>
 		<tbody>
+			<tr data-id="" data-type="" class="dns_record">
+				<td class="type">
+					<div></div>
+					<div class="record-non-editable">
+						<select>
+							<option>A</option>
+							<option>AAAA</option>
+							<option>ANAME</option>
+							<option>CNAME</option>
+							<option value="HTTPRedirection">HTTP Redirect</option>
+							<option>MX</option>
+							<option>SPF</option>
+							<option>SRV</option>
+							<option>TXT</option>
+						</select>
+					</div>
+				</td>
+				<td class="name">
+					<div class="record-view"></div>
+					<div class="record-editable">
+						<input type="text" value="">
+					</div>
+				</td>
+				<td class="value">
+					<div class="record-view"></div>
+					<div class="record-editable">
+						<input type="text" value="">
+					</div>
+				</td>
+			<td class="ttl">
+				<div class="record-view"></div>
+				<div class="record-editable"><input type="text" value="1800">				</div>
+			</td>
+			<td class="actions">
+				<a class="edit-record" href=""><i class="fas fa-edit"></i></a>
+				<a class="remove-record"  href=""><i class="fas fa-times"></i></a>
+			</td>
+		</tr>
 		<?php
 		foreach ( $response as $records ) {
 			$record_id     = $records->id;
