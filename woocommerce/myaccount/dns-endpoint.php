@@ -600,17 +600,17 @@ if ( $wp_query->query_vars['dns'] ) {
 								$record_port     = $record->port;
 
 							?>
-								<p><?php echo $record_value; ?> <?php echo $record_priority; ?> <?php echo $record_weight; ?> <?php echo $record_port; ?></p>
+								<p><?php echo $record_priority; ?> <?php echo $record_weight; ?> <?php echo $record_port; ?> <?php echo $record_value; ?> </p>
 					<?php } ?>
 						</div>
 						<div class="record-editable">
 					<table>
 						<tr><th>Priority</th><th>Weight</th><th>Port</th><th>Host</th><th></th></tr>
 					<?php foreach ( $record_values as $record ) { ?>
-									<tr>
-										<td><input type="text" value="<?php echo $record_priority; ?>"></td><td><input type="text" value="<?php echo $record_weight; ?>"></td><td><input type="text" value="<?php echo $record_port; ?>"></td>
-										<td><input type="text" value="<?php echo $record_value; ?>"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td>
-									</tr>
+						<tr>
+							<td><input type="text" value="<?php echo $record_priority; ?>"></td><td><input type="text" value="<?php echo $record_weight; ?>"></td><td><input type="text" value="<?php echo $record_port; ?>"></td>
+							<td><input type="text" value="<?php echo $record_value; ?>"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td>
+						</tr>
 					<?php } ?>
 							<tr><td colspan="5"><a href="#" class="add-record">Add Additional Record</a></td></tr>
 					 </table>
