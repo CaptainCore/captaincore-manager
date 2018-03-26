@@ -610,7 +610,11 @@ table.dns_records {
   font-size: 0.8em;
 }
 
-table.dns_records>tbody>tr:first-child>td {
+table.dns_records>tbody>tr:nth-child(1) {
+  display: none;
+}
+
+table.dns_records>tbody>tr:nth-child(2)>td {
   border-top: 1px solid black;
 }
 
