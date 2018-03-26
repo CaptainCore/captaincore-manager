@@ -2536,6 +2536,26 @@ function anchor_dns_action_callback() {
 					"redirectTypeId" => "3",
 				);
 
+			} elseif ($record_type == "srv" ) {
+
+				// Formats SRV records into array which API can read
+				$srv_records = [];
+				foreach($record_value as $srv_record) {
+					$srv_records[] = array(
+						"value" => $srv_record["value"],
+						"priority" => $srv_record["priority"],
+						"weight" => $srv_record["weight"],
+						"port" => $srv_record["port"],
+					);
+				}
+
+				$post = array(
+					"recordOption" => "roundRobin",
+					"name" => $record_name,
+					"ttl" => $record_ttl,
+					"roundRobin" => $srv_records,
+				);
+
 		  } else {
 				$post = array(
 				  "recordOption" => "roundRobin",
@@ -2619,7 +2639,27 @@ function anchor_dns_action_callback() {
 					"ttl" => $record_ttl,
 				);
 
-			} else {
+			} elseif ($record_type == "srv" ) {
+
+				// Formats SRV records into array which API can read
+				$srv_records = [];
+				foreach($record_value as $srv_record) {
+					$srv_records[] = array(
+						"value" => $srv_record["value"],
+						"priority" => $srv_record["priority"],
+						"weight" => $srv_record["weight"],
+						"port" => $srv_record["port"],
+					);
+				}
+
+				$post = array(
+					"recordOption" => "roundRobin",
+					"name" => $record_name,
+					"ttl" => $record_ttl,
+					"roundRobin" => $srv_records,
+				);
+
+		  } else {
 				$post = array(
 				  "recordOption" => "roundRobin",
 				  "name" => $record_name,

@@ -227,6 +227,34 @@ if ( $wp_query->query_vars['dns'] ) {
 							record_value = record_values;
 
 						}
+						if (record_type == "srv") {
+
+							record_values = [];
+
+							jQuery(this).find('tr:has("td")').each(function() {
+								priority = jQuery(this).find("td:nth-child(1) input").val();
+								weight = jQuery(this).find("td:nth-child(2) input").val();
+								port = jQuery(this).find("td:nth-child(3) input").val();
+								value = jQuery(this).find("td:nth-child(4) input").val();
+
+								// Check for SRV value ending in period. If not add one.
+								if ( value && value.substr(value.length - 1) != "." ) {
+									value = value + ".";
+								}
+
+								if (priority && value) {
+									record_values.push({
+										"priority": priority,
+										"weight": weight,
+										"port": port,
+										"value": value
+									});
+								}
+							});
+
+							record_value = record_values;
+
+						}
 						if (record_type == "txt" || record_type == "a") {
 
 							record_values = [];
@@ -293,6 +321,21 @@ if ( $wp_query->query_vars['dns'] ) {
 										record_server = jQuery(this).find("td:nth-child(2) input").val();
 										if (record_priority && record_server) {
 											record_values.push ( '<p>'+record_priority+' '+record_server+'</p>' );
+										}
+									});
+									record_row.find('.value .record-view').html( "" );
+									jQuery(record_values).each(function() {
+										record_row.find('.value .record-view').append( this );
+									});
+								} else if ( record_type == "srv" ) {
+									record_values = [];
+									record_row.find('.value .record-editable table tr').each(function() {
+										record_priority = jQuery(this).find("td:nth-child(1) input").val();
+										record_weight = jQuery(this).find("td:nth-child(2) input").val();
+										record_port = jQuery(this).find("td:nth-child(3) input").val();
+										record_host = jQuery(this).find("td:nth-child(4) input").val();
+										if (record_priority && record_host) {
+											record_values.push ( '<p>'+record_priority+' '+record_weight+' '+record_port+' '+record_host+'</p>' );
 										}
 									});
 									record_row.find('.value .record-view').html( "" );
