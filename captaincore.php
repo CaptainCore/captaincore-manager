@@ -780,7 +780,7 @@ function snapshot_post_type() {
 		'labels'                => $labels,
 		'supports'              => array( ),
 		'hierarchical'          => false,
-		'public'                => true,
+		'public'                => false,
 		'show_ui'               => true,
 		'show_in_menu'          => false,
 		'menu_position'         => 5,
@@ -788,12 +788,12 @@ function snapshot_post_type() {
 		'show_in_admin_bar'     => true,
 		'show_in_nav_menus'     => true,
 		'can_export'            => true,
-		'has_archive'           => true,
-		'exclude_from_search'   => false,
-		'publicly_queryable'    => true,
+		'has_archive'           => false,
+		'exclude_from_search'   => true,
+		'publicly_queryable'    => false,
 		'capability_type'       => 'page',
-		'capabilities'        => $capabilities,
-		'map_meta_cap' 		  => true
+		'capabilities'          => $capabilities,
+		'map_meta_cap'          => true
 	);
 	register_post_type( 'captcore_snapshot', $args );
 
@@ -847,7 +847,7 @@ function captaincore_quicksaves_post_type() {
 		'labels'                => $labels,
 		'supports'              => array( ),
 		'hierarchical'          => false,
-		'public'                => true,
+		'public'                => false,
 		'show_ui'               => true,
 		'show_in_menu'          => false,
 		'menu_position'         => 5,
