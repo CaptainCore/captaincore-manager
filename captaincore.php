@@ -855,11 +855,12 @@ function captaincore_quicksaves_post_type() {
 		'show_in_admin_bar'     => true,
 		'show_in_nav_menus'     => true,
 		'can_export'            => true,
-		'has_archive'           => true,
-		'exclude_from_search'   => false,
-		'publicly_queryable'    => true,
+		'has_archive'           => false,
+		'exclude_from_search'   => true,
+		'publicly_queryable'    => false,
 		'capability_type'       => 'page',
 		'capabilities'          => $capabilities,
+		'map_meta_cap'          => true
 	);
 	register_post_type( 'captcore_quicksave', $args );
 
