@@ -644,7 +644,14 @@ if ( $wp_query->query_vars['dns'] ) {
 						<div class="record-editable">
 					<table>
 						<tr><th>Priority</th><th>Weight</th><th>Port</th><th>Host</th><th></th></tr>
-					<?php foreach ( $record_values as $record ) { ?>
+					<?php foreach ( $record_values as $record ) {
+
+						$record_value    = $record->value;
+						$record_priority = $record->priority;
+						$record_weight   = $record->weight;
+						$record_port     = $record->port;
+
+						?>
 						<tr>
 							<td><input type="text" value="<?php echo $record_priority; ?>"></td><td><input type="text" value="<?php echo $record_weight; ?>"></td><td><input type="text" value="<?php echo $record_port; ?>"></td>
 							<td><input type="text" value="<?php echo $record_value; ?>"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td>
