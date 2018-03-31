@@ -192,8 +192,8 @@ if (substr_count($site, ".") > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 		if ( count($quicksave_duplicate_search) == 0 ) {
 
 		// Updates site with latest $plugins, $themes, $core and $home_url
-		update_field("field_5a9421b004ed3", $plugins, $site_id);
-		update_field("field_5a9421b804ed4", $themes, $site_id);
+		update_field("field_5a9421b004ed3", wp_slash($plugins), $site_id);
+		update_field("field_5a9421b804ed4", wp_slash($themes), $site_id);
 		update_field("field_5a9421bc04ed5", $core, $site_id);
 		update_field("field_5a944358bf146", $home_url, $site_id);
 
@@ -211,8 +211,8 @@ if (substr_count($site, ".") > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 		update_field("field_5a7dc6919ed81", $git_commit, $quicksave_id);
 		update_field("field_5a7f0a55a5086", $git_status, $quicksave_id);
 		update_field("field_59bae8d2ec7cc", $core, $quicksave_id);
-		update_field("field_59badadc66871", $plugins, $quicksave_id);
-		update_field("field_59badab866870", $themes, $quicksave_id);
+		update_field("field_59badadc66871", wp_slash($plugins), $quicksave_id);
+		update_field("field_59badab866870", wp_slash($themes), $quicksave_id);
 
 		// Adds snapshot ID to title
 		$my_post = array(
