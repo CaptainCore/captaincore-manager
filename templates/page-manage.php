@@ -163,7 +163,7 @@ var sites = [<?php foreach( $websites as $website ) {
 		      <v-card class="site">
 						<!--<div class="checkbox-selector"></div>-->
 						<v-expansion-panel>
-						 <v-expansion-panel-content v-for="(item,i) in 1" :key="i">
+						 <v-expansion-panel-content lazy v-for="(item,i) in 1" :key="i">
 							 <div slot="header"><strong>{{ site.name }}</strong> <span class="text-xs-right">plugins {{ site.plugins.length }} themes {{ site.themes.length }} version {{ site.core }}</span></div>
 							 <v-card>
 								 <v-data-table
