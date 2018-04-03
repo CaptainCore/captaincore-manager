@@ -169,15 +169,15 @@ var sites = [<?php foreach( $websites as $website ) {
 								 <v-data-table
 								    :headers="headers"
 								    :items="site.plugins"
-								    hide-actions
 								    class="elevation-1"
+										hide-actions
 								  >
 								    <template slot="items" slot-scope="props">
 								      <td>{{ props.item.title }}</td>
 								      <td>{{ props.item.name }}</td>
 								      <td>{{ props.item.version }}</td>
 								      <td>{{ props.item.status }}</td>
-											<td class="justify-center layout px-0">
+											<td class="justify-center px-0">
 							          <v-btn icon class="mx-0" @click="editItem(props.item)">
 							            <v-icon color="teal">edit</v-icon>
 							          </v-btn>
@@ -187,11 +187,27 @@ var sites = [<?php foreach( $websites as $website ) {
 							        </td>
 								    </template>
 								  </v-data-table>
-								 <v-card-text>
-									 <div v-for="plugin in site.plugins">
-										 {{ plugin.title }} {{ plugin.name }} {{ plugin.version }}
-									 </div>
-								 </v-card-text>
+									<v-data-table
+ 								    :headers="headers"
+ 								    :items="site.themes"
+ 								    class="elevation-1"
+										hide-actions
+ 								  >
+ 								    <template slot="items" slot-scope="props">
+ 								      <td>{{ props.item.title }}</td>
+ 								      <td>{{ props.item.name }}</td>
+ 								      <td>{{ props.item.version }}</td>
+ 								      <td>{{ props.item.status }}</td>
+ 											<td class="justify-center layout px-0">
+ 							          <v-btn icon class="mx-0" @click="editItem(props.item)">
+ 							            <v-icon color="teal">edit</v-icon>
+ 							          </v-btn>
+ 							          <v-btn icon class="mx-0" @click="deleteItem(props.item)">
+ 							            <v-icon color="pink">delete</v-icon>
+ 							          </v-btn>
+ 							        </td>
+ 								    </template>
+ 								  </v-data-table>
 							 </v-card>
 						 </v-expansion-panel-content>
 					 </v-expansion-panel>
