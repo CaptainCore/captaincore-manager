@@ -3447,6 +3447,7 @@ class PageTemplater {
 		$this->templates = array(
 			'templates/page-captaincore-api.php' => 'CaptainCore API',
 			'templates/page-company-handbook.php' => 'Company Handbook',
+			'templates/page-manage.php' => 'Manage VueJS Version',
 			'templates/page-activities.php' => 'Activities',
 			'templates/page-checkout-express.php' => 'Checkout Express',
 			'templates/page-websites.php' => 'Website Recommendations'
