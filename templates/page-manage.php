@@ -112,6 +112,7 @@ if( $websites ): ?>
 var sites = [<?php foreach( $websites as $website ) {
 	$plugins = get_field( "plugins", $website->ID);
 	$themes = get_field( "themes", $website->ID);
+	if ($plugins && $themes) {
 	?>
 {
 "id": <?php echo $website->ID; ?>,
@@ -120,7 +121,7 @@ var sites = [<?php foreach( $websites as $website ) {
 <?php if($themes) { ?>"themes": <?php echo $themes; ?>,<?php } ?>
 "core": "<?php echo get_field( "core", $website->ID ); ?>",
 "visible": true
-},<?php } ?>];
+},<?php } } ?>];
 </script>
 
 <div id="app">
