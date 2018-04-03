@@ -36,6 +36,14 @@ html {
 span.text-xs-right {
 	float:right;
 }
+
+.entry-content, .entry-footer, .entry-summary {
+	max-width: 1000px;
+}
+table.table thead tr,
+table.table tbody td, table.table tbody th {
+	height: auto;
+}
 </style>
 <?php if ( $_SERVER["SERVER_NAME"] == "dev.anchor" ) { ?>
 <script src="https://unpkg.com/vue/dist/vue.js"></script>
@@ -166,11 +174,13 @@ var sites = [<?php foreach( $websites as $website ) {
 						 <v-expansion-panel-content lazy v-for="(item,i) in 1" :key="i">
 							 <div slot="header"><strong>{{ site.name }}</strong> <span class="text-xs-right">plugins {{ site.plugins.length }} themes {{ site.themes.length }} version {{ site.core }}</span></div>
 							 <v-card>
+
 								 <v-data-table
 								    :headers="headers"
 								    :items="site.plugins"
 								    class="elevation-1"
 										hide-actions
+										style="margin: 0 2% 2% 2%;"
 								  >
 								    <template slot="items" slot-scope="props">
 								      <td>{{ props.item.title }}</td>
@@ -215,6 +225,55 @@ var sites = [<?php foreach( $websites as $website ) {
 		    </v-flex>
 		  </v-layout>
 			</v-container>
+			<v-dialog v-model="dialog" max-width="500px">
+			 <v-card>
+				 <v-card-title>
+					 Bulk Actions on {{ visibleSites }} sites
+				 </v-card-title>
+				 <v-card-text>
+
+					 <ul>
+						 <li>
+							 Run a
+							 <select>
+								 <option disabled selected>Script/Command</option>
+								 <optgroup label="Script">
+									 <option>Migrate</option>
+									 <option>Apply SSL</option>
+									 <option>Apply SSL with www</option>
+									 <option>Launch</option>
+								 </optgroup>
+								 <optgroup label="Command">
+									 <option>Backup</option>
+									 <option>Sync</option>
+									 <option>Activate/Deactivate</option>
+									 <option>Snapshot</option>
+									 <option>Remove</option>
+								 </optgroup>
+							 </select>
+						 </li>
+						 <li>
+							 <select>
+								 <option disabled selected>Action</option>
+								 <option>Activate</option>
+								 <option>Deactivate</option>
+								 <option>Install</option>
+								 <option>Delete</option>
+							 </select>
+							 on
+							 <select>
+								 <option disabled selected>Plugin/Theme</option>
+								 <option>Plugin</option>
+								 <option>Theme</option>
+							 </select>
+
+					 </ul>
+				 </v-card-text>
+				 <v-card-actions>
+					 <v-btn color="primary" flat @click.stop="dialog=false">Close</v-btn>
+				 </v-card-actions>
+			 </v-card>
+		 </v-dialog>
 		</template>
 		</v-content>
 	</v-app>
@@ -260,6 +319,7 @@ sites.forEach(function(site) {
 new Vue({
 	el: '#app',
 	data: {
+		dialog: false,
 		site_filters: all_filters,
   	sites: sites,
 		headers: [
@@ -285,7 +345,7 @@ new Vue({
 		filterSites() {
 
 			// Filter if select has value
-			if ( this.applied_site_filter ) {
+			if ( this.applied_site_filter && this.applied_site_filter != "" ) {
 
 				filterby = this.applied_site_filter;
 
@@ -309,6 +369,10 @@ new Vue({
 					}
 
 				});
+			} else {
+				this.sites.forEach(function(site) {
+					site.visible = true;
+				});
 			}
 
 		}
@@ -317,88 +381,11 @@ new Vue({
 
 </script>
 
-<label class="right">
-<h3>Listing <?php echo count($websites);?> sites</h3>
-</label>
-<p>&nbsp;</p>
-<div class="site-filter">
-	Filter sites by <span class="input-field browser-default">
-	<select class="filter-name">
-	 <option value="1" disabled selected>Theme/Plugin or Core Version</option>
-		<optgroup label="Theme"></optgroup>
-    <optgroup label="Plugin"></optgroup>
-		<optgroup label="Core"></optgroup>
-	</select></span>
-	<span class="input-field browser-default">
-		<select class="filter-status">
-			<option value="1" disabled selected>Status</option>
-		</select>
-	</span>
-	<span class="input-field browser-default">
-		<select class="filter-version">
-			<option value="1" disabled selected>Version</option>
-			<option value="2">active</option>
-			<option value="2">inactive</option>
-			<option value="2">dropin</option>
-			<option value="2">must-use</option>
-		</select>
-	</span>
-	<span class="input-field browser-default alignright">
-		<select class="filter-select">
-			<option value="1" disabled selected>Select</option>
-			<option value="all">All</option>
-			<option value="visible">Visible</option>
-			<option value="none">None</option>
-		</select>
-	</span>
-</div>
-<div class="preloader-wrapper small active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div>
-<div class="website-group site-manage">
-
-
 </div>
 <?php endif;
 
 } ?>
 
-<div class="selected-sites">Selected 0 sites</div>
-<div class="selected-action">
-<ul>
-	<li>
-		Run a
-		<select>
-			<option disabled selected>Script/Command</option>
-			<optgroup label="Script">
-				<option>Migrate</option>
-				<option>Apply SSL</option>
-				<option>Apply SSL with www</option>
-				<option>Launch</option>
-			</optgroup>
-			<optgroup label="Command">
-				<option>Backup</option>
-				<option>Sync</option>
-				<option>Activate/Deactivate</option>
-				<option>Snapshot</option>
-				<option>Remove</option>
-			</optgroup>
-		</select>
-	</li>
-	<li>
-		<select>
-			<option disabled selected>Action</option>
-			<option>Activate</option>
-			<option>Deactivate</option>
-			<option>Install</option>
-			<option>Delete</option>
-		</select>
-		on
-		<select>
-			<option disabled selected>Plugin/Theme</option>
-			<option>Plugin</option>
-			<option>Theme</option>
-		</select>
-
-</ul>
 </div>
 </div>
 </div>
