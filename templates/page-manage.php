@@ -37,7 +37,11 @@ span.text-xs-right {
 	float:right;
 }
 </style>
+<?php if ( $_SERVER["SERVER_NAME"] == "dev.anchor" ) { ?>
 <script src="https://unpkg.com/vue/dist/vue.js"></script>
+<?php } else { ?>
+<script src="https://unpkg.com/vue/dist/vue.min.js"></script>
+<?php } ?>
 <script src="https://unpkg.com/vuetify/dist/vuetify.js"></script>
 
 <script type="text/javascript">
