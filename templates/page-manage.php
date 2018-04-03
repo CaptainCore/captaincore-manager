@@ -133,7 +133,7 @@ var sites = [<?php foreach( $websites as $website ) {
        <v-flex xs12 sm9>
          <v-select
            :items="site_filters"
-           v-model="a1"
+           v-model="applied_site_filter"
 					 @input="filterSites"
 					 item-text="title"
            label="Select"
@@ -204,14 +204,13 @@ all_filters.push({ header: 'Themes' });
 sites.forEach(function(site) {
 
 	site["themes"].forEach(function(theme) {
-		name = theme["name"];
 		exists = all_filters.some(function (el) {
-			return el.name === name;
+			return el.name === theme.name;
 		});
 		if (!exists) {
 			all_filters.push({
-				name: theme["name"],
-				title: theme["title"],
+				name: theme.name,
+				title: theme.title,
 				type: 'theme'
 			});
 		}
@@ -223,14 +222,13 @@ all_filters.push({ header: 'Plugins' });
 sites.forEach(function(site) {
 
 	site["plugins"].forEach(function(plugin) {
-		name = plugin["name"];
 		exists = all_filters.some(function (el) {
-			return el.name === name;
+			return el.name === plugin.name;
 		});
 		if (!exists) {
 			all_filters.push({
-				name: plugin["name"],
-				title: plugin["title"],
+				name: plugin.name,
+				title: plugin.title,
 				type: 'plugin'
 			});
 		}
@@ -238,63 +236,64 @@ sites.forEach(function(site) {
 
 });
 
-	new Vue({
-		el: '#app',
-		data: {
-			site_filters: all_filters,
-    	sites: sites,
-			headers: [
-				 {
-					 text: 'Name',
-					 align: 'left',
-					 sortable: true,
-					 value: 'name'
-				 },
-				 { text: 'Slug', value: 'slug' },
-				 { text: 'Version', value: 'version' },
-				 { text: 'Status', value: 'status' },
-				 { text: 'Actions', value: 'actions' }
-			 ],
-			 a1: null
-		},
-		computed: {
-			visibleSites() {
-				return this.sites.filter(site => site.visible).length;
-			}
-		},
-		methods: {
-			filterSites() {
+new Vue({
+	el: '#app',
+	data: {
+		site_filters: all_filters,
+  	sites: sites,
+		headers: [
+			 {
+				 text: 'Name',
+				 align: 'left',
+				 sortable: true,
+				 value: 'name'
+			 },
+			 { text: 'Slug', value: 'slug' },
+			 { text: 'Version', value: 'version' },
+			 { text: 'Status', value: 'status' },
+			 { text: 'Actions', value: 'actions' }
+		 ],
+		 applied_site_filter: null
+	},
+	computed: {
+		visibleSites() {
+			return this.sites.filter(site => site.visible).length;
+		}
+	},
+	methods: {
+		filterSites() {
 
-				// Filter if select has value
-				if ( this.a1 ) {
+			// Filter if select has value
+			if ( this.applied_site_filter ) {
 
-					filterby = this.a1;
+				filterby = this.applied_site_filter;
 
-					// loop through sites and set visible true if found in filter
-					this.sites.forEach(function(site) {
+				// loop through sites and set visible true if found in filter
+				this.sites.forEach(function(site) {
 
-						filterby.forEach(function(filter) {
+					filterby.forEach(function(filter) {
 
-							exists = site[filter.type+"s"].some(function (el) {
-								return el.name === filter.name;
-							});
-
+						exists = site[filter.type+"s"].some(function (el) {
+							return el.name === filter.name;
 						});
 
-						if (exists) {
-							// Theme exists so set to visible
-							site["visible"] = true;
-						} else {
-							// Theme doesn't exists so hide
-							site["visible"] = false;
-						}
-
 					});
-				}
 
+					if (exists) {
+						// Theme exists so set to visible
+						site.visible = true;
+					} else {
+						// Theme doesn't exists so hide
+						site.visible = false;
+					}
+
+				});
 			}
+
 		}
-	});
+	}
+});
+
 </script>
 
 <label class="right">
