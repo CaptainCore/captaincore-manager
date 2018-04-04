@@ -2,6 +2,15 @@
 
 /* Template: Manage */
 
+add_filter( 'body_class','my_body_classes' );
+function my_body_classes( $classes ) {
+
+    $classes[] = 'woocommerce-account';
+
+    return $classes;
+
+}
+
 add_action( 'wp_enqueue_scripts', 'my_register_javascript', 100 );
 
 function my_register_javascript() {
@@ -78,28 +87,11 @@ table.table tbody td, table.table tbody th {
 	<main id="main" class="site-main" role="main">
 		<article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
 
-			<?php
-			$featured_image = '';
-			$c              = '';
-			if ( is_page() ) {
-				if ( has_post_thumbnail() ) {
-					$featured_image = wp_get_attachment_image_src( get_post_thumbnail_id( $post->ID ), 'swell_full_width' );
-					$c              = '';
-				}
-			}
-			?>
+		<header class="main entry-header " style="">
+			<h1 class="entry-title"><?php the_title(); ?></h1>
 
-			<header class="main entry-header <?php echo $c; ?>" style="<?php echo 'background-image: url(' . $featured_image[0] . ');'; ?>">
-				<?php the_title( '<h1 class="entry-title">', '</h1>' ); ?>
-
-				<?php if ( $post->post_excerpt ) { ?>
-					<hr class="short" />
-				<span class="meta">
-					<?php echo $post->post_excerpt; ?>
-				</span>
-				<?php } ?>
-				<span class="overlay"></span>
-			</header><!-- .entry-header -->
+			<span class="overlay"></span>
+		</header>
 
 			<div class="body-wrap">
 			<div class="entry-content">
