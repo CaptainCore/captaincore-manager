@@ -38,9 +38,15 @@ html {
 	padding: 0px;
 }
 
+table {
+	margin: 0px;
+}
+
 .card .list {
 	float:none;
 	width:auto;
+	margin:0px;
+	padding:0px;
 }
 button {
 	padding: 0 16px;
@@ -141,6 +147,8 @@ var sites = [<?php foreach( $websites as $website ) {
        <v-flex xs12 sm9>
          <v-select
            :items="site_filters"
+					 item-text="title"
+					 item-value="name"
            v-model="applied_site_filter"
 					 @input="filterSites"
 					 item-text="title"
@@ -149,6 +157,17 @@ var sites = [<?php foreach( $websites as $website ) {
 					 multiple
            autocomplete
          ></v-select>
+				 <v-select
+				 v-model="applied_site_filter_version"
+				 v-for="filter in site_filter_version"
+					 :items="filter.versions"
+					 :key="filter.name"
+					 :label="'Select Version for '+ filter.name"
+					 item-text="title"
+					 chips
+					 multiple
+					 autocomplete
+				 ></v-select>
 
        </v-flex>
 			 <v-flex xs12 sm3 text-xs-right>
@@ -322,6 +341,7 @@ new Vue({
 	data: {
 		dialog: false,
 		site_filters: all_filters,
+		site_filter_version: null,
   	sites: sites,
 		headers: [
 			 { text: 'Name', value: 'name' },
@@ -330,7 +350,9 @@ new Vue({
 			 { text: 'Status', value: 'status', width: "100px" },
 			 { text: 'Actions', value: 'actions', width: "90px", sortable: false, }
 		 ],
-		 applied_site_filter: null
+		 applied_site_filter: null,
+		 applied_site_filter_version: null,
+
 	},
 	computed: {
 		visibleSites() {
@@ -344,15 +366,24 @@ new Vue({
 			if ( this.applied_site_filter && this.applied_site_filter != "" ) {
 
 				filterby = this.applied_site_filter;
+				filter_versions = [];
 
 				// loop through sites and set visible true if found in filter
 				this.sites.forEach(function(site) {
 
+					exists = false;
+
 					filterby.forEach(function(filter) {
 
-						exists = site[filter.type+"s"].some(function (el) {
-							return el.name === filter.name;
+						theme_exists = site.themes.some(function (el) {
+							return el.name === filter;
 						});
+						plugin_exists = site.plugins.some(function (el) {
+							return el.name === filter;
+						});
+						if (theme_exists || plugin_exists) {
+							exists = true;
+						}
 
 					});
 
@@ -365,6 +396,31 @@ new Vue({
 					}
 
 				});
+
+				// Populate versions for select item: site_filter_version
+				filterby.forEach(function(filter) {
+
+					var versions = [];
+
+						this.sites.forEach(function(site) {
+							site.plugins.filter(plugin => plugin.name == filter).forEach(function(plugin) {
+								if (!versions.includes(plugin.version)){
+									versions.push(plugin.version);
+								}
+							});
+							site.themes.filter(theme => theme.name == filter).forEach(function(theme) {
+								if (!versions.includes(theme.version)){
+									versions.push(theme.version);
+								}
+							});
+						});
+
+						filter_versions.push({name: filter, versions: versions });
+
+				});
+
+				this.site_filter_version = filter_versions;
+
 			} else {
 				this.sites.forEach(function(site) {
 					site.visible = true;
