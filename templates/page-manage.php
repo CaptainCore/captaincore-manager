@@ -33,6 +33,9 @@ html {
 	float:none;
 	width:auto;
 }
+button {
+	padding: 0 16px;
+}
 span.text-xs-right {
 	float:right;
 }
@@ -149,7 +152,7 @@ var sites = [<?php foreach( $websites as $website ) {
            v-model="applied_site_filter"
 					 @input="filterSites"
 					 item-text="title"
-           label="Select"
+           label="Select Theme and/or Plugin"
 					 chips
 					 multiple
            autocomplete
@@ -172,35 +175,14 @@ var sites = [<?php foreach( $websites as $website ) {
 						<!--<div class="checkbox-selector"></div>-->
 						<v-expansion-panel>
 						 <v-expansion-panel-content lazy v-for="(item,i) in 1" :key="i">
-							 <div slot="header"><strong>{{ site.name }}</strong> <span class="text-xs-right">plugins {{ site.plugins.length }} themes {{ site.themes.length }} version {{ site.core }}</span></div>
+							 <div slot="header"><strong>{{ site.name }}</strong> <span class="text-xs-right">{{ site.plugins.length }} Plugins {{ site.themes.length }} Themes - WordPress {{ site.core }}</span></div>
 							 <v-card>
-
-								 <v-data-table
-								    :headers="headers"
-								    :items="site.plugins"
-								    class="elevation-1"
-										hide-actions
-										style="margin: 0 2% 2% 2%;"
-								  >
-								    <template slot="items" slot-scope="props">
-								      <td>{{ props.item.title }}</td>
-								      <td>{{ props.item.name }}</td>
-								      <td>{{ props.item.version }}</td>
-								      <td>{{ props.item.status }}</td>
-											<td class="justify-center px-0">
-							          <v-btn icon class="mx-0" @click="editItem(props.item)">
-							            <v-icon color="teal">edit</v-icon>
-							          </v-btn>
-							          <v-btn icon class="mx-0" @click="deleteItem(props.item)">
-							            <v-icon color="pink">delete</v-icon>
-							          </v-btn>
-							        </td>
-								    </template>
-								  </v-data-table>
+								  <v-toolbar-title class="caption" style="margin:0 0 0 2%;">{{ site.themes.length }} Themes</v-toolbar-title>
 									<v-data-table
  								    :headers="headers"
  								    :items="site.themes"
  								    class="elevation-1"
+										style="margin: 0 2% 2% 2%;"
 										hide-actions
  								  >
  								    <template slot="items" slot-scope="props">
@@ -208,12 +190,35 @@ var sites = [<?php foreach( $websites as $website ) {
  								      <td>{{ props.item.name }}</td>
  								      <td>{{ props.item.version }}</td>
  								      <td>{{ props.item.status }}</td>
- 											<td class="justify-center layout px-0">
- 							          <v-btn icon class="mx-0" @click="editItem(props.item)">
- 							            <v-icon color="teal">edit</v-icon>
+ 											<td class="text-xs-center px-0">
+ 							          <v-btn small icon class="mx-0" @click="editItem(props.item)">
+ 							            <v-icon small color="teal">edit</v-icon>
  							          </v-btn>
  							          <v-btn icon class="mx-0" @click="deleteItem(props.item)">
- 							            <v-icon color="pink">delete</v-icon>
+ 							            <v-icon small color="pink">delete</v-icon>
+ 							          </v-btn>
+ 							        </td>
+ 								    </template>
+ 								  </v-data-table>
+									<v-toolbar-title class="caption" style="margin:0 0 0 2%;">{{ site.plugins.length }} Plugins</v-toolbar-title>
+									<v-data-table
+ 								    :headers="headers"
+ 								    :items="site.plugins"
+ 								    class="elevation-1"
+ 										style="margin: 0 2% 2% 2%;"
+ 										hide-actions
+ 								  >
+ 								    <template slot="items" slot-scope="props">
+ 								      <td>{{ props.item.title }}</td>
+ 								      <td>{{ props.item.name }}</td>
+ 								      <td>{{ props.item.version }}</td>
+ 								      <td>{{ props.item.status }}</td>
+ 											<td class="text-xs-center px-0">
+ 							          <v-btn icon small class="mx-0" @click="editItem(props.item)">
+ 							            <v-icon small color="teal">edit</v-icon>
+ 							          </v-btn>
+ 							          <v-btn icon small class="mx-0" @click="deleteItem(props.item)">
+ 							            <v-icon small color="pink">delete</v-icon>
  							          </v-btn>
  							        </td>
  								    </template>
@@ -279,42 +284,46 @@ var sites = [<?php foreach( $websites as $website ) {
 	</v-app>
 </div>
 <script>
-all_filters = [];
-all_filters.push({ header: 'Themes' });
+
+all_themes = [];
+all_plugins = [];
 sites.forEach(function(site) {
 
 	site["themes"].forEach(function(theme) {
-		exists = all_filters.some(function (el) {
+		exists = all_themes.some(function (el) {
 			return el.name === theme.name;
 		});
 		if (!exists) {
-			all_filters.push({
+			all_themes.push({
 				name: theme.name,
-				title: theme.title,
+				title: theme.title+ " ("+theme.name+")",
 				type: 'theme'
 			});
 		}
 	});
 
-});
-
-all_filters.push({ header: 'Plugins' });
-sites.forEach(function(site) {
-
 	site["plugins"].forEach(function(plugin) {
-		exists = all_filters.some(function (el) {
+		exists = all_plugins.some(function (el) {
 			return el.name === plugin.name;
 		});
 		if (!exists) {
-			all_filters.push({
+			all_plugins.push({
 				name: plugin.name,
-				title: plugin.title,
+				title: plugin.title+ " ("+plugin.name+")",
 				type: 'plugin'
 			});
 		}
 	});
 
 });
+
+all_themes.sort((a, b) => a.name.localeCompare(b.name));
+all_plugins.sort((a, b) => a.name.localeCompare(b.name));
+
+all_filters = [{ header: 'Themes' }];
+all_filters = all_filters.concat(all_themes);
+all_filters.push({ header: 'Plugins' })
+all_filters = all_filters.concat(all_plugins);
 
 new Vue({
 	el: '#app',
@@ -323,16 +332,11 @@ new Vue({
 		site_filters: all_filters,
   	sites: sites,
 		headers: [
-			 {
-				 text: 'Name',
-				 align: 'left',
-				 sortable: true,
-				 value: 'name'
-			 },
+			 { text: 'Name', value: 'name' },
 			 { text: 'Slug', value: 'slug' },
 			 { text: 'Version', value: 'version' },
-			 { text: 'Status', value: 'status' },
-			 { text: 'Actions', value: 'actions' }
+			 { text: 'Status', value: 'status', width: "100px" },
+			 { text: 'Actions', value: 'actions', width: "90px", sortable: false, }
 		 ],
 		 applied_site_filter: null
 	},
