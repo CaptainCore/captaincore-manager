@@ -157,7 +157,7 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
 
 .quicksave_manual_check {
   display: block;
-  font-size: 0.5em;
+  font-size: 0.6em;
   line-height: 0.5em;
   text-align: center;
   margin: 0px;
@@ -231,6 +231,12 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
   table-layout: fixed;
   margin: 0px;
   overflow: scroll;
+}
+
+.quicksave span.badge {
+    font-size: 0.7em;
+    letter-spacing: -0.5px;
+    line-height: 28px;
 }
 
 .quicksave .card-reveal pre {
