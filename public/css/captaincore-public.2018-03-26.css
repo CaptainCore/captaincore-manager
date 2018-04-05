@@ -243,7 +243,7 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
 }
 
 .quicksave .file {
-  font-size: 0.5em;
+  font-size: 0.8em;
   padding: 0px 1em;
   margin: 0px;
   line-height: 1.6em;
@@ -1330,8 +1330,13 @@ i.material-icons.reverse {
   right: 20px;
 }
 
+.modal.file_diff.open {
+	 width: 90%;
+   max-height: 86%;
+}
+
 .file_diff .code {
-  font-size: 0.4em;
+  font-size: 0.8em;
   line-height: 1.5em;
   padding: 0 2%;
 }
