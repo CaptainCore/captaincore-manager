@@ -2,26 +2,27 @@
 
 /* Template: Manage */
 
-add_filter( 'body_class','my_body_classes' );
-function my_body_classes( $classes ) {
-
-    $classes[] = 'woocommerce-account';
-
-    return $classes;
-
-}
-
-add_action( 'wp_enqueue_scripts', 'my_register_javascript', 100 );
-
-function my_register_javascript() {
-   wp_deregister_style( 'materialize' );
-	 wp_deregister_script( 'materialize' );
-}
-
 get_header();
 $user = wp_get_current_user();
 $role_check = in_array( 'administrator', $user->roles);
-if ($role_check) { ?>
+if ($role_check) {
+
+	add_filter( 'body_class','my_body_classes' );
+	function my_body_classes( $classes ) {
+
+	    $classes[] = 'woocommerce-account';
+	    return $classes;
+
+	}
+
+	add_action( 'wp_enqueue_scripts', 'my_register_javascript', 100 );
+
+	function my_register_javascript() {
+	   wp_deregister_style( 'materialize' );
+		 wp_deregister_script( 'materialize' );
+	}
+
+	?>
 
 <link href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons' rel="stylesheet">
 <link href="https://unpkg.com/vuetify/dist/vuetify.min.css" rel="stylesheet">
@@ -36,6 +37,10 @@ html {
 
 .application .theme--light.btn:not(.btn--icon):not(.btn--flat), .theme--light .btn:not(.btn--icon):not(.btn--flat) {
 	padding: 0px;
+}
+
+.secondary {
+	background: transparent !important;
 }
 
 table {
@@ -70,25 +75,6 @@ table.table tbody td, table.table tbody th {
 <?php } ?>
 <script src="https://unpkg.com/vuetify/dist/vuetify.js"></script>
 
-<script type="text/javascript">
-
-	ajaxurl = "/wp-admin/admin-ajax.php";
-
-	function sort_li(a, b){
-	    var va = jQuery(a).data('id').toString().charCodeAt(0);
-	    var vb = jQuery(b).data('id').toString().charCodeAt(0);
-	    if (va < 'a'.charCodeAt(0)) va += 100; // Add weight if it's a number
-	    if (vb < 'a'.charCodeAt(0)) vb += 100; // Add weight if it's a number
-	    return vb < va ? 1 : -1;
-	}
-
-
-	function isEmail(email) {
-  	var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$/;
-  	return regex.test(email);
-
-	}
-</script>
 <div id="primary" class="content-area">
 	<main id="main" class="site-main" role="main">
 		<article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
@@ -122,6 +108,9 @@ $websites = get_posts( $arguments );
 
 if( $websites ): ?>
 <script>
+
+ajaxurl = "/wp-admin/admin-ajax.php";
+
 var sites = [<?php foreach( $websites as $website ) {
 	$plugins = get_field( "plugins", $website->ID);
 	$themes = get_field( "themes", $website->ID);
@@ -434,14 +423,47 @@ new Vue({
 </script>
 
 </div>
-<?php endif;
-
-} ?>
-
+<?php endif; ?>
 </div>
 </div>
 </div>
 </article>
 </main>
 </div>
+
+<?php } else { ?>
+
+	<div id="primary" class="content-area">
+	<main id="main" class="site-main" role="main">
+
+		<section class="error-404 not-found">
+			<?php
+			$featured_image = "";
+			$c = "";
+
+				$blog_page_id = get_option( 'page_for_posts' );
+				$blog_page = get_post( $blog_page_id );
+				if( has_post_thumbnail( $blog_page_id ) ) {
+					$featured_image = wp_get_attachment_image_src( get_post_thumbnail_id( $blog_page_id ), 'swell_full_width' );
+					$c = "has-background";
+				}?>
+				<header class="main entry-header <?php echo $c; ?>" style="<?php echo $featured_image ? 'background-image: url(' . esc_url( $featured_image[0] ) . ');' : '' ?>">
+					<h1 class="entry-title"><h1 class="page-title"><?php _e( 'Oops! That page can&rsquo;t be found.', 'swell' ); ?></h1>
+					<span class="overlay"></span>
+				</header><!-- .entry-header -->
+
+		<div class="body-wrap">
+		<div class="entry-content">
+			<p><?php _e( 'The page you are looking for could not be found. Try a different address, or search using the form below.', 'swell' ); ?></p>
+			<?php get_search_form(); ?>
+		</div>
+		</div>
+		</section><!-- .error-404 -->
+
+	</main><!-- #main -->
+</div><!-- #primary -->
+
+<?php } ?>
+
+
 <?php get_footer(); ?>
