@@ -2853,7 +2853,7 @@ function anchor_install_action_callback() {
 		$website_id = get_field('website',$post_id);
 		$install = get_field('install',$website_id[0]);
 		$command = "captaincore get quicksave_changes $install $value";
-		$post_id = $website_id;
+		$post_id = $website_id[0];
 	}
 
 	if ($cmd == "quicksave_file_diff") {
@@ -2878,7 +2878,7 @@ function anchor_install_action_callback() {
 		$commit = get_field('git_commit',$post_id);
 		$commit_previous = get_field('git_commit', $quicksaves_previous_id );
 		$command = "captaincore get quicksave_file_diff $install $commit_previous $commit \"$value\"";
-		$post_id = $website_id;
+		$post_id = $website_id[0];
 	}
 
 	if ($cmd == "rollback") {
@@ -2889,7 +2889,7 @@ function anchor_install_action_callback() {
 		$website_id = get_field('website', $post_id);
 		$install = get_field('install', $website_id[0]);
 		$command = "captaincore rollback $install $git_commit --$addon_type=$value > ~/Tmp/$timestamp-rollback_$install.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$install.txt";
-		$post_id = $website_id;
+		$post_id = $website_id[0];
 	}
 
 	if ($cmd == "quicksave_rollback") {
@@ -2900,7 +2900,7 @@ function anchor_install_action_callback() {
 		$website_id = get_field('website', $post_id);
 		$install = get_field('install', $website_id[0]);
 		$command = "captaincore rollback $install $git_commit --all > ~/Tmp/$timestamp-rollback_$install.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$install.txt";
-		$post_id = $website_id;
+		$post_id = $website_id[0];
 	}
 
 	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
