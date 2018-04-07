@@ -7,6 +7,7 @@
   margin: 0px;
 }
 
+.page-template-page-manage #main header.main,
 .woocommerce-account #main header.main {
   padding: 40px 0 !important;
   margin-bottom: 40px !important;
