@@ -557,13 +557,6 @@ class CaptainCore_My_Account_Manage_Endpoint {
 	}
 
 	/**
-	 * Endpoint HTML content.
-	 */
-	public function endpoint_content() {
-		wc_get_template( '../woocommerce/myaccount/manage-endpoint.php' );
-	}
-
-	/**
 	 * Plugin install action.
 	 * Flush rewrite rules to make our custom endpoint available.
 	 */
