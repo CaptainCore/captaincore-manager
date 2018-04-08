@@ -52,6 +52,10 @@ table {
 	padding:0px;
 }
 
+.card  {
+	margin:0px;
+	padding:0px;
+}
 .card .list {
 	float:none;
 	width:auto;
@@ -66,6 +70,10 @@ button.btn--icon {
 }
 span.text-xs-right {
 	float:right;
+}
+.input-group.input-group--selection-controls.switch .input-group--selection-controls__container {
+	margin: auto;
+	margin-top: 1.5em;
 }
 
 .entry-content, .entry-footer, .entry-summary {
@@ -130,7 +138,8 @@ var sites = [<?php foreach( $websites as $website ) {
 <?php if($plugins) { ?>"plugins": <?php echo $plugins; ?>,<?php } ?>
 <?php if($themes) { ?>"themes": <?php echo $themes; ?>,<?php } ?>
 "core": "<?php echo get_field( "core", $website->ID ); ?>",
-"visible": true
+"visible": true,
+"selected": false
 },<?php } } ?>];
 </script>
 
@@ -141,7 +150,7 @@ var sites = [<?php foreach( $websites as $website ) {
 			<template>
 			<v-container fluid>
 			<v-layout row>
-       <v-flex xs12 sm9>
+       <v-flex xs12>
          <v-select
            :items="site_filters"
 					 item-text="title"
@@ -180,13 +189,8 @@ var sites = [<?php foreach( $websites as $website ) {
 				 <template slot="item" slot-scope="data">
 						<strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span>
 				 </template>
-
 			 	</v-select>
-
        </v-flex>
-			 <v-flex xs12 sm3 text-xs-right>
-				 <v-btn @click.stop="dialog = true">Bulk Actions</v-btn>
-			 </v-flex>
 			</v-layout>
 			</v-container>
 			<v-container
@@ -194,10 +198,25 @@ var sites = [<?php foreach( $websites as $website ) {
         style="min-height: 0;"
         grid-list-lg
       >
+			<v-layout row>
+			<v-flex xs12 sm9 text-xs-right>
+			<v-select
+          :items="select_site_options"
+					v-model="site_selected"
+					@input="selectSites"
+          label="Select"
+        ></v-select>
+				</v-flex>
+				<v-flex xs12 sm3 text-xs-right>
+					<v-btn @click.stop="dialog = true">Bulk Actions on {{ selectedSites }} sites</v-btn>
+				</v-flex>
+			</v-layout>
 		  <v-layout row wrap v-for="site in sites" :key="site.id" v-show="site.visible">
-		    <v-flex xs12>
+				<v-flex xs1>
+					<v-switch v-model="site.selected" @change="site_selected = null"></v-switch>
+				</v-flex>
+		    <v-flex xs11>
 		      <v-card class="site">
-						<!--<div class="checkbox-selector"></div>-->
 						<v-expansion-panel>
 						 <v-expansion-panel-content lazy v-for="(item,i) in 1" :key="i">
 							 <div slot="header"><strong>{{ site.name }}</strong> <span class="text-xs-right">{{ site.plugins.length }} Plugins {{ site.themes.length }} Themes - WordPress {{ site.core }}</span></div>
@@ -256,47 +275,45 @@ var sites = [<?php foreach( $websites as $website ) {
 		    </v-flex>
 		  </v-layout>
 			</v-container>
+
+			<v-snackbar
+				 :timeout="3000"
+				 top
+				 right
+				 multi-line
+				 v-model="snackbar"
+			 >
+				 Test1
+			 </v-snackbar>
+
 			<v-dialog v-model="dialog" max-width="500px">
 			 <v-card>
 				 <v-card-title>
-					 Bulk Actions on {{ visibleSites }} sites
+					 Bulk Actions on {{ selectedSites }} sites
 				 </v-card-title>
 				 <v-card-text>
 
 					 <ul>
 						 <li>
 							 Run a
-							 <select>
-								 <option disabled selected>Script/Command</option>
-								 <optgroup label="Script">
-									 <option>Migrate</option>
-									 <option>Apply SSL</option>
-									 <option>Apply SSL with www</option>
-									 <option>Launch</option>
-								 </optgroup>
-								 <optgroup label="Command">
-									 <option>Backup</option>
-									 <option>Sync</option>
-									 <option>Activate/Deactivate</option>
-									 <option>Snapshot</option>
-									 <option>Remove</option>
-								 </optgroup>
-							 </select>
+							 <v-select
+								 :items="bulk_actions"
+								 item-text="name"
+								 item-value="value"
+								 v-model="select_bulk_action"
+								 label="Script/Command"
+								 @input="argumentsForActions"
+								 single-line
+								 chips
+								 multiple
+			           autocomplete
+							 ></v-select>
+							 <v-text-field
+          name="input-1"
+          v-for="arguments in select_bulk_action_arguments"
+					:label="arguments.name"
+        ></v-text-field>
 						 </li>
-						 <li>
-							 <select>
-								 <option disabled selected>Action</option>
-								 <option>Activate</option>
-								 <option>Deactivate</option>
-								 <option>Install</option>
-								 <option>Delete</option>
-							 </select>
-							 on
-							 <select>
-								 <option disabled selected>Plugin/Theme</option>
-								 <option>Plugin</option>
-								 <option>Theme</option>
-							 </select>
 
 					 </ul>
 				 </v-card-text>
@@ -355,6 +372,7 @@ new Vue({
 	el: '#app',
 	data: {
 		dialog: false,
+		site_selected: null,
 		site_filters: all_filters,
 		site_filter_version: null,
   	sites: sites,
@@ -367,16 +385,67 @@ new Vue({
 		 ],
 		 applied_site_filter: null,
 		 applied_site_filter_version: null,
+		 select_site_options: [
+			 { text: 'All', value: 'all' },
+			 { text: 'Visible', value: 'visible' },
+			 { text: 'None', value: 'none' }
+		 ],
+		 select_bulk_action: null,
+		 bulk_actions: [
+			 { header: "Script" },
+			 { name: "Migrate", value: "migrate", arguments: [
+					 { name: "Url", value: "url" },
+					 { name: "Skip url override", value: "skip-url-override" }
+				]
+		   },
+			 { name: "Apply SSL", value: "applyssl"  },
+			 { name: "Apply SSL with www", value: "applysslwithwww" },
+			 { name: "Launch", value: "launch" },
+			 { header: "Command" },
+			 { name: "Backup", value: "backup" },
+			 { name: "Sync", value: "sync" },
+			 { name: "Activate", value: "activate" },
+			 { name: "Deactivate", value: "deactivate" },
+			 { name: "Snapshot", value: "snapshot" },
+			 { name: "Remove", value: "remove" }
+		 ],
+		 select_bulk_action_arguments: null,
+		 snackbar: false,
 
 	},
 	computed: {
 		visibleSites() {
 			return this.sites.filter(site => site.visible).length;
+		},
+		selectedSites() {
+			return this.sites.filter(site => site.selected).length;
 		}
 	},
 	methods: {
+		argumentsForActions() {
+			arguments = [];
+			this.select_bulk_action.forEach(action => {
+				this.bulk_actions.filter(bulk_action => bulk_action.value == action).forEach(filtered_action => {
+					if ( filtered_action.arguments ) {
+						filtered_action.arguments.forEach(argument => arguments.push({ name: argument.value, command: action }) );
+					}
+				});
+			});
+			this.select_bulk_action_arguments = arguments;
+		},
+		selectSites() {
+			if (this.site_selected == "all") {
+				this.sites.forEach(site => site.selected = true );
+			}
+			if (this.site_selected == "visible") {
+				this.sites.forEach(site => site.selected = false );
+				this.sites.filter(site => site.visible ).forEach(site => site.selected = true );
+			}
+			if (this.site_selected == "none") {
+				this.sites.forEach(site => site.selected = false );
+			}
+		},
 		filterSites() {
-
 			// Filter if select has value
 			if ( this.applied_site_filter && this.applied_site_filter != "" ) {
 
