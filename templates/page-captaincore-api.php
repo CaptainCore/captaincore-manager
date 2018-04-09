@@ -11,19 +11,19 @@
  * Examples:
 
  * Adding Quicksave
- * https://anchor.host/captaincore-api/anchor.host/?git_commit=<git-commit>&core=<version>&plugins=<plugin-data>&themes=<theme-data>&token=token_key
+ * https://<captaincore-server>/captaincore-api/<site-domain>/?git_commit=<git-commit>&core=<version>&plugins=<plugin-data>&themes=<theme-data>&token=<token_key>
 
  * Adding backup snapshot
- * https://anchor.host/captaincore-api/anchor.host/?archive=anchorhost1.wpengine.com-2016-10-22.tar.gz&storage=235256&token=token_key
+ * https://<captaincore-server>/captaincore-api/<site-domain>/?archive=anchorhost1.wpengine.com-2016-10-22.tar.gz&storage=235256&token=<token_key>
 
  * Updating views and storage
- * https://anchor.host/captaincore-api/anchor.host/?views=9435345&storage=2334242&token=token_key
+ * https://<captaincore-server>/captaincore-api/<site-domain>/?views=9435345&storage=2334242&token=token_key
 
  * Assigning server
- * https://anchor.host/captaincore-api/anchor.host/?server=104.197.69.102&token=token_key
+ * https://<captaincore-server>/captaincore-api/<site-domain>/?server=104.197.69.102&token=token_key
 
  * Load token
- * https://anchor.host/captaincore-api/anchor.host/?token_key=token_key&token=token_key
+ * https://<captaincore-server>/captaincore-api/<site-domain>/?token_key=token_key&token=token_key
  */
 
 $site       = get_query_var( 'callback' );
@@ -45,8 +45,8 @@ $git_status = trim( base64_decode( $_POST['git_status'] ) );
 
 $args = array(
 	'post_type'      => 'captcore_website',
-	's'              => $site,
 	'posts_per_page' => 1,
+	's'              => $site,
 );
 
 $query = new WP_Query( $args );
@@ -136,7 +136,6 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 		update_field( 'field_580b9776f2791', $storage, $snapshot_id );
 		update_field( 'field_580b9784f2792', $site_id, $snapshot_id );
 		update_field( 'field_59aecbd173318', $email, $snapshot_id );
-
 
 		// Adds snapshot ID to title
 		$my_post = array(
