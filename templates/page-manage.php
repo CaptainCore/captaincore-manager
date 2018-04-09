@@ -175,7 +175,9 @@ var sites = [<?php foreach( $websites as $website ) {
 					 chips
 					 multiple
            autocomplete
-         ></v-select>
+					 deletable-chips
+         >
+			 	</v-select>
 				 <v-select
 				 v-model="applied_site_filter_version"
 				 v-for="filter in site_filter_version"
@@ -196,7 +198,7 @@ var sites = [<?php foreach( $websites as $website ) {
 						 class="chip--select-multi"
 						 :key="JSON.stringify(data.item)"
 					 >
-						 {{ data.item.name }}
+						 {{ data.item.name }} ({{ data.item.count }})
 					 </v-chip>
 				 </template>
 				 <template slot="item" slot-scope="data">
