@@ -35,6 +35,16 @@ TODO
 
 == Changelog ==
 
+= 0.1.8: April 8, 2018 =
+* New: Manage (admins only) - Replaced manage concept with entirely new version rewritten with Vue.js and Vuetify
+* Tweak: Locked down quicksave and snapshot CPTs
+* Tweak: Manage DNS - display improvements for srv records
+* Tweak: Manage DNS - support for adding/editing srv records
+* Tweak: Manage DNS - display fix when creating initial records
+* Tweak: Allow json data with escaping to be stored in database.
+* Tweak: Increased font size on Quicksaves for better readability
+* Fix: Permission fix for non administrators with remote commands
+
 = 0.1.7: March 25, 2018 =
 * New: Manage (admins only) - Filter and selecting sites for bulk actions, commands and scripts.
 * Tweak: Visually highlighted admin pages on WooCommerce my account tabs
