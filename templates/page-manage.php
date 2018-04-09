@@ -22,9 +22,7 @@ if ($role_check) {
 
 	}
 
-
-
-	?>
+?>
 
 <link href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons' rel="stylesheet">
 <link href="https://unpkg.com/vuetify/dist/vuetify.min.css" rel="stylesheet">
@@ -160,7 +158,15 @@ var sites = [<?php foreach( $websites as $website ) {
 "selected": false
 },<?php } } ?>];
 </script>
-
+<!--
+<?php foreach( $websites as $website ) {
+	$plugins = get_field( "plugins", $website->ID);
+	$themes = get_field( "themes", $website->ID);
+	if (!$plugins || !$themes) {
+		echo $website->ID . " " . $website->post_title . " \r";
+	}
+} ?>
+-->
 <div id="app" v-cloak>
 	<v-app>
 		<v-content>
@@ -260,6 +266,7 @@ var sites = [<?php foreach( $websites as $website ) {
 					v-model="site_selected"
 					@input="selectSites"
           label="Select"
+					chips
         ></v-select>
 				</v-flex>
 				<v-flex xs12 sm3 text-xs-right>
