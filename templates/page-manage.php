@@ -490,10 +490,18 @@ new Vue({
 						// Handle filtering items with versions
 						if ( versions.includes(filter) ) {
 							slug = filter;
+							plugin_exists = false;
+							theme_exists = false;
 							// Apply versions specific for this theme/plugin
 							filterbyversions.filter(item => item.slug == slug).forEach(version => {
-								plugin_exists = site.plugins.some(el => el.name === slug && el.version === version.name);
-								theme_exists = site.themes.some(el => el.name === slug && el.version === version.name);
+
+								if ( theme_exists || plugin_exists ) {
+									exists = true;
+								} else {
+									plugin_exists = site.plugins.some(el => el.name === slug && el.version === version.name);
+									theme_exists = site.themes.some(el => el.name === slug && el.version === version.name);
+								}
+
 							});
 
 							if (theme_exists || plugin_exists) {
