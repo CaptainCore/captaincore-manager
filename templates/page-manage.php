@@ -2,6 +2,13 @@
 
 /* Template: Manage */
 
+add_action( 'wp_enqueue_scripts', 'my_register_javascript', 100 );
+
+function my_register_javascript() {
+	 wp_deregister_style( 'materialize' );
+	 wp_deregister_script( 'materialize' );
+}
+
 get_header();
 $user = wp_get_current_user();
 $role_check = in_array( 'administrator', $user->roles);
@@ -15,12 +22,7 @@ if ($role_check) {
 
 	}
 
-	add_action( 'wp_enqueue_scripts', 'my_register_javascript', 100 );
 
-	function my_register_javascript() {
-	   wp_deregister_style( 'materialize' );
-		 wp_deregister_script( 'materialize' );
-	}
 
 	?>
 
@@ -80,6 +82,9 @@ button {
 }
 button.btn--icon {
 	padding:0px;
+}
+.application .theme--dark.btn, .theme--dark .btn {
+    color: #fff !important;
 }
 span.text-xs-right {
 	float:right;
@@ -178,6 +183,10 @@ var sites = [<?php foreach( $websites as $website ) {
 					 deletable-chips
          >
 			 	</v-select>
+			</v-flex>
+		</v-layout>
+		<v-layout row>
+			<v-flex xs5>
 				 <v-select
 				 v-model="applied_site_filter_version"
 				 v-for="filter in site_filter_version"
@@ -205,6 +214,37 @@ var sites = [<?php foreach( $websites as $website ) {
 						<strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span>
 				 </template>
 			 	</v-select>
+			</v-flex>
+			<v-flex xs2>
+			</v-flex>
+				<v-flex xs5>
+				<v-select
+				v-model="applied_site_filter_status"
+				v-for="filter in site_filter_status"
+					:items="filter.statuses"
+					:key="filter.name"
+					:label="'Select Status for '+ filter.name"
+					@input="filterSites"
+					item-text="title"
+					chips
+					multiple
+					autocomplete
+				>
+				<template slot="selection" slot-scope="data">
+					<v-chip
+						close
+						@input="data.parent.selectItem(data.item)"
+						:selected="data.selected"
+						class="chip--select-multi"
+						:key="JSON.stringify(data.item)"
+					>
+						{{ data.item.name }} ({{ data.item.count }})
+					</v-chip>
+				</template>
+				<template slot="item" slot-scope="data">
+					 <strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span>
+				</template>
+			 </v-select>
        </v-flex>
 			</v-layout>
 			</v-container>
@@ -290,24 +330,23 @@ var sites = [<?php foreach( $websites as $website ) {
 		    </v-flex>
 		  </v-layout>
 			</v-container>
-
-			<v-snackbar
-				 :timeout="3000"
-				 top
-				 right
-				 multi-line
-				 v-model="snackbar"
-			 >
-				 Test1
-			 </v-snackbar>
-
-			<v-dialog v-model="dialog" max-width="500px">
-			 <v-card>
-				 <v-card-title>
-					 Bulk Actions on {{ selectedSites }} sites
-				 </v-card-title>
+			<v-dialog
+				fullscreen
+        transition="dialog-bottom-transition"
+        :overlay="false"
+        scrollable
+				v-model="dialog">
+			 <v-card tile>
+				 <v-toolbar card dark color="primary" style="margin-top: 32px">
+            <v-btn icon @click.native="dialog = false" dark>
+              <v-icon>close</v-icon>
+            </v-btn>
+            <v-toolbar-title>Bulk Actions on {{ selectedSites }} sites</v-toolbar-title>
+            <v-spacer></v-spacer>
+          </v-toolbar>
+				<v-layout row>
+       	<v-flex xs12 style="max-width: 800px;" mx-auto>
 				 <v-card-text>
-
 					 <ul>
 						 <li>
 							 Run a
@@ -324,17 +363,20 @@ var sites = [<?php foreach( $websites as $website ) {
 			           autocomplete
 							 ></v-select>
 							 <v-text-field
-          name="input-1"
-          v-for="arguments in select_bulk_action_arguments"
-					:label="arguments.name"
-        ></v-text-field>
+				          name="input-1"
+				          v-for="arguments in select_bulk_action_arguments"
+									:label="arguments.name"
+				        ></v-text-field>
 						 </li>
 
 					 </ul>
 				 </v-card-text>
 				 <v-card-actions>
+					  <v-btn @click="bulkactionSubmit">submit</v-btn>
 					 <v-btn color="primary" flat @click.stop="dialog=false">Close</v-btn>
 				 </v-card-actions>
+		 	</v-flex>
+			</v-layout>
 			 </v-card>
 		 </v-dialog>
 		</template>
@@ -347,7 +389,7 @@ all_themes = [];
 all_plugins = [];
 sites.forEach(function(site) {
 
-	site["themes"].forEach(function(theme) {
+	site.themes.forEach(function(theme) {
 		exists = all_themes.some(function (el) {
 			return el.name === theme.name;
 		});
@@ -360,7 +402,7 @@ sites.forEach(function(site) {
 		}
 	});
 
-	site["plugins"].forEach(function(plugin) {
+	site.plugins.forEach(function(plugin) {
 		exists = all_plugins.some(function (el) {
 			return el.name === plugin.name;
 		});
@@ -390,6 +432,7 @@ new Vue({
 		site_selected: null,
 		site_filters: all_filters,
 		site_filter_version: null,
+		site_filter_status: null,
   	sites: sites,
 		headers: [
 			 { text: 'Name', value: 'name' },
@@ -400,6 +443,7 @@ new Vue({
 		 ],
 		 applied_site_filter: null,
 		 applied_site_filter_version: null,
+		 applied_site_filter_status: null,
 		 select_site_options: [
 			 { text: 'All', value: 'all' },
 			 { text: 'Visible', value: 'visible' },
@@ -409,23 +453,25 @@ new Vue({
 		 bulk_actions: [
 			 { header: "Script" },
 			 { name: "Migrate", value: "migrate", arguments: [
-					 { name: "Url", value: "url" },
-					 { name: "Skip url override", value: "skip-url-override" }
-				]
-		   },
+					{ name: "Url", value: "url" },
+					{ name: "Skip url override", value: "skip-url-override" }
+				]},
 			 { name: "Apply SSL", value: "applyssl"  },
 			 { name: "Apply SSL with www", value: "applysslwithwww" },
 			 { name: "Launch", value: "launch" },
 			 { header: "Command" },
 			 { name: "Backup", value: "backup" },
+			 { name: "SSH", value: "ssh", arguments: [
+					{ name: "Commands", value: "command" },
+					{ name: "Script", value: "script" }
+				]},
 			 { name: "Sync", value: "sync" },
 			 { name: "Activate", value: "activate" },
 			 { name: "Deactivate", value: "deactivate" },
 			 { name: "Snapshot", value: "snapshot" },
 			 { name: "Remove", value: "remove" }
 		 ],
-		 select_bulk_action_arguments: null,
-		 snackbar: false,
+		 select_bulk_action_arguments: null
 
 	},
 	computed: {
@@ -442,11 +488,14 @@ new Vue({
 			this.select_bulk_action.forEach(action => {
 				this.bulk_actions.filter(bulk_action => bulk_action.value == action).forEach(filtered_action => {
 					if ( filtered_action.arguments ) {
-						filtered_action.arguments.forEach(argument => arguments.push({ name: argument.value, command: action }) );
+						filtered_action.arguments.forEach(argument => arguments.push({ name: argument.name, value: argument.value, command: action }) );
 					}
 				});
 			});
 			this.select_bulk_action_arguments = arguments;
+		},
+		bulkactionSubmit() {
+
 		},
 		selectSites() {
 			if (this.site_selected == "all") {
@@ -466,8 +515,11 @@ new Vue({
 
 				filterby = this.applied_site_filter;
 				filterbyversions = this.applied_site_filter_version;
+				filterbystatuses = this.applied_site_filter_status;
 				filter_versions = [];
+				filter_statuses = [];
 				versions = [];
+				statuses = [];
 
 				if ( this.applied_site_filter_version && this.applied_site_filter_version != "" ) {
 
@@ -480,6 +532,17 @@ new Vue({
 
 				}
 
+				if ( this.applied_site_filter_status && this.applied_site_filter_status != "" ) {
+
+					// Find all themes/plugins which have selcted version
+					this.applied_site_filter_status.forEach(filter => {
+						if(!statuses.includes(filter.slug)) {
+							statuses.push(filter.slug);
+						}
+					});
+
+				}
+
 				// loop through sites and set visible true if found in filter
 				this.sites.forEach(function(site) {
 
@@ -487,8 +550,42 @@ new Vue({
 
 					filterby.forEach(function(filter) {
 
+						// Handle filtering items with versions and statuses
+						if ( versions.includes(filter) && statuses.includes(filter) ) {
+							slug = filter;
+							plugin_exists = false;
+							theme_exists = false;
+							// Apply versions specific for this theme/plugin
+							filterbyversions.filter(item => item.slug == slug).forEach(version => {
+
+								if ( theme_exists || plugin_exists ) {
+									exists = true;
+								} else {
+									plugin_exists = site.plugins.some(el => el.name === slug && el.version === version.name);
+									theme_exists = site.themes.some(el => el.name === slug && el.version === version.name);
+								}
+
+							});
+
+							// Apply status specific for this theme/plugin
+							filterbystatuses.filter(item => item.slug == slug).forEach(status => {
+
+								if ( theme_exists || plugin_exists ) {
+									exists = true;
+								} else {
+									plugin_exists = site.plugins.some(el => el.name === slug && el.status === status.name);
+									theme_exists = site.themes.some(el => el.name === slug && el.status === status.name);
+								}
+
+							});
+
+							if (theme_exists || plugin_exists) {
+								exists = true;
+							}
+
 						// Handle filtering items with versions
-						if ( versions.includes(filter) ) {
+						} else if ( versions.includes(filter) ) {
+
 							slug = filter;
 							plugin_exists = false;
 							theme_exists = false;
@@ -508,6 +605,30 @@ new Vue({
 								exists = true;
 							}
 
+						// Handle filtering items with statuses
+						} else if ( statuses.includes(filter) ) {
+
+							slug = filter;
+							plugin_exists = false;
+							theme_exists = false;
+
+							// Apply status specific for this theme/plugin
+							filterbystatuses.filter(item => item.slug == slug).forEach(status => {
+
+								if ( theme_exists || plugin_exists ) {
+									exists = true;
+								} else {
+									plugin_exists = site.plugins.some(el => el.name === slug && el.status === status.name);
+									theme_exists = site.themes.some(el => el.name === slug && el.status === status.name);
+								}
+
+							});
+
+							if (theme_exists || plugin_exists) {
+								exists = true;
+							}
+
+						// Handle filtering of the themes/plugins
 						} else {
 
 							theme_exists = site.themes.some(function (el) {
@@ -566,6 +687,39 @@ new Vue({
 				});
 
 				this.site_filter_version = filter_versions;
+
+				// Populate statuses for select item
+				filterby.forEach(function(filter) {
+
+					var statuses = [];
+
+					this.sites.forEach(function(site) {
+
+						site.plugins.filter(item => item.name == filter).forEach(function(plugin) {
+							status_count = statuses.filter(item => item.name == plugin.status).length;
+							if ( status_count == 0 ) {
+								statuses.push({ name: plugin.status, count: 1, slug: plugin.name });
+							} else {
+								statuses.find(function (item) { return item.name === plugin.status; }).count++;
+							}
+						});
+
+						site.themes.filter(item => item.name == filter).forEach(function(theme) {
+							status_count = statuses.filter(item => item.name == theme.status).length;
+							if ( status_count == 0 ) {
+								statuses.push({ name: theme.status, count: 1, slug: theme.name });
+							} else {
+								statuses.find(function (item) { return item.name === theme.status; }).count++;
+							}
+						});
+
+					});
+
+					filter_statuses.push({name: filter, statuses: statuses });
+
+				});
+
+				this.site_filter_status = filter_statuses;
 
 			} else {
 				this.sites.forEach(function(site) {
