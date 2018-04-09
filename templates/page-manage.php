@@ -31,6 +31,19 @@ if ($role_check) {
 html {
 	font-size: 62.5%;
 }
+
+[v-cloak] > * {
+  display:none;
+}
+[v-cloak]::before {
+  content: "Loading...";
+  display: block;
+  position: relative;
+  left: 0%;
+  top: 0%;
+	max-width: 1000px;
+	margin:auto;
+}
 .application.theme--light {
 	background-color: #fff;
 }
@@ -143,7 +156,7 @@ var sites = [<?php foreach( $websites as $website ) {
 },<?php } } ?>];
 </script>
 
-<div id="app">
+<div id="app" v-cloak>
 	<v-app>
 		<v-content>
 			Listing {{ visibleSites }} sites
