@@ -2702,9 +2702,18 @@ add_action( 'wp_ajax_anchor_install', 'anchor_install_action_callback' );
 function anchor_install_action_callback() {
 	global $wpdb; // this is how you get access to the database
 
-	$post_id = intval( $_POST['post_id'] );
+	if ( is_array( $_POST['post_id'] ) ) {
+		$post_ids = array();
+		$post_ids_array = $_POST['post_id'];
+		foreach( $post_ids_array as $id ) {
+			$post_ids[] = intval( $id );
+		}
+	} else {
+		$post_id = intval( $_POST['post_id'] );
+	}
 	$cmd = $_POST['command'];
 	$value = $_POST['value'];
+	$arguments = $_POST['arguments'];
 	$addon_type = $_POST['addon_type'];
 
 	$install = get_field('install',$post_id);
@@ -2854,6 +2863,25 @@ function anchor_install_action_callback() {
 		$install = get_field('install',$website_id[0]);
 		$command = "captaincore get quicksave_changes $install $value";
 		$post_id = $website_id[0];
+	}
+
+	if ($cmd == "manage") {
+		$command = "";
+		$sites = array();
+		foreach ($post_ids as $post_id) {
+			$sites[] =  get_field("install", $post_id);
+		}
+		foreach ($value as $bulk_command) {
+			$bulk_arguments = array();
+			foreach($arguments as $argument ) {
+				if ($argument["command"] == $bulk_command && isset($argument["input"]) && $argument["input"] != "" ) {
+					$bulk_arguments[] = $argument["input"];
+					$command .= "captaincore $bulk_command ". implode(" ", $sites). " --".$argument["value"]."=\"". $argument["input"]. "\";";
+				}
+			}
+
+		}
+
 	}
 
 	if ($cmd == "quicksave_file_diff") {

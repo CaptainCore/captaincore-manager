@@ -43,6 +43,7 @@ html {
   top: 0%;
 	max-width: 1000px;
 	margin:auto;
+	padding-bottom: 10em;
 }
 .application.theme--light {
 	background-color: #fff;
@@ -177,7 +178,7 @@ var sites = [<?php foreach( $websites as $website ) {
        <v-flex xs12>
          <v-select
            :items="site_filters"
-					 item-text="title"
+					 item-text="search"
 					 item-value="name"
            v-model="applied_site_filter"
 					 @input="filterSites"
@@ -188,6 +189,20 @@ var sites = [<?php foreach( $websites as $website ) {
            autocomplete
 					 deletable-chips
          >
+				 <template slot="selection" slot-scope="data">
+					<v-chip
+						close
+						@input="data.parent.selectItem(data.item)"
+						:selected="data.selected"
+						class="chip--select-multi"
+						:key="JSON.stringify(data.item)"
+					>
+						<strong>{{ data.item.title }}</strong>&nbsp;<span>({{ data.item.name }})</span>
+					</v-chip>
+				</template>
+				<template slot="item" slot-scope="data">
+					 <strong>{{ data.item.title }}</strong>&nbsp;<span>({{ data.item.name }})</span>
+				</template>
 			 	</v-select>
 			</v-flex>
 		</v-layout>
@@ -337,6 +352,14 @@ var sites = [<?php foreach( $websites as $website ) {
 		    </v-flex>
 		  </v-layout>
 			</v-container>
+			<v-snackbar
+      :timeout="3000"
+    	:multi-line="true"
+      v-model="bulkaction_response_snackbar"
+    >
+      {{ bulkaction_response }}
+      <v-btn dark flat @click.native="snackbar = false">Close</v-btn>
+    </v-snackbar>
 			<v-dialog
 				fullscreen
         transition="dialog-bottom-transition"
@@ -371,8 +394,9 @@ var sites = [<?php foreach( $websites as $website ) {
 							 ></v-select>
 							 <v-text-field
 				          name="input-1"
-				          v-for="arguments in select_bulk_action_arguments"
-									:label="arguments.name"
+									v-model="argument.input"
+				          v-for="argument in select_bulk_action_arguments"
+									:label="argument.name"
 				        ></v-text-field>
 						 </li>
 
@@ -403,7 +427,7 @@ sites.forEach(function(site) {
 		if (!exists) {
 			all_themes.push({
 				name: theme.name,
-				title: theme.title+ " ("+theme.name+")",
+				title: theme.title,
 				type: 'theme'
 			});
 		}
@@ -416,7 +440,8 @@ sites.forEach(function(site) {
 		if (!exists) {
 			all_plugins.push({
 				name: plugin.name,
-				title: plugin.title+ " ("+plugin.name+")",
+				title: plugin.title,
+				search: plugin.title + " ("+ plugin.name +")",
 				type: 'plugin'
 			});
 		}
@@ -478,7 +503,9 @@ new Vue({
 			 { name: "Snapshot", value: "snapshot" },
 			 { name: "Remove", value: "remove" }
 		 ],
-		 select_bulk_action_arguments: null
+		 select_bulk_action_arguments: null,
+		 bulkaction_response: null,
+		 bulkaction_response_snackbar: false
 
 	},
 	computed: {
@@ -502,6 +529,23 @@ new Vue({
 			this.select_bulk_action_arguments = arguments;
 		},
 		bulkactionSubmit() {
+
+			var data = {
+	  		'action': 'anchor_install',
+	  		'post_id': this.sites.filter( site => site.selected ).map( site => site.id ),
+	      'command': "manage",
+				'value': this.select_bulk_action,
+				'arguments': this.select_bulk_action_arguments
+	  	};
+
+			var self = this;
+
+  		// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+	  	jQuery.post(ajaxurl, data, function(response) {
+	      self.bulkaction_response = response;
+				self.bulkaction_response_snackbar = true;
+				self.dialog = false;
+	  	});
 
 		},
 		selectSites() {
