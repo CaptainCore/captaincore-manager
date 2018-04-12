@@ -91,6 +91,14 @@ require "inc/bulk-actions.php"; // Custom bulk actions.
 function captaincore_rewrite() {
 	add_rewrite_rule('^captaincore-api/([^/]*)/?','index.php?pagename=captaincore-api&callback=$matches[1]','top');
 	add_rewrite_rule('^checkout-express/([^/]*)/?','index.php?pagename=checkout-express&callback=$matches[1]','top');
+
+	// Removed the following paths from Google by forcing a 404 response
+	// TO DO: Remove after Google results for "site:anchor.host" are clean
+	add_rewrite_rule('^captcore_quicksave/([^/]*)/?','index.php?pagename=404','top');
+	add_rewrite_rule('^cc_quicksave/([^/]*)/?','index.php?pagename=404','top');
+	add_rewrite_rule('^captcore_snapshot/([^/]*)/?','index.php?pagename=404','top');
+	add_rewrite_rule('^captcore_contact/([^/]*)/?','index.php?pagename=404','top');
+
 	add_rewrite_tag('%site%','([^&]+)');
 	add_rewrite_tag('%sitetoken%','([^&]+)');
 	add_rewrite_tag('%callback%','([^&]+)');
@@ -189,7 +197,7 @@ function contact_post_type() {
 		'labels'                => $labels,
 		'supports'              => array( 'author', 'revisions', ),
 		'hierarchical'          => false,
-		'public'                => true,
+		'public'                => false,
 		'show_ui'               => true,
 		'show_in_menu'          => false,
 		'menu_position'         => 5,
@@ -198,8 +206,8 @@ function contact_post_type() {
 		'show_in_nav_menus'     => true,
 		'can_export'            => true,
 		'has_archive'           => false,
-		'exclude_from_search'   => false,
-		'publicly_queryable'    => true,
+		'exclude_from_search'   => true,
+		'publicly_queryable'    => false,
 		'capability_type'       => 'page',
 		'capabilities'        => $capabilities,
 		'map_meta_cap' 		  => true
