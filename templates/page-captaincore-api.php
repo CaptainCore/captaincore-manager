@@ -51,11 +51,8 @@ $args = array(
 );
 $sites = get_posts( $args );
 
-// Number of matching sites
-$result_count = count($sites);
-
 // Assign site id
-if ($sites == 1 ) {
+if (count($sites) == 1 ) {
 	// Assign ID
 	$site_id = $sites[0]->ID;
 }
