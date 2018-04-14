@@ -61,7 +61,7 @@ if (count($sites) == 1 ) {
 if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 
 	// No website found. Generate a new record.
-	if ( $result_count == 0 ) {
+	if ( count($sites) == 0 ) {
 		// Create post object
 		$my_post = array(
 			'post_title'  => $site,
