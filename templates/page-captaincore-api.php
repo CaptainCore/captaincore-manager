@@ -77,8 +77,8 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 		$site_id = wp_insert_post( $my_post );
 	}
 
-	// Kinsta production deploy to staging
-	if ( $command == 'production_to_staging_kinsta' and $email ) {
+	// Production deploy to staging
+	if ( $command == 'production-to-staging' and $email ) {
 
 		$install_name = get_field( 'install', $site_id );
 		$domain_name  = get_the_title( $site_id );
@@ -92,12 +92,12 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 
 		wp_mail( $to, $subject, $body, $headers );
 
-		echo 'production_to_staging_kinsta email sent';
+		echo 'production-to-staging email sent';
 
 	}
 
 	// Kinsta staging deploy to production
-	if ( $command == 'staging_to_production_kinsta' and $email ) {
+	if ( $command == 'staging-to-production' and $email ) {
 
 		$install_name = get_field( 'install', $site_id );
 		$domain_name  = get_the_title( $site_id );
@@ -111,7 +111,7 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 
 		wp_mail( $to, $subject, $body, $headers );
 
-		echo 'staging_to_production_kinsta email sent';
+		echo 'staging-to-production email sent';
 
 	}
 
