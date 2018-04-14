@@ -178,9 +178,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 		});
 
-		jQuery(".card .card-reveal a.kinsta-deploy-to-staging").click(function(e){
+		jQuery(".card .card-reveal a.production-to-staging").click(function(e){
 
-			confirm_deploy = confirm("Kinsta staging site will be overridden. Proceed?");
+			confirm_deploy = confirm("Staging site will be overridden. Proceed?");
 
 			if(confirm_deploy) {
 
@@ -189,12 +189,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 			  var data = {
 			  	'action': 'anchor_install',
 			  	'post_id': post_id,
-					'command': 'kinsta-deploy-to-staging'
+					'command': 'production-to-staging'
 			  };
 
 			  // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 			  jQuery.post(ajaxurl, data, function(response) {
-			  	Materialize.toast('Kinsta staging site being generated.', 4000);
+			  	Materialize.toast('Staging site being generated.', 4000);
 			  });
 
 			}

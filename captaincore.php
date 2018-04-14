@@ -2813,24 +2813,24 @@ function anchor_install_action_callback() {
 		($s3bucket ? " --s3bucket=$s3bucket" : "" ) .
 		($s3path ? " --s3path=$s3path" : "" );
 	}
-	if ($cmd == "kinsta-deploy-to-staging") {
+	if ($cmd == "production-to-staging") {
 		date_default_timezone_set('America/New_York');
 		$t=time();
 		$timestamp = date("Y-m-d-hms",$t);
 		if($value) {
-			$command = "captaincore deploy production_to_staging_kinsta $install --email=$value > ~/Tmp/$timestamp-deploy_production_to_staging_kinsta_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_kinsta_$install.txt";
+			$command = "captaincore deploy production-to-staging $install --email=$value > ~/Tmp/$timestamp-deploy_production_to_staging_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_$install.txt";
 		} else {
-			$command = "captaincore deploy production_to_staging_kinsta $install > ~/Tmp/$timestamp-deploy_production_to_staging_kinsta_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_kinsta_$install.txt";
+			$command = "captaincore deploy production-to-staging $install > ~/Tmp/$timestamp-deploy_production_to_staging_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_$install.txt";
 		}
 	}
-	if ($cmd == "kinsta-deploy-to-production") {
+	if ($cmd == "staging-to-production") {
 		date_default_timezone_set('America/New_York');
 		$t=time();
 		$timestamp = date("Y-m-d-hms",$t);
 		if($value) {
-			$command = "captaincore deploy staging_to_production_kinsta $install --email=$value > ~/Tmp/$timestamp-deploy_staging_to_production_kinsta_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_staging_to_production_kinsta_$install.txt";
+			$command = "captaincore deploy staging-to-production $install --email=$value > ~/Tmp/$timestamp-deploy_staging_to_production_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_staging_to_production_$install.txt";
 		} else {
-			$command = "captaincore deploy staging_to_production_kinsta $install > ~/Tmp/$timestamp-deploy_staging_to_production_kinsta_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_staging_to_production_kinsta_$install.txt";
+			$command = "captaincore deploy staging-to-production $install > ~/Tmp/$timestamp-deploy_staging_to_production_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_staging_to_production_$install.txt";
 		}
 	}
 	if ($cmd == "remove") {
