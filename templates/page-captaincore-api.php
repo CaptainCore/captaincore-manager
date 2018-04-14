@@ -55,7 +55,7 @@ $sites = get_posts( $args );
 $result_count = count($sites);
 
 // Assign site id
-if ($sites == "1" ) {
+if ($sites == 1 ) {
 	// Assign ID
 	$site_id = $sites[0]->ID;
 }
