@@ -43,26 +43,22 @@ $git_commit = $_POST['git_commit'];
 $home_url   = $_POST['home_url'];
 $git_status = trim( base64_decode( $_POST['git_status'] ) );
 
+
+// Finding matching site by domain name (title)
 $args = array(
 	'post_type'      => 'captcore_website',
-	'posts_per_page' => 1,
-	's'              => $site,
+	'title'          => $site,
 );
+$sites = get_posts( $args );
 
-$query = new WP_Query( $args );
+// Number of matching sites
+$result_count = count($sites);
 
-// The Loop
-if ( $query->have_posts() ) {
-	while ( $query->have_posts() ) {
-		$query->the_post();
-		// do something
-		$site_id = get_the_id();
-	}
-} else {
-	// no posts found
+// Assign site id
+if ($sites == "1" ) {
+	// Assign ID
+	$site_id = $sites[0]->ID;
 }
-
-$result_count = $query->post_count;
 
 // Verifies valid token and site exists with a period
 if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
