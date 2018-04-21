@@ -575,7 +575,16 @@ if ( $wp_query->query_vars["websites"] ) {
 									'key' => 'customer', // name of custom field
 									'value' => '"' . $customer_id[0] . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
 									'compare' => 'LIKE'
-								)
+								),
+								array(
+									'key'		=> 'address',
+									'compare'	=>	'EXISTS',
+								),
+								array(
+									'key'		=> 'address',
+									'value'	  	=> '',
+									'compare'	=>	'!=',
+								),
 							)
 						));
 						?>
@@ -616,7 +625,6 @@ if ( $wp_query->query_vars["websites"] ) {
 	<div class="flip-container">
 	<div class="flipper">
 
-<?php if (get_field('address', $website_id)) { ?>
 <div class="card partner production" data-id="<?php echo get_the_title( $website_id ); ?>">
 
 <div class="card-content">
@@ -646,14 +654,6 @@ if ( $wp_query->query_vars["websites"] ) {
 </div>
 
 </div>
-<?php } else { ?>
-<div class="card">
-<div class="card-content">
-	<span class="card-title grey-text text-darken-4"><?php echo get_the_title( $website_id ); ?> - Part of a multisite network</span>
-</div>
-</div>
-<?php $provider = "";
-} ?>
 
 </div> <!-- end .flipper -->
 </div> <!-- end .flip-container -->

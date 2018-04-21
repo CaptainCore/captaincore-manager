@@ -343,6 +343,15 @@ if ($partner and $role_check) {
 					'value'	  	=> 'closed',
 					'compare' 	=> '!=',
 				),
+				array(
+					'key'		=> 'address',
+					'compare'	=>	'EXISTS',
+				),
+				array(
+					'key'		=> 'address',
+					'value'	  	=> '',
+					'compare'	=>	'!=',
+				),
 			)
 		);
 
@@ -354,6 +363,15 @@ if ($partner and $role_check) {
 						'key'	  	=> 'status',
 						'value'	  	=> 'closed',
 						'compare' 	=> '!=',
+					),
+					array(
+						'key'		=> 'address',
+						'compare'	=>	'EXISTS',
+					),
+					array(
+						'key'		=> 'address',
+						'value'	  	=> '',
+						'compare'	=>	'!=',
 					),
 			);
 
@@ -381,6 +399,15 @@ if ($partner and $role_check) {
 						'key'	  	=> 'status',
 						'value'	  	=> 'closed',
 						'compare' 	=> '!=',
+					),
+					array(
+						'key'		=> 'address',
+						'compare'	=>	'EXISTS',
+					),
+					array(
+						'key'		=> 'address',
+						'value'	  	=> '',
+						'compare'	=>	'!=',
 					),
 			)
 		));
@@ -455,7 +482,6 @@ if ($partner and $role_check) {
 			<div class="flip-container">
 			<div class="flipper">
 
-	<?php if (get_field('address', $website->ID)) { ?>
 		<div class="card partner production" data-id="<?php echo get_the_title( $website->ID ); ?>">
 
 	<div class="card-content">
@@ -546,14 +572,6 @@ if ($partner and $role_check) {
 	</div>
  <?php
 $provider = "";
-} ?>
-	<?php } else { ?>
-		<div class="card">
-    <div class="card-content">
-      <span class="card-title grey-text text-darken-4"><?php echo get_the_title( $website->ID ); ?> - Part of a multisite network</span>
-    </div>
-  </div>
-	<?php $provider = "";
 } ?>
 
 	</div> <!-- end .flipper -->
