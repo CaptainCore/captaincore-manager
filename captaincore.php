@@ -13,10 +13,10 @@
  * @package           Captaincore
  *
  * @wordpress-plugin
- * Plugin Name:       CaptainCore Server
+ * Plugin Name:       CaptainCore GUI
  * Plugin URI:        https://captaincore.io
  * Description:       Toolkit for running your own WordPress hosting business
- * Version:           0.1.8
+ * Version:           0.2.0
  * Author:            Anchor Hosting
  * Author URI:        https://anchor.host
  * License:           GPL-2.0+

@@ -1,4 +1,4 @@
-=== CaptainCore Server ===
+=== CaptainCore GUI ===
 Author URI: https://anchor.host
 Plugin URI: https://captaincore.io
 Contributors: austinginder
@@ -34,6 +34,13 @@ TODO
 TODO
 
 == Changelog ==
+
+= 0.2.0: April 22, 2018 =
+* Tweak: Renamed plugin from CaptainCore Server to CaptainCore GUI
+* Tweak: Renamed various commands to match CaptainCore CLI
+* Tweak: Removed subsites from showing in main website list
+* Fix: Removed additional pages from being picked up by Google. Added new 404 errors to remove existing pages from Google search results.
+* Fix: CaptainCore API - Select site based on title rather then search. Prevents incorrect selection.
 
 = 0.1.8: April 8, 2018 =
 * New: Manage (admins only) - Replaced manage concept with entirely new version rewritten with Vue.js and Vuetify
