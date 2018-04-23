@@ -24,6 +24,7 @@
 
  * Load token
  * https://<captaincore-server>/captaincore-api/<site-domain>/?token_key=token_key&token=token_key
+
  */
 
 $site       = get_query_var( 'callback' );
@@ -45,14 +46,14 @@ $git_status = trim( base64_decode( $_POST['git_status'] ) );
 
 
 // Finding matching site by domain name (title)
-$args = array(
-	'post_type'      => 'captcore_website',
-	'title'          => $site,
+$args  = array(
+	'post_type' => 'captcore_website',
+	'title'     => $site,
 );
 $sites = get_posts( $args );
 
 // Assign site id
-if (count($sites) == 1 ) {
+if ( count( $sites ) == 1 ) {
 	// Assign ID
 	$site_id = $sites[0]->ID;
 }
@@ -61,7 +62,7 @@ if (count($sites) == 1 ) {
 if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 
 	// No website found. Generate a new record.
-	if ( count($sites) == 0 ) {
+	if ( count( $sites ) == 0 ) {
 		// Create post object
 		$my_post = array(
 			'post_title'  => $site,

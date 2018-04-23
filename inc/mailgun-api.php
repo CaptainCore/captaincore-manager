@@ -211,7 +211,7 @@ function mailgun_events( $mailgun_subdomain ) {
 	$mgClient = new \Mailgun\Mailgun( MAILGUN_API_KEY );
 
 	$queryString = array(
-    'limit'        =>  300,
+		'limit' => 300,
 	);
 
 	// Fetch all domains from Mailgun
