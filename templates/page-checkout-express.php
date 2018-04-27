@@ -3,7 +3,7 @@
  * Template Name: Checkout Express
  */
 
-$order_id = get_query_var('callback');
+$order_id = get_query_var( 'callback' );
 $key      = $_GET['key'];
 
 // Loads user and key from order
