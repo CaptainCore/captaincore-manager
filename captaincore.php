@@ -1172,7 +1172,7 @@ function anchor_acf_save_post_before( $post_id ){
 
 	if ( get_post_type( $post_id ) == 'captcore_website' ) {
 
-		if ( get_field('launch_date') == "" and $_POST['acf']['field_52d167f4ac39e'] == "") {
+		if ( get_field('launch_date', $post_id) == "" and $_POST['acf']['field_52d167f4ac39e'] == "") {
 			// No date was entered for Launch Date, assign to today.
 			$_POST['acf']['field_52d167f4ac39e'] = date("Ymd");
 		}
