@@ -10,15 +10,15 @@ function my_register_javascript() {
 }
 
 get_header();
-$user = wp_get_current_user();
-$role_check = in_array( 'administrator', $user->roles);
-if ($role_check) {
+$user       = wp_get_current_user();
+$role_check = in_array( 'administrator', $user->roles );
+if ( $role_check ) {
 
-	add_filter( 'body_class','my_body_classes' );
+	add_filter( 'body_class', 'my_body_classes' );
 	function my_body_classes( $classes ) {
 
-	    $classes[] = 'woocommerce-account';
-	    return $classes;
+		$classes[] = 'woocommerce-account';
+		return $classes;
 
 	}
 
@@ -83,7 +83,7 @@ button.btn--icon {
 	padding:0px;
 }
 .application .theme--dark.btn, .theme--dark .btn {
-    color: #fff !important;
+	color: #fff !important;
 }
 span.text-xs-right {
 	float:right;
@@ -101,7 +101,7 @@ table.table tbody td, table.table tbody th {
 	height: auto;
 }
 </style>
-<?php if ( $_SERVER["SERVER_NAME"] == "dev.anchor" ) { ?>
+<?php if ( $_SERVER['SERVER_NAME'] == 'dev.anchor' ) { ?>
 <script src="https://unpkg.com/vue/dist/vue.js"></script>
 <?php } else { ?>
 <script src="https://unpkg.com/vue/dist/vue.min.js"></script>
