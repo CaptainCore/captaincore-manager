@@ -2813,6 +2813,10 @@ function anchor_install_action_callback() {
 		($s3bucket ? " --s3bucket=$s3bucket" : "" ) .
 		($s3path ? " --s3path=$s3path" : "" );
 	}
+	if ($cmd == "mailgun") {
+		mailgun_setup( $domain );
+		$command = "captaincore ssh $install --command=\"wp plugin install mailgun --force --activate\" 2>&1 &";
+	}
 	if ($cmd == "production-to-staging") {
 		date_default_timezone_set('America/New_York');
 		$t=time();
