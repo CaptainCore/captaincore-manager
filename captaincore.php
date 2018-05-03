@@ -2977,6 +2977,330 @@ function anchor_install_action_callback() {
 // Logs a process completion
 add_action( 'wp_ajax_log_process', 'process_log_action_callback' );
 
+function captaincore_website_acf_actions( $field ) {
+
+	if ($field and $field["label"] == "Download Snapshot" ) {
+
+		$id = get_the_ID();
+
+		?>
+		<script>
+		jQuery(document).ready(function(){
+		  jQuery("#download").click(function(e){
+			e.preventDefault();
+			var data = {
+				'action': 'snapshot_email',
+				'snapshot_id': <?php echo $id; ?>,
+				'email': 'austin@anchor.host'
+			};
+
+				// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+				jQuery.post(ajaxurl, data, function(response) {
+					jQuery('.download-result').html(response);
+				});
+
+		  });
+		});
+		</script>
+		<input type="button" value="Download Snapshot" id="download" class="button">
+		<div class="download-result"></div> <?php
+
+	}
+
+	if ($field and $field["label"] == "Websites" ) {
+
+		$id = get_the_ID();
+
+		/*
+		*  Query posts for a relationship value.
+		*  This method uses the meta_query LIKE to match the string "123" to the database value a:1:{i:0;s:3:"123";} (serialized array)
+		*/
+
+		$websites = get_posts(array(
+			'post_type' => 'captcore_website',
+		        'posts_per_page'         => '-1',
+		        'meta_query' => array(
+
+		        'relation'		=> 'AND',
+				array(
+					'key' => 'server', // name of custom field
+					'value' => '"' . $id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+					'compare' => 'LIKE'
+				),
+		         array(
+					'key' => 'status', // name of custom field
+					'value' => 'closed',
+					'compare' => '!='
+				)
+			)
+		));
+		?>
+		<?php if( $websites ):
+			$total_storage = 0;
+		?>
+			<ul>
+			<?php foreach( $websites as $website ):
+				$domain = get_the_title( $website->ID );
+				$storage = get_field('storage', $website->ID);
+				$total_storage = $total_storage + $storage;
+				?>
+				<li>
+					<?php edit_post_link( $domain , '', '', $website->ID); ?> - <?php echo human_filesize($storage); ?>
+				</li>
+			<?php endforeach; ?>
+
+				<li>Total storage: <?php echo human_filesize($total_storage); ?></li>
+			</ul>
+		<?php endif;
+
+	}
+
+	if ($field and $field["label"] == "Websites included with Plan" ) {
+
+		$id = get_the_ID();
+
+		/*
+		*  Query posts for a relationship value.
+		*  This method uses the meta_query LIKE to match the string "123" to the database value a:1:{i:0;s:3:"123";} (serialized array)
+		*/
+
+		$websites = get_posts(array(
+			'post_type' => 'captcore_website',
+		        'posts_per_page'         => '-1',
+		        'meta_query' => array(
+				array(
+					'key' => 'customer', // name of custom field
+					'value' => '"' . $id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+					'compare' => 'LIKE'
+				)
+			)
+		));
+		?>
+		<?php if( $websites ): ?>
+			<ul>
+			<?php foreach( $websites as $website ): ?>
+				<li>
+					<a href="<?php echo get_permalink( $website->ID ); ?>">
+						<?php $domain = get_the_title( $website->ID ); ?>
+		                                <?php edit_post_link( $domain , '<p>', '</p>', $website->ID); ?>
+					</a>
+				</li>
+			<?php endforeach; ?>
+			</ul>
+		<?php endif;
+
+	}
+	if ($field and $field["label"] == "Websites managed by Partner" ) {
+
+		$id = get_the_ID();
+
+		/*
+		*  Query posts for a relationship value.
+		*  This method uses the meta_query LIKE to match the string "123" to the database value a:1:{i:0;s:3:"123";} (serialized array)
+		*/
+
+		$websites = get_posts(array(
+			'post_type' => 'captcore_website',
+		        'posts_per_page'         => '-1',
+		        'meta_query' => array(
+				array(
+					'key' => 'partner', // name of custom field
+					'value' => '"' . $id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+					'compare' => 'LIKE'
+				)
+			)
+		));
+		?>
+		<?php if( $websites ): ?>
+			<ul>
+			<?php foreach( $websites as $website ): ?>
+				<li>
+					<a href="<?php echo get_permalink( $website->ID ); ?>">
+						<?php $domain = get_the_title( $website->ID ); ?>
+						<?php edit_post_link( $domain , '', '', $website->ID); ?>
+						<?php the_field("status", $website->ID); ?>
+					</a>
+				</li>
+			<?php endforeach; ?>
+			</ul>
+		<strong>Active Installs</strong>
+		<?php foreach( $websites as $website ):
+		  if ( get_field("status", $website->ID) == "active" ) {
+		    echo get_field("install", $website->ID). " ";
+		 }
+		endforeach; ?>
+		<?php endif;
+
+	}
+
+	if ($field and $field["label"] == "Plans paid by Partner" ) {
+
+		$id = get_the_ID();
+
+		/*
+		*  Query posts for a relationship value.
+		*  This method uses the meta_query LIKE to match the string "123" to the database value a:1:{i:0;s:3:"123";} (serialized array)
+		*/
+
+		$websites = get_posts(array(
+			'post_type' => 'captcore_customer',
+		        'posts_per_page'         => '-1',
+		        'meta_query' => array(
+				array(
+					'key' => 'paid_by', // name of custom field
+					'value' => '"' . $id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+					'compare' => 'LIKE'
+				)
+			)
+		));
+		?>
+		<?php if( $websites ): ?>
+			<ul>
+			<?php foreach( $websites as $website ): ?>
+				<li>
+					<a href="<?php echo get_permalink( $website->ID ); ?>">
+						<?php $domain = get_the_title( $website->ID );
+		                                 $total_price = get_field("total_price");
+		                                 ?>
+		                                <p><?php edit_post_link( $domain , '', '', $website->ID); ?> - $<?php echo $total_price; ?></p>
+					</a>
+				</li>
+			<?php endforeach; ?>
+			</ul>
+		<?php endif;
+	}
+
+	if ($field and $field["label"] == "Production FTP Details" ) { ?>
+
+<textarea rows='6'>
+<?php the_title();?>&#13;
+<?php the_field('address'); ?>&#13;
+<?php the_field('username'); ?>&#13;
+<?php the_field('password'); ?>&#13;
+<?php the_field('protocol'); ?>&#13;
+<?php the_field('port'); ?>
+</textarea>
+
+	<?php }
+
+	if ($field and $field["label"] == "Staging FTP Details" ) { ?>
+
+<textarea rows='6'>
+<?php the_title();?> (Staging)&#13;
+<?php the_field('address_staging'); ?>&#13;
+<?php the_field('username_staging'); ?>&#13;
+<?php the_field('password_staging'); ?>&#13;
+<?php the_field('protocol_staging'); ?>&#13;
+<?php the_field('port_staging'); ?>
+</textarea>
+
+	<?php }
+
+	if ($field and $field["label"] == "Customer" ) {
+
+		$id = get_the_ID();
+		$customer = get_field("customer",$id);
+		if (isset($customer[0])) {
+			$customer_id = $customer[0];
+			$name = get_the_title( $customer_id );
+			$link = get_edit_post_link( $customer_id); ?>
+			<a href="<?php echo $link; ?>&classic-editor" class="button" target="_parent"><i class="fa fa-user"></i> <?php echo $name; ?></a>
+		<?php }
+
+	}
+
+	if ($field and $field["label"] == "Load Configs" ) { ?>
+
+		<style>
+		@-ms-keyframes spin {
+		    from { -ms-transform: rotate(0deg); }
+		    to { -ms-transform: rotate(360deg); }
+		}
+		@-moz-keyframes spin {
+		    from { -moz-transform: rotate(0deg); }
+		    to { -moz-transform: rotate(360deg); }
+		}
+		@-webkit-keyframes spin {
+		    from { -webkit-transform: rotate(0deg); }
+		    to { -webkit-transform: rotate(360deg); }
+		}
+		@keyframes spin {
+		    from {
+		        transform:rotate(0deg);
+		    }
+		    to {
+		        transform:rotate(360deg);
+		    }
+		}
+
+		i.fa.fa-spinner {
+		  -webkit-animation-name: spin;
+		   -webkit-animation-duration: 4000ms;
+		   -webkit-animation-iteration-count: infinite;
+		   -webkit-animation-timing-function: linear;
+		   -moz-animation-name: spin;
+		   -moz-animation-duration: 4000ms;
+		   -moz-animation-iteration-count: infinite;
+		   -moz-animation-timing-function: linear;
+		   -ms-animation-name: spin;
+		   -ms-animation-duration: 4000ms;
+		   -ms-animation-iteration-count: infinite;
+		   -ms-animation-timing-function: linear;
+
+		   animation-name: spin;
+		   animation-duration: 4000ms;
+		   animation-iteration-count: infinite;
+		   animation-timing-function: linear;
+		}
+		.install-result {
+		  padding: 12px;
+		  background: #f7f7f7;
+		  margin-top: 1em;
+		  color: #606060;
+		  display: none;
+		  white-space: pre;
+		}
+		</style>
+		<p>Runs initial backup, setups up token, install plugins and load custom configs into wp-config.php and .htaccess in a background process. Sends email when completed. </p>
+		<script>
+		jQuery(document).ready(function(){
+		  jQuery(".anchor_commands input.button").click(function(e){
+
+		    // Loading
+		    jQuery('.install-result').html( '<i class="fa fa-spinner" aria-hidden="true"></i>' ).show();
+
+		    var command = jQuery(this).val().toLowerCase();
+		  	e.preventDefault();
+		  	var data = {
+		  		'action': 'anchor_install',
+		  		'post_id': acf.o.post_id,
+		      'command': command
+		  	};
+
+		  	// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+		  	jQuery.post(ajaxurl, data, function(response) {
+		      jQuery('.install-result').html( response );
+		  	});
+		  });
+
+		});
+		</script>
+		<div class="anchor_commands">
+		<input type="button" value="New" class="button">
+		<input type="button" value="Update" class="button">
+		<input type="button" value="Backup" class="button">
+		<input type="button" value="Snapshot" class="button">
+		<input type="button" value="Activate" class="button">
+		<input type="button" value="Deactivate" class="button">
+		<input type="button" value="Remove" class="button">
+		</div>
+		<div class="install-result"></div>
+		<?php
+	}
+
+}
+add_action( 'acf/render_field/type=message', 'captaincore_website_acf_actions', 10, 1 );
+
 function process_log_action_callback() {
 	global $wpdb; // this is how you get access to the database
 
