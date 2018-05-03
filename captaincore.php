@@ -3209,7 +3209,7 @@ function captaincore_website_acf_actions( $field ) {
 
 	}
 
-	if ($field and $field["label"] == "Load Configs" ) { ?>
+	if ($field and $field["label"] == "Website Actions" ) { ?>
 		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.11/css/all.css" integrity="sha384-p2jx59pefphTFIpeqCcISO9MdVfIm4pNnsL08A6v5vaQc4owkQqxMV8kg4Yvhaw/" crossorigin="anonymous">
 
 		<style>
