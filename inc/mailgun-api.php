@@ -164,6 +164,22 @@ function mailgun_setup( $domain ) {
 		)
 	);
 
+	// Update website detail with new Mailgun subdomain
+	// Finding matching site by domain name (title)
+	$args  = array(
+		'post_type' => 'captcore_website',
+		'title'     => $domain,
+	);
+	$sites = get_posts( $args );
+
+	// Assign site id
+	if ( count( $sites ) == 1 ) {
+		// Assign ID
+		$site_id = $sites[0]->ID;
+		// Updates domain details
+		update_field( 'field_5a985788d43a6', $mailgun_subdomain, $site_id );
+	}
+
 	// In 1 minute run Mailgun verify domain
 	wp_schedule_single_event( time() + 60, 'schedule_mailgun_verify', array( $domain ) );
 
