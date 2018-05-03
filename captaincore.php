@@ -3291,13 +3291,14 @@ function captaincore_website_acf_actions( $field ) {
 		});
 		</script>
 		<div class="anchor_commands">
-		<button value="New" class="button"><i class="fas fa-plus-circle"></i> New</button>
-		<button value="Update" class="button"><i class="fas fa-pen-square"></i> Update</button>
-		<button value="Backup" class="button"><i class="fas fa-cloud"></i> Backup</button>
-		<button value="Snapshot" class="button"><i class="fas fa-save"></i> Snapshot</button>
-		<button value="Activate" class="button"><i class="fas fa-toggle-on"></i> Activate</button>
-		<button value="Deactivate" class="button"><i class="fas fa-toggle-off"></i> Deactivate</button>
-		<button value="Remove" class="button"><i class="fas fa-trash-alt"></i> Remove</button>
+			<button value="New" class="button"><i class="fas fa-plus-circle"></i> New</button>
+			<button value="Update" class="button"><i class="fas fa-pen-square"></i> Update</button>
+			<button value="Mailgun" class="button"><i class="fas fa-envelope"></i> Deploy Mailgun</button>
+			<button value="Backup" class="button"><i class="fas fa-cloud"></i> Backup</button>
+			<button value="Snapshot" class="button"><i class="fas fa-save"></i> Snapshot</button>
+			<button value="Activate" class="button"><i class="fas fa-toggle-on"></i> Activate</button>
+			<button value="Deactivate" class="button"><i class="fas fa-toggle-off"></i> Deactivate</button>
+			<button value="Remove" class="button"><i class="fas fa-trash-alt"></i> Remove</button>
 		</div>
 		<div class="install-result"></div>
 		<?php
