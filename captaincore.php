@@ -3210,6 +3210,7 @@ function captaincore_website_acf_actions( $field ) {
 	}
 
 	if ($field and $field["label"] == "Load Configs" ) { ?>
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.11/css/all.css" integrity="sha384-p2jx59pefphTFIpeqCcISO9MdVfIm4pNnsL08A6v5vaQc4owkQqxMV8kg4Yvhaw/" crossorigin="anonymous">
 
 		<style>
 		@-ms-keyframes spin {
@@ -3264,7 +3265,7 @@ function captaincore_website_acf_actions( $field ) {
 		<p>Runs initial backup, setups up token, install plugins and load custom configs into wp-config.php and .htaccess in a background process. Sends email when completed. </p>
 		<script>
 		jQuery(document).ready(function(){
-		  jQuery(".anchor_commands input.button").click(function(e){
+		  jQuery(".anchor_commands button").click(function(e){
 
 		    // Loading
 		    jQuery('.install-result').html( '<i class="fa fa-spinner" aria-hidden="true"></i>' ).show();
@@ -3286,13 +3287,13 @@ function captaincore_website_acf_actions( $field ) {
 		});
 		</script>
 		<div class="anchor_commands">
-		<input type="button" value="New" class="button">
-		<input type="button" value="Update" class="button">
-		<input type="button" value="Backup" class="button">
-		<input type="button" value="Snapshot" class="button">
-		<input type="button" value="Activate" class="button">
-		<input type="button" value="Deactivate" class="button">
-		<input type="button" value="Remove" class="button">
+		<button value="New" class="button"><i class="fas fa-plus-circle"></i> New</button>
+		<button value="Update" class="button"><i class="fas fa-pen-square"></i> Update</button>
+		<button value="Backup" class="button"><i class="fas fa-cloud"></i> Backup</button>
+		<button value="Snapshot" class="button"><i class="fas fa-save"></i> Snapshot</button>
+		<button value="Activate" class="button"><i class="fas fa-toggle-on"></i> Activate</button>
+		<button value="Deactivate" class="button"><i class="fas fa-toggle-off"></i> Deactivate</button>
+		<button value="Remove" class="button"><i class="fas fa-trash-alt"></i> Remove</button>
 		</div>
 		<div class="install-result"></div>
 		<?php
