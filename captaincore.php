@@ -2815,7 +2815,7 @@ function anchor_install_action_callback() {
 	}
 	if ($cmd == "mailgun") {
 		mailgun_setup( $domain );
-		$command = "captaincore ssh $install --command=\"wp plugin install mailgun --force --activate\" 2>&1 &";
+		$command = "captaincore ssh $install --script=deploy-mailgun --key=\"".MAILGUN_API_KEY."\" --domain=".$domain." 2>&1 &";
 	}
 	if ($cmd == "production-to-staging") {
 		date_default_timezone_set('America/New_York');
@@ -3306,6 +3306,48 @@ function captaincore_website_acf_actions( $field ) {
 
 }
 add_action( 'acf/render_field/type=message', 'captaincore_website_acf_actions', 10, 1 );
+
+function captaincore_job_create( $command ) {
+
+	// Create post object
+	$my_post = array(
+	  'post_title'    => 'Job',
+	  'post_status'   => 'publish',
+	  'post_author'   => 1,
+	  'post_type' => "captcore_queue"
+	);
+
+	// Insert the post into the database
+	$job_id = wp_insert_post( $my_post );
+
+	// Wraps command with 'nohup' with trackable ID
+	$filename = "~/Tmp/job-$job_id.txt";
+	$command = "nohup $command > $filename 2>&1 &";
+
+	return $command;
+}
+
+function captaincore_job_check( $job_id ) {
+	$filename = "~/Tmp/job-$job_id.txt";
+	$command = "tail $filename";
+	// Checks permissions
+	if ( anchor_verify_permissions( $post_id ) ) {
+
+		// Runs command on remote on production
+		require_once( ABSPATH . '/vendor/autoload.php' );
+
+		$ssh = new \phpseclib\Net\SSH2( CAPTAINCORE_CLI_ADDRESS, CAPTAINCORE_CLI_PORT );
+
+		if ( !$ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
+			exit('Login Failed');
+		}
+		echo $ssh->exec( $command );
+
+	} else {
+		echo "Permission denied";
+	}
+
+}
 
 function process_log_action_callback() {
 	global $wpdb; // this is how you get access to the database
