@@ -89,8 +89,8 @@ if ( $query->have_posts() ) {
 					$domain = get_the_title( $website->ID );
 					$customer_id = get_field('customer', $website->ID);
 
-					if (get_field('install',$website->ID)) {
-						the_field('install', $website->ID ); ?> <?php
+					if (get_field('site',$website->ID)) {
+						the_field('site', $website->ID ); ?> <?php
 					}
 
 				endforeach;
@@ -102,7 +102,7 @@ if ( $query->have_posts() ) {
 
 				foreach( $websites as $website ):
 
-					if (get_field('install',$website->ID)) {
+					if (get_field('site',$website->ID)) {
 
 						if ($i < count($websites)) {
 							echo '"'.get_the_title($website->ID).'",';
@@ -123,9 +123,9 @@ if ( $query->have_posts() ) {
 				foreach( $websites as $website ):
 
 
-					if (get_field('install',$website->ID)) {
+					if (get_field('site',$website->ID)) {
 
-					$install = get_field('install',$website->ID);
+					$site = get_field('site',$website->ID);
 					$domain = get_the_title($website->ID);
 					$address = get_field('address',$website->ID);
 					$username = get_field('username',$website->ID);
@@ -134,7 +134,7 @@ if ( $query->have_posts() ) {
 					$port = get_field('port',$website->ID);
 					$token = "***REMOVED***";
 
-					echo "php Sites/backup.anchor.host/api/new.php install=$install domain=$domain username=$username password=".rawurlencode(base64_encode($password))." address=$address protocol=$protocol port=$port preloadusers=$preloadusers token=$token skip=true
+					echo "php Sites/backup.anchor.host/api/new.php site=$site domain=$domain username=$username password=".rawurlencode(base64_encode($password))." address=$address protocol=$protocol port=$port preloadusers=$preloadusers token=$token skip=true
 ";
 					}
 				endforeach;

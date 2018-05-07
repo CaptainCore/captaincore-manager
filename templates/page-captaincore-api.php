@@ -24,7 +24,6 @@
 
  * Load token
  * https://<captaincore-server>/captaincore-api/<site-domain>/?token_key=token_key&token=token_key
-
  */
 
 $site       = get_query_var( 'callback' );
@@ -78,9 +77,9 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 	// Production deploy to staging
 	if ( $command == 'production-to-staging' and $email ) {
 
-		$install_name = get_field( 'install', $site_id );
-		$domain_name  = get_the_title( $site_id );
-		$url          = 'https://staging-' . get_field( 'install_staging', $site_id ) . '.kinsta.com';
+		$site_name   = get_field( 'site', $site_id );
+		$domain_name = get_the_title( $site_id );
+		$url         = 'https://staging-' . get_field( 'site_staging', $site_id ) . '.kinsta.com';
 
 		// Send out completed email notice
 		$to      = $email;
@@ -97,9 +96,9 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 	// Kinsta staging deploy to production
 	if ( $command == 'staging-to-production' and $email ) {
 
-		$install_name = get_field( 'install', $site_id );
-		$domain_name  = get_the_title( $site_id );
-		$url          = 'https://' . get_field( 'install', $site_id ) . '.kinsta.com';
+		$site_name   = get_field( 'site', $site_id );
+		$domain_name = get_the_title( $site_id );
+		$url         = 'https://' . get_field( 'site', $site_id ) . '.kinsta.com';
 
 		// Send out completed email notice
 		$to      = $email;

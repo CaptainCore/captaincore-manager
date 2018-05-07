@@ -2724,7 +2724,7 @@ function anchor_install_action_callback() {
 	$arguments = $_POST['arguments'];
 	$addon_type = $_POST['addon_type'];
 
-	$install = get_field('install',$post_id);
+	$site = get_field('site',$post_id);
 	$domain = get_the_title($post_id);
 	$address = get_field('address',$post_id);
 	$username = get_field('username',$post_id);
@@ -2732,7 +2732,7 @@ function anchor_install_action_callback() {
 	$protocol = get_field('protocol',$post_id);
 	$port = get_field('port',$post_id);
 	$homedir = get_field('homedir',$post_id);
-	$staging_install = get_field('install_staging',$post_id);
+	$staging_site = get_field('site_staging',$post_id);
 	$staging_address = get_field('address_staging',$post_id);
 	$staging_username = get_field('username_staging',$post_id);
 	$staging_password = get_field('password_staging',$post_id);
@@ -2751,8 +2751,8 @@ function anchor_install_action_callback() {
 	}
 
 	// Assume this is a subsite and reconfigure as such
-	if ($install == "") {
-		$install = $domain;
+	if ($site == "") {
+		$site = $domain;
 		$domain = "";
 		$subsite = "true";
 	}
@@ -2767,7 +2767,7 @@ function anchor_install_action_callback() {
 
 	if ($cmd == "new") {
 		$command = "captaincore site add".
-		($install ? " $install" : "" ) .
+		($site ? " $site" : "" ) .
 		($post_id ? " --id=$post_id" : "" ) .
 		($domain ? " --domain=$domain" : "" ) .
 		($username ? " --username=$username" : "" ) .
@@ -2776,7 +2776,7 @@ function anchor_install_action_callback() {
 		($protocol ? " --protocol=$protocol" : "" ) .
 		($port ? " --port=$port" : "" ) .
 		($homedir ? " --homedir=$homedir" : "" ) .
-		($staging_install ? " --install_staging=$staging_install" : "" ) .
+		($staging_site ? " --site_staging=$staging_site" : "" ) .
 		($staging_username ? " --username_staging=$staging_username" : "" ) .
 		($staging_password ? " --password_staging=".rawurlencode(base64_encode($staging_password)) : "" ) .
 		($staging_address ? " --address_staging=$staging_address" : "" ) .
@@ -2792,7 +2792,7 @@ function anchor_install_action_callback() {
 	}
 	if ($cmd == "update") {
 		$command = "captaincore site update".
-		($install ? " $install" : "" ) .
+		($site ? " $site" : "" ) .
 		($post_id ? " --id=$post_id" : "" ) .
 		($domain ? " --domain=$domain" : "" ) .
 		($username ? " --username=$username" : "" ) .
@@ -2815,16 +2815,16 @@ function anchor_install_action_callback() {
 	}
 	if ($cmd == "mailgun") {
 		mailgun_setup( $domain );
-		$command = "captaincore ssh $install --script=deploy-mailgun --key=\"".MAILGUN_API_KEY."\" --domain=".$domain." 2>&1 &";
+		$command = "captaincore ssh $site --script=deploy-mailgun --key=\"".MAILGUN_API_KEY."\" --domain=".$domain." 2>&1 &";
 	}
 	if ($cmd == "production-to-staging") {
 		date_default_timezone_set('America/New_York');
 		$t=time();
 		$timestamp = date("Y-m-d-hms",$t);
 		if($value) {
-			$command = "captaincore deploy production-to-staging $install --email=$value > ~/Tmp/$timestamp-deploy_production_to_staging_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_$install.txt";
+			$command = "captaincore deploy production-to-staging $site --email=$value > ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt";
 		} else {
-			$command = "captaincore deploy production-to-staging $install > ~/Tmp/$timestamp-deploy_production_to_staging_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_$install.txt";
+			$command = "captaincore deploy production-to-staging $site > ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt";
 		}
 	}
 	if ($cmd == "staging-to-production") {
@@ -2832,48 +2832,48 @@ function anchor_install_action_callback() {
 		$t=time();
 		$timestamp = date("Y-m-d-hms",$t);
 		if($value) {
-			$command = "captaincore deploy staging-to-production $install --email=$value > ~/Tmp/$timestamp-deploy_staging_to_production_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_staging_to_production_$install.txt";
+			$command = "captaincore deploy staging-to-production $site --email=$value > ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt";
 		} else {
-			$command = "captaincore deploy staging-to-production $install > ~/Tmp/$timestamp-deploy_staging_to_production_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_staging_to_production_$install.txt";
+			$command = "captaincore deploy staging-to-production $site > ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt";
 		}
 	}
 	if ($cmd == "remove") {
-		$command = "captaincore site delete $install";
+		$command = "captaincore site delete $site";
 	}
 	if ($cmd == "quick_backup") {
 		date_default_timezone_set('America/New_York');
 		$t=time();
 		$timestamp = date("Y-m-d-hms",$t);
-		$command = "captaincore quicksave $install > ~/Tmp/$timestamp-quicksave_$install.txt 2>&1";
+		$command = "captaincore quicksave $site > ~/Tmp/$timestamp-quicksave_$site.txt 2>&1";
 	}
 	if ($cmd == "backup") {
 		date_default_timezone_set('America/New_York');
 		$t=time();
 		$timestamp = date("Y-m-d-hms",$t);
-		$command = "captaincore backup $install > ~/Tmp/$timestamp-backup_$install.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-backup_$install.txt";
+		$command = "captaincore backup $site > ~/Tmp/$timestamp-backup_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-backup_$site.txt";
 	}
 	if ($cmd == "snapshot") {
 		date_default_timezone_set('America/New_York');
 		$t=time();
 		$timestamp = date("Y-m-d-hms",$t);
 		if($value) {
-			$command = "captaincore snapshot $install --email=$value > ~/Tmp/$timestamp-snapshot_$install.txt 2>&1 & sleep 2; head ~/Tmp/$timestamp-snapshot_$install.txt";
+			$command = "captaincore snapshot $site --email=$value > ~/Tmp/$timestamp-snapshot_$site.txt 2>&1 & sleep 2; head ~/Tmp/$timestamp-snapshot_$site.txt";
 		} else {
-			$command = "captaincore snapshot $install > ~/Tmp/$timestamp-snapshot_$install.txt 2>&1 & sleep 2; head ~/Tmp/$timestamp-snapshot_$install.txt";
+			$command = "captaincore snapshot $site > ~/Tmp/$timestamp-snapshot_$site.txt 2>&1 & sleep 2; head ~/Tmp/$timestamp-snapshot_$site.txt";
 		}
 
 	}
 	if ($cmd == "deactivate") {
-		$command = "captaincore site deactivate $install";
+		$command = "captaincore site deactivate $site";
 	}
 	if ($cmd == "activate") {
-		$command = "captaincore site activate $install";
+		$command = "captaincore site activate $site";
 	}
 
 	if ($cmd == "view_quicksave_changes") {
 		$website_id = get_field('website',$post_id);
-		$install = get_field('install',$website_id[0]);
-		$command = "captaincore get quicksave_changes $install $value";
+		$site = get_field('site',$website_id[0]);
+		$command = "captaincore get quicksave_changes $site $value";
 		$post_id = $website_id[0];
 	}
 
@@ -2881,7 +2881,7 @@ function anchor_install_action_callback() {
 		$command = "";
 		$sites = array();
 		foreach ($post_ids as $post_id) {
-			$sites[] =  get_field("install", $post_id);
+			$sites[] =  get_field("site", $post_id);
 		}
 		foreach ($value as $bulk_command) {
 			$bulk_arguments = array();
@@ -2914,10 +2914,10 @@ function anchor_install_action_callback() {
 		}
 
 		$quicksaves_previous_id = $quicksaves_for_website_ids[$mykey+1];
-		$install = get_field('install',$website_id[0]);
+		$site = get_field('site',$website_id[0]);
 		$commit = get_field('git_commit',$post_id);
 		$commit_previous = get_field('git_commit', $quicksaves_previous_id );
-		$command = "captaincore get quicksave_file_diff $install $commit_previous $commit \"$value\"";
+		$command = "captaincore get quicksave_file_diff $site $commit_previous $commit \"$value\"";
 		$post_id = $website_id[0];
 	}
 
@@ -2927,8 +2927,8 @@ function anchor_install_action_callback() {
 		$timestamp = date("Y-m-d-hms",$t);
 		$git_commit = get_field('git_commit', $post_id);
 		$website_id = get_field('website', $post_id);
-		$install = get_field('install', $website_id[0]);
-		$command = "captaincore rollback $install $git_commit --$addon_type=$value > ~/Tmp/$timestamp-rollback_$install.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$install.txt";
+		$site = get_field('site', $website_id[0]);
+		$command = "captaincore rollback $site $git_commit --$addon_type=$value > ~/Tmp/$timestamp-rollback_$site.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$site.txt";
 		$post_id = $website_id[0];
 	}
 
@@ -2938,8 +2938,8 @@ function anchor_install_action_callback() {
 		$timestamp = date("Y-m-d-hms",$t);
 		$git_commit = get_field('git_commit', $post_id);
 		$website_id = get_field('website', $post_id);
-		$install = get_field('install', $website_id[0]);
-		$command = "captaincore rollback $install $git_commit --all > ~/Tmp/$timestamp-rollback_$install.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$install.txt";
+		$site = get_field('site', $website_id[0]);
+		$command = "captaincore rollback $site $git_commit --all > ~/Tmp/$timestamp-rollback_$site.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$site.txt";
 		$post_id = $website_id[0];
 	}
 
@@ -3130,7 +3130,7 @@ function captaincore_website_acf_actions( $field ) {
 		<strong>Active Installs</strong>
 		<?php foreach( $websites as $website ):
 		  if ( get_field("status", $website->ID) == "active" ) {
-		    echo get_field("install", $website->ID). " ";
+		    echo get_field("site", $website->ID). " ";
 		 }
 		endforeach; ?>
 		<?php endif;
