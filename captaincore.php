@@ -2814,8 +2814,11 @@ function anchor_install_action_callback() {
 		($s3path ? " --s3path=$s3path" : "" );
 	}
 	if ($cmd == "mailgun") {
+		date_default_timezone_set('America/New_York');
+		$t=time();
+		$timestamp = date("Y-m-d-hms",$t);
 		mailgun_setup( $domain );
-		$command = "captaincore ssh $site --script=deploy-mailgun --key=\"".MAILGUN_API_KEY."\" --domain=".$domain." 2>&1 &";
+		$command = "captaincore ssh $site --script=deploy-mailgun --key=\"".MAILGUN_API_KEY."\" --domain=".$domain." > ~/Tmp/$timestamp-deploy_mailgun_$site.txt 2>&1 &";
 	}
 	if ($cmd == "production-to-staging") {
 		date_default_timezone_set('America/New_York');
