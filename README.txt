@@ -35,6 +35,16 @@ TODO
 
 == Changelog ==
 
+= 0.2.1: May 8, 2018 =
+* New: New button to deploy Mailgun
+* New: Automatically add Mailgun subdomain to relating domain during Mailgun setup
+* New: Added icons website actions
+* Tweak: Updated to new quicksave format
+* Tweak: Removed need of "ACF Enhanced Message Field" plugin
+* Tweak: Renamed "Load Configs" to "Website Actions"
+* Tweak: Renamed install field to site
+* Fix: Bug causing site launch date to reset
+
 = 0.2.0: April 22, 2018 =
 * Tweak: Renamed plugin from CaptainCore Server to CaptainCore GUI
 * Tweak: Renamed various commands to match CaptainCore CLI
