@@ -81,71 +81,78 @@ function run_captaincore() {
 }
 run_captaincore();
 
-include "inc/woocommerce-my-account-endpoints.php";
-include "inc/constellix-api/constellix-api.php";
-include "inc/woocommerce-custom-password-fields.php";
-include "inc/mailgun-api.php";
-include "inc/process-functions.php";
-require "inc/bulk-actions.php"; // Custom bulk actions.
+require 'inc/woocommerce-my-account-endpoints.php';
+require 'inc/constellix-api/constellix-api.php';
+require 'inc/woocommerce-custom-password-fields.php';
+require 'inc/mailgun-api.php';
+require 'inc/process-functions.php';
+require 'inc/bulk-actions.php'; // Custom bulk actions.
 
 function captaincore_rewrite() {
-	add_rewrite_rule('^captaincore-api/([^/]*)/?','index.php?pagename=captaincore-api&callback=$matches[1]','top');
-	add_rewrite_rule('^checkout-express/([^/]*)/?','index.php?pagename=checkout-express&callback=$matches[1]','top');
+	add_rewrite_rule( '^captaincore-api/([^/]*)/?', 'index.php?pagename=captaincore-api&callback=$matches[1]', 'top' );
+	add_rewrite_rule( '^checkout-express/([^/]*)/?', 'index.php?pagename=checkout-express&callback=$matches[1]', 'top' );
 
 	// Removed the following paths from Google by forcing a 404 response
 	// TO DO: Remove after Google results for "site:anchor.host" are clean
-	add_rewrite_rule('^captcore_quicksave/([^/]*)/?','index.php?pagename=404','top');
-	add_rewrite_rule('^cc_quicksave/([^/]*)/?','index.php?pagename=404','top');
-	add_rewrite_rule('^captcore_snapshot/([^/]*)/?','index.php?pagename=404','top');
-	add_rewrite_rule('^captcore_contact/([^/]*)/?','index.php?pagename=404','top');
+	add_rewrite_rule( '^captcore_quicksave/([^/]*)/?', 'index.php?pagename=404', 'top' );
+	add_rewrite_rule( '^cc_quicksave/([^/]*)/?', 'index.php?pagename=404', 'top' );
+	add_rewrite_rule( '^captcore_snapshot/([^/]*)/?', 'index.php?pagename=404', 'top' );
+	add_rewrite_rule( '^captcore_contact/([^/]*)/?', 'index.php?pagename=404', 'top' );
 
-	add_rewrite_tag('%site%','([^&]+)');
-	add_rewrite_tag('%sitetoken%','([^&]+)');
-	add_rewrite_tag('%callback%','([^&]+)');
+	add_rewrite_tag( '%site%', '([^&]+)' );
+	add_rewrite_tag( '%sitetoken%', '([^&]+)' );
+	add_rewrite_tag( '%callback%', '([^&]+)' );
 
-	register_taxonomy("process_role", array("captcore_process"), array("hierarchical" => true, "label" => "Roles", "singular_label" => "Role", "rewrite" => true));
+	register_taxonomy(
+		'process_role', array( 'captcore_process' ), array(
+			'hierarchical'   => true,
+			'label'          => 'Roles',
+			'singular_label' => 'Role',
+			'rewrite'        => true,
+		)
+	);
 }
 
 add_action( 'init', 'captaincore_rewrite' );
 
 function anchor_disable_gutenberg( $can_edit, $post_type ) {
-	$disabled_post_types = array("captcore_website", "captcore_domain", "captcore_customer", "captcore_changelog");
-  if ( in_array($post_type, $disabled_post_types ) ) {
+	$disabled_post_types = array( 'captcore_website', 'captcore_domain', 'captcore_customer', 'captcore_changelog' );
+	if ( in_array( $post_type, $disabled_post_types ) ) {
 		return false;
 	}
 	return $can_edit;
 }
-add_filter( 'gutenberg_can_edit_post_type','anchor_disable_gutenberg', 10, 2 );
+add_filter( 'gutenberg_can_edit_post_type', 'anchor_disable_gutenberg', 10, 2 );
 
 // Modify WooCommerce Menu: wc_get_account_menu_items() ;
 function anchor_my_account_order( $current_menu ) {
 
-	unset($current_menu["websites"]);
-	unset($current_menu["edit-account"]);
-	$current_menu["edit-account"] = "Account";
-	unset($current_menu["subscriptions"]);
-	$current_menu["subscriptions"] = "Billing";
-	unset($current_menu["customer-logout"]);
-	$current_menu['payment-methods'] = "Payment methods"; // Payment Methods
-	$current_menu["customer-logout"] = "Logout";
+	unset( $current_menu['websites'] );
+	unset( $current_menu['edit-account'] );
+	$current_menu['edit-account'] = 'Account';
+	unset( $current_menu['subscriptions'] );
+	$current_menu['subscriptions'] = 'Billing';
+	unset( $current_menu['customer-logout'] );
+	$current_menu['payment-methods'] = 'Payment methods'; // Payment Methods
+	$current_menu['customer-logout'] = 'Logout';
 
 	$user = wp_get_current_user();
 
-	$role_check_admin = in_array( 'administrator', $user->roles );
-	$role_check_partner = in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
+	$role_check_admin      = in_array( 'administrator', $user->roles );
+	$role_check_partner    = in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
 	$role_check_subscriber = in_array( 'subscriber', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
 
-	if (!$role_check_admin) {
-		unset($current_menu["handbook"]);
-		unset($current_menu["manage"]);
+	if ( ! $role_check_admin ) {
+		unset( $current_menu['handbook'] );
+		unset( $current_menu['manage'] );
 	}
-	if (!$role_check_partner) {
-		unset($current_menu["licenses"]);
-		unset($current_menu["configs"]);
+	if ( ! $role_check_partner ) {
+		unset( $current_menu['licenses'] );
+		unset( $current_menu['configs'] );
 	}
-	if (!$role_check_subscriber){
-		unset($current_menu["dns"]);
-		unset($current_menu["logs"]);
+	if ( ! $role_check_subscriber ) {
+		unset( $current_menu['dns'] );
+		unset( $current_menu['logs'] );
 	}
 	return $current_menu;
 }
@@ -155,7 +162,7 @@ add_filter( 'woocommerce_account_menu_items', 'anchor_my_account_order', 50 );
 // Register Custom Post Type
 function contact_post_type() {
 
-	$labels = array(
+	$labels       = array(
 		'name'                  => _x( 'Contacts', 'Post Type General Name', 'captaincore' ),
 		'singular_name'         => _x( 'Contact', 'Post Type Singular Name', 'captaincore' ),
 		'menu_name'             => __( 'Contacts', 'captaincore' ),
@@ -183,34 +190,34 @@ function contact_post_type() {
 		'filter_items_list'     => __( 'Filter items list', 'captaincore' ),
 	);
 	$capabilities = array(
-	  'edit_post'             => 'website_edit_post',
-	  'read_post'             => 'website_read_post',
-	  'delete_post'           => 'website_delete_post',
-	  'edit_posts'            => 'website_edit_posts',
-	  'edit_others_posts'     => 'website_edit_others_posts',
-	  'publish_posts'         => 'website_publish_posts',
-	  'read_private_posts'    => 'website_read_private_posts',
+		'edit_post'          => 'website_edit_post',
+		'read_post'          => 'website_read_post',
+		'delete_post'        => 'website_delete_post',
+		'edit_posts'         => 'website_edit_posts',
+		'edit_others_posts'  => 'website_edit_others_posts',
+		'publish_posts'      => 'website_publish_posts',
+		'read_private_posts' => 'website_read_private_posts',
 	);
-	$args = array(
-		'label'                 => __( 'Contact', 'captaincore' ),
-		'description'           => __( 'Contact Description', 'captaincore' ),
-		'labels'                => $labels,
-		'supports'              => array( 'author', 'revisions', ),
-		'hierarchical'          => false,
-		'public'                => false,
-		'show_ui'               => true,
-		'show_in_menu'          => false,
-		'menu_position'         => 5,
-		'menu_icon'             => 'dashicons-admin-users',
-		'show_in_admin_bar'     => true,
-		'show_in_nav_menus'     => true,
-		'can_export'            => true,
-		'has_archive'           => false,
-		'exclude_from_search'   => true,
-		'publicly_queryable'    => false,
-		'capability_type'       => 'page',
+	$args         = array(
+		'label'               => __( 'Contact', 'captaincore' ),
+		'description'         => __( 'Contact Description', 'captaincore' ),
+		'labels'              => $labels,
+		'supports'            => array( 'author', 'revisions' ),
+		'hierarchical'        => false,
+		'public'              => false,
+		'show_ui'             => true,
+		'show_in_menu'        => false,
+		'menu_position'       => 5,
+		'menu_icon'           => 'dashicons-admin-users',
+		'show_in_admin_bar'   => true,
+		'show_in_nav_menus'   => true,
+		'can_export'          => true,
+		'has_archive'         => false,
+		'exclude_from_search' => true,
+		'publicly_queryable'  => false,
+		'capability_type'     => 'page',
 		'capabilities'        => $capabilities,
-		'map_meta_cap' 		  => true
+		'map_meta_cap'        => true,
 	);
 	register_post_type( 'captcore_contact', $args );
 
@@ -219,15 +226,15 @@ add_action( 'init', 'contact_post_type', 0 );
 
 
 function captaincore_admin_menu() {
-    add_menu_page(
-        'CaptainCore',
-        'CaptainCore',
-        'read',
-        'captaincore',
-        '', // Callback, leave empty
-        'dashicons-welcome-widgets-menus',
-				5
-    );
+	add_menu_page(
+		'CaptainCore',
+		'CaptainCore',
+		'read',
+		'captaincore',
+		'', // Callback, leave empty
+		'dashicons-welcome-widgets-menus',
+		5
+	);
 }
 
 add_action( 'admin_menu', 'captaincore_admin_menu' );
@@ -235,37 +242,37 @@ add_action( 'admin_menu', 'captaincore_admin_menu' );
 // Register Custom Post Type
 function customer_post_type() {
 
-	$labels = array(
-		'name'                => _x( 'Customers', 'Post Type General Name', 'captaincore' ),
-		'singular_name'       => _x( 'Customer', 'Post Type Singular Name', 'captaincore' ),
-		'menu_name'           => __( 'Customers', 'captaincore' ),
-		'name_admin_bar'      => __( 'Customer', 'captaincore' ),
-		'parent_item_colon'   => __( 'Parent Customer:', 'captaincore' ),
-		'all_items'           => __( 'Customers', 'captaincore' ),
-		'add_new_item'        => __( 'Add New Customer', 'captaincore' ),
-		'add_new'             => __( 'Add New', 'captaincore' ),
-		'new_item'            => __( 'New Customer', 'captaincore' ),
-		'edit_item'           => __( 'Edit Customer', 'captaincore' ),
-		'update_item'         => __( 'Update Customer', 'captaincore' ),
-		'view_item'           => __( 'View Item', 'captaincore' ),
-		'search_items'        => __( 'Search Customers', 'captaincore' ),
-		'not_found'           => __( 'Not found', 'captaincore' ),
-		'not_found_in_trash'  => __( 'Not found in Trash', 'captaincore' ),
+	$labels       = array(
+		'name'               => _x( 'Customers', 'Post Type General Name', 'captaincore' ),
+		'singular_name'      => _x( 'Customer', 'Post Type Singular Name', 'captaincore' ),
+		'menu_name'          => __( 'Customers', 'captaincore' ),
+		'name_admin_bar'     => __( 'Customer', 'captaincore' ),
+		'parent_item_colon'  => __( 'Parent Customer:', 'captaincore' ),
+		'all_items'          => __( 'Customers', 'captaincore' ),
+		'add_new_item'       => __( 'Add New Customer', 'captaincore' ),
+		'add_new'            => __( 'Add New', 'captaincore' ),
+		'new_item'           => __( 'New Customer', 'captaincore' ),
+		'edit_item'          => __( 'Edit Customer', 'captaincore' ),
+		'update_item'        => __( 'Update Customer', 'captaincore' ),
+		'view_item'          => __( 'View Item', 'captaincore' ),
+		'search_items'       => __( 'Search Customers', 'captaincore' ),
+		'not_found'          => __( 'Not found', 'captaincore' ),
+		'not_found_in_trash' => __( 'Not found in Trash', 'captaincore' ),
 	);
 	$capabilities = array(
-	  'edit_post'             => 'website_edit_post',
-	  'read_post'             => 'website_read_post',
-	  'delete_post'           => 'website_delete_post',
-	  'edit_posts'            => 'website_edit_posts',
-	  'edit_others_posts'     => 'website_edit_others_posts',
-	  'publish_posts'         => 'website_publish_posts',
-	  'read_private_posts'    => 'website_read_private_posts',
+		'edit_post'          => 'website_edit_post',
+		'read_post'          => 'website_read_post',
+		'delete_post'        => 'website_delete_post',
+		'edit_posts'         => 'website_edit_posts',
+		'edit_others_posts'  => 'website_edit_others_posts',
+		'publish_posts'      => 'website_publish_posts',
+		'read_private_posts' => 'website_read_private_posts',
 	);
-	$args = array(
+	$args         = array(
 		'label'               => __( 'Customer', 'captaincore' ),
 		'description'         => __( 'Customer Description', 'captaincore' ),
 		'labels'              => $labels,
-		'supports'            => array( ),
+		'supports'            => array(),
 		'hierarchical'        => false,
 		'public'              => false,
 		'show_ui'             => true,
@@ -279,9 +286,9 @@ function customer_post_type() {
 		'exclude_from_search' => true,
 		'publicly_queryable'  => false,
 		'capability_type'     => 'page',
-		'show_in_rest'		  => true,
+		'show_in_rest'        => true,
 		'capabilities'        => $capabilities,
-		'map_meta_cap' 		  => true
+		'map_meta_cap'        => true,
 	);
 	register_post_type( 'captcore_customer', $args );
 
@@ -291,35 +298,35 @@ add_action( 'init', 'customer_post_type', 0 );
 // Register Custom Post Type
 function website_post_type() {
 
-	$labels = array(
-		'name'                => _x( 'Websites', 'Post Type General Name', 'captaincore' ),
-		'singular_name'       => _x( 'Website', 'Post Type Singular Name', 'captaincore' ),
-		'menu_name'           => __( 'Websites', 'captaincore' ),
-		'parent_item_colon'   => __( 'Parent Website:', 'captaincore' ),
-		'all_items'           => __( 'Websites', 'captaincore' ),
-		'view_item'           => __( 'View Website', 'captaincore' ),
-		'add_new_item'        => __( 'Add New Websites', 'captaincore' ),
-		'add_new'             => __( 'New Websites', 'captaincore' ),
-		'edit_item'           => __( 'Edit Website', 'captaincore' ),
-		'update_item'         => __( 'Update Website', 'captaincore' ),
-		'search_items'        => __( 'Search websites', 'captaincore' ),
-		'not_found'           => __( 'No websites found', 'captaincore' ),
-		'not_found_in_trash'  => __( 'No websites found in Trash', 'captaincore' ),
+	$labels       = array(
+		'name'               => _x( 'Websites', 'Post Type General Name', 'captaincore' ),
+		'singular_name'      => _x( 'Website', 'Post Type Singular Name', 'captaincore' ),
+		'menu_name'          => __( 'Websites', 'captaincore' ),
+		'parent_item_colon'  => __( 'Parent Website:', 'captaincore' ),
+		'all_items'          => __( 'Websites', 'captaincore' ),
+		'view_item'          => __( 'View Website', 'captaincore' ),
+		'add_new_item'       => __( 'Add New Websites', 'captaincore' ),
+		'add_new'            => __( 'New Websites', 'captaincore' ),
+		'edit_item'          => __( 'Edit Website', 'captaincore' ),
+		'update_item'        => __( 'Update Website', 'captaincore' ),
+		'search_items'       => __( 'Search websites', 'captaincore' ),
+		'not_found'          => __( 'No websites found', 'captaincore' ),
+		'not_found_in_trash' => __( 'No websites found in Trash', 'captaincore' ),
 	);
 	$capabilities = array(
-	  'edit_post'             => 'website_edit_post',
-	  'read_post'             => 'website_read_post',
-	  'delete_post'           => 'website_delete_post',
-	  'edit_posts'            => 'website_edit_posts',
-	  'edit_others_posts'     => 'website_edit_others_posts',
-	  'publish_posts'         => 'website_publish_posts',
-	  'read_private_posts'    => 'website_read_private_posts',
+		'edit_post'          => 'website_edit_post',
+		'read_post'          => 'website_read_post',
+		'delete_post'        => 'website_delete_post',
+		'edit_posts'         => 'website_edit_posts',
+		'edit_others_posts'  => 'website_edit_others_posts',
+		'publish_posts'      => 'website_publish_posts',
+		'read_private_posts' => 'website_read_private_posts',
 	);
-	$args = array(
+	$args         = array(
 		'label'               => __( 'website', 'captaincore' ),
 		'description'         => __( 'Website information pages', 'captaincore' ),
 		'labels'              => $labels,
-		'supports'            => array( ),
+		'supports'            => array(),
 		'hierarchical'        => false,
 		'public'              => false,
 		'show_ui'             => true,
@@ -327,15 +334,15 @@ function website_post_type() {
 		'show_in_nav_menus'   => true,
 		'show_in_admin_bar'   => true,
 		'menu_position'       => 5,
-		'menu_icon'						=> 'dashicons-admin-multisite',
+		'menu_icon'           => 'dashicons-admin-multisite',
 		'can_export'          => true,
 		'has_archive'         => false,
 		'exclude_from_search' => true,
 		'publicly_queryable'  => false,
 		'capability_type'     => 'page',
-		'show_in_rest'				=> true,
+		'show_in_rest'        => true,
 		'capabilities'        => $capabilities,
-		'map_meta_cap'				=> true
+		'map_meta_cap'        => true,
 	);
 	register_post_type( 'captcore_website', $args );
 }
@@ -346,7 +353,7 @@ add_action( 'init', 'website_post_type', 0 );
 // Register Custom Post Type
 function domain_post_type() {
 
-	$labels = array(
+	$labels       = array(
 		'name'                  => _x( 'Domains', 'Post Type General Name', 'captaincore' ),
 		'singular_name'         => _x( 'Domain', 'Post Type Singular Name', 'captaincore' ),
 		'menu_name'             => __( 'Domains', 'captaincore' ),
@@ -376,35 +383,35 @@ function domain_post_type() {
 		'filter_items_list'     => __( 'Filter items list', 'captaincore' ),
 	);
 	$capabilities = array(
-	  'edit_post'             => 'website_edit_post',
-	  'read_post'             => 'website_read_post',
-	  'delete_post'           => 'website_delete_post',
-	  'edit_posts'            => 'website_edit_posts',
-	  'edit_others_posts'     => 'website_edit_others_posts',
-	  'publish_posts'         => 'website_publish_posts',
-	  'read_private_posts'    => 'website_read_private_posts',
+		'edit_post'          => 'website_edit_post',
+		'read_post'          => 'website_read_post',
+		'delete_post'        => 'website_delete_post',
+		'edit_posts'         => 'website_edit_posts',
+		'edit_others_posts'  => 'website_edit_others_posts',
+		'publish_posts'      => 'website_publish_posts',
+		'read_private_posts' => 'website_read_private_posts',
 	);
-	$args = array(
-		'label'                 => __( 'Domain', 'captaincore' ),
-		'description'           => __( 'Domain Description', 'captaincore' ),
-		'labels'                => $labels,
-		'supports'              => array( 'title', 'editor' ),
-		'hierarchical'          => false,
-		'public'                => true,
-		'show_ui'               => true,
-		'show_in_menu'          => false,
-		'menu_position'         => 5,
-		'menu_icon'             => 'dashicons-welcome-widgets-menus',
-		'show_in_admin_bar'     => true,
-		'show_in_nav_menus'     => true,
-		'can_export'            => true,
-		'has_archive'           => false,
-		'exclude_from_search'   => true,
-		'publicly_queryable'    => false,
-		'capability_type'       => 'page',
-		'show_in_rest'				=> true,
+	$args         = array(
+		'label'               => __( 'Domain', 'captaincore' ),
+		'description'         => __( 'Domain Description', 'captaincore' ),
+		'labels'              => $labels,
+		'supports'            => array( 'title', 'editor' ),
+		'hierarchical'        => false,
+		'public'              => true,
+		'show_ui'             => true,
+		'show_in_menu'        => false,
+		'menu_position'       => 5,
+		'menu_icon'           => 'dashicons-welcome-widgets-menus',
+		'show_in_admin_bar'   => true,
+		'show_in_nav_menus'   => true,
+		'can_export'          => true,
+		'has_archive'         => false,
+		'exclude_from_search' => true,
+		'publicly_queryable'  => false,
+		'capability_type'     => 'page',
+		'show_in_rest'        => true,
 		'capabilities'        => $capabilities,
-		'map_meta_cap'				=> true,
+		'map_meta_cap'        => true,
 	);
 	register_post_type( 'captcore_domain', $args );
 
@@ -413,50 +420,50 @@ add_action( 'init', 'domain_post_type', 0 );
 
 // Adds new permissions
 function add_theme_caps() {
-    // gets the administrator role
-    $admins = get_role( 'administrator' );
-    $admins->add_cap( 'website_edit_post' );
-    $admins->add_cap( 'website_read_post' );
-    $admins->add_cap( 'website_delete_post' );
-    $admins->add_cap( 'website_edit_posts' );
-    $admins->add_cap( 'website_edit_others_posts' );
-    $admins->add_cap( 'website_publish_posts' );
-    $admins->add_cap( 'website_read_private_posts' );
+	// gets the administrator role
+	$admins = get_role( 'administrator' );
+	$admins->add_cap( 'website_edit_post' );
+	$admins->add_cap( 'website_read_post' );
+	$admins->add_cap( 'website_delete_post' );
+	$admins->add_cap( 'website_edit_posts' );
+	$admins->add_cap( 'website_edit_others_posts' );
+	$admins->add_cap( 'website_publish_posts' );
+	$admins->add_cap( 'website_read_private_posts' );
 }
-add_action( 'admin_init', 'add_theme_caps');
+add_action( 'admin_init', 'add_theme_caps' );
 
 // Register Custom Post Type
 function changelog_post_type() {
 
-	$labels = array(
-		'name'                => _x( 'Website Logs', 'Post Type General Name', 'captaincore' ),
-		'singular_name'       => _x( 'Website Log', 'Post Type Singular Name', 'captaincore' ),
-		'menu_name'           => __( 'Website Logs', 'captaincore' ),
-		'parent_item_colon'   => __( 'Parent Changelog:', 'captaincore' ),
-		'all_items'           => __( 'Changelogs', 'captaincore' ),
-		'view_item'           => __( 'View Changelog', 'captaincore' ),
-		'add_new_item'        => __( 'Add New Changelog', 'captaincore' ),
-		'add_new'             => __( 'New Changelog', 'captaincore' ),
-		'edit_item'           => __( 'Edit Changelog', 'captaincore' ),
-		'update_item'         => __( 'Update Changelog', 'captaincore' ),
-		'search_items'        => __( 'Search changelogs', 'captaincore' ),
-		'not_found'           => __( 'No changelogs found', 'captaincore' ),
-		'not_found_in_trash'  => __( 'No changelogs found in Trash', 'captaincore' ),
+	$labels       = array(
+		'name'               => _x( 'Website Logs', 'Post Type General Name', 'captaincore' ),
+		'singular_name'      => _x( 'Website Log', 'Post Type Singular Name', 'captaincore' ),
+		'menu_name'          => __( 'Website Logs', 'captaincore' ),
+		'parent_item_colon'  => __( 'Parent Changelog:', 'captaincore' ),
+		'all_items'          => __( 'Changelogs', 'captaincore' ),
+		'view_item'          => __( 'View Changelog', 'captaincore' ),
+		'add_new_item'       => __( 'Add New Changelog', 'captaincore' ),
+		'add_new'            => __( 'New Changelog', 'captaincore' ),
+		'edit_item'          => __( 'Edit Changelog', 'captaincore' ),
+		'update_item'        => __( 'Update Changelog', 'captaincore' ),
+		'search_items'       => __( 'Search changelogs', 'captaincore' ),
+		'not_found'          => __( 'No changelogs found', 'captaincore' ),
+		'not_found_in_trash' => __( 'No changelogs found in Trash', 'captaincore' ),
 	);
 	$capabilities = array(
-	  'edit_post'             => 'website_edit_post',
-	  'read_post'             => 'website_read_post',
-	  'delete_post'           => 'website_delete_post',
-	  'edit_posts'            => 'website_edit_posts',
-	  'edit_others_posts'     => 'website_edit_others_posts',
-	  'publish_posts'         => 'website_publish_posts',
-	  'read_private_posts'    => 'website_read_private_posts',
+		'edit_post'          => 'website_edit_post',
+		'read_post'          => 'website_read_post',
+		'delete_post'        => 'website_delete_post',
+		'edit_posts'         => 'website_edit_posts',
+		'edit_others_posts'  => 'website_edit_others_posts',
+		'publish_posts'      => 'website_publish_posts',
+		'read_private_posts' => 'website_read_private_posts',
 	);
-	$args = array(
+	$args         = array(
 		'label'               => __( 'changelog', 'captaincore' ),
 		'description'         => __( 'Changelog information pages', 'captaincore' ),
 		'labels'              => $labels,
-		'supports'            => array( ),
+		'supports'            => array(),
 		'hierarchical'        => false,
 		'public'              => false,
 		'show_ui'             => true,
@@ -464,15 +471,15 @@ function changelog_post_type() {
 		'show_in_nav_menus'   => true,
 		'show_in_admin_bar'   => true,
 		'menu_position'       => 5,
-		'menu_icon'						=> 'dashicons-media-spreadsheet',
+		'menu_icon'           => 'dashicons-media-spreadsheet',
 		'can_export'          => true,
 		'has_archive'         => false,
 		'exclude_from_search' => true,
 		'publicly_queryable'  => false,
 		'capability_type'     => 'page',
-		'show_in_rest'				=> true,
+		'show_in_rest'        => true,
 		'capabilities'        => $capabilities,
-		'map_meta_cap'				=> true
+		'map_meta_cap'        => true,
 	);
 	register_post_type( 'captcore_changelog', $args );
 
@@ -484,7 +491,7 @@ add_action( 'init', 'changelog_post_type', 0 );
 // Register Custom Post Type
 function process_post_type() {
 
-	$labels = array(
+	$labels       = array(
 		'name'                  => _x( 'Processes', 'Post Type General Name', 'captaincore' ),
 		'singular_name'         => _x( 'Process', 'Post Type Singular Name', 'captaincore' ),
 		'menu_name'             => __( 'Processes', 'captaincore' ),
@@ -512,34 +519,34 @@ function process_post_type() {
 		'filter_items_list'     => __( 'Filter items list', 'captaincore' ),
 	);
 	$capabilities = array(
-	  'edit_post'             => 'website_edit_post',
-	  'read_post'             => 'website_read_post',
-	  'delete_post'           => 'website_delete_post',
-	  'edit_posts'            => 'website_edit_posts',
-	  'edit_others_posts'     => 'website_edit_others_posts',
-	  'publish_posts'         => 'website_publish_posts',
-	  'read_private_posts'    => 'website_read_private_posts',
+		'edit_post'          => 'website_edit_post',
+		'read_post'          => 'website_read_post',
+		'delete_post'        => 'website_delete_post',
+		'edit_posts'         => 'website_edit_posts',
+		'edit_others_posts'  => 'website_edit_others_posts',
+		'publish_posts'      => 'website_publish_posts',
+		'read_private_posts' => 'website_read_private_posts',
 	);
-	$args = array(
-		'label'                 => __( 'Process', 'captaincore' ),
-		'description'           => __( 'Process Description', 'captaincore' ),
-		'labels'                => $labels,
-		'supports'              => array( 'title', 'editor', 'author', 'thumbnail', 'revisions', 'wpcom-markdown' ),
-		'hierarchical'          => false,
-		'public'                => true,
-		'show_ui'               => true,
-		'show_in_menu'          => false,
-		'menu_position'         => 5,
-		'menu_icon'             => 'dashicons-controls-repeat',
-		'show_in_admin_bar'     => true,
-		'show_in_nav_menus'     => true,
-		'can_export'            => true,
-		'has_archive'           => false,
-		'exclude_from_search'   => true,
-		'publicly_queryable'    => true,
-		'capability_type'       => 'page',
+	$args         = array(
+		'label'               => __( 'Process', 'captaincore' ),
+		'description'         => __( 'Process Description', 'captaincore' ),
+		'labels'              => $labels,
+		'supports'            => array( 'title', 'editor', 'author', 'thumbnail', 'revisions', 'wpcom-markdown' ),
+		'hierarchical'        => false,
+		'public'              => true,
+		'show_ui'             => true,
+		'show_in_menu'        => false,
+		'menu_position'       => 5,
+		'menu_icon'           => 'dashicons-controls-repeat',
+		'show_in_admin_bar'   => true,
+		'show_in_nav_menus'   => true,
+		'can_export'          => true,
+		'has_archive'         => false,
+		'exclude_from_search' => true,
+		'publicly_queryable'  => true,
+		'capability_type'     => 'page',
 		'capabilities'        => $capabilities,
-		'map_meta_cap' 		  => true
+		'map_meta_cap'        => true,
 	);
 	register_post_type( 'captcore_process', $args );
 
@@ -549,7 +556,7 @@ add_action( 'init', 'process_post_type', 0 );
 // Register Custom Post Type
 function process_log_post_type() {
 
-	$labels = array(
+	$labels       = array(
 		'name'                  => _x( 'Process Logs', 'Post Type General Name', 'captaincore' ),
 		'singular_name'         => _x( 'Process Log', 'Post Type Singular Name', 'captaincore' ),
 		'menu_name'             => __( 'Process Logs', 'captaincore' ),
@@ -577,35 +584,35 @@ function process_log_post_type() {
 		'filter_items_list'     => __( 'Filter items list', 'captaincore' ),
 	);
 	$capabilities = array(
-	  'edit_post'             => 'website_edit_post',
-	  'read_post'             => 'website_read_post',
-	  'delete_post'           => 'website_delete_post',
-	  'edit_posts'            => 'website_edit_posts',
-	  'edit_others_posts'     => 'website_edit_others_posts',
-	  'publish_posts'         => 'website_publish_posts',
-	  'read_private_posts'    => 'website_read_private_posts',
+		'edit_post'          => 'website_edit_post',
+		'read_post'          => 'website_read_post',
+		'delete_post'        => 'website_delete_post',
+		'edit_posts'         => 'website_edit_posts',
+		'edit_others_posts'  => 'website_edit_others_posts',
+		'publish_posts'      => 'website_publish_posts',
+		'read_private_posts' => 'website_read_private_posts',
 	);
-	$args = array(
-		'label'                 => __( 'Process Log', 'captaincore' ),
-		'description'           => __( 'Process Log Description', 'captaincore' ),
-		'labels'                => $labels,
-		'supports'              => array( 'author', 'thumbnail', 'revisions', ),
-		'hierarchical'          => false,
-		'public'                => false,
-		'show_ui'               => true,
-		'show_in_menu'          => false,
-		'menu_position'         => 5,
-		'menu_icon'             => 'dashicons-media-spreadsheet',
-		'show_in_admin_bar'     => true,
-		'show_in_nav_menus'     => true,
-		'can_export'            => true,
-		'has_archive'           => true,
-		'exclude_from_search'   => true,
-		'publicly_queryable'    => false,
-		'capability_type'       => 'page',
-		'show_in_rest'		  => true,
+	$args         = array(
+		'label'               => __( 'Process Log', 'captaincore' ),
+		'description'         => __( 'Process Log Description', 'captaincore' ),
+		'labels'              => $labels,
+		'supports'            => array( 'author', 'thumbnail', 'revisions' ),
+		'hierarchical'        => false,
+		'public'              => false,
+		'show_ui'             => true,
+		'show_in_menu'        => false,
+		'menu_position'       => 5,
+		'menu_icon'           => 'dashicons-media-spreadsheet',
+		'show_in_admin_bar'   => true,
+		'show_in_nav_menus'   => true,
+		'can_export'          => true,
+		'has_archive'         => true,
+		'exclude_from_search' => true,
+		'publicly_queryable'  => false,
+		'capability_type'     => 'page',
+		'show_in_rest'        => true,
 		'capabilities'        => $capabilities,
-		'map_meta_cap' 		  => true
+		'map_meta_cap'        => true,
 	);
 	register_post_type( 'captcore_processlog', $args );
 
@@ -615,7 +622,7 @@ add_action( 'init', 'process_log_post_type', 0 );
 // Register Custom Post Type
 function process_item_log_post_type() {
 
-	$labels = array(
+	$labels       = array(
 		'name'                  => _x( 'Process Item Logs', 'Post Type General Name', 'captaincore' ),
 		'singular_name'         => _x( 'Process Item Log', 'Post Type Singular Name', 'captaincore' ),
 		'menu_name'             => __( 'Process Item Logs', 'captaincore' ),
@@ -643,45 +650,44 @@ function process_item_log_post_type() {
 		'filter_items_list'     => __( 'Filter items list', 'captaincore' ),
 	);
 	$capabilities = array(
-	  'edit_post'             => 'website_edit_post',
-	  'read_post'             => 'website_read_post',
-	  'delete_post'           => 'website_delete_post',
-	  'edit_posts'            => 'website_edit_posts',
-	  'edit_others_posts'     => 'website_edit_others_posts',
-	  'publish_posts'         => 'website_publish_posts',
-	  'read_private_posts'    => 'website_read_private_posts',
+		'edit_post'          => 'website_edit_post',
+		'read_post'          => 'website_read_post',
+		'delete_post'        => 'website_delete_post',
+		'edit_posts'         => 'website_edit_posts',
+		'edit_others_posts'  => 'website_edit_others_posts',
+		'publish_posts'      => 'website_publish_posts',
+		'read_private_posts' => 'website_read_private_posts',
 	);
-	$args = array(
-		'label'                 => __( 'Process Item Log', 'captaincore' ),
-		'description'           => __( 'Process Item Log Description', 'captaincore' ),
-		'labels'                => $labels,
-		'supports'              => array( 'author', 'thumbnail', 'revisions', ),
-		'hierarchical'          => false,
-		'public'                => false,
-		'show_ui'               => true,
-		'show_in_menu'          => false,
-		'menu_position'         => 5,
-		'menu_icon'             => 'dashicons-media-spreadsheet',
-		'show_in_admin_bar'     => true,
-		'show_in_nav_menus'     => true,
-		'can_export'            => true,
-		'has_archive'           => true,
-		'exclude_from_search'   => true,
-		'publicly_queryable'    => false,
-		'capability_type'       => 'page',
-		'show_in_rest'		  => true,
+	$args         = array(
+		'label'               => __( 'Process Item Log', 'captaincore' ),
+		'description'         => __( 'Process Item Log Description', 'captaincore' ),
+		'labels'              => $labels,
+		'supports'            => array( 'author', 'thumbnail', 'revisions' ),
+		'hierarchical'        => false,
+		'public'              => false,
+		'show_ui'             => true,
+		'show_in_menu'        => false,
+		'menu_position'       => 5,
+		'menu_icon'           => 'dashicons-media-spreadsheet',
+		'show_in_admin_bar'   => true,
+		'show_in_nav_menus'   => true,
+		'can_export'          => true,
+		'has_archive'         => true,
+		'exclude_from_search' => true,
+		'publicly_queryable'  => false,
+		'capability_type'     => 'page',
+		'show_in_rest'        => true,
 		'capabilities'        => $capabilities,
-		'map_meta_cap' 		  => true
+		'map_meta_cap'        => true,
 	);
 	register_post_type( 'captcore_processitem', $args );
 
 }
 // add_action( 'init', 'process_item_log_post_type', 0 );
-
 // Register Custom Post Type
 function server_post_type() {
 
-	$labels = array(
+	$labels       = array(
 		'name'                  => _x( 'Servers', 'Post Type General Name', 'captaincore' ),
 		'singular_name'         => _x( 'Server', 'Post Type Singular Name', 'captaincore' ),
 		'menu_name'             => __( 'Servers', 'captaincore' ),
@@ -709,34 +715,34 @@ function server_post_type() {
 		'filter_items_list'     => __( 'Filter items list', 'captaincore' ),
 	);
 	$capabilities = array(
-	  'edit_post'             => 'website_edit_post',
-	  'read_post'             => 'website_read_post',
-	  'delete_post'           => 'website_delete_post',
-	  'edit_posts'            => 'website_edit_posts',
-	  'edit_others_posts'     => 'website_edit_others_posts',
-	  'publish_posts'         => 'website_publish_posts',
-	  'read_private_posts'    => 'website_read_private_posts',
+		'edit_post'          => 'website_edit_post',
+		'read_post'          => 'website_read_post',
+		'delete_post'        => 'website_delete_post',
+		'edit_posts'         => 'website_edit_posts',
+		'edit_others_posts'  => 'website_edit_others_posts',
+		'publish_posts'      => 'website_publish_posts',
+		'read_private_posts' => 'website_read_private_posts',
 	);
-	$args = array(
-		'label'                 => __( 'Server', 'captaincore' ),
-		'description'           => __( 'Server Description', 'captaincore' ),
-		'labels'                => $labels,
-		'supports'              => array( ),
-		'hierarchical'          => false,
-		'public'                => false,
-		'show_ui'               => true,
-		'show_in_menu'          => false,
-		'menu_position'         => 10,
-		'menu_icon'             => 'dashicons-building',
-		'show_in_admin_bar'     => true,
-		'show_in_nav_menus'     => true,
-		'can_export'            => true,
-		'has_archive'           => true,
-		'exclude_from_search'   => true,
-		'publicly_queryable'    => false,
-		'capability_type'       => 'page',
+	$args         = array(
+		'label'               => __( 'Server', 'captaincore' ),
+		'description'         => __( 'Server Description', 'captaincore' ),
+		'labels'              => $labels,
+		'supports'            => array(),
+		'hierarchical'        => false,
+		'public'              => false,
+		'show_ui'             => true,
+		'show_in_menu'        => false,
+		'menu_position'       => 10,
+		'menu_icon'           => 'dashicons-building',
+		'show_in_admin_bar'   => true,
+		'show_in_nav_menus'   => true,
+		'can_export'          => true,
+		'has_archive'         => true,
+		'exclude_from_search' => true,
+		'publicly_queryable'  => false,
+		'capability_type'     => 'page',
 		'capabilities'        => $capabilities,
-		'map_meta_cap' 		  => true
+		'map_meta_cap'        => true,
 	);
 	register_post_type( 'captcore_server', $args );
 
@@ -746,7 +752,7 @@ add_action( 'init', 'server_post_type', 0 );
 // Register Custom Post Type
 function snapshot_post_type() {
 
-	$labels = array(
+	$labels       = array(
 		'name'                  => _x( 'Snapshots', 'Post Type General Name', 'captaincore' ),
 		'singular_name'         => _x( 'Snapshots', 'Post Type Singular Name', 'captaincore' ),
 		'menu_name'             => __( 'Snapshots', 'captaincore' ),
@@ -774,34 +780,34 @@ function snapshot_post_type() {
 		'filter_items_list'     => __( 'Filter items list', 'captaincore' ),
 	);
 	$capabilities = array(
-	  'edit_post'             => 'website_edit_post',
-	  'read_post'             => 'website_read_post',
-	  'delete_post'           => 'website_delete_post',
-	  'edit_posts'            => 'website_edit_posts',
-	  'edit_others_posts'     => 'website_edit_others_posts',
-	  'publish_posts'         => 'website_publish_posts',
-	  'read_private_posts'    => 'website_read_private_posts',
+		'edit_post'          => 'website_edit_post',
+		'read_post'          => 'website_read_post',
+		'delete_post'        => 'website_delete_post',
+		'edit_posts'         => 'website_edit_posts',
+		'edit_others_posts'  => 'website_edit_others_posts',
+		'publish_posts'      => 'website_publish_posts',
+		'read_private_posts' => 'website_read_private_posts',
 	);
-	$args = array(
-		'label'                 => __( 'Snapshot', 'captaincore' ),
-		'description'           => __( 'Snapshot Description', 'captaincore' ),
-		'labels'                => $labels,
-		'supports'              => array( ),
-		'hierarchical'          => false,
-		'public'                => false,
-		'show_ui'               => true,
-		'show_in_menu'          => false,
-		'menu_position'         => 5,
-		'menu_icon'             => 'dashicons-backup',
-		'show_in_admin_bar'     => true,
-		'show_in_nav_menus'     => true,
-		'can_export'            => true,
-		'has_archive'           => false,
-		'exclude_from_search'   => true,
-		'publicly_queryable'    => false,
-		'capability_type'       => 'page',
-		'capabilities'          => $capabilities,
-		'map_meta_cap'          => true
+	$args         = array(
+		'label'               => __( 'Snapshot', 'captaincore' ),
+		'description'         => __( 'Snapshot Description', 'captaincore' ),
+		'labels'              => $labels,
+		'supports'            => array(),
+		'hierarchical'        => false,
+		'public'              => false,
+		'show_ui'             => true,
+		'show_in_menu'        => false,
+		'menu_position'       => 5,
+		'menu_icon'           => 'dashicons-backup',
+		'show_in_admin_bar'   => true,
+		'show_in_nav_menus'   => true,
+		'can_export'          => true,
+		'has_archive'         => false,
+		'exclude_from_search' => true,
+		'publicly_queryable'  => false,
+		'capability_type'     => 'page',
+		'capabilities'        => $capabilities,
+		'map_meta_cap'        => true,
 	);
 	register_post_type( 'captcore_snapshot', $args );
 
@@ -811,7 +817,7 @@ add_action( 'init', 'snapshot_post_type', 0 );
 // Register Custom Post Type
 function captaincore_quicksaves_post_type() {
 
-	$labels = array(
+	$labels       = array(
 		'name'                  => _x( 'Quicksaves', 'Post Type General Name', 'captaincore' ),
 		'singular_name'         => _x( 'Quicksave', 'Post Type Singular Name', 'captaincore' ),
 		'menu_name'             => __( 'Quicksave', 'captaincore' ),
@@ -841,34 +847,34 @@ function captaincore_quicksaves_post_type() {
 		'filter_items_list'     => __( 'Filter items list', 'captaincore' ),
 	);
 	$capabilities = array(
-	  'edit_post'             => 'website_edit_post',
-	  'read_post'             => 'website_read_post',
-	  'delete_post'           => 'website_delete_post',
-	  'edit_posts'            => 'website_edit_posts',
-	  'edit_others_posts'     => 'website_edit_others_posts',
-	  'publish_posts'         => 'website_publish_posts',
-	  'read_private_posts'    => 'website_read_private_posts',
+		'edit_post'          => 'website_edit_post',
+		'read_post'          => 'website_read_post',
+		'delete_post'        => 'website_delete_post',
+		'edit_posts'         => 'website_edit_posts',
+		'edit_others_posts'  => 'website_edit_others_posts',
+		'publish_posts'      => 'website_publish_posts',
+		'read_private_posts' => 'website_read_private_posts',
 	);
-	$args = array(
-		'label'                 => __( 'Quicksave', 'captaincore' ),
-		'description'           => __( 'Quicksave Description', 'captaincore' ),
-		'labels'                => $labels,
-		'supports'              => array( ),
-		'hierarchical'          => false,
-		'public'                => false,
-		'show_ui'               => true,
-		'show_in_menu'          => false,
-		'menu_position'         => 5,
-		'menu_icon'             => 'dashicons-backup',
-		'show_in_admin_bar'     => true,
-		'show_in_nav_menus'     => true,
-		'can_export'            => true,
-		'has_archive'           => false,
-		'exclude_from_search'   => true,
-		'publicly_queryable'    => false,
-		'capability_type'       => 'page',
-		'capabilities'          => $capabilities,
-		'map_meta_cap'          => true
+	$args         = array(
+		'label'               => __( 'Quicksave', 'captaincore' ),
+		'description'         => __( 'Quicksave Description', 'captaincore' ),
+		'labels'              => $labels,
+		'supports'            => array(),
+		'hierarchical'        => false,
+		'public'              => false,
+		'show_ui'             => true,
+		'show_in_menu'        => false,
+		'menu_position'       => 5,
+		'menu_icon'           => 'dashicons-backup',
+		'show_in_admin_bar'   => true,
+		'show_in_nav_menus'   => true,
+		'can_export'          => true,
+		'has_archive'         => false,
+		'exclude_from_search' => true,
+		'publicly_queryable'  => false,
+		'capability_type'     => 'page',
+		'capabilities'        => $capabilities,
+		'map_meta_cap'        => true,
 	);
 	register_post_type( 'captcore_quicksave', $args );
 
@@ -880,18 +886,22 @@ function captaincore_website_tabs() {
 	$screen = get_current_screen();
 
 	// Only edit post screen:
-	$pages = array('captcore_website','captcore_customer','captcore_contact','captcore_domain','captcore_changelog','captcore_process','captcore_processlog','captcore_server','captcore_snapshot','captcore_quicksave');
-	if( in_array($screen->post_type, $pages) ) {
-	    // Before:
-	    add_action( 'all_admin_notices', function(){
-					include "inc/admin-website-tabs.php";
-	        echo '';
-	    });
+	$pages = array( 'captcore_website', 'captcore_customer', 'captcore_contact', 'captcore_domain', 'captcore_changelog', 'captcore_process', 'captcore_processlog', 'captcore_server', 'captcore_snapshot', 'captcore_quicksave' );
+	if ( in_array( $screen->post_type, $pages ) ) {
+		// Before:
+		add_action(
+			'all_admin_notices', function() {
+					include 'inc/admin-website-tabs.php';
+				echo '';
+			}
+		);
 
-	    // After:
-	    add_action( 'in_admin_footer', function(){
-	        echo '';
-	    });
+		// After:
+		add_action(
+			'in_admin_footer', function() {
+				echo '';
+			}
+		);
 	}
 };
 
@@ -900,19 +910,19 @@ add_action( 'load-edit.php', 'captaincore_website_tabs' );
 add_action( 'load-post.php', 'captaincore_website_tabs' );
 
 function my_remove_extra_product_data( $data, $post, $context ) {
-    // make sure you've got the right custom post type
-    if ( 'captcore_website' !== $data[ 'type' ] ) {
-        return $data;
-    }
-    // now proceed as you saw in the other examples
-    if ( $context !== 'view' || is_wp_error( $data ) ) {
-        return $data;
-    }
-    // unset unwanted fields
-    unset( $data[ 'link' ] );
+	// make sure you've got the right custom post type
+	if ( 'captcore_website' !== $data['type'] ) {
+		return $data;
+	}
+	// now proceed as you saw in the other examples
+	if ( $context !== 'view' || is_wp_error( $data ) ) {
+		return $data;
+	}
+	// unset unwanted fields
+	unset( $data['link'] );
 
-    // finally, return the filtered data
-    return $data;
+	// finally, return the filtered data
+	return $data;
 }
 
 // make sure you use the SAME filter hook as for regular posts
@@ -920,70 +930,72 @@ add_filter( 'json_prepare_post', 'my_remove_extra_product_data', 12, 3 );
 
 // meta fields functions
 function slug_get_post_meta_array( $object, $field_name, $request ) {
-    return get_field( $field_name, $object['id'] );
+	return get_field( $field_name, $object['id'] );
 }
 function slug_get_post_meta_revisions( $object, $field_name, $request ) {
-    $gist = get_post_meta( $object['id'], $field_name );
-    return $gist;
+	$gist = get_post_meta( $object['id'], $field_name );
+	return $gist;
 }
 function slug_get_post_meta_cb( $object, $field_name, $request ) {
-    return get_post_meta( $object['id'], $field_name );
+	return get_post_meta( $object['id'], $field_name );
 }
 function slug_get_paid_by( $object, $field_name, $request ) {
 		$post_id = get_post_meta( $object['id'], $field_name )[0][0];
-		if ($post_id) {
-			$post_title = get_the_title($post_id);
-		}
-    return $post_title;
+	if ( $post_id ) {
+		$post_title = get_the_title( $post_id );
+	}
+	return $post_title;
 }
 function slug_update_post_meta_cb( $value, $object, $field_name ) {
-		if ( is_object($object) ) {
-			$object_id = $object->ID;
-		} else {
-			$object_id = $object['id'];
-		}
-    return update_post_meta( $object_id, $field_name, $value );
+	if ( is_object( $object ) ) {
+		$object_id = $object->ID;
+	} else {
+		$object_id = $object['id'];
+	}
+	return update_post_meta( $object_id, $field_name, $value );
 }
 
 function slug_get_paid_by_me( $object, $field_name, $request ) {
 
 	$paid_by_me = array();
-	$post_id = $object['id'];
+	$post_id    = $object['id'];
 
-	$websites = get_posts(array(
-		'post_type' => 'captcore_customer',
-	    'posts_per_page'         => '-1',
-	    'meta_query' => array(
-        	'relation'		=> 'AND',
+	$websites = get_posts(
+		array(
+			'post_type'      => 'captcore_customer',
+			'posts_per_page' => '-1',
+			'meta_query'     => array(
+				'relation' => 'AND',
 				array(
-					'key' => 'paid_by', // name of custom field
-					'value' => '"' . $post_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-					'compare' => 'LIKE'
+					'key'     => 'paid_by', // name of custom field
+					'value'   => '"' . $post_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+					'compare' => 'LIKE',
 				),
 				array(
-					'key'	  	=> 'status',
-					'value'	  	=> 'cancelled',
-					'compare' 	=> '!=',
+					'key'     => 'status',
+					'value'   => 'cancelled',
+					'compare' => '!=',
 				),
+			),
 		)
-	));
+	);
 
-	if( $websites ):
+	if ( $websites ) :
 
-		foreach( $websites as $website ):
+		foreach ( $websites as $website ) :
 			$domain = get_the_title( $website->ID );
-	        $data = array (
-	        	"id" => $website->ID,
-	        	"website" => $domain,
-	        	"addons" => get_field("addons", $website->ID),
-	        	"price" => get_field("hosting_price", $website->ID),
-	        	"views" => get_field("views", $website->ID),
-	        	"storage" => get_field("storage", $website->ID),
-	        	"total_price" => get_field("total_price", $website->ID),
-	        	"hosting_plan" => get_field("hosting_plan", $website->ID)
-	        );
+			$data   = array(
+				'id'           => $website->ID,
+				'website'      => $domain,
+				'addons'       => get_field( 'addons', $website->ID ),
+				'price'        => get_field( 'hosting_price', $website->ID ),
+				'views'        => get_field( 'views', $website->ID ),
+				'storage'      => get_field( 'storage', $website->ID ),
+				'total_price'  => get_field( 'total_price', $website->ID ),
+				'hosting_plan' => get_field( 'hosting_plan', $website->ID ),
+			);
 
-	        array_push($paid_by_me, $data);
+			array_push( $paid_by_me, $data );
 
 		endforeach;
 	endif;
@@ -997,11 +1009,16 @@ function slug_get_process_description( $object, $field_name, $request ) {
 
 	$description = get_post_meta( $object['id'], $field_name );
 
-	if ($description[0]) {
-		$description = WPCom_Markdown::get_instance()->transform( $description[0], array('id'=>false,'unslash'=>false));
+	if ( $description[0] ) {
+		$description = WPCom_Markdown::get_instance()->transform(
+			$description[0], array(
+				'id'      => false,
+				'unslash' => false,
+			)
+		);
 	} else {
 		// ACF field should be in an array if not then return nothing via API.
-		$description = "";
+		$description = '';
 	}
 
 	return $description;
@@ -1011,53 +1028,53 @@ function slug_get_process( $object, $field_name, $request ) {
 	$process_id = get_post_meta( $object['id'], $field_name );
 	$process_id = $process_id[0][0];
 
-	return get_the_title($process_id);
+	return get_the_title( $process_id );
 }
 
 function slug_get_server( $object, $field_name, $request ) {
 	$server_id = get_post_meta( $object['id'], $field_name );
 	$server_id = $server_id[0][0];
 
-	$provider_field = get_field_object('field_5803a848814c7');
-	$provider_value = get_field('provider', $server_id);
+	$provider_field = get_field_object( 'field_5803a848814c7' );
+	$provider_value = get_field( 'provider', $server_id );
 
-	if ($server_id) {
+	if ( $server_id ) {
 
-	$server = array(
-		"address" => get_field('address', $server_id),
-		"provider" => $provider_field['choices'][ $provider_value ],
-	);
+		$server = array(
+			'address'  => get_field( 'address', $server_id ),
+			'provider' => $provider_field['choices'][ $provider_value ],
+		);
 
 	} else {
-		$server = "";
+		$server = '';
 	}
 
 	return $server;
 }
 
 function my_relationship_query( $args, $field, $post ) {
-    // increase the posts per page
-    $args['posts_per_page'] = 25;
-    $args['meta_query'] = array(
-    		array(
-    			'key'     => 'partner',
-    			'value'   => true,
-    			'compare' => '=',
-    		),
-    	);
+	// increase the posts per page
+	$args['posts_per_page'] = 25;
+	$args['meta_query']     = array(
+		array(
+			'key'     => 'partner',
+			'value'   => true,
+			'compare' => '=',
+		),
+	);
 
-    return $args;
+	return $args;
 }
 
 // filter for a specific field based on it's key
-add_filter('acf/fields/relationship/query/key=field_56181a38cf6e3', 'my_relationship_query', 10, 3);
+add_filter( 'acf/fields/relationship/query/key=field_56181a38cf6e3', 'my_relationship_query', 10, 3 );
 
 function anchor_website_relationship_result( $title, $post, $field, $post_id ) {
 
 	// load a custom field from this $object and show it in the $result
-	$status = get_field('status', $post->ID);
+	$status = get_field( 'status', $post->ID );
 
-	if ($status == "closed") {
+	if ( $status == 'closed' ) {
 
 		// append to title
 		$title .= ' (closed)';
@@ -1070,16 +1087,16 @@ function anchor_website_relationship_result( $title, $post, $field, $post_id ) {
 }
 
 // filter for a specific field based on it's name
-add_filter('acf/fields/relationship/result/name=website', 'anchor_website_relationship_result', 10, 4);
+add_filter( 'acf/fields/relationship/result/name=website', 'anchor_website_relationship_result', 10, 4 );
 
 function anchor_subscription_relationship_result( $title, $post, $field, $post_id ) {
 
 	// load a custom field from this $object and show it in the $result
-	$subscription = wcs_get_subscription($post->ID);
-	$user = $subscription->get_user();
+	$subscription = wcs_get_subscription( $post->ID );
+	$user         = $subscription->get_user();
 
 	// append to title
-	$title = 'Subscription #'.$post->ID.' - ('.$subscription->get_formatted_order_total(). ") $user->first_name $user->last_name $user->user_email";
+	$title = 'Subscription #' . $post->ID . ' - (' . $subscription->get_formatted_order_total() . ") $user->first_name $user->last_name $user->user_email";
 
 	// return
 	return $title;
@@ -1087,94 +1104,94 @@ function anchor_subscription_relationship_result( $title, $post, $field, $post_i
 }
 
 // filter for a specific field based on it's name
-add_filter('acf/fields/relationship/result/name=subscription', 'anchor_subscription_relationship_result', 10, 4);
+add_filter( 'acf/fields/relationship/result/name=subscription', 'anchor_subscription_relationship_result', 10, 4 );
 
 function anchor_subscription_relationship_query( $args, $field, $post ) {
 
 		// Current search term
-		$search_term = $args['s'];
+		$search_term    = $args['s'];
 		$found_user_ids = array();
 
 		// Search users
-		$search_users = get_users( array( 'search' => "*".$search_term."*" ) );
+		$search_users = get_users( array( 'search' => '*' . $search_term . '*' ) );
 
-		foreach ($search_users as $found_user) {
-			$found_user_ids[] = $found_user->ID;
-		}
+	foreach ( $search_users as $found_user ) {
+		$found_user_ids[] = $found_user->ID;
+	}
 
 		// Array of WP_User objects.
-		foreach ( $blogusers as $user ) {
-			echo '<span>' . esc_html( $user->user_email ) . '</span>';
-		}
+	foreach ( $blogusers as $user ) {
+		echo '<span>' . esc_html( $user->user_email ) . '</span>';
+	}
 
-		if ( $found_user_ids ) {
-			// Check for Subscriptions assigned to Users
-			$args['meta_query'] = array(
-					array(
-					'key'     => '_customer_user',
-					'value'   => $found_user_ids,
-					'type'    => 'numeric',
-					'compare' => 'IN',
-					)
-			);
-		} else {
-			$args['posts_per_page'] = 0;
-		}
+	if ( $found_user_ids ) {
+		// Check for Subscriptions assigned to Users
+		$args['meta_query'] = array(
+			array(
+				'key'     => '_customer_user',
+				'value'   => $found_user_ids,
+				'type'    => 'numeric',
+				'compare' => 'IN',
+			),
+		);
+	} else {
+		$args['posts_per_page'] = 0;
+	}
 		// Remove standard search
-		unset($args['s']);
+		unset( $args['s'] );
 
-		//print_r( $args ); wp_die();
-
-    return $args;
+		// print_r( $args ); wp_die();
+	return $args;
 }
 
 // filter for a specific field based on it's key
-add_filter('acf/fields/relationship/query/name=subscription', 'anchor_subscription_relationship_query', 10, 3);
+add_filter( 'acf/fields/relationship/query/name=subscription', 'anchor_subscription_relationship_query', 10, 3 );
 
 // Validate domain is unique
-add_action('acf/validate_save_post', 'my_acf_validate_save_post', 10, 0);
+add_action( 'acf/validate_save_post', 'my_acf_validate_save_post', 10, 0 );
 
 function my_acf_validate_save_post() {
 
 	// Runs only when creating a new domain post.
-	if( $_POST['post_type'] == "domain" ) {
+	if ( $_POST['post_type'] == 'domain' ) {
 
 		$post_id = $_POST['post_ID'];
-		$domain = $_POST['post_title'];
+		$domain  = $_POST['post_title'];
 
 		// Check for duplicate domain.
-		$domain_exists = get_posts( array(
-			'title'						=> $domain,
-			'post_type' 			=> 'captcore_domain',
-			'posts_per_page'	=> '-1',
-			'post_status'			=> 'publish',
-			'fields'          => 'ids',
-		 ));
+		$domain_exists = get_posts(
+			array(
+				'title'          => $domain,
+				'post_type'      => 'captcore_domain',
+				'posts_per_page' => '-1',
+				'post_status'    => 'publish',
+				'fields'         => 'ids',
+			)
+		);
 
 		 // Remove current ID from results
-		 if (($key = array_search($post_id, $domain_exists)) !== false) {
-		    unset($domain_exists[$key]);
-		 }
+		if ( ( $key = array_search( $post_id, $domain_exists ) ) !== false ) {
+			unset( $domain_exists[ $key ] );
+		}
 
 		 // If results still exists then give an error
-		 if ( count($domain_exists) > 0 ) {
-				 acf_add_validation_error( '', 'Domain has already been added.' );
-		 }
-
+		if ( count( $domain_exists ) > 0 ) {
+				acf_add_validation_error( '', 'Domain has already been added.' );
+		}
 	}
 
 }
 
 
 // run before ACF saves the $_POST['acf'] data
-add_action('acf/save_post', 'anchor_acf_save_post_before', 1);
-function anchor_acf_save_post_before( $post_id ){
+add_action( 'acf/save_post', 'anchor_acf_save_post_before', 1 );
+function anchor_acf_save_post_before( $post_id ) {
 
 	if ( get_post_type( $post_id ) == 'captcore_website' ) {
 
-		if ( get_field('launch_date', $post_id) == "" and $_POST['acf']['field_52d167f4ac39e'] == "") {
+		if ( get_field( 'launch_date', $post_id ) == '' and $_POST['acf']['field_52d167f4ac39e'] == '' ) {
 			// No date was entered for Launch Date, assign to today.
-			$_POST['acf']['field_52d167f4ac39e'] = date("Ymd");
+			$_POST['acf']['field_52d167f4ac39e'] = date( 'Ymd' );
 		}
 	}
 
@@ -1184,11 +1201,11 @@ function acf_load_color_field_choices( $field ) {
 
 	global $woocommerce;
 
-    // reset choices
-    $field['choices'] = array();
+	// reset choices
+	$field['choices'] = array();
 
-    // Args
-    $args = array(
+	// Args
+	$args = array(
 		'status'         => array( 'draft', 'pending', 'private', 'publish' ),
 		'type'           => array_merge( array_keys( wc_get_product_types() ) ),
 		'parent'         => null,
@@ -1205,263 +1222,263 @@ function acf_load_color_field_choices( $field ) {
 		'return'         => 'objects',
 		'paginate'       => false,
 		'shipping_class' => array(),
-    );
+	);
 
-    // List all products
-    $products = wc_get_products( $args );
+	// List all products
+	$products = wc_get_products( $args );
 
-    $choices = array();
-    foreach ( $products as $product ) {
+	$choices = array();
+	foreach ( $products as $product ) {
 
-    	if ($product->get_type() == "variable-subscription" or $product->get_type() == "variable") {
-    		$variations = $product->get_available_variations();
+		if ( $product->get_type() == 'variable-subscription' or $product->get_type() == 'variable' ) {
+			$variations = $product->get_available_variations();
 
-    		foreach ( $variations as $variation ) {
-    			//print_r($variation);
-    			$id = $variation["id"];
-    			$name = $variation["name"];
-    			$attributes =  $variation["attributes"];
-    			$data = array ( "id" => $id, "name" => $name,  "attributes" => $attributes );
+			foreach ( $variations as $variation ) {
+				// print_r($variation);
+				$id         = $variation['id'];
+				$name       = $variation['name'];
+				$attributes = $variation['attributes'];
+				$data       = array(
+					'id'         => $id,
+					'name'       => $name,
+					'attributes' => $attributes,
+				);
 
-    			array_push($choices, $data);
+				array_push( $choices, $data );
 
-    		}
+			}
+		} else {
+			$id   = $product->get_id();
+			$name = $product->get_title();
+			$data = array(
+				'id'   => $id,
+				'name' => $name,
+			);
+			array_push( $choices, $data );
+		}
 
+		// echo "<pre>";
+		// print_r();
+		// echo "</pre>";
+	}
 
-    	} else {
-    		$id = $product->get_id();
-    		$name = $product->get_title();
-    		$data = array ( "id" => $id, "name" => $name );
-    		array_push($choices, $data);
-    	}
+	// loop through array and add to field 'choices'
+	if ( is_array( $choices ) ) {
 
-    	//echo "<pre>";
-    	//print_r();
-    	//echo "</pre>";
+		foreach ( $choices as $choice ) {
 
-    }
+			$attributes           = $choice['attributes'];
+			$formatted_attributes = '';
+			foreach ( $attributes as $attribute ) {
+				$formatted_attributes .= ' - ' . $attribute;
+			}
 
-    // loop through array and add to field 'choices'
-    if( is_array($choices) ) {
+			$field['choices'][ $choice['id'] ] = $choice['name'] . $formatted_attributes;
 
-        foreach( $choices as $choice ) {
+		}
+	}
 
-        	$attributes = $choice["attributes"];
-        	$formatted_attributes = "";
-        	foreach ($attributes as $attribute) {
-        		$formatted_attributes .= " - " . $attribute;
-        	}
-
-            $field['choices'][ $choice["id"] ] = $choice["name"] . $formatted_attributes;
-
-        }
-
-    }
-
-
-    // return the field
-    return $field;
+	// return the field
+	return $field;
 
 }
 
-add_filter('acf/load_field/key=field_590681f3c0775', 'acf_load_color_field_choices');
+add_filter( 'acf/load_field/key=field_590681f3c0775', 'acf_load_color_field_choices' );
 
 // run after ACF saves
-add_action('acf/save_post', 'anchor_acf_save_post_after', 20);
-function anchor_acf_save_post_after( $post_id ){
+add_action( 'acf/save_post', 'anchor_acf_save_post_after', 20 );
+function anchor_acf_save_post_after( $post_id ) {
 
 	if ( get_post_type( $post_id ) == 'captcore_website' ) {
-	    $custom = get_post_custom($post_id);
-	    $hosting_plan = $custom["hosting_plan"][0];
-	    $hosting_price = $custom["hosting_price"][0];
-	    $addons = get_field('addons', $post_id);
-	    $customer = get_field('customer', $post_id);
-	    $views = get_field('views', $post_id);
-	    $status = $custom["status"][0];
-	    $total = 0;
-	    $addon_total = 0;
+		$custom        = get_post_custom( $post_id );
+		$hosting_plan  = $custom['hosting_plan'][0];
+		$hosting_price = $custom['hosting_price'][0];
+		$addons        = get_field( 'addons', $post_id );
+		$customer      = get_field( 'customer', $post_id );
+		$views         = get_field( 'views', $post_id );
+		$status        = $custom['status'][0];
+		$total         = 0;
+		$addon_total   = 0;
 
-	    if ( $customer == "" ) {
-	    	// no customer found, generate and assign the customer
-	    	if (get_field('billing_date', $post_id)) {
-	    		$website_billing_date = date('Ymd', strtotime(get_field('billing_date', $post_id)));
-	    	}
-	    	$website_hosting_plan = get_field('hosting_plan', $post_id);
-	    	$website_hosting_price = get_field('hosting_price', $post_id);
-	    	$website_addons = get_field('addons', $post_id);
-	    	$website_billing_method = get_field('billing_method', $post_id);
-	    	$website_billing_email = get_field('billing_email', $post_id);
+		if ( $customer == '' ) {
+			// no customer found, generate and assign the customer
+			if ( get_field( 'billing_date', $post_id ) ) {
+				$website_billing_date = date( 'Ymd', strtotime( get_field( 'billing_date', $post_id ) ) );
+			}
+			$website_hosting_plan   = get_field( 'hosting_plan', $post_id );
+			$website_hosting_price  = get_field( 'hosting_price', $post_id );
+			$website_addons         = get_field( 'addons', $post_id );
+			$website_billing_method = get_field( 'billing_method', $post_id );
+			$website_billing_email  = get_field( 'billing_email', $post_id );
 
-	    	// Create customer object
-	    	$my_post = array(
-	    	  'post_title'    => get_the_title( $post_id ),
-	    	  'post_type'     => 'captcore_customer',
-	    	  'post_status'   => 'publish',
-	    	  'post_author'   => 1
-	    	);
+			// Create customer object
+			$my_post = array(
+				'post_title'  => get_the_title( $post_id ),
+				'post_type'   => 'captcore_customer',
+				'post_status' => 'publish',
+				'post_author' => 1,
+			);
 
-	    	// Insert the post into the database
-	    	$customer_post_id = wp_insert_post( $my_post );
+			// Insert the post into the database
+			$customer_post_id = wp_insert_post( $my_post );
 
-	    	// Add data to customer
-	    	if ($website_hosting_plan) {
-	    		update_field( "field_549d42b57c687", $website_hosting_plan, $customer_post_id );
-	    	} else {
-	    		update_field( "field_549d42b57c687", "basic", $customer_post_id );
-	    	}
-	    	if ($website_hosting_price) {
-	    		// assign hosting plan
-		    	update_field( "field_549d42d07c688", $website_hosting_price, $customer_post_id );
+			// Add data to customer
+			if ( $website_hosting_plan ) {
+				update_field( 'field_549d42b57c687', $website_hosting_plan, $customer_post_id );
+			} else {
+				update_field( 'field_549d42b57c687', 'basic', $customer_post_id );
+			}
+			if ( $website_hosting_price ) {
+				// assign hosting plan
+				update_field( 'field_549d42d07c688', $website_hosting_price, $customer_post_id );
 
-		    	// calculate and assign new total price
-	    		$hosting_price = get_field('hosting_price', $post_id);
-	    		$addons = get_field('addons', $post_id);
+				// calculate and assign new total price
+				$hosting_price = get_field( 'hosting_price', $post_id );
+				$addons        = get_field( 'addons', $post_id );
 
-	    	    // check if the repeater field has rows of data
-	    	    if( have_rows('addons', $post_id) ):
+				// check if the repeater field has rows of data
+				if ( have_rows( 'addons', $post_id ) ) :
 
-	    	     	// loop through the rows of data
-	    	        while ( have_rows('addons', $post_id) ) : the_row();
-	    	            // vars
-	    	    		$name = get_sub_field('name');
-	    	    		$price = get_sub_field('price');
-	    	    		$addon_total = $price + $addon_total;
-	    	        endwhile;
+					// loop through the rows of data
+					while ( have_rows( 'addons', $post_id ) ) :
+						the_row();
+						// vars
+						$name        = get_sub_field( 'name' );
+						$price       = get_sub_field( 'price' );
+						$addon_total = $price + $addon_total;
+					endwhile;
 
-	    	    else :
-	    	    // no rows found
-	    	    endif;
-	    	    $total_price = $hosting_price + $addon_total;
-		    	update_field( "field_56181aaed39a9", $total_price, $customer_post_id );
-		    } else {
-		    	update_field( "field_549d42d07c688", "240", $customer_post_id ); 	// Hosting Price
-		    	update_field( "field_56181aaed39a9", "240", $customer_post_id ); 	// Total Price
-		    	update_field( "field_56252d8051ee2", "year", $customer_post_id ); 	// Billing Terms
-		    }
-		    if ($website_billing_date) {
-	    		update_field( "field_549d430d7c68c", $website_billing_date, $customer_post_id );
-		    } else {
-		    	// No date so assign the first day of the next month
-		    	$first_day_next_month = date("Ymd", strtotime(date('m', strtotime('+1 month')).'/01/'.date('Y', strtotime('+1 month')).' 00:00:00'));
-		    	update_field( "field_549d430d7c68c", $first_day_next_month, $customer_post_id );
-		    }
-		    if ($website_addons) {
-		    	update_field( "field_549ed77808354", $website_addons, $customer_post_id );
-		    }
-		    if ($website_billing_method) {
-		    	update_field( "field_549d42d37c689", $website_billing_method, $customer_post_id );
-		    }
-		    if ($website_billing_email) {
-		    	update_field( "field_549d43087c68b", $website_billing_email, $customer_post_id );
-		    }
-	    	update_field( "field_561936147136b", "active", $customer_post_id );
+				else :
+					// no rows found
+				endif;
+				$total_price = $hosting_price + $addon_total;
+				update_field( 'field_56181aaed39a9', $total_price, $customer_post_id );
+			} else {
+				update_field( 'field_549d42d07c688', '240', $customer_post_id );    // Hosting Price
+				update_field( 'field_56181aaed39a9', '240', $customer_post_id );    // Total Price
+				update_field( 'field_56252d8051ee2', 'year', $customer_post_id );   // Billing Terms
+			}
+			if ( $website_billing_date ) {
+				update_field( 'field_549d430d7c68c', $website_billing_date, $customer_post_id );
+			} else {
+				// No date so assign the first day of the next month
+				$first_day_next_month = date( 'Ymd', strtotime( date( 'm', strtotime( '+1 month' ) ) . '/01/' . date( 'Y', strtotime( '+1 month' ) ) . ' 00:00:00' ) );
+				update_field( 'field_549d430d7c68c', $first_day_next_month, $customer_post_id );
+			}
+			if ( $website_addons ) {
+				update_field( 'field_549ed77808354', $website_addons, $customer_post_id );
+			}
+			if ( $website_billing_method ) {
+				update_field( 'field_549d42d37c689', $website_billing_method, $customer_post_id );
+			}
+			if ( $website_billing_email ) {
+				update_field( 'field_549d43087c68b', $website_billing_email, $customer_post_id );
+			}
+			update_field( 'field_561936147136b', 'active', $customer_post_id );
 
-	    	// Link website to customer
-	    	update_field( "field_56181a1fcf6e2", $customer_post_id, $post_id);
+			// Link website to customer
+			update_field( 'field_56181a1fcf6e2', $customer_post_id, $post_id );
 
+		} else {
 
-	    } else {
+			// Load customer data
+			$customer_id = $customer[0];
 
-	    	// Load customer data
-
-	    	$customer_id = $customer[0];
-
-	    	$billing_terms = get_field('billing_terms', $customer_id);
-	    	$billing_date = date('Y-m-d', strtotime(get_field('billing_date', $customer_id)));
-	    	$billing_date_month = date('m', strtotime(get_field('billing_date', $customer_id)));
-	    	$current_month = date('m');
-
+			$billing_terms      = get_field( 'billing_terms', $customer_id );
+			$billing_date       = date( 'Y-m-d', strtotime( get_field( 'billing_date', $customer_id ) ) );
+			$billing_date_month = date( 'm', strtotime( get_field( 'billing_date', $customer_id ) ) );
+			$current_month      = date( 'm' );
 
 			// If yearly then calculate date of beginning of current pay period
-			if ($billing_terms == "year") {
-				$billing_period = "";
+			if ( $billing_terms == 'year' ) {
+				$billing_period = '';
 			}
 			// If monthly then calculate date of beginning of current pay period
-			if ($billing_terms == "month") {
-				$billing_period = "";
+			if ( $billing_terms == 'month' ) {
+				$billing_period = '';
 			}
 			// If quarterly then calculate date of beginning of current pay period
-			if ($billing_terms == "quarter") {
-				$billing_period = "";
+			if ( $billing_terms == 'quarter' ) {
+				$billing_period = '';
 			}
+		}
 
-	    }
+		// Update customer usage
+		if ( isset( $views ) and is_array( $customer ) ) {
 
-	    // Update customer usage
-	    if (isset( $views ) and is_array( $customer )) {
+			$views       = 0;
+			$storage     = 0;
+			$customer_id = $customer[0];
 
-	    	$views = 0;
-	    	$storage = 0;
-	    	$customer_id = $customer[0];
+			/*
+			*  Query posts for a relationship value.
+			*  This method uses the meta_query LIKE to match the string "123" to the database value a:1:{i:0;s:3:"123";} (serialized array)
+			*/
 
-	    	/*
-	    	*  Query posts for a relationship value.
-	    	*  This method uses the meta_query LIKE to match the string "123" to the database value a:1:{i:0;s:3:"123";} (serialized array)
-	    	*/
-
-	    	$websites = get_posts(array(
-	    		'post_type' 			=> 'captcore_website',
-	    	  'posts_per_page'  => '-1',
-	    	  'meta_query' 			=> array(
-					 'relation'		=> 'AND',
+			$websites = get_posts(
+				array(
+					'post_type'      => 'captcore_website',
+					'posts_per_page' => '-1',
+					'meta_query'     => array(
+						'relation' => 'AND',
 						array(
-	    				'key' => 'status', // name of custom field
-	    				'value' => 'active', // matches exaclty "123", not just 123. This prevents a match for "1234"
-	    				'compare' => '='
-	    			),
-	    			array(
-	    				'key' => 'customer', // name of custom field
-	    				'value' => '"' . $customer_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-	    				'compare' => 'LIKE'
-	    			)
-	    		)
-	    	));
+							'key'     => 'status', // name of custom field
+							'value'   => 'active', // matches exaclty "123", not just 123. This prevents a match for "1234"
+							'compare' => '=',
+						),
+						array(
+							'key'     => 'customer', // name of custom field
+							'value'   => '"' . $customer_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+							'compare' => 'LIKE',
+						),
+					),
+				)
+			);
 
-	    	if( $websites ):
-	    		foreach( $websites as $website ):
+			if ( $websites ) :
+				foreach ( $websites as $website ) :
 
-	    			$storage = $storage + get_field('storage', $website->ID);
-	    			$views = $views + get_field('views', $website->ID);
+					$storage = $storage + get_field( 'storage', $website->ID );
+					$views   = $views + get_field( 'views', $website->ID );
 
-	    		 endforeach;
-	    	endif;
+				 endforeach;
+			endif;
 
-	    	update_field( "field_59089b37bd588", $storage , $customer_id );
-	    	update_field( "field_59089b3ebd589", $views , $customer_id );
+			update_field( 'field_59089b37bd588', $storage, $customer_id );
+			update_field( 'field_59089b3ebd589', $views, $customer_id );
 
-	    }
-
+		}
 	}
 	if ( get_post_type( $post_id ) == 'captcore_customer' ) {
-		$custom = get_post_custom($post_id);
-		$hosting_price = $custom["hosting_price"][0];
-		$addons = get_field('addons', $post_id);
+		$custom        = get_post_custom( $post_id );
+		$hosting_price = $custom['hosting_price'][0];
+		$addons        = get_field( 'addons', $post_id );
 
-	    // check if the repeater field has rows of data
-	    if( have_rows('addons') ):
+		// check if the repeater field has rows of data
+		if ( have_rows( 'addons' ) ) :
 
-	     	// loop through the rows of data
-	        while ( have_rows('addons') ) : the_row();
+			// loop through the rows of data
+			while ( have_rows( 'addons' ) ) :
+				the_row();
 
-	            // vars
-	    		$name = get_sub_field('name');
-	    		$price = get_sub_field('price');
-	    		$addon_total = $price + $addon_total;
+				// vars
+				$name        = get_sub_field( 'name' );
+				$price       = get_sub_field( 'price' );
+				$addon_total = $price + $addon_total;
 
-	        endwhile;
+			endwhile;
 
-	    else :
+		else :
 
-	        // no rows found
-
-	    endif;
-	    $total_price = $hosting_price + $addon_total;
-	    update_field('field_56181aaed39a9', $total_price, $post_id);
+			// no rows found
+		endif;
+		$total_price = $hosting_price + $addon_total;
+		update_field( 'field_56181aaed39a9', $total_price, $post_id );
 	}
 
 	if ( get_post_type( $post_id ) == 'captcore_domain' ) {
 
-		if ( get_field('domain_id', $post_id ) == "" ) {
+		if ( get_field( 'domain_id', $post_id ) == '' ) {
 
 			$domainname = get_the_title( $post_id );
 
@@ -1469,92 +1486,89 @@ function anchor_acf_save_post_after( $post_id ){
 			$constellix_all_domains = get_transient( 'constellix_all_domains' );
 
 			// If empty then update transient with large remote call
-		  if( empty( $constellix_all_domains ) ) {
+			if ( empty( $constellix_all_domains ) ) {
 
-				$constellix_all_domains = constellix_api_get("domains");
+				$constellix_all_domains = constellix_api_get( 'domains' );
 
 				// Save the API response so we don't have to call again until tomorrow.
-    		set_transient( 'constellix_all_domains', $constellix_all_domains, HOUR_IN_SECONDS );
+				set_transient( 'constellix_all_domains', $constellix_all_domains, HOUR_IN_SECONDS );
 
 			}
 
 			// Search API for domain ID
-			foreach($constellix_all_domains as $domain) {
-				if( $domainname == $domain->name ) {
+			foreach ( $constellix_all_domains as $domain ) {
+				if ( $domainname == $domain->name ) {
 					$domain_id = $domain->id;
 				}
 			}
 
 			if ( $domain_id ) {
 				// Found domain ID from API so update post
-				update_field("domain_id", $domain_id, $post_id);
+				update_field( 'domain_id', $domain_id, $post_id );
 			} else {
 				// Generate a new domain zone and adds the new domain ID to the post
-				$post = array( "names" => array( $domainname ) );
+				$post = array( 'names' => array( $domainname ) );
 
-				$response = constellix_api_post("domains", $post);
+				$response = constellix_api_post( 'domains', $post );
 
-				foreach($response as $domain) {
-				  // Capture new domain IDs from $response
-				  $domain_id = $domain->id;
+				foreach ( $response as $domain ) {
+					// Capture new domain IDs from $response
+					$domain_id = $domain->id;
 				}
-				update_field("domain_id", $domain_id, $post_id);
+				update_field( 'domain_id', $domain_id, $post_id );
 			}
 			// Assign domain to customers
-			$args = array(
-				'title' => $domainname,
-				'post_type' => 'captcore_website'
+			$args        = array(
+				'title'     => $domainname,
+				'post_type' => 'captcore_website',
 			);
-			$website = get_posts( $args );
-			$website_id = $website[0]->ID;
-			$customer = get_field('customer', $website_id );
+			$website     = get_posts( $args );
+			$website_id  = $website[0]->ID;
+			$customer    = get_field( 'customer', $website_id );
 			$customer_id = $customer[0];
-			$domains = get_field("domains", $customer_id);
+			$domains     = get_field( 'domains', $customer_id );
 
 			// Add domains to customer if not already assigned
-			if ( !in_array($post_id, $domains) ) {
+			if ( ! in_array( $post_id, $domains ) ) {
 				$domains[] = $post_id;
-				update_field("domains", $domains, $customer_id);
+				update_field( 'domains', $domains, $customer_id );
 			}
-
 		}
-
 	}
 
 	if ( get_post_type( $post_id ) == 'captcore_processlog' ) {
-		$custom = get_post_custom($post_id);
-		$process_id = get_field('process', $post_id);
+		$custom     = get_post_custom( $post_id );
+		$process_id = get_field( 'process', $post_id );
 		$process_id = $process_id[0];
-		$roles = has_term("maintenance","process_role",$process_id) + has_term("growth","process_role",$process_id) + has_term("support","process_role",$process_id);
+		$roles      = has_term( 'maintenance', 'process_role', $process_id ) + has_term( 'growth', 'process_role', $process_id ) + has_term( 'support', 'process_role', $process_id );
 		// Check if process is under the maintenance, growth or support role.
-		if ($roles > 0) {
+		if ( $roles > 0 ) {
 			// Making log public which will be viewable over WP REST API
-			update_field('field_584dc76e7eec2', "1", $post_id);
+			update_field( 'field_584dc76e7eec2', '1', $post_id );
 		} else {
 			// Make it private
-			update_field('field_584dc76e7eec2', "", $post_id);
+			update_field( 'field_584dc76e7eec2', '', $post_id );
 		}
-
 	}
 
 	if ( get_post_type( $post_id ) == 'captcore_contact' ) {
 
-		$first_name = get_field('first_name', $post_id);
-		$last_name = get_field('last_name', $post_id);
-		$email = get_field('email', $post_id);
+		$first_name = get_field( 'first_name', $post_id );
+		$last_name  = get_field( 'last_name', $post_id );
+		$email      = get_field( 'email', $post_id );
 
-		$new_title = "";
+		$new_title = '';
 
-		if ($first_name and $last_name) {
-			$new_title = $first_name . " " . $last_name . " (" . $email . ")";
+		if ( $first_name and $last_name ) {
+			$new_title = $first_name . ' ' . $last_name . ' (' . $email . ')';
 		} else {
 			$new_title = $email;
 		}
 
 		// Update post
 		  $my_post = array(
-		      'ID'           => $post_id,
-		      'post_title'   => $new_title
+			  'ID'         => $post_id,
+			  'post_title' => $new_title,
 		  );
 
 		// Update the post title
@@ -1563,280 +1577,333 @@ function anchor_acf_save_post_after( $post_id ){
 	}
 }
 
-add_action( 'rest_api_init', function () {
-  register_rest_route( 'captaincore/v1', '/client', array(
-    'methods' => 'GET',
-    'callback' => 'captaincore_client_options_func',
-  ) );
-} );
+add_action(
+	'rest_api_init', function () {
+		register_rest_route(
+			'captaincore/v1', '/client', array(
+				'methods'  => 'GET',
+				'callback' => 'captaincore_client_options_func',
+			)
+		);
+	}
+);
 
 function captaincore_client_options_func( WP_REST_Request $request ) {
 
 	$data = array(
-		"profile_image" => get_field("profile_image","option"),
-		"description" => get_field("description","option"),
-		"contact_info" => get_field("contact_info","option"),
-		"business_name" => get_field("business_name","option"),
-		"business_tagline" => get_field("business_tagline","option"),
-		"business_link" => get_field("business_link","option"),
-		"business_logo" => get_field("business_logo","option"),
-		"hosting_dashboard_link" => get_field("hosting_dashboard_link","option"),
+		'profile_image'          => get_field( 'profile_image', 'option' ),
+		'description'            => get_field( 'description', 'option' ),
+		'contact_info'           => get_field( 'contact_info', 'option' ),
+		'business_name'          => get_field( 'business_name', 'option' ),
+		'business_tagline'       => get_field( 'business_tagline', 'option' ),
+		'business_link'          => get_field( 'business_link', 'option' ),
+		'business_logo'          => get_field( 'business_logo', 'option' ),
+		'hosting_dashboard_link' => get_field( 'hosting_dashboard_link', 'option' ),
 	);
 
-  return $data;
+	return $data;
 
 }
 
 // Add meta fields to API
-add_action( 'rest_api_init','slug_register_ah_fields' );
+add_action( 'rest_api_init', 'slug_register_ah_fields' );
 
 function slug_register_ah_fields() {
-	register_rest_field( 'captcore_website', 'launch_date',
+	register_rest_field(
+		'captcore_website', 'launch_date',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_cb',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_website', 'closed_date',
+			'get_callback'    => 'slug_get_post_meta_cb',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_website', 'closed_date',
 		array(
-			 'get_callback'    => 'slug_get_post_meta_cb',
-			 'update_callback' => 'slug_update_post_meta_cb',
-			 'schema'          => null,
-	));
-	register_rest_field( 'captcore_website', 'storage',
+			'get_callback'    => 'slug_get_post_meta_cb',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_website', 'storage',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_cb',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_website', 'address',
+			'get_callback'    => 'slug_get_post_meta_cb',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_website', 'address',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_cb',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_website', 'server',
+			'get_callback'    => 'slug_get_post_meta_cb',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_website', 'server',
 		array(
-		   'get_callback'    => 'slug_get_server',
-		   'update_callback' => 'slug_update_server',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_website', 'views',
+			'get_callback'    => 'slug_get_server',
+			'update_callback' => 'slug_update_server',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_website', 'views',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_cb',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_customer', 'billing_terms',
+			'get_callback'    => 'slug_get_post_meta_cb',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_customer', 'billing_terms',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_array',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_customer', 'addons',
+			'get_callback'    => 'slug_get_post_meta_array',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_customer', 'addons',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_array',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_customer', 'preloaded_email',
+			'get_callback'    => 'slug_get_post_meta_array',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_customer', 'preloaded_email',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_array',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_customer', 'preloaded_users',
+			'get_callback'    => 'slug_get_post_meta_array',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_customer', 'preloaded_users',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_array',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_customer', 'preloaded_plugins',
+			'get_callback'    => 'slug_get_post_meta_array',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_customer', 'preloaded_plugins',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_array',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_customer', 'billing_method',
+			'get_callback'    => 'slug_get_post_meta_array',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_customer', 'billing_method',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_cb',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_customer', 'billing_email',
+			'get_callback'    => 'slug_get_post_meta_cb',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_customer', 'billing_email',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_cb',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_customer', 'billing_date',
+			'get_callback'    => 'slug_get_post_meta_cb',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_customer', 'billing_date',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_cb',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_customer', 'storage',
+			'get_callback'    => 'slug_get_post_meta_cb',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_customer', 'storage',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_cb',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_customer', 'views',
+			'get_callback'    => 'slug_get_post_meta_cb',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_customer', 'views',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_cb',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_customer', 'paid_by',
+			'get_callback'    => 'slug_get_post_meta_cb',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_customer', 'paid_by',
 		array(
-		   'get_callback'    => 'slug_get_paid_by',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_customer', 'paid_by_me',
+			'get_callback'    => 'slug_get_paid_by',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_customer', 'paid_by_me',
 		array(
-		   'get_callback'    => 'slug_get_paid_by_me',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_customer', 'hosting_price',
+			'get_callback'    => 'slug_get_paid_by_me',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_customer', 'hosting_price',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_cb',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_website', 'status',
+			'get_callback'    => 'slug_get_post_meta_cb',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_website', 'status',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_cb',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_customer', 'hosting_plan',
+			'get_callback'    => 'slug_get_post_meta_cb',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_customer', 'hosting_plan',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_cb',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_customer', 'total_price',
+			'get_callback'    => 'slug_get_post_meta_cb',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_customer', 'total_price',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_cb',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_website', 'customer',
+			'get_callback'    => 'slug_get_post_meta_cb',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_website', 'customer',
 		array(
-		   'get_callback'    => 'slug_get_post_meta_cb',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_processlog', 'description',
+			'get_callback'    => 'slug_get_post_meta_cb',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_processlog', 'description',
 		array(
-		   'get_callback'    => 'slug_get_process_description',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
-	register_rest_field( 'captcore_processlog', 'process',
+			'get_callback'    => 'slug_get_process_description',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
+		'captcore_processlog', 'process',
 		array(
-		   'get_callback'    => 'slug_get_process',
-		   'update_callback' => 'slug_update_post_meta_cb',
-		   'schema'          => null,
-	));
+			'get_callback'    => 'slug_get_process',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
 
- };
+};
 
-add_action("manage_posts_custom_column",  "customer_custom_columns");
-add_filter("manage_edit-captcore_website_columns", "website_edit_columns");
-add_filter("manage_edit-captcore_customer_columns", "customer_edit_columns");
-add_filter("manage_edit-captcore_customer_sortable_columns", 'customer_sortable_columns' );
-add_filter("manage_edit-captcore_changelog_columns", "changelog_edit_columns");
+add_action( 'manage_posts_custom_column', 'customer_custom_columns' );
+add_filter( 'manage_edit-captcore_website_columns', 'website_edit_columns' );
+add_filter( 'manage_edit-captcore_customer_columns', 'customer_edit_columns' );
+add_filter( 'manage_edit-captcore_customer_sortable_columns', 'customer_sortable_columns' );
+add_filter( 'manage_edit-captcore_changelog_columns', 'changelog_edit_columns' );
 
 function customer_sortable_columns( $columns ) {
 	$columns['hosting_plan'] = 'hosting_plan';
-	$columns['renewal'] = 'renewal';
-	$columns['url'] = 'url';
-	$columns['total'] = 'total';
+	$columns['renewal']      = 'renewal';
+	$columns['url']          = 'url';
+	$columns['total']        = 'total';
 
 	return $columns;
 }
 
-function changelog_edit_columns($columns){
-  $columns = array(
-  	"cb" => '<input type="checkbox" />',
-    "title" => "Title",
-    "client" => "Client",
-    "date" => "Date",
-  );
+function changelog_edit_columns( $columns ) {
+	$columns = array(
+		'cb'     => '<input type="checkbox" />',
+		'title'  => 'Title',
+		'client' => 'Client',
+		'date'   => 'Date',
+	);
 
-  return $columns;
+	return $columns;
 }
 
-function customer_edit_columns($columns){
-  $columns = array(
-  	"cb" => '<input type="checkbox" />',
-    "title" => "Title",
-    "hosting_plan" => "Plan",
-    "renewal" => "Renews",
-    "addons" => "Addons",
-    "total" => "Total",
-    "status" => "Status"
+function customer_edit_columns( $columns ) {
+	$columns = array(
+		'cb'           => '<input type="checkbox" />',
+		'title'        => 'Title',
+		'hosting_plan' => 'Plan',
+		'renewal'      => 'Renews',
+		'addons'       => 'Addons',
+		'total'        => 'Total',
+		'status'       => 'Status',
 
-  );
+	);
 
-  return $columns;
+	return $columns;
 }
-function website_edit_columns($columns){
-  $columns = array(
-  	"cb" => '<input type="checkbox" />',
-    "title" => "Title",
-    "customer" => "Customer",
-    "partner" => "Partner",
-    "launched" => "Launched",
-    "status" => "Status"
+function website_edit_columns( $columns ) {
+	$columns = array(
+		'cb'       => '<input type="checkbox" />',
+		'title'    => 'Title',
+		'customer' => 'Customer',
+		'partner'  => 'Partner',
+		'launched' => 'Launched',
+		'status'   => 'Status',
 
-  );
+	);
 
-  return $columns;
+	return $columns;
 }
 
 function captaincore_formatted_acf_value_storage( $value, $id, $column ) {
 
 	if ( $column instanceof ACA_ACF_Column ) {
-			$meta_key = $column->get_meta_key(); // This gets the ACF field key
+			$meta_key  = $column->get_meta_key(); // This gets the ACF field key
 			$acf_field = $column->get_acf_field(); // Gets an ACF object
-			$acf_type =  $column->get_acf_field_option( 'type' ); // Get the ACF field type
+			$acf_type  = $column->get_acf_field_option( 'type' ); // Get the ACF field type
 
-			if( 'storage' == $meta_key and is_numeric($value) ){
-				// Alter the display $value
-				$value = human_filesize($value);
-			}
+		if ( 'storage' == $meta_key and is_numeric( $value ) ) {
+			// Alter the display $value
+			$value = human_filesize( $value );
 		}
+	}
 
-    return $value;
+	return $value;
 }
 add_filter( 'ac/column/value', 'captaincore_formatted_acf_value_storage', 10, 3 );
 
 function my_pre_get_posts( $query ) {
 
 	// only modify queries for 'website' post type
-	if( $query->query_vars['post_type'] == 'captcore_customer' ) {
+	if ( $query->query_vars['post_type'] == 'captcore_customer' ) {
 
-		$orderby = $query->get( 'orderby');
+		$orderby = $query->get( 'orderby' );
 
-		if ('hosting_plan' == $orderby) {
-			$query->set('orderby', 'meta_value');
-			$query->set('meta_key', 'hosting_plan');
+		if ( 'hosting_plan' == $orderby ) {
+			$query->set( 'orderby', 'meta_value' );
+			$query->set( 'meta_key', 'hosting_plan' );
 		}
 
-		if ('renewal' == $orderby) {
-			$query->set('orderby', 'meta_value_num');
-			$query->set('meta_key', 'billing_date');
+		if ( 'renewal' == $orderby ) {
+			$query->set( 'orderby', 'meta_value_num' );
+			$query->set( 'meta_key', 'billing_date' );
 		}
 
-		if ('total' == $orderby) {
-			$query->set('orderby', 'meta_value_num');
-			$query->set('meta_key', 'total_price');
+		if ( 'total' == $orderby ) {
+			$query->set( 'orderby', 'meta_value_num' );
+			$query->set( 'meta_key', 'total_price' );
 		}
-
 	}
 
 	// return
@@ -1845,140 +1912,137 @@ function my_pre_get_posts( $query ) {
 }
 
 // add_action('pre_get_posts', 'my_pre_get_posts');
-function customer_custom_columns($column){
-  global $post;
+function customer_custom_columns( $column ) {
+	global $post;
 
-  switch ($column) {
-	case "hosting_plan":
-		$custom = get_post_custom();
-		echo ucfirst($custom["hosting_plan"][0]);
-		break;
-  	case "client":
-  		$clients = get_field('website', $post->ID);
-		if( $clients ):
-			foreach( $clients as $p ): // variable must NOT be called $post (IMPORTANT)
-				echo edit_post_link(get_the_title( $p ), '<p>','</p>', $p);
-			endforeach;
-		endif;
-		break;
-	case "customer":
-		$hosting_price = get_field('hosting_price', $post->ID);
-		$customers = get_field('customer', $post->ID);
-		if( $customers ):
-			foreach( $customers as $customer): // variable must be called $post (IMPORTANT)
-				edit_post_link(get_the_title($customer), '<p>', '</p>', $customer);
-			endforeach;
-			//wp_reset_postdata(); // IMPORTANT - reset the $post object so the rest of the page works correctly
-		endif;
-		//echo "<small>";
-		//echo "Old Details<br />";
-		//the_field('hosting_plan', $post->ID);
-		//the_field('hosting_price', $post->ID);
-		//$addons = get_field('addons', $post->ID);
-		//print_r($addons);
+	switch ( $column ) {
+		case 'hosting_plan':
+			$custom = get_post_custom();
+			echo ucfirst( $custom['hosting_plan'][0] );
+			break;
+		case 'client':
+			$clients = get_field( 'website', $post->ID );
+			if ( $clients ) :
+				foreach ( $clients as $p ) : // variable must NOT be called $post (IMPORTANT)
+					echo edit_post_link( get_the_title( $p ), '<p>', '</p>', $p );
+				endforeach;
+			endif;
+			break;
+		case 'customer':
+			$hosting_price = get_field( 'hosting_price', $post->ID );
+			$customers     = get_field( 'customer', $post->ID );
+			if ( $customers ) :
+				foreach ( $customers as $customer ) : // variable must be called $post (IMPORTANT)
+					edit_post_link( get_the_title( $customer ), '<p>', '</p>', $customer );
+				endforeach;
+				// wp_reset_postdata(); // IMPORTANT - reset the $post object so the rest of the page works correctly
+			endif;
+			// echo "<small>";
+			// echo "Old Details<br />";
+			// the_field('hosting_plan', $post->ID);
+			// the_field('hosting_price', $post->ID);
+			// $addons = get_field('addons', $post->ID);
+			// print_r($addons);
+			// check if the repeater field has rows of data
+			// if( have_rows('addons', $post->ID) ):
+			//
+			// loop through the rows of data
+			// while ( have_rows('addons', $post->ID) ) : the_row();
+			//
+			// vars
+			// $name = get_sub_field('name');
+			// $price = get_sub_field('price');
+			// $addon_total = $price + $addon_total;
+			//
+			// endwhile;
+			//
+			// else :
+			//
+			// no rows found
+			//
+			// endif;
+			// $total_price = $hosting_price + $addon_total;
+			// echo $total_price;
+			// the_field('addons', $post->ID);
+			// the_field('billing_date', $post->ID);
+			// the_field('billing_method', $post->ID);
+			// the_field('billing_email', $post->ID);
+			// echo "</small>";
+			break;
+		case 'partner':
+			$partners = get_field( 'partner', $post->ID );
+			if ( $partners ) :
+				foreach ( $partners as $partner ) : // variable must be called $post (IMPORTANT)
+					edit_post_link( get_the_title( $partner ), '<p>', '</p>', $partner );
+				endforeach;
+				// wp_reset_postdata(); // IMPORTANT - reset the $post object so the rest of the page works correctly
+			endif;
+			break;
+		case 'renewal':
+			date_default_timezone_set( 'America/New_York' );
+			$date = get_field( 'billing_date', $post->ID );
+			if ( $date ) {
+				echo date( 'Y-m-d', strtotime( $date ) );
+			}
+			break;
+		case 'launched':
+			date_default_timezone_set( 'America/New_York' );
+			$date = get_field( 'launch_date', $post->ID );
+			if ( $date ) {
+				echo date( 'Y-m-d', strtotime( $date ) );
+			}
+			break;
+		case 'total':
+			$billing_terms = get_field( 'billing_terms', $post->ID );
+			$total_price   = get_field( 'total_price', $post->ID );
+			echo '$' . $total_price;
+			if ( isset( $billing_terms ) ) {
+				echo '/' . $billing_terms;
+			}
+			break;
+		case 'addons':
+			$custom        = get_post_custom();
+			$hosting_plan  = $custom['hosting_plan'][0];
+			$hosting_price = $custom['hosting_price'][0];
+			$addons        = get_field( 'addons', $post->ID );
+			$addon_total   = 0;
 
-	    // check if the repeater field has rows of data
-	    //if( have_rows('addons', $post->ID) ):
-//
-	    // 	// loop through the rows of data
-	    //    while ( have_rows('addons', $post->ID) ) : the_row();
-//
-	    //        // vars
-	    //		$name = get_sub_field('name');
-	    //		$price = get_sub_field('price');
-	    //		$addon_total = $price + $addon_total;
-//
-	    //    endwhile;
-//
-	    //else :
-//
-	    //    // no rows found
-//
-	    //endif;
-	    //$total_price = $hosting_price + $addon_total;
-	    //echo $total_price;
-		//the_field('addons', $post->ID);
-		//the_field('billing_date', $post->ID);
-		//the_field('billing_method', $post->ID);
-		//the_field('billing_email', $post->ID);
-		//echo "</small>";
-		break;
-	case "partner":
-		$partners = get_field('partner', $post->ID);
-		if( $partners ):
-			foreach( $partners as $partner): // variable must be called $post (IMPORTANT)
-				edit_post_link(get_the_title($partner), '<p>', '</p>',$partner);
-			endforeach;
-			//wp_reset_postdata(); // IMPORTANT - reset the $post object so the rest of the page works correctly
-		endif;
-		break;
-	case "renewal":
-		date_default_timezone_set('America/New_York');
-		$date = get_field('billing_date', $post->ID);
-		if ($date) {
-			echo date('Y-m-d', strtotime($date));
-		}
-		break;
-	case "launched":
-		date_default_timezone_set('America/New_York');
-		$date = get_field('launch_date', $post->ID);
-		if ($date) {
-			echo date('Y-m-d', strtotime($date));
-		}
-		break;
-	case "total":
-		$billing_terms = get_field('billing_terms', $post->ID);
-		$total_price = get_field('total_price', $post->ID);
-		echo "$".$total_price;
-		if (isset($billing_terms)) {
-			echo "/".$billing_terms;
-		}
-		break;
-	case "addons":
-		$custom = get_post_custom();
-		$hosting_plan = $custom["hosting_plan"][0];
-		$hosting_price = $custom["hosting_price"][0];
-		$addons = get_field('addons', $post->ID);
-		$addon_total = 0;
+			$billing_info = '<p>';
+			if ( $addons ) {
+				$billing_info .= count( $addons ) . ' addons';
+			}
+			$billing_info .= '</p>';
 
-		$billing_info = "<p>";
-		if ($addons) {
-		 	$billing_info .= count($addons) ." addons";
-	    }
-	    $billing_info .= "</p>";
-
-		echo $billing_info;
-		break;
-	case "status":
-		$storage = get_field('storage', $post->ID);
-		$status = get_field('status', $post->ID);
-		echo ucfirst($status);
-		break;
-	case "storage":
-		$storage = get_field('storage', $post->ID);
-		if ($storage) {
-			echo human_filesize($storage);
-		}
-		break;
-  }
+			echo $billing_info;
+			break;
+		case 'status':
+			$storage = get_field( 'storage', $post->ID );
+			$status  = get_field( 'status', $post->ID );
+			echo ucfirst( $status );
+			break;
+		case 'storage':
+			$storage = get_field( 'storage', $post->ID );
+			if ( $storage ) {
+				echo human_filesize( $storage );
+			}
+			break;
+	}
 }
 
-function human_filesize($bytes, $decimals = 2) {
-    $size = array('B','kB','MB','GB','TB','PB','EB','ZB','YB');
-    $factor = floor((strlen($bytes) - 1) / 3);
-    return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . @$size[$factor];
+function human_filesize( $bytes, $decimals = 2 ) {
+	$size   = array( 'B', 'kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB' );
+	$factor = floor( ( strlen( $bytes ) - 1 ) / 3 );
+	return sprintf( "%.{$decimals}f", $bytes / pow( 1024, $factor ) ) . @$size[ $factor ];
 }
 
 function my_relationship_result( $title, $post, $field, $post_id ) {
 
 	// load a custom field from this $object and show it in the $result
-	$process = get_field('process', $post->ID);
-	$process_title = $post->ID . " - " . get_the_title($process[0]) . " - " . get_the_author_meta( 'display_name', $post->post_author );
-
+	$process       = get_field( 'process', $post->ID );
+	$process_title = $post->ID . ' - ' . get_the_title( $process[0] ) . ' - ' . get_the_author_meta( 'display_name', $post->post_author );
 
 	// overide to title
 	$title = $process_title;
-
 
 	// return
 	return $title;
@@ -1986,22 +2050,22 @@ function my_relationship_result( $title, $post, $field, $post_id ) {
 }
 
 // filter for every field
-add_filter('acf/fields/relationship/result/name=captcore_processlog', 'my_relationship_result', 10, 4);
+add_filter( 'acf/fields/relationship/result/name=captcore_processlog', 'my_relationship_result', 10, 4 );
 
 /**
  * Deregister matching post types.
  */
 function custom_unregister_theme_post_types() {
-    global $wp_post_types;
-    foreach( array( 'project' ) as $post_type ) {
-        if ( isset( $wp_post_types[ $post_type ] ) ) {
-            unset( $wp_post_types[ $post_type ] );
-        }
-    }
+	global $wp_post_types;
+	foreach ( array( 'project' ) as $post_type ) {
+		if ( isset( $wp_post_types[ $post_type ] ) ) {
+			unset( $wp_post_types[ $post_type ] );
+		}
+	}
 }
 add_action( 'init', 'custom_unregister_theme_post_types', 20 );
 
-function checkApiAuth( $result ){
+function checkApiAuth( $result ) {
 
 	if ( ! empty( $result ) ) {
 			return $result;
@@ -2010,13 +2074,13 @@ function checkApiAuth( $result ){
 	global $wp;
 
 	// Strips first part of endpoint
-	$endpoint_all = str_replace("wp-json/wp/v2/","",$wp->request);
-	if ( strpos($wp->request, "wp-json/captaincore/v1") !== false ) {
+	$endpoint_all = str_replace( 'wp-json/wp/v2/', '', $wp->request );
+	if ( strpos( $wp->request, 'wp-json/captaincore/v1' ) !== false ) {
 		return $result;
 	}
 
 	// Breaks apart endpoint into array
-	$endpoint_all = explode('/', $endpoint_all);
+	$endpoint_all = explode( '/', $endpoint_all );
 
 	// Grabs only the first part of the endpoint
 	$endpoint = $endpoint_all[0];
@@ -2024,59 +2088,56 @@ function checkApiAuth( $result ){
 	// User not logged in so do custom token auth
 	if ( ! is_user_logged_in() ) {
 
-		if ( $endpoint == "posts" ) {
+		if ( $endpoint == 'posts' ) {
 			return $result;
 		}
 
 		// custom auth on changelog endpoint, exlcuding global posts
-		if ( $endpoint == "captcore_changelog" and !isset($_GET["global"]) ) {
+		if ( $endpoint == 'captcore_changelog' and ! isset( $_GET['global'] ) ) {
 
-			$token = $_GET["token"];
-			$website = $_GET["website"];
+			$token   = $_GET['token'];
+			$website = $_GET['website'];
 
-			$token_lookup = get_field('token', $website);
+			$token_lookup = get_field( 'token', $website );
 
 			// Token lookup
-			if ($token and $token == $token_lookup) {
+			if ( $token and $token == $token_lookup ) {
 				return $result;
 			}
-
-		} elseif (  $endpoint == "captcore_changelog" and isset($_GET["global"]) ) {
+		} elseif ( $endpoint == 'captcore_changelog' and isset( $_GET['global'] ) ) {
 			// Return global changelogs for non logged in users
 			return $result;
 		}
 
 		// custom auth on changelog endpoint, exlcuding global posts
-		if ($endpoint == "captcore_processlog") {
+		if ( $endpoint == 'captcore_processlog' ) {
 
-			$token = $_GET["token"];
-			$website = $_GET["website"];
+			$token   = $_GET['token'];
+			$website = $_GET['website'];
 
-			$token_lookup = get_field('token', $website);
+			$token_lookup = get_field( 'token', $website );
 
 			// Token lookup
-
-			if ($token and $token == $token_lookup) {
+			if ( $token and $token == $token_lookup ) {
 				return $result;
 			}
-
 		}
 
 		// custom auth on website endpoint, excluding global posts
-		if ($endpoint == "captcore_website") {
+		if ( $endpoint == 'captcore_website' ) {
 
 			$website_id = $endpoint_all[1];
 
-			$token = $_GET["token"];
-			$domain = $_GET["search"];
+			$token  = $_GET['token'];
+			$domain = $_GET['search'];
 
 			// Token lookup
 			// WP_Query arguments
-			$args = array (
-				'post_type'         => array( 'captcore_website' ),
-				'name'          		=> $domain,
-				'exact'							=> true,
-				'posts_per_page'    => '1',
+			$args = array(
+				'post_type'      => array( 'captcore_website' ),
+				'name'           => $domain,
+				'exact'          => true,
+				'posts_per_page' => '1',
 			);
 
 			// The Query
@@ -2086,7 +2147,7 @@ function checkApiAuth( $result ){
 			if ( $query->have_posts() ) {
 				while ( $query->have_posts() ) {
 					$query->the_post();
-					$token_lookup = get_field('token');
+					$token_lookup = get_field( 'token' );
 				}
 			} else {
 				// no posts found
@@ -2095,18 +2156,17 @@ function checkApiAuth( $result ){
 			// Restore original Post Data
 			wp_reset_postdata();
 
-			if ($token == $token_lookup and $token <> "" and $token_lookup <> "") {
+			if ( $token == $token_lookup and $token <> '' and $token_lookup <> '' ) {
 				return $result;
 			}
-
 		}
 
 		// custom auth on customer endpoint, exlcuding global posts
-		if ($endpoint == "captcore_customer") {
+		if ( $endpoint == 'captcore_customer' ) {
 
-			$token = $_GET["token"];
+			$token       = $_GET['token'];
 			$token_match = false;
-			$id = $endpoint_all[1];
+			$id          = $endpoint_all[1];
 
 			/*
 			*  Query posts for a relationship value.
@@ -2114,103 +2174,103 @@ function checkApiAuth( $result ){
 			*/
 
 			// Token lookup. Find all websites attached to customer to find a token match.
-			$websites = get_posts(array(
-				'post_type'				=> 'captcore_website',
-		    'posts_per_page'	=> '-1',
-		    'meta_query' 			=> array(
-			    'relation' => 'OR',
-					array(
-						'key' => 'customer', // name of custom field
-						'value' => '"' . $id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-						'compare' => 'LIKE'
+			$websites = get_posts(
+				array(
+					'post_type'      => 'captcore_website',
+					'posts_per_page' => '-1',
+					'meta_query'     => array(
+						'relation' => 'OR',
+						array(
+							'key'     => 'customer', // name of custom field
+							'value'   => '"' . $id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+							'compare' => 'LIKE',
+						),
+						array(
+							'key'     => 'partner', // name of custom field
+							'value'   => '"' . $id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+							'compare' => 'LIKE',
+						),
 					),
-					array(
-						'key' => 'partner', // name of custom field
-						'value' => '"' . $id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-						'compare' => 'LIKE'
-					)
 				)
-			));
+			);
 
-			if( $websites ):
-				foreach( $websites as $website ):
+			if ( $websites ) :
+				foreach ( $websites as $website ) :
 
-					$token_lookup = get_field('token',$website->ID);
-					if ($token_lookup == $token) {
+					$token_lookup = get_field( 'token', $website->ID );
+					if ( $token_lookup == $token ) {
 						$token_match = true;
 					}
 				endforeach;
 			endif;
 
-			if ($token_match) {
+			if ( $token_match ) {
 				return $result;
 			}
 		}
 		// User not logged in and no valid bypass token found
-		return new WP_Error( "rest_not_logged_in", "You are not currently logged in.", array( "status" => 401 ) );
+		return new WP_Error( 'rest_not_logged_in', 'You are not currently logged in.', array( 'status' => 401 ) );
 
 	} else {
 
 		// User logged in so check anchor_verify_permissions
-
-		if ($endpoint == "captcore_website") {
+		if ( $endpoint == 'captcore_website' ) {
 
 			$website_id = $endpoint_all[1];
 
-			if ( !anchor_verify_permissions($website_id) ) {
-				return new WP_Error( 'rest_token_invalid', __( 'Token is invalid'), array( 'status' => 403 ) );
+			if ( ! anchor_verify_permissions( $website_id ) ) {
+				return new WP_Error( 'rest_token_invalid', __( 'Token is invalid' ), array( 'status' => 403 ) );
 			}
-
 		}
 
-		if ($endpoint == "captcore_customer") {
+		if ( $endpoint == 'captcore_customer' ) {
 
 			$customer_id = $endpoint_all[1];
 
-			if ( !anchor_verify_permissions_customer($customer_id) ) {
-				return new WP_Error( 'rest_token_invalid', __( 'Token is invalid'), array( 'status' => 403 ) );
+			if ( ! anchor_verify_permissions_customer( $customer_id ) ) {
+				return new WP_Error( 'rest_token_invalid', __( 'Token is invalid' ), array( 'status' => 403 ) );
 			}
-
 		}
-
 	}
 	return $result;
 
 }
-add_filter( "rest_authentication_errors", "checkApiAuth");
+add_filter( 'rest_authentication_errors', 'checkApiAuth' );
 
 // Loads all domains for partners
-function get_domains_per_partner ( $partner_id ) {
+function get_domains_per_partner( $partner_id ) {
 
 	$all_domains = [];
 
 	// Load websites assigned to partner
-	$websites = get_posts(array(
-		'post_type' 			=> 'captcore_website',
-		'posts_per_page'	=> '-1',
-		'order'						=> 'asc',
-		'orderby'					=> 'title',
-		'fields'          => 'ids',
-		'meta_query'			=> array(
-			'relation'			=> 'AND',
+	$websites = get_posts(
+		array(
+			'post_type'      => 'captcore_website',
+			'posts_per_page' => '-1',
+			'order'          => 'asc',
+			'orderby'        => 'title',
+			'fields'         => 'ids',
+			'meta_query'     => array(
+				'relation' => 'AND',
 				array(
-					'key' => 'partner', // name of custom field
-					'value' => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-					'compare' => 'LIKE'
+					'key'     => 'partner', // name of custom field
+					'value'   => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+					'compare' => 'LIKE',
 				),
+			),
 		)
-	));
-	foreach( $websites as $website ):
-		$customers = get_field('customer', $website);
+	);
+	foreach ( $websites as $website ) :
+		$customers = get_field( 'customer', $website );
 
-		foreach( $customers as $customer ):
+		foreach ( $customers as $customer ) :
 
-			$domains = get_field('domains', $customer);
-			if ($domains) {
-				foreach( $domains as $domain ):
+			$domains = get_field( 'domains', $customer );
+			if ( $domains ) {
+				foreach ( $domains as $domain ) :
 					$domain_name = get_the_title( $domain );
-					if($domain_name) {
-						$all_domains[$domain_name] = $domain;
+					if ( $domain_name ) {
+						$all_domains[ $domain_name ] = $domain;
 					}
 				endforeach;
 			}
@@ -2220,37 +2280,39 @@ function get_domains_per_partner ( $partner_id ) {
 	endforeach;
 
 	// Sort array by domain name
-	ksort($all_domains);
+	ksort( $all_domains );
 
 	// None found, check for customer
-	if ( count($all_domains) == 0 ) {
+	if ( count( $all_domains ) == 0 ) {
 
 		// Load websites assigned to partner
-		$websites = get_posts(array(
-			'post_type' 			=> 'captcore_website',
-			'posts_per_page'	=> '-1',
-			'order'						=> 'asc',
-			'orderby'					=> 'title',
-			'fields'          => 'ids',
-			'meta_query'			=> array(
-				'relation'			=> 'AND',
+		$websites = get_posts(
+			array(
+				'post_type'      => 'captcore_website',
+				'posts_per_page' => '-1',
+				'order'          => 'asc',
+				'orderby'        => 'title',
+				'fields'         => 'ids',
+				'meta_query'     => array(
+					'relation' => 'AND',
 					array(
-						'key' => 'customer', // name of custom field
-						'value' => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-						'compare' => 'LIKE'
+						'key'     => 'customer', // name of custom field
+						'value'   => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+						'compare' => 'LIKE',
 					),
+				),
 			)
-		));
-		foreach( $websites as $website ):
-			$customers = get_field('customer', $website);
+		);
+		foreach ( $websites as $website ) :
+			$customers = get_field( 'customer', $website );
 
-			foreach( $customers as $customer ):
+			foreach ( $customers as $customer ) :
 
-				$domains = get_field('domains', $customer);
-				if ($domains) {
-					foreach( $domains as $domain ):
-						$domain_name = get_the_title( $domain );
-						$all_domains[$domain_name] = $domain;
+				$domains = get_field( 'domains', $customer );
+				if ( $domains ) {
+					foreach ( $domains as $domain ) :
+						$domain_name                 = get_the_title( $domain );
+						$all_domains[ $domain_name ] = $domain;
 					endforeach;
 				}
 
@@ -2259,7 +2321,7 @@ function get_domains_per_partner ( $partner_id ) {
 		endforeach;
 
 		// Sort array by domain name
-		ksort($all_domains);
+		ksort( $all_domains );
 
 	}
 
@@ -2270,7 +2332,7 @@ function get_domains_per_partner ( $partner_id ) {
 function anchor_verify_permissions( $website_id ) {
 
 	$current_user = wp_get_current_user();
-	$role_check = in_array( 'administrator', $current_user->roles );
+	$role_check   = in_array( 'administrator', $current_user->roles );
 
 	// Checks for a current user. If admin found pass if not check permissions
 	if ( $current_user && $role_check ) {
@@ -2280,32 +2342,34 @@ function anchor_verify_permissions( $website_id ) {
 		$role_check = in_array( 'partner', $current_user->roles );
 
 		// Checks current users permissions
-		$partner = get_field('partner', 'user_'. get_current_user_id());
+		$partner = get_field( 'partner', 'user_' . get_current_user_id() );
 
-		if ($partner and $role_check) {
-			foreach ($partner as $partner_id) {
+		if ( $partner and $role_check ) {
+			foreach ( $partner as $partner_id ) {
 
-				$websites = get_posts(array(
-					'post_type' 			=> 'captcore_website',
-	        'posts_per_page'	=> '-1',
-					'order'						=> 'asc',
-					'orderby'					=> 'title',
-	        'meta_query'			=> array(
-	        'relation'				=> 'AND',
-						array(
-							'key' => 'partner', // name of custom field
-							'value' => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-							'compare' => 'LIKE'
+				$websites = get_posts(
+					array(
+						'post_type'      => 'captcore_website',
+						'posts_per_page' => '-1',
+						'order'          => 'asc',
+						'orderby'        => 'title',
+						'meta_query'     => array(
+							'relation' => 'AND',
+							array(
+								'key'     => 'partner', // name of custom field
+								'value'   => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+								'compare' => 'LIKE',
+							),
 						),
 					)
-				));
+				);
 
-				if( $websites ):
+				if ( $websites ) :
 
-					foreach( $websites as $website ):
-						$customer_id = get_field('customer', $website->ID);
+					foreach ( $websites as $website ) :
+						$customer_id = get_field( 'customer', $website->ID );
 
-						if ($website_id == $website->ID) {
+						if ( $website_id == $website->ID ) {
 							return true;
 						}
 
@@ -2324,7 +2388,7 @@ function anchor_verify_permissions( $website_id ) {
 function anchor_verify_permissions_customer( $customer_id ) {
 
 	$current_user = wp_get_current_user();
-	$role_check = in_array( 'administrator', $current_user->roles );
+	$role_check   = in_array( 'administrator', $current_user->roles );
 
 	// Checks for a current user. If admin found pass if not check permissions
 	if ( $current_user && $role_check ) {
@@ -2334,37 +2398,39 @@ function anchor_verify_permissions_customer( $customer_id ) {
 		$role_check = in_array( 'partner', $current_user->roles );
 
 		// Checks current users permissions
-		$partner = get_field('partner', 'user_'. get_current_user_id());
+		$partner = get_field( 'partner', 'user_' . get_current_user_id() );
 
-		if ($partner and $role_check) {
-			foreach ($partner as $partner_id) {
+		if ( $partner and $role_check ) {
+			foreach ( $partner as $partner_id ) {
 
-				$websites = get_posts(array(
-					'post_type' 			=> 'captcore_website',
-	        'posts_per_page'	=> '-1',
-					'order'						=> 'asc',
-					'orderby'					=> 'title',
-	        'meta_query'			=> array(
-		        'relation'			=> 'AND',
+				$websites = get_posts(
+					array(
+						'post_type'      => 'captcore_website',
+						'posts_per_page' => '-1',
+						'order'          => 'asc',
+						'orderby'        => 'title',
+						'meta_query'     => array(
+							'relation' => 'AND',
 							array(
-								'key' => 'partner', // name of custom field
-								'value' => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-								'compare' => 'LIKE'
+								'key'     => 'partner', // name of custom field
+								'value'   => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+								'compare' => 'LIKE',
 							),
 							array(
-								'key'	  		=> 'status',
-								'value'	  	=> 'closed',
-								'compare' 	=> '!=',
+								'key'     => 'status',
+								'value'   => 'closed',
+								'compare' => '!=',
 							),
-						)
-				));
+						),
+					)
+				);
 
-				if( $websites ):
+				if ( $websites ) :
 
-					foreach( $websites as $website ):
-						$website_customer_id = get_field('customer', $website->ID);
+					foreach ( $websites as $website ) :
+						$website_customer_id = get_field( 'customer', $website->ID );
 
-						if ($customer_id == $website_customer_id[0]) {
+						if ( $customer_id == $website_customer_id[0] ) {
 							return true;
 						}
 
@@ -2382,58 +2448,61 @@ function anchor_verify_permissions_customer( $customer_id ) {
 // Checks current user for valid permissions
 function anchor_verify_permissions_domain( $domain_id ) {
 
-	$domain_exists = get_posts( array(
-		'post_type' 			=> 'captcore_domain',
-		'posts_per_page'	=> '-1',
-		'meta_query'			=> array(
-			 array(
-					'key' => 'domain_id',
-					'value' => $domain_id,
-					'compare' => '='
-				)
-			)
-	 ));
+	$domain_exists = get_posts(
+		array(
+			'post_type'      => 'captcore_domain',
+			'posts_per_page' => '-1',
+			'meta_query'     => array(
+				array(
+					'key'     => 'domain_id',
+					'value'   => $domain_id,
+					'compare' => '=',
+				),
+			),
+		)
+	);
 
 	// Check if domain exists
 	if ( $domain_exists ) {
 
 		$current_user = wp_get_current_user();
-		$role_check = in_array( 'administrator', $current_user->roles );
+		$role_check   = in_array( 'administrator', $current_user->roles );
 
 		// Checks for a current user. If admin found pass if not check permissions
 		if ( $current_user && $role_check ) {
 			return true;
-		} elseif( $current_user ) {
+		} elseif ( $current_user ) {
 			// Not an administrator so proceed with checking permissions
-
 			// Checks current users permissions
-			$partner = get_field( 'partner', 'user_'. get_current_user_id() );
+			$partner = get_field( 'partner', 'user_' . get_current_user_id() );
 
-			foreach ($partner as $partner_id) {
+			foreach ( $partner as $partner_id ) {
 
-				$websites = get_posts(array(
-					'post_type' 			=> 'captcore_website',
-	        'posts_per_page'	=> '-1',
-					'order'						=> 'asc',
-					'orderby'					=> 'title',
-	        'meta_query'			=> array(
-		        'relation'			=> 'AND',
+				$websites = get_posts(
+					array(
+						'post_type'      => 'captcore_website',
+						'posts_per_page' => '-1',
+						'order'          => 'asc',
+						'orderby'        => 'title',
+						'meta_query'     => array(
+							'relation' => 'AND',
 							array(
-								'key' => 'partner',
-								'value' => '"' . $partner_id . '"',
-								'compare' => 'LIKE'
+								'key'     => 'partner',
+								'value'   => '"' . $partner_id . '"',
+								'compare' => 'LIKE',
 							),
-						)
-				));
+						),
+					)
+				);
 
-				if( $websites ):
+				if ( $websites ) :
 
-					foreach( $websites as $website ):
-						$website_customer_id = get_field('customer', $website->ID);
-						$domains = get_field( 'domains', $website_customer_id[0] );
-						if ($domains) {
-							foreach( $domains as $domain ) {
-								if ( $domain_id == get_field('domain_id', $domain )) {
+					foreach ( $websites as $website ) :
+						$website_customer_id = get_field( 'customer', $website->ID );
+						$domains             = get_field( 'domains', $website_customer_id[0] );
+						if ( $domains ) {
+							foreach ( $domains as $domain ) {
+								if ( $domain_id == get_field( 'domain_id', $domain ) ) {
 									return true;
 								}
 							}
@@ -2444,31 +2513,33 @@ function anchor_verify_permissions_domain( $domain_id ) {
 
 			}
 
-			foreach ($partner as $partner_id) {
+			foreach ( $partner as $partner_id ) {
 
-				$websites = get_posts(array(
-					'post_type' 			=> 'captcore_website',
-	        'posts_per_page'	=> '-1',
-					'order'						=> 'asc',
-					'orderby'					=> 'title',
-	        'meta_query'			=> array(
-		        'relation'			=> 'AND',
+				$websites = get_posts(
+					array(
+						'post_type'      => 'captcore_website',
+						'posts_per_page' => '-1',
+						'order'          => 'asc',
+						'orderby'        => 'title',
+						'meta_query'     => array(
+							'relation' => 'AND',
 							array(
-								'key' => 'customer',
-								'value' => '"' . $partner_id . '"',
-								'compare' => 'LIKE'
+								'key'     => 'customer',
+								'value'   => '"' . $partner_id . '"',
+								'compare' => 'LIKE',
 							),
-						)
-				));
+						),
+					)
+				);
 
-				if( $websites ):
+				if ( $websites ) :
 
-					foreach( $websites as $website ):
-						$website_customer_id = get_field('customer', $website->ID);
-						$domains = get_field( 'domains', $website_customer_id[0] );
-						if ($domains) {
-							foreach( $domains as $domain ) {
-								if ( $domain_id == get_field('domain_id', $domain )) {
+					foreach ( $websites as $website ) :
+						$website_customer_id = get_field( 'customer', $website->ID );
+						$domains             = get_field( 'domains', $website_customer_id[0] );
+						if ( $domains ) {
+							foreach ( $domains as $domain ) {
+								if ( $domain_id == get_field( 'domain_id', $domain ) ) {
 									return true;
 								}
 							}
@@ -2478,9 +2549,7 @@ function anchor_verify_permissions_domain( $domain_id ) {
 				endif;
 
 			}
-
 		}
-
 	}
 
 	// No permissions found
@@ -2493,211 +2562,209 @@ add_action( 'wp_ajax_anchor_dns', 'anchor_dns_action_callback' );
 function anchor_dns_action_callback() {
 	global $wpdb; // this is how you get access to the database
 
-	$domain_id = intval( $_POST['domain_key'] );
+	$domain_id      = intval( $_POST['domain_key'] );
 	$record_updates = $_POST['record_updates'];
 
-	$responses = "[";
+	$responses = '[';
 
-	foreach ($record_updates as $record_update) {
+	foreach ( $record_updates as $record_update ) {
 
-		$record_id = $record_update["record_id"];
-		$record_type = $record_update["record_type"];
-		$record_name = $record_update["record_name"];
-		$record_value = $record_update["record_value"];
-		$record_ttl = $record_update["record_ttl"];
-		$record_status = $record_update["record_status"];
+		$record_id     = $record_update['record_id'];
+		$record_type   = $record_update['record_type'];
+		$record_name   = $record_update['record_name'];
+		$record_value  = $record_update['record_value'];
+		$record_ttl    = $record_update['record_ttl'];
+		$record_status = $record_update['record_status'];
 
-		if ( $record_status == "new-record" ) {
-			if ( $record_type == "mx" ) {
+		if ( $record_status == 'new-record' ) {
+			if ( $record_type == 'mx' ) {
 
 				// Formats MX records into array which API can read
 				$mx_records = [];
-				foreach($record_value as $mx_record) {
+				foreach ( $record_value as $mx_record ) {
 					$mx_records[] = array(
-						"value" => $mx_record["value"],
-						"level" => $mx_record["priority"],
-						"disableFlag" => false
+						'value'       => $mx_record['value'],
+						'level'       => $mx_record['priority'],
+						'disableFlag' => false,
 					);
 				}
 
 				$post = array(
-				  "recordOption" => "roundRobin",
-				  "name" => $record_name,
-				  "ttl" => $record_ttl,
-				  "roundRobin" => $mx_records,
+					'recordOption' => 'roundRobin',
+					'name'         => $record_name,
+					'ttl'          => $record_ttl,
+					'roundRobin'   => $mx_records,
 				);
 
-			} elseif ( $record_type == "cname" ) {
+			} elseif ( $record_type == 'cname' ) {
 
 				$post = array(
-				  "name" => $record_name,
-				  "host" => $record_value,
-					"ttl" => $record_ttl,
+					'name' => $record_name,
+					'host' => $record_value,
+					'ttl'  => $record_ttl,
 				);
 
-			} elseif ($record_type == "httpredirection" ) {
+			} elseif ( $record_type == 'httpredirection' ) {
 
 				$post = array(
-				  "name" => $record_name,
-				  "ttl" => $record_ttl,
-				  "url" => $record_value,
-					"redirectTypeId" => "3",
+					'name'           => $record_name,
+					'ttl'            => $record_ttl,
+					'url'            => $record_value,
+					'redirectTypeId' => '3',
 				);
 
-			} elseif ($record_type == "srv" ) {
+			} elseif ( $record_type == 'srv' ) {
 
 				// Formats SRV records into array which API can read
 				$srv_records = [];
-				foreach($record_value as $srv_record) {
+				foreach ( $record_value as $srv_record ) {
 					$srv_records[] = array(
-						"value" => $srv_record["value"],
-						"priority" => $srv_record["priority"],
-						"weight" => $srv_record["weight"],
-						"port" => $srv_record["port"],
+						'value'    => $srv_record['value'],
+						'priority' => $srv_record['priority'],
+						'weight'   => $srv_record['weight'],
+						'port'     => $srv_record['port'],
 					);
 				}
 
 				$post = array(
-					"recordOption" => "roundRobin",
-					"name" => $record_name,
-					"ttl" => $record_ttl,
-					"roundRobin" => $srv_records,
+					'recordOption' => 'roundRobin',
+					'name'         => $record_name,
+					'ttl'          => $record_ttl,
+					'roundRobin'   => $srv_records,
 				);
 
-		  } else {
+			} else {
 				$post = array(
-				  "recordOption" => "roundRobin",
-				  "name" => $record_name,
-				  "ttl" => $record_ttl,
-				  "roundRobin" => array(
-				    array(
-				      "value" => $record_value,
-				      "disableFlag" => false,
-				    ),
-				   ),
+					'recordOption' => 'roundRobin',
+					'name'         => $record_name,
+					'ttl'          => $record_ttl,
+					'roundRobin'   => array(
+						array(
+							'value'       => $record_value,
+							'disableFlag' => false,
+						),
+					),
 				);
 
 			}
 
-			$response = constellix_api_post("domains/$domain_id/records/$record_type", $post);
+			$response = constellix_api_post( "domains/$domain_id/records/$record_type", $post );
 
-			foreach( $response as $result ) {
-				if( is_array($result) ) {
-					$result["errors"] = $result[0];
-					$responses = $responses . json_encode($result) . ",";
+			foreach ( $response as $result ) {
+				if ( is_array( $result ) ) {
+					$result['errors'] = $result[0];
+					$responses        = $responses . json_encode( $result ) . ',';
 				} else {
-					$responses = $responses . json_encode($result) . ",";
+					$responses = $responses . json_encode( $result ) . ',';
 				}
 			}
-
 		}
 
-		if ( $record_status == "edit-record" ) {
-			if ( $record_type == "mx" ) {
+		if ( $record_status == 'edit-record' ) {
+			if ( $record_type == 'mx' ) {
 
 				// Formats MX records into array which API can read
 				$mx_records = [];
-				foreach($record_value as $mx_record) {
+				foreach ( $record_value as $mx_record ) {
 					$mx_records[] = array(
-						"value" => $mx_record["value"],
-						"level" => $mx_record["priority"],
-						"disableFlag" => false
+						'value'       => $mx_record['value'],
+						'level'       => $mx_record['priority'],
+						'disableFlag' => false,
 					);
 				}
 
 				$post = array(
-				  "recordOption" => "roundRobin",
-				  "name" => $record_name,
-				  "ttl" => $record_ttl,
-				  "roundRobin" => $mx_records,
+					'recordOption' => 'roundRobin',
+					'name'         => $record_name,
+					'ttl'          => $record_ttl,
+					'roundRobin'   => $mx_records,
 				);
 
-			} elseif ( $record_type == "txt" or $record_type == "a" ) {
+			} elseif ( $record_type == 'txt' or $record_type == 'a' ) {
 
 				// Formats A and TXT records into array which API can read
 				$records = [];
-				foreach($record_value as $record) {
+				foreach ( $record_value as $record ) {
 					$records[] = array(
-						"value" => stripslashes($record["value"]),
-						"disableFlag" => false
+						'value'       => stripslashes( $record['value'] ),
+						'disableFlag' => false,
 					);
 				}
 
 				$post = array(
-				  "recordOption" => "roundRobin",
-				  "name" => "$record_name",
-				  "ttl" => $record_ttl,
-				  "roundRobin" => $records,
+					'recordOption' => 'roundRobin',
+					'name'         => "$record_name",
+					'ttl'          => $record_ttl,
+					'roundRobin'   => $records,
 				);
 
-			} elseif ( $record_type == "httpredirection" ) {
+			} elseif ( $record_type == 'httpredirection' ) {
 
 				$post = array(
-				  "name" => $record_name,
-				  "ttl" => $record_ttl,
-				  "url" => $record_value,
-					"redirectTypeId" => "3",
+					'name'           => $record_name,
+					'ttl'            => $record_ttl,
+					'url'            => $record_value,
+					'redirectTypeId' => '3',
 				);
 
-			} elseif ( $record_type == "cname" ) {
+			} elseif ( $record_type == 'cname' ) {
 
 				$post = array(
-				  "name" => $record_name,
-				  "host" => $record_value,
-					"ttl" => $record_ttl,
+					'name' => $record_name,
+					'host' => $record_value,
+					'ttl'  => $record_ttl,
 				);
 
-			} elseif ($record_type == "srv" ) {
+			} elseif ( $record_type == 'srv' ) {
 
 				// Formats SRV records into array which API can read
 				$srv_records = [];
-				foreach($record_value as $srv_record) {
+				foreach ( $record_value as $srv_record ) {
 					$srv_records[] = array(
-						"value" => $srv_record["value"],
-						"priority" => $srv_record["priority"],
-						"weight" => $srv_record["weight"],
-						"port" => $srv_record["port"],
+						'value'    => $srv_record['value'],
+						'priority' => $srv_record['priority'],
+						'weight'   => $srv_record['weight'],
+						'port'     => $srv_record['port'],
 					);
 				}
 
 				$post = array(
-					"recordOption" => "roundRobin",
-					"name" => $record_name,
-					"ttl" => $record_ttl,
-					"roundRobin" => $srv_records,
+					'recordOption' => 'roundRobin',
+					'name'         => $record_name,
+					'ttl'          => $record_ttl,
+					'roundRobin'   => $srv_records,
 				);
 
-		  } else {
+			} else {
 				$post = array(
-				  "recordOption" => "roundRobin",
-				  "name" => $record_name,
-				  "ttl" => $record_ttl,
-				  "roundRobin" => array(
-				    array(
-				      "value" => stripslashes($record_value),
-				      "disableFlag" => false,
-				    ),
-				   ),
+					'recordOption' => 'roundRobin',
+					'name'         => $record_name,
+					'ttl'          => $record_ttl,
+					'roundRobin'   => array(
+						array(
+							'value'       => stripslashes( $record_value ),
+							'disableFlag' => false,
+						),
+					),
 				);
 
 			}
-			$response = constellix_api_put("domains/$domain_id/records/$record_type/$record_id", $post);
-			$response->domain_id = $domain_id;
-			$response->record_id = $record_id;
+			$response              = constellix_api_put( "domains/$domain_id/records/$record_type/$record_id", $post );
+			$response->domain_id   = $domain_id;
+			$response->record_id   = $record_id;
 			$response->record_type = $record_type;
-			$responses = $responses . json_encode($response) . ",";
+			$responses             = $responses . json_encode( $response ) . ',';
 		}
 
-		if ( $record_status == "remove-record" ) {
-			$response = constellix_api_delete("domains/$domain_id/records/$record_type/$record_id");
-			$response->domain_id = $domain_id;
-			$response->record_id = $record_id;
+		if ( $record_status == 'remove-record' ) {
+			$response              = constellix_api_delete( "domains/$domain_id/records/$record_type/$record_id" );
+			$response->domain_id   = $domain_id;
+			$response->record_id   = $record_id;
 			$response->record_type = $record_type;
-			$responses = $responses . json_encode($response) . ",";
+			$responses             = $responses . json_encode( $response ) . ',';
 		}
-
 	}
-	$responses = rtrim($responses,',') . "]";
+	$responses = rtrim( $responses, ',' ) . ']';
 
 	echo $responses;
 
@@ -2711,239 +2778,240 @@ function anchor_install_action_callback() {
 	global $wpdb; // this is how you get access to the database
 
 	if ( is_array( $_POST['post_id'] ) ) {
-		$post_ids = array();
+		$post_ids       = array();
 		$post_ids_array = $_POST['post_id'];
-		foreach( $post_ids_array as $id ) {
+		foreach ( $post_ids_array as $id ) {
 			$post_ids[] = intval( $id );
 		}
 	} else {
 		$post_id = intval( $_POST['post_id'] );
 	}
-	$cmd = $_POST['command'];
-	$value = $_POST['value'];
-	$arguments = $_POST['arguments'];
+	$cmd        = $_POST['command'];
+	$value      = $_POST['value'];
+	$arguments  = $_POST['arguments'];
 	$addon_type = $_POST['addon_type'];
 
-	$site = get_field('site',$post_id);
-	$domain = get_the_title($post_id);
-	$address = get_field('address',$post_id);
-	$username = get_field('username',$post_id);
-	$password = get_field('password',$post_id);
-	$protocol = get_field('protocol',$post_id);
-	$port = get_field('port',$post_id);
-	$homedir = get_field('homedir',$post_id);
-	$staging_site = get_field('site_staging',$post_id);
-	$staging_address = get_field('address_staging',$post_id);
-	$staging_username = get_field('username_staging',$post_id);
-	$staging_password = get_field('password_staging',$post_id);
-	$staging_protocol = get_field('protocol_staging',$post_id);
-	$staging_port = get_field('port_staging',$post_id);
-	$staging_homedir  = get_field('homedir_staging',$post_id);
-	$s3accesskey = get_field('s3_access_key',$post_id);
-	$s3secretkey = get_field('s3_secret_key',$post_id);
-	$s3bucket = get_field('s3_bucket',$post_id);
-	$s3path = get_field('s3_path',$post_id);
-	$token = "***REMOVED***";
+	$site             = get_field( 'site', $post_id );
+	$domain           = get_the_title( $post_id );
+	$address          = get_field( 'address', $post_id );
+	$username         = get_field( 'username', $post_id );
+	$password         = get_field( 'password', $post_id );
+	$protocol         = get_field( 'protocol', $post_id );
+	$port             = get_field( 'port', $post_id );
+	$homedir          = get_field( 'homedir', $post_id );
+	$staging_site     = get_field( 'site_staging', $post_id );
+	$staging_address  = get_field( 'address_staging', $post_id );
+	$staging_username = get_field( 'username_staging', $post_id );
+	$staging_password = get_field( 'password_staging', $post_id );
+	$staging_protocol = get_field( 'protocol_staging', $post_id );
+	$staging_port     = get_field( 'port_staging', $post_id );
+	$staging_homedir  = get_field( 'homedir_staging', $post_id );
+	$s3accesskey      = get_field( 's3_access_key', $post_id );
+	$s3secretkey      = get_field( 's3_secret_key', $post_id );
+	$s3bucket         = get_field( 's3_bucket', $post_id );
+	$s3path           = get_field( 's3_path', $post_id );
+	$token            = '***REMOVED***';
 
-	$partners = get_field('partner', $post_id);
-	if ($partners) {
-		$preloadusers = implode(",", $partners);
+	$partners = get_field( 'partner', $post_id );
+	if ( $partners ) {
+		$preloadusers = implode( ',', $partners );
 	}
 
 	// Assume this is a subsite and reconfigure as such
-	if ($site == "") {
-		$site = $domain;
-		$domain = "";
-		$subsite = "true";
+	if ( $site == '' ) {
+		$site    = $domain;
+		$domain  = '';
+		$subsite = 'true';
 	}
 
 	// Disable SSL verification due to self signed cert on other end
-	$arrContextOptions=array(
-	    "ssl"=>array(
-      "verify_peer"=>false,
-      "verify_peer_name"=>false,
-	    ),
+	$arrContextOptions = array(
+		'ssl' => array(
+			'verify_peer'      => false,
+			'verify_peer_name' => false,
+		),
 	);
 
-	if ($cmd == "new") {
-		$command = "captaincore site add".
-		($site ? " $site" : "" ) .
-		($post_id ? " --id=$post_id" : "" ) .
-		($domain ? " --domain=$domain" : "" ) .
-		($username ? " --username=$username" : "" ) .
-		($password ? " --password=".rawurlencode(base64_encode($password)) : "" ) .
-		($address ? " --address=$address" : "" ) .
-		($protocol ? " --protocol=$protocol" : "" ) .
-		($port ? " --port=$port" : "" ) .
-		($homedir ? " --homedir=$homedir" : "" ) .
-		($staging_site ? " --site_staging=$staging_site" : "" ) .
-		($staging_username ? " --username_staging=$staging_username" : "" ) .
-		($staging_password ? " --password_staging=".rawurlencode(base64_encode($staging_password)) : "" ) .
-		($staging_address ? " --address_staging=$staging_address" : "" ) .
-		($staging_protocol ? " --protocol_staging=$staging_protocol" : "" ) .
-		($staging_port ? " --port_staging=$staging_port" : "" ) .
-		($staging_homedir ? " --homedir_staging=$staging_homedir" : "" ) .
-		($preloadusers ? " --preloadusers=$preloadusers" : "" ) .
-		($subsite ? " --subsite=$subsite" : "" ) .
-		($s3accesskey ? " --s3accesskey=$s3accesskey" : "" ) .
-		($s3secretkey ? " --s3secretkey=$s3secretkey" : "" ) .
-		($s3bucket ? " --s3bucket=$s3bucket" : "" ) .
-		($s3path ? " --s3path=$s3path" : "" );
+	if ( $cmd == 'new' ) {
+		$command = 'captaincore site add' .
+		( $site ? " $site" : '' ) .
+		( $post_id ? " --id=$post_id" : '' ) .
+		( $domain ? " --domain=$domain" : '' ) .
+		( $username ? " --username=$username" : '' ) .
+		( $password ? ' --password=' . rawurlencode( base64_encode( $password ) ) : '' ) .
+		( $address ? " --address=$address" : '' ) .
+		( $protocol ? " --protocol=$protocol" : '' ) .
+		( $port ? " --port=$port" : '' ) .
+		( $homedir ? " --homedir=$homedir" : '' ) .
+		( $staging_site ? " --site_staging=$staging_site" : '' ) .
+		( $staging_username ? " --username_staging=$staging_username" : '' ) .
+		( $staging_password ? ' --password_staging=' . rawurlencode( base64_encode( $staging_password ) ) : '' ) .
+		( $staging_address ? " --address_staging=$staging_address" : '' ) .
+		( $staging_protocol ? " --protocol_staging=$staging_protocol" : '' ) .
+		( $staging_port ? " --port_staging=$staging_port" : '' ) .
+		( $staging_homedir ? " --homedir_staging=$staging_homedir" : '' ) .
+		( $preloadusers ? " --preloadusers=$preloadusers" : '' ) .
+		( $subsite ? " --subsite=$subsite" : '' ) .
+		( $s3accesskey ? " --s3accesskey=$s3accesskey" : '' ) .
+		( $s3secretkey ? " --s3secretkey=$s3secretkey" : '' ) .
+		( $s3bucket ? " --s3bucket=$s3bucket" : '' ) .
+		( $s3path ? " --s3path=$s3path" : '' );
 	}
-	if ($cmd == "update") {
-		$command = "captaincore site update".
-		($site ? " $site" : "" ) .
-		($post_id ? " --id=$post_id" : "" ) .
-		($domain ? " --domain=$domain" : "" ) .
-		($username ? " --username=$username" : "" ) .
-		($password ? " --password=".rawurlencode(base64_encode($password)) : "" ) .
-		($address ? " --address=$address" : "" ) .
-		($protocol ? " --protocol=$protocol" : "" ) .
-		($port ? " --port=$port" : "" ) .
-		($staging_username ? " --staging_username=$staging_username" : "" ) .
-		($staging_password ? " --staging_password=".rawurlencode(base64_encode($staging_password)) : "" ) .
-		($staging_address ? " --staging_address=$staging_address" : "" ) .
-		($staging_protocol ? " --staging_protocol=$staging_protocol" : "" ) .
-		($staging_port ? " --staging_port=$staging_port" : "" ) .
-		($preloadusers ? " --preloadusers=$preloadusers" : "" ) .
-		($homedir ? " --homedir=$homedir" : "" ) .
-		($subsite ? " --subsite=$subsite" : "" ) .
-		($s3accesskey ? " --s3accesskey=$s3accesskey" : "" ) .
-		($s3secretkey ? " --s3secretkey=$s3secretkey" : "" ) .
-		($s3bucket ? " --s3bucket=$s3bucket" : "" ) .
-		($s3path ? " --s3path=$s3path" : "" );
+	if ( $cmd == 'update' ) {
+		$command = 'captaincore site update' .
+		( $site ? " $site" : '' ) .
+		( $post_id ? " --id=$post_id" : '' ) .
+		( $domain ? " --domain=$domain" : '' ) .
+		( $username ? " --username=$username" : '' ) .
+		( $password ? ' --password=' . rawurlencode( base64_encode( $password ) ) : '' ) .
+		( $address ? " --address=$address" : '' ) .
+		( $protocol ? " --protocol=$protocol" : '' ) .
+		( $port ? " --port=$port" : '' ) .
+		( $staging_username ? " --staging_username=$staging_username" : '' ) .
+		( $staging_password ? ' --staging_password=' . rawurlencode( base64_encode( $staging_password ) ) : '' ) .
+		( $staging_address ? " --staging_address=$staging_address" : '' ) .
+		( $staging_protocol ? " --staging_protocol=$staging_protocol" : '' ) .
+		( $staging_port ? " --staging_port=$staging_port" : '' ) .
+		( $preloadusers ? " --preloadusers=$preloadusers" : '' ) .
+		( $homedir ? " --homedir=$homedir" : '' ) .
+		( $subsite ? " --subsite=$subsite" : '' ) .
+		( $s3accesskey ? " --s3accesskey=$s3accesskey" : '' ) .
+		( $s3secretkey ? " --s3secretkey=$s3secretkey" : '' ) .
+		( $s3bucket ? " --s3bucket=$s3bucket" : '' ) .
+		( $s3path ? " --s3path=$s3path" : '' );
 	}
-	if ($cmd == "mailgun") {
-		date_default_timezone_set('America/New_York');
-		$t=time();
-		$timestamp = date("Y-m-d-hms",$t);
+	if ( $cmd == 'mailgun' ) {
+		date_default_timezone_set( 'America/New_York' );
+		$t         = time();
+		$timestamp = date( 'Y-m-d-hms', $t );
 		mailgun_setup( $domain );
-		$command = "captaincore ssh $site --script=deploy-mailgun --key=\"".MAILGUN_API_KEY."\" --domain=".$domain." > ~/Tmp/$timestamp-deploy_mailgun_$site.txt 2>&1 &";
+		$command = "captaincore ssh $site --script=deploy-mailgun --key=\"" . MAILGUN_API_KEY . '" --domain=' . $domain . " > ~/Tmp/$timestamp-deploy_mailgun_$site.txt 2>&1 &";
 	}
-	if ($cmd == "production-to-staging") {
-		date_default_timezone_set('America/New_York');
-		$t=time();
-		$timestamp = date("Y-m-d-hms",$t);
-		if($value) {
+	if ( $cmd == 'production-to-staging' ) {
+		date_default_timezone_set( 'America/New_York' );
+		$t         = time();
+		$timestamp = date( 'Y-m-d-hms', $t );
+		if ( $value ) {
 			$command = "captaincore deploy production-to-staging $site --email=$value > ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt";
 		} else {
 			$command = "captaincore deploy production-to-staging $site > ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt";
 		}
 	}
-	if ($cmd == "staging-to-production") {
-		date_default_timezone_set('America/New_York');
-		$t=time();
-		$timestamp = date("Y-m-d-hms",$t);
-		if($value) {
+	if ( $cmd == 'staging-to-production' ) {
+		date_default_timezone_set( 'America/New_York' );
+		$t         = time();
+		$timestamp = date( 'Y-m-d-hms', $t );
+		if ( $value ) {
 			$command = "captaincore deploy staging-to-production $site --email=$value > ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt";
 		} else {
 			$command = "captaincore deploy staging-to-production $site > ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt";
 		}
 	}
-	if ($cmd == "remove") {
+	if ( $cmd == 'remove' ) {
 		$command = "captaincore site delete $site";
 	}
-	if ($cmd == "quick_backup") {
-		date_default_timezone_set('America/New_York');
-		$t=time();
-		$timestamp = date("Y-m-d-hms",$t);
-		$command = "captaincore quicksave $site > ~/Tmp/$timestamp-quicksave_$site.txt 2>&1";
+	if ( $cmd == 'quick_backup' ) {
+		date_default_timezone_set( 'America/New_York' );
+		$t         = time();
+		$timestamp = date( 'Y-m-d-hms', $t );
+		$command   = "captaincore quicksave $site > ~/Tmp/$timestamp-quicksave_$site.txt 2>&1";
 	}
-	if ($cmd == "backup") {
-		date_default_timezone_set('America/New_York');
-		$t=time();
-		$timestamp = date("Y-m-d-hms",$t);
-		$command = "captaincore backup $site > ~/Tmp/$timestamp-backup_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-backup_$site.txt";
+	if ( $cmd == 'backup' ) {
+		date_default_timezone_set( 'America/New_York' );
+		$t         = time();
+		$timestamp = date( 'Y-m-d-hms', $t );
+		$command   = "captaincore backup $site > ~/Tmp/$timestamp-backup_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-backup_$site.txt";
 	}
-	if ($cmd == "snapshot") {
-		date_default_timezone_set('America/New_York');
-		$t=time();
-		$timestamp = date("Y-m-d-hms",$t);
-		if($value) {
+	if ( $cmd == 'snapshot' ) {
+		date_default_timezone_set( 'America/New_York' );
+		$t         = time();
+		$timestamp = date( 'Y-m-d-hms', $t );
+		if ( $value ) {
 			$command = "captaincore snapshot $site --email=$value > ~/Tmp/$timestamp-snapshot_$site.txt 2>&1 & sleep 2; head ~/Tmp/$timestamp-snapshot_$site.txt";
 		} else {
 			$command = "captaincore snapshot $site > ~/Tmp/$timestamp-snapshot_$site.txt 2>&1 & sleep 2; head ~/Tmp/$timestamp-snapshot_$site.txt";
 		}
-
 	}
-	if ($cmd == "deactivate") {
+	if ( $cmd == 'deactivate' ) {
 		$command = "captaincore site deactivate $site";
 	}
-	if ($cmd == "activate") {
+	if ( $cmd == 'activate' ) {
 		$command = "captaincore site activate $site";
 	}
 
-	if ($cmd == "view_quicksave_changes") {
-		$website_id = get_field('website',$post_id);
-		$site = get_field('site',$website_id[0]);
-		$command = "captaincore get quicksave_changes $site $value";
-		$post_id = $website_id[0];
+	if ( $cmd == 'view_quicksave_changes' ) {
+		$website_id = get_field( 'website', $post_id );
+		$site       = get_field( 'site', $website_id[0] );
+		$command    = "captaincore get quicksave_changes $site $value";
+		$post_id    = $website_id[0];
 	}
 
-	if ($cmd == "manage") {
-		$command = "";
-		$sites = array();
-		foreach ($post_ids as $post_id) {
-			$sites[] =  get_field("site", $post_id);
+	if ( $cmd == 'manage' ) {
+		$command = '';
+		$sites   = array();
+		foreach ( $post_ids as $post_id ) {
+			$sites[] = get_field( 'site', $post_id );
 		}
-		foreach ($value as $bulk_command) {
+		foreach ( $value as $bulk_command ) {
 			$bulk_arguments = array();
-			foreach($arguments as $argument ) {
-				if ($argument["command"] == $bulk_command && isset($argument["input"]) && $argument["input"] != "" ) {
-					$bulk_arguments[] = $argument["input"];
-					$command .= "captaincore $bulk_command ". implode(" ", $sites). " --".$argument["value"]."=\"". $argument["input"]. "\";";
+			foreach ( $arguments as $argument ) {
+				if ( $argument['command'] == $bulk_command && isset( $argument['input'] ) && $argument['input'] != '' ) {
+					$bulk_arguments[] = $argument['input'];
+					$command         .= "captaincore $bulk_command " . implode( ' ', $sites ) . ' --' . $argument['value'] . '="' . $argument['input'] . '";';
 				}
 			}
+		}
+	}
 
+	if ( $cmd == 'quicksave_file_diff' ) {
+		$website_id                 = get_field( 'website', $post_id );
+		$quicksaves_for_website_ids = get_posts(
+			array(
+				'fields'         => 'ids',
+				'post_type'      => 'captcore_quicksave',
+				'posts_per_page' => '-1',
+				'meta_query'     => array(
+					array(
+						'key'     => 'website',
+						'value'   => '"' . $website_id[0] . '"',
+						'compare' => 'LIKE',
+					),
+				),
+			)
+		);
+		foreach ( $quicksaves_for_website_ids as $key => $quicksave_for_website_id ) {
+			if ( $quicksave_for_website_id == $post_id ) {
+				$mykey = $key; }
 		}
 
+		$quicksaves_previous_id = $quicksaves_for_website_ids[ $mykey + 1 ];
+		$site                   = get_field( 'site', $website_id[0] );
+		$commit                 = get_field( 'git_commit', $post_id );
+		$commit_previous        = get_field( 'git_commit', $quicksaves_previous_id );
+		$command                = "captaincore get quicksave_file_diff $site $commit_previous $commit \"$value\"";
+		$post_id                = $website_id[0];
 	}
 
-	if ($cmd == "quicksave_file_diff") {
-		$website_id = get_field('website',$post_id);
-		$quicksaves_for_website_ids = get_posts(array(
-			'fields' => 'ids',
-			'post_type' => 'captcore_quicksave',
-			'posts_per_page' => '-1',
-			'meta_query' => array(
-				array(
-				'key' => 'website',
-				'value' => '"' . $website_id[0] . '"',
-				'compare' => 'LIKE'
-			))
-		));
-		foreach($quicksaves_for_website_ids as $key => $quicksave_for_website_id) {
-			if ($quicksave_for_website_id == $post_id) { $mykey = $key; }
-		}
-
-		$quicksaves_previous_id = $quicksaves_for_website_ids[$mykey+1];
-		$site = get_field('site',$website_id[0]);
-		$commit = get_field('git_commit',$post_id);
-		$commit_previous = get_field('git_commit', $quicksaves_previous_id );
-		$command = "captaincore get quicksave_file_diff $site $commit_previous $commit \"$value\"";
-		$post_id = $website_id[0];
+	if ( $cmd == 'rollback' ) {
+		date_default_timezone_set( 'America/New_York' );
+		$t          = time();
+		$timestamp  = date( 'Y-m-d-hms', $t );
+		$git_commit = get_field( 'git_commit', $post_id );
+		$website_id = get_field( 'website', $post_id );
+		$site       = get_field( 'site', $website_id[0] );
+		$command    = "captaincore rollback $site $git_commit --$addon_type=$value > ~/Tmp/$timestamp-rollback_$site.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$site.txt";
+		$post_id    = $website_id[0];
 	}
 
-	if ($cmd == "rollback") {
-		date_default_timezone_set('America/New_York');
-		$t=time();
-		$timestamp = date("Y-m-d-hms",$t);
-		$git_commit = get_field('git_commit', $post_id);
-		$website_id = get_field('website', $post_id);
-		$site = get_field('site', $website_id[0]);
-		$command = "captaincore rollback $site $git_commit --$addon_type=$value > ~/Tmp/$timestamp-rollback_$site.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$site.txt";
-		$post_id = $website_id[0];
-	}
-
-	if ($cmd == "quicksave_rollback") {
-		date_default_timezone_set('America/New_York');
-		$t=time();
-		$timestamp = date("Y-m-d-hms",$t);
-		$git_commit = get_field('git_commit', $post_id);
-		$website_id = get_field('website', $post_id);
-		$site = get_field('site', $website_id[0]);
-		$command = "captaincore rollback $site $git_commit --all > ~/Tmp/$timestamp-rollback_$site.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$site.txt";
-		$post_id = $website_id[0];
+	if ( $cmd == 'quicksave_rollback' ) {
+		date_default_timezone_set( 'America/New_York' );
+		$t          = time();
+		$timestamp  = date( 'Y-m-d-hms', $t );
+		$git_commit = get_field( 'git_commit', $post_id );
+		$website_id = get_field( 'website', $post_id );
+		$site       = get_field( 'site', $website_id[0] );
+		$command    = "captaincore rollback $site $git_commit --all > ~/Tmp/$timestamp-rollback_$site.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$site.txt";
+		$post_id    = $website_id[0];
 	}
 
 	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
@@ -2954,28 +3022,26 @@ function anchor_install_action_callback() {
 
 		} else {
 
-			echo "Permission denied";
+			echo 'Permission denied';
 		}
-
 	} else {
 
 		// Checks permissions
 		if ( anchor_verify_permissions( $post_id ) ) {
 
 			// Runs command on remote on production
-			require_once( ABSPATH . '/vendor/autoload.php' );
+			require_once ABSPATH . '/vendor/autoload.php';
 
 			$ssh = new \phpseclib\Net\SSH2( CAPTAINCORE_CLI_ADDRESS, CAPTAINCORE_CLI_PORT );
 
-			if ( !$ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
-	  		exit('Login Failed');
+			if ( ! $ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
+				exit( 'Login Failed' );
 			}
 			echo $ssh->exec( $command );
 
 		} else {
-			echo "Permission denied";
+			echo 'Permission denied';
 		}
-
 	}
 
 	wp_die(); // this is required to terminate immediately and return a proper response
@@ -2986,7 +3052,7 @@ add_action( 'wp_ajax_log_process', 'process_log_action_callback' );
 
 function captaincore_website_acf_actions( $field ) {
 
-	if ($field and $field["label"] == "Download Snapshot" ) {
+	if ( $field and $field['label'] == 'Download Snapshot' ) {
 
 		$id = get_the_ID();
 
@@ -3010,11 +3076,12 @@ function captaincore_website_acf_actions( $field ) {
 		});
 		</script>
 		<input type="button" value="Download Snapshot" id="download" class="button">
-		<div class="download-result"></div> <?php
+		<div class="download-result"></div>
+		<?php
 
 	}
 
-	if ($field and $field["label"] == "Websites" ) {
+	if ( $field and $field['label'] == 'Websites' ) {
 
 		$id = get_the_ID();
 
@@ -3023,46 +3090,51 @@ function captaincore_website_acf_actions( $field ) {
 		*  This method uses the meta_query LIKE to match the string "123" to the database value a:1:{i:0;s:3:"123";} (serialized array)
 		*/
 
-		$websites = get_posts(array(
-			'post_type' => 'captcore_website',
-		        'posts_per_page'         => '-1',
-		        'meta_query' => array(
+		$websites = get_posts(
+			array(
+				'post_type'      => 'captcore_website',
+				'posts_per_page' => '-1',
+				'meta_query'     => array(
 
-		        'relation'		=> 'AND',
-				array(
-					'key' => 'server', // name of custom field
-					'value' => '"' . $id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-					'compare' => 'LIKE'
+					'relation' => 'AND',
+					array(
+						'key'     => 'server', // name of custom field
+						'value'   => '"' . $id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+						'compare' => 'LIKE',
+					),
+					array(
+						'key'     => 'status', // name of custom field
+						'value'   => 'closed',
+						'compare' => '!=',
+					),
 				),
-		         array(
-					'key' => 'status', // name of custom field
-					'value' => 'closed',
-					'compare' => '!='
-				)
 			)
-		));
+		);
 		?>
-		<?php if( $websites ):
+		<?php
+		if ( $websites ) :
 			$total_storage = 0;
 		?>
 			<ul>
-			<?php foreach( $websites as $website ):
-				$domain = get_the_title( $website->ID );
-				$storage = get_field('storage', $website->ID);
+			<?php
+			foreach ( $websites as $website ) :
+				$domain        = get_the_title( $website->ID );
+				$storage       = get_field( 'storage', $website->ID );
 				$total_storage = $total_storage + $storage;
 				?>
 				<li>
-					<?php edit_post_link( $domain , '', '', $website->ID); ?> - <?php echo human_filesize($storage); ?>
+					<?php edit_post_link( $domain, '', '', $website->ID ); ?> - <?php echo human_filesize( $storage ); ?>
 				</li>
 			<?php endforeach; ?>
 
-				<li>Total storage: <?php echo human_filesize($total_storage); ?></li>
+				<li>Total storage: <?php echo human_filesize( $total_storage ); ?></li>
 			</ul>
-		<?php endif;
+		<?php
+		endif;
 
 	}
 
-	if ($field and $field["label"] == "Websites included with Plan" ) {
+	if ( $field and $field['label'] == 'Websites included with Plan' ) {
 
 		$id = get_the_ID();
 
@@ -3071,33 +3143,36 @@ function captaincore_website_acf_actions( $field ) {
 		*  This method uses the meta_query LIKE to match the string "123" to the database value a:1:{i:0;s:3:"123";} (serialized array)
 		*/
 
-		$websites = get_posts(array(
-			'post_type' => 'captcore_website',
-		        'posts_per_page'         => '-1',
-		        'meta_query' => array(
-				array(
-					'key' => 'customer', // name of custom field
-					'value' => '"' . $id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-					'compare' => 'LIKE'
-				)
+		$websites = get_posts(
+			array(
+				'post_type'      => 'captcore_website',
+				'posts_per_page' => '-1',
+				'meta_query'     => array(
+					array(
+						'key'     => 'customer', // name of custom field
+						'value'   => '"' . $id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+						'compare' => 'LIKE',
+					),
+				),
 			)
-		));
+		);
 		?>
-		<?php if( $websites ): ?>
+		<?php if ( $websites ) : ?>
 			<ul>
-			<?php foreach( $websites as $website ): ?>
+			<?php foreach ( $websites as $website ) : ?>
 				<li>
 					<a href="<?php echo get_permalink( $website->ID ); ?>">
 						<?php $domain = get_the_title( $website->ID ); ?>
-		                                <?php edit_post_link( $domain , '<p>', '</p>', $website->ID); ?>
+										<?php edit_post_link( $domain, '<p>', '</p>', $website->ID ); ?>
 					</a>
 				</li>
 			<?php endforeach; ?>
 			</ul>
-		<?php endif;
+		<?php
+		endif;
 
 	}
-	if ($field and $field["label"] == "Websites managed by Partner" ) {
+	if ( $field and $field['label'] == 'Websites managed by Partner' ) {
 
 		$id = get_the_ID();
 
@@ -3106,41 +3181,46 @@ function captaincore_website_acf_actions( $field ) {
 		*  This method uses the meta_query LIKE to match the string "123" to the database value a:1:{i:0;s:3:"123";} (serialized array)
 		*/
 
-		$websites = get_posts(array(
-			'post_type' => 'captcore_website',
-		        'posts_per_page'         => '-1',
-		        'meta_query' => array(
-				array(
-					'key' => 'partner', // name of custom field
-					'value' => '"' . $id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-					'compare' => 'LIKE'
-				)
+		$websites = get_posts(
+			array(
+				'post_type'      => 'captcore_website',
+				'posts_per_page' => '-1',
+				'meta_query'     => array(
+					array(
+						'key'     => 'partner', // name of custom field
+						'value'   => '"' . $id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+						'compare' => 'LIKE',
+					),
+				),
 			)
-		));
+		);
 		?>
-		<?php if( $websites ): ?>
+		<?php if ( $websites ) : ?>
 			<ul>
-			<?php foreach( $websites as $website ): ?>
+			<?php foreach ( $websites as $website ) : ?>
 				<li>
 					<a href="<?php echo get_permalink( $website->ID ); ?>">
 						<?php $domain = get_the_title( $website->ID ); ?>
-						<?php edit_post_link( $domain , '', '', $website->ID); ?>
-						<?php the_field("status", $website->ID); ?>
+						<?php edit_post_link( $domain, '', '', $website->ID ); ?>
+						<?php the_field( 'status', $website->ID ); ?>
 					</a>
 				</li>
 			<?php endforeach; ?>
 			</ul>
 		<strong>Active Installs</strong>
-		<?php foreach( $websites as $website ):
-		  if ( get_field("status", $website->ID) == "active" ) {
-		    echo get_field("site", $website->ID). " ";
-		 }
-		endforeach; ?>
-		<?php endif;
+		<?php
+		foreach ( $websites as $website ) :
+			if ( get_field( 'status', $website->ID ) == 'active' ) {
+				echo get_field( 'site', $website->ID ) . ' ';
+			}
+		endforeach;
+		?>
+		<?php
+		endif;
 
 	}
 
-	if ($field and $field["label"] == "Plans paid by Partner" ) {
+	if ( $field and $field['label'] == 'Plans paid by Partner' ) {
 
 		$id = get_the_ID();
 
@@ -3149,96 +3229,106 @@ function captaincore_website_acf_actions( $field ) {
 		*  This method uses the meta_query LIKE to match the string "123" to the database value a:1:{i:0;s:3:"123";} (serialized array)
 		*/
 
-		$websites = get_posts(array(
-			'post_type' => 'captcore_customer',
-		        'posts_per_page'         => '-1',
-		        'meta_query' => array(
-				array(
-					'key' => 'paid_by', // name of custom field
-					'value' => '"' . $id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-					'compare' => 'LIKE'
-				)
+		$websites = get_posts(
+			array(
+				'post_type'      => 'captcore_customer',
+				'posts_per_page' => '-1',
+				'meta_query'     => array(
+					array(
+						'key'     => 'paid_by', // name of custom field
+						'value'   => '"' . $id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+						'compare' => 'LIKE',
+					),
+				),
 			)
-		));
+		);
 		?>
-		<?php if( $websites ): ?>
+		<?php if ( $websites ) : ?>
 			<ul>
-			<?php foreach( $websites as $website ): ?>
+			<?php foreach ( $websites as $website ) : ?>
 				<li>
 					<a href="<?php echo get_permalink( $website->ID ); ?>">
-						<?php $domain = get_the_title( $website->ID );
-		                                 $total_price = get_field("total_price");
-		                                 ?>
-		                                <p><?php edit_post_link( $domain , '', '', $website->ID); ?> - $<?php echo $total_price; ?></p>
+						<?php
+						$domain                       = get_the_title( $website->ID );
+										 $total_price = get_field( 'total_price' );
+											?>
+										<p><?php edit_post_link( $domain, '', '', $website->ID ); ?> - $<?php echo $total_price; ?></p>
 					</a>
 				</li>
 			<?php endforeach; ?>
 			</ul>
-		<?php endif;
+		<?php
+		endif;
 	}
 
-	if ($field and $field["label"] == "Production FTP Details" ) { ?>
+	if ( $field and $field['label'] == 'Production FTP Details' ) {
+	?>
 
 <textarea rows='6'>
-<?php the_title();?>&#13;
-<?php the_field('address'); ?>&#13;
-<?php the_field('username'); ?>&#13;
-<?php the_field('password'); ?>&#13;
-<?php the_field('protocol'); ?>&#13;
-<?php the_field('port'); ?>
+<?php the_title(); ?>&#13;
+<?php the_field( 'address' ); ?>&#13;
+<?php the_field( 'username' ); ?>&#13;
+<?php the_field( 'password' ); ?>&#13;
+<?php the_field( 'protocol' ); ?>&#13;
+<?php the_field( 'port' ); ?>
 </textarea>
 
-	<?php }
+	<?php
+	}
 
-	if ($field and $field["label"] == "Staging FTP Details" ) { ?>
+	if ( $field and $field['label'] == 'Staging FTP Details' ) {
+	?>
 
 <textarea rows='6'>
-<?php the_title();?> (Staging)&#13;
-<?php the_field('address_staging'); ?>&#13;
-<?php the_field('username_staging'); ?>&#13;
-<?php the_field('password_staging'); ?>&#13;
-<?php the_field('protocol_staging'); ?>&#13;
-<?php the_field('port_staging'); ?>
+<?php the_title(); ?> (Staging)&#13;
+<?php the_field( 'address_staging' ); ?>&#13;
+<?php the_field( 'username_staging' ); ?>&#13;
+<?php the_field( 'password_staging' ); ?>&#13;
+<?php the_field( 'protocol_staging' ); ?>&#13;
+<?php the_field( 'port_staging' ); ?>
 </textarea>
 
-	<?php }
+	<?php
+	}
 
-	if ($field and $field["label"] == "Customer" ) {
+	if ( $field and $field['label'] == 'Customer' ) {
 
-		$id = get_the_ID();
-		$customer = get_field("customer",$id);
-		if (isset($customer[0])) {
+		$id       = get_the_ID();
+		$customer = get_field( 'customer', $id );
+		if ( isset( $customer[0] ) ) {
 			$customer_id = $customer[0];
-			$name = get_the_title( $customer_id );
-			$link = get_edit_post_link( $customer_id); ?>
+			$name        = get_the_title( $customer_id );
+			$link        = get_edit_post_link( $customer_id );
+			?>
 			<a href="<?php echo $link; ?>&classic-editor" class="button" target="_parent"><i class="fa fa-user"></i> <?php echo $name; ?></a>
-		<?php }
-
+		<?php
+		}
 	}
 
-	if ($field and $field["label"] == "Website Actions" ) { ?>
+	if ( $field and $field['label'] == 'Website Actions' ) {
+	?>
 		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.11/css/all.css" integrity="sha384-p2jx59pefphTFIpeqCcISO9MdVfIm4pNnsL08A6v5vaQc4owkQqxMV8kg4Yvhaw/" crossorigin="anonymous">
 
 		<style>
 		@-ms-keyframes spin {
-		    from { -ms-transform: rotate(0deg); }
-		    to { -ms-transform: rotate(360deg); }
+			from { -ms-transform: rotate(0deg); }
+			to { -ms-transform: rotate(360deg); }
 		}
 		@-moz-keyframes spin {
-		    from { -moz-transform: rotate(0deg); }
-		    to { -moz-transform: rotate(360deg); }
+			from { -moz-transform: rotate(0deg); }
+			to { -moz-transform: rotate(360deg); }
 		}
 		@-webkit-keyframes spin {
-		    from { -webkit-transform: rotate(0deg); }
-		    to { -webkit-transform: rotate(360deg); }
+			from { -webkit-transform: rotate(0deg); }
+			to { -webkit-transform: rotate(360deg); }
 		}
 		@keyframes spin {
-		    from {
-		        transform:rotate(0deg);
-		    }
-		    to {
-		        transform:rotate(360deg);
-		    }
+			from {
+				transform:rotate(0deg);
+			}
+			to {
+				transform:rotate(360deg);
+			}
 		}
 
 		i.fa.fa-spinner {
@@ -3274,21 +3364,21 @@ function captaincore_website_acf_actions( $field ) {
 		jQuery(document).ready(function(){
 		  jQuery(".anchor_commands button").click(function(e){
 
-		    // Loading
-		    jQuery('.install-result').html( '<i class="fa fa-spinner" aria-hidden="true"></i>' ).show();
+			// Loading
+			jQuery('.install-result').html( '<i class="fa fa-spinner" aria-hidden="true"></i>' ).show();
 
-		    var command = jQuery(this).val().toLowerCase();
-		  	e.preventDefault();
-		  	var data = {
-		  		'action': 'anchor_install',
-		  		'post_id': acf.o.post_id,
-		      'command': command
-		  	};
+			var command = jQuery(this).val().toLowerCase();
+			  e.preventDefault();
+			  var data = {
+				  'action': 'anchor_install',
+				  'post_id': acf.o.post_id,
+			  'command': command
+			  };
 
-		  	// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
-		  	jQuery.post(ajaxurl, data, function(response) {
-		      jQuery('.install-result').html( response );
-		  	});
+			  // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+			  jQuery.post(ajaxurl, data, function(response) {
+			  jQuery('.install-result').html( response );
+			  });
 		  });
 
 		});
@@ -3314,10 +3404,10 @@ function captaincore_job_create( $command ) {
 
 	// Create post object
 	$my_post = array(
-	  'post_title'    => 'Job',
-	  'post_status'   => 'publish',
-	  'post_author'   => 1,
-	  'post_type' => "captcore_queue"
+		'post_title'  => 'Job',
+		'post_status' => 'publish',
+		'post_author' => 1,
+		'post_type'   => 'captcore_queue',
 	);
 
 	// Insert the post into the database
@@ -3325,29 +3415,29 @@ function captaincore_job_create( $command ) {
 
 	// Wraps command with 'nohup' with trackable ID
 	$filename = "~/Tmp/job-$job_id.txt";
-	$command = "nohup $command > $filename 2>&1 &";
+	$command  = "nohup $command > $filename 2>&1 &";
 
 	return $command;
 }
 
 function captaincore_job_check( $job_id ) {
 	$filename = "~/Tmp/job-$job_id.txt";
-	$command = "tail $filename";
+	$command  = "tail $filename";
 	// Checks permissions
 	if ( anchor_verify_permissions( $post_id ) ) {
 
 		// Runs command on remote on production
-		require_once( ABSPATH . '/vendor/autoload.php' );
+		require_once ABSPATH . '/vendor/autoload.php';
 
 		$ssh = new \phpseclib\Net\SSH2( CAPTAINCORE_CLI_ADDRESS, CAPTAINCORE_CLI_PORT );
 
-		if ( !$ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
-			exit('Login Failed');
+		if ( ! $ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
+			exit( 'Login Failed' );
 		}
 		echo $ssh->exec( $command );
 
 	} else {
-		echo "Permission denied";
+		echo 'Permission denied';
 	}
 
 }
@@ -3359,24 +3449,24 @@ function process_log_action_callback() {
 
 	// Create post object
 	$my_post = array(
-	  'post_status'   => 'publish',
-	  'post_type'	  => 'captcore_processlog',
-	  'post_author'   => get_current_user_id()
+		'post_status' => 'publish',
+		'post_type'   => 'captcore_processlog',
+		'post_author' => get_current_user_id(),
 	);
 
 	// Insert the post into the database
 	$process_log_id = wp_insert_post( $my_post );
 
 	// Assign process to ACF relationship field
-	update_field( "field_57f862ec5b466", $post_id, $process_log_id );
+	update_field( 'field_57f862ec5b466', $post_id, $process_log_id );
 
 	// Copies checklist from process and stores into new process log
-	$process_checklist = get_field('checklist', $post_id );
-	update_field('field_58e9288d66c07', $process_checklist, $process_log_id);
+	$process_checklist = get_field( 'checklist', $post_id );
+	update_field( 'field_58e9288d66c07', $process_checklist, $process_log_id );
 
-    // Debug output
-    $redirect_url = get_permalink($post_id);
-    echo "{ \"redirect_url\" : \"$redirect_url\", \"process_id\": \"$process_log_id\" }";
+	// Debug output
+	$redirect_url = get_permalink( $post_id );
+	echo "{ \"redirect_url\" : \"$redirect_url\", \"process_id\": \"$process_log_id\" }";
 
 	wp_die(); // this is required to terminate immediately and return a proper response
 }
@@ -3389,14 +3479,14 @@ function log_process_completed_callback() {
 
 	$post_id = intval( $_POST['post_id'] );
 
-	date_default_timezone_set('America/New_York');
+	date_default_timezone_set( 'America/New_York' );
 
 	// Sets process log status to completed
-	update_field( "field_588bb7bd3cab6", "completed", $post_id );			// Sets status field to completed
-	update_field( "field_588bb8423cab7", date('Y-m-d H:i:s'), $post_id );   // Sets completed field to current timestamp
+	update_field( 'field_588bb7bd3cab6', 'completed', $post_id );           // Sets status field to completed
+	update_field( 'field_588bb8423cab7', date( 'Y-m-d H:i:s' ), $post_id );   // Sets completed field to current timestamp
 
-	if (get_field("status", $post_id) == "completed") {
-		echo "1";
+	if ( get_field( 'status', $post_id ) == 'completed' ) {
+		echo '1';
 	}
 
 	wp_die(); // this is required to terminate immediately and return a proper response
@@ -3416,60 +3506,61 @@ function snapshot_email_action_callback() {
 }
 
 function anchor_download_snapshot_email( $snapshot_id ) {
-	$email =  get_field('email',$snapshot_id);
-	$name = get_field('name',$snapshot_id);
-	$website = get_field('website',$snapshot_id);
+	$email      = get_field( 'email', $snapshot_id );
+	$name       = get_field( 'name', $snapshot_id );
+	$website    = get_field( 'website', $snapshot_id );
 	$website_id = $website[0];
-	$domain = get_the_title($website_id);
+	$domain     = get_the_title( $website_id );
 
 	// Get new auth from B2
-	$account_id = CAPTAINCORE_B2_ACCOUNT_ID; // Obtained from your B2 account page
+	$account_id      = CAPTAINCORE_B2_ACCOUNT_ID; // Obtained from your B2 account page
 	$application_key = CAPTAINCORE_B2_ACCOUNT_KEY; // Obtained from your B2 account page
-	$credentials = base64_encode($account_id . ":" . $application_key);
-	$url = "https://api.backblazeb2.com/b2api/v1/b2_authorize_account";
+	$credentials     = base64_encode( $account_id . ':' . $application_key );
+	$url             = 'https://api.backblazeb2.com/b2api/v1/b2_authorize_account';
 
-	$session = curl_init($url);
+	$session = curl_init( $url );
 
 	// Add headers
-	$headers = array();
-	$headers[] = "Accept: application/json";
-	$headers[] = "Authorization: Basic " . $credentials;
-	curl_setopt($session, CURLOPT_HTTPHEADER, $headers);  // Add headers
+	$headers   = array();
+	$headers[] = 'Accept: application/json';
+	$headers[] = 'Authorization: Basic ' . $credentials;
+	curl_setopt( $session, CURLOPT_HTTPHEADER, $headers );  // Add headers
 
-	curl_setopt($session, CURLOPT_HTTPGET, true);  // HTTP GET
-	curl_setopt($session, CURLOPT_RETURNTRANSFER, true); // Receive server response
-	$server_output = curl_exec($session);
-	curl_close ($session);
-	$output = json_decode($server_output);
+	curl_setopt( $session, CURLOPT_HTTPGET, true );  // HTTP GET
+	curl_setopt( $session, CURLOPT_RETURNTRANSFER, true ); // Receive server response
+	$server_output = curl_exec( $session );
+	curl_close( $session );
+	$output = json_decode( $server_output );
 
 	// Variables for Backblaze
-	$api_url = "https://api001.backblazeb2.com"; // From b2_authorize_account call
-	$auth_token = $output->authorizationToken; // From b2_authorize_account call
-	$bucket_id = CAPTAINCORE_B2_BUCKET_ID; // The file name prefix of files the download authorization will allow
-	$valid_duration = 604800; // The number of seconds the authorization is valid for
-	$file_name_prefix = "Snapshots/". $domain; // The file name prefix of files the download authorization will allow
+	$api_url          = 'https://api001.backblazeb2.com'; // From b2_authorize_account call
+	$auth_token       = $output->authorizationToken; // From b2_authorize_account call
+	$bucket_id        = CAPTAINCORE_B2_BUCKET_ID; // The file name prefix of files the download authorization will allow
+	$valid_duration   = 604800; // The number of seconds the authorization is valid for
+	$file_name_prefix = 'Snapshots/' . $domain; // The file name prefix of files the download authorization will allow
 
-	$session = curl_init($api_url .  "/b2api/v1/b2_get_download_authorization");
+	$session = curl_init( $api_url . '/b2api/v1/b2_get_download_authorization' );
 
 	// Add post fields
-	$data = array("bucketId" => $bucket_id,
-	              "validDurationInSeconds" => $valid_duration,
-	              "fileNamePrefix" => $file_name_prefix);
-	$post_fields = json_encode($data);
-	curl_setopt($session, CURLOPT_POSTFIELDS, $post_fields);
+	$data        = array(
+		'bucketId'               => $bucket_id,
+		'validDurationInSeconds' => $valid_duration,
+		'fileNamePrefix'         => $file_name_prefix,
+	);
+	$post_fields = json_encode( $data );
+	curl_setopt( $session, CURLOPT_POSTFIELDS, $post_fields );
 
 	// Add headers
-	$headers = array();
-	$headers[] = "Authorization: " . $auth_token;
-	curl_setopt($session, CURLOPT_HTTPHEADER, $headers);
+	$headers   = array();
+	$headers[] = 'Authorization: ' . $auth_token;
+	curl_setopt( $session, CURLOPT_HTTPHEADER, $headers );
 
-	curl_setopt($session, CURLOPT_POST, true); // HTTP POST
-	curl_setopt($session, CURLOPT_RETURNTRANSFER, true);  // Receive server response
-	$server_output = curl_exec($session); // Let's do this!
-	curl_close ($session); // Clean up
+	curl_setopt( $session, CURLOPT_POST, true ); // HTTP POST
+	curl_setopt( $session, CURLOPT_RETURNTRANSFER, true );  // Receive server response
+	$server_output = curl_exec( $session ); // Let's do this!
+	curl_close( $session ); // Clean up
 	// echo ($server_output); // Tell me about the rabbits, George!
-
-	$server_output = json_decode($server_output);
+	$server_output = json_decode( $server_output );
 
 	$auth = $server_output->authorizationToken;
 
@@ -3477,106 +3568,104 @@ function anchor_download_snapshot_email( $snapshot_id ) {
 
 	echo $url;
 
-	$to = $email;
+	$to      = $email;
 	$subject = "Anchor Hosting - Snapshot #$snapshot_id";
-	$body = 'Snapshot #'.$snapshot_id.' for '.$domain.'. Expires after 1 week.<br /><br /><a href="'.$url.'">Download Snapshot</a>';
-	$headers = array('Content-Type: text/html; charset=UTF-8');
+	$body    = 'Snapshot #' . $snapshot_id . ' for ' . $domain . '. Expires after 1 week.<br /><br /><a href="' . $url . '">Download Snapshot</a>';
+	$headers = array( 'Content-Type: text/html; charset=UTF-8' );
 
 	wp_mail( $to, $subject, $body, $headers );
 }
 
 // Add reports to customers
-add_action('admin_menu' , 'anchor_custom_pages');
+add_action( 'admin_menu', 'anchor_custom_pages' );
 
 function anchor_custom_pages() {
-    add_submenu_page('captaincore', 'Customers Report', 'Reports', 'manage_options', "anchor_report", 'anchor_customer_report_callback');
-    add_submenu_page( null, 'Partners Report', 'Partners', 'manage_options', "anchor_partner", 'anchor_partner_report_callback');
-    add_submenu_page( null, 'Installs', 'Installs', 'manage_options', "anchor_installs", 'anchor_installs_report_callback');
-		add_submenu_page( null, 'Customers Timeline', 'Timeline', 'manage_options', "anchor_timeline", 'anchor_timeline_report_callback');
-		add_submenu_page( null, 'KPI', 'KPI', 'manage_options', "anchor_kpi", 'anchor_kpi_report_callback');
-		add_submenu_page( null, 'Quicksaves', 'Quicksaves', 'manage_options', "anchor_quicksaves", 'anchor_quicksaves_report_callback');
+	add_submenu_page( 'captaincore', 'Customers Report', 'Reports', 'manage_options', 'anchor_report', 'anchor_customer_report_callback' );
+	add_submenu_page( null, 'Partners Report', 'Partners', 'manage_options', 'anchor_partner', 'anchor_partner_report_callback' );
+	add_submenu_page( null, 'Installs', 'Installs', 'manage_options', 'anchor_installs', 'anchor_installs_report_callback' );
+		add_submenu_page( null, 'Customers Timeline', 'Timeline', 'manage_options', 'anchor_timeline', 'anchor_timeline_report_callback' );
+		add_submenu_page( null, 'KPI', 'KPI', 'manage_options', 'anchor_kpi', 'anchor_kpi_report_callback' );
+		add_submenu_page( null, 'Quicksaves', 'Quicksaves', 'manage_options', 'anchor_quicksaves', 'anchor_quicksaves_report_callback' );
 }
 
 function anchor_customer_report_callback() {
 	// Loads the Customer Report template
-	require_once(dirname(__FILE__) . "/inc/admin-customer-report.php");
+	require_once dirname( __FILE__ ) . '/inc/admin-customer-report.php';
 }
 
 function anchor_partner_report_callback() {
 	// Loads the Customer Report template
-	require_once(dirname(__FILE__) . "/inc/admin-partner-report.php");
+	require_once dirname( __FILE__ ) . '/inc/admin-partner-report.php';
 }
 
 function anchor_installs_report_callback() {
 	// Loads the Customer Report template
-	require_once(dirname(__FILE__) . "/inc/admin-installs-report.php");
+	require_once dirname( __FILE__ ) . '/inc/admin-installs-report.php';
 }
 
 function anchor_timeline_report_callback() {
 	// Loads the Customer Report template
-	require_once(dirname(__FILE__) . "/inc/admin-timeline-report.php");
+	require_once dirname( __FILE__ ) . '/inc/admin-timeline-report.php';
 }
 
 function anchor_kpi_report_callback() {
 	// Loads the Customer Report template
-	require_once(dirname(__FILE__) . "/inc/admin-kpi-report.php");
+	require_once dirname( __FILE__ ) . '/inc/admin-kpi-report.php';
 }
 
 function anchor_quicksaves_report_callback() {
 	// Loads the Quicksaves Report template
-	require_once(dirname(__FILE__) . "/inc/admin-report-quicksaves.php");
+	require_once dirname( __FILE__ ) . '/inc/admin-report-quicksaves.php';
 }
 
 // allow SVGs
-function cc_mime_types($mimes) {
-  $mimes['svg'] = 'image/svg+xml';
-  return $mimes;
+function cc_mime_types( $mimes ) {
+	$mimes['svg'] = 'image/svg+xml';
+	return $mimes;
 }
-add_filter('upload_mimes', 'cc_mime_types');
+add_filter( 'upload_mimes', 'cc_mime_types' );
 
 // After payment received, connect up the Stripe info into the subscription.
 function anchor_woocommerce_payment_complete( $order_id ) {
 
-	$customer_id = get_field('_customer_user', $order_id);
+	$customer_id    = get_field( '_customer_user', $order_id );
 	$payment_tokens = WC_Payment_Tokens::get_customer_tokens( $customer_id );
 
 	foreach ( $payment_tokens as $payment_token ) {
 		$token_id = $payment_token->get_token();
 	}
 
-	$payment_cus_id = get_field('_stripe_customer_id', "user_" . $customer_id);
+	$payment_cus_id  = get_field( '_stripe_customer_id', 'user_' . $customer_id );
 	$payment_card_id = $token_id;
 
 	// Find parent subscription id
-	if (wcs_order_contains_subscription($order_id)) {
-		$subscription = wcs_get_subscriptions_for_order( $order_id );
-		$subscription_id = key($subscription);
+	if ( wcs_order_contains_subscription( $order_id ) ) {
+		$subscription    = wcs_get_subscriptions_for_order( $order_id );
+		$subscription_id = key( $subscription );
 	} else {
-		$subscription_id = get_field('_subscription_renewal', $order_id);
+		$subscription_id = get_field( '_subscription_renewal', $order_id );
 	}
 
 	update_post_meta( $subscription_id, '_stripe_customer_id', $payment_cus_id );
-	update_post_meta( $subscription_id, '_stripe_card_id', $payment_card_id  );
-	update_post_meta( $subscription_id, '_requires_manual_renewal', "false" );
-	update_post_meta( $subscription_id, '_payment_method', "stripe" );
-	update_post_meta( $subscription_id, '_payment_method_title', "Credit card" );
+	update_post_meta( $subscription_id, '_stripe_card_id', $payment_card_id );
+	update_post_meta( $subscription_id, '_requires_manual_renewal', 'false' );
+	update_post_meta( $subscription_id, '_payment_method', 'stripe' );
+	update_post_meta( $subscription_id, '_payment_method_title', 'Credit card' );
 
 }
 add_action( 'woocommerce_payment_complete', 'anchor_woocommerce_payment_complete' );
 
 
 // Custom payment link for speedy checkout
-function anchor_get_checkout_payment_url($payment_url) {
+function anchor_get_checkout_payment_url( $payment_url ) {
 
 	// Current $payment_url is
 	// https://anchor.host/checkout/order-pay/1918?pay_for_order=true&key=wc_order_576c79296c346&subscription_renewal=true
-
 	// Replace with
 	// https://anchor.host/checkout-express/1918/?pay_for_order=true&key=wc_order_576c79296c346&subscription_renewal=true
-
 	$home_url = esc_url( home_url( '/' ) );
 
-	$new_payment_url = str_replace($home_url ."checkout/order-pay/", $home_url . "checkout-express/", $payment_url);
+	$new_payment_url = str_replace( $home_url . 'checkout/order-pay/', $home_url . 'checkout-express/', $payment_url );
 
 	return $new_payment_url;
 }
@@ -3591,13 +3680,13 @@ function woocommerce_email_customer_invoice_add_recipients( $recipient, $order )
 	// Finds subscription for the order
 	$subscription = wcs_get_subscriptions_for_order( $order, array( 'order_type' => array( 'parent', 'renewal' ) ) );
 
-	if ( $subscription and array_values($subscription)[0] ) {
+	if ( $subscription and array_values( $subscription )[0] ) {
 		// Find first subscription ID
-		$subscription_id = array_values($subscription)[0]->id;
+		$subscription_id = array_values( $subscription )[0]->id;
 		// Check ACF field for additional emails
-		$additional_emails = get_field('additional_emails', $subscription_id);
+		$additional_emails = get_field( 'additional_emails', $subscription_id );
 
-		if ($additional_emails) {
+		if ( $additional_emails ) {
 			// Found additional emails so add them to the $recipients list
 			$recipient .= ', ' . $additional_emails;
 		}
@@ -3665,9 +3754,9 @@ function my_acf_input_admin_footer() {
 <style>
 .acf-postbox.seamless > .acf-fields > .acf-field.sync-button {
 	position: absolute;
-    right: 10px;
-    padding-top: 10px;
-    z-index: 9999;
+	right: 10px;
+	padding-top: 10px;
+	z-index: 9999;
 }
 
 </style>
@@ -3675,19 +3764,21 @@ function my_acf_input_admin_footer() {
 
 }
 
-add_action('acf/input/admin_footer', 'my_acf_input_admin_footer');
+add_action( 'acf/input/admin_footer', 'my_acf_input_admin_footer' );
 
-add_filter( 'query_vars', function( $vars ){
-    $vars[] = 'tag__in';
-    $vars[] = 'tag__not_in';
-    return $vars;
-});
+add_filter(
+	'query_vars', function( $vars ) {
+		$vars[] = 'tag__in';
+		$vars[] = 'tag__not_in';
+		return $vars;
+	}
+);
 
 add_filter( 'rest_query_vars', 'test_query_vars' );
-function test_query_vars( $vars ){
-    $vars[] = 'captcore_website';
-    $vars[] = 'global';
-    return $vars;
+function test_query_vars( $vars ) {
+	$vars[] = 'captcore_website';
+	$vars[] = 'global';
+	return $vars;
 }
 
 add_action( 'pre_get_posts', 'test_pre_get_posts' );
@@ -3695,25 +3786,25 @@ function test_pre_get_posts( $query ) {
 
 	global $wp;
 
-	if (isset($wp->query_vars["rest_route"])) {
-		$rest_route = $wp->query_vars["rest_route"];
+	if ( isset( $wp->query_vars['rest_route'] ) ) {
+		$rest_route = $wp->query_vars['rest_route'];
 	}
 
-	if (isset($rest_route) and $rest_route == "/wp/v2/captcore_processlog") {
+	if ( isset( $rest_route ) and $rest_route == '/wp/v2/captcore_processlog' ) {
 
 			// Filter only logs attached to processes in Growth, Maintenance and Support roles.
 			$meta_query = array(
-		        array(
-		            'key' => 'website',
-		            'value' => '"' . $_GET["website"] . '"',
-		            'compare' => 'like'
-		        ),
-		        array(
-		            'key' => 'public',
-		            'value' => '1',
-		            'compare' => 'like'
-		        )
-		    );
+				array(
+					'key'     => 'website',
+					'value'   => '"' . $_GET['website'] . '"',
+					'compare' => 'like',
+				),
+				array(
+					'key'     => 'public',
+					'value'   => '1',
+					'compare' => 'like',
+				),
+			);
 
 			$query->set( 'meta_query', $meta_query );
 
@@ -3721,73 +3812,76 @@ function test_pre_get_posts( $query ) {
 
 	} else {
 
-		if ( isset($_GET["website"]) ) {
+		if ( isset( $_GET['website'] ) ) {
 
 			$meta_query = array(
-		        array(
-		            'key' => 'captcore_website',
-		            'value' => '"' . $_GET["website"] . '"',
-		            'compare' => 'like'
-		        )
-		    );
+				array(
+					'key'     => 'captcore_website',
+					'value'   => '"' . $_GET['website'] . '"',
+					'compare' => 'like',
+				),
+			);
 
 			$query->set( 'meta_query', $meta_query );
 
 			return $query;
 		}
-		if ( isset($_GET["global"]) ) {
+		if ( isset( $_GET['global'] ) ) {
 
 			$meta_query = array(
-		        array(
-		            'key' => 'global',
-		            'value' => '1',
-		            'compare' => '='
-		        )
-		    );
+				array(
+					'key'     => 'global',
+					'value'   => '1',
+					'compare' => '=',
+				),
+			);
 
 			$query->set( 'meta_query', $meta_query );
 
 			return $query;
 		}
-
 	}
 }
 
 // Load custom WooCommerce templates from plugin's woocommerce directory
 function captaincore_plugin_path() {
-  // gets the absolute path to this plugin directory
-  return untrailingslashit( plugin_dir_path( __FILE__ ) );
+	// gets the absolute path to this plugin directory
+	return untrailingslashit( plugin_dir_path( __FILE__ ) );
 }
 add_filter( 'woocommerce_locate_template', 'captaincore_woocommerce_locate_template', 10, 3 );
 
 function captaincore_woocommerce_locate_template( $template, $template_name, $template_path ) {
-  global $woocommerce;
+	global $woocommerce;
 
-  $_template = $template;
+	$_template = $template;
 
-  if ( ! $template_path ) $template_path = $woocommerce->template_url;
+	if ( ! $template_path ) {
+		$template_path = $woocommerce->template_url;
+	}
 
-  $plugin_path  = captaincore_plugin_path() . '/woocommerce/';
+	$plugin_path = captaincore_plugin_path() . '/woocommerce/';
 
-  // Look within passed path within the theme - this is priority
-  $template = locate_template(
+	// Look within passed path within the theme - this is priority
+	$template = locate_template(
 
-    array(
-      $template_path . $template_name,
-      $template_name
-    )
-  );
+		array(
+			$template_path . $template_name,
+			$template_name,
+		)
+	);
 
-  // Modification: Get the template from this plugin, if it exists
-  if ( ! $template && file_exists( $plugin_path . $template_name ) )
-    $template = $plugin_path . $template_name;
+	// Modification: Get the template from this plugin, if it exists
+	if ( ! $template && file_exists( $plugin_path . $template_name ) ) {
+		$template = $plugin_path . $template_name;
+	}
 
-  // Use default template
-  if ( ! $template )
-    $template = $_template;
+	// Use default template
+	if ( ! $template ) {
+		$template = $_template;
+	}
 
-  // Return what we found
-  return $template;
+	// Return what we found
+	return $template;
 }
 
 // Hook in custom page templates
@@ -3851,24 +3945,23 @@ class PageTemplater {
 		// template assigned and return it's path
 		add_filter(
 			'template_include',
-			array( $this, 'view_project_template')
+			array( $this, 'view_project_template' )
 		);
 
 		// Add your templates to this array.
 		$this->templates = array(
-			'templates/page-captaincore-api.php' => 'CaptainCore API',
+			'templates/page-captaincore-api.php'  => 'CaptainCore API',
 			'templates/page-company-handbook.php' => 'Company Handbook',
-			'templates/page-manage.php' => 'Manage',
-			'templates/page-activities.php' => 'Activities',
+			'templates/page-manage.php'           => 'Manage',
+			'templates/page-activities.php'       => 'Activities',
 			'templates/page-checkout-express.php' => 'Checkout Express',
-			'templates/page-websites.php' => 'Website Recommendations'
+			'templates/page-websites.php'         => 'Website Recommendations',
 		);
 
 	}
 
 	/**
 	 * Adds our template to the page dropdown for v4.7+
-	 *
 	 */
 	public function add_new_template( $posts_templates ) {
 		$posts_templates = array_merge( $posts_templates, $this->templates );
@@ -3892,7 +3985,7 @@ class PageTemplater {
 		}
 
 		// New cache, therefore remove the old one
-		wp_cache_delete( $cache_key , 'themes');
+		wp_cache_delete( $cache_key, 'themes' );
 
 		// Now add our template to the list of templates by merging our templates
 		// with the existing templates array from the cache.
@@ -3920,13 +4013,15 @@ class PageTemplater {
 		}
 
 		// Return default template if we don't have a custom one defined
-		if ( ! isset( $this->templates[get_post_meta(
-			$post->ID, '_wp_page_template', true
-		)] ) ) {
+		if ( ! isset(
+			$this->templates[ get_post_meta(
+				$post->ID, '_wp_page_template', true
+			) ]
+		) ) {
 			return $template;
 		}
 
-		$file = plugin_dir_path( __FILE__ ). get_post_meta(
+		$file = plugin_dir_path( __FILE__ ) . get_post_meta(
 			$post->ID, '_wp_page_template', true
 		);
 
@@ -3948,31 +4043,31 @@ add_action( 'plugins_loaded', array( 'PageTemplater', 'get_instance' ), 10 );
 /* Filter the single_template with our custom function*/
 
 // Hooks in custom post template from plugin
-add_filter('single_template', 'captaincore_custom_template');
+add_filter( 'single_template', 'captaincore_custom_template' );
 
 function captaincore_custom_template( $single ) {
 
-    global $wp_query, $post;
+	global $wp_query, $post;
 
-    /* Checks for single template by post type */
-    if ( $post->post_type == 'captcore_process' ) {
-        if ( file_exists( plugin_dir_path( __FILE__ ) . '/templates/single-captcore_process.php' ) ) {
-            return plugin_dir_path( __FILE__ ) . '/templates/single-captcore_process.php';
-        }
-    }
+	/* Checks for single template by post type */
+	if ( $post->post_type == 'captcore_process' ) {
+		if ( file_exists( plugin_dir_path( __FILE__ ) . '/templates/single-captcore_process.php' ) ) {
+			return plugin_dir_path( __FILE__ ) . '/templates/single-captcore_process.php';
+		}
+	}
 
-    return $single;
+	return $single;
 
 }
 
 // Custom filesize function
-function captaincore_human_filesize($size, $precision = 2) {
-  $units = array('B','kB','MB','GB','TB','PB','EB','ZB','YB');
-  $step = 1024;
-  $i = 0;
-  while (($size / $step) > 0.9) {
-      $size = $size / $step;
-      $i++;
-  }
-  return round($size, $precision).$units[$i];
+function captaincore_human_filesize( $size, $precision = 2 ) {
+	$units = array( 'B', 'kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB' );
+	$step  = 1024;
+	$i     = 0;
+	while ( ( $size / $step ) > 0.9 ) {
+		$size = $size / $step;
+		$i++;
+	}
+	return round( $size, $precision ) . $units[ $i ];
 }
