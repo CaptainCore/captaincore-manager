@@ -2887,6 +2887,12 @@ function anchor_install_action_callback() {
 		mailgun_setup( $domain );
 		$command = "captaincore ssh $site --script=deploy-mailgun --key=\"" . MAILGUN_API_KEY . '" --domain=' . $domain . " > ~/Tmp/$timestamp-deploy_mailgun_$site.txt 2>&1 &";
 	}
+	if ( $cmd == 'applyssl' ) {
+		$command = "captaincore ssh $site --script=applyssl";
+	}
+	if ( $cmd == 'applysslwithwww' ) {
+		$command = "captaincore ssh $site --script=applysslwithwww";
+	}
 	if ( $cmd == 'production-to-staging' ) {
 		date_default_timezone_set( 'America/New_York' );
 		$t         = time();
@@ -3400,31 +3406,57 @@ function captaincore_website_acf_actions( $field ) {
 }
 add_action( 'acf/render_field/type=message', 'captaincore_website_acf_actions', 10, 1 );
 
-function captaincore_job_create( $command ) {
+function captaincore_job_create( $command, $site_id ) {
 
-	// Create post object
-	$my_post = array(
-		'post_title'  => 'Job',
-		'post_status' => 'publish',
-		'post_author' => 1,
-		'post_type'   => 'captcore_queue',
-	);
+	// Checks permissions
+	if ( anchor_verify_permissions( $site_id ) ) {
 
-	// Insert the post into the database
-	$job_id = wp_insert_post( $my_post );
+		// Create post object
+		$my_post = array(
+			'post_title'  => 'Job',
+			'post_status' => 'publish',
+			'post_author' => 1,
+			'post_type'   => 'captcore_job',
+		);
 
-	// Wraps command with 'nohup' with trackable ID
-	$filename = "~/Tmp/job-$job_id.txt";
-	$command  = "nohup $command > $filename 2>&1 &";
+		// Store Site ID within Job
+		// ACF field update
 
-	return $command;
+		// Insert the post into the database
+		$job_id = wp_insert_post( $my_post );
+
+		// Wraps command with 'nohup' with trackable ID
+		$filename = "~/Tmp/job-$job_id.txt";
+		$command  = "$command --mark-when-completed > $filename 2>&1 &";
+
+		// Runs command on remote
+		require_once ABSPATH . '/vendor/autoload.php';
+
+		$ssh = new \phpseclib\Net\SSH2( CAPTAINCORE_CLI_ADDRESS, CAPTAINCORE_CLI_PORT );
+
+		if ( ! $ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
+			exit( 'Login Failed' );
+		}
+
+		$ssh->exec( $command );
+
+	} else {
+		echo 'Permission denied';
+	}
+
+	return $job_id;
 }
 
 function captaincore_job_check( $job_id ) {
-	$filename = "~/Tmp/job-$job_id.txt";
-	$command  = "tail $filename";
+
+	$site_id = get_field('site', $job_id)
+
 	// Checks permissions
-	if ( anchor_verify_permissions( $post_id ) ) {
+	if ( anchor_verify_permissions( $site_id ) ) {
+
+		// Preps command
+		$filename = "~/Tmp/job-$job_id.txt";
+		$command  = "tail -n 1 $filename";
 
 		// Runs command on remote on production
 		require_once ABSPATH . '/vendor/autoload.php';
@@ -3434,7 +3466,8 @@ function captaincore_job_check( $job_id ) {
 		if ( ! $ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
 			exit( 'Login Failed' );
 		}
-		echo $ssh->exec( $command );
+		$response = json_decode( $ssh->exec( $command ) );
+		print_r( $response );
 
 	} else {
 		echo 'Permission denied';
@@ -3554,16 +3587,13 @@ function anchor_download_snapshot_email( $snapshot_id ) {
 	$headers   = array();
 	$headers[] = 'Authorization: ' . $auth_token;
 	curl_setopt( $session, CURLOPT_HTTPHEADER, $headers );
-
 	curl_setopt( $session, CURLOPT_POST, true ); // HTTP POST
 	curl_setopt( $session, CURLOPT_RETURNTRANSFER, true );  // Receive server response
 	$server_output = curl_exec( $session ); // Let's do this!
 	curl_close( $session ); // Clean up
 	// echo ($server_output); // Tell me about the rabbits, George!
 	$server_output = json_decode( $server_output );
-
 	$auth = $server_output->authorizationToken;
-
 	$url = "https://f001.backblazeb2.com/file/AnchorHostBackup/Snapshots/$domain/$name?Authorization=" . $auth;
 
 	echo $url;
@@ -3583,9 +3613,9 @@ function anchor_custom_pages() {
 	add_submenu_page( 'captaincore', 'Customers Report', 'Reports', 'manage_options', 'anchor_report', 'anchor_customer_report_callback' );
 	add_submenu_page( null, 'Partners Report', 'Partners', 'manage_options', 'anchor_partner', 'anchor_partner_report_callback' );
 	add_submenu_page( null, 'Installs', 'Installs', 'manage_options', 'anchor_installs', 'anchor_installs_report_callback' );
-		add_submenu_page( null, 'Customers Timeline', 'Timeline', 'manage_options', 'anchor_timeline', 'anchor_timeline_report_callback' );
-		add_submenu_page( null, 'KPI', 'KPI', 'manage_options', 'anchor_kpi', 'anchor_kpi_report_callback' );
-		add_submenu_page( null, 'Quicksaves', 'Quicksaves', 'manage_options', 'anchor_quicksaves', 'anchor_quicksaves_report_callback' );
+	add_submenu_page( null, 'Customers Timeline', 'Timeline', 'manage_options', 'anchor_timeline', 'anchor_timeline_report_callback' );
+	add_submenu_page( null, 'KPI', 'KPI', 'manage_options', 'anchor_kpi', 'anchor_kpi_report_callback' );
+	add_submenu_page( null, 'Quicksaves', 'Quicksaves', 'manage_options', 'anchor_quicksaves', 'anchor_quicksaves_report_callback' );
 }
 
 function anchor_customer_report_callback() {

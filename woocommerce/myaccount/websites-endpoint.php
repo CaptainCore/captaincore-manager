@@ -266,6 +266,40 @@ if ( $wp_query->query_vars["websites"] ) {
 
 			});
 
+			jQuery(".apply_ssl .modal-content button").click(function(e){
+
+				e.preventDefault();
+
+				modal_form = jQuery(this).parents('.modal.open');
+
+				confirm_applyssl = confirm("Will apply ssl urls. Proceed?");
+				command = jQuery(this).val();
+
+					if(confirm_applyssl) {
+
+						var post_id = jQuery(this).data('post-id');
+
+						var data = {
+							'action': 'anchor_install',
+							'post_id': modal_form.data('id'),
+							'command': command,
+						};
+
+						// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+						jQuery.post(ajaxurl, data, function(response) {
+							Materialize.toast('Apply SSL in progress.', 4000);
+							jQuery('.modal.open .modal-content .row').show();
+							jQuery('.modal.open .modal-content .progress').addClass('hide');
+							modal_form.modal('close');
+						});
+
+					} else {
+						jQuery('.modal.open .modal-content .row').show();
+						jQuery('.modal.open .modal-content .progress').addClass('hide');
+					}
+
+			});
+
 			jQuery(".push_to_staging .modal-content input#submit").click(function(e){
 
 				e.preventDefault();
@@ -504,6 +538,7 @@ if ( $wp_query->query_vars["websites"] ) {
 		$website_storage = get_field('storage', $website_id);
 		$website_views = get_field('views', $website_id);
 		$mailgun = get_field('mailgun', $website_id);
+		$domain = preg_replace('#^https?://#', '', get_field('home_url', $website_id));
 
 		if ($hosting_plan == "basic") {
 			$views_plan_limit = "100000";
@@ -642,9 +677,11 @@ if ( $wp_query->query_vars["websites"] ) {
 			<a href="#push_to_staging<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large" data-post-id="<?php echo $website_id; ?>"><i class="material-icons left">local_shipping</i>Push Production to Staging</a><br />
 			<a href="#push_to_production<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large" data-post-id="<?php echo $website_id; ?>"><i class="material-icons reverse left">local_shipping</i>Push Staging to Production</a><br />
 		<?php endif ?>
+			<a href="#apply_ssl<?php echo $website_id; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">launch</i>Apply SSL (Will replace http urls with https)</a><br />
 		<?php if ($views != $website_views or $storage != $website_storage) { ?>
 			<a href="#view_usage_breakdown_<?php echo $customer_id[0]; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">chrome_reader_mode</i>View Usage Breakdown</a><br />
 		<?php } ?>
+
 		<?php if ($mailgun) { ?>
 			<a href="#mailgun_logs_<?php echo $website_id; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">email</i>View Mailgun Logs</a>
 		<?php } ?>
@@ -684,6 +721,28 @@ if ( $wp_query->query_vars["websites"] ) {
 
 		<input id="submit" value="Download" type="submit">
 	</div>
+</div>
+</div>
+</div>
+
+<div id="apply_ssl<?php echo $website_id; ?>" class="modal apply_ssl" data-id="<?php echo $website_id; ?>">
+<div class="modal-content">
+
+<h4>Apply SSL <small>(<?php echo get_the_title( $website_id ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
+<div class="progress hide">
+		<div class="indeterminate"></div>
+</div>
+<div class="row">
+
+
+	<div class="card-panel">
+		<span style="font-size:16px;"><i class="material-icons">announcement</i> Domain needs to match current home url which is <strong><?php echo get_field('home_url', $website_id); ?></strong>. Otherwise server domain mapping will need updated to prevent redirection loop.</span>
+	</div>
+	<p>Select url replacement option.<p>
+
+	<button class="btn blue<?php if ( $domain != get_the_title( $website_id ) ) { echo " disabled"; } ?>" style="color:#fff !important;" value="applyssl"><b>Option 1</b>: https://<?php echo get_the_title( $website_id ); ?></button>
+	<button class="btn blue<?php if ( $domain != "www.". get_the_title( $website_id ) ) { echo " disabled"; } ?>" style="color:#fff !important;" value="applysslwithwww"><b>Option 2</b>: https://www.<?php echo get_the_title( $website_id ); ?></button>
+
 </div>
 </div>
 </div>
