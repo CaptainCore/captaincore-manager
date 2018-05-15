@@ -3421,7 +3421,6 @@ function captaincore_job_create( $command, $site_id ) {
 
 		// Store Site ID within Job
 		// ACF field update
-
 		// Insert the post into the database
 		$job_id = wp_insert_post( $my_post );
 
@@ -3449,7 +3448,7 @@ function captaincore_job_create( $command, $site_id ) {
 
 function captaincore_job_check( $job_id ) {
 
-	$site_id = get_field('site', $job_id)
+	$site_id = get_field( 'site', $job_id );
 
 	// Checks permissions
 	if ( anchor_verify_permissions( $site_id ) ) {
