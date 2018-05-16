@@ -3532,12 +3532,12 @@ function snapshot_email_action_callback() {
 
 	// Variables from JS request
 	$snapshot_id = intval( $_POST['snapshot_id'] );
-	anchor_download_snapshot_email( $snapshot_id );
+	captaincore_download_snapshot_email( $snapshot_id );
 
 	wp_die(); // this is required to terminate immediately and return a proper response
 }
 
-function anchor_download_snapshot_email( $snapshot_id ) {
+function captaincore_download_snapshot_email( $snapshot_id ) {
 	$email      = get_field( 'email', $snapshot_id );
 	$name       = get_field( 'name', $snapshot_id );
 	$website    = get_field( 'website', $snapshot_id );

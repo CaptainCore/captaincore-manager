@@ -139,7 +139,7 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 		wp_update_post( $my_post );
 
 		// Send out snapshot email
-		anchor_download_snapshot_email( $snapshot_id );
+		captaincore_download_snapshot_email( $snapshot_id );
 
 	}
 
