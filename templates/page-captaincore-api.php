@@ -1,47 +1,48 @@
 <?php
 /**
  * Template Name: CaptainCore API Endpoint
-
- *  This is a collection of custom functions meant to received from Anchor's custom server.
- *  Currently it handles the follow:
-
+ *
+ *  This is a collection of custom functions meant to received from CaptainCore CLI.
+ *
  * Received views, storage and server then updates ACF records
  * Received backup snapshot info (name, size)
-
+ *
  * Examples:
-
+ *
  * Adding Quicksave
  * https://<captaincore-server>/captaincore-api/<site-domain>/?git_commit=<git-commit>&core=<version>&plugins=<plugin-data>&themes=<theme-data>&token=<token_key>
-
+ *
  * Adding backup snapshot
  * https://<captaincore-server>/captaincore-api/<site-domain>/?archive=anchorhost1.wpengine.com-2016-10-22.tar.gz&storage=235256&token=<token_key>
-
+ *
  * Updating views and storage
  * https://<captaincore-server>/captaincore-api/<site-domain>/?views=9435345&storage=2334242&token=token_key
-
+ *
  * Assigning server
  * https://<captaincore-server>/captaincore-api/<site-domain>/?server=104.197.69.102&token=token_key
-
+ *
  * Load token
  * https://<captaincore-server>/captaincore-api/<site-domain>/?token_key=token_key&token=token_key
  */
 
-$site       = get_query_var( 'callback' );
-$date       = $_POST['date'];
-$archive    = $_POST['archive'];
-$command    = $_POST['command'];
-$storage    = $_POST['storage'];
-$views      = $_POST['views'];
-$email      = $_POST['email'];
-$server     = $_POST['server'];
-$core       = $_POST['core'];
-$plugins    = base64_decode( $_POST['plugins'] );
-$themes     = base64_decode( $_POST['themes'] );
-$token      = $_POST['token'];
-$token_key  = $_POST['token_key'];
-$git_commit = $_POST['git_commit'];
-$home_url   = $_POST['home_url'];
-$git_status = trim( base64_decode( $_POST['git_status'] ) );
+$site                = get_query_var( 'callback' );
+$site_source_id      = $_POST['site_source_id'];
+$site_destination_id = $_POST['site_destination_id'];
+$date                = $_POST['date'];
+$archive             = $_POST['archive'];
+$command             = $_POST['command'];
+$storage             = $_POST['storage'];
+$views               = $_POST['views'];
+$email               = $_POST['email'];
+$server              = $_POST['server'];
+$core                = $_POST['core'];
+$plugins             = base64_decode( $_POST['plugins'] );
+$themes              = base64_decode( $_POST['themes'] );
+$token               = $_POST['token'];
+$token_key           = $_POST['token_key'];
+$git_commit          = $_POST['git_commit'];
+$home_url            = $_POST['home_url'];
+$git_status          = trim( base64_decode( $_POST['git_status'] ) );
 
 
 // Finding matching site by domain name (title)
@@ -72,6 +73,24 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 
 		// Insert the post into the database
 		$site_id = wp_insert_post( $my_post );
+	}
+
+	// Copy site
+	if ( $command == 'copy' and $email ) {
+
+		$site_source = get_the_title( $site_source_id );
+		$site_destination = get_the_title( $site_destination_id );
+
+		// Send out completed email notice
+		$to      = $email;
+		$subject = "Anchor Hosting - Copy site ($site_source) to ($site_destination) completed";
+		$body    = "Completed copying $site_source to $site_destination.<br /><br /><a href=\"http://$site_destination\">$site_destination</a>";
+		$headers = array( 'Content-Type: text/html; charset=UTF-8' );
+
+		wp_mail( $to, $subject, $body, $headers );
+
+		echo 'copy-site email sent';
+
 	}
 
 	// Production deploy to staging
