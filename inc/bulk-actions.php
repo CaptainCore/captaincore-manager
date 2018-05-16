@@ -139,7 +139,7 @@ if (!class_exists('FRS_Custom_Bulk_Action')) {
 			// do whatever work needs to be done
 
 			// Update the post into the database
-			anchor_acf_save_post_after($post_id);
+			captaincore_acf_save_post_after($post_id);
 			return true;
 		}
 		function assign_partner($post_id, $partner_id) {

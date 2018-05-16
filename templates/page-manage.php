@@ -531,7 +531,7 @@ new Vue({
 		bulkactionSubmit() {
 
 			var data = {
-	  		'action': 'anchor_install',
+	  		'action': 'captaincore_install',
 	  		'post_id': this.sites.filter( site => site.selected ).map( site => site.id ),
 	      'command': "manage",
 				'value': this.select_bulk_action,

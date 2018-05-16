@@ -41,7 +41,7 @@ do_action( 'woocommerce_email_header', $email_heading, $email ); ?>
 			)
 		),
 		esc_html( get_bloginfo( 'name', 'display' ) ),
-		'<a href="' . esc_url( anchor_get_checkout_payment_url( $order->get_checkout_payment_url() ) ) . '">' . esc_html__( 'Pay Now »', 'woocommerce' ) . '</a>'
+		'<a href="' . esc_url( captaincore_get_checkout_payment_url( $order->get_checkout_payment_url() ) ) . '">' . esc_html__( 'Pay Now »', 'woocommerce' ) . '</a>'
 	);
 	?>
 	</p>

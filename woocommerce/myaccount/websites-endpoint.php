@@ -5,7 +5,7 @@ if ( $wp_query->query_vars["websites"] ) {
 
 	$website_id = $wp_query->query_vars["websites"];
 
-	if ( anchor_verify_permissions( $website_id ) ) {
+	if ( captaincore_verify_permissions( $website_id ) ) {
 	//  Display single website page ?>
 
 	<script type="text/javascript">
@@ -63,7 +63,7 @@ if ( $wp_query->query_vars["websites"] ) {
 				var post_id = jQuery(this).data('post-id');
 
 				var data = {
-					'action': 'anchor_install',
+					'action': 'captaincore_install',
 					'post_id': post_id,
 					'command': 'quick_backup'
 				};
@@ -88,7 +88,7 @@ if ( $wp_query->query_vars["websites"] ) {
 					jQuery(quicksave).find(".git_status").html( '<p></p><div class="preloader-wrapper small active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p></p>' );
 
 					var data = {
-						'action': 'anchor_install',
+						'action': 'captaincore_install',
 						'post_id': quicksave.data('id'),
 						'command': 'quicksave_rollback',
 					};
@@ -109,7 +109,7 @@ if ( $wp_query->query_vars["websites"] ) {
 				jQuery(quicksave).find(".card-reveal .response").html( '<p></p><div class="preloader-wrapper small active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p></p>' );
 
 				var data = {
-					'action': 'anchor_install',
+					'action': 'captaincore_install',
 					'post_id': quicksave.data('id'),
 					'command': 'view_quicksave_changes',
 					'value'	: quicksave.data("git_commit")
@@ -157,7 +157,7 @@ if ( $wp_query->query_vars["websites"] ) {
 				jQuery( modal_id ).find("p").html( '<p></p><div class="preloader-wrapper small active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p></p>' );
 				jQuery( modal_id ).modal('open');
 				var data = {
-					'action': 'anchor_install',
+					'action': 'captaincore_install',
 					'post_id': quicksave.data('id'),
 					'command': 'quicksave_file_diff',
 					'value'	: file_name,
@@ -169,10 +169,10 @@ if ( $wp_query->query_vars["websites"] ) {
 //--- a/plugins/captaincore/inc/admin-submenu-tabs.php
 //+++ b/plugins/captaincore/inc/admin-submenu-tabs.php
 //@@ -5,5 +5,4 @@
-// 	<a class="nav-tab" href="/wp-admin/admin.php?page=anchor_installs">Installs</a>
-// 	<a class="nav-tab" href="/wp-admin/admin.php?page=anchor_timeline">Timeline</a>
-// 	<a class="nav-tab" href="/wp-admin/admin.php?page=anchor_kpi">KPI</a>
-//-	<a class="nav-tab" href="/wp-admin/admin.php?page=anchor_quicksaves">Quicksaves</a>
+// 	<a class="nav-tab" href="/wp-admin/admin.php?page=captaincore_installs">Installs</a>
+// 	<a class="nav-tab" href="/wp-admin/admin.php?page=captaincore_timeline">Timeline</a>
+// 	<a class="nav-tab" href="/wp-admin/admin.php?page=captaincore_kpi">KPI</a>
+//-	<a class="nav-tab" href="/wp-admin/admin.php?page=captaincore_quicksaves">Quicksaves</a>
 // </h2>`;
 					file_diff = response.split("\n");
 					jQuery( modal_id ).find("p").html( "" );
@@ -218,7 +218,7 @@ if ( $wp_query->query_vars["websites"] ) {
 					jQuery(quicksave).find(".git_status").html( '<p></p><div class="preloader-wrapper small active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p></p>' );
 
 					var data = {
-						'action': 'anchor_install',
+						'action': 'captaincore_install',
 						'post_id': quicksave.data('id'),
 						'command': 'rollback',
 						'value'	: addon_name,
@@ -244,7 +244,7 @@ if ( $wp_query->query_vars["websites"] ) {
 
 				email_address = modal_form.find('input#email').val();
 				var data = {
-					'action': 'anchor_install',
+					'action': 'captaincore_install',
 					'post_id': modal_form.data('id'),
 					'command': 'snapshot',
 					'value'	: email_address
@@ -280,7 +280,7 @@ if ( $wp_query->query_vars["websites"] ) {
 						var post_id = jQuery(this).data('post-id');
 
 						var data = {
-							'action': 'anchor_install',
+							'action': 'captaincore_install',
 							'post_id': modal_form.data('id'),
 							'command': command,
 						};
@@ -320,7 +320,7 @@ if ( $wp_query->query_vars["websites"] ) {
 						var post_id = jQuery(this).data('post-id');
 
 						var data = {
-							'action': 'anchor_install',
+							'action': 'captaincore_install',
 							'post_id': modal_form.data('id'),
 							'command': 'production-to-staging',
 							'value'	: email_address
@@ -367,7 +367,7 @@ if ( $wp_query->query_vars["websites"] ) {
 						var post_id = jQuery(this).data('post-id');
 
 						var data = {
-							'action': 'anchor_install',
+							'action': 'captaincore_install',
 							'post_id': modal_form.data('id'),
 							'command': 'staging-to-production',
 							'value'	: email_address
@@ -403,7 +403,7 @@ if ( $wp_query->query_vars["websites"] ) {
 					var post_id = jQuery(this).data('post-id');
 
 					var data = {
-						'action': 'anchor_install',
+						'action': 'captaincore_install',
 						'post_id': post_id,
 						'command': 'new'
 					};
@@ -669,7 +669,7 @@ if ( $wp_query->query_vars["websites"] ) {
 		<a href="#snapshot<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">cloud</i>Download Backup Snapshot</a> <br />
 		<a class="waves-effect waves-light large redeploy" data-post-id="<?php echo $website_id; ?>"><i class="material-icons left">loop</i>Redeploy users/plugins</a> <br />
 		<a href="#quicksave<?php echo $website_id; ?>" class="waves-effect waves-light modal-quicksave modal-trigger large"><i class="material-icons left">settings_backup_restore</i>Quicksaves (Plugins & Themes)</a><br />
-		<?php if( defined('ANCHOR_DEV_MODE') ) { ?>
+		<?php if( defined('CAPTAINCORE_DEV_MODE') ) { ?>
 			<!-- <a href="#install-premium-plugin<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">add</i>Install premium plugin</a> <br />-->
 		<?php } ?>
 		<?php
@@ -733,7 +733,6 @@ if ( $wp_query->query_vars["websites"] ) {
 		<div class="indeterminate"></div>
 </div>
 <div class="row">
-
 
 	<div class="card-panel">
 		<span style="font-size:16px;"><i class="material-icons">announcement</i> Domain needs to match current home url which is <strong><?php echo get_field('home_url', $website_id); ?></strong>. Otherwise server domain mapping will need updated to prevent redirection loop.</span>

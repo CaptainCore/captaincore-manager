@@ -71,7 +71,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			jQuery(quicksave).find(".git_status").html( '<p></p><div class="preloader-wrapper small active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p></p>' );
 
 			var data = {
-	  		'action': 'anchor_install',
+	  		'action': 'captaincore_install',
 	  		'post_id': quicksave.data('id'),
 	      'command': 'view_quicksave_changes',
 				'value'	: quicksave.data("git_commit")
@@ -107,7 +107,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				jQuery(quicksave).find(".git_status").html( '<p></p><div class="preloader-wrapper small active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p></p>' );
 
 				var data = {
-		  		'action': 'anchor_install',
+		  		'action': 'captaincore_install',
 		  		'post_id': quicksave.data('id'),
 		      'command': 'rollback',
 					'value'	: addon_name,
@@ -133,7 +133,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 			email_address = modal_form.find('input#email').val();
 	  	var data = {
-	  		'action': 'anchor_install',
+	  		'action': 'captaincore_install',
 	  		'post_id': modal_form.data('id'),
 	      'command': 'snapshot',
 				'value'	: email_address
@@ -162,7 +162,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				var post_id = jQuery(this).data('post-id');
 
 			  var data = {
-			  	'action': 'anchor_install',
+			  	'action': 'captaincore_install',
 			  	'post_id': post_id,
 					'command': 'new'
 			  };
@@ -187,7 +187,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				var post_id = jQuery(this).data('post-id');
 
 			  var data = {
-			  	'action': 'anchor_install',
+			  	'action': 'captaincore_install',
 			  	'post_id': post_id,
 					'command': 'production-to-staging'
 			  };

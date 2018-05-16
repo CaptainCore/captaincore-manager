@@ -115,17 +115,17 @@ function captaincore_rewrite() {
 
 add_action( 'init', 'captaincore_rewrite' );
 
-function anchor_disable_gutenberg( $can_edit, $post_type ) {
+function captaincore_disable_gutenberg( $can_edit, $post_type ) {
 	$disabled_post_types = array( 'captcore_website', 'captcore_domain', 'captcore_customer', 'captcore_changelog' );
 	if ( in_array( $post_type, $disabled_post_types ) ) {
 		return false;
 	}
 	return $can_edit;
 }
-add_filter( 'gutenberg_can_edit_post_type', 'anchor_disable_gutenberg', 10, 2 );
+add_filter( 'gutenberg_can_edit_post_type', 'captaincore_disable_gutenberg', 10, 2 );
 
 // Modify WooCommerce Menu: wc_get_account_menu_items() ;
-function anchor_my_account_order( $current_menu ) {
+function captaincore_my_account_order( $current_menu ) {
 
 	unset( $current_menu['websites'] );
 	unset( $current_menu['edit-account'] );
@@ -157,7 +157,7 @@ function anchor_my_account_order( $current_menu ) {
 	return $current_menu;
 }
 // Need to run later to allow time for new items to be added to WooCommerce Menu
-add_filter( 'woocommerce_account_menu_items', 'anchor_my_account_order', 50 );
+add_filter( 'woocommerce_account_menu_items', 'captaincore_my_account_order', 50 );
 
 // Register Custom Post Type
 function contact_post_type() {
@@ -1069,7 +1069,7 @@ function my_relationship_query( $args, $field, $post ) {
 // filter for a specific field based on it's key
 add_filter( 'acf/fields/relationship/query/key=field_56181a38cf6e3', 'my_relationship_query', 10, 3 );
 
-function anchor_website_relationship_result( $title, $post, $field, $post_id ) {
+function captaincore_website_relationship_result( $title, $post, $field, $post_id ) {
 
 	// load a custom field from this $object and show it in the $result
 	$status = get_field( 'status', $post->ID );
@@ -1087,9 +1087,9 @@ function anchor_website_relationship_result( $title, $post, $field, $post_id ) {
 }
 
 // filter for a specific field based on it's name
-add_filter( 'acf/fields/relationship/result/name=website', 'anchor_website_relationship_result', 10, 4 );
+add_filter( 'acf/fields/relationship/result/name=website', 'captaincore_website_relationship_result', 10, 4 );
 
-function anchor_subscription_relationship_result( $title, $post, $field, $post_id ) {
+function captaincore_subscription_relationship_result( $title, $post, $field, $post_id ) {
 
 	// load a custom field from this $object and show it in the $result
 	$subscription = wcs_get_subscription( $post->ID );
@@ -1104,9 +1104,9 @@ function anchor_subscription_relationship_result( $title, $post, $field, $post_i
 }
 
 // filter for a specific field based on it's name
-add_filter( 'acf/fields/relationship/result/name=subscription', 'anchor_subscription_relationship_result', 10, 4 );
+add_filter( 'acf/fields/relationship/result/name=subscription', 'captaincore_subscription_relationship_result', 10, 4 );
 
-function anchor_subscription_relationship_query( $args, $field, $post ) {
+function captaincore_subscription_relationship_query( $args, $field, $post ) {
 
 		// Current search term
 		$search_term    = $args['s'];
@@ -1145,7 +1145,7 @@ function anchor_subscription_relationship_query( $args, $field, $post ) {
 }
 
 // filter for a specific field based on it's key
-add_filter( 'acf/fields/relationship/query/name=subscription', 'anchor_subscription_relationship_query', 10, 3 );
+add_filter( 'acf/fields/relationship/query/name=subscription', 'captaincore_subscription_relationship_query', 10, 3 );
 
 // Validate domain is unique
 add_action( 'acf/validate_save_post', 'my_acf_validate_save_post', 10, 0 );
@@ -1184,8 +1184,8 @@ function my_acf_validate_save_post() {
 
 
 // run before ACF saves the $_POST['acf'] data
-add_action( 'acf/save_post', 'anchor_acf_save_post_before', 1 );
-function anchor_acf_save_post_before( $post_id ) {
+add_action( 'acf/save_post', 'captaincore_acf_save_post_before', 1 );
+function captaincore_acf_save_post_before( $post_id ) {
 
 	if ( get_post_type( $post_id ) == 'captcore_website' ) {
 
@@ -1286,8 +1286,8 @@ function acf_load_color_field_choices( $field ) {
 add_filter( 'acf/load_field/key=field_590681f3c0775', 'acf_load_color_field_choices' );
 
 // run after ACF saves
-add_action( 'acf/save_post', 'anchor_acf_save_post_after', 20 );
-function anchor_acf_save_post_after( $post_id ) {
+add_action( 'acf/save_post', 'captaincore_acf_save_post_after', 20 );
+function captaincore_acf_save_post_after( $post_id ) {
 
 	if ( get_post_type( $post_id ) == 'captcore_website' ) {
 		$custom        = get_post_custom( $post_id );
@@ -2213,12 +2213,12 @@ function checkApiAuth( $result ) {
 
 	} else {
 
-		// User logged in so check anchor_verify_permissions
+		// User logged in so check captaincore_verify_permissions
 		if ( $endpoint == 'captcore_website' ) {
 
 			$website_id = $endpoint_all[1];
 
-			if ( ! anchor_verify_permissions( $website_id ) ) {
+			if ( ! captaincore_verify_permissions( $website_id ) ) {
 				return new WP_Error( 'rest_token_invalid', __( 'Token is invalid' ), array( 'status' => 403 ) );
 			}
 		}
@@ -2227,7 +2227,7 @@ function checkApiAuth( $result ) {
 
 			$customer_id = $endpoint_all[1];
 
-			if ( ! anchor_verify_permissions_customer( $customer_id ) ) {
+			if ( ! captaincore_verify_permissions_customer( $customer_id ) ) {
 				return new WP_Error( 'rest_token_invalid', __( 'Token is invalid' ), array( 'status' => 403 ) );
 			}
 		}
@@ -2329,7 +2329,7 @@ function get_domains_per_partner( $partner_id ) {
 }
 
 // Checks current user for valid permissions
-function anchor_verify_permissions( $website_id ) {
+function captaincore_verify_permissions( $website_id ) {
 
 	$current_user = wp_get_current_user();
 	$role_check   = in_array( 'administrator', $current_user->roles );
@@ -2385,7 +2385,7 @@ function anchor_verify_permissions( $website_id ) {
 }
 
 // Checks current user for valid permissions
-function anchor_verify_permissions_customer( $customer_id ) {
+function captaincore_verify_permissions_customer( $customer_id ) {
 
 	$current_user = wp_get_current_user();
 	$role_check   = in_array( 'administrator', $current_user->roles );
@@ -2446,7 +2446,7 @@ function anchor_verify_permissions_customer( $customer_id ) {
 }
 
 // Checks current user for valid permissions
-function anchor_verify_permissions_domain( $domain_id ) {
+function captaincore_verify_permissions_domain( $domain_id ) {
 
 	$domain_exists = get_posts(
 		array(
@@ -2557,9 +2557,9 @@ function anchor_verify_permissions_domain( $domain_id ) {
 }
 
 // Processes install events (new install, remove install, setup configs)
-add_action( 'wp_ajax_anchor_dns', 'anchor_dns_action_callback' );
+add_action( 'wp_ajax_captaincore_dns', 'captaincore_dns_action_callback' );
 
-function anchor_dns_action_callback() {
+function captaincore_dns_action_callback() {
 	global $wpdb; // this is how you get access to the database
 
 	$domain_id      = intval( $_POST['domain_key'] );
@@ -2772,9 +2772,9 @@ function anchor_dns_action_callback() {
 }
 
 // Processes install events (new install, remove install, setup configs)
-add_action( 'wp_ajax_anchor_install', 'anchor_install_action_callback' );
+add_action( 'wp_ajax_captaincore_install', 'captaincore_install_action_callback' );
 
-function anchor_install_action_callback() {
+function captaincore_install_action_callback() {
 	global $wpdb; // this is how you get access to the database
 
 	if ( is_array( $_POST['post_id'] ) ) {
@@ -3022,7 +3022,7 @@ function anchor_install_action_callback() {
 
 	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
 
-		if ( anchor_verify_permissions( $post_id ) ) {
+		if ( captaincore_verify_permissions( $post_id ) ) {
 
 			echo $command; // Outputs command on development
 
@@ -3033,7 +3033,7 @@ function anchor_install_action_callback() {
 	} else {
 
 		// Checks permissions
-		if ( anchor_verify_permissions( $post_id ) ) {
+		if ( captaincore_verify_permissions( $post_id ) ) {
 
 			// Runs command on remote on production
 			require_once ABSPATH . '/vendor/autoload.php';
@@ -3368,7 +3368,7 @@ function captaincore_website_acf_actions( $field ) {
 		<p>Runs initial backup, setups up token, install plugins and load custom configs into wp-config.php and .htaccess in a background process. Sends email when completed. </p>
 		<script>
 		jQuery(document).ready(function(){
-		  jQuery(".anchor_commands button").click(function(e){
+		  jQuery(".captaincore_commands button").click(function(e){
 
 			// Loading
 			jQuery('.install-result').html( '<i class="fa fa-spinner" aria-hidden="true"></i>' ).show();
@@ -3376,7 +3376,7 @@ function captaincore_website_acf_actions( $field ) {
 			var command = jQuery(this).val().toLowerCase();
 			  e.preventDefault();
 			  var data = {
-				  'action': 'anchor_install',
+				  'action': 'captaincore_install',
 				  'post_id': acf.o.post_id,
 			  'command': command
 			  };
@@ -3389,7 +3389,7 @@ function captaincore_website_acf_actions( $field ) {
 
 		});
 		</script>
-		<div class="anchor_commands">
+		<div class="captaincore_commands">
 			<button value="New" class="button"><i class="fas fa-plus-circle"></i> New</button>
 			<button value="Update" class="button"><i class="fas fa-pen-square"></i> Update</button>
 			<button value="Mailgun" class="button"><i class="fas fa-envelope"></i> Deploy Mailgun</button>
@@ -3409,7 +3409,7 @@ add_action( 'acf/render_field/type=message', 'captaincore_website_acf_actions', 
 function captaincore_job_create( $command, $site_id ) {
 
 	// Checks permissions
-	if ( anchor_verify_permissions( $site_id ) ) {
+	if ( captaincore_verify_permissions( $site_id ) ) {
 
 		// Create post object
 		$my_post = array(
@@ -3451,7 +3451,7 @@ function captaincore_job_check( $job_id ) {
 	$site_id = get_field( 'site', $job_id );
 
 	// Checks permissions
-	if ( anchor_verify_permissions( $site_id ) ) {
+	if ( captaincore_verify_permissions( $site_id ) ) {
 
 		// Preps command
 		$filename = "~/Tmp/job-$job_id.txt";
@@ -3605,43 +3605,43 @@ function captaincore_download_snapshot_email( $snapshot_id ) {
 }
 
 // Add reports to customers
-add_action( 'admin_menu', 'anchor_custom_pages' );
+add_action( 'admin_menu', 'captaincore_custom_pages' );
 
-function anchor_custom_pages() {
-	add_submenu_page( 'captaincore', 'Customers Report', 'Reports', 'manage_options', 'anchor_report', 'anchor_customer_report_callback' );
-	add_submenu_page( null, 'Partners Report', 'Partners', 'manage_options', 'anchor_partner', 'anchor_partner_report_callback' );
-	add_submenu_page( null, 'Installs', 'Installs', 'manage_options', 'anchor_installs', 'anchor_installs_report_callback' );
-	add_submenu_page( null, 'Customers Timeline', 'Timeline', 'manage_options', 'anchor_timeline', 'anchor_timeline_report_callback' );
-	add_submenu_page( null, 'KPI', 'KPI', 'manage_options', 'anchor_kpi', 'anchor_kpi_report_callback' );
-	add_submenu_page( null, 'Quicksaves', 'Quicksaves', 'manage_options', 'anchor_quicksaves', 'anchor_quicksaves_report_callback' );
+function captaincore_custom_pages() {
+	add_submenu_page( 'captaincore', 'Customers Report', 'Reports', 'manage_options', 'captaincore_report', 'captaincore_customer_report_callback' );
+	add_submenu_page( null, 'Partners Report', 'Partners', 'manage_options', 'captaincore_partner', 'captaincore_partner_report_callback' );
+	add_submenu_page( null, 'Installs', 'Installs', 'manage_options', 'captaincore_installs', 'captaincore_installs_report_callback' );
+	add_submenu_page( null, 'Customers Timeline', 'Timeline', 'manage_options', 'captaincore_timeline', 'captaincore_timeline_report_callback' );
+	add_submenu_page( null, 'KPI', 'KPI', 'manage_options', 'captaincore_kpi', 'captaincore_kpi_report_callback' );
+	add_submenu_page( null, 'Quicksaves', 'Quicksaves', 'manage_options', 'captaincore_quicksaves', 'captaincore_quicksaves_report_callback' );
 }
 
-function anchor_customer_report_callback() {
+function captaincore_customer_report_callback() {
 	// Loads the Customer Report template
 	require_once dirname( __FILE__ ) . '/inc/admin-customer-report.php';
 }
 
-function anchor_partner_report_callback() {
+function captaincore_partner_report_callback() {
 	// Loads the Customer Report template
 	require_once dirname( __FILE__ ) . '/inc/admin-partner-report.php';
 }
 
-function anchor_installs_report_callback() {
+function captaincore_installs_report_callback() {
 	// Loads the Customer Report template
 	require_once dirname( __FILE__ ) . '/inc/admin-installs-report.php';
 }
 
-function anchor_timeline_report_callback() {
+function captaincore_timeline_report_callback() {
 	// Loads the Customer Report template
 	require_once dirname( __FILE__ ) . '/inc/admin-timeline-report.php';
 }
 
-function anchor_kpi_report_callback() {
+function captaincore_kpi_report_callback() {
 	// Loads the Customer Report template
 	require_once dirname( __FILE__ ) . '/inc/admin-kpi-report.php';
 }
 
-function anchor_quicksaves_report_callback() {
+function captaincore_quicksaves_report_callback() {
 	// Loads the Quicksaves Report template
 	require_once dirname( __FILE__ ) . '/inc/admin-report-quicksaves.php';
 }
@@ -3654,7 +3654,7 @@ function cc_mime_types( $mimes ) {
 add_filter( 'upload_mimes', 'cc_mime_types' );
 
 // After payment received, connect up the Stripe info into the subscription.
-function anchor_woocommerce_payment_complete( $order_id ) {
+function captaincore_woocommerce_payment_complete( $order_id ) {
 
 	$customer_id    = get_field( '_customer_user', $order_id );
 	$payment_tokens = WC_Payment_Tokens::get_customer_tokens( $customer_id );
@@ -3681,11 +3681,11 @@ function anchor_woocommerce_payment_complete( $order_id ) {
 	update_post_meta( $subscription_id, '_payment_method_title', 'Credit card' );
 
 }
-add_action( 'woocommerce_payment_complete', 'anchor_woocommerce_payment_complete' );
+add_action( 'woocommerce_payment_complete', 'captaincore_woocommerce_payment_complete' );
 
 
 // Custom payment link for speedy checkout
-function anchor_get_checkout_payment_url( $payment_url ) {
+function captaincore_get_checkout_payment_url( $payment_url ) {
 
 	// Current $payment_url is
 	// https://anchor.host/checkout/order-pay/1918?pay_for_order=true&key=wc_order_576c79296c346&subscription_renewal=true

@@ -35,7 +35,7 @@ jQuery( function( $ ) {
 		 */
 		init: function() {
 			$( document.body )
-				.on( 'keyup change', 'form.register #reg_password, form.checkout #account_password, form.edit-account #anchor_password_1, form.lost_reset_password #anchor_password_1', this.strengthMeter );
+				.on( 'keyup change', 'form.register #reg_password, form.checkout #account_password, form.edit-account #captaincore_password_1, form.lost_reset_password #captaincore_password_1', this.strengthMeter );
 			$( 'form.checkout #createaccount' ).change();
 		},
 
@@ -45,7 +45,7 @@ jQuery( function( $ ) {
 		strengthMeter: function() {
 			var wrapper    = $( 'form.register, form.checkout, form.edit-account, form.lost_reset_password' ),
 				submit     = $( 'input[type="submit"]', wrapper ),
-				field      = $( '#reg_password, #account_password, #anchor_password_1', wrapper ),
+				field      = $( '#reg_password, #account_password, #captaincore_password_1', wrapper ),
 				strength   = 1,
 				fieldValue = field.val();
 

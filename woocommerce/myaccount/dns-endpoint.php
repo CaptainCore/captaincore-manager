@@ -8,7 +8,7 @@ if ( $wp_query->query_vars['dns'] ) {
 
 	$domain_id = $wp_query->query_vars['dns'];
 
-	if ( anchor_verify_permissions_domain( $domain_id ) ) {
+	if ( captaincore_verify_permissions_domain( $domain_id ) ) {
 
 		$domain   = constellix_api_get( "domains/$domain_id" );
 		$response = constellix_api_get( "domains/$domain_id/records" );
@@ -292,7 +292,7 @@ if ( $wp_query->query_vars['dns'] ) {
 
 				 // Submit DNS Updates
 				 var data = {
-					'action': 'anchor_dns',
+					'action': 'captaincore_dns',
 					'domain_key': <?php echo $domain_id; ?>,
 					'record_updates': record_updates
 				 };
