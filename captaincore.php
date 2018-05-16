@@ -3557,9 +3557,8 @@ function anchor_download_snapshot_email( $snapshot_id ) {
 	$headers   = array();
 	$headers[] = 'Accept: application/json';
 	$headers[] = 'Authorization: Basic ' . $credentials;
-	curl_setopt( $session, CURLOPT_HTTPHEADER, $headers );  // Add headers
-
-	curl_setopt( $session, CURLOPT_HTTPGET, true );  // HTTP GET
+	curl_setopt( $session, CURLOPT_HTTPHEADER, $headers ); // Add headerss
+	curl_setopt( $session, CURLOPT_HTTPGET, true );        // HTTP GET
 	curl_setopt( $session, CURLOPT_RETURNTRANSFER, true ); // Receive server response
 	$server_output = curl_exec( $session );
 	curl_close( $session );
@@ -3587,13 +3586,13 @@ function anchor_download_snapshot_email( $snapshot_id ) {
 	$headers   = array();
 	$headers[] = 'Authorization: ' . $auth_token;
 	curl_setopt( $session, CURLOPT_HTTPHEADER, $headers );
-	curl_setopt( $session, CURLOPT_POST, true ); // HTTP POST
-	curl_setopt( $session, CURLOPT_RETURNTRANSFER, true );  // Receive server response
-	$server_output = curl_exec( $session ); // Let's do this!
-	curl_close( $session ); // Clean up
+	curl_setopt( $session, CURLOPT_POST, true );           // HTTP POST
+	curl_setopt( $session, CURLOPT_RETURNTRANSFER, true ); // Receive server response
+	$server_output = curl_exec( $session );                // Let's do this!
+	curl_close( $session );                                // Clean up
 	$server_output = json_decode( $server_output );
 	$auth          = $server_output->authorizationToken;
-	$url           = "https://f001.backblazeb2.com/file/" .CAPTAINCORE_B2_SNAPSHOTS . "/$site/$name?Authorization=" . $auth;
+	$url           = "https://f001.backblazeb2.com/file/" . CAPTAINCORE_B2_SNAPSHOTS . "/$site/$name?Authorization=" . $auth;
 
 	echo $url;
 
