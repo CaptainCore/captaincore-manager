@@ -586,9 +586,9 @@ if ( $wp_query->query_vars["websites"] ) {
 		}	?>
 		<?php if ($views != $website_views or $storage != $website_storage) { ?>
 			<!-- Modal Structure -->
-			<div id="view_usage_breakdown_<?php echo $customer_id[0]; ?>" class="modal modal-fixed-footer">
+			<div id="view_usage_breakdown_<?php echo $customer_id[0]; ?>" class="modal bottom-sheet">
 				<div class="modal-content">
-					<h4>Usage Breakdown for <?php echo get_the_title($customer_id[0]); ?></h4>
+					<h4>Usage Breakdown for <?php echo get_the_title($customer_id[0]); ?> <a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
 					<?php
 
 						/*
@@ -651,9 +651,6 @@ if ( $wp_query->query_vars["websites"] ) {
 							</div>
 							<?php } ?>
 						<?php endif; ?>
-				</div>
-				<div class="modal-footer">
-					<a href="#!" class="modal-action modal-close waves-effect btn-flat ">Close</a>
 				</div>
 			</div>
 		<?php } ?>
@@ -725,7 +722,7 @@ if ( $wp_query->query_vars["websites"] ) {
 </div>
 </div>
 
-<div id="apply_ssl<?php echo $website_id; ?>" class="modal apply_ssl" data-id="<?php echo $website_id; ?>">
+<div id="apply_ssl<?php echo $website_id; ?>" class="modal bottom-sheet apply_ssl" data-id="<?php echo $website_id; ?>">
 <div class="modal-content">
 
 <h4>Apply SSL <small>(<?php echo get_the_title( $website_id ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
