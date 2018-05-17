@@ -2888,10 +2888,10 @@ function captaincore_install_action_callback() {
 		$command = "captaincore ssh $site --script=deploy-mailgun --key=\"" . MAILGUN_API_KEY . '" --domain=' . $domain . " > ~/Tmp/$timestamp-deploy_mailgun_$site.txt 2>&1 &";
 	}
 	if ( $cmd == 'applyssl' ) {
-		$command = "captaincore ssh $site --script=applyssl";
+		$command = "captaincore ssh $site --script=applyssl &";
 	}
 	if ( $cmd == 'applysslwithwww' ) {
-		$command = "captaincore ssh $site --script=applysslwithwww";
+		$command = "captaincore ssh $site --script=applysslwithwww &";
 	}
 	if ( $cmd == 'production-to-staging' ) {
 		date_default_timezone_set( 'America/New_York' );
