@@ -674,7 +674,8 @@ if ( $wp_query->query_vars["websites"] ) {
 			<a href="#push_to_staging<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large" data-post-id="<?php echo $website_id; ?>"><i class="material-icons left">local_shipping</i>Push Production to Staging</a><br />
 			<a href="#push_to_production<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large" data-post-id="<?php echo $website_id; ?>"><i class="material-icons reverse left">local_shipping</i>Push Staging to Production</a><br />
 		<?php endif ?>
-			<a href="#apply_ssl<?php echo $website_id; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">launch</i>Apply SSL (Will replace http urls with https)</a><br />
+			<a href="#apply_ssl<?php echo $website_id; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">launch</i>Apply HTTPS Urls</a><br />
+			<a href="#copy_site<?php echo $website_id; ?>" class="waves-effect waves-light large modal-trigger"><i class="fas fa-clone"></i>Copy Site</a><br />
 		<?php if ($views != $website_views or $storage != $website_storage) { ?>
 			<a href="#view_usage_breakdown_<?php echo $customer_id[0]; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">chrome_reader_mode</i>View Usage Breakdown</a><br />
 		<?php } ?>
@@ -734,6 +735,7 @@ if ( $wp_query->query_vars["websites"] ) {
 	<div class="card-panel">
 		<span style="font-size:16px;"><i class="material-icons">announcement</i> Domain needs to match current home url which is <strong><?php echo get_field('home_url', $website_id); ?></strong>. Otherwise server domain mapping will need updated to prevent redirection loop.</span>
 	</div>
+	<p></p>
 	<p>Select url replacement option.<p>
 
 	<button class="btn blue<?php if ( $domain != get_the_title( $website_id ) ) { echo " disabled"; } ?>" style="color:#fff !important;" value="applyssl"><b>Option 1</b>: https://<?php echo get_the_title( $website_id ); ?></button>
