@@ -29,6 +29,24 @@ if ( $wp_query->query_vars["websites"] ) {
 				if (vb < 'a'.charCodeAt(0)) vb += 100; // Add weight if it's a number
 				return vb < va ? 1 : -1;
 		}
+		jQuery(window).load(function() {
+		jQuery('input.autocomplete').autocomplete({
+					data: {<?php
+						$arguments = captaincore_fetch_sites();
+						// Loads websites
+						$websites = get_posts( $arguments );
+						foreach( $websites as $website ):
+							$site = get_field('site', $website->ID);
+							echo '"'.$site.' ('.get_the_title($website->ID).')": null,';
+						endforeach; ?>
+					},
+					limit: 20, // The max amount of results that can be shown at once. Default: Infinity.
+					onAutocomplete: function(val) {
+						// Callback function when value is autcompleted.
+					},
+					minLength: 1, // The minimum length of the input for the autocomplete to start. Default: 1.
+				});
+			});
 
 		jQuery(document).ready(function() {
 			jQuery('a.staging-toggle').click(function() {
