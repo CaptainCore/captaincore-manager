@@ -73,7 +73,9 @@ class Captaincore_Public {
 		 * class.
 		 */
 
-		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/captaincore-public.2018-04-09.css', array(), $this->version, 'all' );
+		 global $wp_query;
+
+		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/captaincore-public.2018-05-17.css', array(), $this->version, 'all' );
 		wp_enqueue_style( 'google-material-icons', "https://fonts.googleapis.com/icon?family=Material+Icons", array(), '2017-09-03' );
 		wp_enqueue_style( 'materialize', plugin_dir_url( __FILE__ ) . "css/materialize-src/materialize.css", array(), '2017-09-08' );
 		wp_enqueue_script( 'font-awesome', "https://use.fontawesome.com/releases/v5.0.6/js/all.js", array() );
