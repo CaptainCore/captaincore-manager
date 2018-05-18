@@ -2956,7 +2956,10 @@ function captaincore_install_action_callback() {
 		if ( captaincore_verify_permissions( $site_destination_id ) ) {
 			$current_user = wp_get_current_user();
 			$email = $current_user->user_email;
-			$command = "captaincore copy $site $value --email=$email &";
+			date_default_timezone_set( 'America/New_York' );
+			$t         = time();
+			$timestamp = date( 'Y-m-d-hms', $t );
+			$command = "nohup captaincore copy $site $value --email=$email --mark-when-completed > ~/Tmp/job-copy-$timestamp.txt 2>&1 &";
 		}
 	}
 	if ( $cmd == 'mailgun' ) {
