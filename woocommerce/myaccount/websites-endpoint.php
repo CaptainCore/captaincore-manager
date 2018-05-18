@@ -318,7 +318,38 @@ if ( $wp_query->query_vars["websites"] ) {
 
 			});
 
-			jQuery(".push_to_staging .modal-content input#submit").click(function(e){
+			jQuery(".copy_site .modal-content .start_copy").click(function(e){
+
+					e.preventDefault();
+
+					modal_form = jQuery(this).parents('.modal.open');
+					confirm_copy_site = confirm("Will start site copy. Proceed?");
+
+					if(confirm_copy_site) {
+
+						var post_id = jQuery(this).data('post-id');
+						var site = jQuery("#autocomplete-input").val().split(" ")[0];
+
+						var data = {
+							'action': 'captaincore_install',
+							'post_id': modal_form.data('id'),
+							'command': 'copy',
+							'value': site
+						};
+
+						// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+						jQuery.post(ajaxurl, data, function(response) {
+							Materialize.toast('Site Copy in progress.', 4000);
+							jQuery('.modal.open .modal-content .row').show();
+							jQuery('.modal.open .modal-content .progress').addClass('hide');
+							modal_form.modal('close');
+						});
+
+					}
+
+			});
+
+			jQuery(".push_to_staging .modal-content a.btn").click(function(e){
 
 				e.preventDefault();
 
@@ -751,12 +782,29 @@ if ( $wp_query->query_vars["websites"] ) {
 		<span style="font-size:16px;"><i class="material-icons">announcement</i> Domain needs to match current home url which is <strong><?php echo get_field('home_url', $website_id); ?></strong>. Otherwise server domain mapping will need updated to prevent redirection loop.</span>
 	</div>
 	<p></p>
-	<p>Select url replacement option.<p>
-
-	<button class="btn blue<?php if ( $domain != get_the_title( $website_id ) ) { echo " disabled"; } ?>" style="color:#fff !important;" value="applyssl"><b>Option 1</b>: https://<?php echo get_the_title( $website_id ); ?></button>
-	<button class="btn blue<?php if ( $domain != "www.". get_the_title( $website_id ) ) { echo " disabled"; } ?>" style="color:#fff !important;" value="applysslwithwww"><b>Option 2</b>: https://www.<?php echo get_the_title( $website_id ); ?></button>
+	<p>Select url replacement option.</p>
+	<p><button class="btn blue<?php if ( $domain != get_the_title( $website_id ) ) { echo " disabled"; } ?>" style="color:#fff !important;" value="applyssl"><b>Option 1</b>: https://<?php echo get_the_title( $website_id ); ?></button></p>
+	<p><button class="btn blue<?php if ( $domain != "www.". get_the_title( $website_id ) ) { echo " disabled"; } ?>" style="color:#fff !important;" value="applysslwithwww"><b>Option 2</b>: https://www.<?php echo get_the_title( $website_id ); ?></button></p>
 
 </div>
+</div>
+</div>
+
+<div id="copy_site<?php echo $website_id; ?>" class="modal copy_site bottom-sheet" data-id="<?php echo $website_id; ?>">
+<div class="modal-content">
+  <h4>Copy Site <small>(<?php echo get_the_title( $website_id ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
+	<div class="progress hide">
+			<div class="indeterminate"></div>
+	</div>
+	<form class="col s12">
+	<div class="row">
+    <div class="input-field col s12">
+			<label for="autocomplete-input">Select destination site</label> <br/>
+      <input type="text" id="autocomplete-input" class="autocomplete">
+			<a class="start_copy blue btn">Start Copy</a>
+    </div>
+  </div>
+  </form>
 </div>
 </div>
 
