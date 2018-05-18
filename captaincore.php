@@ -2384,6 +2384,75 @@ function captaincore_verify_permissions( $website_id ) {
 	return false;
 }
 
+// List sites current user has access to
+function captaincore_fetch_sites() {
+
+	$user = wp_get_current_user();
+	$role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles) + in_array( 'editor', $user->roles );
+	$partner = get_field('partner', 'user_'. get_current_user_id());
+	if ($partner and $role_check) {
+
+		// Loop through each partner assigned to current user
+		foreach ($partner as $partner_id) {
+
+			// Load websites assigned to partner
+			$arguments = array(
+				'post_type' 			=> 'captcore_website',
+				'posts_per_page'	=> '-1',
+				'order'						=> 'asc',
+				'orderby'					=> 'title',
+				'meta_query'			=> array(
+					'relation'			=> 'AND',
+					array(
+						'key' => 'partner',
+						'value' => '"' . $partner_id . '"',
+						'compare' => 'LIKE'
+					),
+					array(
+						'key'	  	=> 'status',
+						'value'	  	=> 'closed',
+						'compare' 	=> '!=',
+					),
+					array(
+						'key'		=> 'address',
+						'compare'	=>	'EXISTS',
+					),
+					array(
+						'key'		=> 'address',
+						'value'	  	=> '',
+						'compare'	=>	'!=',
+					),
+				)
+			);
+
+			if ( in_array( 'administrator', $user->roles) ) {
+
+				// Load all websites for administrators
+				$arguments["meta_query"] = array(
+						array(
+							'key'	  	=> 'status',
+							'value'	  	=> 'closed',
+							'compare' 	=> '!=',
+						),
+						array(
+							'key'		=> 'address',
+							'compare'	=>	'EXISTS',
+						),
+						array(
+							'key'		=> 'address',
+							'value'	  	=> '',
+							'compare'	=>	'!=',
+						),
+				);
+
+			}
+		}
+
+	}
+
+		return $arguments;
+}
+
 // Checks current user for valid permissions
 function captaincore_verify_permissions_customer( $customer_id ) {
 
