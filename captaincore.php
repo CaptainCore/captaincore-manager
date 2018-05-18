@@ -2949,6 +2949,16 @@ function captaincore_install_action_callback() {
 		( $s3bucket ? " --s3bucket=$s3bucket" : '' ) .
 		( $s3path ? " --s3path=$s3path" : '' );
 	}
+	if ( $cmd == 'copy' ) {
+		// Find destination site and verify we have permission to it
+		$site_destination = get_posts( array( 'post_type' => 'captcore_website', 'meta_key' => 'site', 'meta_value' => $value ) );
+		$site_destination_id = $site_destination[0]->ID;
+		if ( captaincore_verify_permissions( $site_destination_id ) ) {
+			$current_user = wp_get_current_user();
+			$email = $current_user->user_email;
+			$command = "captaincore copy $site $value --email=$email &";
+		}
+	}
 	if ( $cmd == 'mailgun' ) {
 		date_default_timezone_set( 'America/New_York' );
 		$t         = time();
