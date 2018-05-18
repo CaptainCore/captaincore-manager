@@ -637,7 +637,10 @@ if ( $wp_query->query_vars["websites"] ) {
 			<!-- Modal Structure -->
 			<div id="view_usage_breakdown_<?php echo $customer_id[0]; ?>" class="modal bottom-sheet">
 				<div class="modal-content">
-					<h4>Usage Breakdown for <?php echo get_the_title($customer_id[0]); ?> <a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
+					<h4>Usage Breakdown <small>(<?php echo get_the_title($customer_id[0]); ?>)</small> <a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
+					<div class="row">
+						<div class="card">
+							<div class="card-content">
 					<?php
 
 						/*
@@ -700,6 +703,9 @@ if ( $wp_query->query_vars["websites"] ) {
 							</div>
 							<?php } ?>
 						<?php endif; ?>
+					</div>
+				</div>
+			  </div>
 				</div>
 			</div>
 		<?php } ?>
@@ -793,18 +799,18 @@ if ( $wp_query->query_vars["websites"] ) {
 <div id="copy_site<?php echo $website_id; ?>" class="modal copy_site bottom-sheet" data-id="<?php echo $website_id; ?>">
 <div class="modal-content">
   <h4>Copy Site <small>(<?php echo get_the_title( $website_id ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
-	<div class="progress hide">
-			<div class="indeterminate"></div>
+		<div class="card">
+		<div class="card-content">
+
+			<div class="input-field col s12">
+				<label for="autocomplete-input">Select destination site</label> <br/>
+	      <input type="text" id="autocomplete-input" class="autocomplete">
+				<a class="start_copy blue btn">Start Copy</a>
+	    </div>
+
+	  </div>
+	  </div>
 	</div>
-	<form class="col s12">
-	<div class="row">
-    <div class="input-field col s12">
-			<label for="autocomplete-input">Select destination site</label> <br/>
-      <input type="text" id="autocomplete-input" class="autocomplete">
-			<a class="start_copy blue btn">Start Copy</a>
-    </div>
-  </div>
-  </form>
 </div>
 </div>
 
