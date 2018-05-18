@@ -7,8 +7,7 @@
   margin: 0px;
 }
 
-.page-template-page-manage #main header.main,
-.woocommerce-account #main header.main {
+.page-template-page-manage #main header.main, .woocommerce-account #main header.main {
   padding: 40px 0 !important;
   margin-bottom: 40px !important;
 }
@@ -145,13 +144,27 @@
   margin: 0px;
 }
 
+.modal .modal-content {
+	max-width: 990px;
+	margin: auto;
+}
+
 .modal.bottom-sheet.open {
   top: 0px;
   max-height: 100%;
   margin: 0em;
   width: auto;
 }
+#autocomplete-input {
+	width: 400px;
+}
+.autocomplete-content.dropdown-content {
+	opacity: 1;
+}
 
+.dropdown-content li > a, .dropdown-content li > span {
+	color: #27c3f3 !important;
+}
 body.logged-in.admin-bar .modal.bottom-sheet.open {
   margin-top: 32px;
 }
@@ -165,6 +178,18 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
   padding: 0px;
 }
 
+.website-group .quicksave .card .action-buttons {
+	padding-bottom: 0.5em;
+	margin-top: -0.5em;
+  text-align: right;
+}
+
+.action-buttons .btn, .action-buttons .btn-large, .action-buttons .btn-flat {
+	height: 24px;
+	line-height: 24px;
+	padding: 0px 8px;
+}
+
 .quicksave .spinner-blue, .quicksave .spinner-blue-only {
   border-color: #27c3f3;
 }
@@ -175,6 +200,7 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
   font-size: 0.8em;
   width: auto;
   margin-right: 2em;
+	width: 100%;
 }
 
 .quicksave table th, .quicksave table td {
@@ -203,25 +229,22 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
 }
 
 .quicksave table td:nth-child(4) a {
-  background: #25c4f3;
-  color: #fff;
-  padding: 0 10px;
-  top: 3px;
-  position: relative;
-  left: -100%;
-  z-index: 999;
-  display: block;
-  line-height: 2em;
-  margin: 0 9px;
+	line-height: 18px;
+  height: 18px;
+}
+
+.quicksave table td:nth-child(3) {
+	max-width: 50px;
 }
 
 .quicksave table td:nth-child(4) {
-  position: absolute;
-  display: none;
+	max-width: 64px;
+  text-align: center;
+	opacity: 0;
 }
 
 .quicksave table tr:hover td:nth-child(4) {
-  display: block;
+  opacity: 1;
 }
 
 .quicksave table tr.removed:hover td:nth-child(4) {
@@ -235,9 +258,9 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
 }
 
 .quicksave span.badge {
-    font-size: 0.7em;
-    letter-spacing: -0.5px;
-    line-height: 28px;
+  font-size: 0.7em;
+  letter-spacing: -0.5px;
+  line-height: 28px;
 }
 
 .quicksave .card-reveal pre {
@@ -456,22 +479,21 @@ div.website .actions a {
   content: "\f022";
   font-family: FontAwesome;
 }
-.woocommerce-MyAccount-navigation-link--handbook,
-.woocommerce-MyAccount-navigation-link--manage {
-	border-left: 10px solid #27c3f3;
+
+.woocommerce-MyAccount-navigation-link--handbook, .woocommerce-MyAccount-navigation-link--manage {
+  border-left: 10px solid #27c3f3;
 }
 
-.woocommerce-MyAccount-navigation-link--handbook:after,
-.woocommerce-MyAccount-navigation-link--manage:after {
-	content: "admin";
-	font-size: 0.2em;
-	position: absolute;
-	left: -16px;
-	top: 5px;
-	padding: 0px;
-	margin: 0px;
-	transform: rotate(-90deg);
-	color: #fff;
+.woocommerce-MyAccount-navigation-link--handbook:after, .woocommerce-MyAccount-navigation-link--manage:after {
+  content: "admin";
+  font-size: 0.2em;
+  position: absolute;
+  left: -16px;
+  top: 5px;
+  padding: 0px;
+  margin: 0px;
+  transform: rotate(-90deg);
+  color: #fff;
 }
 
 .woocommerce-MyAccount-navigation-link--handbook:before {
@@ -1286,6 +1308,15 @@ body .progress .indeterminate {
   background-color: #eaeaea;
 }
 
+.card svg {
+  margin-right: 15px;
+  width: 24px !important;
+  height: 24px !important;
+  line-height: 1.3em;
+  text-align: center;
+  vertical-align: middle;
+}
+
 p.small {
   font-size: 14px;
   margin: 0px;
@@ -1330,16 +1361,9 @@ i.material-icons.reverse {
   right: 20px;
 }
 
-.website-group .quicksave .card .action-buttons {
-	position: absolute;
-  bottom: auto;
-  top: 20px;
-  right: 20px;
-}
-
 .modal.file_diff.open {
-	 width: 90%;
-   max-height: 86%;
+  width: 90%;
+  max-height: 86%;
 }
 
 .file_diff .code {
@@ -1491,8 +1515,8 @@ ul.changelog li .changelog-item.hascontent:hover {
 }
 
 ul.changelog li .changelog-item .title {
-	line-height: 1em;
-	padding: 0.7em 0 0.7em 0;
+  line-height: 1em;
+  padding: 0.7em 0 0.7em 0;
 }
 
 ul.changelog li .changelog-item .title.hascontent {
@@ -1512,13 +1536,13 @@ ul.changelog li .changelog-item .title a {
 
 ul.changelog li .changelog-item .content {
   display: none;
-	line-height: 1.2em;
-	padding: 0 0 1em 0;
-	margin: 0px;
+  line-height: 1.2em;
+  padding: 0 0 1em 0;
+  margin: 0px;
 }
 
 ul.changelog li .changelog-item .content.show {
-	display: block;
+  display: block;
 }
 
 ul.changelog li .changelog-item .content, ul.changelog li .changelog-item .content p {
@@ -1585,99 +1609,99 @@ ul.changelog.domain li:before {
 }
 
 .site-manage {
-	display: none;
-}
-.content-area .site ul {
-	padding:0px;
-	margin:0px;
-	list-style: none;
+  display: none;
 }
 
+.content-area .site ul {
+  padding: 0px;
+  margin: 0px;
+  list-style: none;
+}
 
 .site .collapsible-body {
-	font-size: .75em;
-	line-height: 1.4em;
+  font-size: .75em;
+  line-height: 1.4em;
 }
 
 .site span.title {
-	margin-right: 1em;
+  margin-right: 1em;
 }
 
 .site span.timestamp {
-	font-size: .75em;
-	line-height: 2em;
+  font-size: .75em;
+  line-height: 2em;
 }
 
 .site-manage .card .card-content {
-	padding: 12px;
+  padding: 12px;
 }
 
-.site .collapsible-header,
-.site .collapsible-body {
-	border-bottom: 0px;
+.site .collapsible-header, .site .collapsible-body {
+  border-bottom: 0px;
 }
 
 .site span.badge {
-	line-height: 2.7em;
+  line-height: 2.7em;
 }
 
 .site .collapsible-body table td {
-	border-bottom: 1px solid #d0d0d0;
+  border-bottom: 1px solid #d0d0d0;
 }
 
 .site-filter {
-	width: 100%;
-	overflow: hidden;
+  width: 100%;
+  overflow: hidden;
 }
 
-.site-filter select,
-.selected-action select {
-	font-size: .75em;
-	max-width: 220px;
-	text-overflow: ellipsis;
+.site-filter select, .selected-action select {
+  font-size: .75em;
+  max-width: 220px;
+  text-overflow: ellipsis;
 }
+
 .site .checkbox-selector {
-	background: #94949412;
-	width: 15px;
-	height: 100%;
-	display: block;
-	position: absolute;
-	top: 0px;
-	left: 0px;
-	cursor: pointer;
-	-webkit-transition: all 0.3s ease-in-out;
-	-moz-transition: all 0.3s ease-in-out;
-	-ms-transition: all 0.3s ease-in-out;
-	-o-transition: all 0.3s ease-in-out;
-	transition: all 0.3s ease-in-out;
+  background: #94949412;
+  width: 15px;
+  height: 100%;
+  display: block;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  cursor: pointer;
+  -webkit-transition: all 0.3s ease-in-out;
+  -moz-transition: all 0.3s ease-in-out;
+  -ms-transition: all 0.3s ease-in-out;
+  -o-transition: all 0.3s ease-in-out;
+  transition: all 0.3s ease-in-out;
 }
 
 .site .checkbox-selector:before {
-	content: "selected";
-	font-size: 0.2em;
-	position: absolute;
-	left: -9px;
-	top: 20px;
-	padding: 0px;
-	margin: 0px;
-	opacity: 0;
-	transform: rotate(-90deg);
-	color: #fff;
-	-webkit-transition: all 0.3s ease-in-out;
-	-moz-transition: all 0.3s ease-in-out;
-	-ms-transition: all 0.3s ease-in-out;
-	-o-transition: all 0.3s ease-in-out;
-	transition: all 0.3s ease-in-out;
+  content: "selected";
+  font-size: 0.2em;
+  position: absolute;
+  left: -9px;
+  top: 20px;
+  padding: 0px;
+  margin: 0px;
+  opacity: 0;
+  transform: rotate(-90deg);
+  color: #fff;
+  -webkit-transition: all 0.3s ease-in-out;
+  -moz-transition: all 0.3s ease-in-out;
+  -ms-transition: all 0.3s ease-in-out;
+  -o-transition: all 0.3s ease-in-out;
+  transition: all 0.3s ease-in-out;
 }
 
 .site .checkbox-selector:hover {
-	background: #25c4f361;
+  background: #25c4f361;
 }
 
 .site .checkbox-selector.selected {
-	background: #25c4f3;
+  background: #25c4f3;
 }
+
 .site .checkbox-selector.selected:before {
-	opacity: 1;
-	color: #fff;
+  opacity: 1;
+  color: #fff;
 }

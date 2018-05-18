@@ -251,7 +251,7 @@ if ( $wp_query->query_vars["websites"] ) {
 
 			});
 
-			jQuery(".snapshot .modal-content input#submit").click(function(e){
+			jQuery(".snapshot .modal-content button.btn").click(function(e){
 
 				e.preventDefault();
 
@@ -365,7 +365,7 @@ if ( $wp_query->query_vars["websites"] ) {
 
 			});
 
-			jQuery(".push_to_production .modal-content input#submit").click(function(e){
+			jQuery(".push_to_production .modal-content a.btn").click(function(e){
 
 				e.preventDefault();
 
@@ -681,26 +681,24 @@ if ( $wp_query->query_vars["websites"] ) {
 <div class="row">
 <span class="card-title grey-text text-darken-4 "><a href="http://<?php echo get_the_title( $website_id ); ?>" target="_blank"><?php echo get_the_title( $website_id ); ?></a></span>
 	<div class="col s12 m12">
+		<a href="#apply_ssl<?php echo $website_id; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">launch</i>Apply HTTPS Urls</a><br />
+		<a href="#copy_site<?php echo $website_id; ?>" class="waves-effect waves-light large modal-trigger"><i class="fas fa-clone"></i>Copy Site</a><br />
 		<a href="#snapshot<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">cloud</i>Download Backup Snapshot</a> <br />
-		<a class="waves-effect waves-light large redeploy" data-post-id="<?php echo $website_id; ?>"><i class="material-icons left">loop</i>Redeploy users/plugins</a> <br />
-		<a href="#quicksave<?php echo $website_id; ?>" class="waves-effect waves-light modal-quicksave modal-trigger large"><i class="material-icons left">settings_backup_restore</i>Quicksaves (Plugins & Themes)</a><br />
-		<?php if( defined('CAPTAINCORE_DEV_MODE') ) { ?>
-			<!-- <a href="#install-premium-plugin<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">add</i>Install premium plugin</a> <br />-->
+		<?php if ($mailgun) { ?>
+			<a href="#mailgun_logs_<?php echo $website_id; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">email</i>View Mailgun Logs</a> <br />
 		<?php } ?>
+		<a href="#quicksave<?php echo $website_id; ?>" class="waves-effect waves-light modal-quicksave modal-trigger large"><i class="material-icons left">settings_backup_restore</i>Quicksaves (Plugins & Themes)</a><br />
+		<a class="waves-effect waves-light large redeploy" data-post-id="<?php echo $website_id; ?>"><i class="material-icons left">loop</i>Redeploy users/plugins</a> <br />
 		<?php
 		if( strpos($production_address, ".kinsta.com") ):  ?>
 			<a href="#push_to_staging<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large" data-post-id="<?php echo $website_id; ?>"><i class="material-icons left">local_shipping</i>Push Production to Staging</a><br />
 			<a href="#push_to_production<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large" data-post-id="<?php echo $website_id; ?>"><i class="material-icons reverse left">local_shipping</i>Push Staging to Production</a><br />
 		<?php endif ?>
-			<a href="#apply_ssl<?php echo $website_id; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">launch</i>Apply HTTPS Urls</a><br />
-			<a href="#copy_site<?php echo $website_id; ?>" class="waves-effect waves-light large modal-trigger"><i class="fas fa-clone"></i>Copy Site</a><br />
 		<?php if ($views != $website_views or $storage != $website_storage) { ?>
 			<a href="#view_usage_breakdown_<?php echo $customer_id[0]; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">chrome_reader_mode</i>View Usage Breakdown</a><br />
 		<?php } ?>
 
-		<?php if ($mailgun) { ?>
-			<a href="#mailgun_logs_<?php echo $website_id; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">email</i>View Mailgun Logs</a>
-		<?php } ?>
+
 	</div>
 
 </div>
@@ -721,7 +719,6 @@ if ( $wp_query->query_vars["websites"] ) {
 		<div class="indeterminate"></div>
 </div>
 <div class="row">
-
 	<div class="input-field col s12">
 		<label for="email">Email Address</label><br />
 		<input id="email" type="email" class="validate" value="<?php $current_user = wp_get_current_user(); echo $current_user->user_email; ?>">
@@ -735,7 +732,7 @@ if ( $wp_query->query_vars["websites"] ) {
 <div class="row">
 	<div class="input-field col s12">
 
-		<input id="submit" value="Download" type="submit">
+		<button style="color:#fff !important;" id="submit" class="btn blue" value="Download" type="submit">Download</button>
 	</div>
 </div>
 </div>
@@ -785,7 +782,7 @@ if ( $wp_query->query_vars["websites"] ) {
 </div>
 <div class="row">
 	<div class="input-field col s12">
-		<input id="submit" value="Proceed" type="submit">
+		<a href="#" class="btn blue">Proceed</a>
 	</div>
 </div>
 </div>
@@ -812,7 +809,7 @@ if ( $wp_query->query_vars["websites"] ) {
 </div>
 <div class="row">
 	<div class="input-field col s12">
-		<input id="submit" value="Proceed" type="submit">
+		<a href="#" class="btn blue">Proceed</a>
 	</div>
 </div>
 </div>
@@ -919,6 +916,7 @@ foreach($mailgun_events->items as $mailgun_event ) {
 											<th>Plugin</th>
 											<th>Version</th>
 											<th>Status</th>
+											<th></th>
 									</tr>
 								</thead>
 								<tbody>
@@ -927,7 +925,7 @@ foreach($mailgun_events->items as $mailgun_event ) {
 										<td><?php if ($plugin->title) { echo $plugin->title; } else { echo $plugin->name; } ?></td>
 										<td><span><?php echo $plugin->version; ?></span></td>
 										<td><span><?php echo $plugin->status; ?></span></td>
-										<td><a href="#rollback" class="rollback" data-plugin-name="<?php echo $plugin->name; ?>">Rollback</a></td>
+										<td><a href="#rollback" class="btn blue rollback" data-plugin-name="<?php echo $plugin->name; ?>">Rollback</a></td>
 									</tr>
 									<?php } ?>
 								</tbody>
@@ -938,6 +936,7 @@ foreach($mailgun_events->items as $mailgun_event ) {
 											<th>Theme</th>
 											<th>Version</th>
 											<th>Status</th>
+											<th></th>
 									</tr>
 								</thead>
 								<tbody>
@@ -946,7 +945,7 @@ foreach($mailgun_events->items as $mailgun_event ) {
 										<td><?php if ($theme->title) { echo $theme->title; } else { echo $theme->name; } ?></td>
 										<td><span><?php echo $theme->version; ?></span></td>
 										<td><span><?php echo $theme->status; ?></span></td>
-										<td><a href="#rollback" class="rollback" data-theme-name="<?php echo $theme->name; ?>">Rollback</a></td>
+										<td><a href="#rollback" class="btn blue rollback" data-theme-name="<?php echo $theme->name; ?>">Rollback</a></td>
 									</tr>
 									<?php } ?>
 								</tbody>
