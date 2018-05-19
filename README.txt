@@ -35,6 +35,16 @@ TODO
 
 == Changelog ==
 
+= 0.2.2: May 20, 2018 =
+* New: Site Copy to advanced tab
+* New: Apply HTTPS to advanced tab
+* New: Email when site copy completes
+* Tweak: Cleaned up Quicksaves interface
+* Tweak: Organized advanced tab links
+* Tweak: Consistent button styling throughout advanced tab
+* Tweak: B2 Snapshots now configurable from wp-config constant CAPTAINCORE_B2_SNAPSHOTS
+* Tweak: Renamed various internal functions to captaincore prefix
+
 = 0.2.1: May 8, 2018 =
 * New: New button to deploy Mailgun
 * New: Automatically add Mailgun subdomain to relating domain during Mailgun setup
