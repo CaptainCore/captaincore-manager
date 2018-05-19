@@ -178,7 +178,7 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
   padding: 0px;
 }
 
-.website-group .quicksave .card .action-buttons {
+.quicksave .card .action-buttons {
 	padding-bottom: 0.5em;
 	margin-top: -0.5em;
   text-align: right;
@@ -228,19 +228,19 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
   color: #ff0000;
 }
 
-.quicksave table td:nth-child(4) a {
-	line-height: 18px;
-  height: 18px;
-}
-
 .quicksave table td:nth-child(3) {
 	max-width: 50px;
 }
 
 .quicksave table td:nth-child(4) {
-	max-width: 64px;
+	width: 64px;
   text-align: center;
 	opacity: 0;
+}
+
+.quicksave table td:nth-child(4) a {
+	line-height: 18px;
+  height: 18px;
 }
 
 .quicksave table tr:hover td:nth-child(4) {
