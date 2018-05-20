@@ -2387,67 +2387,66 @@ function captaincore_verify_permissions( $website_id ) {
 // List sites current user has access to
 function captaincore_fetch_sites() {
 
-	$user = wp_get_current_user();
-	$role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles) + in_array( 'editor', $user->roles );
-	$partner = get_field('partner', 'user_'. get_current_user_id());
-	if ($partner and $role_check) {
+	$user       = wp_get_current_user();
+	$role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
+	$partner    = get_field( 'partner', 'user_' . get_current_user_id() );
+	if ( $partner and $role_check ) {
 
 		// Loop through each partner assigned to current user
-		foreach ($partner as $partner_id) {
+		foreach ( $partner as $partner_id ) {
 
 			// Load websites assigned to partner
 			$arguments = array(
-				'post_type' 			=> 'captcore_website',
-				'posts_per_page'	=> '-1',
-				'order'						=> 'asc',
-				'orderby'					=> 'title',
-				'meta_query'			=> array(
-					'relation'			=> 'AND',
+				'post_type'      => 'captcore_website',
+				'posts_per_page' => '-1',
+				'order'          => 'asc',
+				'orderby'        => 'title',
+				'meta_query'     => array(
+					'relation' => 'AND',
 					array(
-						'key' => 'partner',
-						'value' => '"' . $partner_id . '"',
-						'compare' => 'LIKE'
+						'key'     => 'partner',
+						'value'   => '"' . $partner_id . '"',
+						'compare' => 'LIKE',
 					),
 					array(
-						'key'	  	=> 'status',
-						'value'	  	=> 'closed',
-						'compare' 	=> '!=',
+						'key'     => 'status',
+						'value'   => 'closed',
+						'compare' => '!=',
 					),
 					array(
-						'key'		=> 'address',
-						'compare'	=>	'EXISTS',
+						'key'     => 'address',
+						'compare' => 'EXISTS',
 					),
 					array(
-						'key'		=> 'address',
-						'value'	  	=> '',
-						'compare'	=>	'!=',
+						'key'     => 'address',
+						'value'   => '',
+						'compare' => '!=',
 					),
-				)
+				),
 			);
 
-			if ( in_array( 'administrator', $user->roles) ) {
+			if ( in_array( 'administrator', $user->roles ) ) {
 
 				// Load all websites for administrators
-				$arguments["meta_query"] = array(
-						array(
-							'key'	  	=> 'status',
-							'value'	  	=> 'closed',
-							'compare' 	=> '!=',
-						),
-						array(
-							'key'		=> 'address',
-							'compare'	=>	'EXISTS',
-						),
-						array(
-							'key'		=> 'address',
-							'value'	  	=> '',
-							'compare'	=>	'!=',
-						),
+				$arguments['meta_query'] = array(
+					array(
+						'key'     => 'status',
+						'value'   => 'closed',
+						'compare' => '!=',
+					),
+					array(
+						'key'     => 'address',
+						'compare' => 'EXISTS',
+					),
+					array(
+						'key'     => 'address',
+						'value'   => '',
+						'compare' => '!=',
+					),
 				);
 
 			}
 		}
-
 	}
 
 		return $arguments;
@@ -2953,15 +2952,21 @@ function captaincore_install_action_callback() {
 	}
 	if ( $cmd == 'copy' ) {
 		// Find destination site and verify we have permission to it
-		$site_destination = get_posts( array( 'post_type' => 'captcore_website', 'meta_key' => 'site', 'meta_value' => $value ) );
+		$site_destination    = get_posts(
+			array(
+				'post_type'  => 'captcore_website',
+				'meta_key'   => 'site',
+				'meta_value' => $value,
+			)
+		);
 		$site_destination_id = $site_destination[0]->ID;
 		if ( captaincore_verify_permissions( $site_destination_id ) ) {
 			$current_user = wp_get_current_user();
-			$email = $current_user->user_email;
+			$email        = $current_user->user_email;
 			date_default_timezone_set( 'America/New_York' );
 			$t         = time();
 			$timestamp = date( 'Y-m-d-hms', $t );
-			$command = "nohup captaincore copy $site $value --email=$email --mark-when-completed > ~/Tmp/job-copy-$timestamp.txt 2>&1 &";
+			$command   = "nohup captaincore copy $site $value --email=$email --mark-when-completed > ~/Tmp/job-copy-$timestamp.txt 2>&1 &";
 		}
 	}
 	if ( $cmd == 'mailgun' ) {
@@ -3676,7 +3681,7 @@ function captaincore_download_snapshot_email( $snapshot_id ) {
 	curl_close( $session );                                // Clean up
 	$server_output = json_decode( $server_output );
 	$auth          = $server_output->authorizationToken;
-	$url           = "https://f001.backblazeb2.com/file/" . CAPTAINCORE_B2_SNAPSHOTS . "/$site/$name?Authorization=" . $auth;
+	$url           = 'https://f001.backblazeb2.com/file/' . CAPTAINCORE_B2_SNAPSHOTS . "/$site/$name?Authorization=" . $auth;
 
 	echo $url;
 
