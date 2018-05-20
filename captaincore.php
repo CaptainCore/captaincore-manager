@@ -2859,6 +2859,8 @@ function captaincore_install_action_callback() {
 	$value      = $_POST['value'];
 	$arguments  = $_POST['arguments'];
 	$addon_type = $_POST['addon_type'];
+	$name       = $_POST['name'];
+	$link       = $_POST['link'];
 
 	$site             = get_field( 'site', $post_id );
 	$domain           = get_the_title( $post_id );
@@ -3021,10 +3023,10 @@ function captaincore_install_action_callback() {
 		}
 	}
 	if ( $cmd == 'deactivate' ) {
-		$command = "captaincore site deactivate $site";
+		$command = "nohup captaincore site deactivate $site --name=\"$name\" --link=\"$link\" &";
 	}
 	if ( $cmd == 'activate' ) {
-		$command = "captaincore site activate $site";
+		$command = "nohup captaincore site activate $site &";
 	}
 
 	if ( $cmd == 'view_quicksave_changes' ) {
