@@ -4,6 +4,7 @@ global $wp_query;
 if ( $wp_query->query_vars['websites'] ) {
 
 	$website_id = $wp_query->query_vars['websites'];
+	$current_user = wp_get_current_user();
 
 	if ( captaincore_verify_permissions( $website_id ) ) {
 		// Display single website page ?>
@@ -283,6 +284,76 @@ if ( $wp_query->query_vars['websites'] ) {
 					jQuery('.modal.open .modal-content .row').show();
 					jQuery('.modal.open .modal-content .progress').addClass('hide');
 				}
+
+			});
+
+			jQuery(".toggle .modal-content a.deactivate").click(function(e){
+
+				e.preventDefault();
+
+				modal_form = jQuery(this).parents('.modal.open');
+
+				confirm_toggle = confirm("Will deactivate website. Proceed?");
+
+					if(confirm_toggle) {
+
+						var post_id = jQuery(this).data('post-id');
+						var name = jQuery('input#name').val();
+						var link = jQuery('input#link').val();
+
+						var data = {
+							'action': 'captaincore_install',
+							'post_id': modal_form.data('id'),
+							'command': 'deactivate',
+							'name': name,
+							'link': link
+						};
+
+						// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+						jQuery.post(ajaxurl, data, function(response) {
+							Materialize.toast('Deactivating site.', 4000);
+							jQuery('.modal.open .modal-content .row').show();
+							jQuery('.modal.open .modal-content .progress').addClass('hide');
+							modal_form.modal('close');
+						});
+
+					} else {
+						jQuery('.modal.open .modal-content .row').show();
+						jQuery('.modal.open .modal-content .progress').addClass('hide');
+					}
+
+			});
+
+			jQuery(".toggle .modal-content a.activate").click(function(e){
+
+				e.preventDefault();
+
+				modal_form = jQuery(this).parents('.modal.open');
+
+				confirm_toggle = confirm("Will activate website. Proceed?");
+
+					if(confirm_toggle) {
+
+						var post_id = jQuery(this).data('post-id');
+
+						var data = {
+							'action': 'captaincore_install',
+							'post_id': modal_form.data('id'),
+							'command': 'activate',
+						};
+
+						// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+						jQuery.post(ajaxurl, data, function(response) {
+							Materialize.toast('Activating site.', 4000);
+							jQuery('.modal.open .modal-content .row').show();
+							jQuery('.modal.open .modal-content .progress').addClass('hide');
+							modal_form.modal('close');
+						});
+
+					} else {
+						jQuery('.modal.open .modal-content .row').show();
+						jQuery('.modal.open .modal-content .progress').addClass('hide');
+					}
 
 			});
 
@@ -763,6 +834,7 @@ if ( $wp_query->query_vars['websites'] ) {
 			<a href="#push_to_staging<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large" data-post-id="<?php echo $website_id; ?>"><i class="material-icons left">local_shipping</i>Push Production to Staging</a><br />
 			<a href="#push_to_production<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large" data-post-id="<?php echo $website_id; ?>"><i class="material-icons reverse left">local_shipping</i>Push Staging to Production</a><br />
 		<?php endif ?>
+		<a href="#toggle_site<?php echo $website_id; ?>" class="waves-effect waves-light large modal-trigger"><i class="fas fa-toggle-on"></i>Toggle Site</a><br />
 		<?php if ( $views != $website_views or $storage != $website_storage ) { ?>
 			<a href="#view_usage_breakdown_<?php echo $customer_id[0]; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">chrome_reader_mode</i>View Usage Breakdown</a><br />
 		<?php } ?>
@@ -790,12 +862,7 @@ if ( $wp_query->query_vars['websites'] ) {
 <div class="row">
 	<div class="input-field col s12">
 		<label for="email">Email Address</label><br />
-		<input id="email" type="email" class="validate" value="
-		<?php
-		$current_user = wp_get_current_user();
-		echo $current_user->user_email;
-?>
-">
+		<input id="email" type="email" class="validate" value="<?php echo $current_user->user_email; ?>">
 	</div>
 </div>
 <div class="row">
@@ -826,18 +893,50 @@ if ( $wp_query->query_vars['websites'] ) {
 	</div>
 	<p></p>
 	<p>Select url replacement option.</p>
-	<p><button class="btn blue
-	<?php
+	<p><button class="btn blue<?php
 	if ( $domain != get_the_title( $website_id ) ) {
 		echo ' disabled'; }
-?>
-" style="color:#fff !important;" value="applyssl"><b>Option 1</b>: https://<?php echo get_the_title( $website_id ); ?></button></p>
-	<p><button class="btn blue
-	<?php
+?>" style="color:#fff !important;" value="applyssl"><b>Option 1</b>: https://<?php echo get_the_title( $website_id ); ?></button></p>
+	<p><button class="btn blue<?php
 	if ( $domain != 'www.' . get_the_title( $website_id ) ) {
 		echo ' disabled'; }
-?>
-" style="color:#fff !important;" value="applysslwithwww"><b>Option 2</b>: https://www.<?php echo get_the_title( $website_id ); ?></button></p>
+?>" style="color:#fff !important;" value="applysslwithwww"><b>Option 2</b>: https://www.<?php echo get_the_title( $website_id ); ?></button></p>
+
+</div>
+</div>
+</div>
+
+<div id="toggle_site<?php echo $website_id; ?>" class="modal bottom-sheet toggle" data-id="<?php echo $website_id; ?>">
+	<?php
+	$belongs_to = get_field("partner", "user_{$current_user->ID}");
+	$business_name = get_the_title( $belongs_to[0] );
+	$business_link = get_field( "partner_link", $belongs_to[0] );
+
+	?>
+<div class="modal-content">
+
+<h4>Toggle Site <small>(<?php echo get_the_title( $website_id ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
+<div class="row">
+
+	<div class="col s12 m6">
+	<div class="card-panel">
+		<p class="card-title">Deactivate Site</p>
+		Will apply deactivate message with the following link back to the site owner.
+    <p>
+			<input placeholder="Name" id="name" type="text" class="validate" value="<?php echo $business_name; ?>">
+			<input placeholder="Link" id="link" type="text" class="validate" value="<?php echo $business_link; ?>">
+		</p>
+		<p><a href="#" class="btn blue deactivate">Deactivate Site</a></p>
+	</div>
+	</div>
+
+	<div class="col s12 m6">
+	<div class="card-panel">
+		<p class="card-title">Activate Site</p>
+
+		<p><a href="#" class="btn blue activate">Activate Site</a></p>
+	</div>
+	</div>
 
 </div>
 </div>
@@ -905,12 +1004,7 @@ if ( $wp_query->query_vars['websites'] ) {
 
 	<div class="input-field col s12">
 		<label for="email">Email Address</label><br />
-		<input id="email" type="email" class="validate" value="
-		<?php
-		$current_user = wp_get_current_user();
-		echo $current_user->user_email;
-?>
-">
+		<input id="email" type="email" class="validate" value="<?php echo $current_user->user_email; ?>">
 	</div>
 </div>
 <div class="row">
@@ -978,7 +1072,7 @@ foreach ( $mailgun_events->items as $mailgun_event ) {
 
 <h4>
 	Quicksaves <small>(<?php echo get_the_title( $website_id ); ?>)</small><a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a>
-	<p class="quicksave_manual_check"><a href="" data-post-id="<?php echo $website_id; ?>">Manually check for changes.</a></p>
+	<span class="action-buttons quicksave_manual_check"><a href="#" data-post-id="<?php echo $website_id; ?>" class="btn blue ">Manually check for changes.</a></span>
 </h4>
 <div class="progress hide">
 		<div class="indeterminate"></div>
