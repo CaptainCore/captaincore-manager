@@ -169,15 +169,6 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
   margin-top: 32px;
 }
 
-.quicksave_manual_check {
-  display: block;
-  font-size: 0.6em;
-  line-height: 0.5em;
-  text-align: center;
-  margin: 0px;
-  padding: 0px;
-}
-
 .quicksave .card .action-buttons {
 	padding-bottom: 0.5em;
 	margin-top: -0.5em;
