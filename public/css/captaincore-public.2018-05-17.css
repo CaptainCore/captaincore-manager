@@ -359,6 +359,14 @@ div.website .usage-stats {
   background: antiquewhite;
 }
 
+table.usage {
+	width: auto;
+}
+
+table.usage td {
+	padding: 0px 5px;
+}
+
 div.website .actions a {
   color: #f7f7f7;
   background: #6a6a6a;

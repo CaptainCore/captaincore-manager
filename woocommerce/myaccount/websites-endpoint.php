@@ -1,12 +1,12 @@
 <?php
 global $wp_query;
 
-if ( $wp_query->query_vars["websites"] ) {
+if ( $wp_query->query_vars['websites'] ) {
 
-	$website_id = $wp_query->query_vars["websites"];
+	$website_id = $wp_query->query_vars['websites'];
 
 	if ( captaincore_verify_permissions( $website_id ) ) {
-	//  Display single website page ?>
+		// Display single website page ?>
 
 	<script type="text/javascript">
 
@@ -31,14 +31,16 @@ if ( $wp_query->query_vars["websites"] ) {
 		}
 		jQuery(window).load(function() {
 		jQuery('input.autocomplete').autocomplete({
-					data: {<?php
+					data: {
+					<?php
 						$arguments = captaincore_fetch_sites();
 						// Loads websites
 						$websites = get_posts( $arguments );
-						foreach( $websites as $website ):
-							$site = get_field('site', $website->ID);
-							echo '"'.$site.' ('.get_the_title($website->ID).')": null,';
-						endforeach; ?>
+					foreach ( $websites as $website ) :
+						$site = get_field( 'site', $website->ID );
+						echo '"' . $site . ' (' . get_the_title( $website->ID ) . ')": null,';
+						endforeach;
+						?>
 					},
 					limit: 20, // The max amount of results that can be shown at once. Default: Infinity.
 					onAutocomplete: function(val) {
@@ -579,65 +581,66 @@ if ( $wp_query->query_vars["websites"] ) {
 	<div class="website-group">
 	<?php
 
-		$customer_id = get_field('customer', $website_id);
-		$hosting_plan = get_field('hosting_plan', $customer_id[0]);
-		$addons = get_field('addons', $customer_id[0]);
-		$storage = get_field('storage', $customer_id[0]);
-		$views = get_field('views', $customer_id[0]);
-		$website_storage = get_field('storage', $website_id);
-		$website_views = get_field('views', $website_id);
-		$mailgun = get_field('mailgun', $website_id);
-		$domain = preg_replace('#^https?://#', '', get_field('home_url', $website_id));
+		$customer_id     = get_field( 'customer', $website_id );
+		$hosting_plan    = get_field( 'hosting_plan', $customer_id[0] );
+		$addons          = get_field( 'addons', $customer_id[0] );
+		$storage         = get_field( 'storage', $customer_id[0] );
+		$views           = get_field( 'views', $customer_id[0] );
+		$website_storage = get_field( 'storage', $website_id );
+		$website_views   = get_field( 'views', $website_id );
+		$mailgun         = get_field( 'mailgun', $website_id );
+		$domain          = preg_replace( '#^https?://#', '', get_field( 'home_url', $website_id ) );
 
-		if ($hosting_plan == "basic") {
-			$views_plan_limit = "100000";
-		}
-		if ($hosting_plan == "standard") {
-			$views_plan_limit = "500000";
-		}
-		if ($hosting_plan == "professional") {
-			$views_plan_limit = "1000000";
-		}
-		if ($hosting_plan == "business") {
-			$views_plan_limit = "2000000";
-		}
-		if (isset($views)) {
-			$views_percent = round( $views / $views_plan_limit * 100, 0 );
-		}
+	if ( $hosting_plan == 'basic' ) {
+		$views_plan_limit = '100000';
+	}
+	if ( $hosting_plan == 'standard' ) {
+		$views_plan_limit = '500000';
+	}
+	if ( $hosting_plan == 'professional' ) {
+		$views_plan_limit = '1000000';
+	}
+	if ( $hosting_plan == 'business' ) {
+		$views_plan_limit = '2000000';
+	}
+	if ( isset( $views ) ) {
+		$views_percent = round( $views / $views_plan_limit * 100, 0 );
+	}
 
-		$storage_gbs = round($storage / 1024 / 1024 / 1024, 1);
-		$storage_cap = "10";
-		if ($addons) {
-			foreach($addons as $item) {
-				// Evaluate if contains word storage
-				if (stripos($item["name"], "storage") !== FALSE) {
-					// Found storage addon, now extract number and add to cap.
-					$extracted_gbs = filter_var($item["name"], FILTER_SANITIZE_NUMBER_INT);
-					$storage_cap = $storage_cap + $extracted_gbs;
-				}
+		$storage_gbs = round( $storage / 1024 / 1024 / 1024, 1 );
+		$storage_cap = '10';
+	if ( $addons ) {
+		foreach ( $addons as $item ) {
+			// Evaluate if contains word storage
+			if ( stripos( $item['name'], 'storage' ) !== false ) {
+				// Found storage addon, now extract number and add to cap.
+				$extracted_gbs = filter_var( $item['name'], FILTER_SANITIZE_NUMBER_INT );
+				$storage_cap   = $storage_cap + $extracted_gbs;
 			}
 		}
+	}
 
-		$storage_percent = round($storage_gbs / $storage_cap * 100, 0);
+		$storage_percent = round( $storage_gbs / $storage_cap * 100, 0 );
 
-		$production_address = get_field('address', $website_id);
-		$staging_address = get_field('address_staging', $website_id);
-		$server = get_field('server', $website_id);
-		if ($server and $server[0]) {
-			$provider = get_field('provider', $server[0]);
+		$production_address = get_field( 'address', $website_id );
+		$staging_address    = get_field( 'address_staging', $website_id );
+		$server             = get_field( 'server', $website_id );
+	if ( $server and $server[0] ) {
+		$provider = get_field( 'provider', $server[0] );
 
-			// vars
-			$provider_object = get_field_object('provider', $server[0]);
-			$provider_label = $provider_object['choices'][ $provider ];
+		// vars
+		$provider_object = get_field_object( 'provider', $server[0] );
+		$provider_label  = $provider_object['choices'][ $provider ];
 
-			$server_name = get_field('name', $server[0]);
-			$server_address = get_field('address', $server[0]);
-		}	?>
-		<?php if ($views != $website_views or $storage != $website_storage) { ?>
+		$server_name    = get_field( 'name', $server[0] );
+		$server_address = get_field( 'address', $server[0] );
+	}
+		?>
+		<?php if ( $views != $website_views or $storage != $website_storage ) { ?>
 			<!-- Modal Structure -->
 			<div id="view_usage_breakdown_<?php echo $customer_id[0]; ?>" class="modal bottom-sheet">
 				<div class="modal-content">
-					<h4>Usage Breakdown <small>(<?php echo get_the_title($customer_id[0]); ?>)</small> <a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
+					<h4>Usage Breakdown <small>(<?php echo get_the_title( $customer_id[0] ); ?>)</small> <a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
 					<div class="row">
 						<div class="card">
 							<div class="card-content">
@@ -648,58 +651,86 @@ if ( $wp_query->query_vars["websites"] ) {
 						*  This method uses the meta_query LIKE to match the string "123" to the database value a:1:{i:0;s:3:"123";} (serialized array)
 						*/
 
-						$websites_for_customer = get_posts(array(
-							'post_type' => 'captcore_website',
-							'posts_per_page'         => '-1',
-							'meta_query' => array(
-								'relation'		=> 'AND',
-								array(
-									'key' => 'status', // name of custom field
-									'value' => 'active', // matches exaclty "123", not just 123. This prevents a match for "1234"
-									'compare' => '='
-								),
-								array(
-									'key' => 'customer', // name of custom field
-									'value' => '"' . $customer_id[0] . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-									'compare' => 'LIKE'
-								),
-								array(
-									'key'		=> 'address',
-									'compare'	=>	'EXISTS',
-								),
-								array(
-									'key'		=> 'address',
-									'value'	  	=> '',
-									'compare'	=>	'!=',
+						$websites_for_customer = get_posts(
+							array(
+								'post_type'      => 'captcore_website',
+								'posts_per_page' => '-1',
+								'order'          => 'ASC',
+								'orderby'        => 'title',
+								'meta_query' => array(
+									'relation' => 'AND',
+									array(
+										'key'     => 'status', // name of custom field
+										'value'   => 'active', // matches exaclty "123", not just 123. This prevents a match for "1234"
+										'compare' => '=',
+									),
+									array(
+										'key'     => 'customer', // name of custom field
+										'value'   => '"' . $customer_id[0] . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+										'compare' => 'LIKE',
+									),
+									array(
+										'key'     => 'address',
+										'compare' => 'EXISTS',
+									),
+									array(
+										'key'     => 'address',
+										'value'   => '',
+										'compare' => '!=',
+									),
 								),
 							)
-						));
+						);
 						?>
-						<?php if( $websites_for_customer ): ?>
-							<ul>
-							<?php foreach( $websites_for_customer as $website_for_customer ):
-								$website_for_customer_storage = get_field('storage', $website_for_customer->ID);
-								$website_for_customer_views = get_field('views', $website_for_customer->ID);
+						<?php if ( $websites_for_customer ) : ?>
+							<table class="usage">
+								<tr>
+									<th>Site</th>
+									<th>Storage</th>
+									<th>Views</th>
+								</tr>
+							<?php
+							foreach ( $websites_for_customer as $website_for_customer ) :
+								$website_for_customer_storage = get_field( 'storage', $website_for_customer->ID );
+								$website_for_customer_views   = get_field( 'views', $website_for_customer->ID );
 									?>
-								<li>
-										<?php echo get_the_title( $website_for_customer->ID ); ?> -
-										<?php if($website_for_customer_storage) { echo '<i class="fas fa-hdd"></i> '.round($website_for_customer_storage / 1024 / 1024 / 1024, 1). "GB"; } ?>
-										<?php if($website_for_customer_views) { echo '<i class="fas fa-eye"></i> '. number_format($website_for_customer_views). " views"; } ?>
-								</li>
+								<tr>
+									<td><?php echo get_the_title( $website_for_customer->ID ); ?></td>
+									<td>
+									<?php
+									if ( $website_for_customer_storage ) {
+										echo '<i class="fas fa-hdd"></i> ' . round( $website_for_customer_storage / 1024 / 1024 / 1024, 1 ) . 'GB'; }
+?>
+</td>
+									<td>
+									<?php
+									if ( $website_for_customer_views ) {
+										echo '<i class="fas fa-eye"></i> ' . number_format( $website_for_customer_views ) . ' views'; }
+?>
+</td>
+								</tr>
 							<?php endforeach; ?>
-							</ul>
-							<?php if ($storage_gbs != 0) { ?>
-							<div class="usage<?php if ($storage_percent > 100) { echo " over"; } ?>">
+						  </table>
+							<?php if ( $storage_gbs != 0 ) { ?>
+							<div class="usage
+							<?php
+							if ( $storage_percent > 100 ) {
+								echo ' over'; }
+?>
+">
 									<i class="fas fa-hdd"></i>
 									<?php echo $storage_percent; ?>% storage
 									<strong><?php echo $storage_gbs; ?>GB/<?php echo $storage_cap; ?>GB</strong>
 							</div>
 							<?php } ?>
-							<?php if ($views != 0) { ?>
-							<div class="usage<?php if ($views_percent > 100) { echo " over"; } ?>">
+							<?php if ( $views != 0 ) { ?>
+							<div class="usage<?php
+							if ( $views_percent > 100 ) {
+								echo ' over'; }
+							?>">
 								<i class="fas fa-eye"></i>
 									<?php echo $views_percent; ?>% traffic
-									<strong><?php echo number_format($views); ?></strong> <small>Yearly Estimate</small>
+									<strong><?php echo number_format( $views ); ?></strong> <small>Yearly Estimate</small>
 							</div>
 							<?php } ?>
 						<?php endif; ?>
@@ -721,17 +752,18 @@ if ( $wp_query->query_vars["websites"] ) {
 		<a href="#apply_ssl<?php echo $website_id; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">launch</i>Apply HTTPS Urls</a><br />
 		<a href="#copy_site<?php echo $website_id; ?>" class="waves-effect waves-light large modal-trigger"><i class="fas fa-clone"></i>Copy Site</a><br />
 		<a href="#snapshot<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large"><i class="material-icons left">cloud</i>Download Backup Snapshot</a> <br />
-		<?php if ($mailgun) { ?>
+		<?php if ( $mailgun ) { ?>
 			<a href="#mailgun_logs_<?php echo $website_id; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">email</i>View Mailgun Logs</a> <br />
 		<?php } ?>
 		<a href="#quicksave<?php echo $website_id; ?>" class="waves-effect waves-light modal-quicksave modal-trigger large"><i class="material-icons left">settings_backup_restore</i>Quicksaves (Plugins & Themes)</a><br />
 		<a class="waves-effect waves-light large redeploy" data-post-id="<?php echo $website_id; ?>"><i class="material-icons left">loop</i>Redeploy users/plugins</a> <br />
 		<?php
-		if( strpos($production_address, ".kinsta.com") ):  ?>
+		if ( strpos( $production_address, '.kinsta.com' ) ) :
+		?>
 			<a href="#push_to_staging<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large" data-post-id="<?php echo $website_id; ?>"><i class="material-icons left">local_shipping</i>Push Production to Staging</a><br />
 			<a href="#push_to_production<?php echo $website_id; ?>" class="waves-effect waves-light modal-trigger large" data-post-id="<?php echo $website_id; ?>"><i class="material-icons reverse left">local_shipping</i>Push Staging to Production</a><br />
 		<?php endif ?>
-		<?php if ($views != $website_views or $storage != $website_storage) { ?>
+		<?php if ( $views != $website_views or $storage != $website_storage ) { ?>
 			<a href="#view_usage_breakdown_<?php echo $customer_id[0]; ?>" class="waves-effect waves-light large modal-trigger"><i class="material-icons left">chrome_reader_mode</i>View Usage Breakdown</a><br />
 		<?php } ?>
 
@@ -758,7 +790,12 @@ if ( $wp_query->query_vars["websites"] ) {
 <div class="row">
 	<div class="input-field col s12">
 		<label for="email">Email Address</label><br />
-		<input id="email" type="email" class="validate" value="<?php $current_user = wp_get_current_user(); echo $current_user->user_email; ?>">
+		<input id="email" type="email" class="validate" value="
+		<?php
+		$current_user = wp_get_current_user();
+		echo $current_user->user_email;
+?>
+">
 	</div>
 </div>
 <div class="row">
@@ -785,12 +822,22 @@ if ( $wp_query->query_vars["websites"] ) {
 <div class="row">
 
 	<div class="card-panel">
-		<span style="font-size:16px;"><i class="material-icons">announcement</i> Domain needs to match current home url which is <strong><?php echo get_field('home_url', $website_id); ?></strong>. Otherwise server domain mapping will need updated to prevent redirection loop.</span>
+		<span style="font-size:16px;"><i class="material-icons">announcement</i> Domain needs to match current home url which is <strong><?php echo get_field( 'home_url', $website_id ); ?></strong>. Otherwise server domain mapping will need updated to prevent redirection loop.</span>
 	</div>
 	<p></p>
 	<p>Select url replacement option.</p>
-	<p><button class="btn blue<?php if ( $domain != get_the_title( $website_id ) ) { echo " disabled"; } ?>" style="color:#fff !important;" value="applyssl"><b>Option 1</b>: https://<?php echo get_the_title( $website_id ); ?></button></p>
-	<p><button class="btn blue<?php if ( $domain != "www.". get_the_title( $website_id ) ) { echo " disabled"; } ?>" style="color:#fff !important;" value="applysslwithwww"><b>Option 2</b>: https://www.<?php echo get_the_title( $website_id ); ?></button></p>
+	<p><button class="btn blue
+	<?php
+	if ( $domain != get_the_title( $website_id ) ) {
+		echo ' disabled'; }
+?>
+" style="color:#fff !important;" value="applyssl"><b>Option 1</b>: https://<?php echo get_the_title( $website_id ); ?></button></p>
+	<p><button class="btn blue
+	<?php
+	if ( $domain != 'www.' . get_the_title( $website_id ) ) {
+		echo ' disabled'; }
+?>
+" style="color:#fff !important;" value="applysslwithwww"><b>Option 2</b>: https://www.<?php echo get_the_title( $website_id ); ?></button></p>
 
 </div>
 </div>
@@ -804,9 +851,9 @@ if ( $wp_query->query_vars["websites"] ) {
 
 			<div class="input-field col s12">
 				<label for="autocomplete-input">Select destination site</label> <br/>
-	      <input type="text" id="autocomplete-input" class="autocomplete">
+		  <input type="text" id="autocomplete-input" class="autocomplete">
 				<a class="start_copy blue btn">Start Copy</a>
-	    </div>
+		</div>
 
 	  </div>
 	  </div>
@@ -814,7 +861,7 @@ if ( $wp_query->query_vars["websites"] ) {
 </div>
 </div>
 
-<?php if( strpos($production_address, ".kinsta.com") ):  ?>
+<?php if ( strpos( $production_address, '.kinsta.com' ) ) : ?>
 <div id="push_to_staging<?php echo $website_id; ?>" class="modal push_to_staging" data-id="<?php echo $website_id; ?>">
 <div class="modal-content">
 
@@ -826,7 +873,12 @@ if ( $wp_query->query_vars["websites"] ) {
 
 	<div class="input-field col s12">
 		<label for="email">Email Address</label><br />
-		<input id="email" type="email" class="validate" value="<?php $current_user = wp_get_current_user(); echo $current_user->user_email; ?>">
+		<input id="email" type="email" class="validate" value="
+		<?php
+		$current_user = wp_get_current_user();
+		echo $current_user->user_email;
+?>
+">
 	</div>
 </div>
 <div class="row">
@@ -853,7 +905,12 @@ if ( $wp_query->query_vars["websites"] ) {
 
 	<div class="input-field col s12">
 		<label for="email">Email Address</label><br />
-		<input id="email" type="email" class="validate" value="<?php $current_user = wp_get_current_user(); echo $current_user->user_email; ?>">
+		<input id="email" type="email" class="validate" value="
+		<?php
+		$current_user = wp_get_current_user();
+		echo $current_user->user_email;
+?>
+">
 	</div>
 </div>
 <div class="row">
@@ -870,37 +927,38 @@ if ( $wp_query->query_vars["websites"] ) {
 </div>
 <?php endif; ?>
 
-<?php if ($mailgun) { ?>
+<?php if ( $mailgun ) { ?>
 <div id="mailgun_logs_<?php echo $website_id; ?>" class="modal bottom-sheet" data-id="<?php echo $website_id; ?>">
 <div class="modal-content">
 <h4>Mailgun Logs <small>(last 30 days)</small> <a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
 
 <div class="row">
 <ul class="collapsible" data-collapsible="accordion">
-<?php $mailgun_events = mailgun_events( $mailgun );
+<?php
+$mailgun_events = mailgun_events( $mailgun );
 if ( $mailgun_events->paging ) {
 	// TO DO add paging
 	// print_r($mailgun_events->paging);
 }
-foreach($mailgun_events->items as $mailgun_event ) {
+foreach ( $mailgun_events->items as $mailgun_event ) {
 
 
-	if ($mailgun_event->envelope) {
-		$mailgun_description = $mailgun_event->event. ": ". $mailgun_event->envelope->sender. " -> ". $mailgun_event->recipient;
+	if ( $mailgun_event->envelope ) {
+		$mailgun_description = $mailgun_event->event . ': ' . $mailgun_event->envelope->sender . ' -> ' . $mailgun_event->recipient;
 	} else {
-		$mailgun_description = $mailgun_event->event. ": ". $mailgun_event->recipient;
+		$mailgun_description = $mailgun_event->event . ': ' . $mailgun_event->recipient;
 	}
 	?>
 
 	<li class="mailgun_logs">
 		<div class="collapsible-header">
-			<span class="material-icons">event_note</span> <span class="timestamp"><?php echo date('M jS Y g:ia', $mailgun_event->timestamp); ?></span>
+			<span class="material-icons">event_note</span> <span class="timestamp"><?php echo date( 'M jS Y g:ia', $mailgun_event->timestamp ); ?></span>
 			<span class="badge"><?php echo $mailgun_description; ?></span>
 		</div>
 		<div class="collapsible-body">
 			<div class="card">
 				<div class="card-content">
-					<pre><?php echo json_encode($mailgun_event, JSON_PRETTY_PRINT); ?></pre>
+					<pre><?php echo json_encode( $mailgun_event, JSON_PRETTY_PRINT ); ?></pre>
 				</div>
 
 			</div>
@@ -908,7 +966,7 @@ foreach($mailgun_events->items as $mailgun_event ) {
 		</div>
 	</li>
 
-<?php }	?>
+<?php } ?>
 </ul>
 </div>
 </div>
@@ -927,34 +985,37 @@ foreach($mailgun_events->items as $mailgun_event ) {
 </div>
 <div class="row">
 		<?php
-		$quicksaves_for_website = get_posts(array(
-			'post_type' => 'captcore_quicksave',
-			'posts_per_page' => '-1',
-			'meta_query' => array(
-				array(
-					'key' => 'website', // name of custom field
-					'value' => '"' . $website_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-					'compare' => 'LIKE'
-				)
+		$quicksaves_for_website = get_posts(
+			array(
+				'post_type'      => 'captcore_quicksave',
+				'posts_per_page' => '-1',
+				'meta_query'     => array(
+					array(
+						'key'     => 'website', // name of custom field
+						'value'   => '"' . $website_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+						'compare' => 'LIKE',
+					),
+				),
 			)
-		));
-		if ($quicksaves_for_website) { ?>
+		);
+		if ( $quicksaves_for_website ) {
+		?>
 		<ul class="collapsible" data-collapsible="accordion">
 		<?php
 
-		foreach( $quicksaves_for_website as $quicksave ) {
+		foreach ( $quicksaves_for_website as $quicksave ) {
 
-			$timestamp = get_the_time( "M jS Y g:ia", $quicksave->ID);
-			$plugins = json_decode(get_field( "plugins", $quicksave->ID));
-			$themes = json_decode(get_field( "themes", $quicksave->ID));
-			$git_status = get_field( "git_status", $quicksave->ID );
-			$git_commit = get_field( "git_commit", $quicksave->ID );
+			$timestamp  = get_the_time( 'M jS Y g:ia', $quicksave->ID );
+			$plugins    = json_decode( get_field( 'plugins', $quicksave->ID ) );
+			$themes     = json_decode( get_field( 'themes', $quicksave->ID ) );
+			$git_status = get_field( 'git_status', $quicksave->ID );
+			$git_commit = get_field( 'git_commit', $quicksave->ID );
 			?>
 			<li class="quicksave" data-id="<?php echo $quicksave->ID; ?>" data-git_commit="<?php echo $git_commit; ?>">
 				<div class="collapsible-header">
 					<span class="material-icons">settings_backup_restore</span> <span class="timestamp"><?php echo $timestamp; ?></span>
 					<span class="badge"><?php echo $git_status; ?></span>
-					<span class="badge">WordPress <?php the_field("core", $quicksave->ID); ?> - <?php echo count($plugins); ?> plugins - <?php echo count($themes); ?> themes</span>
+					<span class="badge">WordPress <?php the_field( 'core', $quicksave->ID ); ?> - <?php echo count( $plugins ); ?> plugins - <?php echo count( $themes ); ?> themes</span>
 				</div>
 				<div class="collapsible-body">
 					<div class="card">
@@ -974,9 +1035,16 @@ foreach($mailgun_events->items as $mailgun_event ) {
 									</tr>
 								</thead>
 								<tbody>
-									<?php foreach( $plugins as $plugin ) { ?>
+									<?php foreach ( $plugins as $plugin ) { ?>
 									<tr class="plugin" data-plugin-name="<?php echo $plugin->name; ?>" data-plugin-version="<?php echo $plugin->version; ?>" data-plugin-status="<?php echo $plugin->status; ?>">
-										<td><?php if ($plugin->title) { echo $plugin->title; } else { echo $plugin->name; } ?></td>
+										<td>
+										<?php
+										if ( $plugin->title ) {
+											echo $plugin->title;
+										} else {
+											echo $plugin->name; }
+?>
+</td>
 										<td><span><?php echo $plugin->version; ?></span></td>
 										<td><span><?php echo $plugin->status; ?></span></td>
 										<td><a href="#rollback" class="btn blue rollback" data-plugin-name="<?php echo $plugin->name; ?>">Rollback</a></td>
@@ -994,9 +1062,16 @@ foreach($mailgun_events->items as $mailgun_event ) {
 									</tr>
 								</thead>
 								<tbody>
-									<?php foreach( $themes as $theme ) { ?>
+									<?php foreach ( $themes as $theme ) { ?>
 									<tr class="theme" data-theme-name="<?php echo $theme->name; ?>" data-theme-version="<?php echo $theme->version; ?>" data-theme-status="<?php echo $theme->status; ?>">
-										<td><?php if ($theme->title) { echo $theme->title; } else { echo $theme->name; } ?></td>
+										<td>
+										<?php
+										if ( $theme->title ) {
+											echo $theme->title;
+										} else {
+											echo $theme->name; }
+?>
+</td>
 										<td><span><?php echo $theme->version; ?></span></td>
 										<td><span><?php echo $theme->status; ?></span></td>
 										<td><a href="#rollback" class="btn blue rollback" data-theme-name="<?php echo $theme->name; ?>">Rollback</a></td>
@@ -1037,10 +1112,10 @@ foreach($mailgun_events->items as $mailgun_event ) {
 
 </div>
 <?php
-}
-
-}	else { ?>
+	}
+} else {
+?>
 Website not found
-<a href="<?php echo get_site_url(null,'/my-account/'); ?>" class="alignright button">View All Websites</a>
+<a href="<?php echo get_site_url( null, '/my-account/' ); ?>" class="alignright button">View All Websites</a>
 <?php
 }
