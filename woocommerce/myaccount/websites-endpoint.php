@@ -781,29 +781,27 @@ if ( $wp_query->query_vars['websites'] ) {
 </td>
 								</tr>
 							<?php endforeach; ?>
+							<tr>
+								<td colspan="3"><hr /></td>
+							</tr>
+							<tr>
+								<td>Total</td>
+								<td><?php if ( $storage_gbs != 0 ) { ?>
+									<div class="usage<?php	if ( $storage_percent > 100 ) {	echo ' over'; }?>">
+											<?php echo $storage_percent; ?>% storage<br />
+											<strong><?php echo $storage_gbs; ?>GB/<?php echo $storage_cap; ?>GB</strong>
+									</div>
+							  <?php } ?></td>
+								<td>
+								<?php if ( $views != 0 ) { ?>
+								<div class="usage<?php if ( $views_percent > 100 ) { echo ' over'; } ?>">
+										<?php echo $views_percent; ?>% traffic<br />
+										<strong><?php echo number_format( $views ); ?></strong> <small>Yearly Estimate</small>
+								</div>
+							<?php } ?></td>
+						  </tr>
 						  </table>
-							<?php if ( $storage_gbs != 0 ) { ?>
-							<div class="usage
-							<?php
-							if ( $storage_percent > 100 ) {
-								echo ' over'; }
-?>
-">
-									<i class="fas fa-hdd"></i>
-									<?php echo $storage_percent; ?>% storage
-									<strong><?php echo $storage_gbs; ?>GB/<?php echo $storage_cap; ?>GB</strong>
-							</div>
-							<?php } ?>
-							<?php if ( $views != 0 ) { ?>
-							<div class="usage<?php
-							if ( $views_percent > 100 ) {
-								echo ' over'; }
-							?>">
-								<i class="fas fa-eye"></i>
-									<?php echo $views_percent; ?>% traffic
-									<strong><?php echo number_format( $views ); ?></strong> <small>Yearly Estimate</small>
-							</div>
-							<?php } ?>
+
 						<?php endif; ?>
 					</div>
 				</div>
