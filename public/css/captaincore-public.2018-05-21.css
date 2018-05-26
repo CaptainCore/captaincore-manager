@@ -3,6 +3,71 @@
  * included in this file.
  */
 
+ nav {
+	 background: none;
+	 box-shadow: none;
+	 -webkit-box-shadow: none;
+ }
+
+ nav ul li {
+	 float: none;
+ }
+
+ nav ul a:hover {
+    background: none;
+}
+body button:hover, input[type="button"]:hover, input[type="reset"]:hover, input[type="submit"]:hover {
+	box-shadow: none;
+}
+.btn, .btn-large, .btn-small, .btn-flat {
+	text-transform: none;
+}
+.green-text{color:#4CAF50 !important}
+ .blue {
+	 background-color: #27c3f3 !important;
+ }
+ button:focus {
+    outline: none;
+    background-color: #27c3f3;
+}
+ .datepicker-date-display {
+	 background-color: #27c3f3;
+	 padding: 20px 12px;
+ }
+ .datepicker-date-display .date-text {
+	 font-size: 16px;
+   line-height: 24px;
+ }
+ .datepicker-table td.is-selected {
+	 background-color: #27c3f3;
+ }
+
+ input.valid:not([type]), input.valid:not([type]):focus, input[type=text].valid:not(.browser-default), input[type=text].valid:not(.browser-default):focus, input[type=password].valid:not(.browser-default), input[type=password].valid:not(.browser-default):focus, input[type=email].valid:not(.browser-default), input[type=email].valid:not(.browser-default):focus, input[type=url].valid:not(.browser-default), input[type=url].valid:not(.browser-default):focus, input[type=time].valid:not(.browser-default), input[type=time].valid:not(.browser-default):focus, input[type=date].valid:not(.browser-default), input[type=date].valid:not(.browser-default):focus, input[type=datetime].valid:not(.browser-default), input[type=datetime].valid:not(.browser-default):focus, input[type=datetime-local].valid:not(.browser-default), input[type=datetime-local].valid:not(.browser-default):focus, input[type=tel].valid:not(.browser-default), input[type=tel].valid:not(.browser-default):focus, input[type=number].valid:not(.browser-default), input[type=number].valid:not(.browser-default):focus, input[type=search].valid:not(.browser-default), input[type=search].valid:not(.browser-default):focus, textarea.materialize-textarea.valid, textarea.materialize-textarea.valid:focus, .select-wrapper.valid>input.select-dropdown {
+    border-bottom: 1px solid #27c3f3;
+    -webkit-box-shadow: 0 1px 0 0 #27c3f3;
+    box-shadow: 0 1px 0 0 #27c3f3;
+}
+
+input:not([type]):focus:not([readonly]),input[type=text]:not(.browser-default):focus:not([readonly]),input[type=password]:not(.browser-default):focus:not([readonly]),input[type=email]:not(.browser-default):focus:not([readonly]),input[type=url]:not(.browser-default):focus:not([readonly]),input[type=time]:not(.browser-default):focus:not([readonly]),input[type=date]:not(.browser-default):focus:not([readonly]),input[type=datetime]:not(.browser-default):focus:not([readonly]),input[type=datetime-local]:not(.browser-default):focus:not([readonly]),input[type=tel]:not(.browser-default):focus:not([readonly]),input[type=number]:not(.browser-default):focus:not([readonly]),input[type=search]:not(.browser-default):focus:not([readonly]),textarea.materialize-textarea:focus:not([readonly]){
+	border-bottom:1px solid #27c3f3;
+	-webkit-box-shadow:0 1px 0 0 #27c3f3;
+	box-shadow:0 1px 0 0 #27c3f3
+}
+
+input:not([type]):focus.valid ~ label,input[type=text]:not(.browser-default):focus.valid ~ label,input[type=password]:not(.browser-default):focus.valid ~ label,input[type=email]:not(.browser-default):focus.valid ~ label,input[type=url]:not(.browser-default):focus.valid ~ label,input[type=time]:not(.browser-default):focus.valid ~ label,input[type=date]:not(.browser-default):focus.valid ~ label,input[type=datetime]:not(.browser-default):focus.valid ~ label,input[type=datetime-local]:not(.browser-default):focus.valid ~ label,input[type=tel]:not(.browser-default):focus.valid ~ label,input[type=number]:not(.browser-default):focus.valid ~ label,input[type=search]:not(.browser-default):focus.valid ~ label,textarea.materialize-textarea:focus.valid ~ label{
+	color:#27c3f3
+}
+
+input:not([type]), input[type=text]:not(.browser-default), input[type=password]:not(.browser-default), input[type=email]:not(.browser-default), input[type=url]:not(.browser-default), input[type=time]:not(.browser-default), input[type=date]:not(.browser-default), input[type=datetime]:not(.browser-default), input[type=datetime-local]:not(.browser-default), input[type=tel]:not(.browser-default), input[type=number]:not(.browser-default), input[type=search]:not(.browser-default), textarea.materialize-textarea {
+	font-size: 16px;
+	margin: 0px;
+	height: 4rem;
+}
+
+.input-field>label {
+	font-size: 88%;
+}
+
 .content-area .woocommerce-MyAccount-secondary ul {
   margin: 0px;
 }
@@ -169,6 +234,10 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
   margin-top: 32px;
 }
 
+.quicksaves h4 a {
+	float:right;
+}
+
 .quicksave .card .action-buttons {
 	padding-bottom: 0.5em;
 	margin-top: -0.5em;
@@ -186,12 +255,9 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
 }
 
 .quicksave table {
-  display: inline-table;
   border-collapse: collapse;
   font-size: 0.8em;
   width: auto;
-  margin-right: 2em;
-	width: 100%;
 }
 
 .quicksave table th, .quicksave table td {
@@ -219,14 +285,18 @@ body.logged-in.admin-bar .modal.bottom-sheet.open {
   color: #ff0000;
 }
 
+.quicksave table td:nth-child(2) {
+	width: 72px;
+}
+
 .quicksave table td:nth-child(3) {
-	max-width: 50px;
+	width: 72px;
 }
 
 .quicksave table td:nth-child(4) {
 	width: 64px;
   text-align: center;
-	opacity: 0;
+	opacity: 0.1;
 }
 
 .quicksave table td:nth-child(4) a {
@@ -348,10 +418,6 @@ div.website .usage-stats {
 
 .usage-stats .usage.over {
   background: antiquewhite;
-}
-
-table.usage {
-	width: auto;
 }
 
 table.usage td {

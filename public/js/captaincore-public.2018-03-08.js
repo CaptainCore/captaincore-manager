@@ -1,5 +1,8 @@
 jQuery(document).ready(function() {
 
+	jQuery('.collapsible').collapsible();
+	jQuery('.datepicker').datepicker();
+
   jQuery('ul.changelog li .changelog-item').click(function() {
 
     if (jQuery(this).children('.content').hasClass("show")) {
