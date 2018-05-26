@@ -754,7 +754,7 @@ if ( $wp_query->query_vars['websites'] ) {
 						);
 						?>
 						<?php if ( $websites_for_customer ) : ?>
-							<table class="usage">
+							<table class="usage highlight">
 								<tr>
 									<th>Site</th>
 									<th>Storage</th>
@@ -859,7 +859,7 @@ if ( $wp_query->query_vars['websites'] ) {
 </div>
 <div class="row">
 	<div class="input-field col s12">
-		<label for="email">Email Address</label><br />
+		<label for="email">Email Address</label>
 		<input id="email" type="email" class="validate" value="<?php echo $current_user->user_email; ?>">
 	</div>
 </div>
@@ -920,10 +920,14 @@ if ( $wp_query->query_vars['websites'] ) {
 	<div class="card-panel">
 		<p class="card-title">Deactivate Site</p>
 		Will apply deactivate message with the following link back to the site owner.
-    <p>
-			<input placeholder="Name" id="name" type="text" class="validate" value="<?php echo $business_name; ?>">
-			<input placeholder="Link" id="link" type="text" class="validate" value="<?php echo $business_link; ?>">
-		</p>
+			<div class="input-field col s12">
+				<label for="name">Business name</label>
+				<input id="name" type="text" class="validate" value="<?php echo $business_name; ?>">
+			</div>
+			<div class="input-field col s12">
+				<label for="link">Business link</label>
+				<input id="link" type="text" class="validate" value="<?php echo $business_link; ?>">
+			</div>
 		<p><a href="#" class="btn blue deactivate">Deactivate Site</a></p>
 	</div>
 	</div>
@@ -947,8 +951,8 @@ if ( $wp_query->query_vars['websites'] ) {
 		<div class="card-content">
 
 			<div class="input-field col s12">
-				<label for="autocomplete-input">Select destination site</label> <br/>
-		  <input type="text" id="autocomplete-input" class="autocomplete">
+				<label for="autocomplete-input">Select destination site</label>
+		  	<input type="text" id="autocomplete-input" class="autocomplete">
 				<a class="start_copy blue btn">Start Copy</a>
 		</div>
 
@@ -1117,34 +1121,7 @@ foreach ( $mailgun_events->items as $mailgun_event ) {
 								<a class="view_quicksave_changes blue btn">View Changes</a>
 							</div>
 							<div class="git_status"></div>
-							<table class="bordered plugins" id="plugins_<?php echo $website_id; ?>">
-								<thead>
-									<tr>
-											<th>Plugin</th>
-											<th>Version</th>
-											<th>Status</th>
-											<th></th>
-									</tr>
-								</thead>
-								<tbody>
-									<?php foreach ( $plugins as $plugin ) { ?>
-									<tr class="plugin" data-plugin-name="<?php echo $plugin->name; ?>" data-plugin-version="<?php echo $plugin->version; ?>" data-plugin-status="<?php echo $plugin->status; ?>">
-										<td>
-										<?php
-										if ( $plugin->title ) {
-											echo $plugin->title;
-										} else {
-											echo $plugin->name; }
-?>
-</td>
-										<td><span><?php echo $plugin->version; ?></span></td>
-										<td><span><?php echo $plugin->status; ?></span></td>
-										<td><a href="#rollback" class="btn blue rollback" data-plugin-name="<?php echo $plugin->name; ?>">Rollback</a></td>
-									</tr>
-									<?php } ?>
-								</tbody>
-							</table>
-							<table class="bordered themes" id="themes_<?php echo $website_id; ?>">
+							<table class="highlight themes" id="themes_<?php echo $website_id; ?>">
 								<thead>
 									<tr>
 											<th>Theme</th>
@@ -1171,6 +1148,34 @@ foreach ( $mailgun_events->items as $mailgun_event ) {
 									<?php } ?>
 								</tbody>
 							</table>
+							<table class="highlight plugins" id="plugins_<?php echo $website_id; ?>">
+								<thead>
+									<tr>
+											<th>Plugin</th>
+											<th>Version</th>
+											<th>Status</th>
+											<th></th>
+									</tr>
+								</thead>
+								<tbody>
+									<?php foreach ( $plugins as $plugin ) { ?>
+									<tr class="plugin" data-plugin-name="<?php echo $plugin->name; ?>" data-plugin-version="<?php echo $plugin->version; ?>" data-plugin-status="<?php echo $plugin->status; ?>">
+										<td>
+										<?php
+										if ( $plugin->title ) {
+											echo $plugin->title;
+										} else {
+											echo $plugin->name; }
+?>
+</td>
+										<td><span><?php echo $plugin->version; ?></span></td>
+										<td><span><?php echo $plugin->status; ?></span></td>
+										<td><a href="#rollback" class="btn blue rollback" data-plugin-name="<?php echo $plugin->name; ?>">Rollback</a></td>
+									</tr>
+									<?php } ?>
+								</tbody>
+							</table>
+
 						</div>
 						<div class="card-reveal">
 							<span class="card-title grey-text text-darken-4"><i class="material-icons right">close</i></span>
