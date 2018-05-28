@@ -3109,6 +3109,14 @@ function captaincore_install_action_callback() {
 		$post_id    = $website_id[0];
 	}
 
+	if ( $cmd == 'quicksave_file_restore' ) {
+		$git_commit = get_field( 'git_commit', $post_id );
+		$website_id = get_field( 'website', $post_id );
+		$site       = get_field( 'site', $website_id[0] );
+		$command    = "nohup captaincore rollback $site $git_commit --file=\"$value\" &";
+		$post_id    = $website_id[0];
+	}
+
 	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
 
 		if ( captaincore_verify_permissions( $post_id ) ) {
