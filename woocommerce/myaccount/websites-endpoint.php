@@ -127,6 +127,7 @@ if ( $wp_query->query_vars['websites'] ) {
 				e.preventDefault();
 				jQuery(this).parent().addClass("activator").trigger("click");
 				quicksave = jQuery(this).parents('.quicksave');
+				quicksave_date = jQuery( quicksave ).find(".timestamp").text();
 				jQuery(quicksave).find(".card-reveal .response").html( '<p></p><div class="preloader-wrapper small active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p></p>' );
 
 				var data = {
@@ -150,20 +151,44 @@ if ( $wp_query->query_vars['websites'] ) {
 							file_array = files[i].split("\t");
 							file_status = file_array[0];
 							file_name = file_array[1];
-							jQuery(quicksave).find(".card-reveal .response").append("<a class='file modal-trigger' href='#file_"+i+"'><span class='file_status'>"+file_status+"</span><span class='file_name'>"+file_name+"</span></div>");
-							jQuery(".website-group").append(`<div id="file_`+i+`" class="modal file_diff">
+
+							jQuery(quicksave).find(".card-reveal .response").append("<a class='file modal-trigger' href='#file_"+i+"_quicksave_"+quicksave.data('id')+"' data-file-name='"+file_name+"'><span class='file_status'>"+file_status+"</span><span class='file_name'>"+file_name+"</span></div>");
+							jQuery(".website-group").append(`<div id="file_`+i+`_quicksave_`+quicksave.data('id')+`" class="modal file_diff">
 <div class="modal-content">
-	<h4>`+file_name+` <a href="#!" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a></h4>
+	<h4>`+file_name+` <a href="#" class="modal-action modal-close grey-text text-darken-4"><i class="material-icons right">close</i></a><a href="#" class="btn blue quicksave-restore-file right" data-file-name="`+file_name+`"  data-quicksave-date="`+quicksave_date+`" data-quicksave-id="`+quicksave.data('id')+`">Restore this file</a></h4>
 	<p></p>
 </div>
 </div>`);
-							//
 
 							i++;
 						});
 
 					}
 				});
+
+			});
+
+			jQuery(".website-group").on( "click", ".file_diff .quicksave-restore-file", function(e) {
+
+				e.preventDefault();
+
+				file_name = jQuery( this ).data("file-name");
+				quicksave_id = jQuery( this ).data("quicksave-id");
+				quicksave_date = jQuery( this ).data("quicksave-date");
+				var data = {
+					'action': 'captaincore_install',
+					'post_id': quicksave_id,
+					'command': 'quicksave_file_restore',
+					'value'	: file_name,
+				};
+
+				confirm_file_rollback = confirm("Rollback file " + file_name + " as of " + quicksave_date);
+
+				if(confirm_file_rollback) {
+					jQuery.post(ajaxurl, data, function(response) {
+							Materialize.toast('File restore in process. Will email once completed.', 4000);
+					});
+				}
 
 			});
 
