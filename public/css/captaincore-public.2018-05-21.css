@@ -557,7 +557,7 @@ div.website .actions a {
   font-size: 0.2em;
   position: absolute;
   left: -16px;
-  top: 5px;
+  top: -8px;
   padding: 0px;
   margin: 0px;
   transform: rotate(-90deg);
