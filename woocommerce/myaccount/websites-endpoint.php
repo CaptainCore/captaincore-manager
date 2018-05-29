@@ -52,6 +52,15 @@ if ( $wp_query->query_vars['websites'] ) {
 			});
 
 		jQuery(document).ready(function() {
+
+			var backupStartDate = new Date("<?php echo get_field( 'backup_start_date', $website_id ); ?> 0:00");
+			var currentTime = new Date();
+
+			jQuery('.datepicker').datepicker({
+				minDate: backupStartDate,
+				maxDate: currentTime
+			});
+
 			jQuery('a.staging-toggle').click(function() {
 				jQuery(this).parents('.flip-container').addClass('toggle');
 				return false;
@@ -888,6 +897,15 @@ if ( $wp_query->query_vars['websites'] ) {
 		<input id="email" type="email" class="validate" value="<?php echo $current_user->user_email; ?>">
 	</div>
 </div>
+<?php if (get_field("backup_start_date", $website_id)) { ?>
+<div class="row">
+	<div class="input-field col s12">
+		<label for="datepicker">Older version (Optional)</label>
+		<input type="text" class="datepicker">
+	</div>
+</div>
+<?php } ?>
+
 <div class="row">
 	<div class="input-field col s12">
 		<span class="results red-text text-darken-4"></span>
