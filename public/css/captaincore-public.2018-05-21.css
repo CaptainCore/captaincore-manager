@@ -30,6 +30,9 @@ body button:hover, input[type="button"]:hover, input[type="reset"]:hover, input[
     outline: none;
     background-color: #27c3f3;
 }
+td.is-disabled button {
+		color: #0000002b !important;
+}
  .datepicker-date-display {
 	 background-color: #27c3f3;
 	 padding: 20px 12px;

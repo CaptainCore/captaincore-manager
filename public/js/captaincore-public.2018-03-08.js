@@ -1,7 +1,6 @@
 jQuery(document).ready(function() {
 
 	jQuery('.collapsible').collapsible();
-	jQuery('.datepicker').datepicker();
 
   jQuery('ul.changelog li .changelog-item').click(function() {
 
