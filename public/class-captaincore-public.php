@@ -77,7 +77,7 @@ class Captaincore_Public {
 
 		wp_enqueue_style( 'google-material-icons', "https://fonts.googleapis.com/icon?family=Material+Icons", array(), '2017-09-03' );
 		wp_enqueue_style( 'materialize', plugin_dir_url( __FILE__ ) . "css/materialize.min.css", array(), '2017-09-08' );
-		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/captaincore-public.2018-05-21.css', array(), $this->version, 'all' );
+		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/captaincore-public.2018-06-03.css', array(), $this->version, 'all' );
 		wp_enqueue_script( 'font-awesome', "https://use.fontawesome.com/releases/v5.0.6/js/all.js", array() );
 		wp_enqueue_script( 'materialize', plugin_dir_url( __FILE__ ) . 'js/materialize.min.js', array(), '2016-12-30', true );
 
@@ -103,7 +103,7 @@ class Captaincore_Public {
 		 * class.
 		 */
 
-		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/captaincore-public.2018-03-08.js', array( 'jquery' ), $this->version, false );
+		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/captaincore-public.2018-06-03.js', array( 'jquery' ), $this->version, false );
 
 	}
 
