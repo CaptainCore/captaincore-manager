@@ -109,7 +109,6 @@ if ( $wp_query->query_vars['dns'] ) {
 				jQuery(this).parent().parent("tr").remove();
 				event.preventDefault();
 			 });
-
 			 jQuery('.dns_records .mx a.add-record').click(function( event ) {
 				 jQuery(this).parent().parent("tr").before('<tr class="dns_record" data-status="new-record" data-type="a"><td><input type="text" placeholder="Priority"></td><td><input type="text" placeholder="Mail Server"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>');
 				 event.preventDefault();
@@ -127,7 +126,7 @@ if ( $wp_query->query_vars['dns'] ) {
 				 event.preventDefault();
 			 });
 			 jQuery('.dns_records').on("click",'tr[data-type="a"] a.add-record', function( event ) {
-				 jQuery(this).parent().parent("tr").before('<tr><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>');
+				 jQuery(this).parent().parent("tr").before('<tr><td><input type="text" placeholder="Value"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>');
 				 event.preventDefault();
 			 });
 			 jQuery('.dns_records tr[data-type="a"] table').on("click","a.remove-record", function( event ) {
@@ -143,10 +142,10 @@ if ( $wp_query->query_vars['dns'] ) {
 				 event.preventDefault();
 			 });
 			 jQuery('.dns_records tr[data-type="spf"] a.add-record').click(function( event ) {
-				 jQuery(this).parent().parent("tr").before('<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>');
+				 jQuery(this).parent().parent("tr").before('<tr><td><input type="text" placeholder="Value"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>');
 				 event.preventDefault();
 			 });
-			 jQuery('.dns_records tr[data-type="srv"] table').on("click","a.remove-record", function( event ) {
+			 jQuery('.dns_records tr[data-type="spf"] table').on("click","a.remove-record", function( event ) {
 				 jQuery(this).parent().parent("tr").remove();
 				 event.preventDefault();
 			 });
