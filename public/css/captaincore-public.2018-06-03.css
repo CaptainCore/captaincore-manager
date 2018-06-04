@@ -243,6 +243,9 @@ input:not([type]), input[type=text]:not(.browser-default), input[type=password]:
   top: 100%;
   display: none;
 }
+.select-wrapper input.select-dropdown:focus {
+    border-bottom: 1px solid #27c3f3;
+}
 .autocomplete-content.dropdown-content {
 	opacity: 1;
 }

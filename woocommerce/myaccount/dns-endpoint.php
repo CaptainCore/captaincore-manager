@@ -73,14 +73,12 @@ if ( $wp_query->query_vars['dns'] ) {
 
 			 ajaxurl = "/wp-admin/admin-ajax.php";
 
-			 jQuery('select').formSelect();
-
 			 new_dns_record = jQuery('.dns_record[data-status="new-record"]').clone();
+
+			 jQuery('select').formSelect();
 
 			 // Changing record types via dropdown
 			 jQuery('.dns_records').on("change", "tr select", function() {
-
-				 console.log( jQuery(this).val() );
 
 				 record_type = jQuery(this).val().toLowerCase();
 				 record_row = jQuery(this).parents("tr");
@@ -113,7 +111,7 @@ if ( $wp_query->query_vars['dns'] ) {
 			 });
 
 			 jQuery('.dns_records .mx a.add-record').click(function( event ) {
-				 jQuery(this).parent().parent("tr").before('<tr class="dns_record" data-status="new-record" data-type="a"><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>');
+				 jQuery(this).parent().parent("tr").before('<tr class="dns_record" data-status="new-record" data-type="a"><td><input type="text" placeholder="Priority"></td><td><input type="text" placeholder="Mail Server"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>');
 				 event.preventDefault();
 			 });
 			 jQuery('.dns_records .mx').on("click","a.remove-record", function( event ) {
@@ -121,7 +119,7 @@ if ( $wp_query->query_vars['dns'] ) {
 				 event.preventDefault();
 			 });
 			 jQuery('.dns_records tr[data-type="txt"] a.add-record').click(function( event ) {
-				 jQuery(this).parent().parent("tr").before('<tr><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>');
+				 jQuery(this).parent().parent("tr").before('<tr><td><input type="text" placeholder="Value"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>');
 				 event.preventDefault();
 			 });
 			 jQuery('.dns_records tr[data-type="txt"] table').on("click","a.remove-record", function( event ) {
@@ -137,7 +135,7 @@ if ( $wp_query->query_vars['dns'] ) {
 				 event.preventDefault();
 			 });
 			 jQuery('.dns_records').on("click",'tr[data-type="srv"] a.add-record', function( event ) {
-				 jQuery(this).parent().parent("tr").before('<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>');
+				 jQuery(this).parent().parent("tr").before('<tr><td><input type="text" placeholder="Priority"></td><td><input type="text" placeholder="Weight"></td><td><input type="text" placeholder="Port"></td><td><input type="text" placeholder="Host"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>');
 				 event.preventDefault();
 			 });
 			 jQuery('.dns_records tr[data-type="srv"] table').on("click","a.remove-record", function( event ) {
@@ -156,6 +154,7 @@ if ( $wp_query->query_vars['dns'] ) {
 			 jQuery('.add-additional-record').click(function( event ) {
 
 				 jQuery('.dns_records > tbody > tr:last-child').before( new_dns_record.clone() );
+				 jQuery('.dns_records > tbody > tr:last-child').prev().find("select").formSelect();
 				 event.preventDefault();
 
 			 });
@@ -465,18 +464,18 @@ if ( $wp_query->query_vars['dns'] ) {
 				<td class="name">
 					<div class="record-view"></div>
 					<div class="record-editable">
-						<input type="text" value="">
+						<input type="text" value="" placeholder="Name">
 					</div>
 				</td>
 				<td class="value">
 					<div class="record-view"></div>
 					<div class="record-editable">
-						<input type="text" value="">
+						<input type="text" value="" placeholder="Value">
 					</div>
 				</td>
 			<td class="ttl">
 				<div class="record-view"></div>
-				<div class="record-editable"><input type="text" value="1800">				</div>
+				<div class="record-editable"><input type="text" value="1800" placeholder="TTL"></div>
 			</td>
 			<td class="actions">
 				<a class="edit-record" href=""><i class="fas fa-edit"></i></a>
@@ -523,7 +522,7 @@ if ( $wp_query->query_vars['dns'] ) {
 						<?php echo $record_name; ?>
 					</div>
 					<div class="record-editable">
-						<input type="text" value="<?php echo $record_name; ?>">
+						<input type="text" value="<?php echo $record_name; ?>" placeholder="Name">
 					</div>
 				</td>
 				<td class="value">
@@ -544,13 +543,12 @@ if ( $wp_query->query_vars['dns'] ) {
 						</div>
 						<div class="record-editable">
 							<table>
-								<tr><th>Priority</th><th>Mail Server</th><th></th></tr>
 						<?php
 						foreach ( $record_values as $record ) {
 							$record_value = $record->value;
 							$record_level = $record->level;  // Used by MX records
 							?>
-							<tr><td><input type="text" value="<?php echo $record_level; ?>"></td><td><div class="message">.<?php echo $domain->name; ?></div><input type="text" value="<?php echo $record_value; ?>"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+							<tr><td><input type="text" value="<?php echo $record_level; ?>" placeholder="Priority"></td><td><div class="message">.<?php echo $domain->name; ?></div><input type="text" value="<?php echo $record_value; ?>" placeholder="Mail Server"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
 						<?php } ?>
 								<tr><td colspan="3"><a href="#" class="add-record">Add Additional Record</a></td></tr>
 							 </table>
@@ -596,9 +594,8 @@ if ( $wp_query->query_vars['dns'] ) {
 					</div>
 					<div class="record-editable">
 						<table>
-							<tr><th>Value</th><th></th></tr>
 					<?php foreach ( $record_values as $record ) { ?>
-				<tr><td><input type="text" value='<?php echo $record; ?>'></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+				<tr><td><input type="text" value='<?php echo $record; ?>' placeholder="Value"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
 				<?php } ?>
 							<tr><td colspan="2"><a href="#" class="add-record">Add Additional Record</a></td></tr>
 						 </table>
@@ -619,12 +616,11 @@ if ( $wp_query->query_vars['dns'] ) {
 					</div>
 					<div class="record-editable">
 						<table>
-					<tr><th>Value</th><th></th></tr>
 					<?php
 					foreach ( $record_values as $record ) {
 						$record_value = $record->value;
 						?>
-						<tr><td><input type="text" value='<?php echo $record_value; ?>'></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+						<tr><td><input type="text" value='<?php echo $record_value; ?>' placeholder="Value"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
 				<?php } ?>
 							<tr><td colspan="2"><a href="#" class="add-record">Add Additional Record</a></td></tr>
 						 </table>
@@ -649,7 +645,6 @@ if ( $wp_query->query_vars['dns'] ) {
 						</div>
 						<div class="record-editable">
 					<table>
-						<tr><th>Priority</th><th>Weight</th><th>Port</th><th>Host</th><th></th></tr>
 					<?php foreach ( $record_values as $record ) {
 
 						$record_value    = $record->value;
@@ -659,8 +654,10 @@ if ( $wp_query->query_vars['dns'] ) {
 
 						?>
 						<tr>
-							<td><input type="text" value="<?php echo $record_priority; ?>"></td><td><input type="text" value="<?php echo $record_weight; ?>"></td><td><input type="text" value="<?php echo $record_port; ?>"></td>
-							<td><input type="text" value="<?php echo $record_value; ?>"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td>
+							<td><input type="text" value="<?php echo $record_priority; ?>" placeholder="Priority"></td>
+							<td><input type="text" value="<?php echo $record_weight; ?>" placeholder="Weight"></td>
+							<td><input type="text" value="<?php echo $record_port; ?>" placeholder="Port"></td>
+							<td><input type="text" value="<?php echo $record_value; ?>"placeholder="Host"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td>
 						</tr>
 					<?php } ?>
 							<tr><td colspan="5"><a href="#" class="add-record">Add Additional Record</a></td></tr>
@@ -695,39 +692,37 @@ if ( $wp_query->query_vars['dns'] ) {
 					<option>ANAME</option>
 					<option>CNAME</option>
 					<option value="HTTPRedirection">HTTP Redirect</option>
-					<optio>MX</option>
+					<option>MX</option>
 					<option>SPF</option>
 					<option>SRV</option>
 					<option>TXT</option>
 				</select>
 				</div>
 			</td>
-			<td class="name"><input type="text"></td>
+			<td class="name"><input type="text" placeholder="Name"></td>
 			<td class="value">
 				<div class="value">
 				<div class="message">.<?php echo $domain->name; ?></div>
-				<input type="text">
+				<input type="text" placeholder="Value">
 			</div>
 			<div class="mx">
 				<table>
-					<tr><th>Priority</th><th>Mail Server</th><th></th></tr>
-					<tr><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
-					<tr><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
-					<tr><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
-					<tr><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
-					<tr><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+					<tr><td><input type="text" placeholder="Priority"></td><td><input type="text" placeholder="Mail Server"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+					<tr><td><input type="text" placeholder="Priority"></td><td><input type="text" placeholder="Mail Server"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+					<tr><td><input type="text" placeholder="Priority"></td><td><input type="text" placeholder="Mail Server"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+					<tr><td><input type="text" placeholder="Priority"></td><td><input type="text" placeholder="Mail Server"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+					<tr><td><input type="text" placeholder="Priority"></td><td><input type="text" placeholder="Mail Server"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
 					<tr><td colspan="3"><a href="#" class="add-record">Add Additional Record</a></td></tr>
 			 </table>
 			</div>
 
 			<div class="srv">
 				<table>
-					<tr><th>Priority</th><th>Weight</th><th>Port</th><th>Host</th><th></th></tr>
-					<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
-					<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
-					<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
-					<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
-					<tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+					<tr><td><input type="text" placeholder="Priority"></td><td><input type="text" placeholder="Weight"></td><td><input type="text" placeholder="Port"></td><td><input type="text" placeholder="Host"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+					<tr><td><input type="text" placeholder="Priority"></td><td><input type="text" placeholder="Weight"></td><td><input type="text" placeholder="Port"></td><td><input type="text" placeholder="Host"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+					<tr><td><input type="text" placeholder="Priority"></td><td><input type="text" placeholder="Weight"></td><td><input type="text" placeholder="Port"></td><td><input type="text" placeholder="Host"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+					<tr><td><input type="text" placeholder="Priority"></td><td><input type="text" placeholder="Weight"></td><td><input type="text" placeholder="Port"></td><td><input type="text" placeholder="Host"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
+					<tr><td><input type="text" placeholder="Priority"></td><td><input type="text" placeholder="Weight"></td><td><input type="text" placeholder="Port"></td><td><input type="text" placeholder="Host"></td><td><a class="remove-record" href=""><i class="fas fa-times"></i></a></td></tr>
 					<tr><td colspan="5"><a href="#" class="add-record">Add Additional Record</a></td></tr>
 			 </table>
 			</div>
