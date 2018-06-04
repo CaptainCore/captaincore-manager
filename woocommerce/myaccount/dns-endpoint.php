@@ -73,13 +73,17 @@ if ( $wp_query->query_vars['dns'] ) {
 
 			 ajaxurl = "/wp-admin/admin-ajax.php";
 
+			 jQuery('select').formSelect();
+
 			 new_dns_record = jQuery('.dns_record[data-status="new-record"]').clone();
 
 			 // Changing record types via dropdown
 			 jQuery('.dns_records').on("change", "tr select", function() {
 
+				 console.log( jQuery(this).val() );
+
 				 record_type = jQuery(this).val().toLowerCase();
-				 record_row = jQuery(this).parent().parent("tr");
+				 record_row = jQuery(this).parents("tr");
 
 				 jQuery(record_row).data( "type", record_type );
 				 jQuery(record_row).attr( "data-type", record_type );
@@ -361,11 +365,11 @@ if ( $wp_query->query_vars['dns'] ) {
 								jQuery(record_row).removeAttr( "data-status" );
 							}
 
-							Materialize.toast( this["success"] , 4000);
+							M.toast({html: this["success"] });
 						}
 						// Display errors
 						if ( this["errors"] ) {
-							Materialize.toast( this["errors"], 4000 );
+							M.toast({html: this["errors"] });
 						}
 						// New record
 						if ( this["id"] ) {
@@ -408,7 +412,7 @@ if ( $wp_query->query_vars['dns'] ) {
 									.thenBy(function (v) { return jQuery(v).find(".name .record-view").text().trim(); })
 							);
 							jQuery.each(dnsrecordstr, function(idx, itm) { dnsrecords.append(itm); });
-							Materialize.toast( "New record added" , 4000);
+							M.toast({html: 'New record added'});
 							jQuery('.add-additional-record').click();
 						}
 
@@ -443,17 +447,19 @@ if ( $wp_query->query_vars['dns'] ) {
 				<td class="type">
 					<div></div>
 					<div class="record-non-editable">
-						<select>
-							<option>A</option>
-							<option>AAAA</option>
-							<option>ANAME</option>
-							<option>CNAME</option>
+						<div class="input-field col s12">
+						<select browser-default>
+							<option value="a">A</option>
+							<option value="aaaa">AAAA</option>
+							<option value="aname">ANAME</option>
+							<option value="cname">CNAME</option>
 							<option value="HTTPRedirection">HTTP Redirect</option>
-							<option>MX</option>
-							<option>SPF</option>
-							<option>SRV</option>
-							<option>TXT</option>
+							<option value="mx">MX</option>
+							<option value="spf">SPF</option>
+							<option value="srv">SRV</option>
+							<option value="txt">TXT</option>
 						</select>
+						</div>
 					</div>
 				</td>
 				<td class="name">
@@ -682,18 +688,19 @@ if ( $wp_query->query_vars['dns'] ) {
 		?>
 		<tr class="dns_record" data-status="new-record" data-type="a">
 			<td>
-				<select>
-					<option selected>A</option>
-					<option>AAAA</option>
-					<option>ANAME</option>
-					<option>CNAME</option>
-					<option value="httpredirection">HTTP Redirect</option>
-					<option>MX</option>
-					<option>SPF</option>
-					<option>SRV</option>
-					<option>TXT</option>
-
+				<div class="input-field">
+				<select browser-default>
+					<option value="a">A</option>
+					<option value="aaaa">AAAA</option>
+					<option value="aname">ANAME</option>
+					<option value="cname">CNAME</option>
+					<option value="HTTPRedirection">HTTP Redirect</option>
+					<option value="mx">MX</option>
+					<option value="spf">SPF</option>
+					<option value="srv">SRV</option>
+					<option value="txt">TXT</option>
 				</select>
+				</div>
 			</td>
 			<td class="name"><input type="text"></td>
 			<td class="value">

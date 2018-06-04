@@ -238,6 +238,11 @@ input:not([type]), input[type=text]:not(.browser-default), input[type=password]:
 #autocomplete-input {
 	width: 400px;
 }
+
+.content-area .select-wrapper ul.dropdown-content {
+  top: 100%;
+  display: none;
+}
 .autocomplete-content.dropdown-content {
 	opacity: 1;
 }
