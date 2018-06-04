@@ -2858,10 +2858,12 @@ function captaincore_install_action_callback() {
 	$value      = $_POST['value'];
 	$arguments  = $_POST['arguments'];
 	$addon_type = $_POST['addon_type'];
+	$date       = $_POST['date'];
 	$name       = $_POST['name'];
 	$link       = $_POST['link'];
 
 	$site             = get_field( 'site', $post_id );
+	$provider         = get_field( 'provider', $post_id );
 	$domain           = get_the_title( $post_id );
 	$address          = get_field( 'address', $post_id );
 	$username         = get_field( 'username', $post_id );
@@ -2892,6 +2894,11 @@ function captaincore_install_action_callback() {
 		$site    = $domain;
 		$domain  = '';
 		$subsite = 'true';
+	}
+
+	// Append provider if exists
+	if ( $provider != '' ) {
+		$site = $site . "@" . $provider;
 	}
 
 	// Disable SSL verification due to self signed cert on other end
