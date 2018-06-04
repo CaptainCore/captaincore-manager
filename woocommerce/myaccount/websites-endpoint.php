@@ -83,8 +83,8 @@ if ( $wp_query->query_vars['websites'] ) {
 			});
 
 			jQuery('.modal.quicksaves').modal({
-				ready: function(modal, trigger) { // Callback for Modal open. Modal and trigger parameters available.
-					quicksave_highlight_changed( modal );
+				onOpenEnd: function() { // Callback for Modal open.
+					quicksave_highlight_changed( this );
 				}
 			});
 
