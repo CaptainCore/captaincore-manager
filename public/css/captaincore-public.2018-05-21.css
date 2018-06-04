@@ -31,6 +31,9 @@ body button:hover, input[type="button"]:hover, input[type="reset"]:hover, input[
 label[for=datepicker] {
     z-index: -1;
 }
+.toast {
+	font-size: 2rem;
+}
 .green-text{color:#4CAF50 !important}
  .blue {
 	 background-color: #27c3f3 !important;

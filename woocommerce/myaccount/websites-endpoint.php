@@ -100,7 +100,7 @@ if ( $wp_query->query_vars['websites'] ) {
 
 				// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 				jQuery.post(ajaxurl, data, function(response) {
-					Materialize.toast('Checking for file changes. If any found a new Quicksave will be added shortly.', 4000);
+					M.toast({html: 'Checking for file changes. If any found a new Quicksave will be added shortly.'});
 				});
 
 			});
@@ -124,7 +124,7 @@ if ( $wp_query->query_vars['websites'] ) {
 					};
 
 					jQuery.post(ajaxurl, data, function(response) {
-						Materialize.toast('Rollback in process.', 4000);
+						M.toast({html: 'Rollback in process.'});
 						jQuery(quicksave).find(".git_status").html( '' );
 					});
 
@@ -195,7 +195,7 @@ if ( $wp_query->query_vars['websites'] ) {
 
 				if(confirm_file_rollback) {
 					jQuery.post(ajaxurl, data, function(response) {
-							Materialize.toast('File restore in process. Will email once completed.', 4000);
+							M.toast({html: 'File restore in process. Will email once completed.'});
 					});
 				}
 
@@ -308,7 +308,7 @@ if ( $wp_query->query_vars['websites'] ) {
 				if ( isEmail(email_address) ) {
 					// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 					jQuery.post(ajaxurl, data, function(response) {
-						Materialize.toast('Backup snapshot in process. Will email once completed.', 4000);
+						M.toast({html: 'Backup snapshot in process. Will email once completed.'});
 						jQuery('.modal.open .modal-content .row').show();
 						jQuery('.modal.open .modal-content .progress').addClass('hide');
 						modal_form.modal('close');
@@ -345,7 +345,6 @@ if ( $wp_query->query_vars['websites'] ) {
 
 						// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 						jQuery.post(ajaxurl, data, function(response) {
-							Materialize.toast('Deactivating site.', 4000);
 							jQuery('.modal.open .modal-content .row').show();
 							jQuery('.modal.open .modal-content .progress').addClass('hide');
 							modal_form.modal('close');
@@ -378,7 +377,7 @@ if ( $wp_query->query_vars['websites'] ) {
 
 						// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 						jQuery.post(ajaxurl, data, function(response) {
-							Materialize.toast('Activating site.', 4000);
+							M.toast({html: 'Activating site.'});
 							jQuery('.modal.open .modal-content .row').show();
 							jQuery('.modal.open .modal-content .progress').addClass('hide');
 							modal_form.modal('close');
@@ -412,7 +411,7 @@ if ( $wp_query->query_vars['websites'] ) {
 
 						// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 						jQuery.post(ajaxurl, data, function(response) {
-							Materialize.toast('Apply SSL in progress.', 4000);
+							M.toast({html: 'Apply SSL in progress.'});
 							jQuery('.modal.open .modal-content .row').show();
 							jQuery('.modal.open .modal-content .progress').addClass('hide');
 							modal_form.modal('close');
@@ -446,7 +445,7 @@ if ( $wp_query->query_vars['websites'] ) {
 
 						// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 						jQuery.post(ajaxurl, data, function(response) {
-							Materialize.toast('Site Copy in progress.', 4000);
+							M.toast({html: 'Site Copy in progress.'});
 							jQuery('.modal.open .modal-content .row').show();
 							jQuery('.modal.open .modal-content .progress').addClass('hide');
 							modal_form.modal('close');
@@ -484,7 +483,7 @@ if ( $wp_query->query_vars['websites'] ) {
 
 						// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 						jQuery.post(ajaxurl, data, function(response) {
-							Materialize.toast('Production push to staging in process. Will email once completed.', 4000);
+							M.toast({html: 'Production push to staging in process. Will email once completed.'});
 							jQuery('.modal.open .modal-content .row').show();
 							jQuery('.modal.open .modal-content .progress').addClass('hide');
 							modal_form.modal('close');
@@ -531,7 +530,7 @@ if ( $wp_query->query_vars['websites'] ) {
 
 						// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 						jQuery.post(ajaxurl, data, function(response) {
-							Materialize.toast('Staging push to production in process. Will email once completed.', 4000);
+							M.toast({html: 'Staging push to production in process. Will email once completed.'});
 							jQuery('.modal.open .modal-content .row').show();
 							jQuery('.modal.open .modal-content .progress').addClass('hide');
 							modal_form.modal('close');
@@ -566,7 +565,7 @@ if ( $wp_query->query_vars['websites'] ) {
 
 					// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 					jQuery.post(ajaxurl, data, function(response) {
-						Materialize.toast('Redeploy in progress.', 4000);
+						M.toast({html: 'Redeploy in progress.'});
 					});
 
 				}

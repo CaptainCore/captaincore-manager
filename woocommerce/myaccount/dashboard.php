@@ -142,7 +142,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			if ( isEmail(email_address) ) {
 				// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 				jQuery.post(ajaxurl, data, function(response) {
-				  Materialize.toast('Backup snapshot in process. Will email once completed.', 4000);
+				  M.toast({html: 'Backup snapshot in process. Will email once completed.'});
 					modal_form.modal('close');
 				});
 			} else {
@@ -169,7 +169,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 			  // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 			  jQuery.post(ajaxurl, data, function(response) {
-					Materialize.toast('Redeploy in progress.', 4000);
+					M.toast({html: 'Redeploy in progress.'});
 			  });
 
 			}
@@ -194,7 +194,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 			  // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 			  jQuery.post(ajaxurl, data, function(response) {
-			  	Materialize.toast('Staging site being generated.', 4000);
+			  	M.toast({html: 'Staging site being generated.'});
 			  });
 
 			}
