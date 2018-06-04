@@ -35,6 +35,15 @@ TODO
 
 == Changelog ==
 
+= 0.2.3: May 27, 2018 =
+* New: Toggle Site on advanced tab
+* New: Button "Restore this file" to Quicksaves. Allow restoration of individual files.
+* New: Add datapicker to "Download Backup Snapshot" on advanced tab if start backup date exists.
+* Tweak: Improvements to Quicksaves UI.
+* Tweak: Improvements to usage breakdown section. Sorted sites by name. Moved totals into new total row.
+* Tweak: Upgraded to Materialize v1.0.0.-beta
+* Tweak: Improved toggle on hosting dashboard for admins
+
 = 0.2.2: May 20, 2018 =
 * New: Site Copy to advanced tab
 * New: Apply HTTPS to advanced tab
