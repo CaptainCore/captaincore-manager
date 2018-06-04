@@ -22,6 +22,12 @@ body button:hover, input[type="button"]:hover, input[type="reset"]:hover, input[
 .btn, .btn-large, .btn-small, .btn-flat {
 	text-transform: none;
 }
+.switch label input[type=checkbox]:checked+.lever:after {
+  background-color: #17c0f5;
+}
+.switch label input[type=checkbox]:checked+.lever {
+    background-color: #c4ecfb;
+}
 .green-text{color:#4CAF50 !important}
  .blue {
 	 background-color: #27c3f3 !important;

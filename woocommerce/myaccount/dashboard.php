@@ -416,10 +416,15 @@ if ($partner and $role_check) {
 
 	if( $websites ): ?>
 	<?php if ( in_array( 'administrator', $user->roles) ) { ?>
-		<label class="right">
-			<input type="checkbox" checked="checked">
-			All sites
-		</label>
+ <div class="switch right">
+	 <label>
+		 High usage
+		 <input type="checkbox" checked="checked">
+		 <span class="lever"></span>
+		 All sites
+	 </label>
+ </div>
+
 		<h3>Listing <?php echo count($websites);?> sites</h3>
 	<?php } else { ?>
 		<h3>Account: <?php echo get_the_title($partner_id); ?> <small>(<?php echo count($websites);?> sites)</small></h3>
