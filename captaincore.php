@@ -3028,7 +3028,9 @@ function captaincore_install_action_callback() {
 		date_default_timezone_set( 'America/New_York' );
 		$t         = time();
 		$timestamp = date( 'Y-m-d-hms', $t );
-		if ( $value ) {
+    if ( $date && $value ) {
+			$command = "captaincore snapshot $site --email=$value --rollback='$date' > ~/Tmp/$timestamp-snapshot_$site.txt 2>&1 & sleep 2; head ~/Tmp/$timestamp-snapshot_$site.txt";
+		} elseif ( $value ) {
 			$command = "captaincore snapshot $site --email=$value > ~/Tmp/$timestamp-snapshot_$site.txt 2>&1 & sleep 2; head ~/Tmp/$timestamp-snapshot_$site.txt";
 		} else {
 			$command = "captaincore snapshot $site > ~/Tmp/$timestamp-snapshot_$site.txt 2>&1 & sleep 2; head ~/Tmp/$timestamp-snapshot_$site.txt";
