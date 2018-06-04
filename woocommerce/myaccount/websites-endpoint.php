@@ -963,7 +963,7 @@ if ( $wp_query->query_vars['websites'] ) {
 	<div class="col s12 m6">
 	<div class="card-panel">
 		<p class="card-title">Deactivate Site</p>
-		Will apply deactivate message with the following link back to the site owner.
+		<p>Will apply deactivate message with the following link back to the site owner.</p>
 			<div class="input-field col s12">
 				<label for="name">Business name</label>
 				<input id="name" type="text" class="validate" value="<?php echo $business_name; ?>">
