@@ -28,6 +28,9 @@ body button:hover, input[type="button"]:hover, input[type="reset"]:hover, input[
 .switch label input[type=checkbox]:checked+.lever {
     background-color: #c4ecfb;
 }
+label[for=datepicker] {
+    z-index: -1;
+}
 .green-text{color:#4CAF50 !important}
  .blue {
 	 background-color: #27c3f3 !important;
