@@ -81,6 +81,9 @@ class Captaincore_Public {
 		wp_enqueue_script( 'font-awesome', "https://use.fontawesome.com/releases/v5.0.6/js/all.js", array() );
 		wp_enqueue_script( 'materialize', plugin_dir_url( __FILE__ ) . 'js/materialize.min.js', array(), '2016-12-30', true );
 
+		if ( isset($wp_query->query_vars["pagename"]) && $wp_query->query_vars["pagename"] == "contact" ) {
+			 wp_deregister_style( 'materialize' );
+		 }
 
 	}
 
