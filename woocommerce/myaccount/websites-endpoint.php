@@ -30,26 +30,6 @@ if ( $wp_query->query_vars['websites'] ) {
 				if (vb < 'a'.charCodeAt(0)) vb += 100; // Add weight if it's a number
 				return vb < va ? 1 : -1;
 		}
-		jQuery(window).load(function() {
-		jQuery('input.autocomplete').autocomplete({
-					data: {
-					<?php
-						$arguments = captaincore_fetch_sites();
-						// Loads websites
-						$websites = get_posts( $arguments );
-					foreach ( $websites as $website ) :
-						$site = get_field( 'site', $website->ID );
-						echo '"' . $site . ' (' . get_the_title( $website->ID ) . ')": null,';
-						endforeach;
-						?>
-					},
-					limit: 20, // The max amount of results that can be shown at once. Default: Infinity.
-					onAutocomplete: function(val) {
-						// Callback function when value is autcompleted.
-					},
-					minLength: 1, // The minimum length of the input for the autocomplete to start. Default: 1.
-				});
-			});
 
 		jQuery(document).ready(function() {
 
@@ -298,12 +278,17 @@ if ( $wp_query->query_vars['websites'] ) {
 				jQuery('.modal.open .modal-content .progress').removeClass('hide');
 
 				email_address = modal_form.find('input#email').val();
+				snapshot_version = modal_form.find('input#snapshot_version').val();
 				var data = {
 					'action': 'captaincore_install',
 					'post_id': modal_form.data('id'),
 					'command': 'snapshot',
 					'value'	: email_address
 				};
+
+				if (snapshot_version) {
+					data.date = snapshot_version;
+				}
 
 				if ( isEmail(email_address) ) {
 					// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
@@ -345,6 +330,7 @@ if ( $wp_query->query_vars['websites'] ) {
 
 						// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 						jQuery.post(ajaxurl, data, function(response) {
+							M.toast({html: 'Deactivating site.'});
 							jQuery('.modal.open .modal-content .row').show();
 							jQuery('.modal.open .modal-content .progress').addClass('hide');
 							modal_form.modal('close');
@@ -605,6 +591,22 @@ if ( $wp_query->query_vars['websites'] ) {
 
 					}
 				});
+
+				options = {
+					data: {
+					<?php
+						$arguments = captaincore_fetch_sites();
+						// Loads websites
+						$websites = get_posts( $arguments );
+					foreach ( $websites as $website ) :
+						$site = get_field( 'site', $website->ID );
+						echo '"' . $site . ' (' . get_the_title( $website->ID ) . ')": null,';
+						endforeach;
+						?>
+					},
+				};
+
+				jQuery('.autocomplete').autocomplete(options);
 
 		});
 
@@ -900,7 +902,7 @@ if ( $wp_query->query_vars['websites'] ) {
 <div class="row">
 	<div class="input-field col s12">
 		<label for="datepicker">Older version (Optional)</label>
-		<input type="text" class="datepicker">
+		<input id="snapshot_version" type="text" class="datepicker">
 	</div>
 </div>
 <?php } ?>
@@ -993,8 +995,8 @@ if ( $wp_query->query_vars['websites'] ) {
 		<div class="card-content">
 
 			<div class="input-field col s12">
+				<input type="text" id="autocomplete-input" class="autocomplete">
 				<label for="autocomplete-input">Select destination site</label>
-		  	<input type="text" id="autocomplete-input" class="autocomplete">
 				<a class="start_copy blue btn">Start Copy</a>
 		</div>
 
