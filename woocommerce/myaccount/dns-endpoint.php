@@ -449,15 +449,15 @@ if ( $wp_query->query_vars['dns'] ) {
 					<div class="record-non-editable">
 						<div class="input-field col s12">
 						<select browser-default>
-							<option value="a">A</option>
-							<option value="aaaa">AAAA</option>
-							<option value="aname">ANAME</option>
-							<option value="cname">CNAME</option>
+							<option>A</option>
+							<option>AAAA</option>
+							<option>ANAME</option>
+							<option>CNAME</option>
 							<option value="HTTPRedirection">HTTP Redirect</option>
-							<option value="mx">MX</option>
-							<option value="spf">SPF</option>
-							<option value="srv">SRV</option>
-							<option value="txt">TXT</option>
+							<option>MX</option>
+							<option>SPF</option>
+							<option>SRV</option>
+							<option>TXT</option>
 						</select>
 						</div>
 					</div>
@@ -690,15 +690,15 @@ if ( $wp_query->query_vars['dns'] ) {
 			<td>
 				<div class="input-field">
 				<select browser-default>
-					<option value="a">A</option>
-					<option value="aaaa">AAAA</option>
-					<option value="aname">ANAME</option>
-					<option value="cname">CNAME</option>
+					<option>A</option>
+					<option>AAAA</option>
+					<option>ANAME</option>
+					<option>CNAME</option>
 					<option value="HTTPRedirection">HTTP Redirect</option>
-					<option value="mx">MX</option>
-					<option value="spf">SPF</option>
-					<option value="srv">SRV</option>
-					<option value="txt">TXT</option>
+					<optio>MX</option>
+					<option>SPF</option>
+					<option>SRV</option>
+					<option>TXT</option>
 				</select>
 				</div>
 			</td>
