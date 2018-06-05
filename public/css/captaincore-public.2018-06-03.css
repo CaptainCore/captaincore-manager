@@ -19,6 +19,13 @@
 body button:hover, input[type="button"]:hover, input[type="reset"]:hover, input[type="submit"]:hover {
 	box-shadow: none;
 }
+
+body nav {
+	height: auto;
+}
+ul:not(.browser-default)>li {
+	list-style-type: disc;
+}
 .btn, .btn-large, .btn-small, .btn-flat {
 	text-transform: none;
 }
