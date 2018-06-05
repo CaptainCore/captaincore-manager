@@ -26,6 +26,12 @@ body nav {
 ul:not(.browser-default)>li {
 	list-style-type: disc;
 }
+.gform_wrapper ul:not(.browser-default)>li,
+.widget-box ul li,
+#main-nav .sf-menu li {
+	list-style: none;
+}
+
 .btn, .btn-large, .btn-small, .btn-flat {
 	text-transform: none;
 }
