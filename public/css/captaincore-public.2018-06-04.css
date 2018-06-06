@@ -26,6 +26,7 @@ body nav {
 ul:not(.browser-default)>li {
 	list-style-type: disc;
 }
+ul:not(.browser-default)>li.expansion-panel__container,
 ul:not(.browser-default)>li.quicksave,
 .block ul:not(.browser-default)>li,
 .gform_wrapper ul:not(.browser-default)>li,
