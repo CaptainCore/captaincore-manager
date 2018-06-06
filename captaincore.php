@@ -3480,12 +3480,12 @@ function captaincore_website_acf_actions( $field ) {
 			jQuery('.install-result').html( '<i class="fa fa-spinner" aria-hidden="true"></i>' ).show();
 
 			var command = jQuery(this).val().toLowerCase();
-			  e.preventDefault();
-			  var data = {
-				  'action': 'captaincore_install',
-				  'post_id': acf.o.post_id,
-			  'command': command
-			  };
+				e.preventDefault();
+				var data = {
+					'action': 'captaincore_install',
+					'post_id': acf.data.post_id,
+					'command': command
+				};
 
 			  // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 			  jQuery.post(ajaxurl, data, function(response) {
@@ -3572,8 +3572,11 @@ function captaincore_job_check( $job_id ) {
 			exit( 'Login Failed' );
 		}
 		$response = json_decode( $ssh->exec( $command ) );
-		print_r( $response );
-
+		if ( $response['response'] ) {
+			// update acf field to $response["response"]
+			// update acf field to $response["timestamp"]
+			// update acf field to $response["runtime"]
+		}
 	} else {
 		echo 'Permission denied';
 	}
