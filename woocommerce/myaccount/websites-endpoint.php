@@ -105,7 +105,7 @@ if ( $wp_query->query_vars['websites'] ) {
 
 					jQuery.post(ajaxurl, data, function(response) {
 						M.toast({html: 'Rollback in process.'});
-						jQuery(quicksave).find(".git_status").html( '' );
+						jQuery(quicksave).find(".git_status").html( '' ); // Clears loading
 					});
 
 				}
@@ -160,7 +160,7 @@ if ( $wp_query->query_vars['websites'] ) {
 			jQuery(".website-group").on( "click", ".file_diff .quicksave-restore-file", function(e) {
 
 				e.preventDefault();
-
+				modal_id = jQuery( this ).parents(".modal.open");
 				file_name = jQuery( this ).data("file-name");
 				quicksave_id = jQuery( this ).data("quicksave-id");
 				quicksave_date = jQuery( this ).data("quicksave-date");
@@ -176,6 +176,7 @@ if ( $wp_query->query_vars['websites'] ) {
 				if(confirm_file_rollback) {
 					jQuery.post(ajaxurl, data, function(response) {
 							M.toast({html: 'File restore in process. Will email once completed.'});
+							jQuery( modal_id ).modal('close');
 					});
 				}
 
@@ -261,7 +262,8 @@ if ( $wp_query->query_vars['websites'] ) {
 					};
 
 					jQuery.post(ajaxurl, data, function(response) {
-						jQuery(quicksave).find(".git_status").html( "<pre>" + response + "</pre>" );
+						M.toast({html: 'Rollback in progress.' + response });
+						jQuery(quicksave).find(".git_status").html( "" ); // Clears loading
 					});
 
 				}
