@@ -44,13 +44,13 @@ class Captaincore_Public {
 	 * Initialize the class and set its properties.
 	 *
 	 * @since    0.1.0
-	 * @param      string    $plugin_name       The name of the plugin.
-	 * @param      string    $version    The version of this plugin.
+	 * @param      string $plugin_name       The name of the plugin.
+	 * @param      string $version    The version of this plugin.
 	 */
 	public function __construct( $plugin_name, $version ) {
 
 		$this->plugin_name = $plugin_name;
-		$this->version = $version;
+		$this->version     = $version;
 
 	}
 
@@ -75,16 +75,15 @@ class Captaincore_Public {
 
 		 global $wp_query;
 
-		wp_enqueue_style( 'google-material-icons', "https://fonts.googleapis.com/icon?family=Material+Icons", array(), '2017-09-03' );
-		wp_enqueue_style( 'materialize', plugin_dir_url( __FILE__ ) . "css/materialize.min.css", array(), '2017-09-08' );
+		wp_enqueue_style( 'google-material-icons', 'https://fonts.googleapis.com/icon?family=Material+Icons', array(), '2017-09-03' );
+		wp_enqueue_style( 'materialize', plugin_dir_url( __FILE__ ) . 'css/materialize.min.css', array(), '2017-09-08' );
+		wp_enqueue_style( 'font-awesome', "https://use.fontawesome.com/releases/v5.0.13/css/all.css", array() );
 		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/captaincore-public.2018-06-04.css', array(), $this->version, 'all' );
-		wp_enqueue_script( 'font-awesome', "https://use.fontawesome.com/releases/v5.0.6/js/all.js", array() );
-		wp_enqueue_script( 'materialize', plugin_dir_url( __FILE__ ) . 'js/materialize.min.js', array(), '2016-12-30', true );
 
-		if ( isset($wp_query->query_vars["pagename"]) && $wp_query->query_vars["pagename"] == "contact" ) {
+		if ( isset( $wp_query->query_vars['pagename'] ) && $wp_query->query_vars['pagename'] == 'contact' ) {
 			 wp_deregister_style( 'materialize' );
-		 }
-		if ( isset($wp_query->query["configs"]) || isset($wp_query->query["edit-address"]) ) {
+		}
+		if ( isset( $wp_query->query['configs'] ) || isset( $wp_query->query['edit-address'] ) ) {
 			 wp_deregister_style( 'materialize' );
 		}
 
@@ -108,7 +107,7 @@ class Captaincore_Public {
 		 * between the defined hooks and the functions defined in this
 		 * class.
 		 */
-
+		wp_enqueue_script( 'materialize', plugin_dir_url( __FILE__ ) . 'js/materialize.min.js', array(), '2016-12-30', true );
 		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/captaincore-public.2018-06-03.js', array( 'jquery' ), $this->version, false );
 
 	}

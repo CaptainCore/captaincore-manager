@@ -581,7 +581,7 @@ div.website .actions a {
 
 .woocommerce-MyAccount-navigation-link--logs:before {
   content: "\f022";
-  font-family: FontAwesome;
+  font-family: "Font Awesome 5 Free";
 }
 
 .woocommerce-MyAccount-navigation-link--handbook, .woocommerce-MyAccount-navigation-link--manage {
@@ -601,8 +601,9 @@ div.website .actions a {
 }
 
 .woocommerce-MyAccount-navigation-link--handbook:before {
-  content: "\f02d";
-  font-family: FontAwesome;
+  content: "\f279";
+	font-weight: 900;
+  font-family: "Font Awesome 5 Free";
 }
 
 .woocommerce-MyAccount-navigation-link--dns:before {
@@ -619,7 +620,8 @@ div.website .actions a {
 
 .woocommerce-MyAccount-navigation-link--manage:before {
   content: "\f0ad";
-  font-family: FontAwesome;
+	font-weight: 900;
+  font-family: "Font Awesome 5 Free";
 }
 
 .woocommerce-MyAccount-navigation-link--customer-logout:before {
@@ -1026,7 +1028,7 @@ table.dns_records .dns_record>td:last-child {
 .woocommerce .woocommerce-error:before, .woocommerce .woocommerce-info:before, .woocommerce .woocommerce-message:before {
   content: "\f058";
   display: inline-block;
-  font: normal normal normal 14px/1 FontAwesome;
+  font: normal normal normal 14px/1 "Font Awesome 5 Free";
   font-size: inherit;
   text-rendering: auto;
   -webkit-font-smoothing: antialiased;
@@ -1043,8 +1045,9 @@ h3.process {
 }
 
 .page-template-page-company-handbook header.main>h1.entry-title:after {
-  content: "\f02d";
-  font-family: FontAwesome;
+	content: "\f279";
+	font-weight: 900;
+  font-family: "Font Awesome 5 Free";
   position: relative;
   left: 10px;
   top: 2px;
