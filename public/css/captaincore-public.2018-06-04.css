@@ -542,7 +542,7 @@ div.website .actions a {
   position: absolute;
   right: 7px;
   top: 12px;
-	z-index: 1;
+	z-index: 30;
   transition-property: all;
   -webkit-transition: .5s ease;
   -moz-transition: .5s ease;
@@ -1457,6 +1457,13 @@ i.material-icons.reverse {
 .card i.material-icons {
   line-height: 1.3em;
   text-align: center;
+}
+
+.website-group .card i.fas {
+    margin-right: 17px;
+    height: 20px;
+    margin-left: 3px;
+    vertical-align: middle;
 }
 
 .card .pass {
