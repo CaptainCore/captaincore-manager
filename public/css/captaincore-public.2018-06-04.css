@@ -150,12 +150,12 @@ input:not([type]), input[type=text]:not(.browser-default), input[type=password]:
   padding: 0;
 }
 
-.woocommerce-account .woocommerce-MyAccount-content {
+body.woocommerce-account .woocommerce-MyAccount-content {
   float: right;
   width: 78%;
 }
 
-.woocommerce-account .woocommerce-MyAccount-navigation {
+body.woocommerce-account .woocommerce-MyAccount-navigation {
   float: left;
   width: 17%;
   min-width: 127px;
@@ -475,10 +475,6 @@ div.website .actions a {
   background: rgba(39, 195, 243, 0.1);
 }
 
-.woocommerce-account .entry-content, .woocommerce-account .entry-footer, .woocommerce-account .entry-summary {
-  max-width: 980px
-}
-
 .content-area .woocommerce-MyAccount-navigation ul {
   margin: 0 0 40px;
   padding-bottom: 0;
@@ -523,7 +519,9 @@ div.website .actions a {
 .woocommerce-MyAccount-navigation-link {
   position: relative;
 }
-
+.woocommerce-MyAccount-navigation-link {
+	border: 0px;
+}
 .woocommerce-MyAccount-navigation-link:before {
   color: #27c3f3;
   display: inline-block;
@@ -544,6 +542,7 @@ div.website .actions a {
   position: absolute;
   right: 7px;
   top: 12px;
+	z-index: 1;
   transition-property: all;
   -webkit-transition: .5s ease;
   -moz-transition: .5s ease;
