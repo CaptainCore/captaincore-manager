@@ -2898,7 +2898,7 @@ function captaincore_install_action_callback() {
 
 	// Append provider if exists
 	if ( $provider != '' ) {
-		$site = $site . "@" . $provider;
+		$site = $site . '@' . $provider;
 	}
 
 	// Disable SSL verification due to self signed cert on other end
@@ -3028,7 +3028,7 @@ function captaincore_install_action_callback() {
 		date_default_timezone_set( 'America/New_York' );
 		$t         = time();
 		$timestamp = date( 'Y-m-d-hms', $t );
-    if ( $date && $value ) {
+		if ( $date && $value ) {
 			$command = "captaincore snapshot $site --email=$value --rollback='$date' > ~/Tmp/$timestamp-snapshot_$site.txt 2>&1 & sleep 2; head ~/Tmp/$timestamp-snapshot_$site.txt";
 		} elseif ( $value ) {
 			$command = "captaincore snapshot $site --email=$value > ~/Tmp/$timestamp-snapshot_$site.txt 2>&1 & sleep 2; head ~/Tmp/$timestamp-snapshot_$site.txt";
@@ -4208,3 +4208,19 @@ function captaincore_human_filesize( $size, $precision = 2 ) {
 	}
 	return round( $size, $precision ) . $units[ $i ];
 }
+
+// Handle redirections of /my-account/manage/ and /my-account/handbook/ endpoints
+function captaincore_template_redirect() {
+	global $wp_query;
+
+	if ( isset( $wp_query->query['manage'] ) ) {
+			wp_redirect( home_url( '/site-manage/' ) );
+			die;
+	}
+	if ( isset( $wp_query->query['handbook'] ) ) {
+			wp_redirect( home_url( '/company-handbook/' ) );
+			die;
+	}
+
+}
+add_action( 'template_redirect', 'captaincore_template_redirect' );
