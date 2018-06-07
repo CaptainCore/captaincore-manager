@@ -115,7 +115,7 @@ input:not([type]), input[type=text]:not(.browser-default), input[type=password]:
 
 .single-captcore_process #main header.main .btn {
   margin-top: 1em;
-  font-size: 0.7em;
+  font-size: 0.9em;
 }
 
 /* Prep for Subscriptions */
@@ -428,7 +428,6 @@ form.acf-form {
 }
 
 .website-group {
-  max-width: 800px;
   margin-bottom: 2em;
 }
 
