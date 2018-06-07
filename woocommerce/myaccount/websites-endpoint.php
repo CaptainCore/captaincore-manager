@@ -13,6 +13,8 @@ if ( $wp_query->query_vars['websites'] ) {
 
 		ajaxurl = "/wp-admin/admin-ajax.php";
 
+		jQuery('.collapsible').collapsible();
+
 		Array.prototype.clean = function(deleteValue) {
 			for (var i = 0; i < this.length; i++) {
 				if (this[i] == deleteValue) {

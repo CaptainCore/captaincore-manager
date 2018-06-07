@@ -22,6 +22,14 @@ body button:hover, input[type="button"]:hover, input[type="reset"]:hover, input[
 
 body nav {
 	height: auto;
+	line-height: auto;
+}
+
+@media only screen and (min-width: 601px) {
+	bodu nav, nav .nav-wrapper i, nav a.sidenav-trigger, nav a.sidenav-trigger i {
+	    height: auto;
+	    line-height: auto;
+	}
 }
 ul:not(.browser-default)>li {
 	list-style-type: disc;
@@ -155,10 +163,12 @@ body.woocommerce-account .woocommerce-MyAccount-content {
   width: 78%;
 }
 
-body.woocommerce-account .woocommerce-MyAccount-navigation {
+body.woocommerce-account nav.woocommerce-MyAccount-navigation {
   float: left;
   width: 17%;
   min-width: 127px;
+	line-height: normal;
+	height: auto;
 }
 
 @media (max-width: 800px) {
@@ -592,7 +602,7 @@ div.website .actions a {
   font-size: 0.2em;
   position: absolute;
   left: -16px;
-  top: -8px;
+  top: 16px;
   padding: 0px;
   margin: 0px;
   transform: rotate(-90deg);

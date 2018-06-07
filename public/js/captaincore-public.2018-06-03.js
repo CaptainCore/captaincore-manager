@@ -1,7 +1,5 @@
 jQuery(document).ready(function() {
 
-	jQuery('.collapsible').collapsible();
-
   jQuery('ul.changelog li .changelog-item').click(function() {
 
     if (jQuery(this).children('.content').hasClass("show")) {
