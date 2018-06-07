@@ -4224,3 +4224,8 @@ function captaincore_template_redirect() {
 
 }
 add_action( 'template_redirect', 'captaincore_template_redirect' );
+
+// Adds ACF Option page
+if( function_exists('acf_add_options_page') ) {
+	acf_add_options_page();
+}
