@@ -78,11 +78,15 @@ class Captaincore_Public {
 		wp_enqueue_style( 'google-material-icons', 'https://fonts.googleapis.com/icon?family=Material+Icons', array(), '2017-09-03' );
 		wp_enqueue_style( 'font-awesome', "https://use.fontawesome.com/releases/v5.0.13/css/all.css", array() );
 
-		if ( isset( $wp_query->query['dns'] ) || isset( $wp_query->query['licenses'] ) || isset( $wp_query->query['websites'] ) ) {
-			$materialize_needed = true;
-		}
-		if ( isset( $wp_query->query['pagename'] ) and $wp_query->query['pagename'] == "my-account" and isset( $wp_query->query['page']) ) {
-			$materialize_needed = true;
+		if ( is_user_logged_in() ) {
+			// Pages: DNS, Licenses, Websites
+			if ( isset( $wp_query->query['dns'] ) || isset( $wp_query->query['licenses'] ) || isset( $wp_query->query['websites'] ) ) {
+				$materialize_needed = true;
+			}
+			// Page: my-account dashboard when logged in
+			if ( isset( $wp_query->query['pagename'] ) and $wp_query->query['pagename'] == "my-account" and isset( $wp_query->query['page']) ) {
+				$materialize_needed = true;
+			}
 		}
 
 		if ( $materialize_needed ) {
