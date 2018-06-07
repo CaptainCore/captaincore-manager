@@ -13,8 +13,6 @@ if ( $wp_query->query_vars['websites'] ) {
 
 		ajaxurl = "/wp-admin/admin-ajax.php";
 
-		jQuery('.collapsible').collapsible();
-
 		Array.prototype.clean = function(deleteValue) {
 			for (var i = 0; i < this.length; i++) {
 				if (this[i] == deleteValue) {
@@ -34,6 +32,8 @@ if ( $wp_query->query_vars['websites'] ) {
 		}
 
 		jQuery(document).ready(function() {
+
+			jQuery('.collapsible').collapsible();
 
 			var backupStartDate = new Date("<?php echo get_field( 'backup_start_date', $website_id ); ?> 0:00");
 			var currentTime = new Date();

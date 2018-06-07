@@ -26,21 +26,10 @@ body nav {
 }
 
 @media only screen and (min-width: 601px) {
-	bodu nav, nav .nav-wrapper i, nav a.sidenav-trigger, nav a.sidenav-trigger i {
+	body nav, nav .nav-wrapper i, nav a.sidenav-trigger, nav a.sidenav-trigger i {
 	    height: auto;
 	    line-height: auto;
 	}
-}
-ul:not(.browser-default)>li {
-	list-style-type: disc;
-}
-ul:not(.browser-default)>li.expansion-panel__container,
-ul:not(.browser-default)>li.quicksave,
-.block ul:not(.browser-default)>li,
-.gform_wrapper ul:not(.browser-default)>li,
-.widget-box ul li,
-#main-nav .sf-menu li {
-	list-style: none;
 }
 
 .btn, .btn-large, .btn-small, .btn-flat {
