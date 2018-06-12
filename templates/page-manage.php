@@ -2,13 +2,6 @@
 
 /* Template: Manage */
 
-add_action( 'wp_enqueue_scripts', 'my_register_javascript', 100 );
-
-function my_register_javascript() {
-	 wp_deregister_style( 'materialize' );
-	 wp_deregister_script( 'materialize' );
-}
-
 get_header();
 $user       = wp_get_current_user();
 $role_check = in_array( 'administrator', $user->roles );
@@ -24,7 +17,7 @@ if ( $role_check ) {
 
 ?>
 
-<link href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons' rel="stylesheet">
+<!--<link href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons' rel="stylesheet">-->
 <link href="https://unpkg.com/vuetify/dist/vuetify.min.css" rel="stylesheet">
 <style>
 
