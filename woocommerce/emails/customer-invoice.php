@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 do_action( 'woocommerce_email_header', $email_heading, $email ); ?>
 
-<?php if ( $order->has_status( 'pending' ) ) : ?>
+<?php if ( $order->has_status( 'pending' ) or $order->has_status( 'failed' ) ) : ?>
 	<p>
 	<?php
 	printf(
