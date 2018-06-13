@@ -3701,7 +3701,7 @@ function captaincore_download_snapshot_email( $snapshot_id ) {
 	curl_close( $session );                                // Clean up
 	$server_output = json_decode( $server_output );
 	$auth          = $server_output->authorizationToken;
-	$url           = 'https://f001.backblazeb2.com/file/' . CAPTAINCORE_B2_SNAPSHOTS . "/$site/$name?Authorization=" . $auth;
+	$url           = 'https://f001.backblazeb2.com/file/' . CAPTAINCORE_B2_SNAPSHOTS . "/${site}_${website_id}/$name?Authorization=" . $auth;
 
 	echo $url;
 
