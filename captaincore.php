@@ -1599,6 +1599,7 @@ function captaincore_client_options_func( WP_REST_Request $request ) {
 		'business_link'          => get_field( 'business_link', 'option' ),
 		'business_logo'          => get_field( 'business_logo', 'option' ),
 		'hosting_dashboard_link' => get_field( 'hosting_dashboard_link', 'option' ),
+		'preinstall_plugins'     => get_field( 'preinstall_plugins', 'option' ),
 	);
 
 	return $data;
