@@ -78,7 +78,7 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 	// Copy site
 	if ( $command == 'copy' and $email ) {
 
-		$site_source = get_the_title( $site_source_id );
+		$site_source      = get_the_title( $site_source_id );
 		$site_destination = get_the_title( $site_destination_id );
 
 		// Send out completed email notice
@@ -175,7 +175,7 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 	}
 
 	// Generate a new CaptainCore quicksave
-	if ( $git_commit and $core and $plugins and $themes ) {
+	if ( $git_commit and $core and $plugins and $themes and $date ) {
 
 		// Check if Git Commit already entered for this Site ID
 		$args = array(
@@ -201,6 +201,11 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 
 		if ( count( $quicksave_duplicate_search ) == 0 ) {
 
+			// Puts unix timestamp into int varible
+			$date      = intval( $date );
+			$timetamp  = new DateTime( "@$date" );
+			$post_date = $timetamp->format( 'Y-m-d H:i:s' );
+
 			// Updates site with latest $plugins, $themes, $core and $home_url
 			update_field( 'field_5a9421b004ed3', wp_slash( $plugins ), $site_id );
 			update_field( 'field_5a9421b804ed4', wp_slash( $themes ), $site_id );
@@ -209,9 +214,10 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 
 			// Create post object
 			$my_post = array(
-				'post_title'  => 'Quicksave',
-				'post_type'   => 'captcore_quicksave',
-				'post_status' => 'publish',
+				'post_title'    => 'Quicksave',
+				'post_type'     => 'captcore_quicksave',
+				'post_date_gmt' => $post_date,
+				'post_status'   => 'publish',
 			);
 
 			// Insert the post into the database
