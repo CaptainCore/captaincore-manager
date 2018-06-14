@@ -3038,10 +3038,10 @@ function captaincore_install_action_callback() {
 		}
 	}
 	if ( $cmd == 'deactivate' ) {
-		$command = "nohup captaincore site deactivate $site --name=\"$name\" --link=\"$link\" &";
+		$command = "nohup captaincore deactivate $site --name=\"$name\" --link=\"$link\" &";
 	}
 	if ( $cmd == 'activate' ) {
-		$command = "nohup captaincore site activate $site &";
+		$command = "nohup captaincore activate $site &";
 	}
 
 	if ( $cmd == 'view_quicksave_changes' ) {
