@@ -2995,9 +2995,9 @@ function captaincore_install_action_callback() {
 		$t         = time();
 		$timestamp = date( 'Y-m-d-hms', $t );
 		if ( $value ) {
-			$command = "captaincore deploy production-to-staging $site --email=$value > ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt";
+			$command = "captaincore copy-production-to-staging $site --email=$value > ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt";
 		} else {
-			$command = "captaincore deploy production-to-staging $site > ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt";
+			$command = "captaincore copy-production-to-staging $site > ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt";
 		}
 	}
 	if ( $cmd == 'staging-to-production' ) {
@@ -3005,9 +3005,9 @@ function captaincore_install_action_callback() {
 		$t         = time();
 		$timestamp = date( 'Y-m-d-hms', $t );
 		if ( $value ) {
-			$command = "captaincore deploy staging-to-production $site --email=$value > ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt";
+			$command = "captaincore copy-staging-to-production $site --email=$value > ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt";
 		} else {
-			$command = "captaincore deploy staging-to-production $site > ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt";
+			$command = "captaincore copy-staging-to-production $site > ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt";
 		}
 	}
 	if ( $cmd == 'remove' ) {
@@ -3047,7 +3047,7 @@ function captaincore_install_action_callback() {
 	if ( $cmd == 'view_quicksave_changes' ) {
 		$website_id = get_field( 'website', $post_id );
 		$site       = get_field( 'site', $website_id[0] );
-		$command    = "captaincore get quicksave_changes $site $value";
+		$command    = "captaincore quicksave-view-schanges $site $value";
 		$post_id    = $website_id[0];
 	}
 
@@ -3093,7 +3093,7 @@ function captaincore_install_action_callback() {
 		$site                   = get_field( 'site', $website_id[0] );
 		$commit                 = get_field( 'git_commit', $post_id );
 		$commit_previous        = get_field( 'git_commit', $quicksaves_previous_id );
-		$command                = "captaincore get quicksave_file_diff $site $commit_previous $commit \"$value\"";
+		$command                = "captaincore quicksave-file-diff $site $commit_previous $commit \"$value\"";
 		$post_id                = $website_id[0];
 	}
 
