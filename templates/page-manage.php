@@ -25,6 +25,35 @@ html {
 	font-size: 62.5%;
 }
 
+.application .theme--dark.icon, .theme--dark .icon {
+	font-size: 1em;
+	padding-left: 0.3em;
+}
+
+.application .theme--light.input-group input, .application .theme--light.input-group textarea, .theme--light .input-group input, .theme--light .input-group textarea {
+	background: none;
+	border: none;
+}
+
+.content-area ul.pagination {
+	display: inline-flex;
+	margin: 0px;
+}
+
+.alignright.input-group {
+	width: auto;
+}
+
+a.tabs__item:hover {
+	color:inherit;
+}
+
+.pagination span.pagination__more {
+	margin: .3rem;
+	border: 0px;
+	padding: 0px;
+}
+
 [v-cloak] > * {
   display:none;
 }
@@ -86,6 +115,23 @@ span.text-xs-right {
 	margin-top: 1.5em;
 }
 
+table.table .input-group--selection-controls {
+	top: 10px;
+	position: relative;
+}
+
+table.table .input-group.input-group--selection-controls.switch .input-group--selection-controls__container {
+	margin:0px;
+}
+
+.application .theme--light.pagination__item--active, body .theme--light button.pagination__item--active {
+	color: #fff !important;
+}
+
+body button.pagination__item:hover {
+    box-shadow: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
+	}
+
 .entry-content, .entry-footer, .entry-summary {
 	max-width: 1000px;
 }
@@ -94,7 +140,7 @@ table.table tbody td, table.table tbody th {
 	height: auto;
 }
 </style>
-<?php if ( $_SERVER['SERVER_NAME'] == 'dev.anchor' ) { ?>
+<?php if ( $_SERVER['SERVER_NAME'] == 'anchor.test' ) { ?>
 <script src="https://unpkg.com/vue/dist/vue.js"></script>
 <?php } else { ?>
 <script src="https://unpkg.com/vue/dist/vue.min.js"></script>
@@ -116,72 +162,121 @@ table.table tbody td, table.table tbody th {
 <?php
 
 	$arguments = array(
-		'post_type' 			=> 'captcore_website',
-		'posts_per_page'	=> '-1',
-		'order'						=> 'asc',
-		'orderby'					=> 'title',
-		'meta_query'			=> array(
+		'post_type'      => 'captcore_website',
+		'posts_per_page' => '-1',
+		'order'          => 'asc',
+		'orderby'        => 'title',
+		'meta_query'     => array(
 			array(
-				'key'	  	=> 'status',
-				'value'	  	=> 'closed',
-				'compare' 	=> '!=',
+				'key'     => 'status',
+				'value'   => 'closed',
+				'compare' => '!=',
 			),
-		)
+		),
 	);
 
 // Loads websites
 $websites = get_posts( $arguments );
 
-if( $websites ): ?>
+if ( $websites ) :
+?>
 <script>
 
 ajaxurl = "/wp-admin/admin-ajax.php";
 
-var sites = [<?php foreach( $websites as $website ) {
-	$plugins = get_field( "plugins", $website->ID);
-	$themes = get_field( "themes", $website->ID);
-	if ($plugins && $themes) {
+var sites = [
+<?php
+$count = 0;
+foreach ( $websites as $website ) {
+	$plugins = get_field( 'plugins', $website->ID );
+	$themes  = get_field( 'themes', $website->ID );
+	if ( $plugins && $themes ) {
 	?>
 {
 "id": <?php echo $website->ID; ?>,
-"name": "<?php echo get_the_title($website->ID); ?>",
-<?php if($plugins) { ?>"plugins": <?php echo $plugins; ?>,<?php } ?>
-<?php if($themes) { ?>"themes": <?php echo $themes; ?>,<?php } ?>
-"core": "<?php echo get_field( "core", $website->ID ); ?>",
+"name": "<?php echo get_the_title( $website->ID ); ?>",
+<?php
+if ( $plugins ) {
+?>
+"plugins": <?php echo $plugins; ?>,<?php } ?>
+<?php
+if ( $themes ) {
+?>
+"themes": <?php echo $themes; ?>,<?php } ?>
+"core": "<?php echo get_field( 'core', $website->ID ); ?>",
+"loading_themes": false,
+"loading_plugins": false,
+<?php
+if ( $count <= 49 ) {
+?>
 "visible": true,
+<?php } else { ?>
+"visible": false,
+<?php } ?>
+"filtered": true,
 "selected": false
-},<?php } } ?>];
+},
+<?php
+	$count++;
+	}
+}
+?>
+];
 </script>
 <!--
-<?php foreach( $websites as $website ) {
-	$plugins = get_field( "plugins", $website->ID);
-	$themes = get_field( "themes", $website->ID);
-	if (!$plugins || !$themes) {
-		echo $website->ID . " " . $website->post_title . " \r";
+<?php
+foreach ( $websites as $website ) {
+	$plugins = get_field( 'plugins', $website->ID );
+	$themes  = get_field( 'themes', $website->ID );
+	if ( ! $plugins || ! $themes ) {
+		echo $website->ID . ' ' . $website->post_title . " \r";
 	}
-} ?>
+}
+?>
 -->
 <div id="app" v-cloak>
 	<v-app>
 		<v-content>
-			Listing {{ visibleSites }} sites
-			<template>
 			<v-container fluid>
+			<v-layout row wrap>
+      <v-flex xs4>
+				Sites per page <v-select
+	          :items='[50,100,250]'
+	          v-model="items_per_page"
+	          label=""
+						dense
+						@change="paginationUpdate( page )"
+						style="display:inline-table;width:100px;"
+						width="80"
+	        ></v-select>
+			</v-flex>
+			<v-flex xs4 text-md-center>
+				<v-card-text>{{ showingSitesBegin }}-{{ showingSitesEnd }} sites of {{ filteredSites }}</v-card-text>
+			</v-flex>
+			<v-flex xs4 text-md-right>
+				<v-switch inline-block v-model="advanced_filter" class="alignright"></v-switch>
+				<v-card-title v-if="advanced_filter == false" class="alignright caption" style="float:right;padding: 16px 0px;">Basic Filter</v-card-title>
+				<v-card-title v-if="advanced_filter == true" class="alignright caption" style="float:right;padding: 16px 0px;">Advanced Filter</v-card-title>
+			</v-flex>
+			</v-layout>
+			</v-container>
+			<template>
+			<v-container fluid v-if="advanced_filter == true">
 			<v-layout row>
-       <v-flex xs12>
-         <v-select
-           :items="site_filters"
-					 item-text="search"
-					 item-value="name"
-           v-model="applied_site_filter"
-					 @input="filterSites"
-					 item-text="title"
-           label="Select Theme and/or Plugin"
-					 chips
-					 multiple
-           autocomplete
-					 deletable-chips
-         >
+	   <v-flex xs12>
+		 <v-select
+			:items="site_filters"
+			item-text="search"
+			item-value="name"
+			v-model="applied_site_filter"
+			@input="filterSites"
+			item-text="title"
+			label="Select Theme and/or Plugin"
+			chips
+			multiple
+		  autocomplete
+			deletable-chips
+		 >
 				 <template slot="selection" slot-scope="data">
 					<v-chip
 						close
@@ -196,7 +291,7 @@ var sites = [<?php foreach( $websites as $website ) {
 				<template slot="item" slot-scope="data">
 					 <strong>{{ data.item.title }}</strong>&nbsp;<span>({{ data.item.name }})</span>
 				</template>
-			 	</v-select>
+				 </v-select>
 			</v-flex>
 		</v-layout>
 		<v-layout row>
@@ -227,7 +322,7 @@ var sites = [<?php foreach( $websites as $website ) {
 				 <template slot="item" slot-scope="data">
 						<strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span>
 				 </template>
-			 	</v-select>
+				 </v-select>
 			</v-flex>
 			<v-flex xs2>
 			</v-flex>
@@ -259,116 +354,178 @@ var sites = [<?php foreach( $websites as $website ) {
 					 <strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span>
 				</template>
 			 </v-select>
-       </v-flex>
+	   </v-flex>
 			</v-layout>
 			</v-container>
 			<v-container
-        fluid
-        style="min-height: 0;"
-        grid-list-lg
-      >
-			<v-layout row>
+		fluid
+		style="min-height: 0;"
+		grid-list-lg
+	  >
+			<v-layout row v-if="advanced_filter == true">
 			<v-flex xs12 sm9 text-xs-right>
 			<v-select
-          :items="select_site_options"
-					v-model="site_selected"
-					@input="selectSites"
-          label="Select"
-					chips
-        ></v-select>
+		  :items="select_site_options"
+			v-model="site_selected"
+			@input="selectSites"
+		  label="Select"
+			chips
+		></v-select>
 				</v-flex>
 				<v-flex xs12 sm3 text-xs-right>
 					<v-btn @click.stop="dialog = true">Bulk Actions on {{ selectedSites }} sites</v-btn>
 				</v-flex>
 			</v-layout>
+			<v-text-field
+				v-model="search"
+				label="Search sites by name"
+				light
+				@input="filterSites"
+				></v-text-field>
+			<template>
+				<v-container>
+				<v-layout justify-center>
+				<div class="text-xs-center">
+					<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" :length="Math.ceil(filteredSites / items_per_page)" v-model="page" @input="paginationUpdate( page )" :total-visible="7"></v-pagination>
+				</div>
+				</v-layout>
+				</v-container>
+			</template>
 		  <v-layout row wrap v-for="site in sites" :key="site.id" v-show="site.visible">
-				<v-flex xs1>
+				<v-flex xs1 v-if="advanced_filter == true">
 					<v-switch v-model="site.selected" @change="site_selected = null"></v-switch>
 				</v-flex>
-		    <v-flex xs11>
-		      <v-card class="site">
+			<v-flex v-bind:class="{ xs11: advanced_filter }">
+			  <v-card class="site">
 						<v-expansion-panel>
 						 <v-expansion-panel-content lazy v-for="(item,i) in 1" :key="i">
 							 <div slot="header"><strong>{{ site.name }}</strong> <span class="text-xs-right">{{ site.plugins.length }} Plugins {{ site.themes.length }} Themes - WordPress {{ site.core }}</span></div>
-							 <v-card>
-								  <v-toolbar-title class="caption" style="margin:0 0 0 2%;">{{ site.themes.length }} Themes</v-toolbar-title>
-									<v-data-table
- 								    :headers="headers"
- 								    :items="site.themes"
- 								    class="elevation-1"
-										style="margin: 0 2% 2% 2%;"
-										hide-actions
- 								  >
- 								    <template slot="items" slot-scope="props">
- 								      <td>{{ props.item.title }}</td>
- 								      <td>{{ props.item.name }}</td>
- 								      <td>{{ props.item.version }}</td>
- 								      <td>{{ props.item.status }}</td>
- 											<td class="text-xs-center px-0">
- 							          <v-btn small icon class="mx-0" @click="editItem(props.item)">
- 							            <v-icon small color="teal">edit</v-icon>
- 							          </v-btn>
- 							          <v-btn icon class="mx-0" @click="deleteItem(props.item)">
- 							            <v-icon small color="pink">delete</v-icon>
- 							          </v-btn>
- 							        </td>
- 								    </template>
- 								  </v-data-table>
-									<v-toolbar-title class="caption" style="margin:0 0 0 2%;">{{ site.plugins.length }} Plugins</v-toolbar-title>
-									<v-data-table
- 								    :headers="headers"
- 								    :items="site.plugins"
- 								    class="elevation-1"
- 										style="margin: 0 2% 2% 2%;"
- 										hide-actions
- 								  >
- 								    <template slot="items" slot-scope="props">
- 								      <td>{{ props.item.title }}</td>
- 								      <td>{{ props.item.name }}</td>
- 								      <td>{{ props.item.version }}</td>
- 								      <td>{{ props.item.status }}</td>
- 											<td class="text-xs-center px-0">
- 							          <v-btn icon small class="mx-0" @click="editItem(props.item)">
- 							            <v-icon small color="teal">edit</v-icon>
- 							          </v-btn>
- 							          <v-btn icon small class="mx-0" @click="deleteItem(props.item)">
- 							            <v-icon small color="pink">delete</v-icon>
- 							          </v-btn>
- 							        </td>
- 								    </template>
- 								  </v-data-table>
-									<p></p>
-							 </v-card>
+							 <v-tabs color="blue darken-3" dark>
+
+		<v-tab :key="2" ripple>
+		Themes <v-icon>fas fa-paint-brush</v-icon>
+	  </v-tab>
+		<v-tab :key="3" ripple>
+		Plugins <v-icon>fas fa-plug</v-icon>
+	  </v-tab>
+
+		
+		<v-tab-item :key="2">
+			<v-card>
+				<v-toolbar-title class="caption" style="margin:2% 0 0 2%;">{{ site.themes.length }} Themes</v-toolbar-title>
+					<v-data-table
+						:headers="headers"
+						:items="site.themes"
+						class="elevation-1"
+						style="margin: 0 2% 2% 2%;"
+						:loading="site.loading_themes"
+						hide-actions
+					>
+						 <template slot="items" slot-scope="props">
+							 <td>{{ props.item.title }}</td>
+							 <td>{{ props.item.name }}</td>
+							 <td>{{ props.item.version }}</td>
+							 <td>
+								 <div v-if="props.item.status === 'active' || props.item.status === 'inactive' || props.item.status === 'parent' || props.item.status === 'child'">
+									<v-switch left :label="props.item.status" v-model="props.item.status" false-value="inactive" true-value="active"></v-switch>
+ 								</div>
+ 								<div v-else>
+ 									{{ props.item.status }}
+ 								</div>
+							 </td>
+							 <td class="text-xs-center px-0">
+								 <v-btn icon class="mx-0" @click="deleteTheme(props.item.name, site.id)">
+									 <v-icon small color="pink">delete</v-icon>
+								 </v-btn>
+							 </td>
+						 </template>
+					 </v-data-table>
+					 <p></p>
+				</v-card>
+	  </v-tab-item>
+		<v-tab-item :key="3">
+			<v-card>
+					 <v-toolbar-title class="caption" style="margin:2% 0 0 2%;">{{ site.plugins.length }} Plugins</v-toolbar-title>
+					 <v-data-table
+						 :headers="headers"
+						 :items="site.plugins"
+						 class="elevation-1"
+						 style="margin: 0 2% 2% 2%;"
+						 hide-actions
+					 >
+						 <template slot="items" slot-scope="props">
+							<td>{{ props.item.title }}</td>
+							<td>{{ props.item.name }}</td>
+							<td>{{ props.item.version }}</td>
+							<td>
+								<div v-if="props.item.status === 'active' || props.item.status === 'inactive'">
+									<v-switch v-model="props.item.status" false-value="inactive" true-value="active"></v-switch>
+								</div>
+								<div v-else>
+									{{ props.item.status }}
+								</div>
+							</td>
+							<td class="text-xs-center px-0">
+								 <v-btn icon small class="mx-0" @click="deletePlugin(props.item.name, site.id)">
+									 <v-icon small color="pink">delete</v-icon>
+								 </v-btn>
+							 </td>
+						 </template>
+					 </v-data-table>
+					 <p></p>
+				</v-card>
+	  </v-tab-item>
+		<v-tab-item :key="4">
+			<v-card>
+				<v-card-title>
+					<div>
+						Fetching update logs...
+					  <v-progress-linear :indeterminate="true"></v-progress-linear>
+					</div>
+				</v-card-title>
+			</v-card>
+	  </v-tab-item>
+	</v-tabs>
+
 						 </v-expansion-panel-content>
 					 </v-expansion-panel>
-		      </v-card>
-		    </v-flex>
+			  </v-card>
+			</v-flex>
 		  </v-layout>
+			<template>
+				<v-container>
+				<v-layout justify-center>
+				<div class="text-xs-center">
+					<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" :length="Math.ceil(filteredSites / items_per_page)" v-model="page" @input="paginationUpdate( page )" :total-visible="7"></v-pagination>
+				</div>
+				</v-layout>
+				</v-container>
+			</template>
 			</v-container>
 			<v-snackbar
-      :timeout="3000"
-    	:multi-line="true"
-      v-model="bulkaction_response_snackbar"
-    >
-      {{ bulkaction_response }}
-      <v-btn dark flat @click.native="snackbar = false">Close</v-btn>
-    </v-snackbar>
+				:timeout="3000"
+				:multi-line="true"
+				v-model="bulkaction_response_snackbar"
+			>
+				{{ bulkaction_response }}
+				<v-btn dark flat @click.native="snackbar = false">Close</v-btn>
+			</v-snackbar>
 			<v-dialog
 				fullscreen
-        transition="dialog-bottom-transition"
-        :overlay="false"
-        scrollable
+		transition="dialog-bottom-transition"
+		:overlay="false"
+		scrollable
 				v-model="dialog">
 			 <v-card tile>
 				 <v-toolbar card dark color="primary" style="margin-top: 32px">
-            <v-btn icon @click.native="dialog = false" dark>
-              <v-icon>close</v-icon>
-            </v-btn>
-            <v-toolbar-title>Bulk Actions on {{ selectedSites }} sites</v-toolbar-title>
-            <v-spacer></v-spacer>
-          </v-toolbar>
+			<v-btn icon @click.native="dialog = false" dark>
+			  <v-icon>close</v-icon>
+			</v-btn>
+			<v-toolbar-title>Bulk Actions on {{ selectedSites }} sites</v-toolbar-title>
+			<v-spacer></v-spacer>
+		  </v-toolbar>
 				<v-layout row>
-       	<v-flex xs12 style="max-width: 800px;" mx-auto>
+		   <v-flex xs12 style="max-width: 800px;" mx-auto>
 				 <v-card-text>
 					 <ul>
 						 <li>
@@ -383,14 +540,14 @@ var sites = [<?php foreach( $websites as $website ) {
 								 single-line
 								 chips
 								 multiple
-			           autocomplete
+					   autocomplete
 							 ></v-select>
 							 <v-text-field
-				          name="input-1"
+						  name="input-1"
 									v-model="argument.input"
-				          v-for="argument in select_bulk_action_arguments"
+						  v-for="argument in select_bulk_action_arguments"
 									:label="argument.name"
-				        ></v-text-field>
+						></v-text-field>
 						 </li>
 
 					 </ul>
@@ -399,7 +556,7 @@ var sites = [<?php foreach( $websites as $website ) {
 					  <v-btn @click="bulkactionSubmit">submit</v-btn>
 					 <v-btn color="primary" flat @click.stop="dialog=false">Close</v-btn>
 				 </v-card-actions>
-		 	</v-flex>
+			 </v-flex>
 			</v-layout>
 			 </v-card>
 		 </v-dialog>
@@ -454,16 +611,20 @@ new Vue({
 	el: '#app',
 	data: {
 		dialog: false,
+		page: 1,
+		search: null,
+		advanced_filter: false,
+		items_per_page: 50,
 		site_selected: null,
 		site_filters: all_filters,
 		site_filter_version: null,
 		site_filter_status: null,
-  	sites: sites,
+	  sites: sites,
 		headers: [
 			 { text: 'Name', value: 'name' },
 			 { text: 'Slug', value: 'slug' },
 			 { text: 'Version', value: 'version' },
-			 { text: 'Status', value: 'status', width: "100px" },
+			 { text: 'Status', value: 'status', width: "140px" },
 			 { text: 'Actions', value: 'actions', width: "90px", sortable: false, }
 		 ],
 		 applied_site_filter: null,
@@ -502,14 +663,48 @@ new Vue({
 
 	},
 	computed: {
+		showingSitesBegin() {
+			return this.page * this.items_per_page - this.items_per_page;
+		},
+		showingSitesEnd() {
+			total = this.page * this.items_per_page;
+			if (total > this.filteredSites) {
+				total = this.filteredSites;
+			}
+			return total;
+		},
 		visibleSites() {
 			return this.sites.filter(site => site.visible).length;
 		},
 		selectedSites() {
 			return this.sites.filter(site => site.selected).length;
+		},
+		filteredSites() {
+			return this.sites.filter(site => site.filtered).length;
+		},
+		allSites() {
+			return this.sites.length;
 		}
 	},
 	methods: {
+		paginationUpdate( page ) {
+
+			// Updates pagination with first 50 of sites visible
+			this.page = page;
+			count = 0;
+			count_begin = page * this.items_per_page - this.items_per_page;
+			count_end = page * this.items_per_page;
+			this.sites.forEach(function(site) {
+				if ( site.filtered == true ) {
+					count++;
+				}
+				if ( site.filtered == true && count > count_begin && count <= count_end ) {
+					site.visible = true;
+				} else {
+					site.visible = false;
+				}
+			});
+		},
 		argumentsForActions() {
 			arguments = [];
 			this.select_bulk_action.forEach(action => {
@@ -521,24 +716,80 @@ new Vue({
 			});
 			this.select_bulk_action_arguments = arguments;
 		},
+		deleteTheme (theme_name, site_id) {
+			should_delete = confirm("Are you sure you want to delete theme " + theme_name + "?");
+			if (should_delete) {
+
+				// Enable loading progress
+				this.sites.filter(site => site.id == site_id)[0].loading_themes = true;
+
+				// WP ClI command to send
+				wpcli = "wp theme delete " + theme_name;
+
+				var data = {
+					'action': 'captaincore_install',
+					'post_id': [ site_id ],
+					'command': "manage",
+					'value': ["ssh"],
+					'arguments': [{ "name":"Commands","value":"command","command":"ssh","input": wpcli }]
+				};
+
+				self = this;
+
+				jQuery.post(ajaxurl, data, function(response) {
+					console.log( response );
+					updated_themes = self.sites.filter(site => site.id == site_id)[0].themes.filter(theme => theme.name != theme_name);
+					self.sites.filter(site => site.id == site_id)[0].themes = updated_themes;
+					self.sites.filter(site => site.id == site_id)[0].loading_themes = false;
+				});
+			}
+		},
+		deletePlugin (plugin_name, site_id) {
+			should_delete = confirm("Are you sure you want to delete plugin " + plugin_name + "?");
+			if (should_delete) {
+
+				// Enable loading progress
+				this.sites.filter(site => site.id == site_id)[0].loading_plugins = true;
+
+				// WP ClI command to send
+				wpcli = "wp plugin delete " + plugin_name;
+
+				var data = {
+					'action': 'captaincore_install',
+					'post_id': [ site_id ],
+					'command': "manage",
+					'value': ["ssh"],
+					'arguments': [{ "name":"Commands","value":"command","command":"ssh","input": wpcli }]
+				};
+
+				self = this;
+
+				jQuery.post(ajaxurl, data, function(response) {
+					console.log( response );
+					updated_plugins = self.sites.filter(site => site.id == site_id)[0].plugins.filter(plugin => plugin.name != plugin_name);
+					self.sites.filter(site => site.id == site_id)[0].themes = updated_plugins;
+					self.sites.filter(site => site.id == site_id)[0].loading_themes = false;
+				});
+			}
+		},
 		bulkactionSubmit() {
 
 			var data = {
-	  		'action': 'captaincore_install',
-	  		'post_id': this.sites.filter( site => site.selected ).map( site => site.id ),
-	      'command': "manage",
+			  'action': 'captaincore_install',
+			  'post_id': this.sites.filter( site => site.selected ).map( site => site.id ),
+				'command': "manage",
 				'value': this.select_bulk_action,
 				'arguments': this.select_bulk_action_arguments
-	  	};
+		  };
 
 			var self = this;
 
-  		// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
-	  	jQuery.post(ajaxurl, data, function(response) {
-	      self.bulkaction_response = response;
+			// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+			jQuery.post(ajaxurl, data, function(response) {
+				self.bulkaction_response = response;
 				self.bulkaction_response_snackbar = true;
 				self.dialog = false;
-	  	});
+		  });
 
 		},
 		selectSites() {
@@ -555,8 +806,9 @@ new Vue({
 		},
 		filterSites() {
 			// Filter if select has value
-			if ( this.applied_site_filter && this.applied_site_filter != "" ) {
+			if ( this.applied_site_filter || this.search ) {
 
+				search = this.search;
 				filterby = this.applied_site_filter;
 				filterbyversions = this.applied_site_filter_version;
 				filterbystatuses = this.applied_site_filter_status;
@@ -567,7 +819,7 @@ new Vue({
 
 				if ( this.applied_site_filter_version && this.applied_site_filter_version != "" ) {
 
-					// Find all themes/plugins which have selcted version
+					// Find all themes/plugins which have selected version
 					this.applied_site_filter_version.forEach(filter => {
 						if(!versions.includes(filter.slug)) {
 							versions.push(filter.slug);
@@ -587,10 +839,12 @@ new Vue({
 
 				}
 
-				// loop through sites and set visible true if found in filter
+				// loop through sites and set filtered true if found in filter
 				this.sites.forEach(function(site) {
 
 					exists = false;
+
+					if ( filterby ) {
 
 					filterby.forEach(function(filter) {
 
@@ -689,15 +943,34 @@ new Vue({
 
 					});
 
+					}
+
+					//else {
+					if ( this.applied_site_filter === null || this.applied_site_filter == "" ) {
+						// No filters are enabled so enable all sites
+						exists = true;
+					}
+
+					// If search by name then check for a partial matches
+					if ( this.search && this.search != "" ) {
+						if ( site.name.includes( this.search.toLowerCase() ) ) {
+							exists = true;
+						} else {
+							exists = false;
+						}
+					}
+
 					if (exists) {
-						// Theme exists so set to visible
-						site.visible = true;
+						// Site filtered exists so set to visible
+						site.filtered = true;
 					} else {
-						// Theme doesn't exists so hide
-						site.visible = false;
+						// Site filtered doesn't exists so hide
+						site.filtered = false;
 					}
 
 				});
+
+				if ( filterby ) {
 
 				// Populate versions for select item
 				filterby.forEach(function(filter) {
@@ -765,11 +1038,20 @@ new Vue({
 
 				this.site_filter_status = filter_statuses;
 
-			} else {
-				this.sites.forEach(function(site) {
-					site.visible = true;
-				});
+				} // end filterby
+
 			}
+
+			// Neither filter is set so set all sites to filtered true.
+			if ( !this.applied_site_filter && !this.search ) {
+
+				this.sites.forEach(function(site) {
+					site.filtered = true;
+				});
+
+			}
+
+			this.paginationUpdate( 1 );
 
 		}
 	}
@@ -793,16 +1075,17 @@ new Vue({
 
 		<section class="error-404 not-found">
 			<?php
-			$featured_image = "";
-			$c = "";
+			$featured_image = '';
+			$c              = '';
 
 				$blog_page_id = get_option( 'page_for_posts' );
-				$blog_page = get_post( $blog_page_id );
-				if( has_post_thumbnail( $blog_page_id ) ) {
-					$featured_image = wp_get_attachment_image_src( get_post_thumbnail_id( $blog_page_id ), 'swell_full_width' );
-					$c = "has-background";
-				}?>
-				<header class="main entry-header <?php echo $c; ?>" style="<?php echo $featured_image ? 'background-image: url(' . esc_url( $featured_image[0] ) . ');' : '' ?>">
+				$blog_page    = get_post( $blog_page_id );
+			if ( has_post_thumbnail( $blog_page_id ) ) {
+				$featured_image = wp_get_attachment_image_src( get_post_thumbnail_id( $blog_page_id ), 'swell_full_width' );
+				$c              = 'has-background';
+			}
+				?>
+				<header class="main entry-header <?php echo $c; ?>" style="<?php echo $featured_image ? 'background-image: url(' . esc_url( $featured_image[0] ) . ');' : ''; ?>">
 					<h1 class="entry-title"><h1 class="page-title"><?php _e( 'Oops! That page can&rsquo;t be found.', 'swell' ); ?></h1>
 					<span class="overlay"></span>
 				</header><!-- .entry-header -->
