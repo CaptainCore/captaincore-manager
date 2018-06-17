@@ -204,6 +204,14 @@ if ( $themes ) {
 ?>
 "themes": <?php echo $themes; ?>,<?php } ?>
 "core": "<?php echo get_field( 'core', $website->ID ); ?>",
+"keys": [
+	{"link":"http://<?php echo get_the_title( $website->ID ); ?>","environment": "Production", "address": "<?php the_field('address', $website->ID); ?>","username":"<?php the_field('username', $website->ID); ?>","password":"<?php the_field('password', $website->ID); ?>","protocol":"<?php the_field('protocol', $website->ID); ?>","port":"<?php the_field('port', $website->ID); ?>"},
+	{"link":"<?php if (strpos( get_field('address_staging', $website->ID), ".kinsta.com") ) {
+		echo "https://staging-". get_field('site_staging', $website->ID).".kinsta.com";
+	} else {
+		echo "https://". get_field('site_staging', $website->ID). ".staging.wpengine.com";
+	} ?>","environment": "Staging", "address": "<?php the_field('address_staging', $website->ID); ?>","username":"<?php the_field('username_staging', $website->ID); ?>","password":"<?php the_field('password_staging', $website->ID); ?>","protocol":"<?php the_field('protocol_staging', $website->ID); ?>","port":"<?php the_field('port_staging', $website->ID); ?>"},
+],
 "loading_themes": false,
 "loading_plugins": false,
 <?php
@@ -401,15 +409,32 @@ foreach ( $websites as $website ) {
 						 <v-expansion-panel-content lazy v-for="(item,i) in 1" :key="i">
 							 <div slot="header"><strong>{{ site.name }}</strong> <span class="text-xs-right">{{ site.plugins.length }} Plugins {{ site.themes.length }} Themes - WordPress {{ site.core }}</span></div>
 							 <v-tabs color="blue darken-3" dark>
-
+	  <v-tab :key="1" ripple>
+		Keys <v-icon>fas fa-key</v-icon>
+	  </v-tab>
 		<v-tab :key="2" ripple>
 		Themes <v-icon>fas fa-paint-brush</v-icon>
 	  </v-tab>
 		<v-tab :key="3" ripple>
 		Plugins <v-icon>fas fa-plug</v-icon>
 	  </v-tab>
-
-		
+		<v-tab :key="4" ripple>
+		Logs <v-icon>fas fa-book-open</v-icon>
+		</v-tab>
+		<v-tab-item :key="1">
+			<v-card v-for="key in site.keys">
+			 <v-card-title primary-title>
+				 <div>
+					 <h3 class="headline mb-0"><v-chip>{{ key.environment }}</v-chip> <a :href="key.link" target="_blank">{{ key.link }}</a></h3>
+					 <div><span class="caption">Address</span> {{ key.address }}</div>
+					 <div><span class="caption">Username</span> {{ key.username }}</div>
+					 <div><span class="caption">Password</span> {{ key.password }}</div>
+					 <div><span class="caption">Protocol</span> {{ key.protocol }}</div>
+					 <div><span class="caption">Port</span> {{ key.port }}</div>
+				 </div>
+			 </v-card-title>
+		 </v-card>
+		</v-tab-item>
 		<v-tab-item :key="2">
 			<v-card>
 				<v-toolbar-title class="caption" style="margin:2% 0 0 2%;">{{ site.themes.length }} Themes</v-toolbar-title>
@@ -426,8 +451,8 @@ foreach ( $websites as $website ) {
 							 <td>{{ props.item.name }}</td>
 							 <td>{{ props.item.version }}</td>
 							 <td>
-								 <div v-if="props.item.status === 'active' || props.item.status === 'inactive' || props.item.status === 'parent' || props.item.status === 'child'">
-									<v-switch left :label="props.item.status" v-model="props.item.status" false-value="inactive" true-value="active"></v-switch>
+								 <div v-if="props.item.status === 'inactive' || props.item.status === 'parent' || props.item.status === 'child'">
+									<v-switch left :label="props.item.status" v-model="props.item.status" false-value="inactive" true-value="active" @change="activateTheme(props.item.name, site.id)"></v-switch>
  								</div>
  								<div v-else>
  									{{ props.item.status }}
@@ -459,14 +484,14 @@ foreach ( $websites as $website ) {
 							<td>{{ props.item.version }}</td>
 							<td>
 								<div v-if="props.item.status === 'active' || props.item.status === 'inactive'">
-									<v-switch v-model="props.item.status" false-value="inactive" true-value="active"></v-switch>
+									<v-switch v-model="props.item.status" false-value="inactive" true-value="active" @change="togglePlugin(props.item.name, props.item.status, site.id)"></v-switch>
 								</div>
 								<div v-else>
 									{{ props.item.status }}
 								</div>
 							</td>
 							<td class="text-xs-center px-0">
-								 <v-btn icon small class="mx-0" @click="deletePlugin(props.item.name, site.id)">
+								 <v-btn icon class="mx-0" @click="deletePlugin(props.item.name, site.id)" v-if="props.item.status === 'active' || props.item.status === 'inactive'">
 									 <v-icon small color="pink">delete</v-icon>
 								 </v-btn>
 							 </td>
@@ -716,6 +741,30 @@ new Vue({
 			});
 			this.select_bulk_action_arguments = arguments;
 		},
+		activateTheme (theme_name, site_id) {
+
+			// Enable loading progress
+			this.sites.filter(site => site.id == site_id)[0].loading_themes = true;
+			this.sites.filter(site => site.id == site_id)[0].themes.filter(theme => theme.name != theme_name).forEach( theme => theme.status = "inactive" );
+
+			// WP ClI command to send
+			wpcli = "wp theme activate " + theme_name;
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': [ site_id ],
+				'command': "manage",
+				'value': ["ssh"],
+				'arguments': [{ "name":"Commands","value":"command","command":"ssh","input": wpcli }]
+			};
+
+			self = this;
+
+			jQuery.post(ajaxurl, data, function(response) {
+				console.log( response );
+				self.sites.filter(site => site.id == site_id)[0].loading_themes = false;
+			});
+		},
 		deleteTheme (theme_name, site_id) {
 			should_delete = confirm("Are you sure you want to delete theme " + theme_name + "?");
 			if (should_delete) {
@@ -743,6 +792,38 @@ new Vue({
 					self.sites.filter(site => site.id == site_id)[0].loading_themes = false;
 				});
 			}
+		},
+		togglePlugin (plugin_name, plugin_status, site_id) {
+
+			// Enable loading progress
+			this.sites.filter(site => site.id == site_id)[0].loading_plugins = true;
+
+			if (plugin_status == "inactive") {
+				action = "deactivate";
+			}
+			if (plugin_status == "active") {
+				action = "activate";
+			}
+
+			// WP ClI command to send
+			wpcli = "wp plugin " + action + " " + plugin_name;
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': [ site_id ],
+				'command': "manage",
+				'value': ["ssh"],
+				'arguments': [{ "name":"Commands","value":"command","command":"ssh","input": wpcli }]
+			};
+
+			self = this;
+
+			jQuery.post(ajaxurl, data, function(response) {
+				console.log( response );
+				updated_plugins = self.sites.filter(site => site.id == site_id)[0].plugins.filter(plugin => plugin.name != plugin_name);
+				self.sites.filter(site => site.id == site_id)[0].themes = updated_plugins;
+				self.sites.filter(site => site.id == site_id)[0].loading_themes = false;
+			});
 		},
 		deletePlugin (plugin_name, site_id) {
 			should_delete = confirm("Are you sure you want to delete plugin " + plugin_name + "?");
