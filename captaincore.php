@@ -3047,7 +3047,7 @@ function captaincore_install_action_callback() {
 	if ( $cmd == 'view_quicksave_changes' ) {
 		$website_id = get_field( 'website', $post_id );
 		$site       = get_field( 'site', $website_id[0] );
-		$command    = "captaincore quicksave-view-schanges $site $value";
+		$command    = "captaincore quicksave-view-changes $site $value";
 		$post_id    = $website_id[0];
 	}
 
