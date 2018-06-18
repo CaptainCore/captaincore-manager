@@ -483,9 +483,6 @@ if ( $count <= 49 ) {
 		<v-tab :key="3" ripple>
 		Plugins <v-icon>fas fa-plug</v-icon>
 	  </v-tab>
-		<v-tab :key="4" ripple>
-		Logs <v-icon>fas fa-book-open</v-icon>
-		</v-tab>
 		<v-tab-item :key="1">
 			<v-card v-for="key in site.keys" class="bordered">
 			<v-card-title>
