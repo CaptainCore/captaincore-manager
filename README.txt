@@ -35,7 +35,20 @@ TODO
 
 == Changelog ==
 
-= 0.2.3: May 27, 2018 =
+= 0.2.4: June 17, 2018 =
+* New: Configurable preinstall plugins to option page.
+* Tweak: Improvements to Manage UI. Adds pagination, basic/advanced filter, search by site name, new tabs (themes/plugins) per site. Added ability to manage themes and plugins.
+* Tweak: Bug fixes and improvements to DNS editor.
+* Tweak: Improvements to Quicksaves UI. File restore now closes open modal. Individual rollback displays response in toast popup.
+* Tweak: Updated Materialize to v1.0.0-rc.1 (master branch). Fixes 2 major JS bugs.
+* Tweak: Updated commands to new names in 0.2.4 CLI
+* Tweak: Upgraded Font Awesome v5 CDN
+* Tweak: Limit Materialize css/js to select few pages
+* Tweak: Handle redirects of custom WooCommerce endpoints
+* Tweak: Quicksaves will now match created time of git commit
+* Tweak: Include express checkout payment link when manually sending order invoice for failed orders
+
+= 0.2.3: June 3, 2018 =
 * New: Toggle Site on advanced tab
 * New: Button "Restore this file" to Quicksaves. Allow restoration of individual files.
 * New: Add datapicker to "Download Backup Snapshot" on advanced tab if start backup date exists.
