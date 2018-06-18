@@ -39,6 +39,18 @@ html {
 	padding: 0px;
 	box-shadow: 0 2px 1px -1px rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 1px 3px 0 rgba(0,0,0,.12);
 }
+.expansion-panel__body .card.bordered .pass-mask {
+	display: inline-block;
+}
+.expansion-panel__body .card.bordered .pass-reveal {
+	display: none;
+}
+.expansion-panel__body .card.bordered:hover .pass-mask {
+	display: none;
+}
+.expansion-panel__body .card.bordered:hover .pass-reveal {
+	display: inline-block;
+}
 
 .static.badge {
 	position: fixed;
@@ -486,7 +498,7 @@ if ( $count <= 49 ) {
 					<div>	<h3 class="headline mb-0"><a :href="key.link" target="_blank">{{ key.link }}</a></h3></div>
 					<div><span class="caption">Address</span> {{ key.address }}</div>
 					<div><span class="caption">Username</span> {{ key.username }}</div>
-					<div><span class="caption">Password</span> {{ key.password }}</div>
+					<div><span class="caption">Password</span> <div class="pass-mask">##########</div><div class="pass-reveal">{{ key.password }}</div></div>
 					<div><span class="caption">Protocol</span> {{ key.protocol }}</div>
 					<div><span class="caption">Port</span> {{ key.port }}</div>
 				 </div>
