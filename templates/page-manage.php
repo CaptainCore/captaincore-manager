@@ -30,6 +30,26 @@ html {
 	padding-left: 0.3em;
 }
 
+.dialog__content__active {
+	z-index: 999999 !important;
+}
+
+.expansion-panel__body .card.bordered {
+	margin: 2em;
+	padding: 0px;
+	box-shadow: 0 2px 1px -1px rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 1px 3px 0 rgba(0,0,0,.12);
+}
+
+.static.badge {
+	position: fixed;
+  top: 23%;
+  right: 0px;
+  background: white;
+  z-index: 99999;
+  padding: 1em 1em .5em 1em;
+  box-shadow: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
+}
+
 .application .theme--light.input-group input, .application .theme--light.input-group textarea, .theme--light .input-group input, .theme--light .input-group textarea {
 	background: none;
 	border: none;
@@ -514,6 +534,7 @@ if ( $count <= 49 ) {
 						 :items="site.plugins"
 						 class="elevation-1"
 						 style="margin: 0 2% 2% 2%;"
+						 :loading="site.loading_plugins"
 						 hide-actions
 					 >
 						 <template slot="items" slot-scope="props">
@@ -629,6 +650,10 @@ if ( $count <= 49 ) {
 </div>
 <script>
 
+function titleCase(string) {
+	return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
 all_themes = [];
 all_plugins = [];
 sites.forEach(function(site) {
@@ -675,6 +700,8 @@ new Vue({
 	data: {
 		dialog: false,
 		page: 1,
+		jobs: [],
+		view_jobs: false,
 		search: null,
 		advanced_filter: false,
 		items_per_page: 50,
@@ -726,6 +753,9 @@ new Vue({
 
 	},
 	computed: {
+		runningJobs() {
+			return this.jobs.filter(job => job.status != 'done').length;;
+		},
 		showingSitesBegin() {
 			return this.page * this.items_per_page - this.items_per_page;
 		},
@@ -785,6 +815,12 @@ new Vue({
 			this.sites.filter(site => site.id == site_id)[0].loading_themes = true;
 			this.sites.filter(site => site.id == site_id)[0].themes.filter(theme => theme.name != theme_name).forEach( theme => theme.status = "inactive" );
 
+			// Start job
+			site_name = this.sites.filter(site => site.id == site_id)[0].name;
+			description = "Activating theme '" +theme_name + "' on " + site_name;
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
 			// WP ClI command to send
 			wpcli = "wp theme activate " + theme_name;
 
@@ -799,8 +835,8 @@ new Vue({
 			self = this;
 
 			jQuery.post(ajaxurl, data, function(response) {
-				console.log( response );
 				self.sites.filter(site => site.id == site_id)[0].loading_themes = false;
+				self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
 			});
 		},
 		deleteTheme (theme_name, site_id) {
@@ -809,6 +845,10 @@ new Vue({
 
 				// Enable loading progress
 				this.sites.filter(site => site.id == site_id)[0].loading_themes = true;
+				site_name = this.sites.filter(site => site.id == site_id)[0].name;
+				description = "Removing theme '" +theme_name + "' from " + site_name;
+				job_id = Math.round((new Date()).getTime());
+				this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
 
 				// WP ClI command to send
 				wpcli = "wp theme delete " + theme_name;
@@ -824,10 +864,10 @@ new Vue({
 				self = this;
 
 				jQuery.post(ajaxurl, data, function(response) {
-					console.log( response );
 					updated_themes = self.sites.filter(site => site.id == site_id)[0].themes.filter(theme => theme.name != theme_name);
 					self.sites.filter(site => site.id == site_id)[0].themes = updated_themes;
 					self.sites.filter(site => site.id == site_id)[0].loading_themes = false;
+					self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
 				});
 			}
 		},
@@ -835,6 +875,7 @@ new Vue({
 
 			// Enable loading progress
 			this.sites.filter(site => site.id == site_id)[0].loading_plugins = true;
+			site_name = this.sites.filter(site => site.id == site_id)[0].name;
 
 			if (plugin_status == "inactive") {
 				action = "deactivate";
@@ -842,6 +883,10 @@ new Vue({
 			if (plugin_status == "active") {
 				action = "activate";
 			}
+
+			description = titleCase(action) + " plugin '" + plugin_name + "' from " + site_name;
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
 
 			// WP ClI command to send
 			wpcli = "wp plugin " + action + " " + plugin_name;
@@ -857,10 +902,8 @@ new Vue({
 			self = this;
 
 			jQuery.post(ajaxurl, data, function(response) {
-				console.log( response );
-				updated_plugins = self.sites.filter(site => site.id == site_id)[0].plugins.filter(plugin => plugin.name != plugin_name);
-				self.sites.filter(site => site.id == site_id)[0].themes = updated_plugins;
-				self.sites.filter(site => site.id == site_id)[0].loading_themes = false;
+				self.sites.filter(site => site.id == site_id)[0].loading_plugins = false;
+				self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
 			});
 		},
 		deletePlugin (plugin_name, site_id) {
@@ -869,6 +912,11 @@ new Vue({
 
 				// Enable loading progress
 				this.sites.filter(site => site.id == site_id)[0].loading_plugins = true;
+
+				site_name = this.sites.filter(site => site.id == site_id)[0].name;
+				description = "Delete plugin '" + plugin_name + "' from " + site_name;
+				job_id = Math.round((new Date()).getTime());
+				this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
 
 				// WP ClI command to send
 				wpcli = "wp plugin delete " + plugin_name;
@@ -884,10 +932,10 @@ new Vue({
 				self = this;
 
 				jQuery.post(ajaxurl, data, function(response) {
-					console.log( response );
 					updated_plugins = self.sites.filter(site => site.id == site_id)[0].plugins.filter(plugin => plugin.name != plugin_name);
-					self.sites.filter(site => site.id == site_id)[0].themes = updated_plugins;
-					self.sites.filter(site => site.id == site_id)[0].loading_themes = false;
+					self.sites.filter(site => site.id == site_id)[0].plugins = updated_plugins;
+					self.sites.filter(site => site.id == site_id)[0].loading_plugins = false;
+					self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
 				});
 			}
 		},
