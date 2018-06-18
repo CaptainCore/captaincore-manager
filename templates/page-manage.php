@@ -206,11 +206,7 @@ if ( $themes ) {
 "core": "<?php echo get_field( 'core', $website->ID ); ?>",
 "keys": [
 	{"link":"http://<?php echo get_the_title( $website->ID ); ?>","environment": "Production", "address": "<?php the_field('address', $website->ID); ?>","username":"<?php the_field('username', $website->ID); ?>","password":"<?php the_field('password', $website->ID); ?>","protocol":"<?php the_field('protocol', $website->ID); ?>","port":"<?php the_field('port', $website->ID); ?>"},
-	{"link":"<?php if (strpos( get_field('address_staging', $website->ID), ".kinsta.com") ) {
-		echo "https://staging-". get_field('site_staging', $website->ID).".kinsta.com";
-	} else {
-		echo "https://". get_field('site_staging', $website->ID). ".staging.wpengine.com";
-	} ?>","environment": "Staging", "address": "<?php the_field('address_staging', $website->ID); ?>","username":"<?php the_field('username_staging', $website->ID); ?>","password":"<?php the_field('password_staging', $website->ID); ?>","protocol":"<?php the_field('protocol_staging', $website->ID); ?>","port":"<?php the_field('port_staging', $website->ID); ?>"},
+	<?php if (get_field('address_staging', $website->ID)) { ?>{"link":"<?php if (strpos( get_field('address_staging', $website->ID), ".kinsta.com") ) { echo "https://staging-". get_field('site_staging', $website->ID).".kinsta.com"; } else { echo "https://". get_field('site_staging', $website->ID). ".staging.wpengine.com"; } ?>","environment": "Staging", "address": "<?php the_field('address_staging', $website->ID); ?>","username":"<?php the_field('username_staging', $website->ID); ?>","password":"<?php the_field('password_staging', $website->ID); ?>","protocol":"<?php the_field('protocol_staging', $website->ID); ?>","port":"<?php the_field('port_staging', $website->ID); ?>"},<?php } ?>
 ],
 "loading_themes": false,
 "loading_plugins": false,
@@ -231,20 +227,57 @@ if ( $count <= 49 ) {
 ?>
 ];
 </script>
-<!--
-<?php
-foreach ( $websites as $website ) {
-	$plugins = get_field( 'plugins', $website->ID );
-	$themes  = get_field( 'themes', $website->ID );
-	if ( ! $plugins || ! $themes ) {
-		echo $website->ID . ' ' . $website->post_title . " \r";
-	}
-}
-?>
--->
 <div id="app" v-cloak>
 	<v-app>
 		<v-content>
+		<v-badge overlap left class="static" v-if="runningJobs">
+			<span slot="badge">{{ runningJobs }}</span>
+			<a @click.stop="view_jobs = true"><v-icon large color="grey lighten-1">fas fa-cogs</v-icon></a>
+			<template>
+			  <v-progress-linear :indeterminate="true"></v-progress-linear>
+			</template>
+		</v-badge>
+		<v-dialog
+			v-model="view_jobs"
+			fullscreen
+			hide-overlay
+			transition="dialog-bottom-transition"
+			scrollable
+		>
+        <v-card tile>
+          <v-toolbar card dark color="primary">
+            <v-btn icon dark @click.native="view_jobs = false">
+              <v-icon>close</v-icon>
+            </v-btn>
+            <v-toolbar-title>Running Jobs</v-toolbar-title>
+            <v-spacer></v-spacer>
+          </v-toolbar>
+          <v-card-text>
+
+            <v-list three-line subheader>
+
+              <v-list-tile avatar v-for="job in jobs.slice().reverse()">
+                <v-list-tile-content>
+                  <v-list-tile-title>{{ job.description }}</v-list-tile-title>
+									<v-chip v-if="job.status == 'done'" outline label color="green">Sucess</v-chip>
+									<template v-else>
+										<div style="width:200px;">
+									  <v-progress-linear :indeterminate="true"></v-progress-linear>
+										</div>
+									</template>
+
+                </v-list-tile-content>
+              </v-list-tile>
+
+            </v-list>
+            <v-divider></v-divider>
+
+          </v-card-text>
+
+          <div style="flex: 1 1 auto;"></div>
+        </v-card>
+      </v-dialog>
+
 			<v-container fluid>
 			<v-layout row wrap>
       <v-flex xs4>
@@ -422,15 +455,20 @@ foreach ( $websites as $website ) {
 		Logs <v-icon>fas fa-book-open</v-icon>
 		</v-tab>
 		<v-tab-item :key="1">
-			<v-card v-for="key in site.keys">
-			 <v-card-title primary-title>
-				 <div>
-					 <h3 class="headline mb-0"><v-chip>{{ key.environment }}</v-chip> <a :href="key.link" target="_blank">{{ key.link }}</a></h3>
-					 <div><span class="caption">Address</span> {{ key.address }}</div>
-					 <div><span class="caption">Username</span> {{ key.username }}</div>
-					 <div><span class="caption">Password</span> {{ key.password }}</div>
-					 <div><span class="caption">Protocol</span> {{ key.protocol }}</div>
-					 <div><span class="caption">Port</span> {{ key.port }}</div>
+			<v-card v-for="key in site.keys" class="bordered">
+			<v-card-title>
+				<div>
+					<v-btn
+						depressed
+						disabled
+						style="background-color: rgb(229, 229, 229)!important;color: #000 !important;left: -11px;top: -5px;"
+								>{{ key.environment }} Environment</v-btn>
+					<div>	<h3 class="headline mb-0"><a :href="key.link" target="_blank">{{ key.link }}</a></h3></div>
+					<div><span class="caption">Address</span> {{ key.address }}</div>
+					<div><span class="caption">Username</span> {{ key.username }}</div>
+					<div><span class="caption">Password</span> {{ key.password }}</div>
+					<div><span class="caption">Protocol</span> {{ key.protocol }}</div>
+					<div><span class="caption">Port</span> {{ key.port }}</div>
 				 </div>
 			 </v-card-title>
 		 </v-card>
