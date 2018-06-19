@@ -843,6 +843,8 @@ new Vue({
 
 				jQuery.post(ajaxurl, data, function(response) {
 
+					console.log( response );
+
 					// Formats response to readable format by table
 					if ( Array.isArray(response) ) {
 						update_items = [];
