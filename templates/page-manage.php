@@ -842,28 +842,20 @@ new Vue({
 					'command': "update-fetch",
 				};
 
-				self = this;
-
 				jQuery.post(ajaxurl, data, function(response) {
 
 					// Formats response to readable format by table
-					if ( Array.isArray(response) ) {
-						update_items = [];
-						response.forEach(logs => {
-							logs.updates.forEach( update => {
-								update.type = logs.type;
-								update.date = logs.date;
-								update_items.push( update );
-							});
+					update_items = [];
+					response.forEach(logs => {
+						logs.updates.forEach( update => {
+							update.type = logs.type;
+							update.date = logs.date;
+							update_items.push( update );
 						});
+					});
 
-						// Add to site.update_logs
-						current = self.sites.filter(site => site.id == site_id)[0].update_logs;
-						console.log("Updating update_logs from "+ current + " to " + update_items);
-						self.sites.filter(site => site.id == site_id)[0].update_logs = update_items;
-
-					}
-
+					// Add to site.update_logs
+					site.update_logs = update_items;
 				});
 			}
 		},
