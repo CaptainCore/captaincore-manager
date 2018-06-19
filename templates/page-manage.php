@@ -847,6 +847,8 @@ new Vue({
 					console.log(response);
 					console.log(typeof response);
 					content_type = typeof response;
+					var json = JSON.parse(response);
+					console.log(typeof json);
 
 					if ( content_type == "array" ) {
 
