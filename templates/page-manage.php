@@ -694,6 +694,23 @@ function titleCase(string) {
 	return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
+function tryParseJSON (jsonString){
+	try {
+		var o = JSON.parse(jsonString);
+
+		// Handle non-exception-throwing cases:
+		// Neither JSON.parse(false) or JSON.parse(1234) throw errors, hence the type-checking,
+		// but... JSON.parse(null) returns null, and typeof null === "object",
+		// so we must check for that, too. Thankfully, null is falsey, so this suffices:
+		if (o && typeof o === "object") {
+			return o;
+		}
+	}
+	catch (e) { }
+
+	return false;
+	};
+
 all_themes = [];
 all_plugins = [];
 sites.forEach(function(site) {
@@ -844,6 +861,8 @@ new Vue({
 
 				jQuery.post(ajaxurl, data, function(response) {
 
+					if (tryParseJSON(response)) {
+
 					var json = JSON.parse(response);
 					content_type = typeof json;
 
@@ -861,6 +880,10 @@ new Vue({
 
 					// Add to site.update_logs
 					site.update_logs = update_items;
+				}
+
+				} else {
+					console.log(response);
 				}
 
 				});
