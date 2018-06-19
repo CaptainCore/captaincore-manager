@@ -842,15 +842,14 @@ new Vue({
 					'command': "update-fetch",
 				};
 
-				var dataType = "json";
-
 				jQuery.post(ajaxurl, data, function(response) {
 
 					console.log(response);
+					r = response;
 
 					// Formats response to readable format by table
 					update_items = [];
-					response.forEach(logs => {
+					r.forEach(logs => {
 						logs.updates.forEach( update => {
 							update.type = logs.type;
 							update.date = logs.date;
@@ -860,7 +859,7 @@ new Vue({
 
 					// Add to site.update_logs
 					site.update_logs = update_items;
-				}, dataType);
+				}, "json");
 			}
 		},
 		paginationUpdate( page ) {
