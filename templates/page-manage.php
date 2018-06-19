@@ -829,8 +829,11 @@ new Vue({
 	},
 	methods: {
 		fetchUpdateLogs( site_id ) {
+
 			site = this.sites.filter(site => site.id == site_id)[0];
 			update_logs_count = site.update_logs.length;
+
+			// Fetch updates if none exists
 			if ( update_logs_count == 0 ) {
 
 				var data = {
@@ -842,8 +845,6 @@ new Vue({
 				self = this;
 
 				jQuery.post(ajaxurl, data, function(response) {
-
-					console.log( response );
 
 					// Formats response to readable format by table
 					if ( Array.isArray(response) ) {
@@ -857,6 +858,8 @@ new Vue({
 						});
 
 						// Add to site.update_logs
+						current = self.sites.filter(site => site.id == site_id)[0].update_logs;
+						console.log("Updating update_logs from "+ current + " to " + update_items);
 						self.sites.filter(site => site.id == site_id)[0].update_logs = update_items;
 
 					}
