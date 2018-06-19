@@ -845,11 +845,14 @@ new Vue({
 				jQuery.post(ajaxurl, data, function(response) {
 
 					console.log(response);
-					r = response;
+					console.log(typeof response);
+					content_type = typeof response;
+
+					if ( content_type == "array" ) {
 
 					// Formats response to readable format by table
 					update_items = [];
-					r.forEach(logs => {
+					response.forEach(logs => {
 						logs.updates.forEach( update => {
 							update.type = logs.type;
 							update.date = logs.date;
@@ -859,7 +862,9 @@ new Vue({
 
 					// Add to site.update_logs
 					site.update_logs = update_items;
-				}, "json");
+				}
+
+				});
 			}
 		},
 		paginationUpdate( page ) {
@@ -893,13 +898,15 @@ new Vue({
 		},
 		activateTheme (theme_name, site_id) {
 
+			site = this.sites.filter(site => site.id == site_id)[0];
+
 			// Enable loading progress
-			this.sites.filter(site => site.id == site_id)[0].loading_themes = true;
-			this.sites.filter(site => site.id == site_id)[0].themes.filter(theme => theme.name != theme_name).forEach( theme => theme.status = "inactive" );
+			site.loading_themes = true;
+			site.themes.filter(theme => theme.name != theme_name).forEach( theme => theme.status = "inactive" );
 
 			// Start job
-			site_name = this.sites.filter(site => site.id == site_id)[0].name;
-			description = "Activating theme '" +theme_name + "' on " + site_name;
+			site_name = site.name;
+			description = "Activating theme '" + theme_name + "' on " + site_name;
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
 
@@ -917,7 +924,7 @@ new Vue({
 			self = this;
 
 			jQuery.post(ajaxurl, data, function(response) {
-				self.sites.filter(site => site.id == site_id)[0].loading_themes = false;
+				site.loading_themes = false;
 				self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
 			});
 		},
