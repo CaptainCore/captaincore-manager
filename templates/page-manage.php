@@ -727,21 +727,21 @@ function titleCase(string) {
 }
 
 function tryParseJSON (jsonString){
-	try {
-		var o = JSON.parse(jsonString);
+try {
+	var o = JSON.parse(jsonString);
 
-		// Handle non-exception-throwing cases:
-		// Neither JSON.parse(false) or JSON.parse(1234) throw errors, hence the type-checking,
-		// but... JSON.parse(null) returns null, and typeof null === "object",
-		// so we must check for that, too. Thankfully, null is falsey, so this suffices:
-		if (o && typeof o === "object") {
-			return o;
-		}
+	// Handle non-exception-throwing cases:
+	// Neither JSON.parse(false) or JSON.parse(1234) throw errors, hence the type-checking,
+	// but... JSON.parse(null) returns null, and typeof null === "object",
+	// so we must check for that, too. Thankfully, null is falsey, so this suffices:
+	if (o && typeof o === "object") {
+		return o;
 	}
-	catch (e) { }
+}
+catch (e) { }
 
-	return false;
-	};
+return false;
+};
 
 all_themes = [];
 all_plugins = [];
@@ -944,12 +944,12 @@ new Vue({
 
 			jQuery.post(ajaxurl, data, function(response) {
 
-				console.log(response);
+			console.log(response);
 
 			 json_array = response.split('\n');
 			 last_item = json_array.length - 1;
 
-			 if ( tryParseJSON(json_array[last_item]) && JSON.parse(json_array[last_item]).finished == "Command finished" ) {
+			 if ( tryParseJSON(json_array[last_item]) && JSON.parse(json_array[last_item]).response == "Command finished" ) {
 
 				 if (tryParseJSON(json_array[0])) {
 
