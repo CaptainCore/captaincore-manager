@@ -590,7 +590,7 @@ if ( $count <= 49 ) {
 				<v-card-title v-else>
 					<div>
 						<v-data-table
-							:headers='[{"text":"Date"},{"text":"Description"},{"text":"Name"},{"text":"Version"},{"text":"Updated Version"},{"text":"Status"}]'
+							:headers='[{"text":"Date"},{"text":"Type"},{"text":"Name"},{"text":"Old Version"},{"text":"New Version"},{"text":"Status"}]'
 							:items="site.update_logs"
 							hide-actions
 							class="elevation-1"
@@ -599,8 +599,8 @@ if ( $count <= 49 ) {
 					      <td>{{ props.item.date | pretty_timestamp }}</td>
 					      <td>{{ props.item.type }}</td>
 								<td>{{ props.item.name }}</td>
-								<td class="text-xs-right">{{ props.item.version }}</td>
-								<td class="text-xs-right">{{ props.item.update_version }}</td>
+								<td class="text-xs-right">{{ props.item.old_version }}</td>
+								<td class="text-xs-right">{{ props.item.new_version }}</td>
 								<td>{{ props.item.status }}</td>
 					    </template>
 					  </v-data-table>
