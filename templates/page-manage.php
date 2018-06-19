@@ -832,7 +832,6 @@ new Vue({
 			site = this.sites.filter(site => site.id == site_id)[0];
 			update_logs_count = site.update_logs.length;
 			if ( update_logs_count == 0 ) {
-				site_name = this.sites.filter(site => site.id == site_id)[0];
 
 				var data = {
 					'action': 'captaincore_install',
@@ -845,19 +844,19 @@ new Vue({
 				jQuery.post(ajaxurl, data, function(response) {
 
 					// Formats response to readable format by table
-
 					if ( Array.isArray(response) ) {
-					update_items = [];
-					response.forEach(logs => {
-						logs.updates.forEach( update => {
-							update.type = logs.type;
-							update.date = logs.date;
-							update_items.push( update );
+						update_items = [];
+						response.forEach(logs => {
+							logs.updates.forEach( update => {
+								update.type = logs.type;
+								update.date = logs.date;
+								update_items.push( update );
+							});
 						});
-					});
 
-					// Add to site.update_logs
-					site.update_logs = update_items;
+						// Add to site.update_logs
+						self.sites.filter(site => site.id == site_id)[0].update_logs = update_items;
+
 					}
 
 				});
