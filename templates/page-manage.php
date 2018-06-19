@@ -723,6 +723,7 @@ sites.forEach(function(site) {
 			all_themes.push({
 				name: theme.name,
 				title: theme.title,
+				search: theme.title + " ("+ theme.name +")",
 				type: 'theme'
 			});
 		}
