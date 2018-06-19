@@ -855,7 +855,9 @@ new Vue({
 							update_items.push( update );
 						});
 					});
-					this.update_logs = update_items;
+
+					// Add to site.update_logs
+					self.update_logs = update_items;
 					}
 
 				});
