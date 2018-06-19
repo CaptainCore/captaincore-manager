@@ -2960,7 +2960,21 @@ function captaincore_install_action_callback() {
 	}
 	if ( $cmd == 'update-fetch' ) {
 		$command = "captaincore update-fetch $site";
+
+		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+			// return mock data
+			$command = CAPTAINCORE_DEBUG_MOCK_UPDATES;
+		}
 	}
+	if ( $cmd == 'users-fetch' ) {
+		$command = "captaincore ssh $site --command='wp user list --format=json'";
+
+		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+			// return mock data
+			$command = CAPTAINCORE_DEBUG_MOCK_USERS;
+		}
+	}
+
 	if ( $cmd == 'copy' ) {
 		// Find destination site and verify we have permission to it
 		$site_destination    = get_posts(

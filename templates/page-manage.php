@@ -247,6 +247,7 @@ if ( $themes ) {
 	{"link":"http://<?php echo get_the_title( $website->ID ); ?>","environment": "Production", "address": "<?php the_field('address', $website->ID); ?>","username":"<?php the_field('username', $website->ID); ?>","password":"<?php the_field('password', $website->ID); ?>","protocol":"<?php the_field('protocol', $website->ID); ?>","port":"<?php the_field('port', $website->ID); ?>"},
 	<?php if (get_field('address_staging', $website->ID)) { ?>{"link":"<?php if (strpos( get_field('address_staging', $website->ID), ".kinsta.com") ) { echo "https://staging-". get_field('site_staging', $website->ID).".kinsta.com"; } else { echo "https://". get_field('site_staging', $website->ID). ".staging.wpengine.com"; } ?>","environment": "Staging", "address": "<?php the_field('address_staging', $website->ID); ?>","username":"<?php the_field('username_staging', $website->ID); ?>","password":"<?php the_field('password_staging', $website->ID); ?>","protocol":"<?php the_field('protocol_staging', $website->ID); ?>","port":"<?php the_field('port_staging', $website->ID); ?>"},<?php } ?>
 ],
+"users": [],
 "update_logs": [],
 "loading_themes": false,
 "loading_plugins": false,
@@ -491,7 +492,10 @@ if ( $count <= 49 ) {
 		<v-tab :key="3" ripple>
 		Plugins <v-icon>fas fa-plug</v-icon>
 	  </v-tab>
-		<v-tab :key="4" ripple @click="fetchUpdateLogs( site.id )">
+		<v-tab :key="4" ripple @click="fetchUsers( site.id )">
+		Users <v-icon>fas fa-users</v-icon>
+		</v-tab>
+		<v-tab :key="5" ripple @click="fetchUpdateLogs( site.id )">
 		Updates <v-icon>fas fa-book-open</v-icon>
 		</v-tab>
 		<v-tab-item :key="1">
@@ -581,6 +585,35 @@ if ( $count <= 49 ) {
 	  </v-tab-item>
 		<v-tab-item :key="4">
 			<v-card>
+				<v-card-title v-if="site.users.length == 0">
+					<div>
+						Fetching users...
+					  <v-progress-linear :indeterminate="true"></v-progress-linear>
+					</div>
+				</v-card-title>
+				<v-card-title v-else>
+					<div>
+						<v-data-table
+							:headers='header_users'
+							:pagination.sync="pagination"
+							:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
+							:items="site.users"
+							class="elevation-1"
+						>
+					    <template slot="items" slot-scope="props">
+					      <td>{{ props.item.user_login }}</td>
+								<td>{{ props.item.display_name }}</td>
+								<td>{{ props.item.user_email }}</td>
+								<td>{{ props.item.roles }}</td>
+								<td><v-btn small round>Login as</v-btn></td>
+					    </template>
+					  </v-data-table>
+					</div>
+				</v-card-title>
+			</v-card>
+		</v-tab-item>
+		<v-tab-item :key="5">
+			<v-card>
 				<v-card-title v-if="site.update_logs.length == 0">
 					<div>
 						Fetching update logs...
@@ -604,7 +637,6 @@ if ( $count <= 49 ) {
 								<td>{{ props.item.status }}</td>
 					    </template>
 					  </v-data-table>
-
 					</div>
 				</v-card-title>
 			</v-card>
@@ -783,6 +815,16 @@ new Vue({
  			 { text: 'New Version', value: 'new_version' },
 			 { text: 'Status', value: 'status' }
  		 ],
+		 header_users: [
+			 { text: 'Login', value: 'login' },
+			 { text: 'Display Name', value: 'display_name' },
+			 { text: 'Email', value: 'user_email' },
+			 { text: 'Role(s)', value: 'roles' },
+			 { text: 'Actions', value: 'actions' }
+		 ],
+		 pagination: {
+			 sortBy: 'roles'
+		 },
 		 applied_site_filter: null,
 		 applied_site_filter_version: null,
 		 applied_site_filter_status: null,
@@ -855,6 +897,42 @@ new Vue({
 		}
 	},
 	methods: {
+		fetchUsers( site_id ) {
+
+			site = this.sites.filter(site => site.id == site_id)[0];
+			users_count = site.users.length;
+
+			// Fetch updates if none exists
+			if ( users_count == 0 ) {
+
+				var data = {
+					'action': 'captaincore_install',
+					'post_id': site_id,
+					'command': "users-fetch",
+				};
+
+				jQuery.post(ajaxurl, data, function(response) {
+
+				if (tryParseJSON(response)) {
+
+					var json = JSON.parse(response);
+					content_type = typeof json;
+
+					if ( content_type == "object" ) {
+						// Sort by user roles
+						// json.sort((a,b) => (a.roles < b.roles) ? -1 : (a.roles > b.roles) ? 1 : 0 );
+
+						// Add to site.users
+						site.users = json;
+					}
+
+				} else {
+					console.log(response);
+				}
+
+				});
+			}
+		},
 		fetchUpdateLogs( site_id ) {
 
 			site = this.sites.filter(site => site.id == site_id)[0];
