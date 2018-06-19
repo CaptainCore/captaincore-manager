@@ -1084,6 +1084,10 @@ new Vue({
 			if (this.site_selected == "all") {
 				this.sites.forEach(site => site.selected = true );
 			}
+			if (this.site_selected == "filtered") {
+				this.sites.forEach(site => site.selected = false );
+				this.sites.filter(site => site.filtered ).forEach(site => site.selected = true );
+			}
 			if (this.site_selected == "visible") {
 				this.sites.forEach(site => site.selected = false );
 				this.sites.filter(site => site.visible ).forEach(site => site.selected = true );
