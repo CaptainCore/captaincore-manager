@@ -492,7 +492,7 @@ if ( $count <= 49 ) {
 		Plugins <v-icon>fas fa-plug</v-icon>
 	  </v-tab>
 		<v-tab :key="4" ripple @click="fetchUpdateLogs( site.id )">
-		Logs <v-icon>fas fa-book-open</v-icon>
+		Updates <v-icon>fas fa-book-open</v-icon>
 		</v-tab>
 		<v-tab-item :key="1">
 			<v-card v-for="key in site.keys" class="bordered">
@@ -590,7 +590,7 @@ if ( $count <= 49 ) {
 				<v-card-title v-else>
 					<div>
 						<v-data-table
-							:headers='[{"text":"Date"},{"text":"Type"},{"text":"Name"},{"text":"Old Version"},{"text":"New Version"},{"text":"Status"}]'
+							:headers='header_updatelog'
 							:items="site.update_logs"
 							hide-actions
 							class="elevation-1"
@@ -772,13 +772,22 @@ new Vue({
 			 { text: 'Slug', value: 'slug' },
 			 { text: 'Version', value: 'version' },
 			 { text: 'Status', value: 'status', width: "140px" },
-			 { text: 'Actions', value: 'actions', width: "90px", sortable: false, }
+			 { text: 'Actions', value: 'actions', width: "90px", sortable: false }
 		 ],
+		 header_updatelog: [
+ 			 { text: 'Date', value: 'date' },
+ 			 { text: 'Type', value: 'type' },
+ 			 { text: 'Name', value: 'name' },
+ 			 { text: 'Old Version', value: 'old_version' },
+ 			 { text: 'New Version', value: 'new_version' },
+			 { text: 'Status', value: 'status' }
+ 		 ],
 		 applied_site_filter: null,
 		 applied_site_filter_version: null,
 		 applied_site_filter_status: null,
 		 select_site_options: [
 			 { text: 'All', value: 'all' },
+			 { text: 'Filtered', value: 'filtered' },
 			 { text: 'Visible', value: 'visible' },
 			 { text: 'None', value: 'none' }
 		 ],
