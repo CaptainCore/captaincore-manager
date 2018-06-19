@@ -844,17 +844,14 @@ new Vue({
 
 				jQuery.post(ajaxurl, data, function(response) {
 
-					console.log(response);
-					console.log(typeof response);
-					content_type = typeof response;
 					var json = JSON.parse(response);
-					console.log(typeof json);
+					content_type = typeof json;
 
-					if ( content_type == "array" ) {
+					if ( content_type == "object" ) {
 
 					// Formats response to readable format by table
 					update_items = [];
-					response.forEach(logs => {
+					json.forEach(logs => {
 						logs.updates.forEach( update => {
 							update.type = logs.type;
 							update.date = logs.date;
