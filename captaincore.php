@@ -2958,6 +2958,9 @@ function captaincore_install_action_callback() {
 		( $s3bucket ? " --s3bucket=$s3bucket" : '' ) .
 		( $s3path ? " --s3path=$s3path" : '' );
 	}
+	if ( $cmd == 'update-fetch' ) {
+		$command = "captaincore update-fetch $site";
+	}
 	if ( $cmd == 'copy' ) {
 		// Find destination site and verify we have permission to it
 		$site_destination    = get_posts(

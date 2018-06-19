@@ -216,6 +216,13 @@ if ( $websites ) :
 
 ajaxurl = "/wp-admin/admin-ajax.php";
 
+var pretty_timestamp_options = {
+    weekday: "long", year: "numeric", month: "short",
+    day: "numeric", hour: "2-digit", minute: "2-digit"
+};
+// Example: new Date("2018-06-18 19:44:47").toLocaleTimeString("en-us", options);
+// Returns: "Monday, Jun 18, 2018, 7:44 PM"
+
 var sites = [
 <?php
 $count = 0;
@@ -240,6 +247,7 @@ if ( $themes ) {
 	{"link":"http://<?php echo get_the_title( $website->ID ); ?>","environment": "Production", "address": "<?php the_field('address', $website->ID); ?>","username":"<?php the_field('username', $website->ID); ?>","password":"<?php the_field('password', $website->ID); ?>","protocol":"<?php the_field('protocol', $website->ID); ?>","port":"<?php the_field('port', $website->ID); ?>"},
 	<?php if (get_field('address_staging', $website->ID)) { ?>{"link":"<?php if (strpos( get_field('address_staging', $website->ID), ".kinsta.com") ) { echo "https://staging-". get_field('site_staging', $website->ID).".kinsta.com"; } else { echo "https://". get_field('site_staging', $website->ID). ".staging.wpengine.com"; } ?>","environment": "Staging", "address": "<?php the_field('address_staging', $website->ID); ?>","username":"<?php the_field('username_staging', $website->ID); ?>","password":"<?php the_field('password_staging', $website->ID); ?>","protocol":"<?php the_field('protocol_staging', $website->ID); ?>","port":"<?php the_field('port_staging', $website->ID); ?>"},<?php } ?>
 ],
+"update_logs": [],
 "loading_themes": false,
 "loading_plugins": false,
 <?php
@@ -483,6 +491,9 @@ if ( $count <= 49 ) {
 		<v-tab :key="3" ripple>
 		Plugins <v-icon>fas fa-plug</v-icon>
 	  </v-tab>
+		<v-tab :key="4" ripple @click="fetchUpdateLogs( site.id )">
+		Logs <v-icon>fas fa-book-open</v-icon>
+		</v-tab>
 		<v-tab-item :key="1">
 			<v-card v-for="key in site.keys" class="bordered">
 			<v-card-title>
@@ -570,10 +581,30 @@ if ( $count <= 49 ) {
 	  </v-tab-item>
 		<v-tab-item :key="4">
 			<v-card>
-				<v-card-title>
+				<v-card-title v-if="site.update_logs.length == 0">
 					<div>
 						Fetching update logs...
 					  <v-progress-linear :indeterminate="true"></v-progress-linear>
+					</div>
+				</v-card-title>
+				<v-card-title v-else>
+					<div>
+						<v-data-table
+							:headers='[{"text":"Date"},{"text":"Description"},{"text":"Name"},{"text":"Version"},{"text":"Updated Version"},{"text":"Status"}]'
+							:items="site.update_logs"
+							hide-actions
+							class="elevation-1"
+						>
+					    <template slot="items" slot-scope="props">
+					      <td>{{ props.item.date | pretty_timestamp }}</td>
+					      <td>{{ props.item.type }}</td>
+								<td>{{ props.item.name }}</td>
+								<td class="text-xs-right">{{ props.item.version }}</td>
+								<td class="text-xs-right">{{ props.item.update_version }}</td>
+								<td>{{ props.item.status }}</td>
+					    </template>
+					  </v-data-table>
+
 					</div>
 				</v-card-title>
 			</v-card>
@@ -761,6 +792,14 @@ new Vue({
 		 bulkaction_response_snackbar: false
 
 	},
+	filters: {
+		pretty_timestamp: function (date) {
+			// takes in '2018-06-18-194447' and converts to '2018-06-18 19:44:47' then returns "Monday, Jun 18, 2018, 7:44 PM"
+			date = date.substring(0,10) + " " + date.substring(11,13) + ":" + date.substring(13,15) + ":" + date.substring(15,17);
+			formatted_date = new Date(date).toLocaleTimeString("en-us", pretty_timestamp_options);
+			return formatted_date;
+		}
+	},
 	computed: {
 		runningJobs() {
 			return this.jobs.filter(job => job.status != 'done').length;;
@@ -789,6 +828,39 @@ new Vue({
 		}
 	},
 	methods: {
+		fetchUpdateLogs( site_id ) {
+			site = this.sites.filter(site => site.id == site_id)[0];
+			update_logs_count = site.update_logs.length;
+			if ( update_logs_count == 0 ) {
+				site_name = this.sites.filter(site => site.id == site_id)[0];
+
+				var data = {
+					'action': 'captaincore_install',
+					'post_id': site_id,
+					'command': "update-fetch",
+				};
+
+				self = this;
+
+				jQuery.post(ajaxurl, data, function(response) {
+
+					// Formats response to readable format by table
+
+					if ( Array.isArray(response) ) {
+					update_items = [];
+					response.forEach(logs => {
+						logs.updates.forEach( update => {
+							update.type = logs.type;
+							update.date = logs.date;
+							update_items.push( update );
+						});
+					});
+					this.update_logs = update_items;
+					}
+
+				});
+			}
+		},
 		paginationUpdate( page ) {
 
 			// Updates pagination with first 50 of sites visible
