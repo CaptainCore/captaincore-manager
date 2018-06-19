@@ -2862,6 +2862,7 @@ function captaincore_install_action_callback() {
 	$date       = $_POST['date'];
 	$name       = $_POST['name'];
 	$link       = $_POST['link'];
+	$job_id			= $_POST['job_id'];
 
 	$site             = get_field( 'site', $post_id );
 	$provider         = get_field( 'provider', $post_id );
@@ -2969,12 +2970,21 @@ function captaincore_install_action_callback() {
 	if ( $cmd == 'users-fetch' ) {
 		$command = "captaincore ssh $site --command='wp user list --format=json'";
 
+		$run_in_background = true;
+
 		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
 			// return mock data
 			$command = CAPTAINCORE_DEBUG_MOCK_USERS;
 		}
 	}
+	if ( $cmd == 'job-fetch' ) {
+		$command = "captaincore job-fetch $job_id";
 
+		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+			// return mock data
+			$command = CAPTAINCORE_DEBUG_MOCK_JOB_FETCH;
+		}
+	}
 	if ( $cmd == 'copy' ) {
 		// Find destination site and verify we have permission to it
 		$site_destination    = get_posts(
@@ -3167,7 +3177,12 @@ function captaincore_install_action_callback() {
 			if ( ! $ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
 				exit( 'Login Failed' );
 			}
-			echo $ssh->exec( $command );
+			if ( $run_in_background ) {
+				$job_id = captaincore_job_create( $command, $post_id );
+				echo $job_id;
+			} else {
+				echo $ssh->exec( $command );
+			}
 
 		} else {
 			echo 'Permission denied';
@@ -3541,6 +3556,9 @@ function captaincore_job_create( $command, $site_id ) {
 			'post_status' => 'publish',
 			'post_author' => 1,
 			'post_type'   => 'captcore_job',
+			'meta_input' => array(
+        'site' => $site_id
+			)
 		);
 
 		// Store Site ID within Job
@@ -3549,8 +3567,7 @@ function captaincore_job_create( $command, $site_id ) {
 		$job_id = wp_insert_post( $my_post );
 
 		// Wraps command with 'nohup' with trackable ID
-		$filename = "~/Tmp/job-$job_id.txt";
-		$command  = "$command --mark-when-completed > $filename 2>&1 &";
+		$command = "$command --mark-when-completed --job-id=$job_id &";
 
 		// Runs command on remote
 		require_once ABSPATH . '/vendor/autoload.php';

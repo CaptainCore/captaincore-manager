@@ -899,6 +899,8 @@ new Vue({
 	methods: {
 		fetchUsers( site_id ) {
 
+			console.log("Running fetch users");
+
 			site = this.sites.filter(site => site.id == site_id)[0];
 			users_count = site.users.length;
 
@@ -911,27 +913,73 @@ new Vue({
 					'command': "users-fetch",
 				};
 
+				self = this;
+
 				jQuery.post(ajaxurl, data, function(response) {
 
-				if (tryParseJSON(response)) {
+					// Expect Job ID
+					job_id = response;
+					description = "Fetching users for " + site.name;
+					self.jobs.push({"job_id": job_id,"description": description, "status": "running"});
 
-					var json = JSON.parse(response);
-					content_type = typeof json;
-
-					if ( content_type == "object" ) {
-						// Sort by user roles
-						// json.sort((a,b) => (a.roles < b.roles) ? -1 : (a.roles > b.roles) ? 1 : 0 );
-
-						// Add to site.users
-						site.users = json;
-					}
-
-				} else {
-					console.log(response);
-				}
-
+					// Check if completed in 5 seconds
+					setTimeout(function(){
+          	self.fetchUsersRetry(site_id, job_id);
+          }, 5000);
 				});
 			}
+		},
+		fetchUsersRetry( site_id, job_id ) {
+
+			console.log("Running fetch users retry");
+
+			job = self.jobs.filter(job => job.job_id == job_id)[0];
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': site_id,
+				'command': "job-fetch",
+				'job_id': job_id
+			};
+
+			jQuery.post(ajaxurl, data, function(response) {
+
+				console.log(response);
+
+			 json_array = response.split('\n');
+			 last_item = json_array.length - 1;
+    	 finished = JSON.parse(json_array[last_item]).response;
+
+			 if ( finished == "Command finished" ) {
+
+				 if (tryParseJSON(json_array[0])) {
+
+					 var json = JSON.parse(json_array[0]);
+					 content_type = typeof json;
+
+					 console.log(json)
+
+					 if ( content_type == "object" ) {
+						 // Sort by user roles
+						 // json.sort((a,b) => (a.roles < b.roles) ? -1 : (a.roles > b.roles) ? 1 : 0 );
+
+						 // Add to site.users
+						 site.users = json;
+						 job.status = "done";
+					 }
+
+				 } else {
+					 console.log(response);
+				 }
+
+			 } else {
+				 // Check if completed in 5 seconds
+				 setTimeout(function(){
+					 self.fetchUsersRetry(site_id, job_id);
+				 }, 5000);
+			 }
+
+			});
 		},
 		fetchUpdateLogs( site_id ) {
 
