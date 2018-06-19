@@ -948,9 +948,8 @@ new Vue({
 
 			 json_array = response.split('\n');
 			 last_item = json_array.length - 1;
-    	 finished = JSON.parse(json_array[last_item]).response;
 
-			 if ( finished == "Command finished" ) {
+			 if ( tryParseJSON(json_array[last_item]) && JSON.parse(json_array[last_item]).finished == "Command finished" ) {
 
 				 if (tryParseJSON(json_array[0])) {
 
