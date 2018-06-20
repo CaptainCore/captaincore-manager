@@ -904,7 +904,11 @@ new Vue({
 
 			console.log("Running fetch users");
 
+			job_id = Math.round((new Date()).getTime());
 			site = this.sites.filter(site => site.id == site_id)[0];
+			description = "Fetching users for " + site.name;
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
 			users_count = site.users.length;
 
 			// Fetch updates if none exists
@@ -920,15 +924,15 @@ new Vue({
 
 				jQuery.post(ajaxurl, data, function(response) {
 
-					// Expect Job ID
-					job_id = response;
+					// Expect Job ID and update temp Job in queue for tracking purposes
+					new_job_id = response;
 					description = "Fetching users for " + site.name;
-					self.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+					self.jobs.filter(job => job.job_id == job_id )[0].job_id = new_job_id;
 
-					// Check if completed in 5 seconds
+					// Check if completed in 2 seconds
 					setTimeout(function(){
-          	self.fetchUsersRetry(site_id, job_id);
-          }, 5000);
+          	self.fetchUsersRetry(site_id, new_job_id);
+          }, 2000);
 				});
 			}
 		},
