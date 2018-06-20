@@ -933,7 +933,9 @@ new Vue({
 
 			console.log("Running fetch users retry");
 
-			job = self.jobs.filter(job => job.job_id == job_id)[0];
+			site = this.sites.filter(site => site.id == site_id)[0];
+			job = this.jobs.filter(job => job.job_id == job_id)[0];
+			self = this;
 
 			var data = {
 				'action': 'captaincore_install',
@@ -956,11 +958,9 @@ new Vue({
 					 var json = JSON.parse(json_array[0]);
 					 content_type = typeof json;
 
-					 console.log(json)
+					 console.log(json);
 
 					 if ( content_type == "object" ) {
-						 // Sort by user roles
-						 // json.sort((a,b) => (a.roles < b.roles) ? -1 : (a.roles > b.roles) ? 1 : 0 );
 
 						 // Add to site.users
 						 site.users = json;
@@ -973,7 +973,7 @@ new Vue({
 
 			 } else {
 				 // Check if completed in 5 seconds
-				 setTimeout(function(){
+				 setTimeout(function() {
 					 self.fetchUsersRetry(site_id, job_id);
 				 }, 5000);
 			 }
