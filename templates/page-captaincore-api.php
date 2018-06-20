@@ -38,6 +38,7 @@ $server              = $_POST['server'];
 $core                = $_POST['core'];
 $plugins             = base64_decode( $_POST['plugins'] );
 $themes              = base64_decode( $_POST['themes'] );
+$users               = base64_decode( $_POST['users'] );
 $token               = $_POST['token'];
 $token_key           = $_POST['token_key'];
 $git_commit          = $_POST['git_commit'];
@@ -209,6 +210,7 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 			// Updates site with latest $plugins, $themes, $core and $home_url
 			update_field( 'field_5a9421b004ed3', wp_slash( $plugins ), $site_id );
 			update_field( 'field_5a9421b804ed4', wp_slash( $themes ), $site_id );
+			update_field( 'field_5b2a900c85a77', wp_slash( $users ), $site_id );
 			update_field( 'field_5a9421bc04ed5', $core, $site_id );
 			update_field( 'field_5a944358bf146', $home_url, $site_id );
 
