@@ -1021,7 +1021,7 @@ new Vue({
 				}
 
 				} else {
-					site.update_logs = response;
+					site.update_logs = response.replace("[31mError:�[39m ","Error: ");
 				}
 
 				});
