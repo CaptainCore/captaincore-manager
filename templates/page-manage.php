@@ -229,6 +229,7 @@ $count = 0;
 foreach ( $websites as $website ) {
 	$plugins = get_field( 'plugins', $website->ID );
 	$themes  = get_field( 'themes', $website->ID );
+	$users  = get_field( 'users', $website->ID );
 	if ( $plugins && $themes ) {
 	?>
 {
@@ -247,7 +248,9 @@ if ( $themes ) {
 	{"link":"http://<?php echo get_the_title( $website->ID ); ?>","environment": "Production", "address": "<?php the_field('address', $website->ID); ?>","username":"<?php the_field('username', $website->ID); ?>","password":"<?php the_field('password', $website->ID); ?>","protocol":"<?php the_field('protocol', $website->ID); ?>","port":"<?php the_field('port', $website->ID); ?>"},
 	<?php if (get_field('address_staging', $website->ID)) { ?>{"link":"<?php if (strpos( get_field('address_staging', $website->ID), ".kinsta.com") ) { echo "https://staging-". get_field('site_staging', $website->ID).".kinsta.com"; } else { echo "https://". get_field('site_staging', $website->ID). ".staging.wpengine.com"; } ?>","environment": "Staging", "address": "<?php the_field('address_staging', $website->ID); ?>","username":"<?php the_field('username_staging', $website->ID); ?>","password":"<?php the_field('password_staging', $website->ID); ?>","protocol":"<?php the_field('protocol_staging', $website->ID); ?>","port":"<?php the_field('port_staging', $website->ID); ?>"},<?php } ?>
 ],
-"users": [],
+<?php if ( $users ) {
+?>
+"users": <?php echo $users; ?>,<?php } else { ?>"users": [],<?php } ?>
 "update_logs": [],
 "loading_themes": false,
 "loading_plugins": false,
@@ -904,15 +907,16 @@ new Vue({
 
 			console.log("Running fetch users");
 
-			job_id = Math.round((new Date()).getTime());
 			site = this.sites.filter(site => site.id == site_id)[0];
-			description = "Fetching users for " + site.name;
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
-
 			users_count = site.users.length;
 
 			// Fetch updates if none exists
 			if ( users_count == 0 ) {
+
+				job_id = Math.round((new Date()).getTime());
+
+				description = "Fetching users for " + site.name;
+				this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
 
 				var data = {
 					'action': 'captaincore_install',
