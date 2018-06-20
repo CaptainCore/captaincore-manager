@@ -2880,6 +2880,9 @@ function captaincore_install_action_callback() {
 	$staging_protocol = get_field( 'protocol_staging', $post_id );
 	$staging_port     = get_field( 'port_staging', $post_id );
 	$staging_homedir  = get_field( 'homedir_staging', $post_id );
+	$updates_enabled  = get_field( 'updates_enabled', $post_id );
+	$exclude_themes   = get_field( 'exclude_themes', $post_id );
+	$exclude_plugins  = get_field( 'exclude_plugins', $post_id );
 	$s3accesskey      = get_field( 's3_access_key', $post_id );
 	$s3secretkey      = get_field( 's3_secret_key', $post_id );
 	$s3bucket         = get_field( 's3_bucket', $post_id );
@@ -2929,6 +2932,9 @@ function captaincore_install_action_callback() {
 		( $staging_protocol ? " --protocol_staging=$staging_protocol" : '' ) .
 		( $staging_port ? " --port_staging=$staging_port" : '' ) .
 		( $staging_homedir ? " --homedir_staging=$staging_homedir" : '' ) .
+		( $updates_enabled ? " --updates_enabled=$updates_enabled" : '' ) .
+		( $exclude_themes ? " --exclude_themes=$exclude_themes" : '' ) .
+		( $exclude_plugins ? " --exclude_plugins=$exclude_plugins" : '' ) .
 		( $preloadusers ? " --preloadusers=$preloadusers" : '' ) .
 		( $subsite ? " --subsite=$subsite" : '' ) .
 		( $s3accesskey ? " --s3accesskey=$s3accesskey" : '' ) .
@@ -2954,6 +2960,9 @@ function captaincore_install_action_callback() {
 		( $preloadusers ? " --preloadusers=$preloadusers" : '' ) .
 		( $homedir ? " --homedir=$homedir" : '' ) .
 		( $subsite ? " --subsite=$subsite" : '' ) .
+		( $updates_enabled ? " --updates_enabled=$updates_enabled" : '' ) .
+		( $exclude_themes ? " --exclude_themes=$exclude_themes" : '' ) .
+		( $exclude_plugins ? " --exclude_plugins=$exclude_plugins" : '' ) .
 		( $s3accesskey ? " --s3accesskey=$s3accesskey" : '' ) .
 		( $s3secretkey ? " --s3secretkey=$s3secretkey" : '' ) .
 		( $s3bucket ? " --s3bucket=$s3bucket" : '' ) .
