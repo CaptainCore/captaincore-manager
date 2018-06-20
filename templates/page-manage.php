@@ -620,6 +620,9 @@ if ( $count <= 49 ) {
 					  <v-progress-linear :indeterminate="true"></v-progress-linear>
 					</div>
 				</v-card-title>
+				<v-card-title v-else-if="typeof site.update_logs == 'string'">
+					{{ site.update_logs }}
+				</v-card-title>
 				<v-card-title v-else>
 					<div>
 						<v-data-table
@@ -1018,7 +1021,7 @@ new Vue({
 				}
 
 				} else {
-					console.log(response);
+					site.update_logs = response;
 				}
 
 				});
