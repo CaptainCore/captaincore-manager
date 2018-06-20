@@ -3183,10 +3183,10 @@ function captaincore_install_action_callback() {
 				$job_id = round(microtime(true) * 1000);
 
 				// Tie in the site_id to prevent people from access Jobs they don't have access to.
-				$background_job = "${site_id}_${job_id}";
+				$job_id = "${site_id}_${job_id}";
 
 				// Tack on CaptaionCore global arguments for tracking purposes
-				$command = "$command --run-in-background=$job_ &";
+				$command = "$command --run-in-background=$job_id &";
 
 				// Executes command over SSH
 				$ssh->exec( $command );
