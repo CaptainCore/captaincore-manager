@@ -951,9 +951,9 @@ new Vue({
 			 json_array = response.split('\n');
 			 last_item = json_array.length - 1;
 
-			 if ( tryParseJSON(json_array[last_item]) && JSON.parse(json_array[last_item]).response == "Command finished" ) {
+			 if ( tryParseJSON(json_array[1]) ) {
 
-				 if (tryParseJSON(json_array[0])) {
+				 if ( JSON.parse(json_array[1]).response == "Command finished" ) {
 
 					 var json = JSON.parse(json_array[0]);
 					 content_type = typeof json;
