@@ -905,8 +905,6 @@ new Vue({
 	methods: {
 		fetchUsers( site_id ) {
 
-			console.log("Running fetch users");
-
 			site = this.sites.filter(site => site.id == site_id)[0];
 			users_count = site.users.length;
 
@@ -942,8 +940,6 @@ new Vue({
 		},
 		fetchUsersRetry( site_id, job_id ) {
 
-			console.log("Running fetch users retry");
-
 			site = this.sites.filter(site => site.id == site_id)[0];
 			job = this.jobs.filter(job => job.job_id == job_id)[0];
 			self = this;
@@ -957,8 +953,6 @@ new Vue({
 
 			jQuery.post(ajaxurl, data, function(response) {
 
-			console.log(response);
-
 			 json_array = response.split('\n');
 			 last_item = json_array.length - 1;
 
@@ -968,8 +962,6 @@ new Vue({
 
 					 var json = JSON.parse(json_array[0]);
 					 content_type = typeof json;
-
-					 console.log(json);
 
 					 if ( content_type == "object" ) {
 
