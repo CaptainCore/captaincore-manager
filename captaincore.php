@@ -2978,7 +2978,7 @@ function captaincore_install_action_callback() {
 		}
 	}
 	if ( $cmd == 'job-fetch' ) {
-		$command = "captaincore job-fetch $job_id";
+		$command = "captaincore job-fetch ${post_id}_${job_id}";
 
 		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
 			// return mock data
@@ -3178,8 +3178,22 @@ function captaincore_install_action_callback() {
 				exit( 'Login Failed' );
 			}
 			if ( $run_in_background ) {
-				$job_id = captaincore_job_create( $command, $post_id );
+
+				// Generate unique $job_id for tracking
+				$job_id = round(microtime(true) * 1000);
+
+				// Tie in the site_id to prevent people from access Jobs they don't have access to.
+				$background_job = "${site_id}_${job_id}";
+
+				// Tack on CaptaionCore global arguments for tracking purposes
+				$command = "$command --run-in-background=$job_ &";
+
+				// Executes command over SSH
+				$ssh->exec( $command );
+
+				// Returns Job ID to begin repeating AJAX checks
 				echo $job_id;
+
 			} else {
 				echo $ssh->exec( $command );
 			}
@@ -3544,79 +3558,6 @@ function captaincore_website_acf_actions( $field ) {
 
 }
 add_action( 'acf/render_field/type=message', 'captaincore_website_acf_actions', 10, 1 );
-
-function captaincore_job_create( $command, $site_id ) {
-
-	// Checks permissions
-	if ( captaincore_verify_permissions( $site_id ) ) {
-
-		// Create post object
-		$my_post = array(
-			'post_title'  => 'Job',
-			'post_status' => 'publish',
-			'post_author' => 1,
-			'post_type'   => 'captcore_job',
-			'meta_input' => array(
-        'site' => $site_id
-			)
-		);
-
-		// Store Site ID within Job
-		// ACF field update
-		// Insert the post into the database
-		$job_id = wp_insert_post( $my_post );
-
-		// Wraps command with 'nohup' with trackable ID
-		$command = "$command --mark-when-completed --job-id=$job_id &";
-
-		// Runs command on remote
-		require_once ABSPATH . '/vendor/autoload.php';
-
-		$ssh = new \phpseclib\Net\SSH2( CAPTAINCORE_CLI_ADDRESS, CAPTAINCORE_CLI_PORT );
-
-		if ( ! $ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
-			exit( 'Login Failed' );
-		}
-
-		$ssh->exec( $command );
-
-	} else {
-		echo 'Permission denied';
-	}
-
-	return $job_id;
-}
-
-function captaincore_job_check( $job_id ) {
-
-	$site_id = get_field( 'site', $job_id );
-
-	// Checks permissions
-	if ( captaincore_verify_permissions( $site_id ) ) {
-
-		// Preps command
-		$filename = "~/Tmp/job-$job_id.txt";
-		$command  = "tail -n 1 $filename";
-
-		// Runs command on remote on production
-		require_once ABSPATH . '/vendor/autoload.php';
-
-		$ssh = new \phpseclib\Net\SSH2( CAPTAINCORE_CLI_ADDRESS, CAPTAINCORE_CLI_PORT );
-
-		if ( ! $ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
-			exit( 'Login Failed' );
-		}
-		$response = json_decode( $ssh->exec( $command ) );
-		if ( $response['response'] ) {
-			// update acf field to $response["response"]
-			// update acf field to $response["timestamp"]
-			// update acf field to $response["runtime"]
-		}
-	} else {
-		echo 'Permission denied';
-	}
-
-}
 
 function process_log_action_callback() {
 	global $wpdb; // this is how you get access to the database
