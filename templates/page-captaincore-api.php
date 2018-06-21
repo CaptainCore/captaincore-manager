@@ -175,6 +175,18 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 
 	}
 
+	// Sync site data
+	if ( $command == "sync-data" and $core and $plugins and $themes and $users ) {
+
+		// Updates site with latest $plugins, $themes, $core, $home_url and $users
+		update_field( 'field_5a9421b004ed3', wp_slash( $plugins ), $site_id );
+		update_field( 'field_5a9421b804ed4', wp_slash( $themes ), $site_id );
+		update_field( 'field_5b2a900c85a77', wp_slash( $users ), $site_id );
+		update_field( 'field_5a9421bc04ed5', $core, $site_id );
+		update_field( 'field_5a944358bf146', $home_url, $site_id );
+
+	}
+
 	// Generate a new CaptainCore quicksave
 	if ( $git_commit and $core and $plugins and $themes and $date ) {
 
