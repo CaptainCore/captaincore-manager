@@ -26,24 +26,27 @@
  */
 
 $site                = get_query_var( 'callback' );
-$site_source_id      = $_POST['site_source_id'];
-$site_destination_id = $_POST['site_destination_id'];
-$date                = $_POST['date'];
-$archive             = $_POST['archive'];
-$command             = $_POST['command'];
-$storage             = $_POST['storage'];
-$views               = $_POST['views'];
-$email               = $_POST['email'];
-$server              = $_POST['server'];
-$core                = $_POST['core'];
-$plugins             = base64_decode( $_POST['plugins'] );
-$themes              = base64_decode( $_POST['themes'] );
-$users               = base64_decode( $_POST['users'] );
-$token               = $_POST['token'];
-$token_key           = $_POST['token_key'];
-$git_commit          = $_POST['git_commit'];
-$home_url            = $_POST['home_url'];
-$git_status          = trim( base64_decode( $_POST['git_status'] ) );
+
+$post_data = json_decode( file_get_contents( "php://input" ) );
+
+$site_source_id      = $post_data->site_source_id;
+$site_destination_id = $post_data->site_destination_id;
+$date                = $post_data->date;
+$archive             = $post_data->archive;
+$command             = $post_data->command;
+$storage             = $post_data->storage;
+$views               = $post_data->views;
+$email               = $post_data->email;
+$server              = $post_data->server;
+$core                = $post_data->core;
+$plugins             = base64_decode( $post_data->plugins );
+$themes              = base64_decode( $post_data->themes );
+$users               = base64_decode( $post_data->users );
+$token               = $post_data->token;
+$token_key           = $post_data->token_key;
+$git_commit          = $post_data->git_commit;
+$home_url            = $post_data->home_url;
+$git_status          = trim( base64_decode( $post_data->git_status ) );
 
 
 // Finding matching site by domain name (title)
@@ -184,6 +187,8 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 		update_field( 'field_5b2a900c85a77', wp_slash( $users ), $site_id );
 		update_field( 'field_5a9421bc04ed5', $core, $site_id );
 		update_field( 'field_5a944358bf146', $home_url, $site_id );
+
+		echo '{"response":"Completed sync-data for '.$site_id.'"}';
 
 	}
 
