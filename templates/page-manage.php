@@ -230,6 +230,8 @@ foreach ( $websites as $website ) {
 	$plugins = get_field( 'plugins', $website->ID );
 	$themes  = get_field( 'themes', $website->ID );
 	$users  = get_field( 'users', $website->ID );
+	$storage = get_field('storage', $website->ID);
+	$views = get_field('views', $website->ID);
 	if ( $plugins && $themes ) {
 	?>
 {
@@ -252,6 +254,8 @@ if ( $themes ) {
 ?>
 "users": <?php echo $users; ?>,<?php } else { ?>"users": [],<?php } ?>
 "update_logs": [],
+"storage": <?php echo $storage; ?>,
+"views": <?php echo $views; ?>,
 "loading_themes": false,
 "loading_plugins": false,
 <?php
@@ -309,7 +313,6 @@ if ( $count <= 49 ) {
 									  <v-progress-linear :indeterminate="true"></v-progress-linear>
 										</div>
 									</template>
-
                 </v-list-tile-content>
               </v-list-tile>
 
@@ -481,26 +484,26 @@ if ( $count <= 49 ) {
 					<v-switch v-model="site.selected" @change="site_selected = null"></v-switch>
 				</v-flex>
 			<v-flex v-bind:class="{ xs11: advanced_filter }">
-			  <v-card class="site">
+				<v-card class="site">
 						<v-expansion-panel>
-						 <v-expansion-panel-content lazy v-for="(item,i) in 1" :key="i">
-							 <div slot="header"><strong>{{ site.name }}</strong> <span class="text-xs-right">{{ site.plugins.length }} Plugins {{ site.themes.length }} Themes - WordPress {{ site.core }}</span></div>
-							 <v-tabs color="blue darken-3" dark>
-	  <v-tab :key="1" ripple>
-		Keys <v-icon>fas fa-key</v-icon>
-	  </v-tab>
-		<v-tab :key="2" ripple>
-		Themes <v-icon>fas fa-paint-brush</v-icon>
-	  </v-tab>
-		<v-tab :key="3" ripple>
-		Plugins <v-icon>fas fa-plug</v-icon>
-	  </v-tab>
-		<v-tab :key="4" ripple @click="fetchUsers( site.id )">
-		Users <v-icon>fas fa-users</v-icon>
-		</v-tab>
-		<v-tab :key="5" ripple @click="fetchUpdateLogs( site.id )">
-		Updates <v-icon>fas fa-book-open</v-icon>
-		</v-tab>
+						<v-expansion-panel-content lazy v-for="(item,i) in 1" :key="i">
+							<div slot="header"><strong>{{ site.name }}</strong> <span class="text-xs-right">{{ site.plugins.length }} Plugins {{ site.themes.length }} Themes - WordPress {{ site.core }}</span></div>
+							<v-tabs color="blue darken-3" dark>
+								<v-tab :key="1" ripple>
+									Keys <v-icon>fas fa-key</v-icon>
+								</v-tab>
+								<v-tab :key="2" ripple>
+									Themes <v-icon>fas fa-paint-brush</v-icon>
+								</v-tab>
+								<v-tab :key="3" ripple>
+									Plugins <v-icon>fas fa-plug</v-icon>
+								</v-tab>
+								<v-tab :key="4" ripple @click="fetchUsers( site.id )">
+									Users <v-icon>fas fa-users</v-icon>
+								</v-tab>
+								<v-tab :key="5" ripple @click="fetchUpdateLogs( site.id )">
+									Updates <v-icon>fas fa-book-open</v-icon>
+								</v-tab>
 		<v-tab-item :key="1">
 			<v-card v-for="key in site.keys" class="bordered">
 			<v-card-title>
