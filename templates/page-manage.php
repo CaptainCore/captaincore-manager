@@ -254,8 +254,6 @@ if ( $themes ) {
 ?>
 "users": <?php echo $users; ?>,<?php } else { ?>"users": [],<?php } ?>
 "update_logs": [],
-"storage": <?php echo $storage; ?>,
-"views": <?php echo $views; ?>,
 "loading_themes": false,
 "loading_plugins": false,
 <?php
