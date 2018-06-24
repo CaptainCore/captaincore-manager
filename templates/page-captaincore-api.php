@@ -42,12 +42,11 @@ $core                = $post_data->core;
 $plugins             = base64_decode( $post_data->plugins );
 $themes              = base64_decode( $post_data->themes );
 $users               = base64_decode( $post_data->users );
+$home_url            = $post_data->home_url;
+$git_commit          = $post_data->git_commit;
+$git_status          = trim( base64_decode( $post_data->git_status ) );
 $token               = $post_data->token;
 $token_key           = $post_data->token_key;
-$git_commit          = $post_data->git_commit;
-$home_url            = $post_data->home_url;
-$git_status          = trim( base64_decode( $post_data->git_status ) );
-
 
 // Finding matching site by domain name (title)
 $args  = array(
@@ -193,7 +192,7 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 	}
 
 	// Generate a new CaptainCore quicksave
-	if ( $git_commit and $core and $plugins and $themes and $date ) {
+	if ( $command == "quicksave" ) {
 
 		// Check if Git Commit already entered for this Site ID
 		$args = array(
@@ -256,7 +255,7 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 			);
 
 			wp_update_post( $my_post );
-			echo "Adding Quicksave \n";
+			echo '{"response":"Completed adding Quicksave '.$quicksave_id.' for '.$site_id.'"}';
 
 		}
 	}
