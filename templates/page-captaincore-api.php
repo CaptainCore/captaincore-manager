@@ -25,9 +25,8 @@
  * https://<captaincore-server>/captaincore-api/<site-domain>/?token_key=token_key&token=token_key
  */
 
-$site                = get_query_var( 'callback' );
-
-$post_data = json_decode( file_get_contents( "php://input" ) );
+$site = get_query_var( 'callback' );
+$post_data = json_decode( file_get_contents( 'php://input' ) );
 
 $site_source_id      = $post_data->site_source_id;
 $site_destination_id = $post_data->site_destination_id;
@@ -178,7 +177,7 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 	}
 
 	// Sync site data
-	if ( $command == "sync-data" and $core and $plugins and $themes and $users ) {
+	if ( $command == 'sync-data' and $core and $plugins and $themes and $users ) {
 
 		// Updates site with latest $plugins, $themes, $core, $home_url and $users
 		update_field( 'field_5a9421b004ed3', wp_slash( $plugins ), $site_id );
@@ -187,12 +186,12 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 		update_field( 'field_5a9421bc04ed5', $core, $site_id );
 		update_field( 'field_5a944358bf146', $home_url, $site_id );
 
-		echo '{"response":"Completed sync-data for '.$site_id.'"}';
+		echo '{"response":"Completed sync-data for ' . $site_id . '"}';
 
 	}
 
 	// Generate a new CaptainCore quicksave
-	if ( $command == "quicksave" ) {
+	if ( $command == 'quicksave' ) {
 
 		// Check if Git Commit already entered for this Site ID
 		$args = array(
@@ -255,7 +254,7 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 			);
 
 			wp_update_post( $my_post );
-			echo '{"response":"Completed adding Quicksave '.$quicksave_id.' for '.$site_id.'"}';
+			echo '{"response":"Completed adding Quicksave ' . $quicksave_id . ' for ' . $site_id . '"}';
 
 		}
 	}
