@@ -316,6 +316,7 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 
 		</div><!-- #content -->
 	</div><!-- #primary -->
+	<div style="display:none"><?php echo "${site} ${token}"; ?></div>
 <?php
 
 get_footer();
