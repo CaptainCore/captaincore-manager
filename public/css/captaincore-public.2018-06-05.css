@@ -581,11 +581,15 @@ div.website .actions a {
   font-family: "Font Awesome 5 Free";
 }
 
-.woocommerce-MyAccount-navigation-link--handbook, .woocommerce-MyAccount-navigation-link--manage {
+.woocommerce-MyAccount-navigation-link--handbook,
+.woocommerce-MyAccount-navigation-link--health,
+.woocommerce-MyAccount-navigation-link--manage {
   border-left: 10px solid #27c3f3;
 }
 
-.woocommerce-MyAccount-navigation-link--handbook:after, .woocommerce-MyAccount-navigation-link--manage:after {
+.woocommerce-MyAccount-navigation-link--handbook:after,
+.woocommerce-MyAccount-navigation-link--health:after,
+.woocommerce-MyAccount-navigation-link--manage:after {
   content: "admin";
   font-size: 0.2em;
   position: absolute;
@@ -599,6 +603,12 @@ div.website .actions a {
 
 .woocommerce-MyAccount-navigation-link--handbook:before {
   content: "\f279";
+	font-weight: 900;
+  font-family: "Font Awesome 5 Free";
+}
+
+.woocommerce-MyAccount-navigation-link--health:before {
+  content: "\f21e";
 	font-weight: 900;
   font-family: "Font Awesome 5 Free";
 }
