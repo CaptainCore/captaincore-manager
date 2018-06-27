@@ -4075,7 +4075,6 @@ class PageTemplater {
 		$this->templates = array(
 			'templates/page-captaincore-api.php'  => 'CaptainCore API',
 			'templates/page-company-handbook.php' => 'Company Handbook',
-			'templates/page-manage.php'           => 'Manage',
 			'templates/page-activities.php'       => 'Activities',
 			'templates/page-checkout-express.php' => 'Checkout Express',
 			'templates/page-websites.php'         => 'Website Recommendations',
@@ -4199,10 +4198,6 @@ function captaincore_human_filesize( $size, $precision = 2 ) {
 function captaincore_template_redirect() {
 	global $wp_query;
 
-	if ( isset( $wp_query->query['manage'] ) ) {
-			wp_redirect( home_url( '/site-manage/' ) );
-			die;
-	}
 	if ( isset( $wp_query->query['handbook'] ) ) {
 			wp_redirect( home_url( '/company-handbook/' ) );
 			die;
