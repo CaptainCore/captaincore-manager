@@ -1158,7 +1158,7 @@ new Vue({
 						this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
 
 						// Builds WP-CLI
-						wpcli = "wp plugin install " + new_response.url + " --force --format=json"
+						wpcli = "wp plugin install " + new_response.url + " --force --activate"
 
 						// Prep AJAX request
 						var data = {
