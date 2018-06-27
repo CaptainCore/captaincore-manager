@@ -3113,7 +3113,7 @@ function captaincore_install_action_callback() {
 		}
 
 		if ( is_int($post_id) ) {
-			$command = "captaincore $site --" . $arguments['value'] . '="' . $arguments['input'] . '"';
+			$command = "captaincore $value $site --" . $arguments['value'] . '="' . $arguments['input'] . '"';
 		}
 
 	}
