@@ -3094,20 +3094,28 @@ function captaincore_install_action_callback() {
 	}
 
 	if ( $cmd == 'manage' ) {
-		$command = '';
-		$sites   = array();
-		foreach ( $post_ids as $post_id ) {
-			$sites[] = get_field( 'site', $post_id );
-		}
-		foreach ( $value as $bulk_command ) {
-			$bulk_arguments = array();
-			foreach ( $arguments as $argument ) {
-				if ( $argument['command'] == $bulk_command && isset( $argument['input'] ) && $argument['input'] != '' ) {
-					$bulk_arguments[] = $argument['input'];
-					$command         .= "captaincore $bulk_command " . implode( ' ', $sites ) . ' --' . $argument['value'] . '="' . $argument['input'] . '";';
+
+		if ( is_array($post_id) ) {
+			$command = '';
+			$sites   = array();
+			foreach ( $post_ids as $post_id ) {
+				$sites[] = get_field( 'site', $post_id );
+			}
+			foreach ( $value as $bulk_command ) {
+				$bulk_arguments = array();
+				foreach ( $arguments as $argument ) {
+					if ( $argument['command'] == $bulk_command && isset( $argument['input'] ) && $argument['input'] != '' ) {
+						$bulk_arguments[] = $argument['input'];
+						$command         .= "captaincore $bulk_command " . implode( ' ', $sites ) . ' --' . $argument['value'] . '="' . $argument['input'] . '";';
+					}
 				}
 			}
 		}
+
+		if ( is_int($post_id) ) {
+			$command = "captaincore $site --" . $arguments['value'] . '="' . $arguments['input'] . '"';
+		}
+
 	}
 
 	if ( $cmd == 'quicksave_file_diff' ) {
@@ -3192,26 +3200,28 @@ function captaincore_install_action_callback() {
 			if ( ! $ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
 				exit( 'Login Failed' );
 			}
+
 			if ( $run_in_background ) {
 
 				// Generate unique $job_id for tracking
 				$job_id = round(microtime(true) * 1000);
 
-				// Tie in the site_id to prevent people from access Jobs they don't have access to.
+				// Tie in the site_id to make sure jobs are only viewed by people with access.
 				$background_id = "${post_id}_${job_id}";
 
 				// Tack on CaptaionCore global arguments for tracking purposes
 				$command = "$command --run-in-background=$background_id &";
 
-				// Executes command over SSH
-				$ssh->exec( $command );
-
-				// Returns Job ID to begin repeating AJAX checks
-				echo $job_id;
-
-			} else {
-				echo $ssh->exec( $command );
 			}
+
+			// Executes command over SSH and returns output
+			$response = $ssh->exec( $command );
+
+				// Background jobs need job_id returned in order to begin repeating AJAX checks
+			if ( $run_in_background ) { $response = $job_id; }
+
+			// Return response
+			echo $response;
 
 		} else {
 			echo 'Permission denied';

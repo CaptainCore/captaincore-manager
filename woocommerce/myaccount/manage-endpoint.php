@@ -1163,11 +1163,11 @@ new Vue({
 						// Prep AJAX request
 						var data = {
 							'action': 'captaincore_install',
-							'post_id': [ site_id ],
+							'post_id': site_id,
 							'command': "manage",
-							'value': ["ssh"],
+							'value': "ssh",
 							'background': true,
-							'arguments': [{ "name":"Commands","value":"command","command":"ssh","input": wpcli }]
+							'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 						};
 
 						// Housecleaning
