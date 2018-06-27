@@ -1166,6 +1166,7 @@ new Vue({
 							'post_id': [ site_id ],
 							'command': "manage",
 							'value': ["ssh"],
+							'background': true,
 							'arguments': [{ "name":"Commands","value":"command","command":"ssh","input": wpcli }]
 						};
 

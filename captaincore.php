@@ -2863,7 +2863,8 @@ function captaincore_install_action_callback() {
 	$date       = $_POST['date'];
 	$name       = $_POST['name'];
 	$link       = $_POST['link'];
-	$job_id			= $_POST['job_id'];
+	$background = $_POST['background'];
+	$job_id     = $_POST['job_id'];
 
 	$site             = get_field( 'site', $post_id );
 	$provider         = get_field( 'provider', $post_id );
@@ -2914,6 +2915,10 @@ function captaincore_install_action_callback() {
 			'verify_peer_name' => false,
 		),
 	);
+
+	if ($background) {
+		$run_in_background = true;
+	}
 
 	if ( $cmd == 'new' ) {
 		$command = 'captaincore site add' .
