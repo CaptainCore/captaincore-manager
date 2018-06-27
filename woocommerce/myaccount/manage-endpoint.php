@@ -14,8 +14,7 @@ if ( $role_check ) {
 
 ?>
 
-<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-<link href="https://unpkg.com/vuetify/dist/vuetify.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.0.19/vuetify.min.css" rel="stylesheet">
 <style>
 
 html {
@@ -202,12 +201,12 @@ table.table tbody td, table.table tbody th {
 }
 </style>
 <?php if ( $_SERVER['SERVER_NAME'] == 'anchor.test' ) { ?>
-<script src="https://unpkg.com/vue/dist/vue.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.16/vue.js"></script>
 <?php } else { ?>
-<script src="https://unpkg.com/vue/dist/vue.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.16/vue.min.js"></script>
 <?php } ?>
-<script src="https://unpkg.com/vuetify/dist/vuetify.js"></script>
-<script src="https://unpkg.com/vue-upload-component"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.0.19/vuetify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.9/dist/vue-upload-component.min.js"></script>
 
 <?php
 
