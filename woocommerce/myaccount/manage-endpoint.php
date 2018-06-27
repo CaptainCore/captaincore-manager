@@ -169,11 +169,14 @@ table.table tbody td, table.table tbody th {
 	height: auto;
 }
 
-.example-drag label.btn {
+.upload-drag label.btn {
   margin-bottom: 0;
   margin-right: 1rem;
 }
-.example-drag .drop-active {
+.upload-drag label.btn.btn-primary.file-uploads.file-uploads-html5.file-uploads-drop {
+    display: none;
+}
+.upload-drag .drop-active {
   top: 0;
   bottom: 0;
   right: 0;
@@ -184,7 +187,7 @@ table.table tbody td, table.table tbody th {
   text-align: center;
   background: #000;
 }
-.example-drag .drop-active h3 {
+.upload-drag .drop-active h3 {
   margin: -.5em 0 0;
   position: absolute;
   top: 50%;
@@ -305,6 +308,55 @@ selected: false },
 			  <v-progress-linear :indeterminate="true"></v-progress-linear>
 			</template>
 		</v-badge>
+		<v-dialog
+		v-model="new_plugin.show"
+		max-width="500px"
+		>
+		<v-card tile>
+			<v-toolbar card dark color="primary">
+				<v-btn icon dark @click.native="new_plugin.show = false">
+					<v-icon>close</v-icon>
+				</v-btn>
+				<v-toolbar-title>Add plugin to {{ new_plugin.site_name }}</v-toolbar-title>
+				<v-spacer></v-spacer>
+			</v-toolbar>
+			<v-card-text>
+
+		<div class="upload-drag">
+    <div class="upload">
+      <div v-if="upload.length">
+        <div v-for="(file, index) in upload" :key="file.id">
+          <span>{{file.name}}</span> -
+          <span>{{file.size | formatSize}}</span> -
+          <span v-if="file.error">{{file.error}}</span>
+          <span v-else-if="file.success">success</span>
+          <span v-else-if="file.active">active
+						<v-progress-linear v-model="file.progress"></v-progress-linear>
+					</span>
+          <span v-else></span>
+        </div>
+      </div>
+      <div v-else>
+
+          <div class="text-xs-center">
+            <h4>Drop files anywhere to upload<br/>or</h4>
+            <label for="file" class="btn btn-lg btn-primary" style="padding: 0px 8px;">Select Files</label>
+          </div>
+
+      </div>
+
+			<div v-show="$refs.upload && $refs.upload.dropActive" class="drop-active">
+    		<h3>Drop files to upload</h3>
+      </div>
+
+			<div class="upload-drag-btn">
+				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="/wp-content/plugins/captaincore/upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
+			</div>
+		</div>
+	</div>
+</v-card-text>
+</v-card>
+		</v-dialog>
 		<v-dialog
 			v-model="view_jobs"
 			fullscreen
@@ -670,53 +722,10 @@ selected: false },
 	  </v-tab-item>
 		<v-tab-item :key="3">
 			<v-card>
-				<div class="example-drag" v-if="new_plugin">
-    <div class="upload">
-      <ul v-if="upload.length">
-        <li v-for="(file, index) in upload" :key="file.id">
-          <span>{{file.name}}</span> -
-          <span>{{file.size | formatSize}}</span> -
-          <span v-if="file.error">{{file.error}}</span>
-          <span v-else-if="file.success">success</span>
-          <span v-else-if="file.active">active</span>
-          <span v-else-if="file.active">active</span>
-          <span v-else></span>
-        </li>
-      </ul>
-      <ul v-else>
-        <td colspan="7">
-          <div class="text-center p-5">
-            <h4>Drop files anywhere to upload<br/>or</h4>
-            <label for="file" class="btn btn-lg btn-primary">Select Files</label>
-          </div>
-        </td>
-      </ul>
-			<div v-show="$refs.upload && $refs.upload.dropActive" class="drop-active">
-    		<h3>Drop files to upload</h3>
-      </div>
-				<div class="example-btn">
-				<file-upload
-				 class="btn btn-primary"
-				 post-action="/upload/post"
-				 :drop="true"
-				 v-model="upload"
-				 ref="upload">
-				 <i class="fa fa-plus"></i>
-				 Drag and drop plugin zip.
-			 </file-upload>
-			 <button type="button" class="btn btn-success" v-if="!$refs.upload || !$refs.upload.active" @click.prevent="$refs.upload.active = true">
-				 <i class="fa fa-arrow-up" aria-hidden="true"></i>
-				 Start Upload
-			 </button>
-			 <button type="button" class="btn btn-danger" v-else @click.prevent="$refs.upload.active = false">
-				 <i class="fa fa-stop" aria-hidden="true"></i>
-				 Stop Upload
-			 </button>
-		 	</div>
-		</div>
-	</div>
 				<div class="text-xs-right" style="margin:2% 2% 0 0;">
-
+					<v-btn small dark color="blue darken-3" @click="addPlugin(site.id)">Add Plugin
+						<v-icon dark>add</v-icon>
+					</v-btn>
 				</div>
 					 <v-toolbar-title class="caption" style="margin:0 0 0 2%;">{{ site.plugins.length }} Plugins</v-toolbar-title>
 					 <v-data-table
@@ -878,9 +887,9 @@ selected: false },
 			</v-snackbar>
 			<v-dialog
 				fullscreen
-		transition="dialog-bottom-transition"
-		:overlay="false"
-		scrollable
+				transition="dialog-bottom-transition"
+				:overlay="false"
+				scrollable
 				v-model="dialog">
 			 <v-card tile>
 				 <v-toolbar card dark color="primary" style="margin-top: 32px">
@@ -1013,7 +1022,7 @@ new Vue({
 			],
 		},<?php } else { ?>
 		new_site: false,<?php } ?>
-		new_plugin: false,
+		new_plugin: { show: false, site_id: null},
 		upload: [],
 		view_jobs: false,
 		search: null,
@@ -1083,6 +1092,16 @@ new Vue({
 
 	},
 	filters: {
+		formatSize: function (fileSizeInBytes) {
+    var i = -1;
+    var byteUnits = [' kB', ' MB', ' GB', ' TB', 'PB', 'EB', 'ZB', 'YB'];
+    do {
+        fileSizeInBytes = fileSizeInBytes / 1024;
+        i++;
+    } while (fileSizeInBytes > 1024);
+
+    return Math.max(fileSizeInBytes, 0.1).toFixed(1) + byteUnits[i];
+		},
 		pretty_timestamp: function (date) {
 			// takes in '2018-06-18-194447' and converts to '2018-06-18 19:44:47' then returns "Monday, Jun 18, 2018, 7:44 PM"
 			date = date.substring(0,10) + " " + date.substring(11,13) + ":" + date.substring(13,15) + ":" + date.substring(15,17);
@@ -1118,6 +1137,65 @@ new Vue({
 		}
 	},
 	methods: {
+		inputFile (newFile, oldFile) {
+
+			if (newFile && oldFile) {
+			// Uploaded successfully
+        if (newFile.success && !oldFile.success) {
+					new_response = JSON.parse( newFile.response );
+					if (  new_response.response == "Success" && new_response.url ) {
+
+						this.new_plugin.show = false;
+						this.upload = [];
+
+						// run wp cli with new plugin url and site
+						site_id = this.new_plugin.site_id;
+						site_name = this.new_plugin.site_name;
+
+						// Adds new job
+						job_id = Math.round((new Date()).getTime());
+						description = "Installing plugin '" + newFile.name + "' to " + site_name;
+						this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
+						// Builds WP-CLI
+						wpcli = "wp plugin install " + new_response.url + " --force --format=json"
+
+						// Prep AJAX request
+						var data = {
+							'action': 'captaincore_install',
+							'post_id': [ site_id ],
+							'command': "manage",
+							'value': ["ssh"],
+							'arguments': [{ "name":"Commands","value":"command","command":"ssh","input": wpcli }]
+						};
+
+						// Housecleaning
+						this.new_plugin.site_id = null;
+						this.new_plugin.site_name = null;
+
+						self = this;
+
+						jQuery.post(ajaxurl, data, function(response) {
+
+							console.log( response );
+
+							self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+
+						});
+
+					}
+
+        }
+
+			}
+
+      // Automatically activate upload
+      if (Boolean(newFile) !== Boolean(oldFile) || oldFile.error !== newFile.error) {
+        if (!this.$refs.upload.active) {
+          this.$refs.upload.active = true;
+        }
+      }
+    },
 		new_site_preload_staging() {
 
 			// Copy production address to staging field
@@ -1296,6 +1374,11 @@ new Vue({
 				});
 			});
 			this.select_bulk_action_arguments = arguments;
+		},
+		addPlugin ( site_id ){
+			this.new_plugin.show = true;
+			this.new_plugin.site_id = site_id;
+			this.new_plugin.site_name = this.sites.filter(site => site.id == site_id)[0].name;
 		},
 		activateTheme (theme_name, site_id) {
 
