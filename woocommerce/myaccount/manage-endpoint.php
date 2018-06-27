@@ -255,7 +255,6 @@ foreach ( $websites as $website ) {
 	$views = get_field('views', $website->ID);
 	$production_address = get_field('address', $website->ID);
 	$staging_address = get_field('address_staging', $website->ID);
-	if ( $plugins && $themes ) {
 	?>
 { id: <?php echo $website->ID; ?>,
 name: "<?php echo get_the_title( $website->ID ); ?>",
@@ -263,10 +262,10 @@ name: "<?php echo get_the_title( $website->ID ); ?>",
 ?>customer: [{ customer_id: "<?php echo $customer[0]; ?>", name: "<?php echo get_the_title( $customer[0] ); ?>"}],<?php } ?>
 <?php if ($shared_with) {
 ?>shared_with: [<?php foreach ($shared_with as $customer_id) { ?>{ customer_id: "<?php echo $customer_id; ?>", name: "<?php echo get_the_title( $customer_id ); ?>"},<?php } ?>],<?php } ?>
-<?php if ( $plugins ) {
-?>plugins: <?php echo $plugins; ?>,<?php } ?>
-<?php if ( $themes ) {
-?>themes: <?php echo $themes; ?>,<?php } ?>
+<?php if ( $plugins && $plugins != "" ) {
+?>plugins: <?php echo $plugins; ?>,<?php } else { ?>plugins: [],<?php } ?>
+<?php if ( $themes && $themes != "" ) {
+?>themes: <?php echo $themes; ?>,<?php } else { ?>themes: [],<?php } ?>
 core: "<?php echo get_field( 'core', $website->ID ); ?>",
 keys: [
 	{ key_id: 1, "link":"http://<?php echo get_the_title( $website->ID ); ?>","environment": "Production", "address": "<?php the_field('address', $website->ID); ?>","username":"<?php the_field('username', $website->ID); ?>","password":"<?php the_field('password', $website->ID); ?>","protocol":"<?php the_field('protocol', $website->ID); ?>","port":"<?php the_field('port', $website->ID); ?>",<?php if ( strpos($production_address, ".kinsta.com") ) { ?>"ssh":"ssh <?php the_field('username', $website->ID); ?>@<?php echo $production_address; ?> -p <?php the_field('port', $website->ID); ?>",<?php } if ( strpos($production_address, ".kinsta.com") and get_field('database_username', $website->ID) ) { ?>"database": "https://mysqleditor-<?php the_field('database_username', $website->ID); ?>.kinsta.com","database_username": "<?php the_field('database_username', $website->ID); ?>","database_password": "<?php the_field('database_password', $website->ID); ?>",<?php } ?>},
@@ -292,7 +291,6 @@ filtered: true,
 selected: false },
 <?php
 	$count++;
-	}
 }
 ?>
 ];
