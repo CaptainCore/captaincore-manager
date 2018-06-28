@@ -394,7 +394,6 @@ selected: false },
         </v-card>
       </v-dialog>
 
-
 			<v-dialog
 				v-model="add_site"
 				fullscreen
@@ -1185,16 +1184,16 @@ new Vue({
 		 json_array = response.split('\n');
 		 last_item = json_array.length - 1;
 
-		 if ( tryParseJSON(json_array[1]) ) {
+		 if ( tryParseJSON(json_array[last_item]) ) {
 
-			 if ( JSON.parse(json_array[1]).response == "Command finished" ) {
+			 if ( JSON.parse(json_array[last_item]).response == "Command finished" ) {
 
 					 // Opens site
-					 console.log(response);
+					 console.log(json_array[0]);
 					 job.status = "done";
 
 			 } else {
-				 console.log(response);
+				 console.log("Retrying");
 			 }
 
 		 } else {
