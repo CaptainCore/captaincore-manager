@@ -1188,7 +1188,7 @@ new Vue({
 			 if ( JSON.parse(json_array[2]).response == "Command finished" ) {
 
 					 // Opens site
-					 console.log(json_array[0]);
+					 window.open(json_array[0]);
 					 job.status = "done";
 
 			 } else {
