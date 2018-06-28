@@ -777,7 +777,7 @@ selected: false },
 								<td>{{ props.item.display_name }}</td>
 								<td>{{ props.item.user_email }}</td>
 								<td>{{ props.item.roles }}</td>
-								<td><v-btn small round>Login as</v-btn></td>
+								<td><v-btn small round @click="loginSite(site.id, props.item.user_login)">Login as</v-btn></td>
 					    </template>
 					  </v-data-table>
 					</div>
@@ -1134,6 +1134,79 @@ new Vue({
 		}
 	},
 	methods: {
+		loginSite(site_id, username) {
+
+			site = this.sites.filter(site => site.id == site_id)[0];
+
+			// Adds new job
+			job_id = Math.round((new Date()).getTime());
+			description = "Login as '" + username + "' to " + site.name;
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
+			// Prep AJAX request
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': site_id,
+				'command': "login",
+				'value': username,
+				'background': true
+			};
+
+			self = this;
+
+			jQuery.post(ajaxurl, data, function(response) {
+
+				// Updates job id with reponsed background job id
+				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
+
+				// Check if completed in 2 seconds
+				setTimeout(function(){
+					self.loginSitesRetry(site_id, response);
+				}, 2000);
+
+			});
+
+		},
+		loginSitesRetry( site_id, job_id ) {
+
+		site = this.sites.filter(site => site.id == site_id)[0];
+		job = this.jobs.filter(job => job.job_id == job_id)[0];
+		self = this;
+
+		var data = {
+			'action': 'captaincore_install',
+			'post_id': site_id,
+			'command': "job-fetch",
+			'job_id': job_id
+		};
+
+		jQuery.post(ajaxurl, data, function(response) {
+
+		 json_array = response.split('\n');
+		 last_item = json_array.length - 1;
+
+		 if ( tryParseJSON(json_array[1]) ) {
+
+			 if ( JSON.parse(json_array[1]).response == "Command finished" ) {
+
+					 // Opens site
+					 console.log(response);
+					 job.status = "done";
+
+			 } else {
+				 console.log(response);
+			 }
+
+		 } else {
+			 // Check if completed in 5 seconds
+			 setTimeout(function() {
+				 self.loginSitesRetry(site_id, job_id);
+			 }, 5000);
+		 }
+
+		});
+		},
+
 		inputFile (newFile, oldFile) {
 
 			if (newFile && oldFile) {

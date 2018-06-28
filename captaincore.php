@@ -2992,6 +2992,17 @@ function captaincore_install_action_callback() {
 			$command = CAPTAINCORE_DEBUG_MOCK_USERS;
 		}
 	}
+	if ( $cmd == 'login' ) {
+		$command = "captaincore login $site $value";
+
+		$run_in_background = true;
+
+		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+			// return mock data
+			$command = CAPTAINCORE_DEBUG_MOCK_LOGIN;
+		}
+
+	}
 	if ( $cmd == 'job-fetch' ) {
 		$command = "captaincore job-fetch ${post_id}_${job_id}";
 
