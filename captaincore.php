@@ -3188,55 +3188,49 @@ function captaincore_install_action_callback() {
 		$post_id    = $website_id[0];
 	}
 
-	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+	// Checks permissions
+	if ( captaincore_verify_permissions( $post_id ) ) {
 
-		if ( captaincore_verify_permissions( $post_id ) ) {
+		// Runs command on remote on production
+		require_once ABSPATH . '/vendor/autoload.php';
 
-			echo $command; // Outputs command on development
+		$ssh = new \phpseclib\Net\SSH2( CAPTAINCORE_CLI_ADDRESS, CAPTAINCORE_CLI_PORT );
 
-		} else {
-
-			echo 'Permission denied';
+		if ( ! $ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
+			exit( 'Login Failed' );
 		}
-	} else {
 
-		// Checks permissions
-		if ( captaincore_verify_permissions( $post_id ) ) {
+		if ( $run_in_background ) {
 
-			// Runs command on remote on production
-			require_once ABSPATH . '/vendor/autoload.php';
+			// Generate unique $job_id for tracking
+			$job_id = round(microtime(true) * 1000);
 
-			$ssh = new \phpseclib\Net\SSH2( CAPTAINCORE_CLI_ADDRESS, CAPTAINCORE_CLI_PORT );
+			// Tie in the site_id to make sure jobs are only viewed by people with access.
+			$background_id = "${post_id}_${job_id}";
 
-			if ( ! $ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
-				exit( 'Login Failed' );
-			}
+			// Tack on CaptaionCore global arguments for tracking purposes
+			$command = "$command --run-in-background=$background_id &";
 
-			if ( $run_in_background ) {
+		}
 
-				// Generate unique $job_id for tracking
-				$job_id = round(microtime(true) * 1000);
-
-				// Tie in the site_id to make sure jobs are only viewed by people with access.
-				$background_id = "${post_id}_${job_id}";
-
-				// Tack on CaptaionCore global arguments for tracking purposes
-				$command = "$command --run-in-background=$background_id &";
-
-			}
-
-			// Executes command over SSH and returns output
+		// Returns command if debug enabled otherwise executes command over SSH and returns output
+		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+			$response = $command;
+		} else {
 			$response = $ssh->exec( $command );
 
-				// Background jobs need job_id returned in order to begin repeating AJAX checks
-			if ( $run_in_background ) { $response = $job_id; }
+			// Background jobs need job_id returned in order to begin repeating AJAX checks
+			if ( $run_in_background ) {
+				$response = $job_id;
+			}
 
-			// Return response
-			echo $response;
-
-		} else {
-			echo 'Permission denied';
 		}
+
+		// Return response
+		echo $response;
+
+	} else {
+		echo 'Permission denied';
 	}
 
 	wp_die(); // this is required to terminate immediately and return a proper response
