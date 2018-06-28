@@ -1182,13 +1182,10 @@ new Vue({
 		jQuery.post(ajaxurl, data, function(response) {
 
 		 json_array = response.split('\n');
-		 last_item = json_array.length - 1;
 
-		 console.log(last_item);
+		 if ( tryParseJSON(json_array[2]) ) {
 
-		 if ( tryParseJSON(json_array[last_item]) ) {
-
-			 if ( JSON.parse(json_array[last_item]).response == "Command finished" ) {
+			 if ( JSON.parse(json_array[2]).response == "Command finished" ) {
 
 					 // Opens site
 					 console.log(json_array[0]);
