@@ -280,13 +280,6 @@ loading_plugins: false,
 pagination: {
 	sortBy: 'roles'
 },
-<?php
-if ( $count <= 49 ) {
-?>
-visible: true,
-<?php } else { ?>
-visible: false,
-<?php } ?>
 filtered: true,
 selected: false },
 <?php
@@ -470,7 +463,7 @@ selected: false },
 	          v-model="items_per_page"
 	          label=""
 						dense
-						@change="paginationUpdate( page )"
+						@change="page = 1"
 						style="display:inline-table;width:100px;"
 						width="80"
 	        ></v-select>
@@ -611,7 +604,7 @@ selected: false },
 				<v-container>
 				<v-layout justify-center>
 				<div class="text-xs-center">
-					<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" :length="Math.ceil(filteredSites / items_per_page)" v-model="page" @input="paginationUpdate( page )" :total-visible="7" color="blue darken-3"></v-pagination>
+					<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" :length="Math.ceil(filteredSites / items_per_page)" v-model="page" :total-visible="7" color="blue darken-3"></v-pagination>
 				</div>
 				</v-layout>
 				</v-container>
@@ -621,7 +614,7 @@ selected: false },
 				<v-icon dark>add</v-icon>
 			</v-btn>
 			</div>
-		  <v-layout row wrap v-for="site in sites" :key="site.id" v-show="site.visible">
+		  <v-layout row wrap v-for="site in paginatedSites" :key="site.id">
 				<v-flex xs1 v-if="advanced_filter == true">
 					<v-switch v-model="site.selected" @change="site_selected = null"></v-switch>
 				</v-flex>
@@ -867,7 +860,7 @@ selected: false },
 				<v-container>
 				<v-layout justify-center>
 				<div class="text-xs-center">
-					<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" :length="Math.ceil(filteredSites / items_per_page)" v-model="page" @input="paginationUpdate( page )" :total-visible="7" color="blue darken-3"></v-pagination>
+					<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" :length="Math.ceil(filteredSites / items_per_page)" v-model="page" :total-visible="7" color="blue darken-3"></v-pagination>
 				</div>
 				</v-layout>
 				</v-container>
@@ -1106,6 +1099,11 @@ new Vue({
 		}
 	},
 	computed: {
+		paginatedSites() {
+			const start = this.page * this.items_per_page - this.items_per_page;
+			const end = start + this.items_per_page;
+			return this.sites.filter( site => site.filtered ).slice(start, end);
+		},
 		runningJobs() {
 			return this.jobs.filter(job => job.status != 'done').length;;
 		},
@@ -1120,7 +1118,7 @@ new Vue({
 			return total;
 		},
 		visibleSites() {
-			return this.sites.filter(site => site.visible).length;
+			return this.paginatedSites.length;
 		},
 		selectedSites() {
 			return this.sites.filter(site => site.selected).length;
@@ -1416,7 +1414,6 @@ new Vue({
 			}
 		},
 		paginationUpdate( page ) {
-
 			// Updates pagination with first 50 of sites visible
 			this.page = page;
 			count = 0;
@@ -1611,7 +1608,7 @@ new Vue({
 			}
 			if (this.site_selected == "visible") {
 				this.sites.forEach(site => site.selected = false );
-				this.sites.filter(site => site.visible ).forEach(site => site.selected = true );
+				this.paginatedSites.forEach(site => site.selected = true );
 			}
 			if (this.site_selected == "none") {
 				this.sites.forEach(site => site.selected = false );
@@ -1864,7 +1861,7 @@ new Vue({
 
 			}
 
-			this.paginationUpdate( 1 );
+			this.page = 1;
 
 		}
 	}
