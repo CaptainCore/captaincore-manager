@@ -551,7 +551,7 @@ selected: false },
 			</v-flex>
 			<v-flex xs2>
 			</v-flex>
-				<v-flex xs5>
+			<v-flex xs5>
 				<v-select
 				v-model="applied_site_filter_status"
 				v-for="filter in site_filter_status"
@@ -578,15 +578,15 @@ selected: false },
 				<template slot="item" slot-scope="data">
 					 <strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span>
 				</template>
-			 </v-select>
-	   </v-flex>
+				</v-select>
+			</v-flex>
 			</v-layout>
 			</v-container>
 			<v-container
 		fluid
 		style="min-height: 0;"
 		grid-list-lg
-	  >
+		>
 			<v-layout row v-if="advanced_filter == true">
 			<v-flex xs12 sm9 text-xs-right>
 			<v-select
@@ -625,10 +625,10 @@ selected: false },
 				<v-flex xs1 v-if="advanced_filter == true">
 					<v-switch v-model="site.selected" @change="site_selected = null"></v-switch>
 				</v-flex>
-			<v-flex v-bind:class="{ xs11: advanced_filter }">
-				<v-card class="site">
+				<v-flex v-bind:class="{ xs11: advanced_filter }">
+					<v-card class="site">
 						<v-expansion-panel>
-						<v-expansion-panel-content lazy v-for="(item,i) in 1" :key="i">
+						<v-expansion-panel-content lazy>
 							<div slot="header"><strong>{{ site.name }}</strong> <span class="text-xs-right">{{ site.plugins.length }} Plugins {{ site.themes.length }} Themes - WordPress {{ site.core }}</span></div>
 							<v-tabs color="blue darken-3" dark>
 								<v-tab :key="1" ripple>
@@ -649,73 +649,73 @@ selected: false },
 								<v-tab :key="6" ripple>
 									Sharing <v-icon>fas fa-user-lock</v-icon>
 								</v-tab>
-		<v-tab-item :key="1">
-			<v-card v-for="key in site.keys" class="bordered">
-					<div style="position: absolute;
-    top: -20px;
-    left: 20px;"><v-btn
-						depressed
-						disabled
-						right
-						style="background-color: rgb(229, 229, 229)!important; color: #000 !important; left: -11px; top: 0px; height: 24px;"
-								>{{ key.environment }} Environment</v-btn></div>
-					<v-container fluid>
-					<div><h3 class="headline mb-0" style="margin-top:10px;"><a :href="key.link" target="_blank">{{ key.link }}</a></h3></div>
-					<div row>
+								<v-tab-item :key="1">
+									<v-card v-for="key in site.keys" class="bordered">
+										<div style="position: absolute; top: -20px; left: 20px;">
+										<v-btn
+											depressed
+											disabled
+											right
+											style="background-color: rgb(229, 229, 229)!important; color: #000 !important; left: -11px; top: 0px; height: 24px;"
+										>{{ key.environment }} Environment</v-btn></div>
+										<v-container fluid>
+										<div><h3 class="headline mb-0" style="margin-top:10px;"><a :href="key.link" target="_blank">{{ key.link }}</a></h3></div>
+										<div row>
 
-						<div><span class="caption">Address</span> {{ key.address }}</div>
-	 					<div><span class="caption">Username</span> {{ key.username }}</div>
-	 					<div><span class="caption">Password</span> <div class="pass-mask">##########</div><div class="pass-reveal">{{ key.password }}</div></div>
-	 					<div><span class="caption">Protocol</span> {{ key.protocol }}</div>
-	 					<div><span class="caption">Port</span> {{ key.port }}</div>
+											<div><span class="caption">Address</span> {{ key.address }}</div>
+											<div><span class="caption">Username</span> {{ key.username }}</div>
+											<div><span class="caption">Password</span> <div class="pass-mask">##########</div><div class="pass-reveal">{{ key.password }}</div></div>
+											<div><span class="caption">Protocol</span> {{ key.protocol }}</div>
+											<div><span class="caption">Port</span> {{ key.port }}</div>
 
-					 <div v-if="key.database && key.ssh">
-						 <div v-if="key.database">
-						 <hr />
-						 <div><span class="caption">Database</span> <a :href="key.database" target="_blank">{{ key.database }}</a></div>
-						 <div><span class="caption">Database Username</span> {{ key.database_username }}</a></div>
-						 <div><span class="caption">Database Password</span> {{ key.database_password }}</a></div>
-						 </div>
-						 <hr />
-						 <div v-if="key.ssh">{{ key.ssh }}</div>
-					 </div>
-				 </div>
-			 </v-container>
-		 </v-card>
-		</v-tab-item>
-		<v-tab-item :key="2">
-			<v-card>
-				<v-toolbar-title class="caption" style="margin:2% 0 0 2%;">{{ site.themes.length }} Themes</v-toolbar-title>
-					<v-data-table
-						:headers="headers"
-						:items="site.themes"
-						class="elevation-1"
-						style="margin: 0 2% 2% 2%;"
-						:loading="site.loading_themes"
-						hide-actions
-					>
-						 <template slot="items" slot-scope="props">
-							 <td>{{ props.item.title }}</td>
-							 <td>{{ props.item.name }}</td>
-							 <td>{{ props.item.version }}</td>
-							 <td>
-								 <div v-if="props.item.status === 'inactive' || props.item.status === 'parent' || props.item.status === 'child'">
-									<v-switch left :label="props.item.status" v-model="props.item.status" false-value="inactive" true-value="active" @change="activateTheme(props.item.name, site.id)"></v-switch>
- 								</div>
- 								<div v-else>
- 									{{ props.item.status }}
- 								</div>
-							 </td>
-							 <td class="text-xs-center px-0">
-								 <v-btn icon class="mx-0" @click="deleteTheme(props.item.name, site.id)">
-									 <v-icon small color="pink">delete</v-icon>
-								 </v-btn>
-							 </td>
-						 </template>
-					 </v-data-table>
-					 <p></p>
-				</v-card>
-	  </v-tab-item>
+										 <div v-if="key.database && key.ssh">
+											 <div v-if="key.database">
+											 <hr />
+											 <div><span class="caption">Database</span> <a :href="key.database" target="_blank">{{ key.database }}</a></div>
+											 <div><span class="caption">Database Username</span> {{ key.database_username }}</a></div>
+											 <div><span class="caption">Database Password</span> {{ key.database_password }}</a></div>
+											 </div>
+											 <hr />
+											 <div v-if="key.ssh">{{ key.ssh }}</div>
+										 </div>
+
+									 </div>
+								 </v-container>
+							 </v-card>
+							</v-tab-item>
+							<v-tab-item :key="2">
+								<v-card>
+									<v-toolbar-title class="caption" style="margin:2% 0 0 2%;">{{ site.themes.length }} Themes</v-toolbar-title>
+										<v-data-table
+											:headers="headers"
+											:items="site.themes"
+											class="elevation-1"
+											style="margin: 0 2% 2% 2%;"
+											:loading="site.loading_themes"
+											hide-actions
+										>
+									 <template slot="items" slot-scope="props">
+										 <td>{{ props.item.title }}</td>
+										 <td>{{ props.item.name }}</td>
+										 <td>{{ props.item.version }}</td>
+										 <td>
+											 <div v-if="props.item.status === 'inactive' || props.item.status === 'parent' || props.item.status === 'child'">
+												<v-switch left :label="props.item.status" v-model="props.item.status" false-value="inactive" true-value="active" @change="activateTheme(props.item.name, site.id)"></v-switch>
+			 								</div>
+			 								<div v-else>
+			 									{{ props.item.status }}
+			 								</div>
+										 </td>
+										 <td class="text-xs-center px-0">
+											 <v-btn icon class="mx-0" @click="deleteTheme(props.item.name, site.id)">
+												 <v-icon small color="pink">delete</v-icon>
+											 </v-btn>
+										 </td>
+									 </template>
+								 </v-data-table>
+								 <p></p>
+							</v-card>
+						</v-tab-item>
 		<v-tab-item :key="3">
 			<v-card>
 				<div class="text-xs-right" style="margin:2% 2% 0 0;">
@@ -1422,11 +1422,11 @@ new Vue({
 			count = 0;
 			count_begin = page * this.items_per_page - this.items_per_page;
 			count_end = page * this.items_per_page;
-			this.sites.forEach(function(site) {
-				if ( site.filtered == true ) {
+			this.sites.forEach( site => {
+				if ( site.filtered ) {
 					count++;
 				}
-				if ( site.filtered == true && count > count_begin && count <= count_end ) {
+				if ( site.filtered && count > count_begin && count <= count_end ) {
 					site.visible = true;
 				} else {
 					site.visible = false;
