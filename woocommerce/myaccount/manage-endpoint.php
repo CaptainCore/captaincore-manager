@@ -483,10 +483,7 @@ selected: false },
 				<v-card-title v-if="advanced_filter == true" class="alignright caption" style="float:right;padding: 16px 0px;">Advanced Filter</v-card-title>
 			</v-flex>
 			</v-layout>
-			</v-container>
-			<template>
-			<v-container fluid v-if="advanced_filter == true">
-			<v-layout row>
+			<v-layout row v-if="advanced_filter == true">
 	   <v-flex xs12>
 		 <v-select
 			:items="site_filters"
@@ -518,7 +515,7 @@ selected: false },
 				 </v-select>
 			</v-flex>
 		</v-layout>
-		<v-layout row>
+		<v-layout row v-if="advanced_filter == true">
 			<v-flex xs5>
 				 <v-select
 				 v-model="applied_site_filter_version"
@@ -580,12 +577,6 @@ selected: false },
 				</v-select>
 			</v-flex>
 			</v-layout>
-			</v-container>
-			<v-container
-		fluid
-		style="min-height: 0;"
-		grid-list-lg
-		>
 			<v-layout row v-if="advanced_filter == true">
 			<v-flex xs12 sm9 text-xs-right>
 			<v-select
@@ -606,23 +597,21 @@ selected: false },
 				light
 				@input="filterSites"
 				></v-text-field>
-			<template>
-				<v-container>
-				<v-layout justify-center>
+
+			<v-layout justify-center>
 				<div class="text-xs-center">
 					<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" :length="Math.ceil(filteredSites / items_per_page)" v-model="page" :total-visible="7" color="blue darken-3"></v-pagination>
 				</div>
-				</v-layout>
-				</v-container>
-			</template>
+			</v-layout>
+
 			<div class="text-xs-right" v-if="typeof new_site == 'object'">
 			<v-btn small dark color="blue darken-3" @click="add_site = true">Add Site
 				<v-icon dark>add</v-icon>
 			</v-btn>
 			</div>
-		  <v-layout row wrap v-for="site in paginatedSites" :key="site.id">
+		  <v-layout row wrap v-for="site in paginatedSites" :key="site.id" style="padding: 0px;margin:20px 0px;">
 				<v-flex xs1 v-if="advanced_filter == true">
-					<v-switch v-model="site.selected" @change="site_selected = null"></v-switch>
+					<v-switch v-model="site.selected" @change="site_selected = null" style="margin-top: 10px;margin-bottom: 0px;height: 30px;"></v-switch>
 				</v-flex>
 				<v-flex v-bind:class="{ xs11: advanced_filter }">
 					<v-card class="site">
