@@ -251,8 +251,8 @@ var sites = [
 <?php
 $count = 0;
 foreach ( $websites as $website ) {
-	$plugins = get_field( 'plugins', $website->ID );
-	$themes = get_field( 'themes', $website->ID );
+	$plugins = trim( get_field( 'plugins', $website->ID ) );
+	$themes = trim( get_field( 'themes', $website->ID ) );
 	$users = get_field( 'users', $website->ID );
 	$customer = get_field( 'customer', $website->ID );
 	$shared_with = get_field( 'partner', $website->ID );
