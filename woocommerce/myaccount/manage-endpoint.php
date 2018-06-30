@@ -14,37 +14,42 @@ if ( $role_check ) {
 
 ?>
 
-<link href="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.0.19/vuetify.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.1.0/vuetify.min.css" rel="stylesheet">
 <style>
 
 html {
 	font-size: 62.5%;
 }
 
-.application .site .theme--dark.icon, .site .theme--dark .icon {
+.application .site .theme--dark.icon, .site .theme--dark .v-icon {
 	font-size: 1em;
 	padding-left: 0.3em;
 }
 
-.dialog__content__active {
+.v-dialog__content--active {
 	z-index: 999999 !important;
 }
 
-.expansion-panel__body .card.bordered {
+.v-card hr {
+	margin: 4px 0;
+	background-color: #eaeaea;
+}
+
+.v-expansion-panel__body .v-card.bordered {
 	margin: 2em;
 	padding: 0px;
 	box-shadow: 0 2px 1px -1px rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 1px 3px 0 rgba(0,0,0,.12);
 }
-.expansion-panel__body .card.bordered .pass-mask {
+.v-expansion-panel__body .v-card.bordered .pass-mask {
 	display: inline-block;
 }
-.expansion-panel__body .card.bordered .pass-reveal {
+.v-expansion-panel__body .v-card.bordered .pass-reveal {
 	display: none;
 }
-.expansion-panel__body .card.bordered:hover .pass-mask {
+.v-expansion-panel__body .v-card.bordered:hover .pass-mask {
 	display: none;
 }
-.expansion-panel__body .card.bordered:hover .pass-reveal {
+.v-expansion-panel__body .v-card.bordered:hover .pass-reveal {
 	display: inline-block;
 }
 
@@ -58,12 +63,12 @@ html {
   box-shadow: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
 }
 
-.application .theme--light.input-group input, .application .theme--light.input-group textarea, .theme--light .input-group input, .theme--light .input-group textarea {
+.v-select.v-text-field input, .v-input input, .v-text-field input {
 	background: none;
 	border: none;
 }
 
-.content-area ul.pagination {
+.content-area ul.v-pagination {
 	display: inline-flex;
 	margin: 0px;
 }
@@ -72,7 +77,7 @@ html {
 	width: auto;
 }
 
-a.tabs__item:hover {
+a.v-tabs__item:hover {
 	color:inherit;
 }
 
@@ -132,7 +137,7 @@ button {
 button.btn--icon {
 	padding:0px;
 }
-.application .theme--dark.btn, .theme--dark .btn {
+.application .theme--dark.v-btn, .theme--dark .v-btn {
 	color: #fff !important;
 }
 span.text-xs-right {
@@ -152,11 +157,11 @@ table.table .input-group.input-group--selection-controls.switch .input-group--se
 	margin:0px;
 }
 
-.application .theme--light.pagination__item--active, body .theme--light button.pagination__item--active {
+.application .theme--light.v-pagination__item--active, .theme--light button.v-pagination__item--active {
 	color: #fff !important;
 }
 
-body button.pagination__item:hover {
+body button.v-pagination__item:hover {
     box-shadow: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
 	}
 
@@ -205,7 +210,7 @@ table.table tbody td, table.table tbody th {
 <?php } else { ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.16/vue.min.js"></script>
 <?php } ?>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.0.19/vuetify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.1.0/vuetify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.9/dist/vue-upload-component.js"></script>
 
 <?php
@@ -277,6 +282,7 @@ users: <?php echo $users; ?>,<?php } else { ?>users: [],<?php } ?>
 update_logs: [],
 loading_themes: false,
 loading_plugins: false,
+tabs: 0,
 pagination: {
 	sortBy: 'roles'
 },
@@ -623,7 +629,7 @@ selected: false },
 						<v-expansion-panel>
 						<v-expansion-panel-content lazy>
 							<div slot="header"><strong>{{ site.name }}</strong> <span class="text-xs-right">{{ site.plugins.length }} Plugins {{ site.themes.length }} Themes - WordPress {{ site.core }}</span></div>
-							<v-tabs color="blue darken-3" dark>
+							<v-tabs v-model="site.tabs" color="blue darken-3" dark>
 								<v-tab :key="1" ripple>
 									Keys <v-icon>fas fa-key</v-icon>
 								</v-tab>
