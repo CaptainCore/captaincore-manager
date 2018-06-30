@@ -32,6 +32,24 @@ body nav {
 	}
 }
 
+.toggle_woocommerce_my_account {
+	position: absolute;
+}
+.toggle_woocommerce_my_account a {
+	font-size: 14px;
+	position: relative;
+	left: -25px;
+	top: 5px;
+}
+
+.toggle_woocommerce_my_account.open span.close a {
+	display:none;
+}
+
+.toggle_woocommerce_my_account.close span.open a {
+	display:none;
+}
+
 .btn, .btn-large, .btn-small, .btn-flat {
 	text-transform: none;
 }
@@ -149,10 +167,10 @@ input:not([type]), input[type=text]:not(.browser-default), input[type=password]:
 
 body.woocommerce-account .woocommerce-MyAccount-content {
   float: right;
-  width: 78%;
+  width: 80%;
 }
 
-body.woocommerce-account nav.woocommerce-MyAccount-navigation {
+body.woocommerce-account .woocommerce-MyAccount-navigation {
   float: left;
   width: 17%;
   min-width: 127px;
@@ -160,15 +178,13 @@ body.woocommerce-account nav.woocommerce-MyAccount-navigation {
 	height: auto;
 }
 
-@media (max-width: 800px) {
-  .woocommerce-account .woocommerce-MyAccount-content {
-    float: right;
-    width: 100%;
-  }
-  .woocommerce-account .woocommerce-MyAccount-navigation {
-    float: left;
-    width: 100%;
-  }
+@media (max-width: 890px) {
+
+	body.woocommerce-account .woocommerce-MyAccount-content, body.woocommerce-account .woocommerce-MyAccount-navigation {
+		float: none;
+		width: 100%;
+	}
+
 }
 
 .woocommerce-account .woocommerce-MyAccount-navigation li {
@@ -475,7 +491,7 @@ div.website .actions a {
 
 .content-area .woocommerce-MyAccount-navigation ul {
   margin: 0 0 40px;
-  padding-bottom: 0;
+	padding: 0px;
   text-align: center;
 }
 

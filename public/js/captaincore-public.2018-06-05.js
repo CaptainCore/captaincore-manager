@@ -1,5 +1,21 @@
 jQuery(document).ready(function() {
 
+	jQuery('.toggle_woocommerce_my_account a').click(function(e) {
+		e.preventDefault();
+		toggle = jQuery(this).parent().parent();
+		if ( toggle.hasClass("open") ) {
+			jQuery(toggle).removeClass("open");
+			jQuery(toggle).addClass("close");
+			jQuery('.woocommerce-account nav.woocommerce-MyAccount-navigation').css("display", "none");
+			jQuery('body.woocommerce-account .woocommerce-MyAccount-content').css("width", "100%");
+		} else {
+			jQuery(toggle).removeClass("close");
+			jQuery(toggle).addClass("open");
+			jQuery('.woocommerce-account nav.woocommerce-MyAccount-navigation').css("display", "block");
+			jQuery('body.woocommerce-account .woocommerce-MyAccount-content').css("width", "80%");
+		}
+	});
+
   jQuery('ul.changelog li .changelog-item').click(function() {
 
     if (jQuery(this).children('.content').hasClass("show")) {

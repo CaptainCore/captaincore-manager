@@ -1873,6 +1873,11 @@ new Vue({
 	}
 });
 
+
+jQuery( document ).ready(function() {
+	jQuery('.toggle_woocommerce_my_account a:visible').click();
+});
+
 </script>
 
 <?php endif; ?>
