@@ -53,7 +53,7 @@ html {
 	display: inline-block;
 }
 
-.static.badge {
+.static.v-badge {
 	position: fixed;
   top: 23%;
   right: 0px;
