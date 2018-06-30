@@ -1436,11 +1436,6 @@ new Vue({
 			});
 			this.select_bulk_action_arguments = arguments;
 		},
-		addPlugin ( site_id ){
-			this.new_plugin.show = true;
-			this.new_plugin.site_id = site_id;
-			this.new_plugin.site_name = this.sites.filter(site => site.id == site_id)[0].name;
-		},
 		activateTheme (theme_name, site_id) {
 
 			site = this.sites.filter(site => site.id == site_id)[0];
@@ -1504,6 +1499,11 @@ new Vue({
 					self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
 				});
 			}
+		},
+		addPlugin ( site_id ){
+			this.new_plugin.show = true;
+			this.new_plugin.site_id = site_id;
+			this.new_plugin.site_name = this.sites.filter(site => site.id == site_id)[0].name;
 		},
 		togglePlugin (plugin_name, plugin_status, site_id) {
 
