@@ -764,7 +764,12 @@ selected: false },
 								<td>{{ props.item.display_name }}</td>
 								<td>{{ props.item.user_email }}</td>
 								<td>{{ props.item.roles }}</td>
-								<td><v-btn small round @click="loginSite(site.id, props.item.user_login)">Login as</v-btn></td>
+								<td>
+									<v-btn small round @click="loginSite(site.id, props.item.user_login)">Login as</v-btn>
+									<v-btn icon class="mx-0" @click="deleteUser(props.item.user_login, site.id)">
+										<v-icon small color="pink">delete</v-icon>
+									</v-btn>
+								</td>
 					    </template>
 					  </v-data-table>
 					</div>
@@ -1569,6 +1574,38 @@ new Vue({
 					updated_plugins = self.sites.filter(site => site.id == site_id)[0].plugins.filter(plugin => plugin.name != plugin_name);
 					self.sites.filter(site => site.id == site_id)[0].plugins = updated_plugins;
 					self.sites.filter(site => site.id == site_id)[0].loading_plugins = false;
+					self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+				});
+			}
+		},
+		deleteUser (username, site_id) {
+			should_delete = confirm("Are you sure you want to delete user " + username + "?");
+			if (should_delete) {
+
+				// Enable loading progress
+				this.sites.filter(site => site.id == site_id)[0].loading_plugins = true;
+
+				site_name = this.sites.filter(site => site.id == site_id)[0].name;
+				description = "Delete user '" + username + "' from " + site_name;
+				job_id = Math.round((new Date()).getTime());
+				this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
+				// WP ClI command to send
+				wpcli = "wp user delete " + username;
+
+				var data = {
+					'action': 'captaincore_install',
+					'post_id': [ site_id ],
+					'command': "manage",
+					'value': ["ssh"],
+					'arguments': [{ "name":"Commands","value":"command","command":"ssh","input": wpcli }]
+				};
+
+				self = this;
+
+				jQuery.post(ajaxurl, data, function(response) {
+					updated_users = self.sites.filter(site => site.id == site_id)[0].users.filter(user => user.username != username);
+					self.sites.filter(site => site.id == site_id)[0].users = updated_users;
 					self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
 				});
 			}
