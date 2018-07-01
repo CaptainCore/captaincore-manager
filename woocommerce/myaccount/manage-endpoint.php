@@ -1138,7 +1138,7 @@ new Vue({
 			// Adds new job
 			job_id = Math.round((new Date()).getTime());
 			description = "Login as '" + username + "' to " + site.name;
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command":"login"});
 
 			// Prep AJAX request
 			var data = {
@@ -1196,12 +1196,12 @@ new Vue({
 
 							previous_index = index - 1;
 
-							if ( line_parsed.command == "Fetch Users") {
+							if ( job.command == "usersFetch") {
 								// Add to site.users
 								site.users = response_array[previous_index];
 							}
 
-							if ( line_parsed.command == "Login Site") {
+							if ( job.command == "login") {
 								// Opens site
 								window.open(response_array[previous_index]);
 							}
@@ -1323,7 +1323,7 @@ new Vue({
 				job_id = Math.round((new Date()).getTime());
 
 				description = "Fetching users for " + site.name;
-				this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+				this.jobs.push({"job_id": job_id,"description": description, "status": "running","command":"usersFetch"});
 
 				var data = {
 					'action': 'captaincore_install',
