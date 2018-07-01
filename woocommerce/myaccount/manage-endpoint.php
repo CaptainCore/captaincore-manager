@@ -1158,51 +1158,74 @@ new Vue({
 
 				// Check if completed in 2 seconds
 				setTimeout(function(){
-					self.loginSitesRetry(site_id, response);
+					self.jobRetry(site_id, response);
 				}, 2000);
 
 			});
 
 		},
-		loginSitesRetry( site_id, job_id ) {
+		jobRetry( site_id, job_id ) {
 
-		site = this.sites.filter(site => site.id == site_id)[0];
-		job = this.jobs.filter(job => job.job_id == job_id)[0];
-		self = this;
+			site = this.sites.filter(site => site.id == site_id)[0];
+			job = this.jobs.filter(job => job.job_id == job_id)[0];
+			self = this;
 
-		var data = {
-			'action': 'captaincore_install',
-			'post_id': site_id,
-			'command': "job-fetch",
-			'job_id': job_id
-		};
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': site_id,
+				'command': "job-fetch",
+				'job_id': job_id
+			};
 
-		jQuery.post(ajaxurl, data, function(response) {
+			jQuery.post(ajaxurl, data, function(response) {
 
-		 json_array = response.split('\n');
+				index = 0;
+				repeat = true;
 
-		 if ( tryParseJSON(json_array[2]) ) {
+				// collect responses seperated by lines
+				response_array = response.split('\n');
 
-			 if ( JSON.parse(json_array[2]).response == "Command finished" ) {
+				// Loop through lines looking for valid JSON
+				response_array.forEach(line => {
 
-					 // Opens site
-					 window.open(json_array[0]);
-					 job.status = "done";
+					if ( tryParseJSON(line) ) {
 
-			 } else {
-				 console.log("Retrying");
-			 }
+						line_parsed = JSON.parse(line);
 
-		 } else {
-			 // Check if completed in 5 seconds
-			 setTimeout(function() {
-				 self.loginSitesRetry(site_id, job_id);
-			 }, 5000);
-		 }
+						if ( line_parsed.response == "Command finished" ) {
 
-		});
+							previous_index = index - 1;
+
+							if ( line_parsed.command == "Fetch Users") {
+								// Add to site.users
+								site.users = response_array[previous_index];
+							}
+
+							if ( line_parsed.command == "Login Site") {
+								// Opens site
+								window.open(response_array[previous_index]);
+							}
+
+							job.status = "done";
+							repeat = false;
+
+						}
+
+					}
+
+					index++;
+
+				});
+
+				if ( repeat ) {
+					// Check if completed in 5 seconds
+					setTimeout(function() {
+						self.jobRetry(site_id, job_id);
+					}, 5000);
+				}
+
+			});
 		},
-
 		inputFile (newFile, oldFile) {
 
 			if (newFile && oldFile) {
@@ -1319,55 +1342,10 @@ new Vue({
 
 					// Check if completed in 2 seconds
 					setTimeout(function(){
-          	self.fetchUsersRetry(site_id, new_job_id);
+          	self.jobRetry(site_id, new_job_id);
           }, 2000);
 				});
 			}
-		},
-		fetchUsersRetry( site_id, job_id ) {
-
-			site = this.sites.filter(site => site.id == site_id)[0];
-			job = this.jobs.filter(job => job.job_id == job_id)[0];
-			self = this;
-
-			var data = {
-				'action': 'captaincore_install',
-				'post_id': site_id,
-				'command': "job-fetch",
-				'job_id': job_id
-			};
-
-			jQuery.post(ajaxurl, data, function(response) {
-
-			 json_array = response.split('\n');
-			 last_item = json_array.length - 1;
-
-			 if ( tryParseJSON(json_array[1]) ) {
-
-				 if ( JSON.parse(json_array[1]).response == "Command finished" ) {
-
-					 var json = JSON.parse(json_array[0]);
-					 content_type = typeof json;
-
-					 if ( content_type == "object" ) {
-
-						 // Add to site.users
-						 site.users = json;
-						 job.status = "done";
-					 }
-
-				 } else {
-					 console.log(response);
-				 }
-
-			 } else {
-				 // Check if completed in 5 seconds
-				 setTimeout(function() {
-					 self.fetchUsersRetry(site_id, job_id);
-				 }, 5000);
-			 }
-
-			});
 		},
 		fetchUpdateLogs( site_id ) {
 
