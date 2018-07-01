@@ -1536,7 +1536,7 @@ new Vue({
 				'command': "manage",
 				'value': "ssh",
 				'background': true,
-				'arguments': [{ "name":"Commands","value":"command","command":"ssh","input": wpcli }]
+				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 			};
 
 			self = this;
@@ -1582,9 +1582,6 @@ new Vue({
 		deleteUser (username, site_id) {
 			should_delete = confirm("Are you sure you want to delete user " + username + "?");
 			if (should_delete) {
-
-				// Enable loading progress
-				this.sites.filter(site => site.id == site_id)[0].loading_plugins = true;
 
 				site_name = this.sites.filter(site => site.id == site_id)[0].name;
 				description = "Delete user '" + username + "' from " + site_name;
