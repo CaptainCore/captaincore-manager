@@ -1197,8 +1197,10 @@ new Vue({
 							previous_index = index - 1;
 
 							if ( job.command == "usersFetch") {
-								// Add to site.users
-								site.users = response_array[previous_index];
+								if ( tryParseJSON( response_array[previous_index] ) ) {
+									// Add to site.users
+									site.users =  JSON.parse( response_array[previous_index] );
+								}
 							}
 
 							if ( job.command == "login") {
