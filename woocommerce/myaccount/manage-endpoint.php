@@ -1440,10 +1440,11 @@ new Vue({
 
 			var data = {
 				'action': 'captaincore_install',
-				'post_id': [ site_id ],
+				'post_id': site_id,
 				'command': "manage",
-				'value': ["ssh"],
-				'arguments': [{ "name":"Commands","value":"command","command":"ssh","input": wpcli }]
+				'value': "ssh",
+				'background': true,
+				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 			};
 
 			self = this;
@@ -1469,10 +1470,11 @@ new Vue({
 
 				var data = {
 					'action': 'captaincore_install',
-					'post_id': [ site_id ],
+					'post_id': site_id,
 					'command': "manage",
-					'value': ["ssh"],
-					'arguments': [{ "name":"Commands","value":"command","command":"ssh","input": wpcli }]
+					'value': "ssh",
+					'background': true,
+					'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 				};
 
 				self = this;
@@ -1543,10 +1545,11 @@ new Vue({
 
 				var data = {
 					'action': 'captaincore_install',
-					'post_id': [ site_id ],
+					'post_id': site_id,
 					'command': "manage",
-					'value': ["ssh"],
-					'arguments': [{ "name":"Commands","value":"command","command":"ssh","input": wpcli }]
+					'value': "ssh",
+					'background': true,
+					'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 				};
 
 				self = this;
@@ -1573,10 +1576,11 @@ new Vue({
 
 				var data = {
 					'action': 'captaincore_install',
-					'post_id': [ site_id ],
+					'post_id': site_id,
 					'command': "manage",
-					'value': ["ssh"],
-					'arguments': [{ "name":"Commands","value":"command","command":"ssh","input": wpcli }]
+					'value': "ssh",
+					'background': true,
+					'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 				};
 
 				self = this;
