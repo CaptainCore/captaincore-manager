@@ -165,7 +165,7 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 	}
 
 	// Load Token Key
-	if ( isset( $token_key ) ) {
+	if ( $command == 'token' and isset( $token_key ) ) {
 
 		// defines the ACF keys to use
 		$token_id = 'field_52d16819ac39f';
