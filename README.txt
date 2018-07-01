@@ -35,6 +35,20 @@ TODO
 
 == Changelog ==
 
+= 0.2.5: July 1, 2018 =
+* New: Updates tab to Manage UI. Populates using 'update-fetch' cli command.
+* New: Users tab to Manage UI. Populates using 'users-fetch' cli command.
+* New: Sharing tab to Manage UI.
+* New: Command sync-data to CaptainCore API.
+* New: WooCommerce tab for site health (GUI for CaptainCore CLI monitor)
+* New: Manage UI - Drag and drop uploader for adding plugins.
+* New: Navigation toggle icon for WooCommerce my account pages.
+* Tweak: Ability to use 'manage' with single command.
+* Tweak: Manage UI - Performance improvements to Vue.js filtering by using a computed property
+* Tweak: Manage UI - Fix for filtering by theme.
+* Tweak: Manage UI - New option to select filtered sites.
+* Tweak: Moved Manage UI into WooCommerce endpoint. Removed old custom page template (page-manage.php).
+
 = 0.2.4: June 17, 2018 =
 * New: Configurable preinstall plugins to option page.
 * Tweak: Improvements to Manage UI. Adds pagination, basic/advanced filter, search by site name, new tabs (themes/plugins) per site. Added ability to manage themes and plugins.
