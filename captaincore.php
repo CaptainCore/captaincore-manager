@@ -2947,6 +2947,12 @@ function captaincore_install_action_callback() {
 		( $s3secretkey ? " --s3secretkey=$s3secretkey" : '' ) .
 		( $s3bucket ? " --s3bucket=$s3bucket" : '' ) .
 		( $s3path ? " --s3path=$s3path" : '' );
+
+		// Run in background without confirmation. Will display first 5 secs of output
+		date_default_timezone_set( 'America/New_York' );
+		$timestamp = date( 'Y-m-d-hms', time() );
+		$file = "~/Tmp/command-site_update_${site}_${timestamp}.txt";
+		$command = "$command > $file 2>&1 & sleep 5; head $file";
 	}
 	if ( $cmd == 'update' ) {
 		$command = 'captaincore site update' .
@@ -2974,6 +2980,7 @@ function captaincore_install_action_callback() {
 		( $s3bucket ? " --s3bucket=$s3bucket" : '' ) .
 		( $s3path ? " --s3path=$s3path" : '' );
 
+		// Run in background without confirmation. Will display first 5 secs of output
 		date_default_timezone_set( 'America/New_York' );
 		$timestamp = date( 'Y-m-d-hms', time() );
 		$file = "~/Tmp/command-site_update_${site}_${timestamp}.txt";
@@ -3030,15 +3037,13 @@ function captaincore_install_action_callback() {
 			$current_user = wp_get_current_user();
 			$email        = $current_user->user_email;
 			date_default_timezone_set( 'America/New_York' );
-			$t         = time();
-			$timestamp = date( 'Y-m-d-hms', $t );
+			$timestamp = date( 'Y-m-d-hms', time() );
 			$command   = "nohup captaincore copy $site $value --email=$email --mark-when-completed > ~/Tmp/job-copy-$timestamp.txt 2>&1 &";
 		}
 	}
 	if ( $cmd == 'mailgun' ) {
 		date_default_timezone_set( 'America/New_York' );
-		$t         = time();
-		$timestamp = date( 'Y-m-d-hms', $t );
+		$timestamp = date( 'Y-m-d-hms', time() );
 		mailgun_setup( $domain );
 		$command = "captaincore ssh $site --script=deploy-mailgun --key=\"" . MAILGUN_API_KEY . '" --domain=' . $domain . " > ~/Tmp/$timestamp-deploy_mailgun_$site.txt 2>&1 &";
 	}
@@ -3050,8 +3055,7 @@ function captaincore_install_action_callback() {
 	}
 	if ( $cmd == 'production-to-staging' ) {
 		date_default_timezone_set( 'America/New_York' );
-		$t         = time();
-		$timestamp = date( 'Y-m-d-hms', $t );
+		$timestamp = date( 'Y-m-d-hms', time() );
 		if ( $value ) {
 			$command = "captaincore copy-production-to-staging $site --email=$value > ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt";
 		} else {
@@ -3060,8 +3064,7 @@ function captaincore_install_action_callback() {
 	}
 	if ( $cmd == 'staging-to-production' ) {
 		date_default_timezone_set( 'America/New_York' );
-		$t         = time();
-		$timestamp = date( 'Y-m-d-hms', $t );
+		$timestamp = date( 'Y-m-d-hms', time() );
 		if ( $value ) {
 			$command = "captaincore copy-staging-to-production $site --email=$value > ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt";
 		} else {
@@ -3073,20 +3076,17 @@ function captaincore_install_action_callback() {
 	}
 	if ( $cmd == 'quick_backup' ) {
 		date_default_timezone_set( 'America/New_York' );
-		$t         = time();
-		$timestamp = date( 'Y-m-d-hms', $t );
+		$timestamp = date( 'Y-m-d-hms', time() );
 		$command   = "captaincore quicksave $site > ~/Tmp/$timestamp-quicksave_$site.txt 2>&1";
 	}
 	if ( $cmd == 'backup' ) {
 		date_default_timezone_set( 'America/New_York' );
-		$t         = time();
-		$timestamp = date( 'Y-m-d-hms', $t );
+		$timestamp = date( 'Y-m-d-hms', time() );
 		$command   = "captaincore backup $site > ~/Tmp/$timestamp-backup_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-backup_$site.txt";
 	}
 	if ( $cmd == 'snapshot' ) {
 		date_default_timezone_set( 'America/New_York' );
-		$t         = time();
-		$timestamp = date( 'Y-m-d-hms', $t );
+		$timestamp = date( 'Y-m-d-hms', time() );
 		if ( $date && $value ) {
 			$command = "captaincore snapshot $site --email=$value --rollback='$date' > ~/Tmp/$timestamp-snapshot_$site.txt 2>&1 & sleep 2; head ~/Tmp/$timestamp-snapshot_$site.txt";
 		} elseif ( $value ) {
@@ -3165,8 +3165,7 @@ function captaincore_install_action_callback() {
 
 	if ( $cmd == 'rollback' ) {
 		date_default_timezone_set( 'America/New_York' );
-		$t          = time();
-		$timestamp  = date( 'Y-m-d-hms', $t );
+		$timestamp  = date( 'Y-m-d-hms', time() );
 		$git_commit = get_field( 'git_commit', $post_id );
 		$website_id = get_field( 'website', $post_id );
 		$site       = get_field( 'site', $website_id[0] );
@@ -3176,8 +3175,7 @@ function captaincore_install_action_callback() {
 
 	if ( $cmd == 'quicksave_rollback' ) {
 		date_default_timezone_set( 'America/New_York' );
-		$t          = time();
-		$timestamp  = date( 'Y-m-d-hms', $t );
+		$timestamp  = date( 'Y-m-d-hms', time() );
 		$git_commit = get_field( 'git_commit', $post_id );
 		$website_id = get_field( 'website', $post_id );
 		$site       = get_field( 'site', $website_id[0] );
