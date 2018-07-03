@@ -14,7 +14,7 @@ if ( $role_check ) {
 
 ?>
 
-<link href="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.1.0/vuetify.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.1.1/vuetify.min.css" rel="stylesheet">
 <style>
 
 html {
@@ -34,7 +34,9 @@ html {
 	margin: 4px 0;
 	background-color: #eaeaea;
 }
-
+.v-btn__content span {
+    padding: 0 0 0 6px;
+}
 .v-expansion-panel__body .v-card.bordered {
 	margin: 2em;
 	padding: 0px;
@@ -165,9 +167,6 @@ body button.v-pagination__item:hover {
     box-shadow: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
 	}
 
-.entry-content, .entry-footer, .entry-summary {
-	max-width: 1000px;
-}
 table.table thead tr,
 table.table tbody td, table.table tbody th {
 	height: auto;
@@ -210,7 +209,7 @@ table.table tbody td, table.table tbody th {
 <?php } else { ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.16/vue.min.js"></script>
 <?php } ?>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.1.0/vuetify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.1.1/vuetify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.9/dist/vue-upload-component.js"></script>
 
 <?php
@@ -1036,7 +1035,7 @@ new Vue({
  			 { text: 'Old Version', value: 'old_version' },
  			 { text: 'New Version', value: 'new_version' },
 			 { text: 'Status', value: 'status' }
- 		 ],
+		],
 		 header_users: [
 			 { text: 'Login', value: 'login' },
 			 { text: 'Display Name', value: 'display_name' },
@@ -1231,8 +1230,8 @@ new Vue({
 		inputFile (newFile, oldFile) {
 
 			if (newFile && oldFile) {
-			// Uploaded successfully
-        if (newFile.success && !oldFile.success) {
+				// Uploaded successfully
+				if (newFile.success && !oldFile.success) {
 					new_response = JSON.parse( newFile.response );
 					if (  new_response.response == "Success" && new_response.url ) {
 
@@ -1277,17 +1276,17 @@ new Vue({
 
 					}
 
-        }
+				}
 
 			}
 
-      // Automatically activate upload
-      if (Boolean(newFile) !== Boolean(oldFile) || oldFile.error !== newFile.error) {
-        if (!this.$refs.upload.active) {
-          this.$refs.upload.active = true;
-        }
-      }
-    },
+			// Automatically activate upload
+			if (Boolean(newFile) !== Boolean(oldFile) || oldFile.error !== newFile.error) {
+				if (!this.$refs.upload.active) {
+					this.$refs.upload.active = true;
+				}
+			}
+		},
 		new_site_preload_staging() {
 
 			// Copy production address to staging field
