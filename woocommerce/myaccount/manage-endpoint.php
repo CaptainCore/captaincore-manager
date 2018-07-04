@@ -110,6 +110,10 @@ a.v-tabs__item:hover {
 	padding: 0px;
 }
 
+.application .theme--light.v-input:not(.v-input--is-disabled) input, .application .theme--light.v-input:not(.v-input--is-disabled) textarea, .theme--light .v-input:not(.v-input--is-disabled) input, .theme--light .v-input:not(.v-input--is-disabled) textarea {
+	border-radius: 0px;
+}
+
 .secondary {
 	background: transparent !important;
 }
@@ -167,8 +171,8 @@ body button.v-pagination__item:hover {
     box-shadow: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
 	}
 
-table.table thead tr,
-table.table tbody td, table.table tbody th {
+table.v-table thead tr,
+table.v-table tbody td, table.v-table tbody th {
 	height: auto;
 }
 
@@ -257,6 +261,9 @@ foreach ( $websites as $website ) {
 	$shared_with = get_field( 'partner', $website->ID );
 	$storage = get_field('storage', $website->ID);
 	$views = get_field('views', $website->ID);
+	$exclude_themes = get_field('exclude_themes', $website->ID);
+	$exclude_plugins = get_field('exclude_plugins', $website->ID);
+	$updates_enabled = get_post_meta( $website->ID, 'updates_enabled');
 	$production_address = get_field('address', $website->ID);
 	$staging_address = get_field('address_staging', $website->ID);
 	?>
@@ -275,10 +282,20 @@ keys: [
 	{ key_id: 1, "link":"http://<?php echo get_the_title( $website->ID ); ?>","environment": "Production", "address": "<?php the_field('address', $website->ID); ?>","username":"<?php the_field('username', $website->ID); ?>","password":"<?php the_field('password', $website->ID); ?>","protocol":"<?php the_field('protocol', $website->ID); ?>","port":"<?php the_field('port', $website->ID); ?>",<?php if ( strpos($production_address, ".kinsta.com") ) { ?>"ssh":"ssh <?php the_field('username', $website->ID); ?>@<?php echo $production_address; ?> -p <?php the_field('port', $website->ID); ?>",<?php } if ( strpos($production_address, ".kinsta.com") and get_field('database_username', $website->ID) ) { ?>"database": "https://mysqleditor-<?php the_field('database_username', $website->ID); ?>.kinsta.com","database_username": "<?php the_field('database_username', $website->ID); ?>","database_password": "<?php the_field('database_password', $website->ID); ?>",<?php } ?>},
 	<?php if (get_field('address_staging', $website->ID)) { ?>{ key_id: 2, "link":"<?php if (strpos( get_field('address_staging', $website->ID), ".kinsta.com") ) { echo "https://staging-". get_field('site_staging', $website->ID).".kinsta.com"; } else { echo "https://". get_field('site_staging', $website->ID). ".staging.wpengine.com"; } ?>","environment": "Staging", "address": "<?php the_field('address_staging', $website->ID); ?>","username":"<?php the_field('username_staging', $website->ID); ?>","password":"<?php the_field('password_staging', $website->ID); ?>","protocol":"<?php the_field('protocol_staging', $website->ID); ?>","port":"<?php the_field('port_staging', $website->ID); ?>"},<?php } ?>
 ],
-<?php if ( $users and substr($users, 0, 1) === "[" ) {
-?>
+<?php if ( $users and substr($users, 0, 1) === "[" ) { ?>
 users: <?php echo $users; ?>,<?php } else { ?>users: [],<?php } ?>
 update_logs: [],
+<?php if ( $exclude_themes ) {
+$exclude_themes = explode(",", $exclude_themes);
+$exclude_themes_formatted = '"' . implode ( '", "', $exclude_themes ) . '"';
+?>
+exclude_themes: [<?php echo $exclude_themes_formatted; ?>],<?php } else { ?>exclude_themes: [],<?php } ?>
+<?php if ( $exclude_plugins ) {
+$exclude_plugins = explode(",", $exclude_plugins);
+$exclude_plugins_formatted = '"' . implode ( '", "', $exclude_plugins ) . '"';
+?>
+exclude_plugins: [<?php echo $exclude_plugins_formatted; ?>],<?php } else { ?>exclude_plugins: [],<?php } ?>
+updates_enabled: <?php if ($updates_enabled && $updates_enabled[0] == "1" ) { echo "1"; } else { echo "0"; } ?>,
 loading_themes: false,
 loading_plugins: false,
 tabs: 0,
@@ -303,10 +320,7 @@ selected: false },
 			  <v-progress-linear :indeterminate="true"></v-progress-linear>
 			</template>
 		</v-badge>
-		<v-dialog
-		v-model="new_plugin.show"
-		max-width="500px"
-		>
+		<v-dialog v-model="new_plugin.show" max-width="500px">
 		<v-card tile>
 			<v-toolbar card dark color="primary">
 				<v-btn icon dark @click.native="new_plugin.show = false">
@@ -348,9 +362,50 @@ selected: false },
 				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="/wp-content/plugins/captaincore/upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
 			</div>
 		</div>
-	</div>
-</v-card-text>
-</v-card>
+		</div>
+		</v-card-text>
+		</v-card>
+		</v-dialog>
+		<v-dialog v-model="update_settings.show" max-width="500px">
+		<v-card tile>
+			<v-toolbar card dark color="primary">
+				<v-btn icon dark @click.native="update_settings.show = false">
+					<v-icon>close</v-icon>
+				</v-btn>
+				<v-toolbar-title>Update settings for {{ update_settings.site_name }}</v-toolbar-title>
+				<v-spacer></v-spacer>
+			</v-toolbar>
+			<v-card-text>
+
+				<v-switch label="Automatic Updates" v-model="update_settings.updates_enabled" false-value="0" true-value="1"></v-switch>
+
+				<v-select
+					:items="update_settings.plugins"
+					item-text="title"
+					item-value="name"
+					v-model="update_settings.exclude_plugins"
+					label="Excluded Plugins"
+					multiple
+					chips
+					persistent-hint
+				></v-select>
+				<v-select
+					:items="update_settings.themes"
+					item-text="title"
+					item-value="name"
+					v-model="update_settings.exclude_themes"
+					label="Excluded Themes"
+					multiple
+					chips
+					persistent-hint
+				></v-select>
+
+				<v-progress-linear :indeterminate="true" v-if="update_settings.loading == true"></v-progress-linear>
+
+				<v-btn @click="saveUpdateSettings()">Save Update Settings</v-btn>
+
+			</v-card-text>
+		</v-card>
 		</v-dialog>
 		<v-dialog
 			v-model="view_jobs"
@@ -495,6 +550,7 @@ selected: false },
 			chips
 			multiple
 		  autocomplete
+			small-chips
 			deletable-chips
 		 >
 				 <template slot="selection" slot-scope="data">
@@ -777,6 +833,12 @@ selected: false },
 		</v-tab-item>
 		<v-tab-item :key="5">
 			<v-card>
+				<p class="text-xs-right" style="margin:0px;padding:0px">
+					<v-btn right small dark color="blue darken-3" @click="updateSettings(site.id)">
+						Update Settings
+						<v-icon dark>fas fa-cog</v-icon>
+					</v-btn>
+				</p>
 				<v-card-title v-if="site.update_logs.length == 0">
 					<div>
 						Fetching update logs...
@@ -1011,6 +1073,7 @@ new Vue({
 		},<?php } else { ?>
 		new_site: false,<?php } ?>
 		new_plugin: { show: false, site_id: null},
+		update_settings: { show: false, site_id: null},
 		upload: [],
 		view_jobs: false,
 		search: null,
@@ -1560,6 +1623,43 @@ new Vue({
 					self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
 				});
 			}
+		},
+		updateSettings( site_id ) {
+			this.update_settings.show = true;
+			this.update_settings.site_id = site_id;
+			site = this.sites.filter(site => site.id == site_id)[0];
+			this.update_settings.site_name = site.name;
+			this.update_settings.exclude_plugins = site.exclude_plugins;
+			this.update_settings.exclude_themes = site.exclude_themes;
+			this.update_settings.updates_enabled = site.updates_enabled;
+			this.update_settings.plugins = site.plugins;
+			this.update_settings.themes = site.themes;
+		},
+		saveUpdateSettings() {
+			this.update_settings.loading = true;
+			site_id = this.update_settings.site_id;
+
+			// Prep AJAX request
+			var data = {
+				'action': 'captaincore_ajax',
+				'post_id': site_id,
+				'command': "updateSettings",
+				'value': { "exclude_plugins": this.update_settings.exclude_plugins, "exclude_themes": this.update_settings.exclude_themes, "updates_enabled": this.update_settings.updates_enabled },
+			};
+
+			jQuery.post(ajaxurl, data, function(response) {
+
+				console.log( response );
+
+			});
+
+
+			site = this.sites.filter(site => site.id == site_id)[0];
+			site.exclude_plugins = this.update_settings.exclude_plugins;
+			site.exclude_themes = this.update_settings.exclude_themes;
+			site.updates_enabled = this.update_settings.updates_enabled;
+			this.update_settings.show = false;
+			this.update_settings.loading = false;
 		},
 		deleteUser (username, site_id) {
 			should_delete = confirm("Are you sure you want to delete user " + username + "?");

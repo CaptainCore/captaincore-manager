@@ -2841,6 +2841,49 @@ function captaincore_dns_action_callback() {
 	wp_die(); // this is required to terminate immediately and return a proper response
 }
 
+// Processes ajax events (new install, remove install, setup configs)
+add_action( 'wp_ajax_captaincore_ajax', 'captaincore_ajax_action_callback' );
+
+function captaincore_ajax_action_callback() {
+	global $wpdb; // this is how you get access to the database
+
+	if ( is_array( $_POST['post_id'] ) ) {
+		$post_ids       = array();
+		$post_ids_array = $_POST['post_id'];
+		foreach ( $post_ids_array as $id ) {
+			$post_ids[] = intval( $id );
+		}
+	} else {
+		$post_id = intval( $_POST['post_id'] );
+	}
+
+	// Only proceed if have permission to particular site id.
+	if ( ! captaincore_verify_permissions( $post_id  ) ) {
+		echo "Permission defined";
+		wp_die();
+		return;
+	}
+
+	$cmd        = $_POST['command'];
+	$value      = $_POST['value'];
+
+	if ( $cmd == 'updateSettings' ) {
+
+		// Saves update settings for a site
+
+		$exclude_plugins = implode(",", $value["exclude_plugins"]);
+		$exclude_themes = implode(",", $value["exclude_themes"]);
+
+		update_field( 'field_5b231770b9732', $exclude_plugins, $post_id );
+		update_field( 'field_5b231746b9731', $exclude_themes, $post_id );
+		update_field( 'field_5b2a902585a78', $value["updates_enabled"], $post_id );
+
+		echo '{"response":"Update settings saved."}';
+	}
+
+	wp_die(); // this is required to terminate immediately and return a proper response
+}
+
 // Processes install events (new install, remove install, setup configs)
 add_action( 'wp_ajax_captaincore_install', 'captaincore_install_action_callback' );
 
