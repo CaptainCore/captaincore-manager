@@ -2864,13 +2864,13 @@ function captaincore_ajax_action_callback() {
 		return;
 	}
 
-	$cmd        = $_POST['command'];
-	$value      = $_POST['value'];
+	$cmd   = $_POST['command'];
+	$value = $_POST['value'];
+	$site  = get_field( 'site', $post_id );
 
 	if ( $cmd == 'updateSettings' ) {
 
 		// Saves update settings for a site
-
 		$exclude_plugins = implode(",", $value["exclude_plugins"]);
 		$exclude_themes = implode(",", $value["exclude_themes"]);
 
@@ -2878,7 +2878,59 @@ function captaincore_ajax_action_callback() {
 		update_field( 'field_5b231746b9731', $exclude_themes, $post_id );
 		update_field( 'field_5b2a902585a78', $value["updates_enabled"], $post_id );
 
+		// Remote Sync
+		$run_in_background = true;
+		$remote_command = true;
+		$command = "captaincore sync-data $site";
+
 		echo '{"response":"Update settings saved."}';
+	}
+
+	if ( $cmd == 'newSite' ) {
+
+		// Create new site
+
+	}
+
+	if ( $run_in_background ) {
+
+		// Generate unique $job_id for tracking
+		$job_id = round(microtime(true) * 1000);
+
+		// Tie in the site_id to make sure jobs are only viewed by people with access.
+		$background_id = "${post_id}_${job_id}";
+
+		// Tack on CaptaionCore global arguments for tracking purposes
+		$command = "$command --run-in-background=$background_id &";
+
+	}
+
+	if ( $remote_command ) {
+
+		// Runs command on remote on production
+		require_once ABSPATH . '/vendor/autoload.php';
+
+		$ssh = new \phpseclib\Net\SSH2( CAPTAINCORE_CLI_ADDRESS, CAPTAINCORE_CLI_PORT );
+		if ( ! $ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
+			exit( 'Login Failed' );
+		}
+
+		// Returns command if debug enabled otherwise executes command over SSH and returns output
+		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+			$response = $command;
+		} else {
+			$response = $ssh->exec( $command );
+
+			// Background jobs need job_id returned in order to begin repeating AJAX checks
+			if ( $run_in_background ) {
+				$response = $job_id;
+			}
+
+		}
+
+		// Return response
+		echo $response;
+
 	}
 
 	wp_die(); // this is required to terminate immediately and return a proper response
