@@ -1064,7 +1064,7 @@ new Vue({
 		<?php if ( current_user_can('administrator') ) { ?>
 		new_site: {
 			domain: "",
-			updates_enabled: true,
+			updates_enabled: 1,
 			shared_with: [],
 			keys: [
 				{"environment": "Production", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","use_s3": false,"s3_access_key":"","s3_secret_key":"","s3_bucket":"","s3_path":"","database_username":"","database_password":"" },
