@@ -295,7 +295,7 @@ $exclude_plugins = explode(",", $exclude_plugins);
 $exclude_plugins_formatted = '"' . implode ( '", "', $exclude_plugins ) . '"';
 ?>
 exclude_plugins: [<?php echo $exclude_plugins_formatted; ?>],<?php } else { ?>exclude_plugins: [],<?php } ?>
-updates_enabled: <?php if ($updates_enabled && $updates_enabled[0] == "1" ) { echo "1"; } else { echo "0"; } ?>,
+updates_enabled: <?php if ($updates_enabled && $updates_enabled[0] == "1" ) { echo '"1"'; } else { echo '"0"'; } ?>,
 loading_themes: false,
 loading_plugins: false,
 tabs: 0,
@@ -519,9 +519,9 @@ selected: false },
 			<v-layout row wrap>
       <v-flex xs4>
 				Sites per page <v-select
-	          :items='[50,100,250]'
-	          v-model="items_per_page"
-	          label=""
+						:items='[50,100,250]'
+						v-model="items_per_page"
+						label=""
 						dense
 						@change="page = 1"
 						style="display:inline-table;width:100px;"
@@ -1064,7 +1064,7 @@ new Vue({
 		<?php if ( current_user_can('administrator') ) { ?>
 		new_site: {
 			domain: "",
-			updates_enabled: 1,
+			updates_enabled: "1",
 			shared_with: [],
 			keys: [
 				{"environment": "Production", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","use_s3": false,"s3_access_key":"","s3_secret_key":"","s3_bucket":"","s3_path":"","database_username":"","database_password":"" },
@@ -1652,7 +1652,6 @@ new Vue({
 				console.log( response );
 
 			});
-
 
 			site = this.sites.filter(site => site.id == site_id)[0];
 			site.exclude_plugins = this.update_settings.exclude_plugins;
