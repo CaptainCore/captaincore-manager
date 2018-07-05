@@ -3331,8 +3331,8 @@ function captaincore_site_fetch_details( $post_id ) {
 	( $homedir ? " --homedir=$homedir" : '' ) .
 	( $subsite ? " --subsite=$subsite" : '' ) .
 	( $updates_enabled ? " --updates_enabled=$updates_enabled" : '' ) .
-	( $exclude_themes ? " --exclude_themes=$exclude_themes" : ' --exclude_themes=""' ) .
-	( $exclude_plugins ? " --exclude_plugins=$exclude_plugins" : ' --exclude_plugins=""' ) .
+	( $exclude_themes ? " --exclude_themes=$exclude_themes" : '' ) .
+	( $exclude_plugins ? " --exclude_plugins=$exclude_plugins" : '' ) .
 	( $s3accesskey ? " --s3accesskey=$s3accesskey" : '' ) .
 	( $s3secretkey ? " --s3secretkey=$s3secretkey" : '' ) .
 	( $s3bucket ? " --s3bucket=$s3bucket" : '' ) .
@@ -3455,7 +3455,7 @@ function captaincore_website_acf_actions( $field ) {
 				<li>
 					<a href="<?php echo get_permalink( $website->ID ); ?>">
 						<?php $domain = get_the_title( $website->ID ); ?>
-										<?php edit_post_link( $domain, '<p>', '</p>', $website->ID ); ?>
+						<?php edit_post_link( $domain, '<p>', '</p>', $website->ID ); ?>
 					</a>
 				</li>
 			<?php endforeach; ?>
