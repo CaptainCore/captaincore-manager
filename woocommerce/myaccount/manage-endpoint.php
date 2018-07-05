@@ -1649,16 +1649,16 @@ new Vue({
 
 			jQuery.post(ajaxurl, data, function(response) {
 
-				console.log( response );
+				site = this.sites.filter(site => site.id == site_id)[0];
+				site.exclude_plugins = this.update_settings.exclude_plugins;
+				site.exclude_themes = this.update_settings.exclude_themes;
+				site.updates_enabled = this.update_settings.updates_enabled;
+				this.update_settings.show = false;
+				this.update_settings.loading = false;
 
 			});
 
-			site = this.sites.filter(site => site.id == site_id)[0];
-			site.exclude_plugins = this.update_settings.exclude_plugins;
-			site.exclude_themes = this.update_settings.exclude_themes;
-			site.updates_enabled = this.update_settings.updates_enabled;
-			this.update_settings.show = false;
-			this.update_settings.loading = false;
+
 		},
 		deleteUser (username, site_id) {
 			should_delete = confirm("Are you sure you want to delete user " + username + "?");
