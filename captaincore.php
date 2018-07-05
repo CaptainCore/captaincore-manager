@@ -2881,7 +2881,7 @@ function captaincore_ajax_action_callback() {
 		// Remote Sync
 		$run_in_background = true;
 		$remote_command = true;
-		$command = "captaincore sync-data $site";
+		$command = "captaincore site update" . captaincore_site_fetch_details( $post_id );
 
 		echo '{"response":"Update settings saved."}';
 	}
@@ -2920,12 +2920,10 @@ function captaincore_ajax_action_callback() {
 			$response = $command;
 		} else {
 			$response = $ssh->exec( $command );
-
 			// Background jobs need job_id returned in order to begin repeating AJAX checks
 			if ( $run_in_background ) {
 				$response = $job_id;
 			}
-
 		}
 
 		// Return response
@@ -2951,6 +2949,14 @@ function captaincore_install_action_callback() {
 	} else {
 		$post_id = intval( $_POST['post_id'] );
 	}
+
+	// Checks permissions
+	if ( ! captaincore_verify_permissions( $post_id ) ) {
+		echo 'Permission denied';
+		wp_die(); // this is required to terminate immediately and return a proper response
+		return;
+	}
+
 	$cmd        = $_POST['command'];
 	$value      = $_POST['value'];
 	$arguments  = $_POST['arguments'];
@@ -2984,7 +2990,6 @@ function captaincore_install_action_callback() {
 	$s3secretkey      = get_field( 's3_secret_key', $post_id );
 	$s3bucket         = get_field( 's3_bucket', $post_id );
 	$s3path           = get_field( 's3_path', $post_id );
-	$token            = '***REMOVED***';
 
 	$partners = get_field( 'partner', $post_id );
 	if ( $partners ) {
@@ -3016,32 +3021,7 @@ function captaincore_install_action_callback() {
 	}
 
 	if ( $cmd == 'new' ) {
-		$command = 'captaincore site add' .
-		( $site ? " $site" : '' ) .
-		( $post_id ? " --id=$post_id" : '' ) .
-		( $domain ? " --domain=$domain" : '' ) .
-		( $username ? " --username=$username" : '' ) .
-		( $password ? ' --password=' . rawurlencode( base64_encode( $password ) ) : '' ) .
-		( $address ? " --address=$address" : '' ) .
-		( $protocol ? " --protocol=$protocol" : '' ) .
-		( $port ? " --port=$port" : '' ) .
-		( $homedir ? " --homedir=$homedir" : '' ) .
-		( $staging_site ? " --site_staging=$staging_site" : '' ) .
-		( $staging_username ? " --username_staging=$staging_username" : '' ) .
-		( $staging_password ? ' --password_staging=' . rawurlencode( base64_encode( $staging_password ) ) : '' ) .
-		( $staging_address ? " --address_staging=$staging_address" : '' ) .
-		( $staging_protocol ? " --protocol_staging=$staging_protocol" : '' ) .
-		( $staging_port ? " --port_staging=$staging_port" : '' ) .
-		( $staging_homedir ? " --homedir_staging=$staging_homedir" : '' ) .
-		( $updates_enabled ? " --updates_enabled=$updates_enabled" : '' ) .
-		( $exclude_themes ? " --exclude_themes=$exclude_themes" : '' ) .
-		( $exclude_plugins ? " --exclude_plugins=$exclude_plugins" : '' ) .
-		( $preloadusers ? " --preloadusers=$preloadusers" : '' ) .
-		( $subsite ? " --subsite=$subsite" : '' ) .
-		( $s3accesskey ? " --s3accesskey=$s3accesskey" : '' ) .
-		( $s3secretkey ? " --s3secretkey=$s3secretkey" : '' ) .
-		( $s3bucket ? " --s3bucket=$s3bucket" : '' ) .
-		( $s3path ? " --s3path=$s3path" : '' );
+		$command = 'captaincore site add' . captaincore_site_fetch_details( $post_id );
 
 		// Run in background without confirmation. Will display first 5 secs of output
 		date_default_timezone_set( 'America/New_York' );
@@ -3050,30 +3030,7 @@ function captaincore_install_action_callback() {
 		$command = "$command > $file 2>&1 & sleep 5; head $file";
 	}
 	if ( $cmd == 'update' ) {
-		$command = 'captaincore site update' .
-		( $site ? " $site" : '' ) .
-		( $post_id ? " --id=$post_id" : '' ) .
-		( $domain ? " --domain=$domain" : '' ) .
-		( $username ? " --username=$username" : '' ) .
-		( $password ? ' --password=' . rawurlencode( base64_encode( $password ) ) : '' ) .
-		( $address ? " --address=$address" : '' ) .
-		( $protocol ? " --protocol=$protocol" : '' ) .
-		( $port ? " --port=$port" : '' ) .
-		( $staging_username ? " --staging_username=$staging_username" : '' ) .
-		( $staging_password ? ' --staging_password=' . rawurlencode( base64_encode( $staging_password ) ) : '' ) .
-		( $staging_address ? " --staging_address=$staging_address" : '' ) .
-		( $staging_protocol ? " --staging_protocol=$staging_protocol" : '' ) .
-		( $staging_port ? " --staging_port=$staging_port" : '' ) .
-		( $preloadusers ? " --preloadusers=$preloadusers" : '' ) .
-		( $homedir ? " --homedir=$homedir" : '' ) .
-		( $subsite ? " --subsite=$subsite" : '' ) .
-		( $updates_enabled ? " --updates_enabled=$updates_enabled" : '' ) .
-		( $exclude_themes ? " --exclude_themes=$exclude_themes" : '' ) .
-		( $exclude_plugins ? " --exclude_plugins=$exclude_plugins" : '' ) .
-		( $s3accesskey ? " --s3accesskey=$s3accesskey" : '' ) .
-		( $s3secretkey ? " --s3secretkey=$s3secretkey" : '' ) .
-		( $s3bucket ? " --s3bucket=$s3bucket" : '' ) .
-		( $s3path ? " --s3path=$s3path" : '' );
+		$command = 'captaincore site update' . captaincore_site_fetch_details( $post_id );
 
 		// Run in background without confirmation. Will display first 5 secs of output
 		date_default_timezone_set( 'America/New_York' );
@@ -3286,56 +3243,104 @@ function captaincore_install_action_callback() {
 		$post_id    = $website_id[0];
 	}
 
-	// Checks permissions
-	if ( captaincore_verify_permissions( $post_id ) ) {
+	// Runs command on remote on production
+	require_once ABSPATH . '/vendor/autoload.php';
 
-		// Runs command on remote on production
-		require_once ABSPATH . '/vendor/autoload.php';
+	$ssh = new \phpseclib\Net\SSH2( CAPTAINCORE_CLI_ADDRESS, CAPTAINCORE_CLI_PORT );
 
-		$ssh = new \phpseclib\Net\SSH2( CAPTAINCORE_CLI_ADDRESS, CAPTAINCORE_CLI_PORT );
-
-		if ( ! $ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
-			exit( 'Login Failed' );
-		}
-
-		if ( $run_in_background ) {
-
-			// Generate unique $job_id for tracking
-			$job_id = round(microtime(true) * 1000);
-
-			// Tie in the site_id to make sure jobs are only viewed by people with access.
-			$background_id = "${post_id}_${job_id}";
-
-			// Tack on CaptaionCore global arguments for tracking purposes
-			$command = "$command --run-in-background=$background_id &";
-
-		}
-
-		// Returns command if debug enabled otherwise executes command over SSH and returns output
-		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
-			$response = $command;
-		} else {
-			$response = $ssh->exec( $command );
-
-			// Background jobs need job_id returned in order to begin repeating AJAX checks
-			if ( $run_in_background ) {
-				$response = $job_id;
-			}
-
-		}
-
-		// Return response
-		echo $response;
-
-	} else {
-		echo 'Permission denied';
+	if ( ! $ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
+		exit( 'Login Failed' );
 	}
+
+	if ( $run_in_background ) {
+
+		// Generate unique $job_id for tracking
+		$job_id = round(microtime(true) * 1000);
+
+		// Tie in the site_id to make sure jobs are only viewed by people with access.
+		$background_id = "${post_id}_${job_id}";
+
+		// Tack on CaptaionCore global arguments for tracking purposes
+		$command = "$command --run-in-background=$background_id &";
+
+	}
+
+	// Returns command if debug enabled otherwise executes command over SSH and returns output
+	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+		$response = $command;
+	} else {
+		$response = $ssh->exec( $command );
+
+		// Background jobs need job_id returned in order to begin repeating AJAX checks
+		if ( $run_in_background ) {
+			$response = $job_id;
+		}
+
+	}
+
+	// Return response
+	echo $response;
 
 	wp_die(); // this is required to terminate immediately and return a proper response
 }
 
 // Logs a process completion
 add_action( 'wp_ajax_log_process', 'process_log_action_callback' );
+
+function captaincore_site_fetch_details( $post_id ) {
+
+	$site             = get_field( 'site', $post_id );
+	$provider         = get_field( 'provider', $post_id );
+	$domain           = get_the_title( $post_id );
+	$address          = get_field( 'address', $post_id );
+	$username         = get_field( 'username', $post_id );
+	$password         = get_field( 'password', $post_id );
+	$protocol         = get_field( 'protocol', $post_id );
+	$port             = get_field( 'port', $post_id );
+	$homedir          = get_field( 'homedir', $post_id );
+	$staging_site     = get_field( 'site_staging', $post_id );
+	$staging_address  = get_field( 'address_staging', $post_id );
+	$staging_username = get_field( 'username_staging', $post_id );
+	$staging_password = get_field( 'password_staging', $post_id );
+	$staging_protocol = get_field( 'protocol_staging', $post_id );
+	$staging_port     = get_field( 'port_staging', $post_id );
+	$staging_homedir  = get_field( 'homedir_staging', $post_id );
+	$updates_enabled  = get_field( 'updates_enabled', $post_id );
+	$exclude_themes   = get_field( 'exclude_themes', $post_id );
+	$exclude_plugins  = get_field( 'exclude_plugins', $post_id );
+	$s3accesskey      = get_field( 's3_access_key', $post_id );
+	$s3secretkey      = get_field( 's3_secret_key', $post_id );
+	$s3bucket         = get_field( 's3_bucket', $post_id );
+	$s3path           = get_field( 's3_path', $post_id );
+
+	$command = '' .
+	( $site ? " $site" : '' ) .
+	( $post_id ? " --id=$post_id" : '' ) .
+	( $domain ? " --domain=$domain" : '' ) .
+	( $username ? " --username=$username" : '' ) .
+	( $password ? ' --password=' . rawurlencode( base64_encode( $password ) ) : '' ) .
+	( $address ? " --address=$address" : '' ) .
+	( $protocol ? " --protocol=$protocol" : '' ) .
+	( $port ? " --port=$port" : '' ) .
+	( $staging_username ? " --staging_username=$staging_username" : '' ) .
+	( $staging_password ? ' --staging_password=' . rawurlencode( base64_encode( $staging_password ) ) : '' ) .
+	( $staging_address ? " --staging_address=$staging_address" : '' ) .
+	( $staging_protocol ? " --staging_protocol=$staging_protocol" : '' ) .
+	( $staging_port ? " --staging_port=$staging_port" : '' ) .
+	( $preloadusers ? " --preloadusers=$preloadusers" : '' ) .
+	( $homedir ? " --homedir=$homedir" : '' ) .
+	( $subsite ? " --subsite=$subsite" : '' ) .
+	( $updates_enabled ? " --updates_enabled=$updates_enabled" : '' ) .
+	( $exclude_themes ? " --exclude_themes=$exclude_themes" : ' --exclude_themes=""' ) .
+	( $exclude_plugins ? " --exclude_plugins=$exclude_plugins" : ' --exclude_plugins=""' ) .
+	( $s3accesskey ? " --s3accesskey=$s3accesskey" : '' ) .
+	( $s3secretkey ? " --s3secretkey=$s3secretkey" : '' ) .
+	( $s3bucket ? " --s3bucket=$s3bucket" : '' ) .
+	( $s3path ? " --s3path=$s3path" : '' );
+
+	return $command;
+
+}
 
 function captaincore_website_acf_actions( $field ) {
 
