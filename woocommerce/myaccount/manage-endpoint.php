@@ -1073,7 +1073,7 @@ new Vue({
 		},<?php } else { ?>
 		new_site: false,<?php } ?>
 		new_plugin: { show: false, site_id: null},
-		update_settings: { show: false, site_id: null},
+		update_settings: { show: false, site_id: null, loading: false},
 		upload: [],
 		view_jobs: false,
 		search: null,
@@ -1638,6 +1638,8 @@ new Vue({
 		saveUpdateSettings() {
 			this.update_settings.loading = true;
 			site_id = this.update_settings.site_id;
+			site = this.sites.filter(site => site.id == site_id)[0];
+			self = this;
 
 			// Prep AJAX request
 			var data = {
@@ -1647,14 +1649,11 @@ new Vue({
 				'value': { "exclude_plugins": this.update_settings.exclude_plugins, "exclude_themes": this.update_settings.exclude_themes, "updates_enabled": this.update_settings.updates_enabled },
 			};
 
-			self = this;
-
 			jQuery.post(ajaxurl, data, function(response) {
 
-				site = this.sites.filter(site => site.id == site_id)[0];
-				site.exclude_plugins = this.update_settings.exclude_plugins;
-				site.exclude_themes = this.update_settings.exclude_themes;
-				site.updates_enabled = this.update_settings.updates_enabled;
+				site.exclude_plugins = self.update_settings.exclude_plugins;
+				site.exclude_themes = self.update_settings.exclude_themes;
+				site.updates_enabled = self.update_settings.updates_enabled;
 				self.update_settings.show = false;
 				self.update_settings.loading = false;
 
