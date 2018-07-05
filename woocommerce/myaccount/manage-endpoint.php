@@ -400,7 +400,7 @@ selected: false },
 					persistent-hint
 				></v-select>
 
-				<v-progress-linear :indeterminate="true" v-if="update_settings.loading == true"></v-progress-linear>
+				<v-progress-linear :indeterminate="true" v-if="update_settings.loading"></v-progress-linear>
 
 				<v-btn @click="saveUpdateSettings()">Save Update Settings</v-btn>
 
@@ -1647,14 +1647,16 @@ new Vue({
 				'value': { "exclude_plugins": this.update_settings.exclude_plugins, "exclude_themes": this.update_settings.exclude_themes, "updates_enabled": this.update_settings.updates_enabled },
 			};
 
+			self = this;
+
 			jQuery.post(ajaxurl, data, function(response) {
 
 				site = this.sites.filter(site => site.id == site_id)[0];
 				site.exclude_plugins = this.update_settings.exclude_plugins;
 				site.exclude_themes = this.update_settings.exclude_themes;
 				site.updates_enabled = this.update_settings.updates_enabled;
-				this.update_settings.show = false;
-				this.update_settings.loading = false;
+				self.update_settings.show = false;
+				self.update_settings.loading = false;
 
 			});
 
