@@ -1270,6 +1270,10 @@ new Vue({
 								window.open(response_array[previous_index]);
 							}
 
+							if ( job.command == "saveUpdateSettings" ){
+								// to do
+							}
+
 							job.status = "done";
 							repeat = false;
 
@@ -1641,21 +1645,36 @@ new Vue({
 			site = this.sites.filter(site => site.id == site_id)[0];
 			self = this;
 
+			site = this.sites.filter(site => site.id == site_id)[0];
+
+			// Adds new job
+			job_id = Math.round((new Date()).getTime());
+			description = "Saving update settings for " + site.name;
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command":"saveUpdateSettings"});
+
 			// Prep AJAX request
 			var data = {
 				'action': 'captaincore_ajax',
 				'post_id': site_id,
 				'command': "updateSettings",
-				'value': { "exclude_plugins": this.update_settings.exclude_plugins, "exclude_themes": this.update_settings.exclude_themes, "updates_enabled": this.update_settings.updates_enabled },
+				'value': { "exclude_plugins": this.update_settings.exclude_plugins, "exclude_themes": this.update_settings.exclude_themes, "updates_enabled": this.update_settings.updates_enabled }
 			};
+
+			site.exclude_plugins = self.update_settings.exclude_plugins;
+			site.exclude_themes = self.update_settings.exclude_themes;
+			site.updates_enabled = self.update_settings.updates_enabled;
+			self.update_settings.show = false;
+			self.update_settings.loading = false;
 
 			jQuery.post(ajaxurl, data, function(response) {
 
-				site.exclude_plugins = self.update_settings.exclude_plugins;
-				site.exclude_themes = self.update_settings.exclude_themes;
-				site.updates_enabled = self.update_settings.updates_enabled;
-				self.update_settings.show = false;
-				self.update_settings.loading = false;
+				// Updates job id with reponsed background job id
+				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
+
+				// Check if completed in 2 seconds
+				setTimeout(function() {
+					self.jobRetry(site_id, response);
+				}, 2000);
 
 			});
 
