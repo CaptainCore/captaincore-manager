@@ -3330,7 +3330,7 @@ function captaincore_site_fetch_details( $post_id ) {
 	( $preloadusers ? " --preloadusers=$preloadusers" : '' ) .
 	( $homedir ? " --homedir=$homedir" : '' ) .
 	( $subsite ? " --subsite=$subsite" : '' ) .
-	( $updates_enabled ? " --updates_enabled=$updates_enabled" : '' ) .
+	( $updates_enabled ? " --updates_enabled=$updates_enabled" : ' --updates_enabled=0' ) .
 	( $exclude_themes ? " --exclude_themes=$exclude_themes" : '' ) .
 	( $exclude_plugins ? " --exclude_plugins=$exclude_plugins" : '' ) .
 	( $s3accesskey ? " --s3accesskey=$s3accesskey" : '' ) .
