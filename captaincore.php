@@ -2883,7 +2883,6 @@ function captaincore_ajax_action_callback() {
 		$remote_command = true;
 		$command = "captaincore site update" . captaincore_site_fetch_details( $post_id );
 
-		echo '{"response":"Update settings saved."}';
 	}
 
 	if ( $cmd == 'newSite' ) {
