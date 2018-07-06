@@ -2892,6 +2892,15 @@ function captaincore_ajax_action_callback() {
 
 	}
 
+	if ( $cmd == 'fetch-update-logs' ) {
+
+		# Fetch from custom table
+		$db_update_logs = new CaptainCore\update_logs;
+
+		echo json_encode($db_update_logs->fetch_logs( $post_id ));
+
+	}
+
 	if ( $run_in_background ) {
 
 		// Generate unique $job_id for tracking
