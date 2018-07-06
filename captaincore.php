@@ -63,6 +63,7 @@ register_deactivation_hook( __FILE__, 'deactivate_captaincore' );
  * admin-specific hooks, and public-facing site hooks.
  */
 require plugin_dir_path( __FILE__ ) . 'includes/class-captaincore.php';
+require plugin_dir_path( __FILE__ ) . 'includes/class-captaincore-db.php';
 
 /**
  * Begins execution of the plugin.
@@ -3339,6 +3340,27 @@ function captaincore_site_fetch_details( $post_id ) {
 
 	return $command;
 
+}
+
+function captaincore_create_tables() {
+    global $wpdb;
+
+    $charset_collate = $wpdb->get_charset_collate();
+
+    $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_update_logs` (
+      log_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+      site_id bigint(20) UNSIGNED NOT NULL,
+      created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+      update_type varchar(255),
+			update_log longtext,
+      PRIMARY KEY  (log_id)
+    ) $charset_collate;";
+
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql);
+    $success = empty($wpdb->last_error);
+
+    return $success;
 }
 
 function captaincore_website_acf_actions( $field ) {
