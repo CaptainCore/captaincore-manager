@@ -195,10 +195,7 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 	// Imports update log
 	if ( $command == 'import-update-log' ) {
 
-		$json        = $data;
-		$json_decode = json_decode( $json );
-
-		foreach ( $json_decode as $row ) {
+		foreach ( $data as $row ) {
 
 			// Format for mysql timestamp format. Changes "2018-06-20-091520" to "2018-06-20 09:15:20"
 			$date_formatted = substr_replace( $row->date, ' ', 10, 1 );
@@ -218,9 +215,13 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 				'created_at'  => $date_formatted,
 			);
 
+			$db_update_logs = new CaptainCore\update_logs;
+
+			$valid_check = $db_update_logs->valid_check( $new_update_log_check );
+
 			// Add new update log if not added.
-			if ( $update_log->valid_check( $new_update_log_check ) ) {
-				$update_log->insert( $new_update_log );
+			if ( $valid_check ) {
+				$db_update_logs->insert( $new_update_log );
 			}
 
 		}
