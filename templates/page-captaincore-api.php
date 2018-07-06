@@ -25,7 +25,7 @@
  * https://<captaincore-server>/captaincore-api/<site-domain>/?token_key=token_key&token=token_key
  */
 
-$site = get_query_var( 'callback' );
+$site      = get_query_var( 'callback' );
 $post_data = json_decode( file_get_contents( 'php://input' ) );
 
 $site_source_id      = $post_data->site_source_id;
@@ -46,6 +46,7 @@ $git_commit          = $post_data->git_commit;
 $git_status          = trim( base64_decode( $post_data->git_status ) );
 $token               = $post_data->token;
 $token_key           = $post_data->token_key;
+$data                = $post_data->data;
 
 // Finding matching site by domain name (title)
 $args  = array(
@@ -75,6 +76,7 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 
 		// Insert the post into the database
 		$site_id = wp_insert_post( $my_post );
+
 	}
 
 	// Copy site
@@ -190,6 +192,41 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 
 	}
 
+	// Imports update log
+	if ( $command == 'import-update-log' ) {
+
+		$json        = $data;
+		$json_decode = json_decode( $json );
+
+		foreach ( $json_decode as $row ) {
+
+			// Format for mysql timestamp format. Changes "2018-06-20-091520" to "2018-06-20 09:15:20"
+			$date_formatted = substr_replace( $row->date, ' ', 10, 1 );
+			$date_formatted = substr_replace( $date_formatted, ':', 13, 0 );
+			$date_formatted = substr_replace( $date_formatted, ':', 16, 0 );
+			$update_log     = json_encode( $row->updates );
+
+			$new_update_log = array(
+				'site_id'     => $site_id,
+				'update_type' => $row->type,
+				'update_log'  => $update_log,
+				'created_at'  => $date_formatted,
+			);
+
+			$new_update_log_check = array(
+				'site_id'     => $site_id,
+				'created_at'  => $date_formatted,
+			);
+
+			// Add new update log if not added.
+			if ( $update_log->valid_check( $new_update_log_check ) ) {
+				$update_log->insert( $new_update_log );
+			}
+
+		}
+
+	}
+
 	// Generate a new CaptainCore quicksave
 	if ( $command == 'quicksave' ) {
 
@@ -293,6 +330,7 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 		endif;
 
 	}
+
 } else {
 
 	get_header();  ?>
