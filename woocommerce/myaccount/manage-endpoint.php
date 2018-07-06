@@ -242,7 +242,7 @@ if ( $websites ) :
 ajaxurl = "/wp-admin/admin-ajax.php";
 
 var pretty_timestamp_options = {
-    weekday: "long", year: "numeric", month: "short",
+    weekday: "short", year: "numeric", month: "short",
     day: "numeric", hour: "2-digit", minute: "2-digit"
 };
 // Example: new Date("2018-06-18 19:44:47").toLocaleTimeString("en-us", options);
@@ -1154,8 +1154,7 @@ new Vue({
     return Math.max(fileSizeInBytes, 0.1).toFixed(1) + byteUnits[i];
 		},
 		pretty_timestamp: function (date) {
-			// takes in '2018-06-18-194447' and converts to '2018-06-18 19:44:47' then returns "Monday, Jun 18, 2018, 7:44 PM"
-			date = date.substring(0,10) + " " + date.substring(11,13) + ":" + date.substring(13,15) + ":" + date.substring(15,17);
+			// takes in '2018-06-18 19:44:47' then returns "Monday, Jun 18, 2018, 7:44 PM"
 			formatted_date = new Date(date).toLocaleTimeString("en-us", pretty_timestamp_options);
 			return formatted_date;
 		}
@@ -1424,37 +1423,21 @@ new Vue({
 			if ( update_logs_count == 0 ) {
 
 				var data = {
-					'action': 'captaincore_install',
+					'action': 'captaincore_ajax',
 					'post_id': site_id,
-					'command': "update-fetch",
+					'command': "fetch-update-logs",
 				};
 
 				jQuery.post(ajaxurl, data, function(response) {
 
 					if (tryParseJSON(response)) {
-
-					var json = JSON.parse(response);
-					content_type = typeof json;
-
-					if ( content_type == "object" ) {
-
-					// Formats response to readable format by table
-					update_items = [];
-					json.forEach(logs => {
-						logs.updates.forEach( update => {
-							update.type = logs.type;
-							update.date = logs.date;
-							update_items.push( update );
-						});
-					});
-
 					// Add to site.update_logs
-					site.update_logs = update_items;
-				}
+						site.update_logs = JSON.parse(response);
+					}
 
-				} else {
-					site.update_logs = response.replace("[31mError:[39m ","Error: ");
-				}
+					if ( site.update_logs.length == 0 ) {
+							site.update_logs = "Error: Did not find any update logs.";
+					}
 
 				});
 			}

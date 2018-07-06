@@ -60,6 +60,25 @@ class DB {
 		return $wpdb->query( $wpdb->prepare( $sql, $value ) );
 	}
 
+	static function fetch_logs( $value ) {
+		global $wpdb;
+		$value = intval( $value );
+		$sql = "SELECT * FROM ".self::_table()." WHERE `site_id` = '$value'";
+		$results = $wpdb->get_results( $sql );
+		$reponse = [];
+		foreach ($results as $result) {
+
+			$update_log = json_decode( $result->update_log );
+
+			foreach ($update_log as $log) {
+				$log->type = $result->update_type;
+				$log->date = $result->created_at;
+				$reponse[] = $log;
+			}
+		}
+		return $reponse;
+	}
+
 }
 
 class update_logs extends DB {
