@@ -1281,7 +1281,7 @@ new Vue({
 							if ( job.command == "update-wp" ){
 								// to do
 								site.update_logs = [];
-								this.fetchUpdateLogs( site_id );
+								self.fetchUpdateLogs( site_id );
 							}
 
 							job.status = "done";
