@@ -3354,22 +3354,48 @@ function captaincore_site_fetch_details( $post_id ) {
 function captaincore_create_tables() {
     global $wpdb;
 
+		$version = (int) get_site_option('captcorecore_db_version');
     $charset_collate = $wpdb->get_charset_collate();
 
-    $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_update_logs` (
-      log_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-      site_id bigint(20) UNSIGNED NOT NULL,
-      created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
-      update_type varchar(255),
-			update_log longtext,
-      PRIMARY KEY  (log_id)
-    ) $charset_collate;";
+		if ( $version < 1 ) {
+			$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_update_logs` (
+				log_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+				site_id bigint(20) UNSIGNED NOT NULL,
+				created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+				update_type varchar(255),
+				update_log longtext,
+			PRIMARY KEY  (log_id)
+			) $charset_collate;";
 
-    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-    dbDelta($sql);
-    $success = empty($wpdb->last_error);
+			require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+			dbDelta($sql);
+			$success = empty($wpdb->last_error);
 
-    return $success;
+			update_site_option('captcorecore_db_version', 1);
+		}
+
+		if ( $version < 2 && $sql == "" ) {
+			$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_quicksaves` (
+				quicksave_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+				site_id bigint(20) UNSIGNED NOT NULL,
+				created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+				git_status varchar(255),
+				git_commit varchar(100),
+				core varchar(10),
+				themes longtext,
+				plugins longtext,
+			PRIMARY KEY  (quicksave_id)
+			) $charset_collate;";
+
+			require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+			dbDelta($sql);
+			$success = empty($wpdb->last_error);
+
+			update_site_option('captcorecore_db_version', 2);
+		}
+
+		return $success;
+
 }
 
 function captaincore_website_acf_actions( $field ) {
