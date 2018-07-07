@@ -82,7 +82,7 @@ class DB {
 	static function fetch( $value ) {
 		global $wpdb;
 		$value = intval( $value );
-		$sql = "SELECT * FROM ".self::_table()." WHERE `site_id` = '$value'";
+		$sql = "SELECT * FROM ".self::_table()." WHERE `site_id` = '$value' order by `created_at` DESC";
 		return $wpdb->get_results( $sql );
 	}
 
