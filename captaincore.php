@@ -2901,6 +2901,7 @@ function captaincore_install_action_callback() {
 
 	$cmd        = $_POST['command'];
 	$value      = $_POST['value'];
+	$commit     = $_POST['commit'];
 	$arguments  = $_POST['arguments'];
 	$addon_type = $_POST['addon_type'];
 	$date       = $_POST['date'];
@@ -3126,11 +3127,7 @@ function captaincore_install_action_callback() {
 	}
 
 	if ( $cmd == 'quicksave_file_diff' ) {
-		$website_id = get_field( 'website', $post_id );
-		$site       = get_field( 'site', $website_id[0] );
-		$commit     = get_field( 'git_commit', $post_id );
 		$command    = "captaincore quicksave-file-diff $site --hash=$commit --file=\"$value\"";
-		$post_id    = $website_id[0];
 	}
 
 	if ( $cmd == 'rollback' ) {

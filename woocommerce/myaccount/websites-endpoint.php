@@ -198,6 +198,7 @@ if ( $wp_query->query_vars['websites'] ) {
 					'action': 'captaincore_install',
 					'post_id': quicksave.data('id'),
 					'command': 'quicksave_file_diff',
+					'commit': quicksave.data('git_commit'),
 					'value'	: file_name,
 				};
 
