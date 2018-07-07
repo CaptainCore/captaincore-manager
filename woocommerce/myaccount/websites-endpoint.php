@@ -1147,7 +1147,7 @@ foreach ( $mailgun_events->items as $mailgun_event ) {
 			$git_status = $quicksave->git_status;
 			$git_commit = $quicksave->git_commit;
 			?>
-			<li class="quicksave" data-id="<?php echo $quicksave->ID; ?>" data-git_commit="<?php echo $git_commit; ?>">
+			<li class="quicksave" data-id="<?php echo $website_id; ?>" data-git_commit="<?php echo $git_commit; ?>">
 				<div class="collapsible-header">
 					<span class="material-icons">settings_backup_restore</span> <span class="timestamp"><?php echo $timestamp; ?></span>
 					<span class="badge"><?php echo $git_status; ?></span>
