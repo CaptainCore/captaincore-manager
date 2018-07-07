@@ -229,6 +229,15 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 	// Imports update log
 	if ( $command == 'import-quicksaves' ) {
 
+		// If new info sent then update otherwise continue with quicksavee import
+		if ( $plugins &&  $themes && $users && $core && $home_url ) {
+			update_field( 'field_5a9421b004ed3', wp_slash( $plugins ), $site_id );
+			update_field( 'field_5a9421b804ed4', wp_slash( $themes ), $site_id );
+			update_field( 'field_5b2a900c85a77', wp_slash( $users ), $site_id );
+			update_field( 'field_5a9421bc04ed5', $core, $site_id );
+			update_field( 'field_5a944358bf146', $home_url, $site_id );
+		}
+
 		foreach ( $data as $row ) {
 
 			// Format for mysql timestamp format. Changes "1530817828" to "2018-06-20 09:15:20"
@@ -262,75 +271,6 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 			if ( $valid_check ) {
 				$db_quicksaves->insert( $new_quicksave );
 			}
-		}
-	}
-
-	// Generate a new CaptainCore quicksave
-	if ( $command == 'quicksave' ) {
-
-		// Check if Git Commit already entered for this Site ID
-		$args = array(
-			'post_type'      => 'captcore_quicksave',
-			'posts_per_page' => '-1',
-			'fields'         => 'ids',
-			'meta_query'     => array(
-				'relation' => 'AND',
-				array(
-					'key'     => 'git_commit', // name of custom field
-					'value'   => $git_commmit, // matches exaclty "123", not just 123. This prevents a match for "1234"
-					'compare' => '=',
-				),
-				array(
-					'key'     => 'website', // name of custom field
-					'value'   => '"' . $site_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-					'compare' => 'LIKE',
-				),
-			),
-		);
-
-		$quicksave_duplicate_search = get_posts( $args );
-
-		if ( count( $quicksave_duplicate_search ) == 0 ) {
-
-			// Puts unix timestamp into int varible
-			$date      = intval( $date );
-			$timetamp  = new DateTime( "@$date" );
-			$post_date = $timetamp->format( 'Y-m-d H:i:s' );
-
-			// Updates site with latest $plugins, $themes, $core and $home_url
-			update_field( 'field_5a9421b004ed3', wp_slash( $plugins ), $site_id );
-			update_field( 'field_5a9421b804ed4', wp_slash( $themes ), $site_id );
-			update_field( 'field_5b2a900c85a77', wp_slash( $users ), $site_id );
-			update_field( 'field_5a9421bc04ed5', $core, $site_id );
-			update_field( 'field_5a944358bf146', $home_url, $site_id );
-
-			// Create post object
-			$my_post = array(
-				'post_title'    => 'Quicksave',
-				'post_type'     => 'captcore_quicksave',
-				'post_date_gmt' => $post_date,
-				'post_status'   => 'publish',
-			);
-
-			// Insert the post into the database
-			$quicksave_id = wp_insert_post( $my_post );
-
-			update_field( 'field_59badaa96686f', $site_id, $quicksave_id );
-			update_field( 'field_5a7dc6919ed81', $git_commit, $quicksave_id );
-			update_field( 'field_5a7f0a55a5086', $git_status, $quicksave_id );
-			update_field( 'field_59bae8d2ec7cc', $core, $quicksave_id );
-			update_field( 'field_59badadc66871', wp_slash( $plugins ), $quicksave_id );
-			update_field( 'field_59badab866870', wp_slash( $themes ), $quicksave_id );
-
-			// Adds snapshot ID to title
-			$my_post = array(
-				'ID'         => $quicksave_id,
-				'post_title' => 'Quicksave ' . $quicksave_id,
-			);
-
-			wp_update_post( $my_post );
-			echo '{"response":"Completed adding Quicksave ' . $quicksave_id . ' for ' . $site_id . '"}';
-
 		}
 	}
 
