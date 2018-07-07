@@ -211,11 +211,11 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 			);
 
 			$new_update_log_check = array(
-				'site_id'     => $site_id,
-				'created_at'  => $date_formatted,
+				'site_id'    => $site_id,
+				'created_at' => $date_formatted,
 			);
 
-			$db_update_logs = new CaptainCore\update_logs;
+			$db_update_logs = new CaptainCore\update_logs();
 
 			$valid_check = $db_update_logs->valid_check( $new_update_log_check );
 
@@ -223,9 +223,46 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 			if ( $valid_check ) {
 				$db_update_logs->insert( $new_update_log );
 			}
-
 		}
+	}
 
+	// Imports update log
+	if ( $command == 'import-quicksaves' ) {
+
+		foreach ( $data as $row ) {
+
+			// Format for mysql timestamp format. Changes "1530817828" to "2018-06-20 09:15:20"
+			$epoch = $row->date;
+			$dt = new DateTime("@$epoch");  // convert UNIX timestamp to PHP DateTime
+			$date_formatted = $dt->format('Y-m-d H:i:s'); // output = 2017-01-01 00:00:00
+
+			$themes         = json_encode( $row->themes );
+			$plugins        = json_encode( $row->plugins );
+
+			$new_quicksave = array(
+				'site_id'    => $site_id,
+				'created_at' => $date_formatted,
+				'git_status' => $row->git_status,
+				'git_commit' => $row->git_commit,
+				'core'       => $row->core,
+				'themes'     => $themes,
+				'plugins'    => $plugins,
+			);
+
+			$new_quicksave_check = array(
+				'site_id'    => $site_id,
+				'created_at' => $date_formatted,
+			);
+
+			$db_quicksaves = new CaptainCore\quicksaves();
+
+			$valid_check = $db_quicksaves->valid_check( $new_quicksave_check );
+
+			// Add new update log if not added.
+			if ( $valid_check ) {
+				$db_quicksaves->insert( $new_quicksave );
+			}
+		}
 	}
 
 	// Generate a new CaptainCore quicksave
@@ -331,7 +368,6 @@ if ( substr_count( $site, '.' ) > 0 and $token == CAPTAINCORE_CLI_TOKEN ) {
 		endif;
 
 	}
-
 } else {
 
 	get_header();  ?>

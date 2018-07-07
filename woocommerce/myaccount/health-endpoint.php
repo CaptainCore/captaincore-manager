@@ -192,7 +192,7 @@ table.table tbody td, table.table tbody th {
   color: #fff;
   padding: 0;
 }
-.content-area ul.expansion-panel {
+.content-area ul.v-expansion-panel {
 	margin:0px;
 	list-style: none;
 }

@@ -21,6 +21,9 @@ jQuery( document ).ready(function() {
 
 $today = date('Ymd');
 
+$db_quicksaves = new CaptainCore\quicksaves;
+
+
 // WP_Query arguments
 $websites = get_posts(array(
 	  'post_type' 			=> 'captcore_website',
@@ -29,17 +32,8 @@ $websites = get_posts(array(
 
 foreach ($websites as $website) {
 
-	$quicksaves = get_posts(array(
-		'post_type' => 'captcore_quicksave',
-		'posts_per_page'  => '-1',
-		'meta_query' => array(
-			array(
-				'key' => 'website', // name of custom field
-				'value' => '"' . $website->ID . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-				'compare' => 'LIKE'
-			)
-		)
-	));
+	$quicksaves = $db_quicksaves->fetch( $website->ID );
+
 	?>
 
 	<div data-quicksaves="<?php echo count($quicksaves); ?>"><?php echo get_field("address", $website->ID); ?> has <?php echo count($quicksaves); ?> Quicksaves</div>

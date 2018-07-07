@@ -79,11 +79,24 @@ class DB {
 		return $reponse;
 	}
 
+	static function fetch( $value ) {
+		global $wpdb;
+		$value = intval( $value );
+		$sql = "SELECT * FROM ".self::_table()." WHERE `site_id` = '$value'";
+		return $wpdb->get_results( $sql );
+	}
+
 }
 
 class update_logs extends DB {
 
 	static $primary_key = 'log_id';
+
+}
+
+class quicksaves extends DB {
+
+	static $primary_key = 'quicksave_id';
 
 }
 

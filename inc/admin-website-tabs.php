@@ -35,7 +35,6 @@ a.nav-tab.nav-tab-active span {
 	<a class="nav-tab dashicons-before dashicons-media-spreadsheet<?php if( $screen->post_type == "captcore_processlog") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=captcore_processlog"><span>Process Logs</span></a>
 	<a class="nav-tab dashicons-before dashicons-building<?php if( $screen->post_type == "captcore_server") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=captcore_server"><span>Servers</span></a>
 	<a class="nav-tab dashicons-before dashicons-backup<?php if( $screen->post_type == "captcore_snapshot") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=captcore_snapshot"><span>Snapshots</span></a>
-	<a class="nav-tab dashicons-before dashicons-backup<?php if( $screen->post_type == "captcore_quicksave") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=captcore_quicksave"><span>Quicksaves</span></a>
 </h2>
 <script>
 jQuery(document).ready(function() {

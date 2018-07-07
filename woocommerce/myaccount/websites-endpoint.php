@@ -1129,19 +1129,8 @@ foreach ( $mailgun_events->items as $mailgun_event ) {
 </div>
 <div class="row">
 		<?php
-		$quicksaves_for_website = get_posts(
-			array(
-				'post_type'      => 'captcore_quicksave',
-				'posts_per_page' => '-1',
-				'meta_query'     => array(
-					array(
-						'key'     => 'website', // name of custom field
-						'value'   => '"' . $website_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-						'compare' => 'LIKE',
-					),
-				),
-			)
-		);
+		$db_quicksaves = new CaptainCore\quicksaves;
+		$quicksaves_for_website = $db_quicksaves->fetch( $website_id );
 		if ( $quicksaves_for_website ) {
 		?>
 		<ul class="collapsible" data-collapsible="accordion">
@@ -1149,17 +1138,20 @@ foreach ( $mailgun_events->items as $mailgun_event ) {
 
 		foreach ( $quicksaves_for_website as $quicksave ) {
 
-			$timestamp  = get_the_time( 'M jS Y g:ia', $quicksave->ID );
-			$plugins    = json_decode( get_field( 'plugins', $quicksave->ID ) );
-			$themes     = json_decode( get_field( 'themes', $quicksave->ID ) );
-			$git_status = get_field( 'git_status', $quicksave->ID );
-			$git_commit = get_field( 'git_commit', $quicksave->ID );
+			// Format for mysql timestamp format. Changes "1530817828" to "2018-06-20 09:15:20"
+			$date = new DateTime( $quicksave->created_at );  // convert UNIX timestamp to PHP DateTime
+			$timestamp  = $date->format('M jS Y g:ia');
+			$plugins    = json_decode( $quicksave->plugins );
+			$themes     = json_decode( $quicksave->themes );
+			$core       = $quicksave->core;
+			$git_status = $quicksave->git_status;
+			$git_commit = $quicksave->git_commit;
 			?>
 			<li class="quicksave" data-id="<?php echo $quicksave->ID; ?>" data-git_commit="<?php echo $git_commit; ?>">
 				<div class="collapsible-header">
 					<span class="material-icons">settings_backup_restore</span> <span class="timestamp"><?php echo $timestamp; ?></span>
 					<span class="badge"><?php echo $git_status; ?></span>
-					<span class="badge">WordPress <?php the_field( 'core', $quicksave->ID ); ?> - <?php echo count( $plugins ); ?> plugins - <?php echo count( $themes ); ?> themes</span>
+					<span class="badge">WordPress <?php echo $core; ?> - <?php echo count( $plugins ); ?> plugins - <?php echo count( $themes ); ?> themes</span>
 				</div>
 				<div class="collapsible-body">
 					<div class="card">

@@ -1431,12 +1431,12 @@ new Vue({
 				jQuery.post(ajaxurl, data, function(response) {
 
 					if (tryParseJSON(response)) {
-					// Add to site.update_logs
+						// Add to site.update_logs
 						site.update_logs = JSON.parse(response);
 					}
 
 					if ( site.update_logs.length == 0 ) {
-							site.update_logs = "Error: Did not find any update logs.";
+						site.update_logs = "Error: Did not find any update logs.";
 					}
 
 				});
