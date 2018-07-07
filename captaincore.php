@@ -3097,7 +3097,7 @@ function captaincore_install_action_callback() {
 	}
 
 	if ( $cmd == 'view_quicksave_changes' ) {
-		$command    = "captaincore quicksave-view-changes $site $value";
+		$command = "captaincore quicksave-view-changes $site --hash=$value";
 	}
 
 	if ( $cmd == 'manage' ) {
