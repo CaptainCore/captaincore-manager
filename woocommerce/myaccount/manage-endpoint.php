@@ -833,11 +833,16 @@ selected: false },
 		</v-tab-item>
 		<v-tab-item :key="5">
 			<v-card>
-				<p class="text-xs-right" style="margin:0px;padding:0px">
+				<p class="text-xs-right" style="margin:12px 0 0 0;padding:0px">
+
+					<v-btn right small @click="update(site.id)">
+						Manually update
+					</v-btn>
 					<v-btn right small dark color="blue darken-3" @click="updateSettings(site.id)">
 						Update Settings
 						<v-icon dark>fas fa-cog</v-icon>
 					</v-btn>
+
 				</p>
 				<v-card-title v-if="site.update_logs.length == 0">
 					<div>
@@ -1608,6 +1613,37 @@ new Vue({
 					self.sites.filter(site => site.id == site_id)[0].plugins = updated_plugins;
 					self.sites.filter(site => site.id == site_id)[0].loading_plugins = false;
 					self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+				});
+			}
+		},
+		update( site_id ) {
+			site = this.sites.filter(site => site.id == site_id)[0];
+
+			should_update = confirm("Apply all plugin/theme updates for " + site.name + "?");
+			if (should_update) {
+
+				// New job for progress tracking
+				job_id = Math.round((new Date()).getTime());
+				description = "Updating themes/plugins on" + site.name;
+				this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
+				var data = {
+					'action': 'captaincore_install',
+					'post_id': site_id,
+					'command': "update-wp",
+					'background': true
+				};
+
+				self = this;
+
+				jQuery.post(ajaxurl, data, function(response) {
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
+
+					// Check if completed in 2 seconds
+					setTimeout(function() {
+						self.jobRetry(site_id, response);
+					}, 2000);
 				});
 			}
 		},

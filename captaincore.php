@@ -2981,6 +2981,10 @@ function captaincore_install_action_callback() {
 		$file = "~/Tmp/command-site_update_${site}_${timestamp}.txt";
 		$command = "$command > $file 2>&1 & sleep 5; head $file";
 	}
+	if ( $cmd == 'update-wp' ) {
+		$command = "captaincore update $site";
+		$run_in_background = true;
+	}
 	if ( $cmd == 'update-fetch' ) {
 		$command = "captaincore update-fetch $site";
 
