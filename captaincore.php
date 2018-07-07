@@ -3129,7 +3129,7 @@ function captaincore_install_action_callback() {
 		$website_id = get_field( 'website', $post_id );
 		$site       = get_field( 'site', $website_id[0] );
 		$commit     = get_field( 'git_commit', $post_id );
-		$command    = "captaincore quicksave-file-diff $site $commit \"$value\"";
+		$command    = "captaincore quicksave-file-diff $site --hash=$commit --file=\"$value\"";
 		$post_id    = $website_id[0];
 	}
 
