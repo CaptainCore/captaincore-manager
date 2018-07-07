@@ -1278,6 +1278,12 @@ new Vue({
 								// to do
 							}
 
+							if ( job.command == "update-wp" ){
+								// to do
+								site.update_logs = [];
+								fetchUpdateLogs( site_id );
+							}
+
 							job.status = "done";
 							repeat = false;
 
@@ -1625,7 +1631,7 @@ new Vue({
 				// New job for progress tracking
 				job_id = Math.round((new Date()).getTime());
 				description = "Updating themes/plugins on" + site.name;
-				this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+				this.jobs.push({"job_id": job_id,"description": description, "status": "running","command":"update-wp"});
 
 				var data = {
 					'action': 'captaincore_install',
