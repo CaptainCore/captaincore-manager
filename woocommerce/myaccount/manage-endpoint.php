@@ -302,6 +302,10 @@ tabs: 0,
 pagination: {
 	sortBy: 'roles'
 },
+update_logs_pagination: {
+	sortBy: 'date',
+	descending: true
+},
 filtered: true,
 selected: false },
 <?php
@@ -858,6 +862,7 @@ selected: false },
 						<v-data-table
 							:headers='header_updatelog'
 							:items="site.update_logs"
+							:pagination.sync="site.update_logs_pagination"
 							hide-actions
 							class="elevation-1"
 						>
@@ -947,7 +952,7 @@ selected: false },
 				scrollable
 				v-model="dialog">
 			 <v-card tile>
-				 <v-toolbar card dark color="primary" style="margin-top: 32px">
+				 <v-toolbar card dark color="primary">
 			<v-btn icon @click.native="dialog = false" dark>
 			  <v-icon>close</v-icon>
 			</v-btn>
