@@ -3231,6 +3231,11 @@ function captaincore_site_fetch_details( $post_id ) {
 	$s3secretkey      = get_field( 's3_secret_key', $post_id );
 	$s3bucket         = get_field( 's3_bucket', $post_id );
 	$s3path           = get_field( 's3_path', $post_id );
+	$partners         = get_field( 'partner', $post_id );
+
+	if ( $partners ) {
+		$preloadusers = implode( ',', $partners );
+	}
 
 	// Append provider if exists
 	if ( $provider != '' ) {
