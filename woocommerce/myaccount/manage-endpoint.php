@@ -172,9 +172,15 @@ body button.v-pagination__item:hover {
 	}
 
 table.v-table thead tr,
+table.v-table thead th,
 table.v-table tbody td,
-table.v-table tbody th {
-	height: auto;
+table.v-table tbody th,
+table.v-table tfoot td {
+	vertical-align: middle;
+}
+table.v-table tfoot td {
+	font-weight: 400;
+	font-size: 13px;
 }
 div.update_logs table tr td:nth-child(1) {
 	white-space: nowrap;
@@ -301,6 +307,8 @@ exclude_plugins: [<?php echo $exclude_plugins_formatted; ?>],<?php } else { ?>ex
 updates_enabled: <?php if ($updates_enabled && $updates_enabled[0] == "1" ) { echo '"1"'; } else { echo '"0"'; } ?>,
 loading_themes: false,
 loading_plugins: false,
+themes_selected: [],
+plugins_selected: [],
 tabs: 0,
 pagination: {
 	sortBy: 'roles'
@@ -679,7 +687,7 @@ selected: false },
 					<v-card class="site">
 						<v-expansion-panel>
 						<v-expansion-panel-content lazy>
-							<div slot="header"><strong>{{ site.name }}</strong> <span class="text-xs-right">{{ site.plugins.length }} Plugins {{ site.themes.length }} Themes - WordPress {{ site.core }}</span></div>
+							<div slot="header"><strong>{{ site.name }}</strong> <span class="text-xs-right">{{ site.themes.length }} Themes {{ site.plugins.length }} Plugins - WordPress {{ site.core }}</span></div>
 							<v-tabs v-model="site.tabs" color="blue darken-3" dark>
 								<v-tab :key="1" ripple>
 									Keys <v-icon>fas fa-key</v-icon>
@@ -734,75 +742,102 @@ selected: false },
 							 </v-card>
 							</v-tab-item>
 							<v-tab-item :key="2">
-								<v-card>
-									<v-toolbar-title class="caption" style="margin:2% 0 0 2%;">{{ site.themes.length }} Themes</v-toolbar-title>
-										<v-data-table
-											:headers="headers"
-											:items="site.themes"
-											class="elevation-1"
-											style="margin: 0 2% 2% 2%;"
-											:loading="site.loading_themes"
-											hide-actions
-										>
-									 <template slot="items" slot-scope="props">
-										 <td>{{ props.item.title }}</td>
-										 <td>{{ props.item.name }}</td>
-										 <td>{{ props.item.version }}</td>
-										 <td>
-											 <div v-if="props.item.status === 'inactive' || props.item.status === 'parent' || props.item.status === 'child'">
-												<v-switch left :label="props.item.status" v-model="props.item.status" false-value="inactive" true-value="active" @change="activateTheme(props.item.name, site.id)"></v-switch>
-			 								</div>
-			 								<div v-else>
-			 									{{ props.item.status }}
-			 								</div>
-										 </td>
-										 <td class="text-xs-center px-0">
-											 <v-btn icon class="mx-0" @click="deleteTheme(props.item.name, site.id)">
-												 <v-icon small color="pink">delete</v-icon>
-											 </v-btn>
-										 </td>
-									 </template>
-								 </v-data-table>
-								 <p></p>
-							</v-card>
+								<v-data-table
+										:headers="headers"
+										:items="site.themes"
+										:loading="site.loading_themes"
+										v-model="site.themes_selected"
+										item-key="name"
+										value="name"
+										class="elevation-1"
+										select-all
+										hide-actions
+									>
+								 <template slot="items" slot-scope="props">
+									 <td>
+					         <v-checkbox
+					           v-model="props.selected"
+					           primary
+					           hide-details
+					         ></v-checkbox>
+					 				</td>
+									 <td>{{ props.item.title }}</td>
+									 <td>{{ props.item.name }}</td>
+									 <td>{{ props.item.version }}</td>
+									 <td>
+										 <div v-if="props.item.status === 'inactive' || props.item.status === 'parent' || props.item.status === 'child'">
+											<v-switch left :label="props.item.status" v-model="props.item.status" false-value="inactive" true-value="active" @change="activateTheme(props.item.name, site.id)"></v-switch>
+		 								</div>
+		 								<div v-else>
+		 									{{ props.item.status }}
+		 								</div>
+									 </td>
+									 <td class="text-xs-center px-0">
+										 <v-btn icon class="mx-0" @click="deleteTheme(props.item.name, site.id)">
+											 <v-icon small color="pink">delete</v-icon>
+										 </v-btn>
+									 </td>
+								 </template>
+							 </v-data-table>
 						</v-tab-item>
 		<v-tab-item :key="3">
-			<v-card>
-				<div class="text-xs-right" style="margin:2% 2% 0 0;">
-					<v-btn small dark color="blue darken-3" @click="addPlugin(site.id)">Add Plugin
-						<v-icon dark>add</v-icon>
-					</v-btn>
-				</div>
-					 <v-toolbar-title class="caption" style="margin:0 0 0 2%;">{{ site.plugins.length }} Plugins</v-toolbar-title>
-					 <v-data-table
-						 :headers="headers"
-						 :items="site.plugins"
-						 class="elevation-1"
-						 style="margin: 0 2% 2% 2%;"
-						 :loading="site.loading_plugins"
-						 hide-actions
-					 >
-						 <template slot="items" slot-scope="props">
-							<td>{{ props.item.title }}</td>
-							<td>{{ props.item.name }}</td>
-							<td>{{ props.item.version }}</td>
-							<td>
-								<div v-if="props.item.status === 'active' || props.item.status === 'inactive'">
-									<v-switch v-model="props.item.status" false-value="inactive" true-value="active" @change="togglePlugin(props.item.name, props.item.status, site.id)"></v-switch>
-								</div>
-								<div v-else>
-									{{ props.item.status }}
-								</div>
-							</td>
-							<td class="text-xs-center px-0">
-								 <v-btn icon class="mx-0" @click="deletePlugin(props.item.name, site.id)" v-if="props.item.status === 'active' || props.item.status === 'inactive'">
-									 <v-icon small color="pink">delete</v-icon>
-								 </v-btn>
-							 </td>
-						 </template>
-					 </v-data-table>
-					 <p></p>
-				</v-card>
+			<v-toolbar color="grey lighten-4" dense light>
+				<v-toolbar-title>Plugins</v-toolbar-title>
+				<v-spacer></v-spacer>
+				<v-toolbar-items>
+					<v-btn flat @click="addPlugin(site.id)" v-if="site.plugins_selected.length != 0">Bulk Edit {{ site.plugins_selected.length }} plugins</v-btn>
+					<v-btn flat @click="addPlugin(site.id)">Add Plugin <v-icon dark>add</v-icon></v-btn>
+				</v-toolbar-items>
+			</v-toolbar>
+
+			<v-data-table
+				:headers="headers"
+				:items="site.plugins.filter(plugin => plugin.status != 'must-use' && plugin.status != 'dropin')"
+				:loading="site.loading_plugins"
+				:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
+				v-model="site.plugins_selected"
+				item-key="name"
+				value="name"
+				class="elevation-1"
+				select-all
+				hide-actions
+			 >
+			 <template slot="items" slot-scope="props">
+				<td>
+        <v-checkbox
+          v-model="props.selected"
+          primary
+          hide-details
+        ></v-checkbox>
+				</td>
+				<td>{{ props.item.title }}</td>
+				<td>{{ props.item.name }}</td>
+				<td>{{ props.item.version }}</td>
+				<td>
+					<div v-if="props.item.status === 'active' || props.item.status === 'inactive'">
+						<v-switch v-model="props.item.status" false-value="inactive" true-value="active" @change="togglePlugin(props.item.name, props.item.status, site.id)"></v-switch>
+					</div>
+					<div v-else>
+						{{ props.item.status }}
+					</div>
+				</td>
+				<td class="text-xs-center px-0">
+					 <v-btn icon class="mx-0" @click="deletePlugin(props.item.name, site.id)" v-if="props.item.status === 'active' || props.item.status === 'inactive'">
+						 <v-icon small color="pink">delete</v-icon>
+					 </v-btn>
+				 </td>
+			 </template>
+			 <template slot="footer" v-for="plugin in site.plugins.filter(plugin => plugin.status == 'must-use' || plugin.status == 'dropin')">
+				<tr>
+					<td></td>
+					<td>{{ plugin.title }}</td>
+					<td>{{ plugin.name }}</td>
+					<td>{{ plugin.version }}</td>
+					<td>{{ plugin.status }}</td>
+					<td class="text-xs-center px-0"></td>
+				</tr>
+			 </template>
+			</v-data-table>
 	  </v-tab-item>
 		<v-tab-item :key="4">
 			<v-card>
@@ -812,30 +847,28 @@ selected: false },
 					  <v-progress-linear :indeterminate="true"></v-progress-linear>
 					</div>
 				</v-card-title>
-				<v-card-title v-else>
-					<div>
-						<v-data-table
-							:headers='header_users'
-							:pagination.sync="site.pagination"
-							:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
-							:items="site.users"
-							class="elevation-1"
-						>
-					    <template slot="items" slot-scope="props">
-					      <td>{{ props.item.user_login }}</td>
-								<td>{{ props.item.display_name }}</td>
-								<td>{{ props.item.user_email }}</td>
-								<td>{{ props.item.roles }}</td>
-								<td>
-									<v-btn small round @click="loginSite(site.id, props.item.user_login)">Login as</v-btn>
-									<v-btn icon class="mx-0" @click="deleteUser(props.item.user_login, site.id)">
-										<v-icon small color="pink">delete</v-icon>
-									</v-btn>
-								</td>
-					    </template>
-					  </v-data-table>
-					</div>
-				</v-card-title>
+				<div v-else>
+					<v-data-table
+						:headers='header_users'
+						:pagination.sync="site.pagination"
+						:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
+						:items="site.users"
+						class="elevation-1"
+					>
+				    <template slot="items" slot-scope="props">
+				      <td>{{ props.item.user_login }}</td>
+							<td>{{ props.item.display_name }}</td>
+							<td>{{ props.item.user_email }}</td>
+							<td>{{ props.item.roles }}</td>
+							<td>
+								<v-btn small round @click="loginSite(site.id, props.item.user_login)">Login as</v-btn>
+								<v-btn icon class="mx-0" @click="deleteUser(props.item.user_login, site.id)">
+									<v-icon small color="pink">delete</v-icon>
+								</v-btn>
+							</td>
+				    </template>
+				  </v-data-table>
+				</div>
 			</v-card>
 		</v-tab-item>
 		<v-tab-item :key="5">
