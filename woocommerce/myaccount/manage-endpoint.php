@@ -172,10 +172,13 @@ body button.v-pagination__item:hover {
 	}
 
 table.v-table thead tr,
-table.v-table tbody td, table.v-table tbody th {
+table.v-table tbody td,
+table.v-table tbody th {
 	height: auto;
 }
-
+div.update_logs table tr td:nth-child(1) {
+	white-space: nowrap;
+}
 .upload-drag label.btn {
   margin-bottom: 0;
   margin-right: 1rem;
@@ -837,7 +840,7 @@ selected: false },
 		</v-tab-item>
 		<v-tab-item :key="5">
 			<v-card>
-				<p class="text-xs-right" style="margin:12px 0 0 0;padding:0px">
+				<p class="text-xs-right" style="margin:12px 0;padding:0px">
 
 					<v-btn right small @click="update(site.id)">
 						Manually update
@@ -857,14 +860,13 @@ selected: false },
 				<v-card-title v-else-if="typeof site.update_logs == 'string'">
 					{{ site.update_logs }}
 				</v-card-title>
-				<v-card-title v-else>
-					<div>
+				<div v-else>
 						<v-data-table
 							:headers='header_updatelog'
 							:items="site.update_logs"
 							:pagination.sync="site.update_logs_pagination"
-							hide-actions
-							class="elevation-1"
+							class="elevation-1 update_logs"
+							:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
 						>
 					    <template slot="items" slot-scope="props">
 					      <td>{{ props.item.date | pretty_timestamp }}</td>
@@ -876,7 +878,6 @@ selected: false },
 					    </template>
 					  </v-data-table>
 					</div>
-				</v-card-title>
 			</v-card>
 	  </v-tab-item>
 		<v-tab-item :key="6">
