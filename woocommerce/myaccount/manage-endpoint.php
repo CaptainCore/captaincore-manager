@@ -309,6 +309,7 @@ loading_themes: false,
 loading_plugins: false,
 themes_selected: [],
 plugins_selected: [],
+users_selected: [],
 tabs: 0,
 pagination: {
 	sortBy: 'roles'
@@ -742,16 +743,24 @@ selected: false },
 							 </v-card>
 							</v-tab-item>
 							<v-tab-item :key="2">
+								<v-toolbar color="grey lighten-4" dense light>
+									<v-toolbar-title>Themes</v-toolbar-title>
+									<v-spacer></v-spacer>
+									<v-toolbar-items>
+										<v-btn flat @click="addPlugin(site.id)" v-if="site.themes_selected.length != 0">Bulk Edit {{ site.themes_selected.length }} themes</v-btn>
+										<v-btn flat @click="addPlugin(site.id)">Add Theme <v-icon dark>add</v-icon></v-btn>
+									</v-toolbar-items>
+								</v-toolbar>
 								<v-data-table
-										:headers="headers"
-										:items="site.themes"
-										:loading="site.loading_themes"
-										v-model="site.themes_selected"
-										item-key="name"
-										value="name"
-										class="elevation-1"
-										select-all
-										hide-actions
+									:headers="headers"
+									:items="site.themes"
+									:loading="site.loading_themes"
+									v-model="site.themes_selected"
+									item-key="name"
+									value="name"
+									class="elevation-1"
+									select-all
+									hide-actions
 									>
 								 <template slot="items" slot-scope="props">
 									 <td>
@@ -789,7 +798,6 @@ selected: false },
 					<v-btn flat @click="addPlugin(site.id)">Add Plugin <v-icon dark>add</v-icon></v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
-
 			<v-data-table
 				:headers="headers"
 				:items="site.plugins.filter(plugin => plugin.status != 'must-use' && plugin.status != 'dropin')"
@@ -840,6 +848,14 @@ selected: false },
 			</v-data-table>
 	  </v-tab-item>
 		<v-tab-item :key="4">
+			<v-toolbar color="grey lighten-4" dense light>
+				<v-toolbar-title>Users</v-toolbar-title>
+				<v-spacer></v-spacer>
+				<v-toolbar-items>
+					<v-btn flat @click="addPlugin(site.id)" v-if="site.users_selected.length != 0">Bulk Edit {{ site.users_selected.length }} users</v-btn>
+					<v-btn flat @click="addPlugin(site.id)">Add User <v-icon dark>add</v-icon></v-btn>
+				</v-toolbar-items>
+			</v-toolbar>
 			<v-card>
 				<v-card-title v-if="site.users.length == 0">
 					<div>
@@ -853,9 +869,19 @@ selected: false },
 						:pagination.sync="site.pagination"
 						:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
 						:items="site.users"
+						item-key="user_login"
+						v-model="site.users_selected"
 						class="elevation-1"
+						select-all
 					>
 				    <template slot="items" slot-scope="props">
+							<td>
+			        <v-checkbox
+			          v-model="props.selected"
+			          primary
+			          hide-details
+			        ></v-checkbox>
+							</td>
 				      <td>{{ props.item.user_login }}</td>
 							<td>{{ props.item.display_name }}</td>
 							<td>{{ props.item.user_email }}</td>
@@ -872,18 +898,15 @@ selected: false },
 			</v-card>
 		</v-tab-item>
 		<v-tab-item :key="5">
+			<v-toolbar color="grey lighten-4" dense light>
+				<v-toolbar-title>Update Logs</v-toolbar-title>
+				<v-spacer></v-spacer>
+				<v-toolbar-items>
+					<v-btn flat @click="update(site.id)">Manually update</v-btn>
+					<v-btn flat @click="updateSettings(site.id)">Update Settings <v-icon dark small>fas fa-cog</v-icon></v-btn>
+				</v-toolbar-items>
+			</v-toolbar>
 			<v-card>
-				<p class="text-xs-right" style="margin:12px 0;padding:0px">
-
-					<v-btn right small @click="update(site.id)">
-						Manually update
-					</v-btn>
-					<v-btn right small dark color="blue darken-3" @click="updateSettings(site.id)">
-						Update Settings
-						<v-icon dark>fas fa-cog</v-icon>
-					</v-btn>
-
-				</p>
 				<v-card-title v-if="site.update_logs.length == 0">
 					<div>
 						Fetching update logs...
@@ -1132,7 +1155,7 @@ new Vue({
 			 { text: 'Name', value: 'name' },
 			 { text: 'Slug', value: 'slug' },
 			 { text: 'Version', value: 'version' },
-			 { text: 'Status', value: 'status', width: "140px" },
+			 { text: 'Status', value: 'status', width: "100px" },
 			 { text: 'Actions', value: 'actions', width: "90px", sortable: false }
 		 ],
 		 header_updatelog: [
@@ -1148,7 +1171,7 @@ new Vue({
 			 { text: 'Display Name', value: 'display_name' },
 			 { text: 'Email', value: 'user_email' },
 			 { text: 'Role(s)', value: 'roles' },
-			 { text: 'Actions', value: 'actions' }
+			 { text: 'Actions', value: 'actions', width: "200px", sortable: false }
 		 ],
 		 applied_site_filter: null,
 		 applied_site_filter_version: null,
