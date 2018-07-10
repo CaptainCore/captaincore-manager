@@ -423,6 +423,21 @@ selected: false },
 		</v-card-text>
 		</v-card>
 		</v-dialog>
+		<v-dialog v-model="bulk_edit.show" max-width="600px">
+		<v-card tile>
+			<v-toolbar card dark color="primary">
+				<v-btn icon dark @click.native="bulk_edit.show = false">
+					<v-icon>close</v-icon>
+				</v-btn>
+				<v-toolbar-title>Bulk edit on {{ bulk_edit.site_name }}</v-toolbar-title>
+				<v-spacer></v-spacer>
+			</v-toolbar>
+		<v-card-text>
+			<h3>Bulk edit {{ bulk_edit.items.length }} {{ bulk_edit.type }}</h3>
+			<v-btn v-if="bulk_edit.type == 'plugins'" @click="bulkEditExecute('activate')">Activate</v-btn> <v-btn v-if="bulk_edit.type == 'plugins'" @click="bulkEditExecute('deactivate')">Deactivate</v-btn> <v-btn v-if="bulk_edit.type == 'plugins'" @click="bulkEditExecute('toggle')">Toggle</v-btn> <v-btn @click="bulkEditExecute('delete')">Delete</v-btn>
+		</v-card-text>
+		</v-card>
+		</v-dialog>
 		<v-dialog v-model="update_settings.show" max-width="500px">
 		<v-card tile>
 			<v-toolbar card dark color="primary">
@@ -788,7 +803,7 @@ selected: false },
 									<v-toolbar-title>Themes</v-toolbar-title>
 									<v-spacer></v-spacer>
 									<v-toolbar-items>
-										<v-btn flat @click="addTheme(site.id)" v-if="site.themes_selected.length != 0">Bulk Edit {{ site.themes_selected.length }} themes</v-btn>
+										<v-btn flat @click="bulkEdit(site.id,'themes')" v-if="site.themes_selected.length != 0">Bulk Edit {{ site.themes_selected.length }} themes</v-btn>
 										<v-btn flat @click="addTheme(site.id)">Add Theme <v-icon dark>add</v-icon></v-btn>
 									</v-toolbar-items>
 								</v-toolbar>
@@ -835,7 +850,7 @@ selected: false },
 				<v-toolbar-title>Plugins</v-toolbar-title>
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
-					<v-btn flat @click="addPlugin(site.id)" v-if="site.plugins_selected.length != 0">Bulk Edit {{ site.plugins_selected.length }} plugins</v-btn>
+					<v-btn flat @click="bulkEdit(site.id, 'plugins')" v-if="site.plugins_selected.length != 0">Bulk Edit {{ site.plugins_selected.length }} plugins</v-btn>
 					<v-btn flat @click="addPlugin(site.id)">Add Plugin <v-icon dark>add</v-icon></v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
@@ -893,7 +908,7 @@ selected: false },
 				<v-toolbar-title>Users</v-toolbar-title>
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
-					<v-btn flat @click="addPlugin(site.id)" v-if="site.users_selected.length != 0">Bulk Edit {{ site.users_selected.length }} users</v-btn>
+					<v-btn flat @click="bulkEdit(site.id,'users')" v-if="site.users_selected.length != 0">Bulk Edit {{ site.users_selected.length }} users</v-btn>
 					<v-btn flat @click="addPlugin(site.id)">Add User <v-icon dark>add</v-icon></v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
@@ -1182,6 +1197,7 @@ new Vue({
 		new_site: false,<?php } ?>
 		new_plugin: { show: false, site_id: null},
 		new_theme: { show: false, site_id: null},
+		bulk_edit: { show: false, site_id: null, type: null, items: [] },
 		update_settings: { show: false, site_id: null, loading: false},
 		upload: [],
 		view_jobs: false,
@@ -1617,6 +1633,49 @@ new Vue({
 				});
 			});
 			this.select_bulk_action_arguments = arguments;
+		},
+		bulkEdit ( site_id, type ) {
+			this.bulk_edit.show = true;
+			site = this.sites.filter(site => site.id == site_id)[0];
+			this.bulk_edit.site_id = site_id;
+			this.bulk_edit.site_name = site.name;
+			this.bulk_edit.items = site[ type.toLowerCase() + "_selected" ];
+			this.bulk_edit.type = type;
+		},
+		bulkEditExecute ( action ) {
+			site_id = this.bulk_edit.site_id;
+			object_singular = this.bulk_edit.type.slice(0, -1);
+			items = this.bulk_edit.items.map(item => item.name).join(" ");
+			if ( object_singular == "user" ) {
+				items = this.bulk_edit.items.map(item => item.user_login).join(" ");
+			}
+
+			// Start job
+			site_name = this.bulk_edit.site_name;
+			description = "Bulk action '" + action + " " + this.bulk_edit.type + "' on " + site_name;
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
+			// WP ClI command to send
+			wpcli = "wp " + object_singular + " " + action + " " + items;
+
+			this.bulk_edit.show = false;
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': site_id,
+				'command': "manage",
+				'value': "ssh",
+				'background': true,
+				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+			};
+
+			self = this;
+
+			jQuery.post(ajaxurl, data, function(response) {
+				self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+			});
+
 		},
 		addTheme ( site_id ){
 			this.new_theme.show = true;
