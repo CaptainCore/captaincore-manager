@@ -345,38 +345,79 @@ selected: false },
 				<v-toolbar-title>Add plugin to {{ new_plugin.site_name }}</v-toolbar-title>
 				<v-spacer></v-spacer>
 			</v-toolbar>
-			<v-card-text>
-
+		<v-card-text>
 		<div class="upload-drag">
-    <div class="upload">
-      <div v-if="upload.length">
-        <div v-for="(file, index) in upload" :key="file.id">
-          <span>{{file.name}}</span> -
-          <span>{{file.size | formatSize}}</span> -
-          <span v-if="file.error">{{file.error}}</span>
-          <span v-else-if="file.success">success</span>
-          <span v-else-if="file.active">active
+		<div class="upload">
+			<div v-if="upload.length">
+				<div v-for="(file, index) in upload" :key="file.id">
+					<span>{{file.name}}</span> -
+					<span>{{file.size | formatSize}}</span> -
+					<span v-if="file.error">{{file.error}}</span>
+					<span v-else-if="file.success">success</span>
+					<span v-else-if="file.active">active
 						<v-progress-linear v-model="file.progress"></v-progress-linear>
 					</span>
-          <span v-else></span>
-        </div>
-      </div>
-      <div v-else>
-
-          <div class="text-xs-center">
-            <h4>Drop files anywhere to upload<br/>or</h4>
-            <label for="file" class="btn btn-lg btn-primary" style="padding: 0px 8px;">Select Files</label>
-          </div>
-
-      </div>
+					<span v-else></span>
+				</div>
+			</div>
+			<div v-else>
+					<div class="text-xs-center">
+						<h4>Drop files anywhere to upload<br/>or</h4>
+						<label for="file" class="btn btn-lg btn-primary" style="padding: 0px 8px;">Select Files</label>
+					</div>
+			</div>
 
 			<div v-show="$refs.upload && $refs.upload.dropActive" class="drop-active">
-    		<h3>Drop files to upload</h3>
-      </div>
+				<h3>Drop files to upload</h3>
+			</div>
 
 			<div class="upload-drag-btn">
 				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="/wp-content/plugins/captaincore/upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
 			</div>
+		</div>
+		</div>
+		</v-card-text>
+		</v-card>
+		</v-dialog>
+		<v-dialog v-model="new_theme.show" max-width="500px">
+		<v-card tile>
+			<v-toolbar card dark color="primary">
+				<v-btn icon dark @click.native="new_theme.show = false">
+					<v-icon>close</v-icon>
+				</v-btn>
+				<v-toolbar-title>Add theme to {{ new_theme.site_name }}</v-toolbar-title>
+				<v-spacer></v-spacer>
+			</v-toolbar>
+		<v-card-text>
+		<div class="upload-drag">
+		<div class="upload">
+			<div v-if="upload.length">
+				<div v-for="(file, index) in upload" :key="file.id">
+					<span>{{file.name}}</span> -
+					<span>{{file.size | formatSize}}</span> -
+					<span v-if="file.error">{{file.error}}</span>
+					<span v-else-if="file.success">success</span>
+					<span v-else-if="file.active">active
+						<v-progress-linear v-model="file.progress"></v-progress-linear>
+					</span>
+					<span v-else></span>
+				</div>
+			</div>
+			<div v-else>
+					<div class="text-xs-center">
+						<h4>Drop files anywhere to upload<br/>or</h4>
+						<label for="file" class="btn btn-lg btn-primary" style="padding: 0px 8px;">Select Files</label>
+					</div>
+			</div>
+
+			<div v-show="$refs.upload && $refs.upload.dropActive" class="drop-active">
+				<h3>Drop files to upload</h3>
+			</div>
+
+			<div class="upload-drag-btn">
+				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="/wp-content/plugins/captaincore/upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
+			</div>
+
 		</div>
 		</div>
 		</v-card-text>
@@ -747,8 +788,8 @@ selected: false },
 									<v-toolbar-title>Themes</v-toolbar-title>
 									<v-spacer></v-spacer>
 									<v-toolbar-items>
-										<v-btn flat @click="addPlugin(site.id)" v-if="site.themes_selected.length != 0">Bulk Edit {{ site.themes_selected.length }} themes</v-btn>
-										<v-btn flat @click="addPlugin(site.id)">Add Theme <v-icon dark>add</v-icon></v-btn>
+										<v-btn flat @click="addTheme(site.id)" v-if="site.themes_selected.length != 0">Bulk Edit {{ site.themes_selected.length }} themes</v-btn>
+										<v-btn flat @click="addTheme(site.id)">Add Theme <v-icon dark>add</v-icon></v-btn>
 									</v-toolbar-items>
 								</v-toolbar>
 								<v-data-table
@@ -1140,6 +1181,7 @@ new Vue({
 		},<?php } else { ?>
 		new_site: false,<?php } ?>
 		new_plugin: { show: false, site_id: null},
+		new_theme: { show: false, site_id: null},
 		update_settings: { show: false, site_id: null, loading: false},
 		upload: [],
 		view_jobs: false,
@@ -1372,36 +1414,69 @@ new Vue({
 				// Uploaded successfully
 				if (newFile.success && !oldFile.success) {
 					new_response = JSON.parse( newFile.response );
-					if (  new_response.response == "Success" && new_response.url ) {
+					if ( new_response.response == "Success" && new_response.url ) {
 
-						this.new_plugin.show = false;
-						this.upload = [];
+						if ( this.new_plugin.show ) {
+							this.new_plugin.show = false;
 
-						// run wp cli with new plugin url and site
-						site_id = this.new_plugin.site_id;
-						site_name = this.new_plugin.site_name;
+							this.upload = [];
 
-						// Adds new job
-						job_id = Math.round((new Date()).getTime());
-						description = "Installing plugin '" + newFile.name + "' to " + site_name;
-						this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+							// run wp cli with new plugin url and site
+							site_id = this.new_plugin.site_id;
+							site_name = this.new_plugin.site_name;
 
-						// Builds WP-CLI
-						wpcli = "wp plugin install " + new_response.url + " --force --activate"
+							// Adds new job
+							job_id = Math.round((new Date()).getTime());
+							description = "Installing plugin '" + newFile.name + "' to " + site_name;
+							this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
 
-						// Prep AJAX request
-						var data = {
-							'action': 'captaincore_install',
-							'post_id': site_id,
-							'command': "manage",
-							'value': "ssh",
-							'background': true,
-							'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
-						};
+							// Builds WP-CLI
+							wpcli = "wp plugin install " + new_response.url + " --force --activate"
 
-						// Housecleaning
-						this.new_plugin.site_id = null;
-						this.new_plugin.site_name = null;
+							// Prep AJAX request
+							var data = {
+								'action': 'captaincore_install',
+								'post_id': site_id,
+								'command': "manage",
+								'value': "ssh",
+								'background': true,
+								'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+							};
+
+							// Housecleaning
+							this.new_plugin.site_id = null;
+							this.new_plugin.site_name = null;
+						}
+						if ( this.new_theme.show ) {
+							this.new_theme.show = false;
+							this.upload = [];
+
+							// run wp cli with new plugin url and site
+							site_id = this.new_theme.site_id;
+							site_name = this.new_theme.site_name;
+
+							// Adds new job
+							job_id = Math.round((new Date()).getTime());
+							description = "Installing theme '" + newFile.name + "' to " + site_name;
+							this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
+							// Builds WP-CLI
+							wpcli = "wp theme install " + new_response.url + " --force"
+
+							// Prep AJAX request
+							var data = {
+								'action': 'captaincore_install',
+								'post_id': site_id,
+								'command': "manage",
+								'value': "ssh",
+								'background': true,
+								'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+							};
+
+							// Housecleaning
+							this.new_theme.site_id = null;
+							this.new_theme.site_name = null;
+						}
 
 						self = this;
 
@@ -1542,6 +1617,11 @@ new Vue({
 				});
 			});
 			this.select_bulk_action_arguments = arguments;
+		},
+		addTheme ( site_id ){
+			this.new_theme.show = true;
+			this.new_theme.site_id = site_id;
+			this.new_theme.site_name = this.sites.filter(site => site.id == site_id)[0].name;
 		},
 		activateTheme (theme_name, site_id) {
 
