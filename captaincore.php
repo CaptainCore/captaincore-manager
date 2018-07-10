@@ -1512,17 +1512,6 @@ function captaincore_acf_save_post_after( $post_id ) {
 	}
 }
 
-add_action(
-	'rest_api_init', function () {
-		register_rest_route(
-			'captaincore/v1', '/client', array(
-				'methods'  => 'GET',
-				'callback' => 'captaincore_client_options_func',
-			)
-		);
-	}
-);
-
 function captaincore_client_options_func( WP_REST_Request $request ) {
 
 	$data = array(
@@ -1541,10 +1530,29 @@ function captaincore_client_options_func( WP_REST_Request $request ) {
 
 }
 
-// Add meta fields to API
-add_action( 'rest_api_init', 'slug_register_ah_fields' );
 
-function slug_register_ah_fields() {
+add_action( 'rest_api_init', 'captaincore_register_rest_endpoints' );
+
+function captaincore_register_rest_endpoints() {
+
+	// Custom endpoint for CaptainCore Client plugin
+	register_rest_route(
+		'captaincore/v1', '/client', array(
+			'methods'  => 'GET',
+			'callback' => 'captaincore_client_options_func',
+		)
+	);
+
+	// Custom endpoint for CaptainCore API
+	register_rest_route(
+		'captaincore/v1', '/api', array(
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_api_func',
+			'show_in_index' => false
+		)
+	);
+
+	// Add meta fields to API
 	register_rest_field(
 		'captcore_website', 'launch_date',
 		array(
