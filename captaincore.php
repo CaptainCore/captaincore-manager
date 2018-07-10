@@ -1534,9 +1534,6 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	$post = json_decode( file_get_contents( 'php://input' ) );
 
-	$site_source_id      = $post->site_source_id;
-	$site_destination_id = $post->site_destination_id;
-	$date                = $post->date;
 	$archive             = $post->archive;
 	$command             = $post->command;
 	$storage             = $post->storage;
@@ -1552,28 +1549,30 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	$git_status          = trim( base64_decode( $post->git_status ) );
 	$token_key           = $post->token_key;
 	$data                = $post->data;
-	$site_id             = $post->site_id;
 
 	// Error if token not valid
 	if ( $post->token != CAPTAINCORE_CLI_TOKEN ) {
-	 // Create the response object
-	 return new WP_Error( 'token_invalid', 'Invalid Token', array( 'status' => 404 ) );
- }
+		// Create the response object
+		return new WP_Error( 'token_invalid', 'Invalid Token', array( 'status' => 404 ) );
+	}
 
 	// Error if site not valid
-	if (  get_post_type( $site_id ) != "captcore_website" ) {
-	 // Create the response object
-	 return new WP_Error( 'command_invalid', 'Invalid Command', array( 'status' => 404 ) );
- }
+	if (  get_post_type( $post->site_id ) != "captcore_website" ) {
+		// Create the response object
+		return new WP_Error( 'command_invalid', 'Invalid Command', array( 'status' => 404 ) );
+	}
 
 	// Verifies valid token and site exists with a period
-	if ( get_post_type( $site_id ) == "captcore_website" and $post->token == CAPTAINCORE_CLI_TOKEN ) {
+	if ( get_post_type( $post->site_id ) == "captcore_website" and $post->token == CAPTAINCORE_CLI_TOKEN ) {
+
+		$site_name   = get_field( 'site', $post->site_id );
+		$domain_name = get_the_title( $post->site_id );
 
 		// Copy site
 		if ( $command == 'copy' and $email ) {
 
-			$site_source      = get_the_title( $site_source_id );
-			$site_destination = get_the_title( $site_destination_id );
+			$site_source      = get_the_title( $post->site_source_id );
+			$site_destination = get_the_title( $post->site_destination_id );
 
 			// Send out completed email notice
 			$to      = $email;
@@ -1590,8 +1589,6 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		// Production deploy to staging
 		if ( $command == 'production-to-staging' and $email ) {
 
-			$site_name   = get_field( 'site', $site_id );
-			$domain_name = get_the_title( $site_id );
 			$url         = 'https://staging-' . get_field( 'site_staging', $site_id ) . '.kinsta.com';
 
 			// Send out completed email notice
