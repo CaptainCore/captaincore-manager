@@ -21,6 +21,11 @@ html {
 	font-size: 62.5%;
 }
 
+.table_users tbody tr td:nth-child(6) {
+	 width:200px;
+	 display:block;
+}
+
 .application .site .theme--dark.icon, .site .theme--dark .v-icon {
 	font-size: 1em;
 	padding-left: 0.3em;
@@ -36,6 +41,14 @@ html {
 }
 .v-btn__content span {
     padding: 0 0 0 6px;
+}
+.v-toolbar__items i.v-icon.theme--dark {
+    margin-left: 2%;
+}
+table.v-datatable.v-table.v-datatable--select-all thead tr th:nth-child(1),
+table.v-datatable.v-table.v-datatable--select-all tbody tr td:nth-child(1) {
+	width: 42px;
+	padding: 0 0 0px 22px;
 }
 .v-expansion-panel__body .v-card.bordered {
 	margin: 2em;
@@ -804,7 +817,7 @@ selected: false },
 									<v-spacer></v-spacer>
 									<v-toolbar-items>
 										<v-btn flat @click="bulkEdit(site.id,'themes')" v-if="site.themes_selected.length != 0">Bulk Edit {{ site.themes_selected.length }} themes</v-btn>
-										<v-btn flat @click="addTheme(site.id)">Add Theme <v-icon dark>add</v-icon></v-btn>
+										<v-btn flat @click="addTheme(site.id)">Add Theme <v-icon dark small>add</v-icon></v-btn>
 									</v-toolbar-items>
 								</v-toolbar>
 								<v-data-table
@@ -851,7 +864,7 @@ selected: false },
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
 					<v-btn flat @click="bulkEdit(site.id, 'plugins')" v-if="site.plugins_selected.length != 0">Bulk Edit {{ site.plugins_selected.length }} plugins</v-btn>
-					<v-btn flat @click="addPlugin(site.id)">Add Plugin <v-icon dark>add</v-icon></v-btn>
+					<v-btn flat @click="addPlugin(site.id)">Add Plugin <v-icon dark small>add</v-icon></v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
 			<v-data-table
@@ -909,7 +922,7 @@ selected: false },
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
 					<v-btn flat @click="bulkEdit(site.id,'users')" v-if="site.users_selected.length != 0">Bulk Edit {{ site.users_selected.length }} users</v-btn>
-					<v-btn flat @click="addPlugin(site.id)">Add User <v-icon dark>add</v-icon></v-btn>
+					<v-btn flat @click="addPlugin(site.id)">Add User <v-icon dark small>add</v-icon></v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
 			<v-card>
@@ -927,7 +940,7 @@ selected: false },
 						:items="site.users"
 						item-key="user_login"
 						v-model="site.users_selected"
-						class="elevation-1"
+						class="elevation-1 table_users"
 						select-all
 					>
 				    <template slot="items" slot-scope="props">
@@ -1229,7 +1242,7 @@ new Vue({
 			 { text: 'Display Name', value: 'display_name' },
 			 { text: 'Email', value: 'user_email' },
 			 { text: 'Role(s)', value: 'roles' },
-			 { text: 'Actions', value: 'actions', width: "200px", sortable: false }
+			 { text: 'Actions', value: 'actions', sortable: false }
 		 ],
 		 applied_site_filter: null,
 		 applied_site_filter_version: null,
