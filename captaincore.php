@@ -3399,7 +3399,9 @@ function captaincore_install_action_callback() {
 				foreach ( $arguments as $argument ) {
 					if ( $argument['command'] == $bulk_command && isset( $argument['input'] ) && $argument['input'] != '' ) {
 						$bulk_arguments[] = $argument['input'];
-						$command         .= "captaincore $bulk_command " . implode( ' ', $sites ) . ' --' . $argument['value'] . '="' . $argument['input'] . '";';
+						date_default_timezone_set( 'America/New_York' );
+						$timestamp  = date( 'Y-m-d-hms', time() );
+						$command         .= "captaincore $bulk_command " . implode( ' ', $sites ) . " --" . $argument['value'] . "=\"" . $argument['input'] . "\" > ~/Tmp/$timestamp-bulk.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-bulk.txt;";
 					}
 				}
 			}
