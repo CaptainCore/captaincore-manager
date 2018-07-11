@@ -3387,12 +3387,13 @@ function captaincore_install_action_callback() {
 
 	if ( $cmd == 'manage' ) {
 
-		if ( is_array($post_id) ) {
+		if ( is_array($post_ids) ) {
 			$command = '';
 			$sites   = array();
-			foreach ( $post_ids as $post_id ) {
-				$sites[] = get_field( 'site', $post_id );
+			foreach ( $post_ids as $site_id ) {
+				$sites[] = get_field( 'site', $site_id );
 			}
+
 			foreach ( $value as $bulk_command ) {
 				$bulk_arguments = array();
 				foreach ( $arguments as $argument ) {
