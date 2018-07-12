@@ -1549,6 +1549,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	$git_status          = trim( base64_decode( $post->git_status ) );
 	$token_key           = $post->token_key;
 	$data                = $post->data;
+	$site_id             = $post->site_id;
 
 	// Error if token not valid
 	if ( $post->token != CAPTAINCORE_CLI_TOKEN ) {
@@ -1557,16 +1558,16 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Error if site not valid
-	if (  get_post_type( $post->site_id ) != "captcore_website" ) {
+	if ( get_post_type( $site_id) != "captcore_website" ) {
 		// Create the response object
 		return new WP_Error( 'command_invalid', 'Invalid Command', array( 'status' => 404 ) );
 	}
 
 	// Verifies valid token and site exists with a period
-	if ( get_post_type( $post->site_id ) == "captcore_website" and $post->token == CAPTAINCORE_CLI_TOKEN ) {
+	if ( get_post_type( $site_id ) == "captcore_website" and $post->token == CAPTAINCORE_CLI_TOKEN ) {
 
-		$site_name   = get_field( 'site', $post->site_id );
-		$domain_name = get_the_title( $post->site_id );
+		$site_name   = get_field( 'site', $site_id );
+		$domain_name = get_the_title( $site_id );
 
 		// Copy site
 		if ( $command == 'copy' and $email ) {
@@ -1762,7 +1763,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		}
 
 		// Updates views and storage usage
-		if ( isset( $views ) and isset( $storage ) ) {
+		if ( $command == 'usage-update' and isset( $storage ) ) {
 			update_field( 'field_57e0b2b17eb2a', $storage, $site_id );
 			update_field( 'field_57e0b2c07eb2b', $views, $site_id );
 			do_action( 'acf/save_post', $site_id ); // Runs ACF save post hooks
