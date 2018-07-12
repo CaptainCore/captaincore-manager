@@ -3105,6 +3105,13 @@ function captaincore_ajax_action_callback() {
 
 	}
 
+	if ( $cmd == 'fetch-users' ) {
+
+		# Fetch from custom table
+		echo get_field( "users", $post_id );
+
+	}
+
 	if ( $cmd == 'fetch-update-logs' ) {
 
 		# Fetch from custom table

@@ -278,7 +278,6 @@ $count = 0;
 foreach ( $websites as $website ) {
 	$plugins = trim( get_field( 'plugins', $website->ID ) );
 	$themes = trim( get_field( 'themes', $website->ID ) );
-	$users = get_field( 'users', $website->ID );
 	$customer = get_field( 'customer', $website->ID );
 	$shared_with = get_field( 'partner', $website->ID );
 	$storage = get_field('storage', $website->ID);
@@ -304,8 +303,7 @@ keys: [
 	{ key_id: 1, "link":"http://<?php echo get_the_title( $website->ID ); ?>","environment": "Production", "address": "<?php the_field('address', $website->ID); ?>","username":"<?php the_field('username', $website->ID); ?>","password":"<?php the_field('password', $website->ID); ?>","protocol":"<?php the_field('protocol', $website->ID); ?>","port":"<?php the_field('port', $website->ID); ?>",<?php if ( strpos($production_address, ".kinsta.com") ) { ?>"ssh":"ssh <?php the_field('username', $website->ID); ?>@<?php echo $production_address; ?> -p <?php the_field('port', $website->ID); ?>",<?php } if ( strpos($production_address, ".kinsta.com") and get_field('database_username', $website->ID) ) { ?>"database": "https://mysqleditor-<?php the_field('database_username', $website->ID); ?>.kinsta.com","database_username": "<?php the_field('database_username', $website->ID); ?>","database_password": "<?php the_field('database_password', $website->ID); ?>",<?php } ?>},
 	<?php if (get_field('address_staging', $website->ID)) { ?>{ key_id: 2, "link":"<?php if (strpos( get_field('address_staging', $website->ID), ".kinsta.com") ) { echo "https://staging-". get_field('site_staging', $website->ID).".kinsta.com"; } else { echo "https://". get_field('site_staging', $website->ID). ".staging.wpengine.com"; } ?>","environment": "Staging", "address": "<?php the_field('address_staging', $website->ID); ?>","username":"<?php the_field('username_staging', $website->ID); ?>","password":"<?php the_field('password_staging', $website->ID); ?>","protocol":"<?php the_field('protocol_staging', $website->ID); ?>","port":"<?php the_field('port_staging', $website->ID); ?>"},<?php } ?>
 ],
-<?php if ( $users and substr($users, 0, 1) === "[" ) { ?>
-users: <?php echo $users; ?>,<?php } else { ?>users: [],<?php } ?>
+users: [],
 update_logs: [],
 <?php if ( $exclude_themes ) {
 $exclude_themes = explode(",", $exclude_themes);
@@ -1563,31 +1561,26 @@ new Vue({
 
 			// Fetch updates if none exists
 			if ( users_count == 0 ) {
-
-				job_id = Math.round((new Date()).getTime());
-
-				description = "Fetching users for " + site.name;
-				this.jobs.push({"job_id": job_id,"description": description, "status": "running","command":"usersFetch"});
-
+				
 				var data = {
-					'action': 'captaincore_install',
+					'action': 'captaincore_ajax',
 					'post_id': site_id,
-					'command': "users-fetch",
+					'command': "fetch-users",
 				};
 
 				self = this;
 
 				jQuery.post(ajaxurl, data, function(response) {
 
-					// Expect Job ID and update temp Job in queue for tracking purposes
-					new_job_id = response;
-					description = "Fetching users for " + site.name;
-					self.jobs.filter(job => job.job_id == job_id )[0].job_id = new_job_id;
+					if (tryParseJSON(response)) {
+						// Add to site.update_logs
+						site.users = JSON.parse(response);
+					}
 
-					// Check if completed in 2 seconds
-					setTimeout(function(){
-          	self.jobRetry(site_id, new_job_id);
-          }, 2000);
+					if ( site.users.length == 0 ) {
+						site.users = "Error: Did not find any users.";
+					}
+
 				});
 			}
 		},
