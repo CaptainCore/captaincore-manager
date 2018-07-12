@@ -4469,7 +4469,6 @@ class PageTemplater {
 
 		// Add your templates to this array.
 		$this->templates = array(
-			'templates/page-captaincore-api.php'  => 'CaptainCore API',
 			'templates/page-company-handbook.php' => 'Company Handbook',
 			'templates/page-activities.php'       => 'Activities',
 			'templates/page-checkout-express.php' => 'Checkout Express',
