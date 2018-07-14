@@ -2607,66 +2607,86 @@ function captaincore_fetch_sites() {
 	$user       = wp_get_current_user();
 	$role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
 	$partner    = get_field( 'partner', 'user_' . get_current_user_id() );
-	if ( $partner and $role_check ) {
 
-		// Loop through each partner assigned to current user
-		foreach ( $partner as $partner_id ) {
+	// Bail if not assigned a role
+	if ( !$role_check ) {
+		return "Error: Please log in.";
+	}
 
-			// Load websites assigned to partner
-			$arguments = array(
-				'post_type'      => 'captcore_website',
-				'posts_per_page' => '-1',
-				'order'          => 'asc',
-				'orderby'        => 'title',
-				'meta_query'     => array(
-					'relation' => 'AND',
-					array(
-						'key'     => 'partner',
-						'value'   => '"' . $partner_id . '"',
-						'compare' => 'LIKE',
-					),
-					array(
-						'key'     => 'status',
-						'value'   => 'closed',
-						'compare' => '!=',
-					),
-					array(
-						'key'     => 'address',
-						'compare' => 'EXISTS',
-					),
-					array(
-						'key'     => 'address',
-						'value'   => '',
-						'compare' => '!=',
-					),
+	// Administrators return all sites
+	if ( $partner && $role_check && in_array( 'administrator', $user->roles ) ) {
+		$sites = get_posts( array(
+			'order'          => 'asc',
+			'orderby'        => 'title',
+			'posts_per_page' => '-1',
+			'post_type'      => 'captcore_website',
+			'meta_query'     => array(
+				'relation' => 'AND',
+				array(
+					'key'     => 'status',
+					'value'   => 'closed',
+					'compare' => '!=',
 				),
-			);
+		) ) );
 
-			if ( in_array( 'administrator', $user->roles ) ) {
+		return $sites;
+	}
 
-				// Load all websites for administrators
-				$arguments['meta_query'] = array(
-					array(
-						'key'     => 'status',
-						'value'   => 'closed',
-						'compare' => '!=',
-					),
-					array(
-						'key'     => 'address',
-						'compare' => 'EXISTS',
-					),
-					array(
-						'key'     => 'address',
-						'value'   => '',
-						'compare' => '!=',
-					),
-				);
+	// New array to collect IDs
+	$site_ids = array();
 
-			}
+	// Loop through each partner assigned to current user
+	foreach ( $partner as $partner_id ) {
+
+	// Load websites assigned to partner
+	$arguments = array(
+		'fields'         => 'ids',
+		'post_type'      => 'captcore_website',
+		'posts_per_page' => '-1',
+		'meta_query'     => array(
+			'relation' => 'AND',
+			array(
+				'key'     => 'partner',
+				'value'   => '"' . $partner_id . '"',
+				'compare' => 'LIKE',
+			),
+			array(
+				'key'     => 'status',
+				'value'   => 'closed',
+				'compare' => '!=',
+			),
+			array(
+				'key'     => 'address',
+				'compare' => 'EXISTS',
+			),
+			array(
+				'key'     => 'address',
+				'value'   => '',
+				'compare' => '!=',
+			),
+		),
+	);
+
+	$sites = new WP_Query( $arguments );
+
+	foreach($sites->posts as $site_id) {
+		if( !in_array($site_id, $site_ids) ) {
+			$site_ids[] = $site_id;
 		}
 	}
 
-		return $arguments;
+	}
+
+	$sites = get_posts( array(
+		'include'        => $site_ids,
+		'order'          => 'asc',
+		'orderby'        => 'title',
+		'posts_per_page' => '-1',
+		'post_type'      => 'captcore_website'
+	) );
+
+	return $sites;
+
 }
 
 // Checks current user for valid permissions
