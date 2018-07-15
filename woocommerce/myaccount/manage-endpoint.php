@@ -237,6 +237,7 @@ div.update_logs table tr td:nth-child(1) {
 <?php } ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.1.1/vuetify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.9/dist/vue-upload-component.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 
 <?php
 
@@ -1204,59 +1205,59 @@ new Vue({
 		site_filters: all_filters,
 		site_filter_version: null,
 		site_filter_status: null,
-	  sites: sites,
+		sites: sites,
 		headers: [
-			 { text: 'Name', value: 'name' },
-			 { text: 'Slug', value: 'slug' },
-			 { text: 'Version', value: 'version' },
-			 { text: 'Status', value: 'status', width: "100px" },
-			 { text: 'Actions', value: 'actions', width: "90px", sortable: false }
-		 ],
-		 header_updatelog: [
- 			 { text: 'Date', value: 'date' },
- 			 { text: 'Type', value: 'type' },
- 			 { text: 'Name', value: 'name' },
- 			 { text: 'Old Version', value: 'old_version' },
- 			 { text: 'New Version', value: 'new_version' },
-			 { text: 'Status', value: 'status' }
+			{ text: 'Name', value: 'name' },
+			{ text: 'Slug', value: 'slug' },
+			{ text: 'Version', value: 'version' },
+			{ text: 'Status', value: 'status', width: "100px" },
+			{ text: 'Actions', value: 'actions', width: "90px", sortable: false }
+		],
+		header_updatelog: [
+			{ text: 'Date', value: 'date' },
+			{ text: 'Type', value: 'type' },
+			{ text: 'Name', value: 'name' },
+			{ text: 'Old Version', value: 'old_version' },
+			{ text: 'New Version', value: 'new_version' },
+			{ text: 'Status', value: 'status' }
 		],
 		 header_users: [
-			 { text: 'Login', value: 'login' },
-			 { text: 'Display Name', value: 'display_name' },
-			 { text: 'Email', value: 'user_email' },
-			 { text: 'Role(s)', value: 'roles' },
-			 { text: 'Actions', value: 'actions', sortable: false }
-		 ],
-		 applied_site_filter: null,
-		 applied_site_filter_version: null,
-		 applied_site_filter_status: null,
-		 select_site_options: [
-			 { text: 'All', value: 'all' },
-			 { text: 'Filtered', value: 'filtered' },
-			 { text: 'Visible', value: 'visible' },
-			 { text: 'None', value: 'none' }
-		 ],
-		 select_bulk_action: null,
-		 bulk_actions: [
-			 { header: "Script" },
-			 { name: "Migrate", value: "migrate", arguments: [
-					{ name: "Url", value: "url" },
-					{ name: "Skip url override", value: "skip-url-override" }
-				]},
-			 { name: "Apply SSL", value: "applyssl"  },
-			 { name: "Apply SSL with www", value: "applysslwithwww" },
-			 { name: "Launch", value: "launch" },
-			 { header: "Command" },
-			 { name: "Backup", value: "backup" },
-			 { name: "SSH", value: "ssh", arguments: [
-					{ name: "Commands", value: "command" },
-					{ name: "Script", value: "script" }
-				]},
-			 { name: "Sync", value: "sync" },
-			 { name: "Activate", value: "activate" },
-			 { name: "Deactivate", value: "deactivate" },
-			 { name: "Snapshot", value: "snapshot" },
-			 { name: "Remove", value: "remove" }
+			{ text: 'Login', value: 'login' },
+			{ text: 'Display Name', value: 'display_name' },
+			{ text: 'Email', value: 'user_email' },
+			{ text: 'Role(s)', value: 'roles' },
+			{ text: 'Actions', value: 'actions', sortable: false }
+		],
+		applied_site_filter: null,
+		applied_site_filter_version: null,
+		applied_site_filter_status: null,
+		select_site_options: [
+			{ text: 'All', value: 'all' },
+			{ text: 'Filtered', value: 'filtered' },
+			{ text: 'Visible', value: 'visible' },
+			{ text: 'None', value: 'none' }
+		],
+		select_bulk_action: null,
+		bulk_actions: [
+			{ header: "Script" },
+			{ name: "Migrate", value: "migrate", arguments: [
+				{ name: "Url", value: "url" },
+				{ name: "Skip url override", value: "skip-url-override" }
+			]},
+			{ name: "Apply SSL", value: "applyssl"  },
+			{ name: "Apply SSL with www", value: "applysslwithwww" },
+			{ name: "Launch", value: "launch" },
+			{ header: "Command" },
+			{ name: "Backup", value: "backup" },
+			{ name: "SSH", value: "ssh", arguments: [
+				{ name: "Commands", value: "command" },
+				{ name: "Script", value: "script" }
+			]},
+			{ name: "Sync", value: "sync" },
+			{ name: "Activate", value: "activate" },
+			{ name: "Deactivate", value: "deactivate" },
+			{ name: "Snapshot", value: "snapshot" },
+			{ name: "Remove", value: "remove" }
 		 ],
 		 select_bulk_action_arguments: null,
 		 bulkaction_response: null,
@@ -1822,7 +1823,7 @@ new Vue({
 
 				// New job for progress tracking
 				job_id = Math.round((new Date()).getTime());
-				description = "Updating themes/plugins on" + site.name;
+				description = "Updating themes/plugins on " + site.name;
 				this.jobs.push({"job_id": job_id,"description": description, "status": "running","command":"update-wp"});
 
 				var data = {
