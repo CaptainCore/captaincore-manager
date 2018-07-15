@@ -600,12 +600,11 @@ if ( $wp_query->query_vars['websites'] ) {
 				options = {
 					data: {
 					<?php
-						$arguments = captaincore_fetch_sites();
 						// Loads websites
-						$websites = get_posts( $arguments );
-					foreach ( $websites as $website ) :
-						$site = get_field( 'site', $website->ID );
-						echo '"' . $site . ' (' . get_the_title( $website->ID ) . ')": null,';
+						$websites = captaincore_fetch_sites();
+						foreach ( $websites as $website ) :
+							$site = get_field( 'site', $website->ID );
+							echo '"' . $site . ' (' . get_the_title( $website->ID ) . ')": null,';
 						endforeach;
 						?>
 					},
