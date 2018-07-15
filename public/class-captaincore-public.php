@@ -122,6 +122,13 @@ class Captaincore_Public {
 		 * class.
 		 */
 		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/captaincore-public.2018-06-30.js', array( 'jquery' ), $this->version, false );
+		if ( is_user_logged_in() ) {
+			wp_enqueue_script( 'wp-api' );
+			wp_localize_script( 'wp-api', 'wpApiSettings', array(
+			    'root' => esc_url_raw( rest_url() ),
+			    'nonce' => wp_create_nonce( 'wp_rest' )
+			) );
+		}
 
 	}
 
