@@ -1803,6 +1803,23 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 }
 
+function captaincore_site_func( $request ) {
+	$site_id = $request['id'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', array( 'status' => 403 ) );
+	}
+
+	$db_quicksaves = new CaptainCore\quicksaves;
+	$quicksaves = $db_quicksaves->fetch( $site_id );
+	foreach ($quicksaves as $key => $quicksave) {
+		$quicksaves[$key]->plugins = json_decode($quicksaves[$key]->plugins);
+		$quicksaves[$key]->themes = json_decode($quicksaves[$key]->themes);
+		$quicksaves[$key]->view_changes = false;
+		$quicksaves[$key]->view_files = [];
+	}
+	return $quicksaves;
+}
 
 add_action( 'rest_api_init', 'captaincore_register_rest_endpoints' );
 
@@ -1821,6 +1838,15 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/api', array(
 			'methods'       => 'POST',
 			'callback'      => 'captaincore_api_func',
+			'show_in_index' => false
+		)
+	);
+
+	// Custom endpoint for CaptainCore site
+	register_rest_route(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/quicksaves', array(
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_site_func',
 			'show_in_index' => false
 		)
 	);
@@ -3411,6 +3437,10 @@ function captaincore_install_action_callback() {
 
 	if ( $cmd == 'view_quicksave_changes' ) {
 		$command = "captaincore quicksave-view-changes $site --hash=$value";
+		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+			// return mock data
+			$command = CAPTAINCORE_DEBUG_MOCK_QUICKSAVE_VIEW_CHANGES;
+		}
 	}
 
 	if ( $cmd == 'manage' ) {
