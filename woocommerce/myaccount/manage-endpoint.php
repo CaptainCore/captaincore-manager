@@ -1,7 +1,7 @@
 <?php
 
 $user       = wp_get_current_user();
-$role_check = in_array( 'administrator', $user->roles );
+$role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
 if ( $role_check ) {
 
 	add_filter( 'body_class', 'my_body_classes' );
@@ -240,22 +240,8 @@ div.update_logs table tr td:nth-child(1) {
 
 <?php
 
-	$arguments = array(
-		'post_type'      => 'captcore_website',
-		'posts_per_page' => '-1',
-		'order'          => 'asc',
-		'orderby'        => 'title',
-		'meta_query'     => array(
-			array(
-				'key'     => 'status',
-				'value'   => 'closed',
-				'compare' => '!=',
-			),
-		),
-	);
-
 // Loads websites
-$websites = get_posts( $arguments );
+$websites =  captaincore_fetch_sites();
 
 if ( $websites ) :
 ?>
@@ -597,7 +583,6 @@ selected: false },
 	          </v-card-text>
 	        </v-card>
 	      </v-dialog>
-
 			<v-container fluid>
 			<v-layout row wrap>
       <v-flex xs4>
@@ -1561,7 +1546,7 @@ new Vue({
 
 			// Fetch updates if none exists
 			if ( users_count == 0 ) {
-				
+
 				var data = {
 					'action': 'captaincore_ajax',
 					'post_id': site_id,
