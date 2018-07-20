@@ -35,6 +35,23 @@ TODO
 
 == Changelog ==
 
+= 0.2.6: July 15, 2018 =
+* New: Custom database tables for update logs and quicksaves. Significant Performance improvements.
+* New: Manage UI - Dialog 'Update Settings' to manage autoupdate settings per site.
+* New: Manage UI - Button to manually update sites.
+* New: Manage UI - Bulk editing UI for themes, plugins and users.
+* New: Manage UI - Theme drag and drop upload.
+* Tweak: Moved CaptainCore API to custom rest endpoint. Replacing the custom page template API.
+* Tweak: Upgraded Vuetify to 1.1.1.
+* Tweak: Manage UI - Performance improvement. Fetch users only when tab clicked.
+* Tweak: Manage UI - Sort update logs by date
+* Tweak: Manage UI - Apply new toolbar headings to themes, users and update tabs.
+* Tweak: Manage UI - Improved plugin UI. Now must-use and dropin plugins are displayed below the management tools.
+* Tweak: Manage UI - Prep for opening it up to customers
+* Tweak: Improved function `captaincore_fetch_sites` to reduce complexity looping through sites which current user has access to.
+* Tweak: Removed custom post type Quicksaves. Replaced complex code with new custom table.
+* Tweak: Removed need to pass `<git_hash_previous>` with `captaincore quicksave-file-diff`.
+
 = 0.2.5: July 1, 2018 =
 * New: Updates tab to Manage UI. Populates using 'update-fetch' cli command.
 * New: Users tab to Manage UI. Populates using 'users-fetch' cli command.
