@@ -2658,6 +2658,11 @@ function captaincore_fetch_sites() {
 		return $sites;
 	}
 
+	// Bail if no partner set.
+	if ( ! is_array($partner) ) {
+		return;
+	}
+
 	// New array to collect IDs
 	$site_ids = array();
 
@@ -2701,6 +2706,48 @@ function captaincore_fetch_sites() {
 		}
 	}
 
+	// Load websites assigned to partner
+	$arguments = array(
+		'fields'         => 'ids',
+		'post_type'      => 'captcore_website',
+		'posts_per_page' => '-1',
+		'meta_query'     => array(
+			'relation' => 'AND',
+			array(
+				'key'     => 'customer',
+				'value'   => '"' . $partner_id . '"',
+				'compare' => 'LIKE',
+			),
+			array(
+				'key'     => 'status',
+				'value'   => 'closed',
+				'compare' => '!=',
+			),
+			array(
+				'key'     => 'address',
+				'compare' => 'EXISTS',
+			),
+			array(
+				'key'     => 'address',
+				'value'   => '',
+				'compare' => '!=',
+			),
+		),
+	);
+
+	$sites = new WP_Query( $arguments );
+
+	foreach($sites->posts as $site_id) {
+		if( !in_array($site_id, $site_ids) ) {
+			$site_ids[] = $site_id;
+		}
+	}
+
+	}
+
+	// Bail if no site ids found
+	if ( count($site_ids) == 0 ) {
+		return;
 	}
 
 	$sites = get_posts( array(
