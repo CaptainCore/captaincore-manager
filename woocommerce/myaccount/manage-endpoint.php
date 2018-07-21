@@ -722,6 +722,12 @@ selected: false },
 				<v-card-title v-if="advanced_filter == true" class="alignright caption" style="float:right;padding: 16px 0px;">Advanced Filter</v-card-title>
 			</v-flex>
 			</v-layout>
+			<v-text-field
+				v-model="search"
+				label="Search sites by name"
+				light
+				@input="filterSites"
+				></v-text-field>
 			<v-layout row v-if="advanced_filter == true">
 	   <v-flex xs12>
 		 <v-select
@@ -831,12 +837,6 @@ selected: false },
 					<v-btn @click.stop="dialog = true">Bulk Actions on {{ selectedSites }} sites</v-btn>
 				</v-flex>
 			</v-layout>
-			<v-text-field
-				v-model="search"
-				label="Search sites by name"
-				light
-				@input="filterSites"
-				></v-text-field>
 
 			<v-layout justify-center>
 				<div class="text-xs-center">
@@ -1177,7 +1177,7 @@ selected: false },
 				:overlay="false"
 				scrollable
 				v-model="dialog">
-			 <v-card tile>
+			 <v-card tile style="overflow-y: scroll;">
 				 <v-toolbar card dark color="primary">
 			<v-btn icon @click.native="dialog = false" dark>
 			  <v-icon>close</v-icon>
@@ -1210,7 +1210,6 @@ selected: false },
 								:label="argument.name"
 						></v-text-field>
 						 </li>
-
 					 </ul>
 					 <v-chip
 						color="green"
@@ -1225,6 +1224,8 @@ selected: false },
 					  <v-btn @click="bulkactionSubmit">submit</v-btn>
 					 <v-btn color="primary" flat @click.stop="dialog=false">Close</v-btn>
 				 </v-card-actions>
+				 <v-spacer></v-spacer>
+				 <p></p>
 			 </v-flex>
 			</v-layout>
 			 </v-card>
