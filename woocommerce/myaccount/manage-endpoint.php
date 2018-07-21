@@ -290,6 +290,7 @@ foreach ( $websites as $website ) {
 	$updates_enabled = get_post_meta( $website->ID, 'updates_enabled');
 	$production_address = get_field('address', $website->ID);
 	$staging_address = get_field('address_staging', $website->ID);
+	$home_url = get_field('home_url', $website->ID);
 	?>
 { id: <?php echo $website->ID; ?>,
 name: "<?php echo get_the_title( $website->ID ); ?>",
@@ -306,6 +307,7 @@ keys: [
 	{ key_id: 1, "link":"http://<?php echo get_the_title( $website->ID ); ?>","environment": "Production", "address": "<?php the_field('address', $website->ID); ?>","username":"<?php the_field('username', $website->ID); ?>","password":"<?php the_field('password', $website->ID); ?>","protocol":"<?php the_field('protocol', $website->ID); ?>","port":"<?php the_field('port', $website->ID); ?>",<?php if ( strpos($production_address, ".kinsta.com") ) { ?>"ssh":"ssh <?php the_field('username', $website->ID); ?>@<?php echo $production_address; ?> -p <?php the_field('port', $website->ID); ?>",<?php } if ( strpos($production_address, ".kinsta.com") and get_field('database_username', $website->ID) ) { ?>"database": "https://mysqleditor-<?php the_field('database_username', $website->ID); ?>.kinsta.com","database_username": "<?php the_field('database_username', $website->ID); ?>","database_password": "<?php the_field('database_password', $website->ID); ?>",<?php } ?>},
 	<?php if (get_field('address_staging', $website->ID)) { ?>{ key_id: 2, "link":"<?php if (strpos( get_field('address_staging', $website->ID), ".kinsta.com") ) { echo "https://staging-". get_field('site_staging', $website->ID).".kinsta.com"; } else { echo "https://". get_field('site_staging', $website->ID). ".staging.wpengine.com"; } ?>","environment": "Staging", "address": "<?php the_field('address_staging', $website->ID); ?>","username":"<?php the_field('username_staging', $website->ID); ?>","password":"<?php the_field('password_staging', $website->ID); ?>","protocol":"<?php the_field('protocol_staging', $website->ID); ?>","port":"<?php the_field('port_staging', $website->ID); ?>"},<?php } ?>
 ],
+<?php if ( $home_url ) { ?>home_url: "<?php echo $home_url; ?>",<?php } else { ?>home_url: "",<?php } ?>
 users: [],
 update_logs: [],
 <?php if ( $exclude_themes ) {
@@ -1210,8 +1212,16 @@ selected: false },
 						 </li>
 
 					 </ul>
+					 <v-chip
+						color="green"
+						outline
+						close
+						v-for="site in sites_selected"
+						@input="removeFromBulk(site.id)"
+						><a :href="site.home_url" target="_blank" style="color:#4caf50;">{{ site.name }}</a></v-chip>
 				 </v-card-text>
 				 <v-card-actions>
+					 <v-btn @click="bulkactionLaunch">Launch sites in browser</v-btn>
 					  <v-btn @click="bulkactionSubmit">submit</v-btn>
 					 <v-btn color="primary" flat @click.stop="dialog=false">Close</v-btn>
 				 </v-card-actions>
@@ -1421,6 +1431,9 @@ new Vue({
 		selectedSites() {
 			return this.sites.filter(site => site.selected).length;
 		},
+		sites_selected() {
+			return this.sites.filter( site => site.selected );
+		},
 		filteredSites() {
 			return this.sites.filter(site => site.filtered).length;
 		},
@@ -1432,6 +1445,9 @@ new Vue({
 		},
 	},
 	methods: {
+		removeFromBulk( site_id ) {
+			this.sites.filter(site => site.id == site_id)[0].selected = false;
+		},
 		loginSite(site_id, username) {
 
 			site = this.sites.filter(site => site.id == site_id)[0];
@@ -2074,6 +2090,9 @@ new Vue({
 					self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
 				});
 			}
+		},
+		bulkactionLaunch() {
+				this.sites_selected.forEach(site => window.open(site.home_url));
 		},
 		bulkactionSubmit() {
 
