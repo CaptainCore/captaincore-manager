@@ -244,6 +244,7 @@ public function get( $site_id ) {
 
 		// Insert the post into the database
 		$site_id = wp_insert_post( $new_site );
+
 		if ( $site_id ) {
 
 			$response['response'] = 'Successfully added new site';
@@ -254,6 +255,13 @@ public function get( $site_id ) {
 			update_field( 'partner', $site->shared_with, $site_id );
 			update_field( 'updates_enabled', $site->updates_enabled, $site_id );
 			update_field( 'status', 'active', $site_id );
+
+			if ( get_field( 'launch_date', $site_id ) == '' ) {
+
+				// No date was entered for Launch Date, assign to today.
+				update_field( 'launch_date', date( 'Ymd' ), $site_id );
+
+			}
 
 			foreach ( $site->keys as $key ) {
 
