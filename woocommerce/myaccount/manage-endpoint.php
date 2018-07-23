@@ -258,7 +258,8 @@ div.update_logs table tr td:nth-child(1) {
 <?php
 
 // Loads websites
-$websites =  captaincore_fetch_sites();
+$websites = captaincore_fetch_sites();
+$customers = captaincore_fetch_customers();
 
 if ( $websites ) :
 ?>
@@ -540,26 +541,82 @@ selected: false },
 				transition="dialog-bottom-transition"
 				scrollable
 			>
-	        <v-card tile>
-	          <v-toolbar card dark color="primary">
-	            <v-btn icon dark @click.native="add_site = false">
-	              <v-icon>close</v-icon>
-	            </v-btn>
-	            <v-toolbar-title>Add Site</v-toolbar-title>
-	            <v-spacer></v-spacer>
-	          </v-toolbar>
-	          <v-card-text>
-
+					<v-card tile>
+						<v-toolbar card dark color="primary">
+							<v-btn icon dark @click.native="add_site = false">
+								<v-icon>close</v-icon>
+							</v-btn>
+							<v-toolbar-title>Add Site</v-toolbar-title>
+								<v-spacer></v-spacer>
+							</v-toolbar>
+						<v-card-text>
 							<v-container>
 							<v-form ref="form">
 								<v-text-field :value="new_site.domain" @change.native="new_site.domain = $event.target.value" label="Domain name" required></v-text-field>
 						    <v-text-field :value="new_site.site" @change.native="new_site.site = $event.target.value" label="Site name" required></v-text-field>
+								<v-select
+								:items="customers"
+								item-text="name"
+								item-value="customer_id"
+								v-model="new_site.customers"
+								item-text="name"
+								label="Customer"
+								chips
+								multiple
+								autocomplete
+								small-chips
+								deletable-chips
+							>
+						 	<template slot="selection" slot-scope="data">
+								<v-chip
+									close
+									@input="data.parent.selectItem(data.item)"
+									:selected="data.selected"
+									class="chip--select-multi"
+									:key="JSON.stringify(data.item)"
+									>
+									<strong>{{ data.item.name }}</strong>
+								</v-chip>
+							</template>
+							<template slot="item" slot-scope="data">
+								<strong>{{ data.item.name }}</strong>
+							</template>
+							</v-select>
+							<v-select
+							:items="developers"
+							item-text="name"
+							item-value="customer_id"
+							v-model="new_site.shared_with"
+							item-text="name"
+							label="Shared With"
+							chips
+							multiple
+							autocomplete
+							small-chips
+							deletable-chips
+						>
+						<template slot="selection" slot-scope="data">
+							<v-chip
+								close
+								@input="data.parent.selectItem(data.item)"
+								:selected="data.selected"
+								class="chip--select-multi"
+								:key="JSON.stringify(data.item)"
+								>
+								<strong>{{ data.item.name }}</strong>
+							</v-chip>
+						</template>
+						<template slot="item" slot-scope="data">
+							<strong>{{ data.item.name }}</strong>
+						</template>
+						</v-select>
+						<v-switch label="Automatic Updates" v-model="new_site.updates_enabled" false-value="0" true-value="1"></v-switch>
 								<v-container grid-list-md text-xs-center>
 									<v-layout row wrap>
 										<v-flex xs12 style="height:0px">
 										<v-btn @click="new_site_preload_staging" flat icon center relative color="green" style="top:32px;">
-				              <v-icon>cached</v-icon>
-				            </v-btn>
+											<v-icon>cached</v-icon>
+										</v-btn>
 										</v-flex>
 										<v-flex xs6 v-for="key in new_site.keys" :key="key.index">
 										<v-card class="bordered body-1" style="margin:2em;">
@@ -570,7 +627,7 @@ selected: false },
 										</div>
 										<v-container fluid>
 										<div row>
-
+											<v-text-field label="Site Name" :value="key.site" @change.native="key.site = $event.target.value" required></v-text-field>
 											<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required></v-text-field>
 											<v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field>
 											<v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field>
@@ -580,7 +637,7 @@ selected: false },
 											<v-text-field label="Database Username" :value="key.database_username" @change.native="key.database_username = $event.target.value" required></v-text-field>
 											<v-text-field label="Database Password" :value="key.database_password" @change.native="key.database_password = $event.target.value" required></v-text-field>
 											<div v-if="typeof key.use_s3 != 'undefined'">
-												<v-switch label="Use S3" v-model="key.use_s3" left></v-switch>
+												<v-switch label="Use S3" v-model="key.use_s3" false-value="0" true-value="1" left></v-switch>
 												<div v-if="key.use_s3">
 													<v-text-field label="s3 Access Key" :value="key.s3_access_key" @change.native="key.s3_access_key = $event.target.value" required></v-text-field>
 													<v-text-field label="s3 Secret Key" :value="key.s3_secret_key" @change.native="key.s3_secret_key = $event.target.value" required></v-text-field>
@@ -738,10 +795,10 @@ selected: false },
 			label="Select Theme and/or Plugin"
 			chips
 			multiple
-		  autocomplete
+			autocomplete
 			small-chips
 			deletable-chips
-		 >
+			>
 				 <template slot="selection" slot-scope="data">
 					<v-chip
 						close
@@ -1309,12 +1366,24 @@ new Vue({
 			domain: "",
 			updates_enabled: "1",
 			shared_with: [],
+			customers: [],
 			keys: [
-				{"environment": "Production", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","use_s3": false,"s3_access_key":"","s3_secret_key":"","s3_bucket":"","s3_path":"","database_username":"","database_password":"" },
-				{"environment": "Staging", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","database_username":"","database_password":"" }
+				{"environment": "Production", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","use_s3": false,"s3_access_key":"","s3_secret_key":"","s3_bucket":"","s3_path":"","database_username":"","database_password":"" },
+				{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","database_username":"","database_password":"" }
 			],
-		},<?php } else { ?>
-		new_site: false,<?php } ?>
+		},
+		customers: [
+			<?php foreach ($customers as $customer) { ?>
+			{customer_id: "<?php echo $customer->ID; ?>", name: "<?php echo $customer->post_title; ?>", developer: <?php if( get_field('partner', $customer->ID ) ) { echo "true"; } else { echo "false"; } ?> },
+			<?php } ?>
+		],
+		shared_with: [
+
+		],
+		<?php } else { ?>
+		new_site: false,
+		customers: [],
+		shared_with: [],<?php } ?>
 		new_plugin: { show: false, site_id: null},
 		new_theme: { show: false, site_id: null},
 		quicksave_dialog: { show: false, site_id: null, quicksaves: [], search: "" },
@@ -1438,6 +1507,9 @@ new Vue({
 		},
 		allSites() {
 			return this.sites.length;
+		},
+		developers() {
+			return this.customers.filter(customer => customer.developer );
 		},
 		filteredFiles() {
 			return this.quicksave_dialog.view_files.filter( file => file.filtered );
@@ -1649,6 +1721,9 @@ new Vue({
 		},
 		new_site_preload_staging() {
 
+			// Copy production site name to staging field
+			this.new_site.keys[1].site = this.new_site.keys[0].site;
+
 			// Copy production address to staging field
 			this.new_site.keys[1].address = this.new_site.keys[0].address;
 
@@ -1671,7 +1746,65 @@ new Vue({
 			this.new_site.keys[1].database_password = this.new_site.keys[0].database_password;
 		},
 		submitNewSite() {
-			this.$emit('submit-new-site');
+
+			var data = {
+				'action': 'captaincore_ajax',
+				'command': "newSite",
+				'value': this.new_site
+			};
+
+			self = this;
+
+			jQuery.post(ajaxurl, data, function(response) {
+
+				if (tryParseJSON(response)) {
+					var response = JSON.parse(response);
+					if ( response.response = "Successfully added new site" ) {
+						self.add_site = false;
+						self.new_site = {
+							domain: "",
+							updates_enabled: "1",
+							shared_with: [],
+							customers: [],
+							keys: [
+								{"environment": "Production", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","use_s3": false,
+								"s3_access_key":"","s3_secret_key":"","s3_bucket":"","s3_path":"","database_username":"","database_password":"" },
+								{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","database_username":"","database_password":"" }
+							],
+						}
+						self.fetchSiteInfo( response.site_id );
+					}
+				}
+			});
+		},
+		fetchSiteInfo( site_id ) {
+
+			var data = {
+				'action': 'captaincore_ajax',
+				'command': "fetch-site",
+				'post_id': site_id
+			};
+
+			self = this;
+
+			jQuery.post(ajaxurl, data, function(response) {
+
+				if (tryParseJSON(response)) {
+					var site = JSON.parse(response);
+					lookup = self.sites.filter(site => site.id == site_id).length;
+					if (lookup == 1 ) {
+						// Update existing site info
+						site_update = self.sites.filter(site => site.id == site_id)[0];
+						// Look through keys and update
+						Object.keys(site).forEach(function(key) {
+						  site_update[key] = site[key];
+						});
+					} else {
+						// Add new site info
+						self.sites.push(site);
+					}
+				}
+			});
 		},
 		fetchUsers( site_id ) {
 
