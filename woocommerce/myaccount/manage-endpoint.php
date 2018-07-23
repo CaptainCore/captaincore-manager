@@ -14,7 +14,7 @@ if ( $role_check ) {
 
 ?>
 
-<link href="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.1.1/vuetify.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.1.7/vuetify.min.css" rel="stylesheet">
 <style>
 
 html {
@@ -511,9 +511,7 @@ selected: false },
             <v-spacer></v-spacer>
           </v-toolbar>
           <v-card-text>
-
             <v-list three-line subheader>
-
               <v-list-tile avatar v-for="job in jobs.slice().reverse()" key="job.job_id">
                 <v-list-tile-content>
                   <v-list-tile-title>{{ job.description }}</v-list-tile-title>
