@@ -1800,6 +1800,23 @@ new Vue({
 						  site_update[key] = site[key];
 						});
 					} else {
+						// Patch in default settings
+						site.loading_themes = false;
+						site.loading_plugins = false;
+						site.themes_selected = [];
+						site.plugins_selected = [];
+						site.users_selected = [];
+						site.tabs = 0;
+						site.pagination = {
+							sortBy: 'roles'
+						};
+						site.update_logs_pagination = {
+							sortBy: 'date',
+							descending: true
+						};
+						site.filtered = true;
+						site.selected = false;
+
 						// Add new site info
 						self.sites.push(site);
 					}
