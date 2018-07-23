@@ -2628,6 +2628,28 @@ function captaincore_verify_permissions( $website_id ) {
 }
 
 // List sites current user has access to
+function captaincore_fetch_customers() {
+
+	$user       = wp_get_current_user();
+	$role_check = in_array( 'administrator', $user->roles );
+
+	// Bail if not assigned a role
+	if ( !$role_check ) {
+		return "Error: Please log in.";
+	}
+
+	$customers = get_posts( array(
+		'order'          => 'asc',
+		'orderby'        => 'title',
+		'posts_per_page' => '-1',
+		'post_type'      => 'captcore_customer'
+	) );
+
+	return $customers;
+
+}
+
+// List sites current user has access to
 function captaincore_fetch_sites() {
 
 	$user       = wp_get_current_user();
@@ -3166,7 +3188,7 @@ function captaincore_ajax_action_callback() {
 	}
 
 	// Only proceed if have permission to particular site id.
-	if ( ! captaincore_verify_permissions( $post_id  ) ) {
+	if ( ! captaincore_verify_permissions( $post_id ) ) {
 		echo "Permission defined";
 		wp_die();
 		return;
@@ -3196,6 +3218,16 @@ function captaincore_ajax_action_callback() {
 	if ( $cmd == 'newSite' ) {
 
 		// Create new site
+		$new_site = (new CaptainCore\Site)->create( $value );
+		echo json_encode($new_site);
+
+	}
+
+	if ( $cmd == 'fetch-site' ) {
+
+		// Create new site
+		$site = (new CaptainCore\Site)->get( $post_id );
+		echo json_encode($site);
 
 	}
 
