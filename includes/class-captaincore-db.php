@@ -299,6 +299,9 @@ public function get( $site_id ) {
 					update_field( 'database_password_staging', $key->database_password, $site_id );
 				}
 			}
+
+			// Run ACF custom tasks afterward.
+			captaincore_acf_save_post_after( $site_id );
 		}
 		if ( ! $site_id ) {
 			$response['response'] = 'Failed to add new site';
