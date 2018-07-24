@@ -234,6 +234,12 @@ public function get( $site_id ) {
 		// Pull in current user
 		$current_user = wp_get_current_user();
 
+		// Validate
+		if ( $site->domain == '') {
+			$response['response'] = "Error: Domain can't be empty.";
+			return $response;
+		}
+
 		// Create post object
 		$new_site = array(
 			'post_title'  => $site->domain,

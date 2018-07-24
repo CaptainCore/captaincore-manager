@@ -649,6 +649,13 @@ selected: false },
 								 </v-container>
 							 </v-card>
 							</v-flex>
+							<v-alert
+							:value="true"
+							type="error"
+							v-for="error in new_site.errors"
+							>
+							{{ error }}
+							</v-alert>
 							<v-flex xs12 text-xs-right><v-btn right @click="submitNewSite">Add Site</v-btn></v-flex>
 						 </v-layout>
 					 </v-container>
@@ -1364,6 +1371,7 @@ new Vue({
 		<?php if ( current_user_can('administrator') ) { ?>
 		new_site: {
 			domain: "",
+			errors: [],
 			updates_enabled: "1",
 			shared_with: [],
 			customers: [],
@@ -1759,10 +1767,20 @@ new Vue({
 
 				if (tryParseJSON(response)) {
 					var response = JSON.parse(response);
+
+					// If error then response
+					if ( response.response.includes("Error:") ) {
+
+						self.new_site.errors = [ response.response ];
+						console.log(response.response);
+						return;
+					}
+
 					if ( response.response = "Successfully added new site" ) {
 						self.add_site = false;
 						self.new_site = {
 							domain: "",
+							errors: [],
 							updates_enabled: "1",
 							shared_with: [],
 							customers: [],
@@ -2278,6 +2296,10 @@ new Vue({
 			if (this.site_selected == "none") {
 				this.sites.forEach(site => site.selected = false );
 			}
+		},
+		filterFiles() {
+
+
 		},
 		filterSites() {
 			// Filter if select has value
