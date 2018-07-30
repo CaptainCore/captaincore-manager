@@ -1791,6 +1791,17 @@ new Vue({
 							],
 						}
 						self.fetchSiteInfo( response.site_id );
+
+						// Run prep immediately after site added.
+						var data = {
+							'action': 'captaincore_install',
+							'command': "update",
+							'post_id': response.site_id
+						};
+						jQuery.post(ajaxurl, data, function(response) {
+							console.log(response);
+						}
+
 					}
 				}
 			});
