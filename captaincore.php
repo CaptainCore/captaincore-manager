@@ -2580,47 +2580,69 @@ function captaincore_verify_permissions( $website_id ) {
 	// Checks for a current user. If admin found pass if not check permissions
 	if ( $current_user && $role_check ) {
 		return true;
-	} else {
-		// Checks for other roles
-		$role_check = in_array( 'partner', $current_user->roles );
+	}
 
-		// Checks current users permissions
-		$partner = get_field( 'partner', 'user_' . get_current_user_id() );
+	// Checks for other roles
+	$role_check = in_array( 'subscriber', $current_user->roles ) + in_array( 'customer', $current_user->roles ) + in_array( 'partner', $current_user->roles ) + in_array( 'editor', $current_user->roles );
 
-		if ( $partner and $role_check ) {
-			foreach ( $partner as $partner_id ) {
+	// Checks current users permissions
+	$partner = get_field( 'partner', 'user_' . get_current_user_id() );
 
-				$websites = get_posts(
+	// Bail if incorrect role or nothing assigned.
+	if ( !$role_check or !$partner ) {
+		return false;
+	}
+
+	foreach ( $partner as $partner_id ) {
+
+		$websites = get_posts(
+			array(
+				'post_type'      => 'captcore_website',
+				'posts_per_page' => '-1',
+				'order'          => 'asc',
+				'orderby'        => 'title',
+				'meta_query'     => array(
+					'relation' => 'AND',
 					array(
-						'post_type'      => 'captcore_website',
-						'posts_per_page' => '-1',
-						'order'          => 'asc',
-						'orderby'        => 'title',
-						'meta_query'     => array(
-							'relation' => 'AND',
-							array(
-								'key'     => 'partner', // name of custom field
-								'value'   => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-								'compare' => 'LIKE',
-							),
-						),
-					)
-				);
+						'key'     => 'partner', // name of custom field
+						'value'   => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+						'compare' => 'LIKE',
+					),
+				),
+			)
+		);
+		if ( $websites ) :
+			foreach ( $websites as $website ) :
+				$customer_id = get_field( 'customer', $website->ID );
+				if ( $website_id == $website->ID ) {
+					return true;
+				}
+			endforeach;
+		endif;
 
-				if ( $websites ) :
+		// Load websites assigned to partner
+		$arguments = array(
+			'fields'         => 'ids',
+			'post_type'      => 'captcore_website',
+			'posts_per_page' => '-1',
+			'meta_query'     => array(
+				'relation' => 'AND',
+				array(
+					'key'     => 'customer',
+					'value'   => '"' . $partner_id . '"',
+					'compare' => 'LIKE',
+				),
+			),
+		);
 
-					foreach ( $websites as $website ) :
-						$customer_id = get_field( 'customer', $website->ID );
+		$sites = new WP_Query( $arguments );
 
-						if ( $website_id == $website->ID ) {
-							return true;
-						}
-
-					endforeach;
-				endif;
-
+		foreach($sites->posts as $site_id) {
+			if( $website_id == $site_id) {
+				return true;
 			}
 		}
+
 	}
 
 	// No permissions found
@@ -2633,7 +2655,7 @@ function captaincore_fetch_customers() {
 	$user       = wp_get_current_user();
 	$role_check = in_array( 'administrator', $user->roles );
 
-	// Bail if not assigned a role
+	// Bail if role not assigned
 	if ( !$role_check ) {
 		return "Error: Please log in.";
 	}
