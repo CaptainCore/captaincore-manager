@@ -1800,7 +1800,7 @@ new Vue({
 						};
 						jQuery.post(ajaxurl, data, function(response) {
 							console.log(response);
-						}
+						});
 
 					}
 				}
