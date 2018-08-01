@@ -26,6 +26,15 @@ html {
 	 display:block;
 }
 
+.usage {
+	font-size: 13px;
+	margin: 0 4px;
+}
+
+.v-expansion-panel__header {
+	line-height: 0.8em;
+}
+
 .quicksave-table table {
 	width: auto;
 }
@@ -292,6 +301,13 @@ foreach ( $websites as $website ) {
 	$production_address = get_field('address', $website->ID);
 	$staging_address = get_field('address_staging', $website->ID);
 	$home_url = get_field('home_url', $website->ID);
+	$storage = get_field('storage', $website->ID);
+	$views = get_field('views', $website->ID);
+	if ($storage) {
+		$storage_gbs = round($storage / 1024 / 1024 / 1024, 1);
+		$storage_gbs = $storage_gbs ."GB";
+	}
+
 	?>
 { id: <?php echo $website->ID; ?>,
 name: "<?php echo get_the_title( $website->ID ); ?>",
@@ -310,6 +326,11 @@ keys: [
 ],
 <?php if ( $home_url ) { ?>home_url: "<?php echo $home_url; ?>",<?php } else { ?>home_url: "",<?php } ?>
 users: [],
+<?php if ( strpos( $production_address, '.wpengine.com' ) !== false ) { ?>server: "WP Engine",<?php } ?>
+<?php if ( strpos( $production_address, '.kinsta.com' ) !== false ) { ?>server: "Kinsta",<?php } ?>
+<?php if ( strpos( $production_address, '.wpengine.com' ) == false && strpos( $production_address, '.kinsta.com' ) == false ) { ?>server: "",<?php } ?>
+<?php if ($views != 0) { ?>views: "<?php echo number_format($views); ?>"<?php } else { ?>views: ""<?php } ?>,
+storage: "<?php echo $storage_gbs; ?>",
 update_logs: [],
 <?php if ( $exclude_themes ) {
 $exclude_themes = explode(",", $exclude_themes);
@@ -919,7 +940,18 @@ selected: false },
 					<v-card class="site">
 						<v-expansion-panel>
 						<v-expansion-panel-content lazy>
-							<div slot="header"><strong>{{ site.name }}</strong> <span class="text-xs-right">{{ site.themes.length }} Themes {{ site.plugins.length }} Plugins - WordPress {{ site.core }}</span></div>
+							<div slot="header">
+								<v-layout align-center justify-space-between row>
+									<div>
+										<strong>{{ site.name }}</strong>
+									</div>
+									<div class="text-xs-right">
+										<span class="usage"><v-icon small light>fas fa-server</v-icon> {{ site.server }}</span>
+										<span v-if="site.views" class="usage"><v-icon small light>fas fa-eye</v-icon> {{ site.views }} <small>yearly</small></span>
+										<span class="usage"><v-icon small light>fas fa-hdd</v-icon> {{ site.storage }}</span>
+									</div>
+								</v-layout>
+							</div>
 							<v-tabs v-model="site.tabs" color="blue darken-3" dark>
 								<v-tab :key="1" ripple>
 									Keys <v-icon>fas fa-key</v-icon>
@@ -1172,12 +1204,12 @@ selected: false },
 				<v-card-title>
 					<div>
 						<v-list two-line subheader>
-	          <v-subheader inset>Customer</v-subheader>
-	          <v-list-tile v-for="customer in site.customer" :key="customer.customer_id" avatar @click="">
-	            <v-list-tile-avatar>
-	              <v-icon>fas fa-user</v-icon>
-	            </v-list-tile-avatar>
-	            <v-list-tile-content>
+						<v-subheader inset>Customer</v-subheader>
+						<v-list-tile v-for="customer in site.customer" :key="customer.customer_id" avatar @click="">
+							<v-list-tile-avatar>
+								<v-icon>fas fa-user</v-icon>
+							</v-list-tile-avatar>
+							<v-list-tile-content>
 	              <v-list-tile-title>{{ customer.name }}</v-list-tile-title>
 	              <v-list-tile-sub-title></v-list-tile-sub-title>
 	            </v-list-tile-content>
