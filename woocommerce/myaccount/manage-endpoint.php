@@ -946,9 +946,9 @@ selected: false },
 										<strong>{{ site.name }}</strong>
 									</div>
 									<div class="text-xs-right">
-										<span class="usage"><v-icon small light>fas fa-server</v-icon> {{ site.server }}</span>
-										<span v-if="site.views" class="usage"><v-icon small light>fas fa-eye</v-icon> {{ site.views }} <small>yearly</small></span>
-										<span class="usage"><v-icon small light>fas fa-hdd</v-icon> {{ site.storage }}</span>
+										<span v-show="site.server" class="usage"><v-icon small light>fas fa-server</v-icon> {{ site.server }}</span>
+										<span v-show="site.views" class="usage"><v-icon small light>fas fa-eye</v-icon> {{ site.views }} <small>yearly</small></span>
+										<span v-show="site.storage" class="usage"><v-icon small light>fas fa-hdd</v-icon> {{ site.storage }}</span>
 									</div>
 								</v-layout>
 							</div>
