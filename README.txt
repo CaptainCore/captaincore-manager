@@ -44,6 +44,22 @@ TODO
 
 == Changelog ==
 
+= 0.2.7: August 6, 2018 =
+* New: Manage UI - Quicksaves added.
+* New: Manage UI - Ability to add new sites.
+* New: Function `captaincore_fetch_customer` to populate customer dropdown.
+* New: Class for sites.
+* New: Added Readme.md
+* New: [Emoji-Log](https://github.com/ahmadawais/Emoji-Log) to git commits.
+* Tweak: Manage UI - Included home url for sites. Added new button "launch sites in browser".
+* Tweak: Manage UI - Organized advanced filter options.
+* Tweak: Manage UI - Fixed bulk dialog scrolling.
+* Tweak: Manage UI - Run site prep after new site added.
+* Tweak: Manage UI - New usage stats to site list.
+* Tweak: Various improvements when displaying sites for customers.
+* Tweak: Cleaned up `captaincore_verify_permissions`
+* Tweak: Upgraded Vuetify to 1.1.7.
+
 = 0.2.6: July 15, 2018 =
 * New: Custom database tables for update logs and quicksaves. Significant Performance improvements.
 * New: Manage UI - Dialog 'Update Settings' to manage autoupdate settings per site.
