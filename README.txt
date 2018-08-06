@@ -17,13 +17,22 @@ CaptainCore is an open sourced toolkit made and used by [Anchor Hosting](https:/
 
 == Installation ==
 
-This section describes how to install the plugin and get it working.
-
-e.g.
-
 1. Upload `/captaincore/` to the `/wp-content/plugins/` directory
 2. Activate the plugin through the 'Plugins' menu in WordPress
-3. CaptainCore requires access to a remote server running CaptainCore CLI. (TODO: add instructions for adding keys to wp-config.php)
+3. CaptainCore requires access to a remote server running CaptainCore CLI. Add following auth info to wp-config.php file.
+
+# CaptainCore CLI keys
+define( 'CAPTAINCORE_CLI_TOKEN', "xxxxxxxxxxxxxxxxxxxxxxxxx" );
+define( 'CAPTAINCORE_CLI_USER', "xxxxxxxx" );
+define( 'CAPTAINCORE_CLI_KEY', "xxxxxxxxxxxxxxxxxxxxxxxxx" );
+define( 'CAPTAINCORE_CLI_ADDRESS', "xxx.xxx.xxx.xxx" );
+define( 'CAPTAINCORE_CLI_PORT', "xxxxx" );
+
+# CaptainCore B2 keys
+define( 'CAPTAINCORE_B2_ACCOUNT_ID', 'xxxxxxxxxxxx' );
+define( 'CAPTAINCORE_B2_ACCOUNT_KEY', 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' );
+define( 'CAPTAINCORE_B2_BUCKET_ID', 'xxxxxxxxxxxxxxxxxxxxxxxx' );
+define( 'CAPTAINCORE_B2_SNAPSHOTS', "Bucket/Foldername" );
 
 == Frequently Asked Questions ==
 
