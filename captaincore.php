@@ -2477,7 +2477,7 @@ function checkApiAuth( $result ) {
 add_filter( 'rest_authentication_errors', 'checkApiAuth' );
 
 // Loads all domains for partners
-function get_domains_per_partner( $partner_id ) {
+function captaincore_get_domains_per_partner( $partner_id ) {
 
 	$all_domains = [];
 
@@ -2799,6 +2799,58 @@ function captaincore_fetch_sites() {
 	) );
 
 	return $sites;
+
+}
+
+
+// Loads all domains for current user
+function captaincore_fetch_domains() {
+
+	$user        = wp_get_current_user();
+	$role_check  = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
+	$partner     = get_field( 'partner', 'user_' . get_current_user_id() );
+	$all_domains = [];
+
+	// Bail if not assigned a role
+	if ( !$role_check ) {
+		return "Error: Please log in.";
+	}
+
+	// Administrators return all sites
+	if ( $role_check && in_array( 'administrator', $user->roles ) ) {
+		$customers = get_posts( array(
+			'order'          => 'asc',
+			'orderby'        => 'title',
+			'posts_per_page' => '-1',
+			'post_type'      => 'captcore_customer',
+			'meta_query'     => array(
+				'relation' => 'AND',
+				array(
+					'key'     => 'status',
+					'value'   => 'closed',
+					'compare' => '!=',
+				),
+		) ) );
+
+		foreach ( $customers as $customer ) :
+
+			$domains = get_field( 'domains', $customer );
+			if ( $domains ) {
+				foreach ( $domains as $domain ) :
+					$domain_name = get_the_title( $domain );
+					if ( $domain_name ) {
+						$all_domains[ $domain_name ] = $domain;
+					}
+				endforeach;
+			}
+
+		endforeach;
+
+		// Sort array by domain name
+		ksort( $all_domains );
+
+		return $all_domains;
+	}
 
 }
 
