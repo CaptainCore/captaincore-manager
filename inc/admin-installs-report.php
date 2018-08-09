@@ -132,7 +132,6 @@ if ( $query->have_posts() ) {
 					$password = get_field('password',$website->ID);
 					$protocol = get_field('protocol',$website->ID);
 					$port = get_field('port',$website->ID);
-					$token = "***REMOVED***";
 
 					echo "php Sites/backup.anchor.host/api/new.php site=$site domain=$domain username=$username password=".rawurlencode(base64_encode($password))." address=$address protocol=$protocol port=$port preloadusers=$preloadusers token=$token skip=true
 ";
