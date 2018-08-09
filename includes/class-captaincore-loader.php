@@ -3,7 +3,7 @@
 /**
  * Register all actions and filters for the plugin
  *
- * @link       https://anchor.host
+ * @link       https://captaincore.io
  * @since      0.1.0
  *
  * @package    Captaincore
@@ -19,7 +19,7 @@
  *
  * @package    Captaincore
  * @subpackage Captaincore/includes
- * @author     Anchor Hosting <support@anchor.host>
+ * @author     Austin Ginder
  */
 class Captaincore_Loader {
 

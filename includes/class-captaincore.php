@@ -6,7 +6,7 @@
  * A class definition that includes attributes and functions used across both the
  * public-facing side of the site and the admin area.
  *
- * @link       https://anchor.host
+ * @link       https://captaincore.io
  * @since      0.1.0
  *
  * @package    Captaincore
@@ -25,7 +25,7 @@
  * @since      0.1.0
  * @package    Captaincore
  * @subpackage Captaincore/includes
- * @author     Anchor Hosting <support@anchor.host>
+ * @author     Austin Ginder
  */
 class Captaincore {
 

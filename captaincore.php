@@ -8,17 +8,17 @@
  * registers the activation and deactivation functions, and defines a function
  * that starts the plugin.
  *
- * @link              https://anchor.host
+ * @link              https://captaincore.io
  * @since             0.1.0
  * @package           Captaincore
  *
  * @wordpress-plugin
  * Plugin Name:       CaptainCore GUI
  * Plugin URI:        https://captaincore.io
- * Description:       Toolkit for running your own WordPress hosting business
+ * Description:       Open Source Toolkit for Managing WordPress Sites
  * Version:           0.2.7
- * Author:            Anchor Hosting
- * Author URI:        https://anchor.host
+ * Author:            Austin Ginder
+ * Author URI:        https://twitter.com/austinginder
  * License:           GPL-2.0+
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
  * Text Domain:       captaincore
@@ -4372,9 +4372,9 @@ add_action( 'woocommerce_payment_complete', 'captaincore_woocommerce_payment_com
 function captaincore_get_checkout_payment_url( $payment_url ) {
 
 	// Current $payment_url is
-	// https://anchor.host/checkout/order-pay/1918?pay_for_order=true&key=wc_order_576c79296c346&subscription_renewal=true
+	// https://captcore-sitename.com/checkout/order-pay/1918?pay_for_order=true&key=wc_order_576c79296c346&subscription_renewal=true
 	// Replace with
-	// https://anchor.host/checkout-express/1918/?pay_for_order=true&key=wc_order_576c79296c346&subscription_renewal=true
+	// https://captcore-sitename.com/checkout-express/1918/?pay_for_order=true&key=wc_order_576c79296c346&subscription_renewal=true
 	$home_url = esc_url( home_url( '/' ) );
 
 	$new_payment_url = str_replace( $home_url . 'checkout/order-pay/', $home_url . 'checkout-express/', $payment_url );

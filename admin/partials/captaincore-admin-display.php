@@ -5,7 +5,7 @@
  *
  * This file is used to markup the admin-facing aspects of the plugin.
  *
- * @link       https://anchor.host
+ * @link       https://captaincore.io
  * @since      0.1.0
  *
  * @package    Captaincore

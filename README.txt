@@ -1,5 +1,5 @@
 === CaptainCore GUI ===
-Author URI: https://anchor.host
+Author URI: https://twitter.com/austinginder
 Plugin URI: https://captaincore.io
 Contributors: austinginder
 Tags: hosting, dns, wp hosting, web host, website management, web host business
@@ -13,7 +13,7 @@ Toolkit for running your own WordPress hosting business
 
 == Description ==
 
-CaptainCore is an open sourced toolkit made and used by [Anchor Hosting](https://anchor.host). If your a geek take a look on Github and help contribute! If you just want to pay someone to setup and run CaptainCore for your business then check out [CaptainCore.io](https://captaincore.io). We'll handle getting your business and hosting customers moved over.
+[CaptainCore GUI](https://captaincore.io) is a WordPress plugin part of the CaptainCore toolkit (a powerful toolkit for managing WordPress sites via SSH & WP-CLI). Requires a connection with a CaptainCore CLI (see installation notes).
 
 == Installation ==
 

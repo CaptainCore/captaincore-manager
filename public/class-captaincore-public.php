@@ -3,7 +3,7 @@
 /**
  * The public-facing functionality of the plugin.
  *
- * @link       https://anchor.host
+ * @link       https://captaincore.io
  * @since      0.1.0
  *
  * @package    Captaincore
@@ -18,7 +18,7 @@
  *
  * @package    Captaincore
  * @subpackage Captaincore/public
- * @author     Anchor Hosting <support@anchor.host>
+ * @author     Austin Ginder
  */
 class Captaincore_Public {
 
