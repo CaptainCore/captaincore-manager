@@ -8,6 +8,9 @@ CaptainCore GUI
 
 [![emoji-log](https://cdn.rawgit.com/ahmadawais/stuff/ca97874/emoji-log/flat.svg)](https://github.com/ahmadawais/Emoji-Log/)
 
+## **Warning**
+This project is under active development and **not yet stable**. Things may break without notice. Only proceed if your wanting to spend time on the project. Sign up to receive project update at [captaincore.io](https://captaincore.io/).
+
 ## Installation
 
 1. Upload `/captaincore/` to the `/wp-content/plugins/` directory
