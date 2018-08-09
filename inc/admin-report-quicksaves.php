@@ -9,7 +9,7 @@ jQuery( document ).ready(function() {
 
 
 </script>
-<link rel='stylesheet' id='font-awesome-css'  href='https://anchor.host/wp-content/themes/swell-anchorhost/css/font-awesome.min.css' type='text/css' media='all' />
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css" integrity="sha384-hWVjflwFxL6sNzntih27bfxkr27PmbbK/iSvJ+a4+0owXq79v+lsFkW54bOGbiDQ" crossorigin="anonymous">
 
 <div class="wrap"><div id="icon-tools" class="icon32"></div>
 <h2>Quicksaves Report</h2>
