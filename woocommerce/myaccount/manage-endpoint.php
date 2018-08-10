@@ -1689,7 +1689,7 @@ new Vue({
 							this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
 
 							// Builds WP-CLI
-							wpcli = "wp plugin install " + new_response.url + " --force --activate"
+							wpcli = "wp plugin install '" + new_response.url + "' --force --activate"
 
 							// Prep AJAX request
 							var data = {
@@ -1719,7 +1719,7 @@ new Vue({
 							this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
 
 							// Builds WP-CLI
-							wpcli = "wp theme install " + new_response.url + " --force"
+							wpcli = "wp theme install '" + new_response.url + "' --force"
 
 							// Prep AJAX request
 							var data = {
