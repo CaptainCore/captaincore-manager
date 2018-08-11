@@ -30,6 +30,12 @@ html {
 	font-size: 13px;
 	margin: 0 4px;
 }
+.v-tabs__container--icons-and-text {
+	height: auto;
+}
+.v-tabs__container--fixed-tabs .v-tabs__div, .v-tabs__container--icons-and-text .v-tabs__div {
+	min-width: 0px;
+}
 
 .theme--dark .theme--light .v-select__selections {
 	color: rgb(22, 101, 192);
@@ -1009,7 +1015,7 @@ selected: false },
 
 							<v-tab-item id="tab-Site-Management">
 
-								<v-tabs v-model="site.tabs_management" color="grey lighten-4" right>
+								<v-tabs v-model="site.tabs_management" color="grey lighten-4" right icons-and-text>
 									<v-select
 										v-model="site.environment_selected"
 										:items='[{"name":"Production Environment","value":"Production"},{"name":"Staging Environment","value":"Staging"}]'
