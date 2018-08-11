@@ -31,6 +31,19 @@ html {
 	margin: 0 4px;
 }
 
+.theme--dark .theme--light .v-select__selections {
+	color: rgb(22, 101, 192);
+	padding-left: 6px;
+}
+
+.theme--dark .theme--light .v-icon {
+	color: rgba(0,0,0,.54);
+}
+
+.application.theme--light a {
+	color: inherit;
+}
+
 .v-expansion-panel__header {
 	line-height: 0.8em;
 }
@@ -80,16 +93,16 @@ table.v-datatable.v-table.v-datatable--select-all tbody tr td:nth-child(1) {
 	padding: 0px;
 	box-shadow: 0 2px 1px -1px rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 1px 3px 0 rgba(0,0,0,.12);
 }
-.v-expansion-panel__body .v-card.bordered .pass-mask {
+.v-expansion-panel__body .v-card .pass-mask {
 	display: inline-block;
 }
-.v-expansion-panel__body .v-card.bordered .pass-reveal {
+.v-expansion-panel__body .v-card .pass-reveal {
 	display: none;
 }
-.v-expansion-panel__body .v-card.bordered:hover .pass-mask {
+.v-expansion-panel__body .v-card:hover .pass-mask {
 	display: none;
 }
-.v-expansion-panel__body .v-card.bordered:hover .pass-reveal {
+.v-expansion-panel__body .v-card:hover .pass-reveal {
 	display: inline-block;
 }
 
@@ -348,7 +361,9 @@ loading_plugins: false,
 themes_selected: [],
 plugins_selected: [],
 users_selected: [],
-tabs: 0,
+environment_selected: "Production",
+tabs: 'tab-Site-Management',
+tabs_management: 'tab-Keys',
 pagination: {
 	sortBy: 'roles'
 },
@@ -410,7 +425,7 @@ selected: false },
 			</div>
 
 			<div class="upload-drag-btn">
-				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="/wp-content/plugins/captaincore/upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
+				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="/wp-content/plugins/captaincore-gui/upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
 			</div>
 		</div>
 		</div>
@@ -453,7 +468,7 @@ selected: false },
 			</div>
 
 			<div class="upload-drag-btn">
-				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="/wp-content/plugins/captaincore/upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
+				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="/wp-content/plugins/captaincore-gui/upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
 			</div>
 
 		</div>
@@ -952,254 +967,289 @@ selected: false },
 									</div>
 								</v-layout>
 							</div>
-							<v-tabs v-model="site.tabs" color="blue darken-3" dark>
-								<v-tab :key="1" ripple>
-									Keys <v-icon>fas fa-key</v-icon>
+							<v-tabs v-model="site.tabs" color="blue darken-3"
+				 		 dark
+				 		 >
+								<v-tab :key="1" href="#tab-Site-Management">
+								Site Management<v-icon>fas fa-cog</v-icon>
 								</v-tab>
-								<v-tab :key="2" ripple>
-									Themes <v-icon>fas fa-paint-brush</v-icon>
-								</v-tab>
-								<v-tab :key="3" ripple>
-									Plugins <v-icon>fas fa-plug</v-icon>
-								</v-tab>
-								<v-tab :key="4" ripple @click="fetchUsers( site.id )">
-									Users <v-icon>fas fa-users</v-icon>
-								</v-tab>
-								<v-tab :key="5" ripple @click="fetchUpdateLogs( site.id )">
-									Updates <v-icon>fas fa-book-open</v-icon>
-								</v-tab>
-								<v-tab :key="6" ripple>
+								<v-tab :key="6" href="#tab-Sharing" ripple>
 									Sharing <v-icon>fas fa-user-lock</v-icon>
 								</v-tab>
-								<v-tab-item :key="1">
-									<v-card v-for="key in site.keys" class="bordered">
-										<div style="position: absolute; top: -20px; left: 20px;">
-										<v-btn
-											depressed
-											disabled
-											right
-											style="background-color: rgb(229, 229, 229)!important; color: #000 !important; left: -11px; top: 0px; height: 24px;"
-										>{{ key.environment }} Environment</v-btn></div>
-										<v-container fluid>
-										<div><h3 class="headline mb-0" style="margin-top:10px;"><a :href="key.link" target="_blank">{{ key.link }}</a></h3></div>
-										<div row>
+								<v-tab :key="7" href="#tab-Advanced" ripple>
+									Advanced <v-icon>fas fa-cogs</v-icon>
+								</v-tab>
+							</v-tabs>
+						<v-tabs-items v-model="site.tabs">
 
-											<div><span class="caption">Address</span> {{ key.address }}</div>
-											<div><span class="caption">Username</span> {{ key.username }}</div>
-											<div><span class="caption">Password</span> <div class="pass-mask">##########</div><div class="pass-reveal">{{ key.password }}</div></div>
-											<div><span class="caption">Protocol</span> {{ key.protocol }}</div>
-											<div><span class="caption">Port</span> {{ key.port }}</div>
+							<v-tab-item id="tab-Site-Management">
 
-										 <div v-if="key.database && key.ssh">
-											 <div v-if="key.database">
-											 <hr />
-											 <div><span class="caption">Database</span> <a :href="key.database" target="_blank">{{ key.database }}</a></div>
-											 <div><span class="caption">Database Username</span> {{ key.database_username }}</a></div>
-											 <div><span class="caption">Database Password</span> {{ key.database_password }}</a></div>
+								<v-tabs v-model="site.tabs_management" color="grey lighten-4" right>
+									<v-select
+										v-model="site.environment_selected"
+										:items='[{"name":"Production Environment","value":"Production"},{"name":"Staging Environment","value":"Staging"}]'
+										item-text="name"
+										item-value="value"
+										light
+										style="max-width: 230px;margin: 8px auto 0 16px;"></v-select>
+
+								<v-tab
+									v-for="item in site_tabs"
+									:key="item.title"
+									:href="'#tab-' + item.title"
+								>
+								  {{ item.title }} <v-icon small style="margin-left:7px;">{{ item.icon }}</v-icon>
+								</v-tab>
+
+								</v-tabs>
+								<v-tabs-items v-model="site.tabs_management">
+
+									<v-tab-item :key="1" id="tab-Keys">
+										<v-toolbar color="grey lighten-4" dense light>
+											<v-toolbar-title>Keys</v-toolbar-title>
+
+											<!--<div style="margin-left: 20px;">
+											<v-btn
+												depressed
+												disabled
+												right
+												style="background-color: rgb(229, 229, 229)!important; color: #000 !important; left: -11px; top: 0px; height: 24px;"
+											>{{ site.environment_selected }} Environment</v-btn></div>-->
+											<v-spacer></v-spacer>
+										</v-toolbar>
+
+										<v-card v-for="key in site.keys" v-show="key.environment == site.environment_selected">
+
+											<v-container fluid style="padding-top: 10px;">
+											<div><h3 class="headline mb-0" style="margin-top:10px;"><a :href="key.link" target="_blank">{{ key.link }}</a></h3></div>
+											<div row>
+
+												<div><span class="caption">Address</span> {{ key.address }}</div>
+												<div><span class="caption">Username</span> {{ key.username }}</div>
+												<div><span class="caption">Password</span> <div class="pass-mask">##########</div><div class="pass-reveal">{{ key.password }}</div></div>
+												<div><span class="caption">Protocol</span> {{ key.protocol }}</div>
+												<div><span class="caption">Port</span> {{ key.port }}</div>
+
+											 <div v-if="key.database && key.ssh">
+												 <div v-if="key.database">
+												 <hr />
+												 <div><span class="caption">Database</span> <a :href="key.database" target="_blank">{{ key.database }}</a></div>
+												 <div><span class="caption">Database Username</span> {{ key.database_username }}</a></div>
+												 <div><span class="caption">Database Password</span> {{ key.database_password }}</a></div>
+												 </div>
+												 <hr />
+												 <div v-if="key.ssh">{{ key.ssh }}</div>
 											 </div>
-											 <hr />
-											 <div v-if="key.ssh">{{ key.ssh }}</div>
-										 </div>
 
-									 </div>
-								 </v-container>
-							 </v-card>
+										 </div>
+									 </v-container>
+								 </v-card>
+								</v-tab-item>
+								<v-tab-item :key="2" id="tab-Themes">
+									<v-toolbar color="grey lighten-4" dense light>
+										<v-toolbar-title>Themes</v-toolbar-title>
+										<v-spacer></v-spacer>
+										<v-toolbar-items>
+											<v-btn flat @click="bulkEdit(site.id,'themes')" v-if="site.themes_selected.length != 0">Bulk Edit {{ site.themes_selected.length }} themes</v-btn>
+											<v-btn flat @click="addTheme(site.id)">Add Theme <v-icon dark small>add</v-icon></v-btn>
+										</v-toolbar-items>
+									</v-toolbar>
+									<v-data-table
+										:headers="headers"
+										:items="site.themes"
+										:loading="site.loading_themes"
+										v-model="site.themes_selected"
+										item-key="name"
+										value="name"
+										class="elevation-1"
+										select-all
+										hide-actions
+										>
+									 <template slot="items" slot-scope="props">
+										 <td>
+						         <v-checkbox
+						           v-model="props.selected"
+						           primary
+						           hide-details
+						         ></v-checkbox>
+						 				</td>
+										 <td>{{ props.item.title }}</td>
+										 <td>{{ props.item.name }}</td>
+										 <td>{{ props.item.version }}</td>
+										 <td>
+											 <div v-if="props.item.status === 'inactive' || props.item.status === 'parent' || props.item.status === 'child'">
+												<v-switch left :label="props.item.status" v-model="props.item.status" false-value="inactive" true-value="active" @change="activateTheme(props.item.name, site.id)"></v-switch>
+			 								</div>
+			 								<div v-else>
+			 									{{ props.item.status }}
+			 								</div>
+										 </td>
+										 <td class="text-xs-center px-0">
+											 <v-btn icon class="mx-0" @click="deleteTheme(props.item.name, site.id)">
+												 <v-icon small color="pink">delete</v-icon>
+											 </v-btn>
+										 </td>
+									 </template>
+								 </v-data-table>
 							</v-tab-item>
-							<v-tab-item :key="2">
-								<v-toolbar color="grey lighten-4" dense light>
-									<v-toolbar-title>Themes</v-toolbar-title>
-									<v-spacer></v-spacer>
-									<v-toolbar-items>
-										<v-btn flat @click="bulkEdit(site.id,'themes')" v-if="site.themes_selected.length != 0">Bulk Edit {{ site.themes_selected.length }} themes</v-btn>
-										<v-btn flat @click="addTheme(site.id)">Add Theme <v-icon dark small>add</v-icon></v-btn>
-									</v-toolbar-items>
-								</v-toolbar>
-								<v-data-table
-									:headers="headers"
-									:items="site.themes"
-									:loading="site.loading_themes"
-									v-model="site.themes_selected"
-									item-key="name"
-									value="name"
-									class="elevation-1"
-									select-all
-									hide-actions
-									>
-								 <template slot="items" slot-scope="props">
-									 <td>
-					         <v-checkbox
-					           v-model="props.selected"
-					           primary
-					           hide-details
-					         ></v-checkbox>
-					 				</td>
-									 <td>{{ props.item.title }}</td>
-									 <td>{{ props.item.name }}</td>
-									 <td>{{ props.item.version }}</td>
-									 <td>
-										 <div v-if="props.item.status === 'inactive' || props.item.status === 'parent' || props.item.status === 'child'">
-											<v-switch left :label="props.item.status" v-model="props.item.status" false-value="inactive" true-value="active" @change="activateTheme(props.item.name, site.id)"></v-switch>
-		 								</div>
-		 								<div v-else>
-		 									{{ props.item.status }}
-		 								</div>
-									 </td>
-									 <td class="text-xs-center px-0">
-										 <v-btn icon class="mx-0" @click="deleteTheme(props.item.name, site.id)">
-											 <v-icon small color="pink">delete</v-icon>
-										 </v-btn>
-									 </td>
-								 </template>
-							 </v-data-table>
-						</v-tab-item>
-		<v-tab-item :key="3">
-			<v-toolbar color="grey lighten-4" dense light>
-				<v-toolbar-title>Plugins</v-toolbar-title>
-				<v-spacer></v-spacer>
-				<v-toolbar-items>
-					<v-btn flat @click="bulkEdit(site.id, 'plugins')" v-if="site.plugins_selected.length != 0">Bulk Edit {{ site.plugins_selected.length }} plugins</v-btn>
-					<v-btn flat @click="addPlugin(site.id)">Add Plugin <v-icon dark small>add</v-icon></v-btn>
-				</v-toolbar-items>
-			</v-toolbar>
-			<v-data-table
-				:headers="headers"
-				:items="site.plugins.filter(plugin => plugin.status != 'must-use' && plugin.status != 'dropin')"
-				:loading="site.loading_plugins"
-				:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
-				v-model="site.plugins_selected"
-				item-key="name"
-				value="name"
-				class="elevation-1"
-				select-all
-				hide-actions
-			 >
-			 <template slot="items" slot-scope="props">
-				<td>
-        <v-checkbox
-          v-model="props.selected"
-          primary
-          hide-details
-        ></v-checkbox>
-				</td>
-				<td>{{ props.item.title }}</td>
-				<td>{{ props.item.name }}</td>
-				<td>{{ props.item.version }}</td>
-				<td>
-					<div v-if="props.item.status === 'active' || props.item.status === 'inactive'">
-						<v-switch v-model="props.item.status" false-value="inactive" true-value="active" @change="togglePlugin(props.item.name, props.item.status, site.id)"></v-switch>
-					</div>
+			<v-tab-item :key="3" id="tab-Plugins">
+				<v-toolbar color="grey lighten-4" dense light>
+					<v-toolbar-title>Plugins</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+						<v-btn flat @click="bulkEdit(site.id, 'plugins')" v-if="site.plugins_selected.length != 0">Bulk Edit {{ site.plugins_selected.length }} plugins</v-btn>
+						<v-btn flat @click="addPlugin(site.id)">Add Plugin <v-icon dark small>add</v-icon></v-btn>
+					</v-toolbar-items>
+				</v-toolbar>
+				<v-data-table
+					:headers="headers"
+					:items="site.plugins.filter(plugin => plugin.status != 'must-use' && plugin.status != 'dropin')"
+					:loading="site.loading_plugins"
+					:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
+					v-model="site.plugins_selected"
+					item-key="name"
+					value="name"
+					class="elevation-1"
+					select-all
+					hide-actions
+				 >
+				 <template slot="items" slot-scope="props">
+					<td>
+	        <v-checkbox
+	          v-model="props.selected"
+	          primary
+	          hide-details
+	        ></v-checkbox>
+					</td>
+					<td>{{ props.item.title }}</td>
+					<td>{{ props.item.name }}</td>
+					<td>{{ props.item.version }}</td>
+					<td>
+						<div v-if="props.item.status === 'active' || props.item.status === 'inactive'">
+							<v-switch v-model="props.item.status" false-value="inactive" true-value="active" @change="togglePlugin(props.item.name, props.item.status, site.id)"></v-switch>
+						</div>
+						<div v-else>
+							{{ props.item.status }}
+						</div>
+					</td>
+					<td class="text-xs-center px-0">
+						 <v-btn icon class="mx-0" @click="deletePlugin(props.item.name, site.id)" v-if="props.item.status === 'active' || props.item.status === 'inactive'">
+							 <v-icon small color="pink">delete</v-icon>
+						 </v-btn>
+					 </td>
+				 </template>
+				 <template slot="footer" v-for="plugin in site.plugins.filter(plugin => plugin.status == 'must-use' || plugin.status == 'dropin')">
+					<tr>
+						<td></td>
+						<td>{{ plugin.title }}</td>
+						<td>{{ plugin.name }}</td>
+						<td>{{ plugin.version }}</td>
+						<td>{{ plugin.status }}</td>
+						<td class="text-xs-center px-0"></td>
+					</tr>
+				 </template>
+				</v-data-table>
+		  </v-tab-item>
+			<v-tab-item :key="4" id="tab-Users">
+				<v-toolbar color="grey lighten-4" dense light>
+					<v-toolbar-title>Users</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+						<v-btn flat @click="bulkEdit(site.id,'users')" v-if="site.users_selected.length != 0">Bulk Edit {{ site.users_selected.length }} users</v-btn>
+						<v-btn flat @click="addPlugin(site.id)">Add User <v-icon dark small>add</v-icon></v-btn>
+					</v-toolbar-items>
+				</v-toolbar>
+				<v-card>
+					<v-card-title v-if="site.users.length == 0">
+						<div>
+							Fetching users...
+						  <v-progress-linear :indeterminate="true"></v-progress-linear>
+						</div>
+					</v-card-title>
 					<div v-else>
-						{{ props.item.status }}
-					</div>
-				</td>
-				<td class="text-xs-center px-0">
-					 <v-btn icon class="mx-0" @click="deletePlugin(props.item.name, site.id)" v-if="props.item.status === 'active' || props.item.status === 'inactive'">
-						 <v-icon small color="pink">delete</v-icon>
-					 </v-btn>
-				 </td>
-			 </template>
-			 <template slot="footer" v-for="plugin in site.plugins.filter(plugin => plugin.status == 'must-use' || plugin.status == 'dropin')">
-				<tr>
-					<td></td>
-					<td>{{ plugin.title }}</td>
-					<td>{{ plugin.name }}</td>
-					<td>{{ plugin.version }}</td>
-					<td>{{ plugin.status }}</td>
-					<td class="text-xs-center px-0"></td>
-				</tr>
-			 </template>
-			</v-data-table>
-	  </v-tab-item>
-		<v-tab-item :key="4">
-			<v-toolbar color="grey lighten-4" dense light>
-				<v-toolbar-title>Users</v-toolbar-title>
-				<v-spacer></v-spacer>
-				<v-toolbar-items>
-					<v-btn flat @click="bulkEdit(site.id,'users')" v-if="site.users_selected.length != 0">Bulk Edit {{ site.users_selected.length }} users</v-btn>
-					<v-btn flat @click="addPlugin(site.id)">Add User <v-icon dark small>add</v-icon></v-btn>
-				</v-toolbar-items>
-			</v-toolbar>
-			<v-card>
-				<v-card-title v-if="site.users.length == 0">
-					<div>
-						Fetching users...
-					  <v-progress-linear :indeterminate="true"></v-progress-linear>
-					</div>
-				</v-card-title>
-				<div v-else>
-					<v-data-table
-						:headers='header_users'
-						:pagination.sync="site.pagination"
-						:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
-						:items="site.users"
-						item-key="user_login"
-						v-model="site.users_selected"
-						class="elevation-1 table_users"
-						select-all
-					>
-				    <template slot="items" slot-scope="props">
-							<td>
-			        <v-checkbox
-			          v-model="props.selected"
-			          primary
-			          hide-details
-			        ></v-checkbox>
-							</td>
-				      <td>{{ props.item.user_login }}</td>
-							<td>{{ props.item.display_name }}</td>
-							<td>{{ props.item.user_email }}</td>
-							<td>{{ props.item.roles }}</td>
-							<td>
-								<v-btn small round @click="loginSite(site.id, props.item.user_login)">Login as</v-btn>
-								<v-btn icon class="mx-0" @click="deleteUser(props.item.user_login, site.id)">
-									<v-icon small color="pink">delete</v-icon>
-								</v-btn>
-							</td>
-				    </template>
-				  </v-data-table>
-				</div>
-			</v-card>
-		</v-tab-item>
-		<v-tab-item :key="5">
-			<v-toolbar color="grey lighten-4" dense light>
-				<v-toolbar-title>Update Logs</v-toolbar-title>
-				<v-spacer></v-spacer>
-				<v-toolbar-items>
-					<v-btn flat @click="update(site.id)">Manually update</v-btn>
-					<v-btn flat @click="updateSettings(site.id)">Update Settings <v-icon dark small>fas fa-cog</v-icon></v-btn>
-				</v-toolbar-items>
-			</v-toolbar>
-			<v-card>
-				<v-card-title v-if="site.update_logs.length == 0">
-					<div>
-						Fetching update logs...
-					  <v-progress-linear :indeterminate="true"></v-progress-linear>
-					</div>
-				</v-card-title>
-				<v-card-title v-else-if="typeof site.update_logs == 'string'">
-					{{ site.update_logs }}
-				</v-card-title>
-				<div v-else>
 						<v-data-table
-							:headers='header_updatelog'
-							:items="site.update_logs"
-							:pagination.sync="site.update_logs_pagination"
-							class="elevation-1 update_logs"
+							:headers='header_users'
+							:pagination.sync="site.pagination"
 							:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
+							:items="site.users"
+							item-key="user_login"
+							v-model="site.users_selected"
+							class="elevation-1 table_users"
+							select-all
 						>
 					    <template slot="items" slot-scope="props">
-					      <td>{{ props.item.date | pretty_timestamp }}</td>
-					      <td>{{ props.item.type }}</td>
-								<td>{{ props.item.name }}</td>
-								<td class="text-xs-right">{{ props.item.old_version }}</td>
-								<td class="text-xs-right">{{ props.item.new_version }}</td>
-								<td>{{ props.item.status }}</td>
+								<td>
+				        <v-checkbox
+				          v-model="props.selected"
+				          primary
+				          hide-details
+				        ></v-checkbox>
+								</td>
+					      <td>{{ props.item.user_login }}</td>
+								<td>{{ props.item.display_name }}</td>
+								<td>{{ props.item.user_email }}</td>
+								<td>{{ props.item.roles }}</td>
+								<td>
+									<v-btn small round @click="loginSite(site.id, props.item.user_login)">Login as</v-btn>
+									<v-btn icon class="mx-0" @click="deleteUser(props.item.user_login, site.id)">
+										<v-icon small color="pink">delete</v-icon>
+									</v-btn>
+								</td>
 					    </template>
 					  </v-data-table>
 					</div>
-			</v-card>
-	  </v-tab-item>
-		<v-tab-item :key="6">
+				</v-card>
+			</v-tab-item>
+			<v-tab-item :key="5" id="tab-Updates">
+				<v-toolbar color="grey lighten-4" dense light>
+					<v-toolbar-title>Update Logs</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+						<v-btn flat @click="update(site.id)">Manually update</v-btn>
+						<v-btn flat @click="updateSettings(site.id)">Update Settings <v-icon dark small>fas fa-cog</v-icon></v-btn>
+					</v-toolbar-items>
+				</v-toolbar>
+				<v-card>
+					<v-card-title v-if="site.update_logs.length == 0">
+						<div>
+							Fetching update logs...
+						  <v-progress-linear :indeterminate="true"></v-progress-linear>
+						</div>
+					</v-card-title>
+					<v-card-title v-else-if="typeof site.update_logs == 'string'">
+						{{ site.update_logs }}
+					</v-card-title>
+					<div v-else>
+							<v-data-table
+								:headers='header_updatelog'
+								:items="site.update_logs"
+								:pagination.sync="site.update_logs_pagination"
+								class="elevation-1 update_logs"
+								:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
+							>
+						    <template slot="items" slot-scope="props">
+						      <td>{{ props.item.date | pretty_timestamp }}</td>
+						      <td>{{ props.item.type }}</td>
+									<td>{{ props.item.name }}</td>
+									<td class="text-xs-right">{{ props.item.old_version }}</td>
+									<td class="text-xs-right">{{ props.item.new_version }}</td>
+									<td>{{ props.item.status }}</td>
+						    </template>
+						  </v-data-table>
+						</div>
+				</v-card>
+		  </v-tab-item>
+		</v-tabs-items>
+
+		</v-tab-item>
+		<v-tab-item :key="6" id="tab-Sharing">
+			<v-toolbar color="grey lighten-4" dense light>
+				<v-toolbar-title>Sharing</v-toolbar-title>
+				<v-spacer></v-spacer>
+				<v-toolbar-items>
+					<v-btn flat>Invite</v-btn>
+				</v-toolbar-items>
+			</v-toolbar>
 			<v-card>
 				<v-card-title>
 					<div>
@@ -1438,6 +1488,13 @@ new Vue({
 		site_filters: all_filters,
 		site_filter_version: null,
 		site_filter_status: null,
+		site_tabs: [
+			{ title: 'Keys', icon: 'fas fa-key' },
+			{ title: 'Themes', icon: 'fas fa-paint-brush' },
+			{ title: 'Plugins', icon: 'fas fa-plug' },
+			{ title: 'Users', icon: 'fas fa-users' },
+			{ title: 'Updates', icon: 'fas fa-book-open' }
+		],
 		sites: sites,
 		headers: [
 			{ text: 'Name', value: 'name' },
@@ -1867,7 +1924,7 @@ new Vue({
 						site.themes_selected = [];
 						site.plugins_selected = [];
 						site.users_selected = [];
-						site.tabs = 0;
+						site.tabs = 'tab-Keys';
 						site.pagination = {
 							sortBy: 'roles'
 						};
