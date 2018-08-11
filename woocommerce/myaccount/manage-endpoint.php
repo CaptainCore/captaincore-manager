@@ -1315,6 +1315,45 @@ selected: false },
 				</v-card-title>
 			</v-card>
 	  </v-tab-item>
+		<v-tab-item :key="7" id="tab-Advanced">
+			<v-toolbar color="grey lighten-4" dense light>
+				<v-toolbar-title>Advanced</v-toolbar-title>
+				<v-spacer></v-spacer>
+				<v-toolbar-items>
+					<v-btn flat @click="bulkEdit(site.id,'users')" v-if="site.users_selected.length != 0">Bulk Edit {{ site.users_selected.length }} users</v-btn>
+					<v-btn flat @click="submitNewSite">Copy Site <v-icon dark small>file_copy</v-icon></v-btn>
+					<v-btn flat @click="submitNewSite">Edit Site <v-icon dark small>edit</v-icon></v-btn>
+					<v-btn flat @click="submitNewSite">Remove Site <v-icon dark small>delete</v-icon></v-btn>
+				</v-toolbar-items>
+			</v-toolbar>
+			<v-card>
+				<v-card-title>
+					<div>
+						<v-btn small flat @click="viewApplyHttpsUrls(site.id)">
+							<v-icon>launch</v-icon> <span>Apply HTTPS Urls</span></v-btn><br />
+						<v-btn small flat>
+							<v-icon>cloud</v-icon> <span>Download Backup Snapshot</span></v-btn><br />
+						<v-btn small flat>
+							<v-icon>email</v-icon> <span>View Mailgun Logs</span></v-btn><br />
+						<v-btn small flat @click="viewQuicksaves(site.id)">
+							<v-icon>settings_backup_restore</v-icon> <span>Quicksaves (Plugins & Themes)</span></v-btn><br />
+						<v-btn small flat>
+							<v-icon>loop</v-icon> <span>Redeploy users/plugins</span></v-btn><br />
+						<v-btn small flat>
+							<v-icon>local_shipping</v-icon> <span>Push Production to Staging</span></v-btn><br />
+						<v-btn small flat>
+							<v-icon class="reverse">local_shipping</v-icon> <span>Push Staging to Production</span></v-btn><br />
+						<v-btn small flat>
+							<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span></v-btn><br />
+						<v-btn small flat>
+							<v-icon>chrome_reader_mode</v-icon>
+							<span>View Usage Breakdown</span>
+						</v-btn><br />
+
+					</div>
+				</v-card-title>
+			</v-card>
+		</v-tab-item>
 	</v-tabs>
 
 						 </v-expansion-panel-content>
