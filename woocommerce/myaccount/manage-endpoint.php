@@ -1878,7 +1878,8 @@ new Vue({
 
 						jQuery.post(ajaxurl, data, function(response) {
 
-							console.log( response );
+							// TO DO, update job ID to respsonse (trackable one from server)
+							//  start a repeat check to see when it's completed. Do no mark it done here.
 
 							self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
 
