@@ -1043,7 +1043,7 @@ selected: false },
 									  Backups <v-icon small style="margin-left:7px;">fas fa-hdd</v-icon>
 									</v-tab>
 								</v-tabs>
-								<v-tabs-items v-model="site.tabs_management">
+								<v-tabs-items v-model="site.tabs_management" v-if="site.keys.filter( key => key.environment == site.environment_selected ).length == 1">
 
 									<v-tab-item :key="1" id="tab-Keys">
 										<v-toolbar color="grey lighten-4" dense light>
@@ -1281,6 +1281,13 @@ selected: false },
 				</v-card>
 		  </v-tab-item>
 		</v-tabs-items>
+		<v-card v-if="site.keys.filter( key => key.environment == site.environment_selected ).length == 0">
+
+			<v-container fluid>
+			 <div><span>{{ site.environment_selected }} environment not created.</span></div>
+		 </v-container>
+
+		</v-card>
 
 		</v-tab-item>
 		<v-tab-item :key="6" id="tab-Sharing">
