@@ -1016,16 +1016,26 @@ selected: false },
 										item-text="name"
 										item-value="value"
 										light
-										style="max-width: 230px;margin: 8px auto 0 16px;"></v-select>
+										style="max-width: 230px; margin: 0px auto 0px 16px; top: 8px;"></v-select>
 
-								<v-tab
-									v-for="item in site_tabs"
-									:key="item.title"
-									:href="'#tab-' + item.title"
-								>
-								  {{ item.title }} <v-icon small style="margin-left:7px;">{{ item.icon }}</v-icon>
-								</v-tab>
-
+									<v-tab key="Keys" href="#tab-Keys">
+									  Keys <v-icon small style="margin-left:7px;">fas fa-key</v-icon>
+									</v-tab>
+									<v-tab key="Themes" href="#tab-Themes">
+									  Themes <v-icon small style="margin-left:7px;">fas fa-paint-brush</v-icon>
+									</v-tab>
+									<v-tab key="Plugins" href="#tab-Plugins">
+									  Plugins <v-icon small style="margin-left:7px;">fas fa-plug</v-icon>
+									</v-tab>
+									<v-tab key="Users" href="#tab-Users" @click="fetchUsers( site.id )">
+									  Users <v-icon small style="margin-left:7px;">fas fa-users</v-icon>
+									</v-tab>
+									<v-tab key="Updates" href="#tab-Updates" @click="fetchUpdateLogs( site.id )">
+									  Updates <v-icon small style="margin-left:7px;">fas fa-book-open</v-icon>
+									</v-tab>
+									<v-tab key="Timemachine" href="#tab-Timemachine">
+									  Backups <v-icon small style="margin-left:7px;">fas fa-hdd</v-icon>
+									</v-tab>
 								</v-tabs>
 								<v-tabs-items v-model="site.tabs_management">
 
@@ -1553,13 +1563,6 @@ new Vue({
 		site_filters: all_filters,
 		site_filter_version: null,
 		site_filter_status: null,
-		site_tabs: [
-			{ title: 'Keys', icon: 'fas fa-key' },
-			{ title: 'Themes', icon: 'fas fa-paint-brush' },
-			{ title: 'Plugins', icon: 'fas fa-plug' },
-			{ title: 'Users', icon: 'fas fa-users' },
-			{ title: 'Updates', icon: 'fas fa-book-open' }
-		],
 		sites: sites,
 		headers: [
 			{ text: 'Name', value: 'name' },
