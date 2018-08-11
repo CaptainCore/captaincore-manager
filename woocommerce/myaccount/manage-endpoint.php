@@ -701,6 +701,31 @@ selected: false },
 	        </v-card>
 	      </v-dialog>
 				<v-dialog
+					v-model="dialog_apply_https_urls.show"
+					fullscreen
+					hide-overlay
+					transition="dialog-bottom-transition"
+					scrollable
+				>
+				<v-card tile>
+					<v-toolbar card dark color="primary">
+						<v-btn icon dark @click.native="dialog_apply_https_urls.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>Apply HTTPS Urls for {{ dialog_apply_https_urls.site.name }}</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text>
+					<v-container>
+						<v-alert :value="true" type="info" color="blue darken-3">
+							Domain needs to match current home url which is <strong>{{ dialog_apply_https_urls.site.home_url }}</strong>. Otherwise server domain mapping will need updated to prevent redirection loop.
+						</v-alert>
+						<p>Select url replacement option.</p>
+					</v-container>
+					</v-card-text>
+					</v-card>
+				</v-dialog>
+				<v-dialog
 					v-model="quicksave_dialog.show"
 					fullscreen
 					hide-overlay
@@ -1447,6 +1472,7 @@ new Vue({
 	el: '#app',
 	data: {
 		dialog: false,
+		dialog_apply_https_urls: { show: false, site: {} },
 		page: 1,
 		jobs: [],
 		add_site: false,
@@ -2069,6 +2095,11 @@ new Vue({
 				self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
 			});
 
+		},
+		viewApplyHttpsUrls( site_id ) {
+			site = this.sites.filter(site => site.id == site_id)[0];
+			this.dialog_apply_https_urls.show = true;
+			this.dialog_apply_https_urls.site = site;
 		},
 		viewQuicksavesChanges( site_id, quicksave ) {
 
