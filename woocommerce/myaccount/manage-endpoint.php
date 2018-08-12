@@ -1424,10 +1424,10 @@ selected: false },
 			<v-snackbar
 				:timeout="3000"
 				:multi-line="true"
-				v-model="bulkaction_response_snackbar"
+				v-model="snackbar.show"
 			>
-				{{ bulkaction_response }}
-				<v-btn dark flat @click.native="snackbar = false">Close</v-btn>
+				{{ snackbar.message }}
+				<v-btn dark flat @click.native="snackbar.show = false">Close</v-btn>
 			</v-snackbar>
 			<v-dialog
 				fullscreen
@@ -1658,9 +1658,10 @@ new Vue({
 			{ name: "Remove", value: "remove" }
 		 ],
 		 select_bulk_action_arguments: null,
-		 bulkaction_response: null,
-		 bulkaction_response_snackbar: false
-
+		 snackbar: [
+			 { show: false },
+			 { message: "" }
+		 ]
 	},
 	filters: {
 		formatSize: function (fileSizeInBytes) {
@@ -2489,8 +2490,8 @@ new Vue({
 
 			// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 			jQuery.post(ajaxurl, data, function(response) {
-				self.bulkaction_response = response;
-				self.bulkaction_response_snackbar = true;
+				self.snackbar.message = response;
+				self.snackbar.show = true;
 				self.dialog = false;
 		  });
 
