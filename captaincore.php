@@ -3529,11 +3529,11 @@ function captaincore_install_action_callback() {
 		mailgun_setup( $domain );
 		$command = "captaincore ssh $site --script=deploy-mailgun --key=\"" . MAILGUN_API_KEY . '" --domain=' . $domain . " > ~/Tmp/$timestamp-deploy_mailgun_$site.txt 2>&1 &";
 	}
-	if ( $cmd == 'applyssl' ) {
-		$command = "captaincore ssh $site --script=applyssl &";
+	if ( $cmd == 'apply-https' ) {
+		$command = "captaincore ssh $site --script=apply-https &";
 	}
-	if ( $cmd == 'applysslwithwww' ) {
-		$command = "captaincore ssh $site --script=applysslwithwww &";
+	if ( $cmd == 'apply-https-with-www' ) {
+		$command = "captaincore ssh $site --script=apply-https-with-www &";
 	}
 	if ( $cmd == 'production-to-staging' ) {
 		date_default_timezone_set( 'America/New_York' );
