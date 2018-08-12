@@ -726,7 +726,14 @@ selected: false },
 						<v-alert :value="true" type="info" color="blue darken-3">
 							Domain needs to match current home url which is <strong>{{ dialog_apply_https_urls.site.home_url }}</strong>. Otherwise server domain mapping will need updated to prevent redirection loop.
 						</v-alert>
-						<p>Select url replacement option.</p>
+						<p></p>
+						<span>Select url replacement option.</span><br />
+						<v-btn @click="applyHttpsUrls( 'apply-https' )">
+							Option 1: https://{{ dialog_apply_https_urls.site.name }}
+						</v-btn><br />
+						<v-btn @click="applyHttpsUrls( 'apply-https-with-www' )">
+							Option 2: https://www.{{ dialog_apply_https_urls.site.name }}
+						</v-btn>
 					</v-container>
 					</v-card-text>
 					</v-card>
@@ -2179,6 +2186,34 @@ new Vue({
 				self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
 			});
 
+		},
+		applyHttpsUrls( command ) {
+			confirm_command = confirm("Will apply ssl urls. Proceed?");
+
+				if(confirm_command) {
+
+					var post_id = this.dialog_apply_https_urls.site.id;
+
+					var data = {
+						'action': 'captaincore_install',
+						'post_id': post_id,
+						'command': command,
+					};
+
+					self = this;
+
+					// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+					jQuery.post(ajaxurl, data, function(response) {
+
+						self.dialog_apply_https_urls.site = "";
+						self.dialog_apply_https_urls.show = false;
+						self.snackbar.message = "Applying HTTPS Urls";
+						self.snackbar.show = true;
+
+					});
+
+
+				}
 		},
 		viewApplyHttpsUrls( site_id ) {
 			site = this.sites.filter(site => site.id == site_id)[0];
