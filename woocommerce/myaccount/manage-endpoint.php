@@ -1039,12 +1039,14 @@ selected: false },
 									<v-tab key="Updates" href="#tab-Updates" @click="fetchUpdateLogs( site.id )">
 									  Updates <v-icon small style="margin-left:7px;">fas fa-book-open</v-icon>
 									</v-tab>
-									<v-tab key="Timemachine" href="#tab-Timemachine">
-									  Backups <v-icon small style="margin-left:7px;">fas fa-hdd</v-icon>
+									<v-tab key="Scripts" href="#tab-Scripts">
+										Scripts <v-icon small style="margin-left:7px;">fas fa-code</v-icon>
+									</v-tab>
+									<v-tab key="Backups" href="#tab-Backups">
+										Backups <v-icon small style="margin-left:7px;">fas fa-hdd</v-icon>
 									</v-tab>
 								</v-tabs>
 								<v-tabs-items v-model="site.tabs_management" v-if="site.keys.filter( key => key.environment == site.environment_selected ).length == 1">
-
 									<v-tab-item :key="1" id="tab-Keys">
 										<v-toolbar color="grey lighten-4" dense light>
 											<v-toolbar-title>Keys</v-toolbar-title>
@@ -1279,7 +1281,45 @@ selected: false },
 						  </v-data-table>
 						</div>
 				</v-card>
-		  </v-tab-item>
+			</v-tab-item>
+			<v-tab-item :key="6" id="tab-Scripts">
+				<v-toolbar color="grey lighten-4" dense light>
+					<v-toolbar-title>Scripts</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-card>
+					<v-card-title>
+						<div>
+							<v-btn small flat @click="viewApplyHttpsUrls(site.id)">
+								<v-icon>launch</v-icon> <span>Apply HTTPS Urls</span></v-btn><br />
+							<v-btn small flat>
+								<v-icon>email</v-icon> <span>View Mailgun Logs</span></v-btn><br />
+							<v-btn small flat>
+								<v-icon>loop</v-icon> <span>Redeploy users/plugins</span></v-btn><br />
+							<v-btn small flat>
+								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span></v-btn><br />
+						</div>
+					</v-card-title>
+				</v-card>
+			</v-tab-item>
+			<v-tab-item :key="7" id="tab-Backups">
+				<v-toolbar color="grey lighten-4" dense light>
+					<v-toolbar-title>Backups</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-card>
+					<v-card-title>
+						<div>
+							<v-btn small flat>
+								<v-icon>cloud</v-icon> <span>Download Backup Snapshot</span>
+							</v-btn><br />
+							<v-btn small flat @click="viewQuicksaves(site.id)">
+								<v-icon>settings_backup_restore</v-icon> <span>Quicksaves (Plugins & Themes)</span>
+							</v-btn><br />
+						</div>
+						</v-card-title>
+					</v-card>
+			</v-tab-item>
 		</v-tabs-items>
 		<v-card v-if="site.keys.filter( key => key.environment == site.environment_selected ).length == 0">
 
@@ -1352,27 +1392,14 @@ selected: false },
 			<v-card>
 				<v-card-title>
 					<div>
-						<v-btn small flat @click="viewApplyHttpsUrls(site.id)">
-							<v-icon>launch</v-icon> <span>Apply HTTPS Urls</span></v-btn><br />
-						<v-btn small flat>
-							<v-icon>cloud</v-icon> <span>Download Backup Snapshot</span></v-btn><br />
-						<v-btn small flat>
-							<v-icon>email</v-icon> <span>View Mailgun Logs</span></v-btn><br />
-						<v-btn small flat @click="viewQuicksaves(site.id)">
-							<v-icon>settings_backup_restore</v-icon> <span>Quicksaves (Plugins & Themes)</span></v-btn><br />
-						<v-btn small flat>
-							<v-icon>loop</v-icon> <span>Redeploy users/plugins</span></v-btn><br />
 						<v-btn small flat>
 							<v-icon>local_shipping</v-icon> <span>Push Production to Staging</span></v-btn><br />
 						<v-btn small flat>
 							<v-icon class="reverse">local_shipping</v-icon> <span>Push Staging to Production</span></v-btn><br />
 						<v-btn small flat>
-							<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span></v-btn><br />
-						<v-btn small flat>
 							<v-icon>chrome_reader_mode</v-icon>
 							<span>View Usage Breakdown</span>
 						</v-btn><br />
-
 					</div>
 				</v-card-title>
 			</v-card>
@@ -1432,7 +1459,7 @@ selected: false },
 								 single-line
 								 chips
 								 multiple
-					   autocomplete
+								 autocomplete
 							 ></v-select>
 							 <v-text-field
 							 	name="input-1"
