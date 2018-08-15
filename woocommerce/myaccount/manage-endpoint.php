@@ -1302,8 +1302,8 @@ selected: false },
 								<v-icon>launch</v-icon> <span>Apply HTTPS Urls</span></v-btn><br />
 							<v-btn small flat>
 								<v-icon>email</v-icon> <span>View Mailgun Logs</span></v-btn><br />
-							<v-btn small flat>
-								<v-icon>loop</v-icon> <span>Redeploy users/plugins</span></v-btn><br />
+							<v-btn small flat @click="siteDeploy(site.id)">
+								<v-icon>loop</v-icon> <span>Deploy users/plugins</span></v-btn><br />
 							<v-btn small flat>
 								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span></v-btn><br />
 						</div>
@@ -2212,6 +2212,31 @@ new Vue({
 
 
 				}
+		},
+		siteDeploy( site_id ) {
+
+			site = this.sites.filter(site => site.id == site_id)[0];
+			should_proceed = confirm("Deploy users and plugins " + site.name + "?");
+
+			if (! should_proceed) {
+				return;
+			}
+
+			var data = {
+				action: 'captaincore_install',
+				post_id: site_id,
+				command: 'new'
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.snackbar.message = "Site deploy in process";
+					self.snackbar.show = true;
+				})
+				.catch( error => console.log(error) );
+
 		},
 		viewApplyHttpsUrls( site_id ) {
 			site = this.sites.filter(site => site.id == site_id)[0];
