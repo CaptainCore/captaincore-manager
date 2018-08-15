@@ -102,7 +102,7 @@ class quicksaves extends DB {
 
 class Site {
 
-public function get( $site_id ) {
+	public function get( $site_id ) {
 
 		$site = get_post( $site_id );
 
