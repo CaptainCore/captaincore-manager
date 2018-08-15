@@ -2222,13 +2222,14 @@ new Vue({
 
 			quicksave.view_changes = true;
 
-			var data = new URLSearchParams();
-			data.append('action', 'captaincore_install');
-			data.append('post_id', site_id);
-			data.append('command', 'view_quicksave_changes');
-			data.append('value', quicksave.git_commit);
+			var data = {
+				action: 'captaincore_install',
+				post_id: site_id,
+				command: 'view_quicksave_changes',
+				value:  quicksave.git_commit
+			};
 
-			axios.post( ajaxurl, data)
+			axios.post( ajaxurl, Qs.stringify( data ) )
 			  .then( response => {
 					quicksave.view_files = response.data.split("\n");
 				})
