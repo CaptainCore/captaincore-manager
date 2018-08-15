@@ -1666,10 +1666,7 @@ new Vue({
 			{ name: "Remove", value: "remove" }
 		 ],
 		 select_bulk_action_arguments: null,
-		 snackbar: [
-			 { show: false },
-			 { message: "" }
-		 ]
+		 snackbar: { show: false, message: "" }
 	},
 	filters: {
 		formatSize: function (fileSizeInBytes) {
