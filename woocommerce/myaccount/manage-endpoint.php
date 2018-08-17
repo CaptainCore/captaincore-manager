@@ -708,6 +708,41 @@ selected: false },
 	        </v-card>
 	      </v-dialog>
 				<v-dialog
+					v-model="dialog_copy_site.show"
+					fullscreen
+					hide-overlay
+					transition="dialog-bottom-transition"
+					scrollable
+				>
+				<v-card tile>
+					<v-toolbar card dark color="primary">
+						<v-btn icon dark @click.native="dialog_copy_site.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>Copy Site {{ dialog_copy_site.site.name }} to </v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text>
+					<v-container>
+						<v-select
+			 			:items="dialog_copy_site.options"
+			 			v-model="dialog_copy_site.destination"
+			 			label="Select Destination Site"
+						item-text="name"
+						item-value="id"
+			 			chips
+			 			autocomplete
+			 			small-chips
+			 			deletable-chips
+			 			></v-select>
+						<v-btn @click="startCopySite()">
+							Copy Site
+						</v-btn>
+					</v-container>
+					</v-card-text>
+					</v-card>
+				</v-dialog>
+				<v-dialog
 					v-model="dialog_apply_https_urls.show"
 					fullscreen
 					hide-overlay
@@ -1392,7 +1427,7 @@ selected: false },
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
 					<v-btn flat @click="bulkEdit(site.id,'users')" v-if="site.users_selected.length != 0">Bulk Edit {{ site.users_selected.length }} users</v-btn>
-					<v-btn flat @click="submitNewSite">Copy Site <v-icon dark small>file_copy</v-icon></v-btn>
+					<v-btn flat @click="copySite(site.id)">Copy Site <v-icon dark small>file_copy</v-icon></v-btn>
 					<v-btn flat @click="submitNewSite">Edit Site <v-icon dark small>edit</v-icon></v-btn>
 					<v-btn flat @click="submitNewSite">Remove Site <v-icon dark small>delete</v-icon></v-btn>
 				</v-toolbar-items>
@@ -1570,6 +1605,7 @@ new Vue({
 	data: {
 		dialog: false,
 		dialog_apply_https_urls: { show: false, site: {} },
+		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
 		page: 1,
 		jobs: [],
 		add_site: false,
@@ -2184,6 +2220,50 @@ new Vue({
 				self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
 			});
 
+		},
+		copySite( site_id ) {
+			site = this.sites.filter(site => site.id == site_id );
+			site_name = site[0].name;
+			this.dialog_copy_site.show = true;
+			this.dialog_copy_site.site = site[0];
+			this.dialog_copy_site.options = this.sites.map(site => {
+				option = { name: site.name, id: site.id };
+				return option;
+			}).filter(option => option.name != site_name );
+
+			this.sites.map(site => site.name).filter(site => site != site_name );
+		},
+		startCopySite() {
+			site_name = this.dialog_copy_site.site.name;
+			destination_id = this.dialog_copy_site.destination;
+			site_name_destination = this.sites.filter(site => site.id == destination_id)[0].name;
+			confirm_command = confirm("Copy site " + site_name + " to " + site_name_destination);
+
+			if( confirm_command ) {
+
+				var post_id = this.dialog_copy_site.site.id;
+
+				var data = {
+					'action': 'captaincore_install',
+					'post_id': post_id,
+					'command': 'copy',
+					'value': this.dialog_copy_site.destination
+				};
+
+				self = this;
+
+				axios.post( ajaxurl, Qs.stringify( data ) )
+					.then( response => {
+						self.dialog_copy_site.site = {};
+						self.dialog_copy_site.show = false;
+						this.dialog_copy_site.destination = "";
+						this.dialog_copy_site.options = [];
+						self.snackbar.message = "Coping "+ site_name + " to " + site_name_destination;
+						self.snackbar.show = true;
+					})
+					.catch( error => console.log(error) );
+
+			}
 		},
 		applyHttpsUrls( command ) {
 			confirm_command = confirm("Will apply ssl urls. Proceed?");
