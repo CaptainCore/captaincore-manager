@@ -1435,10 +1435,12 @@ selected: false },
 			<v-card>
 				<v-card-title>
 					<div>
-						<v-btn small flat>
-							<v-icon>local_shipping</v-icon> <span>Push Production to Staging</span></v-btn><br />
-						<v-btn small flat>
-							<v-icon class="reverse">local_shipping</v-icon> <span>Push Staging to Production</span></v-btn><br />
+						<v-btn small flat @click="PushProductionToStaging( site.id )">
+							<v-icon>local_shipping</v-icon> <span>Push Production to Staging</span>
+						</v-btn><br />
+						<v-btn small flat @click="PushStagingToProduction( site.id )">
+							<v-icon class="reverse">local_shipping</v-icon> <span>Push Staging to Production</span>
+						</v-btn><br />
 						<v-btn small flat>
 							<v-icon>chrome_reader_mode</v-icon>
 							<span>View Usage Breakdown</span>
@@ -2316,6 +2318,52 @@ new Vue({
 				})
 				.catch( error => console.log(error) );
 
+		},
+		PushProductionToStaging( site_id ) {
+			site = this.sites.filter(site => site.id == site_id)[0];
+			should_proceed = confirm("Push production site " + site.name + " to staging site?");
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			var data = {
+				action: 'captaincore_install',
+				post_id: site.id,
+				command: 'production-to-staging'
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.snackbar.message = "Pushing production site to staging";
+					self.snackbar.show = true;
+				})
+				.catch( error => console.log(error) );
+		},
+		PushStagingToProduction( site_id ) {
+			site = this.sites.filter(site => site.id == site_id)[0];
+			should_proceed = confirm("Push staging site " + site.name + " to production site?");
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			var data = {
+				action: 'captaincore_install',
+				post_id: site.id,
+				command: 'staging-to-production'
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.snackbar.message = "Pushing stagging site to production";
+					self.snackbar.show = true;
+				})
+				.catch( error => console.log(error) );
 		},
 		viewApplyHttpsUrls( site_id ) {
 			site = this.sites.filter(site => site.id == site_id)[0];
