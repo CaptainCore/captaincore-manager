@@ -575,14 +575,14 @@ class CaptainCore_My_Account_Licenses_Endpoint {
 // Flush rewrite rules on plugin activation.
 register_activation_hook( __FILE__, array( 'CaptainCore_My_Account_Licenses_Endpoint', 'install' ) );
 
-class CaptainCore_My_Account_Manage_Endpoint {
+class CaptainCore_My_Account_Sites_Endpoint {
 
 	/**
 	 * Custom endpoint name.
 	 *
 	 * @var string
 	 */
-	public static $endpoint = 'manage';
+	public static $endpoint = 'sites';
 
 	/**
 	 * Plugin actions.
@@ -631,7 +631,7 @@ class CaptainCore_My_Account_Manage_Endpoint {
 	public function new_menu_items( $items ) {
 
 		// Insert your custom endpoint.
-		$items[ self::$endpoint ] = __( 'Manage', 'woocommerce' );
+		$items[ self::$endpoint ] = __( 'Sites', 'woocommerce' );
 
 		return $items;
 	}
@@ -640,7 +640,7 @@ class CaptainCore_My_Account_Manage_Endpoint {
 	 * Endpoint HTML content.
 	 */
 	public function endpoint_content() {
-		wc_get_template( '../woocommerce/myaccount/manage-endpoint.php' );
+		wc_get_template( '../woocommerce/myaccount/sites-endpoint.php' );
 	}
 
 	/**
@@ -653,7 +653,7 @@ class CaptainCore_My_Account_Manage_Endpoint {
 }
 
 // Flush rewrite rules on plugin activation.
-register_activation_hook( __FILE__, array( 'CaptainCore_My_Account_Manage_Endpoint', 'install' ) );
+register_activation_hook( __FILE__, array( 'CaptainCore_My_Account_Sites_Endpoint', 'install' ) );
 
 class CaptainCore_My_Account_Website_Endpoint {
 
@@ -764,7 +764,7 @@ function websites_endpoint_construct_my_class() {
 // Load classes
 new CaptainCore_My_Account_Handbook_Endpoint();
 new CaptainCore_My_Account_Health_Endpoint();
-new CaptainCore_My_Account_Manage_Endpoint();
+new CaptainCore_My_Account_Sites_Endpoint();
 new CaptainCore_My_Account_Website_Endpoint();
 new CaptainCore_My_Account_Config_Endpoint();
 new CaptainCore_My_Account_Dns_Endpoint();

@@ -598,14 +598,12 @@ div.website .actions a {
 }
 
 .woocommerce-MyAccount-navigation-link--handbook,
-.woocommerce-MyAccount-navigation-link--health,
-.woocommerce-MyAccount-navigation-link--manage {
+.woocommerce-MyAccount-navigation-link--health{
   border-left: 10px solid #27c3f3;
 }
 
 .woocommerce-MyAccount-navigation-link--handbook:after,
-.woocommerce-MyAccount-navigation-link--health:after,
-.woocommerce-MyAccount-navigation-link--manage:after {
+.woocommerce-MyAccount-navigation-link--health:after {
   content: "admin";
   font-size: 0.2em;
   position: absolute;
@@ -641,7 +639,7 @@ div.website .actions a {
   content: "\f112";
 }
 
-.woocommerce-MyAccount-navigation-link--manage:before {
+.woocommerce-MyAccount-navigation-link--sites:before {
   content: "\f0ad";
 	font-weight: 900;
   font-family: "Font Awesome 5 Free";
