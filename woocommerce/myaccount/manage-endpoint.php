@@ -2236,70 +2236,74 @@ new Vue({
 			this.sites.map(site => site.name).filter(site => site != site_name );
 		},
 		startCopySite() {
+
 			site_name = this.dialog_copy_site.site.name;
 			destination_id = this.dialog_copy_site.destination;
 			site_name_destination = this.sites.filter(site => site.id == destination_id)[0].name;
-			confirm_command = confirm("Copy site " + site_name + " to " + site_name_destination);
+			should_proceed = confirm("Copy site " + site_name + " to " + site_name_destination);
 
-			if( confirm_command ) {
-
-				var post_id = this.dialog_copy_site.site.id;
-
-				var data = {
-					'action': 'captaincore_install',
-					'post_id': post_id,
-					'command': 'copy',
-					'value': this.dialog_copy_site.destination
-				};
-
-				self = this;
-
-				axios.post( ajaxurl, Qs.stringify( data ) )
-					.then( response => {
-						self.dialog_copy_site.site = {};
-						self.dialog_copy_site.show = false;
-						this.dialog_copy_site.destination = "";
-						this.dialog_copy_site.options = [];
-						self.snackbar.message = "Coping "+ site_name + " to " + site_name_destination;
-						self.snackbar.show = true;
-					})
-					.catch( error => console.log(error) );
-
+			if ( ! should_proceed ) {
+				return;
 			}
+
+			var post_id = this.dialog_copy_site.site.id;
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': post_id,
+				'command': 'copy',
+				'value': this.dialog_copy_site.destination
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.dialog_copy_site.site = {};
+					self.dialog_copy_site.show = false;
+					this.dialog_copy_site.destination = "";
+					this.dialog_copy_site.options = [];
+					self.snackbar.message = "Coping "+ site_name + " to " + site_name_destination;
+					self.snackbar.show = true;
+				})
+				.catch( error => console.log(error) );
+
 		},
 		applyHttpsUrls( command ) {
-			confirm_command = confirm("Will apply ssl urls. Proceed?");
 
-			if( confirm_command ) {
+			should_proceed = confirm("Will apply ssl urls. Proceed?");
 
-				var post_id = this.dialog_apply_https_urls.site.id;
-
-				var data = {
-					'action': 'captaincore_install',
-					'post_id': post_id,
-					'command': command,
-				};
-
-				self = this;
-
-				// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
-				jQuery.post(ajaxurl, data, function(response) {
-
-					self.dialog_apply_https_urls.site = "";
-					self.dialog_apply_https_urls.show = false;
-					self.snackbar.message = "Applying HTTPS Urls";
-					self.snackbar.show = true;
-
-				});
-
+			if ( ! should_proceed ) {
+				return;
 			}
+
+			var post_id = this.dialog_apply_https_urls.site.id;
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': post_id,
+				'command': command,
+			};
+
+			self = this;
+
+			// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+			jQuery.post(ajaxurl, data, function(response) {
+
+				self.dialog_apply_https_urls.site = "";
+				self.dialog_apply_https_urls.show = false;
+				self.snackbar.message = "Applying HTTPS Urls";
+				self.snackbar.show = true;
+
+			});
+
 		},
 		siteDeploy( site_id ) {
 
 			site = this.sites.filter(site => site.id == site_id)[0];
 			should_proceed = confirm("Deploy users and plugins " + site.name + "?");
 
-			if (! should_proceed) {
+			if ( ! should_proceed ) {
 				return;
 			}
 
@@ -2320,6 +2324,7 @@ new Vue({
 
 		},
 		PushProductionToStaging( site_id ) {
+
 			site = this.sites.filter(site => site.id == site_id)[0];
 			should_proceed = confirm("Push production site " + site.name + " to staging site?");
 
@@ -2343,6 +2348,7 @@ new Vue({
 				.catch( error => console.log(error) );
 		},
 		PushStagingToProduction( site_id ) {
+
 			site = this.sites.filter(site => site.id == site_id)[0];
 			should_proceed = confirm("Push staging site " + site.name + " to production site?");
 
@@ -2439,37 +2445,41 @@ new Vue({
 			});
 		},
 		deleteTheme (theme_name, site_id) {
-			should_delete = confirm("Are you sure you want to delete theme " + theme_name + "?");
-			if (should_delete) {
 
-				// Enable loading progress
-				this.sites.filter(site => site.id == site_id)[0].loading_themes = true;
-				site_name = this.sites.filter(site => site.id == site_id)[0].name;
-				description = "Removing theme '" +theme_name + "' from " + site_name;
-				job_id = Math.round((new Date()).getTime());
-				this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			should_proceed = confirm("Are you sure you want to delete theme " + theme_name + "?");
 
-				// WP ClI command to send
-				wpcli = "wp theme delete " + theme_name;
-
-				var data = {
-					'action': 'captaincore_install',
-					'post_id': site_id,
-					'command': "manage",
-					'value': "ssh",
-					'background': true,
-					'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
-				};
-
-				self = this;
-
-				jQuery.post(ajaxurl, data, function(response) {
-					updated_themes = self.sites.filter(site => site.id == site_id)[0].themes.filter(theme => theme.name != theme_name);
-					self.sites.filter(site => site.id == site_id)[0].themes = updated_themes;
-					self.sites.filter(site => site.id == site_id)[0].loading_themes = false;
-					self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
-				});
+			if ( ! should_proceed ) {
+				return;
 			}
+
+			// Enable loading progress
+			this.sites.filter(site => site.id == site_id)[0].loading_themes = true;
+			site_name = this.sites.filter(site => site.id == site_id)[0].name;
+			description = "Removing theme '" +theme_name + "' from " + site_name;
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
+			// WP ClI command to send
+			wpcli = "wp theme delete " + theme_name;
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': site_id,
+				'command': "manage",
+				'value': "ssh",
+				'background': true,
+				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+			};
+
+			self = this;
+
+			jQuery.post(ajaxurl, data, function(response) {
+				updated_themes = self.sites.filter(site => site.id == site_id)[0].themes.filter(theme => theme.name != theme_name);
+				self.sites.filter(site => site.id == site_id)[0].themes = updated_themes;
+				self.sites.filter(site => site.id == site_id)[0].loading_themes = false;
+				self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+			});
+
 		},
 		addPlugin ( site_id ){
 			this.new_plugin.show = true;
@@ -2513,69 +2523,76 @@ new Vue({
 			});
 		},
 		deletePlugin (plugin_name, site_id) {
-			should_delete = confirm("Are you sure you want to delete plugin " + plugin_name + "?");
-			if (should_delete) {
 
-				// Enable loading progress
-				this.sites.filter(site => site.id == site_id)[0].loading_plugins = true;
+			should_proceed = confirm("Are you sure you want to delete plugin " + plugin_name + "?");
 
-				site_name = this.sites.filter(site => site.id == site_id)[0].name;
-				description = "Delete plugin '" + plugin_name + "' from " + site_name;
-				job_id = Math.round((new Date()).getTime());
-				this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
-
-				// WP ClI command to send
-				wpcli = "wp plugin delete " + plugin_name;
-
-				var data = {
-					'action': 'captaincore_install',
-					'post_id': site_id,
-					'command': "manage",
-					'value': "ssh",
-					'background': true,
-					'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
-				};
-
-				self = this;
-
-				jQuery.post(ajaxurl, data, function(response) {
-					updated_plugins = self.sites.filter(site => site.id == site_id)[0].plugins.filter(plugin => plugin.name != plugin_name);
-					self.sites.filter(site => site.id == site_id)[0].plugins = updated_plugins;
-					self.sites.filter(site => site.id == site_id)[0].loading_plugins = false;
-					self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
-				});
+			if ( ! should_proceed ) {
+				return;
 			}
+
+			// Enable loading progress
+			this.sites.filter(site => site.id == site_id)[0].loading_plugins = true;
+
+			site_name = this.sites.filter(site => site.id == site_id)[0].name;
+			description = "Delete plugin '" + plugin_name + "' from " + site_name;
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
+			// WP ClI command to send
+			wpcli = "wp plugin delete " + plugin_name;
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': site_id,
+				'command': "manage",
+				'value': "ssh",
+				'background': true,
+				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+			};
+
+			self = this;
+
+			jQuery.post(ajaxurl, data, function(response) {
+				updated_plugins = self.sites.filter(site => site.id == site_id)[0].plugins.filter(plugin => plugin.name != plugin_name);
+				self.sites.filter(site => site.id == site_id)[0].plugins = updated_plugins;
+				self.sites.filter(site => site.id == site_id)[0].loading_plugins = false;
+				self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+			});
+
 		},
 		update( site_id ) {
+
 			site = this.sites.filter(site => site.id == site_id)[0];
+			should_proceed = confirm("Apply all plugin/theme updates for " + site.name + "?");
 
-			should_update = confirm("Apply all plugin/theme updates for " + site.name + "?");
-			if (should_update) {
-
-				// New job for progress tracking
-				job_id = Math.round((new Date()).getTime());
-				description = "Updating themes/plugins on " + site.name;
-				this.jobs.push({"job_id": job_id,"description": description, "status": "running","command":"update-wp"});
-
-				var data = {
-					'action': 'captaincore_install',
-					'post_id': site_id,
-					'command': "update-wp",
-					'background': true
-				};
-
-				self = this;
-
-				jQuery.post(ajaxurl, data, function(response) {
-					// Updates job id with reponsed background job id
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-
-					// Check if completed in 2 seconds
-					setTimeout(function() {
-						self.jobRetry(site_id, response);
-					}, 2000);
-				});
+			if ( ! should_proceed ) {
+				return;
 			}
+
+			// New job for progress tracking
+			job_id = Math.round((new Date()).getTime());
+			description = "Updating themes/plugins on " + site.name;
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running","command":"update-wp"});
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': site_id,
+				'command': "update-wp",
+				'background': true
+			};
+
+			self = this;
+
+			jQuery.post(ajaxurl, data, function(response) {
+				// Updates job id with reponsed background job id
+				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
+
+				// Check if completed in 2 seconds
+				setTimeout(function() {
+					self.jobRetry(site_id, response);
+				}, 2000);
+			});
+
 		},
 		updateSettings( site_id ) {
 			this.update_settings.show = true;
@@ -2627,37 +2644,40 @@ new Vue({
 
 			});
 
-
 		},
 		deleteUser (username, site_id) {
-			should_delete = confirm("Are you sure you want to delete user " + username + "?");
-			if (should_delete) {
 
-				site_name = this.sites.filter(site => site.id == site_id)[0].name;
-				description = "Delete user '" + username + "' from " + site_name;
-				job_id = Math.round((new Date()).getTime());
-				this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			should_proceed = confirm("Are you sure you want to delete user " + username + "?");
 
-				// WP ClI command to send
-				wpcli = "wp user delete " + username;
-
-				var data = {
-					'action': 'captaincore_install',
-					'post_id': site_id,
-					'command': "manage",
-					'value': "ssh",
-					'background': true,
-					'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
-				};
-
-				self = this;
-
-				jQuery.post(ajaxurl, data, function(response) {
-					updated_users = self.sites.filter(site => site.id == site_id)[0].users.filter(user => user.username != username);
-					self.sites.filter(site => site.id == site_id)[0].users = updated_users;
-					self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
-				});
+			if ( ! should_proceed ) {
+				return;
 			}
+
+			site_name = this.sites.filter(site => site.id == site_id)[0].name;
+			description = "Delete user '" + username + "' from " + site_name;
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
+			// WP ClI command to send
+			wpcli = "wp user delete " + username;
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': site_id,
+				'command': "manage",
+				'value': "ssh",
+				'background': true,
+				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+			};
+
+			self = this;
+
+			jQuery.post(ajaxurl, data, function(response) {
+				updated_users = self.sites.filter(site => site.id == site_id)[0].users.filter(user => user.username != username);
+				self.sites.filter(site => site.id == site_id)[0].users = updated_users;
+				self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+			});
+
 		},
 		bulkactionLaunch() {
 				this.sites_selected.forEach(site => window.open(site.home_url));
