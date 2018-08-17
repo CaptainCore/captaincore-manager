@@ -276,13 +276,16 @@ div.update_logs table tr td:nth-child(1) {
 </style>
 <?php if ( $_SERVER['SERVER_NAME'] == 'anchor.test' ) { ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.16/vue.js"></script>
+<script src="https://anchor.test/wp-content/plugins/captaincore-gui/public/js/qs.js"></script>
+<script src="https://anchor.test/wp-content/plugins/captaincore-gui/public/js/axios.min.js"></script>
 <?php } else { ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.16/vue.min.js"></script>
+<script src="https://unpkg.com/qs/dist/qs.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 <?php } ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.1.1/vuetify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.9/dist/vue-upload-component.js"></script>
-<script src="https://unpkg.com/qs/dist/qs.js"></script>
-<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
 
 <?php
 
