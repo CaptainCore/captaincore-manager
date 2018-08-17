@@ -30,6 +30,9 @@ html {
 	font-size: 13px;
 	margin: 0 4px;
 }
+.v-input {
+	margin-top: 0px;
+}
 .v-tabs__container--icons-and-text {
 	height: auto;
 }
