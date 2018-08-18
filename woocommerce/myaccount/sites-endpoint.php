@@ -12,6 +12,8 @@ if ( $role_check ) {
 
 	}
 
+	$current_user = wp_get_current_user();
+
 ?>
 
 <link href="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.1.7/vuetify.min.css" rel="stylesheet">
@@ -714,6 +716,31 @@ selected: false },
 	        </v-card>
 	      </v-dialog>
 				<v-dialog
+					v-model="dialog_backup_snapshot.show"
+					fullscreen
+					hide-overlay
+					transition="dialog-bottom-transition"
+					scrollable
+				>
+				<v-card tile>
+					<v-toolbar card dark color="primary">
+						<v-btn icon dark @click.native="dialog_backup_snapshot.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>Download Snapshot {{ dialog_backup_snapshot.site.name }} </v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text>
+					<v-container>
+						<v-text-field name="Email" v-model="dialog_backup_snapshot.email"></v-text-field>
+						<v-btn @click="downloadBackupSnapshot()">
+							Download Snapshot
+						</v-btn>
+					</v-container>
+					</v-card-text>
+					</v-card>
+				</v-dialog>
+				<v-dialog
 					v-model="dialog_copy_site.show"
 					fullscreen
 					hide-overlay
@@ -1359,7 +1386,7 @@ selected: false },
 				<v-card>
 					<v-card-title>
 						<div>
-							<v-btn small flat>
+							<v-btn small flat @click="promptBackupSnapshot(site.id)">
 								<v-icon>cloud</v-icon> <span>Download Backup Snapshot</span>
 							</v-btn><br />
 							<v-btn small flat @click="viewQuicksaves(site.id)">
@@ -1614,6 +1641,7 @@ new Vue({
 		dialog: false,
 		dialog_apply_https_urls: { show: false, site: {} },
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
+		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $current_user->user_email; ?>", current_user_email: "<?php echo $current_user->user_email; ?>" },
 		page: 1,
 		jobs: [],
 		add_site: false,
@@ -2227,6 +2255,35 @@ new Vue({
 			jQuery.post(ajaxurl, data, function(response) {
 				self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
 			});
+
+		},
+		promptBackupSnapshot( site_id ) {
+			site = this.sites.filter(site => site.id == site_id )[0];
+			this.dialog_backup_snapshot.show = true;
+			this.dialog_backup_snapshot.site = site;
+		},
+		downloadBackupSnapshot( site_id ) {
+
+			var post_id = this.dialog_backup_snapshot.site.id;
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': post_id,
+				'command': 'snapshot',
+				'value': this.dialog_backup_snapshot.email
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.snackbar.message = "Generating snapshot for "+ self.dialog_backup_snapshot.site.name + ".";
+					self.snackbar.show = true;
+					self.dialog_backup_snapshot.site = {};
+					self.dialog_backup_snapshot.show = false;
+					self.dialog_backup_snapshot.email = self.dialog_backup_snapshot.current_user_email;
+				})
+				.catch( error => console.log( error ) );
 
 		},
 		copySite( site_id ) {
