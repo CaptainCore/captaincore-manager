@@ -2329,7 +2329,7 @@ new Vue({
 					self.snackbar.message = "Coping "+ site_name + " to " + site_name_destination;
 					self.snackbar.show = true;
 				})
-				.catch( error => console.log(error) );
+				.catch( error => console.log( error ) );
 
 		},
 		applyHttpsUrls( command ) {
@@ -2383,7 +2383,7 @@ new Vue({
 					self.snackbar.message = "Site deploy in process";
 					self.snackbar.show = true;
 				})
-				.catch( error => console.log(error) );
+				.catch( error => console.log( error ) );
 
 		},
 		PushProductionToStaging( site_id ) {
@@ -2408,7 +2408,7 @@ new Vue({
 					self.snackbar.message = "Pushing production site to staging";
 					self.snackbar.show = true;
 				})
-				.catch( error => console.log(error) );
+				.catch( error => console.log( error ) );
 		},
 		PushStagingToProduction( site_id ) {
 
@@ -2432,7 +2432,7 @@ new Vue({
 					self.snackbar.message = "Pushing stagging site to production";
 					self.snackbar.show = true;
 				})
-				.catch( error => console.log(error) );
+				.catch( error => console.log( error ) );
 		},
 		viewApplyHttpsUrls( site_id ) {
 			site = this.sites.filter(site => site.id == site_id)[0];
@@ -2454,7 +2454,7 @@ new Vue({
 			  .then( response => {
 					quicksave.view_files = response.data.split("\n");
 				})
-			  .catch( error => console.log(error) );
+			  .catch( error => console.log( error ) );
 		},
 		viewQuicksaves ( site_id ) {
 			site = this.sites.filter(site => site.id == site_id)[0];
