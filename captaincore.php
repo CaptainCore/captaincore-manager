@@ -3268,6 +3268,36 @@ function captaincore_ajax_action_callback() {
 	$value = $_POST['value'];
 	$site  = get_field( 'site', $post_id );
 
+	if ( $cmd == 'mailgun' ) {
+
+		$mailgun = get_field( "mailgun", $post_id );
+		$mailgun_events = mailgun_events( $mailgun );
+		$response = [];
+
+		if ( $mailgun_events->paging ) {
+			// TO DO add paging
+			// print_r($mailgun_events->paging);
+		}
+		foreach ( $mailgun_events->items as $mailgun_event ) {
+
+			if ( $mailgun_event->envelope ) {
+				$mailgun_description = $mailgun_event->event . ': ' . $mailgun_event->envelope->sender . ' -> ' . $mailgun_event->recipient;
+			} else {
+				$mailgun_description = $mailgun_event->event . ': ' . $mailgun_event->recipient;
+			}
+
+			$response[] = array(
+				'timestamp' => date( 'M jS Y g:ia', $mailgun_event->timestamp ),
+				'description' => $mailgun_description,
+				'event' => $mailgun_event,
+			);
+
+		}
+
+		echo json_encode($response);
+
+	}
+
 	if ( $cmd == 'updateSettings' ) {
 
 		// Saves update settings for a site

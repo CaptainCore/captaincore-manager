@@ -359,6 +359,7 @@ users: [],
 <?php if ( strpos( $production_address, '.wpengine.com' ) == false && strpos( $production_address, '.kinsta.com' ) == false ) { ?>server: "",<?php } ?>
 <?php if ($views != 0) { ?>views: "<?php echo number_format($views); ?>"<?php } else { ?>views: ""<?php } ?>,
 storage: "<?php echo $storage_gbs; ?>",
+mailgun: "<?php the_field('mailgun', $website->ID); ?>",
 update_logs: [],
 <?php if ( $exclude_themes ) {
 $exclude_themes = explode(",", $exclude_themes);
@@ -715,6 +716,28 @@ selected: false },
 	          </v-card-text>
 	        </v-card>
 	      </v-dialog>
+				<v-dialog
+					v-model="dialog_mailgun.show"
+					fullscreen
+					hide-overlay
+					transition="dialog-bottom-transition"
+					scrollable
+				>
+				<v-card tile>
+					<v-toolbar card dark color="primary">
+						<v-btn icon dark @click.native="dialog_mailgun.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>Mailgun Logs for {{ dialog_mailgun.site.name }} (Last 30 days)</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text>
+					<v-container>
+						{{ dialog_mailgun.response }}
+					</v-container>
+					</v-card-text>
+					</v-card>
+				</v-dialog>
 				<v-dialog
 					v-model="dialog_backup_snapshot.show"
 					fullscreen
@@ -1367,13 +1390,17 @@ selected: false },
 					<v-card-title>
 						<div>
 							<v-btn small flat @click="viewApplyHttpsUrls(site.id)">
-								<v-icon>launch</v-icon> <span>Apply HTTPS Urls</span></v-btn><br />
-							<v-btn small flat>
-								<v-icon>email</v-icon> <span>View Mailgun Logs</span></v-btn><br />
+								<v-icon>launch</v-icon> <span>Apply HTTPS Urls</span>
+							</v-btn><br />
+							<v-btn small flat @click="viewMailgunLogs(site.id)" v-show="site.mailgun">
+								<v-icon>email</v-icon> <span>View Mailgun Logs</span>
+							</v-btn><br />
 							<v-btn small flat @click="siteDeploy(site.id)">
-								<v-icon>loop</v-icon> <span>Deploy users/plugins</span></v-btn><br />
+								<v-icon>loop</v-icon> <span>Deploy users/plugins</span>
+							</v-btn><br />
 							<v-btn small flat>
-								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span></v-btn><br />
+								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span>
+							</v-btn><br />
 						</div>
 					</v-card-title>
 				</v-card>
@@ -1642,6 +1669,7 @@ new Vue({
 		dialog_apply_https_urls: { show: false, site: {} },
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $current_user->user_email; ?>", current_user_email: "<?php echo $current_user->user_email; ?>" },
+		dialog_mailgun: { show: false, site: {}, response: "" },
 		page: 1,
 		jobs: [],
 		add_site: false,
@@ -2359,6 +2387,27 @@ new Vue({
 				self.snackbar.show = true;
 
 			});
+
+		},
+		viewMailgunLogs( site_id ) {
+
+			site = this.sites.filter(site => site.id == site_id )[0];
+			this.dialog_mailgun.show = true;
+			this.dialog_mailgun.site = site;
+
+			var data = {
+				action: 'captaincore_ajax',
+				post_id: site_id,
+				command: 'mailgun'
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.dialog_mailgun.response = response;
+				})
+				.catch( error => console.log( error ) );
 
 		},
 		siteDeploy( site_id ) {
