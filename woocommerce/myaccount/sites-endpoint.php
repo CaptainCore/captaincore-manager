@@ -2287,10 +2287,10 @@ new Vue({
 
 		},
 		copySite( site_id ) {
-			site = this.sites.filter(site => site.id == site_id );
-			site_name = site[0].name;
+			site = this.sites.filter(site => site.id == site_id )[0];
+			site_name = site.name;
 			this.dialog_copy_site.show = true;
-			this.dialog_copy_site.site = site[0];
+			this.dialog_copy_site.site = site;
 			this.dialog_copy_site.options = this.sites.map(site => {
 				option = { name: site.name, id: site.id };
 				return option;
