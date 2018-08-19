@@ -13,6 +13,9 @@ if ( $role_check ) {
 	}
 
 	$current_user = wp_get_current_user();
+	$belongs_to = get_field("partner", "user_{$current_user->ID}");
+	$business_name = get_the_title( $belongs_to[0] );
+	$business_link = get_field( "partner_link", $belongs_to[0] );
 
 ?>
 
@@ -798,6 +801,60 @@ selected: false },
 						<v-btn @click="downloadBackupSnapshot()">
 							Download Snapshot
 						</v-btn>
+					</v-container>
+					</v-card-text>
+					</v-card>
+				</v-dialog>
+				<v-dialog
+					v-model="dialog_toggle.show"
+					fullscreen
+					hide-overlay
+					transition="dialog-bottom-transition"
+					scrollable
+				>
+				<v-card tile>
+					<v-toolbar card dark color="primary">
+						<v-btn icon dark @click.native="dialog_toggle.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>Toggle Site {{ dialog_toggle.site.name }}</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text>
+					<v-container>
+						<v-layout row wrap>
+						 <v-flex xs6 pa-2>
+							 <v-card>
+								 <v-card-title primary-title>
+									<div>
+										<h3 class="headline mb-0">Deactivate Site</h3>
+									</div>
+								  </v-card-title>
+									<v-card-text>
+										<p>Will apply deactivate message with the following link back to the site owner.</p>
+										<v-text-field label="Business Name" :value="dialog_toggle.business_name"></v-text-field>
+										<v-text-field label="Business Link" :value="dialog_toggle.business_link"></v-text-field>
+										<v-btn @click="DeactivateSite(dialog_toggle.site.id)">
+											Deactivate Site
+										</v-btn>
+									</v-card-text>
+							 </v-card>
+						 </v-flex>
+						 <v-flex xs6 pa-2>
+							 <v-card>
+								 <v-card-title primary-title>
+									<div>
+										<h3 class="headline mb-0">Activate Site</h3>
+									</div>
+								  </v-card-title>
+									<v-card-text>
+										<v-btn @click="ActivateSite(dialog_toggle.site.id)">
+											Activate Site
+										</v-btn>
+									</v-card-text>
+							 </v-card>
+						 </v-flex>
+					 </v-layout>
 					</v-container>
 					</v-card-text>
 					</v-card>
@@ -1710,6 +1767,7 @@ new Vue({
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $current_user->user_email; ?>", current_user_email: "<?php echo $current_user->user_email; ?>" },
 		dialog_mailgun: { show: false, site: {}, response: "" },
 		dialog_usage_breakdown: { show: false, site: {}, response: [], company_name: "" },
+		dialog_toggle: { show: false, site: {} },
 		page: 1,
 		jobs: [],
 		add_site: false,
@@ -1747,6 +1805,8 @@ new Vue({
 		search: null,
 		advanced_filter: false,
 		items_per_page: 50,
+		business_name: "<?php echo $business_name; ?>",
+		business_link: "<?php echo $business_link; ?>",
 		site_selected: null,
 		site_filters: all_filters,
 		site_filter_version: null,
@@ -2446,6 +2506,63 @@ new Vue({
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					self.dialog_mailgun.response = response;
+				})
+				.catch( error => console.log( error ) );
+
+		},
+		toggleSite( site_id ) {
+
+			site = this.sites.filter(site => site.id == site_id )[0];
+			this.dialog_toggle.show = true;
+			this.dialog_toggle.site = site;
+			this.dialog_toggle.business_name = this.business_name;
+			this.dialog_toggle.business_link = this.business_link;
+
+		},
+		DeactivateSite( site_id ) {
+
+			site_name = this.dialog_toggle.site.name;
+
+			var data = {
+				action: 'captaincore_install',
+				post_id: site_id,
+				command: 'deactivate'
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.snackbar.message = "Deactivating " + site_name;
+					self.snackbar.show = true;
+					self.dialog_toggle.show = false;
+					self.dialog_toggle.site = {};
+					self.dialog_toggle.business_name = "";
+					self.dialog_toggle.business_link = "";
+				})
+				.catch( error => console.log( error ) );
+
+		},
+		ActivateSite( site_id ) {
+
+			site_name = this.dialog_toggle.site.name;
+
+			var data = {
+				action: 'captaincore_install',
+				post_id: site_id,
+				command: 'activate'
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.snackbar.message = "Activating " + site_name;
+					self.snackbar.show = true;
+					self.dialog_toggle.show = false;
+					self.dialog_toggle.site = {};
+					self.dialog_toggle.business_name = "";
+					self.dialog_toggle.business_link = "";
 				})
 				.catch( error => console.log( error ) );
 
