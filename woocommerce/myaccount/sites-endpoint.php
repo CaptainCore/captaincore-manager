@@ -1428,18 +1428,18 @@ selected: false },
 				<v-card>
 					<v-card-title>
 						<div>
-							<v-btn small flat @click="viewApplyHttpsUrls(site.id)">
+							<div><v-btn small flat @click="viewApplyHttpsUrls(site.id)">
 								<v-icon>launch</v-icon> <span>Apply HTTPS Urls</span>
-							</v-btn><br />
-							<v-btn small flat @click="viewMailgunLogs(site.id)" v-show="site.mailgun">
+							</v-btn></div>
+							<div v-show="site.mailgun"><v-btn small flat @click="viewMailgunLogs(site.id)" >
 								<v-icon>email</v-icon> <span>View Mailgun Logs</span>
-							</v-btn><br />
-							<v-btn small flat @click="siteDeploy(site.id)">
+							</v-btn></div>
+							<div><v-btn small flat @click="siteDeploy(site.id)">
 								<v-icon>loop</v-icon> <span>Deploy users/plugins</span>
-							</v-btn><br />
-							<v-btn small flat>
+							</v-btn></div>
+							<div><v-btn small flat @click="toggleSite(site.id)">
 								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span>
-							</v-btn><br />
+							</v-btn></div>
 						</div>
 					</v-card-title>
 				</v-card>
