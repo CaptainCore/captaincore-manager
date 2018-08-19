@@ -775,7 +775,17 @@ selected: false },
 					</v-toolbar>
 					<v-card-text>
 					<v-container>
-						{{ dialog_mailgun.response }}
+						<v-progress-linear :indeterminate="true" v-show="dialog_mailgun.loading"></v-progress-linear>
+						<v-expansion-panel>
+						<v-expansion-panel-content
+							v-for="event in dialog_mailgun.response"
+							>
+							<div slot="header"><v-icon>event_note</v-icon> {{ event.timestamp }} <small style="padding-left:40px;">{{ event.description }}</small></div>
+							<v-card>
+								<v-card-text><pre>{{ event.event }}</pre></v-card-text>
+							</v-card>
+							</v-expansion-panel-content>
+						</v-expansion-panel>
 					</v-container>
 					</v-card-text>
 					</v-card>
@@ -1765,7 +1775,7 @@ new Vue({
 		dialog_apply_https_urls: { show: false, site: {} },
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $current_user->user_email; ?>", current_user_email: "<?php echo $current_user->user_email; ?>" },
-		dialog_mailgun: { show: false, site: {}, response: "" },
+		dialog_mailgun: { show: false, site: {}, response: "", loading: false },
 		dialog_usage_breakdown: { show: false, site: {}, response: [], company_name: "" },
 		dialog_toggle: { show: false, site: {} },
 		page: 1,
@@ -2492,6 +2502,7 @@ new Vue({
 		viewMailgunLogs( site_id ) {
 
 			site = this.sites.filter(site => site.id == site_id )[0];
+			this.dialog_mailgun.loading = true;
 			this.dialog_mailgun.show = true;
 			this.dialog_mailgun.site = site;
 
@@ -2505,7 +2516,8 @@ new Vue({
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					self.dialog_mailgun.response = response;
+					self.dialog_mailgun.loading = false;
+					self.dialog_mailgun.response = response.data;
 				})
 				.catch( error => console.log( error ) );
 
