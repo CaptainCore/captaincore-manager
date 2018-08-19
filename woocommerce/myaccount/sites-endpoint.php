@@ -340,7 +340,7 @@ foreach ( $websites as $website ) {
 { id: <?php echo $website->ID; ?>,
 name: "<?php echo get_the_title( $website->ID ); ?>",
 <?php if ($customer && $customer[0]) {
-?>customer: [{ customer_id: "customer_id_<?php echo $customer[0]; ?>", name: "<?php echo get_post_field('post_title', $customer[0], 'raw');; ?>"}],<?php } ?>
+?>customer: [{ customer_id: "customer_id_<?php echo $customer[0]; ?>", name: "<?php echo get_post_field('post_title', $customer[0], 'raw'); ?>"}],<?php } ?>
 <?php if ($shared_with) {
 ?>shared_with: [<?php foreach ($shared_with as $customer_id) { ?>{ customer_id: "shared_id_<?php echo $customer_id; ?>", name: "<?php echo get_post_field('post_title', $customer_id, 'raw'); ?>"},<?php } ?>],<?php } ?>
 <?php if ( $plugins && $plugins != "" ) {
