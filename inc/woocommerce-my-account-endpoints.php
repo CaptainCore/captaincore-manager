@@ -162,7 +162,7 @@ class CaptainCore_My_Account_Logs_Endpoint {
 
 		if ( $is_endpoint && ! is_admin() && is_main_query() && in_the_loop() && is_account_page() ) {
 			// New page title.
-			$title = __( 'Website Logs', 'woocommerce' );
+			$title = __( 'Timeline', 'woocommerce' );
 
 			remove_filter( 'the_title', array( $this, 'endpoint_title' ) );
 		}
@@ -179,7 +179,7 @@ class CaptainCore_My_Account_Logs_Endpoint {
 	public function new_menu_items( $items ) {
 
 		// Insert your custom endpoint.
-		$items[ self::$endpoint ] = __( 'Website Logs', 'woocommerce' );
+		$items[ self::$endpoint ] = __( 'Timeline', 'woocommerce' );
 
 		return $items;
 	}
@@ -333,7 +333,7 @@ class CaptainCore_My_Account_Dns_Endpoint {
 
 		if ( $is_endpoint && ! is_admin() && is_main_query() && in_the_loop() && is_account_page() ) {
 			// New page title.
-			$title = __( 'Manage DNS', 'woocommerce' );
+			$title = __( 'DNS', 'woocommerce' );
 
 			remove_filter( 'the_title', array( $this, 'endpoint_title' ) );
 		}
@@ -350,7 +350,7 @@ class CaptainCore_My_Account_Dns_Endpoint {
 	public function new_menu_items( $items ) {
 
 		// Insert your custom endpoint.
-		$items[ self::$endpoint ] = __( 'Manage DNS', 'woocommerce' );
+		$items[ self::$endpoint ] = __( 'DNS', 'woocommerce' );
 
 		return $items;
 	}
