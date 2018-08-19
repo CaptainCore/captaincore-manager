@@ -717,6 +717,45 @@ selected: false },
 	        </v-card>
 	      </v-dialog>
 				<v-dialog
+					v-model="dialog_usage_breakdown.show"
+					fullscreen
+					hide-overlay
+					transition="dialog-bottom-transition"
+					scrollable
+				>
+				<v-card tile>
+					<v-toolbar card dark color="primary">
+						<v-btn icon dark @click.native="dialog_usage_breakdown.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>Usage breakdown for {{ dialog_usage_breakdown.customer_name }}</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text>
+					<v-container>
+						<v-data-table
+							:headers='[{"text":"Name","value":"name"},{"text":"Storage","value":"Views"},{"text":"Status","value":"status"}]'
+							:items="dialog_usage_breakdown.response.sites"
+							item-key="name"
+							hide-actions
+						 >
+						 <template slot="items" slot-scope="props">
+							<td>{{ props.item.name }}</td>
+							<td>{{ props.item.storage }}GB</td>
+							<td>{{ props.item.views }}</td>
+						</template>
+						<template slot="footer">
+						 <tr>
+							 <td>Totals:</td>
+							 <td v-for="total in dialog_usage_breakdown.response.total" v-html="total"></td>
+						 </tr>
+						</template>
+						</v-data-table>
+					</v-container>
+					</v-card-text>
+					</v-card>
+				</v-dialog>
+				<v-dialog
 					v-model="dialog_mailgun.show"
 					fullscreen
 					hide-overlay
@@ -1501,7 +1540,7 @@ selected: false },
 						<v-btn small flat @click="PushStagingToProduction( site.id )">
 							<v-icon class="reverse">local_shipping</v-icon> <span>Push Staging to Production</span>
 						</v-btn><br />
-						<v-btn small flat>
+						<v-btn small flat @click="viewUsageBreakdown( site.id )">
 							<v-icon>chrome_reader_mode</v-icon>
 							<span>View Usage Breakdown</span>
 						</v-btn><br />
@@ -1670,6 +1709,7 @@ new Vue({
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $current_user->user_email; ?>", current_user_email: "<?php echo $current_user->user_email; ?>" },
 		dialog_mailgun: { show: false, site: {}, response: "" },
+		dialog_usage_breakdown: { show: false, site: {}, response: [], company_name: "" },
 		page: 1,
 		jobs: [],
 		add_site: false,
@@ -2431,6 +2471,27 @@ new Vue({
 				.then( response => {
 					self.snackbar.message = "Site deploy in process";
 					self.snackbar.show = true;
+				})
+				.catch( error => console.log( error ) );
+
+		},
+		viewUsageBreakdown( site_id ) {
+
+			site = this.sites.filter(site => site.id == site_id)[0];
+			this.dialog_usage_breakdown.show = true;
+			this.dialog_usage_breakdown.customer_name = site.customer[0].name;
+
+			var data = {
+				action: 'captaincore_ajax',
+				post_id: site.id,
+				command: 'usage-breakdown'
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.dialog_usage_breakdown.response = response.data;
 				})
 				.catch( error => console.log( error ) );
 

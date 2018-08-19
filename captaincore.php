@@ -3298,6 +3298,120 @@ function captaincore_ajax_action_callback() {
 
 	}
 
+	if ( $cmd == 'usage-breakdown' ) {
+
+		$customer = get_field( "customer", $post_id );
+		$customer_id = $customer[0];
+		$hosting_plan    = get_field( 'hosting_plan', $customer_id );
+		$addons          = get_field( 'addons', $customer_id );
+		$storage         = get_field( 'storage', $customer_id );
+		$views           = get_field( 'views', $customer_id );
+
+		if ( $hosting_plan == 'basic' ) {
+			$views_plan_limit = '100000';
+		}
+		if ( $hosting_plan == 'standard' ) {
+			$views_plan_limit = '500000';
+		}
+		if ( $hosting_plan == 'professional' ) {
+			$views_plan_limit = '1000000';
+		}
+		if ( $hosting_plan == 'business' ) {
+			$views_plan_limit = '2000000';
+		}
+		if ( isset( $views ) ) {
+			$views_percent = round( $views / $views_plan_limit * 100, 0 );
+		}
+
+		$storage_gbs = round( $storage / 1024 / 1024 / 1024, 1 );
+		$storage_cap = '10';
+		if ( $addons ) {
+			foreach ( $addons as $item ) {
+				// Evaluate if contains word storage
+				if ( stripos( $item['name'], 'storage' ) !== false ) {
+					// Found storage addon, now extract number and add to cap.
+					$extracted_gbs = filter_var( $item['name'], FILTER_SANITIZE_NUMBER_INT );
+					$storage_cap   = $storage_cap + $extracted_gbs;
+				}
+			}
+		}
+
+		$storage_percent = round( $storage_gbs / $storage_cap * 100, 0 );
+
+		$sites = array();
+		$total = array();
+
+		$websites_for_customer = get_posts(
+			array(
+				'post_type'      => 'captcore_website',
+				'posts_per_page' => '-1',
+				'order'          => 'ASC',
+				'orderby'        => 'title',
+				'meta_query' => array(
+					'relation' => 'AND',
+					array(
+						'key'     => 'status', // name of custom field
+						'value'   => 'active', // matches exaclty "123", not just 123. This prevents a match for "1234"
+						'compare' => '=',
+					),
+					array(
+						'key'     => 'customer', // name of custom field
+						'value'   => '"' . $customer_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+						'compare' => 'LIKE',
+					),
+					array(
+						'key'     => 'address',
+						'compare' => 'EXISTS',
+					),
+					array(
+						'key'     => 'address',
+						'value'   => '',
+						'compare' => '!=',
+					),
+				),
+			)
+		);
+		if ( $websites_for_customer ) :
+			foreach ( $websites_for_customer as $website_for_customer ) :
+				$website_for_customer_storage = get_field( 'storage', $website_for_customer->ID );
+				$website_for_customer_views   = get_field( 'views', $website_for_customer->ID );
+				$sites[] = array(
+					'name' => get_the_title( $website_for_customer->ID ),
+					'storage' => round( $website_for_customer_storage / 1024 / 1024 / 1024, 1 ),
+					'views' => $website_for_customer_views
+				);
+			endforeach;
+			$total = array(
+				$storage_percent . "% storage<br /><strong>" . $storage_gbs ."GB/". $storage_cap ."GB</strong>",
+				$views_percent . "% traffic<br /><strong>" . number_format( $views ) . "</strong> <small>Yearly Estimate</small>"
+			);
+
+		endif;
+
+		$usage_breakdown = array ( 'sites' => $sites, 'total' => $total );
+
+		$mock_usage_breakdown = array(
+			'sites' => array(
+					array(
+						'name' => 'anchor.host',
+						'storage' => '.4',
+						'views' => '22164'
+					),
+					array(
+						'name' => 'anchorhost1.wpengine.com',
+						'storage' => '2.5',
+						'views' => '10352'
+					)
+			),
+			'total' =>  array(
+				'25% storage<br />24.9GB/100GB',
+				'86% traffic<br />86,112 Yearly Estimate'
+			),
+		);
+
+		echo json_encode( $usage_breakdown ) ;
+	}
+
 	if ( $cmd == 'updateSettings' ) {
 
 		// Saves update settings for a site
