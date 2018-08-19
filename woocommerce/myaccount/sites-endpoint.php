@@ -16,7 +16,7 @@ if ( $role_check ) {
 
 ?>
 
-<link href="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.1.7/vuetify.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.1.13/vuetify.min.css" rel="stylesheet">
 <style>
 
 html {
@@ -288,7 +288,7 @@ div.update_logs table tr td:nth-child(1) {
 <script src="https://unpkg.com/qs/dist/qs.js"></script>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 <?php } ?>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.1.1/vuetify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.1.13/vuetify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.9/dist/vue-upload-component.js"></script>
 
 
