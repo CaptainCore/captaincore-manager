@@ -937,6 +937,29 @@ selected: false },
 					</v-card>
 				</v-dialog>
 				<v-dialog
+					v-model="dialog_file_diff.show"
+					fullscreen
+					hide-overlay
+					transition="dialog-bottom-transition"
+					scrollable
+				>
+				<v-card tile>
+					<v-toolbar card dark color="primary">
+						<v-btn icon dark @click.native="dialog_file_diff.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>File diff {{ dialog_file_diff.file_name}}</v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-toolbar-items class="hidden-sm-and-down">
+							<v-btn flat @click="QuicksaveFileRestore()">Restore this file</v-btn>
+						</v-toolbar-items>
+					</v-toolbar>
+					<v-card-text>
+					<v-container v-html="dialog_file_diff.response"><v-progress-linear :indeterminate="true" v-show="dialog_file_diff.loading"></v-progress-linear></v-container>
+					</v-card-text>
+					</v-card>
+				</v-dialog>
+				<v-dialog
 					v-model="dialog_quicksave.show"
 					fullscreen
 					hide-overlay
@@ -988,7 +1011,7 @@ selected: false },
 											<v-data-table hide-actions :headers='[{"text":"File","value":"file"}]' :items="quicksave.filtered_files">
 												<template slot="items" slot-scope="props">
 												 <td>
-													 <a class="v-menu__activator"> {{ props.item }} </a>
+													 <a class="v-menu__activator" @click="QuicksaveFileDiff(quicksave.quicksave_id, quicksave.git_commit, props.item)"> {{ props.item }} </a>
 												 </td>
 											 </template>
 											 <v-alert slot="no-results" :value="true" color="error" icon="warning">
@@ -1635,6 +1658,7 @@ selected: false },
 				:timeout="3000"
 				:multi-line="true"
 				v-model="snackbar.show"
+				style="z-index: 9999999;"
 			>
 				{{ snackbar.message }}
 				<v-btn dark flat @click.native="snackbar.show = false">Close</v-btn>
@@ -1774,6 +1798,7 @@ new Vue({
 		dialog_apply_https_urls: { show: false, site: {} },
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $current_user->user_email; ?>", current_user_email: "<?php echo $current_user->user_email; ?>" },
+		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
 		dialog_mailgun: { show: false, site: {}, response: "", loading: false },
 		dialog_usage_breakdown: { show: false, site: {}, response: [], company_name: "" },
 		dialog_toggle: { show: false, site: {} },
@@ -2701,6 +2726,71 @@ new Vue({
 				.then( response => {
 					self.snackbar.message = "Rollback in progress.";
 					self.snackbar.show = true;
+				})
+				.catch( error => console.log( error ) );
+
+		},
+		QuicksaveFileRestore() {
+
+			date = this.$options.filters.pretty_timestamp(this.dialog_file_diff.quicksave.created_at);
+			should_proceed = confirm("Rollback file " + this.dialog_file_diff.file_name  + " as of " + date);
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': this.dialog_file_diff.quicksave.quicksave_id,
+				'command': 'quicksave_file_restore',
+				'value'	: this.dialog_file_diff.file_name,
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.snackbar.message = "File restore in process. Will email once completed.";
+					self.snackbar.show = true;
+					self.dialog_file_diff.show = false;
+				})
+				.catch( error => console.log( error ) );
+
+		},
+		QuicksaveFileDiff( quicksave_id, git_commit, file_name ) {
+
+			file_name = file_name.split("       ")[1];
+
+			this.dialog_file_diff.file_name = file_name;
+			this.dialog_file_diff.loading = true;
+			this.dialog_file_diff.quicksave = this.dialog_quicksave.quicksaves.filter(quicksave => quicksave.quicksave_id == quicksave_id)[0];
+			this.dialog_file_diff.show = true;
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': quicksave_id,
+				'command': 'quicksave_file_diff',
+				'commit': git_commit,
+				'value'	: file_name,
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.dialog_file_diff.loading = false;
+					html = [];
+					response.data.split('\n').forEach(line => {
+						applied_css="";
+						if ( line[0] == "-" ) {
+							applied_css=" class='red lighten-4'";
+						}
+						if ( line[0] == "+" ) {
+							applied_css=" class='green lighten-5'";
+						}
+						html.push("<div"+applied_css+">" + line + "</div>");
+					});
+					self.dialog_file_diff.response = html.join('\n');
 				})
 				.catch( error => console.log( error ) );
 
