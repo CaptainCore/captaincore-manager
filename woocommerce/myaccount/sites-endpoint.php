@@ -977,8 +977,8 @@ selected: false },
 									      Files
 									      <v-spacer></v-spacer>
 									      <v-text-field
-									        v-model="quicksave_dialog.search"
-													@input="filterFiles"
+									        v-model="quicksave.search"
+													@input="filterFiles(quicksave.quicksave_id)"
 									        append-icon="search"
 									        label="Search"
 									        single-line
@@ -1932,6 +1932,7 @@ new Vue({
 			return this.customers.filter(customer => customer.developer );
 		},
 		filteredFiles() {
+			return this.dialog_quicksave.view_files.filter( file => file.filtered );
 		},
 	},
 	methods: {
@@ -2690,6 +2691,7 @@ new Vue({
 			axios.post( ajaxurl, Qs.stringify( data ) )
 			  .then( response => {
 					quicksave.view_files = response.data.split("\n");
+					quicksave.filtered_files = response.data.split("\n");
 				})
 			  .catch( error => console.log( error ) );
 		},
@@ -3018,8 +3020,11 @@ new Vue({
 				this.sites.forEach(site => site.selected = false );
 			}
 		},
-		filterFiles() {
+		filterFiles( quicksave_id ) {
 
+			quicksave = this.dialog_quicksave.quicksaves.filter( quicksave => quicksave.quicksave_id == quicksave_id )[0];
+			search = quicksave.search;
+			quicksave.filtered_files = quicksave.view_files.filter( file => file.includes( search ) );
 
 		},
 		filterSites() {
