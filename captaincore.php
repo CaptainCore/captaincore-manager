@@ -2802,7 +2802,6 @@ function captaincore_fetch_sites() {
 
 }
 
-
 // Loads all domains for current user
 function captaincore_fetch_domains() {
 
@@ -2817,7 +2816,7 @@ function captaincore_fetch_domains() {
 	}
 
 	// Administrators return all sites
-	if ( $role_check && in_array( 'administrator', $user->roles ) ) {
+	if ( in_array( 'administrator', $user->roles ) ) {
 		$customers = get_posts( array(
 			'order'          => 'asc',
 			'orderby'        => 'title',
@@ -2830,27 +2829,63 @@ function captaincore_fetch_domains() {
 					'value'   => 'closed',
 					'compare' => '!=',
 				),
-		) ) );
+			) ) );
+	}
 
-		foreach ( $customers as $customer ) :
+	if ( in_array( 'subscriber', $user->roles ) or in_array( 'customer', $user->roles ) or in_array( 'partner', $user->roles ) or in_array( 'editor', $user->roles ) ) {
 
-			$domains = get_field( 'domains', $customer );
-			if ( $domains ) {
-				foreach ( $domains as $domain ) :
-					$domain_name = get_the_title( $domain );
-					if ( $domain_name ) {
-						$all_domains[ $domain_name ] = $domain;
-					}
+		$customers = array();
+
+		$user_id = get_current_user_id();
+		$partner = get_field( 'partner', 'user_' . get_current_user_id() );
+		if ( $partner ) {
+			foreach ( $partner as $partner_id ) {
+				$websites_for_partner = get_posts(
+					array(
+						'post_type'      => 'captcore_website',
+						'posts_per_page' => '-1',
+						'order'          => 'asc',
+						'orderby'        => 'title',
+						'fields'         => 'ids',
+						'meta_query'     => array(
+							'relation' => 'AND',
+							array(
+								'key'     => 'partner', // name of custom field
+								'value'   => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+								'compare' => 'LIKE',
+							),
+						),
+					)
+				);
+				foreach ( $websites_for_partner as $website ) :
+					$customers[] = get_field( 'customer', $website );
 				endforeach;
 			}
-
-		endforeach;
-
-		// Sort array by domain name
-		ksort( $all_domains );
-
-		return $all_domains;
+		}
 	}
+
+	foreach ( $customers as $customer ) :
+
+		if ( is_array( $customer ) ) {
+			$customer = $customer[0];
+		}
+
+		$domains = get_field( 'domains', $customer );
+		if ( $domains ) {
+			foreach ( $domains as $domain ) :
+				$domain_name = get_the_title( $domain );
+				if ( $domain_name ) {
+					$all_domains[ $domain_name ] = $domain;
+				}
+			endforeach;
+		}
+
+	endforeach;
+
+	// Sort array by domain name
+	ksort( $all_domains );
+
+	return $all_domains;
 
 }
 
