@@ -3686,15 +3686,7 @@ function captaincore_install_action_callback() {
 	}
 	if ( $cmd == 'copy' ) {
 		// Find destination site and verify we have permission to it
-		$site_destination    = get_posts(
-			array(
-				'post_type'  => 'captcore_website',
-				'meta_key'   => 'site',
-				'meta_value' => $value,
-			)
-		);
-		$site_destination_id = $site_destination[0]->ID;
-		if ( captaincore_verify_permissions( $site_destination_id ) ) {
+		if ( captaincore_verify_permissions( $value ) ) {
 			$current_user = wp_get_current_user();
 			$email        = $current_user->user_email;
 			date_default_timezone_set( 'America/New_York' );
