@@ -1826,6 +1826,8 @@ function captaincore_site_quicksaves_func( $request ) {
 		$quicksaves[$key]->themes = json_decode($quicksaves[$key]->themes);
 		$quicksaves[$key]->view_changes = false;
 		$quicksaves[$key]->view_files = [];
+		$quicksaves[$key]->filtered_files = [];
+		$quicksaves[$key]->loading = false;
 	}
 	return $quicksaves;
 }
@@ -3814,35 +3816,47 @@ function captaincore_install_action_callback() {
 	}
 
 	if ( $cmd == 'quicksave_file_diff' ) {
+		$db_quicksaves = new CaptainCore\quicksaves;
+		$quicksaves = $db_quicksaves->get( $post_id );
+		$git_commit = $quicksaves->git_commit;
+		$site       = get_field( 'site', $quicksaves->site_id );
 		$command    = "captaincore quicksave-file-diff $site --hash=$commit --file=\"$value\"";
+		$post_id    = $quicksaves->site_id;
+		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+			// return mock data
+			$command = CAPTAINCORE_DEBUG_MOCK_QUICKSAVE_FILE_DIFF;
+		}
 	}
 
 	if ( $cmd == 'rollback' ) {
 		date_default_timezone_set( 'America/New_York' );
 		$timestamp  = date( 'Y-m-d-hms', time() );
-		$git_commit = get_field( 'git_commit', $post_id );
-		$website_id = get_field( 'website', $post_id );
-		$site       = get_field( 'site', $website_id[0] );
+		$db_quicksaves = new CaptainCore\quicksaves;
+		$quicksaves = $db_quicksaves->get( $post_id );
+		$git_commit = $quicksaves->git_commit;
+		$site       = get_field( 'site', $quicksaves->site_id );
 		$command    = "captaincore rollback $site $git_commit --$addon_type=$value > ~/Tmp/$timestamp-rollback_$site.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$site.txt";
-		$post_id    = $website_id[0];
+		$post_id    = $quicksaves->site_id;
 	}
 
 	if ( $cmd == 'quicksave_rollback' ) {
 		date_default_timezone_set( 'America/New_York' );
 		$timestamp  = date( 'Y-m-d-hms', time() );
-		$git_commit = get_field( 'git_commit', $post_id );
-		$website_id = get_field( 'website', $post_id );
-		$site       = get_field( 'site', $website_id[0] );
+		$db_quicksaves = new CaptainCore\quicksaves;
+		$quicksaves = $db_quicksaves->get( $post_id );
+		$git_commit = $quicksaves->git_commit;
+		$site       = get_field( 'site', $quicksaves->site_id );
 		$command    = "captaincore rollback $site $git_commit --all > ~/Tmp/$timestamp-rollback_$site.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$site.txt";
-		$post_id    = $website_id[0];
+		$post_id    = $quicksaves->site_id;
 	}
 
 	if ( $cmd == 'quicksave_file_restore' ) {
-		$git_commit = get_field( 'git_commit', $post_id );
-		$website_id = get_field( 'website', $post_id );
-		$site       = get_field( 'site', $website_id[0] );
+		$db_quicksaves = new CaptainCore\quicksaves;
+		$quicksaves = $db_quicksaves->get( $post_id );
+		$git_commit = $quicksaves->git_commit;
+		$site       = get_field( 'site', $quicksaves->site_id );
 		$command    = "nohup captaincore rollback $site $git_commit --file=\"$value\" &";
-		$post_id    = $website_id[0];
+		$post_id    = $quicksaves->site_id;
 	}
 
 	if ( $run_in_background ) {
