@@ -44,6 +44,21 @@ TODO
 
 == Changelog ==
 
+= 0.2.8: August 20, 2018 =
+* NEW: Overview stats after logged in: "You have access to *** WordPress Sites and DNS for *** domains."
+* NEW: Manage DNS - List all domains.
+* NEW: Combined interface for listing/managing sites - Combined old site listing and advanced options with new Vue.JS interface.
+* NEW: Sites UI - Advanced tab (first draft)
+* Tweak: Sites UI - Major improvements for site management. Preparation for adding staging to manage ui, see concept video: https://vimeo.com/284488960/10872cca8e.
+* Tweak: Sites UI - Merged advanced tools with new Vue.JS powered interface: HTTPS dialog, Site copy dialog, Download snapshot dialog, production/staging deployments, usage breakdown dialog, site toggle dialog and Quicksave file diff dialog.
+* Tweak: Function `captaincore_fetch_domains` now works with other user roles.
+* Tweak: Fixed FontAwesome on backend pages.
+* Tweak: Upgraded Vuetify to 1.1.13.
+* Tweak: Cleaned up branding.
+* Tweak: Renamed WooCommerce endpoint 'manage' to 'sites'. Manage UI is now the Sites page.
+* Tweak: Renamed WooCommerce sidebar items. Manage UI to Sites. Manage DNS to DNS. Website Logs to Timeline.
+* Tweak: Removed old WooCommerce websites endpoint.
+
 = 0.2.7: August 6, 2018 =
 * New: Manage UI - Quicksaves added.
 * New: Manage UI - Ability to add new sites.
