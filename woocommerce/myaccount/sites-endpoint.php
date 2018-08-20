@@ -1011,7 +1011,7 @@ selected: false },
 											<v-data-table hide-actions :headers='[{"text":"File","value":"file"}]' :items="quicksave.filtered_files">
 												<template slot="items" slot-scope="props">
 												 <td>
-													 <a class="v-menu__activator" @click="QuicksaveFileDiff(quicksave.quicksave_id, quicksave.git_commit, props.item)"> {{ props.item }} </a>
+													 <a class="v-menu__activator" @click="QuicksaveFileDiff(quicksave.site_id, quicksave.quicksave_id, quicksave.git_commit, props.item)"> {{ props.item }} </a>
 												 </td>
 											 </template>
 											 <v-alert slot="no-results" :value="true" color="error" icon="warning">
@@ -1032,7 +1032,7 @@ selected: false },
 												<td>{{ props.item.title }}</td>
 												<td>{{ props.item.version }}</td>
 												<td>{{ props.item.status }}</td>
-												<td><v-btn flat small @click="RollbackQuicksave(quicksave.quicksave_id, 'theme', props.item.name)">Rollback</v-btn></td>
+												<td><v-btn flat small @click="RollbackQuicksave(quicksave.site_id, quicksave.quicksave_id, 'theme', props.item.name)">Rollback</v-btn></td>
 											 </template>
 											</v-data-table>
 
@@ -1047,7 +1047,7 @@ selected: false },
 												<td>{{ props.item.title }}</td>
 												<td>{{ props.item.version }}</td>
 												<td>{{ props.item.status }}</td>
-												<td><v-btn flat small @click="RollbackQuicksave(quicksave.quicksave_id, 'plugin', props.item.name)">Rollback</v-btn></td>
+												<td><v-btn flat small @click="RollbackQuicksave(quicksave.site_id, quicksave.quicksave_id, 'plugin', props.item.name)">Rollback</v-btn></td>
 											 </template>
 											</v-data-table>
 							    </v-card>
@@ -2700,7 +2700,7 @@ new Vue({
 			this.dialog_apply_https_urls.show = true;
 			this.dialog_apply_https_urls.site = site;
 		},
-		RollbackQuicksave( quicksave_id, addon_type, addon_name ){
+		RollbackQuicksave( site_id, quicksave_id, addon_type, addon_name ){
 
 			quicksave = this.dialog_quicksave.quicksaves.filter( quicksave => quicksave.quicksave_id == quicksave_id )[0];
 			date = this.$options.filters.pretty_timestamp(quicksave.created_at);
@@ -2712,7 +2712,8 @@ new Vue({
 
 			var data = {
 				'action': 'captaincore_install',
-				'post_id': quicksave_id,
+				'post_id': site_id,
+				'quicksave_id': quicksave_id,
 				'command': 'rollback',
 				'value'	: addon_name,
 				'addon_type': addon_type,
@@ -2739,7 +2740,8 @@ new Vue({
 
 			var data = {
 				'action': 'captaincore_install',
-				'post_id': this.dialog_file_diff.quicksave.quicksave_id,
+				'post_id': this.dialog_file_diff.quicksave.site_id,
+				'quicksave_id': this.dialog_file_diff.quicksave.quicksave_id,
 				'command': 'quicksave_file_restore',
 				'value'	: this.dialog_file_diff.file_name,
 			};
@@ -2755,7 +2757,7 @@ new Vue({
 				.catch( error => console.log( error ) );
 
 		},
-		QuicksaveFileDiff( quicksave_id, git_commit, file_name ) {
+		QuicksaveFileDiff( site_id, quicksave_id, git_commit, file_name ) {
 
 			file_name = file_name.split("       ")[1];
 
@@ -2766,7 +2768,8 @@ new Vue({
 
 			var data = {
 				'action': 'captaincore_install',
-				'post_id': quicksave_id,
+				'post_id': site_id,
+				'quicksave_id': quicksave_id,
 				'command': 'quicksave_file_diff',
 				'commit': git_commit,
 				'value'	: file_name,
@@ -2805,7 +2808,8 @@ new Vue({
 
 			var data = {
 				'action': 'captaincore_install',
-				'post_id': quicksave.quicksave_id,
+				'post_id': quicksave.site_id,
+				'quicksave_id': quicksave.quicksave_id,
 				'command': 'quicksave_rollback',
 			};
 
