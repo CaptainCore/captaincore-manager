@@ -1278,14 +1278,6 @@ selected: false },
 									<v-tab-item :key="1" id="tab-Keys">
 										<v-toolbar color="grey lighten-4" dense light>
 											<v-toolbar-title>Keys</v-toolbar-title>
-
-											<!--<div style="margin-left: 20px;">
-											<v-btn
-												depressed
-												disabled
-												right
-												style="background-color: rgb(229, 229, 229)!important; color: #000 !important; left: -11px; top: 0px; height: 24px;"
-											>{{ site.environment_selected }} Environment</v-btn></div>-->
 											<v-spacer></v-spacer>
 										</v-toolbar>
 
