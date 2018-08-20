@@ -1592,7 +1592,6 @@ selected: false },
 				<v-toolbar-title>Advanced</v-toolbar-title>
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
-					<v-btn flat @click="bulkEdit(site.id,'users')" v-if="site.users_selected.length != 0">Bulk Edit {{ site.users_selected.length }} users</v-btn>
 					<v-btn flat @click="copySite(site.id)">Copy Site <v-icon dark small>file_copy</v-icon></v-btn>
 					<v-btn flat @click="submitNewSite">Edit Site <v-icon dark small>edit</v-icon></v-btn>
 					<v-btn flat @click="submitNewSite">Remove Site <v-icon dark small>delete</v-icon></v-btn>
