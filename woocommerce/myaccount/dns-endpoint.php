@@ -782,62 +782,27 @@ if ( !$wp_query->query_vars['dns'] ) { ?>
 
 <?php
 
-	// Get all domains assigned to current user
-	$domains = captaincore_fetch_domains();
+// Get all domains assigned to current user
+$domains = captaincore_fetch_domains();
 
-	if ( $domains ) : ?>
-	<h3>All Accounts <small class="alignright"><?php echo count( $domains ); ?> domains</small></h3>
-	<div class="row dns_records">
-	<?php foreach ( $domains as $domain ) : ?>
+if ( $domains ) : ?>
+<h3>All Accounts <small class="alignright"><?php echo count( $domains ); ?> domains</small></h3>
+<div class="row dns_records">
+<?php foreach ( $domains as $domain ) : ?>
 
-	 <div class="col s12 m6">
-		 <div class="card">
-			 <div class="card-content">
-				 <p><span class="card-title"><?php echo get_the_title( $domain ); ?></span></p>
-			 </div>
-			 <div class="card-action">
-				 <a href="<?php echo get_site_url( null, '/my-account/dns' ); ?>/<?php echo get_field( 'domain_id', $domain ); ?>/">Modify DNS</a>
-			 </div>
+ <div class="col s12 m6">
+	 <div class="card">
+		 <div class="card-content">
+			 <p><span class="card-title"><?php echo get_the_title( $domain ); ?></span></p>
+		 </div>
+		 <div class="card-action">
+			 <a href="<?php echo get_site_url( null, '/my-account/dns' ); ?>/<?php echo get_field( 'domain_id', $domain ); ?>/">Modify DNS</a>
 		 </div>
 	 </div>
+ </div>
 
-	<?php endforeach; ?>
-	</div>
-	<?php endif; ?>
+<?php endforeach; ?>
+</div>
+<?php endif;
 
-	<?php
-	$user_id = get_current_user_id();
-
-	$partner = get_field( 'partner', 'user_' . get_current_user_id() );
-	if ( $partner ) {
-		foreach ( $partner as $partner_id ) {
-
-		// Get all domains partner has access to
-		$domains = captaincore_get_domains_per_partner( $partner_id );
-
-		if ( $domains ) :
-			echo '<h3>Account: ' . get_the_title( $partner_id ) . ' <small class="alignright">' . count( $domains ) . ' domains</small></h3>';
-			echo '<div class="row dns_records">';
-			foreach ( $domains as $domain ) :
-			?>
-
-		 <div class="col s12 m6">
-			 <div class="card">
-
-				 <div class="card-content">
-					 <p><span class="card-title"><?php echo get_the_title( $domain ); ?></span></p>
-				 </div>
-				 <div class="card-action">
-					 <a href="<?php echo get_site_url( null, '/my-account/dns' ); ?>/<?php echo get_field( 'domain_id', $domain ); ?>/">Modify DNS</a>
-				 </div>
-			 </div>
-		 </div>
-
-			<?php
-			endforeach;
-			echo '</div>';
-		endif;
-
-		}
-	} // end foreach ($partner as $partner_id)
 }
