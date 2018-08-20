@@ -1312,7 +1312,7 @@ selected: false },
 									<v-toolbar color="grey lighten-4" dense light>
 										<v-toolbar-title>Themes</v-toolbar-title>
 										<v-spacer></v-spacer>
-										<v-toolbar-items>
+										<v-toolbar-items v-show="site.environment_selected == 'Production'">
 											<v-btn flat @click="bulkEdit(site.id,'themes')" v-if="site.themes_selected.length != 0">Bulk Edit {{ site.themes_selected.length }} themes</v-btn>
 											<v-btn flat @click="addTheme(site.id)">Add Theme <v-icon dark small>add</v-icon></v-btn>
 										</v-toolbar-items>
@@ -1327,20 +1327,21 @@ selected: false },
 										class="elevation-1"
 										select-all
 										hide-actions
+										v-show="site.environment_selected == 'Production'"
 										>
-									 <template slot="items" slot-scope="props">
-										 <td>
-						         <v-checkbox
-						           v-model="props.selected"
-						           primary
-						           hide-details
-						         ></v-checkbox>
-						 				</td>
-										 <td>{{ props.item.title }}</td>
-										 <td>{{ props.item.name }}</td>
-										 <td>{{ props.item.version }}</td>
-										 <td>
-											 <div v-if="props.item.status === 'inactive' || props.item.status === 'parent' || props.item.status === 'child'">
+										<template slot="items" slot-scope="props">
+											<td>
+												<v-checkbox
+													v-model="props.selected"
+													primary
+													hide-details
+												></v-checkbox>
+											</td>
+											<td>{{ props.item.title }}</td>
+											<td>{{ props.item.name }}</td>
+											<td>{{ props.item.version }}</td>
+											<td>
+											<div v-if="props.item.status === 'inactive' || props.item.status === 'parent' || props.item.status === 'child'">
 												<v-switch left :label="props.item.status" v-model="props.item.status" false-value="inactive" true-value="active" @change="activateTheme(props.item.name, site.id)"></v-switch>
 			 								</div>
 			 								<div v-else>
@@ -1359,7 +1360,7 @@ selected: false },
 				<v-toolbar color="grey lighten-4" dense light>
 					<v-toolbar-title>Plugins</v-toolbar-title>
 					<v-spacer></v-spacer>
-					<v-toolbar-items>
+					<v-toolbar-items v-show="site.environment_selected == 'Production'">
 						<v-btn flat @click="bulkEdit(site.id, 'plugins')" v-if="site.plugins_selected.length != 0">Bulk Edit {{ site.plugins_selected.length }} plugins</v-btn>
 						<v-btn flat @click="addPlugin(site.id)">Add Plugin <v-icon dark small>add</v-icon></v-btn>
 					</v-toolbar-items>
@@ -1373,6 +1374,7 @@ selected: false },
 					item-key="name"
 					value="name"
 					class="elevation-1"
+					v-show="site.environment_selected == 'Production'"
 					select-all
 					hide-actions
 				 >
@@ -1416,19 +1418,21 @@ selected: false },
 			<v-tab-item :key="4" id="tab-Users">
 				<v-toolbar color="grey lighten-4" dense light>
 					<v-toolbar-title>Users</v-toolbar-title>
-					<v-spacer></v-spacer>
+					<v-spacer></v-spacer v-show="site.environment_selected == 'Production'">
 					<v-toolbar-items>
 						<v-btn flat @click="bulkEdit(site.id,'users')" v-if="site.users_selected.length != 0">Bulk Edit {{ site.users_selected.length }} users</v-btn>
-						<v-btn flat @click="addPlugin(site.id)">Add User <v-icon dark small>add</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
-				<v-card>
+				<v-card v-show="site.environment_selected == 'Production'">
 					<v-card-title v-if="site.users.length == 0">
 						<div>
 							Fetching users...
 						  <v-progress-linear :indeterminate="true"></v-progress-linear>
 						</div>
 					</v-card-title>
+					<div v-else-if="typeof site.users == 'string'">
+						<v-card-title><div>{{ site.users }}</div></v-card-title>
+					</div>
 					<div v-else>
 						<v-data-table
 							:headers='header_users'
@@ -1467,12 +1471,12 @@ selected: false },
 				<v-toolbar color="grey lighten-4" dense light>
 					<v-toolbar-title>Update Logs</v-toolbar-title>
 					<v-spacer></v-spacer>
-					<v-toolbar-items>
+					<v-toolbar-items v-show="site.environment_selected == 'Production'">
 						<v-btn flat @click="update(site.id)">Manually update</v-btn>
 						<v-btn flat @click="updateSettings(site.id)">Update Settings <v-icon dark small>fas fa-cog</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
-				<v-card>
+				<v-card v-show="site.environment_selected == 'Production'">
 					<v-card-title v-if="site.update_logs.length == 0">
 						<div>
 							Fetching update logs...
@@ -1507,7 +1511,7 @@ selected: false },
 					<v-toolbar-title>Scripts</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
-				<v-card>
+				<v-card v-show="site.environment_selected == 'Production'">
 					<v-card-title>
 						<div>
 							<div><v-btn small flat @click="viewApplyHttpsUrls(site.id)">
@@ -1531,7 +1535,7 @@ selected: false },
 					<v-toolbar-title>Backups</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
-				<v-card>
+				<v-card v-show="site.environment_selected == 'Production'">
 					<v-card-title>
 						<div>
 							<v-btn small flat @click="promptBackupSnapshot(site.id)">
@@ -1558,7 +1562,7 @@ selected: false },
 			<v-toolbar color="grey lighten-4" dense light>
 				<v-toolbar-title>Sharing</v-toolbar-title>
 				<v-spacer></v-spacer>
-				<v-toolbar-items>
+				<v-toolbar-items v-show="role == 'administrator'">
 					<v-btn flat>Invite</v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
@@ -1608,8 +1612,8 @@ selected: false },
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
 					<v-btn flat @click="copySite(site.id)">Copy Site <v-icon dark small>file_copy</v-icon></v-btn>
-					<v-btn flat @click="submitNewSite">Edit Site <v-icon dark small>edit</v-icon></v-btn>
-					<v-btn flat @click="submitNewSite">Remove Site <v-icon dark small>delete</v-icon></v-btn>
+					<v-btn flat @click="submitNewSite" v-show="role == 'administrator'">Edit Site <v-icon dark small>edit</v-icon></v-btn>
+					<v-btn flat @click="submitNewSite" v-show="role == 'administrator'">Remove Site <v-icon dark small>delete</v-icon></v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
 			<v-card>
@@ -1799,6 +1803,7 @@ new Vue({
 		jobs: [],
 		add_site: false,
 		<?php if ( current_user_can('administrator') ) { ?>
+		role: "administrator",
 		new_site: {
 			domain: "",
 			errors: [],
@@ -1819,6 +1824,7 @@ new Vue({
 
 		],
 		<?php } else { ?>
+		role: "",
 		new_site: false,
 		customers: [],
 		shared_with: [],<?php } ?>
