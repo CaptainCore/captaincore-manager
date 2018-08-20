@@ -2759,7 +2759,7 @@ new Vue({
 		},
 		QuicksaveFileDiff( site_id, quicksave_id, git_commit, file_name ) {
 
-			file_name = file_name.split("       ")[1];
+			file_name = file_name.split("	")[1];
 
 			this.dialog_file_diff.file_name = file_name;
 			this.dialog_file_diff.loading = true;
@@ -2830,7 +2830,7 @@ new Vue({
 				action: 'captaincore_install',
 				post_id: site_id,
 				command: 'view_quicksave_changes',
-				value:  quicksave.git_commit
+				value: quicksave.git_commit
 			};
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
