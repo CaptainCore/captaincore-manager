@@ -3823,15 +3823,6 @@ function captaincore_install_action_callback() {
 		$post_id    = $website_id[0];
 	}
 
-	// Runs command on remote on production
-	require_once ABSPATH . '/vendor/autoload.php';
-
-	$ssh = new \phpseclib\Net\SSH2( CAPTAINCORE_CLI_ADDRESS, CAPTAINCORE_CLI_PORT );
-
-	if ( ! $ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
-		exit( 'Login Failed' );
-	}
-
 	if ( $run_in_background ) {
 
 		// Generate unique $job_id for tracking
@@ -3845,17 +3836,27 @@ function captaincore_install_action_callback() {
 
 	}
 
-	// Returns command if debug enabled otherwise executes command over SSH and returns output
+	// Returns command if debug enabled
 	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
-		$response = $command;
-	} else {
-		$response = $ssh->exec( $command );
+		echo $command;
+		wp_die();
+		return;
+	}
 
-		// Background jobs need job_id returned in order to begin repeating AJAX checks
-		if ( $run_in_background ) {
-			$response = $job_id;
-		}
+	// Runs command on remote on production
+	require_once ABSPATH . '/vendor/autoload.php';
+	$ssh = new \phpseclib\Net\SSH2( CAPTAINCORE_CLI_ADDRESS, CAPTAINCORE_CLI_PORT );
 
+	if ( ! $ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
+		exit( 'Login Failed' );
+	}
+
+ 	// Executes command over SSH and returns output
+	$response = $ssh->exec( $command );
+
+	// Background jobs need job_id returned in order to begin repeating AJAX checks
+	if ( $run_in_background ) {
+		$response = $job_id;
 	}
 
 	// Return response
