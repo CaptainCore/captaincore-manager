@@ -21,6 +21,9 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
+
+$websites = captaincore_fetch_sites();
+$domains = captaincore_fetch_domains();
 ?>
 
 <p><?php
@@ -31,6 +34,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 		esc_url( wc_logout_url( wc_get_page_permalink( 'myaccount' ) ) )
 	);
 ?></p>
+
+	<div class="row">
+		<div class="col s12">
+			<div class="card">
+				<div class="card-content row">
+				<div class="col s12">
+					You have access to <a href="/my-account/sites/"><?php echo count( $websites ); ?> WordPress Sites</a> and DNS for <a href="/my-account/dns/"><?php echo count( $domains ); ?> domains</a>.
+				</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
 
 <p><?php
 	printf(
