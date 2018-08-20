@@ -960,7 +960,7 @@ selected: false },
 										<v-toolbar-title></v-toolbar-title>
 										<v-spacer></v-spacer>
 										<v-toolbar-items>
-											<v-btn flat>Entire Quicksave Rollback</v-btn>
+											<v-btn flat @click="QuicksavesRollback(dialog_quicksave.site_id, quicksave)">Entire Quicksave Rollback</v-btn>
 											<v-btn flat @click="viewQuicksavesChanges(dialog_quicksave.site_id, quicksave)">View Changes</v-btn>
 										</v-toolbar-items>
 									</v-toolbar>
@@ -1009,7 +1009,7 @@ selected: false },
 												<td>{{ props.item.title }}</td>
 												<td>{{ props.item.version }}</td>
 												<td>{{ props.item.status }}</td>
-												<td><v-btn flat small>Rollback</v-btn></td>
+												<td><v-btn flat small @click="RollbackQuicksave(quicksave.quicksave_id, 'theme', props.item.name)">Rollback</v-btn></td>
 											 </template>
 											</v-data-table>
 
@@ -1024,7 +1024,7 @@ selected: false },
 												<td>{{ props.item.title }}</td>
 												<td>{{ props.item.version }}</td>
 												<td>{{ props.item.status }}</td>
-												<td><v-btn flat small>Rollback</v-btn></td>
+												<td><v-btn flat small @click="RollbackQuicksave(quicksave.quicksave_id, 'plugin', props.item.name)">Rollback</v-btn></td>
 											 </template>
 											</v-data-table>
 							    </v-card>
@@ -2676,6 +2676,59 @@ new Vue({
 			site = this.sites.filter(site => site.id == site_id)[0];
 			this.dialog_apply_https_urls.show = true;
 			this.dialog_apply_https_urls.site = site;
+		},
+		RollbackQuicksave( quicksave_id, addon_type, addon_name ){
+
+			quicksave = this.dialog_quicksave.quicksaves.filter( quicksave => quicksave.quicksave_id == quicksave_id )[0];
+			date = this.$options.filters.pretty_timestamp(quicksave.created_at);
+			should_proceed = confirm("Rollback "+ addon_type + " " + addon_name +" to version as of " + date + " on " + this.dialog_quicksave.site_name + "?");
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': quicksave_id,
+				'command': 'rollback',
+				'value'	: addon_name,
+				'addon_type': addon_type,
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.snackbar.message = "Rollback in progress.";
+					self.snackbar.show = true;
+				})
+				.catch( error => console.log( error ) );
+
+		},
+		QuicksavesRollback( site_id, quicksave ) {
+
+			date = this.$options.filters.pretty_timestamp(quicksave.created_at);
+			site = this.sites.filter(site => site.id == site_id)[0];
+			should_proceed = confirm("Will rollback all themes/plugins on " + site.name + " to " + date + ". Proceed?");
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': quicksave.quicksave_id,
+				'command': 'quicksave_rollback',
+			};
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+			  .then( response => {
+					quicksave.loading = false;
+					self.snackbar.message = "Rollback in process.";
+					self.snackbar.show = true;
+				})
+			  .catch( error => console.log( error ) );
+
 		},
 		viewQuicksavesChanges( site_id, quicksave ) {
 
