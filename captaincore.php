@@ -2886,6 +2886,30 @@ function captaincore_fetch_domains() {
 				endforeach;
 			}
 		}
+		if ( count($customers) == 0 ) {
+			foreach ( $partner as $partner_id ) {
+				$websites_for_partner = get_posts(
+					array(
+						'post_type'      => 'captcore_website',
+						'posts_per_page' => '-1',
+						'order'          => 'asc',
+						'orderby'        => 'title',
+						'fields'         => 'ids',
+						'meta_query'     => array(
+							'relation' => 'AND',
+							array(
+								'key'     => 'customer', // name of custom field
+								'value'   => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+								'compare' => 'LIKE',
+							),
+						),
+					)
+				);
+				foreach ( $websites_for_partner as $website ) :
+					$customers[] = get_field( 'customer', $website );
+				endforeach;
+			}
+		}
 	}
 
 	foreach ( $customers as $customer ) :
