@@ -937,7 +937,7 @@ selected: false },
 					</v-card>
 				</v-dialog>
 				<v-dialog
-					v-model="quicksave_dialog.show"
+					v-model="dialog_quicksave.show"
 					fullscreen
 					hide-overlay
 					transition="dialog-bottom-transition"
@@ -945,23 +945,23 @@ selected: false },
 				>
 	        <v-card tile>
 	          <v-toolbar card dark color="primary">
-	            <v-btn icon dark @click.native="quicksave_dialog.show = false">
+	            <v-btn icon dark @click.native="dialog_quicksave.show = false">
 	              <v-icon>close</v-icon>
 	            </v-btn>
-	            <v-toolbar-title>Quicksaves for {{ quicksave_dialog.site_name }}</v-toolbar-title>
+	            <v-toolbar-title>Quicksaves for {{ dialog_quicksave.site_name }}</v-toolbar-title>
 	            <v-spacer></v-spacer>
 	          </v-toolbar>
 	          <v-card-text>
 						<v-container>
 							<v-expansion-panel>
-							  <v-expansion-panel-content v-for="quicksave in quicksave_dialog.quicksaves" lazy style="position:relative;">
+							  <v-expansion-panel-content v-for="quicksave in dialog_quicksave.quicksaves" lazy style="position:relative;">
 							    <div slot="header" class="text-md-center"><span class="alignleft"><v-icon>settings_backup_restore</v-icon> {{ quicksave.created_at | pretty_timestamp }}</span><span class="body-1">{{ quicksave.git_status }}</span><span class="alignright body-1">WordPress {{ quicksave.core }} - {{ quicksave.plugins.length }} Plugins - {{ quicksave.themes.length }} Themes</span></div>
 									<v-toolbar color="dark primary" dark dense light>
 										<v-toolbar-title></v-toolbar-title>
 										<v-spacer></v-spacer>
 										<v-toolbar-items>
 											<v-btn flat>Entire Quicksave Rollback</v-btn>
-											<v-btn flat @click="viewQuicksavesChanges(quicksave_dialog.site_id, quicksave)">View Changes</v-btn>
+											<v-btn flat @click="viewQuicksavesChanges(dialog_quicksave.site_id, quicksave)">View Changes</v-btn>
 										</v-toolbar-items>
 									</v-toolbar>
 									<v-card v-show="quicksave.view_changes == true" style="table-layout:fixed;margin:0px;overflow: scroll;padding: 0px;position: absolute;background-color: #fff;width: 100%;left: 0;top: 100%;height: 100%;z-index: 3;transform: translateY(-100%);">
@@ -985,14 +985,14 @@ selected: false },
 									        hide-details
 									      ></v-text-field>
 									    </v-card-title>
-											<v-data-table hide-actions :headers='[{"text":"File","value":"file"}]' :items="quicksave.view_files">
+											<v-data-table hide-actions :headers='[{"text":"File","value":"file"}]' :items="quicksave.filtered_files">
 												<template slot="items" slot-scope="props">
 												 <td>
 													 <a class="v-menu__activator"> {{ props.item }} </a>
 												 </td>
 											 </template>
 											 <v-alert slot="no-results" :value="true" color="error" icon="warning">
-													Your search for "{{ quicksave_dialog.search }}" found no results.
+													Your search for "{{ dialog_quicksave.search }}" found no results.
 												</v-alert>
 											</v-data-table>
 										</v-card-text>
@@ -1777,6 +1777,7 @@ new Vue({
 		dialog_mailgun: { show: false, site: {}, response: "", loading: false },
 		dialog_usage_breakdown: { show: false, site: {}, response: [], company_name: "" },
 		dialog_toggle: { show: false, site: {} },
+		dialog_quicksave: { show: false, site_id: null, quicksaves: [], search: "" },
 		page: 1,
 		jobs: [],
 		add_site: false,
@@ -1806,7 +1807,6 @@ new Vue({
 		shared_with: [],<?php } ?>
 		new_plugin: { show: false, site_id: null},
 		new_theme: { show: false, site_id: null},
-		quicksave_dialog: { show: false, site_id: null, quicksaves: [], search: "" },
 		bulk_edit: { show: false, site_id: null, type: null, items: [] },
 		update_settings: { show: false, site_id: null, loading: false},
 		upload: [],
@@ -1932,7 +1932,6 @@ new Vue({
 			return this.customers.filter(customer => customer.developer );
 		},
 		filteredFiles() {
-			return this.quicksave_dialog.view_files.filter( file => file.filtered );
 		},
 	},
 	methods: {
@@ -2696,15 +2695,15 @@ new Vue({
 		},
 		viewQuicksaves ( site_id ) {
 			site = this.sites.filter(site => site.id == site_id)[0];
-			this.quicksave_dialog.show = true;
-			this.quicksave_dialog.site_id = site_id;
-			this.quicksave_dialog.site_name = site.name;
+			this.dialog_quicksave.show = true;
+			this.dialog_quicksave.site_id = site_id;
+			this.dialog_quicksave.site_name = site.name;
 
 			axios.get(
 				'/wp-json/captaincore/v1/site/'+site_id+'/quicksaves', {
 					headers: {'X-WP-Nonce':wpApiSettings.nonce}
 				})
-				.then(response => this.quicksave_dialog.quicksaves = response.data );
+				.then(response => this.dialog_quicksave.quicksaves = response.data );
 
 		},
 		addTheme ( site_id ){
