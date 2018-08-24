@@ -1859,9 +1859,9 @@ new Vue({
 			{ text: 'Role(s)', value: 'roles' },
 			{ text: 'Actions', value: 'actions', sortable: false }
 		],
-		applied_site_filter: null,
-		applied_site_filter_version: null,
-		applied_site_filter_status: null,
+		applied_site_filter: [],
+		applied_site_filter_version: [],
+		applied_site_filter_status: [],
 		select_site_options: [
 			{ text: 'All', value: 'all' },
 			{ text: 'Filtered', value: 'filtered' },
@@ -3167,7 +3167,7 @@ new Vue({
 		},
 		filterSites() {
 			// Filter if select has value
-			if ( this.applied_site_filter || this.search ) {
+			if ( this.applied_site_filter.length > 0 || this.search ) {
 
 				search = this.search;
 				filterby = this.applied_site_filter;
@@ -3178,7 +3178,7 @@ new Vue({
 				versions = [];
 				statuses = [];
 
-				if ( this.applied_site_filter_version && this.applied_site_filter_version != "" ) {
+				if ( this.applied_site_filter_version.length > 0 ) {
 
 					// Find all themes/plugins which have selected version
 					this.applied_site_filter_version.forEach(filter => {
@@ -3189,7 +3189,7 @@ new Vue({
 
 				}
 
-				if ( this.applied_site_filter_status && this.applied_site_filter_status != "" ) {
+				if ( this.applied_site_filter_status.length > 0 ) {
 
 					// Find all themes/plugins which have selcted version
 					this.applied_site_filter_status.forEach(filter => {
@@ -3404,7 +3404,7 @@ new Vue({
 			}
 
 			// Neither filter is set so set all sites to filtered true.
-			if ( !this.applied_site_filter && !this.search ) {
+			if ( this.applied_site_filter.length == 0 && !this.search ) {
 
 				this.sites.forEach(function(site) {
 					site.filtered = true;
