@@ -609,7 +609,7 @@ selected: false },
 							<v-form ref="form">
 								<v-text-field :value="new_site.domain" @change.native="new_site.domain = $event.target.value" label="Domain name" required></v-text-field>
 						    <v-text-field :value="new_site.site" @change.native="new_site.site = $event.target.value" label="Site name" required></v-text-field>
-								<v-select
+								<v-autocomplete
 								:items="customers"
 								item-text="name"
 								item-value="customer_id"
@@ -618,7 +618,6 @@ selected: false },
 								label="Customer"
 								chips
 								multiple
-								autocomplete
 								small-chips
 								deletable-chips
 							>
@@ -636,8 +635,8 @@ selected: false },
 							<template slot="item" slot-scope="data">
 								<strong>{{ data.item.name }}</strong>
 							</template>
-							</v-select>
-							<v-select
+							</v-autocomplete>
+							<v-autocomplete
 							:items="developers"
 							item-text="name"
 							item-value="customer_id"
@@ -646,7 +645,6 @@ selected: false },
 							label="Shared With"
 							chips
 							multiple
-							autocomplete
 							small-chips
 							deletable-chips
 						>
@@ -664,7 +662,7 @@ selected: false },
 						<template slot="item" slot-scope="data">
 							<strong>{{ data.item.name }}</strong>
 						</template>
-						</v-select>
+						</v-autocomplete>
 						<v-switch label="Automatic Updates" v-model="new_site.updates_enabled" false-value="0" true-value="1"></v-switch>
 								<v-container grid-list-md text-xs-center>
 									<v-layout row wrap>
@@ -886,17 +884,16 @@ selected: false },
 					</v-toolbar>
 					<v-card-text>
 					<v-container>
-						<v-select
-			 			:items="dialog_copy_site.options"
-			 			v-model="dialog_copy_site.destination"
-			 			label="Select Destination Site"
+						<v-autocomplete
+						:items="dialog_copy_site.options"
+						v-model="dialog_copy_site.destination"
+						label="Select Destination Site"
 						item-text="name"
 						item-value="id"
-			 			chips
-			 			autocomplete
-			 			small-chips
-			 			deletable-chips
-			 			></v-select>
+						chips
+						small-chips
+						deletable-chips
+						></v-autocomplete>
 						<v-btn @click="startCopySite()">
 							Copy Site
 						</v-btn>
@@ -1086,8 +1083,8 @@ selected: false },
 				@input="filterSites"
 				></v-text-field>
 			<v-layout row v-if="advanced_filter == true">
-	   <v-flex xs12>
-		 <v-select
+			<v-flex xs12>
+			<v-autocomplete
 			:items="site_filters"
 			item-text="search"
 			item-value="name"
@@ -1097,7 +1094,6 @@ selected: false },
 			label="Select Theme and/or Plugin"
 			chips
 			multiple
-			autocomplete
 			small-chips
 			deletable-chips
 			>
@@ -1115,12 +1111,12 @@ selected: false },
 				<template slot="item" slot-scope="data">
 					 <strong>{{ data.item.title }}</strong>&nbsp;<span>({{ data.item.name }})</span>
 				</template>
-				 </v-select>
+			</v-autocomplete>
 			</v-flex>
 		</v-layout>
 		<v-layout row v-if="advanced_filter == true">
 			<v-flex xs5>
-				 <v-select
+				 <v-autocomplete
 				 v-model="applied_site_filter_version"
 				 v-for="filter in site_filter_version"
 					 :items="filter.versions"
@@ -1130,7 +1126,6 @@ selected: false },
 					 item-text="title"
 					 chips
 					 multiple
-					 autocomplete
 				 >
 				 <template slot="selection" slot-scope="data">
 					 <v-chip
@@ -1146,12 +1141,12 @@ selected: false },
 				 <template slot="item" slot-scope="data">
 						<strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span>
 				 </template>
-				 </v-select>
+				</v-autocomplete>
 			</v-flex>
 			<v-flex xs2>
 			</v-flex>
 			<v-flex xs5>
-				<v-select
+				<v-autocomplete
 				v-model="applied_site_filter_status"
 				v-for="filter in site_filter_status"
 					:items="filter.statuses"
@@ -1161,7 +1156,6 @@ selected: false },
 					item-text="title"
 					chips
 					multiple
-					autocomplete
 				>
 				<template slot="selection" slot-scope="data">
 					<v-chip
@@ -1177,7 +1171,7 @@ selected: false },
 				<template slot="item" slot-scope="data">
 					 <strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span>
 				</template>
-				</v-select>
+				</v-autocomplete>
 			</v-flex>
 			</v-layout>
 			<v-layout row v-if="advanced_filter == true">
@@ -1679,7 +1673,7 @@ selected: false },
 					 <ul>
 						 <li>
 							 Run a
-							 <v-select
+							 <v-autocomplete
 								 :items="bulk_actions"
 								 item-text="name"
 								 item-value="value"
@@ -1689,8 +1683,7 @@ selected: false },
 								 single-line
 								 chips
 								 multiple
-								 autocomplete
-							 ></v-select>
+							 ></v-autocomplete>
 							 <v-text-field
 							 	name="input-1"
 								v-model="argument.input"
