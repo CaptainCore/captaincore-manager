@@ -970,6 +970,9 @@ selected: false },
 	            </v-btn>
 	            <v-toolbar-title>Quicksaves for {{ dialog_quicksave.site_name }}</v-toolbar-title>
 	            <v-spacer></v-spacer>
+							<v-toolbar-items>
+								<v-btn flat @click="QuicksaveCheck(dialog_quicksave.site_id)">Manual Check</v-btn>
+							</v-toolbar-items>
 	          </v-toolbar>
 	          <v-card-text>
 						<v-container>
@@ -2785,6 +2788,31 @@ new Vue({
 						html.push("<div"+applied_css+">" + line + "</div>");
 					});
 					self.dialog_file_diff.response = html.join('\n');
+				})
+				.catch( error => console.log( error ) );
+
+		},
+		QuicksaveCheck( site_id ) {
+
+			site = this.sites.filter(site => site.id == site_id)[0];
+			should_proceed = confirm("Run a manual check for new files on " + site.name + "?");
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': site_id,
+				'command': 'quick_backup',
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.snackbar.message = "Quicksave in process.";
+					self.snackbar.show = true;
 				})
 				.catch( error => console.log( error ) );
 
