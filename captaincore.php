@@ -82,12 +82,12 @@ function run_captaincore() {
 }
 run_captaincore();
 
-require 'inc/woocommerce-my-account-endpoints.php';
-require 'inc/constellix-api/constellix-api.php';
-require 'inc/woocommerce-custom-password-fields.php';
-require 'inc/mailgun-api.php';
-require 'inc/process-functions.php';
-require 'inc/bulk-actions.php'; // Custom bulk actions.
+require 'includes/woocommerce-my-account-endpoints.php';
+require 'includes/constellix-api/constellix-api.php';
+require 'includes/woocommerce-custom-password-fields.php';
+require 'includes/mailgun-api.php';
+require 'includes/process-functions.php';
+require 'includes/bulk-actions.php'; // Custom bulk actions.
 
 function captaincore_rewrite() {
 	add_rewrite_rule( '^captaincore-api/([^/]*)/?', 'index.php?pagename=captaincore-api&callback=$matches[1]', 'top' );
@@ -826,7 +826,7 @@ function captaincore_website_tabs() {
 		// Before:
 		add_action(
 			'all_admin_notices', function() {
-					include 'inc/admin-website-tabs.php';
+					include 'includes/admin-website-tabs.php';
 				echo '';
 			}
 		);
@@ -4531,32 +4531,32 @@ function captaincore_custom_pages() {
 
 function captaincore_customer_report_callback() {
 	// Loads the Customer Report template
-	require_once dirname( __FILE__ ) . '/inc/admin-customer-report.php';
+	require_once dirname( __FILE__ ) . '/includes/admin-customer-report.php';
 }
 
 function captaincore_partner_report_callback() {
 	// Loads the Customer Report template
-	require_once dirname( __FILE__ ) . '/inc/admin-partner-report.php';
+	require_once dirname( __FILE__ ) . '/includes/admin-partner-report.php';
 }
 
 function captaincore_installs_report_callback() {
 	// Loads the Customer Report template
-	require_once dirname( __FILE__ ) . '/inc/admin-installs-report.php';
+	require_once dirname( __FILE__ ) . '/includes/admin-installs-report.php';
 }
 
 function captaincore_timeline_report_callback() {
 	// Loads the Customer Report template
-	require_once dirname( __FILE__ ) . '/inc/admin-timeline-report.php';
+	require_once dirname( __FILE__ ) . '/includes/admin-timeline-report.php';
 }
 
 function captaincore_kpi_report_callback() {
 	// Loads the Customer Report template
-	require_once dirname( __FILE__ ) . '/inc/admin-kpi-report.php';
+	require_once dirname( __FILE__ ) . '/includes/admin-kpi-report.php';
 }
 
 function captaincore_quicksaves_report_callback() {
 	// Loads the Quicksaves Report template
-	require_once dirname( __FILE__ ) . '/inc/admin-report-quicksaves.php';
+	require_once dirname( __FILE__ ) . '/includes/admin-report-quicksaves.php';
 }
 
 // allow SVGs
