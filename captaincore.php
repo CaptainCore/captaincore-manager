@@ -1822,12 +1822,114 @@ function captaincore_site_quicksaves_func( $request ) {
 	$db_quicksaves = new CaptainCore\quicksaves;
 	$quicksaves = $db_quicksaves->fetch( $site_id );
 	foreach ($quicksaves as $key => $quicksave) {
+		$compare_key = $key + 1;
 		$quicksaves[$key]->plugins = json_decode($quicksaves[$key]->plugins);
 		$quicksaves[$key]->themes = json_decode($quicksaves[$key]->themes);
 		$quicksaves[$key]->view_changes = false;
 		$quicksaves[$key]->view_files = [];
 		$quicksaves[$key]->filtered_files = [];
 		$quicksaves[$key]->loading = false;
+
+		// Skips compare check on oldest quicksave or if not found.
+		if ( !isset($quicksaves[$compare_key]) ) {
+			continue;
+		}
+
+		$compare_plugins = json_decode( $quicksaves[$compare_key]->plugins );
+		$compare_themes = json_decode( $quicksaves[$compare_key]->themes );
+		$plugins_names = array_column( $quicksaves[$key]->plugins, 'name' );
+		$themes_names = array_column( $quicksaves[$key]->themes, 'name' );
+		$compare_plugins_names = array_column( $compare_plugins, 'name' );
+		$compare_themes_names = array_column( $compare_themes, 'name' );
+		$removed_plugins = array_diff( $compare_plugins_names, $plugins_names );
+		$removed_themes = array_diff( $compare_themes_names, $themes_names );
+
+		foreach( $quicksaves[$key]->plugins as $plugin ) {
+			$compare_plugin_key = null;
+
+			// Check if plugin exists in previous Quicksave
+			foreach( $compare_plugins as $compare_key => $compare_plugin ) {
+				if ( $compare_plugin->name == $plugin->name ) {
+					$compare_plugin_key = $compare_key;
+				}
+			}
+			// If not found then mark as newly added.
+			if ( is_null($compare_plugin_key) ) {
+				$plugin->compare = false;
+				$plugin->highlight = "new";
+				continue;
+			}
+
+			if ( $plugin->version != $compare_plugins[$compare_plugin_key]->version ) {
+				$plugin->compare = false;
+				$plugin->changed_version = true;
+			}
+
+			if ( $plugin->status != $compare_plugins[$compare_plugin_key]->status ) {
+				$plugin->compare = false;
+				$plugin->changed_status = true;
+			}
+
+			if( isset($plugin->changed_status) or isset($plugin->changed_version) ) {
+				continue;
+			}
+
+			// Plugin is the same
+			$plugin->compare = true;
+		}
+
+		foreach( $quicksaves[$key]->themes as $theme ) {
+			$compare_theme_key = null;
+
+			// Check if plugin exists in previous Quicksave
+			foreach( $compare_themes as $compare_key => $compare_theme ) {
+				if ( $compare_theme->name == $theme->name ) {
+					$compare_theme_key = $compare_key;
+				}
+			}
+			// If not found then mark as newly added.
+			if ( is_null($compare_theme_key) ) {
+				$theme->compare = false;
+				$theme->highlight = "new";
+				continue;
+			}
+
+			if ( $theme->version != $compare_themes[$compare_theme_key]->version ) {
+				$theme->compare = false;
+				$theme->changed_version = true;
+			}
+
+			if ( $theme->status != $compare_themes[$compare_theme_key]->status ) {
+				$theme->compare = false;
+				$theme->changed_status = true;
+			}
+
+			if( isset($theme->changed_status) or isset($theme->changed_version) ) {
+				continue;
+			}
+
+			// Theme is the same
+			$theme->compare = true;
+		}
+
+		// Attached removed themes
+		foreach ($removed_themes as $removed_theme) {
+			$theme_key = array_search( $removed_theme, array_column( $compare_themes ,'name' ) );
+			$theme = $compare_themes[$theme_key];
+			$theme->compare = false;
+			$theme->deleted = true;
+			$quicksaves[$key]->deleted_themes[] = $theme;
+		}
+
+		// Attached removed plugins
+		foreach ($removed_plugins as $removed_plugin) {
+			$plugin_key = array_search( $removed_plugin, array_column( $compare_plugins ,'name' ) );
+			$plugin = $compare_plugins[$plugin_key];
+			$plugin->compare = false;
+			$plugin->deleted = true;
+			$quicksaves[$key]->deleted_plugins[] = $plugin;
+		}
+
 	}
 	return $quicksaves;
 }
