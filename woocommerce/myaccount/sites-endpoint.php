@@ -31,6 +31,10 @@ html {
 	 display:block;
 }
 
+.strikethrough {
+	text-decoration: line-through;
+}
+
 .usage {
 	font-size: 13px;
 	margin: 0 4px;
@@ -64,6 +68,10 @@ html {
 
 .quicksave-table table {
 	width: auto;
+}
+
+.quicksave-table table.v-table tbody td, .quicksave-table table.v-table tbody th {
+	height:40px;
 }
 
 .quicksave-table table tr:hover button.v-btn--flat:before {
@@ -976,7 +984,7 @@ selected: false },
 	          </v-toolbar>
 	          <v-card-text>
 						<v-container>
-							<v-expansion-panel>
+							<v-expansion-panel v-model="dialog_quicksave.panel">
 							  <v-expansion-panel-content v-for="quicksave in dialog_quicksave.quicksaves" lazy style="position:relative;">
 							    <div slot="header" class="text-md-center"><span class="alignleft"><v-icon>settings_backup_restore</v-icon> {{ quicksave.created_at | pretty_timestamp }}</span><span class="body-1">{{ quicksave.git_status }}</span><span class="alignright body-1">WordPress {{ quicksave.core }} - {{ quicksave.plugins.length }} Plugins - {{ quicksave.themes.length }} Themes</span></div>
 									<v-toolbar color="dark primary" dark dense light>
@@ -1029,10 +1037,20 @@ selected: false },
 												hide-actions
 											 >
 											 <template slot="items" slot-scope="props">
+											 <tr v-bind:class="{ 'green lighten-5': props.item.changed_version || props.item.changed_status }">
 												<td>{{ props.item.title }}</td>
-												<td>{{ props.item.version }}</td>
-												<td>{{ props.item.status }}</td>
+												<td v-bind:class="{ 'green lighten-4': props.item.changed_version }">{{ props.item.version }}</td>
+												<td v-bind:class="{ 'green lighten-4': props.item.changed_status }">{{ props.item.status }}</td>
 												<td><v-btn flat small @click="RollbackQuicksave(quicksave.site_id, quicksave.quicksave_id, 'theme', props.item.name)">Rollback</v-btn></td>
+										  </tr>
+											 </template>
+											 <template slot="footer">
+											 <tr class="red lighten-4 strikethrough" v-for="theme in quicksave.deleted_themes">
+												<td>{{ theme.title || theme.name }}</td>
+												<td>{{ theme.version }}</td>
+												<td>{{ theme.status }}</td>
+												<td></td>
+											 </tr>
 											 </template>
 											</v-data-table>
 
@@ -1044,11 +1062,22 @@ selected: false },
 												hide-actions
 											 >
 											 <template slot="items" slot-scope="props">
-												<td>{{ props.item.title }}</td>
-												<td>{{ props.item.version }}</td>
-												<td>{{ props.item.status }}</td>
+											 <tr v-bind:class="[{ 'green lighten-5': props.item.changed_version || props.item.changed_status },{ 'red lighten-4 strikethrough': props.item.deleted }]">
+												<td>{{ props.item.title || props.item.name }}</td>
+												<td v-bind:class="{ 'green lighten-4': props.item.changed_version }">{{ props.item.version }}</td>
+												<td v-bind:class="{ 'green lighten-4': props.item.changed_status }">{{ props.item.status }}</td>
 												<td><v-btn flat small @click="RollbackQuicksave(quicksave.site_id, quicksave.quicksave_id, 'plugin', props.item.name)">Rollback</v-btn></td>
+											 </tr>
 											 </template>
+											 <template slot="footer">
+											 <tr class="red lighten-4 strikethrough" v-for="plugin in quicksave.deleted_plugins">
+												<td>{{ plugin.title || plugin.name }}</td>
+												<td>{{ plugin.version }}</td>
+												<td>{{ plugin.status }}</td>
+												<td></td>
+											 </tr>
+											 </template>
+
 											</v-data-table>
 							    </v-card>
 							  </v-expansion-panel-content>
@@ -1794,7 +1823,7 @@ new Vue({
 		dialog_mailgun: { show: false, site: {}, response: "", loading: false },
 		dialog_usage_breakdown: { show: false, site: {}, response: [], company_name: "" },
 		dialog_toggle: { show: false, site: {} },
-		dialog_quicksave: { show: false, site_id: null, quicksaves: [], search: "" },
+		dialog_quicksave: { show: false, site_id: null, quicksaves: [], search: ""},
 		page: 1,
 		jobs: [],
 		add_site: false,
