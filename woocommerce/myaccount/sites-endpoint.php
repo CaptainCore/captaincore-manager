@@ -2291,6 +2291,7 @@ new Vue({
 						});
 					} else {
 						// Patch in default settings
+						site.environment_selected = "Production";
 						site.loading_themes = false;
 						site.loading_plugins = false;
 						site.themes_selected = [];
