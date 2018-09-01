@@ -258,7 +258,7 @@ class Site {
 
 			// add in ACF fields
 			update_field( 'customer', $site->customers, $site_id );
-			update_field( 'partner', $site->shared_with, $site_id );
+			update_field( 'partner', array_column($site->shared_with,'customer_id'), $site_id );
 			update_field( 'updates_enabled', $site->updates_enabled, $site_id );
 			update_field( 'status', 'active', $site_id );
 

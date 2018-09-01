@@ -615,7 +615,7 @@ selected: false },
 						<v-card-text>
 							<v-container>
 							<v-form ref="form">
-								<v-text-field :value="dialog_new_site.domain" @change.native="dialog_new_sitedialog_new_site.domain = $event.target.value" label="Domain name" required></v-text-field>
+								<v-text-field :value="dialog_new_site.domain" @change.native="dialog_new_site.domain = $event.target.value" label="Domain name" required></v-text-field>
 						    <v-text-field :value="dialog_new_site.site" @change.native="dialog_new_site.site = $event.target.value" label="Site name" required></v-text-field>
 								<v-autocomplete
 								:items="customers"
@@ -646,9 +646,6 @@ selected: false },
 							</v-autocomplete>
 							<v-autocomplete
 							:items="developers"
-							item-text="name"
-							item-value="customer_id"
-							item-text="name"
 							v-model="dialog_new_site.shared_with"
 							label="Shared With"
 							chips
