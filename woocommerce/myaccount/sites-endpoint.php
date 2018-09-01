@@ -1827,6 +1827,7 @@ new Vue({
 		page: 1,
 		jobs: [],
 		add_site: false,
+		current_user_email: "<?php echo $current_user->user_email; ?>",
 		<?php if ( current_user_can('administrator') ) { ?>
 		role: "administrator",
 		new_site: {
@@ -2685,7 +2686,8 @@ new Vue({
 			var data = {
 				action: 'captaincore_install',
 				post_id: site.id,
-				command: 'production-to-staging'
+				command: 'production-to-staging',
+				value: this.current_user_email
 			};
 
 			self = this;
@@ -2709,7 +2711,8 @@ new Vue({
 			var data = {
 				action: 'captaincore_install',
 				post_id: site.id,
-				command: 'staging-to-production'
+				command: 'staging-to-production',
+				value: this.current_user_email
 			};
 
 			self = this;
