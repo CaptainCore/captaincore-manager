@@ -598,7 +598,7 @@ selected: false },
       </v-dialog>
 
 			<v-dialog
-				v-model="add_site"
+				v-model="dialog_new_site.show"
 				fullscreen
 				hide-overlay
 				transition="dialog-bottom-transition"
@@ -606,7 +606,7 @@ selected: false },
 			>
 					<v-card tile>
 						<v-toolbar card dark color="primary">
-							<v-btn icon dark @click.native="add_site = false">
+							<v-btn icon dark @click.native="dialog_new_site.show = false">
 								<v-icon>close</v-icon>
 							</v-btn>
 							<v-toolbar-title>Add Site</v-toolbar-title>
@@ -615,13 +615,13 @@ selected: false },
 						<v-card-text>
 							<v-container>
 							<v-form ref="form">
-								<v-text-field :value="new_site.domain" @change.native="new_site.domain = $event.target.value" label="Domain name" required></v-text-field>
-						    <v-text-field :value="new_site.site" @change.native="new_site.site = $event.target.value" label="Site name" required></v-text-field>
+								<v-text-field :value="dialog_new_site.domain" @change.native="dialog_new_sitedialog_new_site.domain = $event.target.value" label="Domain name" required></v-text-field>
+						    <v-text-field :value="dialog_new_site.site" @change.native="dialog_new_site.site = $event.target.value" label="Site name" required></v-text-field>
 								<v-autocomplete
 								:items="customers"
 								item-text="name"
 								item-value="customer_id"
-								v-model="new_site.customers"
+								v-model="dialog_new_site.customers"
 								item-text="name"
 								label="Customer"
 								chips
@@ -648,8 +648,8 @@ selected: false },
 							:items="developers"
 							item-text="name"
 							item-value="customer_id"
-							v-model="new_site.shared_with"
 							item-text="name"
+							v-model="dialog_new_site.shared_with"
 							label="Shared With"
 							chips
 							multiple
@@ -671,7 +671,7 @@ selected: false },
 							<strong>{{ data.item.name }}</strong>
 						</template>
 						</v-autocomplete>
-						<v-switch label="Automatic Updates" v-model="new_site.updates_enabled" false-value="0" true-value="1"></v-switch>
+						<v-switch label="Automatic Updates" v-model="dialog_new_site.updates_enabled" false-value="0" true-value="1"></v-switch>
 								<v-container grid-list-md text-xs-center>
 									<v-layout row wrap>
 										<v-flex xs12 style="height:0px">
@@ -679,7 +679,7 @@ selected: false },
 											<v-icon>cached</v-icon>
 										</v-btn>
 										</v-flex>
-										<v-flex xs6 v-for="key in new_site.keys" :key="key.index">
+										<v-flex xs6 v-for="key in dialog_new_site.keys" :key="key.index">
 										<v-card class="bordered body-1" style="margin:2em;">
 										<div style="position: absolute;top: -20px;left: 20px;">
 											<v-btn depressed disabled right style="background-color: rgb(229, 229, 229)!important; color: #000 !important; left: -11px; top: 0px; height: 24px;">
@@ -713,7 +713,7 @@ selected: false },
 							<v-alert
 							:value="true"
 							type="error"
-							v-for="error in new_site.errors"
+							v-for="error in dialog_new_site.errors"
 							>
 							{{ error }}
 							</v-alert>
@@ -1227,8 +1227,8 @@ selected: false },
 				</div>
 			</v-layout>
 
-			<div class="text-xs-right" v-if="typeof new_site == 'object'">
-			<v-btn small dark color="blue darken-3" @click="add_site = true">Add Site
+			<div class="text-xs-right" v-if="typeof dialog_new_site == 'object'">
+			<v-btn small dark color="blue darken-3" @click="dialog_new_site.show = true">Add Site
 				<v-icon dark>add</v-icon>
 			</v-btn>
 			</div>
@@ -1826,11 +1826,11 @@ new Vue({
 		dialog_quicksave: { show: false, site_id: null, quicksaves: [], search: ""},
 		page: 1,
 		jobs: [],
-		add_site: false,
 		current_user_email: "<?php echo $current_user->user_email; ?>",
 		<?php if ( current_user_can('administrator') ) { ?>
 		role: "administrator",
-		new_site: {
+		dialog_new_site: {
+			show: false,
 			domain: "",
 			errors: [],
 			updates_enabled: "1",
@@ -1851,7 +1851,7 @@ new Vue({
 		],
 		<?php } else { ?>
 		role: "",
-		new_site: false,
+		dialog_new_site: false,
 		customers: [],
 		shared_with: [],<?php } ?>
 		new_plugin: { show: false, site_id: null},
@@ -2192,35 +2192,35 @@ new Vue({
 		new_site_preload_staging() {
 
 			// Copy production site name to staging field
-			this.new_site.keys[1].site = this.new_site.keys[0].site;
+			this.dialog_new_site.keys[1].site = this.dialog_new_site.keys[0].site;
 
 			// Copy production address to staging field
-			this.new_site.keys[1].address = this.new_site.keys[0].address;
+			this.dialog_new_site.keys[1].address = this.dialog_new_site.keys[0].address;
 
-			if ( this.new_site.keys[0].address.includes(".kinsta.com") ) {
+			if ( this.dialog_new_site.keys[0].address.includes(".kinsta.com") ) {
 				// Copy production username to staging field
-				this.new_site.keys[1].username = this.new_site.keys[0].username;
+				this.dialog_new_site.keys[1].username = this.dialog_new_site.keys[0].username;
 				// Copy production password to staging field (If Kinsta address)
-				this.new_site.keys[1].password = this.new_site.keys[0].password;
+				this.dialog_new_site.keys[1].password = this.dialog_new_site.keys[0].password;
 			} else {
 				// Copy production username to staging field with staging suffix
-				this.new_site.keys[1].username = this.new_site.keys[0].username + "-staging";
+				this.dialog_new_site.keys[1].username = this.dialog_new_site.keys[0].username + "-staging";
 			}
 
 			// Copy production port to staging field
-			this.new_site.keys[1].port = this.new_site.keys[0].port;
+			this.dialog_new_site.keys[1].port = this.dialog_new_site.keys[0].port;
 			// Copy production home directory to staging field
-			this.new_site.keys[1].homedir = this.new_site.keys[0].homedir;
+			this.dialog_new_site.keys[1].homedir = this.dialog_new_site.keys[0].homedir;
 			// Copy production database info to staging fields
-			this.new_site.keys[1].database_username = this.new_site.keys[0].database_username;
-			this.new_site.keys[1].database_password = this.new_site.keys[0].database_password;
+			this.dialog_new_site.keys[1].database_username = this.dialog_new_site.keys[0].database_username;
+			this.dialog_new_site.keys[1].database_password = this.dialog_new_site.keys[0].database_password;
 		},
 		submitNewSite() {
 
 			var data = {
 				'action': 'captaincore_ajax',
 				'command': "newSite",
-				'value': this.new_site
+				'value': this.dialog_new_site
 			};
 
 			self = this;
@@ -2233,14 +2233,14 @@ new Vue({
 					// If error then response
 					if ( response.response.includes("Error:") ) {
 
-						self.new_site.errors = [ response.response ];
+						self.dialog_new_site.errors = [ response.response ];
 						console.log(response.response);
 						return;
 					}
 
 					if ( response.response = "Successfully added new site" ) {
-						self.add_site = false;
-						self.new_site = {
+						self.dialog_new_site = {
+							show: false,
 							domain: "",
 							errors: [],
 							updates_enabled: "1",
