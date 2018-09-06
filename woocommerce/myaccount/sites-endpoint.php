@@ -909,6 +909,133 @@ selected: false },
 					</v-card>
 				</v-dialog>
 				<v-dialog
+					v-model="dialog_edit_site.show"
+					fullscreen
+					hide-overlay
+					transition="dialog-bottom-transition"
+					scrollable
+				>
+				<v-card tile>
+					<v-toolbar card dark color="primary">
+						<v-btn icon dark @click.native="dialog_edit_site.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>Edit Site {{ dialog_edit_site.site.name }}</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text>
+					<v-container>
+						<v-form ref="form">
+							<v-text-field :value="dialog_edit_site.site.name" @change.native="dialog_edit_site.site.name = $event.target.value" label="Domain name" required></v-text-field>
+							<v-text-field :value="dialog_edit_site.site.site" @change.native="dialog_edit_site.site.site = $event.target.value" label="Site name" required></v-text-field>
+							<v-autocomplete
+							:items="customers"
+							item-text="name"
+							item-value="customer_id"
+							v-model="dialog_edit_site.site.customer"
+							:return-object="true"
+							label="Customer"
+							chips
+							multiple
+							small-chips
+							deletable-chips
+						>
+						<template slot="selection" slot-scope="data">
+							<v-chip
+								close
+								@input="data.parent.selectItem(data.item)"
+								:selected="data.selected"
+								class="chip--select-multi"
+								:key="JSON.stringify(data.item)"
+								>
+								<strong>{{ data.item.name }}</strong>
+							</v-chip>
+						</template>
+						<template slot="item" slot-scope="data">
+							<strong>{{ data.item.name }}</strong>
+						</template>
+						</v-autocomplete>
+						<v-autocomplete
+						:items="developers"
+						v-model="dialog_edit_site.site.shared_with"
+						item-text="name"
+						:return-object="true"
+						label="Shared With"
+						chips
+						multiple
+						small-chips
+						deletable-chips
+					>
+					<template slot="selection" slot-scope="data">
+						<v-chip
+							close
+							@input="data.parent.selectItem(data.item)"
+							:selected="data.selected"
+							class="chip--select-multi"
+							:key="JSON.stringify(data.item)"
+							>
+							<strong>{{ data.item.name }}</strong>
+						</v-chip>
+					</template>
+					<template slot="item" slot-scope="data">
+						<strong>{{ data.item.name }}</strong>
+					</template>
+					</v-autocomplete>
+					<v-switch label="Automatic Updates" v-model="dialog_edit_site.updates_enabled" false-value="0" true-value="1"></v-switch>
+							<v-container grid-list-md text-xs-center>
+								<v-layout row wrap>
+									<v-flex xs12 style="height:0px">
+									<v-btn @click="new_site_preload_staging" flat icon center relative color="green" style="top:32px;">
+										<v-icon>cached</v-icon>
+									</v-btn>
+									</v-flex>
+									<v-flex xs6 v-for="key in dialog_edit_site.site.keys" :key="key.index">
+									<v-card class="bordered body-1" style="margin:2em;">
+									<div style="position: absolute;top: -20px;left: 20px;">
+										<v-btn depressed disabled right style="background-color: rgb(229, 229, 229)!important; color: #000 !important; left: -11px; top: 0px; height: 24px;">
+											{{ key.environment }} Environment
+										</v-btn>
+									</div>
+									<v-container fluid>
+									<div row>
+										<v-text-field label="Site Name" :value="key.site" @change.native="key.site = $event.target.value" required></v-text-field>
+										<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required></v-text-field>
+										<v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field>
+										<v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field>
+										<v-text-field label="Protocol" :value="key.protocol" @change.native="key.protocol = $event.target.value" required></v-text-field>
+										<v-text-field label="Port" :value="key.port" @change.native="key.port = $event.target.value" required></v-text-field>
+										<v-text-field label="Home Directory" :value="key.homedir" @change.native="key.homedir = $event.target.value" required></v-text-field>
+										<v-text-field label="Database Username" :value="key.database_username" @change.native="key.database_username = $event.target.value" required></v-text-field>
+										<v-text-field label="Database Password" :value="key.database_password" @change.native="key.database_password = $event.target.value" required></v-text-field>
+										<div v-if="typeof key.use_s3 != 'undefined'">
+											<v-switch label="Use S3" v-model="key.use_s3" false-value="0" true-value="1" left></v-switch>
+											<div v-if="key.use_s3">
+												<v-text-field label="s3 Access Key" :value="key.s3_access_key" @change.native="key.s3_access_key = $event.target.value" required></v-text-field>
+												<v-text-field label="s3 Secret Key" :value="key.s3_secret_key" @change.native="key.s3_secret_key = $event.target.value" required></v-text-field>
+												<v-text-field label="s3 Bucket" :value="key.s3_bucket" @change.native="key.s3_bucket = $event.target.value" required></v-text-field>
+												<v-text-field label="s3 Path" :value="key.s3_path" @change.native="key.s3_path = $event.target.value" required></v-text-field>
+											</div>
+										</div>
+									</div>
+							 </v-container>
+						 </v-card>
+						</v-flex>
+						<v-alert
+						:value="true"
+						type="error"
+						v-for="error in dialog_edit_site.errors"
+						>
+						{{ error }}
+						</v-alert>
+						<v-flex xs12 text-xs-right><v-btn right @click="submitEditSite">Save Changes</v-btn></v-flex>
+					 </v-layout>
+				 </v-container>
+						</v-form>
+					</v-container>
+					</v-card-text>
+					</v-card>
+				</v-dialog>
+				<v-dialog
 					v-model="dialog_apply_https_urls.show"
 					fullscreen
 					hide-overlay
@@ -1637,7 +1764,7 @@ selected: false },
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
 					<v-btn flat @click="copySite(site.id)">Copy Site <v-icon dark small>file_copy</v-icon></v-btn>
-					<v-btn flat @click="submitNewSite" v-show="role == 'administrator'">Edit Site <v-icon dark small>edit</v-icon></v-btn>
+					<v-btn flat @click="editSite(site.id)" v-show="role == 'administrator'">Edit Site <v-icon dark small>edit</v-icon></v-btn>
 					<v-btn flat @click="submitNewSite" v-show="role == 'administrator'">Remove Site <v-icon dark small>delete</v-icon></v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
@@ -1817,6 +1944,7 @@ new Vue({
 		dialog: false,
 		dialog_apply_https_urls: { show: false, site: {} },
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
+		dialog_edit_site: { show: false, site: {} },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $current_user->user_email; ?>", current_user_email: "<?php echo $current_user->user_email; ?>" },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
 		dialog_mailgun: { show: false, site: {}, response: "", loading: false },
@@ -2267,6 +2395,47 @@ new Vue({
 				}
 			});
 		},
+		submitEditSite() {
+
+			var data = {
+				'action': 'captaincore_ajax',
+				'command': "editSite",
+				'value': this.dialog_edit_site.site
+			};
+
+			self = this;
+
+			jQuery.post(ajaxurl, data, function(response) {
+
+				if (tryParseJSON(response)) {
+					var response = JSON.parse(response);
+
+					// If error then response
+					if ( response.response.includes("Error:") ) {
+
+						self.dialog_edit_site.errors = [ response.response ];
+						console.log(response.response);
+						return;
+					}
+
+					if ( response.response = "Successfully updated site" ) {
+						self.dialog_edit_site = { show: false, site: {} };
+						self.fetchSiteInfo( response.site_id );
+
+						// Run prep immediately after site added.
+						var data = {
+							'action': 'captaincore_install',
+							'command': "update",
+							'post_id': response.site_id
+						};
+						jQuery.post(ajaxurl, data, function(response) {
+							console.log(response);
+						});
+
+					}
+				}
+			});
+		},
 		fetchSiteInfo( site_id ) {
 
 			var data = {
@@ -2483,6 +2652,12 @@ new Vue({
 			}).filter(option => option.name != site_name );
 
 			this.sites.map(site => site.name).filter(site => site != site_name );
+		},
+		editSite( site_id ) {
+			site = this.sites.filter(site => site.id == site_id )[0];
+			site_name = site.name;
+			this.dialog_edit_site.show = true;
+			this.dialog_edit_site.site = site;
 		},
 		startCopySite() {
 
