@@ -324,6 +324,108 @@ class Site {
 		return $response;
 	}
 
+	public function update( $site ) {
+
+		// Work with array as PHP object
+		$site = (object) $site;
+
+		// Prep for response to return
+		$response = array();
+
+		// Pull in current user
+		$current_user = wp_get_current_user();
+
+		$site_id = $site->id;
+
+		// Validate site exists
+		if ( get_post_type( $site_id ) != 'captcore_website' ) {
+			$response['response'] = "Error: Site ID not found.";
+			return $response;
+		}
+
+		// Updates post
+		$update_site = array(
+			'ID'          => $site_id,
+			'post_title'  => $site->name,
+			'post_author' => $current_user->ID,
+			'post_type'   => 'captcore_website',
+			'post_status' => 'publish',
+		);
+
+		wp_update_post( $update_site, true );
+
+		if (is_wp_error($site_id)) {
+		    $errors = $site_id->get_error_messages();
+				return $response['response'] = implode( " ", $errors );
+		}
+
+		if ( $site_id ) {
+
+			$response['response'] = "Successfully updated site";
+			$response['site_id']  = $site_id;
+
+			// add in ACF fields
+			update_field( 'customer', array_column($site->customer, 'customer_id'), $site_id );
+			update_field( 'partner', array_column($site->shared_with, 'customer_id'), $site_id );
+			update_field( 'updates_enabled', $site->updates_enabled, $site_id );
+			//update_field( 'status', 'active', $site_id );
+
+			if ( get_field( 'launch_date', $site_id ) == '' ) {
+
+				// No date was entered for Launch Date, assign to today.
+				update_field( 'launch_date', date( 'Ymd' ), $site_id );
+
+			}
+
+			foreach ( $site->keys as $key ) {
+
+				// Work with array as PHP object
+				$key = (object) $key;
+
+				// Add production key
+				if ( $key->environment == 'Production' ) {
+					if ( strpos( $key->address, '.kinsta.com' ) ) {
+						update_field( 'provider', 'kinsta', $site_id );
+					}
+					if ( strpos( $key->address, '.wpengine.com' ) ) {
+						update_field( 'provider', 'wpengine', $site_id );
+					}
+					update_field( 'site', $key->site, $site_id );
+					update_field( 'address', $key->address, $site_id );
+					update_field( 'username', $key->username, $site_id );
+					update_field( 'password', $key->password, $site_id );
+					update_field( 'protocol', $key->protocol, $site_id );
+					update_field( 'port', $key->port, $site_id );
+					update_field( 'homedir', $key->homedir, $site_id );
+					update_field( 's3_access_key', $key->s3_access_key, $site_id );
+					update_field( 's3_secret_key', $key->s3_secret_key, $site_id );
+					update_field( 's3_bucket', $key->s3_bucket, $site_id );
+					update_field( 's3_path', $key->s3_path, $site_id );
+					if ( $key->use_s3 ) {
+						update_field( 'use_s3', '1', $site_id );
+					}
+					update_field( 'database_username', $key->database_username, $site_id );
+					update_field( 'database_password', $key->database_password, $site_id );
+				}
+
+				// Add staging key
+				if ( $key->environment == 'Staging' ) {
+					update_field( 'site_staging', $key->site, $site_id );
+					update_field( 'address_staging', $key->address, $site_id );
+					update_field( 'username_staging', $key->username, $site_id );
+					update_field( 'password_staging', $key->password, $site_id );
+					update_field( 'protocol_staging', $key->protocol, $site_id );
+					update_field( 'port_staging', $key->port, $site_id );
+					update_field( 'homedir_staging', $key->homedir, $site_id );
+					update_field( 'database_username_staging', $key->database_username, $site_id );
+					update_field( 'database_password_staging', $key->database_password, $site_id );
+				}
+			}
+		}
+
+		return $response;
+	}
+
 }
 
 
