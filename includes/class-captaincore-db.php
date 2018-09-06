@@ -182,11 +182,13 @@ class Site {
 			'key_id'      => 1,
 			'link'        => "http://$domain",
 			'environment' => 'Production',
+			'site'        => get_field( 'site', $site->ID ),
 			'address'     => get_field( 'address', $site->ID ),
 			'username'    => get_field( 'username', $site->ID ),
 			'password'    => get_field( 'password', $site->ID ),
 			'protocol'    => get_field( 'protocol', $site->ID ),
 			'port'        => get_field( 'port', $site->ID ),
+			'homedir'     => get_field( 'homedir', $site->ID ),
 		);
 
 		if ( strpos( $production_address, '.kinsta.com' ) ) {
@@ -210,11 +212,13 @@ class Site {
 				'key_id'      => 2,
 				'link'        => $link_staging,
 				'environment' => 'Staging',
+				'site'        => get_field( 'site_staging', $site->ID ),
 				'address'     => get_field( 'address_staging', $site->ID ),
 				'username'    => get_field( 'username_staging', $site->ID ),
 				'password'    => get_field( 'password_staging', $site->ID ),
 				'protocol'    => get_field( 'protocol_staging', $site->ID ),
 				'port'        => get_field( 'port_staging', $site->ID ),
+				'homedir'     => get_field( 'homedir_staging', $site->ID ),
 			);
 
 		}
