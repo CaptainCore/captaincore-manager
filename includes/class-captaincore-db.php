@@ -128,12 +128,14 @@ class Site {
 		$site_details->id   = $site->ID;
 		$site_details->name = get_the_title( $site->ID );
 
-		if ( $customer && $customer[0] ) {
-			$customer_name          = get_post_field( 'post_title', $customer[0], 'raw' );
-			$site_details->customer = array(
-				'customer_id' => "customer_id_$customer[0]",
-				'name'        => $customer_name,
-			);
+		if (  $customer ) {
+			foreach ( $customer as $customer_id ) {
+				$customer_name          = get_post_field( 'post_title', $customer_id, 'raw' );
+				$site_details->customer[] = array(
+					'customer_id' => "$customer_id",
+					'name'        => $customer_name
+				);
+			}
 		}
 				$site_details->users       = array();
 				$site_details->update_logs = array();
@@ -170,7 +172,7 @@ class Site {
 		if ( $shared_with ) {
 			foreach ( $shared_with as $customer_id ) {
 				$site_details->shared_with[] = array(
-					'customer_id' => "shared_id_$customer_id",
+					'customer_id' => "$customer_id",
 					'name'        => get_post_field( 'post_title', $customer_id, 'raw' ),
 				);
 			}
@@ -257,8 +259,8 @@ class Site {
 			$response['site_id']  = $site_id;
 
 			// add in ACF fields
-			update_field( 'customer', $site->customers, $site_id );
-			update_field( 'partner', array_column($site->shared_with,'customer_id'), $site_id );
+			update_field( 'customer', array_column( $site->customer, 'customer_id' ), $site_id );
+			update_field( 'partner', array_column( $site->shared_with, 'customer_id' ), $site_id );
 			update_field( 'updates_enabled', $site->updates_enabled, $site_id );
 			update_field( 'status', 'active', $site_id );
 
