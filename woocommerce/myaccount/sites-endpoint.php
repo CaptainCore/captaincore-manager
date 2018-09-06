@@ -648,6 +648,8 @@ selected: false },
 							:items="developers"
 							v-model="dialog_new_site.shared_with"
 							label="Shared With"
+							item-text="name"
+							:return-object="true"
 							chips
 							multiple
 							small-chips
