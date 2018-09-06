@@ -3617,8 +3617,16 @@ function captaincore_ajax_action_callback() {
 	if ( $cmd == 'newSite' ) {
 
 		// Create new site
-		$new_site = (new CaptainCore\Site)->create( $value );
-		echo json_encode($new_site);
+		$site = ( new CaptainCore\Site )->create( $value );
+		echo json_encode( $site );
+
+	}
+
+	if ( $cmd == 'editSite' ) {
+
+		// Updates site
+		$site = ( new CaptainCore\Site )->update( $value );
+		echo json_encode( $site );
 
 	}
 
