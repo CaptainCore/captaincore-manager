@@ -1558,7 +1558,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Error if site not valid
-	if ( get_post_type( $site_id) != "captcore_website" ) {
+	if ( get_post_type( $site_id ) != "captcore_website" ) {
 		// Create the response object
 		return new WP_Error( 'command_invalid', 'Invalid Command', array( 'status' => 404 ) );
 	}
@@ -1673,7 +1673,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		update_field( 'field_5a9421bc04ed5', $core, $site_id );
 		update_field( 'field_5a944358bf146', $home_url, $site_id );
 
-		echo '{"response":"Completed sync-data for ' . $site_id . '"}';
+		$response = array( "response" => "Completed sync-data for $site_id" );
 
 	}
 
