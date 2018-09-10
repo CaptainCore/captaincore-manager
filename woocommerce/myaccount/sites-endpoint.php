@@ -518,41 +518,41 @@ selected: false },
 		</v-card-text>
 		</v-card>
 		</v-dialog>
-		<v-dialog v-model="update_settings.show" max-width="500px">
+		<v-dialog v-model="dialog_update_settings.show" max-width="500px">
 		<v-card tile>
 			<v-toolbar card dark color="primary">
-				<v-btn icon dark @click.native="update_settings.show = false">
+				<v-btn icon dark @click.native="dialog_update_settings.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
-				<v-toolbar-title>Update settings for {{ update_settings.site_name }}</v-toolbar-title>
+				<v-toolbar-title>Update settings for {{ dialog_update_settings.site_name }}</v-toolbar-title>
 				<v-spacer></v-spacer>
 			</v-toolbar>
 			<v-card-text>
 
-				<v-switch label="Automatic Updates" v-model="update_settings.updates_enabled" false-value="0" true-value="1"></v-switch>
+				<v-switch label="Automatic Updates" v-model="dialog_update_settings.updates_enabled" false-value="0" true-value="1"></v-switch>
 
 				<v-select
-					:items="update_settings.plugins"
+					:items="dialog_update_settings.plugins"
 					item-text="title"
 					item-value="name"
-					v-model="update_settings.exclude_plugins"
+					v-model="dialog_update_settings.exclude_plugins"
 					label="Excluded Plugins"
 					multiple
 					chips
 					persistent-hint
 				></v-select>
 				<v-select
-					:items="update_settings.themes"
+					:items="dialog_update_settings.themes"
 					item-text="title"
 					item-value="name"
-					v-model="update_settings.exclude_themes"
+					v-model="dialog_update_settings.exclude_themes"
 					label="Excluded Themes"
 					multiple
 					chips
 					persistent-hint
 				></v-select>
 
-				<v-progress-linear :indeterminate="true" v-if="update_settings.loading"></v-progress-linear>
+				<v-progress-linear :indeterminate="true" v-if="dialog_update_settings.loading"></v-progress-linear>
 
 				<v-btn @click="saveUpdateSettings()">Save Update Settings</v-btn>
 
@@ -1951,6 +1951,7 @@ new Vue({
 		dialog_usage_breakdown: { show: false, site: {}, response: [], company_name: "" },
 		dialog_toggle: { show: false, site: {} },
 		dialog_quicksave: { show: false, site_id: null, quicksaves: [], search: ""},
+		dialog_update_settings: { show: false, site_id: null, loading: false},
 		page: 1,
 		jobs: [],
 		current_user_email: "<?php echo $current_user->user_email; ?>",
@@ -1984,7 +1985,6 @@ new Vue({
 		new_plugin: { show: false, site_id: null},
 		new_theme: { show: false, site_id: null},
 		bulk_edit: { show: false, site_id: null, type: null, items: [] },
-		update_settings: { show: false, site_id: null, loading: false},
 		upload: [],
 		view_jobs: false,
 		search: null,
@@ -3270,19 +3270,19 @@ new Vue({
 
 		},
 		updateSettings( site_id ) {
-			this.update_settings.show = true;
-			this.update_settings.site_id = site_id;
+			this.dialog_update_settings.show = true;
+			this.dialog_update_settings.site_id = site_id;
 			site = this.sites.filter(site => site.id == site_id)[0];
-			this.update_settings.site_name = site.name;
-			this.update_settings.exclude_plugins = site.exclude_plugins;
-			this.update_settings.exclude_themes = site.exclude_themes;
-			this.update_settings.updates_enabled = site.updates_enabled;
-			this.update_settings.plugins = site.plugins;
-			this.update_settings.themes = site.themes;
+			this.dialog_update_settings.site_name = site.name;
+			this.dialog_update_settings.exclude_plugins = site.exclude_plugins;
+			this.dialog_update_settings.exclude_themes = site.exclude_themes;
+			this.dialog_update_settings.updates_enabled = site.updates_enabled;
+			this.dialog_update_settings.plugins = site.plugins;
+			this.dialog_update_settings.themes = site.themes;
 		},
 		saveUpdateSettings() {
-			this.update_settings.loading = true;
-			site_id = this.update_settings.site_id;
+			this.dialog_update_settings.loading = true;
+			site_id = this.dialog_update_settings.site_id;
 			site = this.sites.filter(site => site.id == site_id)[0];
 			self = this;
 
@@ -3298,14 +3298,14 @@ new Vue({
 				'action': 'captaincore_ajax',
 				'post_id': site_id,
 				'command': "updateSettings",
-				'value': { "exclude_plugins": this.update_settings.exclude_plugins, "exclude_themes": this.update_settings.exclude_themes, "updates_enabled": this.update_settings.updates_enabled }
+				'value': { "exclude_plugins": this.dialog_update_settings.exclude_plugins, "exclude_themes": this.dialog_update_settings.exclude_themes, "updates_enabled": this.dialog_update_settings.updates_enabled }
 			};
 
-			site.exclude_plugins = self.update_settings.exclude_plugins;
-			site.exclude_themes = self.update_settings.exclude_themes;
-			site.updates_enabled = self.update_settings.updates_enabled;
-			self.update_settings.show = false;
-			self.update_settings.loading = false;
+			site.exclude_plugins = self.dialog_update_settings.exclude_plugins;
+			site.exclude_themes = self.dialog_update_settings.exclude_themes;
+			site.updates_enabled = self.dialog_update_settings.updates_enabled;
+			self.dialog_update_settings.show = false;
+			self.dialog_update_settings.loading = false;
 
 			jQuery.post(ajaxurl, data, function(response) {
 
