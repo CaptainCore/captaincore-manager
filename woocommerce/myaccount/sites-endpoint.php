@@ -353,15 +353,20 @@ name: "<?php echo get_the_title( $website->ID ); ?>",
 <?php if ($customer && isset($customer[0])) {
 ?>customer: [{ customer_id: "<?php echo $customer[0]; ?>", name: "<?php echo get_post_field('post_title', $customer[0], 'raw'); ?>"}],<?php } ?>
 <?php if ($shared_with) {
-?>shared_with: [<?php foreach ($shared_with as $customer_id) { ?>{ customer_id: "shared_id_<?php echo $customer_id; ?>", name: "<?php echo get_post_field('post_title', $customer_id, 'raw'); ?>"},<?php } ?>],<?php } ?>
+?>shared_with: [<?php foreach ($shared_with as $customer_id) { ?>{ customer_id: "<?php echo $customer_id; ?>", name: "<?php echo get_post_field('post_title', $customer_id, 'raw'); ?>"},<?php } ?>],<?php } ?>
 <?php if ( $plugins && $plugins != "" ) {
 ?>plugins: <?php echo $plugins; ?>,<?php } else { ?>plugins: [],<?php } ?>
 <?php if ( $themes && $themes != "" ) {
 ?>themes: <?php echo $themes; ?>,<?php } else { ?>themes: [],<?php } ?>
 core: "<?php echo get_field( 'core', $website->ID ); ?>",
 keys: [
-	{ key_id: 1, "link":"http://<?php echo get_the_title( $website->ID ); ?>","environment": "Production", "address": "<?php the_field('address', $website->ID); ?>","username":"<?php the_field('username', $website->ID); ?>","password":"<?php the_field('password', $website->ID); ?>","protocol":"<?php the_field('protocol', $website->ID); ?>","port":"<?php the_field('port', $website->ID); ?>",<?php if ( strpos($production_address, ".kinsta.com") ) { ?>"ssh":"ssh <?php the_field('username', $website->ID); ?>@<?php echo $production_address; ?> -p <?php the_field('port', $website->ID); ?>",<?php } if ( strpos($production_address, ".kinsta.com") and get_field('database_username', $website->ID) ) { ?>"database": "https://mysqleditor-<?php the_field('database_username', $website->ID); ?>.kinsta.com","database_username": "<?php the_field('database_username', $website->ID); ?>","database_password": "<?php the_field('database_password', $website->ID); ?>",<?php } ?>},
-	<?php if (get_field('address_staging', $website->ID)) { ?>{ key_id: 2, "link":"<?php if (strpos( get_field('address_staging', $website->ID), ".kinsta.com") ) { echo "https://staging-". get_field('site_staging', $website->ID).".kinsta.com"; } else { echo "https://". get_field('site_staging', $website->ID). ".staging.wpengine.com"; } ?>","environment": "Staging", "address": "<?php the_field('address_staging', $website->ID); ?>","username":"<?php the_field('username_staging', $website->ID); ?>","password":"<?php the_field('password_staging', $website->ID); ?>","protocol":"<?php the_field('protocol_staging', $website->ID); ?>","port":"<?php the_field('port_staging', $website->ID); ?>"},<?php } ?>
+	{ key_id: 1, "link":"http://<?php echo get_the_title( $website->ID ); ?>","environment": "Production", "site": "<?php the_field('site', $website->ID); ?>", "address": "<?php the_field('address', $website->ID); ?>","username":"<?php the_field('username', $website->ID); ?>","password":"<?php the_field('password', $website->ID); ?>","protocol":"<?php the_field('protocol', $website->ID); ?>","port":"<?php the_field('port', $website->ID); ?>",<?php if ( strpos($production_address, ".kinsta.com") ) { ?>"ssh":"ssh <?php the_field('username', $website->ID); ?>@<?php echo $production_address; ?> -p <?php the_field('port', $website->ID); ?>",<?php } if ( strpos($production_address, ".kinsta.com") and get_field('database_username', $website->ID) ) { ?>"database": "https://mysqleditor-<?php the_field('database_username', $website->ID); ?>.kinsta.com","homedir": "<?php the_field('homedir', $website->ID); ?>","database_username": "<?php the_field('database_username', $website->ID); ?>","database_password": "<?php the_field('database_password', $website->ID); ?>",<?php } ?>},
+	<?php if (get_field('address_staging', $website->ID)) { ?>{ key_id: 2, "link":"<?php
+		if (strpos( get_field('address_staging', $website->ID), ".kinsta.com") ) {
+			echo "https://staging-". get_field('site_staging', $website->ID).".kinsta.com";
+		} else {
+			echo "https://". get_field('site_staging', $website->ID). ".staging.wpengine.com"; }
+		?>","environment": "Staging", "site": "<?php the_field('site_staging', $website->ID); ?>", "address": "<?php the_field('address_staging', $website->ID); ?>","username":"<?php the_field('username_staging', $website->ID); ?>","password":"<?php the_field('password_staging', $website->ID); ?>","protocol":"<?php the_field('protocol_staging', $website->ID); ?>","port":"<?php the_field('port_staging', $website->ID); ?>","homedir": "<?php the_field('homedir_staging', $website->ID); ?>","database_username": "<?php the_field('database_username_staging', $website->ID); ?>","database_password": "<?php the_field('database_password_staging', $website->ID); ?>"},<?php } ?>
 ],
 <?php if ( $home_url ) { ?>home_url: "<?php echo $home_url; ?>",<?php } else { ?>home_url: "",<?php } ?>
 users: [],
@@ -927,7 +932,6 @@ selected: false },
 					<v-container>
 						<v-form ref="form">
 							<v-text-field :value="dialog_edit_site.site.name" @change.native="dialog_edit_site.site.name = $event.target.value" label="Domain name" required></v-text-field>
-							<v-text-field :value="dialog_edit_site.site.site" @change.native="dialog_edit_site.site.site = $event.target.value" label="Site name" required></v-text-field>
 							<v-autocomplete
 							:items="customers"
 							item-text="name"

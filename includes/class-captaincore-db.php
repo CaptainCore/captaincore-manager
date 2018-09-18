@@ -121,6 +121,7 @@ class Site {
 		$production_port     = get_field( 'port', $site->ID );
 		$database_username   = get_field( 'database_username', $site->ID);
 		$staging_address     = get_field( 'address_staging', $site->ID );
+		$staging_username    = get_field( 'username_staging', $site->ID );
 		$home_url            = get_field( 'home_url', $site->ID );
 
 		// Prepare site details to be returned
@@ -220,6 +221,15 @@ class Site {
 				'port'        => get_field( 'port_staging', $site->ID ),
 				'homedir'     => get_field( 'homedir_staging', $site->ID ),
 			);
+
+			if ( strpos( $staging_address, '.kinsta.com' ) ) {
+				$site_details->keys[1]["ssh"] = "ssh ${staging_username}@${staging_address} -p ${production_port}";
+			}
+			if ( strpos( $staging_address, '.kinsta.com' ) and get_field( 'database_username_staging', $site->ID ) ) {
+				$site_details->keys[1]["database"] = "https://mysqleditor-staging-${database_username}.kinsta.com";
+				$site_details->keys[1]["database_username"] = get_field('database_username_staging', $site->ID);
+				$site_details->keys[1]["database_password"] = get_field('database_password_staging', $site->ID);
+			}
 
 		}
 
