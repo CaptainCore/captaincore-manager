@@ -1775,16 +1775,22 @@ selected: false },
 			<v-card>
 				<v-card-title>
 					<div>
-						<v-btn small flat @click="PushProductionToStaging( site.id )">
+						<div v-show="site.server == 'Kinsta'">
+						<v-btn left small flat @click="PushProductionToStaging( site.id )">
 							<v-icon>local_shipping</v-icon> <span>Push Production to Staging</span>
-						</v-btn><br />
-						<v-btn small flat @click="PushStagingToProduction( site.id )">
+						</v-btn>
+						</div>
+						<div v-show="site.server == 'Kinsta'">
+						<v-btn left small flat @click="PushStagingToProduction( site.id )">
 							<v-icon class="reverse">local_shipping</v-icon> <span>Push Staging to Production</span>
-						</v-btn><br />
-						<v-btn small flat @click="viewUsageBreakdown( site.id )">
+						</v-btn>
+						</div>
+						<div>
+						<v-btn left small flat @click="viewUsageBreakdown( site.id )">
 							<v-icon>chrome_reader_mode</v-icon>
 							<span>View Usage Breakdown</span>
-						</v-btn><br />
+						</v-btn>
+						</div>
 					</div>
 				</v-card-title>
 			</v-card>
