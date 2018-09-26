@@ -16,7 +16,7 @@
  * Plugin Name:       CaptainCore GUI
  * Plugin URI:        https://captaincore.io
  * Description:       Open Source Toolkit for Managing WordPress Sites
- * Version:           0.2.8
+ * Version:           0.2.9
  * Author:            Austin Ginder
  * Author URI:        https://twitter.com/austinginder
  * License:           GPL-2.0+

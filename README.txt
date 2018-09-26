@@ -43,6 +43,16 @@ TODO
 TODO
 
 == Changelog ==
+= 0.2.9: September 26, 2018 =
+* NEW: Site class method 'update'
+* NEW: Sites UI - Edit site dialog
+* NEW: Sites UI - Quicksave check dialog
+* NEW: Sites UI - Quicksave compare and highlight changes.
+* Tweak: Upgraded Vue.JS to 2.5.17.
+* Tweak: Permission bug fixes for Quicksaves.
+* Tweak: Fixed bug preventing sites from resetting when cleared.
+* Tweak: Housecleaning - Moved files from /inc/ to /includes/.
+* Tweak: Sites UI - Email notify after site deployments
 
 = 0.2.8: August 20, 2018 =
 * NEW: Overview stats after logged in: "You have access to *** WordPress Sites and DNS for *** domains."
