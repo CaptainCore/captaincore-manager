@@ -1764,7 +1764,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		update_field( 'field_57e0b2b17eb2a', $storage, $site_id );
 		update_field( 'field_57e0b2c07eb2b', $views, $site_id );
 		do_action( 'acf/save_post', $site_id ); // Runs ACF save post hooks
-		return array( "response" => "Completed usage-update for ' . $site_id" );
+		return array( "response" => "Completed usage-update for $site_id" );
 	}
 
 	if ( $server ) {
