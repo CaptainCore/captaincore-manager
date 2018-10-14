@@ -43,6 +43,10 @@ TODO
 TODO
 
 == Changelog ==
+= 0.3.0: October 14 2018 =
+* Tweak: Improved feedback from 'usage-update' request.
+* Tweak: Password reset bug fix on '/my-account/edit-account/' page.
+
 = 0.2.9: September 26, 2018 =
 * NEW: Site class method 'update'
 * NEW: Sites UI - Edit site dialog
