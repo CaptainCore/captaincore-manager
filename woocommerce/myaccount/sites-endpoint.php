@@ -1940,8 +1940,8 @@ sites.forEach(function(site) {
 
 });
 
-all_themes.sort((a, b) => a.name.localeCompare(b.name));
-all_plugins.sort((a, b) => a.name.localeCompare(b.name));
+all_themes.sort((a, b) => a.name.toString().localeCompare(b.name));
+all_plugins.sort((a, b) => a.name.toString().localeCompare(b.name));
 
 all_filters = [{ header: 'Themes' }];
 all_filters = all_filters.concat(all_themes);
