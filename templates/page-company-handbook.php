@@ -10,8 +10,8 @@ if ( ! is_user_logged_in() ) {
 } else {
 	$get_user_id   = get_current_user_id(); // get user ID
 	$get_user_data = get_userdata( $get_user_id ); // get user data
-	$get_roles     = implode( $get_user_data->roles );
-	if ( 'administrator' != $get_roles ) { // check if role name == user role
+	$get_roles     = $get_user_data->roles;
+	if ( ! in_array( "administrator", $get_roles ) ) { // check if role name == user role
 		wp_redirect( home_url( '/my-account/' ) );
 		exit;
 	}
