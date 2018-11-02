@@ -686,70 +686,6 @@ function process_item_log_post_type() {
 
 }
 // add_action( 'init', 'process_item_log_post_type', 0 );
-// Register Custom Post Type
-function server_post_type() {
-
-	$labels       = array(
-		'name'                  => _x( 'Servers', 'Post Type General Name', 'captaincore' ),
-		'singular_name'         => _x( 'Server', 'Post Type Singular Name', 'captaincore' ),
-		'menu_name'             => __( 'Servers', 'captaincore' ),
-		'name_admin_bar'        => __( 'Server', 'captaincore' ),
-		'archives'              => __( 'Server Archives', 'captaincore' ),
-		'parent_item_colon'     => __( 'Parent Server:', 'captaincore' ),
-		'all_items'             => __( 'Servers', 'captaincore' ),
-		'add_new_item'          => __( 'Add New Server', 'captaincore' ),
-		'add_new'               => __( 'Add New', 'captaincore' ),
-		'new_item'              => __( 'New Server', 'captaincore' ),
-		'edit_item'             => __( 'Edit Server', 'captaincore' ),
-		'update_item'           => __( 'Update Server', 'captaincore' ),
-		'view_item'             => __( 'View Server', 'captaincore' ),
-		'search_items'          => __( 'Search Servers', 'captaincore' ),
-		'not_found'             => __( 'Not found', 'captaincore' ),
-		'not_found_in_trash'    => __( 'Not found in Trash', 'captaincore' ),
-		'featured_image'        => __( 'Featured Image', 'captaincore' ),
-		'set_featured_image'    => __( 'Set featured image', 'captaincore' ),
-		'remove_featured_image' => __( 'Remove featured image', 'captaincore' ),
-		'use_featured_image'    => __( 'Use as featured image', 'captaincore' ),
-		'insert_into_item'      => __( 'Insert into server', 'captaincore' ),
-		'uploaded_to_this_item' => __( 'Uploaded to this server', 'captaincore' ),
-		'items_list'            => __( 'Server list', 'captaincore' ),
-		'items_list_navigation' => __( 'Server list navigation', 'captaincore' ),
-		'filter_items_list'     => __( 'Filter items list', 'captaincore' ),
-	);
-	$capabilities = array(
-		'edit_post'          => 'website_edit_post',
-		'read_post'          => 'website_read_post',
-		'delete_post'        => 'website_delete_post',
-		'edit_posts'         => 'website_edit_posts',
-		'edit_others_posts'  => 'website_edit_others_posts',
-		'publish_posts'      => 'website_publish_posts',
-		'read_private_posts' => 'website_read_private_posts',
-	);
-	$args         = array(
-		'label'               => __( 'Server', 'captaincore' ),
-		'description'         => __( 'Server Description', 'captaincore' ),
-		'labels'              => $labels,
-		'supports'            => array(),
-		'hierarchical'        => false,
-		'public'              => false,
-		'show_ui'             => true,
-		'show_in_menu'        => false,
-		'menu_position'       => 10,
-		'menu_icon'           => 'dashicons-building',
-		'show_in_admin_bar'   => true,
-		'show_in_nav_menus'   => true,
-		'can_export'          => true,
-		'has_archive'         => true,
-		'exclude_from_search' => true,
-		'publicly_queryable'  => false,
-		'capability_type'     => 'page',
-		'capabilities'        => $capabilities,
-		'map_meta_cap'        => true,
-	);
-	register_post_type( 'captcore_server', $args );
-
-}
-add_action( 'init', 'server_post_type', 0 );
 
 // Register Custom Post Type
 function snapshot_post_type() {
@@ -821,7 +757,7 @@ function captaincore_website_tabs() {
 	$screen = get_current_screen();
 
 	// Only edit post screen:
-	$pages = array( 'captcore_website', 'captcore_customer', 'captcore_contact', 'captcore_domain', 'captcore_changelog', 'captcore_process', 'captcore_processlog', 'captcore_server', 'captcore_snapshot', 'captcore_quicksave' );
+	$pages = array( 'captcore_website', 'captcore_customer', 'captcore_contact', 'captcore_domain', 'captcore_changelog', 'captcore_process', 'captcore_processlog', 'captcore_snapshot', 'captcore_quicksave' );
 	if ( in_array( $screen->post_type, $pages ) ) {
 		// Before:
 		add_action(

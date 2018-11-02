@@ -33,7 +33,6 @@ a.nav-tab.nav-tab-active span {
 	<a class="nav-tab dashicons-before dashicons-media-spreadsheet<?php if( $screen->post_type == "captcore_changelog") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=captcore_changelog"><span>Web Logs</span></a>
 	<a class="nav-tab dashicons-before dashicons-controls-repeat<?php if( $screen->post_type == "captcore_process") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=captcore_process"><span>Processes</span></a>
 	<a class="nav-tab dashicons-before dashicons-media-spreadsheet<?php if( $screen->post_type == "captcore_processlog") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=captcore_processlog"><span>Process Logs</span></a>
-	<a class="nav-tab dashicons-before dashicons-building<?php if( $screen->post_type == "captcore_server") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=captcore_server"><span>Servers</span></a>
 	<a class="nav-tab dashicons-before dashicons-backup<?php if( $screen->post_type == "captcore_snapshot") { echo " nav-tab-active"; } ?>" href="/wp-admin/edit.php?post_type=captcore_snapshot"><span>Snapshots</span></a>
 </h2>
 <script>
