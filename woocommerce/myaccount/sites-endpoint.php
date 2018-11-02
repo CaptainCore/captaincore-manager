@@ -1454,7 +1454,7 @@ selected: false },
 												 <hr />
 												 <div><span class="caption">Database</span> <a :href="key.database" target="_blank">{{ key.database }}</a></div>
 												 <div><span class="caption">Database Username</span> {{ key.database_username }}</a></div>
-												 <div><span class="caption">Database Password</span> {{ key.database_password }}</a></div>
+												 <div><span class="caption">Database Password</span> <div class="pass-mask">##########</div><div class="pass-reveal">{{ key.database_password }}</div></div>
 												 </div>
 												 <hr />
 												 <div v-if="key.ssh">{{ key.ssh }}</div>
