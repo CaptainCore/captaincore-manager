@@ -1611,7 +1611,7 @@ selected: false },
 					      <td>{{ props.item.user_login }}</td>
 								<td>{{ props.item.display_name }}</td>
 								<td>{{ props.item.user_email }}</td>
-								<td>{{ props.item.roles }}</td>
+								<td>{{ props.item.roles.split(",").join(" ") }}</td>
 								<td>
 									<v-btn small round @click="loginSite(site.id, props.item.user_login)">Login as</v-btn>
 									<v-btn icon class="mx-0" @click="deleteUser(props.item.user_login, site.id)">
