@@ -3590,6 +3590,29 @@ function captaincore_ajax_action_callback() {
 
 	}
 
+	if ( $cmd == 'fetch-one-time-login' ) {
+
+		$home_url = get_field( "home_url", $post_id );
+
+		$args = array(
+			"body" => json_encode( array(
+					"command" => "login",
+					"user_login" => $value,
+					"token" => get_field( "token", $post_id ),
+			) ),
+			"method" => 'POST',
+			"sslverify" => false,
+			"headers" => array('Content-Type' => 'application/json; charset=utf-8'),
+		);
+
+		$response = wp_remote_post( $home_url . "/wp-json/captaincore/v1/login", $args );
+
+		$login_url = json_decode( $response["body"] );
+
+		echo $login_url;
+
+	}
+
 	if ( $run_in_background ) {
 
 		// Generate unique $job_id for tracking
@@ -3759,17 +3782,6 @@ function captaincore_install_action_callback() {
 			// return mock data
 			$command = CAPTAINCORE_DEBUG_MOCK_USERS;
 		}
-	}
-	if ( $cmd == 'login' ) {
-		$command = "captaincore login $site $value";
-
-		$run_in_background = true;
-
-		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
-			// return mock data
-			$command = CAPTAINCORE_DEBUG_MOCK_LOGIN;
-		}
-
 	}
 	if ( $cmd == 'job-fetch' ) {
 		$command = "captaincore job-fetch ${post_id}_${job_id}";

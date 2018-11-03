@@ -2136,26 +2136,19 @@ new Vue({
 
 			// Prep AJAX request
 			var data = {
-				'action': 'captaincore_install',
+				'action': 'captaincore_ajax',
 				'post_id': site_id,
-				'command': "login",
-				'value': username,
-				'background': true
+				'command': "fetch-one-time-login",
+				'value': username
 			};
 
 			self = this;
 
-			jQuery.post(ajaxurl, data, function(response) {
-
-				// Updates job id with reponsed background job id
-				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-
-				// Check if completed in 2 seconds
-				setTimeout(function(){
-					self.jobRetry(site_id, response);
-				}, 2000);
-
-			});
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					window.open( response.data );
+					self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+				});
 
 		},
 		jobRetry( site_id, job_id ) {
@@ -2195,11 +2188,6 @@ new Vue({
 									// Add to site.users
 									site.users =  JSON.parse( response_array[previous_index] );
 								}
-							}
-
-							if ( job.command == "login") {
-								// Opens site
-								window.open(response_array[previous_index]);
 							}
 
 							if ( job.command == "saveUpdateSettings" ){
