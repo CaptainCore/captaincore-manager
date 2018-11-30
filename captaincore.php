@@ -1523,7 +1523,10 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	// Production deploy to staging
 	if ( $command == 'production-to-staging' and $email ) {
 
-		$url         = 'https://staging-' . get_field( 'site_staging', $site_id ) . '.kinsta.com';
+		$staging_address             = get_field( 'address_staging', $site_id );
+		$staging_address_find_ending = strpos( $staging_address,'.kinsta.' ) + 1;
+		$staging_address_ending      = substr( $staging_address, $staging_address_find_ending );
+		$url                         = "https://staging-" . get_field( 'site_staging', $site_id ) . ".${staging_address_ending}";
 
 		// Send out completed email notice
 		$to      = $email;
@@ -1540,9 +1543,12 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	// Kinsta staging deploy to production
 	if ( $command == 'staging-to-production' and $email ) {
 
-		$site_name   = get_field( 'site', $site_id );
-		$domain_name = get_the_title( $site_id );
-		$url         = 'https://' . get_field( 'site', $site_id ) . '.kinsta.com';
+		$site_name                      = get_field( 'site', $site_id );
+		$domain_name                    = get_the_title( $site_id );
+		$production_address             = get_field( 'address', $site_id );
+		$production_address_find_ending = strpos( $production_address,'.kinsta.' ) + 1;
+		$production_address_ending      = substr( $production_address, $production_address_find_ending );
+		$url                            = "https://" . get_field( 'site', $site_id ) . ".${production_address_ending}";
 
 		// Send out completed email notice
 		$to      = $email;
@@ -4721,14 +4727,14 @@ function my_acf_input_admin_footer() {
 			jQuery('#acf-field_57b7a25d2cc60').val(jQuery('#acf-field_5619c94518f1c').val());
 
 			// Copy production username to staging field
-			if (jQuery('#acf-field_5619c94518f1c').val().includes(".kinsta.com") ) {
+			if (jQuery('#acf-field_5619c94518f1c').val().includes(".kinsta.") ) {
 				jQuery('#acf-field_57b7a2642cc61').val(jQuery('#acf-field_5619c97c18f1d').val() );
 			} else {
 				jQuery('#acf-field_57b7a2642cc61').val(jQuery('#acf-field_5619c97c18f1d').val() + "-staging");
 			}
 
 			// Copy production password to staging field (If Kinsta address)
-			if (jQuery('#acf-field_5619c94518f1c').val().includes(".kinsta.com") ) {
+			if (jQuery('#acf-field_5619c94518f1c').val().includes(".kinsta.") ) {
 				jQuery('#acf-field_57b7a26b2cc62').val(jQuery('#acf-field_5619c98218f1e').val());
 			}
 

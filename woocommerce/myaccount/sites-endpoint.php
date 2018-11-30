@@ -360,10 +360,16 @@ name: "<?php echo get_the_title( $website->ID ); ?>",
 ?>themes: <?php echo $themes; ?>,<?php } else { ?>themes: [],<?php } ?>
 core: "<?php echo get_field( 'core', $website->ID ); ?>",
 keys: [
-	{ key_id: 1, "link":"http://<?php echo get_the_title( $website->ID ); ?>","environment": "Production", "site": "<?php the_field('site', $website->ID); ?>", "address": "<?php the_field('address', $website->ID); ?>","username":"<?php the_field('username', $website->ID); ?>","password":"<?php the_field('password', $website->ID); ?>","protocol":"<?php the_field('protocol', $website->ID); ?>","port":"<?php the_field('port', $website->ID); ?>",<?php if ( strpos($production_address, ".kinsta.com") ) { ?>"ssh":"ssh <?php the_field('username', $website->ID); ?>@<?php echo $production_address; ?> -p <?php the_field('port', $website->ID); ?>",<?php } if ( strpos($production_address, ".kinsta.com") and get_field('database_username', $website->ID) ) { ?>"database": "https://mysqleditor-<?php the_field('database_username', $website->ID); ?>.kinsta.com","homedir": "<?php the_field('homedir', $website->ID); ?>","database_username": "<?php the_field('database_username', $website->ID); ?>","database_password": "<?php the_field('database_password', $website->ID); ?>",<?php } ?>},
-	<?php if (get_field('address_staging', $website->ID)) { ?>{ key_id: 2, "link":"<?php
-		if (strpos( get_field('address_staging', $website->ID), ".kinsta.com") ) {
-			echo "https://staging-". get_field('site_staging', $website->ID).".kinsta.com";
+	{ key_id: 1, "link":"http://<?php echo get_the_title( $website->ID ); ?>","environment": "Production", "site": "<?php the_field('site', $website->ID); ?>", "address": "<?php the_field('address', $website->ID); ?>","username":"<?php the_field('username', $website->ID); ?>","password":"<?php the_field('password', $website->ID); ?>","protocol":"<?php the_field('protocol', $website->ID); ?>","port":"<?php the_field('port', $website->ID); ?>",<?php if ( strpos($production_address, ".kinsta.") ) { ?>"ssh":"ssh <?php the_field('username', $website->ID); ?>@<?php echo $production_address; ?> -p <?php the_field('port', $website->ID); ?>",<?php } 
+	if ( strpos($production_address, ".kinsta.") and get_field('database_username', $website->ID) ) { 
+		$production_address_find_ending = strpos( $production_address ,'.kinsta.' ) + 1;
+		$production_address_ending = substr( $production_address, $production_address_find_ending );
+		?>"database": "https://mysqleditor-<?php the_field('database_username', $website->ID); ?>.<?php echo $production_address_ending; ?>","homedir": "<?php the_field('homedir', $website->ID); ?>","database_username": "<?php the_field('database_username', $website->ID); ?>","database_password": "<?php the_field('database_password', $website->ID); ?>",<?php } ?>},
+	<?php if ( $staging_address ) { ?>{ key_id: 2, "link":"<?php
+		if ( strpos( $staging_address, ".kinsta." ) ) {
+			$staging_address_find_ending = strpos( $staging_address ,'.kinsta.' ) + 1;
+			$staging_address_ending = substr( $staging_address, $staging_address_find_ending );
+			echo "https://staging-". get_field('site_staging', $website->ID) .".${staging_address_ending}";
 		} else {
 			echo "https://". get_field('site_staging', $website->ID). ".staging.wpengine.com"; }
 		?>","environment": "Staging", "site": "<?php the_field('site_staging', $website->ID); ?>", "address": "<?php the_field('address_staging', $website->ID); ?>","username":"<?php the_field('username_staging', $website->ID); ?>","password":"<?php the_field('password_staging', $website->ID); ?>","protocol":"<?php the_field('protocol_staging', $website->ID); ?>","port":"<?php the_field('port_staging', $website->ID); ?>","homedir": "<?php the_field('homedir_staging', $website->ID); ?>","database_username": "<?php the_field('database_username_staging', $website->ID); ?>","database_password": "<?php the_field('database_password_staging', $website->ID); ?>"},<?php } ?>
@@ -371,8 +377,8 @@ keys: [
 <?php if ( $home_url ) { ?>home_url: "<?php echo $home_url; ?>",<?php } else { ?>home_url: "",<?php } ?>
 users: [],
 <?php if ( strpos( $production_address, '.wpengine.com' ) !== false ) { ?>server: "WP Engine",<?php } ?>
-<?php if ( strpos( $production_address, '.kinsta.com' ) !== false ) { ?>server: "Kinsta",<?php } ?>
-<?php if ( strpos( $production_address, '.wpengine.com' ) == false && strpos( $production_address, '.kinsta.com' ) == false ) { ?>server: "",<?php } ?>
+<?php if ( strpos( $production_address, '.kinsta.' ) !== false ) { ?>server: "Kinsta",<?php } ?>
+<?php if ( strpos( $production_address, '.wpengine.com' ) == false && strpos( $production_address, '.kinsta.' ) == false ) { ?>server: "",<?php } ?>
 <?php if ($views != 0) { ?>views: "<?php echo number_format($views); ?>"<?php } else { ?>views: ""<?php } ?>,
 storage: "<?php echo $storage_gbs; ?>",
 mailgun: "<?php the_field('mailgun', $website->ID); ?>",
@@ -2322,7 +2328,7 @@ new Vue({
 			// Copy production address to staging field
 			this.dialog_new_site.keys[1].address = this.dialog_new_site.keys[0].address;
 
-			if ( this.dialog_new_site.keys[0].address.includes(".kinsta.com") ) {
+			if ( this.dialog_new_site.keys[0].address.includes(".kinsta.") ) {
 				// Copy production username to staging field
 				this.dialog_new_site.keys[1].username = this.dialog_new_site.keys[0].username;
 				// Copy production password to staging field (If Kinsta address)

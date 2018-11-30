@@ -192,19 +192,22 @@ class Site {
 			'homedir'     => get_field( 'homedir', $site->ID ),
 		);
 
-		if ( strpos( $production_address, '.kinsta.com' ) ) {
+		if ( strpos( $production_address, '.kinsta.' ) ) {
 			$site_details->keys[0]["ssh"] = "ssh ${production_username}@${production_address} -p ${production_port}";
+			$production_address_find_ending = strpos( $production_address,'.kinsta.' ) + 1;
+			$production_address_ending = substr( $production_address, $production_address_find_ending );
 		}
-		if ( strpos( $production_address, '.kinsta.com' ) and get_field( 'database_username', $site->ID ) ) {
-			$site_details->keys[0]["database"] = "https://mysqleditor-${database_username}.kinsta.com";
+		if ( strpos( $production_address, '.kinsta.' ) and get_field( 'database_username', $site->ID ) ) {
+			
+			$site_details->keys[0]["database"] = "https://mysqleditor-${database_username}.${production_address_ending}";
 			$site_details->keys[0]["database_username"] = get_field('database_username', $site->ID);
 			$site_details->keys[0]["database_password"] = get_field('database_password', $site->ID);
 		}
 
 		if ( get_field( 'address_staging', $site->ID ) ) {
 
-			if ( strpos( get_field( 'address_staging', $site->ID ), '.kinsta.com' ) ) {
-				$link_staging = 'https://staging-' . get_field( 'site_staging', $site->ID ) . '.kinsta.com';
+			if ( strpos( get_field( 'address_staging', $site->ID ), '.kinsta.' ) ) {
+				$link_staging = "https://staging-" . get_field( 'site_staging', $site->ID ) . ".${production_address_ending}";
 			} else {
 				$link_staging = 'https://' . get_field( 'site_staging', $site->ID ) . '.staging.wpengine.com';
 			}
@@ -222,11 +225,13 @@ class Site {
 				'homedir'     => get_field( 'homedir_staging', $site->ID ),
 			);
 
-			if ( strpos( $staging_address, '.kinsta.com' ) ) {
+			if ( strpos( $staging_address, '.kinsta.' ) ) {
 				$site_details->keys[1]["ssh"] = "ssh ${staging_username}@${staging_address} -p ${production_port}";
+				$staging_address_find_ending = strpos( $staging_address,'.kinsta.' ) + 1;
+				$staging_address_ending = substr( $staging_address, $staging_address_find_ending );
 			}
-			if ( strpos( $staging_address, '.kinsta.com' ) and get_field( 'database_username_staging', $site->ID ) ) {
-				$site_details->keys[1]["database"] = "https://mysqleditor-staging-${database_username}.kinsta.com";
+			if ( strpos( $staging_address, '.kinsta.' ) and get_field( 'database_username_staging', $site->ID ) ) {
+				$site_details->keys[1]["database"] = "https://mysqleditor-staging-${database_username}.${staging_address_ending}";
 				$site_details->keys[1]["database_username"] = get_field('database_username_staging', $site->ID);
 				$site_details->keys[1]["database_password"] = get_field('database_password_staging', $site->ID);
 			}
@@ -292,7 +297,7 @@ class Site {
 
 				// Add production key
 				if ( $key->environment == 'Production' ) {
-					if ( strpos( $key->address, '.kinsta.com' ) ) {
+					if ( strpos( $key->address, '.kinsta.' ) ) {
 						update_field( 'provider', 'kinsta', $site_id );
 					}
 					if ( strpos( $key->address, '.wpengine.com' ) ) {
@@ -400,7 +405,7 @@ class Site {
 
 				// Add production key
 				if ( $key->environment == 'Production' ) {
-					if ( strpos( $key->address, '.kinsta.com' ) ) {
+					if ( strpos( $key->address, '.kinsta.' ) ) {
 						update_field( 'provider', 'kinsta', $site_id );
 					}
 					if ( strpos( $key->address, '.wpengine.com' ) ) {
