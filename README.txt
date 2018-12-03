@@ -43,6 +43,14 @@ TODO
 TODO
 
 == Changelog ==
+= 0.3.1: Dec 3 2018 =
+* NEW: Sites UI - Quick logins
+* Tweak: Company Handbook - Allow administrators with multiple roles
+* Tweak: Sites UI - Mask database passwords
+* Tweak: Sites UI - Improve display of roles on user listing
+* Tweak: Removed custom post type captcore_server since provider can be inferred directly based off address.
+* Tweak: Support for Kinsta .cloud tld
+
 = 0.3.0: October 14 2018 =
 * Tweak: Improved feedback from 'usage-update' request.
 * Tweak: Password reset bug fix on '/my-account/edit-account/' page.
