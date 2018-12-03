@@ -19,7 +19,7 @@ if ( $role_check ) {
 
 ?>
 
-<link href="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.1.13/vuetify.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.3.11/vuetify.min.css" rel="stylesheet">
 <style>
 
 html {
@@ -43,7 +43,7 @@ html {
 	margin-top: 0px;
 }
 .v-tabs__container--icons-and-text {
-	height: auto;
+	height: 54px;
 }
 .v-tabs__container--fixed-tabs .v-tabs__div, .v-tabs__container--icons-and-text .v-tabs__div {
 	min-width: 0px;
@@ -299,7 +299,7 @@ div.update_logs table tr td:nth-child(1) {
 <script src="https://unpkg.com/qs@6.5.2/dist/qs.js"></script>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 <?php } ?>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.1.13/vuetify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.3.5/vuetify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.9/dist/vue-upload-component.js"></script>
 
 
