@@ -465,7 +465,7 @@ $process_logs = get_posts(array(
 		'meta_query' 			=> array(
 				array(
 					'key' => 'process', // name of custom field
-					'value' => '"' . $process_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+					'value' => '"' . $process_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
 					'compare' => 'LIKE'
 				)
 			)

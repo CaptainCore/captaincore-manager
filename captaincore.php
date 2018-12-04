@@ -839,7 +839,7 @@ function slug_get_paid_by_me( $object, $field_name, $request ) {
 				'relation' => 'AND',
 				array(
 					'key'     => 'paid_by', // name of custom field
-					'value'   => '"' . $post_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+					'value'   => '"' . $post_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
 					'compare' => 'LIKE',
 				),
 				array(
@@ -1294,12 +1294,12 @@ function captaincore_acf_save_post_after( $post_id ) {
 						'relation' => 'AND',
 						array(
 							'key'     => 'status', // name of custom field
-							'value'   => 'active', // matches exaclty "123", not just 123. This prevents a match for "1234"
+							'value'   => 'active', // matches exactly "123", not just 123. This prevents a match for "1234"
 							'compare' => '=',
 						),
 						array(
 							'key'     => 'customer', // name of custom field
-							'value'   => '"' . $customer_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+							'value'   => '"' . $customer_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
 							'compare' => 'LIKE',
 						),
 					),
@@ -2489,12 +2489,12 @@ function checkApiAuth( $result ) {
 						'relation' => 'OR',
 						array(
 							'key'     => 'customer', // name of custom field
-							'value'   => '"' . $id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+							'value'   => '"' . $id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
 							'compare' => 'LIKE',
 						),
 						array(
 							'key'     => 'partner', // name of custom field
-							'value'   => '"' . $id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+							'value'   => '"' . $id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
 							'compare' => 'LIKE',
 						),
 					),
@@ -2561,7 +2561,7 @@ function captaincore_get_domains_per_partner( $partner_id ) {
 				'relation' => 'AND',
 				array(
 					'key'     => 'partner', // name of custom field
-					'value'   => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+					'value'   => '"' . $partner_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
 					'compare' => 'LIKE',
 				),
 			),
@@ -2604,7 +2604,7 @@ function captaincore_get_domains_per_partner( $partner_id ) {
 					'relation' => 'AND',
 					array(
 						'key'     => 'customer', // name of custom field
-						'value'   => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+						'value'   => '"' . $partner_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
 						'compare' => 'LIKE',
 					),
 				),
@@ -2669,7 +2669,7 @@ function captaincore_verify_permissions( $website_id ) {
 					'relation' => 'AND',
 					array(
 						'key'     => 'partner', // name of custom field
-						'value'   => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+						'value'   => '"' . $partner_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
 						'compare' => 'LIKE',
 					),
 				),
@@ -3010,7 +3010,7 @@ function captaincore_verify_permissions_customer( $customer_id ) {
 							'relation' => 'AND',
 							array(
 								'key'     => 'partner', // name of custom field
-								'value'   => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+								'value'   => '"' . $partner_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
 								'compare' => 'LIKE',
 							),
 							array(
@@ -3478,12 +3478,12 @@ function captaincore_ajax_action_callback() {
 					'relation' => 'AND',
 					array(
 						'key'     => 'status', // name of custom field
-						'value'   => 'active', // matches exaclty "123", not just 123. This prevents a match for "1234"
+						'value'   => 'active', // matches exactly "123", not just 123. This prevents a match for "1234"
 						'compare' => '=',
 					),
 					array(
 						'key'     => 'customer', // name of custom field
-						'value'   => '"' . $customer_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+						'value'   => '"' . $customer_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
 						'compare' => 'LIKE',
 					),
 					array(
@@ -4239,7 +4239,7 @@ function captaincore_website_acf_actions( $field ) {
 				'meta_query'     => array(
 					array(
 						'key'     => 'partner', // name of custom field
-						'value'   => '"' . $id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+						'value'   => '"' . $id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
 						'compare' => 'LIKE',
 					),
 				),
@@ -4287,7 +4287,7 @@ function captaincore_website_acf_actions( $field ) {
 				'meta_query'     => array(
 					array(
 						'key'     => 'paid_by', // name of custom field
-						'value'   => '"' . $id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+						'value'   => '"' . $id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
 						'compare' => 'LIKE',
 					),
 				),

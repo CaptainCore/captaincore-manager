@@ -284,7 +284,7 @@ jQuery(document).ready(function(){
 							'meta_query'     => array(
 								array(
 									'key'     => 'process', // name of custom field
-									'value'   => '"' . $id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+									'value'   => '"' . $id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
 									'compare' => 'LIKE',
 								),
 							),

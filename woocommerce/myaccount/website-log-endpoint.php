@@ -51,7 +51,7 @@ endif;
 							'meta_query'			=> array(
 									array(
 										'key' => 'customer', // name of custom field
-										'value' => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+										'value' => '"' . $partner_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
 										'compare' => 'LIKE'
 									),
 							)

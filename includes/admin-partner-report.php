@@ -32,7 +32,7 @@ $args = array (
 	'meta_query' => array(
 		array(
 			'key' => 'partner', // name of custom field
-			'value' => true, // matches exaclty "123", not just 123. This prevents a match for "1234"
+			'value' => true, // matches exactly "123", not just 123. This prevents a match for "1234"
 			'compare' => 'LIKE'
 		)
 	)
@@ -64,7 +64,7 @@ if ( $query->have_posts() ) {
 			    'meta_query' => array(
 					array(
 						'key' => 'partner', // name of custom field
-						'value' => '"' . $id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
+						'value' => '"' . $id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
 						'compare' => 'LIKE'
 					)
 				)
