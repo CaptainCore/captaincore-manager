@@ -1741,6 +1741,32 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 }
 
+function captaincore_customers_func( $request ) {
+
+	$customers = new CaptainCore\Customers();
+	$all_customers = array();
+
+	foreach( $customers->all() as $customer ) {
+		$all_customers[] = ( new CaptainCore\Customer )->get( $customer );
+	}
+
+	return $all_customers;
+
+}
+
+function captaincore_sites_func( $request ) {
+
+	$sites = new CaptainCore\Sites();
+	$all_sites = array();
+	
+	foreach( $sites->all() as $site ) {
+		$all_sites[] = ( new CaptainCore\Site )->get( $site );
+	}
+
+	return $all_sites;
+
+}
+
 function captaincore_site_func( $request ) {
 
 	$site_id = $request['id'];
@@ -1911,6 +1937,24 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/site/(?P<id>[\d]+)', array(
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_func',
+			'show_in_index' => false
+		)
+	);
+
+	// Custom endpoint for CaptainCore site
+	register_rest_route(
+		'captaincore/v1', '/sites/', array(
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_sites_func',
+			'show_in_index' => false
+		)
+	);
+
+	// Custom endpoint for CaptainCore site
+	register_rest_route(
+		'captaincore/v1', '/customers/', array(
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_customers_func',
 			'show_in_index' => false
 		)
 	);
@@ -2711,274 +2755,6 @@ function captaincore_verify_permissions( $website_id ) {
 
 	// No permissions found
 	return false;
-}
-
-// List sites current user has access to
-function captaincore_fetch_customers() {
-
-	$user       = wp_get_current_user();
-	$role_check = in_array( 'administrator', $user->roles );
-
-	// Bail if role not assigned
-	if ( !$role_check ) {
-		return "Error: Please log in.";
-	}
-
-	$customers = get_posts( array(
-		'order'          => 'asc',
-		'orderby'        => 'title',
-		'posts_per_page' => '-1',
-		'post_type'      => 'captcore_customer'
-	) );
-
-	return $customers;
-
-}
-
-// List sites current user has access to
-function captaincore_fetch_sites() {
-
-	$user       = wp_get_current_user();
-	$role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
-	$partner    = get_field( 'partner', 'user_' . get_current_user_id() );
-
-	// Bail if not assigned a role
-	if ( !$role_check ) {
-		return "Error: Please log in.";
-	}
-
-	// Administrators return all sites
-	if ( $partner && $role_check && in_array( 'administrator', $user->roles ) ) {
-		$sites = get_posts( array(
-			'order'          => 'asc',
-			'orderby'        => 'title',
-			'posts_per_page' => '-1',
-			'post_type'      => 'captcore_website',
-			'meta_query'     => array(
-				'relation' => 'AND',
-				array(
-					'key'     => 'status',
-					'value'   => 'closed',
-					'compare' => '!=',
-				),
-		) ) );
-
-		return $sites;
-	}
-
-	// Bail if no partner set.
-	if ( ! is_array($partner) ) {
-		return;
-	}
-
-	// New array to collect IDs
-	$site_ids = array();
-
-	// Loop through each partner assigned to current user
-	foreach ( $partner as $partner_id ) {
-
-	// Load websites assigned to partner
-	$arguments = array(
-		'fields'         => 'ids',
-		'post_type'      => 'captcore_website',
-		'posts_per_page' => '-1',
-		'meta_query'     => array(
-			'relation' => 'AND',
-			array(
-				'key'     => 'partner',
-				'value'   => '"' . $partner_id . '"',
-				'compare' => 'LIKE',
-			),
-			array(
-				'key'     => 'status',
-				'value'   => 'closed',
-				'compare' => '!=',
-			),
-			array(
-				'key'     => 'address',
-				'compare' => 'EXISTS',
-			),
-			array(
-				'key'     => 'address',
-				'value'   => '',
-				'compare' => '!=',
-			),
-		),
-	);
-
-	$sites = new WP_Query( $arguments );
-
-	foreach($sites->posts as $site_id) {
-		if( !in_array($site_id, $site_ids) ) {
-			$site_ids[] = $site_id;
-		}
-	}
-
-	// Load websites assigned to partner
-	$arguments = array(
-		'fields'         => 'ids',
-		'post_type'      => 'captcore_website',
-		'posts_per_page' => '-1',
-		'meta_query'     => array(
-			'relation' => 'AND',
-			array(
-				'key'     => 'customer',
-				'value'   => '"' . $partner_id . '"',
-				'compare' => 'LIKE',
-			),
-			array(
-				'key'     => 'status',
-				'value'   => 'closed',
-				'compare' => '!=',
-			),
-			array(
-				'key'     => 'address',
-				'compare' => 'EXISTS',
-			),
-			array(
-				'key'     => 'address',
-				'value'   => '',
-				'compare' => '!=',
-			),
-		),
-	);
-
-	$sites = new WP_Query( $arguments );
-
-	foreach($sites->posts as $site_id) {
-		if( !in_array($site_id, $site_ids) ) {
-			$site_ids[] = $site_id;
-		}
-	}
-
-	}
-
-	// Bail if no site ids found
-	if ( count($site_ids) == 0 ) {
-		return;
-	}
-
-	$sites = get_posts( array(
-		'include'        => $site_ids,
-		'order'          => 'asc',
-		'orderby'        => 'title',
-		'posts_per_page' => '-1',
-		'post_type'      => 'captcore_website'
-	) );
-
-	return $sites;
-
-}
-
-// Loads all domains for current user
-function captaincore_fetch_domains() {
-
-	$user        = wp_get_current_user();
-	$role_check  = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
-	$partner     = get_field( 'partner', 'user_' . get_current_user_id() );
-	$all_domains = [];
-
-	// Bail if not assigned a role
-	if ( !$role_check ) {
-		return "Error: Please log in.";
-	}
-
-	// Administrators return all sites
-	if ( in_array( 'administrator', $user->roles ) ) {
-		$customers = get_posts( array(
-			'order'          => 'asc',
-			'orderby'        => 'title',
-			'posts_per_page' => '-1',
-			'post_type'      => 'captcore_customer',
-			'meta_query'     => array(
-				'relation' => 'AND',
-				array(
-					'key'     => 'status',
-					'value'   => 'closed',
-					'compare' => '!=',
-				),
-			) ) );
-	}
-
-	if ( in_array( 'subscriber', $user->roles ) or in_array( 'customer', $user->roles ) or in_array( 'partner', $user->roles ) or in_array( 'editor', $user->roles ) ) {
-
-		$customers = array();
-
-		$user_id = get_current_user_id();
-		$partner = get_field( 'partner', 'user_' . get_current_user_id() );
-		if ( $partner ) {
-			foreach ( $partner as $partner_id ) {
-				$websites_for_partner = get_posts(
-					array(
-						'post_type'      => 'captcore_website',
-						'posts_per_page' => '-1',
-						'order'          => 'asc',
-						'orderby'        => 'title',
-						'fields'         => 'ids',
-						'meta_query'     => array(
-							'relation' => 'AND',
-							array(
-								'key'     => 'partner', // name of custom field
-								'value'   => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-								'compare' => 'LIKE',
-							),
-						),
-					)
-				);
-				foreach ( $websites_for_partner as $website ) :
-					$customers[] = get_field( 'customer', $website );
-				endforeach;
-			}
-		}
-		if ( count($customers) == 0 ) {
-			foreach ( $partner as $partner_id ) {
-				$websites_for_partner = get_posts(
-					array(
-						'post_type'      => 'captcore_website',
-						'posts_per_page' => '-1',
-						'order'          => 'asc',
-						'orderby'        => 'title',
-						'fields'         => 'ids',
-						'meta_query'     => array(
-							'relation' => 'AND',
-							array(
-								'key'     => 'customer', // name of custom field
-								'value'   => '"' . $partner_id . '"', // matches exaclty "123", not just 123. This prevents a match for "1234"
-								'compare' => 'LIKE',
-							),
-						),
-					)
-				);
-				foreach ( $websites_for_partner as $website ) :
-					$customers[] = get_field( 'customer', $website );
-				endforeach;
-			}
-		}
-	}
-
-	foreach ( $customers as $customer ) :
-
-		if ( is_array( $customer ) ) {
-			$customer = $customer[0];
-		}
-
-		$domains = get_field( 'domains', $customer );
-		if ( $domains ) {
-			foreach ( $domains as $domain ) :
-				$domain_name = get_the_title( $domain );
-				if ( $domain_name ) {
-					$all_domains[ $domain_name ] = $domain;
-				}
-			endforeach;
-		}
-
-	endforeach;
-
-	// Sort array by domain name
-	ksort( $all_domains );
-
-	return $all_domains;
-
 }
 
 // Checks current user for valid permissions

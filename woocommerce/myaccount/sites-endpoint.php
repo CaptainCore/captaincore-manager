@@ -166,7 +166,6 @@ a.v-tabs__item:hover {
   display:none;
 }
 [v-cloak]::before {
-  content: "Loading...";
   display: block;
   position: relative;
   left: 0%;
@@ -301,16 +300,6 @@ div.update_logs table tr td:nth-child(1) {
 <?php } ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.3.5/vuetify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.9/dist/vue-upload-component.js"></script>
-
-
-<?php
-
-// Loads websites
-$websites = captaincore_fetch_sites();
-$customers = captaincore_fetch_customers();
-
-if ( $websites ) :
-?>
 <script>
 
 ajaxurl = "/wp-admin/admin-ajax.php";
@@ -323,99 +312,6 @@ var pretty_timestamp_options = {
 // Returns: "Monday, Jun 18, 2018, 7:44 PM"
 
 Vue.component('file-upload', VueUploadComponent);
-
-var sites = [
-<?php
-$count = 0;
-foreach ( $websites as $website ) {
-	$plugins = trim( get_field( 'plugins', $website->ID ) );
-	$themes = trim( get_field( 'themes', $website->ID ) );
-	$customer = get_field( 'customer', $website->ID );
-	$shared_with = get_field( 'partner', $website->ID );
-	$storage = get_field('storage', $website->ID);
-	$views = get_field('views', $website->ID);
-	$exclude_themes = get_field('exclude_themes', $website->ID);
-	$exclude_plugins = get_field('exclude_plugins', $website->ID);
-	$updates_enabled = get_post_meta( $website->ID, 'updates_enabled');
-	$production_address = get_field('address', $website->ID);
-	$staging_address = get_field('address_staging', $website->ID);
-	$home_url = get_field('home_url', $website->ID);
-	$storage = get_field('storage', $website->ID);
-	$views = get_field('views', $website->ID);
-	if ($storage) {
-		$storage_gbs = round($storage / 1024 / 1024 / 1024, 1);
-		$storage_gbs = $storage_gbs ."GB";
-	}
-
-	?>
-{ id: <?php echo $website->ID; ?>,
-name: "<?php echo get_the_title( $website->ID ); ?>",
-<?php if ($customer && isset($customer[0])) {
-?>customer: [{ customer_id: "<?php echo $customer[0]; ?>", name: "<?php echo get_post_field('post_title', $customer[0], 'raw'); ?>"}],<?php } ?>
-<?php if ($shared_with) {
-?>shared_with: [<?php foreach ($shared_with as $customer_id) { ?>{ customer_id: "<?php echo $customer_id; ?>", name: "<?php echo get_post_field('post_title', $customer_id, 'raw'); ?>"},<?php } ?>],<?php } ?>
-<?php if ( $plugins && $plugins != "" ) {
-?>plugins: <?php echo $plugins; ?>,<?php } else { ?>plugins: [],<?php } ?>
-<?php if ( $themes && $themes != "" ) {
-?>themes: <?php echo $themes; ?>,<?php } else { ?>themes: [],<?php } ?>
-core: "<?php echo get_field( 'core', $website->ID ); ?>",
-keys: [
-	{ key_id: 1, "link":"http://<?php echo get_the_title( $website->ID ); ?>","environment": "Production", "site": "<?php the_field('site', $website->ID); ?>", "address": "<?php the_field('address', $website->ID); ?>","username":"<?php the_field('username', $website->ID); ?>","password":"<?php the_field('password', $website->ID); ?>","protocol":"<?php the_field('protocol', $website->ID); ?>","port":"<?php the_field('port', $website->ID); ?>",<?php if ( strpos($production_address, ".kinsta.") ) { ?>"ssh":"ssh <?php the_field('username', $website->ID); ?>@<?php echo $production_address; ?> -p <?php the_field('port', $website->ID); ?>",<?php } 
-	if ( strpos($production_address, ".kinsta.") and get_field('database_username', $website->ID) ) { 
-		$production_address_find_ending = strpos( $production_address ,'.kinsta.' ) + 1;
-		$production_address_ending = substr( $production_address, $production_address_find_ending );
-		?>"database": "https://mysqleditor-<?php the_field('database_username', $website->ID); ?>.<?php echo $production_address_ending; ?>","homedir": "<?php the_field('homedir', $website->ID); ?>","database_username": "<?php the_field('database_username', $website->ID); ?>","database_password": "<?php the_field('database_password', $website->ID); ?>",<?php } ?>},
-	<?php if ( $staging_address ) { ?>{ key_id: 2, "link":"<?php
-		if ( strpos( $staging_address, ".kinsta." ) ) {
-			$staging_address_find_ending = strpos( $staging_address ,'.kinsta.' ) + 1;
-			$staging_address_ending = substr( $staging_address, $staging_address_find_ending );
-			echo "https://staging-". get_field('site_staging', $website->ID) .".${staging_address_ending}";
-		} else {
-			echo "https://". get_field('site_staging', $website->ID). ".staging.wpengine.com"; }
-		?>","environment": "Staging", "site": "<?php the_field('site_staging', $website->ID); ?>", "address": "<?php the_field('address_staging', $website->ID); ?>","username":"<?php the_field('username_staging', $website->ID); ?>","password":"<?php the_field('password_staging', $website->ID); ?>","protocol":"<?php the_field('protocol_staging', $website->ID); ?>","port":"<?php the_field('port_staging', $website->ID); ?>","homedir": "<?php the_field('homedir_staging', $website->ID); ?>","database_username": "<?php the_field('database_username_staging', $website->ID); ?>","database_password": "<?php the_field('database_password_staging', $website->ID); ?>"},<?php } ?>
-],
-<?php if ( $home_url ) { ?>home_url: "<?php echo $home_url; ?>",<?php } else { ?>home_url: "",<?php } ?>
-users: [],
-<?php if ( strpos( $production_address, '.wpengine.com' ) !== false ) { ?>server: "WP Engine",<?php } ?>
-<?php if ( strpos( $production_address, '.kinsta.' ) !== false ) { ?>server: "Kinsta",<?php } ?>
-<?php if ( strpos( $production_address, '.wpengine.com' ) == false && strpos( $production_address, '.kinsta.' ) == false ) { ?>server: "",<?php } ?>
-<?php if ($views != 0) { ?>views: "<?php echo number_format($views); ?>"<?php } else { ?>views: ""<?php } ?>,
-storage: "<?php echo $storage_gbs; ?>",
-mailgun: "<?php the_field('mailgun', $website->ID); ?>",
-update_logs: [],
-<?php if ( $exclude_themes ) {
-$exclude_themes = explode(",", $exclude_themes);
-$exclude_themes_formatted = '"' . implode ( '", "', $exclude_themes ) . '"';
-?>
-exclude_themes: [<?php echo $exclude_themes_formatted; ?>],<?php } else { ?>exclude_themes: [],<?php } ?>
-<?php if ( $exclude_plugins ) {
-$exclude_plugins = explode(",", $exclude_plugins);
-$exclude_plugins_formatted = '"' . implode ( '", "', $exclude_plugins ) . '"';
-?>
-exclude_plugins: [<?php echo $exclude_plugins_formatted; ?>],<?php } else { ?>exclude_plugins: [],<?php } ?>
-updates_enabled: <?php if ($updates_enabled && $updates_enabled[0] == "1" ) { echo '"1"'; } else { echo '"0"'; } ?>,
-loading_themes: false,
-loading_plugins: false,
-themes_selected: [],
-plugins_selected: [],
-users_selected: [],
-environment_selected: "Production",
-tabs: 'tab-Site-Management',
-tabs_management: 'tab-Keys',
-pagination: {
-	sortBy: 'roles'
-},
-update_logs_pagination: {
-	sortBy: 'date',
-	descending: true
-},
-filtered: true,
-selected: false },
-<?php
-	$count++;
-}
-?>
-];
 </script>
 <div id="app" v-cloak>
 	<v-app>
@@ -1222,7 +1118,7 @@ selected: false },
 					</v-card-text>
 				</v-card>
 			</v-dialog>
-			<v-container fluid>
+			<v-container fluid v-show="loading_sites != true">
 			<v-layout row wrap>
       <v-flex xs4>
 				Sites per page <v-select
@@ -1818,6 +1714,9 @@ selected: false },
 				</v-container>
 			</template>
 			</v-container>
+			<v-container fluid v-show="loading_sites">
+				Loading...
+			</v-container>
 			<v-snackbar
 				:timeout="3000"
 				:multi-line="true"
@@ -1912,51 +1811,10 @@ catch (e) { }
 return false;
 };
 
-all_themes = [];
-all_plugins = [];
-sites.forEach(function(site) {
-
-	site.themes.forEach(function(theme) {
-		exists = all_themes.some(function (el) {
-			return el.name === theme.name;
-		});
-		if (!exists) {
-			all_themes.push({
-				name: theme.name,
-				title: theme.title,
-				search: theme.title + " ("+ theme.name +")",
-				type: 'theme'
-			});
-		}
-	});
-
-	site.plugins.forEach(function(plugin) {
-		exists = all_plugins.some(function (el) {
-			return el.name === plugin.name;
-		});
-		if (!exists) {
-			all_plugins.push({
-				name: plugin.name,
-				title: plugin.title,
-				search: plugin.title + " ("+ plugin.name +")",
-				type: 'plugin'
-			});
-		}
-	});
-
-});
-
-all_themes.sort((a, b) => a.name.toString().localeCompare(b.name));
-all_plugins.sort((a, b) => a.name.toString().localeCompare(b.name));
-
-all_filters = [{ header: 'Themes' }];
-all_filters = all_filters.concat(all_themes);
-all_filters.push({ header: 'Plugins' })
-all_filters = all_filters.concat(all_plugins);
-
 new Vue({
 	el: '#app',
 	data: {
+		loading_sites: true,
 		dialog: false,
 		dialog_apply_https_urls: { show: false, site: {} },
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
@@ -1985,11 +1843,7 @@ new Vue({
 				{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","database_username":"","database_password":"" }
 			],
 		},
-		customers: [
-			<?php foreach ($customers as $customer) { ?>
-			{customer_id: "<?php echo $customer->ID; ?>", name: "<?php echo $customer->post_title; ?>", developer: <?php if( get_field('partner', $customer->ID ) ) { echo "true"; } else { echo "false"; } ?> },
-			<?php } ?>
-		],
+		customers: [],
 		shared_with: [
 
 		],
@@ -2009,10 +1863,10 @@ new Vue({
 		business_name: "<?php echo $business_name; ?>",
 		business_link: "<?php echo $business_link; ?>",
 		site_selected: null,
-		site_filters: all_filters,
+		site_filters: [],
 		site_filter_version: null,
 		site_filter_status: null,
-		sites: sites,
+		sites: [],
 		headers: [
 			{ text: 'Name', value: 'name' },
 			{ text: 'Slug', value: 'slug' },
@@ -2085,6 +1939,67 @@ new Vue({
 			formatted_date = new Date(date).toLocaleTimeString("en-us", pretty_timestamp_options);
 			return formatted_date;
 		}
+	},
+	mounted() {
+		axios.get(
+				'/wp-json/captaincore/v1/customers', {
+					headers: {'X-WP-Nonce':wpApiSettings.nonce}
+				})
+				.then(response => {
+					this.customers = response.data;
+				});
+		axios.get(
+				'/wp-json/captaincore/v1/sites', {
+					headers: {'X-WP-Nonce':wpApiSettings.nonce}
+				})
+				.then(response => {
+					this.sites = response.data;
+
+					all_themes = [];
+					all_plugins = [];
+
+					this.sites.forEach(function(site) {
+
+					site.themes.forEach(function(theme) {
+						exists = all_themes.some(function (el) {
+							return el.name === theme.name;
+						});
+						if (!exists) {
+							all_themes.push({
+								name: theme.name,
+								title: theme.title,
+								search: theme.title + " ("+ theme.name +")",
+								type: 'theme'
+							});
+						}
+					});
+
+					site.plugins.forEach(function(plugin) {
+						exists = all_plugins.some(function (el) {
+							return el.name === plugin.name;
+						});
+						if (!exists) {
+							all_plugins.push({
+								name: plugin.name,
+								title: plugin.title,
+								search: plugin.title + " ("+ plugin.name +")",
+								type: 'plugin'
+							});
+						}
+					});
+
+					});
+
+					all_themes.sort((a, b) => a.name.toString().localeCompare(b.name));
+					all_plugins.sort((a, b) => a.name.toString().localeCompare(b.name));
+
+					all_filters = [{ header: 'Themes' }];
+					all_filters = all_filters.concat(all_themes);
+					all_filters.push({ header: 'Plugins' })
+					all_filters = all_filters.concat(all_plugins);
+					this.site_filters = all_filters;
+					this.loading_sites = false;
+			});
 	},
 	computed: {
 		paginatedSites() {
@@ -3663,9 +3578,6 @@ jQuery( document ).ready(function() {
 });
 
 </script>
-
-<?php endif; ?>
-
 
 <?php } else { ?>
 

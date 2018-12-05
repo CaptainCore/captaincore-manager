@@ -100,11 +100,338 @@ class quicksaves extends DB {
 
 }
 
+class Customers {
+
+	protected $customers = [];
+
+	public function __construct( $customers = [] ) {
+
+		$user       = wp_get_current_user();
+		$role_check = in_array( 'administrator', $user->roles );
+
+		// Bail if role not assigned
+		if ( !$role_check ) {
+			return "Error: Please log in.";
+		}
+
+		$customers = get_posts( array(
+			'order'          => 'asc',
+			'orderby'        => 'title',
+			'posts_per_page' => '-1',
+			'post_type'      => 'captcore_customer'
+		) );
+
+		$this->customers = $customers;
+
+	}
+
+	public function all() {
+		return $this->customers;
+	}
+
+}
+
+class Customer {
+
+	public function get( $customer ) {
+
+		// Prepare site details to be returned
+		$customer_details              = new \stdClass();
+		$customer_details->customer_id = $customer->ID;
+		$customer_details->name        = $customer->post_title;
+
+		if( get_field('partner', $customer->ID ) ) { 
+			$customer_details->developer = true;
+		} else { 
+			$customer_details->developer = false;
+		} 
+
+		return $customer_details;
+
+	}
+
+}
+
+class Domains {
+
+	protected $domains = [];
+
+	public function __construct( $domains = [] ) {
+
+		$user        = wp_get_current_user();
+		$role_check  = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
+		$partner     = get_field( 'partner', 'user_' . get_current_user_id() );
+		$all_domains = [];
+
+		// Bail if not assigned a role
+		if ( !$role_check ) {
+			return "Error: Please log in.";
+		}
+
+		// Administrators return all sites
+		if ( in_array( 'administrator', $user->roles ) ) {
+			$customers = get_posts( array(
+				'order'          => 'asc',
+				'orderby'        => 'title',
+				'posts_per_page' => '-1',
+				'post_type'      => 'captcore_customer',
+				'meta_query'     => array(
+					'relation' => 'AND',
+					array(
+						'key'     => 'status',
+						'value'   => 'closed',
+						'compare' => '!=',
+					),
+				) ) );
+		}
+
+		if ( in_array( 'subscriber', $user->roles ) or in_array( 'customer', $user->roles ) or in_array( 'partner', $user->roles ) or in_array( 'editor', $user->roles ) ) {
+
+			$customers = array();
+
+			$user_id = get_current_user_id();
+			$partner = get_field( 'partner', 'user_' . get_current_user_id() );
+			if ( $partner ) {
+				foreach ( $partner as $partner_id ) {
+					$websites_for_partner = get_posts(
+						array(
+							'post_type'      => 'captcore_website',
+							'posts_per_page' => '-1',
+							'order'          => 'asc',
+							'orderby'        => 'title',
+							'fields'         => 'ids',
+							'meta_query'     => array(
+								'relation' => 'AND',
+								array(
+									'key'     => 'partner', // name of custom field
+									'value'   => '"' . $partner_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+									'compare' => 'LIKE',
+								),
+							),
+						)
+					);
+					foreach ( $websites_for_partner as $website ) :
+						$customers[] = get_field( 'customer', $website );
+					endforeach;
+				}
+			}
+			if ( count($customers) == 0 ) {
+				foreach ( $partner as $partner_id ) {
+					$websites_for_partner = get_posts(
+						array(
+							'post_type'      => 'captcore_website',
+							'posts_per_page' => '-1',
+							'order'          => 'asc',
+							'orderby'        => 'title',
+							'fields'         => 'ids',
+							'meta_query'     => array(
+								'relation' => 'AND',
+								array(
+									'key'     => 'customer', // name of custom field
+									'value'   => '"' . $partner_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+									'compare' => 'LIKE',
+								),
+							),
+						)
+					);
+					foreach ( $websites_for_partner as $website ) :
+						$customers[] = get_field( 'customer', $website );
+					endforeach;
+				}
+			}
+		}
+
+		foreach ( $customers as $customer ) :
+
+			if ( is_array( $customer ) ) {
+				$customer = $customer[0];
+			}
+
+			$domains = get_field( 'domains', $customer );
+			if ( $domains ) {
+				foreach ( $domains as $domain ) :
+					$domain_name = get_the_title( $domain );
+					if ( $domain_name ) {
+						$all_domains[ $domain_name ] = $domain;
+					}
+				endforeach;
+			}
+
+		endforeach;
+
+		// Sort array by domain name
+		ksort( $all_domains );
+
+		$this->domains = $all_domains;
+	}
+
+	public function all() {
+		return $this->domains;
+	}
+
+}
+
+class Sites {
+
+	protected $sites = [];
+
+	public function __construct( $sites = [] ) {
+		$user       = wp_get_current_user();
+		$role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
+		$partner    = get_field( 'partner', 'user_' . get_current_user_id() );
+
+		// New array to collect IDs
+		$site_ids = array();
+
+		// Bail if not assigned a role
+		if ( !$role_check ) {
+			return "Error: Please log in.";
+		}
+
+		// Administrators return all sites
+		if ( $partner && $role_check && in_array( 'administrator', $user->roles ) ) {
+			$sites = get_posts( array(
+				'order'          => 'asc',
+				'orderby'        => 'title',
+				'posts_per_page' => '-1',
+				'post_type'      => 'captcore_website',
+				'meta_query'     => array(
+					'relation' => 'AND',
+					array(
+						'key'     => 'status',
+						'value'   => 'closed',
+						'compare' => '!=',
+					),
+			) ) );
+
+			$this->sites = $sites;
+			return;
+		}
+
+		// Bail if no partner set.
+		if ( !is_array( $partner ) ) {
+			return;
+		}
+
+		// Loop through each partner assigned to current user
+		foreach ( $partner as $partner_id ) {
+
+			// Load websites assigned to partner
+			$arguments = array(
+				'fields'         => 'ids',
+				'post_type'      => 'captcore_website',
+				'posts_per_page' => '-1',
+				'meta_query'     => array(
+					'relation' => 'AND',
+					array(
+						'key'     => 'partner',
+						'value'   => '"' . $partner_id . '"',
+						'compare' => 'LIKE',
+					),
+					array(
+						'key'     => 'status',
+						'value'   => 'closed',
+						'compare' => '!=',
+					),
+					array(
+						'key'     => 'address',
+						'compare' => 'EXISTS',
+					),
+					array(
+						'key'     => 'address',
+						'value'   => '',
+						'compare' => '!=',
+					),
+				),
+			);
+
+			$sites = new \WP_Query( $arguments );
+			foreach($sites->posts as $site_id) {
+				if( !in_array($site_id, $site_ids) ) {
+					$site_ids[] = $site_id;
+				}
+			}
+
+			// Load websites assigned to partner
+			$arguments = array(
+				'fields'         => 'ids',
+				'post_type'      => 'captcore_website',
+				'posts_per_page' => '-1',
+				'meta_query'     => array(
+					'relation' => 'AND',
+					array(
+						'key'     => 'customer',
+						'value'   => '"' . $partner_id . '"',
+						'compare' => 'LIKE',
+					),
+					array(
+						'key'     => 'status',
+						'value'   => 'closed',
+						'compare' => '!=',
+					),
+					array(
+						'key'     => 'address',
+						'compare' => 'EXISTS',
+					),
+					array(
+						'key'     => 'address',
+						'value'   => '',
+						'compare' => '!=',
+					),
+				),
+			);
+
+			$sites = new \WP_Query( $arguments );
+
+			foreach($sites->posts as $site_id) {
+				if( !in_array($site_id, $site_ids) ) {
+					$site_ids[] = $site_id;
+				}
+			}
+
+		}
+
+		// Bail if no site ids found
+		if ( count($site_ids) == 0 ) {
+			return;
+		}
+
+		$sites = get_posts( array(
+			'order'          => 'asc',
+			'orderby'        => 'title',
+			'posts_per_page' => '-1',
+			'post_type'      => 'captcore_website',
+			'include'		 => $site_ids,
+			'meta_query'     => array(
+				'relation' => 'AND',
+				array(
+					'key'     => 'status',
+					'value'   => 'closed',
+					'compare' => '!=',
+				),
+		) ) );
+		$this->sites = $sites;
+		return;
+		
+	}
+
+	public function all() {
+		return $this->sites;
+	}
+
+}
+
 class Site {
 
 	public function get( $site_id ) {
 
-		$site = get_post( $site_id );
+		if ( is_object( $site_id ) ) {
+			$site = $site_id;
+		}
+
+		if ( !$site ) {
+			$site = get_post( $site_id );
+		}
 
 		$domain              = get_the_title( $site->ID );
 		$plugins             = json_decode( get_field( 'plugins', $site->ID ) );
@@ -112,7 +439,12 @@ class Site {
 		$customer            = get_field( 'customer', $site->ID );
 		$shared_with         = get_field( 'partner', $site->ID );
 		$storage             = get_field( 'storage', $site->ID );
+		if ($storage) {
+			$storage_gbs = round($storage / 1024 / 1024 / 1024, 1);
+			$storage_gbs = $storage_gbs ."GB";
+		}
 		$views               = get_field( 'views', $site->ID );
+		$mailgun             = get_field( 'mailgun', $site->ID );
 		$exclude_themes      = get_field( 'exclude_themes', $site->ID );
 		$exclude_plugins     = get_field( 'exclude_plugins', $site->ID );
 		$updates_enabled     = get_post_meta( $site->ID, 'updates_enabled' );
@@ -123,11 +455,43 @@ class Site {
 		$staging_address     = get_field( 'address_staging', $site->ID );
 		$staging_username    = get_field( 'username_staging', $site->ID );
 		$home_url            = get_field( 'home_url', $site->ID );
+		if ( strpos( $production_address, '.wpengine.com' ) !== false ) { 
+			$server = "WP Engine";
+		} 
+        if ( strpos( $production_address, '.kinsta.' ) !== false ) { 
+			$server = "Kinsta";
+		}
 
 		// Prepare site details to be returned
 		$site_details       = new \stdClass();
 		$site_details->id   = $site->ID;
 		$site_details->name = get_the_title( $site->ID );
+		$site_details->filtered = true;
+		$site_details->selected = false;
+		$site_details->loading_plugins = false;
+		$site_details->loading_themes = false;
+		$site_details->environment_selected = "Production";
+		$site_details->mailgun = $mailgun;
+		$site_details->tabs = "tab-Site-Management";
+		$site_details->tabs_management = "tab-Keys";
+		$site_details->storage = $storage_gbs;
+		$site_details->server = $server;
+		if (is_string($views)) {
+			$site_details->views = number_format($views);
+		}
+		$site_details->exclude_themes = $exclude_themes;
+		$site_details->exclude_plugins = $exclude_plugins;
+		$site_details->update_logs = array();
+		$site_details->update_logs_pagination = array( "descending" => true, "sortBy" => "date" );
+		$site_details->updates_enabled = $updates_enabled;
+		$site_details->themes_selected = array();
+		$site_details->plugins_selected = array();
+		$site_details->users_selected = array();
+		$site_details->pagination = array( "sortBy" => "roles" );
+
+		if ( $site_details->views == 0 ) {
+			$site_details->views = "";
+		}
 
 		if (  $customer ) {
 			foreach ( $customer as $customer_id ) {

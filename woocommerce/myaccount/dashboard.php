@@ -22,8 +22,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
 
-$websites = captaincore_fetch_sites();
-$domains = captaincore_fetch_domains();
+$sites = new CaptainCore\Sites();
+$domains = new CaptainCore\Domains();
+
 ?>
 
 <p><?php
@@ -40,7 +41,7 @@ $domains = captaincore_fetch_domains();
 			<div class="card">
 				<div class="card-content row">
 				<div class="col s12">
-					You have access to <a href="/my-account/sites/"><?php echo count( $websites ); ?> WordPress Sites</a> and DNS for <a href="/my-account/dns/"><?php echo count( $domains ); ?> domains</a>.
+					You have access to <a href="/my-account/sites/"><?php echo count( $sites->all() ); ?> WordPress Sites</a> and DNS for <a href="/my-account/dns/"><?php echo count( $domains->all() ); ?> domains</a>.
 				</div>
 				</div>
 			</div>
