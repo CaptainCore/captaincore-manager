@@ -1299,7 +1299,7 @@ Vue.component('file-upload', VueUploadComponent);
 							</v-tabs>
 						<v-tabs-items v-model="site.tabs">
 
-							<v-tab-item id="tab-Site-Management">
+							<v-tab-item value="tab-Site-Management">
 
 								<v-tabs v-model="site.tabs_management" color="grey lighten-4" right icons-and-text>
 									<v-select
@@ -1308,7 +1308,7 @@ Vue.component('file-upload', VueUploadComponent);
 										item-text="name"
 										item-value="value"
 										light
-										style="max-width: 230px; margin: 0px auto 0px 16px; top: 8px;"></v-select>
+										style="max-width: 230px; margin: 0px auto 0px 16px; top: 0px;"></v-select>
 
 									<v-tab key="Keys" href="#tab-Keys">
 									  Keys <v-icon small style="margin-left:7px;">fas fa-key</v-icon>
@@ -1333,8 +1333,8 @@ Vue.component('file-upload', VueUploadComponent);
 									</v-tab>
 								</v-tabs>
 								<v-tabs-items v-model="site.tabs_management" v-if="site.keys.filter( key => key.environment == site.environment_selected ).length == 1">
-									<v-tab-item :key="1" id="tab-Keys">
-										<v-toolbar color="grey lighten-4" dense light>
+									<v-tab-item :key="1" value="tab-Keys">
+										<v-toolbar color="grey lighten-4" dense light flat>
 											<v-toolbar-title>Keys</v-toolbar-title>
 											<v-spacer></v-spacer>
 										</v-toolbar>
@@ -1366,8 +1366,8 @@ Vue.component('file-upload', VueUploadComponent);
 									 </v-container>
 								 </v-card>
 								</v-tab-item>
-								<v-tab-item :key="2" id="tab-Themes">
-									<v-toolbar color="grey lighten-4" dense light>
+								<v-tab-item :key="2" value="tab-Themes">
+									<v-toolbar color="grey lighten-4" dense light flat>
 										<v-toolbar-title>Themes</v-toolbar-title>
 										<v-spacer></v-spacer>
 										<v-toolbar-items v-show="site.environment_selected == 'Production'">
@@ -1414,8 +1414,8 @@ Vue.component('file-upload', VueUploadComponent);
 									 </template>
 								 </v-data-table>
 							</v-tab-item>
-			<v-tab-item :key="3" id="tab-Plugins">
-				<v-toolbar color="grey lighten-4" dense light>
+			<v-tab-item :key="3" value="tab-Plugins">
+				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Plugins</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items v-show="site.environment_selected == 'Production'">
@@ -1473,8 +1473,8 @@ Vue.component('file-upload', VueUploadComponent);
 				 </template>
 				</v-data-table>
 		  </v-tab-item>
-			<v-tab-item :key="4" id="tab-Users">
-				<v-toolbar color="grey lighten-4" dense light>
+			<v-tab-item :key="4" value="tab-Users">
+				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Users</v-toolbar-title>
 					<v-spacer></v-spacer v-show="site.environment_selected == 'Production'">
 					<v-toolbar-items>
@@ -1525,8 +1525,8 @@ Vue.component('file-upload', VueUploadComponent);
 					</div>
 				</v-card>
 			</v-tab-item>
-			<v-tab-item :key="5" id="tab-Updates">
-				<v-toolbar color="grey lighten-4" dense light>
+			<v-tab-item :key="5" value="tab-Updates">
+				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Update Logs</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items v-show="site.environment_selected == 'Production'">
@@ -1564,8 +1564,8 @@ Vue.component('file-upload', VueUploadComponent);
 						</div>
 				</v-card>
 			</v-tab-item>
-			<v-tab-item :key="6" id="tab-Scripts">
-				<v-toolbar color="grey lighten-4" dense light>
+			<v-tab-item :key="6" value="tab-Scripts">
+				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Scripts</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
@@ -1588,8 +1588,8 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-card-title>
 				</v-card>
 			</v-tab-item>
-			<v-tab-item :key="7" id="tab-Backups">
-				<v-toolbar color="grey lighten-4" dense light>
+			<v-tab-item :key="7" value="tab-Backups">
+				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Backups</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
@@ -1616,8 +1616,8 @@ Vue.component('file-upload', VueUploadComponent);
 		</v-card>
 
 		</v-tab-item>
-		<v-tab-item :key="6" id="tab-Sharing">
-			<v-toolbar color="grey lighten-4" dense light>
+		<v-tab-item :key="6" value="tab-Sharing">
+			<v-toolbar color="grey lighten-4" dense light flat>
 				<v-toolbar-title>Sharing</v-toolbar-title>
 				<v-spacer></v-spacer>
 				<v-toolbar-items v-show="role == 'administrator'">
@@ -1664,8 +1664,8 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-card-title>
 			</v-card>
 	  </v-tab-item>
-		<v-tab-item :key="7" id="tab-Advanced">
-			<v-toolbar color="grey lighten-4" dense light>
+		<v-tab-item :key="7" value="tab-Advanced">
+			<v-toolbar color="grey lighten-4" dense light flat>
 				<v-toolbar-title>Advanced</v-toolbar-title>
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
