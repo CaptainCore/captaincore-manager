@@ -783,7 +783,8 @@ if ( !$wp_query->query_vars['dns'] ) { ?>
 <?php
 
 // Get all domains assigned to current user
-$domains = captaincore_fetch_domains();
+$domains = (new CaptainCore\Domains())->all();
+
 
 if ( $domains ) : ?>
 <h3>All Accounts <small class="alignright"><?php echo count( $domains ); ?> domains</small></h3>
