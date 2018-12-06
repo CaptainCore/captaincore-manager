@@ -123,7 +123,7 @@ function captaincore_disable_gutenberg( $can_edit, $post_type ) {
 	}
 	return $can_edit;
 }
-add_filter( 'gutenberg_can_edit_post_type', 'captaincore_disable_gutenberg', 10, 2 );
+add_filter( 'use_block_editor_for_post_type', 'captaincore_disable_gutenberg', 10, 2 );
 
 // Modify WooCommerce Menu: wc_get_account_menu_items() ;
 function captaincore_my_account_order( $current_menu ) {
