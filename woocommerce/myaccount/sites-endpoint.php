@@ -3331,6 +3331,7 @@ new Vue({
 				filter_statuses = [];
 				versions = [];
 				statuses = [];
+				sites = this.sites;
 
 				if ( this.applied_site_filter_version.length > 0 ) {
 
@@ -3492,7 +3493,7 @@ new Vue({
 
 					var versions = [];
 
-					this.sites.forEach(function(site) {
+					sites.forEach(function(site) {
 
 						site.plugins.filter(item => item.name == filter).forEach(function(plugin) {
 							version_count = versions.filter(item => item.name == plugin.version).length;
