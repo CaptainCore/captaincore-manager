@@ -436,7 +436,7 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-toolbar>
 			<v-card-text>
 
-				<v-switch label="Automatic Updates" v-model="dialog_update_settings.updates_enabled" false-value="0" true-value="1"></v-switch>
+				<v-switch label="Automatic Updates" v-model="dialog_update_settings.updates_enabled" :false-value="0" :true-value="1"></v-switch>
 
 				<v-select
 					:items="dialog_update_settings.plugins"
