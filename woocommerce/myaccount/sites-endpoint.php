@@ -19,7 +19,7 @@ if ( $role_check ) {
 
 ?>
 
-<link href="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.3.11/vuetify.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/vuetify@1.3.11/dist/vuetify.min.css" rel="stylesheet">
 <style>
 
 html {
@@ -290,15 +290,15 @@ div.update_logs table tr td:nth-child(1) {
 }
 </style>
 <?php if ( $_SERVER['SERVER_NAME'] == 'anchor.test' ) { ?>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.17/vue.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
 <script src="https://anchor.test/wp-content/plugins/captaincore-gui/public/js/qs.js"></script>
 <script src="https://anchor.test/wp-content/plugins/captaincore-gui/public/js/axios.min.js"></script>
 <?php } else { ?>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.17/vue.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.min.js"></script>
 <script src="https://unpkg.com/qs@6.5.2/dist/qs.js"></script>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 <?php } ?>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.3.5/vuetify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@1.3.5/dist/vuetify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.9/dist/vue-upload-component.js"></script>
 <script>
 
