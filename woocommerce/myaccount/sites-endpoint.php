@@ -487,6 +487,7 @@ Vue.component('file-upload', VueUploadComponent);
                 <v-list-tile-content>
                   <v-list-tile-title>{{ job.description }}</v-list-tile-title>
 									<v-chip v-if="job.status == 'done'" outline label color="green">Sucess</v-chip>
+					<v-chip v-else-if="job.status == 'error'" outline label color="red">Error</v-chip>
 									<template v-else>
 										<div style="width:200px;">
 									  <v-progress-linear :indeterminate="true"></v-progress-linear>
@@ -2008,7 +2009,7 @@ new Vue({
 			return this.sites.filter( site => site.filtered ).slice(start, end);
 		},
 		runningJobs() {
-			return this.jobs.filter(job => job.status != 'done').length;;
+			return this.jobs.filter(job => job.status != 'done' && job.status != 'error' ).length;
 		},
 		showingSitesBegin() {
 			return this.page * this.items_per_page - this.items_per_page;
@@ -2069,8 +2070,13 @@ new Vue({
 				.then( response => {
 					window.open( response.data );
 					self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+				})
+				.catch(error => {
+					self.jobs.filter(job => job.job_id == job_id)[0].status = "error";
+					self.snackbar.message = description + " failed.";
+					self.snackbar.show = true;
+					console.log(error.response)
 				});
-
 		},
 		jobRetry( site_id, job_id ) {
 
