@@ -3351,7 +3351,7 @@ function captaincore_ajax_action_callback() {
 	if ( $cmd == 'fetch-site' ) {
 
 		// Create new site
-		$site = (new CaptainCore\Site)->get( $post_id );
+		$site = ( new CaptainCore\Site )->get( $post_id );
 		echo json_encode($site);
 
 	}
