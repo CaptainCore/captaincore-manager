@@ -2631,6 +2631,12 @@ new Vue({
 			}
 
 			var post_id = this.dialog_apply_https_urls.site.id;
+			site_name = this.dialog_apply_https_urls.site.name
+
+			// Start job
+			description = "Applying HTTPS urls for " + site_name;
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
 
 			var data = {
 				'action': 'captaincore_install',
@@ -2642,6 +2648,13 @@ new Vue({
 
 			// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 			jQuery.post(ajaxurl, data, function(response) {
+				// Updates job id with reponsed background job id
+				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
+
+				// Check if completed in 2 seconds
+				setTimeout(function() {
+					self.jobRetry(post_id, response);
+				}, 2000);
 
 				self.dialog_apply_https_urls.site = "";
 				self.dialog_apply_https_urls.show = false;

@@ -3568,10 +3568,12 @@ function captaincore_install_action_callback() {
 		$command = "ssh $site --script=deploy-mailgun --key=\"" . MAILGUN_API_KEY . '" --domain=' . $domain . " > ~/Tmp/$timestamp-deploy_mailgun_$site.txt 2>&1 &";
 	}
 	if ( $cmd == 'apply-https' ) {
-		$command = "ssh $site --script=apply-https &";
+		$run_in_background = true;
+		$command = "ssh $site --script=apply-https";
 	}
 	if ( $cmd == 'apply-https-with-www' ) {
-		$command = "ssh $site --script=apply-https-with-www &";
+		$run_in_background = true;
+		$command = "ssh $site --script=apply-https-with-www";
 	}
 	if ( $cmd == 'production-to-staging' ) {
 		$run_in_background = true;
