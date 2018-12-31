@@ -3347,9 +3347,20 @@ new Vue({
 
 			var self = this;
 
+			description = "Running bulk " + this.select_bulk_action + " on " + site_names.join(" ");
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
 			// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 			jQuery.post(ajaxurl, data, function(response) {
-				self.snackbar.message = response;
+				// Updates job id with reponsed background job id
+				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
+
+				// Check if completed in 2 seconds
+				setTimeout(function() {
+					self.jobRetry(site_ids, response);
+				}, 2000);
+				self.snackbar.message = description;
 				self.snackbar.show = true;
 				self.dialog = false;
 		  });
