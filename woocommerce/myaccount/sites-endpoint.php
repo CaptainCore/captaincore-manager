@@ -2559,8 +2559,9 @@ new Vue({
 
 					// Check if completed in 2 seconds
 					setTimeout(function() {
-						self.jobRetry(site_id, response);
+						self.jobRetry(post_id, response.data);
 					}, 2000);
+					
 					self.snackbar.message = "Generating snapshot for "+ self.dialog_backup_snapshot.site.name + ".";
 					self.snackbar.show = true;
 					self.dialog_backup_snapshot.site = {};
