@@ -43,6 +43,16 @@ TODO
 TODO
 
 == Changelog ==
+= 0.3.2: Dec 31 2018 =
+* New: Integrated CaptainCore Dispatch
+* Tweak: Refactor fetch functions `captaincore_fetch_customer`, `captaincore_fetch_domains` and `captaincore_fetch_sites` to new classes `CaptainCore/Customers`, `CaptainCore/Domains`and `CaptainCore/Sites`
+* Tweak: Sites UI - Refactor code into CaptainCore Site class
+* Tweak: Sites UI - Load customers and sites with new Rest APIs `captaincore/v1/customers/` and `captaincore/v1/sites/`
+* Tweak: Sites UI - Load WP-API nonce before Vue.js mounted lifecycle 
+* Tweak: Sites UI - Handle errors with jobs. Prompt notice when login failed
+* Tweak: Upgraded Vuetify to v1.3.11
+* Tweak: Removed phpseclib
+
 = 0.3.1: Dec 3 2018 =
 * NEW: Sites UI - Quick logins
 * Tweak: Company Handbook - Allow administrators with multiple roles
