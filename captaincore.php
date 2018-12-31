@@ -3595,9 +3595,8 @@ function captaincore_install_action_callback() {
 		$command = "site delete $site";
 	}
 	if ( $cmd == 'quick_backup' ) {
-		date_default_timezone_set( 'America/New_York' );
-		$timestamp = date( 'Y-m-d-hms', time() );
-		$command   = "quicksave $site > ~/Tmp/$timestamp-quicksave_$site.txt 2>&1";
+		$run_in_background = true;
+		$command   = "quicksave $site";
 	}
 	if ( $cmd == 'backup' ) {
 		$run_in_background = true;
@@ -3632,6 +3631,8 @@ function captaincore_install_action_callback() {
 
 	if ( $cmd == 'manage' ) {
 
+		$run_in_background = true;
+
 		if ( is_array($post_ids) ) {
 			$command = '';
 			$sites   = array();
@@ -3644,9 +3645,7 @@ function captaincore_install_action_callback() {
 				foreach ( $arguments as $argument ) {
 					if ( $argument['command'] == $bulk_command && isset( $argument['input'] ) && $argument['input'] != '' ) {
 						$bulk_arguments[] = $argument['input'];
-						date_default_timezone_set( 'America/New_York' );
-						$timestamp  = date( 'Y-m-d-hms', time() );
-						$command         .= "$bulk_command " . implode( ' ', $sites ) . " --" . $argument['value'] . "=\"" . $argument['input'] . "\" > ~/Tmp/$timestamp-bulk.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-bulk.txt;";
+						$command         .= "$bulk_command " . implode( ' ', $sites ) . " --" . $argument['value'] . "=\"" . $argument['input'] . "\"";
 					}
 				}
 			}
@@ -3671,31 +3670,30 @@ function captaincore_install_action_callback() {
 	}
 
 	if ( $cmd == 'rollback' ) {
-		date_default_timezone_set( 'America/New_York' );
-		$timestamp  = date( 'Y-m-d-hms', time() );
+		$run_in_background = true;
 		$db_quicksaves = new CaptainCore\quicksaves;
 		$quicksaves = $db_quicksaves->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
 		$site       = get_field( 'site', $post_id );
-		$command    = "rollback $site $git_commit --$addon_type=$value > ~/Tmp/$timestamp-rollback_$site.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$site.txt";
+		$command    = "rollback $site $git_commit --$addon_type=$value";
 	}
 
 	if ( $cmd == 'quicksave_rollback' ) {
-		date_default_timezone_set( 'America/New_York' );
-		$timestamp  = date( 'Y-m-d-hms', time() );
+		$run_in_background = true;
 		$db_quicksaves = new CaptainCore\quicksaves;
 		$quicksaves = $db_quicksaves->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
 		$site       = get_field( 'site', $post_id );
-		$command    = "rollback $site $git_commit --all > ~/Tmp/$timestamp-rollback_$site.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$site.txt";
+		$command    = "rollback $site $git_commit --all";
 	}
 
 	if ( $cmd == 'quicksave_file_restore' ) {
+		$run_in_background = true;
 		$db_quicksaves = new CaptainCore\quicksaves;
 		$quicksaves = $db_quicksaves->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
 		$site       = get_field( 'site', $post_id );
-		$command    = "rollback $site $git_commit --file=\"$value\" &";
+		$command    = "rollback $site $git_commit --file=\"$value\"";
 	}
 
 	// Disable https when debug enabled

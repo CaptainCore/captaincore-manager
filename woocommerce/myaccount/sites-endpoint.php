@@ -2852,7 +2852,8 @@ new Vue({
 
 			quicksave = this.dialog_quicksave.quicksaves.filter( quicksave => quicksave.quicksave_id == quicksave_id )[0];
 			date = this.$options.filters.pretty_timestamp(quicksave.created_at);
-			should_proceed = confirm("Rollback "+ addon_type + " " + addon_name +" to version as of " + date + " on " + this.dialog_quicksave.site_name + "?");
+			description = "Rollback "+ addon_type + " " + addon_name +" to version as of " + date + " on " + this.dialog_quicksave.site_name;
+			should_proceed = confirm( description + "?");
 
 			if ( ! should_proceed ) {
 				return;
@@ -2869,8 +2870,20 @@ new Vue({
 
 			self = this;
 
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+
+					// Check if completed in 2 seconds
+					setTimeout(function() {
+						self.jobRetry(site_id, response.data);
+					}, 2000);
+
 					self.snackbar.message = "Rollback in progress.";
 					self.snackbar.show = true;
 				})
@@ -3337,10 +3350,14 @@ new Vue({
 		},
 		bulkactionSubmit() {
 
+			site_ids = this.sites.filter( site => site.selected ).map( site => site.id );
+			site_names = this.sites.filter( site => site.selected ).map( site => site.name );
+
 			var data = {
 			  'action': 'captaincore_install',
-			  'post_id': this.sites.filter( site => site.selected ).map( site => site.id ),
+				'post_id': site_ids,
 				'command': "manage",
+				'background': true,
 				'value': this.select_bulk_action,
 				'arguments': this.select_bulk_action_arguments
 		  };
