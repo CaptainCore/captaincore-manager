@@ -2106,7 +2106,7 @@ new Vue({
 
 						line_parsed = JSON.parse(line);
 
-						if ( line_parsed.response == "Command finished" ) {
+						if ( line_parsed.status == "Completed" ) {
 
 							previous_index = index - 1;
 
@@ -2221,10 +2221,13 @@ new Vue({
 
 						jQuery.post(ajaxurl, data, function(response) {
 
-							// TO DO, update job ID to respsonse (trackable one from server)
-							//  start a repeat check to see when it's completed. Do no mark it done here.
+							// Updates job id with reponsed background job id
+							self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
 
-							self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+							// Check if completed in 2 seconds
+							setTimeout(function() {
+								self.jobRetry(site_id, response);
+							}, 2000);
 
 						});
 
@@ -2515,7 +2518,13 @@ new Vue({
 			self = this;
 
 			jQuery.post(ajaxurl, data, function(response) {
-				self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+				// Updates job id with reponsed background job id
+				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
+
+				// Check if completed in 2 seconds
+				setTimeout(function() {
+					self.jobRetry(site_id, response);
+				}, 2000);
 			});
 
 		},
@@ -2527,6 +2536,12 @@ new Vue({
 		downloadBackupSnapshot( site_id ) {
 
 			var post_id = this.dialog_backup_snapshot.site.id;
+			var site_name = this.dialog_backup_snapshot.site.name;
+
+			// Start job
+			description = "Downloading snapshot for " + site_name;
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
 
 			var data = {
 				'action': 'captaincore_install',
@@ -2539,6 +2554,13 @@ new Vue({
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+
+					// Check if completed in 2 seconds
+					setTimeout(function() {
+						self.jobRetry(site_id, response);
+					}, 2000);
 					self.snackbar.message = "Generating snapshot for "+ self.dialog_backup_snapshot.site.name + ".";
 					self.snackbar.show = true;
 					self.dialog_backup_snapshot.site = {};
@@ -2668,7 +2690,9 @@ new Vue({
 			var data = {
 				action: 'captaincore_install',
 				post_id: site_id,
-				command: 'deactivate'
+				command: 'deactivate',
+				name: this.dialog_toggle.business_name,
+				link: this.dialog_toggle.business_link
 			};
 
 			self = this;
@@ -3023,7 +3047,13 @@ new Vue({
 
 			jQuery.post(ajaxurl, data, function(response) {
 				site.loading_themes = false;
-				self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+				// Updates job id with reponsed background job id
+				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
+
+				// Check if completed in 2 seconds
+				setTimeout(function() {
+					self.jobRetry(site_id, response);
+				}, 2000);
 			});
 		},
 		deleteTheme (theme_name, site_id) {
@@ -3059,7 +3089,13 @@ new Vue({
 				updated_themes = self.sites.filter(site => site.id == site_id)[0].themes.filter(theme => theme.name != theme_name);
 				self.sites.filter(site => site.id == site_id)[0].themes = updated_themes;
 				self.sites.filter(site => site.id == site_id)[0].loading_themes = false;
-				self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+				// Updates job id with reponsed background job id
+				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
+
+				// Check if completed in 2 seconds
+				setTimeout(function() {
+					self.jobRetry(site_id, response);
+				}, 2000);
 			});
 
 		},
@@ -3101,7 +3137,14 @@ new Vue({
 
 			jQuery.post(ajaxurl, data, function(response) {
 				self.sites.filter(site => site.id == site_id)[0].loading_plugins = false;
-				self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+				
+				// Updates job id with reponsed background job id
+				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
+
+				// Check if completed in 2 seconds
+				setTimeout(function() {
+					self.jobRetry(site_id, response);
+				}, 2000);
 			});
 		},
 		deletePlugin (plugin_name, site_id) {
@@ -3135,12 +3178,19 @@ new Vue({
 			self = this;
 
 			jQuery.post(ajaxurl, data, function(response) {
+
 				updated_plugins = self.sites.filter(site => site.id == site_id)[0].plugins.filter(plugin => plugin.name != plugin_name);
 				self.sites.filter(site => site.id == site_id)[0].plugins = updated_plugins;
 				self.sites.filter(site => site.id == site_id)[0].loading_plugins = false;
-				self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
-			});
 
+				// Updates job id with reponsed background job id
+				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
+
+				// Check if completed in 2 seconds
+				setTimeout(function() {
+					self.jobRetry(site_id, response);
+				}, 2000);
+			});
 		},
 		update( site_id ) {
 
@@ -3257,7 +3307,14 @@ new Vue({
 			jQuery.post(ajaxurl, data, function(response) {
 				updated_users = self.sites.filter(site => site.id == site_id)[0].users.filter(user => user.username != username);
 				self.sites.filter(site => site.id == site_id)[0].users = updated_users;
-				self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+
+				// Updates job id with reponsed background job id
+				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
+
+				// Check if completed in 2 seconds
+				setTimeout(function() {
+					self.jobRetry(site_id, response);
+				}, 2000);
 			});
 
 		},

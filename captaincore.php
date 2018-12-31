@@ -3328,7 +3328,7 @@ function captaincore_ajax_action_callback() {
 		// Remote Sync
 		$run_in_background = true;
 		$remote_command = true;
-		$command = "captaincore site update" . captaincore_site_fetch_details( $post_id );
+		$command = "site update" . captaincore_site_fetch_details( $post_id );
 
 	}
 
@@ -3395,42 +3395,46 @@ function captaincore_ajax_action_callback() {
 
 	}
 
-	if ( $run_in_background ) {
-
-		// Generate unique $job_id for tracking
-		$job_id = round(microtime(true) * 1000);
-
-		// Tie in the site_id to make sure jobs are only viewed by people with access.
-		$background_id = "${post_id}_${job_id}";
-
-		// Tack on CaptaionCore global arguments for tracking purposes
-		$command = "$command --run-in-background=$background_id &";
-
-	}
-
 	if ( $remote_command ) {
 
-		// Runs command on remote on production
-		require_once ABSPATH . '/vendor/autoload.php';
-
-		$ssh = new \phpseclib\Net\SSH2( CAPTAINCORE_CLI_ADDRESS, CAPTAINCORE_CLI_PORT );
-		if ( ! $ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
-			exit( 'Login Failed' );
-		}
-
-		// Returns command if debug enabled otherwise executes command over SSH and returns output
+		// Disable https when debug enabled
 		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
-			$response = $command;
-		} else {
-			$response = $ssh->exec( $command );
-			// Background jobs need job_id returned in order to begin repeating AJAX checks
-			if ( $run_in_background ) {
-				$response = $job_id;
-			}
+			add_filter( 'https_ssl_verify', '__return_false' );
 		}
 
-		// Return response
+		$data = array( 
+			'headers' => array(
+				'Content-Type' => 'application/json; charset=utf-8', 
+				'token'        => CAPTAINCORE_CLI_TOKEN 
+			), 
+			'body' => json_encode( array(
+				"command" => $command 
+			)), 
+			'method'      => 'POST', 
+			'data_format' => 'body' 
+		);
+
+		if ( $run_in_background ) {
+
+			// Add command to dispatch server
+			$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/tasks", $data );
+			$response = json_decode( $response["body"] );
+			
+			// Response with task id
+			if ( $response && $response->task_id ) { 
+				echo $response->task_id; 
+			}
+
+			wp_die(); // this is required to terminate immediately and return a proper response
+		}
+
+		// Add command to dispatch server
+		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+		$response = json_decode( $response["body"] );
+
 		echo $response;
+		
+		wp_die(); // this is required to terminate immediately and return a proper response
 
 	}
 
@@ -3513,42 +3517,24 @@ function captaincore_install_action_callback() {
 		$site = $site . '@' . $provider;
 	}
 
-	// Disable SSL verification due to self signed cert on other end
-	$arrContextOptions = array(
-		'ssl' => array(
-			'verify_peer'      => false,
-			'verify_peer_name' => false,
-		),
-	);
-
-	if ($background) {
+	if ( $background ) {
 		$run_in_background = true;
 	}
 
 	if ( $cmd == 'new' ) {
-		$command = 'captaincore site add' . captaincore_site_fetch_details( $post_id );
-
-		// Run in background without confirmation. Will display first 5 secs of output
-		date_default_timezone_set( 'America/New_York' );
-		$timestamp = date( 'Y-m-d-hms', time() );
-		$file = "~/Tmp/command-site_update_${site}_${timestamp}.txt";
-		$command = "$command > $file 2>&1 & sleep 5; head $file";
+		$command = 'site add' . captaincore_site_fetch_details( $post_id );
+		$run_in_background = true;
 	}
 	if ( $cmd == 'update' ) {
-		$command = 'captaincore site update' . captaincore_site_fetch_details( $post_id );
-
-		// Run in background without confirmation. Will display first 5 secs of output
-		date_default_timezone_set( 'America/New_York' );
-		$timestamp = date( 'Y-m-d-hms', time() );
-		$file = "~/Tmp/command-site_update_${site}_${timestamp}.txt";
-		$command = "$command > $file 2>&1 & sleep 5; head $file";
+		$command = 'site update' . captaincore_site_fetch_details( $post_id );
+		$run_in_background = true;
 	}
 	if ( $cmd == 'update-wp' ) {
-		$command = "captaincore update $site";
+		$command = "update $site";
 		$run_in_background = true;
 	}
 	if ( $cmd == 'update-fetch' ) {
-		$command = "captaincore update-fetch $site";
+		$command = "update-fetch $site";
 
 		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
 			// return mock data
@@ -3556,21 +3542,13 @@ function captaincore_install_action_callback() {
 		}
 	}
 	if ( $cmd == 'users-fetch' ) {
-		$command = "captaincore ssh $site --command='wp user list --format=json'";
+		$command = "ssh $site --command='wp user list --format=json'";
 
 		$run_in_background = true;
 
 		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
 			// return mock data
 			$command = CAPTAINCORE_DEBUG_MOCK_USERS;
-		}
-	}
-	if ( $cmd == 'job-fetch' ) {
-		$command = "captaincore job-fetch ${post_id}_${job_id}";
-
-		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
-			// return mock data
-			$command = CAPTAINCORE_DEBUG_MOCK_JOB_FETCH;
 		}
 	}
 	if ( $cmd == 'copy' ) {
@@ -3580,76 +3558,74 @@ function captaincore_install_action_callback() {
 			$email        = $current_user->user_email;
 			date_default_timezone_set( 'America/New_York' );
 			$timestamp = date( 'Y-m-d-hms', time() );
-			$command   = "nohup captaincore copy $site $value --email=$email --mark-when-completed > ~/Tmp/job-copy-$timestamp.txt 2>&1 &";
+			$command   = "copy $site $value --email=$email --mark-when-completed > ~/Tmp/job-copy-$timestamp.txt 2>&1 &";
 		}
 	}
 	if ( $cmd == 'mailgun' ) {
 		date_default_timezone_set( 'America/New_York' );
 		$timestamp = date( 'Y-m-d-hms', time() );
 		mailgun_setup( $domain );
-		$command = "captaincore ssh $site --script=deploy-mailgun --key=\"" . MAILGUN_API_KEY . '" --domain=' . $domain . " > ~/Tmp/$timestamp-deploy_mailgun_$site.txt 2>&1 &";
+		$command = "ssh $site --script=deploy-mailgun --key=\"" . MAILGUN_API_KEY . '" --domain=' . $domain . " > ~/Tmp/$timestamp-deploy_mailgun_$site.txt 2>&1 &";
 	}
 	if ( $cmd == 'apply-https' ) {
-		$command = "captaincore ssh $site --script=apply-https &";
+		$command = "ssh $site --script=apply-https &";
 	}
 	if ( $cmd == 'apply-https-with-www' ) {
-		$command = "captaincore ssh $site --script=apply-https-with-www &";
+		$command = "ssh $site --script=apply-https-with-www &";
 	}
 	if ( $cmd == 'production-to-staging' ) {
-		date_default_timezone_set( 'America/New_York' );
-		$timestamp = date( 'Y-m-d-hms', time() );
+		$run_in_background = true;
 		if ( $value ) {
-			$command = "captaincore copy-production-to-staging $site --email=$value > ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt";
+			$command = "copy-production-to-staging $site --email=$value";
 		} else {
-			$command = "captaincore copy-production-to-staging $site > ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_production_to_staging_$site.txt";
+			$command = "copy-production-to-staging $site";
 		}
 	}
 	if ( $cmd == 'staging-to-production' ) {
-		date_default_timezone_set( 'America/New_York' );
-		$timestamp = date( 'Y-m-d-hms', time() );
+		$run_in_background = true;
 		if ( $value ) {
-			$command = "captaincore copy-staging-to-production $site --email=$value > ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt";
+			$command = "copy-staging-to-production $site --email=$value";
 		} else {
-			$command = "captaincore copy-staging-to-production $site > ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-deploy_staging_to_production_$site.txt";
+			$command = "copy-staging-to-production $site";
 		}
 	}
 	if ( $cmd == 'remove' ) {
-		$command = "captaincore site delete $site";
+		$command = "site delete $site";
 	}
 	if ( $cmd == 'quick_backup' ) {
 		date_default_timezone_set( 'America/New_York' );
 		$timestamp = date( 'Y-m-d-hms', time() );
-		$command   = "captaincore quicksave $site > ~/Tmp/$timestamp-quicksave_$site.txt 2>&1";
+		$command   = "quicksave $site > ~/Tmp/$timestamp-quicksave_$site.txt 2>&1";
 	}
 	if ( $cmd == 'backup' ) {
-		date_default_timezone_set( 'America/New_York' );
-		$timestamp = date( 'Y-m-d-hms', time() );
-		$command   = "captaincore backup $site > ~/Tmp/$timestamp-backup_$site.txt 2>&1 & sleep 5; head ~/Tmp/$timestamp-backup_$site.txt";
+		$run_in_background = true;
+		$command = "backup $site";
 	}
 	if ( $cmd == 'snapshot' ) {
-		date_default_timezone_set( 'America/New_York' );
-		$timestamp = date( 'Y-m-d-hms', time() );
+		$run_in_background = true;
 		if ( $date && $value ) {
-			$command = "captaincore snapshot $site --email=$value --rollback='$date' > ~/Tmp/$timestamp-snapshot_$site.txt 2>&1 & sleep 2; head ~/Tmp/$timestamp-snapshot_$site.txt";
+			$command = "snapshot $site --email=$value --rollback='$date'";
 		} elseif ( $value ) {
-			$command = "captaincore snapshot $site --email=$value > ~/Tmp/$timestamp-snapshot_$site.txt 2>&1 & sleep 2; head ~/Tmp/$timestamp-snapshot_$site.txt";
+			$command = "snapshot $site --email=$value";
 		} else {
-			$command = "captaincore snapshot $site > ~/Tmp/$timestamp-snapshot_$site.txt 2>&1 & sleep 2; head ~/Tmp/$timestamp-snapshot_$site.txt";
+			$command = "snapshot $site";
 		}
 	}
 	if ( $cmd == 'deactivate' ) {
-		$command = "nohup captaincore deactivate $site --name=\"$name\" --link=\"$link\" &";
+		$run_in_background = true;
+		$command = "deactivate $site --name=\"$name\" --domain=\"$link\"";
 	}
 	if ( $cmd == 'activate' ) {
-		$command = "nohup captaincore activate $site &";
+		$run_in_background = true;
+		$command = "activate $site";
 	}
 
 	if ( $cmd == 'view_quicksave_changes' ) {
-		$command = "captaincore quicksave-view-changes $site --hash=$value";
-		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
-			// return mock data
-			$command = CAPTAINCORE_DEBUG_MOCK_QUICKSAVE_VIEW_CHANGES;
-		}
+		$command = "quicksave-view-changes $site --hash=$value";
+		//if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+		//	// return mock data
+		//	$command = CAPTAINCORE_DEBUG_MOCK_QUICKSAVE_VIEW_CHANGES;
+		//}
 	}
 
 	if ( $cmd == 'manage' ) {
@@ -3668,14 +3644,14 @@ function captaincore_install_action_callback() {
 						$bulk_arguments[] = $argument['input'];
 						date_default_timezone_set( 'America/New_York' );
 						$timestamp  = date( 'Y-m-d-hms', time() );
-						$command         .= "captaincore $bulk_command " . implode( ' ', $sites ) . " --" . $argument['value'] . "=\"" . $argument['input'] . "\" > ~/Tmp/$timestamp-bulk.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-bulk.txt;";
+						$command         .= "$bulk_command " . implode( ' ', $sites ) . " --" . $argument['value'] . "=\"" . $argument['input'] . "\" > ~/Tmp/$timestamp-bulk.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-bulk.txt;";
 					}
 				}
 			}
 		}
 
 		if ( is_int($post_id) ) {
-			$command = "captaincore $value $site --" . $arguments['value'] . '="' . $arguments['input'] . '"';
+			$command = "$value $site --" . $arguments['value'] . '="' . $arguments['input'] . '"';
 		}
 
 	}
@@ -3685,7 +3661,7 @@ function captaincore_install_action_callback() {
 		$quicksaves = $db_quicksaves->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
 		$site       = get_field( 'site', $post_id );
-		$command    = "captaincore quicksave-file-diff $site --hash=$commit --file=\"$value\"";
+		$command    = "quicksave-file-diff $site --hash=$commit --file=\"$value\"";
 		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
 			// return mock data
 			$command = CAPTAINCORE_DEBUG_MOCK_QUICKSAVE_FILE_DIFF;
@@ -3699,7 +3675,7 @@ function captaincore_install_action_callback() {
 		$quicksaves = $db_quicksaves->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
 		$site       = get_field( 'site', $post_id );
-		$command    = "captaincore rollback $site $git_commit --$addon_type=$value > ~/Tmp/$timestamp-rollback_$site.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$site.txt";
+		$command    = "rollback $site $git_commit --$addon_type=$value > ~/Tmp/$timestamp-rollback_$site.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$site.txt";
 	}
 
 	if ( $cmd == 'quicksave_rollback' ) {
@@ -3709,7 +3685,7 @@ function captaincore_install_action_callback() {
 		$quicksaves = $db_quicksaves->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
 		$site       = get_field( 'site', $post_id );
-		$command    = "captaincore rollback $site $git_commit --all > ~/Tmp/$timestamp-rollback_$site.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$site.txt";
+		$command    = "rollback $site $git_commit --all > ~/Tmp/$timestamp-rollback_$site.txt 2>&1 & sleep 1; head ~/Tmp/$timestamp-rollback_$site.txt";
 	}
 
 	if ( $cmd == 'quicksave_file_restore' ) {
@@ -3717,48 +3693,71 @@ function captaincore_install_action_callback() {
 		$quicksaves = $db_quicksaves->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
 		$site       = get_field( 'site', $post_id );
-		$command    = "nohup captaincore rollback $site $git_commit --file=\"$value\" &";
+		$command    = "rollback $site $git_commit --file=\"$value\" &";
 	}
 
-	if ( $run_in_background ) {
-
-		// Generate unique $job_id for tracking
-		$job_id = round(microtime(true) * 1000);
-
-		// Tie in the site_id to make sure jobs are only viewed by people with access.
-		$background_id = "${post_id}_${job_id}";
-
-		// Tack on CaptaionCore global arguments for tracking purposes
-		$command = "$command --run-in-background=$background_id &";
-
-	}
-
-	// Returns command if debug enabled
+	// Disable https when debug enabled
 	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
-		echo $command;
-		wp_die();
-		return;
+		add_filter( 'https_ssl_verify', '__return_false' );
 	}
 
-	// Runs command on remote on production
-	require_once ABSPATH . '/vendor/autoload.php';
-	$ssh = new \phpseclib\Net\SSH2( CAPTAINCORE_CLI_ADDRESS, CAPTAINCORE_CLI_PORT );
+	$data = array( 
+		'headers' => array(
+			'Content-Type' => 'application/json; charset=utf-8', 
+			'token'        => CAPTAINCORE_CLI_TOKEN 
+		), 
+		'body' => json_encode( array(
+			"command" => $command 
+		)), 
+		'method'      => 'POST', 
+		'data_format' => 'body' 
+	);
 
-	if ( ! $ssh->login( CAPTAINCORE_CLI_USER, CAPTAINCORE_CLI_KEY ) ) {
-		exit( 'Login Failed' );
+	if ( $cmd == 'job-fetch' ) {
+
+		$data['body'] = "";
+		$data['method'] = "GET";
+
+		// Add command to dispatch server
+		$response = wp_remote_get( CAPTAINCORE_CLI_ADDRESS . "/task/${job_id}", $data );
+		$response = json_decode( $response["body"] );
+		
+		// Response with task id
+		if ( $response && $response->Status == "Completed" ) { 
+			echo json_encode(array(
+				"response" => $response->Response,
+				"status" => "Completed",
+				"job_id" => $job_id
+			));
+			wp_die(); // this is required to terminate immediately and return a proper response
+		}
+
+		echo "Job ID $job_id is still running.";
+
+		wp_die(); // this is required to terminate immediately and return a proper response
 	}
 
- 	// Executes command over SSH and returns output
-	$response = $ssh->exec( $command );
-
-	// Background jobs need job_id returned in order to begin repeating AJAX checks
 	if ( $run_in_background ) {
-		$response = $job_id;
+
+		// Add command to dispatch server
+		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/tasks", $data );
+		$response = json_decode( $response["body"] );
+		
+		// Response with task id
+		if ( $response && $response->task_id ) { 
+			echo $response->task_id; 
+		}
+
+
+		wp_die(); // this is required to terminate immediately and return a proper response
 	}
 
-	// Return response
-	echo $response;
+	// Add command to dispatch server
+	$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+	$response = json_decode( $response["body"] );
 
+	echo $response;
+	
 	wp_die(); // this is required to terminate immediately and return a proper response
 }
 
