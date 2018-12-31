@@ -3403,6 +3403,7 @@ function captaincore_ajax_action_callback() {
 		}
 
 		$data = array( 
+			'timeout' => 45,
 			'headers' => array(
 				'Content-Type' => 'application/json; charset=utf-8', 
 				'token'        => CAPTAINCORE_CLI_TOKEN 
@@ -3702,6 +3703,7 @@ function captaincore_install_action_callback() {
 	}
 
 	$data = array( 
+		'timeout' => 45,
 		'headers' => array(
 			'Content-Type' => 'application/json; charset=utf-8', 
 			'token'        => CAPTAINCORE_CLI_TOKEN 
