@@ -3663,11 +3663,7 @@ function captaincore_install_action_callback() {
 		$quicksaves = $db_quicksaves->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
 		$site       = get_field( 'site', $post_id );
-		$command    = "quicksave-file-diff $site --hash=$commit --file=\"$value\"";
-		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
-			// return mock data
-			$command = CAPTAINCORE_DEBUG_MOCK_QUICKSAVE_FILE_DIFF;
-		}
+		$command    = "quicksave-file-diff $site --hash=$commit --file=$value";
 	}
 
 	if ( $cmd == 'rollback' ) {
@@ -3694,7 +3690,7 @@ function captaincore_install_action_callback() {
 		$quicksaves = $db_quicksaves->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
 		$site       = get_field( 'site', $post_id );
-		$command    = "rollback $site $git_commit --file=\"$value\"";
+		$command    = "rollback $site $git_commit --file=$value";
 	}
 
 	// Disable https when debug enabled
