@@ -3750,13 +3750,12 @@ function captaincore_install_action_callback() {
 			echo $response->task_id; 
 		}
 
-
 		wp_die(); // this is required to terminate immediately and return a proper response
 	}
 
 	// Add command to dispatch server
 	$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
-	$response = json_decode( $response["body"] );
+	$response = $response["body"];
 
 	echo $response;
 	
