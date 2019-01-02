@@ -3035,6 +3035,7 @@ new Vue({
 					// Remove empty last row
 					quicksave.view_files = response.data.trim().split("\n");
 					quicksave.filtered_files = response.data.trim().split("\n");
+					quicksave.loading = false;
 				})
 			  .catch( error => console.log( error ) );
 		},

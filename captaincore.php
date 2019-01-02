@@ -1796,7 +1796,7 @@ function captaincore_site_quicksaves_func( $request ) {
 		$quicksaves[$key]->view_changes = false;
 		$quicksaves[$key]->view_files = [];
 		$quicksaves[$key]->filtered_files = [];
-		$quicksaves[$key]->loading = false;
+		$quicksaves[$key]->loading = true;
 
 		// Skips compare check on oldest quicksave or if not found.
 		if ( !isset($quicksaves[$compare_key]) ) {
@@ -3738,7 +3738,7 @@ function captaincore_install_action_callback() {
 		
 		// Response with task id
 		if ( $response && $response->task_id ) { 
-			echo $response->task_id; 
+			echo $response->task_id;
 		}
 
 		wp_die(); // this is required to terminate immediately and return a proper response
