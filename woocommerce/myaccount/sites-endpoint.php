@@ -3032,8 +3032,9 @@ new Vue({
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 			  .then( response => {
-					quicksave.view_files = response.data.split("\n");
-					quicksave.filtered_files = response.data.split("\n");
+					// Remove empty last row
+					quicksave.view_files = response.data.trim().split("\n");
+					quicksave.filtered_files = response.data.trim().split("\n");
 				})
 			  .catch( error => console.log( error ) );
 		},

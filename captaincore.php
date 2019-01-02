@@ -3623,10 +3623,6 @@ function captaincore_install_action_callback() {
 
 	if ( $cmd == 'view_quicksave_changes' ) {
 		$command = "quicksave-view-changes $site --hash=$value";
-		//if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
-		//	// return mock data
-		//	$command = CAPTAINCORE_DEBUG_MOCK_QUICKSAVE_VIEW_CHANGES;
-		//}
 	}
 
 	if ( $cmd == 'manage' ) {
