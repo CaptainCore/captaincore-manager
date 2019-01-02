@@ -3557,16 +3557,15 @@ function captaincore_install_action_callback() {
 		if ( captaincore_verify_permissions( $value ) ) {
 			$current_user = wp_get_current_user();
 			$email        = $current_user->user_email;
-			date_default_timezone_set( 'America/New_York' );
-			$timestamp = date( 'Y-m-d-hms', time() );
-			$command   = "copy $site $value --email=$email --mark-when-completed > ~/Tmp/job-copy-$timestamp.txt 2>&1 &";
+			$run_in_background = true;
+			$site_destination = get_field( 'site', $value );
+			$command   = "copy $site $site_destination --email=$email";
 		}
 	}
 	if ( $cmd == 'mailgun' ) {
-		date_default_timezone_set( 'America/New_York' );
-		$timestamp = date( 'Y-m-d-hms', time() );
+		$run_in_background = true;
 		mailgun_setup( $domain );
-		$command = "ssh $site --script=deploy-mailgun --key=\"" . MAILGUN_API_KEY . '" --domain=' . $domain . " > ~/Tmp/$timestamp-deploy_mailgun_$site.txt 2>&1 &";
+		$command = "ssh $site --script=deploy-mailgun --key=\"" . MAILGUN_API_KEY . "\" --domain=$domain";
 	}
 	if ( $cmd == 'apply-https' ) {
 		$run_in_background = true;

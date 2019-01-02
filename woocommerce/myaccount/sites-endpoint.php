@@ -2611,13 +2611,24 @@ new Vue({
 
 			self = this;
 
+			// Start job
+			description = "Coping "+ site_name + " to " + site_name_destination;
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+
+					// Check if completed in 2 seconds
+					setTimeout(function() { self.jobRetry(post_id, response.data); }, 2000);
+
 					self.dialog_copy_site.site = {};
 					self.dialog_copy_site.show = false;
 					this.dialog_copy_site.destination = "";
 					this.dialog_copy_site.options = [];
-					self.snackbar.message = "Coping "+ site_name + " to " + site_name_destination;
+					self.snackbar.message = description;
 					self.snackbar.show = true;
 				})
 				.catch( error => console.log( error ) );
