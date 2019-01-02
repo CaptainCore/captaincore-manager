@@ -1049,7 +1049,7 @@ Vue.component('file-upload', VueUploadComponent);
 									        hide-details
 									      ></v-text-field>
 									    </v-card-title>
-											<v-data-table hide-actions :headers='[{"text":"File","value":"file"}]' :items="quicksave.filtered_files">
+											<v-data-table hide-actions no-data-text="" :headers='[{"text":"File","value":"file"}]' :items="quicksave.filtered_files" :loading="quicksave.loading">
 												<template slot="items" slot-scope="props">
 												 <td>
 													 <a class="v-menu__activator" @click="QuicksaveFileDiff(quicksave.site_id, quicksave.quicksave_id, quicksave.git_commit, props.item)"> {{ props.item }} </a>
