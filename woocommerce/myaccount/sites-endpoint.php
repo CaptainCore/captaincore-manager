@@ -2279,6 +2279,7 @@ new Vue({
 			};
 
 			self = this;
+			site_name = this.dialog_new_site.domain;
 
 			jQuery.post(ajaxurl, data, function(response) {
 
@@ -2308,6 +2309,12 @@ new Vue({
 							],
 						}
 						self.fetchSiteInfo( response.site_id );
+						site_id = response.site_id;
+						
+						// Start job
+						description = "Adding " + site_name;
+						job_id = Math.round((new Date()).getTime());
+						self.jobs.push({"job_id": job_id,"description": description, "status": "running"});
 
 						// Run prep immediately after site added.
 						var data = {
@@ -2315,8 +2322,15 @@ new Vue({
 							'command': "update",
 							'post_id': response.site_id
 						};
+
 						jQuery.post(ajaxurl, data, function(response) {
-							console.log(response);
+							// Updates job id with reponsed background job id
+							self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
+
+							// Check if completed in 2 seconds
+							setTimeout(function() {
+								self.jobRetry(site_id, response);
+							}, 2000);
 						});
 
 					}
