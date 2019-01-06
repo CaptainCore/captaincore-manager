@@ -2835,7 +2835,7 @@ new Vue({
 
 			site = this.sites.filter(site => site.id == site_id)[0];
 			should_proceed = confirm("Push production site " + site.name + " to staging site?");
-			description = "Pushing production site to staging";
+			description = "Pushing production site '" + site.name + "' to staging";
 
 			if ( ! should_proceed ) {
 				return;
@@ -2872,7 +2872,7 @@ new Vue({
 
 			site = this.sites.filter(site => site.id == site_id)[0];
 			should_proceed = confirm("Push staging site " + site.name + " to production site?");
-			description = "Pushing staging site to production";
+			description = "Pushing staging site '" + site.name + "' to production";
 
 			if ( ! should_proceed ) {
 				return;
