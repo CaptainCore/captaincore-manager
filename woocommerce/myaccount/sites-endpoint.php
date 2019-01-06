@@ -2776,6 +2776,7 @@ new Vue({
 
 			site = this.sites.filter(site => site.id == site_id)[0];
 			should_proceed = confirm("Deploy users and plugins " + site.name + "?");
+			description = "Deploy users and plugins on '" + site.name + "'";
 
 			if ( ! should_proceed ) {
 				return;
@@ -2789,9 +2790,21 @@ new Vue({
 
 			self = this;
 
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					self.snackbar.message = "Site deploy in process";
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+
+					// Check if completed in 2 seconds
+					setTimeout(function() {
+						self.jobRetry( site_id, response.data );
+					}, 2000);
+
+					self.snackbar.message = description;
 					self.snackbar.show = true;
 				})
 				.catch( error => console.log( error ) );
