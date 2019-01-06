@@ -2808,6 +2808,7 @@ new Vue({
 
 			site = this.sites.filter(site => site.id == site_id)[0];
 			should_proceed = confirm("Push production site " + site.name + " to staging site?");
+			description = "Pushing production site to staging";
 
 			if ( ! should_proceed ) {
 				return;
@@ -2822,9 +2823,20 @@ new Vue({
 
 			self = this;
 
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					self.snackbar.message = "Pushing production site to staging";
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+
+					// Check if completed in 2 seconds
+					setTimeout(function() {
+						self.jobRetry(site_id, response.data);
+					}, 2000);
+					self.snackbar.message = description;
 					self.snackbar.show = true;
 				})
 				.catch( error => console.log( error ) );
@@ -2833,6 +2845,7 @@ new Vue({
 
 			site = this.sites.filter(site => site.id == site_id)[0];
 			should_proceed = confirm("Push staging site " + site.name + " to production site?");
+			description = "Pushing staging site to production";
 
 			if ( ! should_proceed ) {
 				return;
@@ -2847,9 +2860,20 @@ new Vue({
 
 			self = this;
 
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					self.snackbar.message = "Pushing stagging site to production";
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+
+					// Check if completed in 2 seconds
+					setTimeout(function() {
+						self.jobRetry(site_id, response.data);
+					}, 2000);
+					self.snackbar.message = description;
 					self.snackbar.show = true;
 				})
 				.catch( error => console.log( error ) );
