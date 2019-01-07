@@ -3168,8 +3168,11 @@ function captaincore_ajax_action_callback() {
 	}
 
 	$cmd   = $_POST['command'];
-	$value = $_POST['value'];
+	if ( isset($_POST['value']) ){
+		$value = $_POST['value'];
+	}
 	$site  = get_field( 'site', $post_id );
+	$remote_command = false;
 
 	if ( $cmd == 'mailgun' ) {
 
