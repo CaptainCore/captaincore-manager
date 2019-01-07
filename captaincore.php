@@ -3749,8 +3749,13 @@ function captaincore_install_action_callback() {
 
 	// Add command to dispatch server
 	$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+	if ( is_wp_error( $response ) ) {
+		$error_message = $response->get_error_message();
+		$response = "Something went wrong: $error_message";
+	} else {
 	$response = $response["body"];
-
+	}
+	
 	echo $response;
 	
 	wp_die(); // this is required to terminate immediately and return a proper response
