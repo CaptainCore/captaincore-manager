@@ -442,6 +442,8 @@ class Site {
 		if ($storage) {
 			$storage_gbs = round($storage / 1024 / 1024 / 1024, 1);
 			$storage_gbs = $storage_gbs ."GB";
+		} else { 
+			$storage_gbs = "";
 		}
 		$views               = get_field( 'views', $site->ID );
 		$mailgun             = get_field( 'mailgun', $site->ID );
@@ -462,6 +464,10 @@ class Site {
 			$server = "Kinsta";
 		}
 
+		if ( !isset( $server ) ) {
+			$server = "";
+		}
+
 		// Prepare site details to be returned
 		$site_details       = new \stdClass();
 		$site_details->id   = $site->ID;
@@ -476,8 +482,8 @@ class Site {
 		$site_details->tabs_management = "tab-Keys";
 		$site_details->storage = $storage_gbs;
 		$site_details->server = $server;
-		if (is_string($views)) {
-			$site_details->views = number_format($views);
+		if ( is_string($views) ) {
+			$site_details->views = number_format( intval( $views ) );
 		}
 		$site_details->exclude_themes = $exclude_themes;
 		$site_details->exclude_plugins = $exclude_plugins;
@@ -488,6 +494,10 @@ class Site {
 		$site_details->plugins_selected = array();
 		$site_details->users_selected = array();
 		$site_details->pagination = array( "sortBy" => "roles" );
+
+		if ( !isset( $site_details->views ) ) {
+			$site_details->views = "";
+		}
 
 		if ( $site_details->views == 0 ) {
 			$site_details->views = "";
