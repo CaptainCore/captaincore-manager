@@ -259,6 +259,20 @@ class Domains {
 
 		endforeach;
 
+		foreach ( $partner as $customer ) :
+
+			$domains = get_field( 'domains', $customer );
+			if ( $domains ) {
+				foreach ( $domains as $domain ) :
+					$domain_name = get_the_title( $domain );
+					if ( $domain_name ) {
+						$all_domains[ $domain_name ] = $domain;
+					}
+				endforeach;
+			}
+
+		endforeach;
+
 		// Sort array by domain name
 		ksort( $all_domains );
 

@@ -2922,6 +2922,18 @@ function captaincore_verify_permissions_domain( $domain_id ) {
 				endif;
 
 			}
+
+			foreach ( $partner as $partner_id ) {
+
+				$domains = get_field( 'domains', $partner_id );
+				if ( $domains ) {
+					foreach ( $domains as $domain ) {
+						if ( $domain_id == get_field( 'domain_id', $domain ) ) {
+							return true;
+						}
+					}
+				}
+			}
 		}
 	}
 
