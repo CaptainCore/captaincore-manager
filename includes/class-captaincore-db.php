@@ -470,6 +470,7 @@ class Site {
 		$database_username   = get_field( 'database_username', $site->ID);
 		$staging_address     = get_field( 'address_staging', $site->ID );
 		$staging_username    = get_field( 'username_staging', $site->ID );
+		$staging_port        = get_field( 'port_staging', $site->ID );
 		$home_url            = get_field( 'home_url', $site->ID );
 		if ( strpos( $production_address, '.wpengine.com' ) !== false ) { 
 			$server = "WP Engine";
@@ -614,7 +615,7 @@ class Site {
 			);
 
 			if ( strpos( $staging_address, '.kinsta.' ) ) {
-				$site_details->keys[1]["ssh"] = "ssh ${staging_username}@${staging_address} -p ${production_port}";
+				$site_details->keys[1]["ssh"] = "ssh ${staging_username}@${staging_address} -p ${staging_port}";
 				$staging_address_find_ending = strpos( $staging_address,'.kinsta.' ) + 1;
 				$staging_address_ending = substr( $staging_address, $staging_address_find_ending );
 			}
