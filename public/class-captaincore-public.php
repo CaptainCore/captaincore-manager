@@ -98,7 +98,7 @@ class Captaincore_Public {
 			wp_enqueue_script( 'materialize', plugin_dir_url( __FILE__ ) . 'js/materialize.min.js', array( 'jquery' ), '2016-12-30', false );
 		}
 
-		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/captaincore-public.2018-06-30.css', array(), $this->version, 'all' );
+		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/captaincore-public.2019-02-06.css', array(), $this->version, 'all' );
 
 
 	}
