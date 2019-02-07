@@ -487,6 +487,7 @@ class Site {
 		$site_details       = new \stdClass();
 		$site_details->id   = $site->ID;
 		$site_details->name = get_the_title( $site->ID );
+		$site_details->site = get_field( 'site', $site->ID );
 		$site_details->filtered = true;
 		$site_details->selected = false;
 		$site_details->loading_plugins = false;
@@ -572,7 +573,6 @@ class Site {
 			'key_id'      => 1,
 			'link'        => "http://$domain",
 			'environment' => 'Production',
-			'site'        => get_field( 'site', $site->ID ),
 			'address'     => get_field( 'address', $site->ID ),
 			'username'    => get_field( 'username', $site->ID ),
 			'password'    => get_field( 'password', $site->ID ),
@@ -605,7 +605,6 @@ class Site {
 				'key_id'      => 2,
 				'link'        => $link_staging,
 				'environment' => 'Staging',
-				'site'        => get_field( 'site_staging', $site->ID ),
 				'address'     => get_field( 'address_staging', $site->ID ),
 				'username'    => get_field( 'username_staging', $site->ID ),
 				'password'    => get_field( 'password_staging', $site->ID ),
@@ -667,6 +666,7 @@ class Site {
 			$response['site_id']  = $site_id;
 
 			// add in ACF fields
+			update_field( 'site', $site->site, $site_id );
 			update_field( 'customer', array_column( $site->customer, 'customer_id' ), $site_id );
 			update_field( 'partner', array_column( $site->shared_with, 'customer_id' ), $site_id );
 			update_field( 'updates_enabled', $site->updates_enabled, $site_id );
@@ -692,7 +692,6 @@ class Site {
 					if ( strpos( $key->address, '.wpengine.com' ) ) {
 						update_field( 'provider', 'wpengine', $site_id );
 					}
-					update_field( 'site', $key->site, $site_id );
 					update_field( 'address', $key->address, $site_id );
 					update_field( 'username', $key->username, $site_id );
 					update_field( 'password', $key->password, $site_id );

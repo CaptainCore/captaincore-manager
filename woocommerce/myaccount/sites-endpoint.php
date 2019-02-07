@@ -595,7 +595,6 @@ Vue.component('file-upload', VueUploadComponent);
 										</div>
 										<v-container fluid>
 										<div row>
-											<v-text-field label="Site Name" :value="key.site" @change.native="key.site = $event.target.value" required></v-text-field>
 											<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required></v-text-field>
 											<v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field>
 											<v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field>
@@ -905,7 +904,6 @@ Vue.component('file-upload', VueUploadComponent);
 									</div>
 									<v-container fluid>
 									<div row>
-										<v-text-field label="Site Name" :value="key.site" @change.native="key.site = $event.target.value" required></v-text-field>
 										<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required></v-text-field>
 										<v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field>
 										<v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field>
@@ -2246,9 +2244,6 @@ new Vue({
 		},
 		new_site_preload_staging() {
 
-			// Copy production site name to staging field
-			this.dialog_new_site.keys[1].site = this.dialog_new_site.keys[0].site;
-
 			// Copy production address to staging field
 			this.dialog_new_site.keys[1].address = this.dialog_new_site.keys[0].address;
 
@@ -2298,14 +2293,15 @@ new Vue({
 						self.dialog_new_site = {
 							show: false,
 							domain: "",
+							site: "",
 							errors: [],
 							updates_enabled: "1",
 							shared_with: [],
 							customers: [],
 							keys: [
-								{"environment": "Production", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","use_s3": false,
+								{"environment": "Production", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","use_s3": false,
 								"s3_access_key":"","s3_secret_key":"","s3_bucket":"","s3_path":"","database_username":"","database_password":"" },
-								{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","database_username":"","database_password":"" }
+								{"environment": "Staging", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","database_username":"","database_password":"" }
 							],
 						}
 						self.fetchSiteInfo( response.site_id );
