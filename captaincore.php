@@ -3802,9 +3802,12 @@ function captaincore_site_fetch_details( $post_id ) {
 	$s3bucket         = get_field( 's3_bucket', $post_id );
 	$s3path           = get_field( 's3_path', $post_id );
 	$partners         = get_field( 'partner', $post_id );
+	$subsite          = "";
 
 	if ( $partners ) {
 		$preloadusers = implode( ',', $partners );
+	} else {
+		$preloadusers     = "";
 	}
 
 	// Append provider if exists
