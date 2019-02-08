@@ -3330,6 +3330,17 @@ function captaincore_ajax_action_callback() {
 		echo json_encode( $usage_breakdown ) ;
 	}
 
+	if ( $cmd == 'updateFathom' ) {
+
+		update_field( 'field_5c3c65a3f5462', json_encode($value), $post_id );
+
+		// Remote Sync
+		$run_in_background = true;
+		$remote_command = true;
+		$command = "stats-deploy $site '" . json_encode($value) . "'";
+
+	}
+
 	if ( $cmd == 'updateSettings' ) {
 
 		// Saves update settings for a site

@@ -425,6 +425,59 @@ Vue.component('file-upload', VueUploadComponent);
 		</v-card-text>
 		</v-card>
 		</v-dialog>
+		<v-dialog v-model="dialog_fathom.show" max-width="500px">
+		<v-card tile>
+			<v-toolbar card dark color="primary">
+				<v-btn icon dark @click.native="dialog_fathom.show = false">
+					<v-icon>close</v-icon>
+				</v-btn>
+				<v-toolbar-title>Configure Fathom for {{ dialog_fathom.site.name }}</v-toolbar-title>
+				<v-spacer></v-spacer>
+			</v-toolbar>
+			<v-card-text>
+
+				<v-progress-linear :indeterminate="true" v-if="dialog_fathom.loading"></v-progress-linear>
+				
+				<table>
+				<tr v-for="tracker in dialog_fathom.site.fathom">
+					<td><v-text-field v-model="tracker.domain" label="Domain"></v-text-field></td>
+					<td><v-text-field v-model="tracker.code" label="Code"></v-text-field></td>
+					<td>
+						<v-icon small @click="deleteFathomItem(tracker)">delete</v-icon>
+					</td>
+				</tr>
+				</table>
+				<v-btn color="primary" dark class="mb-2" @click="newFathomItem">New Item</v-btn>
+			<v-btn @click="saveFathomConfigurations()">Save Fathom configurations</v-btn>
+		</v-card-text>
+		</v-card>
+		</v-dialog>
+		<v-dialog v-model="dialog_fathom.editItem" max-width="500px">
+        <v-card>
+          <v-card-title>
+            <span class="headline">Edit Item</span>
+          </v-card-title>
+
+          <v-card-text>
+            <v-container grid-list-md>
+              <v-layout wrap>
+                <v-flex xs12 sm6 md4>
+                  <v-text-field v-model="dialog_fathom.editedItem.domain" label="Domain"></v-text-field>
+                </v-flex>
+                <v-flex xs12 sm6 md4>
+                  <v-text-field v-model="dialog_fathom.editedItem.code" label="Code"></v-text-field>
+                </v-flex>
+              </v-layout>
+            </v-container>
+          </v-card-text>
+
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn color="blue darken-1" flat @click="configureFathomClose">Cancel</v-btn>
+            <v-btn color="blue darken-1" flat @click="configureFathomSave">Save</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
 		<v-dialog v-model="dialog_update_settings.show" max-width="500px">
 		<v-card tile>
 			<v-toolbar card dark color="primary">
@@ -1686,6 +1739,12 @@ Vue.component('file-upload', VueUploadComponent);
 							<v-icon class="reverse">local_shipping</v-icon> <span>Push Staging to Production</span>
 						</v-btn>
 						</div>
+						<div v-if="typeof dialog_new_site == 'object'">
+						<v-btn left small flat @click="configureFathom( site.id )">
+							<v-icon>bar_chart</v-icon>
+							<span>Configure Fathom Tracker</span>
+						</v-btn>
+						</div>
 						<div>
 						<v-btn left small flat @click="viewUsageBreakdown( site.id )">
 							<v-icon>chrome_reader_mode</v-icon>
@@ -1823,8 +1882,10 @@ new Vue({
 		dialog_mailgun: { show: false, site: {}, response: "", loading: false },
 		dialog_usage_breakdown: { show: false, site: {}, response: [], company_name: "" },
 		dialog_toggle: { show: false, site: {} },
-		dialog_quicksave: { show: false, site_id: null, quicksaves: [], search: ""},
-		dialog_update_settings: { show: false, site_id: null, loading: false},
+		dialog_quicksave: { show: false, site_id: null, quicksaves: [], search: "" },
+		dialog_theme_and_plugin_checks: { show: false, site: {}, loading: false },
+		dialog_update_settings: { show: false, site_id: null, loading: false },
+		dialog_fathom: { show: false, site: {}, loading: false, editItem: false, editedItem: {}, editedIndex: -1 },
 		page: 1,
 		jobs: [],
 		current_user_email: "<?php echo $current_user->user_email; ?>",
@@ -3312,6 +3373,71 @@ new Vue({
 				}, 2000);
 			});
 
+		},
+		themeAndPluginChecks( site_id ) {
+			site = this.sites.filter(site => site.id == site_id)[0];
+			this.dialog_theme_and_plugin_checks.site = site;
+			this.dialog_theme_and_plugin_checks.show = true;
+		},
+		configureFathom( site_id ) {
+			this.dialog_fathom.site = this.sites.filter(site => site.id == site_id)[0];
+			this.dialog_fathom.show = true;
+		},
+		configureFathomClose() {
+			this.dialog_fathom.editItem = false;
+			setTimeout(() => {
+				this.dialog_fathom.editedItem = {}
+				this.dialog_fathom.editedIndex = -1
+			}, 300)
+		},
+		configureFathomSave() {
+			if (this.dialog_fathom.editedIndex > -1) {
+          		Object.assign(this.dialog_fathom.site.fathom[this.dialog_fathom.editedIndex], this.dialog_fathom.editedItem)
+			} else {
+				this.dialog_fathom.site.fathom.push(this.dialog_fathom.editedItem)
+			}
+			this.configureFathomClose()
+		},
+		newFathomItem(){
+			this.dialog_fathom.site.fathom.push({ "code": "", "domain" : "" })
+		},
+		deleteFathomItem (item) {
+			const index = this.dialog_fathom.site.fathom.indexOf(item)
+			confirm('Are you sure you want to delete this item?') && this.dialog_fathom.site.fathom.splice(index, 1)
+		},
+		saveFathomConfigurations() {
+			site = this.dialog_fathom.site;
+			site_id = site.id;
+			should_proceed = confirm("Apply new Fathom tracker for " + site.name + "?");
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			// New job for progress tracking
+			job_id = Math.round((new Date()).getTime());
+			description = "Updating Fathom tracker on " + site.name;
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
+			// Prep AJAX request
+			var data = {
+				'action': 'captaincore_ajax',
+				'post_id': site_id,
+				'command': "updateFathom",
+				'value': site.fathom,
+			};
+
+			self = this;
+
+			jQuery.post(ajaxurl, data, function(response) {
+				// Updates job id with reponsed background job id
+				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
+
+				// Check if completed in 2 seconds
+				setTimeout(function() {
+					self.jobRetry(site_id, response);
+				}, 2000);
+			});
 		},
 		updateSettings( site_id ) {
 			this.dialog_update_settings.show = true;

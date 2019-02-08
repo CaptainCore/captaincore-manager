@@ -461,6 +461,7 @@ class Site {
 		}
 		$views               = get_field( 'views', $site->ID );
 		$mailgun             = get_field( 'mailgun', $site->ID );
+		$fathom              = json_decode( get_field( 'fathom', $site->ID ) );
 		$exclude_themes      = get_field( 'exclude_themes', $site->ID );
 		$exclude_plugins     = get_field( 'exclude_plugins', $site->ID );
 		$updates_enabled     = get_post_meta( $site->ID, 'updates_enabled' );
@@ -472,6 +473,9 @@ class Site {
 		$staging_username    = get_field( 'username_staging', $site->ID );
 		$staging_port        = get_field( 'port_staging', $site->ID );
 		$home_url            = get_field( 'home_url', $site->ID );
+		if ( $fathom == "" ) {
+			$fathom = array();
+		}
 		if ( strpos( $production_address, '.wpengine.com' ) !== false ) { 
 			$server = "WP Engine";
 		} 
@@ -494,6 +498,7 @@ class Site {
 		$site_details->loading_themes = false;
 		$site_details->environment_selected = "Production";
 		$site_details->mailgun = $mailgun;
+		$site_details->fathom = $fathom;
 		$site_details->tabs = "tab-Site-Management";
 		$site_details->tabs_management = "tab-Keys";
 		$site_details->storage = $storage_gbs;
