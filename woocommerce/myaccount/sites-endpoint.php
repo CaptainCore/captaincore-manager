@@ -447,8 +447,14 @@ Vue.component('file-upload', VueUploadComponent);
 					</td>
 				</tr>
 				</table>
-				<v-btn color="primary" dark class="mb-2" @click="newFathomItem">New Item</v-btn>
-			<v-btn @click="saveFathomConfigurations()">Save Fathom configurations</v-btn>
+				<v-flex xs12 class="text-xs-right">
+				<v-btn fab small @click="newFathomItem">
+					<v-icon dark>add</v-icon>
+				</v-btn>
+				</v-flex>
+				<v-flex xs12>
+					<v-btn  color="primary" dark @click="saveFathomConfigurations()">Save Fathom configurations</v-btn>
+				</v-flex>
 		</v-card-text>
 		</v-card>
 		</v-dialog>
@@ -3430,6 +3436,10 @@ new Vue({
 			self = this;
 
 			jQuery.post(ajaxurl, data, function(response) {
+				// close dialog
+				self.dialog_fathom.site = {};
+				self.dialog_fathom.show = false;
+
 				// Updates job id with reponsed background job id
 				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
 
