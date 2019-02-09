@@ -43,6 +43,16 @@ TODO
 TODO
 
 == Changelog ==
+= 0.3.3: Feb 9 2019
+* New: Sites UI - Fathom tracker
+* Tweak: Sites UI - Moved many of the commands like 'Mailgun', 'Site copy' into the background with proper status reporting.
+* Tweak: Sites UI - Improve response when and added loading status when listing quicksave changes.
+* Tweak: Sites UI - Added feedback to production/staging deployments and adding new sites. 
+* Fix: Sites UI - Feedback when applying HTTPS urls and creating Snapshots
+* Fix: Sites UI - SSH staging port
+* Fix: Various PHP errors and warnings.
+* Fix: Company Handbook - restore bullets
+
 = 0.3.2: Dec 31 2018 =
 * New: Integrated CaptainCore Dispatch
 * Tweak: Refactor fetch functions `captaincore_fetch_customer`, `captaincore_fetch_domains` and `captaincore_fetch_sites` to new classes `CaptainCore/Customers`, `CaptainCore/Domains`and `CaptainCore/Sites`
