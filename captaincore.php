@@ -4521,9 +4521,6 @@ function my_acf_input_admin_footer() {
 	if(staging_address) {
 
 		function sync_button() {
-			// Copy production install name to staging field
-			jQuery('#acf-field_57b7a2532cc5f').val(jQuery('#acf-field_561fa4ab910ff').val());
-
 			// Copy production address to staging field
 			jQuery('#acf-field_57b7a25d2cc60').val(jQuery('#acf-field_5619c94518f1c').val());
 
@@ -4553,7 +4550,7 @@ function my_acf_input_admin_footer() {
 			jQuery('#acf-field_5845da68fc2c9').val(jQuery('#acf-field_58422bd538c32').val());
 		}
 
-		jQuery('.acf-field.acf-field-text.acf-field-57b7a2532cc5f').before('<div class="sync-button acf-field acf-field-text"><a href="#">Preload from Production</a></div>');
+		jQuery('.acf-field.acf-field-text.acf-field-57b7a25d2cc60').before('<div class="sync-button acf-field acf-field-text"><a href="#">Preload from Production</a></div>');
 		jQuery('.sync-button a').click(function(e) {
 			sync_button();
 			return false;
