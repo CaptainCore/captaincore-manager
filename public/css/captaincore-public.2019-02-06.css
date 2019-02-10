@@ -123,7 +123,7 @@ input:not([type]), input[type=text]:not(.browser-default), input[type=password]:
   margin-bottom: 40px !important;
 }
 
-.captcore_process-template-default ul li {
+.captcore_process-template-default #primary.content-area ul li {
   list-style-type: disc;
 }
 
