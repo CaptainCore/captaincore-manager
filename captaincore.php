@@ -3791,6 +3791,7 @@ function captaincore_site_fetch_details( $post_id ) {
 
 	$site             = get_field( 'site', $post_id );
 	$provider         = get_field( 'provider', $post_id );
+	$fathom           = get_field( 'fathom', $post_id );
 	$domain           = get_the_title( $post_id );
 	$address          = get_field( 'address', $post_id );
 	$username         = get_field( 'username', $post_id );
@@ -3830,6 +3831,7 @@ function captaincore_site_fetch_details( $post_id ) {
 	( $site ? " $site" : '' ) .
 	( $post_id ? " --id=$post_id" : '' ) .
 	( $domain ? " --domain=$domain" : '' ) .
+	( $fathom ? " --fathom=$fathom" : '' ) .
 	( $username ? " --username=$username" : '' ) .
 	( $password ? ' --password=' . rawurlencode( base64_encode( $password ) ) : '' ) .
 	( $address ? " --address=$address" : '' ) .
