@@ -896,7 +896,6 @@ Vue.component('file-upload', VueUploadComponent);
 							<v-autocomplete
 							:items="customers"
 							item-text="name"
-							item-value="customer_id"
 							v-model="dialog_edit_site.site.customer"
 							:return-object="true"
 							label="Customer"
@@ -991,7 +990,14 @@ Vue.component('file-upload', VueUploadComponent);
 						>
 						{{ error }}
 						</v-alert>
-						<v-flex xs12 text-xs-right><v-btn right @click="submitEditSite">Save Changes</v-btn></v-flex>
+						
+						<v-flex xs12 text-xs-right >
+							<v-btn right @click="submitEditSite">
+								Save Changes
+							</v-btn>
+							<v-progress-linear :indeterminate="true" v-show="dialog_edit_site.loading"></v-progress-linear>
+							
+						</v-flex>
 					 </v-layout>
 				 </v-container>
 						</v-form>
@@ -1882,7 +1888,7 @@ new Vue({
 		dialog: false,
 		dialog_apply_https_urls: { show: false, site: {} },
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
-		dialog_edit_site: { show: false, site: {} },
+		dialog_edit_site: { show: false, site: {}, loading: false },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $current_user->user_email; ?>", current_user_email: "<?php echo $current_user->user_email; ?>" },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
 		dialog_mailgun: { show: false, site: {}, response: "", loading: false },
@@ -2402,6 +2408,8 @@ new Vue({
 		},
 		submitEditSite() {
 
+			this.dialog_edit_site.loading = true;
+
 			var data = {
 				'action': 'captaincore_ajax',
 				'command': "editSite",
@@ -2424,7 +2432,8 @@ new Vue({
 					}
 
 					if ( response.response = "Successfully updated site" ) {
-						self.dialog_edit_site = { show: false, site: {} };
+						self.dialog_edit_site.show = false;
+						
 						self.fetchSiteInfo( response.site_id );
 
 						// Run prep immediately after site added.
@@ -2434,7 +2443,7 @@ new Vue({
 							'post_id': response.site_id
 						};
 						jQuery.post(ajaxurl, data, function(response) {
-							console.log(response);
+							self.dialog_edit_site = { show: false, loading: false, site: {} };
 						});
 
 					}
