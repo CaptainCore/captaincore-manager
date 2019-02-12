@@ -1481,6 +1481,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	$themes              = $post->themes;
 	$users               = $post->users;
 	$home_url            = $post->home_url;
+	$subsite_count       = $post->subsite_count;
 	$git_commit          = $post->git_commit;
 	$git_status          = trim( base64_decode( $post->git_status ) );
 	$token_key           = $post->token_key;
@@ -1614,6 +1615,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		update_field( 'field_5b2a900c85a77', json_encode( $users ), $site_id );
 		update_field( 'field_5a9421bc04ed5', $core, $site_id );
 		update_field( 'field_5a944358bf146', $home_url, $site_id );
+		update_field( 'field_5c621d58fd8c9', $subsite_count, $site_id );
 
 		$response = array( "response" => "Completed sync-data for $site_id" );
 
