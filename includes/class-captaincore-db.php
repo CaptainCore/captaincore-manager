@@ -461,6 +461,7 @@ class Site {
 		}
 		$views               = get_field( 'views', $site->ID );
 		$mailgun             = get_field( 'mailgun', $site->ID );
+		$subsite_count       = get_field( 'subsite_count', $site->ID );
 		$fathom              = json_decode( get_field( 'fathom', $site->ID ) );
 		$exclude_themes      = get_field( 'exclude_themes', $site->ID );
 		$exclude_plugins     = get_field( 'exclude_plugins', $site->ID );
@@ -498,6 +499,7 @@ class Site {
 		$site_details->loading_themes = false;
 		$site_details->environment_selected = "Production";
 		$site_details->mailgun = $mailgun;
+		$site_details->subsite_count = $subsite_count;
 		$site_details->fathom = $fathom;
 		$site_details->tabs = "tab-Site-Management";
 		$site_details->tabs_management = "tab-Keys";

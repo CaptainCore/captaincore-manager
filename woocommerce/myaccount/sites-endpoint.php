@@ -1342,6 +1342,7 @@ Vue.component('file-upload', VueUploadComponent);
 										<strong>{{ site.name }}</strong>
 									</div>
 									<div class="text-xs-right">
+									    <span v-show="site.subsite_count" class="usage"><v-icon small light>fas fa-network-wired</i></v-icon> Multisite - {{ site.subsite_count }} sites</span>
 										<span v-show="site.server" class="usage"><v-icon small light>fas fa-server</v-icon> {{ site.server }}</span>
 										<span v-show="site.views" class="usage"><v-icon small light>fas fa-eye</v-icon> {{ site.views }} <small>yearly</small></span>
 										<span v-show="site.storage" class="usage"><v-icon small light>fas fa-hdd</v-icon> {{ site.storage }}</span>
