@@ -76,7 +76,7 @@ class Captaincore_Public {
 		 global $wp_query;
 
 		wp_enqueue_style( 'google-material-icons', 'https://fonts.googleapis.com/icon?family=Material+Icons', array(), '2017-09-03' );
-		wp_enqueue_style( 'font-awesome', "https://use.fontawesome.com/releases/v5.0.13/css/all.css", array() );
+		wp_enqueue_style( 'font-awesome', "https://use.fontawesome.com/releases/v5.7.1/css/all.css", array() );
 		wp_enqueue_style( 'dashicons' );
 
 		$materialize_needed = false;
