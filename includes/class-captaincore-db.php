@@ -47,6 +47,7 @@ class DB {
 	static function insert( $data ) {
 		global $wpdb;
 		$wpdb->insert( self::_table(), $data );
+		return $wpdb->insert_id;
 	}
 
 	static function update( $data, $where ) {
@@ -85,6 +86,26 @@ class DB {
 		$sql   = 'SELECT * FROM ' . self::_table() . " WHERE `site_id` = '$value' order by `created_at` DESC";
 		return $wpdb->get_results( $sql );
 	}
+
+	static function fetch_environments( $value ) {
+		global $wpdb;
+		$value = intval( $value );
+		$sql   = 'SELECT * FROM ' . self::_table() . " WHERE `site_id` = '$value' order by `environment` ASC";
+		return $wpdb->get_results( $sql );
+	}
+
+	static function fetch_field( $value, $environment, $field ) {
+		global $wpdb;
+		$value = intval( $value );
+		$sql   = "SELECT $field FROM " . self::_table() . " WHERE `site_id` = '$value' and `environment` = '$environment' order by `created_at` DESC";
+		return $wpdb->get_results( $sql );
+	}
+
+}
+
+class environments extends DB {
+
+	static $primary_key = 'environment_id';
 
 }
 
@@ -447,33 +468,36 @@ class Site {
 			$site = get_post( $site_id );
 		}
 
+		// Fetch relating enviroments
+		$db_environments = new environments();
+		$environments = $db_environments->fetch_environments( $site->ID );
+
 		$domain              = get_the_title( $site->ID );
-		$plugins             = json_decode( get_field( 'plugins', $site->ID ) );
-		$themes              = json_decode( get_field( 'themes', $site->ID ) );
 		$customer            = get_field( 'customer', $site->ID );
 		$shared_with         = get_field( 'partner', $site->ID );
-		$storage             = get_field( 'storage', $site->ID );
+		$mailgun             = get_field( 'mailgun', $site->ID );
+		$fathom              = json_decode( get_field( 'fathom', $site->ID ) );
+		$storage             = $environments[0]->storage;
 		if ($storage) {
 			$storage_gbs = round($storage / 1024 / 1024 / 1024, 1);
 			$storage_gbs = $storage_gbs ."GB";
 		} else { 
 			$storage_gbs = "";
 		}
-		$views               = get_field( 'views', $site->ID );
-		$mailgun             = get_field( 'mailgun', $site->ID );
-		$subsite_count       = get_field( 'subsite_count', $site->ID );
-		$fathom              = json_decode( get_field( 'fathom', $site->ID ) );
-		$exclude_themes      = get_field( 'exclude_themes', $site->ID );
-		$exclude_plugins     = get_field( 'exclude_plugins', $site->ID );
-		$updates_enabled     = get_post_meta( $site->ID, 'updates_enabled' );
-		$production_address  = get_field( 'address', $site->ID );
-		$production_username = get_field( 'username', $site->ID );
-		$production_port     = get_field( 'port', $site->ID );
-		$database_username   = get_field( 'database_username', $site->ID);
-		$staging_address     = get_field( 'address_staging', $site->ID );
-		$staging_username    = get_field( 'username_staging', $site->ID );
-		$staging_port        = get_field( 'port_staging', $site->ID );
-		$home_url            = get_field( 'home_url', $site->ID );
+		$views               = $environments[0]->views;
+		$subsite_count       = $environments[0]->subsite_count;
+		$exclude_themes      = $environments[0]->exclude_themes;
+		$exclude_plugins     = $environments[0]->exclude_plugins;
+		$updates_enabled     = $environments[0]->updates_enabled;
+		$production_address  = $environments[0]->address;
+		$production_username = $environments[0]->username;
+		$production_port     = $environments[0]->port;
+		$database_username   = $environments[0]->database_username;
+		$staging_address     = ( isset($environments[1]) ? $environments[1]->address : '' );
+		$staging_username    = ( isset($environments[1]) ? $environments[1]->username : '' );
+		$staging_port        = ( isset($environments[1]) ? $environments[1]->port : '' );
+		$home_url            = $environments[0]->home_url;
+
 		if ( $fathom == "" ) {
 			$fathom = array();
 		}
@@ -491,7 +515,7 @@ class Site {
 		// Prepare site details to be returned
 		$site_details       = new \stdClass();
 		$site_details->id   = $site->ID;
-		$site_details->name = get_the_title( $site->ID );
+		$site_details->name = $domain;
 		$site_details->site = get_field( 'site', $site->ID );
 		$site_details->filtered = true;
 		$site_details->selected = false;
@@ -556,17 +580,6 @@ class Site {
 			$site_details->updates_enabled = 0;
 		}
 
-		if ( $plugins && $plugins != '' ) {
-			$site_details->plugins = $plugins;
-		} else {
-			$site_details->plugins = array();
-		}
-		if ( $themes && $themes != '' ) {
-			$site_details->themes = $themes;
-		} else {
-			$site_details->themes = array();
-		}
-
 		if ( $shared_with ) {
 			foreach ( $shared_with as $customer_id ) {
 				$site_details->shared_with[] = array(
@@ -576,65 +589,90 @@ class Site {
 			}
 		}
 
-		$site_details->keys[0] = array(
+		$site_details->environments[0] = array(
 			'key_id'      => 1,
 			'link'        => "http://$domain",
 			'environment' => 'Production',
-			'address'     => get_field( 'address', $site->ID ),
-			'username'    => get_field( 'username', $site->ID ),
-			'password'    => get_field( 'password', $site->ID ),
-			'protocol'    => get_field( 'protocol', $site->ID ),
-			'port'        => get_field( 'port', $site->ID ),
-			'homedir'     => get_field( 'homedir', $site->ID ),
+			'address'     => $environments[0]->address,
+			'username'    => $environments[0]->username,
+			'password'    => $environments[0]->password,
+			'protocol'    => $environments[0]->protocol,
+			'port'        => $environments[0]->port,
+			'homedir'     => $environments[0]->home_directory,
+			'plugins'     => json_decode( $environments[0]->plugins),
+			'themes'      => json_decode( $environments[0]->themes ),
+			'users'       => "Loading",
+			'core'        => $environments[0]->core,
+			'home_url'    => $environments[0]->home_url,
 		);
 
+		if ( $site_details->environments[0]['themes'] == "" ) {
+			$site_details->environments[0]['themes'] = array();
+		}
+		if ( $site_details->environments[0]['plugins'] == "" ) {
+			$site_details->environments[0]['plugins'] = array();
+		}
+
 		if ( strpos( $production_address, '.kinsta.' ) ) {
-			$site_details->keys[0]["ssh"] = "ssh ${production_username}@${production_address} -p ${production_port}";
+			$site_details->environments[0]["ssh"] = "ssh ${production_username}@${production_address} -p ${production_port}";
 			$production_address_find_ending = strpos( $production_address,'.kinsta.' ) + 1;
 			$production_address_ending = substr( $production_address, $production_address_find_ending );
 		}
-		if ( strpos( $production_address, '.kinsta.' ) and get_field( 'database_username', $site->ID ) ) {
+		if ( strpos( $production_address, '.kinsta.' ) and $environments[0]->database_username ) {
 			
-			$site_details->keys[0]["database"] = "https://mysqleditor-${database_username}.${production_address_ending}";
-			$site_details->keys[0]["database_username"] = get_field('database_username', $site->ID);
-			$site_details->keys[0]["database_password"] = get_field('database_password', $site->ID);
+			$site_details->environments[0]["database"] = "https://mysqleditor-${database_username}.${production_address_ending}";
+			$site_details->environments[0]["database_username"] = $environments[0]->database_username;
+			$site_details->environments[0]["database_password"] = $environments[0]->database_password;
 		}
 
-		if ( get_field( 'address_staging', $site->ID ) ) {
+		if ( isset($environments[1]->address) && $environments[1]->address != ""  ) {
 
-			if ( strpos( get_field( 'address_staging', $site->ID ), '.kinsta.' ) ) {
-				$link_staging = "https://staging-" . get_field( 'site_staging', $site->ID ) . ".${production_address_ending}";
+			if ( strpos( $environments[1]->address, '.kinsta.' ) ) {
+				if (! $production_address_ending) {
+					echo "Missing address {$site->ID} ". get_the_title( $site->ID ). " 0: {$environments[1]->address}";
+				}
+				$link_staging = "https://staging-" . get_field( 'site', $site->ID ) . ".${production_address_ending}";
 			} else {
-				$link_staging = 'https://' . get_field( 'site_staging', $site->ID ) . '.staging.wpengine.com';
+				$link_staging = 'https://' . get_field( 'site', $site->ID ) . '.staging.wpengine.com';
 			}
 
-			$site_details->keys[1] = array(
+			$site_details->environments[1] = array(
 				'key_id'      => 2,
 				'link'        => $link_staging,
 				'environment' => 'Staging',
-				'address'     => get_field( 'address_staging', $site->ID ),
-				'username'    => get_field( 'username_staging', $site->ID ),
-				'password'    => get_field( 'password_staging', $site->ID ),
-				'protocol'    => get_field( 'protocol_staging', $site->ID ),
-				'port'        => get_field( 'port_staging', $site->ID ),
-				'homedir'     => get_field( 'homedir_staging', $site->ID ),
+				'address'     => $environments[1]->address,
+				'username'    => $environments[1]->username,
+				'password'    => $environments[1]->password,
+				'protocol'    => $environments[1]->protocol,
+				'port'        => $environments[1]->port,
+				'homedir'     => $environments[1]->home_directory,
+				'plugins'     => json_decode( $environments[1]->plugins),
+				'themes'      => json_decode( $environments[1]->themes ),
+				'users'       => "Loading",
+				'core'        => $environments[1]->core,
+				'home_url'    => $environments[1]->home_url,
 			);
+	
+			if ( $site_details->environments[1]['themes'] == "" ) {
+				$site_details->environments[1]['themes'] = array();
+			}
+			if ( $site_details->environments[1]['plugins'] == "" ) {
+				$site_details->environments[1]['plugins'] = array();
+			}
 
 			if ( strpos( $staging_address, '.kinsta.' ) ) {
-				$site_details->keys[1]["ssh"] = "ssh ${staging_username}@${staging_address} -p ${staging_port}";
+				$site_details->environments[1]['ssh'] = "ssh ${staging_username}@${staging_address} -p ${staging_port}";
 				$staging_address_find_ending = strpos( $staging_address,'.kinsta.' ) + 1;
 				$staging_address_ending = substr( $staging_address, $staging_address_find_ending );
 			}
-			if ( strpos( $staging_address, '.kinsta.' ) and get_field( 'database_username_staging', $site->ID ) ) {
-				$site_details->keys[1]["database"] = "https://mysqleditor-staging-${database_username}.${staging_address_ending}";
-				$site_details->keys[1]["database_username"] = get_field('database_username_staging', $site->ID);
-				$site_details->keys[1]["database_password"] = get_field('database_password_staging', $site->ID);
+			if ( strpos( $staging_address, '.kinsta.' ) and $environments[1]->database_username ) {
+				$site_details->environments[1]['database'] = "https://mysqleditor-staging-${database_username}.${staging_address_ending}";
+				$site_details->environments[1]['database_username'] = $environments[1]->database_username;
+				$site_details->environments[1]['database_password'] = $environments[1]->database_password;
 			}
 
 		}
 
-		$site_details->core                   = get_field( 'core', $site->ID );
-		$site_details->home_url               = $home_url;
 		return $site_details;
 
 	}
@@ -686,7 +724,7 @@ class Site {
 
 			}
 
-			foreach ( $site->keys as $key ) {
+			foreach ( $site->environments as $key ) {
 
 				// Work with array as PHP object
 				$key = (object) $key;
@@ -793,7 +831,7 @@ class Site {
 
 			}
 
-			foreach ( $site->keys as $key ) {
+			foreach ( $site->environments as $key ) {
 
 				// Work with array as PHP object
 				$key = (object) $key;

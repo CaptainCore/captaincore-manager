@@ -645,7 +645,7 @@ Vue.component('file-upload', VueUploadComponent);
 											<v-icon>cached</v-icon>
 										</v-btn>
 										</v-flex>
-										<v-flex xs6 v-for="key in dialog_new_site.keys" :key="key.index">
+										<v-flex xs6 v-for="key in dialog_new_site.environments" :key="key.index">
 										<v-card class="bordered body-1" style="margin:2em;">
 										<div style="position: absolute;top: -20px;left: 20px;">
 											<v-btn depressed disabled right style="background-color: rgb(229, 229, 229)!important; color: #000 !important; left: -11px; top: 0px; height: 24px;">
@@ -953,7 +953,7 @@ Vue.component('file-upload', VueUploadComponent);
 										<v-icon>cached</v-icon>
 									</v-btn>
 									</v-flex>
-									<v-flex xs6 v-for="key in dialog_edit_site.site.keys" :key="key.index">
+									<v-flex xs6 v-for="key in dialog_edit_site.site.environments" :key="key.index">
 									<v-card class="bordered body-1" style="margin:2em;">
 									<div style="position: absolute;top: -20px;left: 20px;">
 										<v-btn depressed disabled right style="background-color: rgb(229, 229, 229)!important; color: #000 !important; left: -11px; top: 0px; height: 24px;">
@@ -1384,7 +1384,7 @@ Vue.component('file-upload', VueUploadComponent);
 									<v-tab key="Plugins" href="#tab-Plugins">
 									  Plugins <v-icon small style="margin-left:7px;">fas fa-plug</v-icon>
 									</v-tab>
-									<v-tab key="Users" href="#tab-Users" @click="fetchUsers( site.id )">
+									<v-tab key="Users" href="#tab-Users" @click="fetchUsers( site.id, site.environment_selected )">
 									  Users <v-icon small style="margin-left:7px;">fas fa-users</v-icon>
 									</v-tab>
 									<v-tab key="Updates" href="#tab-Updates" @click="fetchUpdateLogs( site.id )">
@@ -1397,14 +1397,14 @@ Vue.component('file-upload', VueUploadComponent);
 										Backups <v-icon small style="margin-left:7px;">fas fa-hdd</v-icon>
 									</v-tab>
 								</v-tabs>
-								<v-tabs-items v-model="site.tabs_management" v-if="site.keys.filter( key => key.environment == site.environment_selected ).length == 1">
+								<v-tabs-items v-model="site.tabs_management" v-if="site.environments.filter( key => key.environment == site.environment_selected ).length == 1">
 									<v-tab-item :key="1" value="tab-Keys">
 										<v-toolbar color="grey lighten-4" dense light flat>
 											<v-toolbar-title>Keys</v-toolbar-title>
 											<v-spacer></v-spacer>
 										</v-toolbar>
 
-										<v-card v-for="key in site.keys" v-show="key.environment == site.environment_selected">
+										<v-card v-for="key in site.environments" v-show="key.environment == site.environment_selected">
 
 											<v-container fluid style="padding-top: 10px;">
 											<div><h3 class="headline mb-0" style="margin-top:10px;"><a :href="key.link" target="_blank">{{ key.link }}</a></h3></div>
@@ -1435,22 +1435,23 @@ Vue.component('file-upload', VueUploadComponent);
 									<v-toolbar color="grey lighten-4" dense light flat>
 										<v-toolbar-title>Themes</v-toolbar-title>
 										<v-spacer></v-spacer>
-										<v-toolbar-items v-show="site.environment_selected == 'Production'">
+										<v-toolbar-items>
 											<v-btn flat @click="bulkEdit(site.id,'themes')" v-if="site.themes_selected.length != 0">Bulk Edit {{ site.themes_selected.length }} themes</v-btn>
 											<v-btn flat @click="addTheme(site.id)">Add Theme <v-icon dark small>add</v-icon></v-btn>
 										</v-toolbar-items>
 									</v-toolbar>
 									<v-data-table
-										:headers="headers"
-										:items="site.themes"
-										:loading="site.loading_themes"
+										v-for="key in site.environments"
 										v-model="site.themes_selected"
+										v-show="key.environment == site.environment_selected"
+										:headers="headers"
+										:items="key.themes"
+										:loading="site.loading_themes"
 										item-key="name"
 										value="name"
 										class="elevation-1"
 										select-all
 										hide-actions
-										v-show="site.environment_selected == 'Production'"
 										>
 										<template slot="items" slot-scope="props">
 											<td>
@@ -1483,21 +1484,22 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Plugins</v-toolbar-title>
 					<v-spacer></v-spacer>
-					<v-toolbar-items v-show="site.environment_selected == 'Production'">
+					<v-toolbar-items>
 						<v-btn flat @click="bulkEdit(site.id, 'plugins')" v-if="site.plugins_selected.length != 0">Bulk Edit {{ site.plugins_selected.length }} plugins</v-btn>
 						<v-btn flat @click="addPlugin(site.id)">Add Plugin <v-icon dark small>add</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-data-table
+					v-for="key in site.environments"
+					v-show="key.environment == site.environment_selected"
 					:headers="headers"
-					:items="site.plugins.filter(plugin => plugin.status != 'must-use' && plugin.status != 'dropin')"
+					:items="key.plugins.filter(plugin => plugin.status != 'must-use' && plugin.status != 'dropin')"
 					:loading="site.loading_plugins"
 					:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
 					v-model="site.plugins_selected"
 					item-key="name"
 					value="name"
 					class="elevation-1"
-					v-show="site.environment_selected == 'Production'"
 					select-all
 					hide-actions
 				 >
@@ -1526,7 +1528,7 @@ Vue.component('file-upload', VueUploadComponent);
 						 </v-btn>
 					 </td>
 				 </template>
-				 <template slot="footer" v-for="plugin in site.plugins.filter(plugin => plugin.status == 'must-use' || plugin.status == 'dropin')">
+				 <template slot="footer" v-for="plugin in key.plugins.filter(plugin => plugin.status == 'must-use' || plugin.status == 'dropin')">
 					<tr>
 						<td></td>
 						<td>{{ plugin.title }}</td>
@@ -1546,22 +1548,22 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-btn flat @click="bulkEdit(site.id,'users')" v-if="site.users_selected.length != 0">Bulk Edit {{ site.users_selected.length }} users</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
-				<v-card v-show="site.environment_selected == 'Production'">
-					<v-card-title v-if="site.users.length == 0">
+				<v-card 
+					v-for="key in site.environments"
+					v-show="key.environment == site.environment_selected"
+					>
+					<v-card-title v-if="typeof key.users == 'string'">
 						<div>
 							Fetching users...
 						  <v-progress-linear :indeterminate="true"></v-progress-linear>
 						</div>
 					</v-card-title>
-					<div v-else-if="typeof site.users == 'string'">
-						<v-card-title><div>{{ site.users }}</div></v-card-title>
-					</div>
 					<div v-else>
 						<v-data-table
 							:headers='header_users'
 							:pagination.sync="site.pagination"
 							:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
-							:items="site.users"
+							:items="key.users"
 							item-key="user_login"
 							v-model="site.users_selected"
 							class="elevation-1 table_users"
@@ -1672,7 +1674,7 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-card>
 			</v-tab-item>
 		</v-tabs-items>
-		<v-card v-if="site.keys.filter( key => key.environment == site.environment_selected ).length == 0">
+		<v-card v-if="site.environments.filter( key => key.environment == site.environment_selected ).length == 0">
 
 			<v-container fluid>
 			 <div><span>{{ site.environment_selected }} environment not created.</span></div>
@@ -1911,7 +1913,7 @@ new Vue({
 			updates_enabled: "1",
 			shared_with: [],
 			customers: [],
-			keys: [
+			environments: [
 				{"environment": "Production", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","use_s3": false,"s3_access_key":"","s3_secret_key":"","s3_bucket":"","s3_path":"","database_username":"","database_password":"" },
 				{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","database_username":"","database_password":"" }
 			],
@@ -2031,9 +2033,9 @@ new Vue({
 					all_themes = [];
 					all_plugins = [];
 
-					this.sites.forEach(function(site) {
-
-					site.themes.forEach(function(theme) {
+					this.sites.forEach(site => {
+						site.environments.forEach(environment => {
+							environment.themes.forEach(theme => {
 						exists = all_themes.some(function (el) {
 							return el.name === theme.name;
 						});
@@ -2047,7 +2049,7 @@ new Vue({
 						}
 					});
 
-					site.plugins.forEach(function(plugin) {
+						environment.plugins.forEach(plugin => {
 						exists = all_plugins.some(function (el) {
 							return el.name === plugin.name;
 						});
@@ -2060,7 +2062,7 @@ new Vue({
 							});
 						}
 					});
-
+					 });
 					});
 
 					all_themes.sort((a, b) => a.name.toString().localeCompare(b.name));
@@ -2133,7 +2135,8 @@ new Vue({
 				'action': 'captaincore_ajax',
 				'post_id': site_id,
 				'command': "fetch-one-time-login",
-				'value': username
+				'value': username,
+				'environment': site.environment_selected
 			};
 
 			self = this;
@@ -2319,25 +2322,25 @@ new Vue({
 		new_site_preload_staging() {
 
 			// Copy production address to staging field
-			this.dialog_new_site.keys[1].address = this.dialog_new_site.keys[0].address;
+			this.dialog_new_site.environments[1].address = this.dialog_new_site.environments[0].address;
 
-			if ( this.dialog_new_site.keys[0].address.includes(".kinsta.") ) {
+			if ( this.dialog_new_site.environments[0].address.includes(".kinsta.") ) {
 				// Copy production username to staging field
-				this.dialog_new_site.keys[1].username = this.dialog_new_site.keys[0].username;
+				this.dialog_new_site.environments[1].username = this.dialog_new_site.environments[0].username;
 				// Copy production password to staging field (If Kinsta address)
-				this.dialog_new_site.keys[1].password = this.dialog_new_site.keys[0].password;
+				this.dialog_new_site.environments[1].password = this.dialog_new_site.environments[0].password;
 			} else {
 				// Copy production username to staging field with staging suffix
-				this.dialog_new_site.keys[1].username = this.dialog_new_site.keys[0].username + "-staging";
+				this.dialog_new_site.environments[1].username = this.dialog_new_site.environments[0].username + "-staging";
 			}
 
 			// Copy production port to staging field
-			this.dialog_new_site.keys[1].port = this.dialog_new_site.keys[0].port;
+			this.dialog_new_site.environments[1].port = this.dialog_new_site.environments[0].port;
 			// Copy production home directory to staging field
-			this.dialog_new_site.keys[1].homedir = this.dialog_new_site.keys[0].homedir;
+			this.dialog_new_site.environments[1].homedir = this.dialog_new_site.environments[0].homedir;
 			// Copy production database info to staging fields
-			this.dialog_new_site.keys[1].database_username = this.dialog_new_site.keys[0].database_username;
-			this.dialog_new_site.keys[1].database_password = this.dialog_new_site.keys[0].database_password;
+			this.dialog_new_site.environments[1].database_username = this.dialog_new_site.environments[0].database_username;
+			this.dialog_new_site.environments[1].database_password = this.dialog_new_site.environments[0].database_password;
 		},
 		submitNewSite() {
 
@@ -2372,7 +2375,7 @@ new Vue({
 							updates_enabled: "1",
 							shared_with: [],
 							customers: [],
-							keys: [
+							environments: [
 								{"environment": "Production", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","use_s3": false,
 								"s3_access_key":"","s3_secret_key":"","s3_bucket":"","s3_path":"","database_username":"","database_password":"" },
 								{"environment": "Staging", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","database_username":"","database_password":"" }
@@ -2499,12 +2502,17 @@ new Vue({
 				jQuery.post(ajaxurl, data, function(response) {
 
 					if (tryParseJSON(response)) {
-						// Add to site.update_logs
-						site.users = JSON.parse(response);
-					}
+						response = JSON.parse(response)
 
-					if ( site.users.length == 0 ) {
-						site.users = "Error: Did not find any users.";
+						// Loop through enviroments and assign users
+						Object.keys(response).forEach( key => {
+							console.log("key :" + key);
+							site.environments.filter( e => e.environment == key )[0].users = response[key];
+
+							if ( response[key] == null ) {
+								site.environments.filter( e => e.environment == key )[0].users = [];
+					}
+						});
 					}
 
 				});
@@ -3668,8 +3676,8 @@ new Vue({
 								if ( theme_exists || plugin_exists ) {
 									exists = true;
 								} else {
-									plugin_exists = site.plugins.some(el => el.name === slug && el.version === version.name);
-									theme_exists = site.themes.some(el => el.name === slug && el.version === version.name);
+									plugin_exists = site.environments[0].plugins.some(el => el.name === slug && el.version === version.name);
+									theme_exists = site.environments[0].themes.some(el => el.name === slug && el.version === version.name);
 								}
 
 							});
@@ -3680,8 +3688,8 @@ new Vue({
 								if ( theme_exists || plugin_exists ) {
 									exists = true;
 								} else {
-									plugin_exists = site.plugins.some(el => el.name === slug && el.status === status.name);
-									theme_exists = site.themes.some(el => el.name === slug && el.status === status.name);
+									plugin_exists = site.environments[0].plugins.some(el => el.name === slug && el.status === status.name);
+									theme_exists = site.environments[0].themes.some(el => el.name === slug && el.status === status.name);
 								}
 
 							});
@@ -3702,8 +3710,8 @@ new Vue({
 								if ( theme_exists || plugin_exists ) {
 									exists = true;
 								} else {
-									plugin_exists = site.plugins.some(el => el.name === slug && el.version === version.name);
-									theme_exists = site.themes.some(el => el.name === slug && el.version === version.name);
+									plugin_exists = site.environments[0].plugins.some(el => el.name === slug && el.version === version.name);
+									theme_exists = site.environments[0].themes.some(el => el.name === slug && el.version === version.name);
 								}
 
 							});
@@ -3725,8 +3733,8 @@ new Vue({
 								if ( theme_exists || plugin_exists ) {
 									exists = true;
 								} else {
-									plugin_exists = site.plugins.some(el => el.name === slug && el.status === status.name);
-									theme_exists = site.themes.some(el => el.name === slug && el.status === status.name);
+									plugin_exists = site.environments[0].plugins.some(el => el.name === slug && el.status === status.name);
+									theme_exists = site.environments[0].themes.some(el => el.name === slug && el.status === status.name);
 								}
 
 							});
@@ -3738,10 +3746,10 @@ new Vue({
 						// Handle filtering of the themes/plugins
 						} else {
 
-							theme_exists = site.themes.some(function (el) {
+							theme_exists = site.environments[0].themes.some(function (el) {
 								return el.name === filter;
 							});
-							plugin_exists = site.plugins.some(function (el) {
+							plugin_exists = site.environments[0].plugins.some(function (el) {
 								return el.name === filter;
 							});
 							if (theme_exists || plugin_exists) {
@@ -3788,7 +3796,7 @@ new Vue({
 
 					sites.forEach(function(site) {
 
-						site.plugins.filter(item => item.name == filter).forEach(function(plugin) {
+						site.environments[0].plugins.filter(item => item.name == filter).forEach(function(plugin) {
 							version_count = versions.filter(item => item.name == plugin.version).length;
 							if ( version_count == 0 ) {
 								versions.push({ name: plugin.version, count: 1, slug: plugin.name });
@@ -3797,7 +3805,7 @@ new Vue({
 							}
 						});
 
-						site.themes.filter(item => item.name == filter).forEach(function(theme) {
+						site.environments[0].themes.filter(item => item.name == filter).forEach(function(theme) {
 							version_count = versions.filter(item => item.name == theme.version).length;
 							if ( version_count == 0 ) {
 								versions.push({ name: theme.version, count: 1, slug: theme.name });
@@ -3821,7 +3829,7 @@ new Vue({
 
 					this.sites.forEach(function(site) {
 
-						site.plugins.filter(item => item.name == filter).forEach(function(plugin) {
+						site.environments[0].plugins.filter(item => item.name == filter).forEach(function(plugin) {
 							status_count = statuses.filter(item => item.name == plugin.status).length;
 							if ( status_count == 0 ) {
 								statuses.push({ name: plugin.status, count: 1, slug: plugin.name });
@@ -3830,7 +3838,7 @@ new Vue({
 							}
 						});
 
-						site.themes.filter(item => item.name == filter).forEach(function(theme) {
+						site.environments[0].themes.filter(item => item.name == filter).forEach(function(theme) {
 							status_count = statuses.filter(item => item.name == theme.status).length;
 							if ( status_count == 0 ) {
 								statuses.push({ name: theme.status, count: 1, slug: theme.name });

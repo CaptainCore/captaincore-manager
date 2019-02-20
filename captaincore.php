@@ -1472,6 +1472,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	$archive             = $post->archive;
 	$command             = $post->command;
+	$environment         = $post->environment;
 	$storage             = $post->storage;
 	$views               = $post->views;
 	$email               = $post->email;
@@ -1609,15 +1610,36 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	// Sync site data
 	if ( $command == 'sync-data' and $core and $plugins and $themes and $users ) {
 
+		if ( $environment == "production" ) {
+			$environment_id = get_field( 'environment_production_id', $site_id );
+		}
+		if ( $environment == "staging" ) {
+			$environment_id = get_field( 'environment_staging_id', $site_id );
+		}
+		
 		// Updates site with latest $plugins, $themes, $core, $home_url and $users
-		update_field( 'field_5a9421b004ed3', wp_slash( json_encode( $plugins ) ), $site_id );
-		update_field( 'field_5a9421b804ed4', wp_slash( json_encode( $themes ) ), $site_id );
-		update_field( 'field_5b2a900c85a77', json_encode( $users ), $site_id );
-		update_field( 'field_5a9421bc04ed5', $core, $site_id );
-		update_field( 'field_5a944358bf146', $home_url, $site_id );
-		update_field( 'field_5c621d58fd8c9', $subsite_count, $site_id );
+		$environment = array(
+			'site_id'            => $site_id,
+			'environment'        => ucfirst($environment),
+			'users'              => json_encode( $users ),
+			'themes'             => json_encode( $themes ),
+			'plugins'            => json_encode( $plugins ),
+			'core'               => $core,
+			'home_url'					 => $home_url,
+			'subsite_count'      => $subsite_count
+		);
 
-		$response = array( "response" => "Completed sync-data for $site_id" );
+		$time_now = date("Y-m-d H:i:s");
+		$environment['updated_at'] = $time_now;
+
+		$db_environments = new CaptainCore\environments();
+		$db_environments->update( $environment, array( "environment_id" => $environment_id ) );
+
+		$response = array( 
+			"response" => "Completed sync-data for $site_id",
+			"environment_id" => $environment_id,
+			"environment" => $environment
+		);
 
 	}
 
@@ -3186,6 +3208,7 @@ function captaincore_ajax_action_callback() {
 		$value = $_POST['value'];
 	}
 	$site  = get_field( 'site', $post_id );
+	$environment = $_POST['environment'];
 	$remote_command = false;
 
 	if ( $cmd == 'mailgun' ) {
@@ -3387,7 +3410,12 @@ function captaincore_ajax_action_callback() {
 	if ( $cmd == 'fetch-users' ) {
 
 		# Fetch from custom table
-		echo get_field( "users", $post_id );
+
+		$users = array(
+			"Production" => json_decode(get_field( "field_5b2a900c85a77", $post_id )),
+			"Staging" => json_decode(get_field( "field_5c6758d67ad20", $post_id ))
+		);
+		echo json_encode($users);
 
 	}
 
@@ -3402,7 +3430,13 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'fetch-one-time-login' ) {
 
-		$home_url = get_field( "home_url", $post_id );
+		if ($environment == "Production") {
+			$home_url = get_field( "field_5a944358bf146", $post_id );
+		}
+		if ($environment == "Staging") {
+			$home_url = get_field( "field_5c6758df7ad21", $post_id );
+		}
+
 
 		$args = array(
 			"body" => json_encode( array(
