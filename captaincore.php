@@ -3880,9 +3880,10 @@ function captaincore_create_tables() {
 			$success = empty($wpdb->last_error);
 
 			update_site_option('captcorecore_db_version', 1);
+			return $success;
 		}
 
-		if ( $version < 2 && $sql == "" ) {
+		if ( $version < 2 ) {
 			$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_quicksaves` (
 				quicksave_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 				site_id bigint(20) UNSIGNED NOT NULL,
@@ -3900,9 +3901,290 @@ function captaincore_create_tables() {
 			$success = empty($wpdb->last_error);
 
 			update_site_option('captcorecore_db_version', 2);
+			return $success;
 		}
 
+		if ( $version < 3 ) {
+			$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_environments` (
+				environment_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+				site_id bigint(20) UNSIGNED NOT NULL,
+				created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+				updated_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+				environment varchar(255),
+				address varchar(255),
+				username varchar(255),
+				password varchar(255),
+				protocol varchar(255),
+				port varchar(255),
+				home_directory varchar(255),
+				database_username varchar(255),
+				database_password varchar(255),
+				use_offload boolean,
+				offload_provider varchar(255),
+				offload_access_key varchar(255),
+				offload_secret_key varchar(255),
+				offload_bucket varchar(255),
+				offload_path varchar(255),
+				storage varchar(20),
+				views varchar(20),
+				core varchar(10),
+				subsite_count varchar(10),
+				home_url varchar(255),
+				themes longtext,
+				plugins longtext,
+				users longtext,
+				updates_enabled boolean,
+				exclude_themes longtext,
+				exclude_plugins longtext,
+			PRIMARY KEY  (environment_id)
+			) $charset_collate;";
+
+			require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+			dbDelta($sql);
+			$success = empty($wpdb->last_error);
+
+			update_site_option('captcorecore_db_version', 3);
+
 		return $success;
+		}
+
+}
+
+add_action('acf/save_post', 'captaincore_acf_save_post', 1);
+
+function captaincore_acf_save_post( $post_id ) {
+    
+	// bail early if no ACF data
+	if( empty($_POST['acf']) ) {
+			return;
+	}
+	
+	// array of field values
+	$fields = $_POST['acf'];
+
+	// bail if environment field not found
+	if ( ! isset( $fields['field_5619c94518f1c'] ) ) {
+		return;
+	}
+
+	$environment_production_id = get_field( 'environment_production_id', $post_id );
+	$environment_staging_id = get_field( 'environment_staging_id', $post_id );
+
+	$environment = array(
+		'site_id'            => $post_id,
+		'environment'        => "Production",
+		'address'            => $fields['field_5619c94518f1c'],
+		'username'           => $fields['field_5619c97c18f1d'],
+		'password'           => $fields['field_5619c98218f1e'],
+		'protocol'           => $fields['field_5619c98918f1f'],
+		'port'               => $fields['field_5619c99d18f20'],
+		'home_directory'     => $fields['field_58422bd538c32'],
+		'database_username'  => $fields['field_5a69f0a6e9686'],
+		'database_password'  => $fields['field_5a69f0cce9687'],
+		'updates_enabled'    => $fields['field_5b2a902585a78'],
+		'exclude_themes'     => $fields['field_5b231746b9731'],
+		'exclude_plugins'    => $fields['field_5b231770b9732'],
+		'users'              => stripslashes($fields['field_5b2a900c85a77']),
+		'themes'             => stripslashes($fields['field_5a9421b804ed4']),
+		'plugins'            => stripslashes($fields['field_5a9421b004ed3']),
+		'home_url'           => $fields['field_5a944358bf146'],
+		'core'               => $fields['field_5a9421bc04ed5'],
+		'use_offload'        => $fields['field_58e14eee75e79'],
+		'offload_provider'   => $fields['field_5c67581c7ad15'],
+		'offload_access_key' => $fields['field_58e14fc275e7a'],
+		'offload_secret_key' => $fields['field_58e1500875e7b'],
+		'offload_bucket'     => $fields['field_58e1502475e7c'],
+		'offload_path'       => $fields['field_58e1503075e7d'],
+	);
+
+
+	$db_environments = new CaptainCore\environments();
+
+	// Fetch existing environments.
+
+	if ( $environment_production_id ) {
+		// Updating production environment
+		$environment['updated_at'] = date("Y-m-d H:i:s");
+		$db_environments->update( $environment, array( "environment_id" => $environment_production_id ) );
+	} else {
+		// Creating production environment
+		$time_now = date("Y-m-d H:i:s");
+		$environment['created_at'] = $time_now;
+		$environment['updated_at'] = $time_now;
+		$environment_id = $db_environments->insert( $environment );
+		update_field( 'environment_production_id', $environment_id, $post_id );
+	}
+
+	$environment = array(
+		'site_id'            => $post_id,
+		'environment'        => "Staging",
+		'address'            => $fields['field_57b7a25d2cc60'],
+		'username'           => $fields['field_57b7a2642cc61'],
+		'password'           => $fields['field_57b7a26b2cc62'],
+		'protocol'           => $fields['field_57b7a2712cc63'],
+		'port'               => $fields['field_57b7a2772cc64'],
+		'home_directory'     => $fields['field_5845da68fc2c9'],
+		'database_username'  => $fields['field_5a90ba0c6c61a'],
+		'database_password'  => $fields['field_5a90ba1e6c61b'],
+		'updates_enabled'    => $fields['field_5c6758987ad1a'],
+		'exclude_themes'     => $fields['field_5c6758a37ad1b'],
+		'exclude_plugins'    => $fields['field_5c6758b37ad1c'],
+		'users'              => stripslashes($fields['field_5c6758d67ad20']),
+		'themes'             => stripslashes($fields['field_5c6758cc7ad1f']),
+		'plugins'            => stripslashes($fields['field_5c6758c57ad1e']),
+		'home_url'           => $fields['field_5c6758df7ad21'],
+		'core'               => $fields['field_5c6758bb7ad1d'],
+		'use_offload'        => $fields['field_5c6757d97ad13'],
+		'offload_provider'   => $fields['field_5c67584d7ad16'],
+		'offload_access_key' => $fields['field_5c6757e77ad14'],
+		'offload_secret_key' => $fields['field_5c6758667ad17'],
+		'offload_bucket'     => $fields['field_5c6758797ad18'],
+		'offload_path'       => $fields['field_5c67588f7ad19'],
+	);
+
+	$db_environments = new CaptainCore\environments();
+
+	// Fetch existing environments.
+
+	if ( $environment_staging_id ) {
+		// Updating staging environment
+		$environment['updated_at'] = date("Y-m-d H:i:s");
+		$db_environments->update( $environment, array( "environment_id" => $environment_staging_id ) );
+	} else {
+		// Creating staging environment
+		$time_now = date("Y-m-d H:i:s");
+		$environment['created_at'] = $time_now;
+		$environment['updated_at'] = $time_now;
+		$environment_id = $db_environments->insert( $environment );
+		update_field( 'environment_staging_id', $environment_id, $post_id );
+	}
+	
+}
+
+add_filter( 'acf/update_value', 'captaincore_disregard_acf_fields', 10, 3 );
+
+function captaincore_disregard_acf_fields( $value, $post_id, $field ) {
+
+	$fields_to_disregard = array(
+    "field_57b7a25d2cc60",
+    "field_57b7a2642cc61",
+    "field_57b7a26b2cc62",
+    "field_57b7a2712cc63",
+    "field_57b7a2772cc64",
+    "field_5845da68fc2c9",
+    "field_5a90ba0c6c61a",
+    "field_5a90ba1e6c61b",
+    "field_5c6758987ad1a",
+    "field_5c6758a37ad1b",
+    "field_5c6758b37ad1c",
+    "field_5c6758d67ad20",
+    "field_5c6758cc7ad1f",
+    "field_5c6758c57ad1e",
+    "field_5c6758df7ad21",
+    "field_5c6758bb7ad1d",
+    "field_5c6757d97ad13",
+    "field_5c67584d7ad16",
+    "field_5c6757e77ad14",
+    "field_5c6758667ad17",
+    "field_5c6758797ad18",
+    "field_5c67588f7ad19",
+    "field_5619c94518f1c",
+    "field_5619c97c18f1d",
+    "field_5619c98218f1e",
+    "field_5619c98918f1f",
+    "field_5619c99d18f20",
+    "field_58422bd538c32",
+    "field_5a69f0a6e9686",
+    "field_5a69f0cce9687",
+    "field_5b2a902585a78",
+    "field_5b231746b9731",
+    "field_5b231770b9732",
+    "field_5b2a900c85a77",
+    "field_5a9421b804ed4",
+    "field_5a9421b004ed3",
+    "field_5a944358bf146",
+    "field_5a9421bc04ed5",
+    "field_58e14eee75e79",
+    "field_5c67581c7ad15",
+    "field_58e14fc275e7a",
+    "field_58e1500875e7b",
+    "field_58e1502475e7c",
+    "field_58e1503075e7d"
+	);
+
+	// Disregard updating certain fields as they've already been stored in a custom table.
+	if ( in_array( $field['key'], $fields_to_disregard ) ) {
+		return null;
+	}
+
+	return $value;
+
+}
+
+add_filter( 'acf/load_value', 'captaincore_load_environments', 11, 3 );
+
+function captaincore_load_environments( $value, $post_id, $field ) {
+
+	$fields_table_map = array(
+    "field_5619c94518f1c" => array( "environment" => "Production", "field" => 'address'           ),
+    "field_5619c97c18f1d" => array( "environment" => "Production", "field" => 'username'          ),
+    "field_5619c98218f1e" => array( "environment" => "Production", "field" => 'password'          ),
+    "field_5619c98918f1f" => array( "environment" => "Production", "field" => 'protocol'          ),
+    "field_5619c99d18f20" => array( "environment" => "Production", "field" => 'port'              ),
+    "field_58422bd538c32" => array( "environment" => "Production", "field" => 'home_directory'    ),
+    "field_5a69f0a6e9686" => array( "environment" => "Production", "field" => 'database_username' ),
+    "field_5a69f0cce9687" => array( "environment" => "Production", "field" => 'database_password' ),
+    "field_5b2a902585a78" => array( "environment" => "Production", "field" => 'updates_enabled'   ),
+    "field_5b231746b9731" => array( "environment" => "Production", "field" => 'exclude_themes'    ),
+    "field_5b231770b9732" => array( "environment" => "Production", "field" => 'exclude_plugins'   ),
+    "field_5b2a900c85a77" => array( "environment" => "Production", "field" => 'users'             ),
+    "field_5a9421b804ed4" => array( "environment" => "Production", "field" => 'themes'            ),
+    "field_5a9421b004ed3" => array( "environment" => "Production", "field" => 'plugins'           ),
+    "field_5a944358bf146" => array( "environment" => "Production", "field" => 'home_url'          ),
+    "field_5a9421bc04ed5" => array( "environment" => "Production", "field" => 'core'              ),
+    "field_58e14eee75e79" => array( "environment" => "Production", "field" => 'use_offload'       ),
+    "field_5c67581c7ad15" => array( "environment" => "Production", "field" => 'offload_provider'  ),
+    "field_58e14fc275e7a" => array( "environment" => "Production", "field" => 'offload_access_key'),
+    "field_58e1500875e7b" => array( "environment" => "Production", "field" => 'offload_secret_key'),
+    "field_58e1502475e7c" => array( "environment" => "Production", "field" => 'offload_bucket'    ),
+    "field_58e1503075e7d" => array( "environment" => "Production", "field" => 'offload_path'      ),
+    "field_57b7a25d2cc60" => array( "environment" => "Staging", "field" => 'address'           ),
+    "field_57b7a2642cc61" => array( "environment" => "Staging", "field" => 'username'          ),
+    "field_57b7a26b2cc62" => array( "environment" => "Staging", "field" => 'password'          ),
+    "field_57b7a2712cc63" => array( "environment" => "Staging", "field" => 'protocol'          ),
+    "field_57b7a2772cc64" => array( "environment" => "Staging", "field" => 'port'              ),
+    "field_5845da68fc2c9" => array( "environment" => "Staging", "field" => 'home_directory'    ),
+    "field_5a90ba0c6c61a" => array( "environment" => "Staging", "field" => 'database_username' ),
+    "field_5a90ba1e6c61b" => array( "environment" => "Staging", "field" => 'database_password' ),
+    "field_5c6758987ad1a" => array( "environment" => "Staging", "field" => 'updates_enabled'   ),
+    "field_5c6758a37ad1b" => array( "environment" => "Staging", "field" => 'exclude_themes'    ),
+    "field_5c6758b37ad1c" => array( "environment" => "Staging", "field" => 'exclude_plugins'   ),
+    "field_5c6758d67ad20" => array( "environment" => "Staging", "field" => 'users'             ),
+    "field_5c6758cc7ad1f" => array( "environment" => "Staging", "field" => 'themes'            ),
+    "field_5c6758c57ad1e" => array( "environment" => "Staging", "field" => 'plugins'           ),
+    "field_5c6758df7ad21" => array( "environment" => "Staging", "field" => 'home_url'          ),
+    "field_5c6758bb7ad1d" => array( "environment" => "Staging", "field" => 'core'              ),
+    "field_5c6757d97ad13" => array( "environment" => "Staging", "field" => 'use_offload'       ),
+    "field_5c67584d7ad16" => array( "environment" => "Staging", "field" => 'offload_provider'  ),
+    "field_5c6757e77ad14" => array( "environment" => "Staging", "field" => 'offload_access_key'),
+    "field_5c6758667ad17" => array( "environment" => "Staging", "field" => 'offload_secret_key'),
+    "field_5c6758797ad18" => array( "environment" => "Staging", "field" => 'offload_bucket'    ),
+    "field_5c67588f7ad19" => array( "environment" => "Staging", "field" => 'offload_path'      )
+	);
+
+	// Fetch certain records from custom table
+	if ( in_array( $field['key'], array_keys( $fields_table_map ) ) ) {
+
+		$db_environments = new CaptainCore\environments();
+
+		$item = $fields_table_map[ $field['key'] ];
+		$data =	$db_environments->fetch_field( $post_id, $item["environment"], $item['field'] );
+		if ( $data && $data[0]) {
+			return $data[0]->{$item['field']};
+		}
+	}
+
+	return $value;
 
 }
 
