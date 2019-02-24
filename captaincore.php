@@ -3839,30 +3839,31 @@ add_action( 'wp_ajax_log_process', 'process_log_action_callback' );
 
 function captaincore_site_fetch_details( $post_id ) {
 
+	$site_details = ( new CaptainCore\Site )->get( $post_id );
+
 	$site             = get_field( 'site', $post_id );
 	$provider         = get_field( 'provider', $post_id );
 	$fathom           = get_field( 'fathom', $post_id );
 	$domain           = get_the_title( $post_id );
-	$address          = get_field( 'address', $post_id );
-	$username         = get_field( 'username', $post_id );
-	$password         = get_field( 'password', $post_id );
-	$protocol         = get_field( 'protocol', $post_id );
-	$port             = get_field( 'port', $post_id );
-	$homedir          = get_field( 'homedir', $post_id );
-	$staging_site     = get_field( 'site_staging', $post_id );
-	$staging_address  = get_field( 'address_staging', $post_id );
-	$staging_username = get_field( 'username_staging', $post_id );
-	$staging_password = get_field( 'password_staging', $post_id );
-	$staging_protocol = get_field( 'protocol_staging', $post_id );
-	$staging_port     = get_field( 'port_staging', $post_id );
-	$staging_homedir  = get_field( 'homedir_staging', $post_id );
-	$updates_enabled  = get_field( 'updates_enabled', $post_id );
-	$exclude_themes   = get_field( 'exclude_themes', $post_id );
-	$exclude_plugins  = get_field( 'exclude_plugins', $post_id );
-	$s3accesskey      = get_field( 's3_access_key', $post_id );
-	$s3secretkey      = get_field( 's3_secret_key', $post_id );
-	$s3bucket         = get_field( 's3_bucket', $post_id );
-	$s3path           = get_field( 's3_path', $post_id );
+	$address          = $site_details->environments[0]["address"];
+	$username         = $site_details->environments[0]["username"];
+	$password         = $site_details->environments[0]["password"];
+	$protocol         = $site_details->environments[0]["protocol"];
+	$port             = $site_details->environments[0]["port"];
+	$homedir          = ( isset($site_details->environments[0]["home_directory"]) ? $site_details->environments[0]["home_directory"] : '' );
+	$staging_address  = ( isset($site_details->environments[1]["address"]) ? $site_details->environments[1]["address"] : '' );
+	$staging_username = ( isset($site_details->environments[1]["username"]) ? $site_details->environments[1]["username"] : '' );
+	$staging_password = ( isset($site_details->environments[1]["password"]) ? $site_details->environments[1]["password"] : '' );
+	$staging_protocol = ( isset($site_details->environments[1]["protocol"]) ? $site_details->environments[1]["protocol"] : '' );
+	$staging_port     = ( isset($site_details->environments[1]["port"]) ? $site_details->environments[1]["port"] : '' );
+	$staging_homedir  = ( isset($site_details->environments[1]["home_directory"]) ? $site_details->environments[1]["home_directory"] : '' );
+	$updates_enabled  = ( isset($site_details->environments[0]["updates_enabled"]) ? $site_details->environments[0]["updates_enabled"] : '' );
+	$exclude_themes   = ( isset($site_details->environments[0]["exclude_themes"]) ? $site_details->environments[0]["exclude_themes"] : '' );
+	$exclude_plugins  = ( isset($site_details->environments[0]["exclude_plugins"]) ? $site_details->environments[0]["exclude_plugins"] : '' );
+	$s3accesskey      = ( isset($site_details->environments[0]["offload_access_key"]) ? $site_details->environments[0]["offload_access_key"] : '' );
+	$s3secretkey      = ( isset($site_details->environments[0]["offload_secret_key"]) ? $site_details->environments[0]["offload_secret_key"] : '' );
+	$s3bucket         = ( isset($site_details->environments[0]["offload_bucket"]) ? $site_details->environments[0]["offload_bucket"] : '' );
+	$s3path           = ( isset($site_details->environments[0]["offload_path"]) ? $site_details->environments[0]["offload_path"] : '' );
 	$partners         = get_field( 'partner', $post_id );
 	$subsite          = "";
 
