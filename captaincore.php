@@ -3368,13 +3368,27 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'updateSettings' ) {
 
+		$db_environments = new CaptainCore\environments();
+
 		// Saves update settings for a site
 		$exclude_plugins = implode(",", $value["exclude_plugins"]);
 		$exclude_themes = implode(",", $value["exclude_themes"]);
 
-		update_field( 'field_5b231770b9732', $exclude_plugins, $post_id );
-		update_field( 'field_5b231746b9731', $exclude_themes, $post_id );
-		update_field( 'field_5b2a902585a78', $value["updates_enabled"], $post_id );
+		$environment_update = array(
+			'updates_enabled'    => $value["updates_enabled"],
+			'exclude_themes'     => $exclude_themes,
+			'exclude_plugins'    => $exclude_plugins,
+		);
+		$environment_update['updated_at'] = date("Y-m-d H:i:s");
+
+		if ($environment == "Production") {
+			$environment_id = get_field( 'environment_production_id', $post_id );
+			$db_environments->update( $environment_update, array( "environment_id" => $environment_id ) );
+		}
+		if ($environment == "Staging") {
+			$environment_id = get_field( 'environment_staging_id', $post_id );
+			$db_environments->update( $environment_update, array( "environment_id" => $environment_id ) );
+		}
 
 		// Remote Sync
 		$run_in_background = true;

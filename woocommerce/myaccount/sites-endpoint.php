@@ -1596,12 +1596,14 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Update Logs</v-toolbar-title>
 					<v-spacer></v-spacer>
-					<v-toolbar-items v-show="site.environment_selected == 'Production'">
+					<v-toolbar-items>
 						<v-btn flat @click="update(site.id)">Manually update</v-btn>
 						<v-btn flat @click="updateSettings(site.id)">Update Settings <v-icon dark small>fas fa-cog</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
-				<v-card v-show="site.environment_selected == 'Production'">
+				<v-card 
+				  v-for="key in site.environments"
+					v-show="key.environment == site.environment_selected" >
 					<v-card-title v-if="site.update_logs.length == 0">
 						<div>
 							Fetching update logs...
@@ -2506,9 +2508,7 @@ new Vue({
 
 						// Loop through enviroments and assign users
 						Object.keys(response).forEach( key => {
-							console.log("key :" + key);
 							site.environments.filter( e => e.environment == key )[0].users = response[key];
-
 							if ( response[key] == null ) {
 								site.environments.filter( e => e.environment == key )[0].users = [];
 					}
@@ -3471,12 +3471,13 @@ new Vue({
 			this.dialog_update_settings.show = true;
 			this.dialog_update_settings.site_id = site_id;
 			site = this.sites.filter(site => site.id == site_id)[0];
+			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
 			this.dialog_update_settings.site_name = site.name;
-			this.dialog_update_settings.exclude_plugins = site.exclude_plugins;
-			this.dialog_update_settings.exclude_themes = site.exclude_themes;
-			this.dialog_update_settings.updates_enabled = site.updates_enabled;
-			this.dialog_update_settings.plugins = site.plugins;
-			this.dialog_update_settings.themes = site.themes;
+			this.dialog_update_settings.exclude_plugins = environment.exclude_plugins;
+			this.dialog_update_settings.exclude_themes = environment.exclude_themes;
+			this.dialog_update_settings.updates_enabled = environment.updates_enabled;
+			this.dialog_update_settings.plugins = environment.plugins;
+			this.dialog_update_settings.themes = environment.themes;
 		},
 		saveUpdateSettings() {
 			this.dialog_update_settings.loading = true;
@@ -3484,11 +3485,9 @@ new Vue({
 			site = this.sites.filter(site => site.id == site_id)[0];
 			self = this;
 
-			site = this.sites.filter(site => site.id == site_id)[0];
-
 			// Adds new job
 			job_id = Math.round((new Date()).getTime());
-			description = "Saving update settings for " + site.name;
+			description = "Saving update settings for " + site.name + " (" + site.environment_selected + ")";
 			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command":"saveUpdateSettings"});
 
 			// Prep AJAX request
@@ -3496,12 +3495,20 @@ new Vue({
 				'action': 'captaincore_ajax',
 				'post_id': site_id,
 				'command': "updateSettings",
-				'value': { "exclude_plugins": this.dialog_update_settings.exclude_plugins, "exclude_themes": this.dialog_update_settings.exclude_themes, "updates_enabled": this.dialog_update_settings.updates_enabled }
+				'environment': site.environment_selected,
+				'value': { 
+					"exclude_plugins": this.dialog_update_settings.exclude_plugins, 
+					"exclude_themes": this.dialog_update_settings.exclude_themes, 
+					"updates_enabled": this.dialog_update_settings.updates_enabled
+					}
 			};
 
-			site.exclude_plugins = self.dialog_update_settings.exclude_plugins;
-			site.exclude_themes = self.dialog_update_settings.exclude_themes;
-			site.updates_enabled = self.dialog_update_settings.updates_enabled;
+			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
+
+			environment.exclude_plugins = self.dialog_update_settings.exclude_plugins;
+			environment.exclude_themes = self.dialog_update_settings.exclude_themes;
+			environment.updates_enabled = self.dialog_update_settings.updates_enabled;
+
 			self.dialog_update_settings.show = false;
 			self.dialog_update_settings.loading = false;
 

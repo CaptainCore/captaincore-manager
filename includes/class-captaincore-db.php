@@ -464,7 +464,7 @@ class Site {
 			$site = $site_id;
 		}
 
-		if ( !$site ) {
+		if ( ! isset($site) ) {
 			$site = get_post( $site_id );
 		}
 
@@ -486,9 +486,6 @@ class Site {
 		}
 		$views               = $environments[0]->views;
 		$subsite_count       = $environments[0]->subsite_count;
-		$exclude_themes      = $environments[0]->exclude_themes;
-		$exclude_plugins     = $environments[0]->exclude_plugins;
-		$updates_enabled     = $environments[0]->updates_enabled;
 		$production_address  = $environments[0]->address;
 		$production_username = $environments[0]->username;
 		$production_port     = $environments[0]->port;
@@ -532,11 +529,8 @@ class Site {
 		if ( is_string($views) ) {
 			$site_details->views = number_format( intval( $views ) );
 		}
-		$site_details->exclude_themes = $exclude_themes;
-		$site_details->exclude_plugins = $exclude_plugins;
 		$site_details->update_logs = array();
 		$site_details->update_logs_pagination = array( "descending" => true, "sortBy" => "date" );
-		$site_details->updates_enabled = $updates_enabled;
 		$site_details->themes_selected = array();
 		$site_details->plugins_selected = array();
 		$site_details->users_selected = array();
@@ -559,27 +553,10 @@ class Site {
 				);
 			}
 		}
-				$site_details->users       = array();
-				$site_details->update_logs = array();
-		if ( $exclude_themes ) {
-			$exclude_themes               = explode( ',', $exclude_themes );
-			$site_details->exclude_themes = $exclude_themes;
-		} else {
-			$site_details->exclude_themes = array();
-		}
-		if ( $exclude_plugins ) {
-			$exclude_plugins               = explode( ',', $exclude_plugins );
-			$site_details->exclude_plugins = $exclude_plugins;
-		} else {
-			$site_details->exclude_plugins = array();
-		}
 
-		if ( $updates_enabled && $updates_enabled[0] == '1' ) {
-			$site_details->updates_enabled = 1;
-		} else {
-			$site_details->updates_enabled = 0;
-		}
-
+		$site_details->users       = array();
+		$site_details->update_logs = array();
+	
 		if ( $shared_with ) {
 			foreach ( $shared_with as $customer_id ) {
 				$site_details->shared_with[] = array(
@@ -590,7 +567,7 @@ class Site {
 		}
 
 		$site_details->environments[0] = array(
-			'key_id'      => 1,
+			'id' => $environments[0]->environment_id,
 			'link'        => "http://$domain",
 			'environment' => 'Production',
 			'address'     => $environments[0]->address,
@@ -604,7 +581,21 @@ class Site {
 			'users'       => "Loading",
 			'core'        => $environments[0]->core,
 			'home_url'    => $environments[0]->home_url,
+			'updates_enabled' => intval($environments[0]->updates_enabled),
+			'exclude_plugins' => $environments[0]->exclude_plugins,
+			'exclude_themes' => $environments[0]->exclude_themes,
 		);
+
+		if ( $site_details->environments[0]['exclude_themes'] ) {
+			$site_details->environments[0]['exclude_themes'] = explode( ',', $site_details->environments[0]['exclude_themes'] );
+		} else {
+			$site_details->environments[0]['exclude_themes'] = array();
+		}
+		if ( $site_details->environments[0]['exclude_plugins'] ) {
+			$site_details->environments[0]['exclude_plugins'] = explode( ',', $site_details->environments[0]['exclude_plugins'] );
+		} else {
+			$site_details->environments[0]['exclude_plugins'] = array();
+		}
 
 		if ( $site_details->environments[0]['themes'] == "" ) {
 			$site_details->environments[0]['themes'] = array();
@@ -628,11 +619,10 @@ class Site {
 		if ( isset($environments[1]->address) && $environments[1]->address != ""  ) {
 
 			if ( strpos( $environments[1]->address, '.kinsta.' ) ) {
-				if (! $production_address_ending) {
-					echo "Missing address {$site->ID} ". get_the_title( $site->ID ). " 0: {$environments[1]->address}";
-				}
-				$link_staging = "https://staging-" . get_field( 'site', $site->ID ) . ".${production_address_ending}";
-			} else {
+				$link_staging = "https://staging-" . $environments[1]->address;
+			}
+
+			if ( strpos( $environments[1]->address, '.wpengine.' ) ) {
 				$link_staging = 'https://' . get_field( 'site', $site->ID ) . '.staging.wpengine.com';
 			}
 
@@ -651,7 +641,21 @@ class Site {
 				'users'       => "Loading",
 				'core'        => $environments[1]->core,
 				'home_url'    => $environments[1]->home_url,
+				'updates_enabled' => intval($environments[1]->updates_enabled),
+				'exclude_plugins' => $environments[1]->exclude_plugins,
+				'exclude_themes' => $environments[1]->exclude_themes,
 			);
+	
+			if ( $site_details->environments[1]['exclude_themes'] ) {
+				$site_details->environments[1]['exclude_themes'] = explode( ',', $site_details->environments[1]['exclude_themes'] );
+			} else {
+				$site_details->environments[1]['exclude_themes'] = array();
+			}
+			if ( $site_details->environments[1]['exclude_plugins'] ) {
+				$site_details->environments[1]['exclude_plugins'] = explode( ',', $site_details->environments[1]['exclude_plugins'] );
+			} else {
+				$site_details->environments[1]['exclude_plugins'] = array();
+			}
 	
 			if ( $site_details->environments[1]['themes'] == "" ) {
 				$site_details->environments[1]['themes'] = array();
