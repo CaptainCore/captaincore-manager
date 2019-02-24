@@ -3582,13 +3582,6 @@ function captaincore_install_action_callback() {
 		$preloadusers = implode( ',', $partners );
 	}
 
-	// Assume this is a subsite and reconfigure as such
-	if ( $site == '' ) {
-		$site    = $domain;
-		$domain  = '';
-		$subsite = 'true';
-	}
-
 	// Append provider if exists
 	if ( $provider != '' ) {
 		$site = $site . '@' . $provider;
@@ -3865,7 +3858,6 @@ function captaincore_site_fetch_details( $post_id ) {
 	$s3bucket         = ( isset($site_details->environments[0]["offload_bucket"]) ? $site_details->environments[0]["offload_bucket"] : '' );
 	$s3path           = ( isset($site_details->environments[0]["offload_path"]) ? $site_details->environments[0]["offload_path"] : '' );
 	$partners         = get_field( 'partner', $post_id );
-	$subsite          = "";
 
 	if ( $partners ) {
 		$preloadusers = implode( ',', $partners );
@@ -3895,7 +3887,6 @@ function captaincore_site_fetch_details( $post_id ) {
 	( $staging_port ? " --staging_port=$staging_port" : '' ) .
 	( $preloadusers ? " --preloadusers=$preloadusers" : '' ) .
 	( $homedir ? " --homedir=$homedir" : '' ) .
-	( $subsite ? " --subsite=$subsite" : '' ) .
 	( $updates_enabled ? " --updates_enabled=$updates_enabled" : ' --updates_enabled=0' ) .
 	( $exclude_themes ? " --exclude_themes=$exclude_themes" : '' ) .
 	( $exclude_plugins ? " --exclude_plugins=$exclude_plugins" : '' ) .
