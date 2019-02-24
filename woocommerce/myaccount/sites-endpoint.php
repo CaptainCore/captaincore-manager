@@ -1620,6 +1620,7 @@ Vue.component('file-upload', VueUploadComponent);
 								:pagination.sync="site.update_logs_pagination"
 								class="elevation-1 update_logs"
 								:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
+								v-show="site.environment_selected == 'Production'"
 							>
 						    <template slot="items" slot-scope="props">
 						      <td>{{ props.item.date | pretty_timestamp }}</td>
