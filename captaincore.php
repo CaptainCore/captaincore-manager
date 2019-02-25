@@ -3905,10 +3905,11 @@ function captaincore_create_tables() {
 		$version = (int) get_site_option('captcorecore_db_version');
     $charset_collate = $wpdb->get_charset_collate();
 
-		if ( $version < 1 ) {
+		if ( $version < 4 ) {
 			$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_update_logs` (
 				log_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 				site_id bigint(20) UNSIGNED NOT NULL,
+				environment_id bigint(20) UNSIGNED NOT NULL,
 				created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 				update_type varchar(255),
 				update_log longtext,
@@ -3919,14 +3920,15 @@ function captaincore_create_tables() {
 			dbDelta($sql);
 			$success = empty($wpdb->last_error);
 
-			update_site_option('captcorecore_db_version', 1);
+			update_site_option('captcorecore_db_version', 4);
 			return $success;
 		}
 
-		if ( $version < 2 ) {
+		if ( $version < 5 ) {
 			$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_quicksaves` (
 				quicksave_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 				site_id bigint(20) UNSIGNED NOT NULL,
+				environment_id bigint(20) UNSIGNED NOT NULL,
 				created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 				git_status varchar(255),
 				git_commit varchar(100),
@@ -3940,7 +3942,7 @@ function captaincore_create_tables() {
 			dbDelta($sql);
 			$success = empty($wpdb->last_error);
 
-			update_site_option('captcorecore_db_version', 2);
+			update_site_option('captcorecore_db_version', 5);
 			return $success;
 		}
 
