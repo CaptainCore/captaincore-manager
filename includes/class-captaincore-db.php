@@ -474,7 +474,7 @@ class Site {
 			$site = get_post( $site_id );
 		}
 
-		// Fetch relating enviroments
+		// Fetch relating environments
 		$db_environments = new environments();
 		$environments = $db_environments->fetch_environments( $site->ID );
 
@@ -574,22 +574,22 @@ class Site {
 
 		$site_details->environments[0] = array(
 			'id' => $environments[0]->environment_id,
-			'link'        => "http://$domain",
-			'environment' => 'Production',
-			'address'     => $environments[0]->address,
-			'username'    => $environments[0]->username,
-			'password'    => $environments[0]->password,
-			'protocol'    => $environments[0]->protocol,
-			'port'        => $environments[0]->port,
-			'homedir'     => $environments[0]->home_directory,
-			'plugins'     => json_decode( $environments[0]->plugins),
-			'themes'      => json_decode( $environments[0]->themes ),
-			'users'       => "Loading",
-			'core'        => $environments[0]->core,
-			'home_url'    => $environments[0]->home_url,
+			'link'            => "http://$domain",
+			'environment'     => 'Production',
+			'address'         => $environments[0]->address,
+			'username'        => $environments[0]->username,
+			'password'        => $environments[0]->password,
+			'protocol'        => $environments[0]->protocol,
+			'port'            => $environments[0]->port,
+			'home_directory'	=> $environments[0]->home_directory,
+			'plugins'         => json_decode( $environments[0]->plugins),
+			'themes'          => json_decode( $environments[0]->themes ),
+			'users'           => "Loading",
+			'core'            => $environments[0]->core,
+			'home_url'        => $environments[0]->home_url,
 			'updates_enabled' => intval($environments[0]->updates_enabled),
 			'exclude_plugins' => $environments[0]->exclude_plugins,
-			'exclude_themes' => $environments[0]->exclude_themes,
+			'exclude_themes'	=> $environments[0]->exclude_themes,
 		);
 
 		if ( $site_details->environments[0]['exclude_themes'] ) {
@@ -633,23 +633,23 @@ class Site {
 			}
 
 			$site_details->environments[1] = array(
-				'key_id'      => 2,
-				'link'        => $link_staging,
-				'environment' => 'Staging',
-				'address'     => $environments[1]->address,
-				'username'    => $environments[1]->username,
-				'password'    => $environments[1]->password,
-				'protocol'    => $environments[1]->protocol,
-				'port'        => $environments[1]->port,
-				'homedir'     => $environments[1]->home_directory,
-				'plugins'     => json_decode( $environments[1]->plugins),
-				'themes'      => json_decode( $environments[1]->themes ),
-				'users'       => "Loading",
-				'core'        => $environments[1]->core,
-				'home_url'    => $environments[1]->home_url,
+				'key_id'          => 2,
+				'link'            => $link_staging,
+				'environment'     => 'Staging',
+				'address'         => $environments[1]->address,
+				'username'        => $environments[1]->username,
+				'password'        => $environments[1]->password,
+				'protocol'        => $environments[1]->protocol,
+				'port'            => $environments[1]->port,
+				'home_directory'	=> $environments[1]->home_directory,
+				'plugins'         => json_decode( $environments[1]->plugins),
+				'themes'          => json_decode( $environments[1]->themes ),
+				'users'           => "Loading",
+				'core'            => $environments[1]->core,
+				'home_url'        => $environments[1]->home_url,
 				'updates_enabled' => intval($environments[1]->updates_enabled),
 				'exclude_plugins' => $environments[1]->exclude_plugins,
-				'exclude_themes' => $environments[1]->exclude_themes,
+				'exclude_themes'  => $environments[1]->exclude_themes,
 			);
 	
 			if ( $site_details->environments[1]['exclude_themes'] ) {
@@ -734,50 +734,81 @@ class Site {
 
 			}
 
-			foreach ( $site->environments as $key ) {
-
-				// Work with array as PHP object
-				$key = (object) $key;
-
-				// Add production key
-				if ( $key->environment == 'Production' ) {
-					if ( strpos( $key->address, '.kinsta.' ) ) {
-						update_field( 'provider', 'kinsta', $site_id );
-					}
-					if ( strpos( $key->address, '.wpengine.com' ) ) {
-						update_field( 'provider', 'wpengine', $site_id );
-					}
-					update_field( 'address', $key->address, $site_id );
-					update_field( 'username', $key->username, $site_id );
-					update_field( 'password', $key->password, $site_id );
-					update_field( 'protocol', $key->protocol, $site_id );
-					update_field( 'port', $key->port, $site_id );
-					update_field( 'homedir', $key->homedir, $site_id );
-					update_field( 's3_access_key', $key->s3_access_key, $site_id );
-					update_field( 's3_secret_key', $key->s3_secret_key, $site_id );
-					update_field( 's3_bucket', $key->s3_bucket, $site_id );
-					update_field( 's3_path', $key->s3_path, $site_id );
-					if ( $key->use_s3 ) {
-						update_field( 'use_s3', '1', $site_id );
-					}
-					update_field( 'database_username', $key->database_username, $site_id );
-					update_field( 'database_password', $key->database_password, $site_id );
-				}
-
-				// Add staging key
-				if ( $key->environment == 'Staging' ) {
-					update_field( 'site_staging', $key->site, $site_id );
-					update_field( 'address_staging', $key->address, $site_id );
-					update_field( 'username_staging', $key->username, $site_id );
-					update_field( 'password_staging', $key->password, $site_id );
-					update_field( 'protocol_staging', $key->protocol, $site_id );
-					update_field( 'port_staging', $key->port, $site_id );
-					update_field( 'homedir_staging', $key->homedir, $site_id );
-					update_field( 'database_username_staging', $key->database_username, $site_id );
-					update_field( 'database_password_staging', $key->database_password, $site_id );
-				}
+			if ( strpos( $site->environments[0]->address, '.kinsta.' ) ) {
+				update_field( 'provider', 'kinsta', $site_id );
+			}
+			if ( strpos( $site->environments[0]->address, '.wpengine.com' ) ) {
+				update_field( 'provider', 'wpengine', $site_id );
 			}
 
+			$db_environments = new environments();
+
+			$environment = array(
+				'site_id'            => $site_id,
+				'environment'        => "Production",
+				'address'            => $site->environments[0]["address"],
+				'username'           => $site->environments[0]["username"],
+				'password'           => $site->environments[0]["password"],
+				'protocol'           => $site->environments[0]["protocol"],
+				'port'               => $site->environments[0]["port"],
+				'home_directory'     => $site->environments[0]["home_directory"],
+				'database_username'  => $site->environments[0]["database_username"],
+				'database_password'  => $site->environments[0]["database_password"],
+				'use_offload'        => $site->environments[0]["use_offload"],
+				'offload_access_key' => $site->environments[0]["offload_access_key"],
+				'offload_secret_key' => $site->environments[0]["offload_secret_key"],
+				'offload_bucket'     => $site->environments[0]["offload_bucket"],
+				'offload_path'       => $site->environments[0]["offload_path"],
+				'updates_enabled'    => $site->environments[0]["updates_enabled"],
+				'exclude_plugins'    => $site->environments[0]["exclude_plugins"],
+				'exclude_themes'     => $site->environments[0]["exclude_themes"],
+				'use_offload'        => $site->environments[0]["use_offload"],
+				'offload_provider'   => $site->environments[0]["offload_provider"],
+				'offload_access_key' => $site->environments[0]["offload_access_key"],
+				'offload_secret_key' => $site->environments[0]["offload_secret_key"],
+				'offload_bucket'     => $site->environments[0]["offload_bucket"],
+				'offload_path'       => $site->environments[0]["offload_path"],
+			);
+
+			$time_now = date("Y-m-d H:i:s");
+			$environment['created_at'] = $time_now;
+			$environment['updated_at'] = $time_now;
+			$environment_id = $db_environments->insert( $environment );
+			update_field( 'environment_production_id', $environment_id, $site_id );
+		
+			$environment = array(
+				'site_id'            => $site_id,
+				'environment'        => "Staging",
+				'address'            => $site->environments[1]["address"],
+				'username'           => $site->environments[1]["username"],
+				'password'           => $site->environments[1]["password"],
+				'protocol'           => $site->environments[1]["protocol"],
+				'port'               =>	$site->environments[1]["port"],
+				'home_directory'     => $site->environments[1]["home_directory"],
+				'database_username'  => $site->environments[1]["database_username"],
+				'database_password'  => $site->environments[1]["database_password"],
+				'use_offload'        => $site->environments[1]["use_offload"],
+				'offload_access_key' => $site->environments[1]["offload_access_key"],
+				'offload_secret_key' => $site->environments[1]["offload_secret_key"],
+				'offload_bucket'     => $site->environments[1]["offload_bucket"],
+				'offload_path'       => $site->environments[1]["offload_path"],
+				'updates_enabled'    => $site->environments[1]["updates_enabled"],
+				'exclude_plugins'    => $site->environments[1]["exclude_plugins"],
+				'exclude_themes'     => $site->environments[1]["exclude_themes"],
+				'use_offload'        => $site->environments[1]["use_offload"],
+				'offload_provider'   => $site->environments[1]["offload_provider"],
+				'offload_access_key' => $site->environments[1]["offload_access_key"],
+				'offload_secret_key' => $site->environments[1]["offload_secret_key"],
+				'offload_bucket'     => $site->environments[1]["offload_bucket"],
+				'offload_path'       => $site->environments[1]["offload_path"],
+			);
+
+			$time_now = date("Y-m-d H:i:s");
+			$environment['created_at'] = $time_now;
+			$environment['updated_at'] = $time_now;
+			$environment_id = $db_environments->insert( $environment );
+			update_field( 'environment_staging_id', $environment_id, $site_id );
+			
 			// Run ACF custom tasks afterward.
 			captaincore_acf_save_post_after( $site_id );
 		}
@@ -831,60 +862,68 @@ class Site {
 			// add in ACF fields
 			update_field( 'customer', array_column($site->customer, 'customer_id'), $site_id );
 			update_field( 'partner', array_column($site->shared_with, 'customer_id'), $site_id );
-			update_field( 'updates_enabled', $site->updates_enabled, $site_id );
+
 			//update_field( 'status', 'active', $site_id );
 
 			if ( get_field( 'launch_date', $site_id ) == '' ) {
-
 				// No date was entered for Launch Date, assign to today.
 				update_field( 'launch_date', date( 'Ymd' ), $site_id );
-
 			}
 
-			foreach ( $site->environments as $key ) {
+			// Fetch relating environments
+			$db_environments = new environments();
 
-				// Work with array as PHP object
-				$key = (object) $key;
-
-				// Add production key
-				if ( $key->environment == 'Production' ) {
-					if ( strpos( $key->address, '.kinsta.' ) ) {
-						update_field( 'provider', 'kinsta', $site_id );
-					}
-					if ( strpos( $key->address, '.wpengine.com' ) ) {
-						update_field( 'provider', 'wpengine', $site_id );
-					}
-					update_field( 'site', $key->site, $site_id );
-					update_field( 'address', $key->address, $site_id );
-					update_field( 'username', $key->username, $site_id );
-					update_field( 'password', $key->password, $site_id );
-					update_field( 'protocol', $key->protocol, $site_id );
-					update_field( 'port', $key->port, $site_id );
-					update_field( 'homedir', $key->homedir, $site_id );
-					update_field( 's3_access_key', $key->s3_access_key, $site_id );
-					update_field( 's3_secret_key', $key->s3_secret_key, $site_id );
-					update_field( 's3_bucket', $key->s3_bucket, $site_id );
-					update_field( 's3_path', $key->s3_path, $site_id );
-					if ( $key->use_s3 ) {
-						update_field( 'use_s3', '1', $site_id );
-					}
-					update_field( 'database_username', $key->database_username, $site_id );
-					update_field( 'database_password', $key->database_password, $site_id );
-				}
-
-				// Add staging key
-				if ( $key->environment == 'Staging' ) {
-					update_field( 'site_staging', $key->site, $site_id );
-					update_field( 'address_staging', $key->address, $site_id );
-					update_field( 'username_staging', $key->username, $site_id );
-					update_field( 'password_staging', $key->password, $site_id );
-					update_field( 'protocol_staging', $key->protocol, $site_id );
-					update_field( 'port_staging', $key->port, $site_id );
-					update_field( 'homedir_staging', $key->homedir, $site_id );
-					update_field( 'database_username_staging', $key->database_username, $site_id );
-					update_field( 'database_password_staging', $key->database_password, $site_id );
-				}
+			if ( strpos( $site->environments[0]->address, '.kinsta.' ) ) {
+				update_field( 'provider', 'kinsta', $site_id );
 			}
+			if ( strpos( $site->environments[0]->address, '.wpengine.com' ) ) {
+				update_field( 'provider', 'wpengine', $site_id );
+			}
+			
+			$environment = array(
+				'address'            => $site->environments[0]["address"],
+				'username'           => $site->environments[0]["username"],
+				'password'           => $site->environments[0]["password"],
+				'protocol'           => $site->environments[0]["protocol"],
+				'port'               => $site->environments[0]["port"],
+				'home_directory'     => $site->environments[0]["home_directory"],
+				'database_username'  => $site->environments[0]["database_username"],
+				'database_password'  => $site->environments[0]["database_password"],
+				'use_offload'        => $site->environments[0]["use_offload"],
+				'offload_access_key' => $site->environments[0]["offload_access_key"],
+				'offload_secret_key' => $site->environments[0]["offload_secret_key"],
+				'offload_bucket'     => $site->environments[0]["offload_bucket"],
+				'offload_path'       => $site->environments[0]["offload_path"],
+				'updates_enabled'    => $site->environments[0]["updates_enabled"],
+				'exclude_plugins'    => $site->environments[0]["exclude_plugins"],
+				'exclude_themes'     => $site->environments[0]["exclude_themes"],
+			);
+
+			$environment_id = get_field( 'environment_production_id', $site_id );
+			$db_environments->update( $environment, array( "environment_id" => $environment_id ) );
+		
+			$environment = array(
+				'address'            => $site->environments[1]["address"],
+				'username'           => $site->environments[1]["username"],
+				'password'           => $site->environments[1]["password"],
+				'protocol'           => $site->environments[1]["protocol"],
+				'port'               => $site->environments[1]["port"],
+				'home_directory'     => $site->environments[1]["home_directory"],
+				'database_username'  => $site->environments[1]["database_username"],
+				'database_password'  => $site->environments[1]["database_password"],
+				'use_offload'        => $site->environments[1]["use_offload"],
+				'offload_access_key' => $site->environments[1]["offload_access_key"],
+				'offload_secret_key' => $site->environments[1]["offload_secret_key"],
+				'offload_bucket'     => $site->environments[1]["offload_bucket"],
+				'offload_path'       => $site->environments[1]["offload_path"],
+				'updates_enabled'    => $site->environments[1]["updates_enabled"],
+				'exclude_plugins'    => $site->environments[1]["exclude_plugins"],
+				'exclude_themes'     => $site->environments[1]["exclude_themes"],
+			);
+
+			$environment_id = get_field( 'environment_staging_id', $site_id );
+			$db_environments->update( $environment, array( "environment_id" => $environment_id ) );
+
 		}
 
 		return $response;
