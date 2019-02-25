@@ -87,6 +87,12 @@ class DB {
 		return $wpdb->get_results( $sql );
 	}
 
+	static function all() {
+		global $wpdb;
+		$sql   = 'SELECT * FROM ' . self::_table() . " order by `created_at` DESC";
+		return $wpdb->get_results( $sql );
+	}
+
 	static function fetch_environments( $value ) {
 		global $wpdb;
 		$value = intval( $value );
