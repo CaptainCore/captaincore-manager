@@ -1199,7 +1199,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-card-text>{{ showingSitesBegin }}-{{ showingSitesEnd }} sites of {{ filteredSites }}</v-card-text>
 			</v-flex>
 			<v-flex xs4 text-md-right>
-				<v-switch inline-block v-model="advanced_filter" class="alignright"></v-switch>
+				<v-switch inline-block v-model="advanced_filter" class="alignright" style="float:right;padding: 12px 0px;"></v-switch>
 				<v-card-title v-if="advanced_filter == false" class="alignright caption" style="float:right;padding: 16px 0px;">Basic Filter</v-card-title>
 				<v-card-title v-if="advanced_filter == true" class="alignright caption" style="float:right;padding: 16px 0px;">Advanced Filter</v-card-title>
 			</v-flex>
