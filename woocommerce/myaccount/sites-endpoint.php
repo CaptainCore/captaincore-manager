@@ -659,7 +659,7 @@ Vue.component('file-upload', VueUploadComponent);
 											<v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field>
 											<v-text-field label="Protocol" :value="key.protocol" @change.native="key.protocol = $event.target.value" required></v-text-field>
 											<v-text-field label="Port" :value="key.port" @change.native="key.port = $event.target.value" required></v-text-field>
-											<v-text-field label="Home Directory" :value="key.homedir" @change.native="key.homedir = $event.target.value" required></v-text-field>
+											<v-text-field label="Home Directory" :value="key.home_directory" @change.native="key.home_directory = $event.target.value" required></v-text-field>
 											<v-text-field label="Database Username" :value="key.database_username" @change.native="key.database_username = $event.target.value" required></v-text-field>
 											<v-text-field label="Database Password" :value="key.database_password" @change.native="key.database_password = $event.target.value" required></v-text-field>
 											<div v-if="typeof key.use_s3 != 'undefined'">
@@ -945,7 +945,6 @@ Vue.component('file-upload', VueUploadComponent);
 						<strong>{{ data.item.name }}</strong>
 					</template>
 					</v-autocomplete>
-					<v-switch label="Automatic Updates" v-model="dialog_edit_site.updates_enabled" false-value="0" true-value="1"></v-switch>
 							<v-container grid-list-md text-xs-center>
 								<v-layout row wrap>
 									<v-flex xs12 style="height:0px">
@@ -967,7 +966,7 @@ Vue.component('file-upload', VueUploadComponent);
 										<v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field>
 										<v-text-field label="Protocol" :value="key.protocol" @change.native="key.protocol = $event.target.value" required></v-text-field>
 										<v-text-field label="Port" :value="key.port" @change.native="key.port = $event.target.value" required></v-text-field>
-										<v-text-field label="Home Directory" :value="key.homedir" @change.native="key.homedir = $event.target.value" required></v-text-field>
+										<v-text-field label="Home Directory" :value="key.home_directory" @change.native="key.home_directory = $event.target.value" required></v-text-field>
 										<v-text-field label="Database Username" :value="key.database_username" @change.native="key.database_username = $event.target.value" required></v-text-field>
 										<v-text-field label="Database Password" :value="key.database_password" @change.native="key.database_password = $event.target.value" required></v-text-field>
 										<div v-if="typeof key.use_s3 != 'undefined'">
@@ -1384,7 +1383,7 @@ Vue.component('file-upload', VueUploadComponent);
 									<v-tab key="Plugins" href="#tab-Plugins">
 									  Plugins <v-icon small style="margin-left:7px;">fas fa-plug</v-icon>
 									</v-tab>
-									<v-tab key="Users" href="#tab-Users" @click="fetchUsers( site.id, site.environment_selected )">
+									<v-tab key="Users" href="#tab-Users" @click="fetchUsers( site.id )">
 									  Users <v-icon small style="margin-left:7px;">fas fa-users</v-icon>
 									</v-tab>
 									<v-tab key="Updates" href="#tab-Updates" @click="fetchUpdateLogs( site.id )">
@@ -1604,23 +1603,19 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-card 
 				  v-for="key in site.environments"
 					v-show="key.environment == site.environment_selected" >
-					<v-card-title v-if="site.update_logs.length == 0">
+					<v-card-title v-if="typeof key.update_logs == 'string'">
 						<div>
 							Fetching update logs...
 						  <v-progress-linear :indeterminate="true"></v-progress-linear>
 						</div>
 					</v-card-title>
-					<v-card-title v-else-if="typeof site.update_logs == 'string'">
-						{{ site.update_logs }}
-					</v-card-title>
 					<div v-else>
 							<v-data-table
 								:headers='header_updatelog'
-								:items="site.update_logs"
+								:items="key.update_logs"
 								:pagination.sync="site.update_logs_pagination"
 								class="elevation-1 update_logs"
 								:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
-								v-show="site.environment_selected == 'Production'"
 							>
 						    <template slot="items" slot-scope="props">
 						      <td>{{ props.item.date | pretty_timestamp }}</td>
@@ -1663,7 +1658,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Backups</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
-				<v-card v-show="site.environment_selected == 'Production'">
+				<v-card>
 					<v-card-title>
 						<div>
 							<v-btn small flat @click="promptBackupSnapshot(site.id)">
@@ -1917,8 +1912,8 @@ new Vue({
 			shared_with: [],
 			customers: [],
 			environments: [
-				{"environment": "Production", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","use_s3": false,"s3_access_key":"","s3_secret_key":"","s3_bucket":"","s3_path":"","database_username":"","database_password":"" },
-				{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","database_username":"","database_password":"" }
+				{"environment": "Production", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"","use_s3": false,"s3_access_key":"","s3_secret_key":"","s3_bucket":"","s3_path":"","database_username":"","database_password":"" },
+				{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"","database_username":"","database_password":"" }
 			],
 		},
 		customers: [],
@@ -2340,7 +2335,7 @@ new Vue({
 			// Copy production port to staging field
 			this.dialog_new_site.environments[1].port = this.dialog_new_site.environments[0].port;
 			// Copy production home directory to staging field
-			this.dialog_new_site.environments[1].homedir = this.dialog_new_site.environments[0].homedir;
+			this.dialog_new_site.environments[1].home_directory = this.dialog_new_site.environments[0].home_directory;
 			// Copy production database info to staging fields
 			this.dialog_new_site.environments[1].database_username = this.dialog_new_site.environments[0].database_username;
 			this.dialog_new_site.environments[1].database_password = this.dialog_new_site.environments[0].database_password;
@@ -2379,9 +2374,9 @@ new Vue({
 							shared_with: [],
 							customers: [],
 							environments: [
-								{"environment": "Production", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","use_s3": false,
+								{"environment": "Production", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"","use_s3": false,
 								"s3_access_key":"","s3_secret_key":"","s3_bucket":"","s3_path":"","database_username":"","database_password":"" },
-								{"environment": "Staging", "address": "","username":"","password":"","protocol":"sftp","port":"2222","homedir":"","database_username":"","database_password":"" }
+								{"environment": "Staging", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"","database_username":"","database_password":"" }
 							],
 						}
 						self.fetchSiteInfo( response.site_id );
@@ -2507,7 +2502,7 @@ new Vue({
 					if (tryParseJSON(response)) {
 						response = JSON.parse(response)
 
-						// Loop through enviroments and assign users
+						// Loop through environments and assign users
 						Object.keys(response).forEach( key => {
 							site.environments.filter( e => e.environment == key )[0].users = response[key];
 							if ( response[key] == null ) {
@@ -2536,12 +2531,15 @@ new Vue({
 				jQuery.post(ajaxurl, data, function(response) {
 
 					if (tryParseJSON(response)) {
-						// Add to site.update_logs
-						site.update_logs = JSON.parse(response);
-					}
+						response = JSON.parse(response)
 
-					if ( site.update_logs.length == 0 ) {
-						site.update_logs = "Error: Did not find any update logs.";
+						// Loop through environments and assign users
+						Object.keys(response).forEach( key => {
+							site.environments.filter( e => e.environment == key )[0].update_logs = response[key];
+							if ( response[key] == null ) {
+								site.environments.filter( e => e.environment == key )[0].update_logs = [];
+					}
+						});
 					}
 
 				});
@@ -2633,6 +2631,7 @@ new Vue({
 
 			var post_id = this.dialog_backup_snapshot.site.id;
 			var site_name = this.dialog_backup_snapshot.site.name;
+			var environment = this.dialog_backup_snapshot.site.environment_selected;
 
 			// Start job
 			description = "Downloading snapshot for " + site_name;
@@ -2643,6 +2642,7 @@ new Vue({
 				'action': 'captaincore_install',
 				'post_id': post_id,
 				'command': 'snapshot',
+				'environment': environment,
 				'value': this.dialog_backup_snapshot.email
 			};
 
@@ -3064,8 +3064,9 @@ new Vue({
 		},
 		QuicksaveFileDiff( site_id, quicksave_id, git_commit, file_name ) {
 
+			site = this.sites.filter(site => site.id == site_id)[0];
 			file_name = file_name.split("	")[1];
-
+			this.dialog_file_diff.response = "";
 			this.dialog_file_diff.file_name = file_name;
 			this.dialog_file_diff.loading = true;
 			this.dialog_file_diff.quicksave = this.dialog_quicksave.quicksaves.filter(quicksave => quicksave.quicksave_id == quicksave_id)[0];
@@ -3074,6 +3075,7 @@ new Vue({
 			var data = {
 				'action': 'captaincore_install',
 				'post_id': site_id,
+				'environment': site.environment_selected,
 				'quicksave_id': quicksave_id,
 				'command': 'quicksave_file_diff',
 				'commit': git_commit,
@@ -3114,6 +3116,7 @@ new Vue({
 				'action': 'captaincore_install',
 				'post_id': site_id,
 				'command': 'quick_backup',
+				'environment': site.environment_selected,
 			};
 
 			self = this;
@@ -3141,6 +3144,7 @@ new Vue({
 				'post_id': quicksave.site_id,
 				'quicksave_id': quicksave.quicksave_id,
 				'command': 'quicksave_rollback',
+				'environment': site.environment_selected,
 			};
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
@@ -3154,12 +3158,14 @@ new Vue({
 		},
 		viewQuicksavesChanges( site_id, quicksave ) {
 
+			site = this.sites.filter(site => site.id == site_id)[0];
 			quicksave.view_changes = true;
 
 			var data = {
 				action: 'captaincore_install',
 				post_id: site_id,
 				command: 'view_quicksave_changes',
+				environment: site.environment_selected,
 				value: quicksave.git_commit
 			};
 
@@ -3174,6 +3180,7 @@ new Vue({
 		},
 		viewQuicksaves ( site_id ) {
 			site = this.sites.filter(site => site.id == site_id)[0];
+			site.environment_selected;
 			this.dialog_quicksave.show = true;
 			this.dialog_quicksave.site_id = site_id;
 			this.dialog_quicksave.site_name = site.name;
@@ -3182,7 +3189,15 @@ new Vue({
 				'/wp-json/captaincore/v1/site/'+site_id+'/quicksaves', {
 					headers: {'X-WP-Nonce':wpApiSettings.nonce}
 				})
-				.then(response => this.dialog_quicksave.quicksaves = response.data );
+				.then(response => { 
+					if ( site.environment_selected == "Production" ) {
+						this.dialog_quicksave.quicksaves = response.data.Production
+					}
+					if ( site.environment_selected == "Staging" ) {
+						this.dialog_quicksave.quicksaves = response.data.Staging
+					}
+				
+				} );
 
 		},
 		addTheme ( site_id ){
@@ -3382,6 +3397,7 @@ new Vue({
 			var data = {
 				'action': 'captaincore_install',
 				'post_id': site_id,
+				'environment': site.environment_selected,
 				'command': "update-wp",
 				'background': true
 			};

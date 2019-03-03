@@ -61,10 +61,11 @@ class DB {
 		return $wpdb->query( $wpdb->prepare( $sql, $value ) );
 	}
 
-	static function fetch_logs( $value ) {
+	static function fetch_logs( $value, $environment_id ) {
 		global $wpdb;
 		$value   = intval( $value );
-		$sql     = 'SELECT * FROM ' . self::_table() . " WHERE `site_id` = '$value'";
+		$environment_id   = intval( $environment_id );
+		$sql     = 'SELECT * FROM ' . self::_table() . " WHERE `site_id` = '$value' and `environment_id` = '$environment_id'";
 		$results = $wpdb->get_results( $sql );
 		$reponse = [];
 		foreach ( $results as $result ) {
@@ -84,6 +85,14 @@ class DB {
 		global $wpdb;
 		$value = intval( $value );
 		$sql   = 'SELECT * FROM ' . self::_table() . " WHERE `site_id` = '$value' order by `created_at` DESC";
+		return $wpdb->get_results( $sql );
+	}
+
+	static function fetch_quicksaves( $value, $environment_id ) {
+		global $wpdb;
+		$value = intval( $value );
+		$environment_id = intval( $environment_id );
+		$sql   = 'SELECT * FROM ' . self::_table() . " WHERE `site_id` = '$value' and `environment_id` = '$environment_id' order by `created_at` DESC";
 		return $wpdb->get_results( $sql );
 	}
 
@@ -585,6 +594,8 @@ class Site {
 			'plugins'         => json_decode( $environments[0]->plugins),
 			'themes'          => json_decode( $environments[0]->themes ),
 			'users'           => "Loading",
+			'quicksaves'			=> "Loading",
+			'update_logs'			=> "Loading",
 			'core'            => $environments[0]->core,
 			'home_url'        => $environments[0]->home_url,
 			'updates_enabled' => intval($environments[0]->updates_enabled),
@@ -645,6 +656,8 @@ class Site {
 				'plugins'         => json_decode( $environments[1]->plugins),
 				'themes'          => json_decode( $environments[1]->themes ),
 				'users'           => "Loading",
+				'quicksaves'			=> "Loading",
+				'update_logs'			=> "Loading",
 				'core'            => $environments[1]->core,
 				'home_url'        => $environments[1]->home_url,
 				'updates_enabled' => intval($environments[1]->updates_enabled),
