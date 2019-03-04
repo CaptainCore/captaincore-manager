@@ -1504,6 +1504,13 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	$site_name   = get_field( 'site', $site_id );
 	$domain_name = get_the_title( $site_id );
 
+	if ( $environment == "production" ) {
+		$environment_id = get_field( 'environment_production_id', $site_id );
+	}
+	if ( $environment == "staging" ) {
+		$environment_id = get_field( 'environment_staging_id', $site_id );
+	}
+
 	// Copy site
 	if ( $command == 'copy' and $email ) {
 
@@ -1609,13 +1616,6 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	// Sync site data
 	if ( $command == 'sync-data' and $core and $plugins and $themes and $users ) {
-
-		if ( $environment == "production" ) {
-			$environment_id = get_field( 'environment_production_id', $site_id );
-		}
-		if ( $environment == "staging" ) {
-			$environment_id = get_field( 'environment_staging_id', $site_id );
-		}
 		
 		// Updates site with latest $plugins, $themes, $core, $home_url and $users
 		$environment = array(
@@ -1655,10 +1655,11 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			$update_log     = json_encode( $row->updates );
 
 			$new_update_log = array(
-				'site_id'     => $site_id,
-				'update_type' => $row->type,
-				'update_log'  => $update_log,
-				'created_at'  => $date_formatted,
+				'site_id'        => $site_id,
+				'environment_id' => $environment_id,
+				'update_type'    => $row->type,
+				'update_log'     => $update_log,
+				'created_at'     => $date_formatted,
 			);
 
 			$new_update_log_check = array(
@@ -1680,13 +1681,20 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	// Imports update log
 	if ( $command == 'import-quicksaves' ) {
 
-		// If new info sent then update otherwise continue with quicksavee import
+		// If new info sent then update otherwise continue with quicksave import
 		if ( $plugins &&  $themes && $users && $core && $home_url ) {
 			update_field( 'field_5a9421b004ed3', wp_slash( $plugins ), $site_id );
 			update_field( 'field_5a9421b804ed4', wp_slash( $themes ), $site_id );
 			update_field( 'field_5b2a900c85a77', wp_slash( $users ), $site_id );
 			update_field( 'field_5a9421bc04ed5', $core, $site_id );
 			update_field( 'field_5a944358bf146', $home_url, $site_id );
+		}
+
+		if ( $environment == "production" ) {
+			$environment_id = get_field( 'environment_production_id', $site_id );
+		}
+		if ( $environment == "staging" ) {
+			$environment_id = get_field( 'environment_staging_id', $site_id );
 		}
 
 		foreach ( $data as $row ) {
@@ -1700,13 +1708,14 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			$plugins        = json_encode( $row->plugins );
 
 			$new_quicksave = array(
-				'site_id'    => $site_id,
-				'created_at' => $date_formatted,
-				'git_status' => $row->git_status,
-				'git_commit' => $row->git_commit,
-				'core'       => $row->core,
-				'themes'     => $themes,
-				'plugins'    => $plugins,
+				'site_id'        => $site_id,
+				'environment_id' => $environment_id,
+				'created_at'     => $date_formatted,
+				'git_status'     => $row->git_status,
+				'git_commit'     => $row->git_commit,
+				'core'           => $row->core,
+				'themes'         => $themes,
+				'plugins'        => $plugins,
 			);
 
 			$new_quicksave_check = array(
@@ -1727,10 +1736,36 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	// Updates views and storage usage
 	if ( $command == 'usage-update' ) {
-		update_field( 'field_57e0b2b17eb2a', $storage, $site_id );
-		update_field( 'field_57e0b2c07eb2b', $views, $site_id );
+
+		if ( $environment == "production" ) {
+			$environment_id = get_field( 'environment_production_id', $site_id );
+		}
+		if ( $environment == "staging" ) {
+			$environment_id = get_field( 'environment_staging_id', $site_id );
+		}
+		
+		// Updates site with latest $plugins, $themes, $core, $home_url and $users
+		$environment = array(
+			'site_id'            => $site_id,
+			'environment'        => ucfirst($environment),
+			'storage'            => $storage,
+			'views'              => $views
+		);
+
+		$time_now = date("Y-m-d H:i:s");
+		$environment['updated_at'] = $time_now;
+
+		$db_environments = new CaptainCore\environments();
+		$db_environments->update( $environment, array( "environment_id" => $environment_id ) );
+
+		$response = array( 
+			"response" => "Completed usage-update for $site_id",
+			"environment_id" => $environment_id,
+			"environment" => $environment
+		);
+
 		do_action( 'acf/save_post', $site_id ); // Runs ACF save post hooks
-		return array( "response" => "Completed usage-update for $site_id" );
+		return $response;
 	}
 
 	if ( $server ) {
@@ -1811,8 +1846,12 @@ function captaincore_site_quicksaves_func( $request ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', array( 'status' => 403 ) );
 	}
 
+	$results = array();
 	$db_quicksaves = new CaptainCore\quicksaves;
-	$quicksaves = $db_quicksaves->fetch( $site_id );
+
+	$environment_id = get_field( 'environment_production_id', $site_id );
+	$quicksaves = $db_quicksaves->fetch_quicksaves( $site_id, $environment_id );
+
 	foreach ($quicksaves as $key => $quicksave) {
 		$compare_key = $key + 1;
 		$quicksaves[$key]->plugins = json_decode($quicksaves[$key]->plugins);
@@ -1923,7 +1962,126 @@ function captaincore_site_quicksaves_func( $request ) {
 		}
 
 	}
-	return $quicksaves;
+
+	$results["Production"] = $quicksaves; 
+
+	$environment_id = get_field( 'environment_staging_id', $site_id );
+	$quicksaves = $db_quicksaves->fetch_quicksaves( $site_id, $environment_id );
+
+	foreach ($quicksaves as $key => $quicksave) {
+		$compare_key = $key + 1;
+		$quicksaves[$key]->plugins = json_decode($quicksaves[$key]->plugins);
+		$quicksaves[$key]->themes = json_decode($quicksaves[$key]->themes);
+		$quicksaves[$key]->view_changes = false;
+		$quicksaves[$key]->view_files = [];
+		$quicksaves[$key]->filtered_files = [];
+		$quicksaves[$key]->loading = true;
+
+		// Skips compare check on oldest quicksave or if not found.
+		if ( !isset($quicksaves[$compare_key]) ) {
+			continue;
+		}
+
+		$compare_plugins = json_decode( $quicksaves[$compare_key]->plugins );
+		$compare_themes = json_decode( $quicksaves[$compare_key]->themes );
+		$plugins_names = array_column( $quicksaves[$key]->plugins, 'name' );
+		$themes_names = array_column( $quicksaves[$key]->themes, 'name' );
+		$compare_plugins_names = array_column( $compare_plugins, 'name' );
+		$compare_themes_names = array_column( $compare_themes, 'name' );
+		$removed_plugins = array_diff( $compare_plugins_names, $plugins_names );
+		$removed_themes = array_diff( $compare_themes_names, $themes_names );
+
+		foreach( $quicksaves[$key]->plugins as $plugin ) {
+			$compare_plugin_key = null;
+
+			// Check if plugin exists in previous Quicksave
+			foreach( $compare_plugins as $compare_key => $compare_plugin ) {
+				if ( $compare_plugin->name == $plugin->name ) {
+					$compare_plugin_key = $compare_key;
+				}
+			}
+			// If not found then mark as newly added.
+			if ( is_null($compare_plugin_key) ) {
+				$plugin->compare = false;
+				$plugin->highlight = "new";
+				continue;
+			}
+
+			if ( $plugin->version != $compare_plugins[$compare_plugin_key]->version ) {
+				$plugin->compare = false;
+				$plugin->changed_version = true;
+			}
+
+			if ( $plugin->status != $compare_plugins[$compare_plugin_key]->status ) {
+				$plugin->compare = false;
+				$plugin->changed_status = true;
+			}
+
+			if( isset($plugin->changed_status) or isset($plugin->changed_version) ) {
+				continue;
+			}
+
+			// Plugin is the same
+			$plugin->compare = true;
+		}
+
+		foreach( $quicksaves[$key]->themes as $theme ) {
+			$compare_theme_key = null;
+
+			// Check if plugin exists in previous Quicksave
+			foreach( $compare_themes as $compare_key => $compare_theme ) {
+				if ( $compare_theme->name == $theme->name ) {
+					$compare_theme_key = $compare_key;
+				}
+			}
+			// If not found then mark as newly added.
+			if ( is_null($compare_theme_key) ) {
+				$theme->compare = false;
+				$theme->highlight = "new";
+				continue;
+			}
+
+			if ( $theme->version != $compare_themes[$compare_theme_key]->version ) {
+				$theme->compare = false;
+				$theme->changed_version = true;
+			}
+
+			if ( $theme->status != $compare_themes[$compare_theme_key]->status ) {
+				$theme->compare = false;
+				$theme->changed_status = true;
+			}
+
+			if( isset($theme->changed_status) or isset($theme->changed_version) ) {
+				continue;
+			}
+
+			// Theme is the same
+			$theme->compare = true;
+		}
+
+		// Attached removed themes
+		foreach ($removed_themes as $removed_theme) {
+			$theme_key = array_search( $removed_theme, array_column( $compare_themes ,'name' ) );
+			$theme = $compare_themes[$theme_key];
+			$theme->compare = false;
+			$theme->deleted = true;
+			$quicksaves[$key]->deleted_themes[] = $theme;
+		}
+
+		// Attached removed plugins
+		foreach ($removed_plugins as $removed_plugin) {
+			$plugin_key = array_search( $removed_plugin, array_column( $compare_plugins ,'name' ) );
+			$plugin = $compare_plugins[$plugin_key];
+			$plugin->compare = false;
+			$plugin->deleted = true;
+			$quicksaves[$key]->deleted_plugins[] = $plugin;
+		}
+
+	}
+
+	$results["Staging"] = $quicksaves; 
+
+	return $results;
 }
 
 add_action( 'rest_api_init', 'captaincore_register_rest_endpoints' );
@@ -3424,21 +3582,28 @@ function captaincore_ajax_action_callback() {
 	if ( $cmd == 'fetch-users' ) {
 
 		# Fetch from custom table
-
-		$users = array(
+		$results = array(
 			"Production" => json_decode(get_field( "field_5b2a900c85a77", $post_id )),
 			"Staging" => json_decode(get_field( "field_5c6758d67ad20", $post_id ))
 		);
-		echo json_encode($users);
-
+		echo json_encode($results);
+			 
 	}
 
 	if ( $cmd == 'fetch-update-logs' ) {
 
-		# Fetch from custom table
-		$db_update_logs = new CaptainCore\update_logs;
+		$db = new CaptainCore\update_logs;
 
-		echo json_encode($db_update_logs->fetch_logs( $post_id ));
+		$environment_production_id = get_field( 'environment_production_id', $post_id );
+		$environment_staging_id = get_field( 'environment_staging_id', $post_id );
+
+		# Fetch from custom table
+		$results = array(
+			"Production" => $db->fetch_logs( $post_id, $environment_production_id ),
+			"Staging" => $db->fetch_logs( $post_id, $environment_staging_id )
+		);
+
+		echo json_encode($results);
 
 	}
 
@@ -3548,6 +3713,7 @@ function captaincore_install_action_callback() {
 	$addon_type   = $_POST['addon_type'];
 	$date         = $_POST['date'];
 	$name         = $_POST['name'];
+	$environment  = $_POST['environment'];
 	$quicksave_id = $_POST['quicksave_id'];
 	$link         = $_POST['link'];
 	$background   = $_POST['background'];
@@ -3556,30 +3722,15 @@ function captaincore_install_action_callback() {
 	$site             = get_field( 'site', $post_id );
 	$provider         = get_field( 'provider', $post_id );
 	$domain           = get_the_title( $post_id );
-	$address          = get_field( 'address', $post_id );
-	$username         = get_field( 'username', $post_id );
-	$password         = get_field( 'password', $post_id );
-	$protocol         = get_field( 'protocol', $post_id );
-	$port             = get_field( 'port', $post_id );
-	$homedir          = get_field( 'homedir', $post_id );
-	$staging_site     = get_field( 'site_staging', $post_id );
-	$staging_address  = get_field( 'address_staging', $post_id );
-	$staging_username = get_field( 'username_staging', $post_id );
-	$staging_password = get_field( 'password_staging', $post_id );
-	$staging_protocol = get_field( 'protocol_staging', $post_id );
-	$staging_port     = get_field( 'port_staging', $post_id );
-	$staging_homedir  = get_field( 'homedir_staging', $post_id );
-	$updates_enabled  = get_field( 'updates_enabled', $post_id );
-	$exclude_themes   = get_field( 'exclude_themes', $post_id );
-	$exclude_plugins  = get_field( 'exclude_plugins', $post_id );
-	$s3accesskey      = get_field( 's3_access_key', $post_id );
-	$s3secretkey      = get_field( 's3_secret_key', $post_id );
-	$s3bucket         = get_field( 's3_bucket', $post_id );
-	$s3path           = get_field( 's3_path', $post_id );
 
 	$partners = get_field( 'partner', $post_id );
 	if ( $partners ) {
 		$preloadusers = implode( ',', $partners );
+	}
+
+	// Append enviroment if needed
+	if ( $environment == "Staging" ) {
+		$site = get_field( 'site', $post_id ) . "-staging";
 	}
 
 	// Append provider if exists
@@ -3726,7 +3877,6 @@ function captaincore_install_action_callback() {
 		$db_quicksaves = new CaptainCore\quicksaves;
 		$quicksaves = $db_quicksaves->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
-		$site       = get_field( 'site', $post_id );
 		$command    = "quicksave-file-diff $site --hash=$commit --file=$value";
 	}
 
@@ -3735,7 +3885,6 @@ function captaincore_install_action_callback() {
 		$db_quicksaves = new CaptainCore\quicksaves;
 		$quicksaves = $db_quicksaves->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
-		$site       = get_field( 'site', $post_id );
 		$command    = "rollback $site $git_commit --$addon_type=$value";
 	}
 
@@ -3744,7 +3893,6 @@ function captaincore_install_action_callback() {
 		$db_quicksaves = new CaptainCore\quicksaves;
 		$quicksaves = $db_quicksaves->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
-		$site       = get_field( 'site', $post_id );
 		$command    = "rollback $site $git_commit --all";
 	}
 
@@ -3753,7 +3901,6 @@ function captaincore_install_action_callback() {
 		$db_quicksaves = new CaptainCore\quicksaves;
 		$quicksaves = $db_quicksaves->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
-		$site       = get_field( 'site', $post_id );
 		$command    = "rollback $site $git_commit --file=$value";
 	}
 
@@ -3819,7 +3966,7 @@ function captaincore_install_action_callback() {
 		$error_message = $response->get_error_message();
 		$response = "Something went wrong: $error_message";
 	} else {
-	$response = $response["body"];
+		$response = $response["body"];
 	}
 	
 	echo $response;
@@ -3834,30 +3981,41 @@ function captaincore_site_fetch_details( $post_id ) {
 
 	$site_details = ( new CaptainCore\Site )->get( $post_id );
 
-	$site             = get_field( 'site', $post_id );
-	$provider         = get_field( 'provider', $post_id );
-	$fathom           = get_field( 'fathom', $post_id );
-	$domain           = get_the_title( $post_id );
-	$address          = $site_details->environments[0]["address"];
-	$username         = $site_details->environments[0]["username"];
-	$password         = $site_details->environments[0]["password"];
-	$protocol         = $site_details->environments[0]["protocol"];
-	$port             = $site_details->environments[0]["port"];
-	$homedir          = ( isset($site_details->environments[0]["home_directory"]) ? $site_details->environments[0]["home_directory"] : '' );
-	$staging_address  = ( isset($site_details->environments[1]["address"]) ? $site_details->environments[1]["address"] : '' );
-	$staging_username = ( isset($site_details->environments[1]["username"]) ? $site_details->environments[1]["username"] : '' );
-	$staging_password = ( isset($site_details->environments[1]["password"]) ? $site_details->environments[1]["password"] : '' );
-	$staging_protocol = ( isset($site_details->environments[1]["protocol"]) ? $site_details->environments[1]["protocol"] : '' );
-	$staging_port     = ( isset($site_details->environments[1]["port"]) ? $site_details->environments[1]["port"] : '' );
-	$staging_homedir  = ( isset($site_details->environments[1]["home_directory"]) ? $site_details->environments[1]["home_directory"] : '' );
-	$updates_enabled  = ( isset($site_details->environments[0]["updates_enabled"]) ? $site_details->environments[0]["updates_enabled"] : '' );
-	$exclude_themes   = ( isset($site_details->environments[0]["exclude_themes"]) ? $site_details->environments[0]["exclude_themes"] : '' );
-	$exclude_plugins  = ( isset($site_details->environments[0]["exclude_plugins"]) ? $site_details->environments[0]["exclude_plugins"] : '' );
-	$s3accesskey      = ( isset($site_details->environments[0]["offload_access_key"]) ? $site_details->environments[0]["offload_access_key"] : '' );
-	$s3secretkey      = ( isset($site_details->environments[0]["offload_secret_key"]) ? $site_details->environments[0]["offload_secret_key"] : '' );
-	$s3bucket         = ( isset($site_details->environments[0]["offload_bucket"]) ? $site_details->environments[0]["offload_bucket"] : '' );
-	$s3path           = ( isset($site_details->environments[0]["offload_path"]) ? $site_details->environments[0]["offload_path"] : '' );
-	$partners         = get_field( 'partner', $post_id );
+	$site                    = get_field( 'site', $post_id );
+	$provider                = get_field( 'provider', $post_id );
+	$fathom                  = get_field( 'fathom', $post_id );
+	$domain                  = get_the_title( $post_id );
+	$partners                = get_field( 'partner', $post_id );
+	$address                 = $site_details->environments[0]["address"];
+	$username                = $site_details->environments[0]["username"];
+	$password                = $site_details->environments[0]["password"];
+	$protocol                = $site_details->environments[0]["protocol"];
+	$port                    = $site_details->environments[0]["port"];
+	$home_directory          = ( isset($site_details->environments[0]["home_directory"]) ? $site_details->environments[0]["home_directory"] : '' );
+	$updates_enabled         = ( isset($site_details->environments[0]["updates_enabled"]) ? $site_details->environments[0]["updates_enabled"] : '' );
+	$updates_exclude_themes  = ( isset($site_details->environments[0]["updates_exclude_themes"]) ? $site_details->environments[0]["updates_exclude_themes"] : '' );
+	$updates_exclude_plugins = ( isset($site_details->environments[0]["updates_exclude_plugins"]) ? $site_details->environments[0]["updates_exclude_plugins"] : '' );
+	$offload_enabled         = ( isset($site_details->environments[0]["offload_enabled"]) ? $site_details->environments[0]["offload_enabled"] : '' );
+	$offload_provider        = ( isset($site_details->environments[0]["offload_provider"]) ? $site_details->environments[0]["offload_provider"] : '' );
+	$offload_access_key      = ( isset($site_details->environments[0]["offload_access_key"]) ? $site_details->environments[0]["offload_access_key"] : '' );
+	$offload_secret_key      = ( isset($site_details->environments[0]["offload_secret_key"]) ? $site_details->environments[0]["offload_secret_key"] : '' );
+	$offload_bucket          = ( isset($site_details->environments[0]["offload_bucket"]) ? $site_details->environments[0]["offload_bucket"] : '' );
+	$offload_path            = ( isset($site_details->environments[0]["offload_path"]) ? $site_details->environments[0]["offload_path"] : '' );
+	$staging_address         = ( isset($site_details->environments[1]["address"]) ? $site_details->environments[1]["address"] : '' );
+	$staging_username        = ( isset($site_details->environments[1]["username"]) ? $site_details->environments[1]["username"] : '' );
+	$staging_password        = ( isset($site_details->environments[1]["password"]) ? $site_details->environments[1]["password"] : '' );
+	$staging_protocol        = ( isset($site_details->environments[1]["protocol"]) ? $site_details->environments[1]["protocol"] : '' );
+	$staging_port            = ( isset($site_details->environments[1]["port"]) ? $site_details->environments[1]["port"] : '' );
+	$staging_home_directory  = ( isset($site_details->environments[1]["home_directory"]) ? $site_details->environments[1]["home_directory"] : '' );
+	$staging_updates_enabled         = ( isset($site_details->environments[1]["updates_enabled"]) ? $site_details->environments[1]["updates_enabled"] : '' );
+	$staging_updates_exclude_themes  = ( isset($site_details->environments[1]["updates_exclude_themes"]) ? $site_details->environments[1]["updates_exclude_themes"] : '' );
+	$staging_updates_exclude_plugins = ( isset($site_details->environments[1]["updates_exclude_plugins"]) ? $site_details->environments[1]["updates_exclude_plugins"] : '' );
+	$staging_offload_enabled         = ( isset($site_details->environments[1]["offload_enabled"]) ? $site_details->environments[1]["offload_enabled"] : '' );
+	$staging_offload_provider        = ( isset($site_details->environments[1]["offload_provider"]) ? $site_details->environments[1]["offload_provider"] : '' );
+	$staging_offload_access_key      = ( isset($site_details->environments[1]["offload_access_key"]) ? $site_details->environments[1]["offload_access_key"] : '' );
+	$staging_offload_secret_key      = ( isset($site_details->environments[1]["offload_secret_key"]) ? $site_details->environments[1]["offload_secret_key"] : '' );
+	$staging_offload_bucket          = ( isset($site_details->environments[1]["offload_bucket"]) ? $site_details->environments[1]["offload_bucket"] : '' );
+	$staging_offload_path            = ( isset($site_details->environments[1]["offload_path"]) ? $site_details->environments[1]["offload_path"] : '' );
 
 	if ( $partners ) {
 		$preloadusers = implode( ',', $partners );
@@ -3875,26 +4033,37 @@ function captaincore_site_fetch_details( $post_id ) {
 	( $post_id ? " --id=$post_id" : '' ) .
 	( $domain ? " --domain=$domain" : '' ) .
 	( $fathom ? " --fathom=$fathom" : '' ) .
+	( $preloadusers ? " --preloadusers=$preloadusers" : '' ) .
+	( $address ? " --address=$address" : '' ) .
 	( $username ? " --username=$username" : '' ) .
 	( $password ? ' --password=' . rawurlencode( base64_encode( $password ) ) : '' ) .
-	( $address ? " --address=$address" : '' ) .
 	( $protocol ? " --protocol=$protocol" : '' ) .
 	( $port ? " --port=$port" : '' ) .
+	( $home_directory ? " --home_directory=$home_directory" : '' ) .
+	( $updates_enabled ? " --updates_enabled=$updates_enabled" : ' --updates_enabled=0' ) .
+	( $updates_exclude_themes ? " --updates_exclude_themes=$updates_exclude_themes" : '' ) .
+	( $updates_exclude_plugins ? " --updates_exclude_plugins=$updates_exclude_plugins" : '' ) .
+	( $offload_enabled ? " --offload_enabled=$offload_enabled" : ' --offload_enabled=0' ) .
+	( $offload_provider ? " --offload_provider=$offload_provider" : '' ) .
+	( $offload_access_key ? " --offload_access_key=$offload_access_key" : '' ) .
+	( $offload_secret_key ? " --offload_secret_key=$offload_secret_key" : '' ) .
+	( $offload_bucket ? " --offload_bucket=$offload_bucket" : '' ) .
+	( $offload_path ? " --offload_path=$offload_path" : '' ) .
+	( $staging_address ? " --staging_address=$staging_address" : '' ) .
 	( $staging_username ? " --staging_username=$staging_username" : '' ) .
 	( $staging_password ? ' --staging_password=' . rawurlencode( base64_encode( $staging_password ) ) : '' ) .
-	( $staging_address ? " --staging_address=$staging_address" : '' ) .
 	( $staging_protocol ? " --staging_protocol=$staging_protocol" : '' ) .
 	( $staging_port ? " --staging_port=$staging_port" : '' ) .
-	( $preloadusers ? " --preloadusers=$preloadusers" : '' ) .
-	( $homedir ? " --homedir=$homedir" : '' ) .
-	( $updates_enabled ? " --updates_enabled=$updates_enabled" : ' --updates_enabled=0' ) .
-	( $exclude_themes ? " --exclude_themes=$exclude_themes" : '' ) .
-	( $exclude_plugins ? " --exclude_plugins=$exclude_plugins" : '' ) .
-	( $s3accesskey ? " --s3accesskey=$s3accesskey" : '' ) .
-	( $s3secretkey ? " --s3secretkey=$s3secretkey" : '' ) .
-	( $s3bucket ? " --s3bucket=$s3bucket" : '' ) .
-	( $s3path ? " --s3path=$s3path" : '' );
-
+	( $staging_home_directory ? " --staging_home_directory=$staging_home_directory" : '' ) .
+	( $staging_updates_enabled ? " --staging_updates_enabled=$staging_updates_enabled" : ' --staging_updates_enabled=0' ) .
+	( $staging_updates_exclude_themes ? " --staging_updates_exclude_themes=$staging_updates_exclude_themes" : '' ) .
+	( $staging_updates_exclude_plugins ? " --staging_updates_exclude_plugins=$staging_updates_exclude_plugins" : '' ) .
+	( $staging_offload_enabled ? " --staging_offload_enabled=$staging_offload_enabled" : ' --staging_offload_enabled=0' ) .
+	( $staging_offload_provider ? " --staging_offload_provider=$staging_offload_provider" : '' ) .
+	( $staging_offload_access_key ? " --staging_offload_access_key=$staging_offload_access_key" : '' ) .
+	( $staging_offload_secret_key ? " --staging_offload_secret_key=$staging_offload_secret_key" : '' ) .
+	( $staging_offload_bucket ? " --staging_offload_bucket=$staging_offload_bucket" : '' ) .
+	( $staging_offload_path ? " --staging_offload_path=$staging_offload_path" : '' );
 	return $command;
 
 }
@@ -3987,7 +4156,7 @@ function captaincore_create_tables() {
 
 			update_site_option('captcorecore_db_version', 3);
 
-		return $success;
+			return $success;
 		}
 
 }
@@ -4042,8 +4211,6 @@ function captaincore_acf_save_post( $post_id ) {
 
 	$db_environments = new CaptainCore\environments();
 
-	// Fetch existing environments.
-
 	if ( $environment_production_id ) {
 		// Updating production environment
 		$environment['updated_at'] = date("Y-m-d H:i:s");
@@ -4085,8 +4252,6 @@ function captaincore_acf_save_post( $post_id ) {
 	);
 
 	$db_environments = new CaptainCore\environments();
-
-	// Fetch existing environments.
 
 	if ( $environment_staging_id ) {
 		// Updating staging environment
