@@ -1056,7 +1056,8 @@ Vue.component('file-upload', VueUploadComponent);
 						</v-toolbar-items>
 					</v-toolbar>
 					<v-card-text>
-					<v-container v-html="dialog_file_diff.response"><v-progress-linear :indeterminate="true" v-show="dialog_file_diff.loading"></v-progress-linear></v-container>
+						<v-container v-show="dialog_file_diff.loading"><v-progress-linear :indeterminate="true"></v-progress-linear></v-container>
+						<v-container v-html="dialog_file_diff.response"></v-container>
 					</v-card-text>
 					</v-card>
 				</v-dialog>
@@ -3087,7 +3088,6 @@ new Vue({
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					self.dialog_file_diff.loading = false;
 					html = [];
 					response.data.split('\n').forEach(line => {
 						applied_css="";
@@ -3100,6 +3100,7 @@ new Vue({
 						html.push("<div"+applied_css+">" + line + "</div>");
 					});
 					self.dialog_file_diff.response = html.join('\n');
+					self.dialog_file_diff.loading = false;
 				})
 				.catch( error => console.log( error ) );
 
