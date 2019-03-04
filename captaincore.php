@@ -3868,7 +3868,7 @@ function captaincore_install_action_callback() {
 		}
 
 		if ( is_int($post_id) ) {
-			$command = "$value $site --" . $arguments['value'] . '="' . $arguments['input'] . '"';
+			$command = "$value $site --" . $arguments['value'] . '="' . stripslashes($arguments['input']) . '"';
 		}
 
 	}
