@@ -893,6 +893,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-container>
 						<v-form ref="form">
 							<v-text-field :value="dialog_edit_site.site.name" @change.native="dialog_edit_site.site.name = $event.target.value" label="Domain name" required></v-text-field>
+							<v-text-field :value="dialog_edit_site.site.site" @change.native="dialog_edit_site.site.site = $event.target.value" label="Site name (not changeable)" disabled></v-text-field>
 							<v-autocomplete
 							:items="customers"
 							item-text="name"
