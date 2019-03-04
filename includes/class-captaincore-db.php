@@ -583,35 +583,35 @@ class Site {
 
 		$site_details->environments[0] = array(
 			'id' => $environments[0]->environment_id,
-			'link'            => "http://$domain",
-			'environment'     => 'Production',
-			'address'         => $environments[0]->address,
-			'username'        => $environments[0]->username,
-			'password'        => $environments[0]->password,
-			'protocol'        => $environments[0]->protocol,
-			'port'            => $environments[0]->port,
-			'home_directory'	=> $environments[0]->home_directory,
-			'plugins'         => json_decode( $environments[0]->plugins),
-			'themes'          => json_decode( $environments[0]->themes ),
-			'users'           => "Loading",
-			'quicksaves'			=> "Loading",
-			'update_logs'			=> "Loading",
-			'core'            => $environments[0]->core,
-			'home_url'        => $environments[0]->home_url,
-			'updates_enabled' => intval($environments[0]->updates_enabled),
-			'exclude_plugins' => $environments[0]->exclude_plugins,
-			'exclude_themes'	=> $environments[0]->exclude_themes,
+			'link'                    => "http://$domain",
+			'environment'             => 'Production',
+			'address'                 => $environments[0]->address,
+			'username'                => $environments[0]->username,
+			'password'                => $environments[0]->password,
+			'protocol'                => $environments[0]->protocol,
+			'port'                    => $environments[0]->port,
+			'home_directory'	        => $environments[0]->home_directory,
+			'plugins'                 => json_decode( $environments[0]->plugins),
+			'themes'                  => json_decode( $environments[0]->themes ),
+			'users'                   => "Loading",
+			'quicksaves'			        => "Loading",
+			'update_logs'			        => "Loading",
+			'core'                    => $environments[0]->core,
+			'home_url'                => $environments[0]->home_url,
+			'updates_enabled'         => intval($environments[0]->updates_enabled),
+			'updates_exclude_plugins' => $environments[0]->updates_exclude_plugins,
+			'updates_exclude_themes'	=> $environments[0]->updates_exclude_themes,
 		);
 
-		if ( $site_details->environments[0]['exclude_themes'] ) {
-			$site_details->environments[0]['exclude_themes'] = explode( ',', $site_details->environments[0]['exclude_themes'] );
+		if ( $site_details->environments[0]['updates_exclude_themes'] ) {
+			$site_details->environments[0]['updates_exclude_themes'] = explode( ',', $site_details->environments[0]['updates_exclude_themes'] );
 		} else {
-			$site_details->environments[0]['exclude_themes'] = array();
+			$site_details->environments[0]['updates_exclude_themes'] = array();
 		}
-		if ( $site_details->environments[0]['exclude_plugins'] ) {
-			$site_details->environments[0]['exclude_plugins'] = explode( ',', $site_details->environments[0]['exclude_plugins'] );
+		if ( $site_details->environments[0]['updates_exclude_plugins'] ) {
+			$site_details->environments[0]['updates_exclude_plugins'] = explode( ',', $site_details->environments[0]['updates_exclude_plugins'] );
 		} else {
-			$site_details->environments[0]['exclude_plugins'] = array();
+			$site_details->environments[0]['updates_exclude_plugins'] = array();
 		}
 
 		if ( $site_details->environments[0]['themes'] == "" ) {
@@ -644,36 +644,36 @@ class Site {
 			}
 
 			$site_details->environments[1] = array(
-				'key_id'          => 2,
-				'link'            => $link_staging,
-				'environment'     => 'Staging',
-				'address'         => $environments[1]->address,
-				'username'        => $environments[1]->username,
-				'password'        => $environments[1]->password,
-				'protocol'        => $environments[1]->protocol,
-				'port'            => $environments[1]->port,
-				'home_directory'	=> $environments[1]->home_directory,
-				'plugins'         => json_decode( $environments[1]->plugins),
-				'themes'          => json_decode( $environments[1]->themes ),
-				'users'           => "Loading",
-				'quicksaves'			=> "Loading",
-				'update_logs'			=> "Loading",
-				'core'            => $environments[1]->core,
-				'home_url'        => $environments[1]->home_url,
-				'updates_enabled' => intval($environments[1]->updates_enabled),
-				'exclude_plugins' => $environments[1]->exclude_plugins,
-				'exclude_themes'  => $environments[1]->exclude_themes,
+				'key_id'                  => 2,
+				'link'                    => $link_staging,
+				'environment'             => 'Staging',
+				'address'                 => $environments[1]->address,
+				'username'                => $environments[1]->username,
+				'password'                => $environments[1]->password,
+				'protocol'                => $environments[1]->protocol,
+				'port'                    => $environments[1]->port,
+				'home_directory'	        => $environments[1]->home_directory,
+				'plugins'                 => json_decode( $environments[1]->plugins),
+				'themes'                  => json_decode( $environments[1]->themes ),
+				'users'                   => "Loading",
+				'quicksaves'			        => "Loading",
+				'update_logs'			        => "Loading",
+				'core'                    => $environments[1]->core,
+				'home_url'                => $environments[1]->home_url,
+				'updates_enabled'         => intval($environments[1]->updates_enabled),
+				'updates_exclude_plugins' => $environments[1]->updates_exclude_plugins,
+				'updates_exclude_themes'  => $environments[1]->updates_exclude_themes,
 			);
 	
-			if ( $site_details->environments[1]['exclude_themes'] ) {
-				$site_details->environments[1]['exclude_themes'] = explode( ',', $site_details->environments[1]['exclude_themes'] );
+			if ( $site_details->environments[1]['updates_exclude_themes'] ) {
+				$site_details->environments[1]['updates_exclude_themes'] = explode( ',', $site_details->environments[1]['updates_exclude_themes'] );
 			} else {
-				$site_details->environments[1]['exclude_themes'] = array();
+				$site_details->environments[1]['updates_exclude_themes'] = array();
 			}
-			if ( $site_details->environments[1]['exclude_plugins'] ) {
-				$site_details->environments[1]['exclude_plugins'] = explode( ',', $site_details->environments[1]['exclude_plugins'] );
+			if ( $site_details->environments[1]['updates_exclude_plugins'] ) {
+				$site_details->environments[1]['updates_exclude_plugins'] = explode( ',', $site_details->environments[1]['updates_exclude_plugins'] );
 			} else {
-				$site_details->environments[1]['exclude_plugins'] = array();
+				$site_details->environments[1]['updates_exclude_plugins'] = array();
 			}
 	
 			if ( $site_details->environments[1]['themes'] == "" ) {
@@ -757,30 +757,25 @@ class Site {
 			$db_environments = new environments();
 
 			$environment = array(
-				'site_id'            => $site_id,
-				'environment'        => "Production",
-				'address'            => $site->environments[0]["address"],
-				'username'           => $site->environments[0]["username"],
-				'password'           => $site->environments[0]["password"],
-				'protocol'           => $site->environments[0]["protocol"],
-				'port'               => $site->environments[0]["port"],
-				'home_directory'     => $site->environments[0]["home_directory"],
-				'database_username'  => $site->environments[0]["database_username"],
-				'database_password'  => $site->environments[0]["database_password"],
-				'use_offload'        => $site->environments[0]["use_offload"],
-				'offload_access_key' => $site->environments[0]["offload_access_key"],
-				'offload_secret_key' => $site->environments[0]["offload_secret_key"],
-				'offload_bucket'     => $site->environments[0]["offload_bucket"],
-				'offload_path'       => $site->environments[0]["offload_path"],
-				'updates_enabled'    => $site->environments[0]["updates_enabled"],
-				'exclude_plugins'    => $site->environments[0]["exclude_plugins"],
-				'exclude_themes'     => $site->environments[0]["exclude_themes"],
-				'use_offload'        => $site->environments[0]["use_offload"],
-				'offload_provider'   => $site->environments[0]["offload_provider"],
-				'offload_access_key' => $site->environments[0]["offload_access_key"],
-				'offload_secret_key' => $site->environments[0]["offload_secret_key"],
-				'offload_bucket'     => $site->environments[0]["offload_bucket"],
-				'offload_path'       => $site->environments[0]["offload_path"],
+				'site_id'                 => $site_id,
+				'environment'             => "Production",
+				'address'                 => $site->environments[0]["address"],
+				'username'                => $site->environments[0]["username"],
+				'password'                => $site->environments[0]["password"],
+				'protocol'                => $site->environments[0]["protocol"],
+				'port'                    => $site->environments[0]["port"],
+				'home_directory'          => $site->environments[0]["home_directory"],
+				'database_username'       => $site->environments[0]["database_username"],
+				'database_password'       => $site->environments[0]["database_password"],
+				'updates_enabled'         => $site->environments[0]["updates_enabled"],
+				'updates_exclude_plugins' => $site->environments[0]["updates_exclude_plugins"],
+				'updates_exclude_themes'  => $site->environments[0]["updates_exclude_themes"],
+				'offload_enabled'         => $site->environments[0]["offload_enabled"],
+				'offload_provider'        => $site->environments[0]["offload_provider"],
+				'offload_access_key'      => $site->environments[0]["offload_access_key"],
+				'offload_secret_key'      => $site->environments[0]["offload_secret_key"],
+				'offload_bucket'          => $site->environments[0]["offload_bucket"],
+				'offload_path'            => $site->environments[0]["offload_path"],
 			);
 
 			$time_now = date("Y-m-d H:i:s");
@@ -790,30 +785,25 @@ class Site {
 			update_field( 'environment_production_id', $environment_id, $site_id );
 		
 			$environment = array(
-				'site_id'            => $site_id,
-				'environment'        => "Staging",
-				'address'            => $site->environments[1]["address"],
-				'username'           => $site->environments[1]["username"],
-				'password'           => $site->environments[1]["password"],
-				'protocol'           => $site->environments[1]["protocol"],
-				'port'               =>	$site->environments[1]["port"],
-				'home_directory'     => $site->environments[1]["home_directory"],
-				'database_username'  => $site->environments[1]["database_username"],
-				'database_password'  => $site->environments[1]["database_password"],
-				'use_offload'        => $site->environments[1]["use_offload"],
-				'offload_access_key' => $site->environments[1]["offload_access_key"],
-				'offload_secret_key' => $site->environments[1]["offload_secret_key"],
-				'offload_bucket'     => $site->environments[1]["offload_bucket"],
-				'offload_path'       => $site->environments[1]["offload_path"],
-				'updates_enabled'    => $site->environments[1]["updates_enabled"],
-				'exclude_plugins'    => $site->environments[1]["exclude_plugins"],
-				'exclude_themes'     => $site->environments[1]["exclude_themes"],
-				'use_offload'        => $site->environments[1]["use_offload"],
-				'offload_provider'   => $site->environments[1]["offload_provider"],
-				'offload_access_key' => $site->environments[1]["offload_access_key"],
-				'offload_secret_key' => $site->environments[1]["offload_secret_key"],
-				'offload_bucket'     => $site->environments[1]["offload_bucket"],
-				'offload_path'       => $site->environments[1]["offload_path"],
+				'site_id'                 => $site_id,
+				'environment'             => "Staging",
+				'address'                 => $site->environments[1]["address"],
+				'username'                => $site->environments[1]["username"],
+				'password'                => $site->environments[1]["password"],
+				'protocol'                => $site->environments[1]["protocol"],
+				'port'                    =>	$site->environments[1]["port"],
+				'home_directory'          => $site->environments[1]["home_directory"],
+				'database_username'       => $site->environments[1]["database_username"],
+				'database_password'       => $site->environments[1]["database_password"],
+				'updates_enabled'         => $site->environments[1]["updates_enabled"],
+				'updates_exclude_plugins' => $site->environments[1]["updates_exclude_plugins"],
+				'updates_exclude_themes'  => $site->environments[1]["updates_exclude_themes"],
+				'offload_enabled'         => $site->environments[1]["offload_enabled"],
+				'offload_provider'        => $site->environments[1]["offload_provider"],
+				'offload_access_key'      => $site->environments[1]["offload_access_key"],
+				'offload_secret_key'      => $site->environments[1]["offload_secret_key"],
+				'offload_bucket'          => $site->environments[1]["offload_bucket"],
+				'offload_path'            => $site->environments[1]["offload_path"],
 			);
 
 			$time_now = date("Y-m-d H:i:s");
@@ -894,44 +884,44 @@ class Site {
 			}
 			
 			$environment = array(
-				'address'            => $site->environments[0]["address"],
-				'username'           => $site->environments[0]["username"],
-				'password'           => $site->environments[0]["password"],
-				'protocol'           => $site->environments[0]["protocol"],
-				'port'               => $site->environments[0]["port"],
-				'home_directory'     => $site->environments[0]["home_directory"],
-				'database_username'  => $site->environments[0]["database_username"],
-				'database_password'  => $site->environments[0]["database_password"],
-				'use_offload'        => $site->environments[0]["use_offload"],
-				'offload_access_key' => $site->environments[0]["offload_access_key"],
-				'offload_secret_key' => $site->environments[0]["offload_secret_key"],
-				'offload_bucket'     => $site->environments[0]["offload_bucket"],
-				'offload_path'       => $site->environments[0]["offload_path"],
-				'updates_enabled'    => $site->environments[0]["updates_enabled"],
-				'exclude_plugins'    => $site->environments[0]["exclude_plugins"],
-				'exclude_themes'     => $site->environments[0]["exclude_themes"],
+				'address'                 => $site->environments[0]["address"],
+				'username'                => $site->environments[0]["username"],
+				'password'                => $site->environments[0]["password"],
+				'protocol'                => $site->environments[0]["protocol"],
+				'port'                    => $site->environments[0]["port"],
+				'home_directory'          => $site->environments[0]["home_directory"],
+				'database_username'       => $site->environments[0]["database_username"],
+				'database_password'       => $site->environments[0]["database_password"],
+				'offload_enabled'         => $site->environments[0]["offload_enabled"],
+				'offload_access_key'      => $site->environments[0]["offload_access_key"],
+				'offload_secret_key'      => $site->environments[0]["offload_secret_key"],
+				'offload_bucket'          => $site->environments[0]["offload_bucket"],
+				'offload_path'            => $site->environments[0]["offload_path"],
+				'updates_enabled'         => $site->environments[0]["updates_enabled"],
+				'updates_exclude_plugins' => $site->environments[0]["updates_exclude_plugins"],
+				'updates_exclude_themes'  => $site->environments[0]["updates_exclude_themes"],
 			);
 
 			$environment_id = get_field( 'environment_production_id', $site_id );
 			$db_environments->update( $environment, array( "environment_id" => $environment_id ) );
 		
 			$environment = array(
-				'address'            => $site->environments[1]["address"],
-				'username'           => $site->environments[1]["username"],
-				'password'           => $site->environments[1]["password"],
-				'protocol'           => $site->environments[1]["protocol"],
-				'port'               => $site->environments[1]["port"],
-				'home_directory'     => $site->environments[1]["home_directory"],
-				'database_username'  => $site->environments[1]["database_username"],
-				'database_password'  => $site->environments[1]["database_password"],
-				'use_offload'        => $site->environments[1]["use_offload"],
-				'offload_access_key' => $site->environments[1]["offload_access_key"],
-				'offload_secret_key' => $site->environments[1]["offload_secret_key"],
-				'offload_bucket'     => $site->environments[1]["offload_bucket"],
-				'offload_path'       => $site->environments[1]["offload_path"],
-				'updates_enabled'    => $site->environments[1]["updates_enabled"],
-				'exclude_plugins'    => $site->environments[1]["exclude_plugins"],
-				'exclude_themes'     => $site->environments[1]["exclude_themes"],
+				'address'                 => $site->environments[1]["address"],
+				'username'                => $site->environments[1]["username"],
+				'password'                => $site->environments[1]["password"],
+				'protocol'                => $site->environments[1]["protocol"],
+				'port'                    => $site->environments[1]["port"],
+				'home_directory'          => $site->environments[1]["home_directory"],
+				'database_username'       => $site->environments[1]["database_username"],
+				'database_password'       => $site->environments[1]["database_password"],
+				'offload_enabled'         => $site->environments[1]["offload_enabled"],
+				'offload_access_key'      => $site->environments[1]["offload_access_key"],
+				'offload_secret_key'      => $site->environments[1]["offload_secret_key"],
+				'offload_bucket'          => $site->environments[1]["offload_bucket"],
+				'offload_path'            => $site->environments[1]["offload_path"],
+				'updates_enabled'         => $site->environments[1]["updates_enabled"],
+				'updates_exclude_plugins' => $site->environments[1]["updates_exclude_plugins"],
+				'updates_exclude_themes'  => $site->environments[1]["updates_exclude_themes"],
 			);
 
 			$environment_id = get_field( 'environment_staging_id', $site_id );

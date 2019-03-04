@@ -637,7 +637,7 @@ Vue.component('file-upload', VueUploadComponent);
 							<strong>{{ data.item.name }}</strong>
 						</template>
 						</v-autocomplete>
-						<v-switch label="Automatic Updates" v-model="dialog_new_site.updates_enabled" false-value="0" true-value="1"></v-switch>
+						
 								<v-container grid-list-md text-xs-center>
 									<v-layout row wrap>
 										<v-flex xs12 style="height:0px">
@@ -662,13 +662,15 @@ Vue.component('file-upload', VueUploadComponent);
 											<v-text-field label="Home Directory" :value="key.home_directory" @change.native="key.home_directory = $event.target.value" required></v-text-field>
 											<v-text-field label="Database Username" :value="key.database_username" @change.native="key.database_username = $event.target.value" required></v-text-field>
 											<v-text-field label="Database Password" :value="key.database_password" @change.native="key.database_password = $event.target.value" required></v-text-field>
-											<div v-if="typeof key.use_s3 != 'undefined'">
-												<v-switch label="Use S3" v-model="key.use_s3" false-value="0" true-value="1" left></v-switch>
-												<div v-if="key.use_s3">
-													<v-text-field label="s3 Access Key" :value="key.s3_access_key" @change.native="key.s3_access_key = $event.target.value" required></v-text-field>
-													<v-text-field label="s3 Secret Key" :value="key.s3_secret_key" @change.native="key.s3_secret_key = $event.target.value" required></v-text-field>
-													<v-text-field label="s3 Bucket" :value="key.s3_bucket" @change.native="key.s3_bucket = $event.target.value" required></v-text-field>
-													<v-text-field label="s3 Path" :value="key.s3_path" @change.native="key.s3_path = $event.target.value" required></v-text-field>
+											<v-switch label="Automatic Updates" v-model="key.updates_enabled" false-value="0" true-value="1"></v-switch>
+											<div v-if="typeof key.offload_enabled != 'undefined'">
+												<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
+												<div v-if="key.offload_enabled == 1">
+													<v-select label="Offload Provider" :value="key.offload_provider" @change.native="key.offload_provider = $event.target.value" :items='[{ provider:"s3", label: "Amazon S3" },{ provider:"do", label:"Digital Ocean" }]' item-text="label" item-value="provider" clearable></v-select>
+													<v-text-field label="Offload Access Key" :value="key.offload_access_key" @change.native="key.offload_access_key = $event.target.value" required></v-text-field>
+													<v-text-field label="Offload Secret Key" :value="key.offload_secret_key" @change.native="key.offload_secret_key = $event.target.value" required></v-text-field>
+													<v-text-field label="Offload Bucket" :value="key.offload_bucket" @change.native="key.offload_bucket = $event.target.value" required></v-text-field>
+													<v-text-field label="Offload Path" :value="key.offload_path" @change.native="key.offload_path = $event.target.value" required></v-text-field>
 												</div>
 											</div>
 										</div>
@@ -970,13 +972,13 @@ Vue.component('file-upload', VueUploadComponent);
 										<v-text-field label="Home Directory" :value="key.home_directory" @change.native="key.home_directory = $event.target.value" required></v-text-field>
 										<v-text-field label="Database Username" :value="key.database_username" @change.native="key.database_username = $event.target.value" required></v-text-field>
 										<v-text-field label="Database Password" :value="key.database_password" @change.native="key.database_password = $event.target.value" required></v-text-field>
-										<div v-if="typeof key.use_s3 != 'undefined'">
-											<v-switch label="Use S3" v-model="key.use_s3" false-value="0" true-value="1" left></v-switch>
-											<div v-if="key.use_s3">
-												<v-text-field label="s3 Access Key" :value="key.s3_access_key" @change.native="key.s3_access_key = $event.target.value" required></v-text-field>
-												<v-text-field label="s3 Secret Key" :value="key.s3_secret_key" @change.native="key.s3_secret_key = $event.target.value" required></v-text-field>
-												<v-text-field label="s3 Bucket" :value="key.s3_bucket" @change.native="key.s3_bucket = $event.target.value" required></v-text-field>
-												<v-text-field label="s3 Path" :value="key.s3_path" @change.native="key.s3_path = $event.target.value" required></v-text-field>
+										<div v-if="typeof key.offload_enabled != 'undefined'">
+											<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
+											<div v-if="key.offload_enabled">
+												<v-text-field label="Offload Access Key" :value="key.offload_access_key" @change.native="key.offload_access_key = $event.target.value" required></v-text-field>
+												<v-text-field label="Offload Secret Key" :value="key.offload_secret_key" @change.native="key.offload_secret_key = $event.target.value" required></v-text-field>
+												<v-text-field label="Offload Bucket" :value="key.offload_bucket" @change.native="key.offload_bucket = $event.target.value" required></v-text-field>
+												<v-text-field label="Offload Path" :value="key.offload_path" @change.native="key.offload_path = $event.target.value" required></v-text-field>
 											</div>
 										</div>
 									</div>
@@ -1910,12 +1912,11 @@ new Vue({
 			show: false,
 			domain: "",
 			errors: [],
-			updates_enabled: "1",
 			shared_with: [],
 			customers: [],
 			environments: [
-				{"environment": "Production", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"","use_s3": false,"s3_access_key":"","s3_secret_key":"","s3_bucket":"","s3_path":"","database_username":"","database_password":"" },
-				{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"","database_username":"","database_password":"" }
+				{"environment": "Production", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"","database_username":"","database_password":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" },
+				{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"","database_username":"","database_password":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" }
 			],
 		},
 		customers: [],
@@ -2372,13 +2373,11 @@ new Vue({
 							domain: "",
 							site: "",
 							errors: [],
-							updates_enabled: "1",
 							shared_with: [],
 							customers: [],
 							environments: [
-								{"environment": "Production", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"","use_s3": false,
-								"s3_access_key":"","s3_secret_key":"","s3_bucket":"","s3_path":"","database_username":"","database_password":"" },
-								{"environment": "Staging", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"","database_username":"","database_password":"" }
+								{"environment": "Production", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"","database_username":"","database_password":"","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" },
+								{"environment": "Staging", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"","database_username":"","database_password":"","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" }
 							],
 						}
 						self.fetchSiteInfo( response.site_id );
