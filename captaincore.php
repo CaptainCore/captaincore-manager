@@ -4112,7 +4112,7 @@ function captaincore_create_tables() {
 			return $success;
 		}
 
-		if ( $version < 3 ) {
+		if ( $version < 6 ) {
 			$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_environments` (
 				environment_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 				site_id bigint(20) UNSIGNED NOT NULL,
@@ -4151,7 +4151,7 @@ function captaincore_create_tables() {
 			dbDelta($sql);
 			$success = empty($wpdb->last_error);
 
-			update_site_option('captcorecore_db_version', 3);
+			update_site_option('captcorecore_db_version', 6);
 
 			return $success;
 		}
