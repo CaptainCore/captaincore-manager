@@ -1638,7 +1638,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Scripts</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
-				<v-card v-show="site.environment_selected == 'Production'">
+				<v-card>
 					<v-card-title>
 						<div>
 							<div><v-btn small flat @click="viewApplyHttpsUrls(site.id)">
@@ -2740,15 +2740,16 @@ new Vue({
 			}
 
 			var post_id = this.dialog_apply_https_urls.site.id;
-			site_name = this.dialog_apply_https_urls.site.name
+			site = this.sites.filter(site => site.id == post_id )[0];
 
 			// Start job
-			description = "Applying HTTPS urls for " + site_name;
+			description = "Applying HTTPS urls for " + site.name;
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
 
 			var data = {
 				'action': 'captaincore_install',
+				'environment': site.environment_selected,
 				'post_id': post_id,
 				'command': command,
 			};
@@ -2807,12 +2808,14 @@ new Vue({
 		},
 		DeactivateSite( site_id ) {
 
+			site = this.sites.filter(site => site.id == site_id)[0];
 			site_name = this.dialog_toggle.site.name;
 
 			var data = {
 				action: 'captaincore_install',
 				post_id: site_id,
 				command: 'deactivate',
+				environment: site.environment_selected,
 				name: this.dialog_toggle.business_name,
 				link: this.dialog_toggle.business_link
 			};
@@ -2833,11 +2836,13 @@ new Vue({
 		},
 		ActivateSite( site_id ) {
 
+			site = this.sites.filter(site => site.id == site_id)[0];
 			site_name = this.dialog_toggle.site.name;
 
 			var data = {
 				action: 'captaincore_install',
 				post_id: site_id,
+				environment: site.environment_selected,
 				command: 'activate'
 			};
 
@@ -2867,6 +2872,7 @@ new Vue({
 
 			var data = {
 				action: 'captaincore_install',
+				environment: site.environment_selected,
 				post_id: site_id,
 				command: 'new'
 			};
@@ -3004,9 +3010,12 @@ new Vue({
 				return;
 			}
 
+			site = this.sites.filter(site => site.id == site_id)[0];
+
 			var data = {
 				'action': 'captaincore_install',
 				'post_id': site_id,
+				'environment': site.environment_selected,
 				'quicksave_id': quicksave_id,
 				'command': 'rollback',
 				'value'	: addon_name,
@@ -3044,9 +3053,13 @@ new Vue({
 				return;
 			}
 
+			site_id = this.dialog_file_diff.quicksave.site_id
+			site = this.sites.filter(site => site.id == site_id)[0];
+
 			var data = {
 				'action': 'captaincore_install',
-				'post_id': this.dialog_file_diff.quicksave.site_id,
+				'post_id': site_id,
+				'environment': site.environment_selected,
 				'quicksave_id': this.dialog_file_diff.quicksave.quicksave_id,
 				'command': 'quicksave_file_restore',
 				'value'	: this.dialog_file_diff.file_name,
@@ -3229,6 +3242,7 @@ new Vue({
 				'command': "manage",
 				'value': "ssh",
 				'background': true,
+				'environment': site.environment_selected,
 				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 			};
 
@@ -3253,10 +3267,11 @@ new Vue({
 				return;
 			}
 
+			site = this.sites.filter(site => site.id == site_id)[0];
+
 			// Enable loading progress
-			this.sites.filter(site => site.id == site_id)[0].loading_themes = true;
-			site_name = this.sites.filter(site => site.id == site_id)[0].name;
-			description = "Removing theme '" +theme_name + "' from " + site_name;
+			site.loading_themes = true;
+			description = "Removing theme '" +theme_name + "' from " + site.name;
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
 
@@ -3269,15 +3284,17 @@ new Vue({
 				'command': "manage",
 				'value': "ssh",
 				'background': true,
+				'environment': site.environment_selected,
 				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 			};
 
 			self = this;
 
 			jQuery.post(ajaxurl, data, function(response) {
-				updated_themes = self.sites.filter(site => site.id == site_id)[0].themes.filter(theme => theme.name != theme_name);
-				self.sites.filter(site => site.id == site_id)[0].themes = updated_themes;
-				self.sites.filter(site => site.id == site_id)[0].loading_themes = false;
+				environment = site.environments.filter( e => e.environment == site.environment_selected )[0]
+				updated_themes = environment.themes.filter(theme => theme.name != theme_name);
+				environment.themes = updated_themes;
+				site.loading_themes = false;
 				// Updates job id with reponsed background job id
 				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
 
@@ -3294,6 +3311,8 @@ new Vue({
 			this.new_plugin.site_name = this.sites.filter(site => site.id == site_id)[0].name;
 		},
 		togglePlugin (plugin_name, plugin_status, site_id) {
+
+			site = this.sites.filter(site => site.id == site_id)[0];
 
 			// Enable loading progress
 			this.sites.filter(site => site.id == site_id)[0].loading_plugins = true;
@@ -3319,6 +3338,7 @@ new Vue({
 				'command': "manage",
 				'value': "ssh",
 				'background': true,
+				'environment': site.environment_selected,
 				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 			};
 
@@ -3344,6 +3364,8 @@ new Vue({
 				return;
 			}
 
+			site = this.sites.filter(site => site.id == site_id)[0];
+
 			// Enable loading progress
 			this.sites.filter(site => site.id == site_id)[0].loading_plugins = true;
 
@@ -3361,6 +3383,7 @@ new Vue({
 				'command': "manage",
 				'value': "ssh",
 				'background': true,
+				'environment': site.environment_selected,
 				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 			};
 
@@ -3368,8 +3391,9 @@ new Vue({
 
 			jQuery.post(ajaxurl, data, function(response) {
 
-				updated_plugins = self.sites.filter(site => site.id == site_id)[0].plugins.filter(plugin => plugin.name != plugin_name);
-				self.sites.filter(site => site.id == site_id)[0].plugins = updated_plugins;
+				environment = site.environments.filter( e => e.environment == site.environment_selected )[0]
+				updated_plugins = environment.plugins.filter(plugin => plugin.name != plugin_name);
+				environment.plugins = updated_plugins;
 				self.sites.filter(site => site.id == site_id)[0].loading_plugins = false;
 
 				// Updates job id with reponsed background job id
@@ -3545,6 +3569,7 @@ new Vue({
 		},
 		deleteUser (username, site_id) {
 
+			site = this.sites.filter(site => site.id == site_id)[0];
 			should_proceed = confirm("Are you sure you want to delete user " + username + "?");
 
 			if ( ! should_proceed ) {
@@ -3565,6 +3590,7 @@ new Vue({
 				'command': "manage",
 				'value': "ssh",
 				'background': true,
+				'environment': site.environment_selected,
 				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 			};
 
