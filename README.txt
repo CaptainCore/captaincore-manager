@@ -43,6 +43,18 @@ TODO
 TODO
 
 == Changelog ==
+= 0.4.0: Mar 4 2019
+* New: Sites UI - Environment support added (themes, plugins, users, updates, scripts, backups and quicksaves)
+* New: Sites UI - Label for multisite networks
+* New: Support for environments
+* New: CLI support for Fathom code
+* New: DB method `all`
+* Tweak: Sites UI - Improvements to site edit dialog and file diff dialog
+* Tweak: Removed legacy subsites support. Subsite should not be added as a seperate site.
+* Tweak: Upgraded Vuetify to v1.5.4
+* Fix: Sites UI - Staging links.
+* Fix: Sites UI - Manage commands to Dispatch server.
+
 = 0.3.3: Feb 9 2019
 * New: Sites UI - Fathom tracker
 * Tweak: Sites UI - Moved many of the commands like 'Mailgun', 'Site copy' into the background with proper status reporting.
