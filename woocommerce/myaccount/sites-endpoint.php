@@ -2238,11 +2238,11 @@ new Vue({
 
 							// run wp cli with new plugin url and site
 							site_id = this.new_plugin.site_id;
-							site_name = this.new_plugin.site_name;
+							site = this.sites.filter(site => site.id == site_id)[0];
 
 							// Adds new job
 							job_id = Math.round((new Date()).getTime());
-							description = "Installing plugin '" + newFile.name + "' to " + site_name;
+							description = "Installing plugin '" + newFile.name + "' to " + site.name;
 							this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
 
 							// Builds WP-CLI
@@ -2255,6 +2255,7 @@ new Vue({
 								'command': "manage",
 								'value': "ssh",
 								'background': true,
+								'environment': site.environment_selected,
 								'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 							};
 
@@ -2268,11 +2269,11 @@ new Vue({
 
 							// run wp cli with new plugin url and site
 							site_id = this.new_theme.site_id;
-							site_name = this.new_theme.site_name;
+							site = this.sites.filter(site => site.id == site_id)[0];
 
 							// Adds new job
 							job_id = Math.round((new Date()).getTime());
-							description = "Installing theme '" + newFile.name + "' to " + site_name;
+							description = "Installing theme '" + newFile.name + "' to " + site.name;
 							this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
 
 							// Builds WP-CLI
@@ -2285,6 +2286,7 @@ new Vue({
 								'command': "manage",
 								'value': "ssh",
 								'background': true,
+								'environment': site.environment_selected,
 								'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 							};
 
