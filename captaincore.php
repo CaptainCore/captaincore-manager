@@ -1532,15 +1532,15 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	// Production deploy to staging
 	if ( $command == 'production-to-staging' and $email ) {
 
-		$staging_address             = get_field( 'address_staging', $site_id );
-		$staging_address_find_ending = strpos( $staging_address,'.kinsta.' ) + 1;
-		$staging_address_ending      = substr( $staging_address, $staging_address_find_ending );
-		$url                         = "https://staging-" . get_field( 'site_staging', $site_id ) . ".${staging_address_ending}";
+		$domain_name = get_the_title( $site_id );
+		$db          = new CaptainCore\Site;
+		$site        = $db->get( $site_id );
+		$link        = $site->environments[1]["link"];
 
 		// Send out completed email notice
 		$to      = $email;
 		$subject = "Anchor Hosting - Deploy to Staging ($domain_name)";
-		$body    = 'Deploy to staging completed for ' . $domain_name . '.<br /><br /><a href="' . $url . '">' . $url . '</a>';
+		$body    = 'Deploy to staging completed for ' . $domain_name . '.<br /><br /><a href="' . $link . '">' . $link . '</a>';
 		$headers = array( 'Content-Type: text/html; charset=UTF-8' );
 
 		wp_mail( $to, $subject, $body, $headers );
@@ -1552,17 +1552,15 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	// Kinsta staging deploy to production
 	if ( $command == 'staging-to-production' and $email ) {
 
-		$site_name                      = get_field( 'site', $site_id );
-		$domain_name                    = get_the_title( $site_id );
-		$production_address             = get_field( 'address', $site_id );
-		$production_address_find_ending = strpos( $production_address,'.kinsta.' ) + 1;
-		$production_address_ending      = substr( $production_address, $production_address_find_ending );
-		$url                            = "https://" . get_field( 'site', $site_id ) . ".${production_address_ending}";
+		$domain_name = get_the_title( $site_id );
+		$db          = new CaptainCore\Site;
+		$site        = $db->get( $site_id );
+		$link        = $site->environments[0]["link"];
 
 		// Send out completed email notice
 		$to      = $email;
 		$subject = "Anchor Hosting - Deploy to Production ($domain_name)";
-		$body    = 'Deploy to production completed for ' . $domain_name . '.<br /><br /><a href="' . $url . '">' . $domain_name . '</a>';
+		$body    = 'Deploy to production completed for ' . $domain_name . '.<br /><br /><a href="' . $link . '">' . $link . '</a>';
 		$headers = array( 'Content-Type: text/html; charset=UTF-8' );
 
 		wp_mail( $to, $subject, $body, $headers );
