@@ -383,19 +383,11 @@ class Sites {
 						'value'   => 'closed',
 						'compare' => '!=',
 					),
-					array(
-						'key'     => 'address',
-						'compare' => 'EXISTS',
-					),
-					array(
-						'key'     => 'address',
-						'value'   => '',
-						'compare' => '!=',
-					),
 				),
 			);
 
 			$sites = new \WP_Query( $arguments );
+
 			foreach($sites->posts as $site_id) {
 				if( !in_array($site_id, $site_ids) ) {
 					$site_ids[] = $site_id;
@@ -417,15 +409,6 @@ class Sites {
 					array(
 						'key'     => 'status',
 						'value'   => 'closed',
-						'compare' => '!=',
-					),
-					array(
-						'key'     => 'address',
-						'compare' => 'EXISTS',
-					),
-					array(
-						'key'     => 'address',
-						'value'   => '',
 						'compare' => '!=',
 					),
 				),
@@ -451,7 +434,7 @@ class Sites {
 			'orderby'        => 'title',
 			'posts_per_page' => '-1',
 			'post_type'      => 'captcore_website',
-			'include'		 => $site_ids,
+			'include'		      => $site_ids,
 			'meta_query'     => array(
 				'relation' => 'AND',
 				array(
