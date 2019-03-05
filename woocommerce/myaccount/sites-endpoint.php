@@ -290,11 +290,11 @@ div.update_logs table tr td:nth-child(1) {
 }
 </style>
 <?php if ( $_SERVER['SERVER_NAME'] == 'anchor.test' ) { ?>
-<script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.8/dist/vue.js"></script>
 <script src="https://anchor.test/wp-content/plugins/captaincore-gui/public/js/qs.js"></script>
 <script src="https://anchor.test/wp-content/plugins/captaincore-gui/public/js/axios.min.js"></script>
 <?php } else { ?>
-<script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.8/dist/vue.min.js"></script>
 <script src="https://unpkg.com/qs@6.5.2/dist/qs.js"></script>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 <?php } ?>
