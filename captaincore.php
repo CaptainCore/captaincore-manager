@@ -3988,8 +3988,8 @@ function captaincore_site_fetch_details( $post_id ) {
 	$port                    = $site_details->environments[0]["port"];
 	$home_directory          = ( isset($site_details->environments[0]["home_directory"]) ? $site_details->environments[0]["home_directory"] : '' );
 	$updates_enabled         = ( isset($site_details->environments[0]["updates_enabled"]) ? $site_details->environments[0]["updates_enabled"] : '' );
-	$updates_exclude_themes  = ( isset($site_details->environments[0]["updates_exclude_themes"]) ? $site_details->environments[0]["updates_exclude_themes"] : '' );
-	$updates_exclude_plugins = ( isset($site_details->environments[0]["updates_exclude_plugins"]) ? $site_details->environments[0]["updates_exclude_plugins"] : '' );
+	$updates_exclude_themes  = ( isset($site_details->environments[0]["updates_exclude_themes"]) ? implode(",", $site_details->environments[0]["updates_exclude_themes"] ) : '' );
+	$updates_exclude_plugins = ( isset($site_details->environments[0]["updates_exclude_plugins"]) ? implode(",", $site_details->environments[0]["updates_exclude_plugins"] ) : '' );
 	$offload_enabled         = ( isset($site_details->environments[0]["offload_enabled"]) ? $site_details->environments[0]["offload_enabled"] : '' );
 	$offload_provider        = ( isset($site_details->environments[0]["offload_provider"]) ? $site_details->environments[0]["offload_provider"] : '' );
 	$offload_access_key      = ( isset($site_details->environments[0]["offload_access_key"]) ? $site_details->environments[0]["offload_access_key"] : '' );
@@ -4003,8 +4003,8 @@ function captaincore_site_fetch_details( $post_id ) {
 	$staging_port            = ( isset($site_details->environments[1]["port"]) ? $site_details->environments[1]["port"] : '' );
 	$staging_home_directory  = ( isset($site_details->environments[1]["home_directory"]) ? $site_details->environments[1]["home_directory"] : '' );
 	$staging_updates_enabled         = ( isset($site_details->environments[1]["updates_enabled"]) ? $site_details->environments[1]["updates_enabled"] : '' );
-	$staging_updates_exclude_themes  = ( isset($site_details->environments[1]["updates_exclude_themes"]) ? $site_details->environments[1]["updates_exclude_themes"] : '' );
-	$staging_updates_exclude_plugins = ( isset($site_details->environments[1]["updates_exclude_plugins"]) ? $site_details->environments[1]["updates_exclude_plugins"] : '' );
+	$staging_updates_exclude_themes  = ( isset($site_details->environments[1]["updates_exclude_themes"]) ? implode(",", $site_details->environments[1]["updates_exclude_themes"] ) : '' );
+	$staging_updates_exclude_plugins = ( isset($site_details->environments[1]["updates_exclude_plugins"]) ? implode(",", $site_details->environments[1]["updates_exclude_plugins"] ) : '' );
 	$staging_offload_enabled         = ( isset($site_details->environments[1]["offload_enabled"]) ? $site_details->environments[1]["offload_enabled"] : '' );
 	$staging_offload_provider        = ( isset($site_details->environments[1]["offload_provider"]) ? $site_details->environments[1]["offload_provider"] : '' );
 	$staging_offload_access_key      = ( isset($site_details->environments[1]["offload_access_key"]) ? $site_details->environments[1]["offload_access_key"] : '' );

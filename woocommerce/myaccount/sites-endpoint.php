@@ -3517,8 +3517,8 @@ new Vue({
 			site = this.sites.filter(site => site.id == site_id)[0];
 			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
 			this.dialog_update_settings.site_name = site.name;
-			this.dialog_update_settings.exclude_plugins = environment.exclude_plugins;
-			this.dialog_update_settings.exclude_themes = environment.exclude_themes;
+			this.dialog_update_settings.exclude_plugins = environment.updates_exclude_plugins;
+			this.dialog_update_settings.exclude_themes = environment.updates_exclude_themes;
 			this.dialog_update_settings.updates_enabled = environment.updates_enabled;
 			this.dialog_update_settings.plugins = environment.plugins;
 			this.dialog_update_settings.themes = environment.themes;
