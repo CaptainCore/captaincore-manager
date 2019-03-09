@@ -156,6 +156,9 @@ function captaincore_my_account_order( $current_menu ) {
 		unset( $current_menu['dns'] );
 		unset( $current_menu['logs'] );
 	}
+	if ( ! defined( "CONSTELLIX_API_KEY") or ! defined( "CONSTELLIX_SECRET_KEY")  ) {
+		unset( $current_menu['dns'] );
+	}
 	return $current_menu;
 }
 // Need to run later to allow time for new items to be added to WooCommerce Menu
