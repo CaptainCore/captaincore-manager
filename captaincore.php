@@ -82,6 +82,7 @@ function run_captaincore() {
 }
 run_captaincore();
 
+require 'includes/register-custom-fields.php';
 require 'includes/woocommerce-my-account-endpoints.php';
 require 'includes/constellix-api/constellix-api.php';
 require 'includes/woocommerce-custom-password-fields.php';
