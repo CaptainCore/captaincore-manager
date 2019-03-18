@@ -66,6 +66,10 @@ html {
 	line-height: 0.8em;
 }
 
+table.v-table tbody td, table.v-table tbody th {
+	border: 0px;
+}
+
 .quicksave-table table {
 	width: auto;
 }
@@ -249,6 +253,10 @@ table.v-table tbody td,
 table.v-table tbody th,
 table.v-table tfoot td {
 	vertical-align: middle;
+	border:0px;
+}
+.v-btn--active, .v-btn:focus, .v-btn:hover {
+	background: none;
 }
 table.v-table tfoot td {
 	font-weight: 400;
