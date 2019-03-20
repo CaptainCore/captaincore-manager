@@ -773,10 +773,8 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-dialog>
 				<v-dialog
 					v-model="dialog_backup_snapshot.show"
-					fullscreen
-					hide-overlay
+					width="500"
 					transition="dialog-bottom-transition"
-					scrollable
 				>
 				<v-card tile>
 					<v-toolbar card dark color="primary">
