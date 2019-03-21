@@ -1475,7 +1475,7 @@ Vue.component('file-upload', VueUploadComponent);
 											<td>{{ props.item.version }}</td>
 											<td>
 											<div v-if="props.item.status === 'inactive' || props.item.status === 'parent' || props.item.status === 'child'">
-												<v-switch left :label="props.item.status" v-model="props.item.status" false-value="inactive" true-value="active" @change="activateTheme(props.item.name, site.id)"></v-switch>
+												<v-switch hide-details="true" v-model="props.item.status" false-value="inactive" true-value="active" @change="activateTheme(props.item.name, site.id)"></v-switch>
 			 								</div>
 			 								<div v-else>
 			 									{{ props.item.status }}
@@ -1525,7 +1525,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<td>{{ props.item.version }}</td>
 					<td>
 						<div v-if="props.item.status === 'active' || props.item.status === 'inactive'">
-							<v-switch v-model="props.item.status" false-value="inactive" true-value="active" @change="togglePlugin(props.item.name, props.item.status, site.id)"></v-switch>
+							<v-switch hide-details="true" v-model="props.item.status" false-value="inactive" true-value="active" @change="togglePlugin(props.item.name, props.item.status, site.id)"></v-switch>
 						</div>
 						<div v-else>
 							{{ props.item.status }}
