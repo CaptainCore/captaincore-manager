@@ -1065,7 +1065,7 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-toolbar>
 					<v-card-text>
 						<v-container v-show="dialog_file_diff.loading"><v-progress-linear :indeterminate="true"></v-progress-linear></v-container>
-						<v-container v-html="dialog_file_diff.response"></v-container>
+						<v-container v-html="dialog_file_diff.response" style='font-family:SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;'></v-container>
 					</v-card-text>
 					</v-card>
 				</v-dialog>
