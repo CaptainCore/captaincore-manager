@@ -1571,6 +1571,11 @@ Vue.component('file-upload', VueUploadComponent);
 									<v-progress-linear :indeterminate="true"></v-progress-linear>
 								</div>
 							</v-card-title>
+							<v-card-title v-else-if="key.quicksaves.length == 0">
+								<div>
+									No quicksaves found.
+								</div>
+							</v-card-title>
 							<div v-else>
 							<v-expansion-panel v-model="key.quicksave_panel">
 							  <v-expansion-panel-content v-for="quicksave in key.quicksaves" lazy style="position:relative;">
