@@ -3404,12 +3404,12 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'usage-breakdown' ) {
 
-		$customer = get_field( "customer", $post_id );
-		$customer_id = $customer[0];
-		$hosting_plan    = get_field( 'hosting_plan', $customer_id );
-		$addons          = get_field( 'addons', $customer_id );
-		$storage         = get_field( 'storage', $customer_id );
-		$views           = get_field( 'views', $customer_id );
+		$customer     = get_field( "customer", $post_id );
+		$customer_id  = $customer[0];
+		$hosting_plan = get_field( 'hosting_plan', $customer_id );
+		$addons       = get_field( 'addons', $customer_id );
+		$storage      = get_field( 'storage', $customer_id );
+		$views        = get_field( 'views', $customer_id );
 
 		if ( $hosting_plan == 'basic' ) {
 			$views_plan_limit = '100000';
@@ -3463,22 +3463,16 @@ function captaincore_ajax_action_callback() {
 						'value'   => '"' . $customer_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
 						'compare' => 'LIKE',
 					),
-					array(
-						'key'     => 'address',
-						'compare' => 'EXISTS',
 					),
-					array(
-						'key'     => 'address',
-						'value'   => '',
-						'compare' => '!=',
-					),
-				),
 			)
 		);
 		if ( $websites_for_customer ) :
 			foreach ( $websites_for_customer as $website_for_customer ) :
-				$website_for_customer_storage = get_field( 'storage', $website_for_customer->ID );
-				$website_for_customer_views   = get_field( 'views', $website_for_customer->ID );
+
+				$site = ( new CaptainCore\Site )->get( $website_for_customer->ID );
+
+				$website_for_customer_storage = $site->storage_raw;
+				$website_for_customer_views   = $site->views;
 				$sites[] = array(
 					'name' => get_the_title( $website_for_customer->ID ),
 					'storage' => round( $website_for_customer_storage / 1024 / 1024 / 1024, 1 ),

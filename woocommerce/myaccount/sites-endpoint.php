@@ -724,7 +724,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-card-text>
 					<v-container>
 						<v-data-table
-							:headers='[{"text":"Name","value":"name"},{"text":"Storage","value":"Views"},{"text":"Status","value":"status"}]'
+							:headers='[{"text":"Name","value":"name"},{"text":"Storage","value":"Views"},{"text":"Views","value":"views"}]'
 							:items="dialog_usage_breakdown.response.sites"
 							item-key="name"
 							hide-actions

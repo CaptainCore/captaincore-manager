@@ -513,6 +513,7 @@ class Site {
 		$site_details->fathom = $fathom;
 		$site_details->tabs = "tab-Site-Management";
 		$site_details->tabs_management = "tab-Keys";
+		$site_details->storage_raw = $environments[0]->storage;
 		$site_details->storage = $storage_gbs;
 		if ( is_string($views) ) {
 			$site_details->views = number_format( intval( $views ) );
