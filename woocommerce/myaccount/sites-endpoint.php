@@ -590,6 +590,12 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-card-text>
 							<v-container>
 							<v-form ref="form">
+								<v-autocomplete
+								:items='[{"name":"WP Engine","value":"wpengine"},{"name":"Kinsta","value":"kinsta"}]'
+								item-text="name"
+								v-model="dialog_new_site.provider"
+								label="Provider"
+							></v-autocomplete>
 								<v-text-field :value="dialog_new_site.domain" @change.native="dialog_new_site.domain = $event.target.value" label="Domain name" required></v-text-field>
 						    <v-text-field :value="dialog_new_site.site" @change.native="dialog_new_site.site = $event.target.value" label="Site name" required></v-text-field>
 								<v-autocomplete
@@ -900,6 +906,12 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-card-text>
 					<v-container>
 						<v-form ref="form">
+						<v-autocomplete
+							:items='[{"name":"WP Engine","value":"wpengine"},{"name":"Kinsta","value":"kinsta"}]'
+							item-text="name"
+							v-model="dialog_edit_site.site.provider"
+							label="Provider"
+						></v-autocomplete>
 							<v-text-field :value="dialog_edit_site.site.name" @change.native="dialog_edit_site.site.name = $event.target.value" label="Domain name" required></v-text-field>
 							<v-text-field :value="dialog_edit_site.site.site" @change.native="dialog_edit_site.site.site = $event.target.value" label="Site name (not changeable)" disabled></v-text-field>
 							<v-autocomplete
@@ -1230,7 +1242,7 @@ Vue.component('file-upload', VueUploadComponent);
 									</div>
 									<div class="text-xs-right">
 									    <span v-show="site.subsite_count" class="usage"><v-icon small light>fas fa-network-wired</i></v-icon> Multisite - {{ site.subsite_count }} sites</span>
-										<span v-show="site.server" class="usage"><v-icon small light>fas fa-server</v-icon> {{ site.server }}</span>
+										<span v-show="site.provider" class="usage"><v-icon small light>fas fa-server</v-icon> {{ site.provider | formatProvider }}</span>
 										<span v-show="site.views" class="usage"><v-icon small light>fas fa-eye</v-icon> {{ site.views }} <small>yearly</small></span>
 										<span v-show="site.storage" class="usage"><v-icon small light>fas fa-hdd</v-icon> {{ site.storage }}</span>
 									</div>
@@ -1744,12 +1756,12 @@ Vue.component('file-upload', VueUploadComponent);
 			<v-card>
 				<v-card-title>
 					<div>
-						<div v-show="site.server == 'Kinsta'">
+						<div v-show="site.provider == 'kinsta'">
 						<v-btn left small flat @click="PushProductionToStaging( site.id )">
 							<v-icon>local_shipping</v-icon> <span>Push Production to Staging</span>
 						</v-btn>
 						</div>
-						<div v-show="site.server == 'Kinsta'">
+						<div v-show="site.provider == 'kinsta'">
 						<v-btn left small flat @click="PushStagingToProduction( site.id )">
 							<v-icon class="reverse">local_shipping</v-icon> <span>Push Staging to Production</span>
 						</v-btn>
@@ -1906,6 +1918,7 @@ new Vue({
 		<?php if ( current_user_can('administrator') ) { ?>
 		role: "administrator",
 		dialog_new_site: {
+			provider: "kinsta",
 			show: false,
 			domain: "",
 			errors: [],
@@ -1997,6 +2010,14 @@ new Vue({
 		 snackbar: { show: false, message: "" }
 	},
 	filters: {
+		formatProvider: function (value) {
+			if (value == 'wpengine') {
+				return "WP Engine"
+			}
+			if (value == 'kinsta') {
+				return "Kinsta"
+			}
+		},
 		formatSize: function (fileSizeInBytes) {
     var i = -1;
     var byteUnits = [' kB', ' MB', ' GB', ' TB', 'PB', 'EB', 'ZB', 'YB'];
@@ -2321,7 +2342,7 @@ new Vue({
 			// Copy production address to staging field
 			this.dialog_new_site.environments[1].address = this.dialog_new_site.environments[0].address;
 
-			if ( this.dialog_new_site.environments[0].address.includes(".kinsta.") ) {
+			if ( this.dialog_new_site.provider == "kinsta" ) {
 				// Copy production username to staging field
 				this.dialog_new_site.environments[1].username = this.dialog_new_site.environments[0].username;
 				// Copy production password to staging field (If Kinsta address)
