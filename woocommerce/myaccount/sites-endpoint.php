@@ -1069,128 +1069,6 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-card-text>
 					</v-card>
 				</v-dialog>
-				<v-dialog
-					v-model="dialog_quicksave.show"
-					fullscreen
-					hide-overlay
-					transition="dialog-bottom-transition"
-					scrollable
-				>
-	        <v-card tile>
-	          <v-toolbar card dark color="primary">
-	            <v-btn icon dark @click.native="dialog_quicksave.show = false">
-	              <v-icon>close</v-icon>
-	            </v-btn>
-	            <v-toolbar-title>Quicksaves for {{ dialog_quicksave.site_name }}</v-toolbar-title>
-	            <v-spacer></v-spacer>
-							<v-toolbar-items>
-								<v-btn flat @click="QuicksaveCheck(dialog_quicksave.site_id)">Manual Check</v-btn>
-							</v-toolbar-items>
-	          </v-toolbar>
-	          <v-card-text>
-						<v-container>
-							<v-expansion-panel v-model="dialog_quicksave.panel">
-							  <v-expansion-panel-content v-for="quicksave in dialog_quicksave.quicksaves" lazy style="position:relative;">
-							    <div slot="header" class="text-md-center"><span class="alignleft"><v-icon>settings_backup_restore</v-icon> {{ quicksave.created_at | pretty_timestamp }}</span><span class="body-1">{{ quicksave.git_status }}</span><span class="alignright body-1">WordPress {{ quicksave.core }} - {{ quicksave.plugins.length }} Plugins - {{ quicksave.themes.length }} Themes</span></div>
-									<v-toolbar color="dark primary" dark dense light>
-										<v-toolbar-title></v-toolbar-title>
-										<v-spacer></v-spacer>
-										<v-toolbar-items>
-											<v-btn flat @click="QuicksavesRollback(dialog_quicksave.site_id, quicksave)">Entire Quicksave Rollback</v-btn>
-											<v-btn flat @click="viewQuicksavesChanges(dialog_quicksave.site_id, quicksave)">View Changes</v-btn>
-										</v-toolbar-items>
-									</v-toolbar>
-									<v-card v-show="quicksave.view_changes == true" style="table-layout:fixed;margin:0px;overflow: scroll;padding: 0px;position: absolute;background-color: #fff;width: 100%;left: 0;top: 100%;height: 100%;z-index: 3;transform: translateY(-100%);">
-										<v-toolbar color="dark primary" dark dense light>
-											<v-btn icon dark @click.native="quicksave.view_changes = false">
-					              <v-icon>close</v-icon>
-					            </v-btn>
-											<v-toolbar-title>List of changes</v-toolbar-title>
-											<v-spacer></v-spacer>
-										</v-toolbar>
-										<v-card-text>
-											<v-card-title>
-									      Files
-									      <v-spacer></v-spacer>
-									      <v-text-field
-									        v-model="quicksave.search"
-													@input="filterFiles(quicksave.quicksave_id)"
-									        append-icon="search"
-									        label="Search"
-									        single-line
-									        hide-details
-									      ></v-text-field>
-									    </v-card-title>
-											<v-data-table hide-actions no-data-text="" :headers='[{"text":"File","value":"file"}]' :items="quicksave.filtered_files" :loading="quicksave.loading">
-												<template slot="items" slot-scope="props">
-												 <td>
-													 <a class="v-menu__activator" @click="QuicksaveFileDiff(quicksave.site_id, quicksave.quicksave_id, quicksave.git_commit, props.item)"> {{ props.item }} </a>
-												 </td>
-											 </template>
-											 <v-alert slot="no-results" :value="true" color="error" icon="warning">
-													Your search for "{{ dialog_quicksave.search }}" found no results.
-												</v-alert>
-											</v-data-table>
-										</v-card-text>
-									</v-card>
-							    <v-card>
-											<v-data-table
-												:headers='[{"text":"Theme","value":"theme"},{"text":"Version","value":"version"},{"text":"Status","value":"status"},{"text":"","value":"actions","width":"150px"}]'
-												:items="quicksave.themes"
-												item-key="name"
-												class="quicksave-table"
-												hide-actions
-											 >
-											 <template slot="items" slot-scope="props">
-											 <tr v-bind:class="{ 'green lighten-5': props.item.changed_version || props.item.changed_status }">
-												<td>{{ props.item.title }}</td>
-												<td v-bind:class="{ 'green lighten-4': props.item.changed_version }">{{ props.item.version }}</td>
-												<td v-bind:class="{ 'green lighten-4': props.item.changed_status }">{{ props.item.status }}</td>
-												<td><v-btn flat small @click="RollbackQuicksave(quicksave.site_id, quicksave.quicksave_id, 'theme', props.item.name)">Rollback</v-btn></td>
-										  </tr>
-											 </template>
-											 <template slot="footer">
-											 <tr class="red lighten-4 strikethrough" v-for="theme in quicksave.deleted_themes">
-												<td>{{ theme.title || theme.name }}</td>
-												<td>{{ theme.version }}</td>
-												<td>{{ theme.status }}</td>
-												<td></td>
-											 </tr>
-											 </template>
-											</v-data-table>
-
-											<v-data-table
-												:headers='[{"text":"Plugin","value":"plugin"},{"text":"Version","value":"version"},{"text":"Status","value":"status"},{"text":"","value":"actions","width":"150px"}]'
-												:items="quicksave.plugins"
-												item-key="name"
-												class="quicksave-table"
-												hide-actions
-											 >
-											 <template slot="items" slot-scope="props">
-											 <tr v-bind:class="[{ 'green lighten-5': props.item.changed_version || props.item.changed_status },{ 'red lighten-4 strikethrough': props.item.deleted }]">
-												<td>{{ props.item.title || props.item.name }}</td>
-												<td v-bind:class="{ 'green lighten-4': props.item.changed_version }">{{ props.item.version }}</td>
-												<td v-bind:class="{ 'green lighten-4': props.item.changed_status }">{{ props.item.status }}</td>
-												<td><v-btn flat small @click="RollbackQuicksave(quicksave.site_id, quicksave.quicksave_id, 'plugin', props.item.name)">Rollback</v-btn></td>
-											 </tr>
-											 </template>
-											 <template slot="footer">
-											 <tr class="red lighten-4 strikethrough" v-for="plugin in quicksave.deleted_plugins">
-												<td>{{ plugin.title || plugin.name }}</td>
-												<td>{{ plugin.version }}</td>
-												<td>{{ plugin.status }}</td>
-												<td></td>
-											 </tr>
-											 </template>
-
-											</v-data-table>
-							    </v-card>
-							  </v-expansion-panel-content>
-							</v-expansion-panel>
-						</v-container>
-					</v-card-text>
-				</v-card>
-			</v-dialog>
 			<v-container fluid v-show="loading_sites != true">
 			<v-layout row wrap>
       <v-flex xs4>
@@ -1402,7 +1280,7 @@ Vue.component('file-upload', VueUploadComponent);
 									<v-tab key="Scripts" href="#tab-Scripts">
 										Scripts <v-icon small style="margin-left:7px;">fas fa-code</v-icon>
 									</v-tab>
-									<v-tab key="Backups" href="#tab-Backups">
+									<v-tab key="Backups" href="#tab-Backups" @click="viewQuicksaves( site.id )">
 										Backups <v-icon small style="margin-left:7px;">fas fa-hdd</v-icon>
 									</v-tab>
 								</v-tabs>
@@ -1665,20 +1543,134 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-tab-item>
 			<v-tab-item :key="7" value="tab-Backups">
 				<v-toolbar color="grey lighten-4" dense light flat>
-					<v-toolbar-title>Backups</v-toolbar-title>
+					<v-toolbar-title>Quicksaves</v-toolbar-title>
 					<v-spacer></v-spacer>
+					<v-toolbar-items>
+						<v-btn flat @click="promptBackupSnapshot( site.id )">Download Backup Snapshot</v-btn>
+						<v-btn flat @click="QuicksaveCheck( site.id )">Manual Check</v-btn>
+					</v-toolbar-items>
 				</v-toolbar>
-				<v-card>
-					<v-card-title>
+						<v-card 
+						v-for="key in site.environments"
+						v-show="key.environment == site.environment_selected">
+							<v-card-title v-if="typeof key.quicksaves == 'string'">
+								<div>
+									Fetching quicksaves...
+									<v-progress-linear :indeterminate="true"></v-progress-linear>
+								</div>
+							</v-card-title>
+							<div v-else>
+							<v-expansion-panel v-model="key.quicksave_panel">
+							  <v-expansion-panel-content v-for="quicksave in key.quicksaves" lazy style="position:relative;">
+							    <div slot="header">
+									<v-layout align-center justify-space-between row>
 						<div>
-							<v-btn small flat @click="promptBackupSnapshot(site.id)">
-								<v-icon>cloud</v-icon> <span>Download Backup Snapshot</span>
-							</v-btn><br />
-							<v-btn small flat @click="viewQuicksaves(site.id)">
-								<v-icon>settings_backup_restore</v-icon> <span>Quicksaves (Plugins & Themes)</span>
-							</v-btn><br />
+										<v-layout align-center justify-start fill-height/>
+											<v-icon>settings_backup_restore</v-icon> {{ quicksave.created_at | pretty_timestamp }}</span>
+										</v-layout>
+									</div>
+									<div class="body-1">{{ quicksave.git_status }}</div>
+									<div class="body-1 text-xs-right">
+										WordPress {{ quicksave.core }} - {{ quicksave.plugins.length }} Plugins - {{ quicksave.themes.length }} Themes
+									</div>
+								</v-layout>
 						</div>
+									<v-toolbar color="dark primary" dark dense light>
+										<v-toolbar-title></v-toolbar-title>
+										<v-spacer></v-spacer>
+										<v-toolbar-items>
+											<v-btn flat @click="QuicksavesRollback( site.id, quicksave)">Entire Quicksave Rollback</v-btn>
+											<v-btn flat @click="viewQuicksavesChanges( site.id, quicksave)">View Changes</v-btn>
+										</v-toolbar-items>
+									</v-toolbar>
+									<v-card v-show="quicksave.view_changes == true" style="table-layout:fixed;margin:0px;overflow: scroll;padding: 0px;position: absolute;background-color: #fff;width: 100%;left: 0;top: 100%;height: 100%;z-index: 3;transform: translateY(-100%);">
+										<v-toolbar color="dark primary" dark dense light>
+											<v-btn icon dark @click.native="quicksave.view_changes = false">
+					              <v-icon>close</v-icon>
+					            </v-btn>
+											<v-toolbar-title>List of changes</v-toolbar-title>
+											<v-spacer></v-spacer>
+										</v-toolbar>
+										<v-card-text>
+											<v-card-title>
+									      Files
+									      <v-spacer></v-spacer>
+									      <v-text-field
+									        v-model="quicksave.search"
+													@input="filterFiles( site.id, quicksave.quicksave_id)"
+									        append-icon="search"
+									        label="Search"
+									        single-line
+									        hide-details
+									      ></v-text-field>
 						</v-card-title>
+											<v-data-table hide-actions no-data-text="" :headers='[{"text":"File","value":"file"}]' :items="quicksave.filtered_files" :loading="quicksave.loading">
+												<template slot="items" slot-scope="props">
+												 <td>
+													 <a class="v-menu__activator" @click="QuicksaveFileDiff(quicksave.site_id, quicksave.quicksave_id, quicksave.git_commit, props.item)"> {{ props.item }} </a>
+												 </td>
+											 </template>
+											 <v-alert slot="no-results" :value="true" color="error" icon="warning">
+													Your search for "{{ quicksave.search }}" found no results.
+												</v-alert>
+											</v-data-table>
+										</v-card-text>
+									</v-card>
+							    <v-card>
+											<v-data-table
+												:headers='[{"text":"Theme","value":"theme"},{"text":"Version","value":"version"},{"text":"Status","value":"status"},{"text":"","value":"actions","width":"150px"}]'
+												:items="quicksave.themes"
+												item-key="name"
+												class="quicksave-table"
+												hide-actions
+											 >
+											 <template slot="items" slot-scope="props">
+											 <tr v-bind:class="{ 'green lighten-5': props.item.changed_version || props.item.changed_status }">
+												<td>{{ props.item.title }}</td>
+												<td v-bind:class="{ 'green lighten-4': props.item.changed_version }">{{ props.item.version }}</td>
+												<td v-bind:class="{ 'green lighten-4': props.item.changed_status }">{{ props.item.status }}</td>
+												<td><v-btn flat small @click="RollbackQuicksave(quicksave.site_id, quicksave.quicksave_id, 'theme', props.item.name)">Rollback</v-btn></td>
+										  </tr>
+											 </template>
+											 <template slot="footer">
+											 <tr class="red lighten-4 strikethrough" v-for="theme in quicksave.deleted_themes">
+												<td>{{ theme.title || theme.name }}</td>
+												<td>{{ theme.version }}</td>
+												<td>{{ theme.status }}</td>
+												<td></td>
+											 </tr>
+											 </template>
+											</v-data-table>
+
+											<v-data-table
+												:headers='[{"text":"Plugin","value":"plugin"},{"text":"Version","value":"version"},{"text":"Status","value":"status"},{"text":"","value":"actions","width":"150px"}]'
+												:items="quicksave.plugins"
+												item-key="name"
+												class="quicksave-table"
+												hide-actions
+											 >
+											 <template slot="items" slot-scope="props">
+											 <tr v-bind:class="[{ 'green lighten-5': props.item.changed_version || props.item.changed_status },{ 'red lighten-4 strikethrough': props.item.deleted }]">
+												<td>{{ props.item.title || props.item.name }}</td>
+												<td v-bind:class="{ 'green lighten-4': props.item.changed_version }">{{ props.item.version }}</td>
+												<td v-bind:class="{ 'green lighten-4': props.item.changed_status }">{{ props.item.status }}</td>
+												<td><v-btn flat small @click="RollbackQuicksave(quicksave.site_id, quicksave.quicksave_id, 'plugin', props.item.name)">Rollback</v-btn></td>
+											 </tr>
+											 </template>
+											 <template slot="footer">
+											 <tr class="red lighten-4 strikethrough" v-for="plugin in quicksave.deleted_plugins">
+												<td>{{ plugin.title || plugin.name }}</td>
+												<td>{{ plugin.version }}</td>
+												<td>{{ plugin.status }}</td>
+												<td></td>
+											 </tr>
+											 </template>
+
+											</v-data-table>
+							    </v-card>
+							  </v-expansion-panel-content>
+							</v-expansion-panel>
+							</div>
 					</v-card>
 			</v-tab-item>
 		</v-tabs-items>
@@ -1905,7 +1897,6 @@ new Vue({
 		dialog_mailgun: { show: false, site: {}, response: "", loading: false },
 		dialog_usage_breakdown: { show: false, site: {}, response: [], company_name: "" },
 		dialog_toggle: { show: false, site: {} },
-		dialog_quicksave: { show: false, site_id: null, quicksaves: [], search: "" },
 		dialog_theme_and_plugin_checks: { show: false, site: {}, loading: false },
 		dialog_update_settings: { show: false, site_id: null, loading: false },
 		dialog_fathom: { show: false, site: {}, loading: false, editItem: false, editedItem: {}, editedIndex: -1 },
@@ -2119,9 +2110,6 @@ new Vue({
 		},
 		developers() {
 			return this.customers.filter(customer => customer.developer );
-		},
-		filteredFiles() {
-			return this.dialog_quicksave.view_files.filter( file => file.filtered );
 		},
 	},
 	methods: {
@@ -3009,9 +2997,11 @@ new Vue({
 		},
 		RollbackQuicksave( site_id, quicksave_id, addon_type, addon_name ){
 
-			quicksave = this.dialog_quicksave.quicksaves.filter( quicksave => quicksave.quicksave_id == quicksave_id )[0];
+			site = this.sites.filter(site => site.id == site_id)[0];
+			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
+			quicksave = environment.quicksaves.filter( quicksave => quicksave.quicksave_id == quicksave_id )[0];
 			date = this.$options.filters.pretty_timestamp(quicksave.created_at);
-			description = "Rollback "+ addon_type + " " + addon_name +" to version as of " + date + " on " + this.dialog_quicksave.site_name;
+			description = "Rollback "+ addon_type + " " + addon_name +" to version as of " + date + " on " + site.name ;
 			should_proceed = confirm( description + "?");
 
 			if ( ! should_proceed ) {
@@ -3087,11 +3077,12 @@ new Vue({
 		QuicksaveFileDiff( site_id, quicksave_id, git_commit, file_name ) {
 
 			site = this.sites.filter(site => site.id == site_id)[0];
+			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
 			file_name = file_name.split("	")[1];
 			this.dialog_file_diff.response = "";
 			this.dialog_file_diff.file_name = file_name;
 			this.dialog_file_diff.loading = true;
-			this.dialog_file_diff.quicksave = this.dialog_quicksave.quicksaves.filter(quicksave => quicksave.quicksave_id == quicksave_id)[0];
+			this.dialog_file_diff.quicksave = environment.quicksaves.filter(quicksave => quicksave.quicksave_id == quicksave_id)[0];
 			this.dialog_file_diff.show = true;
 
 			var data = {
@@ -3200,26 +3191,17 @@ new Vue({
 				})
 			  .catch( error => console.log( error ) );
 		},
-		viewQuicksaves ( site_id ) {
-			site = this.sites.filter(site => site.id == site_id)[0];
-			site.environment_selected;
-			this.dialog_quicksave.show = true;
-			this.dialog_quicksave.site_id = site_id;
-			this.dialog_quicksave.site_name = site.name;
+		viewQuicksaves( site_id ) {
 
+			site = this.sites.filter(site => site.id == site_id)[0];
 			axios.get(
 				'/wp-json/captaincore/v1/site/'+site_id+'/quicksaves', {
 					headers: {'X-WP-Nonce':wpApiSettings.nonce}
 				})
 				.then(response => { 
-					if ( site.environment_selected == "Production" ) {
-						this.dialog_quicksave.quicksaves = response.data.Production
-					}
-					if ( site.environment_selected == "Staging" ) {
-						this.dialog_quicksave.quicksaves = response.data.Staging
-					}
-				
-				} );
+						site.environments[0].quicksaves = response.data.Production
+						site.environments[1].quicksaves = response.data.Staging				
+				});
 
 		},
 		addTheme ( site_id ){
@@ -3672,9 +3654,12 @@ new Vue({
 				this.sites.forEach(site => site.selected = false );
 			}
 		},
-		filterFiles( quicksave_id ) {
+		filterFiles( site_id, quicksave_id ) {
 
-			quicksave = this.dialog_quicksave.quicksaves.filter( quicksave => quicksave.quicksave_id == quicksave_id )[0];
+			site = this.sites.filter(site => site.id == site_id)[0];
+			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
+
+			quicksave = environment.quicksaves.filter( quicksave => quicksave.quicksave_id == quicksave_id )[0];
 			search = quicksave.search;
 			quicksave.filtered_files = quicksave.view_files.filter( file => file.includes( search ) );
 
