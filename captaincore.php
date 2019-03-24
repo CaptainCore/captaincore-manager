@@ -1861,6 +1861,7 @@ function captaincore_site_quicksaves_func( $request ) {
 		$quicksaves[$key]->view_files = [];
 		$quicksaves[$key]->filtered_files = [];
 		$quicksaves[$key]->loading = true;
+		$quicksaves[$key]->search = "";
 
 		// Skips compare check on oldest quicksave or if not found.
 		if ( !isset($quicksaves[$compare_key]) ) {
@@ -1977,6 +1978,7 @@ function captaincore_site_quicksaves_func( $request ) {
 		$quicksaves[$key]->view_files = [];
 		$quicksaves[$key]->filtered_files = [];
 		$quicksaves[$key]->loading = true;
+		$quicksaves[$key]->search = "";
 
 		// Skips compare check on oldest quicksave or if not found.
 		if ( !isset($quicksaves[$compare_key]) ) {
