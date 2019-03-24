@@ -3125,6 +3125,12 @@ new Vue({
 				return;
 			}
 
+			// Start job
+			site_name = site.name;
+			description = "Checking for file changes on " + site_name;
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
 			var data = {
 				'action': 'captaincore_install',
 				'post_id': site_id,
@@ -3136,8 +3142,18 @@ new Vue({
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
+					
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+
+					// Check if completed in 2 seconds
+					setTimeout(function() {
+						self.jobRetry(site_id, response.data);
+					}, 2000);
+
 					self.snackbar.message = "Quicksave in process.";
 					self.snackbar.show = true;
+					
 				})
 				.catch( error => console.log( error ) );
 
