@@ -496,22 +496,13 @@ class Site {
 		if ( $fathom == "" ) {
 			$fathom = array();
 		}
-		if ( strpos( $production_address, '.wpengine.com' ) !== false ) { 
-			$server = "WP Engine";
-		} 
-        if ( strpos( $production_address, '.kinsta.' ) !== false ) { 
-			$server = "Kinsta";
-		}
-
-		if ( !isset( $server ) ) {
-			$server = "";
-		}
 
 		// Prepare site details to be returned
 		$site_details       = new \stdClass();
 		$site_details->id   = $site->ID;
 		$site_details->name = $domain;
 		$site_details->site = get_field( 'site', $site->ID );
+		$site_details->provider = get_field( 'provider', $site->ID );
 		$site_details->filtered = true;
 		$site_details->selected = false;
 		$site_details->loading_plugins = false;
@@ -523,7 +514,6 @@ class Site {
 		$site_details->tabs = "tab-Site-Management";
 		$site_details->tabs_management = "tab-Keys";
 		$site_details->storage = $storage_gbs;
-		$site_details->server = $server;
 		if ( is_string($views) ) {
 			$site_details->views = number_format( intval( $views ) );
 		}
@@ -606,12 +596,12 @@ class Site {
 			$site_details->environments[0]['plugins'] = array();
 		}
 
-		if ( strpos( $production_address, '.kinsta.' ) ) {
+		if ( $site_details->provider == "kinsta" ) {
 			$site_details->environments[0]["ssh"] = "ssh ${production_username}@${production_address} -p ${production_port}";
 			$production_address_find_ending = strpos( $production_address,'.kinsta.' ) + 1;
 			$production_address_ending = substr( $production_address, $production_address_find_ending );
 		}
-		if ( strpos( $production_address, '.kinsta.' ) and $environments[0]->database_username ) {
+		if ( $site_details->provider == "kinsta" and $environments[0]->database_username ) {
 			
 			$site_details->environments[0]["database"] = "https://mysqleditor-${database_username}.${production_address_ending}";
 			$site_details->environments[0]["database_username"] = $environments[0]->database_username;
@@ -620,11 +610,11 @@ class Site {
 
 		if ( isset($environments[1]->address) && $environments[1]->address != ""  ) {
 
-			if ( strpos( $environments[1]->address, '.kinsta.' ) ) {
+			if ( $site_details->provider == "kinsta" ) {
 				$link_staging = "https://staging-" . $environments[1]->address;
 			}
 
-			if ( strpos( $environments[1]->address, '.wpengine.' ) ) {
+			if ( $site_details->provider == "wpengine" ) {
 				$link_staging = 'https://' . get_field( 'site', $site->ID ) . '.staging.wpengine.com';
 			}
 
@@ -670,12 +660,12 @@ class Site {
 				$site_details->environments[1]['plugins'] = array();
 			}
 
-			if ( strpos( $staging_address, '.kinsta.' ) ) {
+			if ( $site_details->provider == "kinsta" ) {
 				$site_details->environments[1]['ssh'] = "ssh ${staging_username}@${staging_address} -p ${staging_port}";
 				$staging_address_find_ending = strpos( $staging_address,'.kinsta.' ) + 1;
 				$staging_address_ending = substr( $staging_address, $staging_address_find_ending );
 			}
-			if ( strpos( $staging_address, '.kinsta.' ) and $environments[1]->database_username ) {
+			if ( $site_details->provider == "kinsta" and $environments[1]->database_username ) {
 				$site_details->environments[1]['database'] = "https://mysqleditor-staging-${database_username}.${staging_address_ending}";
 				$site_details->environments[1]['database_username'] = $environments[1]->database_username;
 				$site_details->environments[1]['database_password'] = $environments[1]->database_password;
@@ -722,6 +712,7 @@ class Site {
 
 			// add in ACF fields
 			update_field( 'site', $site->site, $site_id );
+			update_field( 'provider', $site->provider, $site_id );
 			update_field( 'customer', array_column( $site->customer, 'customer_id' ), $site_id );
 			update_field( 'partner', array_column( $site->shared_with, 'customer_id' ), $site_id );
 			update_field( 'updates_enabled', $site->updates_enabled, $site_id );
@@ -732,13 +723,6 @@ class Site {
 				// No date was entered for Launch Date, assign to today.
 				update_field( 'launch_date', date( 'Ymd' ), $site_id );
 
-			}
-
-			if ( strpos( $site->environments[0]->address, '.kinsta.' ) ) {
-				update_field( 'provider', 'kinsta', $site_id );
-			}
-			if ( strpos( $site->environments[0]->address, '.wpengine.com' ) ) {
-				update_field( 'provider', 'wpengine', $site_id );
 			}
 
 			$db_environments = new environments();
@@ -852,6 +836,7 @@ class Site {
 			// add in ACF fields
 			update_field( 'customer', array_column($site->customer, 'customer_id'), $site_id );
 			update_field( 'partner', array_column($site->shared_with, 'customer_id'), $site_id );
+			update_field( 'provider', $site->provider, $site_id );
 
 			//update_field( 'status', 'active', $site_id );
 
@@ -863,13 +848,6 @@ class Site {
 			// Fetch relating environments
 			$db_environments = new environments();
 
-			if ( strpos( $site->environments[0]->address, '.kinsta.' ) ) {
-				update_field( 'provider', 'kinsta', $site_id );
-			}
-			if ( strpos( $site->environments[0]->address, '.wpengine.com' ) ) {
-				update_field( 'provider', 'wpengine', $site_id );
-			}
-			
 			$environment = array(
 				'address'                 => $site->environments[0]["address"],
 				'username'                => $site->environments[0]["username"],
