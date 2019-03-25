@@ -793,6 +793,16 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-card-text>
 					<v-container>
 						<v-text-field name="Email" v-model="dialog_backup_snapshot.email"></v-text-field>
+					
+							<v-switch v-model="dialog_backup_snapshot.filter_toggle" label="Everything"></v-switch>
+							<div v-show="dialog_backup_snapshot.filter_toggle === false">
+								<v-checkbox small hide-details v-model="dialog_backup_snapshot.filter_options" label="Database" value="database"></v-checkbox>
+ 								<v-checkbox small hide-details v-model="dialog_backup_snapshot.filter_options" label="Themes" value="themes"></v-checkbox>
+								<v-checkbox small hide-details v-model="dialog_backup_snapshot.filter_options" label="Plugins" value="plugins"></v-checkbox>
+								<v-checkbox small hide-details v-model="dialog_backup_snapshot.filter_options" label="Uploads" value="uploads"></v-checkbox>
+								<v-checkbox small hide-details v-model="dialog_backup_snapshot.filter_options" label="Everything Else" value="everything-else"></v-checkbox>
+								<v-spacer><br /></v-spacer>
+							</div>
 						<v-btn @click="downloadBackupSnapshot()">
 							Download Snapshot
 						</v-btn>
@@ -2668,6 +2678,10 @@ new Vue({
 				'environment': environment,
 				'value': this.dialog_backup_snapshot.email
 			};
+
+			if ( this.dialog_backup_snapshot.filter_toggle === false ) {
+				data.filters = this.dialog_backup_snapshot.filter_options
+			}
 
 			self = this;
 

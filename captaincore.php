@@ -3704,6 +3704,7 @@ function captaincore_install_action_callback() {
 	$value        = $_POST['value'];
 	$commit       = $_POST['commit'];
 	$arguments    = $_POST['arguments'];
+	$filters      = $_POST['filters'];
 	$addon_type   = $_POST['addon_type'];
 	$date         = $_POST['date'];
 	$name         = $_POST['name'];
@@ -3824,6 +3825,11 @@ function captaincore_install_action_callback() {
 			$command = "snapshot $site --email=$value";
 		} else {
 			$command = "snapshot $site";
+		}
+
+		if ( $filters ) {
+			$filters = implode(" ", $filters); 
+			$command = $command . " --filter='{$filters}'";
 		}
 	}
 	if ( $cmd == 'deactivate' ) {
