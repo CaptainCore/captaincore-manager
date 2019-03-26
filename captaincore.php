@@ -3832,8 +3832,8 @@ function captaincore_install_action_callback() {
 		}
 
 		if ( $filters ) {
-			$filters = implode(" ", $filters); 
-			$command = $command . " --filter='{$filters}'";
+			$filters = implode(",", $filters); 
+			$command = $command . " --filter={$filters}";
 		}
 	}
 	if ( $cmd == 'deactivate' ) {
