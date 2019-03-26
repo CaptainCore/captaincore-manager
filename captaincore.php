@@ -1519,7 +1519,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 		$site_source      = get_the_title( $post->site_source_id );
 		$site_destination = get_the_title( $post->site_destination_id );
-		$business_name    = get_field("business_name", "options");
+		$business_name    = get_field('business_name', 'option');
 
 		// Send out completed email notice
 		$to      = $email;
@@ -1536,7 +1536,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	// Production deploy to staging
 	if ( $command == 'production-to-staging' and $email ) {
 
-		$business_name = get_field("business_name", "options");
+		$business_name = get_field('business_name', 'option');
 		$domain_name = get_the_title( $site_id );
 		$db          = new CaptainCore\Site;
 		$site        = $db->get( $site_id );
@@ -1557,7 +1557,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	// Kinsta staging deploy to production
 	if ( $command == 'staging-to-production' and $email ) {
 
-		$business_name = get_field("business_name", "options");
+		$business_name = get_field('business_name', 'option');
 		$domain_name = get_the_title( $site_id );
 		$db          = new CaptainCore\Site;
 		$site        = $db->get( $site_id );
