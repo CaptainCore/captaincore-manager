@@ -4871,8 +4871,10 @@ function captaincore_download_snapshot_email( $snapshot_id ) {
 
 	echo $url;
 
+	$business_name = get_field('business_name', 'option');
+
 	$to      = $email;
-	$subject = "Anchor Hosting - Snapshot #$snapshot_id";
+	$subject = "$business_name - Snapshot #$snapshot_id";
 	$body    = 'Snapshot #' . $snapshot_id . ' for ' . $domain . '. Expires after 1 week.<br /><br /><a href="' . $url . '">Download Snapshot</a>';
 	$headers = array( 'Content-Type: text/html; charset=UTF-8' );
 
