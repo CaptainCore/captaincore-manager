@@ -1519,10 +1519,11 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 		$site_source      = get_the_title( $post->site_source_id );
 		$site_destination = get_the_title( $post->site_destination_id );
+		$business_name    = get_field("business_name", "options");
 
 		// Send out completed email notice
 		$to      = $email;
-		$subject = "Anchor Hosting - Copy site ($site_source) to ($site_destination) completed";
+		$subject = "$business_name - Copy site ($site_source) to ($site_destination) completed";
 		$body    = "Completed copying $site_source to $site_destination.<br /><br /><a href=\"http://$site_destination\">$site_destination</a>";
 		$headers = array( 'Content-Type: text/html; charset=UTF-8' );
 
@@ -1535,6 +1536,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	// Production deploy to staging
 	if ( $command == 'production-to-staging' and $email ) {
 
+		$business_name = get_field("business_name", "options");
 		$domain_name = get_the_title( $site_id );
 		$db          = new CaptainCore\Site;
 		$site        = $db->get( $site_id );
@@ -1542,7 +1544,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 		// Send out completed email notice
 		$to      = $email;
-		$subject = "Anchor Hosting - Deploy to Staging ($domain_name)";
+		$subject = "$business_name - Deploy to Staging ($domain_name)";
 		$body    = 'Deploy to staging completed for ' . $domain_name . '.<br /><br /><a href="' . $link . '">' . $link . '</a>';
 		$headers = array( 'Content-Type: text/html; charset=UTF-8' );
 
@@ -1555,14 +1557,16 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	// Kinsta staging deploy to production
 	if ( $command == 'staging-to-production' and $email ) {
 
+		$business_name = get_field("business_name", "options");
 		$domain_name = get_the_title( $site_id );
 		$db          = new CaptainCore\Site;
 		$site        = $db->get( $site_id );
 		$link        = $site->environments[0]["link"];
 
 		// Send out completed email notice
+		
 		$to      = $email;
-		$subject = "Anchor Hosting - Deploy to Production ($domain_name)";
+		$subject = "$business_name - Deploy to Production ($domain_name)";
 		$body    = 'Deploy to production completed for ' . $domain_name . '.<br /><br /><a href="' . $link . '">' . $link . '</a>';
 		$headers = array( 'Content-Type: text/html; charset=UTF-8' );
 
