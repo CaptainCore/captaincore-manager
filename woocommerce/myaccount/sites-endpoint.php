@@ -1282,7 +1282,7 @@ Vue.component('file-upload', VueUploadComponent);
 										item-text="name"
 										item-value="value"
 										light
-										style="max-width: 230px; margin: 0px 1em 0px 16px; top: 0px;">
+										style="max-width: 204px; margin: 0px 1em 0px 16px; top: 0px;">
 									</v-select>
 									<v-btn small icon @click="syncSite( site.id )" style="margin: 14px auto 0 0;">
 										<v-icon small color="grey">fas fa-sync</v-icon>
@@ -1531,7 +1531,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Update Logs</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn flat @click="update(site.id)">Manually update</v-btn>
+						<v-btn flat @click="update(site.id)">Manual update <v-icon dark small>fas fa-sync-alt</v-icon></v-btn>
 						<v-btn flat @click="updateSettings(site.id)">Update Settings <v-icon dark small>fas fa-cog</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
@@ -1593,8 +1593,8 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Quicksaves</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn flat @click="promptBackupSnapshot( site.id )">Download Backup Snapshot</v-btn>
-						<v-btn flat @click="QuicksaveCheck( site.id )">Manual Check</v-btn>
+						<v-btn flat @click="promptBackupSnapshot( site.id )">Download Backup Snapshot <v-icon dark small>fas fa-cloud-download-alt</v-icon></v-btn>
+						<v-btn flat @click="QuicksaveCheck( site.id )">Manual Check <v-icon dark small>fas fa-sync-alt</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 						<v-card 
