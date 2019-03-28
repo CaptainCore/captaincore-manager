@@ -3360,11 +3360,22 @@ function captaincore_ajax_action_callback() {
 		return;
 	}
 
+	// Only proceed if access to command 
+	$user = wp_get_current_user();
+	$role_check_admin = in_array( 'administrator', $user->roles );
+	$admin_commands = array( 'updateFathom', 'newSite', 'editSite', 'deleteSite' );
+	if ( ! $role_check_admin && in_array( $_POST['command'], $admin_commands ) ) {
+		echo "Permission defined";
+		wp_die();
+		return;
+	}
+
 	$cmd   = $_POST['command'];
 	if ( isset($_POST['value']) ){
 		$value = $_POST['value'];
 	}
-	$site  = get_field( 'site', $post_id );
+
+	$site = get_field( 'site', $post_id );
 	$environment = $_POST['environment'];
 	$remote_command = false;
 
