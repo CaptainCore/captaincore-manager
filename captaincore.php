@@ -93,14 +93,6 @@ require 'includes/bulk-actions.php'; // Custom bulk actions.
 function captaincore_rewrite() {
 	add_rewrite_rule( '^captaincore-api/([^/]*)/?', 'index.php?pagename=captaincore-api&callback=$matches[1]', 'top' );
 	add_rewrite_rule( '^checkout-express/([^/]*)/?', 'index.php?pagename=checkout-express&callback=$matches[1]', 'top' );
-
-	// Removed the following paths from Google by forcing a 404 response
-	// TO DO: Remove after Google results for "site:anchor.host" are clean
-	add_rewrite_rule( '^captcore_quicksave/([^/]*)/?', 'index.php?pagename=404', 'top' );
-	add_rewrite_rule( '^cc_quicksave/([^/]*)/?', 'index.php?pagename=404', 'top' );
-	add_rewrite_rule( '^captcore_snapshot/([^/]*)/?', 'index.php?pagename=404', 'top' );
-	add_rewrite_rule( '^captcore_contact/([^/]*)/?', 'index.php?pagename=404', 'top' );
-
 	add_rewrite_tag( '%site%', '([^&]+)' );
 	add_rewrite_tag( '%sitetoken%', '([^&]+)' );
 	add_rewrite_tag( '%callback%', '([^&]+)' );
