@@ -3802,6 +3802,10 @@ function captaincore_install_action_callback() {
 			$command = "copy-staging-to-production $site";
 		}
 	}
+	if ( $cmd == 'sync-data' ) {
+		$run_in_background = true;
+		$command = "sync-data $site";
+	}
 	if ( $cmd == 'remove' ) {
 		$command = "site delete $site";
 	}

@@ -1349,10 +1349,19 @@ Vue.component('file-upload', VueUploadComponent);
 											<v-btn flat @click="addTheme(site.id)">Add Theme <v-icon dark small>add</v-icon></v-btn>
 										</v-toolbar-items>
 									</v-toolbar>
+									<v-card 
+									v-for="key in site.environments"
+									v-show="key.environment == site.environment_selected"
+									>
+									<v-card-title v-if="typeof key.themes == 'string'">
+										<div>
+											Updating themes...
+											<v-progress-linear :indeterminate="true"></v-progress-linear>
+										</div>
+									</v-card-title>
+									<div v-else>
 									<v-data-table
-										v-for="key in site.environments"
 										v-model="site.themes_selected"
-										v-show="key.environment == site.environment_selected"
 										:headers="headers"
 										:items="key.themes"
 										:loading="site.loading_themes"
@@ -1388,6 +1397,7 @@ Vue.component('file-upload', VueUploadComponent);
 										 </td>
 									 </template>
 								 </v-data-table>
+								</div>
 							</v-tab-item>
 			<v-tab-item :key="3" value="tab-Plugins">
 				<v-toolbar color="grey lighten-4" dense light flat>
@@ -1398,9 +1408,18 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-btn flat @click="addPlugin(site.id)">Add Plugin <v-icon dark small>add</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
-				<v-data-table
+				<v-card 
 					v-for="key in site.environments"
 					v-show="key.environment == site.environment_selected"
+				>
+				<v-card-title v-if="typeof key.plugins == 'string'">
+					<div>
+						Updating plugins...
+						<v-progress-linear :indeterminate="true"></v-progress-linear>
+					</div>
+				</v-card-title>
+				<div v-else>
+				<v-data-table
 					:headers="headers"
 					:items="key.plugins.filter(plugin => plugin.status != 'must-use' && plugin.status != 'dropin')"
 					:loading="site.loading_plugins"
@@ -1448,6 +1467,7 @@ Vue.component('file-upload', VueUploadComponent);
 					</tr>
 				 </template>
 				</v-data-table>
+			 </div>
 		  </v-tab-item>
 			<v-tab-item :key="4" value="tab-Users">
 				<v-toolbar color="grey lighten-4" dense light flat>
@@ -1463,7 +1483,7 @@ Vue.component('file-upload', VueUploadComponent);
 					>
 					<v-card-title v-if="typeof key.users == 'string'">
 						<div>
-							Fetching users...
+							Updating users...
 						  <v-progress-linear :indeterminate="true"></v-progress-linear>
 						</div>
 					</v-card-title>
@@ -2216,7 +2236,15 @@ new Vue({
 
 							previous_index = index - 1;
 
-							if ( job.command == "usersFetch") {
+							if ( job.command == "syncSite" ) {
+								self.fetchSiteInfo( site_id );
+							}
+
+							if ( job.command == "manage" ) {
+								self.syncSite( site_id );
+							}
+
+							if ( job.command == "usersFetch" ) {
 								if ( tryParseJSON( response_array[previous_index] ) ) {
 									// Add to site.users
 									site.users =  JSON.parse( response_array[previous_index] );
@@ -2486,6 +2514,38 @@ new Vue({
 				}
 			});
 		},
+		syncSite( site_id ) {
+
+			site = this.sites.filter(site => site.id == site_id)[0];
+
+			var data = {
+				action: 'captaincore_install',
+				post_id: site_id,
+				command: 'sync-data',
+				environment: site.environment_selected
+			};
+
+			self = this;
+			description = "Syncing " + site.name + " site info";
+
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({ "job_id": job_id, "description": description, "status": "running", "command": "syncSite" });
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+
+					// Check if completed in 2 seconds
+					setTimeout(function() {
+						self.jobRetry(site_id, response.data);
+					}, 2000);
+
+				})
+				.catch( error => console.log( error ) );
+
+		},
 		fetchSiteInfo( site_id ) {
 
 			var data = {
@@ -2506,6 +2566,12 @@ new Vue({
 						site_update = self.sites.filter(site => site.id == site_id)[0];
 						// Look through keys and update
 						Object.keys(site).forEach(function(key) {
+
+							// Skip updating environment_selected and tabs_management
+							if ( key == "environment_selected" || key == "tabs_management" ) {
+								return;
+							}
+
 						  site_update[key] = site[key];
 						});
 					} else {
@@ -2617,6 +2683,8 @@ new Vue({
 		},
 		bulkEditExecute ( action ) {
 			site_id = this.bulk_edit.site_id;
+			site = this.sites.filter(site => site.id == site_id )[0];
+			object_type = this.bulk_edit.type;
 			object_singular = this.bulk_edit.type.slice(0, -1);
 			items = this.bulk_edit.items.map(item => item.name).join(" ");
 			if ( object_singular == "user" ) {
@@ -2627,10 +2695,13 @@ new Vue({
 			site_name = this.bulk_edit.site_name;
 			description = "Bulk action '" + action + " " + this.bulk_edit.type + "' on " + site_name;
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			this.jobs.push({"job_id": job_id, "description": description, "status": "running", "command": "manage"});
 
 			// WP ClI command to send
 			wpcli = "wp " + object_singular + " " + action + " " + items;
+
+			// Set to loading.
+			site.environments[0][ object_type ] = "Updating";
 
 			this.bulk_edit.show = false;
 
@@ -3678,7 +3749,7 @@ new Vue({
 
 			description = "Running bulk " + this.select_bulk_action + " on " + site_names.join(" ");
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command": "manage"});
 
 			// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 			jQuery.post(ajaxurl, data, function(response) {
