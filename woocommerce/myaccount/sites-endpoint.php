@@ -1282,8 +1282,11 @@ Vue.component('file-upload', VueUploadComponent);
 										item-text="name"
 										item-value="value"
 										light
-										style="max-width: 230px; margin: 0px auto 0px 16px; top: 0px;"></v-select>
-
+										style="max-width: 230px; margin: 0px 1em 0px 16px; top: 0px;">
+									</v-select>
+									<v-btn small icon @click="syncSite( site.id )" style="margin: 14px auto 0 0;">
+										<v-icon small color="grey">fas fa-sync</v-icon>
+									</v-btn>
 									<v-tab key="Keys" href="#tab-Keys">
 									  Keys <v-icon small style="margin-left:7px;">fas fa-key</v-icon>
 									</v-tab>
@@ -1316,9 +1319,9 @@ Vue.component('file-upload', VueUploadComponent);
 										<v-card v-for="key in site.environments" v-show="key.environment == site.environment_selected">
 
 											<v-container fluid style="padding-top: 10px;">
-											<div><h3 class="headline mb-0" style="margin-top:10px;"><a :href="key.link" target="_blank">{{ key.link }}</a></h3></div>
+											<v-layout align-start justify-space-between/>
 											<div row>
-
+											<div><h3 class="headline mb-0" style="margin-top:10px;"><a :href="key.link" target="_blank">{{ key.link }}</a></h3></div>
 												<div><span class="caption">Address</span> {{ key.address }}</div>
 												<div><span class="caption">Username</span> {{ key.username }}</div>
 												<div><span class="caption">Password</span> <div class="pass-mask">##########</div><div class="pass-reveal">{{ key.password }}</div></div>
@@ -1337,6 +1340,8 @@ Vue.component('file-upload', VueUploadComponent);
 											 </div>
 
 										 </div>
+										</v-layout>
+										 
 									 </v-container>
 								 </v-card>
 								</v-tab-item>
