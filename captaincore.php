@@ -3561,6 +3561,18 @@ function captaincore_ajax_action_callback() {
 
 	}
 
+	if ( $cmd == 'deleteSite' ) {
+
+		// Delete site on CaptainCore CLI
+		$run_in_background = true;
+		$remote_command = true;
+		$command = "site delete $site";
+
+		// Delete site locally
+		( new CaptainCore\Site )->delete( $value );
+	
+	}
+
 	if ( $cmd == 'fetch-site' ) {
 
 		// Create new site

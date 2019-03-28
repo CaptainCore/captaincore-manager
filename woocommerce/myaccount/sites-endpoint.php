@@ -1785,7 +1785,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-toolbar-items>
 					<v-btn flat @click="copySite(site.id)">Copy Site <v-icon dark small>file_copy</v-icon></v-btn>
 					<v-btn flat @click="editSite(site.id)" v-show="role == 'administrator'">Edit Site <v-icon dark small>edit</v-icon></v-btn>
-					<v-btn flat @click="submitNewSite" v-show="role == 'administrator'">Remove Site <v-icon dark small>delete</v-icon></v-btn>
+					<v-btn flat @click="deleteSite(site.id)" v-show="role == 'administrator'">Remove Site <v-icon dark small>delete</v-icon></v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
 			<v-card>
@@ -2793,6 +2793,46 @@ new Vue({
 			site_name = site.name;
 			this.dialog_edit_site.show = true;
 			this.dialog_edit_site.site = site;
+		},
+		deleteSite( site_id ) {
+			site = this.sites.filter(site => site.id == site_id )[0];
+			site_name = site.name;
+			should_proceed = confirm("Delete site " + site_name + "?");
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			// Start job
+			description = "Removing site " + site_name;
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+
+			var data = {
+				'action': 'captaincore_ajax',
+				'command': 'deleteSite',
+				'post_id': site.id
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+
+					// Check if completed in 2 seconds
+					setTimeout(function() {
+						self.jobRetry(site_id, response.data);
+					}, 2000);
+					
+					// Remove item
+					self.sites = self.sites.filter( site => site.id != site_id )
+					self.snackbar.message = "Removing site "+ site_name + ".";
+					
+				})
+				.catch( error => console.log( error ) );
+
 		},
 		startCopySite() {
 

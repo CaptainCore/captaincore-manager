@@ -898,6 +898,20 @@ class Site {
 		return $response;
 	}
 
+	public function delete( $site_id ) {
+
+		// Remove environments attached to site
+		$db_environments = new environments();
+		$environment_id = get_field( 'environment_production_id', $site_id );
+		$db_environments->delete( $environment_id );
+		$environment_id = get_field( 'environment_staging_id', $site_id );
+		$db_environments->delete( $environment_id );
+
+		// Remove site
+		wp_delete_post( $site_id );
+
+	}
+
 }
 
 
