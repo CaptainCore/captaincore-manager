@@ -2702,6 +2702,9 @@ new Vue({
 
 			// Set to loading.
 			site.environments[0][ object_type ] = "Updating";
+			if (site.environments[1] ) {
+				site.environments[1][ object_type ] = "Updating";
+			}
 
 			this.bulk_edit.show = false;
 
