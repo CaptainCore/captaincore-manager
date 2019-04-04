@@ -1156,13 +1156,9 @@ add_action( 'acf/save_post', 'captaincore_acf_save_post_after', 20 );
 function captaincore_acf_save_post_after( $post_id ) {
 
 	if ( get_post_type( $post_id ) == 'captcore_website' ) {
-		$custom        = get_post_custom( $post_id );
-		$hosting_plan  = $custom['hosting_plan'][0];
-		$hosting_price = $custom['hosting_price'][0];
-		$addons        = get_field( 'addons', $post_id );
 		$customer      = get_field( 'customer', $post_id );
 		$visits        = get_field( 'visits', $post_id );
-		$status        = $custom['status'][0];
+		$status        = get_field( 'status', $post_id );
 		$total         = 0;
 		$addon_total   = 0;
 
@@ -1212,9 +1208,9 @@ function captaincore_acf_save_post_after( $post_id ) {
 		}
 
 		// Update customer usage
-		$sites       = 0;
-		$visits      = 0;
-			$storage     = 0;
+		$total_sites   = 0;
+		$total_visits  = 0;
+		$total_storage = 0;
 
 			/*
 			*  Query posts for a relationship value.
@@ -1251,16 +1247,16 @@ function captaincore_acf_save_post_after( $post_id ) {
 				$storage = $environments[0]->storage;
 				$visits = $environments[0]->visits;
 
-					$storage = $storage + get_field( 'storage', $website->ID );
-				$visits  = $visits + get_field( 'visits', $website->ID );
-				$sites++;
+				$total_storage = $total_storage + $storage;
+				$total_visits  = $total_visits + $visits;
+				$total_sites++;
 
 				 endforeach;
 			endif;
 
-			update_field( 'field_59089b37bd588', $storage, $customer_id );
-		update_field( 'field_59089b3ebd589', $visits, $customer_id );
-		update_field( 'field_5ca178d77d7e2', $sites, $customer_id );
+		update_field( 'storage', $total_storage, $customer_id );
+		update_field( 'visits', $total_visits, $customer_id );
+		update_field( 'sites', $total_sites, $customer_id );
 
 	}
 	if ( get_post_type( $post_id ) == 'captcore_customer' ) {
@@ -3400,11 +3396,10 @@ function captaincore_ajax_action_callback() {
 					),
 			)
 		);
+
 		if ( $websites_for_customer ) :
 			foreach ( $websites_for_customer as $website_for_customer ) :
-
 				$site = ( new CaptainCore\Site )->get( $website_for_customer->ID );
-
 				$website_for_customer_storage = $site->storage_raw;
 				$website_for_customer_visits  = $site->visits;
 				$sites[] = array(
@@ -3413,6 +3408,7 @@ function captaincore_ajax_action_callback() {
 					'visits'  => $website_for_customer_visits
 				);
 			endforeach;
+
 			$total = array(
 				$storage_percent . "% storage<br /><strong>" . $storage_gbs ."GB/". $storage_limit ."GB</strong>",
 				$visits_percent . "% traffic<br /><strong>" . number_format( $visits ) . "</strong> <small>Yearly Estimate</small>"
