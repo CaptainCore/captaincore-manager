@@ -745,8 +745,11 @@ Vue.component('file-upload', VueUploadComponent);
 						</v-layout>
 						<h3 class="title" v-show="typeof dialog_modify_plan.hosting_addons == 'object' && dialog_modify_plan.hosting_addons" style="margin-top: 1em;">Addons</h3>
 						<v-layout row wrap v-for="(addon, index) in dialog_modify_plan.hosting_addons">
-						<v-flex xs9 pa-1>
-							<v-text-field label="Name" :value="addon.name" @change.native="addon.name = $event.target.value">
+						<v-flex xs7 pa-1>
+							<v-textarea auto-grow rows="1" label="Name" :value="addon.name" @change.native="addon.name = $event.target.value">
+						</v-flex>
+						<v-flex xs2 pa-1>
+							<v-text-field label="Quantity" :value="addon.quantity" @change.native="addon.quantity = $event.target.value">
 						</v-flex>
 						<v-flex xs2 pa-1>
 							<v-text-field label="Price" :value="addon.price" @change.native="addon.price = $event.target.value">
