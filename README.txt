@@ -43,6 +43,21 @@ TODO
 TODO
 
 == Changelog ==
+= 0.4.1: Apr 4 2019
+* New: Sites UI - Site plan tab for managing hosting plans. Administrators can assign plans per customer which define storage, visits and number of sites usage.
+* New: Sites UI - Added button for removing a site.
+* New: Sites UI - Added icon to manual sync a site.
+* Tweak: Include ACF field groups via PHP.
+* Tweak: Removed WooCommerce tab for site health.
+* Tweak: Display DNS tab if CONSTELLIX_API_KEY and CONSTELLIX_SECRET_KEY defined. 
+* Tweak: Display domains on overview page if DNS is defined.
+* Tweak: Sites UI - Improve snapshot dialog
+* Tweak: Sites UI - Improve font used for code diff
+* Tweak: Sites UI - Track Quicksave progress
+* Tweak: Sites UI - Specify provider instead of extracting from the address.
+* Tweak: Sites UI - Snapshot options
+* Fix: Deactivate command passed to CLI
+
 = 0.4.0: Mar 4 2019
 * New: Sites UI - Environment support added (themes, plugins, users, updates, scripts, backups and quicksaves)
 * New: Sites UI - Label for multisite networks
