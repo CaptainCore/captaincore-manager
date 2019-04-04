@@ -855,7 +855,7 @@ function slug_get_paid_by_me( $object, $field_name, $request ) {
 				'website'      => $domain,
 				'addons'       => get_field( 'addons', $website->ID ),
 				'price'        => get_field( 'hosting_price', $website->ID ),
-				'views'        => get_field( 'views', $website->ID ),
+				'visits'       => get_field( 'visits', $website->ID ),
 				'storage'      => get_field( 'storage', $website->ID ),
 				'total_price'  => get_field( 'total_price', $website->ID ),
 				'hosting_plan' => get_field( 'hosting_plan', $website->ID ),
@@ -1161,23 +1161,15 @@ function captaincore_acf_save_post_after( $post_id ) {
 		$hosting_price = $custom['hosting_price'][0];
 		$addons        = get_field( 'addons', $post_id );
 		$customer      = get_field( 'customer', $post_id );
-		$views         = get_field( 'views', $post_id );
+		$visits        = get_field( 'visits', $post_id );
 		$status        = $custom['status'][0];
 		$total         = 0;
 		$addon_total   = 0;
 
+		
 		if ( $customer == '' ) {
-			// no customer found, generate and assign the customer
-			if ( get_field( 'billing_date', $post_id ) ) {
-				$website_billing_date = date( 'Ymd', strtotime( get_field( 'billing_date', $post_id ) ) );
-			}
-			$website_hosting_plan   = get_field( 'hosting_plan', $post_id );
-			$website_hosting_price  = get_field( 'hosting_price', $post_id );
-			$website_addons         = get_field( 'addons', $post_id );
-			$website_billing_method = get_field( 'billing_method', $post_id );
-			$website_billing_email  = get_field( 'billing_email', $post_id );
 
-			// Create customer object
+			// No customer found, generate and assign the customer. Create customer object.
 			$my_post = array(
 				'post_title'  => get_the_title( $post_id ),
 				'post_type'   => 'captcore_customer',
@@ -1188,60 +1180,6 @@ function captaincore_acf_save_post_after( $post_id ) {
 			// Insert the post into the database
 			$customer_post_id = wp_insert_post( $my_post );
 
-			// Add data to customer
-			if ( $website_hosting_plan ) {
-				update_field( 'field_549d42b57c687', $website_hosting_plan, $customer_post_id );
-			} else {
-				update_field( 'field_549d42b57c687', 'basic', $customer_post_id );
-			}
-			if ( $website_hosting_price ) {
-				// assign hosting plan
-				update_field( 'field_549d42d07c688', $website_hosting_price, $customer_post_id );
-
-				// calculate and assign new total price
-				$hosting_price = get_field( 'hosting_price', $post_id );
-				$addons        = get_field( 'addons', $post_id );
-
-				// check if the repeater field has rows of data
-				if ( have_rows( 'addons', $post_id ) ) :
-
-					// loop through the rows of data
-					while ( have_rows( 'addons', $post_id ) ) :
-						the_row();
-						// vars
-						$name        = get_sub_field( 'name' );
-						$price       = get_sub_field( 'price' );
-						$addon_total = $price + $addon_total;
-					endwhile;
-
-				else :
-					// no rows found
-				endif;
-				$total_price = $hosting_price + $addon_total;
-				update_field( 'field_56181aaed39a9', $total_price, $customer_post_id );
-			} else {
-				update_field( 'field_549d42d07c688', '240', $customer_post_id );    // Hosting Price
-				update_field( 'field_56181aaed39a9', '240', $customer_post_id );    // Total Price
-				update_field( 'field_56252d8051ee2', 'year', $customer_post_id );   // Billing Terms
-			}
-			if ( $website_billing_date ) {
-				update_field( 'field_549d430d7c68c', $website_billing_date, $customer_post_id );
-			} else {
-				// No date so assign the first day of the next month
-				$first_day_next_month = date( 'Ymd', strtotime( date( 'm', strtotime( '+1 month' ) ) . '/01/' . date( 'Y', strtotime( '+1 month' ) ) . ' 00:00:00' ) );
-				update_field( 'field_549d430d7c68c', $first_day_next_month, $customer_post_id );
-			}
-			if ( $website_addons ) {
-				update_field( 'field_549ed77808354', $website_addons, $customer_post_id );
-			}
-			if ( $website_billing_method ) {
-				update_field( 'field_549d42d37c689', $website_billing_method, $customer_post_id );
-			}
-			if ( $website_billing_email ) {
-				update_field( 'field_549d43087c68b', $website_billing_email, $customer_post_id );
-			}
-			update_field( 'field_561936147136b', 'active', $customer_post_id );
-
 			// Link website to customer
 			update_field( 'field_56181a1fcf6e2', $customer_post_id, $post_id );
 
@@ -1249,6 +1187,10 @@ function captaincore_acf_save_post_after( $post_id ) {
 
 			// Load customer data
 			$customer_id = $customer[0];
+
+			if ( is_array( $customer ) ) {
+				$customer_id = $customer[0];
+			}
 
 			$billing_terms      = get_field( 'billing_terms', $customer_id );
 			$billing_date       = date( 'Y-m-d', strtotime( get_field( 'billing_date', $customer_id ) ) );
@@ -1270,11 +1212,9 @@ function captaincore_acf_save_post_after( $post_id ) {
 		}
 
 		// Update customer usage
-		if ( isset( $views ) and is_array( $customer ) ) {
-
-			$views       = 0;
+		$sites       = 0;
+		$visits      = 0;
 			$storage     = 0;
-			$customer_id = $customer[0];
 
 			/*
 			*  Query posts for a relationship value.
@@ -1301,19 +1241,27 @@ function captaincore_acf_save_post_after( $post_id ) {
 				)
 			);
 
+		$db_environments = new CaptainCore\environments();
+
 			if ( $websites ) :
 				foreach ( $websites as $website ) :
 
+				$environments = $db_environments->fetch_environments( $website->ID );
+
+				$storage = $environments[0]->storage;
+				$visits = $environments[0]->visits;
+
 					$storage = $storage + get_field( 'storage', $website->ID );
-					$views   = $views + get_field( 'views', $website->ID );
+				$visits  = $visits + get_field( 'visits', $website->ID );
+				$sites++;
 
 				 endforeach;
 			endif;
 
 			update_field( 'field_59089b37bd588', $storage, $customer_id );
-			update_field( 'field_59089b3ebd589', $views, $customer_id );
+		update_field( 'field_59089b3ebd589', $visits, $customer_id );
+		update_field( 'field_5ca178d77d7e2', $sites, $customer_id );
 
-		}
 	}
 	if ( get_post_type( $post_id ) == 'captcore_customer' ) {
 		$custom        = get_post_custom( $post_id );
@@ -1469,7 +1417,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	$command             = $post->command;
 	$environment         = $post->environment;
 	$storage             = $post->storage;
-	$views               = $post->views;
+	$visits              = $post->visits;
 	$email               = $post->email;
 	$server              = $post->server;
 	$core                = $post->core;
@@ -1731,7 +1679,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		}
 	}
 
-	// Updates views and storage usage
+	// Updates visits and storage usage
 	if ( $command == 'usage-update' ) {
 
 		if ( $environment == "production" ) {
@@ -1746,7 +1694,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			'site_id'            => $site_id,
 			'environment'        => ucfirst($environment),
 			'storage'            => $storage,
-			'views'              => $views
+			'visits'             => $visits
 		);
 
 		$time_now = date("Y-m-d H:i:s");
@@ -2182,7 +2130,7 @@ function captaincore_register_rest_endpoints() {
 		)
 	);
 	register_rest_field(
-		'captcore_website', 'views',
+		'captcore_website', 'visits',
 		array(
 			'get_callback'    => 'slug_get_post_meta_cb',
 			'update_callback' => 'slug_update_post_meta_cb',
@@ -2262,7 +2210,7 @@ function captaincore_register_rest_endpoints() {
 		)
 	);
 	register_rest_field(
-		'captcore_customer', 'views',
+		'captcore_customer', 'visits',
 		array(
 			'get_callback'    => 'slug_get_post_meta_cb',
 			'update_callback' => 'slug_update_post_meta_cb',
@@ -3416,38 +3364,17 @@ function captaincore_ajax_action_callback() {
 		$hosting_plan = get_field( 'hosting_plan', $customer_id );
 		$addons       = get_field( 'addons', $customer_id );
 		$storage      = get_field( 'storage', $customer_id );
-		$views        = get_field( 'views', $customer_id );
+		$visits       = get_field( 'visits', $customer_id );
+		$visits_plan_limit = get_field( 'visits_limit', $customer_id );
+		$storage_limit     = get_field( 'storage_limit', $customer_id );
+		$sites_limit       = get_field( 'sites_limit', $customer_id );
 
-		if ( $hosting_plan == 'basic' ) {
-			$views_plan_limit = '100000';
-		}
-		if ( $hosting_plan == 'standard' ) {
-			$views_plan_limit = '500000';
-		}
-		if ( $hosting_plan == 'professional' ) {
-			$views_plan_limit = '1000000';
-		}
-		if ( $hosting_plan == 'business' ) {
-			$views_plan_limit = '2000000';
-		}
-		if ( isset( $views ) ) {
-			$views_percent = round( $views / $views_plan_limit * 100, 0 );
+		if ( isset( $visits ) ) {
+			$visits_percent = round( $visits / $visits_plan_limit * 100, 0 );
 		}
 
 		$storage_gbs = round( $storage / 1024 / 1024 / 1024, 1 );
-		$storage_cap = '10';
-		if ( $addons ) {
-			foreach ( $addons as $item ) {
-				// Evaluate if contains word storage
-				if ( stripos( $item['name'], 'storage' ) !== false ) {
-					// Found storage addon, now extract number and add to cap.
-					$extracted_gbs = filter_var( $item['name'], FILTER_SANITIZE_NUMBER_INT );
-					$storage_cap   = $storage_cap + $extracted_gbs;
-				}
-			}
-		}
-
-		$storage_percent = round( $storage_gbs / $storage_cap * 100, 0 );
+		$storage_percent = round( $storage_gbs / $storage_limit * 100, 0 );
 
 		$sites = array();
 		$total = array();
@@ -3479,16 +3406,16 @@ function captaincore_ajax_action_callback() {
 				$site = ( new CaptainCore\Site )->get( $website_for_customer->ID );
 
 				$website_for_customer_storage = $site->storage_raw;
-				$website_for_customer_views   = $site->views;
+				$website_for_customer_visits  = $site->visits;
 				$sites[] = array(
-					'name' => get_the_title( $website_for_customer->ID ),
+					'name'    => get_the_title( $website_for_customer->ID ),
 					'storage' => round( $website_for_customer_storage / 1024 / 1024 / 1024, 1 ),
-					'views' => $website_for_customer_views
+					'visits'  => $website_for_customer_visits
 				);
 			endforeach;
 			$total = array(
-				$storage_percent . "% storage<br /><strong>" . $storage_gbs ."GB/". $storage_cap ."GB</strong>",
-				$views_percent . "% traffic<br /><strong>" . number_format( $views ) . "</strong> <small>Yearly Estimate</small>"
+				$storage_percent . "% storage<br /><strong>" . $storage_gbs ."GB/". $storage_limit ."GB</strong>",
+				$visits_percent . "% traffic<br /><strong>" . number_format( $visits ) . "</strong> <small>Yearly Estimate</small>"
 			);
 
 		endif;
@@ -3500,12 +3427,12 @@ function captaincore_ajax_action_callback() {
 					array(
 						'name' => 'anchor.host',
 						'storage' => '.4',
-						'views' => '22164'
+						'visits' => '22164'
 					),
 					array(
 						'name' => 'anchorhost1.wpengine.com',
 						'storage' => '2.5',
-						'views' => '10352'
+						'visits' => '10352'
 					)
 			),
 			'total' =>  array(
@@ -3525,6 +3452,25 @@ function captaincore_ajax_action_callback() {
 		$run_in_background = true;
 		$remote_command = true;
 		$command = "stats-deploy $site '" . json_encode($value) . "'";
+
+	}
+
+	if ( $cmd == 'updatePlan' ) {
+
+		// Regenerate usage info for customer
+		captaincore_acf_save_post_after( $post_id );
+
+		$customer     = get_field( "customer", $post_id );
+		$customer_id  = $customer[0];
+		$hosting_plan = $value["hosting_plan"];
+		$addons       = $value["addons"];
+
+		update_field( 'hosting_plan', $hosting_plan["name"], $customer_id );
+		update_field( 'visits_limit', $hosting_plan["visits_limit"], $customer_id );
+		update_field( 'storage_limit', $hosting_plan["storage_limit"], $customer_id );
+		update_field( 'sites_limit', $hosting_plan["sites_limit"], $customer_id );
+		update_field( 'price', $hosting_plan["price"], $customer_id );
+		update_field( 'addons', $addons, $customer_id );
 
 	}
 
@@ -4160,7 +4106,7 @@ function captaincore_create_tables() {
 				offload_bucket varchar(255),
 				offload_path varchar(255),
 				storage varchar(20),
-				views varchar(20),
+				visits varchar(20),
 				core varchar(10),
 				subsite_count varchar(10),
 				home_url varchar(255),

@@ -251,7 +251,7 @@ class Domains {
 					endforeach;
 				}
 			}
-			if ( count($customers) == 0 ) {
+			if ( count($customers) == 0 and is_array($partner ) ) {
 				foreach ( $partner as $partner_id ) {
 					$websites_for_partner = get_posts(
 						array(
@@ -482,7 +482,7 @@ class Site {
 		} else { 
 			$storage_gbs = "";
 		}
-		$views               = $environments[0]->views;
+		$visits              = $environments[0]->visits;
 		$subsite_count       = $environments[0]->subsite_count;
 		$production_address  = $environments[0]->address;
 		$production_username = $environments[0]->username;
@@ -504,6 +504,7 @@ class Site {
 		$site_details->site = get_field( 'site', $site->ID );
 		$site_details->provider = get_field( 'provider', $site->ID );
 		$site_details->filtered = true;
+		$site_details->usage_breakdown = array();
 		$site_details->selected = false;
 		$site_details->loading_plugins = false;
 		$site_details->loading_themes = false;
@@ -515,8 +516,8 @@ class Site {
 		$site_details->tabs_management = "tab-Keys";
 		$site_details->storage_raw = $environments[0]->storage;
 		$site_details->storage = $storage_gbs;
-		if ( is_string($views) ) {
-			$site_details->views = number_format( intval( $views ) );
+		if ( is_string($visits) ) {
+			$site_details->visits = number_format( intval( $visits ) );
 		}
 		$site_details->update_logs = array();
 		$site_details->update_logs_pagination = array( "descending" => true, "sortBy" => "date" );
@@ -525,22 +526,50 @@ class Site {
 		$site_details->users_selected = array();
 		$site_details->pagination = array( "sortBy" => "roles" );
 
-		if ( !isset( $site_details->views ) ) {
-			$site_details->views = "";
+		if ( !isset( $site_details->visits ) ) {
+			$site_details->visits = "";
 		}
 
-		if ( $site_details->views == 0 ) {
-			$site_details->views = "";
+		if ( $site_details->visits == 0 ) {
+			$site_details->visits = "";
 		}
 
 		if (  $customer ) {
 			foreach ( $customer as $customer_id ) {
-				$customer_name          = get_post_field( 'post_title', $customer_id, 'raw' );
+				$customer_name = get_post_field( 'post_title', $customer_id, 'raw' );
+				$addons        =  get_field( "addons", $customer_id ); 
+				if ( $addons == "" ) {
+					$addons = array();
+				}
 				$site_details->customer[] = array(
-					'customer_id' => "$customer_id",
-					'name'        => $customer_name
+					'customer_id'    => $customer_id,
+					'name'           => $customer_name,
+					'hosting_addons' => $addons,
+					'hosting_plan'   => array(
+						'name'          => get_field( "hosting_plan", $customer_id ),
+						'visits_limit'  => get_field( "visits_limit", $customer_id ),
+						'storage_limit' => get_field( "storage_limit", $customer_id ),
+						'sites_limit'   => get_field( "sites_limit", $customer_id ),
+						'price'         => get_field( "price", $customer_id ),
+					),
+					'usage'   => array(
+						'storage' => get_field( "storage", $customer_id ),
+						'visits'  => get_field( "visits", $customer_id ),
+						'sites'   => get_field( "sites", $customer_id ),
+					),
 				);
 			}
+		}
+
+		if ( count($site_details->customer) == 0 ){
+			$site_details->customer[] = array(
+				'customer_id'   => "",
+				'name'          => "",
+				'hosting_plan'  => "",
+				'visits_limit'  => "",
+				'storage_limit' => "",
+				'sites_limit'   => "",
+			);
 		}
 
 		$site_details->users       = array();
@@ -577,6 +606,12 @@ class Site {
 			'updates_enabled'         => intval($environments[0]->updates_enabled),
 			'updates_exclude_plugins' => $environments[0]->updates_exclude_plugins,
 			'updates_exclude_themes'	=> $environments[0]->updates_exclude_themes,
+			'offload_enabled'         => $environments[0]->offload_enabled,
+			'offload_provider'        => $environments[0]->offload_provider,
+			'offload_access_key'      => $environments[0]->offload_access_key,
+			'offload_secret_key'      => $environments[0]->offload_secret_key,
+			'offload_bucket'          => $environments[0]->offload_bucket,
+			'offload_path'            => $environments[0]->offload_path,
 		);
 
 		if ( $site_details->environments[0]['updates_exclude_themes'] ) {
@@ -641,6 +676,12 @@ class Site {
 				'updates_enabled'         => intval($environments[1]->updates_enabled),
 				'updates_exclude_plugins' => $environments[1]->updates_exclude_plugins,
 				'updates_exclude_themes'  => $environments[1]->updates_exclude_themes,
+				'offload_enabled'         => $environments[1]->offload_enabled,
+				'offload_provider'        => $environments[1]->offload_provider,
+				'offload_access_key'      => $environments[1]->offload_access_key,
+				'offload_secret_key'      => $environments[1]->offload_secret_key,
+				'offload_bucket'          => $environments[1]->offload_bucket,
+				'offload_path'            => $environments[1]->offload_path,
 			);
 	
 			if ( $site_details->environments[1]['updates_exclude_themes'] ) {
@@ -848,7 +889,7 @@ class Site {
 
 			// Fetch relating environments
 			$db_environments = new environments();
-
+			
 			$environment = array(
 				'address'                 => $site->environments[0]["address"],
 				'username'                => $site->environments[0]["username"],

@@ -707,41 +707,64 @@ Vue.component('file-upload', VueUploadComponent);
 	        </v-card>
 	      </v-dialog>
 				<v-dialog
-					v-model="dialog_usage_breakdown.show"
-					fullscreen
-					hide-overlay
+					v-model="dialog_modify_plan.show"
 					transition="dialog-bottom-transition"
-					scrollable
+					width="500"
 				>
 				<v-card tile>
 					<v-toolbar card dark color="primary">
-						<v-btn icon dark @click.native="dialog_usage_breakdown.show = false">
+						<v-btn icon dark @click.native="dialog_modify_plan.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
-						<v-toolbar-title>Usage breakdown for {{ dialog_usage_breakdown.customer_name }}</v-toolbar-title>
+						<v-toolbar-title v-show="role == 'administrator'">Modify plan for {{ dialog_modify_plan.customer_name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text>
-					<v-container>
-						<v-data-table
-							:headers='[{"text":"Name","value":"name"},{"text":"Storage","value":"Views"},{"text":"Views","value":"views"}]'
-							:items="dialog_usage_breakdown.response.sites"
-							item-key="name"
-							hide-actions
-						 >
-						 <template slot="items" slot-scope="props">
-							<td>{{ props.item.name }}</td>
-							<td>{{ props.item.storage }}GB</td>
-							<td>{{ props.item.views }}</td>
-						</template>
-						<template slot="footer">
-						 <tr>
-							 <td>Totals:</td>
-							 <td v-for="total in dialog_usage_breakdown.response.total" v-html="total"></td>
-						 </tr>
-						</template>
-						</v-data-table>
-					</v-container>
+						<v-layout row wrap>
+						<v-flex xs12>
+						<v-select
+							@change="loadHostingPlan()"
+							v-model="dialog_modify_plan.selected_plan"
+							label="Plan Name"
+							:items="hosting_plans.map( plan => plan.name )"
+							:value="dialog_modify_plan.hosting_plan.name"
+						></v-select>
+						</v-flex>
+						</v-layout>
+						<v-layout v-if="typeof dialog_modify_plan.hosting_plan.name == 'string' && dialog_modify_plan.hosting_plan.name == 'Custom'" row wrap>
+							<v-flex xs3 pa-1><v-text-field label="Storage (GBs)" :value="dialog_modify_plan.hosting_plan.storage_limit" @change.native="dialog_modify_plan.hosting_plan.storage_limit = $event.target.value"></v-text-field></v-flex>
+							<v-flex xs3 pa-1><v-text-field label="Visits" :value="dialog_modify_plan.hosting_plan.visits_limit" @change.native="dialog_modify_plan.hosting_plan.visits_limit = $event.target.value"></v-text-field></v-flex>
+							<v-flex xs3 pa-1><v-text-field label="Sites" :value="dialog_modify_plan.hosting_plan.sites_limit" @change.native="dialog_modify_plan.hosting_plan.sites_limit = $event.target.value"></v-text-field></v-flex>
+							<v-flex xs3 pa-1><v-text-field label="Price" :value="dialog_modify_plan.hosting_plan.price" @change.native="dialog_modify_plan.hosting_plan.price = $event.target.value"></v-text-field></v-flex>
+						</v-layout>
+						<v-layout v-else row wrap>
+							<v-flex xs3 pa-1><v-text-field label="Storage (GBs)" :value="dialog_modify_plan.hosting_plan.storage_limit" disabled></v-text-field></v-flex>
+							<v-flex xs3 pa-1><v-text-field label="Visits" :value="dialog_modify_plan.hosting_plan.visits_limit" disabled></v-text-field></v-flex>
+							<v-flex xs3 pa-1><v-text-field label="Sites" :value="dialog_modify_plan.hosting_plan.sites_limit" disabled ></v-text-field></v-flex>
+							<v-flex xs3 pa-1><v-text-field label="Price" :value="dialog_modify_plan.hosting_plan.price" disabled ></v-text-field></v-flex>
+						</v-layout>
+						<h3 class="title" v-show="typeof dialog_modify_plan.hosting_addons == 'object' && dialog_modify_plan.hosting_addons" style="margin-top: 1em;">Addons</h3>
+						<v-layout row wrap v-for="(addon, index) in dialog_modify_plan.hosting_addons">
+						<v-flex xs9 pa-1>
+							<v-text-field label="Name" :value="addon.name" @change.native="addon.name = $event.target.value">
+						</v-flex>
+						<v-flex xs2 pa-1>
+							<v-text-field label="Price" :value="addon.price" @change.native="addon.price = $event.target.value">
+						</v-flex>
+						<v-flex xs1>
+							<v-btn small flat icon @click="removeAddon(index)"><v-icon>delete</v-icon></v-btn>
+						</v-flex>
+						</v-layout>
+						<v-btn small style="margin:0px;" @click="addAddon()">
+							Add Addon
+						</v-btn>
+						<v-layout>
+						<v-flex xs12 text-xs-right>
+							<v-btn color="primary" dark style="margin:0px;" @click="updatePlan()">
+								Save Changes
+							</v-btn>
+						</v-flex>
+						</v-layout>
 					</v-card-text>
 					</v-card>
 				</v-dialog>
@@ -1021,7 +1044,7 @@ Vue.component('file-upload', VueUploadComponent);
 						{{ error }}
 						</v-alert>
 						
-						<v-flex xs12 text-xs-right >
+						<v-flex xs12 text-xs-right>
 							<v-btn right @click="submitEditSite">
 								Save Changes
 							</v-btn>
@@ -1253,7 +1276,7 @@ Vue.component('file-upload', VueUploadComponent);
 									<div class="text-xs-right">
 									    <span v-show="site.subsite_count" class="usage"><v-icon small light>fas fa-network-wired</i></v-icon> Multisite - {{ site.subsite_count }} sites</span>
 										<span v-show="site.provider" class="usage"><v-icon small light>fas fa-server</v-icon> {{ site.provider | formatProvider }}</span>
-										<span v-show="site.views" class="usage"><v-icon small light>fas fa-eye</v-icon> {{ site.views }} <small>yearly</small></span>
+										<span v-show="site.visits" class="usage"><v-icon small light>fas fa-eye</v-icon> {{ site.visits }} <small>yearly</small></span>
 										<span v-show="site.storage" class="usage"><v-icon small light>fas fa-hdd</v-icon> {{ site.storage }}</span>
 									</div>
 								</v-layout>
@@ -1264,10 +1287,13 @@ Vue.component('file-upload', VueUploadComponent);
 								<v-tab :key="1" href="#tab-Site-Management">
 								Site Management<v-icon>fas fa-cog</v-icon>
 								</v-tab>
-								<v-tab :key="6" href="#tab-Sharing" ripple>
+								<v-tab :key="6" href="#tab-SitePlan" ripple @click="viewUsageBreakdown( site.id )">
+									Site Plan <v-icon>far fa-list-alt</v-icon>
+								</v-tab>
+								<v-tab :key="7" href="#tab-Sharing" ripple>
 									Sharing <v-icon>fas fa-user-lock</v-icon>
 								</v-tab>
-								<v-tab :key="7" href="#tab-Advanced" ripple>
+								<v-tab :key="9" href="#tab-Advanced" ripple>
 									Advanced <v-icon>fas fa-cogs</v-icon>
 								</v-tab>
 							</v-tabs>
@@ -1389,7 +1415,7 @@ Vue.component('file-upload', VueUploadComponent);
 											<td>{{ props.item.version }}</td>
 											<td>
 											<div v-if="props.item.status === 'inactive' || props.item.status === 'parent' || props.item.status === 'child'">
-												<v-switch hide-details="true" v-model="props.item.status" false-value="inactive" true-value="active" @change="activateTheme(props.item.name, site.id)"></v-switch>
+												<v-switch hide-details v-model="props.item.status" false-value="inactive" true-value="active" @change="activateTheme(props.item.name, site.id)"></v-switch>
 			 								</div>
 			 								<div v-else>
 			 									{{ props.item.status }}
@@ -1449,7 +1475,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<td>{{ props.item.version }}</td>
 					<td>
 						<div v-if="props.item.status === 'active' || props.item.status === 'inactive'">
-							<v-switch hide-details="true" v-model="props.item.status" false-value="inactive" true-value="active" @change="togglePlugin(props.item.name, props.item.status, site.id)"></v-switch>
+							<v-switch hide-details v-model="props.item.status" false-value="inactive" true-value="active" @change="togglePlugin(props.item.name, props.item.status, site.id)"></v-switch>
 						</div>
 						<div v-else>
 							{{ props.item.status }}
@@ -1727,15 +1753,83 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-tab-item>
 		</v-tabs-items>
 		<v-card v-if="site.environments.filter( key => key.environment == site.environment_selected ).length == 0">
-
 			<v-container fluid>
 			 <div><span>{{ site.environment_selected }} environment not created.</span></div>
 		 </v-container>
-
 		</v-card>
-
 		</v-tab-item>
-		<v-tab-item :key="6" value="tab-Sharing">
+		<v-tab-item :key="6" value="tab-SitePlan">
+			<v-toolbar color="grey lighten-4" dense light flat>
+				<v-toolbar-title>Site Plan</v-toolbar-title>
+				<v-spacer></v-spacer>
+					<v-toolbar-items>
+						<v-btn flat @click="modifyPlan( site.id )">Modify Plan <v-icon dark small>edit</v-icon></v-btn>
+					</v-toolbar-items>
+			</v-toolbar>
+			<v-card>
+				<div v-for="customer in site.customer">
+				<div v-if="typeof customer.hosting_plan.visits_limit == 'string'">
+				<v-card-text>
+				<v-layout align-center justify-left row/>
+					<div style="padding: 10px 10px 10px 20px;">
+						<v-progress-circular :size="50" :value="( customer.usage.storage / ( customer.hosting_plan.storage_limit * 1024 * 1024 * 1024 ) ) * 100 | formatPercentage" color="primary"><small>{{ ( customer.usage.storage / ( customer.hosting_plan.storage_limit * 1024 * 1024 * 1024 ) ) * 100 | formatPercentage }}</small></v-progress-circular>
+					</div>
+					<div style="line-height: 0.85em;">
+						Storage <br /><small>{{ customer.usage.storage | formatGBs }}GB / {{ customer.hosting_plan.storage_limit }}GB</small><br />
+					</div>
+					<div style="padding: 10px 10px 10px 20px;">
+						<v-progress-circular :size="50" :value="( customer.usage.visits / customer.hosting_plan.visits_limit * 100 ) | formatPercentage" color="primary"><small>{{ ( customer.usage.visits / customer.hosting_plan.visits_limit ) * 100 | formatPercentage }}</small></v-progress-circular>
+					</div>
+					<div style="line-height: 0.85em;">
+						Visits <br /><small>{{ customer.usage.visits | formatLargeNumbers }} / {{ customer.hosting_plan.visits_limit | formatLargeNumbers }}</small><br />
+					</div>
+					<div style="padding: 10px 10px 10px 20px;">
+						<v-progress-circular :size="50" :value="( customer.usage.sites / customer.hosting_plan.sites_limit * 100 ) | formatPercentage" color="blue darken-4"><small>{{ ( customer.usage.sites / customer.hosting_plan.sites_limit * 100 ) | formatPercentage }}</small></v-progress-circular>
+					</div>
+					<div  style="line-height: 0.85em;">
+						Sites <br /><small>{{ customer.usage.sites }} / {{ customer.hosting_plan.sites_limit }}</small><br />
+					</div>
+				</v-layout>
+				</v-card-text>
+				<v-alert
+					:value="true"
+					type="info"
+					color="primary"
+				>
+					<strong>{{ customer.hosting_plan.name }} Plan</strong> which supports up to {{ customer.hosting_plan.visits_limit | formatLargeNumbers }} visits, {{ customer.hosting_plan.storage_limit }}GB storage and {{ customer.hosting_plan.sites_limit }} sites.
+				</v-alert>
+				</div>
+				<div v-else>
+				<v-alert
+					:value="true"
+					type="info"
+					color="primary"
+				>
+					Development mode, no plan selected.
+				</v-alert>
+				</div>
+				</div>
+				<v-data-table
+					:headers='[{"text":"Name","value":"name"},{"text":"Storage","value":"Storage"},{"text":"Visits","value":"visits"}]'
+					:items="site.usage_breakdown.sites"
+					item-key="name"
+					hide-actions
+				>
+					<template slot="items" slot-scope="props">
+						<td>{{ props.item.name }}</td>
+						<td>{{ props.item.storage }}GB</td>
+						<td>{{ props.item.visits }}</td>
+					</template>
+					<template slot="footer">
+						<tr>
+							<td>Totals:</td>
+							<td v-for="total in site.usage_breakdown.total" v-html="total"></td>
+						</tr>
+					</template>
+				</v-data-table>
+			</v-card>
+		</v-tab-item>
+		<v-tab-item :key="7" value="tab-Sharing">
 			<v-toolbar color="grey lighten-4" dense light flat>
 				<v-toolbar-title>Sharing</v-toolbar-title>
 				<v-spacer></v-spacer>
@@ -1743,10 +1837,8 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-btn flat>Invite</v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
-			<v-card>
-				<v-card-title>
-					<div>
-						<v-list two-line subheader>
+			<v-layout>
+				<v-list subheader>
 						<v-subheader inset>Customer</v-subheader>
 						<v-list-tile v-for="customer in site.customer" :key="customer.customer_id" avatar @click="">
 							<v-list-tile-avatar>
@@ -1754,13 +1846,7 @@ Vue.component('file-upload', VueUploadComponent);
 							</v-list-tile-avatar>
 							<v-list-tile-content>
 	              <v-list-tile-title>{{ customer.name }}</v-list-tile-title>
-	              <v-list-tile-sub-title></v-list-tile-sub-title>
 	            </v-list-tile-content>
-	            <v-list-tile-action>
-	              <v-btn icon ripple>
-	                <v-icon color="grey lighten-1">info</v-icon>
-	              </v-btn>
-	            </v-list-tile-action>
 	          </v-list-tile>
 	          <v-divider inset></v-divider>
 	          <v-subheader inset>Shared With</v-subheader>
@@ -1770,20 +1856,12 @@ Vue.component('file-upload', VueUploadComponent);
 	            </v-list-tile-avatar>
 	            <v-list-tile-content>
 	              <v-list-tile-title>{{ customer.name }}</v-list-tile-title>
-	              <v-list-tile-sub-title></v-list-tile-sub-title>
 	            </v-list-tile-content>
-	            <v-list-tile-action>
-	              <v-btn icon ripple>
-	                <v-icon color="grey lighten-1">info</v-icon>
-	              </v-btn>
-	            </v-list-tile-action>
 	          </v-list-tile>
 	        </v-list>
-					</div>
-				</v-card-title>
-			</v-card>
+		</v-layout>
 	  </v-tab-item>
-		<v-tab-item :key="7" value="tab-Advanced">
+		<v-tab-item :key="9" value="tab-Advanced">
 			<v-toolbar color="grey lighten-4" dense light flat>
 				<v-toolbar-title>Advanced</v-toolbar-title>
 				<v-spacer></v-spacer>
@@ -1810,12 +1888,6 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-btn left small flat @click="configureFathom( site.id )">
 							<v-icon>bar_chart</v-icon>
 							<span>Configure Fathom Tracker</span>
-						</v-btn>
-						</div>
-						<div>
-						<v-btn left small flat @click="viewUsageBreakdown( site.id )">
-							<v-icon>chrome_reader_mode</v-icon>
-							<span>View Usage Breakdown</span>
 						</v-btn>
 						</div>
 					</div>
@@ -1947,7 +2019,7 @@ new Vue({
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $current_user->user_email; ?>", current_user_email: "<?php echo $current_user->user_email; ?>", filter_toggle: true, filter_options: [] },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
 		dialog_mailgun: { show: false, site: {}, response: "", loading: false },
-		dialog_usage_breakdown: { show: false, site: {}, response: [], company_name: "" },
+		dialog_modify_plan: { show: false, site: {}, hosting_plan: {}, hosting_addons: [], selected_plan: "", customer_name: "" },
 		dialog_toggle: { show: false, site: {} },
 		dialog_theme_and_plugin_checks: { show: false, site: {}, loading: false },
 		dialog_update_settings: { show: false, site_id: null, loading: false },
@@ -1957,6 +2029,10 @@ new Vue({
 		current_user_email: "<?php echo $current_user->user_email; ?>",
 		<?php if ( current_user_can('administrator') ) { ?>
 		role: "administrator",
+		hosting_plans: <?php 
+			$hosting_plans = get_field( "hosting_plans", "option" );
+			$hosting_plans[] = array("name" => "Custom", "visits_limit" => "", "storage_limit" => "", "sites_limit" => "", "price" => "" );
+		echo json_encode($hosting_plans); ?>,
 		dialog_new_site: {
 			provider: "kinsta",
 			show: false,
@@ -2067,6 +2143,20 @@ new Vue({
     } while (fileSizeInBytes > 1024);
 
     return Math.max(fileSizeInBytes, 0.1).toFixed(1) + byteUnits[i];
+		},
+		formatGBs: function (fileSizeInBytes) {
+			fileSizeInBytes = fileSizeInBytes / 1024 / 1024 / 1024;
+			return Math.max(fileSizeInBytes, 0.1).toFixed(2);
+		},
+		formatLargeNumbers: function (number) {
+			if ( isNaN(number) || number == null ) {
+				return null;
+			} else {
+				return number.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,');
+			}
+		},
+		formatPercentage: function (percentage) {
+			return Math.max(percentage, 0.1).toFixed(0);
 		},
 		pretty_timestamp: function (date) {
 			// takes in '2018-06-18 19:44:47' then returns "Monday, Jun 18, 2018, 7:44 PM"
@@ -2573,7 +2663,7 @@ new Vue({
 						Object.keys(site).forEach(function(key) {
 
 							// Skip updating environment_selected and tabs_management
-							if ( key == "environment_selected" || key == "tabs_management" ) {
+							if ( key == "environment_selected" || key == "tabs" || key == "tabs_management" ) {
 								return;
 							}
 
@@ -3058,8 +3148,6 @@ new Vue({
 		viewUsageBreakdown( site_id ) {
 
 			site = this.sites.filter(site => site.id == site_id)[0];
-			this.dialog_usage_breakdown.show = true;
-			this.dialog_usage_breakdown.customer_name = site.customer[0].name;
 
 			var data = {
 				action: 'captaincore_ajax',
@@ -3071,10 +3159,81 @@ new Vue({
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					self.dialog_usage_breakdown.response = response.data;
+					site.usage_breakdown = response.data;
 				})
 				.catch( error => console.log( error ) );
 
+		},
+		modifyPlan( site_id ) {
+			site = this.sites.filter(site => site.id == site_id)[0];
+			this.dialog_modify_plan.site = site;
+			customer = site.customer[0];
+			this.dialog_modify_plan.hosting_addons = customer.hosting_addons;
+			this.dialog_modify_plan.hosting_plan = Object.assign({}, customer.hosting_plan)
+
+			// Adds commas
+			if ( this.dialog_modify_plan.hosting_plan.visits_limit != null ) {
+				this.dialog_modify_plan.hosting_plan.visits_limit = this.dialog_modify_plan.hosting_plan.visits_limit.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+			}
+
+			this.dialog_modify_plan.selected_plan = customer.hosting_plan.name;
+			this.dialog_modify_plan.customer_name = customer.name;
+			this.dialog_modify_plan.show = true;
+		},
+		updatePlan() {
+			site_id = this.dialog_modify_plan.site.id;
+			site = this.sites.filter(site => site.id == site_id)[0];
+			customer = site.customer[0];
+			hosting_plan = Object.assign({}, this.dialog_modify_plan.hosting_plan)
+			hosting_addons = Object.assign({}, this.dialog_modify_plan.hosting_addons)
+
+			// Remove commas
+			hosting_plan.visits_limit = hosting_plan.visits_limit.replace(/,/g, '')
+			customer.hosting_plan = hosting_plan
+			this.dialog_modify_plan.show = false;
+			
+			// New job for progress tracking
+			job_id = Math.round((new Date()).getTime());
+			description = "Updating Plan for " + customer.name;
+			this.jobs.push({"job_id": job_id,"description": description, "status": "done"});
+
+			// Prep AJAX request
+			var data = {
+				'action': 'captaincore_ajax',
+				'post_id': site_id,
+				'command': "updatePlan",
+				'value': { "hosting_plan": hosting_plan, "addons": hosting_addons },
+			};
+
+			self = this;
+
+			jQuery.post(ajaxurl, data, function(response) {
+				
+				// Reset dialog
+				self.dialog_modify_plan = { show: false, site: {}, hosting_plan: {}, hosting_addons: [], selected_plan: "", customer_name: "" };
+
+				// Updates job id with reponsed background job id
+				self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+
+				// Fetch new usage breakdown
+				self.viewUsageBreakdown( site_id )
+				self.fetchSiteInfo( site_id )
+
+			});
+
+		},
+		addAddon() {
+			this.dialog_modify_plan.hosting_addons.push({ "name": "", "price": "" });
+		},
+		removeAddon( remove_item ) {
+			this.dialog_modify_plan.hosting_addons = this.dialog_modify_plan.hosting_addons.filter( (item, index) => index != remove_item );
+		},
+		loadHostingPlan() {
+			selected_plan = this.dialog_modify_plan.selected_plan
+			hosting_plan = this.hosting_plans.filter( plan => plan.name == selected_plan )[0]
+			if ( typeof hosting_plan != "undefined" ) {
+				this.dialog_modify_plan.hosting_plan = hosting_plan
+			}
 		},
 		PushProductionToStaging( site_id ) {
 
