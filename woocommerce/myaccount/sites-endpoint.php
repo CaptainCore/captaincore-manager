@@ -1028,7 +1028,7 @@ Vue.component('file-upload', VueUploadComponent);
 										<v-text-field label="Database Password" :value="key.database_password" @change.native="key.database_password = $event.target.value" required></v-text-field>
 										<div v-if="typeof key.offload_enabled != 'undefined'">
 											<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
-											<div v-if="key.offload_enabled">
+											<div v-if="key.offload_enabled == '1'">
 												<v-text-field label="Offload Access Key" :value="key.offload_access_key" @change.native="key.offload_access_key = $event.target.value" required></v-text-field>
 												<v-text-field label="Offload Secret Key" :value="key.offload_secret_key" @change.native="key.offload_secret_key = $event.target.value" required></v-text-field>
 												<v-text-field label="Offload Bucket" :value="key.offload_bucket" @change.native="key.offload_bucket = $event.target.value" required></v-text-field>
