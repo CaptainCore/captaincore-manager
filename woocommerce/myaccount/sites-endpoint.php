@@ -2349,6 +2349,21 @@ new Vue({
 								}
 							}
 
+							if ( job.command == "updateFathom" ) {
+
+								// Refresh CLI with new Fathom info
+								var data = {
+									'action': 'captaincore_install',
+									'command': "update",
+									'post_id': site_id
+								};
+
+								axios.post( ajaxurl, Qs.stringify( data ) )
+									.then( response => console.log( response.data ) )
+									.catch( error => console.log( error ) );
+
+							}
+
 							if ( job.command == "saveUpdateSettings" ){
 								// to do
 							}
@@ -3811,7 +3826,7 @@ new Vue({
 			// New job for progress tracking
 			job_id = Math.round((new Date()).getTime());
 			description = "Updating Fathom tracker on " + site.name;
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command": "updateFathom"});
 
 			// Prep AJAX request
 			var data = {
