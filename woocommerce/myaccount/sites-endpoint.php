@@ -448,8 +448,8 @@ Vue.component('file-upload', VueUploadComponent);
 				
 				<table>
 				<tr v-for="tracker in dialog_fathom.site.fathom">
-					<td><v-text-field v-model="tracker.domain" label="Domain"></v-text-field></td>
-					<td><v-text-field v-model="tracker.code" label="Code"></v-text-field></td>
+					<td class="pa-1"><v-text-field v-model="tracker.domain" label="Domain"></v-text-field></td>
+					<td class="pa-1"><v-text-field v-model="tracker.code" label="Code"></v-text-field></td>
 					<td>
 						<v-icon small @click="deleteFathomItem(tracker)">delete</v-icon>
 					</td>
