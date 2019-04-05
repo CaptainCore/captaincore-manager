@@ -716,7 +716,7 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-btn icon dark @click.native="dialog_modify_plan.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
-						<v-toolbar-title v-show="role == 'administrator'">Modify plan for {{ dialog_modify_plan.customer_name }}</v-toolbar-title>
+						<v-toolbar-title>Modify plan for {{ dialog_modify_plan.customer_name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text>
@@ -1765,7 +1765,7 @@ Vue.component('file-upload', VueUploadComponent);
 			<v-toolbar color="grey lighten-4" dense light flat>
 				<v-toolbar-title>Site Plan</v-toolbar-title>
 				<v-spacer></v-spacer>
-					<v-toolbar-items>
+					<v-toolbar-items v-show="role == 'administrator'">
 						<v-btn flat @click="modifyPlan( site.id )">Modify Plan <v-icon dark small>edit</v-icon></v-btn>
 					</v-toolbar-items>
 			</v-toolbar>
@@ -2030,12 +2030,12 @@ new Vue({
 		page: 1,
 		jobs: [],
 		current_user_email: "<?php echo $current_user->user_email; ?>",
-		<?php if ( current_user_can('administrator') ) { ?>
-		role: "administrator",
 		hosting_plans: <?php 
 			$hosting_plans = get_field( "hosting_plans", "option" );
 			$hosting_plans[] = array("name" => "Custom", "visits_limit" => "", "storage_limit" => "", "sites_limit" => "", "price" => "" );
 		echo json_encode($hosting_plans); ?>,
+		<?php if ( current_user_can('administrator') ) { ?>
+		role: "administrator",
 		dialog_new_site: {
 			provider: "kinsta",
 			show: false,
@@ -3226,7 +3226,7 @@ new Vue({
 
 		},
 		addAddon() {
-			this.dialog_modify_plan.hosting_addons.push({ "name": "", "price": "" });
+			this.dialog_modify_plan.hosting_addons.push({ "name": "", "quantity": "", "price": "" });
 		},
 		removeAddon( remove_item ) {
 			this.dialog_modify_plan.hosting_addons = this.dialog_modify_plan.hosting_addons.filter( (item, index) => index != remove_item );
