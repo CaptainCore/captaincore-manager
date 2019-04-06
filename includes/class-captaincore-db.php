@@ -494,7 +494,10 @@ class Site {
 		$home_url            = $environments[0]->home_url;
 
 		if ( $fathom == "" ) {
-			$fathom = array();
+			$fathom = array( array(
+				"code"   => "",
+				"domain" => ""
+			));
 		}
 
 		// Prepare site details to be returned
