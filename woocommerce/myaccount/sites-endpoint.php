@@ -1263,7 +1263,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-icon dark>add</v-icon>
 			</v-btn>
 			</div>
-			<v-expansion-panel style="box-shadow: none;">
+			<v-expansion-panel style="box-shadow: none; margin: 0px; padding: 0px">
 		  <v-layout row wrap v-for="site in paginatedSites" :key="site.id" style="padding: 0px;margin:20px 0px;">
 				<v-flex xs1 v-if="advanced_filter == true">
 					<v-switch v-model="site.selected" @change="site_selected = null" style="margin-top: 10px;margin-bottom: 0px;height: 30px;"></v-switch>
