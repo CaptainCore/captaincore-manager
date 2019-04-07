@@ -1263,13 +1263,13 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-icon dark>add</v-icon>
 			</v-btn>
 			</div>
+			<v-expansion-panel style="box-shadow: none;">
 		  <v-layout row wrap v-for="site in paginatedSites" :key="site.id" style="padding: 0px;margin:20px 0px;">
 				<v-flex xs1 v-if="advanced_filter == true">
 					<v-switch v-model="site.selected" @change="site_selected = null" style="margin-top: 10px;margin-bottom: 0px;height: 30px;"></v-switch>
 				</v-flex>
 				<v-flex v-bind:class="{ xs11: advanced_filter }">
 					<v-card class="site">
-						<v-expansion-panel>
 						<v-expansion-panel-content lazy>
 							<div slot="header">
 								<v-layout align-center justify-space-between row>
@@ -1301,9 +1301,7 @@ Vue.component('file-upload', VueUploadComponent);
 								</v-tab>
 							</v-tabs>
 						<v-tabs-items v-model="site.tabs">
-
 							<v-tab-item value="tab-Site-Management">
-
 								<v-tabs v-model="site.tabs_management" color="grey lighten-4" right icons-and-text>
 									<v-select
 										v-model="site.environment_selected"
@@ -1370,7 +1368,6 @@ Vue.component('file-upload', VueUploadComponent);
 
 										 </div>
 										</v-layout>
-										 
 									 </v-container>
 								 </v-card>
 								</v-tab-item>
@@ -1900,10 +1897,11 @@ Vue.component('file-upload', VueUploadComponent);
 	</v-tabs>
 
 						 </v-expansion-panel-content>
-					 </v-expansion-panel>
+					
 			  </v-card>
 			</v-flex>
 		  </v-layout>
+			</v-expansion-panel>
 			<template>
 				<v-container>
 				<v-layout justify-center>
