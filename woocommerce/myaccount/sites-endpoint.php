@@ -777,6 +777,114 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-card>
 				</v-dialog>
 				<v-dialog
+					v-model="dialog_handbook.show"
+					transition="dialog-bottom-transition"
+					:scrollable="true"
+					fullscreen
+					lazy
+				>
+				<v-card tile>
+					<v-toolbar card dark color="primary">
+						<v-btn icon dark @click.native="dialog_handbook.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>Handbook</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-toolbar color="grey lighten-4" dense light flat>
+						<v-toolbar-title>Contains {{ processes.length }} processes</v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-toolbar-items>
+							<v-btn flat>Add new process</v-btn>
+						</v-toolbar-items>
+					</v-toolbar>
+					<v-card-text style="max-height: 100%;">
+					<v-window v-model="handbook_step">
+      		<v-window-item :value="1">
+					<v-container
+						fluid
+						grid-list-lg
+					>
+        <v-layout row wrap>
+          <v-flex xs12 v-for="process in processes">
+						<v-card :hover="true" @click="viewProcess( process.id )">
+						<v-card-title primary-title>
+							<div>
+								<span class="title mb-0" color="primary">{{ process.title }}</a> <v-chip color="primary" text-color="white" flat disabled>{{ process.role }}</v-chip></span>
+								<div class="caption">
+									<v-icon small v-show="process.time_estimate != ''" style="padding:0px 5px">far fa-clock</v-icon>{{ process.time_estimate }} 
+									<v-icon small v-show="process.repeat != '' && process.repeat != null" style="padding:0px 5px">fas fa-redo-alt</v-icon>{{ process.repeat }} 
+									<v-icon small v-show="process.repeat_quantity != '' && process.repeat_quantity != null" style="padding:0px 5px">fas fa-retweet</v-icon>{{ process.repeat_quantity }}
+								</div>
+							</div>
+						</v-card-title>
+						</v-card>
+					</v-flex>
+        	</v-layout>
+					</v-container>
+					</v-window-item>
+					<v-window-item :value="2">
+						<v-card tile>
+						<v-toolbar card dark color="primary">
+							<v-btn icon dark @click.native="handbook_step = 1">
+								<v-icon>close</v-icon>
+							</v-btn>
+							<v-toolbar-title>Process - {{ dialog_handbook.process.title }}</v-toolbar-title>
+							<v-spacer></v-spacer>
+						</v-toolbar>
+						<v-card-text style="max-height: 100%;">
+							<span v-html="dialog_handbook.description"></span>
+						</v-card-text>
+						</v-card>
+					</v-window-item>
+					</v-card-text>
+					</v-card>
+				</v-dialog>
+				<v-dialog
+					v-model="dialog_new_log_entry.show"
+					transition="dialog-bottom-transition"
+					scrollable
+					width="500"
+				>
+				<v-card tile>
+					<v-toolbar card dark color="primary">
+						<v-btn icon dark @click.native="dialog_new_log_entry.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>Add a new log entry for {{ dialog_new_log_entry.site.name }}</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text>
+					<v-container>
+						<v-autocomplete
+							v-model="dialog_new_log_entry.process"
+							:items="processes"
+							item-text="title"
+							item-value="id"
+						>
+						<template v-slot:item="data">
+								<template v-if="typeof data.item !== 'object'">
+									<v-list-tile-content v-text="data.item"></v-list-tile-content>
+								</template>
+								<template v-else>
+									<v-list-tile-content>
+										<v-list-tile-title v-html="data.item.title"></v-list-tile-title>
+										<v-list-tile-sub-title v-html="data.item.repeat + ' - ' + data.item.role"></v-list-tile-sub-title>
+									</v-list-tile-content>
+								</template>
+							</template>
+						</v-autocomplete>
+						<v-textarea label="Description" auto-grow :value="dialog_new_log_entry.description" @change.native="dialog_new_log_entry.description = $event.target.value"></v-textarea>
+						<v-flex xs12 text-xs-right>
+							<v-btn color="primary" dark style="margin:0px;" @click="newLogEntry()">
+								Add Log Entry
+							</v-btn>
+						</v-flex>
+					</v-container>
+					</v-card-text>
+					</v-card>
+				</v-dialog>
+				<v-dialog
 					v-model="dialog_mailgun.show"
 					fullscreen
 					hide-overlay
@@ -1873,6 +1981,9 @@ Vue.component('file-upload', VueUploadComponent);
 			<v-toolbar color="grey lighten-4" dense light flat>
 				<v-toolbar-title>Timeline</v-toolbar-title>
 				<v-spacer></v-spacer>
+				<v-toolbar-items v-show="role == 'administrator'">
+					<v-btn flat @click="showLogEntry(site.id)">New Log Entry  <v-icon dark small>fas fa-check-circle</v-icon></v-btn>
+				</v-toolbar-items>
 			</v-toolbar>
 			<v-card>
 			<v-data-table
@@ -2064,6 +2175,44 @@ new Vue({
 		echo json_encode($hosting_plans); ?>,
 		<?php if ( current_user_can('administrator') ) { ?>
 		role: "administrator",
+		processes: <?php 
+
+			// WP_Query arguments
+			$args = array(
+				'post_type'      => array( 'captcore_process' ),
+				'posts_per_page' => '-1',
+				'order'          => 'ASC',
+				'orderby'        => 'title',
+			);
+
+			// The Query
+			$all_processes = get_posts( $args );
+			$repeat_field  = get_field_object( 'field_57f791d6363f4' );
+			$processes = array();
+
+			foreach ($all_processes as $process) {
+
+				$repeat_value  = get_field( 'repeat', $process->ID );
+				$repeat = $repeat_field['choices'][ $repeat_value ];
+				$role = get_the_terms( $process->ID, 'process_role' );
+					if ( ! empty( $role ) && ! is_wp_error( $role ) ) {
+						$role = join(' ', wp_list_pluck( $role, 'name' ) );
+				}
+
+				$processes[] = (object) [
+					"id"              => $process->ID,
+					"title"           => get_the_title( $process->ID ),
+					"created_at"      => $process->post_date,
+					"time_estimate"   => get_field( 'time_estimate', $process->ID ),
+					"repeat"          => $repeat,
+					"repeat_quantity" => get_field( 'repeat_quantity', $process->ID ),
+					"role"            => $role
+				];
+			}
+		echo json_encode( $processes ); ?>,
+		dialog_new_log_entry: { show: false, site: {}, process: "", description: "" },
+		dialog_handbook: { show: false, process: {}, description: "" },
+		handbook_step: 1,
 		dialog_new_site: {
 			provider: "kinsta",
 			show: false,
@@ -3064,6 +3213,60 @@ new Vue({
 				self.snackbar.show = true;
 
 			});
+
+		},
+		showLogEntry( site_id ){
+			site = this.sites.filter(site => site.id == site_id )[0];
+			this.dialog_new_log_entry.show = true;
+			this.dialog_new_log_entry.site = site;
+		},
+		newLogEntry(  ) {
+
+			site_id = this.dialog_new_log_entry.site.id;
+			site = this.sites.filter(site => site.id == site_id )[0];
+
+			var data = {
+				action: 'captaincore_ajax',
+				post_id: site_id,
+				process_id: this.dialog_new_log_entry.process,
+				command: 'newLogEntry',
+				value: this.dialog_new_log_entry.description
+
+			};
+
+			this.dialog_new_log_entry.show = false;
+			this.dialog_new_log_entry.site = {};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					site.timeline.unshift( response.data );
+					self.dialog_new_log_entry.description = "";
+					self.dialog_new_log_entry.process = "";
+				})
+				.catch( error => console.log( error ) );
+
+		},
+		viewProcess( process_id ) {
+
+			process = this.processes.filter( process => process.id == process_id )[0];
+			this.dialog_handbook.process = process;
+
+			var data = {
+				action: 'captaincore_ajax',
+				post_id: process_id,
+				command: 'fetchProcess',
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.dialog_handbook.description = response.data;
+					self.handbook_step = 2;
+				})
+				.catch( error => console.log( error ) );
 
 		},
 		viewMailgunLogs( site_id ) {

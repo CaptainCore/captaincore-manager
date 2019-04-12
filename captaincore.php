@@ -3307,7 +3307,7 @@ function captaincore_ajax_action_callback() {
 	// Only proceed if access to command 
 	$user = wp_get_current_user();
 	$role_check_admin = in_array( 'administrator', $user->roles );
-	$admin_commands = array( 'updateFathom', 'updatePlan', 'newSite', 'editSite', 'deleteSite' );
+	$admin_commands = array( 'fetchProcess', 'updateFathom', 'updatePlan', 'newSite', 'editSite', 'deleteSite' );
 	if ( ! $role_check_admin && in_array( $_POST['command'], $admin_commands ) ) {
 		echo "Permission defined";
 		wp_die();
@@ -3350,6 +3350,63 @@ function captaincore_ajax_action_callback() {
 		}
 
 		echo json_encode($response);
+
+	}
+
+	if ( $cmd == 'fetchProcess' ) {
+		$process = get_post( $post_id );
+		$content = apply_filters( 'the_content', $process->post_content );
+		echo json_encode( $content );
+	}
+
+	if ( $cmd == 'newLogEntry' ) {
+
+		$process_id = $_POST['process_id'];
+
+		// Create post object
+		$my_post = array(
+			'post_status' => 'publish',
+			'post_type'   => 'captcore_processlog',
+			'post_author' => get_current_user_id(),
+		);
+
+		// Insert the post into the database
+		$process_log_id = wp_insert_post( $my_post );
+
+		// Assign process to ACF relationship field
+		update_field( 'field_57f862ec5b466', $process_id, $process_log_id );
+
+		// Assign website to ACF relationship field
+		update_field( 'field_57fae6d263704', $post_id, $process_log_id );
+
+		// Assign description
+		update_field( 'field_57fc396b04e0a', $value, $process_log_id );
+
+		// Mark completed
+		update_field( 'field_588bb7bd3cab6', 'completed', $process_log_id );           // Sets status field to completed
+		update_field( 'field_588bb8423cab7', date( 'Y-m-d H:i:s' ), $process_log_id );
+
+		// Fetch new process_log and return as json
+		$process_log = get_post( $process_log_id );
+		$process     = get_field( "process", $process_log->ID );
+		$author_id   = $process_log->post_author;
+		$author      = get_the_author_meta( 'display_name', $author_id );
+		$description = get_field("description", $process_log->ID );
+		$description = WPCom_Markdown::get_instance()->transform(
+			$description, array(
+				'id'      => false,
+				'unslash' => false,
+			)
+		);
+
+		$timeline_item = (object) [
+			'title'       => get_the_title( $process[0] ),
+			'author'      => $author,
+			'description' => $description,
+			'created_at'  => $process_log->post_date,
+		];
+
+		echo json_encode( $timeline_item ) ;
 
 	}
 
