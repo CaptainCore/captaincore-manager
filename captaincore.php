@@ -3307,7 +3307,7 @@ function captaincore_ajax_action_callback() {
 	// Only proceed if access to command 
 	$user = wp_get_current_user();
 	$role_check_admin = in_array( 'administrator', $user->roles );
-	$admin_commands = array( 'updateFathom', 'newSite', 'editSite', 'deleteSite' );
+	$admin_commands = array( 'updateFathom', 'updatePlan', 'newSite', 'editSite', 'deleteSite' );
 	if ( ! $role_check_admin && in_array( $_POST['command'], $admin_commands ) ) {
 		echo "Permission defined";
 		wp_die();
