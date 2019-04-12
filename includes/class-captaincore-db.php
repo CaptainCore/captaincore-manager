@@ -520,6 +520,7 @@ class Site {
 		$site_details->provider             = get_field( 'provider', $site->ID );
 		$site_details->filtered             = true;
 		$site_details->usage_breakdown      = array();
+		$site_details->timeline             = array();
 		$site_details->selected             = false;
 		$site_details->loading_plugins      = false;
 		$site_details->loading_themes       = false;

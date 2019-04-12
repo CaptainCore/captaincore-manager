@@ -62,6 +62,11 @@ html {
 	color: inherit;
 }
 
+.theme--light.v-table a,
+.theme--light.v-table a:hover {
+	color: #1976d2;
+}
+
 .v-expansion-panel__header {
 	line-height: 0.8em;
 }
@@ -1296,6 +1301,9 @@ Vue.component('file-upload', VueUploadComponent);
 								<v-tab :key="7" href="#tab-Sharing" ripple>
 									Sharing <v-icon>fas fa-user-lock</v-icon>
 								</v-tab>
+								<v-tab :key="8" href="#tab-Timeline" ripple @click="fetchTimeline( site.id )">
+								  Timeline <v-icon>fas fa-stream</v-icon>
+								</v-tab>
 								<v-tab :key="9" href="#tab-Advanced" ripple>
 									Advanced <v-icon>fas fa-cogs</v-icon>
 								</v-tab>
@@ -1861,6 +1869,28 @@ Vue.component('file-upload', VueUploadComponent);
 	        </v-list>
 		</v-layout>
 	  </v-tab-item>
+		<v-tab-item :key="8" value="tab-Timeline">
+			<v-toolbar color="grey lighten-4" dense light flat>
+				<v-toolbar-title>Timeline</v-toolbar-title>
+				<v-spacer></v-spacer>
+			</v-toolbar>
+			<v-card>
+			<v-data-table
+				:headers='[{"text":"Date","sortable":false,"width":"220"},{"text":"Done by","sortable":false,"width":"135"},{"text":"Name","sortable":false,"width":"165"},{"text":"Notes","sortable":false}]'
+				:items="site.timeline"
+				:disable-initial-sort="true"
+				class="elevation-1"
+				hide-actions
+				>
+				<template slot="items" slot-scope="props">
+					<td>{{ props.item.created_at | pretty_timestamp }}</td>
+					<td>{{ props.item.author }}</td>
+					<td>{{ props.item.title }}</td>
+					<td><span v-html="props.item.description"></span></td>
+				</template>
+			</v-data-table>
+			</v-card>
+		</v-tab-item>
 		<v-tab-item :key="9" value="tab-Advanced">
 			<v-toolbar color="grey lighten-4" dense light flat>
 				<v-toolbar-title>Advanced</v-toolbar-title>
@@ -3176,6 +3206,25 @@ new Vue({
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					site.usage_breakdown = response.data;
+				})
+				.catch( error => console.log( error ) );
+
+		},
+		fetchTimeline( site_id ) {
+
+			site = this.sites.filter(site => site.id == site_id)[0];
+
+			var data = {
+				action: 'captaincore_ajax',
+				post_id: site.id,
+				command: 'timeline'
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					site.timeline = response.data;
 				})
 				.catch( error => console.log( error ) );
 

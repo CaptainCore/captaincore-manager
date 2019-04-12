@@ -3353,6 +3353,49 @@ function captaincore_ajax_action_callback() {
 
 	}
 
+	if ( $cmd == 'timeline' ) {
+		
+		$arguments = array(
+			'post_type'      => 'captcore_processlog',
+			'posts_per_page' => '-1',
+			'meta_query'	=> array(
+				array(
+					'key'	 	=> 'website',
+					'value'	  	=> '"'.$post_id.'"',
+					'compare' 	=> 'LIKE',
+				),
+		));
+
+		$process_logs = get_posts( $arguments );
+
+		$timeline_items = array();
+
+		foreach ($process_logs as $process_log) {
+
+			$process = get_field("process", $process_log->ID );
+			$author_id = $process_log->post_author;
+			$author = get_the_author_meta( 'display_name', $author_id );
+			$description = get_field("description", $process_log->ID );
+			$description = WPCom_Markdown::get_instance()->transform(
+				$description, array(
+					'id'      => false,
+					'unslash' => false,
+				)
+			);
+
+			$timeline_items[] = (object) [
+				'title'       => get_the_title( $process[0] ),
+				'author'      => $author,
+				'description' => $description,
+				'created_at'  => $process_log->post_date,
+			];
+
+		} 
+
+		echo json_encode( $timeline_items ) ;
+
+	}
+
 	if ( $cmd == 'usage-breakdown' ) {
 
 		$customer     = get_field( "customer", $post_id );
