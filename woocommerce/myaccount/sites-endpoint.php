@@ -946,6 +946,50 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-card>
 				</v-dialog>
 				<v-dialog
+					v-model="dialog_edit_log_entry.show"
+					transition="dialog-bottom-transition"
+					scrollable
+					width="500"
+				>
+				<v-card tile>
+					<v-toolbar card dark color="primary">
+						<v-btn icon dark @click.native="dialog_edit_log_entry.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>Edit log entry for {{ dialog_edit_log_entry.site.name }}</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text>
+					<v-container>
+						<v-autocomplete
+							v-model="dialog_edit_log_entry.process"
+							:items="processes"
+							item-text="title"
+							item-value="id"
+						>
+						<template v-slot:item="data">
+								<template v-if="typeof data.item !== 'object'">
+									<v-list-tile-content v-text="data.item"></v-list-tile-content>
+								</template>
+								<template v-else>
+									<v-list-tile-content>
+										<v-list-tile-title v-html="data.item.title"></v-list-tile-title>
+										<v-list-tile-sub-title v-html="data.item.repeat + ' - ' + data.item.role"></v-list-tile-sub-title>
+									</v-list-tile-content>
+								</template>
+							</template>
+						</v-autocomplete>
+						<v-textarea label="Description" auto-grow :value="dialog_edit_log_entry.description" @change.native="dialog_edit_log_entry.description = $event.target.value"></v-textarea>
+						<v-flex xs12 text-xs-right>
+							<v-btn color="primary" dark style="margin:0px;" @click="updateLogEntry()">
+								Update Log Entry
+							</v-btn>
+						</v-flex>
+					</v-container>
+					</v-card-text>
+					</v-card>
+				</v-dialog>
+				<v-dialog
 					v-model="dialog_mailgun.show"
 					fullscreen
 					hide-overlay
@@ -2051,7 +2095,7 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-toolbar>
 			<v-card>
 			<v-data-table
-				:headers='[{"text":"Date","sortable":false,"width":"220"},{"text":"Done by","sortable":false,"width":"135"},{"text":"Name","sortable":false,"width":"165"},{"text":"Notes","sortable":false},{"text":""}]'
+				:headers='[{"text":"Date","value":"date","sortable":false,"width":"220"},{"text":"Done by","value":"done-by","sortable":false,"width":"135"},{"text":"Name","value":"name","sortable":false,"width":"165"},{"text":"Notes","value":"notes","sortable":false},{"text":"","value":""}]'
 				:items="site.timeline"
 				:disable-initial-sort="true"
 				class="elevation-1 timeline"
