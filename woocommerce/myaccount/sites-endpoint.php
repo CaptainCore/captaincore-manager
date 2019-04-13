@@ -795,7 +795,7 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-toolbar-title>Contains {{ processes.length }} processes</v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items>
-							<v-btn flat>Add new process</v-btn>
+							<v-btn flat @click="handbook_step = 3">Add new process</v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
 					<v-card-text style="max-height: 100%;">
@@ -808,9 +808,9 @@ Vue.component('file-upload', VueUploadComponent);
         <v-layout row wrap>
           <v-flex xs12 v-for="process in processes">
 						<v-card :hover="true" @click="viewProcess( process.id )">
-						<v-card-title primary-title>
+						<v-card-title primary-title class="pt-2">
 							<div>
-								<span class="title mb-0" color="primary">{{ process.title }}</a> <v-chip color="primary" text-color="white" flat disabled>{{ process.role }}</v-chip></span>
+								<span class="title">{{ process.title }}</a> <v-chip color="primary" text-color="white" flat disabled>{{ process.role }}</v-chip></span>
 								<div class="caption">
 									<v-icon small v-show="process.time_estimate != ''" style="padding:0px 5px">far fa-clock</v-icon>{{ process.time_estimate }} 
 									<v-icon small v-show="process.repeat != '' && process.repeat != null" style="padding:0px 5px">fas fa-redo-alt</v-icon>{{ process.repeat }} 
@@ -825,15 +825,65 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-window-item>
 					<v-window-item :value="2">
 						<v-card tile>
-						<v-toolbar card dark color="primary">
-							<v-btn icon dark @click.native="handbook_step = 1">
+						<v-toolbar card color="grey lighten-4">
+							<v-btn icon @click.native="handbook_step = 1">
 								<v-icon>close</v-icon>
 							</v-btn>
-							<v-toolbar-title>Process - {{ dialog_handbook.process.title }}</v-toolbar-title>
+							<v-toolbar-title>{{ dialog_handbook.process.title }}</v-toolbar-title>
 							<v-spacer></v-spacer>
 						</v-toolbar>
 						<v-card-text style="max-height: 100%;">
 							<span v-html="dialog_handbook.description"></span>
+						</v-card-text>
+						</v-card>
+					</v-window-item>
+					<v-window-item :value="3">
+					<v-card tile style="margin:auto;max-width:800px">
+						<v-toolbar card color="grey lighten-4">
+							<v-btn icon @click.native="handbook_step = 1">
+								<v-icon>close</v-icon>
+							</v-btn>
+							<v-toolbar-title>New Process</v-toolbar-title>
+							<v-spacer></v-spacer>
+						</v-toolbar>
+						<v-card-text style="max-height: 100%;">
+						<v-container>
+						<v-layout row wrap>
+
+							<v-flex xs12 pa-2>
+								<v-text-field label="Name" :value="new_process.title" @change.native="new_process.title = $event.target.value"></v-text-field>
+							</v-flex>
+
+							<v-flex xs12 sm3 pa-2>
+								<v-text-field label="Time Estimate" hint="Example: 15 minutes" persistent-hint :value="new_process.time_estimate" @change.native="new_process.time_estimate = $event.target.value"></v-text-field>
+							</v-flex>
+
+							<v-flex xs12 sm3 pa-2>
+								<v-select :items='[{"text":"As needed","value":"as-needed"},{"text":"Daily","value":"daily"},{"text":"Weekly","value":"weekly"},{"text":"Monthly","value":"monthly"},{"text":"Yearly","value":"yearly"}]' label="Repeat" :value="new_process.repeat" @change.native="new_process.repeat = $event.target.value"></v-select>
+							</v-flex>
+
+							<v-flex xs12 sm3 pa-2>
+								<v-text-field label="Repeat Quantity"  hint="Example: 2 or 3 times" persistent-hint :value="new_process.repeat_quantity" @change.native="new_process.repeat_quantity = $event.target.value"></v-text-field>
+							</v-flex>
+
+							<v-flex xs12 sm3 pa-2>
+								<v-select :items="new_process_roles" label="Role" hide-details v-model="new_process.role"></v-select>
+							</v-flex>
+
+							<v-flex xs12 pa-2>
+								<v-textarea label="Description" persistent-hint hint="Steps to accomplish this process. Markdown enabled." auto-grow :value="new_process.description" @change.native="new_process.description = $event.target.value"></v-textfield>
+							</v-flex>
+
+							<v-flex xs12 text-xs-right pa-0 ma-0>
+								<v-btn color="primary" dark @click="addNewProcess()">
+									Add New Process
+								</v-btn>
+							</v-flex>
+
+						</v-flex>
+
+							</v-layout>
+    				</v-container>
 						</v-card-text>
 						</v-card>
 					</v-window-item>
@@ -1372,6 +1422,9 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-layout>
 
 			<div class="text-xs-right" v-if="typeof dialog_new_site == 'object'">
+				<v-btn small dark color="blue darken-3" @click="dialog_handbook.show = true">Handbook
+					<v-icon small dark style="padding-left: 0.5em">fas fa-map</v-icon>
+				</v-btn>
 			<v-btn small dark color="blue darken-3" @click="dialog_new_site.show = true">Add Site
 				<v-icon dark>add</v-icon>
 			</v-btn>
@@ -2212,6 +2265,18 @@ new Vue({
 		echo json_encode( $processes ); ?>,
 		dialog_new_log_entry: { show: false, site: {}, process: "", description: "" },
 		dialog_handbook: { show: false, process: {}, description: "" },
+		new_process: { title: "", time_estimate: "", repeat: "as-needed", repeat_quantity: "", role: "", description: "" },
+		new_process_roles: <?php 
+			$roles = get_terms( 'process_role' );
+			$new_roles = array();
+			foreach ($roles as $role) {
+				$new_roles[] = (object) [
+					"text"            => $role->name,
+					"value"           => $role->term_id,
+				];
+			}
+			echo json_encode( $new_roles );
+		?>,
 		handbook_step: 1,
 		dialog_new_site: {
 			provider: "kinsta",
@@ -3265,6 +3330,25 @@ new Vue({
 				.then( response => {
 					self.dialog_handbook.description = response.data;
 					self.handbook_step = 2;
+				})
+				.catch( error => console.log( error ) );
+
+		},
+		addNewProcess() {
+
+			var data = {
+				action: 'captaincore_ajax',
+				command: 'newProcess',
+				value: this.new_process
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.handbook_step = 1
+					self.processes.unshift( response.data );
+					self.new_process = { title: "", time_estimate: "", repeat: "as-needed", repeat_quantity: "", role: "", description: "" };
 				})
 				.catch( error => console.log( error ) );
 

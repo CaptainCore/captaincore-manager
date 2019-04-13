@@ -88,7 +88,8 @@ require 'includes/constellix-api/constellix-api.php';
 require 'includes/woocommerce-custom-password-fields.php';
 require 'includes/mailgun-api.php';
 require 'includes/process-functions.php';
-require 'includes/bulk-actions.php'; // Custom bulk actions.
+require 'includes/bulk-actions.php';
+require 'includes/Parsedown.php';
 
 function captaincore_rewrite() {
 	add_rewrite_rule( '^captaincore-api/([^/]*)/?', 'index.php?pagename=captaincore-api&callback=$matches[1]', 'top' );
@@ -528,7 +529,7 @@ function process_post_type() {
 		'label'               => __( 'Process', 'captaincore' ),
 		'description'         => __( 'Process Description', 'captaincore' ),
 		'labels'              => $labels,
-		'supports'            => array( 'title', 'editor', 'author', 'thumbnail', 'revisions', 'wpcom-markdown' ),
+		'supports'            => array( 'title', 'editor', 'author', 'thumbnail', 'revisions' ),
 		'hierarchical'        => false,
 		'public'              => true,
 		'show_ui'             => true,
@@ -871,17 +872,12 @@ function slug_get_paid_by_me( $object, $field_name, $request ) {
 }
 
 function slug_get_process_description( $object, $field_name, $request ) {
-	jetpack_require_lib( 'markdown' );
 
+	$Parsedown = new Parsedown();
 	$description = get_post_meta( $object['id'], $field_name );
 
 	if ( $description[0] ) {
-		$description = WPCom_Markdown::get_instance()->transform(
-			$description[0], array(
-				'id'      => false,
-				'unslash' => false,
-			)
-		);
+		$description = $Parsedown->text( $description[0] );
 	} else {
 		// ACF field should be in an array if not then return nothing via API.
 		$description = '';
@@ -3307,7 +3303,7 @@ function captaincore_ajax_action_callback() {
 	// Only proceed if access to command 
 	$user = wp_get_current_user();
 	$role_check_admin = in_array( 'administrator', $user->roles );
-	$admin_commands = array( 'fetchProcess', 'updateFathom', 'updatePlan', 'newSite', 'editSite', 'deleteSite' );
+	$admin_commands = array( 'newProcess', 'fetchProcess', 'updateFathom', 'updatePlan', 'newSite', 'editSite', 'deleteSite' );
 	if ( ! $role_check_admin && in_array( $_POST['command'], $admin_commands ) ) {
 		echo "Permission defined";
 		wp_die();
@@ -3353,10 +3349,56 @@ function captaincore_ajax_action_callback() {
 
 	}
 
+	if ( $cmd == 'newProcess' ) {
+
+		$process = (object) $value;
+
+		// Create post object
+		$new_process = array(
+			'post_status' => 'publish',
+			'post_type'   => 'captcore_process',
+			'post_title'  => $process->title,
+			'post_author' => get_current_user_id(),
+		);
+
+		// Insert the post into the database
+		$process_id = wp_insert_post( $new_process );
+
+		update_field( 'time_estimate', $process->time_estimate, $process_id );
+		update_field( 'repeat', $process->repeat, $process_id );
+		update_field( 'repeat_quantity', $process->repeat_quantity, $process_id );
+		update_field( 'description', $process->description, $process_id );
+		wp_set_post_terms( $process_id, $process->role, 'process_role' );
+
+		// Prepare to send back
+		$all_processes = get_posts( $args );
+		$repeat_field  = get_field_object( 'field_57f791d6363f4' );
+
+		$process = get_post( $process_id );
+		$repeat_value  = get_field( 'repeat', $process->ID  );
+		$repeat = $repeat_field['choices'][ $repeat_value ];
+		$role = get_the_terms( $process->ID , 'process_role' );
+			if ( ! empty( $role ) && ! is_wp_error( $role ) ) {
+				$role = join(' ', wp_list_pluck( $role, 'name' ) );
+		}
+
+		$process_added = (object) [
+			"id"              => $process->ID,
+			"title"           => get_the_title( $process->ID ),
+			"created_at"      => $process->post_date,
+			"time_estimate"   => get_field( 'time_estimate', $process->ID ),
+			"repeat"          => $repeat,
+			"repeat_quantity" => get_field( 'repeat_quantity', $process->ID ),
+			"role"            => $role
+		];
+
+		echo json_encode( $process_added );
+	}
+
 	if ( $cmd == 'fetchProcess' ) {
-		$process = get_post( $post_id );
-		$content = apply_filters( 'the_content', $process->post_content );
-		echo json_encode( $content );
+		$Parsedown = new Parsedown();
+		$description = $Parsedown->text( get_field("description", $post_id ) );
+		echo json_encode( $description );
 	}
 
 	if ( $cmd == 'newLogEntry' ) {
@@ -3387,17 +3429,12 @@ function captaincore_ajax_action_callback() {
 		update_field( 'field_588bb8423cab7', date( 'Y-m-d H:i:s' ), $process_log_id );
 
 		// Fetch new process_log and return as json
+		$Parsedown = new Parsedown();
 		$process_log = get_post( $process_log_id );
 		$process     = get_field( "process", $process_log->ID );
 		$author_id   = $process_log->post_author;
 		$author      = get_the_author_meta( 'display_name', $author_id );
-		$description = get_field("description", $process_log->ID );
-		$description = WPCom_Markdown::get_instance()->transform(
-			$description, array(
-				'id'      => false,
-				'unslash' => false,
-			)
-		);
+		$description = $Parsedown->text( get_field("description", $process_log->ID ) );
 
 		$timeline_item = (object) [
 			'title'       => get_the_title( $process[0] ),
@@ -3425,6 +3462,7 @@ function captaincore_ajax_action_callback() {
 
 		$process_logs = get_posts( $arguments );
 
+		$Parsedown = new Parsedown();
 		$timeline_items = array();
 
 		foreach ($process_logs as $process_log) {
@@ -3432,13 +3470,7 @@ function captaincore_ajax_action_callback() {
 			$process = get_field("process", $process_log->ID );
 			$author_id = $process_log->post_author;
 			$author = get_the_author_meta( 'display_name', $author_id );
-			$description = get_field("description", $process_log->ID );
-			$description = WPCom_Markdown::get_instance()->transform(
-				$description, array(
-					'id'      => false,
-					'unslash' => false,
-				)
-			);
+			$description = $Parsedown->text( get_field("description", $process_log->ID ) );
 
 			$timeline_items[] = (object) [
 				'title'       => get_the_title( $process[0] ),
