@@ -2267,7 +2267,7 @@ new Vue({
 		dialog_handbook: { show: false, process: {}, description: "" },
 		new_process: { title: "", time_estimate: "", repeat: "as-needed", repeat_quantity: "", role: "", description: "" },
 		new_process_roles: <?php 
-			$roles = get_terms( 'process_role' );
+			$roles = get_terms( 'process_role', array( 'hide_empty' => false, 'parent' => 0 ) );
 			$new_roles = array();
 			foreach ($roles as $role) {
 				$new_roles[] = (object) [
