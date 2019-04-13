@@ -2098,7 +2098,7 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-toolbar>
 			<v-card>
 			<v-data-table
-				:headers='[{"text":"Date","value":"date","sortable":false,"width":"220"},{"text":"Done by","value":"done-by","sortable":false,"width":"135"},{"text":"Name","value":"name","sortable":false,"width":"165"},{"text":"Notes","value":"notes","sortable":false},{"text":"","value":""}]'
+				:headers="header_timeline"
 				:items="site.timeline"
 				:disable-initial-sort="true"
 				class="elevation-1 timeline"
@@ -2109,7 +2109,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<td class="justify-center">{{ props.item.author }}</td>
 					<td class="justify-center">{{ props.item.title }}</td>
 					<td class="justify-center" v-html="props.item.description"></td>
-					<td v-show="role == 'administrator'"><v-icon
+					<td v-if="role == 'administrator'"><v-icon
             small
             class="mr-2"
             @click="editLogEntry(site.id, props.item.id)"
@@ -2357,14 +2357,25 @@ new Vue({
 			],
 		},
 		customers: [],
-		shared_with: [
-
+		shared_with: [],
+		header_timeline: [
+			{"text":"Date","value":"date","sortable":false,"width":"220"},
+			{"text":"Done by","value":"done-by","sortable":false,"width":"135"},
+			{"text":"Name","value":"name","sortable":false,"width":"165"},
+			{"text":"Notes","value":"notes","sortable":false},
+			{"text":"","value":"","sortable":false},
 		],
 		<?php } else { ?>
 		role: "",
 		dialog_new_site: false,
 		customers: [],
-		shared_with: [],<?php } ?>
+		shared_with: [],
+		header_timeline: [
+			{"text":"Date","value":"date","sortable":false,"width":"220"},
+			{"text":"Done by","value":"done-by","sortable":false,"width":"135"},
+			{"text":"Name","value":"name","sortable":false,"width":"165"},
+			{"text":"Notes","value":"notes","sortable":false},
+		],<?php } ?>
 		new_plugin: { show: false, site_id: null},
 		new_theme: { show: false, site_id: null},
 		bulk_edit: { show: false, site_id: null, type: null, items: [] },
