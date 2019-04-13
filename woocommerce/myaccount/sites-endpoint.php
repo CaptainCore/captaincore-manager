@@ -788,6 +788,7 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-card>
 				</v-dialog>
 				<v-dialog
+					v-if="role == 'administrator'"
 					v-model="dialog_handbook.show"
 					transition="dialog-bottom-transition"
 					:scrollable="true"
@@ -902,6 +903,7 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-card>
 				</v-dialog>
 				<v-dialog
+					v-if="role == 'administrator'"
 					v-model="dialog_new_log_entry.show"
 					transition="dialog-bottom-transition"
 					scrollable
@@ -946,6 +948,7 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-card>
 				</v-dialog>
 				<v-dialog
+					v-if="role == 'administrator'"
 					v-model="dialog_edit_log_entry.show"
 					transition="dialog-bottom-transition"
 					scrollable
