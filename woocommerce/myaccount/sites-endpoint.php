@@ -67,6 +67,17 @@ html {
 	color: #1976d2;
 }
 
+.timeline .theme--light.v-table p {
+	margin-bottom: 0px;
+	padding-bottom: 0px;
+	line-height: initial;
+}
+
+.timeline table.theme--light.v-table tbody td {
+	vertical-align: top;
+	padding: 1.2em 1.8em;
+}
+
 .v-expansion-panel__header {
 	line-height: 0.8em;
 }
@@ -2040,17 +2051,24 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-toolbar>
 			<v-card>
 			<v-data-table
-				:headers='[{"text":"Date","sortable":false,"width":"220"},{"text":"Done by","sortable":false,"width":"135"},{"text":"Name","sortable":false,"width":"165"},{"text":"Notes","sortable":false}]'
+				:headers='[{"text":"Date","sortable":false,"width":"220"},{"text":"Done by","sortable":false,"width":"135"},{"text":"Name","sortable":false,"width":"165"},{"text":"Notes","sortable":false},{"text":""}]'
 				:items="site.timeline"
 				:disable-initial-sort="true"
-				class="elevation-1"
+				class="elevation-1 timeline"
 				hide-actions
 				>
 				<template slot="items" slot-scope="props">
-					<td>{{ props.item.created_at | pretty_timestamp }}</td>
-					<td>{{ props.item.author }}</td>
-					<td>{{ props.item.title }}</td>
-					<td><span v-html="props.item.description"></span></td>
+					<td class="justify-center">{{ props.item.created_at | pretty_timestamp }}</td>
+					<td class="justify-center">{{ props.item.author }}</td>
+					<td class="justify-center">{{ props.item.title }}</td>
+					<td class="justify-center" v-html="props.item.description"></td>
+					<td v-show="role == 'administrator'"><v-icon
+            small
+            class="mr-2"
+            @click="editLogEntry(site.id, props.item.id)"
+          >
+            edit
+          </v-icon></td>
 				</template>
 			</v-data-table>
 			</v-card>
@@ -2264,6 +2282,7 @@ new Vue({
 			}
 		echo json_encode( $processes ); ?>,
 		dialog_new_log_entry: { show: false, site: {}, process: "", description: "" },
+		dialog_edit_log_entry: { id: "", show: false, site: {}, process: "", description: "" },
 		dialog_handbook: { show: false, process: {}, description: "" },
 		new_process: { title: "", time_estimate: "", repeat: "as-needed", repeat_quantity: "", role: "", description: "" },
 		new_process_roles: <?php 
@@ -3285,8 +3304,7 @@ new Vue({
 			this.dialog_new_log_entry.show = true;
 			this.dialog_new_log_entry.site = site;
 		},
-		newLogEntry(  ) {
-
+		newLogEntry() {
 			site_id = this.dialog_new_log_entry.site.id;
 			site = this.sites.filter(site => site.id == site_id )[0];
 
@@ -3296,7 +3314,6 @@ new Vue({
 				process_id: this.dialog_new_log_entry.process,
 				command: 'newLogEntry',
 				value: this.dialog_new_log_entry.description
-
 			};
 
 			this.dialog_new_log_entry.show = false;
@@ -3311,6 +3328,44 @@ new Vue({
 					self.dialog_new_log_entry.process = "";
 				})
 				.catch( error => console.log( error ) );
+		},
+		updateLogEntry() {
+			site_id = this.dialog_edit_log_entry.site.id;
+			site = this.sites.filter(site => site.id == site_id )[0];
+
+			var data = {
+				action: 'captaincore_ajax',
+				post_id: site_id,
+				log_id: this.dialog_edit_log_entry.id,
+				process_id: this.dialog_edit_log_entry.process,
+				command: 'updateLogEntry',
+				value: this.dialog_edit_log_entry.description
+			};
+
+			this.dialog_edit_log_entry.show = false;
+			this.dialog_edit_log_entry.site = {};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					site.timeline = response.data;
+					self.dialog_edit_log_entry.description = "";
+					self.dialog_edit_log_entry.process = "";
+					self.dialog_edit_log_entry.id = ""
+				})
+				.catch( error => console.log( error ) );
+		},
+		editLogEntry( site_id, log_id ) {
+
+			site = this.sites.filter(site => site.id == site_id )[0];
+			this.dialog_edit_log_entry.show = true;
+			this.dialog_edit_log_entry.site = site;
+			this.dialog_edit_log_entry.id = log_id;
+
+			log_entry = site.timeline.filter( log => log.id == log_id )[0]
+			this.dialog_edit_log_entry.description = log_entry.description_raw
+			this.dialog_edit_log_entry.process = log_entry.process_id
 
 		},
 		viewProcess( process_id ) {

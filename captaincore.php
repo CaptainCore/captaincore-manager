@@ -3303,7 +3303,7 @@ function captaincore_ajax_action_callback() {
 	// Only proceed if access to command 
 	$user = wp_get_current_user();
 	$role_check_admin = in_array( 'administrator', $user->roles );
-	$admin_commands = array( 'newProcess', 'fetchProcess', 'updateFathom', 'updatePlan', 'newSite', 'editSite', 'deleteSite' );
+	$admin_commands = array( 'updateLogEntry', 'newLogEntry', 'newProcess', 'fetchProcess', 'updateFathom', 'updatePlan', 'newSite', 'editSite', 'deleteSite' );
 	if ( ! $role_check_admin && in_array( $_POST['command'], $admin_commands ) ) {
 		echo "Permission defined";
 		wp_die();
@@ -3437,13 +3437,44 @@ function captaincore_ajax_action_callback() {
 		$description = $Parsedown->text( get_field("description", $process_log->ID ) );
 
 		$timeline_item = (object) [
-			'title'       => get_the_title( $process[0] ),
-			'author'      => $author,
-			'description' => $description,
-			'created_at'  => $process_log->post_date,
+			'id'              => $process_log->ID,
+			'process_id'      => $process[0],
+			'title'           => get_the_title( $process[0] ),
+			'author'          => $author,
+			'description'     => $description,
+			'description_raw' => get_field("description", $process_log->ID ),
+			'created_at'      => $process_log->post_date,
 		];
 
 		echo json_encode( $timeline_item ) ;
+
+	}
+
+	if ( $cmd == 'updateLogEntry' ) {
+
+		$process_id = $_POST['process_id'];
+
+		$process_log = get_post($_POST['log_id'] );
+		$process_log->post_author = get_current_user_id();
+
+		// Insert the post into the database
+		$process_log_id = wp_insert_post( $my_post );
+
+		// Assign process to ACF relationship field
+		update_field( 'field_57f862ec5b466', $process_id, $process_log->ID );
+
+		// Assign website to ACF relationship field
+		update_field( 'field_57fae6d263704', $post_id, $process_log->ID );
+
+		// Assign description
+		update_field( 'field_57fc396b04e0a', $value, $process_log->ID );
+
+		// Mark completed
+		update_field( 'field_588bb7bd3cab6', 'completed', $process_log->ID );           // Sets status field to completed
+		update_field( 'field_588bb8423cab7', date( 'Y-m-d H:i:s' ), $process_log->ID );
+
+		// Respond with updated timeline for site
+		$cmd = 'timeline';
 
 	}
 
@@ -3473,10 +3504,13 @@ function captaincore_ajax_action_callback() {
 			$description = $Parsedown->text( get_field("description", $process_log->ID ) );
 
 			$timeline_items[] = (object) [
-				'title'       => get_the_title( $process[0] ),
-				'author'      => $author,
-				'description' => $description,
-				'created_at'  => $process_log->post_date,
+				'id'              => $process_log->ID,
+				'process_id'      => $process[0],
+				'title'           => get_the_title( $process[0] ),
+				'author'          => $author,
+				'description'     => $description,
+				'description_raw' => get_field("description", $process_log->ID ),
+				'created_at'      => $process_log->post_date,
 			];
 
 		} 
