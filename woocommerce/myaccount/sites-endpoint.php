@@ -12,10 +12,10 @@ if ( $role_check ) {
 
 	}
 
-	$current_user = wp_get_current_user();
-	$belongs_to = get_field("partner", "user_{$current_user->ID}");
+	$current_user  = wp_get_current_user();
+	$belongs_to    = get_field( 'partner', "user_{$current_user->ID}" );
 	$business_name = get_the_title( $belongs_to[0] );
-	$business_link = get_field( "partner_link", $belongs_to[0] );
+	$business_link = get_field( 'partner_link', $belongs_to[0] );
 
 ?>
 
@@ -2314,13 +2314,23 @@ new Vue({
 		page: 1,
 		jobs: [],
 		current_user_email: "<?php echo $current_user->user_email; ?>",
-		hosting_plans: <?php 
-			$hosting_plans = get_field( "hosting_plans", "option" );
-			$hosting_plans[] = array("name" => "Custom", "visits_limit" => "", "storage_limit" => "", "sites_limit" => "", "price" => "" );
-		echo json_encode($hosting_plans); ?>,
-		<?php if ( current_user_can('administrator') ) { ?>
+		hosting_plans: 
+		<?php
+			$hosting_plans   = get_field( 'hosting_plans', 'option' );
+			$hosting_plans[] = array(
+				'name'          => 'Custom',
+				'visits_limit'  => '',
+				'storage_limit' => '',
+				'sites_limit'   => '',
+				'price'         => '',
+			);
+		echo json_encode( $hosting_plans );
+		?>
+		,
+		<?php if ( current_user_can( 'administrator' ) ) { ?>
 		role: "administrator",
-		processes: <?php 
+		processes: 
+			<?php
 
 			// WP_Query arguments
 			$args = array(
@@ -2333,43 +2343,53 @@ new Vue({
 			// The Query
 			$all_processes = get_posts( $args );
 			$repeat_field  = get_field_object( 'field_57f791d6363f4' );
-			$processes = array();
+				   $processes     = array();
 
-			foreach ($all_processes as $process) {
+			foreach ( $all_processes as $process ) {
 
-				$repeat_value  = get_field( 'repeat', $process->ID );
-				$repeat = $repeat_field['choices'][ $repeat_value ];
-				$role = get_the_terms( $process->ID, 'process_role' );
+				$repeat_value = get_field( 'repeat', $process->ID );
+				$repeat       = $repeat_field['choices'][ $repeat_value ];
+				$role         = get_the_terms( $process->ID, 'process_role' );
 					if ( ! empty( $role ) && ! is_wp_error( $role ) ) {
-						$role = join(' ', wp_list_pluck( $role, 'name' ) );
+					   $role = join( ' ', wp_list_pluck( $role, 'name' ) );
 				}
 
 				$processes[] = (object) [
-					"id"              => $process->ID,
-					"title"           => get_the_title( $process->ID ),
-					"created_at"      => $process->post_date,
-					"time_estimate"   => get_field( 'time_estimate', $process->ID ),
-					"repeat"          => $repeat,
-					"repeat_quantity" => get_field( 'repeat_quantity', $process->ID ),
-					"role"            => $role
+							'id'              => $process->ID,
+							'title'           => get_the_title( $process->ID ),
+							'created_at'      => $process->post_date,
+							'time_estimate'   => get_field( 'time_estimate', $process->ID ),
+							'repeat'          => $repeat,
+							'repeat_quantity' => get_field( 'repeat_quantity', $process->ID ),
+							'role'            => $role,
 				];
 			}
-		echo json_encode( $processes ); ?>,
+					echo json_encode( $processes );
+			?>
+		,
 		dialog_new_log_entry: { show: false, site: {}, process: "", description: "" },
 		dialog_edit_log_entry: { id: "", show: false, site: {}, process: "", description: "" },
 		dialog_handbook: { show: false, process: {}, description: "" },
 		new_process: { title: "", time_estimate: "", repeat: "as-needed", repeat_quantity: "", role: "", description: "" },
-		new_process_roles: <?php 
-			$roles = get_terms( 'process_role', array( 'hide_empty' => false, 'parent' => 0 ) );
+		new_process_roles: 
+			<?php
+			$roles     = get_terms(
+				'process_role',
+				array(
+					'hide_empty' => false,
+					'parent'     => 0,
+				)
+			);
 			$new_roles = array();
-			foreach ($roles as $role) {
+			foreach ( $roles as $role ) {
 				$new_roles[] = (object) [
-					"text"            => $role->name,
-					"value"           => $role->term_id,
+					'text'  => $role->name,
+					'value' => $role->term_id,
 				];
 			}
 			echo json_encode( $new_roles );
-		?>,
+			?>
+		,
 		handbook_step: 1,
 		dialog_new_site: {
 			provider: "kinsta",
