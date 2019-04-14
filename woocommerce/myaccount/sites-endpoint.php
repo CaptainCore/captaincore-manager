@@ -72,6 +72,22 @@ html {
 	padding-bottom: 0px;
 	line-height: initial;
 }
+.timeline .theme--light.v-table ul {
+	margin: 5px 0px;
+}
+.timeline .theme--light.v-table li {
+    list-style: disc;
+    margin-left: 1.5em;
+}
+.timeline .theme--light.v-table h1,
+.timeline .theme--light.v-table h2,
+.timeline .theme--light.v-table h3,
+.timeline .theme--light.v-table h4,
+.timeline .theme--light.v-table h5,
+.timeline .theme--light.v-table h6 {
+	margin: 0px;
+}
+
 
 .timeline table.theme--light.v-table tbody td {
 	vertical-align: top;
@@ -80,6 +96,23 @@ html {
 
 .v-expansion-panel__header {
 	line-height: 0.8em;
+}
+
+ul.v-expansion-panel.theme--light {
+    margin: 0px;
+    padding: 0px;
+}
+
+ul.v-expansion-panel.theme--light.toggleSelect {
+    padding-left: 56px;
+}
+
+.v-expansion-panel--inset .v-expansion-panel__container, .v-expansion-panel--popout .v-expansion-panel__container {
+    max-width: 100%;
+}
+
+.v-expansion-panel--inset .v-expansion-panel__container--active, .v-expansion-panel--popout .v-expansion-panel__container--active {
+	margin: 16px 0px;
 }
 
 table.v-table tbody td, table.v-table tbody th {
@@ -1487,14 +1520,8 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-icon dark>add</v-icon>
 			</v-btn>
 			</div>
-			<v-expansion-panel style="box-shadow: none; margin: 0px; padding: 0px; display: block;">
-		  <v-layout row wrap v-for="site in paginatedSites" :key="site.id" style="padding: 0px;margin:20px 0px;">
-				<v-flex xs1 v-if="advanced_filter == true">
-					<v-switch v-model="site.selected" @change="site_selected = null" style="margin-top: 10px;margin-bottom: 0px;height: 30px;"></v-switch>
-				</v-flex>
-				<v-flex v-bind:class="{ xs11: advanced_filter }">
-					<v-card class="site">
-						<v-expansion-panel-content lazy>
+				<v-expansion-panel style="margin-top: 20px" v-bind:class='{ "toggleSelect": advanced_filter }' popout>
+						<v-expansion-panel-content lazy v-for="site in paginatedSites" :key="site.id" class="site"> 
 							<div slot="header">
 								<v-layout align-center justify-space-between row>
 									<div>
@@ -1508,9 +1535,7 @@ Vue.component('file-upload', VueUploadComponent);
 									</div>
 								</v-layout>
 							</div>
-							<v-tabs v-model="site.tabs" color="blue darken-3"
-				 		 dark
-				 		 >
+							<v-tabs v-model="site.tabs" color="blue darken-3" dark>
 								<v-tab :key="1" href="#tab-Site-Management">
 								Site Management<v-icon>fas fa-cog</v-icon>
 								</v-tab>
@@ -1570,7 +1595,7 @@ Vue.component('file-upload', VueUploadComponent);
 											<v-spacer></v-spacer>
 										</v-toolbar>
 
-										<v-card v-for="key in site.environments" v-show="key.environment == site.environment_selected">
+										<v-card v-for="key in site.environments" v-show="key.environment == site.environment_selected" flat>
 
 											<v-container fluid style="padding-top: 10px;">
 											<v-layout align-start justify-space-between/>
@@ -1610,6 +1635,7 @@ Vue.component('file-upload', VueUploadComponent);
 									<v-card 
 									v-for="key in site.environments"
 									v-show="key.environment == site.environment_selected"
+									flat
 									>
 									<v-card-title v-if="typeof key.themes == 'string'">
 										<div>
@@ -1669,6 +1695,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-card 
 					v-for="key in site.environments"
 					v-show="key.environment == site.environment_selected"
+				flat
 				>
 				<v-card-title v-if="typeof key.plugins == 'string'">
 					<div>
@@ -1738,6 +1765,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-card 
 					v-for="key in site.environments"
 					v-show="key.environment == site.environment_selected"
+					flat
 					>
 					<v-card-title v-if="typeof key.users == 'string'">
 						<div>
@@ -1790,7 +1818,9 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-toolbar>
 				<v-card 
 				  v-for="key in site.environments"
-					v-show="key.environment == site.environment_selected" >
+					v-show="key.environment == site.environment_selected" 
+					flat
+				>
 					<v-card-title v-if="typeof key.update_logs == 'string'">
 						<div>
 							Fetching update logs...
@@ -1822,7 +1852,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Scripts</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
-				<v-card>
+				<v-card flat>
 					<v-card-title>
 						<div>
 							<div><v-btn small flat @click="viewApplyHttpsUrls(site.id)">
@@ -1852,7 +1882,8 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-toolbar>
 						<v-card 
 						v-for="key in site.environments"
-						v-show="key.environment == site.environment_selected">
+						v-show="key.environment == site.environment_selected"
+						flat>
 							<v-card-title v-if="typeof key.quicksaves == 'string'">
 								<div>
 									Fetching quicksaves...
@@ -1888,7 +1919,7 @@ Vue.component('file-upload', VueUploadComponent);
 											<v-btn flat @click="viewQuicksavesChanges( site.id, quicksave)">View Changes</v-btn>
 										</v-toolbar-items>
 									</v-toolbar>
-									<v-card v-show="quicksave.view_changes == true" style="table-layout:fixed;margin:0px;overflow: scroll;padding: 0px;position: absolute;background-color: #fff;width: 100%;left: 0;top: 100%;height: 100%;z-index: 3;transform: translateY(-100%);">
+									<v-card flat v-show="quicksave.view_changes == true" style="table-layout:fixed;margin:0px;overflow: scroll;padding: 0px;position: absolute;background-color: #fff;width: 100%;left: 0;top: 100%;height: 100%;z-index: 3;transform: translateY(-100%);">
 										<v-toolbar color="dark primary" dark dense light>
 											<v-btn icon dark @click.native="quicksave.view_changes = false">
 					              <v-icon>close</v-icon>
@@ -1979,7 +2010,7 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-card>
 			</v-tab-item>
 		</v-tabs-items>
-		<v-card v-if="site.environments.filter( key => key.environment == site.environment_selected ).length == 0">
+		<v-card flat v-if="site.environments.filter( key => key.environment == site.environment_selected ).length == 0">
 			<v-container fluid>
 			 <div><span>{{ site.environment_selected }} environment not created.</span></div>
 		 </v-container>
@@ -1993,7 +2024,7 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-btn flat @click="modifyPlan( site.id )">Modify Plan <v-icon dark small>edit</v-icon></v-btn>
 					</v-toolbar-items>
 			</v-toolbar>
-			<v-card>
+			<v-card flat>
 				<div v-for="customer in site.customer">
 				<div v-if="typeof customer.hosting_plan.visits_limit == 'string'">
 				<v-card-text>
@@ -2096,7 +2127,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-btn flat @click="showLogEntry(site.id)">New Log Entry  <v-icon dark small>fas fa-check-circle</v-icon></v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
-			<v-card>
+			<v-card flat>
 			<v-data-table
 				:headers="header_timeline"
 				:items="site.timeline"
@@ -2130,7 +2161,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-btn flat @click="deleteSite(site.id)" v-show="role == 'administrator'">Remove Site <v-icon dark small>delete</v-icon></v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
-			<v-card>
+			<v-card flat>
 				<v-card-title>
 					<div>
 						<div v-show="site.provider == 'kinsta'">
@@ -2156,10 +2187,6 @@ Vue.component('file-upload', VueUploadComponent);
 	</v-tabs>
 
 						 </v-expansion-panel-content>
-					
-			  </v-card>
-			</v-flex>
-		  </v-layout>
 			</v-expansion-panel>
 			<template>
 				<v-container>
