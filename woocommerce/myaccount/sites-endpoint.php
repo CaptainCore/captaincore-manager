@@ -1651,7 +1651,6 @@ Vue.component('file-upload', VueUploadComponent);
 										:loading="site.loading_themes"
 										item-key="name"
 										value="name"
-										class="elevation-1"
 										select-all
 										hide-actions
 										>
@@ -1712,7 +1711,6 @@ Vue.component('file-upload', VueUploadComponent);
 					v-model="site.plugins_selected"
 					item-key="name"
 					value="name"
-					class="elevation-1"
 					select-all
 					hide-actions
 				 >
@@ -1781,7 +1779,7 @@ Vue.component('file-upload', VueUploadComponent);
 							:items="key.users"
 							item-key="user_login"
 							v-model="site.users_selected"
-							class="elevation-1 table_users"
+							class="table_users"
 							select-all
 						>
 					    <template slot="items" slot-scope="props">
@@ -1832,7 +1830,7 @@ Vue.component('file-upload', VueUploadComponent);
 								:headers='header_updatelog'
 								:items="key.update_logs"
 								:pagination.sync="site.update_logs_pagination"
-								class="elevation-1 update_logs"
+								class="update_logs"
 								:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
 							>
 						    <template slot="items" slot-scope="props">
@@ -2132,7 +2130,7 @@ Vue.component('file-upload', VueUploadComponent);
 				:headers="header_timeline"
 				:items="site.timeline"
 				:disable-initial-sort="true"
-				class="elevation-1 timeline"
+				class="timeline"
 				hide-actions
 				>
 				<template slot="items" slot-scope="props">
