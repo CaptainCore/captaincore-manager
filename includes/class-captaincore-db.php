@@ -476,6 +476,8 @@ class Site {
 			$site = get_post( $site_id );
 		}
 
+		$upload_dir   = wp_upload_dir();
+
 		// Fetch relating environments
 		$db_environments = new environments();
 		$environments    = $db_environments->fetch_environments( $site->ID );
@@ -631,7 +633,15 @@ class Site {
 			'offload_secret_key'      => $environments[0]->offload_secret_key,
 			'offload_bucket'          => $environments[0]->offload_bucket,
 			'offload_path'            => $environments[0]->offload_path,
+			'screenshot'              => intval( $environments[0]->screenshot ),
+			'screenshot_small'        => '',
+			'screenshot_large'        => '',
 		);
+
+		if ( intval( $environments[0]->screenshot ) ) {
+			$site_details->environments[0]['screenshot_small'] = $upload_dir['baseurl'] . "/screenshots/{$site_details->site}_{$site_details->id}/production/screenshot-100.png";
+			$site_details->environments[0]['screenshot_large'] = $upload_dir['baseurl'] . "/screenshots/{$site_details->site}_{$site_details->id}/production/screenshot-800.png";
+		}
 
 		if ( $site_details->environments[0]['updates_exclude_themes'] ) {
 			$site_details->environments[0]['updates_exclude_themes'] = explode( ',', $site_details->environments[0]['updates_exclude_themes'] );
@@ -701,7 +711,15 @@ class Site {
 				'offload_secret_key'      => $environments[1]->offload_secret_key,
 				'offload_bucket'          => $environments[1]->offload_bucket,
 				'offload_path'            => $environments[1]->offload_path,
+				'screenshot'              => intval( $environments[1]->screenshot ),
+				'screenshot_small'        => '',
+				'screenshot_large'        => '',
 			);
+
+			if ( intval( $environments[1]->screenshot ) == 1 ) {
+				$site_details->environments[1]['screenshot_small'] = $upload_dir['baseurl'] . "/screenshots/{$site_details->site}_{$site_details->id}/staging/screenshot-100.png";
+				$site_details->environments[1]['screenshot_large'] = $upload_dir['baseurl'] . "/screenshots/{$site_details->site}_{$site_details->id}/production/screenshot-800.png";
+			}
 
 			if ( $site_details->environments[1]['updates_exclude_themes'] ) {
 				$site_details->environments[1]['updates_exclude_themes'] = explode( ',', $site_details->environments[1]['updates_exclude_themes'] );

@@ -1555,7 +1555,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	if ( $command == 'sync-data' and $core and $plugins and $themes and $users ) {
 		
 		// Updates site with latest $plugins, $themes, $core, $home_url and $users
-		$environment = array(
+		$environment_update = array(
 			'site_id'            => $site_id,
 			'environment'        => ucfirst($environment),
 			'users'              => json_encode( $users ),
@@ -1567,15 +1567,22 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		);
 
 		$time_now = date("Y-m-d H:i:s");
-		$environment['updated_at'] = $time_now;
+		$environment_update['updated_at'] = $time_now;
 
+		$upload_dir       = wp_upload_dir();
+		$screenshot_check = $upload_dir['basedir'] . "/screenshots/{$site_name}_{$site_id}/$environment/screenshot-800.png";
+		if ( file_exists( $screenshot_check ) ) {
+			$environment_update['screenshot'] = true;
+		} else {
+			$environment_update['screenshot'] = false;
+		}
 		$db_environments = new CaptainCore\environments();
-		$db_environments->update( $environment, array( "environment_id" => $environment_id ) );
+		$db_environments->update( $environment_update, array( "environment_id" => $environment_id ) );
 
 		$response = array( 
-			"response" => "Completed sync-data for $site_id",
+			"response"       => "Completed sync-data for $site_id",
 			"environment_id" => $environment_id,
-			"environment" => $environment
+			"environment"    => $environment_update
 		);
 
 	}
@@ -4246,7 +4253,7 @@ function captaincore_create_tables() {
 			return $success;
 		}
 
-		if ( $version < 6 ) {
+		if ( $version < 7 ) {
 			$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_environments` (
 				environment_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 				site_id bigint(20) UNSIGNED NOT NULL,
@@ -4275,6 +4282,7 @@ function captaincore_create_tables() {
 				themes longtext,
 				plugins longtext,
 				users longtext,
+				screenshot boolean,
 				updates_enabled boolean,
 				updates_exclude_themes longtext,
 				updates_exclude_plugins longtext,

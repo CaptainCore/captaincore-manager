@@ -1525,7 +1525,11 @@ Vue.component('file-upload', VueUploadComponent);
 							<div slot="header">
 								<v-layout align-center justify-space-between row>
 									<div>
+										<v-layout align-center justify-start fill-height/>
+										<v-switch v-model="site.selected" @click.native.stop @change="site_selected = null" style="position: absolute;left: -48px;top: 12px;" v-show="advanced_filter == true"></v-switch>
+											<img :src="site.environments[0].screenshot_small" style="width: 50px; margin-right:1em" class="elevation-1" v-show="site.environments[0].screenshot_small">
 										<strong>{{ site.name }}</strong>
+										</v-layout>
 									</div>
 									<div class="text-xs-right">
 									    <span v-show="site.subsite_count" class="usage"><v-icon small light>fas fa-network-wired</i></v-icon> Multisite - {{ site.subsite_count }} sites</span>
@@ -1617,7 +1621,9 @@ Vue.component('file-upload', VueUploadComponent);
 												 <hr />
 												 <div v-if="key.ssh">{{ key.ssh }}</div>
 											 </div>
-
+										 </div>
+										 <div>
+												<img :src="key.screenshot_large" style="width: 400px; margin-top:10px;" class="elevation-3" v-show="key.screenshot_large">
 										 </div>
 										</v-layout>
 									 </v-container>
