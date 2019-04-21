@@ -3744,23 +3744,20 @@ function captaincore_ajax_action_callback() {
 			$home_url = get_field( "field_5c6758df7ad21", $post_id );
 		}
 
-
 		$args = array(
 			"body" => json_encode( array(
-					"command" => "login",
+					"command"    => "login",
 					"user_login" => $value,
-					"token" => get_field( "token", $post_id ),
+					"token"      => get_field( "token", $post_id ),
 			) ),
-			"method" => 'POST',
+			"method"    => 'POST',
 			"sslverify" => false,
-			"headers" => array('Content-Type' => 'application/json; charset=utf-8'),
 		);
 
-		$response = wp_remote_post( $home_url . "/wp-json/captaincore/v1/login", $args );
-
-		$login_url = json_decode( $response["body"] );
-
+		$response = wp_remote_post( $home_url . "/wp-admin/admin-ajax.php?action=captaincore_quick_login", $args );
+		$login_url = $response["body"];
 		echo $login_url;
+		wp_die();
 
 	}
 
