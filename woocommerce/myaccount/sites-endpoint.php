@@ -2662,8 +2662,15 @@ new Vue({
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
+					if ( response.data.includes("http") ) {
 					window.open( response.data );
 					self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+					} else {
+						self.jobs.filter(job => job.job_id == job_id)[0].status = "error";
+						self.snackbar.message = description + " failed.";
+						self.snackbar.show = true;
+					}
+					
 				})
 				.catch(error => {
 					self.jobs.filter(job => job.job_id == job_id)[0].status = "error";
