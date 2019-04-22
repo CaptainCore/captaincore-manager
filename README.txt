@@ -43,6 +43,14 @@ TODO
 TODO
 
 == Changelog ==
+= 0.4.2: Apr 22 2019
+* New: Sites UI - Timeline tab. Administrators can add new log entrys per site.
+* New: Sites UI - Handbook section for administrators.
+* New: Sites UI - Screenshot thumbnails of websites are automatically added/updated when synced.
+* Tweak: Sites UI - Performance improvement when working with sites. Now only 1 site panel will be open at a time.
+* Tweak: Replaced markdown support from using Jetpack plugin to [Parsedown](https://parsedown.org/)
+* Tweak: Upgrade compatibility for CaptainCore helper v0.2.0
+
 = 0.4.1: Apr 4 2019
 * New: Sites UI - Site plan tab for managing hosting plans. Administrators can assign plans per customer which define storage, visits and number of sites usage.
 * New: Sites UI - Added button for removing a site.
