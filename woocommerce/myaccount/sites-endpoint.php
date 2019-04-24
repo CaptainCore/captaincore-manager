@@ -2330,7 +2330,6 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-btn dark flat @click.native="snackbar.show = false">Close</v-btn>
 			</v-snackbar>
 			<v-dialog
-				fullscreen
 				transition="dialog-bottom-transition"
 				:overlay="false"
 				scrollable
@@ -2346,15 +2345,12 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-layout row>
 		   <v-flex xs12 style="max-width: 800px;" mx-auto>
 				 <v-card-text>
-					 <ul>
-						 <li>
-							 Run a
 							 <v-autocomplete
 								 :items="bulk_actions"
 								 item-text="name"
 								 item-value="value"
 								 v-model="select_bulk_action"
-								 label="Script/Command"
+						label="Run a Script or Command"
 								 @input="argumentsForActions"
 								 single-line
 								 chips
@@ -2366,8 +2362,6 @@ Vue.component('file-upload', VueUploadComponent);
 								v-for="argument in select_bulk_action_arguments"
 								:label="argument.name"
 						></v-text-field>
-						 </li>
-					 </ul>
 					 <v-chip
 						color="green"
 						outline
@@ -4675,7 +4669,7 @@ new Vue({
 
 		},
 		bulkactionLaunch() {
-				this.sites_selected.forEach(site => window.open(site.home_url));
+				this.sites_selected.forEach(site => window.open(site.environments[0].home_url));
 		},
 		bulkactionSubmit() {
 
