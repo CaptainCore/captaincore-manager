@@ -1408,10 +1408,10 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-toolbar>
 				<v-card-text>
             <v-layout row>
-			<v-flex xs2 px-2>
+			<v-flex xs2 ma-1>
 				<v-select :items="select_site_options" v-model="site_selected" @input="selectSites" label="Bulk Toggle" chips></v-select>
 			</v-flex>
-			<v-flex xs10 px-2>
+			<v-flex xs10 ma-1>
 			<v-autocomplete
 			:items="site_filters"
 			item-text="search"
@@ -1446,7 +1446,7 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-flex>
 		</v-layout>
 		<v-layout row>
-			<v-flex xs5>
+			<v-flex xs6 ma-1>
 				 <v-autocomplete
 				 v-model="applied_site_filter_version"
 				 v-for="filter in site_filter_version"
@@ -1474,9 +1474,7 @@ Vue.component('file-upload', VueUploadComponent);
 				 </template>
 				</v-autocomplete>
 			</v-flex>
-			<v-flex xs2>
-			</v-flex>
-			<v-flex xs5>
+			<v-flex xs6 ma-1>
 				<v-autocomplete
 				v-model="applied_site_filter_status"
 				v-for="filter in site_filter_status"
