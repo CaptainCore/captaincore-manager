@@ -695,8 +695,6 @@ Vue.component('file-upload', VueUploadComponent);
 		</v-dialog>
 		<v-dialog
 			v-model="view_jobs"
-			fullscreen
-			hide-overlay
 			transition="dialog-bottom-transition"
 			scrollable
 		>
@@ -734,8 +732,6 @@ Vue.component('file-upload', VueUploadComponent);
 
 			<v-dialog
 				v-model="dialog_new_site.show"
-				fullscreen
-				hide-overlay
 				transition="dialog-bottom-transition"
 				scrollable
 			>
@@ -1313,10 +1309,9 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-dialog>
 				<v-dialog
 					v-model="dialog_apply_https_urls.show"
-					fullscreen
-					hide-overlay
 					transition="dialog-bottom-transition"
 					scrollable
+					width="500"
 				>
 				<v-card tile>
 					<v-toolbar card dark color="primary">
