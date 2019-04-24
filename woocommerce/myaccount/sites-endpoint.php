@@ -540,6 +540,118 @@ Vue.component('file-upload', VueUploadComponent);
           </v-card-actions>
         </v-card>
       </v-dialog>
+	  <v-dialog v-model="new_process.show" max-width="800px" v-if="role == 'administrator'">
+		<v-card tile style="margin:auto;max-width:800px">
+			<v-toolbar card color="grey lighten-4">
+				<v-btn icon @click.native="new_process.show = false">
+					<v-icon>close</v-icon>
+				</v-btn>
+				<v-toolbar-title>New Process</v-toolbar-title>
+				<v-spacer></v-spacer>
+			</v-toolbar>
+			<v-card-text style="max-height: 100%;">
+			<v-container>
+			<v-layout row wrap>
+				<v-flex xs12 pa-2>
+					<v-text-field label="Name" :value="new_process.title" @change.native="new_process.title = $event.target.value"></v-text-field>
+				</v-flex>
+				<v-flex xs12 sm3 pa-2>
+					<v-text-field label="Time Estimate" hint="Example: 15 minutes" persistent-hint :value="new_process.time_estimate" @change.native="new_process.time_estimate = $event.target.value"></v-text-field>
+				</v-flex>
+				<v-flex xs12 sm3 pa-2>
+					<v-select :items='[{"text":"As needed","value":"as-needed"},{"text":"Daily","value":"daily"},{"text":"Weekly","value":"weekly"},{"text":"Monthly","value":"monthly"},{"text":"Yearly","value":"yearly"}]' label="Repeat" :value="new_process.repeat" @change.native="new_process.repeat = $event.target.value"></v-select>
+				</v-flex>
+
+				<v-flex xs12 sm3 pa-2>
+					<v-text-field label="Repeat Quantity"  hint="Example: 2 or 3 times" persistent-hint :value="new_process.repeat_quantity" @change.native="new_process.repeat_quantity = $event.target.value"></v-text-field>
+				</v-flex>
+
+				<v-flex xs12 sm3 pa-2>
+					<v-select :items="new_process_roles" label="Role" hide-details v-model="new_process.role"></v-select>
+				</v-flex>
+
+				<v-flex xs12 pa-2>
+					<v-textarea label="Description" persistent-hint hint="Steps to accomplish this process. Markdown enabled." auto-grow :value="new_process.description" @change.native="new_process.description = $event.target.value"></v-textfield>
+				</v-flex>
+
+				<v-flex xs12 text-xs-right pa-0 ma-0>
+					<v-btn color="primary" dark @click="addNewProcess()">
+						Add New Process
+					</v-btn>
+				</v-flex>
+				</v-flex>
+				</v-layout>
+			</v-container>
+			</v-card-text>
+			</v-card>
+		</v-dialog>
+		<v-dialog v-model="dialog_edit_process.show" max-width="800px" v-if="role == 'administrator'">
+		<v-card tile style="margin:auto;max-width:800px">
+			<v-toolbar card color="grey lighten-4">
+				<v-btn icon @click.native="dialog_edit_process.show = false">
+					<v-icon>close</v-icon>
+				</v-btn>
+				<v-toolbar-title>Edit Process</v-toolbar-title>
+				<v-spacer></v-spacer>
+			</v-toolbar>
+			<v-card-text style="max-height: 100%;">
+			<v-container>
+			<v-layout row wrap>
+				<v-flex xs12 pa-2>
+					<v-text-field label="Name" :value="dialog_edit_process.process.title" @change.native="dialog_edit_process.process.title = $event.target.value"></v-text-field>
+				</v-flex>
+				<v-flex xs12 sm3 pa-2>
+					<v-text-field label="Time Estimate" hint="Example: 15 minutes" persistent-hint :value="dialog_edit_process.process.time_estimate" @change.native="dialog_edit_process.process.time_estimate = $event.target.value"></v-text-field>
+				</v-flex>
+				<v-flex xs12 sm3 pa-2>
+					<v-select :items='[{"text":"As needed","value":"as-needed"},{"text":"Daily","value":"1-daily"},{"text":"Weekly","value":"2-weekly"},{"text":"Monthly","value":"3-monthly"},{"text":"Yearly","value":"4-yearly"}]' label="Repeat" v-model="dialog_edit_process.process.repeat_value"></v-select>
+				</v-flex>
+
+				<v-flex xs12 sm3 pa-2>
+					<v-text-field label="Repeat Quantity" hint="Example: 2 or 3 times" persistent-hint :value="dialog_edit_process.process.repeat_quantity" @change.native="dialog_edit_process.process.repeat_quantity = $event.target.value"></v-text-field>
+				</v-flex>
+
+				<v-flex xs12 sm3 pa-2>
+					<v-select :items="new_process_roles" label="Role" hide-details v-model="dialog_edit_process.process.role_id"></v-select>
+				</v-flex>
+
+				<v-flex xs12 pa-2>
+					<v-textarea label="Description" persistent-hint hint="Steps to accomplish this process. Markdown enabled." auto-grow :value="dialog_edit_process.process.description_raw" @change.native="dialog_edit_process.process.description_raw = $event.target.value"></v-textfield>
+				</v-flex>
+
+				<v-flex xs12 text-xs-right pa-0 ma-0>
+					<v-btn color="primary" dark @click="updateProcess()">
+						Update Process
+					</v-btn>
+				</v-flex>
+				</v-flex>
+				</v-layout>
+			</v-container>
+			</v-card-text>
+			</v-card>
+		</v-dialog>
+		<v-dialog v-model="dialog_handbook.show" v-if="role == 'administrator'">
+			<v-card tile>
+			<v-toolbar card color="grey lighten-4">
+				<v-btn icon @click.native="dialog_handbook.show = false">
+					<v-icon>close</v-icon>
+				</v-btn>
+				<v-toolbar-title>{{ dialog_handbook.process.title }} <v-chip color="primary" text-color="white" flat disabled>{{ dialog_handbook.process.role }}</v-chip></v-toolbar-title>
+				<v-spacer></v-spacer>
+				<v-toolbar-items>
+					<v-btn flat @click="editProcess( dialog_handbook.process.id ); dialog_handbook.show = false">Edit</v-btn>
+				</v-toolbar-items>
+			</v-toolbar>
+			<v-card-text style="max-height: 100%;">
+				<div class="caption mb-3">
+					<v-icon small v-show="dialog_handbook.process.time_estimate != ''" style="padding:0px 5px">far fa-clock</v-icon>{{ dialog_handbook.process.time_estimate }} 
+					<v-icon small v-show="dialog_handbook.process.repeat != '' && dialog_handbook.process.repeat != null" style="padding:0px 5px">fas fa-redo-alt</v-icon>{{ dialog_handbook.process.repeat }} 
+					<v-icon small v-show="dialog_handbook.process.repeat_quantity != '' && dialog_handbook.process.repeat_quantity != null" style="padding:0px 5px">fas fa-retweet</v-icon>{{ dialog_handbook.process.repeat_quantity }}
+				</div>
+				<span v-html="dialog_handbook.process.description"></span>
+			</v-card-text>
+			</v-card>
+		</v-dialog>
 		<v-dialog v-model="dialog_update_settings.show" max-width="500px">
 		<v-card tile>
 			<v-toolbar card dark color="primary">
@@ -816,121 +928,6 @@ Vue.component('file-upload', VueUploadComponent);
 							</v-btn>
 						</v-flex>
 						</v-layout>
-					</v-card-text>
-					</v-card>
-				</v-dialog>
-				<v-dialog
-					v-if="role == 'administrator'"
-					v-model="dialog_handbook.show"
-					transition="dialog-bottom-transition"
-					:scrollable="true"
-					fullscreen
-					lazy
-				>
-				<v-card tile>
-					<v-toolbar card dark color="primary">
-						<v-btn icon dark @click.native="dialog_handbook.show = false">
-							<v-icon>close</v-icon>
-						</v-btn>
-						<v-toolbar-title>Handbook</v-toolbar-title>
-						<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-toolbar color="grey lighten-4" dense light flat>
-						<v-toolbar-title>Contains {{ processes.length }} processes</v-toolbar-title>
-						<v-spacer></v-spacer>
-						<v-toolbar-items>
-							<v-btn flat @click="handbook_step = 3">Add new process</v-btn>
-						</v-toolbar-items>
-					</v-toolbar>
-					<v-card-text style="max-height: 100%;">
-					<v-window v-model="handbook_step">
-      		<v-window-item :value="1">
-					<v-container
-						fluid
-						grid-list-lg
-					>
-        <v-layout row wrap>
-          <v-flex xs12 v-for="process in processes">
-						<v-card :hover="true" @click="viewProcess( process.id )">
-						<v-card-title primary-title class="pt-2">
-							<div>
-								<span class="title">{{ process.title }}</a> <v-chip color="primary" text-color="white" flat disabled>{{ process.role }}</v-chip></span>
-								<div class="caption">
-									<v-icon small v-show="process.time_estimate != ''" style="padding:0px 5px">far fa-clock</v-icon>{{ process.time_estimate }} 
-									<v-icon small v-show="process.repeat != '' && process.repeat != null" style="padding:0px 5px">fas fa-redo-alt</v-icon>{{ process.repeat }} 
-									<v-icon small v-show="process.repeat_quantity != '' && process.repeat_quantity != null" style="padding:0px 5px">fas fa-retweet</v-icon>{{ process.repeat_quantity }}
-								</div>
-							</div>
-						</v-card-title>
-						</v-card>
-					</v-flex>
-        	</v-layout>
-					</v-container>
-					</v-window-item>
-					<v-window-item :value="2">
-						<v-card tile>
-						<v-toolbar card color="grey lighten-4">
-							<v-btn icon @click.native="handbook_step = 1">
-								<v-icon>close</v-icon>
-							</v-btn>
-							<v-toolbar-title>{{ dialog_handbook.process.title }}</v-toolbar-title>
-							<v-spacer></v-spacer>
-						</v-toolbar>
-						<v-card-text style="max-height: 100%;">
-							<span v-html="dialog_handbook.description"></span>
-						</v-card-text>
-						</v-card>
-					</v-window-item>
-					<v-window-item :value="3">
-					<v-card tile style="margin:auto;max-width:800px">
-						<v-toolbar card color="grey lighten-4">
-							<v-btn icon @click.native="handbook_step = 1">
-								<v-icon>close</v-icon>
-							</v-btn>
-							<v-toolbar-title>New Process</v-toolbar-title>
-							<v-spacer></v-spacer>
-						</v-toolbar>
-						<v-card-text style="max-height: 100%;">
-						<v-container>
-						<v-layout row wrap>
-
-							<v-flex xs12 pa-2>
-								<v-text-field label="Name" :value="new_process.title" @change.native="new_process.title = $event.target.value"></v-text-field>
-							</v-flex>
-
-							<v-flex xs12 sm3 pa-2>
-								<v-text-field label="Time Estimate" hint="Example: 15 minutes" persistent-hint :value="new_process.time_estimate" @change.native="new_process.time_estimate = $event.target.value"></v-text-field>
-							</v-flex>
-
-							<v-flex xs12 sm3 pa-2>
-								<v-select :items='[{"text":"As needed","value":"as-needed"},{"text":"Daily","value":"daily"},{"text":"Weekly","value":"weekly"},{"text":"Monthly","value":"monthly"},{"text":"Yearly","value":"yearly"}]' label="Repeat" :value="new_process.repeat" @change.native="new_process.repeat = $event.target.value"></v-select>
-							</v-flex>
-
-							<v-flex xs12 sm3 pa-2>
-								<v-text-field label="Repeat Quantity"  hint="Example: 2 or 3 times" persistent-hint :value="new_process.repeat_quantity" @change.native="new_process.repeat_quantity = $event.target.value"></v-text-field>
-							</v-flex>
-
-							<v-flex xs12 sm3 pa-2>
-								<v-select :items="new_process_roles" label="Role" hide-details v-model="new_process.role"></v-select>
-							</v-flex>
-
-							<v-flex xs12 pa-2>
-								<v-textarea label="Description" persistent-hint hint="Steps to accomplish this process. Markdown enabled." auto-grow :value="new_process.description" @change.native="new_process.description = $event.target.value"></v-textfield>
-							</v-flex>
-
-							<v-flex xs12 text-xs-right pa-0 ma-0>
-								<v-btn color="primary" dark @click="addNewProcess()">
-									Add New Process
-								</v-btn>
-							</v-flex>
-
-						</v-flex>
-
-							</v-layout>
-    				</v-container>
-						</v-card-text>
-						</v-card>
-					</v-window-item>
 					</v-card-text>
 					</v-card>
 				</v-dialog>
@@ -2004,7 +2001,6 @@ Vue.component('file-upload', VueUploadComponent);
 												<td></td>
 											 </tr>
 											 </template>
-
 											</v-data-table>
 							    </v-card>
 							  </v-expansion-panel-content>
@@ -3487,6 +3483,8 @@ new Vue({
 
 			process = this.processes.filter( process => process.id == process_id )[0];
 			this.dialog_handbook.process = process;
+			this.dialog_handbook.process.description = "Loading...";
+			this.dialog_handbook.show = true;
 
 			var data = {
 				action: 'captaincore_ajax',
@@ -3498,11 +3496,51 @@ new Vue({
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					self.dialog_handbook.description = response.data;
-					self.handbook_step = 2;
+					self.dialog_handbook.process = response.data;
 				})
 				.catch( error => console.log( error ) );
 
+		},
+		editProcess( process_id ) {
+			process = this.processes.filter( process => process.id == process_id )[0];
+
+			var data = {
+				action: 'captaincore_ajax',
+				post_id: process_id,
+				command: 'fetchProcess',
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.dialog_edit_process.process = response.data;
+					self.dialog_edit_process.show = true;
+				})
+				.catch( error => console.log( error ) );
+		},
+		updateProcess() {
+			var data = {
+				action: 'captaincore_ajax',
+				command: 'updateProcess',
+				value: this.dialog_edit_process.process
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					// Remove existing item
+					self.processes = self.processes.filter( process => process.id != response.data.id );
+					// Add new item
+					self.processes.push( response.data )
+					// Sort processes
+					self.processes.sort((a,b) => (a.title > b.title) ? 1 : ((b.title > a.title) ? -1 : 0));
+					self.dialog_edit_process.process = { show: false, title: "", time_estimate: "", repeat: "as-needed", repeat_quantity: "", role: "", description: "" };
+					self.dialog_edit_process.show = false;
+					self.viewProcess( response.data.id );
+				})
+				.catch( error => console.log( error ) );
 		},
 		addNewProcess() {
 
@@ -3516,9 +3554,12 @@ new Vue({
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					self.handbook_step = 1
 					self.processes.unshift( response.data );
-					self.new_process = { title: "", time_estimate: "", repeat: "as-needed", repeat_quantity: "", role: "", description: "" };
+					self.new_process = { show: false, title: "", time_estimate: "", repeat: "as-needed", repeat_quantity: "", role: "", description: "" };
+				})
+				.catch( error => console.log( error ) );
+
+		},
 				})
 				.catch( error => console.log( error ) );
 

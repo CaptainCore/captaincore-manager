@@ -3310,7 +3310,7 @@ function captaincore_ajax_action_callback() {
 	// Only proceed if access to command 
 	$user = wp_get_current_user();
 	$role_check_admin = in_array( 'administrator', $user->roles );
-	$admin_commands = array( 'updateLogEntry', 'newLogEntry', 'newProcess', 'fetchProcess', 'updateFathom', 'updatePlan', 'newSite', 'editSite', 'deleteSite' );
+	$admin_commands = array( 'newRecipe', 'updateRecipe', 'updateLogEntry', 'newLogEntry', 'newProcess', 'updateProcess', 'fetchProcess', 'updateFathom', 'updatePlan', 'newSite', 'editSite', 'deleteSite' );
 	if ( ! $role_check_admin && in_array( $_POST['command'], $admin_commands ) ) {
 		echo "Permission defined";
 		wp_die();
@@ -3402,10 +3402,81 @@ function captaincore_ajax_action_callback() {
 		echo json_encode( $process_added );
 	}
 
+	if ( $cmd == 'updateProcess' ) {
+
+		$process = (object) $value;
+		$process_id = $process->id;
+
+		// Create post object
+		$update_process = array(
+			'ID'          => $process_id,
+			'post_title'  => $process->title,
+			'post_author' => get_current_user_id(),
+		);
+
+		// Update post
+		wp_update_post( $update_process );
+
+		update_field( 'time_estimate', $process->time_estimate, $process_id );
+		update_field( 'repeat', $process->repeat_value, $process_id );
+		update_field( 'repeat_quantity', $process->repeat_quantity, $process_id );
+		update_field( 'description', $process->description_raw, $process_id );
+		wp_set_post_terms( $process_id, $process->role_id, 'process_role' );
+
+		// Prepare to send back
+		$all_processes = get_posts( $args );
+		$repeat_field  = get_field_object( 'field_57f791d6363f4' );
+
+		$process = get_post( $process_id );
+		$repeat_value  = get_field( 'repeat', $process->ID  );
+		$repeat = $repeat_field['choices'][ $repeat_value ];
+		$role = get_the_terms( $process->ID , 'process_role' );
+			if ( ! empty( $role ) && ! is_wp_error( $role ) ) {
+				$role = join(' ', wp_list_pluck( $role, 'name' ) );
+		}
+
+		$process_updated = (object) [
+			"id"              => $process->ID,
+			"title"           => get_the_title( $process->ID ),
+			"created_at"      => $process->post_date,
+			"time_estimate"   => get_field( 'time_estimate', $process->ID ),
+			"repeat"          => $repeat,
+			"repeat_quantity" => get_field( 'repeat_quantity', $process->ID ),
+			"role"            => $role
+		];
+
+		echo json_encode( $process_updated );
+	}
+
 	if ( $cmd == 'fetchProcess' ) {
+
+		$process = get_post( $post_id );
 		$Parsedown = new Parsedown();
-		$description = $Parsedown->text( get_field("description", $post_id ) );
-		echo json_encode( $description );
+		$description = $GLOBALS['wp_embed']->autoembed( get_field("description", $post_id ) ) ;
+		$description = $Parsedown->text( $description );
+		$repeat_field  = get_field_object( 'field_57f791d6363f4' );
+		$repeat_value  = get_field( 'repeat', $process->ID  );
+		$repeat = $repeat_field['choices'][ $repeat_value ];
+		$role = get_the_terms( $process->ID , 'process_role' );
+			if ( ! empty( $role ) && ! is_wp_error( $role ) ) {
+				$role = join(' ', wp_list_pluck( $role, 'name' ) );
+		}
+
+		$process_fetch = (object) [
+			"id"              => $process->ID,
+			"title"           => get_the_title( $process->ID ),
+			"created_at"      => $process->post_date,
+			"description"     => $description,
+			"description_raw" => get_field( 'description', $process->ID ),
+			"time_estimate"   => get_field( 'time_estimate', $process->ID ),
+			"repeat"          => $repeat,
+			"repeat_value"    => $repeat_value,
+			"repeat_quantity" => get_field( 'repeat_quantity', $process->ID ),
+			"role"            => $role,
+			"role_id"         => get_the_terms( $process->ID , 'process_role' )[0]->term_id,
+		];
+		
+		echo json_encode( $process_fetch );
 	}
 
 	if ( $cmd == 'newLogEntry' ) {
