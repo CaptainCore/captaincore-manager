@@ -1866,9 +1866,12 @@ Vue.component('file-upload', VueUploadComponent);
 								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span>
 							</v-btn></div>
 					</v-flex>
-					<v-flex xs12 sm3>
+					<v-flex xs12 sm3 v-show="role == 'administrator'">
 					<v-subheader>User-Defined Recipes</v-subheader>
 						<div v-for="recipe in recipes">
+							<v-btn small flat @click="runRecipe(recipe.recipe_id)">
+								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
+							</v-btn>
 						</div>
 					</v-flex>
 					</v-card-title>
