@@ -1,4 +1,6 @@
 <?php
+wp_enqueue_style( ARVE_SLUG );
+wp_enqueue_script( ARVE_SLUG );
 
 $user       = wp_get_current_user();
 $role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
@@ -18,7 +20,6 @@ if ( $role_check ) {
 	$business_link = get_field( 'partner_link', $belongs_to[0] );
 
 ?>
-
 <link href="https://cdn.jsdelivr.net/npm/vuetify@1.5.4/dist/vuetify.min.css" rel="stylesheet">
 <style>
 
@@ -520,7 +521,6 @@ Vue.component('file-upload', VueUploadComponent);
           <v-card-title>
             <span class="headline">Edit Item</span>
           </v-card-title>
-
           <v-card-text>
             <v-container grid-list-md>
               <v-layout wrap>
@@ -533,7 +533,6 @@ Vue.component('file-upload', VueUploadComponent);
               </v-layout>
             </v-container>
           </v-card-text>
-
           <v-card-actions>
             <v-spacer></v-spacer>
             <v-btn color="blue darken-1" flat @click="configureFathomClose">Cancel</v-btn>
