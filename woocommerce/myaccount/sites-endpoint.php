@@ -1397,6 +1397,7 @@ Vue.component('file-upload', VueUploadComponent);
 			item-text="search"
 			item-value="name"
 			v-model="applied_site_filter"
+			ref="applied_site_filter"
 			@input="filterSites"
 			item-text="title"
 			label="Select Theme and/or Plugin"
@@ -2488,6 +2489,11 @@ new Vue({
 		 select_bulk_action_arguments: null,
 		 snackbar: { show: false, message: "" }
 	},
+	watch: {
+		applied_site_filter (val) {
+			setTimeout( () => this.$refs.applied_site_filter.isMenuActive = false, 50)
+		}
+    },
 	filters: {
 		formatProvider: function (value) {
 			if (value == 'wpengine') {
