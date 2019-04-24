@@ -939,7 +939,7 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-btn icon dark @click.native="dialog_new_log_entry.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
-						<v-toolbar-title>Add a new log entry for {{ dialog_new_log_entry.site.name }}</v-toolbar-title>
+						<v-toolbar-title>Add a new log entry <span v-if="dialog_new_log_entry.site.name">for {{ dialog_new_log_entry.site.name }}</span></v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text>
@@ -2292,7 +2292,8 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Contains {{ processes.length }} processes</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn flat @click="new_process.show = true">Add new process</v-btn>
+						<v-btn flat @click="showLogEntryGeneric()">New log entry</v-btn>
+						<v-btn flat @click="new_process.show = true">New process</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text style="max-height: 100%;">
@@ -3549,6 +3550,10 @@ new Vue({
 			site = this.sites.filter(site => site.id == site_id )[0];
 			this.dialog_new_log_entry.show = true;
 			this.dialog_new_log_entry.site = site;
+		},
+		showLogEntryGeneric() {
+			this.dialog_new_log_entry.show = true;
+			this.dialog_new_log_entry.site = {};
 		},
 		newLogEntry() {
 			site_id = this.dialog_new_log_entry.site.id;

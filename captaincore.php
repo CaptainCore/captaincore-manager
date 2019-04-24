@@ -3497,7 +3497,9 @@ function captaincore_ajax_action_callback() {
 		update_field( 'field_57f862ec5b466', $process_id, $process_log_id );
 
 		// Assign website to ACF relationship field
+		if ( $post_id != "0" ) {
 		update_field( 'field_57fae6d263704', $post_id, $process_log_id );
+		}
 
 		// Assign description
 		update_field( 'field_57fc396b04e0a', $value, $process_log_id );
