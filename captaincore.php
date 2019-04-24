@@ -3310,7 +3310,7 @@ function captaincore_ajax_action_callback() {
 	// Only proceed if access to command 
 	$user = wp_get_current_user();
 	$role_check_admin = in_array( 'administrator', $user->roles );
-	$admin_commands = array( 'newRecipe', 'updateRecipe', 'updateLogEntry', 'newLogEntry', 'newProcess', 'updateProcess', 'fetchProcess', 'updateFathom', 'updatePlan', 'newSite', 'editSite', 'deleteSite' );
+	$admin_commands = array( 'newRecipe', 'updateRecipe', 'updateLogEntry', 'newLogEntry', 'newProcess', 'updateProcess', 'fetchProcess', 'fetchProcessLogs', 'updateFathom', 'updatePlan', 'newSite', 'editSite', 'deleteSite' );
 	if ( ! $role_check_admin && in_array( $_POST['command'], $admin_commands ) ) {
 		echo "Permission defined";
 		wp_die();
@@ -3479,6 +3479,90 @@ function captaincore_ajax_action_callback() {
 		echo json_encode( $process_fetch );
 	}
 
+	if ( $cmd == 'fetchProcessLog' ) {
+
+		$process_log = get_post( $value ) ;
+
+		// Fetch new process_log and return as json
+		$Parsedown = new Parsedown();
+
+			$process     = get_field( "process", $process_log->ID );
+			$author_id   = $process_log->post_author;
+			$author      = get_the_author_meta( 'display_name', $author_id );
+			$description = $Parsedown->text( get_field("description", $process_log->ID ) );
+			$websites    = array();
+			foreach( get_field("website", $process_log->ID ) as $website_id ) {
+				$site = get_post( $website_id );
+				$websites[] = (object) [ 
+					'id'   => $site->ID,
+					'name' => $site->post_title,
+				];
+			}
+
+			$process_log_fetch = (object) [
+				'id'              => $process_log->ID,
+				'process_id'      => $process[0],
+				'title'           => get_the_title( $process[0] ),
+				'author'          => $author,
+				'description'     => $description,
+				'description_raw' => get_field("description", $process_log->ID ),
+				'websites'        => $websites,
+				'created_at'      => $process_log->post_date,
+			];
+
+		
+		echo json_encode( $process_log_fetch );
+
+	}
+
+	if ( $cmd == 'fetchProcessLogs' ) {
+
+		$processlogs_fetch = array();
+
+		$process_logs = get_posts(
+			array(
+				'post_type'      => 'captcore_processlog',
+				'posts_per_page' => '-1',
+				'meta_key'       => 'status',
+				'meta_value'     => 'completed',
+
+			)
+		);
+
+		// Fetch new process_log and return as json
+		$Parsedown = new Parsedown();
+
+		foreach ( $process_logs as $process_log ) {
+
+			$process     = get_field( "process", $process_log->ID );
+			$author_id   = $process_log->post_author;
+			$author      = get_the_author_meta( 'display_name', $author_id );
+			$description = $Parsedown->text( get_field("description", $process_log->ID ) );
+			$websites    = array();
+			foreach( get_field("website", $process_log->ID ) as $website_id ) {
+				$site = get_post( $website_id );
+				$websites[] = (object) [ 
+					'id'   => $site->ID,
+					'name' => $site->post_title,
+				];
+			}
+
+			$processlogs_fetch[] = (object) [
+				'id'              => $process_log->ID,
+				'process_id'      => $process[0],
+				'title'           => get_the_title( $process[0] ),
+				'author'          => $author,
+				'description'     => $description,
+				'description_raw' => get_field("description", $process_log->ID ),
+				'websites'        => $websites,
+				'created_at'      => $process_log->post_date,
+			];
+
+		}
+		
+		echo json_encode( $processlogs_fetch );
+	}
+
 	if ( $cmd == 'newLogEntry' ) {
 
 		$process_id = $_POST['process_id'];
@@ -3532,29 +3616,43 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'updateLogEntry' ) {
 
-		$process_id = $_POST['process_id'];
+		$process_log_update = (object) $_POST['log'];
 
-		$process_log = get_post($_POST['log_id'] );
+		$process_log = get_post( $process_log_update->id );
 		$process_log->post_author = get_current_user_id();
 
-		// Insert the post into the database
-		$process_log_id = wp_insert_post( $my_post );
-
 		// Assign process to ACF relationship field
-		update_field( 'field_57f862ec5b466', $process_id, $process_log->ID );
+		update_field( 'field_57f862ec5b466', $process_log_update->process_id, $process_log->ID );
 
 		// Assign website to ACF relationship field
 		update_field( 'field_57fae6d263704', $post_id, $process_log->ID );
 
 		// Assign description
-		update_field( 'field_57fc396b04e0a', $value, $process_log->ID );
+		update_field( 'field_57fc396b04e0a', $process_log_update->description_raw, $process_log->ID );
 
 		// Mark completed
 		update_field( 'field_588bb7bd3cab6', 'completed', $process_log->ID );           // Sets status field to completed
 		update_field( 'field_588bb8423cab7', date( 'Y-m-d H:i:s' ), $process_log->ID );
 
-		// Respond with updated timeline for site
-		$cmd = 'timeline';
+		// Respond with updated process log
+		$Parsedown = new Parsedown();
+		$process_log = get_post( $process_log_update->id );
+		$process     = get_field( "process", $process_log->ID );
+		$author_id   = $process_log->post_author;
+		$author      = get_the_author_meta( 'display_name', $author_id );
+		$description = $Parsedown->text( get_field("description", $process_log->ID ) );
+
+		$process_log_updated = (object) [
+			'id'              => $process_log->ID,
+			'process_id'      => $process[0],
+			'title'           => get_the_title( $process[0] ),
+			'author'          => $author,
+			'description'     => $description,
+			'description_raw' => get_field("description", $process_log->ID ),
+			'created_at'      => $process_log->post_date,
+		];
+
+		echo json_encode( $process_log_updated ) ;
 
 	}
 

@@ -929,6 +929,47 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-dialog>
 				<v-dialog
 					v-if="role == 'administrator'"
+					v-model="dialog_log_history.show"
+					scrollable
+					fullscreen
+				>
+				<v-card tile>
+					<v-toolbar card dark color="primary">
+						<v-btn icon dark @click.native="dialog_log_history.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>Log History</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text>
+					<v-data-table
+				:headers="header_timeline"
+				:items="dialog_log_history.logs"
+				class="timeline"
+				:rows-per-page-items='[5,10,25,{"text":"$vuetify.dataIterator.rowsPerPageAll","value":-1}]'
+				hide-actions
+				>
+				<template slot="items" slot-scope="props">
+					<td class="justify-center">{{ props.item.created_at | pretty_timestamp }}</td>
+					<td class="justify-center">{{ props.item.author }}</td>
+					<td class="justify-center">{{ props.item.title }}</td>
+					<td class="justify-center" v-html="props.item.description"></td>
+					<td v-if="role == 'administrator'">
+						<v-icon
+							small
+							class="mr-2"
+							@click="dialog_log_history.show = false; editLogEntry(props.item.websites[0].id, props.item.id)"
+						>
+							edit
+						</v-icon><br />
+						{{ props.item.websites.map( site => site.name ).join(" ") }}
+					</td>
+				</template>
+			</v-data-table>
+					</v-card-text>
+				</v-dialog>
+				<v-dialog
+					v-if="role == 'administrator'"
 					v-model="dialog_new_log_entry.show"
 					transition="dialog-bottom-transition"
 					scrollable
@@ -974,23 +1015,23 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-dialog>
 				<v-dialog
 					v-if="role == 'administrator'"
-					v-model="dialog_edit_log_entry.show"
+					v-model="dialog_edit_process_log.show"
 					transition="dialog-bottom-transition"
 					scrollable
 					width="500"
 				>
 				<v-card tile>
 					<v-toolbar card dark color="primary">
-						<v-btn icon dark @click.native="dialog_edit_log_entry.show = false">
+						<v-btn icon dark @click.native="dialog_edit_process_log.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
-						<v-toolbar-title>Edit log entry for {{ dialog_edit_log_entry.site.name }}</v-toolbar-title>
+						<v-toolbar-title>Edit log entry <span v-if="dialog_edit_process_log.site.name">for {{ dialog_edit_process_log.site.name }}</span></v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text>
 					<v-container>
 						<v-autocomplete
-							v-model="dialog_edit_log_entry.process"
+							v-model="dialog_edit_process_log.log.process_id"
 							:items="processes"
 							item-text="title"
 							item-value="id"
@@ -1007,7 +1048,7 @@ Vue.component('file-upload', VueUploadComponent);
 								</template>
 							</template>
 						</v-autocomplete>
-						<v-textarea label="Description" auto-grow :value="dialog_edit_log_entry.description" @change.native="dialog_edit_log_entry.description = $event.target.value"></v-textarea>
+						<v-textarea label="Description" auto-grow :value="dialog_edit_process_log.log.description_raw" @change.native="dialog_edit_process_log.log.description_raw = $event.target.value"></v-textarea>
 						<v-flex xs12 text-xs-right>
 							<v-btn color="primary" dark style="margin:0px;" @click="updateLogEntry()">
 								Update Log Entry
@@ -2292,6 +2333,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Contains {{ processes.length }} processes</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
+						<v-btn flat @click="fetchProcessLogs()">Log history</v-btn>
 						<v-btn flat @click="showLogEntryGeneric()">New log entry</v-btn>
 						<v-btn flat @click="new_process.show = true">New process</v-btn>
 					</v-toolbar-items>
@@ -2495,7 +2537,8 @@ new Vue({
 		<?php if ( current_user_can( 'administrator' ) ) { ?>
 		role: "administrator",
 		dialog_new_log_entry: { show: false, site: {}, process: "", description: "" },
-		dialog_edit_log_entry: { id: "", show: false, site: {}, process: "", description: "" },
+		dialog_log_history: { show: false, logs: [] },
+		dialog_edit_process_log: { show: false, site: {}, log: {} },
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_handbook: { show: false, process: {} },
 		new_recipe: { title: "", content: "" },
@@ -3546,6 +3589,22 @@ new Vue({
 			});
 
 		},
+		fetchProcessLogs() {
+			this.dialog_log_history.show = true;
+
+			var data = {
+				action: 'captaincore_ajax',
+				command: 'fetchProcessLogs',
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.dialog_log_history.logs = response.data;
+				})
+				.catch( error => console.log( error ) );
+		},
 		showLogEntry( site_id ){
 			site = this.sites.filter(site => site.id == site_id )[0];
 			this.dialog_new_log_entry.show = true;
@@ -3581,42 +3640,54 @@ new Vue({
 				.catch( error => console.log( error ) );
 		},
 		updateLogEntry() {
-			site_id = this.dialog_edit_log_entry.site.id;
+			site_id = this.dialog_edit_process_log.site.id;
 			site = this.sites.filter(site => site.id == site_id )[0];
 
 			var data = {
 				action: 'captaincore_ajax',
-				post_id: site_id,
-				log_id: this.dialog_edit_log_entry.id,
-				process_id: this.dialog_edit_log_entry.process,
 				command: 'updateLogEntry',
-				value: this.dialog_edit_log_entry.description
+				post_id: this.dialog_edit_process_log.site.id,
+				log: this.dialog_edit_process_log.log,
 			};
 
-			this.dialog_edit_log_entry.show = false;
-			this.dialog_edit_log_entry.site = {};
+			this.dialog_edit_process_log.show = false;
+			this.dialog_edit_process_log.site = {};
 
 			self = this;
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					site.timeline = response.data;
-					self.dialog_edit_log_entry.description = "";
-					self.dialog_edit_log_entry.process = "";
-					self.dialog_edit_log_entry.id = ""
+					if ( site ) {
+						self.fetchTimeline( site.id )
+					}
+					self.dialog_edit_process_log.log = {};
 				})
 				.catch( error => console.log( error ) );
 		},
 		editLogEntry( site_id, log_id ) {
 
 			site = this.sites.filter(site => site.id == site_id )[0];
-			this.dialog_edit_log_entry.show = true;
-			this.dialog_edit_log_entry.site = site;
-			this.dialog_edit_log_entry.id = log_id;
 
-			log_entry = site.timeline.filter( log => log.id == log_id )[0]
-			this.dialog_edit_log_entry.description = log_entry.description_raw
-			this.dialog_edit_log_entry.process = log_entry.process_id
+			var data = {
+				action: 'captaincore_ajax',
+				post_id: site_id,
+				command: 'fetchProcessLog',
+				value: log_id,
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.dialog_edit_process_log.log = response.data;
+					self.dialog_edit_process_log.show = true;
+					self.dialog_edit_process_log.site = site;
+				})
+				.catch( error => console.log( error ) );
+
+			//log_entry = site.timeline.filter( log => log.id == log_id )[0]
+			//this.dialog_edit_process_log.description = log_entry.description_raw
+			//this.dialog_edit_process_log.process = log_entry.process_id
 
 		},
 		viewProcess( process_id ) {
