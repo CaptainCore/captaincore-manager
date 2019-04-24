@@ -3597,6 +3597,42 @@ function captaincore_ajax_action_callback() {
 
 	}
 
+	if ( $cmd == 'newRecipe' ) {
+
+		$recipe = (object) $value;
+		$time_now = date("Y-m-d H:i:s");
+
+		$new_recipe = array(
+			'title'          => $recipe->title,
+			'updated_at'     => $time_now,
+			'created_at'     => $time_now,
+			'content'        => $recipe->content,
+		);
+
+		$db_recipes = new CaptainCore\recipes();
+		$recipe_id = $db_recipes->insert( $new_recipe );
+		echo json_encode( $db_recipes->all("title","ASC") );
+
+	}
+
+	if ( $cmd == 'updateRecipe' ) {
+
+		$recipe = (object) $value;
+		$time_now = date("Y-m-d H:i:s");
+
+		$recipe_update = array(
+			'title'          => $recipe->title,
+			'updated_at'     => $time_now,
+			'content'        => $recipe->content,
+		);
+
+		$db_recipes = new CaptainCore\recipes();
+		$db_recipes->update( $recipe_update, array( "recipe_id" => $recipe->recipe_id ) );
+
+		echo json_encode( $db_recipes->all("title","ASC") );
+
+	}
+
 	if ( $cmd == 'usage-breakdown' ) {
 
 		$customer     = get_field( "customer", $post_id );
@@ -4361,7 +4397,26 @@ function captaincore_create_tables() {
 			dbDelta($sql);
 			$success = empty($wpdb->last_error);
 
-			update_site_option('captcorecore_db_version', 6);
+			update_site_option('captcorecore_db_version', 7);
+
+			return $success;
+		}
+
+		if ( $version < 9 ) {
+			$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_recipes` (
+				recipe_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+				title varchar(255),
+				created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+				updated_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+				content longtext,
+			PRIMARY KEY  (recipe_id)
+			) $charset_collate;";
+
+			require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+			dbDelta($sql);
+			$success = empty($wpdb->last_error);
+
+			update_site_option('captcorecore_db_version', 9);
 
 			return $success;
 		}

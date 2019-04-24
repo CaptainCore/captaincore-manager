@@ -96,9 +96,9 @@ class DB {
 		return $wpdb->get_results( $sql );
 	}
 
-	static function all() {
+	static function all( $sort = "created_at", $sort_order = "DESC" ) {
 		global $wpdb;
-		$sql = 'SELECT * FROM ' . self::_table() . ' order by `created_at` DESC';
+		$sql = 'SELECT * FROM ' . self::_table() . ' order by `' . $sort . '` '. $sort_order;
 		return $wpdb->get_results( $sql );
 	}
 
@@ -133,6 +133,12 @@ class update_logs extends DB {
 class quicksaves extends DB {
 
 	static $primary_key = 'quicksave_id';
+
+}
+
+class recipes extends DB {
+
+	static $primary_key = 'recipe_id';
 
 }
 

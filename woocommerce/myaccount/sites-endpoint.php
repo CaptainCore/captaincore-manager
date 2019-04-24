@@ -2197,8 +2197,124 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" :length="Math.ceil(filteredSites / items_per_page)" v-model="page" :total-visible="7" color="blue darken-3"></v-pagination>
 				</div>
 				</v-layout>
+			</v-card-text>
+			</v-card>
+			<v-card tile v-show="active_page == 'Cookbook'" v-if="role == 'administrator'">
+				<v-toolbar color="grey lighten-4" dense light flat>
+					<v-toolbar-title>Contains {{ recipes.length }} recipes</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+						<v-btn flat @click="cookbook_step = 3">Add new recipe</v-btn>
+					</v-toolbar-items>
+				</v-toolbar>
+				<v-card-text>
+				<v-window v-model="cookbook_step">
+				<v-window-item :value="1">
+					<v-container fluid grid-list-lg>
+						<v-layout row wrap>
+						<v-flex xs12 v-for="recipe in recipes">
+							<v-card :hover="true" @click="editRecipe( recipe.recipe_id )">
+							<v-card-title primary-title class="pt-2">
+								<div>
+									<span class="title">{{ recipe.title }}</a></span>
+								</div>
+							</v-card-title>
+							</v-card>
+						</v-flex>
+						</v-layout>
 				</v-container>
-			</template>
+				</v-window-item>
+				<v-window-item :value="2">
+				<v-card tile style="margin:auto;max-width:800px">
+					<v-toolbar card color="grey lighten-4">
+						<v-btn icon @click.native="cookbook_step = 1">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>Edit Recipe</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text style="max-height: 100%;">
+					<v-container>
+					<v-layout row wrap>
+
+						<v-flex xs12 pa-2>
+							<v-text-field label="Name" :value="dialog_cookbook.recipe.title" @change.native="dialog_cookbook.recipe.title = $event.target.value"></v-text-field>
+						</v-flex>
+
+						<v-flex xs12 pa-2>
+							<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="dialog_cookbook.recipe.content" @change.native="dialog_cookbook.recipe.content = $event.target.value"></v-textfield>
+						</v-flex>
+
+						<v-flex xs12 text-xs-right pa-0 ma-0>
+							<v-btn color="primary" dark @click="updateRecipe()">
+								Update Recipe
+							</v-btn>
+						</v-flex>
+
+					</v-layout>
+					</v-container>
+					</v-card-text>
+				</v-card>
+				</v-window-item>
+				<v-window-item :value="3">
+				<v-card tile style="margin:auto;max-width:800px">
+					<v-toolbar card color="grey lighten-4">
+						<v-btn icon @click.native="cookbook_step = 1">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>New Recipe</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text style="max-height: 100%;">
+					<v-container>
+					<v-layout row wrap>
+						<v-flex xs12 pa-2>
+							<v-text-field label="Name" :value="new_recipe.title" @change.native="new_recipe.title = $event.target.value"></v-text-field>
+						</v-flex>
+						<v-flex xs12 pa-2>
+							<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="new_recipe.content" @change.native="new_recipe.content = $event.target.value"></v-textfield>
+						</v-flex>
+						<v-flex xs12 text-xs-right pa-0 ma-0>
+							<v-btn color="primary" dark @click="addRecipe()">
+								Add New Recipe
+							</v-btn>
+						</v-flex>
+					</v-layout>
+					</v-container>
+					</v-card-text>
+				</v-card>
+				</v-window-item>
+				</v-card-text>
+			</v-card>
+			<v-card tile v-show="active_page == 'Handbook'" v-if="role == 'administrator'">
+				<v-toolbar color="grey lighten-4" dense light flat>
+					<v-toolbar-title>Contains {{ processes.length }} processes</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+						<v-btn flat @click="new_process.show = true">Add new process</v-btn>
+					</v-toolbar-items>
+				</v-toolbar>
+				<v-card-text style="max-height: 100%;">
+					<v-container fluid grid-list-lg>
+					<v-layout row wrap>
+					<v-flex xs12 v-for="process in processes">
+						<v-card :hover="true" @click="viewProcess( process.id )">
+						<v-card-title primary-title class="pt-2">
+							<div>
+								<span class="title">{{ process.title }}</a> <v-chip color="primary" text-color="white" flat disabled>{{ process.role }}</v-chip></span>
+								<div class="caption">
+									<v-icon small v-show="process.time_estimate != ''" style="padding:0px 5px">far fa-clock</v-icon>{{ process.time_estimate }} 
+									<v-icon small v-show="process.repeat != '' && process.repeat != null" style="padding:0px 5px">fas fa-redo-alt</v-icon>{{ process.repeat }} 
+									<v-icon small v-show="process.repeat_quantity != '' && process.repeat_quantity != null" style="padding:0px 5px">fas fa-retweet</v-icon>{{ process.repeat_quantity }}
+								</div>
+							</div>
+						</v-card-title>
+						</v-card>
+					</v-flex>
+					</v-layout>
+					</v-container>
+					</v-card-text>
+					</v-card>
 			</v-container>
 			<v-container fluid v-show="loading_sites">
 				Loading...
@@ -3584,9 +3700,44 @@ new Vue({
 				.catch( error => console.log( error ) );
 
 		},
+		editRecipe( recipe_id ) {
+			recipe = this.recipes.filter( recipe => recipe.recipe_id == recipe_id )[0];
+			this.dialog_cookbook.recipe = recipe;
+			this.cookbook_step = 2;
+		},
+		updateRecipe() {
+
+			var data = {
+				action: 'captaincore_ajax',
+				command: 'updateRecipe',
+				value: this.dialog_cookbook.recipe
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.cookbook_step = 1
+					self.recipes = response.data;
 				})
 				.catch( error => console.log( error ) );
+		},
+		addRecipe() {
+			var data = {
+				action: 'captaincore_ajax',
+				command: 'newRecipe',
+				value: this.new_recipe
+			};
 
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.cookbook_step = 1
+					self.recipes = response.data;
+					self.new_recipe = { title: "", content: "" };
+				})
+				.catch( error => console.log( error ) );
 		},
 		viewMailgunLogs( site_id ) {
 
