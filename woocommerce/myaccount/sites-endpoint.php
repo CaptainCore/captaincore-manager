@@ -1363,35 +1363,55 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-card>
 				</v-dialog>
 			<v-container fluid v-show="loading_sites != true">
-			<v-layout row wrap>
-      <v-flex xs4>
-				Sites per page <v-select
-						:items='[50,100,250]'
-						v-model="items_per_page"
-						label=""
-						dense
-						@change="page = 1"
-						style="display:inline-table;width:100px;"
-						width="80"
-	        ></v-select>
-			</v-flex>
-			<v-flex xs4 text-md-center>
-				<v-card-text>{{ showingSitesBegin }}-{{ showingSitesEnd }} sites of {{ filteredSites }}</v-card-text>
-			</v-flex>
-			<v-flex xs4 text-md-right>
-				<v-switch inline-block v-model="advanced_filter" class="alignright" style="float:right;padding: 12px 0px;"></v-switch>
-				<v-card-title v-if="advanced_filter == false" class="alignright caption" style="float:right;padding: 16px 0px;">Basic Filter</v-card-title>
-				<v-card-title v-if="advanced_filter == true" class="alignright caption" style="float:right;padding: 16px 0px;">Advanced Filter</v-card-title>
+			<v-layout row v-if="role == 'administrator'">
+			<v-flex xs12 sm6>
+				<v-select v-model="active_page" :items='["Sites","Cookbook","Handbook"]' label="" style="width:120px;"></v-select>
 			</v-flex>
 			</v-layout>
-			<v-text-field
-				v-model="search"
-				label="Search sites by name"
-				light
-				@input="filterSites"
-				></v-text-field>
-			<v-layout row v-if="advanced_filter == true">
-			<v-flex xs12>
+			<v-card tile v-show="active_page == 'Sites'">
+				<v-toolbar color="grey lighten-4" dense light flat>
+					<v-toolbar-title>Sites <small>({{ showingSitesBegin }}-{{ showingSitesEnd }} of {{ filteredSites }})</small></v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+						<v-btn flat @click="advanced_filter = !advanced_filter">Advanced filter<v-icon dark small>fas fa-filter</v-icon></v-btn>
+						<v-btn flat @click="dialog_new_site.show = true">Add Site <v-icon dark>add</v-icon></v-btn>
+					</v-toolbar-items>
+				</v-toolbar>
+				<v-card-text>
+				<v-layout justify-center>
+					<v-flex xs12 sm3>
+						<v-select
+						:items='[50,100,250]'
+						v-model="items_per_page"
+						label="Per page"
+						dense
+						@change="page = 1"
+						style="width:70px;"
+	        ></v-select>
+			</v-flex>
+					<v-flex xs12 sm6>
+					<div class="text-xs-center">
+						<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" :length="Math.ceil(filteredSites / items_per_page)" v-model="page" :total-visible="7" color="blue darken-3"></v-pagination>
+					</div>
+			</v-flex>
+					<v-flex xs12 sm3>
+						<v-text-field v-model="search" label="Search sites by name" light @input="filterSites" append-icon="search"></v-text-field>
+			</v-flex>
+			</v-layout>
+				<v-card v-show="advanced_filter == true">
+				<v-toolbar card dense dark color="primary">
+					<v-btn icon dark @click.native="advanced_filter = false">
+						<v-icon>close</v-icon>
+					</v-btn>
+					<v-toolbar-title>Advanced Filter</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-card-text>
+            <v-layout row>
+			<v-flex xs2 px-2>
+				<v-select :items="select_site_options" v-model="site_selected" @input="selectSites" label="Bulk Toggle" chips></v-select>
+			</v-flex>
+			<v-flex xs10 px-2>
 			<v-autocomplete
 			:items="site_filters"
 			item-text="search"
@@ -1403,6 +1423,8 @@ Vue.component('file-upload', VueUploadComponent);
 			label="Select Theme and/or Plugin"
 			chips
 			multiple
+			hide-details
+			hide-selected
 			small-chips
 			deletable-chips
 			>
@@ -1423,7 +1445,7 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-autocomplete>
 			</v-flex>
 		</v-layout>
-		<v-layout row v-if="advanced_filter == true">
+		<v-layout row>
 			<v-flex xs5>
 				 <v-autocomplete
 				 v-model="applied_site_filter_version"
@@ -1483,35 +1505,16 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-autocomplete>
 			</v-flex>
 			</v-layout>
-			<v-layout row v-if="advanced_filter == true">
+			<v-layout row>
 			<v-flex xs12 sm9 text-xs-right>
-			<v-select
-		  :items="select_site_options"
-			v-model="site_selected"
-			@input="selectSites"
-		  label="Select"
-			chips
-		></v-select>
+			
 				</v-flex>
 				<v-flex xs12 sm3 text-xs-right>
 					<v-btn @click.stop="dialog = true">Bulk Actions on {{ selectedSites }} sites</v-btn>
 				</v-flex>
 			</v-layout>
-
-			<v-layout justify-center>
-				<div class="text-xs-center">
-					<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" :length="Math.ceil(filteredSites / items_per_page)" v-model="page" :total-visible="7" color="blue darken-3"></v-pagination>
-				</div>
-			</v-layout>
-
-			<div class="text-xs-right" v-if="typeof dialog_new_site == 'object'">
-				<v-btn small dark color="blue darken-3" @click="dialog_handbook.show = true">Handbook
-					<v-icon small dark style="padding-left: 0.5em">fas fa-map</v-icon>
-				</v-btn>
-			<v-btn small dark color="blue darken-3" @click="dialog_new_site.show = true">Add Site
-				<v-icon dark>add</v-icon>
-			</v-btn>
-			</div>
+			</v-card-text>
+            </v-card>
 				<v-expansion-panel style="margin-top: 20px" v-bind:class='{ "toggleSelect": advanced_filter }' popout>
 						<v-expansion-panel-content lazy v-for="site in paginatedSites" :key="site.id" class="site"> 
 							<div slot="header">
@@ -1850,7 +1853,8 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-toolbar>
 				<v-card flat>
 					<v-card-title>
-						<div>
+					<v-flex xs12 sm3>
+						<v-subheader>Common Built-in Scripts</v-subheader>
 							<div><v-btn small flat @click="viewApplyHttpsUrls(site.id)">
 								<v-icon>launch</v-icon> <span>Apply HTTPS Urls</span>
 							</v-btn></div>
@@ -1863,7 +1867,12 @@ Vue.component('file-upload', VueUploadComponent);
 							<div><v-btn small flat @click="toggleSite(site.id)">
 								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span>
 							</v-btn></div>
+					</v-flex>
+					<v-flex xs12 sm3>
+					<v-subheader>User-Defined Recipes</v-subheader>
+						<div v-for="recipe in recipes">
 						</div>
+					</v-flex>
 					</v-card-title>
 				</v-card>
 			</v-tab-item>
@@ -2183,8 +2192,6 @@ Vue.component('file-upload', VueUploadComponent);
 
 						 </v-expansion-panel-content>
 			</v-expansion-panel>
-			<template>
-				<v-container>
 				<v-layout justify-center>
 				<div class="text-xs-center">
 					<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" :length="Math.ceil(filteredSites / items_per_page)" v-model="page" :total-visible="7" color="blue darken-3"></v-pagination>
@@ -2306,24 +2313,17 @@ new Vue({
 		dialog_theme_and_plugin_checks: { show: false, site: {}, loading: false },
 		dialog_update_settings: { show: false, site_id: null, loading: false },
 		dialog_fathom: { show: false, site: {}, loading: false, editItem: false, editedItem: {}, editedIndex: -1 },
+		active_page: "Sites",
 		page: 1,
 		jobs: [],
-		current_user_email: "<?php echo $current_user->user_email; ?>",
-		hosting_plans: 
+		recipes: 
 		<?php
-			$hosting_plans   = get_field( 'hosting_plans', 'option' );
-			$hosting_plans[] = array(
-				'name'          => 'Custom',
-				'visits_limit'  => '',
-				'storage_limit' => '',
-				'sites_limit'   => '',
-				'price'         => '',
-			);
-		echo json_encode( $hosting_plans );
+
+		$db_recipes = new CaptainCore\recipes();
+		$recipes = $db_recipes->all("title","ASC");
+		echo json_encode( $recipes );
 		?>
 		,
-		<?php if ( current_user_can( 'administrator' ) ) { ?>
-		role: "administrator",
 		processes: 
 			<?php
 
@@ -2343,7 +2343,11 @@ new Vue({
 			foreach ( $all_processes as $process ) {
 
 				$repeat_value = get_field( 'repeat', $process->ID );
+				if ( is_array( $repeat_field ) && isset( $repeat_field['choices'][ $repeat_value ] ) ) {
 				$repeat       = $repeat_field['choices'][ $repeat_value ];
+				} else {
+					$repeat = "";
+				}
 				$role         = get_the_terms( $process->ID, 'process_role' );
 					if ( ! empty( $role ) && ! is_wp_error( $role ) ) {
 					   $role = join( ' ', wp_list_pluck( $role, 'name' ) );
@@ -2362,10 +2366,29 @@ new Vue({
 					echo json_encode( $processes );
 			?>
 		,
+		current_user_email: "<?php echo $current_user->user_email; ?>",
+		hosting_plans: 
+		<?php
+			$hosting_plans   = get_field( 'hosting_plans', 'option' );
+			$hosting_plans[] = array(
+				'name'          => 'Custom',
+				'visits_limit'  => '',
+				'storage_limit' => '',
+				'sites_limit'   => '',
+				'price'         => '',
+			);
+		echo json_encode( $hosting_plans );
+		?>
+		,
+		<?php if ( current_user_can( 'administrator' ) ) { ?>
+		role: "administrator",
 		dialog_new_log_entry: { show: false, site: {}, process: "", description: "" },
 		dialog_edit_log_entry: { id: "", show: false, site: {}, process: "", description: "" },
-		dialog_handbook: { show: false, process: {}, description: "" },
-		new_process: { title: "", time_estimate: "", repeat: "as-needed", repeat_quantity: "", role: "", description: "" },
+		dialog_cookbook: { show: false, recipe: {}, content: "" },
+		dialog_handbook: { show: false, process: {} },
+		new_recipe: { title: "", content: "" },
+		new_process: { show: false, title: "", time_estimate: "", repeat: "as-needed", repeat_quantity: "", role: "", description: "" },
+		dialog_edit_process: { show: false, process: {} },
 		new_process_roles: 
 			<?php
 			$roles     = get_terms(
@@ -2385,7 +2408,7 @@ new Vue({
 			echo json_encode( $new_roles );
 			?>
 		,
-		handbook_step: 1,
+		cookbook_step: 1,
 		dialog_new_site: {
 			provider: "kinsta",
 			show: false,
