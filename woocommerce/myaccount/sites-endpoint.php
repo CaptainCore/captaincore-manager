@@ -1374,7 +1374,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
 						<v-btn flat @click="advanced_filter = !advanced_filter">Advanced filter<v-icon dark small>fas fa-filter</v-icon></v-btn>
-						<v-btn flat @click="dialog_new_site.show = true">Add Site <v-icon dark>add</v-icon></v-btn>
+						<v-btn flat @click="dialog_new_site.show = true" v-show="role == 'administrator'">Add Site <v-icon dark>add</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
