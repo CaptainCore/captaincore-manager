@@ -1618,7 +1618,7 @@ Vue.component('file-upload', VueUploadComponent);
 											 </div>
 										 </div>
 										 <div>
-												<img :src="key.screenshot_large" style="width: 400px; margin-top:10px;" class="elevation-3" v-show="key.screenshot_large">
+												<img :src="key.screenshot_large" style="width: 400px; margin-top:14px;" class="elevation-3" v-show="key.screenshot_large">
 										 </div>
 										</v-layout>
 									 </v-container>
