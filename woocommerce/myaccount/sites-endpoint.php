@@ -945,9 +945,9 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-data-table
 				:headers="header_timeline"
 				:items="dialog_log_history.logs"
+						:pagination.sync="dialog_log_history.pagination"
+						:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
 				class="timeline"
-				:rows-per-page-items='[5,10,25,{"text":"$vuetify.dataIterator.rowsPerPageAll","value":-1}]'
-				hide-actions
 				>
 				<template slot="items" slot-scope="props">
 					<td class="justify-center">{{ props.item.created_at | pretty_timestamp }}</td>
@@ -958,10 +958,10 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-icon
 							small
 							class="mr-2"
-							@click="dialog_log_history.show = false; editLogEntry(props.item.websites[0].id, props.item.id)"
+							@click="dialog_log_history.show = false; editLogEntry(props.item.websites, props.item.id)"
 						>
 							edit
-						</v-icon><br />
+						</v-icon>
 						{{ props.item.websites.map( site => site.name ).join(" ") }}
 					</td>
 				</template>
@@ -2537,7 +2537,7 @@ new Vue({
 		<?php if ( current_user_can( 'administrator' ) ) { ?>
 		role: "administrator",
 		dialog_new_log_entry: { show: false, site: {}, process: "", description: "" },
-		dialog_log_history: { show: false, logs: [] },
+		dialog_log_history: { show: false, logs: [], pagination: {} },
 		dialog_edit_process_log: { show: false, site: {}, log: {} },
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_handbook: { show: false, process: {} },
@@ -3666,6 +3666,15 @@ new Vue({
 		},
 		editLogEntry( site_id, log_id ) {
 
+			// If not assigned that's fine but at least assign as string.
+			if ( site_id == "" ) {
+				site_id = "Not found";
+			}
+
+			if ( typeof site_id == "object" ) {
+				site_id = site_id[0].id;
+			}
+			
 			site = this.sites.filter(site => site.id == site_id )[0];
 
 			var data = {
@@ -3681,13 +3690,13 @@ new Vue({
 				.then( response => {
 					self.dialog_edit_process_log.log = response.data;
 					self.dialog_edit_process_log.show = true;
+					if ( typeof site !== "undefined" ) {
 					self.dialog_edit_process_log.site = site;
+					} else {
+						self.dialog_edit_process_log.site = {};
+					}
 				})
 				.catch( error => console.log( error ) );
-
-			//log_entry = site.timeline.filter( log => log.id == log_id )[0]
-			//this.dialog_edit_process_log.description = log_entry.description_raw
-			//this.dialog_edit_process_log.process = log_entry.process_id
 
 		},
 		viewProcess( process_id ) {
