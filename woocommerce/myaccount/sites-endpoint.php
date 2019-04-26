@@ -4899,9 +4899,11 @@ new Vue({
 				this.sites_selected.forEach(site => window.open(site.environments[0].home_url));
 			}
 			if ( this.dialog_bulk.environment_selected == "Staging" || this.dialog_bulk.environment_selected == "Both" ) {
+				this.sites_selected.forEach(site => { 
 				if ( site.environments[1].home_url ) {
-					this.sites_selected.forEach(site => window.open(site.environments[1].home_url));
+						window.open( site.environments[1].home_url );
 				}
+				});
 			}
 		},
 		bulkactionSubmit() {
