@@ -4021,14 +4021,27 @@ add_action( 'wp_ajax_captaincore_install', 'captaincore_install_action_callback'
 function captaincore_install_action_callback() {
 	global $wpdb; // this is how you get access to the database
 
+	// Assign post id
+	$post_id = intval( $_POST['post_id'] );
+
+	// Many sites found, check permissions
 	if ( is_array( $_POST['post_id'] ) ) {
 		$post_ids       = array();
-		$post_ids_array = $_POST['post_id'];
-		foreach ( $post_ids_array as $id ) {
+		foreach ( $_POST['post_id'] as $id ) {
+
+			// Checks permissions
+			if ( ! captaincore_verify_permissions( $id ) ) {
+				echo 'Permission denied';
+				wp_die(); // this is required to terminate immediately and return a proper response
+				return;
+			}
+
 			$post_ids[] = intval( $id );
 		}
-	} else {
-		$post_id = intval( $_POST['post_id'] );
+
+		// Patch in the first from the post_ids
+		$post_id = $post_ids[0];
+
 	}
 
 	// Checks permissions
@@ -4069,6 +4082,27 @@ function captaincore_install_action_callback() {
 	// Append provider if exists
 	if ( $provider != '' ) {
 		$site = $site . '@' . $provider;
+	}
+
+	// If many sites, fetch their names
+	if ( $post_ids ) {
+		$site_names = array();
+		foreach( $post_ids as $id ) {
+
+			if ( $environment == "Production" or $environment == "Both" ) {
+				$site_names[]   = get_field( 'site', $id );
+			}
+
+			$address_staging  = get_field( 'field_57b7a25d2cc60', $id );
+
+			// Add staging if needed
+			if ( isset( $address_staging ) && $address_staging != "" ) {
+				if ( $environment == "Staging" or $environment == "Both" ) {
+					$site_names[] = get_field( 'site', $id ) . '-staging';
+				}
+			}
+		}
+		$site = implode( " ", $site_names );
 	}
 
 	if ( $background ) {

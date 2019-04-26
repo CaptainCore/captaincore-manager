@@ -43,6 +43,9 @@ html {
 .v-input {
 	margin-top: 0px;
 }
+.siteFilter .v-input__control { 
+	min-height: 42px;
+}
 .v-tabs__container--icons-and-text {
 	height: 54px;
 }
@@ -454,15 +457,12 @@ Vue.component('file-upload', VueUploadComponent);
 						<label for="file" class="btn btn-lg btn-primary" style="padding: 0px 8px;">Select Files</label>
 					</div>
 			</div>
-
 			<div v-show="$refs.upload && $refs.upload.dropActive" class="drop-active">
 				<h3>Drop files to upload</h3>
 			</div>
-
 			<div class="upload-drag-btn">
 				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="/wp-content/plugins/captaincore-gui/upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
 			</div>
-
 		</div>
 		</div>
 		</v-card-text>
@@ -493,9 +493,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-spacer></v-spacer>
 			</v-toolbar>
 			<v-card-text>
-
 				<v-progress-linear :indeterminate="true" v-if="dialog_fathom.loading"></v-progress-linear>
-				
 				<table>
 				<tr v-for="tracker in dialog_fathom.site.fathom">
 					<td class="pa-1"><v-text-field v-model="tracker.domain" label="Domain"></v-text-field></td>
@@ -1414,6 +1412,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Sites <small>({{ showingSitesBegin }}-{{ showingSitesEnd }} of {{ filteredSites }})</small></v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
+						<v-btn flat @click="dialog_bulk.show = !dialog_bulk.show" v-show="selectedSites > 0">Bulk Management <small>({{ selectedSites }})</small><v-icon dark small>fas fa-cog</v-icon></v-btn>
 						<v-btn flat @click="advanced_filter = !advanced_filter">Advanced filter<v-icon dark small>fas fa-filter</v-icon></v-btn>
 						<v-btn flat @click="dialog_new_site.show = true" v-show="role == 'administrator'">Add Site <v-icon dark>add</v-icon></v-btn>
 					</v-toolbar-items>
@@ -1462,6 +1461,7 @@ Vue.component('file-upload', VueUploadComponent);
 			@input="filterSites"
 			item-text="title"
 			label="Select Theme and/or Plugin"
+					class="siteFilter"
 			chips
 			multiple
 			hide-details
@@ -1544,15 +1544,154 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-autocomplete>
 			</v-flex>
 			</v-layout>
-			<v-layout row>
-			<v-flex xs12 sm9 text-xs-right>
-			
-				</v-flex>
-				<v-flex xs12 sm3 text-xs-right>
-					<v-btn @click.stop="dialog = true">Bulk Actions on {{ selectedSites }} sites</v-btn>
-				</v-flex>
-			</v-layout>
 			</v-card-text>
+            </v-card>
+			<v-card tile v-show="dialog_bulk.show == true">
+			<v-toolbar card dark color="primary" dense class="mt-3">
+				<v-btn icon dark @click.native="dialog_bulk.show = false">
+					<v-icon>close</v-icon>
+				</v-btn>
+				<v-toolbar-title>Bulk Management</v-toolbar-title>
+				<v-spacer></v-spacer>
+			</v-toolbar>
+			<v-tabs v-model="dialog_bulk.tabs_management" color="grey lighten-4" right icons-and-text>
+				<v-select
+					v-model="dialog_bulk.environment_selected"
+					:items='[{"name":"Production Environments","value":"Production"},{"name":"Staging Environments","value":"Staging"},{"name":"Both Environments","value":"Both"}]'
+					item-text="name"
+					item-value="value"
+					light
+					style="max-width: 204px; margin: 0px 1em 0px 16px; top: 0px;">
+				</v-select>
+				<v-btn small icon @click="bulkSyncSites()" style="margin: 14px auto 0 0;">
+					<v-icon small color="grey">fas fa-sync</v-icon>
+				</v-btn>
+				<v-tab href="#tab-Sites">
+					Sites <v-icon small>fas fa-list</v-icon>
+				</v-tab>
+				<v-tab key="Themes" href="#tab-Themes" v-show="role == 'administrator'">
+					Themes <v-icon small style="margin-left:7px;">fas fa-paint-brush</v-icon>
+				</v-tab>
+				<v-tab key="Plugins" href="#tab-Plugins" v-show="role == 'administrator'">
+					Plugins <v-icon small style="margin-left:7px;">fas fa-plug</v-icon>
+				</v-tab>
+				<v-tab key="Users" href="#tab-Users" v-show="role == 'coming-soon'">
+					Users <v-icon small style="margin-left:7px;">fas fa-users</v-icon>
+				</v-tab>
+				<v-tab key="Updates" href="#tab-Updates" v-show="role == 'coming-soon'">
+					Updates <v-icon small style="margin-left:7px;">fas fa-book-open</v-icon>
+				</v-tab>
+				<v-tab href="#tab-Scripts" v-show="role == 'coming-soon'">
+					Scripts <v-icon small style="margin-left:7px;">fas fa-code</v-icon>
+				</v-tab>
+				<v-tab key="Backups" href="#tab-Backups" v-show="role == 'coming-soon'">
+					Backups <v-icon small style="margin-left:7px;">fas fa-hdd</v-icon>
+				</v-tab>
+			</v-tabs>
+			<v-tabs-items v-model="dialog_bulk.tabs_management">
+			<v-tab-item key="1" value="tab-Sites">
+				<v-card flat>
+					<v-toolbar color="grey lighten-4" dense light flat>
+					<v-toolbar-title>Sites</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+						<v-btn flat @click="bulkactionLaunch">Launch sites in browser</v-btn>
+					</v-toolbar-items>
+				</v-toolbar>
+				<v-card-text>
+				<v-flex sm12 mb-3>
+				<v-chip
+					outline
+					close
+					v-for="site in sites_selected"
+					@input="removeFromBulk(site.id)"
+				><a :href="site.home_url" target="_blank">{{ site.name }}</a></v-chip>
+				</v-flex>
+				</v-card-text>
+				</v-card>
+			</v-tab-item>
+			<v-tab-item key="2" value="tab-Themes">
+				<v-card flat>
+					<v-toolbar color="grey lighten-4" dense light flat>
+					<v-toolbar-title>Themes</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+						<v-btn flat @click="addThemeBulk()">Add theme <v-icon dark small>add</v-icon></v-btn>
+					</v-toolbar-items>
+				</v-toolbar>
+				</v-card>
+			</v-tab-item>
+			<v-tab-item key="3" value="tab-Plugins">
+				<v-card flat>
+					<v-toolbar color="grey lighten-4" dense light flat>
+					<v-toolbar-title>Plugins</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+						<v-btn flat @click="addPluginBulk()">Add plugin <v-icon dark small>add</v-icon></v-btn>
+					</v-toolbar-items>
+				</v-toolbar>
+				</v-card>
+			</v-tab-item>
+			<v-tab-item key="4" value="tab-Users">
+				<v-card flat>
+					<v-toolbar color="grey lighten-4" dense light flat>
+					<v-toolbar-title>Users</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+						<v-btn flat @click="bulkactionLaunch">Add user <v-icon dark small>add</v-icon></v-btn>
+					</v-toolbar-items>
+				</v-toolbar>
+				</v-card>
+			</v-tab-item>
+			<v-tab-item key="5" value="tab-Updates">
+				<v-card flat>
+					<v-toolbar color="grey lighten-4" dense light flat>
+					<v-toolbar-title>Updates</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+						<v-btn flat @click="bulkactionLaunch">Manual Update <v-icon dark small>add</v-icon></v-btn>
+					</v-toolbar-items>
+				</v-toolbar>
+				</v-card>
+			</v-tab-item>
+			<v-tab-item key="6" value="tab-Scripts">
+				<v-card flat>
+					<v-card-title>
+					<v-flex xs12 sm3>
+						<v-subheader>Common Built-in Scripts</v-subheader>
+							<div><v-btn small flat @click="viewApplyHttpsUrls(site.id)">
+								<v-icon>launch</v-icon> <span>Apply HTTPS Urls</span>
+							</v-btn></div>
+							<div><v-btn small flat @click="siteDeploy(site.id)">
+								<v-icon>loop</v-icon> <span>Deploy users/plugins</span>
+							</v-btn></div>
+							<div><v-btn small flat @click="toggleSite(site.id)">
+								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span>
+							</v-btn></div>
+				</v-flex>
+					<v-flex xs12 sm3 v-show="role == 'administrator'">
+					<v-subheader>User-Defined Recipes</v-subheader>
+						<div v-for="recipe in recipes">
+							<v-btn small flat @click="runRecipe(recipe.recipe_id)">
+								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
+							</v-btn>
+						</div>
+				</v-flex>
+					</v-card-title>
+				</v-card>
+			</v-tab-item>
+			<v-tab-item key="7" value="tab-Backups">
+				<v-card flat>
+					<v-toolbar color="grey lighten-4" dense light flat>
+					<v-toolbar-title>Backups</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+						<v-btn flat @click="bulkactionLaunch">Manual Check <v-icon dark small>add</v-icon></v-btn>
+					</v-toolbar-items>
+				</v-toolbar>
+				</v-card>
+			</v-tab-item>
+			</v-tabs-items>
             </v-card>
 				<v-expansion-panel style="margin-top: 20px" v-bind:class='{ "toggleSelect": advanced_filter }' popout>
 						<v-expansion-panel-content lazy v-for="site in paginatedSites" :key="site.id" class="site"> 
@@ -2372,58 +2511,6 @@ Vue.component('file-upload', VueUploadComponent);
 				{{ snackbar.message }}
 				<v-btn dark flat @click.native="snackbar.show = false">Close</v-btn>
 			</v-snackbar>
-			<v-dialog
-				transition="dialog-bottom-transition"
-				:overlay="false"
-				scrollable
-				v-model="dialog">
-			 <v-card tile style="overflow-y: scroll;">
-				 <v-toolbar card dark color="primary">
-			<v-btn icon @click.native="dialog = false" dark>
-			  <v-icon>close</v-icon>
-			</v-btn>
-			<v-toolbar-title>Bulk Actions on {{ selectedSites }} sites</v-toolbar-title>
-			<v-spacer></v-spacer>
-		  </v-toolbar>
-				<v-layout row>
-		   <v-flex xs12 style="max-width: 800px;" mx-auto>
-				 <v-card-text>
-							 <v-autocomplete
-								 :items="bulk_actions"
-								 item-text="name"
-								 item-value="value"
-								 v-model="select_bulk_action"
-						label="Run a Script or Command"
-								 @input="argumentsForActions"
-								 single-line
-								 chips
-								 multiple
-							 ></v-autocomplete>
-							 <v-text-field
-							 	name="input-1"
-								v-model="argument.input"
-								v-for="argument in select_bulk_action_arguments"
-								:label="argument.name"
-						></v-text-field>
-					 <v-chip
-						color="green"
-						outline
-						close
-						v-for="site in sites_selected"
-						@input="removeFromBulk(site.id)"
-						><a :href="site.home_url" target="_blank" style="color:#4caf50;">{{ site.name }}</a></v-chip>
-				 </v-card-text>
-				 <v-card-actions>
-					 <v-btn @click="bulkactionLaunch">Launch sites in browser</v-btn>
-					  <v-btn @click="bulkactionSubmit">submit</v-btn>
-					 <v-btn color="primary" flat @click.stop="dialog=false">Close</v-btn>
-				 </v-card-actions>
-				 <v-spacer></v-spacer>
-				 <p></p>
-			 </v-flex>
-			</v-layout>
-			 </v-card>
-		 </v-dialog>
 		</template>
 		</v-content>
 	</v-app>
@@ -2455,7 +2542,7 @@ new Vue({
 	el: '#app',
 	data: {
 		loading_sites: true,
-		dialog: false,
+		dialog_bulk: { show: false, tabs_management: "tab-Sites", environment_selected: "Production" },
 		dialog_apply_https_urls: { show: false, site: {} },
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
 		dialog_edit_site: { show: false, site: {}, loading: false },
@@ -2596,8 +2683,8 @@ new Vue({
 			{"text":"Name","value":"name","sortable":false,"width":"165"},
 			{"text":"Notes","value":"notes","sortable":false},
 		],<?php } ?>
-		new_plugin: { show: false, site_id: null},
-		new_theme: { show: false, site_id: null},
+		new_plugin: { show: false, site_id: null, site_name: "", environment_selected: ""},
+		new_theme: { show: false, site_id: null, site_name: "", environment_selected: ""},
 		bulk_edit: { show: false, site_id: null, type: null, items: [] },
 		upload: [],
 		view_jobs: false,
@@ -2964,7 +3051,7 @@ new Vue({
 
 							// Adds new job
 							job_id = Math.round((new Date()).getTime());
-							description = "Installing plugin '" + newFile.name + "' to " + site.name;
+							description = "Installing plugin '" + newFile.name + "' to " + this.new_plugin.site_name;
 							this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
 
 							// Builds WP-CLI
@@ -2977,13 +3064,13 @@ new Vue({
 								'command': "manage",
 								'value': "ssh",
 								'background': true,
-								'environment': site.environment_selected,
+								'environment': this.new_plugin.environment_selected,
 								'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 							};
 
 							// Housecleaning
-							this.new_plugin.site_id = null;
-							this.new_plugin.site_name = null;
+							this.new_plugin.site_id = "";
+							this.new_plugin.site_name = "";
 						}
 						if ( this.new_theme.show ) {
 							this.new_theme.show = false;
@@ -2995,7 +3082,7 @@ new Vue({
 
 							// Adds new job
 							job_id = Math.round((new Date()).getTime());
-							description = "Installing theme '" + newFile.name + "' to " + site.name;
+							description = "Installing theme '" + newFile.name + "' to " + this.new_theme.site_name;
 							this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
 
 							// Builds WP-CLI
@@ -3008,13 +3095,13 @@ new Vue({
 								'command': "manage",
 								'value': "ssh",
 								'background': true,
-								'environment': site.environment_selected,
+								'environment': this.new_theme.environment_selected,
 								'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 							};
 
 							// Housecleaning
-							this.new_theme.site_id = null;
-							this.new_theme.site_name = null;
+							this.new_theme.site_id = "";
+							this.new_theme.site_name = "";
 						}
 
 						self = this;
@@ -3191,6 +3278,44 @@ new Vue({
 
 			self = this;
 			description = "Syncing " + site.name + " site info";
+
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({ "job_id": job_id, "description": description, "status": "running", "command": "syncSite" });
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+
+					// Check if completed in 2 seconds
+					setTimeout(function() {
+						self.jobRetry(site_id, response.data);
+					}, 2000);
+
+				})
+				.catch( error => console.log( error ) );
+
+		},
+		bulkSyncSites() {
+
+			should_proceed = confirm("Sync " + this.selectedSites + " sites for " + this.dialog_bulk.environment_selected.toLowerCase() + " environments info?");
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			site_ids = this.sites_selected.map( site => site.id );
+			site_names = this.sites_selected.map( site => site.name ).join(" ");
+
+			var data = {
+				action: 'captaincore_install',
+				post_id: site_ids,
+				command: 'sync-data',
+			};
+
+			self = this;
+			description = "Syncing " + site_names + " site info";
 
 			// Start job
 			job_id = Math.round((new Date()).getTime());
@@ -4358,9 +4483,17 @@ new Vue({
 
 		},
 		addTheme ( site_id ){
+			site = this.sites.filter(site => site.id == site_id)[0]
 			this.new_theme.show = true;
-			this.new_theme.site_id = site_id;
-			this.new_theme.site_name = this.sites.filter(site => site.id == site_id)[0].name;
+			this.new_theme.site_id = site.id;
+			this.new_theme.site_name = site.name;
+			this.new_theme.environment_selected = site.environment_selected;
+		},
+		addThemeBulk() {
+			this.new_theme.show = true;
+			this.new_theme.site_id = this.sites_selected.map( site => site.id );
+			this.new_theme.site_name = "Bulk sites";
+			this.new_theme.environment_selected = this.dialog_bulk.environment_selected;
 		},
 		activateTheme (theme_name, site_id) {
 
@@ -4449,9 +4582,17 @@ new Vue({
 
 		},
 		addPlugin ( site_id ){
+			site = this.sites.filter(site => site.id == site_id)[0]
 			this.new_plugin.show = true;
-			this.new_plugin.site_id = site_id;
-			this.new_plugin.site_name = this.sites.filter(site => site.id == site_id)[0].name;
+			this.new_plugin.site_id = site.id;
+			this.new_plugin.site_name = site.name;
+			this.new_plugin.environment_selected = site.environment_selected;
+		},
+		addPluginBulk() {
+			this.new_plugin.show = true;
+			this.new_plugin.site_id = this.sites_selected.map( site => site.id );
+			this.new_plugin.site_name = "Bulk sites";
+			this.new_plugin.environment_selected = this.dialog_bulk.environment_selected;
 		},
 		togglePlugin (plugin_name, plugin_status, site_id) {
 
@@ -4754,7 +4895,14 @@ new Vue({
 
 		},
 		bulkactionLaunch() {
+			if ( this.dialog_bulk.environment_selected == "Production" || this.dialog_bulk.environment_selected == "Both" ) {
 				this.sites_selected.forEach(site => window.open(site.environments[0].home_url));
+			}
+			if ( this.dialog_bulk.environment_selected == "Staging" || this.dialog_bulk.environment_selected == "Both" ) {
+				if ( site.environments[1].home_url ) {
+					this.sites_selected.forEach(site => window.open(site.environments[1].home_url));
+				}
+			}
 		},
 		bulkactionSubmit() {
 
