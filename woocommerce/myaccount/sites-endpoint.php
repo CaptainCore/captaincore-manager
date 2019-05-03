@@ -727,12 +727,7 @@ Vue.component('file-upload', VueUploadComponent);
           <div style="flex: 1 1 auto;"></div>
         </v-card>
       </v-dialog>
-
-			<v-dialog
-				v-model="dialog_new_site.show"
-				transition="dialog-bottom-transition"
-				scrollable
-			>
+		<v-dialog v-model="dialog_new_site.show" scrollable>
 					<v-card tile>
 						<v-toolbar card dark color="primary">
 							<v-btn icon dark @click.native="dialog_new_site.show = false">
@@ -744,21 +739,30 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-card-text>
 							<v-container>
 							<v-form ref="form">
+							<v-layout>
+							<v-flex xs4 class="mx-2">
 								<v-autocomplete
 								:items='[{"name":"WP Engine","value":"wpengine"},{"name":"Kinsta","value":"kinsta"}]'
 								item-text="name"
 								v-model="dialog_new_site.provider"
 								label="Provider"
 							></v-autocomplete>
+							</v-flex>
+							<v-flex xs4 class="mx-2">
 								<v-text-field :value="dialog_new_site.domain" @change.native="dialog_new_site.domain = $event.target.value" label="Domain name" required></v-text-field>
+							</v-flex>
+							<v-flex xs4 class="mx-2">
 						    <v-text-field :value="dialog_new_site.site" @change.native="dialog_new_site.site = $event.target.value" label="Site name" required></v-text-field>
+							</v-flex>
+							</v-layout>
+							<v-layout>
+							<v-flex xs4 class="mx-2">
 								<v-autocomplete
-								:items="customers"
+							:items="developers"
+							v-model="dialog_new_site.shared_with"
+							label="Shared With"
 								item-text="name"
-								item-value="customer_id"
-								v-model="dialog_new_site.customers"
-								item-text="name"
-								label="Customer"
+							:return-object="true"
 								chips
 								multiple
 								small-chips
@@ -779,14 +783,18 @@ Vue.component('file-upload', VueUploadComponent);
 								<strong>{{ data.item.name }}</strong>
 							</template>
 							</v-autocomplete>
+						</v-flex>
+						<v-flex xs4 class="mx-2">
 							<v-autocomplete
-							:items="developers"
-							v-model="dialog_new_site.shared_with"
-							label="Shared With"
+								:items="customers"
+								item-text="name"
+								item-value="customer_id"
+								v-model="dialog_new_site.customers"
 							item-text="name"
-							:return-object="true"
+
+								hint="Assign to existing customer. If new leave blank."
+								persistent-hint
 							chips
-							multiple
 							small-chips
 							deletable-chips
 						>
@@ -805,7 +813,10 @@ Vue.component('file-upload', VueUploadComponent);
 							<strong>{{ data.item.name }}</strong>
 						</template>
 						</v-autocomplete>
-						
+							</v-flex>
+						<v-flex xs4 class="mx-2">
+						</v-flex>
+						</v-layout>
 								<v-container grid-list-md text-xs-center>
 									<v-layout row wrap>
 										<v-flex xs12 style="height:0px">
@@ -823,23 +834,37 @@ Vue.component('file-upload', VueUploadComponent);
 										<v-container fluid>
 										<div row>
 											<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required></v-text-field>
-											<v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field>
-											<v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field>
-											<v-text-field label="Protocol" :value="key.protocol" @change.native="key.protocol = $event.target.value" required></v-text-field>
-											<v-text-field label="Port" :value="key.port" @change.native="key.port = $event.target.value" required></v-text-field>
 											<v-text-field label="Home Directory" :value="key.home_directory" @change.native="key.home_directory = $event.target.value" required></v-text-field>
-											<v-text-field label="Database Username" :value="key.database_username" @change.native="key.database_username = $event.target.value" required></v-text-field>
-											<v-text-field label="Database Password" :value="key.database_password" @change.native="key.database_password = $event.target.value" required></v-text-field>
-											<v-switch label="Automatic Updates" v-model="key.updates_enabled" false-value="0" true-value="1"></v-switch>
-											<div v-if="typeof key.offload_enabled != 'undefined'">
+											<v-layout>
+											<v-flex xs6 class="mr-1"><v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field></v-flex>
+											<v-flex xs6 class="ml-1"><v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field></v-flex>
+											</v-layout>
+											<v-layout>
+											<v-flex xs6 class="mr-1"><v-text-field label="Protocol" :value="key.protocol" @change.native="key.protocol = $event.target.value" required></v-text-field></v-flex>
+											<v-flex xs6 class="mr-1"><v-text-field label="Port" :value="key.port" @change.native="key.port = $event.target.value" required></v-text-field></v-flex>
+											</v-layout>
+											<v-layout>
+											<v-flex xs6 class="mr-1"><v-text-field label="Database Username" :value="key.database_username" @change.native="key.database_username = $event.target.value" required></v-text-field></v-flex>
+											<v-flex xs6 class="mr-1"><v-text-field label="Database Password" :value="key.database_password" @change.native="key.database_password = $event.target.value" required></v-text-field></v-flex>
+											</v-layout>
+											<v-layout>
+												<v-flex xs6 class="mr-1"><v-switch label="Automatic Updates" v-model="key.updates_enabled" false-value="0" true-value="1"></v-switch></v-flex>
+												<v-flex xs6 class="mr-1" v-if="typeof key.offload_enabled != 'undefined'">
 												<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
+												</v-flex>
+											</v-layout>
 												<div v-if="key.offload_enabled == 1">
-													<v-select label="Offload Provider" :value="key.offload_provider" @change.native="key.offload_provider = $event.target.value" :items='[{ provider:"s3", label: "Amazon S3" },{ provider:"do", label:"Digital Ocean" }]' item-text="label" item-value="provider" clearable></v-select>
-													<v-text-field label="Offload Access Key" :value="key.offload_access_key" @change.native="key.offload_access_key = $event.target.value" required></v-text-field>
-													<v-text-field label="Offload Secret Key" :value="key.offload_secret_key" @change.native="key.offload_secret_key = $event.target.value" required></v-text-field>
-													<v-text-field label="Offload Bucket" :value="key.offload_bucket" @change.native="key.offload_bucket = $event.target.value" required></v-text-field>
-													<v-text-field label="Offload Path" :value="key.offload_path" @change.native="key.offload_path = $event.target.value" required></v-text-field>
-												</div>
+											<v-layout>
+												<v-flex xs6 class="mr-1"><v-select label="Offload Provider" :value="key.offload_provider" @change.native="key.offload_provider = $event.target.value" :items='[{ provider:"s3", label: "Amazon S3" },{ provider:"do", label:"Digital Ocean" }]' item-text="label" item-value="provider" clearable></v-select></v-flex>
+												<v-flex xs6 class="mr-1"><v-text-field label="Offload Access Key" :value="key.offload_access_key" @change.native="key.offload_access_key = $event.target.value" required></v-text-field></v-flex>
+											</v-layout>
+											<v-layout>
+												<v-flex xs6 class="mr-1"><v-text-field label="Offload Secret Key" :value="key.offload_secret_key" @change.native="key.offload_secret_key = $event.target.value" required></v-text-field></v-flex>
+												<v-flex xs6 class="mr-1"><v-text-field label="Offload Bucket" :value="key.offload_bucket" @change.native="key.offload_bucket = $event.target.value" required></v-text-field></v-flex>
+											</v-layout>
+											<v-layout>
+												<v-flex xs6 class="mr-1"><v-text-field label="Offload Path" :value="key.offload_path" @change.native="key.offload_path = $event.target.value" required></v-text-field></v-flex>
+											</v-layout>
 											</div>
 										</div>
 								 </v-container>
