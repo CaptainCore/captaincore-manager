@@ -381,7 +381,7 @@ Vue.component('file-upload', VueUploadComponent);
 		<v-content>
 		<v-badge overlap left class="static" v-if="runningJobs">
 			<span slot="badge">{{ runningJobs }}</span>
-			<a @click.stop="view_jobs = !view_jobs"><v-icon large color="grey lighten-1">fas fa-cogs</v-icon></a>
+			<a @click.stop="view_jobs = !view_jobs; $vuetify.goTo( '#sites' )"><v-icon large color="grey lighten-1">fas fa-cogs</v-icon></a>
 			<template>
 			  <v-progress-linear :indeterminate="true"></v-progress-linear>
 			</template>
@@ -1464,7 +1464,7 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
-				<v-layout justify-center>
+				<v-layout justify-center id="sites">
 					<v-flex xs12 sm3>
 						<v-select
 						:items='[50,100,250]'
