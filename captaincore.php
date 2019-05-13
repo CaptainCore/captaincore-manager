@@ -3995,8 +3995,8 @@ function captaincore_ajax_action_callback() {
 			$response = json_decode( $response["body"] );
 			
 			// Response with task id
-			if ( $response && $response->task_id ) { 
-				echo $response->task_id; 
+			if ( $response && $response->token ) { 
+				echo $response->token; 
 			}
 
 			wp_die(); // this is required to terminate immediately and return a proper response
@@ -4328,9 +4328,9 @@ function captaincore_install_action_callback() {
 		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/tasks", $data );
 		$response = json_decode( $response["body"] );
 		
-		// Response with task id
-		if ( $response && $response->task_id ) { 
-			echo $response->task_id;
+		// Response with token for task
+		if ( $response && $response->token ) { 
+			echo $response->token;
 		}
 
 		wp_die(); // this is required to terminate immediately and return a proper response

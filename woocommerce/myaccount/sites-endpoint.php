@@ -379,7 +379,7 @@ Vue.component('file-upload', VueUploadComponent);
 		<v-content>
 		<v-badge overlap left class="static" v-if="runningJobs">
 			<span slot="badge">{{ runningJobs }}</span>
-			<a @click.stop="view_jobs = true"><v-icon large color="grey lighten-1">fas fa-cogs</v-icon></a>
+			<a @click.stop="view_jobs = !view_jobs"><v-icon large color="grey lighten-1">fas fa-cogs</v-icon></a>
 			<template>
 			  <v-progress-linear :indeterminate="true"></v-progress-linear>
 			</template>
@@ -583,7 +583,7 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-card-text>
 			</v-card>
 		</v-dialog>
-		<v-dialog v-model="dialog_edit_process.show" max-width="800px" v-if="role == 'administrator'">
+		<v-dialog v-model="dialog_edit_process.show" persistent max-width="800px" v-if="role == 'administrator'">
 		<v-card tile style="margin:auto;max-width:800px">
 			<v-toolbar card color="grey lighten-4">
 				<v-btn icon @click.native="dialog_edit_process.show = false">
@@ -691,40 +691,58 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-card-text>
 		</v-card>
 		</v-dialog>
-		<v-dialog
-			v-model="view_jobs"
-			transition="dialog-bottom-transition"
-			scrollable
-		>
+		<v-dialog v-model="dialog_theme_and_plugin_checks.show" width="500">
         <v-card tile>
           <v-toolbar card dark color="primary">
-            <v-btn icon dark @click.native="view_jobs = false">
+				<v-btn icon dark @click.native="dialog_theme_and_plugin_checks.show = false">
               <v-icon>close</v-icon>
             </v-btn>
-            <v-toolbar-title>Running Jobs</v-toolbar-title>
+				<v-toolbar-title>Theme & plugin checks for {{ dialog_theme_and_plugin_checks.site.name }}</v-toolbar-title>
             <v-spacer></v-spacer>
           </v-toolbar>
           <v-card-text>
-            <v-list three-line subheader>
-              <v-list-tile avatar v-for="job in jobs.slice().reverse()" key="job.job_id">
-                <v-list-tile-content>
-                  <v-list-tile-title>{{ job.description }}</v-list-tile-title>
-									<v-chip v-if="job.status == 'done'" outline label color="green">Sucess</v-chip>
-					<v-chip v-else-if="job.status == 'error'" outline label color="red">Error</v-chip>
-									<template v-else>
-										<div style="width:200px;">
-									  <v-progress-linear :indeterminate="true"></v-progress-linear>
-										</div>
-									</template>
-                </v-list-tile-content>
-              </v-list-tile>
 
-            </v-list>
-            <v-divider></v-divider>
+				<p>Enables daily checks to verify a theme/plugin is a certain status (activate/inactive). Will email notify if a check fails.</p>
 
+				<v-switch label="Theme & Plugin Checks" v-model="dialog_theme_and_plugin_checks.theme_and_plugin_checks" false-value="0" true-value="1"></v-switch>
+			  <v-data-table
+				:items='[{ slug: "wordpress-seo", status: "active" },{ slug: "enhanced-e-commerce-for-woocommerce-store", status: "active"}]'
+				hide-actions
+				hide-headers
+				class="elevation-1"
+				v-show="dialog_theme_and_plugin_checks.theme_and_plugin_checks == 1"
+			  >
+				<template slot="items" slot-scope="props">
+					<tr>
+				  <td>
+							<v-text-field v-model="props.item.slug" label="Slug" required></v-text-field>
+						</td>
+				  <td class="text-xs-right">
+							<v-select
+					  :items='["active","inactive","active-network"]'
+					  box
+					  label="Status"
+								:value="props.item.status">
+					</v-select>
+						</td>
+						<td class="justify-center layout px-0">
+				  <v-icon small @click="deleteItem(props.item)">
+					delete
+				  </v-icon>
+				</td>
+					</tr>
+				</template>
+					<template slot="footer">
+				  <td colspan="100%" class="text-xs-right">
+							<v-btn @click="deleteItem(props.item)">
+							Add new check
+						</v-btn>
+				  </td>
+				</template>
+			  </v-data-table>
+				<v-progress-linear :indeterminate="true" v-if="dialog_theme_and_plugin_checks.loading"></v-progress-linear>
+				<v-btn @click="savethemeAndPluginChecks()">Save Checks</v-btn>
           </v-card-text>
-
-          <div style="flex: 1 1 auto;"></div>
         </v-card>
       </v-dialog>
 		<v-dialog v-model="dialog_new_site.show" scrollable>
@@ -1437,6 +1455,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Sites <small>({{ showingSitesBegin }}-{{ showingSitesEnd }} of {{ filteredSites }})</small></v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
+						<v-btn flat @click="view_jobs = !view_jobs">Running Jobs <small v-if="runningJobs">({{ runningJobs }})</small><v-icon dark small>fas fa-cogs</v-icon></v-btn>
 						<v-btn flat @click="dialog_bulk.show = !dialog_bulk.show" v-show="selectedSites > 0">Bulk Management <small>({{ selectedSites }})</small><v-icon dark small>fas fa-cog</v-icon></v-btn>
 						<v-btn flat @click="advanced_filter = !advanced_filter">Advanced filter<v-icon dark small>fas fa-filter</v-icon></v-btn>
 						<v-btn flat @click="dialog_new_site.show = true" v-show="role == 'administrator'">Add Site <v-icon dark>add</v-icon></v-btn>
@@ -1463,6 +1482,39 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-text-field v-model="search" label="Search sites by name" light @input="filterSites" append-icon="search"></v-text-field>
 			</v-flex>
 			</v-layout>
+				<v-card v-show="view_jobs == true">
+					<v-toolbar card dense dark color="primary">
+					<v-btn icon dark @click.native="view_jobs = false">
+						<v-icon>close</v-icon>
+					</v-btn>
+					<v-toolbar-title>Running Jobs</v-toolbar-title>
+					<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-data-table
+						:headers="[{ text: 'Description', value: 'description', width: '300px' },
+          { text: 'Status', value: 'status', width: '130px' },
+          { text: 'Response', value: 'response' }]"
+						:items="jobs.slice().reverse()"
+						class="elevation-1"
+						:disable-initial-sort="true"
+					>
+						<template v-slot:items="props">
+							<td>{{ props.item.description }}</td>
+							<td>
+								<v-chip v-if="props.item.status == 'done'" small outline label color="green">Success</v-chip>
+								<v-chip v-else-if="props.item.status == 'error'" small outline label color="red">Error</v-chip>
+								<div v-else>
+										<v-progress-linear :indeterminate="true"></v-progress-linear>
+								</div>
+							</td>
+							<td>
+								<v-card flat width="100%" height="80px" id="streamOutput" class="transparent" style="overflow: auto;display: flex;flex-direction: column-reverse;">
+									<small mv-1><div v-for="s in props.item.stream">{{ s }}</div></small>
+								</v-card>
+							</td>
+						</template>
+					</v-data-table>
+				</v-card>
 				<v-card v-show="advanced_filter == true">
 				<v-toolbar card dense dark color="primary">
 					<v-btn icon dark @click.native="advanced_filter = false">
@@ -2581,6 +2633,7 @@ new Vue({
 		dialog_fathom: { show: false, site: {}, loading: false, editItem: false, editedItem: {}, editedIndex: -1 },
 		active_page: "Sites",
 		page: 1,
+		socket: "<?php echo str_replace( "https://", "wss://", CAPTAINCORE_CLI_ADDRESS ) . "/ws"; ?>",
 		jobs: [],
 		recipes: 
 		<?php
@@ -2963,98 +3016,6 @@ new Vue({
 					self.snackbar.message = description + " failed.";
 					self.snackbar.show = true;
 					console.log(error.response)
-				});
-		},
-		jobRetry( site_id, job_id ) {
-
-			site = this.sites.filter(site => site.id == site_id)[0];
-			job = this.jobs.filter(job => job.job_id == job_id)[0];
-			self = this;
-
-			var data = {
-				'action': 'captaincore_install',
-				'post_id': site_id,
-				'command': "job-fetch",
-				'job_id': job_id
-			};
-
-			jQuery.post(ajaxurl, data, function(response) {
-
-				index = 0;
-				repeat = true;
-
-				// collect responses seperated by lines
-				response_array = response.split('\n');
-
-				// Loop through lines looking for valid JSON
-				response_array.forEach(line => {
-
-					if ( tryParseJSON(line) ) {
-
-						line_parsed = JSON.parse(line);
-
-						if ( line_parsed.status == "Completed" ) {
-
-							previous_index = index - 1;
-
-							if ( job.command == "syncSite" ) {
-								self.fetchSiteInfo( site_id );
-							}
-
-							if ( job.command == "manage" ) {
-								self.syncSite( site_id );
-							}
-
-							if ( job.command == "usersFetch" ) {
-								if ( tryParseJSON( response_array[previous_index] ) ) {
-									// Add to site.users
-									site.users =  JSON.parse( response_array[previous_index] );
-								}
-							}
-
-							if ( job.command == "updateFathom" ) {
-
-								// Refresh CLI with new Fathom info
-								var data = {
-									'action': 'captaincore_install',
-									'command': "update",
-									'post_id': site_id
-								};
-
-								axios.post( ajaxurl, Qs.stringify( data ) )
-									.then( response => console.log( response.data ) )
-									.catch( error => console.log( error ) );
-
-							}
-
-							if ( job.command == "saveUpdateSettings" ){
-								// to do
-							}
-
-							if ( job.command == "update-wp" ){
-								// to do
-								site.update_logs = [];
-								self.fetchUpdateLogs( site_id );
-							}
-
-							job.status = "done";
-							repeat = false;
-
-						}
-
-					}
-
-					index++;
-
-				});
-
-				if ( repeat ) {
-					// Check if completed in 5 seconds
-					setTimeout(function() {
-						self.jobRetry(site_id, job_id);
-					}, 5000);
-				}
-
 			});
 		},
 		inputFile (newFile, oldFile) {
@@ -3077,7 +3038,7 @@ new Vue({
 							// Adds new job
 							job_id = Math.round((new Date()).getTime());
 							description = "Installing plugin '" + newFile.name + "' to " + this.new_plugin.site_name;
-							this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+							this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 							// Builds WP-CLI
 							wpcli = "wp plugin install '" + new_response.url + "' --force --activate"
@@ -3108,7 +3069,7 @@ new Vue({
 							// Adds new job
 							job_id = Math.round((new Date()).getTime());
 							description = "Installing theme '" + newFile.name + "' to " + this.new_theme.site_name;
-							this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+							this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 							// Builds WP-CLI
 							wpcli = "wp theme install '" + new_response.url + "' --force"
@@ -3132,15 +3093,9 @@ new Vue({
 						self = this;
 
 						jQuery.post(ajaxurl, data, function(response) {
-
 							// Updates job id with reponsed background job id
 							self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-
-							// Check if completed in 2 seconds
-							setTimeout(function() {
-								self.jobRetry(site_id, response);
-							}, 2000);
-
+							self.runCommand( response );
 						});
 
 					}
@@ -3235,11 +3190,7 @@ new Vue({
 						jQuery.post(ajaxurl, data, function(response) {
 							// Updates job id with reponsed background job id
 							self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-
-							// Check if completed in 2 seconds
-							setTimeout(function() {
-								self.jobRetry(site_id, response);
-							}, 2000);
+							self.runCommand( response );
 						});
 
 					}
@@ -3306,18 +3257,13 @@ new Vue({
 
 			// Start job
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({ "job_id": job_id, "description": description, "status": "running", "command": "syncSite" });
+			this.jobs.push({ "job_id": job_id, "description": description, "status": "queued", stream: [], "command": "syncSite", "site_id": site_id });
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					// Updates job id with reponsed background job id
+					// Updates job id with responsed background job id
 					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-
-					// Check if completed in 2 seconds
-					setTimeout(function() {
-						self.jobRetry(site_id, response.data);
-					}, 2000);
-
+					self.runCommand( response.data );
 				})
 				.catch( error => console.log( error ) );
 
@@ -3344,18 +3290,13 @@ new Vue({
 
 			// Start job
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({ "job_id": job_id, "description": description, "status": "running", "command": "syncSite" });
+			this.jobs.push({ "job_id": job_id, "description": description, "status": "queued", stream: [], "command": "syncSite" });
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					// Updates job id with reponsed background job id
 					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-
-					// Check if completed in 2 seconds
-					setTimeout(function() {
-						self.jobRetry(site_id, response.data);
-					}, 2000);
-
+					self.runCommand( response.data )
 				})
 				.catch( error => console.log( error ) );
 
@@ -3509,7 +3450,7 @@ new Vue({
 			site_name = this.bulk_edit.site_name;
 			description = "Bulk action '" + action + " " + this.bulk_edit.type + "' on " + site_name;
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id, "description": description, "status": "running", "command": "manage"});
+			this.jobs.push({"job_id": job_id, "description": description, "status": "queued", stream: [], "command": "manage"});
 
 			// WP ClI command to send
 			wpcli = "wp " + object_singular + " " + action + " " + items;
@@ -3536,11 +3477,7 @@ new Vue({
 			jQuery.post(ajaxurl, data, function(response) {
 				// Updates job id with reponsed background job id
 				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-
-				// Check if completed in 2 seconds
-				setTimeout(function() {
-					self.jobRetry(site_id, response);
-				}, 2000);
+				self.runCommand( response );
 			});
 
 		},
@@ -3558,7 +3495,7 @@ new Vue({
 			// Start job
 			description = "Downloading snapshot for " + site_name;
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			var data = {
 				'action': 'captaincore_install',
@@ -3578,12 +3515,7 @@ new Vue({
 				.then( response => {
 					// Updates job id with reponsed background job id
 					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-
-					// Check if completed in 2 seconds
-					setTimeout(function() {
-						self.jobRetry(post_id, response.data);
-					}, 2000);
-					
+					self.runCommand( response.data )
 					self.snackbar.message = "Generating snapshot for "+ self.dialog_backup_snapshot.site.name + ".";
 					self.snackbar.show = true;
 					self.dialog_backup_snapshot.site = {};
@@ -3623,7 +3555,7 @@ new Vue({
 			// Start job
 			description = "Removing site " + site_name;
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			var data = {
 				'action': 'captaincore_ajax',
@@ -3637,16 +3569,10 @@ new Vue({
 				.then( response => {
 					// Updates job id with reponsed background job id
 					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-
-					// Check if completed in 2 seconds
-					setTimeout(function() {
-						self.jobRetry(site_id, response.data);
-					}, 2000);
-					
+					self.runCommand( response.data )
 					// Remove item
 					self.sites = self.sites.filter( site => site.id != site_id )
 					self.snackbar.message = "Removing site "+ site_name + ".";
-					
 				})
 				.catch( error => console.log( error ) );
 
@@ -3676,16 +3602,13 @@ new Vue({
 			// Start job
 			description = "Coping "+ site_name + " to " + site_name_destination;
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					// Updates job id with reponsed background job id
 					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-
-					// Check if completed in 2 seconds
-					setTimeout(function() { self.jobRetry(post_id, response.data); }, 2000);
-
+					self.runCommand( response.data );
 					self.dialog_copy_site.site = {};
 					self.dialog_copy_site.show = false;
 					this.dialog_copy_site.destination = "";
@@ -3710,7 +3633,7 @@ new Vue({
 			// Start job
 			description = "Applying HTTPS urls for " + site.name;
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			var data = {
 				'action': 'captaincore_install',
@@ -3725,12 +3648,7 @@ new Vue({
 			jQuery.post(ajaxurl, data, function(response) {
 				// Updates job id with reponsed background job id
 				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-
-				// Check if completed in 2 seconds
-				setTimeout(function() {
-					self.jobRetry(post_id, response);
-				}, 2000);
-
+				self.runCommand( response.data );
 				self.dialog_apply_https_urls.site = "";
 				self.dialog_apply_https_urls.show = false;
 				self.snackbar.message = "Applying HTTPS Urls";
@@ -4076,18 +3994,13 @@ new Vue({
 
 			// Start job
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					// Updates job id with reponsed background job id
 					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-
-					// Check if completed in 2 seconds
-					setTimeout(function() {
-						self.jobRetry( site_id, response.data );
-					}, 2000);
-
+					self.runCommand( response.data )
 					self.snackbar.message = description;
 					self.snackbar.show = true;
 				})
@@ -4224,17 +4137,13 @@ new Vue({
 
 			// Start job
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					// Updates job id with reponsed background job id
 					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-
-					// Check if completed in 2 seconds
-					setTimeout(function() {
-						self.jobRetry(site_id, response.data);
-					}, 2000);
+					self.runCommand( response.data );
 					self.snackbar.message = description;
 					self.snackbar.show = true;
 				})
@@ -4261,17 +4170,13 @@ new Vue({
 
 			// Start job
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					// Updates job id with reponsed background job id
 					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-
-					// Check if completed in 2 seconds
-					setTimeout(function() {
-						self.jobRetry(site_id, response.data);
-					}, 2000);
+					self.runCommand( response.data );
 					self.snackbar.message = description;
 					self.snackbar.show = true;
 				})
@@ -4311,18 +4216,13 @@ new Vue({
 
 			// Start job
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					// Updates job id with reponsed background job id
 					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-
-					// Check if completed in 2 seconds
-					setTimeout(function() {
-						self.jobRetry(site_id, response.data);
-					}, 2000);
-
+					self.runCommand( response.data );
 					self.snackbar.message = "Rollback in progress.";
 					self.snackbar.show = true;
 				})
@@ -4416,7 +4316,7 @@ new Vue({
 			site_name = site.name;
 			description = "Checking for file changes on " + site_name;
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			var data = {
 				'action': 'captaincore_install',
@@ -4432,12 +4332,7 @@ new Vue({
 					
 					// Updates job id with reponsed background job id
 					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-
-					// Check if completed in 2 seconds
-					setTimeout(function() {
-						self.jobRetry(site_id, response.data);
-					}, 2000);
-
+					self.runCommand( response.data );
 					self.snackbar.message = "Quicksave in process.";
 					self.snackbar.show = true;
 					
@@ -4455,6 +4350,11 @@ new Vue({
 				return;
 			}
 
+			// Start job
+			description = "Quicksave rollback all themes/plugins on " + site.name + " to " + date + ".";
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
+
 			var data = {
 				'action': 'captaincore_install',
 				'post_id': quicksave.site_id,
@@ -4463,9 +4363,13 @@ new Vue({
 				'environment': site.environment_selected,
 			};
 
+			self = this;
+
 			axios.post( ajaxurl, Qs.stringify( data ) )
 			  .then( response => {
 					quicksave.loading = false;
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data );
 					self.snackbar.message = "Rollback in process.";
 					self.snackbar.show = true;
 				})
@@ -4532,7 +4436,7 @@ new Vue({
 			site_name = site.name;
 			description = "Activating theme '" + theme_name + "' on " + site_name;
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			// WP ClI command to send
 			wpcli = "wp theme activate " + theme_name;
@@ -4553,11 +4457,7 @@ new Vue({
 				site.loading_themes = false;
 				// Updates job id with reponsed background job id
 				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-
-				// Check if completed in 2 seconds
-				setTimeout(function() {
-					self.jobRetry(site_id, response);
-				}, 2000);
+				self.runCommand( response );
 			});
 		},
 		deleteTheme (theme_name, site_id) {
@@ -4574,7 +4474,7 @@ new Vue({
 			site.loading_themes = true;
 			description = "Removing theme '" +theme_name + "' from " + site.name;
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			// WP ClI command to send
 			wpcli = "wp theme delete " + theme_name;
@@ -4598,11 +4498,7 @@ new Vue({
 				site.loading_themes = false;
 				// Updates job id with reponsed background job id
 				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-
-				// Check if completed in 2 seconds
-				setTimeout(function() {
-					self.jobRetry(site_id, response);
-				}, 2000);
+				self.runCommand( response );
 			});
 
 		},
@@ -4636,7 +4532,7 @@ new Vue({
 
 			description = titleCase(action) + " plugin '" + plugin_name + "' from " + site_name;
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			this.jobs.push({"job_id": job_id, "description": description, "status": "queued", stream: [], conn: {}});
 
 			// WP ClI command to send
 			wpcli = "wp plugin " + action + " " + plugin_name;
@@ -4653,16 +4549,14 @@ new Vue({
 
 			self = this;
 
-			jQuery.post(ajaxurl, data, function(response) {
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
 				self.sites.filter(site => site.id == site_id)[0].loading_plugins = false;
-				
-				// Updates job id with reponsed background job id
-				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-
-				// Check if completed in 2 seconds
-				setTimeout(function() {
-					self.jobRetry(site_id, response);
-				}, 2000);
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data )
+				})
+				.catch(error => {
+					console.log(error.response)
 			});
 		},
 		deletePlugin (plugin_name, site_id) {
@@ -4681,7 +4575,7 @@ new Vue({
 			site_name = this.sites.filter(site => site.id == site_id)[0].name;
 			description = "Delete plugin '" + plugin_name + "' from " + site_name;
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			// WP ClI command to send
 			wpcli = "wp plugin delete " + plugin_name;
@@ -4707,11 +4601,7 @@ new Vue({
 
 				// Updates job id with reponsed background job id
 				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-
-				// Check if completed in 2 seconds
-				setTimeout(function() {
-					self.jobRetry(site_id, response);
-				}, 2000);
+				self.runCommand( response );
 			});
 		},
 		update( site_id ) {
@@ -4726,7 +4616,7 @@ new Vue({
 			// New job for progress tracking
 			job_id = Math.round((new Date()).getTime());
 			description = "Updating themes/plugins on " + site.name;
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running","command":"update-wp"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: [],"command":"update-wp"});
 
 			var data = {
 				'action': 'captaincore_install',
@@ -4741,11 +4631,7 @@ new Vue({
 			jQuery.post(ajaxurl, data, function(response) {
 				// Updates job id with reponsed background job id
 				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-
-				// Check if completed in 2 seconds
-				setTimeout(function() {
-					self.jobRetry(site_id, response);
-				}, 2000);
+				self.runCommand( response );
 			});
 
 		},
@@ -4753,6 +4639,60 @@ new Vue({
 			site = this.sites.filter(site => site.id == site_id)[0];
 			this.dialog_theme_and_plugin_checks.site = site;
 			this.dialog_theme_and_plugin_checks.show = true;
+		},
+		runCommand( job_id ) {
+
+			job = this.jobs.filter(job => job.job_id == job_id)[0]
+			self = this;
+			// console.log( "Start: select token " + job_id + " found job " + job.job_id )
+
+			job.conn = new WebSocket( this.socket );
+			job.conn.onopen = () => job.conn.send( '{ "token" : "'+ job.job_id +'", "action" : "start" }' );
+			
+			job.conn.onmessage = (session) => self.writeSocket( job_id, session );
+			job.conn.onclose = () => {
+				job = self.jobs.filter(job => job.job_id == job_id)[0]
+				job.status = "done"
+				
+				if ( job.command == "syncSite" ) {
+					self.fetchSiteInfo( job.site_id );
+				}
+
+				if ( job.command == "manage" ) {
+					self.syncSite( job.site_id );
+				}
+
+				if ( job.command == "updateFathom" ) {
+
+					// Refresh CLI with new Fathom info
+					var data = {
+						'action': 'captaincore_install',
+						'command': "update",
+						'post_id': site_id
+					};
+
+					axios.post( ajaxurl, Qs.stringify( data ) )
+						.then( response => console.log( response.data ) )
+						.catch( error => console.log( error ) );
+
+				}
+
+				if ( job.command == "saveUpdateSettings" ){
+					// to do
+				}
+
+				if ( job.command == "update-wp" ){
+					// to do
+					site.update_logs = [];
+					self.fetchUpdateLogs( site_id );
+				}
+
+				// console.log( "Done: select token " + job_id + " found job " + job.job_id )
+			}
+		},
+		writeSocket( job_id, session ) {
+			job = self.jobs.filter(job => job.job_id == job_id)[0]
+			job.stream.push( session.data )
 		},
 		configureFathom( site_id ) {
 			this.dialog_fathom.site = this.sites.filter(site => site.id == site_id)[0];
@@ -4792,7 +4732,7 @@ new Vue({
 			// New job for progress tracking
 			job_id = Math.round((new Date()).getTime());
 			description = "Updating Fathom tracker on " + site.name;
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command": "updateFathom"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: [], "command": "updateFathom"});
 
 			// Prep AJAX request
 			var data = {
@@ -4811,11 +4751,8 @@ new Vue({
 
 				// Updates job id with reponsed background job id
 				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
+				self.runCommand( response );
 
-				// Check if completed in 2 seconds
-				setTimeout(function() {
-					self.jobRetry(site_id, response);
-				}, 2000);
 			});
 		},
 		updateSettings( site_id ) {
@@ -4839,7 +4776,7 @@ new Vue({
 			// Adds new job
 			job_id = Math.round((new Date()).getTime());
 			description = "Saving update settings for " + site.name + " (" + site.environment_selected + ")";
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command":"saveUpdateSettings"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: [], "command":"saveUpdateSettings"});
 
 			// Prep AJAX request
 			var data = {
@@ -4867,11 +4804,7 @@ new Vue({
 
 				// Updates job id with reponsed background job id
 				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-
-				// Check if completed in 2 seconds
-				setTimeout(function() {
-					self.jobRetry(site_id, response);
-				}, 2000);
+				self.runCommand( response );
 
 			});
 
@@ -4888,7 +4821,7 @@ new Vue({
 			site_name = this.sites.filter(site => site.id == site_id)[0].name;
 			description = "Delete user '" + username + "' from " + site_name;
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			// WP ClI command to send
 			wpcli = "wp user delete " + username;
@@ -4911,11 +4844,8 @@ new Vue({
 
 				// Updates job id with reponsed background job id
 				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
+				self.runCommand( response );
 
-				// Check if completed in 2 seconds
-				setTimeout(function() {
-					self.jobRetry(site_id, response);
-				}, 2000);
 			});
 
 		},
@@ -4949,17 +4879,13 @@ new Vue({
 
 			description = "Running bulk " + this.select_bulk_action + " on " + site_names.join(" ");
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command": "manage"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: [], "command": "manage"});
 
 			// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
 			jQuery.post(ajaxurl, data, function(response) {
 				// Updates job id with reponsed background job id
 				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-
-				// Check if completed in 2 seconds
-				setTimeout(function() {
-					self.jobRetry(site_ids, response);
-				}, 2000);
+				self.runCommand( response );
 				self.snackbar.message = description;
 				self.snackbar.show = true;
 				self.dialog = false;
