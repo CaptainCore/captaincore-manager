@@ -381,7 +381,7 @@ Vue.component('file-upload', VueUploadComponent);
 		<v-content>
 		<v-badge overlap left class="static" v-if="runningJobs">
 			<span slot="badge">{{ runningJobs }}</span>
-			<a @click.stop="view_jobs = !view_jobs; $vuetify.goTo( '#sites' )"><v-icon large color="grey lighten-1">fas fa-cogs</v-icon></a>
+			<a @click.stop="view_jobs = true; $vuetify.goTo( '#sites' )"><v-icon large color="grey lighten-1">fas fa-cogs</v-icon></a>
 			<template>
 			  <v-progress-linear :indeterminate="true"></v-progress-linear>
 			</template>
@@ -1272,14 +1272,24 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-card-text>
 					<v-container>
 						<v-form ref="form">
+						<v-layout>
+						<v-flex xs4 class="mx-2">
 						<v-autocomplete
 							:items='[{"name":"WP Engine","value":"wpengine"},{"name":"Kinsta","value":"kinsta"}]'
 							item-text="name"
 							v-model="dialog_edit_site.site.provider"
 							label="Provider"
 						></v-autocomplete>
+						</v-flex>
+        		<v-flex xs4 class="mx-2">
 							<v-text-field :value="dialog_edit_site.site.name" @change.native="dialog_edit_site.site.name = $event.target.value" label="Domain name" required></v-text-field>
+						</v-flex>
+        		<v-flex xs4 class="mx-2">
 							<v-text-field :value="dialog_edit_site.site.site" @change.native="dialog_edit_site.site.site = $event.target.value" label="Site name (not changeable)" disabled></v-text-field>
+						</v-flex>
+					</v-layout>
+					<v-layout>
+						<v-flex xs4 class="mx-2">
 							<v-autocomplete
 							:items="customers"
 							item-text="name"
@@ -1306,6 +1316,8 @@ Vue.component('file-upload', VueUploadComponent);
 							<strong>{{ data.item.name }}</strong>
 						</template>
 						</v-autocomplete>
+				</v-flex>
+    		<v-flex xs4 class="mx-2">
 						<v-autocomplete
 						:items="developers"
 						v-model="dialog_edit_site.site.shared_with"
@@ -1332,6 +1344,10 @@ Vue.component('file-upload', VueUploadComponent);
 						<strong>{{ data.item.name }}</strong>
 					</template>
 					</v-autocomplete>
+        </v-flex>
+				<v-flex xs4 class="mx-2">
+				</v-flex>
+				</v-layout>
 							<v-container grid-list-md text-xs-center>
 								<v-layout row wrap>
 									<v-flex xs12 style="height:0px">
@@ -1349,21 +1365,36 @@ Vue.component('file-upload', VueUploadComponent);
 									<v-container fluid>
 									<div row>
 										<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required></v-text-field>
-										<v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field>
-										<v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field>
-										<v-text-field label="Protocol" :value="key.protocol" @change.native="key.protocol = $event.target.value" required></v-text-field>
-										<v-text-field label="Port" :value="key.port" @change.native="key.port = $event.target.value" required></v-text-field>
 										<v-text-field label="Home Directory" :value="key.home_directory" @change.native="key.home_directory = $event.target.value" required></v-text-field>
-										<v-text-field label="Database Username" :value="key.database_username" @change.native="key.database_username = $event.target.value" required></v-text-field>
-										<v-text-field label="Database Password" :value="key.database_password" @change.native="key.database_password = $event.target.value" required></v-text-field>
-										<div v-if="typeof key.offload_enabled != 'undefined'">
+											<v-layout>
+											<v-flex xs6 class="mr-1"><v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field></v-flex>
+											<v-flex xs6 class="ml-1"><v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field></v-flex>
+											</v-layout>
+											<v-layout>
+											<v-flex xs6 class="mr-1"><v-text-field label="Protocol" :value="key.protocol" @change.native="key.protocol = $event.target.value" required></v-text-field></v-flex>
+											<v-flex xs6 class="mr-1"><v-text-field label="Port" :value="key.port" @change.native="key.port = $event.target.value" required></v-text-field></v-flex>
+											</v-layout>
+											<v-layout>
+											<v-flex xs6 class="mr-1"><v-text-field label="Database Username" :value="key.database_username" @change.native="key.database_username = $event.target.value" required></v-text-field></v-flex>
+											<v-flex xs6 class="mr-1"><v-text-field label="Database Password" :value="key.database_password" @change.native="key.database_password = $event.target.value" required></v-text-field></v-flex>
+											</v-layout>
+											<v-layout>
+												<v-flex xs6 class="mr-1" v-if="typeof key.offload_enabled != 'undefined'">
 											<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
-											<div v-if="key.offload_enabled == '1'">
-												<v-text-field label="Offload Access Key" :value="key.offload_access_key" @change.native="key.offload_access_key = $event.target.value" required></v-text-field>
-												<v-text-field label="Offload Secret Key" :value="key.offload_secret_key" @change.native="key.offload_secret_key = $event.target.value" required></v-text-field>
-												<v-text-field label="Offload Bucket" :value="key.offload_bucket" @change.native="key.offload_bucket = $event.target.value" required></v-text-field>
-												<v-text-field label="Offload Path" :value="key.offload_path" @change.native="key.offload_path = $event.target.value" required></v-text-field>
-											</div>
+												</v-flex>
+											</v-layout>
+											<div v-if="key.offload_enabled == 1">
+											<v-layout>
+												<v-flex xs6 class="mr-1"><v-select label="Offload Provider" :value="key.offload_provider" @change.native="key.offload_provider = $event.target.value" :items='[{ provider:"s3", label: "Amazon S3" },{ provider:"do", label:"Digital Ocean" }]' item-text="label" item-value="provider" clearable></v-select></v-flex>
+												<v-flex xs6 class="mr-1"><v-text-field label="Offload Access Key" :value="key.offload_access_key" @change.native="key.offload_access_key = $event.target.value" required></v-text-field></v-flex>
+											</v-layout>
+											<v-layout>
+												<v-flex xs6 class="mr-1"><v-text-field label="Offload Secret Key" :value="key.offload_secret_key" @change.native="key.offload_secret_key = $event.target.value" required></v-text-field></v-flex>
+												<v-flex xs6 class="mr-1"><v-text-field label="Offload Bucket" :value="key.offload_bucket" @change.native="key.offload_bucket = $event.target.value" required></v-text-field></v-flex>
+											</v-layout>
+											<v-layout>
+												<v-flex xs6 class="mr-1"><v-text-field label="Offload Path" :value="key.offload_path" @change.native="key.offload_path = $event.target.value" required></v-text-field></v-flex>
+											</v-layout>
 										</div>
 									</div>
 							 </v-container>
@@ -3180,7 +3211,7 @@ new Vue({
 						// Start job
 						description = "Adding " + site_name;
 						job_id = Math.round((new Date()).getTime());
-						self.jobs.push({"job_id": job_id,"description": description, "status": "running"});
+						self.jobs.push({"job_id": job_id,"description": description, "status": "running", stream: []});
 
 						// Run prep immediately after site added.
 						var data = {
@@ -3190,7 +3221,7 @@ new Vue({
 						};
 
 						jQuery.post(ajaxurl, data, function(response) {
-							// Updates job id with reponsed background job id
+							// Updates job id with background job id
 							self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
 							self.runCommand( response );
 						});
@@ -3229,6 +3260,11 @@ new Vue({
 						
 						self.fetchSiteInfo( response.site_id );
 
+						// Start job
+						description = "Updating " + site_name;
+						job_id = Math.round((new Date()).getTime());
+						self.jobs.push({"job_id": job_id,"description": description, "status": "running", stream: []});
+
 						// Run prep immediately after site added.
 						var data = {
 							'action': 'captaincore_install',
@@ -3236,6 +3272,9 @@ new Vue({
 							'post_id': response.site_id
 						};
 						jQuery.post(ajaxurl, data, function(response) {
+							// Updates job id with background job id
+							self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
+							self.runCommand( response );
 							self.dialog_edit_site = { show: false, loading: false, site: {} };
 						});
 
