@@ -3689,7 +3689,7 @@ new Vue({
 			jQuery.post(ajaxurl, data, function(response) {
 				// Updates job id with reponsed background job id
 				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-				self.runCommand( response.data );
+				self.runCommand( response );
 				self.dialog_apply_https_urls.site = "";
 				self.dialog_apply_https_urls.show = false;
 				self.snackbar.message = "Applying HTTPS Urls";
