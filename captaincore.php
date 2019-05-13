@@ -3582,8 +3582,11 @@ function captaincore_ajax_action_callback() {
 
 		// Assign website to ACF relationship field
 		if ( $post_id != "0" ) {
-		update_field( 'field_57fae6d263704', $post_id, $process_log_id );
+			update_field( 'field_57fae6d263704', array( $post_id ), $process_log_id );
 		}
+
+		// Mark public
+		update_field( 'field_584dc76e7eec2', true, $process_log_id );
 
 		// Assign description
 		update_field( 'field_57fc396b04e0a', $value, $process_log_id );
@@ -3625,7 +3628,7 @@ function captaincore_ajax_action_callback() {
 		update_field( 'field_57f862ec5b466', $process_log_update->process_id, $process_log->ID );
 
 		// Assign website to ACF relationship field
-		update_field( 'field_57fae6d263704', $post_id, $process_log->ID );
+		update_field( 'field_57fae6d263704', array( $post_id ), $process_log->ID );
 
 		// Assign description
 		update_field( 'field_57fc396b04e0a', $process_log_update->description_raw, $process_log->ID );
