@@ -1,6 +1,8 @@
 <?php
+if ( defined( 'ARVE_SLUG' ) ) {
 wp_enqueue_style( ARVE_SLUG );
 wp_enqueue_script( ARVE_SLUG );
+}
 
 $user       = wp_get_current_user();
 $role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
@@ -350,10 +352,10 @@ div.update_logs table tr td:nth-child(1) {
   padding: 0;
 }
 </style>
-<?php if ( $_SERVER['SERVER_NAME'] == 'anchor.test' ) { ?>
+	<?php if ( substr( $_SERVER['SERVER_NAME'], -4) == 'test' ) { ?>
 <script src="https://cdn.jsdelivr.net/npm/vue@2.6.8/dist/vue.js"></script>
-<script src="https://anchor.test/wp-content/plugins/captaincore-gui/public/js/qs.js"></script>
-<script src="https://anchor.test/wp-content/plugins/captaincore-gui/public/js/axios.min.js"></script>
+<script src="/wp-content/plugins/captaincore-gui/public/js/qs.js"></script>
+<script src="/wp-content/plugins/captaincore-gui/public/js/axios.min.js"></script>
 <?php } else { ?>
 <script src="https://cdn.jsdelivr.net/npm/vue@2.6.8/dist/vue.min.js"></script>
 <script src="https://unpkg.com/qs@6.5.2/dist/qs.js"></script>
