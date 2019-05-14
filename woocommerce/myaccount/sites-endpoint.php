@@ -1717,6 +1717,14 @@ Vue.component('file-upload', VueUploadComponent);
 					@input="removeFromBulk(site.id)"
 				><a :href="site.home_url" target="_blank">{{ site.name }}</a></v-chip>
 				</v-flex>
+				<v-layout row>
+				<v-flex sm12 mb-3>
+				<small>
+					<strong>Site names: </strong> 
+						<span v-for="site in sites_selected" class="ma-1" style="display: inline-block;" v-if="dialog_bulk.environment_selected == 'Production' || dialog_bulk.environment_selected == 'Both'">{{ site.site }} </span>
+						<span v-for="site in sites_selected" class="ma-1" style="display: inline-block;" v-if="dialog_bulk.environment_selected == 'Staging' || dialog_bulk.environment_selected == 'Both'">{{ site.site }}-staging </span>
+				</small>
+				</v-flex>
 				</v-card-text>
 				</v-card>
 			</v-tab-item>
