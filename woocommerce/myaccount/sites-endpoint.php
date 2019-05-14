@@ -1356,7 +1356,7 @@ Vue.component('file-upload', VueUploadComponent);
 							<v-container grid-list-md text-xs-center>
 								<v-layout row wrap>
 									<v-flex xs12 style="height:0px">
-									<v-btn @click="new_site_preload_staging" flat icon center relative color="green" style="top:32px;">
+									<v-btn @click="edit_site_preload_staging" flat icon center relative color="green" style="top:32px;">
 										<v-icon>cached</v-icon>
 									</v-btn>
 									</v-flex>
@@ -3174,11 +3174,37 @@ new Vue({
 
 			// Copy production port to staging field
 			this.dialog_new_site.environments[1].port = this.dialog_new_site.environments[0].port;
+			// Copy production protocol to staging field
+			this.dialog_new_site.environments[1].protocol = this.dialog_new_site.environments[0].protocol;
 			// Copy production home directory to staging field
 			this.dialog_new_site.environments[1].home_directory = this.dialog_new_site.environments[0].home_directory;
 			// Copy production database info to staging fields
 			this.dialog_new_site.environments[1].database_username = this.dialog_new_site.environments[0].database_username;
 			this.dialog_new_site.environments[1].database_password = this.dialog_new_site.environments[0].database_password;
+		},
+		edit_site_preload_staging() {
+			// Copy production address to staging field
+			this.dialog_edit_site.site.environments[1].address = this.dialog_edit_site.site.environments[0].address;
+
+			if ( this.dialog_edit_site.site.provider == "kinsta" ) {
+				// Copy production username to staging field
+				this.dialog_edit_site.site.environments[1].username = this.dialog_edit_site.site.environments[0].username;
+				// Copy production password to staging field (If Kinsta address)
+				this.dialog_edit_site.site.environments[1].password = this.dialog_edit_site.site.environments[0].password;
+			} else {
+				// Copy production username to staging field with staging suffix
+				this.dialog_edit_site.site.environments[1].username = this.dialog_edit_site.site.environments[0].username + "-staging";
+			}
+
+			// Copy production port to staging field
+			this.dialog_edit_site.site.environments[1].port = this.dialog_edit_site.site.environments[0].port;
+			// Copy production protocol to staging field
+			this.dialog_edit_site.site.environments[1].protocol = this.dialog_edit_site.site.environments[0].protocol;
+			// Copy production home directory to staging field
+			this.dialog_edit_site.site.environments[1].home_directory = this.dialog_edit_site.site.environments[0].home_directory;
+			// Copy production database info to staging fields
+			this.dialog_edit_site.site.environments[1].database_username = this.dialog_edit_site.site.environments[0].database_username;
+			this.dialog_edit_site.site.environments[1].database_password = this.dialog_edit_site.site.environments[0].database_password;
 		},
 		submitNewSite() {
 
