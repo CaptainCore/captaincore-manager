@@ -1016,6 +1016,7 @@ Vue.component('file-upload', VueUploadComponent);
 					v-model="dialog_new_log_entry.show"
 					transition="dialog-bottom-transition"
 					scrollable
+					persistent
 					width="500"
 				>
 				<v-card tile>
@@ -1073,6 +1074,10 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-toolbar>
 					<v-card-text>
 					<v-container>
+						<v-text-field
+							v-model="dialog_edit_process_log.log.created_at"
+							label="Date"
+						></v-text-field>
 						<v-autocomplete
 							v-model="dialog_edit_process_log.log.process_id"
 							:items="processes"

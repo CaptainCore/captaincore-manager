@@ -3622,7 +3622,14 @@ function captaincore_ajax_action_callback() {
 		$process_log_update = (object) $_POST['log'];
 
 		$process_log = get_post( $process_log_update->id );
-		$process_log->post_author = get_current_user_id();
+		wp_update_post(
+			array (
+					'ID'            => $process_log_update->id, // ID of the post to update
+					'post_date'     => $process_log_update->created_at,
+					'post_date_gmt' => get_gmt_from_date( $process_log_update->created_at ),
+					'post_author'   => get_current_user_id()
+			)
+		);
 
 		// Assign process to ACF relationship field
 		update_field( 'field_57f862ec5b466', $process_log_update->process_id, $process_log->ID );
