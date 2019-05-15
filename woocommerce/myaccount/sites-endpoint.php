@@ -890,6 +890,7 @@ Vue.component('file-upload', VueUploadComponent);
 								 </v-container>
 							 </v-card>
 							</v-flex>
+							<v-flex xs12>
 							<v-alert
 							:value="true"
 							type="error"
@@ -897,6 +898,7 @@ Vue.component('file-upload', VueUploadComponent);
 							>
 							{{ error }}
 							</v-alert>
+							</v-flex>
 							<v-flex xs12 text-xs-right><v-btn right @click="submitNewSite">Add Site</v-btn></v-flex>
 						 </v-layout>
 					 </v-container>
@@ -2778,6 +2780,7 @@ new Vue({
 		dialog_new_site: {
 			provider: "kinsta",
 			show: false,
+			site: "",
 			domain: "",
 			errors: [],
 			shared_with: [],
@@ -3223,10 +3226,8 @@ new Vue({
 					var response = JSON.parse(response);
 
 					// If error then response
-					if ( response.response.includes("Error:") ) {
-
-						self.dialog_new_site.errors = [ response.response ];
-						console.log(response.response);
+					if ( response.errors.length > 0 ) {
+						self.dialog_new_site.errors = response.errors;
 						return;
 					}
 

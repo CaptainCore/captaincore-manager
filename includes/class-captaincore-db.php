@@ -767,14 +767,47 @@ class Site {
 		$site = (object) $site;
 
 		// Prep for response to return
-		$response = array();
+		$response = array( "errors" => array() );
 
 		// Pull in current user
 		$current_user = wp_get_current_user();
 
 		// Validate
 		if ( $site->domain == '' ) {
-			$response['response'] = "Error: Domain can't be empty.";
+			$response['errors'][] = "Error: Domain can't be empty.";
+		}
+
+		if ( $site->site == '' ) {
+			$response['errors'][] = "Error: Site can't be empty.";
+		}
+
+		// Hunt for conflicting site names
+		$arguments = array(
+			'fields'         => 'ids',
+			'post_type'      => 'captcore_website',
+			'posts_per_page' => '-1',
+			'meta_query'     => array(
+				'relation' => 'AND',
+				array(
+					'key'     => 'site',
+					'value'   => $site->site,
+					'compare' => '=',
+				),
+				array(
+					'key'     => 'status',
+					'value'   => 'closed',
+					'compare' => '!=',
+				),
+			),
+		);
+
+		$site_check = get_posts( $arguments ); 
+
+		if ( count( $site_check ) > 0 ) {
+			$response['errors'][] = "Error: Site name needs to be unique.";
+		}
+
+		if ( count($response) > 0 ) {
 			return $response;
 		}
 
