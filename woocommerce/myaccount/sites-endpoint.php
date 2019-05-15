@@ -38,10 +38,34 @@ html {
 	text-decoration: line-through;
 }
 
-.usage {
-	font-size: 13px;
-	margin: 0 4px;
+.text-xs-right .usage.multisite {
+	width: 150px;
 }
+
+.text-xs-right .usage.provider {
+	width: 94px;
+}
+
+.text-xs-right .usage.visits {
+	width: 130px;
+}
+
+.text-xs-right .usage.storage {
+	width: 100px;
+}
+
+.usage {
+	display: inline-block;
+	text-align: center;
+	font-size: 13px;
+  padding: 0 4px;
+  border-right: 1px solid #949494;
+}
+
+.text-xs-right .usage:last-child {
+	border-right: 0px;
+}
+
 .v-input {
 	margin-top: 0px;
 }
@@ -1818,6 +1842,13 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-tab-item>
 			</v-tabs-items>
             </v-card>
+				<div class="text-xs-right" v-show="sites.length > 1">
+					<span class="usage multisite"><v-btn flat icon @click="sortSites('multisite')"><v-icon small light>fas fa-network-wired</i></v-icon></v-btn></span>
+					<span class="usage visits"><v-btn flat icon @click="sortSites('visits')"><v-icon small light>fas fa-eye</v-icon></v-btn></span>
+					<span class="usage storage"><v-btn flat icon @click="sortSites('storage')"><v-icon small light>fas fa-hdd</v-icon></v-btn></span>
+					<span class="usage provider" style="border:0px"><v-btn flat icon @click="sortSites('provider')"><v-icon small light>fas fa-server</v-icon></v-btn></span>
+					<span class="ma-4"></span>
+				</div>
 				<v-expansion-panel style="margin-top: 20px" v-bind:class='{ "toggleSelect": advanced_filter }' popout>
 						<v-expansion-panel-content lazy v-for="site in paginatedSites" :key="site.id" class="site"> 
 							<div slot="header">
@@ -1830,10 +1861,10 @@ Vue.component('file-upload', VueUploadComponent);
 										</v-layout>
 									</div>
 									<div class="text-xs-right">
-									    <span v-show="site.subsite_count" class="usage"><v-icon small light>fas fa-network-wired</i></v-icon> Multisite - {{ site.subsite_count }} sites</span>
-										<span v-show="site.provider" class="usage"><v-icon small light>fas fa-server</v-icon> {{ site.provider | formatProvider }}</span>
-										<span v-show="site.visits" class="usage"><v-icon small light>fas fa-eye</v-icon> {{ site.visits }} <small>yearly</small></span>
-										<span v-show="site.storage" class="usage"><v-icon small light>fas fa-hdd</v-icon> {{ site.storage }}</span>
+									  <div class="usage multisite"><span v-show="site.subsite_count"><v-icon small light >fas fa-network-wired</i></v-icon> Multisite - {{ site.subsite_count }} sites</span></div>
+										<div class="usage visits"><v-icon small light>fas fa-eye</v-icon> {{ site.visits }} <small>yearly</small></div>
+										<div class="usage storage"><v-icon small light>fas fa-hdd</v-icon> {{ site.storage }}</div>
+										<div class="usage provider"><v-icon small light>fas fa-server</v-icon> {{ site.provider | formatProvider }}</div>
 									</div>
 								</v-layout>
 							</div>
@@ -2824,6 +2855,7 @@ new Vue({
 		site_filters: [],
 		site_filter_version: null,
 		site_filter_status: null,
+		sort_direction: "asc",
 		sites: [],
 		headers: [
 			{ text: 'Name', value: 'name' },
@@ -3025,6 +3057,48 @@ new Vue({
 		},
 	},
 	methods: {
+		compare(key, order='asc') {
+			return function(a, b) {
+				//if(!a.hasOwnProperty(key) || !b.hasOwnProperty(key)) {
+				//	// property doesn't exist on either object
+				//	return 0;
+				//}
+				if ( key == 'multisite' ) {
+					varA = parseInt(a.subsite_count) || 0;
+					varB = parseInt(b.subsite_count) || 0;
+				}
+				if ( key == 'visits' ) {
+					varA = parseInt(a[key].replace(/\,/g,'')) || 0;
+					varB = parseInt(b[key].replace(/\,/g,'')) || 0;
+				}
+				if ( key == 'storage' ) {
+					varA = parseInt(a.storage_raw) || 0;
+					varB = parseInt(b.storage_raw) || 0;
+				}
+				if ( key == 'provider' ) {
+					varA = a.provider || "";
+					varB = b.provider || "";
+				}
+				let comparison = 0;
+				if (varA > varB) {
+					comparison = 1;
+				} else if (varA < varB) {
+					comparison = -1;
+				}
+				return (
+					(order == 'desc') ? (comparison * -1) : comparison
+				);
+			};
+		},
+		sortSites( key ) {
+			if ( this.sort_direction == "asc" ) {
+				this.sort_direction = "desc";
+			} else {
+				this.sort_direction = "asc";
+			}
+			// Order these
+			this.sites = this.sites.sort( this.compare( key, this.sort_direction ) );
+		},
 		removeFromBulk( site_id ) {
 			this.sites.filter(site => site.id == site_id)[0].selected = false;
 		},
