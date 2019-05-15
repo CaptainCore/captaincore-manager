@@ -679,8 +679,6 @@ class Site {
 			$site_details->environments[0]['database_password'] = $environments[0]->database_password;
 		}
 
-		if ( isset( $environments[1]->address ) && $environments[1]->address != '' ) {
-
 			if ( $site_details->provider == 'kinsta' ) {
 				$link_staging = 'https://staging-' . $environments[1]->address;
 			}
@@ -755,7 +753,6 @@ class Site {
 				$site_details->environments[1]['database_username'] = $environments[1]->database_username;
 				$site_details->environments[1]['database_password'] = $environments[1]->database_password;
 			}
-		}
 
 		return $site_details;
 
