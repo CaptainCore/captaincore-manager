@@ -3117,24 +3117,21 @@ new Vue({
 			};
 		},
 		sortSites( key ) {
-			// Reset sort to default on 3rd click
-			if ( this.toggle_site_counter.count == 2 ) {
-				this.sort_direction = "asc";
-				this.sites = this.sites.sort( this.compare( "name", this.sort_direction ) );
-				this.toggle_site_counter = { key: "", count: 0 };
-				this.toggle_site_sort = null;
-				return
-			}
 			if ( this.toggle_site_counter.key == key ) {
 				this.toggle_site_counter.count++;
+				this.sort_direction = "asc";
 			} else {
 				this.toggle_site_counter.key = key;
 				this.toggle_site_counter.count = 1;
-			}
-			if ( this.sort_direction == "asc" ) {
 				this.sort_direction = "desc";
-			} else {
-				this.sort_direction = "asc";
+			}
+			// Reset sort to default on 3rd click
+			if ( this.toggle_site_counter.count == 3 ) {
+				this.sites = this.sites.sort( this.compare( "name", this.sort_direction ) );
+				this.toggle_site_counter = { key: "", count: 0 };
+				this.toggle_site_sort = null;
+				this.sort_direction = "desc";
+				return
 			}
 			// Order these
 			this.sites = this.sites.sort( this.compare( key, this.sort_direction ) );
