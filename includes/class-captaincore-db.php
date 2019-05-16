@@ -679,80 +679,80 @@ class Site {
 			$site_details->environments[0]['database_password'] = $environments[0]->database_password;
 		}
 
-			if ( $site_details->provider == 'kinsta' ) {
-				$link_staging = 'https://staging-' . $environments[1]->address;
-			}
+		if ( $site_details->provider == 'kinsta' ) {
+			$link_staging = 'https://staging-' . $environments[1]->address;
+		}
 
-			if ( $site_details->provider == 'wpengine' ) {
-				$link_staging = 'https://' . get_field( 'site', $site->ID ) . '.staging.wpengine.com';
-			}
+		if ( $site_details->provider == 'wpengine' ) {
+			$link_staging = 'https://' . get_field( 'site', $site->ID ) . '.staging.wpengine.com';
+		}
 
-			$site_details->environments[1] = array(
-				'key_id'                  => 2,
-				'link'                    => $link_staging,
-				'environment'             => 'Staging',
-				'address'                 => $environments[1]->address,
-				'username'                => $environments[1]->username,
-				'password'                => $environments[1]->password,
-				'protocol'                => $environments[1]->protocol,
-				'port'                    => $environments[1]->port,
-				'home_directory'          => $environments[1]->home_directory,
-				'plugins'                 => json_decode( $environments[1]->plugins ),
-				'themes'                  => json_decode( $environments[1]->themes ),
-				'users'                   => 'Loading',
-				'quicksaves'              => 'Loading',
-				'update_logs'             => 'Loading',
-				'quicksave_panel'         => array(),
-				'quicksave_search'        => '',
-				'core'                    => $environments[1]->core,
-				'home_url'                => $environments[1]->home_url,
-				'updates_enabled'         => intval( $environments[1]->updates_enabled ),
-				'updates_exclude_plugins' => $environments[1]->updates_exclude_plugins,
-				'updates_exclude_themes'  => $environments[1]->updates_exclude_themes,
-				'offload_enabled'         => $environments[1]->offload_enabled,
-				'offload_provider'        => $environments[1]->offload_provider,
-				'offload_access_key'      => $environments[1]->offload_access_key,
-				'offload_secret_key'      => $environments[1]->offload_secret_key,
-				'offload_bucket'          => $environments[1]->offload_bucket,
-				'offload_path'            => $environments[1]->offload_path,
-				'screenshot'              => intval( $environments[1]->screenshot ),
-				'screenshot_small'        => '',
-				'screenshot_large'        => '',
-			);
+		$site_details->environments[1] = array(
+			'key_id'                  => 2,
+			'link'                    => $link_staging,
+			'environment'             => 'Staging',
+			'address'                 => $environments[1]->address,
+			'username'                => $environments[1]->username,
+			'password'                => $environments[1]->password,
+			'protocol'                => $environments[1]->protocol,
+			'port'                    => $environments[1]->port,
+			'home_directory'          => $environments[1]->home_directory,
+			'plugins'                 => json_decode( $environments[1]->plugins ),
+			'themes'                  => json_decode( $environments[1]->themes ),
+			'users'                   => 'Loading',
+			'quicksaves'              => 'Loading',
+			'update_logs'             => 'Loading',
+			'quicksave_panel'         => array(),
+			'quicksave_search'        => '',
+			'core'                    => $environments[1]->core,
+			'home_url'                => $environments[1]->home_url,
+			'updates_enabled'         => intval( $environments[1]->updates_enabled ),
+			'updates_exclude_plugins' => $environments[1]->updates_exclude_plugins,
+			'updates_exclude_themes'  => $environments[1]->updates_exclude_themes,
+			'offload_enabled'         => $environments[1]->offload_enabled,
+			'offload_provider'        => $environments[1]->offload_provider,
+			'offload_access_key'      => $environments[1]->offload_access_key,
+			'offload_secret_key'      => $environments[1]->offload_secret_key,
+			'offload_bucket'          => $environments[1]->offload_bucket,
+			'offload_path'            => $environments[1]->offload_path,
+			'screenshot'              => intval( $environments[1]->screenshot ),
+			'screenshot_small'        => '',
+			'screenshot_large'        => '',
+		);
 
-			if ( intval( $environments[1]->screenshot ) == 1 ) {
-				$site_details->environments[1]['screenshot_small'] = $upload_dir['baseurl'] . "/screenshots/{$site_details->site}_{$site_details->id}/staging/screenshot-100.png";
-				$site_details->environments[1]['screenshot_large'] = $upload_dir['baseurl'] . "/screenshots/{$site_details->site}_{$site_details->id}/production/screenshot-800.png";
-			}
+		if ( intval( $environments[1]->screenshot ) == 1 ) {
+			$site_details->environments[1]['screenshot_small'] = $upload_dir['baseurl'] . "/screenshots/{$site_details->site}_{$site_details->id}/staging/screenshot-100.png";
+			$site_details->environments[1]['screenshot_large'] = $upload_dir['baseurl'] . "/screenshots/{$site_details->site}_{$site_details->id}/production/screenshot-800.png";
+		}
 
-			if ( $site_details->environments[1]['updates_exclude_themes'] ) {
-				$site_details->environments[1]['updates_exclude_themes'] = explode( ',', $site_details->environments[1]['updates_exclude_themes'] );
-			} else {
-				$site_details->environments[1]['updates_exclude_themes'] = array();
-			}
-			if ( $site_details->environments[1]['updates_exclude_plugins'] ) {
-				$site_details->environments[1]['updates_exclude_plugins'] = explode( ',', $site_details->environments[1]['updates_exclude_plugins'] );
-			} else {
-				$site_details->environments[1]['updates_exclude_plugins'] = array();
-			}
+		if ( $site_details->environments[1]['updates_exclude_themes'] ) {
+			$site_details->environments[1]['updates_exclude_themes'] = explode( ',', $site_details->environments[1]['updates_exclude_themes'] );
+		} else {
+			$site_details->environments[1]['updates_exclude_themes'] = array();
+		}
+		if ( $site_details->environments[1]['updates_exclude_plugins'] ) {
+			$site_details->environments[1]['updates_exclude_plugins'] = explode( ',', $site_details->environments[1]['updates_exclude_plugins'] );
+		} else {
+			$site_details->environments[1]['updates_exclude_plugins'] = array();
+		}
 
-			if ( $site_details->environments[1]['themes'] == '' ) {
-				$site_details->environments[1]['themes'] = array();
-			}
-			if ( $site_details->environments[1]['plugins'] == '' ) {
-				$site_details->environments[1]['plugins'] = array();
-			}
+		if ( $site_details->environments[1]['themes'] == '' ) {
+			$site_details->environments[1]['themes'] = array();
+		}
+		if ( $site_details->environments[1]['plugins'] == '' ) {
+			$site_details->environments[1]['plugins'] = array();
+		}
 
-			if ( $site_details->provider == 'kinsta' ) {
-				$site_details->environments[1]['ssh'] = "ssh ${staging_username}@${staging_address} -p ${staging_port}";
-				$staging_address_find_ending          = strpos( $staging_address, '.kinsta.' ) + 1;
-				$staging_address_ending               = substr( $staging_address, $staging_address_find_ending );
-			}
-			if ( $site_details->provider == 'kinsta' and $environments[1]->database_username ) {
-				$site_details->environments[1]['database']          = "https://mysqleditor-staging-${database_username}.${staging_address_ending}";
-				$site_details->environments[1]['database_username'] = $environments[1]->database_username;
-				$site_details->environments[1]['database_password'] = $environments[1]->database_password;
-			}
+		if ( $site_details->provider == 'kinsta' ) {
+			$site_details->environments[1]['ssh'] = "ssh ${staging_username}@${staging_address} -p ${staging_port}";
+			$staging_address_find_ending          = strpos( $staging_address, '.kinsta.' ) + 1;
+			$staging_address_ending               = substr( $staging_address, $staging_address_find_ending );
+		}
+		if ( $site_details->provider == 'kinsta' and $environments[1]->database_username ) {
+			$site_details->environments[1]['database']          = "https://mysqleditor-staging-${database_username}.${staging_address_ending}";
+			$site_details->environments[1]['database_username'] = $environments[1]->database_username;
+			$site_details->environments[1]['database_password'] = $environments[1]->database_password;
+		}
 
 		return $site_details;
 
@@ -804,7 +804,7 @@ class Site {
 			$response['errors'][] = "Error: Site name needs to be unique.";
 		}
 
-		if ( count($response) > 0 ) {
+		if ( count($response['errors']) > 0 ) {
 			return $response;
 		}
 
