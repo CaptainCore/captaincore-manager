@@ -54,6 +54,24 @@ html {
 	width: 100px;
 }
 
+.text-xs-right .usage button {
+	margin-top: 0px;
+	margin-bottom: 0px;
+}
+
+.text-xs-right .usage button .v-icon.material-icons.theme--light {
+	display:none;
+}
+
+.text-xs-right .usage button.v-btn--active .v-icon.material-icons.theme--light {
+	display:inline-block;
+}
+
+.text-xs-right .desc .usage button.v-btn--active .v-icon.material-icons.theme--light {
+	-webkit-transform: rotate(-180deg);
+	transform: rotate(-180deg);
+}
+
 .usage {
 	display: inline-block;
 	text-align: center;
@@ -1843,11 +1861,13 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-tabs-items>
             </v-card>
 				<div class="text-xs-right" v-show="sites.length > 1">
-					<span class="usage multisite"><v-btn flat icon @click="sortSites('multisite')"><v-icon small light>fas fa-network-wired</i></v-icon></v-btn></span>
-					<span class="usage visits"><v-btn flat icon @click="sortSites('visits')"><v-icon small light>fas fa-eye</v-icon></v-btn></span>
-					<span class="usage storage"><v-btn flat icon @click="sortSites('storage')"><v-icon small light>fas fa-hdd</v-icon></v-btn></span>
-					<span class="usage provider" style="border:0px"><v-btn flat icon @click="sortSites('provider')"><v-icon small light>fas fa-server</v-icon></v-btn></span>
-					<span class="ma-4"></span>
+				<v-btn-toggle v-model="toggle_site_sort" style="box-shadow: none;" v-bind:class="sort_direction">
+					<div class="usage multisite ml-1" ><v-btn flat @click.native.stop="toggle_site_sort = 0; sortSites('multisite')"><v-icon small light>fas fa-network-wired</v-icon><v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
+					<div class="usage visits ml-1"><v-btn flat @click.native.stop="toggle_site_sort = 1; sortSites('visits')"><v-icon small light>fas fa-eye</v-icon><v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
+					<div class="usage storage ml-1"><v-btn flat @click.native.stop="toggle_site_sort = 2; sortSites('storage')"><v-icon small light>fas fa-hdd</v-icon><v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
+					<div class="usage provider ml-1" style="border:0px"><v-btn flat @click.native.stop="toggle_site_sort = 3; sortSites('provider')"><v-icon small light>fas fa-server</v-icon><v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
+					<div style="width: 50px;"></div>
+				</v-btn-toggle>
 				</div>
 				<v-expansion-panel style="margin-top: 20px" v-bind:class='{ "toggleSelect": advanced_filter }' popout>
 						<v-expansion-panel-content lazy v-for="site in paginatedSites" :key="site.id" class="site"> 
@@ -1862,9 +1882,9 @@ Vue.component('file-upload', VueUploadComponent);
 									</div>
 									<div class="text-xs-right">
 									  <div class="usage multisite"><span v-show="site.subsite_count"><v-icon small light >fas fa-network-wired</i></v-icon> Multisite - {{ site.subsite_count }} sites</span></div>
-										<div class="usage visits"><v-icon small light>fas fa-eye</v-icon> {{ site.visits }} <small>yearly</small></div>
-										<div class="usage storage"><v-icon small light>fas fa-hdd</v-icon> {{ site.storage }}</div>
-										<div class="usage provider"><v-icon small light>fas fa-server</v-icon> {{ site.provider | formatProvider }}</div>
+										<div class="usage visits"><span v-show="site.visits"><v-icon small light>fas fa-eye</v-icon> {{ site.visits }} <small>yearly</small></span></div>
+										<div class="usage storage"><span v-show="site.storage"><v-icon small light>fas fa-hdd</v-icon> {{ site.storage }}</span></div>
+										<div class="usage provider"><span v-show="site.provider"><v-icon small light>fas fa-server</v-icon> {{ site.provider | formatProvider }}</span></div>
 									</div>
 								</v-layout>
 							</div>
@@ -2856,6 +2876,8 @@ new Vue({
 		site_filter_version: null,
 		site_filter_status: null,
 		sort_direction: "asc",
+		toggle_site_sort: null,
+		toggle_site_counter: { key: "", count: 0 },
 		sites: [],
 		headers: [
 			{ text: 'Name', value: 'name' },
@@ -3063,6 +3085,10 @@ new Vue({
 				//	// property doesn't exist on either object
 				//	return 0;
 				//}
+				if ( key == 'name' ) {
+					varA = a.name || "";
+					varB = b.name || "";
+				}
 				if ( key == 'multisite' ) {
 					varA = parseInt(a.subsite_count) || 0;
 					varB = parseInt(b.subsite_count) || 0;
@@ -3091,6 +3117,20 @@ new Vue({
 			};
 		},
 		sortSites( key ) {
+			// Reset sort to default on 3rd click
+			if ( this.toggle_site_counter.count == 2 ) {
+				this.sort_direction = "asc";
+				this.sites = this.sites.sort( this.compare( "name", this.sort_direction ) );
+				this.toggle_site_counter = { key: "", count: 0 };
+				this.toggle_site_sort = null;
+				return
+			}
+			if ( this.toggle_site_counter.key == key ) {
+				this.toggle_site_counter.count++;
+			} else {
+				this.toggle_site_counter.key = key;
+				this.toggle_site_counter.count = 1;
+			}
 			if ( this.sort_direction == "asc" ) {
 				this.sort_direction = "desc";
 			} else {
