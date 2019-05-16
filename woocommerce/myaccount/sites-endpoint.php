@@ -38,46 +38,47 @@ html {
 	text-decoration: line-through;
 }
 
-.text-xs-right .usage.multisite {
+.usage.multisite {
 	width: 150px;
 }
 
-.text-xs-right .usage.provider {
+.usage.provider {
 	width: 94px;
 }
 
-.text-xs-right .usage.visits {
+.usage.visits {
 	width: 130px;
 }
 
-.text-xs-right .usage.storage {
+.usage.storage {
 	width: 100px;
 }
 
-.text-xs-right .usage button {
-	margin-top: 0px;
-	margin-bottom: 0px;
+.usage button {
+	margin: 0px;
+	font-size: 11px;
+  font-weight: bold;
 }
 
-.text-xs-right .usage button .v-icon.material-icons.theme--light {
+.usage button .v-icon.material-icons.theme--light {
 	display:none;
 }
 
-.text-xs-right .usage button.v-btn--active .v-icon.material-icons.theme--light {
+.usage button.v-btn--active .v-icon.material-icons.theme--light {
 	display:inline-block;
 }
 
-.text-xs-right .desc .usage button.v-btn--active .v-icon.material-icons.theme--light {
+.desc .usage button.v-btn--active .v-icon.material-icons.theme--light {
 	-webkit-transform: rotate(-180deg);
 	transform: rotate(-180deg);
 }
 
 .usage {
 	display: inline-block;
-	text-align: center;
+	text-align: left;
 	font-size: 13px;
-  padding: 0 4px;
-  border-right: 1px solid #949494;
+  padding: 0px;
+	margin: 0px;
 }
 
 .text-xs-right .usage:last-child {
@@ -1861,12 +1862,12 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-tabs-items>
             </v-card>
 				<div class="text-xs-right" v-show="sites.length > 1">
-				<v-btn-toggle v-model="toggle_site_sort" style="box-shadow: none;" v-bind:class="sort_direction">
-					<div class="usage multisite ml-1" ><v-btn flat @click.native.stop="toggle_site_sort = 0; sortSites('multisite')"><v-icon small light>fas fa-network-wired</v-icon><v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
-					<div class="usage visits ml-1"><v-btn flat @click.native.stop="toggle_site_sort = 1; sortSites('visits')"><v-icon small light>fas fa-eye</v-icon><v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
-					<div class="usage storage ml-1"><v-btn flat @click.native.stop="toggle_site_sort = 2; sortSites('storage')"><v-icon small light>fas fa-hdd</v-icon><v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
-					<div class="usage provider ml-1" style="border:0px"><v-btn flat @click.native.stop="toggle_site_sort = 3; sortSites('provider')"><v-icon small light>fas fa-server</v-icon><v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
-					<div style="width: 50px;"></div>
+				<v-btn-toggle v-model="toggle_site_sort" style="box-shadow: none; border-bottom: 1px solid #e0e0e0;" v-bind:class="sort_direction">
+					<div class="usage ml-1 multisite"><v-btn flat small @click.native.stop="toggle_site_sort = 0; sortSites('multisite')">Multisite Mode<v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
+					<div class="usage ml-1 visits"><v-btn flat small @click.native.stop="toggle_site_sort = 1; sortSites('visits')">Visits<v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
+					<div class="usage ml-1 storage"><v-btn flat small @click.native.stop="toggle_site_sort = 2; sortSites('storage')">Storage <v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
+					<div class="usage ml-1 provider"><v-btn flat small @click.native.stop="toggle_site_sort = 3; sortSites('provider')">Provider <v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
+					<div style="width: 58px;"></div>
 				</v-btn-toggle>
 				</div>
 				<v-expansion-panel style="margin-top: 20px" v-bind:class='{ "toggleSelect": advanced_filter }' popout>
