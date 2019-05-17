@@ -3181,7 +3181,6 @@ new Vue({
 		},
 		inputFile (newFile, oldFile) {
 
-
 			if (newFile && oldFile) {
 				// Uploaded successfully
 				if (newFile.success && !oldFile.success) {
@@ -3225,7 +3224,7 @@ new Vue({
 							// Adds new job
 							job_id = Math.round((new Date()).getTime());
 							description = "Installing plugin '" + newFile.name + "' to " + this.new_plugin.site_name;
-							this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
+							this.jobs.push({"job_id": job_id, "site_id": site_id, "description": description, "status": "queued", stream: [], "command": "manage"});
 
 							// Builds WP-CLI
 							wpcli = "wp plugin install '" + new_response.url + "' --force --activate"
@@ -3256,7 +3255,7 @@ new Vue({
 							// Adds new job
 							job_id = Math.round((new Date()).getTime());
 							description = "Installing theme '" + newFile.name + "' to " + this.new_theme.site_name;
-							this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
+							this.jobs.push({"job_id": job_id, "site_id": site_id, "description": description, "status": "queued", stream: [], "command": "manage"});
 
 							// Builds WP-CLI
 							wpcli = "wp theme install '" + new_response.url + "' --force"
