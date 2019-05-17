@@ -405,7 +405,7 @@ div.update_logs table tr td:nth-child(1) {
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 <?php } ?>
 <script src="https://cdn.jsdelivr.net/npm/vuetify@1.5.4/dist/vuetify.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.9/dist/vue-upload-component.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.20/dist/vue-upload-component.js"></script>
 <script>
 
 ajaxurl = "/wp-admin/admin-ajax.php";
@@ -1575,7 +1575,7 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-toolbar>
 					<v-data-table
 						:headers="[{ text: 'Description', value: 'description', width: '300px' },
-          { text: 'Status', value: 'status', width: '130px' },
+          { text: 'Status', value: 'status', width: '115px' },
           { text: 'Response', value: 'response' }]"
 						:items="jobs.slice().reverse()"
 						class="elevation-1"
@@ -1584,7 +1584,7 @@ Vue.component('file-upload', VueUploadComponent);
 						<template v-slot:items="props">
 							<td>{{ props.item.description }}</td>
 							<td>
-								<v-chip v-if="props.item.status == 'done'" small outline label color="green">Success</v-chip>
+								<v-chip v-if="props.item.status == 'done'" small outline label color="green">Done</v-chip>
 								<v-chip v-else-if="props.item.status == 'error'" small outline label color="red">Error</v-chip>
 								<div v-else>
 										<v-progress-linear :indeterminate="true"></v-progress-linear>
@@ -3181,10 +3181,36 @@ new Vue({
 		},
 		inputFile (newFile, oldFile) {
 
+
 			if (newFile && oldFile) {
 				// Uploaded successfully
 				if (newFile.success && !oldFile.success) {
 					new_response = JSON.parse( newFile.response );
+					if ( new_response.response == "Error" ) {
+
+						if ( this.new_theme.show ) {
+							this.new_theme.show = false;
+							this.snackbar.message = "Installing theme failed.";
+							this.snackbar.show = true;
+							description = "Installing theme '" + newFile.name + "' to " + this.new_theme.site_name;
+
+							// Adds new job
+							job_id = Math.round((new Date()).getTime());
+							this.jobs.push({"job_id": job_id,"description": description, "status": "error", stream: []});
+						}
+
+						if ( this.new_plugin.show ) {
+							this.new_plugin.show = false;
+							this.snackbar.message = "Installing plugin failed.";
+							this.snackbar.show = true;
+							description = "Installing plugin '" + newFile.name + "' to " + this.new_plugin.site_name;
+							
+							// Adds new job
+							job_id = Math.round((new Date()).getTime());
+							this.jobs.push({"job_id": job_id,"description": description, "status": "error", stream: []});
+						}
+
+					}
 					if ( new_response.response == "Success" && new_response.url ) {
 
 						if ( this.new_plugin.show ) {
