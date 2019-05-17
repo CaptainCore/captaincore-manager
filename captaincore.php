@@ -1172,6 +1172,9 @@ function captaincore_acf_save_post_after( $post_id ) {
 			// Insert the post into the database
 			$customer_post_id = wp_insert_post( $my_post );
 
+			// Set customer status as active
+			update_field( 'field_561936147136b', "active", $customer_post_id );
+			
 			// Link website to customer
 			update_field( 'field_56181a1fcf6e2', $customer_post_id, $post_id );
 
