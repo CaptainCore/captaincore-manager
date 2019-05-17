@@ -3501,6 +3501,7 @@ new Vue({
 				action: 'captaincore_install',
 				post_id: site_ids,
 				command: 'sync-data',
+				environment: this.dialog_bulk.environment_selected
 			};
 
 			self = this;
