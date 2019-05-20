@@ -429,7 +429,7 @@ Vue.component('file-upload', VueUploadComponent);
 			  <v-progress-linear :indeterminate="true"></v-progress-linear>
 			</template>
 		</v-badge>
-		<v-dialog v-model="new_plugin.show" max-width="500px">
+		<v-dialog v-model="new_plugin.show" max-width="900px">
 		<v-card tile>
 			<v-toolbar card dark color="primary">
 				<v-btn icon dark @click.native="new_plugin.show = false">
@@ -438,8 +438,20 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-toolbar-title>Add plugin to {{ new_plugin.site_name }}</v-toolbar-title>
 				<v-spacer></v-spacer>
 			</v-toolbar>
-		<v-card-text>
-		<div class="upload-drag">
+		<v-toolbar color="grey lighten-4" dense light flat>
+			<v-tabs
+				color="transparent"
+				v-model="new_plugin.tabs"
+				mandatory
+			>
+          <v-tab>From your computer</v-tab>
+					<v-tab>From WordPress.org</v-tab>
+			</v-tabs>
+			<v-spacer></v-spacer>
+		</v-toolbar>
+		<v-tabs-items v-model="new_plugin.tabs">
+      <v-tab-item key="0">
+			<div class="upload-drag pt-4">
 		<div class="upload">
 			<div v-if="upload.length">
 				<div v-for="(file, index) in upload" :key="file.id">
@@ -469,10 +481,56 @@ Vue.component('file-upload', VueUploadComponent);
 			</div>
 		</div>
 		</div>
-		</v-card-text>
+      </v-tab-item>
+			<v-tab-item key="1">
+				<v-layout justify-center class="pa-3">
+				<v-flex xs12 sm3>
+				</v-flex>
+				<v-flex xs12 sm6>
+					<div class="text-xs-center">
+						<v-pagination v-if="new_plugin.api.info && new_plugin.api.info.pages > 1" :length="new_plugin.api.info.pages - 1" v-model="new_plugin.page" :total-visible="7" color="blue darken-3" @input="fetchPlugins"></v-pagination>
+					</div>
+				</v-flex>
+				<v-flex xs12 sm3>
+					<v-text-field label="Search plugins" light @click:append="new_plugin.search = $event.target.offsetParent.children[0].children[1].value; fetchPlugins()" v-on:keyup.enter="new_plugin.search = $event.target.value; fetchPlugins()" append-icon="search" :loading="new_plugin.loading"></v-text-field>
+					<!-- @change.native="new_plugin.search = $event.target.value; fetchPlugins" -->
+				</v-flex>
+			</v-layout>
+			<v-layout row wrap pa-2>
+				<v-flex
+					v-for="item in new_plugin.api.items"
+					:key="item.slug"
+					xs4
+					pa-2
+				>
+					<v-card>
+					<v-layout style="min-height: 120px;">
+					<v-flex xs3 px-2 pt-2>
+						<v-img
+							:src='item.icons["1x"]'
+							contain
+						></v-img>
+					</v-flex>
+					<v-flex xs9 px-2 pt-2>
+						<span v-html="item.name"></span>
+					</v-flex>
+					</v-layout>
+						<v-card-actions>
+							<v-spacer></v-spacer>
+							<div v-if="new_plugin.current_plugins.includes( item.slug )">
+							<v-btn small depressed @click="uninstallPlugin( item )">Uninstall</v-btn>
+							<v-btn small depressed disabled>Install</v-btn>
+							</div>
+							<v-btn v-else small depressed @click="installPlugin( item )">Install</v-btn>
+						</v-card-actions>
+		</v-card>
+				</v-flex>
+			</v-layout>
+      </v-tab-item>
+    </v-tabs-items>
 		</v-card>
 		</v-dialog>
-		<v-dialog v-model="new_theme.show" max-width="500px">
+		<v-dialog v-model="new_theme.show" max-width="900px">
 		<v-card tile>
 			<v-toolbar card dark color="primary">
 				<v-btn icon dark @click.native="new_theme.show = false">
@@ -481,8 +539,20 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-toolbar-title>Add theme to {{ new_theme.site_name }}</v-toolbar-title>
 				<v-spacer></v-spacer>
 			</v-toolbar>
-		<v-card-text>
-		<div class="upload-drag">
+			<v-toolbar color="grey lighten-4" dense light flat>
+			<v-tabs
+				color="transparent"
+				v-model="new_theme.tabs"
+				mandatory
+			>
+          <v-tab>From your computer</v-tab>
+					<v-tab>From WordPress.org</v-tab>
+			</v-tabs>
+			<v-spacer></v-spacer>
+		</v-toolbar>
+		<v-tabs-items v-model="new_theme.tabs">
+      <v-tab-item key="0">
+		<div class="upload-drag pt-4">
 		<div class="upload">
 			<div v-if="upload.length">
 				<div v-for="(file, index) in upload" :key="file.id">
@@ -510,7 +580,52 @@ Vue.component('file-upload', VueUploadComponent);
 			</div>
 		</div>
 		</div>
-		</v-card-text>
+		</v-tab-item>
+			<v-tab-item key="1">
+				<v-layout justify-center class="pa-3">
+				<v-flex xs12 sm3>
+				</v-flex>
+				<v-flex xs12 sm6>
+					<div class="text-xs-center">
+						<v-pagination v-if="new_theme.api.info && new_theme.api.info.pages > 1" :length="new_theme.api.info.pages - 1" v-model="new_theme.page" :total-visible="7" color="blue darken-3" @input="fetchThemes"></v-pagination>
+					</div>
+				</v-flex>
+				<v-flex xs12 sm3>
+					<v-text-field label="Search themes" light @click:append="new_theme.search = $event.target.offsetParent.children[0].children[1].value; fetchThemes()" v-on:keyup.enter="new_theme.search = $event.target.value; fetchThemes()" append-icon="search" :loading="new_theme.loading"></v-text-field>
+				</v-flex>
+			</v-layout>
+			<v-layout row wrap pa-2>
+				<v-flex
+					v-for="item in new_theme.api.items"
+					:key="item.slug"
+					xs4
+					pa-2
+				>
+					<v-card>
+					<v-layout style="min-height: 120px;">
+					<v-flex xs3 px-2 pt-2>
+						<v-img
+							:src='item.screenshot_url'
+							contain
+						></v-img>
+					</v-flex>
+					<v-flex xs9 px-2 pt-2>
+						<span v-html="item.name"></span>
+					</v-flex>
+					</v-layout>
+						<v-card-actions>
+							<v-spacer></v-spacer>
+							<div v-if="new_theme.current_themes.includes( item.slug )">
+							<v-btn small depressed @click="uninstallTheme( item )">Uninstall</v-btn>
+							<v-btn small depressed disabled>Install</v-btn>
+							</div>
+							<v-btn v-else small depressed @click="installTheme( item )">Install</v-btn>
+						</v-card-actions>
+		</v-card>
+				</v-flex>
+			</v-layout>
+      </v-tab-item>
+    </v-tabs-items>
 		</v-card>
 		</v-dialog>
 		<v-dialog v-model="bulk_edit.show" max-width="600px">
@@ -2862,9 +2977,9 @@ new Vue({
 			{"text":"Name","value":"name","sortable":false,"width":"165"},
 			{"text":"Notes","value":"notes","sortable":false},
 		],<?php } ?>
-		new_plugin: { show: false, site_id: null, site_name: "", environment_selected: ""},
-		new_theme: { show: false, site_id: null, site_name: "", environment_selected: ""},
-		bulk_edit: { show: false, site_id: null, type: null, items: [] },
+		new_plugin: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {} },
+		new_theme: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {} },
+		bulk_edit: { show: false, site_id: null, type: null, items: [], api_items: [], api_info: [], api_page: 1 },
 		upload: [],
 		view_jobs: false,
 		search: null,
@@ -3218,7 +3333,7 @@ new Vue({
 							this.upload = [];
 
 							// run wp cli with new plugin url and site
-							site_id = this.new_plugin.site_id;
+							site_id = this.new_plugin.site.id;
 							site = this.sites.filter(site => site.id == site_id)[0];
 
 							// Adds new job
@@ -3236,13 +3351,12 @@ new Vue({
 								'command': "manage",
 								'value': "ssh",
 								'background': true,
-								'environment': this.new_plugin.environment_selected,
+								'environment': this.new_plugin.site.environment_selected,
 								'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 							};
 
 							// Housecleaning
-							this.new_plugin.site_id = "";
-							this.new_plugin.site_name = "";
+							this.new_plugin.sites = [];
 						}
 						if ( this.new_theme.show ) {
 							this.new_theme.show = false;
@@ -3459,19 +3573,25 @@ new Vue({
 				}
 			});
 		},
-		syncSite( site_id ) {
+		syncSite( site_id, environment ) {
 
 			site = this.sites.filter(site => site.id == site_id)[0];
+			if ( site_id.constructor === Array ) { 
+				site_name = site_id.length + " sites";
+			} else {
+				environment = site.environment_selected
+				site_name = site.name;
+			}
 
 			var data = {
 				action: 'captaincore_install',
 				post_id: site_id,
 				command: 'sync-data',
-				environment: site.environment_selected
+				environment: environment
 			};
 
 			self = this;
-			description = "Syncing " + site.name + " site info";
+			description = "Syncing " + site_name + " site info";
 
 			// Start job
 			job_id = Math.round((new Date()).getTime());
@@ -4630,19 +4750,6 @@ new Vue({
 				});
 
 		},
-		addTheme ( site_id ){
-			site = this.sites.filter(site => site.id == site_id)[0]
-			this.new_theme.show = true;
-			this.new_theme.site_id = site.id;
-			this.new_theme.site_name = site.name;
-			this.new_theme.environment_selected = site.environment_selected;
-		},
-		addThemeBulk() {
-			this.new_theme.show = true;
-			this.new_theme.site_id = this.sites_selected.map( site => site.id );
-			this.new_theme.site_name = "Bulk sites";
-			this.new_theme.environment_selected = this.dialog_bulk.environment_selected;
-		},
 		activateTheme (theme_name, site_id) {
 
 			site = this.sites.filter(site => site.id == site_id)[0];
@@ -4724,15 +4831,311 @@ new Vue({
 		addPlugin ( site_id ){
 			site = this.sites.filter(site => site.id == site_id)[0]
 			this.new_plugin.show = true;
-			this.new_plugin.site_id = site.id;
+			this.new_plugin.sites.push( site );
 			this.new_plugin.site_name = site.name;
-			this.new_plugin.environment_selected = site.environment_selected;
+			this.new_plugin.current_plugins = site.environments.filter( e => e.environment == site.environment_selected )[0].plugins.map( p => p.name );
+			this.fetchPlugins();
 		},
 		addPluginBulk() {
 			this.new_plugin.show = true;
-			this.new_plugin.site_id = this.sites_selected.map( site => site.id );
-			this.new_plugin.site_name = "Bulk sites";
+			this.new_plugin.sites = this.sites_selected;
+			this.new_plugin.site_name = this.new_plugin.sites.length + " sites";
+			this.new_plugin.current_plugins = [];
 			this.new_plugin.environment_selected = this.dialog_bulk.environment_selected;
+			this.fetchPlugins();
+		},
+		installPlugin ( plugin ) {
+
+			if ( this.new_plugin.sites.length ==  1 ) {
+				site_id = this.new_plugin.sites[0].id;
+				environment_selected = this.new_plugin.sites[0].environment_selected
+			} else {
+				site_id = this.new_plugin.sites.map( s => s.id )
+				environment_selected = this.new_plugin.environment_selected
+			}
+
+			site_name = this.new_plugin.site_name;
+
+			should_proceed = confirm("Proceed with installing plugin " + plugin.name + " on " + site_name + "?");
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			// Enable loading progress
+			description = "Installing plugin '" +plugin.name + "' to " + site_name;
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"site_id": site_id, "environment": environment_selected, "description": description, "status": "queued", "command": "manage", stream: []});
+
+			// WP ClI command to send
+			wpcli = "wp plugin install " + plugin.download_link + " --force";
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': site_id,
+				'command': "manage",
+				'value': "ssh",
+				'background': true,
+				'environment': environment_selected,
+				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.new_plugin.show = false
+					self.snackbar.message = description
+					self.snackbar.show = true
+					self.new_plugin.api.items = []
+					self.new_plugin.api.info = {}
+					self.new_plugin.loading = false;
+
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data );
+				})
+				.catch(error => {
+					console.log(error.response)
+					self.new_plugin.show = true
+				});
+
+		},
+		uninstallPlugin ( plugin ) {
+
+			if ( this.new_plugin.sites.length ==  1 ) {
+				site_id = this.new_plugin.sites[0].id;
+				environment_selected = this.new_plugin.sites[0].environment_selected
+			} else {
+				site_id = this.new_plugin.sites.map( s => s.id )
+				environment_selected = this.new_plugin.environment_selected
+			}
+
+			site_name = this.new_plugin.site_name;
+
+			should_proceed = confirm("Proceed with uninstalling plugin " + plugin.name + " from " + site_name + "?");
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			// Enable loading progress
+			description = "Uninstalling plugin '" +plugin.name + "' from " + site_name;
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"site_id": site_id, "environment": environment_selected, "description": description, "status": "queued", "command": "manage", stream: []});
+
+			// WP ClI command to send
+			wpcli = "wp plugin delete " + plugin.slug;
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': site_id,
+				'command': "manage",
+				'value': "ssh",
+				'background': true,
+				'environment': environment_selected,
+				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.new_plugin.show = false
+					self.snackbar.message = description
+					self.snackbar.show = true
+					self.new_plugin.api.items = []
+					self.new_plugin.api.info = {}
+					self.new_plugin.loading = false;
+
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data );
+				})
+				.catch(error => {
+					console.log(error.response)
+					self.new_plugin.show = true
+				});
+
+		},
+		fetchPlugins() {
+			this.new_plugin.loading = true;
+			site_id = this.new_plugin.sites[0].id
+			search = this.new_plugin.search
+			var data = {
+				'action': 'captaincore_ajax',
+				'post_id': site_id,
+				'command': "fetchPlugins",
+				'page': this.new_plugin.page
+			};
+			if ( search ) {
+				data.value = search;
+			}
+			self = this;
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.new_plugin.api.items = response.data.plugins
+					self.new_plugin.api.info = response.data.info
+					self.new_plugin.loading = false;
+				})
+				.catch(error => {
+					console.log(error.response)
+					self.new_plugin.loading = false;
+				});
+		},
+		addTheme ( site_id ) {
+			site = this.sites.filter(site => site.id == site_id)[0]
+			this.new_theme.show = true;
+			this.new_theme.sites.push( site );
+			this.new_theme.site_name = site.name;
+			this.new_theme.current_themes = site.environments.filter( e => e.environment == site.environment_selected )[0].themes.map( p => p.name );
+			this.fetchThemes();
+		},
+		addThemeBulk() {
+			this.new_theme.show = true;
+			this.new_theme.sites = this.sites_selected.map( site => site.id );
+			this.new_theme.site_name = this.new_theme.sites.length + " sites";
+			this.new_theme.environment_selected = this.dialog_bulk.environment_selected;
+			this.fetchThemes();
+		},
+		installTheme ( theme ) {
+
+			if ( this.new_theme.sites.length ==  1 ) {
+				site_id = this.new_theme.sites[0].id;
+				environment_selected = this.new_theme.sites[0].environment_selected
+			} else {
+				site_id = this.new_theme.sites.map( s => s.id )
+				environment_selected = this.new_theme.environment_selected
+			}
+
+			site_name = this.new_theme.site_name;
+
+			should_proceed = confirm("Proceed with installing theme " + theme.name + " on " + site_name + "?");
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			// Enable loading progress
+			description = "Installing theme '" + theme.name + "' to " + site_name;
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"site_id": site_id, "environment": environment_selected, "description": description, "status": "queued", "command": "manage", stream: []});
+
+			// WP ClI command to send
+			wpcli = "wp theme install " + theme.slug + " --force";
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': site_id,
+				'command': "manage",
+				'value': "ssh",
+				'background': true,
+				'environment': environment_selected,
+				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.new_theme.show = false
+					self.snackbar.message = description
+					self.snackbar.show = true
+					self.new_theme.api.items = []
+					self.new_theme.api.info = {}
+					self.new_theme.loading = false;
+
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data );
+				})
+				.catch(error => {
+					console.log(error.response)
+					self.new_theme.show = true
+				});
+
+		},
+		uninstallTheme ( theme ) {
+
+			if ( this.new_theme.sites.length ==  1 ) {
+				site_id = this.new_theme.sites[0].id;
+				environment_selected = this.new_theme.sites[0].environment_selected
+			} else {
+				site_id = this.new_theme.sites.map( s => s.id )
+				environment_selected = this.new_theme.environment_selected
+			}
+
+			site_name = this.new_theme.site_name;
+
+			should_proceed = confirm("Proceed with uninstalling theme " + theme.name + " from " + site_name + "?");
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			// Enable loading progress
+			description = "Uninstalling theme '" + theme.name + "' from " + site_name;
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"site_id": site_id, "environment" : environment_selected, "description": description, "status": "queued", "command": "manage", stream: []});
+
+			// WP ClI command to send
+			wpcli = "wp theme delete " + theme.slug;
+
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': site_id,
+				'command': "manage",
+				'value': "ssh",
+				'background': true,
+				'environment': environment_selected,
+				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.new_theme.show = false
+					self.snackbar.message = description
+					self.snackbar.show = true
+					self.new_theme.api.items = []
+					self.new_theme.api.info = {}
+					self.new_theme.loading = false;
+
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data );
+				})
+				.catch(error => {
+					console.log(error.response)
+					self.new_theme.show = true
+				});
+
+		},
+		fetchThemes() {
+			this.new_theme.loading = true;
+			site_id = this.new_theme.sites[0].id
+			search = this.new_theme.search
+			var data = {
+				'action': 'captaincore_ajax',
+				'post_id': site_id,
+				'command': "fetchThemes",
+				'page': this.new_theme.page
+			};
+			if ( search ) {
+				data.value = search;
+			}
+			self = this;
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.new_theme.api.items = response.data.themes
+					self.new_theme.api.info = response.data.info
+					self.new_theme.loading = false;
+				})
+				.catch(error => {
+					console.log(error.response)
+					self.new_theme.loading = false;
+				});
 		},
 		togglePlugin (plugin_name, plugin_status, site_id) {
 
@@ -4878,7 +5281,7 @@ new Vue({
 				}
 
 				if ( job.command == "manage" ) {
-					self.syncSite( job.site_id );
+					self.syncSite( job.site_id, job.environment );
 				}
 
 				if ( job.command == "updateFathom" ) {

@@ -3355,9 +3355,43 @@ function captaincore_ajax_action_callback() {
 
 		}
 
-		echo json_encode($response);
+		echo json_encode( $response );
 
 	}
+
+	if ( $cmd == 'fetchPlugins' ) {
+		require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
+		$arguments = array(
+			'per_page' => 9,
+			'page'     => $_POST['page'],
+			'browse'   => 'popular', 
+			'is_ssl'   => true,
+		);
+		if ( $value ) {
+			$arguments['search'] = $value;
+			unset( $arguments['browse'] );
+		}
+		$response = plugins_api( 'query_plugins', $arguments );
+
+		echo json_encode( $response ); 
+	};
+
+	if ( $cmd == 'fetchThemes' ) {
+		require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
+		$arguments = array(
+			'per_page' => 9,
+			'page'     => $_POST['page'],
+			'browse'   => 'popular', 
+			'is_ssl'   => true,
+		);
+		if ( $value ) {
+			$arguments['search'] = $value;
+			unset( $arguments['browse'] );
+	}
+		$response = themes_api( 'query_themes', $arguments );
+
+		echo json_encode( $response ); 
+	};
 
 	if ( $cmd == 'newProcess' ) {
 
@@ -4078,9 +4112,9 @@ function captaincore_install_action_callback() {
 	$background   = $_POST['background'];
 	$job_id       = $_POST['job_id'];
 
-	$site             = get_field( 'site', $post_id );
-	$provider         = get_field( 'provider', $post_id );
-	$domain           = get_the_title( $post_id );
+	$site         = get_field( 'site', $post_id );
+	$provider     = get_field( 'provider', $post_id );
+	$domain       = get_the_title( $post_id );
 
 	$partners = get_field( 'partner', $post_id );
 	if ( $partners ) {
@@ -4098,7 +4132,7 @@ function captaincore_install_action_callback() {
 	}
 
 	// If many sites, fetch their names
-	if ( $post_ids ) {
+	if ( count($post_ids) > 0 ) {
 		$site_names = array();
 		foreach( $post_ids as $id ) {
 
