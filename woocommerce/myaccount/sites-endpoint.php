@@ -1654,7 +1654,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
 						<v-btn flat @click="view_jobs = !view_jobs">Running Jobs <small v-if="runningJobs">({{ runningJobs }})</small><v-icon dark small>fas fa-cogs</v-icon></v-btn>
-						<v-btn flat @click="dialog_bulk.show = !dialog_bulk.show" v-show="selectedSites > 0">Bulk Management <small>({{ selectedSites }})</small><v-icon dark small>fas fa-cog</v-icon></v-btn>
+						<v-btn flat @click="dialog_bulk.show = !dialog_bulk.show">Bulk Management <small v-show="selectedSites > 0">({{ selectedSites }})</small><v-icon dark small>fas fa-cog</v-icon></v-btn>
 						<v-btn flat @click="advanced_filter = !advanced_filter">Advanced filter<v-icon dark small>fas fa-filter</v-icon></v-btn>
 						<v-btn flat @click="dialog_new_site.show = true" v-show="role == 'administrator'">Add Site <v-icon dark>add</v-icon></v-btn>
 					</v-toolbar-items>
@@ -1668,7 +1668,16 @@ Vue.component('file-upload', VueUploadComponent);
 						label="Per page"
 						dense
 						@change="page = 1"
-						style="width:70px;"
+						style="width:70px;display: inline-block;"
+					></v-select>
+						<v-select 
+							:items="select_site_options"
+							v-model="site_selected"
+							v-show="dialog_bulk.show == true"
+							@input="selectSites"
+							label="Bulk Toggle"
+							dense
+							style="width:120px;display: inline-block;"
 	        ></v-select>
 			</v-flex>
 					<v-flex xs12 sm6>
@@ -1723,10 +1732,7 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-toolbar>
 				<v-card-text>
             <v-layout row>
-			<v-flex xs2 ma-1>
-				<v-select :items="select_site_options" v-model="site_selected" @input="selectSites" label="Bulk Toggle" chips></v-select>
-			</v-flex>
-			<v-flex xs10 ma-1>
+			<v-flex xs12 ma-1>
 			<v-autocomplete
 			:items="site_filters"
 			item-text="search"
@@ -1985,13 +1991,13 @@ Vue.component('file-upload', VueUploadComponent);
 					<div style="width: 58px;"></div>
 				</v-btn-toggle>
 				</div>
-				<v-expansion-panel style="margin-top: 20px" v-bind:class='{ "toggleSelect": advanced_filter }' popout>
+				<v-expansion-panel style="margin-top: 20px" v-bind:class='{ "toggleSelect": dialog_bulk.show }' popout>
 						<v-expansion-panel-content lazy v-for="site in paginatedSites" :key="site.id" class="site"> 
 							<div slot="header">
 								<v-layout align-center justify-space-between row>
 									<div>
 										<v-layout align-center justify-start fill-height/>
-										<v-switch v-model="site.selected" @click.native.stop @change="site_selected = null" style="position: absolute;left: -48px;top: 12px;" v-show="advanced_filter == true"></v-switch>
+										<v-switch v-model="site.selected" @click.native.stop @change="site_selected = null" style="position: absolute;left: -48px;top: 12px;" v-show="dialog_bulk.show == true"></v-switch>
 											<img :src="site.environments[0].screenshot_small" style="width: 50px; margin-right:1em" class="elevation-1" v-show="site.environments[0].screenshot_small">
 										<strong>{{ site.name }}</strong>
 										</v-layout>
