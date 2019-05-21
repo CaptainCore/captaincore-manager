@@ -2095,19 +2095,19 @@ Vue.component('file-upload', VueUploadComponent);
 								 </v-card>
 								</v-tab-item>
 								<v-tab-item :key="2" value="tab-Themes">
-									<v-toolbar color="grey lighten-4" dense light flat>
-										<v-toolbar-title>Themes</v-toolbar-title>
-										<v-spacer></v-spacer>
-										<v-toolbar-items>
-											<v-btn flat @click="bulkEdit(site.id,'themes')" v-if="site.themes_selected.length != 0">Bulk Edit {{ site.themes_selected.length }} themes</v-btn>
-											<v-btn flat @click="addTheme(site.id)">Add Theme <v-icon dark small>add</v-icon></v-btn>
-										</v-toolbar-items>
-									</v-toolbar>
 									<v-card 
 									v-for="key in site.environments"
 									v-show="key.environment == site.environment_selected"
 									flat
 									>
+									<v-toolbar color="grey lighten-4" dense light flat>
+										<v-toolbar-title>Themes</v-toolbar-title>
+										<v-spacer></v-spacer>
+										<v-toolbar-items>
+											<v-btn flat @click="bulkEdit(site.id,'themes')" v-if="key.themes_selected.length != 0">Bulk Edit {{ key.themes_selected.length }} themes</v-btn>
+											<v-btn flat @click="addTheme(site.id)">Add Theme <v-icon dark small>add</v-icon></v-btn>
+										</v-toolbar-items>
+									</v-toolbar>
 									<v-card-title v-if="typeof key.themes == 'string'">
 										<div>
 											Updating themes...
@@ -2116,7 +2116,7 @@ Vue.component('file-upload', VueUploadComponent);
 									</v-card-title>
 									<div v-else>
 									<v-data-table
-										v-model="site.themes_selected"
+										v-model="key.themes_selected"
 										:headers="headers"
 										:items="key.themes"
 										:loading="site.loading_themes"
@@ -2154,19 +2154,19 @@ Vue.component('file-upload', VueUploadComponent);
 								</div>
 							</v-tab-item>
 			<v-tab-item :key="3" value="tab-Plugins">
-				<v-toolbar color="grey lighten-4" dense light flat>
-					<v-toolbar-title>Plugins</v-toolbar-title>
-					<v-spacer></v-spacer>
-					<v-toolbar-items>
-						<v-btn flat @click="bulkEdit(site.id, 'plugins')" v-if="site.plugins_selected.length != 0">Bulk Edit {{ site.plugins_selected.length }} plugins</v-btn>
-						<v-btn flat @click="addPlugin(site.id)">Add Plugin <v-icon dark small>add</v-icon></v-btn>
-					</v-toolbar-items>
-				</v-toolbar>
 				<v-card 
 					v-for="key in site.environments"
 					v-show="key.environment == site.environment_selected"
 				flat
 				>
+				<v-toolbar color="grey lighten-4" dense light flat>
+					<v-toolbar-title>Plugins</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+						<v-btn flat @click="bulkEdit(site.id, 'plugins')" v-if="key.plugins_selected.length != 0">Bulk Edit {{ key.plugins_selected.length }} plugins</v-btn>
+						<v-btn flat @click="addPlugin(site.id)">Add Plugin <v-icon dark small>add</v-icon></v-btn>
+					</v-toolbar-items>
+				</v-toolbar>
 				<v-card-title v-if="typeof key.plugins == 'string'">
 					<div>
 						Updating plugins...
@@ -2179,7 +2179,7 @@ Vue.component('file-upload', VueUploadComponent);
 					:items="key.plugins.filter(plugin => plugin.status != 'must-use' && plugin.status != 'dropin')"
 					:loading="site.loading_plugins"
 					:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
-					v-model="site.plugins_selected"
+					v-model="key.plugins_selected"
 					item-key="name"
 					value="name"
 					select-all
@@ -2224,18 +2224,18 @@ Vue.component('file-upload', VueUploadComponent);
 			 </div>
 		  </v-tab-item>
 			<v-tab-item :key="4" value="tab-Users">
-				<v-toolbar color="grey lighten-4" dense light flat>
-					<v-toolbar-title>Users</v-toolbar-title>
-					<v-spacer></v-spacer v-show="site.environment_selected == 'Production'">
-					<v-toolbar-items>
-						<v-btn flat @click="bulkEdit(site.id,'users')" v-if="site.users_selected.length != 0">Bulk Edit {{ site.users_selected.length }} users</v-btn>
-					</v-toolbar-items>
-				</v-toolbar>
 				<v-card 
 					v-for="key in site.environments"
 					v-show="key.environment == site.environment_selected"
 					flat
 					>
+				<v-toolbar color="grey lighten-4" dense light flat>
+					<v-toolbar-title>Users</v-toolbar-title>
+					<v-spacer></v-spacer v-show="site.environment_selected == 'Production'">
+					<v-toolbar-items>
+						<v-btn flat @click="bulkEdit(site.id,'users')" v-if="key.users_selected.length != 0">Bulk Edit {{ key.users_selected.length }} users</v-btn>
+					</v-toolbar-items>
+				</v-toolbar>
 					<v-card-title v-if="typeof key.users == 'string'">
 						<div>
 							Updating users...
@@ -2249,7 +2249,7 @@ Vue.component('file-upload', VueUploadComponent);
 							:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
 							:items="key.users"
 							item-key="user_login"
-							v-model="site.users_selected"
+							v-model="key.users_selected"
 							class="table_users"
 							select-all
 						>
@@ -2979,7 +2979,7 @@ new Vue({
 		],<?php } ?>
 		new_plugin: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {} },
 		new_theme: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {} },
-		bulk_edit: { show: false, site_id: null, type: null, items: [], api_items: [], api_info: [], api_page: 1 },
+		bulk_edit: { show: false, site_id: null, type: null, items: [] },
 		upload: [],
 		view_jobs: false,
 		search: null,
@@ -3576,7 +3576,7 @@ new Vue({
 		syncSite( site_id, environment ) {
 
 			site = this.sites.filter(site => site.id == site_id)[0];
-			if ( site_id.constructor === Array ) { 
+			if ( Array.isArray( site_id ) ) { 
 				site_name = site_id.length + " sites";
 			} else {
 				environment = site.environment_selected
@@ -3652,27 +3652,31 @@ new Vue({
 
 			jQuery.post(ajaxurl, data, function(response) {
 
-				if (tryParseJSON(response)) {
-					var site = JSON.parse(response);
-					lookup = self.sites.filter(site => site.id == site_id).length;
+				// Bail if JSON not found
+				if ( !tryParseJSON( response ) ) {
+					return;
+				}
+
+				var sites = JSON.parse( response );
+				sites.forEach( site => {
+					lookup = self.sites.filter(s => s.id == site.id).length;
 					if (lookup == 1 ) {
 						// Update existing site info
-						site_update = self.sites.filter(site => site.id == site_id)[0];
+						site_update = self.sites.filter(s => s.id == site.id)[0];
 						// Look through keys and update
 						Object.keys(site).forEach(function(key) {
-
 							// Skip updating environment_selected and tabs_management
 							if ( key == "environment_selected" || key == "tabs" || key == "tabs_management" ) {
 								return;
 							}
-
 						  site_update[key] = site[key];
 						});
-					} else {
+					}
+					if (lookup != 1 ) { 
 						// Add new site info
 						self.sites.push(site);
 					}
-				}
+				});
 			});
 		},
 		fetchUsers( site_id ) {
@@ -3772,7 +3776,7 @@ new Vue({
 			site = this.sites.filter(site => site.id == site_id)[0];
 			this.bulk_edit.site_id = site_id;
 			this.bulk_edit.site_name = site.name;
-			this.bulk_edit.items = site[ type.toLowerCase() + "_selected" ];
+			this.bulk_edit.items = site.environments.filter( e => e.environment == site.environment_selected )[0][ type.toLowerCase() + "_selected" ];
 			this.bulk_edit.type = type;
 		},
 		bulkEditExecute ( action ) {
@@ -3789,7 +3793,7 @@ new Vue({
 			site_name = this.bulk_edit.site_name;
 			description = "Bulk action '" + action + " " + this.bulk_edit.type + "' on " + site_name;
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id, "description": description, "status": "queued", stream: [], "command": "manage"});
+			this.jobs.push({"job_id": job_id, "site_id": site_id, "description": description, "status": "queued", stream: [], "command": "manage"});
 
 			// WP ClI command to send
 			wpcli = "wp " + object_singular + " " + action + " " + items;
@@ -3808,6 +3812,7 @@ new Vue({
 				'command': "manage",
 				'value': "ssh",
 				'background': true,
+				'environment': site.environment_selected,
 				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 			};
 
@@ -5280,8 +5285,12 @@ new Vue({
 					self.fetchSiteInfo( job.site_id );
 				}
 
-				if ( job.command == "manage" ) {
+				if ( job.command == "manage" && job.environment ) {
 					self.syncSite( job.site_id, job.environment );
+				}
+
+				if ( job.command == "manage" && !job.environment ) {
+					self.syncSite( job.site_id );
 				}
 
 				if ( job.command == "updateFathom" ) {
@@ -5484,7 +5493,6 @@ new Vue({
 			}
 		},
 		bulkactionSubmit() {
-
 			site_ids = this.sites.filter( site => site.selected ).map( site => site.id );
 			site_names = this.sites.filter( site => site.selected ).map( site => site.name );
 
@@ -5512,7 +5520,6 @@ new Vue({
 				self.snackbar.show = true;
 				self.dialog = false;
 		  });
-
 		},
 		selectSites() {
 			if (this.site_selected == "all") {

@@ -3955,9 +3955,19 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'fetch-site' ) {
 
-		// Create new site
-		$site = ( new CaptainCore\Site )->get( $post_id );
-		echo json_encode($site);
+		$sites = array();
+
+		if ( count( $post_ids ) > 0 ) {
+
+			foreach( $post_ids as $id ) {
+				$sites[] = ( new CaptainCore\Site )->get( $id );
+			}
+
+		} else {
+			$sites[] = ( new CaptainCore\Site )->get( $post_id );
+		}
+
+		echo json_encode( $sites );
 
 	}
 

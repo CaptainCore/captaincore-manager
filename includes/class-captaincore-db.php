@@ -548,9 +548,6 @@ class Site {
 			'descending' => true,
 			'sortBy'     => 'date',
 		);
-		$site_details->themes_selected        = array();
-		$site_details->plugins_selected       = array();
-		$site_details->users_selected         = array();
 		$site_details->pagination             = array( 'sortBy' => 'roles' );
 
 		if ( ! isset( $site_details->visits ) ) {
@@ -642,6 +639,9 @@ class Site {
 			'screenshot'              => intval( $environments[0]->screenshot ),
 			'screenshot_small'        => '',
 			'screenshot_large'        => '',
+			'themes_selected'         => array(),
+			'plugins_selected'        => array(),
+			'users_selected'          => array(),
 		);
 
 		if ( intval( $environments[0]->screenshot ) ) {
@@ -718,6 +718,9 @@ class Site {
 			'screenshot'              => intval( $environments[1]->screenshot ),
 			'screenshot_small'        => '',
 			'screenshot_large'        => '',
+			'themes_selected'         => array(),
+			'plugins_selected'        => array(),
+			'users_selected'          => array(),
 		);
 
 		if ( intval( $environments[1]->screenshot ) == 1 ) {
