@@ -1343,7 +1343,7 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-btn icon dark @click.native="dialog_toggle.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
-						<v-toolbar-title>Toggle Site {{ dialog_toggle.site.name }}</v-toolbar-title>
+						<v-toolbar-title>Toggle Site {{ dialog_toggle.site_name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text>
@@ -1360,7 +1360,7 @@ Vue.component('file-upload', VueUploadComponent);
 										<p>Will apply deactivate message with the following link back to the site owner.</p>
 										<v-text-field label="Business Name" :value="dialog_toggle.business_name"></v-text-field>
 										<v-text-field label="Business Link" :value="dialog_toggle.business_link"></v-text-field>
-										<v-btn @click="DeactivateSite(dialog_toggle.site.id)">
+										<v-btn @click="DeactivateSite(dialog_toggle.site_id)">
 											Deactivate Site
 										</v-btn>
 									</v-card-text>
@@ -1374,7 +1374,7 @@ Vue.component('file-upload', VueUploadComponent);
 									</div>
 								  </v-card-title>
 									<v-card-text>
-										<v-btn @click="ActivateSite(dialog_toggle.site.id)">
+										<v-btn @click="ActivateSite(dialog_toggle.site_id)">
 											Activate Site
 										</v-btn>
 									</v-card-text>
@@ -1598,21 +1598,21 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-btn icon dark @click.native="dialog_apply_https_urls.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
-						<v-toolbar-title>Apply HTTPS Urls for {{ dialog_apply_https_urls.site.name }}</v-toolbar-title>
+						<v-toolbar-title>Apply HTTPS Urls for {{ dialog_apply_https_urls.site_name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text>
 					<v-container>
 						<v-alert :value="true" type="info" color="blue darken-3">
-							Domain needs to match current home url which is <strong>{{ dialog_apply_https_urls.site.home_url }}</strong>. Otherwise server domain mapping will need updated to prevent redirection loop.
+							Domain needs to match current home url. Otherwise server domain mapping will need updated to prevent redirection loop.
 						</v-alert>
 						<p></p>
 						<span>Select url replacement option.</span><br />
 						<v-btn @click="applyHttpsUrls( 'apply-https' )">
-							Option 1: https://{{ dialog_apply_https_urls.site.name }}
+							Option 1: https://domain.tld
 						</v-btn><br />
 						<v-btn @click="applyHttpsUrls( 'apply-https-with-www' )">
-							Option 2: https://www.{{ dialog_apply_https_urls.site.name }}
+							Option 2: https://www.domain.tld
 						</v-btn>
 					</v-container>
 					</v-card-text>
@@ -1862,7 +1862,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-tab key="Updates" href="#tab-Updates" v-show="role == 'coming-soon'">
 					Updates <v-icon small style="margin-left:7px;">fas fa-book-open</v-icon>
 				</v-tab>
-				<v-tab href="#tab-Scripts" v-show="role == 'coming-soon'">
+				<v-tab href="#tab-Scripts" v-show="role == 'administrator'">
 					Scripts <v-icon small style="margin-left:7px;">fas fa-code</v-icon>
 				</v-tab>
 				<v-tab key="Backups" href="#tab-Backups" v-show="role == 'coming-soon'">
@@ -1948,13 +1948,13 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-card-title>
 					<v-flex xs12 sm3>
 						<v-subheader>Common Built-in Scripts</v-subheader>
-							<div><v-btn small flat @click="viewApplyHttpsUrls(site.id)">
+							<div><v-btn small flat @click="viewApplyHttpsUrlsBulk()">
 								<v-icon>launch</v-icon> <span>Apply HTTPS Urls</span>
 							</v-btn></div>
-							<div><v-btn small flat @click="siteDeploy(site.id)">
+							<div><v-btn small flat @click="siteDeployBulk()">
 								<v-icon>loop</v-icon> <span>Deploy users/plugins</span>
 							</v-btn></div>
-							<div><v-btn small flat @click="toggleSite(site.id)">
+							<div><v-btn small flat @click="toggleSiteBulk()">
 								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span>
 							</v-btn></div>
 				</v-flex>
@@ -2841,14 +2841,14 @@ new Vue({
 	data: {
 		loading_sites: true,
 		dialog_bulk: { show: false, tabs_management: "tab-Sites", environment_selected: "Production" },
-		dialog_apply_https_urls: { show: false, site: {} },
+		dialog_apply_https_urls: { show: false, site_id: "", site_name: "", sites: [] },
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
 		dialog_edit_site: { show: false, site: {}, loading: false },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $current_user->user_email; ?>", current_user_email: "<?php echo $current_user->user_email; ?>", filter_toggle: true, filter_options: [] },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
 		dialog_mailgun: { show: false, site: {}, response: "", loading: false },
 		dialog_modify_plan: { show: false, site: {}, hosting_plan: {}, hosting_addons: [], selected_plan: "", customer_name: "" },
-		dialog_toggle: { show: false, site: {} },
+		dialog_toggle: { show: false, site_name: "", site_id: "" },
 		dialog_theme_and_plugin_checks: { show: false, site: {}, loading: false },
 		dialog_update_settings: { show: false, site_id: null, loading: false },
 		dialog_fathom: { show: false, site: {}, loading: false, editItem: false, editedItem: {}, editedIndex: -1 },
@@ -3583,6 +3583,7 @@ new Vue({
 
 			site = this.sites.filter(site => site.id == site_id)[0];
 			if ( Array.isArray( site_id ) ) { 
+				environment = this.dialog_bulk.environment_selected;
 				site_name = site_id.length + " sites";
 			} else {
 				environment = site.environment_selected
@@ -3597,7 +3598,7 @@ new Vue({
 			};
 
 			self = this;
-			description = "Syncing " + site_name + " site info";
+			description = "Syncing " + site_name + " info";
 
 			// Start job
 			job_id = Math.round((new Date()).getTime());
@@ -3971,24 +3972,30 @@ new Vue({
 		},
 		applyHttpsUrls( command ) {
 
-			should_proceed = confirm("Will apply ssl urls. Proceed?");
+			site_id = this.dialog_apply_https_urls.site_id
+			site_name = this.dialog_apply_https_urls.site_name
+
+			if ( Array.isArray( site_id ) ) { 
+				environment = this.dialog_bulk.environment_selected;
+			} else {
+				environment = site.environment_selected
+			}
+
+			should_proceed = confirm("Will apply ssl urls to '"+site_name+"'. Proceed?");
 
 			if ( ! should_proceed ) {
 				return;
 			}
 
-			var post_id = this.dialog_apply_https_urls.site.id;
-			site = this.sites.filter(site => site.id == post_id )[0];
-
 			// Start job
-			description = "Applying HTTPS urls for " + site.name;
+			description = "Applying HTTPS urls to " + site_name;
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			var data = {
 				'action': 'captaincore_install',
-				'environment': site.environment_selected,
-				'post_id': post_id,
+				'environment': environment,
+				'post_id': site_id,
 				'command': command,
 			};
 
@@ -3999,11 +4006,11 @@ new Vue({
 				// Updates job id with reponsed background job id
 				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
 				self.runCommand( response );
-				self.dialog_apply_https_urls.site = "";
+				self.dialog_apply_https_urls.site_id = "";
+				self.dialog_apply_https_urls.site_name = "";
 				self.dialog_apply_https_urls.show = false;
 				self.snackbar.message = "Applying HTTPS Urls";
 				self.snackbar.show = true;
-
 			});
 
 		},
@@ -4262,9 +4269,24 @@ new Vue({
 		},
 		toggleSite( site_id ) {
 
-			site = this.sites.filter(site => site.id == site_id )[0];
+			site = this.sites.filter( site => site.id == site_id )[0];
+
 			this.dialog_toggle.show = true;
-			this.dialog_toggle.site = site;
+			this.dialog_toggle.site_id = site.id;
+			this.dialog_toggle.site_name = site.name;
+			this.dialog_toggle.business_name = this.business_name;
+			this.dialog_toggle.business_link = this.business_link;
+
+		},
+		toggleSiteBulk() {
+
+			sites = this.sites_selected
+			site_ids = this.sites_selected.map( s => s.id )
+			site_name = sites.length + " sites";
+
+			this.dialog_toggle.show = true;
+			this.dialog_toggle.site_id = site_ids;
+			this.dialog_toggle.site_name = site_name;
 			this.dialog_toggle.business_name = this.business_name;
 			this.dialog_toggle.business_link = this.business_link;
 
@@ -4272,25 +4294,39 @@ new Vue({
 		DeactivateSite( site_id ) {
 
 			site = this.sites.filter(site => site.id == site_id)[0];
-			site_name = this.dialog_toggle.site.name;
+			site_name = this.dialog_toggle.site_name;
+
+			if ( Array.isArray( site_id ) ) { 
+				environment = this.dialog_bulk.environment_selected;
+			} else {
+				environment = site.environment_selected
+			}
 
 			var data = {
 				action: 'captaincore_install',
 				post_id: site_id,
 				command: 'deactivate',
-				environment: site.environment_selected,
+				environment: environment,
 				name: this.dialog_toggle.business_name,
 				link: this.dialog_toggle.business_link
 			};
 
 			self = this;
+			description = "Deactivating '" + site_name + "'";
+
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data )
 					self.snackbar.message = "Deactivating " + site_name;
 					self.snackbar.show = true;
 					self.dialog_toggle.show = false;
-					self.dialog_toggle.site = {};
+					self.dialog_toggle.site_id = "";
+					self.dialog_toggle.site_name = "";
 					self.dialog_toggle.business_name = "";
 					self.dialog_toggle.business_link = "";
 				})
@@ -4300,23 +4336,37 @@ new Vue({
 		ActivateSite( site_id ) {
 
 			site = this.sites.filter(site => site.id == site_id)[0];
-			site_name = this.dialog_toggle.site.name;
+			site_name = this.dialog_toggle.site_name;
+
+			if ( Array.isArray( site_id ) ) { 
+				environment = this.dialog_bulk.environment_selected;
+			} else {
+				environment = site.environment_selected
+			}
 
 			var data = {
 				action: 'captaincore_install',
 				post_id: site_id,
-				environment: site.environment_selected,
+				environment: environment,
 				command: 'activate'
 			};
 
 			self = this;
+			description = "Activating '" + site_name + "'";
+
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data )
 					self.snackbar.message = "Activating " + site_name;
 					self.snackbar.show = true;
 					self.dialog_toggle.show = false;
-					self.dialog_toggle.site = {};
+					self.dialog_toggle.site_id = "";
+					self.dialog_toggle.site_name = "";
 					self.dialog_toggle.business_name = "";
 					self.dialog_toggle.business_link = "";
 				})
@@ -4345,6 +4395,41 @@ new Vue({
 			// Start job
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data )
+					self.snackbar.message = description;
+					self.snackbar.show = true;
+				})
+				.catch( error => console.log( error ) );
+
+		},
+		siteDeployBulk(){
+
+			sites = this.sites_selected;
+			site_ids = sites.map( s => s.id );
+			should_proceed = confirm("Deploy users and plugins " + sites.length + " sites?");
+			description = "Deploying users and plugins on '" + sites.length + " sites'";
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			var data = {
+				action: 'captaincore_install',
+				environment: this.dialog_bulk.environment_selected,
+				post_id: site_ids,
+				command: 'deploy-defaults'
+			};
+
+			self = this;
+
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id ,"site_id": site_ids, "command": "manage", "description": description, "status": "queued", stream: []});
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
@@ -4535,7 +4620,13 @@ new Vue({
 		viewApplyHttpsUrls( site_id ) {
 			site = this.sites.filter(site => site.id == site_id)[0];
 			this.dialog_apply_https_urls.show = true;
-			this.dialog_apply_https_urls.site = site;
+			this.dialog_apply_https_urls.site_id = site_id
+			this.dialog_apply_https_urls.site_name = site.name;
+		},
+		viewApplyHttpsUrlsBulk() {
+			this.dialog_apply_https_urls.show = true;
+			this.dialog_apply_https_urls.site_id = this.sites_selected.map( s => s.id );
+			this.dialog_apply_https_urls.site_name = this.sites_selected.length + " sites";
 		},
 		RollbackQuicksave( site_id, quicksave_id, addon_type, addon_name ){
 

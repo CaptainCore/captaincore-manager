@@ -3954,21 +3954,15 @@ function captaincore_ajax_action_callback() {
 	}
 
 	if ( $cmd == 'fetch-site' ) {
-
 		$sites = array();
-
 		if ( count( $post_ids ) > 0 ) {
-
 			foreach( $post_ids as $id ) {
 				$sites[] = ( new CaptainCore\Site )->get( $id );
 			}
-
 		} else {
 			$sites[] = ( new CaptainCore\Site )->get( $post_id );
 		}
-
 		echo json_encode( $sites );
-
 	}
 
 	if ( $cmd == 'fetch-users' ) {
@@ -4165,9 +4159,12 @@ function captaincore_install_action_callback() {
 	if ( $background ) {
 		$run_in_background = true;
 	}
-
 	if ( $cmd == 'new' ) {
 		$command = 'site add' . captaincore_site_fetch_details( $post_id );
+		$run_in_background = true;
+	}
+	if ( $cmd == 'deploy-defaults' ) {
+		$command = "deploy-defaults $site";
 		$run_in_background = true;
 	}
 	if ( $cmd == 'update' ) {
