@@ -596,6 +596,7 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-layout>
 			<v-layout row wrap pa-2>
 				<v-flex
+					v-if="new_theme.api.items"
 					v-for="item in new_theme.api.items"
 					:key="item.slug"
 					xs4
@@ -615,7 +616,7 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-layout>
 						<v-card-actions>
 							<v-spacer></v-spacer>
-							<div v-if="new_theme.current_themes.includes( item.slug )">
+							<div v-if="new_theme.current_themes && new_theme.current_themes.includes( item.slug )">
 							<v-btn small depressed @click="uninstallTheme( item )">Uninstall</v-btn>
 							<v-btn small depressed disabled>Install</v-btn>
 							</div>
@@ -5095,7 +5096,7 @@ new Vue({
 		},
 		addThemeBulk() {
 			this.new_theme.show = true;
-			this.new_theme.sites = this.sites_selected.map( site => site.id );
+			this.new_theme.sites = this.sites_selected;
 			this.new_theme.site_name = this.new_theme.sites.length + " sites";
 			this.new_theme.environment_selected = this.dialog_bulk.environment_selected;
 			this.fetchThemes();
