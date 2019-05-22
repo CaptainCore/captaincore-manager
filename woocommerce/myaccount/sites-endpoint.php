@@ -1387,6 +1387,36 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-card>
 				</v-dialog>
 				<v-dialog
+					v-model="dialog_migration.show"
+					transition="dialog-bottom-transition"
+					scrollable
+					width="500"
+				>
+				<v-card tile>
+					<v-toolbar card dark color="primary">
+						<v-btn icon dark @click.native="dialog_migration.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>Migrate from backup to {{ dialog_migration.site_name }}</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text>
+						<v-alert :value="true" type="info" color="yellow darken-4">
+							Warning {{ dialog_migration.site_name }} will be overwritten with backup. 
+						</v-alert>
+						<p></p>
+						<v-form ref="formSiteMigration">
+						<v-text-field :rules="[v => !!v || 'Backup URL is required']" required label="Backup URL" placeholder="https://storage.googleapis.com/..../live-backup.zip" :value="dialog_migration.backup_url" @change.native="dialog_migration.backup_url = $event.target.value"></v-text-field>
+						<v-checkbox label="Update URLs" v-model="dialog_migration.update_urls" hint="Will change urls in database to match the existing site." persistent-hint></v-checkbox>
+						<p></p>
+						<v-btn @click="validateSiteMigration">
+							Start Migration
+						</v-btn>
+						</v-form>
+					</v-card-text>
+					</v-card>
+				</v-dialog>
+				<v-dialog
 					v-model="dialog_copy_site.show"
 					fullscreen
 					hide-overlay
@@ -2356,6 +2386,9 @@ Vue.component('file-upload', VueUploadComponent);
 							<div><v-btn small flat @click="siteDeploy(site.id)">
 								<v-icon>loop</v-icon> <span>Deploy users/plugins</span>
 							</v-btn></div>
+							<div><v-btn small flat @click="showSiteMigration(site.id)">
+								<v-icon>fas fa-truck-moving</v-icon><span>Migrate from backup</span>
+							</v-btn></div>
 							<div><v-btn small flat @click="toggleSite(site.id)">
 								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span>
 							</v-btn></div>
@@ -2878,6 +2911,7 @@ new Vue({
 		dialog_mailgun: { show: false, site: {}, response: "", loading: false },
 		dialog_modify_plan: { show: false, site: {}, hosting_plan: {}, hosting_addons: [], selected_plan: "", customer_name: "" },
 		dialog_toggle: { show: false, site_name: "", site_id: "" },
+		dialog_migration: { show: false, sites: [], site_name: "", site_id: "", update_urls: true, backup_url: "" },
 		dialog_theme_and_plugin_checks: { show: false, site: {}, loading: false },
 		dialog_update_settings: { show: false, site_id: null, loading: false },
 		dialog_fathom: { show: false, site: {}, loading: false, editItem: false, editedItem: {}, editedIndex: -1 },
@@ -4298,27 +4332,74 @@ new Vue({
 
 		},
 		toggleSite( site_id ) {
-
 			site = this.sites.filter( site => site.id == site_id )[0];
-
 			this.dialog_toggle.show = true;
 			this.dialog_toggle.site_id = site.id;
 			this.dialog_toggle.site_name = site.name;
 			this.dialog_toggle.business_name = this.business_name;
 			this.dialog_toggle.business_link = this.business_link;
-
 		},
 		toggleSiteBulk() {
-
 			sites = this.sites_selected
 			site_ids = this.sites_selected.map( s => s.id )
 			site_name = sites.length + " sites";
-
 			this.dialog_toggle.show = true;
 			this.dialog_toggle.site_id = site_ids;
 			this.dialog_toggle.site_name = site_name;
 			this.dialog_toggle.business_name = this.business_name;
 			this.dialog_toggle.business_link = this.business_link;
+		},
+		showSiteMigration( site_id ){
+			site = this.sites.filter(site => site.id == site_id)[0];
+			this.dialog_migration.sites.push( site );
+			this.dialog_migration.show = true;
+			this.dialog_migration.site_id = site.id
+			this.dialog_migration.site_name = site.name;
+		},
+		validateSiteMigration() {
+			if ( this.$refs.formSiteMigration.validate() ) {
+				this.siteMigration( this.dialog_migration.site_id );
+			}	
+		},
+		siteMigration( site_id ) {
+			site = this.sites.filter(site => site.id == site_id)[0];
+			site_name = site.name;
+
+			should_proceed = confirm("Migrate from backup url? This will overwrite the existing site at " + site_name + ".");
+			description = "Migrating backup to '" + site_name + "'";
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			var data = {
+				action: 'captaincore_install',
+				post_id: site_id,
+				command: 'migrate',
+				value: this.dialog_migration.backup_url,
+				update_urls: this.dialog_migration.update_urls,
+				environment: site.environment_selected
+			};
+
+			self = this;
+			description = "Migrating backup to '" + site_name + "'";
+
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", "command": "migrate", stream: []});
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+			.then( response => {
+				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+				self.runCommand( response.data )
+				self.snackbar.message = "Migration backup to " + site_name;
+				self.snackbar.show = true;
+				self.dialog_migration.show = false;
+				self.dialog_migration.sites = [];
+				self.dialog_migration.backup_url = "";
+				self.dialog_migration.update_urls = "";
+			})
+			.catch( error => console.log( error ) );
 
 		},
 		DeactivateSite( site_id ) {
