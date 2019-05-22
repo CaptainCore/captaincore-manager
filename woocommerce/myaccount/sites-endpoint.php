@@ -1947,7 +1947,8 @@ Vue.component('file-upload', VueUploadComponent);
 			<v-tab-item key="6" value="tab-Scripts">
 				<v-card flat>
 					<v-card-title>
-					<v-flex xs12 sm3>
+					<v-layout align-start>
+					<v-flex xs12 sm4>
 						<v-subheader>Common Built-in Scripts</v-subheader>
 							<div><v-btn small flat @click="viewApplyHttpsUrlsBulk()">
 								<v-icon>launch</v-icon> <span>Apply HTTPS Urls</span>
@@ -1959,7 +1960,7 @@ Vue.component('file-upload', VueUploadComponent);
 								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span>
 							</v-btn></div>
 				</v-flex>
-					<v-flex xs12 sm3 v-show="role == 'administrator'">
+					<v-flex xs12 sm4 v-show="role == 'administrator'">
 					<v-subheader>User-Defined Recipes</v-subheader>
 						<div v-for="recipe in recipes">
 							<v-btn small flat @click="runRecipe(recipe.recipe_id)">
@@ -1967,6 +1968,19 @@ Vue.component('file-upload', VueUploadComponent);
 							</v-btn>
 						</div>
 				</v-flex>
+					<v-flex xs12 sm4 v-show="role == 'administrator'">
+					<v-subheader>Custom bash script or WP-CLI commands</v-subheader>
+							<v-textarea
+									auto-grow
+									solo
+									label=""
+									hide-details
+									:value="custom_script" 
+									@change.native="custom_script = $event.target.value"
+							></v-textarea>
+							<v-btn small color="primary" dark @click="runCustomCodeBulk()">Run Custom Code</v-btn>
+					</v-flex>
+					</v-layout>
 					</v-card-title>
 				</v-card>
 			</v-tab-item>
@@ -2330,7 +2344,8 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-toolbar>
 				<v-card flat>
 					<v-card-title>
-					<v-flex xs12 sm3>
+					<v-layout align-start>
+					<v-flex xs12 sm4>
 						<v-subheader>Common Built-in Scripts</v-subheader>
 							<div><v-btn small flat @click="viewApplyHttpsUrls(site.id)">
 								<v-icon>launch</v-icon> <span>Apply HTTPS Urls</span>
@@ -2345,7 +2360,7 @@ Vue.component('file-upload', VueUploadComponent);
 								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span>
 							</v-btn></div>
 					</v-flex>
-					<v-flex xs12 sm3 v-show="role == 'administrator'">
+					<v-flex xs12 sm4 v-show="role == 'administrator'">
 					<v-subheader>User-Defined Recipes</v-subheader>
 						<div v-for="recipe in recipes">
 							<v-btn small flat @click="runRecipe(recipe.recipe_id)">
@@ -2353,6 +2368,19 @@ Vue.component('file-upload', VueUploadComponent);
 							</v-btn>
 						</div>
 					</v-flex>
+					<v-flex xs12 sm4 v-show="role == 'administrator'">
+					<v-subheader>Custom bash script or WP-CLI commands</v-subheader>
+						<v-textarea
+							auto-grow
+							solo
+							label=""
+							hide-details
+							:value="custom_script" 
+							@change.native="custom_script = $event.target.value"
+						></v-textarea>
+						<v-btn small color="primary" dark @click="runCustomCode(site.id)">Run Custom Code</v-btn>
+					</v-flex>
+					</v-layout>
 					</v-card-title>
 				</v-card>
 			</v-tab-item>
@@ -2857,6 +2885,7 @@ new Vue({
 		page: 1,
 		socket: "<?php echo str_replace( "https://", "wss://", CAPTAINCORE_CLI_ADDRESS ) . "/ws"; ?>",
 		jobs: [],
+		custom_script: "",
 		recipes: 
 		<?php
 
@@ -4439,6 +4468,87 @@ new Vue({
 					self.runCommand( response.data )
 					self.snackbar.message = description;
 					self.snackbar.show = true;
+				})
+				.catch( error => console.log( error ) );
+
+		},
+		runCustomCode( site_id ) {
+
+			site = this.sites.filter(site => site.id == site_id)[0];
+			should_proceed = confirm("Deploy custom code on "+site.name+"?");
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			wp_cli = this.custom_script;
+
+			var data = {
+				action: 'captaincore_install',
+				environment: site.environment_selected,
+				post_id: site_id,
+				command: 'manage',
+				value: "ssh",
+				background: true,
+				arguments: { "name":"Commands","value":"command","command":"ssh","input": wp_cli }
+			};
+
+			self = this;
+			description = "Deploying custom code on '" + site.name  +"'";
+
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id, "description": description, "status": "queued", stream: []});
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data )
+					self.snackbar.message = description;
+					self.snackbar.show = true;
+					self.custom_script = "";
+				})
+				.catch( error => console.log( error ) );
+
+		},
+		runCustomCodeBulk(){
+
+			sites = this.sites_selected;
+			site_ids = sites.map( s => s.id );
+			should_proceed = confirm("Deploy custom code on "+ sites.length +" sites?");
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			wp_cli = this.custom_script;
+
+			var data = {
+				action: 'captaincore_install',
+				environment: this.dialog_bulk.environment_selected,
+				post_id: site_ids,
+				command: 'manage',
+				value: "ssh",
+				background: true,
+				arguments: { "name":"Commands","value":"command","command":"ssh","input": wp_cli }
+			};
+
+			self = this;
+			description = "Deploying custom code on '" + sites.length + " sites'";
+
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id, "description": description, "status": "queued", stream: []});
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data )
+					self.snackbar.message = description;
+					self.snackbar.show = true;
+					self.custom_script = "";
 				})
 				.catch( error => console.log( error ) );
 
