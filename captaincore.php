@@ -4203,6 +4203,13 @@ function captaincore_install_action_callback() {
 			$command   = "copy $site $site_destination --email=$email";
 		}
 	}
+	if ( $cmd == 'migrate' ) {
+		$run_in_background = true;
+		$command = "ssh $site --script=migrate --url=\"$value\"";
+		if ( $_POST['update_urls'] == "true" ) {
+			$command = "$command --update-urls";
+		}
+	}
 	if ( $cmd == 'mailgun' ) {
 		$run_in_background = true;
 		mailgun_setup( $domain );
