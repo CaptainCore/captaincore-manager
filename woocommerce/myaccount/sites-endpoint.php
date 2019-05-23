@@ -4223,12 +4223,12 @@ new Vue({
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					self.dialog_edit_process_log.log = response.data;
-					self.dialog_edit_process_log.show = true;
+					self.dialog_edit_log_entry.log = response.data;
+					self.dialog_edit_log_entry.show = true;
 					if ( typeof site !== "undefined" ) {
-					self.dialog_edit_process_log.site = site;
+					self.dialog_edit_log_entry.site = site;
 					} else {
-						self.dialog_edit_process_log.site = {};
+						self.dialog_edit_log_entry.site = {};
 					}
 				})
 				.catch( error => console.log( error ) );
