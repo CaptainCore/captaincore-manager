@@ -3618,8 +3618,8 @@ function captaincore_ajax_action_callback() {
 		update_field( 'field_57f862ec5b466', $process_id, $process_log_id );
 
 		// Assign website to ACF relationship field
-		if ( $post_id != "0" ) {
-			update_field( 'field_57fae6d263704', array( $post_id ), $process_log_id );
+		if ( $post_ids ) {
+			update_field( 'field_57fae6d263704', $post_ids, $process_log_id );
 		}
 
 		// Mark public
@@ -3632,15 +3632,35 @@ function captaincore_ajax_action_callback() {
 		update_field( 'field_588bb7bd3cab6', 'completed', $process_log_id );           // Sets status field to completed
 		update_field( 'field_588bb8423cab7', date( 'Y-m-d H:i:s' ), $process_log_id );
 
-		// Fetch new process_log and return as json
+
+		// Loop through each site and fetch updated timeline to return.
+		$timelines = array();
 		$Parsedown = new Parsedown();
-		$process_log = get_post( $process_log_id );
-		$process     = get_field( "process", $process_log->ID );
-		$author_id   = $process_log->post_author;
-		$author      = get_the_author_meta( 'display_name', $author_id );
+
+		foreach ( $post_ids as $post_id ) {
+
+			$arguments = array(
+				'post_type'      => 'captcore_processlog',
+				'posts_per_page' => '-1',
+				'meta_query'	=> array(
+					array(
+						'key'	 	=> 'website',
+						'value'	  	=> '"'.$post_id.'"',
+						'compare' 	=> 'LIKE',
+					),
+			));
+	
+			$process_logs = get_posts( $arguments );
+			$timeline_items = array();
+
+			foreach ($process_logs as $process_log) {
+
+				$process = get_field("process", $process_log->ID );
+				$author_id = $process_log->post_author;
+				$author = get_the_author_meta( 'display_name', $author_id );
 		$description = $Parsedown->text( get_field("description", $process_log->ID ) );
 
-		$timeline_item = (object) [
+				$timeline_items[] = (object) [
 			'id'              => $process_log->ID,
 			'process_id'      => $process[0],
 			'title'           => get_the_title( $process[0] ),
@@ -3650,7 +3670,12 @@ function captaincore_ajax_action_callback() {
 			'created_at'      => $process_log->post_date,
 		];
 
-		echo json_encode( $timeline_item ) ;
+			} 
+			$timelines[ $post_id ] = $timeline_items;
+
+		}
+
+		echo json_encode( $timelines ) ;
 
 	}
 
@@ -3672,7 +3697,7 @@ function captaincore_ajax_action_callback() {
 		update_field( 'field_57f862ec5b466', $process_log_update->process_id, $process_log->ID );
 
 		// Assign website to ACF relationship field
-		update_field( 'field_57fae6d263704', array( $post_id ), $process_log->ID );
+		update_field( 'field_57fae6d263704', $post_ids, $process_log->ID );
 
 		// Assign description
 		update_field( 'field_57fc396b04e0a', $process_log_update->description_raw, $process_log->ID );
@@ -3681,15 +3706,34 @@ function captaincore_ajax_action_callback() {
 		update_field( 'field_588bb7bd3cab6', 'completed', $process_log->ID );           // Sets status field to completed
 		update_field( 'field_588bb8423cab7', date( 'Y-m-d H:i:s' ), $process_log->ID );
 
-		// Respond with updated process log
+		// Loop through each site and fetch updated timeline to return.
+		$timelines = array();
 		$Parsedown = new Parsedown();
-		$process_log = get_post( $process_log_update->id );
-		$process     = get_field( "process", $process_log->ID );
-		$author_id   = $process_log->post_author;
-		$author      = get_the_author_meta( 'display_name', $author_id );
+
+		foreach ( $post_ids as $post_id ) {
+
+			$arguments = array(
+				'post_type'      => 'captcore_processlog',
+				'posts_per_page' => '-1',
+				'meta_query'	=> array(
+					array(
+						'key'	 	=> 'website',
+						'value'	  	=> '"'.$post_id.'"',
+						'compare' 	=> 'LIKE',
+					),
+			));
+	
+			$process_logs = get_posts( $arguments );
+			$timeline_items = array();
+
+			foreach ($process_logs as $process_log) {
+
+				$process = get_field("process", $process_log->ID );
+				$author_id = $process_log->post_author;
+				$author = get_the_author_meta( 'display_name', $author_id );
 		$description = $Parsedown->text( get_field("description", $process_log->ID ) );
 
-		$process_log_updated = (object) [
+				$timeline_items[] = (object) [
 			'id'              => $process_log->ID,
 			'process_id'      => $process[0],
 			'title'           => get_the_title( $process[0] ),
@@ -3699,7 +3743,12 @@ function captaincore_ajax_action_callback() {
 			'created_at'      => $process_log->post_date,
 		];
 
-		echo json_encode( $process_log_updated ) ;
+			} 
+			$timelines[ $post_id ] = $timeline_items;
+
+		}
+
+		echo json_encode( $timelines ) ;
 
 	}
 

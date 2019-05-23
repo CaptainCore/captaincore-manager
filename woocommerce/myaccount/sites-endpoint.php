@@ -1185,7 +1185,7 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-btn icon dark @click.native="dialog_new_log_entry.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
-						<v-toolbar-title>Add a new log entry <span v-if="dialog_new_log_entry.site.name">for {{ dialog_new_log_entry.site.name }}</span></v-toolbar-title>
+						<v-toolbar-title>Add a new log entry <span v-if="dialog_new_log_entry.site_name">for {{ dialog_new_log_entry.site_name }}</span></v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text>
@@ -1208,6 +1208,24 @@ Vue.component('file-upload', VueUploadComponent);
 								</template>
 							</template>
 						</v-autocomplete>
+						<v-autocomplete
+							v-model="dialog_new_log_entry.sites"
+							:items="sites"
+							item-text="name"
+							return-object
+							multiple
+						>
+						<template v-slot:selection="data">
+                <v-chip
+                  :selected="data.selected"
+                  close
+                  class="chip--select-multi"
+                  @input="dialog_new_log_entry.sites = dialog_new_log_entry.sites.filter( s => s.id != data.item.id )"
+                >
+                  {{ data.item.name }}
+                </v-chip>
+              </template>
+						</v-autocomplete>
 						<v-textarea label="Description" auto-grow :value="dialog_new_log_entry.description" @change.native="dialog_new_log_entry.description = $event.target.value"></v-textarea>
 						<v-flex xs12 text-xs-right>
 							<v-btn color="primary" dark style="margin:0px;" @click="newLogEntry()">
@@ -1220,27 +1238,27 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-dialog>
 				<v-dialog
 					v-if="role == 'administrator'"
-					v-model="dialog_edit_process_log.show"
+					v-model="dialog_edit_log_entry.show"
 					transition="dialog-bottom-transition"
 					scrollable
 					width="500"
 				>
 				<v-card tile>
 					<v-toolbar card dark color="primary">
-						<v-btn icon dark @click.native="dialog_edit_process_log.show = false">
+						<v-btn icon dark @click.native="dialog_edit_log_entry.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
-						<v-toolbar-title>Edit log entry <span v-if="dialog_edit_process_log.site.name">for {{ dialog_edit_process_log.site.name }}</span></v-toolbar-title>
+						<v-toolbar-title>Edit log entry <span v-if="dialog_edit_log_entry.site_name">for {{ dialog_edit_log_entry.site_name }}</span></v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text>
 					<v-container>
 						<v-text-field
-							v-model="dialog_edit_process_log.log.created_at"
+							v-model="dialog_edit_log_entry.log.created_at"
 							label="Date"
 						></v-text-field>
 						<v-autocomplete
-							v-model="dialog_edit_process_log.log.process_id"
+							v-model="dialog_edit_log_entry.log.process_id"
 							:items="processes"
 							item-text="title"
 							item-value="id"
@@ -1257,7 +1275,25 @@ Vue.component('file-upload', VueUploadComponent);
 								</template>
 							</template>
 						</v-autocomplete>
-						<v-textarea label="Description" auto-grow :value="dialog_edit_process_log.log.description_raw" @change.native="dialog_edit_process_log.log.description_raw = $event.target.value"></v-textarea>
+						<v-autocomplete
+							v-model="dialog_edit_log_entry.log.websites"
+							:items="sites"
+							item-text="name"
+							return-object
+							multiple
+						>
+						<template v-slot:selection="data">
+                <v-chip
+                  :selected="data.selected"
+                  close
+                  class="chip--select-multi"
+                  @input="dialog_edit_log_entry.log.websites = dialog_edit_log_entry.log.websites.filter( s => s.id != data.item.id )"
+                >
+                  {{ data.item.name }}
+                </v-chip>
+              </template>
+						</v-autocomplete>
+						<v-textarea label="Description" auto-grow :value="dialog_edit_log_entry.log.description_raw" @change.native="dialog_edit_log_entry.log.description_raw = $event.target.value"></v-textarea>
 						<v-flex xs12 text-xs-right>
 							<v-btn color="primary" dark style="margin:0px;" @click="updateLogEntry()">
 								Update Log Entry
@@ -1907,6 +1943,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Sites</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
+						<v-btn flat @click="showLogEntryBulk()">New Log Entry <v-icon dark small>fas fa-check-circle</v-icon></v-btn>
 						<v-btn flat @click="bulkactionLaunch">Launch sites in browser</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
@@ -2669,7 +2706,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-toolbar-title>Timeline</v-toolbar-title>
 				<v-spacer></v-spacer>
 				<v-toolbar-items v-show="role == 'administrator'">
-					<v-btn flat @click="showLogEntry(site.id)">New Log Entry  <v-icon dark small>fas fa-check-circle</v-icon></v-btn>
+					<v-btn flat @click="showLogEntry(site.id)">New Log Entry <v-icon dark small>fas fa-check-circle</v-icon></v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
 			<v-card flat>
@@ -2688,7 +2725,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<td v-if="role == 'administrator'"><v-icon
             small
             class="mr-2"
-            @click="editLogEntry(site.id, props.item.id)"
+            @click="editLogEntry(props.item.websites, props.item.id)"
           >
             edit
           </v-icon></td>
@@ -2986,9 +3023,9 @@ new Vue({
 		,
 		<?php if ( current_user_can( 'administrator' ) ) { ?>
 		role: "administrator",
-		dialog_new_log_entry: { show: false, site: {}, process: "", description: "" },
+		dialog_new_log_entry: { show: false, sites: [], site_name: "", process: "", description: "" },
+		dialog_edit_log_entry: { show: false, site_name: "", log: {} },
 		dialog_log_history: { show: false, logs: [], pagination: {} },
-		dialog_edit_process_log: { show: false, site: {}, log: {} },
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_handbook: { show: false, process: {} },
 		new_recipe: { title: "", content: "" },
@@ -4097,59 +4134,68 @@ new Vue({
 		showLogEntry( site_id ){
 			site = this.sites.filter(site => site.id == site_id )[0];
 			this.dialog_new_log_entry.show = true;
-			this.dialog_new_log_entry.site = site;
+			this.dialog_new_log_entry.sites.push( site );
+			this.dialog_new_log_entry.site_name = site.name;
+		},
+		showLogEntryBulk() {
+			this.dialog_new_log_entry.show = true;
+			this.dialog_new_log_entry.sites = this.sites_selected;
+			this.dialog_new_log_entry.site_name = this.sites_selected.length + " sites";
 		},
 		showLogEntryGeneric() {
 			this.dialog_new_log_entry.show = true;
-			this.dialog_new_log_entry.site = {};
+			this.dialog_new_log_entry.sites = [];
 		},
 		newLogEntry() {
-			site_id = this.dialog_new_log_entry.site.id;
+			site_ids = this.dialog_new_log_entry.sites.map( s => s.id);
 			site = this.sites.filter(site => site.id == site_id )[0];
 
 			var data = {
 				action: 'captaincore_ajax',
-				post_id: site_id,
+				post_id: site_ids,
 				process_id: this.dialog_new_log_entry.process,
 				command: 'newLogEntry',
 				value: this.dialog_new_log_entry.description
 			};
 
 			this.dialog_new_log_entry.show = false;
-			this.dialog_new_log_entry.site = {};
+			this.dialog_new_log_entry.sites = [];
 
 			self = this;
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					site.timeline.unshift( response.data );
+					Object.keys(response.data).forEach( site_id => {
+						self.sites.filter( site => site.id == site_id )[0].timeline = response.data[site_id]
+					});
+					self.dialog_new_log_entry.sites = []
+					this.dialog_new_log_entry.site_name = "";
 					self.dialog_new_log_entry.description = "";
 					self.dialog_new_log_entry.process = "";
 				})
 				.catch( error => console.log( error ) );
 		},
 		updateLogEntry() {
-			site_id = this.dialog_edit_process_log.site.id;
-			site = this.sites.filter(site => site.id == site_id )[0];
+			site_id = this.dialog_edit_log_entry.log.websites.map( s => s.id );
 
 			var data = {
 				action: 'captaincore_ajax',
 				command: 'updateLogEntry',
-				post_id: this.dialog_edit_process_log.site.id,
-				log: this.dialog_edit_process_log.log,
+				post_id: site_id,
+				log: this.dialog_edit_log_entry.log,
 			};
 
-			this.dialog_edit_process_log.show = false;
-			this.dialog_edit_process_log.site = {};
+			this.dialog_edit_log_entry.show = false;
+			this.dialog_edit_log_entry.sites = [];
 
 			self = this;
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					if ( site ) {
-						self.fetchTimeline( site.id )
-					}
-					self.dialog_edit_process_log.log = {};
+					Object.keys(response.data).forEach( site_id => {
+						self.sites.filter( site => site.id == site_id )[0].timeline = response.data[site_id];
+					});
+					self.dialog_edit_log_entry.log = {};
 				})
 				.catch( error => console.log( error ) );
 		},
