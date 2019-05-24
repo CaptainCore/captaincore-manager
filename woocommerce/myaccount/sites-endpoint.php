@@ -4148,7 +4148,6 @@ new Vue({
 		},
 		newLogEntry() {
 			site_ids = this.dialog_new_log_entry.sites.map( s => s.id);
-			site = this.sites.filter(site => site.id == site_id )[0];
 
 			var data = {
 				action: 'captaincore_ajax',
