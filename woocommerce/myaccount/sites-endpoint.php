@@ -3440,61 +3440,62 @@ new Vue({
 							this.upload = [];
 
 							// run wp cli with new plugin url and site
-							site_id = this.new_plugin.site.id;
-							site = this.sites.filter(site => site.id == site_id)[0];
+							site_ids = this.new_plugin.sites.map( s => s.id );
 
 							// Adds new job
 							job_id = Math.round((new Date()).getTime());
 							description = "Installing plugin '" + newFile.name + "' to " + this.new_plugin.site_name;
-							this.jobs.push({"job_id": job_id, "site_id": site_id, "description": description, "status": "queued", stream: [], "command": "manage"});
+							this.jobs.push({"job_id": job_id, "site_id": site_ids, "description": description, "status": "queued", stream: [], "command": "manage"});
 
 							// Builds WP-CLI
-							wpcli = "wp plugin install '" + new_response.url + "' --force --activate"
+							wp_cli = "wp plugin install '" + new_response.url + "' --force --activate"
 
 							// Prep AJAX request
 							var data = {
 								'action': 'captaincore_install',
-								'post_id': site_id,
+								'post_id': site_ids,
 								'command': "manage",
 								'value': "ssh",
 								'background': true,
-								'environment': this.new_plugin.site.environment_selected,
-								'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+								'environment': this.new_plugin.environment_selected,
+								'arguments': { "name":"Commands","value":"command","command":"ssh","input": wp_cli }
 							};
 
 							// Housecleaning
 							this.new_plugin.sites = [];
+							this.new_plugin.site_name = "";
+							this.new_plugin.environment_selected = "";
 						}
 						if ( this.new_theme.show ) {
 							this.new_theme.show = false;
 							this.upload = [];
 
 							// run wp cli with new plugin url and site
-							site_id = this.new_theme.site_id;
-							site = this.sites.filter(site => site.id == site_id)[0];
+							site_ids = this.new_theme.sites.map( s => s.id );
 
 							// Adds new job
 							job_id = Math.round((new Date()).getTime());
 							description = "Installing theme '" + newFile.name + "' to " + this.new_theme.site_name;
-							this.jobs.push({"job_id": job_id, "site_id": site_id, "description": description, "status": "queued", stream: [], "command": "manage"});
+							this.jobs.push({"job_id": job_id, "site_id": site_ids, "description": description, "status": "queued", stream: [], "command": "manage"});
 
 							// Builds WP-CLI
-							wpcli = "wp theme install '" + new_response.url + "' --force"
+							wp_cli = "wp theme install '" + new_response.url + "' --force"
 
 							// Prep AJAX request
 							var data = {
 								'action': 'captaincore_install',
-								'post_id': site_id,
+								'post_id': site_ids,
 								'command': "manage",
 								'value': "ssh",
 								'background': true,
 								'environment': this.new_theme.environment_selected,
-								'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+								'arguments': { "name":"Commands","value":"command","command":"ssh","input": wp_cli }
 							};
 
 							// Housecleaning
-							this.new_theme.site_id = "";
+							this.new_theme.sites = [];
 							this.new_theme.site_name = "";
+							this.new_theme.environment_selected = "";
 						}
 
 						self = this;
@@ -5173,6 +5174,7 @@ new Vue({
 			this.new_plugin.sites.push( site );
 			this.new_plugin.site_name = site.name;
 			this.new_plugin.current_plugins = site.environments.filter( e => e.environment == site.environment_selected )[0].plugins.map( p => p.name );
+			this.new_plugin.environment_selected = site.environment_selected;
 			this.fetchPlugins();
 		},
 		addPluginBulk() {
@@ -5328,6 +5330,7 @@ new Vue({
 			this.new_theme.sites.push( site );
 			this.new_theme.site_name = site.name;
 			this.new_theme.current_themes = site.environments.filter( e => e.environment == site.environment_selected )[0].themes.map( p => p.name );
+			this.new_theme.environment_selected = site.environment_selected;
 			this.fetchThemes();
 		},
 		addThemeBulk() {
