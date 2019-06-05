@@ -1369,6 +1369,46 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-card>
 				</v-dialog>
 				<v-dialog
+					v-model="dialog_delete_user.show"
+					scrollable
+					width="500px"
+				>
+				<v-card tile>
+					<v-toolbar card dark color="primary">
+						<v-btn icon dark @click.native="dialog_delete_user.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>Delete user</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text>
+					<v-container>
+						<v-layout row wrap>
+						 <v-flex xs12 pa-2>
+								<span>To delete <strong>{{ dialog_delete_user.username }}</strong> from <strong>{{ dialog_delete_user.site.name }}</strong> ({{ dialog_delete_user.site.environment_selected }}), please reassign posts to another user.</span>
+								<v-autocomplete
+								:items="dialog_delete_user.users"
+								return-object
+								v-model="dialog_delete_user.reassign"
+								item-text="user_login"
+								label="Reassign posts to"
+								chips
+								hide-details
+								hide-selected
+								small-chips
+								deletable-chips
+								>
+								</v-autocomplete><br />
+								<v-btn @click="deleteUser()">
+									Delete User <strong>&nbsp;{{ dialog_delete_user.username }}</strong>
+								</v-btn>
+						 </v-flex>
+					 </v-layout>
+					</v-container>
+					</v-card-text>
+					</v-card>
+				</v-dialog>
+				<v-dialog
 					v-model="dialog_toggle.show"
 					fullscreen
 					hide-overlay
@@ -2355,7 +2395,7 @@ Vue.component('file-upload', VueUploadComponent);
 								<td>{{ props.item.roles.split(",").join(" ") }}</td>
 								<td>
 									<v-btn small round @click="loginSite(site.id, props.item.user_login)">Login as</v-btn>
-									<v-btn icon class="mx-0" @click="deleteUser(props.item.user_login, site.id)">
+									<v-btn icon class="mx-0" @click="deleteUserDialog(props.item.user_login, site.id)">
 										<v-icon small color="pink">delete</v-icon>
 									</v-btn>
 								</td>
@@ -2940,6 +2980,7 @@ new Vue({
 	data: {
 		loading_sites: true,
 		dialog_bulk: { show: false, tabs_management: "tab-Sites", environment_selected: "Production" },
+		dialog_delete_user: { show: false, site: {}, users: [], username: "", reassign: {} },
 		dialog_apply_https_urls: { show: false, site_id: "", site_name: "", sites: [] },
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
 		dialog_edit_site: { show: false, site: {}, loading: false },
@@ -5777,22 +5818,41 @@ new Vue({
 			});
 
 		},
-		deleteUser (username, site_id) {
+		deleteUserDialog( username, site_id ){
 
 			site = this.sites.filter(site => site.id == site_id)[0];
+			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
+
+			this.dialog_delete_user.username = username
+			this.dialog_delete_user.site = site
+			this.dialog_delete_user.show = true
+			this.dialog_delete_user.users = environment.users.filter( u => u.user_login != username )
+			
+		},
+		deleteUser() {
+
+			if ( this.dialog_delete_user.reassign.ID == undefined ) {
+				this.snackbar.message = "Can't remove user without reassign content to another user.";
+				this.snackbar.show = true;
+				return;
+			}
+
+			username = this.dialog_delete_user.username
+			site = this.dialog_delete_user.site
+			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
 			should_proceed = confirm("Are you sure you want to delete user " + username + "?");
 
 			if ( ! should_proceed ) {
 				return;
 			}
-
-			site_name = this.sites.filter(site => site.id == site_id)[0].name;
-			description = "Delete user '" + username + "' from " + site_name;
+			site_id = site.id
+			site_name = site.name;
+			description = "Delete user '" + username + "' from " + site_name + " (" + site.environment_selected + ")";
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			// WP ClI command to send
-			wpcli = "wp user delete " + username;
+			wpcli = "wp user delete " + username + " --reassign=" + this.dialog_delete_user.reassign.ID;
 
 			var data = {
 				'action': 'captaincore_install',
@@ -5807,12 +5867,16 @@ new Vue({
 			self = this;
 
 			jQuery.post(ajaxurl, data, function(response) {
-				updated_users = self.sites.filter(site => site.id == site_id)[0].users.filter(user => user.username != username);
-				self.sites.filter(site => site.id == site_id)[0].users = updated_users;
+				environment.users = environment.users.filter(user => user.username != username);
 
 				// Updates job id with reponsed background job id
 				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
 				self.runCommand( response );
+				self.dialog_delete_user.show = false
+				self.dialog_delete_user.site = {}
+				self.dialog_delete_user.reassign = {}
+				self.dialog_delete_user.username = ""
+				self.dialog_delete_user.users = []
 
 			});
 
