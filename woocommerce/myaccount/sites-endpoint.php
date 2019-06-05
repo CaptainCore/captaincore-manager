@@ -5849,7 +5849,7 @@ new Vue({
 			site_name = site.name;
 			description = "Delete user '" + username + "' from " + site_name + " (" + site.environment_selected + ")";
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
+			this.jobs.push({"job_id": job_id,"site_id":site_id,"command":"manage","description": description, "status": "queued", stream: []});
 
 			// WP ClI command to send
 			wpcli = "wp user delete " + username + " --reassign=" + this.dialog_delete_user.reassign.ID;
