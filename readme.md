@@ -31,6 +31,3 @@ define( 'CAPTAINCORE_B2_ACCOUNT_KEY', 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' );
 define( 'CAPTAINCORE_B2_BUCKET_ID', 'xxxxxxxxxxxxxxxxxxxxxxxx' );
 define( 'CAPTAINCORE_B2_SNAPSHOTS', "Bucket/Foldername" );
 ```
-
-## License
-This is free software under the terms of MIT the license (check the LICENSE file included in this package).

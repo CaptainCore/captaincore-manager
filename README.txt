@@ -43,13 +43,26 @@ TODO
 TODO
 
 == Changelog ==
+= 0.4.4: June 4 2019
+* New: Bulk scripts section
+* New: Bulk log entry support
+* New: Run custom code section
+* New: Migrate script dialog
+ Tweak: Added date field to edit process entry log.
+ Tweak: Site sorting icons.
+ Tweak: Improved file upload error handling. If /wp-content/deploy/ directory not exists, create it. If upload failed then report it. 
+ Tweak: Improved theme & plugin uploads. 
+ Tweak: Improved bulk actions environment support
+ Tweak: Improved bulk management section. Moved toggle commands here.
+
+== Changelog ==
 = 0.4.3: May 12 2019
 * New: Sites UI - Realtime websockets which replaces the `jobRetry` polling method. CLI commands are now run from a websocket and output streamed in realtime.
 * New: Sites UI - Log history dialog to handbook section
 * New: Sites UI - Cookbook section
 * Tweak: Sites UI - Handbook section improved with new dialogs for viewing and editing. Added logging generic entry not tied to a website.
 * Tweak: Sites UI - Overhauled main layout and greatly improved the advanced filter interface.
-* Tweak: Consistant dialog stylings
+* Tweak: Consistent dialog stylings
 * Tweak: Improved autocomplete UX based [example from John Leider](https://codepen.io/johnjleider/pen/MQRjme?&editors=101)
 * Tweak: Compatibility fix for [ARVE](https://wordpress.org/plugins/advanced-responsive-video-embedder/) video embeds.
 * Tweak: Compatibility fix when adding/updating process log entries. Force relationship fields to save in serialized format.
