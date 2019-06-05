@@ -3724,7 +3724,7 @@ new Vue({
 			}
 
 			site_ids = this.sites_selected.map( site => site.id );
-			site_names = this.sites_selected.map( site => site.name ).join(" ");
+			site_names = this.sites_selected.length + " sites";
 
 			var data = {
 				action: 'captaincore_install',
