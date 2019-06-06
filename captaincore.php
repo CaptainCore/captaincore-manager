@@ -4264,6 +4264,10 @@ function captaincore_install_action_callback() {
 		mailgun_setup( $domain );
 		$command = "ssh $site --script=deploy-mailgun --key=\"" . MAILGUN_API_KEY . "\" --domain=$domain";
 	}
+	if ( $cmd == 'launch' ) {
+		$run_in_background = true;
+		$command = "ssh $site --script=launch --domain=$value";
+	}
 	if ( $cmd == 'apply-https' ) {
 		$run_in_background = true;
 		$command = "ssh $site --script=apply-https";

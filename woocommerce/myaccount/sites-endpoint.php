@@ -1409,6 +1409,34 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-card>
 				</v-dialog>
 				<v-dialog
+					v-model="dialog_launch.show"
+					width="500px"
+					scrollable
+				>
+				<v-card tile>
+					<v-toolbar card dark color="primary">
+						<v-btn icon dark @click.native="dialog_launch.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>Launch Site {{ dialog_launch.site.name }}</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text>
+					<v-container>
+						<v-layout row wrap>
+						 <v-flex xs12 pa-2>
+								<span>Will turn off search privacy and update development urls to the following live urls.</span><br /><br />
+								<v-text-field label="Domain" prefix="https://" :value="dialog_launch.domain" @change.native="dialog_launch.domain = $event.target.value"></v-text-field>
+								<v-btn @click="launchSite()">
+									Launch Site
+								</v-btn>
+						 </v-flex>
+					 </v-layout>
+					</v-container>
+					</v-card-text>
+					</v-card>
+				</v-dialog>
+				<v-dialog
 					v-model="dialog_toggle.show"
 					fullscreen
 					hide-overlay
@@ -2463,6 +2491,9 @@ Vue.component('file-upload', VueUploadComponent);
 							<div><v-btn small flat @click="siteDeploy(site.id)">
 								<v-icon>loop</v-icon> <span>Deploy users/plugins</span>
 							</v-btn></div>
+							<div><v-btn small flat @click="launchSiteDialog(site.id)">
+								<v-icon>fas fa-rocket</v-icon> <span>Launch Site</span>
+							</v-btn></div>
 							<div><v-btn small flat @click="showSiteMigration(site.id)">
 								<v-icon>fas fa-truck-moving</v-icon><span>Migrate from backup</span>
 							</v-btn></div>
@@ -2988,6 +3019,7 @@ new Vue({
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
 		dialog_mailgun: { show: false, site: {}, response: "", loading: false },
 		dialog_modify_plan: { show: false, site: {}, hosting_plan: {}, hosting_addons: [], selected_plan: "", customer_name: "" },
+		dialog_launch: { show: false, site: {}, domain: "" },
 		dialog_toggle: { show: false, site_name: "", site_id: "" },
 		dialog_migration: { show: false, sites: [], site_name: "", site_id: "", update_urls: true, backup_url: "" },
 		dialog_theme_and_plugin_checks: { show: false, site: {}, loading: false },
@@ -4414,6 +4446,47 @@ new Vue({
 				.then( response => {
 					self.dialog_mailgun.loading = false;
 					self.dialog_mailgun.response = response.data;
+				})
+				.catch( error => console.log( error ) );
+
+		},
+		launchSiteDialog( site_id ) {
+			site = this.sites.filter( site => site.id == site_id )[0];
+			this.dialog_launch.site = site
+			this.dialog_launch.show = true
+		},
+		launchSite() {
+
+			if ( this.dialog_launch.domain == "" ) {
+				this.snackbar.message = "Domain is required. Launch cancelled.";
+				this.snackbar.show = true;
+				return
+			}
+
+			site = this.dialog_launch.site
+
+			var data = {
+				action: 'captaincore_install',
+				post_id: site.id,
+				command: 'launch',
+				value: this.dialog_launch.domain
+			};
+
+			description = "Lauching site '" + site.name + "'";
+
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", "command": "manage", stream: []});
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.dialog_launch.site = {};
+					self.dialog_launch.domain = "";
+					self.dialog_launch.show = false;
+					self.runCommand( response.data )
 				})
 				.catch( error => console.log( error ) );
 
