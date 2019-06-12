@@ -1419,6 +1419,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	$plugins             = $post->plugins;
 	$themes              = $post->themes;
 	$users               = $post->users;
+	$fathom              = $post->fathom;
 	$home_url            = $post->home_url;
 	$subsite_count       = $post->subsite_count;
 	$git_commit          = $post->git_commit;
@@ -1564,6 +1565,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			'users'              => json_encode( $users ),
 			'themes'             => json_encode( $themes ),
 			'plugins'            => json_encode( $plugins ),
+			'fathom'             => json_encode( $fathom ),
 			'core'               => $core,
 			'home_url'					 => $home_url,
 			'subsite_count'      => $subsite_count
@@ -3918,7 +3920,27 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'updateFathom' ) {
 
-		update_field( 'field_5c3c65a3f5462', json_encode($value), $post_id );
+		// Append environment if needed
+		if ( $environment == "Staging" ) {
+			$site = "{$site}-staging";
+		}
+
+		$db_environments = new CaptainCore\environments();
+
+		// Saves update settings for a site
+		$environment_update = array(
+			'fathom' => json_encode($value),
+		);
+		$environment_update['updated_at'] = date("Y-m-d H:i:s");
+
+		if ($environment == "Production") {
+			$environment_id = get_field( 'environment_production_id', $post_id );
+			$db_environments->update( $environment_update, array( "environment_id" => $environment_id ) );
+		}
+		if ($environment == "Staging") {
+			$environment_id = get_field( 'environment_staging_id', $post_id );
+			$db_environments->update( $environment_update, array( "environment_id" => $environment_id ) );
+		}
 
 		// Remote Sync
 		$run_in_background = true;
@@ -4174,7 +4196,7 @@ function captaincore_install_action_callback() {
 		$preloadusers = implode( ',', $partners );
 	}
 
-	// Append enviroment if needed
+	// Append environment if needed
 	if ( $environment == "Staging" ) {
 		$site = get_field( 'site', $post_id ) . "-staging";
 	}
@@ -4473,7 +4495,6 @@ function captaincore_site_fetch_details( $post_id ) {
 
 	$site                    = get_field( 'site', $post_id );
 	$provider                = get_field( 'provider', $post_id );
-	$fathom                  = get_field( 'fathom', $post_id );
 	$domain                  = get_the_title( $post_id );
 	$partners                = get_field( 'partner', $post_id );
 	$address                 = $site_details->environments[0]["address"];
@@ -4482,6 +4503,7 @@ function captaincore_site_fetch_details( $post_id ) {
 	$protocol                = $site_details->environments[0]["protocol"];
 	$port                    = $site_details->environments[0]["port"];
 	$home_directory          = ( isset($site_details->environments[0]["home_directory"]) ? $site_details->environments[0]["home_directory"] : '' );
+	$fathom                  = ( isset($site_details->environments[0]["fathom"]) ? json_encode( $site_details->environments[0]["fathom"] ) : '' );
 	$updates_enabled         = ( isset($site_details->environments[0]["updates_enabled"]) ? $site_details->environments[0]["updates_enabled"] : '' );
 	$updates_exclude_themes  = ( isset($site_details->environments[0]["updates_exclude_themes"]) ? implode(",", $site_details->environments[0]["updates_exclude_themes"] ) : '' );
 	$updates_exclude_plugins = ( isset($site_details->environments[0]["updates_exclude_plugins"]) ? implode(",", $site_details->environments[0]["updates_exclude_plugins"] ) : '' );
@@ -4497,6 +4519,7 @@ function captaincore_site_fetch_details( $post_id ) {
 	$staging_protocol        = ( isset($site_details->environments[1]["protocol"]) ? $site_details->environments[1]["protocol"] : '' );
 	$staging_port            = ( isset($site_details->environments[1]["port"]) ? $site_details->environments[1]["port"] : '' );
 	$staging_home_directory  = ( isset($site_details->environments[1]["home_directory"]) ? $site_details->environments[1]["home_directory"] : '' );
+	$staging_fathom                  = ( isset($site_details->environments[1]["fathom"]) ? json_encode( $site_details->environments[1]["fathom"] ) : '' );
 	$staging_updates_enabled         = ( isset($site_details->environments[1]["updates_enabled"]) ? $site_details->environments[1]["updates_enabled"] : '' );
 	$staging_updates_exclude_themes  = ( isset($site_details->environments[1]["updates_exclude_themes"]) ? implode(",", $site_details->environments[1]["updates_exclude_themes"] ) : '' );
 	$staging_updates_exclude_plugins = ( isset($site_details->environments[1]["updates_exclude_plugins"]) ? implode(",", $site_details->environments[1]["updates_exclude_plugins"] ) : '' );
@@ -4522,7 +4545,6 @@ function captaincore_site_fetch_details( $post_id ) {
 	( $site ? " $site" : '' ) .
 	( $post_id ? " --id=$post_id" : '' ) .
 	( $domain ? " --domain=$domain" : '' ) .
-	( $fathom ? " --fathom=$fathom" : '' ) .
 	( $preloadusers ? " --preloadusers=$preloadusers" : '' ) .
 	( $address ? " --address=$address" : '' ) .
 	( $username ? " --username=$username" : '' ) .
@@ -4530,6 +4552,7 @@ function captaincore_site_fetch_details( $post_id ) {
 	( $protocol ? " --protocol=$protocol" : '' ) .
 	( $port ? " --port=$port" : '' ) .
 	( $home_directory ? " --home_directory=$home_directory" : '' ) .
+	( $fathom ? " --fathom=$fathom" : '' ) .
 	( $updates_enabled ? " --updates_enabled=$updates_enabled" : ' --updates_enabled=0' ) .
 	( $updates_exclude_themes ? " --updates_exclude_themes=$updates_exclude_themes" : '' ) .
 	( $updates_exclude_plugins ? " --updates_exclude_plugins=$updates_exclude_plugins" : '' ) .
@@ -4545,6 +4568,7 @@ function captaincore_site_fetch_details( $post_id ) {
 	( $staging_protocol ? " --staging_protocol=$staging_protocol" : '' ) .
 	( $staging_port ? " --staging_port=$staging_port" : '' ) .
 	( $staging_home_directory ? " --staging_home_directory=$staging_home_directory" : '' ) .
+	( $staging_fathom ? " --staging_fathom=$staging_fathom" : '' ) .
 	( $staging_updates_enabled ? " --staging_updates_enabled=$staging_updates_enabled" : ' --staging_updates_enabled=0' ) .
 	( $staging_updates_exclude_themes ? " --staging_updates_exclude_themes=$staging_updates_exclude_themes" : '' ) .
 	( $staging_updates_exclude_plugins ? " --staging_updates_exclude_plugins=$staging_updates_exclude_plugins" : '' ) .
@@ -4605,7 +4629,7 @@ function captaincore_create_tables() {
 			return $success;
 		}
 
-		if ( $version < 7 ) {
+		if ( $version < 10 ) {
 			$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_environments` (
 				environment_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 				site_id bigint(20) UNSIGNED NOT NULL,
@@ -4617,6 +4641,7 @@ function captaincore_create_tables() {
 				password varchar(255),
 				protocol varchar(255),
 				port varchar(255),
+				fathom varchar(255),
 				home_directory varchar(255),
 				database_username varchar(255),
 				database_password varchar(255),
@@ -4645,7 +4670,7 @@ function captaincore_create_tables() {
 			dbDelta($sql);
 			$success = empty($wpdb->last_error);
 
-			update_site_option('captcorecore_db_version', 7);
+			update_site_option('captcorecore_db_version', 10);
 
 			return $success;
 		}

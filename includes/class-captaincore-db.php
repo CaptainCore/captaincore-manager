@@ -492,7 +492,6 @@ class Site {
 		$customer    = get_field( 'customer', $site->ID );
 		$shared_with = get_field( 'partner', $site->ID );
 		$mailgun     = get_field( 'mailgun', $site->ID );
-		$fathom      = json_decode( get_field( 'fathom', $site->ID ) );
 		$storage     = $environments[0]->storage;
 		if ( $storage ) {
 			$storage_gbs = round( $storage / 1024 / 1024 / 1024, 1 );
@@ -511,15 +510,6 @@ class Site {
 		$staging_port        = ( isset( $environments[1] ) ? $environments[1]->port : '' );
 		$home_url            = $environments[0]->home_url;
 
-		if ( $fathom == '' ) {
-			$fathom = array(
-				array(
-					'code'   => '',
-					'domain' => '',
-				),
-			);
-		}
-
 		// Prepare site details to be returned
 		$site_details                       = new \stdClass();
 		$site_details->id                   = $site->ID;
@@ -535,7 +525,6 @@ class Site {
 		$site_details->environment_selected = 'Production';
 		$site_details->mailgun              = $mailgun;
 		$site_details->subsite_count        = $subsite_count;
-		$site_details->fathom               = $fathom;
 		$site_details->tabs                 = 'tab-Site-Management';
 		$site_details->tabs_management      = 'tab-Keys';
 		$site_details->storage_raw          = $environments[0]->storage;
@@ -618,6 +607,7 @@ class Site {
 			'protocol'                => $environments[0]->protocol,
 			'port'                    => $environments[0]->port,
 			'home_directory'          => $environments[0]->home_directory,
+			'fathom'                  => json_decode( $environments[0]->fathom ),
 			'plugins'                 => json_decode( $environments[0]->plugins ),
 			'themes'                  => json_decode( $environments[0]->themes ),
 			'users'                   => 'Loading',
@@ -643,6 +633,15 @@ class Site {
 			'plugins_selected'        => array(),
 			'users_selected'          => array(),
 		);
+
+		if ( $site_details->environments[0]['fathom'] == '' ) {
+			$site_details->environments[0]['fathom'] = array(
+				array(
+					'code'   => '',
+					'domain' => '',
+				),
+			);
+		}
 
 		if ( intval( $environments[0]->screenshot ) ) {
 			$site_details->environments[0]['screenshot_small'] = $upload_dir['baseurl'] . "/screenshots/{$site_details->site}_{$site_details->id}/production/screenshot-100.png";
@@ -697,6 +696,7 @@ class Site {
 			'protocol'                => $environments[1]->protocol,
 			'port'                    => $environments[1]->port,
 			'home_directory'          => $environments[1]->home_directory,
+			'fathom'                  => json_decode( $environments[1]->fathom ),
 			'plugins'                 => json_decode( $environments[1]->plugins ),
 			'themes'                  => json_decode( $environments[1]->themes ),
 			'users'                   => 'Loading',
@@ -722,6 +722,15 @@ class Site {
 			'plugins_selected'        => array(),
 			'users_selected'          => array(),
 		);
+
+		if ( $site_details->environments[1]['fathom'] == '' ) {
+			$site_details->environments[1]['fathom'] = array(
+				array(
+					'code'   => '',
+					'domain' => '',
+				),
+			);
+		}
 
 		if ( intval( $environments[1]->screenshot ) == 1 ) {
 			$site_details->environments[1]['screenshot_small'] = $upload_dir['baseurl'] . "/screenshots/{$site_details->site}_{$site_details->id}/staging/screenshot-100.png";
@@ -1025,7 +1034,7 @@ class Site {
 		// Mark site removed
 		update_field( 'closed_date', date( 'Ymd' ), $site_id );
 		update_field( 'status', 'closed', $site_id );
-
+		
 
 	}
 

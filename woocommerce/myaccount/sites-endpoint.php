@@ -656,7 +656,7 @@ Vue.component('file-upload', VueUploadComponent);
 			<v-card-text>
 				<v-progress-linear :indeterminate="true" v-if="dialog_fathom.loading"></v-progress-linear>
 				<table>
-				<tr v-for="tracker in dialog_fathom.site.fathom">
+				<tr v-for="tracker in dialog_fathom.environment.fathom">
 					<td class="pa-1"><v-text-field v-model="tracker.domain" label="Domain"></v-text-field></td>
 					<td class="pa-1"><v-text-field v-model="tracker.code" label="Code"></v-text-field></td>
 					<td>
@@ -2218,10 +2218,12 @@ Vue.component('file-upload', VueUploadComponent);
 										<v-toolbar color="grey lighten-4" dense light flat>
 											<v-toolbar-title>Keys</v-toolbar-title>
 											<v-spacer></v-spacer>
+											<v-toolbar-items v-if="typeof dialog_new_site == 'object'">
+												<v-btn flat @click="configureFathom( site.id )">Configure Fathom Tracker <v-icon dark small>bar_chart</v-icon></v-btn>
+											</v-toolbar-items>
 										</v-toolbar>
 
 										<v-card v-for="key in site.environments" v-show="key.environment == site.environment_selected" flat>
-
 											<v-container fluid style="padding-top: 10px;">
 											<v-layout align-start justify-space-between/>
 											<div row>
@@ -2827,13 +2829,7 @@ Vue.component('file-upload', VueUploadComponent);
 							<v-icon class="reverse">local_shipping</v-icon> <span>Push Staging to Production</span>
 						</v-btn>
 						</div>
-						<div v-if="typeof dialog_new_site == 'object'">
-						<v-btn left small flat @click="configureFathom( site.id )">
-							<v-icon>bar_chart</v-icon>
-							<span>Configure Fathom Tracker</span>
-						</v-btn>
 						</div>
-					</div>
 				</v-card-title>
 			</v-card>
 		</v-tab-item>
@@ -3024,7 +3020,7 @@ new Vue({
 		dialog_migration: { show: false, sites: [], site_name: "", site_id: "", update_urls: true, backup_url: "" },
 		dialog_theme_and_plugin_checks: { show: false, site: {}, loading: false },
 		dialog_update_settings: { show: false, site_id: null, loading: false },
-		dialog_fathom: { show: false, site: {}, loading: false, editItem: false, editedItem: {}, editedIndex: -1 },
+		dialog_fathom: { show: false, site: {}, environment: {}, loading: false, editItem: false, editedItem: {}, editedIndex: -1 },
 		active_page: "Sites",
 		page: 1,
 		socket: "<?php echo str_replace( "https://", "wss://", CAPTAINCORE_CLI_ADDRESS ) . "/ws"; ?>",
@@ -5744,21 +5740,6 @@ new Vue({
 					self.syncSite( job.site_id );
 				}
 
-				if ( job.command == "updateFathom" ) {
-
-					// Refresh CLI with new Fathom info
-					var data = {
-						'action': 'captaincore_install',
-						'command': "update",
-						'post_id': site_id
-					};
-
-					axios.post( ajaxurl, Qs.stringify( data ) )
-						.then( response => console.log( response.data ) )
-						.catch( error => console.log( error ) );
-
-				}
-
 				if ( job.command == "saveUpdateSettings" ){
 					// to do
 				}
@@ -5777,7 +5758,9 @@ new Vue({
 			job.stream.push( session.data )
 		},
 		configureFathom( site_id ) {
-			this.dialog_fathom.site = this.sites.filter(site => site.id == site_id)[0];
+			site = this.sites.filter(site => site.id == site_id)[0];
+			this.dialog_fathom.site = site
+			this.dialog_fathom.environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
 			this.dialog_fathom.show = true;
 		},
 		configureFathomClose() {
@@ -5789,21 +5772,22 @@ new Vue({
 		},
 		configureFathomSave() {
 			if (this.dialog_fathom.editedIndex > -1) {
-          		Object.assign(this.dialog_fathom.site.fathom[this.dialog_fathom.editedIndex], this.dialog_fathom.editedItem)
+          		Object.assign(this.dialog_fathom.environment.fathom[this.dialog_fathom.editedIndex], this.dialog_fathom.editedItem)
 			} else {
-				this.dialog_fathom.site.fathom.push(this.dialog_fathom.editedItem)
+				this.dialog_fathom.environment.fathom.push(this.dialog_fathom.editedItem)
 			}
 			this.configureFathomClose()
 		},
 		newFathomItem(){
-			this.dialog_fathom.site.fathom.push({ "code": "", "domain" : "" })
+			this.dialog_fathom.environment.fathom.push({ "code": "", "domain" : "" })
 		},
 		deleteFathomItem (item) {
-			const index = this.dialog_fathom.site.fathom.indexOf(item)
-			confirm('Are you sure you want to delete this item?') && this.dialog_fathom.site.fathom.splice(index, 1)
+			const index = this.dialog_fathom.environment.fathom.indexOf(item)
+			confirm('Are you sure you want to delete this item?') && this.dialog_fathom.environment.fathom.splice(index, 1)
 		},
 		saveFathomConfigurations() {
 			site = this.dialog_fathom.site;
+			environment = this.dialog_fathom.environment;
 			site_id = site.id;
 			should_proceed = confirm("Apply new Fathom tracker for " + site.name + "?");
 
@@ -5814,14 +5798,15 @@ new Vue({
 			// New job for progress tracking
 			job_id = Math.round((new Date()).getTime());
 			description = "Updating Fathom tracker on " + site.name;
-			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: [], "command": "updateFathom"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			// Prep AJAX request
 			var data = {
 				'action': 'captaincore_ajax',
 				'post_id': site_id,
 				'command': "updateFathom",
-				'value': site.fathom,
+				'environment': site.environment_selected,
+				'value': environment.fathom,
 			};
 
 			self = this;
