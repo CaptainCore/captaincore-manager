@@ -4020,7 +4020,7 @@ function captaincore_ajax_action_callback() {
 		$command = "site delete $site";
 
 		// Delete site locally
-		( new CaptainCore\Site )->delete( $value );
+		( new CaptainCore\Site )->delete( $post_id );
 	
 	}
 
