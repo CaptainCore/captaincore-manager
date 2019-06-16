@@ -400,15 +400,16 @@ div.update_logs table tr td:nth-child(1) {
 }
 </style>
 	<?php if ( substr( $_SERVER['SERVER_NAME'], -4) == 'test' ) { ?>
-<script src="https://cdn.jsdelivr.net/npm/vue@2.6.8/dist/vue.js"></script>
+<script src="/wp-content/plugins/captaincore-gui/public/js/vue.js"></script>
 <script src="/wp-content/plugins/captaincore-gui/public/js/qs.js"></script>
 <script src="/wp-content/plugins/captaincore-gui/public/js/axios.min.js"></script>
+<script src="/wp-content/plugins/captaincore-gui/public/js/vuetify.min.js"></script>
 <?php } else { ?>
 <script src="https://cdn.jsdelivr.net/npm/vue@2.6.8/dist/vue.min.js"></script>
 <script src="https://unpkg.com/qs@6.5.2/dist/qs.js"></script>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-<?php } ?>
 <script src="https://cdn.jsdelivr.net/npm/vuetify@1.5.4/dist/vuetify.min.js"></script>
+<?php } ?>
 <link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.0/dist/frappe-charts.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.0/dist/frappe-charts.min.iife.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.20/dist/vue-upload-component.js"></script>
