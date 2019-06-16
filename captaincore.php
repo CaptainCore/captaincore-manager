@@ -3395,6 +3395,89 @@ function captaincore_ajax_action_callback() {
 		echo json_encode( $response ); 
 	};
 
+	if ( $cmd == 'fetchStats' ) {
+		
+		if ($environment == "Production") {
+			$environment_id = get_field( 'environment_production_id', $post_id );
+			$site_name = get_the_title( $post_id );
+		}
+		if ($environment == "Staging") {
+			$environment_id = get_field( 'environment_staging_id', $post_id );
+			$db_environments = new CaptainCore\environments();
+			$data = $db_environments->fetch_field( $post_id, "Staging", "home_url" );
+			$site_name = $data[0]->home_url;
+			$site_name = str_replace( "http://", '', $site_name );
+			$site_name = str_replace( "https://", '', $site_name );
+		}
+		
+		$captaincore_settings = get_option( 'captaincore_settings' );
+
+		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+			$fathom_instance = "https://{$captaincore_settings->captaincore_tracker}";
+		} else {
+			$fathom_instance = "https://{$captaincore_settings->captaincore_tracker}";
+		}
+		$login_details = array(
+				'email'    => $captaincore_settings->captaincore_tracker_user, 
+				'password' => $captaincore_settings->captaincore_tracker_pass
+		);
+
+		// Load sites from transient
+		$auth = get_transient( 'captaincore_fathom_auth' );
+
+		// If empty then update transient with large remote call
+		if ( empty( $auth ) ) {
+
+			// Authenticate to Fathom instance
+			$auth = wp_remote_post( "$fathom_instance/api/session", array( 
+				'method'  => 'POST',
+				'headers' => array( 'Content-Type' => 'application/json; charset=utf-8' ),
+				'body'    => json_encode( $login_details )
+			) );
+
+			// Save the API response so we don't have to call again until tomorrow.
+			set_transient( 'captaincore_fathom_auth', $auth, HOUR_IN_SECONDS );
+
+		}
+
+		// Load sites from transient
+		$sites = get_transient( 'captaincore_fathom_sites' );
+
+		// If empty then update transient with large remote call
+		if ( empty( $sites ) ) {
+
+			// Fetch Sites
+			$response = wp_remote_get( "$fathom_instance/api/sites", array( 
+				'cookies' => $auth['cookies']
+			) );
+			$sites = json_decode( $response['body'] )->Data;
+
+			// Save the API response so we don't have to call again until tomorrow.
+			set_transient( 'captaincore_fathom_sites', $sites, HOUR_IN_SECONDS );
+
+		}
+
+		foreach( $sites as $s ) {
+			if ( $s->name == $site_name ) {
+				// Fetch 12 months of stats (From June 1st 2018 to May 31st 2019)
+				$before = strtotime( "now" );
+				$after  = strtotime( date( 'Y-m-01 04:00:00' ). "-11 months" ); 
+				$response = wp_remote_get( "$fathom_instance/api/sites/{$s->id}/stats/site?before=$before&after=$after", array(
+					'cookies' => $auth['cookies']
+				) );
+				$stats = json_decode( $response['body'] )->Data;
+			}
+		}
+
+		if ( $stats ) {
+			echo json_encode( $stats );
+		} else {
+			echo json_encode( array("Error" => "Site not found in Fathom" ) );
+		}
+		
+
+	}
+
 	if ( $cmd == 'newProcess' ) {
 
 		$process = (object) $value;

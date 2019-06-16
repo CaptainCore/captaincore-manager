@@ -629,6 +629,7 @@ class Site {
 			'screenshot'              => intval( $environments[0]->screenshot ),
 			'screenshot_small'        => '',
 			'screenshot_large'        => '',
+			'stats'                   => 'Loading',
 			'themes_selected'         => array(),
 			'plugins_selected'        => array(),
 			'users_selected'          => array(),
@@ -718,6 +719,7 @@ class Site {
 			'screenshot'              => intval( $environments[1]->screenshot ),
 			'screenshot_small'        => '',
 			'screenshot_large'        => '',
+			'stats'                   => 'Loading',
 			'themes_selected'         => array(),
 			'plugins_selected'        => array(),
 			'users_selected'          => array(),
@@ -1034,7 +1036,6 @@ class Site {
 		// Mark site removed
 		update_field( 'closed_date', date( 'Ymd' ), $site_id );
 		update_field( 'status', 'closed', $site_id );
-		
 
 	}
 

@@ -81,6 +81,10 @@ html {
 	margin: 0px;
 }
 
+.graph-svg-tip.comparison .title {
+	font-size: 12px !important;
+}
+
 .text-xs-right .usage:last-child {
 	border-right: 0px;
 }
@@ -405,6 +409,8 @@ div.update_logs table tr td:nth-child(1) {
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 <?php } ?>
 <script src="https://cdn.jsdelivr.net/npm/vuetify@1.5.4/dist/vuetify.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.0/dist/frappe-charts.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.0/dist/frappe-charts.min.iife.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.20/dist/vue-upload-component.js"></script>
 <script>
 
@@ -416,7 +422,6 @@ var pretty_timestamp_options = {
 };
 // Example: new Date("2018-06-18 19:44:47").toLocaleTimeString("en-us", options);
 // Returns: "Monday, Jun 18, 2018, 7:44 PM"
-
 Vue.component('file-upload', VueUploadComponent);
 </script>
 <div id="app" v-cloak>
@@ -2185,6 +2190,7 @@ Vue.component('file-upload', VueUploadComponent);
 										:items='[{"name":"Production Environment","value":"Production"},{"name":"Staging Environment","value":"Staging"}]'
 										item-text="name"
 										item-value="value"
+										@change="triggerEnvironmentUpdate( site.id )"
 										light
 										style="max-width: 204px; margin: 0px 1em 0px 16px; top: 0px;">
 									</v-select>
@@ -2193,6 +2199,9 @@ Vue.component('file-upload', VueUploadComponent);
 									</v-btn>
 									<v-tab key="Keys" href="#tab-Keys">
 									  Keys <v-icon small style="margin-left:7px;">fas fa-key</v-icon>
+									</v-tab>
+									<v-tab key="Stats" href="#tab-Stats" @click="fetchStats( site.id )">
+									  Stats <v-icon small style="margin-left:7px;">far fa-chart-bar</v-icon>
 									</v-tab>
 									<v-tab key="Themes" href="#tab-Themes">
 									  Themes <v-icon small style="margin-left:7px;">fas fa-paint-brush</v-icon>
@@ -2218,9 +2227,6 @@ Vue.component('file-upload', VueUploadComponent);
 										<v-toolbar color="grey lighten-4" dense light flat>
 											<v-toolbar-title>Keys</v-toolbar-title>
 											<v-spacer></v-spacer>
-											<v-toolbar-items v-if="typeof dialog_new_site == 'object'">
-												<v-btn flat @click="configureFathom( site.id )">Configure Fathom Tracker <v-icon dark small>bar_chart</v-icon></v-btn>
-											</v-toolbar-items>
 										</v-toolbar>
 
 										<v-card v-for="key in site.environments" v-show="key.environment == site.environment_selected" flat>
@@ -2250,6 +2256,28 @@ Vue.component('file-upload', VueUploadComponent);
 										 </div>
 										</v-layout>
 									 </v-container>
+								 </v-card>
+								</v-tab-item>
+								<v-tab-item :key="100" value="tab-Stats">
+									<v-card 
+										v-for="key in site.environments"
+										v-show="key.environment == site.environment_selected"
+										flat
+									>
+									<v-toolbar color="grey lighten-4" dense light flat>
+										<v-toolbar-title>Stats</v-toolbar-title>
+										<v-spacer></v-spacer>
+										<v-toolbar-items v-if="typeof dialog_new_site == 'object'">
+											<v-btn flat @click="configureFathom( site.id )">Configure Fathom Tracker <v-icon dark small>bar_chart</v-icon></v-btn>
+										</v-toolbar-items>
+									</v-toolbar>
+										<div class="pa-3" v-show="key.stats == 'Loading'">
+											<v-progress-linear :indeterminate="true" style="width:130px"></v-progress-linear>
+										</div>
+										<div class="pa-3" v-if="typeof key.stats == 'string' && key.stats != 'Loading'">
+											{{ key.stats }}
+										</div>
+									<div :id="`chart_` + site.id + `_` + key.environment"></div>
 								 </v-card>
 								</v-tab-item>
 								<v-tab-item :key="2" value="tab-Themes">
@@ -3002,6 +3030,18 @@ catch (e) { }
 return false;
 };
 
+const monthNames = ["January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+function groupmonth(value, index, array) {
+	d = new Date(value['Date']);
+	key = (d.getFullYear()-1970)*12 + d.getMonth();
+	name = monthNames[d.getMonth()] + " " + d.getFullYear();
+	bymonth[key]=bymonth[key]||{Name: "",Visitors: value['Visitors'], Pageviews: value['Pageviews']};
+    bymonth[key]={Name: name, Visitors: bymonth[key].Visitors + value['Visitors'], Pageviews: bymonth[key].Pageviews + value['Pageviews']}
+}
+
 new Vue({
 	el: '#app',
 	data: {
@@ -3371,6 +3411,14 @@ new Vue({
 		},
 	},
 	methods: {
+		triggerEnvironmentUpdate( site_id ){
+			site = this.sites.filter(site => site.id == site_id)[0];
+
+			// Trigger fetchStats()
+			if ( site.tabs == "tab-Site-Management" && site.tabs_management == "tab-Stats" ) {
+				this.fetchStats( site_id );
+			}
+		},
 		compare(key, order='asc') {
 			return function(a, b) {
 				//if(!a.hasOwnProperty(key) || !b.hasOwnProperty(key)) {
@@ -3856,6 +3904,73 @@ new Vue({
 					}
 				});
 			});
+		},
+		fetchStats( site_id ) {
+
+			site = this.sites.filter(site => site.id == site_id)[0];
+			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
+			environment.stats = "Loading";
+
+			chart_id = "chart_" + site.id + "_" + site.environment_selected;
+			chart_dom = document.getElementById( chart_id );		
+			chart_dom.innerHTML = ""
+
+			var data = {
+				action: 'captaincore_ajax',
+				post_id: site_id,
+				command: 'fetchStats',
+				environment: site.environment_selected
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+
+					if ( response.data.Error ) {
+						environment.stats = response.data.Error 
+						return;
+					}
+					
+					bymonth={};
+					response.data.map( groupmonth );
+
+					k = Object.keys( bymonth );
+					names = Object.keys( bymonth ).map( k => bymonth[k].Name );
+					pageviews = Object.keys( bymonth ).map( k => bymonth[k].Pageviews );
+					visitors = Object.keys( bymonth ).map( k => bymonth[k].Visitors );
+					
+					// Generate chart
+					environment.stats = new frappe.Chart( "#" + chart_id, {
+						data: {
+							labels: names,
+							datasets: [
+								{
+									name: "Pageviews",
+									values: pageviews,
+								},
+								{
+									name: "Visitors",
+									values: visitors,
+								},
+							],
+						},
+						type: "bar",
+						height: 270,
+						colors: ["#1564c0", "light-blue"],
+						axisOptions: {
+								xAxisMode: "tick"
+						},
+						barOptions: {
+								stacked: 1
+						},
+						showLegend: 0,
+						
+						});
+					
+				})
+				.catch( error => console.log( error ) );
+
 		},
 		fetchUsers( site_id ) {
 
