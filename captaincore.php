@@ -3315,7 +3315,7 @@ function captaincore_ajax_action_callback() {
 	// Only proceed if access to command 
 	$user = wp_get_current_user();
 	$role_check_admin = in_array( 'administrator', $user->roles );
-	$admin_commands = array( 'newRecipe', 'updateRecipe', 'updateLogEntry', 'newLogEntry', 'newProcess', 'updateProcess', 'fetchProcess', 'fetchProcessLogs', 'updateFathom', 'updatePlan', 'newSite', 'editSite', 'deleteSite' );
+	$admin_commands = array( 'fetchConfigs', 'newRecipe', 'updateRecipe', 'updateLogEntry', 'newLogEntry', 'newProcess', 'updateProcess', 'fetchProcess', 'fetchProcessLogs', 'updateFathom', 'updatePlan', 'newSite', 'editSite', 'deleteSite' );
 	if ( ! $role_check_admin && in_array( $_POST['command'], $admin_commands ) ) {
 		echo "Permission defined";
 		wp_die();
@@ -3477,6 +3477,11 @@ function captaincore_ajax_action_callback() {
 		
 
 	}
+
+	if ( $cmd == 'fetchConfigs' ) {
+		$remote_command = true;
+		$command = "configs fetch vars";
+	};
 
 	if ( $cmd == 'newProcess' ) {
 
@@ -4209,9 +4214,16 @@ function captaincore_ajax_action_callback() {
 
 		// Add command to dispatch server
 		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
-		$response = json_decode( $response["body"] );
+		$response = $response["body"];
 
 		echo $response;
+		
+		// Store results in wp_options.captaincore_settings
+		if ( $cmd == "fetchConfigs" ) {
+			$captaincore_settings = json_decode( $response );
+			unset($captaincore_settings->websites);
+			update_option("captaincore_settings", $captaincore_settings );
+		}
 		
 		wp_die(); // this is required to terminate immediately and return a proper response
 
