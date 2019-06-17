@@ -85,6 +85,10 @@ html {
 	font-size: 12px !important;
 }
 
+g.chart-legend {
+	display: none;
+}
+
 .text-xs-right .usage:last-child {
 	border-right: 0px;
 }
@@ -2278,7 +2282,64 @@ Vue.component('file-upload', VueUploadComponent);
 										<div class="pa-3" v-if="typeof key.stats == 'string' && key.stats != 'Loading'">
 											{{ key.stats }}
 										</div>
+										<v-layout>
+										<v-flex xs3>
+											<v-card dark flat class="fill-height" v-if="key.stats.agg">
+											<v-card-title>
+											<div>
+											<span class="text-uppercase caption">Unique Visitors</span><br />
+											<span class="display-2 font-weight-thin">{{ key.stats.agg.Visitors | formatk }}</span>
+											<br /><br />
+											<span class="text-uppercase caption">Pageviews</span><br />
+											<span class="display-2 font-weight-thin">{{ key.stats.agg.Pageviews | formatk }}</span>
+											<br /><br />
+											<span class="text-uppercase caption">Avg Time On Site</span><br />
+											<span class="display-2 font-weight-thin">{{ key.stats.agg.AvgDuration | formatTime }}</span>
+											<br /><br />
+											<span class="text-uppercase caption">Bounce Rate</span><br />
+											<span class="display-2 font-weight-thin">{{ key.stats.agg.BounceRate | formatPercentageFixed }}</span>
+											</div>
+											</v-card-title>
+											</v-card>
+										</v-flex>
+										<v-flex xs9>
 									<div :id="`chart_` + site.id + `_` + key.environment"></div>
+											<v-card flat class="mb-3" style="margin-top:-40px">
+											<v-card-title>
+											<v-layout>
+											<v-flex xs6 pr-2>
+											<v-data-table
+												:headers='[{"text":"Top Pages",sortable: false},{"text":"Views",sortable: false},{"text":"Uniques",sortable: false}]'
+												:items="key.stats.pages"
+												class="elevation-0"
+												hide-actions
+											>
+												<template v-slot:items="props">
+												<td><a :href="props.item.Hostname + props.item.Pathname">{{ props.item.Pathname }}</a></td>
+												<td class="text-xs-right">{{ props.item.Pageviews | formatk }}</td>
+												<td class="text-xs-right">{{ props.item.Visitors | formatk }}</td>
+												</template>
+											</v-data-table>
+											</v-flex>
+											<v-flex xs6 pl-2>
+											<v-data-table
+												:headers='[{"text":"Top Referrers",sortable: false},{"text":"Views",sortable: false},{"text":"Uniques",sortable: false}]'
+												:items="key.stats.referrers"
+												class="elevation-0"
+												hide-actions
+											>
+												<template v-slot:items="props">
+												<td><a :href="props.item.Hostname + props.item.Pathname">{{ props.item.Group || props.item.Hostname }}</a></td>
+												<td class="text-xs-right">{{ props.item.Pageviews | formatk }}</td>
+												<td class="text-xs-right">{{ props.item.Visitors | formatk }}</td>
+												</template>
+											</v-data-table>
+											
+											</v-flex>
+											</v-layout>
+											</v-card-title>
+											</v-card>
+										</v-flex>
 								 </v-card>
 								</v-tab-item>
 								<v-tab-item :key="2" value="tab-Themes">
@@ -3303,8 +3364,14 @@ new Vue({
 				return number.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,');
 			}
 		},
+		formatk: function (num) {
+			return Math.abs(num) > 999 ? Math.sign(num)*((Math.abs(num)/1000).toFixed(1)) + 'k' : Math.sign(num)*Math.abs(num)
+		},
 		formatPercentage: function (percentage) {
 			return Math.max(percentage, 0.1).toFixed(0);
+		},
+		formatPercentageFixed: function (percentage) {
+			return Math.max(percentage, 0.1).toFixed(2) * 100 + '%';
 		},
 		pretty_timestamp: function (date) {
 			// takes in '2018-06-18 19:44:47' then returns "Monday, Jun 18, 2018, 7:44 PM"
@@ -3933,8 +4000,10 @@ new Vue({
 						return;
 					}
 					
+					environment.stats = response.data
+					
 					bymonth={};
-					response.data.map( groupmonth );
+					environment.stats.stats.map( groupmonth );
 
 					k = Object.keys( bymonth );
 					names = Object.keys( bymonth ).map( k => bymonth[k].Name );
@@ -3942,7 +4011,7 @@ new Vue({
 					visitors = Object.keys( bymonth ).map( k => bymonth[k].Visitors );
 					
 					// Generate chart
-					environment.stats = new frappe.Chart( "#" + chart_id, {
+					environment.chart = new frappe.Chart( "#" + chart_id, {
 						data: {
 							labels: names,
 							datasets: [
@@ -3960,9 +4029,11 @@ new Vue({
 						height: 270,
 						colors: ["#1564c0", "light-blue"],
 						axisOptions: {
-								xAxisMode: "tick"
+							xAxisMode: "tick",
+							xIsSeries: 1
 						},
 						barOptions: {
+							spaceRatio: 0.1,
 								stacked: 1
 						},
 						showLegend: 0,

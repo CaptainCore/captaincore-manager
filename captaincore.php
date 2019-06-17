@@ -3466,11 +3466,26 @@ function captaincore_ajax_action_callback() {
 					'cookies' => $auth['cookies']
 				) );
 				$stats = json_decode( $response['body'] )->Data;
+
+				$response = wp_remote_get( "$fathom_instance/api/sites/{$s->id}/stats/site/agg?before=$before&after=$after", array(
+					'cookies' => $auth['cookies']
+				) );
+				$agg = json_decode( $response['body'] )->Data;
+
+				$response = wp_remote_get( "$fathom_instance/api/sites/{$s->id}/stats/pages/agg?before=$before&after=$after&offset=0&limit=15", array(
+					'cookies' => $auth['cookies']
+				) );
+				$pages = json_decode( $response['body'] )->Data;
+
+				$response = wp_remote_get( "$fathom_instance/api/sites/{$s->id}/stats/referrers/agg?before=$before&after=$after&offset=0&limit=15", array(
+					'cookies' => $auth['cookies']
+				) );
+				$referrers = json_decode( $response['body'] )->Data;
 			}
 		}
 
 		if ( $stats ) {
-			echo json_encode( $stats );
+			echo json_encode( array( "stats" => $stats, "agg" => $agg, "pages" => $pages, "referrers" => $referrers ) );
 		} else {
 			echo json_encode( array("Error" => "Site not found in Fathom" ) );
 		}
