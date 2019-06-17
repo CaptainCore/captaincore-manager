@@ -2289,16 +2289,16 @@ Vue.component('file-upload', VueUploadComponent);
 											<v-card-title>
 											<div>
 											<span class="text-uppercase caption">Unique Visitors</span><br />
-											<span class="display-2 font-weight-thin">{{ key.stats.agg.Visitors | formatk }}</span>
+											<span class="display-2 font-weight-thin text-uppercase">{{ key.stats.agg.Visitors | formatk }}</span>
 											<br /><br />
 											<span class="text-uppercase caption">Pageviews</span><br />
-											<span class="display-2 font-weight-thin">{{ key.stats.agg.Pageviews | formatk }}</span>
+											<span class="display-2 font-weight-thin text-uppercase">{{ key.stats.agg.Pageviews | formatk }}</span>
 											<br /><br />
 											<span class="text-uppercase caption">Avg Time On Site</span><br />
-											<span class="display-2 font-weight-thin">{{ key.stats.agg.AvgDuration | formatTime }}</span>
+											<span class="display-2 font-weight-thin text-uppercase">{{ key.stats.agg.AvgDuration | formatTime }}</span>
 											<br /><br />
 											<span class="text-uppercase caption">Bounce Rate</span><br />
-											<span class="display-2 font-weight-thin">{{ key.stats.agg.BounceRate | formatPercentageFixed }}</span>
+											<span class="display-2 font-weight-thin text-uppercase">{{ key.stats.agg.BounceRate | formatPercentageFixed }}</span>
 											</div>
 											</v-card-title>
 											</v-card>
@@ -2310,29 +2310,29 @@ Vue.component('file-upload', VueUploadComponent);
 											<v-layout v-show="key.stats.pages">
 											<v-flex xs6 pr-2>
 											<v-data-table
-												:headers='[{"text":"Top Pages",sortable: false},{"text":"Views",sortable: false},{"text":"Uniques",sortable: false}]'
+												:headers='[{"text":"Top Pages",sortable: false},{"text":"Views",sortable: false, "width": 90},{"text":"Uniques",sortable: false, "width": 98}]'
 												:items="key.stats.pages"
-												class="elevation-0"
+												class="elevation-0 table-layout-fixed"
 												hide-actions
 											>
 												<template v-slot:items="props">
-												<td><a :href="props.item.Hostname + props.item.Pathname">{{ props.item.Pathname }}</a></td>
-												<td class="text-xs-right">{{ props.item.Pageviews | formatk }}</td>
-												<td class="text-xs-right">{{ props.item.Visitors | formatk }}</td>
+												<td class="text-truncate"><a :href="props.item.Hostname + props.item.Pathname">{{ props.item.Pathname }}</a></td>
+												<td class="text-xs-right text-uppercase">{{ props.item.Pageviews | formatk }}</td>
+												<td class="text-xs-right text-uppercase">{{ props.item.Visitors | formatk }}</td>
 												</template>
 											</v-data-table>
 											</v-flex>
 											<v-flex xs6 pl-2>
 											<v-data-table
-												:headers='[{"text":"Top Referrers",sortable: false},{"text":"Views",sortable: false},{"text":"Uniques",sortable: false}]'
+												:headers='[{"text":"Top Referrers",sortable: false},{"text":"Views",sortable: false, "width": 90},{"text":"Uniques",sortable: false, "width": 98}]'
 												:items="key.stats.referrers"
-												class="elevation-0"
+												class="elevation-0 table-layout-fixed"
 												hide-actions
 											>
 												<template v-slot:items="props">
-												<td><a :href="props.item.Hostname + props.item.Pathname">{{ props.item.Group || props.item.Hostname + props.item.Pathname }}</a></td>
-												<td class="text-xs-right">{{ props.item.Pageviews | formatk }}</td>
-												<td class="text-xs-right">{{ props.item.Visitors | formatk }}</td>
+												<td class="text-truncate"><a :href="props.item.Hostname + props.item.Pathname">{{ props.item.Group || props.item.Hostname + props.item.Pathname }}</a></td>
+												<td class="text-xs-right text-uppercase">{{ props.item.Pageviews | formatk }}</td>
+												<td class="text-xs-right text-uppercase">{{ props.item.Visitors | formatk }}</td>
 												</template>
 											</v-data-table>
 											
@@ -3377,11 +3377,16 @@ new Vue({
 			}
 		},
 		formatk: function (num) {
-			if (num > 999 ) {
-				return numeral(num).format('0.0a');
-			} else {
-				return num
+			if (num < 9999 ) {
+				return numeral(num).format('0,0');
 			}
+			if (num < 99999 ) {
+				return numeral(num).format('0.0a');
+			}
+			if (num < 999999 ) {
+				return numeral(num).format('0a');
+			}
+			return numeral(num).format('0.00a');
 		},
 		formatPercentage: function (percentage) {
 			return Math.max(percentage, 0.1).toFixed(0);
