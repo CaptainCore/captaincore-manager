@@ -2321,7 +2321,7 @@ Vue.component('file-upload', VueUploadComponent);
 												hide-actions
 											>
 												<template v-slot:items="props">
-												<td class="text-truncate"><a :href="props.item.Hostname + props.item.Pathname">{{ props.item.Pathname }}</a></td>
+												<td class="text-truncate"><a :href="props.item.Hostname + props.item.Pathname" target="_blank">{{ props.item.Pathname }}</a></td>
 												<td class="text-xs-right text-uppercase">{{ props.item.Pageviews | formatk }}</td>
 												<td class="text-xs-right text-uppercase">{{ props.item.Visitors | formatk }}</td>
 												</template>
@@ -2335,7 +2335,7 @@ Vue.component('file-upload', VueUploadComponent);
 												hide-actions
 											>
 												<template v-slot:items="props">
-												<td class="text-truncate"><a :href="props.item.Hostname + props.item.Pathname">{{ props.item.Group || props.item.Hostname + props.item.Pathname }}</a></td>
+												<td class="text-truncate"><a :href="props.item.Hostname + props.item.Pathname" target="_blank">{{ props.item.Group || props.item.Hostname + props.item.Pathname }}</a></td>
 												<td class="text-xs-right text-uppercase">{{ props.item.Pageviews | formatk }}</td>
 												<td class="text-xs-right text-uppercase">{{ props.item.Visitors | formatk }}</td>
 												</template>
