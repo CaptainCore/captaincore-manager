@@ -416,6 +416,7 @@ div.update_logs table tr td:nth-child(1) {
 <?php } ?>
 <link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.0/dist/frappe-charts.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.0/dist/frappe-charts.min.iife.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.20/dist/vue-upload-component.js"></script>
 <script>
 
@@ -3376,7 +3377,11 @@ new Vue({
 			}
 		},
 		formatk: function (num) {
-			return Math.abs(num) > 999 ? Math.sign(num)*((Math.abs(num)/1000).toFixed(1)) + 'K' : Math.sign(num)*Math.abs(num)
+			if (num > 999 ) {
+				return numeral(num).format('0.0a');
+			} else {
+				return num
+			}
 		},
 		formatPercentage: function (percentage) {
 			return Math.max(percentage, 0.1).toFixed(0);
