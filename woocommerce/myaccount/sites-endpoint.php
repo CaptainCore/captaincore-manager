@@ -89,6 +89,11 @@ g.chart-legend {
 	display: none;
 }
 
+.table-layout-fixed table {
+	border-collapse: collapse;
+	table-layout:fixed;
+}
+
 .text-xs-right .usage:last-child {
 	border-right: 0px;
 }
