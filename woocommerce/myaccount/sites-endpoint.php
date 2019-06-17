@@ -2306,7 +2306,7 @@ Vue.component('file-upload', VueUploadComponent);
 									<div :id="`chart_` + site.id + `_` + key.environment"></div>
 											<v-card flat class="mb-3" style="margin-top:-40px">
 											<v-card-title>
-											<v-layout>
+											<v-layout v-show="key.stats.pages">
 											<v-flex xs6 pr-2>
 											<v-data-table
 												:headers='[{"text":"Top Pages",sortable: false},{"text":"Views",sortable: false},{"text":"Uniques",sortable: false}]'
@@ -2329,7 +2329,7 @@ Vue.component('file-upload', VueUploadComponent);
 												hide-actions
 											>
 												<template v-slot:items="props">
-												<td><a :href="props.item.Hostname + props.item.Pathname">{{ props.item.Group || props.item.Hostname }}</a></td>
+												<td><a :href="props.item.Hostname + props.item.Pathname">{{ props.item.Group || props.item.Hostname + props.item.Pathname }}</a></td>
 												<td class="text-xs-right">{{ props.item.Pageviews | formatk }}</td>
 												<td class="text-xs-right">{{ props.item.Visitors | formatk }}</td>
 												</template>
@@ -3376,7 +3376,7 @@ new Vue({
 			}
 		},
 		formatk: function (num) {
-			return Math.abs(num) > 999 ? Math.sign(num)*((Math.abs(num)/1000).toFixed(1)) + 'k' : Math.sign(num)*Math.abs(num)
+			return Math.abs(num) > 999 ? Math.sign(num)*((Math.abs(num)/1000).toFixed(1)) + 'K' : Math.sign(num)*Math.abs(num)
 		},
 		formatPercentage: function (percentage) {
 			return Math.max(percentage, 0.1).toFixed(0);
