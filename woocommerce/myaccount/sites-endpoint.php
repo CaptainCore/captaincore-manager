@@ -420,7 +420,7 @@ div.update_logs table tr td:nth-child(1) {
 <script src="https://cdn.jsdelivr.net/npm/vuetify@1.5.4/dist/vuetify.min.js"></script>
 <?php } ?>
 <link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.0/dist/frappe-charts.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.0/dist/frappe-charts.min.iife.js"></script>
+<script src="/wp-content/plugins/captaincore-gui/public/js/frappe-charts.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.20/dist/vue-upload-component.js"></script>
 <script>
@@ -4053,7 +4053,7 @@ new Vue({
 						},
 						type: "bar",
 						height: 270,
-						colors: ["#1564c0", "light-blue"],
+						colors: ["light-blue", "#1564c0"],
 						axisOptions: {
 							xAxisMode: "tick",
 							xIsSeries: 1
