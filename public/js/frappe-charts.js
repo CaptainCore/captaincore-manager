@@ -2738,8 +2738,10 @@ var frappe = function() {
             key: "calcYExtremes",
             value: function() {
                 var t = this.state;
-                if (this.barOptions.stacked)
-                    return void (t.yExtremes = t.datasets[t.datasets.length - 1].cumulativeYPos);
+                if (this.barOptions.stacked) {
+                    // return void (t.yExtremes = t.datasets[t.datasets.length - 1].cumulativeYPos);
+                    return void (t.yExtremes = t.datasets[0].cumulativeYPos);
+                }
                 t.yExtremes = new Array(t.datasetLength).fill(9999),
                 t.datasets.map(function(e) {
                     e.yPositions.map(function(e, i) {
