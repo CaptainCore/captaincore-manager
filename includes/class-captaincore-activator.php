@@ -30,7 +30,7 @@ class Captaincore_Activator {
 	 * @since    0.1.0
 	 */
 	public static function activate() {
-
+		
 	}
 
 }
