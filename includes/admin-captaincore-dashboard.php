@@ -50,13 +50,13 @@ input[type=text]:focus {
             <v-list dense>
             <v-list-tile>
               <v-list-tile-content>
-                <v-list-tile-title>Sites: <strong>{{ settings.manifest.sites }}</strong></v-list-tile-title>
+                <v-list-tile-title>Sites: <strong>{{ settings.manifest.sites.count }}</strong></v-list-tile-title>
               </v-list-tile-content>
             </v-list-tile>
             <v-divider></v-divider>
             <v-list-tile>
               <v-list-tile-content>
-                <v-list-tile-title>Quicksaves: <strong>{{ settings.manifest.quicksaves }}</strong></v-list-tile-title>
+                <v-list-tile-title>Quicksaves: <strong>{{ settings.manifest.quicksaves.count }}</strong></v-list-tile-title>
               </v-list-tile-content>
             </v-list-tile>
             <v-divider></v-divider>
