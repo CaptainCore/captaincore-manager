@@ -3,6 +3,8 @@
 <script src="https://cdn.jsdelivr.net/npm/vue@2.5.22/dist/vue.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vuetify@1.4.3/dist/vuetify.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/vuetify@1.4.3/dist/vuetify.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.0/dist/frappe-charts.min.css" rel="stylesheet">
+<script src="/wp-content/plugins/captaincore-gui/public/js/frappe-charts.js"></script>
 <style>
 body #app {
   line-height: initial;
@@ -14,6 +16,9 @@ input[type=checkbox], input[type=color], input[type=date], input[type=datetime-l
 
 input[type=text]:focus {
   box-shadow: none;
+}
+.graph-svg-tip.comparison .title {
+	font-size: 12px !important;
 }
 </style>
 <form action='options.php' method='post'>
@@ -66,6 +71,7 @@ input[type=text]:focus {
               </v-list-tile-content>
             </v-list-tile>
             </v-list>
+            <div id="chart"></div>
         </v-card-text>
     </v-card>
     </v-flex>
@@ -98,6 +104,40 @@ var app = new Vue({
         address: "<?php if ( defined( "CAPTAINCORE_CLI_ADDRESS" ) ) { echo CAPTAINCORE_CLI_ADDRESS; } ?>"
     }
   },
+  methods: {
+    generateChart() {
+      //quicksaves_storage = this.settings.manifest.quicksaves.storage | formatGBs;
+      sites_storage = this.$options.filters.formatGBs( this.settings.manifest.sites.storage );
+      sites_percentage = this.settings.manifest.sites.storage / this.settings.manifest.storage;
+      sites_percentage = ( sites_percentage * 100 ).toFixed(1);
+      quicksaves_storage = this.$options.filters.formatGBs( this.settings.manifest.quicksaves.storage );
+      quicksaves_percentage = this.settings.manifest.quicksaves.storage / this.settings.manifest.storage;
+      quicksaves_percentage = ( quicksaves_percentage * 100 ).toFixed(1);
+
+      // Generate chart
+			chart =	new frappe.Chart( "#chart", {
+          data: {
+            labels: ["Quicksaves (" + quicksaves_storage + ")","Sites (" + sites_storage + ")"],
+            datasets: [
+              {
+                name: "Data",
+                values: [ Math.max(quicksaves_percentage), Math.max(sites_percentage) ],
+              }
+            ],
+          },
+          type: "percentage",
+          height: 80,
+          axisOptions: {
+            xAxisMode: "span",
+            xIsSeries: 0
+          },
+          barOptions: {
+            spaceRatio: 0.1,
+            stacked: 0
+          }
+          });
+    }
+  },
   filters: {
     formatGBs: function (fileSizeInBytes) {
 			fileSizeInBytes = fileSizeInBytes / 1024 / 1024 / 1024;
@@ -114,6 +154,7 @@ var app = new Vue({
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
           self.settings = response.data;
+          self.generateChart();
 				})
 				.catch( error => {
 					console.log( error.response );
