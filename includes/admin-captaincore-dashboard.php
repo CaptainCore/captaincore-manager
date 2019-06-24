@@ -127,6 +127,7 @@ var app = new Vue({
           },
           type: "percentage",
           height: 80,
+          colors: ["light-blue", "#1564c0"],
           axisOptions: {
             xAxisMode: "span",
             xIsSeries: 0
