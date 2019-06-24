@@ -792,6 +792,14 @@ class Site {
 			$response['errors'][] = "Error: Site can't be empty.";
 		}
 
+		if ( ! ctype_alnum ( $site->site ) ) {
+			$response['errors'][] = "Error: Site does not consist of all letters or digits.";
+		}
+
+		if ( strlen($site->site) < 3 ) {
+			$response['errors'][] = "Error: Site length less then 3 characters.";
+		}
+
 		// Hunt for conflicting site names
 		$arguments = array(
 			'fields'         => 'ids',
