@@ -669,18 +669,15 @@ class Site {
 
 		if ( $site_details->provider == 'kinsta' ) {
 			$site_details->environments[0]['ssh'] = "ssh ${production_username}@${production_address} -p ${production_port}";
-			$production_address_find_ending       = strpos( $production_address, '.kinsta.' ) + 1;
-			$production_address_ending            = substr( $production_address, $production_address_find_ending );
 		}
 		if ( $site_details->provider == 'kinsta' and $environments[0]->database_username ) {
-
-			$site_details->environments[0]['database']          = "https://mysqleditor-${database_username}.${production_address_ending}";
+			$site_details->environments[0]['database']          = "https://mysqleditor-${database_username}.kinsta.cloud";
 			$site_details->environments[0]['database_username'] = $environments[0]->database_username;
 			$site_details->environments[0]['database_password'] = $environments[0]->database_password;
 		}
 
 		if ( $site_details->provider == 'kinsta' ) {
-			$link_staging = 'https://staging-' . $environments[1]->address;
+			$link_staging = "https://staging-{$environments[1]->username}.kinsta.cloud";
 		}
 
 		if ( $site_details->provider == 'wpengine' ) {
@@ -759,11 +756,9 @@ class Site {
 
 		if ( $site_details->provider == 'kinsta' ) {
 			$site_details->environments[1]['ssh'] = "ssh ${staging_username}@${staging_address} -p ${staging_port}";
-			$staging_address_find_ending          = strpos( $staging_address, '.kinsta.' ) + 1;
-			$staging_address_ending               = substr( $staging_address, $staging_address_find_ending );
 		}
 		if ( $site_details->provider == 'kinsta' and $environments[1]->database_username ) {
-			$site_details->environments[1]['database']          = "https://mysqleditor-staging-${database_username}.${staging_address_ending}";
+			$site_details->environments[1]['database']          = "https://mysqleditor-staging-${database_username}.kinsta.cloud";
 			$site_details->environments[1]['database_username'] = $environments[1]->database_username;
 			$site_details->environments[1]['database_password'] = $environments[1]->database_password;
 		}
