@@ -48,12 +48,12 @@ TODO
 * New: Bulk log entry support
 * New: Run custom code section
 * New: Migrate script dialog
- Tweak: Added date field to edit process entry log.
- Tweak: Site sorting icons.
- Tweak: Improved file upload error handling. If /wp-content/deploy/ directory not exists, create it. If upload failed then report it. 
- Tweak: Improved theme & plugin uploads. 
- Tweak: Improved bulk actions environment support
- Tweak: Improved bulk management section. Moved toggle commands here.
+* Tweak: Added date field to edit process entry log.
+* Tweak: Site sorting icons.
+* Tweak: Improved file upload error handling. If /wp-content/deploy/ directory not exists, create it. If upload failed then report it. 
+* Tweak: Improved theme & plugin uploads. 
+* Tweak: Improved bulk actions environment support
+* Tweak: Improved bulk management section. Moved toggle commands here.
 
 == Changelog ==
 = 0.4.3: May 12 2019
