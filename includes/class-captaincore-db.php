@@ -782,17 +782,26 @@ class Site {
 		if ( $site->domain == '' ) {
 			$response['errors'][] = "Error: Domain can't be empty.";
 		}
-
 		if ( $site->site == '' ) {
 			$response['errors'][] = "Error: Site can't be empty.";
 		}
-
 		if ( ! ctype_alnum ( $site->site ) ) {
 			$response['errors'][] = "Error: Site does not consist of all letters or digits.";
 		}
-
 		if ( strlen($site->site) < 3 ) {
 			$response['errors'][] = "Error: Site length less then 3 characters.";
+		}
+		if ( $site->environments[0]['address'] == "" ) {
+			$response['errors'][] = "Error: Production environment address can't be empty.";
+		}
+		if ( $site->environments[0]['username'] == "" ) {
+			$response['errors'][] = "Error: Production environment username can't be empty.";
+		}
+		if ( $site->environments[0]['protocol'] == "" ) {
+			$response['errors'][] = "Error: Production environment protocol can't be empty.";
+		}
+		if ( $site->environments[0]['port'] == "" ) {
+			$response['errors'][] = "Error: Production environment port can't be empty.";
 		}
 
 		// Hunt for conflicting site names
