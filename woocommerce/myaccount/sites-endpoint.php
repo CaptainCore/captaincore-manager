@@ -986,7 +986,6 @@ Vue.component('file-upload', VueUploadComponent);
 								item-value="customer_id"
 								v-model="dialog_new_site.customers"
 							item-text="name"
-
 								hint="Assign to existing customer. If new leave blank."
 								persistent-hint
 							chips
@@ -1572,7 +1571,6 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-dialog>
 				<v-dialog
 					v-model="dialog_edit_site.show"
-					fullscreen
 					hide-overlay
 					transition="dialog-bottom-transition"
 					scrollable
