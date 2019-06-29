@@ -43,6 +43,15 @@ TODO
 TODO
 
 == Changelog ==
+= 0.4.5: June 29 2019
+* New: Admin dashboard with SVG menu icon. Replaces old admin pages. Includes link to legacy custom post types.
+* New: Stats tab per environment. Fetches stats from Fathom Analytics.
+* New: Dialog to reassign user content when deleting user.
+* New: Dialog to run launch site script.
+* Tweak: Improved site validations and deletions
+* Tweak: Fixed links to Kinsta's database url and staging url
+* Tweak: Fixed assigning existing customers to new site
+
 = 0.4.4: June 4 2019
 * New: Bulk scripts section
 * New: Bulk log entry support
