@@ -3901,7 +3901,7 @@ function captaincore_ajax_action_callback() {
 
 		$remote_command = true;
 		$silence = true;
-		$recipe_content = base64_encode( $recipe->content );
+		$recipe_content = base64_encode( stripslashes_deep( $recipe->content ) );
 		$command = "recipe add $recipe_content --id=$recipe_id --name=\"{$recipe->title}\"";
 
 	}
@@ -3924,7 +3924,7 @@ function captaincore_ajax_action_callback() {
 
 		$remote_command = true;
 		$silence = true;
-		$recipe_content = base64_encode( $recipe->content );
+		$recipe_content = base64_encode( stripslashes_deep( $recipe->content ) );
 		$command = "recipe add $recipe_content --id={$recipe->recipe_id} --name=\"{$recipe->title}\"";
 
 	}
