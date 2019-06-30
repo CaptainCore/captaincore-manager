@@ -715,6 +715,62 @@ Vue.component('file-upload', VueUploadComponent);
           </v-card-actions>
         </v-card>
       </v-dialog>
+	  <v-dialog v-model="new_recipe.show" max-width="800px" v-if="role == 'administrator'">
+	  	<v-card tile style="margin:auto;max-width:800px">
+			<v-toolbar card color="grey lighten-4">
+				<v-btn icon @click.native="new_recipe.show = false">
+					<v-icon>close</v-icon>
+				</v-btn>
+				<v-toolbar-title>New Recipe</v-toolbar-title>
+				<v-spacer></v-spacer>
+			</v-toolbar>
+			<v-card-text style="max-height: 100%;">
+			<v-container>
+			<v-layout row wrap>
+				<v-flex xs12 pa-2>
+					<v-text-field label="Name" :value="new_recipe.title" @change.native="new_recipe.title = $event.target.value"></v-text-field>
+				</v-flex>
+				<v-flex xs12 pa-2>
+					<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="new_recipe.content" @change.native="new_recipe.content = $event.target.value"></v-textfield>
+				</v-flex>
+				<v-flex xs12 text-xs-right pa-0 ma-0>
+					<v-btn color="primary" dark @click="addRecipe()">
+						Add New Recipe
+					</v-btn>
+				</v-flex>
+			</v-layout>
+			</v-container>
+			</v-card-text>
+		</v-card>
+	  </v-dialog>
+	  <v-dialog v-model="dialog_cookbook.show" max-width="800px" v-if="role == 'administrator'">
+		<v-card tile style="margin:auto;max-width:800px">
+			<v-toolbar card color="grey lighten-4">
+				<v-btn icon @click.native="dialog_cookbook.show = false">
+					<v-icon>close</v-icon>
+				</v-btn>
+				<v-toolbar-title>Edit Recipe</v-toolbar-title>
+				<v-spacer></v-spacer>
+			</v-toolbar>
+			<v-card-text style="max-height: 100%;">
+			<v-container>
+			<v-layout row wrap>
+				<v-flex xs12 pa-2>
+					<v-text-field label="Name" :value="dialog_cookbook.recipe.title" @change.native="dialog_cookbook.recipe.title = $event.target.value"></v-text-field>
+				</v-flex>
+				<v-flex xs12 pa-2>
+					<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="dialog_cookbook.recipe.content" @change.native="dialog_cookbook.recipe.content = $event.target.value"></v-textfield>
+				</v-flex>
+				<v-flex xs12 text-xs-right pa-0 ma-0>
+					<v-btn color="primary" dark @click="updateRecipe()">
+						Update Recipe
+					</v-btn>
+				</v-flex>
+			</v-layout>
+			</v-container>
+			</v-card-text>
+		</v-card>
+	  </v-dialog>
 	  <v-dialog v-model="new_process.show" max-width="800px" v-if="role == 'administrator'">
 		<v-card tile style="margin:auto;max-width:800px">
 			<v-toolbar card color="grey lighten-4">
@@ -2109,10 +2165,10 @@ Vue.component('file-upload', VueUploadComponent);
 								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span>
 							</v-btn></div>
 				</v-flex>
-					<v-flex xs12 sm4 v-show="role == 'administrator'">
+					<v-flex xs12 sm4>
 					<v-subheader>User-Defined Recipes</v-subheader>
 						<div v-for="recipe in recipes">
-							<v-btn small flat @click="runRecipe(recipe.recipe_id)">
+							<v-btn small flat @click="runRecipeBulk(recipe.recipe_id)">
 								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
 							</v-btn>
 						</div>
@@ -2597,10 +2653,10 @@ Vue.component('file-upload', VueUploadComponent);
 								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span>
 							</v-btn></div>
 					</v-flex>
-					<v-flex xs12 sm4 v-show="role == 'administrator'">
+					<v-flex xs12 sm4>
 					<v-subheader>User-Defined Recipes</v-subheader>
 						<div v-for="recipe in recipes">
-							<v-btn small flat @click="runRecipe(recipe.recipe_id)">
+							<v-btn small flat @click="runRecipe(recipe.recipe_id, site.id)">
 								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
 							</v-btn>
 						</div>
@@ -2943,7 +2999,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Contains {{ recipes.length }} recipes</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn flat @click="cookbook_step = 3">Add new recipe</v-btn>
+						<v-btn flat @click="new_recipe.show = true">Add new recipe</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
@@ -2963,68 +3019,8 @@ Vue.component('file-upload', VueUploadComponent);
 						</v-layout>
 				</v-container>
 				</v-window-item>
-				<v-window-item :value="2">
-				<v-card tile style="margin:auto;max-width:800px">
-					<v-toolbar card color="grey lighten-4">
-						<v-btn icon @click.native="cookbook_step = 1">
-							<v-icon>close</v-icon>
-						</v-btn>
-						<v-toolbar-title>Edit Recipe</v-toolbar-title>
-						<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-card-text style="max-height: 100%;">
-					<v-container>
-					<v-layout row wrap>
-
-						<v-flex xs12 pa-2>
-							<v-text-field label="Name" :value="dialog_cookbook.recipe.title" @change.native="dialog_cookbook.recipe.title = $event.target.value"></v-text-field>
-						</v-flex>
-
-						<v-flex xs12 pa-2>
-							<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="dialog_cookbook.recipe.content" @change.native="dialog_cookbook.recipe.content = $event.target.value"></v-textfield>
-						</v-flex>
-
-						<v-flex xs12 text-xs-right pa-0 ma-0>
-							<v-btn color="primary" dark @click="updateRecipe()">
-								Update Recipe
-							</v-btn>
-						</v-flex>
-
-					</v-layout>
-					</v-container>
 					</v-card-text>
 				</v-card>
-				</v-window-item>
-				<v-window-item :value="3">
-				<v-card tile style="margin:auto;max-width:800px">
-					<v-toolbar card color="grey lighten-4">
-						<v-btn icon @click.native="cookbook_step = 1">
-							<v-icon>close</v-icon>
-						</v-btn>
-						<v-toolbar-title>New Recipe</v-toolbar-title>
-						<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-card-text style="max-height: 100%;">
-					<v-container>
-					<v-layout row wrap>
-						<v-flex xs12 pa-2>
-							<v-text-field label="Name" :value="new_recipe.title" @change.native="new_recipe.title = $event.target.value"></v-text-field>
-						</v-flex>
-						<v-flex xs12 pa-2>
-							<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="new_recipe.content" @change.native="new_recipe.content = $event.target.value"></v-textfield>
-						</v-flex>
-						<v-flex xs12 text-xs-right pa-0 ma-0>
-							<v-btn color="primary" dark @click="addRecipe()">
-								Add New Recipe
-							</v-btn>
-						</v-flex>
-					</v-layout>
-					</v-container>
-					</v-card-text>
-				</v-card>
-				</v-window-item>
-				</v-card-text>
-			</v-card>
 			<v-card tile v-show="active_page == 'Handbook'" v-if="role == 'administrator'">
 				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Contains {{ processes.length }} processes</v-toolbar-title>
@@ -3203,7 +3199,7 @@ new Vue({
 		dialog_log_history: { show: false, logs: [], pagination: {} },
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_handbook: { show: false, process: {} },
-		new_recipe: { title: "", content: "" },
+		new_recipe: { show: false, title: "", content: "" },
 		new_process: { show: false, title: "", time_estimate: "", repeat: "as-needed", repeat_quantity: "", role: "", description: "" },
 		dialog_edit_process: { show: false, process: {} },
 		new_process_roles: 
@@ -4598,21 +4594,87 @@ new Vue({
 		editRecipe( recipe_id ) {
 			recipe = this.recipes.filter( recipe => recipe.recipe_id == recipe_id )[0];
 			this.dialog_cookbook.recipe = recipe;
-			this.cookbook_step = 2;
+			this.dialog_cookbook.show = true;
 		},
-		updateRecipe() {
+		runRecipe( recipe_id, site_id ) {
+			recipe = this.recipes.filter( recipe => recipe.recipe_id == recipe_id )[0];
+			site = this.sites.filter(site => site.id == site_id )[0];
+
+			should_proceed = confirm("Run recipe '"+ recipe.title +"' on " + site.name + "?");
+
+			if ( ! should_proceed ) {
+				return;
+			}
 
 			var data = {
-				action: 'captaincore_ajax',
-				command: 'updateRecipe',
-				value: this.dialog_cookbook.recipe
+				action: 'captaincore_install',
+				post_id: site.id,
+				command: 'recipe',
+				environment: site.environment_selected,
+				value: recipe_id
 			};
+
+			description = "Run recipe '"+ recipe.title +"' on '" + site.name + "'";
+
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", "command": "recipe", stream: []});
 
 			self = this;
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					self.cookbook_step = 1
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data )
+				})
+				.catch( error => console.log( error ) );
+		},
+		runRecipeBulk( recipe_id ){
+
+			sites = this.sites_selected;
+			site_ids = sites.map( s => s.id );
+			recipe = this.recipes.filter( recipe => recipe.recipe_id == recipe_id )[0];
+
+			should_proceed = confirm("Run recipe '"+ recipe.title +"' on " +  sites.length + "?");
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			var data = {
+				action: 'captaincore_install',
+				post_id: site_ids,
+				command: 'recipe',
+				environment: this.dialog_bulk.environment_selected,
+				value: recipe_id
+			};
+
+			description = "Run recipe '"+ recipe.title +"' on '" + sites.length + "'";
+
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", "command": "recipe", stream: []});
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data )
+				})
+				.catch( error => console.log( error ) );
+
+		},
+		updateRecipe() {
+			var data = {
+				action: 'captaincore_ajax',
+				command: 'updateRecipe',
+				value: this.dialog_cookbook.recipe
+			};
+			self = this;
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.dialog_cookbook.show = false;
 					self.recipes = response.data;
 				})
 				.catch( error => console.log( error ) );
@@ -4623,12 +4685,10 @@ new Vue({
 				command: 'newRecipe',
 				value: this.new_recipe
 			};
-
 			self = this;
-
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					self.cookbook_step = 1
+					self.new_recipe = { show: false, title: "", content: "" };
 					self.recipes = response.data;
 					self.new_recipe = { title: "", content: "" };
 				})

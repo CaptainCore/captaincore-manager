@@ -3892,12 +3892,17 @@ function captaincore_ajax_action_callback() {
 			'title'          => $recipe->title,
 			'updated_at'     => $time_now,
 			'created_at'     => $time_now,
-			'content'        => $recipe->content,
+			'content'        => stripslashes_deep( $recipe->content ),
 		);
 
 		$db_recipes = new CaptainCore\recipes();
 		$recipe_id = $db_recipes->insert( $new_recipe );
 		echo json_encode( $db_recipes->all("title","ASC") );
+
+		$remote_command = true;
+		$silence = true;
+		$recipe_content = base64_encode( $recipe->content );
+		$command = "recipe add $recipe_content --id=$recipe_id --name=\"{$recipe->title}\"";
 
 	}
 
@@ -3909,13 +3914,18 @@ function captaincore_ajax_action_callback() {
 		$recipe_update = array(
 			'title'          => $recipe->title,
 			'updated_at'     => $time_now,
-			'content'        => $recipe->content,
+			'content'        => stripslashes_deep( $recipe->content ),
 		);
 
 		$db_recipes = new CaptainCore\recipes();
 		$db_recipes->update( $recipe_update, array( "recipe_id" => $recipe->recipe_id ) );
 
-		echo json_encode( $db_recipes->all("title","ASC") );
+		echo json_encode( $db_recipes->all( "title", "ASC" ) );
+
+		$remote_command = true;
+		$silence = true;
+		$recipe_content = base64_encode( $recipe->content );
+		$command = "recipe add $recipe_content --id={$recipe->recipe_id} --name=\"{$recipe->title}\"";
 
 	}
 
@@ -4216,6 +4226,10 @@ function captaincore_ajax_action_callback() {
 		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
 		$response = $response["body"];
 
+		if ( $silence ) {
+			wp_die(); // this is required to terminate immediately and return a proper response
+		}
+
 		echo $response;
 		
 		// Store results in wp_options.captaincore_settings
@@ -4375,6 +4389,10 @@ function captaincore_install_action_callback() {
 		if ( $_POST['update_urls'] == "true" ) {
 			$command = "$command --update-urls";
 		}
+	}
+	if ( $cmd == 'recipe' ) {
+		$run_in_background = true;
+		$command = "ssh $site --recipe=$value";
 	}
 	if ( $cmd == 'mailgun' ) {
 		$run_in_background = true;
