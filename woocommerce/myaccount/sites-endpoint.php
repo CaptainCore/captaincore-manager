@@ -193,6 +193,10 @@ table.v-table tbody td, table.v-table tbody th {
 	background-color: currentColor;
 }
 
+#code_diff > div {
+	white-space:pre-wrap;
+}
+
 .v-expansion-panel__body {
 	position: relative;
 }
@@ -1843,7 +1847,7 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-toolbar>
 					<v-card-text>
 						<v-container v-show="dialog_file_diff.loading"><v-progress-linear :indeterminate="true"></v-progress-linear></v-container>
-						<v-container v-html="dialog_file_diff.response" style='font-family:SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;'></v-container>
+						<v-container id="code_diff" v-html="dialog_file_diff.response" style='font-family:SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;'></v-container>
 					</v-card-text>
 					</v-card>
 				</v-dialog>

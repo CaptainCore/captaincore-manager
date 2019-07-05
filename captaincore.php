@@ -4502,7 +4502,7 @@ function captaincore_install_action_callback() {
 		$db_quicksaves = new CaptainCore\quicksaves;
 		$quicksaves = $db_quicksaves->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
-		$command    = "quicksave-file-diff $site --hash=$commit --file=$value";
+		$command    = "quicksave-file-diff $site --hash=$commit --file=$value --html";
 	}
 
 	if ( $cmd == 'rollback' ) {
