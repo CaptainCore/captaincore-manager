@@ -473,7 +473,7 @@ Vue.component('file-upload', VueUploadComponent);
       <v-tab-item key="0">
 			<div class="upload-drag pt-4">
 		<div class="upload">
-			<div v-if="upload.length">
+			<div v-if="upload.length" class="mx-3">
 				<div v-for="(file, index) in upload" :key="file.id">
 					<span>{{file.name}}</span> -
 					<span>{{file.size | formatSize}}</span> -
@@ -491,11 +491,9 @@ Vue.component('file-upload', VueUploadComponent);
 						<label for="file" class="btn btn-lg btn-primary" style="padding: 0px 8px;">Select Files</label>
 					</div>
 			</div>
-
 			<div v-show="$refs.upload && $refs.upload.dropActive" class="drop-active">
 				<h3>Drop files to upload</h3>
 			</div>
-
 			<div class="upload-drag-btn">
 				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="/wp-content/plugins/captaincore-gui/upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
 			</div>
@@ -574,7 +572,7 @@ Vue.component('file-upload', VueUploadComponent);
       <v-tab-item key="0">
 		<div class="upload-drag pt-4">
 		<div class="upload">
-			<div v-if="upload.length">
+			<div v-if="upload.length" class="mx-3">
 				<div v-for="(file, index) in upload" :key="file.id">
 					<span>{{file.name}}</span> -
 					<span>{{file.size | formatSize}}</span> -
