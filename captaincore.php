@@ -2630,7 +2630,7 @@ function checkApiAuth( $result ) {
 			}
 		}
 
-		// custom auth on customer endpoint, exlcuding global posts
+		// custom auth on customer endpoint, excluding global posts
 		if ( $endpoint == 'captcore_customer' ) {
 
 			$token       = $_GET['token'];
@@ -3889,15 +3889,17 @@ function captaincore_ajax_action_callback() {
 		$time_now = date("Y-m-d H:i:s");
 
 		$new_recipe = array(
+			'user_id'        => get_current_user_id(),
 			'title'          => $recipe->title,
 			'updated_at'     => $time_now,
 			'created_at'     => $time_now,
 			'content'        => stripslashes_deep( $recipe->content ),
+			'public'         => $recipe->public,
 		);
 
 		$db_recipes = new CaptainCore\recipes();
 		$recipe_id = $db_recipes->insert( $new_recipe );
-		echo json_encode( $db_recipes->all("title","ASC") );
+		echo json_encode( $db_recipes->fetch_recipes("title","ASC") );
 
 		$remote_command = true;
 		$silence = true;
@@ -3915,12 +3917,13 @@ function captaincore_ajax_action_callback() {
 			'title'          => $recipe->title,
 			'updated_at'     => $time_now,
 			'content'        => stripslashes_deep( $recipe->content ),
+			'public'         => $recipe->public,
 		);
 
 		$db_recipes = new CaptainCore\recipes();
 		$db_recipes->update( $recipe_update, array( "recipe_id" => $recipe->recipe_id ) );
 
-		echo json_encode( $db_recipes->all( "title", "ASC" ) );
+		echo json_encode( $db_recipes->fetch_recipes( "title", "ASC" ) );
 
 		$remote_command = true;
 		$silence = true;
@@ -4470,6 +4473,11 @@ function captaincore_install_action_callback() {
 		$command = "quicksave-view-changes $site --hash=$value";
 	}
 
+	if ( $cmd == 'run' ) {
+		$code = base64_encode( stripslashes_deep( $value ) );
+		$command = "run $site $code";
+	}
+
 	if ( $cmd == 'manage' ) {
 
 		$run_in_background = true;
@@ -4788,13 +4796,15 @@ function captaincore_create_tables() {
 			return $success;
 		}
 
-		if ( $version < 9 ) {
+		if ( $version < 11 ) {
 			$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_recipes` (
 				recipe_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+				user_id bigint(20) UNSIGNED NOT NULL,
 				title varchar(255),
 				created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 				updated_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 				content longtext,
+				public boolean,
 			PRIMARY KEY  (recipe_id)
 			) $charset_collate;";
 
@@ -4802,7 +4812,7 @@ function captaincore_create_tables() {
 			dbDelta($sql);
 			$success = empty($wpdb->last_error);
 
-			update_site_option('captcorecore_db_version', 9);
+			update_site_option('captcorecore_db_version', 11);
 
 			return $success;
 		}

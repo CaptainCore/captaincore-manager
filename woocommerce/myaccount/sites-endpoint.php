@@ -735,6 +735,9 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-flex xs12 pa-2>
 					<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="new_recipe.content" @change.native="new_recipe.content = $event.target.value"></v-textfield>
 				</v-flex>
+				<v-flex xs12 pa-2>
+					<v-switch label="Public" v-model="new_recipe.public" persistent-hint hint="Public by default. Turning off will make the recipe only viewable and useable by you." :false-value="0" :true-value="1"></v-switch>
+				</v-flex>
 				<v-flex xs12 text-xs-right pa-0 ma-0>
 					<v-btn color="primary" dark @click="addRecipe()">
 						Add New Recipe
@@ -762,6 +765,9 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-flex>
 				<v-flex xs12 pa-2>
 					<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="dialog_cookbook.recipe.content" @change.native="dialog_cookbook.recipe.content = $event.target.value"></v-textfield>
+				</v-flex>
+				<v-flex xs12 pa-2>
+					<v-switch label="Public" v-model="dialog_cookbook.recipe.public" persistent-hint hint="Public by default. Turning off will make the recipe only viewable and useable by you." false-value="0" true-value="1"></v-switch>
 				</v-flex>
 				<v-flex xs12 text-xs-right pa-0 ma-0>
 					<v-btn color="primary" dark @click="updateRecipe()">
@@ -1511,8 +1517,6 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-dialog>
 				<v-dialog
 					v-model="dialog_toggle.show"
-					fullscreen
-					hide-overlay
 					transition="dialog-bottom-transition"
 					scrollable
 				>
@@ -2166,8 +2170,6 @@ Vue.component('file-upload', VueUploadComponent);
 							<div><v-btn small flat @click="toggleSiteBulk()">
 								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span>
 							</v-btn></div>
-				</v-flex>
-					<v-flex xs12 sm4>
 					<v-subheader>User-Defined Recipes</v-subheader>
 						<div v-for="recipe in recipes">
 							<v-btn small flat @click="runRecipeBulk(recipe.recipe_id)">
@@ -2175,7 +2177,7 @@ Vue.component('file-upload', VueUploadComponent);
 							</v-btn>
 						</div>
 				</v-flex>
-					<v-flex xs12 sm4 v-show="role == 'administrator'">
+					<v-flex xs12 sm8 v-show="role == 'administrator'">
 					<v-subheader>Custom bash script or WP-CLI commands</v-subheader>
 							<v-textarea
 									auto-grow
@@ -2634,8 +2636,20 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-card flat>
 					<v-card-title>
 					<v-layout align-start>
+					<v-flex xs12 sm8 pr-4 v-show="role == 'administrator'">
+					<v-subheader id="script">Custom bash script or WP-CLI commands</v-subheader>
+						<v-textarea
+							auto-grow
+							solo
+							label=""
+							hide-details
+							:value="custom_script" 
+							@change.native="custom_script = $event.target.value"
+						></v-textarea>
+						<v-btn small color="primary" dark @click="runCustomCode(site.id)">Run Custom Code</v-btn>
+					</v-flex>
 					<v-flex xs12 sm4>
-						<v-subheader>Common Built-in Scripts</v-subheader>
+						<v-subheader>Common</v-subheader>
 							<div><v-btn small flat @click="viewApplyHttpsUrls(site.id)">
 								<v-icon>launch</v-icon> <span>Apply HTTPS Urls</span>
 							</v-btn></div>
@@ -2654,26 +2668,18 @@ Vue.component('file-upload', VueUploadComponent);
 							<div><v-btn small flat @click="toggleSite(site.id)">
 								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span>
 							</v-btn></div>
-					</v-flex>
-					<v-flex xs12 sm4>
-					<v-subheader>User-Defined Recipes</v-subheader>
-						<div v-for="recipe in recipes">
+						<v-subheader>Other</v-subheader>
+						<div v-for="recipe in recipes.filter( r => r.public )">
 							<v-btn small flat @click="runRecipe(recipe.recipe_id, site.id)">
 								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
 							</v-btn>
 						</div>
-					</v-flex>
-					<v-flex xs12 sm4 v-show="role == 'administrator'">
-					<v-subheader>Custom bash script or WP-CLI commands</v-subheader>
-						<v-textarea
-							auto-grow
-							solo
-							label=""
-							hide-details
-							:value="custom_script" 
-							@change.native="custom_script = $event.target.value"
-						></v-textarea>
-						<v-btn small color="primary" dark @click="runCustomCode(site.id)">Run Custom Code</v-btn>
+						<v-subheader v-show="recipes.filter( r => ! r.public ).length > 0">User</v-subheader>
+						<div v-for="recipe in recipes.filter( r => ! r.public )">
+							<v-btn small flat @click="loadRecipe(recipe.recipe_id, site.id)">
+								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
+							</v-btn>
+						</div>
 					</v-flex>
 					</v-layout>
 					</v-card-title>
@@ -3132,12 +3138,10 @@ new Vue({
 		custom_script: "",
 		recipes: 
 		<?php
-
 		$db_recipes = new CaptainCore\recipes();
-		$recipes = $db_recipes->all("title","ASC");
+			$recipes = $db_recipes->fetch_recipes("title","ASC");
 		echo json_encode( $recipes );
-		?>
-		,
+		?>,
 		processes: 
 			<?php
 
@@ -3201,7 +3205,7 @@ new Vue({
 		dialog_log_history: { show: false, logs: [], pagination: {} },
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_handbook: { show: false, process: {} },
-		new_recipe: { show: false, title: "", content: "" },
+		new_recipe: { show: false, title: "", content: "", public: true },
 		new_process: { show: false, title: "", time_estimate: "", repeat: "as-needed", repeat_quantity: "", role: "", description: "" },
 		dialog_edit_process: { show: false, process: {} },
 		new_process_roles: 
@@ -4598,6 +4602,14 @@ new Vue({
 			this.dialog_cookbook.recipe = recipe;
 			this.dialog_cookbook.show = true;
 		},
+		loadRecipe( recipe_id, site_id ) {
+			this.$vuetify.goTo( '#script' );
+			recipe = this.recipes.filter( recipe => recipe.recipe_id == recipe_id )[0];
+			site = this.sites.filter(site => site.id == site_id )[0];
+			this.snackbar.message = "Recipe '"+ recipe.title +"' loaded.";
+			this.snackbar.show = true;
+			this.custom_script = recipe.content;
+		},
 		runRecipe( recipe_id, site_id ) {
 			recipe = this.recipes.filter( recipe => recipe.recipe_id == recipe_id )[0];
 			site = this.sites.filter(site => site.id == site_id )[0];
@@ -4991,16 +5003,13 @@ new Vue({
 				return;
 			}
 
-			wp_cli = this.custom_script;
-
 			var data = {
 				action: 'captaincore_install',
 				environment: site.environment_selected,
 				post_id: site_id,
-				command: 'manage',
-				value: "ssh",
-				background: true,
-				arguments: { "name":"Commands","value":"command","command":"ssh","input": wp_cli }
+				command: 'run',
+				value: this.custom_script,
+				background: true
 			};
 
 			self = this;

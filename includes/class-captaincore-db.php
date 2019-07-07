@@ -102,6 +102,13 @@ class DB {
 		return $wpdb->get_results( $sql );
 	}
 
+	static function fetch_recipes( $sort = "created_at", $sort_order = "DESC" ) {
+		global $wpdb;
+		$user_id = get_current_user_id();
+		$sql = 'SELECT * FROM ' . self::_table() . " WHERE user_id = '{$user_id}' or `public` = '1' order by `{$sort}` {$sort_order}";
+		return $wpdb->get_results( $sql );
+	}
+
 	static function fetch_environments( $value ) {
 		global $wpdb;
 		$value = intval( $value );
