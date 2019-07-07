@@ -4475,7 +4475,7 @@ function captaincore_install_action_callback() {
 
 	if ( $cmd == 'run' ) {
 		$code = base64_encode( stripslashes_deep( $value ) );
-		$command = "run $site $code";
+		$command = "run $site --code=$code";
 	}
 
 	if ( $cmd == 'manage' ) {
