@@ -2160,7 +2160,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-card-title>
 					<v-layout align-start>
 					<v-flex xs12 sm8 pr-4 v-show="role == 'administrator'">
-					<v-subheader id="script">Custom bash script or WP-CLI commands</v-subheader>
+					<v-subheader id="script_bulk">Custom bash script or WP-CLI commands</v-subheader>
 						<v-textarea
 							auto-grow
 							solo
@@ -2190,7 +2190,7 @@ Vue.component('file-upload', VueUploadComponent);
 						</div>
 						<v-subheader v-show="recipes.filter( r => r.public != 1 ).length > 0">User</v-subheader>
 						<div v-for="recipe in recipes.filter( r => r.public != 1 )">
-							<v-btn small flat @click="loadRecipe( recipe.recipe_id )">
+							<v-btn small flat @click="loadRecipe( recipe.recipe_id ); $vuetify.goTo( '#script_bulk' );">
 								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
 							</v-btn>
 						</div>
@@ -2643,7 +2643,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-card-title>
 					<v-layout align-start>
 					<v-flex xs12 sm8 pr-4 v-show="role == 'administrator'">
-					<v-subheader id="script">Custom bash script or WP-CLI commands</v-subheader>
+					<v-subheader id="script_site">Custom bash script or WP-CLI commands</v-subheader>
 						<v-textarea
 							auto-grow
 							solo
@@ -2682,7 +2682,7 @@ Vue.component('file-upload', VueUploadComponent);
 						</div>
 						<v-subheader v-show="recipes.filter( r => r.public != 1 ).length > 0">User</v-subheader>
 						<div v-for="recipe in recipes.filter( r => r.public != 1 )">
-							<v-btn small flat @click="loadRecipe( recipe.recipe_id )">
+							<v-btn small flat @click="loadRecipe( recipe.recipe_id ); $vuetify.goTo( '#script_site' );">
 								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
 							</v-btn>
 						</div>
@@ -4608,8 +4608,7 @@ new Vue({
 			this.dialog_cookbook.recipe = recipe;
 			this.dialog_cookbook.show = true;
 		},
-		loadRecipe( recipe_id, site_id ) {
-			this.$vuetify.goTo( '#script' );
+		loadRecipe( recipe_id ) {
 			recipe = this.recipes.filter( recipe => recipe.recipe_id == recipe_id )[0];
 			this.snackbar.message = "Recipe '"+ recipe.title +"' loaded.";
 			this.snackbar.show = true;
