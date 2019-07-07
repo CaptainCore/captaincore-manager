@@ -2182,14 +2182,14 @@ Vue.component('file-upload', VueUploadComponent);
 							<div><v-btn small flat @click="toggleSiteBulk()">
 								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span>
 							</v-btn></div>
-						<v-subheader>Other</v-subheader>
-						<div v-for="recipe in recipes.filter( r => r.public )">
+						<v-subheader v-show="recipes.filter( r => r.public == 1 ).length > 0">Other</v-subheader>
+						<div v-for="recipe in recipes.filter( r => r.public == 1 )">
 							<v-btn small flat @click="runRecipeBulk( recipe.recipe_id )">
 								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
 							</v-btn>
 						</div>
-						<v-subheader v-show="recipes.filter( r => ! r.public ).length > 0">User</v-subheader>
-						<div v-for="recipe in recipes.filter( r => ! r.public )">
+						<v-subheader v-show="recipes.filter( r => r.public != 1 ).length > 0">User</v-subheader>
+						<div v-for="recipe in recipes.filter( r => r.public != 1 )">
 							<v-btn small flat @click="loadRecipe( recipe.recipe_id )">
 								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
 							</v-btn>
@@ -2674,14 +2674,14 @@ Vue.component('file-upload', VueUploadComponent);
 							<div><v-btn small flat @click="toggleSite(site.id)">
 								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span>
 							</v-btn></div>
-						<v-subheader>Other</v-subheader>
-						<div v-for="recipe in recipes.filter( r => r.public )">
-							<v-btn small flat @click="runRecipe(recipe.recipe_id, site.id)">
+						<v-subheader v-show="recipes.filter( r => r.public == 1 ).length > 0">Other</v-subheader>
+						<div v-for="recipe in recipes.filter( r => r.public == 1 )">
+							<v-btn small flat @click="runRecipe( recipe.recipe_id, site.id )">
 								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
 							</v-btn>
 						</div>
-						<v-subheader v-show="recipes.filter( r => ! r.public ).length > 0">User</v-subheader>
-						<div v-for="recipe in recipes.filter( r => ! r.public )">
+						<v-subheader v-show="recipes.filter( r => r.public != 1 ).length > 0">User</v-subheader>
+						<div v-for="recipe in recipes.filter( r => r.public != 1 )">
 							<v-btn small flat @click="loadRecipe( recipe.recipe_id )">
 								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
 							</v-btn>
