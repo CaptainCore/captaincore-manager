@@ -748,7 +748,7 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-card-text>
 		</v-card>
 	  </v-dialog>
-	  <v-dialog v-model="dialog_cookbook.show" max-width="800px" v-if="role == 'administrator'">
+	  <v-dialog v-model="dialog_cookbook.show" max-width="800px" v-if="role == 'administrator'" persistent>
 		<v-card tile style="margin:auto;max-width:800px">
 			<v-toolbar card color="grey lighten-4">
 				<v-btn icon @click.native="dialog_cookbook.show = false">
@@ -3211,7 +3211,7 @@ new Vue({
 		dialog_log_history: { show: false, logs: [], pagination: {} },
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_handbook: { show: false, process: {} },
-		new_recipe: { show: false, title: "", content: "", public: true },
+		new_recipe: { show: false, title: "", content: "", public: 1 },
 		new_process: { show: false, title: "", time_estimate: "", repeat: "as-needed", repeat_quantity: "", role: "", description: "" },
 		dialog_edit_process: { show: false, process: {} },
 		new_process_roles: 
