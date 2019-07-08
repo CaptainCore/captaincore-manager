@@ -2159,7 +2159,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-card flat>
 					<v-card-title>
 					<v-layout align-start>
-					<v-flex xs12 sm8 pr-4 v-show="role == 'administrator'">
+					<v-flex xs12 sm8 pr-4>
 					<v-subheader id="script_bulk">Custom bash script or WP-CLI commands</v-subheader>
 						<v-textarea
 							auto-grow
@@ -2642,7 +2642,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-card flat>
 					<v-card-title>
 					<v-layout align-start>
-					<v-flex xs12 sm8 pr-4 v-show="role == 'administrator'">
+					<v-flex xs12 sm8 pr-4>
 					<v-subheader id="script_site">Custom bash script or WP-CLI commands</v-subheader>
 						<v-textarea
 							auto-grow
