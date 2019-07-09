@@ -83,8 +83,8 @@ class Captaincore_Public {
 
 		if ( is_user_logged_in() ) {
 
-			// Pages: DNS, Licenses, Websites, Processes
-			if ( isset( $wp_query->query['dns'] ) || isset( $wp_query->query['licenses'] ) || isset( $wp_query->query['websites'] ) || isset( $wp_query->query['captcore_process'] ) ) {
+			// Pages: DNS, Websites, Processes
+			if ( isset( $wp_query->query['dns'] ) || isset( $wp_query->query['websites'] ) || isset( $wp_query->query['captcore_process'] ) ) {
 				$materialize_needed = true;
 			}
 			// Page: my-account dashboard when logged in

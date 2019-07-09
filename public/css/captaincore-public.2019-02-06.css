@@ -631,10 +631,6 @@ div.website .actions a {
   content: "\f111";
 }
 
-.woocommerce-MyAccount-navigation-link--licenses:before {
-  content: "\f112";
-}
-
 .woocommerce-MyAccount-navigation-link--sites:before {
   content: "\f0ad";
 	font-weight: 900;

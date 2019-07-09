@@ -142,7 +142,6 @@ function captaincore_my_account_order( $current_menu ) {
 		unset( $current_menu['manage'] );
 	}
 	if ( ! $role_check_partner ) {
-		unset( $current_menu['licenses'] );
 		unset( $current_menu['configs'] );
 	}
 	if ( ! $role_check_subscriber ) {
