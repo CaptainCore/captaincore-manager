@@ -810,6 +810,14 @@ class Site {
 		if ( $site->environments[0]['port'] == "" ) {
 			$response['errors'][] = "Error: Production environment port can't be empty.";
 		}
+		if ( $site->environments[0]['port'] != "" and ! ctype_digit( $site->environments[0]['port'] ) ) {
+			$response['errors'][] = "Error: Production environment port can only be numbers.";
+		}
+
+		if ( $site->environments[1]['port'] and ! ctype_digit( $site->environments[1]['port'] ) ) {
+			$response['errors'][] = "Error: Staging environment port can only be numbers.";
+		}
+		
 
 		// Hunt for conflicting site names
 		$arguments = array(
