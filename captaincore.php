@@ -6266,3 +6266,18 @@ function captaincore_activation_redirect( $plugin ) {
 	}
 }
 add_action( 'activated_plugin', 'captaincore_activation_redirect' );
+
+function sort_by_name($a, $b) {
+    return strcmp($a["name"], $b["name"]);
+}
+
+function captaincore_fetch_socket_address() {
+
+	$socket_address = str_replace( "https://", "wss://", CAPTAINCORE_CLI_ADDRESS );
+
+	if ( defined( 'CAPTAINCORE_CLI_SOCKET_ADDRESS' ) ) {
+		$socket_address = "wss://" . CAPTAINCORE_CLI_SOCKET_ADDRESS;
+	}
+
+	return $socket_address;
+}
