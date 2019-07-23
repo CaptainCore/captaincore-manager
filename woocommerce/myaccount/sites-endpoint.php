@@ -2107,13 +2107,46 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Sites <small>({{ showingSitesBegin }}-{{ showingSitesEnd }} of {{ filteredSites }})</small></v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn flat @click="view_jobs = !view_jobs">Running Jobs <small v-if="runningJobs">({{ runningJobs }})</small><v-icon dark small>fas fa-cogs</v-icon></v-btn>
-						<v-btn flat @click="dialog_bulk.show = !dialog_bulk.show">Bulk Management <small v-show="selectedSites > 0">({{ selectedSites }})</small><v-icon dark small>fas fa-cog</v-icon></v-btn>
-						<v-btn flat @click="advanced_filter = !advanced_filter">Advanced filter<v-icon dark small>fas fa-filter</v-icon></v-btn>
-						<v-btn flat @click="dialog_new_site.show = true" v-show="role == 'administrator'">Add Site <v-icon dark>add</v-icon></v-btn>
+						<v-tooltip top>
+							<template v-slot:activator="{ on }">
+								<v-btn flat small @click="configureDefaults" v-on="on"><v-icon dark small>fas fa-chalkboard</v-icon></v-btn>
+							</template><span>Configure Defaults</span>
+						</v-tooltip>
+						<v-divider vertical class="mx-1" inset></v-divider>
+						<v-tooltip top>
+							<template v-slot:activator="{ on }">
+								<v-btn flat small @click="fetchTimelineLogs" v-bind:class='{ "v-btn--active": view_timeline }' v-on="on"><v-icon dark small>far fa-list-alt</v-icon></v-btn>
+							</template><span>Timeline Logs</span>
+						</v-tooltip>
+						<v-divider vertical class="mx-1" inset></v-divider>
+						<v-tooltip top>
+							<template v-slot:activator="{ on }">
+								<v-btn flat small @click="view_jobs = !view_jobs" v-bind:class='{ "v-btn--active": view_jobs }' v-on="on"><small v-if="runningJobs">({{ runningJobs }})</small><v-icon dark small>fas fa-cogs</v-icon></v-btn>
+							</template><span>Job Activity</span>
+						</v-tooltip>
+						<v-divider vertical class="mx-1" inset></v-divider>
+						<v-tooltip top>
+							<template v-slot:activator="{ on }">
+								<v-btn flat small @click="dialog_bulk.show = !dialog_bulk.show" v-bind:class='{ "v-btn--active": dialog_bulk.show }' v-on="on"><small v-show="selectedSites > 0">({{ selectedSites }})</small><v-icon dark small>fas fa-cog</v-icon></v-btn>
+							</template><span>Bulk Tools</span>
+						</v-tooltip>
+						<v-divider vertical class="mx-1" inset></v-divider>
+						<v-tooltip top>
+							<template v-slot:activator="{ on }">
+								<v-btn flat small @click="advanced_filter = !advanced_filter" v-bind:class='{ "v-btn--active": advanced_filter }' v-on="on"><v-icon dark small>fas fa-filter</v-icon></v-btn>
+							</template><span>Filters</span>
+						</v-tooltip>
+						<template v-if="role == 'administrator'">
+						<v-divider vertical class="mx-1" inset></v-divider>
+						<v-tooltip top>
+							<template v-slot:activator="{ on }">
+								<v-btn flat small @click="dialog_new_site.show = true" v-on="on"><v-icon dark small>add</v-icon></v-btn>
+							</template><span>Add Site</span>
+						</v-tooltip>
+						</template>
 					</v-toolbar-items>
 				</v-toolbar>
-				<v-card-text>
+				<v-card-text class="my-2">
 				<v-layout justify-center id="sites">
 					<v-flex xs12 sm3>
 						<v-select
@@ -2189,7 +2222,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-btn icon dark @click.native="view_jobs = false">
 						<v-icon>close</v-icon>
 					</v-btn>
-					<v-toolbar-title>Running Jobs</v-toolbar-title>
+				<v-toolbar-title>Job Activity</v-toolbar-title>
 					<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-data-table
@@ -2217,117 +2250,12 @@ Vue.component('file-upload', VueUploadComponent);
 						</template>
 					</v-data-table>
 				</v-card>
-				<v-card v-show="advanced_filter == true">
-				<v-toolbar card dense dark color="primary">
-					<v-btn icon dark @click.native="advanced_filter = false">
-						<v-icon>close</v-icon>
-					</v-btn>
-					<v-toolbar-title>Advanced Filter</v-toolbar-title>
-					<v-spacer></v-spacer>
-				</v-toolbar>
-				<v-card-text>
-            <v-layout row>
-			<v-flex xs12 ma-1>
-			<v-autocomplete
-			:items="site_filters"
-			item-text="search"
-			item-value="name"
-			v-model="applied_site_filter"
-			ref="applied_site_filter"
-			@input="filterSites"
-			item-text="title"
-			label="Select Theme and/or Plugin"
-					class="siteFilter"
-			chips
-			multiple
-			hide-details
-			hide-selected
-			small-chips
-			deletable-chips
-			>
-				 <template slot="selection" slot-scope="data">
-					<v-chip
-						close
-						@input="data.parent.selectItem(data.item)"
-						:selected="data.selected"
-						class="chip--select-multi"
-						:key="JSON.stringify(data.item)"
-					>
-						<strong>{{ data.item.title }}</strong>&nbsp;<span>({{ data.item.name }})</span>
-					</v-chip>
-				</template>
-				<template slot="item" slot-scope="data">
-					 <strong>{{ data.item.title }}</strong>&nbsp;<span>({{ data.item.name }})</span>
-				</template>
-			</v-autocomplete>
-			</v-flex>
-		</v-layout>
-		<v-layout row>
-			<v-flex xs6 ma-1>
-				 <v-autocomplete
-				 v-model="applied_site_filter_version"
-				 v-for="filter in site_filter_version"
-					 :items="filter.versions"
-					 :key="filter.name"
-					 :label="'Select Version for '+ filter.name"
-					 @input="filterSites"
-					 item-text="title"
-					 chips
-					 multiple
-				 >
-				 <template slot="selection" slot-scope="data">
-					 <v-chip
-						 close
-						 @input="data.parent.selectItem(data.item)"
-						 :selected="data.selected"
-						 class="chip--select-multi"
-						 :key="JSON.stringify(data.item)"
-					 >
-						 {{ data.item.name }} ({{ data.item.count }})
-					 </v-chip>
-				 </template>
-				 <template slot="item" slot-scope="data">
-						<strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span>
-				 </template>
-				</v-autocomplete>
-			</v-flex>
-			<v-flex xs6 ma-1>
-				<v-autocomplete
-				v-model="applied_site_filter_status"
-				v-for="filter in site_filter_status"
-					:items="filter.statuses"
-					:key="filter.name"
-					:label="'Select Status for '+ filter.name"
-					@input="filterSites"
-					item-text="title"
-					chips
-					multiple
-				>
-				<template slot="selection" slot-scope="data">
-					<v-chip
-						close
-						@input="data.parent.selectItem(data.item)"
-						:selected="data.selected"
-						class="chip--select-multi"
-						:key="JSON.stringify(data.item)"
-					>
-						{{ data.item.name }} ({{ data.item.count }})
-					</v-chip>
-				</template>
-				<template slot="item" slot-scope="data">
-					 <strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span>
-				</template>
-				</v-autocomplete>
-			</v-flex>
-			</v-layout>
-			</v-card-text>
-            </v-card>
-			<v-card tile v-show="dialog_bulk.show == true">
-			<v-toolbar card dark color="primary" dense class="mt-3">
+			<v-card v-show="dialog_bulk.show == true" class="mb-3">
+			<v-toolbar card dark color="primary" dense>
 				<v-btn icon dark @click.native="dialog_bulk.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
-				<v-toolbar-title>Bulk Management</v-toolbar-title>
+				<v-toolbar-title>Bulk Tools</v-toolbar-title>
 				<v-spacer></v-spacer>
 			</v-toolbar>
 			<v-tabs v-model="dialog_bulk.tabs_management" color="grey lighten-4" right icons-and-text>
@@ -2495,6 +2423,111 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-card>
 			</v-tab-item>
 			</v-tabs-items>
+            </v-card>
+			<v-card v-show="advanced_filter == true" class="mb-3">
+				<v-toolbar card dense dark color="primary">
+					<v-btn icon dark @click.native="advanced_filter = false">
+						<v-icon>close</v-icon>
+					</v-btn>
+					<v-toolbar-title>Filters</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-card-text>
+			<v-layout row>
+			<v-flex xs12 ma-1>
+			<v-autocomplete
+			:items="site_filters"
+			item-text="search"
+			item-value="name"
+			v-model="applied_site_filter"
+			ref="applied_site_filter"
+			@input="filterSites"
+			item-text="title"
+			label="Select Theme and/or Plugin"
+			class="siteFilter"
+			chips
+			multiple
+			hide-details
+			hide-selected
+			small-chips
+			deletable-chips
+			>
+				 <template slot="selection" slot-scope="data">
+					<v-chip
+						close
+						@input="data.parent.selectItem(data.item)"
+						:selected="data.selected"
+						class="chip--select-multi"
+						:key="JSON.stringify(data.item)"
+					>
+						<strong>{{ data.item.title }}</strong>&nbsp;<span>({{ data.item.name }})</span>
+					</v-chip>
+				</template>
+				<template slot="item" slot-scope="data">
+					 <strong>{{ data.item.title }}</strong>&nbsp;<span>({{ data.item.name }})</span>
+				</template>
+			</v-autocomplete>
+			</v-flex>
+		</v-layout>
+		<v-layout row>
+			<v-flex xs6 ma-1>
+				 <v-autocomplete
+				 v-model="applied_site_filter_version"
+				 v-for="filter in site_filter_version"
+					 :items="filter.versions"
+					 :key="filter.name"
+					 :label="'Select Version for '+ filter.name"
+					 @input="filterSites"
+					 item-text="title"
+					 chips
+					 multiple
+				 >
+				 <template slot="selection" slot-scope="data">
+					 <v-chip
+						 close
+						 @input="data.parent.selectItem(data.item)"
+						 :selected="data.selected"
+						 class="chip--select-multi"
+						 :key="JSON.stringify(data.item)"
+					 >
+						 {{ data.item.name }} ({{ data.item.count }})
+					 </v-chip>
+				 </template>
+				 <template slot="item" slot-scope="data">
+						<strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span>
+				 </template>
+				</v-autocomplete>
+			</v-flex>
+			<v-flex xs6 ma-1>
+				<v-autocomplete
+				v-model="applied_site_filter_status"
+				v-for="filter in site_filter_status"
+					:items="filter.statuses"
+					:key="filter.name"
+					:label="'Select Status for '+ filter.name"
+					@input="filterSites"
+					item-text="title"
+					chips
+					multiple
+				>
+				<template slot="selection" slot-scope="data">
+					<v-chip
+						close
+						@input="data.parent.selectItem(data.item)"
+						:selected="data.selected"
+						class="chip--select-multi"
+						:key="JSON.stringify(data.item)"
+					>
+						{{ data.item.name }} ({{ data.item.count }})
+					</v-chip>
+				</template>
+				<template slot="item" slot-scope="data">
+					 <strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span>
+				</template>
+				</v-autocomplete>
+			</v-flex>
+			</v-layout>
+			</v-card-text>
             </v-card>
 				<div class="text-xs-right" v-show="sites.length > 1">
 				<v-btn-toggle v-model="toggle_site_sort" style="box-shadow: none; border-bottom: 1px solid #e0e0e0;" v-bind:class="sort_direction">
@@ -3372,7 +3405,9 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
 						<v-btn flat @click="fetchProcessLogs()">Log history</v-btn>
+						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-btn flat @click="showLogEntryGeneric()">New log entry</v-btn>
+						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-btn flat @click="new_process.show = true">New process</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
