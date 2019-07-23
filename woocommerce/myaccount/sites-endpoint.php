@@ -2546,7 +2546,7 @@ Vue.component('file-upload', VueUploadComponent);
 										<v-layout align-center justify-start fill-height/>
 										<v-switch v-model="site.selected" @click.native.stop @change="site_selected = null" style="position: absolute;left: -48px;top: 12px;" v-show="dialog_bulk.show == true"></v-switch>
 											<img :src="site.environments[0].screenshot_small" style="width: 50px; margin-right:1em" class="elevation-1" v-show="site.environments[0].screenshot_small">
-										<strong>{{ site.name }}</strong>
+										{{ site.name }}
 										</v-layout>
 									</div>
 									<div class="text-xs-right">
@@ -7288,11 +7288,6 @@ new Vue({
 
 		}
 	}
-});
-
-
-jQuery( document ).ready(function() {
-	jQuery('.toggle_woocommerce_my_account a:visible').click();
 });
 
 </script>
