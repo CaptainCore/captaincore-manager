@@ -1772,6 +1772,31 @@ function captaincore_site_func( $request ) {
 
 }
 
+function captaincore_domain_func( $request ) {
+
+	$domain_id = $request['id'];
+
+	if ( ! captaincore_verify_permissions_domain( $domain_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', array( 'status' => 403 ) );
+	}
+
+	$domain   = constellix_api_get( "domains/$domain_id" );
+	$response = constellix_api_get( "domains/$domain_id/records" );
+	if ( ! $response->errors ) {
+		array_multisort( array_column( $response, 'type' ), SORT_ASC, array_column( $response, 'name' ), SORT_ASC, $response );
+	}
+
+	return $response;
+
+}
+
+function captaincore_domains_func( $request ) {
+
+	$domains = (new CaptainCore\Domains())->all();
+	return $domains;
+
+}
+
 function captaincore_site_quicksaves_func( $request ) {
 	$site_id = $request['id'];
 
@@ -2063,6 +2088,24 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/', array(
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_sites_func',
+			'show_in_index' => false
+		)
+	);
+
+	// Custom endpoint for domain
+	register_rest_route(
+		'captaincore/v1', '/domain/(?P<id>[\d]+)', array(
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_domain_func',
+			'show_in_index' => false
+		)
+	);
+
+	// Custom endpoint for domains
+	register_rest_route(
+		'captaincore/v1', '/domains/', array(
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_domains_func',
 			'show_in_index' => false
 		)
 	);
@@ -3072,7 +3115,7 @@ function captaincore_dns_action_callback() {
 	foreach ( $record_updates as $record_update ) {
 
 		$record_id     = $record_update['record_id'];
-		$record_type   = $record_update['record_type'];
+		$record_type   = strtolower($record_update['record_type']);
 		$record_name   = $record_update['record_name'];
 		$record_value  = $record_update['record_value'];
 		$record_ttl    = $record_update['record_ttl'];
@@ -3086,7 +3129,7 @@ function captaincore_dns_action_callback() {
 				foreach ( $record_value as $mx_record ) {
 					$mx_records[] = array(
 						'value'       => $mx_record['value'],
-						'level'       => $mx_record['priority'],
+						'level'       => $mx_record['level'],
 						'disableFlag' => false,
 					);
 				}
@@ -3096,6 +3139,24 @@ function captaincore_dns_action_callback() {
 					'name'         => $record_name,
 					'ttl'          => $record_ttl,
 					'roundRobin'   => $mx_records,
+				);
+
+			} elseif ( $record_type == 'txt' or $record_type == 'a' or $record_type == 'aname' or $record_type == 'aaaa' or $record_type == 'spf' ) {
+
+				// Formats A and TXT records into array which API can read
+				$records = [];
+				foreach ( $record_value as $record ) {
+					$records[] = array(
+						'value'       => stripslashes( $record['value'] ),
+						'disableFlag' => false,
+					);
+				}
+
+				$post = array(
+					'recordOption' => 'roundRobin',
+					'name'         => "$record_name",
+					'ttl'          => $record_ttl,
+					'roundRobin'   => $records,
 				);
 
 			} elseif ( $record_type == 'cname' ) {
@@ -3140,12 +3201,7 @@ function captaincore_dns_action_callback() {
 					'recordOption' => 'roundRobin',
 					'name'         => $record_name,
 					'ttl'          => $record_ttl,
-					'roundRobin'   => array(
-						array(
-							'value'       => $record_value,
-							'disableFlag' => false,
-						),
-					),
+					'roundRobin'   => $record_value,
 				);
 
 			}
@@ -3170,7 +3226,7 @@ function captaincore_dns_action_callback() {
 				foreach ( $record_value as $mx_record ) {
 					$mx_records[] = array(
 						'value'       => $mx_record['value'],
-						'level'       => $mx_record['priority'],
+						'level'       => $mx_record['level'],
 						'disableFlag' => false,
 					);
 				}
@@ -3182,13 +3238,18 @@ function captaincore_dns_action_callback() {
 					'roundRobin'   => $mx_records,
 				);
 
-			} elseif ( $record_type == 'txt' or $record_type == 'a' ) {
+			} elseif ( $record_type == 'txt' or $record_type == 'a' or $record_type == 'aname' or $record_type == 'aaaa' or $record_type == 'spf' ) {
 
 				// Formats A and TXT records into array which API can read
 				$records = [];
 				foreach ( $record_value as $record ) {
+					$value = stripslashes( $record['value'] );
+					// Wrap TXT value in double quotes if not currently
+					if ( $record_type == 'txt' and $value[0] != '"' and $value[-1] != '"' ) {
+						$value = "\"{$value}\"";
+					}
 					$records[] = array(
-						'value'       => stripslashes( $record['value'] ),
+						'value'       => $value,
 						'disableFlag' => false,
 					);
 				}

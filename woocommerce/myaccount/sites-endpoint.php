@@ -89,6 +89,40 @@ g.chart-legend {
 	display: none;
 }
 
+.table-dns {
+	border-collapse: collapse;
+	table-layout:fixed;
+}
+
+.table-dns td {
+	padding: 0 1em 0 0em;
+    margin-bottom: 0px;
+    line-height: 1.50em;
+    font-size: 16px;
+    border-top: 1px solid #8a8a8a;
+}
+.table-dns td.value {
+	overflow-wrap: break-word;
+    word-wrap: break-word;
+    -ms-word-break: break-all;
+    word-break: break-all;
+    word-break: break-word;
+    -ms-hyphens: auto;
+    -moz-hyphens: auto;
+    -webkit-hyphens: auto;
+    hyphens: auto;
+}
+.table-dns tr.delete {
+	color: #ff00008c;
+    background: #80808021;
+}
+.table-dns tr.delete td:not(:last-child) {
+    text-decoration: line-through;
+}
+.table-dns td:last-child {
+	padding: 0px;
+}
+
 .table-layout-fixed table {
 	border-collapse: collapse;
 	table-layout:fixed;
@@ -122,6 +156,15 @@ g.chart-legend {
 
 .application.theme--light a {
 	color: inherit;
+}
+
+.application.theme--light .dns_introduction a {
+	text-decoration: underline;
+	font-weight: bold;
+}
+
+.application.theme--light .dns_introduction p {
+	margin-bottom: 0px;
 }
 
 .theme--light.v-table a,
@@ -717,6 +760,132 @@ Vue.component('file-upload', VueUploadComponent);
           </v-card-actions>
         </v-card>
       </v-dialog>
+	  <v-dialog v-model="dialog_domain.show" max-width="1200px" persistent>
+	  	<v-card tile style="margin:auto;max-width:1200px">
+			<v-toolbar card color="grey lighten-4">
+				<v-btn icon @click.native="dialog_domain.show = false">
+					<v-icon>close</v-icon>
+				</v-btn>
+				<v-toolbar-title>Modify DNS for {{ dialog_domain.domain.name }}</v-toolbar-title>
+				<v-spacer></v-spacer>
+				<span v-show="dnsRecords > 0" class="body-2 mr-4">{{ dnsRecords }} records</span>
+			</v-toolbar>
+			<v-card-text style="max-height: 100%;">
+			<v-container>
+			<v-layout row wrap>
+				<v-flex xs12 pa-2>
+					<v-progress-linear :indeterminate="true" v-if="dialog_domain.loading"></v-progress-linear>
+					<table class="table-dns" v-else>
+						<tr>
+							<th width="125">Type</th>
+							<th width="200">Name</th>
+							<th>Value</th>
+							<th width="75">TTL</th>
+							<th width="70"></th>
+						</tr>
+						<tr v-for="(record, index) in dialog_domain.records" :key="record.id" v-bind:class="{ delete: record.delete }">
+						<template v-if="record.edit">
+							<td>{{ record.type }}</td>
+							<td><v-text-field label="Name" :value="record.update.record_name" @change.native="record.update.record_name = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
+							<td class="value" v-if="record.type == 'MX'">
+								<v-layout v-for="(value, value_index) in record.update.record_value">
+									<v-flex xs3><v-text-field label="Level" :value="value.level" @change.native="value.level = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+									<v-flex xs9><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn flat small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field></v-flex>
+								</v-layout>
+								<v-btn depressed small class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
+							</td>
+							<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'SPF'">
+								<div v-for="(value, value_index) in record.update.record_value" :key="`value-${index}-${value_index}`">
+									<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn flat small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field>
+								</div>
+								<v-btn depressed small class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
+							</td>
+							<td class="value" v-else-if="record.type == 'SRV'">
+								<v-layout v-for="value in record.update.record_value">
+									<v-flex xs2><v-text-field label="Priority" :value="value.priority" @change.native="value.priority = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+									<v-flex xs2><v-text-field label="Weight" :value="value.weight" @change.native="value.weight = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+									<v-flex xs2><v-text-field label="Port" :value="value.port" @change.native="value.port = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+									<v-flex xs6><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+								</v-layout>
+								<v-btn depressed small class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
+							</td>
+							<td class="value" v-else>
+								<v-text-field label="Value" :value="record.update.record_value" @change.native="record.update.record_value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
+							</td>
+							<td><v-text-field label="TTL" :value="record.update.record_ttl" @change.native="record.update.record_ttl = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
+							<td class="text-xs-right">
+								<v-btn flat small icon color="primary" class="ma-0 pa-0" @click="viewRecord( record.id )" :disabled="dialog_domain.saving"><v-icon small>fas fa-edit</v-icon></v-btn>
+								<v-btn flat small icon color="primary" class="ma-0 pa-0" @click="deleteRecord( record.id )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn>
+							</td>
+						</template>
+						<template v-else-if="record.new">
+							<td><v-select v-model="record.type" @input="changeRecordType( index )" item-text="name" item-value="value" :items='[{"name":"A","value":"A"},{"name":"AAAA","value":"AAAA"},{"name":"ANAME","value":"ANAME"},{"name":"CNAME","value":"CNAME"},{"name":"HTTP Redirect","value":"HTTPRedirection"},{"name":"MX","value":"MX"},{"name":"SPF","value":"SPF"},{"name":"SRV","value":"SRV"},{"name":"TXT","value":"TXT"}]' label="Type" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-select></td>
+							<td><v-text-field label="Name" :value="record.update.record_name" @change.native="record.update.record_name = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
+							<td class="value" v-if="record.type == 'MX'">
+								<v-layout v-for="(value, value_index) in record.update.record_value">
+									<v-flex xs3><v-text-field label="Level" :value="value.level" @change.native="value.level = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+									<v-flex xs9><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn flat small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field></v-flex>
+								</v-layout>
+								<v-btn depressed small class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
+							</td>
+							<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'SPF'">
+								<div v-for="(value, value_index) in record.update.record_value" :key="`value-${index}-${value_index}`">
+									<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn flat small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field>
+								</div>
+								<v-btn depressed small class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
+							</td>
+							<td class="value" v-else-if="record.type == 'SRV'">
+								<v-layout v-for="value in record.update.record_value">
+									<v-flex xs2><v-text-field label="Priority" :value="value.priority" @change.native="value.priority = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+									<v-flex xs2><v-text-field label="Weight" :value="value.weight" @change.native="value.weight = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+									<v-flex xs2><v-text-field label="Port" :value="value.port" @change.native="value.port = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+									<v-flex xs6><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+								</v-layout>
+							</td>
+							<td class="value" v-else>
+								<v-text-field label="Value" :value="record.update.record_value" @change.native="record.update.record_value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
+							</td>
+							<td><v-text-field label="TTL" :value="record.update.record_ttl" @change.native="record.update.record_ttl = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
+							<td class="text-xs-right">
+								<v-btn flat small icon color="primary" class="ma-0 pa-0" @click="deleteRecord( index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn>
+							</td>
+						</template>
+						<template v-else>
+							<td>{{ record.type }}</td>
+							<td>{{ record.name }}</td>
+							<td class="value" v-if="record.type == 'MX'"><div v-for="value in record.value">{{ value.level }} {{ value.value }}</div></td>
+							<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'SPF'"><div v-for="value in record.value">{{ value.value }}</div></td>
+							<td class="value" v-else-if="record.type == 'SRV'"><div v-for="value in record.value">{{ value.priority }} {{ value.weight }} {{ value.port }} {{ value.value }}</div></td>
+							<td class="value" v-else>{{ record.value }}</td>
+							<td>{{ record.ttl }}</td>
+							<td class="text-xs-right">
+								<v-btn flat small icon color="primary" class="ma-0 pa-0" @click="editRecord( record.id )" :disabled="dialog_domain.saving"><v-icon small>fas fa-edit</v-icon></v-btn>
+								<v-btn flat small icon color="primary" class="ma-0 pa-0" @click="deleteCurrentRecord( record.id )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn>
+							</td>
+						</template>
+						</tr>
+					</table>
+					<v-btn small depressed class="ma-0" @click="addRecord()" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
+				</v-flex>
+				<v-flex xs12>
+					<v-progress-linear :indeterminate="true" v-show="dialog_domain.saving"></v-progress-linear>
+				</v-flex>
+				<v-flex xs12 text-xs-right pa-0 ma-0 v-show="!dialog_domain.loading">
+					<v-btn color="primary" dark @click="saveDNS()">
+						Save Records
+					</v-btn>
+				</v-flex>
+				<v-flex xs12>
+					<template v-for="result in dialog_domain.results">
+						<v-alert :value="true" type="success" v-show="typeof result.success != 'undefined'">{{ result.success }}</v-alert>
+						<v-alert :value="true" type="error" v-show="typeof result.errors != 'undefined'">{{ result.errors }}</v-alert>
+					</template>
+				</v-flex>
+			</v-layout>
+			</v-container>
+			</v-card-text>
+		</v-card>
+	  </v-dialog>
 	  <v-dialog v-model="new_recipe.show" max-width="800px" v-if="role == 'administrator'">
 	  	<v-card tile style="margin:auto;max-width:800px">
 			<v-toolbar card color="grey lighten-4">
@@ -986,6 +1155,85 @@ Vue.component('file-upload', VueUploadComponent);
           </v-card-text>
         </v-card>
       </v-dialog>
+		<v-dialog v-model="dialog_new_domain.show" scrollable width="500">
+		<v-card>
+			<v-card-text>
+				<v-text-field :value="dialog_new_domain.domain.name" @change.native="dialog_new_domain.domain.name = $event.target.value" label="Domain Name" required></v-text-field>
+				<v-autocomplete :value="dialog_new_domain.domain.customer" @change.native="dialog_new_domain.domain.customer = $event.target.value" label="Customer" required></v-autocomplete>
+			</v-card-text>
+		</v-card>
+		</v-dialog>
+		<v-dialog v-model="dialog_configure_defaults.show" scrollable width="980">
+		<v-card>
+			<v-toolbar card dark color="primary">
+			<v-btn icon dark @click.native="dialog_configure_defaults.show = false">
+				<v-icon>close</v-icon>
+			</v-btn>
+			<v-toolbar-title>Configure Defaults</v-toolbar-title>
+				<v-spacer></v-spacer>
+			</v-toolbar>
+			<v-card-text>
+				<template v-if="dialog_configure_defaults.loading">
+					<v-progress-linear :indeterminate="true"></v-progress-linear>
+				</template>
+				<template v-else>
+				<v-select :items="dialog_configure_defaults.records.map( a => a.account )" label="Account" item-value="id" v-model="dialog_configure_defaults.account" @input="switchConfigureDefaultAccount()">
+					<template v-slot:selection="data">
+						<span v-html="data.item.name"></span>
+					</template>
+					<template v-slot:item="data">
+						<span v-html="data.item.name"></span>
+					</template>
+				</v-select>
+				<v-alert
+					:value="true"
+					type="info"
+					v-if="dialog_configure_defaults.record.account"
+					class="mb-4"
+				>
+					When new sites are added to the account <strong>{{ dialog_configure_defaults.record.account.name }}</strong> then the following default settings will be applied.  
+				</v-alert>
+				<v-layout wrap>			
+					<v-flex xs6 pr-2><v-text-field :value="dialog_configure_defaults.record.default_email" @change.native="dialog_configure_defaults.record.default_email = $event.target.value" label="Default Email" required></v-text-field></v-flex>
+					<v-flex xs6 pl-2><v-autocomplete :items="timezones" label="Default Timezone" v-model="dialog_configure_defaults.record.default_timezone"></v-autocomplete></v-flex>
+				</v-layout>
+				<v-layout wrap>
+					<v-flex><v-autocomplete label="Default Plugins" v-model="dialog_configure_defaults.record.default_plugins" ref="default_plugins" :items="default_plugins" item-text="name" item-value="slug" multiple chips deletable-chips></v-autocomplete></v-flex>
+				</v-layout>
+
+				<span class="body-2">Default Users</span>
+				<v-data-table
+					:items="dialog_configure_defaults.record.default_users"
+					hide-headers
+					hide-actions
+				>
+					<template v-slot:items="props">
+					<tr style="border-bottom: 0px;">
+						<td class="pa-1"><v-text-field :value="props.item.username" @change.native="props.item.username = $event.target.value" label="Username"></v-text-field></td>
+						<td class="pa-1"><v-text-field :value="props.item.email" @change.native="props.item.email = $event.target.value" label="Email"></v-text-field></td>
+						<td class="pa-1"><v-text-field :value="props.item.first_name" @change.native="props.item.first_name = $event.target.value" label="First Name"></v-text-field></td>
+						<td class="pa-1"><v-text-field :value="props.item.last_name" @change.native="props.item.last_name = $event.target.value" label="Last Name"></v-text-field></td>
+						<td class="pa-1" style="width:135px;"><v-select :value="props.item.role" v-model="props.item.role" :items="roles" label="Role" item-text="name"></v-select></td>
+					</tr>
+					</template>
+					<template v-slot:footer>
+					<tr style="border-top: 0px;">
+						<td colspan="5" style="padding:0px;">
+							<v-btn depressed small class="ma-0 mb-3" @click="addDefaultsUser()">Add Additional User</v-btn>
+						</td>
+					</tr>
+					</template>
+				</v-data-table>
+
+				<v-flex xs12 text-xs-right>
+					<v-btn color="primary" dark @click="saveDefaults()">
+						Save Changes
+					</v-btn>
+				</v-flex>
+				</template>
+			</v-card-text>
+		</v-card>
+		</v-dialog>
 		<v-dialog v-model="dialog_new_site.show" scrollable>
 					<v-card tile>
 						<v-toolbar card dark color="primary">
@@ -3008,7 +3256,53 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-layout>
 			</v-card-text>
 			</v-card>
-			<v-card tile v-show="active_page == 'Cookbook'" v-if="role == 'administrator'">
+			<v-card class="mb-4 dns_introduction" v-show="route == 'dns'">
+			<v-alert
+				:value="true"
+				type="info"
+				style="padding:8px 16px;"
+				class="blue darken-3"
+				>
+				<v-layout wrap align-center justify-center row fill-height>
+				<v-flex xs12 md9 px-2 subheading>
+					<div v-html="dns_introduction"></div>
+				</v-flex>
+				<v-flex xs12 md3 px-2 text-xs-center v-show="dns_nameservers != ''">
+					<v-chip color="primary" text-color="white" disabled>Nameservers</v-chip>
+					<div v-html="dns_nameservers"></div>
+				</v-flex>
+				</v-layout>
+				</v-alert>
+			</v-card>
+			<v-card tile v-show="route == 'dns'">
+				<v-toolbar color="grey lighten-4" dense light flat>
+					<v-toolbar-title>Domains <small v-show="allDomains > 0">({{ allDomains }})</small></v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+						<v-btn flat @click="dialog_new_domain.show = true" v-show="role == 'administrator'">Add Domain <v-icon dark>add</v-icon></v-btn>
+					</v-toolbar-items>
+				</v-toolbar>
+				<v-card-text>
+				<v-layout justify-center>
+				<v-container fluid grid-list-lg>
+				<v-layout row wrap>
+					<v-flex v-for="domain in domains" :key="domain.id" xs6>
+					<v-card>
+						<v-card-title primary-title>
+						<div>
+							<h3 class="headline mb-0">{{ domain.name }}</h3>
+						</div>
+						</v-card-title>
+						<v-card-actions>
+						<v-btn flat color="primary" @click="modifyDNS( domain )">Modify DNS</v-btn>
+						</v-card-actions>
+					</v-card>
+					</v-flex>
+				</v-layout>
+				</v-container>
+				</v-layout>
+				</v-card-text>
+			</v-card>
 				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Contains {{ recipes.length }} recipes</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -3127,6 +3421,8 @@ new Vue({
 		dialog_apply_https_urls: { show: false, site_id: "", site_name: "", sites: [] },
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
 		dialog_edit_site: { show: false, site: {}, loading: false },
+		dialog_new_domain: { show: false, domain: { name: "", customer: "" } },
+		dialog_domain: { show: false, domain: {}, records: [], results: [], loading: true, saving: false },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $current_user->user_email; ?>", current_user_email: "<?php echo $current_user->user_email; ?>", filter_toggle: true, filter_options: [] },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
 		dialog_mailgun: { show: false, site: {}, response: "", loading: false },
@@ -3267,6 +3563,9 @@ new Vue({
 			{"text":"Name","value":"name","sortable":false,"width":"165"},
 			{"text":"Notes","value":"notes","sortable":false},
 		],<?php } ?>
+		domains: [],
+		dns_introduction: <?php $Parsedown = new Parsedown(); echo json_encode( $Parsedown->text( get_field( "dns_introduction", "option" ) ) ); ?>,
+		dns_nameservers: <?php echo json_encode( $Parsedown->text( get_field( "dns_nameservers", "option" ) ) ); ?>,
 		new_plugin: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {} },
 		new_theme: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {} },
 		bulk_edit: { show: false, site_id: null, type: null, items: [] },
@@ -3509,6 +3808,24 @@ new Vue({
 		developers() {
 			return this.customers.filter(customer => customer.developer );
 		},
+		dnsRecords() {
+			count = 0;
+			this.dialog_domain.records.forEach( r => {
+				if ( r.update.record_status == 'new-record' ) {
+					return
+				}
+				if ( typeof r.value === 'string' ) {
+					count = count + 1;
+				}
+				if ( typeof r.value === 'object' ) {
+					count = count + r.value.length
+				}
+			})
+			return count;
+	},
+		allDomains() {
+			return Object.keys( this.domains ).length;
+		}
 	},
 	methods: {
 		triggerEnvironmentUpdate( site_id ){
@@ -4004,6 +4321,17 @@ new Vue({
 					}
 				});
 			});
+		},
+		fetchDomains() {
+			axios.get(
+				'/wp-json/captaincore/v1/domains', {
+					headers: {'X-WP-Nonce':wpApiSettings.nonce}
+				})
+				.then(response => {
+					this.domains = response.data;
+					this.loading_page = false;
+					setTimeout(this.fetchMissing, 3000)
+				});
 		},
 		fetchStats( site_id ) {
 
@@ -5112,6 +5440,281 @@ new Vue({
 				})
 				.catch( error => console.log( error ) );
 
+		},
+		addDefaultsUser() {
+			this.dialog_configure_defaults.record.default_users.push({ email: "", first_name: "", last_name: "", role: "administrator", username: "" })
+		},
+		addRecord() {
+			timestamp = new Date().getTime();
+			this.dialog_domain.records.push({ id: "new_" + timestamp, edit: false, delete: false, new: true, ttl: "1800", type: "A", value: [{"value": ""}], update: {"record_id": "new_" + timestamp, "record_type": "A", "record_name": "", "record_value": [{"value": ""}], "record_ttl": "1800", "record_status": "new-record" } });
+		},
+		addRecordValue( index ) {
+			record = this.dialog_domain.records[index];
+			if ( record.type == "A" || record.type == "AAAA" || record.type == "ANAME" || record.type == "TXT" || record.type == "SPF" ) {
+				record.update.record_value.push({ value: "" });
+			}
+			if ( record.type == "MX" ) {
+				record.update.record_value.push({ level: "", value: "" });
+			}
+			if ( record.type == "SRV" ) {
+				record.update.record_value.push({ priority: 0, weight: 0, port: 443, value: "" });
+			}
+		},
+		viewRecord( record_id ){
+			record = this.dialog_domain.records.filter( r => r.id == record_id )[0];
+			record.edit = false
+			record.delete = false
+		},
+		editRecord( record_id ){
+			record = this.dialog_domain.records.filter( r => r.id == record_id )[0];
+			record.edit = true
+			record.delete = false
+		},
+		changeRecordType( index ) {
+			record = this.dialog_domain.records.filter( (r, i) => i == index )[0];
+			if ( record.type == "A" || record.type == "AAAA" || record.type == "ANAME" || record.type == "TXT" || record.type == "SPF" ) {
+				record.update.record_value = [{ value: "" }];
+			}
+			if ( record.type == "MX" ) {
+				record.update.record_value = [{ level: "", value: "" }];
+			}
+			if ( record.type == "SRV" ) {
+				record.update.record_value = [{ priority: 0, weight: 0, port: 443, value: "" }];
+			}
+			if ( record.type == "CNAME" || record.type == "HTTPRedirection" ) {
+				record.update.record_value = "";
+			}
+		},
+		deleteRecordValue( index, value_index ) {
+			this.dialog_domain.records[index].update.record_value.splice( value_index, 1 );
+		},
+		deleteCurrentRecord( record_id ){
+			record = this.dialog_domain.records.filter( r => r.id == record_id )[0];
+			record.edit = false
+			record.delete = !record.delete
+		},
+		deleteRecord( index ){
+			this.dialog_domain.records.splice( index, 1 )
+		},
+		modifyDNS( domain ) {
+			this.dialog_domain = { show: false, domain: {}, records: [], loading: true, saving: false };
+			self = this;
+			axios.get(
+				'/wp-json/captaincore/v1/domain/' + domain.id, {
+					headers: {'X-WP-Nonce':wpApiSettings.nonce}
+				})
+				.then(response => {
+					if ( typeof response.data == "string" ) {
+						self.snackbar.message = response.data;
+						self.snackbar.show = true;
+						this.dialog_domain = { show: false, domain: {}, records: [], loading: false, saving: false };
+						return
+					}
+
+					if ( typeof response.data.errors == 'object' ) {
+						self.snackbar.message = response.data.errors.join(" ");
+						self.snackbar.show = true;
+						this.dialog_domain = { show: false, domain: {}, records: [], loading: false, saving: false };
+						return
+					}
+
+					// Prep records with 
+					response.data.forEach( r => {
+						if ( r.type == "A" || r.type == "AAAA" ) {
+							new_value = [];
+							r.value.forEach( v => {
+								new_value.push({ "value": v });
+							});
+							r.value = new_value;
+						}
+						r.update = {
+							"record_id": JSON.parse(JSON.stringify(r.id)),
+							"record_type": JSON.parse(JSON.stringify(r.type)),
+							"record_name": JSON.parse(JSON.stringify(r.name)),
+							"record_value": JSON.parse(JSON.stringify(r.value)),
+							"record_ttl": JSON.parse(JSON.stringify(r.ttl)),
+							"record_status": "edit-record"
+						};
+						r.edit = false;
+						r.delete = false;
+					});
+					timestamp = new Date().getTime();
+					response.data.push({ id: "new_" + timestamp, edit: false, delete: false, new: true, ttl: "1800", type: "A", value: [{"value": ""}], update: {"record_id": "new_" + timestamp, "record_type": "A", "record_name": "", "record_value": [{"value": ""}], "record_ttl": "1800", "record_status": "new-record" } });
+					this.dialog_domain.records = response.data;
+					this.dialog_domain.loading = false;
+				});
+			this.dialog_domain.domain = domain;
+			this.dialog_domain.show = true;
+			
+		},
+		saveDNS() {
+
+			this.dialog_domain.saving = true;
+			domain_id = this.dialog_domain.domain.id;
+			record_updates = [];
+
+			this.dialog_domain.records.forEach( record => {
+				// Format value for API
+				if ( record.type != "CNAME" && record.type != "HTTPRedirection" ) {
+					record_value = [];
+					record.update.record_value.forEach( v => {
+						if ( v.value == "" ) {
+							return
+						}
+						
+						v.value = v.value.trim();
+						record_value.push( v );
+						
+					});
+				}
+
+				if ( record.type == "CNAME" ) {
+					// Check for value ending in period. If not add one.
+					record_value = record.update.record_value.trim();
+					if ( record_value.substr(record_value.length - 1) != "." ) {
+						record_value = record_value + ".";
+					}
+				}
+
+				if ( record.type == "HTTPRedirection" ) {
+					record_value = record.update.record_value.trim();
+				}
+
+				// Clean out empty values
+				if ( record.update.record_type == "A" && record_value.length == 0 ) {
+					return;
+				}
+				
+				// Clean out empty values
+				if ( record.update.record_type == "CNAME" && record.update.record_value == "" ) {
+					return;
+				}
+
+				// Prepares new records
+				if ( record.new ) {
+					record.update.record_type = record.type;
+				}
+				
+				// Prepares new & modified records
+				if ( record.edit || record.new ) {
+					record.update.record_value = record_value;
+					record_updates.push( record.update );
+				}
+
+				// Prepares records to be removed
+				if ( record.delete ) {
+					record_updates.push({
+						"record_id": record.id,
+						"record_type": record.type,
+						"record_name": record.name,
+						"record_value": record_value,
+						"record_ttl": record.ttl,
+						"record_status": "remove-record"
+					});
+				}
+			});
+			
+			if ( record_updates.length == 0 ) {
+				this.snackbar.message = "No record changes found.";
+				this.snackbar.show = true;
+				this.dialog_domain.saving = false;
+				return;
+			}
+
+			var data = {
+				'action': 'captaincore_dns',
+				'domain_key': domain_id,
+				'record_updates': record_updates
+			};
+
+			console.log( record_updates );
+			// this.dialog_domain.saving = false;
+
+			self = this;
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.dialog_domain.results = response.data;
+					self.reflectDNS();
+					
+					// If no errors found then fetch new details
+					// self.modifyDNS( self.dialog_domain.domain );
+				})
+				.catch( error => {
+					self.snackbar.message = error;
+					self.snackbar.show = true;
+					self.dialog_domain.saving = false;
+					//self.dialog_domain.results = response.data;
+				});
+		},
+		reflectDNS() {
+			this.dialog_domain.results.forEach( result => {
+
+				if ( result.success && result.success == "Record  updated successfully" ) {
+					record = this.dialog_domain.records.filter( r => r.id == result.record_id )[0];
+					record.edit = false;
+					record.name = JSON.parse(JSON.stringify( record.update.record_name ));
+					record.value = JSON.parse(JSON.stringify( record.update.record_value ));
+					record.ttl = JSON.parse(JSON.stringify( record.update.record_ttl ));
+				}
+
+				if ( result.success && result.success == "Record  deleted successfully" ) {
+					this.dialog_domain.records = this.dialog_domain.records.filter( record => result.record_id != record.id );
+				}
+
+				// Add new record
+				if ( typeof result.success == 'undefined' && typeof result.errors == 'undefined' && result.id != "" ) {
+
+					result.success = "Record added successfully";
+
+					// Removed existing new recording matching type, name, value and ttl.
+					this.dialog_domain.records = this.dialog_domain.records.filter( r => r.update.record_status != "new-record" && r.update.record_name != result.name )
+
+					if ( result.type == "A" || result.type == "AAAA" || result.type == "SPF" || result.type == "TXT" ) {
+						record_value = [];
+						result.value.forEach( r => {
+							record_value.push({ value: r });
+						});
+					} else {
+						record_value = result.value;
+					}
+
+					result.new = false
+					result.edit = false
+					result.delete = false
+					result.value = JSON.parse(JSON.stringify(record_value))
+					result.update = {
+						"record_id": JSON.parse(JSON.stringify(result.id)),
+						"record_type": JSON.parse(JSON.stringify(result.type)),
+						"record_name": JSON.parse(JSON.stringify(result.name)),
+						"record_value": JSON.parse(JSON.stringify(record_value)),
+						"record_ttl": JSON.parse(JSON.stringify(result.ttl)),
+						"record_status": "edit-record"
+					}
+
+					// Add new record
+					this.dialog_domain.records.push( result );
+
+					// Sort new results
+					this.dialog_domain.records.sort(function (record1, record2) {
+
+						// Sort by types
+						// If the first item has a higher number, move it down
+						// If the first item has a lower number, move it up
+						if (record1.type < record2.type) return -1;
+						if (record1.type > record2.type) return 1;
+
+						// If the votes number is the same between both items, sort alphabetically
+						// If the first item comes first in the alphabet, move it up
+						// Otherwise move it down
+						if (record1.name > record2.name) return 1;
+						if (record1.name < record2.name) return -1;
+
+					});
+				}
+
+				this.dialog_domain.saving = false;
+
+			});
 		},
 		modifyPlan( site_id ) {
 			site = this.sites.filter(site => site.id == site_id)[0];

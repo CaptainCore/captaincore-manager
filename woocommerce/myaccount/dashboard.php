@@ -41,7 +41,7 @@ $domains = new CaptainCore\Domains();
 			<div class="card">
 				<div class="card-content row">
 				<div class="col s12">
-You have access to <a href="/my-account/sites/"><?php echo count( $sites->all() ); ?> WordPress Sites</a><?php if ( defined( "CONSTELLIX_API_KEY" ) and defined( "CONSTELLIX_SECRET_KEY" ) ) { ?> and DNS for <a href="/my-account/dns/"><?php echo count( $domains->all() ); ?> domains</a><?php } ?>.
+You have access to <a href="/my-account/sites/"><?php echo count( $sites->all() ); ?> WordPress Sites</a><?php if ( defined( "CONSTELLIX_API_KEY" ) and defined( "CONSTELLIX_SECRET_KEY" ) ) { ?> and DNS for <a href="/my-account/sites#dns"><?php echo count( $domains->all() ); ?> domains</a><?php } ?>.
 				</div>
 				</div>
 			</div>

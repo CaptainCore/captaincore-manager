@@ -305,8 +305,9 @@ class Domains {
 			if ( $domains ) {
 				foreach ( $domains as $domain ) :
 					$domain_name = get_the_title( $domain );
+					$domain_id = get_field( "domain_id", $domain );
 					if ( $domain_name ) {
-						$all_domains[ $domain_name ] = $domain;
+						$all_domains[ $domain_name ] = array( "name" => $domain_name, "id" => $domain_id );
 					}
 				endforeach;
 			}
@@ -319,16 +320,16 @@ class Domains {
 			if ( $domains ) {
 				foreach ( $domains as $domain ) :
 					$domain_name = get_the_title( $domain );
+					$domain_id = get_field( "domain_id", $domain );
 					if ( $domain_name ) {
-						$all_domains[ $domain_name ] = $domain;
+						$all_domains[ $domain_name ] = array( "name" => $domain_name, "id" => $domain_id );
 					}
 				endforeach;
 			}
 
 		endforeach;
 
-		// Sort array by domain name
-		ksort( $all_domains );
+		usort( $all_domains, "sort_by_name" );
 
 		$this->domains = $all_domains;
 	}
@@ -818,7 +819,7 @@ class Site {
 			$response['errors'][] = "Error: Staging environment port can only be numbers.";
 		}
 		
-
+		
 		// Hunt for conflicting site names
 		$arguments = array(
 			'fields'         => 'ids',
