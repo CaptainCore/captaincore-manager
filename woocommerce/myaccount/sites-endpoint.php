@@ -2143,8 +2143,49 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-text-field v-model="search" label="Search sites by name" light @input="filterSites" append-icon="search"></v-text-field>
 			</v-flex>
 			</v-layout>
-				<v-card v-show="view_jobs == true">
+			<v-card v-show="view_timeline == true" class="mb-3">
 					<v-toolbar card dense dark color="primary">
+				<v-btn icon dark @click.native="view_timeline = false">
+					<v-icon>close</v-icon>
+				</v-btn>
+				<v-toolbar-title>Timeline Logs</v-toolbar-title>
+				<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-card-text>
+				<template v-if="dialog_timeline.loading">
+					<v-progress-linear :indeterminate="true" style="width:130px"></v-progress-linear>
+				</template>
+				<template v-else>
+				<v-select :items="timeline_logs.map( a => a.account )" label="Account" item-value="id" v-model="dialog_timeline.account" @input="switchTimelineAccount()">
+					<template v-slot:selection="data">
+						<span v-html="data.item.name"></span> <small>&nbsp;({{ data.item.website_count }} sites)</small>
+					</template>
+					<template v-slot:item="data">
+						<span v-html="data.item.name"></span> <small>&nbsp;({{ data.item.website_count }} sites)</small>
+					</template>
+				</v-select>
+				<v-data-table
+					:headers="header_timeline"
+					:items="dialog_timeline.logs"
+					:pagination.sync="dialog_timeline.pagination"
+					:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
+					class="timeline"
+				>
+				<template slot="items" slot-scope="props">
+					<td class="justify-center">{{ props.item.created_at | pretty_timestamp }}</td>
+					<td class="justify-center">{{ props.item.author }}</td>
+					<td class="justify-center">{{ props.item.title }}</td>
+					<td class="justify-center" v-html="props.item.description"></td>
+					<td>
+						{{ props.item.websites.map( site => site.name ).join(" ") }}
+					</td>
+				</template>
+				</v-data-table>
+				</template>
+				</v-card-text>
+			</v-card>
+			<v-card v-show="view_jobs == true" class="mb-3">
+				<v-toolbar card dense dark color="primary">
 					<v-btn icon dark @click.native="view_jobs = false">
 						<v-icon>close</v-icon>
 					</v-btn>
@@ -3418,6 +3459,7 @@ new Vue({
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
 		dialog_edit_site: { show: false, site: {}, loading: false },
 		dialog_new_domain: { show: false, domain: { name: "", customer: "" } },
+		dialog_timeline: { show: false, loading: false, logs: [], pagination: {}, selected_account: "", account: { default_email: "", default_plugins: [], default_timezone: "", default_users: [], name: "", id: ""} },
 		dialog_domain: { show: false, domain: {}, records: [], results: [], loading: true, saving: false },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $current_user->user_email; ?>", current_user_email: "<?php echo $current_user->user_email; ?>", filter_toggle: true, filter_options: [] },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
@@ -3568,6 +3610,7 @@ new Vue({
 		bulk_edit: { show: false, site_id: null, type: null, items: [] },
 		upload: [],
 		view_jobs: false,
+		view_timeline: false,
 		search: null,
 		advanced_filter: false,
 		items_per_page: 50,
@@ -4538,6 +4581,10 @@ new Vue({
 			});
 			this.select_bulk_action_arguments = arguments;
 		},
+		switchTimelineAccount() {
+			account_id = this.dialog_timeline.account
+			this.dialog_timeline.logs = this.timeline_logs.filter( a => a.account.id == account_id )[0].logs
+		},
 		bulkEdit ( site_id, type ) {
 			this.bulk_edit.show = true;
 			site = this.sites.filter(site => site.id == site_id)[0];
@@ -4773,6 +4820,24 @@ new Vue({
 				self.snackbar.show = true;
 			});
 
+		},
+		fetchTimelineLogs() {
+			this.view_timeline = !this.view_timeline;
+			this.dialog_timeline.loading = true;
+
+			var data = {
+				action: 'captaincore_local',
+				command: 'fetchTimelineLogs',
+			};
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.timeline_logs = response.data;
+					this.dialog_timeline.account = JSON.parse(JSON.stringify(this.timeline_logs[0].account.id));
+					this.switchTimelineAccount();
+					this.dialog_timeline.loading = false;
+				})
+				.catch( error => console.log( error ) );
 		},
 		fetchProcessLogs() {
 			this.dialog_log_history.show = true;

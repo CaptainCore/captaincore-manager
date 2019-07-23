@@ -3334,9 +3334,133 @@ function captaincore_dns_action_callback() {
 	wp_die(); // this is required to terminate immediately and return a proper response
 }
 
-// Processes ajax events (new install, remove install, setup configs)
-add_action( 'wp_ajax_captaincore_ajax', 'captaincore_ajax_action_callback' );
+add_action( 'wp_ajax_captaincore_local', 'captaincore_local_action_callback' );
+function captaincore_local_action_callback() {
+	global $wpdb; // this is how you get access to the database
+	$cmd   = $_POST['command'];
+	$value = $_POST['value'];
 
+
+	if ( $cmd == 'fetchTimelineLogs' ) {
+
+		$Parsedown = new Parsedown();
+		$accounts = array();
+
+		$user = wp_get_current_user();
+		$role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles) + in_array( 'editor', $user->roles );
+		$partner = get_field('partner', 'user_'. get_current_user_id());
+
+		if ($partner and $role_check) {
+
+			// Loop through each partner assigned to current user
+			foreach ($partner as $partner_id) {
+
+				// Load websites assigned to partner
+				$arguments = array(
+					'post_type' 		=> 'captcore_website',
+					'posts_per_page'	=> '-1',
+					'fields'			=> 'ids',
+					'order'				=> 'asc',
+					'orderby'			=> 'title',
+					'meta_query'		=> array(
+						array(
+							'key' => 'partner',
+							'value' => '"' . $partner_id . '"',
+							'compare' => 'LIKE'
+						),
+					)
+				);
+
+				// Loads websites
+				$websites = get_posts( $arguments );
+
+				if ( count( $websites ) == 0 ) {
+
+					// Load websites assigned to partner
+					$websites = get_posts(array(
+						'post_type' 		=> 'captcore_website',
+						'posts_per_page'	=> '-1',
+						'fields'			=> 'ids',
+						'order'				=> 'asc',
+						'orderby'			=> 'title',
+						'meta_query'		=> array(
+								array(
+									'key' => 'customer', // name of custom field
+									'value' => '"' . $partner_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+									'compare' => 'LIKE'
+								),
+						)
+					));
+				}
+
+				if( $websites ): 
+				
+					$account = get_the_title($partner_id);
+					$website_count = count($websites);
+					$pattern = '("' . implode('"|"', $websites ) . '")';
+
+					$arguments = array(
+						'post_type'      => 'captcore_processlog',
+						'posts_per_page' => '-1',
+						'meta_query'	=> array(
+							array(
+								'key'	 	=> 'website',
+								'value'	  	=> $pattern,
+								'compare' 	=> 'REGEXP',
+							),
+					));
+
+					$processlogs_fetch = array();
+					$process_logs = get_posts($arguments);
+					// Fetch new process_log and return as json
+					foreach ($process_logs as $process_log) {
+
+						$process     = get_field( "process", $process_log->ID );
+						$author_id   = $process_log->post_author;
+						$author      = get_the_author_meta( 'display_name', $author_id );
+						$description = $Parsedown->text( get_field("description", $process_log->ID ) );
+						$sites       = array();
+						foreach( get_field("website", $process_log->ID ) as $website_id ) {
+							$site = get_post( $website_id );
+							if ( in_array($website_id, $websites) ) {
+								$sites[] = (object) [ 
+									'id'   => $site->ID,
+									'name' => $site->post_title,
+								];
+							}
+						}
+
+						$processlogs_fetch[] = (object) [
+							'id'              => $process_log->ID,
+							'process_id'      => $process[0],
+							'title'           => get_the_title( $process[0] ),
+							'author'          => $author,
+							'description'     => $description,
+							'description_raw' => get_field("description", $process_log->ID ),
+							'websites'        => $sites,
+							'created_at'      => $process_log->post_date,
+						];
+					} 
+				
+				$accounts[] = (object) [
+					'account'  => array(
+						'id'   => $partner_id,
+						'name' => $account,
+						'website_count' => $website_count
+					),
+					'logs'     => $processlogs_fetch,
+				];
+
+				endif;
+			}
+		}
+		echo json_encode( $accounts );
+	}
+	wp_die();
+
+}
+
+add_action( 'wp_ajax_captaincore_ajax', 'captaincore_ajax_action_callback' );
 function captaincore_ajax_action_callback() {
 	global $wpdb; // this is how you get access to the database
 
