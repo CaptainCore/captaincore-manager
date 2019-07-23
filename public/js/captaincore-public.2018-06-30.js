@@ -1,5 +1,28 @@
 jQuery(document).ready(function() {
 
+
+  jQuery('.woocommerce-MyAccount-navigation-link a').click(function(e) {
+
+      // Only proceed if we are not already on the /sites/ page.
+      if ( ! window.location.href.includes("/my-account/sites") ) {
+        return
+      }
+
+      // If link click going to a /sites/ page then prevent click and change hash.
+      if ( jQuery(this).attr("href").includes("/my-account/sites") ) {
+        e.preventDefault();
+        if ( jQuery(this).attr("href").includes("/my-account/sites/") ) {
+          window.location.hash = "#sites"
+          return
+        }
+        if ( jQuery(this).attr("href").includes("/my-account/sites") ) {
+          href = jQuery(this).attr("href");
+          hash = href.split("#")[1];
+          window.location.hash = "#" + hash
+        }
+      }
+    });
+
 	jQuery('.toggle_woocommerce_my_account a').click(function(e) {
 		e.preventDefault();
 		toggle = jQuery(this).parent().parent();
@@ -15,28 +38,6 @@ jQuery(document).ready(function() {
 			jQuery('body.woocommerce-account .woocommerce-MyAccount-content').css("width", "80%");
 		}
 	});
-
-  jQuery('ul.changelog li .changelog-item').click(function() {
-
-    if (jQuery(this).children('.content').hasClass("show")) {
-      jQuery(this).children('.content').removeClass("show");
-    } else {
-      console.log("hide");
-      jQuery(this).children('.content').addClass("show");
-    }
-
-  });
-
-  jQuery('ul.changelog li .changelog-item a').click(function(e) {
-    e.stopPropagation();
-  });
-
-  jQuery('ul.changelog li .changelog-item .title').each(function() {
-    var content = jQuery(this).next().hasClass('content');
-    if (content) {
-      jQuery(this).parent().addClass('hascontent');
-    }
-  });
 
   jQuery(".started-processes a.process-log-completed").click(function(e) {
     e.preventDefault();
@@ -73,13 +74,6 @@ jQuery(document).ready(function() {
     jQuery('.woocommerce-MyAccount-navigation li.woocommerce-MyAccount-navigation-link--payment-methods').appendTo('.woocommerce-MyAccount-secondary ul');
     jQuery('.woocommerce-MyAccount-navigation li.woocommerce-MyAccount-navigation-link--edit-address').appendTo('.woocommerce-MyAccount-secondary ul');
     jQuery('.woocommerce-MyAccount-navigation li.woocommerce-MyAccount-navigation-link--orders').appendTo('.woocommerce-MyAccount-secondary ul');
-  }
-  if (jQuery('.woocommerce-MyAccount-navigation-link--edit-account.is-active').length > 0 ||
-    jQuery('.woocommerce-MyAccount-navigation-link--configs.is-active').length > 0) {
-    jQuery('.woocommerce-MyAccount-content').prepend("<div class='woocommerce-MyAccount-secondary'><ul></ul></div>");
-    $menu_item = jQuery('.woocommerce-MyAccount-navigation li.woocommerce-MyAccount-navigation-link--edit-account').clone();
-    $menu_item.appendTo('.woocommerce-MyAccount-secondary ul');
-    jQuery('.woocommerce-MyAccount-navigation li.woocommerce-MyAccount-navigation-link--configs').appendTo('.woocommerce-MyAccount-secondary ul');
   }
 
 });

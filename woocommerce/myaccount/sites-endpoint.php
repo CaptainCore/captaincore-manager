@@ -2101,13 +2101,8 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-card-text>
 					</v-card>
 				</v-dialog>
-			<v-container fluid v-show="loading_sites != true">
-			<v-layout row v-if="role == 'administrator'">
-			<v-flex xs12 sm6>
-				<v-select v-model="active_page" :items='["Sites","Cookbook","Handbook"]' label="" style="width:120px;"></v-select>
-			</v-flex>
-			</v-layout>
-			<v-card tile v-show="active_page == 'Sites'">
+			<v-container fluid v-show="loading_page != true">
+			<v-card tile v-show="route == 'sites'">
 				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Sites <small>({{ showingSitesBegin }}-{{ showingSitesEnd }} of {{ filteredSites }})</small></v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -3303,6 +3298,7 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-layout>
 				</v-card-text>
 			</v-card>
+			<v-card tile v-show="route == 'cookbook'" v-if="role == 'administrator'">
 				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Contains {{ recipes.length }} recipes</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -3329,7 +3325,7 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-window-item>
 					</v-card-text>
 				</v-card>
-			<v-card tile v-show="active_page == 'Handbook'" v-if="role == 'administrator'">
+			<v-card tile v-show="route == 'handbook'" v-if="role == 'administrator'">
 				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Contains {{ processes.length }} processes</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -3361,7 +3357,7 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-card-text>
 					</v-card>
 			</v-container>
-			<v-container fluid v-show="loading_sites">
+			<v-container fluid v-show="loading_page">
 				Loading...
 			</v-container>
 			<v-snackbar
@@ -3415,7 +3411,7 @@ function groupmonth(value, index, array) {
 new Vue({
 	el: '#app',
 	data: {
-		loading_sites: true,
+		loading_page: true,
 		dialog_bulk: { show: false, tabs_management: "tab-Sites", environment_selected: "Production" },
 		dialog_delete_user: { show: false, site: {}, users: [], username: "", reassign: {} },
 		dialog_apply_https_urls: { show: false, site_id: "", site_name: "", sites: [] },
@@ -3433,7 +3429,8 @@ new Vue({
 		dialog_theme_and_plugin_checks: { show: false, site: {}, loading: false },
 		dialog_update_settings: { show: false, site_id: null, loading: false },
 		dialog_fathom: { show: false, site: {}, environment: {}, loading: false, editItem: false, editedItem: {}, editedIndex: -1 },
-		active_page: "Sites",
+		timeline_logs: [],
+		route: window.location.hash.substring(1),
 		page: 1,
 		socket: "<?php echo str_replace( "https://", "wss://", CAPTAINCORE_CLI_ADDRESS ) . "/ws"; ?>",
 		jobs: [],
@@ -3643,6 +3640,9 @@ new Vue({
 	watch: {
 		applied_site_filter (val) {
 			setTimeout( () => this.$refs.applied_site_filter.isMenuActive = false, 50)
+		},
+		route() {
+			this.triggerRoute()
 		}
     },
 	filters: {
@@ -3711,6 +3711,9 @@ new Vue({
 		}
 	},
 	mounted() {
+		window.onhashchange = () => {
+			this.route = window.location.hash.substring(1)
+		}
 		axios.get(
 				'/wp-json/captaincore/v1/customers', {
 					headers: {'X-WP-Nonce':wpApiSettings.nonce}
@@ -3718,58 +3721,7 @@ new Vue({
 				.then(response => {
 					this.customers = response.data;
 				});
-		axios.get(
-				'/wp-json/captaincore/v1/sites', {
-					headers: {'X-WP-Nonce':wpApiSettings.nonce}
-				})
-				.then(response => {
-					this.sites = response.data;
-
-					all_themes = [];
-					all_plugins = [];
-
-					this.sites.forEach(site => {
-						site.environments.forEach(environment => {
-							environment.themes.forEach(theme => {
-						exists = all_themes.some(function (el) {
-							return el.name === theme.name;
-						});
-						if (!exists) {
-							all_themes.push({
-								name: theme.name,
-								title: theme.title,
-								search: theme.title + " ("+ theme.name +")",
-								type: 'theme'
-							});
-						}
-					});
-
-						environment.plugins.forEach(plugin => {
-						exists = all_plugins.some(function (el) {
-							return el.name === plugin.name;
-						});
-						if (!exists) {
-							all_plugins.push({
-								name: plugin.name,
-								title: plugin.title,
-								search: plugin.title + " ("+ plugin.name +")",
-								type: 'plugin'
-							});
-						}
-					});
-					 });
-					});
-
-					all_themes.sort((a, b) => a.name.toString().localeCompare(b.name));
-					all_plugins.sort((a, b) => a.name.toString().localeCompare(b.name));
-
-					all_filters = [{ header: 'Themes' }];
-					all_filters = all_filters.concat(all_themes);
-					all_filters.push({ header: 'Plugins' })
-					all_filters = all_filters.concat(all_plugins);
-					this.site_filters = all_filters;
-					this.loading_sites = false;
-			});
+		this.triggerRoute()
 	},
 	computed: {
 		paginatedSites() {
@@ -3828,6 +3780,33 @@ new Vue({
 		}
 	},
 	methods: {
+		triggerRoute() {
+			if ( this.route == "dns" ) {
+				if ( this.allDomains == 0 ) {
+					this.loading_page = true;
+				}
+				this.fetchDomains()
+			}
+			if ( this.route == "cookbook" ) {
+				this.loading_page = false;
+			}
+			if ( this.route == "handbook" ) {
+				this.loading_page = false;
+			}
+			if ( this.route == "sites" ) {
+				if ( this.filteredSites == 0 ) {
+					this.loading_page = true;
+				}
+				this.fetchSites()
+			}
+			if ( this.route == "" ) {
+				if ( this.filteredSites == 0 ) {
+					this.loading_page = true;
+				}
+				this.route = "sites";
+				this.fetchSites()
+			}
+		},
 		triggerEnvironmentUpdate( site_id ){
 			site = this.sites.filter(site => site.id == site_id)[0];
 
@@ -4322,6 +4301,14 @@ new Vue({
 				});
 			});
 		},
+		fetchMissing() {
+			if ( this.allDomains == 0 ) {
+				this.fetchDomains()
+			}
+			if ( this.filteredSites == 0 ) {
+				this.fetchSites()
+			}
+		},
 		fetchDomains() {
 			axios.get(
 				'/wp-json/captaincore/v1/domains', {
@@ -4332,6 +4319,61 @@ new Vue({
 					this.loading_page = false;
 					setTimeout(this.fetchMissing, 3000)
 				});
+		},
+		fetchSites() {
+			axios.get(
+				'/wp-json/captaincore/v1/sites', {
+					headers: {'X-WP-Nonce':wpApiSettings.nonce}
+				})
+				.then(response => {
+					this.sites = response.data;
+
+					all_themes = [];
+					all_plugins = [];
+
+					this.sites.forEach(site => {
+						site.environments.forEach(environment => {
+							environment.themes.forEach(theme => {
+						exists = all_themes.some(function (el) {
+							return el.name === theme.name;
+						});
+						if (!exists) {
+							all_themes.push({
+								name: theme.name,
+								title: theme.title,
+								search: theme.title + " ("+ theme.name +")",
+								type: 'theme'
+							});
+						}
+					});
+
+						environment.plugins.forEach(plugin => {
+						exists = all_plugins.some(function (el) {
+							return el.name === plugin.name;
+						});
+						if (!exists) {
+							all_plugins.push({
+								name: plugin.name,
+								title: plugin.title,
+								search: plugin.title + " ("+ plugin.name +")",
+								type: 'plugin'
+							});
+						}
+					});
+					 });
+					});
+
+					all_themes.sort((a, b) => a.name.toString().localeCompare(b.name));
+					all_plugins.sort((a, b) => a.name.toString().localeCompare(b.name));
+
+					all_filters = [{ header: 'Themes' }];
+					all_filters = all_filters.concat(all_themes);
+					all_filters.push({ header: 'Plugins' })
+					all_filters = all_filters.concat(all_plugins);
+					this.site_filters = all_filters;
+					this.loading_page = false;
+					setTimeout(this.fetchMissing, 1000)
+			});
 		},
 		fetchStats( site_id ) {
 
