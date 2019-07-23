@@ -3341,6 +3341,50 @@ function captaincore_local_action_callback() {
 	$cmd   = $_POST['command'];
 	$value = $_POST['value'];
 
+	if ( $cmd == 'fetchDefaults' ) {
+		$user_id = get_current_user_id();
+		$accounts = array();
+
+		$partner = get_field( 'partner', 'user_' . get_current_user_id() );
+		if ( $partner ) {
+			foreach ( $partner as $partner_id ) {
+				$accounts[] = (object) [
+					'account'          => array(
+						'id'               => $partner_id,
+						'name'             => get_the_title( $partner_id ),
+					),
+					'default_email'    => get_field( 'preloaded_email', $partner_id ),
+					'default_users'    => get_field( 'preloaded_users', $partner_id ),
+					'default_plugins'  => array_column( get_field( 'preloaded_plugins', $partner_id ), "plugin" ),
+					'default_timezone' => get_field( 'default_timezone', $partner_id ),
+				];
+			}
+		}
+
+		echo json_encode( $accounts );
+	}
+
+	if ( $cmd == 'saveDefaults' ) {
+		$user_id = get_current_user_id();
+		$record = (object) $value;
+		$account_id = $record->account["id"];
+		$account_ids = get_field( 'partner', 'user_' . get_current_user_id() );
+		if ( in_array( $account_id, $account_ids ) ) {
+
+			$default_plugins = array();
+			foreach ($record->default_plugins as $plugin) {
+				$default_plugins[] = array( "plugin" => $plugin );
+			}
+
+			update_field( 'preloaded_email', $record->default_email, $account_id );
+			update_field( 'preloaded_users', $record->default_users, $account_id );
+			update_field( 'preloaded_plugins', $default_plugins, $account_id );
+			update_field( 'default_timezone', $record->default_timezone, $account_id );
+			echo json_encode( "Record updated." );
+		} else {
+			echo json_encode( "Permission denied" );
+		}
+	}
 
 	if ( $cmd == 'fetchTimelineLogs' ) {
 

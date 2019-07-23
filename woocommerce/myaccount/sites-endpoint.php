@@ -3494,6 +3494,7 @@ new Vue({
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
 		dialog_edit_site: { show: false, site: {}, loading: false },
 		dialog_new_domain: { show: false, domain: { name: "", customer: "" } },
+		dialog_configure_defaults: { show: false, loading: false, record: {}, records: [], account: "" },
 		dialog_timeline: { show: false, loading: false, logs: [], pagination: {}, selected_account: "", account: { default_email: "", default_plugins: [], default_timezone: "", default_users: [], name: "", id: ""} },
 		dialog_domain: { show: false, domain: {}, records: [], results: [], loading: true, saving: false },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $current_user->user_email; ?>", current_user_email: "<?php echo $current_user->user_email; ?>", filter_toggle: true, filter_options: [] },
@@ -3509,7 +3510,9 @@ new Vue({
 		timeline_logs: [],
 		route: window.location.hash.substring(1),
 		page: 1,
-		socket: "<?php echo str_replace( "https://", "wss://", CAPTAINCORE_CLI_ADDRESS ) . "/ws"; ?>",
+		socket: "<?php echo captaincore_fetch_socket_address() . "/ws"; ?>",
+		timezones: <?php echo json_encode( timezone_identifiers_list() ); ?>,
+		default_plugins: <?php $plugins = array(); $items = get_field_object('field_5879880d78844')['choices']; foreach( $items as $slug => $name ) { $plugins[] = array( "name" => $name, "slug" => $slug ); } echo json_encode( $plugins ) ?>,
 		jobs: [],
 		custom_script: "",
 		recipes: 
@@ -3584,6 +3587,7 @@ new Vue({
 		new_recipe: { show: false, title: "", content: "", public: 1 },
 		new_process: { show: false, title: "", time_estimate: "", repeat: "as-needed", repeat_quantity: "", role: "", description: "" },
 		dialog_edit_process: { show: false, process: {} },
+		roles: [{ name: "Subscriber", value: "subscriber" },{ name: "Contributor", value: "contributor" },{ name: "Author", value: "author" },{ name: "Editor", value: "editor" },{ name: "Administrator", value: "administrator" },],
 		new_process_roles: 
 			<?php
 			$roles     = get_terms(
@@ -3719,6 +3723,9 @@ new Vue({
 		applied_site_filter (val) {
 			setTimeout( () => this.$refs.applied_site_filter.isMenuActive = false, 50)
 		},
+		selected_default_plugins (val) {
+			setTimeout( () => this.$refs.default_plugins.isMenuActive = false, 50)
+		},
 		route() {
 			this.triggerRoute()
 		}
@@ -3806,6 +3813,13 @@ new Vue({
 			const start = this.page * this.items_per_page - this.items_per_page;
 			const end = start + this.items_per_page;
 			return this.sites.filter( site => site.filtered ).slice(start, end);
+		},
+		selected_default_plugins() {
+			if ( typeof this.dialog_configure_defaults.record.default_plugins == 'undefined' ) {
+				return "";
+			} else {
+				return this.dialog_configure_defaults.record.default_plugins;
+			}
 		},
 		runningJobs() {
 			return this.jobs.filter(job => job.status != 'done' && job.status != 'error' ).length;
@@ -3929,6 +3943,49 @@ new Vue({
 					(order == 'desc') ? (comparison * -1) : comparison
 				);
 			};
+		},
+		configureDefaults() {
+
+			this.dialog_configure_defaults.show = true
+			if ( this.dialog_configure_defaults.account == "" ) {
+				this.dialog_configure_defaults.loading = true;
+			}
+			// Prep AJAX request
+			var data = {
+				'action': 'captaincore_local',
+				'command': "fetchDefaults",
+			};
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.dialog_configure_defaults.records = response.data;
+					if ( this.dialog_configure_defaults.account == "" ) {
+						this.dialog_configure_defaults.account = JSON.parse(JSON.stringify(this.dialog_configure_defaults.records[0].account.id));
+						this.switchConfigureDefaultAccount();
+					}
+					this.dialog_configure_defaults.loading = false;
+				})
+				.catch(error => {
+					console.log(error.response)
+			});
+		},
+		saveDefaults() {
+			this.dialog_configure_defaults.loading = true;
+			// Prep AJAX request
+			var data = {
+				'action': 'captaincore_local',
+				'command': "saveDefaults",
+				'value': this.dialog_configure_defaults.record
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					console.log( response.data )
+					this.dialog_configure_defaults.show = false;
+					this.dialog_configure_defaults.loading = false;
+				})
+				.catch(error => {
+					console.log(error.response)
+			});
 		},
 		sortSites( key ) {
 			if ( this.toggle_site_counter.key == key ) {
@@ -4619,6 +4676,10 @@ new Vue({
 		switchTimelineAccount() {
 			account_id = this.dialog_timeline.account
 			this.dialog_timeline.logs = this.timeline_logs.filter( a => a.account.id == account_id )[0].logs
+		},
+		switchConfigureDefaultAccount() {
+			account_id = this.dialog_configure_defaults.account
+			this.dialog_configure_defaults.record = this.dialog_configure_defaults.records.filter( a => a.account.id == account_id )[0]
 		},
 		bulkEdit ( site_id, type ) {
 			this.bulk_edit.show = true;
