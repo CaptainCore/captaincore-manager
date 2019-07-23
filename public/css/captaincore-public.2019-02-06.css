@@ -601,20 +601,10 @@ div.website .actions a {
   font-family: "Font Awesome 5 Free";
 }
 
-.woocommerce-MyAccount-navigation-link--handbook {
-  border-left: 10px solid #27c3f3;
-}
-
-.woocommerce-MyAccount-navigation-link--handbook:after {
-  content: "admin";
-  font-size: 0.2em;
-  position: absolute;
-  left: -16px;
-  top: 16px;
-  padding: 0px;
-  margin: 0px;
-  transform: rotate(-90deg);
-  color: #fff;
+.woocommerce-MyAccount-navigation-link--cookbook:before {
+  content: "\f02d";
+	font-weight: 900;
+  font-family: "Font Awesome 5 Free";
 }
 
 .woocommerce-MyAccount-navigation-link--handbook:before {

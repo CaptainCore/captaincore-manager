@@ -139,6 +139,7 @@ function captaincore_my_account_order( $current_menu ) {
 
 	if ( ! $role_check_admin ) {
 		unset( $current_menu['handbook'] );
+		unset( $current_menu['cookbook'] );
 		unset( $current_menu['manage'] );
 	}
 	if ( ! $role_check_partner ) {
