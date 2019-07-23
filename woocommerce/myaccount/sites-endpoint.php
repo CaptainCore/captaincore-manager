@@ -2173,7 +2173,7 @@ Vue.component('file-upload', VueUploadComponent);
 					</div>
 			</v-flex>
 					<v-flex xs12 sm3>
-						<v-text-field v-model="search" label="Search sites by name" light @input="filterSites" append-icon="search"></v-text-field>
+						<v-text-field v-model="search" label="Search sites" clearable light @input="filterSites" append-icon="search"></v-text-field>
 			</v-flex>
 			</v-layout>
 			<v-card v-show="view_timeline == true" class="mb-3">

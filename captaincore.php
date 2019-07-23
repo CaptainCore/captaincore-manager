@@ -3521,7 +3521,7 @@ function captaincore_ajax_action_callback() {
 
 	// Only proceed if have permission to particular site id.
 	if ( ! captaincore_verify_permissions( $post_id ) ) {
-		echo "Permission defined";
+		echo "Permission denied";
 		wp_die();
 		return;
 	}
@@ -3531,7 +3531,7 @@ function captaincore_ajax_action_callback() {
 	$role_check_admin = in_array( 'administrator', $user->roles );
 	$admin_commands = array( 'fetchConfigs', 'newRecipe', 'updateRecipe', 'updateLogEntry', 'newLogEntry', 'newProcess', 'updateProcess', 'fetchProcess', 'fetchProcessLogs', 'updateFathom', 'updatePlan', 'newSite', 'editSite', 'deleteSite' );
 	if ( ! $role_check_admin && in_array( $_POST['command'], $admin_commands ) ) {
-		echo "Permission defined";
+		echo "Permission denied";
 		wp_die();
 		return;
 	}
@@ -3652,6 +3652,13 @@ function captaincore_ajax_action_callback() {
 			// Save the API response so we don't have to call again until tomorrow.
 			set_transient( 'captaincore_fathom_auth', $auth, HOUR_IN_SECONDS );
 
+		}
+
+		if ( is_wp_error( $auth ) ) {
+			$error_message = $auth->get_error_message();
+			echo json_encode( array ( "error" => $error_message ) );
+			wp_die();
+			return;
 		}
 
 		// Load sites from transient
@@ -4478,9 +4485,7 @@ function captaincore_ajax_action_callback() {
 	wp_die(); // this is required to terminate immediately and return a proper response
 }
 
-// Processes install events (new install, remove install, setup configs)
 add_action( 'wp_ajax_captaincore_install', 'captaincore_install_action_callback' );
-
 function captaincore_install_action_callback() {
 	global $wpdb; // this is how you get access to the database
 
