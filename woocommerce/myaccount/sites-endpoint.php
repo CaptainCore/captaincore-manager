@@ -39,7 +39,7 @@ html {
 }
 
 .usage.multisite {
-	width: 150px;
+	width: 100px;
 }
 
 .usage.provider {
@@ -2531,7 +2531,7 @@ Vue.component('file-upload', VueUploadComponent);
             </v-card>
 				<div class="text-xs-right" v-show="sites.length > 1">
 				<v-btn-toggle v-model="toggle_site_sort" style="box-shadow: none; border-bottom: 1px solid #e0e0e0;" v-bind:class="sort_direction">
-					<div class="usage ml-1 multisite"><v-btn flat small @click.native.stop="toggle_site_sort = 0; sortSites('multisite')">Multisite Mode<v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
+					<div class="usage ml-1 multisite"><v-btn flat small @click.native.stop="toggle_site_sort = 0; sortSites('multisite')">Multisite<v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
 					<div class="usage ml-1 visits"><v-btn flat small @click.native.stop="toggle_site_sort = 1; sortSites('visits')">Visits<v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
 					<div class="usage ml-1 storage"><v-btn flat small @click.native.stop="toggle_site_sort = 2; sortSites('storage')">Storage <v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
 					<div class="usage ml-1 provider"><v-btn flat small @click.native.stop="toggle_site_sort = 3; sortSites('provider')">Provider <v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
@@ -2550,7 +2550,7 @@ Vue.component('file-upload', VueUploadComponent);
 										</v-layout>
 									</div>
 									<div class="text-xs-right">
-									  <div class="usage multisite"><span v-show="site.subsite_count"><v-icon small light >fas fa-network-wired</i></v-icon> Multisite - {{ site.subsite_count }} sites</span></div>
+									  <div class="usage multisite"><span v-show="site.subsite_count"><v-icon small light >fas fa-network-wired</i></v-icon>{{ site.subsite_count }} sites</span></div>
 										<div class="usage visits"><span v-show="site.visits"><v-icon small light>fas fa-eye</v-icon> {{ site.visits }} <small>yearly</small></span></div>
 										<div class="usage storage"><span v-show="site.storage"><v-icon small light>fas fa-hdd</v-icon> {{ site.storage }}</span></div>
 										<div class="usage provider"><span v-show="site.provider"><v-icon small light>fas fa-server</v-icon> {{ site.provider | formatProvider }}</span></div>
