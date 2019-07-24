@@ -89,6 +89,51 @@ class CaptainCore_My_Account_Handbook_Endpoint {
 
 }
 
+class CaptainCore_My_Account_Dns_Endpoint {
+
+	/**
+	 * Custom endpoint name.
+	 *
+	 * @var string
+	 */
+	public static $endpoint = 'dns';
+
+	/**
+	 * Plugin actions.
+	 */
+	public function __construct() {
+		// Inserting your new tab/page into the My Account page.
+		add_filter( 'woocommerce_account_menu_items', array( $this, 'new_menu_items' ) );
+		add_filter( 'woocommerce_get_endpoint_url', array( $this, 'maybe_redirect_endpoint' ), 10, 4 );
+	}
+
+	/**
+	 * Insert the new endpoint into the My Account menu.
+	 *
+	 * @param array $items
+	 * @return array
+	 */
+	public function new_menu_items( $items ) {
+
+		// Insert your custom endpoint.
+		$items[ self::$endpoint ] = __( 'DNS', 'woocommerce' );
+
+		return $items;
+	}
+
+	/**
+	 * Modify endpoint for custom URL.
+	 *
+	 * @return string
+	 */
+	public function maybe_redirect_endpoint ($url, $endpoint, $value, $permalink) {
+		if( $endpoint == 'dns')
+			$url = get_permalink( get_option('woocommerce_myaccount_page_id') ) . "sites#dns";
+		return $url;
+	}
+
+}
+
 class CaptainCore_My_Account_Sites_Endpoint {
 
 	/**
@@ -171,5 +216,6 @@ register_activation_hook( __FILE__, array( 'CaptainCore_My_Account_Sites_Endpoin
 
 // Load classes
 new CaptainCore_My_Account_Sites_Endpoint();
+new CaptainCore_My_Account_Dns_Endpoint();
 new CaptainCore_My_Account_Cookbook_Endpoint();
 new CaptainCore_My_Account_Handbook_Endpoint();
