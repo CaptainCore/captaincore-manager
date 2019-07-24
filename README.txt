@@ -43,6 +43,22 @@ TODO
 TODO
 
 == Changelog ==
+= 0.5.0: July 24 2019
+* New: Routing based on hash. Will now toggle between `/sites`, `/sites#dns`, `/sites#cookbook` and `/sites#handbook` without page reloading.
+* New: Custom recipes which can be public or private to the author. Public recipes can run. Private recipes can be loaded and changed before running.
+* New: DNS manager completed rewritten in Vue.JS. Replaces old jQuery DNS manager.
+* New: Options for DNS introduction and DNS nameservers which are displayed in an info alert at top of DNS page.
+* New: Option for managing timezone per account.
+* New: Custom link `/my-account/sites#cookbook` added to WooCommerce endpoint for Cookbook.
+* New: Configure default section for managing WordPress default settings per account. Settings include admin email, timezone, plugins and users. Replaces legacy WooCommerce endpoint for configs.
+* New: Timeline logs sections. Replaces legacy WooCommerce endpoint for logs.
+* Tweak: Replaced custom WooCommerce endpoints `/my-account/dns/` and `/my-account/handbook/` with new single page `/my-account/sites#dns` and `/my-account/sites#handbook`.
+* Tweak: Improved managing user-defined recipes. 
+* Tweak: Improved theme/plugin upload layout.
+* Tweak: License deployments now handled by custom defined recipes. Replaces legacy WooCommerce endpoint for Licenses.
+* Tweak: Many minor improvements to sites page. That includes clearable search, highlight button when toggled on/off and simplified top level buttons. Running Jobs, Bulk Management and Advanced Filters buttons are now called Job Activity, Bulk Tools and Filters. They have been reduced to icons with tooltips.
+* Tweak: Custom links added to WooCommerce my-account menu now operate in single page mode. Selecting Sites, DNS, Cookbook or Handbook will not reload the page.
+
 = 0.4.5: June 29 2019
 * New: Admin dashboard with SVG menu icon. Replaces old admin pages. Includes link to legacy custom post types.
 * New: Stats tab per environment. Fetches stats from Fathom Analytics.
