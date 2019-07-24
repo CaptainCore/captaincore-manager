@@ -2202,6 +2202,14 @@ function captaincore_register_rest_endpoints() {
 		)
 	);
 	register_rest_field(
+		'captcore_customer', 'default_timezone',
+		array(
+			'get_callback'    => 'slug_get_post_meta_array',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
 		'captcore_customer', 'preloaded_plugins',
 		array(
 			'get_callback'    => 'slug_get_post_meta_array',
