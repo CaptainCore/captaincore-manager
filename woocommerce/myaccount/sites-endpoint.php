@@ -3899,7 +3899,6 @@ new Vue({
 					this.loading_page = true;
 				}
 				this.route = "sites";
-				this.fetchSites()
 			}
 		},
 		triggerEnvironmentUpdate( site_id ){
