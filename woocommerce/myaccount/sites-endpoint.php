@@ -2671,6 +2671,7 @@ Vue.component('file-upload', VueUploadComponent);
 										</div>
 										<v-layout wrap>
 										<v-flex xs12>
+											<div :id="`chart_` + site.id + `_` + key.environment" style="margin-bottom:-20px"></div>
 											<v-card flat v-if="key.stats.agg">
 											<v-card-title class="text-xs-center pb-0">
 											<v-layout wrap>
@@ -2693,10 +2694,7 @@ Vue.component('file-upload', VueUploadComponent);
 											</v-layout>
 											</v-card-title>
 											</v-card>
-										</v-flex>
-										<v-flex xs12>
-									<div :id="`chart_` + site.id + `_` + key.environment"></div>
-											<v-card flat class="mb-3" style="margin-top:-20px">
+											<v-card flat class="mb-3">
 											<v-card-title>
 											<v-layout v-show="key.stats.pages">
 											<v-flex xs6 pr-2>
