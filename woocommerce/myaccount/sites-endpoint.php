@@ -3794,7 +3794,7 @@ new Vue({
 			return Math.max(percentage, 0.1).toFixed(0);
 		},
 		formatPercentageFixed: function (percentage) {
-			return Math.max(percentage, 0.1).toFixed(2) * 100 + '%';
+			return (Math.max(percentage, 0.1) * 100 ).toFixed(2) + '%';
 		},
 		pretty_timestamp: function (date) {
 			// takes in '2018-06-18 19:44:47' then returns "Monday, Jun 18, 2018, 7:44 PM"
