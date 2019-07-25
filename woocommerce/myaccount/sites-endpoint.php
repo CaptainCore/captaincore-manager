@@ -466,6 +466,10 @@ div.update_logs table tr td:nth-child(1) {
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vuetify@1.5.4/dist/vuetify.min.js"></script>
 <?php } ?>
+<script src="https://unpkg.com/lodash@4.16.0"></script>
+<script>
+lodash = _.noConflict(); // lets call ourselves _u
+</script>
 <link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.0/dist/frappe-charts.min.css" rel="stylesheet">
 <script src="/wp-content/plugins/captaincore-gui/public/js/frappe-charts.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
@@ -2173,7 +2177,7 @@ Vue.component('file-upload', VueUploadComponent);
 					</div>
 			</v-flex>
 					<v-flex xs12 sm3>
-						<v-text-field v-model="search" label="Search sites" clearable light @input="filterSites" append-icon="search"></v-text-field>
+						<v-text-field @input="updateSearch" ref="search" label="Search sites" clearable light append-icon="search"></v-text-field>
 			</v-flex>
 			</v-layout>
 			<v-card v-show="view_timeline == true" class="mb-3">
@@ -7099,8 +7103,12 @@ new Vue({
 			quicksave.filtered_files = quicksave.view_files.filter( file => file.includes( search ) );
 
 		},
+		updateSearch: lodash.debounce(function (e) {
+			this.search = e;
+			this.filterSites();
+		}, 300),
 		filterSites() {
-			// Filter if select has value
+
 			if ( this.applied_site_filter.length > 0 || this.search ) {
 
 				search = this.search;
