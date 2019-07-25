@@ -2669,29 +2669,34 @@ Vue.component('file-upload', VueUploadComponent);
 										<div class="pa-3" v-if="typeof key.stats == 'string' && key.stats != 'Loading'">
 											{{ key.stats }}
 										</div>
-										<v-layout>
-										<v-flex xs3>
-											<v-card dark flat class="fill-height" v-if="key.stats.agg">
+										<v-layout wrap>
+										<v-flex xs12>
+											<v-card dark flat v-if="key.stats.agg">
 											<v-card-title>
-											<div>
+											<v-layout wrap>
+											<v-flex xs6 sm3>
 											<span class="text-uppercase caption">Unique Visitors</span><br />
 											<span class="display-2 font-weight-thin text-uppercase">{{ key.stats.agg.Visitors | formatk }}</span>
-											<br /><br />
+											</v-flex>
+											<v-flex xs6 sm3>
 											<span class="text-uppercase caption">Pageviews</span><br />
 											<span class="display-2 font-weight-thin text-uppercase">{{ key.stats.agg.Pageviews | formatk }}</span>
-											<br /><br />
+											</v-flex>
+											<v-flex xs6 sm3>
 											<span class="text-uppercase caption">Avg Time On Site</span><br />
 											<span class="display-2 font-weight-thin text-uppercase">{{ key.stats.agg.AvgDuration | formatTime }}</span>
-											<br /><br />
+											</v-flex>
+											<v-flex xs6 sm3>
 											<span class="text-uppercase caption">Bounce Rate</span><br />
 											<span class="display-2 font-weight-thin text-uppercase">{{ key.stats.agg.BounceRate | formatPercentageFixed }}</span>
-											</div>
+											</v-flex>
+											</v-layout>
 											</v-card-title>
 											</v-card>
 										</v-flex>
-										<v-flex xs9>
+										<v-flex xs12>
 									<div :id="`chart_` + site.id + `_` + key.environment"></div>
-											<v-card flat class="mb-3" style="margin-top:-40px">
+											<v-card flat class="mb-3" style="margin-top:-20px">
 											<v-card-title>
 											<v-layout v-show="key.stats.pages">
 											<v-flex xs6 pr-2>
