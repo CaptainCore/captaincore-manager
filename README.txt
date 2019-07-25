@@ -43,7 +43,7 @@ TODO
 TODO
 
 == Changelog ==
-= 0.5.0: July 24 2019
+= 0.5.0: July 24 2019 =
 * New: Routing based on hash. Will now toggle between `/sites`, `/sites#dns`, `/sites#cookbook` and `/sites#handbook` without page reloading.
 * New: Custom recipes which can be public or private to the author. Public recipes can run. Private recipes can be loaded and changed before running.
 * New: DNS manager completed rewritten in Vue.JS. Replaces old jQuery DNS manager.
@@ -59,7 +59,7 @@ TODO
 * Tweak: Many minor improvements to sites page. That includes clearable search, highlight button when toggled on/off and simplified top level buttons. Running Jobs, Bulk Management and Advanced Filters buttons are now called Job Activity, Bulk Tools and Filters. They have been reduced to icons with tooltips.
 * Tweak: Custom links added to WooCommerce my-account menu now operate in single page mode. Selecting Sites, DNS, Cookbook or Handbook will not reload the page.
 
-= 0.4.5: June 29 2019
+= 0.4.5: June 29 2019 =
 * New: Admin dashboard with SVG menu icon. Replaces old admin pages. Includes link to legacy custom post types.
 * New: Stats tab per environment. Fetches stats from Fathom Analytics.
 * New: Dialog to reassign user content when deleting user.
@@ -68,7 +68,7 @@ TODO
 * Tweak: Fixed links to Kinsta's database url and staging url
 * Tweak: Fixed assigning existing customers to new site
 
-= 0.4.4: June 4 2019
+= 0.4.4: June 4 2019 =
 * New: Bulk scripts section
 * New: Bulk log entry support
 * New: Run custom code section
@@ -80,8 +80,7 @@ TODO
 * Tweak: Improved bulk actions environment support
 * Tweak: Improved bulk management section. Moved toggle commands here.
 
-== Changelog ==
-= 0.4.3: May 12 2019
+= 0.4.3: May 12 2019 =
 * New: Sites UI - Realtime websockets which replaces the `jobRetry` polling method. CLI commands are now run from a websocket and output streamed in realtime.
 * New: Sites UI - Log history dialog to handbook section
 * New: Sites UI - Cookbook section
@@ -92,7 +91,7 @@ TODO
 * Tweak: Compatibility fix for [ARVE](https://wordpress.org/plugins/advanced-responsive-video-embedder/) video embeds.
 * Tweak: Compatibility fix when adding/updating process log entries. Force relationship fields to save in serialized format.
 
-= 0.4.2: Apr 22 2019
+= 0.4.2: Apr 22 2019 =
 * New: Sites UI - Timeline tab. Administrators can add new log entrys per site.
 * New: Sites UI - Handbook section for administrators.
 * New: Sites UI - Screenshot thumbnails of websites are automatically added/updated when synced.
@@ -100,7 +99,7 @@ TODO
 * Tweak: Replaced markdown support from using Jetpack plugin to [Parsedown](https://parsedown.org/)
 * Tweak: Upgrade compatibility for CaptainCore helper v0.2.0
 
-= 0.4.1: Apr 4 2019
+= 0.4.1: April 4 2019 =
 * New: Sites UI - Site plan tab for managing hosting plans. Administrators can assign plans per customer which define storage, visits and number of sites usage.
 * New: Sites UI - Added button for removing a site.
 * New: Sites UI - Added icon to manual sync a site.
@@ -115,7 +114,7 @@ TODO
 * Tweak: Sites UI - Snapshot options
 * Fix: Deactivate command passed to CLI
 
-= 0.4.0: Mar 4 2019
+= 0.4.0: March 4 2019 =
 * New: Sites UI - Environment support added (themes, plugins, users, updates, scripts, backups and quicksaves)
 * New: Sites UI - Label for multisite networks
 * New: Support for environments
@@ -127,7 +126,7 @@ TODO
 * Fix: Sites UI - Staging links.
 * Fix: Sites UI - Manage commands to Dispatch server.
 
-= 0.3.3: Feb 9 2019
+= 0.3.3: February 9 2019 =
 * New: Sites UI - Fathom tracker
 * Tweak: Sites UI - Moved many of the commands like 'Mailgun', 'Site copy' into the background with proper status reporting.
 * Tweak: Sites UI - Improve response when and added loading status when listing quicksave changes.
@@ -137,7 +136,7 @@ TODO
 * Fix: Various PHP errors and warnings.
 * Fix: Company Handbook - restore bullets
 
-= 0.3.2: Dec 31 2018 =
+= 0.3.2: December 31 2018 =
 * New: Integrated CaptainCore Dispatch
 * Tweak: Refactor fetch functions `captaincore_fetch_customer`, `captaincore_fetch_domains` and `captaincore_fetch_sites` to new classes `CaptainCore/Customers`, `CaptainCore/Domains`and `CaptainCore/Sites`
 * Tweak: Sites UI - Refactor code into CaptainCore Site class
@@ -147,7 +146,7 @@ TODO
 * Tweak: Upgraded Vuetify to v1.3.11
 * Tweak: Removed phpseclib
 
-= 0.3.1: Dec 3 2018 =
+= 0.3.1: December 3 2018 =
 * NEW: Sites UI - Quick logins
 * Tweak: Company Handbook - Allow administrators with multiple roles
 * Tweak: Sites UI - Mask database passwords
