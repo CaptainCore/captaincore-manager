@@ -1851,10 +1851,8 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-dialog>
 				<v-dialog
 					v-model="dialog_copy_site.show"
-					fullscreen
-					hide-overlay
-					transition="dialog-bottom-transition"
 					scrollable
+					width="500"
 				>
 				<v-card tile>
 					<v-toolbar card dark color="primary">
@@ -2303,7 +2301,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Sites</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn flat @click="showLogEntryBulk()">New Log Entry <v-icon dark small>fas fa-check-circle</v-icon></v-btn>
+						<v-btn flat @click="showLogEntryBulk()" v-if="role == 'administrator'">New Log Entry <v-icon dark small>fas fa-check-circle</v-icon></v-btn>
 						<v-btn flat @click="bulkactionLaunch">Launch sites in browser</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
@@ -2554,7 +2552,7 @@ Vue.component('file-upload', VueUploadComponent);
 										</v-layout>
 									</div>
 									<div class="text-xs-right">
-									  <div class="usage multisite"><span v-show="site.subsite_count"><v-icon small light >fas fa-network-wired</i></v-icon>{{ site.subsite_count }} sites</span></div>
+									  <div class="usage multisite"><span v-show="site.subsite_count"><v-icon small light >fas fa-network-wired</i></v-icon> {{ site.subsite_count }} sites</span></div>
 										<div class="usage visits"><span v-show="site.visits"><v-icon small light>fas fa-eye</v-icon> {{ site.visits }} <small>yearly</small></span></div>
 										<div class="usage storage"><span v-show="site.storage"><v-icon small light>fas fa-hdd</v-icon> {{ site.storage }}</span></div>
 										<div class="usage provider"><span v-show="site.provider"><v-icon small light>fas fa-server</v-icon> {{ site.provider | formatProvider }}</span></div>
