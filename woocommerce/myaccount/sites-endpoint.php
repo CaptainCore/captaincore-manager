@@ -3594,7 +3594,6 @@ new Vue({
 		new_recipe: { show: false, title: "", content: "", public: 1 },
 		new_process: { show: false, title: "", time_estimate: "", repeat: "as-needed", repeat_quantity: "", role: "", description: "" },
 		dialog_edit_process: { show: false, process: {} },
-		roles: [{ name: "Subscriber", value: "subscriber" },{ name: "Contributor", value: "contributor" },{ name: "Author", value: "author" },{ name: "Editor", value: "editor" },{ name: "Administrator", value: "administrator" },],
 		new_process_roles: 
 			<?php
 			$roles     = get_terms(
@@ -3639,6 +3638,7 @@ new Vue({
 		],
 		<?php } else { ?>
 		role: "",
+		roles: [{ name: "Subscriber", value: "subscriber" },{ name: "Contributor", value: "contributor" },{ name: "Author", value: "author" },{ name: "Editor", value: "editor" },{ name: "Administrator", value: "administrator" },],
 		dialog_new_site: false,
 		customers: [],
 		shared_with: [],
