@@ -2671,24 +2671,24 @@ Vue.component('file-upload', VueUploadComponent);
 										</div>
 										<v-layout wrap>
 										<v-flex xs12>
-											<v-card dark flat v-if="key.stats.agg">
-											<v-card-title>
+											<v-card flat v-if="key.stats.agg">
+											<v-card-title class="text-xs-center pb-0">
 											<v-layout wrap>
 											<v-flex xs6 sm3>
 											<span class="text-uppercase caption">Unique Visitors</span><br />
-											<span class="display-2 font-weight-thin text-uppercase">{{ key.stats.agg.Visitors | formatk }}</span>
+												<span class="display-1 font-weight-thin text-uppercase">{{ key.stats.agg.Visitors | formatk }}</span>
 											</v-flex>
 											<v-flex xs6 sm3>
 											<span class="text-uppercase caption">Pageviews</span><br />
-											<span class="display-2 font-weight-thin text-uppercase">{{ key.stats.agg.Pageviews | formatk }}</span>
+												<span class="display-1 font-weight-thin text-uppercase">{{ key.stats.agg.Pageviews | formatk }}</span>
 											</v-flex>
 											<v-flex xs6 sm3>
 											<span class="text-uppercase caption">Avg Time On Site</span><br />
-											<span class="display-2 font-weight-thin text-uppercase">{{ key.stats.agg.AvgDuration | formatTime }}</span>
+												<span class="display-1 font-weight-thin text-uppercase">{{ key.stats.agg.AvgDuration | formatTime }}</span>
 											</v-flex>
 											<v-flex xs6 sm3>
 											<span class="text-uppercase caption">Bounce Rate</span><br />
-											<span class="display-2 font-weight-thin text-uppercase">{{ key.stats.agg.BounceRate | formatPercentageFixed }}</span>
+												<span class="display-1 font-weight-thin text-uppercase">{{ key.stats.agg.BounceRate | formatPercentageFixed }}</span>
 											</v-flex>
 											</v-layout>
 											</v-card-title>
