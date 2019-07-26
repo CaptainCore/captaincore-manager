@@ -96,7 +96,7 @@ input[type=text]:focus {
 var app = new Vue({
   el: '#app',
   data: {
-    settings: { manifest: { sites: 0, quicksaves: 0, storage: 0 } },
+    settings: <?php echo json_encode( get_option( 'captaincore_settings' ) ); ?>,
     instance: { 
         maintenance_logs: {
             count: 12
@@ -151,14 +151,13 @@ var app = new Vue({
 				'action': 'captaincore_ajax',
 				'command': "fetchConfigs",
 			};
-			self = this;
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-          self.settings = response.data;
-          self.generateChart();
-				})
+          this.settings = response.data;
+          this.generateChart();
+        })
 				.catch( error => {
-					console.log( error.response );
+					console.log( error );
 				});
   }
 });
