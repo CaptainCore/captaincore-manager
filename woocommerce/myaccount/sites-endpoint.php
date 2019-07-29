@@ -2503,7 +2503,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-expansion-panel-header>
 					<v-layout align-center justify-space-between row>
 						<div>
-							<v-layout align-center justify-start fill-height/>
+							<v-layout align-center justify-start fill-height font-weight-thin subtitle-1>
 							<v-switch v-model="site.selected" @click.native.stop @change="site_selected = null" style="position: absolute; left: 10px; top: 17px;" v-show="dialog_bulk.show == true"></v-switch>
 								<img :src="site.environments[0].screenshot_small" style="width: 50px; margin-right:1em" class="elevation-1" v-show="site.environments[0].screenshot_small">
 							{{ site.name }}
