@@ -461,7 +461,7 @@ div.update_logs table tr td:nth-child(1) {
 <script src="/wp-content/plugins/captaincore-gui/public/js/axios.min.js"></script>
 <script src="/wp-content/plugins/captaincore-gui/public/js/vuetify.min.js"></script>
 <?php } else { ?>
-<script src="https://cdn.jsdelivr.net/npm/vue@2.6.8/dist/vue.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.10/dist/vue.min.js"></script>
 <script src="https://unpkg.com/qs@6.5.2/dist/qs.js"></script>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vuetify@1.5.4/dist/vuetify.min.js"></script>
