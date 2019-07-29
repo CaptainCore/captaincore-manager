@@ -2060,12 +2060,10 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-dialog>
 				<v-dialog
 					v-model="dialog_file_diff.show"
-					fullscreen
-					hide-overlay
 					transition="dialog-bottom-transition"
 					scrollable
 				>
-				<v-card tile>
+				<v-card>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_file_diff.show = false">
 							<v-icon>close</v-icon>
@@ -2259,7 +2257,7 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-select>
 				</v-flex>
 				<v-flex>
-				<v-btn small icon @click="bulkSyncSites()" style="margin: 14px auto 0 0;">
+				<v-btn small icon @click="bulkSyncSites()" style="margin: 10px auto 0 0;">
 					<v-icon small color="grey">fas fa-sync</v-icon>
 				</v-btn>
 				</v-flex>
@@ -2555,7 +2553,7 @@ Vue.component('file-upload', VueUploadComponent);
 										</v-select>
 										</v-flex>
 										<v-flex>
-										<v-btn small icon @click="syncSite( site.id )" style="margin: 14px auto 0 0;">
+										<v-btn small icon @click="syncSite( site.id )" style="margin: 10px auto 0 0;">
 											<v-icon small color="grey">fas fa-sync</v-icon>
 										</v-btn>
 										</v-flex>
@@ -2969,13 +2967,11 @@ Vue.component('file-upload', VueUploadComponent);
 							<v-expansion-panel v-for="quicksave in key.quicksaves" style="elevation-0">
 							  <v-expansion-panel-header style="min-height: 44px;padding: 12px 20px;">
 								<v-layout align-center justify-space-between row>
-									<v-flex>
-										<v-layout align-center justify-start fill-height/>
-											<v-icon>settings_backup_restore</v-icon> {{ quicksave.created_at | pretty_timestamp }}</span>
-										</v-layout>
+									<v-flex class="body-1">
+										<v-icon>settings_backup_restore</v-icon> {{ quicksave.created_at | pretty_timestamp }}</span>
 									</v-flex>
 									<v-flex class="body-2 text-right pr-3">
-										WordPress {{ quicksave.core }} - {{ quicksave.plugins.length }} Plugins - {{ quicksave.themes.length }} Themes
+									<v-chip label>WordPress {{ quicksave.core }}</v-chip>  <v-chip label>{{ quicksave.plugins.length }} Plugins</v-chip> <v-chip label>{{ quicksave.themes.length }} Themes</v-chip>
 									</v-flex>
 								</v-layout>
 							</v-expansion-panel-header>
@@ -3000,22 +2996,27 @@ Vue.component('file-upload', VueUploadComponent);
 											<v-card-title>
 												Files
 											</v-card-title>
-									      <v-spacer></v-spacer>
-										  <v-text-field
-											v-model="quicksave.search"
-											@input="filterFiles( site.id, quicksave.quicksave_id)"
-											append-icon="search"
-											label="Search"
-											single-line
-											hide-details
-										  ></v-text-field>
-						</v-card-title>
-											<v-data-table hide-default-footer no-data-text="" :headers='[{"text":"File","value":"file"}]' :items="quicksave.filtered_files" :loading="quicksave.loading">
+										  <v-spacer></v-spacer>
+										  <v-layout>
+											  <v-flex sx12 sm9>
+											  </v-flex sx12 sm3>
+											  <v-flex>
+												<v-text-field
+													v-model="quicksave.search"
+													@input="filterFiles( site.id, quicksave.quicksave_id)"
+													append-icon="search"
+													label="Search"
+													single-line
+													hide-details
+												></v-text-field>
+											  </v-flex>
+											</v-layout>
+											<v-data-table no-data-text="" :headers='[{"text":"File","value":"file"}]' :items="quicksave.filtered_files" :loading="quicksave.loading">
 												<template v-slot:body="{ items }">
 												<tbody>
 													<tr v-for="item in items" >
 														<td>
-															<a class="v-menu__activator" @click="QuicksaveFileDiff(quicksave.site_id, quicksave.quicksave_id, quicksave.git_commit, item)"> {{ item }} </a>
+															<a class="v-menu__activator" @click="QuicksaveFileDiff(quicksave.site_id, quicksave.quicksave_id, quicksave.git_commit, item)">{{ item }}</a>
 														</td>
 													</tr>
 												</tbody>
