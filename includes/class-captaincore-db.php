@@ -562,7 +562,7 @@ class Site {
 				if ( $addons == '' ) {
 					$addons = array();
 				}
-				$site_details->customer[] = array(
+				$site_details->customer = array(
 					'customer_id'    => $customer_id,
 					'name'           => $customer_name,
 					'hosting_addons' => $addons,
@@ -583,7 +583,7 @@ class Site {
 		}
 
 		if ( count( $site_details->customer ) == 0 ) {
-			$site_details->customer[] = array(
+			$site_details->customer = array(
 				'customer_id'   => '',
 				'name'          => '',
 				'hosting_plan'  => '',

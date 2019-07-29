@@ -3166,27 +3166,26 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-toolbar-items>
 			</v-toolbar>
 			<v-card flat>
-				<div v-for="customer in site.customer">
-				<div v-if="typeof customer.hosting_plan.visits_limit == 'string'">
-				<v-card-text>
+				<div v-if="typeof site.customer.hosting_plan.visits_limit == 'string'">
+				<v-card-text class="body-1">
 				<v-layout align-center justify-left row/>
 					<div style="padding: 10px 10px 10px 20px;">
-						<v-progress-circular :size="50" :value="( customer.usage.storage / ( customer.hosting_plan.storage_limit * 1024 * 1024 * 1024 ) ) * 100 | formatPercentage" color="primary"><small>{{ ( customer.usage.storage / ( customer.hosting_plan.storage_limit * 1024 * 1024 * 1024 ) ) * 100 | formatPercentage }}</small></v-progress-circular>
+						<v-progress-circular :size="50" :value="( site.customer.usage.storage / ( site.customer.hosting_plan.storage_limit * 1024 * 1024 * 1024 ) ) * 100 | formatPercentage" color="primary"><small>{{ ( site.customer.usage.storage / ( site.customer.hosting_plan.storage_limit * 1024 * 1024 * 1024 ) ) * 100 | formatPercentage }}</small></v-progress-circular>
 					</div>
 					<div style="line-height: 0.85em;">
-						Storage <br /><small>{{ customer.usage.storage | formatGBs }}GB / {{ customer.hosting_plan.storage_limit }}GB</small><br />
+						Storage <br /><small>{{ site.customer.usage.storage | formatGBs }}GB / {{ site.customer.hosting_plan.storage_limit }}GB</small><br />
 					</div>
 					<div style="padding: 10px 10px 10px 20px;">
-						<v-progress-circular :size="50" :value="( customer.usage.visits / customer.hosting_plan.visits_limit * 100 ) | formatPercentage" color="primary"><small>{{ ( customer.usage.visits / customer.hosting_plan.visits_limit ) * 100 | formatPercentage }}</small></v-progress-circular>
+						<v-progress-circular :size="50" :value="( site.customer.usage.visits / site.customer.hosting_plan.visits_limit * 100 ) | formatPercentage" color="primary"><small>{{ ( site.customer.usage.visits / site.customer.hosting_plan.visits_limit ) * 100 | formatPercentage }}</small></v-progress-circular>
 					</div>
 					<div style="line-height: 0.85em;">
-						Visits <br /><small>{{ customer.usage.visits | formatLargeNumbers }} / {{ customer.hosting_plan.visits_limit | formatLargeNumbers }}</small><br />
+						Visits <br /><small>{{ site.customer.usage.visits | formatLargeNumbers }} / {{ site.customer.hosting_plan.visits_limit | formatLargeNumbers }}</small><br />
 					</div>
 					<div style="padding: 10px 10px 10px 20px;">
-						<v-progress-circular :size="50" :value="( customer.usage.sites / customer.hosting_plan.sites_limit * 100 ) | formatPercentage" color="blue darken-4"><small>{{ ( customer.usage.sites / customer.hosting_plan.sites_limit * 100 ) | formatPercentage }}</small></v-progress-circular>
+						<v-progress-circular :size="50" :value="( site.customer.usage.sites / site.customer.hosting_plan.sites_limit * 100 ) | formatPercentage" color="blue darken-4"><small>{{ ( site.customer.usage.sites / site.customer.hosting_plan.sites_limit * 100 ) | formatPercentage }}</small></v-progress-circular>
 					</div>
 					<div  style="line-height: 0.85em;">
-						Sites <br /><small>{{ customer.usage.sites }} / {{ customer.hosting_plan.sites_limit }}</small><br />
+						Sites <br /><small>{{ site.customer.usage.sites }} / {{ site.customer.hosting_plan.sites_limit }}</small><br />
 					</div>
 				</v-layout>
 				</v-card-text>
@@ -3195,7 +3194,7 @@ Vue.component('file-upload', VueUploadComponent);
 					type="info"
 					color="primary"
 				>
-					<strong>{{ customer.hosting_plan.name }} Plan</strong> which supports up to {{ customer.hosting_plan.visits_limit | formatLargeNumbers }} visits, {{ customer.hosting_plan.storage_limit }}GB storage and {{ customer.hosting_plan.sites_limit }} sites.
+					<strong>{{ site.customer.hosting_plan.name }} Plan</strong> which supports up to {{ site.customer.hosting_plan.visits_limit | formatLargeNumbers }} visits, {{ site.customer.hosting_plan.storage_limit }}GB storage and {{ site.customer.hosting_plan.sites_limit }} sites.
 				</v-alert>
 				</div>
 				<div v-else>
@@ -3206,7 +3205,6 @@ Vue.component('file-upload', VueUploadComponent);
 				>
 					Development mode, no plan selected.
 				</v-alert>
-				</div>
 				</div>
 				<v-data-table
 					:headers='[{"text":"Name","value":"name"},{"text":"Storage","value":"Storage"},{"text":"Visits","value":"visits"}]'
@@ -5926,34 +5924,32 @@ new Vue({
 		modifyPlan( site_id ) {
 			site = this.sites.filter(site => site.id == site_id)[0];
 			this.dialog_modify_plan.site = site;
-			customer = site.customer[0];
-			this.dialog_modify_plan.hosting_addons = customer.hosting_addons;
-			this.dialog_modify_plan.hosting_plan = Object.assign({}, customer.hosting_plan)
+			this.dialog_modify_plan.hosting_addons = site.customer.hosting_addons;
+			this.dialog_modify_plan.hosting_plan = Object.assign({}, site.customer.hosting_plan)
 
 			// Adds commas
 			if ( this.dialog_modify_plan.hosting_plan.visits_limit != null ) {
 				this.dialog_modify_plan.hosting_plan.visits_limit = this.dialog_modify_plan.hosting_plan.visits_limit.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 			}
 
-			this.dialog_modify_plan.selected_plan = customer.hosting_plan.name;
-			this.dialog_modify_plan.customer_name = customer.name;
+			this.dialog_modify_plan.selected_plan = site.customer.hosting_plan.name;
+			this.dialog_modify_plan.customer_name = site.customer.name;
 			this.dialog_modify_plan.show = true;
 		},
 		updatePlan() {
 			site_id = this.dialog_modify_plan.site.id;
 			site = this.sites.filter(site => site.id == site_id)[0];
-			customer = site.customer[0];
 			hosting_plan = Object.assign({}, this.dialog_modify_plan.hosting_plan)
 			hosting_addons = Object.assign({}, this.dialog_modify_plan.hosting_addons)
 
 			// Remove commas
 			hosting_plan.visits_limit = hosting_plan.visits_limit.replace(/,/g, '')
-			customer.hosting_plan = hosting_plan
+			site.customer.hosting_plan = hosting_plan
 			this.dialog_modify_plan.show = false;
 			
 			// New job for progress tracking
 			job_id = Math.round((new Date()).getTime());
-			description = "Updating Plan for " + customer.name;
+			description = "Updating Plan for " + site.customer.name;
 			this.jobs.push({"job_id": job_id,"description": description, "status": "done"});
 
 			// Prep AJAX request
