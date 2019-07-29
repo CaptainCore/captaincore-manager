@@ -22,11 +22,16 @@ if ( $role_check ) {
 	$business_link = get_field( 'partner_link', $belongs_to[0] );
 
 ?>
-<link href="https://cdn.jsdelivr.net/npm/vuetify@1.5.4/dist/vuetify.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/vuetify@2.0.2/dist/vuetify.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@mdi/font@3.x/css/materialdesignicons.min.css" rel="stylesheet">
 <style>
 
-html {
-	font-size: 62.5%;
+html body {
+	font-size: 120%;
+}
+
+.theme--light.v-application {
+	background: none;
 }
 
 .table_users tbody tr td:nth-child(6) {
@@ -75,9 +80,9 @@ html {
 
 .usage {
 	display: inline-block;
-	text-align: left;
+	text-align: center;
 	font-size: 13px;
-  padding: 0px;
+	padding: 0px;
 	margin: 0px;
 }
 
@@ -128,7 +133,7 @@ g.chart-legend {
 	table-layout:fixed;
 }
 
-.text-xs-right .usage:last-child {
+.text-right .usage:last-child {
 	border-right: 0px;
 }
 
@@ -137,6 +142,10 @@ g.chart-legend {
 }
 .siteFilter .v-input__control { 
 	min-height: 42px;
+}
+.site .v-tabs--right .v-tab {
+	min-width: 40px;
+	padding: 0 10px;
 }
 .v-tabs__container--icons-and-text {
 	height: 54px;
@@ -158,9 +167,10 @@ g.chart-legend {
 	color: inherit;
 }
 
-.application.theme--light .dns_introduction a {
+.v-application .dns_introduction a {
 	text-decoration: underline;
 	font-weight: bold;
+	color: #fff;
 }
 
 .application.theme--light .dns_introduction p {
@@ -208,8 +218,8 @@ ul.v-expansion-panel.theme--light {
     padding: 0px;
 }
 
-ul.v-expansion-panel.theme--light.toggleSelect {
-    padding-left: 56px;
+.theme--light.v-expansion-panels .v-expansion-panel.site.toggleSelect .v-expansion-panel-header {
+    padding-left: 75px;
 }
 
 .v-expansion-panel--inset .v-expansion-panel__container, .v-expansion-panel--popout .v-expansion-panel__container {
@@ -236,6 +246,11 @@ table.v-table tbody td, table.v-table tbody th {
 	background-color: currentColor;
 }
 
+pre {
+	font-size: 15px;
+	padding: 10px;
+}
+
 #code_diff > div {
 	white-space:pre-wrap;
 }
@@ -243,6 +258,25 @@ table.v-table tbody td, table.v-table tbody th {
 .v-expansion-panel__body {
 	position: relative;
 }
+
+.v-expansion-panel.site:before {
+	box-shadow: none;
+}
+
+.theme--light.v-expansion-panels .v-expansion-panel.site {
+	background: none;
+}
+
+.site .v-expansion-panel-content__wrap {
+	padding: 0px;
+	max-width: 100%;
+}
+
+.v-expansion-panel.v-expansion-panel--active.site:before {
+	box-shadow: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
+}
+
+.theme--light.v-expansion-panels .v-expansion-panel
 
 .application .site .theme--dark.icon, .site .theme--dark .v-icon {
 	font-size: 1em;
@@ -267,8 +301,8 @@ li.v-expansion-panel__container {
 .v-toolbar__items i.v-icon.theme--dark {
     margin-left: 2%;
 }
-table.v-datatable.v-table.v-datatable--select-all thead tr th:nth-child(1),
-table.v-datatable.v-table.v-datatable--select-all tbody tr td:nth-child(1) {
+table.v-datatable.v-table.v-datatable--show-select thead tr th:nth-child(1),
+table.v-datatable.v-table.v-datatable--show-select tbody tr td:nth-child(1) {
 	width: 42px;
 	padding: 0 0 0px 22px;
 }
@@ -277,16 +311,16 @@ table.v-datatable.v-table.v-datatable--select-all tbody tr td:nth-child(1) {
 	padding: 0px;
 	box-shadow: 0 2px 1px -1px rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 1px 3px 0 rgba(0,0,0,.12);
 }
-.v-expansion-panel__body .v-card .pass-mask {
+.v-expansion-panel--active .v-card .pass-mask {
 	display: inline-block;
 }
-.v-expansion-panel__body .v-card .pass-reveal {
+.v-expansion-panel-content .v-card .pass-reveal {
 	display: none;
 }
-.v-expansion-panel__body .v-card:hover .pass-mask {
+.v-expansion-panel-content .v-card:hover .pass-mask {
 	display: none;
 }
-.v-expansion-panel__body .v-card:hover .pass-reveal {
+.v-expansion-panel-content .v-card:hover .pass-reveal {
 	display: inline-block;
 }
 
@@ -377,10 +411,10 @@ button {
 button.btn--icon {
 	padding:0px;
 }
-.application .theme--dark.v-btn, .theme--dark .v-btn {
+.theme--dark.v-btn, .theme--dark .v-btn {
 	color: #fff !important;
 }
-span.text-xs-right {
+span.text-right {
 	float:right;
 }
 .input-group.input-group--selection-controls.switch .input-group--selection-controls__container {
@@ -413,7 +447,22 @@ table.v-table tfoot td {
 	vertical-align: middle;
 	border:0px;
 }
-.v-btn--active, .v-btn:focus, .v-btn:hover {
+.v-data-table td, .v-data-table th {
+	vertical-align: middle;
+	line-height: 1em;
+}
+.v-data-table td p {
+	line-height: 1em;
+}
+.v-data-table td p:last-child {
+	margin-bottom: 0px;
+	padding-bottom: 0px;
+}
+
+.v-btn {
+	letter-spacing: 0em;
+}
+.v-btn--active, .v-btn:focus, .v-btn:hover, button.v-expansion-panel-header:focus {
 	background: none;
 }
 table.v-table tfoot td {
@@ -455,7 +504,7 @@ div.update_logs table tr td:nth-child(1) {
   padding: 0;
 }
 </style>
-	<?php if ( substr( $_SERVER['SERVER_NAME'], -4) == 'test' ) { ?>
+<?php if ( substr( $_SERVER['SERVER_NAME'], -4) == 'test' ) { ?>
 <script src="/wp-content/plugins/captaincore-gui/public/js/vue.js"></script>
 <script src="/wp-content/plugins/captaincore-gui/public/js/qs.js"></script>
 <script src="/wp-content/plugins/captaincore-gui/public/js/axios.min.js"></script>
@@ -464,11 +513,11 @@ div.update_logs table tr td:nth-child(1) {
 <script src="https://cdn.jsdelivr.net/npm/vue@2.6.10/dist/vue.min.js"></script>
 <script src="https://unpkg.com/qs@6.5.2/dist/qs.js"></script>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vuetify@1.5.4/dist/vuetify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@2.0.2/dist/vuetify.min.js"></script>
 <?php } ?>
 <script src="https://unpkg.com/lodash@4.16.0"></script>
 <script>
-lodash = _.noConflict(); // lets call ourselves _u
+lodash = _.noConflict();
 </script>
 <link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.0/dist/frappe-charts.min.css" rel="stylesheet">
 <script src="/wp-content/plugins/captaincore-gui/public/js/frappe-charts.js"></script>
@@ -493,32 +542,32 @@ Vue.component('file-upload', VueUploadComponent);
 			<span slot="badge">{{ runningJobs }}</span>
 			<a @click.stop="view_jobs = true; $vuetify.goTo( '#sites' )"><v-icon large color="grey lighten-1">fas fa-cogs</v-icon></a>
 			<template>
-			  <v-progress-linear :indeterminate="true"></v-progress-linear>
+			  <v-progress-linear :indeterminate="true" class="my-2"></v-progress-linear>
 			</template>
 		</v-badge>
 		<v-dialog v-model="new_plugin.show" max-width="900px">
 		<v-card tile>
-			<v-toolbar card dark color="primary">
-				<v-btn icon dark @click.native="new_plugin.show = false">
-					<v-icon>close</v-icon>
-				</v-btn>
-				<v-toolbar-title>Add plugin to {{ new_plugin.site_name }}</v-toolbar-title>
-				<v-spacer></v-spacer>
-			</v-toolbar>
+		<v-toolbar flat dark color="primary">
+			<v-btn icon dark @click.native="new_plugin.show = false">
+				<v-icon>close</v-icon>
+			</v-btn>
+			<v-toolbar-title>Add plugin to {{ new_plugin.site_name }}</v-toolbar-title>
+			<v-spacer></v-spacer>
+		</v-toolbar>
 		<v-toolbar color="grey lighten-4" dense light flat>
 			<v-tabs
-				color="transparent"
+				background-color="transparent"
 				v-model="new_plugin.tabs"
 				mandatory
 			>
-          <v-tab>From your computer</v-tab>
-					<v-tab>From WordPress.org</v-tab>
+				<v-tab>From your computer</v-tab>
+				<v-tab>From WordPress.org</v-tab>
 			</v-tabs>
 			<v-spacer></v-spacer>
 		</v-toolbar>
 		<v-tabs-items v-model="new_plugin.tabs">
       <v-tab-item key="0">
-			<div class="upload-drag pt-4">
+		<div class="upload-drag pt-4">
 		<div class="upload">
 			<div v-if="upload.length" class="mx-3">
 				<div v-for="(file, index) in upload" :key="file.id">
@@ -533,7 +582,7 @@ Vue.component('file-upload', VueUploadComponent);
 				</div>
 			</div>
 			<div v-else>
-					<div class="text-xs-center">
+					<div class="text-center">
 						<h4>Drop files anywhere to upload<br/>or</h4>
 						<label for="file" class="btn btn-lg btn-primary" style="padding: 0px 8px;">Select Files</label>
 					</div>
@@ -552,7 +601,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-flex xs12 sm3>
 				</v-flex>
 				<v-flex xs12 sm6>
-					<div class="text-xs-center">
+					<div class="text-center">
 						<v-pagination v-if="new_plugin.api.info && new_plugin.api.info.pages > 1" :length="new_plugin.api.info.pages - 1" v-model="new_plugin.page" :total-visible="7" color="blue darken-3" @input="fetchPlugins"></v-pagination>
 					</div>
 				</v-flex>
@@ -597,21 +646,21 @@ Vue.component('file-upload', VueUploadComponent);
 		</v-dialog>
 		<v-dialog v-model="new_theme.show" max-width="900px">
 		<v-card tile>
-			<v-toolbar card dark color="primary">
-				<v-btn icon dark @click.native="new_theme.show = false">
-					<v-icon>close</v-icon>
-				</v-btn>
-				<v-toolbar-title>Add theme to {{ new_theme.site_name }}</v-toolbar-title>
-				<v-spacer></v-spacer>
-			</v-toolbar>
-			<v-toolbar color="grey lighten-4" dense light flat>
+		<v-toolbar flat dark color="primary">
+			<v-btn icon dark @click.native="new_theme.show = false">
+				<v-icon>close</v-icon>
+			</v-btn>
+			<v-toolbar-title>Add theme to {{ new_theme.site_name }}</v-toolbar-title>
+			<v-spacer></v-spacer>
+		</v-toolbar>
+		<v-toolbar color="grey lighten-4" dense flat>
 			<v-tabs
-				color="transparent"
+				background-color="transparent"
 				v-model="new_theme.tabs"
 				mandatory
 			>
-          <v-tab>From your computer</v-tab>
-					<v-tab>From WordPress.org</v-tab>
+				<v-tab>From your computer</v-tab>
+				<v-tab>From WordPress.org</v-tab>
 			</v-tabs>
 			<v-spacer></v-spacer>
 		</v-toolbar>
@@ -632,7 +681,7 @@ Vue.component('file-upload', VueUploadComponent);
 				</div>
 			</div>
 			<div v-else>
-					<div class="text-xs-center">
+					<div class="text-center">
 						<h4>Drop files anywhere to upload<br/>or</h4>
 						<label for="file" class="btn btn-lg btn-primary" style="padding: 0px 8px;">Select Files</label>
 					</div>
@@ -651,7 +700,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-flex xs12 sm3>
 				</v-flex>
 				<v-flex xs12 sm6>
-					<div class="text-xs-center">
+					<div class="text-center">
 						<v-pagination v-if="new_theme.api.info && new_theme.api.info.pages > 1" :length="new_theme.api.info.pages - 1" v-model="new_theme.page" :total-visible="7" color="blue darken-3" @input="fetchThemes"></v-pagination>
 					</div>
 				</v-flex>
@@ -696,7 +745,7 @@ Vue.component('file-upload', VueUploadComponent);
 		</v-dialog>
 		<v-dialog v-model="bulk_edit.show" max-width="600px">
 		<v-card tile>
-			<v-toolbar card dark color="primary">
+			<v-toolbar flat dark color="primary">
 				<v-btn icon dark @click.native="bulk_edit.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
@@ -711,7 +760,7 @@ Vue.component('file-upload', VueUploadComponent);
 		</v-dialog>
 		<v-dialog v-model="dialog_fathom.show" max-width="500px">
 		<v-card tile>
-			<v-toolbar card dark color="primary">
+			<v-toolbar flat dark color="primary">
 				<v-btn icon dark @click.native="dialog_fathom.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
@@ -729,7 +778,7 @@ Vue.component('file-upload', VueUploadComponent);
 					</td>
 				</tr>
 				</table>
-				<v-flex xs12 class="text-xs-right">
+				<v-flex xs12 class="text-right">
 				<v-btn fab small @click="newFathomItem">
 					<v-icon dark>add</v-icon>
 				</v-btn>
@@ -759,14 +808,14 @@ Vue.component('file-upload', VueUploadComponent);
           </v-card-text>
           <v-card-actions>
             <v-spacer></v-spacer>
-            <v-btn color="blue darken-1" flat @click="configureFathomClose">Cancel</v-btn>
-            <v-btn color="blue darken-1" flat @click="configureFathomSave">Save</v-btn>
+            <v-btn color="blue darken-1" text @click="configureFathomClose">Cancel</v-btn>
+            <v-btn color="blue darken-1" text @click="configureFathomSave">Save</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
 	  <v-dialog v-model="dialog_domain.show" max-width="1200px" persistent>
 	  	<v-card tile style="margin:auto;max-width:1200px">
-			<v-toolbar card color="grey lighten-4">
+			<v-toolbar flat color="grey lighten-4">
 				<v-btn icon @click.native="dialog_domain.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
@@ -794,13 +843,13 @@ Vue.component('file-upload', VueUploadComponent);
 							<td class="value" v-if="record.type == 'MX'">
 								<v-layout v-for="(value, value_index) in record.update.record_value">
 									<v-flex xs3><v-text-field label="Level" :value="value.level" @change.native="value.level = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-									<v-flex xs9><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn flat small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field></v-flex>
+									<v-flex xs9><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field></v-flex>
 								</v-layout>
 								<v-btn depressed small class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
 							</td>
 							<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'SPF'">
 								<div v-for="(value, value_index) in record.update.record_value" :key="`value-${index}-${value_index}`">
-									<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn flat small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field>
+									<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field>
 								</div>
 								<v-btn depressed small class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
 							</td>
@@ -817,9 +866,9 @@ Vue.component('file-upload', VueUploadComponent);
 								<v-text-field label="Value" :value="record.update.record_value" @change.native="record.update.record_value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
 							</td>
 							<td><v-text-field label="TTL" :value="record.update.record_ttl" @change.native="record.update.record_ttl = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
-							<td class="text-xs-right">
-								<v-btn flat small icon color="primary" class="ma-0 pa-0" @click="viewRecord( record.id )" :disabled="dialog_domain.saving"><v-icon small>fas fa-edit</v-icon></v-btn>
-								<v-btn flat small icon color="primary" class="ma-0 pa-0" @click="deleteRecord( record.id )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn>
+							<td class="text-right">
+								<v-btn text small icon color="primary" class="ma-0 pa-0" @click="viewRecord( record.id )" :disabled="dialog_domain.saving"><v-icon small>fas fa-edit</v-icon></v-btn>
+								<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecord( record.id )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn>
 							</td>
 						</template>
 						<template v-else-if="record.new">
@@ -828,13 +877,13 @@ Vue.component('file-upload', VueUploadComponent);
 							<td class="value" v-if="record.type == 'MX'">
 								<v-layout v-for="(value, value_index) in record.update.record_value">
 									<v-flex xs3><v-text-field label="Level" :value="value.level" @change.native="value.level = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-									<v-flex xs9><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn flat small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field></v-flex>
+									<v-flex xs9><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field></v-flex>
 								</v-layout>
 								<v-btn depressed small class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
 							</td>
 							<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'SPF'">
 								<div v-for="(value, value_index) in record.update.record_value" :key="`value-${index}-${value_index}`">
-									<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn flat small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field>
+									<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field>
 								</div>
 								<v-btn depressed small class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
 							</td>
@@ -850,8 +899,8 @@ Vue.component('file-upload', VueUploadComponent);
 								<v-text-field label="Value" :value="record.update.record_value" @change.native="record.update.record_value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
 							</td>
 							<td><v-text-field label="TTL" :value="record.update.record_ttl" @change.native="record.update.record_ttl = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
-							<td class="text-xs-right">
-								<v-btn flat small icon color="primary" class="ma-0 pa-0" @click="deleteRecord( index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn>
+							<td class="text-right">
+								<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecord( index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn>
 							</td>
 						</template>
 						<template v-else>
@@ -862,9 +911,9 @@ Vue.component('file-upload', VueUploadComponent);
 							<td class="value" v-else-if="record.type == 'SRV'"><div v-for="value in record.value">{{ value.priority }} {{ value.weight }} {{ value.port }} {{ value.value }}</div></td>
 							<td class="value" v-else>{{ record.value }}</td>
 							<td>{{ record.ttl }}</td>
-							<td class="text-xs-right">
-								<v-btn flat small icon color="primary" class="ma-0 pa-0" @click="editRecord( record.id )" :disabled="dialog_domain.saving"><v-icon small>fas fa-edit</v-icon></v-btn>
-								<v-btn flat small icon color="primary" class="ma-0 pa-0" @click="deleteCurrentRecord( record.id )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn>
+							<td class="text-right">
+								<v-btn text small icon color="primary" class="ma-0 pa-0" @click="editRecord( record.id )" :disabled="dialog_domain.saving"><v-icon small>fas fa-edit</v-icon></v-btn>
+								<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteCurrentRecord( record.id )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn>
 							</td>
 						</template>
 						</tr>
@@ -874,7 +923,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-flex xs12>
 					<v-progress-linear :indeterminate="true" v-show="dialog_domain.saving"></v-progress-linear>
 				</v-flex>
-				<v-flex xs12 text-xs-right pa-0 ma-0 v-show="!dialog_domain.loading">
+				<v-flex xs12 text-right pa-0 ma-0 v-show="!dialog_domain.loading">
 					<v-btn color="primary" dark @click="saveDNS()">
 						Save Records
 					</v-btn>
@@ -892,7 +941,7 @@ Vue.component('file-upload', VueUploadComponent);
 	  </v-dialog>
 	  <v-dialog v-model="new_recipe.show" max-width="800px" v-if="role == 'administrator'">
 	  	<v-card tile style="margin:auto;max-width:800px">
-			<v-toolbar card color="grey lighten-4">
+			<v-toolbar flat color="grey lighten-4">
 				<v-btn icon @click.native="new_recipe.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
@@ -911,7 +960,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-flex xs12 pa-2>
 					<v-switch label="Public" v-model="new_recipe.public" persistent-hint hint="Public by default. Turning off will make the recipe only viewable and useable by you." :false-value="0" :true-value="1"></v-switch>
 				</v-flex>
-				<v-flex xs12 text-xs-right pa-0 ma-0>
+				<v-flex xs12 text-right pa-0 ma-0>
 					<v-btn color="primary" dark @click="addRecipe()">
 						Add New Recipe
 					</v-btn>
@@ -923,7 +972,7 @@ Vue.component('file-upload', VueUploadComponent);
 	  </v-dialog>
 	  <v-dialog v-model="dialog_cookbook.show" max-width="800px" v-if="role == 'administrator'" persistent>
 		<v-card tile style="margin:auto;max-width:800px">
-			<v-toolbar card color="grey lighten-4">
+			<v-toolbar flat color="grey lighten-4">
 				<v-btn icon @click.native="dialog_cookbook.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
@@ -942,7 +991,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-flex xs12 pa-2>
 					<v-switch label="Public" v-model="dialog_cookbook.recipe.public" persistent-hint hint="Public by default. Turning off will make the recipe only viewable and useable by you." false-value="0" true-value="1"></v-switch>
 				</v-flex>
-				<v-flex xs12 text-xs-right pa-0 ma-0>
+				<v-flex xs12 text-right pa-0 ma-0>
 					<v-btn color="primary" dark @click="updateRecipe()">
 						Update Recipe
 					</v-btn>
@@ -954,7 +1003,7 @@ Vue.component('file-upload', VueUploadComponent);
 	  </v-dialog>
 	  <v-dialog v-model="new_process.show" max-width="800px" v-if="role == 'administrator'">
 		<v-card tile style="margin:auto;max-width:800px">
-			<v-toolbar card color="grey lighten-4">
+			<v-toolbar flat color="grey lighten-4">
 				<v-btn icon @click.native="new_process.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
@@ -986,7 +1035,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-textarea label="Description" persistent-hint hint="Steps to accomplish this process. Markdown enabled." auto-grow :value="new_process.description" @change.native="new_process.description = $event.target.value"></v-textfield>
 				</v-flex>
 
-				<v-flex xs12 text-xs-right pa-0 ma-0>
+				<v-flex xs12 text-right pa-0 ma-0>
 					<v-btn color="primary" dark @click="addNewProcess()">
 						Add New Process
 					</v-btn>
@@ -999,7 +1048,7 @@ Vue.component('file-upload', VueUploadComponent);
 		</v-dialog>
 		<v-dialog v-model="dialog_edit_process.show" persistent max-width="800px" v-if="role == 'administrator'">
 		<v-card tile style="margin:auto;max-width:800px">
-			<v-toolbar card color="grey lighten-4">
+			<v-toolbar flat color="grey lighten-4">
 				<v-btn icon @click.native="dialog_edit_process.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
@@ -1031,7 +1080,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-textarea label="Description" persistent-hint hint="Steps to accomplish this process. Markdown enabled." auto-grow :value="dialog_edit_process.process.description_raw" @change.native="dialog_edit_process.process.description_raw = $event.target.value"></v-textfield>
 				</v-flex>
 
-				<v-flex xs12 text-xs-right pa-0 ma-0>
+				<v-flex xs12 text-right pa-0 ma-0>
 					<v-btn color="primary" dark @click="updateProcess()">
 						Update Process
 					</v-btn>
@@ -1044,14 +1093,14 @@ Vue.component('file-upload', VueUploadComponent);
 		</v-dialog>
 		<v-dialog v-model="dialog_handbook.show" v-if="role == 'administrator'">
 			<v-card tile>
-			<v-toolbar card color="grey lighten-4">
+			<v-toolbar flat color="grey lighten-4">
 				<v-btn icon @click.native="dialog_handbook.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
-				<v-toolbar-title>{{ dialog_handbook.process.title }} <v-chip color="primary" text-color="white" flat disabled>{{ dialog_handbook.process.role }}</v-chip></v-toolbar-title>
+				<v-toolbar-title>{{ dialog_handbook.process.title }} <v-chip color="primary" text-color="white" text>{{ dialog_handbook.process.role }}</v-chip></v-toolbar-title>
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
-					<v-btn flat @click="editProcess( dialog_handbook.process.id ); dialog_handbook.show = false">Edit</v-btn>
+					<v-btn text @click="editProcess( dialog_handbook.process.id ); dialog_handbook.show = false">Edit</v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
 			<v-card-text style="max-height: 100%;">
@@ -1066,7 +1115,7 @@ Vue.component('file-upload', VueUploadComponent);
 		</v-dialog>
 		<v-dialog v-model="dialog_update_settings.show" max-width="500px">
 		<v-card tile>
-			<v-toolbar card dark color="primary">
+			<v-toolbar flat dark color="primary">
 				<v-btn icon dark @click.native="dialog_update_settings.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
@@ -1107,7 +1156,7 @@ Vue.component('file-upload', VueUploadComponent);
 		</v-dialog>
 		<v-dialog v-model="dialog_theme_and_plugin_checks.show" width="500">
         <v-card tile>
-          <v-toolbar card dark color="primary">
+          <v-toolbar flat dark color="primary">
 				<v-btn icon dark @click.native="dialog_theme_and_plugin_checks.show = false">
               <v-icon>close</v-icon>
             </v-btn>
@@ -1119,46 +1168,47 @@ Vue.component('file-upload', VueUploadComponent);
 				<p>Enables daily checks to verify a theme/plugin is a certain status (activate/inactive). Will email notify if a check fails.</p>
 
 				<v-switch label="Theme & Plugin Checks" v-model="dialog_theme_and_plugin_checks.theme_and_plugin_checks" false-value="0" true-value="1"></v-switch>
-			  <v-data-table
-				:items='[{ slug: "wordpress-seo", status: "active" },{ slug: "enhanced-e-commerce-for-woocommerce-store", status: "active"}]'
-				hide-actions
-				hide-headers
-				class="elevation-1"
-				v-show="dialog_theme_and_plugin_checks.theme_and_plugin_checks == 1"
-			  >
-				<template slot="items" slot-scope="props">
-					<tr>
-				  <td>
-							<v-text-field v-model="props.item.slug" label="Slug" required></v-text-field>
+				<v-data-table
+					:items='[{ slug: "wordpress-seo", status: "active" },{ slug: "enhanced-e-commerce-for-woocommerce-store", status: "active"}]'
+					hide-default-footer
+					hide-default-header
+					class="elevation-1"
+					v-show="dialog_theme_and_plugin_checks.theme_and_plugin_checks == 1"
+				>
+				<template v-slot:body="{ items }">
+				<tbody>
+					<tr v-for="item in items">
+						<td>
+							<v-text-field v-model="item.slug" label="Slug" required></v-text-field>
 						</td>
-				  <td class="text-xs-right">
+						<td class="text-right">
 							<v-select
-					  :items='["active","inactive","active-network"]'
-					  box
-					  label="Status"
-								:value="props.item.status">
-					</v-select>
+								:items='["active","inactive","active-network"]'
+								box
+								label="Status"
+								:value="item.status"
+							>
+							</v-select>
 						</td>
 						<td class="justify-center layout px-0">
-				  <v-icon small @click="deleteItem(props.item)">
-					delete
-				  </v-icon>
-				</td>
+							<v-icon small @click="deleteItem(item)">delete</v-icon>
+						</td>
 					</tr>
-				</template>
-					<template slot="footer">
-				  <td colspan="100%" class="text-xs-right">
+					<tr>
+						<td colspan="100%" class="text-right">
 							<v-btn @click="deleteItem(props.item)">
-							Add new check
-						</v-btn>
-				  </td>
+								Add new check
+							</v-btn>
+						</td>
+					</tr>
+				</tbody>
 				</template>
 			  </v-data-table>
 				<v-progress-linear :indeterminate="true" v-if="dialog_theme_and_plugin_checks.loading"></v-progress-linear>
 				<v-btn @click="savethemeAndPluginChecks()">Save Checks</v-btn>
           </v-card-text>
-        </v-card>
-      </v-dialog>
+		</v-card>
+		</v-dialog>
 		<v-dialog v-model="dialog_new_domain.show" scrollable width="500">
 		<v-card>
 			<v-card-text>
@@ -1169,7 +1219,7 @@ Vue.component('file-upload', VueUploadComponent);
 		</v-dialog>
 		<v-dialog v-model="dialog_configure_defaults.show" scrollable width="980">
 		<v-card>
-			<v-toolbar card dark color="primary">
+			<v-toolbar flat dark color="primary">
 			<v-btn icon dark @click.native="dialog_configure_defaults.show = false">
 				<v-icon>close</v-icon>
 			</v-btn>
@@ -1208,8 +1258,8 @@ Vue.component('file-upload', VueUploadComponent);
 				<span class="body-2">Default Users</span>
 				<v-data-table
 					:items="dialog_configure_defaults.record.default_users"
-					hide-headers
-					hide-actions
+					hide-default-header
+					hide-default-footer
 				>
 					<template v-slot:items="props">
 					<tr style="border-bottom: 0px;">
@@ -1229,7 +1279,7 @@ Vue.component('file-upload', VueUploadComponent);
 					</template>
 				</v-data-table>
 
-				<v-flex xs12 text-xs-right>
+				<v-flex xs12 text-right>
 					<v-btn color="primary" dark @click="saveDefaults()">
 						Save Changes
 					</v-btn>
@@ -1240,7 +1290,7 @@ Vue.component('file-upload', VueUploadComponent);
 		</v-dialog>
 		<v-dialog v-model="dialog_new_site.show" scrollable>
 					<v-card tile>
-						<v-toolbar card dark color="primary">
+						<v-toolbar flat dark color="primary">
 							<v-btn icon dark @click.native="dialog_new_site.show = false">
 								<v-icon>close</v-icon>
 							</v-btn>
@@ -1268,31 +1318,17 @@ Vue.component('file-upload', VueUploadComponent);
 							</v-layout>
 							<v-layout>
 							<v-flex xs4 class="mx-2">
-								<v-autocomplete
-							:items="developers"
-							v-model="dialog_new_site.shared_with"
-							label="Shared With"
+							<v-autocomplete
+								:items="developers"
+								v-model="dialog_new_site.shared_with"
+								label="Shared With"
 								item-text="name"
-							:return-object="true"
+								return-object
 								chips
 								multiple
 								small-chips
 								deletable-chips
 							>
-						 	<template slot="selection" slot-scope="data">
-								<v-chip
-									close
-									@input="data.parent.selectItem(data.item)"
-									:selected="data.selected"
-									class="chip--select-multi"
-									:key="JSON.stringify(data.item)"
-									>
-									<strong>{{ data.item.name }}</strong>
-								</v-chip>
-							</template>
-							<template slot="item" slot-scope="data">
-								<strong>{{ data.item.name }}</strong>
-							</template>
 							</v-autocomplete>
 						</v-flex>
 						<v-flex xs4 class="mx-2">
@@ -1301,36 +1337,22 @@ Vue.component('file-upload', VueUploadComponent);
 								item-text="name"
 								item-value="customer_id"
 								v-model="dialog_new_site.customers"
-							item-text="name"
+								item-text="name"
 								hint="Assign to existing customer. If new leave blank."
 								persistent-hint
-							chips
-							small-chips
-							deletable-chips
-						>
-						<template slot="selection" slot-scope="data">
-							<v-chip
-								close
-								@input="data.parent.selectItem(data.item)"
-								:selected="data.selected"
-								class="chip--select-multi"
-								:key="JSON.stringify(data.item)"
-								>
-								<strong>{{ data.item.name }}</strong>
-							</v-chip>
-						</template>
-						<template slot="item" slot-scope="data">
-							<strong>{{ data.item.name }}</strong>
-						</template>
+								chips
+								small-chips
+								deletable-chips
+							>
 						</v-autocomplete>
 							</v-flex>
 						<v-flex xs4 class="mx-2">
 						</v-flex>
 						</v-layout>
-								<v-container grid-list-md text-xs-center>
+								<v-container grid-list-md text-center>
 									<v-layout row wrap>
 										<v-flex xs12 style="height:0px">
-										<v-btn @click="new_site_preload_staging" flat icon center relative color="green" style="top:32px;">
+										<v-btn @click="new_site_preload_staging" text icon center relative color="green" style="top:32px;">
 											<v-icon>cached</v-icon>
 										</v-btn>
 										</v-flex>
@@ -1389,7 +1411,7 @@ Vue.component('file-upload', VueUploadComponent);
 							{{ error }}
 							</v-alert>
 							</v-flex>
-							<v-flex xs12 text-xs-right><v-btn right @click="submitNewSite">Add Site</v-btn></v-flex>
+							<v-flex xs12 text-right><v-btn right @click="submitNewSite">Add Site</v-btn></v-flex>
 						 </v-layout>
 					 </v-container>
 						  </v-form>
@@ -1403,7 +1425,7 @@ Vue.component('file-upload', VueUploadComponent);
 					width="500"
 				>
 				<v-card tile>
-					<v-toolbar card dark color="primary">
+					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_modify_plan.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
@@ -1446,14 +1468,14 @@ Vue.component('file-upload', VueUploadComponent);
 							<v-text-field label="Price" :value="addon.price" @change.native="addon.price = $event.target.value">
 						</v-flex>
 						<v-flex xs1>
-							<v-btn small flat icon @click="removeAddon(index)"><v-icon>delete</v-icon></v-btn>
+							<v-btn small text icon @click="removeAddon(index)"><v-icon>delete</v-icon></v-btn>
 						</v-flex>
 						</v-layout>
 						<v-btn small style="margin:0px;" @click="addAddon()">
 							Add Addon
 						</v-btn>
 						<v-layout>
-						<v-flex xs12 text-xs-right>
+						<v-flex xs12 text-right>
 							<v-btn color="primary" dark style="margin:0px;" @click="updatePlan()">
 								Save Changes
 							</v-btn>
@@ -1466,10 +1488,9 @@ Vue.component('file-upload', VueUploadComponent);
 					v-if="role == 'administrator'"
 					v-model="dialog_log_history.show"
 					scrollable
-					fullscreen
 				>
 				<v-card tile>
-					<v-toolbar card dark color="primary">
+					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_log_history.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
@@ -1478,27 +1499,30 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-toolbar>
 					<v-card-text>
 					<v-data-table
-				:headers="header_timeline"
-				:items="dialog_log_history.logs"
-						:pagination.sync="dialog_log_history.pagination"
-						:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
-				class="timeline"
-				>
-				<template slot="items" slot-scope="props">
-					<td class="justify-center">{{ props.item.created_at | pretty_timestamp }}</td>
-					<td class="justify-center">{{ props.item.author }}</td>
-					<td class="justify-center">{{ props.item.title }}</td>
-					<td class="justify-center" v-html="props.item.description"></td>
+						:headers="header_timeline"
+						:items="dialog_log_history.logs"
+						:items-per-page-options='[50,100,250,{"text":"All","value":-1}]'
+						class="timeline"
+					>
+				<template v-slot:body="{ items }">
+				<tbody>
+				<tr v-for="item in items">
+					<td class="justify-center">{{ item.created_at | pretty_timestamp }}</td>
+					<td class="justify-center">{{ item.author }}</td>
+					<td class="justify-center">{{ item.title }}</td>
+					<td class="justify-center" v-html="item.description"></td>
 					<td v-if="role == 'administrator'">
 						<v-icon
 							small
 							class="mr-2"
-							@click="dialog_log_history.show = false; editLogEntry(props.item.websites, props.item.id)"
+							@click="dialog_log_history.show = false; editLogEntry(item.websites, item.id)"
 						>
 							edit
 						</v-icon>
-						{{ props.item.websites.map( site => site.name ).join(" ") }}
+						{{ item.websites.map( site => site.name ).join(" ") }}
 					</td>
+				</tr>
+				</tbody>
 				</template>
 			</v-data-table>
 					</v-card-text>
@@ -1512,7 +1536,7 @@ Vue.component('file-upload', VueUploadComponent);
 					width="500"
 				>
 				<v-card tile>
-					<v-toolbar card dark color="primary">
+					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_new_log_entry.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
@@ -1528,37 +1552,29 @@ Vue.component('file-upload', VueUploadComponent);
 							item-value="id"
 						>
 						<template v-slot:item="data">
-								<template v-if="typeof data.item !== 'object'">
-									<v-list-tile-content v-text="data.item"></v-list-tile-content>
-								</template>
-								<template v-else>
-									<v-list-tile-content>
-										<v-list-tile-title v-html="data.item.title"></v-list-tile-title>
-										<v-list-tile-sub-title v-html="data.item.repeat + ' - ' + data.item.role"></v-list-tile-sub-title>
-									</v-list-tile-content>
-								</template>
+							<template v-if="typeof data.item !== 'object'">
+								<div v-text="data.item"></div>
 							</template>
+							<template v-else>
+								<div>
+									<v-list-item-title v-html="data.item.title"></v-list-item-title>
+									<v-list-item-subtitle v-html="data.item.repeat + ' - ' + data.item.role"></v-list-item-subtitle>
+								</div>
+							</template>
+						</template>
 						</v-autocomplete>
 						<v-autocomplete
 							v-model="dialog_new_log_entry.sites"
 							:items="sites"
 							item-text="name"
 							return-object
+							chips
+							deletable-chips 
 							multiple
 						>
-						<template v-slot:selection="data">
-                <v-chip
-                  :selected="data.selected"
-                  close
-                  class="chip--select-multi"
-                  @input="dialog_new_log_entry.sites = dialog_new_log_entry.sites.filter( s => s.id != data.item.id )"
-                >
-                  {{ data.item.name }}
-                </v-chip>
-              </template>
 						</v-autocomplete>
 						<v-textarea label="Description" auto-grow :value="dialog_new_log_entry.description" @change.native="dialog_new_log_entry.description = $event.target.value"></v-textarea>
-						<v-flex xs12 text-xs-right>
+						<v-flex xs12 text-right>
 							<v-btn color="primary" dark style="margin:0px;" @click="newLogEntry()">
 								Add Log Entry
 							</v-btn>
@@ -1575,7 +1591,7 @@ Vue.component('file-upload', VueUploadComponent);
 					width="500"
 				>
 				<v-card tile>
-					<v-toolbar card dark color="primary">
+					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_edit_log_entry.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
@@ -1595,37 +1611,29 @@ Vue.component('file-upload', VueUploadComponent);
 							item-value="id"
 						>
 						<template v-slot:item="data">
-								<template v-if="typeof data.item !== 'object'">
-									<v-list-tile-content v-text="data.item"></v-list-tile-content>
-								</template>
-								<template v-else>
-									<v-list-tile-content>
-										<v-list-tile-title v-html="data.item.title"></v-list-tile-title>
-										<v-list-tile-sub-title v-html="data.item.repeat + ' - ' + data.item.role"></v-list-tile-sub-title>
-									</v-list-tile-content>
-								</template>
+							<template v-if="typeof data.item !== 'object'">
+								<div v-text="data.item"></div>
 							</template>
+							<template v-else>
+								<div>
+									<v-list-item-title v-html="data.item.title"></v-list-item-title>
+									<v-list-item-subtitle v-html="data.item.repeat + ' - ' + data.item.role"></v-list-item-subtitle>
+								</div>
+							</template>
+						</template>
 						</v-autocomplete>
 						<v-autocomplete
 							v-model="dialog_edit_log_entry.log.websites"
 							:items="sites"
 							item-text="name"
 							return-object
+							chips
+							deletable-chips 
 							multiple
 						>
-						<template v-slot:selection="data">
-                <v-chip
-                  :selected="data.selected"
-                  close
-                  class="chip--select-multi"
-                  @input="dialog_edit_log_entry.log.websites = dialog_edit_log_entry.log.websites.filter( s => s.id != data.item.id )"
-                >
-                  {{ data.item.name }}
-                </v-chip>
-              </template>
 						</v-autocomplete>
 						<v-textarea label="Description" auto-grow :value="dialog_edit_log_entry.log.description_raw" @change.native="dialog_edit_log_entry.log.description_raw = $event.target.value"></v-textarea>
-						<v-flex xs12 text-xs-right>
+						<v-flex xs12 text-right>
 							<v-btn color="primary" dark style="margin:0px;" @click="updateLogEntry()">
 								Update Log Entry
 							</v-btn>
@@ -1642,7 +1650,7 @@ Vue.component('file-upload', VueUploadComponent);
 					scrollable
 				>
 				<v-card tile>
-					<v-toolbar card dark color="primary">
+					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_mailgun.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
@@ -1652,6 +1660,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-card-text>
 					<v-container>
 						<v-progress-linear :indeterminate="true" v-show="dialog_mailgun.loading"></v-progress-linear>
+						<v-expansion-panels>
 						<v-expansion-panel>
 						<v-expansion-panel-content
 							v-for="event in dialog_mailgun.response"
@@ -1662,6 +1671,7 @@ Vue.component('file-upload', VueUploadComponent);
 							</v-card>
 							</v-expansion-panel-content>
 						</v-expansion-panel>
+						</v-expansion-panels>
 					</v-container>
 					</v-card-text>
 					</v-card>
@@ -1672,7 +1682,7 @@ Vue.component('file-upload', VueUploadComponent);
 					transition="dialog-bottom-transition"
 				>
 				<v-card tile>
-					<v-toolbar card dark color="primary">
+					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_backup_snapshot.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
@@ -1705,7 +1715,7 @@ Vue.component('file-upload', VueUploadComponent);
 					width="500px"
 				>
 				<v-card tile>
-					<v-toolbar card dark color="primary">
+					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_delete_user.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
@@ -1718,16 +1728,16 @@ Vue.component('file-upload', VueUploadComponent);
 						 <v-flex xs12 pa-2>
 								<span>To delete <strong>{{ dialog_delete_user.username }}</strong> from <strong>{{ dialog_delete_user.site.name }}</strong> ({{ dialog_delete_user.site.environment_selected }}), please reassign posts to another user.</span>
 								<v-autocomplete
-								:items="dialog_delete_user.users"
-								return-object
-								v-model="dialog_delete_user.reassign"
-								item-text="user_login"
-								label="Reassign posts to"
-								chips
-								hide-details
-								hide-selected
-								small-chips
-								deletable-chips
+									:items="dialog_delete_user.users"
+									return-object
+									v-model="dialog_delete_user.reassign"
+									item-text="user_login"
+									label="Reassign posts to"
+									chips
+									hide-details
+									hide-selected
+									small-chips
+									deletable-chips
 								>
 								</v-autocomplete><br />
 								<v-btn @click="deleteUser()">
@@ -1745,7 +1755,7 @@ Vue.component('file-upload', VueUploadComponent);
 					scrollable
 				>
 				<v-card tile>
-					<v-toolbar card dark color="primary">
+					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_launch.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
@@ -1773,7 +1783,7 @@ Vue.component('file-upload', VueUploadComponent);
 					scrollable
 				>
 				<v-card tile>
-					<v-toolbar card dark color="primary">
+					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_toggle.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
@@ -1826,7 +1836,7 @@ Vue.component('file-upload', VueUploadComponent);
 					width="500"
 				>
 				<v-card tile>
-					<v-toolbar card dark color="primary">
+					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_migration.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
@@ -1855,7 +1865,7 @@ Vue.component('file-upload', VueUploadComponent);
 					width="500"
 				>
 				<v-card tile>
-					<v-toolbar card dark color="primary">
+					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_copy_site.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
@@ -1888,7 +1898,7 @@ Vue.component('file-upload', VueUploadComponent);
 					scrollable
 				>
 				<v-card tile>
-					<v-toolbar card dark color="primary">
+					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_edit_site.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
@@ -1907,77 +1917,46 @@ Vue.component('file-upload', VueUploadComponent);
 							label="Provider"
 						></v-autocomplete>
 						</v-flex>
-        		<v-flex xs4 class="mx-2">
+						<v-flex xs4 class="mx-2">
 							<v-text-field :value="dialog_edit_site.site.name" @change.native="dialog_edit_site.site.name = $event.target.value" label="Domain name" required></v-text-field>
 						</v-flex>
-        		<v-flex xs4 class="mx-2">
+						<v-flex xs4 class="mx-2">
 							<v-text-field :value="dialog_edit_site.site.site" @change.native="dialog_edit_site.site.site = $event.target.value" label="Site name (not changeable)" disabled></v-text-field>
 						</v-flex>
 					</v-layout>
-					<v-layout>
-						<v-flex xs4 class="mx-2">
-							<v-autocomplete
-							:items="customers"
-							item-text="name"
-							v-model="dialog_edit_site.site.customer"
-							:return-object="true"
-							label="Customer"
-							chips
-							multiple
-							small-chips
-							deletable-chips
-						>
-						<template slot="selection" slot-scope="data">
-							<v-chip
-								close
-								@input="data.parent.selectItem(data.item)"
-								:selected="data.selected"
-								class="chip--select-multi"
-								:key="JSON.stringify(data.item)"
-								>
-								<strong>{{ data.item.name }}</strong>
-							</v-chip>
-						</template>
-						<template slot="item" slot-scope="data">
-							<strong>{{ data.item.name }}</strong>
-						</template>
-						</v-autocomplete>
-				</v-flex>
-    		<v-flex xs4 class="mx-2">
-						<v-autocomplete
+			<v-layout>
+				<v-flex xs4 class="mx-2">
+					<v-autocomplete
 						:items="developers"
 						v-model="dialog_edit_site.site.shared_with"
 						item-text="name"
-						:return-object="true"
+						return-object
 						label="Shared With"
 						chips
 						multiple
-						small-chips
 						deletable-chips
 					>
-					<template slot="selection" slot-scope="data">
-						<v-chip
-							close
-							@input="data.parent.selectItem(data.item)"
-							:selected="data.selected"
-							class="chip--select-multi"
-							:key="JSON.stringify(data.item)"
-							>
-							<strong>{{ data.item.name }}</strong>
-						</v-chip>
-					</template>
-					<template slot="item" slot-scope="data">
-						<strong>{{ data.item.name }}</strong>
-					</template>
 					</v-autocomplete>
-        </v-flex>
+				</v-flex>
+				<v-flex xs4 class="mx-2">
+					<v-autocomplete
+						:items="customers"
+						item-text="name"
+						v-model="dialog_edit_site.site.customer"
+						return-object
+						label="Customer"
+						chips
+						deletable-chips
+					>
+					</v-autocomplete>
+				</v-flex>
 				<v-flex xs4 class="mx-2">
 				</v-flex>
 				</v-layout>
-							<v-container grid-list-md text-xs-center>
+							<v-container grid-list-md text-center>
 								<v-layout row wrap>
 									<v-flex xs12 style="height:0px">
-									<v-btn @click="edit_site_preload_staging" flat icon center relative color="green" style="top:32px;">
+									<v-btn @click="edit_site_preload_staging" text icon center relative color="green" style="top:32px;">
 										<v-icon>cached</v-icon>
 									</v-btn>
 									</v-flex>
@@ -2034,7 +2013,7 @@ Vue.component('file-upload', VueUploadComponent);
 						{{ error }}
 						</v-alert>
 						
-						<v-flex xs12 text-xs-right>
+						<v-flex xs12 text-right>
 							<v-btn right @click="submitEditSite">
 								Save Changes
 							</v-btn>
@@ -2055,7 +2034,7 @@ Vue.component('file-upload', VueUploadComponent);
 					width="500"
 				>
 				<v-card tile>
-					<v-toolbar card dark color="primary">
+					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_apply_https_urls.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
@@ -2087,14 +2066,14 @@ Vue.component('file-upload', VueUploadComponent);
 					scrollable
 				>
 				<v-card tile>
-					<v-toolbar card dark color="primary">
+					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_file_diff.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
 						<v-toolbar-title>File diff {{ dialog_file_diff.file_name}}</v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items class="hidden-sm-and-down">
-							<v-btn flat @click="QuicksaveFileRestore()">Restore this file</v-btn>
+							<v-btn text @click="QuicksaveFileRestore()">Restore this file</v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
 					<v-card-text>
@@ -2111,38 +2090,38 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-items>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn flat small @click="configureDefaults" v-on="on"><v-icon dark small>fas fa-chalkboard</v-icon></v-btn>
+								<v-btn text small @click="configureDefaults" v-on="on"><v-icon dark small>fas fa-chalkboard</v-icon></v-btn>
 							</template><span>Configure Defaults</span>
 						</v-tooltip>
 						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn flat small @click="fetchTimelineLogs" v-bind:class='{ "v-btn--active": view_timeline }' v-on="on"><v-icon dark small>far fa-list-alt</v-icon></v-btn>
+								<v-btn text small @click="fetchTimelineLogs" v-bind:class='{ "v-btn--active": view_timeline }' v-on="on"><v-icon dark small>far fa-list-alt</v-icon></v-btn>
 							</template><span>Timeline Logs</span>
 						</v-tooltip>
 						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn flat small @click="view_jobs = !view_jobs" v-bind:class='{ "v-btn--active": view_jobs }' v-on="on"><small v-if="runningJobs">({{ runningJobs }})</small><v-icon dark small>fas fa-cogs</v-icon></v-btn>
+								<v-btn text small @click="view_jobs = !view_jobs" v-bind:class='{ "v-btn--active": view_jobs }' v-on="on"><small v-if="runningJobs">({{ runningJobs }})</small><v-icon dark small>fas fa-cogs</v-icon></v-btn>
 							</template><span>Job Activity</span>
 						</v-tooltip>
 						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn flat small @click="dialog_bulk.show = !dialog_bulk.show" v-bind:class='{ "v-btn--active": dialog_bulk.show }' v-on="on"><small v-show="selectedSites > 0">({{ selectedSites }})</small><v-icon dark small>fas fa-cog</v-icon></v-btn>
+								<v-btn text small @click="dialog_bulk.show = !dialog_bulk.show" v-bind:class='{ "v-btn--active": dialog_bulk.show }' v-on="on"><small v-show="selectedSites > 0">({{ selectedSites }})</small><v-icon dark small>fas fa-cog</v-icon></v-btn>
 							</template><span>Bulk Tools</span>
 						</v-tooltip>
 						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn flat small @click="advanced_filter = !advanced_filter" v-bind:class='{ "v-btn--active": advanced_filter }' v-on="on"><v-icon dark small>fas fa-filter</v-icon></v-btn>
+								<v-btn text small @click="advanced_filter = !advanced_filter" v-bind:class='{ "v-btn--active": advanced_filter }' v-on="on"><v-icon dark small>fas fa-filter</v-icon></v-btn>
 							</template><span>Filters</span>
 						</v-tooltip>
 						<template v-if="role == 'administrator'">
 						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn flat small @click="dialog_new_site.show = true" v-on="on"><v-icon dark small>add</v-icon></v-btn>
+								<v-btn text small @click="dialog_new_site.show = true" v-on="on"><v-icon dark small>add</v-icon></v-btn>
 							</template><span>Add Site</span>
 						</v-tooltip>
 						</template>
@@ -2159,38 +2138,36 @@ Vue.component('file-upload', VueUploadComponent);
 						@change="page = 1"
 						style="width:70px;display: inline-block;"
 					></v-select>
-						<v-select 
-							:items="select_site_options"
-							v-model="site_selected"
-							v-show="dialog_bulk.show == true"
-							@input="selectSites"
-							label="Bulk Toggle"
-							dense
-							style="width:120px;display: inline-block;"
-	        ></v-select>
-			</v-flex>
-					<v-flex xs12 sm6>
-					<div class="text-xs-center">
-						<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" :length="Math.ceil(filteredSites / items_per_page)" v-model="page" :total-visible="7" color="blue darken-3"></v-pagination>
-					</div>
-			</v-flex>
+					<v-select 
+						:items="select_site_options"
+						v-model="site_selected"
+						v-show="dialog_bulk.show == true"
+						@input="selectSites"
+						label="Bulk Toggle"
+						dense
+						style="width:120px;display: inline-block;"
+					></v-select>
+					</v-flex>
+						<v-flex xs12 sm6>
+						<div class="text-center">
+							<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" :length="Math.ceil(filteredSites / items_per_page)" v-model="page" :total-visible="7" color="blue darken-3"></v-pagination>
+						</div>
+					</v-flex>
 					<v-flex xs12 sm3>
 						<v-text-field @input="updateSearch" ref="search" label="Search sites" clearable light append-icon="search"></v-text-field>
-			</v-flex>
+					</v-flex>
 			</v-layout>
 			<v-card v-show="view_timeline == true" class="mb-3">
-					<v-toolbar card dense dark color="primary">
+				<v-toolbar flat dense dark color="primary">
 				<v-btn icon dark @click.native="view_timeline = false">
 					<v-icon>close</v-icon>
 				</v-btn>
 				<v-toolbar-title>Timeline Logs</v-toolbar-title>
 				<v-spacer></v-spacer>
 				</v-toolbar>
+				<v-progress-linear :indeterminate="true" absolute v-show="dialog_timeline.loading"></v-progress-linear>
 				<v-card-text>
-				<template v-if="dialog_timeline.loading">
-					<v-progress-linear :indeterminate="true" style="width:130px"></v-progress-linear>
-				</template>
-				<template v-else>
+				<template v-if="!dialog_timeline.loading">
 				<v-select :items="timeline_logs.map( a => a.account )" label="Account" item-value="id" v-model="dialog_timeline.account" @input="switchTimelineAccount()">
 					<template v-slot:selection="data">
 						<span v-html="data.item.name"></span> <small>&nbsp;({{ data.item.website_count }} sites)</small>
@@ -2202,98 +2179,119 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-data-table
 					:headers="header_timeline"
 					:items="dialog_timeline.logs"
-					:pagination.sync="dialog_timeline.pagination"
-					:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
+					:items-per-page-options='[50,100,250,{"text":"All","value":-1}]'
 					class="timeline"
 				>
-				<template slot="items" slot-scope="props">
-					<td class="justify-center">{{ props.item.created_at | pretty_timestamp }}</td>
-					<td class="justify-center">{{ props.item.author }}</td>
-					<td class="justify-center">{{ props.item.title }}</td>
-					<td class="justify-center" v-html="props.item.description"></td>
+				<template v-slot:body="{ items }">
+				<tbody>
+				<tr v-for="item in items" :key="item.name">
+					<td class="justify-center">{{ item.created_at | pretty_timestamp }}</td>
+					<td class="justify-center">{{ item.author }}</td>
+					<td class="justify-center">{{ item.title }}</td>
+					<td class="justify-center" v-html="item.description"></td>
 					<td>
-						{{ props.item.websites.map( site => site.name ).join(" ") }}
+						{{ item.websites.map( site => site.name ).join(" ") }}
 					</td>
+				</tr>
+				</tbody>
 				</template>
 				</v-data-table>
 				</template>
 				</v-card-text>
 			</v-card>
 			<v-card v-show="view_jobs == true" class="mb-3">
-				<v-toolbar card dense dark color="primary">
-					<v-btn icon dark @click.native="view_jobs = false">
-						<v-icon>close</v-icon>
-					</v-btn>
+				<v-toolbar flat dense dark color="primary">
+				<v-btn icon dark @click.native="view_jobs = false">
+					<v-icon>close</v-icon>
+				</v-btn>
 				<v-toolbar-title>Job Activity</v-toolbar-title>
-					<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-data-table
-						:headers="[{ text: 'Description', value: 'description', width: '300px' },
-          { text: 'Status', value: 'status', width: '115px' },
-          { text: 'Response', value: 'response' }]"
-						:items="jobs.slice().reverse()"
-						class="elevation-1"
-						:disable-initial-sort="true"
-					>
-						<template v-slot:items="props">
-							<td>{{ props.item.description }}</td>
-							<td>
-								<v-chip v-if="props.item.status == 'done'" small outline label color="green">Done</v-chip>
-								<v-chip v-else-if="props.item.status == 'error'" small outline label color="red">Error</v-chip>
-								<div v-else>
-										<v-progress-linear :indeterminate="true"></v-progress-linear>
-								</div>
-							</td>
-							<td>
-								<v-card flat width="100%" height="80px" id="streamOutput" class="transparent" style="overflow: auto;display: flex;flex-direction: column-reverse;">
-									<small mv-1><div v-for="s in props.item.stream">{{ s }}</div></small>
-								</v-card>
-							</td>
-						</template>
-					</v-data-table>
-				</v-card>
+				<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-data-table
+					:headers="[{ text: 'Description', value: 'description', width: '300px' },
+								{ text: 'Status', value: 'status', width: '115px' },
+								{ text: 'Response', value: 'response' }]"
+					:items="jobs.slice().reverse()"
+					class="elevation-1"
+				>
+					<template v-slot:body="{ items }">
+					<tbody>
+ 						<tr v-for="item in items" :key="item.name">
+						<td>{{ item.description }}</td>
+						<td>
+							<v-chip v-if="item.status == 'done'" small outlined label color="green">Done</v-chip>
+							<v-chip v-else-if="item.status == 'error'" small outlined label color="red">Error</v-chip>
+							<div v-else>
+								<v-progress-linear :indeterminate="true"></v-progress-linear>
+							</div>
+						</td>
+						<td>
+							<v-card text width="100%" height="80px" id="streamOutput" class="transparent elevation-0" style="overflow: auto;display: flex;flex-direction: column-reverse;">
+								<small mv-1><div v-for="s in item.stream">{{ s }}</div></small>
+							</v-card>
+						</td>
+						</tr>
+					</tbody>
+					</template>
+				</v-data-table>
+			</v-card>
 			<v-card v-show="dialog_bulk.show == true" class="mb-3">
-			<v-toolbar card dark color="primary" dense>
+			<v-toolbar flat dark color="primary" dense>
 				<v-btn icon dark @click.native="dialog_bulk.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
 				<v-toolbar-title>Bulk Tools</v-toolbar-title>
 				<v-spacer></v-spacer>
 			</v-toolbar>
-			<v-tabs v-model="dialog_bulk.tabs_management" color="grey lighten-4" right icons-and-text>
+			<div class="grey lighten-4 pb-2">
+			<v-layout wrap>
+			<v-flex sx12 sm4 px-2>
+			<v-layout>
+			<v-flex>
 				<v-select
 					v-model="dialog_bulk.environment_selected"
-					:items='[{"name":"Production Environments","value":"Production"},{"name":"Staging Environments","value":"Staging"},{"name":"Both Environments","value":"Both"}]'
+					:items='[{"name":"Production Environment","value":"Production"},{"name":"Staging Environment","value":"Staging"}]'
 					item-text="name"
 					item-value="value"
+					@change="triggerEnvironmentUpdate( site.id )"
 					light
-					style="max-width: 204px; margin: 0px 1em 0px 16px; top: 0px;">
+					style="height:54px;width:220px;">
 				</v-select>
+				</v-flex>
+				<v-flex>
 				<v-btn small icon @click="bulkSyncSites()" style="margin: 14px auto 0 0;">
 					<v-icon small color="grey">fas fa-sync</v-icon>
 				</v-btn>
+				</v-flex>
+			</v-layout>
+			</v-flex>
+			<v-flex xs12 sm8>
+			<v-tabs v-model="dialog_bulk.tabs_management" background-color="grey lighten-4" icons-and-text right show-arrows height="54">
 				<v-tab href="#tab-Sites">
 					Sites <v-icon small>fas fa-list</v-icon>
 				</v-tab>
-				<v-tab key="Themes" href="#tab-Themes" v-show="role == 'administrator'">
-					Themes <v-icon small style="margin-left:7px;">fas fa-paint-brush</v-icon>
+				<v-tab key="Stats" href="#tab-Stats" v-show="role == 'coming-soon'">
+					Stats <v-icon small>far fa-chart-bar</v-icon>
 				</v-tab>
-				<v-tab key="Plugins" href="#tab-Plugins" v-show="role == 'administrator'">
-					Plugins <v-icon small style="margin-left:7px;">fas fa-plug</v-icon>
+				<v-tab key="Addons" href="#tab-Addons">
+					Addons <v-icon small>fas fa-plug</v-icon>
 				</v-tab>
 				<v-tab key="Users" href="#tab-Users" v-show="role == 'coming-soon'">
-					Users <v-icon small style="margin-left:7px;">fas fa-users</v-icon>
+					Users <v-icon small>fas fa-users</v-icon>
 				</v-tab>
 				<v-tab key="Updates" href="#tab-Updates" v-show="role == 'coming-soon'">
-					Updates <v-icon small style="margin-left:7px;">fas fa-book-open</v-icon>
+					Updates <v-icon small>fas fa-book-open</v-icon>
 				</v-tab>
-				<v-tab href="#tab-Scripts" v-show="role == 'administrator'">
-					Scripts <v-icon small style="margin-left:7px;">fas fa-code</v-icon>
+				<v-tab key="Scripts" href="#tab-Scripts">
+					Scripts <v-icon small>fas fa-code</v-icon>
 				</v-tab>
 				<v-tab key="Backups" href="#tab-Backups" v-show="role == 'coming-soon'">
-					Backups <v-icon small style="margin-left:7px;">fas fa-hdd</v-icon>
+					Backups <v-icon small>fas fa-hdd</v-icon>
 				</v-tab>
 			</v-tabs>
+			</v-flex>
+			</v-layout>
+			</div>
 			<v-tabs-items v-model="dialog_bulk.tabs_management">
 			<v-tab-item key="1" value="tab-Sites">
 				<v-card flat>
@@ -2301,21 +2299,22 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Sites</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn flat @click="showLogEntryBulk()" v-if="role == 'administrator'">New Log Entry <v-icon dark small>fas fa-check-circle</v-icon></v-btn>
-						<v-btn flat @click="bulkactionLaunch">Launch sites in browser</v-btn>
+						<v-btn text @click="showLogEntryBulk()" v-if="role == 'administrator'">New Log Entry <v-icon dark small>fas fa-check-circle</v-icon></v-btn>
+						<v-btn text @click="bulkactionLaunch">Launch sites in browser</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
 				<v-flex sm12 mb-3>
 				<v-chip
-					outline
+					outlined
 					close
+					class="ma-1"
 					v-for="site in sites_selected"
-					@input="removeFromBulk(site.id)"
+					@click:close="removeFromBulk(site.id)"
 				><a :href="site.home_url" target="_blank">{{ site.name }}</a></v-chip>
 				</v-flex>
 				<v-layout row>
-				<v-flex sm12 mb-3>
+				<v-flex sm12 mx-5>
 				<small>
 					<strong>Site names: </strong> 
 						<span v-for="site in sites_selected" class="ma-1" style="display: inline-block;" v-if="dialog_bulk.environment_selected == 'Production' || dialog_bulk.environment_selected == 'Both'">{{ site.site }} </span>
@@ -2325,24 +2324,14 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-card-text>
 				</v-card>
 			</v-tab-item>
-			<v-tab-item key="2" value="tab-Themes">
+			<v-tab-item key="3" value="tab-Addons">
 				<v-card flat>
 					<v-toolbar color="grey lighten-4" dense light flat>
-					<v-toolbar-title>Themes</v-toolbar-title>
+					<v-toolbar-title>Addons</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn flat @click="addThemeBulk()">Add theme <v-icon dark small>add</v-icon></v-btn>
-					</v-toolbar-items>
-				</v-toolbar>
-				</v-card>
-			</v-tab-item>
-			<v-tab-item key="3" value="tab-Plugins">
-				<v-card flat>
-					<v-toolbar color="grey lighten-4" dense light flat>
-					<v-toolbar-title>Plugins</v-toolbar-title>
-					<v-spacer></v-spacer>
-					<v-toolbar-items>
-						<v-btn flat @click="addPluginBulk()">Add plugin <v-icon dark small>add</v-icon></v-btn>
+						<v-btn text @click="addThemeBulk()">Add theme <v-icon dark small>add</v-icon></v-btn>
+						<v-btn text @click="addPluginBulk()">Add plugin <v-icon dark small>add</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				</v-card>
@@ -2353,7 +2342,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Users</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn flat @click="bulkactionLaunch">Add user <v-icon dark small>add</v-icon></v-btn>
+						<v-btn text @click="bulkactionLaunch">Add user <v-icon dark small>add</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				</v-card>
@@ -2364,14 +2353,14 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Updates</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn flat @click="bulkactionLaunch">Manual Update <v-icon dark small>add</v-icon></v-btn>
+						<v-btn text @click="bulkactionLaunch">Manual Update <v-icon dark small>add</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				</v-card>
 			</v-tab-item>
 			<v-tab-item key="6" value="tab-Scripts">
 				<v-card flat>
-					<v-card-title>
+				<v-card-title>
 					<v-layout align-start>
 					<v-flex xs12 sm8 pr-4>
 					<v-subheader id="script_bulk">Custom bash script or WP-CLI commands</v-subheader>
@@ -2387,28 +2376,28 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-flex>
 					<v-flex xs12 sm4>
 						<v-subheader>Common</v-subheader>
-							<div><v-btn small flat @click="viewApplyHttpsUrlsBulk()">
+							<div><v-btn small text @click="viewApplyHttpsUrlsBulk()">
 								<v-icon>launch</v-icon> <span>Apply HTTPS Urls</span>
 							</v-btn></div>
-							<div><v-btn small flat @click="siteDeployBulk()">
+							<div><v-btn small text @click="siteDeployBulk()">
 								<v-icon>loop</v-icon> <span>Deploy users/plugins</span>
 							</v-btn></div>
-							<div><v-btn small flat @click="toggleSiteBulk()">
+							<div><v-btn small text @click="toggleSiteBulk()">
 								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span>
 							</v-btn></div>
 						<v-subheader v-show="recipes.filter( r => r.public == 1 ).length > 0">Other</v-subheader>
 						<div v-for="recipe in recipes.filter( r => r.public == 1 )">
-							<v-btn small flat @click="runRecipeBulk( recipe.recipe_id )">
+							<v-btn small text @click="runRecipeBulk( recipe.recipe_id )">
 								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
 							</v-btn>
 						</div>
 						<v-subheader v-show="recipes.filter( r => r.public != 1 ).length > 0">User</v-subheader>
 						<div v-for="recipe in recipes.filter( r => r.public != 1 )">
-							<v-btn small flat @click="loadRecipe( recipe.recipe_id ); $vuetify.goTo( '#script_bulk' );">
+							<v-btn small text @click="loadRecipe( recipe.recipe_id ); $vuetify.goTo( '#script_bulk' );">
 								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
 							</v-btn>
 						</div>
-				</v-flex>
+					</v-flex>
 					</v-layout>
 					</v-card-title>
 				</v-card>
@@ -2419,15 +2408,15 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Backups</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn flat @click="bulkactionLaunch">Manual Check <v-icon dark small>add</v-icon></v-btn>
+						<v-btn text @click="bulkactionLaunch">Manual Check <v-icon dark small>add</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				</v-card>
 			</v-tab-item>
 			</v-tabs-items>
-            </v-card>
+			</v-card>
 			<v-card v-show="advanced_filter == true" class="mb-3">
-				<v-toolbar card dense dark color="primary">
+				<v-toolbar flat dense dark color="primary">
 					<v-btn icon dark @click.native="advanced_filter = false">
 						<v-icon>close</v-icon>
 					</v-btn>
@@ -2438,91 +2427,62 @@ Vue.component('file-upload', VueUploadComponent);
 			<v-layout row>
 			<v-flex xs12 ma-1>
 			<v-autocomplete
-			:items="site_filters"
-			item-text="search"
-			item-value="name"
-			v-model="applied_site_filter"
-			ref="applied_site_filter"
-			@input="filterSites"
-			item-text="title"
-			label="Select Theme and/or Plugin"
-			class="siteFilter"
-			chips
-			multiple
-			hide-details
-			hide-selected
-			small-chips
-			deletable-chips
+				v-model="applied_site_filter"
+				@input="filterSites"
+				:items="site_filters"
+				ref="applied_site_filter"
+				item-text="search"
+				item-value="name"
+				item-text="title"
+				label="Select Theme and/or Plugin"
+				class="siteFilter"
+				chips
+				multiple
+				hide-details
+				hide-selected
+				deletable-chips
 			>
-				 <template slot="selection" slot-scope="data">
-					<v-chip
-						close
-						@input="data.parent.selectItem(data.item)"
-						:selected="data.selected"
-						class="chip--select-multi"
-						:key="JSON.stringify(data.item)"
-					>
-						<strong>{{ data.item.title }}</strong>&nbsp;<span>({{ data.item.name }})</span>
-					</v-chip>
-				</template>
-				<template slot="item" slot-scope="data">
+				<template v-slot:item="data">
 					 <strong>{{ data.item.title }}</strong>&nbsp;<span>({{ data.item.name }})</span>
 				</template>
 			</v-autocomplete>
 			</v-flex>
 		</v-layout>
 		<v-layout row>
-			<v-flex xs6 ma-1>
+			<v-flex xs6 pa-1>
 				 <v-autocomplete
-				 v-model="applied_site_filter_version"
-				 v-for="filter in site_filter_version"
-					 :items="filter.versions"
-					 :key="filter.name"
-					 :label="'Select Version for '+ filter.name"
-					 @input="filterSites"
-					 item-text="title"
-					 chips
-					 multiple
+					v-model="applied_site_filter_version"
+					v-for="filter in site_filter_version"
+					@input="filterSites"
+					ref="applied_site_filter_version"
+					:items="filter.versions"
+					:key="filter.name"
+					:label="'Select Version for '+ filter.name"
+					item-text="title"
+					return-object
+					multiple
+					chips
+					deletable-chips
 				 >
-				 <template slot="selection" slot-scope="data">
-					 <v-chip
-						 close
-						 @input="data.parent.selectItem(data.item)"
-						 :selected="data.selected"
-						 class="chip--select-multi"
-						 :key="JSON.stringify(data.item)"
-					 >
-						 {{ data.item.name }} ({{ data.item.count }})
-					 </v-chip>
-				 </template>
-				 <template slot="item" slot-scope="data">
+				 <template v-slot:item="data">
 						<strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span>
 				 </template>
 				</v-autocomplete>
 			</v-flex>
-			<v-flex xs6 ma-1>
+			<v-flex xs6 pa-1>
 				<v-autocomplete
-				v-model="applied_site_filter_status"
-				v-for="filter in site_filter_status"
+					v-model="applied_site_filter_status"
+					v-for="filter in site_filter_status"
 					:items="filter.statuses"
 					:key="filter.name"
 					:label="'Select Status for '+ filter.name"
 					@input="filterSites"
 					item-text="title"
+					return-object
 					chips
 					multiple
+					deletable-chips
 				>
-				<template slot="selection" slot-scope="data">
-					<v-chip
-						close
-						@input="data.parent.selectItem(data.item)"
-						:selected="data.selected"
-						class="chip--select-multi"
-						:key="JSON.stringify(data.item)"
-					>
-						{{ data.item.name }} ({{ data.item.count }})
-					</v-chip>
-				</template>
 				<template slot="item" slot-scope="data">
 					 <strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span>
 				</template>
@@ -2531,338 +2491,320 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-layout>
 			</v-card-text>
             </v-card>
-				<div class="text-xs-right" v-show="sites.length > 1">
+				<div class="text-right" v-show="sites.length > 1">
 				<v-btn-toggle v-model="toggle_site_sort" style="box-shadow: none; border-bottom: 1px solid #e0e0e0;" v-bind:class="sort_direction">
-					<div class="usage ml-1 multisite"><v-btn flat small @click.native.stop="toggle_site_sort = 0; sortSites('multisite')">Multisite<v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
-					<div class="usage ml-1 visits"><v-btn flat small @click.native.stop="toggle_site_sort = 1; sortSites('visits')">Visits<v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
-					<div class="usage ml-1 storage"><v-btn flat small @click.native.stop="toggle_site_sort = 2; sortSites('storage')">Storage <v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
-					<div class="usage ml-1 provider"><v-btn flat small @click.native.stop="toggle_site_sort = 3; sortSites('provider')">Provider <v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
-					<div style="width: 58px;"></div>
+					<div class="usage ml-1 multisite"><v-btn text small @click.native.stop="toggle_site_sort = 0; sortSites('multisite')">Multisite<v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
+					<div class="usage ml-1 visits"><v-btn text small @click.native.stop="toggle_site_sort = 1; sortSites('visits')">Visits<v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
+					<div class="usage ml-1 storage"><v-btn text small @click.native.stop="toggle_site_sort = 2; sortSites('storage')">Storage <v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
+					<div class="usage ml-1 provider"><v-btn text small @click.native.stop="toggle_site_sort = 3; sortSites('provider')">Provider <v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
+					<div style="width: 28px;"></div>
 				</v-btn-toggle>
 				</div>
-				<v-expansion-panel style="margin-top: 20px" v-bind:class='{ "toggleSelect": dialog_bulk.show }' popout>
-						<v-expansion-panel-content lazy v-for="site in paginatedSites" :key="site.id" class="site"> 
-							<div slot="header">
-								<v-layout align-center justify-space-between row>
-									<div>
-										<v-layout align-center justify-start fill-height/>
-										<v-switch v-model="site.selected" @click.native.stop @change="site_selected = null" style="position: absolute;left: -48px;top: 12px;" v-show="dialog_bulk.show == true"></v-switch>
-											<img :src="site.environments[0].screenshot_small" style="width: 50px; margin-right:1em" class="elevation-1" v-show="site.environments[0].screenshot_small">
-										{{ site.name }}
-										</v-layout>
-									</div>
-									<div class="text-xs-right">
-									  <div class="usage multisite"><span v-show="site.subsite_count"><v-icon small light >fas fa-network-wired</i></v-icon> {{ site.subsite_count }} sites</span></div>
-										<div class="usage visits"><span v-show="site.visits"><v-icon small light>fas fa-eye</v-icon> {{ site.visits }} <small>yearly</small></span></div>
-										<div class="usage storage"><span v-show="site.storage"><v-icon small light>fas fa-hdd</v-icon> {{ site.storage }}</span></div>
-										<div class="usage provider"><span v-show="site.provider"><v-icon small light>fas fa-server</v-icon> {{ site.provider | formatProvider }}</span></div>
-									</div>
-								</v-layout>
-							</div>
-							<v-tabs v-model="site.tabs" color="blue darken-3" dark>
-								<v-tab :key="1" href="#tab-Site-Management">
+				<v-expansion-panels accordion style="margin-top: 20px">
+				<v-expansion-panel v-bind:class='{ "toggleSelect": dialog_bulk.show }' popout accordion v-for="site in paginatedSites" :key="site.id" class="site">
+					<v-expansion-panel-header>
+					<v-layout align-center justify-space-between row>
+						<div>
+							<v-layout align-center justify-start fill-height/>
+							<v-switch v-model="site.selected" @click.native.stop @change="site_selected = null" style="position: absolute; left: 10px; top: 17px;" v-show="dialog_bulk.show == true"></v-switch>
+								<img :src="site.environments[0].screenshot_small" style="width: 50px; margin-right:1em" class="elevation-1" v-show="site.environments[0].screenshot_small">
+							{{ site.name }}
+							</v-layout>
+						</div>
+						<div class="text-right">
+							<div class="usage multisite"><span v-show="site.subsite_count"><v-icon small light >fas fa-network-wired</i></v-icon> {{ site.subsite_count }} sites</span></div>
+							<div class="usage visits"><span v-show="site.visits"><v-icon small light>fas fa-eye</v-icon> {{ site.visits }} <small>yearly</small></span></div>
+							<div class="usage storage"><span v-show="site.storage"><v-icon small light>fas fa-hdd</v-icon> {{ site.storage }}</span></div>
+							<div class="usage provider"><span v-show="site.provider"><v-icon small light>fas fa-server</v-icon> {{ site.provider | formatProvider }}</span></div>
+						</div>
+					</v-layout>
+					</v-expansion-panel-header>
+					<v-expansion-panel-content>
+						<v-tabs v-model="site.tabs" background-color="blue darken-3" dark>
+							<v-tab :key="1" href="#tab-Site-Management">
 								Site Management<v-icon>fas fa-cog</v-icon>
-								</v-tab>
-								<v-tab :key="6" href="#tab-SitePlan" ripple @click="viewUsageBreakdown( site.id )">
-									Site Plan <v-icon>far fa-list-alt</v-icon>
-								</v-tab>
-								<v-tab :key="7" href="#tab-Sharing" ripple>
-									Sharing <v-icon>fas fa-user-lock</v-icon>
-								</v-tab>
-								<v-tab :key="8" href="#tab-Timeline" ripple @click="fetchTimeline( site.id )">
-								  Timeline <v-icon>fas fa-stream</v-icon>
-								</v-tab>
-								<v-tab :key="9" href="#tab-Advanced" ripple>
-									Advanced <v-icon>fas fa-cogs</v-icon>
-								</v-tab>
-							</v-tabs>
+							</v-tab>
+							<v-tab :key="6" href="#tab-SitePlan" ripple @click="viewUsageBreakdown( site.id )">
+								Site Plan <v-icon>far fa-list-alt</v-icon>
+							</v-tab>
+							<v-tab :key="7" href="#tab-Sharing" ripple>
+								Sharing <v-icon>fas fa-user-lock</v-icon>
+							</v-tab>
+							<v-tab :key="8" href="#tab-Timeline" ripple @click="fetchTimeline( site.id )">
+								Timeline <v-icon>fas fa-stream</v-icon>
+							</v-tab>
+							<v-tab :key="9" href="#tab-Advanced" ripple>
+								Advanced <v-icon>fas fa-cogs</v-icon>
+							</v-tab>
+						</v-tabs>
 						<v-tabs-items v-model="site.tabs">
 							<v-tab-item value="tab-Site-Management">
-								<v-tabs v-model="site.tabs_management" color="grey lighten-4" right icons-and-text>
-									<v-select
-										v-model="site.environment_selected"
-										:items='[{"name":"Production Environment","value":"Production"},{"name":"Staging Environment","value":"Staging"}]'
-										item-text="name"
-										item-value="value"
-										@change="triggerEnvironmentUpdate( site.id )"
-										light
-										style="max-width: 204px; margin: 0px 1em 0px 16px; top: 0px;">
-									</v-select>
-									<v-btn small icon @click="syncSite( site.id )" style="margin: 14px auto 0 0;">
-										<v-icon small color="grey">fas fa-sync</v-icon>
-									</v-btn>
-									<v-tab key="Keys" href="#tab-Keys">
-									  Keys <v-icon small style="margin-left:7px;">fas fa-key</v-icon>
-									</v-tab>
-									<v-tab key="Stats" href="#tab-Stats" @click="fetchStats( site.id )">
-									  Stats <v-icon small style="margin-left:7px;">far fa-chart-bar</v-icon>
-									</v-tab>
-									<v-tab key="Themes" href="#tab-Themes">
-									  Themes <v-icon small style="margin-left:7px;">fas fa-paint-brush</v-icon>
-									</v-tab>
-									<v-tab key="Plugins" href="#tab-Plugins">
-									  Plugins <v-icon small style="margin-left:7px;">fas fa-plug</v-icon>
-									</v-tab>
-									<v-tab key="Users" href="#tab-Users" @click="fetchUsers( site.id )">
-									  Users <v-icon small style="margin-left:7px;">fas fa-users</v-icon>
-									</v-tab>
-									<v-tab key="Updates" href="#tab-Updates" @click="fetchUpdateLogs( site.id )">
-									  Updates <v-icon small style="margin-left:7px;">fas fa-book-open</v-icon>
-									</v-tab>
-									<v-tab key="Scripts" href="#tab-Scripts">
-										Scripts <v-icon small style="margin-left:7px;">fas fa-code</v-icon>
-									</v-tab>
-									<v-tab key="Backups" href="#tab-Backups" @click="viewQuicksaves( site.id )">
-										Backups <v-icon small style="margin-left:7px;">fas fa-hdd</v-icon>
-									</v-tab>
-								</v-tabs>
-								<v-tabs-items v-model="site.tabs_management" v-if="site.environments.filter( key => key.environment == site.environment_selected ).length == 1">
-									<v-tab-item :key="1" value="tab-Keys">
-										<v-toolbar color="grey lighten-4" dense light flat>
-											<v-toolbar-title>Keys</v-toolbar-title>
-											<v-spacer></v-spacer>
-										</v-toolbar>
-
-										<v-card v-for="key in site.environments" v-show="key.environment == site.environment_selected" flat>
-											<v-container fluid style="padding-top: 10px;">
-											<v-layout align-start justify-space-between/>
-											<div row>
-											<div><h3 class="headline mb-0" style="margin-top:10px;"><a :href="key.link" target="_blank">{{ key.link }}</a></h3></div>
-												<div><span class="caption">Address</span> {{ key.address }}</div>
-												<div><span class="caption">Username</span> {{ key.username }}</div>
-												<div><span class="caption">Password</span> <div class="pass-mask">##########</div><div class="pass-reveal">{{ key.password }}</div></div>
-												<div><span class="caption">Protocol</span> {{ key.protocol }}</div>
-												<div><span class="caption">Port</span> {{ key.port }}</div>
-
-											 <div v-if="key.database && key.ssh">
-												 <div v-if="key.database">
-												 <hr />
-												 <div><span class="caption">Database</span> <a :href="key.database" target="_blank">{{ key.database }}</a></div>
-												 <div><span class="caption">Database Username</span> {{ key.database_username }}</a></div>
-												 <div><span class="caption">Database Password</span> <div class="pass-mask">##########</div><div class="pass-reveal">{{ key.database_password }}</div></div>
-												 </div>
-												 <hr />
-												 <div v-if="key.ssh">{{ key.ssh }}</div>
-											 </div>
-										 </div>
-										 <div>
-												<img :src="key.screenshot_large" style="width: 400px; margin-top:14px;" class="elevation-3" v-show="key.screenshot_large">
-										 </div>
-										</v-layout>
-									 </v-container>
-								 </v-card>
-								</v-tab-item>
-								<v-tab-item :key="100" value="tab-Stats">
-									<v-card 
-										v-for="key in site.environments"
-										v-show="key.environment == site.environment_selected"
-										flat
-									>
-									<v-toolbar color="grey lighten-4" dense light flat>
-										<v-toolbar-title>Stats</v-toolbar-title>
-										<v-spacer></v-spacer>
-										<v-toolbar-items v-if="typeof dialog_new_site == 'object'">
-											<v-btn flat @click="configureFathom( site.id )">Configure Fathom Tracker <v-icon dark small>bar_chart</v-icon></v-btn>
-										</v-toolbar-items>
-									</v-toolbar>
-										<div class="pa-3" v-show="key.stats == 'Loading'">
-											<v-progress-linear :indeterminate="true" style="width:130px"></v-progress-linear>
-										</div>
-										<div class="pa-3" v-if="typeof key.stats == 'string' && key.stats != 'Loading'">
-											{{ key.stats }}
-										</div>
-										<v-layout wrap>
-										<v-flex xs12>
-											<div :id="`chart_` + site.id + `_` + key.environment" style="margin-bottom:-20px"></div>
-											<v-card flat v-if="key.stats.agg">
-											<v-card-title class="text-xs-center pb-0">
-											<v-layout wrap>
-											<v-flex xs6 sm3>
-											<span class="text-uppercase caption">Unique Visitors</span><br />
-												<span class="display-1 font-weight-thin text-uppercase">{{ key.stats.agg.Visitors | formatk }}</span>
-											</v-flex>
-											<v-flex xs6 sm3>
-											<span class="text-uppercase caption">Pageviews</span><br />
-												<span class="display-1 font-weight-thin text-uppercase">{{ key.stats.agg.Pageviews | formatk }}</span>
-											</v-flex>
-											<v-flex xs6 sm3>
-											<span class="text-uppercase caption">Avg Time On Site</span><br />
-												<span class="display-1 font-weight-thin text-uppercase">{{ key.stats.agg.AvgDuration | formatTime }}</span>
-											</v-flex>
-											<v-flex xs6 sm3>
-											<span class="text-uppercase caption">Bounce Rate</span><br />
-												<span class="display-1 font-weight-thin text-uppercase">{{ key.stats.agg.BounceRate | formatPercentageFixed }}</span>
-											</v-flex>
-											</v-layout>
-											</v-card-title>
-											</v-card>
-											<v-card flat class="mb-3">
-											<v-card-title>
-											<v-layout v-show="key.stats.pages">
-											<v-flex xs6 pr-2>
-											<v-data-table
-												:headers='[{"text":"Top Pages",sortable: false},{"text":"Views",sortable: false, "width": 90},{"text":"Uniques",sortable: false, "width": 98}]'
-												:items="key.stats.pages"
-												class="elevation-0 table-layout-fixed"
-												hide-actions
-											>
-												<template v-slot:items="props">
-												<td class="text-truncate"><a :href="props.item.Hostname + props.item.Pathname" target="_blank">{{ props.item.Pathname }}</a></td>
-												<td class="text-xs-right text-uppercase">{{ props.item.Pageviews | formatk }}</td>
-												<td class="text-xs-right text-uppercase">{{ props.item.Visitors | formatk }}</td>
-												</template>
-											</v-data-table>
-											</v-flex>
-											<v-flex xs6 pl-2>
-											<v-data-table
-												:headers='[{"text":"Top Referrers",sortable: false},{"text":"Views",sortable: false, "width": 90},{"text":"Uniques",sortable: false, "width": 98}]'
-												:items="key.stats.referrers"
-												class="elevation-0 table-layout-fixed"
-												hide-actions
-											>
-												<template v-slot:items="props">
-												<td class="text-truncate"><a :href="props.item.Hostname + props.item.Pathname" target="_blank">{{ props.item.Group || props.item.Hostname + props.item.Pathname }}</a></td>
-												<td class="text-xs-right text-uppercase">{{ props.item.Pageviews | formatk }}</td>
-												<td class="text-xs-right text-uppercase">{{ props.item.Visitors | formatk }}</td>
-												</template>
-											</v-data-table>
-											
-											</v-flex>
-											</v-layout>
-											</v-card-title>
-											</v-card>
+								<div class="grey lighten-4 pb-2">
+								<v-layout wrap>
+									<v-flex sx12 sm4 px-2>
+									<v-layout>
+									<v-flex>
+										<v-select
+											v-model="site.environment_selected"
+											:items='[{"name":"Production Environment","value":"Production"},{"name":"Staging Environment","value":"Staging"}]'
+											item-text="name"
+											item-value="value"
+											@change="triggerEnvironmentUpdate( site.id )"
+											light
+											style="height:54px;width:220px;">
+										</v-select>
 										</v-flex>
-								 </v-card>
-								</v-tab-item>
-								<v-tab-item :key="2" value="tab-Themes">
-									<v-card 
-									v-for="key in site.environments"
-									v-show="key.environment == site.environment_selected"
-									flat
-									>
-									<v-toolbar color="grey lighten-4" dense light flat>
-										<v-toolbar-title>Themes</v-toolbar-title>
-										<v-spacer></v-spacer>
-										<v-toolbar-items>
-											<v-btn flat @click="bulkEdit(site.id,'themes')" v-if="key.themes_selected.length != 0">Bulk Edit {{ key.themes_selected.length }} themes</v-btn>
-											<v-btn flat @click="addTheme(site.id)">Add Theme <v-icon dark small>add</v-icon></v-btn>
-										</v-toolbar-items>
-									</v-toolbar>
-									<v-card-title v-if="typeof key.themes == 'string'">
-										<div>
-											Updating themes...
-											<v-progress-linear :indeterminate="true"></v-progress-linear>
-										</div>
-									</v-card-title>
-									<div v-else>
-									<v-data-table
-										v-model="key.themes_selected"
-										:headers="headers"
-										:items="key.themes"
-										:loading="site.loading_themes"
-										item-key="name"
-										value="name"
-										select-all
-										hide-actions
-										>
-										<template slot="items" slot-scope="props">
-											<td>
-												<v-checkbox
-													v-model="props.selected"
-													primary
-													hide-details
-												></v-checkbox>
-											</td>
-											<td>{{ props.item.title }}</td>
-											<td>{{ props.item.name }}</td>
-											<td>{{ props.item.version }}</td>
-											<td>
-											<div v-if="props.item.status === 'inactive' || props.item.status === 'parent' || props.item.status === 'child'">
-												<v-switch hide-details v-model="props.item.status" false-value="inactive" true-value="active" @change="activateTheme(props.item.name, site.id)"></v-switch>
-			 								</div>
-			 								<div v-else>
-			 									{{ props.item.status }}
-			 								</div>
-										 </td>
-										 <td class="text-xs-center px-0">
-											 <v-btn icon class="mx-0" @click="deleteTheme(props.item.name, site.id)">
-												 <v-icon small color="pink">delete</v-icon>
-											 </v-btn>
-										 </td>
-									 </template>
-								 </v-data-table>
+										<v-flex>
+										<v-btn small icon @click="syncSite( site.id )" style="margin: 14px auto 0 0;">
+											<v-icon small color="grey">fas fa-sync</v-icon>
+										</v-btn>
+										</v-flex>
+									</v-layout>
+									</v-flex>
+									<v-flex xs12 sm8>
+									<v-tabs v-model="site.tabs_management" background-color="grey lighten-4" icons-and-text right show-arrows height="54">
+										<v-tab key="Keys" href="#tab-Keys">
+											Keys <v-icon small>fas fa-key</v-icon>
+										</v-tab>
+										<v-tab key="Stats" href="#tab-Stats" @click="fetchStats( site.id )">
+											Stats <v-icon small>far fa-chart-bar</v-icon>
+										</v-tab>
+										<v-tab key="Plugins" href="#tab-Addons">
+											Addons <v-icon small>fas fa-plug</v-icon>
+										</v-tab>
+										<v-tab key="Users" href="#tab-Users" @click="fetchUsers( site.id )">
+											Users <v-icon small>fas fa-users</v-icon>
+										</v-tab>
+										<v-tab key="Updates" href="#tab-Updates" @click="fetchUpdateLogs( site.id )">
+											Updates <v-icon small>fas fa-book-open</v-icon>
+										</v-tab>
+										<v-tab key="Scripts" href="#tab-Scripts">
+											Scripts <v-icon small>fas fa-code</v-icon>
+										</v-tab>
+										<v-tab key="Backups" href="#tab-Backups" @click="viewQuicksaves( site.id )">
+											Backups <v-icon small>fas fa-hdd</v-icon>
+										</v-tab>
+									</v-tabs>
+									</v-flex>
+									</v-layout>
 								</div>
-							</v-tab-item>
-			<v-tab-item :key="3" value="tab-Plugins">
-				<v-card 
-					v-for="key in site.environments"
-					v-show="key.environment == site.environment_selected"
-				flat
-				>
-				<v-toolbar color="grey lighten-4" dense light flat>
-					<v-toolbar-title>Plugins</v-toolbar-title>
-					<v-spacer></v-spacer>
-					<v-toolbar-items>
-						<v-btn flat @click="bulkEdit(site.id, 'plugins')" v-if="key.plugins_selected.length != 0">Bulk Edit {{ key.plugins_selected.length }} plugins</v-btn>
-						<v-btn flat @click="addPlugin(site.id)">Add Plugin <v-icon dark small>add</v-icon></v-btn>
-					</v-toolbar-items>
-				</v-toolbar>
-				<v-card-title v-if="typeof key.plugins == 'string'">
+				<v-tabs-items v-model="site.tabs_management" v-if="site.environments.filter( key => key.environment == site.environment_selected ).length == 1">
+					<v-tab-item :key="1" value="tab-Keys">
+						<v-toolbar color="grey lighten-4" dense light flat>
+							<v-toolbar-title>Keys</v-toolbar-title>
+							<v-spacer></v-spacer>
+						</v-toolbar>
+
+						<v-card v-for="key in site.environments" v-show="key.environment == site.environment_selected" flat>
+							<v-container fluid>
+							<v-layout align-start justify-space-between body-1 pa-3>
+							<div row>
+							<div><h3 class="headline mb-0"><a :href="key.link" target="_blank">{{ key.link }}</a></h3></div>
+								<div><span class="caption">Address</span> {{ key.address }}</div>
+								<div><span class="caption">Username</span> {{ key.username }}</div>
+								<div><span class="caption">Password</span> <div class="pass-mask">##########</div><div class="pass-reveal">{{ key.password }}</div></div>
+								<div><span class="caption">Protocol</span> {{ key.protocol }}</div>
+								<div><span class="caption">Port</span> {{ key.port }}</div>
+								<div v-if="key.database && key.ssh">
+									<div v-if="key.database">
+									<hr />
+									<div><span class="caption">Database</span> <a :href="key.database" target="_blank">{{ key.database }}</a></div>
+									<div><span class="caption">Database Username</span> {{ key.database_username }}</a></div>
+									<div><span class="caption">Database Password</span> <div class="pass-mask">##########</div><div class="pass-reveal">{{ key.database_password }}</div></div>
+									</div>
+									<hr />
+									<div v-if="key.ssh">{{ key.ssh }}</div>
+								</div>
+							</div>
+							<div>
+							<img :src="key.screenshot_large" style="width:400px;" class="elevation-3" v-show="key.screenshot_large">
+							</div>
+						</v-layout>
+						</v-container>
+					</v-card>
+				</v-tab-item>
+				<v-tab-item :key="100" value="tab-Stats">
+					<v-card 
+						v-for="key in site.environments"
+						v-show="key.environment == site.environment_selected"
+						flat
+					>
+					<v-toolbar color="grey lighten-4" dense light flat>
+						<v-toolbar-title>Stats</v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-toolbar-items v-if="typeof dialog_new_site == 'object'">
+							<v-btn text @click="configureFathom( site.id )">Configure Fathom Tracker <v-icon dark small>bar_chart</v-icon></v-btn>
+						</v-toolbar-items>
+					</v-toolbar>
+						<div class="pa-3" v-if="typeof key.stats == 'string' && key.stats != 'Loading'">
+							{{ key.stats }}
+						</div>
+						<v-layout wrap>
+						<v-flex xs12>
+							<v-progress-linear :indeterminate="true" absolute v-show="key.stats == 'Loading'"></v-progress-linear>
+							<div :id="`chart_` + site.id + `_` + key.environment"></div>
+							<v-card flat v-if="key.stats.agg">
+							<v-card-title class="text-center pa-0">
+							<v-layout wrap>
+							<v-flex xs6 sm3>
+								<span class="text-uppercase caption">Unique Visitors</span><br />
+								<span class="display-1 font-weight-thin text-uppercase">{{ key.stats.agg.Visitors | formatk }}</span>
+							</v-flex>
+							<v-flex xs6 sm3>
+								<span class="text-uppercase caption">Pageviews</span><br />
+								<span class="display-1 font-weight-thin text-uppercase">{{ key.stats.agg.Pageviews | formatk }}</span>
+							</v-flex>
+							<v-flex xs6 sm3>
+								<span class="text-uppercase caption">Avg Time On Site</span><br />
+								<span class="display-1 font-weight-thin text-uppercase">{{ key.stats.agg.AvgDuration | formatTime }}</span>
+							</v-flex>
+							<v-flex xs6 sm3>
+								<span class="text-uppercase caption">Bounce Rate</span><br />
+								<span class="display-1 font-weight-thin text-uppercase">{{ key.stats.agg.BounceRate | formatPercentageFixed }}</span>
+							</v-flex>
+							</v-layout>
+							</v-card-title>
+							</v-card>
+							<v-card flat class="mb-3">
+							<v-card-title>
+							<v-layout wrap v-show="key.stats.pages">
+							<v-flex xs12 sm6 pr-2>
+							<v-data-table
+								:headers='[{"text":"Top Pages","value":"page",sortable: false, class: "text-truncate"},{"text":"Views","value":"views",sortable: false, "width": 90, align: "right"},{"text":"Uniques","value":"uniques",sortable: false, "width": 98, align: "right"}]'
+								:items="key.stats.pages"
+								class="elevation-0 table-layout-fixed"
+								hide-default-footer
+							>
+								<template v-slot:body="{ items }">
+								<tbody>
+									<tr v-for="item in items">
+										<td class="text-truncate"><a :href="item.Hostname + item.Pathname" target="_blank" class="text-truncate">{{ item.Pathname }}</a></td>
+										<td class="text-right">{{ item.Pageviews | formatk }}</td>
+										<td class="text-right">{{ item.Visitors | formatk }}</td>
+									</tr>
+								</tbody>
+								</template>
+							</v-data-table>
+							</v-flex>
+							<v-flex xs12 sm6 pl-2>
+							<v-data-table
+								:headers='[{"text":"Top Referrers","value":"referrer", sortable: false, align: "truncate"},{"text":"Views", "value":"views" ,sortable: false, "width": 90, align: "right"},{"text":"Uniques","value":"uniques", sortable: false, "width": 98, align: "right"}]'
+								:items="key.stats.referrers"
+								class="elevation-0 table-layout-fixed"
+								hide-default-footer
+							>
+								<template v-slot:body="{ items }">
+								<tbody>
+									<tr v-for="item in items">
+										<td class="text-truncate"><a :href="item.Hostname + item.Pathname" target="_blank">{{ item.Group || item.Hostname + item.Pathname }}</a></td>
+										<td class="text-right">{{ item.Pageviews | formatk }}</td>
+										<td class="text-right">{{ item.Visitors | formatk }}</td>
+									</tr>
+								</tbody>
+								</template>
+							</v-data-table>
+							
+							</v-flex>
+							</v-layout>
+							</v-card-title>
+							</v-card>
+						</v-flex>
+					</v-card>
+				</v-tab-item>
+				<v-tab-item :key="3" value="tab-Addons">
+					<v-card 
+						v-for="key in site.environments"
+						v-show="key.environment == site.environment_selected"
+					flat
+					>
+					<v-toolbar color="grey lighten-4" dense light flat>
+						<v-toolbar-title>Addons <small>(Themes/Plugins)</small></v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-toolbar-items>
+							<v-btn text @click="bulkEdit(site.id, 'plugins')" v-if="key.plugins_selected.length != 0">Bulk Edit {{ key.plugins_selected.length }} plugins</v-btn>
+							<v-btn text @click="bulkEdit(site.id, 'themes')" v-if="key.themes_selected.length != 0">Bulk Edit {{ key.themes_selected.length }} themes</v-btn>
+							<v-btn text @click="addTheme(site.id)">Add Theme <v-icon dark small>add</v-icon></v-btn>
+							<v-btn text @click="addPlugin(site.id)">Add Plugin <v-icon dark small>add</v-icon></v-btn>
+						</v-toolbar-items>
+					</v-toolbar>
+					<v-card-title v-if="typeof key.themes == 'string'">
 					<div>
-						Updating plugins...
+						Updating themes...
 						<v-progress-linear :indeterminate="true"></v-progress-linear>
 					</div>
-				</v-card-title>
-				<div v-else>
-				<v-data-table
-					:headers="headers"
-					:items="key.plugins.filter(plugin => plugin.status != 'must-use' && plugin.status != 'dropin')"
-					:loading="site.loading_plugins"
-					:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
-					v-model="key.plugins_selected"
-					item-key="name"
-					value="name"
-					select-all
-					hide-actions
-				 >
-				 <template slot="items" slot-scope="props">
-					<td>
-	        <v-checkbox
-	          v-model="props.selected"
-	          primary
-	          hide-details
-	        ></v-checkbox>
-					</td>
-					<td>{{ props.item.title }}</td>
-					<td>{{ props.item.name }}</td>
-					<td>{{ props.item.version }}</td>
-					<td>
-						<div v-if="props.item.status === 'active' || props.item.status === 'inactive'">
-							<v-switch hide-details v-model="props.item.status" false-value="inactive" true-value="active" @change="togglePlugin(props.item.name, props.item.status, site.id)"></v-switch>
+					</v-card-title>
+					<div v-else>
+					<v-subheader>Themes</v-subheader>
+					<v-data-table
+						v-model="key.themes_selected"
+						:headers="header_themes"
+						:items="key.themes"
+						:loading="site.loading_themes"
+						item-key="name"
+						value="name"
+						show-select
+						hide-default-footer
+						>
+						<template v-slot:item.status="{ item }">
+							<div v-if="item.status === 'inactive' || item.status === 'parent' || item.status === 'child'">
+								<v-switch hide-details v-model="item.status" false-value="inactive" true-value="active" @change="activateTheme(props.item.name, site.id)"></v-switch>
+							</div>
+							<div v-else>
+								{{ item.status }}
+							</div>
+						</template>
+						<template v-slot:item.actions="{ item }" class="text-center px-0">
+							<v-btn icon small class="mx-0" @click="deleteTheme(item.name, site.id)">
+								<v-icon small color="pink">delete</v-icon>
+							</v-btn>
+						</template>
+					</v-data-table>
+				</div>
+					<v-card-title v-if="typeof key.plugins == 'string'">
+						<div>
+							Updating plugins...
+							<v-progress-linear :indeterminate="true"></v-progress-linear>
+						</div>
+					</v-card-title>
+					<div v-else>
+					<v-subheader>Plugins</v-subheader>
+					<v-data-table
+						:headers="header_plugins"
+						:items="key.plugins.filter(plugin => plugin.status != 'must-use' && plugin.status != 'dropin')"
+						:loading="site.loading_plugins"
+						:items-per-page-options='[50,100,250,{"text":"All","value":-1}]'
+						v-model="key.plugins_selected"
+						item-key="name"
+						value="name"
+						show-select
+						hide-default-footer
+					>
+					<template v-slot:item.status="{ item }">
+						<div v-if="item.status === 'inactive' || item.status === 'active'">
+						<v-switch hide-details v-model="item.status" false-value="inactive" true-value="active" @change="togglePlugin(item.name, item.status, site.id)"></v-switch>
 						</div>
 						<div v-else>
-							{{ props.item.status }}
+							{{ item.status }}
 						</div>
-					</td>
-					<td class="text-xs-center px-0">
-						 <v-btn icon class="mx-0" @click="deletePlugin(props.item.name, site.id)" v-if="props.item.status === 'active' || props.item.status === 'inactive'">
-							 <v-icon small color="pink">delete</v-icon>
-						 </v-btn>
-					 </td>
-				 </template>
-				 <template slot="footer" v-for="plugin in key.plugins.filter(plugin => plugin.status == 'must-use' || plugin.status == 'dropin')">
-					<tr>
-						<td></td>
-						<td>{{ plugin.title }}</td>
-						<td>{{ plugin.name }}</td>
-						<td>{{ plugin.version }}</td>
-						<td>{{ plugin.status }}</td>
-						<td class="text-xs-center px-0"></td>
-					</tr>
-				 </template>
-				</v-data-table>
-			 </div>
-		  </v-tab-item>
+					</template>
+					<template v-slot:item.actions="{ item }" class="text-center px-0">
+						<v-btn icon small class="mx-0" @click="deletePlugin(item.name, site.id)" v-if="item.status === 'active' || item.status === 'inactive'">
+							<v-icon small color="pink">delete</v-icon>
+						</v-btn>
+					</template>
+					<template v-slot:body.append>
+						<tr v-for="plugin in key.plugins.filter(plugin => plugin.status == 'must-use' || plugin.status == 'dropin')">
+							<td></td>
+							<td>{{ plugin.title }}</td>
+							<td>{{ plugin.name }}</td>
+							<td>{{ plugin.version }}</td>
+							<td>{{ plugin.status }}</td>
+							<td class="text-center px-0"></td>
+						</tr>
+					</template>
+					</v-data-table>
+				</div>
+			</v-tab-item>
 			<v-tab-item :key="4" value="tab-Users">
 				<v-card 
 					v-for="key in site.environments"
@@ -2873,45 +2815,32 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Users</v-toolbar-title>
 					<v-spacer></v-spacer v-show="site.environment_selected == 'Production'">
 					<v-toolbar-items>
-						<v-btn flat @click="bulkEdit(site.id,'users')" v-if="key.users_selected.length != 0">Bulk Edit {{ key.users_selected.length }} users</v-btn>
+						<v-btn text @click="bulkEdit(site.id,'users')" v-if="key.users_selected.length != 0">Bulk Edit {{ key.users_selected.length }} users</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
-					<v-card-title v-if="typeof key.users == 'string'">
-						<div>
-							Updating users...
-						  <v-progress-linear :indeterminate="true"></v-progress-linear>
-						</div>
-					</v-card-title>
-					<div v-else>
+					<div v-show="typeof key.users == 'string'">
+						<v-progress-linear :indeterminate="true" absolute></v-progress-linear>
+						<p></p>
+					</div>
+					<div v-if="typeof key.users != 'string'">
 						<v-data-table
 							:headers='header_users'
-							:pagination.sync="site.pagination"
-							:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
+							:items-per-page-options='[50,100,250,{"text":"All","value":-1}]'
 							:items="key.users"
 							item-key="user_login"
 							v-model="key.users_selected"
 							class="table_users"
-							select-all
+							show-select
 						>
-					    <template slot="items" slot-scope="props">
-								<td>
-				        <v-checkbox
-				          v-model="props.selected"
-				          primary
-				          hide-details
-				        ></v-checkbox>
-								</td>
-					      <td>{{ props.item.user_login }}</td>
-								<td>{{ props.item.display_name }}</td>
-								<td>{{ props.item.user_email }}</td>
-								<td>{{ props.item.roles.split(",").join(" ") }}</td>
-								<td>
-									<v-btn small round @click="loginSite(site.id, props.item.user_login)">Login as</v-btn>
-									<v-btn icon class="mx-0" @click="deleteUserDialog(props.item.user_login, site.id)">
-										<v-icon small color="pink">delete</v-icon>
-									</v-btn>
-								</td>
-					    </template>
+						<template v-slot:item.roles="{ item }">
+							{{ item.roles.split(",").join(" ") }}
+						</template>
+						<template v-slot:item.actions="{ item }">
+							<v-btn small rounded @click="loginSite(site.id, item.user_login)">Login as</v-btn>
+							<v-btn icon small class="mx-0" @click="deleteUserDialog( item.user_login, site.id)">
+								<v-icon small color="pink">delete</v-icon>
+							</v-btn>
+						</template>
 					  </v-data-table>
 					</div>
 				</v-card>
@@ -2921,36 +2850,37 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Update Logs</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn flat @click="update(site.id)">Manual update <v-icon dark small>fas fa-sync-alt</v-icon></v-btn>
-						<v-btn flat @click="updateSettings(site.id)">Update Settings <v-icon dark small>fas fa-cog</v-icon></v-btn>
+						<v-btn text @click="update(site.id)">Manual update <v-icon dark small>fas fa-sync-alt</v-icon></v-btn>
+						<v-btn text @click="updateSettings(site.id)">Update Settings <v-icon dark small>fas fa-cog</v-icon></v-btn>
+						<!-- <v-btn text @click="themeAndPluginChecks(site.id)">Theme/plugin checks <v-icon dark small>fas fa-calendar-check</v-icon></v-btn> -->
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card 
-				  v-for="key in site.environments"
+					v-for="key in site.environments"
 					v-show="key.environment == site.environment_selected" 
 					flat
 				>
-					<v-card-title v-if="typeof key.update_logs == 'string'">
-						<div>
-							Fetching update logs...
-						  <v-progress-linear :indeterminate="true"></v-progress-linear>
-						</div>
-					</v-card-title>
-					<div v-else>
+					<div v-show="typeof key.update_logs == 'string'">
+						<v-progress-linear :indeterminate="true" absolute></v-progress-linear>
+					</div>
+					<div v-if="typeof key.update_logs != 'string'">
 							<v-data-table
 								:headers='header_updatelog'
 								:items="key.update_logs"
-								:pagination.sync="site.update_logs_pagination"
 								class="update_logs"
-								:rows-per-page-items='[50,100,250,{"text":"All","value":-1}]'
+								:items-per-page-options='[50,100,250,{"text":"All","value":-1}]'
 							>
-						    <template slot="items" slot-scope="props">
-						      <td>{{ props.item.date | pretty_timestamp }}</td>
-						      <td>{{ props.item.type }}</td>
-									<td>{{ props.item.name }}</td>
-									<td class="text-xs-right">{{ props.item.old_version }}</td>
-									<td class="text-xs-right">{{ props.item.new_version }}</td>
-									<td>{{ props.item.status }}</td>
+						    <template v-slot:body="{ items }">
+							<tbody>
+							<tr v-for="item in items">
+								<td>{{ item.date | pretty_timestamp }}</td>
+								<td>{{ item.type }}</td>
+								<td>{{ item.name }}</td>
+								<td class="text-right">{{ item.old_version }}</td>
+								<td class="text-right">{{ item.new_version }}</td>
+								<td>{{ item.status }}</td>
+							</tr>
+							</tbody>
 						    </template>
 						  </v-data-table>
 						</div>
@@ -2978,33 +2908,33 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-flex>
 					<v-flex xs12 sm4>
 						<v-subheader>Common</v-subheader>
-							<div><v-btn small flat @click="viewApplyHttpsUrls(site.id)">
+							<div><v-btn small text @click="viewApplyHttpsUrls(site.id)">
 								<v-icon>launch</v-icon> <span>Apply HTTPS Urls</span>
 							</v-btn></div>
-							<div v-show="site.mailgun"><v-btn small flat @click="viewMailgunLogs(site.id)" >
+							<div v-show="site.mailgun"><v-btn small text @click="viewMailgunLogs(site.id)" >
 								<v-icon>email</v-icon> <span>View Mailgun Logs</span>
 							</v-btn></div>
-							<div><v-btn small flat @click="siteDeploy(site.id)">
+							<div><v-btn small text @click="siteDeploy(site.id)">
 								<v-icon>loop</v-icon> <span>Deploy users/plugins</span>
 							</v-btn></div>
-							<div><v-btn small flat @click="launchSiteDialog(site.id)">
+							<div><v-btn small text @click="launchSiteDialog(site.id)">
 								<v-icon>fas fa-rocket</v-icon> <span>Launch Site</span>
 							</v-btn></div>
-							<div><v-btn small flat @click="showSiteMigration(site.id)">
+							<div><v-btn small text @click="showSiteMigration(site.id)">
 								<v-icon>fas fa-truck-moving</v-icon><span>Migrate from backup</span>
 							</v-btn></div>
-							<div><v-btn small flat @click="toggleSite(site.id)">
+							<div><v-btn small text @click="toggleSite(site.id)">
 								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span>
 							</v-btn></div>
 						<v-subheader v-show="recipes.filter( r => r.public == 1 ).length > 0">Other</v-subheader>
 						<div v-for="recipe in recipes.filter( r => r.public == 1 )">
-							<v-btn small flat @click="runRecipe( recipe.recipe_id, site.id )">
+							<v-btn small text @click="runRecipe( recipe.recipe_id, site.id )">
 								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
 							</v-btn>
 						</div>
 						<v-subheader v-show="recipes.filter( r => r.public != 1 ).length > 0">User</v-subheader>
 						<div v-for="recipe in recipes.filter( r => r.public != 1 )">
-							<v-btn small flat @click="loadRecipe( recipe.recipe_id ); $vuetify.goTo( '#script_site' );">
+							<v-btn small text @click="loadRecipe( recipe.recipe_id ); $vuetify.goTo( '#script_site' );">
 								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
 							</v-btn>
 						</div>
@@ -3018,75 +2948,77 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Quicksaves</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn flat @click="promptBackupSnapshot( site.id )">Download Backup Snapshot <v-icon dark small>fas fa-cloud-download-alt</v-icon></v-btn>
-						<v-btn flat @click="QuicksaveCheck( site.id )">Manual Check <v-icon dark small>fas fa-sync-alt</v-icon></v-btn>
+						<v-btn text @click="promptBackupSnapshot( site.id )">Download Backup Snapshot <v-icon dark small>fas fa-cloud-download-alt</v-icon></v-btn>
+						<v-btn text @click="QuicksaveCheck( site.id )">Manual Check <v-icon dark small>fas fa-sync-alt</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 						<v-card 
 						v-for="key in site.environments"
 						v-show="key.environment == site.environment_selected"
 						flat>
-							<v-card-title v-if="typeof key.quicksaves == 'string'">
-								<div>
-									Fetching quicksaves...
-									<v-progress-linear :indeterminate="true"></v-progress-linear>
-								</div>
-							</v-card-title>
+							<div v-if="typeof key.quicksaves == 'string'">
+								<v-progress-linear :indeterminate="true" absolute></v-progress-linear>
+							</div>
 							<v-card-title v-else-if="key.quicksaves.length == 0">
 								<div>
 									No quicksaves found.
 								</div>
 							</v-card-title>
 							<div v-else>
-							<v-expansion-panel v-model="key.quicksave_panel">
-							  <v-expansion-panel-content v-for="quicksave in key.quicksaves" lazy style="position:relative;">
-							    <div slot="header">
-									<v-layout align-center justify-space-between row>
-						<div>
+							<v-expansion-panels accordion v-model="key.quicksave_panel">
+							<v-expansion-panel v-for="quicksave in key.quicksaves" style="elevation-0">
+							  <v-expansion-panel-header style="min-height: 44px;padding: 12px 20px;">
+								<v-layout align-center justify-space-between row>
+									<v-flex>
 										<v-layout align-center justify-start fill-height/>
 											<v-icon>settings_backup_restore</v-icon> {{ quicksave.created_at | pretty_timestamp }}</span>
 										</v-layout>
-									</div>
-									<div class="body-1">{{ quicksave.git_status }}</div>
-									<div class="body-1 text-xs-right">
+									</v-flex>
+									<v-flex class="body-2 text-right pr-3">
 										WordPress {{ quicksave.core }} - {{ quicksave.plugins.length }} Plugins - {{ quicksave.themes.length }} Themes
-									</div>
+									</v-flex>
 								</v-layout>
-						</div>
+							</v-expansion-panel-header>
+							<v-expansion-panel-content>
+								<v-toolbar color="dark primary" dark dense light>
+									<v-toolbar-title></v-toolbar-title>
+									<v-spacer></v-spacer>
+									<v-toolbar-items>
+										<v-btn text @click="QuicksavesRollback( site.id, quicksave)">Entire Quicksave Rollback</v-btn>
+										<v-btn text @click="viewQuicksavesChanges( site.id, quicksave)">View Changes</v-btn>
+									</v-toolbar-items>
+								</v-toolbar>
+								<v-card text v-show="quicksave.view_changes == true" style="table-layout:fixed;margin:0px;overflow: scroll;padding: 0px;position: absolute;background-color: #fff;width: 100%;left: 0;top: 100%;height: 100%;z-index: 3;transform: translateY(-100%);">
 									<v-toolbar color="dark primary" dark dense light>
-										<v-toolbar-title></v-toolbar-title>
+										<v-btn icon dark @click.native="quicksave.view_changes = false">
+											<v-icon>close</v-icon>
+										</v-btn>
+										<v-toolbar-title>List of changes</v-toolbar-title>
 										<v-spacer></v-spacer>
-										<v-toolbar-items>
-											<v-btn flat @click="QuicksavesRollback( site.id, quicksave)">Entire Quicksave Rollback</v-btn>
-											<v-btn flat @click="viewQuicksavesChanges( site.id, quicksave)">View Changes</v-btn>
-										</v-toolbar-items>
 									</v-toolbar>
-									<v-card flat v-show="quicksave.view_changes == true" style="table-layout:fixed;margin:0px;overflow: scroll;padding: 0px;position: absolute;background-color: #fff;width: 100%;left: 0;top: 100%;height: 100%;z-index: 3;transform: translateY(-100%);">
-										<v-toolbar color="dark primary" dark dense light>
-											<v-btn icon dark @click.native="quicksave.view_changes = false">
-					              <v-icon>close</v-icon>
-					            </v-btn>
-											<v-toolbar-title>List of changes</v-toolbar-title>
-											<v-spacer></v-spacer>
-										</v-toolbar>
 										<v-card-text>
 											<v-card-title>
-									      Files
+												Files
+											</v-card-title>
 									      <v-spacer></v-spacer>
-									      <v-text-field
-									        v-model="quicksave.search"
-													@input="filterFiles( site.id, quicksave.quicksave_id)"
-									        append-icon="search"
-									        label="Search"
-									        single-line
-									        hide-details
-									      ></v-text-field>
+										  <v-text-field
+											v-model="quicksave.search"
+											@input="filterFiles( site.id, quicksave.quicksave_id)"
+											append-icon="search"
+											label="Search"
+											single-line
+											hide-details
+										  ></v-text-field>
 						</v-card-title>
-											<v-data-table hide-actions no-data-text="" :headers='[{"text":"File","value":"file"}]' :items="quicksave.filtered_files" :loading="quicksave.loading">
-												<template slot="items" slot-scope="props">
-												 <td>
-													 <a class="v-menu__activator" @click="QuicksaveFileDiff(quicksave.site_id, quicksave.quicksave_id, quicksave.git_commit, props.item)"> {{ props.item }} </a>
-												 </td>
+											<v-data-table hide-default-footer no-data-text="" :headers='[{"text":"File","value":"file"}]' :items="quicksave.filtered_files" :loading="quicksave.loading">
+												<template v-slot:body="{ items }">
+												<tbody>
+													<tr v-for="item in items" >
+														<td>
+															<a class="v-menu__activator" @click="QuicksaveFileDiff(quicksave.site_id, quicksave.quicksave_id, quicksave.git_commit, item)"> {{ item }} </a>
+														</td>
+													</tr>
+												</tbody>
 											 </template>
 											 <v-alert slot="no-results" :value="true" color="error" icon="warning">
 													Your search for "{{ quicksave.search }}" found no results.
@@ -3096,62 +3028,66 @@ Vue.component('file-upload', VueUploadComponent);
 									</v-card>
 							    <v-card>
 											<v-data-table
-												:headers='[{"text":"Theme","value":"theme"},{"text":"Version","value":"version"},{"text":"Status","value":"status"},{"text":"","value":"actions","width":"150px"}]'
+												:headers='[{"text":"Theme","value":"title"},{"text":"Version","value":"version"},{"text":"Status","value":"status"},{"text":"","value":"actions","width":"150px"}]'
 												:items="quicksave.themes"
 												item-key="name"
 												class="quicksave-table"
-												hide-actions
-											 >
-											 <template slot="items" slot-scope="props">
-											 <tr v-bind:class="{ 'green lighten-5': props.item.changed_version || props.item.changed_status }">
-												<td>{{ props.item.title }}</td>
-												<td v-bind:class="{ 'green lighten-4': props.item.changed_version }">{{ props.item.version }}</td>
-												<td v-bind:class="{ 'green lighten-4': props.item.changed_status }">{{ props.item.status }}</td>
-												<td><v-btn flat small @click="RollbackQuicksave(quicksave.site_id, quicksave.quicksave_id, 'theme', props.item.name)">Rollback</v-btn></td>
-										  </tr>
-											 </template>
-											 <template slot="footer">
+												hide-default-footer
+											>
+											<template v-slot:body="{ items }">
+											<tbody>
+											<tr v-for="item in items" v-bind:class="{ 'green lighten-5': item.changed_version || item.changed_status }">
+												<td>{{ item.title }}</td>
+												<td v-bind:class="{ 'green lighten-4': item.changed_version }">{{ item.version }}</td>
+												<td v-bind:class="{ 'green lighten-4': item.changed_status }">{{ item.status }}</td>
+												<td><v-btn text small @click="RollbackQuicksave(quicksave.site_id, quicksave.quicksave_id, 'theme', item.name)">Rollback</v-btn></td>
+											</tr>
+											</template>
+											 <template v-slot:body.append="{ headers }">
 											 <tr class="red lighten-4 strikethrough" v-for="theme in quicksave.deleted_themes">
 												<td>{{ theme.title || theme.name }}</td>
 												<td>{{ theme.version }}</td>
 												<td>{{ theme.status }}</td>
 												<td></td>
 											 </tr>
+											 </tbody>
 											 </template>
 											</v-data-table>
-
 											<v-data-table
 												:headers='[{"text":"Plugin","value":"plugin"},{"text":"Version","value":"version"},{"text":"Status","value":"status"},{"text":"","value":"actions","width":"150px"}]'
 												:items="quicksave.plugins"
 												item-key="name"
 												class="quicksave-table"
-												hide-actions
+												hide-default-footer
 											 >
-											 <template slot="items" slot-scope="props">
-											 <tr v-bind:class="[{ 'green lighten-5': props.item.changed_version || props.item.changed_status },{ 'red lighten-4 strikethrough': props.item.deleted }]">
-												<td>{{ props.item.title || props.item.name }}</td>
-												<td v-bind:class="{ 'green lighten-4': props.item.changed_version }">{{ props.item.version }}</td>
-												<td v-bind:class="{ 'green lighten-4': props.item.changed_status }">{{ props.item.status }}</td>
-												<td><v-btn flat small @click="RollbackQuicksave(quicksave.site_id, quicksave.quicksave_id, 'plugin', props.item.name)">Rollback</v-btn></td>
+											 <template v-slot:body="{ items }">
+											 <tbody>
+											 <tr v-for="item in items" v-bind:class="[{ 'green lighten-5': item.changed_version || item.changed_status },{ 'red lighten-4 strikethrough': item.deleted }]">
+												<td>{{ item.title || item.name }}</td>
+												<td v-bind:class="{ 'green lighten-4': item.changed_version }">{{ item.version }}</td>
+												<td v-bind:class="{ 'green lighten-4': item.changed_status }">{{ item.status }}</td>
+												<td><v-btn text small @click="RollbackQuicksave(quicksave.site_id, quicksave.quicksave_id, 'plugin', item.name)">Rollback</v-btn></td>
 											 </tr>
 											 </template>
-											 <template slot="footer">
+											 <template v-slot:body.append="{ headers }">
 											 <tr class="red lighten-4 strikethrough" v-for="plugin in quicksave.deleted_plugins">
 												<td>{{ plugin.title || plugin.name }}</td>
 												<td>{{ plugin.version }}</td>
 												<td>{{ plugin.status }}</td>
 												<td></td>
 											 </tr>
+											 </tbody>
 											 </template>
 											</v-data-table>
 							    </v-card>
 							  </v-expansion-panel-content>
 							</v-expansion-panel>
+							</v-expansion-panels>
 							</div>
 					</v-card>
 			</v-tab-item>
 		</v-tabs-items>
-		<v-card flat v-if="site.environments.filter( key => key.environment == site.environment_selected ).length == 0">
+		<v-card text v-if="site.environments.filter( key => key.environment == site.environment_selected ).length == 0">
 			<v-container fluid>
 			 <div><span>{{ site.environment_selected }} environment not created.</span></div>
 		 </v-container>
@@ -3162,7 +3098,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-toolbar-title>Site Plan</v-toolbar-title>
 				<v-spacer></v-spacer>
 					<v-toolbar-items v-show="role == 'administrator'">
-						<v-btn flat @click="modifyPlan( site.id )">Modify Plan <v-icon dark small>edit</v-icon></v-btn>
+						<v-btn text @click="modifyPlan( site.id )">Modify Plan <v-icon dark small>edit</v-icon></v-btn>
 					</v-toolbar-items>
 			</v-toolbar>
 			<v-card flat>
@@ -3210,19 +3146,21 @@ Vue.component('file-upload', VueUploadComponent);
 					:headers='[{"text":"Name","value":"name"},{"text":"Storage","value":"Storage"},{"text":"Visits","value":"visits"}]'
 					:items="site.usage_breakdown.sites"
 					item-key="name"
-					hide-actions
+					hide-default-footer
 				>
-					<template slot="items" slot-scope="props">
-						<td>{{ props.item.name }}</td>
-						<td>{{ props.item.storage }}GB</td>
-						<td>{{ props.item.visits }}</td>
-					</template>
-					<template slot="footer">
-						<tr>
-							<td>Totals:</td>
-							<td v-for="total in site.usage_breakdown.total" v-html="total"></td>
-						</tr>
-					</template>
+				<template v-slot:body="{ items }">
+				<tbody>
+					<tr v-for="item in items">
+						<td>{{ item.name }}</td>
+						<td>{{ item.storage }}GB</td>
+						<td>{{ item.visits }}</td>
+					</tr>
+					<tr>
+						<td>Totals:</td>
+						<td v-for="total in site.usage_breakdown.total" v-html="total"></td>
+					</tr>
+				</tbody>
+				</template>
 				</v-data-table>
 			</v-card>
 		</v-tab-item>
@@ -3231,61 +3169,64 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-toolbar-title>Sharing</v-toolbar-title>
 				<v-spacer></v-spacer>
 				<v-toolbar-items v-show="role == 'administrator'">
-					<v-btn flat>Invite</v-btn>
+					<v-btn text>Invite</v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
 			<v-layout>
-				<v-list subheader>
-						<v-subheader inset>Customer</v-subheader>
-						<v-list-tile v-for="customer in site.customer" :key="customer.customer_id" avatar @click="">
-							<v-list-tile-avatar>
-								<v-icon>fas fa-user</v-icon>
-							</v-list-tile-avatar>
-							<v-list-tile-content>
-	              <v-list-tile-title>{{ customer.name }}</v-list-tile-title>
-	            </v-list-tile-content>
-	          </v-list-tile>
-	          <v-divider inset></v-divider>
-	          <v-subheader inset>Shared With</v-subheader>
-	          <v-list-tile v-for="customer in site.shared_with" :key="customer.customer_id" avatar @click="">
-	            <v-list-tile-avatar>
-	              <v-icon>fas fa-user</v-icon>
-	            </v-list-tile-avatar>
-	            <v-list-tile-content>
-	              <v-list-tile-title>{{ customer.name }}</v-list-tile-title>
-	            </v-list-tile-content>
-	          </v-list-tile>
-	        </v-list>
-		</v-layout>
+			<v-list disabled>
+				<v-subheader>Customer</v-subheader>
+				<v-list-item :key="site.customer.customer_id">
+					<v-list-item-icon>
+						<v-icon>fas fa-user</v-icon>
+					</v-list-item-icon>
+					<v-list-item-content>
+						<v-list-item-title>{{ site.customer.name }}</v-list-item-title>
+					</v-list-item-content>
+				</v-list-item>
+				<v-divider inset></v-divider>
+				<v-subheader>Shared With</v-subheader>
+				<v-list-item v-for="customer in site.shared_with" :key="customer.customer_id">
+					<v-list-item-icon>
+						<v-icon>fas fa-user</v-icon>
+					</v-list-item-icon>
+					<v-list-item-content>
+						<v-list-item-title>{{ customer.name }}</v-list-item-title>
+					</v-list-item-content>
+				</v-list-item>
+			</v-list>
+			</v-layout>
 	  </v-tab-item>
 		<v-tab-item :key="8" value="tab-Timeline">
 			<v-toolbar color="grey lighten-4" dense light flat>
 				<v-toolbar-title>Timeline</v-toolbar-title>
 				<v-spacer></v-spacer>
 				<v-toolbar-items v-show="role == 'administrator'">
-					<v-btn flat @click="showLogEntry(site.id)">New Log Entry <v-icon dark small>fas fa-check-circle</v-icon></v-btn>
+					<v-btn text @click="showLogEntry(site.id)">New Log Entry <v-icon dark small>fas fa-check-circle</v-icon></v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
 			<v-card flat>
 			<v-data-table
 				:headers="header_timeline"
 				:items="site.timeline"
-				:disable-initial-sort="true"
 				class="timeline"
-				hide-actions
+				hide-default-footer
 				>
-				<template slot="items" slot-scope="props">
-					<td class="justify-center">{{ props.item.created_at | pretty_timestamp }}</td>
-					<td class="justify-center">{{ props.item.author }}</td>
-					<td class="justify-center">{{ props.item.title }}</td>
-					<td class="justify-center" v-html="props.item.description"></td>
+				<template v-slot:body="{ items }">
+					<tbody>
+					<tr v-for="item in items">
+					<td class="justify-center">{{ item.created_at | pretty_timestamp }}</td>
+					<td class="justify-center">{{ item.author }}</td>
+					<td class="justify-center">{{ item.title }}</td>
+					<td class="justify-center py-3" v-html="item.description"></td>
 					<td v-if="role == 'administrator'"><v-icon
             small
             class="mr-2"
-            @click="editLogEntry(props.item.websites, props.item.id)"
+            @click="editLogEntry(item.websites, item.id)"
           >
             edit
-          </v-icon></td>
+		  </v-icon></td>
+				</tr>
+				</tbody>
 				</template>
 			</v-data-table>
 			</v-card>
@@ -3295,34 +3236,34 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-toolbar-title>Advanced</v-toolbar-title>
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
-					<v-btn flat @click="copySite(site.id)">Copy Site <v-icon dark small>file_copy</v-icon></v-btn>
-					<v-btn flat @click="editSite(site.id)" v-show="role == 'administrator'">Edit Site <v-icon dark small>edit</v-icon></v-btn>
-					<v-btn flat @click="deleteSite(site.id)" v-show="role == 'administrator'">Remove Site <v-icon dark small>delete</v-icon></v-btn>
+					<v-btn text @click="copySite(site.id)">Copy Site <v-icon dark small>file_copy</v-icon></v-btn>
+					<v-btn text @click="editSite(site.id)" v-show="role == 'administrator'">Edit Site <v-icon dark small>edit</v-icon></v-btn>
+					<v-btn text @click="deleteSite(site.id)" v-show="role == 'administrator'">Remove Site <v-icon dark small>delete</v-icon></v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
 			<v-card flat>
 				<v-card-title>
 					<div>
 						<div v-show="site.provider == 'kinsta'">
-						<v-btn left small flat @click="PushProductionToStaging( site.id )">
+						<v-btn left small text @click="PushProductionToStaging( site.id )">
 							<v-icon>local_shipping</v-icon> <span>Push Production to Staging</span>
 						</v-btn>
 						</div>
 						<div v-show="site.provider == 'kinsta'">
-						<v-btn left small flat @click="PushStagingToProduction( site.id )">
+						<v-btn left small text @click="PushStagingToProduction( site.id )">
 							<v-icon class="reverse">local_shipping</v-icon> <span>Push Staging to Production</span>
 						</v-btn>
 						</div>
-						</div>
+					</div>
 				</v-card-title>
 			</v-card>
 		</v-tab-item>
 	</v-tabs>
-
-						 </v-expansion-panel-content>
+				</v-expansion-panel-content>
 			</v-expansion-panel>
+			</v-expansion-panels>
 				<v-layout justify-center>
-				<div class="text-xs-center">
+				<div class="text-center">
 					<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" :length="Math.ceil(filteredSites / items_per_page)" v-model="page" :total-visible="7" color="blue darken-3"></v-pagination>
 				</div>
 				</v-layout>
@@ -3336,11 +3277,11 @@ Vue.component('file-upload', VueUploadComponent);
 				class="blue darken-3"
 				>
 				<v-layout wrap align-center justify-center row fill-height>
-				<v-flex xs12 md9 px-2 subheading>
+				<v-flex xs12 md9 px-2 subtitle-1>
 					<div v-html="dns_introduction"></div>
 				</v-flex>
-				<v-flex xs12 md3 px-2 text-xs-center v-show="dns_nameservers != ''">
-					<v-chip color="primary" text-color="white" disabled>Nameservers</v-chip>
+				<v-flex xs12 md3 px-2 text-center v-show="dns_nameservers != ''">
+					<v-chip color="primary" text-color="white">Nameservers</v-chip>
 					<div v-html="dns_nameservers"></div>
 				</v-flex>
 				</v-layout>
@@ -3351,7 +3292,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Domains <small v-show="allDomains > 0">({{ allDomains }})</small></v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn flat @click="dialog_new_domain.show = true" v-show="role == 'administrator'">Add Domain <v-icon dark>add</v-icon></v-btn>
+						<v-btn text @click="dialog_new_domain.show = true" v-show="role == 'administrator'">Add Domain <v-icon dark>add</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
@@ -3366,7 +3307,7 @@ Vue.component('file-upload', VueUploadComponent);
 						</div>
 						</v-card-title>
 						<v-card-actions>
-						<v-btn flat color="primary" @click="modifyDNS( domain )">Modify DNS</v-btn>
+						<v-btn text color="primary" @click="modifyDNS( domain )">Modify DNS</v-btn>
 						</v-card-actions>
 					</v-card>
 					</v-flex>
@@ -3380,7 +3321,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Contains {{ recipes.length }} recipes</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn flat @click="new_recipe.show = true">Add new recipe</v-btn>
+						<v-btn text @click="new_recipe.show = true">Add new recipe</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
@@ -3400,18 +3341,18 @@ Vue.component('file-upload', VueUploadComponent);
 						</v-layout>
 				</v-container>
 				</v-window-item>
-					</v-card-text>
-				</v-card>
+				</v-card-text>
+			</v-card>
 			<v-card tile v-show="route == 'handbook'" v-if="role == 'administrator'">
 				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Contains {{ processes.length }} processes</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn flat @click="fetchProcessLogs()">Log history</v-btn>
+						<v-btn text @click="fetchProcessLogs()">Log history</v-btn>
 						<v-divider vertical class="mx-1" inset></v-divider>
-						<v-btn flat @click="showLogEntryGeneric()">New log entry</v-btn>
+						<v-btn text @click="showLogEntryGeneric()">New log entry</v-btn>
 						<v-divider vertical class="mx-1" inset></v-divider>
-						<v-btn flat @click="new_process.show = true">New process</v-btn>
+						<v-btn text @click="new_process.show = true">New process</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text style="max-height: 100%;">
@@ -3421,7 +3362,7 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-card :hover="true" @click="viewProcess( process.id )">
 						<v-card-title primary-title class="pt-2">
 							<div>
-								<span class="title">{{ process.title }}</a> <v-chip color="primary" text-color="white" flat disabled>{{ process.role }}</v-chip></span>
+								<span class="title">{{ process.title }}</a> <v-chip color="primary" text-color="white" text>{{ process.role }}</v-chip></span>
 								<div class="caption">
 									<v-icon small v-show="process.time_estimate != ''" style="padding:0px 5px">far fa-clock</v-icon>{{ process.time_estimate }} 
 									<v-icon small v-show="process.repeat != '' && process.repeat != null" style="padding:0px 5px">fas fa-redo-alt</v-icon>{{ process.repeat }} 
@@ -3446,7 +3387,7 @@ Vue.component('file-upload', VueUploadComponent);
 				style="z-index: 9999999;"
 			>
 				{{ snackbar.message }}
-				<v-btn dark flat @click.native="snackbar.show = false">Close</v-btn>
+				<v-btn dark text @click.native="snackbar.show = false">Close</v-btn>
 			</v-snackbar>
 		</template>
 		</v-content>
@@ -3489,6 +3430,7 @@ function groupmonth(value, index, array) {
 
 new Vue({
 	el: '#app',
+	vuetify: new Vuetify(),
 	data: {
 		loading_page: true,
 		dialog_bulk: { show: false, tabs_management: "tab-Sites", environment_selected: "Production" },
@@ -3520,9 +3462,9 @@ new Vue({
 		custom_script: "",
 		recipes: 
 		<?php
-		$db_recipes = new CaptainCore\recipes();
+			$db_recipes = new CaptainCore\recipes();
 			$recipes = $db_recipes->fetch_recipes("title","ASC");
-		echo json_encode( $recipes );
+			echo json_encode( $recipes );
 		?>,
 		processes: 
 			<?php
@@ -3666,9 +3608,16 @@ new Vue({
 		toggle_site_sort: null,
 		toggle_site_counter: { key: "", count: 0 },
 		sites: [],
-		headers: [
-			{ text: 'Name', value: 'name' },
-			{ text: 'Slug', value: 'slug' },
+		header_themes: [
+			{ text: 'Name', value: 'title' },
+			{ text: 'Slug', value: 'name' },
+			{ text: 'Version', value: 'version' },
+			{ text: 'Status', value: 'status', width: "100px" },
+			{ text: 'Actions', value: 'actions', width: "90px", sortable: false }
+		],
+		header_plugins: [
+			{ text: 'Name', value: 'title' },
+			{ text: 'Slug', value: 'name' },
 			{ text: 'Version', value: 'version' },
 			{ text: 'Status', value: 'status', width: "100px" },
 			{ text: 'Actions', value: 'actions', width: "90px", sortable: false }
@@ -3682,7 +3631,7 @@ new Vue({
 			{ text: 'Status', value: 'status' }
 		],
 		 header_users: [
-			{ text: 'Login', value: 'login' },
+			{ text: 'Login', value: 'user_login' },
 			{ text: 'Display Name', value: 'display_name' },
 			{ text: 'Email', value: 'user_email' },
 			{ text: 'Role(s)', value: 'roles' },
@@ -3869,7 +3818,7 @@ new Vue({
 				}
 			})
 			return count;
-	},
+		},
 		allDomains() {
 			return Object.keys( this.domains ).length;
 		}
@@ -3907,6 +3856,13 @@ new Vue({
 			// Trigger fetchStats()
 			if ( site.tabs == "tab-Site-Management" && site.tabs_management == "tab-Stats" ) {
 				this.fetchStats( site_id );
+			}
+		},
+		removeFilter (item) {
+			const index = this.applied_site_filter.indexOf(item.name)
+			if (index >= 0) { 
+				this.applied_site_filter.splice(index, 1);
+				this.filterSites();
 			}
 		},
 		compare(key, order='asc') {
@@ -4518,10 +4474,6 @@ new Vue({
 			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
 			environment.stats = "Loading";
 
-			chart_id = "chart_" + site.id + "_" + site.environment_selected;
-			chart_dom = document.getElementById( chart_id );		
-			chart_dom.innerHTML = ""
-
 			var data = {
 				action: 'captaincore_ajax',
 				post_id: site_id,
@@ -4538,7 +4490,11 @@ new Vue({
 						environment.stats = response.data.Error 
 						return;
 					}
-					
+
+					chart_id = "chart_" + site.id + "_" + site.environment_selected;
+					chart_dom = document.getElementById( chart_id );		
+					chart_dom.innerHTML = ""
+
 					environment.stats = response.data
 					
 					bymonth={};
@@ -4573,7 +4529,7 @@ new Vue({
 						},
 						barOptions: {
 							spaceRatio: 0.1,
-								stacked: 1
+							stacked: 1
 						},
 						showLegend: 0,
 						
@@ -4956,6 +4912,7 @@ new Vue({
 		showLogEntry( site_id ){
 			site = this.sites.filter(site => site.id == site_id )[0];
 			this.dialog_new_log_entry.show = true;
+			this.dialog_new_log_entry.sites = [];
 			this.dialog_new_log_entry.sites.push( site );
 			this.dialog_new_log_entry.site_name = site.name;
 		},
@@ -7297,6 +7254,11 @@ new Vue({
 
 					});
 
+					// Populate title with format "version (count)"
+					versions.forEach( v => {
+						v.title = v.name + " (" + v.count + ")";
+					});
+					
 					filter_versions.push({name: filter, versions: versions });
 
 				});
@@ -7330,6 +7292,11 @@ new Vue({
 
 					});
 
+					// Populate title with format "status (count)"
+					statuses.forEach( s => {
+						s.title = s.name + " (" + s.count + ")";
+					});
+
 					filter_statuses.push({name: filter, statuses: statuses });
 
 				});
@@ -7338,18 +7305,21 @@ new Vue({
 
 				} // end filterby
 
-			}
+				}
 
-			// Neither filter is set so set all sites to filtered true.
-			if ( this.applied_site_filter.length == 0 && !this.search ) {
+				// Neither filter is set so set all sites to filtered true.
+				if ( this.applied_site_filter.length == 0 && !this.search ) {
 
-				this.sites.forEach(function(site) {
-					site.filtered = true;
-				});
+					this.site_filter_status = [];
+					this.site_filter_version = [];
 
-			}
+					this.sites.forEach(function(site) {
+						site.filtered = true;
+					});
 
-			this.page = 1;
+				}
+
+				this.page = 1;
 
 		}
 	}
