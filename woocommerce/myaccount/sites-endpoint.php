@@ -239,10 +239,6 @@ table.v-table tbody td, table.v-table tbody th {
 	border: 0px;
 }
 
-.quicksave-table table {
-	width: auto;
-}
-
 .quicksave-table table.v-table tbody td, .quicksave-table table.v-table tbody th {
 	height:40px;
 }
@@ -2955,6 +2951,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
 						<v-btn text @click="promptBackupSnapshot( site.id )">Download Backup Snapshot <v-icon dark small>fas fa-cloud-download-alt</v-icon></v-btn>
+						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-btn text @click="QuicksaveCheck( site.id )">Manual Check <v-icon dark small>fas fa-sync-alt</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
@@ -2975,7 +2972,7 @@ Vue.component('file-upload', VueUploadComponent);
 							<v-expansion-panel v-for="quicksave in key.quicksaves" style="elevation-0">
 							  <v-expansion-panel-header style="min-height: 44px;padding: 12px 20px;">
 								<v-layout align-center justify-space-between row>
-									<v-flex class="body-1">
+									<v-flex class="font-weight-thin subtitle-1">
 										<v-icon>settings_backup_restore</v-icon> {{ quicksave.created_at | pretty_timestamp }}</span>
 									</v-flex>
 									<v-flex class="body-2 text-right pr-3">
@@ -2985,10 +2982,11 @@ Vue.component('file-upload', VueUploadComponent);
 							</v-expansion-panel-header>
 							<v-expansion-panel-content>
 								<v-toolbar color="dark primary" dark dense light>
-									<v-toolbar-title></v-toolbar-title>
+									<v-toolbar-title class="body-2">{{ quicksave.git_status }}</v-toolbar-title>
 									<v-spacer></v-spacer>
 									<v-toolbar-items>
-										<v-btn text @click="QuicksavesRollback( site.id, quicksave)">Entire Quicksave Rollback</v-btn>
+										<v-btn text @click="QuicksavesRollback( site.id, quicksave)">Rollback Everything</v-btn>
+										<v-divider vertical class="mx-1" inset></v-divider>
 										<v-btn text @click="viewQuicksavesChanges( site.id, quicksave)">View Changes</v-btn>
 									</v-toolbar-items>
 								</v-toolbar>
@@ -3041,7 +3039,6 @@ Vue.component('file-upload', VueUploadComponent);
 												:items="quicksave.themes"
 												item-key="name"
 												class="quicksave-table"
-												hide-default-footer
 											>
 											<template v-slot:body="{ items }">
 											<tbody>
@@ -3067,7 +3064,8 @@ Vue.component('file-upload', VueUploadComponent);
 												:items="quicksave.plugins"
 												item-key="name"
 												class="quicksave-table"
-												hide-default-footer
+												:items-per-page="25"
+												:footer-props="{ itemsPerPageOptions: [25,50,100,{'text':'All','value':-1}] }"
 											 >
 											 <template v-slot:body="{ items }">
 											 <tbody>
@@ -3075,7 +3073,7 @@ Vue.component('file-upload', VueUploadComponent);
 												<td>{{ item.title || item.name }}</td>
 												<td v-bind:class="{ 'green lighten-4': item.changed_version }">{{ item.version }}</td>
 												<td v-bind:class="{ 'green lighten-4': item.changed_status }">{{ item.status }}</td>
-												<td><v-btn text small @click="RollbackQuicksave(quicksave.site_id, quicksave.quicksave_id, 'plugin', item.name)">Rollback</v-btn></td>
+												<td><v-btn text small @click="RollbackQuicksave(quicksave.site_id, quicksave.quicksave_id, 'plugin', item.name)" v-show="item.status != 'must-use' || item.status != 'dropin'">Rollback</v-btn></td>
 											 </tr>
 											 </template>
 											 <template v-slot:body.append="{ headers }">
