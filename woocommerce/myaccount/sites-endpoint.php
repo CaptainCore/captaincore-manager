@@ -2186,7 +2186,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<td class="justify-center">{{ item.created_at | pretty_timestamp }}</td>
 					<td class="justify-center">{{ item.author }}</td>
 					<td class="justify-center">{{ item.title }}</td>
-					<td class="justify-center" v-html="item.description"></td>
+					<td class="justify-center py-3" v-html="item.description"></td>
 					<td>
 						{{ item.websites.map( site => site.name ).join(" ") }}
 					</td>
@@ -2221,6 +2221,9 @@ Vue.component('file-upload', VueUploadComponent);
 							<v-chip v-else-if="item.status == 'error'" small outlined label color="red">Error</v-chip>
 							<div v-else>
 								<v-progress-linear :indeterminate="true"></v-progress-linear>
+								<v-btn x-small class="ma-1" depressed @click="killCommand(item.job_id)">
+									Cancel
+								</v-btn>
 							</div>
 						</td>
 						<td>
@@ -6763,6 +6766,12 @@ new Vue({
 			this.dialog_theme_and_plugin_checks.site = site;
 			this.dialog_theme_and_plugin_checks.show = true;
 		},
+		killCommand( job_id ) {
+			job = this.jobs.filter(job => job.job_id == job_id)[0]
+			job.conn.send( '{ "token" : "'+ job.job_id +'", "action" : "kill" }' );
+			//job.conn.close();
+			job.status = "error"
+		},
 		runCommand( job_id ) {
 
 			job = this.jobs.filter(job => job.job_id == job_id)[0]
@@ -6775,7 +6784,14 @@ new Vue({
 			job.conn.onmessage = (session) => self.writeSocket( job_id, session );
 			job.conn.onclose = () => {
 				job = self.jobs.filter(job => job.job_id == job_id)[0]
-				job.status = "done"
+				last_output_index = job.stream.length - 1;
+				last_output = job.stream[last_output_index];
+
+				if ( last_output == "Finished.") {
+					job.status = "done"
+				} else {
+					job.status = "error"
+				}
 				
 				if ( job.command == "syncSite" ) {
 					self.fetchSiteInfo( job.site_id );
