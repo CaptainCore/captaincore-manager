@@ -177,6 +177,11 @@ g.chart-legend {
 	margin-bottom: 0px;
 }
 
+.table-dns td button.v-btn.v-btn--flat.v-btn--icon.v-size--small {
+	max-width: 30px;
+	max-height: 30px;
+}
+
 .theme--light.v-table a,
 .theme--light.v-table a:hover {
 	color: #1976d2;
