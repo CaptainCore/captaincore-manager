@@ -3356,14 +3356,22 @@ function captaincore_local_action_callback() {
 		$partner = get_field( 'partner', 'user_' . get_current_user_id() );
 		if ( $partner ) {
 			foreach ( $partner as $partner_id ) {
+				$default_users = get_field( 'preloaded_users', $partner_id );
+				$default_plugins = array_column( get_field( 'preloaded_plugins', $partner_id ), "plugin" );
+				if ( $default_users == "" ){
+					$default_users = array();
+				}
+				if ( $default_plugins == "" ){
+					$default_plugins = array();
+				}
 				$accounts[] = (object) [
 					'account'          => array(
 						'id'               => $partner_id,
 						'name'             => get_the_title( $partner_id ),
 					),
 					'default_email'    => get_field( 'preloaded_email', $partner_id ),
-					'default_users'    => get_field( 'preloaded_users', $partner_id ),
-					'default_plugins'  => array_column( get_field( 'preloaded_plugins', $partner_id ), "plugin" ),
+					'default_users'    => $default_users,
+					'default_plugins'  => $default_plugins,
 					'default_timezone' => get_field( 'default_timezone', $partner_id ),
 				];
 			}
