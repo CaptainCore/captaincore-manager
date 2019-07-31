@@ -924,7 +924,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-flex xs12>
 					<v-progress-linear :indeterminate="true" v-show="dialog_domain.saving"></v-progress-linear>
 				</v-flex>
-				<v-flex xs12 text-right pa-0 ma-0 v-show="!dialog_domain.loading">
+				<v-flex xs12 text-right my-3 v-show="!dialog_domain.loading">
 					<v-btn color="primary" dark @click="saveDNS()">
 						Save Records
 					</v-btn>
@@ -5747,6 +5747,16 @@ new Vue({
 					}
 				}
 
+				if ( record.type == "MX" ) {
+					// Check for value ending in period. If not add one.
+					record.update.record_value.forEach( v => {
+						v.value = v.value.trim();
+						if ( v.value.substr(v.value.length - 1) != "." ) {
+							v.value = v.value + ".";
+						}
+					})
+				}
+
 				if ( record.type == "HTTPRedirection" ) {
 					record_value = record.update.record_value.trim();
 				}
@@ -5797,9 +5807,6 @@ new Vue({
 				'domain_key': domain_id,
 				'record_updates': record_updates
 			};
-
-			console.log( record_updates );
-			// this.dialog_domain.saving = false;
 
 			self = this;
 			axios.post( ajaxurl, Qs.stringify( data ) )
