@@ -1262,15 +1262,17 @@ Vue.component('file-upload', VueUploadComponent);
 					hide-default-header
 					hide-default-footer
 				>
-					<template v-slot:items="props">
-					<tr style="border-bottom: 0px;">
-						<td class="pa-1"><v-text-field :value="props.item.username" @change.native="props.item.username = $event.target.value" label="Username"></v-text-field></td>
-						<td class="pa-1"><v-text-field :value="props.item.email" @change.native="props.item.email = $event.target.value" label="Email"></v-text-field></td>
-						<td class="pa-1"><v-text-field :value="props.item.first_name" @change.native="props.item.first_name = $event.target.value" label="First Name"></v-text-field></td>
-						<td class="pa-1"><v-text-field :value="props.item.last_name" @change.native="props.item.last_name = $event.target.value" label="Last Name"></v-text-field></td>
-						<td class="pa-1" style="width:135px;"><v-select :value="props.item.role" v-model="props.item.role" :items="roles" label="Role" item-text="name"></v-select></td>
+				<template v-slot:body="{ items }">
+				<tbody>
+					<tr v-for="item in items" style="border-bottom: 0px;">
+						<td class="pa-1"><v-text-field :value="item.username" @change.native="item.username = $event.target.value" label="Username"></v-text-field></td>
+						<td class="pa-1"><v-text-field :value="item.email" @change.native="item.email = $event.target.value" label="Email"></v-text-field></td>
+						<td class="pa-1"><v-text-field :value="item.first_name" @change.native="item.first_name = $event.target.value" label="First Name"></v-text-field></td>
+						<td class="pa-1"><v-text-field :value="item.last_name" @change.native="item.last_name = $event.target.value" label="Last Name"></v-text-field></td>
+						<td class="pa-1" style="width:135px;"><v-select :value="item.role" v-model="item.role" :items="roles" label="Role" item-text="name"></v-select></td>
 					</tr>
-					</template>
+				</tbody>
+				</template>
 					<template v-slot:footer>
 					<tr style="border-top: 0px;">
 						<td colspan="5" style="padding:0px;">
@@ -3583,7 +3585,6 @@ new Vue({
 		],
 		<?php } else { ?>
 		role: "",
-		roles: [{ name: "Subscriber", value: "subscriber" },{ name: "Contributor", value: "contributor" },{ name: "Author", value: "author" },{ name: "Editor", value: "editor" },{ name: "Administrator", value: "administrator" },],
 		dialog_new_site: false,
 		customers: [],
 		shared_with: [],
@@ -3596,6 +3597,7 @@ new Vue({
 		domains: [],
 		dns_introduction: <?php $Parsedown = new Parsedown(); echo json_encode( $Parsedown->text( get_field( "dns_introduction", "option" ) ) ); ?>,
 		dns_nameservers: <?php echo json_encode( $Parsedown->text( get_field( "dns_nameservers", "option" ) ) ); ?>,
+		roles: [{ name: "Subscriber", value: "subscriber" },{ name: "Contributor", value: "contributor" },{ name: "Author", value: "author" },{ name: "Editor", value: "editor" },{ name: "Administrator", value: "administrator" }],
 		new_plugin: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {} },
 		new_theme: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {} },
 		bulk_edit: { show: false, site_id: null, type: null, items: [] },
