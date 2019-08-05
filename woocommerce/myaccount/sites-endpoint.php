@@ -1647,8 +1647,6 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-dialog>
 				<v-dialog
 					v-model="dialog_mailgun.show"
-					fullscreen
-					hide-overlay
 					transition="dialog-bottom-transition"
 					scrollable
 				>
@@ -1663,18 +1661,22 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-card-text>
 					<v-container>
 						<v-progress-linear :indeterminate="true" v-show="dialog_mailgun.loading"></v-progress-linear>
-						<v-expansion-panels>
-						<v-expansion-panel>
-						<v-expansion-panel-content
-							v-for="event in dialog_mailgun.response"
+						<v-data-table
+							:headers='[{"text":"Timestamp","value":"timestamp"},{"text":"Description","value":"description"},{"text":"Event","value":"event"}]'
+							:items="dialog_mailgun.response"
+							:items-per-page="50"
+							:footer-props="{ itemsPerPageOptions: [50,150,300,{'text':'All','value':-1}] }"
 							>
-							<div slot="header"><v-icon>event_note</v-icon> {{ event.timestamp }} <small style="padding-left:40px;">{{ event.description }}</small></div>
-							<v-card>
-								<v-card-text><pre>{{ event.event }}</pre></v-card-text>
-							</v-card>
-							</v-expansion-panel-content>
-						</v-expansion-panel>
-						</v-expansion-panels>
+						<template v-slot:body="{ items }">
+						<tbody>
+						<tr v-for="item in items" :key="item.event.id">
+							<td class="justify-center">{{ item.timestamp }}</td>
+							<td class="justify-center">{{ item.description }}</td>
+							<td class="justify-center">{{ item.event.event }}</td>
+						</tr>
+						</tbody>
+						</template>
+						</v-data-table>
 					</v-container>
 					</v-card-text>
 					</v-card>
@@ -3453,7 +3455,7 @@ new Vue({
 		dialog_domain: { show: false, domain: {}, records: [], results: [], loading: true, saving: false },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $current_user->user_email; ?>", current_user_email: "<?php echo $current_user->user_email; ?>", filter_toggle: true, filter_options: [] },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
-		dialog_mailgun: { show: false, site: {}, response: "", loading: false },
+		dialog_mailgun: { show: false, site: {}, response: [], loading: false },
 		dialog_modify_plan: { show: false, site: {}, hosting_plan: {}, hosting_addons: [], selected_plan: "", customer_name: "" },
 		dialog_launch: { show: false, site: {}, domain: "" },
 		dialog_toggle: { show: false, site_name: "", site_id: "" },
