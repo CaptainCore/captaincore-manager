@@ -990,7 +990,7 @@ class Site {
 			$response['site_id']  = $site_id;
 
 			// add in ACF fields
-			update_field( 'customer', array_column( $site->customer, 'customer_id' ), $site_id );
+			update_field( 'customer', $site->customer["customer_id"], $site_id );
 			update_field( 'partner', array_column( $site->shared_with, 'customer_id' ), $site_id );
 			update_field( 'provider', $site->provider, $site_id );
 
