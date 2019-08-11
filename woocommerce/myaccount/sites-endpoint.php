@@ -133,6 +133,10 @@ g.chart-legend {
 	table-layout:fixed;
 }
 
+.table-quicksaves tbody > tr {
+	cursor: pointer;
+}
+
 .text-right .usage:last-child {
 	border-right: 0px;
 }
@@ -312,16 +316,16 @@ table.v-datatable.v-table.v-datatable--show-select tbody tr td:nth-child(1) {
 	padding: 0px;
 	box-shadow: 0 2px 1px -1px rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 1px 3px 0 rgba(0,0,0,.12);
 }
-.v-expansion-panel--active .v-card .pass-mask {
+.v-expansion-panel--active .v-card .keys .pass-mask {
 	display: inline-block;
 }
-.v-expansion-panel-content .v-card .pass-reveal {
+.v-expansion-panel-content .v-card .keys .pass-reveal {
 	display: none;
 }
-.v-expansion-panel-content .v-card:hover .pass-mask {
+.v-expansion-panel-content .v-card .keys:hover .pass-mask {
 	display: none;
 }
-.v-expansion-panel-content .v-card:hover .pass-reveal {
+.v-expansion-panel-content .v-card .keys:hover .pass-reveal {
 	display: inline-block;
 }
 
@@ -2265,7 +2269,7 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-select>
 				</v-flex>
 				<v-flex>
-				<v-btn small icon @click="bulkSyncSites()" style="margin: 10px auto 0 0;">
+				<v-btn small icon @click="bulkSyncSites()" style="margin: 5px auto 0 0;">
 					<v-icon small color="grey">fas fa-sync</v-icon>
 				</v-btn>
 				</v-flex>
@@ -2561,9 +2565,15 @@ Vue.component('file-upload', VueUploadComponent);
 										</v-select>
 										</v-flex>
 										<v-flex>
-										<v-btn small icon @click="syncSite( site.id )" style="margin: 10px auto 0 0;">
+										<v-tooltip bottom>
+											<template v-slot:activator="{ on }">
+											<v-btn small icon @click="syncSite( site.id )" style="margin: 5px auto 0 0;" v-on="on">
 											<v-icon small color="grey">fas fa-sync</v-icon>
 										</v-btn>
+											</template>
+											<span>Manual sync website details</span>
+										</v-tooltip>
+										
 										</v-flex>
 									</v-layout>
 									</v-flex>
@@ -2604,7 +2614,7 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-card v-for="key in site.environments" v-show="key.environment == site.environment_selected" flat>
 							<v-container fluid>
 							<v-layout align-start justify-space-between body-1 pa-3>
-							<div row>
+							<div class="keys">
 							<div><h3 class="headline mb-0"><a :href="key.link" target="_blank">{{ key.link }}</a></h3></div>
 								<div><span class="caption">Address</span> {{ key.address }}</div>
 								<div><span class="caption">Username</span> {{ key.username }}</div>
@@ -2623,7 +2633,7 @@ Vue.component('file-upload', VueUploadComponent);
 								</div>
 							</div>
 							<div>
-							<img :src="key.screenshot_large" style="width:400px;" class="elevation-3" v-show="key.screenshot_large">
+							<img :src="key.screenshot_large" style="width:400px;" class="elevation-3 mx-3" v-show="key.screenshot_large">
 							</div>
 						</v-layout>
 						</v-container>
