@@ -1809,7 +1809,7 @@ function captaincore_site_quicksaves_func( $request ) {
 	$db_quicksaves = new CaptainCore\quicksaves;
 
 	$environment_id = get_field( 'environment_production_id', $site_id );
-	$quicksaves = $db_quicksaves->fetch_quicksaves( $site_id, $environment_id );
+	$quicksaves = $db_quicksaves->fetch_environment( $site_id, $environment_id );
 
 	foreach ($quicksaves as $key => $quicksave) {
 		$compare_key = $key + 1;
@@ -1926,7 +1926,7 @@ function captaincore_site_quicksaves_func( $request ) {
 	$results["Production"] = $quicksaves; 
 
 	$environment_id = get_field( 'environment_staging_id', $site_id );
-	$quicksaves = $db_quicksaves->fetch_quicksaves( $site_id, $environment_id );
+	$quicksaves = $db_quicksaves->fetch_environment( $site_id, $environment_id );
 
 	foreach ($quicksaves as $key => $quicksave) {
 		$compare_key = $key + 1;

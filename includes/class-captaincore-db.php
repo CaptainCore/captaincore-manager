@@ -88,7 +88,7 @@ class DB {
 		return $wpdb->get_results( $sql );
 	}
 
-	static function fetch_quicksaves( $value, $environment_id ) {
+	static function fetch_environment( $value, $environment_id ) {
 		global $wpdb;
 		$value          = intval( $value );
 		$environment_id = intval( $environment_id );
