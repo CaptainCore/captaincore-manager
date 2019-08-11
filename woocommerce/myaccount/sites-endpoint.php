@@ -2587,7 +2587,7 @@ Vue.component('file-upload', VueUploadComponent);
 										<v-tab key="Scripts" href="#tab-Scripts">
 											Scripts <v-icon small>fas fa-code</v-icon>
 										</v-tab>
-										<v-tab key="Backups" href="#tab-Backups" @click="viewQuicksaves( site.id )">
+										<v-tab key="Backups" href="#tab-Backups" @click="viewQuicksaves( site.id ); viewSnapshots( site.id );">
 											Backups <v-icon small>fas fa-hdd</v-icon>
 										</v-tab>
 									</v-tabs>
@@ -2951,52 +2951,69 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-tab-item>
 			<v-tab-item :key="7" value="tab-Backups">
 				<v-toolbar color="grey lighten-4" dense light flat>
-					<v-toolbar-title>Quicksaves</v-toolbar-title>
+					<v-toolbar-title>Backups <small>(Quicksaves & Snapshots)</small></v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn text @click="promptBackupSnapshot( site.id )">Download Backup Snapshot <v-icon dark small>fas fa-cloud-download-alt</v-icon></v-btn>
+						<v-tooltip top>
+							<template v-slot:activator="{ on }">
+								<v-btn text small @click="promptBackupSnapshot( site.id )" v-on="on"><v-icon dark small>fas fa-cloud-download-alt</v-icon></v-btn>
+							</template><span>Generate and Download Snapshot</span>
+						</v-tooltip>
 						<v-divider vertical class="mx-1" inset></v-divider>
-						<v-btn text @click="QuicksaveCheck( site.id )">Manual Check <v-icon dark small>fas fa-sync-alt</v-icon></v-btn>
+						<v-tooltip top>
+							<template v-slot:activator="{ on }">
+							<v-btn text @click="QuicksaveCheck( site.id )" v-on="on"><v-icon dark small>fas fa-sync-alt</v-icon></v-btn>
+							</template><span>Manual check for new Quicksave</span>
+						</v-tooltip>
+						
 					</v-toolbar-items>
 				</v-toolbar>
 						<v-card 
 						v-for="key in site.environments"
 						v-show="key.environment == site.environment_selected"
 						flat>
+					<v-subheader>Quicksaves</v-subheader>
 							<div v-if="typeof key.quicksaves == 'string'">
 								<v-progress-linear :indeterminate="true" absolute></v-progress-linear>
 							</div>
-							<v-card-title v-else-if="key.quicksaves.length == 0">
-								<div>
-									No quicksaves found.
-								</div>
-							</v-card-title>
 							<div v-else>
-							<v-expansion-panels accordion v-model="key.quicksave_panel">
-							<v-expansion-panel v-for="quicksave in key.quicksaves" style="elevation-0">
-							  <v-expansion-panel-header style="min-height: 44px;padding: 12px 20px;">
-								<v-layout align-center justify-space-between row>
-									<v-flex class="font-weight-thin subtitle-1">
-										<v-icon>settings_backup_restore</v-icon> {{ quicksave.created_at | pretty_timestamp }}</span>
-									</v-flex>
-									<v-flex class="body-2 text-right pr-3">
-									<v-chip label>WordPress {{ quicksave.core }}</v-chip>  <v-chip label>{{ quicksave.plugins.length }} Plugins</v-chip> <v-chip label>{{ quicksave.themes.length }} Themes</v-chip>
-									</v-flex>
-								</v-layout>
-							</v-expansion-panel-header>
-							<v-expansion-panel-content>
-								<v-toolbar color="dark primary" dark dense light>
-									<v-toolbar-title class="body-2">{{ quicksave.git_status }}</v-toolbar-title>
+					<v-data-table
+						:headers="[{text:'Created At',value:'created_at'},{text:'WordPress',value:'core',width:'115px'},{text:'',value:'themes',width:'100px'},{text:'',value:'plugins',width:'100px'}]"
+						:items="key.quicksaves"
+						item-key="quicksave_id"
+						no-data-text="No quicksaves found."
+						:ref="'quicksave_table_'+ site.id + '_' + key.environment"
+						@click:row="expandQuicksave( $event, site.id, key.environment )"
+						single-expand
+						show-expand
+						class="table-quicksaves"
+					>
+					<template v-slot:item.created_at="{ item }">
+						{{ item.created_at | pretty_timestamp }}
+					</template>
+					<template v-slot:item.core="{ item }">
+						{{ item.core }}
+					</template>
+					<template v-slot:item.themes="{ item }">
+						{{ item.themes.length }} themes
+					</template>
+					<template v-slot:item.plugins="{ item }">
+						{{ item.plugins.length }} plugins
+					</template>
+					<template v-slot:expanded-item="{ item }">
+						<td colspan="5" style="position: relative;background: #fff; padding:0px">
+						<v-toolbar color="dark primary" dark dense light class="elevation-0">
+							<v-toolbar-title class="body-2">{{ item.git_status }}</v-toolbar-title>
 									<v-spacer></v-spacer>
 									<v-toolbar-items>
-										<v-btn text @click="QuicksavesRollback( site.id, quicksave)">Rollback Everything</v-btn>
+								<v-btn text small @click="QuicksavesRollback( site.id, item)">Rollback Everything</v-btn>
 										<v-divider vertical class="mx-1" inset></v-divider>
-										<v-btn text @click="viewQuicksavesChanges( site.id, quicksave)">View Changes</v-btn>
+								<v-btn text small @click="viewQuicksavesChanges( site.id, item)">View Changes</v-btn>
 									</v-toolbar-items>
 								</v-toolbar>
-								<v-card text v-show="quicksave.view_changes == true" style="table-layout:fixed;margin:0px;overflow: scroll;padding: 0px;position: absolute;background-color: #fff;width: 100%;left: 0;top: 100%;height: 100%;z-index: 3;transform: translateY(-100%);">
+						<v-card flat v-show="item.view_changes == true" style="table-layout:fixed;margin:0px;overflow: scroll;padding: 0px;position: absolute;background-color: #fff;width: 100%;left: 0;top: 100%;height: 100%;z-index: 3;transform: translateY(-100%);">
 									<v-toolbar color="dark primary" dark dense light>
-										<v-btn icon dark @click.native="quicksave.view_changes = false">
+								<v-btn icon dark @click.native="item.view_changes = false">
 											<v-icon>close</v-icon>
 										</v-btn>
 										<v-toolbar-title>List of changes</v-toolbar-title>
@@ -3012,8 +3029,8 @@ Vue.component('file-upload', VueUploadComponent);
 											  </v-flex sx12 sm3>
 											  <v-flex>
 												<v-text-field
-													v-model="quicksave.search"
-													@input="filterFiles( site.id, quicksave.quicksave_id)"
+											v-model="item.search"
+											@input="filterFiles( site.id, item.quicksave_id)"
 													append-icon="search"
 													label="Search"
 													single-line
@@ -3021,36 +3038,36 @@ Vue.component('file-upload', VueUploadComponent);
 												></v-text-field>
 											  </v-flex>
 											</v-layout>
-											<v-data-table no-data-text="" :headers='[{"text":"File","value":"file"}]' :items="quicksave.filtered_files" :loading="quicksave.loading">
+									<v-data-table no-data-text="" :headers='[{"text":"File","value":"file"}]' :items="item.filtered_files" :loading="item.loading">
 												<template v-slot:body="{ items }">
 												<tbody>
-													<tr v-for="item in items" >
+											<tr v-for="i in items">
 														<td>
-															<a class="v-menu__activator" @click="QuicksaveFileDiff(quicksave.site_id, quicksave.quicksave_id, quicksave.git_commit, item)">{{ item }}</a>
+													<a class="v-menu__activator" @click="QuicksaveFileDiff(item.site_id, item.quicksave_id, item.git_commit, i)">{{ i }}</a>
 														</td>
 													</tr>
 												</tbody>
 											 </template>
 											 <v-alert slot="no-results" :value="true" color="error" icon="warning">
-													Your search for "{{ quicksave.search }}" found no results.
+											Your search for "{{ item.search }}" found no results.
 												</v-alert>
 											</v-data-table>
 										</v-card-text>
 									</v-card>
-							    <v-card>
+						<v-card flat>
 											<v-data-table
 												:headers='[{"text":"Theme","value":"title"},{"text":"Version","value":"version"},{"text":"Status","value":"status"},{"text":"","value":"actions","width":"150px"}]'
-												:items="quicksave.themes"
+								:items="item.themes"
 												item-key="name"
 												class="quicksave-table"
 											>
 											<template v-slot:body="{ items }">
 											<tbody>
-											<tr v-for="item in items" v-bind:class="{ 'green lighten-5': item.changed_version || item.changed_status }">
-												<td>{{ item.title }}</td>
-												<td v-bind:class="{ 'green lighten-4': item.changed_version }">{{ item.version }}</td>
-												<td v-bind:class="{ 'green lighten-4': item.changed_status }">{{ item.status }}</td>
-												<td><v-btn text small @click="RollbackQuicksave(quicksave.site_id, quicksave.quicksave_id, 'theme', item.name)">Rollback</v-btn></td>
+							<tr v-for="theme in items" v-bind:class="{ 'green lighten-5': theme.changed_version || theme.changed_status }">
+								<td>{{ theme.title || theme.name }}</td>
+								<td v-bind:class="{ 'green lighten-4': theme.changed_version }">{{ theme.version }}</td>
+								<td v-bind:class="{ 'green lighten-4': theme.changed_status }">{{ theme.status }}</td>
+								<td><v-btn depressed small @click="RollbackQuicksave(item.site_id, item.quicksave_id, 'theme', theme.name)">Rollback</v-btn></td>
 											</tr>
 											</template>
 											 <template v-slot:body.append="{ headers }">
@@ -3065,7 +3082,7 @@ Vue.component('file-upload', VueUploadComponent);
 											</v-data-table>
 											<v-data-table
 												:headers='[{"text":"Plugin","value":"plugin"},{"text":"Version","value":"version"},{"text":"Status","value":"status"},{"text":"","value":"actions","width":"150px"}]'
-												:items="quicksave.plugins"
+								:items="item.plugins"
 												item-key="name"
 												class="quicksave-table"
 												:items-per-page="25"
@@ -3073,11 +3090,11 @@ Vue.component('file-upload', VueUploadComponent);
 											 >
 											 <template v-slot:body="{ items }">
 											 <tbody>
-											 <tr v-for="item in items" v-bind:class="[{ 'green lighten-5': item.changed_version || item.changed_status },{ 'red lighten-4 strikethrough': item.deleted }]">
-												<td>{{ item.title || item.name }}</td>
-												<td v-bind:class="{ 'green lighten-4': item.changed_version }">{{ item.version }}</td>
-												<td v-bind:class="{ 'green lighten-4': item.changed_status }">{{ item.status }}</td>
-												<td><v-btn text small @click="RollbackQuicksave(quicksave.site_id, quicksave.quicksave_id, 'plugin', item.name)" v-show="item.status != 'must-use' || item.status != 'dropin'">Rollback</v-btn></td>
+								<tr v-for="plugin in items" v-bind:class="[{ 'green lighten-5': plugin.changed_version || plugin.changed_status },{ 'red lighten-4 strikethrough': plugin.deleted }]">
+								<td>{{ plugin.title || plugin.name }}</td>
+								<td v-bind:class="{ 'green lighten-4': plugin.changed_version }">{{ plugin.version }}</td>
+								<td v-bind:class="{ 'green lighten-4': plugin.changed_status }">{{ plugin.status }}</td>
+								<td><v-btn depressed small @click="RollbackQuicksave(item.site_id, item.quicksave_id, 'plugin', plugin.name)" v-show="plugin.status != 'must-use' && plugin.status != 'dropin'">Rollback</v-btn></td>
 											 </tr>
 											 </template>
 											 <template v-slot:body.append="{ headers }">
@@ -3090,10 +3107,36 @@ Vue.component('file-upload', VueUploadComponent);
 											 </tbody>
 											 </template>
 											</v-data-table>
+
 							    </v-card>
-							  </v-expansion-panel-content>
-							</v-expansion-panel>
-							</v-expansion-panels>
+						</td>
+					</template>
+					</v-data-table>
+					</div>
+					<v-subheader>Snapshots</v-subheader>
+					<div v-if="typeof key.snapshots == 'string'">
+						<v-progress-linear :indeterminate="true" absolute></v-progress-linear>
+					</div>
+					<div v-else>
+					<v-data-table
+						:headers="[{text:'Created At',value:'created_at',width:'250px'},{text:'User',value:'user',width:'125px'},{text:'Storage',value:'storage',width:'100px'},{text:'Notes',value:'notes'},{text:'',value:'actions',sortable: false}]"
+						:items="key.snapshots"
+						item-key="snapshot_id"
+						no-data-text="No snapshots found."
+					>
+					<template v-slot:item.user="{ item }">
+						{{ item.user.name }}
+					</template>
+					<template v-slot:item.created_at="{ item }">
+						{{ item.created_at | pretty_timestamp }}
+					</template>
+					<template v-slot:item.storage="{ item }">
+						{{ item.storage | formatSize }}
+					</template>
+					<template v-slot:item.actions="{ item }">
+						<a :href="`/wp-json/captaincore/v1/site/${site.id}/snapshots/${item.snapshot_id}/${item.snapshot_name}`"><v-btn small rounded>Download</v-btn></a>
+					</template>
+					</v-data-table>
 							</div>
 					</v-card>
 			</v-tab-item>
@@ -3444,6 +3487,7 @@ new Vue({
 	vuetify: new Vuetify(),
 	data: {
 		loading_page: true,
+		expanded: [],
 		dialog_bulk: { show: false, tabs_management: "tab-Sites", environment_selected: "Production" },
 		dialog_delete_user: { show: false, site: {}, users: [], username: "", reassign: {} },
 		dialog_apply_https_urls: { show: false, site_id: "", site_name: "", sites: [] },
@@ -4725,11 +4769,14 @@ new Vue({
 				'post_id': post_id,
 				'command': 'snapshot',
 				'environment': environment,
-				'value': this.dialog_backup_snapshot.email
+				'value': this.dialog_backup_snapshot.email,
+				'notes': "User requested full snapshot"
 			};
 
 			if ( this.dialog_backup_snapshot.filter_toggle === false ) {
 				data.filters = this.dialog_backup_snapshot.filter_options
+				description = this.dialog_backup_snapshot.filter_options.join(", ").replace(/,([^,]*)$/,' and$1');
+				data.notes = "User requested snapshot containing " + description;
 			}
 
 			self = this;
@@ -6253,6 +6300,14 @@ new Vue({
 				})
 			  .catch( error => console.log( error ) );
 		},
+		expandQuicksave( item, site_id, environment ) {
+			table_name = "quicksave_table_" + site_id + "_" + environment;
+			if ( typeof this.$refs[table_name][0].expansion[item.quicksave_id] == 'boolean' ) {
+				this.$refs[table_name][0].expansion = ""
+			} else {
+				this.$refs[table_name][0].expansion = { [item.quicksave_id] : true }
+			}
+		},
 		viewQuicksaves( site_id ) {
 
 			site = this.sites.filter(site => site.id == site_id)[0];
@@ -6263,6 +6318,19 @@ new Vue({
 				.then(response => { 
 						site.environments[0].quicksaves = response.data.Production
 						site.environments[1].quicksaves = response.data.Staging				
+				});
+
+		},
+		viewSnapshots( site_id ) {
+
+			site = this.sites.filter(site => site.id == site_id)[0];
+			axios.get(
+				'/wp-json/captaincore/v1/site/'+site_id+'/snapshots', {
+					headers: {'X-WP-Nonce':wpApiSettings.nonce}
+				})
+				.then(response => { 
+						site.environments[0].snapshots = response.data.Production
+						site.environments[1].snapshots = response.data.Staging				
 				});
 
 		},

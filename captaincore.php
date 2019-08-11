@@ -1412,6 +1412,8 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	$token_key           = $post->token_key;
 	$data                = $post->data;
 	$site_id             = $post->site_id;
+	$user_id             = $post->user_id;
+	$notes               = $post->notes;
 
 	// Error if token not valid
 	if ( $post->token != CAPTAINCORE_CLI_TOKEN ) {
@@ -1500,28 +1502,31 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	// Generate a new snapshot.
 	if ( $command == 'snapshot' and $archive and $storage ) {
 
-		// Create post object
-		$my_post = array(
-			'post_title'  => 'Snapshot',
-			'post_type'   => 'captcore_snapshot',
-			'post_status' => 'publish',
+		if ( $environment == "production" ) {
+			$environment_id = get_field( 'environment_production_id', $site_id );
+		}
+		if ( $environment == "staging" ) {
+			$environment_id = get_field( 'environment_staging_id', $site_id );
+		}
+
+		if ( $user_id == "") {
+			$user_id = "0";
+		}
+
+		$time_now = date("Y-m-d H:i:s");
+		$snapshot = array(
+			'user_id'        => $user_id,
+			'site_id'        => $site_id,
+			'environment_id' => $environment_id,
+			'snapshot_name'  => $archive,
+			'created_at'     => $time_now,
+			'storage'        => $storage,
+			'email'          => $email,
+			'notes'          => $notes,
 		);
 
-		// Insert the post into the database
-		$snapshot_id = wp_insert_post( $my_post );
-
-		update_field( 'field_580b7cf4f2790', $archive, $snapshot_id );
-		update_field( 'field_580b9776f2791', $storage, $snapshot_id );
-		update_field( 'field_580b9784f2792', $site_id, $snapshot_id );
-		update_field( 'field_59aecbd173318', $email, $snapshot_id );
-
-		// Adds snapshot ID to title
-		$my_post = array(
-			'ID'         => $snapshot_id,
-			'post_title' => 'Snapshot ' . $snapshot_id,
-		);
-
-		wp_update_post( $my_post );
+		$db = new CaptainCore\snapshots();
+		$snapshot_id = $db->insert( $snapshot );
 
 		// Send out snapshot email
 		captaincore_download_snapshot_email( $snapshot_id );
@@ -1798,6 +1803,52 @@ function captaincore_domains_func( $request ) {
 
 }
 
+function captaincore_site_snapshots_func( $request ) {
+	$site_id = $request['id'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', array( 'status' => 403 ) );
+	}
+
+	$db = new CaptainCore\snapshots;
+	$snapshots = $db->fetch_by_environments( $site_id );
+	foreach( $snapshots as $environment ) {
+
+		foreach( $environment as $snapshot ) {
+			if ( $snapshot->user_id == 0 ) {
+				$user_name = "System";
+			} else {
+				$user_name = get_user_by( 'id', $snapshot->user_id )->display_name;
+			}
+			$snapshot->user = (object) [
+				"user_id" => $snapshot->user_id,
+				"name"    => $user_name
+			];
+			unset( $snapshot->user_id );
+		}
+
+	}
+	return $snapshots;
+}
+
+function captaincore_site_snapshot_download_func( $request ) {
+	$site_id       = $request['id'];
+	$snapshot_id   = $request['snapshot_id'];
+	$snapshot_name = $request['snapshot_name'];
+
+	// Verify Snapshot link is valid
+	$db = new CaptainCore\snapshots();
+	$snapshot = $db->get( $snapshot_id );
+
+	if ( $snapshot->snapshot_name != $snapshot_name || $snapshot->site_id != $site_id ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', array( 'status' => 403 ) );
+	}
+
+	$snapshot_url = captaincore_snapshot_download_link( $snapshot_id  );
+	header('Location: ' . $snapshot_url);
+	exit;
+}
+
 function captaincore_site_quicksaves_func( $request ) {
 	$site_id = $request['id'];
 
@@ -2071,6 +2122,24 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/site/(?P<id>[\d]+)/quicksaves', array(
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_quicksaves_func',
+			'show_in_index' => false
+		)
+	);
+
+	// Custom endpoint for CaptainCore site
+	register_rest_route(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/snapshots', array(
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_site_snapshots_func',
+			'show_in_index' => false
+		)
+	);
+
+	// Custom endpoint for CaptainCore site
+	register_rest_route(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/snapshots/(?P<snapshot_id>[\d]+)/(?P<snapshot_name>.+)', array(
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_site_snapshot_download_func',
 			'show_in_index' => false
 		)
 	);
@@ -4548,6 +4617,7 @@ function captaincore_install_action_callback() {
 	$link         = $_POST['link'];
 	$background   = $_POST['background'];
 	$job_id       = $_POST['job_id'];
+	$notes        = $_POST['notes'];
 
 	$site         = get_field( 'site', $post_id );
 	$provider     = get_field( 'provider', $post_id );
@@ -4697,12 +4767,13 @@ function captaincore_install_action_callback() {
 	}
 	if ( $cmd == 'snapshot' ) {
 		$run_in_background = true;
+		$user_id = get_current_user_id();
 		if ( $date && $value ) {
-			$command = "snapshot $site --email=$value --rollback='$date'";
+			$command = "snapshot $site --email=$value --rollback=\"$date\" --user_id=$user_id --notes=\"$notes\"";
 		} elseif ( $value ) {
-			$command = "snapshot $site --email=$value";
+			$command = "snapshot $site --email=$value --user_id=$user_id --notes=\"$notes\"";
 		} else {
-			$command = "snapshot $site";
+			$command = "snapshot $site --user_id=$user_id --notes=\"$notes\"";
 		}
 
 		if ( $filters ) {
@@ -4954,12 +5025,14 @@ function captaincore_site_fetch_details( $post_id ) {
 }
 
 function captaincore_create_tables() {
-    global $wpdb;
 
+    global $wpdb;
+	$required_version = 15;
 		$version = (int) get_site_option('captcorecore_db_version');
     $charset_collate = $wpdb->get_charset_collate();
 
-		if ( $version < 4 ) {
+	if ( $version < $required_version ) {
+
 			$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_update_logs` (
 				log_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 				site_id bigint(20) UNSIGNED NOT NULL,
@@ -4974,11 +5047,6 @@ function captaincore_create_tables() {
 			dbDelta($sql);
 			$success = empty($wpdb->last_error);
 
-			update_site_option('captcorecore_db_version', 4);
-			return $success;
-		}
-
-		if ( $version < 5 ) {
 			$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_quicksaves` (
 				quicksave_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 				site_id bigint(20) UNSIGNED NOT NULL,
@@ -4996,11 +5064,23 @@ function captaincore_create_tables() {
 			dbDelta($sql);
 			$success = empty($wpdb->last_error);
 
-			update_site_option('captcorecore_db_version', 5);
-			return $success;
-		}
+		$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_snapshots` (
+			snapshot_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+			user_id bigint(20) UNSIGNED NOT NULL,
+			site_id bigint(20) UNSIGNED NOT NULL,
+			environment_id bigint(20) UNSIGNED NOT NULL,
+			created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			snapshot_name varchar(255),
+			storage varchar(20),
+			email varchar(100),
+			notes longtext,
+		PRIMARY KEY  (snapshot_id)
+		) $charset_collate;";
 
-		if ( $version < 10 ) {
+		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+		dbDelta($sql);
+		$success = empty($wpdb->last_error);
+
 			$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_environments` (
 				environment_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 				site_id bigint(20) UNSIGNED NOT NULL,
@@ -5041,12 +5121,6 @@ function captaincore_create_tables() {
 			dbDelta($sql);
 			$success = empty($wpdb->last_error);
 
-			update_site_option('captcorecore_db_version', 10);
-
-			return $success;
-		}
-
-		if ( $version < 11 ) {
 			$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_recipes` (
 				recipe_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 				user_id bigint(20) UNSIGNED NOT NULL,
@@ -5062,9 +5136,7 @@ function captaincore_create_tables() {
 			dbDelta($sql);
 			$success = empty($wpdb->last_error);
 
-			update_site_option('captcorecore_db_version', 11);
-
-			return $success;
+		update_site_option('captcorecore_db_version', $required_version );
 		}
 
 }
@@ -5783,6 +5855,68 @@ function captaincore_download_snapshot_email( $snapshot_id ) {
 	$headers = array( 'Content-Type: text/html; charset=UTF-8' );
 
 	wp_mail( $to, $subject, $body, $headers );
+}
+
+function captaincore_snapshot_download_link( $snapshot_id ) {
+
+	$db = new CaptainCore\snapshots;
+	$snapshot = $db->get( $snapshot_id );
+
+	$name       = $snapshot->snapshot_name;
+	$website_id = $snapshot->site_id;
+	$domain     = get_the_title( $website_id );
+	$site       = get_field( 'site', $website_id );
+
+	// Get new auth from B2
+	$account_id      = CAPTAINCORE_B2_ACCOUNT_ID; // Obtained from your B2 account page
+	$application_key = CAPTAINCORE_B2_ACCOUNT_KEY; // Obtained from your B2 account page
+	$credentials     = base64_encode( $account_id . ':' . $application_key );
+	$url             = 'https://api.backblazeb2.com/b2api/v1/b2_authorize_account';
+
+	$session = curl_init( $url );
+
+	// Add headers
+	$headers   = array();
+	$headers[] = 'Accept: application/json';
+	$headers[] = 'Authorization: Basic ' . $credentials;
+	curl_setopt( $session, CURLOPT_HTTPHEADER, $headers ); // Add headerss
+	curl_setopt( $session, CURLOPT_HTTPGET, true );        // HTTP GET
+	curl_setopt( $session, CURLOPT_RETURNTRANSFER, true ); // Receive server response
+	$server_output = curl_exec( $session );
+	curl_close( $session );
+	$output = json_decode( $server_output );
+
+	// Variables for Backblaze
+	$api_url          = 'https://api001.backblazeb2.com'; // From b2_authorize_account call
+	$auth_token       = $output->authorizationToken;      // From b2_authorize_account call
+	$bucket_id        = CAPTAINCORE_B2_BUCKET_ID;         // The file name prefix of files the download authorization will allow
+	$valid_duration   = 604800;                           // The number of seconds the authorization is valid for
+	$file_name_prefix = 'Snapshots/' . $site;             // The file name prefix of files the download authorization will allow
+
+	$session = curl_init( $api_url . '/b2api/v1/b2_get_download_authorization' );
+
+	// Add post fields
+	$data        = array(
+		'bucketId'               => $bucket_id,
+		'validDurationInSeconds' => $valid_duration,
+		'fileNamePrefix'         => $file_name_prefix,
+	);
+	$post_fields = json_encode( $data );
+	curl_setopt( $session, CURLOPT_POSTFIELDS, $post_fields );
+
+	// Add headers
+	$headers   = array();
+	$headers[] = 'Authorization: ' . $auth_token;
+	curl_setopt( $session, CURLOPT_HTTPHEADER, $headers );
+	curl_setopt( $session, CURLOPT_POST, true );           // HTTP POST
+	curl_setopt( $session, CURLOPT_RETURNTRANSFER, true ); // Receive server response
+	$server_output = curl_exec( $session );                // Let's do this!
+	curl_close( $session );                                // Clean up
+	$server_output = json_decode( $server_output );
+	$auth          = $server_output->authorizationToken;
+	$url           = 'https://f001.backblazeb2.com/file/' . CAPTAINCORE_B2_SNAPSHOTS . "/${site}_${website_id}/$name?Authorization=" . $auth;
+
+	return $url;
 }
 
 // Add reports to customers

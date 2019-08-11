@@ -123,6 +123,23 @@ class DB {
 		return $wpdb->get_results( $sql );
 	}
 
+	static function fetch_by_environments( $site_id ) {
+		
+		$results = array();
+
+		$environment_id = get_field( 'environment_production_id', $site_id );
+		if ( $environment_id != "" ) {
+			$results["Production"] = self::fetch_environment( $site_id, $environment_id );
+		}
+
+		$environment_id = get_field( 'environment_staging_id', $site_id );
+		if ( $environment_id != "" ) {
+			$results["Staging"] = self::fetch_environment( $site_id, $environment_id );
+		}
+		
+		return $results;
+	}
+
 }
 
 class environments extends DB {
@@ -140,6 +157,12 @@ class update_logs extends DB {
 class quicksaves extends DB {
 
 	static $primary_key = 'quicksave_id';
+
+}
+
+class snapshots extends DB {
+
+	static $primary_key = 'snapshot_id';
 
 }
 
@@ -620,6 +643,7 @@ class Site {
 			'themes'                  => json_decode( $environments[0]->themes ),
 			'users'                   => 'Loading',
 			'quicksaves'              => 'Loading',
+			'snapshots'               => 'Loading',
 			'update_logs'             => 'Loading',
 			'quicksave_panel'         => array(),
 			'quicksave_search'        => '',
@@ -707,6 +731,7 @@ class Site {
 			'themes'                  => json_decode( $environments[1]->themes ),
 			'users'                   => 'Loading',
 			'quicksaves'              => 'Loading',
+			'snapshots'               => 'Loading',
 			'update_logs'             => 'Loading',
 			'quicksave_panel'         => array(),
 			'quicksave_search'        => '',
