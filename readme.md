@@ -1,10 +1,10 @@
 <h1 align="center">
   <a href="https://captaincore.io"><img src="https://captaincore.io/wp-content/uploads/2018/02/main-web-icons-captain.png" width="70" /></a><br />
-CaptainCore GUI
+CaptainCore
 
 </h1>
 
-[CaptainCore GUI](https://captaincore.io) is a WordPress plugin part of the CaptainCore toolkit (a powerful toolkit for managing WordPress sites via SSH & WP-CLI). Requires a connection with a CaptainCore CLI (see installation notes).
+[CaptainCore](https://captaincore.io) is an open source toolkit for managing WordPress sites via SSH & WP-CLI. This is a WordPress plugin that requires a connection to CaptainCore CLI.
 
 [![emoji-log](https://cdn.rawgit.com/ahmadawais/stuff/ca97874/emoji-log/flat.svg)](https://github.com/ahmadawais/Emoji-Log/)
 

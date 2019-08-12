@@ -510,10 +510,10 @@ div.update_logs table tr td:nth-child(1) {
 }
 </style>
 <?php if ( substr( $_SERVER['SERVER_NAME'], -4) == 'test' ) { ?>
-<script src="/wp-content/plugins/captaincore-gui/public/js/vue.js"></script>
-<script src="/wp-content/plugins/captaincore-gui/public/js/qs.js"></script>
-<script src="/wp-content/plugins/captaincore-gui/public/js/axios.min.js"></script>
-<script src="/wp-content/plugins/captaincore-gui/public/js/vuetify.min.js"></script>
+<script src="/wp-content/plugins/captaincore/public/js/vue.js"></script>
+<script src="/wp-content/plugins/captaincore/public/js/qs.js"></script>
+<script src="/wp-content/plugins/captaincore/public/js/axios.min.js"></script>
+<script src="/wp-content/plugins/captaincore/public/js/vuetify.min.js"></script>
 <?php } else { ?>
 <script src="https://cdn.jsdelivr.net/npm/vue@2.6.10/dist/vue.min.js"></script>
 <script src="https://unpkg.com/qs@6.5.2/dist/qs.js"></script>
@@ -525,7 +525,7 @@ div.update_logs table tr td:nth-child(1) {
 lodash = _.noConflict();
 </script>
 <link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.0/dist/frappe-charts.min.css" rel="stylesheet">
-<script src="/wp-content/plugins/captaincore-gui/public/js/frappe-charts.js"></script>
+<script src="/wp-content/plugins/captaincore/public/js/frappe-charts.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.20/dist/vue-upload-component.js"></script>
 <script>
@@ -596,7 +596,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<h3>Drop files to upload</h3>
 			</div>
 			<div class="upload-drag-btn">
-				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="/wp-content/plugins/captaincore-gui/upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
+				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="/wp-content/plugins/captaincore/upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
 			</div>
 		</div>
 		</div>
@@ -695,7 +695,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<h3>Drop files to upload</h3>
 			</div>
 			<div class="upload-drag-btn">
-				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="/wp-content/plugins/captaincore-gui/upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
+				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="/wp-content/plugins/captaincore/upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
 			</div>
 		</div>
 		</div>

@@ -1,4 +1,4 @@
-=== CaptainCore GUI ===
+=== CaptainCore ===
 Author URI: https://twitter.com/austinginder
 Plugin URI: https://captaincore.io
 Contributors: austinginder
@@ -13,7 +13,7 @@ Toolkit for running your own WordPress hosting business
 
 == Description ==
 
-[CaptainCore GUI](https://captaincore.io) is a WordPress plugin part of the CaptainCore toolkit (a powerful toolkit for managing WordPress sites via SSH & WP-CLI). Requires a connection with a CaptainCore CLI (see installation notes).
+[CaptainCore](https://captaincore.io) is an open source toolkit for managing WordPress sites via SSH & WP-CLI. This is a WordPress plugin that requires a connection to CaptainCore CLI.
 
 == Installation ==
 

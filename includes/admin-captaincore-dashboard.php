@@ -4,7 +4,7 @@
 <script src="https://cdn.jsdelivr.net/npm/vuetify@1.4.3/dist/vuetify.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/vuetify@1.4.3/dist/vuetify.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.0/dist/frappe-charts.min.css" rel="stylesheet">
-<script src="/wp-content/plugins/captaincore-gui/public/js/frappe-charts.js"></script>
+<script src="/wp-content/plugins/captaincore/public/js/frappe-charts.js"></script>
 <style>
 body #app {
   line-height: initial;

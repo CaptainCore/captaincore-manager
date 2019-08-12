@@ -13,7 +13,7 @@
  * @package           Captaincore
  *
  * @wordpress-plugin
- * Plugin Name:       CaptainCore GUI
+ * Plugin Name:       CaptainCore
  * Plugin URI:        https://captaincore.io
  * Description:       Open Source Toolkit for Managing WordPress Sites
  * Version:           0.5.0
