@@ -5377,35 +5377,6 @@ function captaincore_load_environments( $value, $post_id, $field ) {
 
 function captaincore_website_acf_actions( $field ) {
 
-	if ( $field and $field['label'] == 'Download Snapshot' ) {
-
-		$id = get_the_ID();
-
-		?>
-		<script>
-		jQuery(document).ready(function(){
-		  jQuery("#download").click(function(e){
-			e.preventDefault();
-			var data = {
-				'action': 'snapshot_email',
-				'snapshot_id': <?php echo $id; ?>,
-				'email': 'austin@anchor.host'
-			};
-
-				// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
-				jQuery.post(ajaxurl, data, function(response) {
-					jQuery('.download-result').html(response);
-				});
-
-		  });
-		});
-		</script>
-		<input type="button" value="Download Snapshot" id="download" class="button">
-		<div class="download-result"></div>
-		<?php
-
-	}
-
 	if ( $field and $field['label'] == 'Websites' ) {
 
 		$id = get_the_ID();
@@ -5775,100 +5746,40 @@ function log_process_completed_callback() {
 	wp_die(); // this is required to terminate immediately and return a proper response
 }
 
-// Fetch Backblaze link for snapshot and sends email
-add_action( 'wp_ajax_snapshot_email', 'snapshot_email_action_callback' );
-
-function snapshot_email_action_callback() {
-	global $wpdb; // this is how you get access to the database
-
-	// Variables from JS request
-	$snapshot_id = intval( $_POST['snapshot_id'] );
-	captaincore_download_snapshot_email( $snapshot_id );
-
-	wp_die(); // this is required to terminate immediately and return a proper response
-}
-
 function captaincore_download_snapshot_email( $snapshot_id ) {
-	$email      = get_field( 'email', $snapshot_id );
-	$name       = get_field( 'name', $snapshot_id );
-	$website    = get_field( 'website', $snapshot_id );
-	$website_id = $website[0];
-	$domain     = get_the_title( $website_id );
-	$site       = get_field( 'site', $website_id );
 
-	// Get new auth from B2
-	$account_id      = CAPTAINCORE_B2_ACCOUNT_ID; // Obtained from your B2 account page
-	$application_key = CAPTAINCORE_B2_ACCOUNT_KEY; // Obtained from your B2 account page
-	$credentials     = base64_encode( $account_id . ':' . $application_key );
-	$url             = 'https://api.backblazeb2.com/b2api/v1/b2_authorize_account';
+	// Generate download url to snapshot
+	$download_url  = captaincore_snapshot_download_link( $snapshot_id );
 
-	$session = curl_init( $url );
+	// Fetch snapshot details
+	$db       = new CaptainCore\snapshots;
+	$snapshot = $db->get( $snapshot_id );
+	$name     = $snapshot->snapshot_name;
+	$domain   = get_the_title( $snapshot->site_id );
+	$site     = get_field( 'site', $snapshot->site_id );
 
-	// Add headers
-	$headers   = array();
-	$headers[] = 'Accept: application/json';
-	$headers[] = 'Authorization: Basic ' . $credentials;
-	curl_setopt( $session, CURLOPT_HTTPHEADER, $headers ); // Add headerss
-	curl_setopt( $session, CURLOPT_HTTPGET, true );        // HTTP GET
-	curl_setopt( $session, CURLOPT_RETURNTRANSFER, true ); // Receive server response
-	$server_output = curl_exec( $session );
-	curl_close( $session );
-	$output = json_decode( $server_output );
-
-	// Variables for Backblaze
-	$api_url          = 'https://api001.backblazeb2.com'; // From b2_authorize_account call
-	$auth_token       = $output->authorizationToken;      // From b2_authorize_account call
-	$bucket_id        = CAPTAINCORE_B2_BUCKET_ID;         // The file name prefix of files the download authorization will allow
-	$valid_duration   = 604800;                           // The number of seconds the authorization is valid for
-	$file_name_prefix = 'Snapshots/' . $site;             // The file name prefix of files the download authorization will allow
-
-	$session = curl_init( $api_url . '/b2api/v1/b2_get_download_authorization' );
-
-	// Add post fields
-	$data        = array(
-		'bucketId'               => $bucket_id,
-		'validDurationInSeconds' => $valid_duration,
-		'fileNamePrefix'         => $file_name_prefix,
-	);
-	$post_fields = json_encode( $data );
-	curl_setopt( $session, CURLOPT_POSTFIELDS, $post_fields );
-
-	// Add headers
-	$headers   = array();
-	$headers[] = 'Authorization: ' . $auth_token;
-	curl_setopt( $session, CURLOPT_HTTPHEADER, $headers );
-	curl_setopt( $session, CURLOPT_POST, true );           // HTTP POST
-	curl_setopt( $session, CURLOPT_RETURNTRANSFER, true ); // Receive server response
-	$server_output = curl_exec( $session );                // Let's do this!
-	curl_close( $session );                                // Clean up
-	$server_output = json_decode( $server_output );
-	$auth          = $server_output->authorizationToken;
-	$url           = 'https://f001.backblazeb2.com/file/' . CAPTAINCORE_B2_SNAPSHOTS . "/${site}_${website_id}/$name?Authorization=" . $auth;
-
-	echo $url;
-
-	$business_name = get_field('business_name', 'option');
-
-	$to      = $email;
-	$subject = "$business_name - Snapshot #$snapshot_id";
-	$body    = 'Snapshot #' . $snapshot_id . ' for ' . $domain . '. Expires after 1 week.<br /><br /><a href="' . $url . '">Download Snapshot</a>';
+	// Build email
+	$company = get_field( 'business_name', 'option' );
+	$to      = $snapshot->email;
+	$subject = "$company - Snapshot #$snapshot_id";
+	$body    = "Snapshot #{$snapshot_id} for {$domain}. Expires after 1 week.<br /><br /><a href=\"{$download_url}\">Download Snapshot</a>";
 	$headers = array( 'Content-Type: text/html; charset=UTF-8' );
 
+	// Send email
 	wp_mail( $to, $subject, $body, $headers );
+
 }
 
 function captaincore_snapshot_download_link( $snapshot_id ) {
 
-	$db = new CaptainCore\snapshots;
+	$db       = new CaptainCore\snapshots;
 	$snapshot = $db->get( $snapshot_id );
-
-	$name       = $snapshot->snapshot_name;
-	$website_id = $snapshot->site_id;
-	$domain     = get_the_title( $website_id );
-	$site       = get_field( 'site', $website_id );
+	$name     = $snapshot->snapshot_name;
+	$domain   = get_the_title( $snapshot->site_id );
+	$site     = get_field( 'site', $snapshot->site_id);
 
 	// Get new auth from B2
-	$account_id      = CAPTAINCORE_B2_ACCOUNT_ID; // Obtained from your B2 account page
+	$account_id      = CAPTAINCORE_B2_ACCOUNT_ID;  // Obtained from your B2 account page
 	$application_key = CAPTAINCORE_B2_ACCOUNT_KEY; // Obtained from your B2 account page
 	$credentials     = base64_encode( $account_id . ':' . $application_key );
 	$url             = 'https://api.backblazeb2.com/b2api/v1/b2_authorize_account';
@@ -5914,7 +5825,8 @@ function captaincore_snapshot_download_link( $snapshot_id ) {
 	curl_close( $session );                                // Clean up
 	$server_output = json_decode( $server_output );
 	$auth          = $server_output->authorizationToken;
-	$url           = 'https://f001.backblazeb2.com/file/' . CAPTAINCORE_B2_SNAPSHOTS . "/${site}_${website_id}/$name?Authorization=" . $auth;
+	$b2_snapshots  = CAPTAINCORE_B2_SNAPSHOTS;
+	$url           = "https://f001.backblazeb2.com/file/{$b2_snapshots}/{$site}_{$snapshot->site_id}/{$name}?Authorization={$auth}";
 
 	return $url;
 }
