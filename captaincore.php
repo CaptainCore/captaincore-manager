@@ -1514,6 +1514,8 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		}
 
 		$time_now = date("Y-m-d H:i:s");
+		$in_24hrs = date("Y-m-d H:i:s", strtotime ( date("Y-m-d H:i:s")."+24 hours" ) );
+		$token    = bin2hex( openssl_random_pseudo_bytes( 16 ) );
 		$snapshot = array(
 			'user_id'        => $user_id,
 			'site_id'        => $site_id,
@@ -1523,6 +1525,8 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			'storage'        => $storage,
 			'email'          => $email,
 			'notes'          => $notes,
+			'expires_at'     => $in_24hrs,
+			'token'          => $token
 		);
 
 		$db = new CaptainCore\snapshots();
@@ -1833,6 +1837,7 @@ function captaincore_site_snapshots_func( $request ) {
 
 function captaincore_site_snapshot_download_func( $request ) {
 	$site_id       = $request['id'];
+	$token         = $request['token'];
 	$snapshot_id   = $request['snapshot_id'];
 	$snapshot_name = $request['snapshot_name'];
 
@@ -1840,7 +1845,7 @@ function captaincore_site_snapshot_download_func( $request ) {
 	$db = new CaptainCore\snapshots();
 	$snapshot = $db->get( $snapshot_id );
 
-	if ( $snapshot->snapshot_name != $snapshot_name || $snapshot->site_id != $site_id ) {
+	if ( $snapshot->snapshot_name != $snapshot_name || $snapshot->site_id != $site_id || $snapshot->token != $token ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', array( 'status' => 403 ) );
 	}
 
@@ -2137,7 +2142,7 @@ function captaincore_register_rest_endpoints() {
 
 	// Custom endpoint for CaptainCore site
 	register_rest_route(
-		'captaincore/v1', '/site/(?P<id>[\d]+)/snapshots/(?P<snapshot_id>[\d]+)/(?P<snapshot_name>.+)', array(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/snapshots/(?P<snapshot_id>[\d]+)-(?P<token>.+)/(?P<snapshot_name>.+)', array(
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_snapshot_download_func',
 			'show_in_index' => false
@@ -3660,6 +3665,26 @@ function captaincore_ajax_action_callback() {
 
 	}
 
+	if ( $cmd == 'fetchLink' ) {
+		// Fetch snapshot details
+		$db = new CaptainCore\snapshots;
+		$in_24hrs = date("Y-m-d H:i:s", strtotime ( date("Y-m-d H:i:s")."+24 hours" ) );
+
+		// Generate new token
+		$token = bin2hex( openssl_random_pseudo_bytes( 16 ) );
+		$db->update(
+			array( "token"       => $token,
+				   "expires_at"  => $in_24hrs ),
+			array( "snapshot_id" => $value )
+		);
+		echo json_encode( 
+			array( 
+				"token"       => $token,
+				"expires_at"  => $in_24hrs
+			)
+		);
+	}
+
 	if ( $cmd == 'fetchPlugins' ) {
 		require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
 		$arguments = array(
@@ -5074,6 +5099,8 @@ function captaincore_create_tables() {
 			storage varchar(20),
 			email varchar(100),
 			notes longtext,
+			expires_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			token varchar(32),
 		PRIMARY KEY  (snapshot_id)
 		) $charset_collate;";
 
@@ -5748,15 +5775,16 @@ function log_process_completed_callback() {
 
 function captaincore_download_snapshot_email( $snapshot_id ) {
 
-	// Generate download url to snapshot
-	$download_url  = captaincore_snapshot_download_link( $snapshot_id );
-
 	// Fetch snapshot details
 	$db       = new CaptainCore\snapshots;
 	$snapshot = $db->get( $snapshot_id );
 	$name     = $snapshot->snapshot_name;
 	$domain   = get_the_title( $snapshot->site_id );
 	$site     = get_field( 'site', $snapshot->site_id );
+
+	// Generate download url to snapshot
+	$home_url = home_url();
+	$download_url = "{$home_url}/wp-json/captaincore/v1/site/{$snapshot->site_id}/snapshots/{$snapshot->snapshot_id}-{$snapshot->token}/{$snapshot->snapshot_name}";
 
 	// Build email
 	$company = get_field( 'business_name', 'option' );

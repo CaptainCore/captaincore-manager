@@ -2573,7 +2573,6 @@ Vue.component('file-upload', VueUploadComponent);
 											</template>
 											<span>Manual sync website details</span>
 										</v-tooltip>
-										
 										</v-flex>
 									</v-layout>
 									</v-flex>
@@ -3129,7 +3128,7 @@ Vue.component('file-upload', VueUploadComponent);
 					</div>
 					<div v-else>
 					<v-data-table
-						:headers="[{text:'Created At',value:'created_at',width:'250px'},{text:'User',value:'user',width:'125px'},{text:'Storage',value:'storage',width:'100px'},{text:'Notes',value:'notes'},{text:'',value:'actions',sortable: false}]"
+						:headers="[{text:'Created At',value:'created_at',width:'250px'},{text:'User',value:'user',width:'125px'},{text:'Storage',value:'storage',width:'100px'},{text:'Notes',value:'notes'},{text:'',value:'actions',sortable: false,width:'190px'}]"
 						:items="key.snapshots"
 						item-key="snapshot_id"
 						no-data-text="No snapshots found."
@@ -3144,7 +3143,28 @@ Vue.component('file-upload', VueUploadComponent);
 						{{ item.storage | formatSize }}
 					</template>
 					<template v-slot:item.actions="{ item }">
-						<a :href="`/wp-json/captaincore/v1/site/${site.id}/snapshots/${item.snapshot_id}/${item.snapshot_name}`"><v-btn small rounded>Download</v-btn></a>
+					<template v-if="item.token && new Date() < new Date( item.expires_at )">
+						<v-tooltip bottom>
+							<template v-slot:activator="{ on }">
+							<v-btn small icon @click="fetchLink( site.id, item.snapshot_id )" v-on="on">
+								<v-icon small color="grey">fas fa-sync</v-icon>
+							</v-btn>
+							</template>
+							<span>Generate new link. Link valid for 24hrs.</span>
+						</v-tooltip>
+						<a :href="`/wp-json/captaincore/v1/site/${site.id}/snapshots/${item.snapshot_id}-${item.token}/${item.snapshot_name}`"><v-btn small rounded>Download</v-btn></a>
+					</template>
+					<template v-else>
+						<v-tooltip bottom>
+							<template v-slot:activator="{ on }">
+							<v-btn small icon @click="fetchLink( site.id, item.snapshot_id )" v-on="on">
+								<v-icon small color="grey">fas fa-sync</v-icon>
+							</v-btn>
+							</template>
+							<span>Generate new link. Link valid for 24hrs.</span>
+						</v-tooltip>
+						<v-btn small rounded disabled>Download</v-btn>
+					</template>
 					</template>
 					</v-data-table>
 							</div>
@@ -4757,6 +4777,25 @@ new Vue({
 				self.runCommand( response );
 			});
 
+		},
+		fetchLink( site_id, snapshot_id ) {
+			site = this.sites.filter(site => site.id == site_id )[0];
+			snapshot = site.environments.filter( e => e.environment == site.environment_selected )[0].snapshots.filter( s => s.snapshot_id == snapshot_id )[0];
+
+			var data = {
+				'action': 'captaincore_ajax',
+				'post_id': site_id,
+				'command': 'fetchLink',
+				'environment': site.environment_selected,
+				'value': snapshot_id
+			};
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					snapshot.token = response.data.token;
+					snapshot.expires_at = response.data.expires_at;
+				})
+				.catch( error => console.log( error ) );
 		},
 		promptBackupSnapshot( site_id ) {
 			site = this.sites.filter(site => site.id == site_id )[0];
