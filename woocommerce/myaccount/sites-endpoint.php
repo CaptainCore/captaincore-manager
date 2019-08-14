@@ -1320,7 +1320,7 @@ Vue.component('file-upload', VueUploadComponent);
 								<v-text-field :value="dialog_new_site.domain" @change.native="dialog_new_site.domain = $event.target.value" label="Domain name" required></v-text-field>
 							</v-flex>
 							<v-flex xs4 class="mx-2">
-						    <v-text-field :value="dialog_new_site.site" @change.native="dialog_new_site.site = $event.target.value" label="Site name" required></v-text-field>
+						    <v-text-field :value="dialog_new_site.site" @change.native="dialog_new_site.site = $event.target.value" label="Site name" required hint="Should match provider site name." persistent-hint></v-text-field>
 							</v-flex>
 							</v-layout>
 							<v-layout>
