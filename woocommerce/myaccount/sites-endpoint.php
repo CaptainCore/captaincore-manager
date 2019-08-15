@@ -3152,7 +3152,7 @@ Vue.component('file-upload', VueUploadComponent);
 							</template>
 							<span>Generate new link. Link valid for 24hrs.</span>
 						</v-tooltip>
-						<a :href="`/wp-json/captaincore/v1/site/${site.id}/snapshots/${item.snapshot_id}-${item.token}/${item.snapshot_name}`"><v-btn small rounded>Download</v-btn></a>
+						<a :href="`/wp-json/captaincore/v1/site/${site.id}/snapshots/${item.snapshot_id}-${item.token}/${item.snapshot_name.slice(0, -4)}`"><v-btn small rounded>Download</v-btn></a>
 					</template>
 					<template v-else>
 						<v-tooltip bottom>

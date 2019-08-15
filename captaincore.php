@@ -1839,7 +1839,7 @@ function captaincore_site_snapshot_download_func( $request ) {
 	$site_id       = $request['id'];
 	$token         = $request['token'];
 	$snapshot_id   = $request['snapshot_id'];
-	$snapshot_name = $request['snapshot_name'];
+	$snapshot_name = $request['snapshot_name'] . ".zip";
 
 	// Verify Snapshot link is valid
 	$db = new CaptainCore\snapshots();
@@ -2142,7 +2142,7 @@ function captaincore_register_rest_endpoints() {
 
 	// Custom endpoint for CaptainCore site
 	register_rest_route(
-		'captaincore/v1', '/site/(?P<id>[\d]+)/snapshots/(?P<snapshot_id>[\d]+)-(?P<token>.+)/(?P<snapshot_name>.+)', array(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/snapshots/(?P<snapshot_id>[\d]+)-(?P<token>[a-zA-Z0-9-]+)/(?P<snapshot_name>[a-zA-Z0-9-]+)', array(
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_snapshot_download_func',
 			'show_in_index' => false
