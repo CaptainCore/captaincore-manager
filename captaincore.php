@@ -5784,7 +5784,8 @@ function captaincore_download_snapshot_email( $snapshot_id ) {
 
 	// Generate download url to snapshot
 	$home_url = home_url();
-	$download_url = "{$home_url}/wp-json/captaincore/v1/site/{$snapshot->site_id}/snapshots/{$snapshot->snapshot_id}-{$snapshot->token}/{$snapshot->snapshot_name}";
+	$file_name = substr($snapshot->snapshot_name, 0, -4);
+	$download_url = "{$home_url}/wp-json/captaincore/v1/site/{$snapshot->site_id}/snapshots/{$snapshot->snapshot_id}-{$snapshot->token}/{$file_name}";
 
 	// Build email
 	$company = get_field( 'business_name', 'option' );
