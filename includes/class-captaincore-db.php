@@ -704,6 +704,9 @@ class Site {
 		}
 		if ( $site_details->provider == 'kinsta' and $environments[0]->database_username ) {
 			$kinsta_ending = array_pop( explode(".", $site_details->environments[0]['address']) );
+			if ( $kinsta_ending != "com" && $$kinsta_ending != "cloud" ) {
+				$kinsta_ending = "cloud";
+			}
 			$site_details->environments[0]['database']          = "https://mysqleditor-${database_username}.kinsta.{$kinsta_ending}";
 			$site_details->environments[0]['database_username'] = $environments[0]->database_username;
 			$site_details->environments[0]['database_password'] = $environments[0]->database_password;
@@ -793,6 +796,9 @@ class Site {
 		}
 		if ( $site_details->provider == 'kinsta' and $environments[1]->database_username ) {
 			$kinsta_ending = array_pop( explode(".", $site_details->environments[1]['address']) );
+			if ( $kinsta_ending != "com" && $$kinsta_ending != "cloud" ) {
+				$kinsta_ending = "cloud";
+			}
 			$site_details->environments[1]['database']          = "https://mysqleditor-staging-${database_username}.kinsta.{$kinsta_ending}";
 			$site_details->environments[1]['database_username'] = $environments[1]->database_username;
 			$site_details->environments[1]['database_password'] = $environments[1]->database_password;
