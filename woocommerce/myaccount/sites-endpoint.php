@@ -1268,12 +1268,13 @@ Vue.component('file-upload', VueUploadComponent);
 				>
 				<template v-slot:body="{ items }">
 				<tbody>
-					<tr v-for="item in items" style="border-bottom: 0px;">
+					<tr v-for="(item, index) in items" style="border-bottom: 0px;">
 						<td class="pa-1"><v-text-field :value="item.username" @change.native="item.username = $event.target.value" label="Username"></v-text-field></td>
 						<td class="pa-1"><v-text-field :value="item.email" @change.native="item.email = $event.target.value" label="Email"></v-text-field></td>
 						<td class="pa-1"><v-text-field :value="item.first_name" @change.native="item.first_name = $event.target.value" label="First Name"></v-text-field></td>
 						<td class="pa-1"><v-text-field :value="item.last_name" @change.native="item.last_name = $event.target.value" label="Last Name"></v-text-field></td>
 						<td class="pa-1" style="width:135px;"><v-select :value="item.role" v-model="item.role" :items="roles" label="Role" item-text="name"></v-select></td>
+						<td><v-btn text small icon color="primary" @click="deleteUserValue( index )"><v-icon small>fas fa-trash</v-icon></v-btn><td>
 					</tr>
 				</tbody>
 				</template>
@@ -5756,6 +5757,9 @@ new Vue({
 			if ( record.type == "CNAME" || record.type == "HTTPRedirection" ) {
 				record.update.record_value = "";
 			}
+		},
+		deleteUserValue( delete_index ) {
+			this.dialog_configure_defaults.record.default_users = this.dialog_configure_defaults.record.default_users.filter( (u, index) => index != delete_index );
 		},
 		deleteRecordValue( index, value_index ) {
 			this.dialog_domain.records[index].update.record_value.splice( value_index, 1 );
