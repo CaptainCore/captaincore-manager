@@ -1372,7 +1372,7 @@ Vue.component('file-upload', VueUploadComponent);
 										</div>
 										<v-container fluid>
 										<div row>
-											<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required></v-text-field>
+										<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required  hint="Should match included domain. Example: sitename.kinsta.cloud" persistent-hint></v-text-field>
 											<v-text-field label="Home Directory" :value="key.home_directory" @change.native="key.home_directory = $event.target.value" required></v-text-field>
 											<v-layout>
 											<v-flex xs6 class="mr-1"><v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field></v-flex>
@@ -1902,7 +1902,6 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-dialog>
 				<v-dialog
 					v-model="dialog_edit_site.show"
-					hide-overlay
 					transition="dialog-bottom-transition"
 					scrollable
 				>
@@ -2755,6 +2754,8 @@ Vue.component('file-upload', VueUploadComponent);
 						:headers="header_themes"
 						:items="key.themes"
 						:loading="site.loading_themes"
+						:items-per-page="-1"
+						:footer-props="{ itemsPerPageOptions: [{'text':'All','value':-1}] }"
 						item-key="name"
 						value="name"
 						show-select
@@ -2787,7 +2788,8 @@ Vue.component('file-upload', VueUploadComponent);
 						:headers="header_plugins"
 						:items="key.plugins.filter(plugin => plugin.status != 'must-use' && plugin.status != 'dropin')"
 						:loading="site.loading_plugins"
-						:items-per-page-options='[50,100,250,{"text":"All","value":-1}]'
+						:items-per-page="-1"
+						:footer-props="{ itemsPerPageOptions: [{'text':'All','value':-1}] }"
 						v-model="key.plugins_selected"
 						item-key="name"
 						value="name"
@@ -2840,7 +2842,8 @@ Vue.component('file-upload', VueUploadComponent);
 					<div v-if="typeof key.users != 'string'">
 						<v-data-table
 							:headers='header_users'
-							:items-per-page-options='[50,100,250,{"text":"All","value":-1}]'
+							:items-per-page="50"
+							:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
 							:items="key.users"
 							item-key="user_login"
 							v-model="key.users_selected"
