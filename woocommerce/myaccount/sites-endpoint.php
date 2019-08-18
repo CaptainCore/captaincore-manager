@@ -124,6 +124,9 @@ g.chart-legend {
 .table-dns tr.delete td:not(:last-child) {
     text-decoration: line-through;
 }
+.table-dns .v-input__slot {
+	margin-bottom: 0px;
+}
 .table-dns td:last-child {
 	padding: 0px;
 }
@@ -850,13 +853,13 @@ Vue.component('file-upload', VueUploadComponent);
 									<v-flex xs3><v-text-field label="Level" :value="value.level" @change.native="value.level = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
 									<v-flex xs9><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field></v-flex>
 								</v-layout>
-								<v-btn depressed small class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
+								<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon small>fas fa-plus-square</v-icon></v-btn>
 							</td>
 							<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'SPF'">
 								<div v-for="(value, value_index) in record.update.record_value" :key="`value-${index}-${value_index}`">
 									<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field>
 								</div>
-								<v-btn depressed small class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
+								<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon small>fas fa-plus-square</v-icon></v-btn>
 							</td>
 							<td class="value" v-else-if="record.type == 'SRV'">
 								<v-layout v-for="value in record.update.record_value">
@@ -865,7 +868,7 @@ Vue.component('file-upload', VueUploadComponent);
 									<v-flex xs2><v-text-field label="Port" :value="value.port" @change.native="value.port = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
 									<v-flex xs6><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
 								</v-layout>
-								<v-btn depressed small class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
+								<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon small>fas fa-plus-square</v-icon></v-btn>
 							</td>
 							<td class="value" v-else>
 								<v-text-field label="Value" :value="record.update.record_value" @change.native="record.update.record_value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
@@ -884,13 +887,13 @@ Vue.component('file-upload', VueUploadComponent);
 									<v-flex xs3><v-text-field label="Level" :value="value.level" @change.native="value.level = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
 									<v-flex xs9><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field></v-flex>
 								</v-layout>
-								<v-btn depressed small class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
+								<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon small>fas fa-plus-square</v-icon></v-btn>
 							</td>
 							<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'SPF'">
 								<div v-for="(value, value_index) in record.update.record_value" :key="`value-${index}-${value_index}`">
 									<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field>
 								</div>
-								<v-btn depressed small class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
+								<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon small>fas fa-plus-square</v-icon></v-btn>
 							</td>
 							<td class="value" v-else-if="record.type == 'SRV'">
 								<v-layout v-for="value in record.update.record_value">
@@ -5858,6 +5861,19 @@ new Vue({
 						v.value = v.value.trim();
 						if ( v.value.substr(v.value.length - 1) != "." ) {
 							v.value = v.value + ".";
+						}
+					})
+				}
+
+				if ( record.type == "TXT" ) {
+					// Check for value wrapped in quotes. If not add them.
+					record.update.record_value.forEach( v => {
+						v.value = v.value.trim();
+						if ( v.value.substr(0,1) != '"' ) {
+							v.value = '"' + v.value;
+						}
+						if ( v.value.substr(v.value.length - 1) != '"' ) {
+							v.value = v.value + '"';
 						}
 					})
 				}
