@@ -3525,6 +3525,7 @@ new Vue({
 	data: {
 		loading_page: true,
 		expanded: [],
+		modules: { dns: <?php if ( defined( "CONSTELLIX_API_KEY" ) and defined( "CONSTELLIX_SECRET_KEY" ) ) { echo "true"; } else { echo "false"; } ?> },
 		dialog_bulk: { show: false, tabs_management: "tab-Sites", environment_selected: "Production" },
 		dialog_delete_user: { show: false, site: {}, users: [], username: "", reassign: {} },
 		dialog_apply_https_urls: { show: false, site_id: "", site_name: "", sites: [] },
@@ -4487,7 +4488,7 @@ new Vue({
 			});
 		},
 		fetchMissing() {
-			if ( this.allDomains == 0 ) {
+			if ( this.allDomains == 0 && this.modules.dns ) {
 				this.fetchDomains()
 			}
 			if ( this.filteredSites == 0 ) {
