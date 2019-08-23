@@ -106,7 +106,7 @@ g.chart-legend {
     font-size: 16px;
     border-top: 1px solid #8a8a8a;
 }
-.table-dns td.value {
+.table-dns td.name, .table-dns td.value {
 	overflow-wrap: break-word;
     word-wrap: break-word;
     -ms-word-break: break-all;
@@ -913,7 +913,7 @@ Vue.component('file-upload', VueUploadComponent);
 						</template>
 						<template v-else>
 							<td>{{ record.type }}</td>
-							<td>{{ record.name }}</td>
+							<td class="name">{{ record.name }}</td>
 							<td class="value" v-if="record.type == 'MX'"><div v-for="value in record.value">{{ value.level }} {{ value.value }}</div></td>
 							<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'SPF'"><div v-for="value in record.value">{{ value.value }}</div></td>
 							<td class="value" v-else-if="record.type == 'SRV'"><div v-for="value in record.value">{{ value.priority }} {{ value.weight }} {{ value.port }} {{ value.value }}</div></td>
