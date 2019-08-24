@@ -2284,6 +2284,14 @@ function captaincore_register_rest_endpoints() {
 		)
 	);
 	register_rest_field(
+		'captcore_customer', 'default_recipes',
+		array(
+			'get_callback'    => 'slug_get_post_meta_array',
+			'update_callback' => 'slug_update_post_meta_cb',
+			'schema'          => null,
+		)
+	);
+	register_rest_field(
 		'captcore_customer', 'preloaded_plugins',
 		array(
 			'get_callback'    => 'slug_get_post_meta_array',
@@ -3432,6 +3440,7 @@ function captaincore_local_action_callback() {
 			foreach ( $partner as $partner_id ) {
 				$default_users = get_field( 'preloaded_users', $partner_id );
 				$default_plugins = array_column( get_field( 'preloaded_plugins', $partner_id ), "plugin" );
+				$default_recipes = get_field( 'default_recipes', $partner_id );
 				if ( $default_users == "" ){
 					$default_users = array();
 				}
@@ -3446,6 +3455,7 @@ function captaincore_local_action_callback() {
 					'default_email'    => get_field( 'preloaded_email', $partner_id ),
 					'default_users'    => $default_users,
 					'default_plugins'  => $default_plugins,
+					'default_recipes'  => $default_recipes,
 					'default_timezone' => get_field( 'default_timezone', $partner_id ),
 				];
 			}
@@ -3469,6 +3479,7 @@ function captaincore_local_action_callback() {
 			update_field( 'preloaded_email', $record->default_email, $account_id );
 			update_field( 'preloaded_users', $record->default_users, $account_id );
 			update_field( 'preloaded_plugins', $default_plugins, $account_id );
+			update_field( 'default_recipes', $record->default_recipes, $account_id );
 			update_field( 'default_timezone', $record->default_timezone, $account_id );
 			echo json_encode( "Record updated." );
 		} else {

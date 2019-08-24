@@ -1262,6 +1262,9 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-layout wrap>
 					<v-flex><v-autocomplete label="Default Plugins" v-model="dialog_configure_defaults.record.default_plugins" ref="default_plugins" :items="default_plugins" item-text="name" item-value="slug" multiple chips deletable-chips></v-autocomplete></v-flex>
 				</v-layout>
+				<v-layout wrap>
+					<v-flex><v-autocomplete label="Default Recipes" v-model="dialog_configure_defaults.record.default_recipes" ref="default_recipes" :items="recipes" item-text="title" item-value="recipe_id" multiple chips deletable-chips></v-autocomplete></v-flex>
+				</v-layout>
 
 				<span class="body-2">Default Users</span>
 				<v-data-table
