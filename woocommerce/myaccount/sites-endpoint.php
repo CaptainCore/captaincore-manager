@@ -5969,7 +5969,7 @@ new Vue({
 					// Removed existing new recording matching type, name, value and ttl.
 					this.dialog_domain.records = this.dialog_domain.records.filter( r => r.update.record_status != "new-record" && r.update.record_name != result.name )
 
-					if ( result.type == "A" || result.type == "AAAA" || result.type == "SPF" || result.type == "TXT" ) {
+					if ( result.type == "A" || result.type == "AAAA" || result.type == "SPF" ) {
 						record_value = [];
 						result.value.forEach( r => {
 							record_value.push({ value: r });
