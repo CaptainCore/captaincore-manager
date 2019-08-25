@@ -134,16 +134,12 @@ function captaincore_my_account_order( $current_menu ) {
 	$user = wp_get_current_user();
 
 	$role_check_admin      = in_array( 'administrator', $user->roles );
-	$role_check_partner    = in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
-	$role_check_subscriber = in_array( 'subscriber', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
+	$role_check_subscriber = in_array( 'subscriber', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
 
 	if ( ! $role_check_admin ) {
 		unset( $current_menu['handbook'] );
 		unset( $current_menu['cookbook'] );
 		unset( $current_menu['manage'] );
-	}
-	if ( ! $role_check_partner ) {
-		unset( $current_menu['configs'] );
 	}
 	if ( ! $role_check_subscriber ) {
 		unset( $current_menu['dns'] );
@@ -3473,7 +3469,7 @@ function captaincore_local_action_callback() {
 		$accounts = array();
 
 		$user = wp_get_current_user();
-		$role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles) + in_array( 'editor', $user->roles );
+		$role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'administrator', $user->roles) + in_array( 'editor', $user->roles );
 		$partner = get_field('partner', 'user_'. get_current_user_id());
 
 		if ($partner and $role_check) {
