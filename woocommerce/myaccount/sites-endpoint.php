@@ -1260,9 +1260,6 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-flex xs6 pl-2><v-autocomplete :items="timezones" label="Default Timezone" v-model="dialog_configure_defaults.record.default_timezone"></v-autocomplete></v-flex>
 				</v-layout>
 				<v-layout wrap>
-					<v-flex><v-autocomplete label="Default Plugins" v-model="dialog_configure_defaults.record.default_plugins" ref="default_plugins" :items="default_plugins" item-text="name" item-value="slug" multiple chips deletable-chips></v-autocomplete></v-flex>
-				</v-layout>
-				<v-layout wrap>
 					<v-flex><v-autocomplete label="Default Recipes" v-model="dialog_configure_defaults.record.default_recipes" ref="default_recipes" :items="recipes" item-text="title" item-value="recipe_id" multiple chips deletable-chips></v-autocomplete></v-flex>
 				</v-layout>
 
@@ -3553,7 +3550,6 @@ new Vue({
 		page: 1,
 		socket: "<?php echo captaincore_fetch_socket_address() . "/ws"; ?>",
 		timezones: <?php echo json_encode( timezone_identifiers_list() ); ?>,
-		default_plugins: <?php $plugins = array(); $items = get_field_object('field_5879880d78844')['choices']; foreach( $items as $slug => $name ) { $plugins[] = array( "name" => $name, "slug" => $slug ); } echo json_encode( $plugins ) ?>,
 		jobs: [],
 		custom_script: "",
 		recipes: 
@@ -3771,8 +3767,8 @@ new Vue({
 		applied_site_filter (val) {
 			setTimeout( () => this.$refs.applied_site_filter.isMenuActive = false, 50)
 		},
-		selected_default_plugins (val) {
-			setTimeout( () => this.$refs.default_plugins.isMenuActive = false, 50)
+		selected_default_recipes (val) {
+			setTimeout( () => this.$refs.default_recipes.isMenuActive = false, 50)
 		},
 		route() {
 			this.triggerRoute()
@@ -3862,11 +3858,11 @@ new Vue({
 			const end = start + this.items_per_page;
 			return this.sites.filter( site => site.filtered ).slice(start, end);
 		},
-		selected_default_plugins() {
-			if ( typeof this.dialog_configure_defaults.record.default_plugins == 'undefined' ) {
+		selected_default_recipes() {
+			if ( typeof this.dialog_configure_defaults.record.default_recipes == 'undefined' ) {
 				return "";
 			} else {
-				return this.dialog_configure_defaults.record.default_plugins;
+				return this.dialog_configure_defaults.record.default_recipes;
 			}
 		},
 		runningJobs() {
