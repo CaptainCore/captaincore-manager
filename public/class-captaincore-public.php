@@ -75,32 +75,6 @@ class Captaincore_Public {
 
 		 global $wp_query;
 
-		wp_enqueue_style( 'google-material-icons', 'https://fonts.googleapis.com/icon?family=Material+Icons', array(), '2017-09-03' );
-		wp_enqueue_style( 'font-awesome', "https://use.fontawesome.com/releases/v5.7.1/css/all.css", array() );
-		wp_enqueue_style( 'dashicons' );
-
-		$materialize_needed = false;
-
-		if ( is_user_logged_in() ) {
-
-			// Pages: DNS, Websites, Processes
-			if ( isset( $wp_query->query['dns'] ) || isset( $wp_query->query['websites'] ) || isset( $wp_query->query['captcore_process'] ) ) {
-				$materialize_needed = true;
-			}
-			// Page: my-account dashboard when logged in
-			if ( isset( $wp_query->query['pagename'] ) and $wp_query->query['pagename'] == "my-account" and isset( $wp_query->query['page']) ) {
-				$materialize_needed = true;
-			}
-		}
-
-		if ( $materialize_needed ) {
-			wp_enqueue_style( 'materialize', plugin_dir_url( __FILE__ ) . 'css/materialize.min.css', array(), '2017-09-08' );
-			wp_enqueue_script( 'materialize', plugin_dir_url( __FILE__ ) . 'js/materialize.min.js', array( 'jquery' ), '2016-12-30', false );
-		}
-
-		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/captaincore-public.2019-02-06.css', array(), $this->version, 'all' );
-
-
 	}
 
 	/**

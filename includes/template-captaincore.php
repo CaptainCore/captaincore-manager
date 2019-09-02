@@ -1,517 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link href="https://use.fontawesome.com/releases/v5.7.1/css/all.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@3.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+  <meta charset="utf-8">
 <?php
-if ( defined( 'ARVE_SLUG' ) ) {
-wp_enqueue_style( ARVE_SLUG );
-wp_enqueue_script( ARVE_SLUG );
-}
+captaincore_header_content_extracted();
 
 $user       = wp_get_current_user();
 $role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
 if ( $role_check ) {
-
-	add_filter( 'body_class', 'my_body_classes' );
-	function my_body_classes( $classes ) {
-
-		$classes[] = 'woocommerce-account';
-		return $classes;
-
-	}
-
 	$current_user  = wp_get_current_user();
 	$belongs_to    = get_field( 'partner', "user_{$current_user->ID}" );
 	$business_name = get_the_title( $belongs_to[0] );
 	$business_link = get_field( 'partner_link', $belongs_to[0] );
-
+}
 ?>
 <link href="https://cdn.jsdelivr.net/npm/vuetify@2.0.4/dist/vuetify.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@3.x/css/materialdesignicons.min.css" rel="stylesheet">
-<style>
-
-html body {
-	font-size: 120%;
-}
-
-.theme--light.v-application {
-	background: none;
-}
-
-.table_users tbody tr td:nth-child(6) {
-	 width:200px;
-	 display:block;
-}
-
-.strikethrough {
-	text-decoration: line-through;
-}
-
-.usage.multisite {
-	width: 100px;
-}
-
-.usage.provider {
-	width: 94px;
-}
-
-.usage.visits {
-	width: 130px;
-}
-
-.usage.storage {
-	width: 100px;
-}
-
-.usage button {
-	margin: 0px;
-	font-size: 11px;
-  font-weight: bold;
-}
-
-.usage button .v-icon.material-icons.theme--light {
-	display:none;
-}
-
-.usage button.v-btn--active .v-icon.material-icons.theme--light {
-	display:inline-block;
-}
-
-.desc .usage button.v-btn--active .v-icon.material-icons.theme--light {
-	-webkit-transform: rotate(-180deg);
-	transform: rotate(-180deg);
-}
-
-.usage {
-	display: inline-block;
-	text-align: center;
-	font-size: 13px;
-	padding: 0px;
-	margin: 0px;
-}
-
-.graph-svg-tip.comparison .title {
-	font-size: 12px !important;
-}
-
-g.chart-legend {
-	display: none;
-}
-
-.table-dns {
-	border-collapse: collapse;
-	table-layout:fixed;
-}
-
-.table-dns td {
-	padding: 0 1em 0 0em;
-    margin-bottom: 0px;
-    line-height: 1.50em;
-    font-size: 16px;
-    border-top: 1px solid #8a8a8a;
-}
-.table-dns td.name, .table-dns td.value {
-	overflow-wrap: break-word;
-    word-wrap: break-word;
-    -ms-word-break: break-all;
-    word-break: break-all;
-    word-break: break-word;
-    -ms-hyphens: auto;
-    -moz-hyphens: auto;
-    -webkit-hyphens: auto;
-    hyphens: auto;
-}
-.table-dns tr.delete {
-	color: #ff00008c;
-    background: #80808021;
-}
-.table-dns tr.delete td:not(:last-child) {
-    text-decoration: line-through;
-}
-.table-dns .v-input__slot {
-	margin-bottom: 0px;
-}
-.table-dns td:last-child {
-	padding: 0px;
-}
-
-.table-layout-fixed table {
-	border-collapse: collapse;
-	table-layout:fixed;
-}
-
-.table-quicksaves tbody > tr {
-	cursor: pointer;
-}
-
-.text-right .usage:last-child {
-	border-right: 0px;
-}
-
-.v-input {
-	margin-top: 0px;
-}
-.siteFilter .v-input__control { 
-	min-height: 42px;
-}
-.site .v-tabs--right .v-tab {
-	min-width: 40px;
-	padding: 0 10px;
-}
-.v-tabs__container--icons-and-text {
-	height: 54px;
-}
-.v-tabs__container--fixed-tabs .v-tabs__div, .v-tabs__container--icons-and-text .v-tabs__div {
-	min-width: 0px;
-}
-
-.theme--dark .theme--light .v-select__selections {
-	color: rgb(22, 101, 192);
-	padding-left: 6px;
-}
-
-.theme--dark .theme--light .v-icon {
-	color: rgba(0,0,0,.54);
-}
-
-.application.theme--light a {
-	color: inherit;
-}
-
-.v-application .dns_introduction a {
-	text-decoration: underline;
-	font-weight: bold;
-	color: #fff;
-}
-
-.application.theme--light .dns_introduction p {
-	margin-bottom: 0px;
-}
-
-.table-dns td button.v-btn.v-btn--flat.v-btn--icon.v-size--small {
-	max-width: 30px;
-	max-height: 30px;
-}
-
-.theme--light.v-table a,
-.theme--light.v-table a:hover {
-	color: #1976d2;
-}
-
-.timeline .theme--light.v-table p {
-	margin-bottom: 0px;
-	padding-bottom: 0px;
-	line-height: initial;
-}
-.timeline .theme--light.v-table ul {
-	margin: 5px 0px;
-}
-.timeline .theme--light.v-table li {
-    list-style: disc;
-    margin-left: 1.5em;
-}
-.timeline .theme--light.v-table h1,
-.timeline .theme--light.v-table h2,
-.timeline .theme--light.v-table h3,
-.timeline .theme--light.v-table h4,
-.timeline .theme--light.v-table h5,
-.timeline .theme--light.v-table h6 {
-	margin: 0px;
-}
-
-
-.timeline table.theme--light.v-table tbody td {
-	vertical-align: top;
-	padding: 1.2em 1.8em;
-}
-
-.v-expansion-panel__header {
-	line-height: 0.8em;
-}
-
-ul.v-expansion-panel.theme--light {
-    margin: 0px;
-    padding: 0px;
-}
-
-.theme--light.v-expansion-panels .v-expansion-panel.site.toggleSelect .v-expansion-panel-header {
-    padding-left: 75px;
-}
-
-.v-expansion-panel--inset .v-expansion-panel__container, .v-expansion-panel--popout .v-expansion-panel__container {
-    max-width: 100%;
-}
-
-.v-expansion-panel--inset .v-expansion-panel__container--active, .v-expansion-panel--popout .v-expansion-panel__container--active {
-	margin: 16px 0px;
-}
-
-table.v-table tbody td, table.v-table tbody th {
-	border: 0px;
-}
-
-.quicksave-table table.v-table tbody td, .quicksave-table table.v-table tbody th {
-	height:40px;
-}
-
-.quicksave-table table tr:hover button.v-btn--flat:before {
-	background-color: currentColor;
-}
-
-pre {
-	font-size: 15px;
-	padding: 10px;
-}
-
-#code_diff > div {
-	white-space:pre-wrap;
-}
-
-.v-expansion-panel__body {
-	position: relative;
-}
-
-.v-expansion-panel.site:before {
-	box-shadow: none;
-}
-
-.theme--light.v-expansion-panels .v-expansion-panel.site {
-	background: none;
-}
-
-.site .v-expansion-panel-content__wrap {
-	padding: 0px;
-	max-width: 100%;
-}
-
-.v-expansion-panel.v-expansion-panel--active.site:before {
-	box-shadow: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
-}
-
-.theme--light.v-expansion-panels .v-expansion-panel
-
-.application .site .theme--dark.icon, .site .theme--dark .v-icon {
-	font-size: 1em;
-	padding-left: 0.3em;
-}
-
-.v-dialog__content--active {
-	z-index: 999999 !important;
-}
-
-li.v-expansion-panel__container {
-    list-style: none;
-}
-
-.v-card hr {
-	margin: 4px 0;
-	background-color: #eaeaea;
-}
-.v-btn__content span {
-    padding: 0 0 0 6px;
-}
-.v-toolbar__items i.v-icon.theme--dark {
-    margin-left: 2%;
-}
-table.v-datatable.v-table.v-datatable--show-select thead tr th:nth-child(1),
-table.v-datatable.v-table.v-datatable--show-select tbody tr td:nth-child(1) {
-	width: 42px;
-	padding: 0 0 0px 22px;
-}
-.v-expansion-panel__body .v-card.bordered {
-	margin: 2em;
-	padding: 0px;
-	box-shadow: 0 2px 1px -1px rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 1px 3px 0 rgba(0,0,0,.12);
-}
-.v-expansion-panel--active .v-card .keys .pass-mask {
-	display: inline-block;
-}
-.v-expansion-panel-content .v-card .keys .pass-reveal {
-	display: none;
-}
-.v-expansion-panel-content .v-card .keys:hover .pass-mask {
-	display: none;
-}
-.v-expansion-panel-content .v-card .keys:hover .pass-reveal {
-	display: inline-block;
-}
-
-.static.v-badge {
-	position: fixed;
-  top: 23%;
-  right: 0px;
-  background: white;
-  z-index: 99999;
-  padding: 1em 1em .5em 1em;
-  box-shadow: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
-}
-
-.v-select.v-text-field input, .v-input input, .v-text-field input {
-	background: none;
-	border: none;
-}
-
-.content-area ul.v-pagination {
-	display: inline-flex;
-	margin: 0px;
-}
-
-.alignright.input-group {
-	width: auto;
-}
-
-a.v-tabs__item:hover {
-	color:inherit;
-}
-
-.pagination span.pagination__more {
-	margin: .3rem;
-	border: 0px;
-	padding: 0px;
-}
-
-[v-cloak] > * {
-  display:none;
-}
-[v-cloak]::before {
-  display: block;
-  position: relative;
-  left: 0%;
-  top: 0%;
-	max-width: 1000px;
-	margin:auto;
-	padding-bottom: 10em;
-}
-.application.theme--light {
-	background-color: #fff;
-}
-
-.application .theme--light.btn:not(.btn--icon):not(.btn--flat), .theme--light .btn:not(.btn--icon):not(.btn--flat) {
-	padding: 0px;
-}
-
-.application .theme--light.v-input:not(.v-input--is-disabled) input, .application .theme--light.v-input:not(.v-input--is-disabled) textarea, .theme--light .v-input:not(.v-input--is-disabled) input, .theme--light .v-input:not(.v-input--is-disabled) textarea {
-	border-radius: 0px;
-}
-
-.secondary {
-	background: transparent !important;
-}
-
-table {
-	margin: 0px;
-}
-
-.menu__content--select .card {
-	margin:0px;
-	padding:0px;
-}
-
-.card  {
-	margin:0px;
-	padding:0px;
-}
-.card .list {
-	float:none;
-	width:auto;
-	margin:0px;
-	padding:0px;
-}
-button {
-	padding: 0 16px;
-}
-button.btn--icon {
-	padding:0px;
-}
-.theme--dark.v-btn, .theme--dark .v-btn {
-	color: #fff !important;
-}
-span.text-right {
-	float:right;
-}
-.input-group.input-group--selection-controls.switch .input-group--selection-controls__container {
-	margin: auto;
-	margin-top: 1.5em;
-}
-
-table.table .input-group--selection-controls {
-	top: 10px;
-	position: relative;
-}
-
-table.table .input-group.input-group--selection-controls.switch .input-group--selection-controls__container {
-	margin:0px;
-}
-
-.application .theme--light.v-pagination__item--active, .theme--light button.v-pagination__item--active {
-	color: #fff !important;
-}
-
-body button.v-pagination__item:hover {
-    box-shadow: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
-	}
-
-table.v-table thead tr,
-table.v-table thead th,
-table.v-table tbody td,
-table.v-table tbody th,
-table.v-table tfoot td {
-	vertical-align: middle;
-	border:0px;
-}
-.v-data-table td, .v-data-table th {
-	vertical-align: middle;
-	line-height: 1em;
-}
-.v-data-table td p {
-	line-height: 1em;
-}
-.v-data-table td p:last-child {
-	margin-bottom: 0px;
-	padding-bottom: 0px;
-}
-
-.v-btn {
-	letter-spacing: 0em;
-}
-.v-btn--active, .v-btn:focus, .v-btn:hover, button.v-expansion-panel-header:focus {
-	background: none;
-}
-table.v-table tfoot td {
-	font-weight: 400;
-	font-size: 13px;
-}
-div.update_logs table tr td:nth-child(1) {
-	white-space: nowrap;
-}
-.upload-drag label.btn {
-  margin-bottom: 0;
-  margin-right: 1rem;
-}
-.upload-drag label.btn.btn-primary.file-uploads.file-uploads-html5.file-uploads-drop {
-    display: none;
-}
-.upload-drag .drop-active {
-  top: 0;
-  bottom: 0;
-  right: 0;
-  left: 0;
-  position: fixed;
-  z-index: 9999;
-  opacity: .6;
-  text-align: center;
-  background: #000;
-}
-.upload-drag .drop-active h3 {
-  margin: -.5em 0 0;
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  -webkit-transform: translateY(-50%);
-  -ms-transform: translateY(-50%);
-  transform: translateY(-50%);
-  font-size: 40px;
-  color: #fff;
-  padding: 0;
-}
-</style>
+<link href="/wp-content/plugins/captaincore/public/css/captaincore-public.2019-02-06.css" rel="stylesheet">
 <?php if ( substr( $_SERVER['SERVER_NAME'], -4) == 'test' ) { ?>
 <script src="/wp-content/plugins/captaincore/public/js/vue.js"></script>
 <script src="/wp-content/plugins/captaincore/public/js/qs.js"></script>
@@ -532,9 +43,7 @@ lodash = _.noConflict();
 <script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.20/dist/vue-upload-component.js"></script>
 <script>
-
 ajaxurl = "/wp-admin/admin-ajax.php";
-
 var pretty_timestamp_options = {
     weekday: "short", year: "numeric", month: "short",
     day: "numeric", hour: "2-digit", minute: "2-digit"
@@ -543,9 +52,76 @@ var pretty_timestamp_options = {
 // Returns: "Monday, Jun 18, 2018, 7:44 PM"
 Vue.component('file-upload', VueUploadComponent);
 </script>
+</head>
+<body>
 <div id="app" v-cloak>
 	<v-app>
-		<v-content>
+	  <v-app-bar color="blue darken-3" dark app fixed style="left:0px;">
+         <v-toolbar-title>
+		 <v-row>
+		 <v-col v-if="business_logo" class="pr-0">
+		 	<v-img :src="business_logo" contain max-width="32" max-height="32"></v-img>
+		 </v-col>
+		 <v-col>
+		 	{{ business_name }}
+		 </v-col>
+		 </v-row>
+		</v-toolbar-title>
+      </v-app-bar>
+	  <v-navigation-drawer app permanent clipped>
+      <v-list>
+        <v-list-item link href="#sites">
+          <v-list-item-icon>
+            <v-icon>mdi-wrench</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>Sites</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+        <v-list-item link href="#dns">
+          <v-list-item-icon>
+            <v-icon>mdi-library-books</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>DNS</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+		<v-list-item link href="#cookbook" v-show="role == 'administrator'">
+        <v-list-item-icon>
+            <v-icon>mdi-book-open-variant</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>Cookbook</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+        <v-list-item link href="#handbook" v-show="role == 'administrator'">
+          <v-list-item-icon>
+            <v-icon>mdi-map</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>Handbook</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+        <v-list-item link :href="billing_link" target="_new" v-show="billing_link">
+          <v-list-item-icon>
+            <v-icon>mdi-currency-usd</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>Billing  <v-icon small>mdi-open-in-new</v-icon></v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+        <v-list-item link @click="signOut()">
+          <v-list-item-icon>
+            <v-icon>mdi-logout</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>Log Out</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+      </v-list>
+	  </v-navigation-drawer>
+	  <v-content>
+		<v-container fluid style="padding:0px">
 		<v-badge overlap left class="static" v-if="runningJobs">
 			<span slot="badge">{{ runningJobs }}</span>
 			<a @click.stop="view_jobs = true; $vuetify.goTo( '#sites' )"><v-icon large color="grey lighten-1">fas fa-cogs</v-icon></a>
@@ -1219,9 +795,21 @@ Vue.component('file-upload', VueUploadComponent);
 		</v-dialog>
 		<v-dialog v-model="dialog_new_domain.show" scrollable width="500">
 		<v-card>
+			<v-toolbar flat dark color="primary">
+			<v-btn icon dark @click.native="dialog_new_domain.show = false">
+				<v-icon>close</v-icon>
+			</v-btn>
+			<v-toolbar-title>Add Domain</v-toolbar-title>
+				<v-spacer></v-spacer>
+			</v-toolbar>
 			<v-card-text>
 				<v-text-field :value="dialog_new_domain.domain.name" @change.native="dialog_new_domain.domain.name = $event.target.value" label="Domain Name" required></v-text-field>
-				<v-autocomplete :value="dialog_new_domain.domain.customer" @change.native="dialog_new_domain.domain.customer = $event.target.value" label="Customer" required></v-autocomplete>
+				<v-autocomplete :items="customers" item-text="name" item-value="customer_id" v-model="dialog_new_domain.domain.customer" label="Customer" required></v-autocomplete>
+				<v-flex xs12 text-right>
+					<v-btn color="primary" dark @click="addDomain()">
+						Save Changes
+					</v-btn>
+				</v-flex>
 			</v-card-text>
 		</v-card>
 		</v-dialog>
@@ -1234,12 +822,12 @@ Vue.component('file-upload', VueUploadComponent);
 			<v-toolbar-title>Configure Defaults</v-toolbar-title>
 				<v-spacer></v-spacer>
 			</v-toolbar>
-			<v-card-text>
 				<template v-if="dialog_configure_defaults.loading">
 					<v-progress-linear :indeterminate="true"></v-progress-linear>
 				</template>
-				<template v-else>
-				<v-select :items="dialog_configure_defaults.records.map( a => a.account )" label="Account" item-value="id" v-model="dialog_configure_defaults.account" @input="switchConfigureDefaultAccount()">
+			<v-card-text>
+				<template v-if="! dialog_configure_defaults.loading">
+				<v-select class="mt-5" :items="dialog_configure_defaults.records.map( a => a.account )" label="Account" item-value="id" v-model="dialog_configure_defaults.account" @input="switchConfigureDefaultAccount()">
 					<template v-slot:selection="data">
 						<span v-html="data.item.name"></span>
 					</template>
@@ -1276,8 +864,8 @@ Vue.component('file-upload', VueUploadComponent);
 						<td class="pa-1"><v-text-field :value="item.email" @change.native="item.email = $event.target.value" label="Email"></v-text-field></td>
 						<td class="pa-1"><v-text-field :value="item.first_name" @change.native="item.first_name = $event.target.value" label="First Name"></v-text-field></td>
 						<td class="pa-1"><v-text-field :value="item.last_name" @change.native="item.last_name = $event.target.value" label="Last Name"></v-text-field></td>
-						<td class="pa-1" style="width:135px;"><v-select :value="item.role" v-model="item.role" :items="roles" label="Role" item-text="name"></v-select></td>
-						<td><v-btn text small icon color="primary" @click="deleteUserValue( index )"><v-icon small>fas fa-trash</v-icon></v-btn><td>
+						<td class="pa-1" style="width:145px;"><v-select :value="item.role" v-model="item.role" :items="roles" label="Role" item-text="name"></v-select></td>
+						<td class="pa-1"><v-btn text small icon color="primary" @click="deleteUserValue( index )"><v-icon small>fas fa-trash</v-icon></v-btn></td>
 					</tr>
 				</tbody>
 				</template>
@@ -1360,57 +948,57 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-flex xs4 class="mx-2">
 						</v-flex>
 						</v-layout>
-								<v-container grid-list-md text-center>
-									<v-layout row wrap>
-										<v-flex xs12 style="height:0px">
-										<v-btn @click="new_site_preload_staging" text icon center relative color="green" style="top:32px;">
-											<v-icon>cached</v-icon>
+							<v-container grid-list-md text-center>
+								<v-layout row wrap>
+									<v-flex xs12 style="height:0px">
+									<v-btn @click="new_site_preload_staging" text icon center relative color="green" style="top:32px;">
+										<v-icon>cached</v-icon>
+									</v-btn>
+									</v-flex>
+									<v-flex xs6 v-for="key in dialog_new_site.environments" :key="key.index">
+									<v-card class="bordered body-1" style="margin:2em;">
+									<div style="position: absolute;top: -20px;left: 20px;">
+										<v-btn depressed disabled right style="background-color: rgb(229, 229, 229)!important; color: #000 !important; left: -11px; top: 0px; height: 24px;">
+											{{ key.environment }} Environment
 										</v-btn>
-										</v-flex>
-										<v-flex xs6 v-for="key in dialog_new_site.environments" :key="key.index">
-										<v-card class="bordered body-1" style="margin:2em;">
-										<div style="position: absolute;top: -20px;left: 20px;">
-											<v-btn depressed disabled right style="background-color: rgb(229, 229, 229)!important; color: #000 !important; left: -11px; top: 0px; height: 24px;">
-												{{ key.environment }} Environment
-											</v-btn>
-										</div>
-										<v-container fluid>
-										<div row>
+									</div>
+									<v-container fluid>
+									<div row>
 										<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required  hint="Should match included domain. Example: sitename.kinsta.cloud" persistent-hint></v-text-field>
-											<v-text-field label="Home Directory" :value="key.home_directory" @change.native="key.home_directory = $event.target.value" required></v-text-field>
-											<v-layout>
-											<v-flex xs6 class="mr-1"><v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field></v-flex>
-											<v-flex xs6 class="ml-1"><v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field></v-flex>
-											</v-layout>
-											<v-layout>
-											<v-flex xs6 class="mr-1"><v-text-field label="Protocol" :value="key.protocol" @change.native="key.protocol = $event.target.value" required></v-text-field></v-flex>
-											<v-flex xs6 class="mr-1"><v-text-field label="Port" :value="key.port" @change.native="key.port = $event.target.value" required></v-text-field></v-flex>
-											</v-layout>
-											<v-layout>
-											<v-flex xs6 class="mr-1"><v-text-field label="Database Username" :value="key.database_username" @change.native="key.database_username = $event.target.value" required></v-text-field></v-flex>
-											<v-flex xs6 class="mr-1"><v-text-field label="Database Password" :value="key.database_password" @change.native="key.database_password = $event.target.value" required></v-text-field></v-flex>
-											</v-layout>
-											<v-layout>
-												<v-flex xs6 class="mr-1"><v-switch label="Automatic Updates" v-model="key.updates_enabled" false-value="0" true-value="1"></v-switch></v-flex>
-												<v-flex xs6 class="mr-1" v-if="typeof key.offload_enabled != 'undefined'">
-												<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
-												</v-flex>
-											</v-layout>
-												<div v-if="key.offload_enabled == 1">
-											<v-layout>
-												<v-flex xs6 class="mr-1"><v-select label="Offload Provider" :value="key.offload_provider" @change.native="key.offload_provider = $event.target.value" :items='[{ provider:"s3", label: "Amazon S3" },{ provider:"do", label:"Digital Ocean" }]' item-text="label" item-value="provider" clearable></v-select></v-flex>
-												<v-flex xs6 class="mr-1"><v-text-field label="Offload Access Key" :value="key.offload_access_key" @change.native="key.offload_access_key = $event.target.value" required></v-text-field></v-flex>
-											</v-layout>
-											<v-layout>
-												<v-flex xs6 class="mr-1"><v-text-field label="Offload Secret Key" :value="key.offload_secret_key" @change.native="key.offload_secret_key = $event.target.value" required></v-text-field></v-flex>
-												<v-flex xs6 class="mr-1"><v-text-field label="Offload Bucket" :value="key.offload_bucket" @change.native="key.offload_bucket = $event.target.value" required></v-text-field></v-flex>
-											</v-layout>
-											<v-layout>
-												<v-flex xs6 class="mr-1"><v-text-field label="Offload Path" :value="key.offload_path" @change.native="key.offload_path = $event.target.value" required></v-text-field></v-flex>
-											</v-layout>
-											</div>
+										<v-text-field label="Home Directory" :value="key.home_directory" @change.native="key.home_directory = $event.target.value" required></v-text-field>
+										<v-layout>
+										<v-flex xs6 class="mr-1"><v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field></v-flex>
+										<v-flex xs6 class="ml-1"><v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field></v-flex>
+										</v-layout>
+										<v-layout>
+										<v-flex xs6 class="mr-1"><v-text-field label="Protocol" :value="key.protocol" @change.native="key.protocol = $event.target.value" required></v-text-field></v-flex>
+										<v-flex xs6 class="mr-1"><v-text-field label="Port" :value="key.port" @change.native="key.port = $event.target.value" required></v-text-field></v-flex>
+										</v-layout>
+										<v-layout>
+										<v-flex xs6 class="mr-1"><v-text-field label="Database Username" :value="key.database_username" @change.native="key.database_username = $event.target.value" required></v-text-field></v-flex>
+										<v-flex xs6 class="mr-1"><v-text-field label="Database Password" :value="key.database_password" @change.native="key.database_password = $event.target.value" required></v-text-field></v-flex>
+										</v-layout>
+										<v-layout>
+											<v-flex xs6 class="mr-1"><v-switch label="Automatic Updates" v-model="key.updates_enabled" false-value="0" true-value="1"></v-switch></v-flex>
+											<v-flex xs6 class="mr-1" v-if="typeof key.offload_enabled != 'undefined'">
+											<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
+											</v-flex>
+										</v-layout>
+											<div v-if="key.offload_enabled == 1">
+										<v-layout>
+											<v-flex xs6 class="mr-1"><v-select label="Offload Provider" :value="key.offload_provider" @change.native="key.offload_provider = $event.target.value" :items='[{ provider:"s3", label: "Amazon S3" },{ provider:"do", label:"Digital Ocean" }]' item-text="label" item-value="provider" clearable></v-select></v-flex>
+											<v-flex xs6 class="mr-1"><v-text-field label="Offload Access Key" :value="key.offload_access_key" @change.native="key.offload_access_key = $event.target.value" required></v-text-field></v-flex>
+										</v-layout>
+										<v-layout>
+											<v-flex xs6 class="mr-1"><v-text-field label="Offload Secret Key" :value="key.offload_secret_key" @change.native="key.offload_secret_key = $event.target.value" required></v-text-field></v-flex>
+											<v-flex xs6 class="mr-1"><v-text-field label="Offload Bucket" :value="key.offload_bucket" @change.native="key.offload_bucket = $event.target.value" required></v-text-field></v-flex>
+										</v-layout>
+										<v-layout>
+											<v-flex xs6 class="mr-1"><v-text-field label="Offload Path" :value="key.offload_path" @change.native="key.offload_path = $event.target.value" required></v-text-field></v-flex>
+										</v-layout>
 										</div>
-								 </v-container>
+									</div>
+								</v-container>
 							 </v-card>
 							</v-flex>
 							<v-flex xs12>
@@ -1674,7 +1262,7 @@ Vue.component('file-upload', VueUploadComponent);
 							:items="dialog_mailgun.response"
 							:items-per-page="50"
 							:footer-props="{ itemsPerPageOptions: [50,150,300,{'text':'All','value':-1}] }"
-							>
+						>
 						<template v-slot:body="{ items }">
 						<tbody>
 						<tr v-for="item in items" :key="item.event.id">
@@ -2092,8 +1680,8 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-card-text>
 					</v-card>
 				</v-dialog>
-			<v-container fluid v-show="loading_page != true">
-			<v-card tile v-show="route == 'sites'">
+			<v-container fluid v-show="loading_page != true" style="padding:0px;">
+			<v-card tile v-show="route == 'sites'" flat>
 				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Sites <small>({{ showingSitesBegin }}-{{ showingSitesEnd }} of {{ filteredSites }})</small></v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -2260,7 +1848,7 @@ Vue.component('file-upload', VueUploadComponent);
 			<v-layout wrap>
 			<v-flex sx12 sm4 px-2>
 			<v-layout>
-			<v-flex>
+			<v-flex style="width:180px;">
 				<v-select
 					v-model="dialog_bulk.environment_selected"
 					:items='[{"name":"Production Environment","value":"Production"},{"name":"Staging Environment","value":"Staging"}]'
@@ -2268,7 +1856,7 @@ Vue.component('file-upload', VueUploadComponent);
 					item-value="value"
 					@change="triggerEnvironmentUpdate( site.id )"
 					light
-					style="height:54px;width:220px;">
+					style="height:54px;">
 				</v-select>
 				</v-flex>
 				<v-flex>
@@ -2556,7 +2144,7 @@ Vue.component('file-upload', VueUploadComponent);
 								<v-layout wrap>
 									<v-flex sx12 sm4 px-2>
 									<v-layout>
-									<v-flex>
+									<v-flex style="width:180px;">
 										<v-select
 											v-model="site.environment_selected"
 											:items='[{"name":"Production Environment","value":"Production"},{"name":"Staging Environment","value":"Staging"}]'
@@ -2564,15 +2152,15 @@ Vue.component('file-upload', VueUploadComponent);
 											item-value="value"
 											@change="triggerEnvironmentUpdate( site.id )"
 											light
-											style="height:54px;width:220px;">
+											style="height:54px;">
 										</v-select>
 										</v-flex>
 										<v-flex>
 										<v-tooltip bottom>
 											<template v-slot:activator="{ on }">
 											<v-btn small icon @click="syncSite( site.id )" style="margin: 5px auto 0 0;" v-on="on">
-											<v-icon small color="grey">fas fa-sync</v-icon>
-										</v-btn>
+												<v-icon small color="grey">fas fa-sync</v-icon>
+											</v-btn>
 											</template>
 											<span>Manual sync website details</span>
 										</v-tooltip>
@@ -2984,15 +2572,15 @@ Vue.component('file-upload', VueUploadComponent);
 						
 					</v-toolbar-items>
 				</v-toolbar>
-						<v-card 
-						v-for="key in site.environments"
-						v-show="key.environment == site.environment_selected"
-						flat>
+				<v-card 
+				v-for="key in site.environments"
+				v-show="key.environment == site.environment_selected"
+				flat>
 					<v-subheader>Quicksaves</v-subheader>
-							<div v-if="typeof key.quicksaves == 'string'">
-								<v-progress-linear :indeterminate="true" absolute></v-progress-linear>
-							</div>
-							<div v-else>
+					<div v-if="typeof key.quicksaves == 'string'">
+						<v-progress-linear :indeterminate="true" absolute></v-progress-linear>
+					</div>
+					<div v-else>
 					<v-data-table
 						:headers="[{text:'Created At',value:'created_at'},{text:'WordPress',value:'core',width:'115px'},{text:'',value:'themes',width:'100px'},{text:'',value:'plugins',width:'100px'}]"
 						:items="key.quicksaves"
@@ -3020,111 +2608,111 @@ Vue.component('file-upload', VueUploadComponent);
 						<td colspan="5" style="position: relative;background: #fff; padding:0px">
 						<v-toolbar color="dark primary" dark dense light class="elevation-0">
 							<v-toolbar-title class="body-2">{{ item.git_status }}</v-toolbar-title>
-									<v-spacer></v-spacer>
-									<v-toolbar-items>
+							<v-spacer></v-spacer>
+							<v-toolbar-items>
 								<v-btn text small @click="QuicksavesRollback( site.id, item)">Rollback Everything</v-btn>
-										<v-divider vertical class="mx-1" inset></v-divider>
+								<v-divider vertical class="mx-1" inset></v-divider>
 								<v-btn text small @click="viewQuicksavesChanges( site.id, item)">View Changes</v-btn>
-									</v-toolbar-items>
-								</v-toolbar>
+							</v-toolbar-items>
+						</v-toolbar>
 						<v-card flat v-show="item.view_changes == true" style="table-layout:fixed;margin:0px;overflow: scroll;padding: 0px;position: absolute;background-color: #fff;width: 100%;left: 0;top: 100%;height: 100%;z-index: 3;transform: translateY(-100%);">
-									<v-toolbar color="dark primary" dark dense light>
+							<v-toolbar color="dark primary" dark dense light>
 								<v-btn icon dark @click.native="item.view_changes = false">
-											<v-icon>close</v-icon>
-										</v-btn>
-										<v-toolbar-title>List of changes</v-toolbar-title>
-										<v-spacer></v-spacer>
-									</v-toolbar>
-										<v-card-text>
-											<v-card-title>
-												Files
-											</v-card-title>
-										  <v-spacer></v-spacer>
-										  <v-layout>
-											  <v-flex sx12 sm9>
-											  </v-flex sx12 sm3>
-											  <v-flex>
-												<v-text-field
+									<v-icon>close</v-icon>
+								</v-btn>
+								<v-toolbar-title>List of changes</v-toolbar-title>
+								<v-spacer></v-spacer>
+							</v-toolbar>
+								<v-card-text>
+									<v-card-title>
+										Files
+									</v-card-title>
+									<v-spacer></v-spacer>
+									<v-layout>
+										<v-flex sx12 sm9>
+										</v-flex sx12 sm3>
+										<v-flex>
+										<v-text-field
 											v-model="item.search"
 											@input="filterFiles( site.id, item.quicksave_id)"
-													append-icon="search"
-													label="Search"
-													single-line
-													hide-details
-												></v-text-field>
-											  </v-flex>
-											</v-layout>
+											append-icon="search"
+											label="Search"
+											single-line
+											hide-details
+										></v-text-field>
+										</v-flex>
+									</v-layout>
 									<v-data-table no-data-text="" :headers='[{"text":"File","value":"file"}]' :items="item.filtered_files" :loading="item.loading">
-												<template v-slot:body="{ items }">
-												<tbody>
+										<template v-slot:body="{ items }">
+										<tbody>
 											<tr v-for="i in items">
-														<td>
+												<td>
 													<a class="v-menu__activator" @click="QuicksaveFileDiff(item.site_id, item.quicksave_id, item.git_commit, i)">{{ i }}</a>
-														</td>
-													</tr>
-												</tbody>
-											 </template>
-											 <v-alert slot="no-results" :value="true" color="error" icon="warning">
+												</td>
+											</tr>
+										</tbody>
+										</template>
+										<v-alert slot="no-results" :value="true" color="error" icon="warning">
 											Your search for "{{ item.search }}" found no results.
-												</v-alert>
-											</v-data-table>
-										</v-card-text>
-									</v-card>
+										</v-alert>
+									</v-data-table>
+								</v-card-text>
+							</v-card>
 						<v-card flat>
-											<v-data-table
-												:headers='[{"text":"Theme","value":"title"},{"text":"Version","value":"version"},{"text":"Status","value":"status"},{"text":"","value":"actions","width":"150px"}]'
+							<v-data-table
+								:headers='[{"text":"Theme","value":"title"},{"text":"Version","value":"version"},{"text":"Status","value":"status"},{"text":"","value":"actions","width":"150px"}]'
 								:items="item.themes"
-												item-key="name"
-												class="quicksave-table"
-											>
-											<template v-slot:body="{ items }">
-											<tbody>
+								item-key="name"
+								class="quicksave-table"
+							>
+							<template v-slot:body="{ items }">
+							<tbody>
 							<tr v-for="theme in items" v-bind:class="{ 'green lighten-5': theme.changed_version || theme.changed_status }">
 								<td>{{ theme.title || theme.name }}</td>
 								<td v-bind:class="{ 'green lighten-4': theme.changed_version }">{{ theme.version }}</td>
 								<td v-bind:class="{ 'green lighten-4': theme.changed_status }">{{ theme.status }}</td>
 								<td><v-btn depressed small @click="RollbackQuicksave(item.site_id, item.quicksave_id, 'theme', theme.name)">Rollback</v-btn></td>
-											</tr>
-											</template>
-											 <template v-slot:body.append="{ headers }">
-											 <tr class="red lighten-4 strikethrough" v-for="theme in quicksave.deleted_themes">
-												<td>{{ theme.title || theme.name }}</td>
-												<td>{{ theme.version }}</td>
-												<td>{{ theme.status }}</td>
-												<td></td>
-											 </tr>
-											 </tbody>
-											 </template>
-											</v-data-table>
-											<v-data-table
-												:headers='[{"text":"Plugin","value":"plugin"},{"text":"Version","value":"version"},{"text":"Status","value":"status"},{"text":"","value":"actions","width":"150px"}]'
+							</tr>
+							</template>
+								<template v-slot:body.append="{ headers }">
+								<tr class="red lighten-4 strikethrough" v-for="theme in quicksave.deleted_themes">
+								<td>{{ theme.title || theme.name }}</td>
+								<td>{{ theme.version }}</td>
+								<td>{{ theme.status }}</td>
+								<td></td>
+								</tr>
+								</tbody>
+								</template>
+							</v-data-table>
+							<v-data-table
+								:headers='[{"text":"Plugin","value":"plugin"},{"text":"Version","value":"version"},{"text":"Status","value":"status"},{"text":"","value":"actions","width":"150px"}]'
 								:items="item.plugins"
-												item-key="name"
-												class="quicksave-table"
-												:items-per-page="25"
-												:footer-props="{ itemsPerPageOptions: [25,50,100,{'text':'All','value':-1}] }"
-											 >
-											 <template v-slot:body="{ items }">
-											 <tbody>
+								item-key="name"
+								class="quicksave-table"
+								:items-per-page="25"
+								:footer-props="{ itemsPerPageOptions: [25,50,100,{'text':'All','value':-1}] }"
+								>
+								<template v-slot:body="{ items }">
+								<tbody>
 								<tr v-for="plugin in items" v-bind:class="[{ 'green lighten-5': plugin.changed_version || plugin.changed_status },{ 'red lighten-4 strikethrough': plugin.deleted }]">
 								<td>{{ plugin.title || plugin.name }}</td>
 								<td v-bind:class="{ 'green lighten-4': plugin.changed_version }">{{ plugin.version }}</td>
 								<td v-bind:class="{ 'green lighten-4': plugin.changed_status }">{{ plugin.status }}</td>
 								<td><v-btn depressed small @click="RollbackQuicksave(item.site_id, item.quicksave_id, 'plugin', plugin.name)" v-show="plugin.status != 'must-use' && plugin.status != 'dropin'">Rollback</v-btn></td>
-											 </tr>
-											 </template>
-											 <template v-slot:body.append="{ headers }">
-											 <tr class="red lighten-4 strikethrough" v-for="plugin in quicksave.deleted_plugins">
-												<td>{{ plugin.title || plugin.name }}</td>
-												<td>{{ plugin.version }}</td>
-												<td>{{ plugin.status }}</td>
-												<td></td>
-											 </tr>
-											 </tbody>
-											 </template>
-											</v-data-table>
+								</tr>
+								</template>
+								<template v-slot:body.append="{ headers }">
+								<tr class="red lighten-4 strikethrough" v-for="plugin in quicksave.deleted_plugins">
+								<td>{{ plugin.title || plugin.name }}</td>
+								<td>{{ plugin.version }}</td>
+								<td>{{ plugin.status }}</td>
+								<td></td>
+								</tr>
+								</tbody>
+								</template>
+							</v-data-table>
 
-							    </v-card>
+						</v-card>
 						</td>
 					</template>
 					</v-data-table>
@@ -3159,7 +2747,7 @@ Vue.component('file-upload', VueUploadComponent);
 							</template>
 							<span>Generate new link. Link valid for 24hrs.</span>
 						</v-tooltip>
-						<a :href="`/wp-json/captaincore/v1/site/${site.id}/snapshots/${item.snapshot_id}-${item.token}/${item.snapshot_name.slice(0, -4)}`"><v-btn small rounded>Download</v-btn></a>
+						<v-btn small rounded :href="`/wp-json/captaincore/v1/site/${site.id}/snapshots/${item.snapshot_id}-${item.token}/${item.snapshot_name.slice(0, -4)}`">Download</v-btn>
 					</template>
 					<template v-else>
 						<v-tooltip bottom>
@@ -3174,7 +2762,7 @@ Vue.component('file-upload', VueUploadComponent);
 					</template>
 					</template>
 					</v-data-table>
-							</div>
+					</div>
 					</v-card>
 			</v-tab-item>
 		</v-tabs-items>
@@ -3355,28 +2943,10 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-expansion-panels>
 				<v-layout justify-center>
 				<div class="text-center">
-					<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" :length="Math.ceil(filteredSites / items_per_page)" v-model="page" :total-visible="7" color="blue darken-3"></v-pagination>
+					<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" :length="Math.ceil(filteredSites / items_per_page)" v-model="page" :total-visible="7" color="blue darken-3" class="mt-5"></v-pagination>
 				</div>
 				</v-layout>
 			</v-card-text>
-			</v-card>
-			<v-card class="mb-4 dns_introduction" v-show="route == 'dns'">
-			<v-alert
-				:value="true"
-				type="info"
-				style="padding:8px 16px;"
-				class="blue darken-3"
-				>
-				<v-layout wrap align-center justify-center row fill-height>
-				<v-flex xs12 md9 px-2 subtitle-1>
-					<div v-html="dns_introduction"></div>
-				</v-flex>
-				<v-flex xs12 md3 px-2 text-center v-show="dns_nameservers != ''">
-					<v-chip color="primary" text-color="white">Nameservers</v-chip>
-					<div v-html="dns_nameservers"></div>
-				</v-flex>
-				</v-layout>
-				</v-alert>
 			</v-card>
 			<v-card tile v-show="route == 'dns'">
 				<v-toolbar color="grey lighten-4" dense light flat>
@@ -3387,6 +2957,24 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
+				<v-card class="mb-4 dns_introduction" v-show="route == 'dns'">
+					<v-alert
+						:value="true"
+						type="info"
+						style="padding:8px 16px;"
+						class="blue darken-3"
+					>
+					<v-layout wrap align-center justify-center row fill-height>
+					<v-flex xs12 md9 px-2 subtitle-1>
+						<div v-html="dns_introduction"></div>
+					</v-flex>
+					<v-flex xs12 md3 px-2 text-center v-show="dns_nameservers != ''">
+						<v-chip color="primary" text-color="white">Nameservers</v-chip>
+						<div v-html="dns_nameservers"></div>
+					</v-flex>
+					</v-layout>
+					</v-alert>
+				</v-card>
 				<v-layout justify-center>
 				<v-container fluid grid-list-lg>
 				<v-layout row wrap>
@@ -3407,7 +2995,7 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-layout>
 				</v-card-text>
 			</v-card>
-			<v-card tile v-show="route == 'cookbook'" v-if="role == 'administrator'">
+			<v-card tile v-show="route == 'cookbook'" v-if="role == 'administrator'" flat>
 				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Contains {{ recipes.length }} recipes</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -3481,7 +3069,13 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-btn dark text @click.native="snackbar.show = false">Close</v-btn>
 			</v-snackbar>
 		</template>
+		</v-container>
 		</v-content>
+		<v-footer style="z-index: 9;position: relative;font-size:12px;">
+			<v-col class="text-right" cols="12">
+				<a href="https://github.com/captaincore/captaincore/">CaptainCore v{{ captaincore_version }}</a>
+			</v-col>
+		</v-footer>
 	</v-app>
 </div>
 <script>
@@ -3523,6 +3117,9 @@ new Vue({
 	el: '#app',
 	vuetify: new Vuetify(),
 	data: {
+		captaincore_version: "0.5",
+		business_logo: "<?php echo get_field( 'business_logo', 'option' ); ?>",
+		billing_link: "<?php echo get_field( 'billing_link', 'option' ); ?>",
 		loading_page: true,
 		expanded: [],
 		modules: { dns: <?php if ( defined( "CONSTELLIX_API_KEY" ) and defined( "CONSTELLIX_SECRET_KEY" ) ) { echo "true"; } else { echo "false"; } ?> },
@@ -3572,7 +3169,7 @@ new Vue({
 			// The Query
 			$all_processes = get_posts( $args );
 			$repeat_field  = get_field_object( 'field_57f791d6363f4' );
-				   $processes     = array();
+			$processes     = array();
 
 			foreach ( $all_processes as $process ) {
 
@@ -3730,6 +3327,7 @@ new Vue({
 			{ text: 'Actions', value: 'actions', sortable: false }
 		],
 		applied_site_filter: [],
+		applied_site_filter_logic: [],
 		applied_site_filter_version: [],
 		applied_site_filter_status: [],
 		select_site_options: [
@@ -3941,6 +3539,14 @@ new Vue({
 				}
 				this.route = "sites";
 			}
+		},
+		signOut() {
+        	axios.post( '/wp-json/captaincore/v1/login/', {
+                command: "signOut" 
+            })
+            .then( response => {
+                window.location = "/";
+			})
 		},
 		triggerEnvironmentUpdate( site_id ){
 			site = this.sites.filter(site => site.id == site_id)[0];
@@ -4834,7 +4440,7 @@ new Vue({
 				description = this.dialog_backup_snapshot.filter_options.join(", ").replace(/,([^,]*)$/,' and$1');
 				data.notes = "User requested snapshot containing " + description;
 			}
-
+			
 			self = this;
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
@@ -5719,6 +5325,28 @@ new Vue({
 		},
 		addDefaultsUser() {
 			this.dialog_configure_defaults.record.default_users.push({ email: "", first_name: "", last_name: "", role: "administrator", username: "" })
+		},
+		addDomain() {
+			this.dialog_new_domain.loading = true;
+
+			var data = {
+				action: 'captaincore_ajax',
+				command: 'addDomain',
+				value: this.dialog_new_domain.domain
+			};
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.dialog_new_domain.loading = false;
+					this.dialog_new_domain = { show: false, domain: { name: "", customer: "" } };
+					this.snackbar.message = response.data;
+					this.snackbar.show = true;
+				})
+				.catch( error => {
+					this.snackbar.message = error;
+					this.snackbar.show = true;
+					this.dialog_new_domain.loading = false;
+				});
 		},
 		addRecord() {
 			timestamp = new Date().getTime();
@@ -7497,38 +7125,5 @@ new Vue({
 });
 
 </script>
-
-<?php } else { ?>
-
-	<div id="primary" class="content-area">
-	<main id="main" class="site-main" role="main">
-
-		<section class="error-404 not-found">
-			<?php
-			$featured_image = '';
-			$c              = '';
-
-				$blog_page_id = get_option( 'page_for_posts' );
-				$blog_page    = get_post( $blog_page_id );
-			if ( has_post_thumbnail( $blog_page_id ) ) {
-				$featured_image = wp_get_attachment_image_src( get_post_thumbnail_id( $blog_page_id ), 'swell_full_width' );
-				$c              = 'has-background';
-			}
-				?>
-				<header class="main entry-header <?php echo $c; ?>" style="<?php echo $featured_image ? 'background-image: url(' . esc_url( $featured_image[0] ) . ');' : ''; ?>">
-					<h1 class="entry-title"><h1 class="page-title"><?php _e( 'Oops! That page can&rsquo;t be found.', 'swell' ); ?></h1>
-					<span class="overlay"></span>
-				</header><!-- .entry-header -->
-
-		<div class="body-wrap">
-		<div class="entry-content">
-			<p><?php _e( 'The page you are looking for could not be found. Try a different address, or search using the form below.', 'swell' ); ?></p>
-			<?php get_search_form(); ?>
-		</div>
-		</div>
-		</section><!-- .error-404 -->
-
-	</main><!-- #main -->
-</div><!-- #primary -->
-
-<?php } ?>
+</body>
+</html>

@@ -83,7 +83,6 @@ function run_captaincore() {
 run_captaincore();
 
 require 'includes/register-custom-fields.php';
-require 'includes/woocommerce-my-account-endpoints.php';
 require 'includes/constellix-api/constellix-api.php';
 require 'includes/woocommerce-custom-password-fields.php';
 require 'includes/mailgun-api.php';
@@ -2118,6 +2117,15 @@ function captaincore_register_rest_endpoints() {
 		)
 	);
 
+	// Custom endpoint for CaptainCore login
+	register_rest_route(
+		'captaincore/v1', '/login', array(
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_login_func',
+			'show_in_index' => false
+		)
+	);
+
 	// Custom endpoint for CaptainCore site
 	register_rest_route(
 		'captaincore/v1', '/site/(?P<id>[\d]+)/quicksaves', array(
@@ -2401,6 +2409,16 @@ function captaincore_register_rest_endpoints() {
 	);
 
 };
+
+function captaincore_login_func( WP_REST_Request $request ) {
+
+	$post = json_decode( file_get_contents( 'php://input' ) );
+
+	if ( $post->command == "signOut" ) {
+		wp_logout();
+	}
+
+}
 
 add_action( 'manage_posts_custom_column', 'customer_custom_columns' );
 add_filter( 'manage_edit-captcore_website_columns', 'website_edit_columns' );
@@ -6321,18 +6339,6 @@ function captaincore_human_filesize( $size, $precision = 2 ) {
 	return round( $size, $precision ) . $units[ $i ];
 }
 
-// Handle redirections of /my-account/manage/ and /my-account/handbook/ endpoints
-function captaincore_template_redirect() {
-	global $wp_query;
-
-	if ( isset( $wp_query->query['handbook'] ) ) {
-			wp_redirect( home_url( '/company-handbook/' ) );
-			die;
-	}
-
-}
-add_action( 'template_redirect', 'captaincore_template_redirect' );
-
 // Adds ACF Option page
 if( function_exists('acf_add_options_page') ) {
 	acf_add_options_page();
@@ -6358,4 +6364,33 @@ function captaincore_fetch_socket_address() {
 	}
 
 	return $socket_address;
+}
+
+// Load CaptainCore on page /account/
+add_filter( 'template_include', 'load_captaincore_template' );
+function load_captaincore_template( $original_template ) {
+  if ( is_page( 'account' ) ) {
+    return plugin_dir_path( __FILE__ ) . 'includes/template-captaincore.php';
+  } else {
+    return $original_template;
+  }
+}
+
+function captaincore_head_content() {
+    ob_start();
+    do_action('wp_head');
+    return ob_get_clean();
+}
+
+function captaincore_header_content_extracted() {
+	$output = "<script type='text/javascript'>\n/* <![CDATA[ */\n";
+	$head = captaincore_head_content();
+	preg_match_all('/(var wpApiSettings.+)/', $head, $results );
+	foreach( $results as $matches ) {
+		foreach( $matches as $match ) {
+			$output = $output . $match . "\n";
+		}
+	}
+	$output = $output . "</script>";
+	echo $output;
 }
