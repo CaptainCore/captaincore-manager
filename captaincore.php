@@ -6392,5 +6392,9 @@ function captaincore_header_content_extracted() {
 		}
 	}
 	$output = $output . "</script>";
+	preg_match_all('/(<link rel="(icon|apple-touch-icon).+)/', $head, $results );
+	if ( isset($results ) && $results[0] ) {
+		$output = $output . implode("\n", $results[0]);
+	}
 	echo $output;
 }
