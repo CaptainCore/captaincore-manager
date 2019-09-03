@@ -3816,13 +3816,14 @@ new Vue({
 						}
 
 						self = this;
-
-						jQuery.post(ajaxurl, data, function(response) {
-							// Updates job id with reponsed background job id
-							self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-							self.runCommand( response );
-						});
-
+						axios.post( ajaxurl, Qs.stringify( data ) )
+							.then( response => {
+								self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+								self.runCommand( response.data );
+							})
+							.catch(error => {
+								console.log( error.response )
+							});
 					}
 
 				}
@@ -3896,10 +3897,10 @@ new Vue({
 			self = this;
 			site_name = this.dialog_new_site.domain;
 
-			jQuery.post(ajaxurl, data, function(response) {
-
-				if (tryParseJSON(response)) {
-					var response = JSON.parse(response);
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					// Read JSON response
+					var response = response.data;
 
 					// If error then response
 					if ( response.errors.length > 0 ) {
@@ -3935,16 +3936,13 @@ new Vue({
 							'command': "update",
 							'post_id': response.site_id
 						};
-
-						jQuery.post(ajaxurl, data, function(response) {
-							// Updates job id with background job id
-							self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-							self.runCommand( response );
-						});
-
+						axios.post( ajaxurl, Qs.stringify( data ) )
+							.then( r => {
+								self.jobs.filter(job => job.job_id == job_id)[0].job_id = r.data;
+								self.runCommand( r.data );
+							});
 					}
-				}
-			});
+				});
 		},
 		submitEditSite() {
 
@@ -3958,10 +3956,10 @@ new Vue({
 
 			self = this;
 
-			jQuery.post(ajaxurl, data, function(response) {
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
 
-				if (tryParseJSON(response)) {
-					var response = JSON.parse(response);
+					var response = response.data
 
 					// If error then response
 					if ( response.response.includes("Error:") ) {
@@ -3987,16 +3985,14 @@ new Vue({
 							'command': "update",
 							'post_id': response.site_id
 						};
-						jQuery.post(ajaxurl, data, function(response) {
-							// Updates job id with background job id
-							self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-							self.runCommand( response );
-							self.dialog_edit_site = { show: false, loading: false, site: {} };
-						});
-
+						axios.post( ajaxurl, Qs.stringify( data ) )
+							.then( r => {
+								self.jobs.filter(job => job.job_id == job_id)[0].job_id = r.data;
+								self.runCommand( r.data );
+								self.dialog_edit_site = { show: false, loading: false, site: {} };
+							});
 					}
-				}
-			});
+				});
 		},
 		syncSite( site_id, environment ) {
 
@@ -4076,34 +4072,28 @@ new Vue({
 
 			self = this;
 
-			jQuery.post(ajaxurl, data, function(response) {
-
-				// Bail if JSON not found
-				if ( !tryParseJSON( response ) ) {
-					return;
-				}
-
-				var sites = JSON.parse( response );
-				sites.forEach( site => {
-					lookup = self.sites.filter(s => s.id == site.id).length;
-					if (lookup == 1 ) {
-						// Update existing site info
-						site_update = self.sites.filter(s => s.id == site.id)[0];
-						// Look through keys and update
-						Object.keys(site).forEach(function(key) {
-							// Skip updating environment_selected and tabs_management
-							if ( key == "environment_selected" || key == "tabs" || key == "tabs_management" ) {
-								return;
-							}
-						  site_update[key] = site[key];
-						});
-					}
-					if (lookup != 1 ) { 
-						// Add new site info
-						self.sites.push(site);
-					}
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					response.data.forEach( site => {
+						lookup = self.sites.filter(s => s.id == site.id).length;
+						if (lookup == 1 ) {
+							// Update existing site info
+							site_update = self.sites.filter(s => s.id == site.id)[0];
+							// Look through keys and update
+							Object.keys(site).forEach(function(key) {
+								// Skip updating environment_selected and tabs_management
+								if ( key == "environment_selected" || key == "tabs" || key == "tabs_management" ) {
+									return;
+								}
+							site_update[key] = site[key];
+							});
+						}
+						if (lookup != 1 ) { 
+							// Add new site info
+							self.sites.push(site);
+						}
+					});
 				});
-			});
 		},
 		fetchMissing() {
 			if ( this.allDomains == 0 && this.modules.dns ) {
@@ -4291,21 +4281,19 @@ new Vue({
 
 				self = this;
 
-				jQuery.post(ajaxurl, data, function(response) {
+				axios.post( ajaxurl, Qs.stringify( data ) )
+					.then( response => {
 
-					if (tryParseJSON(response)) {
-						response = JSON.parse(response)
+						response = response.data
 
 						// Loop through environments and assign users
 						Object.keys(response).forEach( key => {
 							site.environments.filter( e => e.environment == key )[0].users = response[key];
 							if ( response[key] == null ) {
 								site.environments.filter( e => e.environment == key )[0].users = [];
-					}
+							}
 						});
-					}
-
-				});
+					});
 			}
 		},
 		fetchUpdateLogs( site_id ) {
@@ -4322,21 +4310,17 @@ new Vue({
 					'command': "fetch-update-logs",
 				};
 
-				jQuery.post(ajaxurl, data, function(response) {
-
-					if (tryParseJSON(response)) {
-						response = JSON.parse(response)
-
+				axios.post( ajaxurl, Qs.stringify( data ) )
+					.then( response => {
+						response = response.data
 						// Loop through environments and assign users
 						Object.keys(response).forEach( key => {
 							site.environments.filter( e => e.environment == key )[0].update_logs = response[key];
 							if ( response[key] == null ) {
 								site.environments.filter( e => e.environment == key )[0].update_logs = [];
-					}
+							}
 						});
-					}
-
-				});
+					});
 			}
 		},
 		paginationUpdate( page ) {
@@ -4422,11 +4406,11 @@ new Vue({
 
 			self = this;
 
-			jQuery.post(ajaxurl, data, function(response) {
-				// Updates job id with reponsed background job id
-				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-				self.runCommand( response );
-			});
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data );
+				});
 
 		},
 		fetchLink( site_id, snapshot_id ) {
@@ -4621,17 +4605,17 @@ new Vue({
 			self = this;
 
 			// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
-			jQuery.post(ajaxurl, data, function(response) {
-				// Updates job id with reponsed background job id
-				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-				self.runCommand( response );
-				self.dialog_apply_https_urls.site_id = "";
-				self.dialog_apply_https_urls.site_name = "";
-				self.dialog_apply_https_urls.show = false;
-				self.snackbar.message = "Applying HTTPS Urls";
-				self.snackbar.show = true;
-			});
-
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data );
+					self.dialog_apply_https_urls.site_id = "";
+					self.dialog_apply_https_urls.site_name = "";
+					self.dialog_apply_https_urls.show = false;
+					self.snackbar.message = "Applying HTTPS Urls";
+					self.snackbar.show = true;
+				});
 		},
 		fetchTimelineLogs() {
 			this.view_timeline = !this.view_timeline;
@@ -5722,18 +5706,17 @@ new Vue({
 
 			self = this;
 
-			jQuery.post(ajaxurl, data, function(response) {
-				
-				// Reset dialog
-				self.dialog_modify_plan = { show: false, site: {}, hosting_plan: {}, hosting_addons: [], selected_plan: "", customer_name: "" };
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					// Reset dialog
+					self.dialog_modify_plan = { show: false, site: {}, hosting_plan: {}, hosting_addons: [], selected_plan: "", customer_name: "" };
 
-				// Updates job id with reponsed background job id
-				self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
 
-				// Fetch new usage breakdown
-				self.viewUsageBreakdown( site_id )
-				self.fetchSiteInfo( site_id )
-
+					// Fetch new usage breakdown
+					self.viewUsageBreakdown( site_id )
+					self.fetchSiteInfo( site_id )
 			});
 
 		},
@@ -6101,11 +6084,11 @@ new Vue({
 
 			self = this;
 
-			jQuery.post(ajaxurl, data, function(response) {
-				site.loading_themes = false;
-				// Updates job id with reponsed background job id
-				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-				self.runCommand( response );
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					site.loading_themes = false;
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data );
 			});
 		},
 		deleteTheme (theme_name, site_id) {
@@ -6139,14 +6122,15 @@ new Vue({
 
 			self = this;
 
-			jQuery.post(ajaxurl, data, function(response) {
-				environment = site.environments.filter( e => e.environment == site.environment_selected )[0]
-				updated_themes = environment.themes.filter(theme => theme.name != theme_name);
-				environment.themes = updated_themes;
-				site.loading_themes = false;
-				// Updates job id with reponsed background job id
-				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-				self.runCommand( response );
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					environment = site.environments.filter( e => e.environment == site.environment_selected )[0]
+					updated_themes = environment.themes.filter(theme => theme.name != theme_name);
+					environment.themes = updated_themes;
+					site.loading_themes = false;
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data );
 			});
 
 		},
@@ -6538,16 +6522,16 @@ new Vue({
 
 			self = this;
 
-			jQuery.post(ajaxurl, data, function(response) {
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					environment = site.environments.filter( e => e.environment == site.environment_selected )[0]
+					updated_plugins = environment.plugins.filter(plugin => plugin.name != plugin_name);
+					environment.plugins = updated_plugins;
+					self.sites.filter(site => site.id == site_id)[0].loading_plugins = false;
 
-				environment = site.environments.filter( e => e.environment == site.environment_selected )[0]
-				updated_plugins = environment.plugins.filter(plugin => plugin.name != plugin_name);
-				environment.plugins = updated_plugins;
-				self.sites.filter(site => site.id == site_id)[0].loading_plugins = false;
-
-				// Updates job id with reponsed background job id
-				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-				self.runCommand( response );
+					// Updates job id with reponsed background job id
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data );
 			});
 		},
 		update( site_id ) {
@@ -6574,11 +6558,11 @@ new Vue({
 
 			self = this;
 
-			jQuery.post(ajaxurl, data, function(response) {
-				// Updates job id with reponsed background job id
-				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-				self.runCommand( response );
-			});
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data );
+				});
 
 		},
 		themeAndPluginChecks( site_id ) {
@@ -6696,16 +6680,14 @@ new Vue({
 
 			self = this;
 
-			jQuery.post(ajaxurl, data, function(response) {
-				// close dialog
-				self.dialog_fathom.site = {};
-				self.dialog_fathom.show = false;
-
-				// Updates job id with reponsed background job id
-				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-				self.runCommand( response );
-
-			});
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					// close dialog
+					self.dialog_fathom.site = {};
+					self.dialog_fathom.show = false;
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data );
+				});
 		},
 		updateSettings( site_id ) {
 			this.dialog_update_settings.show = true;
@@ -6752,13 +6734,11 @@ new Vue({
 			self.dialog_update_settings.show = false;
 			self.dialog_update_settings.loading = false;
 
-			jQuery.post(ajaxurl, data, function(response) {
-
-				// Updates job id with reponsed background job id
-				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-				self.runCommand( response );
-
-			});
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data );
+				});
 
 		},
 		deleteUserDialog( username, site_id ){
@@ -6809,19 +6789,17 @@ new Vue({
 
 			self = this;
 
-			jQuery.post(ajaxurl, data, function(response) {
-				environment.users = environment.users.filter(user => user.username != username);
-
-				// Updates job id with reponsed background job id
-				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-				self.runCommand( response );
-				self.dialog_delete_user.show = false
-				self.dialog_delete_user.site = {}
-				self.dialog_delete_user.reassign = {}
-				self.dialog_delete_user.username = ""
-				self.dialog_delete_user.users = []
-
-			});
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					environment.users = environment.users.filter(user => user.username != username);
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data );
+					self.dialog_delete_user.show = false
+					self.dialog_delete_user.site = {}
+					self.dialog_delete_user.reassign = {}
+					self.dialog_delete_user.username = ""
+					self.dialog_delete_user.users = []
+				});
 
 		},
 		bulkactionLaunch() {
@@ -6855,15 +6833,14 @@ new Vue({
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: [], "command": "manage"});
 
-			// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
-			jQuery.post(ajaxurl, data, function(response) {
-				// Updates job id with reponsed background job id
-				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response;
-				self.runCommand( response );
-				self.snackbar.message = description;
-				self.snackbar.show = true;
-				self.dialog = false;
-		  });
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data );
+					self.snackbar.message = description;
+					self.snackbar.show = true;
+					self.dialog = false;
+		  	});
 		},
 		selectSites() {
 			if (this.site_selected == "all") {
