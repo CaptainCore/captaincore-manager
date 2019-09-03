@@ -6420,6 +6420,13 @@ function captaincore_fetch_socket_address() {
 // Load CaptainCore on page /account/
 add_filter( 'template_include', 'load_captaincore_template' );
 function load_captaincore_template( $original_template ) {
+  if ( is_account_page() ) {
+	global $wp;
+	$request = explode( '/', $wp->request );
+	if ( end($request) == 'my-account' ) {
+		wp_redirect("/account");
+	}
+  }
   if ( is_page( 'account' ) ) {
     return plugin_dir_path( __FILE__ ) . 'includes/template-captaincore.php';
   } else {
