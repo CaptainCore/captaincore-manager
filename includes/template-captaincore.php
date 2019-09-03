@@ -4121,7 +4121,32 @@ new Vue({
 					headers: {'X-WP-Nonce':wpApiSettings.nonce}
 				})
 				.then(response => {
+
+					// Populate existing sites
+					if ( this.sites.length > 0 ) {
+						preserve_keys = ['environment_selected','filtered','selected','tabs','tabs_management']
+						response.data.forEach( r => {
+							site_check = this.sites.filter( s => s.id == r.id);
+							// Update site
+							if ( site_check.length == 1 ) {
+								site = site_check[0];
+								Object.keys( site_check[0] ).forEach( k => { 
+									if ( ! preserve_keys.includes( k ) ) { 
+										site[k] = r[k];
+									}
+								})
+							}
+							// Add site
+							if ( site_check.length == 0 ) {
+								this.sites.push( r )
+							}
+						})
+					}
+					
+					// Populate sites
+					if ( this.sites.length == 0 ) {
 					this.sites = response.data;
+					}
 
 					all_themes = [];
 					all_plugins = [];
