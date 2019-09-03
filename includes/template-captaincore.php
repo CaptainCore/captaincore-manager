@@ -3127,7 +3127,7 @@ new Vue({
 	el: '#app',
 	vuetify: new Vuetify(),
 	data: {
-		captaincore_version: "0.5",
+		captaincore_version: "0.6",
 		captaincore_logo: "<?php echo get_field( 'business_logo', 'option' ); ?>",
 		captaincore_name: "<?php echo get_field( 'business_name', 'option' ); ?>",
 		billing_link: "<?php echo get_field( 'billing_link', 'option' ); ?>",

@@ -16,7 +16,7 @@
  * Plugin Name:       CaptainCore
  * Plugin URI:        https://captaincore.io
  * Description:       Open Source Toolkit for Managing WordPress Sites
- * Version:           0.5.0
+ * Version:           0.6.0
  * Author:            Austin Ginder
  * Author URI:        https://twitter.com/austinginder
  * License:           GPL-2.0+
@@ -787,7 +787,12 @@ function slug_get_post_meta_cb( $object, $field_name, $request ) {
 	return get_post_meta( $object['id'], $field_name );
 }
 function slug_get_paid_by( $object, $field_name, $request ) {
-		$post_id = get_post_meta( $object['id'], $field_name )[0][0];
+	$post_title = "";
+	$post_id = get_post_meta( $object['id'], $field_name );
+	if ( !isset( $post_id ) || !isset( $post_id[0] ) || !isset( $post_id[0][0] ) ) {
+		return $post_title;
+	}
+	$post_id = $post_id[0][0];
 	if ( $post_id ) {
 		$post_title = get_the_title( $post_id );
 	}
@@ -1125,7 +1130,7 @@ function acf_load_color_field_choices( $field ) {
 
 }
 
-add_filter( 'acf/load_field/key=field_590681f3c0775', 'acf_load_color_field_choices' );
+// add_filter( 'acf/load_field/key=field_590681f3c0775', 'acf_load_color_field_choices' );
 
 // run after ACF saves
 add_action( 'acf/save_post', 'captaincore_acf_save_post_after', 20 );
@@ -2734,7 +2739,11 @@ function checkApiAuth( $result ) {
 		// custom auth on website endpoint, excluding global posts
 		if ( $endpoint == 'captcore_website' ) {
 
+			$website_id = null;
+
+			if ( isset($endpoint_all[1]) ) {
 			$website_id = $endpoint_all[1];
+			}
 
 			$token  = $_GET['token'];
 			$domain = $_GET['search'];
@@ -2927,6 +2936,22 @@ function captaincore_get_domains_per_partner( $partner_id ) {
 			endforeach;
 
 		endforeach;
+
+		// Sort array by domain name
+		ksort( $all_domains );
+
+	}
+
+	// None found, check directly
+	if ( count( $all_domains ) == 0 ) {
+
+		$domains = get_field( 'domains', $partner_id );
+		if ( $domains ) {
+			foreach ( $domains as $domain ) :
+				$domain_name                 = get_the_title( $domain );
+				$all_domains[ $domain_name ] = $domain;
+			endforeach;
+		}
 
 		// Sort array by domain name
 		ksort( $all_domains );
@@ -3624,7 +3649,7 @@ function captaincore_ajax_action_callback() {
 	// Only proceed if access to command 
 	$user = wp_get_current_user();
 	$role_check_admin = in_array( 'administrator', $user->roles );
-	$admin_commands = array( 'fetchConfigs', 'newRecipe', 'updateRecipe', 'updateLogEntry', 'newLogEntry', 'newProcess', 'updateProcess', 'fetchProcess', 'fetchProcessLogs', 'updateFathom', 'updatePlan', 'newSite', 'editSite', 'deleteSite' );
+	$admin_commands = array( 'addDomain', 'fetchConfigs', 'newRecipe', 'updateRecipe', 'updateLogEntry', 'newLogEntry', 'newProcess', 'updateProcess', 'fetchProcess', 'fetchProcessLogs', 'updateFathom', 'updatePlan', 'newSite', 'editSite', 'deleteSite' );
 	if ( ! $role_check_admin && in_array( $_POST['command'], $admin_commands ) ) {
 		echo "Permission denied";
 		wp_die();
@@ -3667,6 +3692,41 @@ function captaincore_ajax_action_callback() {
 		}
 
 		echo json_encode( $response );
+
+	}
+
+	if ( $cmd == 'addDomain' ) {
+
+		$record = (object) $value;
+		// Check for duplicate domain.
+		$domain_exists = get_posts(
+			array(
+				'title'          => $record->name,
+				'post_type'      => 'captcore_domain',
+				'posts_per_page' => '-1',
+				'post_status'    => 'publish',
+				'fields'         => 'ids',
+			)
+		);
+
+		 // If results still exists then give an error
+		if ( count( $domain_exists ) > 0 ) {
+			echo json_encode( array( "error" => 'Domain has already been added.' ) );
+			wp_die();
+		}
+
+		// Create post object
+		$new_domain = array(
+			'post_status' => 'publish',
+			'post_type'   => 'captcore_domain',
+			'post_title'  => $record->name,
+			'post_author' => get_current_user_id(),
+		);
+
+		// Insert the post into the database
+		$domain_id = wp_insert_post( $new_domain );
+
+		echo json_encode( $record );
 
 	}
 
@@ -5056,43 +5116,43 @@ function captaincore_site_fetch_details( $post_id ) {
 
 function captaincore_create_tables() {
 
-    global $wpdb;
+	global $wpdb;
 	$required_version = 15;
-		$version = (int) get_site_option('captcorecore_db_version');
-    $charset_collate = $wpdb->get_charset_collate();
+	$version = (int) get_site_option('captcorecore_db_version');
+	$charset_collate = $wpdb->get_charset_collate();
 
 	if ( $version < $required_version ) {
 
-			$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_update_logs` (
-				log_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-				site_id bigint(20) UNSIGNED NOT NULL,
-				environment_id bigint(20) UNSIGNED NOT NULL,
-				created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
-				update_type varchar(255),
-				update_log longtext,
-			PRIMARY KEY  (log_id)
-			) $charset_collate;";
+		$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_update_logs` (
+			log_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+			site_id bigint(20) UNSIGNED NOT NULL,
+			environment_id bigint(20) UNSIGNED NOT NULL,
+			created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			update_type varchar(255),
+			update_log longtext,
+		PRIMARY KEY  (log_id)
+		) $charset_collate;";
 
-			require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-			dbDelta($sql);
-			$success = empty($wpdb->last_error);
+		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+		dbDelta($sql);
+		$success = empty($wpdb->last_error);
 
-			$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_quicksaves` (
-				quicksave_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-				site_id bigint(20) UNSIGNED NOT NULL,
-				environment_id bigint(20) UNSIGNED NOT NULL,
-				created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
-				git_status varchar(255),
-				git_commit varchar(100),
-				core varchar(10),
-				themes longtext,
-				plugins longtext,
-			PRIMARY KEY  (quicksave_id)
-			) $charset_collate;";
+		$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_quicksaves` (
+			quicksave_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+			site_id bigint(20) UNSIGNED NOT NULL,
+			environment_id bigint(20) UNSIGNED NOT NULL,
+			created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			git_status varchar(255),
+			git_commit varchar(100),
+			core varchar(10),
+			themes longtext,
+			plugins longtext,
+		PRIMARY KEY  (quicksave_id)
+		) $charset_collate;";
 
-			require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-			dbDelta($sql);
-			$success = empty($wpdb->last_error);
+		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+		dbDelta($sql);
+		$success = empty($wpdb->last_error);
 
 		$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_snapshots` (
 			snapshot_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -5113,63 +5173,63 @@ function captaincore_create_tables() {
 		dbDelta($sql);
 		$success = empty($wpdb->last_error);
 
-			$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_environments` (
-				environment_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-				site_id bigint(20) UNSIGNED NOT NULL,
-				created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
-				updated_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
-				environment varchar(255),
-				address varchar(255),
-				username varchar(255),
-				password varchar(255),
-				protocol varchar(255),
-				port varchar(255),
-				fathom varchar(255),
-				home_directory varchar(255),
-				database_username varchar(255),
-				database_password varchar(255),
-				offload_enabled boolean,
-				offload_provider varchar(255),
-				offload_access_key varchar(255),
-				offload_secret_key varchar(255),
-				offload_bucket varchar(255),
-				offload_path varchar(255),
-				storage varchar(20),
-				visits varchar(20),
-				core varchar(10),
-				subsite_count varchar(10),
-				home_url varchar(255),
-				themes longtext,
-				plugins longtext,
-				users longtext,
-				screenshot boolean,
-				updates_enabled boolean,
-				updates_exclude_themes longtext,
-				updates_exclude_plugins longtext,
-			PRIMARY KEY  (environment_id)
-			) $charset_collate;";
+		$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_environments` (
+			environment_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+			site_id bigint(20) UNSIGNED NOT NULL,
+			created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			updated_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			environment varchar(255),
+			address varchar(255),
+			username varchar(255),
+			password varchar(255),
+			protocol varchar(255),
+			port varchar(255),
+			fathom varchar(255),
+			home_directory varchar(255),
+			database_username varchar(255),
+			database_password varchar(255),
+			offload_enabled boolean,
+			offload_provider varchar(255),
+			offload_access_key varchar(255),
+			offload_secret_key varchar(255),
+			offload_bucket varchar(255),
+			offload_path varchar(255),
+			storage varchar(20),
+			visits varchar(20),
+			core varchar(10),
+			subsite_count varchar(10),
+			home_url varchar(255),
+			themes longtext,
+			plugins longtext,
+			users longtext,
+			screenshot boolean,
+			updates_enabled boolean,
+			updates_exclude_themes longtext,
+			updates_exclude_plugins longtext,
+		PRIMARY KEY  (environment_id)
+		) $charset_collate;";
 
-			require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-			dbDelta($sql);
-			$success = empty($wpdb->last_error);
+		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+		dbDelta($sql);
+		$success = empty($wpdb->last_error);
 
-			$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_recipes` (
-				recipe_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-				user_id bigint(20) UNSIGNED NOT NULL,
-				title varchar(255),
-				created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
-				updated_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
-				content longtext,
-				public boolean,
-			PRIMARY KEY  (recipe_id)
-			) $charset_collate;";
+		$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_recipes` (
+			recipe_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+			user_id bigint(20) UNSIGNED NOT NULL,
+			title varchar(255),
+			created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			updated_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			content longtext,
+			public boolean,
+		PRIMARY KEY  (recipe_id)
+		) $charset_collate;";
 
-			require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-			dbDelta($sql);
-			$success = empty($wpdb->last_error);
+		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+		dbDelta($sql);
+		$success = empty($wpdb->last_error);
 
 		update_site_option('captcorecore_db_version', $required_version );
-		}
+	}
 
 }
 

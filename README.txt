@@ -9,7 +9,7 @@ Stable tag: 4.3
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Toolkit for running your own WordPress hosting business
+Open source toolkit for managing WordPress Sites via SSH & WP-CLI
 
 == Description ==
 
@@ -43,6 +43,23 @@ TODO
 TODO
 
 == Changelog ==
+= 0.6.0: September 3 2019
+* New: Renamed plugin from CaptainCore GUI to CaptainCore
+* New: Decoupled CaptainCore from WooCommerce. Now runs within standalone PHP template for better compatibility.
+* New: Snapshot management section. Links to generated snapshots now automatically expire after 24 hours. Links can be regenerated whenever.
+* New: Delete default user
+* New: Default recipes
+* Tweak: Upgraded Vue.JS to 2.6.10
+* Tweak: Upgraded Vuetify to v2.0.4
+* Tweak: Combined Theme and Plugin tabs into new Addons tab.
+* Tweak: Improvements to multisite column
+* Tweak: Improvements to quicksave management
+* Tweak: Improvements to stats tab
+* Tweak: Improvements to site search performance
+* Tweak: Improvements to DNS editor
+* Tweak: Fix site stats rounding bug with bounce rate
+* Tweak: Removed default plugins. New replacement is to configure default recipes instead.
+
 = 0.5.0: July 24 2019 =
 * New: Routing based on hash. Will now toggle between `/sites`, `/sites#dns`, `/sites#cookbook` and `/sites#handbook` without page reloading.
 * New: Custom recipes which can be public or private to the author. Public recipes can run. Private recipes can be loaded and changed before running.
@@ -91,7 +108,7 @@ TODO
 * Tweak: Compatibility fix for [ARVE](https://wordpress.org/plugins/advanced-responsive-video-embedder/) video embeds.
 * Tweak: Compatibility fix when adding/updating process log entries. Force relationship fields to save in serialized format.
 
-= 0.4.2: Apr 22 2019 =
+= 0.4.2: April 22 2019 =
 * New: Sites UI - Timeline tab. Administrators can add new log entrys per site.
 * New: Sites UI - Handbook section for administrators.
 * New: Sites UI - Screenshot thumbnails of websites are automatically added/updated when synced.
