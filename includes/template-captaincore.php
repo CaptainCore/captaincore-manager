@@ -1725,7 +1725,7 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn text small @click="dialog_new_site.show = true" v-on="on"><v-icon dark small>add</v-icon></v-btn>
+								<v-btn text @click="dialog_new_site.show = true" v-on="on">Add Site <v-icon dark>add</v-icon></v-btn>
 							</template><span>Add Site</span>
 						</v-tooltip>
 						</template>
@@ -3002,11 +3002,11 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-card-text>
 			</v-card>
 			<v-card tile v-show="route == 'cookbook'" v-if="role == 'administrator'" flat>
-				<v-toolbar color="grey lighten-4" dense light flat>
+				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Contains {{ recipes.length }} recipes</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn text @click="new_recipe.show = true">Add new recipe</v-btn>
+						<v-btn text @click="new_recipe.show = true">Add recipe <v-icon dark>add</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
@@ -3028,16 +3028,16 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-window-item>
 				</v-card-text>
 			</v-card>
-			<v-card tile v-show="route == 'handbook'" v-if="role == 'administrator'">
-				<v-toolbar color="grey lighten-4" dense light flat>
+			<v-card tile v-show="route == 'handbook'" v-if="role == 'administrator'" flat>
+				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Contains {{ processes.length }} processes</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
 						<v-btn text @click="fetchProcessLogs()">Log history</v-btn>
 						<v-divider vertical class="mx-1" inset></v-divider>
-						<v-btn text @click="showLogEntryGeneric()">New log entry</v-btn>
+						<v-btn text @click="showLogEntryGeneric()">Add log entry <v-icon dark>add</v-icon></v-btn>
 						<v-divider vertical class="mx-1" inset></v-divider>
-						<v-btn text @click="new_process.show = true">New process</v-btn>
+						<v-btn text @click="new_process.show = true">Add process <v-icon dark>add</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text style="max-height: 100%;">
