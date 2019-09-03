@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <title><?php echo get_field( 'business_name', 'option' ); ?> - Account</title>
   <link href="https://use.fontawesome.com/releases/v5.7.1/css/all.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
@@ -9,6 +10,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
   <meta charset="utf-8">
 <?php
+// Load favicons and wpApiSettings from normal WordPress header
 captaincore_header_content_extracted();
 
 $user       = wp_get_current_user();
@@ -825,9 +827,9 @@ Vue.component('file-upload', VueUploadComponent);
 			<v-toolbar-title>Configure Defaults</v-toolbar-title>
 				<v-spacer></v-spacer>
 			</v-toolbar>
-				<template v-if="dialog_configure_defaults.loading">
-					<v-progress-linear :indeterminate="true"></v-progress-linear>
-				</template>
+			<template v-if="dialog_configure_defaults.loading">
+				<v-progress-linear :indeterminate="true"></v-progress-linear>
+			</template>
 			<v-card-text>
 				<template v-if="! dialog_configure_defaults.loading">
 				<v-select class="mt-5" :items="dialog_configure_defaults.records.map( a => a.account )" label="Account" item-value="id" v-model="dialog_configure_defaults.account" @input="switchConfigureDefaultAccount()">
@@ -1790,7 +1792,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<td class="justify-center">{{ item.author }}</td>
 					<td class="justify-center">{{ item.title }}</td>
 					<td class="justify-center py-3" v-html="item.description"></td>
-					<td>
+					<td width="170px;">
 						{{ item.websites.map( site => site.name ).join(" ") }}
 					</td>
 				</tr>
@@ -3076,7 +3078,7 @@ Vue.component('file-upload', VueUploadComponent);
 		</v-content>
 		<v-footer style="z-index: 9;position: relative;font-size:12px;">
 			<v-col class="text-right" cols="12">
-				<a href="https://github.com/captaincore/captaincore/">CaptainCore v{{ captaincore_version }}</a>
+				<a href="https://github.com/CaptainCore/captaincore">CaptainCore v{{ captaincore_version }}</a>
 			</v-col>
 		</v-footer>
 	</v-app>
@@ -3114,6 +3116,11 @@ function groupmonth(value, index, array) {
 	name = monthNames[d.getMonth()] + " " + d.getFullYear();
 	bymonth[key]=bymonth[key]||{Name: "",Visitors: value['Visitors'], Pageviews: value['Pageviews']};
     bymonth[key]={Name: name, Visitors: bymonth[key].Visitors + value['Visitors'], Pageviews: bymonth[key].Pageviews + value['Pageviews']}
+}
+
+// Redirect to login page if not logged in.
+if ( typeof wpApiSettings == "undefined" ) {
+	window.location = "/my-account/"
 }
 
 new Vue({
@@ -4145,7 +4152,7 @@ new Vue({
 					
 					// Populate sites
 					if ( this.sites.length == 0 ) {
-					this.sites = response.data;
+						this.sites = response.data;
 					}
 
 					all_themes = [];
@@ -4154,9 +4161,9 @@ new Vue({
 					this.sites.forEach(site => {
 						site.environments.forEach(environment => {
 							environment.themes.forEach(theme => {
-						exists = all_themes.some(function (el) {
-							return el.name === theme.name;
-						});
+							exists = all_themes.some(function (el) {
+								return el.name === theme.name;
+							});
 						if (!exists) {
 							all_themes.push({
 								name: theme.name,
@@ -4180,7 +4187,7 @@ new Vue({
 							});
 						}
 					});
-					 });
+					});
 					});
 
 					all_themes.sort((a, b) => a.name.toString().localeCompare(b.name));

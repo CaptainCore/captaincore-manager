@@ -5958,16 +5958,7 @@ function woocommerce_email_customer_invoice_add_recipients( $recipient, $order )
 	}
 	return $recipient;
 }
-
-// Insert text below the Featured Products title
-function add_toggle_to_woocommerce_after_account_navigation() {
-	// Echo out content
-	echo '<div class="toggle_woocommerce_my_account open"><span class="open"><a href="#"><i class="fas fa-long-arrow-alt-left"></i></a></span><span class="close"><a href="#"><i class="fas fa-long-arrow-alt-right"></i></a></span></div>';
-}
-add_action( 'woocommerce_before_account_navigation' , 'add_toggle_to_woocommerce_after_account_navigation' );
-
 function my_acf_input_admin_footer() {
-
 ?>
 <script type="text/javascript">
 	acf.add_action('ready', function( $el ){
