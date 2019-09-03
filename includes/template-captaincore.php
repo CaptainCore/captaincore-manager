@@ -2112,7 +2112,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-expansion-panel-header>
 					<v-layout align-center justify-space-between row>
 						<div>
-							<v-layout align-center justify-start fill-height font-weight-thin subtitle-1>
+							<v-layout align-center justify-start fill-height font-weight-light subtitle-1>
 							<v-switch v-model="site.selected" @click.native.stop @change="site_selected = null" style="position: absolute; left: 10px; top: 17px;" v-show="dialog_bulk.show == true"></v-switch>
 								<img :src="site.environments[0].screenshot_small" style="width: 50px; margin-right:1em" class="elevation-1" v-show="site.environments[0].screenshot_small">
 							{{ site.name }}
@@ -2954,7 +2954,7 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-layout>
 			</v-card-text>
 			</v-card>
-			<v-card tile v-show="route == 'dns'">
+			<v-card tile v-show="route == 'dns'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Domains <small v-show="allDomains > 0">({{ allDomains }})</small></v-toolbar-title>
 					<v-spacer></v-spacer>
