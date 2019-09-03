@@ -58,7 +58,8 @@ Vue.component('file-upload', VueUploadComponent);
 <body>
 <div id="app" v-cloak>
 	<v-app>
-	  <v-app-bar color="blue darken-3" dark app fixed style="left:0px;">
+	  <v-app-bar color="blue darken-3" dark app fixed style="left:0px;height:64px;">
+	 	 <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none"></v-app-bar-nav-icon>
          <v-toolbar-title>
 		 <v-row>
 		 <v-col>
@@ -73,7 +74,7 @@ Vue.component('file-upload', VueUploadComponent);
 		 </v-row>
 		</v-toolbar-title>
       </v-app-bar>
-	  <v-navigation-drawer app permanent clipped>
+	  <v-navigation-drawer v-model="drawer" app mobile-break-point="960" clipped>
       <v-list>
         <v-list-item link href="#sites">
           <v-list-item-icon>
@@ -1687,7 +1688,7 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-dialog>
 			<v-container fluid v-show="loading_page != true" style="padding:0px;">
 			<v-card tile v-show="route == 'sites'" flat>
-				<v-toolbar color="grey lighten-4" dense light flat>
+				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Sites <small>({{ showingSitesBegin }}-{{ showingSitesEnd }} of {{ filteredSites }})</small></v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -2954,7 +2955,7 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-card-text>
 			</v-card>
 			<v-card tile v-show="route == 'dns'">
-				<v-toolbar color="grey lighten-4" dense light flat>
+				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Domains <small v-show="allDomains > 0">({{ allDomains }})</small></v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -3130,6 +3131,7 @@ new Vue({
 		captaincore_version: "0.6",
 		captaincore_logo: "<?php echo get_field( 'business_logo', 'option' ); ?>",
 		captaincore_name: "<?php echo get_field( 'business_name', 'option' ); ?>",
+		drawer: null,
 		billing_link: "<?php echo get_field( 'billing_link', 'option' ); ?>",
 		loading_page: true,
 		expanded: [],
