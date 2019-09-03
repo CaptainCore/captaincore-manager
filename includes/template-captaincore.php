@@ -108,7 +108,7 @@ Vue.component('file-upload', VueUploadComponent);
             <v-list-item-title>Handbook</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-        <v-list-item link :href="billing_link" target="_new" v-show="billing_link">
+        <v-list-item link :href="billing_link" target="_blank" v-show="billing_link">
           <v-list-item-icon>
             <v-icon>mdi-currency-usd</v-icon>
           </v-list-item-icon>
@@ -3079,7 +3079,7 @@ Vue.component('file-upload', VueUploadComponent);
 		</v-content>
 		<v-footer style="z-index: 9;position: relative;font-size:12px;">
 			<v-col class="text-right" cols="12">
-				<a href="https://github.com/CaptainCore/captaincore">CaptainCore v{{ captaincore_version }}</a>
+				<a href="https://github.com/CaptainCore/captaincore" target="_blank">CaptainCore v{{ captaincore_version }}</a>
 			</v-col>
 		</v-footer>
 	</v-app>
