@@ -6420,7 +6420,7 @@ function captaincore_fetch_socket_address() {
 // Load CaptainCore on page /account/
 add_filter( 'template_include', 'load_captaincore_template' );
 function load_captaincore_template( $original_template ) {
-  if ( is_account_page() ) {
+  if ( is_user_logged_in() && is_account_page() ) {
 	global $wp;
 	$request = explode( '/', $wp->request );
 	if ( end($request) == 'my-account' ) {
