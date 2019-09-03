@@ -59,12 +59,15 @@ Vue.component('file-upload', VueUploadComponent);
 	  <v-app-bar color="blue darken-3" dark app fixed style="left:0px;">
          <v-toolbar-title>
 		 <v-row>
-		 <v-col v-if="business_logo" class="pr-0">
-		 	<v-img :src="business_logo" contain max-width="32" max-height="32"></v-img>
-		 </v-col>
 		 <v-col>
-		 	{{ business_name }}
+			<v-list flat color="blue darken-3">
+		 	<v-list-item href="#sites" style="padding:0px;" flat class="not-active">
+			 	<v-img :src="captaincore_logo" contain max-width="32" max-height="32" v-if="captaincore_logo" class="mr-4"></v-img>
+				 {{ captaincore_name }}
+			</v-list-item>
+			</v-list>
 		 </v-col>
+		</a>
 		 </v-row>
 		</v-toolbar-title>
       </v-app-bar>
@@ -3118,7 +3121,8 @@ new Vue({
 	vuetify: new Vuetify(),
 	data: {
 		captaincore_version: "0.5",
-		business_logo: "<?php echo get_field( 'business_logo', 'option' ); ?>",
+		captaincore_logo: "<?php echo get_field( 'business_logo', 'option' ); ?>",
+		captaincore_name: "<?php echo get_field( 'business_name', 'option' ); ?>",
 		billing_link: "<?php echo get_field( 'billing_link', 'option' ); ?>",
 		loading_page: true,
 		expanded: [],
