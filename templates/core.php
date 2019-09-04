@@ -2213,7 +2213,7 @@ Vue.component('file-upload', VueUploadComponent);
 							<v-layout body-1 px-6 class="row">
 								<v-flex xs12 md6 class="py-2">
 								<div class="block mt-6">
-									<v-img :src="key.screenshot_large" max-width="400" class="elevation-5 px-3" v-show="key.screenshot_large" style="margin:auto;"></v-img>
+									<v-img :src="key.screenshot_large" max-width="400" aspect-ratio="1.6" class="elevation-5" v-show="key.screenshot_large" style="margin:auto;"></v-img>
 								</div>
 								</v-flex>
 								<v-flex xs12 md6 class="keys py-2">
