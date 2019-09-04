@@ -6428,7 +6428,7 @@ function load_captaincore_template( $original_template ) {
 	}
   }
   if ( is_page( 'account' ) ) {
-    return plugin_dir_path( __FILE__ ) . 'includes/template-captaincore.php';
+    return plugin_dir_path( __FILE__ ) . 'templates/core.php';
   } else {
     return $original_template;
   }
