@@ -1389,11 +1389,13 @@ g.chart-legend {
 }
 
 .table-dns td {
-	padding: 0 1em 0 0em;
+	  padding: 0.25em 1em 0.25em 0em;
     margin-bottom: 0px;
     line-height: 1.50em;
     font-size: 16px;
     border-top: 1px solid #8a8a8a;
+    vertical-align: top;
+    width: 100%;
 }
 .table-dns td.name, .table-dns td.value {
 	overflow-wrap: break-word;
@@ -1417,7 +1419,7 @@ g.chart-legend {
 	margin-bottom: 0px;
 }
 .table-dns td:last-child {
-	padding: 0px;
+	padding: 0.25em 0em 0.25em 0em;
 }
 
 .table-layout-fixed table {

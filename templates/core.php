@@ -489,7 +489,7 @@ Vue.component('file-upload', VueUploadComponent);
 								<v-text-field label="Value" :value="record.update.record_value" @change.native="record.update.record_value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
 							</td>
 							<td><v-text-field label="TTL" :value="record.update.record_ttl" @change.native="record.update.record_ttl = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
-							<td class="text-right">
+							<td class="text-right" style="padding-top: 20px;">
 								<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecord( index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn>
 							</td>
 						</template>
