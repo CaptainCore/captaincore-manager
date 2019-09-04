@@ -1385,7 +1385,8 @@ g.chart-legend {
 
 .table-dns {
 	border-collapse: collapse;
-	table-layout:fixed;
+  table-layout:fixed;
+  width: 100%;
 }
 
 .table-dns td {
@@ -1395,7 +1396,6 @@ g.chart-legend {
     font-size: 16px;
     border-top: 1px solid #8a8a8a;
     vertical-align: top;
-    width: 100%;
 }
 .table-dns td.name, .table-dns td.value {
 	overflow-wrap: break-word;

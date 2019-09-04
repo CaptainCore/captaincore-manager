@@ -24,7 +24,7 @@ if ( $role_check ) {
 ?>
 <link href="https://cdn.jsdelivr.net/npm/vuetify@2.0.4/dist/vuetify.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@3.x/css/materialdesignicons.min.css" rel="stylesheet">
-<link href="/wp-content/plugins/captaincore/public/css/captaincore-public.2019-02-06.css" rel="stylesheet">
+<link href="/wp-content/plugins/captaincore/public/css/captaincore-public-2019-09-04.css" rel="stylesheet">
 <?php if ( substr( $_SERVER['SERVER_NAME'], -4) == 'test' ) { ?>
 <script src="/wp-content/plugins/captaincore/public/js/vue.js"></script>
 <script src="/wp-content/plugins/captaincore/public/js/qs.js"></script>
