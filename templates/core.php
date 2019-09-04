@@ -68,6 +68,7 @@ Vue.component('file-upload', VueUploadComponent);
 			 	<v-img :src="captaincore_logo" contain max-width="32" max-height="32" v-if="captaincore_logo" class="mr-4"></v-img>
 				 {{ captaincore_name }}
 			</v-list-item>
+			<div id="clipboard" style="position:absolute;opacity:0"></div>
 			</v-list>
 		 </v-col>
 		</a>
@@ -2175,8 +2176,8 @@ Vue.component('file-upload', VueUploadComponent);
 									</v-flex>
 									<v-flex xs12 sm8>
 									<v-tabs v-model="site.tabs_management" background-color="grey lighten-4" icons-and-text right show-arrows height="54">
-										<v-tab key="Keys" href="#tab-Keys">
-											Keys <v-icon small>fas fa-key</v-icon>
+										<v-tab key="Info" href="#tab-Info">
+											Info <v-icon small>mdi-library-books</v-icon>
 										</v-tab>
 										<v-tab key="Stats" href="#tab-Stats" @click="fetchStats( site.id )">
 											Stats <v-icon small>far fa-chart-bar</v-icon>
@@ -2201,37 +2202,119 @@ Vue.component('file-upload', VueUploadComponent);
 									</v-layout>
 								</div>
 				<v-tabs-items v-model="site.tabs_management" v-if="site.environments.filter( key => key.environment == site.environment_selected ).length == 1">
-					<v-tab-item :key="1" value="tab-Keys">
+					<v-tab-item :key="1" value="tab-Info">
 						<v-toolbar color="grey lighten-4" dense light flat>
-							<v-toolbar-title>Keys</v-toolbar-title>
+							<v-toolbar-title>Info</v-toolbar-title>
 							<v-spacer></v-spacer>
 						</v-toolbar>
 
 						<v-card v-for="key in site.environments" v-show="key.environment == site.environment_selected" flat>
 							<v-container fluid>
-							<v-layout body-1 px-3 class="row">
+							<v-layout body-1 px-6 class="row">
+								<v-flex xs12 md6 class="py-2">
+								<div class="block mt-6">
+									<v-img :src="key.screenshot_large" max-width="400" class="elevation-5 px-3" v-show="key.screenshot_large" style="margin:auto;"></v-img>
+								</div>
+								</v-flex>
 								<v-flex xs12 md6 class="keys py-2">
-								<div><h3 class="headline mb-0"><a :href="key.link" target="_blank">{{ key.link }}</a></h3></div>
-								<div><span class="caption">Address</span> {{ key.address }}</div>
-								<div><span class="caption">Username</span> {{ key.username }}</div>
-								<div><span class="caption">Password</span> <div class="pass-mask">##########</div><div class="pass-reveal">{{ key.password }}</div></div>
-								<div><span class="caption">Protocol</span> {{ key.protocol }}</div>
-								<div><span class="caption">Port</span> {{ key.port }}</div>
+								<v-list dense style="padding:0px;max-width:350px;margin: auto;">
+									<v-list-item :href="key.link" target="_blank" dense>
+									<v-list-item-content>
+										<v-list-item-title>Link</v-list-item-title>
+										<v-list-item-subtitle v-text="key.link"></v-list-item-subtitle>
+									</v-list-item-content>
+									<v-list-item-icon>
+										<v-icon>mdi-open-in-new</v-icon>
+									</v-list-item-icon>
+									</v-list-item>
+									<v-list-item @click="copyText( key.address )" dense>
+									<v-list-item-content>
+										<v-list-item-title>Address</v-list-item-title>
+										<v-list-item-subtitle v-text="key.address"></v-list-item-subtitle>
+									</v-list-item-content>
+									<v-list-item-icon>
+										<v-icon>mdi-content-copy</v-icon>
+									</v-list-item-icon>
+									</v-list-item>
+									<v-list-item @click="copyText( key.username )" dense>
+									<v-list-item-content>
+										<v-list-item-title>Username</v-list-item-title>
+										<v-list-item-subtitle v-text="key.username"></v-list-item-subtitle>
+									</v-list-item-content>
+									<v-list-item-icon>
+										<v-icon>mdi-content-copy</v-icon>
+									</v-list-item-icon>
+									</v-list-item>
+									<v-list-item @click="copyText( key.password )" dense>
+									<v-list-item-content>
+										<v-list-item-title>Password</v-list-item-title>
+										<v-list-item-subtitle>##########</v-list-item-subtitle>
+									</v-list-item-content>
+									<v-list-item-icon>
+										<v-icon>mdi-content-copy</v-icon>
+									</v-list-item-icon>
+									</v-list-item>
+									<v-list-item @click="copyText( key.protocol )" dense>
+									<v-list-item-content>
+										<v-list-item-title>Protocol</v-list-item-title>
+										<v-list-item-subtitle v-text="key.protocol"></v-list-item-subtitle>
+									</v-list-item-content>
+									<v-list-item-icon>
+										<v-icon>mdi-content-copy</v-icon>
+									</v-list-item-icon>
+									</v-list-item>
+									<v-list-item @click="copyText( key.port )" dense>
+									<v-list-item-content>
+										<v-list-item-title>Port</v-list-item-title>
+										<v-list-item-subtitle v-text="key.port"></v-list-item-subtitle>
+									</v-list-item-content>
+									<v-list-item-icon>
+										<v-icon>mdi-content-copy</v-icon>
+									</v-list-item-icon>
+									</v-list-item>
 								<div v-if="key.database && key.ssh">
 									<div v-if="key.database">
-									<v-divider></v-divider>
-									<div><span class="caption">Database</span> <a :href="key.database" target="_blank">{{ key.database }}</a></div>
-									<div><span class="caption">Database Username</span> {{ key.database_username }}</a></div>
-									<div><span class="caption">Database Password</span> <div class="pass-mask">##########</div><div class="pass-reveal">{{ key.database_password }}</div></div>
+										<v-list-item :href="key.database" target="_blank" dense>
+										<v-list-item-content>
+											<v-list-item-title>Database</v-list-item-title>
+											<v-list-item-subtitle v-text="key.database"></v-list-item-subtitle>
+										</v-list-item-content>
+										<v-list-item-icon>
+											<v-icon>mdi-open-in-new</v-icon>
+										</v-list-item-icon>
+										</v-list-item>
+										<v-list-item @click="copyText( key.database_username )" dense>
+										<v-list-item-content>
+											<v-list-item-title>Database Username</v-list-item-title>
+											<v-list-item-subtitle v-text="key.database_username"></v-list-item-subtitle>
+										</v-list-item-content>
+										<v-list-item-icon>
+											<v-icon>mdi-content-copy</v-icon>
+										</v-list-item-icon>
+										</v-list-item>
+										<v-list-item @click="copyText( key.database_password )" dense>
+										<v-list-item-content>
+											<v-list-item-title>Database Username</v-list-item-title>
+											<v-list-item-subtitle>##########</v-list-item-subtitle>
+										</v-list-item-content>
+										<v-list-item-icon>
+											<v-icon>mdi-content-copy</v-icon>
+										</v-list-item-icon>
+										</v-list-item>
 									</div>
-									<v-divider></v-divider>
-									<div v-if="key.ssh">{{ key.ssh }}</div>
+									<div v-if="key.ssh">
+										<v-list-item @click="copyText( key.ssh )" dense>
+										<v-list-item-content>
+											<v-list-item-title>SSH Connection</v-list-item-title>
+											<v-list-item-subtitle v-text="key.ssh"></v-list-item-subtitle>
+										</v-list-item-content>
+										<v-list-item-icon>
+											<v-icon>mdi-content-copy</v-icon>
+										</v-list-item-icon>
+										</v-list-item>
+									</div>
 								</div>
-							</v-flex>
-							<v-flex xs12 md6 class="py-2">
-							<v-row align="center" justify="center">
-								<v-img :src="key.screenshot_large" max-width="400" class="elevation-3 mx-3" v-show="key.screenshot_large"></v-img>
-							</v-row>
+								</v-list>
 							</v-flex>
 						</v-layout>
 						</v-container>
@@ -3545,6 +3628,16 @@ new Vue({
             .then( response => {
                 window.location = "/";
 			})
+		},
+		copyText( value ) {
+			var clipboard = document.getElementById("clipboard");
+			var x = document.createElement("input");
+			x.setAttribute("type", "text");
+			x.setAttribute("value", value );
+			clipboard.innerHTML = x.outerHTML;
+			clipboard.children[0].focus()
+			clipboard.children[0].select()
+			document.execCommand("copy");
 		},
 		triggerEnvironmentUpdate( site_id ){
 			site = this.sites.filter(site => site.id == site_id)[0];
