@@ -1983,28 +1983,51 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-btn small color="primary" dark @click="runCustomCodeBulk()">Run Custom Code</v-btn>
 					</v-flex>
 					<v-flex xs12 sm4>
+						<v-list dense>
 						<v-subheader>Common</v-subheader>
-							<div><v-btn small text @click="viewApplyHttpsUrlsBulk()">
-								<v-icon>launch</v-icon> <span>Apply HTTPS Urls</span>
-							</v-btn></div>
-							<div><v-btn small text @click="siteDeployBulk()">
-								<v-icon>loop</v-icon> <span>Deploy users/plugins</span>
-							</v-btn></div>
-							<div><v-btn small text @click="toggleSiteBulk()">
-								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span>
-							</v-btn></div>
+						<v-list-item @click="viewApplyHttpsUrlsBulk()" dense>
+						<v-list-item-icon>
+							<v-icon>launch</v-icon>
+						</v-list-item-icon>
+						<v-list-item-content>
+							<v-list-item-title>Apply HTTPS Urls</v-list-item-title>
+						</v-list-item-content>
+						</v-list-item>
+						<v-list-item @click="siteDeployBulk()" dense>
+						<v-list-item-icon>
+							<v-icon>loop</v-icon>
+						</v-list-item-icon>
+						<v-list-item-content>
+							<v-list-item-title>Deploy users/plugins</v-list-item-title>
+						</v-list-item-content>
+						</v-list-item>
+						<v-list-item @click="toggleSiteBulk()" dense>
+						<v-list-item-icon>
+							<v-icon>fas fa-toggle-on</v-icon>
+						</v-list-item-icon>
+						<v-list-item-content>
+							<v-list-item-title>Toggle Site</v-list-item-title>
+						</v-list-item-content>
+						</v-list-item>
 						<v-subheader v-show="recipes.filter( r => r.public == 1 ).length > 0">Other</v-subheader>
-						<div v-for="recipe in recipes.filter( r => r.public == 1 )">
-							<v-btn small text @click="runRecipeBulk( recipe.recipe_id )">
-								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
-							</v-btn>
-						</div>
+						<v-list-item @click="runRecipeBulk( recipe.recipe_id )" dense v-for="recipe in recipes.filter( r => r.public == 1 )">
+						<v-list-item-icon>
+							<v-icon>fas fa-scroll</v-icon>
+						</v-list-item-icon>
+						<v-list-item-content>
+							<v-list-item-title v-text="recipe.title"></v-list-item-title>
+						</v-list-item-content>
+						</v-list-item>
 						<v-subheader v-show="recipes.filter( r => r.public != 1 ).length > 0">User</v-subheader>
-						<div v-for="recipe in recipes.filter( r => r.public != 1 )">
-							<v-btn small text @click="loadRecipe( recipe.recipe_id ); $vuetify.goTo( '#script_bulk' );">
-								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
-							</v-btn>
-						</div>
+						<v-list-item @click="rloadRecipe( recipe.recipe_id ); $vuetify.goTo( '#script_bulk' );" dense v-for="recipe in recipes.filter( r => r.public != 1 )">
+						<v-list-item-icon>
+							<v-icon>fas fa-scroll</v-icon>
+						</v-list-item-icon>
+						<v-list-item-content>
+							<v-list-item-title v-text="recipe.title"></v-list-item-title>
+						</v-list-item-content>
+						</v-list-item>
+						</v-list>
 					</v-flex>
 					</v-layout>
 					</v-card-title>
@@ -2608,37 +2631,75 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-btn small color="primary" dark @click="runCustomCode(site.id)">Run Custom Code</v-btn>
 					</v-flex>
 					<v-flex xs12 sm4>
+						<v-list dense>
 						<v-subheader>Common</v-subheader>
-							<div><v-btn small text @click="viewApplyHttpsUrls(site.id)">
-								<v-icon>launch</v-icon> <span>Apply HTTPS Urls</span>
-							</v-btn></div>
-							<div v-show="site.mailgun"><v-btn small text @click="viewMailgunLogs(site.id)" >
-								<v-icon>email</v-icon> <span>View Mailgun Logs</span>
-							</v-btn></div>
-							<div><v-btn small text @click="siteDeploy(site.id)">
-								<v-icon>loop</v-icon> <span>Deploy users/plugins</span>
-							</v-btn></div>
-							<div><v-btn small text @click="launchSiteDialog(site.id)">
-								<v-icon>fas fa-rocket</v-icon> <span>Launch Site</span>
-							</v-btn></div>
-							<div><v-btn small text @click="showSiteMigration(site.id)">
-								<v-icon>fas fa-truck-moving</v-icon><span>Migrate from backup</span>
-							</v-btn></div>
-							<div><v-btn small text @click="toggleSite(site.id)">
-								<v-icon>fas fa-toggle-on</v-icon><span>Toggle Site</span>
-							</v-btn></div>
+						<v-list-item @click="viewApplyHttpsUrls(site.id)" dense>
+						<v-list-item-icon>
+							<v-icon>launch</v-icon>
+						</v-list-item-icon>
+						<v-list-item-content>
+							<v-list-item-title>Apply HTTPS Urls</v-list-item-title>
+						</v-list-item-content>
+						</v-list-item>
+						<v-list-item @click="viewMailgunLogs(site.id)" dense v-if="site.mailgun">
+						<v-list-item-icon>
+							<v-icon>email</v-icon>
+						</v-list-item-icon>
+						<v-list-item-content>
+							<v-list-item-title>View Mailgun Logs</v-list-item-title>
+						</v-list-item-content>
+						</v-list-item>
+						<v-list-item @click="siteDeploy(site.id)" dense>
+						<v-list-item-icon>
+							<v-icon>loop</v-icon>
+						</v-list-item-icon>
+						<v-list-item-content>
+							<v-list-item-title>Deploy users/plugins</v-list-item-title>
+						</v-list-item-content>
+						</v-list-item>
+						<v-list-item @click="launchSiteDialog(site.id)" dense>
+						<v-list-item-icon>
+							<v-icon>fas fa-rocket</v-icon>
+						</v-list-item-icon>
+						<v-list-item-content>
+							<v-list-item-title>Launch Site</v-list-item-title>
+						</v-list-item-content>
+						</v-list-item>
+						<v-list-item @click="showSiteMigration(site.id)" dense>
+						<v-list-item-icon>
+							<v-icon>fas fa-truck-moving</v-icon>
+						</v-list-item-icon>
+						<v-list-item-content>
+							<v-list-item-title>Migrate from backup</v-list-item-title>
+						</v-list-item-content>
+						</v-list-item>
+						<v-list-item @click="toggleSite(site.id)" dense>
+						<v-list-item-icon>
+							<v-icon>fas fa-toggle-on</v-icon>
+						</v-list-item-icon>
+						<v-list-item-content>
+							<v-list-item-title>Toggle Site</v-list-item-title>
+						</v-list-item-content>
+						</v-list-item>
 						<v-subheader v-show="recipes.filter( r => r.public == 1 ).length > 0">Other</v-subheader>
-						<div v-for="recipe in recipes.filter( r => r.public == 1 )">
-							<v-btn small text @click="runRecipe( recipe.recipe_id, site.id )">
-								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
-							</v-btn>
-						</div>
+						<v-list-item @click="runRecipe( recipe.recipe_id, site.id )" dense v-for="recipe in recipes.filter( r => r.public == 1 )">
+						<v-list-item-icon>
+							<v-icon>fas fa-scroll</v-icon>
+						</v-list-item-icon>
+						<v-list-item-content>
+							<v-list-item-title v-text="recipe.title"></v-list-item-title>
+						</v-list-item-content>
+						</v-list-item>
 						<v-subheader v-show="recipes.filter( r => r.public != 1 ).length > 0">User</v-subheader>
-						<div v-for="recipe in recipes.filter( r => r.public != 1 )">
-							<v-btn small text @click="loadRecipe( recipe.recipe_id ); $vuetify.goTo( '#script_site' );">
-								<v-icon>fas fa-scroll</v-icon> <span>{{ recipe.title }}</span>
-							</v-btn>
-						</div>
+						<v-list-item @click="loadRecipe( recipe.recipe_id ); $vuetify.goTo( '#script_site' );" dense v-for="recipe in recipes.filter( r => r.public != 1 )">
+						<v-list-item-icon>
+							<v-icon>fas fa-scroll</v-icon>
+						</v-list-item-icon>
+						<v-list-item-content>
+							<v-list-item-title v-text="recipe.title"></v-list-item-title>
+						</v-list-item-content>
+						</v-list-item>
+						</v-list>
 					</v-flex>
 					</v-layout>
 					</v-card-title>
