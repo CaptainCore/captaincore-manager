@@ -1732,8 +1732,8 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text class="my-2">
-				<v-layout justify-center id="sites">
-					<v-flex xs12 sm3>
+				<div class="row mx-2" id="sites">
+					<v-flex xs12 md2>
 						<v-select
 						:items='[50,100,250]'
 						v-model="items_per_page"
@@ -1752,15 +1752,15 @@ Vue.component('file-upload', VueUploadComponent);
 						style="width:120px;display: inline-block;"
 					></v-select>
 					</v-flex>
-						<v-flex xs12 sm6>
+						<v-flex xs12 md8>
 						<div class="text-center">
 							<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" :length="Math.ceil(filteredSites / items_per_page)" v-model="page" :total-visible="7" color="blue darken-3"></v-pagination>
 						</div>
 					</v-flex>
-					<v-flex xs12 sm3>
+					<v-flex xs12 md2>
 						<v-text-field @input="updateSearch" ref="search" label="Search sites" clearable light append-icon="search"></v-text-field>
 					</v-flex>
-			</v-layout>
+			</div>
 			<v-card v-show="view_timeline == true" class="mb-3">
 				<v-toolbar flat dense dark color="primary">
 				<v-btn icon dark @click.native="view_timeline = false">
@@ -2099,7 +2099,7 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-card-text>
             </v-card>
 				<div class="text-right" v-show="sites.length > 1">
-				<v-btn-toggle v-model="toggle_site_sort" style="box-shadow: none; border-bottom: 1px solid #e0e0e0;" v-bind:class="sort_direction">
+				<v-btn-toggle v-model="toggle_site_sort" style="box-shadow: none; border-bottom: 1px solid #e0e0e0;" v-bind:class="sort_direction" class="d-none d-md-block">
 					<div class="usage ml-1 multisite"><v-btn text small @click.native.stop="toggle_site_sort = 0; sortSites('multisite')">Multisite<v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
 					<div class="usage ml-1 visits"><v-btn text small @click.native.stop="toggle_site_sort = 1; sortSites('visits')">Visits<v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
 					<div class="usage ml-1 storage"><v-btn text small @click.native.stop="toggle_site_sort = 2; sortSites('storage')">Storage <v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
@@ -2118,7 +2118,7 @@ Vue.component('file-upload', VueUploadComponent);
 							{{ site.name }}
 							</v-layout>
 						</div>
-						<div class="text-right">
+						<div class="text-right d-none d-md-block">
 							<div class="usage multisite"><span v-show="site.subsite_count"><v-icon small light >fas fa-network-wired</i></v-icon> {{ site.subsite_count }} sites</span></div>
 							<div class="usage visits"><span v-show="site.visits"><v-icon small light>fas fa-eye</v-icon> {{ site.visits }} <small>yearly</small></span></div>
 							<div class="usage storage"><span v-show="site.storage"><v-icon small light>fas fa-hdd</v-icon> {{ site.storage }}</span></div>
@@ -2209,9 +2209,9 @@ Vue.component('file-upload', VueUploadComponent);
 
 						<v-card v-for="key in site.environments" v-show="key.environment == site.environment_selected" flat>
 							<v-container fluid>
-							<v-layout align-start justify-space-between body-1 pa-3>
-							<div class="keys">
-							<div><h3 class="headline mb-0"><a :href="key.link" target="_blank">{{ key.link }}</a></h3></div>
+							<v-layout body-1 px-3 class="row">
+								<v-flex xs12 md6 class="keys py-2">
+								<div><h3 class="headline mb-0"><a :href="key.link" target="_blank">{{ key.link }}</a></h3></div>
 								<div><span class="caption">Address</span> {{ key.address }}</div>
 								<div><span class="caption">Username</span> {{ key.username }}</div>
 								<div><span class="caption">Password</span> <div class="pass-mask">##########</div><div class="pass-reveal">{{ key.password }}</div></div>
@@ -2219,18 +2219,20 @@ Vue.component('file-upload', VueUploadComponent);
 								<div><span class="caption">Port</span> {{ key.port }}</div>
 								<div v-if="key.database && key.ssh">
 									<div v-if="key.database">
-									<hr />
+									<v-divider></v-divider>
 									<div><span class="caption">Database</span> <a :href="key.database" target="_blank">{{ key.database }}</a></div>
 									<div><span class="caption">Database Username</span> {{ key.database_username }}</a></div>
 									<div><span class="caption">Database Password</span> <div class="pass-mask">##########</div><div class="pass-reveal">{{ key.database_password }}</div></div>
 									</div>
-									<hr />
+									<v-divider></v-divider>
 									<div v-if="key.ssh">{{ key.ssh }}</div>
 								</div>
-							</div>
-							<div>
-							<img :src="key.screenshot_large" style="width:400px;" class="elevation-3 mx-3" v-show="key.screenshot_large">
-							</div>
+							</v-flex>
+							<v-flex xs12 md6 class="py-2">
+							<v-row align="center" justify="center">
+								<v-img :src="key.screenshot_large" max-width="400" class="elevation-3 mx-3" v-show="key.screenshot_large"></v-img>
+							</v-row>
+							</v-flex>
 						</v-layout>
 						</v-container>
 					</v-card>
@@ -3089,23 +3091,6 @@ Vue.component('file-upload', VueUploadComponent);
 function titleCase(string) {
 	return string.charAt(0).toUpperCase() + string.slice(1);
 }
-
-function tryParseJSON (jsonString){
-try {
-	var o = JSON.parse(jsonString);
-
-	// Handle non-exception-throwing cases:
-	// Neither JSON.parse(false) or JSON.parse(1234) throw errors, hence the type-checking,
-	// but... JSON.parse(null) returns null, and typeof null === "object",
-	// so we must check for that, too. Thankfully, null is falsey, so this suffices:
-	if (o && typeof o === "object") {
-		return o;
-	}
-}
-catch (e) { }
-
-return false;
-};
 
 const monthNames = ["January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
