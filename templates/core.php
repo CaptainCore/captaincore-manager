@@ -65,7 +65,7 @@ Vue.component('file-upload', VueUploadComponent);
 			 	<v-img :src="captaincore_logo" contain max-width="32" max-height="32" v-if="captaincore_logo" class="mr-4"></v-img>
 				 {{ captaincore_name }}
 			</v-list-item>
-			<div id="clipboard" style="position:absolute;opacity:0"></div>
+			<div style="position:absolute;opacity:0"><textarea id="clipboard"></textarea></div>
 			</v-list>
 		 </v-col>
 		</a>
@@ -2240,9 +2240,7 @@ Vue.component('file-upload', VueUploadComponent);
 								<div class="block mt-6">
 									<v-img :src="key.screenshot_large" max-width="400" aspect-ratio="1.6" class="elevation-5" v-show="key.screenshot_large" style="margin:auto;"></v-img>
 								</div>
-								</v-flex>
-								<v-flex xs12 md6 class="keys py-2">
-								<v-list dense style="padding:0px;max-width:350px;margin: auto;">
+								<v-list dense style="padding:0px;max-width:350px;margin: auto;" class="mt-6">
 									<v-list-item :href="key.link" target="_blank" dense>
 									<v-list-item-content>
 										<v-list-item-title>Link</v-list-item-title>
@@ -2252,6 +2250,26 @@ Vue.component('file-upload', VueUploadComponent);
 										<v-icon>mdi-open-in-new</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
+									<v-list-item @click="copySFTP( key )" dense>
+									<v-list-item-content>
+										<v-list-item-title>SFTP Info</v-list-item-title>
+									</v-list-item-content>
+									<v-list-item-icon>
+										<v-icon>mdi-content-copy</v-icon>
+									</v-list-item-icon>
+									</v-list-item>
+									<v-list-item @click="copyDatabase( key )" dense v-if="key.database">
+									<v-list-item-content>
+										<v-list-item-title>Database Info</v-list-item-title>
+									</v-list-item-content>
+									<v-list-item-icon>
+										<v-icon>mdi-content-copy</v-icon>
+									</v-list-item-icon>
+									</v-list-item>
+								</v-list>
+								</v-flex>
+								<v-flex xs12 md6 class="keys py-2">
+								<v-list dense style="padding:0px;max-width:350px;margin: auto;">
 									<v-list-item @click="copyText( key.address )" dense>
 									<v-list-item-content>
 										<v-list-item-title>Address</v-list-item-title>
@@ -2297,7 +2315,6 @@ Vue.component('file-upload', VueUploadComponent);
 										<v-icon>mdi-content-copy</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
-								<div v-if="key.database && key.ssh">
 									<div v-if="key.database">
 										<v-list-item :href="key.database" target="_blank" dense>
 										<v-list-item-content>
@@ -2319,7 +2336,7 @@ Vue.component('file-upload', VueUploadComponent);
 										</v-list-item>
 										<v-list-item @click="copyText( key.database_password )" dense>
 										<v-list-item-content>
-											<v-list-item-title>Database Username</v-list-item-title>
+											<v-list-item-title>Database Password</v-list-item-title>
 											<v-list-item-subtitle>##########</v-list-item-subtitle>
 										</v-list-item-content>
 										<v-list-item-icon>
@@ -2338,7 +2355,6 @@ Vue.component('file-upload', VueUploadComponent);
 										</v-list-item-icon>
 										</v-list-item>
 									</div>
-								</div>
 								</v-list>
 							</v-flex>
 						</v-layout>
@@ -3694,13 +3710,18 @@ new Vue({
 		},
 		copyText( value ) {
 			var clipboard = document.getElementById("clipboard");
-			var x = document.createElement("input");
-			x.setAttribute("type", "text");
-			x.setAttribute("value", value );
-			clipboard.innerHTML = x.outerHTML;
-			clipboard.children[0].focus()
-			clipboard.children[0].select()
+			clipboard.value = value;
+			clipboard.focus()
+			clipboard.select()
 			document.execCommand("copy");
+		},
+		copySFTP( key ) {
+			sftp_info = `Address: ${key.address}\nUsername: ${key.username}\nPassword: ${key.password}\nProtocol: ${key.protocol}\nPort: ${key.port}`
+			this.copyText( sftp_info );
+		},
+		copyDatabase( key ) {
+			database_info = `Database: ${key.database}\nDatabase Username: ${key.database_username}\nDatabase Password: ${key.database_password}`
+			this.copyText( database_info );
 		},
 		triggerEnvironmentUpdate( site_id ){
 			site = this.sites.filter(site => site.id == site_id)[0];
