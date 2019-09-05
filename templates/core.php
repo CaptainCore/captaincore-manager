@@ -4,8 +4,6 @@
   <title><?php echo get_field( 'business_name', 'option' ); ?> - Account</title>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@3.x/css/materialdesignicons.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
   <meta charset="utf-8">
 <?php
@@ -21,7 +19,7 @@ if ( $role_check ) {
 	$business_link = get_field( 'partner_link', $belongs_to[0] );
 }
 ?>
-<link href="https://cdn.jsdelivr.net/npm/vuetify@2.0.4/dist/vuetify.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/vuetify@2.0.14/dist/vuetify.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@3.x/css/materialdesignicons.min.css" rel="stylesheet">
 <link href="/wp-content/plugins/captaincore/public/css/captaincore-public-2019-09-04.css" rel="stylesheet">
 <?php if ( substr( $_SERVER['SERVER_NAME'], -4) == 'test' ) { ?>
@@ -33,7 +31,7 @@ if ( $role_check ) {
 <script src="https://cdn.jsdelivr.net/npm/vue@2.6.10/dist/vue.min.js"></script>
 <script src="https://unpkg.com/qs@6.5.2/dist/qs.js"></script>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vuetify@2.0.4/dist/vuetify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@2.0.14/dist/vuetify.min.js"></script>
 <?php } ?>
 <script src="https://unpkg.com/lodash@4.16.0"></script>
 <script>

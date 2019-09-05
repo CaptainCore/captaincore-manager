@@ -1314,7 +1314,6 @@ ul.changelog.domain li:before {
   color: #fff;
 }
 
-
 html body {
 	font-size: 120%;
 }
@@ -1324,7 +1323,7 @@ html body {
 }
 
 .table_users tbody tr td:nth-child(6) {
-	 width:200px;
+	 max-width:200px;
 	 display:block;
 }
 
@@ -1337,7 +1336,8 @@ html body {
 }
 
 .usage.provider {
-	width: 94px;
+	width: 100px;
+  letter-spacing: -0.4px;
 }
 
 .usage.visits {
