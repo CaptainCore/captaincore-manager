@@ -2,7 +2,6 @@
 <html>
 <head>
   <title><?php echo get_field( 'business_name', 'option' ); ?> - Account</title>
-  <link href="https://use.fontawesome.com/releases/v5.7.1/css/all.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/@mdi/font@3.x/css/materialdesignicons.min.css" rel="stylesheet">
@@ -131,7 +130,7 @@ Vue.component('file-upload', VueUploadComponent);
 		<v-container fluid style="padding:0px">
 		<v-badge overlap left class="static" v-if="runningJobs">
 			<span slot="badge">{{ runningJobs }}</span>
-			<a @click.stop="view_jobs = true; $vuetify.goTo( '#sites' )"><v-icon large color="grey lighten-1">fas fa-cogs</v-icon></a>
+			<a @click.stop="view_jobs = true; $vuetify.goTo( '#sites' )"><v-icon large color="grey lighten-1">mdi-cogs</v-icon></a>
 			<template>
 			  <v-progress-linear :indeterminate="true" class="my-2"></v-progress-linear>
 			</template>
@@ -434,15 +433,15 @@ Vue.component('file-upload', VueUploadComponent);
 							<td class="value" v-if="record.type == 'MX'">
 								<v-layout v-for="(value, value_index) in record.update.record_value">
 									<v-flex xs3><v-text-field label="Level" :value="value.level" @change.native="value.level = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-									<v-flex xs9><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field></v-flex>
+									<v-flex xs9><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field></v-flex>
 								</v-layout>
-								<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon small>fas fa-plus-square</v-icon></v-btn>
+								<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
 							</td>
 							<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'SPF'">
 								<div v-for="(value, value_index) in record.update.record_value" :key="`value-${index}-${value_index}`">
-									<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field>
+									<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field>
 								</div>
-								<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon small>fas fa-plus-square</v-icon></v-btn>
+								<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
 							</td>
 							<td class="value" v-else-if="record.type == 'SRV'">
 								<v-layout v-for="value in record.update.record_value">
@@ -451,15 +450,15 @@ Vue.component('file-upload', VueUploadComponent);
 									<v-flex xs2><v-text-field label="Port" :value="value.port" @change.native="value.port = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
 									<v-flex xs6><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
 								</v-layout>
-								<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon small>fas fa-plus-square</v-icon></v-btn>
+								<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
 							</td>
 							<td class="value" v-else>
 								<v-text-field label="Value" :value="record.update.record_value" @change.native="record.update.record_value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
 							</td>
 							<td><v-text-field label="TTL" :value="record.update.record_ttl" @change.native="record.update.record_ttl = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
 							<td class="text-right">
-								<v-btn text small icon color="primary" class="ma-0 pa-0" @click="viewRecord( record.id )" :disabled="dialog_domain.saving"><v-icon small>fas fa-edit</v-icon></v-btn>
-								<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecord( record.id )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn>
+								<v-btn text small icon color="primary" class="ma-0 pa-0" @click="viewRecord( record.id )" :disabled="dialog_domain.saving"><v-icon>mdi-pencil-box</v-icon></v-btn>
+								<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecord( record.id )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn>
 							</td>
 						</template>
 						<template v-else-if="record.new">
@@ -468,15 +467,15 @@ Vue.component('file-upload', VueUploadComponent);
 							<td class="value" v-if="record.type == 'MX'">
 								<v-layout v-for="(value, value_index) in record.update.record_value">
 									<v-flex xs3><v-text-field label="Level" :value="value.level" @change.native="value.level = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-									<v-flex xs9><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field></v-flex>
+									<v-flex xs9><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field></v-flex>
 								</v-layout>
-								<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon small>fas fa-plus-square</v-icon></v-btn>
+								<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
 							</td>
 							<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'SPF'">
 								<div v-for="(value, value_index) in record.update.record_value" :key="`value-${index}-${value_index}`">
-									<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn></template></v-text-field>
+									<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field>
 								</div>
-								<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon small>fas fa-plus-square</v-icon></v-btn>
+								<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
 							</td>
 							<td class="value" v-else-if="record.type == 'SRV'">
 								<v-layout v-for="value in record.update.record_value">
@@ -491,7 +490,7 @@ Vue.component('file-upload', VueUploadComponent);
 							</td>
 							<td><v-text-field label="TTL" :value="record.update.record_ttl" @change.native="record.update.record_ttl = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
 							<td class="text-right" style="padding-top: 20px;">
-								<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecord( index )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn>
+								<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecord( index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn>
 							</td>
 						</template>
 						<template v-else>
@@ -503,13 +502,13 @@ Vue.component('file-upload', VueUploadComponent);
 							<td class="value" v-else>{{ record.value }}</td>
 							<td>{{ record.ttl }}</td>
 							<td class="text-right">
-								<v-btn text small icon color="primary" class="ma-0 pa-0" @click="editRecord( record.id )" :disabled="dialog_domain.saving"><v-icon small>fas fa-edit</v-icon></v-btn>
-								<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteCurrentRecord( record.id )" :disabled="dialog_domain.saving"><v-icon small>fas fa-trash</v-icon></v-btn>
+								<v-btn text small icon color="primary" class="ma-0 pa-0" @click="editRecord( record.id )" :disabled="dialog_domain.saving"><v-icon>mdi-pencil-box</v-icon></v-btn>
+								<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteCurrentRecord( record.id )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn>
 							</td>
 						</template>
 						</tr>
 					</table>
-					<v-btn small depressed class="ma-0" @click="addRecord()" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
+					<v-btn depressed class="ma-0" @click="addRecord()" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
 				</v-flex>
 				<v-flex xs12>
 					<v-progress-linear :indeterminate="true" v-show="dialog_domain.saving"></v-progress-linear>
@@ -696,9 +695,9 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-toolbar>
 			<v-card-text style="max-height: 100%;">
 				<div class="caption mb-3">
-					<v-icon small v-show="dialog_handbook.process.time_estimate != ''" style="padding:0px 5px">far fa-clock</v-icon>{{ dialog_handbook.process.time_estimate }} 
-					<v-icon small v-show="dialog_handbook.process.repeat != '' && dialog_handbook.process.repeat != null" style="padding:0px 5px">fas fa-redo-alt</v-icon>{{ dialog_handbook.process.repeat }} 
-					<v-icon small v-show="dialog_handbook.process.repeat_quantity != '' && dialog_handbook.process.repeat_quantity != null" style="padding:0px 5px">fas fa-retweet</v-icon>{{ dialog_handbook.process.repeat_quantity }}
+					<v-icon small v-show="dialog_handbook.process.time_estimate != ''" style="padding:0px 5px">mdi-clock-outline</v-icon>{{ dialog_handbook.process.time_estimate }} 
+					<v-icon small v-show="dialog_handbook.process.repeat != '' && dialog_handbook.process.repeat != null" style="padding:0px 5px">mdi-calendar-repeat</v-icon>{{ dialog_handbook.process.repeat }} 
+					<v-icon small v-show="dialog_handbook.process.repeat_quantity != '' && dialog_handbook.process.repeat_quantity != null" style="padding:0px 5px">mdi-repeat</v-icon>{{ dialog_handbook.process.repeat_quantity }}
 				</div>
 				<span v-html="dialog_handbook.process.description"></span>
 			</v-card-text>
@@ -872,7 +871,7 @@ Vue.component('file-upload', VueUploadComponent);
 						<td class="pa-1"><v-text-field :value="item.first_name" @change.native="item.first_name = $event.target.value" label="First Name"></v-text-field></td>
 						<td class="pa-1"><v-text-field :value="item.last_name" @change.native="item.last_name = $event.target.value" label="Last Name"></v-text-field></td>
 						<td class="pa-1" style="width:145px;"><v-select :value="item.role" v-model="item.role" :items="roles" label="Role" item-text="name"></v-select></td>
-						<td class="pa-1"><v-btn text small icon color="primary" @click="deleteUserValue( index )"><v-icon small>fas fa-trash</v-icon></v-btn></td>
+						<td class="pa-1"><v-btn text small icon color="primary" @click="deleteUserValue( index )"><v-icon small>mdi-delete</v-icon></v-btn></td>
 					</tr>
 				</tbody>
 				</template>
@@ -1695,31 +1694,31 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-items>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn text small @click="configureDefaults" v-on="on"><v-icon dark small>fas fa-chalkboard</v-icon></v-btn>
+								<v-btn text small @click="configureDefaults" v-on="on"><v-icon dark>mdi-clipboard-check-outline</v-icon></v-btn>
 							</template><span>Configure Defaults</span>
 						</v-tooltip>
 						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn text small @click="fetchTimelineLogs" v-bind:class='{ "v-btn--active": view_timeline }' v-on="on"><v-icon dark small>far fa-list-alt</v-icon></v-btn>
+								<v-btn text small @click="fetchTimelineLogs" v-bind:class='{ "v-btn--active": view_timeline }' v-on="on"><v-icon dark>mdi-clipboard-text</v-icon></v-btn>
 							</template><span>Timeline Logs</span>
 						</v-tooltip>
 						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn text small @click="view_jobs = !view_jobs" v-bind:class='{ "v-btn--active": view_jobs }' v-on="on"><small v-if="runningJobs">({{ runningJobs }})</small><v-icon dark small>fas fa-cogs</v-icon></v-btn>
+								<v-btn text small @click="view_jobs = !view_jobs" v-bind:class='{ "v-btn--active": view_jobs }' v-on="on"><small v-if="runningJobs">({{ runningJobs }})</small><v-icon dark>mdi-cogs</v-icon></v-btn>
 							</template><span>Job Activity</span>
 						</v-tooltip>
 						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn text small @click="dialog_bulk.show = !dialog_bulk.show" v-bind:class='{ "v-btn--active": dialog_bulk.show }' v-on="on"><small v-show="selectedSites > 0">({{ selectedSites }})</small><v-icon dark small>fas fa-cog</v-icon></v-btn>
+								<v-btn text small @click="dialog_bulk.show = !dialog_bulk.show" v-bind:class='{ "v-btn--active": dialog_bulk.show }' v-on="on"><small v-show="selectedSites > 0">({{ selectedSites }})</small><v-icon dark>mdi-settings</v-icon></v-btn>
 							</template><span>Bulk Tools</span>
 						</v-tooltip>
 						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn text small @click="advanced_filter = !advanced_filter" v-bind:class='{ "v-btn--active": advanced_filter }' v-on="on"><v-icon dark small>fas fa-filter</v-icon></v-btn>
+								<v-btn text small @click="advanced_filter = !advanced_filter" v-bind:class='{ "v-btn--active": advanced_filter }' v-on="on"><v-icon dark>mdi-filter</v-icon></v-btn>
 							</template><span>Filters</span>
 						</v-tooltip>
 						<template v-if="role == 'administrator'">
@@ -1759,7 +1758,7 @@ Vue.component('file-upload', VueUploadComponent);
 						</div>
 					</v-flex>
 					<v-flex xs12 md2>
-						<v-text-field @input="updateSearch" ref="search" label="Search sites" clearable light append-icon="search"></v-text-field>
+						<v-text-field @input="updateSearch" ref="search" label="Search" clearable light append-icon="search"></v-text-field>
 					</v-flex>
 			</div>
 			<v-card v-show="view_timeline == true" class="mb-3">
@@ -1867,34 +1866,39 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-select>
 				</v-flex>
 				<v-flex>
-				<v-btn small icon @click="bulkSyncSites()" style="margin: 5px auto 0 0;">
-					<v-icon small color="grey">fas fa-sync</v-icon>
+				<v-tooltip bottom>
+					<template v-slot:activator="{ on }">
+					<v-btn small icon @click="bulkSyncSites()" style="margin: 12px auto 0 0;" v-on="on">
+						<v-icon color="grey">mdi-sync</v-icon>
 				</v-btn>
+					</template>
+					<span>Manual sync website details</span>
+				</v-tooltip>
 				</v-flex>
 			</v-layout>
 			</v-flex>
 			<v-flex xs12 sm8>
 			<v-tabs v-model="dialog_bulk.tabs_management" background-color="grey lighten-4" icons-and-text right show-arrows height="54">
 				<v-tab href="#tab-Sites">
-					Sites <v-icon small>fas fa-list</v-icon>
+					Sites <v-icon>mdi-format-list-bulleted</v-icon>
 				</v-tab>
 				<v-tab key="Stats" href="#tab-Stats" v-show="role == 'coming-soon'">
-					Stats <v-icon small>far fa-chart-bar</v-icon>
+					Stats <v-icon>mdi-chart-bar</v-icon>
 				</v-tab>
 				<v-tab key="Addons" href="#tab-Addons">
-					Addons <v-icon small>fas fa-plug</v-icon>
+					Addons <v-icon>mdi-power-plug</v-icon>
 				</v-tab>
 				<v-tab key="Users" href="#tab-Users" v-show="role == 'coming-soon'">
-					Users <v-icon small>fas fa-users</v-icon>
+					Users <v-icon>mdi-account-multiple</v-icon>
 				</v-tab>
 				<v-tab key="Updates" href="#tab-Updates" v-show="role == 'coming-soon'">
-					Updates <v-icon small>fas fa-book-open</v-icon>
+					Updates <v-icon>mdi-book-open</v-icon>
 				</v-tab>
 				<v-tab key="Scripts" href="#tab-Scripts">
-					Scripts <v-icon small>fas fa-code</v-icon>
+					Scripts <v-icon>mdi-code-tags</v-icon>
 				</v-tab>
 				<v-tab key="Backups" href="#tab-Backups" v-show="role == 'coming-soon'">
-					Backups <v-icon small>fas fa-hdd</v-icon>
+					Backups <v-icon>mdi-update</v-icon>
 				</v-tab>
 			</v-tabs>
 			</v-flex>
@@ -1907,7 +1911,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Sites</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn text @click="showLogEntryBulk()" v-if="role == 'administrator'">New Log Entry <v-icon dark small>fas fa-check-circle</v-icon></v-btn>
+						<v-btn text @click="showLogEntryBulk()" v-if="role == 'administrator'">New Log Entry <v-icon dark small>mdi-checkbox-marked</v-icon></v-btn>
 						<v-btn text @click="bulkactionLaunch">Launch sites in browser</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
@@ -2003,7 +2007,7 @@ Vue.component('file-upload', VueUploadComponent);
 						</v-list-item>
 						<v-list-item @click="toggleSiteBulk()" dense>
 						<v-list-item-icon>
-							<v-icon>fas fa-toggle-on</v-icon>
+							<v-icon>mdi-toggle-switch</v-icon>
 						</v-list-item-icon>
 						<v-list-item-content>
 							<v-list-item-title>Toggle Site</v-list-item-title>
@@ -2012,7 +2016,7 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-subheader v-show="recipes.filter( r => r.public == 1 ).length > 0">Other</v-subheader>
 						<v-list-item @click="runRecipeBulk( recipe.recipe_id )" dense v-for="recipe in recipes.filter( r => r.public == 1 )">
 						<v-list-item-icon>
-							<v-icon>fas fa-scroll</v-icon>
+							<v-icon>mdi-script-text-outline</v-icon>
 						</v-list-item-icon>
 						<v-list-item-content>
 							<v-list-item-title v-text="recipe.title"></v-list-item-title>
@@ -2021,7 +2025,7 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-subheader v-show="recipes.filter( r => r.public != 1 ).length > 0">User</v-subheader>
 						<v-list-item @click="rloadRecipe( recipe.recipe_id ); $vuetify.goTo( '#script_bulk' );" dense v-for="recipe in recipes.filter( r => r.public != 1 )">
 						<v-list-item-icon>
-							<v-icon>fas fa-scroll</v-icon>
+							<v-icon>mdi-script-text-outline</v-icon>
 						</v-list-item-icon>
 						<v-list-item-content>
 							<v-list-item-title v-text="recipe.title"></v-list-item-title>
@@ -2128,7 +2132,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<div class="usage ml-1 visits"><v-btn text small @click.native.stop="toggle_site_sort = 1; sortSites('visits')">Visits<v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
 					<div class="usage ml-1 storage"><v-btn text small @click.native.stop="toggle_site_sort = 2; sortSites('storage')">Storage <v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
 					<div class="usage ml-1 provider"><v-btn text small @click.native.stop="toggle_site_sort = 3; sortSites('provider')">Provider <v-icon small light>keyboard_arrow_down</v-icon></v-btn></div>
-					<div style="width: 28px;"></div>
+					<div class="usage" style="width: 28px;"></div>
 				</v-btn-toggle>
 				</div>
 				<v-expansion-panels accordion style="margin-top: 20px">
@@ -2143,29 +2147,29 @@ Vue.component('file-upload', VueUploadComponent);
 							</v-layout>
 						</div>
 						<div class="text-right d-none d-md-block">
-							<div class="usage multisite"><span v-show="site.subsite_count"><v-icon small light >fas fa-network-wired</i></v-icon> {{ site.subsite_count }} sites</span></div>
-							<div class="usage visits"><span v-show="site.visits"><v-icon small light>fas fa-eye</v-icon> {{ site.visits }} <small>yearly</small></span></div>
-							<div class="usage storage"><span v-show="site.storage"><v-icon small light>fas fa-hdd</v-icon> {{ site.storage }}</span></div>
-							<div class="usage provider"><span v-show="site.provider"><v-icon small light>fas fa-server</v-icon> {{ site.provider | formatProvider }}</span></div>
+							<div class="usage multisite"><span v-show="site.subsite_count"><v-icon light >mdi-lan</i></v-icon> {{ site.subsite_count }} sites</span></div>
+							<div class="usage visits"><span v-show="site.visits"><v-icon light>mdi-eye</v-icon> {{ site.visits }} <small>yearly</small></span></div>
+							<div class="usage storage"><span v-show="site.storage"><v-icon light>mdi-harddisk</v-icon> {{ site.storage }}</span></div>
+							<div class="usage provider"><span v-show="site.provider"><v-icon light>mdi-server</v-icon> {{ site.provider | formatProvider }}</span></div>
 						</div>
 					</v-layout>
 					</v-expansion-panel-header>
 					<v-expansion-panel-content>
 						<v-tabs v-model="site.tabs" background-color="blue darken-3" dark>
 							<v-tab :key="1" href="#tab-Site-Management">
-								Site Management<v-icon>fas fa-cog</v-icon>
+								Site Management <v-icon size="24">mdi-settings</v-icon>
 							</v-tab>
 							<v-tab :key="6" href="#tab-SitePlan" ripple @click="viewUsageBreakdown( site.id )">
-								Site Plan <v-icon>far fa-list-alt</v-icon>
+								Site Plan <v-icon size="24">mdi-chart-donut</v-icon>
 							</v-tab>
 							<v-tab :key="7" href="#tab-Sharing" ripple>
-								Sharing <v-icon>fas fa-user-lock</v-icon>
+								Sharing <v-icon size="24">mdi-account-multiple-plus</v-icon>
 							</v-tab>
 							<v-tab :key="8" href="#tab-Timeline" ripple @click="fetchTimeline( site.id )">
-								Timeline <v-icon>fas fa-stream</v-icon>
+								Timeline <v-icon size="24">mdi-timeline-text-outline</v-icon>
 							</v-tab>
 							<v-tab :key="9" href="#tab-Advanced" ripple>
-								Advanced <v-icon>fas fa-cogs</v-icon>
+								Advanced <v-icon size="24">mdi-cogs</v-icon>
 							</v-tab>
 						</v-tabs>
 						<v-tabs-items v-model="site.tabs">
@@ -2188,8 +2192,8 @@ Vue.component('file-upload', VueUploadComponent);
 										<v-flex>
 										<v-tooltip bottom>
 											<template v-slot:activator="{ on }">
-											<v-btn small icon @click="syncSite( site.id )" style="margin: 5px auto 0 0;" v-on="on">
-												<v-icon small color="grey">fas fa-sync</v-icon>
+											<v-btn small icon @click="syncSite( site.id )" style="margin: 12px auto 0 0;" v-on="on">
+												<v-icon color="grey">mdi-sync</v-icon>
 											</v-btn>
 											</template>
 											<span>Manual sync website details</span>
@@ -2200,25 +2204,25 @@ Vue.component('file-upload', VueUploadComponent);
 									<v-flex xs12 sm8>
 									<v-tabs v-model="site.tabs_management" background-color="grey lighten-4" icons-and-text right show-arrows height="54">
 										<v-tab key="Info" href="#tab-Info">
-											Info <v-icon small>mdi-library-books</v-icon>
+											Info <v-icon>mdi-library-books</v-icon>
 										</v-tab>
 										<v-tab key="Stats" href="#tab-Stats" @click="fetchStats( site.id )">
-											Stats <v-icon small>far fa-chart-bar</v-icon>
+											Stats <v-icon>mdi-chart-bar</v-icon>
 										</v-tab>
 										<v-tab key="Plugins" href="#tab-Addons">
-											Addons <v-icon small>fas fa-plug</v-icon>
+											Addons <v-icon>mdi-power-plug</v-icon>
 										</v-tab>
 										<v-tab key="Users" href="#tab-Users" @click="fetchUsers( site.id )">
-											Users <v-icon small>fas fa-users</v-icon>
+											Users <v-icon>mdi-account-multiple</v-icon>
 										</v-tab>
 										<v-tab key="Updates" href="#tab-Updates" @click="fetchUpdateLogs( site.id )">
-											Updates <v-icon small>fas fa-book-open</v-icon>
+											Updates <v-icon>mdi-book-open</v-icon>
 										</v-tab>
 										<v-tab key="Scripts" href="#tab-Scripts">
-											Scripts <v-icon small>fas fa-code</v-icon>
+											Scripts <v-icon>mdi-code-tags</v-icon>
 										</v-tab>
 										<v-tab key="Backups" href="#tab-Backups" @click="viewQuicksaves( site.id ); viewSnapshots( site.id );">
-											Backups <v-icon small>fas fa-hdd</v-icon>
+											Backups <v-icon>mdi-update</v-icon>
 										</v-tab>
 									</v-tabs>
 									</v-flex>
@@ -2560,8 +2564,8 @@ Vue.component('file-upload', VueUploadComponent);
 							{{ item.roles.split(",").join(" ") }}
 						</template>
 						<template v-slot:item.actions="{ item }">
-							<v-btn small rounded @click="loginSite(site.id, item.user_login)">Login as</v-btn>
-							<v-btn icon small class="mx-0" @click="deleteUserDialog( item.user_login, site.id)">
+							<v-btn small rounded @click="loginSite(site.id, item.user_login)" class="my-2">Login as</v-btn>
+							<v-btn icon small class="my-2" @click="deleteUserDialog( item.user_login, site.id)">
 								<v-icon small color="pink">delete</v-icon>
 							</v-btn>
 						</template>
@@ -2574,8 +2578,8 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-title>Update Logs</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn text @click="update(site.id)">Manual update <v-icon dark small>fas fa-sync-alt</v-icon></v-btn>
-						<v-btn text @click="updateSettings(site.id)">Update Settings <v-icon dark small>fas fa-cog</v-icon></v-btn>
+						<v-btn text @click="update(site.id)">Manual update <v-icon dark>mdi-sync</v-icon></v-btn>
+						<v-btn text @click="updateSettings(site.id)">Update Settings <v-icon dark>mdi-settings</v-icon></v-btn>
 						<!-- <v-btn text @click="themeAndPluginChecks(site.id)">Theme/plugin checks <v-icon dark small>fas fa-calendar-check</v-icon></v-btn> -->
 					</v-toolbar-items>
 				</v-toolbar>
@@ -2659,7 +2663,7 @@ Vue.component('file-upload', VueUploadComponent);
 						</v-list-item>
 						<v-list-item @click="launchSiteDialog(site.id)" dense>
 						<v-list-item-icon>
-							<v-icon>fas fa-rocket</v-icon>
+							<v-icon>mdi-rocket</v-icon>
 						</v-list-item-icon>
 						<v-list-item-content>
 							<v-list-item-title>Launch Site</v-list-item-title>
@@ -2667,7 +2671,7 @@ Vue.component('file-upload', VueUploadComponent);
 						</v-list-item>
 						<v-list-item @click="showSiteMigration(site.id)" dense>
 						<v-list-item-icon>
-							<v-icon>fas fa-truck-moving</v-icon>
+							<v-icon>mdi-truck</v-icon>
 						</v-list-item-icon>
 						<v-list-item-content>
 							<v-list-item-title>Migrate from backup</v-list-item-title>
@@ -2675,7 +2679,7 @@ Vue.component('file-upload', VueUploadComponent);
 						</v-list-item>
 						<v-list-item @click="toggleSite(site.id)" dense>
 						<v-list-item-icon>
-							<v-icon>fas fa-toggle-on</v-icon>
+							<v-icon>mdi-toggle-switch</v-icon>
 						</v-list-item-icon>
 						<v-list-item-content>
 							<v-list-item-title>Toggle Site</v-list-item-title>
@@ -2684,7 +2688,7 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-subheader v-show="recipes.filter( r => r.public == 1 ).length > 0">Other</v-subheader>
 						<v-list-item @click="runRecipe( recipe.recipe_id, site.id )" dense v-for="recipe in recipes.filter( r => r.public == 1 )">
 						<v-list-item-icon>
-							<v-icon>fas fa-scroll</v-icon>
+							<v-icon>mdi-script-text-outline</v-icon>
 						</v-list-item-icon>
 						<v-list-item-content>
 							<v-list-item-title v-text="recipe.title"></v-list-item-title>
@@ -2693,7 +2697,7 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-subheader v-show="recipes.filter( r => r.public != 1 ).length > 0">User</v-subheader>
 						<v-list-item @click="loadRecipe( recipe.recipe_id ); $vuetify.goTo( '#script_site' );" dense v-for="recipe in recipes.filter( r => r.public != 1 )">
 						<v-list-item-icon>
-							<v-icon>fas fa-scroll</v-icon>
+							<v-icon>mdi-script-text-outline</v-icon>
 						</v-list-item-icon>
 						<v-list-item-content>
 							<v-list-item-title v-text="recipe.title"></v-list-item-title>
@@ -2712,13 +2716,13 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-toolbar-items>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn text small @click="promptBackupSnapshot( site.id )" v-on="on"><v-icon dark small>fas fa-cloud-download-alt</v-icon></v-btn>
+								<v-btn text small @click="promptBackupSnapshot( site.id )" v-on="on"><v-icon dark>mdi-cloud-download</v-icon></v-btn>
 							</template><span>Generate and Download Snapshot</span>
 						</v-tooltip>
 						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-							<v-btn text @click="QuicksaveCheck( site.id )" v-on="on"><v-icon dark small>fas fa-sync-alt</v-icon></v-btn>
+							<v-btn text @click="QuicksaveCheck( site.id )" v-on="on"><v-icon dark>mdi-sync</v-icon></v-btn>
 							</template><span>Manual check for new Quicksave</span>
 						</v-tooltip>
 						
@@ -2894,7 +2898,7 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-tooltip bottom>
 							<template v-slot:activator="{ on }">
 							<v-btn small icon @click="fetchLink( site.id, item.snapshot_id )" v-on="on">
-								<v-icon small color="grey">fas fa-sync</v-icon>
+								<v-icon color="grey">mdi-sync</v-icon>
 							</v-btn>
 							</template>
 							<span>Generate new link. Link valid for 24hrs.</span>
@@ -2905,7 +2909,7 @@ Vue.component('file-upload', VueUploadComponent);
 						<v-tooltip bottom>
 							<template v-slot:activator="{ on }">
 							<v-btn small icon @click="fetchLink( site.id, item.snapshot_id )" v-on="on">
-								<v-icon small color="grey">fas fa-sync</v-icon>
+								<v-icon color="grey">mdi-sync</v-icon>
 							</v-btn>
 							</template>
 							<span>Generate new link. Link valid for 24hrs.</span>
@@ -3008,7 +3012,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-subheader>Customer</v-subheader>
 				<v-list-item :key="site.customer.customer_id">
 					<v-list-item-icon>
-						<v-icon>fas fa-user</v-icon>
+						<v-icon>mdi-account</v-icon>
 					</v-list-item-icon>
 					<v-list-item-content>
 						<v-list-item-title>{{ site.customer.name }}</v-list-item-title>
@@ -3018,7 +3022,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-subheader>Shared With</v-subheader>
 				<v-list-item v-for="customer in site.shared_with" :key="customer.customer_id">
 					<v-list-item-icon>
-						<v-icon>fas fa-user</v-icon>
+						<v-icon>mdi-account</v-icon>
 					</v-list-item-icon>
 					<v-list-item-content>
 						<v-list-item-title>{{ customer.name }}</v-list-item-title>
@@ -3032,7 +3036,7 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-toolbar-title>Timeline</v-toolbar-title>
 				<v-spacer></v-spacer>
 				<v-toolbar-items v-show="role == 'administrator'">
-					<v-btn text @click="showLogEntry(site.id)">New Log Entry <v-icon dark small>fas fa-check-circle</v-icon></v-btn>
+					<v-btn text @click="showLogEntry(site.id)">New Log Entry <v-icon dark>mdi-checkbox-marked</v-icon></v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
 			<v-card flat>
@@ -3195,9 +3199,9 @@ Vue.component('file-upload', VueUploadComponent);
 							<div>
 								<span class="title">{{ process.title }}</a> <v-chip color="primary" text-color="white" text>{{ process.role }}</v-chip></span>
 								<div class="caption">
-									<v-icon small v-show="process.time_estimate != ''" style="padding:0px 5px">far fa-clock</v-icon>{{ process.time_estimate }} 
-									<v-icon small v-show="process.repeat != '' && process.repeat != null" style="padding:0px 5px">fas fa-redo-alt</v-icon>{{ process.repeat }} 
-									<v-icon small v-show="process.repeat_quantity != '' && process.repeat_quantity != null" style="padding:0px 5px">fas fa-retweet</v-icon>{{ process.repeat_quantity }}
+									<v-icon v-show="process.time_estimate != ''" style="padding:0px 5px">mdi-clock-outline</v-icon>{{ process.time_estimate }} 
+									<v-icon v-show="process.repeat != '' && process.repeat != null" style="padding:0px 5px">mdi-calendar-repeat</v-icon>{{ process.repeat }} 
+									<v-icon v-show="process.repeat_quantity != '' && process.repeat_quantity != null" style="padding:0px 5px">mdi-repeat</v-icon>{{ process.repeat_quantity }}
 								</div>
 							</div>
 						</v-card-title>
