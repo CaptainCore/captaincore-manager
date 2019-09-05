@@ -3714,6 +3714,8 @@ new Vue({
 			clipboard.focus()
 			clipboard.select()
 			document.execCommand("copy");
+			this.snackbar.message = "Copied to clipboard.";
+			this.snackbar.show = true;
 		},
 		copySFTP( key ) {
 			sftp_info = `Address: ${key.address}\nUsername: ${key.username}\nPassword: ${key.password}\nProtocol: ${key.protocol}\nPort: ${key.port}`
