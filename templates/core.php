@@ -2145,10 +2145,10 @@ Vue.component('file-upload', VueUploadComponent);
 							</v-layout>
 						</div>
 						<div class="text-right d-none d-md-block">
-							<div class="usage multisite"><span v-show="site.subsite_count"><v-icon light >mdi-lan</i></v-icon> {{ site.subsite_count }} sites</span></div>
-							<div class="usage visits"><span v-show="site.visits"><v-icon light>mdi-eye</v-icon> {{ site.visits }} <small>yearly</small></span></div>
-							<div class="usage storage"><span v-show="site.storage"><v-icon light>mdi-harddisk</v-icon> {{ site.storage }}</span></div>
-							<div class="usage provider"><span v-show="site.provider"><v-icon light>mdi-server</v-icon> {{ site.provider | formatProvider }}</span></div>
+							<div class="usage multisite"><span v-show="site.subsite_count"><v-icon light size="20">mdi-lan</i></v-icon> {{ site.subsite_count }} sites</span></div>
+							<div class="usage visits"><span v-show="site.visits"><v-icon light size="20">mdi-eye</v-icon> {{ site.visits }} <small>yearly</small></span></div>
+							<div class="usage storage"><span v-show="site.storage"><v-icon light size="20">mdi-harddisk</v-icon> {{ site.storage }}</span></div>
+							<div class="usage provider"><span v-show="site.provider"><v-icon light size="20">mdi-server</v-icon> {{ site.provider | formatProvider }}</span></div>
 						</div>
 					</v-layout>
 					</v-expansion-panel-header>
