@@ -58,18 +58,13 @@ Vue.component('file-upload', VueUploadComponent);
 	  <v-app-bar color="blue darken-3" dark app fixed style="left:0px;height:64px;">
 	 	 <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none"></v-app-bar-nav-icon>
          <v-toolbar-title>
-		 <v-row>
-		 <v-col>
 			<v-list flat color="blue darken-3">
 		 	<v-list-item href="#sites" style="padding:0px;" flat class="not-active">
 			 	<v-img :src="captaincore_logo" contain max-width="32" max-height="32" v-if="captaincore_logo" class="mr-4"></v-img>
 				 {{ captaincore_name }}
 			</v-list-item>
-			<div style="position:absolute;opacity:0"><textarea id="clipboard"></textarea></div>
 			</v-list>
-		 </v-col>
-		</a>
-		 </v-row>
+			<div class="flex" style="opacity:0;"><textarea id="clipboard" style="height:1px;display:flex;cursor:default"></textarea></div>
 		</v-toolbar-title>
       </v-app-bar>
 	  <v-navigation-drawer v-model="drawer" app mobile-break-point="960" clipped>
