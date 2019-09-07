@@ -3744,6 +3744,16 @@ function captaincore_ajax_action_callback() {
 		// Fetch domain ID from DNS provider
 		$domain_id = get_field( 'domain_id', $post_id );
 
+		// Add domain to select partner if needed
+		if ( $record->customer != "" && get_post_type( $record->customer ) == 'captcore_customer' ) {
+			// Fetch current domains
+			$domains  = get_field( 'domains', $record->customer );
+
+			// Add domains to customer if not already assigned
+			$domains[] = $post_id;
+			update_field( 'domains', $domains, $record->customer );
+		}
+
 		echo json_encode( array("name" => $record->name, "id" => $domain_id ) );
 
 	}
