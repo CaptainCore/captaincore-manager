@@ -19,7 +19,7 @@ if ( $role_check ) {
 	$business_link = get_field( 'partner_link', $belongs_to[0] );
 }
 ?>
-<link href="https://cdn.jsdelivr.net/npm/vuetify@2.0.10/dist/vuetify.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/vuetify@2.0.15/dist/vuetify.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@3.x/css/materialdesignicons.min.css" rel="stylesheet">
 <link href="/wp-content/plugins/captaincore/public/css/captaincore-public-2019-09-04.css" rel="stylesheet">
 <?php if ( substr( $_SERVER['SERVER_NAME'], -4) == 'test' ) { ?>
@@ -31,7 +31,7 @@ if ( $role_check ) {
 <script src="https://cdn.jsdelivr.net/npm/vue@2.6.10/dist/vue.min.js"></script>
 <script src="https://unpkg.com/qs@6.5.2/dist/qs.js"></script>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vuetify@2.0.10/dist/vuetify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@2.0.15/dist/vuetify.min.js"></script>
 <?php } ?>
 <script src="https://unpkg.com/lodash@4.16.0"></script>
 <script>
@@ -55,10 +55,10 @@ Vue.component('file-upload', VueUploadComponent);
 <body>
 <div id="app" v-cloak>
 	<v-app>
-	  <v-app-bar color="blue darken-3" dark app fixed style="left:0px;height:64px;">
+	  <v-app-bar color="blue darken-3" dark app fixed style="left:0px;">
 	 	 <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none"></v-app-bar-nav-icon>
          <v-toolbar-title>
-			<v-list flat color="blue darken-3">
+			<v-list flat color="transparent">
 		 	<v-list-item href="#sites" style="padding:0px;" flat class="not-active">
 			 	<v-img :src="captaincore_logo" contain max-width="32" max-height="32" v-if="captaincore_logo" class="mr-4"></v-img>
 				 {{ captaincore_name }}
