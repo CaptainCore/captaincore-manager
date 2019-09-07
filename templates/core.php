@@ -802,11 +802,25 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-spacer></v-spacer>
 			</v-toolbar>
 			<v-card-text>
-				<v-text-field :value="dialog_new_domain.domain.name" @change.native="dialog_new_domain.domain.name = $event.target.value" label="Domain Name" required></v-text-field>
+				<v-text-field :value="dialog_new_domain.domain.name" @change.native="dialog_new_domain.domain.name = $event.target.value" label="Domain Name" required class="mt-3"></v-text-field>
 				<v-autocomplete :items="customers" item-text="name" item-value="customer_id" v-model="dialog_new_domain.domain.customer" label="Customer" required></v-autocomplete>
+				<v-alert
+					:value="true"
+					type="error"
+					v-for="error in dialog_new_domain.errors"
+					>
+					{{ error }}
+				</v-alert>
+				<v-progress-linear
+					indeterminate
+					rounded
+					height="6"
+					v-show="dialog_new_domain.loading"
+					class="mb-3"
+				></v-progress-linear>
 				<v-flex xs12 text-right>
 					<v-btn color="primary" dark @click="addDomain()">
-						Save Changes
+						Add domain
 					</v-btn>
 				</v-flex>
 			</v-card-text>
@@ -3283,7 +3297,7 @@ new Vue({
 		dialog_apply_https_urls: { show: false, site_id: "", site_name: "", sites: [] },
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
 		dialog_edit_site: { show: false, site: {}, loading: false },
-		dialog_new_domain: { show: false, domain: { name: "", customer: "" } },
+		dialog_new_domain: { show: false, domain: { name: "", customer: "" }, loading: false, errors: [] },
 		dialog_configure_defaults: { show: false, loading: false, record: {}, records: [], account: "" },
 		dialog_timeline: { show: false, loading: false, logs: [], pagination: {}, selected_account: "", account: { default_email: "", default_plugins: [], default_timezone: "", default_users: [], name: "", id: ""} },
 		dialog_domain: { show: false, domain: {}, records: [], results: [], loading: true, saving: false },
@@ -5509,6 +5523,7 @@ new Vue({
 		},
 		addDomain() {
 			this.dialog_new_domain.loading = true;
+			this.dialog_new_domain.errors = [];
 
 			var data = {
 				action: 'captaincore_ajax',
@@ -5518,9 +5533,19 @@ new Vue({
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
+
+					// If error then response
+					if ( response.data.errors ) {
+						this.dialog_new_domain.loading = false
+						this.dialog_new_domain.errors = response.data.errors;
+						return;
+					}
+
 					this.dialog_new_domain.loading = false;
 					this.dialog_new_domain = { show: false, domain: { name: "", customer: "" } };
-					this.snackbar.message = response.data;
+					this.domains.push( response.data )
+					this.domains.sort((a, b) => (a.name > b.name) ? 1 : -1)
+					this.snackbar.message = "Added new domain " + response.data.name;
 					this.snackbar.show = true;
 				})
 				.catch( error => {

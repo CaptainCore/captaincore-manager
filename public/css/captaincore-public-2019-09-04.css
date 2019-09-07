@@ -1389,6 +1389,10 @@ g.chart-legend {
   width: 100%;
 }
 
+.table-dns th {
+  text-align: left;
+}
+
 .table-dns td {
 	  padding: 0.25em 1em 0.25em 0em;
     margin-bottom: 0px;

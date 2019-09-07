@@ -244,22 +244,25 @@ class Domains {
 
 		// Administrators return all sites
 		if ( in_array( 'administrator', $user->roles ) ) {
-			$customers = get_posts(
+			
+			$domains = get_posts(
 				array(
-					'order'          => 'asc',
-					'orderby'        => 'title',
+					'post_type'      => 'captcore_domain',
 					'posts_per_page' => '-1',
-					'post_type'      => 'captcore_customer',
-					'meta_query'     => array(
-						'relation' => 'AND',
-						array(
-							'key'     => 'status',
-							'value'   => 'closed',
-							'compare' => '!=',
-						),
-					),
 				)
 			);
+
+			foreach ( $domains as $domain ) :
+				$domain_name = get_the_title( $domain );
+				$domain_id = get_field( "domain_id", $domain );
+				if ( $domain_name ) {
+					$all_domains[ $domain_name ] = array( "name" => $domain_name, "id" => $domain_id );
+				}
+			endforeach;
+
+			usort( $all_domains, "sort_by_name" );
+
+			$this->domains = $all_domains;
 		}
 
 		if ( in_array( 'subscriber', $user->roles ) or in_array( 'customer', $user->roles ) or in_array( 'partner', $user->roles ) or in_array( 'editor', $user->roles ) ) {
@@ -316,45 +319,41 @@ class Domains {
 					endforeach;
 				}
 			}
+
+			foreach ( $customers as $customer ) :
+
+				if ( is_array( $customer ) ) {
+					$customer = $customer[0];
+				}
+	
+				$domains = get_field( 'domains', $customer );
+				if ( $domains ) {
+					foreach ( $domains as $domain ) :
+						$domain_name = get_the_title( $domain );
+						$domain_id = get_field( "domain_id", $domain );
+						if ( $domain_name ) {
+							$all_domains[ $domain_name ] = array( "name" => $domain_name, "id" => $domain_id );
+						}
+					endforeach;
+				}
+	
+			endforeach;
+	
+			foreach ( $partner as $customer ) :
+				$domains = get_field( 'domains', $customer );
+				if ( $domains ) {
+					foreach ( $domains as $domain ) :
+						$domain_name = get_the_title( $domain );
+						$domain_id = get_field( "domain_id", $domain );
+						if ( $domain_name ) {
+							$all_domains[ $domain_name ] = array( "name" => $domain_name, "id" => $domain_id );
+						}
+					endforeach;
+				}
+			endforeach;
+			usort( $all_domains, "sort_by_name" );
+			$this->domains = $all_domains;
 		}
-
-		foreach ( $customers as $customer ) :
-
-			if ( is_array( $customer ) ) {
-				$customer = $customer[0];
-			}
-
-			$domains = get_field( 'domains', $customer );
-			if ( $domains ) {
-				foreach ( $domains as $domain ) :
-					$domain_name = get_the_title( $domain );
-					$domain_id = get_field( "domain_id", $domain );
-					if ( $domain_name ) {
-						$all_domains[ $domain_name ] = array( "name" => $domain_name, "id" => $domain_id );
-					}
-				endforeach;
-			}
-
-		endforeach;
-
-		foreach ( $partner as $customer ) :
-
-			$domains = get_field( 'domains', $customer );
-			if ( $domains ) {
-				foreach ( $domains as $domain ) :
-					$domain_name = get_the_title( $domain );
-					$domain_id = get_field( "domain_id", $domain );
-					if ( $domain_name ) {
-						$all_domains[ $domain_name ] = array( "name" => $domain_name, "id" => $domain_id );
-					}
-				endforeach;
-			}
-
-		endforeach;
-
-		usort( $all_domains, "sort_by_name" );
-
-		$this->domains = $all_domains;
 	}
 
 	public function all() {

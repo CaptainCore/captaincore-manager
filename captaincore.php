@@ -3697,7 +3697,14 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'addDomain' ) {
 
+		$errors = array();
 		$record = (object) $value;
+
+		// If results still exists then give an error
+		if ( $record->name == "" ) {
+			$errors[] = "Domain can't be empty.";
+		}
+
 		// Check for duplicate domain.
 		$domain_exists = get_posts(
 			array(
@@ -3711,7 +3718,12 @@ function captaincore_ajax_action_callback() {
 
 		 // If results still exists then give an error
 		if ( count( $domain_exists ) > 0 ) {
-			echo json_encode( array( "error" => 'Domain has already been added.' ) );
+			$errors[] = "Domain has already been added.";
+		}
+
+		// If any errors then bail
+		if ( count($errors) > 0 ) {
+			echo json_encode( array( "errors" => $errors ) );
 			wp_die();
 		}
 
@@ -3724,9 +3736,15 @@ function captaincore_ajax_action_callback() {
 		);
 
 		// Insert the post into the database
-		$domain_id = wp_insert_post( $new_domain );
+		$post_id = wp_insert_post( $new_domain );
 
-		echo json_encode( $record );
+		// Execute remote code
+		captaincore_acf_save_post_after( $post_id );
+
+		// Fetch domain ID from DNS provider
+		$domain_id = get_field( 'domain_id', $post_id );
+
+		echo json_encode( array("name" => $record->name, "id" => $domain_id ) );
 
 	}
 
