@@ -510,7 +510,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-progress-linear :indeterminate="true" v-show="dialog_domain.saving"></v-progress-linear>
 				</v-flex>
 				<v-flex xs12 text-right my-3 v-show="!dialog_domain.loading">
-					<v-btn @click="deleteDomain()" class="mx-3">
+					<v-btn @click="deleteDomain()" class="mx-3" v-if="role == 'administrator'">
 						Delete Domain
 					</v-btn>
 					<v-btn color="primary" @click="saveDNS()" :dark="dialog_domain.records && dialog_domain.records.length != '0'" :disabled="dialog_domain.records && dialog_domain.records.length == '0'">
