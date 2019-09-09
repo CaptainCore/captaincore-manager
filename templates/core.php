@@ -410,11 +410,11 @@ Vue.component('file-upload', VueUploadComponent);
 			<v-container>
 			<v-layout row wrap>
 				<v-flex xs12 pa-2>
-					<v-progress-linear :indeterminate="true" v-show="dialog_domain.loading" class="mb-3"></v-progress-linear>
+					<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="dialog_domain.loading"></v-progress-linear>
 					<div v-if="dialog_domain.errors">
 						<v-alert :value="true" type="error" v-for="error in dialog_domain.errors">{{ error }}</v-alert>
 					</div>
-					<table class="table-dns" v-else>
+					<table class="table-dns" v-show="dialog_domain.records.length > 0">
 						<tr>
 							<th width="125">Type</th>
 							<th width="200">Name</th>
@@ -817,13 +817,7 @@ Vue.component('file-upload', VueUploadComponent);
 					>
 					{{ error }}
 				</v-alert>
-				<v-progress-linear
-					indeterminate
-					rounded
-					height="6"
-					v-show="dialog_new_domain.loading"
-					class="mb-3"
-				></v-progress-linear>
+				<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="dialog_new_domain.loading"></v-progress-linear>
 				<v-flex xs12 text-right>
 					<v-btn color="primary" dark @click="addDomain()">
 						Add domain
@@ -5708,10 +5702,8 @@ new Vue({
 						if ( v.value == "" ) {
 							return
 						}
-						
 						v.value = v.value.trim();
 						record_value.push( v );
-						
 					});
 				}
 
