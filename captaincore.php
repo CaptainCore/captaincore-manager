@@ -3649,7 +3649,7 @@ function captaincore_ajax_action_callback() {
 	// Only proceed if access to command 
 	$user = wp_get_current_user();
 	$role_check_admin = in_array( 'administrator', $user->roles );
-	$admin_commands = array( 'addDomain', 'fetchConfigs', 'newRecipe', 'updateRecipe', 'updateLogEntry', 'newLogEntry', 'newProcess', 'updateProcess', 'fetchProcess', 'fetchProcessLogs', 'updateFathom', 'updatePlan', 'newSite', 'editSite', 'deleteSite' );
+	$admin_commands = array( 'addDomain', 'deleteDomain', 'fetchConfigs', 'newRecipe', 'updateRecipe', 'updateLogEntry', 'newLogEntry', 'newProcess', 'updateProcess', 'fetchProcess', 'fetchProcessLogs', 'updateFathom', 'updatePlan', 'newSite', 'editSite', 'deleteSite' );
 	if ( ! $role_check_admin && in_array( $_POST['command'], $admin_commands ) ) {
 		echo "Permission denied";
 		wp_die();
@@ -3694,6 +3694,16 @@ function captaincore_ajax_action_callback() {
 		echo json_encode( $response );
 
 	}
+
+	if ( $cmd == 'deleteDomain' ) {
+		$domain_id = get_field( 'domain_id', $value );
+		$domain_name = get_the_title( $value );
+		if ( $domain_id  ) {
+			constellix_api_delete( "domains/$domain_id" );
+		}
+		wp_delete_post( $value, true );
+		echo json_encode( array( "post_id" => $value, "message" => "Deleted domain $domain_name") );
+	};
 
 	if ( $cmd == 'addDomain' ) {
 

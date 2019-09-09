@@ -256,7 +256,7 @@ class Domains {
 				$domain_name = get_the_title( $domain );
 				$domain_id = get_field( "domain_id", $domain );
 				if ( $domain_name ) {
-					$all_domains[ $domain_name ] = array( "name" => $domain_name, "id" => $domain_id );
+					$all_domains[ $domain_name ] = array( "name" => $domain_name, "id" => $domain_id, "post_id" => $domain->ID );
 				}
 			endforeach;
 

@@ -410,7 +410,10 @@ Vue.component('file-upload', VueUploadComponent);
 			<v-container>
 			<v-layout row wrap>
 				<v-flex xs12 pa-2>
-					<v-progress-linear :indeterminate="true" v-if="dialog_domain.loading"></v-progress-linear>
+					<v-progress-linear :indeterminate="true" v-show="dialog_domain.loading" class="mb-3"></v-progress-linear>
+					<div v-if="dialog_domain.errors">
+						<v-alert :value="true" type="error" v-for="error in dialog_domain.errors">{{ error }}</v-alert>
+					</div>
 					<table class="table-dns" v-else>
 						<tr>
 							<th width="125">Type</th>
@@ -501,13 +504,16 @@ Vue.component('file-upload', VueUploadComponent);
 						</template>
 						</tr>
 					</table>
-					<v-btn depressed class="ma-0" @click="addRecord()" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
+					<v-btn depressed class="ma-0" @click="addRecord()" v-show="!dialog_domain.loading && !dialog_domain.saving && !dialog_domain.errors">Add Additional Record</v-btn>
 				</v-flex>
 				<v-flex xs12>
 					<v-progress-linear :indeterminate="true" v-show="dialog_domain.saving"></v-progress-linear>
 				</v-flex>
 				<v-flex xs12 text-right my-3 v-show="!dialog_domain.loading">
-					<v-btn color="primary" dark @click="saveDNS()">
+					<v-btn @click="deleteDomain()" class="mx-3">
+						Delete Domain
+					</v-btn>
+					<v-btn color="primary" @click="saveDNS()" :dark="dialog_domain.records && dialog_domain.records.length != '0'" :disabled="dialog_domain.records && dialog_domain.records.length == '0'">
 						Save Records
 					</v-btn>
 				</v-flex>
@@ -3300,7 +3306,7 @@ new Vue({
 		dialog_new_domain: { show: false, domain: { name: "", customer: "" }, loading: false, errors: [] },
 		dialog_configure_defaults: { show: false, loading: false, record: {}, records: [], account: "" },
 		dialog_timeline: { show: false, loading: false, logs: [], pagination: {}, selected_account: "", account: { default_email: "", default_plugins: [], default_timezone: "", default_users: [], name: "", id: ""} },
-		dialog_domain: { show: false, domain: {}, records: [], results: [], loading: true, saving: false },
+		dialog_domain: { show: false, domain: {}, records: [], results: [], errors: [], loading: true, saving: false },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $current_user->user_email; ?>", current_user_email: "<?php echo $current_user->user_email; ?>", filter_toggle: true, filter_options: [] },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
 		dialog_mailgun: { show: false, site: {}, response: [], loading: false },
@@ -5611,6 +5617,13 @@ new Vue({
 		},
 		modifyDNS( domain ) {
 			this.dialog_domain = { show: false, domain: {}, records: [], loading: true, saving: false };
+			if ( domain.id == null ) {
+				this.dialog_domain.errors = [ "Domain not found." ];
+				this.dialog_domain.domain = domain;
+				this.dialog_domain.loading = false
+				this.dialog_domain.show = true;
+				return
+			}
 			self = this;
 			axios.get(
 				'/wp-json/captaincore/v1/domain/' + domain.id, {
@@ -5618,16 +5631,14 @@ new Vue({
 				})
 				.then(response => {
 					if ( typeof response.data == "string" ) {
-						self.snackbar.message = response.data;
-						self.snackbar.show = true;
-						this.dialog_domain = { show: false, domain: {}, records: [], loading: false, saving: false };
+						this.dialog_domain.errors = [ response.data ];
+						this.dialog_domain.loading = false
 						return
 					}
 
 					if ( typeof response.data.errors == 'object' ) {
-						self.snackbar.message = response.data.errors.join(" ");
-						self.snackbar.show = true;
-						this.dialog_domain = { show: false, domain: {}, records: [], loading: false, saving: false };
+						this.dialog_domain.loading = false
+						this.dialog_domain.errors = response.data.errors
 						return
 					}
 
@@ -5660,8 +5671,31 @@ new Vue({
 			this.dialog_domain.show = true;
 			
 		},
+		deleteDomain() {
+			should_proceed = confirm("Delete domain " +  this.dialog_domain.domain.name + "?");
+			if ( ! should_proceed ) {
+				return;
+			}
+			this.dialog_domain.loading = true
+			var data = {
+				action: 'captaincore_ajax',
+				command: 'deleteDomain',
+				value: this.dialog_domain.domain.post_id
+			}
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.domains = this.domains.filter( d => d.post_id != response.data.post_id );
+					this.dialog_domain = { show: false, domain: {}, records: [], loading: true, saving: false };
+					this.snackbar.message = response.data.message;
+					this.snackbar.show = true;
+				})
+				.catch( error => {
+					this.snackbar.message = error;
+					this.snackbar.show = true;
+					this.dialog_domain.loading = false;
+				});
+		},
 		saveDNS() {
-
 			this.dialog_domain.saving = true;
 			domain_id = this.dialog_domain.domain.id;
 			record_updates = [];
