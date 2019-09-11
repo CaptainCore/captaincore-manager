@@ -1802,8 +1802,13 @@ function captaincore_domain_func( $request ) {
 
 function captaincore_domains_func( $request ) {
 
-	$domains = (new CaptainCore\Domains())->all();
-	return $domains;
+	return (new CaptainCore\Domains())->all();
+
+}
+
+function  captaincore_keys_func( $request ) {
+
+	return (new CaptainCore\keys())->all( "title", "ASC" );
 
 }
 
@@ -2199,6 +2204,15 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/customers/', array(
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_customers_func',
+			'show_in_index' => false
+		)
+	);
+
+	// Custom endpoint for domains
+	register_rest_route(
+		'captaincore/v1', '/keys/', array(
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_keys_func',
 			'show_in_index' => false
 		)
 	);
@@ -3649,7 +3663,27 @@ function captaincore_ajax_action_callback() {
 	// Only proceed if access to command 
 	$user = wp_get_current_user();
 	$role_check_admin = in_array( 'administrator', $user->roles );
-	$admin_commands = array( 'addDomain', 'deleteDomain', 'fetchConfigs', 'newRecipe', 'updateRecipe', 'updateLogEntry', 'newLogEntry', 'newProcess', 'updateProcess', 'fetchProcess', 'fetchProcessLogs', 'updateFathom', 'updatePlan', 'newSite', 'editSite', 'deleteSite' );
+	$admin_commands = array( 
+		'addDomain', 
+		'deleteDomain', 
+		'fetchConfigs', 
+		'newRecipe', 
+		'updateRecipe', 
+		'updateLogEntry', 
+		'newLogEntry', 
+		'newKey', 
+		'updateKey',
+		'deleteKey',
+		'newProcess', 
+		'updateProcess', 
+		'fetchProcess', 
+		'fetchProcessLogs', 
+		'updateFathom', 
+		'updatePlan', 
+		'newSite', 
+		'updateSite', 
+		'deleteSite' 
+	);
 	if ( ! $role_check_admin && in_array( $_POST['command'], $admin_commands ) ) {
 		echo "Permission denied";
 		wp_die();
@@ -3931,6 +3965,63 @@ function captaincore_ajax_action_callback() {
 		$remote_command = true;
 		$command = "configs fetch vars";
 	};
+
+	if ( $cmd == 'newKey' ) {
+
+		$key = (object) $value;
+		$time_now = date("Y-m-d H:i:s");
+
+		$new_key = array(
+			'user_id'        => get_current_user_id(),
+			'title'          => $key->title,
+			'updated_at'     => $time_now,
+			'created_at'     => $time_now,
+		);
+
+		$db = new CaptainCore\keys();
+		$key_id = $db->insert( $new_key );
+
+		$remote_command = true;
+		$silence = true;
+		$ssh_key = base64_encode( stripslashes_deep( $key->key ) );
+		$command = "key add $ssh_key --id=$key_id";
+	}
+
+	if ( $cmd == 'updateKey' ) {
+
+		$key = (object) $value;
+		$key_id = $key->key_id;
+		$time_now = date("Y-m-d H:i:s");
+
+		$key_update = array(
+			'title'          => $key->title,
+			'updated_at'     => $time_now,
+		);
+
+		$db = new CaptainCore\keys();
+		$db->update( $key_update, array( "key_id" => $key_id ) );
+
+		$remote_command = true;
+		$silence = true;
+		$ssh_key = base64_encode( stripslashes_deep( $key->key ) );
+		$command = "key add $ssh_key --id={$key_id}";
+
+	}
+
+	if ( $cmd == 'deleteKey' ) {
+
+		$key_id = $value;
+		$time_now = date("Y-m-d H:i:s");
+
+		$db = new CaptainCore\keys();
+		$db->delete( $key_id );
+
+		$remote_command = true;
+		$silence = true;
+		$ssh_key = base64_encode( stripslashes_deep( $key->key ) );
+		$command = "key delete --id={$key_id}";
+
+	}
 
 	if ( $cmd == 'newProcess' ) {
 
@@ -4554,7 +4645,7 @@ function captaincore_ajax_action_callback() {
 
 	}
 
-	if ( $cmd == 'editSite' ) {
+	if ( $cmd == 'updateSite' ) {
 
 		// Updates site
 		$site = ( new CaptainCore\Site )->update( $value );
@@ -4678,18 +4769,29 @@ function captaincore_ajax_action_callback() {
 		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
 		$response = $response["body"];
 
-		if ( $silence ) {
-			wp_die(); // this is required to terminate immediately and return a proper response
-		}
-
-		echo $response;
-		
 		// Store results in wp_options.captaincore_settings
 		if ( $cmd == "fetchConfigs" ) {
 			$captaincore_settings = json_decode( $response );
 			unset($captaincore_settings->websites);
 			update_option("captaincore_settings", $captaincore_settings );
 		}
+		
+		// Store results in wp_options.captaincore_settings
+		if ( $cmd == "newKey" ||  $cmd == "updateKey" ) {
+			$key_update = array(
+				'fingerprint' => $response,
+			);
+	
+			$db = new CaptainCore\keys();
+			$db->update( $key_update, array( "key_id" => $key_id ) );
+			echo json_encode( $db->get( $key_id ) );
+		}
+
+		if ( $silence ) {
+		wp_die(); // this is required to terminate immediately and return a proper response
+		}
+
+		echo $response;
 		
 		wp_die(); // this is required to terminate immediately and return a proper response
 
@@ -5067,6 +5169,7 @@ function captaincore_site_fetch_details( $post_id ) {
 	$provider                = get_field( 'provider', $post_id );
 	$domain                  = get_the_title( $post_id );
 	$partners                = get_field( 'partner', $post_id );
+	$key                     = get_field( 'key', $post_id );
 	$address                 = $site_details->environments[0]["address"];
 	$username                = $site_details->environments[0]["username"];
 	$password                = $site_details->environments[0]["password"];
@@ -5115,6 +5218,7 @@ function captaincore_site_fetch_details( $post_id ) {
 	( $site ? " $site" : '' ) .
 	( $post_id ? " --id=$post_id" : '' ) .
 	( $domain ? " --domain=$domain" : '' ) .
+	( $key ? " --key=$key" : '' ) .
 	( $preloadusers ? " --preloadusers=$preloadusers" : '' ) .
 	( $address ? " --address=$address" : '' ) .
 	( $username ? " --username=$username" : '' ) .
@@ -5155,11 +5259,13 @@ function captaincore_site_fetch_details( $post_id ) {
 function captaincore_create_tables() {
 
 	global $wpdb;
-	$required_version = 15;
-	$version = (int) get_site_option('captcorecore_db_version');
+	$required_version = 16;
+	$version = (int) get_site_option( 'captcorecore_db_version' );
 	$charset_collate = $wpdb->get_charset_collate();
 
 	if ( $version < $required_version ) {
+
+		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 
 		$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_update_logs` (
 			log_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -5171,7 +5277,6 @@ function captaincore_create_tables() {
 		PRIMARY KEY  (log_id)
 		) $charset_collate;";
 
-		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 		dbDelta($sql);
 		$success = empty($wpdb->last_error);
 
@@ -5188,7 +5293,6 @@ function captaincore_create_tables() {
 		PRIMARY KEY  (quicksave_id)
 		) $charset_collate;";
 
-		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 		dbDelta($sql);
 		$success = empty($wpdb->last_error);
 
@@ -5207,7 +5311,6 @@ function captaincore_create_tables() {
 		PRIMARY KEY  (snapshot_id)
 		) $charset_collate;";
 
-		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 		dbDelta($sql);
 		$success = empty($wpdb->last_error);
 
@@ -5247,7 +5350,6 @@ function captaincore_create_tables() {
 		PRIMARY KEY  (environment_id)
 		) $charset_collate;";
 
-		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 		dbDelta($sql);
 		$success = empty($wpdb->last_error);
 
@@ -5262,11 +5364,23 @@ function captaincore_create_tables() {
 		PRIMARY KEY  (recipe_id)
 		) $charset_collate;";
 
-		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 		dbDelta($sql);
 		$success = empty($wpdb->last_error);
 
-		update_site_option('captcorecore_db_version', $required_version );
+		$sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_keys` (
+			key_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+			user_id bigint(20) UNSIGNED NOT NULL,
+			title varchar(255),
+			fingerprint varchar(47),
+			created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			updated_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+		PRIMARY KEY  (key_id)
+		) $charset_collate;";
+
+		dbDelta($sql);
+		$success = empty($wpdb->last_error);
+
+		update_site_option( 'captcorecore_db_version', $required_version );
 	}
 
 }

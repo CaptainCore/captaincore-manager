@@ -100,6 +100,14 @@ Vue.component('file-upload', VueUploadComponent);
           <v-list-item-content>
             <v-list-item-title>Handbook</v-list-item-title>
           </v-list-item-content>
+		</v-list-item>
+		<v-list-item link href="#keys" v-show="role == 'administrator'">
+          <v-list-item-icon>
+            <v-icon>mdi-key</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>SSH Keys</v-list-item-title>
+          </v-list-item-content>
         </v-list-item>
         <v-list-item link :href="billing_link" target="_blank" v-show="billing_link">
           <v-list-item-icon>
@@ -590,6 +598,68 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-card-text>
 		</v-card>
 	  </v-dialog>
+	  <v-dialog v-model="new_key.show" max-width="800px" v-if="role == 'administrator'">
+		<v-card tile style="margin:auto;max-width:800px">
+		<v-toolbar flat color="grey lighten-4">
+			<v-btn icon @click.native="new_key.show = false">
+				<v-icon>close</v-icon>
+			</v-btn>
+			<v-toolbar-title>New SSH Key</v-toolbar-title>
+			<v-spacer></v-spacer>
+		</v-toolbar>
+		<v-card-text style="max-height: 100%;">
+		<v-container>
+		<v-layout row wrap>
+			<v-flex xs12 pa-2>
+				<v-text-field label="Name" :value="new_key.title" @change.native="new_key.title = $event.target.value"></v-text-field>
+			</v-flex>
+			<v-flex xs12 pa-2>
+				<v-textarea label="Private Key" persistent-hint hint="Contents of your private key file. Typically named something like 'id_rsa'. The corresponding public key will need to added to your host provider." auto-grow :value="new_key.key" @change.native="new_key.key = $event.target.value"></v-textfield>
+			</v-flex>
+
+			<v-flex xs12 text-right pa-0 ma-0>
+				<v-btn color="primary" dark @click="addNewKey()">
+					Add New SSH Key
+				</v-btn>
+			</v-flex>
+			</v-flex>
+			</v-layout>
+		</v-container>
+		</v-card-text>
+		</v-card>
+	</v-dialog>
+	<v-dialog v-model="dialog_key.show" v-if="role == 'administrator'" max-width="800px" v-if="role == 'administrator'" persistent>
+		<v-card tile>
+		<v-toolbar flat color="grey lighten-4">
+			<v-btn icon @click.native="dialog_key.show = false">
+				<v-icon>close</v-icon>
+			</v-btn>
+			<v-toolbar-title>Edit SSH Key</v-toolbar-title>
+			<v-spacer></v-spacer>
+			<v-chip color="primary" text-color="white" text>{{ dialog_key.key.fingerprint }}</v-chip>
+		</v-toolbar>
+		<v-card-text style="max-height: 100%;">
+			<v-container>
+			<v-layout row wrap>
+				<v-flex xs12 pa-2>
+					<v-text-field label="Name" :value="dialog_key.key.title" @change.native="dialog_key.key.title = $event.target.value"></v-text-field>
+				</v-flex>
+				<v-flex xs12 pa-2>
+					<v-textarea label="Private Key" persistent-hint hint="Enter new private key to override existing key. The current key is not viewable." auto-grow :value="dialog_key.key.key" @change.native="dialog_key.key.key = $event.target.value"></v-textfield>
+				</v-flex>
+				<v-flex xs12 text-right pa-0 ma-0>
+					<v-btn @click="deleteKey()" class="mr-2">
+						Delete SSH Key
+					</v-btn>
+					<v-btn color="primary" dark @click="updateKey()">
+						Update SSH Key
+					</v-btn>
+				</v-flex>
+			</v-layout>
+			</v-container>
+			</v-card-text>
+		</v-card>
+	</v-dialog>
 	  <v-dialog v-model="new_process.show" max-width="800px" v-if="role == 'administrator'">
 		<v-card tile style="margin:auto;max-width:800px">
 			<v-toolbar flat color="grey lighten-4">
@@ -1564,57 +1634,69 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-autocomplete>
 				</v-flex>
 				<v-flex xs4 class="mx-2">
+					<v-autocomplete
+						:items="keys"
+						item-text="title"
+						item-value="key_id"
+						v-model="dialog_edit_site.site.key"
+						label="SSH Key"
+						chips
+						deletable-chips
+						hint="Optional. Will use SSH key instead of SFTP for management purposes."
+						persistent-hint
+					>
+					</v-autocomplete>
 				</v-flex>
 				</v-layout>
-							<v-container grid-list-md text-center>
-								<v-layout row wrap>
-									<v-flex xs12 style="height:0px">
-									<v-btn @click="edit_site_preload_staging" text icon center relative color="green" style="top:32px;">
-										<v-icon>cached</v-icon>
+						<v-container grid-list-md text-center>
+							<v-layout row wrap>
+								<v-flex xs12 style="height:0px">
+								<v-btn @click="edit_site_preload_staging" text icon center relative color="green" style="top:32px;">
+									<v-icon>cached</v-icon>
+								</v-btn>
+								</v-flex>
+								<v-flex xs6 v-for="key in dialog_edit_site.site.environments" :key="key.index">
+								<v-card class="bordered body-1" style="margin:2em;">
+								<div style="position: absolute;top: -20px;left: 20px;">
+									<v-btn depressed disabled right style="background-color: rgb(229, 229, 229)!important; color: #000 !important; left: -11px; top: 0px; height: 24px;">
+										{{ key.environment }} Environment
 									</v-btn>
-									</v-flex>
-									<v-flex xs6 v-for="key in dialog_edit_site.site.environments" :key="key.index">
-									<v-card class="bordered body-1" style="margin:2em;">
-									<div style="position: absolute;top: -20px;left: 20px;">
-										<v-btn depressed disabled right style="background-color: rgb(229, 229, 229)!important; color: #000 !important; left: -11px; top: 0px; height: 24px;">
-											{{ key.environment }} Environment
-										</v-btn>
+								</div>
+								<v-container fluid>
+								<div row>
+									<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required></v-text-field>
+									<v-text-field label="Home Directory" :value="key.home_directory" @change.native="key.home_directory = $event.target.value" required></v-text-field>
+										<v-layout>
+										<v-flex xs6 class="mr-1"><v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field></v-flex>
+										<v-flex xs6 class="ml-1"><v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field></v-flex>
+										</v-layout>
+										<v-layout>
+										<v-flex xs6 class="mr-1"><v-text-field label="Protocol" :value="key.protocol" @change.native="key.protocol = $event.target.value" required></v-text-field></v-flex>
+										<v-flex xs6 class="mr-1"><v-text-field label="Port" :value="key.port" @change.native="key.port = $event.target.value" required></v-text-field></v-flex>
+										</v-layout>
+										<v-layout>
+										<v-flex xs6 class="mr-1"><v-text-field label="Database Username" :value="key.database_username" @change.native="key.database_username = $event.target.value" required></v-text-field></v-flex>
+										<v-flex xs6 class="mr-1"><v-text-field label="Database Password" :value="key.database_password" @change.native="key.database_password = $event.target.value" required></v-text-field></v-flex>
+										</v-layout>
+										<v-layout>
+											<v-flex xs6 class="mr-1" v-if="typeof key.offload_enabled != 'undefined'">
+										<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
+											</v-flex>
+										</v-layout>
+										<div v-if="key.offload_enabled == 1">
+										<v-layout>
+											<v-flex xs6 class="mr-1"><v-select label="Offload Provider" :value="key.offload_provider" @change.native="key.offload_provider = $event.target.value" :items='[{ provider:"s3", label: "Amazon S3" },{ provider:"do", label:"Digital Ocean" }]' item-text="label" item-value="provider" clearable></v-select></v-flex>
+											<v-flex xs6 class="mr-1"><v-text-field label="Offload Access Key" :value="key.offload_access_key" @change.native="key.offload_access_key = $event.target.value" required></v-text-field></v-flex>
+										</v-layout>
+										<v-layout>
+											<v-flex xs6 class="mr-1"><v-text-field label="Offload Secret Key" :value="key.offload_secret_key" @change.native="key.offload_secret_key = $event.target.value" required></v-text-field></v-flex>
+											<v-flex xs6 class="mr-1"><v-text-field label="Offload Bucket" :value="key.offload_bucket" @change.native="key.offload_bucket = $event.target.value" required></v-text-field></v-flex>
+										</v-layout>
+										<v-layout>
+											<v-flex xs6 class="mr-1"><v-text-field label="Offload Path" :value="key.offload_path" @change.native="key.offload_path = $event.target.value" required></v-text-field></v-flex>
+										</v-layout>
 									</div>
-									<v-container fluid>
-									<div row>
-										<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required></v-text-field>
-										<v-text-field label="Home Directory" :value="key.home_directory" @change.native="key.home_directory = $event.target.value" required></v-text-field>
-											<v-layout>
-											<v-flex xs6 class="mr-1"><v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field></v-flex>
-											<v-flex xs6 class="ml-1"><v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field></v-flex>
-											</v-layout>
-											<v-layout>
-											<v-flex xs6 class="mr-1"><v-text-field label="Protocol" :value="key.protocol" @change.native="key.protocol = $event.target.value" required></v-text-field></v-flex>
-											<v-flex xs6 class="mr-1"><v-text-field label="Port" :value="key.port" @change.native="key.port = $event.target.value" required></v-text-field></v-flex>
-											</v-layout>
-											<v-layout>
-											<v-flex xs6 class="mr-1"><v-text-field label="Database Username" :value="key.database_username" @change.native="key.database_username = $event.target.value" required></v-text-field></v-flex>
-											<v-flex xs6 class="mr-1"><v-text-field label="Database Password" :value="key.database_password" @change.native="key.database_password = $event.target.value" required></v-text-field></v-flex>
-											</v-layout>
-											<v-layout>
-												<v-flex xs6 class="mr-1" v-if="typeof key.offload_enabled != 'undefined'">
-											<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
-												</v-flex>
-											</v-layout>
-											<div v-if="key.offload_enabled == 1">
-											<v-layout>
-												<v-flex xs6 class="mr-1"><v-select label="Offload Provider" :value="key.offload_provider" @change.native="key.offload_provider = $event.target.value" :items='[{ provider:"s3", label: "Amazon S3" },{ provider:"do", label:"Digital Ocean" }]' item-text="label" item-value="provider" clearable></v-select></v-flex>
-												<v-flex xs6 class="mr-1"><v-text-field label="Offload Access Key" :value="key.offload_access_key" @change.native="key.offload_access_key = $event.target.value" required></v-text-field></v-flex>
-											</v-layout>
-											<v-layout>
-												<v-flex xs6 class="mr-1"><v-text-field label="Offload Secret Key" :value="key.offload_secret_key" @change.native="key.offload_secret_key = $event.target.value" required></v-text-field></v-flex>
-												<v-flex xs6 class="mr-1"><v-text-field label="Offload Bucket" :value="key.offload_bucket" @change.native="key.offload_bucket = $event.target.value" required></v-text-field></v-flex>
-											</v-layout>
-											<v-layout>
-												<v-flex xs6 class="mr-1"><v-text-field label="Offload Path" :value="key.offload_path" @change.native="key.offload_path = $event.target.value" required></v-text-field></v-flex>
-											</v-layout>
-										</div>
-									</div>
+								</div>
 							 </v-container>
 						 </v-card>
 						</v-flex>
@@ -1627,7 +1709,7 @@ Vue.component('file-upload', VueUploadComponent);
 						</v-alert>
 						
 						<v-flex xs12 text-right>
-							<v-btn right @click="submitEditSite">
+							<v-btn right @click="updateSite" color="primary">
 								Save Changes
 							</v-btn>
 							<v-progress-linear :indeterminate="true" v-show="dialog_edit_site.loading"></v-progress-linear>
@@ -1877,11 +1959,11 @@ Vue.component('file-upload', VueUploadComponent);
 					<template v-slot:activator="{ on }">
 					<v-btn small icon @click="bulkSyncSites()" style="margin: 12px auto 0 0;" v-on="on">
 						<v-icon color="grey">mdi-sync</v-icon>
-				</v-btn>
+					</v-btn>
 					</template>
 					<span>Manual sync website details</span>
 				</v-tooltip>
-				</v-flex>
+			</v-flex>
 			</v-layout>
 			</v-flex>
 			<v-flex xs12 sm8>
@@ -2205,7 +2287,7 @@ Vue.component('file-upload', VueUploadComponent);
 											</template>
 											<span>Manual sync website details</span>
 										</v-tooltip>
-										</v-flex>
+									</v-flex>
 									</v-layout>
 									</v-flex>
 									<v-flex xs12 sm8>
@@ -3232,8 +3314,35 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-flex>
 					</v-layout>
 					</v-container>
-					</v-card-text>
-					</v-card>
+				</v-card-text>
+			</v-card>
+			<v-card tile v-show="route == 'keys'" v-if="role == 'administrator'" flat>
+				<v-toolbar color="grey lighten-4" light flat>
+					<v-toolbar-title>Your SSH keys</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+						<v-btn text @click="new_key.show = true">Add SSH Key <v-icon dark>add</v-icon></v-btn>
+					</v-toolbar-items>
+				</v-toolbar>
+				<v-card-text style="max-height: 100%;">
+					<v-container fluid grid-list-lg>
+					<v-layout row wrap>
+					<v-flex xs12 v-for="key in keys">
+						<v-card :hover="true" @click="viewKey( key.key_id )">
+						<v-card-title primary-title class="pt-2">
+							<div>
+								<span class="title">{{ key.title }}</a></span>
+							</div>
+						</v-card-title>
+						<v-card-text>
+							<v-chip color="primary" text-color="white" text>{{ key.fingerprint }}</v-chip>
+						</v-card-text>
+						</v-card>
+					</v-flex>
+					</v-layout>
+					</v-container>
+				</v-card-text>
+			</v-card>
 			</v-container>
 			<v-container fluid v-show="loading_page">
 				Loading...
@@ -3317,6 +3426,7 @@ new Vue({
 		socket: "<?php echo captaincore_fetch_socket_address() . "/ws"; ?>",
 		timezones: <?php echo json_encode( timezone_identifiers_list() ); ?>,
 		jobs: [],
+		keys: [],
 		custom_script: "",
 		recipes: 
 		<?php
@@ -3387,8 +3497,10 @@ new Vue({
 		dialog_log_history: { show: false, logs: [], pagination: {} },
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_handbook: { show: false, process: {} },
+		dialog_key: { show: false, key: {} },
 		new_recipe: { show: false, title: "", content: "", public: 1 },
 		new_process: { show: false, title: "", time_estimate: "", repeat: "as-needed", repeat_quantity: "", role: "", description: "" },
+		new_key: { show: false, title: "", key: "" },
 		dialog_edit_process: { show: false, process: {} },
 		new_process_roles: 
 			<?php
@@ -3695,6 +3807,10 @@ new Vue({
 			}
 			if ( this.route == "handbook" ) {
 				this.loading_page = false;
+			}
+			if ( this.route == "keys" ) {
+				this.loading_page = false;
+				this.fetchKeys()
 			}
 			if ( this.route == "sites" ) {
 				if ( this.filteredSites == 0 ) {
@@ -4117,13 +4233,13 @@ new Vue({
 					}
 				});
 		},
-		submitEditSite() {
+		updateSite() {
 
 			this.dialog_edit_site.loading = true;
 
 			var data = {
 				'action': 'captaincore_ajax',
-				'command': "editSite",
+				'command': "updateSite",
 				'value': this.dialog_edit_site.site
 			};
 
@@ -4284,10 +4400,28 @@ new Vue({
 				.then(response => {
 					this.domains = response.data;
 					this.loading_page = false;
-					setTimeout(this.fetchMissing, 3000)
+					setTimeout(this.fetchMissing, 4000)
+				});
+		},
+		fetchKeys() {
+			axios.get(
+				'/wp-json/captaincore/v1/keys', {
+					headers: {'X-WP-Nonce':wpApiSettings.nonce}
+				})
+				.then(response => {
+					this.keys = response.data;
+					this.loading_page = false;
+					setTimeout(this.fetchMissing, 4000)
 				});
 		},
 		fetchSites() {
+			axios.get(
+				'/wp-json/captaincore/v1/keys', {
+					headers: {'X-WP-Nonce':wpApiSettings.nonce}
+				})
+				.then(response => {
+					this.keys = response.data;
+				});
 			axios.get(
 				'/wp-json/captaincore/v1/sites', {
 					headers: {'X-WP-Nonce':wpApiSettings.nonce}
@@ -5007,6 +5141,70 @@ new Vue({
 				})
 				.catch( error => console.log( error ) );
 
+		},
+		addNewKey() {
+
+			var data = {
+				action: 'captaincore_ajax',
+				command: 'newKey',
+				value: this.new_key
+			};
+
+			self = this;
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					self.keys.unshift( response.data );
+					self.new_key = { show: false, title: "", key: "" };
+					self.snackbar.message = "New SSH key added.";
+					self.snackbar.show = true;
+				})
+				.catch( error => console.log( error ) );
+
+		},
+		viewKey( key_id ) {
+			key = this.keys.filter( key => key.key_id == key_id )[0];
+			this.dialog_key.key = key;
+			this.dialog_key.key.key = "";
+			this.dialog_key.show = true;
+		},
+		updateKey() {
+			var data = {
+				action: 'captaincore_ajax',
+				command: 'updateKey',
+				value: this.dialog_key.key
+			};
+
+			key = this.keys.filter( key => key.key_id == this.dialog_key.key.key_id )[0];
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.keys = this.keys.filter( key => key.key_id != this.dialog_key.key.key_id )
+					this.dialog_key = { show: false, key: {} };
+					this.keys.push( response.data );
+					this.keys.sort((a, b) => (a.title > b.title) ? 1 : -1)
+				})
+				.catch( error => console.log( error ) );
+		},
+		deleteKey() {
+
+			delete_key = this.keys.filter( key => key.key_id == this.dialog_key.key.key_id )[0];
+			should_proceed = confirm(`Delete SSH key '${delete_key.title}'?`);
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			var data = {
+				action: 'captaincore_ajax',
+				command: 'deleteKey',
+				value: this.dialog_key.key.key_id
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.keys = this.keys.filter( key => key.key_id != this.dialog_key.key.key_id )
+					this.dialog_key = { show: false, key: {} };
+				})
+				.catch( error => console.log( error ) );
 		},
 		editRecipe( recipe_id ) {
 			recipe = this.recipes.filter( recipe => recipe.recipe_id == recipe_id )[0];

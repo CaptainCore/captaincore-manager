@@ -102,6 +102,13 @@ class DB {
 		return $wpdb->get_results( $sql );
 	}
 
+	static function mine( $sort = "created_at", $sort_order = "DESC" ) {
+		global $wpdb;
+		$user_id = get_current_user_id();
+		$sql = 'SELECT * FROM ' . self::_table() . " WHERE user_id = '{$user_id}' order by `{$sort}` {$sort_order}";
+		return $wpdb->get_results( $sql );
+	}
+
 	static function fetch_recipes( $sort = "created_at", $sort_order = "DESC" ) {
 		global $wpdb;
 		$user_id = get_current_user_id();
@@ -145,6 +152,12 @@ class DB {
 class environments extends DB {
 
 	static $primary_key = 'environment_id';
+
+}
+
+class keys extends DB {
+
+	static $primary_key = 'key_id';
 
 }
 
@@ -546,6 +559,7 @@ class Site {
 		$site_details->name                 = $domain;
 		$site_details->site                 = get_field( 'site', $site->ID );
 		$site_details->provider             = get_field( 'provider', $site->ID );
+		$site_details->key                  = get_field( 'key', $site->ID );
 		$site_details->filtered             = true;
 		$site_details->usage_breakdown      = array();
 		$site_details->timeline             = array();
@@ -1025,6 +1039,7 @@ class Site {
 			update_field( 'customer', $site->customer["customer_id"], $site_id );
 			update_field( 'partner', array_column( $site->shared_with, 'customer_id' ), $site_id );
 			update_field( 'provider', $site->provider, $site_id );
+			update_field( 'key', $site->key, $site_id );
 
 			// update_field( 'status', 'active', $site_id );
 			if ( get_field( 'launch_date', $site_id ) == '' ) {
