@@ -2181,8 +2181,11 @@ Vue.component('file-upload', VueUploadComponent);
 					 <strong>{{ data.item.title }}</strong>&nbsp;<span>({{ data.item.name }})</span>
 				</template>
 			</v-autocomplete>
-				<v-btn v-show="role == 'administrator'" class="mx-1 mt-5" @click="showHealthySites">Healthy only</v-btn>
-				<v-btn v-show="role == 'administrator'" class="mx-1 mt-5" @click="showOutdatedSites">Outdated only</v-btn>
+				<v-btn color="primary" small outlined v-show="role == 'administrator'" class="mx-1 mt-5" @click="showHealthySites">Healthy only</v-btn>
+				<v-btn color="primary" small outlined v-show="role == 'administrator'" class="mx-1 mt-5" @click="showOutdatedSites">Outdated only</v-btn>
+				<v-btn color="primary" small outlined v-show="role == 'administrator'" class="mx-1 mt-5" @click="showWithPlan">With assigned plan</v-btn>
+				<v-btn color="primary" small outlined v-show="role == 'administrator'" class="mx-1 mt-5" @click="showWithoutPlan">Without assigned plan</v-btn>
+				<v-btn color="primary" small outlined v-show="role == 'administrator'" class="mx-1 mt-5" @click="filterSites">Reset</v-btn>
 			</v-flex>
 		</v-layout>
 		<v-layout row>
@@ -7316,6 +7319,26 @@ new Vue({
 					site.filtered = true;
 				} else {
 					site.filtered = false;
+				}
+			});
+		},
+		showWithPlan() {
+			hosting_plans = this.hosting_plans.map( p => p.name )
+			this.sites.forEach( site => {
+				if ( hosting_plans.includes( site.customer.hosting_plan.name ) ) {
+					site.filtered = true;
+				} else {
+					site.filtered = false;
+				}
+			});
+		},
+		showWithoutPlan() {
+			hosting_plans = this.hosting_plans.map( p => p.name )
+			this.sites.forEach( site => {
+				if ( hosting_plans.includes( site.customer.hosting_plan.name ) ) {
+					site.filtered = false;
+				} else {
+					site.filtered = true;
 				}
 			});
 		},
