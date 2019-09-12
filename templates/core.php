@@ -4414,6 +4414,9 @@ new Vue({
 				});
 		},
 		fetchKeys() {
+			if ( this.role != 'administrator' ) {
+				return
+			}
 			axios.get(
 				'/wp-json/captaincore/v1/keys', {
 					headers: {'X-WP-Nonce':wpApiSettings.nonce}
@@ -4425,13 +4428,15 @@ new Vue({
 				});
 		},
 		fetchSites() {
-			axios.get(
+			if ( this.role == 'administrator' ) {
+				axios.get(
 				'/wp-json/captaincore/v1/keys', {
 					headers: {'X-WP-Nonce':wpApiSettings.nonce}
 				})
 				.then(response => {
 					this.keys = response.data;
 				});
+			}
 			axios.get(
 				'/wp-json/captaincore/v1/sites', {
 					headers: {'X-WP-Nonce':wpApiSettings.nonce}

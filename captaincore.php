@@ -1773,7 +1773,15 @@ function captaincore_domains_func( $request ) {
 
 function  captaincore_keys_func( $request ) {
 
-	return (new CaptainCore\keys())->all( "title", "ASC" );
+	$current_user = wp_get_current_user();
+	$role_check   = in_array( 'administrator', $current_user->roles );
+
+	// Checks for a current user. If admin found pass
+	if ( $current_user && $role_check ) {
+		return (new CaptainCore\keys())->all( "title", "ASC" );
+	} else {
+		return array();
+	}
 
 }
 
