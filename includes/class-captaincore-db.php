@@ -573,6 +573,7 @@ class Site {
 		$site_details->tabs_management      = 'tab-Info';
 		$site_details->storage_raw          = $environments[0]->storage;
 		$site_details->storage              = $storage_gbs;
+		$site_details->outdated				= false;
 		if ( is_string( $visits ) ) {
 			$site_details->visits = number_format( intval( $visits ) );
 		}
@@ -582,6 +583,11 @@ class Site {
 			'sortBy'     => 'date',
 		);
 		$site_details->pagination             = array( 'sortBy' => 'roles' );
+
+		// Mark site as outdated if sync older then 48 hours
+		if ( strtotime( $environments[0]->updated_at ) <= strtotime( "-48 hours" ) ) {
+			$site_details->outdated           = true;
+		}
 
 		if ( ! isset( $site_details->visits ) ) {
 			$site_details->visits = '';
@@ -645,6 +651,7 @@ class Site {
 			'id'                      => $environments[0]->environment_id,
 			'link'                    => "http://$domain",
 			'environment'             => 'Production',
+			'updated_at'              => $environments[0]->updated_at,
 			'address'                 => $environments[0]->address,
 			'username'                => $environments[0]->username,
 			'password'                => $environments[0]->password,
@@ -737,6 +744,7 @@ class Site {
 			'key_id'                  => 2,
 			'link'                    => $link_staging,
 			'environment'             => 'Staging',
+			'updated_at'              => $environments[1]->updated_at,
 			'address'                 => $environments[1]->address,
 			'username'                => $environments[1]->username,
 			'password'                => $environments[1]->password,

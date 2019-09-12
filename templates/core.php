@@ -38,6 +38,7 @@ if ( $role_check ) {
 lodash = _.noConflict();
 </script>
 <link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.0/dist/frappe-charts.min.css" rel="stylesheet">
+<script src="/wp-content/plugins/captaincore/public/js/moment.min.js"></script>
 <script src="/wp-content/plugins/captaincore/public/js/frappe-charts.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.20/dist/vue-upload-component.js"></script>
@@ -2180,6 +2181,8 @@ Vue.component('file-upload', VueUploadComponent);
 					 <strong>{{ data.item.title }}</strong>&nbsp;<span>({{ data.item.name }})</span>
 				</template>
 			</v-autocomplete>
+				<v-btn v-show="role == 'administrator'" class="mx-1 mt-5" @click="showHealthySites">Healthy only</v-btn>
+				<v-btn v-show="role == 'administrator'" class="mx-1 mt-5" @click="showOutdatedSites">Outdated only</v-btn>
 			</v-flex>
 		</v-layout>
 		<v-layout row>
@@ -2242,7 +2245,7 @@ Vue.component('file-upload', VueUploadComponent);
 							<v-layout align-center justify-start fill-height font-weight-light subtitle-1>
 							<v-switch v-model="site.selected" @click.native.stop @change="site_selected = null" style="position: absolute; left: 10px; top: 17px;" v-show="dialog_bulk.show == true"></v-switch>
 								<img :src="site.environments[0].screenshot_small" style="width: 50px; margin-right:1em" class="elevation-1" v-show="site.environments[0].screenshot_small">
-							{{ site.name }}
+							{{ site.name }} <v-chip class="ma-2" color="red" text-color="white" v-show="role == 'administrator' && site.outdated" small>Last sync {{ site.environments[0].updated_at | timeago }}</v-chip>
 							</v-layout>
 						</div>
 						<div class="text-right d-none d-md-block">
@@ -2295,7 +2298,7 @@ Vue.component('file-upload', VueUploadComponent);
 												<v-icon color="grey">mdi-sync</v-icon>
 											</v-btn>
 											</template>
-											<span>Manual sync website details</span>
+											<span>Manual sync website details. Last sync {{ site.environments[0].updated_at | timeago }}.</span>
 										</v-tooltip>
 									</v-flex>
 									</v-layout>
@@ -3665,6 +3668,9 @@ new Vue({
 		}
     },
 	filters: {
+		timeago: function( timestamp ){
+			return moment.utc( timestamp, "YYYY-MM-DD hh:mm:ss").fromNow();
+		},
 		formatTime: function ( value ) {
 			var sec_num = parseInt(value, 10); // don't forget the second param
 			var hours   = Math.floor(sec_num / 3600);
@@ -7295,6 +7301,24 @@ new Vue({
 			this.search = e;
 			this.filterSites();
 		}, 300),
+		showHealthySites(){
+			this.sites.forEach( site => {
+				if ( site.outdated ) {
+					site.filtered = false;
+				} else {
+					site.filtered = true;
+				}
+			});
+		},
+		showOutdatedSites() {
+			this.sites.forEach( site => {
+				if ( site.outdated ) {
+					site.filtered = true;
+				} else {
+					site.filtered = false;
+				}
+			});
+		},
 		filterSites() {
 
 			if ( this.applied_site_filter.length > 0 || this.search ) {
