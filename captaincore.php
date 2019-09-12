@@ -91,7 +91,6 @@ require 'includes/bulk-actions.php';
 require 'includes/Parsedown.php';
 
 function captaincore_rewrite() {
-	add_rewrite_rule( '^captaincore-api/([^/]*)/?', 'index.php?pagename=captaincore-api&callback=$matches[1]', 'top' );
 	add_rewrite_rule( '^checkout-express/([^/]*)/?', 'index.php?pagename=checkout-express&callback=$matches[1]', 'top' );
 	add_rewrite_tag( '%site%', '([^&]+)' );
 	add_rewrite_tag( '%sitetoken%', '([^&]+)' );
@@ -117,40 +116,6 @@ function captaincore_disable_gutenberg( $can_edit, $post_type ) {
 	return $can_edit;
 }
 add_filter( 'use_block_editor_for_post_type', 'captaincore_disable_gutenberg', 10, 2 );
-
-// Modify WooCommerce Menu: wc_get_account_menu_items() ;
-function captaincore_my_account_order( $current_menu ) {
-
-	unset( $current_menu['websites'] );
-	unset( $current_menu['edit-account'] );
-	$current_menu['edit-account'] = 'Account';
-	unset( $current_menu['subscriptions'] );
-	$current_menu['subscriptions'] = 'Billing';
-	unset( $current_menu['customer-logout'] );
-	$current_menu['payment-methods'] = 'Payment methods'; // Payment Methods
-	$current_menu['customer-logout'] = 'Logout';
-
-	$user = wp_get_current_user();
-
-	$role_check_admin      = in_array( 'administrator', $user->roles );
-	$role_check_subscriber = in_array( 'subscriber', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
-
-	if ( ! $role_check_admin ) {
-		unset( $current_menu['handbook'] );
-		unset( $current_menu['cookbook'] );
-		unset( $current_menu['manage'] );
-	}
-	if ( ! $role_check_subscriber ) {
-		unset( $current_menu['dns'] );
-		unset( $current_menu['logs'] );
-	}
-	if ( ! defined( "CONSTELLIX_API_KEY") or ! defined( "CONSTELLIX_SECRET_KEY")  ) {
-		unset( $current_menu['dns'] );
-	}
-	return $current_menu;
-}
-// Need to run later to allow time for new items to be added to WooCommerce Menu
-add_filter( 'woocommerce_account_menu_items', 'captaincore_my_account_order', 50 );
 
 // Register Custom Post Type
 function contact_post_type() {
