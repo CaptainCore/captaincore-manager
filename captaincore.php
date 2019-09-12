@@ -5183,7 +5183,7 @@ function captaincore_site_fetch_details( $post_id ) {
 	( $site ? " $site" : '' ) .
 	( $post_id ? " --id=$post_id" : '' ) .
 	( $domain ? " --domain=$domain" : '' ) .
-	( $key ? " --key=$key" : '' ) .
+	( $key ? " --key=$key" : ' --key=""' ) .
 	( $preloadusers ? " --preloadusers=$preloadusers" : '' ) .
 	( $address ? " --address=$address" : '' ) .
 	( $username ? " --username=$username" : '' ) .

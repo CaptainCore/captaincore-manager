@@ -1008,7 +1008,6 @@ Vue.component('file-upload', VueUploadComponent);
 								return-object
 								chips
 								multiple
-								small-chips
 								deletable-chips
 							>
 							</v-autocomplete>
@@ -1023,12 +1022,23 @@ Vue.component('file-upload', VueUploadComponent);
 								hint="Assign to existing customer. If new leave blank."
 								persistent-hint
 								chips
-								small-chips
 								deletable-chips
 							>
-						</v-autocomplete>
-							</v-flex>
+							</v-autocomplete>
+						</v-flex>
 						<v-flex xs4 class="mx-2">
+							<v-autocomplete
+								:items="keys"
+								item-text="title"
+								item-value="key_id"
+								v-model="dialog_new_site.key"
+								label="SSH Key"
+								chips
+								deletable-chips
+								hint="Optional. Will use SSH key instead of SFTP for management purposes."
+								persistent-hint
+							>
+							</v-autocomplete>
 						</v-flex>
 						</v-layout>
 							<v-container grid-list-md text-center>
@@ -3525,6 +3535,7 @@ new Vue({
 		dialog_new_site: {
 			provider: "kinsta",
 			show: false,
+			key: "",
 			site: "",
 			domain: "",
 			errors: [],
@@ -4127,7 +4138,6 @@ new Vue({
 			}
 		},
 		new_site_preload_staging() {
-
 			// Copy production address to staging field
 			this.dialog_new_site.environments[1].address = this.dialog_new_site.environments[0].address;
 
