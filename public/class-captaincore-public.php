@@ -96,11 +96,15 @@ class Captaincore_Public {
 		 * class.
 		 */
 		if ( is_user_logged_in() ) {
-			wp_localize_script( 'wp-api', 'wpApiSettings', array(
-			    'root' => esc_url_raw( rest_url() ),
-			    'nonce' => wp_create_nonce( 'wp_rest' )
+			$wpApiSettings = json_encode( array( 
+				'root' => esc_url_raw( rest_url() ),
+				'nonce' => wp_create_nonce( 'wp_rest' )
 			) );
-			wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/captaincore-public.2018-06-30.js', array( 'jquery', 'wp-api' ), $this->version, false );
+			$wpApiSettings = "var wpApiSettings = ${wpApiSettings};";
+			wp_register_script( 'captaincore-wp-api', '' );
+			wp_enqueue_script( 'captaincore-wp-api' );
+			wp_add_inline_script( 'captaincore-wp-api', $wpApiSettings );
+			wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/captaincore-public.2018-06-30.js', array( 'jquery' ), $this->version, false );
 		} else {
 			wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/captaincore-public.2018-06-30.js', array( 'jquery' ), $this->version, false );
 		}

@@ -3725,7 +3725,7 @@ function captaincore_ajax_action_callback() {
 			)
 		);
 
-		 // If results still exists then give an error
+		// If results still exists then give an error
 		if ( count( $domain_exists ) > 0 ) {
 			$errors[] = "Domain has already been added.";
 		}
@@ -4740,7 +4740,7 @@ function captaincore_ajax_action_callback() {
 			unset($captaincore_settings->websites);
 			update_option("captaincore_settings", $captaincore_settings );
 		}
-		
+
 		// Store results in wp_options.captaincore_settings
 		if ( $cmd == "newKey" ||  $cmd == "updateKey" ) {
 			$key_update = array(
@@ -4753,7 +4753,7 @@ function captaincore_ajax_action_callback() {
 		}
 
 		if ( $silence ) {
-		wp_die(); // this is required to terminate immediately and return a proper response
+			wp_die(); // this is required to terminate immediately and return a proper response
 		}
 
 		echo $response;
@@ -6561,15 +6561,17 @@ function captaincore_header_content_extracted() {
 	$output = "<script type='text/javascript'>\n/* <![CDATA[ */\n";
 	$head = captaincore_head_content();
 	preg_match_all('/(var wpApiSettings.+)/', $head, $results );
-	foreach( $results as $matches ) {
-		foreach( $matches as $match ) {
+	if ( isset( $results ) && $results[0] ) {
+		foreach( $results[0] as $match ) {
 			$output = $output . $match . "\n";
 		}
 	}
-	$output = $output . "</script>";
+	$output = $output . "</script>\n";
 	preg_match_all('/(<link rel="(icon|apple-touch-icon).+)/', $head, $results );
-	if ( isset($results ) && $results[0] ) {
-		$output = $output . implode("\n", $results[0]);
+	if ( isset( $results ) && $results[0] ) {
+		foreach( $results[0] as $match ) {
+			$output = $output . $match . "\n";
+		}
 	}
 	echo $output;
 }
