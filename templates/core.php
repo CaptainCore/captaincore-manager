@@ -57,7 +57,7 @@ Vue.component('file-upload', VueUploadComponent);
 <div id="app" v-cloak>
 	<v-app>
 	  <v-app-bar color="blue darken-3" dark app fixed style="left:0px;">
-	 	 <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none"></v-app-bar-nav-icon>
+	 	 <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none" v-show="route != 'login'"></v-app-bar-nav-icon>
          <v-toolbar-title>
 			<v-list flat color="transparent">
 		 	<v-list-item href="#sites" style="padding:0px;" flat class="not-active">
@@ -68,7 +68,7 @@ Vue.component('file-upload', VueUploadComponent);
 			<div class="flex" style="opacity:0;"><textarea id="clipboard" style="height:1px;display:flex;cursor:default"></textarea></div>
 		</v-toolbar-title>
       </v-app-bar>
-	  <v-navigation-drawer v-model="drawer" app mobile-break-point="960" clipped>
+	  <v-navigation-drawer v-model="drawer" app mobile-break-point="960" clipped v-if="route != 'login'">
       <v-list>
         <v-list-item link href="#sites">
           <v-list-item-icon>
@@ -1787,6 +1787,51 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-card>
 				</v-dialog>
 			<v-container fluid v-show="loading_page != true" style="padding:0px;">
+			<v-card tile flat v-show="route == 'login'" class="mt-11">
+				<v-card tile style="max-width: 400px;margin: auto;">
+					<v-toolbar color="grey lighten-4" light flat>
+						<v-toolbar-title>Login</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text class="my-2">
+					<v-form v-if="login.lost_password" ref="reset">
+					<v-row>
+						<v-col cols="12">
+							<v-text-field label="Username" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
+						</v-col>
+						<v-col cols="12">
+							<v-alert type="success" v-show="login.message">{{ login.message }}</v-alert>
+						</v-col>
+						<v-col cols="12">
+							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
+							<v-btn color="primary" @click="resetPassword()" :disabled="login.loading">Reset Password</v-btn>
+						</v-col>
+					</v-row>
+					</v-form>
+					<v-form lazy-validation ref="login" v-else>
+					<v-row>
+						<v-col cols="12">
+							<v-text-field label="Username" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
+						</v-col>
+						<v-col cols="12">
+							<v-text-field label="Password" :value="login.user_password" @change.native="login.user_password = $event.target.value" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']"></v-text-field>
+						</v-col>
+						<v-col cols="12">
+							<v-alert type="error" v-show="login.errors">{{ login.errors }}</v-alert>
+						</v-col>
+						<v-col cols="12">
+							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
+							<v-btn color="primary" @click="signIn()" :disabled="login.loading">Login</v-btn>
+						</v-col>
+					</v-row>
+					</v-form>
+					</v-card-text>
+				</v-card>
+				<v-card tile flat style="max-width: 400px;margin: auto;" class="px-5">
+					<a @click="login.lost_password = true" class="caption" v-show="!login.lost_password">Lost your password?</a>
+					<a @click="login.lost_password = false" class="caption" v-show="login.lost_password">Back to login form.</a>
+				</v-card>
+			</v-card>
 			<v-card tile v-show="route == 'sites'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Sites <small>({{ showingSitesBegin }}-{{ showingSitesEnd }} of {{ filteredSites }})</small></v-toolbar-title>
@@ -3377,7 +3422,7 @@ Vue.component('file-upload', VueUploadComponent);
 		</v-content>
 		<v-footer style="z-index: 9;position: relative;font-size:12px;">
 			<v-col class="text-right" cols="12">
-				<a href="https://github.com/CaptainCore/captaincore" target="_blank">CaptainCore v{{ captaincore_version }}</a>
+				<v-btn text icon :href="home_link" target="_blank" class="mx-1 transparent"><v-icon small>mdi-home</v-icon></v-btn> <a href="https://github.com/CaptainCore/captaincore" target="_blank" class="mx-1">CaptainCore v{{ captaincore_version }}</a>
 			</v-col>
 		</v-footer>
 	</v-app>
@@ -3400,20 +3445,18 @@ function groupmonth(value, index, array) {
     bymonth[key]={Name: name, Visitors: bymonth[key].Visitors + value['Visitors'], Pageviews: bymonth[key].Pageviews + value['Pageviews']}
 }
 
-// Redirect to login page if not logged in.
-if ( typeof wpApiSettings == "undefined" ) {
-	window.location = "/my-account/"
-}
-
 new Vue({
 	el: '#app',
 	vuetify: new Vuetify(),
 	data: {
+		login: { user_login: "", user_password: "", errors: "", loading: false, lost_password: false, message: "" },
+		wp_nonce: "",
 		captaincore_version: "0.6",
 		captaincore_logo: "<?php echo get_field( 'business_logo', 'option' ); ?>",
 		captaincore_name: "<?php echo get_field( 'business_name', 'option' ); ?>",
 		drawer: null,
 		billing_link: "<?php echo get_field( 'billing_link', 'option' ); ?>",
+		home_link: "<?php echo home_url(); ?>",
 		loading_page: true,
 		expanded: [],
 		modules: { dns: <?php if ( defined( "CONSTELLIX_API_KEY" ) and defined( "CONSTELLIX_SECRET_KEY" ) ) { echo "true"; } else { echo "false"; } ?> },
@@ -3742,13 +3785,21 @@ new Vue({
 		window.onhashchange = () => {
 			this.route = window.location.hash.substring(1)
 		}
+		if ( typeof wpApiSettings == "undefined" ) {
+			window.location = "#login"
+			this.route = "login"
+			this.triggerRoute()
+			return;
+		} else {
+			this.wp_nonce = wpApiSettings.nonce
+		}
 		axios.get(
-				'/wp-json/captaincore/v1/customers', {
-					headers: {'X-WP-Nonce':wpApiSettings.nonce}
-				})
-				.then(response => {
-					this.customers = response.data;
-				});
+			'/wp-json/captaincore/v1/customers', {
+				headers: {'X-WP-Nonce':this.wp_nonce}
+			})
+			.then(response => {
+				this.customers = response.data;
+			});
 		this.triggerRoute()
 	},
 	computed: {
@@ -3816,6 +3867,15 @@ new Vue({
 	},
 	methods: {
 		triggerRoute() {
+			if ( this.wp_nonce == "" ) {
+				window.location = "#login"
+				this.route = "login"
+				this.loading_page = false;
+				return;
+			}
+			if ( this.route == "login" ) {
+				this.loading_page = false;
+			}
 			if ( this.route == "dns" ) {
 				if ( this.allDomains == 0 ) {
 					this.loading_page = true;
@@ -3845,12 +3905,54 @@ new Vue({
 				this.route = "sites";
 			}
 		},
+		resetPassword() {
+			this.login.loading = true
+			if ( ! this.$refs.reset.validate() ) {
+				this.login.loading = false
+				return
+			}
+			axios.post( '/wp-json/captaincore/v1/login/', {
+					'command': "reset",
+					'login': this.login
+				})
+				.then( response => {
+					this.login.message = "A password reset email is on it's way."
+					this.login.loading = false
+				})
+				.catch(error => {
+					console.log(error);
+				});
+		},
+		signIn() {
+			this.login.loading = true
+			if ( ! this.$refs.login.validate() ) {
+				this.login.loading = false
+				return
+			}
+			axios.post( '/wp-json/captaincore/v1/login/', {
+					'command': "signIn",
+					'login': this.login
+				})
+				.then( response => {
+					if ( typeof response.data.errors === 'undefined' ) {
+						window.location = window.location.origin + window.location.pathname
+						return
+					}
+					this.login.errors = response.data.errors
+					this.login.loading = false
+				})
+				.catch(error => {
+					console.log(error);
+				});
+		},
 		signOut() {
-        	axios.post( '/wp-json/captaincore/v1/login/', {
-                command: "signOut" 
-            })
-            .then( response => {
-                window.location = "/";
+			axios.post( '/wp-json/captaincore/v1/login/', {
+				command: "signOut" 
+			})
+			.then( response => {
+				window.location = "#login"
+				this.route = "login"
+				this.wp_nonce = "";
 			})
 		},
 		copyText( value ) {
@@ -4414,7 +4516,7 @@ new Vue({
 		fetchDomains() {
 			axios.get(
 				'/wp-json/captaincore/v1/domains', {
-					headers: {'X-WP-Nonce':wpApiSettings.nonce}
+					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
 					this.domains = response.data;
@@ -4428,7 +4530,7 @@ new Vue({
 			}
 			axios.get(
 				'/wp-json/captaincore/v1/keys', {
-					headers: {'X-WP-Nonce':wpApiSettings.nonce}
+					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
 					this.keys = response.data;
@@ -4440,7 +4542,7 @@ new Vue({
 			if ( this.role == 'administrator' ) {
 				axios.get(
 				'/wp-json/captaincore/v1/keys', {
-					headers: {'X-WP-Nonce':wpApiSettings.nonce}
+					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
 					this.keys = response.data;
@@ -4448,7 +4550,7 @@ new Vue({
 			}
 			axios.get(
 				'/wp-json/captaincore/v1/sites', {
-					headers: {'X-WP-Nonce':wpApiSettings.nonce}
+					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
 
@@ -5843,7 +5945,7 @@ new Vue({
 			self = this;
 			axios.get(
 				'/wp-json/captaincore/v1/domain/' + domain.id, {
-					headers: {'X-WP-Nonce':wpApiSettings.nonce}
+					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
 					if ( typeof response.data == "string" ) {
@@ -6466,7 +6568,7 @@ new Vue({
 			site = this.sites.filter(site => site.id == site_id)[0];
 			axios.get(
 				'/wp-json/captaincore/v1/site/'+site_id+'/quicksaves', {
-					headers: {'X-WP-Nonce':wpApiSettings.nonce}
+					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => { 
 						site.environments[0].quicksaves = response.data.Production
@@ -6479,7 +6581,7 @@ new Vue({
 			site = this.sites.filter(site => site.id == site_id)[0];
 			axios.get(
 				'/wp-json/captaincore/v1/site/'+site_id+'/snapshots', {
-					headers: {'X-WP-Nonce':wpApiSettings.nonce}
+					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => { 
 						site.environments[0].snapshots = response.data.Production
