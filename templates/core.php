@@ -413,8 +413,8 @@ Vue.component('file-upload', VueUploadComponent);
           </v-card-actions>
         </v-card>
       </v-dialog>
-	  <v-dialog v-model="dialog_domain.show" max-width="1200px" persistent>
-	  	<v-card tile style="margin:auto;max-width:1200px">
+	  <v-dialog v-model="dialog_domain.show" max-width="1200px" scrollable persistent>
+	  	<v-card tile>
 			<v-toolbar flat color="grey lighten-4">
 				<v-btn icon @click.native="dialog_domain.show = false">
 					<v-icon>close</v-icon>
@@ -576,8 +576,8 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-card-text>
 		</v-card>
 	  </v-dialog>
-	  <v-dialog v-model="dialog_cookbook.show" max-width="800px" v-if="role == 'administrator'" persistent>
-		<v-card tile style="margin:auto;max-width:800px">
+	  <v-dialog v-model="dialog_cookbook.show" max-width="800px" v-if="role == 'administrator'" persistent scrollable>
+		<v-card tile>
 			<v-toolbar flat color="grey lighten-4">
 				<v-btn icon @click.native="dialog_cookbook.show = false">
 					<v-icon>close</v-icon>
@@ -607,7 +607,7 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-card-text>
 		</v-card>
 	  </v-dialog>
-	  <v-dialog v-model="dialog_account.show" max-width="800px" persistent>
+	  <v-dialog v-model="dialog_account.show" max-width="800px" persistent scrollable>
 		<v-card tile style="margin:auto;max-width:800px">
 			<v-toolbar dense flat color="grey lighten-4">
 				<v-btn icon @click.native="dialog_account.show = false">
@@ -698,7 +698,7 @@ Vue.component('file-upload', VueUploadComponent);
 		</v-card-text>
 		</v-card>
 	</v-dialog>
-	<v-dialog v-model="dialog_key.show" v-if="role == 'administrator'" max-width="800px" v-if="role == 'administrator'" persistent>
+	<v-dialog v-model="dialog_key.show" v-if="role == 'administrator'" max-width="800px" v-if="role == 'administrator'" persistent scrollable>
 		<v-card tile>
 		<v-toolbar flat color="grey lighten-4">
 			<v-btn icon @click.native="dialog_key.show = false">
@@ -730,8 +730,8 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-card-text>
 		</v-card>
 	</v-dialog>
-	  <v-dialog v-model="new_process.show" max-width="800px" v-if="role == 'administrator'">
-		<v-card tile style="margin:auto;max-width:800px">
+	  <v-dialog v-model="new_process.show" max-width="800px" v-if="role == 'administrator'" persistent scrollable>
+		<v-card tile>
 			<v-toolbar flat color="grey lighten-4">
 				<v-btn icon @click.native="new_process.show = false">
 					<v-icon>close</v-icon>
@@ -775,8 +775,8 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-card-text>
 			</v-card>
 		</v-dialog>
-		<v-dialog v-model="dialog_edit_process.show" persistent max-width="800px" v-if="role == 'administrator'">
-		<v-card tile style="margin:auto;max-width:800px">
+		<v-dialog v-model="dialog_edit_process.show" persistent max-width="800px" v-if="role == 'administrator'" persistent scrollable>
+		<v-card tile>
 			<v-toolbar flat color="grey lighten-4">
 				<v-btn icon @click.native="dialog_edit_process.show = false">
 					<v-icon>close</v-icon>
@@ -820,7 +820,7 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-card-text>
 			</v-card>
 		</v-dialog>
-		<v-dialog v-model="dialog_handbook.show" v-if="role == 'administrator'">
+		<v-dialog v-model="dialog_handbook.show" v-if="role == 'administrator'" scrollable persistent>
 			<v-card tile>
 			<v-toolbar flat color="grey lighten-4">
 				<v-btn icon @click.native="dialog_handbook.show = false">
@@ -833,7 +833,7 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-toolbar-items>
 			</v-toolbar>
 			<v-card-text style="max-height: 100%;">
-				<div class="caption mb-3">
+				<div class="caption my-3">
 					<v-icon small v-show="dialog_handbook.process.time_estimate != ''" style="padding:0px 5px">mdi-clock-outline</v-icon>{{ dialog_handbook.process.time_estimate }} 
 					<v-icon small v-show="dialog_handbook.process.repeat != '' && dialog_handbook.process.repeat != null" style="padding:0px 5px">mdi-calendar-repeat</v-icon>{{ dialog_handbook.process.repeat }} 
 					<v-icon small v-show="dialog_handbook.process.repeat_quantity != '' && dialog_handbook.process.repeat_quantity != null" style="padding:0px 5px">mdi-repeat</v-icon>{{ dialog_handbook.process.repeat_quantity }}
@@ -3315,12 +3315,12 @@ Vue.component('file-upload', VueUploadComponent);
 				<v-card-title>
 					<div>
 						<div v-show="site.provider == 'kinsta'">
-						<v-btn left small text @click="PushProductionToStaging( site.id )">
+						<v-btn left text @click="PushProductionToStaging( site.id )">
 							<v-icon>local_shipping</v-icon> <span>Push Production to Staging</span>
 						</v-btn>
 						</div>
 						<div v-show="site.provider == 'kinsta'">
-						<v-btn left small text @click="PushStagingToProduction( site.id )">
+						<v-btn left text @click="PushStagingToProduction( site.id )">
 							<v-icon class="reverse">local_shipping</v-icon> <span>Push Staging to Production</span>
 						</v-btn>
 						</div>
@@ -3517,7 +3517,7 @@ Vue.component('file-upload', VueUploadComponent);
 		</template>
 		</v-container>
 		</v-content>
-		<v-footer style="z-index: 9;position: relative;font-size:12px;">
+		<v-footer padless style="z-index: 9;position: relative;font-size:12px;">
 			<v-col class="text-right" cols="12">
 				<v-btn text icon :href="home_link" target="_blank" class="mx-1 transparent"><v-icon small>mdi-home</v-icon></v-btn> <a href="https://github.com/CaptainCore/captaincore" target="_blank" class="mx-1">CaptainCore v{{ captaincore_version }}</a>
 			</v-col>
@@ -5458,7 +5458,6 @@ new Vue({
 				.then( response => {
 					this.dialog_account.new_invite_email = "" 
 					this.dialog_account.new_invite = false
-					this
 				})
 
 		},
