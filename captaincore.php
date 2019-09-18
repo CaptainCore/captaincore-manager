@@ -1209,6 +1209,67 @@ function captaincore_acf_save_post_after( $post_id ) {
 
 	}
 	if ( get_post_type( $post_id ) == 'captcore_customer' ) {
+		// Calculate active website count
+		$websites_by_customer = get_posts(
+			array(
+				'post_type'      => 'captcore_website',
+				'fields'         => 'ids',
+				'posts_per_page' => '-1',
+				'meta_query'     => array(
+					'relation' => 'AND',
+					array(
+						'key'     => 'customer', // name of custom field
+						'value'   => '"' . $post_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+						'compare' => 'LIKE',
+					),
+					array(
+						'key'     => 'status',
+						'value'   => 'active',
+						'compare' => 'LIKE',
+					),
+				),
+			)
+		);
+		$websites_by_partners = get_posts(
+			array(
+				'post_type'      => 'captcore_website',
+				'fields'         => 'ids',
+				'posts_per_page' => '-1',
+				'meta_query'     => array(
+					'relation' => 'AND',
+					array(
+						'key'     => 'partner', // name of custom field
+						'value'   => '"' . $post_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+						'compare' => 'LIKE',
+					),
+					array(
+						'key'     => 'status',
+						'value'   => 'active',
+						'compare' => 'LIKE',
+					),
+				),
+			)
+		);
+		$websites = array_unique(array_merge($websites_by_customer, $websites_by_partners));
+		$args = array (
+			'order' => 'ASC',
+			'orderby' => 'display_name',
+			'meta_query' => array(
+				array(
+					'key'     => 'partner',
+					'value'   => '"' . $post_id . '"',
+					'compare' => 'LIKE'
+				),
+			)
+		);
+		 
+		// Create the WP_User_Query object
+		$wp_user_query = new WP_User_Query($args);
+		$users = $wp_user_query->get_results();
+
+		update_field( 'website_count', count( $websites ), $post_id );
+		update_field( 'user_count', count( $users ), $post_id );
+
 		$custom        = get_post_custom( $post_id );
 		$hosting_price = $custom['hosting_price'][0];
 		$addons        = get_field( 'addons', $post_id );
@@ -1708,16 +1769,10 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 }
 
-function captaincore_customers_func( $request ) {
+function captaincore_accounts_func( $request ) {
 
-	$customers = new CaptainCore\Customers();
-	$all_customers = array();
-
-	foreach( $customers->all() as $customer ) {
-		$all_customers[] = ( new CaptainCore\Customer )->get( $customer );
-	}
-
-	return $all_customers;
+	$accounts = ( new CaptainCore\Accounts )->all();
+	return $accounts;
 
 }
 
@@ -2172,11 +2227,11 @@ function captaincore_register_rest_endpoints() {
 		)
 	);
 
-	// Custom endpoint for CaptainCore site
+	// Custom endpoint for CaptainCore accounts
 	register_rest_route(
-		'captaincore/v1', '/customers/', array(
+		'captaincore/v1', '/accounts/', array(
 			'methods'       => 'GET',
-			'callback'      => 'captaincore_customers_func',
+			'callback'      => 'captaincore_accounts_func',
 			'show_in_index' => false
 		)
 	);
@@ -3126,13 +3181,11 @@ function captaincore_verify_permissions_customer( $customer_id ) {
 	if ( $current_user && $role_check ) {
 		return true;
 	} else {
-		// Checks for other roles
-		$role_check = in_array( 'partner', $current_user->roles );
 
 		// Checks current users permissions
 		$partner = get_field( 'partner', 'user_' . get_current_user_id() );
 
-		if ( $partner and $role_check ) {
+		if ( $partner ) {
 			foreach ( $partner as $partner_id ) {
 
 				$websites = get_posts(
@@ -3533,11 +3586,59 @@ function captaincore_dns_action_callback() {
 	wp_die(); // this is required to terminate immediately and return a proper response
 }
 
+function captaincore_invite( $email, $company_id ) {
+
+}
+
 add_action( 'wp_ajax_captaincore_local', 'captaincore_local_action_callback' );
 function captaincore_local_action_callback() {
 	global $wpdb; // this is how you get access to the database
 	$cmd   = $_POST['command'];
 	$value = $_POST['value'];
+
+	if ( $cmd == 'sendAccountInvite' ) {
+		if ( ! captaincore_verify_permissions_customer( $value ) ) {
+			echo "Permission denied";
+			wp_die();
+			return;
+		}
+
+		captaincore_invite( $_POST['invite'], $value );
+
+	}
+
+	if ( $cmd == 'fetchAccount' ) {
+		if ( ! captaincore_verify_permissions_customer( $value ) ) {
+			echo "Permission denied";
+			wp_die();
+			return;
+		}
+
+		$args = array (
+			'order' => 'ASC',
+			'orderby' => 'display_name',
+			'meta_query' => array(
+				array(
+					'key'     => 'partner',
+					'value'   => '"' . $value . '"',
+					'compare' => 'LIKE'
+				),
+			)
+		);
+
+		// Create the WP_User_Query object
+		$wp_user_query = new WP_User_Query($args);
+		$users = $wp_user_query->get_results();
+		$results = array();
+		foreach( $users as $user ) {
+			$results[] = array( 
+				"name"  => $user->display_name, 
+				"email" => $user->user_email, 
+				"level" => "administrator" );
+		}
+		echo json_encode( $results );
+
+	}
 
 	if ( $cmd == 'fetchDefaults' ) {
 		$user_id = get_current_user_id();

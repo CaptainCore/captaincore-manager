@@ -109,6 +109,14 @@ Vue.component('file-upload', VueUploadComponent);
           <v-list-item-content>
             <v-list-item-title>SSH Keys</v-list-item-title>
           </v-list-item-content>
+		</v-list-item>
+		<v-list-item link href="#sharing" v-show="role == 'administrator'">
+          <v-list-item-icon>
+            <v-icon>mdi-account-multiple-plus</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>Sharing</v-list-item-title>
+          </v-list-item-content>
         </v-list-item>
         <v-list-item link :href="billing_link" target="_blank" v-show="billing_link">
           <v-list-item-icon>
@@ -599,6 +607,67 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-card-text>
 		</v-card>
 	  </v-dialog>
+	  <v-dialog v-model="dialog_account.show" max-width="800px" persistent>
+		<v-card tile style="margin:auto;max-width:800px">
+			<v-toolbar dense flat color="grey lighten-4">
+				<v-btn icon @click.native="dialog_account.show = false">
+					<v-icon>close</v-icon>
+				</v-btn>
+				<v-toolbar-title v-html="dialog_account.account.name"></v-toolbar-title>
+			</v-toolbar>
+			<v-toolbar dense flat fixed color="grey lighten-4">
+				<v-toolbar-title class="caption pl-11">
+					<span v-show="dialog_account.account.user_count != '' && dialog_account.account.user_count != null" class="mx-1"><v-icon style="padding:0px 5px">mdi-account-multiple</v-icon>{{ dialog_account.account.user_count }} users</span>
+					<span v-show="dialog_account.account.website_count != '' && dialog_account.account.website_count != null" class="mx-1"><v-icon style="padding:0px 5px">mdi-folder-multiple</v-icon>{{ dialog_account.account.website_count }} sites</span>
+					<span v-show="dialog_account.account.domain_count != '' && dialog_account.account.domain_count != null" class="mx-1"><v-icon style="padding:0px 5px">mdi-library-books</v-icon>{{ dialog_account.account.domain_count }} domains</span>
+				</v-toolbar-title>
+				<div class="flex-grow-1"></div>
+				<v-toolbar-items style="margin-right: -16px;">
+					<v-btn text @click="dialog_account.new_invite = true">New Invite <v-icon dark>add</v-icon></v-btn>
+				</v-toolbar-items>
+			</v-toolbar>
+			<v-card-text style="max-height: 100%;">
+			<v-container>
+				<v-card v-show="dialog_account.new_invite == true" class="mb-3">
+					<v-toolbar flat dense dark color="primary">
+					<v-btn icon dark @click.native="dialog_account.new_invite = false">
+						<v-icon>close</v-icon>
+					</v-btn>
+					<v-toolbar-title>New Invitation</v-toolbar-title>
+					<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text>
+					<v-container>
+					<v-layout row wrap>
+						<v-flex xs12>
+							<v-text-field label="Email" :value="dialog_account.new_invite_email" @change.native="dialog_account.new_invite_email = $event.target.value"></v-text-field>
+						</v-flex>
+						<v-flex xs12 text-right pa-0 ma-0>
+							<v-btn color="primary" dark @click="sendAccountInvite()">
+								Send Invite
+							</v-btn>
+						</v-flex>
+						</v-flex>
+					</v-layout>
+					</v-container>
+					</v-card-text>
+				</v-card>
+				<v-data-table
+					:headers='[{"text":"Name","value":"name"},{"text":"Email","value":"email"},{"text":"","value":"actions"}]'
+					:items="dialog_account.users"
+					:items-per-page="-1"
+					hide-default-footer
+				>
+				<template v-slot:item.actions="{ item }">
+				<v-btn text icon color="pink" v-if=>
+					<v-icon>mdi-delete</v-icon>
+				</v-btn>
+				</template>
+				</v-data-table>
+			</v-container>
+			</v-card-text>
+		</v-card>
+	  </v-dialog>
 	  <v-dialog v-model="new_key.show" max-width="800px" v-if="role == 'administrator'">
 		<v-card tile style="margin:auto;max-width:800px">
 		<v-toolbar flat color="grey lighten-4">
@@ -880,7 +949,7 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-toolbar>
 			<v-card-text>
 				<v-text-field :value="dialog_new_domain.domain.name" @change.native="dialog_new_domain.domain.name = $event.target.value" label="Domain Name" required class="mt-3"></v-text-field>
-				<v-autocomplete :items="customers" item-text="name" item-value="customer_id" v-model="dialog_new_domain.domain.customer" label="Customer" required></v-autocomplete>
+				<v-autocomplete :items="accounts" item-text="name" item-value="id" v-model="dialog_new_domain.domain.customer" label="Customer" required></v-autocomplete>
 				<v-alert
 					:value="true"
 					type="error"
@@ -1015,9 +1084,9 @@ Vue.component('file-upload', VueUploadComponent);
 						</v-flex>
 						<v-flex xs4 class="mx-2">
 							<v-autocomplete
-								:items="customers"
+								:items="accounts"
 								item-text="name"
-								item-value="customer_id"
+								item-value="id"
 								v-model="dialog_new_site.customers"
 								item-text="name"
 								hint="Assign to existing customer. If new leave blank."
@@ -1634,7 +1703,7 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-flex>
 				<v-flex xs4 class="mx-2">
 					<v-autocomplete
-						:items="customers"
+						:items="accounts"
 						item-text="name"
 						v-model="dialog_edit_site.site.customer"
 						return-object
@@ -3319,7 +3388,7 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-card>
 			<v-card tile v-show="route == 'cookbook'" v-if="role == 'administrator'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
-					<v-toolbar-title>Contains {{ recipes.length }} recipes</v-toolbar-title>
+					<v-toolbar-title>Listing {{ recipes.length }} recipes</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
 						<v-btn text @click="new_recipe.show = true">Add recipe <v-icon dark>add</v-icon></v-btn>
@@ -3346,7 +3415,7 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-card>
 			<v-card tile v-show="route == 'handbook'" v-if="role == 'administrator'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
-					<v-toolbar-title>Contains {{ processes.length }} processes</v-toolbar-title>
+					<v-toolbar-title>Listing {{ processes.length }} processes</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
 						<v-btn text @click="fetchProcessLogs()">Log history</v-btn>
@@ -3404,6 +3473,34 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-container>
 				</v-card-text>
 			</v-card>
+			<v-card tile v-show="route == 'sharing'" flat>
+				<v-toolbar color="grey lighten-4" light flat>
+					<v-toolbar-title>Listing {{ accounts.length }} accounts</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+					</v-toolbar-items>
+				</v-toolbar>
+				<v-card-text>
+				<v-container fluid grid-list-lg>
+					<v-layout row wrap>
+						<v-flex xs12 v-for="account in accounts">
+							<v-card :hover="true" @click="editAccount( account.id )">
+							<v-card-title primary-title class="pt-2">
+								<div>
+									<span class="title" v-html="account.name"></span>
+									<div class="caption">
+										<span v-show="account.user_count != '' && account.user_count != null"><v-icon style="padding:0px 5px">mdi-account-multiple</v-icon>{{ account.user_count }} users</span>
+										<span v-show="account.website_count != '' && account.website_count != null"><v-icon style="padding:0px 5px">mdi-folder-multiple</v-icon>{{ account.website_count }} sites</span>
+										<span v-show="account.domain_count != '' && account.domain_count != null"><v-icon style="padding:0px 5px">mdi-library-books</v-icon>{{ account.domain_count }} domains</span>
+									</div>
+								</div>
+							</v-card-title>
+							</v-card>
+						</v-flex>
+					</v-layout>
+				</v-container>
+				</v-card-text>
+			</v-card>
 			</v-container>
 			<v-container fluid v-show="loading_page">
 				Loading...
@@ -3459,6 +3556,7 @@ new Vue({
 		home_link: "<?php echo home_url(); ?>",
 		loading_page: true,
 		expanded: [],
+		accounts: [],
 		modules: { dns: <?php if ( defined( "CONSTELLIX_API_KEY" ) and defined( "CONSTELLIX_SECRET_KEY" ) ) { echo "true"; } else { echo "false"; } ?> },
 		dialog_bulk: { show: false, tabs_management: "tab-Sites", environment_selected: "Production" },
 		dialog_delete_user: { show: false, site: {}, users: [], username: "", reassign: {} },
@@ -3479,6 +3577,7 @@ new Vue({
 		dialog_theme_and_plugin_checks: { show: false, site: {}, loading: false },
 		dialog_update_settings: { show: false, site_id: null, loading: false },
 		dialog_fathom: { show: false, site: {}, environment: {}, loading: false, editItem: false, editedItem: {}, editedIndex: -1 },
+		dialog_account: { show: false, account: {}, users: {}, new_invite: false, new_invite_email: "" },
 		timeline_logs: [],
 		route: window.location.hash.substring(1),
 		page: 1,
@@ -3595,7 +3694,6 @@ new Vue({
 				{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"","database_username":"","database_password":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" }
 			],
 		},
-		customers: [],
 		shared_with: [],
 		header_timeline: [
 			{"text":"Date","value":"date","sortable":false,"width":"220"},
@@ -3607,7 +3705,6 @@ new Vue({
 		<?php } else { ?>
 		role: "",
 		dialog_new_site: false,
-		customers: [],
 		shared_with: [],
 		header_timeline: [
 			{"text":"Date","value":"date","sortable":false,"width":"220"},
@@ -3794,11 +3891,11 @@ new Vue({
 			this.wp_nonce = wpApiSettings.nonce
 		}
 		axios.get(
-			'/wp-json/captaincore/v1/customers', {
+			'/wp-json/captaincore/v1/accounts', {
 				headers: {'X-WP-Nonce':this.wp_nonce}
 			})
 			.then(response => {
-				this.customers = response.data;
+				this.accounts = response.data;
 			});
 		this.triggerRoute()
 	},
@@ -3844,7 +3941,7 @@ new Vue({
 			return this.sites.length;
 		},
 		developers() {
-			return this.customers.filter(customer => customer.developer );
+			return this.accounts.filter(account => account.developer );
 		},
 		dnsRecords() {
 			count = 0;
@@ -3891,6 +3988,9 @@ new Vue({
 			if ( this.route == "keys" ) {
 				this.loading_page = false;
 				this.fetchKeys()
+			}
+			if ( this.route == "sharing" ) {
+				this.loading_page = false;
 			}
 			if ( this.route == "sites" ) {
 				if ( this.filteredSites == 0 ) {
@@ -5331,6 +5431,36 @@ new Vue({
 					this.dialog_key = { show: false, key: {} };
 				})
 				.catch( error => console.log( error ) );
+		},
+		editAccount( account_id ) {
+			account = this.accounts.filter( account => account.id == account_id )[0];
+			this.dialog_account.account = account;
+			var data = {
+				action: 'captaincore_local',
+				command: 'fetchAccount',
+				value: account_id
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.dialog_account.users = response.data
+					this.dialog_account.show = true;
+				})
+				.catch( error => console.log( error ) );
+		},
+		sendAccountInvite() {
+			var data = {
+				action: 'captaincore_local',
+				command: 'sendAccountInvite',
+				value: this.dialog_account.account.id,
+				invite: this.dialog_account.new_invite_email
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.dialog_account.new_invite_email = "" 
+					this.dialog_account.new_invite = false
+					this
+				})
+
 		},
 		editRecipe( recipe_id ) {
 			recipe = this.recipes.filter( recipe => recipe.recipe_id == recipe_id )[0];
