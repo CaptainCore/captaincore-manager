@@ -2976,7 +2976,7 @@ function checkApiAuth( $result ) {
 
 			$customer_id = $endpoint_all[1];
 
-			if ( ! captaincore_verify_permissions_customer( $customer_id ) ) {
+			if ( ! captaincore_verify_permissions_account( $customer_id ) ) {
 				return new WP_Error( 'rest_token_invalid', __( 'Token is invalid' ), array( 'status' => 403 ) );
 			}
 		}
@@ -3172,7 +3172,7 @@ function captaincore_verify_permissions( $website_id ) {
 }
 
 // Checks current user for valid permissions
-function captaincore_verify_permissions_customer( $customer_id ) {
+function captaincore_verify_permissions_account( $customer_id ) {
 
 	$current_user = wp_get_current_user();
 	$role_check   = in_array( 'administrator', $current_user->roles );
@@ -3586,58 +3586,22 @@ function captaincore_dns_action_callback() {
 	wp_die(); // this is required to terminate immediately and return a proper response
 }
 
-function captaincore_invite( $email, $company_id ) {
-
-}
-
 add_action( 'wp_ajax_captaincore_local', 'captaincore_local_action_callback' );
 function captaincore_local_action_callback() {
 	global $wpdb; // this is how you get access to the database
 	$cmd   = $_POST['command'];
 	$value = $_POST['value'];
+	$email = $_POST['invite'];
 
 	if ( $cmd == 'sendAccountInvite' ) {
-		if ( ! captaincore_verify_permissions_customer( $value ) ) {
-			echo "Permission denied";
-			wp_die();
-			return;
-		}
-
-		captaincore_invite( $_POST['invite'], $value );
-
+		$account = new CaptainCore\Account( $value );
+		$response = $account->invite( $email );
+		echo json_encode( $response );
 	}
 
 	if ( $cmd == 'fetchAccount' ) {
-		if ( ! captaincore_verify_permissions_customer( $value ) ) {
-			echo "Permission denied";
-			wp_die();
-			return;
-		}
-
-		$args = array (
-			'order' => 'ASC',
-			'orderby' => 'display_name',
-			'meta_query' => array(
-				array(
-					'key'     => 'partner',
-					'value'   => '"' . $value . '"',
-					'compare' => 'LIKE'
-				),
-			)
-		);
-
-		// Create the WP_User_Query object
-		$wp_user_query = new WP_User_Query($args);
-		$users = $wp_user_query->get_results();
-		$results = array();
-		foreach( $users as $user ) {
-			$results[] = array( 
-				"name"  => $user->display_name, 
-				"email" => $user->user_email, 
-				"level" => "administrator" );
-		}
-		echo json_encode( $results );
-
+		$account = new CaptainCore\Account( $value );
+		echo json_encode( $account->users() );
 	}
 
 	if ( $cmd == 'fetchDefaults' ) {
@@ -3727,11 +3691,11 @@ function captaincore_local_action_callback() {
 						'order'				=> 'asc',
 						'orderby'			=> 'title',
 						'meta_query'		=> array(
-								array(
-									'key' => 'customer', // name of custom field
-									'value' => '"' . $partner_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-									'compare' => 'LIKE'
-								),
+							array(
+								'key' => 'customer', // name of custom field
+								'value' => '"' . $partner_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+								'compare' => 'LIKE'
+							),
 						)
 					));
 				}
