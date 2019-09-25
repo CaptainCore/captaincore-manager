@@ -4,7 +4,7 @@ namespace CaptainCore;
 
 // Perform CaptainCore database upgrades by running `CaptainCore\upgrade();`
 function upgrade() {
-	$required_version = 16;
+	$required_version = 17;
 	$version = (int) get_site_option( 'captcorecore_db_version' );
 
 	if ( $version >= $required_version ) {
