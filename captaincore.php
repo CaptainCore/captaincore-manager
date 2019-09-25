@@ -1209,67 +1209,10 @@ function captaincore_acf_save_post_after( $post_id ) {
 
 	}
 	if ( get_post_type( $post_id ) == 'captcore_customer' ) {
-		// Calculate active website count
-		$websites_by_customer = get_posts(
-			array(
-				'post_type'      => 'captcore_website',
-				'fields'         => 'ids',
-				'posts_per_page' => '-1',
-				'meta_query'     => array(
-					'relation' => 'AND',
-					array(
-						'key'     => 'customer', // name of custom field
-						'value'   => '"' . $post_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-						'compare' => 'LIKE',
-					),
-					array(
-						'key'     => 'status',
-						'value'   => 'active',
-						'compare' => 'LIKE',
-					),
-				),
-			)
-		);
-		$websites_by_partners = get_posts(
-			array(
-				'post_type'      => 'captcore_website',
-				'fields'         => 'ids',
-				'posts_per_page' => '-1',
-				'meta_query'     => array(
-					'relation' => 'AND',
-					array(
-						'key'     => 'partner', // name of custom field
-						'value'   => '"' . $post_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-						'compare' => 'LIKE',
-					),
-					array(
-						'key'     => 'status',
-						'value'   => 'active',
-						'compare' => 'LIKE',
-					),
-				),
-			)
-		);
-		$websites = array_unique(array_merge($websites_by_customer, $websites_by_partners));
-		$args = array (
-			'order' => 'ASC',
-			'orderby' => 'display_name',
-			'meta_query' => array(
-				array(
-					'key'     => 'partner',
-					'value'   => '"' . $post_id . '"',
-					'compare' => 'LIKE'
-				),
-			)
-		);
-		 
-		// Create the WP_User_Query object
-		$wp_user_query = new WP_User_Query($args);
-		$users = $wp_user_query->get_results();
 
-		update_field( 'website_count', count( $websites ), $post_id );
-		update_field( 'user_count', count( $users ), $post_id );
-
+		$account = new CaptainCore\Account( $post_id );
+		$account->calculate_totals();
+	
 		$custom        = get_post_custom( $post_id );
 		$hosting_price = $custom['hosting_price'][0];
 		$addons        = get_field( 'addons', $post_id );
@@ -2555,6 +2498,116 @@ function captaincore_login_func( WP_REST_Request $request ) {
 		wp_logout();
 	}
 
+	if ( $post->command == "createAccount" ) {
+
+		if (!filter_var($post->login, FILTER_VALIDATE_EMAIL)) {
+			return array( "error" => "Not a valid email address." );
+		}
+		if ( email_exists( $post->login ) ) {
+			return array( "error" => "Account already taken or invalid invite." );
+		}
+
+		$invites = new CaptainCore\invites();
+		$results = $invites->where( array( 
+			"account_id" => $post->invite->account,
+			"token"      => $post->invite->token,
+		) );
+		if ( count( $results ) == "1" ) {
+			// Add account ID to current user
+			$userdata = array(
+				'user_login' => $post->login,
+				'user_email' => $post->login,
+				'user_pass'  =>  NULL // When creating an user, `user_pass` is expected.
+			);
+			
+			// Generate new user
+			$user_id = wp_insert_user( $userdata );
+
+			// Assign permission to account
+			update_field( 'partner', $post->invite->account, "user_{$user_id}" );
+
+			$account = new CaptainCore\Account( $post->invite->account, true );
+			$account->calculate_totals();
+
+			$invite = new CaptainCore\Invite( $results[0]->invite_id );
+			$invite->mark_accepted();
+
+			$user_data = get_user_by( 'login', $post->login );
+			if ( ! $user_data ) {
+				$user_data = get_user_by( 'email', $post->login );
+			}
+			if ( ! $user_data ) {
+				return;
+			}
+	
+			$user_login = $user_data->user_login;
+			$user_email = $user_data->user_email;
+		
+			// Redefining user_login ensures we return the right case in the email.
+			$key        = get_password_reset_key( $user_data );
+		
+			if ( is_wp_error( $key ) ) {
+				return $key;
+			}
+		
+			if ( is_multisite() ) {
+				$site_name = get_network()->site_name;
+			} else {
+				/*
+				 * The blogname option is escaped with esc_html on the way into the database
+				 * in sanitize_option we want to reverse this for the plain text arena of emails.
+				 */
+				$site_name = wp_specialchars_decode( get_option( 'blogname' ), ENT_QUOTES );
+			}
+		
+			$message = __( 'Someone has requested a password reset for the following account:' ) . "\r\n\r\n";
+			/* translators: %s: site name */
+			$message .= sprintf( __( 'Site Name: %s' ), $site_name ) . "\r\n\r\n";
+			/* translators: %s: user login */
+			$message .= sprintf( __( 'Username: %s' ), $user_login ) . "\r\n\r\n";
+			$message .= __( 'If this was a mistake, just ignore this email and nothing will happen.' ) . "\r\n\r\n";
+			$message .= __( 'To reset your password, visit the following address:' ) . "\r\n\r\n";
+			$message .= '<' . network_site_url( "wp-login.php?action=rp&key=$key&login=" . rawurlencode( $user_login ), 'login' ) . ">\r\n";
+		
+			/* translators: Password reset notification email subject. %s: Site title */
+			$title = sprintf( __( '[%s] Password Reset' ), $site_name );
+		
+			/**
+			 * Filters the subject of the password reset email.
+			 *
+			 * @since 2.8.0
+			 * @since 4.4.0 Added the `$user_login` and `$user_data` parameters.
+			 *
+			 * @param string  $title      Default email title.
+			 * @param string  $user_login The username for the user.
+			 * @param WP_User $user_data  WP_User object.
+			 */
+			$title = apply_filters( 'retrieve_password_title', $title, $user_login, $user_data );
+		
+			/**
+			 * Filters the message body of the password reset mail.
+			 *
+			 * If the filtered message is empty, the password reset email will not be sent.
+			 *
+			 * @since 2.8.0
+			 * @since 4.1.0 Added `$user_login` and `$user_data` parameters.
+			 *
+			 * @param string  $message    Default mail message.
+			 * @param string  $key        The activation key.
+			 * @param string  $user_login The username for the user.
+			 * @param WP_User $user_data  WP_User object.
+			 */
+			$message = apply_filters( 'retrieve_password_message', $message, $key, $user_login, $user_data );
+		
+			if ( $message && ! wp_mail( $user_email, wp_specialchars_decode( $title ), $message ) ) {
+				wp_die( __( 'The email could not be sent.' ) . "<br />\n" . __( 'Possible reason: your host may have disabled the mail() function.' ) );
+			}
+
+			return array( "message" => "New account created." );
+		}
+		return array( "error" => "Account already taken or invalid invite." );
+	}
+
 }
 
 add_action( 'manage_posts_custom_column', 'customer_custom_columns' );
@@ -3601,9 +3654,61 @@ function captaincore_local_action_callback() {
 
 	if ( $cmd == 'fetchAccount' ) {
 		$account = new CaptainCore\Account( $value );
-		echo json_encode( $account->users() );
+		echo json_encode( $account->fetch() );
 	}
+	if ( $cmd == 'fetchInvite' ) {
+		$invite = (object) $value;
+		$invites = new CaptainCore\invites();
+		$results = $invites->where( array( 
+			"account_id" => $invite->account,
+			"token"      => $invite->token,
+		) );
+		if ( count( $results ) == "1" ) {
+			$account = new CaptainCore\Account( $invite->account, true );
+			echo json_encode( $account->fetch() );
+		}
+	}
+	if ( $cmd == 'removeAccountAccess' ) {
+		$user_id    = $value;
+		$account_id = $_POST['account'];
 
+		$accounts = get_field( 'partner', "user_{$user_id}" );
+		// Remove account from user's accounts
+		if (($key = array_search($account_id, $accounts)) !== false) {
+			unset($accounts[$key]);
+		}
+		update_field( 'partner', array_unique( $accounts ), "user_{$user_id}" );
+
+		$account = new CaptainCore\Account( $account_id );
+		$account->calculate_totals();
+	}
+	if ( $cmd == 'deleteInvite' ) {
+		$invites = new CaptainCore\invites();
+		$invites->delete( $value );
+		echo "Invite deleted.";
+	}
+	if ( $cmd == 'acceptInvite' ) {
+		$invite = (object) $value;
+		$invites = new CaptainCore\invites();
+		$results = $invites->where( array(
+			"account_id" => $invite->account,
+			"token"      => $invite->token,
+		) );
+		
+		if ( count( $results ) == "1" ) {
+			// Add account ID to current user
+			$accounts = get_field( 'partner', "user_" . get_current_user_id() );
+			$accounts[] = $invite->account;
+			update_field( 'partner', array_unique( $accounts ), "user_" . get_current_user_id() );
+
+			$account = new CaptainCore\Account( $invite->account );
+			$account->calculate_totals();
+
+			$invite = new CaptainCore\Invite( $results[0]->invite_id );
+			$invite->mark_accepted();
+		}
+	}
+	
 	if ( $cmd == 'fetchDefaults' ) {
 		$user_id = get_current_user_id();
 		$accounts = array();

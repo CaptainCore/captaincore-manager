@@ -11,7 +11,7 @@
 captaincore_header_content_extracted();
 
 $user       = wp_get_current_user();
-$role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'partner', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
+$role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
 if ( $role_check ) {
 	$current_user  = wp_get_current_user();
 	$belongs_to    = get_field( 'partner', "user_{$current_user->ID}" );
@@ -110,7 +110,7 @@ Vue.component('file-upload', VueUploadComponent);
             <v-list-item-title>SSH Keys</v-list-item-title>
           </v-list-item-content>
 		</v-list-item>
-		<v-list-item link href="#sharing" v-show="role == 'administrator'">
+		<v-list-item link href="#sharing">
           <v-list-item-icon>
             <v-icon>mdi-account-multiple-plus</v-icon>
           </v-list-item-icon>
@@ -355,6 +355,23 @@ Vue.component('file-upload', VueUploadComponent);
 		<v-card-text>
 			<h3>Bulk edit {{ bulk_edit.items.length }} {{ bulk_edit.type }}</h3>
 			<v-btn v-if="bulk_edit.type == 'plugins'" @click="bulkEditExecute('activate')">Activate</v-btn> <v-btn v-if="bulk_edit.type == 'plugins'" @click="bulkEditExecute('deactivate')">Deactivate</v-btn> <v-btn v-if="bulk_edit.type == 'plugins'" @click="bulkEditExecute('toggle')">Toggle</v-btn> <v-btn @click="bulkEditExecute('delete')">Delete</v-btn>
+		</v-card-text>
+		</v-card>
+		</v-dialog>
+		<v-dialog v-model="new_account.show" max-width="500px">
+		<v-card tile>
+			<v-toolbar flat dark color="primary">
+				<v-btn icon dark @click.native="new_account.show = false">
+					<v-icon>close</v-icon>
+				</v-btn>
+				<v-toolbar-title>New account</v-toolbar-title>
+				<v-spacer></v-spacer>
+			</v-toolbar>
+			<v-card-text>
+				<v-text-field v-model="new_account.email" label="Email" class="mt-3"></v-text-field>
+				<v-flex xs12>
+					<v-btn color="primary" dark @click="createAccount()">Create Account and accept invite.</v-btn>
+				</v-flex>
 		</v-card-text>
 		</v-card>
 		</v-dialog>
@@ -608,63 +625,144 @@ Vue.component('file-upload', VueUploadComponent);
 		</v-card>
 	  </v-dialog>
 	  <v-dialog v-model="dialog_account.show" max-width="800px" persistent scrollable>
-		<v-card tile style="margin:auto;max-width:800px">
+		<v-card tile>
 			<v-toolbar dense flat color="grey lighten-4">
 				<v-btn icon @click.native="dialog_account.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
-				<v-toolbar-title v-html="dialog_account.account.name"></v-toolbar-title>
-			</v-toolbar>
-			<v-toolbar dense flat fixed color="grey lighten-4">
-				<v-toolbar-title class="caption pl-11">
-					<span v-show="dialog_account.account.user_count != '' && dialog_account.account.user_count != null" class="mx-1"><v-icon style="padding:0px 5px">mdi-account-multiple</v-icon>{{ dialog_account.account.user_count }} users</span>
-					<span v-show="dialog_account.account.website_count != '' && dialog_account.account.website_count != null" class="mx-1"><v-icon style="padding:0px 5px">mdi-folder-multiple</v-icon>{{ dialog_account.account.website_count }} sites</span>
-					<span v-show="dialog_account.account.domain_count != '' && dialog_account.account.domain_count != null" class="mx-1"><v-icon style="padding:0px 5px">mdi-library-books</v-icon>{{ dialog_account.account.domain_count }} domains</span>
-				</v-toolbar-title>
+				<v-toolbar-title v-if="typeof dialog_account.records.account == 'object'" v-html="dialog_account.records.account.name"></v-toolbar-title>
 				<div class="flex-grow-1"></div>
 				<v-toolbar-items style="margin-right: -16px;">
-					<v-btn text @click="dialog_account.new_invite = true">New Invite <v-icon dark>add</v-icon></v-btn>
+					<v-btn text @click="account_tab = 0; dialog_account.new_invite = true">New Invite <v-icon dark>add</v-icon></v-btn>
 				</v-toolbar-items>
-			</v-toolbar>
-			<v-card-text style="max-height: 100%;">
-			<v-container>
-				<v-card v-show="dialog_account.new_invite == true" class="mb-3">
-					<v-toolbar flat dense dark color="primary">
-					<v-btn icon dark @click.native="dialog_account.new_invite = false">
-						<v-icon>close</v-icon>
-					</v-btn>
-					<v-toolbar-title>New Invitation</v-toolbar-title>
-					<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-card-text>
-					<v-container>
-					<v-layout row wrap>
-						<v-flex xs12>
-							<v-text-field label="Email" :value="dialog_account.new_invite_email" @change.native="dialog_account.new_invite_email = $event.target.value"></v-text-field>
-						</v-flex>
-						<v-flex xs12 text-right pa-0 ma-0>
-							<v-btn color="primary" dark @click="sendAccountInvite()">
-								Send Invite
-							</v-btn>
-						</v-flex>
-						</v-flex>
-					</v-layout>
-					</v-container>
-					</v-card-text>
-				</v-card>
-				<v-data-table
-					:headers='[{"text":"Name","value":"name"},{"text":"Email","value":"email"},{"text":"","value":"actions"}]'
-					:items="dialog_account.users"
-					:items-per-page="-1"
-					hide-default-footer
-				>
-				<template v-slot:item.actions="{ item }">
-				<v-btn text icon color="pink" v-if=>
-					<v-icon>mdi-delete</v-icon>
-				</v-btn>
+				<template v-slot:extension>
+				<v-tabs v-model="account_tab" background-color="blue darken-3" dark>
+				<v-tab>
+					<v-icon class="mr-1">mdi-account</v-icon>
+					{{ dialog_account.records.users.length }} Users
+				</v-tab>
+				<v-tab>
+					<v-icon class="mr-1">mdi-folder-multiple</v-icon>
+					{{ dialog_account.records.sites.length }} Sites
+				</v-tab>
+				<v-tab>
+					<v-icon class="mr-1">mdi-library-books</v-icon>
+					{{ dialog_account.records.domains.length }} Domains
+				</v-tab>
+				</v-tabs>
 				</template>
-				</v-data-table>
-			</v-container>
+			</v-toolbar>
+			<v-card-text style="max-height: 100%;padding:0px;margin:0px">
+			<v-tabs-items v-model="account_tab">
+			<v-tab-item>
+				<v-card flat>
+				<v-card-text>
+					<v-card v-show="dialog_account.new_invite == true" class="mb-3">
+						<v-toolbar flat dense dark color="primary" id="new_invite">
+						<v-btn icon dark @click.native="dialog_account.new_invite = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>New Invitation</v-toolbar-title>
+						<v-spacer></v-spacer>
+						</v-toolbar>
+						<v-card-text>
+						<v-container>
+						<v-layout row wrap>
+							<v-flex xs12>
+								<v-text-field label="Email" :value="dialog_account.new_invite_email" @change.native="dialog_account.new_invite_email = $event.target.value"></v-text-field>
+							</v-flex>
+							<v-flex xs12 text-right pa-0 ma-0>
+								<v-btn color="primary" dark @click="sendAccountInvite()">
+									Send Invite
+								</v-btn>
+							</v-flex>
+							</v-flex>
+						</v-layout>
+						</v-container>
+						</v-card-text>
+					</v-card>
+					<v-data-table
+						v-show="typeof dialog_account.records.users == 'object' && dialog_account.records.users.length > 0"
+						:headers='[{"text":"Name","value":"name"},{"text":"Email","value":"email"},{"text":"","value":"actions"}]'
+						:items="dialog_account.records.users"
+						:items-per-page="-1"
+						hide-default-footer
+					>
+					<template v-slot:item.actions="{ item }">
+					<v-btn text icon color="pink" @click="removeAccountAccess( item.user_id )" v-if="role == 'administrator'">
+						<v-icon>mdi-delete</v-icon>
+					</v-btn>
+					</template>
+					</v-data-table>
+					<v-data-table
+						v-show="typeof dialog_account.records.invites == 'object' && dialog_account.records.invites.length > 0"
+						:headers='[{"text":"Email","value":"email"},{"text":"Created","value":"created_at"},{"text":"","value":"actions"}]'
+						:items="dialog_account.records.invites"
+						:items-per-page="-1"
+						hide-default-footer
+						hide-default-header
+					>
+					<template v-slot:header>
+						<tr>
+						<td colspan="3" style="padding:0px;padding-top:16px;">
+							<v-divider></v-divider>
+							<v-subheader>Invites</v-subheader>
+						</td>
+						</tr>
+					</template>
+					<template v-slot:item.created_at="{ item }">
+					{{ item.created_at | pretty_timestamp }}
+					</template>
+					<template v-slot:item.actions="{ item }">
+					<v-tooltip top>
+						<template v-slot:activator="{ on }">
+							<v-btn text icon v-on="on" @click="copyInviteLink( item.account_id, item.token )"><v-icon dark>mdi-link-variant</v-icon></v-btn>
+						</template><span>Copy Invite Link</span>
+					</v-tooltip>
+					<v-tooltip top>
+						<template v-slot:activator="{ on }">
+							<v-btn text icon color="pink" @click="deleteInvite( item.invite_id )" v-on="on" v-if="role == 'administrator'"><v-icon dark>mdi-delete</v-icon></v-btn>
+						</template><span>Delete Invite</span>
+					</v-tooltip>
+					</template>
+					</v-data-table>
+				</v-card-text>
+				</v-card>
+			</v-tab-item>
+			<v-tab-item>
+				<v-card flat>
+				<v-card-text>
+					<v-data-table
+						v-show="typeof dialog_account.records.sites == 'object' && dialog_account.records.sites.length > 0"
+						:headers='[{"text":"Sites","value":"name"}]'
+						:items="dialog_account.records.sites"
+						:items-per-page="-1"
+						hide-default-footer
+					>
+					</v-data-table>
+				</v-card-text>
+				</v-card>
+			</v-tab-item>
+			<v-tab-item>
+				<v-card flat>
+				<v-card-text>
+					<v-data-table
+						v-show="typeof dialog_account.records.domains == 'object' && dialog_account.records.domains.length > 0"
+						:headers='[{"text":"Domain","value":"name"}]'
+						:items="dialog_account.records.domains"
+						:items-per-page="-1"
+						hide-default-footer
+					>
+					<template v-slot:item.actions="{ item }">
+					<v-btn text icon color="pink" v-if=>
+						<v-icon>mdi-delete</v-icon>
+					</v-btn>
+					</template>
+					</v-data-table>
+				</v-card-text>
+				</v-card>
+			</v-tab-item>
+			</v-tabs-items>
 			</v-card-text>
 		</v-card>
 	  </v-dialog>
@@ -1857,6 +1955,11 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-dialog>
 			<v-container fluid v-show="loading_page != true" style="padding:0px;">
 			<v-card tile flat v-show="route == 'login'" class="mt-11">
+				<v-card flat style="max-width: 660px;margin: auto;margin-bottom:30px" v-show="fetchInvite.account">
+				<v-alert type="info" style="border-radius: 4px;" elevation="2" dense color="primary" dark>
+					To accept access either <a @click="new_account.show = true" style="color:#fff;font-weight:bold;text-decoration:underline">create a new account</a> or login to an existing account.
+				</v-alert>
+				</v-card>
 				<v-card tile style="max-width: 400px;margin: auto;">
 					<v-toolbar color="grey lighten-4" light flat>
 						<v-toolbar-title>Login</v-toolbar-title>
@@ -1866,7 +1969,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-form v-if="login.lost_password" ref="reset">
 					<v-row>
 						<v-col cols="12">
-							<v-text-field label="Username" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
+							<v-text-field label="Username or Email" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
 						</v-col>
 						<v-col cols="12">
 							<v-alert type="success" v-show="login.message">{{ login.message }}</v-alert>
@@ -1880,7 +1983,7 @@ Vue.component('file-upload', VueUploadComponent);
 					<v-form lazy-validation ref="login" v-else>
 					<v-row>
 						<v-col cols="12">
-							<v-text-field label="Username" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
+							<v-text-field label="Username or Email" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
 						</v-col>
 						<v-col cols="12">
 							<v-text-field label="Password" :value="login.user_password" @change.native="login.user_password = $event.target.value" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']"></v-text-field>
@@ -1968,7 +2071,7 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-flex>
 						<v-flex xs12 md8>
 						<div class="text-center">
-							<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" :length="Math.ceil(filteredSites / items_per_page)" v-model="page" :total-visible="7" color="blue darken-3"></v-pagination>
+							<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" v-model="page" :total-visible="7" :length="Math.ceil(filteredSites / items_per_page)" color="blue darken-3"></v-pagination>
 						</div>
 					</v-flex>
 					<v-flex xs12 md2>
@@ -2237,7 +2340,7 @@ Vue.component('file-upload', VueUploadComponent);
 						</v-list-item-content>
 						</v-list-item>
 						<v-subheader v-show="recipes.filter( r => r.public != 1 ).length > 0">User</v-subheader>
-						<v-list-item @click="rloadRecipe( recipe.recipe_id ); $vuetify.goTo( '#script_bulk' );" dense v-for="recipe in recipes.filter( r => r.public != 1 )">
+						<v-list-item @click="loadRecipe( recipe.recipe_id ); $vuetify.goTo( '#script_bulk' );" dense v-for="recipe in recipes.filter( r => r.public != 1 )">
 						<v-list-item-icon>
 							<v-icon>mdi-script-text-outline</v-icon>
 						</v-list-item-icon>
@@ -3334,7 +3437,7 @@ Vue.component('file-upload', VueUploadComponent);
 			</v-expansion-panels>
 				<v-layout justify-center>
 				<div class="text-center">
-					<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" :length="Math.ceil(filteredSites / items_per_page)" v-model="page" :total-visible="7" color="blue darken-3" class="mt-5"></v-pagination>
+					<v-pagination v-if="Math.ceil(filteredSites / items_per_page) > 1" v-model="page" :total-visible="7" :length="Math.ceil(filteredSites / items_per_page)" color="blue darken-3" class="mt-5"></v-pagination>
 				</div>
 				</v-layout>
 			</v-card-text>
@@ -3501,6 +3604,65 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-container>
 				</v-card-text>
 			</v-card>
+			<v-dialog v-if="route == 'invite'" value="true" scrollable persistance width="500" height="300">
+			<v-overlay :value="true" v-if="typeof new_invite.account.name == 'undefined'">
+				<v-progress-circular indeterminate size="64"></v-progress-circular>
+			</v-overlay>
+			<v-card tile v-else>
+				<v-toolbar color="grey lighten-4" light flat>
+					<v-toolbar-title>Account <strong><span v-html="new_invite.account.name"></span></strong> contains:</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+					</v-toolbar-items>
+					<template v-slot:extension>
+						<v-tabs v-model="account_tab" background-color="blue darken-3" dark>
+						<v-tab>
+							<v-icon class="mr-1">mdi-folder-multiple</v-icon>
+							{{ new_invite.account.website_count }} Sites
+						</v-tab>
+						<v-tab>
+							<v-icon class="mr-1">mdi-library-books</v-icon>
+							{{ new_invite.account.domain_count }} Domains
+						</v-tab>
+						</v-tabs>
+					</template>
+				</v-toolbar>
+				<v-card-text style="height:300px;">
+					<v-tabs-items v-model="account_tab">
+					<v-tab-item>
+						<v-data-table
+							v-show="typeof new_invite.sites == 'object' && new_invite.sites.length > 0"
+							:headers='[{"text":"Sites","value":"name"}]'
+							:items="new_invite.sites"
+							:items-per-page="-1"
+							hide-default-footer
+						>
+						</v-data-table>
+					</v-tab-item>
+					<v-tab-item>
+						<v-data-table
+							v-show="typeof new_invite.domains == 'object' && new_invite.domains.length > 0"
+							:headers='[{"text":"Domain","value":"name"}]'
+							:items="new_invite.domains"
+							:items-per-page="-1"
+							hide-default-footer
+						>
+						</v-data-table>
+					</v-tab-item>
+					</v-tabs-items>
+						</v-card-text>
+						<v-divider></v-divider>
+						<v-card-actions>
+							<div class="flex-grow-1"></div>
+							<v-btn @click="cancelInvite">Cancel</v-btn>
+							<v-btn @click="acceptInvite" color="primary" dark>Accept Invite as {{ current_user_login }}</v-btn>
+						</v-card-actions>
+						</v-card>
+						</v-dialog>
+					</v-layout>
+				</v-container>
+				</v-card-text>
+			</v-card>
 			</v-container>
 			<v-container fluid v-show="loading_page">
 				Loading...
@@ -3557,6 +3719,7 @@ new Vue({
 		loading_page: true,
 		expanded: [],
 		accounts: [],
+		account_tab: null,
 		modules: { dns: <?php if ( defined( "CONSTELLIX_API_KEY" ) and defined( "CONSTELLIX_SECRET_KEY" ) ) { echo "true"; } else { echo "false"; } ?> },
 		dialog_bulk: { show: false, tabs_management: "tab-Sites", environment_selected: "Production" },
 		dialog_delete_user: { show: false, site: {}, users: [], username: "", reassign: {} },
@@ -3577,9 +3740,12 @@ new Vue({
 		dialog_theme_and_plugin_checks: { show: false, site: {}, loading: false },
 		dialog_update_settings: { show: false, site_id: null, loading: false },
 		dialog_fathom: { show: false, site: {}, environment: {}, loading: false, editItem: false, editedItem: {}, editedIndex: -1 },
-		dialog_account: { show: false, account: {}, users: {}, new_invite: false, new_invite_email: "" },
+		dialog_account: { show: false, records: {}, new_invite: false, new_invite_email: "" },
+		new_invite: { account: {}, records: {} },
+		new_account: { email: "", show: false },
 		timeline_logs: [],
 		route: window.location.hash.substring(1),
+		querystring: window.location.search,
 		page: 1,
 		socket: "<?php echo captaincore_fetch_socket_address() . "/ws"; ?>",
 		timezones: <?php echo json_encode( timezone_identifiers_list() ); ?>,
@@ -3635,6 +3801,7 @@ new Vue({
 			?>
 		,
 		current_user_email: "<?php echo $current_user->user_email; ?>",
+		current_user_login: "<?php echo $current_user->user_login; ?>",
 		hosting_plans: 
 		<?php
 			$hosting_plans   = get_field( 'hosting_plans', 'option' );
@@ -3900,6 +4067,11 @@ new Vue({
 		this.triggerRoute()
 	},
 	computed: {
+		fetchInvite() {
+			var urlParams = new URLSearchParams( this.querystring )
+			var invite = { account: urlParams.get('account'), token: urlParams.get('token') }
+			return invite
+		},
 		paginatedSites() {
 			const start = this.page * this.items_per_page - this.items_per_page;
 			const end = start + this.items_per_page;
@@ -3998,6 +4170,13 @@ new Vue({
 				}
 				this.fetchSites()
 			}
+			if ( this.fetchInvite.account ) {
+				this.fetchInviteInfo()
+				window.location = "#invite"
+				this.route = "invite"
+				this.loading_page = false;
+				return
+			}
 			if ( this.route == "" ) {
 				if ( this.filteredSites == 0 ) {
 					this.loading_page = true;
@@ -4035,7 +4214,7 @@ new Vue({
 				})
 				.then( response => {
 					if ( typeof response.data.errors === 'undefined' ) {
-						window.location = window.location.origin + window.location.pathname
+						window.location = window.location.origin + window.location.pathname + window.location.search
 						return
 					}
 					this.login.errors = response.data.errors
@@ -4063,6 +4242,10 @@ new Vue({
 			document.execCommand("copy");
 			this.snackbar.message = "Copied to clipboard.";
 			this.snackbar.show = true;
+		},
+		copyInviteLink( account, token ) {
+			link = window.location.origin + window.location.pathname + `?account=${account}&token=${token}`
+			this.copyText( link )
 		},
 		copySFTP( key ) {
 			sftp_info = `Address: ${key.address}\nUsername: ${key.username}\nPassword: ${key.password}\nProtocol: ${key.protocol}\nPort: ${key.port}`
@@ -5432,9 +5615,117 @@ new Vue({
 				})
 				.catch( error => console.log( error ) );
 		},
+		fetchInviteInfo(){
+			var data = {
+				action: 'captaincore_local',
+				command: 'fetchInvite',
+				value: this.fetchInvite
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.new_invite = response.data
+				})
+				.catch( error => console.log( error ) );
+		},
+		createAccount(){
+			axios.post( '/wp-json/captaincore/v1/login/', {
+					 command: "createAccount",
+					 login: this.new_account.email,
+					 invite: this.fetchInvite,
+				})
+				.then( response => {
+					if ( response.data.error ) {
+						this.snackbar.message = response.data.error 
+						this.snackbar.show = true
+						return
+					}
+					this.new_account.show = false
+					this.new_account.email = ""
+					this.snackbar.message = "Verification email sent. Check your email."
+					this.snackbar.show = true
+				})
+				.catch( error => console.log( error ) );
+		},
+		removeAccountAccess( user_id ) {
+			email = this.dialog_account.records.users.filter( u => u.user_id == user_id )[0].email
+			should_proceed = confirm(`Remove access for user ${email}?`);
+			if ( ! should_proceed ) {
+				return;
+			}
+			var data = {
+				action: 'captaincore_local',
+				command: 'removeAccountAccess',
+				value: user_id,
+				account: this.dialog_account.records.account.id
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.dialog_account.records.users = this.dialog_account.records.users.filter( u => u.user_id != user_id )
+					this.snackbar.message = `Removed access for user ${email}.`
+					this.snackbar.show
+					axios.get(
+						'/wp-json/captaincore/v1/accounts', {
+							headers: {'X-WP-Nonce':this.wp_nonce}
+						})
+						.then(response => {
+							this.accounts = response.data;
+						});
+				})
+				.catch( error => console.log( error ) );
+
+		},
+		deleteInvite( invite_id ) {
+			email = this.dialog_account.records.invites.filter( i => i.invite_id == invite_id )[0].email
+			should_proceed = confirm(`Remove invite ${email}?`);
+			if ( ! should_proceed ) {
+				return;
+			}
+			if ( invite_id == "" ) {
+				return
+			}
+			var data = {
+				action: 'captaincore_local',
+				command: 'deleteInvite',
+				value: invite_id
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.dialog_account.records.invites = this.dialog_account.records.invites.filter( i => i.invite_id != invite_id )
+					this.snackbar.message = "Invite deleted."
+					this.snackbar.show
+				})
+				.catch( error => console.log( error ) );
+		},
+		acceptInvite() {
+			var data = {
+				action: 'captaincore_local',
+				command: 'acceptInvite',
+				value: this.fetchInvite
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					window.history.pushState({}, document.title, window.location.origin + window.location.pathname );
+					this.querystring = ""
+					this.route = ""
+					this.triggerRoute()
+					axios.get(
+						'/wp-json/captaincore/v1/accounts', {
+							headers: {'X-WP-Nonce':this.wp_nonce}
+						})
+						.then(response => {
+							this.accounts = response.data;
+						});
+				})
+				.catch( error => console.log( error ) );
+		},
+		cancelInvite() {
+			window.history.pushState({}, document.title, window.location.origin + window.location.pathname );
+			this.querystring = ""
+			this.route = ""
+			this.triggerRoute()
+		},
 		editAccount( account_id ) {
 			account = this.accounts.filter( account => account.id == account_id )[0];
-			this.dialog_account.account = account;
 			var data = {
 				action: 'captaincore_local',
 				command: 'fetchAccount',
@@ -5442,7 +5733,7 @@ new Vue({
 			};
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					this.dialog_account.users = response.data
+					this.dialog_account.records = response.data
 					this.dialog_account.show = true;
 				})
 				.catch( error => console.log( error ) );
@@ -5451,13 +5742,14 @@ new Vue({
 			var data = {
 				action: 'captaincore_local',
 				command: 'sendAccountInvite',
-				value: this.dialog_account.account.id,
+				value: this.dialog_account.records.account.id,
 				invite: this.dialog_account.new_invite_email
 			};
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					this.dialog_account.new_invite_email = "" 
 					this.dialog_account.new_invite = false
+					this.editAccount( this.dialog_account.records.account.id )
 				})
 
 		},
