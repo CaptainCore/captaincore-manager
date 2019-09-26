@@ -3635,25 +3635,31 @@ function captaincore_local_action_callback() {
 			
 		}
 
-		if ( count($errors) > 0 ) {
-			$response->errors = $errors;
-		}
-
-
 		if ( count($errors) == 0 ) {
 			// Update user submitted info
-			wp_update_user( array( 
+			$result = wp_update_user( array( 
 				'ID'           => $user_id, 
 				'display_name' => $account->display_name,
 				'user_email'   => $account->email,
 			) );
+			if ( is_wp_error( $result ) ) {
+				$errors[] = $result->get_error_message();
+			}
 		}
+
 		// Passed checks so update the password.
 		if ( count($errors) == 0 && $account->new_password != "") {
-			wp_update_user( array( 
+			$result = wp_update_user( array( 
 				'ID'        => $user_id, 
 				'user_pass' => $account->new_password,
 			) );
+			if ( is_wp_error( $result ) ) {
+				$errors[] = $result->get_error_message();
+			}
+		}
+
+		if ( count($errors) > 0 ) {
+			$response->errors = $errors;
 		}
 
 		$response->profile = $account;
