@@ -521,6 +521,17 @@ class Account {
 	}
 
 	public function invite( $email ) {
+		if ( email_exists( $email ) ) {
+			$user = get_user_by( 'email', $email );
+			// Add account ID to current user
+			$accounts = get_field( 'partner', "user_{$user->ID}" );
+			$accounts[] = $this->account_id;
+			update_field( 'partner', array_unique( $accounts ), "user_{$user->ID}" );
+			$this->calculate_totals();
+
+			return array( "message" => "Account already exists. Adding permissions for existing user." );
+		}
+
 		$time_now = date("Y-m-d H:i:s");
 		$token    = bin2hex( openssl_random_pseudo_bytes( 24 ) );
 		$new_invite = array(
@@ -542,7 +553,7 @@ class Account {
 
 		wp_mail( $email, $subject, $body, $headers );
 
-		return $invite_id;
+		return array( "message" => "Invite has been sent." );
 	}
 
 	public function account() {

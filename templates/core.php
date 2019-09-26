@@ -13,8 +13,7 @@ captaincore_header_content_extracted();
 $user       = wp_get_current_user();
 $role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
 if ( $role_check ) {
-	$current_user  = wp_get_current_user();
-	$belongs_to    = get_field( 'partner', "user_{$current_user->ID}" );
+	$belongs_to    = get_field( 'partner', "user_{$user->ID}" );
 	$business_name = get_the_title( $belongs_to[0] );
 	$business_link = get_field( 'partner_link', $belongs_to[0] );
 }
@@ -44,6 +43,190 @@ lodash = _.noConflict();
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.20/dist/vue-upload-component.js"></script>
 <script>
 ajaxurl = "/wp-admin/admin-ajax.php";
+function md5cycle(x, k) {
+var a = x[0], b = x[1], c = x[2], d = x[3];
+
+a = ff(a, b, c, d, k[0], 7, -680876936);
+d = ff(d, a, b, c, k[1], 12, -389564586);
+c = ff(c, d, a, b, k[2], 17,  606105819);
+b = ff(b, c, d, a, k[3], 22, -1044525330);
+a = ff(a, b, c, d, k[4], 7, -176418897);
+d = ff(d, a, b, c, k[5], 12,  1200080426);
+c = ff(c, d, a, b, k[6], 17, -1473231341);
+b = ff(b, c, d, a, k[7], 22, -45705983);
+a = ff(a, b, c, d, k[8], 7,  1770035416);
+d = ff(d, a, b, c, k[9], 12, -1958414417);
+c = ff(c, d, a, b, k[10], 17, -42063);
+b = ff(b, c, d, a, k[11], 22, -1990404162);
+a = ff(a, b, c, d, k[12], 7,  1804603682);
+d = ff(d, a, b, c, k[13], 12, -40341101);
+c = ff(c, d, a, b, k[14], 17, -1502002290);
+b = ff(b, c, d, a, k[15], 22,  1236535329);
+
+a = gg(a, b, c, d, k[1], 5, -165796510);
+d = gg(d, a, b, c, k[6], 9, -1069501632);
+c = gg(c, d, a, b, k[11], 14,  643717713);
+b = gg(b, c, d, a, k[0], 20, -373897302);
+a = gg(a, b, c, d, k[5], 5, -701558691);
+d = gg(d, a, b, c, k[10], 9,  38016083);
+c = gg(c, d, a, b, k[15], 14, -660478335);
+b = gg(b, c, d, a, k[4], 20, -405537848);
+a = gg(a, b, c, d, k[9], 5,  568446438);
+d = gg(d, a, b, c, k[14], 9, -1019803690);
+c = gg(c, d, a, b, k[3], 14, -187363961);
+b = gg(b, c, d, a, k[8], 20,  1163531501);
+a = gg(a, b, c, d, k[13], 5, -1444681467);
+d = gg(d, a, b, c, k[2], 9, -51403784);
+c = gg(c, d, a, b, k[7], 14,  1735328473);
+b = gg(b, c, d, a, k[12], 20, -1926607734);
+
+a = hh(a, b, c, d, k[5], 4, -378558);
+d = hh(d, a, b, c, k[8], 11, -2022574463);
+c = hh(c, d, a, b, k[11], 16,  1839030562);
+b = hh(b, c, d, a, k[14], 23, -35309556);
+a = hh(a, b, c, d, k[1], 4, -1530992060);
+d = hh(d, a, b, c, k[4], 11,  1272893353);
+c = hh(c, d, a, b, k[7], 16, -155497632);
+b = hh(b, c, d, a, k[10], 23, -1094730640);
+a = hh(a, b, c, d, k[13], 4,  681279174);
+d = hh(d, a, b, c, k[0], 11, -358537222);
+c = hh(c, d, a, b, k[3], 16, -722521979);
+b = hh(b, c, d, a, k[6], 23,  76029189);
+a = hh(a, b, c, d, k[9], 4, -640364487);
+d = hh(d, a, b, c, k[12], 11, -421815835);
+c = hh(c, d, a, b, k[15], 16,  530742520);
+b = hh(b, c, d, a, k[2], 23, -995338651);
+
+a = ii(a, b, c, d, k[0], 6, -198630844);
+d = ii(d, a, b, c, k[7], 10,  1126891415);
+c = ii(c, d, a, b, k[14], 15, -1416354905);
+b = ii(b, c, d, a, k[5], 21, -57434055);
+a = ii(a, b, c, d, k[12], 6,  1700485571);
+d = ii(d, a, b, c, k[3], 10, -1894986606);
+c = ii(c, d, a, b, k[10], 15, -1051523);
+b = ii(b, c, d, a, k[1], 21, -2054922799);
+a = ii(a, b, c, d, k[8], 6,  1873313359);
+d = ii(d, a, b, c, k[15], 10, -30611744);
+c = ii(c, d, a, b, k[6], 15, -1560198380);
+b = ii(b, c, d, a, k[13], 21,  1309151649);
+a = ii(a, b, c, d, k[4], 6, -145523070);
+d = ii(d, a, b, c, k[11], 10, -1120210379);
+c = ii(c, d, a, b, k[2], 15,  718787259);
+b = ii(b, c, d, a, k[9], 21, -343485551);
+
+x[0] = add32(a, x[0]);
+x[1] = add32(b, x[1]);
+x[2] = add32(c, x[2]);
+x[3] = add32(d, x[3]);
+
+}
+
+function cmn(q, a, b, x, s, t) {
+a = add32(add32(a, q), add32(x, t));
+return add32((a << s) | (a >>> (32 - s)), b);
+}
+
+function ff(a, b, c, d, x, s, t) {
+return cmn((b & c) | ((~b) & d), a, b, x, s, t);
+}
+
+function gg(a, b, c, d, x, s, t) {
+return cmn((b & d) | (c & (~d)), a, b, x, s, t);
+}
+
+function hh(a, b, c, d, x, s, t) {
+return cmn(b ^ c ^ d, a, b, x, s, t);
+}
+
+function ii(a, b, c, d, x, s, t) {
+return cmn(c ^ (b | (~d)), a, b, x, s, t);
+}
+
+function md51(s) {
+txt = '';
+var n = s.length,
+state = [1732584193, -271733879, -1732584194, 271733878], i;
+for (i=64; i<=s.length; i+=64) {
+md5cycle(state, md5blk(s.substring(i-64, i)));
+}
+s = s.substring(i-64);
+var tail = [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
+for (i=0; i<s.length; i++)
+tail[i>>2] |= s.charCodeAt(i) << ((i%4) << 3);
+tail[i>>2] |= 0x80 << ((i%4) << 3);
+if (i > 55) {
+md5cycle(state, tail);
+for (i=0; i<16; i++) tail[i] = 0;
+}
+tail[14] = n*8;
+md5cycle(state, tail);
+return state;
+}
+
+/* there needs to be support for Unicode here,
+ * unless we pretend that we can redefine the MD-5
+ * algorithm for multi-byte characters (perhaps
+ * by adding every four 16-bit characters and
+ * shortening the sum to 32 bits). Otherwise
+ * I suggest performing MD-5 as if every character
+ * was two bytes--e.g., 0040 0025 = @%--but then
+ * how will an ordinary MD-5 sum be matched?
+ * There is no way to standardize text to something
+ * like UTF-8 before transformation; speed cost is
+ * utterly prohibitive. The JavaScript standard
+ * itself needs to look at this: it should start
+ * providing access to strings as preformed UTF-8
+ * 8-bit unsigned value arrays.
+ */
+function md5blk(s) { /* I figured global was faster.   */
+var md5blks = [], i; /* Andy King said do it this way. */
+for (i=0; i<64; i+=4) {
+md5blks[i>>2] = s.charCodeAt(i)
++ (s.charCodeAt(i+1) << 8)
++ (s.charCodeAt(i+2) << 16)
++ (s.charCodeAt(i+3) << 24);
+}
+return md5blks;
+}
+
+var hex_chr = '0123456789abcdef'.split('');
+
+function rhex(n)
+{
+var s='', j=0;
+for(; j<4; j++)
+s += hex_chr[(n >> (j * 8 + 4)) & 0x0F]
++ hex_chr[(n >> (j * 8)) & 0x0F];
+return s;
+}
+
+function hex(x) {
+for (var i=0; i<x.length; i++)
+x[i] = rhex(x[i]);
+return x.join('');
+}
+
+function md5(s) {
+return hex(md51(s));
+}
+
+/* this function is much faster,
+so if possible we use it. Some IEs
+are the only ones I know of that
+need the idiotic second function,
+generated by an if clause.  */
+
+function add32(a, b) {
+return (a + b) & 0xFFFFFFFF;
+}
+
+if (md5('hello') != '5d41402abc4b2a76b9719d911017c592') {
+function add32(x, y) {
+var lsw = (x & 0xFFFF) + (y & 0xFFFF),
+msw = (x >> 16) + (y >> 16) + (lsw >> 16);
+return (msw << 16) | (lsw & 0xFFFF);
+}
+}
 var pretty_timestamp_options = {
     weekday: "short", year: "numeric", month: "short",
     day: "numeric", hour: "2-digit", minute: "2-digit"
@@ -102,15 +285,7 @@ Vue.component('file-upload', VueUploadComponent);
             <v-list-item-title>Handbook</v-list-item-title>
           </v-list-item-content>
 		</v-list-item>
-		<v-list-item link href="#keys" v-show="role == 'administrator'">
-          <v-list-item-icon>
-            <v-icon>mdi-key</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>SSH Keys</v-list-item-title>
-          </v-list-item-content>
-		</v-list-item>
-		<v-list-item link href="#sharing">
+		<v-list-item link href="#sharing" v-show="role == 'administrator'">
           <v-list-item-icon>
             <v-icon>mdi-account-multiple-plus</v-icon>
           </v-list-item-icon>
@@ -126,7 +301,42 @@ Vue.component('file-upload', VueUploadComponent);
             <v-list-item-title>Billing  <v-icon small>mdi-open-in-new</v-icon></v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-        <v-list-item link @click="signOut()">
+      </v-list>
+	  <template v-slot:append>
+	  <v-menu offset-y top>
+      <template v-slot:activator="{ on }">
+		<v-list>
+		<v-list-item link v-on="on">
+			<v-list-item-avatar>
+				<v-img :src="gravatar"></v-img>
+			</v-list-item-avatar>
+			<v-list-item-content>
+				<v-list-item-title>{{ current_user_display_name }}</v-list-item-title>
+			</v-list-item-content>
+			<v-list-item-icon>
+				<v-icon>mdi-chevron-up</v-icon>
+			</v-list-item-icon>
+		</v-list-item>
+		</v-list>
+      </template>
+      <v-list dense>
+	  	<v-list-item link href="#profile">
+          <v-list-item-icon>
+            <v-icon>mdi-account-box</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>Profile</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+		<v-list-item link href="#keys" v-show="role == 'administrator'">
+          <v-list-item-icon>
+            <v-icon>mdi-key</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>SSH Keys</v-list-item-title>
+          </v-list-item-content>
+		</v-list-item>
+	  	<v-list-item link @click="signOut()">
           <v-list-item-icon>
             <v-icon>mdi-logout</v-icon>
           </v-list-item-icon>
@@ -135,6 +345,8 @@ Vue.component('file-upload', VueUploadComponent);
           </v-list-item-content>
         </v-list-item>
       </v-list>
+    </v-menu>
+      </template>
 	  </v-navigation-drawer>
 	  <v-content>
 		<v-container fluid style="padding:0px">
@@ -355,23 +567,6 @@ Vue.component('file-upload', VueUploadComponent);
 		<v-card-text>
 			<h3>Bulk edit {{ bulk_edit.items.length }} {{ bulk_edit.type }}</h3>
 			<v-btn v-if="bulk_edit.type == 'plugins'" @click="bulkEditExecute('activate')">Activate</v-btn> <v-btn v-if="bulk_edit.type == 'plugins'" @click="bulkEditExecute('deactivate')">Deactivate</v-btn> <v-btn v-if="bulk_edit.type == 'plugins'" @click="bulkEditExecute('toggle')">Toggle</v-btn> <v-btn @click="bulkEditExecute('delete')">Delete</v-btn>
-		</v-card-text>
-		</v-card>
-		</v-dialog>
-		<v-dialog v-model="new_account.show" max-width="500px">
-		<v-card tile>
-			<v-toolbar flat dark color="primary">
-				<v-btn icon dark @click.native="new_account.show = false">
-					<v-icon>close</v-icon>
-				</v-btn>
-				<v-toolbar-title>New account</v-toolbar-title>
-				<v-spacer></v-spacer>
-			</v-toolbar>
-			<v-card-text>
-				<v-text-field v-model="new_account.email" label="Email" class="mt-3"></v-text-field>
-				<v-flex xs12>
-					<v-btn color="primary" dark @click="createAccount()">Create Account and accept invite.</v-btn>
-				</v-flex>
 		</v-card-text>
 		</v-card>
 		</v-dialog>
@@ -1955,11 +2150,27 @@ Vue.component('file-upload', VueUploadComponent);
 				</v-dialog>
 			<v-container fluid v-show="loading_page != true" style="padding:0px;">
 			<v-card tile flat v-show="route == 'login'" class="mt-11">
-				<v-card flat style="max-width: 660px;margin: auto;margin-bottom:30px" v-show="fetchInvite.account">
+				<v-card flat style="max-width:960px;margin: auto;margin-bottom:30px" v-if="fetchInvite.account">
 				<v-alert type="info" style="border-radius: 4px;" elevation="2" dense color="primary" dark>
-					To accept access either <a @click="new_account.show = true" style="color:#fff;font-weight:bold;text-decoration:underline">create a new account</a> or login to an existing account.
+					To accept invitation either <strong>create new account</strong> or <strong>login</strong> to an existing account.
 				</v-alert>
+				<v-row>
+				<v-col>
+				<v-card tile style="max-width: 400px;margin: auto;">
+					<v-toolbar color="grey lighten-4" light flat>
+						<v-toolbar-title>Create new account</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text>
+						<v-text-field readonly value="################" hint="Will use email where invite was sent to." persistent-hint label="Email" class="mt-3"></v-text-field>
+						<v-text-field type="password" v-model="new_account.password" label="Password" class="mt-3"></v-text-field>
+						<v-flex xs12>
+							<v-btn color="primary" dark @click="createAccount()">Create Account</v-btn>
+						</v-flex>
+				</v-card-text>
 				</v-card>
+				</v-col>
+				<v-col>
 				<v-card tile style="max-width: 400px;margin: auto;">
 					<v-toolbar color="grey lighten-4" light flat>
 						<v-toolbar-title>Login</v-toolbar-title>
@@ -2003,6 +2214,54 @@ Vue.component('file-upload', VueUploadComponent);
 					<a @click="login.lost_password = true" class="caption" v-show="!login.lost_password">Lost your password?</a>
 					<a @click="login.lost_password = false" class="caption" v-show="login.lost_password">Back to login form.</a>
 				</v-card>
+				</v-col>
+				</v-row>
+			</v-card>
+			<template v-else>
+				<v-card tile style="max-width: 400px;margin: auto;">
+					<v-toolbar color="grey lighten-4" light flat>
+						<v-toolbar-title>Login</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text class="my-2">
+					<v-form v-if="login.lost_password" ref="reset">
+					<v-row>
+						<v-col cols="12">
+							<v-text-field label="Username or Email" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
+						</v-col>
+						<v-col cols="12">
+							<v-alert type="success" v-show="login.message">{{ login.message }}</v-alert>
+						</v-col>
+						<v-col cols="12">
+							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
+							<v-btn color="primary" @click="resetPassword()" :disabled="login.loading">Reset Password</v-btn>
+						</v-col>
+					</v-row>
+					</v-form>
+					<v-form lazy-validation ref="login" v-else>
+					<v-row>
+						<v-col cols="12">
+							<v-text-field label="Username or Email" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
+						</v-col>
+						<v-col cols="12">
+							<v-text-field label="Password" :value="login.user_password" @change.native="login.user_password = $event.target.value" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']"></v-text-field>
+						</v-col>
+						<v-col cols="12">
+							<v-alert type="error" v-show="login.errors">{{ login.errors }}</v-alert>
+						</v-col>
+						<v-col cols="12">
+							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
+							<v-btn color="primary" @click="signIn()" :disabled="login.loading">Login</v-btn>
+						</v-col>
+					</v-row>
+					</v-form>
+					</v-card-text>
+				</v-card>
+				<v-card tile flat style="max-width: 400px;margin: auto;" class="px-5">
+					<a @click="login.lost_password = true" class="caption" v-show="!login.lost_password">Lost your password?</a>
+					<a @click="login.lost_password = false" class="caption" v-show="login.lost_password">Back to login form.</a>
+				</v-card>
+			</template>
 			</v-card>
 			<v-card tile v-show="route == 'sites'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
@@ -3576,6 +3835,47 @@ Vue.component('file-upload', VueUploadComponent);
 					</v-container>
 				</v-card-text>
 			</v-card>
+			<v-card tile v-show="route == 'profile'" flat>
+				<v-toolbar color="grey lighten-4" light flat>
+					<v-toolbar-title>Profile</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+					</v-toolbar-items>
+				</v-toolbar>
+				<v-card-text style="max-height: 100%;">
+					<v-card tile style="max-width: 400px;margin: auto;">
+						<v-toolbar color="grey lighten-4" light flat>
+							<v-toolbar-title>Update profile</v-toolbar-title>
+							<v-spacer></v-spacer>
+						</v-toolbar>
+						<v-card-text>
+							<v-list>
+							<v-list-item link href="https://gravatar.com" target="_blank">
+								<v-list-item-avatar>
+									<v-img :src="gravatar"></v-img>
+								</v-list-item-avatar>
+								<v-list-item-content>
+									<v-list-item-title>Edit thumbnail with Gravatar</v-list-item-title>
+								</v-list-item-content>
+								<v-list-item-icon>
+									<v-icon>mdi-open-in-new</v-icon>
+								</v-list-item-icon>
+							</v-list-item>
+							</v-list>
+							<v-text-field :value="profile.display_name" @change.native="profile.display_name = $event.target.value" label="Display Name"></v-text-field>
+							<v-text-field :value="profile.email" @change.native="profile.email = $event.target.value" label="Email"></v-text-field>
+							<v-text-field :value="profile.login" @change.native="profile.login = $event.target.value" label="Username" readonly disabled></v-text-field>
+							<v-text-field :value="profile.new_password" @change.native="profile.new_password = $event.target.value" type="password" label="New Password" hint="Leave empty to keep current password." persistent-hint></v-text-field>
+							<v-alert :value="true" type="error" v-for="error in profile.errors" class="mt-5">{{ error }}</v-alert>
+							<v-alert :value="true" type="success" v-show="profile.success" class="mt-5">{{ profile.success }}</v-alert>
+							
+							<v-flex xs12 mt-5>
+								<v-btn color="primary" dark @click="updateAccount()">Update Account</v-btn>
+							</v-flex>
+					</v-card-text>
+					</v-card>
+				</v-card-text>
+			</v-card>
 			<v-card tile v-show="route == 'sharing'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Listing {{ accounts.length }} accounts</v-toolbar-title>
@@ -3679,11 +3979,7 @@ Vue.component('file-upload', VueUploadComponent);
 		</template>
 		</v-container>
 		</v-content>
-		<v-footer padless style="z-index: 9;position: relative;font-size:12px;">
-			<v-col class="text-right" cols="12">
-				<v-btn text icon :href="home_link" target="_blank" class="mx-1 transparent"><v-icon small>mdi-home</v-icon></v-btn> <a href="https://github.com/CaptainCore/captaincore" target="_blank" class="mx-1">CaptainCore v{{ captaincore_version }}</a>
-			</v-col>
-		</v-footer>
+		
 	</v-app>
 </div>
 <script>
@@ -3730,7 +4026,7 @@ new Vue({
 		dialog_configure_defaults: { show: false, loading: false, record: {}, records: [], account: "" },
 		dialog_timeline: { show: false, loading: false, logs: [], pagination: {}, selected_account: "", account: { default_email: "", default_plugins: [], default_timezone: "", default_users: [], name: "", id: ""} },
 		dialog_domain: { show: false, domain: {}, records: [], results: [], errors: [], loading: true, saving: false },
-		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $current_user->user_email; ?>", current_user_email: "<?php echo $current_user->user_email; ?>", filter_toggle: true, filter_options: [] },
+		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $user->user_email; ?>", current_user_email: "<?php echo $user->user_email; ?>", filter_toggle: true, filter_options: [] },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
 		dialog_mailgun: { show: false, site: {}, response: [], loading: false },
 		dialog_modify_plan: { show: false, site: {}, hosting_plan: {}, hosting_addons: [], selected_plan: "", customer_name: "" },
@@ -3742,7 +4038,7 @@ new Vue({
 		dialog_fathom: { show: false, site: {}, environment: {}, loading: false, editItem: false, editedItem: {}, editedIndex: -1 },
 		dialog_account: { show: false, records: {}, new_invite: false, new_invite_email: "" },
 		new_invite: { account: {}, records: {} },
-		new_account: { email: "", show: false },
+		new_account: { password: "" },
 		timeline_logs: [],
 		route: window.location.hash.substring(1),
 		querystring: window.location.search,
@@ -3800,8 +4096,10 @@ new Vue({
 					echo json_encode( $processes );
 			?>
 		,
-		current_user_email: "<?php echo $current_user->user_email; ?>",
-		current_user_login: "<?php echo $current_user->user_login; ?>",
+		current_user_email: "<?php echo $user->user_email; ?>",
+		current_user_login: "<?php echo $user->user_login; ?>",
+		current_user_display_name: "<?php echo $user->display_name; ?>",
+		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->user_email; ?>", login: "<?php echo $user->user_login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", errors: [] },
 		hosting_plans: 
 		<?php
 			$hosting_plans   = get_field( 'hosting_plans', 'option' );
@@ -4067,6 +4365,9 @@ new Vue({
 		this.triggerRoute()
 	},
 	computed: {
+		gravatar() {
+			return 'https://www.gravatar.com/avatar/' + md5( this.current_user_email.trim().toLowerCase() ) + '?s=80&d=mp'
+		},
 		fetchInvite() {
 			var urlParams = new URLSearchParams( this.querystring )
 			var invite = { account: urlParams.get('account'), token: urlParams.get('token') }
@@ -4160,6 +4461,9 @@ new Vue({
 			if ( this.route == "keys" ) {
 				this.loading_page = false;
 				this.fetchKeys()
+			}
+			if ( this.route == "profile" ) {
+				this.loading_page = false;
 			}
 			if ( this.route == "sharing" ) {
 				this.loading_page = false;
@@ -5627,22 +5931,41 @@ new Vue({
 				})
 				.catch( error => console.log( error ) );
 		},
+		updateAccount() {
+			var data = {
+				action: 'captaincore_local',
+				command: 'updateAccount',
+				value: this.profile,
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					if ( response.data.errors ) {
+						this.profile.errors = response.data.errors
+						return
+					}
+					this.snackbar.message = "Account updated."
+					this.snackbar.show = true
+					this.current_user_display_name = response.data.profile.display_name
+					this.profile.errors = []
+					this.profile.new_password = ""
+				})
+				.catch( error => console.log( error ) );
+		},
 		createAccount(){
 			axios.post( '/wp-json/captaincore/v1/login/', {
 					 command: "createAccount",
-					 login: this.new_account.email,
+					 login: this.new_account,
 					 invite: this.fetchInvite,
 				})
 				.then( response => {
-					if ( response.data.error ) {
-						this.snackbar.message = response.data.error 
+					if ( response.data.errors ) {
+						this.snackbar.message = response.data.errors.join(", ")
 						this.snackbar.show = true
 						return
 					}
-					this.new_account.show = false
-					this.new_account.email = ""
-					this.snackbar.message = "Verification email sent. Check your email."
+					this.snackbar.message = "New account created. Logging in..."
 					this.snackbar.show = true
+					window.location = window.location.origin + window.location.pathname
 				})
 				.catch( error => console.log( error ) );
 		},
@@ -5747,6 +6070,8 @@ new Vue({
 			};
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
+					this.snackbar.message = response.data.message
+					this.snackbar.show = true
 					this.dialog_account.new_invite_email = "" 
 					this.dialog_account.new_invite = false
 					this.editAccount( this.dialog_account.records.account.id )
