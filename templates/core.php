@@ -3798,7 +3798,7 @@ new Vue({
 	data: {
 		login: { user_login: "", user_password: "", errors: "", loading: false, lost_password: false, message: "" },
 		wp_nonce: "",
-		captaincore_version: "0.6",
+		captaincore_version: "0.7",
 		captaincore_logo: "<?php echo get_field( 'business_logo', 'option' ); ?>",
 		captaincore_name: "<?php echo get_field( 'business_name', 'option' ); ?>",
 		drawer: null,

@@ -43,6 +43,24 @@ TODO
 TODO
 
 == Changelog ==
+= 0.7.0: September 27 2019
+* New: Site filters for administrators: healthy only, outdated only, with assigned plan, without assigned plan and reset.
+* New: Account profile section with Gravatar thumbnail
+* New: Sharing section for administrators
+* New: SSH key management
+* New: Last sync time ago. Site which haven't been synced within the last 48 hours will display a label for administrators.
+* New: Filters for administrators to toggle between healthy and outdated sites. Sites which haven't received sync with CaptainCore in over 48 hours are considered unhealthy.
+* New: CaptainCore\Accounts() class for managing accounts. Replaces legacy CaptainCore\Customers
+* New: CaptainCore\upgrade() function which replaces legacy captaincore_create_tables() function
+* Tweak: Upgraded Vuetify to v2.0.19
+* Tweak: Improvements to DNS section. Ability to add and remove domains.
+* Tweak: Improvements to JS includes. Moved JS code from header to footer and consolidated CDN usage to jsDelivr for better performance.
+* Tweak: Revamped site credentials UI. Built in password hidden with one click copy site details.
+* Tweak: Removed Font Awesome. Replaced with Material Design Icons
+* Tweak: Removed bottom footer
+* Tweak: Removed jQuery usage
+* Tweak: Mobile fixes
+
 = 0.6.0: September 3 2019
 * New: Renamed plugin from CaptainCore GUI to CaptainCore
 * New: Decoupled CaptainCore from WooCommerce. Now runs within standalone PHP template for better compatibility.
