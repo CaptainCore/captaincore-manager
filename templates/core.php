@@ -3860,7 +3860,7 @@ new Vue({
 			// The Query
 			$all_processes = get_posts( $args );
 			$repeat_field  = get_field_object( 'field_57f791d6363f4' );
-			$processes     = array();
+			$processes     = [];
 
 			foreach ( $all_processes as $process ) {
 
@@ -3926,7 +3926,7 @@ new Vue({
 					'parent'     => 0,
 				)
 			);
-			$new_roles = array();
+			$new_roles = [];
 			foreach ( $roles as $role ) {
 				$new_roles[] = (object) [
 					'text'  => $role->name,

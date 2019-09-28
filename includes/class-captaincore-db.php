@@ -303,7 +303,7 @@ class DB {
 
 	static function where( $conditions ) {
 		global $wpdb;
-		$where_statements = array();
+		$where_statements = [];
 		foreach ( $conditions as $row => $value ) {
 			$where_statements[] =  "`{$row}` = '{$value}'";
 		}
@@ -363,7 +363,7 @@ class DB {
 
 	static function fetch_by_environments( $site_id ) {
 		
-		$results = array();
+		$results = [];
 
 		$environment_id = get_field( 'environment_production_id', $site_id );
 		if ( $environment_id != "" ) {
@@ -439,8 +439,8 @@ class Invite {
 		$db       = new invites;
 		$time_now = date("Y-m-d H:i:s");
 		$db->update(
-			array( 'accepted_at' => $time_now ),
-			array( 'invite_id'   => $this->invite_id )
+			[ 'accepted_at' => $time_now ],
+			[ 'invite_id'   => $this->invite_id ]
 		);
 		return true;
 	}
@@ -458,21 +458,19 @@ class Accounts {
 
 		// Bail if not assigned a role
 		if ( ! $role_check ) {
-			return array();
+			return [];
 		}
 
 		$account_ids = get_field( 'partner', 'user_' . get_current_user_id() );
 		if ( in_array( 'administrator', $user->roles ) ) {
-			$account_ids = get_posts(
-				array(
-					'post_type'   => 'captcore_customer',
-					'fields'      => 'ids',
-					'numberposts' => '-1' 
-				)
-			);
+			$account_ids = get_posts([
+				'post_type'   => 'captcore_customer',
+				'fields'      => 'ids',
+				'numberposts' => '-1' 
+			]);
 		}
 
-		$accounts = array();
+		$accounts = [];
 
 		if ( $account_ids ) {
 			foreach ( $account_ids as $account_id ) {
@@ -529,7 +527,7 @@ class Account {
 			update_field( 'partner', array_unique( $accounts ), "user_{$user->ID}" );
 			$this->calculate_totals();
 
-			return array( "message" => "Account already exists. Adding permissions for existing user." );
+			return [ "message" => "Account already exists. Adding permissions for existing user." ];
 		}
 
 		$time_now = date("Y-m-d H:i:s");
@@ -549,34 +547,34 @@ class Account {
 		$account_name = get_the_title( $this->account_id );
 		$subject = "Hosting account invite";
 		$body    = "You've been granted access to account '$account_name'. Click here to accept:<br /><br /><a href=\"{$invite_url}\">$invite_url</a>";
-		$headers = array( 'Content-Type: text/html; charset=UTF-8' );
+		$headers = [ 'Content-Type: text/html; charset=UTF-8' ];
 
 		wp_mail( $email, $subject, $body, $headers );
 
-		return array( "message" => "Invite has been sent." );
+		return [ "message" => "Invite has been sent." ];
 	}
 
 	public function account() {
 		
-		return array(
+		return [
 			"id"            => $this->account_id,
 			"name"          => get_the_title( $this->account_id ),
 			'website_count' => get_field( "website_count", $this->account_id ),
 			'user_count'    => get_field( "user_count", $this->account_id ),
 			'domain_count'  => count( get_field( "domains", $this->account_id ) ),
-		);
+		];
 	}
 
 	public function invites() {
 		$invites = new invites();
-		return $invites->where( array( "account_id" => $this->account_id, "accepted_at" => "0000-00-00 00:00:00" ) );
+		return $invites->where( [ "account_id" => $this->account_id, "accepted_at" => "0000-00-00 00:00:00" ] );
 	}
 
 	public function domains() {
 
-		$customers = array();
-		$partner = array( $this->account_id );
-		$all_domains = array();
+		$all_domains = [];
+		$customers   = [];
+		$partner     = [ $this->account_id ];
 
 		$websites_for_partner = get_posts(
 			array(
@@ -664,7 +662,7 @@ class Account {
 
 	public function sites() {
 
-		$results = array();
+		$results = [];
 		$websites = get_posts(
 			array(
 				'post_type'      => 'captcore_website',
@@ -738,7 +736,7 @@ class Account {
 		// Create the WP_User_Query object
 		$wp_user_query = new \WP_User_Query($args);
 		$users = $wp_user_query->get_results();
-		$results = array();
+		$results = [];
 
 		foreach( $users as $user ) {
 			$results[] = array( 
@@ -924,7 +922,7 @@ class Domains {
 
 		if ( in_array( 'subscriber', $user->roles ) or in_array( 'customer', $user->roles ) or in_array( 'editor', $user->roles ) ) {
 
-			$customers = array();
+			$customers = [];
 
 			$user_id = get_current_user_id();
 			$partner = get_field( 'partner', 'user_' . get_current_user_id() );
@@ -1029,7 +1027,7 @@ class Sites {
 		$partner    = get_field( 'partner', 'user_' . get_current_user_id() );
 
 		// New array to collect IDs
-		$site_ids = array();
+		$site_ids = [];
 
 		// Bail if not assigned a role
 		if ( ! $role_check ) {
@@ -1205,8 +1203,8 @@ class Site {
 		$site_details->provider             = get_field( 'provider', $site->ID );
 		$site_details->key                  = get_field( 'key', $site->ID );
 		$site_details->filtered             = true;
-		$site_details->usage_breakdown      = array();
-		$site_details->timeline             = array();
+		$site_details->usage_breakdown      = [];
+		$site_details->timeline             = [];
 		$site_details->selected             = false;
 		$site_details->loading_plugins      = false;
 		$site_details->loading_themes       = false;
@@ -1221,7 +1219,7 @@ class Site {
 		if ( is_string( $visits ) ) {
 			$site_details->visits = number_format( intval( $visits ) );
 		}
-		$site_details->update_logs            = array();
+		$site_details->update_logs            = [];
 		$site_details->update_logs_pagination = array(
 			'descending' => true,
 			'sortBy'     => 'date',
@@ -1246,7 +1244,7 @@ class Site {
 				$customer_name = get_post_field( 'post_title', $customer_id, 'raw' );
 				$addons        = get_field( 'addons', $customer_id );
 				if ( $addons == '' ) {
-					$addons = array();
+					$addons = [];
 				}
 				$site_details->customer = array(
 					'customer_id'    => $customer_id,
@@ -1279,8 +1277,8 @@ class Site {
 			);
 		}
 
-		$site_details->users       = array();
-		$site_details->update_logs = array();
+		$site_details->users       = [];
+		$site_details->update_logs = [];
 
 		if ( $shared_with ) {
 			foreach ( $shared_with as $customer_id ) {
@@ -1309,7 +1307,7 @@ class Site {
 			'quicksaves'              => 'Loading',
 			'snapshots'               => 'Loading',
 			'update_logs'             => 'Loading',
-			'quicksave_panel'         => array(),
+			'quicksave_panel'         => [],
 			'quicksave_search'        => '',
 			'core'                    => $environments[0]->core,
 			'home_url'                => $environments[0]->home_url,
@@ -1326,9 +1324,9 @@ class Site {
 			'screenshot_small'        => '',
 			'screenshot_large'        => '',
 			'stats'                   => 'Loading',
-			'themes_selected'         => array(),
-			'plugins_selected'        => array(),
-			'users_selected'          => array(),
+			'themes_selected'         => [],
+			'plugins_selected'        => [],
+			'users_selected'          => [],
 		);
 
 		if ( $site_details->environments[0]['fathom'] == '' ) {
@@ -1348,19 +1346,19 @@ class Site {
 		if ( $site_details->environments[0]['updates_exclude_themes'] ) {
 			$site_details->environments[0]['updates_exclude_themes'] = explode( ',', $site_details->environments[0]['updates_exclude_themes'] );
 		} else {
-			$site_details->environments[0]['updates_exclude_themes'] = array();
+			$site_details->environments[0]['updates_exclude_themes'] = [];
 		}
 		if ( $site_details->environments[0]['updates_exclude_plugins'] ) {
 			$site_details->environments[0]['updates_exclude_plugins'] = explode( ',', $site_details->environments[0]['updates_exclude_plugins'] );
 		} else {
-			$site_details->environments[0]['updates_exclude_plugins'] = array();
+			$site_details->environments[0]['updates_exclude_plugins'] = [];
 		}
 
 		if ( $site_details->environments[0]['themes'] == '' ) {
-			$site_details->environments[0]['themes'] = array();
+			$site_details->environments[0]['themes'] = [];
 		}
 		if ( $site_details->environments[0]['plugins'] == '' ) {
-			$site_details->environments[0]['plugins'] = array();
+			$site_details->environments[0]['plugins'] = [];
 		}
 
 		if ( $site_details->provider == 'kinsta' ) {
@@ -1402,7 +1400,7 @@ class Site {
 			'quicksaves'              => 'Loading',
 			'snapshots'               => 'Loading',
 			'update_logs'             => 'Loading',
-			'quicksave_panel'         => array(),
+			'quicksave_panel'         => [],
 			'quicksave_search'        => '',
 			'core'                    => $environments[1]->core,
 			'home_url'                => $environments[1]->home_url,
@@ -1419,9 +1417,9 @@ class Site {
 			'screenshot_small'        => '',
 			'screenshot_large'        => '',
 			'stats'                   => 'Loading',
-			'themes_selected'         => array(),
-			'plugins_selected'        => array(),
-			'users_selected'          => array(),
+			'themes_selected'         => [],
+			'plugins_selected'        => [],
+			'users_selected'          => [],
 		);
 
 		if ( $site_details->environments[1]['fathom'] == '' ) {
@@ -1441,19 +1439,19 @@ class Site {
 		if ( $site_details->environments[1]['updates_exclude_themes'] ) {
 			$site_details->environments[1]['updates_exclude_themes'] = explode( ',', $site_details->environments[1]['updates_exclude_themes'] );
 		} else {
-			$site_details->environments[1]['updates_exclude_themes'] = array();
+			$site_details->environments[1]['updates_exclude_themes'] = [];
 		}
 		if ( $site_details->environments[1]['updates_exclude_plugins'] ) {
 			$site_details->environments[1]['updates_exclude_plugins'] = explode( ',', $site_details->environments[1]['updates_exclude_plugins'] );
 		} else {
-			$site_details->environments[1]['updates_exclude_plugins'] = array();
+			$site_details->environments[1]['updates_exclude_plugins'] = [];
 		}
 
 		if ( $site_details->environments[1]['themes'] == '' ) {
-			$site_details->environments[1]['themes'] = array();
+			$site_details->environments[1]['themes'] = [];
 		}
 		if ( $site_details->environments[1]['plugins'] == '' ) {
-			$site_details->environments[1]['plugins'] = array();
+			$site_details->environments[1]['plugins'] = [];
 		}
 
 		if ( $site_details->provider == 'kinsta' ) {
@@ -1479,7 +1477,7 @@ class Site {
 		$site = (object) $site;
 
 		// Prep for response to return
-		$response = array( "errors" => array() );
+		$response = array( "errors" => [] );
 
 		// Pull in current user
 		$current_user = wp_get_current_user();
@@ -1654,7 +1652,7 @@ class Site {
 		$site = (object) $site;
 
 		// Prep for response to return
-		$response = array();
+		$response = [];
 
 		// Pull in current user
 		$current_user = wp_get_current_user();
@@ -1768,34 +1766,3 @@ class Site {
 	}
 
 }
-
-
-// Example adding record
-// (new update_logs)->insert( array( 'site_id' => 1, 'update_type' => "Plugin", 'update_log' => "json data" ) );
-// (new update_logs)->list_records();
-// get record
-// $r = (new CaptainCore\update_logs)->get( 1 );
-// $update_logs = new CaptainCore\update_logs;
-// $update_logs->get(1);
-// $update_log->insert( array( 'site_id' => 10, 'update_type' => "Theme", 'update_log' => "json data", 'created_at' => current_time( 'mysql') ));
-/*
- $json = '[{"date":"2018-06-20-091520","type":"plugin","updates":[{"name":"akismet","old_version":"4.0.7","new_version":"4.0.8","status":"Updated"},{"name":"google-analytics-for-wordpress","old_version":"7.0.6","new_version":"7.0.8","status":"Updated"}]},{"date":"2018-06-22-141016","type":"plugin","updates":[{"name":"gutenberg","old_version":"3.0.1","new_version":"3.1.0","status":"Updated"},{"name":"wp-smush-pro","old_version":"2.7.9.1","new_version":"2.7.9.2","status":"Updated"},{"name":"woocommerce","old_version":"3.4.2","new_version":"3.4.3","status":"Updated"}]},{"date":"2018-06-26-212330","type":"plugin","updates":[{"name":"google-analytics-for-wordpress","old_version":"7.0.8","new_version":"7.0.9","status":"Updated"},{"name":"wordpress-seo","old_version":"7.6.1","new_version":"7.7","status":"Updated"}]},{"date":"2018-06-28-061239","type":"plugin","updates":[{"name":"wordpress-seo","old_version":"7.7","new_version":"7.7.1","status":"Updated"}]},{"date":"2018-06-28-180739","type":"plugin","updates":[{"name":"admin-columns-pro","old_version":"4.2.9","new_version":"4.3.4","status":"Updated"},{"name":"ac-addon-acf","old_version":"2.2.3","new_version":"2.3","status":"Updated"},{"name":"gutenberg","old_version":"3.1.0","new_version":"3.1.1","status":"Updated"},{"name":"wp-mail-smtp","old_version":"1.2.5","new_version":"1.3.0","status":"Updated"}]},{"date":"2018-06-29-143550","type":"plugin","updates":[{"name":"wp-mail-smtp","old_version":"1.3.0","new_version":"1.3.2","status":"Updated"},{"name":"wordpress-seo","old_version":"7.7.1","new_version":"7.7.2","status":"Updated"}]},{"date":"2018-07-04-092457","type":"plugin","updates":[{"name":"wordpress-seo","old_version":"7.7.2","new_version":"7.7.3","status":"Updated"}]}]';
-
-$json_decode = json_decode($json);
-
-foreach ( $json_decode as $row ) {
-
-	// Format for mysql timestamp format
-	$date_formatted = substr_replace($row->date," ",10,1);   # "2018-06-20-091520"
-	$date_formatted = substr_replace($date_formatted,":",13,0);
-	$date_formatted = substr_replace($date_formatted,":",16,0);
-	$update_log = json_encode($row->updates);
-
-	$update_log->insert( array( 'site_id' => 10, 'update_type' => $row->type, 'update_log' => $update_log, 'created_at' => $date_formatted ) );
-}
-
-
-foreach
-
-
-*/

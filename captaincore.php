@@ -35,7 +35,7 @@ if ( ! defined( 'WPINC' ) ) {
  * Start at version 0.1.0 and use SemVer - https://semver.org
  * Rename this for your plugin and update it as you release new versions.
  */
-define( 'PLUGIN_NAME_VERSION', '0.1.0' );
+define( 'CAPTAINCORE_VERSION', '0.7.0' );
 
 /**
  * The code that runs during plugin activation.
@@ -109,7 +109,7 @@ function captaincore_rewrite() {
 add_action( 'init', 'captaincore_rewrite' );
 
 function captaincore_disable_gutenberg( $can_edit, $post_type ) {
-	$disabled_post_types = array( 'captcore_website', 'captcore_domain', 'captcore_customer', 'captcore_changelog' );
+	$disabled_post_types = [ 'captcore_website', 'captcore_domain', 'captcore_customer', 'captcore_changelog' ];
 	if ( in_array( $post_type, $disabled_post_types ) ) {
 		return false;
 	}
@@ -215,7 +215,7 @@ function customer_post_type() {
 		'label'               => __( 'Customer', 'captaincore' ),
 		'description'         => __( 'Customer Description', 'captaincore' ),
 		'labels'              => $labels,
-		'supports'            => array(),
+		'supports'            => [],
 		'hierarchical'        => false,
 		'public'              => false,
 		'show_ui'             => true,
@@ -269,7 +269,7 @@ function website_post_type() {
 		'label'               => __( 'website', 'captaincore' ),
 		'description'         => __( 'Website information pages', 'captaincore' ),
 		'labels'              => $labels,
-		'supports'            => array(),
+		'supports'            => [],
 		'hierarchical'        => false,
 		'public'              => false,
 		'show_ui'             => true,
@@ -406,7 +406,7 @@ function changelog_post_type() {
 		'label'               => __( 'changelog', 'captaincore' ),
 		'description'         => __( 'Changelog information pages', 'captaincore' ),
 		'labels'              => $labels,
-		'supports'            => array(),
+		'supports'            => [],
 		'hierarchical'        => false,
 		'public'              => false,
 		'show_ui'             => true,
@@ -671,7 +671,7 @@ function snapshot_post_type() {
 		'label'               => __( 'Snapshot', 'captaincore' ),
 		'description'         => __( 'Snapshot Description', 'captaincore' ),
 		'labels'              => $labels,
-		'supports'            => array(),
+		'supports'            => [],
 		'hierarchical'        => false,
 		'public'              => false,
 		'show_ui'             => true,
@@ -774,7 +774,7 @@ function slug_update_post_meta_cb( $value, $object, $field_name ) {
 
 function slug_get_paid_by_me( $object, $field_name, $request ) {
 
-	$paid_by_me = array();
+	$paid_by_me = [];
 	$post_id    = $object['id'];
 
 	$websites = get_posts(
@@ -922,7 +922,7 @@ function captaincore_subscription_relationship_query( $args, $field, $post ) {
 
 		// Current search term
 		$search_term    = $args['s'];
-		$found_user_ids = array();
+		$found_user_ids = [];
 
 		// Search users
 		$search_users = get_users( array( 'search' => '*' . $search_term . '*' ) );
@@ -1014,7 +1014,7 @@ function acf_load_color_field_choices( $field ) {
 	global $woocommerce;
 
 	// reset choices
-	$field['choices'] = array();
+	$field['choices'] = [];
 
 	// Args
 	$args = array(
@@ -1022,24 +1022,24 @@ function acf_load_color_field_choices( $field ) {
 		'type'           => array_merge( array_keys( wc_get_product_types() ) ),
 		'parent'         => null,
 		'sku'            => '',
-		'category'       => array(),
-		'tag'            => array(),
+		'category'       => [],
+		'tag'            => [],
 		'limit'          => get_option( 'posts_per_page' ),
 		'offset'         => null,
 		'page'           => 1,
-		'include'        => array(),
-		'exclude'        => array(),
+		'include'        => [],
+		'exclude'        => [],
 		'orderby'        => 'date',
 		'order'          => 'DESC',
 		'return'         => 'objects',
 		'paginate'       => false,
-		'shipping_class' => array(),
+		'shipping_class' => [],
 	);
 
 	// List all products
 	$products = wc_get_products( $args );
 
-	$choices = array();
+	$choices = [];
 	foreach ( $products as $product ) {
 
 		if ( $product->get_type() == 'variable-subscription' or $product->get_type() == 'variable' ) {
@@ -1722,7 +1722,7 @@ function captaincore_accounts_func( $request ) {
 function captaincore_sites_func( $request ) {
 
 	$sites = new CaptainCore\Sites();
-	$all_sites = array();
+	$all_sites = [];
 	
 	foreach( $sites->all() as $site ) {
 		$all_sites[] = ( new CaptainCore\Site )->get( $site );
@@ -1778,7 +1778,7 @@ function  captaincore_keys_func( $request ) {
 	if ( $current_user && $role_check ) {
 		return (new CaptainCore\keys())->all( "title", "ASC" );
 	} else {
-		return array();
+		return [];
 	}
 
 }
@@ -1837,7 +1837,7 @@ function captaincore_site_quicksaves_func( $request ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', array( 'status' => 403 ) );
 	}
 
-	$results = array();
+	$results = [];
 	$db_quicksaves = new CaptainCore\quicksaves;
 
 	$environment_id = get_field( 'environment_production_id', $site_id );
@@ -2500,7 +2500,7 @@ function captaincore_login_func( WP_REST_Request $request ) {
 
 	if ( $post->command == "createAccount" ) {
 
-		$errors = array();
+		$errors = [];
 		$password = $post->login->password;
 		$invites = new CaptainCore\invites();
 		$results = $invites->where( array( 
@@ -3604,8 +3604,8 @@ function captaincore_local_action_callback() {
 	if ( $cmd == 'updateAccount' ) {
 		$user_id = get_current_user_id();
 		$account = (object) $value;
-		$response = (object) array();
-		$errors = array();
+		$response = (object) [];
+		$errors = [];
 
 
 		if ( $account->display_name == "" ) {
@@ -3725,7 +3725,7 @@ function captaincore_local_action_callback() {
 	
 	if ( $cmd == 'fetchDefaults' ) {
 		$user_id = get_current_user_id();
-		$accounts = array();
+		$accounts = [];
 
 		$partner = get_field( 'partner', 'user_' . get_current_user_id() );
 		if ( $partner ) {
@@ -3733,7 +3733,7 @@ function captaincore_local_action_callback() {
 				$default_users = get_field( 'preloaded_users', $partner_id );
 				$default_recipes = get_field( 'default_recipes', $partner_id );
 				if ( $default_users == "" ){
-					$default_users = array();
+					$default_users = [];
 				}
 				$accounts[] = (object) [
 					'account'          => array(
@@ -3770,7 +3770,7 @@ function captaincore_local_action_callback() {
 	if ( $cmd == 'fetchTimelineLogs' ) {
 
 		$Parsedown = new Parsedown();
-		$accounts = array();
+		$accounts = [];
 
 		$user = wp_get_current_user();
 		$role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'administrator', $user->roles) + in_array( 'editor', $user->roles );
@@ -3836,7 +3836,7 @@ function captaincore_local_action_callback() {
 							),
 					));
 
-					$processlogs_fetch = array();
+					$processlogs_fetch = [];
 					$process_logs = get_posts($arguments);
 					// Fetch new process_log and return as json
 					foreach ($process_logs as $process_log) {
@@ -3845,7 +3845,7 @@ function captaincore_local_action_callback() {
 						$author_id   = $process_log->post_author;
 						$author      = get_the_author_meta( 'display_name', $author_id );
 						$description = $Parsedown->text( get_field("description", $process_log->ID ) );
-						$sites       = array();
+						$sites       = [];
 						foreach( get_field("website", $process_log->ID ) as $website_id ) {
 							$site = get_post( $website_id );
 							if ( in_array($website_id, $websites) ) {
@@ -3891,7 +3891,7 @@ function captaincore_ajax_action_callback() {
 	global $wpdb; // this is how you get access to the database
 
 	if ( is_array( $_POST['post_id'] ) ) {
-		$post_ids       = array();
+		$post_ids       = [];
 		$post_ids_array = $_POST['post_id'];
 		foreach ( $post_ids_array as $id ) {
 			$post_ids[] = intval( $id );
@@ -3988,7 +3988,7 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'addDomain' ) {
 
-		$errors = array();
+		$errors = [];
 		$record = (object) $value;
 
 		// If results still exists then give an error
@@ -4404,7 +4404,7 @@ function captaincore_ajax_action_callback() {
 			$author_id   = $process_log->post_author;
 			$author      = get_the_author_meta( 'display_name', $author_id );
 			$description = $Parsedown->text( get_field("description", $process_log->ID ) );
-			$websites    = array();
+			$websites    = [];
 			foreach( get_field("website", $process_log->ID ) as $website_id ) {
 				$site = get_post( $website_id );
 				$websites[] = (object) [ 
@@ -4431,7 +4431,7 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'fetchProcessLogs' ) {
 
-		$processlogs_fetch = array();
+		$processlogs_fetch = [];
 
 		$process_logs = get_posts(
 			array(
@@ -4452,7 +4452,7 @@ function captaincore_ajax_action_callback() {
 			$author_id   = $process_log->post_author;
 			$author      = get_the_author_meta( 'display_name', $author_id );
 			$description = $Parsedown->text( get_field("description", $process_log->ID ) );
-			$websites    = array();
+			$websites    = [];
 			foreach( get_field("website", $process_log->ID ) as $website_id ) {
 				$site = get_post( $website_id );
 				$websites[] = (object) [ 
@@ -4511,7 +4511,7 @@ function captaincore_ajax_action_callback() {
 
 
 		// Loop through each site and fetch updated timeline to return.
-		$timelines = array();
+		$timelines = [];
 		$Parsedown = new Parsedown();
 
 		foreach ( $post_ids as $post_id ) {
@@ -4528,7 +4528,7 @@ function captaincore_ajax_action_callback() {
 			));
 	
 			$process_logs = get_posts( $arguments );
-			$timeline_items = array();
+			$timeline_items = [];
 
 			foreach ($process_logs as $process_log) {
 
@@ -4584,7 +4584,7 @@ function captaincore_ajax_action_callback() {
 		update_field( 'field_588bb8423cab7', date( 'Y-m-d H:i:s' ), $process_log->ID );
 
 		// Loop through each site and fetch updated timeline to return.
-		$timelines = array();
+		$timelines = [];
 		$Parsedown = new Parsedown();
 
 		foreach ( $post_ids as $post_id ) {
@@ -4601,7 +4601,7 @@ function captaincore_ajax_action_callback() {
 			));
 	
 			$process_logs = get_posts( $arguments );
-			$timeline_items = array();
+			$timeline_items = [];
 
 			foreach ($process_logs as $process_log) {
 
@@ -4645,7 +4645,7 @@ function captaincore_ajax_action_callback() {
 		$process_logs = get_posts( $arguments );
 
 		$Parsedown = new Parsedown();
-		$timeline_items = array();
+		$timeline_items = [];
 
 		foreach ($process_logs as $process_log) {
 
@@ -4738,8 +4738,8 @@ function captaincore_ajax_action_callback() {
 		$storage_gbs = round( $storage / 1024 / 1024 / 1024, 1 );
 		$storage_percent = round( $storage_gbs / $storage_limit * 100, 0 );
 
-		$sites = array();
-		$total = array();
+		$sites = [];
+		$total = [];
 
 		$websites_for_customer = get_posts(
 			array(
@@ -4913,7 +4913,7 @@ function captaincore_ajax_action_callback() {
 	}
 
 	if ( $cmd == 'fetch-site' ) {
-		$sites = array();
+		$sites = [];
 		if ( count( $post_ids ) > 0 ) {
 			foreach( $post_ids as $id ) {
 				$sites[] = ( new CaptainCore\Site )->get( $id );
@@ -5056,7 +5056,7 @@ function captaincore_install_action_callback() {
 
 	// Many sites found, check permissions
 	if ( is_array( $_POST['post_id'] ) ) {
-		$post_ids       = array();
+		$post_ids       = [];
 		foreach ( $_POST['post_id'] as $id ) {
 
 			// Checks permissions
@@ -5117,7 +5117,7 @@ function captaincore_install_action_callback() {
 
 	// If many sites, fetch their names
 	if ( count($post_ids) > 0 ) {
-		$site_names = array();
+		$site_names = [];
 		foreach( $post_ids as $id ) {
 
 			if ( $environment == "Production" or $environment == "Both" ) {
@@ -5282,13 +5282,13 @@ function captaincore_install_action_callback() {
 
 		if ( is_array($post_ids) ) {
 			$command = '';
-			$sites   = array();
+			$sites   = [];
 			foreach ( $post_ids as $site_id ) {
 				$sites[] = get_field( 'site', $site_id );
 			}
 
 			foreach ( $value as $bulk_command ) {
-				$bulk_arguments = array();
+				$bulk_arguments = [];
 				foreach ( $arguments as $argument ) {
 					if ( $argument['command'] == $bulk_command && isset( $argument['input'] ) && $argument['input'] != '' ) {
 						$bulk_arguments[] = $argument['input'];
@@ -6151,7 +6151,7 @@ function captaincore_snapshot_download_link( $snapshot_id ) {
 	$session = curl_init( $url );
 
 	// Add headers
-	$headers   = array();
+	$headers   = [];
 	$headers[] = 'Accept: application/json';
 	$headers[] = 'Authorization: Basic ' . $credentials;
 	curl_setopt( $session, CURLOPT_HTTPHEADER, $headers ); // Add headerss
@@ -6180,7 +6180,7 @@ function captaincore_snapshot_download_link( $snapshot_id ) {
 	curl_setopt( $session, CURLOPT_POSTFIELDS, $post_fields );
 
 	// Add headers
-	$headers   = array();
+	$headers   = [];
 	$headers[] = 'Authorization: ' . $auth_token;
 	curl_setopt( $session, CURLOPT_HTTPHEADER, $headers );
 	curl_setopt( $session, CURLOPT_POST, true );           // HTTP POST
@@ -6505,7 +6505,7 @@ class PageTemplater {
 	 */
 	private function __construct() {
 
-		$this->templates = array();
+		$this->templates = [];
 
 		// Add a filter to the attributes metabox to inject template into the cache.
 		if ( version_compare( floatval( get_bloginfo( 'version' ) ), '4.7', '<' ) ) {
@@ -6569,7 +6569,7 @@ class PageTemplater {
 		// If it doesn't exist, or it's empty prepare an array
 		$templates = wp_get_theme()->get_page_templates();
 		if ( empty( $templates ) ) {
-			$templates = array();
+			$templates = [];
 		}
 
 		// New cache, therefore remove the old one
