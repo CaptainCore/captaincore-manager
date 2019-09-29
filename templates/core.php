@@ -4932,7 +4932,8 @@ new Vue({
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
-
+					// Hack fix pagination bug
+					window.dispatchEvent( new Event('resize') )
 					// Populate existing sites
 					if ( this.sites.length > 0 ) {
 						preserve_keys = ['environment_selected','filtered','selected','tabs','tabs_management']
