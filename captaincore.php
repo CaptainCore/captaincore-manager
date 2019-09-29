@@ -62,8 +62,8 @@ register_deactivation_hook( __FILE__, 'deactivate_captaincore' );
  * The core plugin class that is used to define internationalization,
  * admin-specific hooks, and public-facing site hooks.
  */
+
 require plugin_dir_path( __FILE__ ) . 'includes/class-captaincore.php';
-require plugin_dir_path( __FILE__ ) . 'includes/class-captaincore-db.php';
 
 /**
  * Begins execution of the plugin.
@@ -82,6 +82,7 @@ function run_captaincore() {
 }
 run_captaincore();
 
+require plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
 require 'includes/register-custom-fields.php';
 require 'includes/constellix-api/constellix-api.php';
 require 'includes/woocommerce-custom-password-fields.php';
@@ -1498,7 +1499,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			'token'          => $token
 		);
 
-		$db = new CaptainCore\snapshots();
+		$db = new CaptainCore\Snapshots();
 		$snapshot_id = $db->insert( $snapshot );
 
 		// Send out snapshot email
@@ -1579,7 +1580,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 				'created_at' => $date_formatted,
 			);
 
-			$db_update_logs = new CaptainCore\update_logs();
+			$db_update_logs = new CaptainCore\UpdateLogs();
 
 			$valid_check = $db_update_logs->valid_check( $new_update_log_check );
 
@@ -1635,7 +1636,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 				'created_at' => $date_formatted,
 			);
 
-			$db_quicksaves = new CaptainCore\quicksaves();
+			$db_quicksaves = new CaptainCore\Quicksaves();
 
 			$valid_check = $db_quicksaves->valid_check( $new_quicksave_check );
 
@@ -1776,7 +1777,7 @@ function  captaincore_keys_func( $request ) {
 
 	// Checks for a current user. If admin found pass
 	if ( $current_user && $role_check ) {
-		return (new CaptainCore\keys())->all( "title", "ASC" );
+		return (new CaptainCore\Keys())->all( "title", "ASC" );
 	} else {
 		return [];
 	}
@@ -1790,7 +1791,7 @@ function captaincore_site_snapshots_func( $request ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', array( 'status' => 403 ) );
 	}
 
-	$db = new CaptainCore\snapshots;
+	$db = new CaptainCore\Snapshots;
 	$snapshots = $db->fetch_by_environments( $site_id );
 	foreach( $snapshots as $environment ) {
 
@@ -1818,7 +1819,7 @@ function captaincore_site_snapshot_download_func( $request ) {
 	$snapshot_name = $request['snapshot_name'] . ".zip";
 
 	// Verify Snapshot link is valid
-	$db = new CaptainCore\snapshots();
+	$db = new CaptainCore\Snapshots();
 	$snapshot = $db->get( $snapshot_id );
 
 	if ( $snapshot->snapshot_name != $snapshot_name || $snapshot->site_id != $site_id || $snapshot->token != $token ) {
@@ -1838,7 +1839,7 @@ function captaincore_site_quicksaves_func( $request ) {
 	}
 
 	$results = [];
-	$db_quicksaves = new CaptainCore\quicksaves;
+	$db_quicksaves = new CaptainCore\Quicksaves;
 
 	$environment_id = get_field( 'environment_production_id', $site_id );
 	$quicksaves = $db_quicksaves->fetch_environment( $site_id, $environment_id );
@@ -2502,7 +2503,7 @@ function captaincore_login_func( WP_REST_Request $request ) {
 
 		$errors = [];
 		$password = $post->login->password;
-		$invites = new CaptainCore\invites();
+		$invites = new CaptainCore\Invites();
 		$results = $invites->where( array( 
 			"account_id" => $post->invite->account,
 			"token"      => $post->invite->token,
@@ -3672,7 +3673,7 @@ function captaincore_local_action_callback() {
 	}
 	if ( $cmd == 'fetchInvite' ) {
 		$invite = (object) $value;
-		$invites = new CaptainCore\invites();
+		$invites = new CaptainCore\Invites();
 		$results = $invites->where( array( 
 			"account_id" => $invite->account,
 			"token"      => $invite->token,
@@ -3697,13 +3698,13 @@ function captaincore_local_action_callback() {
 		$account->calculate_totals();
 	}
 	if ( $cmd == 'deleteInvite' ) {
-		$invites = new CaptainCore\invites();
+		$invites = new CaptainCore\Invites();
 		$invites->delete( $value );
 		echo "Invite deleted.";
 	}
 	if ( $cmd == 'acceptInvite' ) {
 		$invite = (object) $value;
-		$invites = new CaptainCore\invites();
+		$invites = new CaptainCore\Invites();
 		$results = $invites->where( array(
 			"account_id" => $invite->account,
 			"token"      => $invite->token,
@@ -4051,7 +4052,7 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'fetchLink' ) {
 		// Fetch snapshot details
-		$db = new CaptainCore\snapshots;
+		$db = new CaptainCore\Snapshots;
 		$in_24hrs = date("Y-m-d H:i:s", strtotime ( date("Y-m-d H:i:s")."+24 hours" ) );
 
 		// Generate new token
@@ -4225,7 +4226,7 @@ function captaincore_ajax_action_callback() {
 			'created_at'     => $time_now,
 		);
 
-		$db = new CaptainCore\keys();
+		$db = new CaptainCore\Keys();
 		$key_id = $db->insert( $new_key );
 
 		$remote_command = true;
@@ -4245,7 +4246,7 @@ function captaincore_ajax_action_callback() {
 			'updated_at'     => $time_now,
 		);
 
-		$db = new CaptainCore\keys();
+		$db = new CaptainCore\Keys();
 		$db->update( $key_update, array( "key_id" => $key_id ) );
 
 		$remote_command = true;
@@ -4260,7 +4261,7 @@ function captaincore_ajax_action_callback() {
 		$key_id = $value;
 		$time_now = date("Y-m-d H:i:s");
 
-		$db = new CaptainCore\keys();
+		$db = new CaptainCore\Keys();
 		$db->delete( $key_id );
 
 		$remote_command = true;
@@ -4684,7 +4685,7 @@ function captaincore_ajax_action_callback() {
 			'public'         => $recipe->public,
 		);
 
-		$db_recipes = new CaptainCore\recipes();
+		$db_recipes = new CaptainCore\Recipes();
 		$recipe_id = $db_recipes->insert( $new_recipe );
 		echo json_encode( $db_recipes->fetch_recipes("title","ASC") );
 
@@ -4707,7 +4708,7 @@ function captaincore_ajax_action_callback() {
 			'public'         => $recipe->public,
 		);
 
-		$db_recipes = new CaptainCore\recipes();
+		$db_recipes = new CaptainCore\Recipes();
 		$db_recipes->update( $recipe_update, array( "recipe_id" => $recipe->recipe_id ) );
 
 		echo json_encode( $db_recipes->fetch_recipes( "title", "ASC" ) );
@@ -4937,7 +4938,7 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'fetch-update-logs' ) {
 
-		$db = new CaptainCore\update_logs;
+		$db = new CaptainCore\UpdateLogs;
 
 		$environment_production_id = get_field( 'environment_production_id', $post_id );
 		$environment_staging_id = get_field( 'environment_staging_id', $post_id );
@@ -5029,7 +5030,7 @@ function captaincore_ajax_action_callback() {
 				'fingerprint' => $response,
 			);
 	
-			$db = new CaptainCore\keys();
+			$db = new CaptainCore\Keys();
 			$db->update( $key_update, array( "key_id" => $key_id ) );
 			echo json_encode( $db->get( $key_id ) );
 		}
@@ -5305,7 +5306,7 @@ function captaincore_install_action_callback() {
 	}
 
 	if ( $cmd == 'quicksave_file_diff' ) {
-		$db_quicksaves = new CaptainCore\quicksaves;
+		$db_quicksaves = new CaptainCore\Quicksaves;
 		$quicksaves = $db_quicksaves->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
 		$command    = "quicksave-file-diff $site --hash=$commit --file=$value --html";
@@ -5313,7 +5314,7 @@ function captaincore_install_action_callback() {
 
 	if ( $cmd == 'rollback' ) {
 		$run_in_background = true;
-		$db_quicksaves = new CaptainCore\quicksaves;
+		$db_quicksaves = new CaptainCore\Quicksaves;
 		$quicksaves = $db_quicksaves->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
 		$command    = "rollback $site $git_commit --$addon_type=$value";
@@ -5321,7 +5322,7 @@ function captaincore_install_action_callback() {
 
 	if ( $cmd == 'quicksave_rollback' ) {
 		$run_in_background = true;
-		$db_quicksaves = new CaptainCore\quicksaves;
+		$db_quicksaves = new CaptainCore\Quicksaves;
 		$quicksaves = $db_quicksaves->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
 		$command    = "rollback $site $git_commit --all";
@@ -5329,7 +5330,7 @@ function captaincore_install_action_callback() {
 
 	if ( $cmd == 'quicksave_file_restore' ) {
 		$run_in_background = true;
-		$db_quicksaves = new CaptainCore\quicksaves;
+		$db_quicksaves = new CaptainCore\Quicksaves;
 		$quicksaves = $db_quicksaves->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
 		$command    = "rollback $site $git_commit --file=$value";
@@ -6111,7 +6112,7 @@ function log_process_completed_callback() {
 function captaincore_download_snapshot_email( $snapshot_id ) {
 
 	// Fetch snapshot details
-	$db       = new CaptainCore\snapshots;
+	$db       = new CaptainCore\Snapshots;
 	$snapshot = $db->get( $snapshot_id );
 	$name     = $snapshot->snapshot_name;
 	$domain   = get_the_title( $snapshot->site_id );
@@ -6136,7 +6137,7 @@ function captaincore_download_snapshot_email( $snapshot_id ) {
 
 function captaincore_snapshot_download_link( $snapshot_id ) {
 
-	$db       = new CaptainCore\snapshots;
+	$db       = new CaptainCore\Snapshots;
 	$snapshot = $db->get( $snapshot_id );
 	$name     = $snapshot->snapshot_name;
 	$domain   = get_the_title( $snapshot->site_id );

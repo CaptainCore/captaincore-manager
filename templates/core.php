@@ -3842,7 +3842,7 @@ new Vue({
 		custom_script: "",
 		recipes: 
 		<?php
-			$db_recipes = new CaptainCore\recipes();
+			$db_recipes = new CaptainCore\Recipes();
 			$recipes = $db_recipes->fetch_recipes("title","ASC");
 			echo json_encode( $recipes );
 		?>,
