@@ -135,7 +135,11 @@ class Sites {
     }
 
     public function all() {
-        return $this->sites;
+        $sites = [];
+        foreach( $this->sites as $site ) {
+            $sites[] = ( new Site )->get( $site );
+        }
+        return $sites;
     }
 
 }

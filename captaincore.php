@@ -1715,21 +1715,15 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 function captaincore_accounts_func( $request ) {
 
-	$accounts = ( new CaptainCore\Accounts )->all();
-	return $accounts;
+	$accounts = new CaptainCore\Accounts;
+	return $accounts->all();
 
 }
 
 function captaincore_sites_func( $request ) {
 
-	$sites = new CaptainCore\Sites();
-	$all_sites = [];
-	
-	foreach( $sites->all() as $site ) {
-		$all_sites[] = ( new CaptainCore\Site )->get( $site );
-	}
-
-	return $all_sites;
+	$sites = new CaptainCore\Sites;
+	return $sites->all();
 
 }
 
