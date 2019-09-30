@@ -137,7 +137,7 @@ class Site {
         }
 
         $site_details->environments[0] = array(
-            'id'                      => $environments[0]->environment_id,
+            'id'                      => intval( $environments[0]->environment_id ),
             'link'                    => "http://$domain",
             'environment'             => 'Production',
             'updated_at'              => $environments[0]->updated_at,
@@ -230,7 +230,7 @@ class Site {
         }
 
         $site_details->environments[1] = array(
-            'key_id'                  => 2,
+            'id'                      => intval( $environments[1]->environment_id ),
             'link'                    => $link_staging,
             'environment'             => 'Staging',
             'updated_at'              => $environments[1]->updated_at,
