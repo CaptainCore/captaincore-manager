@@ -19,8 +19,8 @@
  * Version:           0.7.0
  * Author:            Austin Ginder
  * Author URI:        https://twitter.com/austinginder
- * License:           GPL-2.0+
- * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
+ * License:           MIT License
+ * License URI:       https://opensource.org/licenses/MIT
  * Text Domain:       captaincore
  * Domain Path:       /languages
  */
