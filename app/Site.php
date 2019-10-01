@@ -67,11 +67,11 @@ class Site {
             $site_details->visits = number_format( intval( $visits ) );
         }
         $site_details->update_logs            = [];
-        $site_details->update_logs_pagination = array(
+        $site_details->update_logs_pagination = [
             'descending' => true,
             'sortBy'     => 'date',
-        );
-        $site_details->pagination             = array( 'sortBy' => 'roles' );
+        ];
+        $site_details->pagination             = [ 'sortBy' => 'roles' ];
 
         // Mark site as outdated if sync older then 48 hours
         if ( strtotime( $environments[0]->updated_at ) <= strtotime( "-48 hours" ) ) {
@@ -324,7 +324,7 @@ class Site {
         $site = (object) $site;
 
         // Prep for response to return
-        $response = array( "errors" => [] );
+        $response = [ "errors" => [] ];
 
         // Pull in current user
         $current_user = wp_get_current_user();
@@ -568,9 +568,9 @@ class Site {
             );
 
             $environment_id = get_field( 'environment_production_id', $site_id );
-            $db_environments->update( $environment, array( 'environment_id' => $environment_id ) );
+            $db_environments->update( $environment, [ 'environment_id' => $environment_id ] );
 
-            $environment = array(
+            $environment = [
                 'address'                 => $site->environments[1]['address'],
                 'username'                => $site->environments[1]['username'],
                 'password'                => $site->environments[1]['password'],
@@ -587,10 +587,10 @@ class Site {
                 'updates_enabled'         => $site->environments[1]['updates_enabled'],
                 'updates_exclude_plugins' => $site->environments[1]['updates_exclude_plugins'],
                 'updates_exclude_themes'  => $site->environments[1]['updates_exclude_themes'],
-            );
+            ];
 
             $environment_id = get_field( 'environment_staging_id', $site_id );
-            $db_environments->update( $environment, array( 'environment_id' => $environment_id ) );
+            $db_environments->update( $environment, [ 'environment_id' => $environment_id ] );
 
         }
 

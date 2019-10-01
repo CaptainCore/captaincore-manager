@@ -135,7 +135,7 @@ class Account {
                     $domain_name = get_the_title( $domain );
                     $domain_id = get_field( "domain_id", $domain );
                     if ( $domain_name ) {
-                        $all_domains[ $domain_name ] = array( "name" => $domain_name, "id" => $domain_id );
+                        $all_domains[ $domain_name ] = [ "name" => $domain_name, "id" => $domain_id ];
                     }
                 endforeach;
             }
@@ -149,7 +149,7 @@ class Account {
                     $domain_name = get_the_title( $domain );
                     $domain_id = get_field( "domain_id", $domain );
                     if ( $domain_name ) {
-                        $all_domains[ $domain_name ] = array( "name" => $domain_name, "id" => $domain_id );
+                        $all_domains[ $domain_name ] = [ "name" => $domain_name, "id" => $domain_id ];
                     }
                 endforeach;
             }
@@ -179,10 +179,10 @@ class Account {
         if ( $websites ) {
             foreach ( $websites as $website ) {
                 if ( get_field( 'status', $website->ID ) == 'active' ) {
-                    $results[] = array( 
+                    $results[] = [
                         "name"    => get_the_title( $website->ID ), 
                         "site_id" => $website->ID,
-                    );
+                    ];
                 }
             }
         }
@@ -205,10 +205,10 @@ class Account {
                     if ( in_array( $website->ID, array_column( $results, "site_id" ) ) ) {
                         continue;
                     }
-                    $results[] = array( 
+                    $results[] = [ 
                         "name"    => get_the_title( $website->ID ), 
                         "site_id" => $website->ID,
-                    );
+                    ];
                 }
             }
         }
@@ -239,12 +239,12 @@ class Account {
         $results = [];
 
         foreach( $users as $user ) {
-            $results[] = array( 
+            $results[] = [
                 "user_id" => $user->ID,
                 "name"    => $user->display_name, 
                 "email"   => $user->user_email,
                 "level"   => ""
-            );
+            ];
         }
 
         return $results;
