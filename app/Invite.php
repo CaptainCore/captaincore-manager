@@ -11,12 +11,12 @@ class Invite {
     }
 
     public function get() {
-        $invite = (new invites)->get( $this->invite_id );
+        $invite = (new Invites)->get( $this->invite_id );
         return $invite;
     }
 
     public function mark_accepted() {
-        $db       = new invites;
+        $db       = new Invites;
         $time_now = date("Y-m-d H:i:s");
         $db->update(
             [ 'accepted_at' => $time_now ],

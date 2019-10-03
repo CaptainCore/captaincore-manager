@@ -39,7 +39,7 @@ class Account {
             'updated_at'     => $time_now,
             'token'          => $token
         );
-        $invite = new invites();
+        $invite = new Invites();
         $invite_id = $invite->insert( $new_invite );
 
         // Send out invite email
@@ -66,7 +66,7 @@ class Account {
     }
 
     public function invites() {
-        $invites = new invites();
+        $invites = new Invites();
         return $invites->where( [ "account_id" => $this->account_id, "accepted_at" => "0000-00-00 00:00:00" ] );
     }
 
