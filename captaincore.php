@@ -1187,7 +1187,7 @@ function captaincore_acf_save_post_after( $post_id ) {
 				)
 			);
 
-		$db_environments = new CaptainCore\environments();
+		$db_environments = new CaptainCore\Environments();
 
 			if ( $websites ) :
 				foreach ( $websites as $website ) :
@@ -1545,7 +1545,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		} else {
 			$environment_update['screenshot'] = false;
 		}
-		$db_environments = new CaptainCore\environments();
+		$db_environments = new CaptainCore\Environments();
 		$db_environments->update( $environment_update, [ "environment_id" => $environment_id ] );
 
 		$response = [
@@ -1668,7 +1668,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$time_now = date("Y-m-d H:i:s");
 		$environment['updated_at'] = $time_now;
 
-		$db_environments = new CaptainCore\environments();
+		$db_environments = new CaptainCore\Environments();
 		$db_environments->update( $environment, [ "environment_id" => $environment_id ] );
 
 		$response = [
@@ -4106,7 +4106,7 @@ function captaincore_ajax_action_callback() {
 		}
 		if ($environment == "Staging") {
 			$environment_id = get_field( 'environment_staging_id', $post_id );
-			$db_environments = new CaptainCore\environments();
+			$db_environments = new CaptainCore\Environments();
 			$data = $db_environments->fetch_field( $post_id, "Staging", "home_url" );
 			$site_name = $data[0]->home_url;
 			$site_name = str_replace( "http://", '', $site_name );
@@ -4808,7 +4808,7 @@ function captaincore_ajax_action_callback() {
 			$site = "{$site}-staging";
 		}
 
-		$db_environments = new CaptainCore\environments();
+		$db_environments = new CaptainCore\Environments();
 
 		// Saves update settings for a site
 		$environment_update = array(
@@ -4853,7 +4853,7 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'updateSettings' ) {
 
-		$db_environments = new CaptainCore\environments();
+		$db_environments = new CaptainCore\Environments();
 
 		// Saves update settings for a site
 		$environment_update = array(
@@ -5546,7 +5546,7 @@ function captaincore_acf_save_post( $post_id ) {
 	);
 
 
-	$db_environments = new CaptainCore\environments();
+	$db_environments = new CaptainCore\Environments();
 
 	if ( $environment_production_id ) {
 		// Updating production environment
@@ -5588,7 +5588,7 @@ function captaincore_acf_save_post( $post_id ) {
 		'updates_exclude_plugins' => $fields['field_5c6758b37ad1c'],
 	);
 
-	$db_environments = new CaptainCore\environments();
+	$db_environments = new CaptainCore\Environments();
 
 	if ( $environment_staging_id ) {
 		// Updating staging environment
@@ -5719,7 +5719,7 @@ function captaincore_load_environments( $value, $post_id, $field ) {
 	// Fetch certain records from custom table
 	if ( in_array( $field['key'], array_keys( $fields_table_map ) ) ) {
 
-		$db_environments = new CaptainCore\environments();
+		$db_environments = new CaptainCore\Environments();
 
 		$item = $fields_table_map[ $field['key'] ];
 		$data =	$db_environments->fetch_field( $post_id, $item["environment"], $item['field'] );
