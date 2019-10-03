@@ -161,10 +161,10 @@ class DB {
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade() {
         $required_version = 17;
-        $version = (int) get_site_option( 'captcorecore_db_version' );
+        $version = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version ) {
-            return "Not needed `captcorecore_db_version` is v{$version} and required v{$required_version}.";
+            echo "Not needed `captaincore_db_version` is v{$version} and required v{$required_version}.";
         }
     
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
@@ -375,7 +375,7 @@ class DB {
         }
     
         update_site_option( 'captcorecore_db_version', $required_version );
-        return "Updated `captcorecore_db_version` to v$required_version";
+        echo "Updated `captcorecore_db_version` to v$required_version";
     }
 
 }
