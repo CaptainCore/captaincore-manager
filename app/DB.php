@@ -374,8 +374,8 @@ class DB {
             return $wpdb->last_error;
         }
     
-        update_site_option( 'captcorecore_db_version', $required_version );
-        echo "Updated `captcorecore_db_version` to v$required_version";
+        update_site_option( 'captaincore_db_version', $required_version );
+        echo "Updated `captaincore_db_version` to v$required_version";
     }
 
 }
