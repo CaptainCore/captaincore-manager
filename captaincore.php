@@ -1580,7 +1580,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 				'created_at' => $date_formatted,
 			);
 
-			$db_update_logs = new CaptainCore\UpdateLogs();
+			$db_update_logs = new CaptainCore\Update_Logs();
 
 			$valid_check = $db_update_logs->valid_check( $new_update_log_check );
 
@@ -4932,7 +4932,7 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'fetch-update-logs' ) {
 
-		$db = new CaptainCore\UpdateLogs;
+		$db = new CaptainCore\Update_Logs;
 
 		$environment_production_id = get_field( 'environment_production_id', $post_id );
 		$environment_staging_id = get_field( 'environment_staging_id', $post_id );
