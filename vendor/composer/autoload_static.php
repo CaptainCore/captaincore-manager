@@ -34,7 +34,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\Site' => __DIR__ . '/../..' . '/app/Site.php',
         'CaptainCore\\Sites' => __DIR__ . '/../..' . '/app/Sites.php',
         'CaptainCore\\Snapshots' => __DIR__ . '/../..' . '/app/Snapshots.php',
-        'CaptainCore\\UpdateLogs' => __DIR__ . '/../..' . '/app/UpdateLogs.php',
+        'CaptainCore\\Update_Logs' => __DIR__ . '/../..' . '/app/Update_Logs.php',
     );
 
     public static function getInitializer(ClassLoader $loader)

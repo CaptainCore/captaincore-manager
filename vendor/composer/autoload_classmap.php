@@ -19,5 +19,5 @@ return array(
     'CaptainCore\\Site' => $baseDir . '/app/Site.php',
     'CaptainCore\\Sites' => $baseDir . '/app/Sites.php',
     'CaptainCore\\Snapshots' => $baseDir . '/app/Snapshots.php',
-    'CaptainCore\\UpdateLogs' => $baseDir . '/app/UpdateLogs.php',
+    'CaptainCore\\Update_Logs' => $baseDir . '/app/Update_Logs.php',
 );
