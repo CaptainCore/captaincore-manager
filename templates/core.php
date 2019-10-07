@@ -15,6 +15,9 @@ if ( $role_check ) {
 	$belongs_to    = get_field( 'partner', "user_{$user->ID}" );
 	$business_name = get_the_title( $belongs_to[0] );
 	$business_link = get_field( 'partner_link', $belongs_to[0] );
+} else {
+	$business_name = "";
+	$business_link = "";
 }
 ?>
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
