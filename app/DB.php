@@ -159,11 +159,11 @@ class DB {
     }
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
-     public static function upgrade() {
-        $required_version = 17;
+     public static function upgrade( $force = false ) {
+        $required_version = 18;
         $version = (int) get_site_option( 'captaincore_db_version' );
     
-        if ( $version >= $required_version ) {
+        if ( $version >= $required_version and $force != true ) {
             echo "Not needed `captaincore_db_version` is v{$version} and required v{$required_version}.";
         }
     
@@ -179,6 +179,18 @@ class DB {
             update_type varchar(255),
             update_log longtext,
         PRIMARY KEY  (log_id)
+        ) $charset_collate;";
+        
+        dbDelta($sql);
+
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_captures` (
+            capture_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            site_id bigint(20) UNSIGNED NOT NULL,
+            environment_id bigint(20) UNSIGNED NOT NULL,
+            created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+            git_commit varchar(100),
+            pages longtext,
+        PRIMARY KEY  (capture_id)
         ) $charset_collate;";
         
         dbDelta($sql);
@@ -241,6 +253,7 @@ class DB {
             core varchar(10),
             subsite_count varchar(10),
             home_url varchar(255),
+            capture_pages longtext,
             themes longtext,
             plugins longtext,
             users longtext,
@@ -291,7 +304,7 @@ class DB {
         
         dbDelta($sql);
     
-        // Permission/relationships data stucture for CaptainCore: https://dbdiagram.io/d/5d7d409283427516dc0ba8b3
+        // Permission/relationships data structure for CaptainCore: https://dbdiagram.io/d/5d7d409283427516dc0ba8b3
         $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_accounts` (
             account_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             name varchar(255),

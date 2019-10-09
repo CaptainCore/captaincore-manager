@@ -1614,13 +1614,85 @@ if ( $role_check ) {
 					<v-container>
 						<v-layout row wrap>
 						 <v-flex xs12 pa-2>
-								<span>Will turn off search privacy and update development urls to the following live urls.</span><br /><br />
-								<v-text-field label="Domain" prefix="https://" :value="dialog_launch.domain" @change.native="dialog_launch.domain = $event.target.value"></v-text-field>
-								<v-btn @click="launchSite()">
-									Launch Site
-								</v-btn>
+							<span>Will turn off search privacy and update development urls to the following live urls.</span><br /><br />
+							<v-text-field label="Domain" prefix="https://" :value="dialog_launch.domain" @change.native="dialog_launch.domain = $event.target.value"></v-text-field>
+							<v-btn @click="launchSite()">
+								Launch Site
+							</v-btn>
 						 </v-flex>
 					 </v-layout>
+					</v-container>
+					</v-card-text>
+					</v-card>
+				</v-dialog>
+				<v-dialog
+					v-model="dialog_captures.show"
+					scrollable
+				>
+				<v-card tile>
+					<v-toolbar flat dark color="primary">
+						<v-btn icon dark @click.native="dialog_captures.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>Historical Captures of {{ dialog_captures.site.name }}</v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-toolbar-items>
+							<!--<v-select
+								dense
+								v-model="dialog_captures.mode"
+								:items='[{"text":"Screenshot Mode","value":"screenshot","icon":"mdi-eye"},{"text":"Code Mode","value":"code","icon":"mdi-code-tags"}]'
+								label=""
+								class="mt-5"
+								style="max-width:200px;"
+							>-->
+							<template v-slot:selection="data">
+								<div class="v-list-item__title"><v-icon class="mr-2">{{ data.item.icon }}</v-icon> {{ data.item.text }}</div>
+							</template>
+							<template v-slot:item="data">
+								<div class="v-list-item__title"><v-icon class="mr-2">{{ data.item.icon }}</v-icon> {{ data.item.text }}</div>
+							</template>
+							</v-select>
+						</v-toolbar-items>
+					</v-toolbar>
+					<v-toolbar color="grey lighten-4" light flat v-if="dialog_captures.captures.length > 0">
+						<div style="max-width:250px;" class="mx-1 mt-8">
+							<v-select v-model="dialog_captures.capture" dense :items="dialog_captures.captures" item-text="created_at_friendly" item-value="capture_id" label="Taken On" return-object></v-select>
+						</div>
+						<div style="max-width:150px;" class="mx-1 mt-8">
+							<v-select v-model="dialog_captures.selected_page" dense :items="dialog_captures.capture.pages" item-text="name" item-value="name" value="/" :label="`Contains ${dialog_captures.capture.pages.length} ${dialogCapturesPagesText}`" return-object></v-select>
+						</div>
+						<v-spacer></v-spacer>
+						<v-toolbar-items>
+						<v-tooltip top>
+							<template v-slot:activator="{ on }">
+								<v-btn text small @click="dialog_captures.show_configure = true" v-bind:class='{ "v-btn--active": dialog_bulk.show }' v-on="on"><small v-show="selectedSites > 0">({{ selectedSites }})</small><v-icon dark>mdi-settings</v-icon></v-btn>
+							</template><span>Configure pages to capture</span>
+						</v-tooltip>
+						</v-toolbar-items>
+					</v-toolbar>
+					<v-card-text style="min-height:200px;">
+					<v-card v-show="dialog_captures.show_configure" class="mt-5 mb-3" style="max-width:850px;margin:auto;">
+						<v-toolbar color="grey lighten-4" dense light flat>
+							<v-btn icon @click.native="closeCaptures()">
+								<v-icon>close</v-icon>
+							</v-btn>
+							<v-toolbar-title>Configured pages to capture.</v-toolbar-title>
+						</v-toolbar>
+						<v-card-text>
+							<v-alert type="info">Should start with a <code>/</code>. Example use <code>/</code> for the homepage and <code>/contact</code> for the the contact page.</v-alert>
+								<v-text-field v-for="item in dialog_captures.pages" label="Page URL" :value="item.page" @change.native="item.page = $event.target.value"></v-text-field>
+							<p><v-btn text small icon color="primary" @click="addAdditionalCapturePage"><v-icon>mdi-plus-box</v-icon></v-btn></p>
+							<p><v-btn color="primary" @click="updateCapturePages()">Save Pages</v-btn></p>
+						</v-card-text>
+					</v-card>
+					<v-container class="text-center" v-if="dialog_captures.captures.length > 0 && ! dialog_captures.loading">
+						<img :src="`${dialog_captures.image_path}${dialog_captures.selected_page.image}` | safeUrl" style="max-width:100%;" class="elevation-5 mt-5">
+					</v-container>
+					<v-container v-show="dialog_captures.captures.length == 0 && ! dialog_captures.loading" class="mt-5">
+						<v-alert type="info">There are no historical captures, yet.</v-alert>
+					</v-container>
+					<v-container v-show="dialog_captures.loading" class="mt-5">
+						<v-progress-linear indeterminate rounded height="6" class="mb-3"></v-progress-linear>
 					</v-container>
 					</v-card-text>
 					</v-card>
@@ -2612,7 +2684,7 @@ if ( $role_check ) {
 							<v-layout body-1 px-6 class="row">
 								<v-flex xs12 md6 class="py-2">
 								<div class="block mt-6">
-									<v-img :src="key.screenshot_large" max-width="400" aspect-ratio="1.6" class="elevation-5" v-show="key.screenshot_large" style="margin:auto;"></v-img>
+									<a @click="showCaptures( site.id )"><v-img :src="key.screenshot_large" max-width="400" aspect-ratio="1.6" class="elevation-5" v-show="key.screenshot_large" style="margin:auto;"></v-img></a>
 								</div>
 								<v-list dense style="padding:0px;max-width:350px;margin: auto;" class="mt-6">
 									<v-list-item :href="key.link" target="_blank" dense>
@@ -3807,12 +3879,14 @@ new Vue({
 		drawer: null,
 		billing_link: "<?php echo get_field( 'billing_link', 'option' ); ?>",
 		home_link: "<?php echo home_url(); ?>",
+		remote_upload_uri: "<?php echo get_field( 'remote_upload_uri', 'option' ); ?>",
 		loading_page: true,
 		expanded: [],
 		accounts: [],
 		account_tab: null,
 		modules: { dns: <?php if ( defined( "CONSTELLIX_API_KEY" ) and defined( "CONSTELLIX_SECRET_KEY" ) ) { echo "true"; } else { echo "false"; } ?> },
 		dialog_bulk: { show: false, tabs_management: "tab-Sites", environment_selected: "Production" },
+		dialog_captures: { site: {}, pages: [{ page: ""}], capture: { pages: [] }, image_path:"", selected_page: "", captures: [], mode: "screenshot", loading: true, show: false, show_configure: false },
 		dialog_delete_user: { show: false, site: {}, users: [], username: "", reassign: {} },
 		dialog_apply_https_urls: { show: false, site_id: "", site_name: "", sites: [] },
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
@@ -4071,6 +4145,9 @@ new Vue({
 		}
     },
 	filters: {
+		safeUrl: function( url ) {
+			return url.replace('#', '%23' )
+		},
 		timeago: function( timestamp ){
 			return moment.utc( timestamp, "YYYY-MM-DD hh:mm:ss").fromNow();
 		},
@@ -4178,6 +4255,16 @@ new Vue({
 				return "";
 			} else {
 				return this.dialog_configure_defaults.record.default_recipes;
+			}
+		},
+		dialogCapturesPagesText() {
+			if ( typeof this.dialog_captures.capture.pages == 'undefined' ) {
+				return ""
+			}
+			if ( this.dialog_captures.capture.pages.length == 1 ) {
+				return "Page"
+			} else {
+				return "Pages"
 			}
 		},
 		runningJobs() {
@@ -6046,6 +6133,53 @@ new Vue({
 				})
 				.catch( error => console.log( error ) );
 
+		},
+		showCaptures( site_id ) {
+			site = this.sites.filter( site => site.id == site_id )[0];
+			this.dialog_captures.site = site;
+			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
+			this.dialog_captures.pages = environment.capture_pages
+			if ( environment.capture_pages == "" || environment.capture_pages == null ) {
+				this.dialog_captures.pages = [{ page: "/" }]
+			}
+			this.dialog_captures.loading = true
+			this.dialog_captures.show = true;
+			this.dialog_captures.selected_page
+			axios.get(
+				`/wp-json/captaincore/v1/site/${site_id}/${site.environment_selected.toLowerCase()}/captures`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => { 
+					this.dialog_captures.image_path = this.remote_upload_uri + site.site + "_" + site.id + "/" + site.environment_selected.toLowerCase() + "/captures/"
+					this.dialog_captures.captures = response.data
+					if ( this.dialog_captures.captures.length > 0 ) {
+						this.dialog_captures.capture = this.dialog_captures.captures[0]
+						this.dialog_captures.selected_page = this.dialog_captures.capture.pages[0]
+					}
+					this.dialog_captures.loading = false
+				});
+		},
+		closeCaptures() {
+			this.dialog_captures = { site: {}, pages: [{ page: ""}], capture: { pages: [] }, image_path:"", selected_page: "", captures: [], mode: "screenshot", loading: true, show: false, show_configure: false };
+		},
+		addAdditionalCapturePage() {
+			this.dialog_captures.pages.push({ page: "/" });
+		},
+		updateCapturePages() {
+			var data = {
+				action: 'captaincore_ajax',
+				post_id: this.dialog_captures.site.id,
+				command: 'updateCapturePages',
+				environment: this.dialog_captures.site.environment_selected,
+				value: this.dialog_captures.pages,
+			};
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+			.then( response => {
+				this.dialog_captures.show = false;
+				this.dialog_captures.pages = [];
+			})
+			.catch( error => console.log( error ) );
 		},
 		toggleSite( site_id ) {
 			site = this.sites.filter( site => site.id == site_id )[0];

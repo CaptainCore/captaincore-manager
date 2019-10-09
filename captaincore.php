@@ -1591,6 +1591,74 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		}
 	}
 
+	// Add capture
+	if ( $command == 'new-capture' ) {
+
+		print_r( $data );
+
+		if ( $environment == "production" ) {
+			$environment_id = get_field( 'environment_production_id', $site_id );
+		}
+		if ( $environment == "staging" ) {
+			$environment_id = get_field( 'environment_staging_id', $site_id );
+		}
+
+		$captures = new CaptainCore\Captures();
+		$capture_lookup = $captures->where( [ "site_id" => $site_id, "environment_id" => $environment_id ] );
+		if ( count( $capture_lookup ) > 0 ) {
+			$current_capture_pages = json_decode( $capture_lookup[0]->pages );
+		}
+
+		$git_commit_short = substr( $data->git_commit, 0, 7 );
+		$image_ending = "_{$data->created_at}_{$git_commit_short}.jpg";
+		$capture_pages = explode( ",", $data->capture_pages );
+		$captured_pages = explode( ",", $data->captured_pages );
+		$pages = [];
+		foreach( $capture_pages as $page ) {
+			$page_name = str_replace( "/", "#", $page );
+
+			// Add page with new screenshot
+			if ( in_array( $page, $captured_pages ) ) {
+				$pages[] = [
+					"name"  => $page,
+					"image" => "{$page_name}{$image_ending}",
+				];
+				continue;
+			}
+
+			// Lookup current image from DB
+			$current_image = "";
+			foreach($current_capture_pages as $current_capture_page) {
+				if ($page == $current_capture_page->name) {
+					$current_image = $current_capture_page->image;
+					break;
+				}
+			}
+
+			// Otherwise add image to current screenshot
+			$pages[] = [
+				"name"  => $page,
+				"image" => $current_image,
+			];
+		}
+
+		// Format for mysql timestamp format. Changes "1530817828" to "2018-06-20 09:15:20"
+		$epoch = $data->created_at;
+		$created_at = new DateTime("@$epoch");  // convert UNIX timestamp to PHP DateTime
+		$created_at = $created_at->format('Y-m-d H:i:s'); // output = 2017-01-01 00:00:00
+
+		$new_capture = array(
+			'site_id'        => $site_id,
+			'environment_id' => $environment_id,
+			'created_at'     => $created_at,
+			'git_commit'     => $data->git_commit,
+			'pages'          => json_encode( $pages ),
+		);
+
+		$capture = new CaptainCore\Captures();
+		$capture->insert( $new_capture );
+	}
+
 	// Imports update log
 	if ( $command == 'import-quicksaves' ) {
 
@@ -1823,6 +1891,13 @@ function captaincore_site_snapshot_download_func( $request ) {
 	$snapshot_url = captaincore_snapshot_download_link( $snapshot_id  );
 	header('Location: ' . $snapshot_url);
 	exit;
+}
+
+function captaincore_site_captures_func( $request ) {
+	$site_id     = $request['id'];
+	$environment = $request['environment'];
+	$site        = new CaptainCore\Site( $site_id );
+	return $site->captures( $environment );
 }
 
 function captaincore_site_quicksaves_func( $request ) {
@@ -2102,7 +2177,7 @@ function captaincore_register_rest_endpoints() {
 		)
 	);
 
-	// Custom endpoint for CaptainCore site
+	// Custom endpoint for CaptainCore site/<id>/quicksaves
 	register_rest_route(
 		'captaincore/v1', '/site/(?P<id>[\d]+)/quicksaves', array(
 			'methods'       => 'GET',
@@ -2111,7 +2186,16 @@ function captaincore_register_rest_endpoints() {
 		)
 	);
 
-	// Custom endpoint for CaptainCore site
+	// Custom endpoint for CaptainCore site/<id>/captures
+	register_rest_route(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/captures', array(
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_site_captures_func',
+			'show_in_index' => false
+		)
+	);
+
+	// Custom endpoint for CaptainCore site/<id>/snapshots
 	register_rest_route(
 		'captaincore/v1', '/site/(?P<id>[\d]+)/snapshots', array(
 			'methods'       => 'GET',
@@ -4040,6 +4124,32 @@ function captaincore_ajax_action_callback() {
 		}
 
 		echo json_encode( array("name" => $record->name, "id" => $domain_id ) );
+
+	}
+
+	if ( $cmd == 'updateCapturePages' ) {
+
+		$db_environments = new CaptainCore\Environments();
+		$value_json = json_encode($value);
+
+		// Saves update settings for a site
+		$environment_update = array(
+			'capture_pages' => $value_json,
+		);
+		$environment_update['updated_at'] = date("Y-m-d H:i:s");
+
+		if ($environment == "Production") {
+			$environment_id = get_field( 'environment_production_id', $post_id );
+			$db_environments->update( $environment_update, [ "environment_id" => $environment_id ] );
+		}
+		if ($environment == "Staging") {
+			$environment_id = get_field( 'environment_staging_id', $post_id );
+			$db_environments->update( $environment_update, [ "environment_id" => $environment_id ] );
+		}
+
+		// Remote Sync
+		$remote_command = true;
+		$command = "site update-field $site capture_pages $value_json";
 
 	}
 

@@ -162,6 +162,7 @@ class Site {
             'update_logs'             => 'Loading',
             'quicksave_panel'         => [],
             'quicksave_search'        => '',
+            'capture_pages'           => json_decode ( $environments[0]->capture_pages ),
             'core'                    => $environments[0]->core,
             'home_url'                => $environments[0]->home_url,
             'updates_enabled'         => intval( $environments[0]->updates_enabled ),
@@ -255,6 +256,7 @@ class Site {
             'update_logs'             => 'Loading',
             'quicksave_panel'         => [],
             'quicksave_search'        => '',
+            'capture_pages'           => json_decode ( $environments[1]->capture_pages ),
             'core'                    => $environments[1]->core,
             'home_url'                => $environments[1]->home_url,
             'updates_enabled'         => intval( $environments[1]->updates_enabled ),
@@ -615,6 +617,30 @@ class Site {
         // Mark site removed
         update_field( 'closed_date', date( 'Ymd' ), $this->site_id );
         update_field( 'status', 'closed', $this->site_id );
+
+    }
+
+    public function captures( $environment = "production" ) {
+
+        if ( $environment == "production" ) {
+			$environment_id = get_field( 'environment_production_id', $this->site_id );
+		}
+		if ( $environment == "staging" ) {
+			$environment_id = get_field( 'environment_staging_id', $this->site_id );
+		}
+
+        $captures = new Captures();
+        $results = $captures->where( [ "site_id" => $this->site_id, "environment_id" => $environment_id ] );
+
+        foreach ( $results as $result ) {
+            $created_at_friendly = new \DateTime( $result->created_at );
+            $created_at_friendly->setTimezone( new \DateTimeZone( get_option( 'gmt_offset' ) ) );
+            $created_at_friendly = date_format( $created_at_friendly, 'D, M jS Y g:i a');
+            $result->created_at_friendly =  $created_at_friendly;
+            $result->pages = json_decode( $result->pages );
+        }
+
+        return $results;
 
     }
 
