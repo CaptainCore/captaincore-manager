@@ -137,7 +137,7 @@ class Sites {
     public function all() {
         $sites = [];
         foreach( $this->sites as $site ) {
-            $sites[] = ( new Site )->get( $site );
+            $sites[] = ( new Site( $site ) )->get();
         }
         return $sites;
     }

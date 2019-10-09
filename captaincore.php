@@ -1431,8 +1431,8 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 		$business_name = get_field('business_name', 'option');
 		$domain_name = get_the_title( $site_id );
-		$db          = new CaptainCore\Site;
-		$site        = $db->get( $site_id );
+		$db          = new CaptainCore\Site( $site_id );
+		$site        = $db->get();
 		$link        = $site->environments[1]["link"];
 
 		// Send out completed email notice
@@ -1452,8 +1452,8 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 		$business_name = get_field('business_name', 'option');
 		$domain_name = get_the_title( $site_id );
-		$db          = new CaptainCore\Site;
-		$site        = $db->get( $site_id );
+		$db          = new CaptainCore\Site( $site_id );
+		$site        = $db->get();
 		$link        = $site->environments[0]["link"];
 
 		// Send out completed email notice
@@ -1735,8 +1735,8 @@ function captaincore_site_func( $request ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
-	$site = new CaptainCore\Site;
-	return $site->get( $site_id );
+	$site = new CaptainCore\Site( $site_id );
+	return $site->get();
 
 }
 
@@ -3602,7 +3602,6 @@ function captaincore_local_action_callback() {
 		$response = (object) [];
 		$errors = [];
 
-
 		if ( $account->display_name == "" ) {
 			$errors[] = "Display name can't be empty.";
 		}
@@ -4760,7 +4759,8 @@ function captaincore_ajax_action_callback() {
 
 		if ( $websites_for_customer ) :
 			foreach ( $websites_for_customer as $website_for_customer ) :
-				$site = ( new CaptainCore\Site )->get( $website_for_customer->ID );
+				$site = new CaptainCore\Site( $website_for_customer->ID );
+				$site = $site->get();
 				$website_for_customer_storage = $site->storage_raw;
 				$website_for_customer_visits  = $site->visits;
 				$sites[] = array(
@@ -4903,7 +4903,8 @@ function captaincore_ajax_action_callback() {
 		$command = "site delete $site";
 
 		// Delete site locally
-		( new CaptainCore\Site )->delete( $post_id );
+		$site = new CaptainCore\Site( $post_id );
+		$site->delete();
 	
 	}
 
@@ -4911,10 +4912,12 @@ function captaincore_ajax_action_callback() {
 		$sites = [];
 		if ( count( $post_ids ) > 0 ) {
 			foreach( $post_ids as $id ) {
-				$sites[] = ( new CaptainCore\Site )->get( $id );
+				$site = new CaptainCore\Site( $id );
+				$sites[] = $site->get();
 			}
 		} else {
-			$sites[] = ( new CaptainCore\Site )->get( $post_id );
+			$site = new CaptainCore\Site( $post_id );
+			$sites[] = $site->get();
 		}
 		echo json_encode( $sites );
 	}
@@ -5405,8 +5408,8 @@ add_action( 'wp_ajax_log_process', 'process_log_action_callback' );
 
 function captaincore_site_fetch_details( $post_id ) {
 
-	$site_details = ( new CaptainCore\Site )->get( $post_id );
-
+	$site                    = new CaptainCore\Site( $post_id );
+	$site_details            = $site->get();
 	$site                    = get_field( 'site', $post_id );
 	$provider                = get_field( 'provider', $post_id );
 	$domain                  = get_the_title( $post_id );

@@ -4,14 +4,20 @@ namespace CaptainCore;
 
 class Site {
 
-    public function get( $site_id ) {
+    protected $site_id = "";
 
-        if ( is_object( $site_id ) ) {
-            $site = $site_id;
+    public function __construct( $site_id = "" ) {
+        $this->site_id = $site_id;
+    }
+
+    public function get() {
+
+        if ( is_object( $this->site_id ) ) {
+            $site = $this->site_id;
         }
 
         if ( ! isset( $site ) ) {
-            $site = get_post( $site_id );
+            $site = get_post( $this->site_id );
         }
 
         $upload_dir   = wp_upload_dir();
@@ -318,10 +324,10 @@ class Site {
 
     }
 
-    public function create( $site ) {
+    public function create() {
 
         // Work with array as PHP object
-        $site = (object) $site;
+        $site = (object) $this->site_id;
 
         // Prep for response to return
         $response = [ "errors" => [] ];
@@ -493,10 +499,10 @@ class Site {
         return $response;
     }
 
-    public function update( $site ) {
+    public function update() {
 
         // Work with array as PHP object
-        $site = (object) $site;
+        $site = (object) $this->site_id;
 
         // Prep for response to return
         $response = [];
@@ -597,7 +603,7 @@ class Site {
         return $response;
     }
 
-    public function delete( $site_id ) {
+    public function delete() {
 
         // Remove environments attached to site
         // $db_environments = new Environments();
@@ -607,8 +613,8 @@ class Site {
         // $db_environments->delete( $environment_id );
 
         // Mark site removed
-        update_field( 'closed_date', date( 'Ymd' ), $site_id );
-        update_field( 'status', 'closed', $site_id );
+        update_field( 'closed_date', date( 'Ymd' ), $this->site_id );
+        update_field( 'status', 'closed', $this->site_id );
 
     }
 
