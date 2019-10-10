@@ -4992,16 +4992,18 @@ function captaincore_ajax_action_callback() {
 	if ( $cmd == 'newSite' ) {
 
 		// Create new site
-		$site = ( new CaptainCore\Site )->create( $value );
-		echo json_encode( $site );
+		$site = new CaptainCore\Site();
+		$reponse = $site->create( $value );
+		echo json_encode( $reponse );
 
 	}
 
 	if ( $cmd == 'updateSite' ) {
 
 		// Updates site
-		$site = ( new CaptainCore\Site )->update( $value );
-		echo json_encode( $site );
+		$site = new CaptainCore\Site( $value["id"] );
+		$reponse = $site->update( $value );
+		echo json_encode( $reponse );
 
 	}
 

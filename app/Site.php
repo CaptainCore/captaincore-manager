@@ -326,10 +326,10 @@ class Site {
 
     }
 
-    public function create() {
+    public function create( $site ) {
 
         // Work with array as PHP object
-        $site = (object) $this->site_id;
+        $site = (object) $site;
 
         // Prep for response to return
         $response = [ "errors" => [] ];
@@ -422,7 +422,7 @@ class Site {
             update_field( 'provider', $site->provider, $site_id );
             update_field( 'customer', $site->customers, $site_id );
             update_field( 'key', $site->key, $site_id );
-            update_field( 'partner', array_column( $site->shared_with, 'customer_id' ), $site_id );
+            update_field( 'partner', array_column( $site->shared_with, 'id' ), $site_id );
             update_field( 'updates_enabled', $site->updates_enabled, $site_id );
             update_field( 'status', 'active', $site_id );
 
@@ -501,10 +501,10 @@ class Site {
         return $response;
     }
 
-    public function update() {
+    public function update( $site ) {
 
         // Work with array as PHP object
-        $site = (object) $this->site_id;
+        $site = (object) $site;
 
         // Prep for response to return
         $response = [];
@@ -512,7 +512,7 @@ class Site {
         // Pull in current user
         $current_user = wp_get_current_user();
 
-        $site_id = $site->id;
+        $site_id = $this->site_id;
 
         // Validate site exists
         if ( get_post_type( $site_id ) != 'captcore_website' ) {

@@ -1155,7 +1155,7 @@ if ( $role_check ) {
 							<v-layout>
 							<v-flex xs4 class="mx-2">
 							<v-autocomplete
-								:items="developers"
+								:items="accounts"
 								v-model="dialog_new_site.shared_with"
 								label="Shared With"
 								item-text="name"
@@ -1846,7 +1846,7 @@ if ( $role_check ) {
 			<v-layout>
 				<v-flex xs4 class="mx-2">
 					<v-autocomplete
-						:items="developers"
+						:items="accounts"
 						v-model="dialog_edit_site.site.shared_with"
 						item-text="name"
 						return-object
