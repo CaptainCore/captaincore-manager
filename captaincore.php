@@ -3802,12 +3802,21 @@ function captaincore_local_action_callback() {
 	}
 	
 	if ( $cmd == 'fetchDefaults' ) {
-		$user_id = get_current_user_id();
-		$accounts = [];
+		$user        = wp_get_current_user();
+		$user_id     = get_current_user_id();
+		$accounts    = [];
+		$account_ids = get_field( 'partner', 'user_' . get_current_user_id() );
 
-		$partner = get_field( 'partner', 'user_' . get_current_user_id() );
-		if ( $partner ) {
-			foreach ( $partner as $partner_id ) {
+		if ( in_array( 'administrator', $user->roles ) ) {
+            $account_ids = get_posts([
+                'post_type'   => 'captcore_customer',
+                'fields'      => 'ids',
+                'numberposts' => '-1' 
+            ]);
+		}
+
+		if ( $account_ids ) {
+			foreach ( $account_ids as $partner_id ) {
 				$default_users = get_field( 'preloaded_users', $partner_id );
 				$default_recipes = get_field( 'default_recipes', $partner_id );
 				if ( $default_users == "" ){
@@ -3816,7 +3825,7 @@ function captaincore_local_action_callback() {
 				$accounts[] = (object) [
 					'account'          => array(
 						'id'               => $partner_id,
-						'name'             => get_the_title( $partner_id ),
+						'name'             => html_entity_decode( get_the_title( $partner_id ) ),
 					),
 					'default_email'    => get_field( 'preloaded_email', $partner_id ),
 					'default_users'    => $default_users,
@@ -3824,6 +3833,7 @@ function captaincore_local_action_callback() {
 					'default_timezone' => get_field( 'default_timezone', $partner_id ),
 				];
 			}
+			usort($accounts, function($a, $b) { return strcmp( strtolower($a->account["name"]), strtolower($b->account["name"])); });
 		}
 
 		echo json_encode( $accounts );

@@ -1064,14 +1064,7 @@ if ( $role_check ) {
 			</template>
 			<v-card-text>
 				<template v-if="! dialog_configure_defaults.loading">
-				<v-select class="mt-5" :items="dialog_configure_defaults.records.map( a => a.account )" label="Account" item-value="id" v-model="dialog_configure_defaults.account" @input="switchConfigureDefaultAccount()">
-					<template v-slot:selection="data">
-						<span v-html="data.item.name"></span>
-					</template>
-					<template v-slot:item="data">
-						<span v-html="data.item.name"></span>
-					</template>
-				</v-select>
+				<v-autocomplete class="mt-5" :items="dialog_configure_defaults.records.map( a => a.account )" label="Account" item-text="name" item-value="id" v-model="dialog_configure_defaults.account" @input="switchConfigureDefaultAccount()" auto-select-first></v-autocomplete>
 				<v-alert
 					:value="true"
 					type="info"
