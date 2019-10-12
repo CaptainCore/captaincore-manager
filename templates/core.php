@@ -2157,7 +2157,7 @@ if ( $role_check ) {
 						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn text @click="dialog_new_site.show = true" v-on="on">Add Site <v-icon dark>add</v-icon></v-btn>
+								<v-btn text @click="dialog_new_site.show = true" v-on="on"><v-icon dark>add</v-icon></v-btn>
 							</template><span>Add Site</span>
 						</v-tooltip>
 						</template>
