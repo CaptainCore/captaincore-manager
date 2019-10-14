@@ -4781,6 +4781,16 @@ new Vue({
 					}
 
 					if ( response.response = "Successfully added new site" ) {
+
+						// Fetch updated accounts
+						axios.get(
+							'/wp-json/captaincore/v1/accounts', {
+								headers: {'X-WP-Nonce':self.wp_nonce}
+							})
+							.then(response => {
+								self.accounts = response.data;
+							});
+							
 						self.dialog_new_site = {
 							provider: "kinsta",
 							show: false,
