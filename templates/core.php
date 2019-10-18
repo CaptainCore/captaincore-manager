@@ -3497,7 +3497,6 @@ if ( $role_check ) {
 				:headers="header_timeline"
 				:items="site.timeline"
 				class="timeline"
-				hide-default-footer
 				>
 				<template v-slot:body="{ items }">
 					<tbody>
