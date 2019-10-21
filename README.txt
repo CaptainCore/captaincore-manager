@@ -43,6 +43,18 @@ TODO
 TODO
 
 == Changelog ==
+= 0.8.0: October 21 2019
+* New: Composer psr-4 autoloading
+* New: Historical captures feature
+* Tweak: Upgraded Vuetify to v2.1.2
+* Tweak: Upgraded license from GPL to MIT license
+* Tweak: Broke up single file of CaptainCore classes into proper psr-4 loaded classes. 
+* Tweak: Move database upgrade function to CaptainCore\DB::upgrade()
+* Tweak: Replaced PHP `array()` with shorthand `[]`.
+* Tweak: Structure of CaptainCore\Site changed to match other class. Site ID is now assigned within the __construct function.
+* Tweak: Improvements configure default sections. Sort accounts by name, administrators now see all accounts and accounts are now searchable.
+* Tweak: Improvements when adding sites.
+
 = 0.7.0: September 27 2019
 * New: Site filters for administrators: healthy only, outdated only, with assigned plan, without assigned plan and reset.
 * New: Account profile section with Gravatar thumbnail
