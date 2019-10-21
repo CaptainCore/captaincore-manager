@@ -420,7 +420,7 @@ class Site {
             // add in ACF fields
             update_field( 'site', $site->site, $site_id );
             update_field( 'provider', $site->provider, $site_id );
-            update_field( 'customer', $site->customers, $site_id );
+            update_field( 'customer', [ $site->customers ], $site_id );
             update_field( 'key', $site->key, $site_id );
             update_field( 'partner', array_column( $site->shared_with, 'id' ), $site_id );
             update_field( 'updates_enabled', $site->updates_enabled, $site_id );
@@ -542,8 +542,8 @@ class Site {
             $response['site_id']  = $site_id;
 
             // add in ACF fields
-            update_field( 'customer', $site->customer["customer_id"], $site_id );
-            update_field( 'partner', array_column( $site->shared_with, 'customer_id' ), $site_id );
+            update_field( 'customer', [ $site->customer["customer_id"] ], $site_id );
+            update_field( 'partner', array_column( $site->shared_with, 'id' ), $site_id );
             update_field( 'provider', $site->provider, $site_id );
             update_field( 'key', $site->key, $site_id );
 
