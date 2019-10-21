@@ -58,7 +58,7 @@ class Account {
         
         return [
             "id"            => $this->account_id,
-            "name"          => get_the_title( $this->account_id ),
+            "name"          => html_entity_decode( get_the_title( $this->account_id ) ),
             'website_count' => get_field( "website_count", $this->account_id ),
             'user_count'    => get_field( "user_count", $this->account_id ),
             'domain_count'  => count( get_field( "domains", $this->account_id ) ),

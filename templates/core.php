@@ -616,7 +616,7 @@ if ( $role_check ) {
 				<v-btn icon @click.native="dialog_account.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
-				<v-toolbar-title v-if="typeof dialog_account.records.account == 'object'" v-html="dialog_account.records.account.name"></v-toolbar-title>
+				<v-toolbar-title v-if="typeof dialog_account.records.account == 'object'">{{ dialog_account.records.account.name }}</v-toolbar-title>
 				<div class="flex-grow-1"></div>
 				<v-toolbar-items style="margin-right: -16px;">
 					<v-btn text @click="account_tab = 0; dialog_account.new_invite = true">New Invite <v-icon dark>add</v-icon></v-btn>
@@ -3745,7 +3745,7 @@ if ( $role_check ) {
 							<v-card :hover="true" @click="editAccount( account.id )">
 							<v-card-title primary-title class="pt-2">
 								<div>
-									<span class="title" v-html="account.name"></span>
+									<span class="title">{{ account.name }}</span>
 									<div class="caption">
 										<span v-show="account.user_count != '' && account.user_count != null"><v-icon style="padding:0px 5px">mdi-account-multiple</v-icon>{{ account.user_count }} users</span>
 										<span v-show="account.website_count != '' && account.website_count != null"><v-icon style="padding:0px 5px">mdi-folder-multiple</v-icon>{{ account.website_count }} sites</span>

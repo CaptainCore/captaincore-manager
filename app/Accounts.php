@@ -36,7 +36,7 @@ class Accounts {
                 }
                 $accounts[] = (object) [
                     'id'            => $account_id,
-                    'name'          => get_the_title( $account_id ),
+                    'name'          => html_entity_decode( get_the_title( $account_id ) ),
                     'website_count' => get_field( "website_count", $account_id ),
                     'user_count'    => get_field( "user_count", $account_id ),
                     'domain_count'  => count( get_field( "domains", $account_id ) ),
