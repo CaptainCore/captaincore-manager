@@ -1649,7 +1649,7 @@ if ( $role_check ) {
 					</v-toolbar>
 					<v-toolbar color="grey lighten-4" light flat v-if="dialog_captures.captures.length > 0">
 						<div style="max-width:250px;" class="mx-1 mt-8">
-							<v-select v-model="dialog_captures.capture" dense :items="dialog_captures.captures" item-text="created_at_friendly" item-value="capture_id" label="Taken On" return-object></v-select>
+							<v-select v-model="dialog_captures.capture" dense :items="dialog_captures.captures" item-text="created_at_friendly" item-value="capture_id" label="Taken On" return-object @change="switchCapture"></v-select>
 						</div>
 						<div style="max-width:150px;" class="mx-1 mt-8">
 							<v-select v-model="dialog_captures.selected_page" dense :items="dialog_captures.capture.pages" item-text="name" item-value="name" value="/" :label="`Contains ${dialog_captures.capture.pages.length} ${dialogCapturesPagesText}`" return-object></v-select>
@@ -6146,7 +6146,6 @@ new Vue({
 			}
 			this.dialog_captures.loading = true
 			this.dialog_captures.show = true;
-			this.dialog_captures.selected_page
 			axios.get(
 				`/wp-json/captaincore/v1/site/${site_id}/${site.environment_selected.toLowerCase()}/captures`, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
@@ -6160,6 +6159,9 @@ new Vue({
 					}
 					this.dialog_captures.loading = false
 				});
+		},
+		switchCapture() {
+			this.dialog_captures.selected_page = this.dialog_captures.capture.pages[0]
 		},
 		closeCaptures() {
 			this.dialog_captures = { site: {}, pages: [{ page: ""}], capture: { pages: [] }, image_path:"", selected_page: "", captures: [], mode: "screenshot", loading: true, show: false, show_configure: false };
