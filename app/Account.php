@@ -30,15 +30,15 @@ class Account {
             return [ "message" => "Account already exists. Adding permissions for existing user." ];
         }
 
-        $time_now = date("Y-m-d H:i:s");
-        $token    = bin2hex( openssl_random_pseudo_bytes( 24 ) );
-        $new_invite = array(
+        $time_now   = date("Y-m-d H:i:s");
+        $token      = bin2hex( openssl_random_pseudo_bytes( 24 ) );
+        $new_invite = [
             'email'          => $email,
             'account_id'     => $this->account_id,
             'created_at'     => $time_now,
             'updated_at'     => $time_now,
             'token'          => $token
-        );
+        ];
         $invite = new Invites();
         $invite_id = $invite->insert( $new_invite );
 
@@ -76,23 +76,21 @@ class Account {
         $customers   = [];
         $partner     = [ $this->account_id ];
 
-        $websites_for_partner = get_posts(
-            array(
-                'post_type'      => 'captcore_website',
-                'posts_per_page' => '-1',
-                'order'          => 'asc',
-                'orderby'        => 'title',
-                'fields'         => 'ids',
-                'meta_query'     => array(
-                    'relation' => 'AND',
-                    array(
-                        'key'     => 'partner', // name of custom field
-                        'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-                        'compare' => 'LIKE',
-                    ),
-                ),
-            )
-        );
+        $websites_for_partner = get_posts([
+            'post_type'      => 'captcore_website',
+            'posts_per_page' => '-1',
+            'order'          => 'asc',
+            'orderby'        => 'title',
+            'fields'         => 'ids',
+            'meta_query'     => [
+                'relation' => 'AND',
+                [
+                    'key'     => 'partner', // name of custom field
+                    'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+                    'compare' => 'LIKE',
+                ],
+            ],
+        ]);
 
         foreach ( $websites_for_partner as $website ) {
             $customers[] = get_field( 'customer', $website );
@@ -100,23 +98,21 @@ class Account {
 
         if ( count( $customers ) == 0 and is_array( $partner ) ) {
             foreach ( $partner as $partner_id ) {
-                $websites_for_partner = get_posts(
-                    array(
-                        'post_type'      => 'captcore_website',
-                        'posts_per_page' => '-1',
-                        'order'          => 'asc',
-                        'orderby'        => 'title',
-                        'fields'         => 'ids',
-                        'meta_query'     => array(
-                            'relation' => 'AND',
-                            array(
-                                'key'     => 'customer', // name of custom field
-                                'value'   => '"' . $partner_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-                                'compare' => 'LIKE',
-                            ),
-                        ),
-                    )
-                );
+                $websites_for_partner = get_posts([
+                    'post_type'      => 'captcore_website',
+                    'posts_per_page' => '-1',
+                    'order'          => 'asc',
+                    'orderby'        => 'title',
+                    'fields'         => 'ids',
+                    'meta_query'     => [
+                        'relation' => 'AND',
+                        [
+                            'key'     => 'customer', // name of custom field
+                            'value'   => '"' . $partner_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+                            'compare' => 'LIKE',
+                        ],
+                    ],
+                ]);
                 foreach ( $websites_for_partner as $website ) {
                     $customers[] = get_field( 'customer', $website );
                 }
@@ -163,19 +159,17 @@ class Account {
     public function sites() {
 
         $results = [];
-        $websites = get_posts(
-            array(
-                'post_type'      => 'captcore_website',
-                'posts_per_page' => '-1',
-                'meta_query'     => array(
-                    array(
-                        'key'     => 'customer', // name of custom field
-                        'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-                        'compare' => 'LIKE',
-                    ),
-                ),
-            )
-        );
+        $websites = get_posts([
+            'post_type'      => 'captcore_website',
+            'posts_per_page' => '-1',
+            'meta_query'     => [
+                [
+                    'key'     => 'customer', // name of custom field
+                    'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+                    'compare' => 'LIKE',
+                ],
+            ],
+        ]);
         if ( $websites ) {
             foreach ( $websites as $website ) {
                 if ( get_field( 'status', $website->ID ) == 'active' ) {
@@ -186,19 +180,17 @@ class Account {
                 }
             }
         }
-        $websites = get_posts(
-            array(
-                'post_type'      => 'captcore_website',
-                'posts_per_page' => '-1',
-                'meta_query'     => array(
-                    array(
-                        'key'     => 'partner', // name of custom field
-                        'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-                        'compare' => 'LIKE',
-                    ),
-                ),
-            )
-        );
+        $websites = get_posts([
+            'post_type'      => 'captcore_website',
+            'posts_per_page' => '-1',
+            'meta_query'     => [
+                [
+                    'key'     => 'partner', // name of custom field
+                    'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+                    'compare' => 'LIKE',
+                ],
+            ],
+        ]);
         if ( $websites ) {
             foreach ( $websites as $website ) {
                 if ( get_field( 'status', $website->ID ) == 'active' ) {
@@ -221,17 +213,17 @@ class Account {
 
     public function users() {
 
-        $args = array (
-            'order' => 'ASC',
-            'orderby' => 'display_name',
-            'meta_query' => array(
-                array(
+        $args = [
+            'order'      => 'ASC',
+            'orderby'    => 'display_name',
+            'meta_query' => [
+                [
                     'key'     => 'partner',
                     'value'   => '"' . $this->account_id . '"',
                     'compare' => 'LIKE'
-                ),
-            )
-        );
+                ],
+            ]
+        ];
 
         // Create the WP_User_Query object
         $wp_user_query = new \WP_User_Query($args);
@@ -254,58 +246,54 @@ class Account {
     public function calculate_totals() {
 
         // Calculate active website count
-        $websites_by_customer = get_posts(
-            array(
-                'post_type'      => 'captcore_website',
-                'fields'         => 'ids',
-                'posts_per_page' => '-1',
-                'meta_query'     => array(
-                    'relation' => 'AND',
-                    array(
-                        'key'     => 'customer', // name of custom field
-                        'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-                        'compare' => 'LIKE',
-                    ),
-                    array(
-                        'key'     => 'status',
-                        'value'   => 'active',
-                        'compare' => 'LIKE',
-                    ),
-                ),
-            )
-        );
-        $websites_by_partners = get_posts(
-            array(
-                'post_type'      => 'captcore_website',
-                'fields'         => 'ids',
-                'posts_per_page' => '-1',
-                'meta_query'     => array(
-                    'relation' => 'AND',
-                    array(
-                        'key'     => 'partner', // name of custom field
-                        'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-                        'compare' => 'LIKE',
-                    ),
-                    array(
-                        'key'     => 'status',
-                        'value'   => 'active',
-                        'compare' => 'LIKE',
-                    ),
-                ),
-            )
-        );
+        $websites_by_customer = get_posts([
+            'post_type'      => 'captcore_website',
+            'fields'         => 'ids',
+            'posts_per_page' => '-1',
+            'meta_query'     => [
+                'relation' => 'AND',
+                [
+                    'key'     => 'customer', // name of custom field
+                    'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+                    'compare' => 'LIKE',
+                ],
+                [
+                    'key'     => 'status',
+                    'value'   => 'active',
+                    'compare' => 'LIKE',
+                ],
+            ],
+        ]);
+        $websites_by_partners = get_posts([
+            'post_type'      => 'captcore_website',
+            'fields'         => 'ids',
+            'posts_per_page' => '-1',
+            'meta_query'     => [
+                'relation' => 'AND',
+                [
+                    'key'     => 'partner', // name of custom field
+                    'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+                    'compare' => 'LIKE',
+                ],
+                [
+                    'key'     => 'status',
+                    'value'   => 'active',
+                    'compare' => 'LIKE',
+                ],
+            ],
+        ]);
         $websites = array_unique(array_merge($websites_by_customer, $websites_by_partners));
-        $args = array (
-            'order' => 'ASC',
-            'orderby' => 'display_name',
-            'meta_query' => array(
-                array(
+        $args = [
+            'order'      => 'ASC',
+            'orderby'    => 'display_name',
+            'meta_query' => [
+                [
                     'key'     => 'partner',
                     'value'   => '"' . $this->account_id . '"',
                     'compare' => 'LIKE'
-                ),
-            )
-        );
+                ],
+            ]
+        ];
         
         // Create the WP_User_Query object
         $wp_user_query = new \WP_User_Query($args);
@@ -315,13 +303,13 @@ class Account {
     }
 
     public function fetch() {
-        $record = array (
+        $record = [
             "users"   => $this->users(),
             "invites" => $this->invites(),
             "domains" => $this->domains(),
             "sites"   => $this->sites(),
             "account" => $this->account(),
-        );
+        ];
         return $record;
     }
 
