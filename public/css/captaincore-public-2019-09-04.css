@@ -981,11 +981,13 @@ i.material-icons.reverse {
 }
 
 .file_diff .code.remove {
+  color: #7d0909;
   background-color: #ff00002b;
 }
 
 .file_diff .code.add {
-  background: #00ff004a;
+  color:#0b640b;
+  background:#57d9574a;
 }
 
 /* hide back of pane during swap */
