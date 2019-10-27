@@ -2242,6 +2242,9 @@ if ( $role_check ) {
 				</v-btn>
 				<v-toolbar-title>Job Activity</v-toolbar-title>
 				<v-spacer></v-spacer>
+				<v-btn small text dark @click.native="jobs = []; snackbar.message = 'Job activity cleared.'; snackbar.show = true">
+					Clear <v-icon>mdi-trash-can-outline</v-icon>
+				</v-btn>
 				</v-toolbar>
 				<v-data-table
 					:headers="[{ text: 'Description', value: 'description', width: '300px' },
