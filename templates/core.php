@@ -1757,7 +1757,7 @@ if ( $role_check ) {
 						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text>
-						<v-alert :value="true" type="info" color="yellow darken-4">
+						<v-alert :value="true" type="info" color="yellow darken-4" class="mt-3">
 							Warning {{ dialog_migration.site_name }} will be overwritten with backup. 
 						</v-alert>
 						<p></p>
