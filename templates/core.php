@@ -2285,7 +2285,14 @@ if ( $role_check ) {
 				<v-toolbar-title>Bulk Tools</v-toolbar-title>
 				<v-spacer></v-spacer>
 			</v-toolbar>
-			<div class="grey lighten-4 pb-2">
+			<div class="grey lighten-4 pt-1 pb-2">
+			<v-chip
+				outlined
+				close
+				class="ma-1"
+				v-for="site in sites_selected"
+				@click:close="removeFromBulk(site.id)"
+			><a :href="site.environments[0].home_url" target="_blank">{{ site.name }}</a></v-chip>
 			<v-layout wrap>
 			<v-flex sx12 sm4 px-2>
 			<v-layout>
@@ -2351,15 +2358,6 @@ if ( $role_check ) {
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
-				<v-flex sm12 mb-3>
-				<v-chip
-					outlined
-					close
-					class="ma-1"
-					v-for="site in sites_selected"
-					@click:close="removeFromBulk(site.id)"
-				><a :href="site.home_url" target="_blank">{{ site.name }}</a></v-chip>
-				</v-flex>
 				<v-layout row>
 				<v-flex sm12 mx-5>
 				<small>
@@ -2581,7 +2579,7 @@ if ( $role_check ) {
 					<v-layout align-center justify-space-between row>
 						<div>
 							<v-layout align-center justify-start fill-height font-weight-light subtitle-1>
-							<v-switch v-model="site.selected" @click.native.stop @change="site_selected = null" style="position: absolute; left: 10px; top: 17px;" v-show="dialog_bulk.show == true"></v-switch>
+							<v-checkbox v-model="site.selected" @click.native.stop @change="site_selected = null" style="position: absolute; left: 10px; top: 17px;" v-show="dialog_bulk.show == true"></v-checkbox>
 								<img :src="site.environments[0].screenshot_small" style="width: 50px; margin-right:1em" class="elevation-1" v-show="site.environments[0].screenshot_small">
 							{{ site.name }} <v-chip class="ma-2" color="red" text-color="white" v-show="role == 'administrator' && site.outdated" small>Last sync {{ site.environments[0].updated_at | timeago }}</v-chip>
 							</v-layout>
