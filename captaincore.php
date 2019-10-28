@@ -5046,10 +5046,25 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'fetch-users' ) {
 
+		$users_production = json_decode( get_field( "field_5b2a900c85a77", $post_id ) );
+		$users_staging    = json_decode( get_field( "field_5c6758d67ad20", $post_id ) );
+
+		array_multisort(
+			array_column($users_production, 'roles'), SORT_ASC,
+            array_column($users_production, 'user_login'), SORT_ASC,
+			$users_production
+		);
+
+		array_multisort(
+			array_column($users_staging, 'roles'), SORT_ASC,
+            array_column($users_staging, 'user_login'), SORT_ASC,
+			$users_staging
+		);
+
 		# Fetch from custom table
 		$results = array(
-			"Production" => json_decode(get_field( "field_5b2a900c85a77", $post_id )),
-			"Staging" => json_decode(get_field( "field_5c6758d67ad20", $post_id ))
+			"Production" => $users_production,
+			"Staging"    => $users_staging
 		);
 		echo json_encode($results);
 			 
