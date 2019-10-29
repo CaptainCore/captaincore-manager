@@ -2574,12 +2574,12 @@ if ( $role_check ) {
 				</v-btn-toggle>
 				</div>
 				<v-expansion-panels accordion style="margin-top: 20px">
-				<v-expansion-panel v-bind:class='{ "toggleSelect": dialog_bulk.show }' popout accordion v-for="site in paginatedSites" :key="site.id" class="site">
+				<v-expansion-panel popout accordion v-for="site in paginatedSites" :key="site.id" class="site">
 					<v-expansion-panel-header>
 					<v-layout align-center justify-space-between row>
 						<div>
 							<v-layout align-center justify-start fill-height font-weight-light subtitle-1>
-							<v-checkbox v-model="site.selected" @click.native.stop @change="site_selected = null" style="position: absolute; left: 10px; top: 17px;" v-show="dialog_bulk.show == true"></v-checkbox>
+							<v-checkbox v-model="site.selected" @click.native.stop @change="site_selected = null" v-show="dialog_bulk.show == true" style="height:34px;"></v-checkbox>
 								<img :src="site.environments[0].screenshot_small" style="width: 50px; margin-right:1em" class="elevation-1" v-show="site.environments[0].screenshot_small">
 							{{ site.name }} <v-chip class="ma-2" color="red" text-color="white" v-show="role == 'administrator' && site.outdated" small>Last sync {{ site.environments[0].updated_at | timeago }}</v-chip>
 							</v-layout>
