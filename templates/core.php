@@ -2285,14 +2285,15 @@ if ( $role_check ) {
 				<v-toolbar-title>Bulk Tools</v-toolbar-title>
 				<v-spacer></v-spacer>
 			</v-toolbar>
-			<div class="grey lighten-4 pt-1 pb-2">
+			<div class="blue darken-2 pb-1 pl-1 pr-1">
 			<v-chip
-				outlined
 				close
 				class="ma-1"
 				v-for="site in sites_selected"
 				@click:close="removeFromBulk(site.id)"
 			><a :href="site.environments[0].home_url" target="_blank">{{ site.name }}</a></v-chip>
+			</div>
+			<div class="grey lighten-4 pb-2">
 			<v-layout wrap>
 			<v-flex sx12 sm4 px-2>
 			<v-layout>
@@ -2579,7 +2580,7 @@ if ( $role_check ) {
 					<v-layout align-center justify-space-between row>
 						<div>
 							<v-layout align-center justify-start fill-height font-weight-light subtitle-1>
-							<v-checkbox v-model="site.selected" @click.native.stop @change="site_selected = null" v-show="dialog_bulk.show == true" style="height:34px;"></v-checkbox>
+							<v-checkbox v-model="site.selected" @click.native.stop @change="site_selected = null" v-show="dialog_bulk.show == true" style="height:34px;" class="mr-2"></v-checkbox>
 								<img :src="site.environments[0].screenshot_small" style="width: 50px; margin-right:1em" class="elevation-1" v-show="site.environments[0].screenshot_small">
 							{{ site.name }} <v-chip class="ma-2" color="red" text-color="white" v-show="role == 'administrator' && site.outdated" small>Last sync {{ site.environments[0].updated_at | timeago }}</v-chip>
 							</v-layout>
