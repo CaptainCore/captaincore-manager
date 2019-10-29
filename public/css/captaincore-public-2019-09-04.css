@@ -980,12 +980,14 @@ i.material-icons.reverse {
   padding: 0 2%;
 }
 
-.file_diff .code.remove {
+.v-application #code_diff .red.lighten-4 {
+  color: #7d0909;
   background-color: #ff00002b;
 }
 
-.file_diff .code.add {
-  background: #00ff004a;
+.v-application #code_diff .green.lighten-5 {
+  color:#0b640b;
+  background:#57d9574a;
 }
 
 /* hide back of pane during swap */
