@@ -2575,7 +2575,7 @@ if ( $role_check ) {
 				</v-btn-toggle>
 				</div>
 				<v-expansion-panels accordion style="margin-top: 20px">
-				<v-expansion-panel popout accordion v-for="site in paginatedSites" :key="site.id" class="site">
+				<v-expansion-panel popout accordion v-for="site in paginatedSites" :key="site.id" class="site" @change="users_search = ''">
 					<v-expansion-panel-header>
 					<v-layout align-center justify-space-between row>
 						<div>
@@ -2882,7 +2882,6 @@ if ( $role_check ) {
 								</tbody>
 								</template>
 							</v-data-table>
-							
 							</v-flex>
 							</v-layout>
 							</v-card-title>
@@ -2995,7 +2994,17 @@ if ( $role_check ) {
 					>
 				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Users</v-toolbar-title>
-					<v-spacer></v-spacer v-show="site.environment_selected == 'Production'">
+					<v-spacer></v-spacer>
+					<v-text-field
+						@input="searchUsers"
+						ref="users_search"
+						append-icon="search"
+						label="Search"
+						single-line
+						clearable
+						hide-details
+						style="max-width:300px"
+					></v-text-field>
 					<v-toolbar-items>
 						<v-btn text @click="bulkEdit(site.id,'users')" v-if="key.users_selected.length != 0">Bulk Edit {{ key.users_selected.length }} users</v-btn>
 					</v-toolbar-items>
@@ -3013,6 +3022,7 @@ if ( $role_check ) {
 							item-key="user_login"
 							v-model="key.users_selected"
 							class="table_users"
+							:search="users_search"
 							show-select
 						>
 						<template v-slot:item.roles="{ item }">
@@ -4051,6 +4061,7 @@ new Vue({
 		view_jobs: false,
 		view_timeline: false,
 		search: null,
+		users_search: "",
 		advanced_filter: false,
 		items_per_page: 50,
 		business_name: "<?php echo $business_name; ?>",
@@ -8075,15 +8086,15 @@ new Vue({
 			}
 		},
 		filterFiles( site_id, quicksave_id ) {
-
 			site = this.sites.filter(site => site.id == site_id)[0];
 			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
-
 			quicksave = environment.quicksaves.filter( quicksave => quicksave.quicksave_id == quicksave_id )[0];
 			search = quicksave.search;
 			quicksave.filtered_files = quicksave.view_files.filter( file => file.includes( search ) );
-
 		},
+		searchUsers: lodash.debounce(function (e) {
+			this.users_search = e
+		}, 300),
 		updateSearch: lodash.debounce(function (e) {
 			this.search = e;
 			this.filterSites();
