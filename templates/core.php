@@ -6210,6 +6210,11 @@ new Vue({
 			this.dialog_toggle.business_name = this.business_name;
 			this.dialog_toggle.business_link = this.business_link;
 		},
+		showSite( site ) {
+			this.site_dialog.site = site
+			this.site_dialog.show = true
+			this.site_dialog.step = 2
+		},
 		showSiteMigration( site_id ){
 			site = this.sites.filter(site => site.id == site_id)[0];
 			this.dialog_migration.sites.push( site );
