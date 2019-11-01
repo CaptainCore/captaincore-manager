@@ -41,6 +41,12 @@ if ( $role_check ) {
 			</v-list>
 			<div class="flex" style="opacity:0;"><textarea id="clipboard" style="height:1px;display:flex;cursor:default"></textarea></div>
 		</v-toolbar-title>
+		<v-spacer></v-spacer>
+		<v-toolbar-items>
+			<v-btn text small @click.stop="view_jobs = true; $vuetify.goTo( '#sites' )" v-show="runningJobs">
+				Running {{ runningJobs }} jobs <v-progress-circular indeterminate color="white" class="ml-2" size="24"></v-progress-circular>
+			</v-btn>
+		</v-toolbar-items>
       </v-app-bar>
 	  <v-navigation-drawer v-model="drawer" app mobile-break-point="960" clipped v-if="route != 'login'">
       <v-list>
@@ -141,13 +147,6 @@ if ( $role_check ) {
 	  </v-navigation-drawer>
 	  <v-content>
 		<v-container fluid style="padding:0px">
-		<v-badge overlap left class="static" v-if="runningJobs">
-			<span slot="badge">{{ runningJobs }}</span>
-			<a @click.stop="view_jobs = true; $vuetify.goTo( '#sites' )"><v-icon large color="grey lighten-1">mdi-cogs</v-icon></a>
-			<template>
-			  <v-progress-linear :indeterminate="true" class="my-2"></v-progress-linear>
-			</template>
-		</v-badge>
 		<v-dialog v-model="new_plugin.show" max-width="900px">
 		<v-card tile>
 		<v-toolbar flat dark color="primary">
