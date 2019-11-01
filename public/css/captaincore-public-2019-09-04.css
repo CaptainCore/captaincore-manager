@@ -1538,6 +1538,10 @@ ul.v-expansion-panel.theme--light {
 	margin: 16px 0px;
 }
 
+th.hidden {
+  display: none;
+}
+
 table.v-table tbody td, table.v-table tbody th {
 	border: 0px;
 }

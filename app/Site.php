@@ -55,10 +55,8 @@ class Site {
         $site_details->site                 = get_field( 'site', $site->ID );
         $site_details->provider             = get_field( 'provider', $site->ID );
         $site_details->key                  = get_field( 'key', $site->ID );
-        $site_details->filtered             = true;
         $site_details->usage_breakdown      = [];
         $site_details->timeline             = [];
-        $site_details->selected             = false;
         $site_details->loading_plugins      = false;
         $site_details->loading_themes       = false;
         $site_details->environment_selected = 'Production';
@@ -67,10 +65,11 @@ class Site {
         $site_details->tabs                 = 'tab-Site-Management';
         $site_details->tabs_management      = 'tab-Info';
         $site_details->storage_raw          = $environments[0]->storage;
+        $site_details->core                 = $environments[0]->core;
         $site_details->storage              = $storage_gbs;
         $site_details->outdated				= false;
         if ( is_string( $visits ) ) {
-            $site_details->visits = number_format( intval( $visits ) );
+            $site_details->visits = intval( $visits );
         }
         $site_details->update_logs            = [];
         $site_details->update_logs_pagination = [
@@ -157,6 +156,7 @@ class Site {
             'plugins'                 => json_decode( $environments[0]->plugins ),
             'themes'                  => json_decode( $environments[0]->themes ),
             'users'                   => 'Loading',
+            'users_search'            => '',
             'quicksaves'              => 'Loading',
             'snapshots'               => 'Loading',
             'update_logs'             => 'Loading',
@@ -251,6 +251,7 @@ class Site {
             'plugins'                 => json_decode( $environments[1]->plugins ),
             'themes'                  => json_decode( $environments[1]->themes ),
             'users'                   => 'Loading',
+            'users_search'            => '',
             'quicksaves'              => 'Loading',
             'snapshots'               => 'Loading',
             'update_logs'             => 'Loading',
