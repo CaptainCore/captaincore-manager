@@ -2119,9 +2119,7 @@ if ( $role_check ) {
 			</template>
 			</v-card>
 			<v-card tile v-show="route == 'sites'" flat>
-			<v-window v-model="site_dialog.step">
-			<v-window-item :value="1">
-			<v-toolbar color="grey lighten-4" light flat id="sites">
+			<v-toolbar color="grey lighten-4" light flat id="sites" v-show="site_dialog.step == 1">
 				<v-toolbar-title>Sites <small>({{ sites.length }})</small></v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -2548,6 +2546,8 @@ if ( $role_check ) {
 			</v-layout>
 			</v-card-text>
             </v-card>
+			<v-window v-model="site_dialog.step">
+			<v-window-item :value="1">
 				<v-data-table
 					v-model="sites_selected"
 					:headers="[
@@ -2592,12 +2592,10 @@ if ( $role_check ) {
 					</tbody>
 				</template>
 				</v-data-table>
-				
-			</v-card-text>
 			</v-window-item>
 			<v-window-item :value="2" class="site">
 			<template v-if="site_dialog.show">
-				<v-card class="ma-7">
+			<v-card class="mt-5">
 					<v-toolbar color="grey lighten-4" dense light flat>
 						<v-toolbar-title> {{ site_dialog.site.name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -3572,6 +3570,7 @@ if ( $role_check ) {
 				</template>
 			</v-window-item>
 			</v-window>
+			</v-card-text>
 			</v-card>
 			<v-card tile v-show="route == 'dns'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
