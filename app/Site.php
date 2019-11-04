@@ -219,14 +219,17 @@ class Site {
             $site_details->environments[0]['ssh'] = "ssh ${production_username}@${production_address} -p ${production_port}";
         }
         if ( $site_details->provider == 'kinsta' and $environments[0]->database_username ) {
-            $kinsta_ending = array_pop( explode(".", $site_details->environments[0]['address']) );
-            if ( $kinsta_ending != "com" && $$kinsta_ending != "cloud" ) {
+            $address_array = explode( ".", $environments[0]->address );
+            $kinsta_ending = array_pop( $address_array );
+            if ( $kinsta_ending != "com" && $kinsta_ending != "cloud" ) {
                 $kinsta_ending = "cloud";
             }
             $site_details->environments[0]['database']          = "https://mysqleditor-${database_username}.kinsta.{$kinsta_ending}";
             $site_details->environments[0]['database_username'] = $environments[0]->database_username;
             $site_details->environments[0]['database_password'] = $environments[0]->database_password;
         }
+
+        $link_staging = "";
 
         if ( $site_details->provider == 'kinsta' ) {
             $link_staging = $environments[1]->home_url;
@@ -314,8 +317,9 @@ class Site {
             $site_details->environments[1]['ssh'] = "ssh ${staging_username}@${staging_address} -p ${staging_port}";
         }
         if ( $site_details->provider == 'kinsta' and $environments[1]->database_username ) {
-            $kinsta_ending = array_pop( explode(".", $site_details->environments[1]['address']) );
-            if ( $kinsta_ending != "com" && $$kinsta_ending != "cloud" ) {
+            $address_array = explode( ".", $environments[1]->address );
+            $kinsta_ending = array_pop( $address_array );
+            if ( $kinsta_ending != "com" && $kinsta_ending != "cloud" ) {
                 $kinsta_ending = "cloud";
             }
             $site_details->environments[1]['database']          = "https://mysqleditor-staging-${database_username}.kinsta.{$kinsta_ending}";
