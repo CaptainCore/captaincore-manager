@@ -2581,7 +2581,9 @@ if ( $role_check ) {
 						<td v-show="dialog_bulk.show">
 							<v-checkbox v-model="sites_selected" :value="item" hide-details @click.native.stop></v-checkbox>
 						</td>
-						<td><img :src="item.environments[0].screenshot_small" style="width: 50px;" class="elevation-1" v-show="item.environments[0].screenshot_small"></td>
+						<td>
+							<v-img :src="item.environments[0].screenshot_small" class="elevation-1" width="50" v-show="item.environments[0].screenshot_small"></v-img>
+						</td>
 						<td>{{ item.name }} <v-chip class="ma-2" color="red" text-color="white" v-show="role == 'administrator' && item.outdated" small>Last sync {{ item.environments[0].updated_at | timeago }}</v-chip></td>
 						<td>{{ item.subsite_count }}<span v-show="items.subsite_count"> sites</span></td>
 						<td>{{ item.core }}</td>
@@ -2594,7 +2596,6 @@ if ( $role_check ) {
 				</v-data-table>
 			</v-window-item>
 			<v-window-item :value="2" class="site">
-			<template v-if="site_dialog.show">
 			<v-card class="mt-5">
 					<v-toolbar color="grey lighten-4" dense light flat>
 						<v-toolbar-title> {{ site_dialog.site.name }}</v-toolbar-title>
@@ -3567,7 +3568,6 @@ if ( $role_check ) {
 		</v-tab-item>
 	</v-tabs>
 				</v-card>
-				</template>
 			</v-window-item>
 			</v-window>
 			</v-card-text>
@@ -4094,7 +4094,7 @@ new Vue({
 		items_per_page: 50,
 		business_name: "<?php echo $business_name; ?>",
 		business_link: "<?php echo $business_link; ?>",
-		site_dialog: { site: {}, show: false, step: 1 },
+		site_dialog: { show: false, step: 1, site: { name: "", site: "", environment_selected: "Production", environments: [{ id: "", quicksave_panel: [], plugins:[], themes: [], core: "", users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }], users: [], timeline: [], usage_breakdown: [], update_log: [], tabs: "tab-Site-Management", tabs_management: "tab-Info", customer: { hosting_plan: {} }  } },
 		sites_selected: [],
 		sites_filtered: [],
 		site_health_filter: "",
