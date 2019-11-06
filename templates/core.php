@@ -1657,7 +1657,7 @@ if ( $role_check ) {
 						<v-toolbar-items>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn text small @click="dialog_captures.show_configure = true" v-bind:class='{ "v-btn--active": dialog_bulk.show }' v-on="on"><small v-show="selectedSites > 0">({{ selectedSites }})</small><v-icon dark>mdi-settings</v-icon></v-btn>
+								<v-btn text small @click="dialog_captures.show_configure = true" v-bind:class='{ "v-btn--active": dialog_bulk.show }' v-on="on"><small v-show="sites_selected.length > 0">({{ sites_selected.length }})</small><v-icon dark>mdi-settings</v-icon></v-btn>
 							</template><span>Configure pages to capture</span>
 						</v-tooltip>
 						</v-toolbar-items>
@@ -2143,7 +2143,7 @@ if ( $role_check ) {
 						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn text small @click="dialog_bulk.show = !dialog_bulk.show" v-bind:class='{ "v-btn--active": dialog_bulk.show }' v-on="on"><small v-show="selectedSites > 0">({{ selectedSites }})</small><v-icon dark>mdi-settings</v-icon></v-btn>
+								<v-btn text small @click="dialog_bulk.show = !dialog_bulk.show" v-bind:class='{ "v-btn--active": dialog_bulk.show }' v-on="on"><small v-show="sites_selected.length > 0">({{ sites_selected.length }})</small><v-icon dark>mdi-settings</v-icon></v-btn>
 							</template><span>Bulk Tools</span>
 						</v-tooltip>
 						<v-divider vertical class="mx-1" inset></v-divider>
@@ -2260,9 +2260,8 @@ if ( $role_check ) {
 					:items="sites"
 					item-text="name"
 					return-object
-					dense
 					chips
-					small-chips
+					dense
 					label=""
 					multiple
 					:allow-overflow="false"
@@ -2565,7 +2564,7 @@ if ( $role_check ) {
 					:search="search"
 					item-key="id"
 					:show-select="dialog_bulk.show"
-					:footer-props="{ itemsPerPageOptions: [{'text':'All','value':-1}] }"
+					:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
 				>
 				<template v-slot:top>
 				<v-row class="ma-0 pa-0">
@@ -4297,25 +4296,6 @@ new Vue({
 		runningJobs() {
 			return this.jobs.filter(job => job.status != 'done' && job.status != 'error' ).length;
 		},
-		showingSitesBegin() {
-			return this.page * this.items_per_page - this.items_per_page;
-		},
-		showingSitesEnd() {
-			total = this.page * this.items_per_page;
-			if (total > this.sites_filtered) {
-				total = this.sites_filtered;
-			}
-			return total;
-		},
-		selectedSites() {
-			return this.sites.filter(site => site.selected).length;
-		},
-		allSites() {
-			return this.sites.length;
-		},
-		developers() {
-			return this.accounts.filter(account => account.developer );
-		},
 		dnsRecords() {
 			count = 0;
 			this.dialog_domain.records.forEach( r => {
@@ -4934,7 +4914,7 @@ new Vue({
 		},
 		bulkSyncSites() {
 
-			should_proceed = confirm("Sync " + this.selectedSites + " sites for " + this.dialog_bulk.environment_selected.toLowerCase() + " environments info?");
+			should_proceed = confirm("Sync " + this.sites_selected.length + " sites for " + this.dialog_bulk.environment_selected.toLowerCase() + " environments info?");
 
 			if ( ! should_proceed ) {
 				return;
