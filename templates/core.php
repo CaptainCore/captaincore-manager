@@ -2597,7 +2597,8 @@ if ( $role_check ) {
 			<v-window-item :value="2" class="site">
 			<v-card class="mt-5">
 					<v-toolbar color="grey lighten-4" dense light flat>
-						<v-toolbar-title> {{ site_dialog.site.name }}</v-toolbar-title>
+						<v-img :src="site_dialog.site.environments[0].screenshot_small" class="elevation-1 mr-3" max-width="50" v-show="site_dialog.site.environments[0].screenshot_small"></v-img>
+						<v-toolbar-title>{{ site_dialog.site.name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items>
 							<v-btn text @click="site_dialog.step = 1"><v-icon>mdi-arrow-left</v-icon> Back to sites</v-btn>
