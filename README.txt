@@ -43,6 +43,19 @@ TODO
 TODO
 
 == Changelog ==
+= 0.9.0: November 11 2019
+* New: Button to clear job activity
+* New: Searchable site users 
+* Tweak: Upgraded Vuetify to v2.1.9
+* Tweak: Improvements to site listing
+* Tweak: Improvements to running jobs status
+* Tweak: Improvements to migrate dialog
+* Tweak: Improvements to bulk site selection
+* Tweak: Renamed column in site listing from "Multisite" to "Subsites"
+* Tweak: Site users are sorted by roles then login
+* Tweak: Lazy load screenshot thumbnails
+* Tweak: Improvements to file diff color highlight (Thanks @dustinleer)
+
 = 0.8.0: October 21 2019
 * New: Composer psr-4 autoloading
 * New: Historical captures feature
