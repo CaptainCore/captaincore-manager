@@ -2552,7 +2552,7 @@ if ( $role_check ) {
 					:headers="[
 						{ text: '', width: 30, value: 'environments', filter: siteFilters },
 						{ text: 'Name', align: 'left', sortable: true, value: 'name' },
-						{ text: 'Multisite', value: 'subsite_count', width: 104 },
+						{ text: 'Subsites', value: 'subsite_count', width: 104 },
 						{ text: 'WordPress', value: 'core', width: 114 },
 						{ text: 'Visits', value: 'visits', width: 98 },
 						{ text: 'Storage', value: 'storage_raw', width: 98 },
