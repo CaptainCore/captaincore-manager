@@ -46,6 +46,9 @@ if ( $role_check ) {
 			<v-btn text small @click.stop="view_jobs = true; $vuetify.goTo( '#sites' )" v-show="runningJobs">
 				Running {{ runningJobs }} jobs <v-progress-circular indeterminate color="white" class="ml-2" size="24"></v-progress-circular>
 			</v-btn>
+			<v-btn text small @click.stop="view_jobs = true; $vuetify.goTo( '#sites' )" v-show="! runningJobs && completedJobs">
+				Completed {{ completedJobs }} jobs
+			</v-btn>
 		</v-toolbar-items>
       </v-app-bar>
 	  <v-navigation-drawer v-model="drawer" app mobile-break-point="960" clipped v-if="route != 'login'">
@@ -4296,6 +4299,9 @@ new Vue({
 		},
 		runningJobs() {
 			return this.jobs.filter(job => job.status != 'done' && job.status != 'error' ).length;
+		},
+		completedJobs() {
+			return this.jobs.filter(job => job.status == 'done' || job.status == 'error' ).length;
 		},
 		dnsRecords() {
 			count = 0;
