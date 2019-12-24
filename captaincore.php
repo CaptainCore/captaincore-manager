@@ -2561,7 +2561,8 @@ function captaincore_login_func( WP_REST_Request $request ) {
 	if ( $post->command == "signIn" ) {
 		$credentials = [
 			"user_login"    => $post->login->user_login,
-			"user_password" => $post->login->user_password 
+			"user_password" => $post->login->user_password,
+			"remember"      => true,
 		];
 
 		$current_user = wp_signon( $credentials );
@@ -2627,7 +2628,8 @@ function captaincore_login_func( WP_REST_Request $request ) {
 			// Sign into new account
 			$credentials = [
 				"user_login"    => $record->email,
-				"user_password" => $password
+				"user_password" => $password,
+				"remember"      => true,
 			];
 	
 			$current_user = wp_signon( $credentials );
