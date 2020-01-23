@@ -2241,8 +2241,8 @@ if ( $role_check ) {
 							</div>
 						</td>
 						<td>
-							<v-card text width="100%" height="80px" id="streamOutput" class="transparent elevation-0" style="overflow: auto;display: flex;flex-direction: column-reverse;">
-								<small mv-1><div v-for="s in item.stream">{{ s }}</div></small>
+							<v-card text width="100%" height="80px" class="transparent elevation-0" style="overflow-y:scroll; transform: scaleY(-1);">
+								<small mv-1 style="display: block; transform: scaleY(-1);"><div v-for="s in item.stream">{{ s }}</div></small>
 							</v-card>
 						</td>
 						</tr>
