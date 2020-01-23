@@ -566,7 +566,7 @@ if ( $role_check ) {
 					<v-text-field label="Name" :value="new_recipe.title" @change.native="new_recipe.title = $event.target.value"></v-text-field>
 				</v-flex>
 				<v-flex xs12 pa-2>
-					<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="new_recipe.content" @change.native="new_recipe.content = $event.target.value"></v-textfield>
+					<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="new_recipe.content" @change.native="new_recipe.content = $event.target.value" spellcheck="false"></v-textfield>
 				</v-flex>
 				<v-flex xs12 pa-2>
 					<v-switch label="Public" v-model="new_recipe.public" persistent-hint hint="Public by default. Turning off will make the recipe only viewable and useable by you." :false-value="0" :true-value="1"></v-switch>
@@ -597,7 +597,7 @@ if ( $role_check ) {
 					<v-text-field label="Name" :value="dialog_cookbook.recipe.title" @change.native="dialog_cookbook.recipe.title = $event.target.value"></v-text-field>
 				</v-flex>
 				<v-flex xs12 pa-2>
-					<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="dialog_cookbook.recipe.content" @change.native="dialog_cookbook.recipe.content = $event.target.value"></v-textfield>
+					<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="dialog_cookbook.recipe.content" @change.native="dialog_cookbook.recipe.content = $event.target.value" spellcheck="false"></v-textfield>
 				</v-flex>
 				<v-flex xs12 pa-2>
 					<v-switch label="Public" v-model="dialog_cookbook.recipe.public" persistent-hint hint="Public by default. Turning off will make the recipe only viewable and useable by you." false-value="0" true-value="1"></v-switch>
@@ -770,7 +770,7 @@ if ( $role_check ) {
 				<v-text-field label="Name" :value="new_key.title" @change.native="new_key.title = $event.target.value"></v-text-field>
 			</v-flex>
 			<v-flex xs12 pa-2>
-				<v-textarea label="Private Key" persistent-hint hint="Contents of your private key file. Typically named something like 'id_rsa'. The corresponding public key will need to added to your host provider." auto-grow :value="new_key.key" @change.native="new_key.key = $event.target.value"></v-textfield>
+				<v-textarea label="Private Key" persistent-hint hint="Contents of your private key file. Typically named something like 'id_rsa'. The corresponding public key will need to added to your host provider." auto-grow :value="new_key.key" @change.native="new_key.key = $event.target.value" spellcheck="false"></v-textfield>
 			</v-flex>
 
 			<v-flex xs12 text-right pa-0 ma-0>
@@ -801,7 +801,7 @@ if ( $role_check ) {
 					<v-text-field label="Name" :value="dialog_key.key.title" @change.native="dialog_key.key.title = $event.target.value"></v-text-field>
 				</v-flex>
 				<v-flex xs12 pa-2>
-					<v-textarea label="Private Key" persistent-hint hint="Enter new private key to override existing key. The current key is not viewable." auto-grow :value="dialog_key.key.key" @change.native="dialog_key.key.key = $event.target.value"></v-textfield>
+					<v-textarea label="Private Key" persistent-hint hint="Enter new private key to override existing key. The current key is not viewable." auto-grow :value="dialog_key.key.key" @change.native="dialog_key.key.key = $event.target.value" spellcheck="false"></v-textfield>
 				</v-flex>
 				<v-flex xs12 text-right pa-0 ma-0>
 					<v-btn @click="deleteKey()" class="mr-2">
@@ -2400,6 +2400,7 @@ if ( $role_check ) {
 							hide-details
 							:value="custom_script" 
 							@change.native="custom_script = $event.target.value"
+							spellcheck="false"
 						></v-textarea>
 						<v-btn small color="primary" dark @click="runCustomCodeBulk()">Run Custom Code</v-btn>
 					</v-flex>
@@ -3108,6 +3109,7 @@ if ( $role_check ) {
 							hide-details
 							:value="custom_script" 
 							@change.native="custom_script = $event.target.value"
+							spellcheck="false"
 						></v-textarea>
                 <v-btn small color="primary" dark @click="runCustomCode(site_dialog.site.id)">Run Custom Code</v-btn>
 					</v-flex>
