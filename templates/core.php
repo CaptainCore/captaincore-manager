@@ -136,6 +136,14 @@ if ( $role_check ) {
             <v-list-item-title>SSH Keys</v-list-item-title>
           </v-list-item-content>
 		</v-list-item>
+		<v-list-item link v-if="footer.switch_to_link" :href="footer.switch_to_link">
+          <v-list-item-icon>
+            <v-icon>mdi-logout</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>{{ footer.switch_to_text }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
 	  	<v-list-item link @click="signOut()">
           <v-list-item-icon>
             <v-icon>mdi-logout</v-icon>
@@ -3913,6 +3921,7 @@ new Vue({
 		captaincore_version: "0.7",
 		captaincore_logo: "<?php echo get_field( 'business_logo', 'option' ); ?>",
 		captaincore_name: "<?php echo get_field( 'business_name', 'option' ); ?>",
+		footer: <?php echo captaincore_footer_content_extracted(); ?>,
 		drawer: null,
 		billing_link: "<?php echo get_field( 'billing_link', 'option' ); ?>",
 		home_link: "<?php echo home_url(); ?>",
