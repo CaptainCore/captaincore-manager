@@ -6866,8 +6866,28 @@ function captaincore_header_content_extracted() {
 	echo $output;
 }
 
-function captaincore_header_content_nonce_extracted() {
-	$head = captaincore_head_content();
-	preg_match_all('/wpApiSettings.+nonce":"(.+)"/', $head, $results );
-	return $results[1][0];
+function captaincore_footer_content() {
+    ob_start();
+    do_action( 'wp_footer' );
+    return ob_get_clean();
+}
+
+function captaincore_footer_content_extracted() {
+	$output = [];
+	$footer = captaincore_footer_content();
+	preg_match_all('/<p id="user_switching_switch_on"><a href="(.+?)">(.+)<\/a><\/p>/', $footer, $results );
+	if ( isset( $results ) && $results[1] ) {
+		foreach( $results[1] as $match ) {
+			$output[] = $match;
+		}
+	}
+	if ( isset( $results ) && $results[2] ) {
+		foreach( $results[2] as $match ) {
+			$output[] = $match;
+		}
+	}
+	return json_encode( [
+		"switch_to_link" => html_entity_decode( $output[0] ),
+		"switch_to_text" => $output[1]
+	] );
 }
