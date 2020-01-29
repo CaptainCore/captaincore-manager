@@ -4037,33 +4037,13 @@ function captaincore_ajax_action_callback() {
 	$remote_command = false;
 
 	if ( $cmd == 'mailgun' ) {
-
-		$mailgun = get_field( "mailgun", $post_id );
-		$mailgun_events = mailgun_events( $mailgun );
-		$response = [];
-
-		if ( $mailgun_events->paging ) {
-			// TO DO add paging
-			// print_r($mailgun_events->paging);
-		}
-		foreach ( $mailgun_events->items as $mailgun_event ) {
-
-			if ( $mailgun_event->envelope ) {
-				$mailgun_description = $mailgun_event->event . ': ' . $mailgun_event->envelope->sender . ' -> ' . $mailgun_event->recipient;
+		$mailgun  = $fetch->mailgun;
+		if ( isset( $_POST['page'] ) ) {
+			$response = mailgun_events( $mailgun, $_POST['page'] );
 			} else {
-				$mailgun_description = $mailgun_event->event . ': ' . $mailgun_event->recipient;
+			$response = mailgun_events( $mailgun );
 			}
-
-			$response[] = array(
-				'timestamp' => date( 'M jS Y g:ia', $mailgun_event->timestamp ),
-				'description' => $mailgun_description,
-				'event' => $mailgun_event,
-			);
-
-		}
-
 		echo json_encode( $response );
-
 	}
 
 	if ( $cmd == 'deleteDomain' ) {

@@ -217,22 +217,61 @@ function mailgun_verify( $domain ) {
 
 }
 
-function mailgun_events( $mailgun_subdomain ) {
+function mailgun_events( $mailgun_subdomain, $page = "" ) {
 
 	// Prep to handle remote responses
-	$responses = '';
+	$response             = (object) [];
+	$response->items      = [];
+	$response->pagination = [];
 
 	// Load Mailgun API client
-	include_once ABSPATH . '/vendor/autoload.php';
-	$mgClient = new \Mailgun\Mailgun( MAILGUN_API_KEY );
+	$mailgun = \Mailgun\Mailgun::create( MAILGUN_API_KEY );
 
-	$queryString = array(
+	$queryString = [
+		'event' => 'accepted OR rejected OR delivered OR failed OR complained',
 		'limit' => 300,
-	);
+	];
 
-	// Fetch all domains from Mailgun
-	$results = $mgClient->get( "$mailgun_subdomain/events", $queryString );
+	if ( $page != "" ) {
+		// Fetch all domains from Mailgun
+		$results = wp_remote_get( $page, [ 
+			"headers" => [ "Authorization" => "Basic " . base64_encode ( "api:" . MAILGUN_API_KEY ) ],
+		] );
+		$results = json_decode( $results['body'] );
+		foreach ( $results->items as $item ) {
+			$description = $item->recipient;
+			if ( $item->message->headers->from ) {
+				$from        = $item->message->headers->from;
+				$description = "{$from} -> {$description}";
+			}
+			$response->items[] = [
+				"timestamp"   => $item->timestamp,
+				"event"       => $item->event,
+				"description" => $description,
+				"message"     => $item->message,
+			];
+			$response->pagination["next"]     = $results->paging->next;
+		}
+		return $response;
+	}
 
-	return $results->http_response_body;
+	$results = $mailgun->events()->get( "$mailgun_subdomain", $queryString );
+	foreach ( $results->getItems() as $item ) {
+		$description = $item->getRecipient();
+		if ( $item->getMessage()["headers"]["from"] ) {
+			$from        = $item->getMessage()["headers"]["from"];
+			$description = "{$from} -> {$description}";
+		}
+
+		$response->items[] = [
+			"timestamp"   => $item->getTimestamp(),
+			"event"       => $item->getEvent(),
+			"description" => $description,
+			"message"     => $item->getMessage(),
+		];
+	}
+	$response->pagination["next"]     = $results->getNextUrl();
+
+	return $response;
 
 }
