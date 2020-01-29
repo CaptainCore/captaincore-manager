@@ -97,6 +97,15 @@ if ( $role_check ) {
             <v-list-item-title>Sharing</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
+		<v-list-item link href="/account/users" @click.prevent="goto( '/account/users' )" v-show="role == 'administrator'">
+          <v-list-item-icon>
+            <v-icon>mdi-account-multiple</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>Users</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+		</v-list-item-group>
         <v-list-item link :href="billing_link" target="_blank" v-show="billing_link">
           <v-list-item-icon>
             <v-icon>mdi-currency-usd</v-icon>
@@ -3816,6 +3825,42 @@ if ( $role_check ) {
 				</v-container>
 				</v-card-text>
 			</v-card>
+			<v-card tile v-show="route == 'users'" flat>
+				<v-toolbar color="grey lighten-4" light flat>
+					<v-toolbar-title>Listing {{ users.length }} users</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+					</v-toolbar-items>
+				</v-toolbar>
+				<v-card-text>
+				<v-container>
+					<v-row class="ma-0 pa-0">
+						<v-col class="ma-0 pa-0"></v-col>
+						<v-col class="ma-0 pa-0"sm="12" md="4">
+						<v-text-field
+							@input="searchAllUsers"
+							ref="user_search"
+							append-icon="search"
+							label="Search"
+							single-line
+							clearable
+							hide-details
+						></v-text-field>
+						</v-col>
+					</v-row>
+					<v-data-table
+						:headers="[{ text: 'Name', value: 'name' },{ text: 'Username', value: 'username' },,{ text: 'Email', value: 'email' },{ text: '', value: 'user_id', align: 'end', sortable: false }]"
+						:items="users"
+						:search="user_search"
+						:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
+					>
+					<template v-slot:item.user_id="{ item }">
+						<v-btn text color="primary" @click="editUser( item.user_id )">Edit User</v-btn>
+					</template>
+					</v-data-table>
+				</v-container>
+				</v-card-text>
+			</v-card>
 			<v-dialog v-if="route == 'invite'" value="true" scrollable persistance width="500" height="300">
 			<v-overlay :value="true" v-if="typeof new_invite.account.name == 'undefined'">
 				<v-progress-circular indeterminate size="64"></v-progress-circular>
@@ -4125,6 +4170,8 @@ new Vue({
 		toggle_site_sort: null,
 		toggle_site_counter: { key: "", count: 0 },
 		sites: [],
+		users: [],
+		user_search: "",
 		header_themes: [
 			{ text: 'Name', value: 'title' },
 			{ text: 'Slug', value: 'name' },
@@ -4353,6 +4400,10 @@ new Vue({
 					this.loading_page = true;
 				}
 				this.fetchDomains()
+			}
+			if ( this.route == "users" ) {
+				this.selected_nav = 5
+				this.fetchAllUsers();
 			}
 			if ( this.route == "cookbook" ) {
 				this.loading_page = false;
@@ -5008,6 +5059,9 @@ new Vue({
 			if ( this.sites.length == 0 ) {
 				this.fetchSites()
 			}
+			if ( this.role == 'administrator' && this.users.length == 0 ) {
+				this.fetchAllUsers()
+			}
 		},
 		fetchDomains() {
 			axios.get(
@@ -5018,6 +5072,16 @@ new Vue({
 					this.domains = response.data;
 					this.loading_page = false;
 					setTimeout(this.fetchMissing, 4000)
+				});
+		},
+		fetchAllUsers() {
+			axios.get(
+				'/wp-json/captaincore/v1/users', {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					this.users = response.data;
+					this.loading_page = false;
 				});
 		},
 		fetchKeys() {
