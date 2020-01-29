@@ -1,0 +1,380 @@
+<?php
+
+namespace CaptainCore;
+
+class AccountCPT {
+
+    protected $account_id = "";
+
+    public function __construct( $account_id = "", $admin = false ) {
+
+        if ( captaincore_verify_permissions_account( $account_id ) ) {
+            $this->account_id = $account_id;
+        }
+
+        if ( $admin ) {
+            $this->account_id = $account_id;
+        }
+
+    }
+
+    public function invite( $email ) {
+        if ( email_exists( $email ) ) {
+            $user = get_user_by( 'email', $email );
+            // Add account ID to current user
+            $accounts = get_field( 'partner', "user_{$user->ID}" );
+            $accounts[] = $this->account_id;
+            update_field( 'partner', array_unique( $accounts ), "user_{$user->ID}" );
+            $this->calculate_totals();
+
+            return [ "message" => "Account already exists. Adding permissions for existing user." ];
+        }
+
+        $time_now   = date("Y-m-d H:i:s");
+        $token      = bin2hex( openssl_random_pseudo_bytes( 24 ) );
+        $new_invite = [
+            'email'          => $email,
+            'account_id'     => $this->account_id,
+            'created_at'     => $time_now,
+            'updated_at'     => $time_now,
+            'token'          => $token
+        ];
+        $invite = new Invites();
+        $invite_id = $invite->insert( $new_invite );
+
+        // Send out invite email
+        $invite_url = home_url() . "/account/?account={$this->account_id}&token={$token}";
+        $account_name = get_the_title( $this->account_id );
+        $subject = "Hosting account invite";
+        $body    = "You've been granted access to account '$account_name'. Click here to accept:<br /><br /><a href=\"{$invite_url}\">$invite_url</a>";
+        $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
+
+        wp_mail( $email, $subject, $body, $headers );
+
+        return [ "message" => "Invite has been sent." ];
+    }
+
+    public function account() {
+        
+        return [
+            "id"            => $this->account_id,
+            "name"          => html_entity_decode( get_the_title( $this->account_id ) ),
+            'website_count' => get_field( "website_count", $this->account_id ),
+            'user_count'    => get_field( "user_count", $this->account_id ),
+            'domain_count'  => count( get_field( "domains", $this->account_id ) ),
+        ];
+    }
+
+    public function invites() {
+        $invites = new Invites();
+        return $invites->where( [ "account_id" => $this->account_id, "accepted_at" => "0000-00-00 00:00:00" ] );
+    }
+
+    public function domains() {
+
+        $all_domains = [];
+        $customers   = [];
+        $partner     = [ $this->account_id ];
+
+        $websites_for_partner = get_posts([
+            'post_type'      => 'captcore_website',
+            'posts_per_page' => '-1',
+            'order'          => 'asc',
+            'orderby'        => 'title',
+            'fields'         => 'ids',
+            'meta_query'     => [
+                'relation' => 'AND',
+                [
+                    'key'     => 'partner', // name of custom field
+                    'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+                    'compare' => 'LIKE',
+                ],
+            ],
+        ]);
+
+        foreach ( $websites_for_partner as $website ) {
+            $customers[] = get_field( 'customer', $website );
+        }
+
+        if ( count( $customers ) == 0 and is_array( $partner ) ) {
+            foreach ( $partner as $partner_id ) {
+                $websites_for_partner = get_posts([
+                    'post_type'      => 'captcore_website',
+                    'posts_per_page' => '-1',
+                    'order'          => 'asc',
+                    'orderby'        => 'title',
+                    'fields'         => 'ids',
+                    'meta_query'     => [
+                        'relation' => 'AND',
+                        [
+                            'key'     => 'customer', // name of custom field
+                            'value'   => '"' . $partner_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+                            'compare' => 'LIKE',
+                        ],
+                    ],
+                ]);
+                foreach ( $websites_for_partner as $website ) {
+                    $customers[] = get_field( 'customer', $website );
+                }
+            }
+        }
+
+        foreach ( $customers as $customer ) :
+
+            if ( is_array( $customer ) ) {
+                $customer = $customer[0];
+            }
+
+            $domains = get_field( 'domains', $customer );
+            if ( $domains ) {
+                foreach ( $domains as $domain ) :
+                    $domain_name = get_the_title( $domain );
+                    $domain_id = get_field( "domain_id", $domain );
+                    if ( $domain_name ) {
+                        $all_domains[ $domain_name ] = [ "name" => $domain_name, "id" => $domain_id ];
+                    }
+                endforeach;
+            }
+
+        endforeach;
+
+        foreach ( $partner as $customer ) :
+            $domains = get_field( 'domains', $customer );
+            if ( $domains ) {
+                foreach ( $domains as $domain ) :
+                    $domain_name = get_the_title( $domain );
+                    $domain_id = get_field( "domain_id", $domain );
+                    if ( $domain_name ) {
+                        $all_domains[ $domain_name ] = [ "name" => $domain_name, "id" => $domain_id ];
+                    }
+                endforeach;
+            }
+        endforeach;
+
+        usort( $all_domains, "sort_by_name" );
+        return $all_domains;
+
+    }
+
+    public function sites() {
+
+        $results = [];
+        $websites = get_posts([
+            'post_type'      => 'captcore_website',
+            'posts_per_page' => '-1',
+            'meta_query'     => [
+                [
+                    'key'     => 'customer', // name of custom field
+                    'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+                    'compare' => 'LIKE',
+                ],
+            ],
+        ]);
+        if ( $websites ) {
+            foreach ( $websites as $website ) {
+                if ( get_field( 'status', $website->ID ) == 'active' ) {
+                    $results[] = [
+                        "name"    => get_the_title( $website->ID ), 
+                        "site_id" => $website->ID,
+                    ];
+                }
+            }
+        }
+        $websites = get_posts([
+            'post_type'      => 'captcore_website',
+            'posts_per_page' => '-1',
+            'meta_query'     => [
+                [
+                    'key'     => 'partner', // name of custom field
+                    'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+                    'compare' => 'LIKE',
+                ],
+            ],
+        ]);
+        if ( $websites ) {
+            foreach ( $websites as $website ) {
+                if ( get_field( 'status', $website->ID ) == 'active' ) {
+                    if ( in_array( $website->ID, array_column( $results, "site_id" ) ) ) {
+                        continue;
+                    }
+                    $results[] = [ 
+                        "name"    => get_the_title( $website->ID ), 
+                        "site_id" => $website->ID,
+                    ];
+                }
+            }
+        }
+
+        usort( $results, "sort_by_name" );
+
+        return $results;
+
+    }
+
+    public function users() {
+
+        $args = [
+            'order'      => 'ASC',
+            'orderby'    => 'display_name',
+            'meta_query' => [
+                [
+                    'key'     => 'partner',
+                    'value'   => '"' . $this->account_id . '"',
+                    'compare' => 'LIKE'
+                ],
+            ]
+        ];
+
+        // Create the WP_User_Query object
+        $wp_user_query = new \WP_User_Query($args);
+        $users = $wp_user_query->get_results();
+        $results = [];
+
+        foreach( $users as $user ) {
+            $results[] = [
+                "user_id" => $user->ID,
+                "name"    => $user->display_name, 
+                "email"   => $user->user_email,
+                "level"   => ""
+            ];
+        }
+
+        return $results;
+
+    }
+
+    public function calculate_totals() {
+
+        // Calculate active website count
+        $websites_by_customer = get_posts([
+            'post_type'      => 'captcore_website',
+            'fields'         => 'ids',
+            'posts_per_page' => '-1',
+            'meta_query'     => [
+                'relation' => 'AND',
+                [
+                    'key'     => 'customer', // name of custom field
+                    'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+                    'compare' => 'LIKE',
+                ],
+                [
+                    'key'     => 'status',
+                    'value'   => 'active',
+                    'compare' => 'LIKE',
+                ],
+            ],
+        ]);
+        $websites_by_partners = get_posts([
+            'post_type'      => 'captcore_website',
+            'fields'         => 'ids',
+            'posts_per_page' => '-1',
+            'meta_query'     => [
+                'relation' => 'AND',
+                [
+                    'key'     => 'partner', // name of custom field
+                    'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
+                    'compare' => 'LIKE',
+                ],
+                [
+                    'key'     => 'status',
+                    'value'   => 'active',
+                    'compare' => 'LIKE',
+                ],
+            ],
+        ]);
+        $websites = array_unique(array_merge($websites_by_customer, $websites_by_partners));
+        $args = [
+            'order'      => 'ASC',
+            'orderby'    => 'display_name',
+            'meta_query' => [
+                [
+                    'key'     => 'partner',
+                    'value'   => '"' . $this->account_id . '"',
+                    'compare' => 'LIKE'
+                ],
+            ]
+        ];
+        
+        // Create the WP_User_Query object
+        $wp_user_query = new \WP_User_Query($args);
+        $users = $wp_user_query->get_results();
+        update_field( 'website_count', count( $websites ), $this->account_id );
+        update_field( 'user_count', count( $users ), $this->account_id );
+    }
+
+    public function fetch() {
+        $record = [
+            "users"   => $this->users(),
+            "invites" => $this->invites(),
+            "domains" => $this->domains(),
+            "sites"   => $this->sites(),
+            "account" => $this->account(),
+        ];
+        return $record;
+    }
+
+    public function get_raw() {
+        $email    = get_field( 'preloaded_email', $this->account_id );
+        $timezone = get_field( 'default_timezone', $this->account_id );
+        $users    = get_field( 'preloaded_users', $this->account_id );
+        $recipes  = get_field( 'default_recipes', $this->account_id );
+        $status   = get_field( 'status', $this->account_id );
+        $sites    = get_field( 'sites', $this->account_id );
+        $addons   = get_field( 'addons', $this->account_id );
+        $plan     = get_field( 'hosting_plan', $this->account_id );
+        $price    = get_field( 'price', $this->account_id );
+        $storage_limit = get_field( 'storage_limit', $this->account_id );
+        $visits_limit  = get_field( 'visits_limit', $this->account_id );
+        $sites_limit   = get_field( 'sites_limit', $this->account_id );
+        $storage = get_field( 'storage', $this->account_id );
+        $visits  = get_field( 'visits', $this->account_id );
+        $sites   = get_field( 'sites', $this->account_id );
+        if ( $status != "active" ) {
+            $status = "inactive";
+        }
+        $site_count   = get_field( "website_count", $this->account_id );
+        $user_count   = get_field( "user_count", $this->account_id );
+        $domain_count = "";
+        $domains = get_field( "domains", $this->account_id );
+        if ( is_array( $domains ) ) {
+            $domain_count = count( $domains );
+        }
+        if ( ! is_array( $domains ) && $domains != "" ) {
+            $domain_count = 1;
+        }
+        
+        $account = [
+            "created_at" => get_the_date( 'Y-m-d H:i:s', $this->account_id ),
+            "name"       => get_the_title( $this->account_id ),
+            "defaults"   => json_encode( [
+                "email"    => isset($email) ? $email : '',
+                "timezone" => isset($timezone) ? $timezone : '',
+                "recipes"  => isset($recipes) ? $recipes : [],
+                "users"    => isset($users) ? $users : [],
+            ] ),
+            "plan"       => json_encode( [
+                "name"   => isset($plan) ? $plan : "",
+                "addons" => isset($addons) ? $addons : [],
+                "price"  => isset($price) ? $price : [],
+                "limits" => [
+                    "storage" => isset($storage_limit) ? $storage_limit : "",
+                    "visits"  => isset($visits_limit) ? $visits_limit : "",
+                    "sites"   => isset($sites_limit) ? $sites_limit : "",
+                ],
+                "usage"         => [
+                    "storage" => isset($storage) ? $storage : "",
+                    "visits"  => isset($visits) ? $visits : "",
+                    "sites"   => isset($sites) ? $sites : "",
+                ]
+            ] ),
+            "metrics"  => json_encode( [ 
+                'sites'   => isset($site_count) ? $site_count : "",
+                'users'   => isset($user_count) ? $user_count : "",
+                'domains' => isset($domain_count) ? $domain_count : "",
+            ] ),
+            "status"   =>  $status,
+        ];
+        return (object) $account;
+    }
+
+}

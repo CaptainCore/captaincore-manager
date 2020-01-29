@@ -2,144 +2,139 @@
 
 namespace CaptainCore;
 
-class Sites {
+class Sites extends DB {
 
-    protected $sites = [];
+	static $primary_key = 'site_id';
+
+    protected $sites     = [];
+    protected $sites_all = [];
 
     public function __construct( $sites = [] ) {
-        $user       = wp_get_current_user();
-        $role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
-        $partner    = get_field( 'partner', 'user_' . get_current_user_id() );
+        $user        = new User;
+        $account_ids = $user->accounts();
 
         // New array to collect IDs
         $site_ids = [];
 
         // Bail if not assigned a role
-        if ( ! $role_check ) {
+        if ( ! $user->role_check() ) {
             return 'Error: Please log in.';
         }
 
         // Administrators return all sites
-        if ( $partner && $role_check && in_array( 'administrator', $user->roles ) ) {
-            $sites = get_posts(
-                array(
-                    'order'          => 'asc',
-                    'orderby'        => 'title',
-                    'posts_per_page' => '-1',
-                    'post_type'      => 'captcore_website',
-                    'meta_query'     => array(
-                        'relation' => 'AND',
-                        array(
-                            'key'     => 'status',
-                            'value'   => 'closed',
-                            'compare' => '!=',
-                        ),
-                    ),
-                )
-            );
-
-            $this->sites = $sites;
+        if ( $user->is_admin() ) {
+            $this->sites     = self::select();
+            $this->sites_all = self::select_all();
             return;
         }
 
-        // Bail if no partner set.
-        if ( ! is_array( $partner ) ) {
+        // Bail if no accounts set.
+        if ( ! is_array( $account_ids ) ) {
             return;
         }
 
-        // Loop through each partner assigned to current user
-        foreach ( $partner as $partner_id ) {
-
-            // Load websites assigned to partner
-            $arguments = array(
-                'fields'         => 'ids',
-                'post_type'      => 'captcore_website',
-                'posts_per_page' => '-1',
-                'meta_query'     => array(
-                    'relation' => 'AND',
-                    array(
-                        'key'     => 'partner',
-                        'value'   => '"' . $partner_id . '"',
-                        'compare' => 'LIKE',
-                    ),
-                    array(
-                        'key'     => 'status',
-                        'value'   => 'closed',
-                        'compare' => '!=',
-                    ),
-                ),
-            );
-
-            $sites = new \WP_Query( $arguments );
-
-            foreach ( $sites->posts as $site_id ) {
-                if ( ! in_array( $site_id, $site_ids ) ) {
-                    $site_ids[] = $site_id;
-                }
+        // Loop through each account for current user and fetch SiteIDs
+        foreach ( $account_ids as $account_id ) {
+            // Fetch sites assigned as owners
+			$site_ids = self::select( 'site_id', "account_id", $account_id );
+			foreach ( $site_ids as $site_id ) {
+                $this->sites[]     = $site_id;
+                $this->sites_all[] = $site_id;
             }
-
-            // Load websites assigned to partner
-            $arguments = array(
-                'fields'         => 'ids',
-                'post_type'      => 'captcore_website',
-                'posts_per_page' => '-1',
-                'meta_query'     => array(
-                    'relation' => 'AND',
-                    array(
-                        'key'     => 'customer',
-                        'value'   => '"' . $partner_id . '"',
-                        'compare' => 'LIKE',
-                    ),
-                    array(
-                        'key'     => 'status',
-                        'value'   => 'closed',
-                        'compare' => '!=',
-                    ),
-                ),
-            );
-
-            $sites = new \WP_Query( $arguments );
-
-            foreach ( $sites->posts as $site_id ) {
-                if ( ! in_array( $site_id, $site_ids ) ) {
-                    $site_ids[] = $site_id;
-                }
+            // Fetch sites assigned as shared access
+            $site_ids = ( new AccountSite )->select_active_sites( 'site_id', [ "account_id" => $account_id ] );
+			foreach ( $site_ids as $site_id ) {
+                $this->sites[]     = $site_id;
+                $this->sites_all[] = $site_id;
             }
         }
 
-        // Bail if no site ids found
-        if ( count( $site_ids ) == 0 ) {
-            return;
-        }
-
-        $sites       = get_posts(
-            array(
-                'order'          => 'asc',
-                'orderby'        => 'title',
-                'posts_per_page' => '-1',
-                'post_type'      => 'captcore_website',
-                'include'        => $site_ids,
-                'meta_query'     => array(
-                    'relation' => 'AND',
-                    array(
-                        'key'     => 'status',
-                        'value'   => 'closed',
-                        'compare' => '!=',
-                    ),
-                ),
-            )
-        );
-        $this->sites = $sites;
+        // Remove duplicate siteIDs
+        $this->sites     = array_unique($this->sites);
+        $this->sites_all = array_unique($this->sites_all);
+		
         return;
 
     }
+    
+    public function site_ids() {
+        return $this->sites;
+    }
 
-    public function all() {
-        $sites = [];
-        foreach( $this->sites as $site ) {
-            $sites[] = ( new Site( $site ) )->get();
+    public function site_ids_all() {
+        return $this->sites_all;
+    }
+
+    public function verify( $site_id = "" ) {
+        // Check multiple site ids
+        if ( is_array( $site_id ) ) {
+            $valid = true;
+            foreach ($site_id as $id) {
+                if ( in_array( $id, $this->sites_all ) ) {
+                    continue;
+                }
+                $valid = false;
+            }
+            return $valid;
         }
+        // Check individual site id
+        if ( in_array( $site_id, $this->sites_all ) ) {
+            return true;
+        }
+        return false;
+    }
+	
+	public function list() {
+        $upload_dir   = wp_upload_dir();
+		$sites        = [];
+        foreach( $this->sites as $site_id ) {
+            $site    = self::get( $site_id );
+            $details = json_decode( $site->details );
+            $site->environments = ( new Site( $site_id ) )->environments_bare();
+            $site->environment_selected = "Production";
+            $site->usage_breakdown = [];
+            $site->pagination   = [ 'sortBy' => 'roles' ];
+            $site->users        = [];
+            $site->update_logs  = [];
+            $site->timeline     = [];
+            $site->shared_with  = [];
+            $site->account      = ( new Site( $site_id ) )->account();
+            $site->core         = $details->core;
+            $site->key          = $details->key;
+            $site->subsites     = $details->subsites;
+            $site->storage      = $details->storage;
+            $site->storage_raw  = $details->storage_raw;
+            $site->visits       = $details->visits;
+            $site->mailgun      = $details->mailgun;
+            $site->outdated     = false;
+            $site->screenshots  = [];
+            if ( $site->screenshot == true ) {
+                $site->screenshots = [
+                    'small' => $upload_dir['baseurl'] . "/screenshots/{$site->site}_{$site->site_id}/production/screenshot-100.png",
+                    'large' => $upload_dir['baseurl'] . "/screenshots/{$site->site}_{$site->site_id}/production/screenshot-800.png"
+                ];
+            }
+            
+            // Mark site as outdated if sync older then 48 hours
+            if ( strtotime( $site->updated_at ) <= strtotime( "-48 hours" ) ) {
+                $site->outdated = true;
+            }
+            unset( $site->token );
+            unset( $site->details );
+            unset( $site->site_usage );
+            $sites[] = $site;
+        }
+        usort($sites, function($a, $b) { return strcmp($a->name, $b->name); });
         return $sites;
+    }
+
+    public function list_details() {
+		$details = [];
+        foreach( $this->sites as $site_id ) {
+            $site      = self::get( $site_id );
+            $details[] = json_decode( $site->details );
+        }
+        return $details;
     }
 
 }
