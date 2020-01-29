@@ -20,6 +20,10 @@ if ( $role_check ) {
 	$business_link = "";
 }
 ?>
+<?php if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
+<link rel='stylesheet' id='advanced-responsive-video-embedder-css' href='/wp-content/plugins/advanced-responsive-video-embedder/public/arve.min.css' type='text/css' media='all' />
+<link rel='stylesheet' id='arve-pro-css' href='/wp-content/plugins/arve-pro/dist/app.css' type='text/css' media='all' />
+<?php } ?>
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/vuetify@2.2.5/dist/vuetify.min.css" rel="stylesheet">
@@ -8324,5 +8328,10 @@ new Vue({
 });
 
 </script>
+<?php if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.4.1/dist/jquery.min.js"></script>
+<script type='text/javascript' src='/wp-content/plugins/arve-pro/dist/app.js'></script>
+<script type='text/javascript' src='/wp-content/plugins/advanced-responsive-video-embedder/public/arve.min.js'></script>
+<?php } ?>
 </body>
 </html>
