@@ -2,7 +2,7 @@
 
 namespace CaptainCore;
 
-class Update_Logs extends DB {
+class UpdateLogs extends DB {
 
 	static $primary_key = 'log_id';
 

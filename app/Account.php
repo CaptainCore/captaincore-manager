@@ -8,7 +8,7 @@ class Account {
 
     public function __construct( $account_id = "", $admin = false ) {
 
-        if ( captaincore_verify_permissions_account( $account_id ) ) {
+        if ( ( new User )->verify_accounts( [ $account_id ] ) ) {
             $this->account_id = $account_id;
         }
 
@@ -18,15 +18,187 @@ class Account {
 
     }
 
-    public function invite( $email ) {
-        if ( email_exists( $email ) ) {
-            $user = get_user_by( 'email', $email );
-            // Add account ID to current user
-            $accounts = get_field( 'partner', "user_{$user->ID}" );
-            $accounts[] = $this->account_id;
-            update_field( 'partner', array_unique( $accounts ), "user_{$user->ID}" );
-            $this->calculate_totals();
+    public function get() {
+        $account = (new Accounts)->get( $this->account_id );
+        $account->defaults = json_decode( $account->defaults );
+        $account->plan     = json_decode( $account->plan );
+        $account->metrics  = json_decode( $account->metrics );
+        return $account;
+    }
 
+    public function assign_sites( $site_ids = [] ) {
+
+        $accountsite = new AccountSite();
+
+        // Fetch current records
+        $current_site_ids = array_column ( $accountsite->where( [ "account_id" => $this->account_id ] ), "site_id" );
+
+        // Removed current records not found new records.
+        foreach ( array_diff( $current_site_ids, $site_ids ) as $site_id ) {
+            $records = $accountsite->where( [ "account_id" => $this->account_id, "site_id" => $site_id ] );
+            foreach ( $records as $record ) {
+                $accountsite->delete( $record->account_site_id );
+            }
+        }
+        
+        // Add new records
+        foreach ( array_diff( $site_ids, $current_site_ids ) as $site_id ) {
+            $accountsite->insert( [ "account_id" => $this->account_id, "site_id" => $site_id ] );
+        }
+    }
+
+    public function fetch() {
+        if ( $this->account_id == "" ) {
+            return [];
+        }
+        $record = [
+            "account" => $this->account(),
+            "invites" => $this->invites(),
+            "users"   => $this->users(),
+            "domains" => $this->domains(),
+            "sites"   => $this->sites(),
+        ];
+        return $record;
+    }
+
+    public function account() {
+        $account          = (new Accounts)->get( $this->account_id );
+        return [
+            "account_id" => $this->account_id,
+            "name"       => html_entity_decode( $account->name ),
+            "metrics"    => json_decode( $account->metrics ),
+        ];
+    }
+
+    public function invites() {
+        $invites = new Invites();
+        return $invites->where( [ "account_id" => $this->account_id, "accepted_at" => "0000-00-00 00:00:00" ] );
+    }
+
+    public function domains() {
+        $accountdomain = new AccountDomain;
+        $account_ids   = self::shared_with();
+        $account_ids[] = $this->account_id;
+        $results       = $accountdomain->fetch_domains( [ "account_id" => $account_ids ] );
+        return $results;
+    }
+
+    public function sites() {
+        // Fetch sites assigned as owners
+        $all_site_ids = [];
+        $site_ids = array_column( ( new Sites )->where( [ "account_id" => $this->account_id, "status" => "active" ] ), "site_id" );
+        foreach ( $site_ids as $site_id ) {
+            $all_site_ids[] = $site_id;
+        }
+        // Fetch sites assigned as shared access
+        $site_ids = ( new AccountSite )->select_active_sites( 'site_id', [ "account_id" => $this->account_id ] );
+        foreach ( $site_ids as $site_id ) {
+            $all_site_ids[] = $site_id;
+        }
+
+        $results  = [];
+        $all_site_ids = array_unique($all_site_ids);
+
+        foreach ($all_site_ids as $site_id) {
+            $site      = ( new Sites )->get( $site_id );
+            $results[] = [
+                "site_id" => $site_id,
+                "name"    => $site->name,
+            ];
+        }
+        usort( $results, "sort_by_name" );
+        return $results;
+    }
+
+    public function shared_with() {
+        // Fetch sites assigned as owners
+        $all_site_ids = [];
+        $site_ids = array_column( ( new Sites )->where( [ "account_id" => $this->account_id, "status" => "active" ] ), "site_id" );
+        foreach ( $site_ids as $site_id ) {
+            $all_site_ids[] = $site_id;
+        }
+        // Fetch sites assigned as shared access
+        $site_ids = ( new AccountSite )->select_active_sites( 'site_id', [ "account_id" => $this->account_id ] );
+        foreach ( $site_ids as $site_id ) {
+            $all_site_ids[] = $site_id;
+        }
+
+        $all_site_ids = array_unique($all_site_ids);
+        $account_ids  = [];
+
+        foreach ($all_site_ids as $site_id) {
+            $account_ids[] = ( new Sites )->get( $site_id )->account_id;
+        }
+        return array_unique( $account_ids );
+    }
+
+    public function users() {
+        $users   = array_column( ( new AccountUser )->where( [ "account_id" => $this->account_id ] ), "user_id" );
+        $results = [];
+        foreach( $users as $user_id ) {
+            $user      = get_userdata( $user_id );
+            $results[] = [
+                "user_id" => $user->ID,
+                "name"    => $user->display_name, 
+                "email"   => $user->user_email,
+                "level"   => ""
+            ];
+        }
+        return $results;
+    }
+
+    public function usage_breakdown() {
+        $account = self::get();
+        $sites   = self::sites();
+
+        $hosting_plan = $account->plan->name;
+		$addons       = $account->plan->usage->addons;
+		$storage      = $account->plan->usage->storage;
+		$visits       = $account->plan->usage->visits;
+		$visits_plan_limit = $account->plan->limits->visits;
+		$storage_limit     = $account->plan->limits->storage;
+        $sites_limit       = $account->plan->limits->sites;
+
+        if ( isset( $visits ) ) {
+			$visits_percent = round( $visits / $visits_plan_limit * 100, 0 );
+		}
+        
+        $storage_gbs = round( $storage / 1024 / 1024 / 1024, 1 );
+		$storage_percent = round( $storage_gbs / $storage_limit * 100, 0 );
+
+		$result_sites = [];
+
+        foreach ( $sites as $item ) {
+            $site                         = ( new Site( $item['site_id'] ))->get();
+            $website_for_customer_storage = $site->storage_raw;
+            $website_for_customer_visits  = $site->visits;
+            $result_sites[] = [
+                'name'    => $site->name,
+                'storage' => round( $website_for_customer_storage / 1024 / 1024 / 1024, 1 ),
+                'visits'  => $website_for_customer_visits
+            ];
+        }
+
+        return [ 
+            'sites' => $result_sites,
+            'total' => [
+                $storage_percent . "% storage<br /><strong>" . $storage_gbs ."GB/". $storage_limit ."GB</strong>",
+                $visits_percent . "% traffic<br /><strong>" . number_format( $visits ) . "</strong> <small>Yearly Estimate</small>"
+            ]
+        ];
+        
+    }
+
+    public function invite( $email ) {
+
+        // Add account ID to current user
+        if ( email_exists( $email ) ) {
+            $user        = get_user_by( 'email', $email );
+            $accountuser = new AccountUser();
+            $accounts    = array_column( $accountuser->where( [ "user_id" => $user->ID ] ), "account_id" );
+            $accounts[]  = $this->account_id;
+            ( new User( $user->ID, true ) )->assign_accounts( array_unique( $accounts ) );
+            $this->calculate_totals();
             return [ "message" => "Account already exists. Adding permissions for existing user." ];
         }
 
@@ -39,7 +211,7 @@ class Account {
             'updated_at'     => $time_now,
             'token'          => $token
         ];
-        $invite = new Invites();
+        $invite    = new Invites();
         $invite_id = $invite->insert( $new_invite );
 
         // Send out invite email
@@ -54,263 +226,13 @@ class Account {
         return [ "message" => "Invite has been sent." ];
     }
 
-    public function account() {
-        
-        return [
-            "id"            => $this->account_id,
-            "name"          => html_entity_decode( get_the_title( $this->account_id ) ),
-            'website_count' => get_field( "website_count", $this->account_id ),
-            'user_count'    => get_field( "user_count", $this->account_id ),
-            'domain_count'  => count( get_field( "domains", $this->account_id ) ),
-        ];
-    }
-
-    public function invites() {
-        $invites = new Invites();
-        return $invites->where( [ "account_id" => $this->account_id, "accepted_at" => "0000-00-00 00:00:00" ] );
-    }
-
-    public function domains() {
-
-        $all_domains = [];
-        $customers   = [];
-        $partner     = [ $this->account_id ];
-
-        $websites_for_partner = get_posts([
-            'post_type'      => 'captcore_website',
-            'posts_per_page' => '-1',
-            'order'          => 'asc',
-            'orderby'        => 'title',
-            'fields'         => 'ids',
-            'meta_query'     => [
-                'relation' => 'AND',
-                [
-                    'key'     => 'partner', // name of custom field
-                    'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-                    'compare' => 'LIKE',
-                ],
-            ],
-        ]);
-
-        foreach ( $websites_for_partner as $website ) {
-            $customers[] = get_field( 'customer', $website );
-        }
-
-        if ( count( $customers ) == 0 and is_array( $partner ) ) {
-            foreach ( $partner as $partner_id ) {
-                $websites_for_partner = get_posts([
-                    'post_type'      => 'captcore_website',
-                    'posts_per_page' => '-1',
-                    'order'          => 'asc',
-                    'orderby'        => 'title',
-                    'fields'         => 'ids',
-                    'meta_query'     => [
-                        'relation' => 'AND',
-                        [
-                            'key'     => 'customer', // name of custom field
-                            'value'   => '"' . $partner_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-                            'compare' => 'LIKE',
-                        ],
-                    ],
-                ]);
-                foreach ( $websites_for_partner as $website ) {
-                    $customers[] = get_field( 'customer', $website );
-                }
-            }
-        }
-
-        foreach ( $customers as $customer ) :
-
-            if ( is_array( $customer ) ) {
-                $customer = $customer[0];
-            }
-
-            $domains = get_field( 'domains', $customer );
-            if ( $domains ) {
-                foreach ( $domains as $domain ) :
-                    $domain_name = get_the_title( $domain );
-                    $domain_id = get_field( "domain_id", $domain );
-                    if ( $domain_name ) {
-                        $all_domains[ $domain_name ] = [ "name" => $domain_name, "id" => $domain_id ];
-                    }
-                endforeach;
-            }
-
-        endforeach;
-
-        foreach ( $partner as $customer ) :
-            $domains = get_field( 'domains', $customer );
-            if ( $domains ) {
-                foreach ( $domains as $domain ) :
-                    $domain_name = get_the_title( $domain );
-                    $domain_id = get_field( "domain_id", $domain );
-                    if ( $domain_name ) {
-                        $all_domains[ $domain_name ] = [ "name" => $domain_name, "id" => $domain_id ];
-                    }
-                endforeach;
-            }
-        endforeach;
-
-        usort( $all_domains, "sort_by_name" );
-        return $all_domains;
-
-    }
-
-    public function sites() {
-
-        $results = [];
-        $websites = get_posts([
-            'post_type'      => 'captcore_website',
-            'posts_per_page' => '-1',
-            'meta_query'     => [
-                [
-                    'key'     => 'customer', // name of custom field
-                    'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-                    'compare' => 'LIKE',
-                ],
-            ],
-        ]);
-        if ( $websites ) {
-            foreach ( $websites as $website ) {
-                if ( get_field( 'status', $website->ID ) == 'active' ) {
-                    $results[] = [
-                        "name"    => get_the_title( $website->ID ), 
-                        "site_id" => $website->ID,
-                    ];
-                }
-            }
-        }
-        $websites = get_posts([
-            'post_type'      => 'captcore_website',
-            'posts_per_page' => '-1',
-            'meta_query'     => [
-                [
-                    'key'     => 'partner', // name of custom field
-                    'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-                    'compare' => 'LIKE',
-                ],
-            ],
-        ]);
-        if ( $websites ) {
-            foreach ( $websites as $website ) {
-                if ( get_field( 'status', $website->ID ) == 'active' ) {
-                    if ( in_array( $website->ID, array_column( $results, "site_id" ) ) ) {
-                        continue;
-                    }
-                    $results[] = [ 
-                        "name"    => get_the_title( $website->ID ), 
-                        "site_id" => $website->ID,
-                    ];
-                }
-            }
-        }
-
-        usort( $results, "sort_by_name" );
-
-        return $results;
-
-    }
-
-    public function users() {
-
-        $args = [
-            'order'      => 'ASC',
-            'orderby'    => 'display_name',
-            'meta_query' => [
-                [
-                    'key'     => 'partner',
-                    'value'   => '"' . $this->account_id . '"',
-                    'compare' => 'LIKE'
-                ],
-            ]
-        ];
-
-        // Create the WP_User_Query object
-        $wp_user_query = new \WP_User_Query($args);
-        $users = $wp_user_query->get_results();
-        $results = [];
-
-        foreach( $users as $user ) {
-            $results[] = [
-                "user_id" => $user->ID,
-                "name"    => $user->display_name, 
-                "email"   => $user->user_email,
-                "level"   => ""
-            ];
-        }
-
-        return $results;
-
-    }
-
     public function calculate_totals() {
-
-        // Calculate active website count
-        $websites_by_customer = get_posts([
-            'post_type'      => 'captcore_website',
-            'fields'         => 'ids',
-            'posts_per_page' => '-1',
-            'meta_query'     => [
-                'relation' => 'AND',
-                [
-                    'key'     => 'customer', // name of custom field
-                    'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-                    'compare' => 'LIKE',
-                ],
-                [
-                    'key'     => 'status',
-                    'value'   => 'active',
-                    'compare' => 'LIKE',
-                ],
-            ],
-        ]);
-        $websites_by_partners = get_posts([
-            'post_type'      => 'captcore_website',
-            'fields'         => 'ids',
-            'posts_per_page' => '-1',
-            'meta_query'     => [
-                'relation' => 'AND',
-                [
-                    'key'     => 'partner', // name of custom field
-                    'value'   => '"' . $this->account_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-                    'compare' => 'LIKE',
-                ],
-                [
-                    'key'     => 'status',
-                    'value'   => 'active',
-                    'compare' => 'LIKE',
-                ],
-            ],
-        ]);
-        $websites = array_unique(array_merge($websites_by_customer, $websites_by_partners));
-        $args = [
-            'order'      => 'ASC',
-            'orderby'    => 'display_name',
-            'meta_query' => [
-                [
-                    'key'     => 'partner',
-                    'value'   => '"' . $this->account_id . '"',
-                    'compare' => 'LIKE'
-                ],
-            ]
+        $metrics = [ 
+            "sites"   => count( $this->sites() ), 
+            "users"   => count( $this->users() ),
+            "domains" => count( $this->domains() ), 
         ];
-        
-        // Create the WP_User_Query object
-        $wp_user_query = new \WP_User_Query($args);
-        $users = $wp_user_query->get_results();
-        update_field( 'website_count', count( $websites ), $this->account_id );
-        update_field( 'user_count', count( $users ), $this->account_id );
+        ( new Accounts )->update( [ "metrics" => json_encode( $metrics ) ], [ "account_id" => $this->account_id ] );
+        return [ "message" => "Account metrics updated." ];
     }
-
-    public function fetch() {
-        $record = [
-            "users"   => $this->users(),
-            "invites" => $this->invites(),
-            "domains" => $this->domains(),
-            "sites"   => $this->sites(),
-            "account" => $this->account(),
-        ];
-        return $record;
-    }
-
 }

@@ -2,57 +2,58 @@
 
 namespace CaptainCore;
 
-class Accounts {
+class Accounts extends DB {
 
-    protected $accounts = [];
+	static $primary_key = 'account_id';
+
+	protected $accounts = [];
 
     public function __construct( $accounts = [] ) {
-
-        $user        = wp_get_current_user();
-        $role_check  = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
+        $user        = new User;
+        $account_ids = $user->accounts();
 
         // Bail if not assigned a role
-        if ( ! $role_check ) {
-            return [];
+        if ( ! $user->role_check() ) {
+            return 'Error: Please log in.';
         }
 
-        $account_ids = get_field( 'partner', 'user_' . get_current_user_id() );
-        if ( in_array( 'administrator', $user->roles ) ) {
-            $account_ids = get_posts([
-                'post_type'   => 'captcore_customer',
-                'fields'      => 'ids',
-                'numberposts' => '-1' 
-            ]);
+        // Administrators return all accounts
+        if ( $user->is_admin() ) {
+            $this->accounts = self::select( "account_id");
+            return;
         }
 
-        $accounts = [];
+        // Bail if no accounts set.
+        if ( ! is_array( $account_ids ) ) {
+            return;
+        }
 
-        if ( $account_ids ) {
-            foreach ( $account_ids as $account_id ) {
-                if ( get_field( 'partner', $account_id ) ) {
-                    $developer = true;
-                } else {
-                    $developer = false;
-                }
-                $accounts[] = (object) [
-                    'id'            => $account_id,
-                    'name'          => html_entity_decode( get_the_title( $account_id ) ),
-                    'website_count' => get_field( "website_count", $account_id ),
-                    'user_count'    => get_field( "user_count", $account_id ),
-                    'domain_count'  => count( get_field( "domains", $account_id ) ),
-                    'developer'		=> $developer
-                ];
+        $this->accounts = $account_ids;
+        return;
+        
+    }
+
+	public function list() {
+		$accounts = [];
+		foreach ( $this->accounts as $account_id ) {
+			$account  = self::get( $account_id );
+			$defaults = json_decode( $account->defaults );
+			$result = (object) [
+				'account_id' => $account->account_id,
+				'name'       => html_entity_decode( $account->name ),
+				'defaults'   => json_decode( $account->defaults ),
+                'metrics'    => json_decode( $account->metrics ),
+            ];
+            if ( $result->defaults->users == "" ) {
+                $result->defaults->users = [];
             }
-        }
-        usort($accounts, function($a, $b) {
-            return strcmp( ucfirst($a->name), ucfirst($b->name));
-        });
+            if ( $result->defaults->recipes == "" ) {
+                $result->defaults->recipes = [];
+            }
+			$accounts[] = $result;
+		}
+		usort($accounts, function($a, $b) { return strcmp( strtolower($a->name), strtolower($b->name) ); });
+		return $accounts;
+	}
 
-        $this->accounts = $accounts;
-
-    }
-
-    public function all() {
-        return $this->accounts;
-    }
 }
