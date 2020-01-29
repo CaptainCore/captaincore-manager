@@ -995,21 +995,6 @@ function my_acf_validate_save_post() {
 
 }
 
-
-// run before ACF saves the $_POST['acf'] data
-add_action( 'acf/save_post', 'captaincore_acf_save_post_before', 1 );
-function captaincore_acf_save_post_before( $post_id ) {
-
-	if ( get_post_type( $post_id ) == 'captcore_website' ) {
-
-		if ( get_field( 'launch_date', $post_id ) == '' and $_POST['acf']['field_52d167f4ac39e'] == '' ) {
-			// No date was entered for Launch Date, assign to today.
-			$_POST['acf']['field_52d167f4ac39e'] = date( 'Ymd' );
-		}
-	}
-
-}
-
 function acf_load_color_field_choices( $field ) {
 
 	global $woocommerce;
@@ -1195,7 +1180,7 @@ function captaincore_acf_save_post_after( $post_id ) {
 				$environments = $db_environments->fetch_environments( $website->ID );
 
 				$storage = $environments[0]->storage;
-				$visits = $environments[0]->visits;
+				$visits  = $environments[0]->visits;
 
 				$total_storage = $total_storage + $storage;
 				$total_visits  = $total_visits + $visits;
@@ -1242,62 +1227,7 @@ function captaincore_acf_save_post_after( $post_id ) {
 
 	if ( get_post_type( $post_id ) == 'captcore_domain' ) {
 
-		if ( get_field( 'domain_id', $post_id ) == '' ) {
-
-			$domainname = get_the_title( $post_id );
-
-			// Load domains from transient
-			$constellix_all_domains = get_transient( 'constellix_all_domains' );
-
-			// If empty then update transient with large remote call
-			if ( empty( $constellix_all_domains ) ) {
-
-				$constellix_all_domains = constellix_api_get( 'domains' );
-
-				// Save the API response so we don't have to call again until tomorrow.
-				set_transient( 'constellix_all_domains', $constellix_all_domains, HOUR_IN_SECONDS );
-
-			}
-
-			// Search API for domain ID
-			foreach ( $constellix_all_domains as $domain ) {
-				if ( $domainname == $domain->name ) {
-					$domain_id = $domain->id;
-				}
-			}
-
-			if ( $domain_id ) {
-				// Found domain ID from API so update post
-				update_field( 'domain_id', $domain_id, $post_id );
-			} else {
-				// Generate a new domain zone and adds the new domain ID to the post
-				$post = [ 'names' => [ $domainname ] ];
-
-				$response = constellix_api_post( 'domains', $post );
-
-				foreach ( $response as $domain ) {
-					// Capture new domain IDs from $response
-					$domain_id = $domain->id;
-				}
-				update_field( 'domain_id', $domain_id, $post_id );
-			}
-			// Assign domain to customers
-			$args        = [
-				'title'     => $domainname,
-				'post_type' => 'captcore_website',
-			];
-			$website     = get_posts( $args );
-			$website_id  = $website[0]->ID;
-			$customer    = get_field( 'customer', $website_id );
-			$customer_id = $customer[0];
-			$domains     = get_field( 'domains', $customer_id );
-
-			// Add domains to customer if not already assigned
-			if ( ! in_array( $post_id, $domains ) ) {
-				$domains[] = $post_id;
-				update_field( 'domains', $domains, $customer_id );
-			}
-		}
+		
 	}
 
 	if ( get_post_type( $post_id ) == 'captcore_processlog' ) {
@@ -1361,29 +1291,27 @@ function captaincore_client_options_func( WP_REST_Request $request ) {
 
 function captaincore_api_func( WP_REST_Request $request ) {
 
-	$post = json_decode( file_get_contents( 'php://input' ) );
-
-	$archive             = $post->archive;
-	$command             = $post->command;
-	$environment         = $post->environment;
-	$storage             = $post->storage;
-	$visits              = $post->visits;
-	$email               = $post->email;
-	$server              = $post->server;
-	$core                = $post->core;
-	$plugins             = $post->plugins;
-	$themes              = $post->themes;
-	$users               = $post->users;
-	$fathom              = $post->fathom;
-	$home_url            = $post->home_url;
-	$subsite_count       = $post->subsite_count;
-	$git_commit          = $post->git_commit;
-	$git_status          = trim( base64_decode( $post->git_status ) );
-	$token_key           = $post->token_key;
-	$data                = $post->data;
-	$site_id             = $post->site_id;
-	$user_id             = $post->user_id;
-	$notes               = $post->notes;
+	$post          = json_decode( file_get_contents( 'php://input' ) );
+	$archive       = $post->archive;
+	$command       = $post->command;
+	$environment   = $post->environment;
+	$storage       = $post->storage;
+	$visits        = $post->visits;
+	$email         = $post->email;
+	$server        = $post->server;
+	$core          = $post->core;
+	$plugins       = $post->plugins;
+	$themes        = $post->themes;
+	$users         = $post->users;
+	$fathom        = $post->fathom;
+	$home_url      = $post->home_url;
+	$subsite_count = $post->subsite_count;
+	$git_status    = trim( base64_decode( $post->git_status ) );
+	$token_key     = $post->token_key;
+	$data          = $post->data;
+	$site_id       = $post->site_id;
+	$user_id       = $post->user_id;
+	$notes         = $post->notes;
 
 	// Error if token not valid
 	if ( $post->token != CAPTAINCORE_CLI_TOKEN ) {
@@ -1392,20 +1320,14 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Error if site not valid
-	if ( get_post_type( $site_id ) != "captcore_website" ) {
-		// Create the response object
+	$current_site = ( new CaptainCore\Sites )->get( $site_id );
+	if ( $current_site == "" ) {
 		return new WP_Error( 'command_invalid', 'Invalid Command', [ 'status' => 404 ] );
 	}
 
-	$site_name   = get_field( 'site', $site_id );
-	$domain_name = get_the_title( $site_id );
-
-	if ( $environment == "production" ) {
-		$environment_id = get_field( 'environment_production_id', $site_id );
-	}
-	if ( $environment == "staging" ) {
-		$environment_id = get_field( 'environment_staging_id', $site_id );
-	}
+	$site_name      = $current_site->site;
+	$domain_name    = $current_site->name;
+	$environment_id = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment );
 
 	// Copy site
 	if ( $command == 'copy' and $email ) {
@@ -1457,7 +1379,6 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$link        = $site->environments[0]["link"];
 
 		// Send out completed email notice
-		
 		$to      = $email;
 		$subject = "$business_name - Deploy to Production ($domain_name)";
 		$body    = 'Deploy to production completed for ' . $domain_name . '.<br /><br /><a href="' . $link . '">' . $link . '</a>';
@@ -1472,12 +1393,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	// Generate a new snapshot.
 	if ( $command == 'snapshot' and $archive and $storage ) {
 
-		if ( $environment == "production" ) {
-			$environment_id = get_field( 'environment_production_id', $site_id );
-		}
-		if ( $environment == "staging" ) {
-			$environment_id = get_field( 'environment_staging_id', $site_id );
-		}
+		$environment_id = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment );
 
 		if ( $user_id == "") {
 			$user_id = "0";
@@ -1499,8 +1415,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			'token'          => $token
 		);
 
-		$db = new CaptainCore\Snapshots();
-		$snapshot_id = $db->insert( $snapshot );
+		$snapshot_id = ( new CaptainCore\Snapshots )->insert( $snapshot );
 
 		// Send out snapshot email
 		captaincore_download_snapshot_email( $snapshot_id );
@@ -1520,39 +1435,33 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Sync site data
-	if ( $command == 'sync-data' and $core and $plugins and $themes and $users ) {
+	if ( $command == 'sync-data' and ! empty( $post->data ) ) {
 		
-		// Updates site with latest $plugins, $themes, $core, $home_url and $users
-		$environment_update = array(
-			'site_id'            => $site_id,
-			'environment'        => ucfirst($environment),
-			'users'              => json_encode( $users ),
-			'themes'             => json_encode( $themes ),
-			'plugins'            => json_encode( $plugins ),
-			'fathom'             => json_encode( $fathom ),
-			'core'               => $core,
-			'home_url'           => $home_url,
-			'subsite_count'      => $subsite_count
-		);
-
-		$time_now = date("Y-m-d H:i:s");
-		$environment_update['updated_at'] = $time_now;
-
-		$upload_dir       = wp_upload_dir();
-		$screenshot_check = $upload_dir['basedir'] . "/screenshots/{$site_name}_{$site_id}/$environment/screenshot-800.png";
+		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
+		$environment         = strtolower( $current_environment->environment );
+		$upload_dir          = wp_upload_dir();
+		$screenshot_check    = $upload_dir['basedir'] . "/screenshots/{$site_name}_{$site_id}/$environment/screenshot-800.png";
 		if ( file_exists( $screenshot_check ) ) {
 			$environment_update['screenshot'] = true;
 		} else {
 			$environment_update['screenshot'] = false;
 		}
-		$db_environments = new CaptainCore\Environments();
-		$db_environments->update( $environment_update, [ "environment_id" => $environment_id ] );
+		( new CaptainCore\Environments )->update( (array) $post->data, [ "environment_id" => $post->data->environment_id ] );
 
 		$response = [
-			"response"       => "Completed sync-data for $site_id",
-			"environment_id" => $environment_id,
-			"environment"    => $environment_update
+			"response"        => "Completed sync-data for $site_id",
+			"environment"     => $post->data,
 		];
+
+		$current_site = ( new CaptainCore\Sites )->get( $site_id );
+		$details      = json_decode( $current_site->details );
+
+		if ( $current_environment->environment == "Production" ) {
+			$details->core = $post->data->core;
+		}
+
+		// Mark Site as updated
+		( new CaptainCore\Sites )->update( [ "updated_at" => $post->data->updated_at, "details" => json_encode( $details ) ], [ "site_id" => $site_id ] );
 
 	}
 
@@ -1580,7 +1489,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 				'created_at' => $date_formatted,
 			);
 
-			$db_update_logs = new CaptainCore\Update_Logs();
+			$db_update_logs = new CaptainCore\UpdateLogs();
 
 			$valid_check = $db_update_logs->valid_check( $new_update_log_check );
 
@@ -1596,14 +1505,8 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 		print_r( $data );
 
-		if ( $environment == "production" ) {
-			$environment_id = get_field( 'environment_production_id', $site_id );
-		}
-		if ( $environment == "staging" ) {
-			$environment_id = get_field( 'environment_staging_id', $site_id );
-		}
-
-		$captures = new CaptainCore\Captures();
+		$environment_id = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment );
+		$captures       = new CaptainCore\Captures();
 		$capture_lookup = $captures->where( [ "site_id" => $site_id, "environment_id" => $environment_id ] );
 		if ( count( $capture_lookup ) > 0 ) {
 			$current_capture_pages = json_decode( $capture_lookup[0]->pages );
@@ -1659,94 +1562,40 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$capture->insert( $new_capture );
 	}
 
-	// Imports update log
-	if ( $command == 'import-quicksaves' ) {
+	if ( $command == 'quicksave-add' ) {
+		
+		//$details        = ( new CaptainCore\Sites )->get( $site_id )->details;
+		//$details        = json_decode( $defails );
+		//$details->core  = $core;
+		//( new CaptainCore\Sites )->update( [ "details" => json_encode( $details ) ], [ "site_id" => $site_id ] );
 
-		// If new info sent then update otherwise continue with quicksave import
-		if ( $plugins &&  $themes && $users && $core && $home_url ) {
-			update_field( 'field_5a9421b004ed3', wp_slash( $plugins ), $site_id );
-			update_field( 'field_5a9421b804ed4', wp_slash( $themes ), $site_id );
-			update_field( 'field_5b2a900c85a77', wp_slash( $users ), $site_id );
-			update_field( 'field_5a9421bc04ed5', $core, $site_id );
-			update_field( 'field_5a944358bf146', $home_url, $site_id );
+		$quicksave_check = ( new CaptainCore\Quicksaves )->get( $post->data->quicksave_id );
+		// Insert new quicksave
+		if ( empty( $quicksave_check ) ) {
+			( new CaptainCore\Quicksaves )->insert( (array) $post->data );
+		} else {
+			// Update existing quicksave
+			( new CaptainCore\Quicksaves )->update( (array) $post->data, [ "quicksave_id" => $post->data->quicksave_id ] );
 		}
+	
+		$response = [
+			"response"  => "Quicksave added for $site_id",
+			"quicksave" => $post->data,
+		];
 
-		if ( $environment == "production" ) {
-			$environment_id = get_field( 'environment_production_id', $site_id );
-		}
-		if ( $environment == "staging" ) {
-			$environment_id = get_field( 'environment_staging_id', $site_id );
-		}
-
-		foreach ( $data as $row ) {
-
-			// Format for mysql timestamp format. Changes "1530817828" to "2018-06-20 09:15:20"
-			$epoch = $row->date;
-			$dt = new DateTime("@$epoch");  // convert UNIX timestamp to PHP DateTime
-			$date_formatted = $dt->format('Y-m-d H:i:s'); // output = 2017-01-01 00:00:00
-
-			$themes         = json_encode( $row->themes );
-			$plugins        = json_encode( $row->plugins );
-
-			$new_quicksave = array(
-				'site_id'        => $site_id,
-				'environment_id' => $environment_id,
-				'created_at'     => $date_formatted,
-				'git_status'     => $row->git_status,
-				'git_commit'     => $row->git_commit,
-				'core'           => $row->core,
-				'themes'         => $themes,
-				'plugins'        => $plugins,
-			);
-
-			$new_quicksave_check = array(
-				'site_id'    => $site_id,
-				'created_at' => $date_formatted,
-			);
-
-			$db_quicksaves = new CaptainCore\Quicksaves();
-
-			$valid_check = $db_quicksaves->valid_check( $new_quicksave_check );
-
-			// Add new update log if not added.
-			if ( $valid_check ) {
-				$db_quicksaves->insert( $new_quicksave );
-			}
-		}
 	}
 
 	// Updates visits and storage usage
 	if ( $command == 'usage-update' ) {
 
-		if ( $environment == "production" ) {
-			$environment_id = get_field( 'environment_production_id', $site_id );
-		}
-		if ( $environment == "staging" ) {
-			$environment_id = get_field( 'environment_staging_id', $site_id );
-		}
-		
-		// Updates site with latest $plugins, $themes, $core, $home_url and $users
-		$environment = [
-			'site_id'            => $site_id,
-			'environment'        => ucfirst( $environment ),
-			'storage'            => $storage,
-			'visits'             => $visits
-		];
-
-		$time_now = date("Y-m-d H:i:s");
-		$environment['updated_at'] = $time_now;
-
-		$db_environments = new CaptainCore\Environments();
-		$db_environments->update( $environment, [ "environment_id" => $environment_id ] );
+		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
+		( new CaptainCore\Environments )->update( (array) $post->data, [ "environment_id" => $post->data->environment_id ] );
 
 		$response = [
-			"response"       => "Completed usage-update for $site_id",
-			"environment_id" => $environment_id,
-			"environment"    => $environment
+			"response"    => "Completed usage-update for $site_id",
+			"environment" => $post->data,
 		];
 
-		do_action( 'acf/save_post', $site_id ); // Runs ACF save post hooks
-		return $response;
 	}
 
 	if ( $server ) {
@@ -1782,17 +1631,13 @@ function captaincore_api_func( WP_REST_Request $request ) {
 }
 
 function captaincore_accounts_func( $request ) {
-
 	$accounts = new CaptainCore\Accounts;
-	return $accounts->all();
-
+	return $accounts->list();
 }
 
 function captaincore_sites_func( $request ) {
-
 	$sites = new CaptainCore\Sites;
-	return $sites->all();
-
+	return $sites->list();
 }
 
 function captaincore_site_func( $request ) {
@@ -1811,13 +1656,13 @@ function captaincore_site_func( $request ) {
 function captaincore_domain_func( $request ) {
 
 	$domain_id = $request['id'];
-
-	if ( ! captaincore_verify_permissions_domain( $domain_id ) ) {
+	$verify    = ( new CaptainCore\Domains )->verify( $domain_id );
+	if ( ! $verify ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
-
-	$domain   = constellix_api_get( "domains/$domain_id" );
-	$response = constellix_api_get( "domains/$domain_id/records" );
+	$remote_id = ( new CaptainCore\Domains )->get( $domain_id )->remote_id;
+	$domain    = constellix_api_get( "domains/$remote_id" );
+	$response  = constellix_api_get( "domains/$remote_id/records" );
 	if ( ! $response->errors ) {
 		array_multisort( array_column( $response, 'type' ), SORT_ASC, array_column( $response, 'name' ), SORT_ASC, $response );
 	}
@@ -1827,9 +1672,19 @@ function captaincore_domain_func( $request ) {
 }
 
 function captaincore_domains_func( $request ) {
+	return ( new CaptainCore\Domains() )->list();
+}
 
-	return (new CaptainCore\Domains())->all();
+function captaincore_recipes_func( $request ) {
+	return ( new CaptainCore\Recipes() )->list();
+}
 
+function captaincore_processes_func( $request ) {
+	return ( new CaptainCore\Processes )->list();
+}
+
+function captaincore_users_func( $request ) {
+	return ( new CaptainCore\Users() )->list();
 }
 
 function  captaincore_keys_func( $request ) {
@@ -1853,25 +1708,8 @@ function captaincore_site_snapshots_func( $request ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
-	$db = new CaptainCore\Snapshots;
-	$snapshots = $db->fetch_by_environments( $site_id );
-	foreach( $snapshots as $environment ) {
-
-		foreach( $environment as $snapshot ) {
-			if ( $snapshot->user_id == 0 ) {
-				$user_name = "System";
-			} else {
-				$user_name = get_user_by( 'id', $snapshot->user_id )->display_name;
-			}
-			$snapshot->user = (object) [
-				"user_id" => $snapshot->user_id,
-				"name"    => $user_name
-			];
-			unset( $snapshot->user_id );
-		}
-
-	}
-	return $snapshots;
+	$results = ( new CaptainCore\Site( $site_id ))->snapshots();
+	return $results;
 }
 
 function captaincore_site_snapshot_download_func( $request ) {
@@ -1907,243 +1745,7 @@ function captaincore_site_quicksaves_func( $request ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
-	$results = [];
-	$db_quicksaves = new CaptainCore\Quicksaves;
-
-	$environment_id = get_field( 'environment_production_id', $site_id );
-	$quicksaves = $db_quicksaves->fetch_environment( $site_id, $environment_id );
-
-	foreach ($quicksaves as $key => $quicksave) {
-		$compare_key = $key + 1;
-		$quicksaves[$key]->plugins = json_decode($quicksaves[$key]->plugins);
-		$quicksaves[$key]->themes = json_decode($quicksaves[$key]->themes);
-		$quicksaves[$key]->view_changes = false;
-		$quicksaves[$key]->view_files = [];
-		$quicksaves[$key]->filtered_files = [];
-		$quicksaves[$key]->loading = true;
-		$quicksaves[$key]->search = "";
-
-		// Skips compare check on oldest quicksave or if not found.
-		if ( !isset($quicksaves[$compare_key]) ) {
-			continue;
-		}
-
-		$compare_plugins = json_decode( $quicksaves[$compare_key]->plugins );
-		$compare_themes = json_decode( $quicksaves[$compare_key]->themes );
-		$plugins_names = array_column( $quicksaves[$key]->plugins, 'name' );
-		$themes_names = array_column( $quicksaves[$key]->themes, 'name' );
-		$compare_plugins_names = array_column( $compare_plugins, 'name' );
-		$compare_themes_names = array_column( $compare_themes, 'name' );
-		$removed_plugins = array_diff( $compare_plugins_names, $plugins_names );
-		$removed_themes = array_diff( $compare_themes_names, $themes_names );
-
-		foreach( $quicksaves[$key]->plugins as $plugin ) {
-			$compare_plugin_key = null;
-
-			// Check if plugin exists in previous Quicksave
-			foreach( $compare_plugins as $compare_key => $compare_plugin ) {
-				if ( $compare_plugin->name == $plugin->name ) {
-					$compare_plugin_key = $compare_key;
-				}
-			}
-			// If not found then mark as newly added.
-			if ( is_null($compare_plugin_key) ) {
-				$plugin->compare = false;
-				$plugin->highlight = "new";
-				continue;
-			}
-
-			if ( $plugin->version != $compare_plugins[$compare_plugin_key]->version ) {
-				$plugin->compare = false;
-				$plugin->changed_version = true;
-			}
-
-			if ( $plugin->status != $compare_plugins[$compare_plugin_key]->status ) {
-				$plugin->compare = false;
-				$plugin->changed_status = true;
-			}
-
-			if( isset($plugin->changed_status) or isset($plugin->changed_version) ) {
-				continue;
-			}
-
-			// Plugin is the same
-			$plugin->compare = true;
-		}
-
-		foreach( $quicksaves[$key]->themes as $theme ) {
-			$compare_theme_key = null;
-
-			// Check if plugin exists in previous Quicksave
-			foreach( $compare_themes as $compare_key => $compare_theme ) {
-				if ( $compare_theme->name == $theme->name ) {
-					$compare_theme_key = $compare_key;
-				}
-			}
-			// If not found then mark as newly added.
-			if ( is_null($compare_theme_key) ) {
-				$theme->compare = false;
-				$theme->highlight = "new";
-				continue;
-			}
-
-			if ( $theme->version != $compare_themes[$compare_theme_key]->version ) {
-				$theme->compare = false;
-				$theme->changed_version = true;
-			}
-
-			if ( $theme->status != $compare_themes[$compare_theme_key]->status ) {
-				$theme->compare = false;
-				$theme->changed_status = true;
-			}
-
-			if( isset($theme->changed_status) or isset($theme->changed_version) ) {
-				continue;
-			}
-
-			// Theme is the same
-			$theme->compare = true;
-		}
-
-		// Attached removed themes
-		foreach ($removed_themes as $removed_theme) {
-			$theme_key = array_search( $removed_theme, array_column( $compare_themes ,'name' ) );
-			$theme = $compare_themes[$theme_key];
-			$theme->compare = false;
-			$theme->deleted = true;
-			$quicksaves[$key]->deleted_themes[] = $theme;
-		}
-
-		// Attached removed plugins
-		foreach ($removed_plugins as $removed_plugin) {
-			$plugin_key = array_search( $removed_plugin, array_column( $compare_plugins ,'name' ) );
-			$plugin = $compare_plugins[$plugin_key];
-			$plugin->compare = false;
-			$plugin->deleted = true;
-			$quicksaves[$key]->deleted_plugins[] = $plugin;
-		}
-
-	}
-
-	$results["Production"] = $quicksaves; 
-
-	$environment_id = get_field( 'environment_staging_id', $site_id );
-	$quicksaves = $db_quicksaves->fetch_environment( $site_id, $environment_id );
-
-	foreach ($quicksaves as $key => $quicksave) {
-		$compare_key = $key + 1;
-		$quicksaves[$key]->plugins = json_decode($quicksaves[$key]->plugins);
-		$quicksaves[$key]->themes = json_decode($quicksaves[$key]->themes);
-		$quicksaves[$key]->view_changes = false;
-		$quicksaves[$key]->view_files = [];
-		$quicksaves[$key]->filtered_files = [];
-		$quicksaves[$key]->loading = true;
-		$quicksaves[$key]->search = "";
-
-		// Skips compare check on oldest quicksave or if not found.
-		if ( !isset($quicksaves[$compare_key]) ) {
-			continue;
-		}
-
-		$compare_plugins = json_decode( $quicksaves[$compare_key]->plugins );
-		$compare_themes = json_decode( $quicksaves[$compare_key]->themes );
-		$plugins_names = array_column( $quicksaves[$key]->plugins, 'name' );
-		$themes_names = array_column( $quicksaves[$key]->themes, 'name' );
-		$compare_plugins_names = array_column( $compare_plugins, 'name' );
-		$compare_themes_names = array_column( $compare_themes, 'name' );
-		$removed_plugins = array_diff( $compare_plugins_names, $plugins_names );
-		$removed_themes = array_diff( $compare_themes_names, $themes_names );
-
-		foreach( $quicksaves[$key]->plugins as $plugin ) {
-			$compare_plugin_key = null;
-
-			// Check if plugin exists in previous Quicksave
-			foreach( $compare_plugins as $compare_key => $compare_plugin ) {
-				if ( $compare_plugin->name == $plugin->name ) {
-					$compare_plugin_key = $compare_key;
-				}
-			}
-			// If not found then mark as newly added.
-			if ( is_null($compare_plugin_key) ) {
-				$plugin->compare = false;
-				$plugin->highlight = "new";
-				continue;
-			}
-
-			if ( $plugin->version != $compare_plugins[$compare_plugin_key]->version ) {
-				$plugin->compare = false;
-				$plugin->changed_version = true;
-			}
-
-			if ( $plugin->status != $compare_plugins[$compare_plugin_key]->status ) {
-				$plugin->compare = false;
-				$plugin->changed_status = true;
-			}
-
-			if( isset($plugin->changed_status) or isset($plugin->changed_version) ) {
-				continue;
-			}
-
-			// Plugin is the same
-			$plugin->compare = true;
-		}
-
-		foreach( $quicksaves[$key]->themes as $theme ) {
-			$compare_theme_key = null;
-
-			// Check if plugin exists in previous Quicksave
-			foreach( $compare_themes as $compare_key => $compare_theme ) {
-				if ( $compare_theme->name == $theme->name ) {
-					$compare_theme_key = $compare_key;
-				}
-			}
-			// If not found then mark as newly added.
-			if ( is_null($compare_theme_key) ) {
-				$theme->compare = false;
-				$theme->highlight = "new";
-				continue;
-			}
-
-			if ( $theme->version != $compare_themes[$compare_theme_key]->version ) {
-				$theme->compare = false;
-				$theme->changed_version = true;
-			}
-
-			if ( $theme->status != $compare_themes[$compare_theme_key]->status ) {
-				$theme->compare = false;
-				$theme->changed_status = true;
-			}
-
-			if( isset($theme->changed_status) or isset($theme->changed_version) ) {
-				continue;
-			}
-
-			// Theme is the same
-			$theme->compare = true;
-		}
-
-		// Attached removed themes
-		foreach ($removed_themes as $removed_theme) {
-			$theme_key = array_search( $removed_theme, array_column( $compare_themes ,'name' ) );
-			$theme = $compare_themes[$theme_key];
-			$theme->compare = false;
-			$theme->deleted = true;
-			$quicksaves[$key]->deleted_themes[] = $theme;
-		}
-
-		// Attached removed plugins
-		foreach ($removed_plugins as $removed_plugin) {
-			$plugin_key = array_search( $removed_plugin, array_column( $compare_plugins ,'name' ) );
-			$plugin = $compare_plugins[$plugin_key];
-			$plugin->compare = false;
-			$plugin->deleted = true;
-			$quicksaves[$key]->deleted_plugins[] = $plugin;
-		}
-
-	}
-
-	$results["Staging"] = $quicksaves; 
-
+	$results = ( new CaptainCore\Site( $site_id ))->quicksaves();
 	return $results;
 }
 
@@ -2153,118 +1755,146 @@ function captaincore_register_rest_endpoints() {
 
 	// Custom endpoint for CaptainCore Client plugin
 	register_rest_route(
-		'captaincore/v1', '/client', array(
+		'captaincore/v1', '/client', [
 			'methods'  => 'GET',
 			'callback' => 'captaincore_client_options_func',
-		)
+		]
 	);
 
 	// Custom endpoint for CaptainCore API
 	register_rest_route(
-		'captaincore/v1', '/api', array(
+		'captaincore/v1', '/api', [
 			'methods'       => 'POST',
 			'callback'      => 'captaincore_api_func',
 			'show_in_index' => false
-		)
+		]
 	);
 
 	// Custom endpoint for CaptainCore login
 	register_rest_route(
-		'captaincore/v1', '/login', array(
+		'captaincore/v1', '/login', [
 			'methods'       => 'POST',
 			'callback'      => 'captaincore_login_func',
 			'show_in_index' => false
-		)
+		]
 	);
 
 	// Custom endpoint for CaptainCore site/<id>/quicksaves
 	register_rest_route(
-		'captaincore/v1', '/site/(?P<id>[\d]+)/quicksaves', array(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/quicksaves', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_quicksaves_func',
 			'show_in_index' => false
-		)
+		]
 	);
 
 	// Custom endpoint for CaptainCore site/<id>/captures
 	register_rest_route(
-		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/captures', array(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/captures', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_captures_func',
 			'show_in_index' => false
-		)
+		]
 	);
 
 	// Custom endpoint for CaptainCore site/<id>/snapshots
 	register_rest_route(
-		'captaincore/v1', '/site/(?P<id>[\d]+)/snapshots', array(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/snapshots', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_snapshots_func',
 			'show_in_index' => false
-		)
+		]
 	);
 
 	// Custom endpoint for CaptainCore site
 	register_rest_route(
-		'captaincore/v1', '/site/(?P<id>[\d]+)/snapshots/(?P<snapshot_id>[\d]+)-(?P<token>[a-zA-Z0-9-]+)/(?P<snapshot_name>[a-zA-Z0-9-]+)', array(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/snapshots/(?P<snapshot_id>[\d]+)-(?P<token>[a-zA-Z0-9-]+)/(?P<snapshot_name>[a-zA-Z0-9-]+)', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_snapshot_download_func',
 			'show_in_index' => false
-		)
+		]
 	);
 
 	// Custom endpoint for CaptainCore site
 	register_rest_route(
-		'captaincore/v1', '/site/(?P<id>[\d]+)', array(
+		'captaincore/v1', '/site/(?P<id>[\d]+)', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_func',
 			'show_in_index' => false
-		)
+		]
 	);
 
 	// Custom endpoint for CaptainCore site
 	register_rest_route(
-		'captaincore/v1', '/sites/', array(
+		'captaincore/v1', '/sites/', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_sites_func',
 			'show_in_index' => false
-		)
+		]
 	);
 
 	// Custom endpoint for domain
 	register_rest_route(
-		'captaincore/v1', '/domain/(?P<id>[\d]+)', array(
+		'captaincore/v1', '/domain/(?P<id>[\d]+)', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_domain_func',
 			'show_in_index' => false
-		)
+		]
+	);
+
+	// Custom endpoint for recipes
+	register_rest_route(
+		'captaincore/v1', '/recipes/', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_recipes_func',
+			'show_in_index' => false
+		]
+	);
+
+	// Custom endpoint for recipes
+	register_rest_route(
+		'captaincore/v1', '/processes/', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_processes_func',
+			'show_in_index' => false
+		]
 	);
 
 	// Custom endpoint for domains
 	register_rest_route(
-		'captaincore/v1', '/domains/', array(
+		'captaincore/v1', '/domains/', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_domains_func',
 			'show_in_index' => false
-		)
-	);
-
-	// Custom endpoint for CaptainCore accounts
-	register_rest_route(
-		'captaincore/v1', '/accounts/', array(
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_accounts_func',
-			'show_in_index' => false
-		)
+		]
 	);
 
 	// Custom endpoint for domains
 	register_rest_route(
-		'captaincore/v1', '/keys/', array(
+		'captaincore/v1', '/users/', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_users_func',
+			'show_in_index' => false
+		]
+	);
+
+
+	// Custom endpoint for CaptainCore accounts
+	register_rest_route(
+		'captaincore/v1', '/accounts/', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_accounts_func',
+			'show_in_index' => false
+		]
+	);
+
+	// Custom endpoint for domains
+	register_rest_route(
+		'captaincore/v1', '/keys/', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_keys_func',
 			'show_in_index' => false
-		)
+		]
 	);
 
 	// Add meta fields to API
@@ -2334,14 +1964,6 @@ function captaincore_register_rest_endpoints() {
 	);
 	register_rest_field(
 		'captcore_customer', 'preloaded_email',
-		array(
-			'get_callback'    => 'slug_get_post_meta_array',
-			'update_callback' => 'slug_update_post_meta_cb',
-			'schema'          => null,
-		)
-	);
-	register_rest_field(
-		'captcore_customer', 'preloaded_users',
 		array(
 			'get_callback'    => 'slug_get_post_meta_array',
 			'update_callback' => 'slug_update_post_meta_cb',
@@ -2580,10 +2202,10 @@ function captaincore_login_func( WP_REST_Request $request ) {
 
 	if ( $post->command == "createAccount" ) {
 
-		$errors = [];
+		$errors   = [];
 		$password = $post->login->password;
-		$invites = new CaptainCore\Invites();
-		$results = $invites->where( [
+		$invites  = new CaptainCore\Invites();
+		$results  = $invites->where( [
 			"account_id" => $post->invite->account,
 			"token"      => $post->invite->token,
 		 ] );
@@ -2617,7 +2239,7 @@ function captaincore_login_func( WP_REST_Request $request ) {
 			$user_id = wp_insert_user( $userdata );
 
 			// Assign permission to account
-			update_field( 'partner', $record->account_id, "user_{$user_id}" );
+			( new CaptainCore\User( $user_id, true ) )->assign_accounts( [ $record->account_id ] );
 
 			$account = new CaptainCore\Account( $record->account_id, true );
 			$account->calculate_totals();
@@ -3178,81 +2800,9 @@ function captaincore_get_domains_per_partner( $partner_id ) {
 }
 
 // Checks current user for valid permissions
-function captaincore_verify_permissions( $website_id ) {
-
-	$current_user = wp_get_current_user();
-	$role_check   = in_array( 'administrator', $current_user->roles );
-
-	// Checks for a current user. If admin found pass if not check permissions
-	if ( $current_user && $role_check ) {
-		return true;
-	}
-
-	// Checks for other roles
-	$role_check = in_array( 'subscriber', $current_user->roles ) + in_array( 'customer', $current_user->roles ) + in_array( 'partner', $current_user->roles ) + in_array( 'editor', $current_user->roles );
-
-	// Checks current users permissions
-	$partner = get_field( 'partner', 'user_' . get_current_user_id() );
-
-	// Bail if incorrect role or nothing assigned.
-	if ( !$role_check or !$partner ) {
-		return false;
-	}
-
-	foreach ( $partner as $partner_id ) {
-
-		$websites = get_posts(
-			array(
-				'post_type'      => 'captcore_website',
-				'posts_per_page' => '-1',
-				'order'          => 'asc',
-				'orderby'        => 'title',
-				'meta_query'     => array(
-					'relation' => 'AND',
-					array(
-						'key'     => 'partner', // name of custom field
-						'value'   => '"' . $partner_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-						'compare' => 'LIKE',
-					),
-				),
-			)
-		);
-		if ( $websites ) :
-			foreach ( $websites as $website ) :
-				$customer_id = get_field( 'customer', $website->ID );
-				if ( $website_id == $website->ID ) {
-					return true;
-				}
-			endforeach;
-		endif;
-
-		// Load websites assigned to partner
-		$arguments = array(
-			'fields'         => 'ids',
-			'post_type'      => 'captcore_website',
-			'posts_per_page' => '-1',
-			'meta_query'     => array(
-				'relation' => 'AND',
-				array(
-					'key'     => 'customer',
-					'value'   => '"' . $partner_id . '"',
-					'compare' => 'LIKE',
-				),
-			),
-		);
-
-		$sites = new WP_Query( $arguments );
-
-		foreach($sites->posts as $site_id) {
-			if( $website_id == $site_id) {
-				return true;
-			}
-		}
-
-	}
-
-	// No permissions found
-	return false;
+function captaincore_verify_permissions( $site_id ) {
+	$sites = new CaptainCore\Sites();
+	return $sites->verify( $site_id );
 }
 
 // Checks current user for valid permissions
@@ -3441,7 +2991,7 @@ function captaincore_verify_permissions_domain( $domain_id ) {
 add_action( 'wp_ajax_captaincore_dns', 'captaincore_dns_action_callback' );
 
 function captaincore_dns_action_callback() {
-	global $wpdb; // this is how you get access to the database
+	global $wpdb;
 
 	$domain_id      = intval( $_POST['domain_key'] );
 	$record_updates = $_POST['record_updates'];
@@ -3672,7 +3222,7 @@ function captaincore_dns_action_callback() {
 
 add_action( 'wp_ajax_captaincore_local', 'captaincore_local_action_callback' );
 function captaincore_local_action_callback() {
-	global $wpdb; // this is how you get access to the database
+	global $wpdb;
 	$cmd   = $_POST['command'];
 	$value = $_POST['value'];
 	$email = $_POST['invite'];
@@ -3750,6 +3300,14 @@ function captaincore_local_action_callback() {
 		$account = new CaptainCore\Account( $value );
 		echo json_encode( $account->fetch() );
 	}
+	if ( $cmd == 'fetchUser' ) {
+		$user = new CaptainCore\User( $value, true );
+		echo json_encode( $user->fetch() );
+	}
+	if ( $cmd == 'saveUser' ) {
+		$response = ( new CaptainCore\Users )->update( $value );
+		echo json_encode( $response );
+	}
 	if ( $cmd == 'fetchInvite' ) {
 		$invite = (object) $value;
 		$invites = new CaptainCore\Invites();
@@ -3784,16 +3342,17 @@ function captaincore_local_action_callback() {
 	if ( $cmd == 'acceptInvite' ) {
 		$invite = (object) $value;
 		$invites = new CaptainCore\Invites();
-		$results = $invites->where( array(
+		$results = $invites->where( [
 			"account_id" => $invite->account,
 			"token"      => $invite->token,
-		) );
+		] );
 		
 		if ( count( $results ) == "1" ) {
 			// Add account ID to current user
-			$accounts = get_field( 'partner', "user_" . get_current_user_id() );
+			$user       = new CaptainCore\User;
+			$accounts   = $user->accounts();
 			$accounts[] = $invite->account;
-			update_field( 'partner', array_unique( $accounts ), "user_" . get_current_user_id() );
+			$user->assign_accounts( array_unique( $accounts ) );
 
 			$account = new CaptainCore\Account( $invite->account );
 			$account->calculate_totals();
@@ -3804,53 +3363,23 @@ function captaincore_local_action_callback() {
 	}
 	
 	if ( $cmd == 'fetchDefaults' ) {
-		$user        = wp_get_current_user();
-		$user_id     = get_current_user_id();
-		$accounts    = [];
-		$account_ids = get_field( 'partner', 'user_' . get_current_user_id() );
-
-		if ( in_array( 'administrator', $user->roles ) ) {
-            $account_ids = get_posts([
-                'post_type'   => 'captcore_customer',
-                'fields'      => 'ids',
-                'numberposts' => '-1' 
-            ]);
-		}
-
-		if ( $account_ids ) {
-			foreach ( $account_ids as $partner_id ) {
-				$default_users = get_field( 'preloaded_users', $partner_id );
-				$default_recipes = get_field( 'default_recipes', $partner_id );
-				if ( $default_users == "" ){
-					$default_users = [];
-				}
-				$accounts[] = (object) [
-					'account'          => array(
-						'id'               => $partner_id,
-						'name'             => html_entity_decode( get_the_title( $partner_id ) ),
-					),
-					'default_email'    => get_field( 'preloaded_email', $partner_id ),
-					'default_users'    => $default_users,
-					'default_recipes'  => $default_recipes,
-					'default_timezone' => get_field( 'default_timezone', $partner_id ),
-				];
-			}
-			usort($accounts, function($a, $b) { return strcmp( strtolower($a->account["name"]), strtolower($b->account["name"])); });
-		}
-
-		echo json_encode( $accounts );
+		$defaults = ( new CaptainCore\Accounts )->list();
+		echo json_encode( $defaults );
 	}
 
 	if ( $cmd == 'saveDefaults' ) {
-		$user_id = get_current_user_id();
-		$record = (object) $value;
-		$account_id = $record->account["id"];
-		$account_ids = get_field( 'partner', 'user_' . get_current_user_id() );
-		if ( in_array( $account_id, $account_ids ) ) {
-			update_field( 'preloaded_email', $record->default_email, $account_id );
-			update_field( 'preloaded_users', $record->default_users, $account_id );
-			update_field( 'default_recipes', $record->default_recipes, $account_id );
-			update_field( 'default_timezone', $record->default_timezone, $account_id );
+		$user     = new CaptainCore\User;
+		$accounts = $user->accounts();
+		$record   = (object) $value;
+		if ( in_array( $record->account_id, $account_ids ) || $user->is_admin() ) {
+			if ( ! isset( $record->defaults["users"] ) ) {
+                $record->defaults["users"] = [];
+			}
+            if ( ! isset( $record->defaults["recipes"] ) ) {
+                $record->defaults["recipes"] = [];
+			}
+			$account = new CaptainCore\Accounts();
+			$account->update( [ "defaults" => json_encode( $record->defaults ) ], [ "account_id" => $record->account_id ] );
 			echo json_encode( "Record updated." );
 		} else {
 			echo json_encode( "Permission denied" );
@@ -3859,118 +3388,79 @@ function captaincore_local_action_callback() {
 
 	if ( $cmd == 'fetchTimelineLogs' ) {
 
-		$Parsedown = new Parsedown();
-		$accounts = [];
+		$results  = [];
+		$user     = new CaptainCore\User;
+		$accounts = $user->accounts();
 
-		$user = wp_get_current_user();
-		$role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'administrator', $user->roles) + in_array( 'editor', $user->roles );
-		$partner = get_field('partner', 'user_'. get_current_user_id());
-
-		if ($partner and $role_check) {
-
-			// Loop through each partner assigned to current user
-			foreach ($partner as $partner_id) {
-
-				// Load websites assigned to partner
-				$arguments = array(
-					'post_type' 		=> 'captcore_website',
-					'posts_per_page'	=> '-1',
-					'fields'			=> 'ids',
-					'order'				=> 'asc',
-					'orderby'			=> 'title',
-					'meta_query'		=> array(
-						array(
-							'key' => 'partner',
-							'value' => '"' . $partner_id . '"',
-							'compare' => 'LIKE'
-						),
-					)
-				);
-
-				// Loads websites
-				$websites = get_posts( $arguments );
-
-				if ( count( $websites ) == 0 ) {
-
-					// Load websites assigned to partner
-					$websites = get_posts(array(
-						'post_type' 		=> 'captcore_website',
-						'posts_per_page'	=> '-1',
-						'fields'			=> 'ids',
-						'order'				=> 'asc',
-						'orderby'			=> 'title',
-						'meta_query'		=> array(
-							array(
-								'key' => 'customer', // name of custom field
-								'value' => '"' . $partner_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-								'compare' => 'LIKE'
-							),
-						)
-					));
-				}
-
-				if( $websites ): 
-				
-					$account = get_the_title($partner_id);
-					$website_count = count($websites);
-					$pattern = '("' . implode('"|"', $websites ) . '")';
-
-					$arguments = array(
-						'post_type'      => 'captcore_processlog',
-						'posts_per_page' => '-1',
-						'meta_query'	=> array(
-							array(
-								'key'	 	=> 'website',
-								'value'	  	=> $pattern,
-								'compare' 	=> 'REGEXP',
-							),
-					));
-
-					$processlogs_fetch = [];
-					$process_logs = get_posts($arguments);
-					// Fetch new process_log and return as json
-					foreach ($process_logs as $process_log) {
-
-						$process     = get_field( "process", $process_log->ID );
-						$author_id   = $process_log->post_author;
-						$author      = get_the_author_meta( 'display_name', $author_id );
-						$description = $Parsedown->text( get_field("description", $process_log->ID ) );
-						$sites       = [];
-						foreach( get_field("website", $process_log->ID ) as $website_id ) {
-							$site = get_post( $website_id );
-							if ( in_array($website_id, $websites) ) {
-								$sites[] = (object) [ 
-									'id'   => $site->ID,
-									'name' => $site->post_title,
-								];
-							}
-						}
-
-						$processlogs_fetch[] = (object) [
-							'id'              => $process_log->ID,
-							'process_id'      => $process[0],
-							'title'           => get_the_title( $process[0] ),
-							'author'          => $author,
-							'description'     => $description,
-							'description_raw' => get_field("description", $process_log->ID ),
-							'websites'        => $sites,
-							'created_at'      => $process_log->post_date,
-						];
-					} 
-				
-				$accounts[] = (object) [
-					'account'  => array(
-						'id'   => $partner_id,
-						'name' => $account,
-						'website_count' => $website_count
-					),
-					'logs'     => $processlogs_fetch,
-				];
-
-				endif;
-			}
+		if ( ! $user->role_check() ) {
+			return;
 		}
-		echo json_encode( $accounts );
+
+		$Parsedown   = new Parsedown();
+		$process_log = new CaptainCore\ProcessLogs();
+		$accountsite = new CaptainCore\AccountSite();
+
+		// Loop through each partner assigned to current user
+		foreach ( $accounts as $account_id ) {
+
+			$site_ids       = [];
+			$fetch_site_ids = ( new CaptainCore\Sites )->select( 'site_id', "account_id", $account_id );
+			foreach ( $fetch_site_ids as $site_id ) {
+				$site_ids[] = $site_id;
+			}
+
+			// Fetch current sites
+			$fetch_site_ids = array_column ( $accountsite->where( [ "account_id" => $account_id ] ), "site_id" );
+			foreach ($fetch_site_ids as $site_id ) {
+				$site_ids[] = $site_id;
+			}
+
+			// Remove duplicate site IDs
+			array_unique( $site_ids );
+			$process_logs       = [];
+
+			// Skip if no sites found
+			if ( count($site_ids) == 0 ) {
+				continue;
+			}
+			$fetch_process_logs = ( new CaptainCore\ProcessLogSite )->fetch_process_logs( [ "site_id" => $site_ids ] );
+			foreach ( $fetch_process_logs as $result ) {
+				$sites_for_process     = ( new CaptainCore\ProcessLogSite )->fetch_sites_for_process_log( [ "process_log_id" => $result->process_log_id ] );
+				// Filter out sites which account doesn't have access to.
+				foreach ($sites_for_process as $key => $site) {
+					if ( in_array( $site->site_id, $site_ids ) ) {
+						continue;
+					}
+					unset( $sites_for_process[$key] );
+				}
+				$websites              = [];
+				foreach ($sites_for_process as $site_for_process) {
+					$websites[]        = $site_for_process;
+				}
+				$item                  = $process_log->get( $result->process_log_id );
+				$item->name            = $result->name;
+				$item->description_raw = $item->description;
+				$item->description     = $Parsedown->text( $item->description );
+				$item->author          = get_the_author_meta( 'display_name', $item->user_id );
+				$item->websites        = $websites;
+				$process_logs[]        = $item;
+			}
+
+			$results[] = (object) [
+				'account'  => [
+					'account_id' => $account_id,
+					'name'       => ( new CaptainCore\Accounts())->get( $account_id )->name,
+					'site_count' => count( $site_ids )
+				],
+				'logs'           => $process_logs,
+			];
+
+		}
+		function compareByName($a, $b) {
+			return strcmp( strtolower( $a->account['name']), strtolower($b->account['name']));
+		  }
+		usort($results, 'compareByName');
+		echo json_encode( $results );
 	}
 	wp_die();
 
@@ -3978,7 +3468,14 @@ function captaincore_local_action_callback() {
 
 add_action( 'wp_ajax_captaincore_ajax', 'captaincore_ajax_action_callback' );
 function captaincore_ajax_action_callback() {
-	global $wpdb; // this is how you get access to the database
+	global $wpdb;
+	$user = new CaptainCore\User;
+
+	$everyone_commands = [
+		'newRecipe',
+		'updateRecipe',
+		'updateSiteAccount'
+	];
 
 	if ( is_array( $_POST['post_id'] ) ) {
 		$post_ids       = [];
@@ -3991,69 +3488,73 @@ function captaincore_ajax_action_callback() {
 	}
 
 	// Only proceed if have permission to particular site id.
-	if ( ! captaincore_verify_permissions( $post_id ) ) {
+	if ( ! $user->is_admin() && isset( $post_id ) && ! captaincore_verify_permissions( $post_id ) && ! in_array( $_POST['command'], $everyone_commands ) ) {
+		echo "Permission denied";
+		wp_die();
+		return;
+	}
+
+	// Only proceed if have permission to particular site id.
+	if ( ! $user->is_admin() && isset( $post_ids ) && ! captaincore_verify_permissions( $post_ids ) && ! in_array( $_POST['command'], $everyone_commands ) ) {
 		echo "Permission denied";
 		wp_die();
 		return;
 	}
 
 	// Only proceed if access to command 
-	$user = wp_get_current_user();
-	$role_check_admin = in_array( 'administrator', $user->roles );
-	$admin_commands = array( 
+	$admin_commands = [
 		'addDomain', 
 		'deleteDomain', 
 		'fetchConfigs', 
-		'newRecipe', 
-		'updateRecipe', 
 		'updateLogEntry', 
 		'newLogEntry', 
 		'newKey', 
 		'updateKey',
 		'deleteKey',
 		'newProcess', 
-		'updateProcess', 
-		'fetchProcess', 
-		'fetchProcessLogs', 
+		'saveProcess',
+		'fetchProcess',
+		'fetchProcessRaw',
+		'fetchProcessLogs',
 		'updateFathom', 
 		'updatePlan', 
 		'newSite', 
 		'updateSite', 
-		'deleteSite' 
-	);
-	if ( ! $role_check_admin && in_array( $_POST['command'], $admin_commands ) ) {
+		'deleteSite'
+	];
+	if ( ! $user->is_admin() && in_array( $_POST['command'], $admin_commands ) ) {
 		echo "Permission denied";
 		wp_die();
 		return;
 	}
 
-	$cmd   = $_POST['command'];
+	$cmd       = $_POST['command'];
 	if ( isset($_POST['value']) ){
 		$value = $_POST['value'];
 	}
-
-	$site = get_field( 'site', $post_id );
-	$environment = $_POST['environment'];
+	
+	$fetch          = (new CaptainCore\Site( $post_id ))->get();
+	$site           = $fetch->site;
+	$environment    = $_POST['environment'];
 	$remote_command = false;
 
 	if ( $cmd == 'mailgun' ) {
 		$mailgun  = $fetch->mailgun;
 		if ( isset( $_POST['page'] ) ) {
 			$response = mailgun_events( $mailgun, $_POST['page'] );
-			} else {
+		} else {
 			$response = mailgun_events( $mailgun );
-			}
+		}
 		echo json_encode( $response );
 	}
 
 	if ( $cmd == 'deleteDomain' ) {
-		$domain_id = get_field( 'domain_id', $value );
-		$domain_name = get_the_title( $value );
-		if ( $domain_id  ) {
-			constellix_api_delete( "domains/$domain_id" );
+		$domain = ( new CaptainCore\Domains )->get( $value );
+		if ( $domain->remote_id  ) {
+			constellix_api_delete( "domains/{$domain->remote_id}" );
 		}
-		wp_delete_post( $value, true );
-		echo json_encode( array( "post_id" => $value, "message" => "Deleted domain $domain_name") );
+		echo json_encode( array( "domain_id" => $value, "message" => "Deleted domain {$domain->name}") );
+		( new CaptainCore\Domains )->delete( $value );
 	};
 
 	if ( $cmd == 'addDomain' ) {
@@ -4067,15 +3568,7 @@ function captaincore_ajax_action_callback() {
 		}
 
 		// Check for duplicate domain.
-		$domain_exists = get_posts(
-			array(
-				'title'          => $record->name,
-				'post_type'      => 'captcore_domain',
-				'posts_per_page' => '-1',
-				'post_status'    => 'publish',
-				'fields'         => 'ids',
-			)
-		);
+		$domain_exists = ( new CaptainCore\Domains )->where( [ "name" => $record->name ] );
 
 		// If results still exists then give an error
 		if ( count( $domain_exists ) > 0 ) {
@@ -4083,65 +3576,55 @@ function captaincore_ajax_action_callback() {
 		}
 
 		// If any errors then bail
-		if ( count($errors) > 0 ) {
+		if ( count( $errors ) > 0 ) {
 			echo json_encode( [ "errors" => $errors ] );
 			wp_die();
 		}
 
-		// Create post object
-		$new_domain = array(
-			'post_status' => 'publish',
-			'post_type'   => 'captcore_domain',
-			'post_title'  => $record->name,
-			'post_author' => get_current_user_id(),
-		);
+		$time_now = date("Y-m-d H:i:s");
 
-		// Insert the post into the database
-		$post_id = wp_insert_post( $new_domain );
+		// Insert domain
+		$domain_id = ( new CaptainCore\Domains )->insert( [
+			"name"       => $record->name,
+			'updated_at' => $time_now,
+			'created_at' => $time_now,
+		] );
 
-		// Execute remote code
-		captaincore_acf_save_post_after( $post_id );
-
-		// Fetch domain ID from DNS provider
-		$domain_id = get_field( 'domain_id', $post_id );
-
-		// Add domain to select partner if needed
-		if ( $record->customer != "" && get_post_type( $record->customer ) == 'captcore_customer' ) {
-			// Fetch current domains
-			$domains  = get_field( 'domains', $record->customer );
-
-			// Add domains to customer if not already assigned
-			$domains[] = $post_id;
-			update_field( 'domains', $domains, $record->customer );
+		if ( ! empty( $record->account_id ) ) {
+			// Assign domain to account
+			( new CaptainCore\Domain( $domain_id ) )->insert_accounts( [ $record->account_id ] );
 		}
 
-		echo json_encode( array("name" => $record->name, "id" => $domain_id ) );
+		// Execute remote code
+		$response = ( new CaptainCore\Domain( $domain_id ) )->fetch_remote_id();
+		if ( is_array( $response ) ) {
+			foreach ( $response["errors"] as $error ) {
+				$errors[] = $error;
+			}
+			echo json_encode( [ "errors" => $errors ] );
+			wp_die();
+		}
+
+		echo json_encode( [ "name" => $record->name, "domain_id" => $domain_id, "remote_id" => $response ] );
 
 	}
 
 	if ( $cmd == 'updateCapturePages' ) {
-
-		$db_environments = new CaptainCore\Environments();
 		$value_json = json_encode($value);
-
+		$time_now   = date("Y-m-d H:i:s");
+		
 		// Saves update settings for a site
-		$environment_update = array(
+		$environment_update = [
 			'capture_pages' => $value_json,
-		);
-		$environment_update['updated_at'] = date("Y-m-d H:i:s");
+			'updated_at'    => $time_now,
+		];
 
-		if ($environment == "Production") {
-			$environment_id = get_field( 'environment_production_id', $post_id );
-			$db_environments->update( $environment_update, [ "environment_id" => $environment_id ] );
-		}
-		if ($environment == "Staging") {
-			$environment_id = get_field( 'environment_staging_id', $post_id );
-			$db_environments->update( $environment_update, [ "environment_id" => $environment_id ] );
-		}
-
+		$environment_id = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment );
+		( new CaptainCore\Environments )->update( $environment_update, [ "environment_id" => $environment_id ] );
+		
 		// Remote Sync
 		$remote_command = true;
-		$command = "site update-field $site capture_pages $value_json";
+		$command        = "site update-field $site capture_pages $value_json";
 
 	}
 
@@ -4200,15 +3683,14 @@ function captaincore_ajax_action_callback() {
 	};
 
 	if ( $cmd == 'fetchStats' ) {
+
+		$environment_id = ( new CaptainCore\Site( $post_id ) )->fetch_environment_id( $environment );
 		
 		if ($environment == "Production") {
-			$environment_id = get_field( 'environment_production_id', $post_id );
-			$site_name = get_the_title( $post_id );
+			$site_name = ( new CaptainCore\Site( $post_id ) )->get()->name;
 		}
 		if ($environment == "Staging") {
-			$environment_id = get_field( 'environment_staging_id', $post_id );
-			$db_environments = new CaptainCore\Environments();
-			$data = $db_environments->fetch_field( $post_id, "Staging", "home_url" );
+			$data      = ( new CaptainCore\Environments )->fetch_field( $post_id, "Staging", "home_url" );
 			$site_name = $data[0]->home_url;
 			$site_name = str_replace( "http://", '', $site_name );
 			$site_name = str_replace( "https://", '', $site_name );
@@ -4233,11 +3715,11 @@ function captaincore_ajax_action_callback() {
 		if ( empty( $auth ) ) {
 
 			// Authenticate to Fathom instance
-			$auth = wp_remote_post( "$fathom_instance/api/session", array( 
+			$auth = wp_remote_post( "$fathom_instance/api/session", [
 				'method'  => 'POST',
-				'headers' => array( 'Content-Type' => 'application/json; charset=utf-8' ),
+				'headers' => [ 'Content-Type' => 'application/json; charset=utf-8' ],
 				'body'    => json_encode( $login_details )
-			) );
+			] );
 
 			// Save the API response so we don't have to call again until tomorrow.
 			set_transient( 'captaincore_fathom_auth', $auth, HOUR_IN_SECONDS );
@@ -4258,10 +3740,8 @@ function captaincore_ajax_action_callback() {
 		if ( empty( $sites ) ) {
 
 			// Fetch Sites
-			$response = wp_remote_get( "$fathom_instance/api/sites", array( 
-				'cookies' => $auth['cookies']
-			) );
-			$sites = json_decode( $response['body'] )->Data;
+			$response = wp_remote_get( "$fathom_instance/api/sites", [ 'cookies' => $auth['cookies'] ] );
+			$sites    = json_decode( $response['body'] )->Data;
 
 			// Save the API response so we don't have to call again until tomorrow.
 			set_transient( 'captaincore_fathom_sites', $sites, HOUR_IN_SECONDS );
@@ -4300,7 +3780,6 @@ function captaincore_ajax_action_callback() {
 		} else {
 			echo json_encode( array("Error" => "Site not found in Fathom" ) );
 		}
-		
 
 	}
 
@@ -4311,7 +3790,7 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'newKey' ) {
 
-		$key = (object) $value;
+		$key      = (object) $value;
 		$time_now = date("Y-m-d H:i:s");
 
 		$new_key = array(
@@ -4367,177 +3846,50 @@ function captaincore_ajax_action_callback() {
 	}
 
 	if ( $cmd == 'newProcess' ) {
-
-		$process = (object) $value;
-
-		// Create post object
-		$new_process = array(
-			'post_status' => 'publish',
-			'post_type'   => 'captcore_process',
-			'post_title'  => $process->title,
-			'post_author' => get_current_user_id(),
-		);
-
-		// Insert the post into the database
-		$process_id = wp_insert_post( $new_process );
-
-		update_field( 'time_estimate', $process->time_estimate, $process_id );
-		update_field( 'repeat', $process->repeat, $process_id );
-		update_field( 'repeat_quantity', $process->repeat_quantity, $process_id );
-		update_field( 'description', $process->description, $process_id );
-		wp_set_post_terms( $process_id, $process->role, 'process_role' );
-
-		// Prepare to send back
-		$all_processes = get_posts( $args );
-		$repeat_field  = get_field_object( 'field_57f791d6363f4' );
-
-		$process = get_post( $process_id );
-		$repeat_value  = get_field( 'repeat', $process->ID  );
-		$repeat = $repeat_field['choices'][ $repeat_value ];
-		$role = get_the_terms( $process->ID , 'process_role' );
-			if ( ! empty( $role ) && ! is_wp_error( $role ) ) {
-				$role = join(' ', wp_list_pluck( $role, 'name' ) );
-		}
-
-		$process_added = (object) [
-			"id"              => $process->ID,
-			"title"           => get_the_title( $process->ID ),
-			"created_at"      => $process->post_date,
-			"time_estimate"   => get_field( 'time_estimate', $process->ID ),
-			"repeat"          => $repeat,
-			"repeat_quantity" => get_field( 'repeat_quantity', $process->ID ),
-			"role"            => $role
-		];
-
-		echo json_encode( $process_added );
+		$timenow             = date( 'Y-m-d H:i:s' );
+		$process             = (object) $value;
+		$process->user_id    = get_current_user_id();
+		$process->created_at = $timenow;
+		$process->updated_at = $timenow;
+		unset( $process->show );
+		$process_id = ( new CaptainCore\Processes )->insert( (array) $process );
+		$process_inserted = ( new CaptainCore\Processes )->get( $process_id );
+		echo json_encode( $process_inserted );
 	}
 
-	if ( $cmd == 'updateProcess' ) {
-
-		$process = (object) $value;
-		$process_id = $process->id;
-
-		// Create post object
-		$update_process = array(
-			'ID'          => $process_id,
-			'post_title'  => $process->title,
-			'post_author' => get_current_user_id(),
-		);
-
-		// Update post
-		wp_update_post( $update_process );
-
-		update_field( 'time_estimate', $process->time_estimate, $process_id );
-		update_field( 'repeat', $process->repeat_value, $process_id );
-		update_field( 'repeat_quantity', $process->repeat_quantity, $process_id );
-		update_field( 'description', $process->description_raw, $process_id );
-		wp_set_post_terms( $process_id, $process->role_id, 'process_role' );
-
-		// Prepare to send back
-		$all_processes = get_posts( $args );
-		$repeat_field  = get_field_object( 'field_57f791d6363f4' );
-
-		$process = get_post( $process_id );
-		$repeat_value  = get_field( 'repeat', $process->ID  );
-		$repeat = $repeat_field['choices'][ $repeat_value ];
-		$role = get_the_terms( $process->ID , 'process_role' );
-			if ( ! empty( $role ) && ! is_wp_error( $role ) ) {
-				$role = join(' ', wp_list_pluck( $role, 'name' ) );
-		}
-
-		$process_updated = (object) [
-			"id"              => $process->ID,
-			"title"           => get_the_title( $process->ID ),
-			"created_at"      => $process->post_date,
-			"time_estimate"   => get_field( 'time_estimate', $process->ID ),
-			"repeat"          => $repeat,
-			"repeat_quantity" => get_field( 'repeat_quantity', $process->ID ),
-			"role"            => $role
-		];
-
+	if ( $cmd == 'saveProcess' ) {
+		$process             = (object) $value;
+		$process->updated_at = date( 'Y-m-d H:i:s' );
+		( new CaptainCore\Processes )->update( (array) $process, [ "process_id" => $process->process_id ] );
+		$process_updated = ( new CaptainCore\Processes )->get( $process->process_id );
 		echo json_encode( $process_updated );
 	}
 
 	if ( $cmd == 'fetchProcess' ) {
-
-		$process = get_post( $post_id );
-		$Parsedown = new Parsedown();
-		$description = $GLOBALS['wp_embed']->autoembed( get_field("description", $post_id ) ) ;
-		$description = $Parsedown->text( $description );
-		$repeat_field  = get_field_object( 'field_57f791d6363f4' );
-		$repeat_value  = get_field( 'repeat', $process->ID  );
-		$repeat = $repeat_field['choices'][ $repeat_value ];
-		$role = get_the_terms( $process->ID , 'process_role' );
-			if ( ! empty( $role ) && ! is_wp_error( $role ) ) {
-				$role = join(' ', wp_list_pluck( $role, 'name' ) );
-		}
-
-		$process_fetch = (object) [
-			"id"              => $process->ID,
-			"title"           => get_the_title( $process->ID ),
-			"created_at"      => $process->post_date,
-			"description"     => $description,
-			"description_raw" => get_field( 'description', $process->ID ),
-			"time_estimate"   => get_field( 'time_estimate', $process->ID ),
-			"repeat"          => $repeat,
-			"repeat_value"    => $repeat_value,
-			"repeat_quantity" => get_field( 'repeat_quantity', $process->ID ),
-			"role"            => $role,
-			"role_id"         => get_the_terms( $process->ID , 'process_role' )[0]->term_id,
-		];
-		
-		echo json_encode( $process_fetch );
+		$process = ( new CaptainCore\Process( $post_id ) )->get();
+		echo json_encode( $process );
 	}
 
+	if ( $cmd == 'fetchProcessRaw' ) {
+		$process = ( new CaptainCore\Processes )->get( $post_id );
+		$process->roles = (int) $process->roles;
+		echo json_encode( $process );
+	}
+
+
 	if ( $cmd == 'fetchProcessLog' ) {
-
-		$process_log = get_post( $value ) ;
-
-		// Fetch new process_log and return as json
-		$Parsedown = new Parsedown();
-
-			$process     = get_field( "process", $process_log->ID );
-			$author_id   = $process_log->post_author;
-			$author      = get_the_author_meta( 'display_name', $author_id );
-			$description = $Parsedown->text( get_field("description", $process_log->ID ) );
-			$websites    = [];
-			foreach( get_field("website", $process_log->ID ) as $website_id ) {
-				$site = get_post( $website_id );
-				$websites[] = (object) [ 
-					'id'   => $site->ID,
-					'name' => $site->post_title,
-				];
-			}
-
-			$process_log_fetch = (object) [
-				'id'              => $process_log->ID,
-				'process_id'      => $process[0],
-				'title'           => get_the_title( $process[0] ),
-				'author'          => $author,
-				'description'     => $description,
-				'description_raw' => get_field("description", $process_log->ID ),
-				'websites'        => $websites,
-				'created_at'      => $process_log->post_date,
-			];
-
-		
-		echo json_encode( $process_log_fetch );
-
+		$process_log = ( new CaptainCore\ProcessLog( $value ) )->get();
+		echo json_encode( $process_log );
 	}
 
 	if ( $cmd == 'fetchProcessLogs' ) {
-
 		$processlogs_fetch = [];
-
-		$process_logs = get_posts(
-			array(
+		$process_logs = get_posts( [
 				'post_type'      => 'captcore_processlog',
 				'posts_per_page' => '-1',
 				'meta_key'       => 'status',
 				'meta_value'     => 'completed',
-
-			)
-		);
+		] );
 
 		// Fetch new process_log and return as json
 		$Parsedown = new Parsedown();
@@ -4576,194 +3928,63 @@ function captaincore_ajax_action_callback() {
 	if ( $cmd == 'newLogEntry' ) {
 
 		$process_id = $_POST['process_id'];
-
-		// Create post object
-		$my_post = array(
-			'post_status' => 'publish',
-			'post_type'   => 'captcore_processlog',
-			'post_author' => get_current_user_id(),
-		);
-
-		// Insert the post into the database
-		$process_log_id = wp_insert_post( $my_post );
-
-		// Assign process to ACF relationship field
-		update_field( 'field_57f862ec5b466', $process_id, $process_log_id );
-
-		// Assign website to ACF relationship field
-		if ( $post_ids ) {
-			update_field( 'field_57fae6d263704', $post_ids, $process_log_id );
-		}
-
-		// Mark public
-		update_field( 'field_584dc76e7eec2', true, $process_log_id );
-
-		// Assign description
-		update_field( 'field_57fc396b04e0a', $value, $process_log_id );
-
-		// Mark completed
-		update_field( 'field_588bb7bd3cab6', 'completed', $process_log_id );           // Sets status field to completed
-		update_field( 'field_588bb8423cab7', date( 'Y-m-d H:i:s' ), $process_log_id );
-
-
-		// Loop through each site and fetch updated timeline to return.
-		$timelines = [];
-		$Parsedown = new Parsedown();
-
-		foreach ( $post_ids as $post_id ) {
-
-			$arguments = array(
-				'post_type'      => 'captcore_processlog',
-				'posts_per_page' => '-1',
-				'meta_query'	=> array(
-					array(
-						'key'	 	=> 'website',
-						'value'	  	=> '"'.$post_id.'"',
-						'compare' 	=> 'LIKE',
-					),
-			));
-	
-			$process_logs = get_posts( $arguments );
-			$timeline_items = [];
-
-			foreach ($process_logs as $process_log) {
-
-				$process = get_field("process", $process_log->ID );
-				$author_id = $process_log->post_author;
-				$author = get_the_author_meta( 'display_name', $author_id );
-		$description = $Parsedown->text( get_field("description", $process_log->ID ) );
-
-				$timeline_items[] = (object) [
-			'id'              => $process_log->ID,
-			'process_id'      => $process[0],
-			'title'           => get_the_title( $process[0] ),
-			'author'          => $author,
-			'description'     => $description,
-			'description_raw' => get_field("description", $process_log->ID ),
-			'created_at'      => $process_log->post_date,
+		$time_now   = date( 'Y-m-d H:i:s' );
+		$process_log_new = (object) [
+			"process_id"   => $_POST['process_id'],
+			'user_id'      => get_current_user_id(),
+			'public'       => 1,
+			'description'  => $value,
+			'status'       => 'completed',
+			'created_at'   => $time_now,
+			'updated_at'   => $time_now,
+			'completed_at' => $time_now
 		];
-
-			} 
-			$timelines[ $post_id ] = $timeline_items;
-
+		$process_log = new CaptainCore\ProcessLogs();
+		$process_log_id_new = $process_log->insert( (array) $process_log_new );
+		(new CaptainCore\ProcessLog( $process_log_id_new) )->assign_sites( $post_ids );
+		$process_logs = ( new CaptainCore\Site( $post_id ) )->process_logs();
+		$timelines = [];
+		foreach ( $post_ids as $post_id ) {
+			$timelines[ $post_id ] = ( new CaptainCore\Site( $post_id ) )->process_logs();
 		}
-
 		echo json_encode( $timelines ) ;
-
 	}
 
 	if ( $cmd == 'updateLogEntry' ) {
-
-		$process_log_update = (object) $_POST['log'];
-
-		$process_log = get_post( $process_log_update->id );
-		wp_update_post(
-			array (
-					'ID'            => $process_log_update->id, // ID of the post to update
-					'post_date'     => $process_log_update->created_at,
-					'post_date_gmt' => get_gmt_from_date( $process_log_update->created_at ),
-					'post_author'   => get_current_user_id()
-			)
-		);
-
-		// Assign process to ACF relationship field
-		update_field( 'field_57f862ec5b466', $process_log_update->process_id, $process_log->ID );
-
-		// Assign website to ACF relationship field
-		update_field( 'field_57fae6d263704', $post_ids, $process_log->ID );
-
-		// Assign description
-		update_field( 'field_57fc396b04e0a', $process_log_update->description_raw, $process_log->ID );
-
-		// Mark completed
-		update_field( 'field_588bb7bd3cab6', 'completed', $process_log->ID );           // Sets status field to completed
-		update_field( 'field_588bb8423cab7', date( 'Y-m-d H:i:s' ), $process_log->ID );
-
-		// Loop through each site and fetch updated timeline to return.
+		$process_log_update              = (object) $_POST['log'];
+		$site_ids                        = array_column( $process_log_update->websites, 'site_id' );
+		$process_log_update->user_id     = get_current_user_id();
+		$process_log_update->description = $process_log_update->description_raw;
+		$process_log_update->updated_at  = date( 'Y-m-d H:i:s' );
+		unset( $process_log_update->name );
+		unset( $process_log_update->author );
+		unset( $process_log_update->websites );
+		unset( $process_log_update->description_raw );
+		( new CaptainCore\ProcessLogs )->update( (array) $process_log_update, [ "process_log_id" => $process_log_update->process_log_id ] );
+		( new CaptainCore\ProcessLog( $process_log_update->process_log_id) )->assign_sites( $site_ids );
 		$timelines = [];
-		$Parsedown = new Parsedown();
-
-		foreach ( $post_ids as $post_id ) {
-
-			$arguments = array(
-				'post_type'      => 'captcore_processlog',
-				'posts_per_page' => '-1',
-				'meta_query'	=> array(
-					array(
-						'key'	 	=> 'website',
-						'value'	  	=> '"'.$post_id.'"',
-						'compare' 	=> 'LIKE',
-					),
-			));
-	
-			$process_logs = get_posts( $arguments );
-			$timeline_items = [];
-
-			foreach ($process_logs as $process_log) {
-
-				$process = get_field("process", $process_log->ID );
-				$author_id = $process_log->post_author;
-				$author = get_the_author_meta( 'display_name', $author_id );
-		$description = $Parsedown->text( get_field("description", $process_log->ID ) );
-
-				$timeline_items[] = (object) [
-			'id'              => $process_log->ID,
-			'process_id'      => $process[0],
-			'title'           => get_the_title( $process[0] ),
-			'author'          => $author,
-			'description'     => $description,
-			'description_raw' => get_field("description", $process_log->ID ),
-			'created_at'      => $process_log->post_date,
-		];
-
-			} 
-			$timelines[ $post_id ] = $timeline_items;
-
+		foreach ( $site_ids as $site_id ) {
+			$timelines[ $site_id ] = ( new CaptainCore\Site( $site_id ) )->process_logs();
 		}
-
 		echo json_encode( $timelines ) ;
-
 	}
 
 	if ( $cmd == 'timeline' ) {
-		
-		$arguments = array(
-			'post_type'      => 'captcore_processlog',
-			'posts_per_page' => '-1',
-			'meta_query'	=> array(
-				array(
-					'key'	 	=> 'website',
-					'value'	  	=> '"'.$post_id.'"',
-					'compare' 	=> 'LIKE',
-				),
-		));
+		$process_logs = ( new CaptainCore\Site( $post_id ) )->process_logs();
+		echo json_encode( $process_logs ) ;
+	}
 
-		$process_logs = get_posts( $arguments );
+	if ( $cmd == 'updateSiteAccount' ) {
 
-		$Parsedown = new Parsedown();
-		$timeline_items = [];
+		$account = (object) $value;
+		if ( ! $user->verify_accounts( [ $account->account_id ] ) ) {
+			echo "Permission denied";
+			wp_die();
+			return;
+		}
 
-		foreach ($process_logs as $process_log) {
-
-			$process = get_field("process", $process_log->ID );
-			$author_id = $process_log->post_author;
-			$author = get_the_author_meta( 'display_name', $author_id );
-			$description = $Parsedown->text( get_field("description", $process_log->ID ) );
-
-			$timeline_items[] = (object) [
-				'id'              => $process_log->ID,
-				'process_id'      => $process[0],
-				'title'           => get_the_title( $process[0] ),
-				'author'          => $author,
-				'description'     => $description,
-				'description_raw' => get_field("description", $process_log->ID ),
-				'created_at'      => $process_log->post_date,
-			];
-
-		} 
-
-		echo json_encode( $timeline_items ) ;
-
+		( new CaptainCore\Accounts )->update( [ "name" => trim( $account->name ) ], [ "account_id" => $account->account_id ] );
+		echo json_encode( $account ) ;
 	}
 
 	if ( $cmd == 'newRecipe' ) {
@@ -4771,23 +3992,28 @@ function captaincore_ajax_action_callback() {
 		$recipe = (object) $value;
 		$time_now = date("Y-m-d H:i:s");
 
-		$new_recipe = array(
+		$new_recipe = [
 			'user_id'        => get_current_user_id(),
 			'title'          => $recipe->title,
 			'updated_at'     => $time_now,
 			'created_at'     => $time_now,
 			'content'        => stripslashes_deep( $recipe->content ),
-			'public'         => $recipe->public,
-		);
+			'public'         => 0
+		];
+
+		if ( $user->is_admin() ) {
+			$new_recipe["public"] = $recipe->public;
+		}
 
 		$db_recipes = new CaptainCore\Recipes();
 		$recipe_id = $db_recipes->insert( $new_recipe );
-		echo json_encode( $db_recipes->fetch_recipes("title","ASC") );
+		echo json_encode( $db_recipes->list() );
 
 		$remote_command = true;
 		$silence = true;
-		$recipe_content = base64_encode( stripslashes_deep( $recipe->content ) );
-		$command = "recipe add $recipe_content --id=$recipe_id --name=\"{$recipe->title}\"";
+		$recipe = ( new CaptainCore\Recipes )->get( $recipe_id );
+		$recipe = base64_encode( json_encode( $recipe ) );
+		$command = "recipe add $recipe --format=base64";
 
 	}
 
@@ -4795,111 +4021,41 @@ function captaincore_ajax_action_callback() {
 
 		$recipe = (object) $value;
 		$time_now = date("Y-m-d H:i:s");
+		$user_id = get_current_user_id();
 
-		$recipe_update = array(
+		if ( ! $user->is_admin() && $recipe->user_id != $user_id ) {
+			echo "Permission denied";
+			wp_die();
+			return;
+		}
+
+		$recipe_update = [
 			'title'          => $recipe->title,
 			'updated_at'     => $time_now,
 			'content'        => stripslashes_deep( $recipe->content ),
-			'public'         => $recipe->public,
-		);
+			'public'         => 0
+		];
+
+		if ( $user->is_admin() ) {
+			$new_recipe["public"] = $recipe->public;
+		}
 
 		$db_recipes = new CaptainCore\Recipes();
-		$db_recipes->update( $recipe_update, array( "recipe_id" => $recipe->recipe_id ) );
+		$db_recipes->update( $recipe_update, [ "recipe_id" => $recipe->recipe_id ] );
 
-		echo json_encode( $db_recipes->fetch_recipes( "title", "ASC" ) );
+		echo json_encode( $db_recipes->list() );
 
 		$remote_command = true;
 		$silence = true;
-		$recipe_content = base64_encode( stripslashes_deep( $recipe->content ) );
-		$command = "recipe add $recipe_content --id={$recipe->recipe_id} --name=\"{$recipe->title}\"";
+		$recipe = ( new CaptainCore\Recipes )->get( $recipe->recipe_id );
+		$recipe = base64_encode( json_encode( $recipe ) );
+		$command = "recipe add $recipe --format=base64";
 
 	}
 
 	if ( $cmd == 'usage-breakdown' ) {
-
-		$customer     = get_field( "customer", $post_id );
-		$customer_id  = $customer[0];
-		$hosting_plan = get_field( 'hosting_plan', $customer_id );
-		$addons       = get_field( 'addons', $customer_id );
-		$storage      = get_field( 'storage', $customer_id );
-		$visits       = get_field( 'visits', $customer_id );
-		$visits_plan_limit = get_field( 'visits_limit', $customer_id );
-		$storage_limit     = get_field( 'storage_limit', $customer_id );
-		$sites_limit       = get_field( 'sites_limit', $customer_id );
-
-		if ( isset( $visits ) ) {
-			$visits_percent = round( $visits / $visits_plan_limit * 100, 0 );
-		}
-
-		$storage_gbs = round( $storage / 1024 / 1024 / 1024, 1 );
-		$storage_percent = round( $storage_gbs / $storage_limit * 100, 0 );
-
-		$sites = [];
-		$total = [];
-
-		$websites_for_customer = get_posts(
-			array(
-				'post_type'      => 'captcore_website',
-				'posts_per_page' => '-1',
-				'order'          => 'ASC',
-				'orderby'        => 'title',
-				'meta_query' => array(
-					'relation' => 'AND',
-					array(
-						'key'     => 'status', // name of custom field
-						'value'   => 'active', // matches exactly "123", not just 123. This prevents a match for "1234"
-						'compare' => '=',
-					),
-					array(
-						'key'     => 'customer', // name of custom field
-						'value'   => '"' . $customer_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-						'compare' => 'LIKE',
-					),
-					),
-			)
-		);
-
-		if ( $websites_for_customer ) :
-			foreach ( $websites_for_customer as $website_for_customer ) :
-				$site = new CaptainCore\Site( $website_for_customer->ID );
-				$site = $site->get();
-				$website_for_customer_storage = $site->storage_raw;
-				$website_for_customer_visits  = $site->visits;
-				$sites[] = array(
-					'name'    => get_the_title( $website_for_customer->ID ),
-					'storage' => round( $website_for_customer_storage / 1024 / 1024 / 1024, 1 ),
-					'visits'  => $website_for_customer_visits
-				);
-			endforeach;
-
-			$total = array(
-				$storage_percent . "% storage<br /><strong>" . $storage_gbs ."GB/". $storage_limit ."GB</strong>",
-				$visits_percent . "% traffic<br /><strong>" . number_format( $visits ) . "</strong> <small>Yearly Estimate</small>"
-			);
-
-		endif;
-
-		$usage_breakdown = array ( 'sites' => $sites, 'total' => $total );
-
-		$mock_usage_breakdown = array(
-			'sites' => array(
-					array(
-						'name' => 'anchor.host',
-						'storage' => '.4',
-						'visits' => '22164'
-					),
-					array(
-						'name' => 'anchorhost1.wpengine.com',
-						'storage' => '2.5',
-						'visits' => '10352'
-					)
-			),
-			'total' =>  array(
-				'25% storage<br />24.9GB/100GB',
-				'86% traffic<br />86,112 Yearly Estimate'
-			),
-		);
-
+		$account         = new CaptainCore\Account( $post_id );
+		$usage_breakdown = $account->usage_breakdown();
 		echo json_encode( $usage_breakdown ) ;
 	}
 
@@ -4910,189 +4066,144 @@ function captaincore_ajax_action_callback() {
 			$site = "{$site}-staging";
 		}
 
-		$db_environments = new CaptainCore\Environments();
+		$time_now = date("Y-m-d H:i:s");
 
 		// Saves update settings for a site
-		$environment_update = array(
-			'fathom' => json_encode($value),
-		);
-		$environment_update['updated_at'] = date("Y-m-d H:i:s");
+		$environment_update = [
+			'fathom'     => json_encode($value),
+			'updated_at' =>  $time_now,
+		];
 
-		if ($environment == "Production") {
-			$environment_id = get_field( 'environment_production_id', $post_id );
-			$db_environments->update( $environment_update, [ "environment_id" => $environment_id ] );
-		}
-		if ($environment == "Staging") {
-			$environment_id = get_field( 'environment_staging_id', $post_id );
-			$db_environments->update( $environment_update, [ "environment_id" => $environment_id ] );
-		}
+		$environment_id = ( new CaptainCore\Site( $post_id ) )->fetch_environment_id( $environment );
+		( new CaptainCore\Environments )->update( $environment_update, [ "environment_id" => $environment_id ] );
 
 		// Remote Sync
 		$run_in_background = true;
-		$remote_command = true;
-		$command = "stats-deploy $site '" . json_encode($value) . "'";
+		$remote_command    = true;
+		$command           = "stats-deploy $site '" . json_encode($value) . "'";
 
 	}
 
 	if ( $cmd == 'updatePlan' ) {
-
 		// Regenerate usage info for customer
-		captaincore_acf_save_post_after( $post_id );
-
-		$customer     = get_field( "customer", $post_id );
-		$customer_id  = $customer[0];
-		$hosting_plan = $value["hosting_plan"];
-		$addons       = $value["addons"];
-
-		update_field( 'hosting_plan', $hosting_plan["name"], $customer_id );
-		update_field( 'visits_limit', $hosting_plan["visits_limit"], $customer_id );
-		update_field( 'storage_limit', $hosting_plan["storage_limit"], $customer_id );
-		update_field( 'sites_limit', $hosting_plan["sites_limit"], $customer_id );
-		update_field( 'price', $hosting_plan["price"], $customer_id );
-		update_field( 'addons', $addons, $customer_id );
-
+		$account_id   = ( new CaptainCore\Sites )->get( $post_id )->account_id;
+		$account      = ( new CaptainCore\Accounts )->get( $account_id );
+		$plan         = json_decode( $account->plan );
+		$plan->name   = $value["plan"]["name"];
+		$plan->price  = $value["plan"]["price"];
+		$plan->addons = $value["plan"]["addons"];
+		$plan->limits = $value["plan"]["limits"];
+		$db           = new CaptainCore\Accounts;
+		$db->update( [ "plan" => json_encode( $plan ) ], [ "account_id" => $account_id ] );
 	}
 
 	if ( $cmd == 'updateSettings' ) {
-
 		$db_environments = new CaptainCore\Environments();
-
 		// Saves update settings for a site
-		$environment_update = array(
+		$environment_update = [
 			'updates_enabled'         => $value["updates_enabled"],
 			'updates_exclude_themes'  => implode(",", $value["exclude_themes"]),
 			'updates_exclude_plugins' => implode(",", $value["exclude_plugins"]),
-		);
+		];
 		$environment_update['updated_at'] = date("Y-m-d H:i:s");
-
-		if ($environment == "Production") {
-			$environment_id = get_field( 'environment_production_id', $post_id );
+		if ( $environment == "Production" ) {
+			$environment_id = $db_environments->select_by_conditions( 'environment_id', [ 'site_id' => $post_id, 'environment' => 'Production' ] );
 			$db_environments->update( $environment_update, [ "environment_id" => $environment_id ] );
 		}
-		if ($environment == "Staging") {
-			$environment_id = get_field( 'environment_staging_id', $post_id );
+		if ( $environment == "Staging" ) {
+			$environment_id = $db_environments->select_by_conditions( 'environment_id', [ 'site_id' => $post_id, 'environment' => 'Staging' ] );
 			$db_environments->update( $environment_update, [ "environment_id" => $environment_id ] );
 		}
 
 		// Remote Sync
 		$run_in_background = true;
-		$remote_command = true;
-		$command = "site update" . captaincore_site_fetch_details( $post_id );
+		$remote_command    = true;
+		$details           = ( new CaptainCore\Site( $post_id ) )->get_raw();
+		$details           = base64_encode( json_encode( $details ) );
+		$command           = "site update $site --details=$details --format=base64";
 
 	}
 
 	if ( $cmd == 'newSite' ) {
-
 		// Create new site
-		$site = new CaptainCore\Site();
+		$site    = new CaptainCore\Site();
 		$reponse = $site->create( $value );
 		echo json_encode( $reponse );
-
 	}
 
 	if ( $cmd == 'updateSite' ) {
-
 		// Updates site
-		$site = new CaptainCore\Site( $value["id"] );
+		$site    = new CaptainCore\Site( $value["site_id"] );
 		$reponse = $site->update( $value );
 		echo json_encode( $reponse );
-
 	}
 
 	if ( $cmd == 'deleteSite' ) {
-
 		// Delete site on CaptainCore CLI
 		$run_in_background = true;
-		$remote_command = true;
-		$command = "site delete $site";
+		$remote_command    = true;
+		$command           = "site delete $site";
 
 		// Delete site locally
 		$site = new CaptainCore\Site( $post_id );
 		$site->delete();
-	
 	}
 
+	if ( $cmd == 'fetch-site-environments' ) {
+		$site         = new CaptainCore\Site( $post_id );
+		$environments = $site->environments();
+		echo json_encode( $environments );
+	}
+	if ( $cmd == 'fetch-site-details' ) {
+		$site        = new CaptainCore\Site( $post_id );
+		$account     = $site->account();
+		$shared_with = $site->shared_with();
+		echo json_encode( [ 
+			"account"     => $account,
+			"shared_with" => $shared_with,
+		] );
+	}
 	if ( $cmd == 'fetch-site' ) {
 		$sites = [];
 		if ( count( $post_ids ) > 0 ) {
 			foreach( $post_ids as $id ) {
-				$site = new CaptainCore\Site( $id );
+				$site    = new CaptainCore\Site( $id );
 				$sites[] = $site->get();
 			}
 		} else {
-			$site = new CaptainCore\Site( $post_id );
+			$site    = new CaptainCore\Site( $post_id );
 			$sites[] = $site->get();
 		}
 		echo json_encode( $sites );
 	}
 
 	if ( $cmd == 'fetch-users' ) {
-
-		$users_production = json_decode( get_field( "field_5b2a900c85a77", $post_id ) );
-		$users_staging    = json_decode( get_field( "field_5c6758d67ad20", $post_id ) );
-
-		array_multisort(
-			array_column($users_production, 'roles'), SORT_ASC,
-            array_column($users_production, 'user_login'), SORT_ASC,
-			$users_production
-		);
-
-		array_multisort(
-			array_column($users_staging, 'roles'), SORT_ASC,
-            array_column($users_staging, 'user_login'), SORT_ASC,
-			$users_staging
-		);
-
-		# Fetch from custom table
-		$results = array(
-			"Production" => $users_production,
-			"Staging"    => $users_staging
-		);
+		$results = ( new CaptainCore\Site( $post_id ))->users();
 		echo json_encode($results);
-			 
 	}
 
 	if ( $cmd == 'fetch-update-logs' ) {
-
-		$db = new CaptainCore\Update_Logs;
-
-		$environment_production_id = get_field( 'environment_production_id', $post_id );
-		$environment_staging_id = get_field( 'environment_staging_id', $post_id );
-
-		# Fetch from custom table
-		$results = array(
-			"Production" => $db->fetch_logs( $post_id, $environment_production_id ),
-			"Staging" => $db->fetch_logs( $post_id, $environment_staging_id )
-		);
-
+		$results = ( new CaptainCore\Site( $post_id ))->update_logs();
 		echo json_encode($results);
-
 	}
 
 	if ( $cmd == 'fetch-one-time-login' ) {
-
-		if ($environment == "Production") {
-			$home_url = get_field( "field_5a944358bf146", $post_id );
-		}
-		if ($environment == "Staging") {
-			$home_url = get_field( "field_5c6758df7ad21", $post_id );
-		}
-
-		$args = array(
-			"body" => json_encode( array(
+		$fetch    = ( new CaptainCore\Sites )->get( $post_id );
+		$home_url = ( new CaptainCore\Environments )->select_by_conditions( 'home_url', [ "site_id" => $post_id, "environment" => $environment ] );
+		$home_url = isset( $home_url[0] ) ? $home_url[0] : '';
+		$args     = [
+			"body" => json_encode( [
 					"command"    => "login",
 					"user_login" => $value,
-					"token"      => get_field( "token", $post_id ),
-			) ),
+					"token"      => $fetch->token,
+			 ] ),
 			"method"    => 'POST',
 			"sslverify" => false,
-		);
-
-		$response = wp_remote_post( $home_url . "/wp-admin/admin-ajax.php?action=captaincore_quick_login", $args );
+		];
+		$response  = wp_remote_post( "$home_url/wp-admin/admin-ajax.php?action=captaincore_quick_login", $args );
 		$login_url = $response["body"];
 		echo $login_url;
 		wp_die();
-
 	}
 
 	if ( $remote_command ) {
@@ -5166,7 +4277,7 @@ function captaincore_ajax_action_callback() {
 
 add_action( 'wp_ajax_captaincore_install', 'captaincore_install_action_callback' );
 function captaincore_install_action_callback() {
-	global $wpdb; // this is how you get access to the database
+	global $wpdb;
 
 	// Assign post id
 	$post_id = intval( $_POST['post_id'] );
@@ -5212,10 +4323,10 @@ function captaincore_install_action_callback() {
 	$background   = $_POST['background'];
 	$job_id       = $_POST['job_id'];
 	$notes        = $_POST['notes'];
-
-	$site         = get_field( 'site', $post_id );
-	$provider     = get_field( 'provider', $post_id );
-	$domain       = get_the_title( $post_id );
+	$fetch        = (new CaptainCore\Site( $post_id ))->get();
+	$site         = $fetch->site;
+	$provider     = $fetch->provider;
+	$domain       = $fetch->name;
 
 	$partners = get_field( 'partner', $post_id );
 	if ( $partners ) {
@@ -5224,7 +4335,7 @@ function captaincore_install_action_callback() {
 
 	// Append environment if needed
 	if ( $environment == "Staging" ) {
-		$site = get_field( 'site', $post_id ) . "-staging";
+		$site = "{$site}-staging";
 	}
 
 	// Append provider if exists
@@ -5237,16 +4348,19 @@ function captaincore_install_action_callback() {
 		$site_names = [];
 		foreach( $post_ids as $id ) {
 
+			$fetch     = ( new CaptainCore\Site( $id ) );
+			$site_name = $fetch->get()->site;
+
 			if ( $environment == "Production" or $environment == "Both" ) {
-				$site_names[]   = get_field( 'site', $id );
+				$site_names[] = $site_name;
 			}
 
-			$address_staging  = get_field( 'field_57b7a25d2cc60', $id );
+			$address_staging = $fetch->environments()[1]->address;
 
 			// Add staging if needed
 			if ( isset( $address_staging ) && $address_staging != "" ) {
 				if ( $environment == "Staging" or $environment == "Both" ) {
-					$site_names[] = get_field( 'site', $id ) . '-staging';
+					$site_names[] = "{$site_name}-staging";
 				}
 			}
 		}
@@ -5257,7 +4371,9 @@ function captaincore_install_action_callback() {
 		$run_in_background = true;
 	}
 	if ( $cmd == 'new' ) {
-		$command = 'site add' . captaincore_site_fetch_details( $post_id );
+		$details = ( new CaptainCore\Site( $post_id ) )->get_raw();
+		$details = base64_encode( json_encode( $details ) );
+		$command = "site add $site --details=$details --format=base64";
 		$run_in_background = true;
 	}
 	if ( $cmd == 'deploy-defaults' ) {
@@ -5265,7 +4381,9 @@ function captaincore_install_action_callback() {
 		$run_in_background = true;
 	}
 	if ( $cmd == 'update' ) {
-		$command = 'site update' . captaincore_site_fetch_details( $post_id );
+		$details = ( new CaptainCore\Site( $post_id ) )->get_raw();
+		$details = base64_encode( json_encode( $details ) );
+		$command = "site update $site --details=$details --format=base64";
 		$run_in_background = true;
 	}
 	if ( $cmd == 'update-wp' ) {
@@ -5377,11 +4495,11 @@ function captaincore_install_action_callback() {
 	}
 	if ( $cmd == 'deactivate' ) {
 		$run_in_background = true;
-		$command = "deactivate $site --name=\"$name\" --link=\"$link\"";
+		$command           = "deactivate $site --name=\"$name\" --link=\"$link\"";
 	}
 	if ( $cmd == 'activate' ) {
 		$run_in_background = true;
-		$command = "activate $site";
+		$command           = "activate $site";
 	}
 
 	if ( $cmd == 'view_quicksave_changes' ) {
@@ -5389,7 +4507,7 @@ function captaincore_install_action_callback() {
 	}
 
 	if ( $cmd == 'run' ) {
-		$code = base64_encode( stripslashes_deep( $value ) );
+		$code    = base64_encode( stripslashes_deep( $value ) );
 		$command = "run $site --code=$code";
 	}
 
@@ -5422,32 +4540,28 @@ function captaincore_install_action_callback() {
 	}
 
 	if ( $cmd == 'quicksave_file_diff' ) {
-		$db_quicksaves = new CaptainCore\Quicksaves;
-		$quicksaves = $db_quicksaves->get( $quicksave_id );
+		$quicksaves = ( new CaptainCore\Quicksaves )->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
 		$command    = "quicksave-file-diff $site --hash=$commit --file=$value --html";
 	}
 
 	if ( $cmd == 'rollback' ) {
 		$run_in_background = true;
-		$db_quicksaves = new CaptainCore\Quicksaves;
-		$quicksaves = $db_quicksaves->get( $quicksave_id );
+		$quicksaves = ( new CaptainCore\Quicksaves )->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
 		$command    = "rollback $site $git_commit --$addon_type=$value";
 	}
 
 	if ( $cmd == 'quicksave_rollback' ) {
 		$run_in_background = true;
-		$db_quicksaves = new CaptainCore\Quicksaves;
-		$quicksaves = $db_quicksaves->get( $quicksave_id );
+		$quicksaves = ( new CaptainCore\Quicksaves )->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
 		$command    = "rollback $site $git_commit --all";
 	}
 
 	if ( $cmd == 'quicksave_file_restore' ) {
 		$run_in_background = true;
-		$db_quicksaves = new CaptainCore\Quicksaves;
-		$quicksaves = $db_quicksaves->get( $quicksave_id );
+		$quicksaves = ( new CaptainCore\Quicksaves )->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
 		$command    = "rollback $site $git_commit --file=$value";
 	}
@@ -5483,8 +4597,8 @@ function captaincore_install_action_callback() {
 		if ( $response && $response->Status == "Completed" ) { 
 			echo json_encode(array(
 				"response" => $response->Response,
-				"status" => "Completed",
-				"job_id" => $job_id
+				"status"   => "Completed",
+				"job_id"   => $job_id
 			));
 			wp_die(); // this is required to terminate immediately and return a proper response
 		}
@@ -5525,210 +4639,7 @@ function captaincore_install_action_callback() {
 // Logs a process completion
 add_action( 'wp_ajax_log_process', 'process_log_action_callback' );
 
-function captaincore_site_fetch_details( $post_id ) {
-
-	$site                    = new CaptainCore\Site( $post_id );
-	$site_details            = $site->get();
-	$site                    = get_field( 'site', $post_id );
-	$provider                = get_field( 'provider', $post_id );
-	$domain                  = get_the_title( $post_id );
-	$partners                = get_field( 'partner', $post_id );
-	$key                     = get_field( 'key', $post_id );
-	$address                 = $site_details->environments[0]["address"];
-	$username                = $site_details->environments[0]["username"];
-	$password                = $site_details->environments[0]["password"];
-	$protocol                = $site_details->environments[0]["protocol"];
-	$port                    = $site_details->environments[0]["port"];
-	$home_directory          = ( isset($site_details->environments[0]["home_directory"]) ? $site_details->environments[0]["home_directory"] : '' );
-	$fathom                  = ( isset($site_details->environments[0]["fathom"]) ? json_encode( $site_details->environments[0]["fathom"] ) : '' );
-	$updates_enabled         = ( isset($site_details->environments[0]["updates_enabled"]) ? $site_details->environments[0]["updates_enabled"] : '' );
-	$updates_exclude_themes  = ( isset($site_details->environments[0]["updates_exclude_themes"]) ? implode(",", $site_details->environments[0]["updates_exclude_themes"] ) : '' );
-	$updates_exclude_plugins = ( isset($site_details->environments[0]["updates_exclude_plugins"]) ? implode(",", $site_details->environments[0]["updates_exclude_plugins"] ) : '' );
-	$offload_enabled         = ( isset($site_details->environments[0]["offload_enabled"]) ? $site_details->environments[0]["offload_enabled"] : '' );
-	$offload_provider        = ( isset($site_details->environments[0]["offload_provider"]) ? $site_details->environments[0]["offload_provider"] : '' );
-	$offload_access_key      = ( isset($site_details->environments[0]["offload_access_key"]) ? $site_details->environments[0]["offload_access_key"] : '' );
-	$offload_secret_key      = ( isset($site_details->environments[0]["offload_secret_key"]) ? $site_details->environments[0]["offload_secret_key"] : '' );
-	$offload_bucket          = ( isset($site_details->environments[0]["offload_bucket"]) ? $site_details->environments[0]["offload_bucket"] : '' );
-	$offload_path            = ( isset($site_details->environments[0]["offload_path"]) ? $site_details->environments[0]["offload_path"] : '' );
-	$staging_address         = ( isset($site_details->environments[1]["address"]) ? $site_details->environments[1]["address"] : '' );
-	$staging_username        = ( isset($site_details->environments[1]["username"]) ? $site_details->environments[1]["username"] : '' );
-	$staging_password        = ( isset($site_details->environments[1]["password"]) ? $site_details->environments[1]["password"] : '' );
-	$staging_protocol        = ( isset($site_details->environments[1]["protocol"]) ? $site_details->environments[1]["protocol"] : '' );
-	$staging_port            = ( isset($site_details->environments[1]["port"]) ? $site_details->environments[1]["port"] : '' );
-	$staging_home_directory  = ( isset($site_details->environments[1]["home_directory"]) ? $site_details->environments[1]["home_directory"] : '' );
-	$staging_fathom                  = ( isset($site_details->environments[1]["fathom"]) ? json_encode( $site_details->environments[1]["fathom"] ) : '' );
-	$staging_updates_enabled         = ( isset($site_details->environments[1]["updates_enabled"]) ? $site_details->environments[1]["updates_enabled"] : '' );
-	$staging_updates_exclude_themes  = ( isset($site_details->environments[1]["updates_exclude_themes"]) ? implode(",", $site_details->environments[1]["updates_exclude_themes"] ) : '' );
-	$staging_updates_exclude_plugins = ( isset($site_details->environments[1]["updates_exclude_plugins"]) ? implode(",", $site_details->environments[1]["updates_exclude_plugins"] ) : '' );
-	$staging_offload_enabled         = ( isset($site_details->environments[1]["offload_enabled"]) ? $site_details->environments[1]["offload_enabled"] : '' );
-	$staging_offload_provider        = ( isset($site_details->environments[1]["offload_provider"]) ? $site_details->environments[1]["offload_provider"] : '' );
-	$staging_offload_access_key      = ( isset($site_details->environments[1]["offload_access_key"]) ? $site_details->environments[1]["offload_access_key"] : '' );
-	$staging_offload_secret_key      = ( isset($site_details->environments[1]["offload_secret_key"]) ? $site_details->environments[1]["offload_secret_key"] : '' );
-	$staging_offload_bucket          = ( isset($site_details->environments[1]["offload_bucket"]) ? $site_details->environments[1]["offload_bucket"] : '' );
-	$staging_offload_path            = ( isset($site_details->environments[1]["offload_path"]) ? $site_details->environments[1]["offload_path"] : '' );
-
-	if ( $partners ) {
-		$preloadusers = implode( ',', $partners );
-	} else {
-		$preloadusers     = "";
-	}
-
-	// Append provider if exists
-	if ( $provider != '' ) {
-		$site = $site . '@' . $provider;
-	}
-
-	$command = '' .
-	( $site ? " $site" : '' ) .
-	( $post_id ? " --id=$post_id" : '' ) .
-	( $domain ? " --domain=$domain" : '' ) .
-	( $key ? " --key=$key" : ' --key=""' ) .
-	( $preloadusers ? " --preloadusers=$preloadusers" : '' ) .
-	( $address ? " --address=$address" : '' ) .
-	( $username ? " --username=$username" : '' ) .
-	( $password ? ' --password=' . rawurlencode( base64_encode( $password ) ) : '' ) .
-	( $protocol ? " --protocol=$protocol" : '' ) .
-	( $port ? " --port=$port" : '' ) .
-	( $home_directory ? " --home_directory=$home_directory" : '' ) .
-	( $fathom ? " --fathom=$fathom" : '' ) .
-	( $updates_enabled ? " --updates_enabled=$updates_enabled" : ' --updates_enabled=0' ) .
-	( $updates_exclude_themes ? " --updates_exclude_themes=$updates_exclude_themes" : '' ) .
-	( $updates_exclude_plugins ? " --updates_exclude_plugins=$updates_exclude_plugins" : '' ) .
-	( $offload_enabled ? " --offload_enabled=$offload_enabled" : ' --offload_enabled=0' ) .
-	( $offload_provider ? " --offload_provider=$offload_provider" : '' ) .
-	( $offload_access_key ? " --offload_access_key=$offload_access_key" : '' ) .
-	( $offload_secret_key ? " --offload_secret_key=$offload_secret_key" : '' ) .
-	( $offload_bucket ? " --offload_bucket=$offload_bucket" : '' ) .
-	( $offload_path ? " --offload_path=$offload_path" : '' ) .
-	( $staging_address ? " --staging_address=$staging_address" : '' ) .
-	( $staging_username ? " --staging_username=$staging_username" : '' ) .
-	( $staging_password ? ' --staging_password=' . rawurlencode( base64_encode( $staging_password ) ) : '' ) .
-	( $staging_protocol ? " --staging_protocol=$staging_protocol" : '' ) .
-	( $staging_port ? " --staging_port=$staging_port" : '' ) .
-	( $staging_home_directory ? " --staging_home_directory=$staging_home_directory" : '' ) .
-	( $staging_fathom ? " --staging_fathom=$staging_fathom" : '' ) .
-	( $staging_updates_enabled ? " --staging_updates_enabled=$staging_updates_enabled" : ' --staging_updates_enabled=0' ) .
-	( $staging_updates_exclude_themes ? " --staging_updates_exclude_themes=$staging_updates_exclude_themes" : '' ) .
-	( $staging_updates_exclude_plugins ? " --staging_updates_exclude_plugins=$staging_updates_exclude_plugins" : '' ) .
-	( $staging_offload_enabled ? " --staging_offload_enabled=$staging_offload_enabled" : ' --staging_offload_enabled=0' ) .
-	( $staging_offload_provider ? " --staging_offload_provider=$staging_offload_provider" : '' ) .
-	( $staging_offload_access_key ? " --staging_offload_access_key=$staging_offload_access_key" : '' ) .
-	( $staging_offload_secret_key ? " --staging_offload_secret_key=$staging_offload_secret_key" : '' ) .
-	( $staging_offload_bucket ? " --staging_offload_bucket=$staging_offload_bucket" : '' ) .
-	( $staging_offload_path ? " --staging_offload_path=$staging_offload_path" : '' );
-	return $command;
-
-}
-
-add_action('acf/save_post', 'captaincore_acf_save_post', 1);
-
-function captaincore_acf_save_post( $post_id ) {
-    
-	// bail early if no ACF data
-	if( empty($_POST['acf']) ) {
-			return;
-	}
-	
-	// array of field values
-	$fields = $_POST['acf'];
-
-	// bail if environment field not found
-	if ( ! isset( $fields['field_5619c94518f1c'] ) ) {
-		return;
-	}
-
-	$environment_production_id = get_field( 'environment_production_id', $post_id );
-	$environment_staging_id = get_field( 'environment_staging_id', $post_id );
-
-	$environment = array(
-		'site_id'                 => $post_id,
-		'environment'             => "Production",
-		'address'                 => $fields['field_5619c94518f1c'],
-		'username'                => $fields['field_5619c97c18f1d'],
-		'password'                => $fields['field_5619c98218f1e'],
-		'protocol'                => $fields['field_5619c98918f1f'],
-		'port'                    => $fields['field_5619c99d18f20'],
-		'home_directory'          => $fields['field_58422bd538c32'],
-		'database_username'       => $fields['field_5a69f0a6e9686'],
-		'database_password'       => $fields['field_5a69f0cce9687'],
-		'offload_enabled'         => $fields['field_58e14eee75e79'],
-		'offload_provider'        => $fields['field_5c67581c7ad15'],
-		'offload_access_key'      => $fields['field_58e14fc275e7a'],
-		'offload_secret_key'      => $fields['field_58e1500875e7b'],
-		'offload_bucket'          => $fields['field_58e1502475e7c'],
-		'offload_path'            => $fields['field_58e1503075e7d'],
-		'users'                   => stripslashes($fields['field_5b2a900c85a77']),
-		'themes'                  => stripslashes($fields['field_5a9421b804ed4']),
-		'plugins'                 => stripslashes($fields['field_5a9421b004ed3']),
-		'home_url'                => $fields['field_5a944358bf146'],
-		'core'                    => $fields['field_5a9421bc04ed5'],
-		'updates_enabled'         => $fields['field_5b2a902585a78'],
-		'updates_exclude_themes'  => $fields['field_5b231746b9731'],
-		'updates_exclude_plugins' => $fields['field_5b231770b9732'],
-	);
-
-
-	$db_environments = new CaptainCore\Environments();
-
-	if ( $environment_production_id ) {
-		// Updating production environment
-		$environment['updated_at'] = date("Y-m-d H:i:s");
-		$db_environments->update( $environment, array( "environment_id" => $environment_production_id ) );
-	} else {
-		// Creating production environment
-		$time_now = date("Y-m-d H:i:s");
-		$environment['created_at'] = $time_now;
-		$environment['updated_at'] = $time_now;
-		$environment_id = $db_environments->insert( $environment );
-		update_field( 'environment_production_id', $environment_id, $post_id );
-	}
-
-	$environment = array(
-		'site_id'                 => $post_id,
-		'environment'             => "Staging",
-		'address'                 => $fields['field_57b7a25d2cc60'],
-		'username'                => $fields['field_57b7a2642cc61'],
-		'password'                => $fields['field_57b7a26b2cc62'],
-		'protocol'                => $fields['field_57b7a2712cc63'],
-		'port'                    => $fields['field_57b7a2772cc64'],
-		'home_directory'          => $fields['field_5845da68fc2c9'],
-		'database_username'       => $fields['field_5a90ba0c6c61a'],
-		'database_password'       => $fields['field_5a90ba1e6c61b'],
-		'offload_enabled'         => $fields['field_5c6757d97ad13'],
-		'offload_provider'        => $fields['field_5c67584d7ad16'],
-		'offload_access_key'      => $fields['field_5c6757e77ad14'],
-		'offload_secret_key'      => $fields['field_5c6758667ad17'],
-		'offload_bucket'          => $fields['field_5c6758797ad18'],
-		'offload_path'            => $fields['field_5c67588f7ad19'],
-		'users'                   => stripslashes($fields['field_5c6758d67ad20']),
-		'themes'                  => stripslashes($fields['field_5c6758cc7ad1f']),
-		'plugins'                 => stripslashes($fields['field_5c6758c57ad1e']),
-		'home_url'                => $fields['field_5c6758df7ad21'],
-		'core'                    => $fields['field_5c6758bb7ad1d'],
-		'updates_enabled'         => $fields['field_5c6758987ad1a'],
-		'updates_exclude_themes'  => $fields['field_5c6758a37ad1b'],
-		'updates_exclude_plugins' => $fields['field_5c6758b37ad1c'],
-	);
-
-	$db_environments = new CaptainCore\Environments();
-
-	if ( $environment_staging_id ) {
-		// Updating staging environment
-		$environment['updated_at'] = date("Y-m-d H:i:s");
-		$db_environments->update( $environment, array( "environment_id" => $environment_staging_id ) );
-	} else {
-		// Creating staging environment
-		$time_now = date("Y-m-d H:i:s");
-		$environment['created_at'] = $time_now;
-		$environment['updated_at'] = $time_now;
-		$environment_id = $db_environments->insert( $environment );
-		update_field( 'environment_staging_id', $environment_id, $post_id );
-	}
-	
-}
-
 add_filter( 'acf/update_value', 'captaincore_disregard_acf_fields', 10, 3 );
-
 function captaincore_disregard_acf_fields( $value, $post_id, $field ) {
 
 	$fields_to_disregard = [
@@ -6176,7 +5087,7 @@ function captaincore_website_acf_actions( $field ) {
 add_action( 'acf/render_field/type=message', 'captaincore_website_acf_actions', 10, 1 );
 
 function process_log_action_callback() {
-	global $wpdb; // this is how you get access to the database
+	global $wpdb;
 
 	$post_id = intval( $_POST['post_id'] );
 
@@ -6208,7 +5119,7 @@ function process_log_action_callback() {
 add_action( 'wp_ajax_log_process_completed', 'log_process_completed_callback' );
 
 function log_process_completed_callback() {
-	global $wpdb; // this is how you get access to the database
+	global $wpdb;
 
 	$post_id = intval( $_POST['post_id'] );
 
@@ -6783,7 +5694,7 @@ if( function_exists('acf_add_options_page') ) {
 }
 
 function captaincore_activation_redirect( $plugin ) {
-	if( $plugin == plugin_basename( __FILE__ ) ) {
+	if( $plugin == plugin_basename( __FILE__ ) && ! defined( 'WP_CLI' ) ) {
 			exit( wp_redirect( admin_url( 'admin.php?page=captaincore-admin' ) ) );
 	}
 }
@@ -6808,11 +5719,11 @@ function captaincore_fetch_socket_address() {
 add_filter( 'template_include', 'load_captaincore_template' );
 function load_captaincore_template( $original_template ) {
   if ( is_account_page() ) {
-	global $wp;
-	$request = explode( '/', $wp->request );
+  global $wp;
+  $request = explode( '/', $wp->request );
 	if ( end($request) == 'my-account' ) {
-		wp_redirect("/account");
-	}
+	wp_redirect("/account");
+  }
   }
   if ( is_page( 'account' ) ) {
     return plugin_dir_path( __FILE__ ) . 'templates/core.php';

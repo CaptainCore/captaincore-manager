@@ -89,7 +89,6 @@ input[type=text]:focus {
     </v-card>
     </v-flex>
     </v-layout>
-    <p><a href="/wp-admin/edit.php?post_type=captcore_website">Legacy Custom Post Types</a></p>
 </div>
 </form>
 <script>
