@@ -5715,21 +5715,29 @@ function captaincore_fetch_socket_address() {
 	return $socket_address;
 }
 
-// Load CaptainCore on page /account/
+// Load custom template for web requests going to "/account" or "/account/<..>/..."
 add_filter( 'template_include', 'load_captaincore_template' );
 function load_captaincore_template( $original_template ) {
-  if ( is_account_page() ) {
   global $wp;
   $request = explode( '/', $wp->request );
-	if ( end($request) == 'my-account' ) {
+  if ( is_account_page() && end($request) == 'my-account' ) {
 	wp_redirect("/account");
   }
-  }
-  if ( is_page( 'account' ) ) {
+  if ( is_page( 'account' ) || current( $request ) == "account" ) {
     return plugin_dir_path( __FILE__ ) . 'templates/core.php';
   } else {
     return $original_template;
   }
+}
+
+// Disable 404 redirects when unknown request goes to "/account/<..>/..." which allows a custom template to load. See https://wordpress.stackexchange.com/questions/3326/301-redirect-instead-of-404-when-url-is-a-prefix-of-a-post-or-page-name
+add_filter('redirect_canonical', 'disable_404_redirection_for_captaincore');
+function disable_404_redirection_for_captaincore($redirect_url) {
+	global $wp;
+    if ( strpos( $wp->request, "account/" ) !== false ) {
+		return false;
+	}
+    return $redirect_url;
 }
 
 function captaincore_head_content() {

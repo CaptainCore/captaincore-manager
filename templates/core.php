@@ -38,7 +38,7 @@ if ( $role_check ) {
 	 	 <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none" v-show="route != 'login'"></v-app-bar-nav-icon>
          <v-toolbar-title>
 			<v-list flat color="transparent">
-		 	<v-list-item href="#sites" style="padding:0px;" flat class="not-active">
+		 	<v-list-item href="/account" @click.prevent="goto( '/account' )" style="padding:0px;" flat class="not-active">
 			 	<v-img :src="captaincore_logo" contain max-width="32" max-height="32" v-if="captaincore_logo" class="mr-4"></v-img>
 				 {{ captaincore_name }}
 			</v-list-item>
@@ -50,14 +50,15 @@ if ( $role_check ) {
 			<v-btn text small @click.stop="view_jobs = true; $vuetify.goTo( '#sites' )" v-show="runningJobs">
 				Running {{ runningJobs }} jobs <v-progress-circular indeterminate color="white" class="ml-2" size="24"></v-progress-circular>
 			</v-btn>
-			<v-btn text small @click.stop="view_jobs = true; $vuetify.goTo( '#sites' )" v-show="! runningJobs && completedJobs">
+			<v-btn href="#sites" text small @click.stop="view_jobs = true; $vuetify.goTo( '#sites' )" v-show="! runningJobs && completedJobs">
 				Completed {{ completedJobs }} jobs
 			</v-btn>
 		</v-toolbar-items>
       </v-app-bar>
 	  <v-navigation-drawer v-model="drawer" app mobile-break-point="960" clipped v-if="route != 'login'">
-      <v-list>
-        <v-list-item link href="#sites">
+      <v-list nav dense>
+	  	<v-list-item-group v-model="selected_nav" color="primary">
+        <v-list-item link href="/account/sites" @click.prevent="goto( '/account/sites' )">
           <v-list-item-icon>
             <v-icon>mdi-wrench</v-icon>
           </v-list-item-icon>
@@ -65,7 +66,7 @@ if ( $role_check ) {
             <v-list-item-title>Sites</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-        <v-list-item link href="#dns">
+        <v-list-item link href="/account/dns" @click.prevent="goto( '/account/dns' )">
           <v-list-item-icon>
             <v-icon>mdi-library-books</v-icon>
           </v-list-item-icon>
@@ -73,15 +74,15 @@ if ( $role_check ) {
             <v-list-item-title>DNS</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-		<v-list-item link href="#cookbook" v-show="role == 'administrator'">
+		<v-list-item link href="/account/cookbook" @click.prevent="goto( '/account/cookbook' )">
         <v-list-item-icon>
-            <v-icon>mdi-book-open-variant</v-icon>
+            <v-icon>mdi-code-tags</v-icon>
           </v-list-item-icon>
           <v-list-item-content>
             <v-list-item-title>Cookbook</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-        <v-list-item link href="#handbook" v-show="role == 'administrator'">
+        <v-list-item link href="/account/handbook" @click.prevent="goto( '/account/handbook' )" v-show="role == 'administrator'">
           <v-list-item-icon>
             <v-icon>mdi-map</v-icon>
           </v-list-item-icon>
@@ -89,12 +90,12 @@ if ( $role_check ) {
             <v-list-item-title>Handbook</v-list-item-title>
           </v-list-item-content>
 		</v-list-item>
-		<v-list-item link href="#sharing" v-show="role == 'administrator'">
+		<v-list-item link href="/account/accounts" @click.prevent="goto( '/account/accounts' )">
           <v-list-item-icon>
-            <v-icon>mdi-account-multiple-plus</v-icon>
+            <v-icon>mdi-account-card-details</v-icon>
           </v-list-item-icon>
           <v-list-item-content>
-            <v-list-item-title>Sharing</v-list-item-title>
+            <v-list-item-title>Accounts</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 		<v-list-item link href="/account/users" @click.prevent="goto( '/account/users' )" v-show="role == 'administrator'">
@@ -133,7 +134,7 @@ if ( $role_check ) {
 		</v-list>
       </template>
       <v-list dense>
-	  	<v-list-item link href="#profile">
+	  	<v-list-item link href="/account/profile" @click.prevent="goto( '/account/profile' )">
           <v-list-item-icon>
             <v-icon>mdi-account-box</v-icon>
           </v-list-item-icon>
@@ -141,7 +142,15 @@ if ( $role_check ) {
             <v-list-item-title>Profile</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-		<v-list-item link href="#keys" v-show="role == 'administrator'">
+		<v-list-item link href="/account/defaults" @click.prevent="goto( '/account/defaults' )" v-show="role == 'administrator'">
+          <v-list-item-icon>
+            <v-icon>mdi-application</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>Site Defaults</v-list-item-title>
+          </v-list-item-content>
+		</v-list-item>
+		<v-list-item link href="/account/keys" @click.prevent="goto( '/account/keys' )"  v-show="role == 'administrator'">
           <v-list-item-icon>
             <v-icon>mdi-key</v-icon>
           </v-list-item-icon>
@@ -4095,7 +4104,21 @@ new Vue({
 		new_invite: { account: {}, records: {} },
 		new_account: { password: "" },
 		timeline_logs: [],
-		route: window.location.hash.substring(1),
+		route: "",
+		routes: {
+			'/account': '',
+			'/account/login': 'login',
+			'/account/sites': 'sites',
+			'/account/dns': 'dns',
+			'/account/keys': 'keys',
+			'/account/defaults': 'defaults',
+			'/account/profile' : 'profile',
+			'/account/users': 'users',
+			'/account/accounts': 'accounts',
+			'/account/handbook': 'handbook',
+			'/account/cookbook': 'cookbook',
+		},
+		selected_nav: "",
 		querystring: window.location.search,
 		page: 1,
 		socket: "<?php echo captaincore_fetch_socket_address() . "/ws"; ?>",
@@ -4351,13 +4374,12 @@ new Vue({
 		}
 	},
 	mounted() {
-		window.onhashchange = () => {
-			this.route = window.location.hash.substring(1)
-		}
+		window.addEventListener('popstate', () => {
+			this.updateRoute( window.location.pathname )
+		})
 		if ( typeof wpApiSettings == "undefined" ) {
-			window.location = "#login"
+			window.history.pushState( {}, 'login', "/account/login" )
 			this.route = "login"
-			this.triggerRoute()
 			return;
 		} else {
 			this.wp_nonce = wpApiSettings.nonce
@@ -4434,20 +4456,29 @@ new Vue({
 		}
 	},
 	methods: {
+		updateRoute( href ) {
+			// Remove trailing slash
+			if ( href.slice(-1) == "/" ) {
+				href = href.slice(0, -1)
+			}
+			this.route = this.routes[ href ]
+		},
 		triggerRoute() {
 			if ( this.wp_nonce == "" ) {
-				window.location = "#login"
+				window.history.pushState( {}, 'login', "/account/login" )
 				this.route = "login"
 				this.loading_page = false;
 				return;
 			}
 			if ( this.route == "login" ) {
+				this.selected_nav = ""
 				this.loading_page = false;
 			}
 			if ( this.route == "dns" ) {
 				if ( this.allDomains == 0 ) {
 					this.loading_page = true;
 				}
+				this.selected_nav = 1
 				this.fetchDomains()
 			}
 			if ( this.route == "users" ) {
@@ -4455,26 +4486,35 @@ new Vue({
 				this.fetchAllUsers();
 			}
 			if ( this.route == "cookbook" ) {
+				this.selected_nav = 2
 				this.loading_page = false;
 			}
 			if ( this.route == "handbook" ) {
+				this.selected_nav = 3
 				this.loading_page = false;
 			}
 			if ( this.route == "keys" ) {
+				this.selected_nav = ""
 				this.loading_page = false;
 				this.fetchKeys()
 			}
-			if ( this.route == "profile" ) {
+			if ( this.route == "defaults" ) {
+				this.selected_nav = ""
 				this.loading_page = false;
 			}
-			if ( this.route == "sharing" ) {
+			if ( this.route == "profile" ) {
+				this.selected_nav = ""
+				this.loading_page = false;
+			}
+			if ( this.route == "accounts" ) {
+				this.selected_nav = 4
 				this.loading_page = false;
 			}
 			if ( this.route == "sites" ) {
 				if ( this.sites.length == 0 ) {
 					this.loading_page = true;
 				}
-				this.site_dialog.step = 1
+				this.selected_nav = 0
 				this.fetchSites()
 			}
 			if ( this.fetchInvite.account ) {
@@ -4485,11 +4525,16 @@ new Vue({
 				return
 			}
 			if ( this.route == "" ) {
-				if ( this.sites_filtered == 0 ) {
+				if ( this.sites.length == 0 ) {
 					this.loading_page = true;
 				}
-				this.route = "sites";
+				this.route = "sites"
+				this.selected_nav = 0
 			}
+		},
+		goto ( href ) {
+			this.updateRoute( href )
+			window.history.pushState( {}, this.routes[href], href )
 		},
 		resetPassword() {
 			this.login.loading = true
@@ -4521,7 +4566,7 @@ new Vue({
 				})
 				.then( response => {
 					if ( typeof response.data.errors === 'undefined' ) {
-						window.location = window.location.origin + window.location.pathname + window.location.search
+						window.location = "/account"
 						return
 					}
 					this.login.errors = response.data.errors
@@ -4536,7 +4581,7 @@ new Vue({
 				command: "signOut" 
 			})
 			.then( response => {
-				window.location = "#login"
+				window.location = "/account/login"
 				this.route = "login"
 				this.wp_nonce = "";
 			})
