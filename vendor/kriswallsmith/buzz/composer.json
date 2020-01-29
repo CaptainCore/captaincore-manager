@@ -1,0 +1,57 @@
+{
+    "name": "kriswallsmith/buzz",
+    "description": "Lightweight HTTP client",
+    "keywords": ["http client", "curl"],
+    "homepage": "https://github.com/kriswallsmith/Buzz",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Kris Wallsmith",
+            "email": "kris.wallsmith@gmail.com",
+            "homepage": "http://kriswallsmith.net/"
+        },
+        {
+            "name": "Tobias Nyholm",
+            "email": "tobias.nyholm@gmail.com",
+            "homepage": "http://tnyholm.se/"
+        }
+    ],
+    "require": {
+        "php": "^7.1",
+        "psr/http-message": "^1.0",
+        "psr/http-client": "^1.0",
+        "php-http/httplug": "^1.1 || ^2.0",
+        "symfony/options-resolver": "^3.4 || ^4.0",
+        "psr/http-factory": "^1.0"
+    },
+    "require-dev": {
+        "php-http/client-integration-tests": "^2.0.1",
+        "nyholm/psr7": "^1.0",
+        "phpunit/phpunit": "^6.5.7",
+        "psr/log": "^1.0",
+        "symfony/phpunit-bridge": "^4.2.3"
+    },
+    "provide": {
+        "php-http/client-implementation": "1.0",
+        "psr/http-client-implementation": "1.0"
+    },
+    "suggest": {
+        "ext-curl": "To use our cUrl clients",
+        "nyholm/psr7": "For PSR-7 and PSR-17 implementation"
+    },
+    "autoload": {
+        "psr-4": {
+            "Buzz\\": "lib"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Buzz\\Test\\": "tests"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/simple-phpunit --testsuite Unit",
+        "test-ci": "vendor/bin/simple-phpunit --coverage-text --coverage-clover=build/coverage.xml"
+    }
+}
