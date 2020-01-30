@@ -4374,6 +4374,20 @@ new Vue({
 		}
 	},
 	mounted() {
+		document.onkeydown = e => {
+			e = e || window.event
+			if (
+				e.keyCode === 191 && // Forward Slash '/'
+				e.target !== this.$refs.search.$refs.input
+			) {
+				e.preventDefault()
+				this.$refs.search.focus()
+				this.$refs.domain_search.focus()
+				this.$refs.account_search.focus()
+				this.$refs.user_search.focus()
+				this.$refs.account_search.focus()
+			}
+		}
 		window.addEventListener('popstate', () => {
 			this.updateRoute( window.location.pathname )
 		})
