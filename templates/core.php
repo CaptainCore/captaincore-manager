@@ -869,7 +869,7 @@ if ( $role_check ) {
 				<v-btn icon dark @click.native="dialog_update_settings.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
-				<v-toolbar-title>Save settings for {{ site_dialog.site.name }}</v-toolbar-title>
+				<v-toolbar-title>Save settings for {{ dialog_site.site.name }}</v-toolbar-title>
 				<v-spacer></v-spacer>
 			</v-toolbar>
 			<v-card-text>
@@ -2053,7 +2053,7 @@ if ( $role_check ) {
 			</template>
 			</v-card>
 			<v-card tile v-show="route == 'sites'" id="sites" flat>
-			<v-toolbar color="grey lighten-4" light flat id="site_listings" v-show="site_dialog.step == 1">
+			<v-toolbar color="grey lighten-4" light flat id="site_listings" v-show="dialog_site.step == 1">
 				<v-toolbar-title>Listing {{ sites.length }} sites</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -2477,7 +2477,7 @@ if ( $role_check ) {
 			</v-layout>
 			</v-card-text>
             </v-card>
-			<v-window v-model="site_dialog.step">
+			<v-window v-model="dialog_site.step">
 			<v-window-item :value="1">
 				<v-data-table
 					v-model="sites_selected"
@@ -2529,31 +2529,31 @@ if ( $role_check ) {
 			<v-window-item :value="2" class="site">
 			<v-card class="mt-5">
 				<v-toolbar color="grey lighten-4" dense light flat>
-					<v-img :src=`/wp-content/uploads/screenshots/${site_dialog.site.site}_${site_dialog.site.site_id}/production/screenshot-100.png` class="elevation-1 mr-3" max-width="50" v-show="site_dialog.site.screenshot"></v-img>
-					<v-toolbar-title>{{ site_dialog.site.name }}</v-toolbar-title>
+					<v-img :src=`/wp-content/uploads/screenshots/${dialog_site.site.site}_${dialog_site.site.site_id}/production/screenshot-100.png` class="elevation-1 mr-3" max-width="50" v-show="dialog_site.site.screenshot"></v-img>
+					<v-toolbar-title>{{ dialog_site.site.name }}</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn text @click="site_dialog.step = 1"><v-icon>mdi-arrow-left</v-icon> Back to sites</v-btn>
+						<v-btn text @click="dialog_site.step = 1"><v-icon>mdi-arrow-left</v-icon> Back to sites</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
-				<v-tabs v-model="site_dialog.site.tabs" background-color="blue darken-3" dark>
+				<v-tabs v-model="dialog_site.site.tabs" background-color="blue darken-3" dark>
 					<v-tab :key="1" href="#tab-Site-Management">
 						Site Management <v-icon size="24">mdi-settings</v-icon>
 					</v-tab>
-					<v-tab :key="6" href="#tab-SitePlan" ripple @click="viewUsageBreakdown( site_dialog.site.site_id )">
+					<v-tab :key="6" href="#tab-SitePlan" ripple @click="viewUsageBreakdown( dialog_site.site.site_id )">
 						Site Plan <v-icon size="24">mdi-chart-donut</v-icon>
 					</v-tab>
 					<v-tab :key="7" href="#tab-Sharing" ripple v-if="role == 'administrator'">
 						Sharing <v-icon size="24">mdi-account-multiple-plus</v-icon>
 					</v-tab>
-					<v-tab :key="8" href="#tab-Timeline" ripple @click="fetchTimeline( site_dialog.site.site_id )">
+					<v-tab :key="8" href="#tab-Timeline" ripple @click="fetchTimeline( dialog_site.site.site_id )">
 						Timeline <v-icon size="24">mdi-timeline-text-outline</v-icon>
 					</v-tab>
 					<v-tab :key="9" href="#tab-Advanced" ripple>
 						Advanced <v-icon size="24">mdi-cogs</v-icon>
 					</v-tab>
 				</v-tabs>
-				<v-tabs-items v-model="site_dialog.site.tabs">
+				<v-tabs-items v-model="dialog_site.site.tabs">
 					<v-tab-item value="tab-Site-Management">
 						<div class="grey lighten-4 pb-2">
 						<v-layout wrap>
@@ -2561,11 +2561,11 @@ if ( $role_check ) {
 							<v-layout>
 							<v-flex style="width:180px;">
 								<v-select
-									v-model="site_dialog.site.environment_selected"
+									v-model="dialog_site.site.environment_selected"
 									:items='[{"name":"Production Environment","value":"Production"},{"name":"Staging Environment","value":"Staging"}]'
 									item-text="name"
 									item-value="value"
-									@change="triggerEnvironmentUpdate( site_dialog.site.site_id )"
+									@change="triggerEnvironmentUpdate( dialog_site.site.site_id )"
 									light
 									style="height:54px;">
 								</v-select>
@@ -2577,50 +2577,50 @@ if ( $role_check ) {
 										<v-icon color="grey">mdi-sync</v-icon>
 									</v-btn>
 									</template>
-									<span>Manual sync website details. Last sync {{ site_dialog.site.updated_at | timeago }}.</span>
+									<span>Manual sync website details. Last sync {{ dialog_site.site.updated_at | timeago }}.</span>
 								</v-tooltip>
 									</v-flex>
 									</v-layout>
 									</v-flex>
 									<v-flex xs12 sm8>
-           							 	<v-tabs v-model="site_dialog.site.tabs_management" background-color="grey lighten-4" icons-and-text right show-arrows height="54">
+           							 	<v-tabs v-model="dialog_site.site.tabs_management" background-color="grey lighten-4" icons-and-text right show-arrows height="54">
 										<v-tab key="Info" href="#tab-Info">
 											Info <v-icon>mdi-library-books</v-icon>
 										</v-tab>
-           							 	<v-tab key="Stats" href="#tab-Stats" @click="fetchStats( site_dialog.site.site_id )">
+           							 	<v-tab key="Stats" href="#tab-Stats" @click="fetchStats( dialog_site.site.site_id )">
 											Stats <v-icon>mdi-chart-bar</v-icon>
 										</v-tab>
 										<v-tab key="Plugins" href="#tab-Addons">
 											Addons <v-icon>mdi-power-plug</v-icon>
 										</v-tab>
-										<v-tab key="Users" href="#tab-Users" @click="fetchUsers( site_dialog.site.site_id )">
+										<v-tab key="Users" href="#tab-Users" @click="fetchUsers( dialog_site.site.site_id )">
 											Users <v-icon>mdi-account-multiple</v-icon>
 										</v-tab>
-										<v-tab key="Updates" href="#tab-Updates" @click="fetchUpdateLogs( site_dialog.site.site_id )">
+										<v-tab key="Updates" href="#tab-Updates" @click="fetchUpdateLogs( dialog_site.site.site_id )">
 											Updates <v-icon>mdi-book-open</v-icon>
 										</v-tab>
 										<v-tab key="Scripts" href="#tab-Scripts">
 											Scripts <v-icon>mdi-code-tags</v-icon>
 										</v-tab>
-										<v-tab key="Backups" href="#tab-Backups" @click="viewQuicksaves( site_dialog.site.site_id ); viewSnapshots( site_dialog.site.site_id );">
+										<v-tab key="Backups" href="#tab-Backups" @click="viewQuicksaves( dialog_site.site.site_id ); viewSnapshots( dialog_site.site.site_id );">
 											Backups <v-icon>mdi-update</v-icon>
 										</v-tab>
 									</v-tabs>
 									</v-flex>
 									</v-layout>
 								</div>
-        		<v-tabs-items v-model="site_dialog.site.tabs_management" v-if="site_dialog.loading != true && site_dialog.site.environments.filter( key => key.environment == site_dialog.site.environment_selected ).length == 1">
+        		<v-tabs-items v-model="dialog_site.site.tabs_management" v-if="dialog_site.loading != true && dialog_site.site.environments.filter( key => key.environment == dialog_site.site.environment_selected ).length == 1">
 					<v-tab-item :key="1" value="tab-Info">
 						<v-toolbar color="grey lighten-4" dense light flat>
 							<v-toolbar-title>Info</v-toolbar-title>
 							<v-spacer></v-spacer>
 						</v-toolbar>
-               			 <v-card v-for="key in site_dialog.site.environments" v-show="key.environment == site_dialog.site.environment_selected" flat>
+               			 <v-card v-for="key in dialog_site.site.environments" v-show="key.environment == dialog_site.site.environment_selected" flat>
 							<v-container fluid>
 							<v-layout body-1 px-6 class="row">
 								<v-flex xs12 md6 class="py-2">
 								<div class="block mt-6">
-                            		<a @click="showCaptures( site_dialog.site.site_id )"><v-img :src="key.screenshots.large" max-width="400" aspect-ratio="1.6" class="elevation-5" v-show="key.screenshots.large" style="margin:auto;"></v-img></a>
+                            		<a @click="showCaptures( dialog_site.site.site_id )"><v-img :src="key.screenshots.large" max-width="400" aspect-ratio="1.6" class="elevation-5" v-show="key.screenshots.large" style="margin:auto;"></v-img></a>
 								</div>
 								<v-list dense style="padding:0px;max-width:350px;margin: auto;" class="mt-6">
 									<v-list-item :href="key.link" target="_blank" dense>
@@ -2648,7 +2648,7 @@ if ( $role_check ) {
 										<v-icon>mdi-content-copy</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
-									<v-list-item @click="viewMailgunLogs()" dense v-if="site_dialog.site.mailgun">
+									<v-list-item @click="viewMailgunLogs()" dense v-if="dialog_site.site.mailgun">
 									<v-list-item-content>
 										<v-list-item-title>Mailgun Logs</v-list-item-title>
 									</v-list-item-content>
@@ -2753,15 +2753,15 @@ if ( $role_check ) {
 				</v-tab-item>
 				<v-tab-item :key="100" value="tab-Stats">
 					<v-card 
-               			v-for="key in site_dialog.site.environments"
-                		v-show="key.environment == site_dialog.site.environment_selected"
+               			v-for="key in dialog_site.site.environments"
+                		v-show="key.environment == dialog_site.site.environment_selected"
 						flat
 					>
 					<v-toolbar color="grey lighten-4" dense light flat>
 						<v-toolbar-title>Stats</v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items v-if="typeof dialog_new_site == 'object'">
-                    <v-btn text @click="configureFathom( site_dialog.site.site_id )">Configure Fathom Tracker <v-icon dark small>bar_chart</v-icon></v-btn>
+                    <v-btn text @click="configureFathom( dialog_site.site.site_id )">Configure Fathom Tracker <v-icon dark small>bar_chart</v-icon></v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
 						<div class="pa-3" v-if="typeof key.stats == 'string' && key.stats != 'Loading'">
@@ -2770,7 +2770,7 @@ if ( $role_check ) {
 						<v-layout wrap>
 						<v-flex xs12>
 						<v-progress-linear :indeterminate="true" absolute v-show="key.stats == 'Loading'"></v-progress-linear>
-                    	<div :id="`chart_` + site_dialog.site.site_id + `_` + key.environment"></div>
+                    	<div :id="`chart_` + dialog_site.site.site_id + `_` + key.environment"></div>
 							<v-card flat v-if="key.stats && key.stats.agg">
 							<v-card-title class="text-center pa-0">
 							<v-layout wrap>
@@ -2840,18 +2840,18 @@ if ( $role_check ) {
 				</v-tab-item>
 				<v-tab-item :key="3" value="tab-Addons">
 					<v-card 
-            		v-for="key in site_dialog.site.environments"
-                	v-show="key.environment == site_dialog.site.environment_selected"
+            		v-for="key in dialog_site.site.environments"
+                	v-show="key.environment == dialog_site.site.environment_selected"
 					flat
 					>
 					<v-toolbar color="grey lighten-4" dense light flat>
 						<v-toolbar-title>Addons <small>(Themes/Plugins)</small></v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items>
-                    <v-btn text @click="bulkEdit(site_dialog.site.site_id, 'plugins')" v-if="key.plugins_selected.length != 0">Bulk Edit {{ key.plugins_selected.length }} plugins</v-btn>
-                    <v-btn text @click="bulkEdit(site_dialog.site.site_id, 'themes')" v-if="key.themes_selected.length != 0">Bulk Edit {{ key.themes_selected.length }} themes</v-btn>
-                    <v-btn text @click="addTheme(site_dialog.site.site_id)">Add Theme <v-icon dark small>add</v-icon></v-btn>
-                    <v-btn text @click="addPlugin(site_dialog.site.site_id)">Add Plugin <v-icon dark small>add</v-icon></v-btn>
+                    <v-btn text @click="bulkEdit(dialog_site.site.site_id, 'plugins')" v-if="key.plugins_selected.length != 0">Bulk Edit {{ key.plugins_selected.length }} plugins</v-btn>
+                    <v-btn text @click="bulkEdit(dialog_site.site.site_id, 'themes')" v-if="key.themes_selected.length != 0">Bulk Edit {{ key.themes_selected.length }} themes</v-btn>
+                    <v-btn text @click="addTheme(dialog_site.site.site_id)">Add Theme <v-icon dark small>add</v-icon></v-btn>
+                    <v-btn text @click="addPlugin(dialog_site.site.site_id)">Add Plugin <v-icon dark small>add</v-icon></v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
 					<v-card-title v-if="typeof key.themes == 'string'">
@@ -2866,7 +2866,7 @@ if ( $role_check ) {
 						v-model="key.themes_selected"
 						:headers="header_themes"
 						:items="key.themes"
-						:loading="site_dialog.site.loading_themes"
+						:loading="dialog_site.site.loading_themes"
 						:items-per-page="-1"
 						:footer-props="{ itemsPerPageOptions: [{'text':'All','value':-1}] }"
 						item-key="name"
@@ -2876,14 +2876,14 @@ if ( $role_check ) {
 						>
 						<template v-slot:item.status="{ item }">
 							<div v-if="item.status === 'inactive' || item.status === 'parent' || item.status === 'child'">
-                        <v-switch hide-details v-model="item.status" false-value="inactive" true-value="active" @change="activateTheme(props.item.name, site_dialog.site.site_id)"></v-switch>
+                        <v-switch hide-details v-model="item.status" false-value="inactive" true-value="active" @change="activateTheme(props.item.name, dialog_site.site.site_id)"></v-switch>
 							</div>
 							<div v-else>
 								{{ item.status }}
 							</div>
 						</template>
 						<template v-slot:item.actions="{ item }" class="text-center px-0">
-                    <v-btn icon small class="mx-0" @click="deleteTheme(item.name, site_dialog.site.site_id)">
+                    <v-btn icon small class="mx-0" @click="deleteTheme(item.name, dialog_site.site.site_id)">
 								<v-icon small color="pink">delete</v-icon>
 							</v-btn>
 						</template>
@@ -2900,7 +2900,7 @@ if ( $role_check ) {
 					<v-data-table
 						:headers="header_plugins"
 						:items="key.plugins.filter(plugin => plugin.status != 'must-use' && plugin.status != 'dropin')"
-						:loading="site_dialog.site.loading_plugins"
+						:loading="dialog_site.site.loading_plugins"
 						:items-per-page="-1"
 						:footer-props="{ itemsPerPageOptions: [{'text':'All','value':-1}] }"
 						v-model="key.plugins_selected"
@@ -2911,14 +2911,14 @@ if ( $role_check ) {
 					>
 					<template v-slot:item.status="{ item }">
 						<div v-if="item.status === 'inactive' || item.status === 'active'">
-                <v-switch hide-details v-model="item.status" false-value="inactive" true-value="active" @change="togglePlugin(item.name, item.status, site_dialog.site.site_id)"></v-switch>
+                <v-switch hide-details v-model="item.status" false-value="inactive" true-value="active" @change="togglePlugin(item.name, item.status, dialog_site.site.site_id)"></v-switch>
 						</div>
 						<div v-else>
 							{{ item.status }}
 						</div>
 					</template>
 					<template v-slot:item.actions="{ item }" class="text-center px-0">
-                <v-btn icon small class="mx-0" @click="deletePlugin(item.name, site_dialog.site.site_id)" v-if="item.status === 'active' || item.status === 'inactive'">
+                <v-btn icon small class="mx-0" @click="deletePlugin(item.name, dialog_site.site.site_id)" v-if="item.status === 'active' || item.status === 'inactive'">
 							<v-icon small color="pink">delete</v-icon>
 						</v-btn>
 					</template>
@@ -2937,8 +2937,8 @@ if ( $role_check ) {
 			</v-tab-item>
 			<v-tab-item :key="4" value="tab-Users">
 				<v-card 
-            v-for="key in site_dialog.site.environments"
-			v-show="key.environment == site_dialog.site.environment_selected"
+            v-for="key in dialog_site.site.environments"
+			v-show="key.environment == dialog_site.site.environment_selected"
 					flat
 					>
 				<v-toolbar color="grey lighten-4" dense light flat>
@@ -2955,7 +2955,7 @@ if ( $role_check ) {
 						style="max-width:300px"
 					></v-text-field>
 					<v-toolbar-items>
-                <v-btn text @click="bulkEdit(site_dialog.site.site_id,'users')" v-if="key.users_selected.length != 0">Bulk Edit {{ key.users_selected.length }} users</v-btn>
+                <v-btn text @click="bulkEdit(dialog_site.site.site_id,'users')" v-if="key.users_selected.length != 0">Bulk Edit {{ key.users_selected.length }} users</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 					<div v-show="typeof key.users == 'string'">
@@ -2978,8 +2978,8 @@ if ( $role_check ) {
 							{{ item.roles.split(",").join(" ") }}
 						</template>
 						<template v-slot:item.actions="{ item }">
-                    <v-btn small rounded @click="loginSite(site_dialog.site.site_id, item.user_login)" class="my-2">Login as</v-btn>
-                    <v-btn icon small class="my-2" @click="deleteUserDialog( item.user_login, site_dialog.site.site_id)">
+                    <v-btn small rounded @click="loginSite(dialog_site.site.site_id, item.user_login)" class="my-2">Login as</v-btn>
+                    <v-btn icon small class="my-2" @click="deleteUserDialog( item.user_login, dialog_site.site.site_id)">
 								<v-icon small color="pink">delete</v-icon>
 							</v-btn>
 						</template>
@@ -2992,14 +2992,14 @@ if ( $role_check ) {
 					<v-toolbar-title>Update Logs</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-                <v-btn text @click="runUpdate(site_dialog.site.site_id)">Manual update <v-icon dark>mdi-sync</v-icon></v-btn>
-                <v-btn text @click="updateSettings(site_dialog.site.site_id)">Update Settings <v-icon dark>mdi-settings</v-icon></v-btn>
-                <!-- <v-btn text @click="themeAndPluginChecks(site_dialog.site.site_id)">Theme/plugin checks <v-icon dark small>fas fa-calendar-check</v-icon></v-btn> -->
+                <v-btn text @click="runUpdate(dialog_site.site.site_id)">Manual update <v-icon dark>mdi-sync</v-icon></v-btn>
+                <v-btn text @click="updateSettings(dialog_site.site.site_id)">Update Settings <v-icon dark>mdi-settings</v-icon></v-btn>
+                <!-- <v-btn text @click="themeAndPluginChecks(dialog_site.site.site_id)">Theme/plugin checks <v-icon dark small>fas fa-calendar-check</v-icon></v-btn> -->
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card 
-            v-for="key in site_dialog.site.environments"
-            v-show="key.environment == site_dialog.site.environment_selected" 
+            v-for="key in dialog_site.site.environments"
+            v-show="key.environment == dialog_site.site.environment_selected" 
 					flat
 				>
 					<div v-show="typeof key.update_logs == 'string'">
@@ -3047,12 +3047,12 @@ if ( $role_check ) {
 							@change.native="custom_script = $event.target.value"
 							spellcheck="false"
 						></v-textarea>
-                <v-btn small color="primary" dark @click="runCustomCode(site_dialog.site.site_id)">Run Custom Code</v-btn>
+                <v-btn small color="primary" dark @click="runCustomCode(dialog_site.site.site_id)">Run Custom Code</v-btn>
 					</v-flex>
 					<v-flex xs12 sm4>
 						<v-list dense>
 						<v-subheader>Common</v-subheader>
-                <v-list-item @click="viewApplyHttpsUrls(site_dialog.site.site_id)" dense>
+                <v-list-item @click="viewApplyHttpsUrls(dialog_site.site.site_id)" dense>
 						<v-list-item-icon>
 							<v-icon>launch</v-icon>
 						</v-list-item-icon>
@@ -3060,7 +3060,7 @@ if ( $role_check ) {
 							<v-list-item-title>Apply HTTPS Urls</v-list-item-title>
 						</v-list-item-content>
 						</v-list-item>
-                <v-list-item @click="siteDeploy(site_dialog.site.site_id)" dense>
+                <v-list-item @click="siteDeploy(dialog_site.site.site_id)" dense>
 						<v-list-item-icon>
 							<v-icon>loop</v-icon>
 						</v-list-item-icon>
@@ -3068,7 +3068,7 @@ if ( $role_check ) {
 							<v-list-item-title>Deploy users/plugins</v-list-item-title>
 						</v-list-item-content>
 						</v-list-item>
-                <v-list-item @click="launchSiteDialog(site_dialog.site.site_id)" dense>
+                <v-list-item @click="launchSiteDialog(dialog_site.site.site_id)" dense>
 						<v-list-item-icon>
 							<v-icon>mdi-rocket</v-icon>
 						</v-list-item-icon>
@@ -3076,7 +3076,7 @@ if ( $role_check ) {
 							<v-list-item-title>Launch Site</v-list-item-title>
 						</v-list-item-content>
 						</v-list-item>
-                <v-list-item @click="showSiteMigration(site_dialog.site.site_id)" dense>
+                <v-list-item @click="showSiteMigration(dialog_site.site.site_id)" dense>
 						<v-list-item-icon>
 							<v-icon>mdi-truck</v-icon>
 						</v-list-item-icon>
@@ -3084,7 +3084,7 @@ if ( $role_check ) {
 							<v-list-item-title>Migrate from backup</v-list-item-title>
 						</v-list-item-content>
 						</v-list-item>
-                <v-list-item @click="toggleSite(site_dialog.site.site_id)" dense>
+                <v-list-item @click="toggleSite(dialog_site.site.site_id)" dense>
 						<v-list-item-icon>
 							<v-icon>mdi-toggle-switch</v-icon>
 						</v-list-item-icon>
@@ -3093,7 +3093,7 @@ if ( $role_check ) {
 						</v-list-item-content>
 						</v-list-item>
 						<v-subheader v-show="recipes.filter( r => r.public == 1 ).length > 0">Other</v-subheader>
-                <v-list-item @click="runRecipe( recipe.recipe_id, site_dialog.site.site_id )" dense v-for="recipe in recipes.filter( r => r.public == 1 )">
+                <v-list-item @click="runRecipe( recipe.recipe_id, dialog_site.site.site_id )" dense v-for="recipe in recipes.filter( r => r.public == 1 )">
 						<v-list-item-icon>
 							<v-icon>mdi-script-text-outline</v-icon>
 						</v-list-item-icon>
@@ -3123,21 +3123,21 @@ if ( $role_check ) {
 					<v-toolbar-items>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-                        <v-btn text small @click="promptBackupSnapshot( site_dialog.site.site_id )" v-on="on"><v-icon dark>mdi-cloud-download</v-icon></v-btn>
+                        <v-btn text small @click="promptBackupSnapshot( dialog_site.site.site_id )" v-on="on"><v-icon dark>mdi-cloud-download</v-icon></v-btn>
 							</template><span>Generate and Download Snapshot</span>
 						</v-tooltip>
 						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-                    <v-btn text @click="QuicksaveCheck( site_dialog.site.site_id )" v-on="on"><v-icon dark>mdi-sync</v-icon></v-btn>
+                    <v-btn text @click="QuicksaveCheck( dialog_site.site.site_id )" v-on="on"><v-icon dark>mdi-sync</v-icon></v-btn>
 							</template><span>Manual check for new Quicksave</span>
 						</v-tooltip>
 						
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card 
-					v-for="key in site_dialog.site.environments"
-					v-show="key.environment == site_dialog.site.environment_selected"
+					v-for="key in dialog_site.site.environments"
+					v-show="key.environment == dialog_site.site.environment_selected"
 					flat
 				>
 					<v-subheader>Quicksaves</v-subheader>
@@ -3150,8 +3150,8 @@ if ( $role_check ) {
 						:items="key.quicksaves"
 						item-key="quicksave_id"
 						no-data-text="No quicksaves found."
-                		:ref="'quicksave_table_'+ site_dialog.site.site_id + '_' + key.environment"
-						@click:row="expandQuicksave( $event, site_dialog.site.site_id, key.environment )"
+                		:ref="'quicksave_table_'+ dialog_site.site.site_id + '_' + key.environment"
+						@click:row="expandQuicksave( $event, dialog_site.site.site_id, key.environment )"
 						single-expand
 						show-expand
 						class="table-quicksaves"
@@ -3174,9 +3174,9 @@ if ( $role_check ) {
 							<v-toolbar-title class="body-2">{{ item.git_status }}</v-toolbar-title>
 							<v-spacer></v-spacer>
 							<v-toolbar-items>
-                        <v-btn text small @click="QuicksavesRollback( site_dialog.site.site_id, item)">Rollback Everything</v-btn>
+                        <v-btn text small @click="QuicksavesRollback( dialog_site.site.site_id, item)">Rollback Everything</v-btn>
 								<v-divider vertical class="mx-1" inset></v-divider>
-                        <v-btn text small @click="viewQuicksavesChanges( site_dialog.site.site_id, item)">View Changes</v-btn>
+                        <v-btn text small @click="viewQuicksavesChanges( dialog_site.site.site_id, item)">View Changes</v-btn>
 							</v-toolbar-items>
 						</v-toolbar>
 						<v-card flat v-show="item.view_changes == true" style="table-layout:fixed;margin:0px;overflow: scroll;padding: 0px;position: absolute;background-color: #fff;width: 100%;left: 0;top: 100%;height: 100%;z-index: 3;transform: translateY(-100%);">
@@ -3198,7 +3198,7 @@ if ( $role_check ) {
 										<v-flex>
 										<v-text-field
 											v-model="item.search"
-											@input="filterFiles( site_dialog.site.site_id, item.quicksave_id)"
+											@input="filterFiles( dialog_site.site.site_id, item.quicksave_id)"
 											append-icon="search"
 											label="Search"
 											single-line
@@ -3305,18 +3305,18 @@ if ( $role_check ) {
 					<template v-if="item.token && new Date() < new Date( item.expires_at )">
 						<v-tooltip bottom>
 							<template v-slot:activator="{ on }">
-                    <v-btn small icon @click="fetchLink( site_dialog.site.site_id, item.snapshot_id )" v-on="on">
+                    <v-btn small icon @click="fetchLink( dialog_site.site.site_id, item.snapshot_id )" v-on="on">
 								<v-icon color="grey">mdi-sync</v-icon>
 							</v-btn>
 							</template>
 							<span>Generate new link. Link valid for 24hrs.</span>
 						</v-tooltip>
-                <v-btn small rounded :href="`/wp-json/captaincore/v1/site/${site_dialog.site.site_id}/snapshots/${item.snapshot_id}-${item.token}/${item.snapshot_name.slice(0, -4)}`">Download</v-btn>
+                <v-btn small rounded :href="`/wp-json/captaincore/v1/site/${dialog_site.site.site_id}/snapshots/${item.snapshot_id}-${item.token}/${item.snapshot_name.slice(0, -4)}`">Download</v-btn>
 					</template>
 					<template v-else>
 						<v-tooltip bottom>
 							<template v-slot:activator="{ on }">
-                    <v-btn small icon @click="fetchLink( site_dialog.site.site_id, item.snapshot_id )" v-on="on">
+                    <v-btn small icon @click="fetchLink( dialog_site.site.site_id, item.snapshot_id )" v-on="on">
 								<v-icon color="grey">mdi-sync</v-icon>
 							</v-btn>
 							</template>
@@ -3345,26 +3345,26 @@ if ( $role_check ) {
 					</v-toolbar-items>
 			</v-toolbar>
 			<v-card flat>
-        <div v-if="typeof site_dialog.site.account.plan == 'object' && site_dialog.site.account.plan != null">
+        <div v-if="typeof dialog_site.site.account.plan == 'object' && dialog_site.site.account.plan != null">
 				<v-card-text class="body-1">
 				<v-layout align-center justify-left row/>
 					<div style="padding: 10px 10px 10px 20px;">
-                <v-progress-circular :size="50" :value="( site_dialog.site.account.plan.usage.storage / ( site_dialog.site.account.plan.limits.storage * 1024 * 1024 * 1024 ) ) * 100 | formatPercentage" color="primary"><small>{{ ( site_dialog.site.account.plan.usage.storage / ( site_dialog.site.account.plan.limits.storage * 1024 * 1024 * 1024 ) ) * 100 | formatPercentage }}</small></v-progress-circular>
+                <v-progress-circular :size="50" :value="( dialog_site.site.account.plan.usage.storage / ( dialog_site.site.account.plan.limits.storage * 1024 * 1024 * 1024 ) ) * 100 | formatPercentage" color="primary"><small>{{ ( dialog_site.site.account.plan.usage.storage / ( dialog_site.site.account.plan.limits.storage * 1024 * 1024 * 1024 ) ) * 100 | formatPercentage }}</small></v-progress-circular>
 					</div>
 					<div style="line-height: 0.85em;">
-                Storage <br /><small>{{ site_dialog.site.account.plan.usage.storage | formatGBs }}GB / {{ site_dialog.site.account.plan.limits.storage }}GB</small><br />
+                Storage <br /><small>{{ dialog_site.site.account.plan.usage.storage | formatGBs }}GB / {{ dialog_site.site.account.plan.limits.storage }}GB</small><br />
 					</div>
 					<div style="padding: 10px 10px 10px 20px;">
-                <v-progress-circular :size="50" :value="( site_dialog.site.account.plan.usage.visits / site_dialog.site.account.plan.limits.visits * 100 ) | formatPercentage" color="primary"><small>{{ ( site_dialog.site.account.plan.usage.visits / site_dialog.site.account.plan.limits.visits ) * 100 | formatPercentage }}</small></v-progress-circular>
+                <v-progress-circular :size="50" :value="( dialog_site.site.account.plan.usage.visits / dialog_site.site.account.plan.limits.visits * 100 ) | formatPercentage" color="primary"><small>{{ ( dialog_site.site.account.plan.usage.visits / dialog_site.site.account.plan.limits.visits ) * 100 | formatPercentage }}</small></v-progress-circular>
 					</div>
 					<div style="line-height: 0.85em;">
-                Visits <br /><small>{{ site_dialog.site.account.plan.usage.visits | formatLargeNumbers }} / {{ site_dialog.site.account.plan.limits.visits | formatLargeNumbers }}</small><br />
+                Visits <br /><small>{{ dialog_site.site.account.plan.usage.visits | formatLargeNumbers }} / {{ dialog_site.site.account.plan.limits.visits | formatLargeNumbers }}</small><br />
 					</div>
 					<div style="padding: 10px 10px 10px 20px;">
-                <v-progress-circular :size="50" :value="( site_dialog.site.account.plan.usage.sites / site_dialog.site.account.plan.limits.sites * 100 ) | formatPercentage" color="blue darken-4"><small>{{ ( site_dialog.site.account.plan.usage.sites / site_dialog.site.account.plan.limits.sites * 100 ) | formatPercentage }}</small></v-progress-circular>
+                <v-progress-circular :size="50" :value="( dialog_site.site.account.plan.usage.sites / dialog_site.site.account.plan.limits.sites * 100 ) | formatPercentage" color="blue darken-4"><small>{{ ( dialog_site.site.account.plan.usage.sites / dialog_site.site.account.plan.limits.sites * 100 ) | formatPercentage }}</small></v-progress-circular>
 					</div>
 					<div  style="line-height: 0.85em;">
-                Sites <br /><small>{{ site_dialog.site.account.plan.usage.sites }} / {{ site_dialog.site.account.plan.limits.sites }}</small><br />
+                Sites <br /><small>{{ dialog_site.site.account.plan.usage.sites }} / {{ dialog_site.site.account.plan.limits.sites }}</small><br />
 					</div>
 				</v-layout>
 				</v-card-text>
@@ -3373,7 +3373,7 @@ if ( $role_check ) {
 					type="info"
 					color="primary"
 				>
-            <strong>{{ site_dialog.site.account.plan.name }} Plan</strong> which supports up to {{ site_dialog.site.account.plan.limits.visits | formatLargeNumbers }} visits, {{ site_dialog.site.account.plan.limits.storage }}GB storage and {{ site_dialog.site.account.plan.limits.sites }} sites.
+            <strong>{{ dialog_site.site.account.plan.name }} Plan</strong> which supports up to {{ dialog_site.site.account.plan.limits.visits | formatLargeNumbers }} visits, {{ dialog_site.site.account.plan.limits.storage }}GB storage and {{ dialog_site.site.account.plan.limits.sites }} sites.
 				</v-alert>
 				</div>
 				<div v-else>
@@ -3387,7 +3387,7 @@ if ( $role_check ) {
 				</div>
 				<v-data-table
 					:headers='[{"text":"Name","value":"name"},{"text":"Storage","value":"Storage"},{"text":"Visits","value":"visits"}]'
-					:items="site_dialog.site.usage_breakdown.sites"
+					:items="dialog_site.site.usage_breakdown.sites"
 					item-key="name"
 					hide-default-footer
 				>
@@ -3400,7 +3400,7 @@ if ( $role_check ) {
 					</tr>
 					<tr>
 						<td>Totals:</td>
-                <td v-for="total in site_dialog.site.usage_breakdown.total" v-html="total"></td>
+                <td v-for="total in dialog_site.site.usage_breakdown.total" v-html="total"></td>
 					</tr>
 				</tbody>
 				</template>
@@ -3418,17 +3418,17 @@ if ( $role_check ) {
 			<v-layout>
 			<v-list disabled>
 				<v-subheader>Account</v-subheader>
-        		<v-list-item :key="site_dialog.site.account.account_id">
+        		<v-list-item :key="dialog_site.site.account.account_id">
 					<v-list-item-icon>
 						<v-icon>mdi-account</v-icon>
 					</v-list-item-icon>
 					<v-list-item-content>
-                	<v-list-item-title>{{ site_dialog.site.account.name }}</v-list-item-title>
+                	<v-list-item-title>{{ dialog_site.site.account.name }}</v-list-item-title>
 					</v-list-item-content>
 				</v-list-item>
 				<v-divider inset></v-divider>
 				<v-subheader>Shared With</v-subheader>
-   				 <v-list-item v-for="account in site_dialog.site.shared_with" :key="account.account_id">
+   				 <v-list-item v-for="account in dialog_site.site.shared_with" :key="account.account_id">
 					<v-list-item-icon>
 						<v-icon>mdi-account</v-icon>
 					</v-list-item-icon>
@@ -3444,13 +3444,13 @@ if ( $role_check ) {
 				<v-toolbar-title>Timeline</v-toolbar-title>
 				<v-spacer></v-spacer>
 				<v-toolbar-items v-show="role == 'administrator'">
-            		<v-btn text @click="showLogEntry(site_dialog.site.site_id)">New Log Entry <v-icon dark>mdi-checkbox-marked</v-icon></v-btn>
+            		<v-btn text @click="showLogEntry(dialog_site.site.site_id)">New Log Entry <v-icon dark>mdi-checkbox-marked</v-icon></v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
 			<v-card flat>
 			<v-data-table
 				:headers="header_timeline"
-        		:items="site_dialog.site.timeline"
+        		:items="dialog_site.site.timeline"
 				class="timeline"
 				>
 				<template v-slot:body="{ items }">
@@ -3463,7 +3463,7 @@ if ( $role_check ) {
 					<td v-if="role == 'administrator'"><v-icon
             small
             class="mr-2"
-            @click="editLogEntry(site_dialog.site.site_id, item.process_log_id)"
+            @click="editLogEntry(dialog_site.site.site_id, item.process_log_id)"
           >
             edit
 		  </v-icon></td>
@@ -3478,21 +3478,21 @@ if ( $role_check ) {
 				<v-toolbar-title>Advanced</v-toolbar-title>
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
-            <v-btn text @click="copySite(site_dialog.site.site_id)">Copy Site <v-icon dark small>file_copy</v-icon></v-btn>
-            <v-btn text @click="editSite(site_dialog.site.site_id)" v-show="role == 'administrator'">Edit Site <v-icon dark small>edit</v-icon></v-btn>
-            <v-btn text @click="deleteSite(site_dialog.site.site_id)" v-show="role == 'administrator'">Delete Site <v-icon dark small>delete</v-icon></v-btn>
+            <v-btn text @click="copySite(dialog_site.site.site_id)">Copy Site <v-icon dark small>file_copy</v-icon></v-btn>
+            <v-btn text @click="editSite(dialog_site.site.site_id)" v-show="role == 'administrator'">Edit Site <v-icon dark small>edit</v-icon></v-btn>
+            <v-btn text @click="deleteSite(dialog_site.site.site_id)" v-show="role == 'administrator'">Delete Site <v-icon dark small>delete</v-icon></v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
 			<v-card flat>
 				<v-card-title>
 					<div>
-                <div v-show="site_dialog.site.provider == 'kinsta'">
-                <v-btn left text @click="PushProductionToStaging( site_dialog.site.site_id )">
+                <div v-show="dialog_site.site.provider == 'kinsta'">
+                <v-btn left text @click="PushProductionToStaging( dialog_site.site.site_id )">
 							<v-icon>local_shipping</v-icon> <span>Push Production to Staging</span>
 						</v-btn>
 						</div>
-                <div v-show="site_dialog.site.provider == 'kinsta'">
-                <v-btn left text @click="PushStagingToProduction( site_dialog.site.site_id )">
+                <div v-show="dialog_site.site.provider == 'kinsta'">
+                <v-btn left text @click="PushStagingToProduction( dialog_site.site.site_id )">
 							<v-icon class="reverse">local_shipping</v-icon> <span>Push Staging to Production</span>
 						</v-btn>
 						</div>
@@ -4195,6 +4195,7 @@ new Vue({
 		account_search: "",
 		new_recipe: { show: false, title: "", content: "", public: 1 },
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
+		dialog_site: { loading: true, step: 1, site: { name: "", site: "", screenshots: {}, timeline: [], environment_selected: "Production", environments: [{ id: "", quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }], users: [], timeline: [], usage_breakdown: [], update_log: [], tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
 		dialog_edit_account: { show: false, account: {} },
 		dns_introduction: <?php $Parsedown = new Parsedown(); echo json_encode( $Parsedown->text( get_field( "dns_introduction", "option" ) ) ); ?>,
 		dns_nameservers: <?php echo json_encode( $Parsedown->text( get_field( "dns_nameservers", "option" ) ) ); ?>,
@@ -4208,10 +4209,8 @@ new Vue({
 		search: null,
 		users_search: "",
 		advanced_filter: false,
-		items_per_page: 50,
 		business_name: "<?php echo $business_name; ?>",
 		business_link: "<?php echo $business_link; ?>",
-		site_dialog: { loading: true, step: 1, site: { name: "", site: "", screenshots: {}, timeline: [], environment_selected: "Production", environments: [{ id: "", quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }], users: [], timeline: [], usage_breakdown: [], update_log: [], tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
 		sites_selected: [],
 		sites_filtered: [],
 		site_health_filter: "",
@@ -4623,7 +4622,7 @@ new Vue({
 		},
 		triggerEnvironmentUpdate( site_id ){
 			// Trigger fetchStats()
-			if ( this.site_dialog.site.tabs == "tab-Site-Management" && this.site_dialog.site.tabs_management == "tab-Stats" ) {
+			if ( this.dialog_site.site.tabs == "tab-Site-Management" && this.dialog_site.site.tabs_management == "tab-Stats" ) {
 				this.fetchStats( site_id );
 			}
 		},
@@ -5062,7 +5061,7 @@ new Vue({
 		},
 		syncSite() {
 
-			site = this.site_dialog.site
+			site = this.dialog_site.site
 
 			var data = {
 				action: 'captaincore_install',
@@ -5128,8 +5127,8 @@ new Vue({
 			};
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					this.site_dialog.site.environments = response.data
-					this.site_dialog.loading = false
+					this.dialog_site.site.environments = response.data
+					this.dialog_site.loading = false
 				});
 		},
 		fetchSiteDetails( site_id ) {
@@ -5140,8 +5139,8 @@ new Vue({
 			};
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					this.site_dialog.site.account = response.data.account
-					this.site_dialog.site.shared_with = response.data.shared_with
+					this.dialog_site.site.account = response.data.account
+					this.dialog_site.site.shared_with = response.data.shared_with
 				});
 		},
 		fetchSiteInfo( site_id ) {
@@ -5596,7 +5595,7 @@ new Vue({
 			description = "Deleting site " + site_name;
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
-			this.site_dialog.step = 1
+			this.dialog_site.step = 1
 
 			var data = {
 				'action': 'captaincore_ajax',
@@ -6162,7 +6161,7 @@ new Vue({
 			description = "Deleting account " + account.name;
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
-			this.site_dialog.step = 1
+			this.dialog_site.step = 1
 
 			var data = {
 				'action': 'captaincore_ajax',
@@ -6308,10 +6307,10 @@ new Vue({
 				.catch( error => console.log( error ) );
 		},
 		viewMailgunLogs() {
-			this.dialog_mailgun = { show: true, site: this.site_dialog.site, response: { items: [], pagination: [] }, loading: true, pagination: {} };
+			this.dialog_mailgun = { show: true, site: this.dialog_site.site, response: { items: [], pagination: [] }, loading: true, pagination: {} };
 			var data = {
 				action: 'captaincore_ajax',
-				post_id: this.site_dialog.site.site_id,
+				post_id: this.dialog_site.site.site_id,
 				command: 'mailgun'
 			};
 			axios.post( ajaxurl, Qs.stringify( data ) )
@@ -6454,11 +6453,11 @@ new Vue({
 			this.dialog_toggle.business_link = this.business_link;
 		},
 		showSite( site ) {
-			this.site_dialog.loading = true
+			this.dialog_site.loading = true
 			this.fetchSiteEnvironments( site.site_id )
 			this.fetchSiteDetails( site.site_id )
-			this.site_dialog.site = site
-			this.site_dialog.step = 2
+			this.dialog_site.site = site
+			this.dialog_site.step = 2
 		},
 		showSiteMigration( site_id ){
 			site = this.sites.filter(site => site.site_id == site_id)[0];
@@ -7129,17 +7128,17 @@ new Vue({
 			});
 		},
 		modifyPlan() {
-			this.dialog_modify_plan.plan = Object.assign({}, this.site_dialog.site.account.plan)
+			this.dialog_modify_plan.plan = Object.assign({}, this.dialog_site.site.account.plan)
 			// Adds commas
 			if ( this.dialog_modify_plan.plan.limits.visits != null ) {
 				this.dialog_modify_plan.plan.limits.visits  = this.dialog_modify_plan.plan.limits.visits.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 			}
-			this.dialog_modify_plan.selected_plan = this.site_dialog.site.account.plan.name;
-			this.dialog_modify_plan.customer_name = this.site_dialog.site.account.name;
+			this.dialog_modify_plan.selected_plan = this.dialog_site.site.account.plan.name;
+			this.dialog_modify_plan.customer_name = this.dialog_site.site.account.name;
 			this.dialog_modify_plan.show = true;
 		},
 		updatePlan() {
-			site_id = this.site_dialog.site.site_id
+			site_id = this.dialog_site.site.site_id
 			site = this.sites.filter(site => site.site_id == site_id)[0];
 			plan = Object.assign({}, this.dialog_modify_plan.plan)
 
@@ -8131,7 +8130,7 @@ new Vue({
 		},
 		updateSettings() {
 			this.dialog_update_settings.show = true;
-			site = this.site_dialog.site
+			site = this.dialog_site.site
 			environment = site.environments.filter( e => e.environment == site.environment_selected )[0]
 			this.dialog_update_settings.environment.updates_exclude_plugins = environment.updates_exclude_plugins
 			this.dialog_update_settings.environment.updates_exclude_themes = environment.updates_exclude_themes
@@ -8141,7 +8140,7 @@ new Vue({
 		},
 		saveUpdateSettings() {
 			this.dialog_update_settings.loading = true;
-			site = this.site_dialog.site
+			site = this.dialog_site.site
 
 			// Adds new job
 			job_id = Math.round((new Date()).getTime());
