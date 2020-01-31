@@ -869,16 +869,16 @@ if ( $role_check ) {
 				<v-btn icon dark @click.native="dialog_update_settings.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
-				<v-toolbar-title>Save settings for {{ dialog_update_settings.site_name }}</v-toolbar-title>
+				<v-toolbar-title>Save settings for {{ site_dialog.site.name }}</v-toolbar-title>
 				<v-spacer></v-spacer>
 			</v-toolbar>
 			<v-card-text>
-				<v-switch label="Automatic Updates" v-model="dialog_update_settings.updates_enabled" :false-value="0" :true-value="1" class="mt-7"></v-switch>
+				<v-switch label="Automatic Updates" v-model="dialog_update_settings.environment.updates_enabled" :false-value="0" :true-value="1" class="mt-7"></v-switch>
 				<v-select
 					:items="dialog_update_settings.plugins"
 					item-text="title"
 					item-value="name"
-					v-model="dialog_update_settings.exclude_plugins"
+					v-model="dialog_update_settings.environment.updates_exclude_plugins"
 					label="Excluded Plugins"
 					multiple
 					chips
@@ -888,7 +888,7 @@ if ( $role_check ) {
 					:items="dialog_update_settings.themes"
 					item-text="title"
 					item-value="name"
-					v-model="dialog_update_settings.exclude_themes"
+					v-model="dialog_update_settings.environment.updates_exclude_themes"
 					label="Excluded Themes"
 					multiple
 					chips
@@ -2992,7 +2992,7 @@ if ( $role_check ) {
 					<v-toolbar-title>Update Logs</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-                <v-btn text @click="update(site_dialog.site.site_id)">Manual update <v-icon dark>mdi-sync</v-icon></v-btn>
+                <v-btn text @click="runUpdate(site_dialog.site.site_id)">Manual update <v-icon dark>mdi-sync</v-icon></v-btn>
                 <v-btn text @click="updateSettings(site_dialog.site.site_id)">Update Settings <v-icon dark>mdi-settings</v-icon></v-btn>
                 <!-- <v-btn text @click="themeAndPluginChecks(site_dialog.site.site_id)">Theme/plugin checks <v-icon dark small>fas fa-calendar-check</v-icon></v-btn> -->
 					</v-toolbar-items>
@@ -3015,7 +3015,7 @@ if ( $role_check ) {
 						    <template v-slot:body="{ items }">
 							<tbody>
 							<tr v-for="item in items">
-								<td>{{ item.date | pretty_timestamp }}</td>
+								<td>{{ item.created_at | pretty_timestamp_epoch }}</td>
 								<td>{{ item.type }}</td>
 								<td>{{ item.name }}</td>
 								<td class="text-right">{{ item.old_version }}</td>
@@ -4097,7 +4097,7 @@ new Vue({
 		dialog_migration: { show: false, sites: [], site_name: "", site_id: "", update_urls: true, backup_url: "" },
 		dialog_modify_plan: { show: false, site: {}, plan: { limits: {}, addons: [] }, selected_plan: "", customer_name: "" },
 		dialog_theme_and_plugin_checks: { show: false, site: {}, loading: false },
-		dialog_update_settings: { show: false, site_id: null, loading: false },
+		dialog_update_settings: { show: false, environment: {}, themes: [], plugins: [], loading: false },
 		dialog_fathom: { show: false, site: {}, environment: {}, loading: false, editItem: false, editedItem: {}, editedIndex: -1 },
 		dialog_account: { show: false, records: {}, new_invite: false, new_invite_email: "", step: 1 },
 		dialog_user: { show: false, user: {}, errors: [] },
@@ -7978,7 +7978,7 @@ new Vue({
 					self.runCommand( response.data );
 			});
 		},
-		update( site_id ) {
+		runUpdate( site_id ) {
 
 			site = this.sites.filter(site => site.site_id == site_id)[0];
 			should_proceed = confirm("Apply all plugin/theme updates for " + site.name + "?");
@@ -7990,7 +7990,7 @@ new Vue({
 			// New job for progress tracking
 			job_id = Math.round((new Date()).getTime());
 			description = "Updating themes/plugins on " + site.name;
-			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: [],"command":"update-wp"});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: [],"command":"update-wp", site_id: site.site_id});
 
 			var data = {
 				'action': 'captaincore_install',
@@ -8000,12 +8000,10 @@ new Vue({
 				'background': true
 			};
 
-			self = this;
-
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data );
+					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					this.runCommand( response.data );
 				});
 
 		},
@@ -8058,9 +8056,7 @@ new Vue({
 				}
 
 				if ( job.command == "update-wp" ){
-					// to do
-					site.update_logs = [];
-					self.fetchUpdateLogs( site_id );
+					this.fetchUpdateLogs( job.site_id );
 				}
 
 				// console.log( "Done: select token " + job_id + " found job " + job.job_id )
@@ -8133,23 +8129,19 @@ new Vue({
 					self.runCommand( response.data );
 				});
 		},
-		updateSettings( site_id ) {
+		updateSettings() {
 			this.dialog_update_settings.show = true;
-			this.dialog_update_settings.site_id = site_id;
-			site = this.sites.filter(site => site.site_id == site_id)[0];
-			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
-			this.dialog_update_settings.site_name = site.name;
-			this.dialog_update_settings.exclude_plugins = environment.updates_exclude_plugins;
-			this.dialog_update_settings.exclude_themes = environment.updates_exclude_themes;
-			this.dialog_update_settings.updates_enabled = environment.updates_enabled;
-			this.dialog_update_settings.plugins = environment.plugins;
-			this.dialog_update_settings.themes = environment.themes;
+			site = this.site_dialog.site
+			environment = site.environments.filter( e => e.environment == site.environment_selected )[0]
+			this.dialog_update_settings.environment.updates_exclude_plugins = environment.updates_exclude_plugins
+			this.dialog_update_settings.environment.updates_exclude_themes = environment.updates_exclude_themes
+			this.dialog_update_settings.environment.updates_enabled = environment.updates_enabled
+			this.dialog_update_settings.themes = environment.themes
+			this.dialog_update_settings.plugins = environment.plugins
 		},
 		saveUpdateSettings() {
 			this.dialog_update_settings.loading = true;
-			site_id = this.dialog_update_settings.site_id;
-			site = this.sites.filter(site => site.site_id == site_id)[0];
-			self = this;
+			site = this.site_dialog.site
 
 			// Adds new job
 			job_id = Math.round((new Date()).getTime());
@@ -8159,28 +8151,27 @@ new Vue({
 			// Prep AJAX request
 			var data = {
 				'action': 'captaincore_ajax',
-				'post_id': site_id,
+				'post_id': site.site_id,
 				'command': "updateSettings",
 				'environment': site.environment_selected,
 				'value': { 
-					"exclude_plugins": this.dialog_update_settings.exclude_plugins, 
-					"exclude_themes": this.dialog_update_settings.exclude_themes, 
-					"updates_enabled": this.dialog_update_settings.updates_enabled
+					"updates_exclude_plugins": this.dialog_update_settings.environment.updates_exclude_plugins, 
+					"updates_exclude_themes": this.dialog_update_settings.environment.updates_exclude_themes, 
+					"updates_enabled": this.dialog_update_settings.environment.updates_enabled
 					}
 			};
 
-			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
-			environment.exclude_plugins = self.dialog_update_settings.exclude_plugins;
-			environment.exclude_themes = self.dialog_update_settings.exclude_themes;
-			environment.updates_enabled = self.dialog_update_settings.updates_enabled;
-
-			self.dialog_update_settings.show = false;
-			self.dialog_update_settings.loading = false;
+			this.dialog_update_settings.show = false;
+			this.dialog_update_settings.loading = false;
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data );
+					environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
+					environment.updates_exclude_plugins = this.dialog_update_settings.environment.updates_exclude_plugins;
+					environment.updates_exclude_themes = this.dialog_update_settings.environment.updates_exclude_themes;
+					environment.updates_enabled = this.dialog_update_settings.environment.updates_enabled;
+					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					this.runCommand( response.data );
 				});
 
 		},

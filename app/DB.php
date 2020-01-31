@@ -73,13 +73,11 @@ class DB {
         $results        = $wpdb->get_results( $sql );
         $response       = [];
         foreach ( $results as $result ) {
-
             $update_log = json_decode( $result->update_log );
-
             foreach ( $update_log as $log ) {
-                $log->type  = $result->update_type;
-                $log->date  = $result->created_at;
-                $response[] = $log;
+                $log->type       = $result->update_type;
+                $log->created_at = strtotime( $result->created_at );
+                $response[]      = $log;
             }
         }
         return $response;
