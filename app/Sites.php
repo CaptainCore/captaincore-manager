@@ -85,7 +85,6 @@ class Sites extends DB {
     }
 	
 	public function list() {
-        $upload_dir   = wp_upload_dir();
 		$sites        = [];
         foreach( $this->sites as $site_id ) {
             $site    = self::get( $site_id );
@@ -107,13 +106,6 @@ class Sites extends DB {
             $site->visits       = $details->visits;
             $site->mailgun      = $details->mailgun;
             $site->outdated     = false;
-            $site->screenshots  = [];
-            if ( $site->screenshot == true ) {
-                $site->screenshots = [
-                    'small' => $upload_dir['baseurl'] . "/screenshots/{$site->site}_{$site->site_id}/production/screenshot-100.png",
-                    'large' => $upload_dir['baseurl'] . "/screenshots/{$site->site}_{$site->site_id}/production/screenshot-800.png"
-                ];
-            }
             
             // Mark site as outdated if sync older then 48 hours
             if ( strtotime( $site->updated_at ) <= strtotime( "-48 hours" ) ) {
