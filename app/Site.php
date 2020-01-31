@@ -521,6 +521,8 @@ class Site {
             $environment->quicksave_search = '';
             $environment->capture_pages    = json_decode ( $environment->capture_pages );
             $environment->updates_enabled  = intval( $environment->updates_enabled );
+            $environment->updates_exclude_plugins = explode(",", $environment->updates_exclude_plugins );
+            $environment->updates_exclude_themes = explode(",", $environment->updates_exclude_themes );
             $environment->themes_selected  = [];
             $environment->plugins_selected = [];
             $environment->users_selected   = [];
@@ -564,9 +566,8 @@ class Site {
     public function update_logs() {
         // Fetch relating environments
         $site            = ( new Sites )->get( $this->site_id );
-        $db_environments = new Environments();
-        $environments    = $db_environments->fetch_environments( $this->site_id );
-        $results = (object) [];
+        $environments    = ( new Environments )->fetch_environments( $this->site_id );
+        $results         = (object) [];
         foreach ($environments as $environment) {
             $results->{$environment->environment} = ( new UpdateLogs )->fetch_logs( $this->site_id, $environment->environment_id );
         }
