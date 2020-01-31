@@ -1466,38 +1466,21 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Imports update log
-	if ( $command == 'import-update-log' ) {
+	if ( $command == 'update-log-add' ) {
 
-		foreach ( $data as $row ) {
-
-			// Format for mysql timestamp format. Changes "2018-06-20-091520" to "2018-06-20 09:15:20"
-			$date_formatted = substr_replace( $row->date, ' ', 10, 1 );
-			$date_formatted = substr_replace( $date_formatted, ':', 13, 0 );
-			$date_formatted = substr_replace( $date_formatted, ':', 16, 0 );
-			$update_log     = json_encode( $row->updates );
-
-			$new_update_log = array(
-				'site_id'        => $site_id,
-				'environment_id' => $environment_id,
-				'update_type'    => $row->type,
-				'update_log'     => $update_log,
-				'created_at'     => $date_formatted,
-			);
-
-			$new_update_log_check = array(
-				'site_id'    => $site_id,
-				'created_at' => $date_formatted,
-			);
-
-			$db_update_logs = new CaptainCore\UpdateLogs();
-
-			$valid_check = $db_update_logs->valid_check( $new_update_log_check );
-
-			// Add new update log if not added.
-			if ( $valid_check ) {
-				$db_update_logs->insert( $new_update_log );
-			}
+		$update_log_check = ( new CaptainCore\UpdateLogs )->get( $post->data->log_id );
+		// Insert new quicksave
+		if ( empty( $update_log_check ) ) {
+			( new CaptainCore\UpdateLogs )->insert( (array) $post->data );
+		} else {
+			// Update existing quicksave
+			( new CaptainCore\UpdateLogs )->update( (array) $post->data, [ "log_id" => $post->data->log_id ] );
 		}
+	
+		$response = [
+			"response"   => "Update log added for $site_id",
+			"update_log" => $post->data,
+		];
 	}
 
 	// Add capture
@@ -1564,11 +1547,6 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	if ( $command == 'quicksave-add' ) {
 		
-		//$details        = ( new CaptainCore\Sites )->get( $site_id )->details;
-		//$details        = json_decode( $defails );
-		//$details->core  = $core;
-		//( new CaptainCore\Sites )->update( [ "details" => json_encode( $details ) ], [ "site_id" => $site_id ] );
-
 		$quicksave_check = ( new CaptainCore\Quicksaves )->get( $post->data->quicksave_id );
 		// Insert new quicksave
 		if ( empty( $quicksave_check ) ) {
@@ -4098,44 +4076,34 @@ function captaincore_ajax_action_callback() {
 	}
 
 	if ( $cmd == 'updateSettings' ) {
-		$db_environments = new CaptainCore\Environments();
 		// Saves update settings for a site
 		$environment_update = [
 			'updates_enabled'         => $value["updates_enabled"],
-			'updates_exclude_themes'  => implode(",", $value["exclude_themes"]),
-			'updates_exclude_plugins' => implode(",", $value["exclude_plugins"]),
+			'updates_exclude_themes'  => implode(",", $value["updates_exclude_themes"]),
+			'updates_exclude_plugins' => implode(",", $value["updates_exclude_plugins"]),
+			'updated_at'              => date("Y-m-d H:i:s") 
 		];
-		$environment_update['updated_at'] = date("Y-m-d H:i:s");
-		if ( $environment == "Production" ) {
-			$environment_id = $db_environments->select_by_conditions( 'environment_id', [ 'site_id' => $post_id, 'environment' => 'Production' ] );
-			$db_environments->update( $environment_update, [ "environment_id" => $environment_id ] );
-		}
-		if ( $environment == "Staging" ) {
-			$environment_id = $db_environments->select_by_conditions( 'environment_id', [ 'site_id' => $post_id, 'environment' => 'Staging' ] );
-			$db_environments->update( $environment_update, [ "environment_id" => $environment_id ] );
-		}
-
-		// Remote Sync
-		$run_in_background = true;
-		$remote_command    = true;
+		$environment_id = ( new CaptainCore\Site( $post_id ) )->fetch_environment_id( $environment );
+		( new CaptainCore\Environments )->update( $environment_update, [ "environment_id" => $environment_id ] );
 		$details           = ( new CaptainCore\Site( $post_id ) )->get_raw();
 		$details           = base64_encode( json_encode( $details ) );
-		$command           = "site update $site --details=$details --format=base64";
-
+		$command           = "site update $site --details=$details --format=base64 --skip-extras";
+		$remote_command    = true;
+		$run_in_background = true;
 	}
 
 	if ( $cmd == 'newSite' ) {
 		// Create new site
 		$site    = new CaptainCore\Site();
-		$reponse = $site->create( $value );
-		echo json_encode( $reponse );
+		$response = $site->create( $value );
+		echo json_encode( $response );
 	}
 
 	if ( $cmd == 'updateSite' ) {
 		// Updates site
 		$site    = new CaptainCore\Site( $value["site_id"] );
-		$reponse = $site->update( $value );
-		echo json_encode( $reponse );
+		$response = $site->update( $value );
+		echo json_encode( $response );
 	}
 
 	if ( $cmd == 'deleteSite' ) {
@@ -4213,18 +4181,16 @@ function captaincore_ajax_action_callback() {
 			add_filter( 'https_ssl_verify', '__return_false' );
 		}
 
-		$data = array( 
+		$data = [
 			'timeout' => 45,
 			'headers' => array(
 				'Content-Type' => 'application/json; charset=utf-8', 
 				'token'        => CAPTAINCORE_CLI_TOKEN 
 			), 
-			'body' => json_encode( array(
-				"command" => $command 
-			)), 
+			'body' => json_encode( [ "command" => $command ] ), 
 			'method'      => 'POST', 
 			'data_format' => 'body' 
-		);
+		];
 
 		if ( $run_in_background ) {
 
