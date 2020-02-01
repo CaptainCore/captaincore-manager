@@ -3953,9 +3953,8 @@ function captaincore_ajax_action_callback() {
 	}
 
 	if ( $cmd == 'updateSiteAccount' ) {
-
 		$account = (object) $value;
-		if ( ! $user->verify_accounts( [ $account->account_id ] ) ) {
+		if ( ! $user->verify_account_owner( $account->account_id ) ) {
 			echo "Permission denied";
 			wp_die();
 			return;

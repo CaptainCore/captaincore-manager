@@ -38,6 +38,22 @@ class User {
         return true;
     }
 
+    public function verify_account_owner( $account_id ) {
+
+        if ( self::is_admin() ) {
+            return true;
+        }
+
+        $users = ( new Account( $account_id, true ) )->users();
+
+        foreach ($users as $user) {
+            if ( $user['user_id'] === $this->user_id && $user['level'] == "Owner" ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public function roles() {
         return $this->roles;
     }
