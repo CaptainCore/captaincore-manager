@@ -3408,7 +3408,7 @@ if ( $role_check ) {
 				</v-data-table>
 			</v-card>
 		</v-tab-item>
-		<v-tab-item :key="7" value="tab-Sharing">
+		<v-tab-item :key="7" value="tab-Sharing" v-if="role == 'administrator'">
 			<v-toolbar color="grey lighten-4" dense light flat>
 				<v-toolbar-title>Sharing</v-toolbar-title>
 				<v-spacer></v-spacer>
@@ -3434,7 +3434,7 @@ if ( $role_check ) {
 						<v-icon>mdi-account</v-icon>
 					</v-list-item-icon>
 					<v-list-item-content>
-						<v-list-item-title>{{ account.name }}</v-list-item-title>
+						<v-list-item-title>{{ accounts.filter( a => a.account_id == account )[0].name }}</v-list-item-title>
 					</v-list-item-content>
 				</v-list-item>
 			</v-list>
