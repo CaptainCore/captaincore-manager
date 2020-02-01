@@ -4032,7 +4032,8 @@ function captaincore_ajax_action_callback() {
 	}
 
 	if ( $cmd == 'usage-breakdown' ) {
-		$account         = new CaptainCore\Account( $post_id );
+		$site            = ( new CaptainCore\Site( $post_id ) )->get();
+		$account         = new CaptainCore\Account( $site->account_id, true );
 		$usage_breakdown = $account->usage_breakdown();
 		echo json_encode( $usage_breakdown ) ;
 	}
