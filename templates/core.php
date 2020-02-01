@@ -3790,7 +3790,7 @@ if ( $role_check ) {
 							{{ dialog_account.records.domains.length }} Domains
 							<v-icon size="20" class="ml-1">mdi-library-books</v-icon>
 						</v-tab>
-						<v-tab>
+						<v-tab v-show="role == 'administrator' || dialog_account.records.owner">
 							Advanced
 							<v-icon size="24">mdi-cogs</v-icon>
 						</v-tab>
@@ -3798,7 +3798,7 @@ if ( $role_check ) {
 					<v-card-text style="max-height:100%;padding:0px;margin:0px">
 					<v-tabs-items v-model="account_tab">
 					<v-tab-item>
-						<v-toolbar dense flat color="grey lighten-4">
+						<v-toolbar dense flat color="grey lighten-4" v-show="role == 'administrator' || dialog_account.records.owner">
 							<div class="flex-grow-1"></div>
 							<v-toolbar-items>
 								<v-btn text @click="dialog_account.new_invite = true">New Invite <v-icon dark>add</v-icon></v-btn>
@@ -3832,13 +3832,15 @@ if ( $role_check ) {
 							</v-card>
 							<v-data-table
 								v-show="typeof dialog_account.records.users == 'object' && dialog_account.records.users.length > 0"
-								:headers='[{"text":"Name","value":"name"},{"text":"Email","value":"email"},{"text":"","value":"actions"}]'
+								:headers='[{"text":"Name","value":"name"},{"text":"Email","value":"email"},{"text":"","value":"level"},{"text":"","value":"actions"}]'
 								:items="dialog_account.records.users"
+								:sort-by='["level","name"]'
+								sort-desc
 								:items-per-page="-1"
 								hide-default-footer
 							>
 							<template v-slot:item.actions="{ item }">
-							<v-btn text icon color="pink" @click="removeAccountAccess( item.user_id )" v-if="role == 'administrator'">
+							<v-btn text icon color="pink" @click="removeAccountAccess( item.user_id )" v-if="role == 'administrator' || dialog_account.records.owner && item.level != 'Owner'">
 								<v-icon>mdi-delete</v-icon>
 							</v-btn>
 							</template>
@@ -3915,8 +3917,8 @@ if ( $role_check ) {
 						<v-toolbar dense flat color="grey lighten-4">
 							<div class="flex-grow-1"></div>
 							<v-toolbar-items>
-							<v-btn text @click="editAccount()">Edit account <v-icon dark small>edit</v-icon></v-btn>
-							<v-btn text @click="deleteAccount()">Delete account <v-icon dark small>delete</v-icon></v-btn>
+								<v-btn text @click="editAccount()">Edit account <v-icon dark small>edit</v-icon></v-btn>
+								<v-btn text @click="deleteAccount()" v-show="role =='administrator'">Delete account <v-icon dark small>delete</v-icon></v-btn>
 							</v-toolbar-items>
 						</v-toolbar>
 						

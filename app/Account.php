@@ -51,13 +51,23 @@ class Account {
         if ( $this->account_id == "" ) {
             return [];
         }
-        $record = [
+        $user_id = get_current_user_id();
+        $users   = $this->users();
+        $record  = [
             "account" => $this->account(),
             "invites" => $this->invites(),
-            "users"   => $this->users(),
+            "users"   => $users,
             "domains" => $this->domains(),
             "sites"   => $this->sites(),
+            "owner"   => false,
         ];
+
+        foreach ($users as $user) {
+            if ($user['user_id'] === $user_id && $user['level'] == "Owner" ) {
+                $record["owner"] = true;
+            }
+        }
+        
         return $record;
     }
 
@@ -136,15 +146,15 @@ class Account {
     }
 
     public function users() {
-        $users   = array_column( ( new AccountUser )->where( [ "account_id" => $this->account_id ] ), "user_id" );
+        $permissions = ( new AccountUser )->where( [ "account_id" => $this->account_id ] );
         $results = [];
-        foreach( $users as $user_id ) {
-            $user      = get_userdata( $user_id );
+        foreach( $permissions as $permission ) {
+            $user      = get_userdata( $permission->user_id );
             $results[] = [
                 "user_id" => $user->ID,
                 "name"    => $user->display_name, 
                 "email"   => $user->user_email,
-                "level"   => ""
+                "level"   => ucfirst( $permission->level ),
             ];
         }
         return $results;
@@ -231,9 +241,9 @@ class Account {
 
     public function calculate_totals() {
         $metrics = [ 
-            "sites"   => count( $this->sites() ), 
+            "sites"   => count( $this->sites() ),
             "users"   => count( $this->users() ),
-            "domains" => count( $this->domains() ), 
+            "domains" => count( $this->domains() ),
         ];
         ( new Accounts )->update( [ "metrics" => json_encode( $metrics ) ], [ "account_id" => $this->account_id ] );
         return [ "message" => "Account metrics updated." ];
