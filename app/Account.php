@@ -84,6 +84,9 @@ class Account {
     }
 
     public function sites() {
+        if ( $this->account_id == "" ) {
+            return [];
+        }
         // Fetch sites assigned as owners
         $all_site_ids = [];
         $site_ids = array_column( ( new Sites )->where( [ "account_id" => $this->account_id, "status" => "active" ] ), "site_id" );
