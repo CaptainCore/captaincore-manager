@@ -3198,6 +3198,7 @@ if ( $role_check ) {
 										<v-flex>
 										<v-text-field
 											v-model="item.search"
+											ref="quicksave_search"
 											@input="filterFiles( dialog_site.site.site_id, item.quicksave_id)"
 											append-icon="search"
 											label="Search"
@@ -4385,6 +4386,12 @@ new Vue({
 				this.$refs.account_search.focus()
 				this.$refs.user_search.focus()
 				this.$refs.account_search.focus()
+				if ( this.$refs.users_search && typeof this.$refs.users_search[0] == "object" ) {
+					this.$refs.users_search.forEach( e => e.focus() )
+				}
+				if ( this.$refs.quicksave_search && typeof this.$refs.quicksave_search[0] == "object" ) {
+					this.$refs.quicksave_search.forEach( e => e.focus() )
+				}
 			}
 		}
 		window.addEventListener('popstate', () => {
