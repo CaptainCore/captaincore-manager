@@ -1151,7 +1151,7 @@ if ( $role_check ) {
 										</v-layout>
 										<v-layout>
 											<v-flex xs6 class="mr-1"><v-switch label="Automatic Updates" v-model="key.updates_enabled" false-value="0" true-value="1"></v-switch></v-flex>
-											<v-flex xs6 class="mr-1" v-if="typeof key.offload_enabled != 'undefined'">
+											<v-flex xs6 class="mr-1" v-if="typeof key.offload_enabled != 'undefined' && key.offload_enabled == 1">
 											<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
 											</v-flex>
 										</v-layout>
@@ -1841,8 +1841,8 @@ if ( $role_check ) {
 										<v-flex xs6 class="mr-1"><v-text-field label="Database Password" :value="key.database_password" @change.native="key.database_password = $event.target.value" required></v-text-field></v-flex>
 										</v-layout>
 										<v-layout>
-											<v-flex xs6 class="mr-1" v-if="typeof key.offload_enabled != 'undefined'">
-										<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
+											<v-flex xs6 class="mr-1" v-if="typeof key.offload_enabled != 'undefined' && key.offload_enabled == 1">
+											<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
 											</v-flex>
 										</v-layout>
 										<div v-if="key.offload_enabled == 1">
