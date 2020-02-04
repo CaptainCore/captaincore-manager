@@ -4541,7 +4541,6 @@ new Vue({
 			}
 			if ( this.fetchInvite.account ) {
 				this.fetchInviteInfo()
-				window.location = "#invite"
 				this.route = "invite"
 				this.loading_page = false;
 				return
