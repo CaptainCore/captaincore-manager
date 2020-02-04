@@ -30,7 +30,11 @@ class Processes extends DB {
 			$process    = self::get( $item->process_id );
 			$key        = array_search( $process->roles, array_column( $process_roles, 'role_id' ) );
 			$process->repeat_interval = $process_repeat->{$process->repeat_interval};
-			$process->roles = $process_roles[$key]->name;
+            if ( $process->roles == "" ) {
+                $process->roles = "";
+            } else {
+                $process->roles = $process_roles[$key]->name;
+            }
             $processes[]    = $process;
         }
         return $processes;

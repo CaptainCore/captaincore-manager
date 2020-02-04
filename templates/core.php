@@ -847,7 +847,7 @@ if ( $role_check ) {
 				<v-btn icon @click.native="dialog_handbook.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
-				<v-toolbar-title>{{ dialog_handbook.process.name }} <v-chip color="primary" text-color="white" text>{{ dialog_handbook.process.roles }}</v-chip></v-toolbar-title>
+				<v-toolbar-title>{{ dialog_handbook.process.name }} <v-chip color="primary" text-color="white" text v-show="dialog_handbook.process.roles != ''">{{ dialog_handbook.process.roles }}</v-chip></v-toolbar-title>
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
 					<v-btn text @click="editProcess()">Edit</v-btn>
@@ -3616,7 +3616,7 @@ if ( $role_check ) {
 						<v-card :hover="true" @click="viewProcess( process.process_id )">
 						<v-card-title primary-title class="pt-2">
 							<div>
-								<span class="title">{{ process.name }}</a> <v-chip color="primary" text-color="white" text>{{ process.roles }}</v-chip></span>
+								<span class="title">{{ process.name }}</a> <v-chip color="primary" text-color="white" text v-show="process.roles != ''">{{ process.roles }}</v-chip></span>
 								<div class="caption">
 									<v-icon v-show="process.time_estimate != ''" style="padding:0px 5px">mdi-clock-outline</v-icon>{{ process.time_estimate }} 
 									<v-icon v-show="process.repeat_interval != '' && process.repeat_interval != null" style="padding:0px 5px">mdi-calendar-repeat</v-icon>{{ process.repeat_interval }} 
