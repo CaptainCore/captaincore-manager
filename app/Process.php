@@ -26,6 +26,11 @@ class Process {
             "time_estimate"   => $process->time_estimate,
 
         ];
+        if ( $process->roles == "" ) {
+            $fetch_process['roles'] = "";
+        } else {
+            $fetch_process['roles'] = $process_roles[$key]->name;
+        }
         return $fetch_process;
     }
 
