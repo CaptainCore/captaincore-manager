@@ -200,6 +200,17 @@ class DB {
         return $results;
     }
 
+    static function fetch_filters_for_admins() {
+        global $wpdb;
+        $table = self::_table();
+        $sql = "SELECT {$table}.themes, {$table}.plugins
+                FROM {$table}
+                INNER JOIN {$wpdb->prefix}captaincore_sites ON {$table}.site_id = {$wpdb->prefix}captaincore_sites.site_id
+                WHERE {$wpdb->prefix}captaincore_sites.`status` = 'active'";
+        $results = $wpdb->get_results( $sql );
+        return $results;
+    }
+
     static function fetch_filters_for_account( $account_id = "" ) {
         global $wpdb;
         $table = self::_table();
