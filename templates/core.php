@@ -4380,7 +4380,8 @@ new Vue({
 			e = e || window.event
 			if (
 				e.keyCode === 191 && // Forward Slash '/'
-				e.target !== this.$refs.search.$refs.input
+				e.target !== this.$refs.search.$refs.input &&
+				e.target.type !== "textarea"
 			) {
 				e.preventDefault()
 				this.$refs.search.focus()
