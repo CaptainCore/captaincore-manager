@@ -600,6 +600,7 @@ class Site {
         foreach ($environments as $environment) {
             $snapshots = ( new Snapshots )->fetch_environment( $this->site_id, $environment->environment_id );
             foreach( $snapshots as $snapshot ) {
+                $snapshot->created_at = strtotime( $snapshot->created_at );
                 if ( $snapshot->user_id == 0 ) {
                     $user_name = "System";
                 } else {

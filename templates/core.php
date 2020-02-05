@@ -3297,7 +3297,7 @@ if ( $role_check ) {
 						{{ item.user.name }}
 					</template>
 					<template v-slot:item.created_at="{ item }">
-						{{ item.created_at | pretty_timestamp }}
+						{{ item.created_at | pretty_timestamp_epoch }}
 					</template>
 					<template v-slot:item.storage="{ item }">
 						{{ item.storage | formatSize }}
