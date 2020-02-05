@@ -5129,64 +5129,28 @@ function captaincore_download_snapshot_email( $snapshot_id ) {
 }
 
 function captaincore_snapshot_download_link( $snapshot_id ) {
+	$command = "snapshot-fetch-download-link $snapshot_id";
 
-	$db       = new CaptainCore\Snapshots;
-	$snapshot = $db->get( $snapshot_id );
-	$name     = $snapshot->snapshot_name;
-	$domain   = get_the_title( $snapshot->site_id );
-	$site     = get_field( 'site', $snapshot->site_id);
+	// Disable https when debug enabled
+	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+		add_filter( 'https_ssl_verify', '__return_false' );
+	}
 
-	// Get new auth from B2
-	$account_id      = CAPTAINCORE_B2_ACCOUNT_ID;  // Obtained from your B2 account page
-	$application_key = CAPTAINCORE_B2_ACCOUNT_KEY; // Obtained from your B2 account page
-	$credentials     = base64_encode( $account_id . ':' . $application_key );
-	$url             = 'https://api.backblazeb2.com/b2api/v1/b2_authorize_account';
+	$data = [ 
+		'timeout' => 45,
+		'headers' => [
+			'Content-Type' => 'application/json; charset=utf-8', 
+			'token'        => CAPTAINCORE_CLI_TOKEN 
+		],
+		'body'        => json_encode( [ "command" => $command ] ), 
+		'method'      => 'POST', 
+		'data_format' => 'body' 
+	];
 
-	$session = curl_init( $url );
+	// Add command to dispatch server
+	$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
 
-	// Add headers
-	$headers   = [];
-	$headers[] = 'Accept: application/json';
-	$headers[] = 'Authorization: Basic ' . $credentials;
-	curl_setopt( $session, CURLOPT_HTTPHEADER, $headers ); // Add headerss
-	curl_setopt( $session, CURLOPT_HTTPGET, true );        // HTTP GET
-	curl_setopt( $session, CURLOPT_RETURNTRANSFER, true ); // Receive server response
-	$server_output = curl_exec( $session );
-	curl_close( $session );
-	$output = json_decode( $server_output );
-
-	// Variables for Backblaze
-	$api_url          = 'https://api001.backblazeb2.com'; // From b2_authorize_account call
-	$auth_token       = $output->authorizationToken;      // From b2_authorize_account call
-	$bucket_id        = CAPTAINCORE_B2_BUCKET_ID;         // The file name prefix of files the download authorization will allow
-	$valid_duration   = 604800;                           // The number of seconds the authorization is valid for
-	$file_name_prefix = 'Snapshots/' . $site;             // The file name prefix of files the download authorization will allow
-
-	$session = curl_init( $api_url . '/b2api/v1/b2_get_download_authorization' );
-
-	// Add post fields
-	$data        = array(
-		'bucketId'               => $bucket_id,
-		'validDurationInSeconds' => $valid_duration,
-		'fileNamePrefix'         => $file_name_prefix,
-	);
-	$post_fields = json_encode( $data );
-	curl_setopt( $session, CURLOPT_POSTFIELDS, $post_fields );
-
-	// Add headers
-	$headers   = [];
-	$headers[] = 'Authorization: ' . $auth_token;
-	curl_setopt( $session, CURLOPT_HTTPHEADER, $headers );
-	curl_setopt( $session, CURLOPT_POST, true );           // HTTP POST
-	curl_setopt( $session, CURLOPT_RETURNTRANSFER, true ); // Receive server response
-	$server_output = curl_exec( $session );                // Let's do this!
-	curl_close( $session );                                // Clean up
-	$server_output = json_decode( $server_output );
-	$auth          = $server_output->authorizationToken;
-	$b2_snapshots  = CAPTAINCORE_B2_SNAPSHOTS;
-	$url           = "https://f001.backblazeb2.com/file/{$b2_snapshots}/{$site}_{$snapshot->site_id}/{$name}?Authorization={$auth}";
-
-	return $url;
+	return $response["body"];
 }
 
 // Add reports to customers
