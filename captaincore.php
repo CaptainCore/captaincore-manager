@@ -1391,34 +1391,24 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Generate a new snapshot.
-	if ( $command == 'snapshot' and $archive and $storage ) {
+	if ( $command == 'snapshot-add' ) {
 
-		$environment_id = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment );
-
-		if ( $user_id == "") {
-			$user_id = "0";
+		$snapshot_check = ( new CaptainCore\Snapshots )->get( $post->data->snapshot_id );
+		// Insert new snapshot
+		if ( empty( $snapshot_check ) ) {
+			( new CaptainCore\Snapshots )->insert( (array) $post->data );
+		} else {
+			// Update existing quicksave
+			( new CaptainCore\Snapshots )->update( (array) $post->data, [ "snapshot_id" => $post->data->snapshot_id ] );
 		}
-
-		$time_now = date("Y-m-d H:i:s");
-		$in_24hrs = date("Y-m-d H:i:s", strtotime ( date("Y-m-d H:i:s")."+24 hours" ) );
-		$token    = bin2hex( openssl_random_pseudo_bytes( 16 ) );
-		$snapshot = array(
-			'user_id'        => $user_id,
-			'site_id'        => $site_id,
-			'environment_id' => $environment_id,
-			'snapshot_name'  => $archive,
-			'created_at'     => $time_now,
-			'storage'        => $storage,
-			'email'          => $email,
-			'notes'          => $notes,
-			'expires_at'     => $in_24hrs,
-			'token'          => $token
-		);
-
-		$snapshot_id = ( new CaptainCore\Snapshots )->insert( $snapshot );
+	
+		$response = [
+			"response"  => "Snapshot added for $site_id",
+			"snapshot" => $post->data,
+		];
 
 		// Send out snapshot email
-		captaincore_download_snapshot_email( $snapshot_id );
+		captaincore_download_snapshot_email( $post->data->snapshot_id );
 
 	}
 
@@ -1529,17 +1519,17 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		}
 
 		// Format for mysql timestamp format. Changes "1530817828" to "2018-06-20 09:15:20"
-		$epoch = $data->created_at;
+		$epoch      = $data->created_at;
 		$created_at = new DateTime("@$epoch");  // convert UNIX timestamp to PHP DateTime
 		$created_at = $created_at->format('Y-m-d H:i:s'); // output = 2017-01-01 00:00:00
 
-		$new_capture = array(
+		$new_capture = [
 			'site_id'        => $site_id,
 			'environment_id' => $environment_id,
 			'created_at'     => $created_at,
 			'git_commit'     => $data->git_commit,
 			'pages'          => json_encode( $pages ),
-		);
+		];
 
 		$capture = new CaptainCore\Captures();
 		$capture->insert( $new_capture );
@@ -3608,22 +3598,20 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'fetchLink' ) {
 		// Fetch snapshot details
-		$db = new CaptainCore\Snapshots;
 		$in_24hrs = date("Y-m-d H:i:s", strtotime ( date("Y-m-d H:i:s")."+24 hours" ) );
 
 		// Generate new token
 		$token = bin2hex( openssl_random_pseudo_bytes( 16 ) );
-		$db->update(
-			array( "token"       => $token,
-				   "expires_at"  => $in_24hrs ),
-			array( "snapshot_id" => $value )
-		);
-		echo json_encode( 
-			array( 
-				"token"       => $token,
-				"expires_at"  => $in_24hrs
-			)
-		);
+		( new CaptainCore\Snapshots )->update( [
+			"token"       => $token,
+			"expires_at"  => $in_24hrs 
+		],[ 
+			"snapshot_id" => $value 
+		] );
+		echo json_encode( [ 
+			"token"       => $token,
+			"expires_at"  => $in_24hrs
+		] );
 	}
 
 	if ( $cmd == 'fetchPlugins' ) {
