@@ -1084,7 +1084,7 @@ if ( $role_check ) {
 								v-model="dialog_new_site.shared_with"
 								label="Shared With"
 								item-text="name"
-								return-object
+								item-value="account_id"
 								chips
 								multiple
 								deletable-chips
