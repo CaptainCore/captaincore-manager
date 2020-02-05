@@ -5093,15 +5093,14 @@ function log_process_completed_callback() {
 function captaincore_download_snapshot_email( $snapshot_id ) {
 
 	// Fetch snapshot details
-	$db       = new CaptainCore\Snapshots;
-	$snapshot = $db->get( $snapshot_id );
+	$snapshot = ( new CaptainCore\Snapshots )->get( $snapshot_id );
 	$name     = $snapshot->snapshot_name;
-	$domain   = get_the_title( $snapshot->site_id );
+	$domain   = ( new CaptainCore\Sites )->get( $snapshot->site_id )->name;
 	$site     = get_field( 'site', $snapshot->site_id );
 
 	// Generate download url to snapshot
-	$home_url = home_url();
-	$file_name = substr($snapshot->snapshot_name, 0, -4);
+	$home_url     = home_url();
+	$file_name    = substr($snapshot->snapshot_name, 0, -4);
 	$download_url = "{$home_url}/wp-json/captaincore/v1/site/{$snapshot->site_id}/snapshots/{$snapshot->snapshot_id}-{$snapshot->token}/{$file_name}";
 
 	// Build email
@@ -5109,7 +5108,7 @@ function captaincore_download_snapshot_email( $snapshot_id ) {
 	$to      = $snapshot->email;
 	$subject = "$company - Snapshot #$snapshot_id";
 	$body    = "Snapshot #{$snapshot_id} for {$domain}. Expires after 1 week.<br /><br /><a href=\"{$download_url}\">Download Snapshot</a>";
-	$headers = array( 'Content-Type: text/html; charset=UTF-8' );
+	$headers = [ 'Content-Type: text/html; charset=UTF-8' ];
 
 	// Send email
 	wp_mail( $to, $subject, $body, $headers );
