@@ -116,6 +116,7 @@ class Site {
         
         // Fetch relating environments from database
         $site->environments = ( new Environments )->where( [ "site_id" => $this->site_id ] );
+        $site->shared_with  = ( new AccountSite )->where( [ "site_id" => $this->site_id ] );
 
         return $site;
     }
