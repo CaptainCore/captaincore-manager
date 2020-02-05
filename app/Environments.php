@@ -11,6 +11,11 @@ class Environments extends DB {
         $user        = new User;
         $account_ids = $user->accounts();
 
+        if ( $user->is_admin() ) {
+            $account_ids = [];
+            $filters = self::fetch_filters_for_admins();
+        }
+
         // Loop through each account for current user and fetch SiteIDs
         foreach ( $account_ids as $account_id ) {
             // Fetch filters assigned as owners
