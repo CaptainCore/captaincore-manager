@@ -1414,14 +1414,8 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	// Load Token Key
 	if ( $command == 'token' and isset( $token_key ) ) {
-
-		// defines the ACF keys to use
-		$token_id = 'field_52d16819ac39f';
-
-		// update the repeater
-		update_field( $token_id, $token_key, $site_id );
+		( new CaptainCore\Sites )->update( [ "token" => $token_key ], [ "site_id" => $site_id ] );
 		echo "Adding token key. \n";
-
 	}
 
 	// Sync site data
