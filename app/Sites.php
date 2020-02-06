@@ -36,7 +36,7 @@ class Sites extends DB {
         // Loop through each account for current user and fetch SiteIDs
         foreach ( $account_ids as $account_id ) {
             // Fetch sites assigned as owners
-			$site_ids = self::select( 'site_id', "account_id", $account_id );
+			$site_ids = array_column( self::where( [ "account_id" => $account_id, "status" => "active" ] ), "site_id" );
 			foreach ( $site_ids as $site_id ) {
                 $this->sites[]     = $site_id;
                 $this->sites_all[] = $site_id;
