@@ -4194,6 +4194,7 @@ new Vue({
 			{"text":"Notes","value":"notes","sortable":false},
 		],<?php } ?>
 		domains: [],
+		domains_loading: true,
 		domain_search: "",
 		account_search: "",
 		new_recipe: { show: false, title: "", content: "", public: 1 },
@@ -5186,7 +5187,7 @@ new Vue({
 				});
 		},
 		fetchMissing() {
-			if ( this.allDomains == 0 && this.modules.dns ) {
+			if ( this.allDomains == 0 && this.modules.dns && this.domains_loading ) {
 				this.fetchDomains()
 			}
 			if ( this.sites.length == 0 ) {
@@ -5202,8 +5203,9 @@ new Vue({
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
-					this.domains = response.data;
-					this.loading_page = false;
+					this.domains = response.data
+					this.domains_loading = false
+					this.loading_page = false
 					setTimeout(this.fetchMissing, 4000)
 				});
 		},
