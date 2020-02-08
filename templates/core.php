@@ -1271,13 +1271,13 @@ if ( $role_check ) {
 					<v-data-table
 						:headers="header_timeline"
 						:items="dialog_log_history.logs"
-						:items-per-page-options='[50,100,250,{"text":"All","value":-1}]'
+						:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
 						class="timeline"
 					>
 				<template v-slot:body="{ items }">
 				<tbody>
 				<tr v-for="item in items">
-					<td class="justify-center">{{ item.created_at | pretty_timestamp }}</td>
+					<td class="justify-center">{{ item.created_at | pretty_timestamp_epoch }}</td>
 					<td class="justify-center">{{ item.author }}</td>
 					<td class="justify-center">{{ item.name }}</td>
 					<td class="justify-center" v-html="item.description"></td>
@@ -2119,13 +2119,13 @@ if ( $role_check ) {
 				<v-data-table
 					:headers="header_timeline"
 					:items="dialog_timeline.logs"
-					:items-per-page-options='[50,100,250,{"text":"All","value":-1}]'
+					:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
 					class="timeline"
 				>
 				<template v-slot:body="{ items }">
 				<tbody>
 				<tr v-for="item in items">
-					<td class="justify-center">{{ item.created_at | pretty_timestamp }}</td>
+					<td class="justify-center">{{ item.created_at | pretty_timestamp_epoch }}</td>
 					<td class="justify-center">{{ item.author }}</td>
 					<td class="justify-center">{{ item.name }}</td>
 					<td class="justify-center py-3" v-html="item.description"></td>
@@ -3010,7 +3010,7 @@ if ( $role_check ) {
 								:headers='header_updatelog'
 								:items="key.update_logs"
 								class="update_logs"
-								:items-per-page-options='[50,100,250,{"text":"All","value":-1}]'
+								:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
 							>
 						    <template v-slot:body="{ items }">
 							<tbody>
@@ -3207,7 +3207,12 @@ if ( $role_check ) {
 										></v-text-field>
 										</v-flex>
 									</v-layout>
-									<v-data-table no-data-text="" :headers='[{"text":"File","value":"file"}]' :items="item.filtered_files" :loading="item.loading">
+									<v-data-table 
+										:headers='[{"text":"File","value":"file"}]'
+										:items="item.filtered_files"
+										:loading="item.loading"
+										:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
+									>
 										<template v-slot:body="{ items }">
 										<tbody>
 											<tr v-for="i in items">
@@ -3217,9 +3222,6 @@ if ( $role_check ) {
 											</tr>
 										</tbody>
 										</template>
-										<v-alert slot="no-results" :value="true" color="error" icon="warning">
-											Your search for "{{ item.search }}" found no results.
-										</v-alert>
 									</v-data-table>
 								</v-card-text>
 							</v-card>
@@ -3434,7 +3436,7 @@ if ( $role_check ) {
 						<v-icon>mdi-account</v-icon>
 					</v-list-item-icon>
 					<v-list-item-content>
-						<v-list-item-title>{{ accounts.filter( a => a.account_id == account )[0].name }}</v-list-item-title>
+						<v-list-item-title>{{ dialog_site.site.account.name }}</v-list-item-title>
 					</v-list-item-content>
 				</v-list-item>
 			</v-list>
@@ -3457,7 +3459,7 @@ if ( $role_check ) {
 				<template v-slot:body="{ items }">
 					<tbody>
 					<tr v-for="item in items">
-					<td class="justify-center">{{ item.created_at | pretty_timestamp }}</td>
+					<td class="justify-center">{{ item.created_at | pretty_timestamp_epoch }}</td>
 					<td class="justify-center">{{ item.author }}</td>
 					<td class="justify-center">{{ item.name }}</td>
 					<td class="justify-center py-3" v-html="item.description"></td>
@@ -5797,14 +5799,12 @@ new Vue({
 			this.dialog_edit_log_entry.show = false;
 			this.dialog_edit_log_entry.sites = [];
 
-			self = this;
-
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					Object.keys(response.data).forEach( site_id => {
-						self.sites.filter( site => site.site_id == site_id )[0].timeline = response.data[site_id];
+						this.sites.filter( site => site.site_id == site_id )[0].timeline = response.data[site_id];
 					});
-					self.dialog_edit_log_entry.log = {};
+					this.dialog_edit_log_entry.log = {};
 				})
 				.catch( error => console.log( error ) );
 		},
@@ -7283,7 +7283,7 @@ new Vue({
 			site = this.sites.filter(site => site.site_id == site_id)[0];
 			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
 			quicksave = environment.quicksaves.filter( quicksave => quicksave.quicksave_id == quicksave_id )[0];
-			date = this.$options.filters.pretty_timestamp(quicksave.created_at);
+			date = this.$options.filters.pretty_timestamp_epoch(quicksave.created_at);
 			description = "Rollback "+ addon_type + " " + addon_name +" to version as of " + date + " on " + site.name ;
 			should_proceed = confirm( description + "?");
 
@@ -7322,7 +7322,7 @@ new Vue({
 		},
 		QuicksaveFileRestore() {
 
-			date = this.$options.filters.pretty_timestamp(this.dialog_file_diff.quicksave.created_at);
+			date = this.$options.filters.pretty_timestamp_epoch(this.dialog_file_diff.quicksave.created_at);
 			should_proceed = confirm("Rollback file " + this.dialog_file_diff.file_name  + " as of " + date);
 
 			if ( ! should_proceed ) {
@@ -7432,7 +7432,7 @@ new Vue({
 		},
 		QuicksavesRollback( site_id, quicksave ) {
 
-			date = this.$options.filters.pretty_timestamp(quicksave.created_at);
+			date = this.$options.filters.pretty_timestamp_epoch(quicksave.created_at);
 			site = this.sites.filter(site => site.site_id == site_id)[0];
 			should_proceed = confirm("Will rollback all themes/plugins on " + site.name + " to " + date + ". Proceed?");
 

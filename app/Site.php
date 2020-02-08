@@ -752,6 +752,7 @@ class Site {
         $results         = ( new ProcessLogSite )->fetch_process_logs( [ "site_id" => $this->site_id ] );
         foreach ( $results as $result ) {
             $item                  = $process_log->get( $result->process_log_id );
+            $item->created_at      = strtotime( $item->created_at );
             $item->name            = $result->name;
             $item->description_raw = $item->description;
             $item->description     = $Parsedown->text( $item->description );
