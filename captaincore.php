@@ -3843,46 +3843,8 @@ function captaincore_ajax_action_callback() {
 	}
 
 	if ( $cmd == 'fetchProcessLogs' ) {
-		$processlogs_fetch = [];
-		$process_logs = get_posts( [
-				'post_type'      => 'captcore_processlog',
-				'posts_per_page' => '-1',
-				'meta_key'       => 'status',
-				'meta_value'     => 'completed',
-		] );
-
-		// Fetch new process_log and return as json
-		$Parsedown = new Parsedown();
-
-		foreach ( $process_logs as $process_log ) {
-
-			$process     = get_field( "process", $process_log->ID );
-			$author_id   = $process_log->post_author;
-			$author      = get_the_author_meta( 'display_name', $author_id );
-			$description = $Parsedown->text( get_field("description", $process_log->ID ) );
-			$websites    = [];
-			foreach( get_field("website", $process_log->ID ) as $website_id ) {
-				$site = get_post( $website_id );
-				$websites[] = (object) [ 
-					'id'   => $site->ID,
-					'name' => $site->post_title,
-				];
-			}
-
-			$processlogs_fetch[] = (object) [
-				'id'              => $process_log->ID,
-				'process_id'      => $process[0],
-				'title'           => get_the_title( $process[0] ),
-				'author'          => $author,
-				'description'     => $description,
-				'description_raw' => get_field("description", $process_log->ID ),
-				'websites'        => $websites,
-				'created_at'      => $process_log->post_date,
-			];
-
-		}
-		
-		echo json_encode( $processlogs_fetch );
+		$process_logs = ( new CaptainCore\ProcessLogs )->list();
+		echo json_encode( $process_logs );
 	}
 
 	if ( $cmd == 'newLogEntry' ) {
@@ -3926,7 +3888,7 @@ function captaincore_ajax_action_callback() {
 		foreach ( $site_ids as $site_id ) {
 			$timelines[ $site_id ] = ( new CaptainCore\Site( $site_id ) )->process_logs();
 		}
-		echo json_encode( $timelines ) ;
+		echo json_encode( $timelines );
 	}
 
 	if ( $cmd == 'timeline' ) {
