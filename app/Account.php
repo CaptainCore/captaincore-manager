@@ -54,12 +54,13 @@ class Account {
         $user_id = get_current_user_id();
         $users   = $this->users();
         $record  = [
-            "account" => $this->account(),
-            "invites" => $this->invites(),
-            "users"   => $users,
-            "domains" => $this->domains(),
-            "sites"   => $this->sites(),
-            "owner"   => false,
+            "timeline" => $this->process_logs(),
+            "account"  => $this->account(),
+            "invites"  => $this->invites(),
+            "users"    => $users,
+            "domains"  => $this->domains(),
+            "sites"    => $this->sites(),
+            "owner"    => false,
         ];
 
         foreach ($users as $user) {
@@ -73,10 +74,15 @@ class Account {
 
     public function account() {
         $account          = (new Accounts)->get( $this->account_id );
+        $defaults         = json_decode( $account->defaults );
+        if ( ! is_array( $defaults->users ) ) {
+            $defaults->users = [];
+        }
         return [
             "account_id" => $this->account_id,
             "name"       => html_entity_decode( $account->name ),
             "metrics"    => json_decode( $account->metrics ),
+            "defaults"   => $defaults,
         ];
     }
 
@@ -121,6 +127,38 @@ class Account {
         }
         usort( $results, "sort_by_name" );
         return $results;
+    }
+
+    public function process_logs() {
+
+        $Parsedown = new \Parsedown();
+        $site_ids           = array_column( self::sites(), "site_id" );
+        $fetch_process_logs = ( new ProcessLogSite )->fetch_process_logs( [ "site_id" => $site_ids ] );
+        foreach ( $fetch_process_logs as $result ) {
+            $sites_for_process     = ( new ProcessLogSite )->fetch_sites_for_process_log( [ "process_log_id" => $result->process_log_id ] );
+            // Filter out sites which account doesn't have access to.
+            foreach ($sites_for_process as $key => $site) {
+                if ( in_array( $site->site_id, $site_ids ) ) {
+                    continue;
+                }
+                unset( $sites_for_process[$key] );
+            }
+            $websites              = [];
+            foreach ($sites_for_process as $site_for_process) {
+                $websites[]        = $site_for_process;
+            }
+            $item                  = ( new ProcessLogs )->get( $result->process_log_id );
+            $item->created_at      = strtotime( $item->created_at );
+            $item->name            = $result->name;
+            $item->description_raw = $item->description;
+            $item->description     = $Parsedown->text( $item->description );
+            $item->author          = get_the_author_meta( 'display_name', $item->user_id );
+            $item->websites        = $websites;
+            $process_logs[]        = $item;
+        }
+
+        return $process_logs;
+
     }
 
     public function shared_with() {

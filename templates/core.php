@@ -995,29 +995,24 @@ if ( $role_check ) {
 				<v-progress-linear :indeterminate="true"></v-progress-linear>
 			</template>
 			<v-card-text>
-				<template v-if="! dialog_configure_defaults.loading && dialog_configure_defaults.account != ''">
-				<v-autocomplete class="mt-5" :items="dialog_configure_defaults.records" label="Account" item-text="name" item-value="account_id" v-model="dialog_configure_defaults.account" @input="switchConfigureDefaultAccount()" auto-select-first></v-autocomplete>
-				<v-alert
-					:value="true"
-					type="info"
-					v-if="dialog_configure_defaults.record.defaults"
-					class="mb-4"
-				>
-					When new sites are added to the account <strong>{{ dialog_configure_defaults.record.name }}</strong> then the following default settings will be applied.  
+				<template v-if="dialog_account.show">
+				<v-alert :value="true" type="info" class="mb-4 mt-4">
+					When new sites are added to the account <strong>{{ dialog_account.records.account.name }}</strong> then the following default settings will be applied.  
 				</v-alert>
-				<v-layout wrap>			
-					<v-flex xs6 pr-2><v-text-field :value="dialog_configure_defaults.record.defaults.email" @change.native="dialog_configure_defaults.record.defaults.email = $event.target.value" label="Default Email" required></v-text-field></v-flex>
-					<v-flex xs6 pl-2><v-autocomplete :items="timezones" label="Default Timezone" v-model="dialog_configure_defaults.record.defaults.timezone"></v-autocomplete></v-flex>
+				<v-layout wrap>
+					<v-flex xs6 pr-2><v-text-field :value="dialog_account.records.account.defaults.email" @change.native="dialog_account.records.account.defaults.email = $event.target.value" label="Default Email" required></v-text-field></v-flex>
+					<v-flex xs6 pl-2><v-autocomplete :items="timezones" label="Default Timezone" v-model="dialog_account.records.account.defaults.timezone"></v-autocomplete></v-flex>
 				</v-layout>
 				<v-layout wrap>
-					<v-flex><v-autocomplete label="Default Recipes" v-model="dialog_configure_defaults.record.defaults.recipes" ref="default_recipes" :items="recipes" item-text="title" item-value="recipe_id" multiple chips deletable-chips></v-autocomplete></v-flex>
+					<v-flex><v-autocomplete label="Default Recipes" v-model="dialog_account.records.account.defaults.recipes" ref="default_recipes" :items="recipes" item-text="title" item-value="recipe_id" multiple chips deletable-chips></v-autocomplete></v-flex>
 				</v-layout>
 
 				<span class="body-2">Default Users</span>
 				<v-data-table
-					:items="dialog_configure_defaults.record.defaults.users"
+					:items="dialog_account.records.account.defaults.users"
 					hide-default-header
 					hide-default-footer
+					v-if="typeof dialog_account.records.account.defaults.users == 'object'"
 				>
 				<template v-slot:body="{ items }">
 				<tbody>
@@ -2059,18 +2054,6 @@ if ( $role_check ) {
 					<v-toolbar-items>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn text small @click="configureDefaults" v-on="on"><v-icon dark>mdi-clipboard-check-outline</v-icon></v-btn>
-							</template><span>Configure Defaults</span>
-						</v-tooltip>
-						<v-divider vertical class="mx-1" inset></v-divider>
-						<v-tooltip top>
-							<template v-slot:activator="{ on }">
-								<v-btn text small @click="fetchTimelineLogs" v-bind:class='{ "v-btn--active": view_timeline }' v-on="on"><v-icon dark>mdi-clipboard-text</v-icon></v-btn>
-							</template><span>Timeline Logs</span>
-						</v-tooltip>
-						<v-divider vertical class="mx-1" inset></v-divider>
-						<v-tooltip top>
-							<template v-slot:activator="{ on }">
 								<v-btn text small @click="view_jobs = !view_jobs" v-bind:class='{ "v-btn--active": view_jobs }' v-on="on"><small v-if="runningJobs">({{ runningJobs }})</small><v-icon dark>mdi-cogs</v-icon></v-btn>
 							</template><span>Job Activity</span>
 						</v-tooltip>
@@ -2097,48 +2080,6 @@ if ( $role_check ) {
 					</v-toolbar-items>
 				</v-toolbar>
 			<v-card-text>
-			<v-card v-show="view_timeline == true" class="mb-3">
-				<v-toolbar flat dense dark color="primary">
-				<v-btn icon dark @click.native="view_timeline = false">
-					<v-icon>close</v-icon>
-				</v-btn>
-				<v-toolbar-title>Timeline Logs</v-toolbar-title>
-				<v-spacer></v-spacer>
-				</v-toolbar>
-				<v-progress-linear :indeterminate="true" absolute v-show="dialog_timeline.loading"></v-progress-linear>
-				<v-card-text>
-				<template v-if="!dialog_timeline.loading">
-				<v-select :items="timeline_logs.map( a => a.account )" label="Account" item-value="account_id" v-model="dialog_timeline.account" @input="switchTimelineAccount()">
-					<template v-slot:selection="data">
-						<span v-html="data.item.name"></span> <small>&nbsp;({{ data.item.site_count }} sites)</small>
-					</template>
-					<template v-slot:item="data">
-						<span v-html="data.item.name"></span> <small>&nbsp;({{ data.item.site_count }} sites)</small>
-					</template>
-				</v-select>
-				<v-data-table
-					:headers="header_timeline"
-					:items="dialog_timeline.logs"
-					:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
-					class="timeline"
-				>
-				<template v-slot:body="{ items }">
-				<tbody>
-				<tr v-for="item in items">
-					<td class="justify-center">{{ item.created_at | pretty_timestamp_epoch }}</td>
-					<td class="justify-center">{{ item.author }}</td>
-					<td class="justify-center">{{ item.name }}</td>
-					<td class="justify-center py-3" v-html="item.description"></td>
-					<td width="170px;">
-						{{ item.websites.map( site => site.name ).join(" ") }}
-					</td>
-				</tr>
-				</tbody>
-				</template>
-				</v-data-table>
-				</template>
-				</v-card-text>
-			</v-card>
 			<v-card v-show="view_jobs == true" class="mb-3">
 				<v-toolbar flat dense dark color="primary">
 				<v-btn icon dark @click.native="view_jobs = false">
@@ -3776,6 +3717,12 @@ if ( $role_check ) {
 						<v-toolbar-title>{{ dialog_account.records.account.name }}</v-toolbar-title>
 						<div class="flex-grow-1"></div>
 						<v-toolbar-items>
+							<v-tooltip top v-if="role == 'administrator' || dialog_account.records.owner">
+								<template v-slot:activator="{ on }">
+									<v-btn text small @click="dialog_configure_defaults.show = true" v-on="on"><v-icon dark>mdi-clipboard-check-outline</v-icon></v-btn>
+								</template><span>Configure Defaults</span>
+							</v-tooltip>
+							<v-divider vertical class="mx-1" inset v-if="role == 'administrator' || dialog_account.records.owner"></v-divider>
 							<v-btn text @click="dialog_account.step = 1"><v-icon>mdi-arrow-left</v-icon> Back to accounts</v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
@@ -3791,6 +3738,10 @@ if ( $role_check ) {
 						<v-tab>
 							{{ dialog_account.records.domains.length }} Domains
 							<v-icon size="20" class="ml-1">mdi-library-books</v-icon>
+						</v-tab>
+						<v-tab>
+							Timeline
+							<v-icon size="20" class="ml-1">mdi-timeline-text-outline</v-icon>
 						</v-tab>
 						<v-tab v-show="role == 'administrator' || dialog_account.records.owner">
 							Advanced
@@ -3916,6 +3867,34 @@ if ( $role_check ) {
 						</v-card>
 					</v-tab-item>
 					<v-tab-item>
+						<v-card flat>
+						<v-card-text>
+						<v-data-table
+							:headers="header_timeline"
+							:items="dialog_account.records.timeline"
+							:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
+							class="timeline"
+							v-if="typeof dialog_account.records.timeline != 'undefined' || dialog_account.records.timeline != null"
+						>
+						<template v-slot:body="{ items }">
+						<tbody>
+						<tr v-for="item in items">
+							<td class="justify-center">{{ item.created_at | pretty_timestamp_epoch }}</td>
+							<td class="justify-center">{{ item.author }}</td>
+							<td class="justify-center">{{ item.name }}</td>
+							<td class="justify-center py-3" v-html="item.description"></td>
+							<td width="170px;">
+								{{ item.websites.map( site => site.name ).join(" ") }}
+							</td>
+						</tr>
+						</tbody>
+						</template>
+						</v-data-table>
+						</template>
+						</v-card-text>
+						</v-card>
+					</v-tab-item>
+					<v-tab-item>
 						<v-toolbar dense flat color="grey lighten-4">
 							<div class="flex-grow-1"></div>
 							<v-toolbar-items>
@@ -3923,7 +3902,6 @@ if ( $role_check ) {
 								<v-btn text @click="deleteAccount()" v-show="role =='administrator'">Delete account <v-icon dark small>delete</v-icon></v-btn>
 							</v-toolbar-items>
 						</v-toolbar>
-						
 					</v-tab-item>
 					</v-tabs-items>
 					</v-card>
@@ -4091,8 +4069,7 @@ new Vue({
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
 		dialog_edit_site: { show: false, site: {}, loading: false },
 		dialog_new_domain: { show: false, domain: { name: "", account_id: "" }, loading: false, errors: [] },
-		dialog_configure_defaults: { show: false, loading: false, record: { defaults: {} }, records: [], account: "" },
-		dialog_timeline: { show: false, loading: false, logs: [], pagination: {}, selected_account: "", account: { default_email: "", default_plugins: [], default_timezone: "", default_users: [], name: "", id: ""} },
+		dialog_configure_defaults: { show: false, loading: false },
 		dialog_domain: { show: false, domain: {}, records: [], results: [], errors: [], loading: true, saving: false },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $user->user_email; ?>", current_user_email: "<?php echo $user->user_email; ?>", filter_toggle: true, filter_options: [] },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
@@ -4682,38 +4659,13 @@ new Vue({
 				);
 			};
 		},
-		configureDefaults() {
-
-			this.dialog_configure_defaults.show = true
-			if ( this.dialog_configure_defaults.account == "" ) {
-				this.dialog_configure_defaults.loading = true;
-			}
-			// Prep AJAX request
-			var data = {
-				'action': 'captaincore_local',
-				'command': "fetchDefaults",
-			};
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					this.dialog_configure_defaults.records = response.data;
-					if ( this.dialog_configure_defaults.account == "" ) {
-						this.dialog_configure_defaults.account = JSON.parse(JSON.stringify(this.dialog_configure_defaults.records[0].account_id));
-						this.switchConfigureDefaultAccount();
-					}
-					this.dialog_configure_defaults.loading = false;
-				})
-				.catch(error => {
-					console.log(error.response)
-			});
-		},
 		saveDefaults() {
 			this.dialog_configure_defaults.loading = true;
 			// Prep AJAX request
 			var data = {
 				'action': 'captaincore_local',
 				'command': "saveDefaults",
-				'value': this.dialog_configure_defaults.record
+				'value': this.dialog_account.records.account
 			};
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
@@ -5449,14 +5401,6 @@ new Vue({
 			});
 			this.select_bulk_action_arguments = arguments;
 		},
-		switchTimelineAccount() {
-			account_id = this.dialog_timeline.account
-			this.dialog_timeline.logs = this.timeline_logs.filter( a => a.account.account_id == account_id )[0].logs
-		},
-		switchConfigureDefaultAccount() {
-			account_id = this.dialog_configure_defaults.account
-			this.dialog_configure_defaults.record = this.dialog_configure_defaults.records.filter( a => a.account_id == account_id )[0]
-		},
 		bulkEdit ( site_id, type ) {
 			this.bulk_edit.show = true;
 			site = this.sites.filter(site => site.site_id == site_id)[0];
@@ -5713,37 +5657,15 @@ new Vue({
 					self.snackbar.show = true;
 				});
 		},
-		fetchTimelineLogs() {
-			this.view_timeline = !this.view_timeline;
-			this.dialog_timeline.loading = true;
-
-			var data = {
-				action: 'captaincore_local',
-				command: 'fetchTimelineLogs',
-			};
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					this.timeline_logs = response.data;
-					this.dialog_timeline.account = JSON.parse(JSON.stringify(this.timeline_logs[0].account.account_id));
-					this.switchTimelineAccount();
-					this.dialog_timeline.loading = false;
-				})
-				.catch( error => console.log( error ) );
-		},
 		fetchProcessLogs() {
 			this.dialog_log_history.show = true;
-
 			var data = {
 				action: 'captaincore_ajax',
 				command: 'fetchProcessLogs',
 			};
-
-			self = this;
-
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					self.dialog_log_history.logs = response.data;
+					this.dialog_log_history.logs = response.data;
 				})
 				.catch( error => console.log( error ) );
 		},
@@ -6784,7 +6706,7 @@ new Vue({
 				.catch( error => console.log( error ) );
 		},
 		addDefaultsUser() {
-			this.dialog_configure_defaults.record.defaults.users.push({ email: "", first_name: "", last_name: "", role: "administrator", username: "" })
+			this.dialog_account.records.account.defaults.users.push({ email: "", first_name: "", last_name: "", role: "administrator", username: "" })
 		},
 		addDomain() {
 			this.dialog_new_domain.loading = true;
@@ -6859,7 +6781,7 @@ new Vue({
 			}
 		},
 		deleteUserValue( delete_index ) {
-			this.dialog_configure_defaults.record.defaults.users = this.dialog_configure_defaults.record.defaults.users.filter( (u, index) => index != delete_index );
+			this.dialog_account.records.account.defaults.users = this.dialog_account.records.account.defaults.users.filter( (u, index) => index != delete_index );
 		},
 		deleteRecordValue( index, value_index ) {
 			this.dialog_domain.records[index].update.record_value.splice( value_index, 1 );
