@@ -3323,107 +3323,27 @@ function captaincore_local_action_callback() {
 			$invite->mark_accepted();
 		}
 	}
-	
-	if ( $cmd == 'fetchDefaults' ) {
-		$defaults = ( new CaptainCore\Accounts )->list();
-		echo json_encode( $defaults );
-	}
 
 	if ( $cmd == 'saveDefaults' ) {
 		$user     = new CaptainCore\User;
 		$accounts = $user->accounts();
 		$record   = (object) $value;
-		if ( in_array( $record->account_id, $account_ids ) || $user->is_admin() ) {
-			if ( ! isset( $record->defaults["users"] ) ) {
-                $record->defaults["users"] = [];
-			}
-            if ( ! isset( $record->defaults["recipes"] ) ) {
-                $record->defaults["recipes"] = [];
-			}
-			$account = new CaptainCore\Accounts();
-			$account->update( [ "defaults" => json_encode( $record->defaults ) ], [ "account_id" => $record->account_id ] );
-			echo json_encode( "Record updated." );
-		} else {
+		if ( ! in_array( $record->account_id, $accounts ) && ! $user->is_admin() ) { 
 			echo json_encode( "Permission denied" );
+			wp_die();
 		}
+		
+		if ( ! isset( $record->defaults["users"] ) ) {
+			$record->defaults["users"] = [];
+		}
+		if ( ! isset( $record->defaults["recipes"] ) ) {
+			$record->defaults["recipes"] = [];
+		}
+		$account = new CaptainCore\Accounts();
+		$account->update( [ "defaults" => json_encode( $record->defaults ) ], [ "account_id" => $record->account_id ] );
+		echo json_encode( "Record updated." );
 	}
 
-	if ( $cmd == 'fetchTimelineLogs' ) {
-
-		$results  = [];
-		$user     = new CaptainCore\User;
-		$accounts = $user->accounts();
-
-		if ( ! $user->role_check() ) {
-			return;
-		}
-
-		$Parsedown   = new Parsedown();
-		$process_log = new CaptainCore\ProcessLogs();
-		$accountsite = new CaptainCore\AccountSite();
-
-		// Loop through each partner assigned to current user
-		foreach ( $accounts as $account_id ) {
-
-			$site_ids       = [];
-			$fetch_site_ids = ( new CaptainCore\Sites )->select( 'site_id', "account_id", $account_id );
-			foreach ( $fetch_site_ids as $site_id ) {
-				$site_ids[] = $site_id;
-			}
-
-			// Fetch current sites
-			$fetch_site_ids = array_column ( $accountsite->where( [ "account_id" => $account_id ] ), "site_id" );
-			foreach ($fetch_site_ids as $site_id ) {
-				$site_ids[] = $site_id;
-			}
-
-			// Remove duplicate site IDs
-			array_unique( $site_ids );
-			$process_logs       = [];
-
-			// Skip if no sites found
-			if ( count($site_ids) == 0 ) {
-				continue;
-			}
-			$fetch_process_logs = ( new CaptainCore\ProcessLogSite )->fetch_process_logs( [ "site_id" => $site_ids ] );
-			foreach ( $fetch_process_logs as $result ) {
-				$sites_for_process     = ( new CaptainCore\ProcessLogSite )->fetch_sites_for_process_log( [ "process_log_id" => $result->process_log_id ] );
-				// Filter out sites which account doesn't have access to.
-				foreach ($sites_for_process as $key => $site) {
-					if ( in_array( $site->site_id, $site_ids ) ) {
-						continue;
-					}
-					unset( $sites_for_process[$key] );
-				}
-				$websites              = [];
-				foreach ($sites_for_process as $site_for_process) {
-					$websites[]        = $site_for_process;
-				}
-				$item                  = $process_log->get( $result->process_log_id );
-				$item->name            = $result->name;
-				$item->description_raw = $item->description;
-				$item->description     = $Parsedown->text( $item->description );
-				$item->author          = get_the_author_meta( 'display_name', $item->user_id );
-				$item->websites        = $websites;
-				$process_logs[]        = $item;
-			}
-
-			$results[] = (object) [
-				'account'  => [
-					'account_id' => $account_id,
-					'name'       => ( new CaptainCore\Accounts())->get( $account_id )->name,
-					'site_count' => count( $site_ids )
-				],
-				'logs'           => $process_logs,
-			];
-
-		}
-		function compareByName($a, $b) {
-			return strcmp( strtolower( $a->account['name']), strtolower($b->account['name']));
-		  }
-		usort($results, 'compareByName');
-		echo json_encode( $results );
-	}
 	wp_die();
 
 }
