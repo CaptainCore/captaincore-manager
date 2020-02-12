@@ -2262,8 +2262,8 @@ if ( $role_check ) {
 			<v-tab-item key="6" value="tab-Scripts">
 				<v-card flat>
 				<v-card-title>
-					<v-layout align-start>
-					<v-flex xs12 sm8 pr-4>
+				<v-row>
+					<v-col cols="12" md="8">
 					<v-subheader id="script_bulk">Custom bash script or WP-CLI commands</v-subheader>
 						<v-textarea
 							auto-grow
@@ -2275,8 +2275,8 @@ if ( $role_check ) {
 							spellcheck="false"
 						></v-textarea>
 						<v-btn small color="primary" dark @click="runCustomCodeBulk()">Run Custom Code</v-btn>
-					</v-flex>
-					<v-flex xs12 sm4>
+					</v-col>
+					<v-col cols="12" md="4">
 						<v-list dense>
 						<v-subheader>Common</v-subheader>
 						<v-list-item @click="viewApplyHttpsUrlsBulk()" dense>
@@ -2322,8 +2322,8 @@ if ( $role_check ) {
 						</v-list-item-content>
 						</v-list-item>
 						</v-list>
-					</v-flex>
-					</v-layout>
+					</v-col>
+					</v-row>
 					</v-card-title>
 				</v-card>
 			</v-tab-item>
@@ -2976,8 +2976,8 @@ if ( $role_check ) {
 				</v-toolbar>
 				<v-card flat>
 					<v-card-title>
-					<v-layout align-start>
-					<v-flex xs12 sm8 pr-4>
+					<v-row>
+					<v-col cols="12" md="8">
 					<v-subheader id="script_site">Custom bash script or WP-CLI commands</v-subheader>
 						<v-textarea
 							auto-grow
@@ -2989,8 +2989,8 @@ if ( $role_check ) {
 							spellcheck="false"
 						></v-textarea>
                 <v-btn small color="primary" dark @click="runCustomCode(dialog_site.site.site_id)">Run Custom Code</v-btn>
-					</v-flex>
-					<v-flex xs12 sm4>
+					</v-col>
+					<v-col cols="12" md="4">
 						<v-list dense>
 						<v-subheader>Common</v-subheader>
                 <v-list-item @click="viewApplyHttpsUrls(dialog_site.site.site_id)" dense>
@@ -3052,8 +3052,8 @@ if ( $role_check ) {
 						</v-list-item-content>
 						</v-list-item>
 						</v-list>
-					</v-flex>
-					</v-layout>
+					</v-col>
+					</v-row>
 					</v-card-title>
 				</v-card>
 			</v-tab-item>
