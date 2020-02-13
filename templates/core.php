@@ -1280,7 +1280,7 @@ if ( $role_check ) {
 						<v-icon
 							small
 							class="mr-2"
-							@click="dialog_log_history.show = false; editLogEntry(item.websites, item.id)"
+							@click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)"
 						>
 							edit
 						</v-icon>
@@ -1366,7 +1366,7 @@ if ( $role_check ) {
 					<v-card-text>
 					<v-container>
 						<v-text-field
-							v-model="dialog_edit_log_entry.log.created_at"
+							v-model="dialog_edit_log_entry.log.created_at_raw"
 							label="Date"
 						></v-text-field>
 						<v-autocomplete
@@ -3898,6 +3898,14 @@ if ( $role_check ) {
 							<td class="justify-center">{{ item.name }}</td>
 							<td class="justify-center py-3" v-html="item.description"></td>
 							<td width="170px;">
+								<v-icon
+									small
+									class="mr-2"
+									@click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)"
+									v-if="role == 'administrator'"
+								>
+									edit
+								</v-icon>
 								{{ item.websites.map( site => site.name ).join(" ") }}
 							</td>
 						</tr>
@@ -5764,16 +5772,14 @@ new Vue({
 				value: log_id,
 			};
 
-			self = this;
-
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					self.dialog_edit_log_entry.log = response.data;
-					self.dialog_edit_log_entry.show = true;
+					this.dialog_edit_log_entry.log = response.data;
+					this.dialog_edit_log_entry.show = true;
 					if ( typeof site !== "undefined" ) {
-					self.dialog_edit_log_entry.site = site;
+						this.dialog_edit_log_entry.site = site;
 					} else {
-						self.dialog_edit_log_entry.site = {};
+						this.dialog_edit_log_entry.site = {};
 					}
 				})
 				.catch( error => console.log( error ) );
@@ -5824,7 +5830,6 @@ new Vue({
 				.then( response => {
 					this.fetchProcesses()
 					this.dialog_edit_process = { show: false, process: {} }
-					this.viewProcess( response.data.process_id )
 				})
 				.catch( error => console.log( error ) )
 		},
