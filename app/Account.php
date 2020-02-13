@@ -245,8 +245,7 @@ class Account {
         // Add account ID to current user
         if ( email_exists( $email ) ) {
             $user        = get_user_by( 'email', $email );
-            $accountuser = new AccountUser();
-            $accounts    = array_column( $accountuser->where( [ "user_id" => $user->ID ] ), "account_id" );
+            $accounts    = array_column( ( new AccountUser )->where( [ "user_id" => $user->ID ] ), "account_id" );
             $accounts[]  = $this->account_id;
             ( new User( $user->ID, true ) )->assign_accounts( array_unique( $accounts ) );
             $this->calculate_totals();
@@ -267,9 +266,9 @@ class Account {
 
         // Send out invite email
         $invite_url = home_url() . "/account/?account={$this->account_id}&token={$token}";
-        $account_name = get_the_title( $this->account_id );
+        $name    = ( new Accounts )->get( $this->account_id )->name;
         $subject = "Hosting account invite";
-        $body    = "You've been granted access to account '$account_name'. Click here to accept:<br /><br /><a href=\"{$invite_url}\">$invite_url</a>";
+        $body    = "You've been granted access to account '$name'. Click here to accept:<br /><br /><a href=\"{$invite_url}\">$invite_url</a>";
         $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
 
         wp_mail( $email, $subject, $body, $headers );
