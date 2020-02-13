@@ -3738,8 +3738,10 @@ function captaincore_ajax_action_callback() {
 	}
 
 	if ( $cmd == 'saveProcess' ) {
-		$process             = (object) $value;
-		$process->updated_at = date( 'Y-m-d H:i:s' );
+		$process              = (object) $value;
+		$process->name        = str_replace( "\'", "'", $process->name );
+		$process->description = str_replace( "\'", "'", $process->description );
+		$process->updated_at  = date( 'Y-m-d H:i:s' );
 		( new CaptainCore\Processes )->update( (array) $process, [ "process_id" => $process->process_id ] );
 		$process_updated = ( new CaptainCore\Processes )->get( $process->process_id );
 		echo json_encode( $process_updated );
@@ -3796,8 +3798,10 @@ function captaincore_ajax_action_callback() {
 		$process_log_update              = (object) $_POST['log'];
 		$site_ids                        = array_column( $process_log_update->websites, 'site_id' );
 		$process_log_update->user_id     = get_current_user_id();
-		$process_log_update->description = $process_log_update->description_raw;
+		$process_log_update->description = str_replace( "\'", "'", $process_log_update->description_raw );
+		$process_log_update->created_at  = $process_log_update->created_at_raw;
 		$process_log_update->updated_at  = date( 'Y-m-d H:i:s' );
+		unset( $process_log_update->created_at_raw );
 		unset( $process_log_update->name );
 		unset( $process_log_update->author );
 		unset( $process_log_update->websites );
@@ -3830,7 +3834,7 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'newRecipe' ) {
 
-		$recipe = (object) $value;
+		$recipe   = (object) $value;
 		$time_now = date("Y-m-d H:i:s");
 
 		$new_recipe = [
@@ -4974,9 +4978,7 @@ function captaincore_download_snapshot_email( $snapshot_id ) {
 
 	// Fetch snapshot details
 	$snapshot = ( new CaptainCore\Snapshots )->get( $snapshot_id );
-	$name     = $snapshot->snapshot_name;
 	$domain   = ( new CaptainCore\Sites )->get( $snapshot->site_id )->name;
-	$site     = get_field( 'site', $snapshot->site_id );
 
 	// Generate download url to snapshot
 	$home_url     = home_url();

@@ -74,6 +74,7 @@ class ProcessLog {
         $process_log           = new ProcessLogs();
         $item                  = $process_log->get( $this->process_log_id );
         $item->name            = ( new Processes() )->get( $item->process_id )->name;
+        $item->created_at_raw  = $item->created_at;
         $item->created_at      = strtotime( $item->created_at );
         $item->description_raw = $item->description;
         $item->description     = $Parsedown->text( $item->description );
