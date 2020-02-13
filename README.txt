@@ -9,11 +9,11 @@ Stable tag: 4.3
 License: MIT License
 License URI: https://opensource.org/licenses/MIT
 
-Open source toolkit for managing WordPress Sites via SSH & WP-CLI
+WordPress management toolkit for geeky maintenance professionals
 
 == Description ==
 
-[CaptainCore](https://captaincore.io) is an open source toolkit for managing WordPress sites via SSH & WP-CLI. This is a WordPress plugin that requires a connection to CaptainCore CLI.
+[CaptainCore](https://captaincore.io) is WordPress management toolkit for geeky maintenance professionals. This is a WordPress plugin that requires a connection to CaptainCore instance. 
 
 == Installation ==
 
