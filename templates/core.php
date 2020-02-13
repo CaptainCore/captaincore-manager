@@ -2989,7 +2989,7 @@ if ( $role_check ) {
 					<v-col cols="12" md="4">
 						<v-list dense>
 						<v-subheader>Common</v-subheader>
-                <v-list-item @click="viewApplyHttpsUrls(dialog_site.site.site_id)" dense>
+						<v-list-item @click="viewApplyHttpsUrls(dialog_site.site.site_id)" dense>
 						<v-list-item-icon>
 							<v-icon>launch</v-icon>
 						</v-list-item-icon>
@@ -2997,7 +2997,7 @@ if ( $role_check ) {
 							<v-list-item-title>Apply HTTPS Urls</v-list-item-title>
 						</v-list-item-content>
 						</v-list-item>
-                <v-list-item @click="siteDeploy(dialog_site.site.site_id)" dense>
+						<v-list-item @click="siteDeploy(dialog_site.site.site_id)" dense>
 						<v-list-item-icon>
 							<v-icon>loop</v-icon>
 						</v-list-item-icon>
@@ -3005,7 +3005,7 @@ if ( $role_check ) {
 							<v-list-item-title>Deploy users/plugins</v-list-item-title>
 						</v-list-item-content>
 						</v-list-item>
-                <v-list-item @click="launchSiteDialog(dialog_site.site.site_id)" dense>
+						<v-list-item @click="launchSiteDialog(dialog_site.site.site_id)" dense>
 						<v-list-item-icon>
 							<v-icon>mdi-rocket</v-icon>
 						</v-list-item-icon>
@@ -3013,7 +3013,7 @@ if ( $role_check ) {
 							<v-list-item-title>Launch Site</v-list-item-title>
 						</v-list-item-content>
 						</v-list-item>
-                <v-list-item @click="showSiteMigration(dialog_site.site.site_id)" dense>
+						<v-list-item @click="showSiteMigration(dialog_site.site.site_id)" dense>
 						<v-list-item-icon>
 							<v-icon>mdi-truck</v-icon>
 						</v-list-item-icon>
@@ -3021,7 +3021,15 @@ if ( $role_check ) {
 							<v-list-item-title>Migrate from backup</v-list-item-title>
 						</v-list-item-content>
 						</v-list-item>
-                <v-list-item @click="toggleSite(dialog_site.site.site_id)" dense>
+						<v-list-item @click="resetPermissions(dialog_site.site.site_id)" dense>
+						<v-list-item-icon>
+							<v-icon>mdi-file-lock</v-icon>
+						</v-list-item-icon>
+						<v-list-item-content>
+							<v-list-item-title>Reset Permissions</v-list-item-title>
+						</v-list-item-content>
+						</v-list-item>
+						<v-list-item @click="toggleSite(dialog_site.site.site_id)" dense>
 						<v-list-item-icon>
 							<v-icon>mdi-toggle-switch</v-icon>
 						</v-list-item-icon>
@@ -3030,7 +3038,7 @@ if ( $role_check ) {
 						</v-list-item-content>
 						</v-list-item>
 						<v-subheader v-show="recipes.filter( r => r.public == 1 ).length > 0">Other</v-subheader>
-                <v-list-item @click="runRecipe( recipe.recipe_id, dialog_site.site.site_id )" dense v-for="recipe in recipes.filter( r => r.public == 1 )">
+						<v-list-item @click="runRecipe( recipe.recipe_id, dialog_site.site.site_id )" dense v-for="recipe in recipes.filter( r => r.public == 1 )">
 						<v-list-item-icon>
 							<v-icon>mdi-script-text-outline</v-icon>
 						</v-list-item-icon>
@@ -6390,6 +6398,35 @@ new Vue({
 			this.dialog_toggle.site_name = site_name;
 			this.dialog_toggle.business_name = this.business_name;
 			this.dialog_toggle.business_link = this.business_link;
+		},
+		resetPermissions( site_id ) {
+			site = this.sites.filter(site => site.site_id == site_id)[0];
+			should_proceed = confirm("Reset file permissions to defaults " + site.name + "?");
+			description = "Resetting file permissions to defaults on '" + site.name + "'";
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			var data = {
+				action: 'captaincore_install',
+				environment: site.environment_selected,
+				post_id: site_id,
+				command: 'reset-permissions'
+			};
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					// Updates job id with reponsed background job id
+					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					this.runCommand( response.data )
+					this.snackbar.message = description;
+					this.snackbar.show = true;
+				})
+				.catch( error => console.log( error ) );
 		},
 		showSite( site ) {
 			this.dialog_site.loading = true

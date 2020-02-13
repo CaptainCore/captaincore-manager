@@ -4268,6 +4268,10 @@ function captaincore_install_action_callback() {
 		$run_in_background = true;
 		$command = "ssh $site --script=launch --domain=$value";
 	}
+	if ( $cmd == 'reset-permissions' ) {
+		$run_in_background = true;
+		$command = "ssh $site --script=reset-permissions";
+	}
 	if ( $cmd == 'apply-https' ) {
 		$run_in_background = true;
 		$command = "ssh $site --script=apply-https";
