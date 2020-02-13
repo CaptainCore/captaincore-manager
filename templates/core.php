@@ -2070,12 +2070,8 @@ if ( $role_check ) {
 							</template><span>Filters</span>
 						</v-tooltip>
 						<template v-if="role == 'administrator'">
-						<v-divider vertical class="mx-1" inset></v-divider>
-						<v-tooltip top>
-							<template v-slot:activator="{ on }">
-								<v-btn text @click="dialog_new_site.show = true" v-on="on"><v-icon dark>add</v-icon></v-btn>
-							</template><span>Add Site</span>
-						</v-tooltip>
+							<v-divider vertical class="mx-1" inset></v-divider>
+							<v-btn text @click="dialog_new_site.show = true">Add Site <v-icon dark>add</v-icon></v-btn>
 						</template>
 					</v-toolbar-items>
 				</v-toolbar>
