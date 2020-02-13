@@ -761,4 +761,16 @@ class Site {
         }
         return $process_logs;
     }
+    public function update_details() {
+        $site = ( new Sites )->get( $this->site_id );
+        if ( $site == "" ) {
+            $response['response'] = 'Error: Site ID not found.';
+            return $response;
+        }
+        $environments    = self::environments();
+        $details         = json_decode( $site->details );
+        $details->visits = array_sum( array_column( $environments, "visits" ) );
+        ( new Sites )->update( [ "details" => json_encode( $details ) ], [ "site_id" => $site->site_id ] );
+    }
+
 }
