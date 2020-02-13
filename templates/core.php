@@ -3541,9 +3541,19 @@ if ( $role_check ) {
 					<v-toolbar-title>Listing {{ processes.length }} processes</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn text @click="fetchProcessLogs()">Log history</v-btn>
+						<v-tooltip top>
+							<template v-slot:activator="{ on }">
+								<v-btn text small @click="fetchProcessLogs()" v-on="on"><v-icon dark>mdi-timeline-text-outline</v-icon></v-btn>
+							</template>
+							<span>Log History</span>
+						</v-tooltip>
 						<v-divider vertical class="mx-1" inset></v-divider>
-						<v-btn text @click="showLogEntryGeneric()">Add log entry <v-icon dark>add</v-icon></v-btn>
+						<v-tooltip top>
+							<template v-slot:activator="{ on }">
+								<v-btn text small @click="showLogEntryGeneric()" v-on="on"><v-icon dark>mdi-check</v-icon></v-btn>
+							</template>
+							<span>Add Log Entry</span>
+						</v-tooltip>
 						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-btn text @click="new_process.show = true">Add process <v-icon dark>add</v-icon></v-btn>
 					</v-toolbar-items>
