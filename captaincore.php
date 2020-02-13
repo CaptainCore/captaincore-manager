@@ -1558,6 +1558,8 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			"environment" => $post->data,
 		];
 
+		( new CaptainCore\Site( $current_environment->site_id ) )->update_details();
+
 	}
 
 	if ( $server ) {
@@ -1593,13 +1595,11 @@ function captaincore_api_func( WP_REST_Request $request ) {
 }
 
 function captaincore_accounts_func( $request ) {
-	$accounts = new CaptainCore\Accounts;
-	return $accounts->list();
+	return ( new CaptainCore\Accounts )->list();
 }
 
 function captaincore_sites_func( $request ) {
-	$sites = new CaptainCore\Sites;
-	return $sites->list();
+	return ( new CaptainCore\Sites )->list();
 }
 
 function captaincore_site_func( $request ) {
