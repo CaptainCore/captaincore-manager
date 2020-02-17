@@ -2698,7 +2698,7 @@ if ( $role_check ) {
 						<v-toolbar-title>Stats</v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items v-if="typeof dialog_new_site == 'object'">
-                    <v-btn text @click="configureFathom( dialog_site.site.site_id )">Configure Fathom Tracker <v-icon dark small>bar_chart</v-icon></v-btn>
+                    		<v-btn text @click="configureFathom( dialog_site.site.site_id )">Configure Fathom Tracker <v-icon dark small>bar_chart</v-icon></v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
 						<div class="pa-3" v-if="typeof key.stats == 'string' && key.stats != 'Loading'">
@@ -2706,7 +2706,9 @@ if ( $role_check ) {
 						</div>
 						<v-layout wrap>
 						<v-flex xs12>
-						<v-progress-linear :indeterminate="true" absolute v-show="key.stats == 'Loading'"></v-progress-linear>
+						<v-card-text v-show="key.stats == 'Loading'">
+							<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
+						</v-card-text>
                     	<div :id="`chart_` + dialog_site.site.site_id + `_` + key.environment"></div>
 							<v-card flat v-if="key.stats && key.stats.agg">
 							<v-card-title class="text-center pa-0">
@@ -2874,10 +2876,10 @@ if ( $role_check ) {
 			</v-tab-item>
 			<v-tab-item :key="4" value="tab-Users">
 				<v-card 
-            v-for="key in dialog_site.site.environments"
-			v-show="key.environment == dialog_site.site.environment_selected"
+					v-for="key in dialog_site.site.environments"
+					v-show="key.environment == dialog_site.site.environment_selected"
 					flat
-					>
+				>
 				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Users</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -2895,10 +2897,9 @@ if ( $role_check ) {
                 <v-btn text @click="bulkEdit(dialog_site.site.site_id,'users')" v-if="key.users_selected.length != 0">Bulk Edit {{ key.users_selected.length }} users</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
-					<div v-show="typeof key.users == 'string'">
-						<v-progress-linear :indeterminate="true" absolute></v-progress-linear>
-						<p></p>
-					</div>
+				<v-card-text v-show="typeof key.users == 'string'">
+					<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
+				</v-card-text>
 					<div v-if="typeof key.users != 'string'">
 						<v-data-table
 							:headers='header_users'
@@ -2917,8 +2918,8 @@ if ( $role_check ) {
 						<template v-slot:item.actions="{ item }">
                     <v-btn small rounded @click="loginSite(dialog_site.site.site_id, item.user_login)" class="my-2">Login as</v-btn>
                     <v-btn icon small class="my-2" @click="deleteUserDialog( item.user_login, dialog_site.site.site_id)">
-								<v-icon small color="pink">delete</v-icon>
-							</v-btn>
+							<v-icon small color="pink">delete</v-icon>
+						</v-btn>
 						</template>
 					  </v-data-table>
 					</div>
@@ -2935,13 +2936,13 @@ if ( $role_check ) {
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card 
-            v-for="key in dialog_site.site.environments"
-            v-show="key.environment == dialog_site.site.environment_selected" 
+					v-for="key in dialog_site.site.environments"
+					v-show="key.environment == dialog_site.site.environment_selected" 
 					flat
 				>
-					<div v-show="typeof key.update_logs == 'string'">
-						<v-progress-linear :indeterminate="true" absolute></v-progress-linear>
-					</div>
+					<v-card-text v-show="typeof key.update_logs == 'string'">
+						<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
+					</v-card-text>
 					<div v-if="typeof key.update_logs != 'string'">
 							<v-data-table
 								:headers='header_updatelog'
@@ -3074,10 +3075,9 @@ if ( $role_check ) {
 						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-                    <v-btn text @click="QuicksaveCheck( dialog_site.site.site_id )" v-on="on"><v-icon dark>mdi-sync</v-icon></v-btn>
+                    		<v-btn text @click="QuicksaveCheck( dialog_site.site.site_id )" v-on="on"><v-icon dark>mdi-sync</v-icon></v-btn>
 							</template><span>Manual check for new Quicksave</span>
 						</v-tooltip>
-						
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card 
@@ -3086,9 +3086,9 @@ if ( $role_check ) {
 					flat
 				>
 					<v-subheader>Quicksaves</v-subheader>
-					<div v-if="typeof key.quicksaves == 'string'">
-						<v-progress-linear :indeterminate="true" absolute></v-progress-linear>
-					</div>
+					<v-card-text v-if="typeof key.quicksaves == 'string'">
+						<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
+					</v-card-text>
 					<div v-else>
 					<v-data-table
 						:headers="[{text:'Created At',value:'created_at'},{text:'WordPress',value:'core',width:'115px'},{text:'',value:'themes',width:'100px'},{text:'',value:'plugins',width:'100px'}]"
@@ -3223,16 +3223,15 @@ if ( $role_check ) {
 								</tbody>
 								</template>
 							</v-data-table>
-
 						</v-card>
 						</td>
 					</template>
 					</v-data-table>
 					</div>
 					<v-subheader>Snapshots</v-subheader>
-					<div v-if="typeof key.snapshots == 'string'">
-						<v-progress-linear :indeterminate="true" absolute></v-progress-linear>
-					</div>
+					<v-card-text v-if="typeof key.snapshots == 'string'">
+						<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
+					</v-card-text>
 					<div v-else>
 					<v-data-table
 						:headers="[{text:'Created At',value:'created_at',width:'250px'},{text:'User',value:'user',width:'125px'},{text:'Storage',value:'storage',width:'100px'},{text:'Notes',value:'notes'},{text:'',value:'actions',sortable: false,width:'190px'}]"
@@ -4196,6 +4195,7 @@ new Vue({
 		],<?php } ?>
 		domains: [],
 		domains_loading: true,
+		sites_loading: true,
 		domain_search: "",
 		account_search: "",
 		new_recipe: { show: false, title: "", content: "", public: 1 },
@@ -5166,7 +5166,7 @@ new Vue({
 			if ( this.allDomains == 0 && this.modules.dns && this.domains_loading ) {
 				this.fetchDomains()
 			}
-			if ( this.sites.length == 0 ) {
+			if ( this.sites_loading ) {
 				this.fetchSites()
 			}
 			if ( this.role == 'administrator' && this.users.length == 0 ) {
@@ -5211,6 +5211,7 @@ new Vue({
 				})
 				.then(response => {
 					this.processes = response.data;
+					setTimeout(this.fetchMissing, 1000)
 				});
 		},
 		fetchKeys() {
@@ -5234,9 +5235,11 @@ new Vue({
 			})
 			.then(response => {
 				this.accounts = response.data;
+				setTimeout(this.fetchMissing, 1000)
 			});
 		},
 		fetchSites() {
+			this.sites_loading = false
 			if ( this.role == 'administrator' && this.keys.length == 0 ) {
 				axios.get(
 				'/wp-json/captaincore/v1/keys', {
@@ -5251,6 +5254,7 @@ new Vue({
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
+					
 					// Hack fix pagination bug
 					window.dispatchEvent( new Event('resize') )
 					// Populate existing sites
@@ -5278,8 +5282,7 @@ new Vue({
 					if ( this.sites.length == 0 ) {
 						this.sites = response.data;
 					}
-
-					this.loading_page = false;
+					this.loading_page = false
 					setTimeout(this.fetchMissing, 1000)
 			});
 		},
