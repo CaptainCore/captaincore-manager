@@ -5115,6 +5115,19 @@ new Vue({
 				.then( response => {
 					this.dialog_site.site.environments = response.data
 					this.dialog_site.loading = false
+					if ( this.dialog_site.site.tabs_management == "tab-Users" ) {
+						this.fetchUsers( this.dialog_site.site.site_id )
+					}
+					if ( this.dialog_site.site.tabs_management == "tab-Stats" ) {
+						this.fetchStats( this.dialog_site.site.site_id )
+					}
+					if ( this.dialog_site.site.tabs_management == "tab-Updates" ) {
+						this.fetchUpdateLogs( this.dialog_site.site.site_id )
+					}
+					if ( this.dialog_site.site.tabs_management == "tab-Backups" ) {
+						this.viewQuicksaves( this.dialog_site.site.site_id )
+						this.viewSnapshots( this.dialog_site.site.site_id )
+					}
 				});
 		},
 		fetchSiteDetails( site_id ) {
