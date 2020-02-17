@@ -38,7 +38,7 @@ if ( $role_check ) {
 	 	 <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none" v-show="route != 'login'"></v-app-bar-nav-icon>
          <v-toolbar-title>
 			<v-list flat color="transparent">
-		 	<v-list-item href="/account" @click.prevent="goto( '/account' )" style="padding:0px;" flat class="not-active">
+		 	<v-list-item href="/account" @click.prevent="goToPath( '/account' )" style="padding:0px;" flat class="not-active">
 			 	<v-img :src="captaincore_logo" contain max-width="32" max-height="32" v-if="captaincore_logo" class="mr-4"></v-img>
 				 {{ captaincore_name }}
 			</v-list-item>
@@ -58,7 +58,7 @@ if ( $role_check ) {
 	  <v-navigation-drawer v-model="drawer" app mobile-break-point="960" clipped v-if="route != 'login'">
       <v-list nav dense>
 	  	<v-list-item-group v-model="selected_nav" color="primary">
-        <v-list-item link href="/account/sites" @click.prevent="goto( '/account/sites' )">
+        <v-list-item link href="/account/sites" @click.prevent="goToPath( '/account/sites' )">
           <v-list-item-icon>
             <v-icon>mdi-wrench</v-icon>
           </v-list-item-icon>
@@ -66,7 +66,7 @@ if ( $role_check ) {
             <v-list-item-title>Sites</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-        <v-list-item link href="/account/dns" @click.prevent="goto( '/account/dns' )">
+        <v-list-item link href="/account/dns" @click.prevent="goToPath( '/account/dns' )">
           <v-list-item-icon>
             <v-icon>mdi-library-books</v-icon>
           </v-list-item-icon>
@@ -74,7 +74,7 @@ if ( $role_check ) {
             <v-list-item-title>DNS</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-		<v-list-item link href="/account/cookbook" @click.prevent="goto( '/account/cookbook' )">
+		<v-list-item link href="/account/cookbook" @click.prevent="goToPath( '/account/cookbook' )">
         <v-list-item-icon>
             <v-icon>mdi-code-tags</v-icon>
           </v-list-item-icon>
@@ -82,7 +82,7 @@ if ( $role_check ) {
             <v-list-item-title>Cookbook</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-        <v-list-item link href="/account/handbook" @click.prevent="goto( '/account/handbook' )" v-show="role == 'administrator'">
+        <v-list-item link href="/account/handbook" @click.prevent="goToPath( '/account/handbook' )" v-show="role == 'administrator'">
           <v-list-item-icon>
             <v-icon>mdi-map</v-icon>
           </v-list-item-icon>
@@ -90,7 +90,7 @@ if ( $role_check ) {
             <v-list-item-title>Handbook</v-list-item-title>
           </v-list-item-content>
 		</v-list-item>
-		<v-list-item link href="/account/accounts" @click.prevent="goto( '/account/accounts' )">
+		<v-list-item link href="/account/accounts" @click.prevent="goToPath( '/account/accounts' )">
           <v-list-item-icon>
             <v-icon>mdi-account-card-details</v-icon>
           </v-list-item-icon>
@@ -98,7 +98,7 @@ if ( $role_check ) {
             <v-list-item-title>Accounts</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-		<v-list-item link href="/account/users" @click.prevent="goto( '/account/users' )" v-show="role == 'administrator'">
+		<v-list-item link href="/account/users" @click.prevent="goToPath( '/account/users' )" v-show="role == 'administrator'">
           <v-list-item-icon>
             <v-icon>mdi-account-multiple</v-icon>
           </v-list-item-icon>
@@ -134,7 +134,7 @@ if ( $role_check ) {
 		</v-list>
       </template>
       <v-list dense>
-	  	<v-list-item link href="/account/profile" @click.prevent="goto( '/account/profile' )">
+	  	<v-list-item link href="/account/profile" @click.prevent="goToPath( '/account/profile' )">
           <v-list-item-icon>
             <v-icon>mdi-account-box</v-icon>
           </v-list-item-icon>
@@ -142,7 +142,7 @@ if ( $role_check ) {
             <v-list-item-title>Profile</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-		<v-list-item link href="/account/defaults" @click.prevent="goto( '/account/defaults' )" v-show="role == 'administrator'">
+		<v-list-item link href="/account/defaults" @click.prevent="goToPath( '/account/defaults' )" v-show="role == 'administrator'">
           <v-list-item-icon>
             <v-icon>mdi-application</v-icon>
           </v-list-item-icon>
@@ -150,7 +150,7 @@ if ( $role_check ) {
             <v-list-item-title>Site Defaults</v-list-item-title>
           </v-list-item-content>
 		</v-list-item>
-		<v-list-item link href="/account/keys" @click.prevent="goto( '/account/keys' )"  v-show="role == 'administrator'">
+		<v-list-item link href="/account/keys" @click.prevent="goToPath( '/account/keys' )"  v-show="role == 'administrator'">
           <v-list-item-icon>
             <v-icon>mdi-key</v-icon>
           </v-list-item-icon>
@@ -4556,7 +4556,7 @@ new Vue({
 				this.selected_nav = 0
 			}
 		},
-		goto ( href ) {
+		goToPath ( href ) {
 			this.updateRoute( href )
 			window.history.pushState( {}, this.routes[href], href )
 		},
