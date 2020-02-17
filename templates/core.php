@@ -4436,10 +4436,10 @@ new Vue({
 			return invite
 		},
 		selected_default_recipes() {
-			if ( typeof this.dialog_configure_defaults.record.defaults.recipes == 'undefined' ) {
+			if ( typeof this.dialog_account.records.account.defaults.recipes == 'undefined' ) {
 				return "";
 			} else {
-				return this.dialog_configure_defaults.record.defaults.recipes;
+				return this.dialog_account.records.account.defaults.recipes;
 			}
 		},
 		dialogCapturesPagesText() {
