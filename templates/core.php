@@ -4035,7 +4035,7 @@ if ( $role_check ) {
 <script src="/wp-content/plugins/captaincore/public/js/vuetify.min.js"></script>
 <?php } else { ?>
 <script src="https://cdn.jsdelivr.net/npm/vue@2.6.11/dist/vue.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qs@6.9.0/dist/qs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qs@6.9.1/dist/qs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios@0.19.0/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vuetify@2.2.12/dist/vuetify.min.js"></script>
 <?php } ?>
