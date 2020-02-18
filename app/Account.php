@@ -130,10 +130,10 @@ class Account {
     }
 
     public function process_logs() {
-
-        $Parsedown = new \Parsedown();
+        $Parsedown          = new \Parsedown();
         $site_ids           = array_column( self::sites(), "site_id" );
         $fetch_process_logs = ( new ProcessLogSite )->fetch_process_logs( [ "site_id" => $site_ids ] );
+        $process_logs       = [];
         foreach ( $fetch_process_logs as $result ) {
             $sites_for_process     = ( new ProcessLogSite )->fetch_sites_for_process_log( [ "process_log_id" => $result->process_log_id ] );
             // Filter out sites which account doesn't have access to.
@@ -156,9 +156,7 @@ class Account {
             $item->websites        = $websites;
             $process_logs[]        = $item;
         }
-
         return $process_logs;
-
     }
 
     public function shared_with() {
@@ -233,8 +231,8 @@ class Account {
         return [ 
             'sites' => $result_sites,
             'total' => [
-                $storage_percent . "% storage<br /><strong>" . $storage_gbs ."GB/". $storage_limit ."GB</strong>",
-                $visits_percent . "% traffic<br /><strong>" . number_format( $visits ) . "</strong> <small>Yearly Estimate</small>"
+                "{$storage_percent}% storage<br /><strong>{$storage_gbs}GB/{$storage_limit}GB</strong>",
+                "{$visits_percent}% traffic<br /><strong>" . number_format( $visits ) . "</strong> <small>Yearly Estimate</small>"
             ]
         ];
         
