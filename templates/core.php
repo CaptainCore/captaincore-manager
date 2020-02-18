@@ -3357,34 +3357,29 @@ if ( $role_check ) {
 		<v-tab-item :key="7" value="tab-Sharing" v-if="role == 'administrator'">
 			<v-toolbar color="grey lighten-4" dense light flat>
 				<v-toolbar-title>Sharing</v-toolbar-title>
-				<v-spacer></v-spacer>
-				<v-toolbar-items v-show="role == 'administrator'">
-					<v-btn text>Invite</v-btn>
-				</v-toolbar-items>
 			</v-toolbar>
 			<v-layout>
 			<v-list disabled>
-				<v-subheader>Account</v-subheader>
-        		<v-list-item :key="dialog_site.site.account.account_id">
-					<v-list-item-icon>
-						<v-icon>mdi-account</v-icon>
-					</v-list-item-icon>
-					<v-list-item-content>
-                	<v-list-item-title>{{ dialog_site.site.account.name }}</v-list-item-title>
-					</v-list-item-content>
+				<v-subheader class="mt-4" style="height: 8px;font-size: 12px;">Account</v-subheader>
+        		<v-list-item>
+					<v-chip class="ma-1">{{ dialog_site.site.account.name }}</v-chip>
 				</v-list-item>
-				<v-divider inset></v-divider>
-				<v-subheader>Shared With</v-subheader>
-   				 <v-list-item v-for="account in dialog_site.site.shared_with" :key="account.account_id">
-					<v-list-item-icon>
-						<v-icon>mdi-account</v-icon>
-					</v-list-item-icon>
-					<v-list-item-content>
-						<v-list-item-title>{{ dialog_site.site.account.name }}</v-list-item-title>
-					</v-list-item-content>
+				<v-subheader style="height: 8px;font-size: 12px;"></v-subheader>
+				<v-list-item>
+					<v-select
+					:items="accounts"
+					v-model="dialog_site.site.shared_with"
+					label="Shared With"
+					item-text="name"
+					item-value="account_id"
+					chips
+					multiple
+					append-icon=""
+					></v-select>
 				</v-list-item>
-			</v-list>
+				</v-list>
 			</v-layout>
+			
 	  </v-tab-item>
 		<v-tab-item :key="8" value="tab-Timeline">
 			<v-toolbar color="grey lighten-4" dense light flat>
