@@ -8083,6 +8083,11 @@ new Vue({
 			description = "Updating Fathom tracker on " + site.name;
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
+			environment.fathom.forEach( fathom => {
+				fathom.domain = fathom.domain.trim()
+				fathom.code = fathom.code.trim()
+			})
+
 			// Prep AJAX request
 			var data = {
 				'action': 'captaincore_ajax',
@@ -8092,15 +8097,13 @@ new Vue({
 				'value': environment.fathom,
 			};
 
-			self = this;
-
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					// close dialog
-					self.dialog_fathom.site = {};
-					self.dialog_fathom.show = false;
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data );
+					this.dialog_fathom.site = {};
+					this.dialog_fathom.show = false;
+					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					this.runCommand( response.data );
 				});
 		},
 		updateSettings() {
