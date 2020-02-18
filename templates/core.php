@@ -1276,14 +1276,10 @@ if ( $role_check ) {
 					<td class="justify-center">{{ item.author }}</td>
 					<td class="justify-center">{{ item.name }}</td>
 					<td class="justify-center" v-html="item.description"></td>
-					<td v-if="role == 'administrator'">
-						<v-icon
-							small
-							class="mr-2"
-							@click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)"
-						>
-							edit
-						</v-icon>
+					<td>
+						<v-btn text icon @click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)" v-if="role == 'administrator'">
+							<v-icon small>edit</v-icon>
+						</v-btn>
 						{{ item.websites.map( site => site.name ).join(" ") }}
 					</td>
 				</tr>
@@ -3402,13 +3398,11 @@ if ( $role_check ) {
 					<td class="justify-center">{{ item.author }}</td>
 					<td class="justify-center">{{ item.name }}</td>
 					<td class="justify-center py-3" v-html="item.description"></td>
-					<td v-if="role == 'administrator'"><v-icon
-            small
-            class="mr-2"
-            @click="editLogEntry(dialog_site.site.site_id, item.process_log_id)"
-          >
-            edit
-		  </v-icon></td>
+					<td>
+						<v-btn text icon @click="editLogEntry(dialog_site.site.site_id, item.process_log_id)" v-if="role == 'administrator'">
+							<v-icon small>edit</v-icon>
+						</v-btn>
+					</td>
 				</tr>
 				</tbody>
 				</template>
@@ -3892,14 +3886,9 @@ if ( $role_check ) {
 							<td class="justify-center">{{ item.name }}</td>
 							<td class="justify-center py-3" v-html="item.description"></td>
 							<td width="170px;">
-								<v-icon
-									small
-									class="mr-2"
-									@click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)"
-									v-if="role == 'administrator'"
-								>
-									edit
-								</v-icon>
+								<v-btn text icon @click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)" v-if="role == 'administrator'">
+									<v-icon small>edit</v-icon>
+								</v-btn>
 								{{ item.websites.map( site => site.name ).join(" ") }}
 							</td>
 						</tr>
@@ -4171,6 +4160,10 @@ new Vue({
 			],
 		},
 		shared_with: [],
+		<?php } else { ?>
+		role: "",
+		dialog_new_site: false,
+		shared_with: [],<?php } ?>
 		header_timeline: [
 			{"text":"Date","value":"date","sortable":false,"width":"220"},
 			{"text":"Done by","value":"done-by","sortable":false,"width":"135"},
@@ -4178,16 +4171,6 @@ new Vue({
 			{"text":"Notes","value":"notes","sortable":false},
 			{"text":"","value":"","sortable":false},
 		],
-		<?php } else { ?>
-		role: "",
-		dialog_new_site: false,
-		shared_with: [],
-		header_timeline: [
-			{"text":"Date","value":"date","sortable":false,"width":"220"},
-			{"text":"Done by","value":"done-by","sortable":false,"width":"135"},
-			{"text":"Name","value":"name","sortable":false,"width":"165"},
-			{"text":"Notes","value":"notes","sortable":false},
-		],<?php } ?>
 		domains: [],
 		domains_loading: true,
 		sites_loading: true,

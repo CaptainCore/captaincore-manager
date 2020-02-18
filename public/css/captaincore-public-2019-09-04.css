@@ -47,12 +47,8 @@ label[for=datepicker] {
 	font-size: 2rem;
 }
 .green-text{color:#4CAF50 !important}
- .blue {
+.blue {
 	 background-color: #27c3f3 !important;
- }
- button:focus {
-    outline: none;
-    background-color: #27c3f3;
 }
 td.is-disabled button {
 		color: #0000002b !important;
