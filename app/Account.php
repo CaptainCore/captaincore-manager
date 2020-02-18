@@ -197,13 +197,13 @@ class Account {
     }
 
     public function usage_breakdown() {
-        $account = self::get();
-        $sites   = self::sites();
+        $account  = self::get();
+        $site_ids = array_column( ( new Sites )->where( [ "account_id" => $this->account_id, "status" => "active" ] ), "site_id" );
 
-        $hosting_plan = $account->plan->name;
-		$addons       = $account->plan->usage->addons;
-		$storage      = $account->plan->usage->storage;
-		$visits       = $account->plan->usage->visits;
+        $hosting_plan      = $account->plan->name;
+		$addons            = $account->plan->usage->addons;
+		$storage           = $account->plan->usage->storage;
+		$visits            = $account->plan->usage->visits;
 		$visits_plan_limit = $account->plan->limits->visits;
 		$storage_limit     = $account->plan->limits->storage;
         $sites_limit       = $account->plan->limits->sites;
@@ -217,8 +217,8 @@ class Account {
 
 		$result_sites = [];
 
-        foreach ( $sites as $item ) {
-            $site                         = ( new Site( $item['site_id'] ))->get();
+        foreach ( $site_ids as $site_id ) {
+            $site                         = ( new Site( $site_id ))->get();
             $website_for_customer_storage = $site->storage_raw;
             $website_for_customer_visits  = $site->visits;
             $result_sites[] = [
