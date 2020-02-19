@@ -3400,7 +3400,8 @@ function captaincore_ajax_action_callback() {
 		'fetchProcessLogs',
 		'updateFathom', 
 		'updatePlan', 
-		'newSite', 
+		'newSite',
+		'createSiteAccount',
 		'updateSite', 
 		'deleteSite'
 	];
@@ -3818,6 +3819,25 @@ function captaincore_ajax_action_callback() {
 	if ( $cmd == 'timeline' ) {
 		$process_logs = ( new CaptainCore\Site( $post_id ) )->process_logs();
 		echo json_encode( $process_logs ) ;
+	}
+
+	if ( $cmd == 'createSiteAccount' ) {
+		$time_now = date("Y-m-d H:i:s");
+		$defaults = [ 
+			"email"    => "",
+			"timezone" => "",
+			"recipes"  => [],
+			"users"    => [],
+		];
+		$account_id = ( new CaptainCore\Accounts )->insert( [ 
+			"name"       => trim( $value ),
+			"status"     => "active",
+			"created_at" => $time_now,
+			"updated_at" => $time_now,
+			"defaults"   => json_encode( $defaults ),
+		] );
+		( new CaptainCore\Account( $account_id, true ) )->calculate_totals();
+		echo json_encode( $account_id );
 	}
 
 	if ( $cmd == 'updateSiteAccount' ) {
