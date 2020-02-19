@@ -43,6 +43,20 @@ TODO
 TODO
 
 == Changelog ==
+= 0.10.1: February 18 2020
+* New: Account levels
+* New: Common script reset permissions
+* New: Create account dialog
+* Tweak: Upgraded Vuetify to v2.2.12
+* Tweak: Upgraded QS.js to v6.9.1
+* Tweak: Moved account related sections: timelines and defaults from sites section to new accounts section.
+* Tweak: Delagate snapshot link generate to CLI
+* Tweak: Compatibility fixes for new database architecture
+* Tweak: Fix timezone issue with update logs
+* Tweak: Fix mobile layout with script section
+* Tweak: Fix bugs with editing/saving prodcess logs
+* TWeak: Fix `/` in process logs
+
 = 0.10.0: January 29 2020
 * New: Database architecture. Migrated CaptainCore custom post types to custom tables.
 * New: Routing method using pushState js and WordPress catch all `/account` custom template.
