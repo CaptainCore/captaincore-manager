@@ -3673,7 +3673,8 @@ if ( $role_check ) {
 				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Listing {{ accounts.length }} accounts</v-toolbar-title>
 					<v-spacer></v-spacer>
-					<v-toolbar-items>
+					<v-toolbar-items v-if="role == 'administrator'">
+						<v-btn text @click="dialog_new_account.show = true">Add account <v-icon dark>add</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
@@ -4086,7 +4087,8 @@ new Vue({
 		dialog_theme_and_plugin_checks: { show: false, site: {}, loading: false },
 		dialog_update_settings: { show: false, environment: {}, themes: [], plugins: [], loading: false },
 		dialog_fathom: { show: false, site: {}, environment: {}, loading: false, editItem: false, editedItem: {}, editedIndex: -1 },
-		dialog_account: { show: false, records: {}, new_invite: false, new_invite_email: "", step: 1 },
+		dialog_account: { show: false, records: { account: { defaults: { recipes: [] } } }, new_invite: false, new_invite_email: "", step: 1 },
+		dialog_new_account: { show: false, name: "", records: {} },
 		dialog_user: { show: false, user: {}, errors: [] },
 		new_invite: { account: {}, records: {} },
 		new_account: { password: "" },
@@ -4119,8 +4121,7 @@ new Vue({
 		current_user_login: "<?php echo $user->user_login; ?>",
 		current_user_display_name: "<?php echo $user->display_name; ?>",
 		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->user_email; ?>", login: "<?php echo $user->user_login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", errors: [] },
-		hosting_plans: 
-		<?php
+		hosting_plans: <?php
 			$hosting_plans   = json_decode( get_option('captaincore_hosting_plans') );
 			$hosting_plans[] =  [
 				'name'          => 'Custom',
@@ -4131,10 +4132,8 @@ new Vue({
 					'sites'   => '',
 				],
 			];
-		echo json_encode( $hosting_plans );
-		?>
-		,
-		<?php if ( current_user_can( 'administrator' ) ) { ?>
+		echo json_encode( $hosting_plans ); ?>,
+		<?php if ( current_user_can( "administrator" ) ) { ?>
 		role: "administrator",
 		dialog_new_log_entry: { show: false, sites: [], site_name: "", process: "", description: "" },
 		dialog_edit_log_entry: { show: false, site_name: "", log: {} },
@@ -5842,24 +5841,19 @@ new Vue({
 
 		},
 		addNewKey() {
-
 			var data = {
 				action: 'captaincore_ajax',
 				command: 'newKey',
 				value: this.new_key
 			};
-
-			self = this;
-
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					self.keys.unshift( response.data );
-					self.new_key = { show: false, title: "", key: "" };
-					self.snackbar.message = "New SSH key added.";
-					self.snackbar.show = true;
+					this.keys.unshift( response.data );
+					this.new_key = { show: false, title: "", key: "" };
+					this.snackbar.message = "New SSH key added.";
+					this.snackbar.show = true;
 				})
 				.catch( error => console.log( error ) );
-
 		},
 		viewKey( key_id ) {
 			key = this.keys.filter( key => key.key_id == key_id )[0];
