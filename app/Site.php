@@ -256,15 +256,11 @@ class Site {
                 'metrics'    => json_encode( [ "sites" => "1", "users" => "0", "domains" => "0" ] ),
                 'status'     => 'active',
             ];
-            $account_id = ( new Accounts )->insert( $new_account );
-            ( new Sites )->update( [ "account_id" => $account_id ], [ "site_id" => $site_id ] );
+            $site->account_id = ( new Accounts )->insert( $new_account );
+            ( new Sites )->update( [ "account_id" => $site->account_id ], [ "site_id" => $site_id ] );
         }
 
-        ( new Account( $account_id, true ) )->calculate_totals();
-
-        // Run ACF custom tasks afterward.
-        // captaincore_acf_save_post_after( $site_id );
-
+        ( new Account( $site->account_id, true ) )->calculate_totals();
         return $response;
     }
 
@@ -282,6 +278,8 @@ class Site {
             $response['response'] = 'Error: Site ID not found.';
             return $response;
         }
+
+        $account_id_previous = $current_site->account_id;
 
         $time_now     = date("Y-m-d H:i:s");
         $details      = json_decode( $current_site->details );
@@ -309,7 +307,11 @@ class Site {
         $response['site_id']  = $this->site_id;
         $environment_ids      = self::environment_ids();
 
-        self::assign_accounts( $site->shared_with );
+        if ( $site->shared_with ) {
+            self::assign_accounts( $site->shared_with );
+        } else {
+            self::assign_accounts( [] );
+        }
 
         // Update environments
         $db_environments = new Environments();
@@ -338,7 +340,8 @@ class Site {
             ];
             $db_environments->update( $update_environment, [ 'environment_id' => $environment['environment_id'] ] );
         }
-
+        ( new Account( $account_id_previous, true ) )->calculate_totals();
+        ( new Account( $site->account_id, true ) )->calculate_totals();
         return $response;
     }
 
@@ -378,6 +381,12 @@ class Site {
         // Add new records
         foreach ( array_diff( $account_ids, $current_account_ids ) as $account_id ) {
             $accountsite->insert( [ "site_id" => $this->site_id, "account_id" => $account_id ] );
+        }
+
+        // Calculate new totals
+        $all_account_ids = array_unique( array_merge ( $account_ids, $current_account_ids ) );
+        foreach ( $all_account_ids as $account_id ) {
+            ( new Account( $account_id, true ) )->calculate_totals();
         }
 
     }
