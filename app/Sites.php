@@ -41,6 +41,11 @@ class Sites extends DB {
                 $this->sites[]     = $site_id;
                 $this->sites_all[] = $site_id;
             }
+            // Patch in inactive sites
+            $site_ids = array_column ( self::where( [ "account_id" => $account_id ] ), "site_id" );
+            foreach ( $site_ids as $site_id ) {
+                $this->sites_all[] = $site_id;
+            }
             // Fetch sites assigned as shared access
             $site_ids = ( new AccountSite )->select_active_sites( 'site_id', [ "account_id" => $account_id ] );
 			foreach ( $site_ids as $site_id ) {

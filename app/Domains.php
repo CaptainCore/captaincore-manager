@@ -33,7 +33,7 @@ class Domains extends DB {
 
         $account_ids = [];
         // Loop through sites and pull out account ids
-        $site_ids = ( new Sites )->site_ids();
+        $site_ids = ( new Sites )->site_ids_all();
         foreach( $site_ids as $site_id ) {
             $site = ( new Sites )->get( $site_id );
             $account_ids[] = $site->account_id;
