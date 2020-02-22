@@ -1529,6 +1529,14 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$capture->insert( $new_capture );
 	}
 
+	if ( $command == 'site-get-raw' ) {
+		$site = new CaptainCore\Site( $post->site_id );
+		$response = [
+			"response" => "Fetching site $post->site_id ",
+			"site"     => $site->get_raw(),
+		];
+	}
+
 	if ( $command == 'quicksave-add' ) {
 		
 		$quicksave_check = ( new CaptainCore\Quicksaves )->get( $post->data->quicksave_id );

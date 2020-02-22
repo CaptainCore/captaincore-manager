@@ -354,14 +354,12 @@ class Site {
         $details          = json_decode( $site->details );
         $details->mailgun = $domain;
         ( new Sites )->update( [ "details" => json_encode( $details ) ], [ "site_id" => $site->site_id ] );
+        self::sync();
     }
 
     public function sync() {
 
-        $details = self::get_raw();
-        $site    = $details->site;
-		$details = base64_encode( json_encode( $details ) );
-        $command = "site update $site --details=$details --format=base64 --skip-extras";
+        $command = "site sync {$this->site_id}";
         
         // Disable https when debug enabled
         if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
@@ -376,7 +374,7 @@ class Site {
             ],
             'body'        => json_encode( [ "command" => $command ]), 
             'method'      => 'POST', 
-            'data_format' => 'body' 
+            'data_format' => 'body'
         ];
 
         // Add command to dispatch server
