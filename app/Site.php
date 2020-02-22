@@ -359,6 +359,7 @@ class Site {
     public function sync() {
 
         $details = self::get_raw();
+        $site    = $details->site;
 		$details = base64_encode( json_encode( $details ) );
         $command = "site update $site --details=$details --format=base64 --skip-extras";
         
