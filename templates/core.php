@@ -403,7 +403,7 @@ if ( $role_check ) {
 				<v-spacer></v-spacer>
 			</v-toolbar>
 			<v-card-text class="mt-4">
-				<v-text-field v-model="dialog_site.site.mailgun" label="Mailgun Subdomain"></v-text-field>
+				<v-text-field label="Mailgun Subdomain" :value="dialog_site.site.mailgun" @change.native="dialog_site.site.mailgun = $event.target.value"></v-text-field>
 				<v-flex xs12>
 					<v-btn  color="primary" dark @click="saveMailgun()">Save</v-btn>
 				</v-flex>
