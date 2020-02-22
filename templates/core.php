@@ -371,7 +371,7 @@ if ( $role_check ) {
 							</div>
 							<v-btn v-else small depressed @click="installTheme( item )">Install</v-btn>
 						</v-card-actions>
-		</v-card>
+					</v-card>
 				</v-flex>
 			</v-layout>
       </v-tab-item>
@@ -391,6 +391,23 @@ if ( $role_check ) {
 			<h3>Bulk edit {{ bulk_edit.items.length }} {{ bulk_edit.type }}</h3>
 			<v-btn v-if="bulk_edit.type == 'plugins'" @click="bulkEditExecute('activate')">Activate</v-btn> <v-btn v-if="bulk_edit.type == 'plugins'" @click="bulkEditExecute('deactivate')">Deactivate</v-btn> <v-btn v-if="bulk_edit.type == 'plugins'" @click="bulkEditExecute('toggle')">Toggle</v-btn> <v-btn @click="bulkEditExecute('delete')">Delete</v-btn>
 		</v-card-text>
+		</v-card>
+		</v-dialog>
+		<v-dialog v-model="dialog_mailgun_config.show" max-width="500px">
+		<v-card tile>
+			<v-toolbar flat dark color="primary">
+				<v-btn icon dark @click.native="dialog_mailgun_config.show = false">
+					<v-icon>close</v-icon>
+				</v-btn>
+				<v-toolbar-title>Configure Mailgun for {{ dialog_site.site.name }}</v-toolbar-title>
+				<v-spacer></v-spacer>
+			</v-toolbar>
+			<v-card-text class="mt-4">
+				<v-text-field v-model="dialog_site.site.mailgun" label="Mailgun Subdomain"></v-text-field>
+				<v-flex xs12>
+					<v-btn  color="primary" dark @click="saveMailgun()">Save</v-btn>
+				</v-flex>
+			</v-card-text>
 		</v-card>
 		</v-dialog>
 		<v-dialog v-model="dialog_fathom.show" max-width="500px">
@@ -3414,9 +3431,10 @@ if ( $role_check ) {
 				<v-toolbar-title>Advanced</v-toolbar-title>
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
-            <v-btn text @click="copySite(dialog_site.site.site_id)">Copy Site <v-icon dark small>file_copy</v-icon></v-btn>
-            <v-btn text @click="editSite(dialog_site.site.site_id)" v-show="role == 'administrator'">Edit Site <v-icon dark small>edit</v-icon></v-btn>
-            <v-btn text @click="deleteSite(dialog_site.site.site_id)" v-show="role == 'administrator'">Delete Site <v-icon dark small>delete</v-icon></v-btn>
+				<v-btn text @click="dialog_mailgun_config.show = true" v-show="role == 'administrator'">Configure Mailgun <v-icon dark small>mdi-email-search</v-icon></v-btn>
+        			<v-btn text @click="copySite(dialog_site.site.site_id)">Copy Site <v-icon dark small>file_copy</v-icon></v-btn>
+            		<v-btn text @click="editSite(dialog_site.site.site_id)" v-show="role == 'administrator'">Edit Site <v-icon dark small>edit</v-icon></v-btn>
+            		<v-btn text @click="deleteSite(dialog_site.site.site_id)" v-show="role == 'administrator'">Delete Site <v-icon dark small>delete</v-icon></v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
 			<v-card flat>
@@ -4087,6 +4105,7 @@ new Vue({
 		dialog_theme_and_plugin_checks: { show: false, site: {}, loading: false },
 		dialog_update_settings: { show: false, environment: {}, themes: [], plugins: [], loading: false },
 		dialog_fathom: { show: false, site: {}, environment: {}, loading: false, editItem: false, editedItem: {}, editedIndex: -1 },
+		dialog_mailgun_config: { show: false, loading: false },
 		dialog_account: { show: false, records: { account: { defaults: { recipes: [] } } }, new_invite: false, new_invite_email: "", step: 1 },
 		dialog_new_account: { show: false, name: "", records: {} },
 		dialog_user: { show: false, user: {}, errors: [] },
@@ -8061,6 +8080,20 @@ new Vue({
 		deleteFathomItem (item) {
 			const index = this.dialog_fathom.environment.fathom.indexOf(item)
 			confirm('Are you sure you want to delete this item?') && this.dialog_fathom.environment.fathom.splice(index, 1)
+		},
+		saveMailgun() {
+			// Prep AJAX request
+			var data = {
+				'action': 'captaincore_ajax',
+				'post_id': this.dialog_site.site.site_id,
+				'command': "updateMailgun",
+				'value': this.dialog_site.site.mailgun,
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					// close dialog
+					this.dialog_mailgun_config.show = false;
+				});
 		},
 		saveFathomConfigurations() {
 			site = this.dialog_fathom.site;

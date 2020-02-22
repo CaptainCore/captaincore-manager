@@ -3385,21 +3385,22 @@ function captaincore_ajax_action_callback() {
 
 	// Only proceed if access to command 
 	$admin_commands = [
-		'addDomain', 
-		'deleteDomain', 
-		'fetchConfigs', 
-		'updateLogEntry', 
-		'newLogEntry', 
-		'newKey', 
+		'addDomain',
+		'deleteDomain',
+		'fetchConfigs',
+		'updateLogEntry',
+		'newLogEntry',
+		'newKey',
 		'updateKey',
 		'deleteKey',
-		'newProcess', 
+		'newProcess',
 		'saveProcess',
 		'fetchProcess',
 		'fetchProcessRaw',
 		'fetchProcessLogs',
-		'updateFathom', 
-		'updatePlan', 
+		'updateFathom',
+		'updateMailgun',
+		'updatePlan',
 		'newSite',
 		'createSiteAccount',
 		'updateSite', 
@@ -3923,6 +3924,12 @@ function captaincore_ajax_action_callback() {
 		$account         = new CaptainCore\Account( $site->account_id, true );
 		$usage_breakdown = $account->usage_breakdown();
 		echo json_encode( $usage_breakdown ) ;
+	}
+
+	if ( $cmd == 'updateMailgun' ) {
+		$site = new CaptainCore\Site( $post_id );
+		$site->update_mailgun( $value );
+		$site->sync();
 	}
 
 	if ( $cmd == 'updateFathom' ) {

@@ -345,6 +345,49 @@ class Site {
         return $response;
     }
 
+    public function update_mailgun( $domain ) {
+        $site = ( new Sites )->get( $this->site_id );
+        if ( $site == "" ) {
+            $response['response'] = 'Error: Site ID not found.';
+            return $response;
+        }
+        $details          = json_decode( $site->details );
+        $details->mailgun = $domain;
+        ( new Sites )->update( [ "details" => json_encode( $details ) ], [ "site_id" => $site->site_id ] );
+    }
+
+    public function sync() {
+
+        $details = self::get_raw();
+		$details = base64_encode( json_encode( $details ) );
+        $command = "site update $site --details=$details --format=base64 --skip-extras";
+        
+        // Disable https when debug enabled
+        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+            add_filter( 'https_ssl_verify', '__return_false' );
+        }
+
+        $data = [ 
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8', 
+                'token'        => CAPTAINCORE_CLI_TOKEN 
+            ],
+            'body'        => json_encode( [ "command" => $command ]), 
+            'method'      => 'POST', 
+            'data_format' => 'body' 
+        ];
+
+        // Add command to dispatch server
+        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+        if ( is_wp_error( $response ) ) {
+            $error_message = $response->get_error_message();
+            return "Something went wrong: $error_message";
+        }
+        
+        return $response["body"];
+    }
+
     public function insert_accounts( $account_ids = [] ) {
 
         $accountsite = new AccountSite();
