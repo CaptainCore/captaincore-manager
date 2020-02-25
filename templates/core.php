@@ -5585,7 +5585,7 @@ new Vue({
 			// Start job
 			description = "Deleting site " + site_name;
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued"});
 			this.dialog_site.step = 1
 
 			var data = {
@@ -5597,8 +5597,7 @@ new Vue({
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					// Updates job id with reponsed background job id
-					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					this.runCommand( response.data )
+					this.jobs.filter(job => job.job_id == job_id)[0].status = "done";
 					// Remove item
 					this.sites = this.sites.filter( site => site.site_id != site_id )
 					this.snackbar.message = "Deleting site "+ site_name + ".";

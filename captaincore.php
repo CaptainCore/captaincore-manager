@@ -4011,9 +4011,7 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'deleteSite' ) {
 		// Delete site on CaptainCore CLI
-		$run_in_background = true;
-		$remote_command    = true;
-		$command           = "site delete $site";
+		captaincore_run_background_command( "site delete $site" );
 
 		// Delete site locally
 		$site = new CaptainCore\Site( $post_id );
@@ -4511,6 +4509,34 @@ function captaincore_install_action_callback() {
 
 // Logs a process completion
 add_action( 'wp_ajax_log_process', 'process_log_action_callback' );
+
+function captaincore_run_background_command( $command ) {
+        
+	// Disable https when debug enabled
+	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+		add_filter( 'https_ssl_verify', '__return_false' );
+	}
+
+	$data = [
+		'timeout' => 45,
+		'headers' => [
+			'Content-Type' => 'application/json; charset=utf-8', 
+			'token'        => CAPTAINCORE_CLI_TOKEN 
+		],
+		'body'        => json_encode( [ "command" => $command ]), 
+		'method'      => 'POST', 
+		'data_format' => 'body'
+	];
+
+	// Add command to dispatch server
+	$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run/background", $data );
+	if ( is_wp_error( $response ) ) {
+		$error_message = $response->get_error_message();
+		return "Something went wrong: $error_message";
+	}
+	
+	return $response["body"];
+}
 
 add_filter( 'acf/update_value', 'captaincore_disregard_acf_fields', 10, 3 );
 function captaincore_disregard_acf_fields( $value, $post_id, $field ) {
