@@ -94,6 +94,19 @@ class Domain {
 			foreach ( $response as $domain ) {
 				// Capture new domain IDs from $response
                 $remote_id = $domain->id;
+                if ( defined( 'CAPTAINCORE_CONSTELLIX_VANITY_ID' ) && defined( 'CAPTAINCORE_CONSTELLIX_SOA_NAME' ) ) {
+                    $response = constellix_api_put( "domains/$remote_id", [ 
+                        "vanityNameServer" => CAPTAINCORE_CONSTELLIX_VANITY_ID,
+                        "soa"              => [ 
+                            "primaryNameserver" => CAPTAINCORE_CONSTELLIX_SOA_NAME,
+                            "ttl"               => "86400",
+                            "refresh"           => "43200",
+                            "retry"             => "3600",
+                            "expire"            => "1209600",
+                            "negCache"          => "180",
+                        ]
+                    ] );
+                }
 			}
         }
 
