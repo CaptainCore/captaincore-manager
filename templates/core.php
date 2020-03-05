@@ -2437,7 +2437,7 @@ if ( $role_check ) {
 						{ text: 'Subsites', value: 'subsites', width: 104 },
 						{ text: 'WordPress', value: 'core', width: 114 },
 						{ text: 'Visits', value: 'visits', width: 98 },
-						{ text: 'Storage', value: 'storage_raw', width: 98 },
+						{ text: 'Storage', value: 'storage', width: 98 },
 						{ text: 'Provider', value: 'provider', width: 104 },
 						{ text: '', value: 'outdated', filter: siteHealthFilters, width: 0, class: 'hidden' },
 						{ text: '', value: 'account', filter: sitePlanFilters, width: 0, class: 'hidden' },
@@ -2469,7 +2469,7 @@ if ( $role_check ) {
 						<td>{{ item.subsites }}<span v-show="items.subsites"> sites</span></td>
 						<td>{{ item.core }}</td>
 						<td>{{ item.visits | formatLargeNumbers }}</td>
-						<td>{{ item.storage }}</td>
+						<td>{{ item.storage | formatGBs }}GB</td>
 						<td>{{ item.provider | formatProvider }}</td>
 					</tr>
 					</tbody>
