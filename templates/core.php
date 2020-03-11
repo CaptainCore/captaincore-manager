@@ -6795,7 +6795,7 @@ new Vue({
 		},
 		addRecord() {
 			timestamp = new Date().getTime();
-			this.dialog_domain.records.push({ id: "new_" + timestamp, edit: false, delete: false, new: true, ttl: "1800", type: "A", value: [{"value": ""}], update: {"record_id": "new_" + timestamp, "record_type": "A", "record_name": "", "record_value": [{"value": ""}], "record_ttl": "1800", "record_status": "new-record" } });
+			this.dialog_domain.records.push({ id: "new_" + timestamp, edit: false, delete: false, new: true, ttl: "3600", type: "A", value: [{"value": ""}], update: {"record_id": "new_" + timestamp, "record_type": "A", "record_name": "", "record_value": [{"value": ""}], "record_ttl": "3600", "record_status": "new-record" } });
 		},
 		addRecordValue( index ) {
 			record = this.dialog_domain.records[index];
@@ -6896,7 +6896,7 @@ new Vue({
 						r.delete = false;
 					});
 					timestamp = new Date().getTime();
-					response.data.push({ id: "new_" + timestamp, edit: false, delete: false, new: true, ttl: "1800", type: "A", value: [{"value": ""}], update: {"record_id": "new_" + timestamp, "record_type": "A", "record_name": "", "record_value": [{"value": ""}], "record_ttl": "1800", "record_status": "new-record" } });
+					response.data.push({ id: "new_" + timestamp, edit: false, delete: false, new: true, ttl: "3600", type: "A", value: [{"value": ""}], update: {"record_id": "new_" + timestamp, "record_type": "A", "record_name": "", "record_value": [{"value": ""}], "record_ttl": "3600", "record_status": "new-record" } });
 					this.dialog_domain.records = response.data;
 					this.dialog_domain.loading = false;
 				});
