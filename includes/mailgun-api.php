@@ -90,7 +90,7 @@ function mailgun_setup( $domain ) {
 		$post        = array(
 			'recordOption' => 'roundRobin',
 			'name'         => 'mg',
-			'ttl'          => '1800',
+			'ttl'          => '3600',
 			'roundRobin'   => $mx_records,
 		);
 
@@ -114,7 +114,7 @@ function mailgun_setup( $domain ) {
 				$post                       = array(
 					'recordOption' => 'roundRobin',
 					'name'         => $record_name_without_domain,
-					'ttl'          => '1800',
+					'ttl'          => '3600',
 					'roundRobin'   => array(
 						array(
 							'value'       => $record->value,
@@ -140,7 +140,7 @@ function mailgun_setup( $domain ) {
 				$post = array(
 					'name' => $record_name_without_domain,
 					'host' => "$record->value.",
-					'ttl'  => 1800,
+					'ttl'  => 3600,
 				);
 
 				$response = constellix_api_post( "domains/$domain_id/records/cname", $post );
@@ -234,7 +234,7 @@ function mailgun_events( $mailgun_subdomain, $page = "" ) {
 
 	if ( $page != "" ) {
 		// Fetch all domains from Mailgun
-		$results = wp_remote_get( $page, [ 
+		$results = wp_remote_get( $page, [
 			"headers" => [ "Authorization" => "Basic " . base64_encode ( "api:" . MAILGUN_API_KEY ) ],
 		] );
 		$results = json_decode( $results['body'] );
