@@ -1321,7 +1321,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	// Error if site not valid
 	$current_site = ( new CaptainCore\Sites )->get( $site_id );
-	if ( $current_site == "" ) {
+	if ( $current_site == "" && $site_id != "" ) {
 		return new WP_Error( 'command_invalid', 'Invalid Command', [ 'status' => 404 ] );
 	}
 
@@ -1532,10 +1532,19 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	if ( $command == 'site-get-raw' ) {
 		$site = new CaptainCore\Site( $post->site_id );
 		$response = [
-			"response" => "Fetching site $post->site_id ",
+			"response" => "Fetching site {$post->site_id}",
 			"site"     => $site->get_raw(),
 		];
 	}
+
+	if ( $command == 'account-get-raw' ) {
+		$account = new CaptainCore\Account( $post->account_id, true );
+		$response = [
+			"response" => "Fetching account {$post->account_id}",
+			"account"  => $account->get_raw(),
+		];
+	}
+
 
 	if ( $command == 'quicksave-add' ) {
 		
