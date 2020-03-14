@@ -3867,6 +3867,7 @@ function captaincore_ajax_action_callback() {
 		}
 
 		( new CaptainCore\Accounts )->update( [ "name" => trim( $account->name ) ], [ "account_id" => $account->account_id ] );
+		( new CaptainCore\Account( $account->account_id ) )->sync();
 		echo json_encode( $account ) ;
 	}
 
