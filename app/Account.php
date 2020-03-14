@@ -19,11 +19,32 @@ class Account {
     }
 
     public function get() {
-        $account = (new Accounts)->get( $this->account_id );
+        $account = ( new Accounts )->get( $this->account_id );
         $account->defaults = json_decode( $account->defaults );
         $account->plan     = json_decode( $account->plan );
         $account->metrics  = json_decode( $account->metrics );
         return $account;
+    }
+
+    
+    public function get_raw() {
+
+        self::calculate_totals();
+
+        // Fetch site from database
+        $account = ( new Accounts )->get( $this->account_id );
+
+        // Shared with permissions
+        $account_ids   = self::shared_with();
+        $account_ids[] = $this->account_id;
+
+        // Fetch relating data
+        $account->users   = ( new AccountUser )->where( [ "account_id" => $this->account_id ] );
+        $account->domains = ( new AccountDomain )->where( [ "account_id" => $this->account_id ] );
+        $account->sites   = ( new AccountSite )->where( [ "account_id" => $this->account_id ] );
+
+        return $account;
+
     }
 
     public function assign_sites( $site_ids = [] ) {
@@ -45,6 +66,7 @@ class Account {
         foreach ( array_diff( $site_ids, $current_site_ids ) as $site_id ) {
             $accountsite->insert( [ "account_id" => $this->account_id, "site_id" => $site_id ] );
         }
+
     }
 
     public function fetch() {
@@ -92,10 +114,9 @@ class Account {
     }
 
     public function domains() {
-        $accountdomain = new AccountDomain;
         $account_ids   = self::shared_with();
         $account_ids[] = $this->account_id;
-        $results       = $accountdomain->fetch_domains( [ "account_id" => $account_ids ] );
+        $results       = ( new AccountDomain )->fetch_domains( [ "account_id" => $account_ids ] );
         return $results;
     }
 
@@ -172,7 +193,7 @@ class Account {
             $all_site_ids[] = $site_id;
         }
 
-        $all_site_ids = array_unique($all_site_ids);
+        $all_site_ids = array_unique( $all_site_ids );
         $account_ids  = [];
 
         foreach ($all_site_ids as $site_id) {
@@ -212,7 +233,7 @@ class Account {
 			$visits_percent = round( $visits / $visits_plan_limit * 100, 0 );
 		}
         
-        $storage_gbs = round( $storage / 1024 / 1024 / 1024, 1 );
+        $storage_gbs     = round( $storage / 1024 / 1024 / 1024, 1 );
 		$storage_percent = round( $storage_gbs / $storage_limit * 100, 0 );
 
 		$result_sites = [];
