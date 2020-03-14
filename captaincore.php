@@ -3516,7 +3516,7 @@ function captaincore_ajax_action_callback() {
 		
 		// Remote Sync
 		$remote_command = true;
-		$command        = "site update-field $site capture_pages $value_json";
+		$command        = "site sync $site_id";
 
 	}
 
@@ -3988,9 +3988,7 @@ function captaincore_ajax_action_callback() {
 		];
 		$environment_id = ( new CaptainCore\Site( $post_id ) )->fetch_environment_id( $environment );
 		( new CaptainCore\Environments )->update( $environment_update, [ "environment_id" => $environment_id ] );
-		$details           = ( new CaptainCore\Site( $post_id ) )->get_raw();
-		$details           = base64_encode( json_encode( $details ) );
-		$command           = "site update $site --details=$details --format=base64 --skip-extras";
+		$command           = "site sync $post_id";
 		$remote_command    = true;
 		$run_in_background = true;
 	}
@@ -4238,9 +4236,7 @@ function captaincore_install_action_callback() {
 		$run_in_background = true;
 	}
 	if ( $cmd == 'new' ) {
-		$details = ( new CaptainCore\Site( $post_id ) )->get_raw();
-		$details = base64_encode( json_encode( $details ) );
-		$command = "site add $site --details=$details --format=base64";
+		$command = "site sync $post_id --update-extras";
 		$run_in_background = true;
 	}
 	if ( $cmd == 'deploy-defaults' ) {
@@ -4248,9 +4244,7 @@ function captaincore_install_action_callback() {
 		$run_in_background = true;
 	}
 	if ( $cmd == 'update' ) {
-		$details = ( new CaptainCore\Site( $post_id ) )->get_raw();
-		$details = base64_encode( json_encode( $details ) );
-		$command = "site update $site --details=$details --format=base64";
+		$command = "site sync $post_id --update-extras";
 		$run_in_background = true;
 	}
 	if ( $cmd == 'update-wp' ) {
