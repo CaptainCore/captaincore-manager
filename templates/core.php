@@ -4906,6 +4906,9 @@ new Vue({
 		edit_site_preload_staging() {
 			// Copy production address to staging field
 			this.dialog_edit_site.site.environments[1].address = this.dialog_edit_site.site.environments[0].address;
+			if ( this.dialog_edit_site.site.environments[0].address.includes(".kinsta.cloud") ) {
+				this.dialog_edit_site.site.environments[1].address = "staging-" + this.dialog_edit_site.site.environments[0].address
+			}
 
 			if ( this.dialog_edit_site.site.provider == "kinsta" ) {
 				// Copy production username to staging field
