@@ -628,6 +628,31 @@ if ( $role_check ) {
 			</v-card-text>
 		</v-card>
 	  </v-dialog>
+	  <v-dialog v-model="dialog_new_account.show" max-width="800px" persistent scrollable v-if="role == 'administrator'">
+		<v-card tile>
+			<v-toolbar flat color="grey lighten-4">
+				<v-btn icon @click.native="dialog_new_account.show = false">
+					<v-icon>close</v-icon>
+				</v-btn>
+				<v-toolbar-title>New Account</v-toolbar-title>
+				<v-spacer></v-spacer>
+			</v-toolbar>
+			<v-card-text style="max-height: 100%;">
+			<v-container>
+			<v-layout row wrap>
+				<v-flex xs12 pa-2>
+					<v-text-field label="Name" :value="dialog_new_account.name" @change.native="dialog_new_account.name = $event.target.value"></v-text-field>
+				</v-flex>
+				<v-flex xs12 text-right pa-0 ma-0>
+					<v-btn color="primary" dark @click="createSiteAccount()">
+						Create Account
+					</v-btn>
+				</v-flex>
+			</v-layout>
+			</v-container>
+			</v-card-text>
+		</v-card>
+	  </v-dialog>
 	  <v-dialog v-model="dialog_edit_account.show" max-width="800px" persistent scrollable>
 		<v-card tile>
 			<v-toolbar flat color="grey lighten-4">
@@ -6095,6 +6120,21 @@ new Vue({
 			this.dialog_edit_account.show = true
 			this.dialog_edit_account.account = this.dialog_account.records.account
 		},
+		createSiteAccount() {
+			var data = {
+				action: 'captaincore_ajax',
+				command: 'createSiteAccount',
+				value: this.dialog_new_account.name
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.fetchAccounts()
+					this.dialog_new_account.show = false
+					this.dialog_new_account.name = ""
+					this.dialog_account.step = 1
+				})
+				.catch( error => console.log( error ) );
+		},
 		updateSiteAccount() {
 			var data = {
 				action: 'captaincore_ajax',
@@ -6110,7 +6150,7 @@ new Vue({
 				.catch( error => console.log( error ) );
 		},
 		deleteAccount() {
-			account = this.dialog_account.records.account.account_id
+			account = this.dialog_account.records.account
 			
 			should_proceed = confirm("Delete account " + account.name +"?");
 
