@@ -68,7 +68,7 @@ class Account {
         ];
 
         // Add command to dispatch server
-        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run/background", $data );
         if ( is_wp_error( $response ) ) {
             $error_message = $response->get_error_message();
             return "Something went wrong: $error_message";

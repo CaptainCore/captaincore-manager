@@ -3855,6 +3855,7 @@ function captaincore_ajax_action_callback() {
 			"defaults"   => json_encode( $defaults ),
 		] );
 		( new CaptainCore\Account( $account_id, true ) )->calculate_totals();
+		( new CaptainCore\Account( $account_id, true ) )->sync();
 		echo json_encode( $account_id );
 	}
 
@@ -3947,7 +3948,6 @@ function captaincore_ajax_action_callback() {
 	if ( $cmd == 'updateMailgun' ) {
 		$site = new CaptainCore\Site( $post_id );
 		$site->update_mailgun( $value );
-		$site->sync();
 	}
 
 	if ( $cmd == 'updateFathom' ) {
