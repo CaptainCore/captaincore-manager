@@ -558,6 +558,9 @@ class Site {
                     $kinsta_ending = "cloud";
                 }
                 $environment->database          = "https://mysqleditor-{$environment->database_username}.kinsta.{$kinsta_ending}";
+                if ( $environment->environment == "Staging" ) {
+                    $environment->database      = "https://mysqleditor-staging-{$environment->database_username}.kinsta.{$kinsta_ending}";
+                }
             }
             $environment->link             = $environment->home_url;
             $environment->fathom           = json_decode( $environment->fathom );
