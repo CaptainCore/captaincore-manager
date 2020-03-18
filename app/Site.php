@@ -552,7 +552,7 @@ class Site {
                 $environment->ssh = "ssh {$environment->username}@{$environment->address} -p {$environment->port}";
             }
             if ( $site->provider == 'kinsta' and $environment->database_username ) {
-                $address_array = explode( ".", $environments->address );
+                $address_array = explode( ".", $environment->address );
                 $kinsta_ending = array_pop( $address_array );
                 if ( $kinsta_ending != "com" && $kinsta_ending != "cloud" ) {
                     $kinsta_ending = "cloud";
