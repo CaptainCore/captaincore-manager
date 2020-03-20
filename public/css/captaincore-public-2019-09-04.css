@@ -53,18 +53,22 @@ label[for=datepicker] {
 td.is-disabled button {
 		color: #0000002b !important;
 }
- .datepicker-date-display {
-	 background-color: #27c3f3;
-	 padding: 20px 12px;
- }
- .datepicker-date-display .date-text {
-	 font-size: 16px;
-   line-height: 24px;
- }
- .datepicker-table td.is-selected {
-	 background-color: #27c3f3;
- }
-
+.datepicker-date-display {
+  background-color: #27c3f3;
+  padding: 20px 12px;
+}
+.datepicker-date-display .date-text {
+  font-size: 16px;
+  line-height: 24px;
+}
+.datepicker-table td.is-selected {
+  background-color: #27c3f3;
+}
+.v-textarea.code textarea {
+  font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+  font-size: 0.8em;
+  line-height: 1em;
+}
 a.not-active.v-list-item.v-list-item--link.theme--dark > span.v-ripple__container {
   display: none;
 }

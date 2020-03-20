@@ -2307,6 +2307,7 @@ if ( $role_check ) {
 							:value="custom_script" 
 							@change.native="custom_script = $event.target.value"
 							spellcheck="false"
+							class="code"
 						></v-textarea>
 						<v-btn small color="primary" dark @click="runCustomCodeBulk()">Run Custom Code</v-btn>
 					</v-col>
@@ -3022,6 +3023,7 @@ if ( $role_check ) {
 							:value="custom_script" 
 							@change.native="custom_script = $event.target.value"
 							spellcheck="false"
+							class="code"
 						></v-textarea>
                 <v-btn small color="primary" dark @click="runCustomCode(dialog_site.site.site_id)">Run Custom Code</v-btn>
 					</v-col>
