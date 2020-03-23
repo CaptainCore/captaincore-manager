@@ -3300,15 +3300,17 @@ function captaincore_local_action_callback() {
 		}
 	}
 	if ( $cmd == 'removeAccountAccess' ) {
-		$user_id    = $value;
-		$account_id = $_POST['account'];
-
-		$accounts = get_field( 'partner', "user_{$user_id}" );
-		// Remove account from user's accounts
-		if (($key = array_search($account_id, $accounts)) !== false) {
-			unset($accounts[$key]);
+		$user_id     = $value;
+		$user        = ( new CaptainCore\User( $user_id, true ) );
+		$account_id  = $_POST['account'];
+		$account_ids = $user->accounts();
+		if ( empty( $account_ids ) ) {
+			$account_ids = [];
 		}
-		update_field( 'partner', array_unique( $accounts ), "user_{$user_id}" );
+		if ( ( $key = array_search( $account_id, $account_ids ) ) !== false ) {
+			unset( $account_ids[$key] );
+		}
+		( new CaptainCore\User( $user_id, true ) )->assign_accounts( array_unique( $account_ids ) );
 
 		$account = new CaptainCore\Account( $account_id );
 		$account->calculate_totals();

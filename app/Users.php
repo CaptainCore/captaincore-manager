@@ -56,6 +56,10 @@ class Users {
         
         unset( $user->errors );
 
+        if ( empty(  $user->account_ids ) ) {
+            $user->account_ids = [];
+        }
+
         // No errors, update account IDs.
         ( new User( $user->user_id, true ) )->assign_accounts( $user->account_ids );
 		
