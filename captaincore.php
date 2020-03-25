@@ -3795,6 +3795,7 @@ function captaincore_ajax_action_callback() {
 
 		$process_id = $_POST['process_id'];
 		$time_now   = date( 'Y-m-d H:i:s' );
+		$value      = str_replace( "\'", "'", $value );
 		$process_log_new = (object) [
 			"process_id"   => $_POST['process_id'],
 			'user_id'      => get_current_user_id(),
@@ -3807,7 +3808,7 @@ function captaincore_ajax_action_callback() {
 		];
 		$process_log = new CaptainCore\ProcessLogs();
 		$process_log_id_new = $process_log->insert( (array) $process_log_new );
-		(new CaptainCore\ProcessLog( $process_log_id_new) )->assign_sites( $post_ids );
+		( new CaptainCore\ProcessLog( $process_log_id_new ) )->assign_sites( $post_ids );
 		$process_logs = ( new CaptainCore\Site( $post_id ) )->process_logs();
 		$timelines = [];
 		foreach ( $post_ids as $post_id ) {

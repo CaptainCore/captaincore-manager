@@ -5762,7 +5762,7 @@ new Vue({
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					Object.keys(response.data).forEach( site_id => {
-						self.sites.filter( site => site.site_id == site_id )[0].timeline = response.data[site_id]
+						this.sites.filter( site => site.site_id == site_id )[0].timeline = response.data[site_id]
 					});
 					this.dialog_new_log_entry.sites = []
 					this.dialog_new_log_entry.site_name = "";
