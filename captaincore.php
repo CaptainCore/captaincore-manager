@@ -3360,6 +3360,7 @@ function captaincore_local_action_callback() {
 		}
 		$account = new CaptainCore\Accounts();
 		$account->update( [ "defaults" => json_encode( $record->defaults ) ], [ "account_id" => $record->account_id ] );
+		( new CaptainCore\Account( $record->account_id, true ) )->sync();
 		echo json_encode( "Record updated." );
 	}
 
