@@ -168,6 +168,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\AccountsCPT' => __DIR__ . '/../..' . '/app/AccountsCPT.php',
         'CaptainCore\\Captures' => __DIR__ . '/../..' . '/app/Captures.php',
         'CaptainCore\\DB' => __DIR__ . '/../..' . '/app/DB.php',
+        'CaptainCore\\Defaults' => __DIR__ . '/../..' . '/app/Defaults.php',
         'CaptainCore\\Domain' => __DIR__ . '/../..' . '/app/Domain.php',
         'CaptainCore\\Domains' => __DIR__ . '/../..' . '/app/Domains.php',
         'CaptainCore\\Environments' => __DIR__ . '/../..' . '/app/Environments.php',
