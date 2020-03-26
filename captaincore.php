@@ -1321,7 +1321,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	// Error if site not valid
 	$current_site = ( new CaptainCore\Sites )->get( $site_id );
-	if ( $current_site == "" && $site_id != "" ) {
+	if ( $current_site == "" && $site_id != "" && $command != "default-get" ) {
 		return new WP_Error( 'command_invalid', 'Invalid Command', [ 'status' => 404 ] );
 	}
 
@@ -1545,6 +1545,13 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		];
 	}
 
+	if ( $command == 'default-get' ) {
+		$defaults = ( new CaptainCore\Defaults )->get();
+		$response = [
+			"response" => "Fetching global defaults",
+			"defaults" => $defaults,
+		];
+	}
 
 	if ( $command == 'quicksave-add' ) {
 		
@@ -1666,17 +1673,29 @@ function captaincore_users_func( $request ) {
 	return ( new CaptainCore\Users() )->list();
 }
 
-function  captaincore_keys_func( $request ) {
+function captaincore_keys_func( $request ) {
 
 	$current_user = wp_get_current_user();
 	$role_check   = in_array( 'administrator', $current_user->roles );
 
 	// Checks for a current user. If admin found pass
 	if ( $current_user && $role_check ) {
-		return (new CaptainCore\Keys())->all( "title", "ASC" );
-	} else {
-		return [];
+		return ( new CaptainCore\Keys )->all( "title", "ASC" );
+	} 
+	return [];
+
+}
+
+function  captaincore_defaults_func( $request ) {
+
+	$current_user = wp_get_current_user();
+	$role_check   = in_array( 'administrator', $current_user->roles );
+
+	// Checks for a current user. If admin found pass
+	if ( $current_user && $role_check ) {
+		return ( new CaptainCore\Defaults )->get();
 	}
+	return [];
 
 }
 
@@ -1867,11 +1886,20 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
-	// Custom endpoint for domains
+	// Custom endpoint for keys
 	register_rest_route(
 		'captaincore/v1', '/keys/', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_keys_func',
+			'show_in_index' => false
+		]
+	);
+
+	// Custom endpoint for defaults
+	register_rest_route(
+		'captaincore/v1', '/defaults/', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_defaults_func',
 			'show_in_index' => false
 		]
 	);
@@ -3362,6 +3390,17 @@ function captaincore_local_action_callback() {
 		$account->update( [ "defaults" => json_encode( $record->defaults ) ], [ "account_id" => $record->account_id ] );
 		( new CaptainCore\Account( $record->account_id, true ) )->sync();
 		echo json_encode( "Record updated." );
+	}
+
+	if ( $cmd == 'saveGlobalDefaults' ) {
+		$user = new CaptainCore\User;
+		if ( ! $user->is_admin() ) { 
+			echo json_encode( "Permission denied" );
+			wp_die();
+		}
+		update_site_option( 'captaincore_defaults', json_encode( $value ) );
+		( new CaptainCore\Defaults )->sync();
+		echo json_encode( "Global defaults updated." );
 	}
 
 	wp_die();

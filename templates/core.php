@@ -3625,23 +3625,51 @@ if ( $role_check ) {
 					<v-toolbar-title>Site Defaults</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
-				<v-card-text style="max-height: 100%;">
-					<v-container fluid grid-list-lg>
-					<v-layout row wrap>
-					<v-flex xs12 v-for="key in keys">
-						<v-card :hover="true" @click="viewKey( key.key_id )">
-						<v-card-title primary-title class="pt-2">
-							<div>
-								<span class="title">{{ key.title }}</a></span>
-							</div>
-						</v-card-title>
-						<v-card-text>
-							<v-chip color="primary" text-color="white" text>{{ key.fingerprint }}</v-chip>
-						</v-card-text>
-						</v-card>
-					</v-flex>
+				<v-card-text>
+					<v-alert :value="true" type="info" class="mb-4 mt-4">
+						When new sites are added then the following default settings will be applied.  
+					</v-alert>
+					<v-layout wrap>
+						<v-flex xs6 pr-2><v-text-field :value="defaults.email" @change.native="defaults.email = $event.target.value" label="Default Email" required></v-text-field></v-flex>
+						<v-flex xs6 pl-2><v-autocomplete :items="timezones" label="Default Timezone" v-model="defaults.timezone"></v-autocomplete></v-flex>
 					</v-layout>
-					</v-container>
+					<v-layout wrap>
+						<v-flex><v-autocomplete label="Default Recipes" v-model="defaults.recipes" ref="default_recipes" :items="recipes" item-text="title" item-value="recipe_id" multiple chips deletable-chips></v-autocomplete></v-flex>
+					</v-layout>
+
+					<span class="body-2">Default Users</span>
+					<v-data-table
+						:items="defaults.users"
+						hide-default-header
+						hide-default-footer
+						v-if="typeof defaults.users == 'object'"
+					>
+					<template v-slot:body="{ items }">
+					<tbody>
+						<tr v-for="(item, index) in items" style="border-bottom: 0px;">
+							<td class="pa-1"><v-text-field :value="item.username" @change.native="item.username = $event.target.value" label="Username"></v-text-field></td>
+							<td class="pa-1"><v-text-field :value="item.email" @change.native="item.email = $event.target.value" label="Email"></v-text-field></td>
+							<td class="pa-1"><v-text-field :value="item.first_name" @change.native="item.first_name = $event.target.value" label="First Name"></v-text-field></td>
+							<td class="pa-1"><v-text-field :value="item.last_name" @change.native="item.last_name = $event.target.value" label="Last Name"></v-text-field></td>
+							<td class="pa-1" style="width:145px;"><v-select :value="item.role" v-model="item.role" :items="roles" label="Role" item-text="name"></v-select></td>
+							<td class="pa-1"><v-btn text small icon color="primary" @click="deleteGlobalUserValue( index )"><v-icon small>mdi-delete</v-icon></v-btn></td>
+						</tr>
+					</tbody>
+					</template>
+						<template v-slot:footer>
+						<tr style="border-top: 0px;">
+							<td colspan="5" style="padding:0px;">
+								<v-btn depressed small class="ma-0 mb-3" @click="addGlobalDefaultsUser()">Add Additional User</v-btn>
+							</td>
+						</tr>
+						</template>
+					</v-data-table>
+
+					<v-flex xs12 text-right>
+						<v-btn color="primary" dark @click="saveGlobalDefaults()">
+							Save Changes
+						</v-btn>
+					</v-flex>
 				</v-card-text>
 			</v-card>
 			<v-card tile v-show="route == 'keys'" v-if="role == 'administrator'" flat>
@@ -4160,6 +4188,7 @@ new Vue({
 		timezones: <?php echo json_encode( timezone_identifiers_list() ); ?>,
 		jobs: [],
 		keys: [],
+		defaults: [],
 		custom_script: "",
 		recipes: [],
 		processes: [],
@@ -4549,6 +4578,7 @@ new Vue({
 			if ( this.route == "defaults" ) {
 				this.selected_nav = ""
 				this.loading_page = false;
+				this.fetchDefaults()
 			}
 			if ( this.route == "profile" ) {
 				this.selected_nav = ""
@@ -4703,6 +4733,24 @@ new Vue({
 					(order == 'desc') ? (comparison * -1) : comparison
 				);
 			};
+		},
+		saveGlobalDefaults() {
+			this.dialog_configure_defaults.loading = true;
+			// Prep AJAX request
+			var data = {
+				'action': 'captaincore_local',
+				'command': "saveGlobalDefaults",
+				'value': this.defaults
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.snackbar.message = response.data
+					this.snackbar.show = true
+				})
+				.catch(error => {
+					this.snackbar.message = error.response
+					this.snackbar.show = true
+			});
 		},
 		saveDefaults() {
 			this.dialog_configure_defaults.loading = true;
@@ -5263,6 +5311,20 @@ new Vue({
 				})
 				.then(response => {
 					this.keys = response.data;
+					this.loading_page = false;
+					setTimeout(this.fetchMissing, 4000)
+				});
+		},
+		fetchDefaults() {
+			if ( this.role != 'administrator' ) {
+				return
+			}
+			axios.get(
+				'/wp-json/captaincore/v1/defaults', {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					this.defaults = response.data;
 					this.loading_page = false;
 					setTimeout(this.fetchMissing, 4000)
 				});
@@ -6807,6 +6869,9 @@ new Vue({
 		addDefaultsUser() {
 			this.dialog_account.records.account.defaults.users.push({ email: "", first_name: "", last_name: "", role: "administrator", username: "" })
 		},
+		addGlobalDefaultsUser() {
+			this.defaults.users.push({ email: "", first_name: "", last_name: "", role: "administrator", username: "" })
+		},
 		addDomain() {
 			this.dialog_new_domain.loading = true;
 			this.dialog_new_domain.errors  = [];
@@ -6880,10 +6945,13 @@ new Vue({
 			}
 		},
 		deleteUserValue( delete_index ) {
-			this.dialog_account.records.account.defaults.users = this.dialog_account.records.account.defaults.users.filter( (u, index) => index != delete_index );
+			this.dialog_account.records.account.defaults.users = this.dialog_account.records.account.defaults.users.filter( (u, index) => index != delete_index )
+		},
+		deleteGlobalUserValue( delete_index ) {
+			this.defaults.users = this.defaults.users.filter( (u, index) => index != delete_index )
 		},
 		deleteRecordValue( index, value_index ) {
-			this.dialog_domain.records[index].update.record_value.splice( value_index, 1 );
+			this.dialog_domain.records[index].update.record_value.splice( value_index, 1 )
 		},
 		deleteCurrentRecord( record_id ){
 			record = this.dialog_domain.records.filter( r => r.id == record_id )[0];

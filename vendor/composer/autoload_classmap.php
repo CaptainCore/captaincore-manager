@@ -49,6 +49,7 @@ return array(
     'CaptainCore\\AccountsCPT' => $baseDir . '/app/AccountsCPT.php',
     'CaptainCore\\Captures' => $baseDir . '/app/Captures.php',
     'CaptainCore\\DB' => $baseDir . '/app/DB.php',
+    'CaptainCore\\Defaults' => $baseDir . '/app/Defaults.php',
     'CaptainCore\\Domain' => $baseDir . '/app/Domain.php',
     'CaptainCore\\Domains' => $baseDir . '/app/Domains.php',
     'CaptainCore\\Environments' => $baseDir . '/app/Environments.php',
