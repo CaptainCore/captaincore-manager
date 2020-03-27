@@ -4293,7 +4293,7 @@ function captaincore_install_action_callback() {
 		$run_in_background = true;
 	}
 	if ( $cmd == 'deploy-defaults' ) {
-		$command = "deploy-defaults $site";
+		$command = "site deploy-defaults $site";
 		$run_in_background = true;
 	}
 	if ( $cmd == 'update' ) {
