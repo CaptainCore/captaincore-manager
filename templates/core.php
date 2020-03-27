@@ -2327,7 +2327,7 @@ if ( $role_check ) {
 							<v-icon>loop</v-icon>
 						</v-list-item-icon>
 						<v-list-item-content>
-							<v-list-item-title>Deploy users/plugins</v-list-item-title>
+							<v-list-item-title>Deploy Defaults</v-list-item-title>
 						</v-list-item-content>
 						</v-list-item>
 						<v-list-item @click="toggleSiteBulk()" dense>
@@ -3043,7 +3043,7 @@ if ( $role_check ) {
 							<v-icon>loop</v-icon>
 						</v-list-item-icon>
 						<v-list-item-content>
-							<v-list-item-title>Deploy users/plugins</v-list-item-title>
+							<v-list-item-title>Deploy Defaults</v-list-item-title>
 						</v-list-item-content>
 						</v-list-item>
 						<v-list-item @click="launchSiteDialog(dialog_site.site.site_id)" dense>
@@ -6690,44 +6690,42 @@ new Vue({
 		},
 		siteDeploy( site_id ) {
 
-			site = this.sites.filter(site => site.site_id == site_id)[0];
-			should_proceed = confirm("Deploy users and plugins " + site.name + "?");
-			description = "Deploy users and plugins on '" + site.name + "'";
+			site = this.sites.filter(site => site.site_id == site_id)[0]
+			should_proceed = confirm("Deploy defaults on " + site.name + "?")
+			description = "Deploy defaults on '" + site.name + "'"
 
 			if ( ! should_proceed ) {
-				return;
+				return
 			}
 
 			var data = {
 				action: 'captaincore_install',
 				environment: site.environment_selected,
 				post_id: site_id,
-				command: 'new'
+				command: 'deploy-defaults'
 			};
 
-			self = this;
-
 			// Start job
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
+			job_id = Math.round((new Date()).getTime())
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []})
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					// Updates job id with reponsed background job id
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data )
-					self.snackbar.message = description;
-					self.snackbar.show = true;
+					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data
+					this.runCommand( response.data )
+					this.snackbar.message = description
+					this.snackbar.show = true
 				})
 				.catch( error => console.log( error ) );
 
 		},
 		siteDeployBulk(){
 
-			sites = this.sites_selected;
-			site_ids = sites.map( s => s.site_id );
-			should_proceed = confirm("Deploy users and plugins " + sites.length + " sites?");
-			description = "Deploying users and plugins on '" + sites.length + " sites'";
+			sites = this.sites_selected
+			site_ids = sites.map( s => s.site_id )
+			should_proceed = confirm("Deploy defaults on " + sites.length + " sites?")
+			description = "Deploying defaults on '" + sites.length + " sites'"
 
 			if ( ! should_proceed ) {
 				return;
@@ -6738,23 +6736,21 @@ new Vue({
 				environment: this.dialog_bulk.environment_selected,
 				post_id: site_ids,
 				command: 'deploy-defaults'
-			};
-
-			self = this;
+			}
 
 			// Start job
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id ,"site_id": site_ids, "command": "manage", "description": description, "status": "queued", stream: []});
+			this.jobs.push({"job_id": job_id ,"site_id": site_ids, "command": "manage", "description": description, "status": "queued", stream: []})
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					// Updates job id with reponsed background job id
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data )
-					self.snackbar.message = description;
-					self.snackbar.show = true;
+					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data
+					this.runCommand( response.data )
+					this.snackbar.message = description
+					this.snackbar.show = true
 				})
-				.catch( error => console.log( error ) );
+				.catch( error => console.log( error ) )
 
 		},
 		runCustomCode( site_id ) {
