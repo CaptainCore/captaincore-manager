@@ -4421,7 +4421,7 @@ function captaincore_install_action_callback() {
 	}
 
 	if ( $cmd == 'view_quicksave_changes' ) {
-		$command = "quicksave-view-changes $site --hash=$value";
+		$command = "show-changes $site --hash=$value";
 	}
 
 	if ( $cmd == 'run' ) {
@@ -4460,7 +4460,7 @@ function captaincore_install_action_callback() {
 	if ( $cmd == 'quicksave_file_diff' ) {
 		$quicksaves = ( new CaptainCore\Quicksaves )->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
-		$command    = "quicksave-file-diff $site --hash=$commit --file=$value --html";
+		$command    = "file-diff $site --hash=$commit --file=$value --html";
 	}
 
 	if ( $cmd == 'rollback' ) {
@@ -4489,18 +4489,18 @@ function captaincore_install_action_callback() {
 		add_filter( 'https_ssl_verify', '__return_false' );
 	}
 
-	$data = array( 
+	$data = [ 
 		'timeout' => 45,
-		'headers' => array(
-			'Content-Type' => 'application/json; charset=utf-8', 
-			'token'        => CAPTAINCORE_CLI_TOKEN 
-		), 
-		'body' => json_encode( array(
-			"command" => $command 
-		)), 
-		'method'      => 'POST', 
-		'data_format' => 'body' 
-	);
+		'headers' => [
+			'Content-Type' => 'application/json; charset=utf-8',
+			'token'        => CAPTAINCORE_CLI_TOKEN
+		], 
+		'body' => json_encode( [
+			"command" => $command
+		] ),
+		'method'      => 'POST',
+		'data_format' => 'body'
+	];
 
 	if ( $cmd == 'job-fetch' ) {
 
@@ -4513,11 +4513,11 @@ function captaincore_install_action_callback() {
 		
 		// Response with task id
 		if ( $response && $response->Status == "Completed" ) { 
-			echo json_encode(array(
+			echo json_encode( [
 				"response" => $response->Response,
 				"status"   => "Completed",
 				"job_id"   => $job_id
-			));
+			] );
 			wp_die(); // this is required to terminate immediately and return a proper response
 		}
 
@@ -5106,7 +5106,7 @@ function captaincore_download_snapshot_email( $snapshot_id ) {
 }
 
 function captaincore_snapshot_download_link( $snapshot_id ) {
-	$command = "snapshot-fetch-download-link $snapshot_id";
+	$command = "snapshot-fetch-link $snapshot_id";
 
 	// Disable https when debug enabled
 	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
