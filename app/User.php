@@ -67,7 +67,7 @@ class User {
     }
 
     public function is_admin() {
-        if ( in_array( 'administrator', $this->roles ) ) {
+        if ( is_array( $this->roles ) && in_array( 'administrator', $this->roles ) ) {
             return true;
         }
         return false;
