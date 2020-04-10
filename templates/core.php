@@ -3425,8 +3425,10 @@ if ( $role_check ) {
 			<v-toolbar color="grey lighten-4" dense light flat>
 				<v-toolbar-title>Timeline</v-toolbar-title>
 				<v-spacer></v-spacer>
-				<v-toolbar-items v-show="role == 'administrator'">
-            		<v-btn text @click="showLogEntry(dialog_site.site.site_id)">New Log Entry <v-icon dark>mdi-checkbox-marked</v-icon></v-btn>
+				<v-toolbar-items>
+					<v-btn text @click="exportTimeline()">Export <v-icon dark>mdi-file-download</v-icon></v-btn>
+            		<v-btn v-show="role == 'administrator'" text @click="showLogEntry(dialog_site.site.site_id)">New Log Entry <v-icon dark>mdi-checkbox-marked</v-icon></v-btn>
+					<a ref="export_json" href="#"></a>
 				</v-toolbar-items>
 			</v-toolbar>
 			<v-card flat>
@@ -5800,6 +5802,17 @@ new Vue({
 			this.dialog_new_log_entry.sites = [];
 			this.dialog_new_log_entry.sites.push( site );
 			this.dialog_new_log_entry.site_name = site.name;
+		},
+		exportTimeline() {
+			this.$refs.export_json.download = "timeline.json";
+            this.$refs.export_json.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+				site: { 
+					name: this.dialog_site.site.name,
+					site_id: this.dialog_site.site.site_id,
+				},
+                entries: this.dialog_site.site.timeline
+            }, null, 2));
+            this.$refs.export_json.click();
 		},
 		showLogEntryBulk() {
 			this.dialog_new_log_entry.show = true;
