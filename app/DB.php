@@ -94,6 +94,17 @@ class DB {
         return $wpdb->get_results( $sql );
     }
 
+    static function where_compare( $conditions ) {
+        global $wpdb;
+        $where_statements = [];
+        foreach ( $conditions as $condition ) {
+            $where_statements[] =  "`{$condition["key"]}` {$condition["compare"]} '{$condition["value"]}'";
+        }
+        $where_statements = implode( " AND ", $where_statements );
+        $sql = 'SELECT * FROM ' . self::_table() . " WHERE $where_statements order by `created_at` DESC";
+        return $wpdb->get_results( $sql );
+    }
+
     static function fetch( $value ) {
         global $wpdb;
         $value = intval( $value );
@@ -183,7 +194,7 @@ class DB {
         $table = self::_table();
         $where_statements = [];
         foreach ( $conditions as $row => $value ) {
-            if ( is_array($value) ) {
+            if ( is_array( $value ) ) {
                 $values = implode( ", ", $value );
                 $where_statements[] =  "{$table}.{$row} IN ($values)";
                 continue;
