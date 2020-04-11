@@ -575,16 +575,27 @@ if ( $role_check ) {
 					</table>
 					<v-btn depressed class="ma-0" @click="addRecord()" v-show="!dialog_domain.loading && !dialog_domain.saving && !dialog_domain.errors">Add Additional Record</v-btn>
 				</v-flex>
+				<v-flex xs12 v-show="dialog_domain.show_import == true">
+					<v-textarea 
+						placeholder="Paste JSON export here." 
+						outlined
+						persistent-hint 
+						hint="Paste JSON export then click Load JSON. Warning, all existing records will be overwritten." 
+						:value="dialog_domain.import_json" 
+						@change.native="dialog_domain.import_json = $event.target.value" 
+						spellcheck="false">
+					</v-textarea>
+					<v-btn depressed class="ma-0" @click="importDomain()">Load JSON</v-btn>
+				</v-flex>
 				<v-flex xs12>
 					<v-progress-linear :indeterminate="true" v-show="dialog_domain.saving"></v-progress-linear>
 				</v-flex>
 				<v-flex xs12 text-right my-3 v-show="!dialog_domain.loading">
-					<v-btn @click="deleteDomain()" class="mx-3" v-if="role == 'administrator'">
-						Delete Domain
-					</v-btn>
-					<v-btn color="primary" @click="saveDNS()" :dark="dialog_domain.records && dialog_domain.records.length != '0'" :disabled="dialog_domain.records && dialog_domain.records.length == '0'">
-						Save Records
-					</v-btn>
+					<v-btn class="mx-1" depressed @click="deleteDomain()" v-if="role == 'administrator'">Delete Domain</v-btn>
+					<v-btn class="mx-1" depressed @click="dialog_domain.show_import = true" class="mx-3">Import <v-icon dark>mdi-file-upload</v-icon></v-btn>
+					<v-btn class="mx-1" depressed @click="exportDomain()">Export <v-icon dark>mdi-file-download</v-icon></v-btn>
+					<v-btn class="mx-1" depressed color="primary" @click="saveDNS()" :dark="dialog_domain.records && dialog_domain.records.length != '0'" :disabled="dialog_domain.records && dialog_domain.records.length == '0'">Save Records</v-btn>
+					<a ref="export_domain" href="#"></a>
 				</v-flex>
 				<v-flex xs12>
 					<template v-for="result in dialog_domain.results">
@@ -4151,7 +4162,7 @@ new Vue({
 		dialog_edit_site: { show: false, site: {}, loading: false },
 		dialog_new_domain: { show: false, domain: { name: "", account_id: "" }, loading: false, errors: [] },
 		dialog_configure_defaults: { show: false, loading: false },
-		dialog_domain: { show: false, domain: {}, records: [], results: [], errors: [], loading: true, saving: false },
+		dialog_domain: { show: false, show_import: false, import_json: "", domain: {}, records: [], results: [], errors: [], loading: true, saving: false },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $user->user_email; ?>", current_user_email: "<?php echo $user->user_email; ?>", filter_toggle: true, filter_options: [] },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
 		dialog_launch: { show: false, site: {}, domain: "" },
@@ -6971,7 +6982,7 @@ new Vue({
 			this.dialog_domain.records.splice( index, 1 )
 		},
 		modifyDNS( domain ) {
-			this.dialog_domain = { show: false, domain: {}, records: [], loading: true, saving: false };
+			this.dialog_domain = { show: false, show_import: false, import_json: "", domain: {}, records: [], loading: true, saving: false };
 			if ( domain.remote_id == null ) {
 				this.dialog_domain.errors = [ "Domain not found." ];
 				this.dialog_domain.domain = domain;
@@ -7026,6 +7037,34 @@ new Vue({
 			this.dialog_domain.show = true;
 			
 		},
+		importDomain() {
+			// Remove any pending new records
+			this.dialog_domain.records = this.dialog_domain.records.filter( record => ! record.new )
+			// Mark existing records to be deleted
+			this.dialog_domain.records.forEach( record => {
+				record.delete = true
+			})
+			// Process records to be imported and mark as new
+			import_json = JSON.parse( this.dialog_domain.import_json )
+			import_json.records.forEach( record => {
+				record.new = true
+				record.update.record_status = "new-record"
+				this.dialog_domain.records.push( record )
+			})
+			this.dialog_domain.import_json = ""
+			this.dialog_domain.show_import = false
+			this.addRecord()
+			this.snackbar.message = "Loaded DNS records from import. Review then save records."
+			this.snackbar.show = true
+		},
+		exportDomain() {
+			this.$refs.export_domain.download = `dns_records_${this.dialog_domain.domain.name}.json`;
+			export_records = this.dialog_domain.records.filter( record => ! record.new )
+            this.$refs.export_domain.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+				records: export_records
+            }, null, 2));
+            this.$refs.export_domain.click();
+		},
 		deleteDomain() {
 			should_proceed = confirm("Delete domain " +  this.dialog_domain.domain.name + "?");
 			if ( ! should_proceed ) {
@@ -7040,7 +7079,7 @@ new Vue({
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					this.domains = this.domains.filter( d => d.domain_id != response.data.domain_id );
-					this.dialog_domain = { show: false, domain: {}, records: [], loading: true, saving: false };
+					this.dialog_domain = { show: false, show_import: false, import_json: "", domain: {}, records: [], loading: true, saving: false };
 					this.snackbar.message = response.data.message;
 					this.snackbar.show = true;
 				})
