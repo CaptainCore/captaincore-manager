@@ -34,13 +34,13 @@ if ( $role_check ) {
 <body>
 <div id="app" v-cloak>
 	<v-app>
-	  <v-app-bar color="blue darken-3" dark app fixed style="left:0px;">
+	  <v-app-bar color="primary" dark app fixed style="left:0px;">
 	 	 <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none" v-show="route != 'login'"></v-app-bar-nav-icon>
          <v-toolbar-title>
 			<v-list flat color="transparent">
 		 	<v-list-item href="/account" @click.prevent="goToPath( '/account' )" style="padding:0px;" flat class="not-active">
-			 	<v-img :src="captaincore_logo" contain max-width="32" max-height="32" v-if="captaincore_logo" class="mr-4"></v-img>
-				 {{ captaincore_name }}
+			 	<v-img :src="configurations.logo" contain :max-width="configurations.logo_width == '' ? 32 : configurations.logo_width" v-if="configurations.logo" class="mr-4"></v-img>
+				 {{ configurations.name }}
 			</v-list-item>
 			</v-list>
 			<div class="flex" style="opacity:0;"><textarea id="clipboard" style="height:1px;display:flex;cursor:default"></textarea></div>
@@ -142,6 +142,14 @@ if ( $role_check ) {
             <v-list-item-title>Profile</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
+		<v-list-item link href="/account/configurations" @click.prevent="goToPath( '/account/configurations' )" v-show="role == 'administrator'">
+          <v-list-item-icon>
+            <v-icon>mdi-cogs</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>Configurations</v-list-item-title>
+          </v-list-item-content>
+		</v-list-item>
 		<v-list-item link href="/account/defaults" @click.prevent="goToPath( '/account/defaults' )" v-show="role == 'administrator'">
           <v-list-item-icon>
             <v-icon>mdi-application</v-icon>
@@ -237,7 +245,7 @@ if ( $role_check ) {
 				</v-flex>
 				<v-flex xs12 sm6>
 					<div class="text-center">
-						<v-pagination v-if="new_plugin.api.info && new_plugin.api.info.pages > 1" :length="new_plugin.api.info.pages - 1" v-model="new_plugin.page" :total-visible="7" color="blue darken-3" @input="fetchPlugins"></v-pagination>
+						<v-pagination v-if="new_plugin.api.info && new_plugin.api.info.pages > 1" :length="new_plugin.api.info.pages - 1" v-model="new_plugin.page" :total-visible="7" color="primary" @input="fetchPlugins"></v-pagination>
 					</div>
 				</v-flex>
 				<v-flex xs12 sm3>
@@ -336,7 +344,7 @@ if ( $role_check ) {
 				</v-flex>
 				<v-flex xs12 sm6>
 					<div class="text-center">
-						<v-pagination v-if="new_theme.api.info && new_theme.api.info.pages > 1" :length="new_theme.api.info.pages - 1" v-model="new_theme.page" :total-visible="7" color="blue darken-3" @input="fetchThemes"></v-pagination>
+						<v-pagination v-if="new_theme.api.info && new_theme.api.info.pages > 1" :length="new_theme.api.info.pages - 1" v-model="new_theme.page" :total-visible="7" color="primary" @input="fetchThemes"></v-pagination>
 					</div>
 				</v-flex>
 				<v-flex xs12 sm3>
@@ -3514,15 +3522,14 @@ if ( $role_check ) {
 						:value="true"
 						type="info"
 						style="padding:8px 16px;"
-						class="blue darken-3"
 					>
 					<v-layout wrap align-center justify-center row fill-height>
 					<v-flex xs12 md9 px-2 subtitle-1>
-						<div v-html="dns_introduction"></div>
+						<div v-html="configurations.dns_introduction_html"></div>
 					</v-flex>
-					<v-flex xs12 md3 px-2 text-center v-show="dns_nameservers != ''">
+					<v-flex xs12 md3 px-2 text-center v-show="configurations.dns_nameservers != ''">
 						<v-chip color="primary" text-color="white">Nameservers</v-chip>
-						<div v-html="dns_nameservers"></div>
+						<div v-html="configurations.dns_nameservers"></div>
 					</v-flex>
 					</v-layout>
 					</v-alert>
@@ -3569,7 +3576,6 @@ if ( $role_check ) {
 				<v-alert
 					:value="true"
 					type="info"
-					class="blue darken-3"
 				>
 						Warning, this is for developers only 💻. The cookbook contains user made "recipes" or scripts which are deployable to one or many sites. Bash script and WP-CLI commands welcomed. For ideas refer to <code><a href="https://captaincore.io/cookbook/" target="_blank">captaincore.io/cookbook</a></code>.
 				</v-alert>
@@ -3631,6 +3637,260 @@ if ( $role_check ) {
 					</v-flex>
 					</v-layout>
 					</v-container>
+				</v-card-text>
+			</v-card>
+			<v-card tile v-show="route == 'configurations'" v-if="role == 'administrator'" flat>
+				<v-toolbar color="grey lighten-4" light flat>
+					<v-toolbar-title>Configurations</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-card-text>
+				<span class="body-2">Theme colors</span>
+				<v-row>
+					<v-col class="shrink" style="min-width: 220px;">
+						<v-text-field persistent-hint hint="Primary" v-model="$vuetify.theme.themes.light.primary" class="ma-0 pa-0" solo>
+						<template v-slot:append>
+							<v-menu v-model="colors.primary" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
+								<template v-slot:activator="{ on }">
+									<div :style="{ backgroundColor: $vuetify.theme.themes.light.primary, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
+								</template>
+								<v-card>
+									<v-card-text class="pa-0">
+										<v-color-picker v-model="$vuetify.theme.themes.light.primary" flat></v-color-picker>
+									</v-card-text>
+								</v-card>
+							</v-menu>
+						</template>
+						</v-text-field>
+					</v-col>
+					<v-col class="shrink" style="min-width: 220px;">
+						<v-text-field persistent-hint hint="Secondary" v-model="$vuetify.theme.themes.light.secondary" class="ma-0 pa-0" solo>
+						<template v-slot:append>
+							<v-menu v-model="colors.secondary" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
+								<template v-slot:activator="{ on }">
+									<div :style="{ backgroundColor: $vuetify.theme.themes.light.secondary, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
+								</template>
+								<v-card>
+									<v-card-text class="pa-0">
+										<v-color-picker v-model="$vuetify.theme.themes.light.secondary" flat></v-color-picker>
+									</v-card-text>
+								</v-card>
+							</v-menu>
+						</template>
+						</v-text-field>
+					</v-col>
+					<v-col class="shrink" style="min-width: 220px;">
+						<v-text-field persistent-hint hint="Accent" v-model="$vuetify.theme.themes.light.accent" class="ma-0 pa-0" solo>
+						<template v-slot:append>
+							<v-menu v-model="colors.accent" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
+								<template v-slot:activator="{ on }">
+									<div :style="{ backgroundColor: $vuetify.theme.themes.light.accent, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
+								</template>
+								<v-card>
+									<v-card-text class="pa-0">
+										<v-color-picker v-model="$vuetify.theme.themes.light.accent" flat></v-color-picker>
+									</v-card-text>
+								</v-card>
+							</v-menu>
+						</template>
+						</v-text-field>
+					</v-col>
+					<v-col class="shrink" style="min-width: 220px;">
+						<v-text-field persistent-hint hint="Error" v-model="$vuetify.theme.themes.light.error" class="ma-0 pa-0" solo>
+						<template v-slot:append>
+							<v-menu v-model="colors.error" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
+								<template v-slot:activator="{ on }">
+									<div :style="{ backgroundColor: $vuetify.theme.themes.light.error, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
+								</template>
+								<v-card>
+									<v-card-text class="pa-0">
+										<v-color-picker v-model="$vuetify.theme.themes.light.error" flat></v-color-picker>
+									</v-card-text>
+								</v-card>
+							</v-menu>
+						</template>
+						</v-text-field>
+					</v-col>
+					<v-col class="shrink" style="min-width: 220px;">
+						<v-text-field persistent-hint hint="Info" v-model="$vuetify.theme.themes.light.info" class="ma-0 pa-0" solo>
+						<template v-slot:append>
+							<v-menu v-model="colors.info" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
+								<template v-slot:activator="{ on }">
+									<div :style="{ backgroundColor: $vuetify.theme.themes.light.info, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
+								</template>
+								<v-card>
+									<v-card-text class="pa-0">
+										<v-color-picker v-model="$vuetify.theme.themes.light.info" flat></v-color-picker>
+									</v-card-text>
+								</v-card>
+							</v-menu>
+						</template>
+						</v-text-field>
+					</v-col>
+					<v-col class="shrink" style="min-width: 220px;">
+						<v-text-field persistent-hint hint="Success" v-model="$vuetify.theme.themes.light.success" class="ma-0 pa-0" solo>
+						<template v-slot:append>
+							<v-menu v-model="colors.success" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
+								<template v-slot:activator="{ on }">
+									<div :style="{ backgroundColor: $vuetify.theme.themes.light.success, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
+								</template>
+								<v-card>
+									<v-card-text class="pa-0">
+										<v-color-picker v-model="$vuetify.theme.themes.light.success" flat></v-color-picker>
+									</v-card-text>
+								</v-card>
+							</v-menu>
+						</template>
+						</v-text-field>
+					</v-col>
+					<v-col class="shrink" style="min-width: 220px;">
+						<v-text-field persistent-hint hint="Warning" v-model="$vuetify.theme.themes.light.warning" class="ma-0 pa-0" solo>
+						<template v-slot:append>
+							<v-menu v-model="colors.warning" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
+								<template v-slot:activator="{ on }">
+									<div :style="{ backgroundColor: $vuetify.theme.themes.light.warning, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
+								</template>
+								<v-card>
+									<v-card-text class="pa-0">
+										<v-color-picker v-model="$vuetify.theme.themes.light.warning" flat></v-color-picker>
+									</v-card-text>
+								</v-card>
+							</v-menu>
+						</template>
+						</v-text-field>
+					</v-col>
+				</v-row>
+				<v-row>
+					<v-col>
+						<v-text-field v-model="configurations.name" label="Name"></v-text-field>
+					</v-col>
+					<v-col>
+						<v-text-field v-model="configurations.logo" label="Logo URL"></v-text-field>
+					</v-col>
+					<v-col>
+						<v-text-field v-model="configurations.logo_width" label="Logo Width"></v-text-field>
+					</v-col>
+				</v-row>
+				<v-row>
+					<v-col>
+						<v-textarea v-model="configurations.dns_introduction" label="DNS Introduction"></v-textarea>
+					</v-col>
+				</v-row>
+				<v-row>
+					<v-col>
+						<v-textarea v-model="configurations.dns_nameservers" label="DNS Nameservers"></v-textarea>
+					</v-col>
+				</v-row>
+				<span class="body-2">Hosting Plans</span>
+				<v-row v-for="plan in configurations.hosting_plans">
+					<v-col>
+						<v-text-field v-model="plan.name" label="Name"></v-text-field>
+					</v-col>
+					<v-col>
+						<v-text-field v-model="plan.price" label="Price"></v-text-field>
+					</v-col>
+					<v-col>
+						<v-text-field v-model="plan.limits.visits" label="Visits Limits"></v-text-field>
+					</v-col>
+					<v-col>
+						<v-text-field v-model="plan.limits.storage" label="Storage Limits"></v-text-field>
+					</v-col>
+					<v-col>
+						<v-text-field v-model="plan.limits.sites" label="Sites Limits"></v-text-field>
+					</v-col>
+				</v-row>
+				<v-flex xs12 text-right>
+					<v-btn color="primary" dark @click="saveGlobalConfigurations()">
+						Save Configurations
+					</v-btn>
+				</v-flex>
+				</v-card-text>
+			</v-card>
+			<v-card tile v-show="route == 'billing'" flat>
+				<v-toolbar color="grey lighten-4" light flat>
+					<v-toolbar-title>Billing</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-card-text>
+					<v-flex xs12 text-right>
+						<v-card>
+						<v-tabs v-model="billing_tabs" background-color="primary" dark>
+							<v-tab :key="1" href="#tab-Billing-Overview">
+								My Plan <v-icon size="24">mdi-chart-donut</v-icon>
+							</v-tab>
+							<v-tab :key="2" href="#tab-Billing-Invoices" ripple>
+								Invoices <v-icon size="24">mdi-receipt</v-icon>
+							</v-tab>
+							<v-tab :key="3" href="#tab-Billing-Payment-Methods" ripple>
+								Payment Methods <v-icon size="24">mdi-credit-card-outline</v-icon>
+							</v-tab>
+						</v-tabs>
+						<v-tabs-items v-model="billing_tabs">
+							<v-tab-item value="tab-Billing-Overview">
+							<v-data-table
+								:loading="billing_loading"
+								:headers="[
+									{ text: 'Subscription', value: 'subscription_id' },
+									{ text: 'Type', value: 'term' },
+									{ text: 'Price', value: 'price' },
+									{ text: 'Renewal Date', value: 'renewal_at' },
+									{ text: '', value: 'actions' }]"
+								:items="billing.subscriptions"
+							>
+							<template v-slot:item.subscription_id="{ item }">
+								#{{ item.subscription_id }}
+							</template>
+							<template v-slot:item.price="{ item }">
+								${{ item.price }}
+							</template>
+							<template v-slot:item.renewal_at="{ item }">
+								{{ item.renewal_at | pretty_timestamp }}
+							</template>
+							<template v-slot:item.actions="{ item }">
+								<v-btn small>Modify Plan</v-btn>
+							</template>
+							</v-data-table>
+							</v-tab-item>
+							<v-tab-item value="tab-Billing-Invoices">
+							<v-data-table
+								:loading="billing_loading"
+								:headers="[
+									{ text: 'Order', value: 'order_id' },
+									{ text: 'Date', value: 'date' },
+									{ text: 'Status', value: 'status' },
+									{ text: 'Total', value: 'total' }]"
+								:items="billing.invoices"
+							>
+							<template v-slot:item.order_id="{ item }">
+								#{{ item.order_id }}
+							</template>
+							<template v-slot:item.total="{ item }">
+								${{ item.total }}
+							</template>
+							</v-data-table>
+							</v-tab-item>
+							<v-tab-item value="tab-Billing-Payment-Methods">
+							<v-data-table
+								v-if="billing.payment_methods"
+								:loading="billing_loading"
+								:headers="[
+									{ text: 'Method', value: 'method' },
+									{ text: 'Expires', value: 'expires' },
+									{ text: '', value: 'actions' }]"
+								:items="billing.payment_methods.cc"
+							>
+							<template v-slot:item.method="{ item }">
+								{{ item.method.brand }} ending in {{ item.method.last4 }} 
+							</template>
+							<template v-slot:item.actions="{ item }">
+								<v-btn disabled v-show="item.is_default">Primary Method</v-btn>
+								<v-btn v-show="!item.is_default">Set as Primary</v-btn>
+							</template>
+							</v-data-table>
+							</v-tab-item>
+						</v-tab-items>
+						</v-card>
+					</v-flex>
 				</v-card-text>
 			</v-card>
 			<v-card tile v-show="route == 'defaults'" v-if="role == 'administrator'" flat>
@@ -3815,7 +4075,7 @@ if ( $role_check ) {
 							<v-btn text @click="dialog_account.step = 1"><v-icon>mdi-arrow-left</v-icon> Back to accounts</v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
-					<v-tabs v-model="account_tab" background-color="blue darken-3" dark>
+					<v-tabs v-model="account_tab" background-color="primary" dark>
 						<v-tab>
 							{{ dialog_account.records.users.length }} Users
 							<v-icon size="20" class="ml-1">mdi-account</v-icon>
@@ -4047,7 +4307,7 @@ if ( $role_check ) {
 					<v-toolbar-items>
 					</v-toolbar-items>
 					<template v-slot:extension>
-						<v-tabs v-model="account_tab" background-color="blue darken-3" dark>
+						<v-tabs v-model="account_tab" background-color="primary" dark>
 						<v-tab>
 							<v-icon class="mr-1">mdi-folder-multiple</v-icon>
 							{{ new_invite.account.website_count }} Sites
@@ -4138,12 +4398,27 @@ lodash = _.noConflict();
 Vue.component('file-upload', VueUploadComponent);
 new Vue({
 	el: '#app',
-	vuetify: new Vuetify(),
+	vuetify: new Vuetify({
+		theme: {
+			themes: {
+				light: <?php echo json_encode( ( new CaptainCore\Configurations )->colors() ); ?>,
+			},
+		},
+	}),
 	data: {
+		colors: { 
+			primary: false,
+			secondary: false,
+			accent: false,
+			error: false,
+			info: false,
+			success: false,
+			warning: false,
+		},
+		configurations: <?php echo json_encode( ( new CaptainCore\Configurations )->get() ); ?>,
+		configurations_loading: true,
 		login: { user_login: "", user_password: "", errors: "", loading: false, lost_password: false, message: "" },
 		wp_nonce: "",
-		captaincore_logo: "<?php echo get_field( 'business_logo', 'option' ); ?>",
-		captaincore_name: "<?php echo get_field( 'business_name', 'option' ); ?>",
 		footer: <?php echo captaincore_footer_content_extracted(); ?>,
 		drawer: null,
 		billing_link: "<?php echo get_field( 'billing_link', 'option' ); ?>",
@@ -4188,6 +4463,7 @@ new Vue({
 			'/account/dns': 'dns',
 			'/account/keys': 'keys',
 			'/account/defaults': 'defaults',
+			'/account/configurations': 'configurations',
 			'/account/profile' : 'profile',
 			'/account/users': 'users',
 			'/account/accounts': 'accounts',
@@ -4209,18 +4485,7 @@ new Vue({
 		current_user_login: "<?php echo $user->user_login; ?>",
 		current_user_display_name: "<?php echo $user->display_name; ?>",
 		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->user_email; ?>", login: "<?php echo $user->user_login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", errors: [] },
-		hosting_plans: <?php
-			$hosting_plans   = json_decode( get_option('captaincore_hosting_plans') );
-			$hosting_plans[] =  [
-				'name'          => 'Custom',
-				'price'         => '',
-				'limits'        => [
-					'visits'  => '',
-					'storage' => '',
-					'sites'   => '',
-				],
-			];
-		echo json_encode( $hosting_plans ); ?>,
+		hosting_plans: <?php echo json_encode( ( new CaptainCore\Configurations )->hosting_plans() ); ?>,
 		<?php if ( current_user_can( "administrator" ) ) { ?>
 		role: "administrator",
 		dialog_new_log_entry: { show: false, sites: [], site_name: "", process: "", description: "" },
@@ -4267,8 +4532,6 @@ new Vue({
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_site: { loading: true, step: 1, site: { name: "", site: "", screenshots: {}, timeline: [], environment_selected: "Production", environments: [{ id: "", quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }], users: [], timeline: [], usage_breakdown: [], update_log: [], tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
 		dialog_edit_account: { show: false, account: {} },
-		dns_introduction: <?php $Parsedown = new Parsedown(); echo json_encode( $Parsedown->text( get_field( "dns_introduction", "option" ) ) ); ?>,
-		dns_nameservers: <?php echo json_encode( $Parsedown->text( get_field( "dns_nameservers", "option" ) ) ); ?>,
 		roles: [{ name: "Subscriber", value: "subscriber" },{ name: "Contributor", value: "contributor" },{ name: "Author", value: "author" },{ name: "Editor", value: "editor" },{ name: "Administrator", value: "administrator" }],
 		new_plugin: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {} },
 		new_theme: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {} },
@@ -4601,6 +4864,10 @@ new Vue({
 				this.selected_nav = 4
 				this.loading_page = false;
 			}
+			if ( this.route == "configurations" ) {
+				this.fetchConfigurations()
+				this.loading_page = false;
+			}
 			if ( this.route == "sites" ) {
 				if ( this.sites.length == 0 ) {
 					this.loading_page = true;
@@ -4746,6 +5013,25 @@ new Vue({
 					(order == 'desc') ? (comparison * -1) : comparison
 				);
 			};
+		},
+		saveGlobalConfigurations() {
+			this.dialog_configure_defaults.loading = true;
+			this.configurations.colors = this.$vuetify.theme.themes.light
+			// Prep AJAX request
+			var data = {
+				'action': 'captaincore_local',
+				'command': "saveGlobalConfigurations",
+				'value': this.configurations
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.snackbar.message = response.data
+					this.snackbar.show = true
+				})
+				.catch(error => {
+					this.snackbar.message = error.response
+					this.snackbar.show = true
+			});
 		},
 		saveGlobalDefaults() {
 			this.dialog_configure_defaults.loading = true;
@@ -5349,6 +5635,17 @@ new Vue({
 			})
 			.then(response => {
 				this.accounts = response.data;
+				setTimeout(this.fetchMissing, 1000)
+			});
+		},
+		fetchConfigurations() {
+			axios.get(
+			'/wp-json/captaincore/v1/configurations', {
+				headers: {'X-WP-Nonce':this.wp_nonce}
+			})
+			.then(response => {
+				this.configurations = response.data
+				this.configurations_loading = false
 				setTimeout(this.fetchMissing, 1000)
 			});
 		},
