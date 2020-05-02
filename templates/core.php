@@ -3524,7 +3524,7 @@ if ( $role_check ) {
 						<div v-html="configurations.dns_introduction_html"></div>
 					</v-flex>
 					<v-flex xs12 md3 px-2 text-center v-show="configurations.dns_nameservers != ''">
-						<v-chip color="primary" text-color="white">Nameservers</v-chip>
+						<v-chip color="primary">Nameservers</v-chip>
 						<div v-html="configurations.dns_nameservers"></div>
 					</v-flex>
 					</v-layout>
@@ -3755,15 +3755,16 @@ if ( $role_check ) {
 						</template>
 						</v-text-field>
 					</v-col>
+					<v-col><v-btn @click="resetColors">Reset colors</a></v-btn>
 				</v-row>
 				<v-row>
-					<v-col>
+					<v-col :md="5">
 						<v-text-field v-model="configurations.name" label="Name"></v-text-field>
 					</v-col>
-					<v-col>
+					<v-col :md="5">
 						<v-text-field v-model="configurations.logo" label="Logo URL"></v-text-field>
 					</v-col>
-					<v-col>
+					<v-col :md="2">
 						<v-text-field v-model="configurations.logo_width" label="Logo Width"></v-text-field>
 					</v-col>
 				</v-row>
@@ -3778,22 +3779,28 @@ if ( $role_check ) {
 					</v-col>
 				</v-row>
 				<span class="body-2">Hosting Plans</span>
-				<v-row v-for="plan in configurations.hosting_plans">
+				<v-row v-for="(plan, index) in configurations.hosting_plans">
 					<v-col>
 						<v-text-field v-model="plan.name" label="Name"></v-text-field>
 					</v-col>
-					<v-col>
+					<v-col style="max-width:100px">
 						<v-text-field v-model="plan.price" label="Price"></v-text-field>
 					</v-col>
-					<v-col>
+					<v-col style="max-width:150px">
 						<v-text-field v-model="plan.limits.visits" label="Visits Limits"></v-text-field>
 					</v-col>
-					<v-col>
+					<v-col style="max-width:150px">
 						<v-text-field v-model="plan.limits.storage" label="Storage Limits"></v-text-field>
 					</v-col>
-					<v-col>
+					<v-col style="max-width:120px">
 						<v-text-field v-model="plan.limits.sites" label="Sites Limits"></v-text-field>
 					</v-col>
+					<v-col class="ma-0 pa-0" style="max-width:46px">
+						<v-btn color="red" icon @click="deletePlan( index )"><v-icon>mdi-delete</v-icon></v-btn>
+					</v-col>
+				</v-row>
+				<v-row>
+					<v-col><v-btn @click="addAdditionalPlan()">Add Additional Plan</v-btn></v-col>
 				</v-row>
 				<v-flex xs12 text-right>
 					<v-btn color="primary" dark @click="saveGlobalConfigurations()">
@@ -5009,6 +5016,17 @@ new Vue({
 					(order == 'desc') ? (comparison * -1) : comparison
 				);
 			};
+		},
+		resetColors() {
+			this.$vuetify.theme.themes.light = {
+				primary: '#1976D2',
+				secondary: '#424242',
+				accent: '#82B1FF',
+				error: '#FF5252',
+				info: '#2196F3',
+				success: '#4CAF50',
+				warning: '#FFC107'
+			}
 		},
 		saveGlobalConfigurations() {
 			this.dialog_configure_defaults.loading = true;
@@ -6815,6 +6833,12 @@ new Vue({
 				this.dialog_captures.pages = [];
 			})
 			.catch( error => console.log( error ) );
+		},
+		addAdditionalPlan() {
+			this.configurations.hosting_plans.push( {"name":"","price":"","limits":{"visits":"","storage":"","sites":""}})
+		},
+		deletePlan(index) {
+			this.configurations.hosting_plans.splice( index, 1 )
 		},
 		toggleSite( site_id ) {
 			site = this.sites.filter( site => site.site_id == site_id )[0];
