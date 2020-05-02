@@ -43,6 +43,25 @@ TODO
 TODO
 
 == Changelog ==
+= 0.11.0: May 2 2020
+* New: Global site defaults
+* New: Configurations
+* New: Account sync
+* New: Account create dialog
+* New: Support for Constellix vanity nameservers. Added wp-config constants CAPTAINCORE_CONSTELLIX_VANITY_ID and CAPTAINCORE_CONSTELLIX_SOA_NAME
+* New: Run commands in background
+* New: Mailgun dialog
+* New: Timeline export to json
+* New: DNS records import and export
+* New: DB method `where_compare`
+* Tweak: Upgraded Vuetify to v2.2.26
+* Tweak: Upgraded Material Design Icons to v4
+* Tweak: Expanded classes Account and Site to support syncing with CLI.
+* Tweak: Increased default TTL from 1800 to 3600
+* Tweak: Fix edit site sync button
+* Tweak: Removed unnecessary code
+* Tweak: Improvements to DB method `where`
+
 = 0.10.1: February 18 2020
 * New: Account levels
 * New: Common script reset permissions
