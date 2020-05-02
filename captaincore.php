@@ -85,7 +85,6 @@ run_captaincore();
 require plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
 require 'includes/register-custom-fields.php';
 require 'includes/constellix-api/constellix-api.php';
-require 'includes/woocommerce-custom-password-fields.php';
 require 'includes/mailgun-api.php';
 require 'includes/process-functions.php';
 require 'includes/bulk-actions.php';
@@ -693,34 +692,6 @@ function snapshot_post_type() {
 
 }
 add_action( 'init', 'snapshot_post_type', 0 );
-
-function captaincore_website_tabs() {
-
-	$screen = get_current_screen();
-
-	// Only edit post screen:
-	$pages = [ 'captcore_website', 'captcore_customer', 'captcore_contact', 'captcore_domain', 'captcore_changelog', 'captcore_process', 'captcore_processlog', 'captcore_snapshot', 'captcore_quicksave' ];
-	if ( in_array( $screen->post_type, $pages ) ) {
-		// Before:
-		add_action(
-			'all_admin_notices', function() {
-				include 'includes/admin-website-tabs.php';
-				echo '';
-			}
-		);
-
-		// After:
-		add_action(
-			'in_admin_footer', function() {
-				echo '';
-			}
-		);
-	}
-};
-
-add_action( 'load-post-new.php', 'captaincore_website_tabs' );
-add_action( 'load-edit.php', 'captaincore_website_tabs' );
-add_action( 'load-post.php', 'captaincore_website_tabs' );
 
 function my_remove_extra_product_data( $data, $post, $context ) {
 	// make sure you've got the right custom post type
@@ -1469,8 +1440,6 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	// Add capture
 	if ( $command == 'new-capture' ) {
-
-		print_r( $data );
 
 		$environment_id = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment );
 		$captures       = new CaptainCore\Captures();
