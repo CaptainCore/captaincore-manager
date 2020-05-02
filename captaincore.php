@@ -3374,6 +3374,11 @@ function captaincore_local_action_callback() {
 	}
 
 	if ( $cmd == 'saveGlobalConfigurations' ) {
+		$user = new CaptainCore\User;
+		if ( ! $user->is_admin() ) { 
+			echo json_encode( "Permission denied" );
+			wp_die();
+		}
 		$value = (object) $value;
 		if ( isset( $value->dns_introduction ) ) {
 			$value->dns_introduction = str_replace( "\'", "'", $value->dns_introduction );
