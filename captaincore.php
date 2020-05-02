@@ -1622,6 +1622,10 @@ function captaincore_accounts_func( $request ) {
 	return ( new CaptainCore\Accounts )->list();
 }
 
+function captaincore_configurations_func( $request ) {
+	return ( new CaptainCore\Configurations )->get();
+}
+
 function captaincore_sites_func( $request ) {
 	return ( new CaptainCore\Sites )->list();
 }
@@ -1876,12 +1880,20 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
-
 	// Custom endpoint for CaptainCore accounts
 	register_rest_route(
 		'captaincore/v1', '/accounts/', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_accounts_func',
+			'show_in_index' => false
+		]
+	);
+
+	// Custom endpoint for CaptainCore configurations
+	register_rest_route(
+		'captaincore/v1', '/configurations/', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_configurations_func',
 			'show_in_index' => false
 		]
 	);
@@ -3390,6 +3402,15 @@ function captaincore_local_action_callback() {
 		$account->update( [ "defaults" => json_encode( $record->defaults ) ], [ "account_id" => $record->account_id ] );
 		( new CaptainCore\Account( $record->account_id, true ) )->sync();
 		echo json_encode( "Record updated." );
+	}
+
+	if ( $cmd == 'saveGlobalConfigurations' ) {
+		$value = (object) $value;
+		if ( isset( $value->dns_introduction ) ) {
+			$value->dns_introduction = str_replace( "\'", "'", $value->dns_introduction );
+		}
+		update_site_option( 'captaincore_configurations', json_encode( $value ) );
+		echo json_encode( "Global configurations updated." );
 	}
 
 	if ( $cmd == 'saveGlobalDefaults' ) {
