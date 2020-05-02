@@ -87,6 +87,11 @@ class DB {
         global $wpdb;
         $where_statements = [];
         foreach ( $conditions as $row => $value ) {
+            if ( is_array( $value ) ) {
+                $values = implode( ", ", $value );
+                $where_statements[] =  "`{$row}` IN ($values)";
+                continue;
+            }
             $where_statements[] =  "`{$row}` = '{$value}'";
         }
         $where_statements = implode( " AND ", $where_statements );
