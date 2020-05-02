@@ -632,7 +632,7 @@ if ( $role_check ) {
 					<v-text-field label="Name" :value="new_recipe.title" @change.native="new_recipe.title = $event.target.value"></v-text-field>
 				</v-flex>
 				<v-flex xs12 pa-2>
-					<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="new_recipe.content" @change.native="new_recipe.content = $event.target.value" spellcheck="false"></v-textfield>
+					<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="new_recipe.content" @change.native="new_recipe.content = $event.target.value" spellcheck="false"></v-textarea>
 				</v-flex>
 				<v-flex xs12 pa-2 v-if="role == 'administrator'">
 					<v-switch label="Public" v-model="new_recipe.public" persistent-hint hint="Public by default. Turning off will make the recipe only viewable and useable by you." :false-value="0" :true-value="1"></v-switch>
@@ -713,7 +713,7 @@ if ( $role_check ) {
 					<v-text-field label="Name" :value="dialog_cookbook.recipe.title" @change.native="dialog_cookbook.recipe.title = $event.target.value"></v-text-field>
 				</v-flex>
 				<v-flex xs12 pa-2>
-					<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="dialog_cookbook.recipe.content" @change.native="dialog_cookbook.recipe.content = $event.target.value" spellcheck="false"></v-textfield>
+					<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="dialog_cookbook.recipe.content" @change.native="dialog_cookbook.recipe.content = $event.target.value" spellcheck="false"></v-textarea>
 				</v-flex>
 				<v-flex xs12 pa-2 v-if="role == 'administrator'">
 					<v-switch label="Public" v-model="dialog_cookbook.recipe.public" persistent-hint hint="Public by default. Turning off will make the recipe only viewable and useable by you." false-value="0" true-value="1"></v-switch>
@@ -770,7 +770,7 @@ if ( $role_check ) {
 				<v-text-field label="Name" :value="new_key.title" @change.native="new_key.title = $event.target.value"></v-text-field>
 			</v-flex>
 			<v-flex xs12 pa-2>
-				<v-textarea label="Private Key" persistent-hint hint="Contents of your private key file. Typically named something like 'id_rsa'. The corresponding public key will need to added to your host provider." auto-grow :value="new_key.key" @change.native="new_key.key = $event.target.value" spellcheck="false"></v-textfield>
+				<v-textarea label="Private Key" persistent-hint hint="Contents of your private key file. Typically named something like 'id_rsa'. The corresponding public key will need to added to your host provider." auto-grow :value="new_key.key" @change.native="new_key.key = $event.target.value" spellcheck="false"></v-textarea>
 			</v-flex>
 
 			<v-flex xs12 text-right pa-0 ma-0>
@@ -801,7 +801,7 @@ if ( $role_check ) {
 					<v-text-field label="Name" :value="dialog_key.key.title" @change.native="dialog_key.key.title = $event.target.value"></v-text-field>
 				</v-flex>
 				<v-flex xs12 pa-2>
-					<v-textarea label="Private Key" persistent-hint hint="Enter new private key to override existing key. The current key is not viewable." auto-grow :value="dialog_key.key.key" @change.native="dialog_key.key.key = $event.target.value" spellcheck="false"></v-textfield>
+					<v-textarea label="Private Key" persistent-hint hint="Enter new private key to override existing key. The current key is not viewable." auto-grow :value="dialog_key.key.key" @change.native="dialog_key.key.key = $event.target.value" spellcheck="false"></v-textarea>
 				</v-flex>
 				<v-flex xs12 text-right pa-0 ma-0>
 					<v-btn @click="deleteKey()" class="mr-2">
@@ -837,19 +837,15 @@ if ( $role_check ) {
 				<v-flex xs12 sm3 pa-2>
 					<v-select :items='[{"text":"As needed","value":"as-needed"},{"text":"Daily","value":"1-daily"},{"text":"Weekly","value":"2-weekly"},{"text":"Monthly","value":"3-monthly"},{"text":"Yearly","value":"4-yearly"}]' label="Repeat" v-model="new_process.repeat_interval"></v-select>
 				</v-flex>
-
 				<v-flex xs12 sm3 pa-2>
 					<v-text-field label="Repeat Quantity"  hint="Example: 2 or 3 times" persistent-hint :value="new_process.repeat_quantity" @change.native="new_process.repeat_quantity = $event.target.value"></v-text-field>
 				</v-flex>
-
 				<v-flex xs12 sm3 pa-2>
 					<v-autocomplete :items="process_roles" item-text="name" item-value="role_id" label="Role" hide-details v-model="new_process.roles"></v-autocomplete>
 				</v-flex>
-
 				<v-flex xs12 pa-2>
-					<v-textarea label="Description" persistent-hint hint="Steps to accomplish this process. Markdown enabled." auto-grow :value="new_process.description" @change.native="new_process.description = $event.target.value"></v-textfield>
+					<v-textarea label="Description" persistent-hint hint="Steps to accomplish this process. Markdown enabled." auto-grow :value="new_process.description" @change.native="new_process.description = $event.target.value"></v-textarea>
 				</v-flex>
-
 				<v-flex xs12 text-right pa-0 ma-0>
 					<v-btn color="primary" dark @click="addNewProcess()">
 						Add New Process
@@ -889,7 +885,7 @@ if ( $role_check ) {
 					<v-autocomplete :items="process_roles" item-text="name" item-value="role_id" label="Role" hide-details v-model="dialog_edit_process.process.roles"></v-autocomplete>
 				</v-flex>
 				<v-flex xs12 pa-2>
-					<v-textarea label="Description" persistent-hint hint="Steps to accomplish this process. Markdown enabled." auto-grow :value="dialog_edit_process.process.description" @change.native="dialog_edit_process.process.description = $event.target.value"></v-textfield>
+					<v-textarea label="Description" persistent-hint hint="Steps to accomplish this process. Markdown enabled." auto-grow :value="dialog_edit_process.process.description" @change.native="dialog_edit_process.process.description = $event.target.value"></v-textarea>
 				</v-flex>
 				<v-flex xs12 text-right pa-0 ma-0>
 					<v-btn color="primary" dark @click="saveProcess()">
@@ -1285,7 +1281,7 @@ if ( $role_check ) {
 						<h3 class="title" v-show="typeof dialog_modify_plan.plan.addons == 'object' && dialog_modify_plan.plan.addons" style="margin-top: 1em;">Addons</h3>
 						<v-layout row wrap v-for="(addon, index) in dialog_modify_plan.plan.addons">
 						<v-flex xs7 pa-1>
-							<v-textarea auto-grow rows="1" label="Name" :value="addon.name" @change.native="addon.name = $event.target.value">
+							<v-textarea auto-grow rows="1" label="Name" :value="addon.name" @change.native="addon.name = $event.target.value"></v-textarea>
 						</v-flex>
 						<v-flex xs2 pa-1>
 							<v-text-field label="Quantity" :value="addon.quantity" @change.native="addon.quantity = $event.target.value">
@@ -2531,7 +2527,7 @@ if ( $role_check ) {
 						<v-btn text @click="dialog_site.step = 1"><v-icon>mdi-arrow-left</v-icon> Back to sites</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
-				<v-tabs v-model="dialog_site.site.tabs" background-color="blue darken-3" dark>
+				<v-tabs v-model="dialog_site.site.tabs" background-color="primary" dark>
 					<v-tab :key="1" href="#tab-Site-Management">
 						Site Management <v-icon size="24">mdi-settings</v-icon>
 					</v-tab>
