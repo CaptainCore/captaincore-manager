@@ -1917,13 +1917,47 @@ if ( $role_check ) {
 						>
 						{{ error }}
 						</v-alert>
-						
 						<v-flex xs12 text-right>
+						<v-dialog v-model="dialog_edit_site.show_vars" scrollable hide-overlay max-width="400px">
+						<template v-slot:activator="{ on }">
+							<v-btn v-on="on" class="mr-2">Configure Environment Vars</v-btn>
+						</template>
+						<v-card>
+								<v-list>
+								<v-list-item>
+									<v-list-item-content>
+									<v-list-item-title>Environment Vars</v-list-item-title>
+									<v-list-item-subtitle>Pass along with SSH requests</v-list-item-subtitle>
+									</v-list-item-content>
+									<v-list-item-action>
+										<v-btn @click="addEnvironmentVar()">Add</v-btn>
+									</v-list-item-action>
+								</v-list-item>
+								</v-list>
+								<v-divider></v-divider>
+								<v-list>
+								<v-list-item v-for="(item, index) in dialog_edit_site.site.environment_vars">
+									<v-list-item-title>
+										<v-row no-gutters>
+										<v-col><v-text-field v-model.lazy="item.key" label="Key"></v-text-field></v-col>
+										<v-col><v-text-field v-model.lazy="item.value" label="Value"></v-text-field></v-col>
+										</v-row>
+									</v-list-item-title>
+									<v-list-item-action>
+									<v-btn icon @click="removeEnvironmentVar(index)"><v-icon>mdi-delete</v-icon></v-btn>
+									</v-list-item-action>
+								</v-list-item>
+								</v-list>
+								<v-card-actions>
+								<v-spacer></v-spacer>
+								<v-btn color="primary" text @click="dialog_edit_site.show_vars = false">Close</v-btn>
+								</v-card-actions>
+							</v-card>
+						</v-dialog>
 							<v-btn right @click="updateSite" color="primary">
 								Save Changes
 							</v-btn>
 							<v-progress-linear :indeterminate="true" v-show="dialog_edit_site.loading"></v-progress-linear>
-							
 						</v-flex>
 					 </v-layout>
 				 </v-container>
@@ -4350,7 +4384,7 @@ new Vue({
 		dialog_delete_user: { show: false, site: {}, users: [], username: "", reassign: {} },
 		dialog_apply_https_urls: { show: false, site_id: "", site_name: "", sites: [] },
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
-		dialog_edit_site: { show: false, site: {}, loading: false },
+		dialog_edit_site: { show: false, show_vars: false, site: {}, loading: false },
 		dialog_new_domain: { show: false, domain: { name: "", account_id: "" }, loading: false, errors: [] },
 		dialog_configure_defaults: { show: false, loading: false },
 		dialog_domain: { show: false, show_import: false, import_json: "", domain: {}, records: [], results: [], errors: [], loading: true, saving: false },
@@ -7115,6 +7149,12 @@ new Vue({
 					site.timeline = response.data;
 				})
 				.catch( error => console.log( error ) );
+		},
+		addEnvironmentVar() {
+			this.dialog_edit_site.site.environment_vars.push({ key: '', value: '' })
+		},
+		removeEnvironmentVar( index ) {
+			this.dialog_edit_site.site.environment_vars.splice( index, 1 )
 		},
 		addDefaultsUser() {
 			this.dialog_account.records.account.defaults.users.push({ email: "", first_name: "", last_name: "", role: "administrator", username: "" })
