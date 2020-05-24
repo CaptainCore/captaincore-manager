@@ -55,6 +55,7 @@ class Site {
         $site_details->updated_at           = $site->updated_at;
         $site_details->name                 = $site->name;
         $site_details->key                  = $details->key;
+        $site_details->environment_vars     = $details->environment_vars;
         $site_details->site                 = $site->site;
         $site_details->provider             = $site->provider;
         $site_details->usage_breakdown      = [];
@@ -281,9 +282,10 @@ class Site {
 
         $account_id_previous = $current_site->account_id;
 
-        $time_now     = date("Y-m-d H:i:s");
-        $details      = json_decode( $current_site->details );
-        $details->key = $site->key;
+        $time_now                  = date("Y-m-d H:i:s");
+        $details                   = json_decode( $current_site->details );
+        $details->key              = $site->key;
+        $details->environment_vars = $site->environment_vars;
 
         // Updates post
         $update_site = [
