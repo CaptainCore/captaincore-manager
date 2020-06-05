@@ -4137,11 +4137,30 @@ if ( $role_check ) {
 						<v-card-text>
 							<v-data-table
 								v-show="typeof dialog_account.records.sites == 'object' && dialog_account.records.sites.length > 0"
-								:headers='[{"text":"Sites","value":"name"}]'
+								:headers='[{"text":"Sites","value":"name"},{"text":"Storage","value":"storage"},{"text":"Visits","value":"visits"}]'
 								:items="dialog_account.records.sites"
 								:items-per-page="-1"
 								hide-default-footer
 							>
+							<template v-slot:item.storage="{ item }">
+								{{ item.storage | formatGBs }}GB
+							</template>
+							<template v-slot:item.visits="{ item }">
+								{{ item.visits | formatLargeNumbers }}
+							</template>
+							<template v-slot:body.append>
+								<tr>
+								<td class="text-right">
+									Totals: 
+								</td>
+								<td>
+									{{ dialog_account.records.account.plan.usage.storage | formatGBs }}GB
+								</td>
+								<td>
+									{{ dialog_account.records.account.plan.usage.visits | formatLargeNumbers }}
+								</td>
+								</tr>
+							</template>
 							</v-data-table>
 						</v-card-text>
 						</v-card>
