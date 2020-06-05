@@ -3286,6 +3286,7 @@ function captaincore_local_action_callback() {
 	}
 	if ( $cmd == 'fetchAccount' ) {
 		$account = new CaptainCore\Account( $value );
+		$account->calculate_usage();
 		echo json_encode( $account->fetch() );
 	}
 	if ( $cmd == 'fetchUser' ) {

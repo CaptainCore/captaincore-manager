@@ -7,15 +7,12 @@ class Account {
     protected $account_id = "";
 
     public function __construct( $account_id = "", $admin = false ) {
-
         if ( ( new User )->verify_accounts( [ $account_id ] ) ) {
             $this->account_id = $account_id;
         }
-
         if ( $admin ) {
             $this->account_id = $account_id;
         }
-
     }
 
     public function get() {
@@ -127,12 +124,14 @@ class Account {
     public function account() {
         $account          = (new Accounts)->get( $this->account_id );
         $defaults         = json_decode( $account->defaults );
+        $plan             = json_decode( $account->plan );
         if ( ! is_array( $defaults->users ) ) {
             $defaults->users = [];
         }
         return [
             "account_id" => $this->account_id,
             "name"       => html_entity_decode( $account->name ),
+            "plan"       => $plan,
             "metrics"    => json_decode( $account->metrics ),
             "defaults"   => $defaults,
         ];
@@ -167,13 +166,16 @@ class Account {
         }
 
         $results  = [];
-        $all_site_ids = array_unique($all_site_ids);
+        $all_site_ids = array_unique( $all_site_ids );
 
         foreach ($all_site_ids as $site_id) {
             $site      = ( new Sites )->get( $site_id );
+            $details   = json_decode( $site->details );
             $results[] = [
                 "site_id" => $site_id,
                 "name"    => $site->name,
+                "visits"  => $details->visits,
+                "storage" => $details->storage_raw,
             ];
         }
         usort( $results, "sort_by_name" );
@@ -333,5 +335,14 @@ class Account {
         ];
         ( new Accounts )->update( [ "metrics" => json_encode( $metrics ) ], [ "account_id" => $this->account_id ] );
         return [ "message" => "Account metrics updated." ];
+    }
+
+    public function calculate_usage() {
+        $account  = self::get();
+        $sites    = $this->sites();
+        $account->plan->usage->storage = array_sum ( array_column( $sites, "storage" ) );
+        $account->plan->usage->visits  = array_sum ( array_column( $sites, "visits" ) );
+        $account->plan->usage->sites   = count( $sites );
+        ( new Accounts )->update( [ "plan" => json_encode( $account->plan ) ], [ "account_id" => $this->account_id ] );
     }
 }
