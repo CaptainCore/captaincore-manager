@@ -589,6 +589,9 @@ class Site {
             if ( $environment->plugins == "" ) {
                 $environment->plugins = [];
             }
+            if ( $environment->fathom == "" ) {
+                $environment->fathom = [ [ "domain" => "", "code" => ""] ];
+            }
         }
 
         return $environments;
