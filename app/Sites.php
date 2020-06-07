@@ -108,7 +108,6 @@ class Sites extends DB {
             $site->environment_vars = isset( $details->environment_vars ) ? $details->environment_vars : [];
             $site->subsites     = $details->subsites;
             $site->storage      = $details->storage;
-            $site->storage_raw  = $details->storage_raw;
             $site->visits       = $details->visits;
             $site->mailgun      = $details->mailgun;
             $site->outdated     = false;

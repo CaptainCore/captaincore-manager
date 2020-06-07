@@ -175,7 +175,7 @@ class Account {
                 "site_id" => $site_id,
                 "name"    => $site->name,
                 "visits"  => $details->visits,
-                "storage" => $details->storage_raw,
+                "storage" => $details->storage,
             ];
         }
         usort( $results, "sort_by_name" );
@@ -272,11 +272,11 @@ class Account {
 
         foreach ( $site_ids as $site_id ) {
             $site                         = ( new Site( $site_id ))->get();
-            $website_for_customer_storage = $site->storage_raw;
+            $website_for_customer_storage = $site->storage;
             $website_for_customer_visits  = $site->visits;
             $result_sites[] = [
                 'name'    => $site->name,
-                'storage' => round( $website_for_customer_storage / 1024 / 1024 / 1024, 1 ),
+                'storage' => $website_for_customer_storage,
                 'visits'  => $website_for_customer_visits
             ];
         }

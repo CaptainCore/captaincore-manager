@@ -3401,7 +3401,7 @@ if ( $role_check ) {
 				<tbody>
 					<tr v-for="item in items">
 						<td>{{ item.name }}</td>
-						<td>{{ item.storage }}GB</td>
+						<td>{{ item.storage | formatGBs }}GB</td>
 						<td>{{ item.visits }}</td>
 					</tr>
 					<tr>
@@ -5012,8 +5012,8 @@ new Vue({
 					varB = parseInt(b[key].replace(/\,/g,'')) || 0;
 				}
 				if ( key == 'storage' ) {
-					varA = parseInt(a.storage_raw) || 0;
-					varB = parseInt(b.storage_raw) || 0;
+					varA = parseInt(a.storage) || 0;
+					varB = parseInt(b.storage) || 0;
 				}
 				if ( key == 'provider' ) {
 					varA = a.provider || "";
