@@ -46,14 +46,6 @@ if ( $role_check ) {
 			<div class="flex" style="opacity:0;"><textarea id="clipboard" style="height:1px;display:flex;cursor:default"></textarea></div>
 		</v-toolbar-title>
 		<v-spacer></v-spacer>
-		<v-toolbar-items>
-			<v-btn text small @click.stop="view_jobs = true; $vuetify.goTo( '#sites' )" v-show="runningJobs">
-				Running {{ runningJobs }} jobs <v-progress-circular indeterminate color="white" class="ml-2" size="24"></v-progress-circular>
-			</v-btn>
-			<v-btn href="#sites" text small @click.stop="view_jobs = true; $vuetify.goTo( '#sites' )" v-show="! runningJobs && completedJobs">
-				Completed {{ completedJobs }} jobs
-			</v-btn>
-		</v-toolbar-items>
       </v-app-bar>
 	  <v-navigation-drawer v-model="drawer" app mobile-break-point="960" clipped v-if="route != 'login'">
       <v-list nav dense>
@@ -1572,6 +1564,32 @@ if ( $role_check ) {
 					</v-card>
 				</v-dialog>
 				<v-dialog
+					v-model="dialog_job.show"
+					width="680px"
+					scrollable
+				>
+				<v-card tile>
+					<v-toolbar flat dark color="primary">
+						<v-btn icon dark @click.native="dialog_job.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>Task: {{ dialog_job.task.description }}</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text>
+					<v-container>
+						<v-layout row wrap>
+						 <v-flex xs12 pa-2>
+						 <v-card text width="100%" height="400px" class="transparent elevation-0" style="overflow-y:scroll; transform: scaleY(-1);">
+								<small mv-1 style="display: block; transform: scaleY(-1);"><div v-for="s in dialog_job.task.stream">{{ s }}</div></small>
+							</v-card>
+						 </v-flex>
+					 </v-layout>
+					</v-container>
+					</v-card-text>
+					</v-card>
+				</v-dialog>
+				<v-dialog
 					v-model="dialog_launch.show"
 					width="500px"
 					scrollable
@@ -2141,12 +2159,6 @@ if ( $role_check ) {
 					<v-toolbar-items>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn text small @click="view_jobs = !view_jobs" v-bind:class='{ "v-btn--active": view_jobs }' v-on="on"><small v-if="runningJobs">({{ runningJobs }})</small><v-icon dark>mdi-cogs</v-icon></v-btn>
-							</template><span>Job Activity</span>
-						</v-tooltip>
-						<v-divider vertical class="mx-1" inset></v-divider>
-						<v-tooltip top>
-							<template v-slot:activator="{ on }">
 								<v-btn text small @click="dialog_bulk.show = !dialog_bulk.show" v-bind:class='{ "v-btn--active": dialog_bulk.show }' v-on="on"><small v-show="sites_selected.length > 0">({{ sites_selected.length }})</small><v-icon dark>mdi-settings</v-icon></v-btn>
 							</template><span>Bulk Tools</span>
 						</v-tooltip>
@@ -2163,48 +2175,6 @@ if ( $role_check ) {
 					</v-toolbar-items>
 				</v-toolbar>
 			<v-card-text>
-			<v-card v-show="view_jobs == true" class="mb-3">
-				<v-toolbar flat dense dark color="primary">
-				<v-btn icon dark @click.native="view_jobs = false">
-					<v-icon>close</v-icon>
-				</v-btn>
-				<v-toolbar-title>Job Activity</v-toolbar-title>
-				<v-spacer></v-spacer>
-				<v-btn small text dark @click.native="jobs = []; snackbar.message = 'Job activity cleared.'; snackbar.show = true">
-					Clear <v-icon>mdi-trash-can-outline</v-icon>
-				</v-btn>
-				</v-toolbar>
-				<v-data-table
-					:headers="[{ text: 'Description', value: 'description', width: '300px' },
-								{ text: 'Status', value: 'status', width: '115px' },
-								{ text: 'Response', value: 'response' }]"
-					:items="jobs.slice().reverse()"
-					class="elevation-1"
-				>
-					<template v-slot:body="{ items }">
-					<tbody>
- 						<tr v-for="item in items" :key="item.name">
-						<td>{{ item.description }}</td>
-						<td>
-							<v-chip v-if="item.status == 'done'" small outlined label color="green">Done</v-chip>
-							<v-chip v-else-if="item.status == 'error'" small outlined label color="red">Error</v-chip>
-							<div v-else>
-								<v-progress-linear :indeterminate="true"></v-progress-linear>
-								<v-btn x-small class="ma-1" depressed @click="killCommand(item.job_id)">
-									Cancel
-								</v-btn>
-							</div>
-						</td>
-						<td>
-							<v-card text width="100%" height="80px" class="transparent elevation-0" style="overflow-y:scroll; transform: scaleY(-1);">
-								<small mv-1 style="display: block; transform: scaleY(-1);"><div v-for="s in item.stream">{{ s }}</div></small>
-							</v-card>
-						</td>
-						</tr>
-					</tbody>
-					</template>
-				</v-data-table>
-			</v-card>
 			<v-card v-show="dialog_bulk.show == true" class="mb-3">
 			<v-toolbar flat dark color="primary" dense>
 				<v-btn icon dark @click.native="dialog_bulk.show = false">
@@ -4340,10 +4310,85 @@ if ( $role_check ) {
 		</template>
 		</v-container>
 		</v-content>
-		
+		<v-footer app padless :height="footer_height" class="pa-0 ma-0" style="font-size:12px" v-if="runningJobs || completedJobs">
+		<div class="ma-0 pa-0" style="width: 100%;">
+		<v-row no-gutters>
+        <v-col>
+		<v-card v-show="view_jobs == true" class="pa-0 ma-0" flat style="height:176px;" color="transparent">
+			<v-toolbar flat dense color="transparent">
+			<span>Task Activity</span>
+			<v-spacer></v-spacer>
+				<v-tooltip top>
+					<template v-slot:activator="{ on }">
+					<v-btn v-on="on" small icon @click.native="jobs = []; snackbar.message = 'Task activity cleared.'; snackbar.show = true">
+						<v-icon>mdi-trash-can-outline</v-icon>
+					</v-btn>
+					</template><span>Clear Task Activity</span>
+				</v-tooltip>
+				<v-btn small icon @click.native="toggleJobs()">
+					<v-icon>close</v-icon>
+				</v-btn>
+			</v-toolbar>
+			<v-card-text style="height:130px; overflow-y:scroll;" class="ma-0 pa-0">
+			<v-data-table
+				:headers="[{ text: 'Description', value: 'description' },
+							{ text: 'Status', value: 'status' },
+							{ text: 'Response', value: 'response' }]"
+				:items="jobs.slice().reverse()"
+				class="transparent elevation-0 pa-0 ma-0"
+				hide-default-header hide-default-footer dense
+			>
+				<template v-slot:body="{ items }">
+				<tbody>
+				<tr>
+					<td class="ma-0 pa-0">
+				<v-list dense flat class="transparent ma-0 pa-0">
+				<v-list-item-group>
+					<template v-for="(item, index) in items">
+					<v-list-item :key="item.job_id" @click="viewJob( item.job_id )">
+						<template v-slot:default="{ active, toggle }">
+						<v-list-item-content>
+							<v-list-item-subtitle>
+								<v-chip v-if="item.status == 'done'" x-small label color="green" dark class="mr-2">Done</v-chip>
+								<v-chip v-else-if="item.status == 'error'" x-small label color="red" dark class="mr-2">Error</v-chip>
+								<v-chip v-else x-small label color="primary" dark class="mr-2">Running</v-chip>
+								{{ item.description }}
+								<small v-if="typeof item.stream == 'object'" class="ml-2">{{ item.stream.slice(-1)[0] }}</small>
+							</v-list-item-subtitle>
+						</v-list-item-content>
+						<v-list-item-icon class="ma-0" v-if="item.status != 'done' && item.status != 'error'">
+							<v-btn style="margin-top:2.5px" text x-small @click.stop="killCommand(item.job_id)">Cancel</v-btn>
+						</v-list-item-icon>
+						</template>
+					</v-list-item>
+					</template>
+				</v-list-item-group>
+				</v-list>
+				</td>
+				</tr>
+				</tbody>
+				</template>
+			</v-data-table>
+		</v-card>
+		</v-col>
+		</v-row>
+		<v-row no-gutters>
+        <v-col>
+		<v-tooltip top>
+			<template v-slot:activator="{ on }">
+				<v-btn text tile small @click="toggleJobs()" v-on="on">
+					<v-icon x-small>mdi-cogs</v-icon> Tasks
+					<div v-show="runningJobs"><v-chip x-small label color="secondary" class="pa-1 ma-2">Running</v-chip> {{ runningJobs }} jobs <v-progress-circular indeterminate class="ml-2" size="16" width="2"></v-progress-circular></div>
+					<div v-show="! runningJobs && completedJobs"><v-chip x-small label color="secondary" class="pa-1 ma-2">Completed</v-chip> {{ completedJobs }} jobs</div>
+				</v-btn>
+			</template><span>View Task Activity</span>
+		</v-tooltip>
+		</v-col>
+		</v-row>
+		</div>
+		</v-footer>
 	</v-app>
 </div>
-
 <?php if ( substr( $_SERVER['SERVER_NAME'], -4) == 'test' ) { ?>
 <script src="/wp-content/plugins/captaincore/public/js/vue.js"></script>
 <script src="/wp-content/plugins/captaincore/public/js/qs.js"></script>
@@ -4386,6 +4431,7 @@ new Vue({
 		},
 		configurations: <?php echo json_encode( ( new CaptainCore\Configurations )->get() ); ?>,
 		configurations_loading: true,
+		footer_height: "28px",
 		login: { user_login: "", user_password: "", errors: "", loading: false, lost_password: false, message: "" },
 		wp_nonce: "",
 		footer: <?php echo captaincore_footer_content_extracted(); ?>,
@@ -4399,6 +4445,7 @@ new Vue({
 		account_tab: null,
 		modules: { dns: <?php if ( defined( "CONSTELLIX_API_KEY" ) and defined( "CONSTELLIX_SECRET_KEY" ) ) { echo "true"; } else { echo "false"; } ?> },
 		dialog_bulk: { show: false, tabs_management: "tab-Sites", environment_selected: "Production" },
+		dialog_job: { show: false, task: {} },
 		dialog_captures: { site: {}, pages: [{ page: ""}], capture: { pages: [] }, image_path:"", selected_page: "", captures: [], mode: "screenshot", loading: true, show: false, show_configure: false },
 		dialog_delete_user: { show: false, site: {}, users: [], username: "", reassign: {} },
 		dialog_apply_https_urls: { show: false, site_id: "", site_name: "", sites: [] },
@@ -5048,6 +5095,18 @@ new Vue({
 				.catch(error => {
 					console.log(error.response)
 			});
+		},
+		viewJob( job_id ) {
+			this.dialog_job.task = this.jobs.filter( j => j.job_id == job_id )[0];
+			this.dialog_job.show = true;
+		},
+		toggleJobs() {
+			this.view_jobs = !this.view_jobs
+			if ( this.footer_height == "28px" ) {
+				this.footer_height = "202px"
+			} else {
+				this.footer_height = "28px"
+			}
 		},
 		sortSites( key ) {
 			if ( this.toggle_site_counter.key == key ) {
