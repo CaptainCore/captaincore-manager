@@ -4526,6 +4526,13 @@ function captaincore_install_action_callback() {
 
 		// Add command to dispatch server
 		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/tasks", $data );
+		
+		if ( is_wp_error( $response ) ) {
+			// If the request has failed, show the error message
+			echo $response->get_error_message();
+			wp_die();
+		}
+
 		$response = json_decode( $response["body"] );
 		
 		// Response with token for task
