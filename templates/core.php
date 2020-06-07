@@ -4314,7 +4314,7 @@ if ( $role_check ) {
 		<div class="ma-0 pa-0" style="width: 100%;">
 		<v-row no-gutters>
         <v-col>
-		<v-card v-show="view_jobs == true" class="pa-0 ma-0" flat style="height:176px;" color="transparent">
+		<v-card v-show="view_jobs == true" class="pa-0 ma-0" flat style="height:174px;" color="transparent">
 			<v-toolbar flat dense color="transparent">
 			<span>Task Activity</span>
 			<v-spacer></v-spacer>
