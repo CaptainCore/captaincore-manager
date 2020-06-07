@@ -28,7 +28,7 @@ if ( $role_check ) {
 <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/vuetify@2.2.26/dist/vuetify.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
-<link href="/wp-content/plugins/captaincore/public/css/captaincore-public-2019-09-04.css" rel="stylesheet">
+<link href="/wp-content/plugins/captaincore/public/css/captaincore-public-2020-06-07.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.0/dist/frappe-charts.min.css" rel="stylesheet">
 </head>
 <body>
