@@ -1596,13 +1596,24 @@ pre {
 li.v-expansion-panel__container {
     list-style: none;
 }
-
 .v-card hr {
 	margin: 4px 0;
 	background-color: #eaeaea;
 }
-.v-btn__content span {
-    padding: 0 0 0 6px;
+footer.v-footer .v-list--dense .v-list-item, .v-list-item--dense {
+  min-height:20px;
+}
+footer.v-footer .v-list-item.v-list-item--link.theme--light:hover {
+  background: #00000017;
+}
+footer.v-footer .v-list--dense .v-list-item .v-list-item__content, .v-list-item--dense .v-list-item__content {
+  padding: 4px 0;
+}
+footer.v-footer .v-data-table tbody tr:hover:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper) {
+  background: transparent;
+}
+footer.v-footer .v-btn {
+  text-transform: initial;
 }
 .v-toolbar__items i.v-icon.theme--dark {
     margin-left: 2%;
