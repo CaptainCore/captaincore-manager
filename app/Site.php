@@ -28,13 +28,6 @@ class Site {
         $domain       = $site->name;
         $customer     = $site->account_id;
         $mailgun      = $details->mailgun;
-        $storage      = $environments[0]->storage;
-        if ( $storage ) {
-            $storage_gbs = round( $storage / 1024 / 1024 / 1024, 1 );
-            $storage_gbs = $storage_gbs . 'GB';
-        } else {
-            $storage_gbs = '';
-        }
         $visits              = $environments[0]->visits;
         $subsite_count       = $environments[0]->subsite_count;
         $production_address  = $environments[0]->address;
@@ -67,9 +60,8 @@ class Site {
         $site_details->subsite_count        = $subsite_count;
         $site_details->tabs                 = 'tab-Site-Management';
         $site_details->tabs_management      = 'tab-Info';
-        $site_details->storage_raw          = $environments[0]->storage;
         $site_details->core                 = $environments[0]->core;
-        $site_details->storage              = $storage_gbs;
+        $site_details->storage              = $details->storage;
         $site_details->outdated				= false;
         if ( is_string( $visits ) ) {
             $site_details->visits = intval( $visits );
@@ -181,7 +173,6 @@ class Site {
         $details  = (object) [
             "key"         => $site->key,
             "subsites"    => "",
-            "storage_raw" => "",
             "storage"     => "",
             "visits"      => "",
             "mailgun"     => "",
