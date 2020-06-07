@@ -1811,3 +1811,44 @@ div.update_logs table tr td:nth-child(1) {
     border-bottom: 1px solid rgba(0, 0, 0, 0.2);
     padding-bottom: 1px;
 }
+
+/* WooCommerce billing adjustments */
+
+.woocommerce-order-details .shop_table.shop_table_responsive.my_account_orders.woocommerce-orders-table.woocommerce-MyAccount-subscriptions.woocommerce-orders-table--subscriptions,
+.woocommerce-order-details header,
+.woocommerce-order-details .order-again {
+  display: none;
+}
+
+.woocommerce-order-details th {
+  text-align: left;
+}
+
+.v-application .woocommerce-order-details ol, .v-application .woocommerce-order-details ul {
+  padding: 0px;
+  margin: 0px;
+  list-style: none;
+}
+
+.woocommerce-order-details th, .woocommerce-order-details td {
+  padding: 0.7rem;
+  border: 1px solid #e0e5eb;
+}
+
+.woocommerce-order-details table {
+  border: 1px solid #e0e5eb;
+  border-collapse: collapse;
+  border-spacing: 0;
+  empty-cells: show;
+  width: 100%;
+  max-width: 100%;
+}
+
+.woocommerce-customer-details h2,
+.woocommerce-order-details h2 {
+  margin: 1.5em 0 0.5em 0;
+}
+
+.v-application .woocommerce-order-details p {
+  margin-bottom: 0px;
+}
