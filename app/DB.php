@@ -392,6 +392,28 @@ class DB {
         return $results;
     }
 
+    static function latest_capture( $conditions ) {
+        $sort = "created_at";
+        $sort_order = "DESC";
+        global $wpdb;
+        $where_statements = [];
+        foreach ( $conditions as $row => $value ) {
+            if ( is_array( $value ) ) {
+                $values = implode( ", ", $value );
+                $where_statements[] =  "`{$row}` IN ($values)";
+                continue;
+            }
+            $where_statements[] =  "`{$row}` = '{$value}'";
+        }
+        $where_statements = implode( " AND ", $where_statements );
+        $sql = 'SELECT * FROM ' . self::_table() . " WHERE $where_statements order by `created_at` DESC limit 1";
+        $results = $wpdb->get_results( $sql );
+        if ( is_array( $results ) ) {
+            $results = $results[0];
+        }
+        return $results;
+    }
+
     static function fetch_recipes( $sort = "created_at", $sort_order = "DESC" ) {
         global $wpdb;
         $user_id = get_current_user_id();
@@ -513,6 +535,7 @@ class DB {
             themes longtext,
             plugins longtext,
             users longtext,
+            details longtext,
             screenshot boolean,
             updates_enabled boolean,
             updates_exclude_themes longtext,

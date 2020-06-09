@@ -105,6 +105,7 @@ class Sites extends DB {
             $site->account      = ( new Site( $site_id ) )->account();
             $site->core         = $details->core;
             $site->key          = $details->key;
+            $site->screenshot_base  = $details->screenshot_base;
             $site->environment_vars = isset( $details->environment_vars ) ? $details->environment_vars : [];
             $site->subsites     = $details->subsites;
             $site->storage      = $details->storage;

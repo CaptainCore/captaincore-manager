@@ -456,6 +456,31 @@ class Site {
 
     }
 
+    public function generate_screenshot() {
+        $site         = ( new Sites )->get( $this->site_id );
+        $environments = self::environments();
+        
+        foreach( $environments as $environment ) {
+            $capture = ( new Captures )->latest_capture( [ "site_id" => $this->site_id, "environment_id" => $environment->environment_id ] );
+            if ( empty( $capture ) ) {
+                continue;
+            }
+            $created_at               = strtotime( $capture->created_at );
+            $git_commit_short         = substr( $capture->git_commit, 0, 7 );
+            $details                  = ( isset( $environment->details ) ? json_decode( $environment->details ) : (object) [] );
+            $details->screenshot_base = "{$created_at}_${git_commit_short}";
+            ( new Environments )->update( [ "screenshot" => true, "details" => json_encode( $details ) ], [ "environment_id" => $environment->environment_id ] );
+
+            // Update sites if needed
+            if ( $environment->environment == "Production" ) {
+                $details                  = json_decode( $site->details );
+                $details->screenshot_base = "{$created_at}_${git_commit_short}";
+                ( new Sites )->update( [ "screenshot" => true, "details" => json_encode( $details ) ], [ "site_id" => $site->site_id ] );
+            }
+        }
+        self::sync();
+    }
+
     public function customer() {
         $customer = (object) [];
         if ( $customer ) {
