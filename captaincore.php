@@ -1449,9 +1449,9 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		}
 
 		$git_commit_short = substr( $data->git_commit, 0, 7 );
-		$image_ending = "_{$data->created_at}_{$git_commit_short}.jpg";
-		$capture_pages = explode( ",", $data->capture_pages );
-		$captured_pages = explode( ",", $data->captured_pages );
+		$image_ending     = "_{$data->created_at}_{$git_commit_short}.jpg";
+		$capture_pages    = explode( ",", $data->capture_pages );
+		$captured_pages   = explode( ",", $data->captured_pages );
 		$pages = [];
 		foreach( $capture_pages as $page ) {
 			$page_name = str_replace( "/", "#", $page );
@@ -1494,8 +1494,21 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			'pages'          => json_encode( $pages ),
 		];
 
-		$capture = new CaptainCore\Captures();
-		$capture->insert( $new_capture );
+		( new CaptainCore\Captures )->insert( $new_capture );
+
+		// Update pointer to new thumbnails for site
+		if ( $environment == "production" ) {
+			$site                     = ( new CaptainCore\Sites )->get( $site_id );
+			$details                  = json_decode( $site->details );
+			$details->screenshot_base = "{$data->created_at}_${git_commit_short}";
+			( new CaptainCore\Sites )->update( [ "screenshot" => true, "details" => json_encode( $details ) ], [ "site_id" => $site_id ] );
+		}
+		// Update pointer to new thumbnails for environment
+		$environment              = ( new CaptainCore\Environments )->get( $environment_id );
+		$details                  = ( isset( $environment->details ) ? json_decode( $environment->details ) : (object) [] );
+		$details->screenshot_base = "{$data->created_at}_${git_commit_short}";
+		( new CaptainCore\Environments )->update( [ "screenshot" => true, "details" => json_encode( $details ) ], [ "environment_id" => $environment_id ] );
+
 	}
 
 	if ( $command == 'site-get-raw' ) {
@@ -3558,12 +3571,12 @@ function captaincore_ajax_action_callback() {
 			'updated_at'    => $time_now,
 		];
 
-		$environment_id = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment );
+		$environment_id = ( new CaptainCore\Site( $post_id ) )->fetch_environment_id( $environment );
 		( new CaptainCore\Environments )->update( $environment_update, [ "environment_id" => $environment_id ] );
 		
 		// Remote Sync
 		$remote_command = true;
-		$command        = "site sync $site_id";
+		$command        = "site sync $post_id";
 
 	}
 
