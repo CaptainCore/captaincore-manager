@@ -92,10 +92,12 @@ class Site {
         $site_details->screenshot   = false;
         $site_details->screenshots  = [];
         if ( $site->screenshot == true ) {
+            $screenshot_base           = $details->screenshot_base; 
+            $screenshot_url_base       = "{$upload_uri}/{$site->site}_{$site->site_id}/production/screenshots/{$screenshot_base}";
             $site_details->screenshot  = true;
-            $site_details->screenshots = [
-                'small' => $upload_dir['baseurl'] . "/screenshots/{$site->site}_{$site->site_id}/production/screenshot-100.png",
-                'large' => $upload_dir['baseurl'] . "/screenshots/{$site->site}_{$site->site_id}/production/screenshot-800.png"
+            $site_details->screenshots  = [
+                'small' => "${screenshot_url_base}_thumb-100.jpg",
+                'large' => "${screenshot_url_base}_thumb-800.jpg"
             ];
         }
 
@@ -381,9 +383,7 @@ class Site {
     }
 
     public function insert_accounts( $account_ids = [] ) {
-
         $accountsite = new AccountSite();
-
         foreach( $account_ids as $account_id ) {
 
             // Fetch current records
@@ -393,9 +393,7 @@ class Site {
             if ( count($lookup) == 0 ) {
                 $accountsite->insert( [ "site_id" => $this->site_id, "account_id" => $account_id ] );
             }
-
         }
-
     }
 
     public function assign_accounts( $account_ids = [] ) {
@@ -553,17 +551,19 @@ class Site {
 
     public function environments() {
         // Fetch relating environments
-        $site            = ( new Sites )->get( $this->site_id );
-        $db_environments = new Environments();
-        $environments    = $db_environments->fetch_environments( $this->site_id );
-        $upload_dir      = wp_upload_dir();
-        foreach ($environments as $environment) {
-            $environment_name = strtolower( $environment->environment );
-            $environment->screenshots      = [];
+        $site         = ( new Sites )->get( $this->site_id );
+        $environments = ( new Environments )->fetch_environments( $this->site_id );
+        $upload_uri   = get_option( 'options_remote_upload_uri');
+       
+        foreach ( $environments as $environment ) {
+            $environment_name         = strtolower( $environment->environment );
+            $details                  = ( isset( $environment->details ) ? json_decode( $environment->details ) : (object) [] );
+            $environment->screenshots = [];
             if ( intval( $environment->screenshot ) ) {
+                $screenshot_url_base       = "{$upload_uri}{$site->site}_{$site->site_id}/$environment_name/screenshots/{$details->screenshot_base}";
                 $environment->screenshots  = [
-                    'small' => $upload_dir['baseurl'] . "/screenshots/{$site->site}_{$this->site_id}/{$environment_name}/screenshot-100.png",
-                    'large' => $upload_dir['baseurl'] . "/screenshots/{$site->site}_{$this->site_id}/{$environment_name}/screenshot-800.png"
+                    'small' => "{$screenshot_url_base}_thumb-100.jpg",
+                    'large' => "{$screenshot_url_base}_thumb-800.jpg"
                 ];
             }
             if ( $site->provider == 'kinsta' ) {
@@ -719,14 +719,14 @@ class Site {
                     continue;
                 }
 
-                $compare_plugins = json_decode( $quicksaves[$compare_key]->plugins );
-                $compare_themes = json_decode( $quicksaves[$compare_key]->themes );
-                $plugins_names = array_column( $quicksaves[$key]->plugins, 'name' );
-                $themes_names = array_column( $quicksaves[$key]->themes, 'name' );
+                $compare_plugins       = json_decode( $quicksaves[$compare_key]->plugins );
+                $compare_themes        = json_decode( $quicksaves[$compare_key]->themes );
+                $plugins_names         = array_column( $quicksaves[$key]->plugins, 'name' );
+                $themes_names          = array_column( $quicksaves[$key]->themes, 'name' );
                 $compare_plugins_names = array_column( $compare_plugins, 'name' );
-                $compare_themes_names = array_column( $compare_themes, 'name' );
-                $removed_plugins = array_diff( $compare_plugins_names, $plugins_names );
-                $removed_themes = array_diff( $compare_themes_names, $themes_names );
+                $compare_themes_names  = array_column( $compare_themes, 'name' );
+                $removed_plugins       = array_diff( $compare_plugins_names, $plugins_names );
+                $removed_themes        = array_diff( $compare_themes_names, $themes_names );
 
                 foreach( $quicksaves[$key]->plugins as $plugin ) {
                     $compare_plugin_key = null;

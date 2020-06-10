@@ -2508,7 +2508,7 @@ if ( $role_check ) {
 							<v-checkbox v-model="sites_selected" :value="item" hide-details @click.native.stop></v-checkbox>
 						</td>
 						<td>
-							<v-img :src=`/wp-content/uploads/screenshots/${item.site}_${item.site_id}/production/screenshot-100.png` class="elevation-1" width="50" v-show="item.screenshot"></v-img>
+							<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-100.jpg` class="elevation-1" width="50" v-show="item.screenshot"></v-img>
 						</td>
 						<td>{{ item.name }} <v-chip class="ma-2" color="red" text-color="white" v-show="role == 'administrator' && item.outdated" small>Last sync {{ item.updated_at | timeago }}</v-chip></td>
 						<td>{{ item.subsites }}<span v-show="items.subsites"> sites</span></td>
@@ -2524,7 +2524,7 @@ if ( $role_check ) {
 			<v-window-item :value="2" class="site">
 			<v-card class="mt-5">
 				<v-toolbar color="grey lighten-4" dense light flat>
-					<v-img :src=`/wp-content/uploads/screenshots/${dialog_site.site.site}_${dialog_site.site.site_id}/production/screenshot-100.png` class="elevation-1 mr-3" max-width="50" v-show="dialog_site.site.screenshot"></v-img>
+					<v-img :src=`${remote_upload_uri}${dialog_site.site.site}_${dialog_site.site.site_id}/production/screenshots/${dialog_site.site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="dialog_site.site.screenshot"></v-img>
 					<v-toolbar-title>{{ dialog_site.site.name }}</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
