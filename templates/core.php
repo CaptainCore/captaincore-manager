@@ -3587,6 +3587,7 @@ if ( $role_check ) {
 				>
 						Warning, this is for developers only 💻. The cookbook contains user made "recipes" or scripts which are deployable to one or many sites. Bash script and WP-CLI commands welcomed. For ideas refer to <code><a href="https://captaincore.io/cookbook/" target="_blank">captaincore.io/cookbook</a></code>.
 				</v-alert>
+				</v-card-text>
 				<v-data-table
 					:headers="[{ text: 'Title', value: 'title' }]"
 					:items="filteredRecipes"
@@ -3602,7 +3603,6 @@ if ( $role_check ) {
 					</tbody>
 				</template>
 				</v-data-table>
-				</v-card-text>
 			</v-card>
 			<v-card tile v-show="route == 'handbook'" v-if="role == 'administrator'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
@@ -4198,7 +4198,6 @@ if ( $role_check ) {
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
-				<v-container>
 					<v-row class="ma-0 pa-0">
 						<v-col class="ma-0 pa-0"></v-col>
 						<v-col class="ma-0 pa-0"sm="12" md="4">
@@ -4213,6 +4212,7 @@ if ( $role_check ) {
 						></v-text-field>
 						</v-col>
 					</v-row>
+				</v-card-text>
 					<v-data-table
 						:headers="[{ text: 'Name', value: 'name' },{ text: 'Username', value: 'username' },,{ text: 'Email', value: 'email' },{ text: '', value: 'user_id', align: 'end', sortable: false }]"
 						:items="users"
@@ -4223,8 +4223,6 @@ if ( $role_check ) {
 						<v-btn text color="primary" @click="editUser( item.user_id )">Edit User</v-btn>
 					</template>
 					</v-data-table>
-				</v-container>
-				</v-card-text>
 			</v-card>
 			<v-dialog v-if="route == 'invite'" value="true" scrollable persistance width="500" height="300">
 			<v-overlay :value="true" v-if="typeof new_invite.account.name == 'undefined'">
