@@ -1592,6 +1592,15 @@ li.v-expansion-panel__container {
 	margin: 4px 0;
 	background-color: #eaeaea;
 }
+footer.v-footer .v-window-item {
+  -webkit-transition: none;
+  -moz-transition: none;
+  -o-transition: none;
+  transition: none;
+}
+footer.v-footer .theme--light.v-tabs-items {
+  background: transparent;
+}
 footer.v-footer .v-list--dense .v-list-item, .v-list-item--dense {
   min-height:20px;
 }
@@ -1796,6 +1805,14 @@ div.update_logs table tr td:nth-child(1) {
   font-size: 40px;
   color: #fff;
   padding: 0;
+}
+#sites .lightbox {
+  transition: opacity .2s;
+  background-color: rgba(0,0,0,0.2);
+  background-image: linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, transparent 72px);
+}
+#sites .d-flex.child-flex.col.col-4 .v-card:hover .lightbox {
+  opacity: 0;
 }
 .v-footer a {
 	text-decoration: none;

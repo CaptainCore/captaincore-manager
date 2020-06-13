@@ -1421,32 +1421,6 @@ if ( $role_check ) {
 					</v-card>
 				</v-dialog>
 				<v-dialog
-					v-model="dialog_job.show"
-					width="680px"
-					scrollable
-				>
-				<v-card tile>
-					<v-toolbar flat dark color="primary">
-						<v-btn icon dark @click.native="dialog_job.show = false">
-							<v-icon>close</v-icon>
-						</v-btn>
-						<v-toolbar-title>Task: {{ dialog_job.task.description }}</v-toolbar-title>
-						<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-card-text>
-					<v-container>
-						<v-layout row wrap>
-						 <v-flex xs12 pa-2>
-						 <v-card text width="100%" height="400px" class="transparent elevation-0" style="overflow-y:scroll; transform: scaleY(-1);">
-								<small mv-1 style="display: block; transform: scaleY(-1);"><div v-for="s in dialog_job.task.stream">{{ s }}</div></small>
-							</v-card>
-						 </v-flex>
-					 </v-layout>
-					</v-container>
-					</v-card-text>
-					</v-card>
-				</v-dialog>
-				<v-dialog
 					v-model="dialog_launch.show"
 					width="500px"
 					scrollable
@@ -2010,323 +1984,55 @@ if ( $role_check ) {
 			</template>
 			</v-card>
 			<v-card tile v-show="route == 'sites'" id="sites" flat>
-			<v-toolbar color="grey lighten-4" light flat id="site_listings" v-show="dialog_site.step == 1">
+			<v-toolbar v-show="dialog_site.step == 1" id="site_listings" flat color="grey lighten-4">
 				<v-toolbar-title>Listing {{ sites.length }} sites</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-tooltip top>
+						<v-tooltip top v-if="toggle_site == true">
 							<template v-slot:activator="{ on }">
-								<v-btn text small @click="dialog_bulk.show = !dialog_bulk.show" v-bind:class='{ "v-btn--active": dialog_bulk.show }' v-on="on"><small v-show="sites_selected.length > 0">({{ sites_selected.length }})</small><v-icon dark>mdi-settings</v-icon></v-btn>
-							</template><span>Bulk Tools</span>
+							<v-btn icon @click="toggle_site = false" v-on="on">
+								<v-icon>image</v-icon>
+							</v-btn>
+							</template>
+							<span>View as Thumbnails</span>
 						</v-tooltip>
-						<v-divider vertical class="mx-1" inset></v-divider>
-						<v-tooltip top>
+						<v-tooltip top v-if="toggle_site == false">
 							<template v-slot:activator="{ on }">
-								<v-btn text small @click="advanced_filter = !advanced_filter" v-bind:class='{ "v-btn--active": advanced_filter }' v-on="on"><v-icon dark>mdi-filter</v-icon></v-btn>
-							</template><span>Filters</span>
-						</v-tooltip>
-						<template v-if="role == 'administrator'">
-							<v-divider vertical class="mx-1" inset></v-divider>
-							<v-btn text @click="dialog_new_site.show = true">Add Site <v-icon dark>add</v-icon></v-btn>
-						</template>
-					</v-toolbar-items>
-				</v-toolbar>
-			<v-card v-show="dialog_bulk.show == true" class="mb-3">
-			<v-toolbar flat dark color="primary" dense>
-				<v-btn icon dark @click.native="dialog_bulk.show = false">
-					<v-icon>close</v-icon>
+							<v-btn icon @click="toggle_site = true" v-on="on">
+								<v-icon>mdi-table</v-icon>
 				</v-btn>
-				<v-toolbar-title>Bulk Tools</v-toolbar-title>
-				<v-spacer></v-spacer>
-				<v-toolbar-items>
-				<v-autocomplete
-					v-model="sites_selected"
-					:items="sites"
-					item-text="name"
-					return-object
-					chips
-					dense
-					label=""
-					multiple
-					:allow-overflow="false"
-					style="max-width:250px;"
-				>
-				<template v-slot:selection="{ item, index }">
-					<span v-if="index === 0" class="v-size--small mr-2">{{ sites_selected.length }} sites selected </span>
 				</template>
-				</v-autocomplete>
-				</v-toolbar-items>
-			</v-toolbar>
-			<div class="grey lighten-4 pb-2">
-			<v-layout wrap>
-			<v-flex sx12 sm4 px-2>
-			<v-layout>
-			<v-flex style="width:180px;">
-				<v-select
-					v-model="dialog_bulk.environment_selected"
-					:items='[{"name":"Production Environment","value":"Production"},{"name":"Staging Environment","value":"Staging"}]'
-					item-text="name"
-					item-value="value"
-					@change="triggerEnvironmentUpdate( site.site_id )"
-					light
-					style="height:54px;">
-				</v-select>
-				</v-flex>
-				<v-flex>
-				<v-tooltip bottom>
+							<span>View as List</span>
+						</v-tooltip>
+						<v-tooltip top>
 					<template v-slot:activator="{ on }">
-					<v-btn small icon @click="bulkSyncSites()" style="margin: 12px auto 0 0;" v-on="on">
-						<v-icon color="grey">mdi-sync</v-icon>
+							<v-btn icon @click="view_console.show = !view_console.show" v-on="on">
+								<v-icon>mdi-console</v-icon>
 					</v-btn>
 					</template>
-					<span>Manual sync website details</span>
+							<span>Advanced Options</span>
 				</v-tooltip>
-			</v-flex>
-			</v-layout>
-			</v-flex>
-			<v-flex xs12 sm8>
-			<v-tabs v-model="dialog_bulk.tabs_management" background-color="grey lighten-4" icons-and-text right show-arrows height="54">
-				<v-tab href="#tab-Sites">
-					Sites <v-icon>mdi-format-list-bulleted</v-icon>
-				</v-tab>
-				<v-tab key="Stats" href="#tab-Stats" v-show="role == 'coming-soon'">
-					Stats <v-icon>mdi-chart-bar</v-icon>
-				</v-tab>
-				<v-tab key="Addons" href="#tab-Addons">
-					Addons <v-icon>mdi-power-plug</v-icon>
-				</v-tab>
-				<v-tab key="Users" href="#tab-Users" v-show="role == 'coming-soon'">
-					Users <v-icon>mdi-account-multiple</v-icon>
-				</v-tab>
-				<v-tab key="Updates" href="#tab-Updates" v-show="role == 'coming-soon'">
-					Updates <v-icon>mdi-book-open</v-icon>
-				</v-tab>
-				<v-tab key="Scripts" href="#tab-Scripts">
-					Scripts <v-icon>mdi-code-tags</v-icon>
-				</v-tab>
-				<v-tab key="Backups" href="#tab-Backups" v-show="role == 'coming-soon'">
-					Backups <v-icon>mdi-update</v-icon>
-				</v-tab>
-			</v-tabs>
-			</v-flex>
-			</v-layout>
-			</div>
-			<v-tabs-items v-model="dialog_bulk.tabs_management">
-			<v-tab-item key="1" value="tab-Sites">
-				<v-card flat>
-					<v-toolbar color="grey lighten-4" dense light flat>
-					<v-toolbar-title>Sites</v-toolbar-title>
-					<v-spacer></v-spacer>
-					<v-toolbar-items>
-						<v-btn text @click="showLogEntryBulk()" v-if="role == 'administrator'">New Log Entry <v-icon dark small>mdi-checkbox-marked</v-icon></v-btn>
-						<v-btn text @click="bulkactionLaunch">Launch sites in browser</v-btn>
+						<v-btn v-if="role == 'administrator'" text @click="dialog_new_site.show = true">Add Site <v-icon dark>add</v-icon></v-btn>
+						<!--<v-btn v-else text @click="dialog_request_site.show = true; dialog_request_site.request.account_id = accounts[0].account_id">Add Site <v-icon dark>add</v-icon></v-btn>-->
 					</v-toolbar-items>
 				</v-toolbar>
-				<v-card-text>
-				<v-layout row>
-				<v-flex sm12 mx-5>
-				<small>
-					<strong>Site names: </strong> 
-						<span v-for="site in sites_selected" style="display: inline-block;" v-if="dialog_bulk.environment_selected == 'Production' || dialog_bulk.environment_selected == 'Both'">{{ site.site }}&nbsp;</span>
-						<span v-for="site in sites_selected" style="display: inline-block;" v-if="dialog_bulk.environment_selected == 'Staging' || dialog_bulk.environment_selected == 'Both'">{{ site.site }}-staging&nbsp;</span>
-				</small>
-				</v-flex>
-				</v-card-text>
-				</v-card>
-			</v-tab-item>
-			<v-tab-item key="3" value="tab-Addons">
-				<v-card flat>
-					<v-toolbar color="grey lighten-4" dense light flat>
-					<v-toolbar-title>Addons</v-toolbar-title>
-					<v-spacer></v-spacer>
-					<v-toolbar-items>
-						<v-btn text @click="addThemeBulk()">Add theme <v-icon dark small>add</v-icon></v-btn>
-						<v-btn text @click="addPluginBulk()">Add plugin <v-icon dark small>add</v-icon></v-btn>
-					</v-toolbar-items>
-				</v-toolbar>
-				</v-card>
-			</v-tab-item>
-			<v-tab-item key="4" value="tab-Users">
-				<v-card flat>
-					<v-toolbar color="grey lighten-4" dense light flat>
-					<v-toolbar-title>Users</v-toolbar-title>
-					<v-spacer></v-spacer>
-					<v-toolbar-items>
-						<v-btn text @click="bulkactionLaunch">Add user <v-icon dark small>add</v-icon></v-btn>
-					</v-toolbar-items>
-				</v-toolbar>
-				</v-card>
-			</v-tab-item>
-			<v-tab-item key="5" value="tab-Updates">
-				<v-card flat>
-					<v-toolbar color="grey lighten-4" dense light flat>
-					<v-toolbar-title>Updates</v-toolbar-title>
-					<v-spacer></v-spacer>
-					<v-toolbar-items>
-						<v-btn text @click="bulkactionLaunch">Manual Update <v-icon dark small>add</v-icon></v-btn>
-					</v-toolbar-items>
-				</v-toolbar>
-				</v-card>
-			</v-tab-item>
-			<v-tab-item key="6" value="tab-Scripts">
-				<v-card flat>
-				<v-card-title>
-				<v-row>
-					<v-col cols="12" md="8">
-					<v-subheader id="script_bulk">Custom bash script or WP-CLI commands</v-subheader>
-						<v-textarea
-							auto-grow
-							solo
-							label=""
-							hide-details
-							:value="custom_script" 
-							@change.native="custom_script = $event.target.value"
-							spellcheck="false"
-							class="code"
-						></v-textarea>
-						<v-btn small color="primary" dark @click="runCustomCodeBulk()">Run Custom Code</v-btn>
-					</v-col>
-					<v-col cols="12" md="4">
-						<v-list dense>
-						<v-subheader>Common</v-subheader>
-						<v-list-item @click="viewApplyHttpsUrlsBulk()" dense>
-						<v-list-item-icon>
-							<v-icon>launch</v-icon>
-						</v-list-item-icon>
-						<v-list-item-content>
-							<v-list-item-title>Apply HTTPS Urls</v-list-item-title>
-						</v-list-item-content>
-						</v-list-item>
-						<v-list-item @click="siteDeployBulk()" dense>
-						<v-list-item-icon>
-							<v-icon>loop</v-icon>
-						</v-list-item-icon>
-						<v-list-item-content>
-							<v-list-item-title>Deploy Defaults</v-list-item-title>
-						</v-list-item-content>
-						</v-list-item>
-						<v-list-item @click="toggleSiteBulk()" dense>
-						<v-list-item-icon>
-							<v-icon>mdi-toggle-switch</v-icon>
-						</v-list-item-icon>
-						<v-list-item-content>
-							<v-list-item-title>Toggle Site</v-list-item-title>
-						</v-list-item-content>
-						</v-list-item>
-						<v-subheader v-show="recipes.filter( r => r.public == 1 ).length > 0">Other</v-subheader>
-						<v-list-item @click="runRecipeBulk( recipe.recipe_id )" dense v-for="recipe in recipes.filter( r => r.public == 1 )">
-						<v-list-item-icon>
-							<v-icon>mdi-script-text-outline</v-icon>
-						</v-list-item-icon>
-						<v-list-item-content>
-							<v-list-item-title v-text="recipe.title"></v-list-item-title>
-						</v-list-item-content>
-						</v-list-item>
-						<v-subheader v-show="recipes.filter( r => r.public != 1 ).length > 0">User</v-subheader>
-						<v-list-item @click="loadRecipe( recipe.recipe_id ); $vuetify.goTo( '#script_bulk' );" dense v-for="recipe in recipes.filter( r => r.public != 1 )">
-						<v-list-item-icon>
-							<v-icon>mdi-script-text-outline</v-icon>
-						</v-list-item-icon>
-						<v-list-item-content>
-							<v-list-item-title v-text="recipe.title"></v-list-item-title>
-						</v-list-item-content>
-						</v-list-item>
-						</v-list>
-					</v-col>
-					</v-row>
-					</v-card-title>
-				</v-card>
-			</v-tab-item>
-			<v-tab-item key="7" value="tab-Backups">
-				<v-card flat>
-					<v-toolbar color="grey lighten-4" dense light flat>
-					<v-toolbar-title>Backups</v-toolbar-title>
-					<v-spacer></v-spacer>
-					<v-toolbar-items>
-						<v-btn text @click="bulkactionLaunch">Manual Check <v-icon dark small>add</v-icon></v-btn>
-					</v-toolbar-items>
-				</v-toolbar>
-				</v-card>
-			</v-tab-item>
-			</v-tabs-items>
-			</v-card>
-			<v-card v-show="advanced_filter == true" class="mb-3">
+			<v-card v-show="dialog_request_site.show" class="ma-3">
 				<v-toolbar flat dense dark color="primary">
-					<v-btn icon dark @click.native="advanced_filter = false">
+					<v-btn icon dark @click.native="dialog_request_site.show = false">
 						<v-icon>close</v-icon>
 					</v-btn>
-					<v-toolbar-title>Filters</v-toolbar-title>
+					<v-toolbar-title>Create new WordPress site</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
 				<v-card-text>
-			<v-layout row>
-			<v-flex xs12 ma-1>
-			<v-autocomplete
-				v-model="applied_site_filter"
-				@input="filterSites"
-				:items="site_filters"
-				ref="applied_site_filter"
-				item-text="search"
-				item-value="name"
-				item-text="title"
-				label="Select Theme and/or Plugin"
-				class="siteFilter"
-				chips
-				multiple
-				hide-details
-				hide-selected
-				deletable-chips
-			>
-			</v-autocomplete>
-				<v-btn color="primary" small outlined v-show="role == 'administrator'" class="mx-1 mt-5" @click="site_health_filter = 'healthy'">Healthy only</v-btn>
-				<v-btn color="primary" small outlined v-show="role == 'administrator'" class="mx-1 mt-5" @click="site_health_filter = 'outdated'">Outdated only</v-btn>
-				<v-btn color="primary" small outlined v-show="role == 'administrator'" class="mx-1 mt-5" @click="site_plan_filter = 'with'">With assigned plan</v-btn>
-				<v-btn color="primary" small outlined v-show="role == 'administrator'" class="mx-1 mt-5" @click="site_plan_filter = 'without'">Without assigned plan</v-btn>
-				<v-btn color="primary" small outlined v-show="role == 'administrator'" class="mx-1 mt-5" @click="site_health_filter = ''; site_plan_filter='';">Reset</v-btn>
-			</v-flex>
-		</v-layout>
-		<v-layout row>
-			<v-flex xs6 pa-1>
-				 <v-autocomplete
-					v-model="applied_site_filter_version"
-					v-for="filter in site_filter_version"
-					@input="filterSites"
-					ref="applied_site_filter_version"
-					:items="filter.versions"
-					:key="filter.name"
-					:label="'Select Version for '+ filter.name"
-					item-text="title"
-					return-object
-					multiple
-					chips
-					deletable-chips
-				 >
-				 <template v-slot:item="data">
-						<strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span>
-				 </template>
-				</v-autocomplete>
-			</v-flex>
-			<v-flex xs6 pa-1>
-				<v-autocomplete
-					v-model="applied_site_filter_status"
-					v-for="filter in site_filter_status"
-					:items="filter.statuses"
-					:key="filter.name"
-					:label="'Select Status for '+ filter.name"
-					@input="filterSites"
-					item-text="title"
-					return-object
-					chips
-					multiple
-					deletable-chips
-				>
-				<template slot="item" slot-scope="data">
-					 <strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span>
-				</template>
-				</v-autocomplete>
-			</v-flex>
-			</v-layout>
+					<v-row>
+						<v-col><v-text-field v-model="dialog_request_site.request.site" label="Name or Domain" hint="Please enter a name or domain name you wish to use for the new WordPress site." persistent-hint></v-text-field></v-col>
+						<v-col><v-select v-model="dialog_request_site.request.account_id" label="Account" :items="accounts" item-text="name" item-value="account_id"></v-select></v-col>
+					</v-row>
 			</v-card-text>
+				<v-card-actions>
+					<v-btn color="primary" class="pa-3" @click="requestSite()">Request New Site</v-btn>
+				</v-card-actions>
             </v-card>
 			<v-window v-model="dialog_site.step">
 			<v-window-item :value="1">
@@ -2346,8 +2052,10 @@ if ( $role_check ) {
 					:items="sites"
 					:search="search"
 					item-key="site_id"
+					ref="site_datatable"
 					:show-select="dialog_bulk.show"
 					:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
+					v-if="toggle_site"
 				>
 				<template v-slot:top>
 				<v-row>
@@ -2372,6 +2080,80 @@ if ( $role_check ) {
 						<td>{{ item.visits | formatLargeNumbers }}</td>
 						<td>{{ item.storage | formatGBs }}GB</td>
 						<td>{{ item.provider | formatProvider }}</td>
+					</tr>
+					</tbody>
+				</template>
+				</v-data-table>
+				<v-data-table
+					v-model="sites_selected"
+					:headers="[
+						{ text: '', width: 30, value: 'environments', filter: siteFilters },
+						{ text: 'Name', align: 'left', sortable: true, value: 'name' },
+						{ text: 'Subsites', value: 'subsites', width: 104 },
+						{ text: 'WordPress', value: 'core', width: 114 },
+						{ text: 'Visits', value: 'visits', width: 98 },
+						{ text: 'Storage', value: 'storage', width: 98 },
+						{ text: 'Provider', value: 'provider', width: 104 },
+						{ text: '', value: 'outdated', filter: siteHealthFilters, width: 0, class: 'hidden' },
+						{ text: '', value: 'account', filter: sitePlanFilters, width: 0, class: 'hidden' },
+					]"
+					:items="sites"
+					:search="search"
+					item-key="site_id"
+					ref="site_datatable"
+					:show-select="dialog_bulk.show"
+					hide-default-header
+					:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
+					v-else
+				>
+				<template v-slot:top>
+				<v-row>
+					<v-col></v-col>
+					<v-col cols="12" md="4">
+						<v-text-field class="mx-4" @input="updateSearch" ref="search" label="Search" clearable light hide-details append-icon="search"></v-text-field>	
+					</v-col>
+				</v-row>	
+				</template>
+				<template v-slot:body="{ items }">
+					<tbody>
+					<tr class="v-data-table__empty-wrapper">
+						<td colspan="9">
+						<v-row>
+						<v-col cols="12">
+						<v-card flat>
+							<v-container fluid>
+							<v-row>
+								<v-col
+								v-for="item in items"
+								:key="item.site_id"
+								class="d-flex child-flex"
+								cols="4"
+								>
+								<v-card tile style="cursor: pointer" @click="showSite( item )">
+									<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-800.jpg` width="400" v-show="item.screenshot">
+									<v-row align="end" class="lightbox white--text pa-2 fill-height">
+									<v-col class="pa-1">
+										<div class="body-1">{{ item.name }}</div>
+									</v-col>
+									</v-row>
+									<template v-slot:placeholder>
+										<v-row
+										class="fill-height ma-0"
+										align="center"
+										justify="center"
+										>
+										<v-progress-circular indeterminate color="grey lighten-5"></v-progress-circular>
+										</v-row>
+									</template>
+									</v-img>
+								</v-card>
+								</v-col>
+							</v-row>
+							</v-container>
+						</v-card>
+						</v-col>
+					</v-row>
+						</td>
 					</tr>
 					</tbody>
 				</template>
@@ -4299,11 +4081,15 @@ if ( $role_check ) {
 		</template>
 		</v-container>
 		</v-content>
-		<v-footer app padless :height="footer_height" class="pa-0 ma-0" style="font-size:12px" v-if="runningJobs || completedJobs">
+		<v-footer app padless :height="footer_height" class="pa-0 ma-0" style="font-size:12px" class="console" v-if="view_console.show == true">
 		<div class="ma-0 pa-0" style="width: 100%;">
 		<v-row no-gutters>
         <v-col>
-		<v-card v-show="view_jobs == true" class="pa-0 ma-0" flat style="height:174px;" color="transparent">
+		<v-card v-show="view_console.open == true" class="pa-0 ma-0" flat style="height:174px;" color="transparent">
+			<v-window v-model="console">
+			<v-window-item :value="0">
+			</v-window-item>
+			<v-window-item :value="1">
 			<v-toolbar flat dense color="transparent">
 			<span>Task Activity</span>
 			<v-spacer></v-spacer>
@@ -4314,7 +4100,7 @@ if ( $role_check ) {
 					</v-btn>
 					</template><span>Clear Task Activity</span>
 				</v-tooltip>
-				<v-btn small icon @click.native="toggleJobs()">
+				<v-btn small icon @click="closeConsole()">
 					<v-icon>close</v-icon>
 				</v-btn>
 			</v-toolbar>
@@ -4358,6 +4144,285 @@ if ( $role_check ) {
 				</tbody>
 				</template>
 			</v-data-table>
+			</v-card-text>
+			</v-window-item>
+			<v-window-item :value="4">
+			<v-toolbar flat dense color="transparent">
+			<span>Task - {{ dialog_job.task.description }}</span>
+			<v-spacer></v-spacer>
+				<v-btn text tile small @click.native="console = 1">
+					<v-icon>mdi-arrow-left</v-icon> Back to Task Activity
+				</v-btn>
+				<a ref="export_task" href="#"></a>
+				<v-tooltip top>
+					<template v-slot:activator="{ on }">
+					<v-btn v-on="on" small icon @click.native="exportTaskResults()">
+						<v-icon>mdi-file-download</v-icon>
+					</v-btn>
+					</template><span>Export Results</span>
+				</v-tooltip>
+				<v-btn small icon @click="closeConsole()">
+					<v-icon>close</v-icon>
+				</v-btn>
+			</v-toolbar>
+			<v-card-text style="height:130px; overflow-y:scroll; transform: scaleY(-1);" class="ma-0 py-0 px-5">
+				<v-layout row wrap>
+					<v-flex xs12 pa-2>
+					<v-card text width="100%" class="transparent elevation-0">
+						<small mv-1 style="display: block; transform: scaleY(-1);"><div v-for="s in dialog_job.task.stream">{{ s }}</div></small>
+		</v-card>
+					</v-flex>
+				</v-layout>
+			</v-card-text>
+			</v-window-item>
+			<v-window-item :value="2">
+			<v-toolbar flat dense color="transparent">
+			<span class="mr-2">Filters</span>
+			<v-autocomplete
+				v-model="applied_site_filter"
+				@input="filterSites"
+				:items="site_filters"
+				ref="applied_site_filter"
+				item-text="search"
+				item-value="name"
+				item-text="title"
+				label="Select Theme and/or Plugin"
+				class="siteFilter mx-1"
+				chips
+				allow-overflow="false"
+				small-chips
+				solo
+				multiple
+				hide-details
+				hide-selected
+				deletable-chips
+				dense
+				height="24"
+				style="max-width: 420px"
+			>
+			</v-autocomplete>
+			<v-btn small v-show="role == 'administrator'" class="mx-1" @click="site_health_filter = 'healthy'">Healthy only</v-btn>
+			<v-btn small v-show="role == 'administrator'" class="mx-1" @click="site_health_filter = 'outdated'">Outdated only</v-btn>
+			<v-btn small v-show="role == 'administrator'" class="mx-1" @click="site_plan_filter = 'with'">With assigned plan</v-btn>
+			<v-btn small v-show="role == 'administrator'" class="mx-1" @click="site_plan_filter = 'without'">Without assigned plan</v-btn>
+			<v-btn small v-show="role == 'administrator'" class="mx-1" @click="site_health_filter = ''; site_plan_filter='';">Reset</v-btn>
+			<v-spacer></v-spacer>
+				<v-tooltip top>
+					<template v-slot:activator="{ on }">
+					<v-btn v-on="on" small icon @click.native="clearFilters(); snackbar.message = 'Filters cleared.'; snackbar.show = true">
+						<v-icon>mdi-trash-can-outline</v-icon>
+					</v-btn>
+					</template><span>Clear Filters</span>
+				</v-tooltip>
+				<v-btn small icon @click="closeConsole()">
+					<v-icon>close</v-icon>
+				</v-btn>
+			</v-toolbar>
+			<v-card-text style="height:130px; overflow-y:scroll;" class="ma-0 py-0 px-5">
+		<v-layout row>
+			<v-flex xs6 px-1>
+				 <v-autocomplete
+					v-model="applied_site_filter_version"
+					v-for="filter in site_filter_version"
+					@input="filterSites"
+					ref="applied_site_filter_version"
+					:items="filter.versions"
+					:key="filter.name"
+					:label="'Select Version for '+ filter.name"
+					class="mb-1"
+					item-text="title"
+					return-object
+					chips
+					small-chips
+					solo
+					multiple
+					hide-details
+					hide-selected
+					deletable-chips
+					dense
+				 >
+				 <template v-slot:item="data">
+						<div class="v-list-item__title"><strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span></div>
+				 </template>
+				</v-autocomplete>
+			</v-flex>
+			<v-flex xs6 px-1>
+				<v-autocomplete
+					v-model="applied_site_filter_status"
+					v-for="filter in site_filter_status"
+					:items="filter.statuses"
+					:key="filter.name"
+					:label="'Select Status for '+ filter.name"
+					class="mb-1"
+					@input="filterSites"
+					item-text="title"
+					return-object
+					chips
+					small-chips
+					solo
+					multiple
+					hide-details
+					hide-selected
+					deletable-chips
+					dense
+				>
+				<template slot="item" slot-scope="data">
+					<div class="v-list-item__title"><strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span></div>
+				</template>
+				</v-autocomplete>
+			</v-flex>
+			</v-layout>
+			</v-window-item>
+			<v-window-item :value="3">
+			<v-toolbar flat dense color="transparent">
+			<span class="mr-2">Bulk Tools</span>
+			<v-select
+				v-model="dialog_bulk.environment_selected"
+				:items='[{"name":"Production Environment","value":"Production"},{"name":"Staging Environment","value":"Staging"}]'
+				item-text="name"
+				item-value="value"
+				@change="triggerEnvironmentUpdate( site.site_id )"
+				class="mx-1 mt-6"
+				solo
+				dense
+				chips
+				small-chips
+				style="max-width:240px;">
+			</v-select>
+			<v-autocomplete
+				v-model="sites_selected"
+				:items="sites"
+				item-text="name"
+				return-object
+				chips
+				small-chips
+				dense
+				solo
+				label="Search"
+				multiple
+				:allow-overflow="false"
+				class="mx-1 mt-6"
+				style="max-width:240px;"
+			>
+			<template v-slot:selection="{ item, index }">
+				<span v-if="index === 0" class="v-chip--select v-chip v-chip--clickable v-chip--no-color theme--light v-size--small"><span class="v-chip__content">{{ sites_selected.length }} sites selected</span></span>
+			</template>
+			</v-autocomplete>
+			<v-btn small text v-show="filterCount" @click="sites_selected = $refs.site_datatable.$children[0].filteredItems">
+				Select sites in {{ filterCount }} filters
+			</v-btn>
+			<v-spacer></v-spacer>
+				<v-tooltip top>
+					<template v-slot:activator="{ on }">
+					<v-btn small icon @click="addThemeBulk()" v-on="on">
+						<v-icon>add</v-icon>
+					</v-btn>
+					</template>
+					<span>Add theme</span>
+				</v-tooltip>
+				<v-tooltip top>
+					<template v-slot:activator="{ on }">
+					<v-btn small icon @click="addPluginBulk()" v-on="on">
+						<v-icon>add</v-icon>
+					</v-btn>
+					</template>
+					<span>Add plugin</span>
+				</v-tooltip>
+				<v-tooltip top v-if="role == 'administrator'">
+					<template v-slot:activator="{ on }">
+					<v-btn small icon @click="showLogEntryBulk()" v-on="on">
+						<v-icon>mdi-checkbox-marked</v-icon>
+					</v-btn>
+					</template>
+					<span>New Log Entry</span>
+				</v-tooltip>
+				<v-tooltip top>
+					<template v-slot:activator="{ on }">
+					<v-btn small icon @click="bulkactionLaunch()" v-on="on">
+						<v-icon>mdi-open-in-new</v-icon>
+					</v-btn>
+					</template>
+					<span>Open websites in browser</span>
+				</v-tooltip>
+				<v-tooltip top>
+					<template v-slot:activator="{ on }">
+					<v-btn small icon @click="bulkSyncSites()" v-on="on">
+						<v-icon>mdi-sync</v-icon>
+					</v-btn>
+					</template>
+					<span>Manual sync website details</span>
+				</v-tooltip>
+				<v-tooltip top>
+					<template v-slot:activator="{ on }">
+					<v-btn small icon @click="sites_selected = []; snackbar.message = 'Selections cleared.'; snackbar.show = true" v-on="on">
+						<v-icon>mdi-trash-can-outline</v-icon>
+					</v-btn>
+					</template><span>Clear Selections</span>
+				</v-tooltip>
+				<v-btn small icon @click="closeConsole()">
+					<v-icon>close</v-icon>
+				</v-btn>
+			</v-toolbar>
+				<v-card-text style="height:130px; overflow-y:scroll;" class="ma-0 py-0 px-5">
+				<v-row>
+				<v-col cols="12" md="4" class="py-0 my-0">
+					<small>Common Scripts</small><br />
+					<v-tooltip top>
+						<template v-slot:activator="{ on }">
+						<v-btn small icon @click="viewApplyHttpsUrlsBulk()" v-on="on">
+							<v-icon>launch</v-icon>
+						</v-btn>
+						</template><span>Apply HTTPS Urls</span>
+					</v-tooltip>
+					<v-tooltip top>
+						<template v-slot:activator="{ on }">
+						<v-btn small icon @click="siteDeployBulk()" v-on="on">
+							<v-icon>loop</v-icon>
+						</v-btn>
+						</template><span>Deploy Defaults</span>
+					</v-tooltip>
+					<v-tooltip top>
+						<template v-slot:activator="{ on }">
+						<v-btn small icon @click="toggleSiteBulk()" v-on="on">
+							<v-icon>mdi-toggle-switch</v-icon>
+						</v-btn>
+						</template><span>Toggle Site</span>
+					</v-tooltip><br />
+					<small>Other Scripts</small><br />
+					<v-tooltip top dense v-for="recipe in recipes.filter( r => r.public == 1 )">
+						<template v-slot:activator="{ on }">
+						<v-btn small icon @click="runRecipeBulk( recipe.recipe_id )" v-on="on">
+							<v-icon>mdi-script-text-outline</v-icon>
+						</v-btn>
+						</template><span>{{ recipe.title }}</span>
+					</v-tooltip><br />
+					<small><span v-show="sites_selected.length > 0">Selected sites: </span>
+						<span v-for="site in sites_selected" style="display: inline-block;" v-if="dialog_bulk.environment_selected == 'Production' || dialog_bulk.environment_selected == 'Both'">{{ site.site }}&nbsp;</span>
+						<span v-for="site in sites_selected" style="display: inline-block;" v-if="dialog_bulk.environment_selected == 'Staging' || dialog_bulk.environment_selected == 'Both'">{{ site.site }}-staging&nbsp;</span>
+					</small>
+				</v-col>
+				<v-col cols="12" md="8" class="py-0 my-0">
+					<v-textarea
+							auto-grow
+							solo
+							rows="4"
+							dense
+							hint="Custom bash script or WP-CLI commands"
+							persistent-hint
+							:value="custom_script" 
+							@change.native="custom_script = $event.target.value"
+							spellcheck="false"
+							class="code"
+						>
+						<template v-slot:append-outer>
+							<v-btn small color="primary" dark @click="runCustomCodeBulk()">Run Custom Code</v-btn>
+						</template>
+					</v-textarea>
+		</v-col>
+		</v-row>
+			</v-card>
+			</v-window-item>
+			</v-window>
 		</v-card>
 		</v-col>
 		</v-row>
@@ -4365,13 +4430,34 @@ if ( $role_check ) {
         <v-col>
 		<v-tooltip top>
 			<template v-slot:activator="{ on }">
-				<v-btn text tile small @click="toggleJobs()" v-on="on">
-					<v-icon x-small>mdi-cogs</v-icon> Tasks
-					<div v-show="runningJobs"><v-chip x-small label color="secondary" class="pa-1 ma-2">Running</v-chip> {{ runningJobs }} jobs <v-progress-circular indeterminate class="ml-2" size="16" width="2"></v-progress-circular></div>
-					<div v-show="! runningJobs && completedJobs"><v-chip x-small label color="secondary" class="pa-1 ma-2">Completed</v-chip> {{ completedJobs }} jobs</div>
+				<v-btn text tile small @click="toggleConsole( 1 )" v-on="on">
+					<v-icon x-small>mdi-cogs</v-icon> Task Activity
+					<div v-show="runningJobs"><v-chip x-small label color="secondary" class="pa-1 ma-2">{{ runningJobs }} Running</v-chip> <v-progress-circular indeterminate class="ml-2" size="16" width="2"></v-progress-circular></div>
+					<div v-show="! runningJobs && completedJobs"><v-chip x-small label color="secondary" class="pa-1 ma-2">{{ completedJobs }} Completed</v-chip></div>
 				</v-btn>
 			</template><span>View Task Activity</span>
 		</v-tooltip>
+		<v-tooltip top>
+			<template v-slot:activator="{ on }">
+				<v-btn text tile small @click="toggleConsole( 2 )" v-on="on">
+					<v-icon x-small>mdi-filter</v-icon> Site Filters
+					<div v-show="filterCount"><v-chip x-small label color="secondary" class="pa-1 ma-2">{{ filterCount }} Applied</v-chip></div>
+				</v-btn>
+			</template><span>View Filters</span>
+		</v-tooltip>
+		<v-tooltip top>
+			<template v-slot:activator="{ on }">
+				<v-btn text tile small @click="toggleConsole( 3 )" v-on="on">
+					<v-icon x-small>mdi-settings</v-icon> Site Bulk Tools
+					<div v-show="sites_selected.length > 0"><v-chip x-small label color="secondary" class="pa-1 ma-2">{{ sites_selected.length }} Selected</v-chip></div>
+				</v-btn>
+			</template><span>View Bulk Tools</span>
+		</v-tooltip>
+		</v-col>
+		<v-col class="text-right">
+		<v-btn text title small @click="view_console.show = false" v-show="view_console.open == false">
+			<v-icon x-small>close</v-icon>
+		</v-btn>
 		</v-col>
 		</v-row>
 		</div>
@@ -4457,6 +4543,8 @@ new Vue({
 		dialog_account: { show: false, records: { account: { defaults: { recipes: [] } } }, new_invite: false, new_invite_email: "", step: 1 },
 		dialog_new_account: { show: false, name: "", records: {} },
 		dialog_user: { show: false, user: {}, errors: [] },
+		dialog_request_site: { show: false, request: { site: "", account_id: "" } },
+		site_requests: [],
 		new_invite: { account: {}, records: {} },
 		new_account: { password: "" },
 		timeline_logs: [],
@@ -4542,7 +4630,8 @@ new Vue({
 		new_theme: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {} },
 		bulk_edit: { show: false, site_id: null, type: null, items: [] },
 		upload: [],
-		view_jobs: false,
+		console: 0,
+		view_console: { show: false, open: false },
 		view_timeline: false,
 		search: null,
 		users_search: "",
@@ -4558,6 +4647,7 @@ new Vue({
 		site_filter_version: null,
 		site_filter_status: null,
 		sort_direction: "asc",
+		toggle_site: true,
 		toggle_site_sort: null,
 		toggle_site_counter: { key: "", count: 0 },
 		sites: [],
@@ -4630,7 +4720,10 @@ new Vue({
 		},
 		route() {
 			this.triggerRoute()
-		}
+		},
+		runningJobs() {
+			this.view_console.show = true
+		},
     },
 	filters: {
 		safeUrl: function( url ) {
@@ -4784,6 +4877,9 @@ new Vue({
 			} else {
 				return "Pages"
 			}
+		},
+		filterCount() {
+			return this.applied_site_filter.length + this.applied_site_filter_version.length + this.applied_site_filter_status.length
 		},
 		runningJobs() {
 			return this.jobs.filter(job => job.status != 'done' && job.status != 'error' ).length;
@@ -4975,6 +5071,11 @@ new Vue({
 				this.fetchStats( site_id );
 			}
 		},
+		clearFilters() {
+			this.applied_site_filter = []
+			this.applied_site_filter_version = []
+			this.applied_site_filter_status = []
+		},
 		removeFilter (item) {
 			const index = this.applied_site_filter.indexOf(item.name)
 			if (index >= 0) { 
@@ -5087,15 +5188,34 @@ new Vue({
 		},
 		viewJob( job_id ) {
 			this.dialog_job.task = this.jobs.filter( j => j.job_id == job_id )[0];
-			this.dialog_job.show = true;
+			this.console = 4
 		},
-		toggleJobs() {
-			this.view_jobs = !this.view_jobs
+		toggleConsole( index ) {
+			if ( this.console != index ) {
+				this.footer_height = "202px"
+				this.view_console.open = true
+				this.console = index
+				return
+			}
+
 			if ( this.footer_height == "28px" ) {
 				this.footer_height = "202px"
+				this.view_console.open = true
+				this.console = index
 			} else {
 				this.footer_height = "28px"
+				this.view_console.open = false
+				this.console = 0
 			}
+		},
+		openConsole( index ) {
+			this.console = index
+			this.view_console.open = true
+			this.footer_height = "202px"
+		},
+		closeConsole() {
+			this.view_console.open = false
+			this.footer_height = "28px"
 		},
 		sortSites( key ) {
 			if ( this.toggle_site_counter.key == key ) {
@@ -5331,6 +5451,19 @@ new Vue({
 			// Copy production database info to staging fields
 			this.dialog_edit_site.site.environments[1].database_username = this.dialog_edit_site.site.environments[0].database_username;
 			this.dialog_edit_site.site.environments[1].database_password = this.dialog_edit_site.site.environments[0].database_password;
+		},
+		requestSite() {
+			if ( this.dialog_request_site.request.site == "" || this.dialog_request_site.request.account_id == "" ) {
+				this.snackbar.message = "Please enter a site name."
+				this.snackbar.show = true
+				return
+			}
+			var data = {
+				'action': 'captaincore_ajax',
+				'command': "requestSite",
+				'value': this.dialog_request_site.request
+			}
+			this.site_requests.push( this.dialog_request_site.request )
 		},
 		submitNewSite() {
 			var data = {
@@ -6136,6 +6269,15 @@ new Vue({
 			this.dialog_new_log_entry.sites = [];
 			this.dialog_new_log_entry.sites.push( site );
 			this.dialog_new_log_entry.site_name = site.name;
+		},
+		exportTaskResults() {
+			unique_name = this.dialog_job.task.job_id.substring( 0, 10 )
+			this.$refs.export_task.download = `task-${unique_name}.json`;
+            this.$refs.export_task.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+				description: this.dialog_job.task.description,
+                results: this.dialog_job.task.stream
+            }, null, 2));
+            this.$refs.export_task.click();
 		},
 		exportTimeline() {
 			this.$refs.export_json.download = "timeline.json";
