@@ -2132,7 +2132,7 @@ if ( $role_check ) {
 								xs="12"
 								>
 								<v-card tile style="cursor: pointer" @click="showSite( item )">
-									<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-800.jpg` :aspect-ratio="8/5" width="400" v-show="item.screenshot">
+									<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-800.jpg` :aspect-ratio="8/5" v-show="item.screenshot">
 									<v-row align="end" class="lightbox white--text pa-2 fill-height">
 									<v-col class="pa-1">
 										<div class="body-1">{{ item.name }}</div>
@@ -4428,8 +4428,8 @@ if ( $role_check ) {
 		</v-card>
 		</v-col>
 		</v-row>
-		<v-row no-gutters>
-        <v-col>
+		<v-row no-gutters justify="center">
+        <v-col cols="11">
 		<v-tooltip top>
 			<template v-slot:activator="{ on }">
 				<v-btn text tile small @click="toggleConsole( 1 )" v-on="on">
@@ -4456,8 +4456,8 @@ if ( $role_check ) {
 			</template><span>View Bulk Tools</span>
 		</v-tooltip>
 		</v-col>
-		<v-col class="text-right">
-		<v-btn text title small @click="view_console.show = false" v-show="view_console.open == false">
+		<v-col cols="1" class="text-right">
+		<v-btn icon tile small @click="view_console.show = false" v-show="view_console.open == false">
 			<v-icon x-small>close</v-icon>
 		</v-btn>
 		</v-col>
