@@ -2127,10 +2127,12 @@ if ( $role_check ) {
 								v-for="item in items"
 								:key="item.site_id"
 								class="d-flex child-flex"
-								cols="4"
+								md="4"
+								sm="6"
+								xs="12"
 								>
 								<v-card tile style="cursor: pointer" @click="showSite( item )">
-									<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-800.jpg` width="400" v-show="item.screenshot">
+									<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-800.jpg` :aspect-ratio="8/5" width="400" v-show="item.screenshot">
 									<v-row align="end" class="lightbox white--text pa-2 fill-height">
 									<v-col class="pa-1">
 										<div class="body-1">{{ item.name }}</div>

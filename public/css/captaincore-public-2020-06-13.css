@@ -1811,7 +1811,7 @@ div.update_logs table tr td:nth-child(1) {
   background-color: rgba(0,0,0,0.2);
   background-image: linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, transparent 72px);
 }
-#sites .d-flex.child-flex.col.col-4 .v-card:hover .lightbox {
+#sites .d-flex .v-card:hover .lightbox {
   opacity: 0;
 }
 .v-footer a {
