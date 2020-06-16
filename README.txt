@@ -43,6 +43,20 @@ TODO
 TODO
 
 == Changelog ==
+= 0.12.0: June 16 2020
+* New: Thumbnails based on screenshot captures
+* New: List sites as thumbnails
+* New: Console for advanced options
+* New: Shell environmental variables
+* New: Task activity section
+* New: Export task results to json
+* New: Account method `calculate_usage`
+* New: Select sites that are currently filtered for bulk actions
+* Tweak: Upgraded Vuetify to v2.3.0
+* Tweak: Consistency improvements to interface. Domains section now behaves similar to the sites section. Expand content and removed unnessary borders.
+* Tweak: Moved bulk tools, task activity and filters to console
+* Tweak: Fix site storage bug
+
 = 0.11.0: May 2 2020
 * New: Global site defaults
 * New: Configurations
