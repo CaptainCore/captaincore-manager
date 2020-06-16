@@ -16,7 +16,7 @@
  * Plugin Name:       CaptainCore
  * Plugin URI:        https://captaincore.io
  * Description:       Open Source Toolkit for Managing WordPress Sites
- * Version:           0.11.0
+ * Version:           0.12.0
  * Author:            Austin Ginder
  * Author URI:        https://twitter.com/austinginder
  * License:           MIT License
@@ -35,7 +35,7 @@ if ( ! defined( 'WPINC' ) ) {
  * Start at version 0.1.0 and use SemVer - https://semver.org
  * Rename this for your plugin and update it as you release new versions.
  */
-define( 'CAPTAINCORE_VERSION', '0.11.0' );
+define( 'CAPTAINCORE_VERSION', '0.12.0' );
 
 /**
  * The code that runs during plugin activation.
@@ -1608,6 +1608,10 @@ function captaincore_configurations_func( $request ) {
 	return ( new CaptainCore\Configurations )->get();
 }
 
+function captaincore_billing_func( $request ) {
+	return ( new CaptainCore\User )->billing();
+}
+
 function captaincore_sites_func( $request ) {
 	return ( new CaptainCore\Sites )->list();
 }
@@ -1876,6 +1880,15 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/configurations/', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_configurations_func',
+			'show_in_index' => false
+		]
+	);
+
+	// Custom endpoint for CaptainCore billing
+	register_rest_route(
+		'captaincore/v1', '/billing/', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_billing_func',
 			'show_in_index' => false
 		]
 	);
@@ -3297,6 +3310,28 @@ function captaincore_local_action_callback() {
 		unset ( $response->profile->new_password );
 		echo json_encode( $response );
 	}
+	if ( $cmd == 'fetchInvoice' ) {
+		$order            = wc_get_order( $value );
+		$order_data       = (object) $order->get_data();
+		$order_items      = $order->get_items( apply_filters( 'woocommerce_purchase_order_item_types', 'line_item' ) );
+		$order_line_items = [];
+		foreach ( $order_items as $item_id => $item ) {
+			$order_line_items[] = [
+				"name"        => $item->get_name(),
+				"quantity"    => $item->get_quantity(),
+				"description" => $item->get_meta_data(),
+				"total"       => $order->get_formatted_line_subtotal( $item ),
+			];
+		}
+		$response = [
+			"order_id"   => $order_data->id,
+			"created_at" => $order_data->date_created->getTimestamp(),
+			"status"     => $order_data->status,
+			"line_items" => $order_line_items,
+			"total"      => $order_data->total,
+		];
+		echo json_encode( $response );
+	}
 	if ( $cmd == 'fetchAccount' ) {
 		$account = new CaptainCore\Account( $value );
 		$account->calculate_usage();
@@ -4547,7 +4582,7 @@ function captaincore_install_action_callback() {
 		}
 
 		$response = json_decode( $response["body"] );
-		
+
 		// Response with token for task
 		if ( $response && $response->token ) { 
 			echo $response->token;
