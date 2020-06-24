@@ -1047,10 +1047,6 @@ if ( $role_check ) {
 										<v-flex xs6 class="mr-1"><v-text-field label="Port" :value="key.port" @change.native="key.port = $event.target.value" required></v-text-field></v-flex>
 										</v-layout>
 										<v-layout>
-										<v-flex xs6 class="mr-1"><v-text-field label="Database Username" :value="key.database_username" @change.native="key.database_username = $event.target.value" required></v-text-field></v-flex>
-										<v-flex xs6 class="mr-1"><v-text-field label="Database Password" :value="key.database_password" @change.native="key.database_password = $event.target.value" required></v-text-field></v-flex>
-										</v-layout>
-										<v-layout>
 											<v-flex xs6 class="mr-1"><v-switch label="Automatic Updates" v-model="key.updates_enabled" false-value="0" true-value="1"></v-switch></v-flex>
 											<v-flex xs6 class="mr-1" v-if="typeof key.offload_enabled != 'undefined' && key.offload_enabled == 1">
 											<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
@@ -1734,10 +1730,6 @@ if ( $role_check ) {
 										<v-flex xs6 class="mr-1"><v-text-field label="Port" :value="key.port" @change.native="key.port = $event.target.value" required></v-text-field></v-flex>
 										</v-layout>
 										<v-layout>
-										<v-flex xs6 class="mr-1"><v-text-field label="Database Username" :value="key.database_username" @change.native="key.database_username = $event.target.value" required></v-text-field></v-flex>
-										<v-flex xs6 class="mr-1"><v-text-field label="Database Password" :value="key.database_password" @change.native="key.database_password = $event.target.value" required></v-text-field></v-flex>
-										</v-layout>
-										<v-layout>
 											<v-flex xs6 class="mr-1" v-if="typeof key.offload_enabled != 'undefined' && key.offload_enabled == 1">
 											<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
 											</v-flex>
@@ -2348,6 +2340,15 @@ if ( $role_check ) {
 										</v-list-item-content>
 										<v-list-item-icon>
 											<v-icon>mdi-open-in-new</v-icon>
+										</v-list-item-icon>
+										</v-list-item>
+										<v-list-item @click="copyText( key.database_name )" dense>
+										<v-list-item-content>
+											<v-list-item-title>Database Name</v-list-item-title>
+											<v-list-item-subtitle v-text="key.database_name"></v-list-item-subtitle>
+										</v-list-item-content>
+										<v-list-item-icon>
+											<v-icon>mdi-content-copy</v-icon>
 										</v-list-item-icon>
 										</v-list-item>
 										<v-list-item @click="copyText( key.database_username )" dense>
@@ -4602,8 +4603,8 @@ new Vue({
 			shared_with: [],
 			account_id: "",
 			environments: [
-				{"environment": "Production", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"","database_username":"","database_password":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" },
-				{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"","database_username":"","database_password":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" }
+				{"environment": "Production", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" },
+				{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" }
 			],
 		},
 		shared_with: [],
@@ -5423,9 +5424,6 @@ new Vue({
 			this.dialog_new_site.environments[1].protocol = this.dialog_new_site.environments[0].protocol;
 			// Copy production home directory to staging field
 			this.dialog_new_site.environments[1].home_directory = this.dialog_new_site.environments[0].home_directory;
-			// Copy production database info to staging fields
-			this.dialog_new_site.environments[1].database_username = this.dialog_new_site.environments[0].database_username;
-			this.dialog_new_site.environments[1].database_password = this.dialog_new_site.environments[0].database_password;
 		},
 		edit_site_preload_staging() {
 			// Copy production address to staging field
@@ -5450,9 +5448,6 @@ new Vue({
 			this.dialog_edit_site.site.environments[1].protocol = this.dialog_edit_site.site.environments[0].protocol;
 			// Copy production home directory to staging field
 			this.dialog_edit_site.site.environments[1].home_directory = this.dialog_edit_site.site.environments[0].home_directory;
-			// Copy production database info to staging fields
-			this.dialog_edit_site.site.environments[1].database_username = this.dialog_edit_site.site.environments[0].database_username;
-			this.dialog_edit_site.site.environments[1].database_password = this.dialog_edit_site.site.environments[0].database_password;
 		},
 		requestSite() {
 			if ( this.dialog_request_site.request.site == "" || this.dialog_request_site.request.account_id == "" ) {
@@ -5507,8 +5502,8 @@ new Vue({
 							shared_with: [],
 							account_id: "",
 							environments: [
-								{"environment": "Production", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"","database_username":"","database_password":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" },
-								{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"","database_username":"","database_password":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" }
+								{"environment": "Production", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" },
+								{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" }
 							],
 						}
 						self.fetchSiteInfo( response.site_id );
