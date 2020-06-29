@@ -3224,7 +3224,10 @@ if ( $role_check ) {
 						<v-row>
 							<v-col>
 								<v-progress-circular indeterminate color="primary" size="24" class="ml-4" v-show="dialog_domain.loading"></v-progress-circular>
-								<table class="table-dns v-data-table" v-show="dialog_domain.records.length > 0">
+								<div class="v-data-table theme--light">
+								<div class="v-data-table__wrapper">
+								<table class="table-dns " v-show="dialog_domain.records.length > 0">
+									<thead class="v-data-table-header">
 									<tr>
 										<th width="175">Type</th>
 										<th width="200">Name</th>
@@ -3232,6 +3235,8 @@ if ( $role_check ) {
 										<th width="75">TTL</th>
 										<th width="95"></th>
 									</tr>
+									</thead>
+									<tbody>
 									<tr v-for="(record, index) in dialog_domain.records" :key="record.id" v-bind:class="{ delete: record.delete }">
 									<template v-if="record.edit">
 										<td>{{ record.type }}</td>
@@ -3313,7 +3318,10 @@ if ( $role_check ) {
 										</td>
 									</template>
 									</tr>
+								</tbody>
 								</table>
+								</div>
+								</div>
 								<v-btn depressed class="ml-2" @click="addRecord()" v-show="!dialog_domain.loading && !dialog_domain.saving && !dialog_domain.errors">Add Additional Record</v-btn>
 							</v-col>
 						</v-row>
