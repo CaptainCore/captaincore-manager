@@ -1394,6 +1394,10 @@ g.chart-legend {
 .table-dns th {
   text-align: left;
 }
+.v-data-table .table-dns tr.new td, 
+.v-data-table .table-dns tr.edit td {
+  vertical-align: top;
+}
 .table-dns.v-data-table td {
     border-top: 1px solid #8a8a8a;
     vertical-align: top;
