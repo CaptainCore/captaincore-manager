@@ -173,12 +173,13 @@ class Site {
 
         $time_now = date("Y-m-d H:i:s");
         $details  = (object) [
-            "key"         => $site->key,
-            "subsites"    => "",
-            "storage"     => "",
-            "visits"      => "",
-            "mailgun"     => "",
-            "core"        => "",
+            "key"              => $site->key,
+            "environment_vars" => $site->environment_vars,
+            "subsites"         => "",
+            "storage"          => "",
+            "visits"           => "",
+            "mailgun"          => "",
+            "core"             => "",
         ];
         $new_site = [
             'account_id' => $site->account_id,
