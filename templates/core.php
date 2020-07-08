@@ -7094,7 +7094,7 @@ new Vue({
 				saving: false,
 				domain: "",
 				key: "",
-				site: {},
+				site: "",
 				errors: [],
 				shared_with: [],
 				account_id: "",
