@@ -393,6 +393,31 @@ if ( $role_check ) {
 		</v-card-text>
 		</v-card>
 		</v-dialog>
+		<v-dialog v-model="dialog_request_site.show" max-width="600px">
+			<v-card>
+				<v-toolbar flat dense dark color="primary">
+					<v-btn icon dark @click.native="dialog_request_site.show = false">
+						<v-icon>close</v-icon>
+					</v-btn>
+					<v-toolbar-title>Create new WordPress site</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-card-text>
+					<v-row>
+						<v-col><v-text-field :value="dialog_request_site.request.site" @change.native="dialog_request_site.request.site = $event.target.value" label="Name or Domain" hint="Please enter a name or domain name you wish to use for the new WordPress site." persistent-hint></v-text-field></v-col>
+					</v-row>
+					<v-row>
+						<v-col><v-select :value="dialog_request_site.request.account_id" @change.native="dialog_request_site.request.account_id = $event.target.value" label="Account" :items="accounts" item-text="name" item-value="account_id"></v-select></v-col>
+					</v-row>
+					<v-row>
+						<v-col><v-textarea :value="dialog_request_site.request.notes" @change.native="dialog_request_site.request.notes = $event.target.value" label="Notes" hint="Anything else you'd like to mention about this new site? (Optional)" persistent-hint></vtext-area></v-col>
+					</v-row>
+				</v-card-text>
+				<v-card-actions>
+					<v-btn color="primary" class="pa-3" @click="requestSite()">Request New Site</v-btn>
+				</v-card-actions>
+			</v-card>
+		</v-dialog>
 		<v-dialog v-model="dialog_mailgun_config.show" max-width="500px">
 		<v-card tile>
 			<v-toolbar flat dark color="primary">
@@ -912,7 +937,6 @@ if ( $role_check ) {
 				<v-layout wrap>
 					<v-flex><v-autocomplete label="Default Recipes" v-model="dialog_account.records.account.defaults.recipes" ref="default_recipes" :items="recipes" item-text="title" item-value="recipe_id" multiple chips deletable-chips></v-autocomplete></v-flex>
 				</v-layout>
-
 				<span class="body-2">Default Users</span>
 				<v-data-table
 					:items="dialog_account.records.account.defaults.users"
@@ -950,142 +974,6 @@ if ( $role_check ) {
 			</v-card-text>
 		</v-card>
 		</v-dialog>
-		<v-dialog v-model="dialog_new_site.show" scrollable>
-					<v-card tile>
-						<v-toolbar flat dark color="primary">
-							<v-btn icon dark @click.native="dialog_new_site.show = false">
-								<v-icon>close</v-icon>
-							</v-btn>
-							<v-toolbar-title>Add Site</v-toolbar-title>
-								<v-spacer></v-spacer>
-							</v-toolbar>
-						<v-card-text>
-							<v-container>
-							<v-form ref="form">
-							<v-layout>
-							<v-flex xs4 class="mx-2">
-								<v-autocomplete
-								:items='[{"name":"WP Engine","value":"wpengine"},{"name":"Kinsta","value":"kinsta"}]'
-								item-text="name"
-								v-model="dialog_new_site.provider"
-								label="Provider"
-							></v-autocomplete>
-							</v-flex>
-							<v-flex xs4 class="mx-2">
-								<v-text-field :value="dialog_new_site.domain" @change.native="dialog_new_site.domain = $event.target.value" label="Domain name" required></v-text-field>
-							</v-flex>
-							<v-flex xs4 class="mx-2">
-						    <v-text-field :value="dialog_new_site.site" @change.native="dialog_new_site.site = $event.target.value" label="Site name" required hint="Should match provider site name." persistent-hint></v-text-field>
-							</v-flex>
-							</v-layout>
-							<v-layout>
-							<v-flex xs4 class="mx-2">
-							<v-autocomplete
-								:items="accounts"
-								v-model="dialog_new_site.shared_with"
-								label="Shared With"
-								item-text="name"
-								item-value="account_id"
-								chips
-								multiple
-								deletable-chips
-							>
-							</v-autocomplete>
-						</v-flex>
-						<v-flex xs4 class="mx-2">
-							<v-autocomplete
-								:items="accounts"
-								v-model="dialog_new_site.account_id"
-								item-value="account_id"
-								item-text="name"
-								hint="Assign to existing customer. If new leave blank."
-								persistent-hint
-								deletable-chips
-								chips
-							>
-							</v-autocomplete>
-						</v-flex>
-						<v-flex xs4 class="mx-2">
-							<v-autocomplete
-								:items="keys"
-								v-model="dialog_new_site.key"
-								item-text="title"
-								item-value="key_id"
-								label="SSH Key"
-								hint="Optional. Will use SSH key instead of SFTP for management purposes."
-								chips
-								deletable-chips
-								persistent-hint
-							>
-							</v-autocomplete>
-						</v-flex>
-						</v-layout>
-							<v-container grid-list-md text-center>
-								<v-layout row wrap>
-									<v-flex xs12 style="height:0px">
-									<v-btn @click="new_site_preload_staging" text icon center relative color="green" style="top:32px;">
-										<v-icon>cached</v-icon>
-									</v-btn>
-									</v-flex>
-									<v-flex xs6 v-for="key in dialog_new_site.environments" :key="key.index">
-									<v-card class="bordered body-1" style="margin:2em;">
-									<div style="position: absolute;top: -20px;left: 20px;">
-										<v-btn depressed disabled right style="background-color: rgb(229, 229, 229)!important; color: #000 !important; left: -11px; top: 0px; height: 24px;">
-											{{ key.environment }} Environment
-										</v-btn>
-									</div>
-									<v-container fluid>
-									<div row>
-										<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required  hint="Should match included domain. Example: sitename.kinsta.cloud" persistent-hint></v-text-field>
-										<v-text-field label="Home Directory" :value="key.home_directory" @change.native="key.home_directory = $event.target.value" required></v-text-field>
-										<v-layout>
-										<v-flex xs6 class="mr-1"><v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field></v-flex>
-										<v-flex xs6 class="ml-1"><v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field></v-flex>
-										</v-layout>
-										<v-layout>
-										<v-flex xs6 class="mr-1"><v-text-field label="Protocol" :value="key.protocol" @change.native="key.protocol = $event.target.value" required></v-text-field></v-flex>
-										<v-flex xs6 class="mr-1"><v-text-field label="Port" :value="key.port" @change.native="key.port = $event.target.value" required></v-text-field></v-flex>
-										</v-layout>
-										<v-layout>
-											<v-flex xs6 class="mr-1"><v-switch label="Automatic Updates" v-model="key.updates_enabled" false-value="0" true-value="1"></v-switch></v-flex>
-											<v-flex xs6 class="mr-1" v-if="typeof key.offload_enabled != 'undefined' && key.offload_enabled == 1">
-											<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
-											</v-flex>
-										</v-layout>
-											<div v-if="key.offload_enabled == 1">
-										<v-layout>
-											<v-flex xs6 class="mr-1"><v-select label="Offload Provider" :value="key.offload_provider" @change.native="key.offload_provider = $event.target.value" :items='[{ provider:"s3", label: "Amazon S3" },{ provider:"do", label:"Digital Ocean" }]' item-text="label" item-value="provider" clearable></v-select></v-flex>
-											<v-flex xs6 class="mr-1"><v-text-field label="Offload Access Key" :value="key.offload_access_key" @change.native="key.offload_access_key = $event.target.value" required></v-text-field></v-flex>
-										</v-layout>
-										<v-layout>
-											<v-flex xs6 class="mr-1"><v-text-field label="Offload Secret Key" :value="key.offload_secret_key" @change.native="key.offload_secret_key = $event.target.value" required></v-text-field></v-flex>
-											<v-flex xs6 class="mr-1"><v-text-field label="Offload Bucket" :value="key.offload_bucket" @change.native="key.offload_bucket = $event.target.value" required></v-text-field></v-flex>
-										</v-layout>
-										<v-layout>
-											<v-flex xs6 class="mr-1"><v-text-field label="Offload Path" :value="key.offload_path" @change.native="key.offload_path = $event.target.value" required></v-text-field></v-flex>
-										</v-layout>
-										</div>
-									</div>
-								</v-container>
-							 </v-card>
-							</v-flex>
-							<v-flex xs12>
-							<v-alert
-							:value="true"
-							type="error"
-							v-for="error in dialog_new_site.errors"
-							>
-							{{ error }}
-							</v-alert>
-							</v-flex>
-							<v-flex xs12 text-right><v-btn right @click="submitNewSite">Add Site</v-btn></v-flex>
-						 </v-layout>
-					 </v-container>
-						  </v-form>
-						</v-container>
-	          </v-card-text>
-	        </v-card>
-	      </v-dialog>
 				<v-dialog
 					v-model="dialog_modify_plan.show"
 					transition="dialog-bottom-transition"
@@ -1631,183 +1519,6 @@ if ( $role_check ) {
 					</v-card>
 				</v-dialog>
 				<v-dialog
-					v-model="dialog_edit_site.show"
-					transition="dialog-bottom-transition"
-					scrollable
-				>
-				<v-card tile>
-					<v-toolbar flat dark color="primary">
-						<v-btn icon dark @click.native="dialog_edit_site.show = false">
-							<v-icon>close</v-icon>
-						</v-btn>
-						<v-toolbar-title>Edit Site {{ dialog_edit_site.site.name }}</v-toolbar-title>
-						<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-card-text>
-					<v-container>
-						<v-form ref="form">
-						<v-layout>
-						<v-flex xs4 class="mx-2">
-						<v-autocomplete
-							:items='[{"name":"WP Engine","value":"wpengine"},{"name":"Kinsta","value":"kinsta"}]'
-							item-text="name"
-							v-model="dialog_edit_site.site.provider"
-							label="Provider"
-						></v-autocomplete>
-						</v-flex>
-						<v-flex xs4 class="mx-2">
-							<v-text-field :value="dialog_edit_site.site.name" @change.native="dialog_edit_site.site.name = $event.target.value" label="Domain name" required></v-text-field>
-						</v-flex>
-						<v-flex xs4 class="mx-2">
-							<v-text-field :value="dialog_edit_site.site.site" @change.native="dialog_edit_site.site.site = $event.target.value" label="Site name (not changeable)" disabled></v-text-field>
-						</v-flex>
-					</v-layout>
-			<v-layout>
-				<v-flex xs4 class="mx-2">
-					<v-autocomplete
-						:items="accounts"
-						v-model="dialog_edit_site.site.shared_with"
-						item-text="name"
-						item-value="account_id"
-						label="Shared With"
-						chips
-						multiple
-						deletable-chips
-					>
-					</v-autocomplete>
-				</v-flex>
-				<v-flex xs4 class="mx-2">
-					<v-autocomplete
-						:items="accounts"
-						item-text="name"
-						item-value="account_id"
-						v-model="dialog_edit_site.site.account_id"
-						label="Customer"
-						chips
-						deletable-chips
-					>
-					</v-autocomplete>
-				</v-flex>
-				<v-flex xs4 class="mx-2">
-					<v-autocomplete
-						:items="keys"
-						item-text="title"
-						item-value="key_id"
-						v-model="dialog_edit_site.site.key"
-						label="SSH Key"
-						chips
-						deletable-chips
-						hint="Optional. Will use SSH key instead of SFTP for management purposes."
-						persistent-hint
-					>
-					</v-autocomplete>
-				</v-flex>
-				</v-layout>
-						<v-container grid-list-md text-center>
-							<v-layout row wrap>
-								<v-flex xs12 style="height:0px">
-								<v-btn @click="edit_site_preload_staging" text icon center relative color="green" style="top:32px;">
-									<v-icon>cached</v-icon>
-								</v-btn>
-								</v-flex>
-								<v-flex xs6 v-for="key in dialog_edit_site.site.environments" :key="key.index">
-								<v-card class="bordered body-1" style="margin:2em;">
-								<div style="position: absolute;top: -20px;left: 20px;">
-									<v-btn depressed disabled right style="background-color: rgb(229, 229, 229)!important; color: #000 !important; left: -11px; top: 0px; height: 24px;">
-										{{ key.environment }} Environment
-									</v-btn>
-								</div>
-								<v-container fluid>
-								<div row>
-									<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required></v-text-field>
-									<v-text-field label="Home Directory" :value="key.home_directory" @change.native="key.home_directory = $event.target.value" required></v-text-field>
-										<v-layout>
-										<v-flex xs6 class="mr-1"><v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field></v-flex>
-										<v-flex xs6 class="ml-1"><v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field></v-flex>
-										</v-layout>
-										<v-layout>
-										<v-flex xs6 class="mr-1"><v-text-field label="Protocol" :value="key.protocol" @change.native="key.protocol = $event.target.value" required></v-text-field></v-flex>
-										<v-flex xs6 class="mr-1"><v-text-field label="Port" :value="key.port" @change.native="key.port = $event.target.value" required></v-text-field></v-flex>
-										</v-layout>
-										<v-layout>
-											<v-flex xs6 class="mr-1" v-if="typeof key.offload_enabled != 'undefined' && key.offload_enabled == 1">
-											<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
-											</v-flex>
-										</v-layout>
-										<div v-if="key.offload_enabled == 1">
-										<v-layout>
-											<v-flex xs6 class="mr-1"><v-select label="Offload Provider" :value="key.offload_provider" @change.native="key.offload_provider = $event.target.value" :items='[{ provider:"s3", label: "Amazon S3" },{ provider:"do", label:"Digital Ocean" }]' item-text="label" item-value="provider" clearable></v-select></v-flex>
-											<v-flex xs6 class="mr-1"><v-text-field label="Offload Access Key" :value="key.offload_access_key" @change.native="key.offload_access_key = $event.target.value" required></v-text-field></v-flex>
-										</v-layout>
-										<v-layout>
-											<v-flex xs6 class="mr-1"><v-text-field label="Offload Secret Key" :value="key.offload_secret_key" @change.native="key.offload_secret_key = $event.target.value" required></v-text-field></v-flex>
-											<v-flex xs6 class="mr-1"><v-text-field label="Offload Bucket" :value="key.offload_bucket" @change.native="key.offload_bucket = $event.target.value" required></v-text-field></v-flex>
-										</v-layout>
-										<v-layout>
-											<v-flex xs6 class="mr-1"><v-text-field label="Offload Path" :value="key.offload_path" @change.native="key.offload_path = $event.target.value" required></v-text-field></v-flex>
-										</v-layout>
-									</div>
-								</div>
-							 </v-container>
-						 </v-card>
-						</v-flex>
-						<v-alert
-						:value="true"
-						type="error"
-						v-for="error in dialog_edit_site.errors"
-						>
-						{{ error }}
-						</v-alert>
-						<v-flex xs12 text-right>
-						<v-dialog v-model="dialog_edit_site.show_vars" scrollable hide-overlay max-width="400px">
-						<template v-slot:activator="{ on }">
-							<v-btn v-on="on" class="mr-2">Configure Environment Vars</v-btn>
-						</template>
-						<v-card>
-								<v-list>
-								<v-list-item>
-									<v-list-item-content>
-									<v-list-item-title>Environment Vars</v-list-item-title>
-									<v-list-item-subtitle>Pass along with SSH requests</v-list-item-subtitle>
-									</v-list-item-content>
-									<v-list-item-action>
-										<v-btn @click="addEnvironmentVar()">Add</v-btn>
-									</v-list-item-action>
-								</v-list-item>
-								</v-list>
-								<v-divider></v-divider>
-								<v-list>
-								<v-list-item v-for="(item, index) in dialog_edit_site.site.environment_vars">
-									<v-list-item-title>
-										<v-row no-gutters>
-										<v-col><v-text-field v-model.lazy="item.key" label="Key"></v-text-field></v-col>
-										<v-col><v-text-field v-model.lazy="item.value" label="Value"></v-text-field></v-col>
-										</v-row>
-									</v-list-item-title>
-									<v-list-item-action>
-									<v-btn icon @click="removeEnvironmentVar(index)"><v-icon>mdi-delete</v-icon></v-btn>
-									</v-list-item-action>
-								</v-list-item>
-								</v-list>
-								<v-card-actions>
-								<v-spacer></v-spacer>
-								<v-btn color="primary" text @click="dialog_edit_site.show_vars = false">Close</v-btn>
-								</v-card-actions>
-							</v-card>
-						</v-dialog>
-							<v-btn right @click="updateSite" color="primary">
-								Save Changes
-							</v-btn>
-							<v-progress-linear :indeterminate="true" v-show="dialog_edit_site.loading"></v-progress-linear>
-						</v-flex>
-					 </v-layout>
-				 </v-container>
-						</v-form>
-					</v-container>
-					</v-card-text>
-					</v-card>
-				</v-dialog>
-				<v-dialog
 					v-model="dialog_apply_https_urls.show"
 					transition="dialog-bottom-transition"
 					scrollable
@@ -2004,29 +1715,27 @@ if ( $role_check ) {
 					</template>
 							<span>Advanced Options</span>
 				</v-tooltip>
-						<v-btn v-if="role == 'administrator'" text @click="dialog_new_site.show = true">Add Site <v-icon dark>add</v-icon></v-btn>
-						<!--<v-btn v-else text @click="dialog_request_site.show = true; dialog_request_site.request.account_id = accounts[0].account_id">Add Site <v-icon dark>add</v-icon></v-btn>-->
+						<v-btn v-if="role == 'administrator'" text @click="dialog_site.step = 3">Add Site <v-icon dark>add</v-icon></v-btn>
+						
 					</v-toolbar-items>
 				</v-toolbar>
-			<v-card v-show="dialog_request_site.show" class="ma-3">
-				<v-toolbar flat dense dark color="primary">
-					<v-btn icon dark @click.native="dialog_request_site.show = false">
-						<v-icon>close</v-icon>
-					</v-btn>
-					<v-toolbar-title>Create new WordPress site</v-toolbar-title>
-					<v-spacer></v-spacer>
-				</v-toolbar>
-				<v-card-text>
-					<v-row>
-						<v-col><v-text-field v-model="dialog_request_site.request.site" label="Name or Domain" hint="Please enter a name or domain name you wish to use for the new WordPress site." persistent-hint></v-text-field></v-col>
-						<v-col><v-select v-model="dialog_request_site.request.account_id" label="Account" :items="accounts" item-text="name" item-value="account_id"></v-select></v-col>
-					</v-row>
-			</v-card-text>
-				<v-card-actions>
-					<v-btn color="primary" class="pa-3" @click="requestSite()">Request New Site</v-btn>
-				</v-card-actions>
-            </v-card>
 			<v-window v-model="dialog_site.step">
+			<v-card-text v-show="site_requests.length > 0">
+			<v-stepper value="1" v-for="(request, index) in site_requests" alt-labels class="mb-3">
+				<v-toolbar flat dense class="primary white--text">
+					{{ request.site }} in {{ account_name( request.account_id ) }}
+					<v-spacer></v-spacer>
+					<v-btn small @click="cancelRequest( index )">Cancel</v-btn>
+				</v-toolbar>
+				<v-stepper-header class="elevation-0">
+				<v-stepper-step step="1" complete>Requesting site<small>{{ request.created_at | pretty_timestamp_epoch }}</small></v-stepper-step>
+				<v-divider></v-divider>
+				<v-stepper-step step="2">Preparing new site</v-stepper-step>
+				<v-divider></v-divider>
+				<v-stepper-step step="3">Ready to use</v-stepper-step>
+				</v-stepper-header>
+			</v-stepper>
+			</v-card-text>
 			<v-window-item :value="1">
 				<v-data-table
 					v-model="sites_selected"
@@ -2175,9 +1884,6 @@ if ( $role_check ) {
 					</v-tab>
 					<v-tab :key="8" href="#tab-Timeline" ripple @click="fetchTimeline( dialog_site.site.site_id )">
 						Timeline <v-icon size="24">mdi-timeline-text-outline</v-icon>
-					</v-tab>
-					<v-tab :key="9" href="#tab-Advanced" ripple>
-						Advanced <v-icon size="24">mdi-cogs</v-icon>
 					</v-tab>
 				</v-tabs>
 				<v-tabs-items v-model="dialog_site.site.tabs">
@@ -2385,7 +2091,35 @@ if ( $role_check ) {
 							</v-flex>
 						</v-layout>
 						</v-container>
-					</v-card>
+					<v-divider></v-divider>
+					<v-subheader>Site Options</v-subheader>
+					<v-container>
+					<v-btn small depressed @click="PushProductionToStaging( dialog_site.site.site_id )" v-show="dialog_site.site.provider == 'kinsta'">
+						<v-icon>local_shipping</v-icon> Push Production to Staging
+					</v-btn>
+					<v-btn small depressed @click="PushStagingToProduction( dialog_site.site.site_id )" v-show="dialog_site.site.provider == 'kinsta'">
+						<v-icon class="reverse">local_shipping</v-icon> Push Staging to Production
+					</v-btn>
+					<v-btn small depressed @click="dialog_mailgun_config.show = true" v-show="role == 'administrator'">
+						<v-icon>mdi-email-search</v-icon> Configure Mailgun
+					</v-btn>
+					<v-btn small depressed @click="copySite(dialog_site.site.site_id)">
+						<v-icon>file_copy</v-icon> Copy Site
+					</v-btn>
+					</v-container>
+					<div v-show="role == 'administrator'">
+					<v-divider></v-divider>
+					<v-subheader>Administrator Options</v-subheader>
+					<v-container>
+					<v-btn small depressed @click="editSite(dialog_site.site.site_id)">
+						<v-icon>edit</v-icon> Edit Site
+					</v-btn>
+					<v-btn small depressed color="error" @click="deleteSite(dialog_site.site.site_id)">
+						<v-icon>delete</v-icon> Delete Site
+					</v-btn>
+					</v-container>
+					</div>
+					<v-layout class="mb-10"></v-layout>
 				</v-tab-item>
 				<v-tab-item :key="100" value="tab-Stats">
 					<v-card 
@@ -3115,36 +2849,340 @@ if ( $role_check ) {
 			</v-data-table>
 			</v-card>
 		</v-tab-item>
-		<v-tab-item :key="9" value="tab-Advanced">
-			<v-toolbar color="grey lighten-4" dense light flat>
-				<v-toolbar-title>Advanced</v-toolbar-title>
-				<v-spacer></v-spacer>
-				<v-toolbar-items>
-				<v-btn text @click="dialog_mailgun_config.show = true" v-show="role == 'administrator'">Configure Mailgun <v-icon dark small>mdi-email-search</v-icon></v-btn>
-        			<v-btn text @click="copySite(dialog_site.site.site_id)">Copy Site <v-icon dark small>file_copy</v-icon></v-btn>
-            		<v-btn text @click="editSite(dialog_site.site.site_id)" v-show="role == 'administrator'">Edit Site <v-icon dark small>edit</v-icon></v-btn>
-            		<v-btn text @click="deleteSite(dialog_site.site.site_id)" v-show="role == 'administrator'">Delete Site <v-icon dark small>delete</v-icon></v-btn>
-				</v-toolbar-items>
-			</v-toolbar>
-			<v-card flat>
-				<v-card-title>
-					<div>
-                <div v-show="dialog_site.site.provider == 'kinsta'">
-                <v-btn left text @click="PushProductionToStaging( dialog_site.site.site_id )">
-							<v-icon>local_shipping</v-icon> <span>Push Production to Staging</span>
-						</v-btn>
-						</div>
-                <div v-show="dialog_site.site.provider == 'kinsta'">
-                <v-btn left text @click="PushStagingToProduction( dialog_site.site.site_id )">
-							<v-icon class="reverse">local_shipping</v-icon> <span>Push Staging to Production</span>
-						</v-btn>
-						</div>
-					</div>
-				</v-card-title>
-			</v-card>
-		</v-tab-item>
 	</v-tabs>
 				</v-card>
+			</v-window-item>
+			<v-window-item :value="3">
+				<v-toolbar flat color="grey lighten-4">
+					<v-toolbar-title>Add Site</v-toolbar-title>
+				<v-spacer></v-spacer>
+					<v-btn icon @click.native="dialog_site.step = 1">
+						<v-icon>close</v-icon>
+						</v-btn>
+				</v-toolbar>
+				<v-card-text>
+					<v-form ref="form" :disabled="dialog_new_site.saving">
+						<v-layout v-for="error in dialog_new_site.errors">
+							<v-flex xs12>
+								<v-alert
+								:value="true"
+								type="error"
+								>
+								{{ error }}
+								</v-alert>
+							</v-flex>
+						 </v-layout>
+						<v-layout>
+							<v-flex xs4 class="mx-2">
+								<v-autocomplete
+									:items='[{"name":"WP Engine","value":"wpengine"},{"name":"Kinsta","value":"kinsta"}]'
+									item-text="name"
+									v-model="dialog_new_site.provider"
+									label="Provider"
+								></v-autocomplete>
+							</v-flex>
+							<v-flex xs4 class="mx-2">
+								<v-text-field :value="dialog_new_site.domain" @change.native="dialog_new_site.domain = $event.target.value" label="Domain name" required></v-text-field>
+							</v-flex>
+							<v-flex xs4 class="mx-2">
+						    	<v-text-field :value="dialog_new_site.site" @change.native="dialog_new_site.site = $event.target.value" label="Site name" required hint="Should match provider site name." persistent-hint></v-text-field>
+							</v-flex>
+						</v-layout>
+						<v-layout>
+							<v-flex xs4 class="mx-2">
+							<v-autocomplete
+								:items="accounts"
+								v-model="dialog_new_site.shared_with"
+								label="Shared With"
+								item-text="name"
+								item-value="account_id"
+								chips
+								multiple
+								deletable-chips
+							>
+							</v-autocomplete>
+						</v-flex>
+						<v-flex xs4 class="mx-2">
+							<v-autocomplete
+								:items="accounts"
+								v-model="dialog_new_site.account_id"
+								item-value="account_id"
+								item-text="name"
+								hint="Assign to existing customer. If new leave blank."
+								persistent-hint
+								deletable-chips
+								chips
+							>
+							</v-autocomplete>
+						</v-flex>
+						<v-flex xs4 class="mx-2">
+							<v-autocomplete
+								:items="keys"
+								v-model="dialog_new_site.key"
+								item-text="title"
+								item-value="key_id"
+								label="SSH Key"
+								hint="Optional. Will use SSH key instead of SFTP for management purposes."
+								chips
+								deletable-chips
+								persistent-hint
+							>
+							</v-autocomplete>
+						</v-flex>
+						</v-layout>
+						<v-layout class="mt-5">
+							<v-flex class="mx-2" xs6 v-for="key in dialog_new_site.environments" :key="key.index">
+							<v-toolbar flat dense color="grey lighten-4">
+								<div>{{ key.environment }} Environment</div>
+								<v-spacer></v-spacer>
+								<v-tooltip top v-if="key.environment == 'Staging'">
+									<template v-slot:activator="{ on }">
+										<v-btn text small icon color="green" @click="new_site_preload_staging()" v-on="on"><v-icon>cached</v-icon></v-btn>
+									</template>
+									<span>Preload based on Production</span>
+								</v-tooltip>
+							</v-toolbar>
+							<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required  hint="Should match included domain. Example: sitename.kinsta.cloud" persistent-hint></v-text-field>
+							<v-text-field label="Home Directory" :value="key.home_directory" @change.native="key.home_directory = $event.target.value" required></v-text-field>
+							<v-layout>
+								<v-flex xs6 class="mr-1"><v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field></v-flex>
+								<v-flex xs6 class="ml-1"><v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field></v-flex>
+							</v-layout>
+							<v-layout>
+								<v-flex xs6 class="mr-1"><v-text-field label="Protocol" :value="key.protocol" @change.native="key.protocol = $event.target.value" required></v-text-field></v-flex>
+								<v-flex xs6 class="mr-1"><v-text-field label="Port" :value="key.port" @change.native="key.port = $event.target.value" required></v-text-field></v-flex>
+							</v-layout>
+							<v-layout>
+								<v-flex xs6 class="mr-1"><v-switch label="Automatic Updates" v-model="key.updates_enabled" false-value="0" true-value="1"></v-switch></v-flex>
+								<v-flex xs6 class="mr-1" v-if="typeof key.offload_enabled != 'undefined' && key.offload_enabled == 1">
+									<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
+								</v-flex>
+							</v-layout>
+							<div v-if="key.offload_enabled == 1">
+							<v-layout>
+								<v-flex xs6 class="mr-1"><v-select label="Offload Provider" :value="key.offload_provider" @change.native="key.offload_provider = $event.target.value" :items='[{ provider:"s3", label: "Amazon S3" },{ provider:"do", label:"Digital Ocean" }]' item-text="label" item-value="provider" clearable></v-select></v-flex>
+								<v-flex xs6 class="mr-1"><v-text-field label="Offload Access Key" :value="key.offload_access_key" @change.native="key.offload_access_key = $event.target.value" required></v-text-field></v-flex>
+							</v-layout>
+							<v-layout>
+								<v-flex xs6 class="mr-1"><v-text-field label="Offload Secret Key" :value="key.offload_secret_key" @change.native="key.offload_secret_key = $event.target.value" required></v-text-field></v-flex>
+								<v-flex xs6 class="mr-1"><v-text-field label="Offload Bucket" :value="key.offload_bucket" @change.native="key.offload_bucket = $event.target.value" required></v-text-field></v-flex>
+							</v-layout>
+							<v-layout>
+								<v-flex xs6 class="mr-1"><v-text-field label="Offload Path" :value="key.offload_path" @change.native="key.offload_path = $event.target.value" required></v-text-field></v-flex>
+							</v-layout>
+						</div>
+							</v-flex>
+						</v-layout>
+						<v-layout>
+						 	<v-flex xs6><v-progress-circular v-show="dialog_new_site.saving" indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></v-flex>
+							<v-flex xs6 text-right>
+								<v-dialog v-model="dialog_new_site.show_vars" scrollable hide-overlay max-width="400px">
+								<template v-slot:activator="{ on }">
+									<v-btn v-on="on" class="mr-2">Configure Environment Vars</v-btn>
+								</template>
+								<v-card>
+										<v-list>
+										<v-list-item>
+											<v-list-item-content>
+											<v-list-item-title>Environment Vars</v-list-item-title>
+											<v-list-item-subtitle>Pass along with SSH requests</v-list-item-subtitle>
+											</v-list-item-content>
+											<v-list-item-action>
+												<v-btn @click="addEnvironmentVarNewSite()">Add</v-btn>
+											</v-list-item-action>
+										</v-list-item>
+										</v-list>
+										<v-divider></v-divider>
+										<v-list>
+										<v-list-item v-for="(item, index) in dialog_new_site.environment_vars">
+											<v-list-item-title>
+												<v-row no-gutters>
+													<v-col><v-text-field :value="item.key" @change.native="item.key = $event.target.value" label="Key"></v-text-field></v-col>
+													<v-col><v-text-field :value="item.value" @change.native="item.value = $event.target.value" label="Value"></v-text-field></v-col>
+												</v-row>
+											</v-list-item-title>
+											<v-list-item-action>
+											<v-btn icon @click="removeEnvironmentVarNewSite(index)"><v-icon>mdi-delete</v-icon></v-btn>
+											</v-list-item-action>
+										</v-list-item>
+										</v-list>
+										<v-card-actions>
+										<v-spacer></v-spacer>
+										<v-btn color="primary" text @click="dialog_new_site.show_vars = false">Close</v-btn>
+										</v-card-actions>
+									</v-card>
+								</v-dialog>
+								<v-btn color="primary" right @click="submitNewSite()">Add Site</v-btn>
+							</v-flex>
+						</v-layout>
+				</v-form>
+	          </v-card-text>
+			</v-window-item>
+			<v-window-item :value="4">
+				<v-toolbar flat color="grey lighten-4">
+					<v-toolbar-title>Edit Site {{ dialog_edit_site.site.name }}</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-btn icon @click.native="dialog_site.step = 2">
+						<v-icon>close</v-icon>
+						</v-btn>
+				</v-toolbar>
+				<v-card-text>
+				<v-form ref="form" :disabled="dialog_edit_site.loading">
+					<v-layout v-for="error in dialog_edit_site.errors">
+						<v-flex xs12>
+							<v-alert
+							:value="true"
+							type="error"
+							>
+							{{ error }}
+							</v-alert>
+						</v-flex>
+					</v-layout>
+					<v-layout>
+						<v-flex xs4 class="mx-2">
+						<v-autocomplete
+							:items='[{"name":"WP Engine","value":"wpengine"},{"name":"Kinsta","value":"kinsta"}]'
+							item-text="name"
+							v-model="dialog_edit_site.site.provider"
+							label="Provider"
+						></v-autocomplete>
+						</v-flex>
+						<v-flex xs4 class="mx-2">
+							<v-text-field :value="dialog_edit_site.site.name" @change.native="dialog_edit_site.site.name = $event.target.value" label="Domain name" required></v-text-field>
+						</v-flex>
+						<v-flex xs4 class="mx-2">
+							<v-text-field :value="dialog_edit_site.site.site" @change.native="dialog_edit_site.site.site = $event.target.value" label="Site name (not changeable)" disabled></v-text-field>
+						</v-flex>
+					</v-layout>
+					<v-layout>
+						<v-flex xs4 class="mx-2">
+							<v-autocomplete
+								:items="accounts"
+								v-model="dialog_edit_site.site.shared_with"
+								item-text="name"
+								item-value="account_id"
+								label="Shared With"
+								chips
+								multiple
+								deletable-chips
+							>
+							</v-autocomplete>
+						</v-flex>
+						<v-flex xs4 class="mx-2">
+							<v-autocomplete
+								:items="accounts"
+								item-text="name"
+								item-value="account_id"
+								v-model="dialog_edit_site.site.account_id"
+								label="Customer"
+								chips
+								deletable-chips
+							>
+							</v-autocomplete>
+						</v-flex>
+						<v-flex xs4 class="mx-2">
+							<v-autocomplete
+								:items="keys"
+								item-text="title"
+								item-value="key_id"
+								v-model="dialog_edit_site.site.key"
+								label="SSH Key"
+								chips
+								deletable-chips
+								hint="Optional. Will use SSH key instead of SFTP for management purposes."
+								persistent-hint
+							>
+							</v-autocomplete>
+						</v-flex>
+					</v-layout>
+					<v-layout class="mt-5">
+						<v-flex class="mx-2" xs6 v-for="key in dialog_edit_site.site.environments" :key="key.index">
+							<v-toolbar flat dense color="grey lighten-4">
+								<div>{{ key.environment }} Environment</div>
+								<v-spacer></v-spacer>
+								<v-tooltip top v-if="key.environment == 'Staging'">
+									<template v-slot:activator="{ on }">
+										<v-btn text small icon color="green" @click="edit_site_preload_staging()" v-on="on"><v-icon>cached</v-icon></v-btn>
+									</template>
+									<span>Preload based on Production</span>
+								</v-tooltip>
+							</v-toolbar>
+							<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required></v-text-field>
+							<v-text-field label="Home Directory" :value="key.home_directory" @change.native="key.home_directory = $event.target.value" required></v-text-field>
+							<v-layout>
+								<v-flex xs6 class="mr-1"><v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field></v-flex>
+								<v-flex xs6 class="ml-1"><v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field></v-flex>
+							</v-layout>
+							<v-layout>
+								<v-flex xs6 class="mr-1"><v-text-field label="Protocol" :value="key.protocol" @change.native="key.protocol = $event.target.value" required></v-text-field></v-flex>
+								<v-flex xs6 class="mr-1"><v-text-field label="Port" :value="key.port" @change.native="key.port = $event.target.value" required></v-text-field></v-flex>
+							</v-layout>
+							<v-layout>
+									<v-flex xs6 class="mr-1" v-if="typeof key.offload_enabled != 'undefined' && key.offload_enabled == 1">
+										<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
+									</v-flex>
+							</v-layout>
+							<div v-if="key.offload_enabled == 1">
+							<v-layout>
+								<v-flex xs6 class="mr-1"><v-select label="Offload Provider" :value="key.offload_provider" @change.native="key.offload_provider = $event.target.value" :items='[{ provider:"s3", label: "Amazon S3" },{ provider:"do", label:"Digital Ocean" }]' item-text="label" item-value="provider" clearable></v-select></v-flex>
+								<v-flex xs6 class="mr-1"><v-text-field label="Offload Access Key" :value="key.offload_access_key" @change.native="key.offload_access_key = $event.target.value" required></v-text-field></v-flex>
+							</v-layout>
+							<v-layout>
+								<v-flex xs6 class="mr-1"><v-text-field label="Offload Secret Key" :value="key.offload_secret_key" @change.native="key.offload_secret_key = $event.target.value" required></v-text-field></v-flex>
+								<v-flex xs6 class="mr-1"><v-text-field label="Offload Bucket" :value="key.offload_bucket" @change.native="key.offload_bucket = $event.target.value" required></v-text-field></v-flex>
+							</v-layout>
+							<v-layout>
+								<v-flex xs6 class="mr-1"><v-text-field label="Offload Path" :value="key.offload_path" @change.native="key.offload_path = $event.target.value" required></v-text-field></v-flex>
+							</v-layout>
+					</div>
+						</v-flex>
+					</v-layout>
+					<v-layout>
+						<v-flex xs6><v-progress-circular v-show="dialog_edit_site.loading" indeterminate color="primary"></v-progress-linear></v-flex>
+						<v-flex xs6 text-right>
+						<v-dialog v-model="dialog_edit_site.show_vars" scrollable hide-overlay max-width="400px">
+						<template v-slot:activator="{ on }">
+							<v-btn v-on="on" class="mr-2">Configure Environment Vars</v-btn>
+						</template>
+						<v-card>
+								<v-list>
+								<v-list-item>
+									<v-list-item-content>
+									<v-list-item-title>Environment Vars</v-list-item-title>
+									<v-list-item-subtitle>Pass along with SSH requests</v-list-item-subtitle>
+									</v-list-item-content>
+									<v-list-item-action>
+										<v-btn @click="addEnvironmentVar()">Add</v-btn>
+									</v-list-item-action>
+								</v-list-item>
+								</v-list>
+								<v-divider></v-divider>
+								<v-list>
+								<v-list-item v-for="(item, index) in dialog_edit_site.site.environment_vars">
+									<v-list-item-title>
+										<v-row no-gutters>
+											<v-col><v-text-field :value="item.key" @change.native="item.key = $event.target.value" label="Key"></v-text-field></v-col>
+											<v-col><v-text-field :value="item.value" @change.native="item.value = $event.target.value" label="Value"></v-text-field></v-col>
+										</v-row>
+									</v-list-item-title>
+									<v-list-item-action>
+									<v-btn icon @click="removeEnvironmentVar(index)"><v-icon>mdi-delete</v-icon></v-btn>
+									</v-list-item-action>
+								</v-list-item>
+								</v-list>
+								<v-card-actions>
+								<v-spacer></v-spacer>
+								<v-btn color="primary" text @click="dialog_edit_site.show_vars = false">Close</v-btn>
+								</v-card-actions>
+				</v-card>
+						</v-dialog>
+							<v-btn right @click="updateSite" color="primary">
+								Save Changes
+							</v-btn>
+						</v-flex>
+					 </v-layout>
+				</v-form>
+				</v-card-text>
 			</v-window-item>
 			</v-window>
 			</v-card>
@@ -4554,7 +4592,7 @@ new Vue({
 		dialog_account: { show: false, records: { account: { defaults: { recipes: [] } } }, new_invite: false, new_invite_email: "", step: 1 },
 		dialog_new_account: { show: false, name: "", records: {} },
 		dialog_user: { show: false, user: {}, errors: [] },
-		dialog_request_site: { show: false, request: { site: "", account_id: "" } },
+		dialog_request_site: { show: false, request: { site: "", account_id: "", notes: "" } },
 		site_requests: [],
 		new_invite: { account: {}, records: {} },
 		new_account: { password: "" },
@@ -4604,6 +4642,9 @@ new Vue({
 		dialog_new_site: {
 			provider: "kinsta",
 			show: false,
+			show_vars: false,
+			environment_vars: [],
+			saving: false,
 			key: "",
 			site: "",
 			domain: "",
@@ -5094,6 +5135,9 @@ new Vue({
 				this.filterSites();
 			}
 		},
+		account_name( account_id ) {
+			return this.accounts.filter( a => a.account_id == account_id )[0].name
+		},
 		compare(key, order='asc') {
 			return function(a, b) {
 				//if(!a.hasOwnProperty(key) || !b.hasOwnProperty(key)) {
@@ -5463,20 +5507,33 @@ new Vue({
 				this.snackbar.show = true
 				return
 			}
+			this.dialog_request_site.request.created_at =  Math.round((new Date()).getTime() / 1000)
 			var data = {
 				'action': 'captaincore_ajax',
 				'command': "requestSite",
 				'value': this.dialog_request_site.request
 			}
+			name = this.dialog_request_site.request.site
+			this.snackbar.message = `Requesting new site for ${name}`
+			this.snackbar.show = true
 			this.site_requests.push( this.dialog_request_site.request )
+			this.dialog_request_site = { show: false, request: { site: "", account_id: "", notes: "" } }
+		},
+		cancelRequest( index ) {
+			site_request = this.site_requests[index]
+			should_proceed = confirm( `Cancel request to create site "${site_request.site}" for account "${this.account_name( site_request.account_id )}".` )
+			if ( ! should_proceed ) {
+				return
+			}
+			this.site_requests.splice( index, 1 )
 		},
 		submitNewSite() {
+			this.dialog_new_site.saving = true
 			var data = {
 				'action': 'captaincore_ajax',
 				'command': "newSite",
 				'value': this.dialog_new_site
 			};
-			self = this;
 			site_name = this.dialog_new_site.domain;
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
@@ -5486,41 +5543,26 @@ new Vue({
 
 					// If error then response
 					if ( response.errors.length > 0 ) {
-						self.dialog_new_site.errors = response.errors;
+						this.dialog_new_site.saving = false
+						this.dialog_new_site.errors = response.errors
 						return;
 					}
 
 					if ( response.response = "Successfully added new site" ) {
-
+						this.fetchSiteInfo( response.site_id )
 						// Fetch updated accounts
 						axios.get(
 							'/wp-json/captaincore/v1/accounts', {
-								headers: {'X-WP-Nonce':self.wp_nonce}
+								headers: {'X-WP-Nonce':this.wp_nonce}
 							})
-							.then(response => {
-								self.accounts = response.data;
+							.then( response => {
+								this.accounts = response.data
 							});
-						self.dialog_new_site = {
-							provider: "kinsta",
-							show: false,
-							domain: "",
-							key: "",
-							site: "",
-							errors: [],
-							shared_with: [],
-							account_id: "",
-							environments: [
-								{"environment": "Production", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" },
-								{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" }
-							],
-						}
-						self.fetchSiteInfo( response.site_id );
-						site_id = response.site_id;
 						
 						// Start job
 						description = "Adding " + site_name;
 						job_id = Math.round((new Date()).getTime());
-						self.jobs.push({"job_id": job_id,"description": description, "status": "running", stream: []});
+						this.jobs.push({"job_id": job_id,"description": description, "status": "running", stream: []});
 
 						// Run prep immediately after site added.
 						var data = {
@@ -5530,9 +5572,9 @@ new Vue({
 						};
 						axios.post( ajaxurl, Qs.stringify( data ) )
 							.then( r => {
-								self.jobs.filter(job => job.job_id == job_id)[0].job_id = r.data;
-								self.runCommand( r.data );
-							});
+								this.jobs.filter(job => job.job_id == job_id)[0].job_id = r.data
+								this.runCommand( r.data )
+							})
 					}
 				});
 		},
@@ -5543,24 +5585,21 @@ new Vue({
 				'command': "updateSite",
 				'value': this.dialog_edit_site.site
 			};
-			self = this;
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-
 					var response = response.data
 
 					// If error then response
 					if ( response.response.includes("Error:") ) {
-
-						self.dialog_edit_site.errors = [ response.response ];
-						console.log(response.response);
+						this.dialog_edit_site.errors = [ response.response ];
+						console.log( response.response );
 						return;
 					}
 
 					if ( response.response = "Successfully updated site" ) {
-						self.dialog_edit_site.show = false;
-						
-						self.fetchSiteInfo( response.site_id );
+						this.fetchSiteInfo( response.site_id )
+						this.dialog_site.step = 2
+						this.dialog_edit_site = { show: false, loading: false, site: {} }
 
 						// Start job
 						description = "Updating " + site_name;
@@ -5575,9 +5614,8 @@ new Vue({
 						};
 						axios.post( ajaxurl, Qs.stringify( data ) )
 							.then( r => {
-								self.jobs.filter(job => job.job_id == job_id)[0].job_id = r.data;
-								self.runCommand( r.data );
-								self.dialog_edit_site = { show: false, loading: false, site: {} };
+								this.jobs.filter(job => job.job_id == job_id)[0].job_id = r.data
+								this.runCommand( r.data )
 							});
 					}
 				});
@@ -5685,16 +5723,13 @@ new Vue({
 				'command': "fetch-site",
 				'post_id': site_id
 			};
-
-			self = this;
-
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					response.data.forEach( site => {
-						lookup = self.sites.filter(s => s.site_id == site.site_id).length;
+						lookup = this.sites.filter(s => s.site_id == site.site_id).length;
 						if (lookup == 1 ) {
 							// Update existing site info
-							site_update = self.sites.filter(s => s.site_id == site.site_id)[0];
+							site_update = this.sites.filter(s => s.site_id == site.site_id)[0];
 							// Look through keys and update
 							Object.keys(site).forEach(function(key) {
 								// Skip updating environment_selected and tabs_management
@@ -5706,8 +5741,8 @@ new Vue({
 						}
 						if (lookup != 1 ) { 
 							// Add new site info
-							self.sites.push(site);
-							self.showSite( site );
+							this.sites.push( site );
+							this.showSite( site );
 						}
 					});
 				});
@@ -6136,8 +6171,8 @@ new Vue({
 		editSite( site_id ) {
 			site = this.sites.filter(site => site.site_id == site_id )[0];
 			site_name = site.name;
-			this.dialog_edit_site.show = true;
-			this.dialog_edit_site.site = site;
+			this.dialog_edit_site.site = site
+			this.dialog_site.step = 4
 		},
 		deleteSite( site_id ) {
 			site = this.sites.filter(site => site.site_id == site_id )[0];
@@ -6171,7 +6206,6 @@ new Vue({
 				.catch( error => console.log( error ) );
 		},
 		startCopySite() {
-
 			site_name = this.dialog_copy_site.site.name;
 			destination_id = this.dialog_copy_site.destination;
 			site_name_destination = this.sites.filter(site => site.site_id == destination_id)[0].name;
@@ -7052,6 +7086,23 @@ new Vue({
 			this.fetchSiteDetails( site.site_id )
 			this.dialog_site.site = site
 			this.dialog_site.step = 2
+			this.dialog_new_site = {
+				provider: "kinsta",
+				show: false,
+				show_vars: false,
+				environment_vars: [],
+				saving: false,
+				domain: "",
+				key: "",
+				site: {},
+				errors: [],
+				shared_with: [],
+				account_id: "",
+				environments: [
+					{"environment": "Production", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" },
+					{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" }
+				],
+			}
 		},
 		showSiteMigration( site_id ){
 			site = this.sites.filter(site => site.site_id == site_id)[0];
@@ -7361,6 +7412,12 @@ new Vue({
 					site.timeline = response.data;
 				})
 				.catch( error => console.log( error ) );
+		},
+		addEnvironmentVarNewSite() {
+			this.dialog_new_site.environment_vars.push({ key: '', value: '' })
+		},
+		removeEnvironmentVarNewSite( index ) {
+			this.dialog_new_site.environment_vars.splice( index, 1 )
 		},
 		addEnvironmentVar() {
 			this.dialog_edit_site.site.environment_vars.push({ key: '', value: '' })
@@ -7822,7 +7879,6 @@ new Vue({
 			}
 		},
 		PushProductionToStaging( site_id ) {
-
 			site = this.sites.filter(site => site.site_id == site_id)[0];
 			should_proceed = confirm("Push production site " + site.name + " to staging site?");
 			description = "Pushing production site '" + site.name + "' to staging";
