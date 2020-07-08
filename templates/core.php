@@ -3264,7 +3264,7 @@ if ( $role_check ) {
 								<v-progress-circular indeterminate color="primary" size="24" class="ml-4" v-show="dialog_domain.loading"></v-progress-circular>
 								<div class="v-data-table theme--light">
 								<div class="v-data-table__wrapper">
-								<table class="table-dns " v-show="dialog_domain.records.length > 0">
+								<table class="table-dns" v-show="dialog_domain.records.length > 0">
 									<thead class="v-data-table-header">
 									<tr>
 										<th width="175">Type</th>
@@ -3275,9 +3275,9 @@ if ( $role_check ) {
 									</tr>
 									</thead>
 									<tbody>
-									<tr v-for="(record, index) in dialog_domain.records" :key="record.id" v-bind:class="{ delete: record.delete }">
+									<tr v-for="(record, index) in dialog_domain.records" :key="record.id" v-bind:class="{ new: record.new, edit: record.edit, delete: record.delete }">
 									<template v-if="record.edit">
-										<td>{{ record.type }}</td>
+										<td class="pt-3">{{ record.type }}</td>
 										<td><v-text-field label="Name" :value="record.update.record_name" @change.native="record.update.record_name = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
 										<td class="value" v-if="record.type == 'MX'">
 											<v-layout v-for="(value, value_index) in record.update.record_value">
@@ -3305,7 +3305,7 @@ if ( $role_check ) {
 											<v-text-field label="Value" :value="record.update.record_value" @change.native="record.update.record_value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
 										</td>
 										<td><v-text-field label="TTL" :value="record.update.record_ttl" @change.native="record.update.record_ttl = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
-										<td class="text-right pt-6">
+										<td class="text-right pt-3">
 											<v-btn text small icon color="primary" class="ma-0 pa-0" @click="viewRecord( record.id )" :disabled="dialog_domain.saving"><v-icon>mdi-pencil-box</v-icon></v-btn>
 											<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecord( record.id )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn>
 										</td>
@@ -3338,7 +3338,7 @@ if ( $role_check ) {
 											<v-text-field label="Value" :value="record.update.record_value" @change.native="record.update.record_value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
 										</td>
 										<td><v-text-field label="TTL" :value="record.update.record_ttl" @change.native="record.update.record_ttl = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
-										<td class="text-right pt-6">
+										<td class="text-right pt-3">
 											<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecord( index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn>
 										</td>
 									</template>
