@@ -1389,6 +1389,20 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		echo "Adding token key. \n";
 	}
 
+	// Update Fathom
+	if ( $command == 'update-fathom' and ! empty( $post->data ) ) {
+		
+		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
+		$environment         = strtolower( $current_environment->environment );
+		( new CaptainCore\Environments )->update( (array) $post->data, [ "environment_id" => $post->data->environment_id ] );
+
+		$response = [
+			"response"        => "Completed update-fathom for $site_id",
+			"environment"     => $post->data,
+		];
+
+	}
+
 	// Sync site data
 	if ( $command == 'sync-data' and ! empty( $post->data ) ) {
 		
