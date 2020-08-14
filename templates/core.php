@@ -5604,7 +5604,7 @@ new Vue({
 						// Start job
 						description = "Updating " + site_name;
 						job_id = Math.round((new Date()).getTime());
-						self.jobs.push({"job_id": job_id,"description": description, "status": "running", stream: []});
+						this.jobs.push({"job_id": job_id,"description": description, "status": "running", stream: []});
 
 						// Run prep immediately after site added.
 						var data = {
