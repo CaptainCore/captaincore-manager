@@ -328,6 +328,18 @@ class DB {
         if ( ! empty( $arguments->field ) && in_array( $arguments->field, $environment_columns ) ) {
             $field_selection = ", {$wpdb->prefix}captaincore_environments.{$arguments->field}";
         }
+        
+        if ( ! empty( $arguments->field ) && strpos( $arguments->field, ',' ) !== false ) {
+            $fields = explode( ",", $arguments->field );
+            $field_selection = "";
+            foreach ( $fields as $field ) {
+                if ( in_array( $field, $environment_columns ) ) {
+                    $field_selection = "${field_selection}, {$wpdb->prefix}captaincore_environments.{$field}";
+                    continue;
+                }
+                $field_selection = "${field_selection}, {$table}.{$field}";
+            }
+        }
 
         if ( empty( $filter->type ) ) {
             $sql = "SELECT {$table}.site, {$wpdb->prefix}captaincore_environments.environment $field_selection
