@@ -3425,7 +3425,13 @@ if ( $role_check ) {
 						<v-toolbar-title>{{ site.name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items>
-							<v-chip class="mt-4" label :input-value="true">{{ site.errors.length }} issues</v-chip>
+							<v-btn text :href="`http://${site.name}`" target="_blank">
+								View <v-icon class="ml-1">mdi-open-in-new</v-icon> 
+							</v-btn>
+							<v-btn text @click="copySSH( site )">
+								SSH <v-icon class="ml-1">mdi-content-copy</v-icon> 
+							</v-btn>
+							<v-chip class="mt-4 ml-2" label :input-value="true">{{ site.errors.length }} issues</v-chip>
 						</v-toolbar-items>
 					</v-toolbar>
 					<v-card class="elevation-0 mx-auto" v-for="error in site.errors">
@@ -7142,6 +7148,18 @@ new Vue({
 					{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" }
 				],
 			}
+		},
+		copySSH( site ) {
+			var data = {
+				'action': 'captaincore_ajax',
+				'command': "fetch-site-environments",
+				'post_id': site.site_id
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.copyText( response.data[0].ssh )
+				});
+			
 		},
 		showSiteMigration( site_id ){
 			site = this.sites.filter(site => site.site_id == site_id)[0];
