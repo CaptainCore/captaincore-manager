@@ -95,6 +95,7 @@ class Sites extends DB {
             $site    = self::get( $site_id );
             $details = json_decode( $site->details );
             $site->environments = ( new Site( $site_id ) )->environments_bare();
+            $production_details = $site->environments[0]["details"];
             $site->environment_selected = "Production";
             $site->usage_breakdown = [];
             $site->pagination   = [ 'sortBy' => 'roles' ];
@@ -112,10 +113,15 @@ class Sites extends DB {
             $site->visits       = $details->visits;
             $site->mailgun      = $details->mailgun;
             $site->outdated     = false;
+            $site->errors       = [];
             
             // Mark site as outdated if sync older then 48 hours
             if ( strtotime( $site->updated_at ) <= strtotime( "-48 hours" ) ) {
                 $site->outdated = true;
+            }
+
+            if ( ! empty( $production_details->console_errors ) ) {
+                $site->errors = $production_details->console_errors;
             }
             unset( $site->token );
             unset( $site->details );

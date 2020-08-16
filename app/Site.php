@@ -623,6 +623,7 @@ class Site {
             $result = [
                 "themes"  => json_decode( $environment->themes ),
                 "plugins" => json_decode( $environment->plugins ),
+                "details" => json_decode( $environment->details ),
             ];
             if ( $result["themes"] == "" ) {
                 $result["themes"] = [];
