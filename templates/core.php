@@ -3425,16 +3425,14 @@ if ( $role_check ) {
 						<v-toolbar-title>{{ site.name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items>
-							<v-chip class="mt-4" label>{{ site.errors.length }} issues</v-chip>
+							<v-chip class="mt-4" label :input-value="true">{{ site.errors.length }} issues</v-chip>
 						</v-toolbar-items>
 					</v-toolbar>
-					<v-card class="my-3 mx-auto" v-for="error in site.errors">
+					<v-card class="elevation-0 mx-auto" v-for="error in site.errors">
 						<v-card-title>{{ error.source }}</v-card-title>
+						<v-card-subtitle><a :href="error.url">{{ error.url }}</a></small></v-card-subtitle>
 						<v-card-text>
-						<p><a :href="error.url">{{ error.url }}</a></p>
-						<div class="text--primary">
 							<pre><code>{{ error.description }}</code></pre>
-						</div>
 						</v-card-text>
 					</v-card>
 					</div>
