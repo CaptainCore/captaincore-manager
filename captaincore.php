@@ -1403,6 +1403,23 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	}
 
+	// Sync scan errors
+	if ( $command == 'sync-scan-errors' and ! empty( $post->data ) ) {
+		
+		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
+		$environment         = strtolower( $current_environment->environment );
+		( new CaptainCore\Environments )->update( (array) $post->data, [ "environment_id" => $post->data->environment_id ] );
+
+		$response = [
+			"response"        => "Completed sync-scan-errors for $site_id",
+			"environment"     => $post->data,
+		];
+		
+		// Mark Site as updated
+		( new CaptainCore\Sites )->update( [ "updated_at" => $post->data->updated_at ], [ "site_id" => $site_id ] );
+
+	}
+
 	// Sync site data
 	if ( $command == 'sync-data' and ! empty( $post->data ) ) {
 		
