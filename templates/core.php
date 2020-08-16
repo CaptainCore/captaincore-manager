@@ -66,7 +66,7 @@ if ( $role_check ) {
             <v-list-item-title>DNS</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-		<v-list-item link href="/account/health" @click.prevent="goToPath( '/account/health' )" v-show="role == 'administrator'">
+		<v-list-item link href="/account/health" @click.prevent="goToPath( '/account/health' )">
           <v-list-item-icon>
             <v-icon>mdi-ladybug</v-icon>
           </v-list-item-icon>
@@ -3419,6 +3419,9 @@ if ( $role_check ) {
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
+				<v-alert :value="true" type="info">
+						Results from daily scans of home pages. Web console errors are extracted from Google Chrome via Lighthouse CLI. Helpful for tracking down wide range of issues.  
+				</v-alert>
 					<v-card v-for="site in filterSitesWithErrors" flat class="mb-2">
 					<v-toolbar color="grey lighten-4" light flat>
 						<v-img :src=`${remote_upload_uri}${site.site}_${site.site_id}/production/screenshots/${site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="site.screenshot"></v-img>
@@ -5039,15 +5042,15 @@ new Vue({
 				this.fetchDomains()
 			}
 			if ( this.route == "users" ) {
-				this.selected_nav = 5
+				this.selected_nav = 6
 				this.fetchAllUsers();
 			}
 			if ( this.route == "cookbook" ) {
-				this.selected_nav = 2
+				this.selected_nav = 3
 				this.loading_page = false;
 			}
 			if ( this.route == "handbook" ) {
-				this.selected_nav = 3
+				this.selected_nav = 4
 				this.loading_page = false;
 			}
 			if ( this.route == "keys" ) {
@@ -5065,7 +5068,12 @@ new Vue({
 				this.loading_page = false;
 			}
 			if ( this.route == "accounts" ) {
-				this.selected_nav = 4
+				this.selected_nav = 5
+				this.loading_page = false;
+			}
+			if ( this.route == "billing" ) {
+				this.fetchBilling()
+				this.selected_nav = 7
 				this.loading_page = false;
 			}
 			if ( this.route == "configurations" ) {
@@ -5077,6 +5085,13 @@ new Vue({
 					this.loading_page = true;
 				}
 				this.selected_nav = 0
+				this.fetchSites()
+			}
+			if ( this.route == "health" ) {
+				if ( this.sites.length == 0 ) {
+					this.loading_page = true;
+				}
+				this.selected_nav = 2
 				this.fetchSites()
 			}
 			if ( this.fetchInvite.account ) {
