@@ -3425,13 +3425,13 @@ if ( $role_check ) {
 						<v-toolbar-title>{{ site.name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items>
-							<v-btn text @click="scanErrors( site )">
+							<v-btn small text @click="scanErrors( site )">
 								Scan <v-icon>mdi-sync</v-icon>
 							</v-btn>
-							<v-btn text :href="`http://${site.name}`" target="_blank">
+							<v-btn small text :href="`http://${site.name}`" target="_blank">
 								View <v-icon class="ml-1">mdi-open-in-new</v-icon> 
 							</v-btn>
-							<v-btn text @click="copySSH( site )">
+							<v-btn small text @click="copySSH( site )">
 								SSH <v-icon class="ml-1">mdi-content-copy</v-icon> 
 							</v-btn>
 							<v-chip class="mt-4 ml-2" label :input-value="true">{{ site.errors.length }} issues</v-chip>
