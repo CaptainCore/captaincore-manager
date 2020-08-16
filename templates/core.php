@@ -66,6 +66,14 @@ if ( $role_check ) {
             <v-list-item-title>DNS</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
+		<v-list-item link href="/account/health" @click.prevent="goToPath( '/account/health' )" v-show="role == 'administrator'">
+          <v-list-item-icon>
+            <v-icon>mdi-ladybug</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>Health</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
 		<v-list-item link href="/account/cookbook" @click.prevent="goToPath( '/account/cookbook' )">
         <v-list-item-icon>
             <v-icon>mdi-code-tags</v-icon>
@@ -3403,6 +3411,35 @@ if ( $role_check ) {
 				</v-window-item>
 			</v-window-item>
 			</v-card>
+			<v-card tile v-show="route == 'health'" flat>
+				<v-toolbar color="grey lighten-4" light flat>
+					<v-toolbar-title>Listing {{ filterSitesWithErrors.length }} sites with issues</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+					</v-toolbar-items>
+				</v-toolbar>
+				<v-card-text>
+					<div v-for="site in filterSitesWithErrors">
+					<v-toolbar color="grey lighten-4" light flat>
+						<v-img :src=`${remote_upload_uri}${site.site}_${site.site_id}/production/screenshots/${site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="site.screenshot"></v-img>
+						<v-toolbar-title>{{ site.name }}</v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-toolbar-items>
+							<v-chip class="mt-4" label>{{ site.errors.length }} issues</v-chip>
+						</v-toolbar-items>
+					</v-toolbar>
+					<v-card class="my-3 mx-auto" v-for="error in site.errors">
+						<v-card-title>{{ error.source }}</v-card-title>
+						<v-card-text>
+						<p><a :href="error.url">{{ error.url }}</a></p>
+						<div class="text--primary">
+							<pre><code>{{ error.description }}</code></pre>
+						</div>
+						</v-card-text>
+					</v-card>
+					</div>
+				</v-card-text>
+			</v-card>
 			<v-card tile v-show="route == 'cookbook'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Listing {{ filteredRecipes.length }} recipes</v-toolbar-title>
@@ -4603,6 +4640,7 @@ new Vue({
 			'/account/login': 'login',
 			'/account/sites': 'sites',
 			'/account/dns': 'dns',
+			'/account/health': 'health',
 			'/account/keys': 'keys',
 			'/account/defaults': 'defaults',
 			'/account/configurations': 'configurations',
@@ -4929,6 +4967,9 @@ new Vue({
 			} else {
 				return "Pages"
 			}
+		},
+		filterSitesWithErrors() {
+			return this.sites.filter( s => s.errors != "" )
 		},
 		filterCount() {
 			return this.applied_site_filter.length + this.applied_site_filter_version.length + this.applied_site_filter_status.length
