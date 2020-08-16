@@ -28,6 +28,7 @@ class Site {
         $domain       = $site->name;
         $customer     = $site->account_id;
         $mailgun      = $details->mailgun;
+        $production_details  = $environments[0]->details;
         $visits              = $environments[0]->visits;
         $subsite_count       = $environments[0]->subsite_count;
         $production_address  = $environments[0]->address;
@@ -76,6 +77,11 @@ class Site {
         // Mark site as outdated if sync older then 48 hours
         if ( strtotime( $environments[0]->updated_at ) <= strtotime( "-48 hours" ) ) {
             $site_details->outdated           = true;
+        }
+
+        $site_details->errors                 = [];
+        if ( ! empty( $production_details->console_errors ) ) {
+            $site_details->errors = $production_details->console_errors;
         }
 
         if ( ! isset( $site_details->visits ) ) {
