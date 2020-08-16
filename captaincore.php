@@ -4438,6 +4438,10 @@ function captaincore_install_action_callback() {
 			$command = "copy-staging-to-production $site";
 		}
 	}
+	if ( $cmd == 'scan-errors' ) {
+		$run_in_background = true;
+		$command = "scan-errors $site";
+	}
 	if ( $cmd == 'sync-data' ) {
 		$run_in_background = true;
 		$command = "sync-data $site";
