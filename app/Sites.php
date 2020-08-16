@@ -113,6 +113,7 @@ class Sites extends DB {
             $site->visits       = $details->visits;
             $site->mailgun      = $details->mailgun;
             $site->outdated     = false;
+            $site->loading      = false;
             $site->errors       = [];
             
             // Mark site as outdated if sync older then 48 hours

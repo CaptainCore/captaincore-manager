@@ -3419,12 +3419,15 @@ if ( $role_check ) {
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
-					<div v-for="site in filterSitesWithErrors">
+					<v-card v-for="site in filterSitesWithErrors" flat class="mb-2">
 					<v-toolbar color="grey lighten-4" light flat>
 						<v-img :src=`${remote_upload_uri}${site.site}_${site.site_id}/production/screenshots/${site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="site.screenshot"></v-img>
 						<v-toolbar-title>{{ site.name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items>
+							<v-btn text @click="scanErrors( site )">
+								Scan <v-icon>mdi-sync</v-icon>
+							</v-btn>
 							<v-btn text :href="`http://${site.name}`" target="_blank">
 								View <v-icon class="ml-1">mdi-open-in-new</v-icon> 
 							</v-btn>
@@ -3441,7 +3444,10 @@ if ( $role_check ) {
 							<pre><code>{{ error.description }}</code></pre>
 						</v-card-text>
 					</v-card>
-					</div>
+					<v-overlay absolute :value="site.loading">
+						<v-progress-circular indeterminate size="64" width="4"></v-progress-circular>
+					</v-overlay>
+					</v-card>
 				</v-card-text>
 			</v-card>
 			<v-card tile v-show="route == 'cookbook'" flat>
@@ -7161,6 +7167,29 @@ new Vue({
 				});
 			
 		},
+		scanErrors( site ) {
+			site.loading = true
+
+			var data = {
+				action: 'captaincore_install',
+				post_id: site.site_id,
+				command: 'scan-errors',
+			};
+
+			description = "Scanning " + site.name + " for errors";
+
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({ "job_id": job_id, "description": description, "status": "queued", stream: [], "command": "scanErrors", "site_id": site.site_id });
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					// Updates job id with responsed background job id
+					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					this.runCommand( response.data );
+				})
+				.catch( error => console.log( error ) );
+		},
 		showSiteMigration( site_id ){
 			site = this.sites.filter(site => site.site_id == site_id)[0];
 			this.dialog_migration.sites.push( site );
@@ -8782,6 +8811,11 @@ new Vue({
 				}
 				
 				if ( job.command == "syncSite" ) {
+					self.fetchSiteInfo( job.site_id )
+				}
+
+				if ( job.command == "scanErrors" ) {
+					self.sites.filter( s => s.site_id == job.site_id )[0].loading = false
 					self.fetchSiteInfo( job.site_id )
 				}
 
