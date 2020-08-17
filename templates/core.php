@@ -3429,13 +3429,16 @@ if ( $role_check ) {
 						<v-spacer></v-spacer>
 						<v-toolbar-items>
 							<v-btn small text @click="scanErrors( site )">
-								Scan <v-icon>mdi-sync</v-icon>
+								Scan <v-icon class="ml-1">mdi-sync</v-icon>
 							</v-btn>
 							<v-btn small text :href="`http://${site.name}`" target="_blank">
 								View <v-icon class="ml-1">mdi-open-in-new</v-icon> 
 							</v-btn>
 							<v-btn small text @click="copySSH( site )">
 								SSH <v-icon class="ml-1">mdi-content-copy</v-icon> 
+							</v-btn>
+							<v-btn small text @click="showLogEntry( site.site_id )" v-show="role == 'administrator'">
+								Log <v-icon class="ml-1">mdi-check</v-icon>
 							</v-btn>
 							<v-chip class="mt-4 ml-2" label :input-value="true">{{ site.errors.length }} issues</v-chip>
 						</v-toolbar-items>
