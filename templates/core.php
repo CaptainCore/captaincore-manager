@@ -34,7 +34,7 @@ if ( $role_check ) {
 <body>
 <div id="app" v-cloak>
 	<v-app>
-	  <v-app-bar color="primary" dark app fixed style="left:0px;">
+	  <v-app-bar color="primary" dark app fixed style="left:0px;z-index:10">
 	 	 <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none" v-show="route != 'login'"></v-app-bar-nav-icon>
          <v-toolbar-title>
 			<v-list flat color="transparent">
@@ -4183,7 +4183,7 @@ if ( $role_check ) {
 		</template>
 		</v-container>
 		</v-main>
-		<v-footer app padless :height="footer_height" class="pa-0 ma-0" style="font-size:12px" class="console" v-if="view_console.show == true">
+		<v-footer app padless :height="footer_height" class="pa-0 ma-0" style="font-size:12px;z-index:10" class="console" v-if="view_console.show == true">
 		<div class="ma-0 pa-0" style="width: 100%;">
 		<v-row no-gutters>
         <v-col>
@@ -8833,8 +8833,8 @@ new Vue({
 				}
 
 				if ( job.command == "scanErrors" ) {
-					self.sites.filter( s => s.site_id == job.site_id )[0].loading = false
 					self.fetchSiteInfo( job.site_id )
+					self.sites.filter( s => s.site_id == job.site_id )[0].loading = false
 				}
 
 				if ( job.command == "manage" && job.environment ) {
