@@ -1608,7 +1608,7 @@ if ( $role_check ) {
 						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text class="my-2">
-					<v-form v-if="login.lost_password" ref="reset">
+					<v-form v-if="login.lost_password" ref="reset" @keyup.native.enter="resetPassword()">
 					<v-row>
 						<v-col cols="12">
 							<v-text-field label="Username or Email" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
@@ -1622,7 +1622,7 @@ if ( $role_check ) {
 						</v-col>
 					</v-row>
 					</v-form>
-					<v-form lazy-validation ref="login" v-else>
+					<v-form lazy-validation ref="login" @keyup.native.enter="signIn()" v-else>
 					<v-row>
 						<v-col cols="12">
 							<v-text-field label="Username or Email" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
@@ -1655,7 +1655,7 @@ if ( $role_check ) {
 						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text class="my-2">
-					<v-form v-if="login.lost_password" ref="reset">
+					<v-form v-if="login.lost_password" @keyup.native.enter="resetPassword()" ref="reset">
 					<v-row>
 						<v-col cols="12">
 							<v-text-field label="Username or Email" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
@@ -1669,7 +1669,7 @@ if ( $role_check ) {
 						</v-col>
 					</v-row>
 					</v-form>
-					<v-form lazy-validation ref="login" v-else>
+					<v-form lazy-validation ref="login" @keyup.native.enter="signIn()" v-else>
 					<v-row>
 						<v-col cols="12">
 							<v-text-field label="Username or Email" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
