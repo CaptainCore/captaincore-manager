@@ -1762,7 +1762,6 @@ if ( $role_check ) {
 					:search="search"
 					item-key="site_id"
 					ref="site_datatable"
-					:show-select="dialog_bulk.show"
 					:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
 					v-if="toggle_site"
 				>
@@ -1777,9 +1776,6 @@ if ( $role_check ) {
 				<template v-slot:body="{ items }">
 					<tbody>
 					<tr v-for="item in items" :key="item.site_id" @click="showSite( item )" style="cursor:pointer;">
-						<td v-show="dialog_bulk.show">
-							<v-checkbox v-model="sites_selected" :value="item" hide-details @click.native.stop></v-checkbox>
-						</td>
 						<td>
 							<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-100.jpg` class="elevation-1" width="50" v-show="item.screenshot"></v-img>
 						</td>
@@ -1810,7 +1806,6 @@ if ( $role_check ) {
 					:search="search"
 					item-key="site_id"
 					ref="site_datatable"
-					:show-select="dialog_bulk.show"
 					hide-default-header
 					:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
 					v-else
@@ -4410,8 +4405,12 @@ if ( $role_check ) {
 				<span v-if="index === 0" class="v-chip--select v-chip v-chip--clickable v-chip--no-color theme--light v-size--small"><span class="v-chip__content">{{ sites_selected.length }} sites selected</span></span>
 			</template>
 			</v-autocomplete>
-			<v-btn small text v-show="filterCount" @click="sites_selected = $refs.site_datatable.$children[0].filteredItems">
-				Select sites in {{ filterCount }} filters
+			<v-btn small text v-show="filterCount" @click="sites_selected = sites.filter( s => siteFilters( s.environments ) )">
+				Select {{ siteFilterCount }} sites in applied filters
+				
+			</v-btn>
+			<v-btn small text @click="sites_selected = sites">
+				Select all {{ sites.length }} sites
 			</v-btn>
 			<v-spacer></v-spacer>
 				<v-tooltip top>
@@ -4986,6 +4985,9 @@ new Vue({
 		},
 		filterSitesWithErrors() {
 			return this.sites.filter( s => s.errors != "" )
+		},
+		siteFilterCount() {
+			return this.sites.filter( s => this.siteFilters( s.environments ) ).length
 		},
 		filterCount() {
 			return this.applied_site_filter.length + this.applied_site_filter_version.length + this.applied_site_filter_status.length
