@@ -4302,7 +4302,6 @@ if ( $role_check ) {
 			<v-btn small v-show="role == 'administrator'" class="mx-1" @click="site_health_filter = 'outdated'">Outdated only</v-btn>
 			<v-btn small v-show="role == 'administrator'" class="mx-1" @click="site_plan_filter = 'with'">With assigned plan</v-btn>
 			<v-btn small v-show="role == 'administrator'" class="mx-1" @click="site_plan_filter = 'without'">Without assigned plan</v-btn>
-			<v-btn small v-show="role == 'administrator'" class="mx-1" @click="site_health_filter = ''; site_plan_filter='';">Reset</v-btn>
 			<v-spacer></v-spacer>
 				<v-tooltip top>
 					<template v-slot:activator="{ on }">
@@ -4406,8 +4405,7 @@ if ( $role_check ) {
 			</template>
 			</v-autocomplete>
 			<v-btn small text v-show="filterCount" @click="sites_selected = sites.filter( s => siteFilters( s.environments ) )">
-				Select {{ siteFilterCount }} sites in applied filters
-				
+				Select {{ sites.filter( s => siteFilters( s.environments ) ).length }} sites in applied filters
 			</v-btn>
 			<v-btn small text @click="sites_selected = sites">
 				Select all {{ sites.length }} sites
@@ -9109,20 +9107,24 @@ new Vue({
 		}, 300),
 		sitePlanFilters( account ) {
 			hosting_plans = this.hosting_plans.map( p => p.name )
+			name = ""
+			if ( account.plan !== null && typeof account.plan.name != "undefined" ) {
+				name = account.plan.name
+			}
 
 			if ( this.site_plan_filter == "" ) {
 				return true
 				}
-			if ( this.site_plan_filter == "with" && hosting_plans.includes( account.plan.name ) ) {
+			if ( this.site_plan_filter == "with" && hosting_plans.includes( name ) ) {
 				return true
 				}
-			if ( this.site_plan_filter == "with" && ! hosting_plans.includes( account.plan.name ) ) {
+			if ( this.site_plan_filter == "with" && ! hosting_plans.includes( name ) ) {
 				return false
 				}
-			if ( this.site_plan_filter == "without" && hosting_plans.includes( account.plan.name ) ) {
+			if ( this.site_plan_filter == "without" && hosting_plans.includes( name ) ) {
 				return false
 				}
-			if ( this.site_plan_filter == "without" && ! hosting_plans.includes( account.plan.name ) ) {
+			if ( this.site_plan_filter == "without" && ! hosting_plans.includes( name ) ) {
 				return true
 			}
 			return true
