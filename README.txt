@@ -43,6 +43,16 @@ TODO
 TODO
 
 == Changelog ==
+= 0.13.0: September 5 2020
+* New: Health section for displaying errors collected by the new scan-errors cli command.
+* New: Sync scan errors
+* Tweak: Site UI improvements to adding and editing sites.
+* Tweak: Ability to add shell environment variables per site which get loaded on each ssh request.
+* Tweak: Removed need to enter database info. This is auto populated when syncing site data.
+* Tweak: Login page will now login by pressing enter on the keyboard.
+* Tweak: Improved filter and bulk selections
+* Tweak: Fix bug with DNS layout
+
 = 0.12.0: June 16 2020
 * New: Thumbnails based on screenshot captures
 * New: List sites as thumbnails
