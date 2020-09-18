@@ -449,7 +449,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "21";
+        $required_version = (int) "22";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -539,6 +539,7 @@ class DB {
             offload_secret_key varchar(255),
             offload_bucket varchar(255),
             offload_path varchar(255),
+            token varchar(255),
             storage varchar(20),
             visits varchar(20),
             core varchar(10),
