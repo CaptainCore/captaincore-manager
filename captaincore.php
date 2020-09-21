@@ -4183,19 +4183,18 @@ function captaincore_ajax_action_callback() {
 	}
 
 	if ( $cmd == 'fetch-one-time-login' ) {
-		$fetch    = ( new CaptainCore\Sites )->get( $post_id );
-		$home_url = ( new CaptainCore\Environments )->select_by_conditions( 'home_url', [ "site_id" => $post_id, "environment" => $environment ] );
-		$home_url = isset( $home_url[0] ) ? $home_url[0] : '';
+		$environment_id = ( new CaptainCore\Site( $post_id ) )->fetch_environment_id( $environment );
+		$environment    = ( new CaptainCore\Environments )->get( $environment_id );
 		$args     = [
 			"body" => json_encode( [
 					"command"    => "login",
 					"user_login" => $value,
-					"token"      => $fetch->token,
+					"token"      => $environment->token,
 			 ] ),
 			"method"    => 'POST',
 			"sslverify" => false,
 		];
-		$response  = wp_remote_post( "$home_url/wp-admin/admin-ajax.php?action=captaincore_quick_login", $args );
+		$response  = wp_remote_post( "{$environment->home_url}/wp-admin/admin-ajax.php?action=captaincore_quick_login", $args );
 		$login_url = $response["body"];
 		echo $login_url;
 		wp_die();
