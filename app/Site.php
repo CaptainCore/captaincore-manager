@@ -494,7 +494,7 @@ class Site {
         $json    = json_decode( $response["body"] );
 
         if ( json_last_error() != JSON_ERROR_NONE ) {
-            return [ "error" => "Bad response" ];
+            return [];
         }
 
         function buildTree( $branches ) {
@@ -589,7 +589,7 @@ class Site {
         $result = json_decode( $response["body"] );
 
         if ( json_last_error() != JSON_ERROR_NONE ) {
-            return [ "error" => "Bad response" ];
+            return [];
         }
 
         foreach( $result as $item ) {
@@ -751,6 +751,9 @@ class Site {
             $environment->themes_selected  = [];
             $environment->plugins_selected = [];
             $environment->users_selected   = [];
+            if ( $environment->details == "" ) {
+                $environment->details = [];
+            }
             if ( $environment->themes == "" ) {
                 $environment->themes = [];
             }
