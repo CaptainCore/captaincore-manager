@@ -1938,7 +1938,7 @@ if ( $role_check ) {
 										<v-tab key="Scripts" href="#tab-Scripts">
 											Scripts <v-icon>mdi-code-tags</v-icon>
 										</v-tab>
-										<v-tab key="Backups" href="#tab-Backups" @click="viewQuicksaves( dialog_site.site.site_id ); viewSnapshots( dialog_site.site.site_id );">
+										<v-tab key="Backups" href="#tab-Backups" @click="dialog_site.backup_step = 1">
 											Backups <v-icon>mdi-update</v-icon>
 										</v-tab>
 									</v-tabs>
@@ -2501,7 +2501,7 @@ if ( $role_check ) {
 			</v-tab-item>
 			<v-tab-item :key="7" value="tab-Backups">
 				<v-toolbar color="grey lighten-4" dense light flat>
-					<v-toolbar-title>Backups <small>(Quicksaves & Snapshots)</small></v-toolbar-title>
+					<v-toolbar-title>Backups</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
 						<v-tooltip top>
@@ -2517,12 +2517,160 @@ if ( $role_check ) {
 						</v-tooltip>
 					</v-toolbar-items>
 				</v-toolbar>
+				<v-window v-model="dialog_site.backup_step">
+      			<v-window-item :value="1" class="mt-7">
+				  <v-card 
+					v-for="key in dialog_site.site.environments"
+					v-show="key.environment == dialog_site.site.environment_selected"
+					flat
+				>
+				<v-row no-gutters>
+				<v-col cols="sm" class="px-2">
+				<v-card
+					class="mx-auto"
+					max-width="344"
+					outlined
+					link
+					hover
+					@click="viewBackups( dialog_site.site.site_id ); dialog_site.backup_step = 2"
+				>
+					<v-card-title>Backups</v-card-title>
+					<v-card-subtitle>Original file and database backups.</v-card-subtitle>
+					<v-card-text>
+						<span v-if="typeof key.details.backup_count == 'number'">{{ key.details.backup_count }} backups</v-show>
+					</v-card-text>
+				</v-card>
+				</v-col>
+				<v-col cols="sm" class="px-2">
+				<v-card
+					class="mx-auto"
+					max-width="344"
+					outlined
+					link
+					hover
+					@click="viewQuicksaves( dialog_site.site.site_id ); dialog_site.backup_step = 3"
+				>
+					<v-card-title>Quicksaves</v-card-title>
+					<v-card-subtitle>Know what changed and when. Easily rollback themes or plugins. Super helpful for troubleshooting maintenance issues.</v-card-subtitle>
+					<v-card-text>
+						<span v-if="typeof key.details.quicksave_usage == 'object'">{{ key.details.quicksave_usage.count }} quicksaves</v-show>
+					</v-card-text>
+				</v-card>
+				</v-col>
+				<v-col cols="sm" class="px-2">
+				<v-card
+					class="mx-auto"
+					max-width="344"
+					outlined
+					link
+					hover
+					@click="viewSnapshots( dialog_site.site.site_id ); dialog_site.backup_step = 4"
+				>
+					<v-card-title>Snapshots</v-card-title>
+					<v-card-subtitle>Manually generated snapshots zips.</v-card-subtitle>
+					<v-card-text>
+						<span v-if="typeof key.details.snapshot_count == 'number'">{{ key.details.snapshot_count }} snapshots</v-show>
+					</v-card-text>
+				</v-card>
+				</v-col>
+				</v-row>
+				</v-card>
+				</v-window-item>
+				<v-window-item :value="2">
 				<v-card 
 					v-for="key in dialog_site.site.environments"
 					v-show="key.environment == dialog_site.site.environment_selected"
 					flat
 				>
-					<v-subheader>Quicksaves</v-subheader>
+					<v-subheader><a @click="dialog_site.backup_step = 1 ">Types</a>&nbsp;/ Backups</v-subheader>
+					<v-card-text v-if="typeof key.backups == 'string'">
+						<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
+					</v-card-text>
+					<div v-else>
+					<v-data-table
+						:headers="[{text:'Created At',value:'time'},{text:'Backup ID',value:'short_id',width:'115px'}]"
+						:items="key.backups"
+						item-key="id"
+						no-data-text="No backups found."
+                		:ref="'backup_table_'+ dialog_site.site.site_id + '_' + key.environment"
+						single-expand
+						show-expand
+						class="table-backups"
+						@click:row="expandBackup( $event, dialog_site.site.site_id, key.environment )"
+					>
+					<template v-slot:item.time="{ item }">
+						{{ item.time | pretty_timestamp }}
+					</template>
+					<template v-slot:expanded-item="{ item }">
+						<td colspan="3" style="position: relative;background: #fff; padding:0px">
+						<v-row no-gutters justify="space-between">
+						<v-col cols="5" md="5" sm="12">
+						<v-progress-circular indeterminate color="primary" class="ma-5" size="24" v-show="item.loading"></v-progress-circular></span>
+						<v-treeview
+							v-model="item.tree"
+							:items="item.files"
+							activatable
+							selectable
+							selection-type="leaf"
+							item-key="path"
+							open-on-click
+							return-object
+						>
+							<template v-slot:prepend="{ item, open }">
+							<v-icon v-if="item.type == 'dir'">
+								{{ open ? 'mdi-folder-open' : 'mdi-folder' }}
+							</v-icon>
+							<v-icon v-else>
+								{{ files[item.ext] ? files[item.ext] : 'mdi-file' }}
+							</v-icon>
+							</template>
+						</v-treeview>
+						</v-col>
+
+						<v-divider vertical></v-divider>
+
+						<v-col class="pa-5 text-center">
+						<v-scroll-y-transition mode="out-in">
+						<div
+							v-if="item.tree.length == 0"
+							class="title font-weight-light"
+							style="align-self: center;"
+						>
+							Select a file or folder.<br />
+							<a class="body-2" @click="item.tree = item.files">Select everything</a>
+						</div>
+						<v-card
+							v-else
+							class="pt-6 mx-auto"
+							flat
+							max-width="400"
+						>
+							<v-card-text>
+							<h3 class="headline mb-2">
+								{{ item.tree.length }} items selected
+							</h3>
+							<p>{{ item.tree.map( item => item.size ).reduce((a, b) => a + b, 0) | formatSize }}</p>
+							</v-card-text>
+							<v-divider></v-divider>
+							<v-btn class="ma-2" @click="downloadBackup( item.id, item.tree )">Download<v-icon>mdi-file-download</v-icon></v-btn>
+							<p class="mt-5 text-center"><a @click="item.tree = []">Cancel selection</a>
+						</v-card>
+						</v-scroll-y-transition>
+					</v-col>
+					</v-row>
+						</td>
+					</template>
+					</v-data-table>
+					</div>
+				</v-card>
+				</v-window-item>
+				<v-window-item :value="3">
+				<v-card 
+					v-for="key in dialog_site.site.environments"
+					v-show="key.environment == dialog_site.site.environment_selected"
+					flat
+				>
+					<v-subheader><a @click="dialog_site.backup_step = 1 ">Types</a>&nbsp;/ Quicksaves</v-subheader>
 					<v-card-text v-if="typeof key.quicksaves == 'string'">
 						<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
 					</v-card-text>
@@ -2665,7 +2813,15 @@ if ( $role_check ) {
 					</template>
 					</v-data-table>
 					</div>
-					<v-subheader>Snapshots</v-subheader>
+					</v-card>
+					</v-window-item>
+					<v-window-item :value="4">
+					<v-card 
+						v-for="key in dialog_site.site.environments"
+						v-show="key.environment == dialog_site.site.environment_selected"
+						flat
+					>
+					<v-subheader><a @click="dialog_site.backup_step = 1">Types </a>&nbsp;/ Snapshots</v-subheader>
 					<v-card-text v-if="typeof key.snapshots == 'string'">
 						<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
 					</v-card-text>
@@ -2711,7 +2867,8 @@ if ( $role_check ) {
 					</template>
 					</v-data-table>
 					</div>
-					</v-card>
+					</v-window-item>
+					</v-window>
 			</v-tab-item>
 		</v-tabs-items>
 		<v-card flat v-else>
@@ -4603,6 +4760,19 @@ new Vue({
 			success: false,
 			warning: false,
 		},
+		files: {
+			html: 'mdi-language-html5',
+			js: 'mdi-nodejs',
+			json: 'mdi-code-json',
+			md: 'mdi-language-markdown',
+			pdf: 'mdi-file-pdf',
+			png: 'mdi-file-image',
+			txt: 'mdi-file-document-outline',
+			xls: 'mdi-file-excel',
+			jpg: 'mdi-file-image',
+			gif: 'mdi-file-image',
+			php: 'mdi-file-code',
+		},
 		configurations: <?php echo json_encode( ( new CaptainCore\Configurations )->get() ); ?>,
 		configurations_loading: true,
 		footer_height: "28px",
@@ -4726,7 +4896,7 @@ new Vue({
 		account_search: "",
 		new_recipe: { show: false, title: "", content: "", public: 1 },
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
-		dialog_site: { loading: true, step: 1, site: { name: "", site: "", screenshots: {}, timeline: [], environment_selected: "Production", environments: [{ id: "", quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }], users: [], timeline: [], usage_breakdown: [], update_log: [], tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
+		dialog_site: { loading: true, step: 1, backup_step: 1, site: { name: "", site: "", screenshots: {}, timeline: [], environment_selected: "Production", environments: [{ id: "", quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }], users: [], timeline: [], usage_breakdown: [], update_log: [], tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
 		dialog_edit_account: { show: false, account: {} },
 		roles: [{ name: "Subscriber", value: "subscriber" },{ name: "Contributor", value: "contributor" },{ name: "Author", value: "author" },{ name: "Editor", value: "editor" },{ name: "Administrator", value: "administrator" }],
 		new_plugin: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {} },
@@ -5255,6 +5425,14 @@ new Vue({
 				warning: '#FFC107'
 			}
 		},
+		sortTree( data ) {
+			if ( ! data ) { return }
+            data.sort( (a, b) => a.type > b.type || a.name > b.name )
+            for ( var i = 0; i< data.length; i++ ) {
+                var val = data[i]
+                if ( val.children ) { this.sortTree( val.children ) }
+            }
+		},
 		saveGlobalConfigurations() {
 			this.dialog_configure_defaults.loading = true;
 			this.configurations.colors = this.$vuetify.theme.themes.light
@@ -5321,7 +5499,6 @@ new Vue({
 				this.console = index
 				return
 			}
-
 			if ( this.footer_height == "28px" ) {
 				this.footer_height = "202px"
 				this.view_console.open = true
@@ -5380,26 +5557,24 @@ new Vue({
 				'command': "fetch-one-time-login",
 				'value': username,
 				'environment': site.environment_selected
-			};
-
-			self = this;
+			}
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					if ( response.data.includes("http") ) {
 					window.open( response.data );
-					self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+						this.jobs.filter(job => job.job_id == job_id)[0].status = "done";
 					} else {
-						self.jobs.filter(job => job.job_id == job_id)[0].status = "error";
-						self.snackbar.message = description + " failed.";
-						self.snackbar.show = true;
+						this.jobs.filter(job => job.job_id == job_id)[0].status = "error";
+						this.snackbar.message = description + " failed.";
+						this.snackbar.show = true;
 					}
 					
 				})
 				.catch(error => {
-					self.jobs.filter(job => job.job_id == job_id)[0].status = "error";
-					self.snackbar.message = description + " failed.";
-					self.snackbar.show = true;
+					this.jobs.filter(job => job.job_id == job_id)[0].status = "error";
+					this.snackbar.message = description + " failed.";
+					this.snackbar.show = true;
 					console.log(error.response)
 			});
 		},
@@ -8288,8 +8463,73 @@ new Vue({
 				});
 
 		},
-		viewSnapshots( site_id ) {
+		downloadBackup( backup_id, backup_tree ) {
+			site_id = this.dialog_site.site.site_id
+			tree = backup_tree.map( item => item.path )
+			description = "Generating downloadable zip for " + tree.length + " items. Will send an email when ready."
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: [], "command": "downloadBackup"})
 
+			var data = {
+				'action': 'captaincore_install',
+				'post_id': site_id,
+				'command': "backup_download",
+				'backup_id': backup_id,
+				'value': JSON.stringify( tree ),
+				'environment': this.dialog_site.site.environment_selected,
+			};
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.snackbar.message = description
+					this.snackbar.show = true
+					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					this.runCommand( response.data );
+			});
+		},
+		getBackup( backup_id, site_id ) {
+			environment = this.dialog_site.site.environment_selected.toLowerCase()
+			axios.get(
+				`/wp-json/captaincore/v1/site/${site_id}/${environment}/backups/${backup_id}`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					environment_selected = this.dialog_site.site.environments.filter( e => e.environment == this.dialog_site.site.environment_selected )
+					if ( environment_selected.length != 1 ) {
+						return
+					}
+					backup_selected = environment_selected[0].backups.filter( b => b.id == backup_id )
+					if ( backup_selected.length != 1 ) {
+						return
+					}
+					backup_selected[0].files = response.data
+					this.sortTree( backup_selected[0].files )
+					backup_selected[0].loading = false
+				});
+		},
+		viewBackups( site_id ) {
+			environment = this.dialog_site.site.environment_selected.toLowerCase()
+			axios.get(
+				`/wp-json/captaincore/v1/site/${site_id}/${environment}/backups`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					environment_selected = this.dialog_site.site.environments.filter( e => e.environment == this.dialog_site.site.environment_selected )
+					if ( environment_selected.length == 1 ) {
+						environment_selected[0].backups = response.data
+					}
+				});
+		},
+		expandBackup( item, site_id, environment ) {
+			table_name = "backup_table_" + site_id + "_" + environment;
+			if ( typeof this.$refs[table_name][0].expansion[item.id] == 'boolean' ) {
+				this.$refs[table_name][0].expansion = ""
+			} else {
+				this.getBackup( item.id, site_id )
+				this.$refs[table_name][0].expansion = { [item.id] : true }
+			}
+		},
+		viewSnapshots( site_id ) {
 			site = this.sites.filter(site => site.site_id == site_id)[0];
 			axios.get(
 				'/wp-json/captaincore/v1/site/'+site_id+'/snapshots', {
@@ -8299,7 +8539,6 @@ new Vue({
 						site.environments[0].snapshots = response.data.Production
 						site.environments[1].snapshots = response.data.Staging				
 				});
-
 		},
 		activateTheme (theme_name, site_id) {
 
@@ -8328,13 +8567,11 @@ new Vue({
 				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 			};
 
-			self = this;
-
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					site.loading_themes = false;
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data );
+					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					this.runCommand( response.data );
 			});
 		},
 		deleteTheme (theme_name, site_id) {
@@ -8830,6 +9067,15 @@ new Vue({
 				
 				if ( job.command == "syncSite" ) {
 					self.fetchSiteInfo( job.site_id )
+				}
+
+				if ( job.command == "downloadBackup" ) {
+					maybe_url = job.stream[last_output_index - 1];
+					if ( maybe_url.includes("http") ) {
+						window.open( maybe_url );
+						self.snackbar.message = "Downloading zip."
+						self.snackbar.show = true
+					}
 				}
 
 				if ( job.command == "scanErrors" ) {
