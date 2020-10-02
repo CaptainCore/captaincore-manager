@@ -1429,6 +1429,7 @@ g.chart-legend {
 	table-layout:fixed;
 }
 
+.table-backups tbody > tr,
 .table-quicksaves tbody > tr {
 	cursor: pointer;
 }
