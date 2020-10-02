@@ -1407,7 +1407,6 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	if ( $command == 'sync-scan-errors' and ! empty( $post->data ) ) {
 		
 		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
-		$environment         = strtolower( $current_environment->environment );
 		( new CaptainCore\Environments )->update( (array) $post->data, [ "environment_id" => $post->data->environment_id ] );
 
 		$response = [
@@ -1750,8 +1749,38 @@ function captaincore_site_snapshot_download_func( $request ) {
 	exit;
 }
 
+function captaincore_site_backups_func( $request ) {
+	$site_id     = $request['id'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$environment = $request['environment'];
+	$site        = new CaptainCore\Site( $site_id );
+	return $site->backups( $environment );
+}
+
+function captaincore_site_backups_get_func( $request ) {
+	$site_id     = $request['id'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$backup_id   = $request['backup_id'];
+	$environment = $request['environment'];
+	$site        = new CaptainCore\Site( $site_id );
+	return $site->backup_get( $backup_id, $environment );
+}
+
 function captaincore_site_captures_func( $request ) {
 	$site_id     = $request['id'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
 	$environment = $request['environment'];
 	$site        = new CaptainCore\Site( $site_id );
 	return $site->captures( $environment );
@@ -1807,7 +1836,25 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
-	// Custom endpoint for CaptainCore site/<id>/captures
+	// Custom endpoint for CaptainCore site/<site-id>/<environment>/backups
+	register_rest_route(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/backups', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_site_backups_func',
+			'show_in_index' => false
+		]
+	);
+
+	// Custom endpoint for CaptainCore site/<site-id>/<environment>/backups/<backup-id>
+	register_rest_route(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/backups/(?P<backup_id>[a-zA-Z0-9-]+)', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_site_backups_get_func',
+			'show_in_index' => false
+		]
+	);
+
+	// Custom endpoint for CaptainCore site/<id>/<environment>/captures
 	register_rest_route(
 		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/captures', [
 			'methods'       => 'GET',
@@ -4311,6 +4358,7 @@ function captaincore_install_action_callback() {
 	$name         = $_POST['name'];
 	$environment  = $_POST['environment'];
 	$quicksave_id = $_POST['quicksave_id'];
+	$backup_id    = $_POST['backup_id'];
 	$link         = $_POST['link'];
 	$background   = $_POST['background'];
 	$job_id       = $_POST['job_id'];
@@ -4505,6 +4553,15 @@ function captaincore_install_action_callback() {
 	if ( $cmd == 'run' ) {
 		$code    = base64_encode( stripslashes_deep( $value ) );
 		$command = "run $site --code=$code";
+	}
+
+	if ( $cmd == 'backup_download' ) {
+		$run_in_background = true;
+		$current_user = wp_get_current_user();
+		$email        = $current_user->user_email;
+		$tree         = base64_encode( stripslashes_deep( $value ) );
+		$count        = count ( $value );
+		$command      = "site backup download $site $backup_id --email=$email --payload='$tree'";
 	}
 
 	if ( $cmd == 'manage' ) {

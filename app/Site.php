@@ -461,6 +461,149 @@ class Site {
 
     }
 
+    public function backup_get( $backup_id, $environment = "production" ) {
+
+        $command = "site backup get {$this->site_id}-$environment $backup_id";
+        
+        // Disable https when debug enabled
+        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+            add_filter( 'https_ssl_verify', '__return_false' );
+        }
+
+        $data = [ 
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8', 
+                'token'        => CAPTAINCORE_CLI_TOKEN 
+            ],
+            'body'        => json_encode( [ "command" => $command ]),
+            'method'      => 'POST',
+            'data_format' => 'body'
+        ];
+
+        // Add command to dispatch server
+        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+        if ( is_wp_error( $response ) ) {
+            $error_message = $response->get_error_message();
+            return "Something went wrong: $error_message";
+        }
+
+        $response["body"] = explode( PHP_EOL, $response["body"] );
+        $response["body"] = "[" . implode(",", $response["body"] ) . "]";
+
+        $json    = json_decode( $response["body"] );
+
+        if ( json_last_error() != JSON_ERROR_NONE ) {
+            return [ "error" => "Bad response" ];
+        }
+
+        function buildTree( $branches ) {
+            // Create a hierarchy where keys are the labels
+            $rootChildren = [];
+            foreach($branches as $branch) {
+                $children =& $rootChildren;
+                $paths = explode( "/", $branch->path );
+                foreach( $paths as $label ) {
+                    if ( $label == "" ) { 
+                        continue;
+                    };
+                    $ext = "";
+                    if ( strpos( $label, "." ) !== false ) { 
+                        $ext = substr( $label, strpos( $label, "." ) + 1 );
+                    }
+                    if (!isset($children[$label])) $children[$label] = [ "//path" => $branch->path, "//type" => $branch->type, "//size" => $branch->size, "//ext" => $ext ];
+                    $children =& $children[$label];
+                }
+            }
+            // Create target structure from that hierarchy
+            function recur($children) {
+                $result = [];
+                foreach( $children as $label => $grandchildren ) {
+                    $node = [ 
+                        "name" => $label,
+                        "path" => $grandchildren["//path"],
+                        "type" => $grandchildren["//type"],
+                        "size" => $grandchildren["//size"],
+                        "ext" => $grandchildren["//ext"]
+                    ];
+                    unset( $grandchildren["//path"] );
+                    unset( $grandchildren["//type"] );
+                    unset( $grandchildren["//size"] );
+                    unset( $grandchildren["//ext"] );
+                    if ( count($grandchildren) ) { 
+                        $node["children"] = recur( $grandchildren );
+                    };
+                    $result[] = $node;
+                }
+                return $result;
+            }
+            return recur($rootChildren);
+        }
+        
+        $results = buildTree( $json );
+        
+        function sortRecurse(&$array) {
+            usort($array, function($a, $b) {
+                $retval = $a['name'] <=> $b['name'];
+                return $retval;
+            });
+            foreach ($array as &$subarray) {
+                if ( isset( $subarray['children']) ) {
+                    sortRecurse($subarray['children']);
+                }
+            }
+            return $array;
+        }
+        
+        return sortRecurse( $results );
+
+    }
+
+    public function backups( $environment = "production" ) {
+
+        $command = "site backup list {$this->site_id}-$environment";
+        
+        // Disable https when debug enabled
+        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+            add_filter( 'https_ssl_verify', '__return_false' );
+        }
+
+        $data = [ 
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8',
+                'token'        => CAPTAINCORE_CLI_TOKEN
+            ],
+            'body'        => json_encode( [ "command" => $command ]), 
+            'method'      => 'POST', 
+            'data_format' => 'body'
+        ];
+
+        // Add command to dispatch server
+        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+        if ( is_wp_error( $response ) ) {
+            $error_message = $response->get_error_message();
+            return "Something went wrong: $error_message";
+        }
+
+        $result = json_decode( $response["body"] );
+
+        if ( json_last_error() != JSON_ERROR_NONE ) {
+            return [ "error" => "Bad response" ];
+        }
+
+        foreach( $result as $item ) {
+            $item->loading = true;
+            $item->files   = [];
+            $item->tree    = [];
+        }
+
+        usort( $result, function ($a, $b) { return ( $a->time < $b->time ); });
+
+        return $result;
+
+    }
+
     public function generate_screenshot() {
         $site         = ( new Sites )->get( $this->site_id );
         $environments = self::environments();
@@ -595,6 +738,7 @@ class Site {
             $environment->stats            = 'Loading';
             $environment->users            = 'Loading';
             $environment->users_search     =  '';
+            $environment->backups          = 'Loading';
             $environment->quicksaves       = 'Loading';
             $environment->snapshots        = 'Loading';
             $environment->update_logs      = 'Loading';
