@@ -485,7 +485,7 @@ class Site {
         $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
         if ( is_wp_error( $response ) ) {
             $error_message = $response->get_error_message();
-            return "Something went wrong: $error_message";
+            return [];
         }
 
         $response["body"] = explode( PHP_EOL, $response["body"] );
@@ -500,6 +500,7 @@ class Site {
         function buildTree( $branches ) {
             // Create a hierarchy where keys are the labels
             $rootChildren = [];
+            $omitted      = false;
             foreach($branches as $branch) {
                 $children =& $rootChildren;
                 $paths = explode( "/", $branch->path );
@@ -511,7 +512,13 @@ class Site {
                     if ( strpos( $label, "." ) !== false ) { 
                         $ext = substr( $label, strpos( $label, "." ) + 1 );
                     }
-                    if (!isset($children[$label])) $children[$label] = [ "//path" => $branch->path, "//type" => $branch->type, "//size" => $branch->size, "//ext" => $ext ];
+                    if ( empty( $branch->count ) ) {
+                        $branch->count = 1;
+                    }
+                    if ( $branch->type == "dir" && $branch->count > 1 ) {
+                        $omitted = true;
+                    }
+                    if (!isset($children[$label])) $children[$label] = [ "//path" => $branch->path, "//type" => $branch->type, "//size" => $branch->size, "//count" => $branch->count, "//ext" => $ext ];
                     $children =& $children[$label];
                 }
             }
@@ -520,15 +527,17 @@ class Site {
                 $result = [];
                 foreach( $children as $label => $grandchildren ) {
                     $node = [ 
-                        "name" => $label,
-                        "path" => $grandchildren["//path"],
-                        "type" => $grandchildren["//type"],
-                        "size" => $grandchildren["//size"],
-                        "ext" => $grandchildren["//ext"]
+                        "name"  => $label,
+                        "path"  => $grandchildren["//path"],
+                        "type"  => $grandchildren["//type"],
+                        "count" => $grandchildren["//count"],
+                        "size"  => $grandchildren["//size"],
+                        "ext"   => $grandchildren["//ext"]
                     ];
                     unset( $grandchildren["//path"] );
                     unset( $grandchildren["//type"] );
                     unset( $grandchildren["//size"] );
+                    unset( $grandchildren["//count"] );
                     unset( $grandchildren["//ext"] );
                     if ( count($grandchildren) ) { 
                         $node["children"] = recur( $grandchildren );
@@ -537,7 +546,7 @@ class Site {
                 }
                 return $result;
             }
-            return recur($rootChildren);
+            return [ $omitted, recur($rootChildren) ];
         }
         
         $results = buildTree( $json );
@@ -555,7 +564,10 @@ class Site {
             return $array;
         }
         
-        return sortRecurse( $results );
+        return [ 
+            "omitted" => $results[0],
+            "files"   => sortRecurse( $results[1] ),
+        ];
 
     }
 
@@ -594,12 +606,12 @@ class Site {
 
         foreach( $result as $item ) {
             $item->loading = true;
+            $item->omitted = false;
             $item->files   = [];
             $item->tree    = [];
         }
 
         usort( $result, function ($a, $b) { return ( $a->time < $b->time ); });
-
         return $result;
 
     }

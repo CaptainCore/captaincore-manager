@@ -2630,6 +2630,7 @@ if ( $role_check ) {
 						<v-divider vertical></v-divider>
 
 						<v-col class="pa-5 text-center">
+						<v-alert type="info" dense text v-show="item.omitted">This backup has too many files to show. Uploaded files have been omitted for viewing purposes. Everything is still restorable.</v-alert>
 						<v-scroll-y-transition mode="out-in">
 						<div
 							v-if="item.tree.length == 0"
@@ -2647,7 +2648,7 @@ if ( $role_check ) {
 						>
 							<v-card-text>
 							<h3 class="headline mb-2">
-								{{ item.tree.length }} items selected
+								{{ item.tree.map( item => item.count ).reduce((a, b) => a + b, 0)  }} items selected
 							</h3>
 							<p>{{ item.tree.map( item => item.size ).reduce((a, b) => a + b, 0) | formatSize }}</p>
 							</v-card-text>
@@ -8464,9 +8465,17 @@ new Vue({
 
 		},
 		downloadBackup( backup_id, backup_tree ) {
+			directories = []
 			site_id = this.dialog_site.site.site_id
-			tree = backup_tree.map( item => item.path )
-			description = "Generating downloadable zip for " + tree.length + " items. Will send an email when ready."
+
+			files = backup_tree.map( item => item.path )
+			backup_tree.forEach ( item => {
+				if ( item.type == "dir" && item.size > 1 ) {
+					directories.push( item.path )
+				}
+			})
+			
+			description = "Generating downloadable zip for " + backup_tree.map( item => item.count ).reduce((a, b) => a + b, 0) + " items. Will send an email when ready."
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: [], "command": "downloadBackup"})
 
@@ -8474,8 +8483,11 @@ new Vue({
 				'action': 'captaincore_install',
 				'post_id': site_id,
 				'command': "backup_download",
-				'backup_id': backup_id,
-				'value': JSON.stringify( tree ),
+				'value': {
+					files: JSON.stringify( files ),
+					directories: JSON.stringify( directories ),
+					backup_id: backup_id,
+				},
 				'environment': this.dialog_site.site.environment_selected,
 			};
 
@@ -8502,7 +8514,8 @@ new Vue({
 					if ( backup_selected.length != 1 ) {
 						return
 					}
-					backup_selected[0].files = response.data
+					backup_selected[0].files = response.data.files
+					backup_selected[0].omitted = response.data.omitted
 					this.sortTree( backup_selected[0].files )
 					backup_selected[0].loading = false
 				});
