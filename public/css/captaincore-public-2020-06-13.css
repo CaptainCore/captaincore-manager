@@ -1581,7 +1581,7 @@ pre {
 	box-shadow: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
 }
 
-.application .site .theme--dark.icon, .site .theme--dark .v-icon {
+.application .site .v-tab > .theme--dark.icon, .site .theme--dark .v-tab > .v-icon {
 	font-size: 1em;
 	padding-left: 0.3em;
 }
