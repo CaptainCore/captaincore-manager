@@ -1404,13 +1404,13 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Sync scan errors
-	if ( $command == 'sync-scan-errors' and ! empty( $post->data ) ) {
+	if ( $command == 'update-environment' and ! empty( $post->data ) ) {
 		
 		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
 		( new CaptainCore\Environments )->update( (array) $post->data, [ "environment_id" => $post->data->environment_id ] );
 
 		$response = [
-			"response"        => "Completed sync-scan-errors for $site_id",
+			"response"        => "Completed update-environment for $site_id",
 			"environment"     => $post->data,
 		];
 		
