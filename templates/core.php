@@ -1872,9 +1872,9 @@ if ( $role_check ) {
 					<v-toolbar-title>{{ dialog_site.site.name }}</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-tooltip top v-show="role == 'administrator'">
+						<v-tooltip>
 							<template v-slot:activator="{ on }">
-								<v-btn text small @click="showLogEntry(dialog_site.site.site_id)" v-on="on"><v-icon dark>mdi-check</v-icon></v-btn>
+								<v-btn text small @click="showLogEntry(dialog_site.site.site_id)" v-on="on" v-show="role == 'administrator'"><v-icon dark>mdi-check</v-icon></v-btn>
 							</template>
 							<span>Add Log Entry</span>
 						</v-tooltip>
