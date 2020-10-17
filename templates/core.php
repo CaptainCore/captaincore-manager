@@ -2525,8 +2525,8 @@ if ( $role_check ) {
 					v-show="key.environment == dialog_site.site.environment_selected"
 					flat
 				>
-				<v-row no-gutters>
-				<v-col cols="sm" class="px-2">
+				<v-row class="px-5">
+				<v-col cols="12" md="4" class="px-2">
 				<v-card
 					class="mx-auto"
 					max-width="344"
@@ -2542,7 +2542,7 @@ if ( $role_check ) {
 					</v-card-text>
 				</v-card>
 				</v-col>
-				<v-col cols="sm" class="px-2">
+				<v-col cols="12" md="4" class="px-2">
 				<v-card
 					class="mx-auto"
 					max-width="344"
@@ -2558,7 +2558,7 @@ if ( $role_check ) {
 					</v-card-text>
 				</v-card>
 				</v-col>
-				<v-col cols="sm" class="px-2">
+				<v-col cols="12" md="4" class="px-2">
 				<v-card
 					class="mx-auto"
 					max-width="344"
