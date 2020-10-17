@@ -1872,6 +1872,13 @@ if ( $role_check ) {
 					<v-toolbar-title>{{ dialog_site.site.name }}</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
+						<v-tooltip top v-show="role == 'administrator'">
+							<template v-slot:activator="{ on }">
+								<v-btn text small @click="showLogEntry(dialog_site.site.site_id)" v-on="on"><v-icon dark>mdi-check</v-icon></v-btn>
+							</template>
+							<span>Add Log Entry</span>
+						</v-tooltip>
+						<v-divider vertical class="mx-1" inset v-show="role == 'administrator'"></v-divider>
 						<v-btn text @click="dialog_site.step = 1"><v-icon>mdi-arrow-left</v-icon> Back to sites</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
@@ -2878,7 +2885,6 @@ if ( $role_check ) {
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
 					<v-btn text @click="exportTimeline()">Export <v-icon dark>mdi-file-download</v-icon></v-btn>
-            		<v-btn v-show="role == 'administrator'" text @click="showLogEntry(dialog_site.site.site_id)">New Log Entry <v-icon dark>mdi-checkbox-marked</v-icon></v-btn>
 					<a ref="export_json" href="#"></a>
 				</v-toolbar-items>
 			</v-toolbar>
