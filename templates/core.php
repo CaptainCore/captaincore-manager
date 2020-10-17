@@ -1779,7 +1779,7 @@ if ( $role_check ) {
 						<td>
 							<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-100.jpg` class="elevation-1" width="50" v-show="item.screenshot"></v-img>
 						</td>
-						<td>{{ item.name }} <v-chip class="ma-2" color="red" text-color="white" v-show="role == 'administrator' && item.outdated" small>Last sync {{ item.updated_at | timeago }}</v-chip></td>
+						<td>{{ item.name }}</td>
 						<td>{{ item.subsites }}<span v-show="items.subsites"> sites</span></td>
 						<td>{{ item.core }}</td>
 						<td>{{ item.visits | formatLargeNumbers }}</td>
@@ -1878,12 +1878,6 @@ if ( $role_check ) {
 				<v-tabs v-model="dialog_site.site.tabs" background-color="primary" dark>
 					<v-tab :key="1" href="#tab-Site-Management">
 						Site Management <v-icon size="24">mdi-settings</v-icon>
-					</v-tab>
-					<v-tab :key="6" href="#tab-SitePlan" ripple @click="viewUsageBreakdown( dialog_site.site.site_id )">
-						Site Plan <v-icon size="24">mdi-chart-donut</v-icon>
-					</v-tab>
-					<v-tab :key="7" href="#tab-Sharing" ripple v-if="role == 'administrator'">
-						Sharing <v-icon size="24">mdi-account-multiple-plus</v-icon>
 					</v-tab>
 					<v-tab :key="8" href="#tab-Timeline" ripple @click="fetchTimeline( dialog_site.site.site_id )">
 						Timeline <v-icon size="24">mdi-timeline-text-outline</v-icon>
@@ -2877,104 +2871,6 @@ if ( $role_check ) {
        		<div><span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span></div>
 		 </v-container>
 		</v-card>
-		</v-tab-item>
-		<v-tab-item :key="6" value="tab-SitePlan">
-			<v-toolbar color="grey lighten-4" dense light flat>
-				<v-toolbar-title>Site Plan</v-toolbar-title>
-				<v-spacer></v-spacer>
-					<v-toolbar-items v-show="role == 'administrator'">
-                <v-btn text @click="modifyPlan()">Edit Plan <v-icon dark small>edit</v-icon></v-btn>
-					</v-toolbar-items>
-			</v-toolbar>
-			<v-card flat>
-        <div v-if="typeof dialog_site.site.account.plan == 'object' && dialog_site.site.account.plan != null">
-				<v-card-text class="body-1">
-				<v-layout align-center justify-left row/>
-					<div style="padding: 10px 10px 10px 20px;">
-                <v-progress-circular :size="50" :value="( dialog_site.site.account.plan.usage.storage / ( dialog_site.site.account.plan.limits.storage * 1024 * 1024 * 1024 ) ) * 100 | formatPercentage" color="primary"><small>{{ ( dialog_site.site.account.plan.usage.storage / ( dialog_site.site.account.plan.limits.storage * 1024 * 1024 * 1024 ) ) * 100 | formatPercentage }}</small></v-progress-circular>
-					</div>
-					<div style="line-height: 0.85em;">
-                Storage <br /><small>{{ dialog_site.site.account.plan.usage.storage | formatGBs }}GB / {{ dialog_site.site.account.plan.limits.storage }}GB</small><br />
-					</div>
-					<div style="padding: 10px 10px 10px 20px;">
-                <v-progress-circular :size="50" :value="( dialog_site.site.account.plan.usage.visits / dialog_site.site.account.plan.limits.visits * 100 ) | formatPercentage" color="primary"><small>{{ ( dialog_site.site.account.plan.usage.visits / dialog_site.site.account.plan.limits.visits ) * 100 | formatPercentage }}</small></v-progress-circular>
-					</div>
-					<div style="line-height: 0.85em;">
-                Visits <br /><small>{{ dialog_site.site.account.plan.usage.visits | formatLargeNumbers }} / {{ dialog_site.site.account.plan.limits.visits | formatLargeNumbers }}</small><br />
-					</div>
-					<div style="padding: 10px 10px 10px 20px;">
-                <v-progress-circular :size="50" :value="( dialog_site.site.account.plan.usage.sites / dialog_site.site.account.plan.limits.sites * 100 ) | formatPercentage" color="blue darken-4"><small>{{ ( dialog_site.site.account.plan.usage.sites / dialog_site.site.account.plan.limits.sites * 100 ) | formatPercentage }}</small></v-progress-circular>
-					</div>
-					<div  style="line-height: 0.85em;">
-                Sites <br /><small>{{ dialog_site.site.account.plan.usage.sites }} / {{ dialog_site.site.account.plan.limits.sites }}</small><br />
-					</div>
-				</v-layout>
-				</v-card-text>
-				<v-alert
-					:value="true"
-					type="info"
-					color="primary"
-				>
-            <strong>{{ dialog_site.site.account.plan.name }} Plan</strong> which supports up to {{ dialog_site.site.account.plan.limits.visits | formatLargeNumbers }} visits, {{ dialog_site.site.account.plan.limits.storage }}GB storage and {{ dialog_site.site.account.plan.limits.sites }} sites.
-				</v-alert>
-				</div>
-				<div v-else>
-				<v-alert
-					:value="true"
-					type="info"
-					color="primary"
-				>
-					Development mode, no plan selected.
-				</v-alert>
-				</div>
-				<v-data-table
-					:headers='[{"text":"Name","value":"name"},{"text":"Storage","value":"Storage"},{"text":"Visits","value":"visits"}]'
-					:items="dialog_site.site.usage_breakdown.sites"
-					item-key="name"
-					hide-default-footer
-				>
-				<template v-slot:body="{ items }">
-				<tbody>
-					<tr v-for="item in items">
-						<td>{{ item.name }}</td>
-						<td>{{ item.storage | formatGBs }}GB</td>
-						<td>{{ item.visits }}</td>
-					</tr>
-					<tr>
-						<td>Totals:</td>
-                <td v-for="total in dialog_site.site.usage_breakdown.total" v-html="total"></td>
-					</tr>
-				</tbody>
-				</template>
-				</v-data-table>
-			</v-card>
-		</v-tab-item>
-		<v-tab-item :key="7" value="tab-Sharing" v-if="role == 'administrator'">
-			<v-toolbar color="grey lighten-4" dense light flat>
-				<v-toolbar-title>Sharing</v-toolbar-title>
-			</v-toolbar>
-			<v-layout>
-			<v-list disabled>
-				<v-subheader class="mt-4" style="height: 8px;font-size: 12px;">Account</v-subheader>
-        		<v-list-item>
-					<v-chip class="ma-1">{{ dialog_site.site.account.name }}</v-chip>
-				</v-list-item>
-				<v-subheader style="height: 8px;font-size: 12px;"></v-subheader>
-				<v-list-item>
-					<v-select
-					:items="accounts"
-					v-model="dialog_site.site.shared_with"
-					label="Shared With"
-					item-text="name"
-					item-value="account_id"
-					chips
-					multiple
-					append-icon=""
-					></v-select>
-				</v-list-item>
-				</v-list>
-			</v-layout>
-			
 	  </v-tab-item>
 		<v-tab-item :key="8" value="tab-Timeline">
 			<v-toolbar color="grey lighten-4" dense light flat>
