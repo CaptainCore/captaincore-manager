@@ -26,7 +26,7 @@ if ( $role_check ) {
 <?php } ?>
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/vuetify@2.3.0/dist/vuetify.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/vuetify@2.3.14/dist/vuetify.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
 <link href="/wp-content/plugins/captaincore/public/css/captaincore-public-2020-06-13.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.0/dist/frappe-charts.min.css" rel="stylesheet">
@@ -4632,8 +4632,7 @@ if ( $role_check ) {
 <script src="https://cdn.jsdelivr.net/npm/vue@2.6.11/dist/vue.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qs@6.9.1/dist/qs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios@0.19.0/dist/axios.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vuetify@2.3.0/dist/vuetify.min.js"></script>
-<?php } ?>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@2.3.14/dist/vuetify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.15/lodash.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.20/dist/vue-upload-component.js"></script>
