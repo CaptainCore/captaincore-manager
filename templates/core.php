@@ -943,7 +943,7 @@ if ( $role_check ) {
 					<v-flex xs6 pl-2><v-autocomplete :items="timezones" label="Default Timezone" v-model="dialog_account.records.account.defaults.timezone"></v-autocomplete></v-flex>
 				</v-layout>
 				<v-layout wrap>
-					<v-flex><v-autocomplete label="Default Recipes" v-model="dialog_account.records.account.defaults.recipes" ref="default_recipes" :items="recipes" item-text="title" item-value="recipe_id" multiple chips deletable-chips></v-autocomplete></v-flex>
+					<v-flex><v-autocomplete label="Default Recipes" v-model="dialog_account.records.account.defaults.recipes" ref="default_recipes" :items="recipes" item-text="title" item-value="recipe_id" multiple chips deletable-chips :menu-props="{ closeOnContentClick:true, openOnClick: false }"></v-autocomplete></v-flex>
 				</v-layout>
 				<span class="body-2">Default Users</span>
 				<v-data-table
@@ -4356,6 +4356,7 @@ if ( $role_check ) {
 				dense
 				height="24"
 				style="max-width: 420px"
+				:menu-props="{ closeOnContentClick:true, openOnClick: false }"
 			>
 			</v-autocomplete>
 			<v-btn small v-show="role == 'administrator'" class="mx-1" @click="site_health_filter = 'healthy'">Healthy only</v-btn>
@@ -4887,12 +4888,6 @@ new Vue({
 		 snackbar: { show: false, message: "" }
 	},
 	watch: {
-		applied_site_filter (val) {
-			setTimeout( () => this.$refs.applied_site_filter.isMenuActive = false, 50)
-		},
-		selected_default_recipes (val) {
-			setTimeout( () => this.$refs.default_recipes.isMenuActive = false, 50)
-		},
 		route() {
 			this.triggerRoute()
 		},
