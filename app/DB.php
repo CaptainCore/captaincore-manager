@@ -449,7 +449,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "22";
+        $required_version = (int) "23";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -641,6 +641,7 @@ class DB {
         // Permission/relationships data structure for CaptainCore: https://dbdiagram.io/d/5d7d409283427516dc0ba8b3
         $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_accounts` (
             account_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            billing_user_id bigint(20) UNSIGNED NOT NULL,
             name varchar(255),
             defaults longtext,
             plan longtext,
@@ -652,10 +653,12 @@ class DB {
         ) $charset_collate;";
         
         dbDelta($sql);
-    
+        
+        // account_id determines which account is responsible for billing, customer_id determines customer ownership
         $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_sites` (
             site_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             account_id bigint(20) UNSIGNED NOT NULL,
+            customer_id bigint(20) UNSIGNED NOT NULL,
             name varchar(255),
             site varchar(255),
             provider varchar(255),
