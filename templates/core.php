@@ -1727,7 +1727,6 @@ if ( $role_check ) {
 						
 					</v-toolbar-items>
 				</v-toolbar>
-			<v-window v-model="dialog_site.step">
 			<v-card-text v-show="site_requests.length > 0">
 			<v-stepper value="1" v-for="(request, index) in site_requests" alt-labels class="mb-3">
 				<v-toolbar flat dense class="primary white--text">
@@ -1744,7 +1743,7 @@ if ( $role_check ) {
 				</v-stepper-header>
 			</v-stepper>
 			</v-card-text>
-			<v-window-item :value="1">
+			<v-sheet v-show="dialog_site.step == 1">
 				<v-data-table
 					v-model="sites_selected"
 					:headers="[
@@ -1864,8 +1863,8 @@ if ( $role_check ) {
 					</tbody>
 				</template>
 				</v-data-table>
-			</v-window-item>
-			<v-window-item :value="2" class="site">
+			</v-sheet>
+			<v-sheet v-show="dialog_site.step == 2" class="site">
 			<v-card flat>
 				<v-toolbar color="grey lighten-4" light flat>
 					<v-img :src=`${remote_upload_uri}${dialog_site.site.site}_${dialog_site.site.site_id}/production/screenshots/${dialog_site.site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="dialog_site.site.screenshot"></v-img>
@@ -2518,8 +2517,7 @@ if ( $role_check ) {
 						</v-tooltip>
 					</v-toolbar-items>
 				</v-toolbar>
-				<v-window v-model="dialog_site.backup_step">
-      			<v-window-item :value="1" class="mt-7">
+				<v-sheet v-show="dialog_site.backup_step == 1" class="mt-7">
 				  <v-card 
 					v-for="key in dialog_site.site.environments"
 					v-show="key.environment == dialog_site.site.environment_selected"
@@ -2576,8 +2574,8 @@ if ( $role_check ) {
 				</v-col>
 				</v-row>
 				</v-card>
-				</v-window-item>
-				<v-window-item :value="2">
+				</v-sheet>
+				<v-sheet v-show="dialog_site.backup_step == 2">
 				<v-card 
 					v-for="key in dialog_site.site.environments"
 					v-show="key.environment == dialog_site.site.environment_selected"
@@ -2627,9 +2625,7 @@ if ( $role_check ) {
 							</template>
 						</v-treeview>
 						</v-col>
-
 						<v-divider vertical></v-divider>
-
 						<v-col class="pa-5 text-center">
 						<v-alert type="info" dense text v-show="item.omitted">This backup has too many files to show. Uploaded files have been omitted for viewing purposes. Everything is still restorable.</v-alert>
 						<v-scroll-y-transition mode="out-in">
@@ -2665,8 +2661,8 @@ if ( $role_check ) {
 					</v-data-table>
 					</div>
 				</v-card>
-				</v-window-item>
-				<v-window-item :value="3">
+				</v-sheet>
+				<v-sheet v-show="dialog_site.backup_step == 3">
 				<v-card 
 					v-for="key in dialog_site.site.environments"
 					v-show="key.environment == dialog_site.site.environment_selected"
@@ -2816,8 +2812,8 @@ if ( $role_check ) {
 					</v-data-table>
 					</div>
 					</v-card>
-					</v-window-item>
-					<v-window-item :value="4">
+					</v-sheet>
+					<v-sheet v-show="dialog_site.backup_step == 4">
 					<v-card 
 						v-for="key in dialog_site.site.environments"
 						v-show="key.environment == dialog_site.site.environment_selected"
@@ -2869,8 +2865,7 @@ if ( $role_check ) {
 					</template>
 					</v-data-table>
 					</div>
-					</v-window-item>
-					</v-window>
+					</v-sheet>
 			</v-tab-item>
 		</v-tabs-items>
 		<v-card flat v-else>
@@ -2914,8 +2909,8 @@ if ( $role_check ) {
 		</v-tab-item>
 	</v-tabs>
 				</v-card>
-			</v-window-item>
-			<v-window-item :value="3">
+			</v-sheet>
+			<v-sheet v-show="dialog_site.step == 3">
 				<v-toolbar flat color="grey lighten-4">
 					<v-toolbar-title>Add Site</v-toolbar-title>
 				<v-spacer></v-spacer>
@@ -2927,10 +2922,7 @@ if ( $role_check ) {
 					<v-form ref="form" :disabled="dialog_new_site.saving">
 						<v-layout v-for="error in dialog_new_site.errors">
 							<v-flex xs12>
-								<v-alert
-								:value="true"
-								type="error"
-								>
+								<v-alert :value="true" type="error">
 								{{ error }}
 								</v-alert>
 							</v-flex>
@@ -3080,8 +3072,8 @@ if ( $role_check ) {
 						</v-layout>
 				</v-form>
 	          </v-card-text>
-			</v-window-item>
-			<v-window-item :value="4">
+			</v-sheet>
+			<v-sheet v-show="dialog_site.step == 4">
 				<v-toolbar flat color="grey lighten-4">
 					<v-toolbar-title>Edit Site {{ dialog_edit_site.site.name }}</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -3246,12 +3238,10 @@ if ( $role_check ) {
 					 </v-layout>
 				</v-form>
 				</v-card-text>
-			</v-window-item>
-			</v-window>
+			</v-sheet>
 			</v-card>
 			<v-card tile v-if="route == 'dns'" flat>
-			<v-window v-model="dialog_domain.step">
-			<v-window-item :value="1">
+			<v-sheet v-show="dialog_domain.step == 1">
 				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Listing {{ allDomains }} domains</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -3260,7 +3250,7 @@ if ( $role_check ) {
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
-				<v-card class="mb-4 dns_introduction" v-if="route == 'dns'">
+				<v-card class="mb-4 dns_introduction">
 					<v-alert
 						:value="true"
 						type="info"
@@ -3306,8 +3296,8 @@ if ( $role_check ) {
 					</tbody>
 				</template>
 				</v-data-table>
-				</v-window-item>
-				<v-window-item :value="2">
+				</v-sheet>
+				<v-sheet v-show="dialog_domain.step == 2">
 					<v-card tile flat>
 						<v-toolbar flat color="grey lighten-4">
 							<v-toolbar-title>DNS for {{ dialog_domain.domain.name }}</v-toolbar-title>
@@ -3463,8 +3453,7 @@ if ( $role_check ) {
 							</v-col>
 						</v-row>
 					</v-card>
-				</v-window-item>
-			</v-window-item>
+				</v-sheet>
 			</v-card>
 			<v-card tile v-if="route == 'health'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
@@ -3881,8 +3870,7 @@ if ( $role_check ) {
 				</v-card-text>
 			</v-card>
 			<v-card tile v-if="route == 'accounts'" flat>
-			<v-window v-model="dialog_account.step">
-			<v-window-item :value="1">
+			<v-sheet v-show="dialog_account.step == 1">
 				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Listing {{ accounts.length }} accounts</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -3927,8 +3915,8 @@ if ( $role_check ) {
 						</tbody>
 					</template>
 					</v-data-table>
-				</v-window-item>
-				<v-window-item :value="2">
+				</v-sheet>
+				<v-sheet v-show="dialog_account.step == 2">
 				<v-card flat v-if="dialog_account.show && typeof dialog_account.records.account == 'object'">
 					<v-toolbar flat color="grey lighten-4">
 						<v-toolbar-title>{{ dialog_account.records.account.name }}</v-toolbar-title>
@@ -4126,8 +4114,7 @@ if ( $role_check ) {
 					</v-tab-item>
 					</v-tabs-items>
 					</v-card>
-				</v-window-item>
-			</v-window>
+				</v-sheet>
 			</v-card>
 			<v-card tile v-if="route == 'users'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
