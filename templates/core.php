@@ -1694,7 +1694,7 @@ if ( $role_check ) {
 				</v-card>
 			</template>
 			</v-card>
-			<v-card tile v-show="route == 'sites'" id="sites" flat>
+			<v-card tile v-if="route == 'sites'" id="sites" flat>
 			<v-toolbar v-show="dialog_site.step == 1" id="site_listings" flat color="grey lighten-4">
 				<v-toolbar-title>Listing {{ sites.length }} sites</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -3249,7 +3249,7 @@ if ( $role_check ) {
 			</v-window-item>
 			</v-window>
 			</v-card>
-			<v-card tile v-show="route == 'dns'" flat>
+			<v-card tile v-if="route == 'dns'" flat>
 			<v-window v-model="dialog_domain.step">
 			<v-window-item :value="1">
 				<v-toolbar color="grey lighten-4" light flat>
@@ -3260,7 +3260,7 @@ if ( $role_check ) {
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
-				<v-card class="mb-4 dns_introduction" v-show="route == 'dns'">
+				<v-card class="mb-4 dns_introduction" v-if="route == 'dns'">
 					<v-alert
 						:value="true"
 						type="info"
@@ -3466,7 +3466,7 @@ if ( $role_check ) {
 				</v-window-item>
 			</v-window-item>
 			</v-card>
-			<v-card tile v-show="route == 'health'" flat>
+			<v-card tile v-if="route == 'health'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Listing {{ filterSitesWithErrors.length }} sites with issues</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -3477,7 +3477,7 @@ if ( $role_check ) {
 				<v-alert :value="true" type="info">
 						Results from daily scans of home pages. Web console errors are extracted from Google Chrome via Lighthouse CLI. Helpful for tracking down wide range of issues.  
 				</v-alert>
-					<v-card v-for="site in filterSitesWithErrors" flat class="mb-2">
+					<v-card v-for="site in filterSitesWithErrors" flat class="mb-2" :key="site.site_id">
 					<v-toolbar color="grey lighten-4" light flat>
 						<v-img :src=`${remote_upload_uri}${site.site}_${site.site_id}/production/screenshots/${site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="site.screenshot"></v-img>
 						<v-toolbar-title>{{ site.name }}</v-toolbar-title>
@@ -3511,7 +3511,7 @@ if ( $role_check ) {
 					</v-card>
 				</v-card-text>
 			</v-card>
-			<v-card tile v-show="route == 'cookbook'" flat>
+			<v-card tile v-if="route == 'cookbook'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Listing {{ filteredRecipes.length }} recipes</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -3543,7 +3543,7 @@ if ( $role_check ) {
 				</template>
 				</v-data-table>
 			</v-card>
-			<v-card tile v-show="route == 'handbook'" v-if="role == 'administrator'" flat>
+			<v-card tile v-if="route == 'handbook' && role == 'administrator'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Listing {{ processes.length }} processes</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -3586,7 +3586,7 @@ if ( $role_check ) {
 					</v-container>
 				</v-card-text>
 			</v-card>
-			<v-card tile v-show="route == 'configurations'" v-if="role == 'administrator'" flat>
+			<v-card tile v-if="route == 'configurations' && role == 'administrator'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Configurations</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -3812,7 +3812,7 @@ if ( $role_check ) {
 					</v-flex>
 				</v-card-text>
 			</v-card>
-			<v-card tile v-show="route == 'keys'" v-if="role == 'administrator'" flat>
+			<v-card tile v-if="route == 'keys' && role == 'administrator'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Your SSH keys</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -3823,7 +3823,7 @@ if ( $role_check ) {
 				<v-card-text style="max-height: 100%;">
 					<v-container fluid grid-list-lg>
 					<v-layout row wrap>
-					<v-flex xs12 v-for="key in keys">
+					<v-flex xs12 v-for="key in keys" :key="key.key_id">
 						<v-card :hover="true" @click="viewKey( key.key_id )">
 						<v-card-title primary-title class="pt-2">
 							<div>
@@ -3839,7 +3839,7 @@ if ( $role_check ) {
 					</v-container>
 				</v-card-text>
 			</v-card>
-			<v-card tile v-show="route == 'profile'" flat>
+			<v-card tile v-if="route == 'profile'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Profile</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -3880,7 +3880,7 @@ if ( $role_check ) {
 					</v-card>
 				</v-card-text>
 			</v-card>
-			<v-card tile v-show="route == 'accounts'" flat>
+			<v-card tile v-if="route == 'accounts'" flat>
 			<v-window v-model="dialog_account.step">
 			<v-window-item :value="1">
 				<v-toolbar color="grey lighten-4" light flat>
@@ -4129,7 +4129,7 @@ if ( $role_check ) {
 				</v-window-item>
 			</v-window>
 			</v-card>
-			<v-card tile v-show="route == 'users'" flat>
+			<v-card tile v-if="route == 'users'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Listing {{ users.length }} users</v-toolbar-title>
 					<v-spacer></v-spacer>
