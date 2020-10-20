@@ -4629,21 +4629,24 @@ if ( $role_check ) {
 <script src="/wp-content/plugins/captaincore/public/js/qs.js"></script>
 <script src="/wp-content/plugins/captaincore/public/js/axios.min.js"></script>
 <script src="/wp-content/plugins/captaincore/public/js/vuetify.min.js"></script>
+<script src="/wp-content/plugins/captaincore/public/js/lodash.min.js"></script>
+<script src="/wp-content/plugins/captaincore/public/js/vue-upload-component.js"></script>
 <?php } else { ?>
 <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qs@6.9.1/dist/qs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios@0.19.0/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vuetify@2.3.14/dist/vuetify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.15/lodash.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.20/dist/vue-upload-component.js"></script>
+<?php } ?>
+<script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
 <script src="/wp-content/plugins/captaincore/public/js/moment.min.js"></script>
 <script src="/wp-content/plugins/captaincore/public/js/frappe-charts.js"></script>
 <script src="/wp-content/plugins/captaincore/public/js/core.js"></script>
 <script>
-ajaxurl = "/wp-admin/admin-ajax.php";
-lodash = _.noConflict();
-Vue.component('file-upload', VueUploadComponent);
+ajaxurl = "/wp-admin/admin-ajax.php"
+lodash = _.noConflict()
+Vue.component('file-upload', VueUploadComponent)
 new Vue({
 	el: '#app',
 	vuetify: new Vuetify({
