@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title><?php echo get_field( 'business_name', 'option' ); ?> - Account</title>
+  <title><?php echo ( ! empty( get_option( 'options_business_name' ) ) ? get_option( 'options_business_name' ) . ' - ' : "" ); ?>Account</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
   <meta charset="utf-8">
 <?php
@@ -12,9 +12,9 @@ captaincore_header_content_extracted();
 $user       = wp_get_current_user();
 $role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
 if ( $role_check ) {
-	$belongs_to    = get_field( 'partner', "user_{$user->ID}" );
+	$belongs_to    = get_user_meta( 'partner', "user_{$user->ID}" );
 	$business_name = get_the_title( $belongs_to[0] );
-	$business_link = get_field( 'partner_link', $belongs_to[0] );
+	$business_link = get_metadata( 'partner_link', $belongs_to[0] );
 } else {
 	$business_name = "";
 	$business_link = "";
@@ -4675,7 +4675,7 @@ new Vue({
 		drawer: null,
 		billing_link: "<?php echo get_field( 'billing_link', 'option' ); ?>",
 		home_link: "<?php echo home_url(); ?>",
-		remote_upload_uri: "<?php echo get_field( 'remote_upload_uri', 'option' ); ?>",
+		remote_upload_uri: "<?php echo get_option( 'options_remote_upload_uri' ); ?>",
 		loading_page: true,
 		expanded: [],
 		accounts: [],
@@ -4752,7 +4752,7 @@ new Vue({
 		new_process: { show: false, name: "", time_estimate: "", repeat_interval: "as-needed", repeat_quantity: "", roles: "", description: "" },
 		new_key: { show: false, title: "", key: "" },
 		dialog_edit_process: { show: false, process: {} },
-		process_roles: <?php echo get_option('captaincore_process_roles'); ?>,
+		process_roles: <?php echo ( ! empty( get_option('captaincore_process_roles') ) ? get_option('captaincore_process_roles') : "[]" ); ?>,
 		dialog_new_site: {
 			provider: "kinsta",
 			show: false,
