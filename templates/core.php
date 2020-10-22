@@ -214,8 +214,8 @@ if ( $role_check ) {
 		<div class="upload">
 			<div v-if="upload.length" class="mx-3">
 				<div v-for="(file, index) in upload" :key="file.id">
-					<span>{{file.name}}</span> -
-					<span>{{file.size | formatSize}}</span> -
+					<span>{{ file.name }}</span> -
+					<span>{{ file.size | formatSize }}</span> -
 					<span v-if="file.error">{{file.error}}</span>
 					<span v-else-if="file.success">success</span>
 					<span v-else-if="file.active">active
@@ -313,8 +313,8 @@ if ( $role_check ) {
 		<div class="upload">
 			<div v-if="upload.length" class="mx-3">
 				<div v-for="(file, index) in upload" :key="file.id">
-					<span>{{file.name}}</span> -
-					<span>{{file.size | formatSize}}</span> -
+					<span>{{ file.name }}</span> -
+					<span>{{ file.size | formatSize }}</span> -
 					<span v-if="file.error">{{file.error}}</span>
 					<span v-else-if="file.success">success</span>
 					<span v-else-if="file.active">active
