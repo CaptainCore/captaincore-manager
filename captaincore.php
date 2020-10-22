@@ -1403,7 +1403,19 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	}
 
-	// Sync scan errors
+	if ( $command == 'update-site' and ! empty( $post->data ) ) {
+
+		$current_site = ( new CaptainCore\Sites )->get( $post->data->site_id );
+		( new CaptainCore\Sites )->update( (array) $post->data, [ "site_id" => $post->data->site_id ] );
+
+		$response = [
+			"response" => "Completed update-site for $site_id",
+			"site"     => $post->data,
+		];
+		
+	}
+
+
 	if ( $command == 'update-environment' and ! empty( $post->data ) ) {
 		
 		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
