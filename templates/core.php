@@ -1775,7 +1775,7 @@ if ( $role_check ) {
 					<tbody>
 					<tr v-for="item in items" :key="item.site_id" @click="showSite( item )" style="cursor:pointer;">
 						<td>
-							<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-100.jpg` class="elevation-1" width="50" v-show="item.screenshot"></v-img>
+							<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-100.jpg` class="elevation-1" width="50" v-show="item.screenshot_base"></v-img>
 						</td>
 						<td>{{ item.name }}</td>
 						<td>{{ item.subsites }}<span v-show="items.subsites"> sites</span></td>
@@ -1833,7 +1833,7 @@ if ( $role_check ) {
 								xs="12"
 								>
 								<v-card tile style="cursor: pointer" @click="showSite( item )">
-									<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-800.jpg` :aspect-ratio="8/5" v-show="item.screenshot">
+									<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-800.jpg` :aspect-ratio="8/5" v-show="item.screenshot_base">
 									<v-row align="end" class="lightbox white--text pa-2 fill-height">
 									<v-col class="pa-1">
 										<div class="body-1">{{ item.name }}</div>
@@ -1865,7 +1865,7 @@ if ( $role_check ) {
 			<v-sheet v-show="dialog_site.step == 2" class="site">
 			<v-card flat>
 				<v-toolbar color="grey lighten-4" light flat>
-					<v-img :src=`${remote_upload_uri}${dialog_site.site.site}_${dialog_site.site.site_id}/production/screenshots/${dialog_site.site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="dialog_site.site.screenshot"></v-img>
+					<v-img :src=`${remote_upload_uri}${dialog_site.site.site}_${dialog_site.site.site_id}/production/screenshots/${dialog_site.site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="dialog_site.site.screenshot_base"></v-img>
 					<v-toolbar-title>{{ dialog_site.site.name }}</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -2112,7 +2112,7 @@ if ( $role_check ) {
 					<v-divider></v-divider>
 					<v-subheader>Administrator Options</v-subheader>
 					<v-container>
-					<v-btn small depressed @click="editSite(dialog_site.site.site_id)">
+					<v-btn small depressed @click="editSite()">
 						<v-icon>edit</v-icon> Edit Site
 					</v-btn>
 					<v-btn small depressed color="error" @click="deleteSite(dialog_site.site.site_id)">
@@ -2885,6 +2885,7 @@ if ( $role_check ) {
 			<v-data-table
 				:headers="header_timeline"
         		:items="dialog_site.site.timeline"
+				item-key="process_log_id"
 				class="timeline"
 				>
 				<template v-slot:body="{ items }">
@@ -3288,7 +3289,7 @@ if ( $role_check ) {
 				>
 				<template v-slot:body="{ items }">
 					<tbody>
-					<tr v-for="item in items" :key="item.domain_id" @click="modifyDNS( item )" style="cursor:pointer;">
+					<tr v-for="item in items" @click="modifyDNS( item )" style="cursor:pointer;">
 						<td>{{ item.name }}</td>
 					</tr>
 					</tbody>
@@ -3466,7 +3467,7 @@ if ( $role_check ) {
 				</v-alert>
 					<v-card v-for="site in filterSitesWithErrors" flat class="mb-2" :key="site.site_id">
 					<v-toolbar color="grey lighten-4" light flat>
-						<v-img :src=`${remote_upload_uri}${site.site}_${site.site_id}/production/screenshots/${site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="site.screenshot"></v-img>
+						<v-img :src=`${remote_upload_uri}${site.site}_${site.site_id}/production/screenshots/${site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="site.screenshot_base"></v-img>
 						<v-toolbar-title>{{ site.name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items>
@@ -3482,10 +3483,10 @@ if ( $role_check ) {
 							<v-btn small text @click="showLogEntry( site.site_id )" v-show="role == 'administrator'">
 								Log <v-icon class="ml-1">mdi-check</v-icon>
 							</v-btn>
-							<v-chip class="mt-4 ml-2" label :input-value="true">{{ site.errors.length }} issues</v-chip>
+							<v-chip class="mt-4 ml-2" label :input-value="true">{{ site.console_errors.length }} issues</v-chip>
 						</v-toolbar-items>
 					</v-toolbar>
-					<v-card class="elevation-0 mx-auto" v-for="error in site.errors">
+					<v-card class="elevation-0 mx-auto" v-for="error in site.console_errors">
 						<v-card-title>{{ error.source }}</v-card-title>
 						<v-card-subtitle><a :href="error.url">{{ error.url }}</a></small></v-card-subtitle>
 						<v-card-text>
@@ -5030,10 +5031,7 @@ new Vue({
 			}
 		},
 		filterSitesWithErrors() {
-			return this.sites.filter( s => s.errors != "" )
-		},
-		siteFilterCount() {
-			return this.sites.filter( s => this.siteFilters( s.environments ) ).length
+			return this.sites.filter( s => s.console_errors != "" )
 		},
 		filterCount() {
 			return this.applied_site_filter.length + this.applied_site_filter_version.length + this.applied_site_filter_status.length
@@ -5898,8 +5896,8 @@ new Vue({
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
-					this.users = response.data;
-					this.loading_page = false;
+					this.users = response.data
+					this.loading_page = false
 				});
 		},
 		fetchRecipes() {
@@ -7570,7 +7568,6 @@ new Vue({
 
 		},
 		fetchTimeline( site_id ) {
-			site = this.sites.filter(site => site.site_id == site_id)[0];
 			var data = {
 				action: 'captaincore_ajax',
 				post_id: site_id,
@@ -7578,7 +7575,7 @@ new Vue({
 			};
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					site.timeline = response.data;
+					this.dialog_site.site.timeline = response.data
 				})
 				.catch( error => console.log( error ) );
 		},
@@ -7698,7 +7695,6 @@ new Vue({
 				this.dialog_domain.show = true;
 				return
 			}
-			self = this;
 			axios.get(
 				'/wp-json/captaincore/v1/domain/' + domain.domain_id, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
