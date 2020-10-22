@@ -216,37 +216,46 @@ class DB {
         return $results;
     }
 
-    static function fetch_filters_for_admins() {
+    static function fetch_filters_for_admins( $environment = "all" ) {
         global $wpdb;
         $table = self::_table();
+        if ( $environment != "all" ) {
+            $environment_conditions = "AND {$table}.`environment` = '$environment'";
+        }
         $sql = "SELECT {$table}.themes, {$table}.plugins
                 FROM {$table}
                 INNER JOIN {$wpdb->prefix}captaincore_sites ON {$table}.site_id = {$wpdb->prefix}captaincore_sites.site_id
-                WHERE {$wpdb->prefix}captaincore_sites.`status` = 'active'";
+                WHERE {$wpdb->prefix}captaincore_sites.`status` = 'active' $environment_conditions";
         $results = $wpdb->get_results( $sql );
         return $results;
     }
 
-    static function fetch_filters_for_account( $account_id = "" ) {
+    static function fetch_filters_for_account( $account_id = "", $environment = "all" ) {
         global $wpdb;
         $table = self::_table();
+        if ( $environment != "all" ) {
+            $environment_conditions = "AND {$table}.`environment` = '$environment'";
+        }
         $sql = "SELECT {$table}.themes, {$table}.plugins
                 FROM {$table}
                 INNER JOIN {$wpdb->prefix}captaincore_sites ON {$table}.site_id = {$wpdb->prefix}captaincore_sites.site_id
-                WHERE {$wpdb->prefix}captaincore_sites.account_id = $account_id AND {$wpdb->prefix}captaincore_sites.`status` = 'active'";
+                WHERE {$wpdb->prefix}captaincore_sites.account_id = $account_id AND {$wpdb->prefix}captaincore_sites.`status` = 'active' $environment_conditions";
         $results = $wpdb->get_results( $sql );
         return $results;
     }
 
-    static function fetch_filters_for_shared_accounts( $account_id = "" ) {
+    static function fetch_filters_for_shared_accounts( $account_id = "", $environment = "all" ) {
         global $wpdb;
         $table = self::_table();
+        if ( $environment != "all" ) {
+            $environment_conditions = "AND {$table}.`environment` = '$environment'";
+        }
         $sql = "SELECT {$table}.themes, {$table}.plugins
                 FROM {$table}
                 INNER JOIN {$wpdb->prefix}captaincore_sites ON {$table}.site_id = {$wpdb->prefix}captaincore_sites.site_id
                 INNER JOIN {$wpdb->prefix}captaincore_account_site ON {$table}.site_id = {$wpdb->prefix}captaincore_account_site.site_id
                 INNER JOIN {$wpdb->prefix}captaincore_accounts ON {$wpdb->prefix}captaincore_account_site.account_id = {$wpdb->prefix}captaincore_accounts.account_id
-                WHERE {$wpdb->prefix}captaincore_accounts.account_id = $account_id AND {$wpdb->prefix}captaincore_sites.`status` = 'active'";
+                WHERE {$wpdb->prefix}captaincore_accounts.account_id = $account_id AND {$wpdb->prefix}captaincore_sites.`status` = 'active' $environment_conditions";
         $results = $wpdb->get_results( $sql );
         return $results;
     }
@@ -384,6 +393,56 @@ class DB {
                 AND {$table}.status = 'active'
                 order by {$wpdb->prefix}captaincore_sites.`name` ASC";
         $results = $wpdb->get_results( $sql );
+        return $results;
+    }
+
+    static function fetch_sites_matching_versions_statuses( $arguments = [] ) {
+        global $wpdb;
+        $arguments  = (object) $arguments;
+        $table      = self::_table();
+        $patterns   = [];
+        $conditions = "{$wpdb->prefix}captaincore_environments.environment = 'production'";
+        if ( $arguments->filter ) {
+            $arguments->filter = explode( "|", $arguments->filter );
+            // WordPress thinks {} in SQL is a syntax error. To workaround we can wrap them in brackets likes so [{] and [}].
+            $pattern = '{"name":"'.$arguments->filter[0].'","title":"[^"]*","status":"[^"]*","version":"[^"]*"}';
+            $pattern = str_replace ( "{", "[{]", $pattern );
+            $pattern = str_replace ( "}", "[}]", $pattern );
+            $conditions = "$conditions AND {$wpdb->prefix}captaincore_environments.{$arguments->filter[1]} REGEXP '{$pattern}'";
+        }
+
+        foreach( $arguments->versions as $version ) {
+            $version = (object) $version;
+            if ( empty( $version->slug ) ) {
+                continue;
+            }
+            // WordPress thinks {} in SQL is a syntax error. To workaround we can wrap them in brackets likes so [{] and [}].
+            $pattern = '{"name":"'.$version->slug.'","title":"[^"]*","status":"[^"]*","version":"'.$version->name.'"}';
+            $pattern = str_replace ( "{", "[{]", $pattern );
+            $pattern = str_replace ( "}", "[}]", $pattern );
+            $conditions = "$conditions AND {$wpdb->prefix}captaincore_environments.{$version->type} REGEXP '{$pattern}'";
+        }
+
+        foreach( $arguments->statuses as $status ) {
+            $status = (object) $status;
+            if ( empty( $status->slug ) ) {
+                continue;
+            }
+            // WordPress thinks {} in SQL is a syntax error. To workaround we can wrap them in brackets likes so [{] and [}].
+            $pattern = '{"name":"'.$status->slug.'","title":"[^"]*","status":"'.$status->name.'","version":"[^"]*"}';
+            $pattern = str_replace ( "{", "[{]", $pattern );
+            $pattern = str_replace ( "}", "[}]", $pattern );
+            $conditions = "$conditions AND {$wpdb->prefix}captaincore_environments.{$status->type} REGEXP '{$pattern}'";
+        }
+
+        $sql = "SELECT {$table}.site
+                FROM {$table}
+                INNER JOIN {$wpdb->prefix}captaincore_environments ON {$table}.site_id = {$wpdb->prefix}captaincore_environments.site_id
+                WHERE $conditions
+                AND {$table}.status = 'active'
+                order by {$wpdb->prefix}captaincore_sites.`name` ASC";
+
+        $results = array_column( $wpdb->get_results( $sql ), 'site' );
         return $results;
     }
 
