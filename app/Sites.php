@@ -90,42 +90,30 @@ class Sites extends DB {
     }
 	
 	public function list() {
-		$sites        = [];
+        $sites        = [];
         foreach( $this->sites as $site_id ) {
-            $site    = self::get( $site_id );
-            $details = json_decode( $site->details );
-            $site->environments = ( new Site( $site_id ) )->environments_bare();
-            $production_details = $site->environments[0]["details"];
-            $site->environment_selected = "Production";
-            $site->usage_breakdown = [];
-            $site->pagination   = [ 'sortBy' => 'roles' ];
-            $site->users        = [];
-            $site->update_logs  = [];
-            $site->timeline     = [];
-            $site->shared_with  = [];
-            $site->account      = ( new Site( $site_id ) )->account();
-            $site->core         = $details->core;
-            $site->key          = $details->key;
-            $site->screenshot_base  = $details->screenshot_base;
-            $site->environment_vars = isset( $details->environment_vars ) ? $details->environment_vars : [];
-            $site->subsites     = $details->subsites;
-            $site->storage      = $details->storage;
-            $site->visits       = $details->visits;
-            $site->mailgun      = $details->mailgun;
-            $site->outdated     = false;
-            $site->loading      = false;
-            $site->errors       = [];
+            $site                  = self::get( $site_id );
+            $details               = json_decode( $site->details );
+            $site->filtered        = true;
+            $site->loading         = false;
+            $site->key             = $details->key;
+            $site->core            = $details->core;
+            $site->console_errors  = isset( $details->console_errors ) ? $details->console_errors : "";
+            $site->subsites        = $details->subsites;
+            $site->storage         = $details->storage;
+            $site->visits          = $details->visits;
+            $site->outdated        = false;
+            $site->screenshot_base = $details->screenshot_base;
             
             // Mark site as outdated if sync older then 48 hours
             if ( strtotime( $site->updated_at ) <= strtotime( "-48 hours" ) ) {
                 $site->outdated = true;
             }
 
-            if ( ! empty( $production_details->console_errors ) ) {
-                $site->errors = $production_details->console_errors;
-            }
             unset( $site->token );
+            unset( $site->created_at );
             unset( $site->details );
+            unset( $site->status );
             unset( $site->site_usage );
             $sites[] = $site;
         }
