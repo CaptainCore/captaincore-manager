@@ -1739,6 +1739,53 @@ function captaincore_site_snapshots_func( $request ) {
 	return $results;
 }
 
+function captaincore_filter_versions_func( $request ) {
+	$name    = $request['name'];
+	$filters = explode( ",", $name );
+	$response = ( new CaptainCore\Environments )->filters_for_versions( $filters );
+	return $response;
+}
+
+
+function captaincore_filter_statuses_func( $request ) {
+	$name    = $request['name'];
+	$filters = explode( ",", $name );
+	$response = ( new CaptainCore\Environments )->filters_for_statuses( $filters );
+	return $response;
+}
+
+
+function captaincore_filter_sites_func( $request ) {
+	$name     = $request['name'];
+	$statuses = $request['statuses'];
+	$statuses = explode( ",", $statuses );
+	$versions = $request['versions'];
+	$versions = explode( ",", $versions );
+	foreach ($statuses as $key => $value) {
+		$value = explode( "|", $value );
+		$statuses[ $key ] = [
+			"type" => $value[2],
+			"slug" => $value[1],
+			"name" => $value[0],
+		];
+	}
+	foreach ($versions as $key => $value) {
+		$value = explode( "|", $value );
+		$versions[ $key ] = [
+			"type" => $value[2],
+			"slug" => $value[1],
+			"name" => $value[0],
+		];
+	}
+	$sites = ( new CaptainCore\Sites )->fetch_sites_matching_versions_statuses( [
+		"filter"   => $name,
+		"versions" => $versions,
+		"statuses" => $statuses,
+	] );
+	$response = $sites;
+	return $response;
+}
+
 function captaincore_site_snapshot_download_func( $request ) {
 	$site_id       = $request['id'];
 	$token         = $request['token'];
@@ -1904,6 +1951,30 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_sites_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/filters/(?P<name>[a-zA-Z0-9-,|_]+)/versions/', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_filter_versions_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/filters/(?P<name>[a-zA-Z0-9-,|_]+)/statuses/', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_filter_statuses_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/filters/(?P<name>[a-zA-Z0-9-,|_)]+)/sites/versions=(?:(?P<versions>[a-zA-Z0-9-,+\.|]+))?/statuses=(?:(?P<statuses>[a-zA-Z0-9-,+\.|]+))?', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_filter_sites_func',
 			'show_in_index' => false
 		]
 	);
@@ -3949,7 +4020,6 @@ function captaincore_ajax_action_callback() {
 		$process->roles = (int) $process->roles;
 		echo json_encode( $process );
 	}
-
 
 	if ( $cmd == 'fetchProcessLog' ) {
 		$process_log = ( new CaptainCore\ProcessLog( $value ) )->get();
