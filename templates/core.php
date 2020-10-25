@@ -1888,19 +1888,18 @@ if ( $role_check ) {
 					</v-tab>
 				</v-tabs>
 				<v-tabs-items v-model="dialog_site.site.tabs">
-					<v-tab-item value="tab-Site-Management">
+					<v-tab-item value="tab-Site-Management" :transition="false" :reverse-transition="false">
 						<div class="grey lighten-4 pb-2">
 						<v-layout wrap>
 							<v-flex sx12 sm4 px-2>
 							<v-layout>
 							<v-flex style="width:180px;">
 								<v-select
-									v-model="dialog_site.site.environment_selected"
-									:items='[{"name":"Production Environment","value":"Production"},{"name":"Staging Environment","value":"Staging"}]'
-									item-text="name"
-									item-value="value"
-									@change="triggerEnvironmentUpdate( dialog_site.site.site_id )"
-									light
+									v-model="dialog_site.environment_selected"
+									:items="dialog_site.site.environments"
+									return-object
+									item-text="environment_label"
+									@input="triggerEnvironmentUpdate"
 									style="height:54px;">
 								</v-select>
 								</v-flex>
@@ -1921,13 +1920,13 @@ if ( $role_check ) {
 										<v-tab key="Info" href="#tab-Info">
 											Info <v-icon>mdi-library-books</v-icon>
 										</v-tab>
-           							 	<v-tab key="Stats" href="#tab-Stats" @click="fetchStats( dialog_site.site.site_id )">
+           							 	<v-tab key="Stats" href="#tab-Stats" @click="fetchStats()">
 											Stats <v-icon>mdi-chart-bar</v-icon>
 										</v-tab>
 										<v-tab key="Plugins" href="#tab-Addons">
 											Addons <v-icon>mdi-power-plug</v-icon>
 										</v-tab>
-										<v-tab key="Users" href="#tab-Users" @click="fetchUsers( dialog_site.site.site_id )">
+										<v-tab key="Users" href="#tab-Users" @click="fetchUsers()">
 											Users <v-icon>mdi-account-multiple</v-icon>
 										</v-tab>
 										<v-tab key="Updates" href="#tab-Updates" @click="fetchUpdateLogs( dialog_site.site.site_id )">
@@ -1943,30 +1942,30 @@ if ( $role_check ) {
 									</v-flex>
 									</v-layout>
 								</div>
-        		<v-tabs-items v-model="dialog_site.site.tabs_management" v-if="dialog_site.loading != true && dialog_site.site.environments.filter( key => key.environment == dialog_site.site.environment_selected ).length == 1">
-					<v-tab-item :key="1" value="tab-Info">
+        		<v-tabs-items v-model="dialog_site.site.tabs_management" v-if="dialog_site.loading != true">
+					<v-tab-item :key="1" value="tab-Info" :transition="false" :reverse-transition="false">
 						<v-toolbar color="grey lighten-4" dense light flat>
 							<v-toolbar-title>Info</v-toolbar-title>
 							<v-spacer></v-spacer>
 						</v-toolbar>
-               			 <v-card v-for="key in dialog_site.site.environments" v-show="key.environment == dialog_site.site.environment_selected" flat>
+               			 <v-card flat>
 							<v-container fluid>
 							<v-layout body-1 px-6 class="row">
 								<v-flex xs12 md6 class="py-2">
 								<div class="block mt-6">
-                            		<a @click="showCaptures( dialog_site.site.site_id )"><v-img :src="key.screenshots.large" max-width="400" aspect-ratio="1.6" class="elevation-5" v-show="key.screenshots.large" style="margin:auto;"></v-img></a>
+                            		<a @click="showCaptures( dialog_site.site.site_id )"><v-img :src="dialog_site.environment_selected.screenshots.large" max-width="400" aspect-ratio="1.6" class="elevation-5" v-show="dialog_site.environment_selected.screenshots.large" style="margin:auto;"></v-img></a>
 								</div>
 								<v-list dense style="padding:0px;max-width:350px;margin: auto;" class="mt-6">
-									<v-list-item :href="key.link" target="_blank" dense>
+									<v-list-item :href="dialog_site.environment_selected.link" target="_blank" dense>
 									<v-list-item-content>
 										<v-list-item-title>Link</v-list-item-title>
-										<v-list-item-subtitle v-text="key.link"></v-list-item-subtitle>
+										<v-list-item-subtitle v-text="dialog_site.environment_selected.link"></v-list-item-subtitle>
 									</v-list-item-content>
 									<v-list-item-icon>
 										<v-icon>mdi-open-in-new</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
-									<v-list-item @click="copySFTP( key )" dense>
+									<v-list-item @click="copySFTP( dialog_site.environment_selected )" dense>
 									<v-list-item-content>
 										<v-list-item-title>SFTP Info</v-list-item-title>
 									</v-list-item-content>
@@ -1974,7 +1973,7 @@ if ( $role_check ) {
 										<v-icon>mdi-content-copy</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
-									<v-list-item @click="copyDatabase( key )" dense v-if="key.database">
+									<v-list-item @click="copyDatabase( dialog_site.environment_selected )" dense v-if="dialog_site.environment_selected.database">
 									<v-list-item-content>
 										<v-list-item-title>Database Info</v-list-item-title>
 									</v-list-item-content>
@@ -1994,25 +1993,25 @@ if ( $role_check ) {
 								</v-flex>
 								<v-flex xs12 md6 class="keys py-2">
 								<v-list dense style="padding:0px;max-width:350px;margin: auto;">
-									<v-list-item @click="copyText( key.address )" dense>
+									<v-list-item @click="copyText( dialog_site.environment_selected.address )" dense>
 									<v-list-item-content>
 										<v-list-item-title>Address</v-list-item-title>
-										<v-list-item-subtitle v-text="key.address"></v-list-item-subtitle>
+										<v-list-item-subtitle v-text="dialog_site.environment_selected.address"></v-list-item-subtitle>
 									</v-list-item-content>
 									<v-list-item-icon>
 										<v-icon>mdi-content-copy</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
-									<v-list-item @click="copyText( key.username )" dense>
+									<v-list-item @click="copyText( dialog_site.environment_selected.username )" dense>
 									<v-list-item-content>
 										<v-list-item-title>Username</v-list-item-title>
-										<v-list-item-subtitle v-text="key.username"></v-list-item-subtitle>
+										<v-list-item-subtitle v-text="dialog_site.environment_selected.username"></v-list-item-subtitle>
 									</v-list-item-content>
 									<v-list-item-icon>
 										<v-icon>mdi-content-copy</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
-									<v-list-item @click="copyText( key.password )" dense>
+									<v-list-item @click="copyText( dialog_site.environment_selected.password )" dense>
 									<v-list-item-content>
 										<v-list-item-title>Password</v-list-item-title>
 										<v-list-item-subtitle>##########</v-list-item-subtitle>
@@ -2021,53 +2020,53 @@ if ( $role_check ) {
 										<v-icon>mdi-content-copy</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
-									<v-list-item @click="copyText( key.protocol )" dense>
+									<v-list-item @click="copyText( dialog_site.environment_selected.protocol )" dense>
 									<v-list-item-content>
 										<v-list-item-title>Protocol</v-list-item-title>
-										<v-list-item-subtitle v-text="key.protocol"></v-list-item-subtitle>
+										<v-list-item-subtitle v-text="dialog_site.environment_selected.protocol"></v-list-item-subtitle>
 									</v-list-item-content>
 									<v-list-item-icon>
 										<v-icon>mdi-content-copy</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
-									<v-list-item @click="copyText( key.port )" dense>
+									<v-list-item @click="copyText( dialog_site.environment_selected.port )" dense>
 									<v-list-item-content>
 										<v-list-item-title>Port</v-list-item-title>
-										<v-list-item-subtitle v-text="key.port"></v-list-item-subtitle>
+										<v-list-item-subtitle v-text="dialog_site.environment_selected.port"></v-list-item-subtitle>
 									</v-list-item-content>
 									<v-list-item-icon>
 										<v-icon>mdi-content-copy</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
-									<div v-if="key.database">
-										<v-list-item :href="key.database" target="_blank" dense>
+									<div v-if="dialog_site.environment_selected.database">
+										<v-list-item :href="dialog_site.environment_selected.database" target="_blank" dense>
 										<v-list-item-content>
 											<v-list-item-title>Database</v-list-item-title>
-											<v-list-item-subtitle v-text="key.database"></v-list-item-subtitle>
+											<v-list-item-subtitle v-text="dialog_site.environment_selected.database"></v-list-item-subtitle>
 										</v-list-item-content>
 										<v-list-item-icon>
 											<v-icon>mdi-open-in-new</v-icon>
 										</v-list-item-icon>
 										</v-list-item>
-										<v-list-item @click="copyText( key.database_name )" dense>
+										<v-list-item @click="copyText( dialog_site.environment_selected.database_name )" dense>
 										<v-list-item-content>
 											<v-list-item-title>Database Name</v-list-item-title>
-											<v-list-item-subtitle v-text="key.database_name"></v-list-item-subtitle>
+											<v-list-item-subtitle v-text="dialog_site.environment_selected.database_name"></v-list-item-subtitle>
 										</v-list-item-content>
 										<v-list-item-icon>
 											<v-icon>mdi-content-copy</v-icon>
 										</v-list-item-icon>
 										</v-list-item>
-										<v-list-item @click="copyText( key.database_username )" dense>
+										<v-list-item @click="copyText( dialog_site.environment_selected.database_username )" dense>
 										<v-list-item-content>
 											<v-list-item-title>Database Username</v-list-item-title>
-											<v-list-item-subtitle v-text="key.database_username"></v-list-item-subtitle>
+											<v-list-item-subtitle v-text="dialog_site.environment_selected.database_username"></v-list-item-subtitle>
 										</v-list-item-content>
 										<v-list-item-icon>
 											<v-icon>mdi-content-copy</v-icon>
 										</v-list-item-icon>
 										</v-list-item>
-										<v-list-item @click="copyText( key.database_password )" dense>
+										<v-list-item @click="copyText( dialog_site.environment_selected.database_password )" dense>
 										<v-list-item-content>
 											<v-list-item-title>Database Password</v-list-item-title>
 											<v-list-item-subtitle>##########</v-list-item-subtitle>
@@ -2077,11 +2076,11 @@ if ( $role_check ) {
 										</v-list-item-icon>
 										</v-list-item>
 									</div>
-									<div v-if="key.ssh">
-										<v-list-item @click="copyText( key.ssh )" dense>
+									<div v-if="dialog_site.environment_selected.ssh">
+										<v-list-item @click="copyText( dialog_site.environment_selected.ssh )" dense>
 										<v-list-item-content>
 											<v-list-item-title>SSH Connection</v-list-item-title>
-											<v-list-item-subtitle v-text="key.ssh"></v-list-item-subtitle>
+											<v-list-item-subtitle v-text="dialog_site.environment_selected.ssh"></v-list-item-subtitle>
 										</v-list-item-content>
 										<v-list-item-icon>
 											<v-icon>mdi-content-copy</v-icon>
@@ -2122,12 +2121,8 @@ if ( $role_check ) {
 					</div>
 					<v-layout class="mb-10"></v-layout>
 				</v-tab-item>
-				<v-tab-item :key="100" value="tab-Stats">
-					<v-card 
-               			v-for="key in dialog_site.site.environments"
-                		v-show="key.environment == dialog_site.site.environment_selected"
-						flat
-					>
+				<v-tab-item :key="100" value="tab-Stats" :transition="false" :reverse-transition="false">
+					<v-card flat>
 					<v-toolbar color="grey lighten-4" dense light flat>
 						<v-toolbar-title>Stats</v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -2135,44 +2130,45 @@ if ( $role_check ) {
                     		<v-btn text @click="configureFathom( dialog_site.site.site_id )">Configure Fathom Tracker <v-icon dark small>bar_chart</v-icon></v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
-						<div class="pa-3" v-if="typeof key.stats == 'string' && key.stats != 'Loading'">
-							{{ key.stats }}
+						<div class="pa-3" v-if="typeof dialog_site.environment_selected.stats == 'string' && dialog_site.environment_selected.stats != 'Loading'">
+							{{ dialog_site.environment_selected.stats }}
 						</div>
 						<v-layout wrap>
 						<v-flex xs12>
-						<v-card-text v-show="key.stats == 'Loading'">
+						<v-card-text v-show="dialog_site.environment_selected.stats == 'Loading'">
 							<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
 						</v-card-text>
-                    	<div :id="`chart_` + dialog_site.site.site_id + `_` + key.environment"></div>
-							<v-card flat v-if="key.stats && key.stats.agg">
+						<div v-for="e in dialog_site.site.environments" v-show="e.environment == dialog_site.environment_selected.environment">
+							<div :id="`chart_` + dialog_site.site.site_id + `_` + e.environment"></div>
+							<v-card flat v-if="dialog_site.environment_selected.stats && dialog_site.environment_selected.stats.agg">
 							<v-card-title class="text-center pa-0">
 							<v-layout wrap>
 							<v-flex xs6 sm3>
 								<span class="text-uppercase caption">Unique Visitors</span><br />
-								<span class="display-1 font-weight-thin text-uppercase">{{ key.stats.agg.Visitors | formatk }}</span>
+								<span class="display-1 font-weight-thin text-uppercase">{{ dialog_site.environment_selected.stats.agg.Visitors | formatk }}</span>
 							</v-flex>
 							<v-flex xs6 sm3>
 								<span class="text-uppercase caption">Pageviews</span><br />
-								<span class="display-1 font-weight-thin text-uppercase">{{ key.stats.agg.Pageviews | formatk }}</span>
+								<span class="display-1 font-weight-thin text-uppercase">{{ dialog_site.environment_selected.stats.agg.Pageviews | formatk }}</span>
 							</v-flex>
 							<v-flex xs6 sm3>
 								<span class="text-uppercase caption">Avg Time On Site</span><br />
-								<span class="display-1 font-weight-thin text-uppercase">{{ key.stats.agg.AvgDuration | formatTime }}</span>
+								<span class="display-1 font-weight-thin text-uppercase">{{ dialog_site.environment_selected.stats.agg.AvgDuration | formatTime }}</span>
 							</v-flex>
 							<v-flex xs6 sm3>
 								<span class="text-uppercase caption">Bounce Rate</span><br />
-								<span class="display-1 font-weight-thin text-uppercase">{{ key.stats.agg.BounceRate | formatPercentageFixed }}</span>
+								<span class="display-1 font-weight-thin text-uppercase">{{ dialog_site.environment_selected.stats.agg.BounceRate | formatPercentageFixed }}</span>
 							</v-flex>
 							</v-layout>
 							</v-card-title>
 							</v-card>
 							<v-card flat class="mb-3">
 							<v-card-title>
-							<v-layout wrap v-show="key.stats.pages">
+							<v-layout wrap v-show="dialog_site.environment_selected.stats.pages">
 							<v-flex xs12 sm6 pr-2>
 							<v-data-table
 								:headers='[{"text":"Top Pages","value":"page",sortable: false, class: "text-truncate"},{"text":"Views","value":"views",sortable: false, "width": 90, align: "right"},{"text":"Uniques","value":"uniques",sortable: false, "width": 98, align: "right"}]'
-								:items="key.stats.pages"
+								:items="dialog_site.environment_selected.stats.pages"
 								class="elevation-0 table-layout-fixed"
 								hide-default-footer
 							>
@@ -2190,7 +2186,7 @@ if ( $role_check ) {
 							<v-flex xs12 sm6 pl-2>
 							<v-data-table
 								:headers='[{"text":"Top Referrers","value":"referrer", sortable: false, align: "truncate"},{"text":"Views", "value":"views" ,sortable: false, "width": 90, align: "right"},{"text":"Uniques","value":"uniques", sortable: false, "width": 98, align: "right"}]'
-								:items="key.stats.referrers"
+								:items="dialog_site.environment_selected.stats.referrers"
 								class="elevation-0 table-layout-fixed"
 								hide-default-footer
 							>
@@ -2208,26 +2204,23 @@ if ( $role_check ) {
 							</v-layout>
 							</v-card-title>
 							</v-card>
+						</div>
 						</v-flex>
 					</v-card>
 				</v-tab-item>
-				<v-tab-item :key="3" value="tab-Addons">
-					<v-card 
-            		v-for="key in dialog_site.site.environments"
-                	v-show="key.environment == dialog_site.site.environment_selected"
-					flat
-					>
+				<v-tab-item :key="3" value="tab-Addons" :transition="false" :reverse-transition="false">
+					<v-card flat>
 					<v-toolbar color="grey lighten-4" dense light flat>
 						<v-toolbar-title>Addons <small>(Themes/Plugins)</small></v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items>
-                    <v-btn text @click="bulkEdit(dialog_site.site.site_id, 'plugins')" v-if="key.plugins_selected.length != 0">Bulk Edit {{ key.plugins_selected.length }} plugins</v-btn>
-                    <v-btn text @click="bulkEdit(dialog_site.site.site_id, 'themes')" v-if="key.themes_selected.length != 0">Bulk Edit {{ key.themes_selected.length }} themes</v-btn>
+							<v-btn text @click="bulkEdit(dialog_site.site.site_id, 'plugins')" v-if="dialog_site.environment_selected.plugins_selected.length != 0">Bulk Edit {{ dialog_site.environment_selected.plugins_selected.length }} plugins</v-btn>
+							<v-btn text @click="bulkEdit(dialog_site.site.site_id, 'themes')" v-if="dialog_site.environment_selected.themes_selected.length != 0">Bulk Edit {{ dialog_site.environment_selected.themes_selected.length }} themes</v-btn>
                     <v-btn text @click="addTheme(dialog_site.site.site_id)">Add Theme <v-icon dark small>add</v-icon></v-btn>
                     <v-btn text @click="addPlugin(dialog_site.site.site_id)">Add Plugin <v-icon dark small>add</v-icon></v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
-					<v-card-title v-if="typeof key.themes == 'string'">
+					<v-card-title v-if="typeof dialog_site.environment_selected.themes == 'string'">
 					<div>
 						Updating themes...
 						<v-progress-linear :indeterminate="true"></v-progress-linear>
@@ -2236,9 +2229,9 @@ if ( $role_check ) {
 					<div v-else>
 					<v-subheader>Themes</v-subheader>
 					<v-data-table
-						v-model="key.themes_selected"
+						v-model="dialog_site.environment_selected.themes_selected"
 						:headers="header_themes"
-						:items="key.themes"
+						:items="dialog_site.environment_selected.themes"
 						:loading="dialog_site.site.loading_themes"
 						:items-per-page="-1"
 						:footer-props="{ itemsPerPageOptions: [{'text':'All','value':-1}] }"
@@ -2249,7 +2242,7 @@ if ( $role_check ) {
 						>
 						<template v-slot:item.status="{ item }">
 							<div v-if="item.status === 'inactive' || item.status === 'parent' || item.status === 'child'">
-                        <v-switch hide-details v-model="item.status" false-value="inactive" true-value="active" @change="activateTheme(props.item.name, dialog_site.site.site_id)"></v-switch>
+                        		<v-switch hide-details v-model="item.status" false-value="inactive" true-value="active" @change="activateTheme( item.name, dialog_site.site.site_id )"></v-switch>
 							</div>
 							<div v-else>
 								{{ item.status }}
@@ -2262,7 +2255,7 @@ if ( $role_check ) {
 						</template>
 					</v-data-table>
 				</div>
-					<v-card-title v-if="typeof key.plugins == 'string'">
+					<v-card-title v-if="typeof dialog_site.environment_selected.plugins == 'string'">
 						<div>
 							Updating plugins...
 							<v-progress-linear :indeterminate="true"></v-progress-linear>
@@ -2272,11 +2265,11 @@ if ( $role_check ) {
 					<v-subheader>Plugins</v-subheader>
 					<v-data-table
 						:headers="header_plugins"
-						:items="key.plugins.filter(plugin => plugin.status != 'must-use' && plugin.status != 'dropin')"
+						:items="dialog_site.environment_selected.plugins.filter(plugin => plugin.status != 'must-use' && plugin.status != 'dropin')"
 						:loading="dialog_site.site.loading_plugins"
 						:items-per-page="-1"
 						:footer-props="{ itemsPerPageOptions: [{'text':'All','value':-1}] }"
-						v-model="key.plugins_selected"
+						v-model="dialog_site.environment_selected.plugins_selected"
 						item-key="name"
 						value="name"
 						show-select
@@ -2296,7 +2289,7 @@ if ( $role_check ) {
 						</v-btn>
 					</template>
 					<template v-slot:body.append>
-						<tr v-for="plugin in key.plugins.filter(plugin => plugin.status == 'must-use' || plugin.status == 'dropin')">
+						<tr v-for="plugin in dialog_site.environment_selected.plugins.filter(plugin => plugin.status == 'must-use' || plugin.status == 'dropin')">
 							<td></td>
 							<td>{{ plugin.title }}</td>
 							<td>{{ plugin.name }}</td>
@@ -2308,12 +2301,8 @@ if ( $role_check ) {
 					</v-data-table>
 				</div>
 			</v-tab-item>
-			<v-tab-item :key="4" value="tab-Users">
-				<v-card 
-					v-for="key in dialog_site.site.environments"
-					v-show="key.environment == dialog_site.site.environment_selected"
-					flat
-				>
+			<v-tab-item :key="4" value="tab-Users" :transition="false" :reverse-transition="false">
+				<v-card flat>
 				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Users</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -2328,20 +2317,20 @@ if ( $role_check ) {
 						style="max-width:300px"
 					></v-text-field>
 					<v-toolbar-items>
-                <v-btn text @click="bulkEdit(dialog_site.site.site_id,'users')" v-if="key.users_selected.length != 0">Bulk Edit {{ key.users_selected.length }} users</v-btn>
+                <v-btn text @click="bulkEdit(dialog_site.site.site_id,'users')" v-if="dialog_site.environment_selected.users_selected.length != 0">Bulk Edit {{ dialog_site.environment_selected.users_selected.length }} users</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
-				<v-card-text v-show="typeof key.users == 'string'">
+				<v-card-text v-show="typeof dialog_site.environment_selected.users == 'string'">
 					<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
 				</v-card-text>
-					<div v-if="typeof key.users != 'string'">
+					<div v-if="typeof dialog_site.environment_selected.users != 'string'">
 						<v-data-table
 							:headers='header_users'
 							:items-per-page="50"
 							:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
-							:items="key.users"
+							:items="dialog_site.environment_selected.users"
 							item-key="user_login"
-							v-model="key.users_selected"
+							v-model="dialog_site.environment_selected.users_selected"
 							class="table_users"
 							:search="users_search"
 							show-select
@@ -2359,28 +2348,23 @@ if ( $role_check ) {
 					</div>
 				</v-card>
 			</v-tab-item>
-			<v-tab-item :key="5" value="tab-Updates">
+			<v-tab-item :key="5" value="tab-Updates" :transition="false" :reverse-transition="false">
 				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Update Logs</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
                 <v-btn text @click="runUpdate(dialog_site.site.site_id)">Manual update <v-icon dark>mdi-sync</v-icon></v-btn>
                 <v-btn text @click="updateSettings(dialog_site.site.site_id)">Update Settings <v-icon dark>mdi-settings</v-icon></v-btn>
-                <!-- <v-btn text @click="themeAndPluginChecks(dialog_site.site.site_id)">Theme/plugin checks <v-icon dark small>fas fa-calendar-check</v-icon></v-btn> -->
 					</v-toolbar-items>
 				</v-toolbar>
-				<v-card 
-					v-for="key in dialog_site.site.environments"
-					v-show="key.environment == dialog_site.site.environment_selected" 
-					flat
-				>
-					<v-card-text v-show="typeof key.update_logs == 'string'">
+				<v-card flat>
+					<v-card-text v-show="typeof dialog_site.environment_selected.update_logs == 'string'">
 						<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
 					</v-card-text>
-					<div v-if="typeof key.update_logs != 'string'">
+					<div v-if="typeof dialog_site.environment_selected.update_logs != 'string'">
 							<v-data-table
 								:headers='header_updatelog'
-								:items="key.update_logs"
+								:items="dialog_site.environment_selected.update_logs"
 								class="update_logs"
 								:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
 							>
@@ -2400,7 +2384,7 @@ if ( $role_check ) {
 						</div>
 				</v-card>
 			</v-tab-item>
-			<v-tab-item :key="6" value="tab-Scripts">
+			<v-tab-item :key="6" value="tab-Scripts" :transition="false" :reverse-transition="false">
 				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Scripts</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -2497,7 +2481,7 @@ if ( $role_check ) {
 					</v-card-title>
 				</v-card>
 			</v-tab-item>
-			<v-tab-item :key="7" value="tab-Backups">
+			<v-tab-item :key="7" value="tab-Backups" :transition="false" :reverse-transition="false">
 				<v-toolbar color="grey lighten-4" dense light flat>
 					<v-toolbar-title>Backups</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -2516,11 +2500,7 @@ if ( $role_check ) {
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-sheet v-show="dialog_site.backup_step == 1" class="mt-7">
-				  <v-card 
-					v-for="key in dialog_site.site.environments"
-					v-show="key.environment == dialog_site.site.environment_selected"
-					flat
-				>
+				  <v-card flat>
 				<v-row class="px-5">
 				<v-col cols="12" md="4" class="px-2">
 				<v-card
@@ -2529,12 +2509,12 @@ if ( $role_check ) {
 					outlined
 					link
 					hover
-					@click="viewBackups( dialog_site.site.site_id ); dialog_site.backup_step = 2"
+					@click="viewBackups(); dialog_site.backup_step = 2"
 				>
 					<v-card-title>Backups</v-card-title>
 					<v-card-subtitle>Original file and database backups.</v-card-subtitle>
 					<v-card-text>
-						<span v-if="typeof key.details.backup_count == 'number'">{{ key.details.backup_count }} backups</v-show>
+						<span v-if="typeof dialog_site.environment_selected.details.backup_count == 'number'">{{ dialog_site.environment_selected.details.backup_count }} backups</v-show>
 					</v-card-text>
 				</v-card>
 				</v-col>
@@ -2545,12 +2525,12 @@ if ( $role_check ) {
 					outlined
 					link
 					hover
-					@click="viewQuicksaves( dialog_site.site.site_id ); dialog_site.backup_step = 3"
+					@click="viewQuicksaves(); dialog_site.backup_step = 3"
 				>
 					<v-card-title>Quicksaves</v-card-title>
 					<v-card-subtitle>Know what changed and when. Easily rollback themes or plugins. Super helpful for troubleshooting maintenance issues.</v-card-subtitle>
 					<v-card-text>
-						<span v-if="typeof key.details.quicksave_usage == 'object'">{{ key.details.quicksave_usage.count }} quicksaves</v-show>
+						<span v-if="typeof dialog_site.environment_selected.details.quicksave_usage == 'object'">{{ dialog_site.environment_selected.details.quicksave_usage.count }} quicksaves</v-show>
 					</v-card-text>
 				</v-card>
 				</v-col>
@@ -2566,7 +2546,7 @@ if ( $role_check ) {
 					<v-card-title>Snapshots</v-card-title>
 					<v-card-subtitle>Manually generated snapshots zips.</v-card-subtitle>
 					<v-card-text>
-						<span v-if="typeof key.details.snapshot_count == 'number'">{{ key.details.snapshot_count }} snapshots</v-show>
+						<span v-if="typeof dialog_site.environment_selected.details.snapshot_count == 'number'">{{ dialog_site.environment_selected.details.snapshot_count }} snapshots</v-show>
 					</v-card-text>
 				</v-card>
 				</v-col>
@@ -2574,26 +2554,22 @@ if ( $role_check ) {
 				</v-card>
 				</v-sheet>
 				<v-sheet v-show="dialog_site.backup_step == 2">
-				<v-card 
-					v-for="key in dialog_site.site.environments"
-					v-show="key.environment == dialog_site.site.environment_selected"
-					flat
-				>
-					<v-subheader><a @click="dialog_site.backup_step = 1 ">Types</a>&nbsp;/ Backups</v-subheader>
-					<v-card-text v-if="typeof key.backups == 'string'">
+				<v-card flat>
+					<v-subheader><a @click="dialog_site.backup_step = 1">Types</a>&nbsp;/ Backups</v-subheader>
+					<v-card-text v-if="typeof dialog_site.environment_selected.backups == 'string'">
 						<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
 					</v-card-text>
 					<div v-else>
 					<v-data-table
 						:headers="[{text:'Created At',value:'time'},{text:'Backup ID',value:'short_id',width:'115px'}]"
-						:items="key.backups"
+						:items="dialog_site.environment_selected.backups"
 						item-key="id"
 						no-data-text="No backups found."
-                		:ref="'backup_table_'+ dialog_site.site.site_id + '_' + key.environment"
+                		:ref="'backup_table_'+ dialog_site.site.site_id + '_' + dialog_site.environment_selected.environment"
 						single-expand
 						show-expand
 						class="table-backups"
-						@click:row="expandBackup( $event, dialog_site.site.site_id, key.environment )"
+						@click:row="expandBackup( $event, dialog_site.site.site_id, dialog_site.environment_selected.environment )"
 					>
 					<template v-slot:item.time="{ item }">
 						{{ item.time | pretty_timestamp }}
@@ -2661,23 +2637,19 @@ if ( $role_check ) {
 				</v-card>
 				</v-sheet>
 				<v-sheet v-show="dialog_site.backup_step == 3">
-				<v-card 
-					v-for="key in dialog_site.site.environments"
-					v-show="key.environment == dialog_site.site.environment_selected"
-					flat
-				>
+				<v-card flat>
 					<v-subheader><a @click="dialog_site.backup_step = 1 ">Types</a>&nbsp;/ Quicksaves</v-subheader>
-					<v-card-text v-if="typeof key.quicksaves == 'string'">
+					<v-card-text v-if="typeof dialog_site.environment_selected.quicksaves == 'string'">
 						<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
 					</v-card-text>
 					<div v-else>
 					<v-data-table
 						:headers="[{text:'Created At',value:'created_at'},{text:'WordPress',value:'core',width:'115px'},{text:'',value:'themes',width:'100px'},{text:'',value:'plugins',width:'100px'}]"
-						:items="key.quicksaves"
+						:items="dialog_site.environment_selected.quicksaves"
 						item-key="quicksave_id"
 						no-data-text="No quicksaves found."
-                		:ref="'quicksave_table_'+ dialog_site.site.site_id + '_' + key.environment"
-						@click:row="expandQuicksave( $event, dialog_site.site.site_id, key.environment )"
+                		:ref="'quicksave_table_'+ dialog_site.site.site_id + '_' + dialog_site.environment_selected.environment"
+						@click:row="expandQuicksave( $event, dialog_site.site.site_id, dialog_site.environment_selected.environment )"
 						single-expand
 						show-expand
 						class="table-quicksaves"
@@ -2812,19 +2784,15 @@ if ( $role_check ) {
 					</v-card>
 					</v-sheet>
 					<v-sheet v-show="dialog_site.backup_step == 4">
-					<v-card 
-						v-for="key in dialog_site.site.environments"
-						v-show="key.environment == dialog_site.site.environment_selected"
-						flat
-					>
+					<v-card flat>
 					<v-subheader><a @click="dialog_site.backup_step = 1">Types </a>&nbsp;/ Snapshots</v-subheader>
-					<v-card-text v-if="typeof key.snapshots == 'string'">
+					<v-card-text v-if="typeof dialog_site.environment_selected.snapshots == 'string'">
 						<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
 					</v-card-text>
 					<div v-else>
 					<v-data-table
 						:headers="[{text:'Created At',value:'created_at',width:'250px'},{text:'User',value:'user',width:'125px'},{text:'Storage',value:'storage',width:'100px'},{text:'Notes',value:'notes'},{text:'',value:'actions',sortable: false,width:'190px'}]"
-						:items="key.snapshots"
+						:items="dialog_site.environment_selected.snapshots"
 						item-key="snapshot_id"
 						no-data-text="No snapshots found."
 					>
@@ -2872,7 +2840,7 @@ if ( $role_check ) {
 		 </v-container>
 		</v-card>
 	  </v-tab-item>
-		<v-tab-item :key="8" value="tab-Timeline">
+		<v-tab-item :key="8" value="tab-Timeline" :transition="false" :reverse-transition="false">
 			<v-toolbar color="grey lighten-4" dense light flat>
 				<v-toolbar-title>Timeline</v-toolbar-title>
 				<v-spacer></v-spacer>
@@ -4419,7 +4387,7 @@ if ( $role_check ) {
 				:items='[{"name":"Production Environment","value":"Production"},{"name":"Staging Environment","value":"Staging"}]'
 				item-text="name"
 				item-value="value"
-				@change="triggerEnvironmentUpdate( site.site_id )"
+				@change="triggerEnvironmentUpdate()"
 				class="mx-1 mt-6"
 				solo
 				dense
@@ -4783,7 +4751,7 @@ new Vue({
 		account_search: "",
 		new_recipe: { show: false, title: "", content: "", public: 1 },
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
-		dialog_site: { loading: true, step: 1, backup_step: 1, site: { name: "", site: "", screenshots: {}, timeline: [], environment_selected: "Production", environments: [{ id: "", quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }], users: [], timeline: [], usage_breakdown: [], update_log: [], tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
+		dialog_site: { loading: true, step: 1, backup_step: 1, environment_selected: { environment_id: "0", quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
 		dialog_edit_account: { show: false, account: {} },
 		roles: [{ name: "Subscriber", value: "subscriber" },{ name: "Contributor", value: "contributor" },{ name: "Author", value: "author" },{ name: "Editor", value: "editor" },{ name: "Administrator", value: "administrator" }],
 		new_plugin: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {} },
@@ -5232,10 +5200,18 @@ new Vue({
 			database_info = `Database: ${key.database}\nDatabase Username: ${key.database_username}\nDatabase Password: ${key.database_password}`
 			this.copyText( database_info );
 		},
-		triggerEnvironmentUpdate( site_id ){
-			// Trigger fetchStats()
+		triggerEnvironmentUpdate(){
 			if ( this.dialog_site.site.tabs == "tab-Site-Management" && this.dialog_site.site.tabs_management == "tab-Stats" ) {
-				this.fetchStats( site_id );
+				this.fetchStats()
+			}
+			if ( this.dialog_site.site.tabs == "tab-Site-Management" && this.dialog_site.site.tabs_management == "tab-Backups" && this.dialog_site.backup_step == 2 ) {
+				this.viewBackups()
+			}
+			if ( this.dialog_site.site.tabs == "tab-Site-Management" && this.dialog_site.site.tabs_management == "tab-Backups" && this.dialog_site.backup_step == 3 ) {
+				this.viewQuicksaves()
+			}
+			if ( this.dialog_site.site.tabs == "tab-Site-Management" && this.dialog_site.site.tabs_management == "tab-Backups" && this.dialog_site.backup_step == 4 ) {
+				this.viewSnapshots()
 			}
 		},
 		clearFilters() {
@@ -5419,8 +5395,6 @@ new Vue({
 		},
 		loginSite(site_id, username) {
 
-			site = this.sites.filter(site => site.site_id == site_id)[0];
-
 			// Adds new job
 			job_id = Math.round((new Date()).getTime());
 			description = "Login as '" + username + "' to " + site.name;
@@ -5432,7 +5406,7 @@ new Vue({
 				'post_id': site_id,
 				'command': "fetch-one-time-login",
 				'value': username,
-				'environment': site.environment_selected
+				'environment': this.dialog_site.environment_selected.environment
 			}
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
@@ -5809,19 +5783,23 @@ new Vue({
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					this.dialog_site.site.environments = response.data
+					this.dialog_site.site.environments.forEach( e => {
+						e.environment_label = e.environment + " Environment"
+					})
+					this.dialog_site.environment_selected = this.dialog_site.site.environments[0]
 					this.dialog_site.loading = false
 					if ( this.dialog_site.site.tabs_management == "tab-Users" ) {
-						this.fetchUsers( this.dialog_site.site.site_id )
+						this.fetchUsers()
 					}
 					if ( this.dialog_site.site.tabs_management == "tab-Stats" ) {
-						this.fetchStats( this.dialog_site.site.site_id )
+						this.fetchStats()
 					}
 					if ( this.dialog_site.site.tabs_management == "tab-Updates" ) {
 						this.fetchUpdateLogs( this.dialog_site.site.site_id )
 					}
 					if ( this.dialog_site.site.tabs_management == "tab-Backups" ) {
-						this.viewQuicksaves( this.dialog_site.site.site_id )
-						this.viewSnapshots( this.dialog_site.site.site_id )
+						this.viewQuicksaves()
+						this.viewSnapshots()
 					}
 				});
 		},
@@ -6028,20 +6006,17 @@ new Vue({
 					setTimeout(this.fetchMissing, 1000)
 			})
 		},
-		fetchStats( site_id ) {
+		fetchStats() {
 
-			site = this.sites.filter(site => site.site_id == site_id)[0];
-			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
+			environment = this.dialog_site.environment_selected
 			environment.stats = "Loading";
 
 			var data = {
 				action: 'captaincore_ajax',
-				post_id: site_id,
+				post_id: this.dialog_site.site.site_id,
 				command: 'fetchStats',
-				environment: site.environment_selected
+				environment: this.dialog_site.environment_selected.environment
 			};
-
-			self = this;
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
@@ -6051,7 +6026,7 @@ new Vue({
 						return;
 					}
 
-					chart_id = "chart_" + site.site_id + "_" + site.environment_selected;
+					chart_id = "chart_" + this.dialog_site.site.site_id + "_" + this.dialog_site.environment_selected.environment;
 					chart_dom = document.getElementById( chart_id );		
 					chart_dom.innerHTML = ""
 
@@ -6099,48 +6074,35 @@ new Vue({
 				.catch( error => console.log( error ) );
 
 		},
-		fetchUsers( site_id ) {
-
-			site = this.sites.filter(site => site.site_id == site_id)[0];
-			users_count = site.users.length;
-
-			// Fetch updates if none exists
-			if ( users_count == 0 ) {
-
+		fetchUsers() {
+			site = this.dialog_site.site
 				var data = {
 					'action': 'captaincore_ajax',
-					'post_id': site_id,
+				'post_id': site.site_id,
 					'command': "fetch-users",
-				};
-
-				self = this;
-
+			}
 				axios.post( ajaxurl, Qs.stringify( data ) )
 					.then( response => {
-
 						response = response.data
-
 						// Loop through environments and assign users
 						Object.keys(response).forEach( key => {
 							site.environments.filter( e => e.environment == key )[0].users = response[key];
 							if ( response[key] == null ) {
 								site.environments.filter( e => e.environment == key )[0].users = [];
 							}
-						});
-					});
-			}
+					})
+				})
 		},
-		fetchUpdateLogs( site_id ) {
+		fetchUpdateLogs() {
 
-			site = this.sites.filter(site => site.site_id == site_id)[0];
-			update_logs_count = site.update_logs.length;
+			update_logs_count = this.dialog_site.site.update_logs.length;
 
 			// Fetch updates if none exists
 			if ( update_logs_count == 0 ) {
 
 				var data = {
 					'action': 'captaincore_ajax',
-					'post_id': site_id,
+					'post_id': this.dialog_site.site.site_id,
 					'command': "fetch-update-logs",
 				};
 
@@ -6149,9 +6111,9 @@ new Vue({
 						response = response.data
 						// Loop through environments and assign users
 						Object.keys(response).forEach( key => {
-							site.environments.filter( e => e.environment == key )[0].update_logs = response[key];
+							this.dialog_site.site.environments.filter( e => e.environment == key )[0].update_logs = response[key];
 							if ( response[key] == null ) {
-								site.environments.filter( e => e.environment == key )[0].update_logs = [];
+								this.dialog_site.site.environments.filter( e => e.environment == key )[0].update_logs = [];
 							}
 						});
 					});
@@ -6170,15 +6132,15 @@ new Vue({
 		},
 		bulkEdit ( site_id, type ) {
 			this.bulk_edit.show = true;
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 			this.bulk_edit.site_id = site_id;
 			this.bulk_edit.site_name = site.name;
-			this.bulk_edit.items = site.environments.filter( e => e.environment == site.environment_selected )[0][ type.toLowerCase() + "_selected" ];
+			this.bulk_edit.items = this.dialog_site.environment_selected[ type.toLowerCase() + "_selected" ];
 			this.bulk_edit.type = type;
 		},
 		bulkEditExecute ( action ) {
 			site_id = this.bulk_edit.site_id;
-			site = this.sites.filter(site => site.site_id == site_id )[0];
+			site = this.dialog_site.site
 			object_type = this.bulk_edit.type;
 			object_singular = this.bulk_edit.type.slice(0, -1);
 			items = this.bulk_edit.items.map(item => item.name).join(" ");
@@ -6223,8 +6185,8 @@ new Vue({
 
 		},
 		fetchLink( site_id, snapshot_id ) {
-			site = this.sites.filter(site => site.site_id == site_id )[0];
-			snapshot = site.environments.filter( e => e.environment == site.environment_selected )[0].snapshots.filter( s => s.snapshot_id == snapshot_id )[0];
+			site = this.dialog_site.site
+			snapshot = this.dialog_site.environment_selected.snapshots.filter( s => s.snapshot_id == snapshot_id )[0];
 
 			var data = {
 				'action': 'captaincore_ajax',
@@ -6242,7 +6204,7 @@ new Vue({
 				.catch( error => console.log( error ) );
 		},
 		promptBackupSnapshot( site_id ) {
-			site = this.sites.filter(site => site.site_id == site_id )[0];
+			site = this.dialog_site.site
 			this.dialog_backup_snapshot.show = true;
 			this.dialog_backup_snapshot.site = site;
 		},
@@ -6289,7 +6251,7 @@ new Vue({
 
 		},
 		copySite( site_id ) {
-			site = this.sites.filter(site => site.site_id == site_id )[0];
+			site = this.dialog_site.site
 			site_name = site.name;
 			this.dialog_copy_site.show = true;
 			this.dialog_copy_site.site = site;
@@ -6300,14 +6262,12 @@ new Vue({
 
 			this.sites.map(site => site.name).filter(site => site != site_name );
 		},
-		editSite( site_id ) {
-			site = this.sites.filter(site => site.site_id == site_id )[0];
-			site_name = site.name;
-			this.dialog_edit_site.site = site
+		editSite() {
+			this.dialog_edit_site.site = this.dialog_site.site
 			this.dialog_site.step = 4
 		},
 		deleteSite( site_id ) {
-			site = this.sites.filter(site => site.site_id == site_id )[0];
+			site = this.dialog_site.site
 			site_name = site.name;
 			should_proceed = confirm("Delete site " + site_name + "?");
 
@@ -6435,7 +6395,7 @@ new Vue({
 				.catch( error => console.log( error ) );
 		},
 		showLogEntry( site_id ){
-			site = this.sites.filter(site => site.site_id == site_id )[0];
+			site = this.dialog_site.site
 			this.dialog_new_log_entry.show = true;
 			this.dialog_new_log_entry.sites = [];
 			this.dialog_new_log_entry.sites.push( site );
@@ -6526,7 +6486,7 @@ new Vue({
 				site_id = site_id[0].site_id;
 			}
 			
-			site = this.sites.filter(site => site.site_id == site_id )[0];
+			site = this.dialog_site.site
 
 			var data = {
 				action: 'captaincore_ajax',
@@ -6935,7 +6895,7 @@ new Vue({
 		},
 		runRecipe( recipe_id, site_id ) {
 			recipe = this.recipes.filter( recipe => recipe.recipe_id == recipe_id )[0];
-			site = this.sites.filter(site => site.site_id == site_id )[0];
+			site = this.dialog_site.site
 
 			should_proceed = confirm("Run recipe '"+ recipe.title +"' on " + site.name + "?");
 
@@ -7113,7 +7073,7 @@ new Vue({
 		showCaptures( site_id ) {
 			site = this.sites.filter( site => site.site_id == site_id )[0];
 			this.dialog_captures.site = site;
-			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
+			environment = this.dialog_site.environment_selected;
 			this.dialog_captures.pages = environment.capture_pages
 			if ( environment.capture_pages == "" || environment.capture_pages == null ) {
 				this.dialog_captures.pages = [{ page: "/" }]
@@ -7184,7 +7144,7 @@ new Vue({
 			this.dialog_toggle.business_link = this.business_link;
 		},
 		resetPermissions( site_id ) {
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 			should_proceed = confirm("Reset file permissions to defaults " + site.name + "?");
 			description = "Resetting file permissions to defaults on '" + site.name + "'";
 
@@ -7216,7 +7176,16 @@ new Vue({
 			this.dialog_site.loading = true
 			this.fetchSiteEnvironments( site.site_id )
 			this.fetchSiteDetails( site.site_id )
-			this.dialog_site.site = site
+			show_site = JSON.parse ( JSON.stringify ( site ) )
+			show_site.usage_breakdown = []
+			show_site.pagination = []
+			show_site.pagination['sortBy'] = 'roles'
+            show_site.users = []
+            show_site.update_logs = []
+            show_site.timeline = []
+			show_site.shared_with = []
+            show_site.loading = false
+			this.dialog_site.site = show_site
 			this.dialog_site.step = 2
 			this.dialog_new_site = {
 				provider: "kinsta",
@@ -7272,7 +7241,7 @@ new Vue({
 				.catch( error => console.log( error ) );
 		},
 		showSiteMigration( site_id ){
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 			this.dialog_migration.sites.push( site );
 			this.dialog_migration.show = true;
 			this.dialog_migration.site_id = site.site_id
@@ -7284,7 +7253,7 @@ new Vue({
 			}	
 		},
 		siteMigration( site_id ) {
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 			site_name = site.name;
 
 			should_proceed = confirm("Migrate from backup url? This will overwrite the existing site at " + site_name + ".");
@@ -7326,7 +7295,7 @@ new Vue({
 		},
 		DeactivateSite( site_id ) {
 
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 			site_name = this.dialog_toggle.site_name;
 
 			if ( Array.isArray( site_id ) ) { 
@@ -7368,7 +7337,7 @@ new Vue({
 		},
 		ActivateSite( site_id ) {
 
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 			site_name = this.dialog_toggle.site_name;
 
 			if ( Array.isArray( site_id ) ) { 
@@ -7408,7 +7377,7 @@ new Vue({
 		},
 		siteDeploy( site_id ) {
 
-			site = this.sites.filter(site => site.site_id == site_id)[0]
+			site = this.dialog_site.site
 			should_proceed = confirm("Deploy defaults on " + site.name + "?")
 			description = "Deploy defaults on '" + site.name + "'"
 
@@ -7473,7 +7442,7 @@ new Vue({
 		},
 		runCustomCode( site_id ) {
 
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 			should_proceed = confirm("Deploy custom code on "+site.name+"?");
 
 			if ( ! should_proceed ) {
@@ -8044,7 +8013,7 @@ new Vue({
 			}
 		},
 		PushProductionToStaging( site_id ) {
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 			should_proceed = confirm("Push production site " + site.name + " to staging site?");
 			description = "Pushing production site '" + site.name + "' to staging";
 
@@ -8077,7 +8046,7 @@ new Vue({
 		},
 		PushStagingToProduction( site_id ) {
 
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 			should_proceed = confirm("Push staging site " + site.name + " to production site?");
 			description = "Pushing staging site '" + site.name + "' to production";
 
@@ -8109,7 +8078,7 @@ new Vue({
 				.catch( error => console.log( error ) );
 		},
 		viewApplyHttpsUrls( site_id ) {
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 			this.dialog_apply_https_urls.show = true;
 			this.dialog_apply_https_urls.site_id = site_id
 			this.dialog_apply_https_urls.site_name = site.name;
@@ -8120,8 +8089,8 @@ new Vue({
 			this.dialog_apply_https_urls.site_name = this.sites_selected.length + " sites";
 		},
 		RollbackQuicksave( site_id, quicksave_id, addon_type, addon_name ){
-			site = this.sites.filter(site => site.site_id == site_id)[0];
-			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
+			site = this.dialog_site.site;
+			environment = this.dialog_site.environment_selected;
 			quicksave = environment.quicksaves.filter( quicksave => quicksave.quicksave_id == quicksave_id )[0];
 			date = this.$options.filters.pretty_timestamp_epoch(quicksave.created_at);
 			description = "Rollback "+ addon_type + " " + addon_name +" to version as of " + date + " on " + site.name ;
@@ -8131,7 +8100,7 @@ new Vue({
 				return;
 			}
 
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 
 			var data = {
 				'action': 'captaincore_install',
@@ -8170,7 +8139,7 @@ new Vue({
 			}
 
 			site_id = this.dialog_file_diff.quicksave.site_id
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 
 			var data = {
 				'action': 'captaincore_install',
@@ -8193,8 +8162,8 @@ new Vue({
 
 		},
 		QuicksaveFileDiff( site_id, quicksave_id, git_commit, file_name ) {
-			site = this.sites.filter(site => site.site_id == site_id)[0];
-			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
+			site = this.dialog_site.site;
+			environment = this.dialog_site.environment_selected;
 			file_name = file_name.split("	")[1];
 			this.dialog_file_diff.response = "";
 			this.dialog_file_diff.file_name = file_name;
@@ -8235,7 +8204,7 @@ new Vue({
 		},
 		QuicksaveCheck( site_id ) {
 
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 			should_proceed = confirm("Run a manual check for new files on " + site.name + "?");
 
 			if ( ! should_proceed ) {
@@ -8273,7 +8242,7 @@ new Vue({
 		QuicksavesRollback( site_id, quicksave ) {
 
 			date = this.$options.filters.pretty_timestamp_epoch(quicksave.created_at);
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 			should_proceed = confirm("Will rollback all themes/plugins on " + site.name + " to " + date + ". Proceed?");
 
 			if ( ! should_proceed ) {
@@ -8308,7 +8277,7 @@ new Vue({
 		},
 		viewQuicksavesChanges( site_id, quicksave ) {
 
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 			quicksave.view_changes = true;
 
 			var data = {
@@ -8330,24 +8299,20 @@ new Vue({
 		},
 		expandQuicksave( item, site_id, environment ) {
 			table_name = "quicksave_table_" + site_id + "_" + environment;
-			if ( typeof this.$refs[table_name][0].expansion[item.quicksave_id] == 'boolean' ) {
-				this.$refs[table_name][0].expansion = ""
+			if ( typeof this.$refs[table_name].expansion[item.quicksave_id] == 'boolean' ) {
+				this.$refs[table_name].expansion = ""
 			} else {
-				this.$refs[table_name][0].expansion = { [item.quicksave_id] : true }
+				this.$refs[table_name].expansion = { [item.quicksave_id] : true }
 			}
 		},
-		viewQuicksaves( site_id ) {
-
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+		viewQuicksaves() {
 			axios.get(
-				'/wp-json/captaincore/v1/site/'+site_id+'/quicksaves', {
+				'/wp-json/captaincore/v1/site/'+this.dialog_site.site.site_id+'/quicksaves/'+this.dialog_site.environment_selected.environment.toLowerCase(), {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => { 
-						site.environments[0].quicksaves = response.data.Production
-						site.environments[1].quicksaves = response.data.Staging				
+					this.dialog_site.environment_selected.quicksaves = response.data
 				});
-
 		},
 		downloadBackup( backup_id, backup_tree ) {
 			directories = []
@@ -8373,7 +8338,7 @@ new Vue({
 					directories: JSON.stringify( directories ),
 					backup_id: backup_id,
 				},
-				'environment': this.dialog_site.site.environment_selected,
+				'environment': this.dialog_site.environment_selected.environment,
 			};
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
@@ -8385,17 +8350,13 @@ new Vue({
 			});
 		},
 		getBackup( backup_id, site_id ) {
-			environment = this.dialog_site.site.environment_selected.toLowerCase()
+			environment = this.dialog_site.environment_selected.environment.toLowerCase()
 			axios.get(
 				`/wp-json/captaincore/v1/site/${site_id}/${environment}/backups/${backup_id}`, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
-					environment_selected = this.dialog_site.site.environments.filter( e => e.environment == this.dialog_site.site.environment_selected )
-					if ( environment_selected.length != 1 ) {
-						return
-					}
-					backup_selected = environment_selected[0].backups.filter( b => b.id == backup_id )
+					backup_selected = this.dialog_site.environment_selected.backups.filter( b => b.id == backup_id )
 					if ( backup_selected.length != 1 ) {
 						return
 					}
@@ -8405,32 +8366,30 @@ new Vue({
 					backup_selected[0].loading = false
 				});
 		},
-		viewBackups( site_id ) {
-			environment = this.dialog_site.site.environment_selected.toLowerCase()
+		viewBackups() {
+			site_id = this.dialog_site.site.site_id
+			environment = this.dialog_site.environment_selected.environment.toLowerCase()
 			axios.get(
 				`/wp-json/captaincore/v1/site/${site_id}/${environment}/backups`, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
-					environment_selected = this.dialog_site.site.environments.filter( e => e.environment == this.dialog_site.site.environment_selected )
-					if ( environment_selected.length == 1 ) {
-						environment_selected[0].backups = response.data
-					}
+					this.dialog_site.environment_selected.backups = response.data
 				});
 		},
 		expandBackup( item, site_id, environment ) {
 			table_name = "backup_table_" + site_id + "_" + environment;
-			if ( typeof this.$refs[table_name][0].expansion[item.id] == 'boolean' ) {
-				this.$refs[table_name][0].expansion = ""
+			if ( typeof this.$refs[table_name].expansion[item.id] == 'boolean' ) {
+				this.$refs[table_name].expansion = ""
 			} else {
 				this.getBackup( item.id, site_id )
-				this.$refs[table_name][0].expansion = { [item.id] : true }
+				this.$refs[table_name].expansion = { [item.id] : true }
 			}
 		},
-		viewSnapshots( site_id ) {
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+		viewSnapshots() {
+			site = this.dialog_site.site
 			axios.get(
-				'/wp-json/captaincore/v1/site/'+site_id+'/snapshots', {
+				'/wp-json/captaincore/v1/site/'+ site.site_id +'/snapshots', {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => { 
@@ -8438,13 +8397,13 @@ new Vue({
 						site.environments[1].snapshots = response.data.Staging				
 				});
 		},
-		activateTheme (theme_name, site_id) {
+		activateTheme( theme_name, site_id ) {
 
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site
 
 			// Enable loading progress
 			site.loading_themes = true;
-			site.themes.filter(theme => theme.name != theme_name).forEach( theme => theme.status = "inactive" );
+			this.dialog_site.environment_selected.themes.filter(theme => theme.name != theme_name).forEach( theme => theme.status = "inactive" );
 
 			// Start job
 			site_name = site.name;
@@ -8480,7 +8439,7 @@ new Vue({
 				return;
 			}
 
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 
 			// Enable loading progress
 			site.loading_themes = true;
@@ -8505,7 +8464,7 @@ new Vue({
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					environment = site.environments.filter( e => e.environment == site.environment_selected )[0]
+					environment = this.dialog_site.environment_selected
 					updated_themes = environment.themes.filter(theme => theme.name != theme_name);
 					environment.themes = updated_themes;
 					site.loading_themes = false;
@@ -8516,11 +8475,11 @@ new Vue({
 
 		},
 		addPlugin ( site_id ){
-			site = this.sites.filter(site => site.site_id == site_id)[0]
+			site = this.dialog_site.site
 			this.new_plugin.show = true;
 			this.new_plugin.sites.push( site );
 			this.new_plugin.site_name = site.name;
-			this.new_plugin.current_plugins = site.environments.filter( e => e.environment == site.environment_selected )[0].plugins.map( p => p.name );
+			this.new_plugin.current_plugins = this.dialog_site.environment_selected.plugins.map( p => p.name );
 			this.new_plugin.environment_selected = site.environment_selected;
 			this.fetchPlugins();
 		},
@@ -8663,11 +8622,11 @@ new Vue({
 				});
 		},
 		addTheme ( site_id ) {
-			site = this.sites.filter(site => site.site_id == site_id)[0]
+			site = this.dialog_site.site
 			this.new_theme.show = true;
 			this.new_theme.sites.push( site );
 			this.new_theme.site_name = site.name;
-			this.new_theme.current_themes = site.environments.filter( e => e.environment == site.environment_selected )[0].themes.map( p => p.name );
+			this.new_theme.current_themes = this.dialog_site.environment_selected.themes.map( p => p.name );
 			this.new_theme.environment_selected = site.environment_selected;
 			this.fetchThemes();
 		},
@@ -8815,11 +8774,11 @@ new Vue({
 		},
 		togglePlugin (plugin_name, plugin_status, site_id) {
 
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 
 			// Enable loading progress
-			this.sites.filter(site => site.site_id == site_id)[0].loading_plugins = true;
-			site_name = this.sites.filter(site => site.site_id == site_id)[0].name;
+			this.dialog_site.site.loading_plugins = true;
+			site_name = this.dialog_site.site.name;
 
 			if (plugin_status == "inactive") {
 				action = "deactivate";
@@ -8865,12 +8824,12 @@ new Vue({
 				return;
 			}
 
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 
 			// Enable loading progress
-			this.sites.filter(site => site.site_id == site_id)[0].loading_plugins = true;
+			this.dialog_site.site.loading_plugins = true;
 
-			site_name = this.sites.filter(site => site.site_id == site_id)[0].name;
+			site_name = this.dialog_site.site.name;
 			description = "Delete plugin '" + plugin_name + "' from " + site_name;
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
@@ -8892,7 +8851,7 @@ new Vue({
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					environment = site.environments.filter( e => e.environment == site.environment_selected )[0]
+					environment = this.dialog_site.environment_selected
 					updated_plugins = environment.plugins.filter(plugin => plugin.name != plugin_name);
 					environment.plugins = updated_plugins;
 					self.sites.filter(site => site.site_id == site_id)[0].loading_plugins = false;
@@ -8904,7 +8863,7 @@ new Vue({
 		},
 		runUpdate( site_id ) {
 
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 			should_proceed = confirm("Apply all plugin/theme updates for " + site.name + "?");
 
 			if ( ! should_proceed ) {
@@ -8932,7 +8891,7 @@ new Vue({
 
 		},
 		themeAndPluginChecks( site_id ) {
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 			this.dialog_theme_and_plugin_checks.site = site;
 			this.dialog_theme_and_plugin_checks.show = true;
 		},
@@ -9005,9 +8964,9 @@ new Vue({
 			job.stream.push( session.data )
 		},
 		configureFathom( site_id ) {
-			site = this.sites.filter(site => site.site_id == site_id)[0];
+			site = this.dialog_site.site;
 			this.dialog_fathom.site = site
-			this.dialog_fathom.environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
+			this.dialog_fathom.environment = this.dialog_site.environment_selected;
 			this.dialog_fathom.show = true;
 		},
 		configureFathomClose() {
@@ -9087,7 +9046,7 @@ new Vue({
 		updateSettings() {
 			this.dialog_update_settings.show = true;
 			site = this.dialog_site.site
-			environment = site.environments.filter( e => e.environment == site.environment_selected )[0]
+			environment = this.dialog_site.environment_selected
 			this.dialog_update_settings.environment.updates_exclude_plugins = environment.updates_exclude_plugins
 			this.dialog_update_settings.environment.updates_exclude_themes = environment.updates_exclude_themes
 			this.dialog_update_settings.environment.updates_enabled = environment.updates_enabled
@@ -9121,7 +9080,7 @@ new Vue({
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
+					environment = this.dialog_site.environment_selected;
 					environment.updates_exclude_plugins = this.dialog_update_settings.environment.updates_exclude_plugins;
 					environment.updates_exclude_themes = this.dialog_update_settings.environment.updates_exclude_themes;
 					environment.updates_enabled = this.dialog_update_settings.environment.updates_enabled;
@@ -9131,8 +9090,8 @@ new Vue({
 
 		},
 		deleteUserDialog( username, site_id ){
-			site = this.sites.filter(site => site.site_id == site_id)[0];
-			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
+			site = this.dialog_site.site;
+			environment = this.dialog_site.environment_selected;
 			this.dialog_delete_user.username = username
 			this.dialog_delete_user.site = site
 			this.dialog_delete_user.show = true
@@ -9146,7 +9105,7 @@ new Vue({
 			}
 			username = this.dialog_delete_user.username
 			site = this.dialog_delete_user.site
-			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
+			environment = this.dialog_site.environment_selected;
 			should_proceed = confirm("Are you sure you want to delete user " + username + "?");
 
 			if ( ! should_proceed ) {
@@ -9227,8 +9186,8 @@ new Vue({
 		  	});
 		},
 		filterFiles( site_id, quicksave_id ) {
-			site = this.sites.filter(site => site.site_id == site_id)[0];
-			environment = site.environments.filter( e => e.environment == site.environment_selected )[0];
+			site = this.dialog_site.site;
+			environment = this.dialog_site.environment_selected;
 			quicksave = environment.quicksaves.filter( quicksave => quicksave.quicksave_id == quicksave_id )[0];
 			search = quicksave.search;
 			quicksave.filtered_files = quicksave.view_files.filter( file => file.includes( search ) );
