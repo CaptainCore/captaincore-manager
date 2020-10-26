@@ -1865,6 +1865,18 @@ function captaincore_site_quicksaves_func( $request ) {
 	return $results;
 }
 
+function captaincore_site_quicksaves_environment_func( $request ) {
+	$site_id     = $request['id'];
+	$environment = $request['environment'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$results = ( new CaptainCore\Site( $site_id ))->quicksaves( $environment );
+	return $results;
+}
+
 add_action( 'rest_api_init', 'captaincore_register_rest_endpoints' );
 
 function captaincore_register_rest_endpoints() {
@@ -1900,6 +1912,15 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/site/(?P<id>[\d]+)/quicksaves', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_quicksaves_func',
+			'show_in_index' => false
+		]
+	);
+
+	// Custom endpoint for CaptainCore site/<id>/quicksaves
+	register_rest_route(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/quicksaves/(?P<environment>[a-zA-Z0-9-]+)', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_site_quicksaves_environment_func',
 			'show_in_index' => false
 		]
 	);
