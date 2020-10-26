@@ -4144,7 +4144,7 @@ function captaincore_ajax_action_callback() {
 			return;
 		}
 
-		( new CaptainCore\Accounts )->update( [ "name" => trim( $account->name ) ], [ "account_id" => $account->account_id ] );
+		( new CaptainCore\Accounts )->update( [ "name" => trim( $account->name ), "billing_user_id" => $account->billing_user_id ], [ "account_id" => $account->account_id ] );
 		( new CaptainCore\Account( $account->account_id ) )->sync();
 		echo json_encode( $account ) ;
 	}
@@ -4253,16 +4253,14 @@ function captaincore_ajax_action_callback() {
 	}
 
 	if ( $cmd == 'updatePlan' ) {
-		// Regenerate usage info for customer
-		$account_id   = ( new CaptainCore\Sites )->get( $post_id )->account_id;
-		$account      = ( new CaptainCore\Accounts )->get( $account_id );
+		$account   = ( new CaptainCore\Accounts )->get( $post_id );
 		$plan         = json_decode( $account->plan );
 		$plan->name   = $value["plan"]["name"];
 		$plan->price  = $value["plan"]["price"];
 		$plan->addons = $value["plan"]["addons"];
 		$plan->limits = $value["plan"]["limits"];
-		$db           = new CaptainCore\Accounts;
-		$db->update( [ "plan" => json_encode( $plan ) ], [ "account_id" => $account_id ] );
+		$plan->interval = $value["plan"]["interval"];
+		( new CaptainCore\Accounts )->update( [ "plan" => json_encode( $plan ) ], [ "account_id" => $account->account_id ] );
 	}
 
 	if ( $cmd == 'updateSettings' ) {
@@ -4669,11 +4667,15 @@ function captaincore_install_action_callback() {
 
 	if ( $cmd == 'backup_download' ) {
 		$run_in_background = true;
-		$current_user = wp_get_current_user();
-		$email        = $current_user->user_email;
-		$tree         = base64_encode( stripslashes_deep( $value ) );
-		$count        = count ( $value );
-		$command      = "site backup download $site $backup_id --email=$email --payload='$tree'";
+		$value             = (object) $value;
+		$current_user      = wp_get_current_user();
+		$email             = $current_user->user_email;
+		$payload           = [
+			"files"       => json_decode( stripslashes_deep( $value->files ) ),
+			"directories" => json_decode ( stripslashes_deep( $value->directories ) ),
+		];
+		$payload           = base64_encode( json_encode( $payload ) );
+		$command           = "site backup download $site $value->backup_id --email=$email --payload='$payload'";
 	}
 
 	if ( $cmd == 'manage' ) {
