@@ -767,6 +767,12 @@ class Site {
                 if ( $environment->environment == "Staging" ) {
                     $environment->database      = "https://mysqleditor-staging-{$environment->database_username}.kinsta.{$kinsta_ending}";
                 }
+                if ( preg_match('/.+\.temp.+?\.kinsta.cloud/', $environment->address, $matches ) ) {
+                    $environment->database          = "https://mysqleditor-{$environment->address}";
+                }
+                if ( preg_match('/.+\.temp.+?\.kinsta.cloud/', $environment->address, $matches ) && $environment->environment == "Staging" ) {
+                    $environment->database          = "https://mysqleditor-staging-{$environment->address}";
+                }
             }
             $environment->environment_id   = $environment->environment_id;
             $environment->details          = json_decode( $environment->details );
