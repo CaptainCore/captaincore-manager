@@ -995,7 +995,7 @@ if ( $role_check ) {
 						<v-btn icon dark @click.native="dialog_modify_plan.show = false">
 							<v-icon>close</v-icon>
 						</v-btn>
-						<v-toolbar-title>Edit plan for {{ dialog_modify_plan.customer_name }}</v-toolbar-title>
+						<v-toolbar-title>Edit plan for {{ dialog_account.records.account.name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text class="mt-4">
@@ -1005,8 +1005,17 @@ if ( $role_check ) {
 							@change="loadHostingPlan()"
 							v-model="dialog_modify_plan.selected_plan"
 							label="Plan Name"
-							:items="hosting_plans.map( plan => plan.name )"
+							:items="dialog_modify_plan.hosting_plans.map( plan => plan.name )"
 							:value="dialog_modify_plan.plan.name"
+						></v-select>
+						</v-flex>
+						<v-flex xs12>
+						<v-select
+							@change="calculateHostingPlan()"
+							v-model="dialog_modify_plan.plan.interval"
+							label="Plan Interval"
+							:items="[{ text: 'Yearly', value: '12' },{ text: 'Monthly', value: '1' },{ text: 'Quarterly', value: '4' },{ text: 'Biannual', value: '6' }]"
+							:value="dialog_modify_plan.plan.interval"
 						></v-select>
 						</v-flex>
 						</v-layout>
@@ -3735,6 +3744,9 @@ if ( $role_check ) {
 						<v-text-field v-model="plan.name" label="Name"></v-text-field>
 					</v-col>
 					<v-col style="max-width:100px">
+						<v-text-field v-model="plan.interval" label="Interval" hint="# of months" persistent-hint></v-text-field>
+					</v-col>
+					<v-col style="max-width:100px">
 						<v-text-field v-model="plan.price" label="Price"></v-text-field>
 					</v-col>
 					<v-col style="max-width:150px">
@@ -3753,11 +3765,29 @@ if ( $role_check ) {
 				<v-row>
 					<v-col><v-btn @click="addAdditionalPlan()">Add Additional Plan</v-btn></v-col>
 				</v-row>
+				<div class="seperator mt-5"></div>
+				<span class="body-2">Usage Pricing</span>
+				<v-row>
+					<v-col style="max-width:200px"><v-text-field label="Sites Quantity" v-model="configurations.usage_pricing.sites.quantity"></v-text-field></v-col>
+					<v-col style="max-width:150px"><v-text-field label="Sites Cost" v-model="configurations.usage_pricing.sites.cost"></v-text-field></v-col>
+					<v-col style="max-width:150px"><v-text-field label="Sites Interval" v-model="configurations.usage_pricing.sites.interval" hint="# of months" persistent-hint></v-text-fiel></v-col>
+				</v-row>
+				<v-row>
+					<v-col style="max-width:200px"><v-text-field label="Storage Quantity (GB)" v-model="configurations.usage_pricing.storage.quantity"></v-text-field></v-col>
+					<v-col style="max-width:150px"><v-text-field label="Storage Cost" v-model="configurations.usage_pricing.storage.cost"></v-text-field></v-col>
+					<v-col style="max-width:150px"><v-text-field label="Storage Interval" v-model="configurations.usage_pricing.storage.interval" hint="# of months" persistent-hint></v-text-fiel></v-col>
+				</v-row>
+				<v-row>
+					<v-col style="max-width:200px"><v-text-field label="Traffic Quantity (pageviews)" v-model="configurations.usage_pricing.traffic.quantity"></v-text-field></v-col>
+					<v-col style="max-width:150px"><v-text-field label="Traffic Cost" v-model="configurations.usage_pricing.traffic.cost"></v-text-field></v-col>
+					<v-col style="max-width:150px"><v-text-field label="Traffic Interval" v-model="configurations.usage_pricing.traffic.interval" hint="# of months" persistent-hint></v-text-fiel></v-col>
+				</v-row>
 				<v-flex xs12 text-right>
 					<v-btn color="primary" dark @click="saveGlobalConfigurations()">
 						Save Configurations
 					</v-btn>
 				</v-flex>
+
 				</v-card-text>
 			</v-card>
 			<v-card tile v-show="route == 'defaults'" v-if="role == 'administrator'" flat>
@@ -4043,7 +4073,7 @@ if ( $role_check ) {
 							</template>
 							</v-data-table>
 					</v-tab-item>
-					<v-tab-item>
+					<v-tab-item :transition="false" :reverse-transition="false">
 							<v-data-table
 								v-show="typeof dialog_account.records.sites == 'object' && dialog_account.records.sites.length > 0"
 								:headers='[{"text":"Sites","value":"name"},{"text":"Storage","value":"storage"},{"text":"Visits","value":"visits"}]'
@@ -4072,7 +4102,7 @@ if ( $role_check ) {
 							</template>
 							</v-data-table>
 					</v-tab-item>
-					<v-tab-item>
+					<v-tab-item :transition="false" :reverse-transition="false">
 							<v-data-table
 								v-show="typeof dialog_account.records.domains == 'object' && dialog_account.records.domains.length > 0"
 								:headers='[{"text":"Domain","value":"name"}]'
@@ -4087,7 +4117,7 @@ if ( $role_check ) {
 							</template>
 							</v-data-table>
 					</v-tab-item>
-					<v-tab-item>
+					<v-tab-item :transition="false" :reverse-transition="false">
 						<v-data-table
 							:headers="header_timeline"
 							:items="dialog_account.records.timeline"
@@ -4113,16 +4143,177 @@ if ( $role_check ) {
 						</template>
 						</v-data-table>
 					</v-tab-item>
-					<v-tab-item>
-						<v-toolbar dense flat color="grey lighten-4">
-							<div class="flex-grow-1"></div>
-							<v-toolbar-items>
-								<v-btn text @click="editAccount()">Edit account <v-icon dark small>edit</v-icon></v-btn>
-								<v-btn text @click="deleteAccount()" v-show="role =='administrator'">Delete account <v-icon dark small>delete</v-icon></v-btn>
+					<v-tab-item :transition="false" :reverse-transition="false">
+					<v-toolbar color="grey lighten-4" dense light flat>
+						<v-spacer></v-spacer>
+							<v-toolbar-items v-show="role == 'administrator'">
+								<v-btn text @click="modifyPlan()">Edit Plan <v-icon dark small>edit</v-icon></v-btn>
 							</v-toolbar-items>
 						</v-toolbar>
+					<v-card flat>
+					<div v-if="typeof dialog_account.records.account.plan == 'object' && dialog_account.records.account.plan != null">
+						<v-card-text class="body-1">
+						<v-row>
+						<v-col>
+						<v-layout align-center justify-left row/>
+							<div style="padding: 10px 10px 10px 20px;">
+								<v-progress-circular :size="50" :value="( dialog_account.records.account.plan.usage.storage / ( dialog_account.records.account.plan.limits.storage * 1024 * 1024 * 1024 ) ) * 100 | formatPercentage" color="primary"><small>{{ ( dialog_account.records.account.plan.usage.storage / ( dialog_account.records.account.plan.limits.storage * 1024 * 1024 * 1024 ) ) * 100 | formatPercentage }}</small></v-progress-circular>
+							</div>
+							<div style="line-height: 0.85em;">
+								Storage <br /><small>{{ dialog_account.records.account.plan.usage.storage | formatGBs }}GB / {{ dialog_account.records.account.plan.limits.storage }}GB</small><br />
+							</div>
+							<div style="padding: 10px 10px 10px 20px;">
+								<v-progress-circular :size="50" :value="( dialog_account.records.account.plan.usage.visits / dialog_account.records.account.plan.limits.visits * 100 ) | formatPercentage" color="primary"><small>{{ ( dialog_account.records.account.plan.usage.visits / dialog_account.records.account.plan.limits.visits ) * 100 | formatPercentage }}</small></v-progress-circular>
+							</div>
+							<div style="line-height: 0.85em;">
+								Visits <br /><small>{{ dialog_account.records.account.plan.usage.visits | formatLargeNumbers }} / {{ dialog_account.records.account.plan.limits.visits | formatLargeNumbers }}</small><br />
+							</div>
+							<div style="padding: 10px 10px 10px 20px;">
+								<v-progress-circular :size="50" :value="( dialog_account.records.account.plan.usage.sites / dialog_account.records.account.plan.limits.sites * 100 ) | formatPercentage" color="blue darken-4"><small>{{ ( dialog_account.records.account.plan.usage.sites / dialog_account.records.account.plan.limits.sites * 100 ) | formatPercentage }}</small></v-progress-circular>
+							</div>
+							<div  style="line-height: 0.85em;">
+								Sites <br /><small>{{ dialog_account.records.account.plan.usage.sites }} / {{ dialog_account.records.account.plan.limits.sites }}</small><br />
+							</div>
+						</v-layout>
+						</v-col>
+						<v-col class="text-center">
+							<span class="text-uppercase caption">Estimate based on current usage</span><br />
+							<span class="display-1 font-weight-thin" v-html="plan_usage_estimate"></span><br />
+							<span>
+							<v-dialog v-model="dialog_breakdown" width="600">
+								<template v-slot:activator="{ on, attrs }">
+									<a v-bind="attrs" v-on="on">See breakdown</a>
+								</template>
+								<v-card>
+								<v-toolbar flat dark color="primary">
+									<v-btn icon dark @click.native="dialog_breakdown = false">
+										<v-icon>close</v-icon>
+									</v-btn>
+									<v-toolbar-title>Plan Estimate Breakdown</v-toolbar-title>
+									<v-spacer></v-spacer>
+								</v-toolbar>
+								<v-card-text>
+									<v-simple-table>
+									<template v-slot:default>
+									<thead>
+										<tr>
+										<th class="text-left">
+											Type
+										</th>
+										<th class="text-left">
+											Name
+										</th>
+										<th class="text-left">
+											Quantity
+										</th>
+										<th class="text-left">
+											Price
+										</th>
+										<th class="text-left">
+											Total
+										</th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr>
+											<td>Plan</td>
+											<td>{{ dialog_account.records.account.plan.name }}</td>
+											<td>1</td>
+											<td class="text-right">${{ dialog_account.records.account.plan.price }}</td>
+											<td class="text-right">${{ dialog_account.records.account.plan.price }}</td>
+										</tr>
+										<tr v-if="( parseInt( dialog_account.records.account.plan.usage.sites ) - parseInt( dialog_account.records.account.plan.limits.sites ) ) >= 1">
+											<td>Extra</td>
+											<td>Sites</td>
+											<td>{{ parseInt( dialog_account.records.account.plan.usage.sites ) - parseInt( dialog_account.records.account.plan.limits.sites ) }}</td>
+											<td class="text-right">${{ plan_usage_pricing_sites }}</td>
+											<td class="text-right">${{ plan_usage_pricing_sites * ( parseInt( dialog_account.records.account.plan.usage.sites ) - parseInt( dialog_account.records.account.plan.limits.sites ) ) }}</td>
+										</tr>
+										<tr v-if="(( parseInt( dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( dialog_account.records.account.plan.limits.storage ) ) >= 1">
+											<td>Extra</td>
+											<td>Storage</td>
+											<td>{{ Math.round ( ( ( parseInt( dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( dialog_account.records.account.plan.limits.storage ) ) / 10 ) }}</td>
+											<td class="text-right">${{ plan_usage_pricing_storage }}</td>
+											<td class="text-right">${{ plan_usage_pricing_storage * Math.round ( ( ( parseInt( dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( dialog_account.records.account.plan.limits.storage ) ) / 10 ) }}</td>
+										</tr>
+										<tr v-if="Math.round ( ( parseInt( dialog_account.records.account.plan.usage.visits ) - parseInt( dialog_account.records.account.plan.limits.visits ) ) / parseInt ( configurations.usage_pricing.traffic.quantity ) ) >= 1">
+											<td>Extra</td>
+											<td>Visits</td>
+											<td>{{ Math.round ( ( parseInt( dialog_account.records.account.plan.usage.visits ) - parseInt( dialog_account.records.account.plan.limits.visits ) ) / parseInt ( configurations.usage_pricing.traffic.quantity ) ) }}</td>
+											<td class="text-right">${{ plan_usage_pricing_visits }}</td>
+											<td class="text-right">${{ plan_usage_pricing_visits * Math.round ( ( parseInt( dialog_account.records.account.plan.usage.visits ) - parseInt( dialog_account.records.account.plan.limits.visits ) ) / parseInt ( configurations.usage_pricing.traffic.quantity ) ) }}</td>
+										</tr>
+										<tr v-for="item in dialog_account.records.account.plan.addons">
+											<td>Addon</td>
+											<td>{{ item.name }}</td>
+											<td>{{ item.quantity }}</td>
+											<td class="text-right">${{ item.price }}</td>
+											<td class="text-right">${{ item.quantity * item.price }}</td>
+										</tr>
+										<tr>
+											<td colspan="5" class="body-1">Total: <span v-html="plan_usage_estimate"></span></td>
+										</tr>
+									</tbody>
+									</template>
+								</v-simple-table>
+								</v-card-text>
+								</v-card>
+							</v-dialog>	
+						</v-col>
+						</v-row>
+						</v-card-text>
+						<v-alert
+							:value="true"
+							type="info"
+							color="primary"
+						>
+					<strong>{{ dialog_account.records.account.plan.name }} Plan</strong> supports up to {{ dialog_account.records.account.plan.limits.visits | formatLargeNumbers }} visits, {{ dialog_account.records.account.plan.limits.storage }}GB storage and {{ dialog_account.records.account.plan.limits.sites }} sites. Extra sites, storage and visits charged based on usage.
+						</v-alert>
+						</div>
+						<div v-else>
+						<v-alert
+							:value="true"
+							type="info"
+							color="primary"
+						>
+							Development mode, no plan selected.
+						</v-alert>
+						</div>
+						<v-data-table
+							:headers='[{"text":"Name","value":"name"},{"text":"Storage","value":"Storage"},{"text":"Visits","value":"visits"}]'
+							:items="dialog_account.records.usage_breakdown.sites"
+							item-key="name"
+							hide-default-footer
+						>
+						<template v-slot:body="{ items }">
+						<tbody>
+							<tr v-for="item in items">
+								<td>{{ item.name }}</td>
+								<td>{{ item.storage | formatGBs }}GB</td>
+								<td>{{ item.visits }}</td>
+							</tr>
+							<tr>
+								<td>Totals:</td>
+						<td v-for="total in dialog_account.records.usage_breakdown.total" v-html="total"></td>
+							</tr>
+						</tbody>
+						</template>
+						</v-data-table>
+					</v-card>
 					</v-tab-item>
 					</v-tabs-items>
+					<div v-show="role == 'administrator'">
+					<v-divider></v-divider>
+					<v-subheader>Administrator Options</v-subheader>
+					<v-container>
+					<v-btn small depressed @click="editAccount()">
+						<v-icon>edit</v-icon> Edit Account
+					</v-btn>
+					<v-btn small depressed color="error" @click="deleteAccount()">
+						<v-icon>delete</v-icon> Delete Account
+					</v-btn>
+					</v-container>
+					</div>
 					</v-card>
 				</v-sheet>
 			</v-card>
@@ -4688,6 +4879,7 @@ new Vue({
 		modules: { dns: <?php if ( defined( "CONSTELLIX_API_KEY" ) and defined( "CONSTELLIX_SECRET_KEY" ) ) { echo "true"; } else { echo "false"; } ?> },
 		dialog_bulk: { show: false, tabs_management: "tab-Sites", environment_selected: "Production" },
 		dialog_job: { show: false, task: {} },
+		dialog_breakdown: false,
 		dialog_captures: { site: {}, pages: [{ page: ""}], capture: { pages: [] }, image_path:"", selected_page: "", captures: [], mode: "screenshot", loading: true, show: false, show_configure: false },
 		dialog_delete_user: { show: false, site: {}, users: [], username: "", reassign: {} },
 		dialog_apply_https_urls: { show: false, site_id: "", site_name: "", sites: [] },
@@ -4702,7 +4894,7 @@ new Vue({
 		dialog_toggle: { show: false, site_name: "", site_id: "" },
 		dialog_mailgun: { show: false, site: {}, response: { items: [], pagination: [] }, loading: false, pagination: {} },
 		dialog_migration: { show: false, sites: [], site_name: "", site_id: "", update_urls: true, backup_url: "" },
-		dialog_modify_plan: { show: false, site: {}, plan: { limits: {}, addons: [] }, selected_plan: "", customer_name: "" },
+		dialog_modify_plan: { show: false, site: {}, hosting_plans: [], selected_plan: "", plan: { limits: {}, addons: [] }, customer_name: "", interval: "12" },
 		dialog_theme_and_plugin_checks: { show: false, site: {}, loading: false },
 		dialog_update_settings: { show: false, environment: {}, themes: [], plugins: [], loading: false },
 		dialog_fathom: { show: false, site: {}, environment: {}, loading: false, editItem: false, editedItem: {}, editedIndex: -1 },
@@ -4746,7 +4938,6 @@ new Vue({
 		current_user_login: "<?php echo $user->user_login; ?>",
 		current_user_display_name: "<?php echo $user->display_name; ?>",
 		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->user_email; ?>", login: "<?php echo $user->user_login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", errors: [] },
-		hosting_plans: <?php echo json_encode( ( new CaptainCore\Configurations )->hosting_plans() ); ?>,
 		<?php if ( current_user_can( "administrator" ) ) { ?>
 		role: "administrator",
 		dialog_new_log_entry: { show: false, sites: [], site_name: "", process: "", description: "" },
@@ -5074,6 +5265,88 @@ new Vue({
 		},
 		allDomains() {
 			return Object.keys( this.domains ).length;
+		},
+		plan_usage_pricing_sites() {
+			extra_sites = parseInt( this.dialog_account.records.account.plan.usage.sites ) - parseInt( this.dialog_account.records.account.plan.limits.sites )
+			if ( extra_sites > 0 ) {
+				unit_price = this.configurations.usage_pricing.sites.cost
+				if ( this.configurations.usage_pricing.sites.interval != this.dialog_account.records.account.plan.interval ) {
+					unit_price = this.configurations.usage_pricing.sites.cost / this.configurations.usage_pricing.sites.interval
+					unit_price = unit_price * this.dialog_account.records.account.plan.interval
+		}
+			}
+			return unit_price
+	},
+		plan_usage_pricing_storage() {
+			extra_storage = ( parseInt( this.dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( this.dialog_account.records.account.plan.limits.storage ) 
+			if ( extra_storage > 0 ) {
+				unit_price = this.configurations.usage_pricing.storage.cost
+				if ( this.configurations.usage_pricing.storage.interval != this.dialog_account.records.account.plan.interval ) {
+					unit_price = this.configurations.usage_pricing.storage.cost / this.configurations.usage_pricing.storage.interval
+					unit_price = unit_price * this.dialog_account.records.account.plan.interval
+				}
+			}
+			return unit_price
+		},
+		plan_usage_pricing_visits() {
+			extra_visits = Math.round ( ( parseInt( this.dialog_account.records.account.plan.usage.visits ) - parseInt( this.dialog_account.records.account.plan.limits.visits ) ) / parseInt ( this.configurations.usage_pricing.traffic.quantity ) )
+			if ( extra_visits > 0 ) {
+				unit_price = this.configurations.usage_pricing.traffic.cost
+				if ( this.configurations.usage_pricing.traffic.interval != this.dialog_account.records.account.plan.interval ) {
+					unit_price = this.configurations.usage_pricing.traffic.cost / this.configurations.usage_pricing.traffic.interval
+					unit_price = unit_price * this.dialog_account.records.account.plan.interval
+				}
+			}
+			return parseInt( unit_price )
+		},
+		plan_usage_estimate() {
+			if ( typeof this.dialog_account.records.account.plan == 'object' ) {
+				extras = 0
+				addons = 0
+				this.dialog_account.records.account.plan.addons.forEach( addon => {
+					if ( addon.price != "" ) {
+						addons = addons + (  parseInt( addon.quantity ) * parseInt( addon.price ) )
+					}
+				})
+				total = parseInt( addons ) + parseInt( this.dialog_account.records.account.plan.price )
+				units = [] 
+				units[1] = "month"
+				units[4] = "quarter"
+				units[6] = "biannually"
+				units[12] = "year"
+				unit = units[ this.dialog_account.records.account.plan.interval ]
+				extra_sites = parseInt( this.dialog_account.records.account.plan.usage.sites ) - parseInt( this.dialog_account.records.account.plan.limits.sites )
+				extra_storage = Math.round ( ( ( parseInt( this.dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( this.dialog_account.records.account.plan.limits.storage ) ) / 10 )
+				extra_visits = Math.round ( ( parseInt( this.dialog_account.records.account.plan.usage.visits ) - parseInt( this.dialog_account.records.account.plan.limits.visits ) ) / parseInt ( this.configurations.usage_pricing.traffic.quantity ) )
+				if ( extra_sites > 0 ) {
+					unit_price = this.configurations.usage_pricing.sites.cost
+					if ( this.configurations.usage_pricing.sites.interval != this.dialog_account.records.account.plan.interval ) {
+						unit_price = this.configurations.usage_pricing.sites.cost / this.configurations.usage_pricing.sites.interval
+						unit_price = unit_price * this.dialog_account.records.account.plan.interval
+					}
+					extras = extras + ( extra_sites * unit_price )
+				}
+				if ( extra_storage > 0 ) {
+					unit_price = this.configurations.usage_pricing.storage.cost
+					if ( this.configurations.usage_pricing.storage.interval != this.dialog_account.records.account.plan.interval ) {
+						unit_price = this.configurations.usage_pricing.storage.cost / this.configurations.usage_pricing.storage.interval
+						unit_price = unit_price * this.dialog_account.records.account.plan.interval
+					}
+					extras = extras + ( extra_storage * unit_price )
+				}
+				if ( extra_visits > 0 ) {
+					unit_price = this.configurations.usage_pricing.traffic.cost
+					if ( this.configurations.usage_pricing.traffic.interval != this.dialog_account.records.account.plan.interval ) {
+						unit_price = this.configurations.usage_pricing.traffic.cost / this.configurations.usage_pricing.traffic.interval
+						unit_price = unit_price * this.dialog_account.records.account.plan.interval
+					}
+					extras = extras + ( extra_visits * unit_price )
+				}
+				total = parseInt( addons ) + parseInt( extras ) + parseInt( this.dialog_account.records.account.plan.price )
+				return `$${total} <small>per ${unit}</small>`
+			}
+			return ""
+
 		}
 	},
 	methods: {
@@ -7562,25 +7835,6 @@ new Vue({
 					self.snackbar.message = description;
 					self.snackbar.show = true;
 					self.custom_script = "";
-				})
-				.catch( error => console.log( error ) );
-
-		},
-		viewUsageBreakdown( site_id ) {
-
-			site = this.sites.filter(site => site.site_id == site_id)[0];
-
-			var data = {
-				action: 'captaincore_ajax',
-				post_id: site.site_id,
-				command: 'usage-breakdown'
-			};
-
-			self = this;
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					site.usage_breakdown = response.data;
 				})
 				.catch( error => console.log( error ) );
 
