@@ -24,6 +24,7 @@ if ( $role_check ) {
 <link rel='stylesheet' id='advanced-responsive-video-embedder-css' href='/wp-content/plugins/advanced-responsive-video-embedder/public/arve.min.css' type='text/css' media='all' />
 <link rel='stylesheet' id='arve-pro-css' href='/wp-content/plugins/arve-pro/dist/app.css' type='text/css' media='all' />
 <?php } ?>
+<link href="<?php echo home_url(); ?>/account/" rel="canonical">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/vuetify@2.3.14/dist/vuetify.min.css" rel="stylesheet">
