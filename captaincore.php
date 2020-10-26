@@ -5830,14 +5830,18 @@ function sort_by_name($a, $b) {
 }
 
 function captaincore_fetch_socket_address() {
-
-	$socket_address = str_replace( "https://", "wss://", CAPTAINCORE_CLI_ADDRESS );
-
+	$captaincore_cli_address = ( defined( "CAPTAINCORE_CLI_ADDRESS" ) ? CAPTAINCORE_CLI_ADDRESS : "" );
+	$socket_address          = str_replace( "https://", "wss://", $captaincore_cli_address );
 	if ( defined( 'CAPTAINCORE_CLI_SOCKET_ADDRESS' ) ) {
 		$socket_address = "wss://" . CAPTAINCORE_CLI_SOCKET_ADDRESS;
 	}
-
 	return $socket_address;
+}
+
+// Makes sure that any request going to /account/... will respond with a proper 200 http code
+add_action( 'init', 'captaincore_rewrites_init' );
+function captaincore_rewrites_init(){
+    add_rewrite_rule( '^account/(.+)', 'index.php', 'top' );
 }
 
 // Load custom template for web requests going to "/account" or "/account/<..>/..."
@@ -5845,10 +5849,13 @@ add_filter( 'template_include', 'load_captaincore_template' );
 function load_captaincore_template( $original_template ) {
   global $wp;
   $request = explode( '/', $wp->request );
-  if ( is_account_page() && end($request) == 'my-account' ) {
+  if ( class_exists( 'WooCommerce' ) && is_account_page() && end( $request ) == 'my-account' ) {
 	wp_redirect("/account");
   }
   if ( is_page( 'account' ) || current( $request ) == "account" ) {
+	if ( ! function_exists( 'is_plugin_active' ) ){
+		require_once( ABSPATH . '/wp-admin/includes/plugin.php' );
+	}
     return plugin_dir_path( __FILE__ ) . 'templates/core.php';
   } else {
     return $original_template;
