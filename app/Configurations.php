@@ -20,6 +20,9 @@ class Configurations {
         if ( ! isset( $configurations->hosting_plans ) ) {
 			$configurations->hosting_plans = json_decode( get_option('captaincore_hosting_plans') );
         }
+        if ( ! isset( $configurations->usage_pricing ) ) {
+			$configurations->usage_pricing = (object) [ "sites" => [ "quantity" => "1", "cost" => "12.5" ], "storage" => [ "quantity" => "10", "cost" => "10" ], "traffic" => [ "quantity" => "1000000", "cost" => "100" ] ];
+        }
         if ( $configurations->dns_introduction ) {
             $Parsedown = new \Parsedown();
 			$configurations->dns_introduction_html = $Parsedown->text( $configurations->dns_introduction );
@@ -44,23 +47,6 @@ class Configurations {
             ];
         }
         return $configurations->colors;
-    }
-
-    public function hosting_plans() {
-        $configurations = json_decode( get_site_option( 'captaincore_configurations' ) );
-        if ( empty( $configurations ) ) {
-            $configurations = (object) [];
-        }
-        $configurations->hosting_plans[] = [
-            'name'          => 'Custom',
-            'price'         => '',
-            'limits'        => [
-                'visits'  => '',
-                'storage' => '',
-                'sites'   => '',
-            ],
-        ];
-        return $configurations->hosting_plans;
     }
 
     public function update( $field, $value ) {
