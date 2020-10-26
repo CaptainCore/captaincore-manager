@@ -188,15 +188,16 @@ class Site {
             "core"             => "",
         ];
         $new_site = [
-            'account_id' => $site->account_id,
-            'name'       => $site->domain,
-            'site'       => $site->site,
-            'provider'   => $site->provider,
-            'created_at' => $time_now,
-            'updated_at' => $time_now,
-            'details'    => json_encode( $details ),
-            'screenshot' => '0',
-            'status'     => 'active',
+            'account_id'  => $site->account_id,
+            'customer_id' => $site->customer_id,
+            'name'        => $site->domain,
+            'site'        => $site->site,
+            'provider'    => $site->provider,
+            'created_at'  => $time_now,
+            'updated_at'  => $time_now,
+            'details'     => json_encode( $details ),
+            'screenshot'  => '0',
+            'status'      => 'active',
         ];
 
         $site_id = ( new Sites )->insert( $new_site );
@@ -210,8 +211,15 @@ class Site {
         $response['response'] = 'Successfully added new site';
         $response['site_id']  = $site_id;
         $this->site_id        = $site_id;
+        $shared_with_ids      = [];
+        foreach( $site->shared_with as $account_id ) {
+            if ( $site->customer_id == $account_id or $site->account_id == $account_id ) {
+                continue;
+            }
+            $shared_with_ids[] = $account_id;
+        }
 
-        self::assign_accounts( $site->shared_with );
+        self::assign_accounts( $shared_with_ids );
 
         // Update environments
         $db_environments = new Environments();
@@ -241,8 +249,8 @@ class Site {
             $db_environments->insert( $new_environment );
         }
 
-        // Generate new account if needed
-        if ( $site->account_id == "" ) {
+        // Generate new customer if needed
+        if ( $site->customer_id == "" ) {
             $hosting_plans = json_decode( get_option('captaincore_hosting_plans') );
             if ( is_array( $hosting_plans ) ) {
                 $plan        = $hosting_plans[0];
@@ -257,8 +265,13 @@ class Site {
                 'metrics'    => json_encode( [ "sites" => "1", "users" => "0", "domains" => "0" ] ),
                 'status'     => 'active',
             ];
-            $site->account_id = ( new Accounts )->insert( $new_account );
-            ( new Sites )->update( [ "account_id" => $site->account_id ], [ "site_id" => $site_id ] );
+            $site->customer_id = ( new Accounts )->insert( $new_account );
+            ( new Sites )->update( [ "customer_id" => $site->account_id ], [ "site_id" => $site_id ] );
+        }
+
+        // Assign account if needed
+        if ( $site->account_id == "" ) {
+            ( new Sites )->update( [ "account_id" => $site->customer_id ], [ "site_id" => $site_id ] );
         }
 
         ( new Account( $site->account_id, true ) )->calculate_totals();
@@ -289,13 +302,14 @@ class Site {
 
         // Updates post
         $update_site = [
-            'site_id'    => $this->site_id,
-            'account_id' => $site->account_id,
-            'name'       => $site->name,
-            'site'       => $site->site,
-            'provider'   => $site->provider,
-            'updated_at' => $time_now,
-            'details'    => json_encode( $details ),
+            'site_id'     => $this->site_id,
+            'account_id'  => $site->account_id,
+            'customer_id' => $site->customer_id,
+            'name'        => $site->name,
+            'site'        => $site->site,
+            'provider'    => $site->provider,
+            'updated_at'  => $time_now,
+            'details'     => json_encode( $details ),
         ];
 
         $update_response = ( new Sites )->update( $update_site, [ "site_id" => $this->site_id ] );
@@ -308,12 +322,15 @@ class Site {
         $response['response'] = 'Successfully updated site';
         $response['site_id']  = $this->site_id;
         $environment_ids      = self::environment_ids();
-
-        if ( $site->shared_with ) {
-            self::assign_accounts( $site->shared_with );
-        } else {
-            self::assign_accounts( [] );
+        $shared_with_ids      = [];
+        foreach( $site->shared_with as $account_id ) {
+            if ( $site->customer_id == $account_id or $site->account_id == $account_id ) {
+                continue;
         }
+            $shared_with_ids[] = $account_id;
+        }
+
+        self::assign_accounts( $shared_with_ids );
 
         // Update environments
         $db_environments = new Environments();
@@ -697,8 +714,17 @@ class Site {
     }
 
     public function shared_with() {
-        $account_ids = ( new AccountSite )->where( [ "site_id" => $this->site_id ] );
-        return array_column( $account_ids, "account_id" );
+        $site          = ( new Sites )->get( $this->site_id );
+        $accounts      = [];
+        $account_ids   = ( new AccountSite )->where( [ "site_id" => $this->site_id ] );
+        $account_ids   = array_column( $account_ids, "account_id" );
+        $account_ids[] = $site->account_id;
+        $account_ids[] = $site->customer_id;
+        $account_ids   = array_filter( array_unique( $account_ids ) );
+        foreach ( $account_ids as $account_id ) {
+            $accounts[] = ( new Accounts )->get( $account_id );
+        }
+        return $accounts;
     }
 
     public function environment_ids() {
@@ -742,6 +768,7 @@ class Site {
                     $environment->database      = "https://mysqleditor-staging-{$environment->database_username}.kinsta.{$kinsta_ending}";
                 }
             }
+            $environment->environment_id   = $environment->environment_id;
             $environment->details          = json_decode( $environment->details );
             $environment->link             = $environment->home_url;
             $environment->fathom           = json_decode( $environment->fathom );

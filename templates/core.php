@@ -569,6 +569,9 @@ if ( $role_check ) {
 				<v-flex xs12 pa-2>
 					<v-text-field label="Name" :value="dialog_edit_account.account.name" @change.native="dialog_edit_account.account.name = $event.target.value"></v-text-field>
 				</v-flex>
+				<v-flex xs12 pa-2>
+					<v-select v-if="typeof dialog_account.records.users == 'object'" label="Billing User" :items="dialog_account.records.users" :item-text="item => `${item.name} - ${item.email}`" item-value="user_id" v-model="dialog_edit_account.account.billing_user_id"></v-select>
+				</v-flex>
 				<v-flex xs12 text-right pa-0 ma-0>
 					<v-btn color="primary" dark @click="updateSiteAccount()">
 						Save Account
@@ -2895,7 +2898,7 @@ if ( $role_check ) {
 							</v-flex>
 						 </v-layout>
 						<v-layout>
-							<v-flex xs4 class="mx-2">
+							<v-flex xs6 class="mx-2">
 								<v-autocomplete
 									:items='[{"name":"WP Engine","value":"wpengine"},{"name":"Kinsta","value":"kinsta"}]'
 									item-text="name"
@@ -2903,41 +2906,15 @@ if ( $role_check ) {
 									label="Provider"
 								></v-autocomplete>
 							</v-flex>
-							<v-flex xs4 class="mx-2">
+							<v-flex xs6 class="mx-2">
 								<v-text-field :value="dialog_new_site.domain" @change.native="dialog_new_site.domain = $event.target.value" label="Domain name" required></v-text-field>
-							</v-flex>
-							<v-flex xs4 class="mx-2">
-						    	<v-text-field :value="dialog_new_site.site" @change.native="dialog_new_site.site = $event.target.value" label="Site name" required hint="Should match provider site name." persistent-hint></v-text-field>
 							</v-flex>
 						</v-layout>
 						<v-layout>
-							<v-flex xs4 class="mx-2">
-							<v-autocomplete
-								:items="accounts"
-								v-model="dialog_new_site.shared_with"
-								label="Shared With"
-								item-text="name"
-								item-value="account_id"
-								chips
-								multiple
-								deletable-chips
-							>
-							</v-autocomplete>
+							<v-flex xs6 class="mx-2">
+						    	<v-text-field :value="dialog_new_site.site" @change.native="dialog_new_site.site = $event.target.value" label="Site name" required hint="Should match provider site name."></v-text-field>
 						</v-flex>
-						<v-flex xs4 class="mx-2">
-							<v-autocomplete
-								:items="accounts"
-								v-model="dialog_new_site.account_id"
-								item-value="account_id"
-								item-text="name"
-								hint="Assign to existing customer. If new leave blank."
-								persistent-hint
-								deletable-chips
-								chips
-							>
-							</v-autocomplete>
-						</v-flex>
-						<v-flex xs4 class="mx-2">
+							<v-flex xs6 class="mx-2">
 							<v-autocomplete
 								:items="keys"
 								v-model="dialog_new_site.key"
@@ -2945,11 +2922,57 @@ if ( $role_check ) {
 								item-value="key_id"
 								label="SSH Key"
 								hint="Optional. Will use SSH key instead of SFTP for management purposes."
-								chips
-								deletable-chips
 								persistent-hint
 							>
 							</v-autocomplete>
+						</v-flex>
+						</v-layout>
+						<v-layout>
+							<v-flex xs12 class="mx-2">
+							<v-autocomplete
+								:items="accounts"
+								v-model="dialog_new_site.shared_with"
+								label="Assign to an account"
+								item-text="name"
+								item-value="account_id"
+								chips
+								deletable-chips
+								multiple
+								return-object
+								hint="If a customer account is not assigned then a new account will be created automatically."
+								persistent-hint
+								:menu-props="{ closeOnContentClick:true, openOnClick: false }"
+							>
+							</v-autocomplete>
+							<v-expand-transition>
+							<v-row dense v-if="dialog_new_site.shared_with && dialog_new_site.shared_with.length > 0" class="mt-3">
+							<v-col v-for="account in dialog_new_site.shared_with" :key="account.account_id" cols="4">
+							<v-card>
+								<v-card-title v-text="account.name"></v-card-title>
+								<v-card-actions>
+								<v-tooltip top>
+								<template v-slot:activator="{ on, attrs }">
+								<v-btn-toggle v-model="dialog_new_site.customer_id" color="primary" group>
+									<v-btn text :value="account.account_id" v-bind="attrs" v-on="on">
+										<v-icon>mdi-account-circle</v-icon>
+									</v-btn>
+								</v-btn-toggle>
+								</template>
+								<span>Set as customer contact</span>
+								</v-tooltip>
+								<v-tooltip top>
+								<template v-slot:activator="{ on, attrs }">
+								<v-btn-toggle v-model="dialog_new_site.account_id" color="primary" group>
+									<v-btn text :value="account.account_id" v-bind="attrs" v-on="on">
+										<v-icon>mdi-currency-usd</v-icon>
+									</v-btn>
+								</v-btn-toggle>
+								</template>
+								<span>Set as billing contact</span>
+								</v-tooltip>
+								</v-card-actions>
+							</v-card>
+							</v-expand-transition>
 						</v-flex>
 						</v-layout>
 						<v-layout class="mt-5">
@@ -3061,7 +3084,7 @@ if ( $role_check ) {
 						</v-flex>
 					</v-layout>
 					<v-layout>
-						<v-flex xs4 class="mx-2">
+						<v-flex xs6 class="mx-2">
 						<v-autocomplete
 							:items='[{"name":"WP Engine","value":"wpengine"},{"name":"Kinsta","value":"kinsta"}]'
 							item-text="name"
@@ -3069,52 +3092,73 @@ if ( $role_check ) {
 							label="Provider"
 						></v-autocomplete>
 						</v-flex>
-						<v-flex xs4 class="mx-2">
+						<v-flex xs6 class="mx-2">
 							<v-text-field :value="dialog_edit_site.site.name" @change.native="dialog_edit_site.site.name = $event.target.value" label="Domain name" required></v-text-field>
-						</v-flex>
-						<v-flex xs4 class="mx-2">
-							<v-text-field :value="dialog_edit_site.site.site" @change.native="dialog_edit_site.site.site = $event.target.value" label="Site name (not changeable)" disabled></v-text-field>
 						</v-flex>
 					</v-layout>
 					<v-layout>
-						<v-flex xs4 class="mx-2">
-							<v-autocomplete
-								:items="accounts"
-								v-model="dialog_edit_site.site.shared_with"
-								item-text="name"
-								item-value="account_id"
-								label="Shared With"
-								chips
-								multiple
-								deletable-chips
-							>
-							</v-autocomplete>
+						<v-flex xs6 class="mx-2">
+							<v-text-field :value="dialog_edit_site.site.site" @change.native="dialog_edit_site.site.site = $event.target.value" label="Site name (not changeable)" disabled></v-text-field>
 						</v-flex>
-						<v-flex xs4 class="mx-2">
-							<v-autocomplete
-								:items="accounts"
-								item-text="name"
-								item-value="account_id"
-								v-model="dialog_edit_site.site.account_id"
-								label="Customer"
-								chips
-								deletable-chips
-							>
-							</v-autocomplete>
-						</v-flex>
-						<v-flex xs4 class="mx-2">
+						<v-flex xs6 class="mx-2">
 							<v-autocomplete
 								:items="keys"
 								item-text="title"
 								item-value="key_id"
 								v-model="dialog_edit_site.site.key"
 								label="SSH Key"
-								chips
-								deletable-chips
 								hint="Optional. Will use SSH key instead of SFTP for management purposes."
 								persistent-hint
 							>
 							</v-autocomplete>
+						</v-flex>
+					</v-layout>
+					<v-layout>
+						<v-flex xs12 class="mx-2">
+							<v-autocomplete
+								:items="accounts"
+								v-model="dialog_edit_site.site.shared_with"
+								label="Assign to an account"
+								item-text="name"
+								item-value="account_id"
+								chips
+								deletable-chips
+								multiple
+								return-object
+								hint="If a customer account is not assigned then a new account will be created automatically."
+								persistent-hint
+								:menu-props="{ closeOnContentClick:true, openOnClick: false }"
+							>
+							</v-autocomplete>
+							<v-expand-transition>
+							<v-row dense v-if="dialog_edit_site.site.shared_with && dialog_edit_site.site.shared_with.length > 0" class="mt-3">
+							<v-col v-for="account in dialog_edit_site.site.shared_with" :key="account.account_id" cols="4">
+							<v-card>
+								<v-card-title v-html="account.name"></v-card-title>
+								<v-card-actions>
+								<v-tooltip top>
+								<template v-slot:activator="{ on, attrs }">
+								<v-btn-toggle v-model="dialog_edit_site.site.customer_id" color="primary" group>
+									<v-btn text :value="account.account_id" v-bind="attrs" v-on="on">
+										<v-icon>mdi-account-circle</v-icon>
+									</v-btn>
+								</v-btn-toggle>
+								</template>
+								<span>Set as customer contact</span>
+								</v-tooltip>
+								<v-tooltip top>
+								<template v-slot:activator="{ on, attrs }">
+								<v-btn-toggle v-model="dialog_edit_site.site.account_id" color="primary" group>
+									<v-btn text :value="account.account_id" v-bind="attrs" v-on="on">
+										<v-icon>mdi-currency-usd</v-icon>
+									</v-btn>
+								</v-btn-toggle>
+								</template>
+								<span>Set as billing contact</span>
+								</v-tooltip>
+								</v-card-actions>
+							</v-card>
+							</v-expand-transition>
 						</v-flex>
 					</v-layout>
 					<v-layout class="mt-5">
@@ -3916,12 +3960,11 @@ if ( $role_check ) {
 							<v-icon size="20" class="ml-1">mdi-timeline-text-outline</v-icon>
 						</v-tab>
 						<v-tab v-show="role == 'administrator' || dialog_account.records.owner">
-							Advanced
-							<v-icon size="24">mdi-cogs</v-icon>
+							Plan <v-icon size="20" class="ml-1">mdi-chart-donut</v-icon>
 						</v-tab>
 					</v-tabs>
 					<v-tabs-items v-model="account_tab">
-					<v-tab-item>
+					<v-tab-item :transition="false" :reverse-transition="false">
 						<v-toolbar dense flat color="grey lighten-4" v-show="role == 'administrator' || dialog_account.records.owner">
 							<div class="flex-grow-1"></div>
 							<v-toolbar-items>
@@ -4727,6 +4770,7 @@ new Vue({
 			errors: [],
 			shared_with: [],
 			account_id: "",
+			customer_id: "",
 			environments: [
 				{"environment": "Production", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" },
 				{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" }
@@ -5623,6 +5667,8 @@ new Vue({
 		},
 		submitNewSite() {
 			this.dialog_new_site.saving = true
+			new_site = this.dialog_new_site
+			new_site.shared_with = new_site.shared_with.map( a => a.account_id )
 			var data = {
 				'action': 'captaincore_ajax',
 				'command': "newSite",
@@ -5674,10 +5720,13 @@ new Vue({
 		},
 		updateSite() {
 			this.dialog_edit_site.loading = true;
+			site_update = this.dialog_edit_site.site
+			site_update.shared_with = site_update.shared_with.map( a => a.account_id )
+			site_name = site_update.name
 			var data = {
 				'action': 'captaincore_ajax',
 				'command': "updateSite",
-				'value': this.dialog_edit_site.site
+				'value': site_update
 			};
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
@@ -7949,67 +7998,80 @@ new Vue({
 			});
 		},
 		modifyPlan() {
-			this.dialog_modify_plan.plan = Object.assign({}, this.dialog_site.site.account.plan)
+			this.dialog_modify_plan.hosting_plans = JSON.parse(JSON.stringify( this.configurations.hosting_plans ))
+			this.dialog_modify_plan.hosting_plans.push( {"name":"Custom","interval":"12","price":"","limits":{"visits":"","storage":"","sites":""}} )
+			this.dialog_modify_plan.plan = JSON.parse(JSON.stringify( this.dialog_account.records.account.plan ))
+			// Adds commas
+			if ( this.dialog_modify_plan.plan.limits.visits != null ) {
+				this.dialog_modify_plan.plan.limits.visits = this.dialog_modify_plan.plan.limits.visits.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+			}
+			this.dialog_modify_plan.selected_plan = JSON.parse(JSON.stringify( this.dialog_account.records.account.plan.name ) )
+			this.dialog_modify_plan.customer_name = this.dialog_site.site.account.name;
+			this.dialog_modify_plan.show = true;
+		},
+		editPlan() {
+			this.dialog_modify_plan.plan = Object.assign({}, this.dialog_account.records.account.plan)
 			// Adds commas
 			if ( this.dialog_modify_plan.plan.limits.visits != null ) {
 				this.dialog_modify_plan.plan.limits.visits  = this.dialog_modify_plan.plan.limits.visits.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 			}
-			this.dialog_modify_plan.selected_plan = this.dialog_site.site.account.plan.name;
-			this.dialog_modify_plan.customer_name = this.dialog_site.site.account.name;
+			this.dialog_modify_plan.selected_plan = this.dialog_account.records.account.plan.name;
+			this.dialog_modify_plan.customer_name = this.dialog_account.records.account.name;
 			this.dialog_modify_plan.show = true;
 		},
 		updatePlan() {
-			site_id = this.dialog_site.site.site_id
-			site = this.sites.filter(site => site.site_id == site_id)[0];
-			plan = Object.assign({}, this.dialog_modify_plan.plan)
+			account_id = this.dialog_account.records.account.account_id
+			plan = Object.assign( {}, this.dialog_modify_plan.plan )
 
 			// Remove commas
 			plan.limits.visits = plan.limits.visits.replace(/,/g, '')
-			site.account.plan.limits = plan.limits
-			site.account.plan.name = plan.name
-			site.account.plan.price = plan.price
+			this.dialog_account.records.account.plan.limits = plan.limits
+			this.dialog_account.records.account.plan.name = plan.name
+			this.dialog_account.records.account.plan.price = plan.price
 			this.dialog_modify_plan.show = false;
 			
-			// New job for progress tracking
-			job_id = Math.round((new Date()).getTime());
-			description = "Updating Plan for " + site.account.name;
-			this.jobs.push({"job_id": job_id,"description": description, "status": "done"});
-
 			// Prep AJAX request
 			var data = {
 				'action': 'captaincore_ajax',
-				'post_id': site_id,
+				'post_id': account_id,
 				'command': "updatePlan",
 				'value': { "plan": plan },
 			};
 
-			self = this;
-
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					// Reset dialog
-					//self.dialog_modify_plan = { show: false, site: {}, plan: { limits: {}, addons: [] }, selected_plan: "", customer_name: "" };
-
-					// Updates job id with reponsed background job id
-					self.jobs.filter(job => job.job_id == job_id)[0].status = "done";
-
-					// Fetch new usage breakdown
-					self.viewUsageBreakdown( site_id )
-					self.fetchSiteInfo( site_id )
+					this.dialog_modify_plan = { show: false, site: {}, hosting_plans: [], selected_plan: "", plan: { limits: {}, addons: [] }, customer_name: "", interval: "12" },
+					this.showAccount( account_id )
 			});
 
 		},
 		addAddon() {
-			this.dialog_modify_plan.hosting_addons.push({ "name": "", "quantity": "", "price": "" });
+			this.dialog_modify_plan.plan.addons.push({ "name": "", "quantity": "", "price": "" });
 		},
 		removeAddon( remove_item ) {
-			this.dialog_modify_plan.hosting_addons = this.dialog_modify_plan.hosting_addons.filter( (item, index) => index != remove_item );
+			this.dialog_modify_plan.plan.addons = this.dialog_modify_plan.plan.addons.filter( (item, index) => index != remove_item );
 		},
 		loadHostingPlan() {
+			current_interval = JSON.parse(JSON.stringify( this.dialog_modify_plan.plan.interval ) )
+			current_addons = JSON.parse(JSON.stringify( this.dialog_modify_plan.plan.addons ) )
 			selected_plan = this.dialog_modify_plan.selected_plan
-			hosting_plan = this.hosting_plans.filter( plan => plan.name == selected_plan )[0]
+			hosting_plan = this.dialog_modify_plan.hosting_plans.filter( plan => plan.name == selected_plan )[0]
 			if ( typeof hosting_plan != "undefined" ) {
-				this.dialog_modify_plan.plan = hosting_plan
+				this.dialog_modify_plan.plan = JSON.parse(JSON.stringify( hosting_plan ))
+			}
+			if ( current_interval != hosting_plan.interval ) {
+				this.dialog_modify_plan.plan.interval = current_interval
+				this.dialog_modify_plan.plan.addons = current_addons
+				this.calculateHostingPlan()
+			}
+		},
+		calculateHostingPlan() {
+			original_plan = this.dialog_modify_plan.hosting_plans.filter( p => p.name == this.dialog_modify_plan.selected_plan )[0]
+			if ( this.dialog_modify_plan.plan.interval == original_plan.interval ) {
+				this.dialog_modify_plan.plan.price = JSON.parse(JSON.stringify( original_plan.price ))
+			} else {
+				unit_price = original_plan.price / original_plan.interval
+				this.dialog_modify_plan.plan.price = unit_price * this.dialog_modify_plan.plan.interval
 			}
 		},
 		PushProductionToStaging( site_id ) {
