@@ -6270,6 +6270,7 @@ new Vue({
 		},
 		fetchFilterVersions( filters ) {
 			filters = filters.map( f => f.name ).join(",")
+			if ( filters != "" ) {
 			axios.get(
 			`/wp-json/captaincore/v1/filters/${filters}/versions`, {
 				headers: {'X-WP-Nonce':this.wp_nonce}
@@ -6277,9 +6278,11 @@ new Vue({
 			.then(response => {
 				this.site_filter_version = response.data
 			})
+			}
 		},
 		fetchFilterStatus( filters ) {
 			filters = filters.map( f => f.name ).join(",")
+			if ( filters != "" ) {
 			axios.get(
 			`/wp-json/captaincore/v1/filters/${filters}/statuses`, {
 				headers: {'X-WP-Nonce':this.wp_nonce}
@@ -6287,11 +6290,13 @@ new Vue({
 			.then(response => {
 				this.site_filter_status = response.data
 			})
+			}
 		},
 		fetchFilteredSites( site_filters ) {
 			filters = site_filters.filters.map( f => f.name + "|" + f.type ).join(",")
 			versions = site_filters.versions.map( v => v.name + '|' + v.slug + '|' + v.type ).join(',')
 			statuses = site_filters.statuses.map( v => v.name + '|' + v.slug + '|' + v.type ).join(',')
+			if ( filters != "" ) {
 			axios.get(
 			`/wp-json/captaincore/v1/filters/${filters}/sites/versions=${versions}/statuses=${statuses}`, {
 				headers: {'X-WP-Nonce':this.wp_nonce}
@@ -6306,6 +6311,7 @@ new Vue({
 					}
 				})
 			})
+			}
 		},
 		fetchSites() {
 			this.sites_loading = false
