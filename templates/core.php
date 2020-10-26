@@ -7399,9 +7399,8 @@ new Vue({
 
 		},
 		showCaptures( site_id ) {
-			site = this.sites.filter( site => site.site_id == site_id )[0];
-			this.dialog_captures.site = site;
-			environment = this.dialog_site.environment_selected;
+			this.dialog_captures.site = this.dialog_site.site
+			environment = this.dialog_site.environment_selected
 			this.dialog_captures.pages = environment.capture_pages
 			if ( environment.capture_pages == "" || environment.capture_pages == null ) {
 				this.dialog_captures.pages = [{ page: "/" }]
@@ -7409,11 +7408,11 @@ new Vue({
 			this.dialog_captures.loading = true
 			this.dialog_captures.show = true;
 			axios.get(
-				`/wp-json/captaincore/v1/site/${site_id}/${site.environment_selected.toLowerCase()}/captures`, {
+				`/wp-json/captaincore/v1/site/${site_id}/${this.dialog_site.environment_selected.environment.toLowerCase()}/captures`, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => { 
-					this.dialog_captures.image_path = this.remote_upload_uri + site.site + "_" + site.site_id + "/" + site.environment_selected.toLowerCase() + "/captures/"
+					this.dialog_captures.image_path = this.remote_upload_uri + this.dialog_site.site.site + "_" + this.dialog_site.site.site_id + "/" + this.dialog_site.environment_selected.environment.toLowerCase() + "/captures/"
 					this.dialog_captures.captures = response.data
 					if ( this.dialog_captures.captures.length > 0 ) {
 						this.dialog_captures.capture = this.dialog_captures.captures[0]
@@ -7436,7 +7435,7 @@ new Vue({
 				action: 'captaincore_ajax',
 				post_id: this.dialog_captures.site.site_id,
 				command: 'updateCapturePages',
-				environment: this.dialog_captures.site.environment_selected,
+				environment: this.dialog_site.environment_selected.environment,
 				value: this.dialog_captures.pages,
 			};
 
@@ -9381,7 +9380,7 @@ new Vue({
 
 			// Adds new job
 			job_id = Math.round((new Date()).getTime());
-			description = "Saving update settings for " + site.name + " (" + site.environment_selected + ")";
+			description = "Saving update settings for " + site.name + " (" + site.environment_selected.env + ")";
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: [], "command":"saveUpdateSettings"});
 
 			// Prep AJAX request
@@ -9389,7 +9388,7 @@ new Vue({
 				'action': 'captaincore_ajax',
 				'post_id': site.site_id,
 				'command': "updateSettings",
-				'environment': site.environment_selected,
+				'environment': site.environment_selected.environment,
 				'value': { 
 					"updates_exclude_plugins": this.dialog_update_settings.environment.updates_exclude_plugins, 
 					"updates_exclude_themes": this.dialog_update_settings.environment.updates_exclude_themes, 
@@ -9435,7 +9434,7 @@ new Vue({
 			}
 			site_id = site.site_id
 			site_name = site.name;
-			description = "Delete user '" + username + "' from " + site_name + " (" + site.environment_selected + ")";
+			description = "Delete user '" + username + "' from " + site_name + " (" + site.environment_selected.environment + ")";
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"site_id":site_id,"command":"manage","description": description, "status": "queued", stream: []});
 
@@ -9448,7 +9447,7 @@ new Vue({
 				'command': "manage",
 				'value': "ssh",
 				'background': true,
-				'environment': site.environment_selected,
+				'environment': site.environment_selected.environment,
 				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 			};
 
