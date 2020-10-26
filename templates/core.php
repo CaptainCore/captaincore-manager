@@ -1358,28 +1358,11 @@ if ( $role_check ) {
 				>
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
-						<v-btn icon dark @click.native="dialog_captures.show = false">
+						<v-btn icon dark @click="closeCaptures()">
 							<v-icon>close</v-icon>
 						</v-btn>
 						<v-toolbar-title>Historical Captures of {{ dialog_captures.site.name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
-						<v-toolbar-items>
-							<!--<v-select
-								dense
-								v-model="dialog_captures.mode"
-								:items='[{"text":"Screenshot Mode","value":"screenshot","icon":"mdi-eye"},{"text":"Code Mode","value":"code","icon":"mdi-code-tags"}]'
-								label=""
-								class="mt-5"
-								style="max-width:200px;"
-							>-->
-							<template v-slot:selection="data">
-								<div class="v-list-item__title"><v-icon class="mr-2">{{ data.item.icon }}</v-icon> {{ data.item.text }}</div>
-							</template>
-							<template v-slot:item="data">
-								<div class="v-list-item__title"><v-icon class="mr-2">{{ data.item.icon }}</v-icon> {{ data.item.text }}</div>
-							</template>
-							</v-select>
-						</v-toolbar-items>
 					</v-toolbar>
 					<v-toolbar color="grey lighten-4" light flat v-if="dialog_captures.captures.length > 0">
 						<div style="max-width:250px;" class="mx-1 mt-8">
@@ -1400,7 +1383,7 @@ if ( $role_check ) {
 					<v-card-text style="min-height:200px;">
 					<v-card v-show="dialog_captures.show_configure" class="mt-5 mb-3" style="max-width:850px;margin:auto;">
 						<v-toolbar color="grey lighten-4" dense light flat>
-							<v-btn icon @click.native="closeCaptures()">
+							<v-btn icon @click="dialog_captures.show_configure = false">
 								<v-icon>close</v-icon>
 							</v-btn>
 							<v-toolbar-title>Configured pages to capture.</v-toolbar-title>
@@ -2138,7 +2121,7 @@ if ( $role_check ) {
 					<v-toolbar color="grey lighten-4" dense light flat>
 						<v-toolbar-title>Stats</v-toolbar-title>
 						<v-spacer></v-spacer>
-						<v-toolbar-items v-if="typeof dialog_new_site == 'object'">
+						<v-toolbar-items v-if="typeof dialog_new_site == 'object'" v-show="role == 'administrator'">
                     		<v-btn text @click="configureFathom( dialog_site.site.site_id )">Configure Fathom Tracker <v-icon dark small>bar_chart</v-icon></v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
@@ -4640,7 +4623,6 @@ if ( $role_check ) {
 				solo
 				label="Search"
 				multiple
-				allow-overflow="false"
 				class="mx-1 mt-6"
 				style="max-width:240px;"
 			>
