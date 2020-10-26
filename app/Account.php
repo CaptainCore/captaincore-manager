@@ -101,39 +101,41 @@ class Account {
             return [];
         }
         $user_id = get_current_user_id();
-        $users   = $this->users();
         $record  = [
-            "timeline" => $this->process_logs(),
-            "account"  => $this->account(),
-            "invites"  => $this->invites(),
-            "users"    => $users,
-            "domains"  => $this->domains(),
-            "sites"    => $this->sites(),
-            "owner"    => false,
+            "timeline"        => $this->process_logs(),
+            "account"         => $this->account(),
+            "invites"         => $this->invites(),
+            "users"           => $this->users(),
+            "domains"         => $this->domains(),
+            "sites"           => $this->sites(),
+            "usage_breakdown" => $this->usage_breakdown(),
+            "owner"           => false,
         ];
 
-        foreach ($users as $user) {
-            if ($user['user_id'] === $user_id && $user['level'] == "Owner" ) {
-                $record["owner"] = true;
-            }
+        if ( $user_id == $record["account"]["billing_user_id"] ) {
+            $record["owner"] = true;
         }
         
         return $record;
     }
 
     public function account() {
-        $account          = (new Accounts)->get( $this->account_id );
+        $account          = ( new Accounts )->get( $this->account_id );
         $defaults         = json_decode( $account->defaults );
         $plan             = json_decode( $account->plan );
+        $plan->addons     = empty( $plan->addons ) ? [] : $plan->addons;
+        $plan->limits     = empty( $plan->limits ) ? (object) [ "storage" => 0, "visits" => 0, "sites" => 0 ] : $plan->limits;
+        $plan->interval   = empty( $plan->interval ) ? "12" : $plan->interval;
         if ( ! is_array( $defaults->users ) ) {
             $defaults->users = [];
         }
         return [
-            "account_id" => $this->account_id,
-            "name"       => html_entity_decode( $account->name ),
-            "plan"       => $plan,
-            "metrics"    => json_decode( $account->metrics ),
-            "defaults"   => $defaults,
+            "account_id"      => $this->account_id,
+            "billing_user_id" => (int) $account->billing_user_id,
+            "name"            => html_entity_decode( $account->name ),
+            "plan"            => $plan,
+            "metrics"         => json_decode( $account->metrics ),
+            "defaults"        => $defaults,
         ];
     }
 
@@ -254,7 +256,7 @@ class Account {
         $site_ids = array_column( ( new Sites )->where( [ "account_id" => $this->account_id, "status" => "active" ] ), "site_id" );
 
         $hosting_plan      = $account->plan->name;
-		$addons            = $account->plan->usage->addons;
+		$addons            = empty( $account->plan->usage->addons ) ? [] : $account->plan->usage->addons;
 		$storage           = $account->plan->usage->storage;
 		$visits            = $account->plan->usage->visits;
 		$visits_plan_limit = $account->plan->limits->visits;

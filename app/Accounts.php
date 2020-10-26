@@ -39,10 +39,11 @@ class Accounts extends DB {
 			$account  = self::get( $account_id );
 			$defaults = json_decode( $account->defaults );
 			$result = (object) [
-				'account_id' => $account->account_id,
-				'name'       => html_entity_decode( $account->name ),
-				'defaults'   => json_decode( $account->defaults ),
-                'metrics'    => json_decode( $account->metrics ),
+                'account_id'      => $account->account_id,
+                'billing_user_id' => (int) $account->billing_user_id,
+				'name'            => html_entity_decode( $account->name ),
+				'defaults'        => json_decode( $account->defaults ),
+                'metrics'         => json_decode( $account->metrics ),
             ];
             if ( $result->defaults->users == "" ) {
                 $result->defaults->users = [];
