@@ -35,8 +35,8 @@ if ( $role_check ) {
 <body>
 <div id="app" v-cloak>
 	<v-app>
-	  <v-app-bar color="primary" dark app fixed style="left:0px;z-index:10">
-	 	 <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none" v-show="route != 'login'"></v-app-bar-nav-icon>
+	  <v-app-bar color="primary" dark app style="left:0px">
+	 	 <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none" v-show="route != 'login' || route != 'connect'"></v-app-bar-nav-icon>
          <v-toolbar-title>
 			<v-list flat color="transparent">
 		 	<v-list-item href="/account" @click.prevent="goToPath( '/account' )" style="padding:0px;" flat class="not-active">
@@ -48,7 +48,7 @@ if ( $role_check ) {
 		</v-toolbar-title>
 		<v-spacer></v-spacer>
       </v-app-bar>
-	  <v-navigation-drawer v-model="drawer" app mobile-breakpoint="960" clipped v-if="route != 'login'">
+	  <v-navigation-drawer v-model="drawer" app mobile-breakpoint="960" clipped v-if="route != 'login' && route != 'connect'">
       <v-list nav dense>
 	  	<v-list-item-group v-model="selected_nav" color="primary">
         <v-list-item link href="/account/sites" @click.prevent="goToPath( '/account/sites' )">
