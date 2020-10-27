@@ -1824,9 +1824,8 @@ if ( $role_check ) {
 								v-for="item in items"
 								:key="item.site_id"
 								class="d-flex child-flex"
-								md="4"
-								sm="6"
-								xs="12"
+								cols="12"
+								sm="4"
 								>
 								<v-card tile style="cursor: pointer" @click="showSite( item )">
 									<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-800.jpg` :aspect-ratio="8/5" v-show="item.screenshot_base">
