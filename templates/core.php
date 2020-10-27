@@ -5976,7 +5976,7 @@ new Vue({
 		},
 		updateSite() {
 			this.dialog_edit_site.loading = true;
-			site_update = this.dialog_edit_site.site
+			site_update = JSON.parse ( JSON.stringify ( this.dialog_edit_site.site ) )
 			site_update.shared_with = site_update.shared_with.map( a => a.account_id )
 			site_name = site_update.name
 			var data = {
@@ -5996,7 +5996,6 @@ new Vue({
 					}
 
 					if ( response.response = "Successfully updated site" ) {
-						this.fetchSiteInfo( response.site_id )
 						this.dialog_site.step = 2
 						this.dialog_edit_site = { show: false, loading: false, site: {} }
 
@@ -6116,6 +6115,9 @@ new Vue({
 			};
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
+					Object.keys( response.data.site ).forEach( key => {
+						this.dialog_site.site[ key ] = response.data.site[ key ]
+					})
 					this.dialog_site.site.account = response.data.account
 					this.dialog_site.site.shared_with = response.data.shared_with
 				});

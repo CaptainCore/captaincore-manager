@@ -4310,7 +4310,9 @@ function captaincore_ajax_action_callback() {
 		$site        = new CaptainCore\Site( $post_id );
 		$account     = $site->account();
 		$shared_with = $site->shared_with();
+		$site        = $site->fetch();
 		echo json_encode( [ 
+			"site"        => $site,
 			"account"     => $account,
 			"shared_with" => $shared_with,
 		] );
@@ -4320,11 +4322,11 @@ function captaincore_ajax_action_callback() {
 		if ( count( $post_ids ) > 0 ) {
 			foreach( $post_ids as $id ) {
 				$site    = new CaptainCore\Site( $id );
-				$sites[] = $site->get();
+				$sites[] = $site->fetch();
 			}
 		} else {
 			$site    = new CaptainCore\Site( $post_id );
-			$sites[] = $site->get();
+			$sites[] = $site->fetch();
 		}
 		echo json_encode( $sites );
 	}
