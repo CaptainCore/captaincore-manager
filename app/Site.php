@@ -727,6 +727,34 @@ class Site {
         return $accounts;
     }
 
+    public function fetch() {
+        $site                  = ( new Sites )->get( $this->site_id );
+        $details               = json_decode( $site->details );
+        $site->filtered        = true;
+        $site->loading         = false;
+        $site->key             = $details->key;
+        $site->core            = $details->core;
+        $site->console_errors  = isset( $details->console_errors ) ? $details->console_errors : "";
+        $site->subsites        = $details->subsites;
+        $site->storage         = $details->storage;
+        $site->visits          = $details->visits;
+        $site->outdated        = false;
+        $site->screenshot_base = $details->screenshot_base;
+        
+        // Mark site as outdated if sync older then 48 hours
+        if ( strtotime( $site->updated_at ) <= strtotime( "-48 hours" ) ) {
+            $site->outdated = true;
+        }
+
+        unset( $site->token );
+        unset( $site->created_at );
+        unset( $site->details );
+        unset( $site->status );
+        unset( $site->site_usage );
+        $site;
+        return $site;
+    }
+
     public function environment_ids() {
         $environment_ids = ( new Environments )->where( [ "site_id" => $this->site_id ] );
         return array_column( $environment_ids, "environment_id" );
