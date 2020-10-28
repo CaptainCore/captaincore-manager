@@ -1774,7 +1774,7 @@ function captaincore_filter_sites_func( $request ) {
 	$versions = $request['versions'];
 	$versions = explode( ",", $versions );
 	foreach ($statuses as $key => $value) {
-		$value = explode( "|", $value );
+		$value = explode( "+", $value );
 		$statuses[ $key ] = [
 			"type" => $value[2],
 			"slug" => $value[1],
@@ -1782,7 +1782,7 @@ function captaincore_filter_sites_func( $request ) {
 		];
 	}
 	foreach ($versions as $key => $value) {
-		$value = explode( "|", $value );
+		$value = explode( "+", $value );
 		$versions[ $key ] = [
 			"type" => $value[2],
 			"slug" => $value[1],
@@ -2005,7 +2005,7 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
-		'captaincore/v1', '/filters/(?P<name>[a-zA-Z0-9-,|_)]+)/sites/versions=(?:(?P<versions>[a-zA-Z0-9-,+\.|]+))?/statuses=(?:(?P<statuses>[a-zA-Z0-9-,+\.|]+))?', [
+		'captaincore/v1', '/filters/(?P<name>[a-zA-Z0-9-,+_)]+)/sites/versions=(?:(?P<versions>[a-zA-Z0-9-,+\.|]+))?/statuses=(?:(?P<statuses>[a-zA-Z0-9-,+\.|]+))?', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_filter_sites_func',
 			'show_in_index' => false
