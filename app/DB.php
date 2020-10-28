@@ -403,7 +403,7 @@ class DB {
         $patterns   = [];
         $conditions = "{$wpdb->prefix}captaincore_environments.environment = 'production'";
         if ( $arguments->filter ) {
-            $arguments->filter = explode( "|", $arguments->filter );
+            $arguments->filter = explode( "+", $arguments->filter );
             // WordPress thinks {} in SQL is a syntax error. To workaround we can wrap them in brackets likes so [{] and [}].
             $pattern = '{"name":"'.$arguments->filter[0].'","title":"[^"]*","status":"[^"]*","version":"[^"]*"}';
             $pattern = str_replace ( "{", "[{]", $pattern );

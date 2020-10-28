@@ -6277,9 +6277,9 @@ new Vue({
 			}
 		},
 		fetchFilteredSites( site_filters ) {
-			filters = site_filters.filters.map( f => f.name + "|" + f.type ).join(",")
-			versions = site_filters.versions.map( v => v.name + '|' + v.slug + '|' + v.type ).join(',')
-			statuses = site_filters.statuses.map( v => v.name + '|' + v.slug + '|' + v.type ).join(',')
+			filters = site_filters.filters.map( f => f.name + "+" + f.type ).join(",")
+			versions = site_filters.versions.map( v => v.name + '+' + v.slug + '+' + v.type ).join(',')
+			statuses = site_filters.statuses.map( v => v.name + '+' + v.slug + '+' + v.type ).join(',')
 			if ( filters != "" ) {
 			axios.get(
 			`/wp-json/captaincore/v1/filters/${filters}/sites/versions=${versions}/statuses=${statuses}`, {
