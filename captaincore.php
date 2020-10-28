@@ -16,7 +16,7 @@
  * Plugin Name:       CaptainCore
  * Plugin URI:        https://captaincore.io
  * Description:       Open Source Toolkit for Managing WordPress Sites
- * Version:           0.13.0
+ * Version:           0.14.0
  * Author:            Austin Ginder
  * Author URI:        https://austinginder.com
  * License:           MIT License
@@ -35,7 +35,7 @@ if ( ! defined( 'WPINC' ) ) {
  * Start at version 0.1.0 and use SemVer - https://semver.org
  * Rename this for your plugin and update it as you release new versions.
  */
-define( 'CAPTAINCORE_VERSION', '0.13.0' );
+define( 'CAPTAINCORE_VERSION', '0.14.0' );
 
 /**
  * The code that runs during plugin activation.
