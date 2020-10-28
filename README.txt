@@ -43,6 +43,25 @@ TODO
 TODO
 
 == Changelog ==
+= 0.14.0: Oct 28 2020
+* New: Restic backup UI
+* New: Ability to assign customer and billing roles per site
+* New: Configurations for usage pricing
+* Tweak: Upgraded Vue.js to 2.6.12
+* Tweak: Upgraded Vuetify to v2.3.14
+* Tweak: Revamped backup section.
+* Tweak: Overhauled site filters. Moved heavy Javascript to PHP for better performance.
+* Tweak: Performance improvements by conditionally loading routes and reducing site listing data.
+* Tweak: Disable many slider transition effects between screens for better performance.
+* Tweak: Moved admin icon for adding log entry within site for better visibility.
+* Tweak: Moved plan tab from site to account section.
+* Tweak: Expanded token support per environment.
+* Tweak: Reduce reliance on ACF.
+* Tweak: Removed legacy custom page templates.
+* Tweak: Expanded Quicksave endpoint for per environment.
+* Fix: Kinsta database url for new format.
+* Fix: Locked down users api endpoint.
+
 = 0.13.0: September 5 2020
 * New: Health section for displaying errors collected by the new scan-errors cli command.
 * New: Sync scan errors
@@ -93,11 +112,11 @@ TODO
 * Tweak: Upgraded Vuetify to v2.2.12
 * Tweak: Upgraded QS.js to v6.9.1
 * Tweak: Moved account related sections: timelines and defaults from sites section to new accounts section.
-* Tweak: Delagate snapshot link generate to CLI
+* Tweak: Delegate snapshot link generate to CLI
 * Tweak: Compatibility fixes for new database architecture
 * Tweak: Fix timezone issue with update logs
 * Tweak: Fix mobile layout with script section
-* Tweak: Fix bugs with editing/saving prodcess logs
+* Tweak: Fix bugs with editing/saving process logs
 * TWeak: Fix `/` in process logs
 
 = 0.10.0: January 29 2020
@@ -108,10 +127,10 @@ TODO
 * New: [ARVE Pro](https://nextgenthemes.com/) plugin support
 * New: Users management page
 * New: Administrator switch to link
-* New: Presistant completed job count
+* New: Persistent completed job count
 * Tweak: Upgraded Vue.js to 2.6.11
 * Tweak: Upgraded Vuetify to v2.2.5
-* Tweak: Consistant labeling of headers in format of "Listing <number> <items>"
+* Tweak: Consistent labeling of headers in format of "Listing <number> <items>"
 * Tweak: Significantly reduce amount of data for the site listing page
 * Tweak: Sort update logs by date created
 * Tweak: Sort timeline log by account name
