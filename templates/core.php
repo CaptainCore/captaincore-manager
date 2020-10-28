@@ -1763,7 +1763,7 @@ if ( $role_check ) {
 				<v-row>
 					<v-col></v-col>
 					<v-col cols="12" md="4">
-						<v-text-field class="mx-4" @input="updateSearch" ref="search" label="Search" clearable light hide-details append-icon="search"></v-text-field>	
+						<v-text-field class="mx-4" v-model="search" @input="filterSites" ref="search" label="Search" clearable light hide-details append-icon="search"></v-text-field>	
 					</v-col>
 				</v-row>	
 				</template>
@@ -2302,7 +2302,7 @@ if ( $role_check ) {
 					<v-toolbar-title>Users</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-text-field
-						@input="searchUsers"
+						v-model="users_search"
 						ref="users_search"
 						append-icon="search"
 						label="Search"
@@ -3274,7 +3274,7 @@ if ( $role_check ) {
 					<v-col class="ma-0 pa-0"></v-col>
 					<v-col class="ma-0 pa-0"sm="12" md="4">
 					<v-text-field
-						@input="searchDomains"
+						v-model="domain_search"
 						ref="domain_search"
 						append-icon="search"
 						label="Search"
@@ -3907,7 +3907,7 @@ if ( $role_check ) {
 						<v-col class="ma-0 pa-0"></v-col>
 						<v-col class="ma-0 pa-0"sm="12" md="4">
 						<v-text-field
-							@input="searchAccounts"
+							v-model="account_search"
 							ref="account_search"
 							append-icon="search"
 							label="Search"
@@ -4312,7 +4312,7 @@ if ( $role_check ) {
 						<v-col class="ma-0 pa-0"></v-col>
 						<v-col class="ma-0 pa-0"sm="12" md="4">
 						<v-text-field
-							@input="searchAllUsers"
+							v-model="user_search"
 							ref="user_search"
 							append-icon="search"
 							label="Search"
@@ -4794,14 +4794,12 @@ if ( $role_check ) {
 <script src="/wp-content/plugins/captaincore/public/js/qs.js"></script>
 <script src="/wp-content/plugins/captaincore/public/js/axios.min.js"></script>
 <script src="/wp-content/plugins/captaincore/public/js/vuetify.min.js"></script>
-<script src="/wp-content/plugins/captaincore/public/js/lodash.min.js"></script>
 <script src="/wp-content/plugins/captaincore/public/js/vue-upload-component.js"></script>
 <?php } else { ?>
 <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qs@6.9.1/dist/qs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios@0.19.0/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vuetify@2.3.14/dist/vuetify.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/lodash@4.17.15/lodash.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.20/dist/vue-upload-component.js"></script>
 <?php } ?>
 <script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
@@ -4810,7 +4808,6 @@ if ( $role_check ) {
 <script src="/wp-content/plugins/captaincore/public/js/core.js"></script>
 <script>
 ajaxurl = "/wp-admin/admin-ajax.php"
-lodash = _.noConflict()
 Vue.component('file-upload', VueUploadComponent)
 new Vue({
 	el: '#app',
@@ -9497,22 +9494,6 @@ new Vue({
 			search = quicksave.search;
 			quicksave.filtered_files = quicksave.view_files.filter( file => file.includes( search ) );
 		},
-		searchUsers: lodash.debounce(function (e) {
-			this.users_search = e
-		}, 300),
-		searchAllUsers: lodash.debounce(function (e) {
-			this.user_search = e
-		}, 300),
-		updateSearch: lodash.debounce(function (e) {
-			this.search = e;
-			this.filterSites();
-		}, 300),
-		searchDomains: lodash.debounce(function (e) {
-			this.domain_search = e;
-		}, 300),
-		searchAccounts: lodash.debounce(function (e) {
-			this.account_search = e;
-		}, 300),
 		filteredSites( value ) {
 			if ( value ) {
 				return true
