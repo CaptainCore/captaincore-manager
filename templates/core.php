@@ -3946,7 +3946,7 @@ if ( $role_check ) {
 						<v-toolbar-title>{{ dialog_account.records.account.name }}</v-toolbar-title>
 						<div class="flex-grow-1"></div>
 						<v-toolbar-items>
-							<v-tooltip top v-if="role == 'administrator' || dialog_account.records.owner">
+							<v-tooltip top>
 								<template v-slot:activator="{ on }">
 									<v-btn text small @click="dialog_configure_defaults.show = true" v-on="on"><v-icon dark>mdi-clipboard-check-outline</v-icon></v-btn>
 								</template><span>Configure Defaults</span>
