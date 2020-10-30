@@ -1763,7 +1763,7 @@ if ( $role_check ) {
 				<v-row>
 					<v-col></v-col>
 					<v-col cols="12" md="4">
-						<v-text-field class="mx-4" v-model="search" @input="filterSites" ref="search" label="Search" clearable light hide-details append-icon="search"></v-text-field>	
+						<v-text-field class="mx-4" v-model="search" @input="filterSites" autofocus label="Search" clearable light hide-details append-icon="search"></v-text-field>	
 					</v-col>
 				</v-row>	
 				</template>
@@ -2979,7 +2979,7 @@ if ( $role_check ) {
 									<span>Preload based on Production</span>
 								</v-tooltip>
 							</v-toolbar>
-							<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required  hint="Should match included domain. Example: sitename.kinsta.cloud" persistent-hint></v-text-field>
+							<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required hint="Should match included domain. Example: sitename.kinsta.cloud" persistent-hint></v-text-field>
 							<v-text-field label="Home Directory" :value="key.home_directory" @change.native="key.home_directory = $event.target.value" required></v-text-field>
 							<v-layout>
 								<v-flex xs6 class="mr-1"><v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field></v-flex>
@@ -3275,11 +3275,11 @@ if ( $role_check ) {
 					<v-col class="ma-0 pa-0"sm="12" md="4">
 					<v-text-field
 						v-model="domain_search"
-						ref="domain_search"
 						append-icon="search"
 						label="Search"
 						single-line
 						clearable
+						autofocus
 						hide-details
 					></v-text-field>
 					</v-col>
@@ -3908,7 +3908,7 @@ if ( $role_check ) {
 						<v-col class="ma-0 pa-0"sm="12" md="4">
 						<v-text-field
 							v-model="account_search"
-							ref="account_search"
+							autofocus
 							append-icon="search"
 							label="Search"
 							single-line
@@ -4313,7 +4313,7 @@ if ( $role_check ) {
 						<v-col class="ma-0 pa-0"sm="12" md="4">
 						<v-text-field
 							v-model="user_search"
-							ref="user_search"
+							autofocus
 							append-icon="search"
 							label="Search"
 							single-line
@@ -5138,27 +5138,6 @@ new Vue({
 		}
 	},
 	mounted() {
-		document.onkeydown = e => {
-			e = e || window.event
-			if (
-				e.keyCode === 191 && // Forward Slash '/'
-				e.target !== this.$refs.search.$refs.input &&
-				e.target.type !== "textarea"
-			) {
-				e.preventDefault()
-				this.$refs.search.focus()
-				this.$refs.domain_search.focus()
-				this.$refs.account_search.focus()
-				this.$refs.user_search.focus()
-				this.$refs.account_search.focus()
-				if ( this.$refs.users_search && typeof this.$refs.users_search[0] == "object" ) {
-					this.$refs.users_search.forEach( e => e.focus() )
-				}
-				if ( this.$refs.quicksave_search && typeof this.$refs.quicksave_search[0] == "object" ) {
-					this.$refs.quicksave_search.forEach( e => e.focus() )
-				}
-			}
-		}
 		window.addEventListener('popstate', () => {
 			this.updateRoute( window.location.pathname )
 		})
