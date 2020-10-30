@@ -1807,7 +1807,7 @@ if ( $role_check ) {
 				<v-row>
 					<v-col></v-col>
 					<v-col cols="12" md="4">
-						<v-text-field class="mx-4" @input="updateSearch" ref="search" label="Search" clearable light hide-details append-icon="search"></v-text-field>	
+						<v-text-field class="mx-4" v-model="search" @input="filterSites" autofocus label="Search" clearable light hide-details append-icon="search"></v-text-field>	
 					</v-col>
 				</v-row>	
 				</template>
@@ -6551,7 +6551,7 @@ new Vue({
 			this.sites.map(site => site.name).filter(site => site != site_name );
 		},
 		editSite() {
-			this.dialog_edit_site.site = this.dialog_site.site
+			this.dialog_edit_site.site = JSON.parse ( JSON.stringify ( this.dialog_site.site ) )
 			this.dialog_site.step = 4
 		},
 		deleteSite( site_id ) {
@@ -7460,6 +7460,7 @@ new Vue({
 				.catch( error => console.log( error ) );
 		},
 		showSite( site ) {
+			this.users_search = ""
 			this.dialog_site.loading = true
 			this.fetchSiteEnvironments( site.site_id )
 			this.fetchSiteDetails( site.site_id )
