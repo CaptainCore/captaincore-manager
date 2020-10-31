@@ -1861,7 +1861,17 @@ if ( $role_check ) {
 			<v-card flat>
 				<v-toolbar color="grey lighten-4" light flat>
 					<v-img :src=`${remote_upload_uri}${dialog_site.site.site}_${dialog_site.site.site_id}/production/screenshots/${dialog_site.site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="dialog_site.site.screenshot_base"></v-img>
-					<v-toolbar-title>{{ dialog_site.site.name }}</v-toolbar-title>
+					<v-toolbar-title>
+					<v-autocomplete
+						v-model="dialog_site.site"
+						:items="sites"
+						return-object
+						item-text="name"
+						@input="showSite( dialog_site.site )"
+						class="mt-4"
+						flat
+					></v-autocomplete>
+					</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
 						<v-tooltip>
