@@ -1869,6 +1869,7 @@ if ( $role_check ) {
 						item-text="name"
 						@input="showSite( dialog_site.site )"
 						class="mt-4"
+						spellcheck="false"
 						flat
 					></v-autocomplete>
 					</v-toolbar-title>
