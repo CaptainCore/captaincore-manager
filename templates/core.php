@@ -1868,10 +1868,11 @@ if ( $role_check ) {
 						return-object
 						item-text="name"
 						@input="showSite( dialog_site.site )"
-						class="mt-4"
+						class="mt-5"
 						spellcheck="false"
 						flat
-					></v-autocomplete>
+					>
+					</v-autocomplete>
 					</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -3304,7 +3305,7 @@ if ( $role_check ) {
 				>
 				<template v-slot:body="{ items }">
 					<tbody>
-					<tr v-for="item in items" @click="modifyDNS( item )" style="cursor:pointer;">
+					<tr v-for="item in items" @click="goToPath( `/account/dns/${item.name}`)" style="cursor:pointer;">
 						<td>{{ item.name }}</td>
 					</tr>
 					</tbody>
@@ -3314,11 +3315,22 @@ if ( $role_check ) {
 				<v-sheet v-show="dialog_domain.step == 2">
 					<v-card tile flat>
 						<v-toolbar flat color="grey lighten-4">
-							<v-toolbar-title>DNS for {{ dialog_domain.domain.name }}</v-toolbar-title>
+							<v-toolbar-title>
+							<v-autocomplete
+								v-model="dialog_domain.domain"
+								:items="domains"
+								return-object
+								item-text="name"
+								@input="modifyDNS( dialog_domain.domain )"
+								class="mt-5"
+								spellcheck="false"
+								flat
+							></v-autocomplete>
+							</v-toolbar-title>
 							<span v-show="dnsRecords > 0" class="body-2 ml-4">{{ dnsRecords }} records</span>
 							<v-spacer></v-spacer>
 							<v-toolbar-items>
-								<v-btn text @click="dialog_domain.step = 1"><v-icon>mdi-arrow-left</v-icon> Back to domains</v-btn>
+								<v-btn text @click="dialog_domain.step = 1" href="/account/dns" @click.prevent="goToPath( '/account/dns' )"><v-icon>mdi-arrow-left</v-icon> Back to domains</v-btn>
 							</v-toolbar-items>
 						</v-toolbar>
 						<v-row v-if="dialog_domain.errors">
@@ -4897,6 +4909,7 @@ new Vue({
 		new_invite: { account: {}, records: {} },
 		new_account: { password: "" },
 		timeline_logs: [],
+		route_path: "",
 		route: "",
 		routes: {
 			'/account': '',
@@ -5065,6 +5078,9 @@ new Vue({
 	watch: {
 		route() {
 			this.triggerRoute()
+		},
+		route_path() {
+			this.triggerPath()
 		},
 		runningJobs() {
 			this.view_console.show = true
@@ -5324,6 +5340,13 @@ new Vue({
 			if ( href.slice(-1) == "/" ) {
 				href = href.slice(0, -1)
 			}
+			// Catch all nested routes to their parent route.
+			if ( href.match(/\//g).length > 1 ) {
+				this.route_path = href.split('/').slice( 3 ).join( "/" )
+				href = href.split('/').slice( 0, 3 ).join( "/" )
+			} else {
+				this.route_path = ""
+			}
 			this.route = this.routes[ href ]
 		},
 		triggerRoute() {
@@ -5409,6 +5432,18 @@ new Vue({
 				}
 				this.route = "sites"
 				this.selected_nav = 0
+			}
+		},
+		triggerPath() {
+			if ( this.route == "dns" && this.route_path == "" ) {
+				this.dialog_domain.step = 1
+			}
+			if ( this.route == "dns" && this.route_path != "" ) {
+				this.dialog_domain.step = 2				
+				domain = this.domains.filter( d => d.name == this.route_path )[0]
+				if ( domain ) {
+					this.modifyDNS( domain )
+				}
 			}
 		},
 		goToPath ( href ) {
@@ -6158,6 +6193,10 @@ new Vue({
 					this.domains = response.data
 					this.domains_loading = false
 					this.loading_page = false
+					if ( this.dialog_domain.step == 2 && this.route_path != "" ) {
+						domain = this.domains.filter( d => d.name == this.route_path )[0]
+						this.modifyDNS( domain )
+					}
 					setTimeout(this.fetchMissing, 4000)
 				});
 		},
