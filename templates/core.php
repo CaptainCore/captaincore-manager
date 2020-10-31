@@ -1769,7 +1769,7 @@ if ( $role_check ) {
 				</template>
 				<template v-slot:body="{ items }">
 					<tbody>
-					<tr v-for="item in items" :key="item.site_id" @click="showSite( item )" style="cursor:pointer;">
+					<tr v-for="item in items" :key="item.site_id" @click="goToPath( `/account/sites/${item.name}` )" style="cursor:pointer;">
 						<td>
 							<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-100.jpg` class="elevation-1" width="50" v-show="item.screenshot_base"></v-img>
 						</td>
@@ -1827,7 +1827,7 @@ if ( $role_check ) {
 								cols="12"
 								sm="4"
 								>
-								<v-card tile style="cursor: pointer" @click="showSite( item )">
+								<v-card tile style="cursor: pointer" @click="goToPath( `/account/sites/${item.name}` )">
 									<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-800.jpg` :aspect-ratio="8/5" v-show="item.screenshot_base">
 									<v-row align="end" class="lightbox white--text pa-2 fill-height">
 									<v-col class="pa-1">
@@ -1867,7 +1867,7 @@ if ( $role_check ) {
 						:items="sites"
 						return-object
 						item-text="name"
-						@input="showSite( dialog_site.site )"
+						@input="goToPath( `/account/sites/${dialog_site.site.name}` )"
 						class="mt-5"
 						spellcheck="false"
 						flat
@@ -3321,7 +3321,7 @@ if ( $role_check ) {
 								:items="domains"
 								return-object
 								item-text="name"
-								@input="modifyDNS( dialog_domain.domain )"
+								@input="goToPath( `/account/dns/${dialog_domain.domain.name}`)"
 								class="mt-5"
 								spellcheck="false"
 								flat
@@ -5435,14 +5435,22 @@ new Vue({
 			}
 		},
 		triggerPath() {
-			if ( this.route == "dns" && this.route_path == "" ) {
+			if ( this.route_path == "" ) {
 				this.dialog_domain.step = 1
+				this.dialog_site.step = 1
 			}
 			if ( this.route == "dns" && this.route_path != "" ) {
 				this.dialog_domain.step = 2				
 				domain = this.domains.filter( d => d.name == this.route_path )[0]
 				if ( domain ) {
 					this.modifyDNS( domain )
+				}
+			}
+			if ( this.route == "sites" && this.route_path != "" ) {
+				this.dialog_site.step = 2				
+				site = this.sites.filter( d => d.name == this.route_path )[0]
+				if ( site ) {
+					this.showSite( site )
 				}
 			}
 		},
@@ -6341,6 +6349,10 @@ new Vue({
 				.then(response => {
 					this.sites = response.data
 					this.loading_page = false
+					if ( this.dialog_site.step == 2 && this.route_path != "" ) {
+						site = this.sites.filter( d => d.name == this.route_path )[0]
+						this.showSite( site )
+					}
 					setTimeout(this.fetchMissing, 1000)
 			})
 		},
