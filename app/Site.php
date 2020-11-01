@@ -189,7 +189,7 @@ class Site {
         ];
         $new_site = [
             'account_id'  => $site->account_id,
-            'customer_id' => $site->customer_id,
+            'customer_id' => empty( $site->customer_id ) ? "" : $site->customer_id,
             'name'        => $site->domain,
             'site'        => $site->site,
             'provider'    => $site->provider,
