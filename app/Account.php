@@ -123,6 +123,7 @@ class Account {
         $account          = ( new Accounts )->get( $this->account_id );
         $defaults         = json_decode( $account->defaults );
         $plan             = json_decode( $account->plan );
+        $plan->name       = empty( $plan->name ) ? "" : $plan->name;
         $plan->addons     = empty( $plan->addons ) ? [] : $plan->addons;
         $plan->limits     = empty( $plan->limits ) ? (object) [ "storage" => 0, "visits" => 0, "sites" => 0 ] : $plan->limits;
         $plan->interval   = empty( $plan->interval ) ? "12" : $plan->interval;
@@ -347,4 +348,56 @@ class Account {
         $account->plan->usage->sites   = count( $sites );
         ( new Accounts )->update( [ "plan" => json_encode( $account->plan ) ], [ "account_id" => $this->account_id ] );
     }
+
+        
+    public function process_renewals() {
+        $response = [];
+		$accounts = ( new Accounts )->select( 'account_id' );
+		foreach ( $accounts as $account_id ) {
+			$account = ( new Accounts )->get( $account_id );
+            $plan    = json_decode( $account->plan );
+            if ( $plan->next_renewal != "" ) {
+                $result  = (object) [
+                    'account_id' => $account->account_id,
+                    'renewal'    => $plan->next_renewal,
+                    'plan'       => (int) $account->billing_user_id,
+                ];
+            }
+			$response[] = $result;
+		}
+		
+		return $response;
+	}
+
+    public function generate_order() {
+        $account  = ( new Accounts )->get( $this->account_id );
+        $customer = new WC_Customer( $account->billing_user_id );
+        $address  = $customer->get_billing_address();
+        $order    = wc_create_order(  [ 'customer_id' => $account->billing_user_id ] );
+        $order->set_address( $address, 'billing' );
+        $order->set_address( $address, 'shipping' );
+        $order->calculate_totals();
+
+        // Add addon product
+        $line_item_id = $order->add_product( get_product( '11062' ), 1 );
+
+        // Assign price 
+        $order->get_items()[ $line_item_id ]->set_total( '99' );
+        $order->get_items()[ $line_item_id ]->save();
+
+        // Assign meta field
+        $order->get_items()[ $line_item_id ]->get_meta( "Details" );
+        $order->get_items()[ $line_item_id ]->save_meta_data();
+
+        // Set payment method
+        // TODO fetch customer selected payment method
+        $order->set_payment_method( $payment_gateways['stripe'] );
+
+        $order->calculate_totals();
+
+        
+        // here we are adding some system notes to the order
+        // $order->update_status( "processing", 'Imported Order From Funnel', TRUE );
+    }
+
 }
