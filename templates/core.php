@@ -1883,7 +1883,7 @@ if ( $role_check ) {
 							<span>Add Log Entry</span>
 						</v-tooltip>
 						<v-divider vertical class="mx-1" inset v-show="role == 'administrator'"></v-divider>
-						<v-btn text @click="dialog_site.step = 1"><v-icon>mdi-arrow-left</v-icon> Back to sites</v-btn>
+						<v-btn text href="/account/sites" @click.prevent="goToPath( '/account/sites' )"><v-icon>mdi-arrow-left</v-icon> Back to sites</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-tabs v-model="dialog_site.site.tabs" background-color="primary" dark>
@@ -3330,7 +3330,7 @@ if ( $role_check ) {
 							<span v-show="dnsRecords > 0" class="body-2 ml-4">{{ dnsRecords }} records</span>
 							<v-spacer></v-spacer>
 							<v-toolbar-items>
-								<v-btn text @click="dialog_domain.step = 1" href="/account/dns" @click.prevent="goToPath( '/account/dns' )"><v-icon>mdi-arrow-left</v-icon> Back to domains</v-btn>
+								<v-btn text href="/account/dns" @click.prevent="goToPath( '/account/dns' )"><v-icon>mdi-arrow-left</v-icon> Back to domains</v-btn>
 							</v-toolbar-items>
 						</v-toolbar>
 						<v-row v-if="dialog_domain.errors">
@@ -6171,12 +6171,13 @@ new Vue({
 									return;
 								}
 							site_update[key] = site[key];
-							});
+							})
+							this.showSite( site_update )
 						}
 						if (lookup != 1 ) { 
 							// Add new site info
-							this.sites.push( site );
-							this.showSite( site );
+							this.sites.push( site )
+							this.showSite( site )
 						}
 					});
 				});
