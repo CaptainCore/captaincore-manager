@@ -6782,30 +6782,32 @@ new Vue({
 			this.dialog_new_log_entry.sites = [];
 		},
 		newLogEntry() {
-			site_ids = this.dialog_new_log_entry.sites.map( s => s.site_id);
+			site_ids = this.dialog_new_log_entry.sites.map( s => s.site_id )
 			var data = {
 				action: 'captaincore_ajax',
 				post_id: site_ids,
 				process_id: this.dialog_new_log_entry.process,
 				command: 'newLogEntry',
 				value: this.dialog_new_log_entry.description
-			};
-			this.dialog_new_log_entry.show = false;
-			this.dialog_new_log_entry.sites = [];
+			}
+			this.dialog_new_log_entry.show = false
+			this.dialog_new_log_entry.sites = []
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					Object.keys(response.data).forEach( site_id => {
-						this.sites.filter( site => site.site_id == site_id )[0].timeline = response.data[site_id]
-					});
+						if ( site_id == this.dialog_site.site.site_id ) {
+							this.dialog_site.site.timeline = response.data[site_id]
+						}
+					})
 					this.dialog_new_log_entry.sites = []
-					this.dialog_new_log_entry.site_name = "";
-					this.dialog_new_log_entry.description = "";
-					this.dialog_new_log_entry.process = "";
+					this.dialog_new_log_entry.site_name = ""
+					this.dialog_new_log_entry.description = ""
+					this.dialog_new_log_entry.process = ""
 				})
-				.catch( error => console.log( error ) );
+				.catch( error => console.log( error ) )
 		},
 		updateLogEntry() {
-			site_id = this.dialog_edit_log_entry.log.websites.map( s => s.site_id );
+			site_id = this.dialog_edit_log_entry.log.websites.map( s => s.site_id )
 
 			var data = {
 				action: 'captaincore_ajax',
@@ -6814,17 +6816,19 @@ new Vue({
 				log: this.dialog_edit_log_entry.log,
 			};
 
-			this.dialog_edit_log_entry.show = false;
-			this.dialog_edit_log_entry.sites = [];
+			this.dialog_edit_log_entry.show = false
+			this.dialog_edit_log_entry.sites = []
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					Object.keys(response.data).forEach( site_id => {
-						this.sites.filter( site => site.site_id == site_id )[0].timeline = response.data[site_id];
-					});
-					this.dialog_edit_log_entry.log = {};
+						if ( site_id == this.dialog_site.site.site_id ) {
+							this.dialog_site.site.timeline = response.data[site_id]
+						}
+					})
+					this.dialog_edit_log_entry.log = {}
 				})
-				.catch( error => console.log( error ) );
+				.catch( error => console.log( error ) )
 		},
 		editLogEntry( site_id, log_id ) {
 
