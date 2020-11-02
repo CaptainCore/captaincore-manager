@@ -50,7 +50,7 @@ if ( $role_check ) {
       </v-app-bar>
 	  <v-navigation-drawer v-model="drawer" app mobile-breakpoint="960" clipped v-if="route != 'login' && route != 'connect'">
       <v-list nav dense>
-	  	<v-list-item-group v-model="selected_nav" color="primary">
+	  	<v-list-item-group mandatory v-model="selected_nav" color="primary">
         <v-list-item link href="/account/sites" @click.prevent="goToPath( '/account/sites' )">
           <v-list-item-icon>
             <v-icon>mdi-wrench</v-icon>
@@ -1719,8 +1719,7 @@ if ( $role_check ) {
 					</template>
 							<span>Advanced Options</span>
 				</v-tooltip>
-						<v-btn v-if="role == 'administrator'" text @click="dialog_site.step = 3">Add Site <v-icon dark>add</v-icon></v-btn>
-						
+						<v-btn v-if="role == 'administrator'" text @click="goToPath( `/account/sites/new` )">Add Site <v-icon dark>add</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 			<v-card-text v-show="site_requests.length > 0">
@@ -1769,7 +1768,7 @@ if ( $role_check ) {
 				</template>
 				<template v-slot:body="{ items }">
 					<tbody>
-					<tr v-for="item in items" :key="item.site_id" @click="goToPath( `/account/sites/${item.name}` )" style="cursor:pointer;">
+					<tr v-for="item in items" :key="item.site_id" @click="goToPath( `/account/sites/${item.site_id}` )" style="cursor:pointer;">
 						<td>
 							<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-100.jpg` class="elevation-1" width="50" v-show="item.screenshot_base"></v-img>
 						</td>
@@ -1827,7 +1826,7 @@ if ( $role_check ) {
 								cols="12"
 								sm="4"
 								>
-								<v-card tile style="cursor: pointer" @click="goToPath( `/account/sites/${item.name}` )">
+								<v-card tile style="cursor: pointer" @click="goToPath( `/account/sites/${item.site_id}` )">
 									<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-800.jpg` :aspect-ratio="8/5" v-show="item.screenshot_base">
 									<v-row align="end" class="lightbox white--text pa-2 fill-height">
 									<v-col class="pa-1">
@@ -1867,7 +1866,7 @@ if ( $role_check ) {
 						:items="sites"
 						return-object
 						item-text="name"
-						@input="goToPath( `/account/sites/${dialog_site.site.name}` )"
+						@input="goToPath( `/account/sites/${dialog_site.site.site_id}` )"
 						class="mt-5"
 						spellcheck="false"
 						flat
@@ -1883,7 +1882,7 @@ if ( $role_check ) {
 							<span>Add Log Entry</span>
 						</v-tooltip>
 						<v-divider vertical class="mx-1" inset v-show="role == 'administrator'"></v-divider>
-						<v-btn text href="/account/sites" @click.prevent="goToPath( '/account/sites' )"><v-icon>mdi-arrow-left</v-icon> Back to sites</v-btn>
+						<v-btn text href="/account/sites" @click.prevent="goToPath( '/account/sites' )"><v-icon>mdi-arrow-left</v-icon> Back</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-tabs v-model="dialog_site.site.tabs" background-color="primary" dark>
@@ -2888,7 +2887,7 @@ if ( $role_check ) {
 				<v-toolbar flat color="grey lighten-4">
 					<v-toolbar-title>Add Site</v-toolbar-title>
 				<v-spacer></v-spacer>
-					<v-btn icon @click.native="dialog_site.step = 1">
+					<v-btn icon @click="goToPath( `/account/sites` )">
 						<v-icon>close</v-icon>
 						</v-btn>
 				</v-toolbar>
@@ -2916,7 +2915,7 @@ if ( $role_check ) {
 						</v-layout>
 						<v-layout>
 							<v-flex xs6 class="mx-2">
-						    	<v-text-field :value="dialog_new_site.site" @change.native="dialog_new_site.site = $event.target.value" label="Site name" required hint="Should match provider site name."></v-text-field>
+						    	<v-text-field :value="dialog_new_site.site" @change.native="dialog_new_site.site = $event.target.value" label="Site name" required hint="Should match provider site name." persistent-hint></v-text-field>
 						</v-flex>
 							<v-flex xs6 class="mx-2">
 							<v-autocomplete
@@ -3305,7 +3304,7 @@ if ( $role_check ) {
 				>
 				<template v-slot:body="{ items }">
 					<tbody>
-					<tr v-for="item in items" @click="goToPath( `/account/dns/${item.name}`)" style="cursor:pointer;">
+					<tr v-for="item in items" @click="goToPath( `/account/dns/${item.domain_id}`)" style="cursor:pointer;">
 						<td>{{ item.name }}</td>
 					</tr>
 					</tbody>
@@ -3321,7 +3320,7 @@ if ( $role_check ) {
 								:items="domains"
 								return-object
 								item-text="name"
-								@input="goToPath( `/account/dns/${dialog_domain.domain.name}`)"
+								@input="goToPath( `/account/dns/${dialog_domain.domain.domain_id}`)"
 								class="mt-5"
 								spellcheck="false"
 								flat
@@ -3330,7 +3329,7 @@ if ( $role_check ) {
 							<span v-show="dnsRecords > 0" class="body-2 ml-4">{{ dnsRecords }} records</span>
 							<v-spacer></v-spacer>
 							<v-toolbar-items>
-								<v-btn text href="/account/dns" @click.prevent="goToPath( '/account/dns' )"><v-icon>mdi-arrow-left</v-icon> Back to domains</v-btn>
+								<v-btn text href="/account/dns" @click.prevent="goToPath( '/account/dns' )"><v-icon>mdi-arrow-left</v-icon> Back</v-btn>
 							</v-toolbar-items>
 						</v-toolbar>
 						<v-row v-if="dialog_domain.errors">
@@ -3953,7 +3952,7 @@ if ( $role_check ) {
 					>
 					<template v-slot:body="{ items }">
 						<tbody>
-						<tr v-for="item in items" :key="item.account_id" @click="showAccount( item.account_id )" style="cursor:pointer;">
+						<tr v-for="item in items" :key="item.account_id" @click="goToPath( `/account/accounts/${item.account_id}`)" style="cursor:pointer;">
 							<td>{{ item.name }}</td>
 							<td><span v-show="item.metrics.users != '' && item.metrics.users != null">{{ item.metrics.users }}</span></td>
 							<td><span v-show="item.metrics.sites != '' && item.metrics.sites != null">{{ item.metrics.sites }}</span></td>
@@ -3974,8 +3973,8 @@ if ( $role_check ) {
 									<v-btn text small @click="dialog_configure_defaults.show = true" v-on="on"><v-icon dark>mdi-clipboard-check-outline</v-icon></v-btn>
 								</template><span>Configure Defaults</span>
 							</v-tooltip>
-							<v-divider vertical class="mx-1" inset v-if="role == 'administrator' || dialog_account.records.owner"></v-divider>
-							<v-btn text @click="dialog_account.step = 1"><v-icon>mdi-arrow-left</v-icon> Back to accounts</v-btn>
+							<v-divider vertical class="mx-1" inset></v-divider>
+							<v-btn text href="/account/accounts" @click.prevent="goToPath( '/account/accounts' )"><v-icon>mdi-arrow-left</v-icon> Back</v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
 					<v-tabs v-model="account_tab" background-color="primary" dark>
@@ -5175,14 +5174,14 @@ new Vue({
 		} else {
 			this.wp_nonce = wpApiSettings.nonce
 		}
-		axios.get(
-			'/wp-json/captaincore/v1/accounts', {
-				headers: {'X-WP-Nonce':this.wp_nonce}
-			})
-			.then(response => {
-				this.accounts = response.data;
-			});
-		this.fetchRecipes();
+		if ( this.socket == "/ws" ) {
+			console.log("Socket not defined")
+			window.history.pushState( {}, 'connect', "/account/connect" )
+			this.route = "connect"
+			return;
+		}
+		this.fetchAccounts()
+		this.fetchRecipes()
 		if ( this.role == 'administrator' ) {
 			this.fetchProcesses();
 		}
@@ -5438,19 +5437,31 @@ new Vue({
 			if ( this.route_path == "" ) {
 				this.dialog_domain.step = 1
 				this.dialog_site.step = 1
+				this.dialog_account.step = 1
 			}
 			if ( this.route == "dns" && this.route_path != "" ) {
 				this.dialog_domain.step = 2				
-				domain = this.domains.filter( d => d.name == this.route_path )[0]
+				domain = this.domains.filter( d => d.domain_id == this.route_path )[0]
 				if ( domain ) {
 					this.modifyDNS( domain )
 				}
 			}
+			if ( this.route == "sites" && this.route_path == "new" ) {
+				this.dialog_site.step = 3
+				return
+			}
 			if ( this.route == "sites" && this.route_path != "" ) {
 				this.dialog_site.step = 2				
-				site = this.sites.filter( d => d.name == this.route_path )[0]
+				site = this.sites.filter( s => s.site_id == this.route_path )[0]
 				if ( site ) {
 					this.showSite( site )
+				}
+			}
+			if ( this.route == "accounts" && this.route_path != "" ) {
+				this.dialog_account.step = 2				
+				account = this.accounts.filter( a => a.account_id == this.route_path )[0]
+				if ( account ) {
+					this.showAccount( account.account_id )
 				}
 			}
 		},
@@ -6203,7 +6214,7 @@ new Vue({
 					this.domains_loading = false
 					this.loading_page = false
 					if ( this.dialog_domain.step == 2 && this.route_path != "" ) {
-						domain = this.domains.filter( d => d.name == this.route_path )[0]
+						domain = this.domains.filter( d => d.domain_id == this.route_path )[0]
 						this.modifyDNS( domain )
 					}
 					setTimeout(this.fetchMissing, 4000)
@@ -6272,7 +6283,10 @@ new Vue({
 				headers: {'X-WP-Nonce':this.wp_nonce}
 			})
 			.then(response => {
-				this.accounts = response.data;
+				this.accounts = response.data
+				if ( this.dialog_account.step == 2 && this.route_path != "" ) {
+					this.showAccount( this.route_path )
+				}
 				setTimeout(this.fetchMissing, 1000)
 			});
 		},
@@ -6351,7 +6365,7 @@ new Vue({
 					this.sites = response.data
 					this.loading_page = false
 					if ( this.dialog_site.step == 2 && this.route_path != "" ) {
-						site = this.sites.filter( d => d.name == this.route_path )[0]
+						site = this.sites.filter( d => d.site_id == this.route_path )[0]
 						this.showSite( site )
 					}
 					setTimeout(this.fetchMissing, 1000)
