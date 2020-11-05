@@ -9422,7 +9422,7 @@ new Vue({
 
 			// Adds new job
 			job_id = Math.round((new Date()).getTime());
-			description = "Saving update settings for " + site.name + " (" + site.environment_selected.env + ")";
+			description = "Saving update settings for " + site.name + " (" + this.dialog_site.environment_selected.environment + ")";
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: [], "command":"saveUpdateSettings"});
 
 			// Prep AJAX request
@@ -9430,7 +9430,7 @@ new Vue({
 				'action': 'captaincore_ajax',
 				'post_id': site.site_id,
 				'command': "updateSettings",
-				'environment': site.environment_selected.environment,
+				'environment': this.dialog_site.environment_selected.environment,
 				'value': { 
 					"updates_exclude_plugins": this.dialog_update_settings.environment.updates_exclude_plugins, 
 					"updates_exclude_themes": this.dialog_update_settings.environment.updates_exclude_themes, 
