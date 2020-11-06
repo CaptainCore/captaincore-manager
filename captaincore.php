@@ -3642,6 +3642,80 @@ function captaincore_local_action_callback() {
 
 }
 
+add_action( 'wp_ajax_captaincore_user', 'captaincore_user_action_callback' );
+function captaincore_user_action_callback() {
+	global $wpdb;
+	$user = new CaptainCore\User;
+	$cmd  = $_POST['command'];
+	$everyone_commands = [
+		'fetchRequestedSites',
+	];
+
+	if ( ! $user->is_admin() && ! in_array( $cmd, $everyone_commands ) ) {
+		echo "Permission denied";
+		wp_die();
+		return;
+	}
+
+	if ( $cmd == 'fetchRequestedSites' ) {;
+		echo json_encode( $user->fetch_requested_sites() );
+	};
+
+	wp_die();
+
+}
+
+add_action( 'wp_ajax_captaincore_account', 'captaincore_account_action_callback' );
+function captaincore_account_action_callback() {
+	global $wpdb;
+	$user = new CaptainCore\User;
+	$cmd  = $_POST['command'];
+	$everyone_commands = [
+		'requestSite',
+		'deleteRequestSite',
+	];
+	$account_id = intval( $_POST['account_id'] );
+
+	// Only proceed if have permission to particular site id.
+	if ( ! $user->is_admin() && isset( $account_id ) && ! captaincore_verify_permissions_account( $account_id ) && ! in_array( $_POST['command'], $everyone_commands ) ) {
+		echo "Permission denied";
+		wp_die();
+		return;
+	}
+
+	if ( $cmd == 'requestSite' ) {
+		$user->request_site( $_POST['value'] );
+		echo json_encode( $user->fetch_requested_sites() );
+	};
+
+	if ( $cmd == 'backRequestSite' ) {
+		$request = (object) $_POST['value'];
+		$user->back_request_site( $request );
+		echo json_encode( $user->fetch_requested_sites() );
+	};
+
+	if ( $cmd == 'continueRequestSite' ) {
+		$request = (object) $_POST['value'];
+		$user->continue_request_site( $request );
+		echo json_encode( $user->fetch_requested_sites() );
+	};
+	
+	if ( $cmd == 'updateRequestSite' ) {
+		$request = (object) $_POST['value'];
+		$user->update_request_site( $request );
+		echo json_encode( $user->fetch_requested_sites() );
+	};
+
+	if ( $cmd == 'deleteRequestSite' ) {
+		$request = (object) $_POST['value'];
+		$user->delete_request_site( $request );
+		echo json_encode( $user->fetch_requested_sites() );
+	};
+
+	wp_die(); // this is required to terminate immediately and return a proper response
+
+}
+
 add_action( 'wp_ajax_captaincore_ajax', 'captaincore_ajax_action_callback' );
 function captaincore_ajax_action_callback() {
 	global $wpdb;
@@ -3650,7 +3724,8 @@ function captaincore_ajax_action_callback() {
 	$everyone_commands = [
 		'newRecipe',
 		'updateRecipe',
-		'updateSiteAccount'
+		'updateSiteAccount',
+		'requestSite',
 	];
 
 	if ( is_array( $_POST['post_id'] ) ) {
