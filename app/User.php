@@ -125,4 +125,145 @@ class User {
         return $record;
     }
 
+    public function fetch_requested_sites() {
+        $requested_sites = get_user_meta( $this->user_id, 'requested_sites', true );
+        if ( self::is_admin() ) {
+            $requested_sites = ( new Users )->requested_sites();
+        }
+        if ( empty( $requested_sites ) ) {
+            $requested_sites = [];
+        }
+        foreach ( $requested_sites as $key => $requested_site ) {
+            $requested_sites[ $key ] = (object) $requested_site;
+            $requested_sites[ $key ]->show = false;
+        }
+        return $requested_sites;
+    }
+
+    public function requested_sites() {
+        $requested_sites = get_user_meta( $this->user_id, 'requested_sites', true );
+        if ( empty( $requested_sites ) ) {
+            $requested_sites = [];
+        }
+        foreach ( $requested_sites as $key => $requested_site ) {
+            $requested_sites[ $key ] = (object) $requested_site;
+            $requested_sites[ $key ]->show = false;
+        }
+        return $requested_sites;
+    }
+
+    public function request_site( $site ) {
+        $requested_sites   = self::requested_sites();
+        $requested_sites[] = $site;
+        update_user_meta( $this->user_id, 'requested_sites', $requested_sites );
+        $site    = (object) $site;
+        $user    = (object) self::fetch();
+        $account = ( new Accounts )->get( $site->account_id );
+        $body    = "{$user->name} is requesting a new site <strong>'{$site->name}'</strong> for account '{$account->name}'.";
+        if ( $site->notes != "" ) {
+            $body = "$body Message from {$user->name}:<br /><br />{$site->notes}";
+        }
+        
+        // Send out admin email notice
+		$to      = get_option('admin_email');
+		$subject = "Request new site '{$site->name}' from {$user->name}";
+		$headers = [ 'Content-Type: text/html; charset=UTF-8' ];
+		wp_mail( $to, $subject, $body, $headers );
+    }
+
+    public function update_request_site( $site ) {
+        $site    = (object) $site;
+        $user_id = get_current_user_id();
+        if ( self::is_admin() ) {
+            $user_id = $site->user_id;
+        }
+
+        $requested_sites   = ( new self( $user_id, true ) )->requested_sites();
+        foreach( $requested_sites as $key => $request ) {
+            if ( $request->created_at == $site->created_at ) {
+                $requested_sites[ $key ] = $site;
+            }
+        }
+        update_user_meta( $user_id, 'requested_sites', array_values( $requested_sites ) );
+    }
+
+    public function back_request_site( $site ) {
+
+        $site       = (object) $site;
+        $site->step = $site->step - 1;
+        if ( $site->step == 1 ) {
+            unset( $site->processing_at );
+            unset( $site->ready_at );
+        }
+        if ( $site->step == 2 ) {
+            $site->processing_at = time();
+            unset( $site->ready_at );
+        }
+        if ( $site->step == 3 ) {
+            $site->ready_at = time();
+        }
+        $user_id = get_current_user_id();
+        if ( self::is_admin() ) {
+            $user_id = $site->user_id;
+        }
+
+        $requested_sites   = ( new self( $user_id, true ) )->requested_sites();
+        foreach( $requested_sites as $key => $request ) {
+            if ( $request->created_at == $site->created_at ) {
+                $requested_sites[ $key ] = $site;
+            }
+        }
+        update_user_meta( $user_id, 'requested_sites', array_values( $requested_sites ) );
+    }
+
+    public function continue_request_site( $site ) {
+
+        $site       = (object) $site;
+        $site->step = $site->step + 1;
+        if ( $site->step == 1 ) {
+            unset( $site->processing_at );
+            unset( $site->ready_at );
+        }
+        if ( $site->step == 2 ) {
+            $site->processing_at = time();
+            unset( $site->ready_at );
+        }
+        if ( $site->step == 3 ) {
+            $site->ready_at = time();
+        }
+        $user_id = get_current_user_id();
+        if ( self::is_admin() ) {
+            $user_id = $site->user_id;
+        }
+
+        $requested_sites   = ( new self( $user_id, true ) )->requested_sites();
+        foreach( $requested_sites as $key => $request ) {
+            if ( $request->created_at == $site->created_at ) {
+                $requested_sites[ $key ] = $site;
+            }
+        }
+        update_user_meta( $user_id, 'requested_sites', array_values( $requested_sites ) );
+    }
+
+    public function delete_request_site( $site ) {
+
+        $site    = (object) $site;
+        $user_id = get_current_user_id();
+        if ( self::is_admin() ) {
+            $user_id = $site->user_id;
+        }
+
+        $requested_sites   = ( new self( $user_id, true ) )->requested_sites();
+        foreach( $requested_sites as $key => $request ) {
+            if ( $request->created_at == $site->created_at ) {
+                unset( $requested_sites[ $key ] );
+            }
+        }
+        update_user_meta( $user_id, 'requested_sites', array_values( $requested_sites ) );
+    }
+
+    public function delete_requested_sites() {
+        delete_user_meta( $this->user_id, 'requested_sites' );
+    }
+
 }

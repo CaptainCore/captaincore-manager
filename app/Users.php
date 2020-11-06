@@ -28,6 +28,20 @@ class Users {
         return $users;
     }
 
+    public function requested_sites() {
+        $results     = [];
+        $fetch_users = get_users();
+        foreach( $fetch_users as $user ) {
+            $requested_sites = ( new User( $user->ID, true ) )->requested_sites();
+            foreach( $requested_sites as $requested_site ) {
+                $requested_site = (object) $requested_site;
+                $requested_site->user_id = $user->ID;
+                $results[]               = $requested_site;
+            }
+        }
+        return $results;
+    }
+
     public function update( $user ) {
         $user         = (object) $user;
         $user->errors = [];

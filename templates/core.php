@@ -413,10 +413,10 @@ if ( $role_check ) {
 				</v-toolbar>
 				<v-card-text>
 					<v-row>
-						<v-col><v-text-field :value="dialog_request_site.request.site" @change.native="dialog_request_site.request.site = $event.target.value" label="Name or Domain" hint="Please enter a name or domain name you wish to use for the new WordPress site." persistent-hint></v-text-field></v-col>
+						<v-col><v-text-field :value="dialog_request_site.request.name" @change.native="dialog_request_site.request.name = $event.target.value" label="Name or Domain" hint="Please enter a name or domain name you wish to use for the new WordPress site." persistent-hint></v-text-field></v-col>
 					</v-row>
 					<v-row>
-						<v-col><v-select :value="dialog_request_site.request.account_id" @change.native="dialog_request_site.request.account_id = $event.target.value" label="Account" :items="accounts" item-text="name" item-value="account_id"></v-select></v-col>
+						<v-col><v-select v-model="dialog_request_site.request.account_id" label="Account" :items="accounts" item-text="name" item-value="account_id"></v-select></v-col>
 					</v-row>
 					<v-row>
 						<v-col><v-textarea :value="dialog_request_site.request.notes" @change.native="dialog_request_site.request.notes = $event.target.value" label="Notes" hint="Anything else you'd like to mention about this new site? (Optional)" persistent-hint></vtext-area></v-col>
@@ -1720,25 +1720,88 @@ if ( $role_check ) {
 							<span>Advanced Options</span>
 				</v-tooltip>
 						<v-btn v-if="role == 'administrator'" text @click="goToPath( `/account/sites/new` )">Add Site <v-icon dark>add</v-icon></v-btn>
+						<v-btn v-else text @click="dialog_request_site.show = true; dialog_request_site.request.account_id = accounts[0].account_id">Add Site <v-icon dark>add</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
-			<v-card-text v-show="site_requests.length > 0">
-			<v-stepper value="1" v-for="(request, index) in site_requests" alt-labels class="mb-3">
-				<v-toolbar flat dense class="primary white--text">
-					{{ request.site }} in {{ account_name( request.account_id ) }}
+			<v-sheet v-show="dialog_site.step == 1">
+				<v-card-text v-show="requested_sites.length > 0">
+				<v-dialog v-model="dialog_site_request.show" width="500">
+				<v-card>
+					<v-card-title class="headline grey lighten-2">
+					Update site request
+					</v-card-title>
+
+					<v-card-text>
+						<v-text-field label="New Site URL" v-model="dialog_site_request.request.url"></v-text-field>
+						<v-text-field label="Name" v-model="dialog_site_request.request.name"></v-text-field>
+						<v-textarea label="Notes" v-model="dialog_site_request.request.notes"></v-textarea>
+					</v-card-text>
+					<v-divider></v-divider>
+					<v-card-actions>
 					<v-spacer></v-spacer>
-					<v-btn small @click="cancelRequest( index )">Cancel</v-btn>
+					<v-btn @click="dialog_site_request.show = false">Cancel</v-btn>
+					<v-btn color="primary" @click="updateRequestSite">Save</v-btn>
+					</v-card-actions>
+				</v-card>
+				</v-dialog>
+				<v-stepper :value="request.step" v-for="(request, index) in requested_sites" class="mb-3">
+				<v-toolbar flat dense class="primary white--text">
+						<div v-if="role == 'administrator'">Requested by {{ user_name( request.user_id ) }} -&nbsp;</div><strong>{{ request.name }}</strong>&nbsp;in {{ account_name( request.account_id ) }}
+					<v-spacer></v-spacer>
+						<v-btn small @click="modifyRequest( index )" v-show="role == 'administrator'" class="mx-1">Modify</v-btn>
+						<v-btn small @click="finishRequest( index )" v-if="request.step == 3" class="mx-1">Finish</v-btn>
+						<v-btn small @click="cancelRequest( index )" v-else class="mx-1">Cancel</v-btn>
 				</v-toolbar>
 				<v-stepper-header class="elevation-0">
-				<v-stepper-step step="1" complete>Requesting site<small>{{ request.created_at | pretty_timestamp_epoch }}</small></v-stepper-step>
+						<v-stepper-step step="1" :complete="request.step > 0">Requesting site<small>{{ request.created_at | pretty_timestamp_epoch }}</small></v-stepper-step>
 				<v-divider></v-divider>
-				<v-stepper-step step="2">Preparing new site</v-stepper-step>
+						<v-stepper-step step="2" :complete="request.step > 1">Preparing new site<small v-show="request.processing_at">{{ request.processing_at | pretty_timestamp_epoch }}</small></v-stepper-step>
 				<v-divider></v-divider>
-				<v-stepper-step step="3">Ready to use</v-stepper-step>
+						<v-stepper-step step="3" :complete="request.step > 2">Ready to use<small v-show="request.ready_at">{{ request.ready_at | pretty_timestamp_epoch }}</small></v-stepper-step>
 				</v-stepper-header>
+					<v-stepper-items>
+					<v-stepper-content step="1">
+					<div>{{ request.notes }}</div>
+						<v-btn color="primary" @click="continueRequestSite( request )" v-show="role == 'administrator'">
+							Continue
+						</v-btn>
+					</v-stepper-content>
+					<v-stepper-content step="2">
+					<div v-show="role == 'administrator'">
+						<v-btn @click="backRequestSite( request )">
+							Back
+						</v-btn>
+						<v-btn color="primary" @click="continueRequestSite( request )">
+							Continue
+						</v-btn>
+					</div>
+					</v-stepper-content>
+					<v-stepper-content step="3">
+						<v-card v-if="typeof request.url == 'string' && request.url != ''" class="elevation-2 ma-2">
+						<v-list dense>
+							<v-list-item :href="request.url" target="_blank" dense>
+							<v-list-item-content>
+								<v-list-item-title>Link</v-list-item-title>
+								<v-list-item-subtitle v-text="request.url"></v-list-item-subtitle>
+							</v-list-item-content>
+							<v-list-item-icon>
+								<v-icon>mdi-open-in-new</v-icon>
+							</v-list-item-icon>
+							</v-list-item>
+						</v-list>
+						</v-card>
+					<div v-show="role == 'administrator'">
+						<v-btn @click="backRequestSite( request )">
+							Back
+						</v-btn>
+						<v-btn color="primary" @click="continueRequestSite( request )">
+							Continue
+						</v-btn>
+					</div>
+					</v-stepper-content>
+					</v-stepper-items>
 			</v-stepper>
 			</v-card-text>
-			<v-sheet v-show="dialog_site.step == 1">
 				<v-data-table
 					v-model="sites_selected"
 					:headers="[
@@ -4903,8 +4966,8 @@ new Vue({
 		dialog_account: { show: false, records: { account: { defaults: { recipes: [] } } }, new_invite: false, new_invite_email: "", step: 1 },
 		dialog_new_account: { show: false, name: "", records: {} },
 		dialog_user: { show: false, user: {}, errors: [] },
-		dialog_request_site: { show: false, request: { site: "", account_id: "", notes: "" } },
-		site_requests: [],
+		dialog_request_site: { show: false, request: { name: "", account_id: "", notes: "" } },
+		requested_sites: <?php echo json_encode( ( new CaptainCore\User )->fetch_requested_sites() ); ?>,
 		new_invite: { account: {}, records: {} },
 		new_account: { password: "" },
 		timeline_logs: [],
@@ -4989,6 +5052,7 @@ new Vue({
 		new_recipe: { show: false, title: "", content: "", public: 1 },
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_site: { loading: true, step: 1, backup_step: 1, environment_selected: { environment_id: "0", quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
+		dialog_site_request: { show: false, request: {} },
 		dialog_edit_account: { show: false, account: {} },
 		roles: [{ name: "Subscriber", value: "subscriber" },{ name: "Contributor", value: "contributor" },{ name: "Author", value: "author" },{ name: "Editor", value: "editor" },{ name: "Administrator", value: "administrator" }],
 		new_plugin: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {} },
@@ -5180,6 +5244,7 @@ new Vue({
 			this.route = "connect"
 			return;
 		}
+		this.checkRequestedSites()
 		this.fetchAccounts()
 		this.fetchRecipes()
 		if ( this.role == 'administrator' ) {
@@ -5566,8 +5631,19 @@ new Vue({
 				this.filterSites();
 			}
 		},
+		user_name( user_id ) {
+			users = this.users.filter( u => u.user_id == user_id )
+			if ( users.length != 1 ) {
+				return ""
+			}
+			return users[0].name
+		},
 		account_name( account_id ) {
-			return this.accounts.filter( a => a.account_id == account_id )[0].name
+			accounts = this.accounts.filter( a => a.account_id == account_id )
+			if ( accounts.length != 1 ) {
+				return ""
+			}
+			return accounts[0].name
 		},
 		compare(key, order='asc') {
 			return function(a, b) {
@@ -5935,31 +6011,122 @@ new Vue({
 			// Copy production home directory to staging field
 			this.dialog_edit_site.site.environments[1].home_directory = this.dialog_edit_site.site.environments[0].home_directory;
 		},
+		checkRequestedSites() {
+			var data = {
+				'action': 'captaincore_user',
+				'command': "fetchRequestedSites",
+			}
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.requested_sites = response.data
+					if ( this.requested_sites.length != 0 ) {
+						setTimeout(this.checkRequestedSites, 5000)
+					}
+					if ( this.requested_sites.length == 0 && this.role == 'administrator' ) {
+						setTimeout(this.checkRequestedSites, 5000)
+					}
+				})
+				.catch( error => console.log( error ) );
+		},
 		requestSite() {
-			if ( this.dialog_request_site.request.site == "" || this.dialog_request_site.request.account_id == "" ) {
+			if ( this.dialog_request_site.request.name == "" || this.dialog_request_site.request.account_id == "" ) {
 				this.snackbar.message = "Please enter a site name."
 				this.snackbar.show = true
 				return
 			}
-			this.dialog_request_site.request.created_at =  Math.round((new Date()).getTime() / 1000)
+			this.dialog_request_site.request.created_at = Math.round((new Date()).getTime() / 1000)
+			this.dialog_request_site.request.step = 1
 			var data = {
-				'action': 'captaincore_ajax',
+				'action': 'captaincore_account',
 				'command': "requestSite",
-				'value': this.dialog_request_site.request
+				'value': this.dialog_request_site.request,
+				'account_id': this.dialog_request_site.request.account_id
 			}
-			name = this.dialog_request_site.request.site
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.requested_sites = response.data
+					if ( this.requested_sites.length == 1 ) {
+						this.checkRequestedSites()
+					}
+				})
+				.catch( error => console.log( error ) );
+			name = this.dialog_request_site.request.name
 			this.snackbar.message = `Requesting new site for ${name}`
 			this.snackbar.show = true
-			this.site_requests.push( this.dialog_request_site.request )
-			this.dialog_request_site = { show: false, request: { site: "", account_id: "", notes: "" } }
+			this.dialog_request_site = { show: false, request: { name: "", account_id: "", notes: "" } }
+		},
+		backRequestSite( site_request ) {
+			var data = {
+				'action': 'captaincore_account',
+				'command': "backRequestSite",
+				'value': site_request,
+			}
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.requested_sites = response.data
+				})
+				.catch( error => console.log( error ) )
+		},
+		continueRequestSite( site_request ) {
+			var data = {
+				'action': 'captaincore_account',
+				'command': "continueRequestSite",
+				'value': site_request,
+			}
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.requested_sites = response.data
+				})
+				.catch( error => console.log( error ) )
+		},
+		updateRequestSite() {
+			var data = {
+				'action': 'captaincore_account',
+				'command': "updateRequestSite",
+				'value': this.dialog_site_request.request,
+			}
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.dialog_site_request.show = false
+					this.requested_sites = response.data
+				})
+				.catch( error => console.log( error ) )
+		},
+		modifyRequest( index ) {
+			this.dialog_site_request.show = true
+			this.dialog_site_request.request = JSON.parse ( JSON.stringify ( this.requested_sites[index] ) )
+		},
+		finishRequest( index ) {
+			site_request = this.requested_sites[index]
+			var data = {
+				'action': 'captaincore_account',
+				'command': "deleteRequestSite",
+				'value': site_request,
+				'account_id': site_request.account_id
+			}
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.requested_sites = response.data
+				})
+				.catch( error => console.log( error ) )
 		},
 		cancelRequest( index ) {
-			site_request = this.site_requests[index]
-			should_proceed = confirm( `Cancel request to create site "${site_request.site}" for account "${this.account_name( site_request.account_id )}".` )
+			site_request = this.requested_sites[index]
+			should_proceed = confirm( `Cancel request to create site "${site_request.name}" for account "${this.account_name( site_request.account_id )}".` )
 			if ( ! should_proceed ) {
 				return
 			}
-			this.site_requests.splice( index, 1 )
+			var data = {
+				'action': 'captaincore_account',
+				'command': "deleteRequestSite",
+				'value': site_request,
+				'account_id': site_request.account_id
+			}
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.requested_sites = response.data
+				})
+				.catch( error => console.log( error ) )
 		},
 		submitNewSite() {
 			this.dialog_new_site.saving = true
