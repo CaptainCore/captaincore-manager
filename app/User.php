@@ -161,7 +161,7 @@ class User {
         $account = ( new Accounts )->get( $site->account_id );
         $body    = "{$user->name} is requesting a new site <strong>'{$site->name}'</strong> for account '{$account->name}'.";
         if ( $site->notes != "" ) {
-            $body = "$body Message from {$user->name}:<br /><br />{$site->notes}";
+            $body = "$body<br /><br />Message from {$user->name}:<br />{$site->notes}";
         }
         
         // Send out admin email notice
