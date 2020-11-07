@@ -4966,7 +4966,13 @@ new Vue({
 		dialog_delete_user: { show: false, site: {}, users: [], username: "", reassign: {} },
 		dialog_apply_https_urls: { show: false, site_id: "", site_name: "", sites: [] },
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
-		dialog_edit_site: { show: false, show_vars: false, site: {}, loading: false },
+		dialog_edit_site: { show: false, show_vars: false, loading: false, site: {
+				environments: [
+					{"environment": "Production", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" },
+					{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" }
+				],
+			},
+		},
 		dialog_new_domain: { show: false, domain: { name: "", account_id: "" }, loading: false, errors: [] },
 		dialog_configure_defaults: { show: false, loading: false },
 		dialog_domain: { show: false, show_import: false, import_json: "", domain: {}, records: [], results: [], errors: [], loading: true, saving: false, step: 1 },
