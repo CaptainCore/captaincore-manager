@@ -3042,10 +3042,16 @@ if ( $role_check ) {
 						</v-flex>
 						</v-layout>
 						<v-layout class="mt-5">
-							<v-flex class="mx-2" xs6 v-for="key in dialog_new_site.environments" :key="key.index">
+							<v-flex class="mx-2" xs6 v-for="(key, index) in dialog_new_site.environments" :key="key.index">
 							<v-toolbar flat dense color="grey lighten-4">
 								<div>{{ key.environment }} Environment</div>
 								<v-spacer></v-spacer>
+								<v-tooltip top v-if="key.environment == 'Staging'">
+									<template v-slot:activator="{ on }">
+										<v-btn text small icon color="red" @click="dialog_new_site.environments.splice( index )" v-on="on"><v-icon>delete</v-icon></v-btn>
+									</template>
+									<span>Delete Environment</span>
+								</v-tooltip>
 								<v-tooltip top v-if="key.environment == 'Staging'">
 									<template v-slot:activator="{ on }">
 										<v-btn text small icon color="green" @click="new_site_preload_staging()" v-on="on"><v-icon>cached</v-icon></v-btn>
@@ -3083,6 +3089,9 @@ if ( $role_check ) {
 							</v-layout>
 						</div>
 							</v-flex>
+							<v-flex class="mx-2" xs6 v-show="dialog_new_site.environments.length == 1">
+								<v-btn @click='dialog_new_site.environments.push( {"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" } )'>Add Staging Environment</v-btn>
+							</v-flex>		
 						</v-layout>
 						<v-layout>
 						 	<v-flex xs6><v-progress-circular v-show="dialog_new_site.saving" indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></v-flex>
@@ -3228,10 +3237,16 @@ if ( $role_check ) {
 						</v-flex>
 					</v-layout>
 					<v-layout class="mt-5">
-						<v-flex class="mx-2" xs6 v-for="key in dialog_edit_site.site.environments" :key="key.index">
+						<v-flex class="mx-2" xs6 v-for="(key, index) in dialog_edit_site.site.environments" :key="key.index">
 							<v-toolbar flat dense color="grey lighten-4">
 								<div>{{ key.environment }} Environment</div>
 								<v-spacer></v-spacer>
+								<v-tooltip top v-if="key.environment == 'Staging'">
+									<template v-slot:activator="{ on }">
+										<v-btn text small icon color="red" @click="dialog_edit_site.site.environments.splice( index )" v-on="on"><v-icon>delete</v-icon></v-btn>
+									</template>
+									<span>Delete Environment</span>
+								</v-tooltip>
 								<v-tooltip top v-if="key.environment == 'Staging'">
 									<template v-slot:activator="{ on }">
 										<v-btn text small icon color="green" @click="edit_site_preload_staging()" v-on="on"><v-icon>cached</v-icon></v-btn>
@@ -3268,6 +3283,9 @@ if ( $role_check ) {
 							</v-layout>
 					</div>
 						</v-flex>
+						<v-flex class="mx-2" xs6 v-show="dialog_edit_site.site.environments.length == 1">
+							<v-btn @click='dialog_edit_site.site.environments.push( {"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" } )'>Add Staging Environment</v-btn>
+						</v-flex>	
 					</v-layout>
 					<v-layout>
 						<v-flex xs6><v-progress-circular v-show="dialog_edit_site.loading" indeterminate color="primary"></v-progress-linear></v-flex>
