@@ -2954,7 +2954,7 @@ if ( $role_check ) {
 						<v-icon>close</v-icon>
 						</v-btn>
 				</v-toolbar>
-				<v-card-text>
+				<v-card-text v-if="role == 'administrator'">
 					<v-form ref="form" :disabled="dialog_new_site.saving">
 						<v-layout v-for="error in dialog_new_site.errors">
 							<v-flex xs12>
@@ -3146,7 +3146,7 @@ if ( $role_check ) {
 						<v-icon>close</v-icon>
 						</v-btn>
 				</v-toolbar>
-				<v-card-text>
+				<v-card-text v-if="role == 'administrator'">
 				<v-form ref="form" :disabled="dialog_edit_site.loading">
 					<v-layout v-for="error in dialog_edit_site.errors">
 						<v-flex xs12>
