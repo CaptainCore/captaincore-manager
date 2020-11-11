@@ -4355,14 +4355,14 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'newSite' ) {
 		// Create new site
-		$site    = new CaptainCore\Site();
+		$site     = new CaptainCore\Site();
 		$response = $site->create( $value );
 		echo json_encode( $response );
 	}
 
 	if ( $cmd == 'updateSite' ) {
 		// Updates site
-		$site    = new CaptainCore\Site( $value["site_id"] );
+		$site     = new CaptainCore\Site( $value["site_id"] );
 		$response = $site->update( $value );
 		echo json_encode( $response );
 	}
@@ -4606,7 +4606,7 @@ function captaincore_install_action_callback() {
 		$run_in_background = true;
 	}
 	if ( $cmd == 'update' ) {
-		$command = "site sync $post_id --update-extras";
+		$command = "site sync $post_id";
 		$run_in_background = true;
 	}
 	if ( $cmd == 'update-wp' ) {
