@@ -4550,7 +4550,7 @@ function captaincore_install_action_callback() {
 	$background   = $_POST['background'];
 	$job_id       = $_POST['job_id'];
 	$notes        = $_POST['notes'];
-	$fetch        = (new CaptainCore\Site( $post_id ))->get();
+	$fetch        = ( new CaptainCore\Site( $post_id ) )->get();
 	$site         = $fetch->site;
 	$provider     = $fetch->provider;
 	$domain       = $fetch->name;
@@ -4571,7 +4571,7 @@ function captaincore_install_action_callback() {
 	}
 
 	// If many sites, fetch their names
-	if ( count($post_ids) > 0 ) {
+	if ( count ( $post_ids ) > 0 ) {
 		$site_names = [];
 		foreach( $post_ids as $id ) {
 
@@ -4758,25 +4758,6 @@ function captaincore_install_action_callback() {
 	if ( $cmd == 'manage' ) {
 
 		$run_in_background = true;
-
-		if ( is_array($post_ids) ) {
-			$command = '';
-			$sites   = [];
-			foreach ( $post_ids as $site_id ) {
-				$sites[] = get_field( 'site', $site_id );
-			}
-
-			foreach ( $value as $bulk_command ) {
-				$bulk_arguments = [];
-				foreach ( $arguments as $argument ) {
-					if ( $argument['command'] == $bulk_command && isset( $argument['input'] ) && $argument['input'] != '' ) {
-						$bulk_arguments[] = $argument['input'];
-						$command         .= "$bulk_command " . implode( ' ', $sites ) . " --" . $argument['value'] . "=\"" . $argument['input'] . "\"";
-					}
-				}
-			}
-		}
-
 		if ( is_int($post_id) ) {
 			$command = "$value $site --" . $arguments['value'] . '="' . stripslashes($arguments['input']) . '"';
 		}
