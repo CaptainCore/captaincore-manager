@@ -5955,7 +5955,7 @@ new Vue({
 								'command': "manage",
 								'value': "ssh",
 								'background': true,
-								'environment': this.dialog_site.environment_selected.environment,,
+								'environment': this.dialog_site.environment_selected.environment,
 								'arguments': { "name":"Commands","value":"command","command":"ssh","input": wp_cli }
 							};
 
