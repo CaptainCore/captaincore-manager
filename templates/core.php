@@ -4427,7 +4427,7 @@ if ( $role_check ) {
 					</v-row>
 				</v-card-text>
 					<v-data-table
-						:headers="[{ text: 'Name', value: 'name' },{ text: 'Username', value: 'username' },,{ text: 'Email', value: 'email' },{ text: '', value: 'user_id', align: 'end', sortable: false }]"
+						:headers="[{ text: 'Name', value: 'name' },{ text: 'Username', value: 'username' },{ text: 'Email', value: 'email' },{ text: '', value: 'user_id', align: 'end', sortable: false }]"
 						:items="users"
 						:search="user_search"
 						:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
@@ -6257,7 +6257,7 @@ new Vue({
 				action: 'captaincore_install',
 				post_id: site.site_id,
 				command: 'sync-data',
-				environment: site.environment_selected
+				environment: this.dialog_site.environment_selected.environment
 			};
 
 			description = "Syncing " + site.name + " info";
@@ -6321,7 +6321,11 @@ new Vue({
 					this.dialog_site.site.environments.forEach( e => {
 						e.environment_label = e.environment + " Environment"
 					})
+					if ( this.dialog_site.step == 2 && typeof this.dialog_site.environment_selected != 'undefined' ) {
+						this.dialog_site.environment_selected = this.dialog_site.site.environments.filter( e => e.environment == this.dialog_site.environment_selected.environment )[0]
+					} else {
 					this.dialog_site.environment_selected = this.dialog_site.site.environments[0]
+					}
 					this.dialog_site.loading = false
 					if ( this.dialog_site.site.tabs_management == "tab-Users" ) {
 						this.fetchUsers()
@@ -6688,7 +6692,7 @@ new Vue({
 		},
 		bulkEdit ( site_id, type ) {
 			this.bulk_edit.show = true;
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 			this.bulk_edit.site_id = site_id;
 			this.bulk_edit.site_name = site.name;
 			this.bulk_edit.items = this.dialog_site.environment_selected[ type.toLowerCase() + "_selected" ];
@@ -6727,7 +6731,7 @@ new Vue({
 				'command': "manage",
 				'value': "ssh",
 				'background': true,
-				'environment': site.environment_selected,
+				'environment': site.environment_selected,environment,
 				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 			};
 
@@ -6748,7 +6752,7 @@ new Vue({
 				'action': 'captaincore_ajax',
 				'post_id': site_id,
 				'command': 'fetchLink',
-				'environment': site.environment_selected,
+				'environment': this.dialog_site.environment_selected.environment,
 				'value': snapshot_id
 			};
 
@@ -6900,9 +6904,9 @@ new Vue({
 			site_name = this.dialog_apply_https_urls.site_name
 
 			if ( Array.isArray( site_id ) ) { 
-				environment = this.dialog_bulk.environment_selected;
+				environment = this.dialog_bulk.environment_selected
 			} else {
-				environment = site.environment_selected
+				environment = this.dialog_site.environment_selected.environment
 			}
 
 			should_proceed = confirm("Will apply ssl urls to '"+site_name+"'. Proceed?");
@@ -7467,7 +7471,7 @@ new Vue({
 				action: 'captaincore_install',
 				post_id: site.site_id,
 				command: 'recipe',
-				environment: site.environment_selected,
+				environment: this.dialog_site.environment_selected.environment,
 				value: recipe_id
 			};
 
@@ -7703,7 +7707,7 @@ new Vue({
 			this.dialog_toggle.business_link = this.business_link;
 		},
 		resetPermissions( site_id ) {
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 			should_proceed = confirm("Reset file permissions to defaults " + site.name + "?");
 			description = "Resetting file permissions to defaults on '" + site.name + "'";
 
@@ -7713,7 +7717,7 @@ new Vue({
 
 			var data = {
 				action: 'captaincore_install',
-				environment: site.environment_selected,
+				environment: this.dialog_site.environment_selected.environment,
 				post_id: site_id,
 				command: 'reset-permissions'
 			};
@@ -7801,7 +7805,7 @@ new Vue({
 				.catch( error => console.log( error ) );
 		},
 		showSiteMigration( site_id ){
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 			this.dialog_migration.sites.push( site );
 			this.dialog_migration.show = true;
 			this.dialog_migration.site_id = site.site_id
@@ -7813,7 +7817,7 @@ new Vue({
 			}	
 		},
 		siteMigration( site_id ) {
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 			site_name = site.name;
 
 			should_proceed = confirm("Migrate from backup url? This will overwrite the existing site at " + site_name + ".");
@@ -7829,7 +7833,7 @@ new Vue({
 				command: 'migrate',
 				value: this.dialog_migration.backup_url,
 				update_urls: this.dialog_migration.update_urls,
-				environment: site.environment_selected
+				environment: this.dialog_site.environment_selected.environment
 			};
 
 			self = this;
@@ -7855,13 +7859,13 @@ new Vue({
 		},
 		DeactivateSite( site_id ) {
 
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 			site_name = this.dialog_toggle.site_name;
 
 			if ( Array.isArray( site_id ) ) { 
 				environment = this.dialog_bulk.environment_selected;
 			} else {
-				environment = site.environment_selected
+				environment = this.dialog_site.environment_selected.environment
 			}
 
 			var data = {
@@ -7897,13 +7901,13 @@ new Vue({
 		},
 		ActivateSite( site_id ) {
 
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 			site_name = this.dialog_toggle.site_name;
 
 			if ( Array.isArray( site_id ) ) { 
-				environment = this.dialog_bulk.environment_selected;
+				environment = this.dialog_bulk.environment_selected
 			} else {
-				environment = site.environment_selected
+				environment = this.dialog_site.environment_selected.environment
 			}
 
 			var data = {
@@ -7947,7 +7951,7 @@ new Vue({
 
 			var data = {
 				action: 'captaincore_install',
-				environment: site.environment_selected,
+				environment: this.dialog_site.environment_selected.environment,
 				post_id: site_id,
 				command: 'deploy-defaults'
 			};
@@ -8002,7 +8006,7 @@ new Vue({
 		},
 		runCustomCode( site_id ) {
 
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 			should_proceed = confirm("Deploy custom code on "+site.name+"?");
 
 			if ( ! should_proceed ) {
@@ -8011,7 +8015,7 @@ new Vue({
 
 			var data = {
 				action: 'captaincore_install',
-				environment: site.environment_selected,
+				environment: this.dialog_site.environment_selected.environment,
 				post_id: site_id,
 				command: 'run',
 				value: this.custom_script,
@@ -8567,7 +8571,7 @@ new Vue({
 			}
 		},
 		PushProductionToStaging( site_id ) {
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 			should_proceed = confirm("Push production site " + site.name + " to staging site?");
 			description = "Pushing production site '" + site.name + "' to staging";
 
@@ -8600,7 +8604,7 @@ new Vue({
 		},
 		PushStagingToProduction( site_id ) {
 
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 			should_proceed = confirm("Push staging site " + site.name + " to production site?");
 			description = "Pushing staging site '" + site.name + "' to production";
 
@@ -8632,7 +8636,7 @@ new Vue({
 				.catch( error => console.log( error ) );
 		},
 		viewApplyHttpsUrls( site_id ) {
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 			this.dialog_apply_https_urls.show = true;
 			this.dialog_apply_https_urls.site_id = site_id
 			this.dialog_apply_https_urls.site_name = site.name;
@@ -8643,7 +8647,7 @@ new Vue({
 			this.dialog_apply_https_urls.site_name = this.sites_selected.length + " sites";
 		},
 		RollbackQuicksave( site_id, quicksave_id, addon_type, addon_name ){
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 			environment = this.dialog_site.environment_selected;
 			quicksave = environment.quicksaves.filter( quicksave => quicksave.quicksave_id == quicksave_id )[0];
 			date = this.$options.filters.pretty_timestamp_epoch(quicksave.created_at);
@@ -8654,12 +8658,12 @@ new Vue({
 				return;
 			}
 
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 
 			var data = {
 				'action': 'captaincore_install',
 				'post_id': site_id,
-				'environment': site.environment_selected,
+				'environment': this.dialog_site.environment_selected.environment,
 				'quicksave_id': quicksave_id,
 				'command': 'rollback',
 				'value'	: addon_name,
@@ -8693,12 +8697,12 @@ new Vue({
 			}
 
 			site_id = this.dialog_file_diff.quicksave.site_id
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 
 			var data = {
 				'action': 'captaincore_install',
 				'post_id': site_id,
-				'environment': site.environment_selected,
+				'environment': this.dialog_site.environment_selected.environment,
 				'quicksave_id': this.dialog_file_diff.quicksave.quicksave_id,
 				'command': 'quicksave_file_restore',
 				'value'	: this.dialog_file_diff.file_name,
@@ -8716,19 +8720,19 @@ new Vue({
 
 		},
 		QuicksaveFileDiff( site_id, quicksave_id, git_commit, file_name ) {
-			site = this.dialog_site.site;
-			environment = this.dialog_site.environment_selected;
-			file_name = file_name.split("	")[1];
-			this.dialog_file_diff.response = "";
-			this.dialog_file_diff.file_name = file_name;
-			this.dialog_file_diff.loading = true;
-			this.dialog_file_diff.quicksave = environment.quicksaves.filter(quicksave => quicksave.quicksave_id == quicksave_id)[0];
-			this.dialog_file_diff.show = true;
+			site = this.dialog_site.site
+			environment = this.dialog_site.environment_selected
+			file_name = file_name.split("	")[1]
+			this.dialog_file_diff.response = ""
+			this.dialog_file_diff.file_name = file_name
+			this.dialog_file_diff.loading = true
+			this.dialog_file_diff.quicksave = environment.quicksaves.filter(quicksave => quicksave.quicksave_id == quicksave_id)[0]
+			this.dialog_file_diff.show = true
 
 			var data = {
 				'action': 'captaincore_install',
 				'post_id': site_id,
-				'environment': site.environment_selected,
+				'environment': this.dialog_site.environment_selected.environment,
 				'quicksave_id': quicksave_id,
 				'command': 'quicksave_file_diff',
 				'commit': git_commit,
@@ -8758,8 +8762,8 @@ new Vue({
 		},
 		QuicksaveCheck( site_id ) {
 
-			site = this.dialog_site.site;
-			should_proceed = confirm("Run a manual check for new files on " + site.name + "?");
+			site = this.dialog_site.site
+			should_proceed = confirm("Run a manual check for new files on " + site.name + "?")
 
 			if ( ! should_proceed ) {
 				return;
@@ -8775,7 +8779,7 @@ new Vue({
 				'action': 'captaincore_install',
 				'post_id': site_id,
 				'command': 'quick_backup',
-				'environment': site.environment_selected,
+				'environment': this.dialog_site.environment_selected.environment,
 			};
 
 			self = this;
@@ -8795,9 +8799,9 @@ new Vue({
 		},
 		QuicksavesRollback( site_id, quicksave ) {
 
-			date = this.$options.filters.pretty_timestamp_epoch(quicksave.created_at);
-			site = this.dialog_site.site;
-			should_proceed = confirm("Will rollback all themes/plugins on " + site.name + " to " + date + ". Proceed?");
+			date = this.$options.filters.pretty_timestamp_epoch(quicksave.created_at)
+			site = this.dialog_site.site
+			should_proceed = confirm("Will rollback all themes/plugins on " + site.name + " to " + date + ". Proceed?")
 
 			if ( ! should_proceed ) {
 				return;
@@ -8813,7 +8817,7 @@ new Vue({
 				'post_id': quicksave.site_id,
 				'quicksave_id': quicksave.quicksave_id,
 				'command': 'quicksave_rollback',
-				'environment': site.environment_selected,
+				'environment': this.dialog_site.environment_selected.environment,
 			};
 
 			self = this;
@@ -8831,14 +8835,14 @@ new Vue({
 		},
 		viewQuicksavesChanges( site_id, quicksave ) {
 
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 			quicksave.view_changes = true;
 
 			var data = {
 				action: 'captaincore_install',
 				post_id: site_id,
 				command: 'view_quicksave_changes',
-				environment: site.environment_selected,
+				environment: this.dialog_site.environment_selected.environment,
 				value: quicksave.git_commit
 			};
 
@@ -8974,7 +8978,7 @@ new Vue({
 				'command': "manage",
 				'value': "ssh",
 				'background': true,
-				'environment': site.environment_selected,
+				'environment': this.dialog_site.environment_selected.environment,
 				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 			};
 
@@ -8993,7 +8997,7 @@ new Vue({
 				return;
 			}
 
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 
 			// Enable loading progress
 			site.loading_themes = true;
@@ -9010,7 +9014,7 @@ new Vue({
 				'command': "manage",
 				'value': "ssh",
 				'background': true,
-				'environment': site.environment_selected,
+				'environment': this.dialog_site.environment_selected.environment,
 				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 			};
 
@@ -9030,28 +9034,28 @@ new Vue({
 		},
 		addPlugin ( site_id ){
 			site = this.dialog_site.site
-			this.new_plugin.show = true;
-			this.new_plugin.sites.push( site );
-			this.new_plugin.site_name = site.name;
-			this.new_plugin.current_plugins = this.dialog_site.environment_selected.plugins.map( p => p.name );
-			this.new_plugin.environment_selected = site.environment_selected;
-			this.fetchPlugins();
+			this.new_plugin.show = true
+			this.new_plugin.sites.push( site )
+			this.new_plugin.site_name = site.name
+			this.new_plugin.current_plugins = this.dialog_site.environment_selected.plugins.map( p => p.name )
+			this.new_plugin.environment_selected = this.dialog_site.environment_selected.environment
+			this.fetchPlugins()
 		},
 		addPluginBulk() {
-			this.new_plugin.show = true;
-			this.new_plugin.sites = this.sites_selected;
-			this.new_plugin.site_name = this.new_plugin.sites.length + " sites";
-			this.new_plugin.current_plugins = [];
-			this.new_plugin.environment_selected = this.dialog_bulk.environment_selected;
-			this.fetchPlugins();
+			this.new_plugin.show = true
+			this.new_plugin.sites = this.sites_selected
+			this.new_plugin.site_name = this.new_plugin.sites.length + " sites"
+			this.new_plugin.current_plugins = []
+			this.new_plugin.environment_selected = this.dialog_bulk.environment_selected
+			this.fetchPlugins()
 		},
 		installPlugin ( plugin ) {
 			if ( this.new_plugin.sites.length ==  1 ) {
-				site_id = this.new_plugin.sites[0].site_id;
+				site_id = this.new_plugin.sites[0].site_id
 				environment_selected = this.new_plugin.sites[0].environment_selected
 			} else {
 				site_id = this.new_plugin.sites.map( s => s.site_id )
-				environment_selected = this.new_plugin.environment_selected
+				environment_selected = this.new_plugin.environment_selected.environment
 			}
 			site_name = this.new_plugin.site_name;
 			should_proceed = confirm("Proceed with installing plugin " + plugin.name + " on " + site_name + "?");
@@ -9177,19 +9181,19 @@ new Vue({
 		},
 		addTheme ( site_id ) {
 			site = this.dialog_site.site
-			this.new_theme.show = true;
-			this.new_theme.sites.push( site );
-			this.new_theme.site_name = site.name;
-			this.new_theme.current_themes = this.dialog_site.environment_selected.themes.map( p => p.name );
-			this.new_theme.environment_selected = site.environment_selected;
-			this.fetchThemes();
+			this.new_theme.show = true
+			this.new_theme.sites.push( site )
+			this.new_theme.site_name = site.name
+			this.new_theme.current_themes = this.dialog_site.environment_selected.themes.map( p => p.name )
+			this.new_theme.environment_selected = this.dialog_site.environment_selected.environment
+			this.fetchThemes()
 		},
 		addThemeBulk() {
-			this.new_theme.show = true;
-			this.new_theme.sites = this.sites_selected;
-			this.new_theme.site_name = this.new_theme.sites.length + " sites";
-			this.new_theme.environment_selected = this.dialog_bulk.environment_selected;
-			this.fetchThemes();
+			this.new_theme.show = true
+			this.new_theme.sites = this.sites_selected
+			this.new_theme.site_name = this.new_theme.sites.length + " sites"
+			this.new_theme.environment_selected = this.dialog_bulk.environment_selected
+			this.fetchThemes()
 		},
 		installTheme ( theme ) {
 
@@ -9328,11 +9332,11 @@ new Vue({
 		},
 		togglePlugin (plugin_name, plugin_status, site_id) {
 
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 
 			// Enable loading progress
-			this.dialog_site.site.loading_plugins = true;
-			site_name = this.dialog_site.site.name;
+			this.dialog_site.site.loading_plugins = true
+			site_name = this.dialog_site.site.name
 
 			if (plugin_status == "inactive") {
 				action = "deactivate";
@@ -9354,7 +9358,7 @@ new Vue({
 				'command': "manage",
 				'value': "ssh",
 				'background': true,
-				'environment': site.environment_selected,
+				'environment': this.dialog_site.environment_selected.environment,
 				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 			};
 
@@ -9378,7 +9382,7 @@ new Vue({
 				return;
 			}
 
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 
 			// Enable loading progress
 			this.dialog_site.site.loading_plugins = true;
@@ -9397,7 +9401,7 @@ new Vue({
 				'command': "manage",
 				'value': "ssh",
 				'background': true,
-				'environment': site.environment_selected,
+				'environment': this.dialog_site.environment_selected.environment,
 				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 			};
 
@@ -9417,7 +9421,7 @@ new Vue({
 		},
 		runUpdate( site_id ) {
 
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 			should_proceed = confirm("Apply all plugin/theme updates for " + site.name + "?");
 
 			if ( ! should_proceed ) {
@@ -9432,7 +9436,7 @@ new Vue({
 			var data = {
 				'action': 'captaincore_install',
 				'post_id': site_id,
-				'environment': site.environment_selected,
+				'environment': this.dialog_site.environment_selected.environment,
 				'command': "update-wp",
 				'background': true
 			};
@@ -9445,7 +9449,7 @@ new Vue({
 
 		},
 		themeAndPluginChecks( site_id ) {
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 			this.dialog_theme_and_plugin_checks.site = site;
 			this.dialog_theme_and_plugin_checks.show = true;
 		},
@@ -9518,7 +9522,7 @@ new Vue({
 			job.stream.push( session.data )
 		},
 		configureFathom( site_id ) {
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 			this.dialog_fathom.site = site
 			this.dialog_fathom.environment = this.dialog_site.environment_selected;
 			this.dialog_fathom.show = true;
@@ -9584,7 +9588,7 @@ new Vue({
 				'action': 'captaincore_ajax',
 				'post_id': site_id,
 				'command': "updateFathom",
-				'environment': site.environment_selected,
+				'environment': this.dialog_site.environment_selected.environment,
 				'value': environment.fathom,
 			};
 
@@ -9644,7 +9648,7 @@ new Vue({
 
 		},
 		deleteUserDialog( username, site_id ){
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 			environment = this.dialog_site.environment_selected;
 			this.dialog_delete_user.username = username
 			this.dialog_delete_user.site = site
@@ -9667,7 +9671,7 @@ new Vue({
 			}
 			site_id = site.site_id
 			site_name = site.name;
-			description = "Delete user '" + username + "' from " + site_name + " (" + site.environment_selected.environment + ")";
+			description = "Delete user '" + username + "' from " + site_name + " (" + this.dialog_site.environment_selected.environment + ")";
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"site_id":site_id,"command":"manage","description": description, "status": "queued", stream: []});
 
@@ -9680,7 +9684,7 @@ new Vue({
 				'command': "manage",
 				'value': "ssh",
 				'background': true,
-				'environment': site.environment_selected.environment,
+				'environment': this.dialog_site.environment_selected.environment,
 				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 			};
 
@@ -9740,7 +9744,7 @@ new Vue({
 		  	});
 		},
 		filterFiles( site_id, quicksave_id ) {
-			site = this.dialog_site.site;
+			site = this.dialog_site.site
 			environment = this.dialog_site.environment_selected;
 			quicksave = environment.quicksaves.filter( quicksave => quicksave.quicksave_id == quicksave_id )[0];
 			search = quicksave.search;
