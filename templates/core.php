@@ -6194,7 +6194,7 @@ new Vue({
 						// Run prep immediately after site added.
 						var data = {
 							'action': 'captaincore_install',
-							'command': "update",
+							'command': "new",
 							'post_id': response.site_id
 						};
 						axios.post( ajaxurl, Qs.stringify( data ) )
