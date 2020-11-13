@@ -4318,16 +4318,16 @@ if ( $role_check ) {
 										<tr v-if="(( parseInt( dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( dialog_account.records.account.plan.limits.storage ) ) >= 1">
 											<td>Extra</td>
 											<td>Storage</td>
-											<td>{{ Math.round ( ( ( parseInt( dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( dialog_account.records.account.plan.limits.storage ) ) / 10 ) }}</td>
+											<td>{{ Math.ceil ( ( ( parseInt( dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( dialog_account.records.account.plan.limits.storage ) ) / 10 ) }}</td>
 											<td class="text-right">${{ plan_usage_pricing_storage }}</td>
-											<td class="text-right">${{ plan_usage_pricing_storage * Math.round ( ( ( parseInt( dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( dialog_account.records.account.plan.limits.storage ) ) / 10 ) }}</td>
+											<td class="text-right">${{ plan_usage_pricing_storage * Math.ceil ( ( ( parseInt( dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( dialog_account.records.account.plan.limits.storage ) ) / 10 ) }}</td>
 										</tr>
-										<tr v-if="Math.round ( ( parseInt( dialog_account.records.account.plan.usage.visits ) - parseInt( dialog_account.records.account.plan.limits.visits ) ) / parseInt ( configurations.usage_pricing.traffic.quantity ) ) >= 1">
+										<tr v-if="Math.ceil ( ( parseInt( dialog_account.records.account.plan.usage.visits ) - parseInt( dialog_account.records.account.plan.limits.visits ) ) / parseInt ( configurations.usage_pricing.traffic.quantity ) ) >= 1">
 											<td>Extra</td>
 											<td>Visits</td>
-											<td>{{ Math.round ( ( parseInt( dialog_account.records.account.plan.usage.visits ) - parseInt( dialog_account.records.account.plan.limits.visits ) ) / parseInt ( configurations.usage_pricing.traffic.quantity ) ) }}</td>
+											<td>{{ Math.ceil ( ( parseInt( dialog_account.records.account.plan.usage.visits ) - parseInt( dialog_account.records.account.plan.limits.visits ) ) / parseInt ( configurations.usage_pricing.traffic.quantity ) ) }}</td>
 											<td class="text-right">${{ plan_usage_pricing_visits }}</td>
-											<td class="text-right">${{ plan_usage_pricing_visits * Math.round ( ( parseInt( dialog_account.records.account.plan.usage.visits ) - parseInt( dialog_account.records.account.plan.limits.visits ) ) / parseInt ( configurations.usage_pricing.traffic.quantity ) ) }}</td>
+											<td class="text-right">${{ plan_usage_pricing_visits * Math.ceil ( ( parseInt( dialog_account.records.account.plan.usage.visits ) - parseInt( dialog_account.records.account.plan.limits.visits ) ) / parseInt ( configurations.usage_pricing.traffic.quantity ) ) }}</td>
 										</tr>
 										<tr v-for="item in dialog_account.records.account.plan.addons">
 											<td>Addon</td>
@@ -5362,7 +5362,7 @@ new Vue({
 			return unit_price
 		},
 		plan_usage_pricing_visits() {
-			extra_visits = Math.round ( ( parseInt( this.dialog_account.records.account.plan.usage.visits ) - parseInt( this.dialog_account.records.account.plan.limits.visits ) ) / parseInt ( this.configurations.usage_pricing.traffic.quantity ) )
+			extra_visits = Math.ceil ( ( parseInt( this.dialog_account.records.account.plan.usage.visits ) - parseInt( this.dialog_account.records.account.plan.limits.visits ) ) / parseInt ( this.configurations.usage_pricing.traffic.quantity ) )
 			if ( extra_visits > 0 ) {
 				unit_price = this.configurations.usage_pricing.traffic.cost
 				if ( this.configurations.usage_pricing.traffic.interval != this.dialog_account.records.account.plan.interval ) {
@@ -5389,8 +5389,8 @@ new Vue({
 				units[12] = "year"
 				unit = units[ this.dialog_account.records.account.plan.interval ]
 				extra_sites = parseInt( this.dialog_account.records.account.plan.usage.sites ) - parseInt( this.dialog_account.records.account.plan.limits.sites )
-				extra_storage = Math.round ( ( ( parseInt( this.dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( this.dialog_account.records.account.plan.limits.storage ) ) / 10 )
-				extra_visits = Math.round ( ( parseInt( this.dialog_account.records.account.plan.usage.visits ) - parseInt( this.dialog_account.records.account.plan.limits.visits ) ) / parseInt ( this.configurations.usage_pricing.traffic.quantity ) )
+				extra_storage = Math.ceil ( ( ( parseInt( this.dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( this.dialog_account.records.account.plan.limits.storage ) ) / 10 )
+				extra_visits = Math.ceil ( ( parseInt( this.dialog_account.records.account.plan.usage.visits ) - parseInt( this.dialog_account.records.account.plan.limits.visits ) ) / parseInt ( this.configurations.usage_pricing.traffic.quantity ) )
 				if ( extra_sites > 0 ) {
 					unit_price = this.configurations.usage_pricing.sites.cost
 					if ( this.configurations.usage_pricing.sites.interval != this.dialog_account.records.account.plan.interval ) {
