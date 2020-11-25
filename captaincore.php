@@ -1697,6 +1697,42 @@ function captaincore_recipes_func( $request ) {
 	return ( new CaptainCore\Recipes() )->list();
 }
 
+function captaincore_running_func( $request ) {
+
+	$current_user = wp_get_current_user();
+	$role_check   = in_array( 'administrator', $current_user->roles );
+
+	// Checks for a current user. If admin found pass
+	if ( $current_user && $role_check ) {
+
+		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+			add_filter( 'https_ssl_verify', '__return_false' );
+		}
+
+		$data = [ 
+			'timeout' => 45,
+			'headers' => [
+				'Content-Type' => 'application/json; charset=utf-8', 
+				'token'        => CAPTAINCORE_CLI_TOKEN 
+			],
+			'body'        => json_encode( [ "command" => "running list" ] ), 
+			'method'      => 'POST', 
+			'data_format' => 'body' 
+		];
+
+		// Add command to dispatch server
+		$response  = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+		$processes = json_decode( $response["body"]);
+
+		usort( $processes, function($a, $b) { return strcmp($b->created_at, $a->created_at); });
+		
+		return $processes;
+
+	} 
+
+	return [];
+}
+
 function captaincore_processes_func( $request ) {
 	return ( new CaptainCore\Processes )->list();
 }
@@ -2026,6 +2062,14 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/recipes/', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_recipes_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/running/', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_running_func',
 			'show_in_index' => false
 		]
 	);
@@ -3767,6 +3811,7 @@ function captaincore_ajax_action_callback() {
 		'fetchProcess',
 		'fetchProcessRaw',
 		'fetchProcessLogs',
+		'listenProcesses',
 		'updateFathom',
 		'updateMailgun',
 		'updatePlan',
@@ -4094,6 +4139,12 @@ function captaincore_ajax_action_callback() {
 		$ssh_key = base64_encode( stripslashes_deep( $key->key ) );
 		$command = "key delete --id={$key_id}";
 
+	}
+
+	if ( $cmd == 'listenProcesses' ) {
+		$run_in_background = true;
+		$remote_command    = true;
+		$command           = "running listen";
 	}
 
 	if ( $cmd == 'newProcess' ) {
