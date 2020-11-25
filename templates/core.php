@@ -47,6 +47,48 @@ if ( $role_check ) {
 			<div class="flex" style="opacity:0;"><textarea id="clipboard" style="height:1px;display:flex;cursor:default"></textarea></div>
 		</v-toolbar-title>
 		<v-spacer></v-spacer>
+		<v-dialog v-model="dialog_processes.show" v-if="role == 'administrator'">
+		<template v-slot:activator="{ on, attrs }">
+		<v-btn icon v-bind="attrs" v-on="on" @click="fetchRunningProcesses()">
+			<v-icon>mdi-cogs</v-icon> 
+      	</v-btn>
+		</template>
+		<v-card>
+		<v-toolbar>
+          <v-toolbar-title>Running processes</v-toolbar-title>
+          <v-spacer></v-spacer>
+          <v-toolbar-items>
+		  <v-btn icon @click="dialog_processes.show = false; dialog_processes.conn.onclose()">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+          </v-toolbar-items>
+        </v-toolbar>
+		<v-data-table :headers="[{ text: 'Process ID', value: 'process_id' },{ text: 'Command', value: 'command' },{ text: 'Created At', value: 'created_at' },{ text: 'Status', value: 'completed_at' },{ text: '', value: 'progress' }]" :items="dialog_processes.processes" :loading="dialog_processes.loading">
+		<template v-slot:item.created_at="{ item }">
+			{{ item.created_at | pretty_timestamp_epoch }}
+		</template>
+		<template v-slot:item.completed_at="{ item }">
+			<span v-if="typeof item.completed_at == 'string'"><v-icon>mdi-check</v-icon> {{ item.completed_at | pretty_timestamp_epoch }}</span>
+			<div v-else-if="item.percentage < 100">
+			<v-progress-circular
+				:rotate="-90"
+				:size="50"
+				:width="5"
+				:value="item.percentage"
+				color="primary"
+				class="mr-3 my-1"
+				>
+			{{ Math.round( item.percentage * 10) / 10 }}%
+			</v-progress-circular>
+			{{ item.status }}
+			</div>
+			<div v-else>
+			<v-icon>mdi-check</v-icon> 
+			</div>
+		</template>
+		</v-data-table>
+		</v-card>
+		</v-dialog>
       </v-app-bar>
 	  <v-navigation-drawer v-model="drawer" app mobile-breakpoint="960" clipped v-if="route != 'login' && route != 'connect'">
       <v-list nav dense>
@@ -5029,6 +5071,7 @@ new Vue({
 		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->user_email; ?>", login: "<?php echo $user->user_login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", errors: [] },
 		<?php if ( current_user_can( "administrator" ) ) { ?>
 		role: "administrator",
+		dialog_processes: { show: false, processes: [], conn: {}, stream: [], loading: true },
 		dialog_new_log_entry: { show: false, sites: [], site_name: "", process: "", description: "" },
 		dialog_edit_log_entry: { show: false, site_name: "", log: {} },
 		dialog_log_history: { show: false, logs: [], pagination: {} },
@@ -6433,6 +6476,50 @@ new Vue({
 				.then(response => {
 					this.recipes = response.data;
 				});
+		},
+		fetchRunningProcesses() {
+			this.dialog_processes.loading = true
+			axios.get(
+				'/wp-json/captaincore/v1/running', {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					this.dialog_processes.processes = response.data
+					this.listenProcesses()
+				});
+		},
+		listenProcesses() {
+			var data = {
+				'action': 'captaincore_ajax',
+				'command': 'listenProcesses',
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					procesess = this.dialog_processes.processes
+					this.dialog_processes.loading = false
+					this.dialog_processes.conn = new WebSocket( this.socket )
+					this.dialog_processes.conn.onopen = () => this.dialog_processes.conn.send( '{ "token" : "'+ response.data +'", "action" : "start" }' )
+					this.dialog_processes.conn.onmessage = (session) => {
+						if ( session.data == "Error: signal: killed" ) {
+							return
+						}
+						process_update = JSON.parse( session.data )
+						results = procesess.filter( p => p.process_id == process_update.process_id )
+						if ( results.length == 1 ) {
+							results[0].status = process_update.status
+							results[0].percentage = process_update.percentage
+							results[0].completed_at = process_update.completed_at
+						}
+						if ( results.length == 0 ) {
+							this.dialog_processes.processes.unshift( { command: process_update.command, created_at: process_update.created_at, process_id: process_update.process_id, status: process_update.status, percentage: process_update.percentage })
+						}
+					}
+					this.dialog_processes.conn.onclose = () => {
+						this.dialog_processes.conn.send( '{ "token" : "'+ response.data +'", "action" : "kill" }' )
+					}
+				})
+				.catch( error => console.log( error ) );
+
 		},
 		fetchProcesses() {
 			axios.get(
