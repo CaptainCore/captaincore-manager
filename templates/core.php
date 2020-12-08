@@ -9,16 +9,7 @@
 captaincore_header_content_extracted();
 
 // Fetch current user details
-$user       = wp_get_current_user();
-$role_check = in_array( 'subscriber', $user->roles ) + in_array( 'customer', $user->roles ) + in_array( 'administrator', $user->roles ) + in_array( 'editor', $user->roles );
-if ( $role_check ) {
-	$belongs_to    = get_user_meta( 'partner', "user_{$user->ID}" );
-	$business_name = get_the_title( $belongs_to[0] );
-	$business_link = get_metadata( 'partner_link', $belongs_to[0] );
-} else {
-	$business_name = "";
-	$business_link = "";
-}
+$user = wp_get_current_user();
 ?>
 <?php if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <link rel='stylesheet' id='advanced-responsive-video-embedder-css' href='/wp-content/plugins/advanced-responsive-video-embedder/public/arve.min.css' type='text/css' media='all' />
@@ -3846,10 +3837,13 @@ if ( $role_check ) {
 					<v-col><v-btn @click="resetColors">Reset colors</a></v-btn>
 				</v-row>
 				<v-row>
-					<v-col :md="5">
+					<v-col :md="2">
 						<v-text-field v-model="configurations.name" label="Name"></v-text-field>
 					</v-col>
-					<v-col :md="5">
+					<v-col :md="4">
+						<v-text-field v-model="configurations.url" label="URL"></v-text-field>
+					</v-col>
+					<v-col :md="4">
 						<v-text-field v-model="configurations.logo" label="Logo URL"></v-text-field>
 					</v-col>
 					<v-col :md="2">
@@ -7776,22 +7770,22 @@ new Vue({
 			this.configurations.hosting_plans.splice( index, 1 )
 		},
 		toggleSite( site_id ) {
-			site = this.sites.filter( site => site.site_id == site_id )[0];
-			this.dialog_toggle.show = true;
-			this.dialog_toggle.site_id = site.site_id;
-			this.dialog_toggle.site_name = site.name;
-			this.dialog_toggle.business_name = this.business_name;
-			this.dialog_toggle.business_link = this.business_link;
+			site = this.sites.filter( site => site.site_id == site_id )[0]
+			this.dialog_toggle.show = true
+			this.dialog_toggle.site_id = site.site_id
+			this.dialog_toggle.site_name = site.name
+			this.dialog_toggle.business_name = this.configurations.name
+			this.dialog_toggle.business_link = this.configurations.url
 		},
 		toggleSiteBulk() {
 			sites = this.sites_selected
 			site_ids = this.sites_selected.map( s => s.site_id )
-			site_name = sites.length + " sites";
-			this.dialog_toggle.show = true;
-			this.dialog_toggle.site_id = site_ids;
-			this.dialog_toggle.site_name = site_name;
-			this.dialog_toggle.business_name = this.business_name;
-			this.dialog_toggle.business_link = this.business_link;
+			site_name = sites.length + " sites"
+			this.dialog_toggle.show = true
+			this.dialog_toggle.site_id = site_ids
+			this.dialog_toggle.site_name = site_name
+			this.dialog_toggle.business_name = this.configurations.name
+			this.dialog_toggle.business_link = this.configurations.url
 		},
 		resetPermissions( site_id ) {
 			site = this.dialog_site.site
