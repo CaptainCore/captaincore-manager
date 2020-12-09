@@ -8424,6 +8424,16 @@ new Vue({
 					})
 				}
 
+				if ( record.type == "SRV" ) {
+					// Check for value ending in period. If not add one.
+					record.update.record_value.forEach( v => {
+						v.value = v.value.trim();
+						if ( v.value.substr(v.value.length - 1) != "." ) {
+							v.value = v.value + ".";
+						}
+					})
+				}
+
 				if ( record.type == "TXT" ) {
 					// Check for value wrapped in quotes. If not add them.
 					record.update.record_value.forEach( v => {
