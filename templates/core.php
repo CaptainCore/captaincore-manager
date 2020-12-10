@@ -4302,7 +4302,7 @@ $user = wp_get_current_user();
 							<span class="text-uppercase caption">Estimate based on current usage</span><br />
 							<span class="display-1 font-weight-thin" v-html="plan_usage_estimate"></span><br />
 							<span>
-							<v-dialog v-model="dialog_breakdown" width="600">
+							<v-dialog v-model="dialog_breakdown" max-width="980px">
 								<template v-slot:activator="{ on, attrs }">
 									<a v-bind="attrs" v-on="on">See breakdown</a>
 								</template>
