@@ -4393,14 +4393,11 @@ $user = wp_get_current_user();
 						</v-alert>
 						</div>
 						<div v-else>
-						<v-alert
-							:value="true"
-							type="info"
-							color="primary"
-						>
+						<v-alert :value="true" type="info" color="primary">
 							Development mode, no plan selected.
 						</v-alert>
 						</div>
+						<!--
 						<v-data-table
 							:headers='[{"text":"Name","value":"name"},{"text":"Storage","value":"Storage"},{"text":"Visits","value":"visits"}]'
 							:items="dialog_account.records.usage_breakdown.sites"
@@ -4421,6 +4418,7 @@ $user = wp_get_current_user();
 						</tbody>
 						</template>
 						</v-data-table>
+						-->
 					</v-card>
 					</v-tab-item>
 					</v-tabs-items>
