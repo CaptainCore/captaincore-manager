@@ -1048,7 +1048,7 @@ $user = wp_get_current_user();
 							@change="calculateHostingPlan()"
 							v-model="dialog_modify_plan.plan.interval"
 							label="Plan Interval"
-							:items="[{ text: 'Yearly', value: '12' },{ text: 'Monthly', value: '1' },{ text: 'Quarterly', value: '4' },{ text: 'Biannual', value: '6' }]"
+							:items="[{ text: 'Yearly', value: '12' },{ text: 'Monthly', value: '1' },{ text: 'Quarterly', value: '3' },{ text: 'Biannual', value: '6' }]"
 							:value="dialog_modify_plan.plan.interval"
 						></v-select>
 						</v-flex>
@@ -4279,19 +4279,19 @@ $user = wp_get_current_user();
 						<v-col>
 						<v-layout align-center justify-left row/>
 							<div style="padding: 10px 10px 10px 20px;">
-								<v-progress-circular :size="50" :value="( dialog_account.records.account.plan.usage.storage / ( dialog_account.records.account.plan.limits.storage * 1024 * 1024 * 1024 ) ) * 100 | formatPercentage" color="primary"><small>{{ ( dialog_account.records.account.plan.usage.storage / ( dialog_account.records.account.plan.limits.storage * 1024 * 1024 * 1024 ) ) * 100 | formatPercentage }}</small></v-progress-circular>
+								<v-progress-circular :size="50" :value="( dialog_account.records.account.plan.usage.storage / ( dialog_account.records.account.plan.limits.storage * 1024 * 1024 * 1024 ) ) * 100 | formatPercentage" color="primary"><span v-html="$options.filters.account_storage_percentage( dialog_account.records.account )"></span></v-progress-circular>
 							</div>
 							<div style="line-height: 0.85em;">
 								Storage <br /><small>{{ dialog_account.records.account.plan.usage.storage | formatGBs }}GB / {{ dialog_account.records.account.plan.limits.storage }}GB</small><br />
 							</div>
 							<div style="padding: 10px 10px 10px 20px;">
-								<v-progress-circular :size="50" :value="( dialog_account.records.account.plan.usage.visits / dialog_account.records.account.plan.limits.visits * 100 ) | formatPercentage" color="primary"><small>{{ ( dialog_account.records.account.plan.usage.visits / dialog_account.records.account.plan.limits.visits ) * 100 | formatPercentage }}</small></v-progress-circular>
+								<v-progress-circular :size="50" :value="( dialog_account.records.account.plan.usage.visits / dialog_account.records.account.plan.limits.visits * 100 ) | formatPercentage" color="primary"><span v-html="$options.filters.account_visits_percentage( dialog_account.records.account )"></span></v-progress-circular>
 							</div>
 							<div style="line-height: 0.85em;">
 								Visits <br /><small>{{ dialog_account.records.account.plan.usage.visits | formatLargeNumbers }} / {{ dialog_account.records.account.plan.limits.visits | formatLargeNumbers }}</small><br />
 							</div>
 							<div style="padding: 10px 10px 10px 20px;">
-								<v-progress-circular :size="50" :value="( dialog_account.records.account.plan.usage.sites / dialog_account.records.account.plan.limits.sites * 100 ) | formatPercentage" color="blue darken-4"><small>{{ ( dialog_account.records.account.plan.usage.sites / dialog_account.records.account.plan.limits.sites * 100 ) | formatPercentage }}</small></v-progress-circular>
+								<v-progress-circular :size="50" :value="( dialog_account.records.account.plan.usage.sites / dialog_account.records.account.plan.limits.sites * 100 ) | formatPercentage" color="blue darken-4"><span v-html="$options.filters.account_site_percentage( dialog_account.records.account )"></span></v-progress-circular>
 							</div>
 							<div  style="line-height: 0.85em;">
 								Sites <br /><small>{{ dialog_account.records.account.plan.usage.sites }} / {{ dialog_account.records.account.plan.limits.sites }}</small><br />
@@ -5275,6 +5275,33 @@ new Vue({
 		formatPercentageFixed: function (percentage) {
 			return (Math.max(percentage, 0.1) * 100 ).toFixed(2) + '%';
 		},
+		account_storage_percentage: function ( account ) {
+			percentage = ( account.plan.usage.storage / ( account.plan.limits.storage * 1024 * 1024 * 1024 ) ) * 100
+			percentage_formatted = Math.max(percentage, 0.1).toFixed(0)
+			results = `<small>${percentage_formatted}</small>`
+			if ( percentage >= 100 ) {
+				results = `<i aria-hidden="true" class="v-icon notranslate mdi mdi-check"></i>`
+			}
+			return results
+		},
+		account_visits_percentage: function ( account ) {
+			percentage = ( account.plan.usage.visits / account.plan.limits.visits ) * 100
+			percentage_formatted = Math.max(percentage, 0.1).toFixed(0)
+			results = `<small>${percentage_formatted}</small>`
+			if ( percentage >= 100 ) {
+				results = `<i aria-hidden="true" class="v-icon notranslate mdi mdi-check"></i>`
+			}
+			return results
+		},
+		account_site_percentage: function ( account ) {
+			percentage = account.plan.usage.sites / account.plan.limits.sites * 100
+			percentage_formatted = Math.max(percentage, 0.1).toFixed(0)
+			results = `<small>${percentage_formatted}</small>`
+			if ( percentage >= 100 ) {
+				results = `<i aria-hidden="true" class="v-icon notranslate mdi mdi-check"></i>`
+			}
+			return results
+		},
 		pretty_timestamp: function (date) {
 			// takes in '2018-06-18 19:44:47' then returns "Monday, Jun 18, 2018, 7:44 PM"
 			formatted_date = new Date(date).toLocaleTimeString("en-us", pretty_timestamp_options);
@@ -5421,7 +5448,7 @@ new Vue({
 				total = parseInt( addons ) + parseInt( this.dialog_account.records.account.plan.price )
 				units = [] 
 				units[1] = "month"
-				units[4] = "quarter"
+				units[3] = "quarter"
 				units[6] = "biannually"
 				units[12] = "year"
 				unit = units[ this.dialog_account.records.account.plan.interval ]
@@ -8640,10 +8667,13 @@ new Vue({
 		},
 		loadHostingPlan() {
 			current_interval = JSON.parse(JSON.stringify( this.dialog_modify_plan.plan.interval ) )
+			if ( typeof this.dialog_modify_plan.plan.addons != 'undefined' ) {
 			current_addons = JSON.parse(JSON.stringify( this.dialog_modify_plan.plan.addons ) )
+			}
 			selected_plan = this.dialog_modify_plan.selected_plan
 			hosting_plan = this.dialog_modify_plan.hosting_plans.filter( plan => plan.name == selected_plan )[0]
 			if ( typeof hosting_plan != "undefined" ) {
+				hosting_plan.addons = current_addons
 				this.dialog_modify_plan.plan = JSON.parse(JSON.stringify( hosting_plan ))
 			}
 			if ( current_interval != hosting_plan.interval ) {
