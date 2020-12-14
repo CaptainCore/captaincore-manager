@@ -31,13 +31,14 @@ class Domains extends DB {
             return;
         }
 
-        $account_ids = [];
         // Loop through sites and pull out account ids
         $site_ids = ( new Sites )->site_ids_all();
         foreach( $site_ids as $site_id ) {
             $site = ( new Sites )->get( $site_id );
             $account_ids[] = $site->account_id;
         }
+
+        $account_ids = array_unique( $account_ids );
 
         // Loop through each account for current user and fetch SiteIDs
         foreach ( $account_ids as $account_id ) {
