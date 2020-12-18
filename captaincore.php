@@ -3818,7 +3818,8 @@ function captaincore_ajax_action_callback() {
 		'newSite',
 		'createSiteAccount',
 		'updateSite', 
-		'deleteSite'
+		'deleteSite',
+		'deleteAccount'
 	];
 	if ( ! $user->is_admin() && in_array( $_POST['command'], $admin_commands ) ) {
 		echo "Permission denied";
@@ -4425,6 +4426,15 @@ function captaincore_ajax_action_callback() {
 		// Delete site locally
 		$site = new CaptainCore\Site( $post_id );
 		$site->delete();
+	}
+
+	if ( $cmd == 'deleteAccount' ) {
+		// Delete site on CaptainCore CLI
+		captaincore_run_background_command( "account delete $post_id" );
+
+		// Delete account locally
+		$account = new CaptainCore\Account( $post_id, true );
+		$account->delete();
 	}
 
 	if ( $cmd == 'fetch-site-environments' ) {
