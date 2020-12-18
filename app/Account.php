@@ -400,4 +400,8 @@ class Account {
         // $order->update_status( "processing", 'Imported Order From Funnel', TRUE );
     }
 
+    public function delete() {
+        ( new Accounts )->delete( [ "account_id" => $this->account_id ] );
+    }
+
 }
