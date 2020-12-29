@@ -4649,7 +4649,7 @@ $user = wp_get_current_user();
 				:items="site_filters"
 				ref="applied_site_filter"
 				return-object
-				item-text="title"
+				item-text="search"
 				label="Select Theme and/or Plugin"
 				class="siteFilter mx-1"
 				chips
