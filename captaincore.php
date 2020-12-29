@@ -1788,23 +1788,23 @@ function captaincore_site_snapshots_func( $request ) {
 }
 
 function captaincore_filter_versions_func( $request ) {
-	$name    = $request['name'];
-	$filters = explode( ",", $name );
+	$name     = str_replace( "%20", " ", $request['name'] );
+	$filters  = explode( ",", $name );
 	$response = ( new CaptainCore\Environments )->filters_for_versions( $filters );
 	return $response;
 }
 
 
 function captaincore_filter_statuses_func( $request ) {
-	$name    = $request['name'];
-	$filters = explode( ",", $name );
+	$name     = str_replace( "%20", " ", $request['name'] );
+	$filters  = explode( ",", $name );
 	$response = ( new CaptainCore\Environments )->filters_for_statuses( $filters );
 	return $response;
 }
 
 
 function captaincore_filter_sites_func( $request ) {
-	$name     = $request['name'];
+	$name     = str_replace( "%20", " ", $request['name'] );
 	$statuses = $request['statuses'];
 	$statuses = explode( ",", $statuses );
 	$versions = $request['versions'];
@@ -2025,7 +2025,7 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
-		'captaincore/v1', '/filters/(?P<name>[a-zA-Z0-9-,|_]+)/versions/', [
+		'captaincore/v1', '/filters/(?P<name>[a-zA-Z0-9-,|_%]+)/versions/', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_filter_versions_func',
 			'show_in_index' => false
@@ -2033,7 +2033,7 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
-		'captaincore/v1', '/filters/(?P<name>[a-zA-Z0-9-,|_]+)/statuses/', [
+		'captaincore/v1', '/filters/(?P<name>[a-zA-Z0-9-,|_%]+)/statuses/', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_filter_statuses_func',
 			'show_in_index' => false
@@ -2041,7 +2041,7 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
-		'captaincore/v1', '/filters/(?P<name>[a-zA-Z0-9-,+_)]+)/sites/versions=(?:(?P<versions>[a-zA-Z0-9-,+\.|]+))?/statuses=(?:(?P<statuses>[a-zA-Z0-9-,+\.|]+))?', [
+		'captaincore/v1', '/filters/(?P<name>[a-zA-Z0-9-,+_%)]+)/sites/versions=(?:(?P<versions>[a-zA-Z0-9-,+\.|]+))?/statuses=(?:(?P<statuses>[a-zA-Z0-9-,+\.|]+))?', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_filter_sites_func',
 			'show_in_index' => false
