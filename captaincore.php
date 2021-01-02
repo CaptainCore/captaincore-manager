@@ -30,26 +30,13 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-/**
- * Currently plugin version.
- * Start at version 0.1.0 and use SemVer - https://semver.org
- * Rename this for your plugin and update it as you release new versions.
- */
 define( 'CAPTAINCORE_VERSION', '0.14.0' );
 
-/**
- * The code that runs during plugin activation.
- * This action is documented in includes/class-captaincore-activator.php
- */
 function activate_captaincore() {
 	require_once plugin_dir_path( __FILE__ ) . 'includes/class-captaincore-activator.php';
 	Captaincore_Activator::activate();
 }
 
-/**
- * The code that runs during plugin deactivation.
- * This action is documented in includes/class-captaincore-deactivator.php
- */
 function deactivate_captaincore() {
 	require_once plugin_dir_path( __FILE__ ) . 'includes/class-captaincore-deactivator.php';
 	Captaincore_Deactivator::deactivate();
@@ -90,6 +77,11 @@ require 'includes/process-functions.php';
 require 'includes/bulk-actions.php';
 require 'includes/Parsedown.php';
 
+function captaincore_cron_run() {
+    ( new CaptainCore\Accounts )->process_renewals();
+}
+add_action( 'captaincore_cron', 'captaincore_cron_run' );
+
 function captaincore_rewrite() {
 	add_rewrite_rule( '^checkout-express/([^/]*)/?', 'index.php?pagename=checkout-express&callback=$matches[1]', 'top' );
 	add_rewrite_tag( '%site%', '([^&]+)' );
@@ -105,7 +97,6 @@ function captaincore_rewrite() {
 		]
 	);
 }
-
 add_action( 'init', 'captaincore_rewrite' );
 
 function captaincore_disable_gutenberg( $can_edit, $post_type ) {

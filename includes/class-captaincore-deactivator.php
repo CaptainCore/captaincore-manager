@@ -30,7 +30,7 @@ class Captaincore_Deactivator {
 	 * @since    0.1.0
 	 */
 	public static function deactivate() {
-
+		wp_clear_scheduled_hook( 'captaincore_cron' );
 	}
 
 }
