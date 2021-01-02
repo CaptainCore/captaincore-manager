@@ -5969,7 +5969,7 @@ new Vue({
 				addons = 0
 				this.dialog_account.records.account.plan.addons.forEach( addon => {
 					if ( addon.price != "" ) {
-						addons = addons + ( addon.quantity * addon.price ).toFixed(2)
+						addons = addons + parseFloat( ( addon.quantity * addon.price ).toFixed(2) )
 					}
 				})
 				total = parseFloat( addons ) + parseFloat( this.dialog_account.records.account.plan.price )
