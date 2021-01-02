@@ -30,7 +30,17 @@ class Captaincore_Activator {
 	 * @since    0.1.0
 	 */
 	public static function activate() {
-		
+		wp_schedule_event( time(), 'hourly', 'captaincore_cron' );
+		CaptainCore\DB::upgrade();
+		function captaincore_activation_redirect() {
+			if( ! defined( 'WP_CLI' ) ) {
+				wp_safe_redirect( '/account' );
+				exit;
+			}
+		}
+		add_action( 'activated_plugin', 'captaincore_activation_redirect' );
 	}
+
+	
 
 }
