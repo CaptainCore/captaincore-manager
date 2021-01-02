@@ -1827,6 +1827,10 @@ div.update_logs table tr td:nth-child(1) {
 
 /* WooCommerce billing adjustments */
 
+.theme--light.v-data-table.invoice>.v-data-table__wrapper>table>tbody>tr:hover:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper) {
+  background: transparent;
+}
+
 .woocommerce-order-details .shop_table.shop_table_responsive.my_account_orders.woocommerce-orders-table.woocommerce-MyAccount-subscriptions.woocommerce-orders-table--subscriptions,
 .woocommerce-order-details header,
 .woocommerce-order-details .order-again {
