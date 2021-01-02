@@ -17,6 +17,12 @@ class Configurations {
         if ( ! isset( $configurations->logo ) ) {
 			$configurations->logo = "";
         }
+        if ( ! isset( $configurations->scheduled_tasks ) ) {
+			$configurations->scheduled_tasks = [];
+        }
+        if ( ! isset( $configurations->woocommerce ) ) {
+			$configurations->woocommerce = (object) [ "hosting_plan" => "", "addons" => "", "usage" => "" ];
+        }
         if ( ! isset( $configurations->hosting_plans ) ) {
 			$configurations->hosting_plans = json_decode( get_option('captaincore_hosting_plans') );
         }
@@ -26,6 +32,11 @@ class Configurations {
         if ( $configurations->dns_introduction ) {
             $Parsedown = new \Parsedown();
 			$configurations->dns_introduction_html = $Parsedown->text( $configurations->dns_introduction );
+        }
+        if ( $configurations->scheduled_tasks ) {
+			foreach ( $configurations->scheduled_tasks as $task ) {
+                $task->date_selector = false;
+            }
         }
         return $configurations;
     }
@@ -86,6 +97,25 @@ class Configurations {
         }
         
         return $response["body"];
+    }
+
+    public function products() {
+        $products = [];
+        $products_IDs = new \WP_Query( [
+            'post_type'      => 'product',
+            'posts_per_page' => -1,
+        ] );
+    
+        while ($products_IDs->have_posts() ) : $products_IDs->the_post();
+
+            global $product;
+            $products[] = [
+                "id"   => "{$product->id}",
+                "name" => $product->get_title(),
+            ];
+        endwhile;
+
+        return $products;
     }
 
 }
