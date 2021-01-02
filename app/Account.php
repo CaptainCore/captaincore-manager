@@ -101,9 +101,10 @@ class Account {
             return [];
         }
         $user_id = get_current_user_id();
+        $account = $this->account();
         $record  = [
             "timeline"        => $this->process_logs(),
-            "account"         => $this->account(),
+            "account"         => $account,
             "invites"         => $this->invites(),
             "users"           => $this->users(),
             "domains"         => $this->domains(),
@@ -112,7 +113,7 @@ class Account {
             "owner"           => false,
         ];
 
-        if ( $user_id == $record["account"]["billing_user_id"] ) {
+        if ( $user_id == $account["plan"]->billing_user_id ) {
             $record["owner"] = true;
         }
         
@@ -120,19 +121,19 @@ class Account {
     }
 
     public function account() {
-        $account          = ( new Accounts )->get( $this->account_id );
-        $defaults         = json_decode( $account->defaults );
-        $plan             = json_decode( $account->plan );
-        $plan->name       = empty( $plan->name ) ? "" : $plan->name;
-        $plan->addons     = empty( $plan->addons ) ? [] : $plan->addons;
-        $plan->limits     = empty( $plan->limits ) ? (object) [ "storage" => 0, "visits" => 0, "sites" => 0 ] : $plan->limits;
-        $plan->interval   = empty( $plan->interval ) ? "12" : $plan->interval;
+        $account               = ( new Accounts )->get( $this->account_id );
+        $defaults              = json_decode( $account->defaults );
+        $plan                  = json_decode( $account->plan );
+        $plan->name            = empty( $plan->name ) ? "" : $plan->name;
+        $plan->addons          = empty( $plan->addons ) ? [] : $plan->addons;
+        $plan->limits          = empty( $plan->limits ) ? (object) [ "storage" => 0, "visits" => 0, "sites" => 0 ] : $plan->limits;
+        $plan->interval        = empty( $plan->interval ) ? "12" : $plan->interval;
+        $plan->billing_user_id = empty( $plan->billing_user_id ) ? 0 : (int) $plan->billing_user_id;
         if ( ! is_array( $defaults->users ) ) {
             $defaults->users = [];
         }
         return [
             "account_id"      => $this->account_id,
-            "billing_user_id" => (int) $account->billing_user_id,
             "name"            => html_entity_decode( $account->name ),
             "plan"            => $plan,
             "metrics"         => json_decode( $account->metrics ),
@@ -360,7 +361,7 @@ class Account {
                 $result  = (object) [
                     'account_id' => $account->account_id,
                     'renewal'    => $plan->next_renewal,
-                    'plan'       => (int) $account->billing_user_id,
+                    'plan'       => (int) $plan->billing_user_id,
                 ];
             }
 			$response[] = $result;
@@ -370,34 +371,98 @@ class Account {
 	}
 
     public function generate_order() {
-        $account  = ( new Accounts )->get( $this->account_id );
-        $customer = new WC_Customer( $account->billing_user_id );
-        $address  = $customer->get_billing_address();
-        $order    = wc_create_order(  [ 'customer_id' => $account->billing_user_id ] );
-        $order->set_address( $address, 'billing' );
-        $order->set_address( $address, 'shipping' );
-        $order->calculate_totals();
+        $configurations = ( new Configurations )->get();
+        $account        = ( new Accounts )->get( $this->account_id );
+        $plan           = json_decode( $account->plan );
+        $customer       = new \WC_Customer( $plan->billing_user_id );
+        $address        = $customer->get_billing();
+        $order          = wc_create_order(  [ 'customer_id' => $plan->billing_user_id ] );
 
-        // Add addon product
-        $line_item_id = $order->add_product( get_product( '11062' ), 1 );
+        $site_names     = array_column( self::sites(), "name" );
+        sort( $site_names );
+        $site_names     = implode( ", ", $site_names );
 
-        // Assign price 
-        $order->get_items()[ $line_item_id ]->set_total( '99' );
+        if ( ! empty( $address ) ) {
+            $order->set_address( $address, 'billing' );
+        }
+
+        $line_item_id = $order->add_product( get_product( $configurations->woocommerce->hosting_plan ), 1 );
+
+        $order->get_items()[ $line_item_id ]->set_subtotal( $plan->price );
+        $order->get_items()[ $line_item_id ]->set_total( $plan->price );
+        $order->get_items()[ $line_item_id ]->add_meta_data( "Details", $plan->name . "\n\n" . $site_names );
+        $order->get_items()[ $line_item_id ]->save_meta_data();
         $order->get_items()[ $line_item_id ]->save();
 
-        // Assign meta field
-        $order->get_items()[ $line_item_id ]->get_meta( "Details" );
-        $order->get_items()[ $line_item_id ]->save_meta_data();
+        if ( $plan->addons && count( $plan->addons ) > 0 ) {
+            foreach ( $plan->addons as $addon ) {
+                $line_item_id = $order->add_product( get_product( $configurations->woocommerce->addons ), $addon->quantity );
+                $order->get_items()[ $line_item_id ]->set_subtotal( $addon->price * $addon->quantity );
+                $order->get_items()[ $line_item_id ]->set_total( $addon->price * $addon->quantity );
+                $order->get_items()[ $line_item_id ]->add_meta_data( "Details", $addon->name );
+                $order->get_items()[ $line_item_id ]->save_meta_data();
+                $order->get_items()[ $line_item_id ]->save();
+            }
+        }
+
+        if ( $plan->usage->sites > $plan->limits->sites ) {
+            $price    = $configurations->usage_pricing->sites->cost;
+            if ( $plan->interval != $configurations->usage_pricing->sites->interval ) {
+                $price = $configurations->usage_pricing->sites->cost / ($configurations->usage_pricing->sites->interval / $plan->interval );
+            }
+            $quantity = $plan->usage->sites - $plan->limits->sites;
+            $total    = $price * $quantity;
+            $line_item_id = $order->add_product( get_product( $configurations->woocommerce->usage ), $quantity );
+            $order->get_items()[ $line_item_id ]->set_subtotal( $total );
+            $order->get_items()[ $line_item_id ]->set_total( $total );
+            $order->get_items()[ $line_item_id ]->add_meta_data( "Details", "Extra Sites" );
+            $order->get_items()[ $line_item_id ]->save_meta_data();
+            $order->get_items()[ $line_item_id ]->save();
+        }
+
+        if ( $plan->usage->storage > ( $plan->limits->storage * 1024 * 1024 * 1024 ) ) {
+            $price    = $configurations->usage_pricing->storage->cost;
+            if ( $plan->interval != $configurations->usage_pricing->storage->interval ) {
+                $price = $configurations->usage_pricing->storage->cost / ( $configurations->usage_pricing->storage->interval / $plan->interval );
+            }
+            $extra_storage = ( $plan->usage->storage / 1024 / 1024 / 1024 ) - $plan->limits->storage;
+            $quantity      = ceil ( $extra_storage / $configurations->usage_pricing->storage->quantity );
+            $total         = $price * $quantity;
+            $line_item_id  = $order->add_product( get_product( $configurations->woocommerce->usage ), $quantity );
+            $order->get_items()[ $line_item_id ]->set_subtotal( $total );
+            $order->get_items()[ $line_item_id ]->set_total( $total );
+            $order->get_items()[ $line_item_id ]->add_meta_data( "Details", "Extra Storage" );
+            $order->get_items()[ $line_item_id ]->save_meta_data();
+            $order->get_items()[ $line_item_id ]->save();
+        }
+
+        if ( $plan->usage->visits > $plan->limits->visits ) {
+            $price     = $configurations->usage_pricing->traffic->cost;
+            if ( $plan->interval != $configurations->usage_pricing->traffic->interval ) {
+                $price = $configurations->usage_pricing->traffic->cost / ( $configurations->usage_pricing->traffic->interval / $plan->interval );
+            }
+            $quantity     = ceil ( ( $plan->usage->visits - $plan->limits->visits ) / $configurations->usage_pricing->traffic->quantity );
+            $total        = $price * $quantity;
+            $line_item_id = $order->add_product( get_product( $configurations->woocommerce->usage ), $quantity );
+            $order->get_items()[ $line_item_id ]->set_subtotal( $total );
+            $order->get_items()[ $line_item_id ]->set_total( $total );
+            $order->get_items()[ $line_item_id ]->add_meta_data( "Details", "Extra Visits" );
+            $order->get_items()[ $line_item_id ]->save_meta_data();
+            $order->get_items()[ $line_item_id ]->save();
+        }
 
         // Set payment method
-        // TODO fetch customer selected payment method
-        $order->set_payment_method( $payment_gateways['stripe'] );
-
         $order->calculate_totals();
 
-        
-        // here we are adding some system notes to the order
-        // $order->update_status( "processing", 'Imported Order From Funnel', TRUE );
+        if ( $plan->auto_pay == "true" ) {
+            $payment_id = ( new \WC_Payment_Tokens )->get_customer_default_token( $plan->billing_user_id )->get_id();
+            ( new User( $plan->billing_user_id, true ) )->pay_invoice( $order->get_id(), $payment_id );
+            return;
+        }
+
+        WC()->mailer()->customer_invoice( $order );
+        $order->add_order_note( __( 'Order details manually sent to customer.', 'woocommerce' ), false, true );
+        do_action( 'woocommerce_after_resend_order_email', $order, 'customer_invoice' );
     }
 
     public function delete() {

@@ -140,15 +140,15 @@ $user = wp_get_current_user();
             <v-list-item-title>Users</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-		</v-list-item-group>
-        <v-list-item link :href="billing_link" target="_blank" v-show="billing_link">
+		<v-list-item link href="/account/billing" @click.prevent="goToPath( '/account/billing' )" v-show="modules.billing">
           <v-list-item-icon>
             <v-icon>mdi-currency-usd</v-icon>
           </v-list-item-icon>
           <v-list-item-content>
-            <v-list-item-title>Billing  <v-icon small>mdi-open-in-new</v-icon></v-list-item-title>
+            <v-list-item-title>Billing</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
+		</v-list-item-group>
       </v-list>
 	  <template v-slot:append>
 	  <v-menu offset-y top>
@@ -603,9 +603,6 @@ $user = wp_get_current_user();
 				<v-flex xs12 pa-2>
 					<v-text-field label="Name" :value="dialog_edit_account.account.name" @change.native="dialog_edit_account.account.name = $event.target.value"></v-text-field>
 				</v-flex>
-				<v-flex xs12 pa-2>
-					<v-select v-if="typeof dialog_account.records.users == 'object'" label="Billing User" :items="dialog_account.records.users" :item-text="item => `${item.name} - ${item.email}`" item-value="user_id" v-model="dialog_edit_account.account.billing_user_id"></v-select>
-				</v-flex>
 				<v-flex xs12 text-right pa-0 ma-0>
 					<v-btn color="primary" dark @click="updateSiteAccount()">
 						Save Account
@@ -1019,11 +1016,86 @@ $user = wp_get_current_user();
 			</v-card-text>
 		</v-card>
 		</v-dialog>
-				<v-dialog
-					v-model="dialog_modify_plan.show"
-					transition="dialog-bottom-transition"
-					width="500"
-				>
+		<v-dialog v-model="dialog_customer_modify_plan.show" max-width="700">
+				<v-card tile>
+					<v-toolbar flat dark color="primary">
+					<v-btn icon dark @click.native="dialog_customer_modify_plan.show = false">
+						<v-icon>close</v-icon>
+					</v-btn>
+					<v-toolbar-title>Edit plan for {{ dialog_customer_modify_plan.subscription.name }}</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-card-text class="mt-4">
+					<v-layout row wrap>
+					<v-flex xs6 px-1>
+					<v-select
+						v-show="dialog_customer_modify_plan.hosting_plans.map( plan => plan.name ).includes( dialog_customer_modify_plan.selected_plan )"
+						v-model="dialog_customer_modify_plan.selected_plan"
+						label="Plan Name"
+						:items="dialog_customer_modify_plan.hosting_plans.map( plan => plan.name )"
+						:value="dialog_customer_modify_plan.subscription.plan.name"
+					></v-select>
+					</v-flex>
+					<v-flex xs6 px-1>
+					<v-select
+						v-show="dialog_customer_modify_plan.subscription.plan.interval != ''"
+						v-model="dialog_customer_modify_plan.subscription.plan.interval"
+						label="Plan Interval"
+						:items="hosting_intervals"
+						:value="dialog_customer_modify_plan.subscription.plan.interval"
+					></v-select>
+					</v-flex>
+					<v-flex xs6 px-1>
+						<v-switch v-if="typeof dialog_customer_modify_plan.subscription.plan.auto_pay != 'undefined'" v-model="dialog_customer_modify_plan.subscription.plan.auto_pay" false-value="false" true-value="true" label="Autopay"></v-switch>
+					</v-flex>
+					<v-flex xs6 px-1>
+						<v-text-field
+							disabled
+							:value="dialog_customer_modify_plan.subscription.plan.next_renewal"
+							label="Next Renewal Date"
+							prepend-icon="mdi-calendar"
+						></v-text-field>
+						</template>
+					</v-flex>
+					</v-layout>
+					<v-layout v-if="typeof dialog_customer_modify_plan.subscription.plan.name == 'string' && dialog_customer_modify_plan.subscription.plan.name == 'Custom'" row wrap>
+						<v-flex xs3 pa-1><v-text-field label="Storage (GBs)" :value="dialog_customer_modify_plan.subscription.plan.limits.storage" @change.native="dialog_customer_modify_plan.subscription.plan.limits.storage = $event.target.value"></v-text-field></v-flex>
+						<v-flex xs3 pa-1><v-text-field label="Visits" :value="dialog_customer_modify_plan.subscription.plan.limits.visits" @change.native="dialog_customer_modify_plan.subscription.plan.limits.visits = $event.target.value"></v-text-field></v-flex>
+						<v-flex xs3 pa-1><v-text-field label="Sites" :value="dialog_customer_modify_plan.subscription.plan.limits.sites" @change.native="dialog_customer_modify_plan.subscription.plan.limits.sites = $event.target.value"></v-text-field></v-flex>
+						<v-flex xs3 pa-1><v-text-field label="Price" :value="dialog_customer_modify_plan.subscription.plan.price" @change.native="dialog_customer_modify_plan.subscription.plan.price = $event.target.value"></v-text-field></v-flex>
+					</v-layout>
+					<v-layout v-else-if="Object.keys( dialog_customer_modify_plan.subscription.plan.limits ).length > 0" row wrap>
+						<v-flex xs3 pa-1><v-text-field label="Storage (GBs)" :value="dialog_customer_modify_plan.subscription.plan.limits.storage" disabled></v-text-field></v-flex>
+						<v-flex xs3 pa-1><v-text-field label="Visits" :value="dialog_customer_modify_plan.subscription.plan.limits.visits" disabled></v-text-field></v-flex>
+						<v-flex xs3 pa-1><v-text-field label="Sites" :value="dialog_customer_modify_plan.subscription.plan.limits.sites" disabled ></v-text-field></v-flex>
+						<v-flex xs3 pa-1><v-text-field label="Price" :value="dialog_customer_modify_plan.subscription.plan.price" disabled ></v-text-field></v-flex>
+					</v-layout>
+					<v-data-table
+						v-show="dialog_customer_modify_plan.subscription.plan.addons.length > 0"
+						:headers='[{"text":"Name","value":"name"},{"text":"Quantity","value":"quantity"},{"text":"Price","value":"price"},{"text":"Total","value":"total"}]'
+						:items="dialog_customer_modify_plan.subscription.plan.addons"
+						:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }">
+						<template v-slot:item.price="{ item }">
+							${{ item.price }}
+						</template>
+						<template v-slot:item.total="{ item }">
+							${{ ( item.price * item.quantity ).toFixed(2) }}
+						</template>
+					</v-data-table>
+					<v-layout>
+					<v-flex xs12 text-right>
+						<v-btn color="red" dark @click="cancelPlan()">
+							Cancel Plan
+						</v-btn>
+						<v-btn color="primary" dark @click="requestPlanChanges()">
+							Request Changes
+						</v-btn>
+					</v-flex>
+					</v-layout>
+				</v-card-text>
+				</v-card>
+			</v-dialog>
+			<v-dialog v-model="dialog_modify_plan.show" max-width="700">
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_modify_plan.show = false">
@@ -1034,7 +1106,7 @@ $user = wp_get_current_user();
 					</v-toolbar>
 					<v-card-text class="mt-4">
 						<v-layout row wrap>
-						<v-flex xs12>
+						<v-flex xs6 px-1>
 						<v-select
 							@change="loadHostingPlan()"
 							v-model="dialog_modify_plan.selected_plan"
@@ -1043,16 +1115,42 @@ $user = wp_get_current_user();
 							:value="dialog_modify_plan.plan.name"
 						></v-select>
 						</v-flex>
-						<v-flex xs12>
+						<v-flex xs6 px-1>
 						<v-select
 							@change="calculateHostingPlan()"
 							v-model="dialog_modify_plan.plan.interval"
 							label="Plan Interval"
-							:items="[{ text: 'Yearly', value: '12' },{ text: 'Monthly', value: '1' },{ text: 'Quarterly', value: '3' },{ text: 'Biannual', value: '6' }]"
+							:items="hosting_intervals"
 							:value="dialog_modify_plan.plan.interval"
 						></v-select>
 						</v-flex>
+						<v-flex xs6 px-1>
+							<v-select v-if="typeof dialog_account.records.users == 'object'" label="Billing User" :items="dialog_account.records.users" :item-text="item => `${item.name} - ${item.email}`" item-value="user_id" v-model="dialog_modify_plan.plan.billing_user_id"></v-select>
+							</v-flex>
+						<v-flex xs6 px-1>
+						<v-menu
+							v-model="dialog_modify_plan.date_selector"
+							:close-on-content-click="false"
+							:nudge-right="40"
+							transition="scale-transition"
+							offset-y
+							min-width="290px"
+						>
+							<template v-slot:activator="{ on, attrs }">
+							<v-text-field
+								v-model="dialog_modify_plan.plan.next_renewal"
+								:value="dialog_modify_plan.plan.next_renewal"
+								label="Next Renewal Date"
+								prepend-icon="mdi-calendar"
+								v-bind="attrs"
+								v-on="on"
+							></v-text-field>
+							</template>
+							<v-date-picker @input="keepTimestamp( $event ); dialog_modify_plan.date_selector = false"></v-date-picker>
+						</v-menu>
+						</v-flex>
 						</v-layout>
+						<v-switch v-model="dialog_modify_plan.plan.auto_pay" false-value="false" true-value="true" label="Autopay"></v-switch>
 						<v-layout v-if="typeof dialog_modify_plan.plan.name == 'string' && dialog_modify_plan.plan.name == 'Custom'" row wrap>
 							<v-flex xs3 pa-1><v-text-field label="Storage (GBs)" :value="dialog_modify_plan.plan.limits.storage" @change.native="dialog_modify_plan.plan.limits.storage = $event.target.value"></v-text-field></v-flex>
 							<v-flex xs3 pa-1><v-text-field label="Visits" :value="dialog_modify_plan.plan.limits.visits" @change.native="dialog_modify_plan.plan.limits.visits = $event.target.value"></v-text-field></v-flex>
@@ -3860,6 +3958,18 @@ $user = wp_get_current_user();
 						<v-textarea v-model="configurations.dns_nameservers" label="DNS Nameservers"></v-textarea>
 					</v-col>
 				</v-row>
+				<span class="body-2">WooCommerce Products</span>
+				<v-row class="mb-7">
+					<v-col>
+						<v-select v-model="configurations.woocommerce.hosting_plan" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Hosting Plan" hide-details></v-select>
+					</v-col>
+					<v-col>
+						<v-select v-model="configurations.woocommerce.addons" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Addons" hide-details></v-select>
+					</v-col>
+					<v-col>
+						<v-select v-model="configurations.woocommerce.usage" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Usage" hide-details></v-select>
+					</v-col>
+				</v-row>
 				<span class="body-2">Hosting Plans</span>
 				<v-row v-for="(plan, index) in configurations.hosting_plans">
 					<v-col>
@@ -3912,7 +4022,385 @@ $user = wp_get_current_user();
 
 				</v-card-text>
 			</v-card>
-			<v-card tile v-show="route == 'defaults'" v-if="role == 'administrator'" flat>
+			<v-card tile v-if="route == 'billing'" flat>
+				<v-toolbar color="grey lighten-4" light flat v-show="dialog_billing.step == 1">
+					<v-toolbar-title>Billing</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-flex xs12 text-right v-show="dialog_billing.step == 1">
+					<v-tabs v-model="billing_tabs" background-color="primary" dark>
+						<v-tab :key="1" href="#tab-Billing-Invoices" ripple>
+							Invoices <v-icon size="24">mdi-receipt</v-icon>
+						</v-tab>
+						<v-tab :key="2" href="#tab-Billing-Overview">
+							My Plan <v-icon size="24">mdi-chart-donut</v-icon>
+						</v-tab>
+						<v-tab :key="3" href="#tab-Billing-Payment-Methods" ripple>
+							Payment Methods <v-icon size="24">mdi-credit-card-outline</v-icon>
+						</v-tab>
+						<v-tab :key="4" href="#tab-Billing-Address" ripple>
+							Billing Address <v-icon size="24">mdi-map-marker</v-icon>
+						</v-tab>
+					</v-tabs>
+					<v-tabs-items v-model="billing_tabs">
+						<v-tab-item value="tab-Billing-Invoices" :transition="false" :reverse-transition="false">
+						<v-data-table
+							:loading="billing_loading"
+							:headers="[
+								{ text: 'Order', value: 'order_id', width: '130px' },
+								{ text: 'Date', value: 'date' },
+								{ text: 'Status', value: 'status' },
+								{ text: 'Total', value: 'total', width: '120px' },
+								{ text: '', value: 'actions', width: '140px' }]"
+							:items="billing.invoices"
+						>
+						<template v-slot:item.order_id="{ item }">
+							#{{ item.order_id }}
+						</template>
+						<template v-slot:item.total="{ item }">
+							${{ item.total }}
+						</template>
+						<template v-slot:item.actions="{ item }">
+							<v-btn small @click="goToPath( `/account/billing/${item.order_id}`)">Show Invoice</v-btn>
+						</template>
+						</v-data-table>
+						</v-tab-item>
+						<v-tab-item value="tab-Billing-Overview" :transition="false" :reverse-transition="false">
+						<v-data-table
+							:loading="billing_loading"
+							:headers="[
+								{ text: 'Account', value: 'account_id', width: '100px' },
+								{ text: 'Name', value: 'name' },
+								{ text: 'Renewal Date', value: 'next_renewal' },
+								{ text: 'Plan', value: 'plan' },
+								{ text: 'Price', value: 'price' },
+								{ text: 'Status', value: 'status' },
+								{ text: '', value: 'actions', width: '140px' }]"
+							:items="billing.subscriptions"
+						>
+						<template v-slot:item.account_id="{ item }">
+							#{{ item.account_id }}
+						</template>
+						<template v-slot:item.plan="{ item }">
+							{{ item.plan.name }}
+						</template>
+						<template v-slot:item.price="{ item }">
+							<span v-html="my_plan_usage_estimate( item.plan )"></span>
+						</template>
+						<template v-slot:item.next_renewal="{ item }">
+							<span v-show="item.plan.next_renewal != ''">{{ item.plan.next_renewal | pretty_timestamp }}</span>
+						</template>
+						<template v-slot:item.actions="{ item }">
+							<v-btn small @click="customerModifyPlan( item )">Modify Plan</v-btn>
+						</template>
+						</v-data-table>
+						</v-tab-item>
+						<v-tab-item value="tab-Billing-Payment-Methods" :transition="false" :reverse-transition="false">
+						<v-data-table
+							v-if="billing.payment_methods"
+							:loading="billing_loading"
+							:headers="[
+								{ text: 'Method', value: 'method' },
+								{ text: 'Expires', value: 'expires' },
+								{ text: '', value: 'actions', width: '204px', align: 'end' }]"
+							:items="billing.payment_methods"
+							hide-default-footer
+						>
+						<template v-slot:item.method="{ item }">
+							{{ item.method.brand }} ending in {{ item.method.last4 }} 
+						</template>
+						<template v-slot:item.actions="{ item }">
+							<v-btn small disabled v-show="item.is_default">Primary Method</v-btn>
+							<v-btn small v-show="!item.is_default" @click="setAsPrimary( item.token )">Set as Primary</v-btn>
+							<v-btn color="red" icon @click="deletePaymentMethod( item.token )"><v-icon>mdi-delete</v-icon></v-btn>
+						</template>
+						<template
+							v-slot:body.append="{ headers }"
+						>
+							<tr>
+							<td :colspan="headers.length" class="text-left">
+							<v-dialog max-width="500" v-model="new_payment.show" eager>
+							<template v-slot:activator="{ on, attrs }">
+								<v-btn small v-bind="attrs" v-on="on" @click="prepNewPayment()">
+									Add new payment method
+								</v-btn>
+							</template>
+
+							<v-card>
+								<v-card-title class="grey lighten-4">
+									New payment method
+									<v-spacer></v-spacer>
+									<v-btn @click="new_payment.show = false" icon><v-icon>close</v-icon></v-btn>
+								</v-card-title>
+								<v-card-text class="mt-5">
+									<div id="new-card-element"></div>
+									<v-alert dense border="left" type="warning" v-show="new_payment.error != ''">
+										{{ new_payment.error }}
+									</v-alert>
+								</v-card-text>
+								<v-divider></v-divider>
+								<v-card-actions>
+								<v-spacer></v-spacer>
+									<v-btn @click="addPaymentMethod">Add Payment Method</v-btn>
+								</v-card-actions>
+							</v-card>
+							</v-dialog>
+							</td>
+							</tr>
+						</template>
+						</v-data-table>
+						</v-tab-item>
+						<v-tab-item value="tab-Billing-Address" :transition="false" :reverse-transition="false">
+						<v-subheader>Billing Address</v-subheader>
+						<template v-if="typeof billing.address == 'object'">
+						<v-row no-gutters class="mx-3">
+							<v-col class="ma-1"><v-text-field label="First Name" v-model="billing.address.first_name"></v-text-field></v-col>
+							<v-col class="ma-1"><v-text-field label="Last Name" v-model="billing.address.last_name"></v-text-field></v-col>
+							<v-col class="ma-1"><v-text-field label="Company name (optional)" v-model="billing.address.company"></v-text-field></v-col>
+						</v-row>
+						<v-row no-gutters class="mx-3">
+							<v-col class="ma-1"><v-text-field label="Street Address" persistent-hint hint="House number and street name" v-model="billing.address.address_1"></v-text-field></v-col>
+						</v-row>
+						<v-row no-gutters class="mx-3">
+							<v-col class="ma-1"><v-text-field label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="billing.address.address_2"></v-text-field></v-col>
+						</v-row>
+						<v-row no-gutters class="mx-3">
+							<v-col class="ma-1"><v-text-field label="Town" v-model="billing.address.city"></v-text-field></v-col>
+							<v-col class="ma-1">
+								<v-autocomplete label="State" v-model="billing.address.state" :items="states_selected" v-if="states_selected.length > 0"></v-autocomplete>
+								<v-text-field label="State" v-model="billing.address.state" v-else></v-text-field>
+							</v-col>
+							<v-col class="ma-1"><v-text-field label="Zip" v-model="billing.address.postcode"></v-text-field></v-col>
+							<v-col class="ma-1"><v-autocomplete label="Country" v-model="billing.address.country" :items="countries" @change="populateStates()"></v-autocomplete></v-col>
+						</v-row>
+						<v-row no-gutters class="mx-3">
+							<v-col class="ma-1"><v-text-field label="Phone" v-model="billing.address.phone"></v-text-field></v-col>
+							<v-col class="ma-1"><v-text-field label="Email" v-model="billing.address.email"></v-text-field></v-col>
+						</v-row>
+						<v-row no-gutters class="mx-3 mb-3 text-left">
+						<v-btn small @click="updateBilling()">
+							Update Billing Address
+						</v-btn>
+						</v-row>
+						</template>
+						</v-tab-item>
+					</v-tab-items>
+				</v-flex>
+				<v-flex v-show="dialog_billing.step == 2">
+					<v-toolbar flat color="grey lighten-4">
+						<v-toolbar-title v-show="dialog_invoice.loading == true">Loading...</v-toolbar-title>
+						<v-toolbar-title v-show="dialog_invoice.loading == false">Invoice #{{ dialog_invoice.response.order_id }}</v-toolbar-title>
+						<div class="flex-grow-1"></div>
+						<v-toolbar-items v-show="dialog_invoice.loading == false">
+						<v-btn text href="/account/billing" @click.prevent="goToPath( '/account/billing' )"><v-icon>mdi-arrow-left</v-icon> Back</v-btn>
+						</v-toolbar-items>
+					</v-toolbar>
+					<v-card-text v-show="dialog_invoice.loading == false">
+					<v-card flat>
+					<v-row>
+						<v-overlay absolute :value="dialog_invoice.paying">
+							<v-progress-circular indeterminate size="64"></v-progress-circular>
+						</v-overlay>
+						<v-col style="max-width:360px" v-show="dialog_invoice.response.status == 'pending'">
+						<v-card
+							class="mb-7"
+							outlined
+							v-if="typeof billing.address == 'object' && dialog_invoice.customer"
+						>
+							<v-list-item three-line>
+							<v-list-item-content>
+								<div class="overline mb-4">
+								Billing Details
+								</div>
+								<v-list-item-title class="headline mb-1">
+								{{ billing.address.first_name }} {{ billing.address.last_name }}
+								</v-list-item-title>
+								<v-list-item-subtitle>{{ billing.address.company }}</v-list-item-subtitle>
+								<div v-html="billingAddress" class="body-2"></div>
+								<div v-show="billing.address.phone != ''" class="body-2"><v-icon small>mdi-phone</v-icon> <a :href="'tel:'+ billing.address.phone">{{ billing.address.phone }}</a></div>
+								<div v-show="billing.address.email != ''" class="body-2"><v-icon small>mdi-email</v-icon> <a :href="'mailto:'+ billing.address.email">{{ billing.address.email }}</a></div>
+							</v-list-item-content>
+							</v-list-item>
+
+							<v-card-actions>
+							<v-btn color="primary" outlined text @click="dialog_invoice.customer = false">
+								Modify Billing Details
+							</v-btn>
+							</v-card-actions>
+						</v-card>
+						<v-card
+							class="mb-7"
+							max-width="360"
+							outlined
+							v-else-if="typeof billing.address == 'object'"
+						>
+						<v-list-item three-line>
+							<v-list-item-content>
+								<div class="overline mb-4">
+								Billing Details
+								</div>
+								<v-row no-gutters>
+									<v-col class="mx-1"><v-text-field dense label="First Name" v-model="billing.address.first_name"></v-text-field></v-col>
+									<v-col class="mx-1"><v-text-field dense label="Last Name" v-model="billing.address.last_name"></v-text-field></v-col>
+								</v-row>
+								<v-row no-gutters>
+									<v-col class="mx-1"><v-text-field dense label="Company name (optional)" v-model="billing.address.company"></v-text-field></v-col>
+								</v-row>
+								<v-row no-gutters>
+									<v-col class="mx-1"><v-text-field dense label="Street Address" persistent-hint hint="House number and street name" v-model="billing.address.address_1"></v-text-field></v-col>
+								</v-row>
+								<v-row no-gutters>
+									<v-col class="mx-1"><v-text-field dense label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="billing.address.address_2"></v-text-field></v-col>
+								</v-row>
+								<v-row no-gutters>
+									<v-col class="mx-1"><v-text-field label="Town" v-model="billing.address.city"></v-text-field></v-col>
+								</v-row>
+								<v-row no-gutters>
+									<v-col class="mx-1">
+										<v-autocomplete label="State" v-model="billing.address.state" :items="states_selected" v-if="states_selected.length > 0"></v-autocomplete>
+										<v-text-field label="State" v-model="billing.address.state" v-else></v-text-field>
+									</v-col>
+								</v-row>
+								<v-row no-gutters>
+									<v-col class="mx-1"><v-text-field dense label="Zip" v-model="billing.address.postcode"></v-text-field></v-col>
+								</v-row>
+								<v-row no-gutters>
+									<v-col class="mx-1"><v-autocomplete dense label="Country" v-model="billing.address.country" :items="countries" @change="populateStates()"></v-autocomplete></v-col>
+								</v-row>
+								<v-row no-gutters>
+									<v-col class="mx-1"><v-text-field dense label="Phone" v-model="billing.address.phone"></v-text-field></v-col>
+								</v-row>
+								<v-row no-gutters>
+									<v-col class="mx-1"><v-text-field dense label="Email" v-model="billing.address.email"></v-text-field></v-col>
+								</v-row>
+							</v-list-item-content>
+							</v-list-item>
+							<v-card-actions>
+							<v-btn color="primary" outlined text @click="updateBilling()">
+								Save Billing Details
+							</v-btn>
+							</v-card-actions>
+						</v-card>
+					</v-col>
+					<v-col>
+					<p class="mt-5">Order was created on <strong>{{ dialog_invoice.response.created_at | pretty_timestamp_epoch }}</strong> and is currently <strong>{{ dialog_invoice.response.status }} payment</strong>.</p>
+						<v-data-table
+							:headers="[
+								{ text: 'Name', value: 'name', width: '120px' },
+								{ text: 'Description', value: 'description' },
+								{ text: 'Quantity', value: 'quantity', width: '100px' },
+								{ text: 'Total', value: 'total' } ]"
+							:items='dialog_invoice.response.line_items'
+							:items-per-page="-1"
+							hide-default-footer
+							class="mb-5 invoice"
+							>
+							<template v-slot:item.description="{ item }">
+								<div v-for="meta in item.description">
+									<div v-if="item.name == 'Hosting Plan' && meta.value.split( '\n' ).length > 1">
+									{{ meta.value.split( "\n" )[0] }}
+									<v-dialog max-width="900">
+									<template v-slot:activator="{ on, attrs }">
+										<a v-bind="attrs" v-on="on" class="caption mx-3">view details</a>
+									</template>
+									<template v-slot:default="dialog">
+									<v-card>
+										<v-card-title class="headline">
+										Hosting Plan - {{ meta.value.split( "\n" )[0] }}
+										</v-card-title>
+
+										<v-card-text class="mt-3">
+										{{ meta.value.split( "\n" )[2] }}
+										</v-card-text>
+
+										<v-divider></v-divider>
+
+										<v-card-actions>
+										<v-spacer></v-spacer>
+										<v-btn text @click="dialog.value = false">Close</v-btn>
+										</v-card-actions>
+									</v-card>
+									</template>
+									</v-dialog>
+									</div>
+									<p v-else-if="meta.key == 'Details'">{{ meta.value }}</p>
+								</div>
+							</template>
+							<template v-slot:item.total="{ item }">
+								<div v-html="item.total"></div>
+							</template>
+							<template v-slot:body.append="{ headers }">
+								<tr>
+									<td colspan="3" class="text-right">Total:</td>
+									<td><span class="font-weight-bold subtitle-1">${{ dialog_invoice.response.total }}</td>
+								</tr>
+							</template>
+						</v-data-table>
+						<v-card
+							class="mb-7"
+							outlined
+							v-if="dialog_invoice.response.paid_on"
+						>
+							<v-list-item three-line>
+							<v-list-item-content>
+								<div class="overline mb-4">
+								Payment Details
+								</div>
+								<v-list-item-title class="mb-1">
+								{{ dialog_invoice.response.payment_method }}
+								</v-list-item-title>
+								<v-list-item-subtitle>{{ dialog_invoice.response.paid_on }}</v-list-item-subtitle>
+							</v-list-item-content>
+							</v-list-item>
+						</v-card>
+						<v-card
+							class="mb-7"
+							v-show="dialog_invoice.response.status == 'pending'"
+							outlined
+						>
+						<v-list-item three-line>
+							<v-list-item-content>
+								<div class="overline mb-4">
+								Credit Card
+								</div>
+								<v-container py-0 px-3>
+								<v-radio-group v-model="dialog_invoice.payment_method" v-if="typeof billing.payment_methods != 'undefined'">
+							<v-radio
+								v-for="card in billing.payment_methods"
+								:label="`${card.method.brand} ending in ${card.method.last4} expires ${card.expires}`"
+								:value="card.token"
+							></v-radio>
+							<v-radio label="Add new payment method" value="new"></v-radio>
+							</v-radio-group>
+							</v-container>
+							<v-card max-width="450px" outlined v-show="dialog_invoice.payment_method == 'new'" class="mb-4">
+								<v-card-text>
+								<div id="card-element"></div>
+								<v-alert dense border="left" type="error" v-show="dialog_invoice.error != ''" class="mt-4">
+									{{ dialog_invoice.error }}
+								</v-alert>
+								</v-card-text>
+							</v-card>
+							<v-card class="d-flex flex-nowrap py-3" flat>
+								<v-card flat class="mr-1"><v-img contain width="42px" src="/wp-content/plugins/woocommerce-gateway-stripe/assets/images/visa.svg" class="stripe-visa-icon stripe-icon" alt="Visa"></v-img></v-card>
+								<v-card flat class="mr-1"><v-img contain width="42px" src="/wp-content/plugins/woocommerce-gateway-stripe/assets/images/amex.svg" class="stripe-amex-icon stripe-icon" alt="American Express"></v-img></v-card>
+								<v-card flat class="mr-1"><v-img contain width="42px" src="/wp-content/plugins/woocommerce-gateway-stripe/assets/images/mastercard.svg" class="stripe-mastercard-icon stripe-icon" alt="Mastercard"></v-img></v-card>
+								<v-card flat class="mr-1"><v-img contain width="42px" src="/wp-content/plugins/woocommerce-gateway-stripe/assets/images/discover.svg" class="stripe-discover-icon stripe-icon" alt="Discover"></v-img></v-card>
+								<v-card flat class="mr-1"><v-img contain width="42px" src="/wp-content/plugins/woocommerce-gateway-stripe/assets/images/jcb.svg" class="stripe-jcb-icon stripe-icon" alt="JCB"></v-img></v-card>
+								<v-card flat class="mr-1"><v-img contain width="42px" src="/wp-content/plugins/woocommerce-gateway-stripe/assets/images/diners.svg" class="stripe-diners-icon stripe-icon" alt="Diners"></v-img></v-card>
+							</v-card>
+							</v-list-item-content>
+							</v-list-item>
+							</v-card>
+							<v-btn color="primary" x-large @click="payInvoice()" width="100%" class="mb-7" v-show="dialog_invoice.response.status == 'pending'">Pay - ${{ dialog_invoice.response.total }}</v-btn>
+						</v-col>
+						</v-row>
+						</v-card>
+					</v-card-text>
+				</v-card>
+				</v-flex>
+			</v-card>
+			<v-card tile v-if="route == 'defaults' && role == 'administrator'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Site Defaults</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -4370,7 +4858,7 @@ $user = wp_get_current_user();
 											<td>{{ item.name }}</td>
 											<td>{{ item.quantity }}</td>
 											<td class="text-right">${{ item.price }}</td>
-											<td class="text-right">${{ item.quantity * item.price }}</td>
+											<td class="text-right">${{ ( item.quantity * item.price ).toFixed(2) }}</td>
 										</tr>
 										<tr>
 											<td colspan="5" class="body-1">Total: <span v-html="plan_usage_estimate"></span></td>
@@ -4397,7 +4885,6 @@ $user = wp_get_current_user();
 							Development mode, no plan selected.
 						</v-alert>
 						</div>
-						<!--
 						<v-data-table
 							:headers='[{"text":"Name","value":"name"},{"text":"Storage","value":"Storage"},{"text":"Visits","value":"visits"}]'
 							:items="dialog_account.records.usage_breakdown.sites"
@@ -4418,7 +4905,6 @@ $user = wp_get_current_user();
 						</tbody>
 						</template>
 						</v-data-table>
-						-->
 					</v-card>
 					</v-tab-item>
 					</v-tabs-items>
@@ -4939,11 +5425,22 @@ $user = wp_get_current_user();
 <script src="https://cdn.jsdelivr.net/npm/vuetify@2.4.0/dist/vuetify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.20/dist/vue-upload-component.js"></script>
 <?php } ?>
+<script src="https://js.stripe.com/v3/"></script>
 <script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
 <script src="/wp-content/plugins/captaincore/public/js/moment.min.js"></script>
 <script src="/wp-content/plugins/captaincore/public/js/frappe-charts.js"></script>
 <script src="/wp-content/plugins/captaincore/public/js/core.js"></script>
 <script>
+<?php if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { ?>
+wc_countries = <?php $countries = ( new WC_Countries )->get_allowed_countries(); foreach ( $countries as $key => $county ) { $results[] = [ "text" => $county, "value" => $key ]; }; echo json_encode( $results ); ?>;
+wc_states = <?php echo json_encode( array_merge( WC()->countries->get_allowed_country_states(), WC()->countries->get_shipping_country_states() ) ); ?>;
+wc_address_i18n_params = <?php echo json_encode( WC()->countries->get_country_locale() ); ?>;
+stripe = Stripe('<?php echo ( new WC_Gateway_Stripe )->publishable_key; ?>');
+<?php } else { ?>
+wc_countries = []
+wc_states = []
+stripe = ""
+<?php } ?>
 ajaxurl = "/wp-admin/admin-ajax.php"
 Vue.component('file-upload', VueUploadComponent)
 new Vue({
@@ -4980,19 +5477,21 @@ new Vue({
 		},
 		configurations: <?php echo json_encode( ( new CaptainCore\Configurations )->get() ); ?>,
 		configurations_loading: true,
+		hosting_intervals: [{ text: 'Yearly', value: '12' },{ text: 'Monthly', value: '1' },{ text: 'Quarterly', value: '3' },{ text: 'Biannual', value: '6' }],
 		footer_height: "28px",
 		login: { user_login: "", user_password: "", errors: "", loading: false, lost_password: false, message: "" },
 		wp_nonce: "",
 		footer: <?php echo captaincore_footer_content_extracted(); ?>,
 		drawer: null,
-		billing_link: "<?php echo get_field( 'billing_link', 'option' ); ?>",
+		billing_loading: true,
+		billing_tabs: 1,
 		home_link: "<?php echo home_url(); ?>",
 		remote_upload_uri: "<?php echo get_option( 'options_remote_upload_uri' ); ?>",
 		loading_page: true,
 		expanded: [],
 		accounts: [],
 		account_tab: null,
-		modules: { dns: <?php if ( defined( "CONSTELLIX_API_KEY" ) and defined( "CONSTELLIX_SECRET_KEY" ) ) { echo "true"; } else { echo "false"; } ?> },
+		modules: { billing: true, dns: <?php if ( defined( "CONSTELLIX_API_KEY" ) and defined( "CONSTELLIX_SECRET_KEY" ) ) { echo "true"; } else { echo "false"; } ?> },
 		dialog_bulk: { show: false, tabs_management: "tab-Sites", environment_selected: "Production" },
 		dialog_job: { show: false, task: {} },
 		dialog_breakdown: false,
@@ -5016,12 +5515,14 @@ new Vue({
 		dialog_toggle: { show: false, site_name: "", site_id: "" },
 		dialog_mailgun: { show: false, site: {}, response: { items: [], pagination: [] }, loading: false, pagination: {} },
 		dialog_migration: { show: false, sites: [], site_name: "", site_id: "", update_urls: true, backup_url: "" },
-		dialog_modify_plan: { show: false, site: {}, hosting_plans: [], selected_plan: "", plan: { limits: {}, addons: [] }, customer_name: "", interval: "12" },
+		dialog_modify_plan: { show: false, site: {}, date_selector: false, hosting_plans: [], selected_plan: "", plan: { limits: {}, addons: [], next_renewal: "" }, customer_name: "", interval: "12" },
+		dialog_customer_modify_plan: { show: false, hosting_plans: [], selected_plan: "", subscription: {  plan: { limits: {}, addons: [], next_renewal: "" } } },
 		dialog_theme_and_plugin_checks: { show: false, site: {}, loading: false },
 		dialog_update_settings: { show: false, environment: {}, themes: [], plugins: [], loading: false },
 		dialog_fathom: { show: false, site: {}, environment: {}, loading: false, editItem: false, editedItem: {}, editedIndex: -1 },
 		dialog_mailgun_config: { show: false, loading: false },
 		dialog_account: { show: false, records: { account: { defaults: { recipes: [] } } }, new_invite: false, new_invite_email: "", step: 1 },
+		dialog_invoice: { show: false, loading: false, paying: false, customer: false, response: "", payment_method: "", card: {}, error: "" },
 		dialog_new_account: { show: false, name: "", records: {} },
 		dialog_user: { show: false, user: {}, errors: [] },
 		dialog_request_site: { show: false, request: { name: "", account_id: "", notes: "" } },
@@ -5044,6 +5545,7 @@ new Vue({
 			'/account/users': 'users',
 			'/account/accounts': 'accounts',
 			'/account/handbook': 'handbook',
+			'/account/billing': 'billing',
 			'/account/cookbook': 'cookbook',
 		},
 		selected_nav: "",
@@ -5057,6 +5559,8 @@ new Vue({
 		custom_script: "",
 		recipes: [],
 		processes: [],
+		billing: { payment_methods: [] },
+		new_payment: { card: {}, show: false, error: "" },
 		current_user_email: "<?php echo $user->user_email; ?>",
 		current_user_login: "<?php echo $user->user_login; ?>",
 		current_user_display_name: "<?php echo $user->display_name; ?>",
@@ -5110,6 +5614,7 @@ new Vue({
 		account_search: "",
 		new_recipe: { show: false, title: "", content: "", public: 1 },
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
+		dialog_billing: { step: 1 },
 		dialog_site: { loading: true, step: 1, backup_step: 1, environment_selected: { environment_id: "0", quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
 		dialog_site_request: { show: false, request: {} },
 		dialog_edit_account: { show: false, account: {} },
@@ -5136,6 +5641,9 @@ new Vue({
 		toggle_site: true,
 		toggle_site_sort: null,
 		toggle_site_counter: { key: "", count: 0 },
+		countries: wc_countries,
+		states: wc_states,
+		states_selected: [],
 		sites: [],
 		users: [],
 		user_search: "",
@@ -5368,6 +5876,19 @@ new Vue({
 				return "Pages"
 			}
 		},
+		billingAddress() {
+			billing_address = this.billing.address.address_1 + "<br />"
+			if ( this.billing.address.address_2 != "" ) {
+				billing_address += `${this.billing.address.address_2}<br />`
+			}
+			billing_address += `${this.billing.address.city}, ${ this.billing.address.state }  ${ this.billing.address.postcode }<br />`
+			if ( this.billing.address.country != "" ) {
+				countries = this.countries.filter( c => c.value == this.billing.address.country )
+				billing_address += countries.map( c => c.text ).join(" ")
+			}
+			
+			return billing_address
+		},
 		filterSitesWithErrors() {
 			return this.sites.filter( s => s.console_errors != "" )
 		},
@@ -5440,10 +5961,10 @@ new Vue({
 				addons = 0
 				this.dialog_account.records.account.plan.addons.forEach( addon => {
 					if ( addon.price != "" ) {
-						addons = addons + (  parseInt( addon.quantity ) * parseInt( addon.price ) )
+						addons = addons + ( addon.quantity * addon.price ).toFixed(2)
 					}
 				})
-				total = parseInt( addons ) + parseInt( this.dialog_account.records.account.plan.price )
+				total = parseFloat( addons ) + parseFloat( this.dialog_account.records.account.plan.price )
 				units = [] 
 				units[1] = "month"
 				units[3] = "quarter"
@@ -5477,11 +5998,10 @@ new Vue({
 					}
 					extras = extras + ( extra_visits * unit_price )
 				}
-				total = parseInt( addons ) + parseInt( extras ) + parseInt( this.dialog_account.records.account.plan.price )
+				total = parseFloat( addons ) + parseFloat( extras ) + parseFloat( this.dialog_account.records.account.plan.price )
 				return `$${total} <small>per ${unit}</small>`
 			}
 			return ""
-
 		}
 	},
 	methods: {
@@ -5596,6 +6116,14 @@ new Vue({
 				if ( domain ) {
 					this.modifyDNS( domain )
 				}
+			}
+			if ( this.route == "billing" && this.route_path != "" ) {
+				this.dialog_billing.step = 2
+				this.showInvoice( this.route_path )
+				return
+			}
+			if ( this.route == "billing" ) {
+				this.dialog_billing.step = 1
 			}
 			if ( this.route == "sites" && this.route_path == "new" ) {
 				this.dialog_site.step = 3
@@ -5730,6 +6258,57 @@ new Vue({
 				return ""
 			}
 			return accounts[0].name
+		},
+		my_plan_usage_estimate( plan ) {
+			extras = 0
+			addons = 0
+			if ( plan.addons ) {
+				plan.addons.forEach( addon => {
+					if ( addon.price != "" ) {
+						addons = addons + (  parseFloat( addon.quantity ) * parseFloat( addon.price ) )
+					}
+				})
+			}
+			total = parseFloat( addons ) + parseFloat( plan.price )
+			units = [] 
+			units[1] = "month"
+			units[3] = "quarter"
+			units[6] = "biannually"
+			units[12] = "year"
+			unit = units[ plan.interval ]
+			extra_sites = parseInt( plan.usage.sites ) - parseInt( plan.limits.sites )
+			extra_storage = Math.ceil ( ( ( parseInt( plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( plan.limits.storage ) ) / 10 )
+			extra_visits = Math.ceil ( ( parseInt( plan.usage.visits ) - parseInt( plan.limits.visits ) ) / parseInt ( this.configurations.usage_pricing.traffic.quantity ) )
+			if ( extra_sites > 0 ) {
+				unit_price = this.configurations.usage_pricing.sites.cost
+				if ( this.configurations.usage_pricing.sites.interval != plan.interval ) {
+					unit_price = this.configurations.usage_pricing.sites.cost / this.configurations.usage_pricing.sites.interval
+					unit_price = unit_price * plan.interval
+				}
+				extras = extras + ( extra_sites * unit_price )
+			}
+			if ( extra_storage > 0 ) {
+				unit_price = this.configurations.usage_pricing.storage.cost
+				if ( this.configurations.usage_pricing.storage.interval != plan.interval ) {
+					unit_price = this.configurations.usage_pricing.storage.cost / this.configurations.usage_pricing.storage.interval
+					unit_price = unit_price * plan.interval
+				}
+				extras = extras + ( extra_storage * unit_price )
+			}
+			if ( extra_visits > 0 ) {
+				unit_price = this.configurations.usage_pricing.traffic.cost
+				if ( this.configurations.usage_pricing.traffic.interval != plan.interval ) {
+					unit_price = this.configurations.usage_pricing.traffic.cost / this.configurations.usage_pricing.traffic.interval
+					unit_price = unit_price * plan.interval
+				}
+				extras = extras + ( extra_visits * unit_price )
+			}
+			total = parseFloat( addons ) + parseFloat( extras ) + parseFloat( plan.price )
+			response = `$${total}`
+			if ( typeof unit != 'undefined' ) {
+				response += ` <small>per ${unit}</small>`
+			}
+			return response
 		},
 		compare(key, order='asc') {
 			return function(a, b) {
@@ -6602,6 +7181,40 @@ new Vue({
 				setTimeout(this.fetchMissing, 1000)
 			});
 		},
+		fetchBilling() {
+			axios.get(
+			'/wp-json/captaincore/v1/billing', {
+				headers: {'X-WP-Nonce':this.wp_nonce}
+			})
+			.then(response => {
+				this.billing = response.data
+				default_payment = this.billing.payment_methods.filter( method => method.is_default )
+				if ( default_payment.length == 1 ) {
+					this.billing.payment_method = default_payment[0].token
+				}
+				this.billing_loading = false
+				if ( this.billing.address.country != "" ) {
+					this.populateStates()
+				}
+				if ( this.billing.address.address_1 != "" ) {
+					this.dialog_invoice.customer = true
+				}
+				setTimeout(this.fetchMissing, 1000)
+			});
+		},
+		populateStates() {
+			states_selected = []
+			select = this.states[ this.billing.address.country ]
+			if ( typeof select != 'object' ) {
+				this.states_selected = []
+				return
+			}
+			states_by_country = Object.entries( select )
+			states_by_country.forEach( ([key, value]) => {
+				states_selected.push( { "text": value, "value": key } )
+			})
+			this.states_selected = states_selected
+		},
 		fetchFilterVersions( filters ) {
 			filters = filters.map( f => f.name ).join(",")
 			if ( filters != "" ) {
@@ -7454,6 +8067,201 @@ new Vue({
 					this.dialog_user.user = {}
 				})
 				.catch( error => console.log( error ) );
+		},
+		deletePaymentMethod( token ) {
+			card = this.billing.payment_methods.filter( p => p.token == token )[0]
+			should_proceed = confirm(`Delete payment method ${card.method.brand} ending in ${card.method.last4} with expiration ${card.expires}?`);
+
+			if ( ! should_proceed ) {
+				return
+			}
+
+			var data = {
+				action: 'captaincore_account',
+				command: 'deletePaymentMethod',
+				value: token
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					if ( response.data.errors ) {
+						console.log( response.data.errors )
+						return
+					}
+					this.fetchBilling()
+				})
+				.catch( error => console.log( error ) );
+		},
+		setAsPrimary( token ) {
+			var data = {
+				action: 'captaincore_account',
+				command: 'setAsPrimary',
+				value: token
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					if ( response.data.errors ) {
+						console.log( response.data.errors )
+						return
+					}
+					this.fetchBilling()
+				})
+				.catch( error => console.log( error ) );
+		},
+		prepNewPayment() {
+			elements = stripe.elements()
+			style = {
+				base: {
+					color: "#32325d",
+					fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
+					fontSmoothing: "antialiased",
+					fontSize: "16px",
+					"::placeholder": {
+						color: "#aab7c4"
+					}
+				},
+				invalid: {
+				color: "#fa755a",
+				iconColor: "#fa755a"
+				}
+			}
+			this.new_payment.card = elements.create("card", { style: style })
+			this.new_payment.card.mount("#new-card-element")
+		},
+		showInvoice( order_id ) {
+			this.dialog_invoice.loading = true
+			var data = {
+				action: 'captaincore_local',
+				command: 'fetchInvoice',
+				value: order_id
+			};
+			this.dialog_billing.step = 2
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					if ( response.data.errors ) {
+						this.dialog_user.errors = response.data.errors
+						return
+					}
+					this.dialog_invoice.response = response.data
+					this.dialog_invoice.payment_method = this.billing.payment_method
+					if ( this.dialog_invoice.response.status == 'pending' ) {
+						elements = stripe.elements()
+						style = {
+							base: {
+								color: "#32325d",
+								fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
+								fontSmoothing: "antialiased",
+								fontSize: "16px",
+								"::placeholder": {
+									color: "#aab7c4"
+								}
+							},
+							invalid: {
+							color: "#fa755a",
+							iconColor: "#fa755a"
+							}
+						}
+						this.dialog_invoice.card = elements.create("card", { style: style })
+						this.dialog_invoice.card.mount("#card-element")
+					}
+					this.dialog_invoice.loading = false
+					if ( typeof this.billing.address == 'object' && this.billing.address.address_1 != "" ) {
+						this.dialog_invoice.customer = true
+					}
+					this.dialog_invoice.show = true
+				})
+				.catch( error => console.log( error ) );
+		},
+		payInvoice( invoice_id ) {
+			this.dialog_invoice.paying = true
+			if ( this.dialog_invoice.customer != true ) {
+				this.updateBilling()
+			}
+			invoice_id = this.dialog_invoice.response.order_id
+			self = this
+
+			if ( this.dialog_invoice.payment_method == 'new' ) {
+				stripe.createSource( this.dialog_invoice.card, {
+					type: "card",
+					currency: 'usd',
+					owner: {
+						name: this.billing.address.first_name + " " + this.billing.address.last_name,
+						email: this.billing.address.email,
+						address: {
+							city: this.billing.address.city,
+							country: this.billing.address.country,
+							line1: this.billing.address.address_1,
+							line2: this.billing.address.address_2,
+							postal_code: this.billing.address.postcode,
+							state: this.billing.address.state,
+						},
+					},
+				}).then(function(result) {
+					if ( result.error ) {
+						self.dialog_invoice.error = result.error.message
+						return
+					}
+					var data = {
+						action: 'captaincore_account',
+						command: 'payInvoice',
+						value: invoice_id,
+						source_id: result.source.id,
+					}
+					axios.post( ajaxurl, Qs.stringify( data ) )
+						.then( response => {
+							self.dialog_invoice.paying = false
+							self.showInvoice( invoice_id )
+							self.fetchBilling()
+						})
+				})
+				return
+			}
+
+			var data = {
+				action: 'captaincore_account',
+				command: 'payInvoice',
+				value: invoice_id,
+				payment_id: this.dialog_invoice.payment_method,
+			}
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.dialog_invoice.paying = false
+					this.showInvoice( invoice_id )
+					this.fetchBilling()
+				})
+		},
+		addPaymentMethod() {
+			self = this
+			stripe.createSource( this.new_payment.card, {
+					type: "card",
+					currency: 'usd',
+					owner: {
+						name: this.billing.address.first_name + " " + this.billing.address.last_name,
+						email: this.billing.address.email,
+						address: {
+							city: this.billing.address.city,
+							country: this.billing.address.country,
+							line1: this.billing.address.address_1,
+							line2: this.billing.address.address_2,
+							postal_code: this.billing.address.postcode,
+							state: this.billing.address.state,
+						},
+					},
+				}).then(function(result) {
+					if ( result.error ) {
+						self.new_payment.error = result.error.message
+					}
+					var data = {
+						action: 'captaincore_account',
+						command: 'addPaymentMethod',
+						value: result.source.id
+					};
+					axios.post( ajaxurl, Qs.stringify( data ) )
+						.then( response => {
+							self.fetchBilling()
+							self.new_payment = { card: {}, show: false, error: "" }
+						})
+						.catch( error => console.log( error ) )
+			})
 		},
 		showAccount( account_id ) {
 			account = this.accounts.filter( account => account.account_id == account_id )[0];
@@ -8605,6 +9413,12 @@ new Vue({
 
 			});
 		},
+		customerModifyPlan( subscription ) {
+			this.dialog_customer_modify_plan.hosting_plans = JSON.parse(JSON.stringify( this.configurations.hosting_plans ))
+			this.dialog_customer_modify_plan.subscription = JSON.parse(JSON.stringify( subscription ) )
+			this.dialog_customer_modify_plan.selected_plan = subscription.plan.name
+			this.dialog_customer_modify_plan.show = true
+		},
 		modifyPlan() {
 			this.dialog_modify_plan.hosting_plans = JSON.parse(JSON.stringify( this.configurations.hosting_plans ))
 			this.dialog_modify_plan.hosting_plans.push( {"name":"Custom","interval":"12","price":"","limits":{"visits":"","storage":"","sites":""}} )
@@ -8627,6 +9441,62 @@ new Vue({
 			this.dialog_modify_plan.customer_name = this.dialog_account.records.account.name;
 			this.dialog_modify_plan.show = true;
 		},
+		requestPlanChanges() {
+			interval = "Month"
+			this.hosting_intervals.forEach( i => {
+				if ( i.value == this.dialog_customer_modify_plan.subscription.plan.interval ) {
+					interval = i.text
+				}
+			})
+			should_proceed = confirm( `Update plan '${this.dialog_customer_modify_plan.subscription.name}' to ${this.dialog_customer_modify_plan.subscription.plan.name} and ${interval}?`);
+			if ( ! should_proceed ) {
+				return;
+			}
+			var data = {
+				'action': 'captaincore_account',
+				'command': "requestPlanChanges",
+				'value': this.dialog_customer_modify_plan.subscription,
+			};
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.snackbar.message = description
+					this.snackbar.show = true
+
+				})
+				.catch( error => {
+					this.snackbar.message = error;
+					this.snackbar.show = true;
+				});
+			
+		},
+		cancelPlan() {
+			should_proceed = confirm("Cancel plan '" + this.dialog_customer_modify_plan.subscription.name + "'? All sites will be removed.");
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			description = "Requesting to cancel plan production site '" + this.dialog_customer_modify_plan.subscription.name + "'. Will send email notification once request completed.";
+				
+			var data = {
+				'action': 'captaincore_account',
+				'command': "cancelPlan",
+				'value': this.dialog_customer_modify_plan.subscription,
+			};
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.snackbar.message = description
+					this.snackbar.show = true
+
+				})
+				.catch( error => {
+					this.snackbar.message = error;
+					this.snackbar.show = true;
+				});
+
+
+		},
 		updatePlan() {
 			account_id = this.dialog_account.records.account.account_id
 			plan = Object.assign( {}, this.dialog_modify_plan.plan )
@@ -8648,7 +9518,7 @@ new Vue({
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					this.dialog_modify_plan = { show: false, site: {}, hosting_plans: [], selected_plan: "", plan: { limits: {}, addons: [] }, customer_name: "", interval: "12" },
+					this.dialog_modify_plan = { show: false, site: {}, date_selector: false, hosting_plans: [], selected_plan: "", plan: { limits: {}, addons: [], next_renewal: "" }, customer_name: "", interval: "12" }
 					this.showAccount( account_id )
 			});
 
@@ -9716,6 +10586,23 @@ new Vue({
 					this.runCommand( response.data );
 				});
 		},
+		updateBilling() {
+			var data = {
+				'action': 'captaincore_account',
+				'command': "updateBilling",
+				'value': this.billing.address,
+			};
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					if ( this.dialog_invoice.paying == false ) {
+						this.snackbar.message = "Billing address info updated."
+						this.snackbar.show = true
+					}
+					this.dialog_invoice.customer = true
+					this.fetchBilling()
+				});
+		},
 		updateSettings() {
 			this.dialog_update_settings.show = true;
 			site = this.dialog_site.site
@@ -9857,6 +10744,28 @@ new Vue({
 					self.snackbar.show = true;
 					self.dialog = false;
 		  	});
+		},
+		keepTimestampNextRun: function ( date, item ) {
+			if ( typeof item.next_run == 'undefined' ) {
+				today = new Date().getFullYear()+'-'+("0"+(new Date().getMonth()+1)).slice(-2)+'-'+("0"+new Date().getDate()).slice(-2)
+				item.next_run = `${today} 5:00:00`
+			} else if ( item.next_run == "" ) {
+				item.next_run = `${date} 5:00:00`
+			} else {
+				timestamp = item.next_run.split(" ")[1]
+				item.next_run = `${date} ${timestamp}`
+			}
+		},
+		keepTimestamp: function ( date ) {
+			if ( typeof this.dialog_modify_plan.plan.next_renewal == 'undefined' ) {
+				today = new Date().getFullYear()+'-'+("0"+(new Date().getMonth()+1)).slice(-2)+'-'+("0"+new Date().getDate()).slice(-2)
+				this.dialog_modify_plan.plan.next_renewal = `${today} 5:00:00`
+			} else if ( this.dialog_modify_plan.plan.next_renewal == "" ) {
+				this.dialog_modify_plan.plan.next_renewal = `${date} 5:00:00`
+			} else {
+				timestamp = this.dialog_modify_plan.plan.next_renewal.split(" ")[1]
+				this.dialog_modify_plan.plan.next_renewal = `${date} ${timestamp}`
+			}
 		},
 		filterFiles( site_id, quicksave_id ) {
 			site = this.dialog_site.site

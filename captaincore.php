@@ -3549,12 +3549,30 @@ function captaincore_local_action_callback() {
 				"total"       => $order->get_formatted_line_subtotal( $item ),
 			];
 		}
+
+		$payment_gateways      = WC()->payment_gateways->payment_gateways();
+		$payment_method        = $order->get_payment_method();
+		$payment_method_string = sprintf(
+			__( 'Payment via %s', 'woocommerce' ),
+			esc_html( isset( $payment_gateways[ $payment_method ] ) ? $payment_gateways[ $payment_method ]->get_title() : "Check" )
+		);
+
+		if ( $order->get_date_paid() ) {
+			$paid_on = sprintf(
+				__( 'Paid on %1$s @ %2$s', 'woocommerce' ),
+				wc_format_datetime( $order->get_date_paid() ),
+				wc_format_datetime( $order->get_date_paid(), get_option( 'time_format' ) )
+			);
+		}
+
 		$response = [
-			"order_id"   => $order_data->id,
-			"created_at" => $order_data->date_created->getTimestamp(),
-			"status"     => $order_data->status,
-			"line_items" => $order_line_items,
-			"total"      => $order_data->total,
+			"order_id"       => $order_data->id,
+			"created_at"     => $order_data->date_created->getTimestamp(),
+			"status"         => $order_data->status,
+			"line_items"     => $order_line_items,
+			"payment_method" => $payment_method_string,
+			"paid_on"        => $paid_on,
+			"total"          => number_format( (float) $order_data->total, 2, '.', '' ),
 		];
 		echo json_encode( $response );
 	}
@@ -3707,8 +3725,70 @@ function captaincore_account_action_callback() {
 	$cmd  = $_POST['command'];
 	$everyone_commands = [
 		'requestSite',
+		'payInvoice',
+		'setAsPrimary',
+		'addPaymentMethod',
+		'deletePaymentMethod',
 		'deleteRequestSite',
+		'cancelPlan',
+		'updateBilling',
 	];
+
+	if ( $cmd == 'updateBilling' ) {
+		$request  = (object) $_POST['value'];
+		$customer = new WC_Customer(  $user->user_id() );
+		$customer->set_billing_address_1( $request->address_1 );
+		$customer->set_billing_address_2( $request->address_2 );
+		$customer->set_billing_city( $request->city );
+		$customer->set_billing_company( $request->company );
+		$customer->set_billing_country( $request->country );
+		$customer->set_billing_email( $request->email );
+		$customer->set_billing_first_name( $request->first_name );
+		$customer->set_billing_last_name( $request->last_name );
+		$customer->set_billing_phone( $request->phone );
+		$customer->set_billing_postcode( $request->postcode );
+		$customer->set_billing_state( $request->state );
+		$customer->save();
+	};
+
+	if ( $cmd == 'cancelPlan' ) {
+
+		$current_subscription = (object) $_POST['value'];
+		$current_user         = $user->fetch();
+		$billing              = $user->billing();
+		if ( $current_subscription->account_id == "" || $current_subscription->name == "" ) {
+			wp_die();
+		}
+		foreach ( $billing->subscriptions as $subscription ) {
+			if ( $subscription->account_id == $current_subscription->account_id && $subscription->name == $current_subscription->name  ) {
+				
+				// Build email
+				$to      = get_option( 'admin_email' );
+				$subject = "Request cancel plan '{$current_subscription->name}'";
+				$body    = "Request cancel plan '{$current_subscription->name}' #{$current_subscription->account_id} from {$current_user['name']}, <a href='mailto:{$current_user['email']}'>{$current_user['email']}</a>.";
+				$headers = [ 'Content-Type: text/html; charset=UTF-8' ];
+
+				// Send email
+				wp_mail( $to, $subject, $body, $headers );
+			}
+		}
+
+	}
+
+	if ( $cmd == 'requestPlanChanges' ) {
+		$current_user = $user->fetch();
+		$subscription = (object) $_POST['value'];
+		
+		// Build email
+		$to      = get_option( 'admin_email' );
+		$subject = "Request plan change from {$current_user['name']} <{$current_user['email']}>";
+		$body    = "Change subscription '{$subscription->name}' to {$subscription->plan['name']} and {$subscription->plan['interval']} interval.";
+		$headers = [ 'Content-Type: text/html; charset=UTF-8' ];
+
+		// Send email
+		wp_mail( $to, $subject, $body, $headers );
+	}
+
 	$account_id = intval( $_POST['account_id'] );
 
 	// Only proceed if have permission to particular site id.
@@ -3717,6 +3797,37 @@ function captaincore_account_action_callback() {
 		wp_die();
 		return;
 	}
+
+	if ( $cmd == 'payInvoice' ) {
+		// Pay with new credit card
+		if ( isset( $_POST['source_id'] ) ) {
+			$response       = $user->add_payment_method( $_POST['source_id'] );
+			$payment_tokens = WC_Payment_Tokens::get_customer_tokens( $user->user_id() );
+			foreach ( $payment_tokens as $payment_token ) { 
+				if( $payment_token->get_token() == $_POST['source_id'] ) {
+					$user->pay_invoice( $_POST['value'], $payment_token->get_id() );
+					$user->set_as_primary( $payment_token->get_id() );
+				}
+			}
+			wp_die();
+		}
+		// Pay with existing credit card
+		$user->pay_invoice( $_POST['value'], $_POST['payment_id'] );
+		$user->set_as_primary( $_POST['payment_id'] );
+	};
+
+	if ( $cmd == 'setAsPrimary' ) {
+		$user->set_as_primary( $_POST['value'] );
+	};
+
+	if ( $cmd == 'addPaymentMethod' ) {
+		$response = $user->add_payment_method( $_POST['value'] );
+		echo json_encode( $response );
+	};
+
+	if ( $cmd == 'deletePaymentMethod' ) {
+		$user->delete_payment_method( $_POST['value'] );
+	};
 
 	if ( $cmd == 'requestSite' ) {
 		$user->request_site( $_POST['value'] );
@@ -4371,14 +4482,7 @@ function captaincore_ajax_action_callback() {
 	}
 
 	if ( $cmd == 'updatePlan' ) {
-		$account   = ( new CaptainCore\Accounts )->get( $post_id );
-		$plan         = json_decode( $account->plan );
-		$plan->name   = $value["plan"]["name"];
-		$plan->price  = $value["plan"]["price"];
-		$plan->addons = $value["plan"]["addons"];
-		$plan->limits = $value["plan"]["limits"];
-		$plan->interval = $value["plan"]["interval"];
-		( new CaptainCore\Accounts )->update( [ "plan" => json_encode( $plan ) ], [ "account_id" => $account->account_id ] );
+		( new CaptainCore\Accounts )->update_plan( $value["plan"], $post_id );
 	}
 
 	if ( $cmd == 'updateSettings' ) {
@@ -5541,8 +5645,7 @@ function captaincore_get_checkout_payment_url( $payment_url ) {
 	// https://captcore-sitename.com/checkout/order-pay/1918?pay_for_order=true&key=wc_order_576c79296c346&subscription_renewal=true
 	// Replace with
 	// https://captcore-sitename.com/checkout-express/1918/?pay_for_order=true&key=wc_order_576c79296c346&subscription_renewal=true
-	$home_url = esc_url( home_url( '/' ) );
-
+	$home_url        = esc_url( home_url( '/' ) );
 	$new_payment_url = str_replace( $home_url . 'checkout/order-pay/', $home_url . 'checkout-express/', $payment_url );
 
 	return $new_payment_url;
@@ -5978,6 +6081,9 @@ function load_captaincore_template( $original_template ) {
 add_filter('redirect_canonical', 'disable_404_redirection_for_captaincore');
 function disable_404_redirection_for_captaincore($redirect_url) {
 	global $wp;
+	if ( strpos( $wp->request, "checkout-express/" ) !== false ) {
+		return false;
+	}
     if ( strpos( $wp->request, "account/" ) !== false ) {
 		return false;
 	}

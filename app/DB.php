@@ -194,6 +194,28 @@ class DB {
         return $results;
     }
 
+    static function renewals( $user_id ) {
+        global $wpdb;
+        $table = self::_table();
+        $sql   = "SELECT *
+                FROM {$table}
+                WHERE {$table}.plan like '%,\"billing_user_id\":\"$user_id\"%'
+                order by {$table}.`name` ASC";
+        $results = $wpdb->get_results( $sql );
+        return $results;
+    }
+
+    static function with_renewals() {
+        global $wpdb;
+        $table = self::_table();
+        $sql   = "SELECT *
+                FROM {$table}
+                WHERE {$table}.plan like '%\"next_renewal\":\"%'
+                order by {$table}.`name` ASC";
+        $results = $wpdb->get_results( $sql );
+        return $results;
+    }
+
     static function fetch_domains( $conditions = [] ) {
         global $wpdb;
         $table = self::_table();

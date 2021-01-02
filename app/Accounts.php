@@ -55,6 +55,63 @@ class Accounts extends DB {
 		}
 		usort($accounts, function($a, $b) { return strcmp( strtolower($a->name), strtolower($b->name) ); });
 		return $accounts;
-	}
+    }
+
+    public function update_plan( $new_plan, $account_id ) {
+		$account = self::get( $account_id );
+        $plan    = json_decode( $account->plan );
+        $total   = $plan->price;
+        if ( count( $plan->addons ) > 0 ) {
+            foreach( $plan->addons as $addon ) {
+                $total = $total + $addon->price;
+            }
+        }
+        
+        // Calculate credit or charge for paid plans when interval changes.
+        if ( $plan->status == "active" && $plan->interval != $new_plan["interval"] ) {
+            $now              = new \DateTime();
+            $next_renewal     = new \DateTime( $plan->next_renewal );
+            $remaining_time   = $now->diff( $next_renewal );
+            $remaining_days   = $remaining_time->format('%a');
+            $per_month_total  = $total / $plan->interval;
+            $remaining_credit = ( $remaining_days / 30 ) * $per_month_total;
+            if ( $remaining_credit > 0 ) {
+                $plan->credit = $plan->credit + $remaining_credit;
+            }
+            if ( $remaining_credit < 0 ) {
+                $plan->charge = $plan->charge + $remaining_credit;
+            }
+        }
+        if ( $plan->status == "" ) {
+            $plan->status == "pending";
+        }
+		$plan->name            = $new_plan["name"];
+        $plan->price           = $new_plan["price"];
+		$plan->addons          = $new_plan["addons"];
+        $plan->limits          = $new_plan["limits"];
+        $plan->auto_pay        = $new_plan["auto_pay"];
+		$plan->interval        = $new_plan["interval"];
+        $plan->next_renewal    = $new_plan["next_renewal"];
+        $plan->billing_user_id = $new_plan["billing_user_id"];
+
+        self::update( [ "plan" => json_encode( $plan ) ], [ "account_id" => $account_id ] );
+    }
+
+    public function process_renewals() {
+
+        $accounts = self::with_renewals();
+        $now      = strtotime( "now" );
+        foreach ( $accounts as $account ) {
+            $plan         = json_decode( $account->plan );
+            $next_renewal = strtotime ( $plan->next_renewal );
+            if ( ! empty( $next_renewal ) && $next_renewal < $now ) {
+                echo "Processing renewal for {$account->name} as it's past {$plan->next_renewal}\n";
+                ( new Account( $account->account_id, true ) )->generate_order();
+                $plan->next_renewal = date("Y-m-d H:i:s", strtotime( "+{$plan->interval} month", $next_renewal ) );
+                echo "Next renewal in {$plan->interval} months will be {$plan->next_renewal}\n";
+                self::update( [ "plan" => json_encode( $plan ) ], [ "account_id" => $account->account_id ] );
+            }
+        }
+    }
 
 }

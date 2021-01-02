@@ -25,6 +25,50 @@ class User {
         return $accounts;
     }
 
+    public function set_as_primary( $token ) {
+        \WC_Payment_Tokens::set_users_default( $this->user_id, intval( $token ) );
+        $billing = self::billing();
+        foreach ( $billing->subscriptions as $item ) {
+            $subscription = (object) $item;
+            if ( $subscription->type == "woocommerce" ) {
+                self::update_payment_method( $subscription->account_id, intval( $token ) );
+            }
+        }
+    }
+
+    public function add_payment_method( $source_id ) {
+        $customer = new \WC_Stripe_Customer( $this->user_id );
+        $response = $customer->add_source( $source_id );
+        return $response;
+    }
+
+    public function delete_payment_method( $token_id ) {
+        $token       = \WC_Payment_Tokens::get( $token_id );
+        
+        if ( is_null( $token ) || $this->user_id !== $token->get_user_id() ) {
+            return "Error";
+        }
+        $was_default = $token->is_default();
+        \WC_Payment_Tokens::delete( $token_id );
+
+        if ( $was_default ) {
+            $payment_tokens = \WC_Payment_Tokens::get_customer_tokens( $this->user_id );
+
+            // Set default if another payment token found.
+            if ( count( $payment_tokens ) > 0 ) {
+                $other_token_id = array_keys( $payment_tokens )[0];
+                self::set_as_primary( $other_token_id );
+                $billing = self::billing();
+                foreach ( $billing->subscriptions as $item ) {
+                    $subscription = (object) $item;
+                    if ( $subscription->type == "woocommerce" ) {
+                        self::update_payment_method( $subscription->account_id, intval( $other_token_id ) );
+                    }
+                }
+            }
+        }
+    }
+
     public function verify_accounts( $account_ids = [] ) {
         if ( self::is_admin() ) {
             return true;
@@ -52,6 +96,207 @@ class User {
             }
         }
         return false;
+    }
+
+    public function billing() {
+
+        $customer       = new \WC_Customer( $this->user_id );
+        $address        = $customer->get_billing();
+        $invoices       = wc_get_orders( [ 'customer' => $this->user_id ] );
+        foreach ( $invoices as $key => $invoice ) {
+            $order      = wc_get_order( $invoice );
+            $item_count = $order->get_item_count();
+            $invoices[$key]  = [
+                "order_id" => $order->id,
+                "date"     => wc_format_datetime( $order->get_date_created() ),
+                "status"   => wc_get_order_status_name( $order->get_status() ),
+                "total"    => $order->get_total(),
+            ];
+        }
+        // Fetch CaptainCore subscriptions
+        $subscriptions = ( new Accounts )->renewals( $this->user_id );
+        foreach ( $subscriptions as $key => $subscription ) {
+            $plan                        = json_decode( $subscription->plan );
+            $plan->addons                = ( empty( $plan->addons ) ) ? [] : $plan->addons;
+            $subscriptions[ $key ]->plan = $plan;
+        }
+        // Fetch WooCommerce subscriptions
+        $current_subscriptions = wcs_get_users_subscriptions( $this->user_id );
+        foreach ( $current_subscriptions as $key => $subscription ) {
+            $interval   = $subscription->get_billing_period();
+            $line_items = $subscription->get_data()["line_items"];
+            $line_item  = array_shift ( array_values ( $line_items ) );
+            $details    = $line_item->get_meta_data();
+            foreach ( $details as $detail ) {
+                $item = $detail->get_data();
+                if ( isset( $item["key"]) && $item["key"] == "Details" ) {
+                    $name = $item["value"];
+                }
+            }
+
+            if ( $interval == "month" ) {
+                $interval_count = "1";
+            } else {
+                $interval_count = "12";
+            }
+            $subscriptions[] = [
+                "account_id" => $subscription->id,
+                "name"       => $name,
+                "type"       => "woocommerce",
+                "plan"       => (object) [
+                    "name"         => $line_item->get_name(),
+                    "next_renewal" => empty( $subscription->get_date( "next_payment" ) ) ? "" : $subscription->get_date( "next_payment" ),
+                    "price"        => $subscription->get_total(),
+                    "usage"        => (object) [],
+                    "limits"       => (object) [],
+                    "interval"     => $interval_count,
+                    "addons"       => [],
+                ],
+                "payment_method"  => $subscription->get_payment_method_to_display( 'customer' ),
+                "status"          => wcs_get_subscription_status_name( $subscription->get_status() ),
+            ];
+        }
+        $payment_methods = [];
+        $payment_tokens  = \WC_Payment_Tokens::get_customer_tokens( $this->user_id );
+        foreach ( $payment_tokens as $payment_token ) {
+            $type            = strtolower( $payment_token->get_type() );
+            $card_type       = $payment_token->get_card_type();
+            $payment_methods[] = [
+                'method'     => [
+                    'brand'   => ( ! empty( $card_type ) ? ucfirst( $card_type ) : esc_html__( 'Credit card', 'woocommerce' ) ),
+                    'gateway' => $payment_token->get_gateway_id(),
+                    'last4'   => $payment_token->get_last4(),
+                ],
+                'expires'    => $payment_token->get_expiry_month() . '/' . substr( $payment_token->get_expiry_year(), -2 ),
+                'is_default' => $payment_token->is_default(),
+                'token'      => $payment_token->get_id(),
+            ];
+        }
+
+        $billing = (object) [
+            "address"         => $address,
+            "subscriptions"   => $subscriptions,
+            "invoices"        => $invoices,
+            "payment_methods" => $payment_methods,
+        ];
+
+        return $billing;
+    }
+
+    public function update_payment_method( $invoice_id, $payment_id ) {
+
+        try {
+
+            $wc_token      = \WC_Payment_Tokens::get( $payment_id );
+            $source_id     = $wc_token->get_token();
+            $customer      = new \WC_Stripe_Customer( $this->user_id );
+            $customer_id   = $customer->get_id();
+            $source_object = \WC_Stripe_API::retrieve( 'sources/' . $source_id );
+
+            $prepared_source = (object) [
+                'token_id'      => $payment_id,
+                'customer'      => $customer_id,
+                'source'        => $source_id,
+                'source_object' => $source_object,
+            ];
+
+            $available_gateways = WC()->payment_gateways->get_available_payment_gateways();
+            $payment_method     = isset( $available_gateways[ 'stripe' ] ) ? $available_gateways[ 'stripe' ] : false;
+            $order              = wc_get_order( $invoice_id );
+            $payment_method->save_source_to_order( $order, $prepared_source );
+            
+			return array(
+				'result'   => 'success',
+			);
+
+		} catch ( \WC_Stripe_Exception $e ) {
+			return array(
+				'result'   => 'fail',
+				'message' => $e->getMessage(),
+			);
+		}
+    }
+
+    public function pay_invoice( $invoice_id, $payment_id ) {
+
+        try {
+
+            $wc_token      = \WC_Payment_Tokens::get( $payment_id );
+            $source_id     = $wc_token->get_token();
+            $customer      = new \WC_Stripe_Customer( $this->user_id );
+            $customer_id   = $customer->get_id();
+            $source_object = \WC_Stripe_API::retrieve( 'sources/' . $source_id );
+
+            $prepared_source = (object) [
+                'token_id'      => $payment_id,
+                'customer'      => $customer_id,
+                'source'        => $source_id,
+                'source_object' => $source_object,
+            ];
+
+            $available_gateways = WC()->payment_gateways->get_available_payment_gateways();
+            $payment_method     = isset( $available_gateways[ 'stripe' ] ) ? $available_gateways[ 'stripe' ] : false;
+            $order              = wc_get_order( $invoice_id );
+            $order->set_payment_method( 'stripe' );
+            $payment_method->save_source_to_order( $order, $prepared_source );
+            $intent = $payment_method->create_intent( $order, $prepared_source );
+            // Confirm the intent after locking the order to make sure webhooks will not interfere.
+			if ( empty( $intent->error ) ) {
+				$payment_method->lock_order_payment( $order, $intent );
+				$intent = $payment_method->confirm_intent( $intent, $order, $prepared_source );
+			}
+
+			if ( ! empty( $intent->error ) ) {
+				$payment_method->maybe_remove_non_existent_customer( $intent->error, $order );
+
+				// We want to retry.
+				if ( $payment_method->is_retryable_error( $intent->error ) ) {
+					return $payment_method->retry_after_error( $intent, $order, $retry, $force_save_source, $previous_error, $use_order_source );
+				}
+
+				$payment_method->unlock_order_payment( $order );
+				$payment_method->throw_localized_message( $intent, $order );
+			}
+
+			if ( ! empty( $intent ) ) {
+				// Use the last charge within the intent to proceed.
+				$response = end( $intent->charges->data );
+			}
+
+			// Process valid response.
+			$payment_method->process_response( $response, $order );
+
+			// Remove cart.
+			if ( isset( WC()->cart ) ) {
+				WC()->cart->empty_cart();
+			}
+
+			// Unlock the order.
+            $payment_method->unlock_order_payment( $order );
+            
+            $order->update_status( 'completed' );
+
+			// Return thank you page redirect.
+			return array(
+				'result'   => 'success',
+				'redirect' => $payment_method->get_return_url( $order ),
+			);
+
+		} catch ( \WC_Stripe_Exception $e ) {
+			wc_add_notice( $e->getLocalizedMessage(), 'error' );
+			\WC_Stripe_Logger::log( 'Error: ' . $e->getMessage() );
+
+			do_action( 'wc_gateway_stripe_process_payment_error', $e, $order );
+
+			/* translators: error message */
+			$order->update_status( 'failed' );
+
+			return array(
+				'result'   => 'fail',
+				'redirect' => '',
+			);
+		}
+
     }
 
     public function roles() {
@@ -264,6 +509,10 @@ class User {
 
     public function delete_requested_sites() {
         delete_user_meta( $this->user_id, 'requested_sites' );
+    }
+
+    public function user_id() {
+        return $this->user_id;
     }
 
 }
