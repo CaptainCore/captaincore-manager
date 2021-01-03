@@ -1113,8 +1113,8 @@ $user = wp_get_current_user();
 						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text class="mt-4">
-						<v-layout row wrap>
-						<v-flex xs6 px-1>
+						<v-row dense>
+						<v-col cols="6">
 						<v-select
 							@change="loadHostingPlan()"
 							v-model="dialog_modify_plan.selected_plan"
@@ -1122,8 +1122,8 @@ $user = wp_get_current_user();
 							:items="dialog_modify_plan.hosting_plans.map( plan => plan.name )"
 							:value="dialog_modify_plan.plan.name"
 						></v-select>
-						</v-flex>
-						<v-flex xs6 px-1>
+						</v-col>
+						<v-col cols="6">
 						<v-select
 							@change="calculateHostingPlan()"
 							v-model="dialog_modify_plan.plan.interval"
@@ -1131,11 +1131,11 @@ $user = wp_get_current_user();
 							:items="hosting_intervals"
 							:value="dialog_modify_plan.plan.interval"
 						></v-select>
-						</v-flex>
-						<v-flex xs6 px-1>
+						</v-col>
+						<v-col cols="6">
 							<v-select v-if="typeof dialog_account.records.users == 'object'" label="Billing User" :items="dialog_account.records.users" :item-text="item => `${item.name} - ${item.email}`" item-value="user_id" v-model="dialog_modify_plan.plan.billing_user_id"></v-select>
-							</v-flex>
-						<v-flex xs6 px-1>
+						</v-col>
+						<v-col cols="6">
 						<v-menu
 							v-model="dialog_modify_plan.date_selector"
 							:close-on-content-click="false"
@@ -1156,46 +1156,59 @@ $user = wp_get_current_user();
 							</template>
 							<v-date-picker @input="keepTimestamp( $event ); dialog_modify_plan.date_selector = false"></v-date-picker>
 						</v-menu>
-						</v-flex>
-						</v-layout>
+						</v-col>
+						</v-row>
+						<v-row dense><v-col>
 						<v-switch v-model="dialog_modify_plan.plan.auto_pay" false-value="false" true-value="true" label="Autopay"></v-switch>
-						<v-layout v-if="typeof dialog_modify_plan.plan.name == 'string' && dialog_modify_plan.plan.name == 'Custom'" row wrap>
-							<v-flex xs3 pa-1><v-text-field label="Storage (GBs)" :value="dialog_modify_plan.plan.limits.storage" @change.native="dialog_modify_plan.plan.limits.storage = $event.target.value"></v-text-field></v-flex>
-							<v-flex xs3 pa-1><v-text-field label="Visits" :value="dialog_modify_plan.plan.limits.visits" @change.native="dialog_modify_plan.plan.limits.visits = $event.target.value"></v-text-field></v-flex>
-							<v-flex xs3 pa-1><v-text-field label="Sites" :value="dialog_modify_plan.plan.limits.sites" @change.native="dialog_modify_plan.plan.limits.sites = $event.target.value"></v-text-field></v-flex>
-							<v-flex xs3 pa-1><v-text-field label="Price" :value="dialog_modify_plan.plan.price" @change.native="dialog_modify_plan.plan.price = $event.target.value"></v-text-field></v-flex>
-						</v-layout>
-						<v-layout v-else row wrap>
-							<v-flex xs3 pa-1><v-text-field label="Storage (GBs)" :value="dialog_modify_plan.plan.limits.storage" disabled></v-text-field></v-flex>
-							<v-flex xs3 pa-1><v-text-field label="Visits" :value="dialog_modify_plan.plan.limits.visits" disabled></v-text-field></v-flex>
-							<v-flex xs3 pa-1><v-text-field label="Sites" :value="dialog_modify_plan.plan.limits.sites" disabled ></v-text-field></v-flex>
-							<v-flex xs3 pa-1><v-text-field label="Price" :value="dialog_modify_plan.plan.price" disabled ></v-text-field></v-flex>
-						</v-layout>
-						<h3 class="title" v-show="typeof dialog_modify_plan.plan.addons == 'object' && dialog_modify_plan.plan.addons" style="margin-top: 1em;">Addons</h3>
-						<v-layout row wrap v-for="(addon, index) in dialog_modify_plan.plan.addons">
-						<v-flex xs7 pa-1>
+						</v-col></v-row>
+						<v-row v-if="typeof dialog_modify_plan.plan.name == 'string' && dialog_modify_plan.plan.name == 'Custom'" dense>
+							<v-col cols="3"><v-text-field label="Storage (GBs)" :value="dialog_modify_plan.plan.limits.storage" @change.native="dialog_modify_plan.plan.limits.storage = $event.target.value"></v-text-field></v-col>
+							<v-col cols="3"><v-text-field label="Visits" :value="dialog_modify_plan.plan.limits.visits" @change.native="dialog_modify_plan.plan.limits.visits = $event.target.value"></v-text-field></v-col>
+							<v-col cols="3"><v-text-field label="Sites" :value="dialog_modify_plan.plan.limits.sites" @change.native="dialog_modify_plan.plan.limits.sites = $event.target.value"></v-text-field></v-col>
+							<v-col cols="3"><v-text-field label="Price" :value="dialog_modify_plan.plan.price" @change.native="dialog_modify_plan.plan.price = $event.target.value"></v-text-field></v-col>
+						</v-row>
+						<v-row v-else dense>
+							<v-col cols="3"><v-text-field label="Storage (GBs)" :value="dialog_modify_plan.plan.limits.storage" disabled></v-text-field></v-col>
+							<v-col cols="3"><v-text-field label="Visits" :value="dialog_modify_plan.plan.limits.visits" disabled></v-text-field></v-col>
+							<v-col cols="3"><v-text-field label="Sites" :value="dialog_modify_plan.plan.limits.sites" disabled ></v-text-field></v-col>
+							<v-col cols="3"><v-text-field label="Price" :value="dialog_modify_plan.plan.price" disabled ></v-text-field></v-col>
+						</v-row>
+						<v-row dense>
+							<v-col>
+								<h3 class="title" v-show="typeof dialog_modify_plan.plan.addons == 'object' && dialog_modify_plan.plan.addons">Addons</h3>
+							</v-col>
+						</v-row>
+						<v-row dense v-for="(addon, index) in dialog_modify_plan.plan.addons">
+							<v-col cols="7">
 							<v-textarea auto-grow rows="1" label="Name" :value="addon.name" @change.native="addon.name = $event.target.value"></v-textarea>
-						</v-flex>
-						<v-flex xs2 pa-1>
+							</v-col>
+							<v-col cols="2">
 							<v-text-field label="Quantity" :value="addon.quantity" @change.native="addon.quantity = $event.target.value">
-						</v-flex>
-						<v-flex xs2 pa-1>
+							</v-col>
+							<v-col cols="2">
 							<v-text-field label="Price" :value="addon.price" @change.native="addon.price = $event.target.value">
-						</v-flex>
-						<v-flex xs1>
+							</v-col>
+							<v-col cols="1">
 							<v-btn small text icon @click="removeAddon(index)"><v-icon>delete</v-icon></v-btn>
-						</v-flex>
-						</v-layout>
-						<v-btn small style="margin:0px;" @click="addAddon()">
+							</v-col>
+						</v-row>
+						<v-row dense><v-col>
+						<v-btn small @click="addAddon()">
 							Add Addon
 						</v-btn>
-						<v-layout>
-						<v-flex xs12 text-right>
-							<v-btn color="primary" dark style="margin:0px;" @click="updatePlan()">
+						</v-col></v-row>
+						<v-row>
+						<v-col cols="12">
+							<v-text-field label="Additional Emails" persistent-hint hint="Separated by a comma. Example: austin@anchor.host, support@anchor.host" :value="dialog_modify_plan.plan.additional_emails" @change.native="dialog_modify_plan.plan.additional_emails = $event.target.value">
+						</v-col>
+						</v-row>
+						<v-row>
+						<v-col cols="12">
+							<v-btn color="primary" dark @click="updatePlan()">
 								Save Changes
 							</v-btn>
-						</v-flex>
-						</v-layout>
+						</v-col>
+						</v-row>
 					</v-card-text>
 					</v-card>
 				</v-dialog>
