@@ -377,6 +377,7 @@ class Account {
         $customer       = new \WC_Customer( $plan->billing_user_id );
         $address        = $customer->get_billing();
         $order          = wc_create_order(  [ 'customer_id' => $plan->billing_user_id ] );
+        $order->update_meta_data( "captaincore_account_id", $this->account_id );
 
         $site_names     = array_column( self::sites(), "name" );
         sort( $site_names );
