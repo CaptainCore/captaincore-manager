@@ -8151,6 +8151,9 @@ new Vue({
 					}
 					this.dialog_invoice.response = response.data
 					this.dialog_invoice.payment_method = this.billing.payment_method
+					if ( typeof this.dialog_invoice.payment_method == 'undefined' ) {
+						this.dialog_invoice.payment_method = "new"
+					}
 					if ( this.dialog_invoice.response.status == 'pending' ) {
 						elements = stripe.elements()
 						style = {
