@@ -59,7 +59,7 @@ class Domains extends DB {
         foreach( $this->domains as $domain_id ) {
             $domain = self::get( $domain_id );
             $domains[] = [
-                "domain_id" => $domain_id,
+                "domain_id" => (int) $domain_id,
                 "remote_id" => $domain->remote_id,
                 "name"      => $domain->name,
             ];
