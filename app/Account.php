@@ -410,8 +410,8 @@ class Account {
             if ( $plan->interval != $configurations->usage_pricing->sites->interval ) {
                 $price = $configurations->usage_pricing->sites->cost / ($configurations->usage_pricing->sites->interval / $plan->interval );
             }
-            $quantity = $plan->usage->sites - $plan->limits->sites;
-            $total    = $price * $quantity;
+            $quantity     = $plan->usage->sites - $plan->limits->sites;
+            $total        = $price * $quantity;
             $line_item_id = $order->add_product( get_product( $configurations->woocommerce->usage ), $quantity );
             $order->get_items()[ $line_item_id ]->set_subtotal( $total );
             $order->get_items()[ $line_item_id ]->set_total( $total );
@@ -451,17 +451,17 @@ class Account {
             $order->get_items()[ $line_item_id ]->save();
         }
 
-        // Set payment method
         $order->calculate_totals();
+        $default_payment = ( new \WC_Payment_Tokens )->get_customer_default_token( $plan->billing_user_id );
 
-        if ( $plan->auto_pay == "true" ) {
-            $payment_id = ( new \WC_Payment_Tokens )->get_customer_default_token( $plan->billing_user_id )->get_id();
+        if ( $plan->auto_pay == "true" && ! empty( $default_payment ) ) {
+            $payment_id = $default_payment->get_id();
             ( new User( $plan->billing_user_id, true ) )->pay_invoice( $order->get_id(), $payment_id );
             return;
         }
 
         WC()->mailer()->customer_invoice( $order );
-        $order->add_order_note( __( 'Order details manually sent to customer.', 'woocommerce' ), false, true );
+        $order->add_order_note( __( 'Order details sent to customer.', 'woocommerce' ), false, true );
         do_action( 'woocommerce_after_resend_order_email', $order, 'customer_invoice' );
     }
 
