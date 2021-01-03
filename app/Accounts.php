@@ -85,14 +85,15 @@ class Accounts extends DB {
         if ( $plan->status == "" ) {
             $plan->status == "pending";
         }
-		$plan->name            = $new_plan["name"];
-        $plan->price           = $new_plan["price"];
-		$plan->addons          = $new_plan["addons"];
-        $plan->limits          = $new_plan["limits"];
-        $plan->auto_pay        = $new_plan["auto_pay"];
-		$plan->interval        = $new_plan["interval"];
-        $plan->next_renewal    = $new_plan["next_renewal"];
-        $plan->billing_user_id = $new_plan["billing_user_id"];
+		$plan->name              = $new_plan["name"];
+        $plan->price             = $new_plan["price"];
+		$plan->addons            = $new_plan["addons"];
+        $plan->limits            = $new_plan["limits"];
+        $plan->auto_pay          = $new_plan["auto_pay"];
+        $plan->interval          = $new_plan["interval"];
+        $plan->next_renewal      = $new_plan["next_renewal"];
+        $plan->billing_user_id   = $new_plan["billing_user_id"];
+        $plan->additional_emails = $new_plan["additional_emails"];
 
         self::update( [ "plan" => json_encode( $plan ) ], [ "account_id" => $account_id ] );
     }
