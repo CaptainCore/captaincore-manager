@@ -177,6 +177,11 @@ class Site {
             return $response;
         }
 
+        // Remove staging if empty
+        if ( $site->environments[1]['address'] == "" ) {
+            unset( $site->environments[1] );
+        }
+
         $time_now = date("Y-m-d H:i:s");
         $details  = (object) [
             "key"              => $site->key,
@@ -293,8 +298,7 @@ class Site {
             return $response;
         }
 
-        $account_id_previous = $current_site->account_id;
-
+        $account_id_previous       = $current_site->account_id;
         $time_now                  = date("Y-m-d H:i:s");
         $details                   = json_decode( $current_site->details );
         $details->key              = $site->key;
