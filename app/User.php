@@ -102,6 +102,9 @@ class User {
 
         $customer       = new \WC_Customer( $this->user_id );
         $address        = $customer->get_billing();
+        if ( empty( $address["country"] ) ) {
+            $address["country"] = "US";
+        }
         $invoices       = wc_get_orders( [ 'customer' => $this->user_id ] );
         foreach ( $invoices as $key => $invoice ) {
             $order      = wc_get_order( $invoice );
