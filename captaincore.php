@@ -5672,6 +5672,17 @@ function woocommerce_email_customer_invoice_add_recipients( $recipient, $order )
 			$recipient .= ', ' . $additional_emails;
 		}
 	}
+
+	// Finds CaptainCore account
+	$account_id = $order->get_meta( 'captaincore_account_id' );
+	$account    = ( new CaptainCore\Accounts )->get( $account_id );
+	if ( $account ) {
+		$plan   = json_decode( $account->plan );
+		if ( ! empty( $plan->additional_emails ) ) {
+			$recipient .= ", {$plan->additional_emails}";
+		}
+	}
+
 	return $recipient;
 }
 function my_acf_input_admin_footer() {
