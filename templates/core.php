@@ -6117,6 +6117,7 @@ new Vue({
 				this.dialog_domain.step = 1
 				this.dialog_site.step = 1
 				this.dialog_account.step = 1
+				this.dialog_billing.step = 1
 			}
 			if ( this.route == "dns" && this.route_path != "" ) {
 				this.dialog_domain.step = 2				
