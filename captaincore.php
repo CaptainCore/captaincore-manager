@@ -5652,6 +5652,7 @@ function captaincore_get_checkout_payment_url( $payment_url ) {
 }
 
 // Checks subscription for additional emails
+add_filter( 'woocommerce_email_recipient_customer_completed_order', 'woocommerce_email_customer_invoice_add_recipients', 10, 2 );
 add_filter( 'woocommerce_email_recipient_customer_completed_renewal_order', 'woocommerce_email_customer_invoice_add_recipients', 10, 2 );
 add_filter( 'woocommerce_email_recipient_customer_renewal_invoice', 'woocommerce_email_customer_invoice_add_recipients', 10, 2 );
 add_filter( 'woocommerce_email_recipient_customer_invoice', 'woocommerce_email_customer_invoice_add_recipients', 10, 2 );
