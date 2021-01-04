@@ -4109,7 +4109,7 @@ $user = wp_get_current_user();
 							<span v-html="my_plan_usage_estimate( item.plan )"></span>
 						</template>
 						<template v-slot:item.next_renewal="{ item }">
-							<span v-show="item.plan.next_renewal != ''">{{ item.plan.next_renewal | pretty_timestamp }}</span>
+							<span v-if="item.plan.next_renewal != '' && item.plan.next_renewal != null">{{ item.plan.next_renewal | pretty_timestamp }}</span>
 						</template>
 						<template v-slot:item.actions="{ item }">
 							<v-btn small @click="customerModifyPlan( item )">Modify Plan</v-btn>
@@ -9451,6 +9451,9 @@ new Vue({
 			// Adds commas
 			if ( this.dialog_modify_plan.plan.limits.visits != null ) {
 				this.dialog_modify_plan.plan.limits.visits = this.dialog_modify_plan.plan.limits.visits.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+			}
+			if ( this.dialog_modify_plan.plan.next_renewal == null ) {
+				this.dialog_modify_plan.plan.next_renewal = ""
 			}
 			this.dialog_modify_plan.selected_plan = JSON.parse(JSON.stringify( this.dialog_account.records.account.plan.name ) )
 			this.dialog_modify_plan.customer_name = this.dialog_site.site.account.name;

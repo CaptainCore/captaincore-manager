@@ -153,6 +153,33 @@ class Account {
         return $results;
     }
 
+    public function billing_sites() {
+        if ( $this->account_id == "" ) {
+            return [];
+        }
+        // Fetch sites assigned as owners
+        $all_site_ids = [];
+        $site_ids = array_column( ( new Sites )->where( [ "account_id" => $this->account_id, "status" => "active" ] ), "site_id" );
+        foreach ( $site_ids as $site_id ) {
+            $all_site_ids[] = $site_id;
+        }
+        $results  = [];
+        $all_site_ids = array_unique( $all_site_ids );
+
+        foreach ($all_site_ids as $site_id) {
+            $site      = ( new Sites )->get( $site_id );
+            $details   = json_decode( $site->details );
+            $results[] = [
+                "site_id" => $site_id,
+                "name"    => $site->name,
+                "visits"  => $details->visits,
+                "storage" => $details->storage,
+            ];
+        }
+        usort( $results, "sort_by_name" );
+        return $results;
+    }
+
     public function sites() {
         if ( $this->account_id == "" ) {
             return [];
@@ -160,6 +187,11 @@ class Account {
         // Fetch sites assigned as owners
         $all_site_ids = [];
         $site_ids = array_column( ( new Sites )->where( [ "account_id" => $this->account_id, "status" => "active" ] ), "site_id" );
+        foreach ( $site_ids as $site_id ) {
+            $all_site_ids[] = $site_id;
+        }
+        // Fetch customer sites
+        $site_ids = array_column( ( new Sites )->where( [ "customer_id" => $this->account_id, "status" => "active" ] ), "site_id" );
         foreach ( $site_ids as $site_id ) {
             $all_site_ids[] = $site_id;
         }
@@ -333,7 +365,7 @@ class Account {
 
     public function calculate_totals() {
         $metrics = [ 
-            "sites"   => count( $this->sites() ),
+            "sites"   => count( $this->billing_sites() ),
             "users"   => count( $this->users() ),
             "domains" => count( $this->domains() ),
         ];
@@ -343,13 +375,12 @@ class Account {
 
     public function calculate_usage() {
         $account  = self::get();
-        $sites    = $this->sites();
+        $sites    = $this->billing_sites();
         $account->plan->usage->storage = array_sum ( array_column( $sites, "storage" ) );
         $account->plan->usage->visits  = array_sum ( array_column( $sites, "visits" ) );
         $account->plan->usage->sites   = count( $sites );
         ( new Accounts )->update( [ "plan" => json_encode( $account->plan ) ], [ "account_id" => $this->account_id ] );
     }
-
         
     public function process_renewals() {
         $response = [];
@@ -379,7 +410,7 @@ class Account {
         $order          = wc_create_order(  [ 'customer_id' => $plan->billing_user_id ] );
         $order->update_meta_data( "captaincore_account_id", $this->account_id );
 
-        $site_names     = array_column( self::sites(), "name" );
+        $site_names     = array_column( self::billing_sites(), "name" );
         sort( $site_names );
         $site_names     = implode( ", ", $site_names );
 
