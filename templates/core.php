@@ -4213,6 +4213,13 @@ $user = wp_get_current_user();
 						<v-toolbar-title v-show="dialog_invoice.loading == false">Invoice #{{ dialog_invoice.response.order_id }}</v-toolbar-title>
 						<div class="flex-grow-1"></div>
 						<v-toolbar-items v-show="dialog_invoice.loading == false">
+							<v-tooltip bottom>
+								<template v-slot:activator="{ on }">
+									<v-btn text @click="downloadPDF()" v-on="on"><v-icon>mdi-file-pdf-outline</v-icon></v-btn>
+									<a ref="download_pdf" href="#"></a>
+								</template>
+								<span>Download PDF Invoice</span>
+							</v-tooltip>
 						<v-btn text href="/account/billing" @click.prevent="goToPath( '/account/billing' )"><v-icon>mdi-arrow-left</v-icon> Back</v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
@@ -8148,6 +8155,21 @@ new Vue({
 			}
 			this.new_payment.card = elements.create("card", { style: style })
 			this.new_payment.card.mount("#new-card-element")
+		},
+		downloadPDF() {
+			var data = {
+				action: 'captaincore_local',
+				command: 'downloadPDF',
+				value: this.dialog_invoice.response.order_id
+			};
+			axios.post( ajaxurl, Qs.stringify( data ), { responseType: 'blob' })
+				.then( response => {
+					newBlob = new Blob([response.data], {type: "application/pdf"})
+					this.$refs.download_pdf.download = `invoice-${this.dialog_invoice.response.order_id}.pdf`;
+					this.$refs.download_pdf.href = window.URL.createObjectURL(newBlob);
+					this.$refs.download_pdf.click();
+				})
+				.catch( error => console.log( error ) );
 		},
 		showInvoice( order_id ) {
 			this.dialog_invoice.loading = true

@@ -3536,6 +3536,76 @@ function captaincore_local_action_callback() {
 		unset ( $response->profile->new_password );
 		echo json_encode( $response );
 	}
+	if ( $cmd == 'downloadPDF' ) {
+		$order            = wc_get_order( $value );
+		$order_data       = (object) $order->get_data();
+		$order_items      = $order->get_items( apply_filters( 'woocommerce_purchase_order_item_types', 'line_item' ) );
+		$order_line_items = "";
+		foreach ( $order_items as $item_id => $item ) {
+			$subtotal          = str_replace( "<bdi>", "", $order->get_formatted_line_subtotal( $item ) );
+			$subtotal          = str_replace( "</bdi>", "", $subtotal );
+			$details           = $item->get_meta_data()[0]->get_data();
+			if ( $details['key'] == "Details" ) {
+				$description = $details['value'];
+			}
+			$order_line_items .= "<tr><td>{$item->get_name()}</td><td width=\"350\">{$description}</td><td style=\"text-align:right;\">{$item->get_quantity()}</td><td>{$subtotal}</td></tr>";
+		}
+
+		$payment_gateways      = WC()->payment_gateways->payment_gateways();
+		$payment_method        = $order->get_payment_method();
+		$payment_method_string = sprintf(
+			__( 'Payment via %s', 'woocommerce' ),
+			esc_html( isset( $payment_gateways[ $payment_method ] ) ? $payment_gateways[ $payment_method ]->get_title() : "Check" )
+		);
+
+		if ( $order->get_date_paid() ) {
+			$paid_on = sprintf(
+				__( 'Paid on %1$s @ %2$s', 'woocommerce' ),
+				wc_format_datetime( $order->get_date_paid() ),
+				wc_format_datetime( $order->get_date_paid(), get_option( 'time_format' ) )
+			);
+		}
+
+		$response = (object) [
+			"order_id"       => $order_data->id,
+			"created_at"     => $order_data->date_created->getTimestamp(),
+			"status"         => $order_data->status,
+			"line_items"     => $order_line_items,
+			"payment_method" => $payment_method_string,
+			"paid_on"        => $paid_on,
+			"total"          => number_format( (float) $order_data->total, 2, '.', '' ),
+		];
+
+		$account_id = $order->get_meta( 'captaincore_account_id' );
+		$account    = ( new CaptainCore\Accounts )->get( $account_id );
+		$created_at = $order_data->date_created->date( 'M jS Y' );
+		$html2pdf   = new \Spipu\Html2Pdf\Html2Pdf('P', 'A4', 'en');
+		$html       = <<<HEREDOC
+<html>
+<style>body, p { font-size:16px; }
+table { border-collapse: collapse; font-size:16px; width: 100%; table-layout: fixed; }
+hr { height:1px;border-width:0;color:gray rgba(0,0,0,.12);background-color:gray rgba(0,0,0,.12); }
+th, td { padding: 4px 16px; border-bottom: thin solid rgba(0,0,0,.12); word-wrap: break-word; vertical-align: middle; }
+</style>
+<body><img width="224" src="https://anchor.host/wp-content/uploads/2015/01/logo.png" alt="Anchor Hosting"><br /><hr />
+<h2>Invoice #{$order_data->id} for {$account->name}</h2>
+<p>Order was created on <strong>{$created_at}</strong> and is currently <strong>{$response->status} payment</strong>.</p>
+<table>
+<thead>
+	<tr><th><span>Name</span></th><th><span>Description</span></th><th><span>Quantity</span></th><th><span>Total</span></th></tr>
+</thead>
+<tbody>
+	$order_line_items
+	<tr><td colspan="3" style="text-align:right;">Total:</td><td>\${$response->total}</td></tr>
+</tbody>
+</table>
+</body>
+</html>
+HEREDOC;
+		$html2pdf->writeHTML( $html );
+		$html2pdf->output();
+		wp_die();
+	}
 	if ( $cmd == 'fetchInvoice' ) {
 		$order            = wc_get_order( $value );
 		$order_data       = (object) $order->get_data();
