@@ -3046,62 +3046,8 @@ function captaincore_verify_permissions( $site_id ) {
 }
 
 // Checks current user for valid permissions
-function captaincore_verify_permissions_account( $customer_id ) {
-
-	$current_user = wp_get_current_user();
-	$role_check   = in_array( 'administrator', $current_user->roles );
-
-	// Checks for a current user. If admin found pass if not check permissions
-	if ( $current_user && $role_check ) {
-		return true;
-	} else {
-
-		// Checks current users permissions
-		$partner = get_field( 'partner', 'user_' . get_current_user_id() );
-
-		if ( $partner ) {
-			foreach ( $partner as $partner_id ) {
-
-				$websites = get_posts(
-					array(
-						'post_type'      => 'captcore_website',
-						'posts_per_page' => '-1',
-						'order'          => 'asc',
-						'orderby'        => 'title',
-						'meta_query'     => array(
-							'relation' => 'AND',
-							array(
-								'key'     => 'partner', // name of custom field
-								'value'   => '"' . $partner_id . '"', // matches exactly "123", not just 123. This prevents a match for "1234"
-								'compare' => 'LIKE',
-							),
-							array(
-								'key'     => 'status',
-								'value'   => 'closed',
-								'compare' => '!=',
-							),
-						),
-					)
-				);
-
-				if ( $websites ) :
-
-					foreach ( $websites as $website ) :
-						$website_customer_id = get_field( 'customer', $website->ID );
-
-						if ( $customer_id == $website_customer_id[0] ) {
-							return true;
-						}
-
-					endforeach;
-				endif;
-
-			}
-		}
-	}
-
-	// No permissions found
-	return false;
+function captaincore_verify_permissions_account( $account_id ) {
+	return ( new CaptainCore\User )->verify_accounts( [ $account_id ] );
 }
 
 // Checks current user for valid permissions
@@ -3465,13 +3411,7 @@ function captaincore_local_action_callback() {
 	global $wpdb;
 	$cmd   = $_POST['command'];
 	$value = $_POST['value'];
-	$email = $_POST['invite'];
 
-	if ( $cmd == 'sendAccountInvite' ) {
-		$account = new CaptainCore\Account( $value );
-		$response = $account->invite( $email );
-		echo json_encode( $response );
-	}
 	if ( $cmd == 'updateAccount' ) {
 		$user_id = get_current_user_id();
 		$account = (object) $value;
@@ -3687,11 +3627,6 @@ HEREDOC;
 		$account = new CaptainCore\Account( $account_id );
 		$account->calculate_totals();
 	}
-	if ( $cmd == 'deleteInvite' ) {
-		$invites = new CaptainCore\Invites();
-		$invites->delete( $value );
-		echo "Invite deleted.";
-	}
 	if ( $cmd == 'acceptInvite' ) {
 		$invite = (object) $value;
 		$invites = new CaptainCore\Invites();
@@ -3861,11 +3796,23 @@ function captaincore_account_action_callback() {
 
 	$account_id = intval( $_POST['account_id'] );
 
-	// Only proceed if have permission to particular site id.
+	// Only proceed if have permission to particular account id.
 	if ( ! $user->is_admin() && isset( $account_id ) && ! captaincore_verify_permissions_account( $account_id ) && ! in_array( $_POST['command'], $everyone_commands ) ) {
 		echo "Permission denied";
 		wp_die();
 		return;
+	}
+
+	if ( $cmd == 'sendAccountInvite' ) {
+		$account  = new CaptainCore\Account( $account_id );
+		$response = $account->invite( $_POST['invite'] );
+		echo json_encode( $response );
+	}
+
+	if ( $cmd == 'deleteInvite' ) {
+		$account  = new CaptainCore\Account( $account_id );
+		$response = $account->invite_delete( $_POST['value'] );
+		echo "Invite deleted.";
 	}
 
 	if ( $cmd == 'payInvoice' ) {

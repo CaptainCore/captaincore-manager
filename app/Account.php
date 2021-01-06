@@ -327,6 +327,13 @@ class Account {
         
     }
 
+    public function invite_delete( $invite_id ) {
+        $invite  = ( new Invites )->get( $invite_id );
+        if ( $invite->account_id == $this->account_id ) {
+            ( new Invites )->delete( $invite_id );
+        }
+    }
+
     public function invite( $email ) {
 
         // Add account ID to current user
