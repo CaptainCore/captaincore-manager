@@ -9732,6 +9732,12 @@ new Vue({
 			site_id = this.dialog_file_diff.quicksave.site_id
 			site = this.dialog_site.site
 
+			description = "Rollback file " + this.dialog_file_diff.file_name  + " as of " + date
+
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
+
 			var data = {
 				'action': 'captaincore_install',
 				'post_id': site_id,
@@ -9741,13 +9747,11 @@ new Vue({
 				'value'	: this.dialog_file_diff.file_name,
 			};
 
-			self = this;
-
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					self.snackbar.message = "File restore in process. Will email once completed.";
-					self.snackbar.show = true;
-					self.dialog_file_diff.show = false;
+					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data
+					this.runCommand( response.data )
+					this.dialog_file_diff.show = false
 				})
 				.catch( error => console.log( error ) );
 
