@@ -1471,10 +1471,13 @@ g.chart-legend {
 .v-application .dns_introduction a {
 	text-decoration: underline;
 	font-weight: bold;
-	color: #fff;
 }
 
-.application.theme--light .dns_introduction p {
+.dns_introduction .theme--light.v-data-table>.v-data-table__wrapper>table>tbody>tr:hover:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper) {
+  background: none;
+}
+
+.dns_introduction p {
 	margin-bottom: 0px;
 }
 
