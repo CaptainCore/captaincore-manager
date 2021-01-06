@@ -4229,7 +4229,7 @@ $user = wp_get_current_user();
 						<v-overlay absolute :value="dialog_invoice.paying">
 							<v-progress-circular indeterminate size="64"></v-progress-circular>
 						</v-overlay>
-						<v-col style="max-width:360px" v-show="dialog_invoice.response.status == 'pending'">
+						<v-col style="max-width:360px" v-show="dialog_invoice.response.status == 'pending' || dialog_invoice.response.status == 'failed'">
 						<v-card
 							class="mb-7"
 							outlined
@@ -4383,7 +4383,7 @@ $user = wp_get_current_user();
 						</v-card>
 						<v-card
 							class="mb-7"
-							v-show="dialog_invoice.response.status == 'pending'"
+							v-show="dialog_invoice.response.status == 'pending' || dialog_invoice.response.status == 'failed'"
 							outlined
 						>
 						<v-list-item three-line>
@@ -4420,7 +4420,7 @@ $user = wp_get_current_user();
 							</v-list-item-content>
 							</v-list-item>
 							</v-card>
-							<v-btn color="primary" x-large @click="payInvoice()" width="100%" class="mb-7" v-show="dialog_invoice.response.status == 'pending'">Pay - ${{ dialog_invoice.response.total }}</v-btn>
+							<v-btn color="primary" x-large @click="payInvoice()" width="100%" class="mb-7" v-show="dialog_invoice.response.status == 'pending' || dialog_invoice.response.status == 'failed'">Pay - ${{ dialog_invoice.response.total }}</v-btn>
 						</v-col>
 						</v-row>
 						</v-card>
@@ -8190,7 +8190,7 @@ new Vue({
 					if ( typeof this.dialog_invoice.payment_method == 'undefined' ) {
 						this.dialog_invoice.payment_method = "new"
 					}
-					if ( this.dialog_invoice.response.status == 'pending' ) {
+					if ( this.dialog_invoice.response.status == 'pending' || this.dialog_invoice.response.status == 'failed' ) {
 						elements = stripe.elements()
 						style = {
 							base: {
