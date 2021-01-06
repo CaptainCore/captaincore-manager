@@ -669,7 +669,7 @@ $user = wp_get_current_user();
 					<v-text-field label="Email" :value="dialog_user.user.email" @change.native="dialog_user.user.email = $event.target.value"></v-text-field>
 				</v-flex>
 				<v-autocomplete :items="accounts" item-text="name" item-value="account_id" v-model="dialog_user.user.account_ids" label="Accounts" chips multiple deletable-chips></v-autocomplete>
-				<v-alert :value="true" type="error" v-for="error in dialog_user.errors" class="mt-5">{{ error }}</v-alert>
+				<v-alert text :value="true" type="error" v-for="error in dialog_user.errors" class="mt-5">{{ error }}</v-alert>
 				<v-flex xs12 text-right pa-0 ma-0>
 					<v-btn color="primary" dark @click="saveUser()">
 						Save User
@@ -947,11 +947,7 @@ $user = wp_get_current_user();
 			<v-card-text>
 				<v-text-field :value="dialog_new_domain.domain.name" @change.native="dialog_new_domain.domain.name = $event.target.value" label="Domain Name" required class="mt-3"></v-text-field>
 				<v-autocomplete :items="accounts" item-text="name" item-value="account_id" v-model="dialog_new_domain.domain.account_id" label="Account" required></v-autocomplete>
-				<v-alert
-					:value="true"
-					type="error"
-					v-for="error in dialog_new_domain.errors"
-					>
+				<v-alert text :value="true" type="error" v-for="error in dialog_new_domain.errors">
 					{{ error }}
 				</v-alert>
 				<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="dialog_new_domain.loading"></v-progress-linear>
@@ -977,7 +973,7 @@ $user = wp_get_current_user();
 			</template>
 			<v-card-text>
 				<template v-if="dialog_account.show">
-				<v-alert :value="true" type="info" class="mb-4 mt-4">
+				<v-alert text :value="true" type="info" class="mb-4 mt-4">
 					When new sites are added to the account <strong>{{ dialog_account.records.account.name }}</strong> then the following default settings will be applied.  
 				</v-alert>
 				<v-layout wrap>
@@ -1542,7 +1538,7 @@ $user = wp_get_current_user();
 							<v-toolbar-title>Configured pages to capture.</v-toolbar-title>
 						</v-toolbar>
 						<v-card-text>
-							<v-alert type="info">Should start with a <code>/</code>. Example use <code>/</code> for the homepage and <code>/contact</code> for the the contact page.</v-alert>
+							<v-alert text type="info">Should start with a <code>/</code>. Example use <code>/</code> for the homepage and <code>/contact</code> for the the contact page.</v-alert>
 								<v-text-field v-for="item in dialog_captures.pages" label="Page URL" :value="item.page" @change.native="item.page = $event.target.value"></v-text-field>
 							<p><v-btn text small icon color="primary" @click="addAdditionalCapturePage"><v-icon>mdi-plus-box</v-icon></v-btn></p>
 							<p><v-btn color="primary" @click="updateCapturePages()">Save Pages</v-btn></p>
@@ -1552,7 +1548,7 @@ $user = wp_get_current_user();
 						<img :src="`${dialog_captures.image_path}${dialog_captures.selected_page.image}` | safeUrl" style="max-width:100%;" class="elevation-5 mt-5">
 					</v-container>
 					<v-container v-show="dialog_captures.captures.length == 0 && ! dialog_captures.loading" class="mt-5">
-						<v-alert type="info">There are no historical captures, yet.</v-alert>
+						<v-alert text type="info">There are no historical captures, yet.</v-alert>
 					</v-container>
 					<v-container v-show="dialog_captures.loading" class="mt-5">
 						<v-progress-linear indeterminate rounded height="6" class="mb-3"></v-progress-linear>
@@ -1627,7 +1623,7 @@ $user = wp_get_current_user();
 						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text>
-						<v-alert :value="true" type="info" color="yellow darken-4" class="mt-3">
+						<v-alert text :value="true" type="info" color="yellow darken-4" class="mt-3">
 							Warning {{ dialog_migration.site_name }} will be overwritten with backup. 
 						</v-alert>
 						<p></p>
@@ -1690,7 +1686,7 @@ $user = wp_get_current_user();
 					</v-toolbar>
 					<v-card-text>
 					<v-container>
-						<v-alert :value="true" type="info" color="blue darken-3">
+						<v-alert text :value="true" type="info">
 							Domain needs to match current home url. Otherwise server domain mapping will need updated to prevent redirection loop.
 						</v-alert>
 						<p></p>
@@ -1730,7 +1726,7 @@ $user = wp_get_current_user();
 			<v-container fluid v-show="loading_page != true" style="padding:0px;">
 			<v-card tile flat v-show="route == 'login'" class="mt-11">
 				<v-card flat style="max-width:960px;margin: auto;margin-bottom:30px" v-if="fetchInvite.account">
-				<v-alert type="info" style="border-radius: 4px;" elevation="2" dense color="primary" dark>
+				<v-alert text type="info" style="border-radius: 4px;" elevation="2" dense color="primary" dark>
 					To accept invitation either <strong>create new account</strong> or <strong>login</strong> to an existing account.
 				</v-alert>
 				<v-row>
@@ -1762,7 +1758,7 @@ $user = wp_get_current_user();
 							<v-text-field label="Username or Email" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
 						</v-col>
 						<v-col cols="12">
-							<v-alert type="success" v-show="login.message">{{ login.message }}</v-alert>
+							<v-alert text type="success" v-show="login.message">{{ login.message }}</v-alert>
 						</v-col>
 						<v-col cols="12">
 							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
@@ -1779,7 +1775,7 @@ $user = wp_get_current_user();
 							<v-text-field label="Password" :value="login.user_password" @change.native="login.user_password = $event.target.value" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']"></v-text-field>
 						</v-col>
 						<v-col cols="12">
-							<v-alert type="error" v-show="login.errors">{{ login.errors }}</v-alert>
+							<v-alert text type="error" v-show="login.errors">{{ login.errors }}</v-alert>
 						</v-col>
 						<v-col cols="12">
 							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
@@ -1809,7 +1805,7 @@ $user = wp_get_current_user();
 							<v-text-field label="Username or Email" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
 						</v-col>
 						<v-col cols="12">
-							<v-alert type="success" v-show="login.message">{{ login.message }}</v-alert>
+							<v-alert text type="success" v-show="login.message">{{ login.message }}</v-alert>
 						</v-col>
 						<v-col cols="12">
 							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
@@ -1826,7 +1822,7 @@ $user = wp_get_current_user();
 							<v-text-field label="Password" :value="login.user_password" @change.native="login.user_password = $event.target.value" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']"></v-text-field>
 						</v-col>
 						<v-col cols="12">
-							<v-alert type="error" v-show="login.errors">{{ login.errors }}</v-alert>
+							<v-alert text type="error" v-show="login.errors">{{ login.errors }}</v-alert>
 						</v-col>
 						<v-col cols="12">
 							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
@@ -2722,7 +2718,7 @@ $user = wp_get_current_user();
 				</v-toolbar>
 				<v-sheet v-show="dialog_site.backup_step == 1" class="mt-7">
 				  <v-card flat>
-				<v-row class="px-5">
+				<v-row class="pa-4">
 				<v-col cols="12" md="4" class="px-2">
 				<v-card
 					class="mx-auto"
@@ -3110,7 +3106,7 @@ $user = wp_get_current_user();
 					<v-form ref="form" :disabled="dialog_new_site.saving">
 						<v-layout v-for="error in dialog_new_site.errors">
 							<v-flex xs12>
-								<v-alert :value="true" type="error">
+								<v-alert text :value="true" type="error">
 								{{ error }}
 								</v-alert>
 							</v-flex>
@@ -3302,10 +3298,7 @@ $user = wp_get_current_user();
 				<v-form ref="form" :disabled="dialog_edit_site.loading">
 					<v-layout v-for="error in dialog_edit_site.errors">
 						<v-flex xs12>
-							<v-alert
-							:value="true"
-							type="error"
-							>
+							<v-alert text :value="true" type="error">
 							{{ error }}
 							</v-alert>
 						</v-flex>
@@ -3497,21 +3490,33 @@ $user = wp_get_current_user();
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
-				<v-card class="mb-4 dns_introduction">
-					<v-alert
-						:value="true"
-						type="info"
-						style="padding:8px 16px;"
-					>
-					<v-layout wrap align-center justify-center row fill-height>
-					<v-flex xs12 md9 px-2 subtitle-1>
+				<v-card flat class="mb-4 dns_introduction" v-show="configurations.dns_nameservers != ''">
+					<v-alert :value="true" type="info" text>
+						<v-row>
+						<v-col>
 						<div v-html="configurations.dns_introduction_html"></div>
-					</v-flex>
-					<v-flex xs12 md3 px-2 text-center v-show="configurations.dns_nameservers != ''">
-						<v-chip color="primary">Nameservers</v-chip>
-						<div v-html="configurations.dns_nameservers"></div>
-					</v-flex>
-					</v-layout>
+						</v-col>
+						<v-col md="auto" class="ma-0 pa-0">
+						<v-simple-table dense light>
+							<template v-slot:default>
+							<thead>
+								<tr>
+								<th class="text-center primary--text">
+									Nameservers
+								</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr v-for="nameserver in configurations.dns_nameservers.split('\n')">
+								<td class="text-center px-4">
+									<v-btn small text @click="copyText( nameserver )" class="primary--text">{{ nameserver }} <v-icon class="ml-1">mdi-content-copy</v-icon></v-btn>
+								</td>
+								</tr>
+							</tbody>
+							</template>
+						</v-simple-table>
+						</v-col>
+						</v-row>
 					</v-alert>
 				</v-card>
 				<v-row class="ma-0 pa-0">
@@ -3567,7 +3572,7 @@ $user = wp_get_current_user();
 						</v-toolbar>
 						<v-row v-if="dialog_domain.errors">
 							<v-col class="mx-3">
-								<v-alert :value="true" type="error" v-for="error in dialog_domain.errors">{{ error }}</v-alert>
+								<v-alert text :value="true" type="error" v-for="error in dialog_domain.errors">{{ error }}</v-alert>
 							</v-col>
 						</v-row>
 						<v-row>
@@ -3705,8 +3710,8 @@ $user = wp_get_current_user();
     					<v-row>
 							<v-col class="mx-3">
 								<template v-for="result in dialog_domain.results">
-									<v-alert :value="true" type="success" v-show="typeof result.success != 'undefined'">{{ result.success }}</v-alert>
-									<v-alert :value="true" type="error" v-show="typeof result.errors != 'undefined'">{{ result.errors }}</v-alert>
+									<v-alert text :value="true" type="success" v-show="typeof result.success != 'undefined'">{{ result.success }}</v-alert>
+									<v-alert text :value="true" type="error" v-show="typeof result.errors != 'undefined'">{{ result.errors }}</v-alert>
 								</template>
 							</v-col>
 						</v-row>
@@ -3721,7 +3726,7 @@ $user = wp_get_current_user();
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
-				<v-alert :value="true" type="info">
+				<v-alert :value="true" type="info" text>
 						Results from daily scans of home pages. Web console errors are extracted from Google Chrome via Lighthouse CLI. Helpful for tracking down wide range of issues.  
 				</v-alert>
 					<v-card v-for="site in filterSitesWithErrors" flat class="mb-2" :key="site.site_id">
@@ -3767,10 +3772,7 @@ $user = wp_get_current_user();
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
-				<v-alert
-					:value="true"
-					type="info"
-				>
+				<v-alert :value="true" type="info" text>
 						Warning, this is for developers only 💻. The cookbook contains user made "recipes" or scripts which are deployable to one or many sites. Bash script and WP-CLI commands welcomed. For ideas refer to <code><a href="https://captaincore.io/cookbook/" target="_blank">captaincore.io/cookbook</a></code>.
 				</v-alert>
 				</v-card-text>
@@ -4155,7 +4157,7 @@ $user = wp_get_current_user();
 								</v-card-title>
 								<v-card-text class="mt-5">
 									<div id="new-card-element"></div>
-									<v-alert dense border="left" type="warning" v-show="new_payment.error != ''">
+									<v-alert text dense border="left" type="warning" v-show="new_payment.error != ''">
 										{{ new_payment.error }}
 									</v-alert>
 								</v-card-text>
@@ -4404,7 +4406,7 @@ $user = wp_get_current_user();
 							<v-card max-width="450px" outlined v-show="dialog_invoice.payment_method == 'new'" class="mb-4">
 								<v-card-text>
 								<div id="card-element"></div>
-								<v-alert dense border="left" type="error" v-show="dialog_invoice.error != ''" class="mt-4">
+								<v-alert text dense border="left" type="error" v-show="dialog_invoice.error != ''" class="mt-4">
 									{{ dialog_invoice.error }}
 								</v-alert>
 								</v-card-text>
@@ -4434,7 +4436,7 @@ $user = wp_get_current_user();
 					<v-spacer></v-spacer>
 				</v-toolbar>
 				<v-card-text>
-					<v-alert :value="true" type="info" class="mb-4 mt-4">
+					<v-alert text :value="true" type="info" class="mb-4 mt-4">
 						When new sites are added then the following default settings will be applied.  
 					</v-alert>
 					<v-layout wrap>
@@ -4538,8 +4540,8 @@ $user = wp_get_current_user();
 							<v-text-field :value="profile.email" @change.native="profile.email = $event.target.value" label="Email"></v-text-field>
 							<v-text-field :value="profile.login" @change.native="profile.login = $event.target.value" label="Username" readonly disabled></v-text-field>
 							<v-text-field :value="profile.new_password" @change.native="profile.new_password = $event.target.value" type="password" label="New Password" hint="Leave empty to keep current password." persistent-hint></v-text-field>
-							<v-alert :value="true" type="error" v-for="error in profile.errors" class="mt-5">{{ error }}</v-alert>
-							<v-alert :value="true" type="success" v-show="profile.success" class="mt-5">{{ profile.success }}</v-alert>
+							<v-alert text :value="true" type="error" v-for="error in profile.errors" class="mt-5">{{ error }}</v-alert>
+							<v-alert text :value="true" type="success" v-show="profile.success" class="mt-5">{{ profile.success }}</v-alert>
 							
 							<v-flex xs12 mt-5>
 								<v-btn color="primary" dark @click="updateAccount()">Save Account</v-btn>
@@ -4900,16 +4902,12 @@ $user = wp_get_current_user();
 						</v-col>
 						</v-row>
 						</v-card-text>
-						<v-alert
-							:value="true"
-							type="info"
-							color="primary"
-						>
+						<v-alert text :value="true" type="info" color="primary" class="mx-2">
 					<strong>{{ dialog_account.records.account.plan.name }} Plan</strong> supports up to {{ dialog_account.records.account.plan.limits.visits | formatLargeNumbers }} visits, {{ dialog_account.records.account.plan.limits.storage }}GB storage and {{ dialog_account.records.account.plan.limits.sites }} sites. Extra sites, storage and visits charged based on usage.
 						</v-alert>
 						</div>
 						<div v-else>
-						<v-alert :value="true" type="info" color="primary">
+						<v-alert text :value="true" type="info" color="primary" class="mx-2">
 							Development mode, no plan selected.
 						</v-alert>
 						</div>
