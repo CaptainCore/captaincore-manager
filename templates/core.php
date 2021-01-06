@@ -4635,14 +4635,15 @@ $user = wp_get_current_user();
 					</v-tabs>
 					<v-tabs-items v-model="account_tab">
 					<v-tab-item :transition="false" :reverse-transition="false">
-						<v-toolbar dense flat color="grey lighten-4" v-show="role == 'administrator' || dialog_account.records.owner">
+						<v-toolbar dense flat color="grey lighten-4">
 							<div class="flex-grow-1"></div>
 							<v-toolbar-items>
-								<v-btn text @click="dialog_account.new_invite = true">New Invite <v-icon dark>add</v-icon></v-btn>
-							</v-toolbar-items>
-						</v-toolbar>
-							<v-card v-show="dialog_account.new_invite == true" class="mb-3">
-								<v-toolbar flat dense dark color="primary" id="new_invite">
+							<v-dialog v-model="dialog_account.new_invite" max-width="500px">
+							<template v-slot:activator="{ on, attrs }">
+								<v-btn text @click="dialog_account.new_invite = true" v-bind="attrs" v-on="on">New Invite <v-icon dark>add</v-icon></v-btn>
+							</template>
+							<v-card>
+								<v-toolbar flat dense dark color="primary" id="new_invite" class="mb-2">
 								<v-btn icon dark @click.native="dialog_account.new_invite = false">
 									<v-icon>close</v-icon>
 								</v-btn>
@@ -4650,21 +4651,21 @@ $user = wp_get_current_user();
 								<v-spacer></v-spacer>
 								</v-toolbar>
 								<v-card-text>
-								<v-container>
-								<v-layout row wrap>
-									<v-flex xs12>
+								<v-row>
+									<v-col cols="12">
 										<v-text-field label="Email" :value="dialog_account.new_invite_email" @change.native="dialog_account.new_invite_email = $event.target.value"></v-text-field>
-									</v-flex>
-									<v-flex xs12 text-right pa-0 ma-0>
+									</v-col>
+									<v-col cols="12">
 										<v-btn color="primary" dark @click="sendAccountInvite()">
 											Send Invite
 										</v-btn>
-									</v-flex>
-									</v-flex>
-								</v-layout>
-								</v-container>
+									</v-col>
+								</v-row>
 								</v-card-text>
 							</v-card>
+							</v-dialog>
+							</v-toolbar-items>
+						</v-toolbar>
 							<v-data-table
 								v-show="typeof dialog_account.records.users == 'object' && dialog_account.records.users.length > 0"
 								:headers='[{"text":"Name","value":"name"},{"text":"Email","value":"email"},{"text":"","value":"level"},{"text":"","value":"actions"}]'
@@ -4707,7 +4708,7 @@ $user = wp_get_current_user();
 							</v-tooltip>
 							<v-tooltip top>
 								<template v-slot:activator="{ on }">
-									<v-btn text icon color="pink" @click="deleteInvite( item.invite_id )" v-on="on" v-if="role == 'administrator'"><v-icon dark>mdi-delete</v-icon></v-btn>
+									<v-btn text icon color="pink" @click="deleteInvite( item.invite_id )" v-on="on"><v-icon dark>mdi-delete</v-icon></v-btn>
 								</template><span>Delete Invite</span>
 							</v-tooltip>
 							</template>
@@ -8023,8 +8024,9 @@ new Vue({
 				return
 			}
 			var data = {
-				action: 'captaincore_local',
+				action: 'captaincore_account',
 				command: 'deleteInvite',
+				account_id: this.dialog_account.records.account.account_id,
 				value: invite_id
 			};
 			axios.post( ajaxurl, Qs.stringify( data ) )
@@ -8386,9 +8388,9 @@ new Vue({
 		},
 		sendAccountInvite() {
 			var data = {
-				action: 'captaincore_local',
+				action: 'captaincore_account',
 				command: 'sendAccountInvite',
-				value: this.dialog_account.records.account.account_id,
+				account_id: this.dialog_account.records.account.account_id,
 				invite: this.dialog_account.new_invite_email
 			};
 			axios.post( ajaxurl, Qs.stringify( data ) )
