@@ -6025,7 +6025,7 @@ new Vue({
 					}
 					extras = extras + ( extra_visits * unit_price )
 				}
-				total = parseFloat( addons ) + parseFloat( extras ) + parseFloat( this.dialog_account.records.account.plan.price )
+				total = ( parseFloat( addons ) + parseFloat( extras ) + parseFloat( this.dialog_account.records.account.plan.price ) ).toFixed(2)
 				return `$${total} <small>per ${unit}</small>`
 			}
 			return ""
