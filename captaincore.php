@@ -3488,7 +3488,8 @@ function captaincore_local_action_callback() {
 			if ( $details['key'] == "Details" ) {
 				$description = $details['value'];
 			}
-			$order_line_items .= "<tr><td>{$item->get_name()}</td><td width=\"260\">{$description}</td><td style=\"text-align:right;\">{$item->get_quantity()}</td><td>{$subtotal}</td></tr>";
+			$order_line_items .= "<tr><td width=\"536\">{$item->get_quantity()}x {$item->get_name()}<br /><small>{$description}</small></td><td>{$subtotal}</td></tr>";
+			
 		}
 
 		$payment_gateways      = WC()->payment_gateways->payment_gateways();
@@ -3528,7 +3529,7 @@ img { margin-bottom: 1em; }
 hr { height:1px;border-width:0;color: #59595b;background-color: #59595b; }
 th, td { padding: 4px 16px; border-bottom: 1px solid #59595b; vertical-align: top; }
 </style>
-<page backtop="40px" backbottom="40px" backleft="70px" backright="70px">
+<page backtop="20px" backbottom="20px" backleft="20px" backright="20px">
 <p><img width="224" src="https://anchor.host/wp-content/uploads/2015/01/logo.png" alt="Anchor Hosting"></p>
 <hr />
 <h2>Invoice #{$order_data->id} for {$account->name}</h2>
@@ -3536,15 +3537,16 @@ th, td { padding: 4px 16px; border-bottom: 1px solid #59595b; vertical-align: to
 <br /><br />
 <table cellspacing="0">
 <thead>
-	<tr><th style="width: 20px"><span>Name</span></th><th style="width: 20px"><span>Description</span></th><th style="width: 20px"><span>Quantity</span></th><th style="width: 20px"><span>Total</span></th></tr>
+	<tr><th><span>Services</span></th><th><span>Amount</span></th></tr>
 </thead>
 <tbody>
 	$order_line_items
-	<tr><td colspan="3" style="text-align:right;">Total:</td><td>\${$response->total}</td></tr>
+	<tr><td style="text-align:right;">Total:</td><td>\${$response->total}</td></tr>
 </tbody>
 </table>
 </page>
 HEREDOC;
+		$html2pdf->setTestTdInOnePage( false );
 		$html2pdf->writeHTML( $html );
 		$html2pdf->output();
 		wp_die();
