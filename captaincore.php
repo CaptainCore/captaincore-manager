@@ -3488,7 +3488,7 @@ function captaincore_local_action_callback() {
 			if ( $details['key'] == "Details" ) {
 				$description = $details['value'];
 			}
-			$order_line_items .= "<tr><td>{$item->get_name()}</td><td width=\"350\">{$description}</td><td style=\"text-align:right;\">{$item->get_quantity()}</td><td>{$subtotal}</td></tr>";
+			$order_line_items .= "<tr><td>{$item->get_name()}</td><td width=\"260\">{$description}</td><td style=\"text-align:right;\">{$item->get_quantity()}</td><td>{$subtotal}</td></tr>";
 		}
 
 		$payment_gateways      = WC()->payment_gateways->payment_gateways();
@@ -3521,26 +3521,29 @@ function captaincore_local_action_callback() {
 		$created_at = $order_data->date_created->date( 'M jS Y' );
 		$html2pdf   = new \Spipu\Html2Pdf\Html2Pdf('P', 'A4', 'en');
 		$html       = <<<HEREDOC
-<html>
-<style>body, p { font-size:16px; }
-table { border-collapse: collapse; font-size:16px; width: 100%; table-layout: fixed; }
-hr { height:1px;border-width:0;color:gray rgba(0,0,0,.12);background-color:gray rgba(0,0,0,.12); }
-th, td { padding: 4px 16px; border-bottom: thin solid rgba(0,0,0,.12); word-wrap: break-word; vertical-align: middle; }
+<style type="text/css">
+p { font-size:16px; }
+table { border-collapse: collapse; font-size:16px; }
+img { margin-bottom: 1em; }
+hr { height:1px;border-width:0;color: #59595b;background-color: #59595b; }
+th, td { padding: 4px 16px; border-bottom: 1px solid #59595b; vertical-align: top; }
 </style>
-<body><img width="224" src="https://anchor.host/wp-content/uploads/2015/01/logo.png" alt="Anchor Hosting"><br /><hr />
+<page backtop="40px" backbottom="40px" backleft="70px" backright="70px">
+<p><img width="224" src="https://anchor.host/wp-content/uploads/2015/01/logo.png" alt="Anchor Hosting"></p>
+<hr />
 <h2>Invoice #{$order_data->id} for {$account->name}</h2>
 <p>Order was created on <strong>{$created_at}</strong> and is currently <strong>{$response->status} payment</strong>.</p>
-<table>
+<br /><br />
+<table cellspacing="0">
 <thead>
-	<tr><th><span>Name</span></th><th><span>Description</span></th><th><span>Quantity</span></th><th><span>Total</span></th></tr>
+	<tr><th style="width: 20px"><span>Name</span></th><th style="width: 20px"><span>Description</span></th><th style="width: 20px"><span>Quantity</span></th><th style="width: 20px"><span>Total</span></th></tr>
 </thead>
 <tbody>
 	$order_line_items
 	<tr><td colspan="3" style="text-align:right;">Total:</td><td>\${$response->total}</td></tr>
 </tbody>
 </table>
-</body>
-</html>
+</page>
 HEREDOC;
 		$html2pdf->writeHTML( $html );
 		$html2pdf->output();
