@@ -43,6 +43,22 @@ TODO
 TODO
 
 == Changelog ==
+= 0.15.0: Jan 9 2021
+* New: Billing interface powered by WooCommerce and CaptainCore account plans.
+* New: Download PDFs for invoices.
+* New: Site and domain autocomplete selections.
+* New: Running processes.
+* New: Direct deep links for `/account/sites/new`, `/account/sites/<site-id>`, `/account/accounts/<account-id>` and `/account/dns/<domain-id>/`. 
+* New: CaptainCore cron for handling background processes like billing renewals.
+* Tweak: Upgraded Vuetify to v2.4.2
+* Tweak: Improved toggle site defaults to use global configurations.
+* Tweak: Improved UI consistency for search fields.
+* Tweak: Improved sites listing image overlay.
+* Tweak: Expanded account invites.
+* Tweak: Replaced `/` to search functionality with autofocus text fields.
+* Tweak: Removed Lodash which was previously used to speed up searches. This is no longer needed.
+* Tweak: Improvements when adding SRV records with DNS editor
+
 = 0.14.0: Oct 28 2020
 * New: Restic backup UI
 * New: Ability to assign customer and billing roles per site
