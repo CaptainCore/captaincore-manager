@@ -82,7 +82,7 @@ $user = wp_get_current_user();
 		</v-dialog>
 		<v-tooltip bottom>
 			<template v-slot:activator="{ on }">
-				<v-btn icon href="/wp-admin/" v-show="role == 'administrator'" target="_blank" v-on="on">
+				<v-btn icon href="/wp-admin/" v-show="role == 'administrator'" v-on="on">
 					<v-icon>mdi-wordpress</v-icon>
 				</v-btn>
 			</template>
@@ -1970,12 +1970,14 @@ $user = wp_get_current_user();
 					v-if="toggle_site"
 				>
 				<template v-slot:top>
+				<v-card-text>
 				<v-row>
 					<v-col></v-col>
 					<v-col cols="12" md="4">
 						<v-text-field class="mx-4" v-model="search" @input="filterSites" autofocus label="Search" clearable light hide-details append-icon="search"></v-text-field>	
 					</v-col>
 				</v-row>	
+				</v-card-text>
 				</template>
 				<template v-slot:body="{ items }">
 					<tbody>
@@ -2014,12 +2016,14 @@ $user = wp_get_current_user();
 					v-else
 				>
 				<template v-slot:top>
+				<v-card-text>
 				<v-row>
 					<v-col></v-col>
 					<v-col cols="12" md="4">
 						<v-text-field class="mx-4" v-model="search" @input="filterSites" autofocus label="Search" clearable light hide-details append-icon="search"></v-text-field>	
 					</v-col>
 				</v-row>	
+				</v-card-text>
 				</template>
 				<template v-slot:body="{ items }">
 					<tbody>
@@ -2038,22 +2042,24 @@ $user = wp_get_current_user();
 								sm="4"
 								>
 								<v-card tile style="cursor: pointer" @click="goToPath( `/account/sites/${item.site_id}` )">
+								<v-hover v-slot="{ hover }">
 									<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-800.jpg` :aspect-ratio="8/5" v-show="item.screenshot_base">
-									<v-row align="end" class="lightbox white--text pa-2 fill-height">
-									<v-col class="pa-1">
-										<div class="body-1">{{ item.name }}</div>
+									<v-fade-transition>
+									<div v-if="! hover" style="background-image: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5)); height: 100%;" class="d-flex">
+									<v-row align="end">
+									<v-col>
+										<div class="body-1 pa-1 white--text">{{ item.name }}</div>
 									</v-col>
 									</v-row>
+									</div>
+									</v-fade-transition>
 									<template v-slot:placeholder>
-										<v-row
-										class="fill-height ma-0"
-										align="center"
-										justify="center"
-										>
+										<v-row class="fill-height ma-0" align="center" justify="center">
 										<v-progress-circular indeterminate color="grey lighten-5"></v-progress-circular>
 										</v-row>
 									</template>
 									</v-img>
+									</v-hover>
 								</v-card>
 								</v-col>
 							</v-row>
@@ -4559,22 +4565,6 @@ $user = wp_get_current_user();
 						<v-btn text @click="dialog_new_account.show = true">Add account <v-icon dark>add</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
-				<v-card-text>
-					<v-row class="ma-0 pa-0">
-						<v-col class="ma-0 pa-0"></v-col>
-						<v-col class="ma-0 pa-0"sm="12" md="4">
-						<v-text-field
-							v-model="account_search"
-							autofocus
-							append-icon="search"
-							label="Search"
-							single-line
-							clearable
-							hide-details
-						></v-text-field>
-						</v-col>
-					</v-row>
-				</v-card-text>
 					<v-data-table
 						:headers="[
 							{ text: 'Name', value: 'name' },
@@ -4585,6 +4575,16 @@ $user = wp_get_current_user();
 						:search="account_search"
 						:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
 					>
+					<template v-slot:top>
+					<v-card-text>
+					<v-row>
+						<v-col></v-col>
+						<v-col cols="12" md="4">
+							<v-text-field class="mx-4" v-model="account_search" autofocus append-icon="search" label="Search" single-line clearable hide-details></v-text-field>
+						</v-col>
+					</v-row>
+					</v-card-text>
+					</template>
 					<template v-slot:body="{ items }">
 						<tbody>
 						<tr v-for="item in items" :key="item.account_id" @click="goToPath( `/account/accounts/${item.account_id}`)" style="cursor:pointer;">
