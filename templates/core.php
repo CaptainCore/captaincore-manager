@@ -4964,30 +4964,55 @@ $user = wp_get_current_user();
 					<v-toolbar-title>Listing {{ users.length }} users</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
+						
+						<v-dialog max-width="600">
+							<template v-slot:activator="{ on, attrs }">
+								<v-btn text v-bind="attrs" v-on="on">Add user <v-icon dark>add</v-icon></v-btn>
+							</template>
+							<template v-slot:default="dialog">
+							<v-card>
+								<v-toolbar color="primary" dark>
+								<v-btn icon dark @click="dialog.value = false">
+									<v-icon>close</v-icon>
+								</v-btn>
+								<v-toolbar-title>Add user</v-toolbar-title>
+								<v-spacer></v-spacer>
+				</v-toolbar>
+								<v-card-text class="pt-3">
+									<v-row>
+										<v-col><v-text-field :value="dialog_new_user.first_name" @change.native="dialog_new_user.first_name = $event.target.value" label="First Name"></v-text-field></v-col>
+										<v-col><v-text-field :value="dialog_new_user.last_name" @change.native="dialog_new_user.last_name = $event.target.value" label="Last Name"></v-text-field></v-col>
+					</v-row>
+									<v-text-field :value="dialog_new_user.email" @change.native="dialog_new_user.email = $event.target.value" label="Email"></v-text-field>
+									<v-text-field :value="dialog_new_user.login" @change.native="dialog_new_user.login = $event.target.value" label="Username"></v-text-field>
+									<v-autocomplete :items="accounts" item-text="name" item-value="account_id" v-model="dialog_new_user.account_ids" label="Accounts" chips multiple deletable-chips></v-autocomplete>
+									<v-alert text :value="true" type="error" v-for="error in dialog_new_user.errors" class="mt-5">{{ error }}</v-alert>
+									
+									<v-flex xs12 mt-5>
+										<v-btn color="primary" dark @click="newUser( dialog )">Create User</v-btn>
+									</v-flex>
+				</v-card-text>
+							</v-card>
+							</template>
+						</v-dialog>
 					</v-toolbar-items>
 				</v-toolbar>
-				<v-card-text>
-					<v-row class="ma-0 pa-0">
-						<v-col class="ma-0 pa-0"></v-col>
-						<v-col class="ma-0 pa-0"sm="12" md="4">
-						<v-text-field
-							v-model="user_search"
-							autofocus
-							append-icon="search"
-							label="Search"
-							single-line
-							clearable
-							hide-details
-						></v-text-field>
-						</v-col>
-					</v-row>
-				</v-card-text>
 					<v-data-table
 						:headers="[{ text: 'Name', value: 'name' },{ text: 'Username', value: 'username' },{ text: 'Email', value: 'email' },{ text: '', value: 'user_id', align: 'end', sortable: false }]"
 						:items="users"
 						:search="user_search"
 						:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
 					>
+					<template v-slot:top>
+					<v-card-text>
+					<v-row>
+						<v-col></v-col>
+						<v-col cols="12" md="4">
+							<v-text-field class="mx-4" v-model="user_search" @input="filterSites" autofocus label="Search" clearable light hide-details append-icon="search"></v-text-field>	
+						</v-col>
+					</v-row>	
+					</v-card-text>
+					</template>
 					<template v-slot:item.user_id="{ item }">
 						<v-btn text color="primary" @click="editUser( item.user_id )">Edit User</v-btn>
 					</template>
@@ -7954,6 +7979,26 @@ new Vue({
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					this.new_invite = response.data
+				})
+				.catch( error => console.log( error ) );
+		},
+		newUser( dialog ) {
+			var data = {
+				action: 'captaincore_local',
+				command: 'newUser',
+				value: this.dialog_new_user,
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					if ( response.data.errors ) {
+						this.dialog_new_user.errors = response.data.errors
+						return
+					}
+					this.fetchUsers()
+					this.snackbar.message = "New user added."
+					this.snackbar.show = true
+					this.dialog_new_user.errors = []
+					dialog.value = false
 				})
 				.catch( error => console.log( error ) );
 		},
