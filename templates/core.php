@@ -5586,6 +5586,7 @@ new Vue({
 		dialog_invoice: { show: false, loading: false, paying: false, customer: false, response: "", payment_method: "", card: {}, error: "" },
 		dialog_new_account: { show: false, name: "", records: {} },
 		dialog_user: { show: false, user: {}, errors: [] },
+		dialog_new_user: { first_name: "", last_name: "", email: "", login: "", account_ids: [], errors: [] },
 		dialog_request_site: { show: false, request: { name: "", account_id: "", notes: "" } },
 		requested_sites: <?php echo json_encode( ( new CaptainCore\User )->fetch_requested_sites() ); ?>,
 		new_invite: { account: {}, records: {} },
