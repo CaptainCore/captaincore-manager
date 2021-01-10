@@ -3412,11 +3412,90 @@ function captaincore_local_action_callback() {
 	$cmd   = $_POST['command'];
 	$value = $_POST['value'];
 
-	if ( $cmd == 'updateAccount' ) {
-		$user_id = get_current_user_id();
-		$account = (object) $value;
+	if ( $cmd == "connect" ) { 
+		$connect = (object) $_POST['connect'];
+		// Disable https when debug enabled
+		add_filter( 'https_ssl_verify', '__return_false' );
+		
+		$domain = get_option( "home" );
+		$domain = str_replace( "http://www.", "", $domain );
+		$domain = str_replace( "https://www.", "", $domain );
+		$domain = str_replace( "http://", "", $domain );
+		$domain = str_replace( "https://", "", $domain );
+		$auth   = md5( AUTH_KEY );
+
+		$data = [
+			'timeout' => 45,
+			'headers' => [
+				'Content-Type' => 'application/json; charset=utf-8', 
+				'token'        => $connect->token 
+			], 
+			'body'        => json_encode( [ "command" => "connection add $domain $auth {$connect->token}" ] ), 
+			'method'      => 'POST', 
+			'data_format' => 'body' 
+		];
+
+		// Add command to dispatch server
+		$response = wp_remote_post( "https://{$connect->address}/tasks", $data );
+		if ( is_wp_error( $response ) ) {
+			$error_message = $response->get_error_message();
+			echo "Something went wrong: $error_message";
+		} else {
+			echo $response["body"];
+		}
+		wp_die(); // this is required to terminate immediately and return a proper response
+
+	}
+
+	if ( $cmd == 'newUser' ) {
+		$account  = (object) $value;
 		$response = (object) [];
-		$errors = [];
+		$errors   = [];
+
+		if ( $account->login == "" ) {
+			$errors[] = "Username name can't be empty.";
+		}
+
+		if ( $account->login != "" && username_exists( $account->login ) ) {
+			$errors[] = "Username is taken.";
+		}
+		
+		if ( ! filter_var( $account->email, FILTER_VALIDATE_EMAIL ) ) {
+			$errors[] = "Email address is not valid.";
+		}
+
+		if ( filter_var( $account->email, FILTER_VALIDATE_EMAIL ) && email_exists( $account->email ) ) {
+			$errors[] = "Email address is taken.";
+		}
+
+		if ( count($errors) == 0 ) {
+			$result = wp_insert_user( array(
+				'first_name'   => $account->first_name,
+				'last_name'    => $account->last_name,
+				'user_email'   => $account->email,
+				'user_login'   => $account->login,
+				'role'         => 'subscriber'
+			) );
+			if ( is_wp_error( $result ) ) {
+				$errors[] = $result->get_error_message();
+			} else {
+				( new CaptainCore\User( $result, true ) )->assign_accounts( $account->account_ids );
+				wp_new_user_notification( $result, null, 'user' );
+			}
+		}
+
+		if ( count($errors) > 0 ) {
+			$response->errors = $errors;
+		}
+
+		echo json_encode( $response );
+	}
+
+	if ( $cmd == 'updateAccount' ) {
+		$user_id  = get_current_user_id();
+		$account  = (object) $value;
+		$response = (object) [];
+		$errors   = [];
 
 		if ( $account->display_name == "" ) {
 			$errors[] = "Display name can't be empty.";
@@ -3476,6 +3555,7 @@ function captaincore_local_action_callback() {
 		unset ( $response->profile->new_password );
 		echo json_encode( $response );
 	}
+
 	if ( $cmd == 'downloadPDF' ) {
 		$order            = wc_get_order( $value );
 		$order_data       = (object) $order->get_data();
@@ -3489,7 +3569,6 @@ function captaincore_local_action_callback() {
 				$description = $details['value'];
 			}
 			$order_line_items .= "<tr><td width=\"536\">{$item->get_quantity()}x {$item->get_name()}<br /><small>{$description}</small></td><td>{$subtotal}</td></tr>";
-			
 		}
 
 		$payment_gateways      = WC()->payment_gateways->payment_gateways();
