@@ -3499,28 +3499,37 @@ $user = wp_get_current_user();
 				<v-card flat class="mb-4 dns_introduction" v-show="configurations.dns_nameservers != ''">
 					<v-alert :value="true" type="info" text>
 						<v-row>
-						<v-col>
+						<v-col class="grow">
 						<div v-html="configurations.dns_introduction_html"></div>
 						</v-col>
-						<v-col md="auto" class="ma-0 pa-0">
-						<v-simple-table dense light>
-							<template v-slot:default>
-							<thead>
-								<tr>
-								<th class="text-center primary--text">
-									Nameservers
-								</th>
-								</tr>
-							</thead>
-							<tbody>
-								<tr v-for="nameserver in configurations.dns_nameservers.split('\n')">
-								<td class="text-center px-4">
-									<v-btn small text @click="copyText( nameserver )" class="primary--text">{{ nameserver }} <v-icon class="ml-1">mdi-content-copy</v-icon></v-btn>
-								</td>
-								</tr>
-							</tbody>
+						<v-col class="shrink">
+						<v-dialog max-width="440">
+							<template v-slot:activator="{ on, attrs }">
+								<v-btn v-bind="attrs" v-on="on" color="primary">Show Nameservers</v-btn>
 							</template>
-						</v-simple-table>
+							<template v-slot:default="dialog">
+							<v-card>
+								<v-toolbar color="primary" dark>
+								<v-btn icon dark @click="dialog.value = false">
+									<v-icon>close</v-icon>
+								</v-btn>
+								<v-toolbar-title>Nameservers</v-toolbar-title>
+								<v-spacer></v-spacer>
+								</v-toolbar>
+								<v-list-item
+									v-for="nameserver in configurations.dns_nameservers.split('\n')"
+									@click="copyText( nameserver )"
+									link
+								>
+									<v-list-item-title v-text="nameserver"></v-list-item-title>
+									<v-list-item-icon>
+									<v-icon>mdi-content-copy</v-icon>
+									</v-list-item-icon>
+									<v-divider></v-divider>
+								</v-list-item>
+							</v-card>
+							</template>
+						</v-dialog>
 						</v-col>
 						</v-row>
 					</v-alert>
