@@ -5225,7 +5225,7 @@ $user = wp_get_current_user();
 					<v-icon>close</v-icon>
 				</v-btn>
 			</v-toolbar>
-			<v-card-text style="height:130px; overflow-y:scroll;" class="ma-0 py-0 px-5">
+			<v-card-text style="height:130px; overflow-y:scroll;">
 		<v-layout row>
 			<v-flex xs6 px-1>
 				 <v-autocomplete
@@ -6300,6 +6300,9 @@ new Vue({
 			this.applied_site_filter = []
 			this.applied_site_filter_version = []
 			this.applied_site_filter_status = []
+			this.site_filter_version = []
+			this.site_filter_status = []
+			this.filterSites()
 		},
 		removeFilter (item) {
 			const index = this.applied_site_filter.indexOf(item.name)
