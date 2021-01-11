@@ -13,7 +13,7 @@ $user = wp_get_current_user();
 ?>
 <?php if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <link rel='stylesheet' id='arve-main-css' href='/wp-content/plugins/advanced-responsive-video-embedder/build/main.css' type='text/css' media='all' />
-<link rel='stylesheet' id='arve-pro-css' href='/wp-content/plugins/arve-pro/build/app.css' type='text/css' media='all' />
+<link rel='stylesheet' id='arve-pro-css' href='/wp-content/plugins/arve-pro/build/main.css' type='text/css' media='all' />
 <?php } ?>
 <link href="<?php echo home_url(); ?>/account/" rel="canonical">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
