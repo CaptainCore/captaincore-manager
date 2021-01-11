@@ -412,6 +412,11 @@ class Account {
         $configurations = ( new Configurations )->get();
         $account        = ( new Accounts )->get( $this->account_id );
         $plan           = json_decode( $account->plan );
+        if ( $plan->auto_switch ) {
+            self::auto_switch_plan();
+            $account = ( new Accounts )->get( $this->account_id );
+            $plan    = json_decode( $account->plan );
+        }
         $customer       = new \WC_Customer( $plan->billing_user_id );
         $address        = $customer->get_billing();
         $order          = wc_create_order(  [ 'customer_id' => $plan->billing_user_id ] );
@@ -502,6 +507,80 @@ class Account {
         WC()->mailer()->customer_invoice( $order );
         $order->add_order_note( __( 'Order details sent to customer.', 'woocommerce' ), false, true );
         do_action( 'woocommerce_after_resend_order_email', $order, 'customer_invoice' );
+    }
+
+    public function auto_switch_plan() {
+        $configurations = ( new Configurations )->get();
+        $account        = ( new Accounts )->get( $this->account_id );
+        $plan           = json_decode( $account->plan );
+        $estimates      = [];
+
+        foreach( $configurations->hosting_plans as $hosting_plan ) {
+
+            $total = $hosting_plan->price;
+
+            if ( $plan->interval != $hosting_plan->interval ) {
+                $total = ( $hosting_plan->price / $hosting_plan->interval ) * $plan->interval;
+                $hosting_plan->interval = $plan->interval;
+                $hosting_plan->price    = $total;
+            }
+
+            
+            if ( $plan->addons && count( $plan->addons ) > 0 ) {
+                foreach ( $plan->addons as $addon ) {
+                    $total += $addon->quantity * $addon->price;
+                }
+            }
+    
+            if ( $plan->usage->sites > $hosting_plan->limits->sites ) {
+                $price    = $configurations->usage_pricing->sites->cost;
+                if ( $plan->interval != $configurations->usage_pricing->sites->interval ) {
+                    $price = $configurations->usage_pricing->sites->cost / ($configurations->usage_pricing->sites->interval / $plan->interval );
+                }
+                $quantity     = $plan->usage->sites - $hosting_plan->limits->sites;
+                $total        += $price * $quantity;
+            }
+    
+            if ( $plan->usage->storage > ( $hosting_plan->limits->storage * 1024 * 1024 * 1024 ) ) {
+                $price    = $configurations->usage_pricing->storage->cost;
+                if ( $plan->interval != $configurations->usage_pricing->storage->interval ) {
+                    $price = $configurations->usage_pricing->storage->cost / ( $configurations->usage_pricing->storage->interval / $plan->interval );
+                }
+                $extra_storage = ( $plan->usage->storage / 1024 / 1024 / 1024 ) - $hosting_plan->limits->storage;
+                $quantity      = ceil ( $extra_storage / $configurations->usage_pricing->storage->quantity );
+                $total         += $price * $quantity;
+            }
+    
+            if ( $plan->usage->visits > $hosting_plan->limits->visits ) {
+                $price     = $configurations->usage_pricing->traffic->cost;
+                if ( $plan->interval != $configurations->usage_pricing->traffic->interval ) {
+                    $price = $configurations->usage_pricing->traffic->cost / ( $configurations->usage_pricing->traffic->interval / $plan->interval );
+                }
+                $quantity     = ceil ( ( $plan->usage->visits - $hosting_plan->limits->visits ) / $configurations->usage_pricing->traffic->quantity );
+                $total        += $price * $quantity;
+            }
+
+            $estimates[] = (object) [ "name" => $hosting_plan->name, "total" => $total ];
+
+        }
+
+        usort( $estimates, function($a, $b) {return $a->total - $b->total;});
+        $cheapest_estimate = $estimates[0];
+
+        if ( $plan->name != $cheapest_estimate->name ) {
+            foreach( $configurations->hosting_plans as $hosting_plan ) {
+                if ( $hosting_plan->name == $cheapest_estimate->name ) {
+                    $new_hosting_plan = $hosting_plan;
+                }
+            }
+            $new_hosting_plan->auto_pay    = $plan->auto_pay;
+            $new_hosting_plan->auto_switch = $plan->auto_switch;
+            $new_hosting_plan->addons      = $plan->addons;
+            echo "Switching to from {$plan->name} to {$cheapest_estimate->name}";
+            ( new Accounts )->update_plan( (array) $new_hosting_plan, $this->account_id );
+        }
+
+        return $estimates;
     }
 
     public function delete() {

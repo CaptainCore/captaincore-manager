@@ -1154,9 +1154,10 @@ $user = wp_get_current_user();
 						</v-menu>
 						</v-col>
 						</v-row>
-						<v-row dense><v-col>
-						<v-switch v-model="dialog_modify_plan.plan.auto_pay" false-value="false" true-value="true" label="Autopay"></v-switch>
-						</v-col></v-row>
+						<v-row dense>
+							<v-col><v-switch v-model="dialog_modify_plan.plan.auto_pay" false-value="false" true-value="true" label="Autopay"></v-switch></v-col>
+							<v-col><v-switch v-model="dialog_modify_plan.plan.auto_switch" false-value="false" true-value="true" label="Automatically switch plan"></v-switch></v-col>
+						</v-row>
 						<v-row v-if="typeof dialog_modify_plan.plan.name == 'string' && dialog_modify_plan.plan.name == 'Custom'" dense>
 							<v-col cols="3"><v-text-field label="Storage (GBs)" :value="dialog_modify_plan.plan.limits.storage" @change.native="dialog_modify_plan.plan.limits.storage = $event.target.value"></v-text-field></v-col>
 							<v-col cols="3"><v-text-field label="Visits" :value="dialog_modify_plan.plan.limits.visits" @change.native="dialog_modify_plan.plan.limits.visits = $event.target.value"></v-text-field></v-col>
@@ -9638,16 +9639,33 @@ new Vue({
 			this.dialog_modify_plan.plan.addons = this.dialog_modify_plan.plan.addons.filter( (item, index) => index != remove_item );
 		},
 		loadHostingPlan() {
+			current_auto_pay = this.dialog_modify_plan.plan.auto_pay
+			current_auto_switch = this.dialog_modify_plan.plan.auto_switch
+			billing_user_id = this.dialog_modify_plan.plan.billing_user_id
+			next_renewal = this.dialog_modify_plan.plan.next_renewal
 			current_interval = JSON.parse(JSON.stringify( this.dialog_modify_plan.plan.interval ) )
 			if ( typeof this.dialog_modify_plan.plan.addons != 'undefined' ) {
 			current_addons = JSON.parse(JSON.stringify( this.dialog_modify_plan.plan.addons ) )
 			}
 			selected_plan = this.dialog_modify_plan.selected_plan
 			hosting_plan = this.dialog_modify_plan.hosting_plans.filter( plan => plan.name == selected_plan )[0]
-			if ( typeof hosting_plan != "undefined" ) {
-				hosting_plan.addons = current_addons
-				this.dialog_modify_plan.plan = JSON.parse(JSON.stringify( hosting_plan ))
+			if ( typeof hosting_plan == "undefined" ) {
+				return
 			}
+				hosting_plan.addons = current_addons
+			if ( current_auto_pay ) { 
+				hosting_plan.auto_pay = JSON.parse(JSON.stringify( current_auto_pay ) )
+			}
+			if ( current_auto_switch ) {
+				hosting_plan.auto_switch = JSON.parse(JSON.stringify( current_auto_switch ) )
+			}
+			if ( billing_user_id != "" ) {
+				hosting_plan.billing_user_id = JSON.parse(JSON.stringify( billing_user_id ) )
+			}
+			if ( typeof next_renewal != "undefined" && next_renewal != "" ) {
+				hosting_plan.next_renewal = JSON.parse(JSON.stringify( next_renewal ) )
+			}
+				this.dialog_modify_plan.plan = JSON.parse(JSON.stringify( hosting_plan ))
 			if ( current_interval != hosting_plan.interval ) {
 				this.dialog_modify_plan.plan.interval = current_interval
 				this.dialog_modify_plan.plan.addons = current_addons
