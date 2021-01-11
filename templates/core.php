@@ -12,8 +12,8 @@ captaincore_header_content_extracted();
 $user = wp_get_current_user();
 ?>
 <?php if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
-<link rel='stylesheet' id='advanced-responsive-video-embedder-css' href='/wp-content/plugins/advanced-responsive-video-embedder/public/arve.min.css' type='text/css' media='all' />
-<link rel='stylesheet' id='arve-pro-css' href='/wp-content/plugins/arve-pro/dist/app.css' type='text/css' media='all' />
+<link rel='stylesheet' id='arve-main-css' href='/wp-content/plugins/advanced-responsive-video-embedder/build/main.css' type='text/css' media='all' />
+<link rel='stylesheet' id='arve-pro-css' href='/wp-content/plugins/arve-pro/build/app.css' type='text/css' media='all' />
 <?php } ?>
 <link href="<?php echo home_url(); ?>/account/" rel="canonical">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -21,7 +21,7 @@ $user = wp_get_current_user();
 <link href="https://cdn.jsdelivr.net/npm/vuetify@2.4.2/dist/vuetify.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
 <link href="/wp-content/plugins/captaincore/public/css/captaincore-public-2021-01-06.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.0/dist/frappe-charts.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.5.6/dist/frappe-charts.min.css" rel="stylesheet">
 </head>
 <body>
 <div id="app" v-cloak>
@@ -5372,7 +5372,7 @@ $user = wp_get_current_user();
 					<v-icon>close</v-icon>
 				</v-btn>
 			</v-toolbar>
-				<v-card-text style="height:130px; overflow-y:scroll;" class="ma-0 py-0 px-5">
+				<v-card-text style="height:130px; overflow-y:scroll;">
 				<v-row>
 				<v-col cols="12" md="4" class="py-0 my-0">
 					<small>Common Scripts</small><br />
@@ -5691,8 +5691,6 @@ new Vue({
 		search: null,
 		users_search: "",
 		advanced_filter: false,
-		business_name: "<?php echo $business_name; ?>",
-		business_link: "<?php echo $business_link; ?>",
 		sites_selected: [],
 		sites_filtered: [],
 		site_selected: null,
@@ -10953,8 +10951,8 @@ new Vue({
 </script>
 <?php if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.4.1/dist/jquery.min.js"></script>
-<script type='text/javascript' src='/wp-content/plugins/arve-pro/dist/app.js'></script>
-<script type='text/javascript' src='/wp-content/plugins/advanced-responsive-video-embedder/public/arve.min.js'></script>
+<script type='text/javascript' src='/wp-content/plugins/arve-pro/build/main.js'></script>
+<script type='text/javascript' src='/wp-content/plugins/advanced-responsive-video-embedder/build/main.js'></script>
 <?php } ?>
 </body>
 </html>
