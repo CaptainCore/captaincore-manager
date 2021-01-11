@@ -7391,23 +7391,25 @@ new Vue({
 								{
 									name: "Pageviews",
 									values: pageviews,
+									chartType: 'bar'
 								},
 								{
 									name: "Visitors",
 									values: visitors,
+									chartType: 'line'
+
 								},
 							],
 						},
-						type: "bar",
+						type: "axis-mixed",
 						height: 270,
-						colors: ["light-blue", "#1564c0"],
+						colors: [ this.configurations.colors.primary, this.configurations.colors.success ],
 						axisOptions: {
 							xAxisMode: "tick",
 							xIsSeries: 1
 						},
 						barOptions: {
 							spaceRatio: 0.1,
-							stacked: 1
 						},
 						showLegend: 0,
 						
