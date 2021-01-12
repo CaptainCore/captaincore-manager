@@ -8002,8 +8002,8 @@ new Vue({
 					this.fetchUsers()
 					this.snackbar.message = "New user added."
 					this.snackbar.show = true
-					this.dialog_new_user.errors = []
 					dialog.value = false
+					this.dialog_new_user = { first_name: "", last_name: "", email: "", login: "", account_ids: [], errors: [] }
 				})
 				.catch( error => console.log( error ) );
 		},
