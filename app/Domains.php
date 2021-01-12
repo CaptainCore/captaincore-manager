@@ -86,4 +86,17 @@ class Domains extends DB {
         return false;
     }
 
+    public function delete_domain( $domain_id ) {
+
+        if ( ! in_array( $domain_id, $this->domains ) ) {
+            return [ "errors" => "Permission denied." ];
+        }
+        $domain = self::get( $domain_id );
+		if ( $domain->remote_id  ) {
+			constellix_api_delete( "domains/{$domain->remote_id}" );
+		}
+        self::delete( $domain_id );
+        return [ "domain_id" => $domain_id, "message" => "Deleted domain {$domain->name}" ];
+    }
+
 }
