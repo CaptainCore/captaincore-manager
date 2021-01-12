@@ -3813,6 +3813,8 @@ function captaincore_account_action_callback() {
 	$user = new CaptainCore\User;
 	$cmd  = $_POST['command'];
 	$everyone_commands = [
+		'addDomain',
+		'deleteDomain',
 		'requestSite',
 		'payInvoice',
 		'setAsPrimary',
@@ -3885,6 +3887,65 @@ function captaincore_account_action_callback() {
 		echo "Permission denied";
 		wp_die();
 		return;
+	}
+
+	if ( $cmd == 'deleteDomain' ) {
+		$response = ( new CaptainCore\Domains )->delete_domain( $_POST['value'] );
+		echo json_encode( $response );
+	};
+
+	if ( $cmd == 'addDomain' ) {
+
+		$errors = [];
+		$name   = $_POST['value'];
+
+		// If results still exists then give an error
+		if ( $name == "" ) {
+			$errors[] = "Domain can't be empty.";
+		}
+
+		// Check for duplicate domain.
+		$domain_exists = ( new CaptainCore\Domains )->where( [ "name" => $name ] );
+
+		// If results still exists then give an error
+		if ( count( $domain_exists ) > 0 ) {
+			$errors[] = "Domain has already been added.";
+		}
+
+		if ( empty( $account_id ) ) { 
+			$errors[] = "Account can't be empty.";
+		}
+
+		// If any errors then bail
+		if ( count( $errors ) > 0 ) {
+			echo json_encode( [ "errors" => $errors ] );
+			wp_die();
+		}
+
+		$time_now = date("Y-m-d H:i:s");
+
+		// Insert domain
+		$domain_id = ( new CaptainCore\Domains )->insert( [
+			"name"       => $name,
+			'updated_at' => $time_now,
+			'created_at' => $time_now,
+		] );
+
+		// Assign domain to account
+		( new CaptainCore\Domain( $domain_id ) )->insert_accounts( [ $account_id ] );
+
+		// Execute remote code
+		$response = ( new CaptainCore\Domain( $domain_id ) )->fetch_remote_id();
+		if ( is_array( $response ) ) {
+			foreach ( $response["errors"] as $error ) {
+				$errors[] = $error;
+			}
+			echo json_encode( [ "errors" => $errors ] );
+			wp_die();
+		}
+
+		echo json_encode( [ "name" => $name, "domain_id" => $domain_id, "remote_id" => $response ] );
+
 	}
 
 	if ( $cmd == 'sendAccountInvite' ) {
@@ -4001,8 +4062,6 @@ function captaincore_ajax_action_callback() {
 
 	// Only proceed if access to command 
 	$admin_commands = [
-		'addDomain',
-		'deleteDomain',
 		'fetchConfigs',
 		'updateLogEntry',
 		'newLogEntry',
@@ -4048,67 +4107,6 @@ function captaincore_ajax_action_callback() {
 			$response = mailgun_events( $mailgun );
 		}
 		echo json_encode( $response );
-	}
-
-	if ( $cmd == 'deleteDomain' ) {
-		$domain = ( new CaptainCore\Domains )->get( $value );
-		if ( $domain->remote_id  ) {
-			constellix_api_delete( "domains/{$domain->remote_id}" );
-		}
-		echo json_encode( array( "domain_id" => $value, "message" => "Deleted domain {$domain->name}") );
-		( new CaptainCore\Domains )->delete( $value );
-	};
-
-	if ( $cmd == 'addDomain' ) {
-
-		$errors = [];
-		$record = (object) $value;
-
-		// If results still exists then give an error
-		if ( $record->name == "" ) {
-			$errors[] = "Domain can't be empty.";
-		}
-
-		// Check for duplicate domain.
-		$domain_exists = ( new CaptainCore\Domains )->where( [ "name" => $record->name ] );
-
-		// If results still exists then give an error
-		if ( count( $domain_exists ) > 0 ) {
-			$errors[] = "Domain has already been added.";
-		}
-
-		// If any errors then bail
-		if ( count( $errors ) > 0 ) {
-			echo json_encode( [ "errors" => $errors ] );
-			wp_die();
-		}
-
-		$time_now = date("Y-m-d H:i:s");
-
-		// Insert domain
-		$domain_id = ( new CaptainCore\Domains )->insert( [
-			"name"       => $record->name,
-			'updated_at' => $time_now,
-			'created_at' => $time_now,
-		] );
-
-		if ( ! empty( $record->account_id ) ) {
-			// Assign domain to account
-			( new CaptainCore\Domain( $domain_id ) )->insert_accounts( [ $record->account_id ] );
-		}
-
-		// Execute remote code
-		$response = ( new CaptainCore\Domain( $domain_id ) )->fetch_remote_id();
-		if ( is_array( $response ) ) {
-			foreach ( $response["errors"] as $error ) {
-				$errors[] = $error;
-			}
-			echo json_encode( [ "errors" => $errors ] );
-			wp_die();
-		}
-
-		echo json_encode( [ "name" => $record->name, "domain_id" => $domain_id, "remote_id" => $response ] );
-
 	}
 
 	if ( $cmd == 'updateCapturePages' ) {

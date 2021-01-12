@@ -3493,7 +3493,7 @@ $user = wp_get_current_user();
 					<v-toolbar-title>Listing {{ allDomains }} domains</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn text @click="dialog_new_domain.show = true" v-show="role == 'administrator'">Add Domain <v-icon dark>add</v-icon></v-btn>
+						<v-btn text @click="dialog_new_domain.show = true">Add Domain <v-icon dark>add</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
@@ -3716,7 +3716,7 @@ $user = wp_get_current_user();
 						</v-row>
     					<v-row>
 							<v-col class="text-right mx-3" v-show="!dialog_domain.loading">
-								<v-btn class="mx-1" depressed @click="deleteDomain()" v-if="role == 'administrator'">Delete Domain</v-btn>
+								<v-btn class="mx-1" depressed @click="deleteDomain()">Delete Domain</v-btn>
 								<v-btn class="mx-1" depressed @click="dialog_domain.show_import = true" class="mx-3">Import <v-icon dark>mdi-file-upload</v-icon></v-btn>
 								<v-btn class="mx-1" depressed @click="exportDomain()">Export <v-icon dark>mdi-file-download</v-icon></v-btn>
 								<v-btn class="mx-1" depressed color="primary" @click="saveDNS()" :dark="dialog_domain.records && dialog_domain.records.length != '0'" :disabled="dialog_domain.records && dialog_domain.records.length == '0'">Save Records</v-btn>
@@ -9132,9 +9132,10 @@ new Vue({
 			this.dialog_new_domain.errors  = [];
 
 			var data = {
-				action: 'captaincore_ajax',
+				action: 'captaincore_account',
 				command: 'addDomain',
-				value: this.dialog_new_domain.domain
+				value: this.dialog_new_domain.domain.name,
+				account_id: this.dialog_new_domain.domain.account_id
 			};
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
@@ -9306,21 +9307,24 @@ new Vue({
 			}
 			this.dialog_domain.loading = true
 			var data = {
-				action: 'captaincore_ajax',
+				action: 'captaincore_account',
 				command: 'deleteDomain',
-				value: this.dialog_domain.domain.domain_id
+				value: this.dialog_domain.domain.domain_id,
+				account: this.dialog_domain.domain.account_id
 			}
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					this.domains = this.domains.filter( d => d.domain_id != response.data.domain_id );
-					this.dialog_domain = { show: false, show_import: false, import_json: "", domain: {}, records: [], loading: true, saving: false };
-					this.snackbar.message = response.data.message;
-					this.snackbar.show = true;
+					this.dialog_domain = { show: false, show_import: false, import_json: "", domain: {}, records: [], loading: true, saving: false }
+					this.domains = this.domains.filter( d => d.domain_id != response.data.domain_id )
+					this.goToPath( '/account/dns' )
+					this.snackbar.message = response.data.message
+					this.snackbar.show = true
+					
 				})
 				.catch( error => {
-					this.snackbar.message = error;
-					this.snackbar.show = true;
-					this.dialog_domain.loading = false;
+					this.snackbar.message = error
+					this.snackbar.show = true
+					this.dialog_domain.loading = false
 				});
 		},
 		saveDNS() {
