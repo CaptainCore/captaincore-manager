@@ -2350,13 +2350,15 @@ $user = wp_get_current_user();
 					<v-toolbar color="grey lighten-4" dense light flat>
 						<v-toolbar-title>Stats</v-toolbar-title>
 						<v-spacer></v-spacer>
+						<v-toolbar-items v-if="typeof dialog_new_site == 'object'">
 						<v-col style="max-width:150px;">
 						<v-menu
 							v-model="stats.from_at_select"
 							:close-on-content-click="false"
-							:nudge-right="40"
 							transition="scale-transition"
 							offset-y
+								left
+								down
 							min-width="auto"
 						>
 							<template v-slot:activator="{ on, attrs }">
@@ -2377,9 +2379,10 @@ $user = wp_get_current_user();
 						<v-menu
 							v-model="stats.to_at_select"
 							:close-on-content-click="false"
-							:nudge-right="40"
 							transition="scale-transition"
 							offset-y
+								left
+								down
 							min-width="auto"
 						>
 							<template v-slot:activator="{ on, attrs }">
@@ -2395,8 +2398,7 @@ $user = wp_get_current_user();
 							<v-date-picker v-model="stats.to_at" @input="stats.to_at_select = false; fetchStats()"></v-date-picker>
 						</v-menu>
 						</v-col>
-						<v-toolbar-items v-if="typeof dialog_new_site == 'object'" v-show="role == 'administrator'">
-                    		<v-btn text @click="configureFathom( dialog_site.site.site_id )">Configure Fathom Tracker <v-icon dark small>bar_chart</v-icon></v-btn>
+                    		<v-btn text @click="configureFathom( dialog_site.site.site_id )" v-show="role == 'administrator'">Configure Fathom Tracker <v-icon dark small>bar_chart</v-icon></v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
 						<div class="pa-3" v-if="typeof dialog_site.environment_selected.stats == 'string' && dialog_site.environment_selected.stats != 'Loading'">
