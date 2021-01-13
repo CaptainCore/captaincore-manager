@@ -5537,7 +5537,7 @@ $user = wp_get_current_user();
 <script src="https://js.stripe.com/v3/"></script>
 <script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
 <script src="/wp-content/plugins/captaincore/public/js/moment.min.js"></script>
-<script src="/wp-content/plugins/captaincore/public/js/frappe-charts.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.5.6/dist/frappe-charts.min.iife.min.js"></script>
 <script src="/wp-content/plugins/captaincore/public/js/core.js"></script>
 <script>
 <?php if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { ?>
@@ -7435,9 +7435,9 @@ new Vue({
 					environment.stats.stats.map( groupmonth );
 
 					k = Object.keys( bymonth );
-					names = Object.keys( bymonth ).map( k => bymonth[k].Name );
-					pageviews = Object.keys( bymonth ).map( k => bymonth[k].Pageviews );
-					visitors = Object.keys( bymonth ).map( k => bymonth[k].Visitors );
+					names = Object.keys( bymonth ).map( k => bymonth[k].Name )
+					pageviews = Object.keys( bymonth ).map( k => bymonth[k].Pageviews )
+					visitors = Object.keys( bymonth ).map( k => bymonth[k].Visitors )
 					
 					// Generate chart
 					environment.chart = new frappe.Chart( "#" + chart_id, {
@@ -7453,23 +7453,29 @@ new Vue({
 									name: "Visitors",
 									values: visitors,
 									chartType: 'line'
-
 								},
+							],
+							yRegions: [
+								{ label: "", start: 0, end: 50, options: { labelPos: "right" } }
 							],
 						},
 						type: "axis-mixed",
 						height: 270,
 						colors: [ this.configurations.colors.primary, this.configurations.colors.success ],
-						axisOptions: {
-							xAxisMode: "tick",
-							xIsSeries: 1
-						},
 						barOptions: {
 							spaceRatio: 0.1,
 						},
-						showLegend: 0,
+						axisOptions: {
+							xAxisMode: "tick",
+							xIsSeries: true
+						},
 						
-						});
+						lineOptions: {
+							regionFill: 1 // default: 0
+						},
+						
+					})
+						
 					
 				})
 				.catch( error => console.log( error ) );

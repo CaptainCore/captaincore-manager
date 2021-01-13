@@ -1381,10 +1381,6 @@ html body {
 	font-size: 12px !important;
 }
 
-g.chart-legend {
-	display: none;
-}
-
 .table-dns {
 	border-collapse: collapse;
   table-layout:fixed;
