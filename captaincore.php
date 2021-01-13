@@ -4249,11 +4249,15 @@ function captaincore_ajax_action_callback() {
 		foreach( $sites as $s ) {
 			if ( $s->name == $site_name ) {
 				// Fetch 12 months of stats (From June 1st 2018 to May 31st 2019)
-				$before = strtotime( "now" );
-				$after  = strtotime( date( 'Y-m-01 04:00:00' ). "-11 months" ); 
+				$before   = strtotime( $_POST['to_at'] );
+				$after    = strtotime( $_POST['from_at'] ); 
 				$response = wp_remote_get( "$fathom_instance/api/sites/{$s->id}/stats/site?before=$before&after=$after", array(
 					'cookies' => $auth['cookies']
 				) );
+				if ( ! is_array( $response ) ||  is_wp_error( $response ) ) {
+					echo json_encode( $response );
+					wp_die();
+				}
 				$stats = json_decode( $response['body'] )->Data;
 
 				$response = wp_remote_get( "$fathom_instance/api/sites/{$s->id}/stats/site/agg?before=$before&after=$after", array(
