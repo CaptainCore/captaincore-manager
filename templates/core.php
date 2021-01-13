@@ -2350,6 +2350,51 @@ $user = wp_get_current_user();
 					<v-toolbar color="grey lighten-4" dense light flat>
 						<v-toolbar-title>Stats</v-toolbar-title>
 						<v-spacer></v-spacer>
+						<v-col style="max-width:150px;">
+						<v-menu
+							v-model="stats.from_at_select"
+							:close-on-content-click="false"
+							:nudge-right="40"
+							transition="scale-transition"
+							offset-y
+							min-width="auto"
+						>
+							<template v-slot:activator="{ on, attrs }">
+							<v-text-field
+								v-model="stats.from_at"
+								label="From"
+								prepend-icon="mdi-calendar"
+								readonly
+								v-bind="attrs"
+								v-on="on"
+								width="100"
+							></v-text-field>
+							</template>
+							<v-date-picker v-model="stats.from_at" @input="stats.from_at_select = false; fetchStats()"></v-date-picker>
+						</v-menu>
+						</v-col>
+						<v-col style="max-width:150px;">
+						<v-menu
+							v-model="stats.to_at_select"
+							:close-on-content-click="false"
+							:nudge-right="40"
+							transition="scale-transition"
+							offset-y
+							min-width="auto"
+						>
+							<template v-slot:activator="{ on, attrs }">
+							<v-text-field
+								v-model="stats.to_at"
+								label="To"
+								prepend-icon="mdi-calendar"
+								readonly
+								v-bind="attrs"
+								v-on="on"
+							></v-text-field>
+							</template>
+							<v-date-picker v-model="stats.to_at" @input="stats.to_at_select = false; fetchStats()"></v-date-picker>
+						</v-menu>
+						</v-col>
 						<v-toolbar-items v-if="typeof dialog_new_site == 'object'" v-show="role == 'administrator'">
                     		<v-btn text @click="configureFathom( dialog_site.site.site_id )">Configure Fathom Tracker <v-icon dark small>bar_chart</v-icon></v-btn>
 						</v-toolbar-items>
@@ -5628,6 +5673,7 @@ new Vue({
 		current_user_login: "<?php echo $user->user_login; ?>",
 		current_user_display_name: "<?php echo $user->display_name; ?>",
 		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->user_email; ?>", login: "<?php echo $user->user_login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", errors: [] },
+		stats: { from_at: "<?php echo date("Y-m-d", strtotime( date("Y-m-d" ). " -12 months" ) ); ?>", to_at: "<?php echo date("Y-m-d" ); ?>", from_at_select: false, to_at_select: false },
 		<?php if ( current_user_can( "administrator" ) ) { ?>
 		role: "administrator",
 		dialog_processes: { show: false, processes: [], conn: {}, stream: [], loading: true },
@@ -7359,6 +7405,8 @@ new Vue({
 				action: 'captaincore_ajax',
 				post_id: this.dialog_site.site.site_id,
 				command: 'fetchStats',
+				from_at: this.stats.from_at,
+				to_at: this.stats.to_at,
 				environment: this.dialog_site.environment_selected.environment
 			};
 
@@ -7367,6 +7415,11 @@ new Vue({
 
 					if ( response.data.Error ) {
 						environment.stats = response.data.Error 
+						return;
+					}
+
+					if ( response.data.errors ) {
+						environment.stats = response.data.errors 
 						return;
 					}
 
