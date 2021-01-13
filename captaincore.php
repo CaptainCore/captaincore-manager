@@ -4215,6 +4215,7 @@ function captaincore_ajax_action_callback() {
 			// Authenticate to Fathom instance
 			$auth = wp_remote_post( "$fathom_instance/api/session", [
 				'method'  => 'POST',
+				'timeout' => 45,
 				'headers' => [ 'Content-Type' => 'application/json; charset=utf-8' ],
 				'body'    => json_encode( $login_details )
 			] );
@@ -4252,6 +4253,7 @@ function captaincore_ajax_action_callback() {
 				$before   = strtotime( $_POST['to_at'] );
 				$after    = strtotime( $_POST['from_at'] ); 
 				$response = wp_remote_get( "$fathom_instance/api/sites/{$s->id}/stats/site?before=$before&after=$after", array(
+					'timeout' => 45,
 					'cookies' => $auth['cookies']
 				) );
 				if ( ! is_array( $response ) ||  is_wp_error( $response ) ) {
