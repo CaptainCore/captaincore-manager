@@ -193,7 +193,7 @@ function titleCase(string) {
 	return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
-const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function groupmonth(value, index, array) {
 	d = new Date(value['Date']);
