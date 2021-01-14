@@ -2433,8 +2433,7 @@ $user = wp_get_current_user();
 							</v-layout>
 							</v-card-title>
 							</v-card>
-							<v-card flat class="mb-3">
-							<v-card-title>
+							<v-card flat class="mb-10">
 							<v-layout wrap v-show="dialog_site.environment_selected.stats.pages">
 							<v-flex xs12 sm6 pr-2>
 							<v-data-table
@@ -2442,6 +2441,7 @@ $user = wp_get_current_user();
 								:items="dialog_site.environment_selected.stats.pages"
 								class="elevation-0 table-layout-fixed"
 								hide-default-footer
+								dense
 							>
 								<template v-slot:body="{ items }">
 								<tbody>
@@ -2460,6 +2460,7 @@ $user = wp_get_current_user();
 								:items="dialog_site.environment_selected.stats.referrers"
 								class="elevation-0 table-layout-fixed"
 								hide-default-footer
+								dense
 							>
 								<template v-slot:body="{ items }">
 								<tbody>
@@ -2473,7 +2474,6 @@ $user = wp_get_current_user();
 							</v-data-table>
 							</v-flex>
 							</v-layout>
-							</v-card-title>
 							</v-card>
 						</div>
 						</v-flex>
