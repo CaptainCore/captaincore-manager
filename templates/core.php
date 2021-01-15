@@ -2437,11 +2437,9 @@ $user = wp_get_current_user();
 							<v-layout wrap v-show="dialog_site.environment_selected.stats.pages">
 							<v-flex xs12 sm6 pr-2>
 							<v-data-table
-								:headers='[{"text":"Top Pages","value":"page",sortable: false, class: "text-truncate"},{"text":"Views","value":"views",sortable: false, "width": 90, align: "right"},{"text":"Uniques","value":"uniques",sortable: false, "width": 98, align: "right"}]'
+								:headers='[{"text":"Top Pages","value":"page",sortable: false, class: "text-truncate"},{"text":"Views","value":"Pageviews", "width": 90, align: "right"},{"text":"Uniques","value":"Visitors", "width": 98, align: "right"}]'
 								:items="dialog_site.environment_selected.stats.pages"
 								class="elevation-0 table-layout-fixed"
-								hide-default-footer
-								dense
 							>
 								<template v-slot:body="{ items }">
 								<tbody>
@@ -2456,11 +2454,9 @@ $user = wp_get_current_user();
 							</v-flex>
 							<v-flex xs12 sm6 pl-2>
 							<v-data-table
-								:headers='[{"text":"Top Referrers","value":"referrer", sortable: false, align: "truncate"},{"text":"Views", "value":"views" ,sortable: false, "width": 90, align: "right"},{"text":"Uniques","value":"uniques", sortable: false, "width": 98, align: "right"}]'
+								:headers='[{"text":"Top Referrers","value":"referrer", sortable: false, align: "truncate"},{"text":"Views", "value":"Pageviews", "width": 90, align: "right"},{"text":"Uniques","value":"Visitors", "width": 98, align: "right"}]'
 								:items="dialog_site.environment_selected.stats.referrers"
 								class="elevation-0 table-layout-fixed"
-								hide-default-footer
-								dense
 							>
 								<template v-slot:body="{ items }">
 								<tbody>
