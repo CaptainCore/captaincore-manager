@@ -4252,29 +4252,29 @@ function captaincore_ajax_action_callback() {
 				// Fetch 12 months of stats (From June 1st 2018 to May 31st 2019)
 				$before   = strtotime( $_POST['to_at'] );
 				$after    = strtotime( $_POST['from_at'] ); 
-				$response = wp_remote_get( "$fathom_instance/api/sites/{$s->id}/stats/site?before=$before&after=$after", array(
+				$response = wp_remote_get( "$fathom_instance/api/sites/{$s->id}/stats/site?before=$before&after=$after", [
 					'timeout' => 45,
 					'cookies' => $auth['cookies']
-				) );
+				] );
 				if ( ! is_array( $response ) ||  is_wp_error( $response ) ) {
 					echo json_encode( $response );
 					wp_die();
 				}
 				$stats = json_decode( $response['body'] )->Data;
 
-				$response = wp_remote_get( "$fathom_instance/api/sites/{$s->id}/stats/site/agg?before=$before&after=$after", array(
+				$response = wp_remote_get( "$fathom_instance/api/sites/{$s->id}/stats/site/agg?before=$before&after=$after", [
 					'cookies' => $auth['cookies']
-				) );
+				 ] );
 				$agg = json_decode( $response['body'] )->Data;
 
-				$response = wp_remote_get( "$fathom_instance/api/sites/{$s->id}/stats/pages/agg?before=$before&after=$after&offset=0&limit=15", array(
+				$response = wp_remote_get( "$fathom_instance/api/sites/{$s->id}/stats/pages/agg?before=$before&after=$after&offset=0&limit=1000", [
 					'cookies' => $auth['cookies']
-				) );
+				 ] );
 				$pages = json_decode( $response['body'] )->Data;
 
-				$response = wp_remote_get( "$fathom_instance/api/sites/{$s->id}/stats/referrers/agg?before=$before&after=$after&offset=0&limit=15", array(
+				$response = wp_remote_get( "$fathom_instance/api/sites/{$s->id}/stats/referrers/agg?before=$before&after=$after&offset=0&limit=1000", [
 					'cookies' => $auth['cookies']
-				) );
+				 ] );
 				$referrers = json_decode( $response['body'] )->Data;
 			}
 		}
