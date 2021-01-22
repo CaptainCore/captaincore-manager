@@ -41,6 +41,12 @@ class Sites extends DB {
                 $this->sites[]     = $site_id;
                 $this->sites_all[] = $site_id;
             }
+            // Fetch sites assigned as customer
+			$site_ids = array_column( self::where( [ "customer_id" => $account_id, "status" => "active" ] ), "site_id" );
+			foreach ( $site_ids as $site_id ) {
+                $this->sites[]     = $site_id;
+                $this->sites_all[] = $site_id;
+            }
             // Patch in inactive sites
             $site_ids = array_column ( self::where( [ "account_id" => $account_id ] ), "site_id" );
             foreach ( $site_ids as $site_id ) {
