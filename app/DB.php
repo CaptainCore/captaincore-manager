@@ -241,6 +241,7 @@ class DB {
     static function fetch_filters_for_admins( $environment = "all" ) {
         global $wpdb;
         $table = self::_table();
+        $environment_conditions = "";
         if ( $environment != "all" ) {
             $environment_conditions = "AND {$table}.`environment` = '$environment'";
         }
@@ -255,6 +256,7 @@ class DB {
     static function fetch_filters_for_account( $account_id = "", $environment = "all" ) {
         global $wpdb;
         $table = self::_table();
+        $environment_conditions = "";
         if ( $environment != "all" ) {
             $environment_conditions = "AND {$table}.`environment` = '$environment'";
         }
@@ -269,6 +271,7 @@ class DB {
     static function fetch_filters_for_shared_accounts( $account_id = "", $environment = "all" ) {
         global $wpdb;
         $table = self::_table();
+        $environment_conditions = "";
         if ( $environment != "all" ) {
             $environment_conditions = "AND {$table}.`environment` = '$environment'";
         }

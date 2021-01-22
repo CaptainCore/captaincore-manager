@@ -4182,6 +4182,7 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'fetchStats' ) {
 
+		$errors         = [];
 		$environment_id = ( new CaptainCore\Site( $post_id ) )->fetch_environment_id( $environment );
 		
 		if ($environment == "Production") {
@@ -4655,7 +4656,7 @@ function captaincore_ajax_action_callback() {
 	}
 	if ( $cmd == 'fetch-site' ) {
 		$sites = [];
-		if ( count( $post_ids ) > 0 ) {
+		if ( is_array( $post_ids ) && count( $post_ids ) > 0 ) {
 			foreach( $post_ids as $id ) {
 				$site    = new CaptainCore\Site( $id );
 				$sites[] = $site->fetch();
@@ -4832,7 +4833,7 @@ function captaincore_install_action_callback() {
 	}
 
 	// If many sites, fetch their names
-	if ( count ( $post_ids ) > 0 ) {
+	if ( is_array( $post_ids ) && count ( $post_ids ) > 0 ) {
 		$site_names = [];
 		foreach( $post_ids as $id ) {
 
