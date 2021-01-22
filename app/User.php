@@ -15,8 +15,10 @@ class User {
             return;
         }
         $this->user_id = get_current_user_id();
+        if ( ! empty( $this->user_id )) {
         $user_meta     = get_userdata( $this->user_id );
         $this->roles   = $user_meta->roles;
+    }
     }
 
     public function accounts() {
