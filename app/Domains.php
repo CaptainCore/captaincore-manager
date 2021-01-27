@@ -33,11 +33,10 @@ class Domains extends DB {
 
         // Loop through each account for current user and fetch SiteIDs
         foreach ( $account_ids as $account_id ) {
-            
              // Fetch sites assigned as shared access
-             $domain_ids = ( new AccountDomain )->select_domains_for_account( $account_ids );
-             foreach ( $domain_ids as $domain_id ) {
-                 $this->domains[] = $domain_id;
+             $domain_ids = ( new Account( $account_id, true ) )->domains();
+             foreach ( $domain_ids as $domain ) {
+                $this->domains[] = $domain->domain_id;
              }
         }
 
