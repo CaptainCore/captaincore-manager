@@ -265,7 +265,7 @@ class Account {
         $account_ids  = [];
 
         foreach ($all_site_ids as $site_id) {
-            $account_ids[] = ( new Sites )->get( $site_id )->account_id;
+            $account_ids[] = ( new Sites )->get( $site_id )->customer_id;
         }
         return array_unique( $account_ids );
     }
