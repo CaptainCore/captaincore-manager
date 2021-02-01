@@ -58,10 +58,10 @@ class Accounts extends DB {
     }
 
     public function update_plan( $new_plan, $account_id ) {
-		$account = self::get( $account_id );
+        $account = self::get( $account_id );
         $plan    = json_decode( $account->plan );
         $total   = $plan->price;
-        if ( count( $plan->addons ) > 0 ) {
+        if ( is_array( $plan->addons ) && count( $plan->addons ) > 0 ) {
             foreach( $plan->addons as $addon ) {
                 $total = $total + $addon->price;
             }
