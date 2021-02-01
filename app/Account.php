@@ -412,7 +412,7 @@ class Account {
         $configurations = ( new Configurations )->get();
         $account        = ( new Accounts )->get( $this->account_id );
         $plan           = json_decode( $account->plan );
-        if ( $plan->auto_switch ) {
+        if ( $plan->auto_switch == "true" ) {
             self::auto_switch_plan();
             $account = ( new Accounts )->get( $this->account_id );
             $plan    = json_decode( $account->plan );
