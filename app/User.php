@@ -288,7 +288,7 @@ class User {
 			);
 
 		} catch ( \WC_Stripe_Exception $e ) {
-			wc_add_notice( $e->getLocalizedMessage(), 'error' );
+			\wc_add_notice( $e->getLocalizedMessage(), 'error' );
 			\WC_Stripe_Logger::log( 'Error: ' . $e->getMessage() );
 
 			do_action( 'wc_gateway_stripe_process_payment_error', $e, $order );
