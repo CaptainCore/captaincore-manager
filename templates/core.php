@@ -1172,28 +1172,76 @@ $user = wp_get_current_user();
 						</v-row>
 						<v-row dense>
 							<v-col>
-								<h3 class="title" v-show="typeof dialog_modify_plan.plan.addons == 'object' && dialog_modify_plan.plan.addons">Addons</h3>
+								<h3 v-show="typeof dialog_modify_plan.plan.addons == 'object' && dialog_modify_plan.plan.addons">Addons</h3>
 							</v-col>
 						</v-row>
 						<v-row dense v-for="(addon, index) in dialog_modify_plan.plan.addons">
 							<v-col cols="7">
-							<v-textarea auto-grow rows="1" label="Name" :value="addon.name" @change.native="addon.name = $event.target.value"></v-textarea>
+								<v-textarea auto-grow rows="1" label="Name" :value="addon.name" @change.native="addon.name = $event.target.value" hide-details></v-textarea>
 							</v-col>
 							<v-col cols="2">
-							<v-text-field label="Quantity" :value="addon.quantity" @change.native="addon.quantity = $event.target.value">
+								<v-text-field label="Quantity" :value="addon.quantity" @change.native="addon.quantity = $event.target.value" hide-details>
 							</v-col>
 							<v-col cols="2">
-							<v-text-field label="Price" :value="addon.price" @change.native="addon.price = $event.target.value">
+								<v-text-field label="Price" :value="addon.price" @change.native="addon.price = $event.target.value" hide-details>
 							</v-col>
-							<v-col cols="1">
+							<v-col cols="1" align-self="end">
 							<v-btn small text icon @click="removeAddon(index)"><v-icon>delete</v-icon></v-btn>
 							</v-col>
 						</v-row>
-						<v-row dense><v-col>
-						<v-btn small @click="addAddon()">
-							Add Addon
-						</v-btn>
-						</v-col></v-row>
+						<v-row class="mb-1">
+							<v-col>
+								<v-btn small depressed @click="addAddon()">Add Addon</v-btn>
+							</v-col>
+						</v-row>
+						<v-row dense>
+							<v-col>
+								<h3 v-show="typeof dialog_modify_plan.plan.credits == 'object' && dialog_modify_plan.plan.credits">Credits</h3>
+							</v-col>
+						</v-row>
+						<v-row dense v-for="(item, index) in dialog_modify_plan.plan.credits">
+							<v-col cols="7">
+								<v-textarea auto-grow rows="1" label="Name" :value="item.name" @change.native="item.name = $event.target.value" hide-details></v-textarea>
+							</v-col>
+							<v-col cols="2">
+								<v-text-field label="Quantity" :value="item.quantity" @change.native="item.quantity = $event.target.value" hide-details>
+							</v-col>
+							<v-col cols="2">
+								<v-text-field label="Price" :value="item.price" @change.native="item.price = $event.target.value" hide-details>
+							</v-col>
+							<v-col cols="1" align-self="end">
+								<v-btn small text icon @click="removeCredit(index)"><v-icon>delete</v-icon></v-btn>
+							</v-col>
+						</v-row>
+						<v-row class="mb-1">
+							<v-col>
+								<v-btn small depressed @click="addCredit()">Add Credit</v-btn>
+							</v-col>
+						</v-row>
+						<v-row dense>
+							<v-col>
+								<h3 v-show="typeof dialog_modify_plan.plan.charges == 'object' && dialog_modify_plan.plan.credits">Charges</h3>
+							</v-col>
+						</v-row>
+						<v-row dense v-for="(item, index) in dialog_modify_plan.plan.charges">
+							<v-col cols="7">
+								<v-textarea auto-grow rows="1" label="Name" :value="item.name" @change.native="item.name = $event.target.value" hide-details></v-textarea>
+							</v-col>
+							<v-col cols="2">
+								<v-text-field label="Quantity" :value="item.quantity" @change.native="item.quantity = $event.target.value" hide-details>
+							</v-col>
+							<v-col cols="2">
+								<v-text-field label="Price" :value="item.price" @change.native="item.price = $event.target.value" hide-details>
+							</v-col>
+							<v-col cols="1" align-self="end">
+								<v-btn small text icon @click="removeCharge(index)"><v-icon>delete</v-icon></v-btn>
+							</v-col>
+						</v-row>
+						<v-row class="mb-1">
+							<v-col>
+								<v-btn small depressed @click="addCharge()">Add Charge</v-btn>
+							</v-col>
+						</v-row>
 						<v-row>
 						<v-col cols="12">
 							<v-text-field label="Additional Emails" persistent-hint hint="Separated by a comma. Example: austin@anchor.host, support@anchor.host" :value="dialog_modify_plan.plan.additional_emails" @change.native="dialog_modify_plan.plan.additional_emails = $event.target.value">
@@ -4049,6 +4097,12 @@ $user = wp_get_current_user();
 						<v-select v-model="configurations.woocommerce.addons" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Addons" hide-details></v-select>
 					</v-col>
 					<v-col>
+						<v-select v-model="configurations.woocommerce.charges" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Charges" hide-details></v-select>
+					</v-col>
+					<v-col>
+						<v-select v-model="configurations.woocommerce.credits" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Credits" hide-details></v-select>
+					</v-col>
+					<v-col>
 						<v-select v-model="configurations.woocommerce.usage" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Usage" hide-details></v-select>
 					</v-col>
 				</v-row>
@@ -4841,7 +4895,7 @@ $user = wp_get_current_user();
 					<v-toolbar color="grey lighten-4" dense light flat>
 						<v-spacer></v-spacer>
 							<v-toolbar-items v-show="role == 'administrator'">
-								<v-btn text @click="modifyPlan()">Edit Plan <v-icon dark small>edit</v-icon></v-btn>
+								<v-btn text @click="modifyPlan()">Edit Plan <v-icon dark small class="ml-1">edit</v-icon></v-btn>
 							</v-toolbar-items>
 						</v-toolbar>
 					<v-card flat>
@@ -4891,21 +4945,11 @@ $user = wp_get_current_user();
 									<template v-slot:default>
 									<thead>
 										<tr>
-										<th class="text-left">
-											Type
-										</th>
-										<th class="text-left">
-											Name
-										</th>
-										<th class="text-left">
-											Quantity
-										</th>
-										<th class="text-left">
-											Price
-										</th>
-										<th class="text-left">
-											Total
-										</th>
+											<th class="text-left">Type</th>
+											<th class="text-left">Name</th>
+											<th class="text-left">Quantity</th>
+											<th class="text-left">Price</th>
+											<th class="text-left">Total</th>
 										</tr>
 									</thead>
 									<tbody>
@@ -4943,6 +4987,20 @@ $user = wp_get_current_user();
 											<td>{{ item.quantity }}</td>
 											<td class="text-right">${{ item.price }}</td>
 											<td class="text-right">${{ ( item.quantity * item.price ).toFixed(2) }}</td>
+										</tr>
+										<tr v-for="item in dialog_account.records.account.plan.charges">
+											<td>Charge</td>
+											<td>{{ item.name }}</td>
+											<td>{{ item.quantity }}</td>
+											<td class="text-right">${{ item.price }}</td>
+											<td class="text-right">${{ ( item.quantity * item.price ).toFixed(2) }}</td>
+										</tr>
+										<tr v-for="item in dialog_account.records.account.plan.credits">
+											<td>Credit</td>
+											<td>{{ item.name }}</td>
+											<td>{{ item.quantity }}</td>
+											<td class="text-right">-${{ item.price }}</td>
+											<td class="text-right">-${{ ( item.quantity * item.price ).toFixed(2) }}</td>
 										</tr>
 										<tr>
 											<td colspan="5" class="body-1">Total: <span v-html="plan_usage_estimate"></span></td>
@@ -5620,7 +5678,7 @@ new Vue({
 		dialog_toggle: { show: false, site_name: "", site_id: "" },
 		dialog_mailgun: { show: false, site: {}, response: { items: [], pagination: [] }, loading: false, pagination: {} },
 		dialog_migration: { show: false, sites: [], site_name: "", site_id: "", update_urls: true, backup_url: "" },
-		dialog_modify_plan: { show: false, site: {}, date_selector: false, hosting_plans: [], selected_plan: "", plan: { limits: {}, addons: [], next_renewal: "" }, customer_name: "", interval: "12" },
+		dialog_modify_plan: { show: false, site: {}, date_selector: false, hosting_plans: [], selected_plan: "", plan: { limits: {}, addons: [], charges: [], credits: [], next_renewal: "" }, customer_name: "", interval: "12" },
 		dialog_customer_modify_plan: { show: false, hosting_plans: [], selected_plan: "", subscription: {  plan: { limits: {}, addons: [], next_renewal: "" } } },
 		dialog_theme_and_plugin_checks: { show: false, site: {}, loading: false },
 		dialog_update_settings: { show: false, environment: {}, themes: [], plugins: [], loading: false },
@@ -6064,12 +6122,23 @@ new Vue({
 			if ( typeof this.dialog_account.records.account.plan == 'object' ) {
 				extras = 0
 				addons = 0
-				this.dialog_account.records.account.plan.addons.forEach( addon => {
-					if ( addon.price != "" ) {
-						addons = addons + parseFloat( ( addon.quantity * addon.price ).toFixed(2) )
+				credits = 0
+				charges = 0
+				this.dialog_account.records.account.plan.addons.forEach( item => {
+					if ( item.price != "" ) {
+						addons = addons + parseFloat( ( item.quantity * item.price ).toFixed(2) )
 					}
 				})
-				total = parseFloat( addons ) + parseFloat( this.dialog_account.records.account.plan.price )
+				this.dialog_account.records.account.plan.credits.forEach( item => {
+					if ( item.price != "" ) {
+						credits = credits + parseFloat( ( item.quantity * item.price ).toFixed(2) )
+					}
+				})
+				this.dialog_account.records.account.plan.charges.forEach( item => {
+					if ( item.price != "" ) {
+						charges = charges + parseFloat( ( item.quantity * item.price ).toFixed(2) )
+					}
+				})
 				units = [] 
 				units[1] = "month"
 				units[3] = "quarter"
@@ -6103,7 +6172,7 @@ new Vue({
 					}
 					extras = extras + ( extra_visits * unit_price )
 				}
-				total = ( parseFloat( addons ) + parseFloat( extras ) + parseFloat( this.dialog_account.records.account.plan.price ) ).toFixed(2)
+				total = ( parseFloat( addons ) + parseFloat( charges ) - parseFloat( credits )+ parseFloat( extras ) + parseFloat( this.dialog_account.records.account.plan.price ) ).toFixed(2)
 				return `$${total} <small>per ${unit}</small>`
 			}
 			return ""
@@ -9698,6 +9767,18 @@ new Vue({
 		},
 		removeAddon( remove_item ) {
 			this.dialog_modify_plan.plan.addons = this.dialog_modify_plan.plan.addons.filter( (item, index) => index != remove_item );
+		},
+		addCredit() {
+			this.dialog_modify_plan.plan.credits.push({ "name": "", "quantity": "", "price": "" });
+		},
+		removeCredit( remove_item ) {
+			this.dialog_modify_plan.plan.credits = this.dialog_modify_plan.plan.credits.filter( (item, index) => index != remove_item );
+		},
+		addCharge() {
+			this.dialog_modify_plan.plan.charges.push({ "name": "", "quantity": "", "price": "" });
+		},
+		removeCharge( remove_item ) {
+			this.dialog_modify_plan.plan.charges = this.dialog_modify_plan.plan.charges.filter( (item, index) => index != remove_item );
 		},
 		loadHostingPlan() {
 			current_auto_pay = this.dialog_modify_plan.plan.auto_pay

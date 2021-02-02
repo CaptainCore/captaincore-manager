@@ -126,6 +126,8 @@ class Account {
         $plan                  = json_decode( $account->plan );
         $plan->name            = empty( $plan->name ) ? "" : $plan->name;
         $plan->addons          = empty( $plan->addons ) ? [] : $plan->addons;
+        $plan->charges         = empty( $plan->charges ) ? [] : $plan->charges;
+        $plan->credits         = empty( $plan->credits ) ? [] : $plan->credits;
         $plan->limits          = empty( $plan->limits ) ? (object) [ "storage" => 0, "visits" => 0, "sites" => 0 ] : $plan->limits;
         $plan->interval        = empty( $plan->interval ) ? "12" : $plan->interval;
         $plan->billing_user_id = empty( $plan->billing_user_id ) ? 0 : (int) $plan->billing_user_id;
@@ -444,6 +446,28 @@ class Account {
                 $order->get_items()[ $line_item_id ]->set_subtotal( $addon->price * $addon->quantity );
                 $order->get_items()[ $line_item_id ]->set_total( $addon->price * $addon->quantity );
                 $order->get_items()[ $line_item_id ]->add_meta_data( "Details", $addon->name );
+                $order->get_items()[ $line_item_id ]->save_meta_data();
+                $order->get_items()[ $line_item_id ]->save();
+            }
+        }
+
+        if ( $plan->charges && count( $plan->charges ) > 0 ) {
+            foreach ( $plan->charges as $item ) {
+                $line_item_id = $order->add_product( get_product( $configurations->woocommerce->charges ), $item->quantity );
+                $order->get_items()[ $line_item_id ]->set_subtotal( $item->price * $item->quantity );
+                $order->get_items()[ $line_item_id ]->set_total( $item->price * $item->quantity );
+                $order->get_items()[ $line_item_id ]->add_meta_data( "Details", $item->name );
+                $order->get_items()[ $line_item_id ]->save_meta_data();
+                $order->get_items()[ $line_item_id ]->save();
+            }
+        }
+
+        if ( $plan->credits && count( $plan->credits ) > 0 ) {
+            foreach ( $plan->credits as $item ) {
+                $line_item_id = $order->add_product( get_product( $configurations->woocommerce->credits ), $item->quantity );
+                $order->get_items()[ $line_item_id ]->set_subtotal( -1 * abs( $item->price * $item->quantity ) );
+                $order->get_items()[ $line_item_id ]->set_total( -1 * abs( $item->price * $item->quantity ) );
+                $order->get_items()[ $line_item_id ]->add_meta_data( "Details", $item->name );
                 $order->get_items()[ $line_item_id ]->save_meta_data();
                 $order->get_items()[ $line_item_id ]->save();
             }
