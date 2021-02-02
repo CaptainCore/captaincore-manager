@@ -89,7 +89,9 @@ class Accounts extends DB {
 
 		$plan->name              = $new_plan["name"];
         $plan->price             = $new_plan["price"];
-		$plan->addons            = $new_plan["addons"];
+        $plan->addons            = $new_plan["addons"];
+        $plan->credits           = $new_plan["credits"];
+        $plan->charges           = $new_plan["charges"];
         $plan->limits            = $new_plan["limits"];
         $plan->auto_pay          = $new_plan["auto_pay"];
         $plan->auto_switch       = $new_plan["auto_switch"];
@@ -116,6 +118,8 @@ class Accounts extends DB {
                 echo "Processing renewal for {$account->name} as it's past {$plan->next_renewal}\n";
                 ( new Account( $account->account_id, true ) )->generate_order();
                 $plan->next_renewal = date("Y-m-d H:i:s", strtotime( "+{$plan->interval} month", $next_renewal ) );
+                unset( $plan->charges );
+                unset( $plan->credits );
                 echo "Next renewal in {$plan->interval} months will be {$plan->next_renewal}\n";
                 self::update( [ "plan" => json_encode( $plan ) ], [ "account_id" => $account->account_id ] );
             }
