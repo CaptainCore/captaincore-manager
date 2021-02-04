@@ -3571,6 +3571,15 @@ function captaincore_local_action_callback() {
 			$order_line_items .= "<tr><td width=\"536\">{$item->get_quantity()}x {$item->get_name()}<br /><small>{$description}</small></td><td>{$subtotal}</td></tr>";
 		}
 
+		$refunds = $order->get_refunds();
+		foreach ( $refunds as $item ) {
+			$description       = $item->get_post_title();
+			$subtotal          = str_replace( "<bdi>", "", "-".$item->get_formatted_refund_amount() );
+			$subtotal          = str_replace( "</bdi>", "", $subtotal );
+			$order_line_items .= "<tr><td width=\"536\">1x Refund<br /><small>{$description}</small></td><td>{$subtotal}</td></tr>";
+			$order_data->total = $order_data->total - $item->get_amount();
+		}
+
 		$payment_gateways      = WC()->payment_gateways->payment_gateways();
 		$payment_method        = $order->get_payment_method();
 		$payment_method_string = sprintf(
@@ -3642,6 +3651,17 @@ HEREDOC;
 				"description" => $item->get_meta_data(),
 				"total"       => $order->get_formatted_line_subtotal( $item ),
 			];
+		}
+
+		$refunds = $order->get_refunds();
+		foreach ( $refunds as $item ) {
+			$order_line_items[] = [
+				"name"        => "Refund",
+				"quantity"    => "1",
+				"description" => $item->get_post_title(),
+				"total"       => "-".$item->get_formatted_refund_amount(),
+			];
+			$order_data->total = $order_data->total - $item->get_amount();
 		}
 
 		$payment_gateways      = WC()->payment_gateways->payment_gateways();

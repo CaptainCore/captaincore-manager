@@ -4468,6 +4468,7 @@ $user = wp_get_current_user();
 									</div>
 									<p v-else-if="meta.key == 'Details'">{{ meta.value }}</p>
 								</div>
+								<div v-if="typeof item.description == 'string'" v-html="item.description"></div>
 							</template>
 							<template v-slot:item.total="{ item }">
 								<div v-html="item.total"></div>
