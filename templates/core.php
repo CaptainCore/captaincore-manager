@@ -2253,6 +2253,33 @@ $user = wp_get_current_user();
 										<v-icon>mdi-content-copy</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
+									<v-list-item @click="copyText( dialog_site.environment_selected.core )" dense>
+									<v-list-item-content>
+										<v-list-item-title>WordPress Version</v-list-item-title>
+										<v-list-item-subtitle v-text="dialog_site.environment_selected.core"></v-list-item-subtitle>
+									</v-list-item-content>
+									<v-list-item-icon>
+										<v-icon>mdi-content-copy</v-icon>
+									</v-list-item-icon>
+									</v-list-item>
+									<v-list-item @click="copyText( $options.filters.formatSize( dialog_site.environment_selected.storage ) )" dense>
+									<v-list-item-content>
+										<v-list-item-title>Storage</v-list-item-title>
+										<v-list-item-subtitle>{{ dialog_site.environment_selected.storage | formatSize }}</v-list-item-subtitle>
+									</v-list-item-content>
+									<v-list-item-icon>
+										<v-icon>mdi-content-copy</v-icon>
+									</v-list-item-icon>
+									</v-list-item>
+									<v-list-item @click="copyText( dialog_site.environment_selected.subsite_count + ' subsites')" dense v-if="dialog_site.environment_selected.subsite_count">
+									<v-list-item-content>
+										<v-list-item-title>Multisite</v-list-item-title>
+										<v-list-item-subtitle>{{ dialog_site.environment_selected.subsite_count }} subsites</v-list-item-subtitle>
+									</v-list-item-content>
+									<v-list-item-icon>
+										<v-icon>mdi-content-copy</v-icon>
+									</v-list-item-icon>
+									</v-list-item>
 									<v-list-item @click="viewMailgunLogs()" dense v-if="dialog_site.site.mailgun">
 									<v-list-item-content>
 										<v-list-item-title>Mailgun Logs</v-list-item-title>
