@@ -330,11 +330,18 @@ class Site {
         foreach( $site->shared_with as $account_id ) {
             if ( $site->customer_id == $account_id or $site->account_id == $account_id ) {
                 continue;
-        }
+            }
             $shared_with_ids[] = $account_id;
         }
 
         self::assign_accounts( $shared_with_ids );
+
+        $new_environment_ids = array_column( $site->environments, "environment_id" );
+        foreach( $environment_ids as $environment_id ) {
+            if ( ! in_array( $environment_id, $new_environment_ids ) ) {
+                ( new Environments )->delete( $environment_id );
+            }
+        }
 
         // Update environments
         $db_environments = new Environments();
