@@ -4652,44 +4652,88 @@ $user = wp_get_current_user();
 			</v-card>
 			<v-card tile v-if="route == 'profile'" flat>
 				<v-toolbar color="grey lighten-4" light flat>
-					<v-toolbar-title>Profile</v-toolbar-title>
+					<v-toolbar-title>Edit profile</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
 					</v-toolbar-items>
 				</v-toolbar>
-				<v-card-text style="max-height: 100%;">
-					<v-card tile style="max-width: 400px;margin: auto;">
-						<v-toolbar color="grey lighten-4" light flat>
-							<v-toolbar-title>Update profile</v-toolbar-title>
-							<v-spacer></v-spacer>
-						</v-toolbar>
-						<v-card-text>
-							<v-list>
-							<v-list-item link href="https://gravatar.com" target="_blank">
-								<v-list-item-avatar>
-									<v-img :src="gravatar"></v-img>
-								</v-list-item-avatar>
-								<v-list-item-content>
-									<v-list-item-title>Edit thumbnail with Gravatar</v-list-item-title>
-								</v-list-item-content>
-								<v-list-item-icon>
-									<v-icon>mdi-open-in-new</v-icon>
-								</v-list-item-icon>
-							</v-list-item>
-							</v-list>
-							<v-text-field :value="profile.display_name" @change.native="profile.display_name = $event.target.value" label="Display Name"></v-text-field>
-							<v-text-field :value="profile.email" @change.native="profile.email = $event.target.value" label="Email"></v-text-field>
-							<v-text-field :value="profile.login" @change.native="profile.login = $event.target.value" label="Username" readonly disabled></v-text-field>
-							<v-text-field :value="profile.new_password" @change.native="profile.new_password = $event.target.value" type="password" label="New Password" hint="Leave empty to keep current password." persistent-hint></v-text-field>
+				<v-card-text style="max-width:480px">
+					<v-row>
+						<v-col cols="12">
+						<v-list>
+						<v-list-item link href="https://gravatar.com" target="_blank">
+							<v-list-item-avatar>
+								<v-img :src="gravatar"></v-img>
+							</v-list-item-avatar>
+							<v-list-item-content>
+								<v-list-item-title>Edit thumbnail with Gravatar</v-list-item-title>
+							</v-list-item-content>
+							<v-list-item-icon>
+								<v-icon>mdi-open-in-new</v-icon>
+							</v-list-item-icon>
+						</v-list-item>
+						</v-list>
+						<v-text-field :value="profile.display_name" @change.native="profile.display_name = $event.target.value" label="Display Name"></v-text-field>
+						<v-text-field :value="profile.login" @change.native="profile.login = $event.target.value" label="Username" readonly disabled></v-text-field>
+						<v-text-field :value="profile.email" @change.native="profile.email = $event.target.value" label="Email"></v-text-field>
+						<v-text-field :value="profile.new_password" @change.native="profile.new_password = $event.target.value" type="password" label="New Password" hint="Leave empty to keep current password." persistent-hint></v-text-field>
+						</v-col>
+						<v-col cols="12" class="mt-3">
 							<v-alert text :value="true" type="error" v-for="error in profile.errors" class="mt-5">{{ error }}</v-alert>
 							<v-alert text :value="true" type="success" v-show="profile.success" class="mt-5">{{ profile.success }}</v-alert>
-							
-							<v-flex xs12 mt-5>
-								<v-btn color="primary" dark @click="updateAccount()">Save Account</v-btn>
-							</v-flex>
+							<v-btn color="primary" dark @click="updateAccount()">Save Account</v-btn>
+						</v-col>
+					</v-layout>
+			</v-card>
+			<v-card tile v-if="route == 'subscriptions'" flat>
+				<v-toolbar color="grey lighten-4" light flat>
+					<v-toolbar-title>Listing {{ subscriptions.length }} subscriptions</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+						<v-tooltip top v-if="toggle_site == true">
+							<template v-slot:activator="{ on }">
+							<v-btn icon @click="toggle_plan = false" v-on="on">
+								<v-icon>mdi-poll</v-icon>
+							</v-btn>
+							</template>
+							<span>View reports</span>
+						</v-tooltip>
+					</v-toolbar-items>
+				</v-toolbar>
+					<v-data-table
+						:headers="[
+							{ text: 'Name', value: 'name' },
+							{ text: 'Interval', value: 'interval' },
+							{ text: 'Next Renewal', value: 'next_renewal' },
+							{ text: 'Price', value: 'total', width: '100px' }]"
+						:items="subscriptions"
+						:search="subscription_search"
+						:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
+						v-show="toggle_plan == true"
+					>
+					<template v-slot:top>
+					<v-card-text>
+					<v-row>
+						<v-col></v-col>
+						<v-col cols="12" md="4">
+							<v-text-field class="mx-4" v-model="subscription_search" autofocus append-icon="search" label="Search" single-line clearable hide-details></v-text-field>
+						</v-col>
+					</v-row>
 					</v-card-text>
-					</v-card>
-				</v-card-text>
+					</template>
+					<template v-slot:body="{ items }">
+						<tbody>
+						<tr v-for="item in items" :key="item.account_id" @click="goToPath( `/account/subscription/${item.account_id}`)" style="cursor:pointer;">
+							<td>{{ item.name }}</td>
+							<td>{{ item.interval | intervalLabel }}</td>
+							<td>{{ item.next_renewal }}</td>
+							<td>${{ item.total }}</td>
+						</tr>
+						</tbody>
+					</template>
+					</v-data-table>
+					<div id="plan_chart"></div>
+					
 			</v-card>
 			<v-card tile v-if="route == 'accounts'" flat>
 			<v-sheet v-show="dialog_account.step == 1">
