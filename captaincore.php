@@ -1444,6 +1444,8 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$current_site = ( new CaptainCore\Sites )->get( $site_id );
 		$details      = json_decode( $current_site->details );
 
+		unset( $details->connection_errors );
+
 		if ( $current_environment->environment == "Production" ) {
 			$details->core = $post->data->core;
 		}
@@ -1735,8 +1737,8 @@ function captaincore_users_func( $request ) {
 
 	// Checks for a current user. If admin found pass
 	if ( $current_user && $role_check ) {
-	return ( new CaptainCore\Users() )->list();
-}
+		return ( new CaptainCore\Users() )->list();
+	} 
 	return [];
 
 }
@@ -3411,7 +3413,7 @@ function captaincore_local_action_callback() {
 	global $wpdb;
 	$cmd   = $_POST['command'];
 	$value = $_POST['value'];
-
+	
 	if ( $cmd == "connect" ) { 
 		$connect = (object) $_POST['connect'];
 		// Disable https when debug enabled
