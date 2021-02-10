@@ -161,7 +161,7 @@ $user = wp_get_current_user();
             <v-list-item-title>Health</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-		<v-subheader>Administrator</v-subheader v-show="role == 'administrator'">
+		<v-subheader v-show="role == 'administrator'">Administrator</v-subheader>
 		<v-list-item link href="/account/configurations" @click.prevent="goToPath( '/account/configurations' )" v-show="role == 'administrator'">
           <v-list-item-icon>
             <v-icon>mdi-cogs</v-icon>
@@ -2466,54 +2466,54 @@ $user = wp_get_current_user();
 						<v-toolbar-title>Stats</v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items v-if="typeof dialog_new_site == 'object'">
-						<v-col style="max-width:150px;">
-						<v-menu
-							v-model="stats.from_at_select"
-							:close-on-content-click="false"
-							transition="scale-transition"
-							offset-y
+							<v-col style="max-width:150px;">
+							<v-menu
+								v-model="stats.from_at_select"
+								:close-on-content-click="false"
+								transition="scale-transition"
+								offset-y
 								left
 								down
-							min-width="auto"
-						>
-							<template v-slot:activator="{ on, attrs }">
-							<v-text-field
-								v-model="stats.from_at"
-								label="From"
-								prepend-icon="mdi-calendar"
-								readonly
-								v-bind="attrs"
-								v-on="on"
-								width="100"
-							></v-text-field>
-							</template>
-							<v-date-picker v-model="stats.from_at" @input="stats.from_at_select = false; fetchStats()"></v-date-picker>
-						</v-menu>
-						</v-col>
-						<v-col style="max-width:150px;">
-						<v-menu
-							v-model="stats.to_at_select"
-							:close-on-content-click="false"
-							transition="scale-transition"
-							offset-y
+								min-width="auto"
+							>
+								<template v-slot:activator="{ on, attrs }">
+								<v-text-field
+									v-model="stats.from_at"
+									label="From"
+									prepend-icon="mdi-calendar"
+									readonly
+									v-bind="attrs"
+									v-on="on"
+									width="100"
+								></v-text-field>
+								</template>
+								<v-date-picker v-model="stats.from_at" @input="stats.from_at_select = false; fetchStats()"></v-date-picker>
+							</v-menu>
+							</v-col>
+							<v-col style="max-width:150px;">
+							<v-menu
+								v-model="stats.to_at_select"
+								:close-on-content-click="false"
+								transition="scale-transition"
+								offset-y
 								left
 								down
-							min-width="auto"
-						>
-							<template v-slot:activator="{ on, attrs }">
-							<v-text-field
-								v-model="stats.to_at"
-								label="To"
-								prepend-icon="mdi-calendar"
-								readonly
-								v-bind="attrs"
-								v-on="on"
-							></v-text-field>
-							</template>
-							<v-date-picker v-model="stats.to_at" @input="stats.to_at_select = false; fetchStats()"></v-date-picker>
-						</v-menu>
-						</v-col>
-                    		<v-btn text @click="configureFathom( dialog_site.site.site_id )" v-show="role == 'administrator'">Configure Fathom Tracker <v-icon dark small>bar_chart</v-icon></v-btn>
+								min-width="auto"
+							>
+								<template v-slot:activator="{ on, attrs }">
+								<v-text-field
+									v-model="stats.to_at"
+									label="To"
+									prepend-icon="mdi-calendar"
+									readonly
+									v-bind="attrs"
+									v-on="on"
+								></v-text-field>
+								</template>
+								<v-date-picker v-model="stats.to_at" @input="stats.to_at_select = false; fetchStats()"></v-date-picker>
+							</v-menu>
+							</v-col>
+                    		<v-btn text @click="configureFathom( dialog_site.site.site_id )" v-show="role == 'administrator'"><v-icon dark small class="mr-1">mdi-pencil</v-icon> Edit</v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
 						<div class="pa-3" v-if="typeof dialog_site.environment_selected.stats == 'string' && dialog_site.environment_selected.stats != 'Loading'">
