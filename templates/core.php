@@ -92,6 +92,7 @@ $user = wp_get_current_user();
 	  <v-navigation-drawer v-model="drawer" app mobile-breakpoint="960" clipped v-if="route != 'login' && route != 'connect'">
       <v-list nav dense>
 	  	<v-list-item-group mandatory v-model="selected_nav" color="primary">
+		<v-list-item style="display:none"></v-list-item>
         <v-list-item link href="/account/sites" @click.prevent="goToPath( '/account/sites' )">
           <v-list-item-icon>
             <v-icon>mdi-wrench</v-icon>
@@ -108,44 +109,12 @@ $user = wp_get_current_user();
             <v-list-item-title>DNS</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-		<v-list-item link href="/account/health" @click.prevent="goToPath( '/account/health' )">
-          <v-list-item-icon>
-            <v-icon>mdi-ladybug</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>Health</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-		<v-list-item link href="/account/cookbook" @click.prevent="goToPath( '/account/cookbook' )">
-        <v-list-item-icon>
-            <v-icon>mdi-code-tags</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>Cookbook</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-        <v-list-item link href="/account/handbook" @click.prevent="goToPath( '/account/handbook' )" v-show="role == 'administrator'">
-          <v-list-item-icon>
-            <v-icon>mdi-map</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>Handbook</v-list-item-title>
-          </v-list-item-content>
-		</v-list-item>
 		<v-list-item link href="/account/accounts" @click.prevent="goToPath( '/account/accounts' )">
           <v-list-item-icon>
             <v-icon>mdi-account-card-details</v-icon>
           </v-list-item-icon>
           <v-list-item-content>
             <v-list-item-title>Accounts</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-		<v-list-item link href="/account/users" @click.prevent="goToPath( '/account/users' )" v-show="role == 'administrator'">
-          <v-list-item-icon>
-            <v-icon>mdi-account-multiple</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>Users</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 		<v-list-item link href="/account/billing" @click.prevent="goToPath( '/account/billing' )" v-show="modules.billing">
@@ -155,8 +124,7 @@ $user = wp_get_current_user();
           <v-list-item-content>
             <v-list-item-title>Billing</v-list-item-title>
           </v-list-item-content>
-        </v-list-item>
-		</v-list-item-group>
+		</v-list-item>
       </v-list>
 	  <template v-slot:append>
 	  <v-menu offset-y top>
@@ -176,20 +144,38 @@ $user = wp_get_current_user();
 		</v-list>
       </template>
       <v-list dense>
-	  	<v-list-item link href="/account/profile" @click.prevent="goToPath( '/account/profile' )">
-          <v-list-item-icon>
-            <v-icon>mdi-account-box</v-icon>
+	  <v-subheader>Developers</v-subheader>
+		<v-list-item link href="/account/cookbook" @click.prevent="goToPath( '/account/cookbook' )">
+        <v-list-item-icon>
+            <v-icon>mdi-code-tags</v-icon>
           </v-list-item-icon>
           <v-list-item-content>
-            <v-list-item-title>Profile</v-list-item-title>
+            <v-list-item-title>Cookbook</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
+		<v-list-item link href="/account/health" @click.prevent="goToPath( '/account/health' )">
+          <v-list-item-icon>
+            <v-icon>mdi-ladybug</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>Health</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+		<v-subheader>Administrator</v-subheader v-show="role == 'administrator'">
 		<v-list-item link href="/account/configurations" @click.prevent="goToPath( '/account/configurations' )" v-show="role == 'administrator'">
           <v-list-item-icon>
             <v-icon>mdi-cogs</v-icon>
           </v-list-item-icon>
           <v-list-item-content>
             <v-list-item-title>Configurations</v-list-item-title>
+          </v-list-item-content>
+		</v-list-item>
+		<v-list-item link href="/account/handbook" @click.prevent="goToPath( '/account/handbook' )" v-show="role == 'administrator'">
+          <v-list-item-icon>
+            <v-icon>mdi-map</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>Handbook</v-list-item-title>
           </v-list-item-content>
 		</v-list-item>
 		<v-list-item link href="/account/defaults" @click.prevent="goToPath( '/account/defaults' )" v-show="role == 'administrator'">
@@ -208,6 +194,32 @@ $user = wp_get_current_user();
             <v-list-item-title>SSH Keys</v-list-item-title>
           </v-list-item-content>
 		</v-list-item>
+		</v-list-item-group>
+		<v-list-item link href="/account/subscriptions" @click.prevent="goToPath( '/account/subscriptions' )" v-show="role == 'administrator'">
+          <v-list-item-icon>
+            <v-icon>mdi-repeat</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>Subscriptions</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+		<v-list-item link href="/account/users" @click.prevent="goToPath( '/account/users' )" v-show="role == 'administrator'">
+          <v-list-item-icon>
+            <v-icon>mdi-account-multiple</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>Users</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+		<v-subheader>User</v-subheader>
+	  	<v-list-item link href="/account/profile" @click.prevent="goToPath( '/account/profile' )">
+          <v-list-item-icon>
+            <v-icon>mdi-account-box</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>Profile</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
 		<v-list-item link v-if="footer.switch_to_link" :href="footer.switch_to_link">
           <v-list-item-icon>
             <v-icon>mdi-logout</v-icon>
@@ -1021,8 +1033,8 @@ $user = wp_get_current_user();
 		</v-card>
 		</v-dialog>
 		<v-dialog v-model="dialog_customer_modify_plan.show" max-width="700">
-				<v-card tile>
-					<v-toolbar flat dark color="primary">
+			<v-card tile>
+				<v-toolbar flat dark color="primary">
 					<v-btn icon dark @click.native="dialog_customer_modify_plan.show = false">
 						<v-icon>close</v-icon>
 					</v-btn>
@@ -1186,7 +1198,7 @@ $user = wp_get_current_user();
 								<v-text-field label="Price" :value="addon.price" @change.native="addon.price = $event.target.value" hide-details>
 							</v-col>
 							<v-col cols="1" align-self="end">
-							<v-btn small text icon @click="removeAddon(index)"><v-icon>delete</v-icon></v-btn>
+								<v-btn small text icon @click="removeAddon(index)"><v-icon>delete</v-icon></v-btn>
 							</v-col>
 						</v-row>
 						<v-row class="mb-1">
@@ -1899,23 +1911,23 @@ $user = wp_get_current_user();
 							</v-btn>
 							</template>
 							<span>View as Thumbnails</span>
-						</v-tooltip>
-						<v-tooltip top v-if="toggle_site == false">
+							</v-tooltip>
+							<v-tooltip top v-if="toggle_site == false">
 							<template v-slot:activator="{ on }">
 							<v-btn icon @click="toggle_site = true" v-on="on">
 								<v-icon>mdi-table</v-icon>
-				</v-btn>
-				</template>
+							</v-btn>
+							</template>
 							<span>View as List</span>
 						</v-tooltip>
 						<v-tooltip top>
-					<template v-slot:activator="{ on }">
-							<v-btn icon @click="view_console.show = !view_console.show" v-on="on">
-								<v-icon>mdi-console</v-icon>
-					</v-btn>
-					</template>
-							<span>Advanced Options</span>
-				</v-tooltip>
+						<template v-slot:activator="{ on }">
+						<v-btn icon @click="view_console.show = !view_console.show" v-on="on">
+							<v-icon>mdi-console</v-icon>
+						</v-btn>
+						</template>
+						<span>Advanced Options</span>
+						</v-tooltip>
 						<v-btn v-if="role == 'administrator'" text @click="goToPath( `/account/sites/new` )">Add Site <v-icon dark>add</v-icon></v-btn>
 						<v-btn v-else text @click="dialog_request_site.show = true; dialog_request_site.request.account_id = accounts[0].account_id">Add Site <v-icon dark>add</v-icon></v-btn>
 					</v-toolbar-items>
@@ -1942,20 +1954,20 @@ $user = wp_get_current_user();
 				</v-card>
 				</v-dialog>
 				<v-stepper :value="request.step" v-for="(request, index) in requested_sites" class="mb-3">
-				<v-toolbar flat dense class="primary white--text">
+					<v-toolbar flat dense class="primary white--text">
 						<div v-if="role == 'administrator'">Requested by {{ user_name( request.user_id ) }} -&nbsp;</div><strong>{{ request.name }}</strong>&nbsp;in {{ account_name( request.account_id ) }}
-					<v-spacer></v-spacer>
+						<v-spacer></v-spacer>
 						<v-btn small @click="modifyRequest( index )" v-show="role == 'administrator'" class="mx-1">Modify</v-btn>
 						<v-btn small @click="finishRequest( index )" v-if="request.step == 3" class="mx-1">Finish</v-btn>
 						<v-btn small @click="cancelRequest( index )" v-else class="mx-1">Cancel</v-btn>
-				</v-toolbar>
-				<v-stepper-header class="elevation-0">
+					</v-toolbar>
+					<v-stepper-header class="elevation-0">
 						<v-stepper-step step="1" :complete="request.step > 0">Requesting site<small>{{ request.created_at | pretty_timestamp_epoch }}</small></v-stepper-step>
-				<v-divider></v-divider>
+						<v-divider></v-divider>
 						<v-stepper-step step="2" :complete="request.step > 1">Preparing new site<small v-show="request.processing_at">{{ request.processing_at | pretty_timestamp_epoch }}</small></v-stepper-step>
-				<v-divider></v-divider>
+						<v-divider></v-divider>
 						<v-stepper-step step="3" :complete="request.step > 2">Ready to use<small v-show="request.ready_at">{{ request.ready_at | pretty_timestamp_epoch }}</small></v-stepper-step>
-				</v-stepper-header>
+					</v-stepper-header>
 					<v-stepper-items>
 					<v-stepper-content step="1">
 					<div>{{ request.notes }}</div>
@@ -2004,7 +2016,7 @@ $user = wp_get_current_user();
 				<v-alert text type="error" dense>
 					<v-row align="center">
 						<v-col class="shrink">
-							<v-img :src=`${remote_upload_uri}${site.site}_${site.site_id}/production/screenshots/${site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="site.screenshot_base"></v-img>
+							<v-img :src=`${remote_upload_uri}${site.site}_${site.site_id}/production/screenshots/${site.screenshot_base}_thumb-100.jpg` class="elevation-1" max-width="50" v-show="site.screenshot_base"></v-img>
 						</v-col>
 						<v-col class="grow">{{ site.name }}</v-col>
 						<v-col class="shrink pa-0">
@@ -2647,14 +2659,14 @@ $user = wp_get_current_user();
 					>
 					<template v-slot:item.status="{ item }">
 						<div v-if="item.status === 'inactive' || item.status === 'active'">
-                <v-switch hide-details v-model="item.status" false-value="inactive" true-value="active" @change="togglePlugin(item.name, item.status, dialog_site.site.site_id)"></v-switch>
+                			<v-switch hide-details v-model="item.status" false-value="inactive" true-value="active" @change="togglePlugin(item.name, item.status, dialog_site.site.site_id)"></v-switch>
 						</div>
 						<div v-else>
 							{{ item.status }}
 						</div>
 					</template>
 					<template v-slot:item.actions="{ item }" class="text-center px-0">
-                <v-btn icon small class="mx-0" @click="deletePlugin(item.name, dialog_site.site.site_id)" v-if="item.status === 'active' || item.status === 'inactive'">
+                		<v-btn icon small class="mx-0" @click="deletePlugin(item.name, dialog_site.site.site_id)" v-if="item.status === 'active' || item.status === 'inactive'">
 							<v-icon small color="pink">delete</v-icon>
 						</v-btn>
 					</template>
@@ -3253,7 +3265,7 @@ $user = wp_get_current_user();
 				<v-spacer></v-spacer>
 					<v-btn icon @click="goToPath( `/account/sites` )">
 						<v-icon>close</v-icon>
-						</v-btn>
+					</v-btn>
 				</v-toolbar>
 				<v-card-text v-if="role == 'administrator'">
 					<v-form ref="form" :disabled="dialog_new_site.saving">
@@ -3647,7 +3659,7 @@ $user = wp_get_current_user();
 					<v-alert :value="true" type="info" text>
 						<v-row>
 						<v-col class="grow">
-						<div v-html="configurations.dns_introduction_html"></div>
+							<div v-html="configurations.dns_introduction_html"></div>
 						</v-col>
 						<v-col class="shrink">
 						<v-dialog max-width="440">
@@ -4390,7 +4402,7 @@ $user = wp_get_current_user();
 								</template>
 								<span>Download PDF Invoice</span>
 							</v-tooltip>
-						<v-btn text href="/account/billing" @click.prevent="goToPath( '/account/billing' )"><v-icon>mdi-arrow-left</v-icon> Back</v-btn>
+							<v-btn text href="/account/billing" @click.prevent="goToPath( '/account/billing' )"><v-icon>mdi-arrow-left</v-icon> Back</v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
 					<v-card-text v-show="dialog_invoice.loading == false">
@@ -4606,7 +4618,7 @@ $user = wp_get_current_user();
 				</v-toolbar>
 				<v-card-text>
 					<v-alert text :value="true" type="info" class="mb-4 mt-4">
-						When new sites are added then the following default settings will be applied.  
+						When new sites are added then the following default settings will be applied.
 					</v-alert>
 					<v-layout wrap>
 						<v-flex xs6 pr-2><v-text-field :value="defaults.email" @change.native="defaults.email = $event.target.value" label="Default Email" required></v-text-field></v-flex>
@@ -5115,7 +5127,7 @@ $user = wp_get_current_user();
 						</v-row>
 						</v-card-text>
 						<v-alert text :value="true" type="info" color="primary" class="mx-2">
-					<strong>{{ dialog_account.records.account.plan.name }} Plan</strong> supports up to {{ dialog_account.records.account.plan.limits.visits | formatLargeNumbers }} visits, {{ dialog_account.records.account.plan.limits.storage }}GB storage and {{ dialog_account.records.account.plan.limits.sites }} sites. Extra sites, storage and visits charged based on usage.
+							<strong>{{ dialog_account.records.account.plan.name }} Plan</strong> supports up to {{ dialog_account.records.account.plan.limits.visits | formatLargeNumbers }} visits, {{ dialog_account.records.account.plan.limits.storage }}GB storage and {{ dialog_account.records.account.plan.limits.sites }} sites. Extra sites, storage and visits charged based on usage.
 						</v-alert>
 						</div>
 						<div v-else>
@@ -5166,7 +5178,6 @@ $user = wp_get_current_user();
 					<v-toolbar-title>Listing {{ users.length }} users</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						
 						<v-dialog max-width="600">
 							<template v-slot:activator="{ on, attrs }">
 								<v-btn text v-bind="attrs" v-on="on">Add user <v-icon dark>add</v-icon></v-btn>
@@ -5179,12 +5190,12 @@ $user = wp_get_current_user();
 								</v-btn>
 								<v-toolbar-title>Add user</v-toolbar-title>
 								<v-spacer></v-spacer>
-				</v-toolbar>
+								</v-toolbar>
 								<v-card-text class="pt-3">
 									<v-row>
 										<v-col><v-text-field :value="dialog_new_user.first_name" @change.native="dialog_new_user.first_name = $event.target.value" label="First Name"></v-text-field></v-col>
 										<v-col><v-text-field :value="dialog_new_user.last_name" @change.native="dialog_new_user.last_name = $event.target.value" label="Last Name"></v-text-field></v-col>
-					</v-row>
+									</v-row>
 									<v-text-field :value="dialog_new_user.email" @change.native="dialog_new_user.email = $event.target.value" label="Email"></v-text-field>
 									<v-text-field :value="dialog_new_user.login" @change.native="dialog_new_user.login = $event.target.value" label="Username"></v-text-field>
 									<v-autocomplete :items="accounts" item-text="name" item-value="account_id" v-model="dialog_new_user.account_ids" label="Accounts" chips multiple deletable-chips></v-autocomplete>
@@ -5193,18 +5204,18 @@ $user = wp_get_current_user();
 									<v-flex xs12 mt-5>
 										<v-btn color="primary" dark @click="newUser( dialog )">Create User</v-btn>
 									</v-flex>
-				</v-card-text>
+								</v-card-text>
 							</v-card>
 							</template>
 						</v-dialog>
 					</v-toolbar-items>
 				</v-toolbar>
-					<v-data-table
-						:headers="[{ text: 'Name', value: 'name' },{ text: 'Username', value: 'username' },{ text: 'Email', value: 'email' },{ text: '', value: 'user_id', align: 'end', sortable: false }]"
-						:items="users"
-						:search="user_search"
-						:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
-					>
+				<v-data-table
+					:headers="[{ text: 'Name', value: 'name' },{ text: 'Username', value: 'username' },{ text: 'Email', value: 'email' },{ text: '', value: 'user_id', align: 'end', sortable: false }]"
+					:items="users"
+					:search="user_search"
+					:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
+				>
 					<template v-slot:top>
 					<v-card-text>
 					<v-row>
@@ -5218,7 +5229,7 @@ $user = wp_get_current_user();
 					<template v-slot:item.user_id="{ item }">
 						<v-btn text color="primary" @click="editUser( item.user_id )">Edit User</v-btn>
 					</template>
-					</v-data-table>
+				</v-data-table>
 			</v-card>
 			<v-dialog v-if="route == 'invite'" value="true" scrollable persistance width="500" height="300">
 			<v-overlay :value="true" v-if="typeof new_invite.account.name == 'undefined'">
@@ -6311,19 +6322,19 @@ new Vue({
 				if ( this.allDomains == 0 ) {
 					this.loading_page = true;
 				}
-				this.selected_nav = 1
+				this.selected_nav = 2
 				this.fetchDomains()
 			}
 			if ( this.route == "users" ) {
-				this.selected_nav = 6
+				this.selected_nav = ""
 				this.fetchAllUsers();
 			}
 			if ( this.route == "cookbook" ) {
-				this.selected_nav = 3
+				this.selected_nav = ""
 				this.loading_page = false;
 			}
 			if ( this.route == "handbook" ) {
-				this.selected_nav = 4
+				this.selected_nav = ""
 				this.loading_page = false;
 			}
 			if ( this.route == "keys" ) {
@@ -6341,30 +6352,36 @@ new Vue({
 				this.loading_page = false;
 			}
 			if ( this.route == "accounts" ) {
-				this.selected_nav = 5
+				this.selected_nav = 3
 				this.loading_page = false;
 			}
 			if ( this.route == "billing" ) {
 				this.fetchBilling()
-				this.selected_nav = 7
+				this.selected_nav = 4
+				this.loading_page = false;
+			}
+			if ( this.route == "subscriptions" ) {
+				this.fetchSubscriptions()
+				this.selected_nav = ""
 				this.loading_page = false;
 			}
 			if ( this.route == "configurations" ) {
 				this.fetchConfigurations()
-				this.loading_page = false;
+				this.loading_page = false
+				this.selected_nav = ""
 			}
 			if ( this.route == "sites" ) {
 				if ( this.sites.length == 0 ) {
 					this.loading_page = true;
 				}
-				this.selected_nav = 0
+				this.selected_nav = 1
 				this.fetchSites()
 			}
 			if ( this.route == "health" ) {
 				if ( this.sites.length == 0 ) {
 					this.loading_page = true;
 				}
-				this.selected_nav = 2
+				this.selected_nav = ""
 				this.fetchSites()
 			}
 			if ( this.fetchInvite.account ) {
@@ -7269,7 +7286,7 @@ new Vue({
 					if ( this.dialog_site.step == 2 && typeof this.dialog_site.environment_selected != 'undefined' ) {
 						this.dialog_site.environment_selected = this.dialog_site.site.environments.filter( e => e.environment == this.dialog_site.environment_selected.environment )[0]
 					} else {
-					this.dialog_site.environment_selected = this.dialog_site.site.environments[0]
+						this.dialog_site.environment_selected = this.dialog_site.site.environments[0]
 					}
 					this.dialog_site.loading = false
 					if ( this.dialog_site.site.tabs_management == "tab-Users" ) {
@@ -7666,7 +7683,7 @@ new Vue({
 						},
 						
 					})
-						
+
 					
 				})
 				.catch( error => console.log( error ) );
@@ -7676,7 +7693,7 @@ new Vue({
 			site = this.dialog_site.site
 				var data = {
 					'action': 'captaincore_ajax',
-				'post_id': site.site_id,
+					'post_id': site.site_id,
 					'command': "fetch-users",
 			}
 				axios.post( ajaxurl, Qs.stringify( data ) )
@@ -9913,14 +9930,14 @@ new Vue({
 			next_renewal = this.dialog_modify_plan.plan.next_renewal
 			current_interval = JSON.parse(JSON.stringify( this.dialog_modify_plan.plan.interval ) )
 			if ( typeof this.dialog_modify_plan.plan.addons != 'undefined' ) {
-			current_addons = JSON.parse(JSON.stringify( this.dialog_modify_plan.plan.addons ) )
+				current_addons = JSON.parse(JSON.stringify( this.dialog_modify_plan.plan.addons ) )
 			}
 			selected_plan = this.dialog_modify_plan.selected_plan
 			hosting_plan = this.dialog_modify_plan.hosting_plans.filter( plan => plan.name == selected_plan )[0]
 			if ( typeof hosting_plan == "undefined" ) {
 				return
 			}
-				hosting_plan.addons = current_addons
+			hosting_plan.addons = current_addons
 			if ( current_auto_pay ) { 
 				hosting_plan.auto_pay = JSON.parse(JSON.stringify( current_auto_pay ) )
 			}
@@ -9933,7 +9950,7 @@ new Vue({
 			if ( typeof next_renewal != "undefined" && next_renewal != "" ) {
 				hosting_plan.next_renewal = JSON.parse(JSON.stringify( next_renewal ) )
 			}
-				this.dialog_modify_plan.plan = JSON.parse(JSON.stringify( hosting_plan ))
+			this.dialog_modify_plan.plan = JSON.parse(JSON.stringify( hosting_plan ))
 			if ( current_interval != hosting_plan.interval ) {
 				this.dialog_modify_plan.plan.interval = current_interval
 				this.dialog_modify_plan.plan.addons = current_addons
