@@ -98,18 +98,19 @@ class Sites extends DB {
 	public function list() {
         $sites        = [];
         foreach( $this->sites as $site_id ) {
-            $site                  = self::get( $site_id );
-            $details               = json_decode( $site->details );
-            $site->filtered        = true;
-            $site->loading         = false;
-            $site->key             = $details->key;
-            $site->core            = $details->core;
-            $site->console_errors  = isset( $details->console_errors ) ? $details->console_errors : "";
-            $site->subsites        = $details->subsites;
-            $site->storage         = $details->storage;
-            $site->visits          = $details->visits;
-            $site->outdated        = false;
-            $site->screenshot_base = $details->screenshot_base;
+            $site                    = self::get( $site_id );
+            $details                 = json_decode( $site->details );
+            $site->filtered          = true;
+            $site->loading           = false;
+            $site->key               = $details->key;
+            $site->core              = $details->core;
+            $site->console_errors    = isset( $details->console_errors ) ? $details->console_errors : "";
+            $site->connection_errors = isset( $details->connection_errors ) ? $details->connection_errors : "";
+            $site->subsites          = $details->subsites;
+            $site->storage           = $details->storage;
+            $site->visits            = $details->visits;
+            $site->outdated          = false;
+            $site->screenshot_base   = isset( $details->screenshot_base ) ? $details->screenshot_base : "";
             
             // Mark site as outdated if sync older then 48 hours
             if ( strtotime( $site->updated_at ) <= strtotime( "-48 hours" ) ) {

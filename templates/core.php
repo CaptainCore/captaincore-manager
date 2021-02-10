@@ -1997,8 +1997,36 @@ $user = wp_get_current_user();
 					</div>
 					</v-stepper-content>
 					</v-stepper-items>
-			</v-stepper>
-			</v-card-text>
+				</v-stepper>
+				</v-card-text>
+				<div class="ma-5" v-if="role == 'administrator'">
+				<v-card v-for="site in filterSitesWithConnectionErrors" flat :key="site.site_id">
+				<v-alert text type="error" dense>
+					<v-row align="center">
+						<v-col class="shrink">
+							<v-img :src=`${remote_upload_uri}${site.site}_${site.site_id}/production/screenshots/${site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="site.screenshot_base"></v-img>
+						</v-col>
+						<v-col class="grow">{{ site.name }}</v-col>
+						<v-col class="shrink pa-0">
+							<v-btn depressed small @click="goToPath( `/account/sites/${site.site_id}` )">
+								<v-icon>edit</v-icon> Fix Credentials 
+							</v-btn>
+						</v-col>
+						<v-col class="shrink">
+							<v-btn depressed small @click="checkSSH( site )">
+								Check SSH connection <v-icon class="ml-1">mdi-sync</v-icon>
+							</v-btn>
+						</v-col>
+					</v-row>
+					<v-overlay absolute :value="site.loading">
+					<v-progress-circular
+						indeterminate
+						size="32"
+					></v-progress-circular>
+					</v-overlay>
+				</v-alert>
+				</v-card>
+				</div>
 				<v-data-table
 					v-model="sites_selected"
 					:headers="[
@@ -2025,7 +2053,7 @@ $user = wp_get_current_user();
 					<v-col cols="12" md="4">
 						<v-text-field class="mx-4" v-model="search" @input="filterSites" autofocus label="Search" clearable light hide-details append-icon="search"></v-text-field>	
 					</v-col>
-				</v-row>	
+				</v-row>
 				</v-card-text>
 				</template>
 				<template v-slot:body="{ items }">
@@ -2104,7 +2132,7 @@ $user = wp_get_current_user();
 									</v-fade-transition>
 									<template v-slot:placeholder>
 										<v-row class="fill-height ma-0" align="center" justify="center">
-										<v-progress-circular indeterminate color="grey lighten-5"></v-progress-circular>
+											<v-progress-circular indeterminate color="grey lighten-5"></v-progress-circular>
 										</v-row>
 									</template>
 									</v-img>
@@ -6127,6 +6155,9 @@ new Vue({
 		filterSitesWithErrors() {
 			return this.sites.filter( s => s.console_errors != "" )
 		},
+		filterSitesWithConnectionErrors() {
+			return this.sites.filter( s => s.connection_errors != "" )
+		},
 		filterCount() {
 			return this.applied_site_filter.length + this.applied_site_filter_version.length + this.applied_site_filter_status.length
 		},
@@ -7139,6 +7170,29 @@ new Vue({
 							});
 					}
 				});
+		},
+		checkSSH( site ) {
+			site.loading = true
+			var data = {
+				action: 'captaincore_install',
+				post_id: site.site_id,
+				command: 'sync-data',
+				environment: this.dialog_site.environment_selected.environment
+			};
+
+			description = "Checking " + site.name + " SSH connection";
+
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({ "job_id": job_id, "description": description, "status": "queued", stream: [], "command": "checkSSH", "site_id": site.site_id });
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					// Updates job id with responsed background job id
+					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					this.runCommand( response.data );
+				})
+				.catch( error => console.log( error ) );
 		},
 		syncSite() {
 
@@ -10807,6 +10861,21 @@ new Vue({
 					job.status = "done"
 				} else {
 					job.status = "error"
+				}
+
+				if ( job.command == "checkSSH" ) {
+					axios.get(
+					'/wp-json/captaincore/v1/sites', {
+						headers: {'X-WP-Nonce':this.wp_nonce}
+					})
+					.then( response => {
+						site_updated = response.data.filter( s => s.site_id == job.site_id )
+						if ( site_updated.length == 1 ) {
+							this.sites = this.sites.filter( match => match.site_id != job.site_id )
+							this.sites.push( site_updated[0] )
+							this.sites.sort((a, b) => (a.name > b.name) ? 1 : -1)
+						}
+					})
 				}
 				
 				if ( job.command == "syncSite" ) {
