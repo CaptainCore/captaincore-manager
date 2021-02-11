@@ -2235,13 +2235,13 @@ $user = wp_get_current_user();
            							 	<v-tab key="Stats" href="#tab-Stats" @click="fetchStats()">
 											Stats <v-icon>mdi-chart-bar</v-icon>
 										</v-tab>
-										<v-tab key="Plugins" href="#tab-Addons">
+										<v-tab key="Plugins" href="#tab-Addons" v-show="dialog_site.environment_selected.token != 'basic'">
 											Addons <v-icon>mdi-power-plug</v-icon>
 										</v-tab>
-										<v-tab key="Users" href="#tab-Users" @click="fetchUsers()">
+										<v-tab key="Users" href="#tab-Users" @click="fetchUsers()" v-show="dialog_site.environment_selected.token != 'basic'">
 											Users <v-icon>mdi-account-multiple</v-icon>
 										</v-tab>
-										<v-tab key="Updates" href="#tab-Updates" @click="fetchUpdateLogs( dialog_site.site.site_id )">
+										<v-tab key="Updates" href="#tab-Updates" @click="fetchUpdateLogs( dialog_site.site.site_id )" v-show="dialog_site.environment_selected.token != 'basic'">
 											Updates <v-icon>mdi-book-open</v-icon>
 										</v-tab>
 										<v-tab key="Scripts" href="#tab-Scripts">
@@ -2262,6 +2262,7 @@ $user = wp_get_current_user();
 						</v-toolbar>
                			 <v-card flat>
 							<v-container fluid>
+							<v-alert type="info" text v-show="dialog_site.environment_selected.token == 'basic'">This site doesn't appear to be WordPress. Backups will still work however other management functions have been disabled.</v-alert>
 							<v-layout body-1 px-6 class="row">
 								<v-flex xs12 md6 class="py-2">
 								<div class="block mt-6">
@@ -2293,7 +2294,7 @@ $user = wp_get_current_user();
 										<v-icon>mdi-content-copy</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
-									<v-list-item @click="copyText( dialog_site.environment_selected.core )" dense>
+									<v-list-item @click="copyText( dialog_site.environment_selected.core )" dense v-show="dialog_site.environment_selected.token != 'basic'">
 									<v-list-item-content>
 										<v-list-item-title>WordPress Version</v-list-item-title>
 										<v-list-item-subtitle v-text="dialog_site.environment_selected.core"></v-list-item-subtitle>
@@ -2430,6 +2431,7 @@ $user = wp_get_current_user();
 							</v-flex>
 						</v-layout>
 						</v-container>
+					<div v-show="dialog_site.environment_selected.token != 'basic'">
 					<v-divider></v-divider>
 					<v-subheader>Site Options</v-subheader>
 					<v-container>
@@ -2446,6 +2448,7 @@ $user = wp_get_current_user();
 						<v-icon>file_copy</v-icon> Copy Site
 					</v-btn>
 					</v-container>
+					</div>
 					<div v-show="role == 'administrator'">
 					<v-divider></v-divider>
 					<v-subheader>Administrator Options</v-subheader>
@@ -2900,7 +2903,7 @@ $user = wp_get_current_user();
 					</v-card-text>
 				</v-card>
 				</v-col>
-				<v-col cols="12" md="4" class="px-2">
+				<v-col cols="12" md="4" class="px-2" v-show="dialog_site.environment_selected.token != 'basic'">
 				<v-card
 					class="mx-auto"
 					max-width="344"
