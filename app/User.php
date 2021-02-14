@@ -107,6 +107,10 @@ class User {
         if ( empty( $address["country"] ) ) {
             $address["country"] = "US";
         }
+        if ( empty( $address["email"] ) ) {
+            $user             = get_user_by( "ID", $this->user_id );
+            $address["email"] =  $user->user_email;
+        }
         $invoices       = wc_get_orders( [ 'customer' => $this->user_id ] );
         foreach ( $invoices as $key => $invoice ) {
             $order      = wc_get_order( $invoice );
