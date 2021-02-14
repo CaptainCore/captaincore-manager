@@ -600,6 +600,8 @@ class Account {
             $new_hosting_plan->auto_pay    = $plan->auto_pay;
             $new_hosting_plan->auto_switch = $plan->auto_switch;
             $new_hosting_plan->addons      = $plan->addons;
+            $new_hosting_plan->credits     = $plan->credits;
+            $new_hosting_plan->charges     = $plan->charges;
             echo "Switching to from {$plan->name} to {$cheapest_estimate->name}";
             ( new Accounts )->update_plan( (array) $new_hosting_plan, $this->account_id );
         }

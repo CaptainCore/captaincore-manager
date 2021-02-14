@@ -9936,12 +9936,20 @@ new Vue({
 			if ( typeof this.dialog_modify_plan.plan.addons != 'undefined' ) {
 				current_addons = JSON.parse(JSON.stringify( this.dialog_modify_plan.plan.addons ) )
 			}
+			if ( typeof this.dialog_modify_plan.plan.charges != 'undefined' ) {
+				current_charges = JSON.parse(JSON.stringify( this.dialog_modify_plan.plan.current_charges ) )
+			}
+			if ( typeof this.dialog_modify_plan.plan.credits != 'undefined' ) {
+				current_credits = JSON.parse(JSON.stringify( this.dialog_modify_plan.plan.current_credits ) )
+			}
 			selected_plan = this.dialog_modify_plan.selected_plan
 			hosting_plan = this.dialog_modify_plan.hosting_plans.filter( plan => plan.name == selected_plan )[0]
 			if ( typeof hosting_plan == "undefined" ) {
 				return
 			}
 			hosting_plan.addons = current_addons
+			hosting_plan.charges = current_charges
+			hosting_plan.credits = current_credits
 			if ( current_auto_pay ) { 
 				hosting_plan.auto_pay = JSON.parse(JSON.stringify( current_auto_pay ) )
 			}
