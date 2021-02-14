@@ -271,12 +271,7 @@ class Site {
                 'status'     => 'active',
             ];
             $site->customer_id = ( new Accounts )->insert( $new_account );
-            ( new Sites )->update( [ "customer_id" => $site->account_id ], [ "site_id" => $site_id ] );
-        }
-
-        // Assign account if needed
-        if ( $site->account_id == "" ) {
-            ( new Sites )->update( [ "account_id" => $site->customer_id ], [ "site_id" => $site_id ] );
+            ( new Sites )->update( [ "customer_id" => $site->customer_id ], [ "site_id" => $site_id ] );
         }
 
         ( new Account( $site->account_id, true ) )->calculate_totals();

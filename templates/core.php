@@ -7119,6 +7119,7 @@ new Vue({
 
 					if ( response.response = "Successfully added new site" ) {
 						this.fetchSiteInfo( response.site_id )
+						this.goToPath( `/account/sites/${response.site_id}` )
 						// Fetch updated accounts
 						axios.get(
 							'/wp-json/captaincore/v1/accounts', {
