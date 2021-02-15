@@ -432,22 +432,24 @@ class Account {
             $order->set_address( $address, 'billing' );
         }
 
-        $line_item_id = $order->add_product( get_product( $configurations->woocommerce->hosting_plan ), 1 );
+        $line_item_id     = $order->add_product( get_product( $configurations->woocommerce->hosting_plan ), 1 );
 
         $order->get_items()[ $line_item_id ]->set_subtotal( $plan->price );
         $order->get_items()[ $line_item_id ]->set_total( $plan->price );
         $order->get_items()[ $line_item_id ]->add_meta_data( "Details", $plan->name . "\n\n" . $site_names );
         $order->get_items()[ $line_item_id ]->save_meta_data();
         $order->get_items()[ $line_item_id ]->save();
+        $calculated_total = $plan->price;
 
         if ( $plan->addons && count( $plan->addons ) > 0 ) {
-            foreach ( $plan->addons as $addon ) {
-                $line_item_id = $order->add_product( get_product( $configurations->woocommerce->addons ), $addon->quantity );
-                $order->get_items()[ $line_item_id ]->set_subtotal( $addon->price * $addon->quantity );
-                $order->get_items()[ $line_item_id ]->set_total( $addon->price * $addon->quantity );
-                $order->get_items()[ $line_item_id ]->add_meta_data( "Details", $addon->name );
+            foreach ( $plan->addons as $item ) {
+                $line_item_id = $order->add_product( get_product( $configurations->woocommerce->addons ), $item->quantity );
+                $order->get_items()[ $line_item_id ]->set_subtotal( $item->price * $item->quantity );
+                $order->get_items()[ $line_item_id ]->set_total( $item->price * $item->quantity );
+                $order->get_items()[ $line_item_id ]->add_meta_data( "Details", $item->name );
                 $order->get_items()[ $line_item_id ]->save_meta_data();
                 $order->get_items()[ $line_item_id ]->save();
+                $calculated_total = $calculated_total + ( $item->price * $item->quantity );
             }
         }
 
@@ -459,6 +461,7 @@ class Account {
                 $order->get_items()[ $line_item_id ]->add_meta_data( "Details", $item->name );
                 $order->get_items()[ $line_item_id ]->save_meta_data();
                 $order->get_items()[ $line_item_id ]->save();
+                $calculated_total = $calculated_total + ( $item->price * $item->quantity );
             }
         }
 
@@ -470,6 +473,7 @@ class Account {
                 $order->get_items()[ $line_item_id ]->add_meta_data( "Details", $item->name );
                 $order->get_items()[ $line_item_id ]->save_meta_data();
                 $order->get_items()[ $line_item_id ]->save();
+                $calculated_total = $calculated_total + ( -1 * abs( $item->price * $item->quantity ) );
             }
         }
 
@@ -486,6 +490,7 @@ class Account {
             $order->get_items()[ $line_item_id ]->add_meta_data( "Details", "Extra Sites" );
             $order->get_items()[ $line_item_id ]->save_meta_data();
             $order->get_items()[ $line_item_id ]->save();
+            $calculated_total = $calculated_total + $total;
         }
 
         if ( $plan->usage->storage > ( $plan->limits->storage * 1024 * 1024 * 1024 ) ) {
@@ -502,6 +507,7 @@ class Account {
             $order->get_items()[ $line_item_id ]->add_meta_data( "Details", "Extra Storage" );
             $order->get_items()[ $line_item_id ]->save_meta_data();
             $order->get_items()[ $line_item_id ]->save();
+            $calculated_total = $calculated_total + $total;
         }
 
         if ( $plan->usage->visits > $plan->limits->visits ) {
@@ -517,15 +523,33 @@ class Account {
             $order->get_items()[ $line_item_id ]->add_meta_data( "Details", "Extra Visits" );
             $order->get_items()[ $line_item_id ]->save_meta_data();
             $order->get_items()[ $line_item_id ]->save();
+            $calculated_total = $calculated_total + $total;
+        }
+
+        // Adjust credits if overpayment received
+        if ( $calculated_total < 0 ) {
+            $over_payment   = 1 * abs( $calculated_total );
+            $line_item_id = $order->add_product( get_product( $configurations->woocommerce->charges ), 1 );
+            $order->get_items()[ $line_item_id ]->set_subtotal( $over_payment );
+            $order->get_items()[ $line_item_id ]->set_total( $over_payment );
+            $order->get_items()[ $line_item_id ]->add_meta_data( "Details", "Overpayment will be applied to next invoice as credit." );
+            $order->get_items()[ $line_item_id ]->save_meta_data();
+            $order->get_items()[ $line_item_id ]->save();
+            $plan->over_payment = $over_payment;
+            ( new Accounts )->update( [ "plan" => json_encode( $plan ) ], [ "account_id" => $this->account_id ] );
         }
 
         $order->calculate_totals();
         $default_payment = ( new \WC_Payment_Tokens )->get_customer_default_token( $plan->billing_user_id );
 
-        if ( $plan->auto_pay == "true" && ! empty( $default_payment ) ) {
+        if ( $order->get_total > 0 && $plan->auto_pay == "true" && ! empty( $default_payment ) ) {
             $payment_id = $default_payment->get_id();
             ( new User( $plan->billing_user_id, true ) )->pay_invoice( $order->get_id(), $payment_id );
             return;
+        }
+
+        if ( $order->get_total == 0 ) {
+            $order->update_status( 'completed' );
         }
 
         WC()->mailer()->customer_invoice( $order );

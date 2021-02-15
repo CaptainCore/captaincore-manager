@@ -117,9 +117,20 @@ class Accounts extends DB {
             if ( ! empty( $next_renewal ) && $next_renewal < $now ) {
                 echo "Processing renewal for {$account->name} as it's past {$plan->next_renewal}\n";
                 ( new Account( $account->account_id, true ) )->generate_order();
+                $plan = json_decode( ( new Accounts )->get( $account->account_id )->plan );
                 $plan->next_renewal = date("Y-m-d H:i:s", strtotime( "+{$plan->interval} month", $next_renewal ) );
                 unset( $plan->charges );
                 unset( $plan->credits );
+                if ( $plan->over_payment ) {
+                    $plan->credits = [ 
+                        (object) [
+                            "name"     => "Previous credits",
+                            "quantity" => "1",
+                            "price"    => $plan->over_payment
+                        ]
+                    ];
+                    unset( $plan->over_payment );
+                }
                 echo "Next renewal in {$plan->interval} months will be {$plan->next_renewal}\n";
                 self::update( [ "plan" => json_encode( $plan ) ], [ "account_id" => $account->account_id ] );
             }
