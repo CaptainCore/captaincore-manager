@@ -5040,7 +5040,7 @@ $user = wp_get_current_user();
 						</v-layout>
 						</v-col>
 						<v-col class="text-center">
-							<span class="text-uppercase caption">Estimate based on current usage</span><br />
+							<span class="text-uppercase caption">Next Renewal Estimate</span><br />
 							<span class="display-1 font-weight-thin" v-html="plan_usage_estimate"></span><br />
 							<span>
 							<v-dialog v-model="dialog_breakdown" max-width="980px">
@@ -6290,6 +6290,9 @@ new Vue({
 					extras = extras + ( extra_visits * unit_price )
 				}
 				total = ( parseFloat( addons ) + parseFloat( charges ) - parseFloat( credits )+ parseFloat( extras ) + parseFloat( this.dialog_account.records.account.plan.price ) ).toFixed(2)
+				if ( total < 0 ) {
+					total = 0;
+				}
 				return `$${total} <small>per ${unit}</small>`
 			}
 			return ""
