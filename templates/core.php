@@ -5826,6 +5826,7 @@ new Vue({
 			'/account/handbook': 'handbook',
 			'/account/billing': 'billing',
 			'/account/cookbook': 'cookbook',
+			'/account/subscriptions': 'subscriptions',
 		},
 		selected_nav: "",
 		querystring: window.location.search,
@@ -5839,6 +5840,7 @@ new Vue({
 		recipes: [],
 		processes: [],
 		billing: { payment_methods: [] },
+		subscriptions: [],
 		new_payment: { card: {}, show: false, error: "" },
 		current_user_email: "<?php echo $user->user_email; ?>",
 		current_user_login: "<?php echo $user->user_login; ?>",
@@ -5892,6 +5894,7 @@ new Vue({
 		sites_loading: true,
 		domain_search: "",
 		account_search: "",
+		subscription_search: "",
 		new_recipe: { show: false, title: "", content: "", public: 1 },
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_billing: { step: 1 },
@@ -5995,6 +5998,14 @@ new Vue({
 		},
     },
 	filters: {
+		intervalLabel: function( interval ) {
+			units = [] 
+			units[1] = "monthly"
+			units[3] = "quarterly"
+			units[6] = "biannually"
+			units[12] = "yearly"
+			return units[ interval ]
+		},
 		safeUrl: function( url ) {
 			return url.replace('#', '%23' )
 		},
