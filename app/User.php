@@ -152,7 +152,7 @@ class User {
                 }
             }
             foreach( $revenue as $month => $amount ) {
-                if ( $plan->interval == "12" ) {
+                if ( $plan->interval == "1" ) {
                     $revenue->{$month} = $revenue->{$month} + $plan_total;
                     $transactions->{$month} = $transactions->{$month} + 1;
                 }
@@ -170,9 +170,9 @@ class User {
                     $renew_count++;
                     $transactions->{$month} = $transactions->{$month} + 1;
                 }
-                if ( $plan->interval == "1" && $month == $next_renewal ) {
+                if ( $plan->interval == "12" && $month == $next_renewal ) {
                     $revenue->{$month} = $revenue->{$month} + $plan_total;
-                    $next_renewal     = date( "M Y", strtotime("+12 month", strtotime( $plan->next_renewal ) ) );
+                    $next_renewal      = date( "M Y", strtotime("+12 month", strtotime( $plan->next_renewal ) ) );
                     $renew_count++;
                     $transactions->{$month} = $transactions->{$month} + 1;
                 }
