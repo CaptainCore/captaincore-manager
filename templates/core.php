@@ -4776,6 +4776,7 @@ $user = wp_get_current_user();
 					</template>
 					</v-data-table>
 					<div id="plan_chart"></div>
+					<div id="plan_chart_transactions"></div>
 					
 			</v-card>
 			<v-card tile v-if="route == 'accounts'" flat>
@@ -7508,6 +7509,79 @@ new Vue({
 				this.configurations_loading = false
 				setTimeout(this.fetchMissing, 1000)
 			});
+		},
+		fetchSubscriptions() {
+			axios.get(
+			'/wp-json/captaincore/v1/upcoming_subscriptions', {
+				headers: {'X-WP-Nonce':this.wp_nonce}
+			}).then(response => {
+				revenue      = response.data.revenue
+				transactions = response.data.transactions
+				
+				new frappe.Chart( "#plan_chart", {
+					data: {
+						labels: Object.keys( revenue ),
+						datasets: [
+							{
+								name: "Revenue",
+								values: Object.values( revenue ),
+							},
+						],
+						yRegions: [
+							{ label: "", start: 0, end: 50, options: { labelPos: "right" } }
+						],
+					},
+					tooltipOptions: {
+						formatTooltipY: d => '$' + d,
+					},
+					type: "bar",
+					height: 270,
+					colors: [ this.configurations.colors.primary, this.configurations.colors.success ],
+					barOptions: {
+						spaceRatio: 0.1,
+					},
+					axisOptions: {
+						xAxisMode: "tick",
+						xIsSeries: true
+					},
+					lineOptions: {
+						regionFill: 1 // default: 0
+					},
+				})
+				new frappe.Chart( "#plan_chart_transactions", {
+					data: {
+						labels: Object.keys( revenue ),
+						datasets: [
+							{
+								name: "Transactions",
+								values: Object.values( transactions ),
+							},
+						],
+					},
+					type: "bar",
+					height: 270,
+					colors: [ this.configurations.colors.primary, this.configurations.colors.success ],
+					barOptions: {
+						spaceRatio: 0.1,
+					},
+					axisOptions: {
+						xAxisMode: "tick",
+						xIsSeries: true
+					},
+					lineOptions: {
+						regionFill: 1 // default: 0
+					},
+				})
+
+			})
+
+			axios.get(
+			'/wp-json/captaincore/v1/subscriptions', {
+				headers: {'X-WP-Nonce':this.wp_nonce}
+			})
+			.then(response => {
+				this.subscriptions = response.data
+			})
 		},
 		fetchBilling() {
 			axios.get(
