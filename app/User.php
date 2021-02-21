@@ -100,6 +100,92 @@ class User {
         return false;
     }
 
+    public function subscriptions() {
+        $plans         = [];
+        $with_renewals = self::with_renewals();
+        foreach ( $with_renewals as $account ) {
+            $plan  = json_decode ( $account->plan );
+            $total = $plan->price;
+            foreach ( $plan->addons as $addon ) {
+                $total = $total + ( $addon->price * $addon->quantity );
+            }
+            $plans[] = [
+                "account_id"      => $account->account_id,
+                "name"            => $account->name,
+                "next_renewal"    => $plan->next_renewal,
+                "interval"        => $plan->interval,
+                "addons"          => $plan->addons,
+                "price"           => $plan->price,
+                "total"           => $total,
+                "billing_user_id" => $plan->billing_user_id,
+            ];
+        }
+        return $plans;
+    }
+
+    public function upcoming_subscriptions() {
+
+        $with_renewals = self::with_renewals();
+        $plans         = [];
+        $month_count   = 1;
+        $revenue       = (object) [];
+        $transactions  = (object) [];
+
+        for ($i = 1; $i <= 12; $i++) {
+            $next_month = date( "M Y", strtotime( "first day of +$month_count month" ) );
+            $revenue->{$next_month} = 0;
+            $month_count++;
+        }
+
+        $transactions = $months;
+
+        foreach ( $with_renewals as $account ) {
+            $plan         = json_decode ( $account->plan );
+            $next_renewal = date( "M Y", strtotime( $plan->next_renewal ) );
+            $renew_count  = 1;
+            $plan_total   = $plan->price;
+            if ( $plan->addons ) { 
+                foreach ( $plan->addons as $addon ) {
+                    $plan_total = $plan_total + ( $addon->price * $addon->quantity );
+                }
+            }
+            foreach( $revenue as $month => $amount ) {
+                if ( $plan->interval == "12" ) {
+                    $revenue->{$month} = $amount + $plan_total;
+                    $transactions->{$month} = $transactions->{$month} + 1;
+                }
+                if ( $plan->interval == "6" && $month == $next_renewal ) {
+                    $renew_modifier   = $renew_count * 6;
+                    $revenue->{$month} = $amount + $plan_total;
+                    $next_renewal     = date( "M Y", strtotime("+$renew_modifier month", strtotime( $plan->next_renewal ) ) );
+                    $renew_count++;
+                    $transactions->{$month} = $transactions->{$month} + 1;
+                }
+                if ( $plan->interval == "3" && $month == $next_renewal ) {
+                    $renew_modifier   = $renew_count * 3;
+                    $revenue->{$month} = $amount + $plan_total;
+                    $next_renewal     = date( "M Y", strtotime("+$renew_modifier month", strtotime( $plan->next_renewal ) ) );
+                    $renew_count++;
+                    $transactions->{$month} = $transactions->{$month} + 1;
+                }
+                if ( $plan->interval == "1" && $month == $next_renewal ) {
+                    $revenue->{$month} = $amount + $plan_total;
+                    $next_renewal     = date( "M Y", strtotime("+1 month", strtotime( $plan->next_renewal ) ) );
+                    $renew_count++;
+                    $transactions->{$month} = $transactions->{$month} + 1;
+                }
+            }
+        }
+        return [ "revenue" => $revenue, "transactions" => $transactions ];
+    }
+
+    public function with_renewals() {
+        if ( self::is_admin() ) {
+            return ( new Accounts )->with_renewals();
+        }
+        return ( new Accounts )->renewals( $this->user_id );
+    }
+
     public function billing() {
 
         $customer       = new \WC_Customer( $this->user_id );

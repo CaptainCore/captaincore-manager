@@ -1643,6 +1643,14 @@ function captaincore_configurations_func( $request ) {
 	return ( new CaptainCore\Configurations )->get();
 }
 
+function captaincore_subscriptions_func( $request ) {
+	return ( new CaptainCore\User )->subscriptions();
+}
+
+function captaincore_upcoming_subscriptions_func( $request ) {
+	return ( new CaptainCore\User )->upcoming_subscriptions();
+}
+
 function captaincore_billing_func( $request ) {
 	return ( new CaptainCore\User )->billing();
 }
@@ -2117,6 +2125,22 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/billing/', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_billing_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/subscriptions/', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_subscriptions_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/upcoming_subscriptions/', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_upcoming_subscriptions_func',
 			'show_in_index' => false
 		]
 	);
