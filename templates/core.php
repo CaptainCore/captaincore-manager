@@ -4776,6 +4776,7 @@ $user = wp_get_current_user();
 					</template>
 					</v-data-table>
 					<div id="plan_chart"></div>
+					<v-subheader>{{ revenue_estimated_total() }}</v-subheader>
 					<div id="plan_chart_transactions"></div>
 					
 			</v-card>
@@ -5895,6 +5896,7 @@ new Vue({
 		domain_search: "",
 		account_search: "",
 		subscription_search: "",
+		revenue_estimated: [],
 		new_recipe: { show: false, title: "", content: "", public: 1 },
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_billing: { step: 1 },
@@ -6575,6 +6577,9 @@ new Vue({
 				return ""
 			}
 			return accounts[0].name
+		},
+		revenue_estimated_total() {
+			return "Total: $" + Object.values( this.revenue_estimated ).reduce((a, b) => a + b, 0)
 		},
 		my_plan_usage_estimate( plan ) {
 			extras = 0
@@ -7529,6 +7534,8 @@ new Vue({
 			}).then(response => {
 				revenue      = response.data.revenue
 				transactions = response.data.transactions
+
+				this.revenue_estimated = revenue
 				
 				new frappe.Chart( "#plan_chart", {
 					data: {
