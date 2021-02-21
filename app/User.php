@@ -16,9 +16,9 @@ class User {
         }
         $this->user_id = get_current_user_id();
         if ( ! empty( $this->user_id )) {
-        $user_meta     = get_userdata( $this->user_id );
-        $this->roles   = $user_meta->roles;
-    }
+            $user_meta     = get_userdata( $this->user_id );
+            $this->roles   = $user_meta->roles;
+        }
     }
 
     public function accounts() {
@@ -155,22 +155,22 @@ class User {
                     $transactions->{$month} = $transactions->{$month} + 1;
                 }
                 if ( $plan->interval == "6" && $month == $next_renewal ) {
-                    $renew_modifier   = $renew_count * 6;
+                    $renew_modifier    = $renew_count * 6;
                     $revenue->{$month} = $amount + $plan_total;
-                    $next_renewal     = date( "M Y", strtotime("+$renew_modifier month", strtotime( $plan->next_renewal ) ) );
+                    $next_renewal      = date( "M Y", strtotime("+$renew_modifier month", strtotime( $plan->next_renewal ) ) );
                     $renew_count++;
                     $transactions->{$month} = $transactions->{$month} + 1;
                 }
                 if ( $plan->interval == "3" && $month == $next_renewal ) {
-                    $renew_modifier   = $renew_count * 3;
+                    $renew_modifier    = $renew_count * 3;
                     $revenue->{$month} = $amount + $plan_total;
-                    $next_renewal     = date( "M Y", strtotime("+$renew_modifier month", strtotime( $plan->next_renewal ) ) );
+                    $next_renewal      = date( "M Y", strtotime("+$renew_modifier month", strtotime( $plan->next_renewal ) ) );
                     $renew_count++;
                     $transactions->{$month} = $transactions->{$month} + 1;
                 }
                 if ( $plan->interval == "1" && $month == $next_renewal ) {
                     $revenue->{$month} = $amount + $plan_total;
-                    $next_renewal     = date( "M Y", strtotime("+1 month", strtotime( $plan->next_renewal ) ) );
+                    $next_renewal     = date( "M Y", strtotime("+12 month", strtotime( $plan->next_renewal ) ) );
                     $renew_count++;
                     $transactions->{$month} = $transactions->{$month} + 1;
                 }
