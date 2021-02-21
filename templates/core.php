@@ -5920,6 +5920,7 @@ new Vue({
 		site_filter_status: null,
 		sort_direction: "asc",
 		toggle_site: true,
+		toggle_plan: true,
 		toggle_site_sort: null,
 		toggle_site_counter: { key: "", count: 0 },
 		countries: wc_countries,
