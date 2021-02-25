@@ -508,7 +508,10 @@ class User {
         // Send out admin email notice
 		$to      = get_option('admin_email');
 		$subject = "Request new site '{$site->name}' from {$user->name}";
-		$headers = [ 'Content-Type: text/html; charset=UTF-8' ];
+		$headers = [ 
+            'Content-Type: text/html; charset=UTF-8',
+            "Reply-To: {$user->name} <{$user->email}>"
+        ];
 		wp_mail( $to, $subject, $body, $headers );
     }
 
