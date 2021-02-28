@@ -10033,10 +10033,10 @@ new Vue({
 				current_addons = JSON.parse(JSON.stringify( this.dialog_modify_plan.plan.addons ) )
 			}
 			if ( typeof this.dialog_modify_plan.plan.charges != 'undefined' ) {
-				current_charges = JSON.parse(JSON.stringify( this.dialog_modify_plan.plan.current_charges ) )
+				current_charges = JSON.parse(JSON.stringify( this.dialog_modify_plan.plan.charges ) )
 			}
 			if ( typeof this.dialog_modify_plan.plan.credits != 'undefined' ) {
-				current_credits = JSON.parse(JSON.stringify( this.dialog_modify_plan.plan.current_credits ) )
+				current_credits = JSON.parse(JSON.stringify( this.dialog_modify_plan.plan.credits ) )
 			}
 			selected_plan = this.dialog_modify_plan.selected_plan
 			hosting_plan = this.dialog_modify_plan.hosting_plans.filter( plan => plan.name == selected_plan )[0]
