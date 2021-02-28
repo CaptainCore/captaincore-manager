@@ -621,11 +621,13 @@ class Account {
                     $new_hosting_plan = $hosting_plan;
                 }
             }
-            $new_hosting_plan->auto_pay    = $plan->auto_pay;
-            $new_hosting_plan->auto_switch = $plan->auto_switch;
-            $new_hosting_plan->addons      = $plan->addons;
-            $new_hosting_plan->credits     = $plan->credits;
-            $new_hosting_plan->charges     = $plan->charges;
+            $new_hosting_plan->auto_pay        = $plan->auto_pay;
+            $new_hosting_plan->auto_switch     = $plan->auto_switch;
+            $new_hosting_plan->addons          = $plan->addons;
+            $new_hosting_plan->credits         = $plan->credits;
+            $new_hosting_plan->charges         = $plan->charges;
+            $new_hosting_plan->billing_user_id = $plan->billing_user_id;
+            $new_hosting_plan->next_renewal    = $plan->next_renewal;
             echo "Switching to from {$plan->name} to {$cheapest_estimate->name}";
             ( new Accounts )->update_plan( (array) $new_hosting_plan, $this->account_id );
         }
