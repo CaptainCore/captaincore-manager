@@ -542,13 +542,13 @@ class Account {
         $order->calculate_totals();
         $default_payment = ( new \WC_Payment_Tokens )->get_customer_default_token( $plan->billing_user_id );
 
-        if ( $order->get_total > 0 && $plan->auto_pay == "true" && ! empty( $default_payment ) ) {
+        if ( $order->get_total() > 0 && $plan->auto_pay == "true" && ! empty( $default_payment ) ) {
             $payment_id = $default_payment->get_id();
             ( new User( $plan->billing_user_id, true ) )->pay_invoice( $order->get_id(), $payment_id );
             return;
         }
 
-        if ( $order->get_total == 0 ) {
+        if ( $order->get_total() == 0 ) {
             $order->update_status( 'completed' );
         }
 
