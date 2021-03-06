@@ -4550,11 +4550,7 @@ $user = wp_get_current_user();
 								</tr>
 							</template>
 						</v-data-table>
-						<v-card
-							class="mb-7"
-							outlined
-							v-if="dialog_invoice.response.paid_on"
-						>
+						<v-card class="mb-7" outlined v-if="dialog_invoice.response.paid_on && dialog_invoice.response.status == 'completed'">
 							<v-list-item three-line>
 							<v-list-item-content>
 								<div class="overline mb-4">
