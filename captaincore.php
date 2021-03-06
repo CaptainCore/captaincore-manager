@@ -4562,9 +4562,9 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'updateRecipe' ) {
 
-		$recipe = (object) $value;
+		$recipe   = (object) $value;
 		$time_now = date("Y-m-d H:i:s");
-		$user_id = get_current_user_id();
+		$user_id  = get_current_user_id();
 
 		if ( ! $user->is_admin() && $recipe->user_id != $user_id ) {
 			echo "Permission denied";
@@ -4573,14 +4573,14 @@ function captaincore_ajax_action_callback() {
 		}
 
 		$recipe_update = [
-			'title'          => $recipe->title,
-			'updated_at'     => $time_now,
-			'content'        => stripslashes_deep( $recipe->content ),
-			'public'         => 0
+			'title'      => $recipe->title,
+			'updated_at' => $time_now,
+			'content'    => stripslashes_deep( $recipe->content ),
+			'public'     => 0
 		];
 
 		if ( $user->is_admin() ) {
-			$new_recipe["public"] = $recipe->public;
+			$recipe_update["public"] = $recipe->public;
 		}
 
 		$db_recipes = new CaptainCore\Recipes();
@@ -4590,8 +4590,8 @@ function captaincore_ajax_action_callback() {
 
 		$remote_command = true;
 		$silence = true;
-		$recipe = ( new CaptainCore\Recipes )->get( $recipe->recipe_id );
-		$recipe = base64_encode( json_encode( $recipe ) );
+		$recipe  = ( new CaptainCore\Recipes )->get( $recipe->recipe_id );
+		$recipe  = base64_encode( json_encode( $recipe ) );
 		$command = "recipe add $recipe --format=base64";
 
 	}

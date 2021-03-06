@@ -8913,11 +8913,10 @@ new Vue({
 				command: 'updateRecipe',
 				value: this.dialog_cookbook.recipe
 			};
-			self = this;
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					self.dialog_cookbook.show = false;
-					self.recipes = response.data;
+					this.dialog_cookbook.show = false;
+					this.recipes = response.data;
 				})
 				.catch( error => console.log( error ) );
 		},
