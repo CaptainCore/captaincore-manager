@@ -37,7 +37,7 @@ class Domains extends DB {
              $domain_ids = ( new Account( $account_id, true ) )->domains();
              foreach ( $domain_ids as $domain ) {
                 $this->domains[] = $domain->domain_id;
-             }
+            }
         }
 
         $this->domains = array_unique( $this->domains );
@@ -49,9 +49,12 @@ class Domains extends DB {
         foreach( $this->domains as $domain_id ) {
             $domain = self::get( $domain_id );
             $domains[] = [
-                "domain_id" => (int) $domain_id,
-                "remote_id" => $domain->remote_id,
-                "name"      => $domain->name,
+                "domain_id"   => (int) $domain_id,
+                "remote_id"   => $domain->remote_id,
+                "provider_id" => ! empty( $domain->provider_id ) ? $domain->provider_id : "",
+                "name"        => $domain->name,
+                "status"      => $domain->status,
+                "price"       => $domain->price,
             ];
         }
         return $domains;
@@ -85,8 +88,74 @@ class Domains extends DB {
 		if ( $domain->remote_id  ) {
 			constellix_api_delete( "domains/{$domain->remote_id}" );
 		}
+        if ( $domain->provider_id  ) {
+			( new Domain( $domain_id ) )->renew_off();
+		}
         self::delete( $domain_id );
         return [ "domain_id" => $domain_id, "message" => "Deleted domain {$domain->name}" ];
+    }
+
+    public function provider_login() {
+
+        $data = [ 
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8'
+            ],
+            'body'        => json_encode( [ 
+                "username" => HOVERCOM_USERNAME, 
+                'password' => HOVERCOM_PASSWORD 
+            ] ), 
+            'method'      => 'POST', 
+            'data_format' => 'body'
+        ];
+        
+        $response    = wp_remote_post( "https://www.hover.com/api/login", $data );
+        
+        // Save Hover.com cookies as transient login 
+        $cookie_data = json_encode( $response["cookies"] );
+        set_transient( 'captaincore_hovercom_auth', $cookie_data, HOUR_IN_SECONDS * 48 );
+        
+    }
+
+    public function provider_sync() {
+
+        if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
+            self::provider_login();
+        }
+        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
+        $cookies     = [];
+        foreach ( $cookie_data as $key => $cookie ) {
+            $cookies[] = new \WP_Http_Cookie( [
+                'name'    => $cookie->name,
+                'value'   => $cookie->value,
+                'expires' => $cookie->expires,
+                'path'    => $cookie->path,
+                'domain'  => $cookie->domain,
+            ] );
+        }
+
+        $args = [
+            'timeout' => 45,
+            'cookies' => $cookies,
+        ];
+
+        $response = wp_remote_get( "https://www.hover.com/api/control_panel/domains", $args );
+        if ( is_wp_error( $response ) ) {
+            return json_decode( $response->get_error_message() );
+        }
+
+        $domains = json_decode( $response['body'] )->domains;
+        foreach ( $domains as $domain ) {
+            $lookup = self::where( ["name" => $domain->name ] );
+            if ( count( $lookup ) == 1 ) {
+                self::update( [
+                    "status"      => $domain->status,
+                    "provider_id" => $domain->id,
+                ], [ "domain_id"  => $lookup[0]->domain_id ] );
+            }
+        }
+        
     }
 
 }
