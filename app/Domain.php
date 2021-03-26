@@ -119,4 +119,356 @@ class Domain {
 		return $remote_id;
     }
 
+    public function fetch() {
+        $domain        = ( new Domains )->get( $this->domain_id );
+        if ( empty( $domain->provider_id ) ) {
+            return [ "errors" => [ "No remote domain found." ] ];
+        }
+        if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
+            ( new Domains )->provider_login();
+        }
+        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
+        $cookies     = [];
+        foreach ( $cookie_data as $key => $cookie ) {
+            $cookies[] = new \WP_Http_Cookie( [
+                'name'    => $cookie->name,
+                'value'   => $cookie->value,
+                'expires' => $cookie->expires,
+                'path'    => $cookie->path,
+                'domain'  => $cookie->domain,
+            ] );
+        }
+
+        $args = [
+            'cookies' => $cookies,
+        ];
+
+        $response = wp_remote_get( "https://www.hover.com/api/control_panel/domains/{$domain->name}", $args );
+        if ( is_wp_error( $response ) ) {
+            return json_decode( $response->get_error_message() );
+        } else {
+            //echo $response['body'];
+            $response = json_decode( $response['body'] )->domain;
+            $domain   = [
+                "domain"        => $response->name,
+                "contacts"      => [
+                    "owner"   => $response->owner,
+                    "admin"   => $response->admin,
+                    "billing" => $response->billing,
+                    "tech"    => $response->tech,
+                ],
+                "locked"        => $response->locked,
+                "whois_privacy" => $response->whois_privacy,
+                "status"        => $response->status,
+            ];
+            return $domain;
+        }
+
+    }
+
+    public function auth_code() {
+        $domain        = ( new Domains )->get( $this->domain_id );
+        if ( empty( $domain->provider_id ) ) {
+            return [ "errors" => [ "No remote domain found." ] ];
+        }
+        if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
+            ( new Domains )->provider_login();
+        }
+        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
+        $cookies     = [];
+        foreach ( $cookie_data as $key => $cookie ) {
+            $cookies[] = new \WP_Http_Cookie( [
+                'name'    => $cookie->name,
+                'value'   => $cookie->value,
+                'expires' => $cookie->expires,
+                'path'    => $cookie->path,
+                'domain'  => $cookie->domain,
+            ] );
+        }
+
+        $args = [
+            'cookies' => $cookies,
+        ];
+
+        $response = wp_remote_get( "https://www.hover.com/api/domains/{$domain->name}/auth_code", $args );
+        if ( is_wp_error( $response ) ) {
+            return json_decode( $response->get_error_message() );
+        }
+        $response = json_decode( $response['body'] );
+        if ( empty( $response->auth_code ) ) {
+            return "";
+        }
+        return $response->auth_code;
+    }
+
+    public function lock() {
+        $domain        = ( new Domains )->get( $this->domain_id );
+        if ( empty( $domain->provider_id ) ) {
+            return [ "errors" => [ "No remote domain found." ] ];
+        }
+        if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
+            ( new Domains )->provider_login();
+        }
+        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
+        $cookies     = [];
+        foreach ( $cookie_data as $key => $cookie ) {
+            $cookies[] = new \WP_Http_Cookie( [
+                'name'    => $cookie->name,
+                'value'   => $cookie->value,
+                'expires' => $cookie->expires,
+                'path'    => $cookie->path,
+                'domain'  => $cookie->domain,
+            ] );
+        }
+
+        $data = [ 
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8',
+            ],
+            'body'        => json_encode( [ 
+                "field" => "locked", 
+                'value' => true
+            ] ), 
+            'method'      => 'PUT', 
+            'data_format' => 'body',
+            'cookies'     => $cookies,
+        ];
+
+        $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
+        echo json_encode(  $response );
+        if ( is_wp_error( $response ) ) {
+            return json_decode( $response->get_error_message() );
+        } else {
+            return json_decode( $response['body'] );
+        }
+    }
+
+    public function unlock() {
+        $domain        = ( new Domains )->get( $this->domain_id );
+        if ( empty( $domain->provider_id ) ) {
+            return [ "errors" => [ "No remote domain found." ] ];
+        }
+        if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
+            ( new Domains )->provider_login();
+        }
+        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
+        $cookies     = [];
+        foreach ( $cookie_data as $key => $cookie ) {
+            $cookies[] = new \WP_Http_Cookie( [
+                'name'    => $cookie->name,
+                'value'   => $cookie->value,
+                'expires' => $cookie->expires,
+                'path'    => $cookie->path,
+                'domain'  => $cookie->domain,
+            ] );
+        }
+
+        $data = [ 
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8',
+            ],
+            'body'        => json_encode( [ 
+                "field" => "locked", 
+                'value' => false
+            ] ), 
+            'method'      => 'PUT', 
+            'data_format' => 'body',
+            'cookies'     => $cookies,
+        ];
+
+        $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
+        echo json_encode(  $response );
+        if ( is_wp_error( $response ) ) {
+            return json_decode( $response->get_error_message() );
+        } else {
+            return json_decode( $response['body'] );
+        }
+    }
+
+    public function privacy_on() {
+        $domain        = ( new Domains )->get( $this->domain_id );
+        if ( empty( $domain->provider_id ) ) {
+            return [ "errors" => [ "No remote domain found." ] ];
+        }
+        if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
+            ( new Domains )->provider_login();
+        }
+        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
+        $cookies     = [];
+        foreach ( $cookie_data as $key => $cookie ) {
+            $cookies[] = new \WP_Http_Cookie( [
+                'name'    => $cookie->name,
+                'value'   => $cookie->value,
+                'expires' => $cookie->expires,
+                'path'    => $cookie->path,
+                'domain'  => $cookie->domain,
+            ] );
+        }
+
+        $data = [ 
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8',
+            ],
+            'body'        => json_encode( [ 
+                "field" => "whois_privacy", 
+                'value' => true
+            ] ), 
+            'method'      => 'PUT', 
+            'data_format' => 'body',
+            'cookies'     => $cookies,
+        ];
+
+        $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
+        echo json_encode(  $response );
+        if ( is_wp_error( $response ) ) {
+            return json_decode( $response->get_error_message() );
+        } else {
+            return json_decode( $response['body'] );
+        }
+    }
+
+    public function privacy_off() {
+        $domain        = ( new Domains )->get( $this->domain_id );
+        if ( empty( $domain->provider_id ) ) {
+            return [ "errors" => [ "No remote domain found." ] ];
+        }
+        if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
+            ( new Domains )->provider_login();
+        }
+        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
+        $cookies     = [];
+        foreach ( $cookie_data as $key => $cookie ) {
+            $cookies[] = new \WP_Http_Cookie( [
+                'name'    => $cookie->name,
+                'value'   => $cookie->value,
+                'expires' => $cookie->expires,
+                'path'    => $cookie->path,
+                'domain'  => $cookie->domain,
+            ] );
+        }
+
+        $data = [ 
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8',
+            ],
+            'body'        => json_encode( [ 
+                "field" => "whois_privacy", 
+                'value' => false
+            ] ), 
+            'method'      => 'PUT', 
+            'data_format' => 'body',
+            'cookies'     => $cookies,
+        ];
+
+        $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
+        echo json_encode(  $response );
+        if ( is_wp_error( $response ) ) {
+            return json_decode( $response->get_error_message() );
+        } else {
+            return json_decode( $response['body'] );
+        }
+    }
+
+    public function renew_off() {
+        $domain        = ( new Domains )->get( $this->domain_id );
+        if ( empty( $domain->provider_id ) ) {
+            return [ "errors" => [ "No remote domain found." ] ];
+        }
+        if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
+            ( new Domains )->provider_login();
+        }
+        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
+        $cookies     = [];
+        foreach ( $cookie_data as $key => $cookie ) {
+            $cookies[] = new \WP_Http_Cookie( [
+                'name'    => $cookie->name,
+                'value'   => $cookie->value,
+                'expires' => $cookie->expires,
+                'path'    => $cookie->path,
+                'domain'  => $cookie->domain,
+            ] );
+        }
+
+        $data = [ 
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8',
+            ],
+            'body'        => json_encode( [ 
+                "field" => "autorenew", 
+                'value' => false
+            ] ), 
+            'method'      => 'PUT', 
+            'data_format' => 'body',
+            'cookies'     => $cookies,
+        ];
+
+        $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
+        echo json_encode(  $response );
+        if ( is_wp_error( $response ) ) {
+            return json_decode( $response->get_error_message() );
+        } else {
+            return json_decode( $response['body'] );
+        }
+    }
+
+    public function set_contacts( $contacts = [] ) {
+        $domain        = ( new Domains )->get( $this->domain_id );
+        $contacts      = (object) $contacts;
+        if ( empty( $domain->provider_id ) ) {
+            return [ "errors" => [ "No remote domain found." ] ];
+        }
+        if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
+            ( new Domains )->provider_login();
+        }
+        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
+        $cookies     = [];
+        foreach ( $cookie_data as $key => $cookie ) {
+            $cookies[] = new \WP_Http_Cookie( [
+                'name'    => $cookie->name,
+                'value'   => $cookie->value,
+                'expires' => $cookie->expires,
+                'path'    => $cookie->path,
+                'domain'  => $cookie->domain,
+            ] );
+        }
+
+        $data = [ 
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8',
+            ],
+            'body'        => json_encode( [
+                "id"       => "domain-{$domain->name}",
+                "contacts" => [
+                    "nolock"  => true,
+                    "owner"   => $contacts->owner,
+                    "admin"   => $contacts->admin,
+                    "tech"    => $contacts->tech,
+                    "billing" => $contacts->billing,
+
+                ]
+            ] ), 
+            'method'      => 'PUT', 
+            'data_format' => 'body',
+            'cookies'     => $cookies,
+        ];
+
+        $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/set_contacts", $data );
+        if ( is_wp_error( $response ) ) {
+            return json_decode( $response->get_error_message() );
+        }
+        $response = json_decode( $response['body'] );
+        if ( ! empty( $response->error ) ) {
+            return [ "error" => "There was a problem updating the contact info. Check the formatting and try again." ];
+        }
+        if ( $response->succeeded == "true" ) {
+            return [ "response" => "Contacts have been updated." ];
+        }
+    }
+
 }

@@ -101,12 +101,12 @@ $user = wp_get_current_user();
             <v-list-item-title>Sites</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-        <v-list-item link href="/account/dns" @click.prevent="goToPath( '/account/dns' )">
+        <v-list-item link href="/account/domains" @click.prevent="goToPath( '/account/domains' )">
           <v-list-item-icon>
             <v-icon>mdi-library-books</v-icon>
           </v-list-item-icon>
           <v-list-item-content>
-            <v-list-item-title>DNS</v-list-item-title>
+            <v-list-item-title>Domains</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 		<v-list-item link href="/account/accounts" @click.prevent="goToPath( '/account/accounts' )">
@@ -3648,7 +3648,7 @@ $user = wp_get_current_user();
 				</v-card-text>
 			</v-sheet>
 			</v-card>
-			<v-card tile v-if="route == 'dns'" flat>
+			<v-card tile v-if="route == 'domains'" flat>
 			<v-sheet v-show="dialog_domain.step == 1">
 				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Listing {{ allDomains }} domains</v-toolbar-title>
@@ -3712,15 +3712,17 @@ $user = wp_get_current_user();
 				</v-row>
 				</v-card-text>
 				<v-data-table
-					:headers="[{ text: 'Name', value: 'name' }]"
+					:headers="[{ text: 'Name', value: 'name' },{ text: 'DNS', value: 'remote_id', width: '88px' },{ text: 'Registration', value: 'provider_id', width: '120px' }]"
 					:items="domains"
 					:search="domain_search"
 					:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
 				>
 				<template v-slot:body="{ items }">
 					<tbody>
-					<tr v-for="item in items" @click="goToPath( `/account/dns/${item.domain_id}`)" style="cursor:pointer;">
+					<tr v-for="item in items" @click="goToPath( `/account/domains/${item.domain_id}`)" style="cursor:pointer">
 						<td>{{ item.name }}</td>
+						<td><v-icon v-show="item.remote_id != ''">mdi-check-circle</v-icon></td>
+						<td><v-icon v-show="item.provider_id != ''">mdi-check-circle</v-icon></td>
 					</tr>
 					</tbody>
 				</template>
@@ -3735,163 +3737,350 @@ $user = wp_get_current_user();
 								:items="domains"
 								return-object
 								item-text="name"
-								@input="goToPath( `/account/dns/${dialog_domain.domain.domain_id}`)"
+								@input="goToPath( `/account/domains/${dialog_domain.domain.domain_id}`)"
 								class="mt-5"
 								spellcheck="false"
 								flat
 							></v-autocomplete>
 							</v-toolbar-title>
-							<span v-show="dnsRecords > 0" class="body-2 ml-4">{{ dnsRecords }} records</span>
 							<v-spacer></v-spacer>
 							<v-toolbar-items>
-								<v-btn text href="/account/dns" @click.prevent="goToPath( '/account/dns' )"><v-icon>mdi-arrow-left</v-icon> Back</v-btn>
+								<v-btn text href="/account/domains" @click.prevent="goToPath( '/account/domains' )"><v-icon>mdi-arrow-left</v-icon> Back</v-btn>
 							</v-toolbar-items>
 						</v-toolbar>
-						<v-row v-if="dialog_domain.errors">
-							<v-col class="mx-3">
-								<v-alert text :value="true" type="error" v-for="error in dialog_domain.errors">{{ error }}</v-alert>
-							</v-col>
-						</v-row>
-						<v-row>
-							<v-col>
-								<v-progress-circular indeterminate color="primary" size="24" class="ml-4" v-show="dialog_domain.loading"></v-progress-circular>
-								<div class="v-data-table theme--light">
-								<div class="v-data-table__wrapper">
-								<table class="table-dns" v-show="dialog_domain.records.length > 0">
-									<thead class="v-data-table-header">
-									<tr>
-										<th width="175">Type</th>
-										<th width="200">Name</th>
-										<th>Value</th>
-										<th width="75">TTL</th>
-										<th width="95"></th>
-									</tr>
-									</thead>
-									<tbody>
-									<tr v-for="(record, index) in dialog_domain.records" :key="record.id" v-bind:class="{ new: record.new, edit: record.edit, delete: record.delete }">
-									<template v-if="record.edit">
-										<td class="pt-3">{{ record.type }}</td>
-										<td><v-text-field label="Name" :value="record.update.record_name" @change.native="record.update.record_name = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
-										<td class="value" v-if="record.type == 'MX'">
-											<v-layout v-for="(value, value_index) in record.update.record_value">
-												<v-flex xs3><v-text-field label="Level" :value="value.level" @change.native="value.level = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-												<v-flex xs9><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field></v-flex>
-											</v-layout>
-											<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
-										</td>
-										<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'SPF'">
-											<div v-for="(value, value_index) in record.update.record_value" :key="`value-${index}-${value_index}`">
-												<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field>
-											</div>
-											<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
-										</td>
-										<td class="value" v-else-if="record.type == 'SRV'">
-											<v-layout v-for="value in record.update.record_value">
-												<v-flex xs2><v-text-field label="Priority" :value="value.priority" @change.native="value.priority = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-												<v-flex xs2><v-text-field label="Weight" :value="value.weight" @change.native="value.weight = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-												<v-flex xs2><v-text-field label="Port" :value="value.port" @change.native="value.port = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-												<v-flex xs6><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-											</v-layout>
-											<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
-										</td>
-										<td class="value" v-else>
-											<v-text-field label="Value" :value="record.update.record_value" @change.native="record.update.record_value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
-										</td>
-										<td><v-text-field label="TTL" :value="record.update.record_ttl" @change.native="record.update.record_ttl = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
-										<td class="text-right pt-3">
-											<v-btn text small icon color="primary" class="ma-0 pa-0" @click="viewRecord( record.id )" :disabled="dialog_domain.saving"><v-icon>mdi-pencil-box</v-icon></v-btn>
-											<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecord( record.id )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn>
-										</td>
+						<v-tabs v-model="dialog_domain.tabs" background-color="primary" dark>
+							<v-tab key="dns">
+								DNS Records <v-icon class="ml-1">mdi-table</v-icon>
+							</v-tab>
+							<v-tab key="domain">
+								Domain Management <v-icon class="ml-1">mdi-account-box</v-icon>
+							</v-tab>
+						</v-tabs>
+						<v-tabs-items v-model="dialog_domain.tabs">
+							<v-tab-item key="dns" :transition="false" :reverse-transition="false">
+							<v-toolbar flat dense color="grey lighten-4">
+								<v-toolbar-title v-show="dnsRecords > 0"><small>{{ dnsRecords }} DNS records</small></v-toolbar-title>
+								<v-spacer></v-spacer>
+								<v-toolbar-items>
+								<v-dialog max-width="800">
+									<template v-slot:activator="{ on, attrs }">
+										<v-btn v-bind="attrs" v-on="on" text>Import <v-icon dark>mdi-file-upload</v-icon></v-btn>
 									</template>
-									<template v-else-if="record.new">
-										<td><v-select v-model="record.type" @input="changeRecordType( index )" item-text="name" item-value="value" :items='[{"name":"A","value":"A"},{"name":"AAAA","value":"AAAA"},{"name":"ANAME","value":"ANAME"},{"name":"CNAME","value":"CNAME"},{"name":"HTTP Redirect","value":"HTTPRedirection"},{"name":"MX","value":"MX"},{"name":"SRV","value":"SRV"},{"name":"TXT","value":"TXT"}]' label="Type" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-select></td>
-										<td><v-text-field label="Name" :value="record.update.record_name" @change.native="record.update.record_name = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
-										<td class="value" v-if="record.type == 'MX'">
-											<v-layout v-for="(value, value_index) in record.update.record_value">
-												<v-flex xs3><v-text-field label="Level" :value="value.level" @change.native="value.level = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-												<v-flex xs9><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field></v-flex>
-											</v-layout>
-											<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
-										</td>
-										<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'SPF'">
-											<div v-for="(value, value_index) in record.update.record_value" :key="`value-${index}-${value_index}`">
-												<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field>
-											</div>
-											<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
-										</td>
-										<td class="value" v-else-if="record.type == 'SRV'">
-											<v-layout v-for="value in record.update.record_value">
-												<v-flex xs2><v-text-field label="Priority" :value="value.priority" @change.native="value.priority = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-												<v-flex xs2><v-text-field label="Weight" :value="value.weight" @change.native="value.weight = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-												<v-flex xs2><v-text-field label="Port" :value="value.port" @change.native="value.port = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-												<v-flex xs6><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-											</v-layout>
-										</td>
-										<td class="value" v-else>
-											<v-text-field label="Value" :value="record.update.record_value" @change.native="record.update.record_value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
-										</td>
-										<td><v-text-field label="TTL" :value="record.update.record_ttl" @change.native="record.update.record_ttl = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
-										<td class="text-right pt-3">
-											<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecord( index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn>
-										</td>
+									<template v-slot:default="dialog">
+									<v-card>
+										<v-toolbar color="primary" dark>
+											Import DNS Records
+											<v-spacer></v-spacer>
+											<v-toolbar-items>
+												<v-btn text @click="dialog.value = false"><v-icon>mdi-close</v-icon></v-btn>
+											</v-toolbar-items>
+										</v-toolbar>
+										<v-card-text class="mt-5">
+										<v-textarea 
+											placeholder="Paste JSON export here." 
+											outlined
+											persistent-hint 
+											hint="Paste JSON export then click Load JSON. Warning, all existing records will be overwritten." 
+											:value="dialog_domain.import_json" 
+											@change.native="dialog_domain.import_json = $event.target.value" 
+											spellcheck="false">
+										</v-textarea>
+										</v-card-text>
+										<v-card-actions class="justify-end">
+											<v-btn depressed class="ma-0" @click="importDomain()">Load JSON</v-btn>
+										</v-card-actions>
+									</v-card>
 									</template>
-									<template v-else>
-										<td>{{ record.type }}</td>
-										<td class="name">{{ record.name }}</td>
-										<td class="value" v-if="record.type == 'MX'"><div v-for="value in record.value">{{ value.level }} {{ value.value }}</div></td>
-										<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'SPF'"><div v-for="value in record.value">{{ value.value }}</div></td>
-										<td class="value" v-else-if="record.type == 'SRV'"><div v-for="value in record.value">{{ value.priority }} {{ value.weight }} {{ value.port }} {{ value.value }}</div></td>
-										<td class="value" v-else>{{ record.value }}</td>
-										<td>{{ record.ttl }}</td>
-										<td class="text-right">
-											<v-btn text small icon color="primary" class="ma-0 pa-0" @click="editRecord( record.id )" :disabled="dialog_domain.saving"><v-icon>mdi-pencil-box</v-icon></v-btn>
-											<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteCurrentRecord( record.id )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn>
-										</td>
-									</template>
-									</tr>
-								</tbody>
-								</table>
-								</div>
-								</div>
-								<v-btn depressed class="ml-2" @click="addRecord()" v-show="!dialog_domain.loading && !dialog_domain.saving && !dialog_domain.errors">Add Additional Record</v-btn>
-							</v-col>
-						</v-row>
-    					<v-row>
-							<v-col cols="12" class="px-5" v-show="dialog_domain.show_import == true">
-								<v-textarea 
-									placeholder="Paste JSON export here." 
-									outlined
-									persistent-hint 
-									hint="Paste JSON export then click Load JSON. Warning, all existing records will be overwritten." 
-									:value="dialog_domain.import_json" 
-									@change.native="dialog_domain.import_json = $event.target.value" 
-									spellcheck="false">
-								</v-textarea>
-								<v-btn depressed class="ma-0" @click="importDomain()">Load JSON</v-btn>
-							</v-col>
-						</v-row>
-    					<v-row>
-							<v-col>
-								<v-progress-circular indeterminate color="primary" size="24" class="ml-4" v-show="dialog_domain.saving"></v-progress-circular>
-							</v-col>
-						</v-row>
-    					<v-row>
-							<v-col class="text-right mx-3" v-show="!dialog_domain.loading">
-								<v-btn class="mx-1" depressed @click="deleteDomain()">Delete Domain</v-btn>
-								<v-btn class="mx-1" depressed @click="dialog_domain.show_import = true" class="mx-3">Import <v-icon dark>mdi-file-upload</v-icon></v-btn>
-								<v-btn class="mx-1" depressed @click="exportDomain()">Export <v-icon dark>mdi-file-download</v-icon></v-btn>
-								<v-btn class="mx-1" depressed color="primary" @click="saveDNS()" :dark="dialog_domain.records && dialog_domain.records.length != '0'" :disabled="dialog_domain.records && dialog_domain.records.length == '0'">Save Records</v-btn>
-								<a ref="export_domain" href="#"></a>
-							</v-col>
-						</v-row>
-    					<v-row>
-							<v-col class="mx-3">
-								<template v-for="result in dialog_domain.results">
-									<v-alert text :value="true" type="success" v-show="typeof result.success != 'undefined'">{{ result.success }}</v-alert>
-									<v-alert text :value="true" type="error" v-show="typeof result.errors != 'undefined'">{{ result.errors }}</v-alert>
-								</template>
-							</v-col>
-						</v-row>
+								</v-dialog>
+									<v-btn text @click="exportDomain()">Export <v-icon dark>mdi-file-download</v-icon></v-btn>
+								</v-toolbar-items>
+							</v-toolbar>
+								<v-row v-if="dialog_domain.errors">
+									<v-col class="ma-3">
+										<v-alert text :value="true" type="error" v-for="error in dialog_domain.errors">{{ error }}</v-alert>
+									</v-col>
+								</v-row>
+								<v-row>
+									<v-col>
+										<v-progress-circular indeterminate color="primary" size="24" class="ma-5" v-show="dialog_domain.loading"></v-progress-circular>
+										<div class="v-data-table theme--light">
+										<div class="v-data-table__wrapper">
+										<table class="table-dns" v-show="dialog_domain.records.length > 0">
+											<thead class="v-data-table-header">
+											<tr>
+												<th width="175">Type</th>
+												<th width="200">Name</th>
+												<th>Value</th>
+												<th width="75">TTL</th>
+												<th width="95"></th>
+											</tr>
+											</thead>
+											<tbody>
+											<tr v-for="(record, index) in dialog_domain.records" :key="record.id" v-bind:class="{ new: record.new, edit: record.edit, delete: record.delete }">
+											<template v-if="record.edit">
+												<td class="pt-3">{{ record.type }}</td>
+												<td><v-text-field label="Name" :value="record.update.record_name" @change.native="record.update.record_name = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
+												<td class="value" v-if="record.type == 'MX'">
+													<v-layout v-for="(value, value_index) in record.update.record_value">
+														<v-flex xs3><v-text-field label="Level" :value="value.level" @change.native="value.level = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+														<v-flex xs9><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field></v-flex>
+													</v-layout>
+													<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
+												</td>
+												<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'SPF'">
+													<div v-for="(value, value_index) in record.update.record_value" :key="`value-${index}-${value_index}`">
+														<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field>
+													</div>
+													<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
+												</td>
+												<td class="value" v-else-if="record.type == 'SRV'">
+													<v-layout v-for="value in record.update.record_value">
+														<v-flex xs2><v-text-field label="Priority" :value="value.priority" @change.native="value.priority = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+														<v-flex xs2><v-text-field label="Weight" :value="value.weight" @change.native="value.weight = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+														<v-flex xs2><v-text-field label="Port" :value="value.port" @change.native="value.port = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+														<v-flex xs6><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+													</v-layout>
+													<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
+												</td>
+												<td class="value" v-else>
+													<v-text-field label="Value" :value="record.update.record_value" @change.native="record.update.record_value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
+												</td>
+												<td><v-text-field label="TTL" :value="record.update.record_ttl" @change.native="record.update.record_ttl = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
+												<td class="text-right pt-3">
+													<v-btn text small icon color="primary" class="ma-0 pa-0" @click="viewRecord( record.id )" :disabled="dialog_domain.saving"><v-icon>mdi-pencil-box</v-icon></v-btn>
+													<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecord( record.id )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn>
+												</td>
+											</template>
+											<template v-else-if="record.new">
+												<td><v-select v-model="record.type" @input="changeRecordType( index )" item-text="name" item-value="value" :items='[{"name":"A","value":"A"},{"name":"AAAA","value":"AAAA"},{"name":"ANAME","value":"ANAME"},{"name":"CNAME","value":"CNAME"},{"name":"HTTP Redirect","value":"HTTPRedirection"},{"name":"MX","value":"MX"},{"name":"SRV","value":"SRV"},{"name":"TXT","value":"TXT"}]' label="Type" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-select></td>
+												<td><v-text-field label="Name" :value="record.update.record_name" @change.native="record.update.record_name = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
+												<td class="value" v-if="record.type == 'MX'">
+													<v-layout v-for="(value, value_index) in record.update.record_value">
+														<v-flex xs3><v-text-field label="Level" :value="value.level" @change.native="value.level = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+														<v-flex xs9><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field></v-flex>
+													</v-layout>
+													<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
+												</td>
+												<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'SPF'">
+													<div v-for="(value, value_index) in record.update.record_value" :key="`value-${index}-${value_index}`">
+														<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field>
+													</div>
+													<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
+												</td>
+												<td class="value" v-else-if="record.type == 'SRV'">
+													<v-layout v-for="value in record.update.record_value">
+														<v-flex xs2><v-text-field label="Priority" :value="value.priority" @change.native="value.priority = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+														<v-flex xs2><v-text-field label="Weight" :value="value.weight" @change.native="value.weight = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+														<v-flex xs2><v-text-field label="Port" :value="value.port" @change.native="value.port = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+														<v-flex xs6><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+													</v-layout>
+												</td>
+												<td class="value" v-else>
+													<v-text-field label="Value" :value="record.update.record_value" @change.native="record.update.record_value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
+												</td>
+												<td><v-text-field label="TTL" :value="record.update.record_ttl" @change.native="record.update.record_ttl = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
+												<td class="text-right pt-3">
+													<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecord( index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn>
+												</td>
+											</template>
+											<template v-else>
+												<td>{{ record.type }}</td>
+												<td class="name">{{ record.name }}</td>
+												<td class="value" v-if="record.type == 'MX'"><div v-for="value in record.value">{{ value.level }} {{ value.value }}</div></td>
+												<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'SPF'"><div v-for="value in record.value">{{ value.value }}</div></td>
+												<td class="value" v-else-if="record.type == 'SRV'"><div v-for="value in record.value">{{ value.priority }} {{ value.weight }} {{ value.port }} {{ value.value }}</div></td>
+												<td class="value" v-else>{{ record.value }}</td>
+												<td>{{ record.ttl }}</td>
+												<td class="text-right">
+													<v-btn text small icon color="primary" class="ma-0 pa-0" @click="editRecord( record.id )" :disabled="dialog_domain.saving"><v-icon>mdi-pencil-box</v-icon></v-btn>
+													<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteCurrentRecord( record.id )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn>
+												</td>
+											</template>
+											</tr>
+										</tbody>
+										</table>
+										</div>
+										</div>
+										<v-btn depressed class="ml-2" @click="addRecord()" v-show="!dialog_domain.loading && !dialog_domain.saving && !dialog_domain.errors">Add Additional Record</v-btn>
+									</v-col>
+								</v-row>
+								<v-row>
+									<v-col>
+										<v-progress-circular indeterminate color="primary" size="24" class="ml-4" v-show="dialog_domain.saving"></v-progress-circular>
+									</v-col>
+								</v-row>
+								<v-row>
+									<v-col class="text-right mx-3" v-show="!dialog_domain.loading">
+										<v-btn class="mx-1" depressed color="primary" @click="saveDNS()" :dark="dialog_domain.records && dialog_domain.records.length != '0'" :disabled="dialog_domain.records && dialog_domain.records.length == '0'">Save Records</v-btn>
+										<a ref="export_domain" href="#"></a>
+									</v-col>
+								</v-row>
+								<v-row>
+									<v-col class="mx-3">
+										<template v-for="result in dialog_domain.results">
+											<v-alert text :value="true" type="success" v-show="typeof result.success != 'undefined'">{{ result.success }}</v-alert>
+											<v-alert text :value="true" type="error" v-show="typeof result.errors != 'undefined'">{{ result.errors }}</v-alert>
+										</template>
+									</v-col>
+								</v-row>
+							</v-tab-item>
+							<v-tab-item key="domain" :transition="false" :reverse-transition="false">
+								<v-col v-show="! dialog_domain.provider.domain">
+									<v-alert type="info" color="primary" text>Domain is registered through another provider.</v-alert>
+								</v-col>
+								<div v-show="dialog_domain.provider.domain">
+								<v-card tile flat>
+								<v-overlay absolute :value="dialog_domain.updating_contacts">
+								<v-progress-circular indeterminate size="64"></v-progress-circular>
+								</v-overlay>
+								<v-tabs v-model="dialog_domain.contact_tabs" background-color="grey lighten-4" @change="populateStatesforContacts()">
+									<v-tab key="owner">Owner</v-tab>
+									<v-tab key="admin">Admin</v-tab>
+									<v-tab key="technical">Technical</v-tab>
+									<v-tab key="billing">Billing</v-tab>
+								</v-tabs>
+								<v-tabs-items v-model="dialog_domain.contact_tabs" class="mt-2">
+								<v-tab-item key="owner" v-if="dialog_domain.provider.contacts.owner">
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="First Name" v-model="dialog_domain.provider.contacts.owner.first_name"></v-text-field></v-col>
+									<v-col class="ma-1"><v-text-field label="Last Name" v-model="dialog_domain.provider.contacts.owner.last_name"></v-text-field></v-col>
+									<v-col class="ma-1"><v-text-field label="Company name (optional)" v-model="dialog_domain.provider.contacts.owner.org_name"></v-text-field></v-col>
+								</v-row>
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="Street Address" persistent-hint hint="House number and street name" v-model="dialog_domain.provider.contacts.owner.address1"></v-text-field></v-col>
+								</v-row>
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="dialog_domain.provider.contacts.owner.address2"></v-text-field></v-col>
+								</v-row>
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="Town" v-model="dialog_domain.provider.contacts.owner.city"></v-text-field></v-col>
+									<v-col class="ma-1">
+										<v-autocomplete label="State" v-model="dialog_domain.provider.contacts.owner.state" :items="states_selected" v-if="states_selected.length > 0"></v-autocomplete>
+										<v-text-field label="State" v-model="dialog_domain.provider.contacts.owner.state" v-else></v-text-field>
+									</v-col>
+									<v-col class="ma-1"><v-text-field label="Zip" v-model="dialog_domain.provider.contacts.owner.postal_code"></v-text-field></v-col>
+									<v-col class="ma-1"><v-autocomplete label="Country" v-model="dialog_domain.provider.contacts.owner.country" :items="countries" @change="populateStatesFor( dialog_domain.provider.contacts.owner )"></v-autocomplete></v-col>
+								</v-row>
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="Phone" v-model="dialog_domain.provider.contacts.owner.phone"></v-text-field></v-col>
+									<v-col class="ma-1"><v-text-field label="Email" v-model="dialog_domain.provider.contacts.owner.email"></v-text-field></v-col>
+								</v-row>
+								</v-tab-item>
+								<v-tab-item key="admin" v-if="dialog_domain.provider.contacts.admin">
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="First Name" v-model="dialog_domain.provider.contacts.admin.first_name"></v-text-field></v-col>
+									<v-col class="ma-1"><v-text-field label="Last Name" v-model="dialog_domain.provider.contacts.admin.last_name"></v-text-field></v-col>
+									<v-col class="ma-1"><v-text-field label="Company name (optional)" v-model="dialog_domain.provider.contacts.admin.org_name"></v-text-field></v-col>
+								</v-row>
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="Street Address" persistent-hint hint="House number and street name" v-model="dialog_domain.provider.contacts.admin.address1"></v-text-field></v-col>
+								</v-row>
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="dialog_domain.provider.contacts.admin.address2"></v-text-field></v-col>
+								</v-row>
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="Town" v-model="dialog_domain.provider.contacts.admin.city"></v-text-field></v-col>
+									<v-col class="ma-1">
+										<v-autocomplete label="State" v-model="dialog_domain.provider.contacts.admin.state" :items="states_selected" v-if="states_selected.length > 0"></v-autocomplete>
+										<v-text-field label="State" v-model="dialog_domain.provider.contacts.admin.state" v-else></v-text-field>
+									</v-col>
+									<v-col class="ma-1"><v-text-field label="Zip" v-model="dialog_domain.provider.contacts.admin.postal_code"></v-text-field></v-col>
+									<v-col class="ma-1"><v-autocomplete label="Country" v-model="dialog_domain.provider.contacts.admin.country" :items="countries" @change="populateStatesFor( dialog_domain.provider.contacts.admin )"></v-autocomplete></v-col>
+								</v-row>
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="Phone" v-model="dialog_domain.provider.contacts.admin.phone"></v-text-field></v-col>
+									<v-col class="ma-1"><v-text-field label="Email" v-model="dialog_domain.provider.contacts.admin.email"></v-text-field></v-col>
+								</v-row>
+								</v-tab-item>
+								<v-tab-item key="tech" v-if="dialog_domain.provider.contacts.tech">
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="First Name" v-model="dialog_domain.provider.contacts.tech.first_name"></v-text-field></v-col>
+									<v-col class="ma-1"><v-text-field label="Last Name" v-model="dialog_domain.provider.contacts.tech.last_name"></v-text-field></v-col>
+									<v-col class="ma-1"><v-text-field label="Company name (optional)" v-model="dialog_domain.provider.contacts.tech.org_name"></v-text-field></v-col>
+								</v-row>
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="Street Address" persistent-hint hint="House number and street name" v-model="dialog_domain.provider.contacts.tech.address1"></v-text-field></v-col>
+								</v-row>
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="dialog_domain.provider.contacts.tech.address2"></v-text-field></v-col>
+								</v-row>
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="Town" v-model="dialog_domain.provider.contacts.tech.city"></v-text-field></v-col>
+									<v-col class="ma-1">
+										<v-autocomplete label="State" v-model="dialog_domain.provider.contacts.tech.state" :items="states_selected" v-if="states_selected.length > 0"></v-autocomplete>
+										<v-text-field label="State" v-model="dialog_domain.provider.contacts.tech.state" v-else></v-text-field>
+									</v-col>
+									<v-col class="ma-1"><v-text-field label="Zip" v-model="dialog_domain.provider.contacts.tech.postal_code"></v-text-field></v-col>
+									<v-col class="ma-1"><v-autocomplete label="Country" v-model="dialog_domain.provider.contacts.tech.country" :items="countries" @change="populateStatesFor( dialog_domain.provider.contacts.tech )"></v-autocomplete></v-col>
+								</v-row>
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="Phone" v-model="dialog_domain.provider.contacts.tech.phone"></v-text-field></v-col>
+									<v-col class="ma-1"><v-text-field label="Email" v-model="dialog_domain.provider.contacts.tech.email"></v-text-field></v-col>
+								</v-row>
+								</v-tab-item>
+								<v-tab-item key="billing" v-if="dialog_domain.provider.contacts.billing">
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="First Name" v-model="dialog_domain.provider.contacts.billing.first_name"></v-text-field></v-col>
+									<v-col class="ma-1"><v-text-field label="Last Name" v-model="dialog_domain.provider.contacts.billing.last_name"></v-text-field></v-col>
+									<v-col class="ma-1"><v-text-field label="Company name (optional)" v-model="dialog_domain.provider.contacts.billing.org_name"></v-text-field></v-col>
+								</v-row>
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="Street Address" persistent-hint hint="House number and street name" v-model="dialog_domain.provider.contacts.billing.address1"></v-text-field></v-col>
+								</v-row>
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="dialog_domain.provider.contacts.billing.address2"></v-text-field></v-col>
+								</v-row>
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="Town" v-model="dialog_domain.provider.contacts.billing.city"></v-text-field></v-col>
+									<v-col class="ma-1">
+										<v-autocomplete label="State" v-model="dialog_domain.provider.contacts.billing.state" :items="states_selected" v-if="states_selected.length > 0"></v-autocomplete>
+										<v-text-field label="State" v-model="dialog_domain.provider.contacts.billing.state" v-else></v-text-field>
+									</v-col>
+									<v-col class="ma-1"><v-text-field label="Zip" v-model="dialog_domain.provider.contacts.billing.postal_code"></v-text-field></v-col>
+									<v-col class="ma-1"><v-autocomplete label="Country" v-model="dialog_domain.provider.contacts.billing.country" :items="countries" @change="populateStatesFor( dialog_domain.provider.contacts.billing )"></v-autocomplete></v-col>
+								</v-row>
+								<v-row no-gutters class="mx-3">
+									<v-col class="ma-1"><v-text-field label="Phone" v-model="dialog_domain.provider.contacts.billing.phone"></v-text-field></v-col>
+									<v-col class="ma-1"><v-text-field label="Email" v-model="dialog_domain.provider.contacts.billing.email"></v-text-field></v-col>
+								</v-row>
+								</v-tab-item>
+								</v-tabs-items>
+								<v-row class="mx-2 mb-5">
+								<v-col cols="12">
+								<v-btn @click="updateDomainContacts()" color="primary">
+									Update Contact Information
+								</v-btn>
+								</v-col>
+								</v-row>
+								</v-card>
+							<v-divider></v-divider>
+							<v-subheader>Controls</v-subheader>
+								<v-container>
+								<v-row>
+									<v-col v-if="dialog_domain.auth_code != ''">
+										<v-list-item @click="copyText( dialog_domain.auth_code )" dense>
+										<v-list-item-icon>
+											<v-icon>mdi-content-copy</v-icon>
+										</v-list-item-icon>
+										<v-list-item-content>
+											<v-list-item-title>Auth Code</v-list-item-title>
+											<v-list-item-subtitle v-text="dialog_domain.auth_code"></v-list-item-subtitle>
+										</v-list-item-content>
+										</v-list-item>
+									</v-col>
+									<v-col v-else><v-btn class="mx-1" depressed @click="retrieveAuthCode()" :loading="dialog_domain.fetch_auth_code">Retrieve Auth Code</v-btn></v-col>
+									<v-col><v-switch v-model="dialog_domain.provider.locked" :loading="dialog_domain.update_lock" :disabled="dialog_domain.update_lock" false-value="off" true-value="on" :label="`Lock is ${dialog_domain.provider.locked}`" @change="domainLockUpdate()"></v-switch></v-col>
+									<v-col><v-switch v-model="dialog_domain.provider.whois_privacy" :loading="dialog_domain.update_privacy" :disabled="dialog_domain.update_privacy" false-value="off" true-value="on" :label="`Privacy is ${dialog_domain.provider.whois_privacy}`" @change="domainPrivacyUpdate()"></v-switch></v-col>
+								</v-row>
+								</v-container>
+							</div>
+							<v-divider></v-divider>
+								<v-subheader>Administrator Options</v-subheader>
+								<v-container>
+									<v-btn class="mx-1" depressed @click="deleteDomain()">Delete Domain</v-btn>
+								</v-container>
+							</v-tab-item>
+						</v-tabs-items>
 					</v-card>
 				</v-sheet>
 			</v-card>
@@ -5783,7 +5972,7 @@ new Vue({
 		},
 		dialog_new_domain: { show: false, domain: { name: "", account_id: "" }, loading: false, errors: [] },
 		dialog_configure_defaults: { show: false, loading: false },
-		dialog_domain: { show: false, show_import: false, import_json: "", domain: {}, records: [], results: [], errors: [], loading: true, saving: false, step: 1 },
+		dialog_domain: { show: false, updating_contacts: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], results: [], errors: [], loading: true, saving: false, step: 1 },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $user->user_email; ?>", current_user_email: "<?php echo $user->user_email; ?>", filter_toggle: true, filter_options: [] },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
 		dialog_launch: { show: false, site: {}, domain: "" },
@@ -5812,7 +6001,7 @@ new Vue({
 			'/account': '',
 			'/account/login': 'login',
 			'/account/sites': 'sites',
-			'/account/dns': 'dns',
+			'/account/domains': 'domains',
 			'/account/health': 'health',
 			'/account/keys': 'keys',
 			'/account/defaults': 'defaults',
@@ -6335,7 +6524,11 @@ new Vue({
 				this.selected_nav = ""
 				this.loading_page = false;
 			}
-			if ( this.route == "dns" ) {
+			if ( this.route == "connect" ) {
+				this.selected_nav = ""
+				this.loading_page = false;
+			}
+			if ( this.route == "domains" ) {
 				if ( this.allDomains == 0 ) {
 					this.loading_page = true;
 				}
@@ -6422,11 +6615,12 @@ new Vue({
 				this.dialog_account.step = 1
 				this.dialog_billing.step = 1
 			}
-			if ( this.route == "dns" && this.route_path != "" ) {
+			if ( this.route == "domains" && this.route_path != "" ) {
 				this.dialog_domain.step = 2				
 				domain = this.domains.filter( d => d.domain_id == this.route_path )[0]
 				if ( domain ) {
 					this.modifyDNS( domain )
+					this.fetchDomain( domain )
 				}
 			}
 			if ( this.route == "billing" && this.route_path != "" ) {
@@ -7394,6 +7588,7 @@ new Vue({
 					if ( this.dialog_domain.step == 2 && this.route_path != "" ) {
 						domain = this.domains.filter( d => d.domain_id == this.route_path )[0]
 						this.modifyDNS( domain )
+						this.fetchDomain( domain )
 					}
 					setTimeout(this.fetchMissing, 4000)
 				});
@@ -7618,6 +7813,24 @@ new Vue({
 				}
 				setTimeout(this.fetchMissing, 1000)
 			});
+		},
+		populateStatesFor( item ) {
+			states_selected = []
+			select = this.states[ item.country ]
+			if ( typeof select != 'object' ) {
+				this.states_selected = []
+				return
+			}
+			states_by_country = Object.entries( select )
+			states_by_country.forEach( ([key, value]) => {
+				states_selected.push( { "text": value, "value": key } )
+			})
+			this.states_selected = states_selected
+		},
+		populateStatesforContacts() {
+			contacts = [ "owner", "admin", "tech", "billing" ]
+			key = contacts[ this.dialog_domain.contact_tabs ]
+			this.populateStatesFor( this.dialog_domain.provider.contacts[ key ] )
 		},
 		populateStates() {
 			states_selected = []
@@ -9581,8 +9794,94 @@ new Vue({
 		deleteRecord( index ){
 			this.dialog_domain.records.splice( index, 1 )
 		},
+		updateDomainContacts() {
+			this.dialog_domain.updating_contacts = true
+			axios.post( `/wp-json/captaincore/v1/domain/${domain.domain_id}/contacts`, {
+					'contacts': this.dialog_domain.provider.contacts
+				},{
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then( response => {
+					if ( response.data.error ) {
+						this.dialog_domain.updating_contacts = false
+						this.snackbar.message = response.data.error
+						this.snackbar.show = true
+						this.dialog_domain.loading = false
+						return
+					}
+					this.dialog_domain.updating_contacts = false
+					this.snackbar.message = response.data.response
+					this.snackbar.show = true
+					this.dialog_domain.loading = false
+				})
+				.catch( error => {
+					this.dialog_domain.updating_contacts = false
+					this.snackbar.message = error
+					this.snackbar.show = true
+					this.dialog_domain.loading = false
+				})
+		},
+		domainLockUpdate() {
+			this.dialog_domain.update_lock = true
+			status = this.dialog_domain.provider.locked
+			axios.get(
+				`/wp-json/captaincore/v1/domain/${domain.domain_id}/lock_${status}`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					this.snackbar.message = `Domain lock has been turned ${status}.`
+					this.snackbar.show = true
+					this.dialog_domain.update_lock = false
+				})
+		},
+		domainPrivacyUpdate() {
+			this.dialog_domain.update_privacy = true
+			status = this.dialog_domain.provider.whois_privacy
+			axios.get(
+				`/wp-json/captaincore/v1/domain/${domain.domain_id}/privacy_${status}`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					this.snackbar.message = `Domain privacy has been turned ${status}.`
+					this.snackbar.show = true
+					this.dialog_domain.update_privacy = false
+				})
+		},
+		retrieveAuthCode() {
+			this.dialog_domain.fetch_auth_code = true
+			axios.get(
+				`/wp-json/captaincore/v1/domain/${domain.domain_id}/auth_code`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					this.dialog_domain.auth_code = response.data
+					this.dialog_domain.fetch_auth_code = false
+					if ( response.data == "" ) {
+						this.snackbar.message = "Failed to retrieve auth code."
+						this.snackbar.show = true
+						return
+					}
+				})
+		},
+		fetchDomain( domain ) {
+			axios.get(
+				'/wp-json/captaincore/v1/domain/' + domain.domain_id, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					if ( response.data.code == "no_domain" ) {
+						this.dialog_domain.provider =  { contacts: {} }
+						return
+						
+					}
+					this.dialog_domain.provider = response.data
+					if ( this.dialog_domain.provider.contacts.owner.country && this.dialog_domain.provider.contacts.owner.country != "" ) {
+						this.populateStatesFor( this.dialog_domain.provider.contacts.owner )
+					}
+				})
+		},
 		modifyDNS( domain ) {
-			this.dialog_domain = { show: false, show_import: false, import_json: "", domain: {}, records: [], loading: true, saving: false, step: 2 };
+			this.dialog_domain = { show: false, updating_contacts: false, auth_code: "", fetch_auth_code: false, provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], loading: true, saving: false, step: 2 };
 			if ( domain.remote_id == null ) {
 				this.dialog_domain.errors = [ "Domain not found." ];
 				this.dialog_domain.domain = domain;
@@ -9591,7 +9890,7 @@ new Vue({
 				return
 			}
 			axios.get(
-				'/wp-json/captaincore/v1/domain/' + domain.domain_id, {
+				'/wp-json/captaincore/v1/dns/' + domain.domain_id, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
@@ -9665,7 +9964,7 @@ new Vue({
             this.$refs.export_domain.click();
 		},
 		deleteDomain() {
-			should_proceed = confirm("Delete domain " +  this.dialog_domain.domain.name + "?");
+			should_proceed = confirm("Delete domain " +  this.dialog_domain.domain.name + "? All DNS records will be removed and domain will be removed.");
 			if ( ! should_proceed ) {
 				return;
 			}
@@ -9678,9 +9977,9 @@ new Vue({
 			}
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					this.dialog_domain = { show: false, show_import: false, import_json: "", domain: {}, records: [], loading: true, saving: false }
+					this.dialog_domain = { show: false, updating_contacts: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], loading: true, saving: false }
 					this.domains = this.domains.filter( d => d.domain_id != response.data.domain_id )
-					this.goToPath( '/account/dns' )
+					this.goToPath( '/account/domains' )
 					this.snackbar.message = response.data.message
 					this.snackbar.show = true
 					

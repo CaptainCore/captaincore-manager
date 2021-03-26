@@ -1673,13 +1673,84 @@ function captaincore_site_func( $request ) {
 }
 
 function captaincore_domain_func( $request ) {
+	$domain_id = $request['id'];
+	$verify    = ( new CaptainCore\Domains )->verify( $domain_id );
+	if ( ! $verify ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+	$domain = ( new CaptainCore\Domains )->get( $domain_id );
 
+	if ( empty( $domain->provider_id ) ) {
+		return new WP_Error( 'no_domain', 'No records', [ 'status' => 200 ] );
+	}
+
+	return ( new CaptainCore\Domain( $domain_id ) )->fetch();
+}
+
+function captaincore_domain_privacy_func( $request ) {
+	$domain_id = $request['id'];
+	$status    = $request['status'];
+	$verify    = ( new CaptainCore\Domains )->verify( $domain_id );
+	if ( ! $verify ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+	if ( $status == "on" ) {
+		return ( new CaptainCore\Domain( $domain_id ) )->privacy_on();
+	}
+	if ( $status == "off" ) {
+		return ( new CaptainCore\Domain( $domain_id ) )->privacy_off();
+	}
+	return new WP_Error( 'request_invalid', 'Invalid Request', [ 'status' => 404 ] );
+}
+
+function captaincore_domain_lock_func( $request ) {
+	$domain_id = $request['id'];
+	$status    = $request['status'];
+	$verify    = ( new CaptainCore\Domains )->verify( $domain_id );
+	if ( ! $verify ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+	if ( $status == "on" ) {
+		return ( new CaptainCore\Domain( $domain_id ) )->lock();
+	}
+	if ( $status == "off" ) {
+		return ( new CaptainCore\Domain( $domain_id ) )->unlock();
+	}
+	return new WP_Error( 'request_invalid', 'Invalid Request', [ 'status' => 404 ] );
+}
+
+function captaincore_domain_update_contacts_func( $request ) {
+	$domain_id = $request['id'];
+	$verify    = ( new CaptainCore\Domains )->verify( $domain_id );
+	if ( ! $verify ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+    return ( new CaptainCore\Domain( $domain_id ) )->set_contacts( $request['contacts'] );
+}
+
+function captaincore_domain_auth_code_func( $request ) {
+	$domain_id = $request['id'];
+	$verify    = ( new CaptainCore\Domains )->verify( $domain_id );
+	if ( ! $verify ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+	$domain    = ( new CaptainCore\Domains )->get( $domain_id );
+
+	if ( empty( $domain->provider_id ) ) {
+		return new WP_Error( 'no_domain', 'No records', [ 'status' => 200 ] );
+	}
+
+	return ( new CaptainCore\Domain( $domain_id ) )->auth_code();
+}
+
+function captaincore_dns_func( $request ) {
 	$domain_id = $request['id'];
 	$verify    = ( new CaptainCore\Domains )->verify( $domain_id );
 	if ( ! $verify ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 	$remote_id = ( new CaptainCore\Domains )->get( $domain_id )->remote_id;
+
 	$domain    = constellix_api_get( "domains/$remote_id" );
 	$response  = constellix_api_get( "domains/$remote_id/records" );
 	if ( ! $response->errors ) {
@@ -1687,7 +1758,6 @@ function captaincore_domain_func( $request ) {
 	}
 
 	return $response;
-
 }
 
 function captaincore_domains_func( $request ) {
@@ -2049,7 +2119,14 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
-	// Custom endpoint for domain
+	register_rest_route(
+		'captaincore/v1', '/dns/(?P<id>[\d]+)', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_dns_func',
+			'show_in_index' => false
+		]
+	);
+
 	register_rest_route(
 		'captaincore/v1', '/domain/(?P<id>[\d]+)', [
 			'methods'       => 'GET',
@@ -2058,7 +2135,38 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
-	// Custom endpoint for recipes
+	register_rest_route(
+		'captaincore/v1', '/domain/(?P<id>[\d]+)/contacts', [
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_domain_update_contacts_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/domain/(?P<id>[\d]+)/lock_(?P<status>[a-zA-Z0-9-,|_%]+)', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_domain_lock_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/domain/(?P<id>[\d]+)/privacy_(?P<status>[a-zA-Z0-9-,|_%]+)', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_domain_privacy_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/domain/(?P<id>[\d]+)/auth_code', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_domain_auth_code_func',
+			'show_in_index' => false
+		]
+	);
+
 	register_rest_route(
 		'captaincore/v1', '/recipes/', [
 			'methods'       => 'GET',
