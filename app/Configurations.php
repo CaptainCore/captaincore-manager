@@ -70,8 +70,8 @@ class Configurations {
     }
 
     public function sync() {
-
-        $command = "configuration-sync";
+        
+        $command = "configuration sync";
         
         // Disable https when debug enabled
         if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
