@@ -234,7 +234,7 @@ class DB {
                 INNER JOIN {$wpdb->prefix}captaincore_domains ON {$table}.domain_id = {$wpdb->prefix}captaincore_domains.domain_id
                 WHERE $where_statements 
                 order by {$wpdb->prefix}captaincore_domains.`name` ASC";
-        $results = array_column( $wpdb->get_results( $sql ), $field );
+        $results = $wpdb->get_results( $sql );
         return $results;
     }
 
@@ -304,7 +304,7 @@ class DB {
                 LEFT JOIN {$wpdb->prefix}captaincore_processes ON {$wpdb->prefix}captaincore_process_logs.process_id = {$wpdb->prefix}captaincore_processes.process_id
                 WHERE $where_statements 
                 order by {$wpdb->prefix}captaincore_process_logs.`created_at` DESC";
-        $results = array_column( $wpdb->get_results( $sql ), $field );
+        $results = $wpdb->get_results( $sql );
         return $results;
     }
 
@@ -484,7 +484,7 @@ class DB {
                 INNER JOIN {$wpdb->prefix}captaincore_sites ON {$table}.site_id = {$wpdb->prefix}captaincore_sites.site_id
                 WHERE $where_statements 
                 order by {$wpdb->prefix}captaincore_sites.`name` ASC";
-        $results = array_column( $wpdb->get_results( $sql ), $field );
+        $results = $wpdb->get_results( $sql );
         return $results;
     }
 
