@@ -1283,7 +1283,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	// Error if site not valid
 	$current_site = ( new CaptainCore\Sites )->get( $site_id );
-	if ( $current_site == "" && $site_id != "" && $command != "default-get" ) {
+	if ( $current_site == "" && $site_id != "" && $command != "default-get" && $command != "configuration-get" ) {
 		return new WP_Error( 'command_invalid', 'Invalid Command', [ 'status' => 404 ] );
 	}
 
@@ -1559,6 +1559,14 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$response = [
 			"response" => "Fetching account {$post->account_id}",
 			"account"  => $account->get_raw(),
+		];
+	}
+
+	if ( $command == 'configuration-get' ) {
+		$configurations = ( new CaptainCore\Configurations )->get();
+		$response       = [
+			"response"       => "Fetching configurations",
+			"configurations" => $configurations,
 		];
 	}
 
@@ -3920,6 +3928,7 @@ HEREDOC;
 			$value->dns_introduction = str_replace( "\'", "'", $value->dns_introduction );
 		}
 		update_site_option( 'captaincore_configurations', json_encode( $value ) );
+		( new CaptainCore\Configurations )->sync();
 		echo json_encode( "Global configurations updated." );
 	}
 
