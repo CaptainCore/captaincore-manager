@@ -4366,10 +4366,10 @@ function captaincore_ajax_action_callback() {
 		} else {
 			$fathom_instance = "https://{$captaincore_settings->captaincore_tracker}";
 		}
-		$login_details = array(
-				'email'    => $captaincore_settings->captaincore_tracker_user, 
-				'password' => $captaincore_settings->captaincore_tracker_pass
-		);
+		$login_details = [
+			'email'    => $captaincore_settings->captaincore_tracker_user,
+			'password' => $captaincore_settings->captaincore_tracker_pass
+		];
 
 		// Load sites from transient
 		$auth = get_transient( 'captaincore_fathom_auth' );
@@ -4428,16 +4428,23 @@ function captaincore_ajax_action_callback() {
 				$stats = json_decode( $response['body'] )->Data;
 
 				$response = wp_remote_get( "$fathom_instance/api/sites/{$s->id}/stats/site/agg?before=$before&after=$after", [
+					'timeout' => 45,
 					'cookies' => $auth['cookies']
 				 ] );
 				$agg = json_decode( $response['body'] )->Data;
 
 				$response = wp_remote_get( "$fathom_instance/api/sites/{$s->id}/stats/pages/agg?before=$before&after=$after&offset=0&limit=1000", [
+					'timeout' => 45,
 					'cookies' => $auth['cookies']
 				 ] );
-				$pages = json_decode( $response['body'] )->Data;
+				 if ( is_array( $response ) && ! is_wp_error( $response ) ) {
+					$pages = json_decode( $response['body'] )->Data;
+				} else {
+					$errors[] = $response->get_error_message();
+				}
 
 				$response = wp_remote_get( "$fathom_instance/api/sites/{$s->id}/stats/referrers/agg?before=$before&after=$after&offset=0&limit=1000", [
+					'timeout' => 45,
 					'cookies' => $auth['cookies']
 				 ] );
 				$referrers = json_decode( $response['body'] )->Data;
@@ -4448,6 +4455,10 @@ function captaincore_ajax_action_callback() {
 			echo json_encode( array( "stats" => $stats, "agg" => $agg, "pages" => $pages, "referrers" => $referrers ) );
 		} else {
 			echo json_encode( array("Error" => "Site not found in Fathom" ) );
+		}
+
+		if ( count( $errors ) > 0 ) {
+			echo json_encode( array("Error" => implode( ",", $errors ) ) );
 		}
 
 	}
