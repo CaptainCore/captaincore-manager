@@ -728,25 +728,33 @@ $user = wp_get_current_user();
 			</v-btn>
 			<v-toolbar-title>Edit SSH Key</v-toolbar-title>
 			<v-spacer></v-spacer>
-			<v-chip color="primary" text-color="white" text>{{ dialog_key.key.fingerprint }}</v-chip>
+			<v-toolbar-items v-show="dialog_key.key.main == '0'">
+				<v-btn text @click="setKeyAsPrimary()">Set as Primary Key</v-btn>
+			</v-toolbar-items>
 		</v-toolbar>
 		<v-card-text style="max-height: 100%;">
 			<v-container>
-			<v-layout row wrap>
-				<v-flex xs12 pa-2>
+			<v-row>
+				<v-col cols="12">
+					Key Fingerprint<br />
+					{{ dialog_key.key.fingerprint }}
+				</v-col>
+				<v-col cols="12">
 					<v-text-field label="Name" :value="dialog_key.key.title" @change.native="dialog_key.key.title = $event.target.value"></v-text-field>
-				</v-flex>
-				<v-flex xs12 pa-2>
+				</v-col>
+				<v-col cols="12">
 					<v-textarea label="Private Key" persistent-hint hint="Enter new private key to override existing key. The current key is not viewable." auto-grow :value="dialog_key.key.key" @change.native="dialog_key.key.key = $event.target.value" spellcheck="false"></v-textarea>
-				</v-flex>
-				<v-flex xs12 text-right pa-0 ma-0>
+				</v-col>
+			</v-row>
+			<v-row>
+				<v-col cols="12" class="text-right">
 					<v-btn @click="deleteKey()" class="mr-2">
 						Delete SSH Key
 					</v-btn>
 					<v-btn color="primary" dark @click="updateKey()">
 						Save SSH Key
 					</v-btn>
-				</v-flex>
+				</v-col>
 			</v-layout>
 			</v-container>
 			</v-card-text>
@@ -3298,13 +3306,13 @@ $user = wp_get_current_user();
 						</v-flex>
 							<v-flex xs6 class="mx-2">
 							<v-autocomplete
-								:items="keys"
+								:items="keySelections"
 								v-model="dialog_new_site.key"
 								item-text="title"
 								item-value="key_id"
-								label="SSH Key"
-								hint="Optional. Will use SSH key instead of SFTP for management purposes."
-								persistent-hint
+								label="Override SSH Key"
+								hint="Optionally set which SSH key is used. Will default to primary key."
+								persistent-hint chips deletable-chips
 							>
 							</v-autocomplete>
 						</v-flex>
@@ -3490,13 +3498,15 @@ $user = wp_get_current_user();
 						</v-flex>
 						<v-flex xs6 class="mx-2">
 							<v-autocomplete
-								:items="keys"
+								:items="keySelections"
 								item-text="title"
 								item-value="key_id"
 								v-model="dialog_edit_site.site.key"
-								label="SSH Key"
-								hint="Optional. Will use SSH key instead of SFTP for management purposes."
+								label="Override SSH Key"
+								hint="Optionally set which SSH key is used. Will default to primary key."
 								persistent-hint
+								chips
+								deletable-chips
 							>
 							</v-autocomplete>
 						</v-flex>
@@ -6328,6 +6338,11 @@ new Vue({
 		}
 	},
 	computed: {
+		keySelections() {
+			keys = JSON.parse ( JSON.stringify (  this.keys ) )
+			keys.push( { key_id: "use_password", title: "Use SFTP Password" } )
+			return keys
+		},
 		gravatar() {
 			return 'https://www.gravatar.com/avatar/' + md5( this.current_user_email.trim().toLowerCase() ) + '?s=80&d=mp'
 		},
@@ -8518,6 +8533,25 @@ new Vue({
 			this.dialog_key.key = key;
 			this.dialog_key.key.key = "";
 			this.dialog_key.show = true;
+		},
+		setKeyAsPrimary() {
+			key_title = this.dialog_key.key.title
+			should_proceed = confirm(`Set SSH key '${key_title}' as primary key?`);
+			if ( ! should_proceed ) {
+				return;
+			}
+			var data = {
+				action: 'captaincore_ajax',
+				command: 'setKeyAsPrimary',
+				value: this.dialog_key.key
+			};
+			key = this.keys.filter( key => key.key_id == this.dialog_key.key.key_id )[0]
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.fetchKeys()
+					this.dialog_key = { show: false, key: {} }
+				})
+				.catch( error => console.log( error ) );
 		},
 		updateKey() {
 			var data = {

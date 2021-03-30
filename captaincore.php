@@ -4231,6 +4231,7 @@ function captaincore_ajax_action_callback() {
 		'newKey',
 		'updateKey',
 		'deleteKey',
+		'setKeyAsPrimary',
 		'newProcess',
 		'saveProcess',
 		'fetchProcess',
@@ -4457,60 +4458,90 @@ function captaincore_ajax_action_callback() {
 	};
 
 	if ( $cmd == 'newKey' ) {
-
 		$key      = (object) $value;
 		$time_now = date("Y-m-d H:i:s");
+		$user_id  = get_current_user_id();
 
-		$new_key = array(
-			'user_id'        => get_current_user_id(),
-			'title'          => $key->title,
-			'updated_at'     => $time_now,
-			'created_at'     => $time_now,
-		);
+		$new_key = [
+			'user_id'    => $user_id,
+			'title'      => $key->title,
+			'updated_at' => $time_now,
+			'created_at' => $time_now,
+			'main'       => 0,
+		];
 
-		$db = new CaptainCore\Keys();
-		$key_id = $db->insert( $new_key );
+		$look_for_default = ( new CaptainCore\Keys )->where( [ "user_id" => $user_id, "main" => "1" ] );
+		if ( empty( $look_for_default ) ) {
+			$new_key[ "main" ] = 1;
+		}
 
+		$key_id         = ( new CaptainCore\Keys )->insert( $new_key );
 		$remote_command = true;
-		$silence = true;
-		$ssh_key = base64_encode( stripslashes_deep( $key->key ) );
-		$command = "key add $ssh_key --id=$key_id";
+		$silence        = true;
+		$ssh_key        = base64_encode( stripslashes_deep( $key->key ) );
+		$command        = "key add $ssh_key --id=$key_id";
+	}
+
+	if ( $cmd == 'setKeyAsPrimary' ) {
+		$key      = (object) $value;
+		$key_id   = $key->key_id;
+		$time_now = date("Y-m-d H:i:s");
+		$user_id  = get_current_user_id();
+
+		$look_for_default = ( new CaptainCore\Keys )->where( [ "user_id" => $user_id, "main" => "1" ] );
+		if ( ! empty( $look_for_default ) ) {
+			foreach( $look_for_default as $key_primary ) {
+				( new CaptainCore\Keys )->update( [ 'main' => 0 ], [ "key_id" => $key_primary->key_id ] );
+			}
+		}
+
+		$key_update = [
+			'main'       => 1,
+			'updated_at' => $time_now,
+		];
+
+		( new CaptainCore\Keys )->update( $key_update, [ "key_id" => $key_id ] );
+
+		$configurations = ( new CaptainCore\Configurations )->get();
+		$configurations->default_key = $key_id;
+		update_site_option( 'captaincore_configurations', json_encode( $configurations ) );
+		( new CaptainCore\Configurations )->sync();
 	}
 
 	if ( $cmd == 'updateKey' ) {
-
-		$key = (object) $value;
-		$key_id = $key->key_id;
+		$key      = (object) $value;
+		$key_id   = $key->key_id;
 		$time_now = date("Y-m-d H:i:s");
+		$user_id  = get_current_user_id();
 
-		$key_update = array(
-			'title'          => $key->title,
-			'updated_at'     => $time_now,
-		);
+		$key_update = [
+			'title'      => $key->title,
+			'updated_at' => $time_now,
+		];
 
-		$db = new CaptainCore\Keys();
-		$db->update( $key_update, array( "key_id" => $key_id ) );
+		$look_for_default = ( new CaptainCore\Keys )->where( [ "user_id" => $user_id, "main" => "1" ] );
+		if ( empty( $look_for_default ) ) {
+			$key_update[ "main" ] = 1;
+		}
+
+		( new CaptainCore\Keys )->update( $key_update, [ "key_id" => $key_id ] );
 
 		$remote_command = true;
-		$silence = true;
-		$ssh_key = base64_encode( stripslashes_deep( $key->key ) );
-		$command = "key add $ssh_key --id={$key_id}";
-
+		$silence        = true;
+		$ssh_key        = base64_encode( stripslashes_deep( $key->key ) );
+		$command        = "key add $ssh_key --id={$key_id}";
 	}
 
 	if ( $cmd == 'deleteKey' ) {
-
-		$key_id = $value;
+		$key_id   = $value;
 		$time_now = date("Y-m-d H:i:s");
 
-		$db = new CaptainCore\Keys();
-		$db->delete( $key_id );
+		( new CaptainCore\Keys )->delete( $key_id );
 
 		$remote_command = true;
-		$silence = true;
-		$ssh_key = base64_encode( stripslashes_deep( $key->key ) );
-		$command = "key delete --id={$key_id}";
-
+		$silence        = true;
+		$ssh_key        = base64_encode( stripslashes_deep( $key->key ) );
+		$command        = "key delete --id={$key_id}";
 	}
 
 	if ( $cmd == 'listenProcesses' ) {
