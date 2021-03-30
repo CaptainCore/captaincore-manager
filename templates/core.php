@@ -4876,7 +4876,7 @@ $user = wp_get_current_user();
 						<v-card :hover="true" @click="viewKey( key.key_id )">
 						<v-card-title primary-title class="pt-2">
 							<div>
-								<span class="title">{{ key.title }}</a></span>
+								<span class="title">{{ key.title }} <v-chip v-show="key.main == '1'" :input-value="true">Primary Key</v-chip></span>
 							</div>
 						</v-card-title>
 						<v-card-text>
