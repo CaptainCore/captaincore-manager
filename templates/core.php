@@ -9025,7 +9025,7 @@ new Vue({
 				.then( response => {
 					this.fetchAccounts()
 					this.dialog_edit_account.show = false
-					this.dialog_account.step = 1
+					this.showAccount( this.route_path )
 				})
 				.catch( error => console.log( error ) );
 		},
