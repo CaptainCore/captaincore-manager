@@ -1838,10 +1838,10 @@ $user = wp_get_current_user();
 					<v-form lazy-validation ref="login" @keyup.native.enter="signIn()" v-else>
 					<v-row>
 						<v-col cols="12">
-							<v-text-field label="Username or Email" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
+							<v-text-field label="Username or Email" v-model="login.user_login" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
 						</v-col>
 						<v-col cols="12">
-							<v-text-field label="Password" :value="login.user_password" @change.native="login.user_password = $event.target.value" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']"></v-text-field>
+							<v-text-field label="Password" v-model="login.user_password" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']"></v-text-field>
 						</v-col>
 						<v-col cols="12">
 							<v-alert text type="error" v-show="login.errors">{{ login.errors }}</v-alert>
@@ -1871,7 +1871,7 @@ $user = wp_get_current_user();
 					<v-form v-if="login.lost_password" @keyup.native.enter="resetPassword()" ref="reset">
 					<v-row>
 						<v-col cols="12">
-							<v-text-field label="Username or Email" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
+							<v-text-field label="Username or Email" v-model="login.user_login" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
 						</v-col>
 						<v-col cols="12">
 							<v-alert text type="success" v-show="login.message">{{ login.message }}</v-alert>
@@ -1885,10 +1885,10 @@ $user = wp_get_current_user();
 					<v-form lazy-validation ref="login" @keyup.native.enter="signIn()" v-else>
 					<v-row>
 						<v-col cols="12">
-							<v-text-field label="Username or Email" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
+							<v-text-field label="Username or Email" v-model="login.user_login" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
 						</v-col>
 						<v-col cols="12">
-							<v-text-field label="Password" :value="login.user_password" @change.native="login.user_password = $event.target.value" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']"></v-text-field>
+							<v-text-field label="Password" v-model="login.user_password" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']"></v-text-field>
 						</v-col>
 						<v-col cols="12">
 							<v-alert text type="error" v-show="login.errors">{{ login.errors }}</v-alert>
