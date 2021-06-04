@@ -5336,10 +5336,10 @@ $user = wp_get_current_user();
 						</v-alert>
 						</div>
 						<v-data-table
-							:headers='[{"text":"Name","value":"name"},{"text":"Storage","value":"Storage"},{"text":"Visits","value":"visits"}]'
+							:headers='[{"text":"Name","value":"name"},{"text":"Storage","value":"storage"},{"text":"Visits","value":"visits"}]'
 							:items="dialog_account.records.usage_breakdown.sites"
 							item-key="name"
-							hide-default-footer
+							:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
 						>
 						<template v-slot:body="{ items }">
 						<tbody>
