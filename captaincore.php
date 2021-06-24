@@ -1385,7 +1385,11 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		
 		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
 		$environment         = strtolower( $current_environment->environment );
-		( new CaptainCore\Environments )->update( (array) $post->data, [ "environment_id" => $post->data->environment_id ] );
+		$details             = ( isset( $current_environment->details ) ? json_decode( $current_environment->details ) : (object) [] );
+		$details->fathom     = $post->data->fathom;
+		( new CaptainCore\Environments )->update( [ 
+			 "details"    => json_encode( $details ),
+			], [ "environment_id" => $post->data->environment_id ] );
 
 		$response = [
 			"response"        => "Completed update-fathom for $site_id",
@@ -4775,21 +4779,24 @@ function captaincore_ajax_action_callback() {
 		}
 
 		$time_now = date("Y-m-d H:i:s");
-
-		// Saves update settings for a site
-		$environment_update = [
-			'fathom'     => json_encode($value),
-			'updated_at' =>  $time_now,
-		];
+		$data     = (object) $value;
 
 		$environment_id = ( new CaptainCore\Site( $post_id ) )->fetch_environment_id( $environment );
-		( new CaptainCore\Environments )->update( $environment_update, [ "environment_id" => $environment_id ] );
+		$environment    = ( new CaptainCore\Environments )->get( $environment_id );
+		( new CaptainCore\Environments )->update( [ 'fathom' => json_encode( $data->fathom_lite ) ], [ "environment_id" => $environment->environment_id ] );
+		
+		$details         = ( isset( $environment->details ) ? json_decode( $environment->details ) : (object) [] );
+		$details->fathom = $data->fathom;
+		( new CaptainCore\Environments )->update( [ 
+			 "details"    => json_encode( $details ),
+			 "updated_at" => $time_now,
+			], [ "environment_id" => $environment->environment_id ] );
 
-		// Remote Sync
+		( new CaptainCore\Site( $post_id ) )->sync();
+
 		$run_in_background = true;
 		$remote_command    = true;
-		$command           = "stats-deploy $site '" . json_encode($value) . "'";
-
+		$command           = "stats-deploy $site";
 	}
 
 	if ( $cmd == 'updatePlan' ) {
@@ -4853,7 +4860,7 @@ function captaincore_ajax_action_callback() {
 		$account     = $site->account();
 		$shared_with = $site->shared_with();
 		$site        = $site->fetch();
-		echo json_encode( [ 
+		echo json_encode( [
 			"site"        => $site,
 			"account"     => $account,
 			"shared_with" => $shared_with,
@@ -4914,7 +4921,7 @@ function captaincore_ajax_action_callback() {
 				'Content-Type' => 'application/json; charset=utf-8', 
 				'token'        => CAPTAINCORE_CLI_TOKEN 
 			), 
-			'body' => json_encode( [ "command" => $command ] ), 
+			'body'        => json_encode( [ "command" => $command ] ), 
 			'method'      => 'POST', 
 			'data_format' => 'body' 
 		];
@@ -5268,7 +5275,7 @@ function captaincore_install_action_callback() {
 		'headers' => [
 			'Content-Type' => 'application/json; charset=utf-8',
 			'token'        => CAPTAINCORE_CLI_TOKEN
-		], 
+		],
 		'body' => json_encode( [
 			"command" => $command
 		] ),

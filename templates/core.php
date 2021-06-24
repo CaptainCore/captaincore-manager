@@ -506,25 +506,39 @@ $user = wp_get_current_user();
 				<v-toolbar-title>Configure Fathom for {{ dialog_fathom.site.name }}</v-toolbar-title>
 				<v-spacer></v-spacer>
 			</v-toolbar>
-			<v-card-text>
+			<v-card-text class="pt-3">
 				<v-progress-linear :indeterminate="true" v-if="dialog_fathom.loading"></v-progress-linear>
+				<p class="mb-0">Fathom Analytics</p>
 				<table>
-				<tr v-for="tracker in dialog_fathom.environment.fathom">
-					<td class="pa-1"><v-text-field v-model="tracker.domain" label="Domain"></v-text-field></td>
-					<td class="pa-1"><v-text-field v-model="tracker.code" label="Code"></v-text-field></td>
+				<tr v-for="tracker in dialog_site.environment_selected.fathom_analytics">
+					<td><v-text-field v-model="tracker.domain" label="Domain" hide-details></v-text-field></td>
+					<td><v-text-field v-model="tracker.code" label="Code" hide-details></v-text-field></td>
 					<td>
 						<v-icon small @click="deleteFathomItem(tracker)">delete</v-icon>
 					</td>
 				</tr>
 				</table>
-				<v-flex xs12 class="text-right">
+				<v-col cols="12" class="text-right">
+				<v-btn fab small @click='dialog_site.environment_selected.fathom_analytics.push({ "code": "", "domain" : "" })'>
+					<v-icon dark>add</v-icon>
+				</v-btn>
+				</v-col>
+				<p class="mb-0">Fathom Lite</p>
+				<table>
+				<tr v-for="tracker in dialog_fathom.environment.fathom">
+					<td><v-text-field v-model="tracker.domain" label="Domain" hide-details></v-text-field></td>
+					<td><v-text-field v-model="tracker.code" label="Code" hide-details></v-text-field></td>
+					<td>
+						<v-icon small @click="deleteFathomLiteItem(tracker)">delete</v-icon>
+					</td>
+				</tr>
+				</table>
+				<v-col cols="12" class="text-right">
 				<v-btn fab small @click="newFathomItem">
 					<v-icon dark>add</v-icon>
 				</v-btn>
-				</v-flex>
-				<v-flex xs12>
-					<v-btn  color="primary" dark @click="saveFathomConfigurations()">Save Fathom configurations</v-btn>
-				</v-flex>
+				</v-col>
+				<v-btn color="primary" dark @click="saveFathomConfigurations()">Save Fathom configurations</v-btn>
 		</v-card-text>
 		</v-card>
 		</v-dialog>
@@ -11396,9 +11410,13 @@ new Vue({
 		newFathomItem(){
 			this.dialog_fathom.environment.fathom.push({ "code": "", "domain" : "" })
 		},
-		deleteFathomItem (item) {
+		deleteFathomLiteItem (item) {
 			const index = this.dialog_fathom.environment.fathom.indexOf(item)
 			confirm('Are you sure you want to delete this item?') && this.dialog_fathom.environment.fathom.splice(index, 1)
+		},
+		deleteFathomItem (item) {
+			const index = this.dialog_site.environment_selected.fathom_analytics.indexOf(item)
+			confirm('Are you sure you want to delete this item?') && this.dialog_site.environment_selected.fathom_analytics.splice(index, 1)
 		},
 		saveMailgun() {
 			// Prep AJAX request
@@ -11440,8 +11458,11 @@ new Vue({
 				'post_id': site_id,
 				'command': "updateFathom",
 				'environment': this.dialog_site.environment_selected.environment,
-				'value': environment.fathom,
-			};
+				'value': {
+					fathom_lite: environment.fathom,
+					fathom: this.dialog_site.environment_selected.fathom_analytics
+				}
+			}
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {

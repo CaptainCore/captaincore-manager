@@ -789,6 +789,7 @@ class Site {
                     'large' => "{$screenshot_url_base}_thumb-800.jpg"
                 ];
             }
+            $environment->fathom_analytics = ( ! empty( $details->fathom ) ? $details->fathom : [] );
             if ( $site->provider == 'kinsta' ) {
                 $environment->ssh = "ssh {$environment->username}@{$environment->address} -p {$environment->port}";
             }
