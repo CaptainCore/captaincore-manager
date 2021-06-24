@@ -5176,7 +5176,7 @@ function captaincore_install_action_callback() {
 	}
 	if ( $cmd == 'quick_backup' ) {
 		$run_in_background = true;
-		$command   = "quicksave $site";
+		$command   = "quicksave generate $site";
 	}
 	if ( $cmd == 'backup' ) {
 		$run_in_background = true;
@@ -5192,7 +5192,6 @@ function captaincore_install_action_callback() {
 		} else {
 			$command = "snapshot $site --user_id=$user_id --notes=\"$notes\"";
 		}
-
 		if ( $filters ) {
 			$filters = implode(",", $filters); 
 			$command = $command . " --filter={$filters}";
@@ -5208,7 +5207,7 @@ function captaincore_install_action_callback() {
 	}
 
 	if ( $cmd == 'view_quicksave_changes' ) {
-		$command = "show-changes $site --hash=$value";
+		$command = "quicksave show-changes $site $value";
 	}
 
 	if ( $cmd == 'run' ) {
@@ -5226,36 +5225,34 @@ function captaincore_install_action_callback() {
 			"directories" => json_decode ( stripslashes_deep( $value->directories ) ),
 		];
 		$payload           = base64_encode( json_encode( $payload ) );
-		$command           = "site backup download $site $value->backup_id --email=$email --payload='$payload'";
+		$command           = "backup download $site $value->backup_id --email=$email --payload='$payload'";
 	}
 
 	if ( $cmd == 'manage' ) {
-
 		$run_in_background = true;
 		if ( is_int($post_id) ) {
 			$command = "$value $site --" . $arguments['value'] . '="' . stripslashes($arguments['input']) . '"';
 		}
-
 	}
 
 	if ( $cmd == 'quicksave_file_diff' ) {
 		$quicksaves = ( new CaptainCore\Quicksaves )->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
-		$command    = "file-diff $site --hash=$commit --file=$value --html";
+		$command    = "quicksave file-diff $site $commit $value --html";
 	}
 
 	if ( $cmd == 'rollback' ) {
 		$run_in_background = true;
 		$quicksaves = ( new CaptainCore\Quicksaves )->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
-		$command    = "rollback $site $git_commit --$addon_type=$value";
+		$command    = "quicksave rollback $site $git_commit --$addon_type=$value";
 	}
 
 	if ( $cmd == 'quicksave_rollback' ) {
 		$run_in_background = true;
 		$quicksaves = ( new CaptainCore\Quicksaves )->get( $quicksave_id );
 		$git_commit = $quicksaves->git_commit;
-		$command    = "rollback $site $git_commit --all";
+		$command    = "quicksave rollback $site $git_commit --all";
 	}
 
 	if ( $cmd == 'quicksave_file_restore' ) {
