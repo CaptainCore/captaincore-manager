@@ -486,7 +486,7 @@ class Site {
 
     public function backup_get( $backup_id, $environment = "production" ) {
 
-        $command = "site backup get {$this->site_id}-$environment $backup_id";
+        $command = "backup get {$this->site_id}-$environment $backup_id";
         
         // Disable https when debug enabled
         if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
@@ -596,7 +596,7 @@ class Site {
 
     public function backups( $environment = "production" ) {
 
-        $command = "site backup list {$this->site_id}-$environment";
+        $command = "backup list {$this->site_id}-$environment";
         
         // Disable https when debug enabled
         if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
