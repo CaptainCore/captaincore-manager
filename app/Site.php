@@ -341,6 +341,32 @@ class Site {
         // Update environments
         $db_environments = new Environments();
         foreach ( $site->environments as $environment ) {
+            // Add as new environment
+            if ( empty( $environment['environment_id'] ) ) {
+                $new_environment = [
+                    'site_id'                 => $this->site_id,
+                    'environment'             => "Staging",
+                    'address'                 => $environment['address'],
+                    'username'                => $environment['username'],
+                    'password'                => $environment['password'],
+                    'protocol'                => $environment['protocol'],
+                    'port'                    => $environment['port'],
+                    'home_directory'          => $environment['home_directory'],
+                    'database_username'       => $environment['database_username'],
+                    'database_password'       => $environment['database_password'],
+                    'offload_enabled'         => $environment['offload_enabled'],
+                    'offload_access_key'      => $environment['offload_access_key'],
+                    'offload_secret_key'      => $environment['offload_secret_key'],
+                    'offload_bucket'          => $environment['offload_bucket'],
+                    'offload_path'            => $environment['offload_path'],
+                    'updates_enabled'         => $environment['updates_enabled'],
+                    'updates_exclude_plugins' => $environment['updates_exclude_plugins'],
+                    'updates_exclude_themes'  => $environment['updates_exclude_themes'],
+                ];
+                $environment_id = ( new Environments )->insert( $new_environment );
+                continue;
+
+            }
             // Verify this environment ID belongs to this site.
             if ( ! in_array( $environment['environment_id'], $environment_ids )) {
                 continue;
