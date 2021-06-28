@@ -10,8 +10,8 @@ captaincore_header_content_extracted();
 
 // Fetch current user details
 $user = wp_get_current_user();
-?>
-<?php if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
+
+if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <link rel='stylesheet' id='arve-main-css' href='/wp-content/plugins/advanced-responsive-video-embedder/build/main.css' type='text/css' media='all' />
 <link rel='stylesheet' id='arve-pro-css' href='/wp-content/plugins/arve-pro/build/main.css' type='text/css' media='all' />
 <?php } ?>
@@ -6244,14 +6244,13 @@ new Vue({
 			}
 		},
 		formatSize: function (fileSizeInBytes) {
-    var i = -1;
-    var byteUnits = [' kB', ' MB', ' GB', ' TB', 'PB', 'EB', 'ZB', 'YB'];
-    do {
-        fileSizeInBytes = fileSizeInBytes / 1024;
-        i++;
-    } while (fileSizeInBytes > 1024);
-
-    return Math.max(fileSizeInBytes, 0.1).toFixed(1) + byteUnits[i];
+			var i = -1;
+			var byteUnits = [' kB', ' MB', ' GB', ' TB', 'PB', 'EB', 'ZB', 'YB'];
+			do {
+				fileSizeInBytes = fileSizeInBytes / 1024;
+				i++;
+			} while (fileSizeInBytes > 1024);
+    		return Math.max(fileSizeInBytes, 0.1).toFixed(1) + byteUnits[i];
 		},
 		formatGBs: function (fileSizeInBytes) {
 			fileSizeInBytes = fileSizeInBytes / 1024 / 1024 / 1024;
