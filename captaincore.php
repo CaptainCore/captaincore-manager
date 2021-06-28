@@ -5150,17 +5150,17 @@ function captaincore_install_action_callback() {
 	if ( $cmd == 'production-to-staging' ) {
 		$run_in_background = true;
 		if ( $value ) {
-			$command = "copy-production-to-staging $site -- --email=$value";
+			$command = "site copy-to-staging $site --email=$value";
 		} else {
-			$command = "copy-production-to-staging $site";
+			$command = "site copy-to-staging $site";
 		}
 	}
 	if ( $cmd == 'staging-to-production' ) {
 		$run_in_background = true;
 		if ( $value ) {
-			$command = "copy-staging-to-production $site -- --email=$value";
+			$command = "site copy-to-production $site --email=$value";
 		} else {
-			$command = "copy-staging-to-production $site";
+			$command = "site copy-to-production $site";
 		}
 	}
 	if ( $cmd == 'scan-errors' ) {
@@ -5891,7 +5891,7 @@ function captaincore_download_snapshot_email( $snapshot_id ) {
 }
 
 function captaincore_snapshot_download_link( $snapshot_id ) {
-	$command = "snapshot-fetch-link $snapshot_id";
+	$command = "snapshot fetch-link $snapshot_id";
 
 	// Disable https when debug enabled
 	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
