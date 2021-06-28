@@ -5117,7 +5117,7 @@ function captaincore_install_action_callback() {
 	}
 	if ( $cmd == 'migrate' ) {
 		$run_in_background = true;
-		$command = "ssh $site --script=migrate --url=\"$value\"";
+		$command = "ssh $site --script=migrate -- --url=\"$value\"";
 		if ( $_POST['update_urls'] == "true" ) {
 			$command = "$command --update-urls";
 		}
@@ -5129,11 +5129,11 @@ function captaincore_install_action_callback() {
 	if ( $cmd == 'mailgun' ) {
 		$run_in_background = true;
 		mailgun_setup( $domain );
-		$command = "ssh $site --script=deploy-mailgun --key=\"" . MAILGUN_API_KEY . "\" --domain=$domain";
+		$command = "ssh $site --script=deploy-mailgun -- --key=\"" . MAILGUN_API_KEY . "\" --domain=$domain";
 	}
 	if ( $cmd == 'launch' ) {
 		$run_in_background = true;
-		$command = "ssh $site --script=launch --domain=$value";
+		$command = "ssh $site --script=launch -- --domain=$value";
 	}
 	if ( $cmd == 'reset-permissions' ) {
 		$run_in_background = true;
@@ -5150,7 +5150,7 @@ function captaincore_install_action_callback() {
 	if ( $cmd == 'production-to-staging' ) {
 		$run_in_background = true;
 		if ( $value ) {
-			$command = "copy-production-to-staging $site --email=$value";
+			$command = "copy-production-to-staging $site -- --email=$value";
 		} else {
 			$command = "copy-production-to-staging $site";
 		}
@@ -5158,7 +5158,7 @@ function captaincore_install_action_callback() {
 	if ( $cmd == 'staging-to-production' ) {
 		$run_in_background = true;
 		if ( $value ) {
-			$command = "copy-staging-to-production $site --email=$value";
+			$command = "copy-staging-to-production $site -- --email=$value";
 		} else {
 			$command = "copy-staging-to-production $site";
 		}
@@ -5199,7 +5199,7 @@ function captaincore_install_action_callback() {
 	}
 	if ( $cmd == 'deactivate' ) {
 		$run_in_background = true;
-		$command           = "deactivate $site --name=\"$name\" --link=\"$link\"";
+		$command           = "deactivate $site -- --name=\"$name\" --link=\"$link\"";
 	}
 	if ( $cmd == 'activate' ) {
 		$run_in_background = true;
