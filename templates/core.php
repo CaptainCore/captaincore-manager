@@ -8241,11 +8241,10 @@ new Vue({
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					// Updates job id with reponsed background job id
-					this.jobs.filter(job => job.job_id == job_id)[0].status = "done";
-					// Remove item
+					this.goToPath( '/account/sites' )
+					this.jobs.filter(job => job.job_id == job_id)[0].status = "done"
 					this.sites = this.sites.filter( site => site.site_id != site_id )
-					this.snackbar.message = "Deleting site "+ site_name + ".";
+					this.snackbar.message = "Deleting site "+ site_name + "."
 				})
 				.catch( error => console.log( error ) );
 		},

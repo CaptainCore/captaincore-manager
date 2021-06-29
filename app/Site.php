@@ -480,16 +480,15 @@ class Site {
 
     }
 
-    public function delete() {
+    public function mark_inactive() {
+        $site     = self::get();
         $time_now = date("Y-m-d H:i:s");
+        ( new Sites )->update( [ "status" => "inactive", "updated_at" => $time_now ], [ "site_id" => $this->site_id ] );
+        ( new Account( $site->account_id ) )->calculate_usage();
+    }
 
-       ( new Sites )->update( [ 
-            "status"     => "inactive",
-            "updated_at" => $time_now,
-        ],[ 
-            "site_id" => $this->site_id 
-        ] );
-
+    public function delete() {
+        ( new Sites )->delete( $this->site_id );
     }
 
     public function captures( $environment = "production" ) {
