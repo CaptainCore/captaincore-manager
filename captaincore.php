@@ -1558,6 +1558,13 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		];
 	}
 
+	if ( $command == 'site-delete' ) {
+		( new CaptainCore\Sites )->delete( $post->site_id );
+		$response = [
+			"response" => "Delete site {$post->site_id}"
+		];
+	}
+
 	if ( $command == 'account-get-raw' ) {
 		$account = new CaptainCore\Account( $post->account_id, true );
 		$response = [
@@ -4838,7 +4845,7 @@ function captaincore_ajax_action_callback() {
 
 		// Delete site locally
 		$site = new CaptainCore\Site( $post_id );
-		$site->delete();
+		$site->mark_inactive();
 	}
 
 	if ( $cmd == 'deleteAccount' ) {
@@ -5186,11 +5193,11 @@ function captaincore_install_action_callback() {
 		$run_in_background = true;
 		$user_id = get_current_user_id();
 		if ( $date && $value ) {
-			$command = "snapshot $site --email=$value --rollback=\"$date\" --user_id=$user_id --notes=\"$notes\"";
+			$command = "snapshot generate $site --email=$value --rollback=\"$date\" --user-id=$user_id --notes=\"$notes\"";
 		} elseif ( $value ) {
-			$command = "snapshot $site --email=$value --user_id=$user_id --notes=\"$notes\"";
+			$command = "snapshot generate $site --email=$value --user-id=$user_id --notes=\"$notes\"";
 		} else {
-			$command = "snapshot $site --user_id=$user_id --notes=\"$notes\"";
+			$command = "snapshot generate $site --user-id=$user_id --notes=\"$notes\"";
 		}
 		if ( $filters ) {
 			$filters = implode(",", $filters); 
