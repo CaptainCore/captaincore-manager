@@ -13,7 +13,7 @@
  * @package           Captaincore
  *
  * @wordpress-plugin
- * Plugin Name:       CaptainCore
+ * Plugin Name:       CaptainCore Manager
  * Plugin URI:        https://captaincore.io
  * Description:       WordPress management toolkit for geeky maintenance professionals.
  * Version:           0.15.0

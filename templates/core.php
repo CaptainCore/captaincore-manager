@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
   <meta charset="utf-8">
 <?php
+$plugin_url = plugin_dir_url( __DIR__ );
+
 // Load favicons and wpApiSettings from normal WordPress header
 captaincore_header_content_extracted();
 
@@ -20,7 +22,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/vuetify@2.4.2/dist/vuetify.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
-<link href="/wp-content/plugins/captaincore/public/css/captaincore-public-2021-01-06.css" rel="stylesheet">
+<link href="<?php echo $plugin_url; ?>public/css/captaincore-public-2021-01-06.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.5.6/dist/frappe-charts.min.css" rel="stylesheet">
 </head>
 <body>
@@ -288,7 +290,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<h3>Drop files to upload</h3>
 			</div>
 			<div class="upload-drag-btn">
-				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="/wp-content/plugins/captaincore/upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
+				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="<?php echo $plugin_url; ?>upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
 			</div>
 		</div>
 		</div>
@@ -387,7 +389,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<h3>Drop files to upload</h3>
 			</div>
 			<div class="upload-drag-btn">
-				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="/wp-content/plugins/captaincore/upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
+				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="<?php echo $plugin_url; ?>upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
 			</div>
 		</div>
 		</div>
@@ -5900,12 +5902,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		</v-footer>
 	</v-app>
 </div>
-<?php if ( substr( $_SERVER['SERVER_NAME'], -4) == 'test' ) { ?>
-<script src="/wp-content/plugins/captaincore/public/js/vue.js"></script>
-<script src="/wp-content/plugins/captaincore/public/js/qs.js"></script>
-<script src="/wp-content/plugins/captaincore/public/js/axios.min.js"></script>
-<script src="/wp-content/plugins/captaincore/public/js/vuetify.min.js"></script>
-<script src="/wp-content/plugins/captaincore/public/js/vue-upload-component.js"></script>
+<?php if ( substr( $_SERVER['SERVER_NAME'], -10) == '.localhost' ) { ?>
+<script src="<?php echo $plugin_url; ?>public/js/vue.js"></script>
+<script src="<?php echo $plugin_url; ?>public/js/qs.js"></script>
+<script src="<?php echo $plugin_url; ?>public/js/axios.min.js"></script>
+<script src="<?php echo $plugin_url; ?>public/js/vuetify.min.js"></script>
+<script src="<?php echo $plugin_url; ?>public/js/vue-upload-component.js"></script>
 <?php } else { ?>
 <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qs@6.9.1/dist/qs.min.js"></script>
@@ -5915,9 +5917,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <?php } ?>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
-<script src="/wp-content/plugins/captaincore/public/js/moment.min.js"></script>
+<script src="<?php echo $plugin_url; ?>public/js/moment.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.5.6/dist/frappe-charts.min.iife.min.js"></script>
-<script src="/wp-content/plugins/captaincore/public/js/core.js"></script>
+<script src="<?php echo $plugin_url; ?>public/js/core.js"></script>
 <script>
 <?php if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { ?>
 wc_countries = <?php $countries = ( new WC_Countries )->get_allowed_countries(); foreach ( $countries as $key => $county ) { $results[] = [ "text" => $county, "value" => $key ]; }; echo json_encode( $results ); ?>;
