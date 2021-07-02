@@ -34,7 +34,7 @@ class FathomAnalytics
     {
         $this->browser->request('GET', static::LOGIN_URL);
 
-        $this->browser->submitForm('Log in', [
+        $this->browser->submitForm('Login', [
             'email'    => $email,
             'password' => $password
         ]);
