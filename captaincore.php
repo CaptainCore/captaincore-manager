@@ -5232,7 +5232,9 @@ function captaincore_install_action_callback() {
 			"directories" => json_decode ( stripslashes_deep( $value->directories ) ),
 		];
 		$payload           = base64_encode( json_encode( $payload ) );
-		$command           = "backup download $site $value->backup_id --email=$email --payload='$payload'";
+		captaincore_run_background_command( "backup download $site $value->backup_id --email=$email --payload='$payload'" );
+		echo "Generating downloadable zip.";
+		wp_die();
 	}
 
 	if ( $cmd == 'manage' ) {
