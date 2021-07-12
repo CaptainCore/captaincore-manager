@@ -10753,8 +10753,7 @@ new Vue({
 				.then( response => {
 					this.snackbar.message = description
 					this.snackbar.show = true
-					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					this.runCommand( response.data );
+					this.jobs.filter(job => job.job_id == job_id)[0].status = "done"
 			});
 		},
 		getBackup( backup_id, site_id ) {
