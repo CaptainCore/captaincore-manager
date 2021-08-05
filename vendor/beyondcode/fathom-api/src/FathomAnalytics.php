@@ -48,6 +48,7 @@ class FathomAnalytics
 
     public function getSites()
     {
+        ini_set("pcre.backtrack_limit", "-1");
         $result = '';
         $this->browser->getCrawler()->filter('script')->each(function (Crawler $element) use (&$result) {
             $scriptContent = $element->text();
