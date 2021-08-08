@@ -82,6 +82,17 @@ function captaincore_cron_run() {
 }
 add_action( 'captaincore_cron', 'captaincore_cron_run' );
 
+function captaincore_failed_notify( $order_id, $old_status, $new_status ){
+	echo "Woocommerce  $order_id, $old_status, $new_status ";
+    if ( $new_status == 'failed' and $old_status != "failed" ){
+		$order      = wc_get_order( $order_id );
+		$account_id = $order->get_meta( "captaincore_account_id" );
+		echo "( new CaptainCore\Account( $account_id, true ) )->failed_notify();";
+		( new CaptainCore\Account( $account_id, true ) )->failed_notify();
+    }
+}
+add_action( 'woocommerce_order_status_changed', 'captaincore_failed_notify', 10, 3);
+
 function captaincore_rewrite() {
 	add_rewrite_rule( '^checkout-express/([^/]*)/?', 'index.php?pagename=checkout-express&callback=$matches[1]', 'top' );
 	add_rewrite_tag( '%site%', '([^&]+)' );
