@@ -39,7 +39,14 @@ class User {
     }
 
     public function add_payment_method( $source_id ) {
-        $customer = new \WC_Stripe_Customer( $this->user_id );
+        $customer    = new \WC_Stripe_Customer( $this->user_id );
+        $customer_id = $customer->get_id();
+        if ( ! $customer_id ) {
+            $customer->set_id( $customer->create_customer() );
+            $customer_id = $customer->get_id();
+        } else {
+            $customer_id = $customer->update_customer();
+        }
         $response = $customer->add_source( $source_id );
         $customer->attach_source( $source_id );
         return $response;
