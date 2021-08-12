@@ -5217,7 +5217,7 @@ function captaincore_install_action_callback() {
 	}
 	if ( $cmd == 'deactivate' ) {
 		$run_in_background = true;
-		$command           = "deactivate $site -- --name=\"$name\" --link=\"$link\"";
+		$command           = "deactivate $site --name=\"$name\" --link=\"$link\"";
 	}
 	if ( $cmd == 'activate' ) {
 		$run_in_background = true;
