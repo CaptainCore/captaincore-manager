@@ -573,6 +573,9 @@ class Account {
         if ( count( $orders ) > 1 ) {
             $invoice_label  = "invoices";
         }
+        foreach( $orders as $order ) {
+            $order->add_order_note( "Sent payment failure notice." );
+        }
         $order_id       = $orders[0]->ID;
         $account        = ( new Accounts )->get( $this->account_id );
         $plan           = json_decode( $account->plan );
@@ -586,7 +589,7 @@ class Account {
 			$recipient .= ", {$plan->additional_emails}";
 		}
 
-        $from_name = apply_filters( 'woocommerce_email_from_name', get_option( 'woocommerce_email_from_name' ), $this, $from_name );
+        $from_name  = apply_filters( 'woocommerce_email_from_name', get_option( 'woocommerce_email_from_name' ), $this, $from_name );
         $from_email = apply_filters( 'woocommerce_email_from_address', get_option( 'woocommerce_email_from_address' ), $this, $from_email );
 
         $headers = [ 
