@@ -445,7 +445,14 @@ class DB {
             $pattern = '{"name":"'.$version->slug.'","title":"[^"]*","status":"[^"]*","version":"'.$version->name.'"}';
             $pattern = str_replace ( "{", "[{]", $pattern );
             $pattern = str_replace ( "}", "[}]", $pattern );
-            $conditions = "$conditions AND {$wpdb->prefix}captaincore_environments.{$version->type} REGEXP '{$pattern}'";
+            if ( empty( $version_conditions ) ) {
+                $version_conditions = "{$wpdb->prefix}captaincore_environments.{$version->type} REGEXP '{$pattern}'";
+            } else {
+                $version_conditions = "$version_conditions OR {$wpdb->prefix}captaincore_environments.{$version->type} REGEXP '{$pattern}'";
+            }
+        }
+        if ( ! empty( $version_conditions ) ) {
+            $conditions = "$conditions AND ( $version_conditions )";
         }
 
         foreach( $arguments->statuses as $status ) {
@@ -565,21 +572,6 @@ class DB {
             git_commit varchar(100),
             pages longtext,
         PRIMARY KEY  (capture_id)
-        ) $charset_collate;";
-        
-        dbDelta($sql);
-    
-        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_quicksaves` (
-            quicksave_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-            site_id bigint(20) UNSIGNED NOT NULL,
-            environment_id bigint(20) UNSIGNED NOT NULL,
-            created_at datetime NOT NULL,
-            git_status varchar(255),
-            git_commit varchar(100),
-            core varchar(10),
-            themes longtext,
-            plugins longtext,
-        PRIMARY KEY  (quicksave_id)
         ) $charset_collate;";
         
         dbDelta($sql);
