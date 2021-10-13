@@ -2215,7 +2215,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-btn text href="/account/sites" @click.prevent="goToPath( '/account/sites' )"><v-icon>mdi-arrow-left</v-icon> Back</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
-				<v-tabs v-model="dialog_site.site.tabs" background-color="primary" dark>
+				<v-toolbar color="primary" dark dense>
+				<v-tabs v-model="dialog_site.site.tabs">
 					<v-tab :key="1" href="#tab-Site-Management">
 						Site Management <v-icon size="24">mdi-settings</v-icon>
 					</v-tab>
@@ -2223,6 +2224,11 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						Timeline <v-icon size="24">mdi-timeline-text-outline</v-icon>
 					</v-tab>
 				</v-tabs>
+				<v-spacer></v-spacer>
+				<v-toolbar-items>
+					<v-btn text @click="magicLoginSite(dialog_site.site.site_id)">Login to WordPress <v-icon>mdi-open-in-new</v-icon></v-btn>
+				</v-toolbar-items>
+				</v-toolbar>
 				<v-tabs-items v-model="dialog_site.site.tabs">
 					<v-tab-item value="tab-Site-Management" :transition="false" :reverse-transition="false">
 						<div class="grey lighten-4 pb-2">
@@ -7029,6 +7035,39 @@ new Vue({
 				'post_id': site_id,
 				'command': "fetch-one-time-login",
 				'value': username,
+				'environment': this.dialog_site.environment_selected.environment
+			}
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					if ( response.data.includes("http") ) {
+					window.open( response.data );
+						this.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+					} else {
+						this.jobs.filter(job => job.job_id == job_id)[0].status = "error";
+						this.snackbar.message = description + " failed.";
+						this.snackbar.show = true;
+					}
+					
+				})
+				.catch(error => {
+					this.jobs.filter(job => job.job_id == job_id)[0].status = "error";
+					this.snackbar.message = description + " failed.";
+					this.snackbar.show = true;
+					console.log(error.response)
+			});
+		},
+		magicLoginSite( site_id ) {
+// Adds new job
+job_id = Math.round((new Date()).getTime());
+			description = "Magic login to " + site.name
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command":"login"});
+
+			// Prep AJAX request
+			var data = {
+				'action': 'captaincore_ajax',
+				'post_id': site_id,
+				'command': "fetch-magic-login",
 				'environment': this.dialog_site.environment_selected.environment
 			}
 

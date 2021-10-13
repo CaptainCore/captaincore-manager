@@ -4926,6 +4926,44 @@ function captaincore_ajax_action_callback() {
 		wp_die();
 	}
 
+	if ( $cmd == 'fetch-magic-login' ) {
+		$environment_id = ( new CaptainCore\Site( $post_id ) )->fetch_environment_id( $environment );
+		$environment    = ( new CaptainCore\Environments )->get( $environment_id );
+		$current_email  = ( new CaptainCore\User )->fetch()["email"];
+
+		// Attempt to match current user to WordPress user
+		$users = json_decode( $environment->users );
+		foreach ( $users as $user ) {
+			if ( $user->user_email == $current_email ) {
+				$user_login = $user->user_login;
+				break;
+			}
+		}
+
+		// Select random WordPress admin
+		if ( empty( $user_login ) ) { 
+			foreach ( $users as $user ) {
+				if ( strpos( $user->roles, 'administrator') !== false ) {
+					$user_login = $user->user_login;
+					break;
+				}
+			}
+		}
+		$args     = [
+			"body" => json_encode( [
+					"command"    => "login",
+					"user_login" => $user_login,
+					"token"      => $environment->token,
+			 ] ),
+			"method"    => 'POST',
+			"sslverify" => false,
+		];
+		$response  = wp_remote_post( "{$environment->home_url}/wp-admin/admin-ajax.php?action=captaincore_quick_login", $args );
+		$login_url = $response["body"];
+		echo $login_url;
+		wp_die();
+	}
+
 	if ( $remote_command ) {
 
 		// Disable https when debug enabled
