@@ -4371,6 +4371,11 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-row>
 				<v-row>
 					<v-col>
+						<v-text-field v-model="configurations.intercom_embed_id" label="Intercom Embed ID"></v-text-field>
+					</v-col>
+				</v-row>
+				<v-row>
+					<v-col>
 						<v-textarea v-model="configurations.dns_introduction" label="DNS Introduction"></v-textarea>
 					</v-col>
 				</v-row>
@@ -5937,6 +5942,7 @@ wc_countries = []
 wc_states = []
 stripe = ""
 <?php } ?>
+(function(){var w=window;var ic=w.Intercom;if(typeof ic==="function"){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments);};i.q=[];i.c=function(args){i.q.push(args);};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/<?= ( new CaptainCore\Configurations )->get()->intercom_embed_id; ?>';var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);};if(document.readyState==='complete'){l();}else if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();			
 ajaxurl = "/wp-admin/admin-ajax.php"
 Vue.component('file-upload', VueUploadComponent)
 new Vue({
@@ -6357,6 +6363,17 @@ new Vue({
 		if ( this.route == "" ) {
 			this.triggerRoute()
 		}
+
+		// Start chat if logged in
+		if ( this.configurations.intercom_embed_id != "" && this.current_user_email != "" && this.current_user_login != "" && this.current_user_registered != "" ) {
+			window.Intercom("boot", {
+				app_id: this.configurations.intercom_embed_id,
+				name: this.current_user_display_name,
+				email: this.current_user_email,
+				created_at: this.current_user_registered
+			});
+		}
+
 	},
 	computed: {
 		keySelections() {
