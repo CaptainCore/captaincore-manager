@@ -4373,6 +4373,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-col>
 						<v-text-field v-model="configurations.intercom_embed_id" label="Intercom Embed ID"></v-text-field>
 					</v-col>
+					<v-col>
+						<v-text-field v-model="configurations.intercom_secret_key" label="Intercom Secret Key"></v-text-field>
+					</v-col>
 				</v-row>
 				<v-row>
 					<v-col>
@@ -6068,6 +6071,8 @@ new Vue({
 		new_payment: { card: {}, show: false, error: "" },
 		current_user_email: "<?php echo $user->user_email; ?>",
 		current_user_login: "<?php echo $user->user_login; ?>",
+		current_user_registered: "<?php echo strtotime( $user->user_registered ); ?>",
+		current_user_hash: "<?php echo hash_hmac( 'sha256', $user->user_email, ( new CaptainCore\Configurations )->get()->intercom_secret_key ) ?>",
 		current_user_display_name: "<?php echo $user->display_name; ?>",
 		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->user_email; ?>", login: "<?php echo $user->user_login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", errors: [] },
 		stats: { from_at: "<?php echo date("Y-m-d", strtotime( date("Y-m-d" ). " -12 months" ) ); ?>", to_at: "<?php echo date("Y-m-d" ); ?>", from_at_select: false, to_at_select: false },
@@ -6370,7 +6375,8 @@ new Vue({
 				app_id: this.configurations.intercom_embed_id,
 				name: this.current_user_display_name,
 				email: this.current_user_email,
-				created_at: this.current_user_registered
+				created_at: this.current_user_registered,
+				user_hash: this.current_user_hash
 			});
 		}
 

@@ -32,6 +32,9 @@ class Configurations {
         if ( ! isset( $configurations->intercom_embed_id ) ) {
 			$configurations->intercom_embed_id = "";
         }
+        if ( ! isset( $configurations->intercom_secret_key ) ) {
+			$configurations->intercom_secret_key = "";
+        }
         if ( $configurations->dns_introduction ) {
             $Parsedown = new \Parsedown();
 			$configurations->dns_introduction_html = $Parsedown->text( $configurations->dns_introduction );
