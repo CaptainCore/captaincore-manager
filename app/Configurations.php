@@ -29,6 +29,9 @@ class Configurations {
         if ( ! isset( $configurations->usage_pricing ) ) {
 			$configurations->usage_pricing = (object) [ "sites" => [ "quantity" => "1", "cost" => "12.5" ], "storage" => [ "quantity" => "10", "cost" => "10" ], "traffic" => [ "quantity" => "1000000", "cost" => "100" ] ];
         }
+        if ( ! isset( $configurations->intercom_embed_id ) ) {
+			$configurations->intercom_embed_id = "";
+        }
         if ( $configurations->dns_introduction ) {
             $Parsedown = new \Parsedown();
 			$configurations->dns_introduction_html = $Parsedown->text( $configurations->dns_introduction );
