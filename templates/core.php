@@ -6370,7 +6370,7 @@ new Vue({
 		}
 
 		// Start chat if logged in
-		if ( this.configurations.intercom_embed_id != "" && this.current_user_email != "" && this.current_user_login != "" && this.current_user_registered != "" ) {
+		if ( this.role != 'administrator' && this.configurations.intercom_embed_id != "" && this.current_user_email != "" && this.current_user_login != "" && this.current_user_registered != "" ) {
 			window.Intercom("boot", {
 				app_id: this.configurations.intercom_embed_id,
 				name: this.current_user_display_name,
