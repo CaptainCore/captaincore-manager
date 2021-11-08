@@ -7049,7 +7049,7 @@ new Vue({
 
 			// Adds new job
 			job_id = Math.round((new Date()).getTime());
-			description = "Login as '" + username + "' to " + site.name;
+			description = "Login as '" + username + "' to " + this.dialog_site.environment_selected.home_url
 			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command":"login"});
 
 			// Prep AJAX request
@@ -7081,9 +7081,9 @@ new Vue({
 			});
 		},
 		magicLoginSite( site_id ) {
-// Adds new job
-job_id = Math.round((new Date()).getTime());
-			description = "Magic login to " + site.name
+			// Adds new job
+			job_id = Math.round((new Date()).getTime());
+			description = "Magic login to " + this.dialog_site.environment_selected.home_url
 			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command":"login"});
 
 			// Prep AJAX request
