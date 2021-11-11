@@ -2465,10 +2465,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-divider></v-divider>
 					<v-subheader>Site Options</v-subheader>
 					<v-container>
-					<v-btn small depressed @click="PushProductionToStaging( dialog_site.site.site_id )" v-show="dialog_site.site.provider == 'kinsta'">
+					<v-btn small depressed @click="PushProductionToStaging( dialog_site.site.site_id )" v-show="dialog_site.site.provider == 'kinsta' && dialog_site.site.environments.length == 2">
 						<v-icon>local_shipping</v-icon> Push Production to Staging
 					</v-btn>
-					<v-btn small depressed @click="PushStagingToProduction( dialog_site.site.site_id )" v-show="dialog_site.site.provider == 'kinsta'">
+					<v-btn small depressed @click="PushStagingToProduction( dialog_site.site.site_id )" v-show="dialog_site.site.provider == 'kinsta' && dialog_site.site.environments.length == 2">
 						<v-icon class="reverse">local_shipping</v-icon> Push Staging to Production
 					</v-btn>
 					<v-btn small depressed @click="dialog_mailgun_config.show = true" v-show="role == 'administrator'">
@@ -10480,8 +10480,11 @@ new Vue({
 		},
 		PushProductionToStaging( site_id ) {
 			site = this.dialog_site.site
-			should_proceed = confirm("Push production site " + site.name + " to staging site?");
-			description = "Pushing production site '" + site.name + "' to staging";
+			environment = this.dialog_site.site.environments.filter( e => e.environment == "Production" )[0]
+			site_name = environment.home_url
+			site_name = site_name.replace( "https://www.", "" ).replace( "https://", "" ).replace( "http://www.", "" ).replace( "http://", "" )
+			should_proceed = confirm( `Push '${site_name}' to staging environment?` )
+			description = `Pushing '${site_name}' to staging environment.`
 
 			if ( ! should_proceed ) {
 				return;
@@ -10513,8 +10516,11 @@ new Vue({
 		PushStagingToProduction( site_id ) {
 
 			site = this.dialog_site.site
-			should_proceed = confirm("Push staging site " + site.name + " to production site?");
-			description = "Pushing staging site '" + site.name + "' to production";
+			environment = this.dialog_site.site.environments.filter( e => e.environment == "Staging" )[0]
+			site_name = environment.home_url
+			site_name = site_name.replace( "https://", "" ).replace( "http://", "" )
+			should_proceed = confirm( `Push '${site_name}' to production environment?` )
+			description = `Pushing '${site_name}' to production environment`
 
 			if ( ! should_proceed ) {
 				return;
