@@ -9163,9 +9163,10 @@ new Vue({
 		},
 		runRecipe( recipe_id, site_id ) {
 			recipe = this.recipes.filter( recipe => recipe.recipe_id == recipe_id )[0];
-			site = this.dialog_site.site
-
-			should_proceed = confirm("Run recipe '"+ recipe.title +"' on " + site.name + "?");
+			site_name =  this.dialog_site.environment_selected.home_url
+			site_name = site_name.replace( "https://www.", "" ).replace( "https://", "" ).replace( "http://www.", "" ).replace( "http://", "" )
+			
+			should_proceed = confirm( `Run recipe '${recipe.title}' on ${site_name}?` );
 
 			if ( ! should_proceed ) {
 				return;
@@ -9179,7 +9180,7 @@ new Vue({
 				value: recipe_id
 			};
 
-			description = "Run recipe '"+ recipe.title +"' on '" + site.name + "'";
+			description = `Run recipe '${recipe.title}' on ${site_name}`
 
 			// Start job
 			job_id = Math.round((new Date()).getTime());
@@ -9411,8 +9412,11 @@ new Vue({
 		},
 		resetPermissions( site_id ) {
 			site = this.dialog_site.site
-			should_proceed = confirm("Reset file permissions to defaults " + site.name + "?");
-			description = "Resetting file permissions to defaults on '" + site.name + "'";
+			site_name =  this.dialog_site.environment_selected.home_url
+			site_name = site_name.replace( "https://www.", "" ).replace( "https://", "" ).replace( "http://www.", "" ).replace( "http://", "" )
+			
+			should_proceed = confirm( `Reset file permissions to defaults on ${site_name}?` )
+			description = `Resetting file permissions to defaults on ${site_name}`
 
 			if ( ! should_proceed ) {
 				return;
@@ -9645,8 +9649,11 @@ new Vue({
 		siteDeploy( site_id ) {
 
 			site = this.dialog_site.site
-			should_proceed = confirm("Deploy defaults on " + site.name + "?")
-			description = "Deploy defaults on '" + site.name + "'"
+			site_name =  this.dialog_site.environment_selected.home_url
+			site_name = site_name.replace( "https://www.", "" ).replace( "https://", "" ).replace( "http://www.", "" ).replace( "http://", "" )
+			
+			should_proceed = confirm( `Deploy defaults on ${site_name}?` )
+			description = `Deploy defaults on ${site_name}`
 
 			if ( ! should_proceed ) {
 				return
