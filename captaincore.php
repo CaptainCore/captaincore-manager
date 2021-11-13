@@ -4367,9 +4367,10 @@ function captaincore_ajax_action_callback() {
 	};
 
 	if ( $cmd == 'fetchStats' ) {
-		$before   = strtotime( $_POST['from_at'] );
-		$after    = strtotime( $_POST['to_at'] ); 
-		$response = ( new CaptainCore\Site( $post_id ) )->stats( $environment, $before, $after );
+		$before    = strtotime( $_POST['from_at'] );
+		$after     = strtotime( $_POST['to_at'] );
+		$fathom_id = $_POST['fathom_id'];
+		$response  = ( new CaptainCore\Site( $post_id ) )->stats( $environment, $before, $after, $fathom_id );
 		if ( is_wp_error( $response ) ) {
 			$error_message = $response->get_error_message();
 			echo json_encode( [ "error" => $error_message ] );
