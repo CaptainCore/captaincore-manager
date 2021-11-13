@@ -2498,7 +2498,18 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar color="grey lighten-4" dense light flat>
 						<v-toolbar-title>Stats</v-toolbar-title>
 						<v-spacer></v-spacer>
+						
 						<v-toolbar-items v-if="typeof dialog_new_site == 'object'">
+							<v-col v-show="dialog_site.environment_selected.fathom_analytics.length > 1">
+								<v-autocomplete
+									:items='dialog_site.environment_selected.fathom_analytics'
+									item-text="domain"
+									item-value="code"
+									v-model="dialog_site.environment_selected.stats.fathom_id"
+									label="Domain"
+									@change="fetchStats"
+								></v-autocomplete>
+							</v-col>
 							<v-col style="max-width:150px;">
 							<v-menu
 								v-model="stats.from_at_select"
@@ -7971,6 +7982,7 @@ new Vue({
 		},
 		fetchStats() {
 
+			fathom_id = this.dialog_site.environment_selected.stats.fathom_id
 			environment = this.dialog_site.environment_selected
 			environment.stats = "Loading";
 
@@ -7981,7 +7993,11 @@ new Vue({
 				from_at: this.stats.from_at,
 				to_at: this.stats.to_at,
 				environment: this.dialog_site.environment_selected.environment
-			};
+			}
+
+			if ( fathom_id != "" ) {
+				data.fathom_id = fathom_id
+			}
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {

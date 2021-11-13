@@ -901,7 +901,7 @@ class Site {
         return $results;
     }
 
-    public function stats( $environment = "production", $before = "", $after = "" ) {
+    public function stats( $environment = "production", $before = "", $after = "", $fathom_id = "" ) {
 
         if ( empty( $after ) ) {
             $after = date( 'Y-m-d H:i:s' );
@@ -926,24 +926,28 @@ class Site {
         }
         $fathom_ids = array_column( $selected_environment->fathom_analytics, "code" );
 
-        foreach ( $fathom_ids as $fathom_id ) {
-            $url      = "https://api.usefathom.com/v1/aggregations?entity=pageview&entity_id=$fathom_id&aggregates=visits,pageviews,avg_duration,bounce_rate&date_from=$before&date_to=$after&date_grouping=month&sort_by=timestamp:asc";
-            $response = wp_remote_get( $url, [ 
-                "headers" => [ "Authorization" => "Bearer " . FATHOM_API_KEY ],
-            ] );
+        if ( empty( $fathom_id ) ) {
+            $fathom_id = $fathom_ids[0];
         }
+    
+        $url      = "https://api.usefathom.com/v1/aggregations?entity=pageview&entity_id=$fathom_id&aggregates=visits,pageviews,avg_duration,bounce_rate&date_from=$before&date_to=$after&date_grouping=month&sort_by=timestamp:asc";
+        $response = wp_remote_get( $url, [ 
+            "headers" => [ "Authorization" => "Bearer " . FATHOM_API_KEY ],
+        ] );
+        
         $stats = json_decode( $response['body'] );
         foreach ( $stats as $stat ) {
            $stat->date = date('M Y', strtotime( $stat->date ) );
         }
         $response = [
-            "summary" => [
+            "fathom_id" => $fathom_id,
+            "summary"   => [
                 "pageviews"    => array_sum( array_column( $stats, "pageviews" ) ),
                 "visits"       => array_sum( array_column( $stats, "visits" ) ),
                 "bounce_rate"  => array_sum( array_column( $stats, "bounce_rate" ) ) / count ( $stats ),
                 "avg_duration" => array_sum( array_column( $stats, "avg_duration" ) ) / count ( $stats ),
             ],
-            "items"   => $stats
+            "items"     => $stats
         ];
         return $response;
     }
