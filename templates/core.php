@@ -2559,65 +2559,27 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-card-text>
 						<div v-for="e in dialog_site.site.environments" v-show="e.environment == dialog_site.environment_selected.environment">
 							<div :id="`chart_` + dialog_site.site.site_id + `_` + e.environment"></div>
-							<v-card flat v-if="dialog_site.environment_selected.stats && dialog_site.environment_selected.stats.agg">
-							<v-card-title class="text-center pa-0">
+							<v-card flat v-if="dialog_site.environment_selected.stats && dialog_site.environment_selected.stats.summary">
+							<v-card-title class="text-center pa-0 mb-10">
 							<v-layout wrap>
 							<v-flex xs6 sm3>
 								<span class="text-uppercase caption">Unique Visitors</span><br />
-								<span class="display-1 font-weight-thin text-uppercase">{{ dialog_site.environment_selected.stats.agg.Visitors | formatk }}</span>
+								<span class="display-1 font-weight-thin text-uppercase">{{ dialog_site.environment_selected.stats.summary.visits | formatk }}</span>
 							</v-flex>
 							<v-flex xs6 sm3>
 								<span class="text-uppercase caption">Pageviews</span><br />
-								<span class="display-1 font-weight-thin text-uppercase">{{ dialog_site.environment_selected.stats.agg.Pageviews | formatk }}</span>
+								<span class="display-1 font-weight-thin text-uppercase">{{ dialog_site.environment_selected.stats.summary.pageviews | formatk }}</span>
 							</v-flex>
 							<v-flex xs6 sm3>
 								<span class="text-uppercase caption">Avg Time On Site</span><br />
-								<span class="display-1 font-weight-thin text-uppercase">{{ dialog_site.environment_selected.stats.agg.AvgDuration | formatTime }}</span>
+								<span class="display-1 font-weight-thin text-uppercase">{{ dialog_site.environment_selected.stats.summary.avg_duration | formatTime }}</span>
 							</v-flex>
 							<v-flex xs6 sm3>
 								<span class="text-uppercase caption">Bounce Rate</span><br />
-								<span class="display-1 font-weight-thin text-uppercase">{{ dialog_site.environment_selected.stats.agg.BounceRate | formatPercentageFixed }}</span>
+								<span class="display-1 font-weight-thin text-uppercase">{{ dialog_site.environment_selected.stats.summary.bounce_rate | formatPercentageFixed }}</span>
 							</v-flex>
 							</v-layout>
 							</v-card-title>
-							</v-card>
-							<v-card flat class="mb-10">
-							<v-layout wrap v-show="dialog_site.environment_selected.stats.pages">
-							<v-flex xs12 sm6 pr-2>
-							<v-data-table
-								:headers='[{"text":"Top Pages","value":"page",sortable: false, class: "text-truncate"},{"text":"Views","value":"Pageviews", "width": 90, align: "right"},{"text":"Uniques","value":"Visitors", "width": 98, align: "right"}]'
-								:items="dialog_site.environment_selected.stats.pages"
-								class="elevation-0 table-layout-fixed"
-							>
-								<template v-slot:body="{ items }">
-								<tbody>
-									<tr v-for="item in items">
-										<td class="text-truncate"><a :href="item.Hostname + item.Pathname" target="_blank" class="text-truncate">{{ item.Pathname }}</a></td>
-										<td class="text-right">{{ item.Pageviews | formatk }}</td>
-										<td class="text-right">{{ item.Visitors | formatk }}</td>
-									</tr>
-								</tbody>
-								</template>
-							</v-data-table>
-							</v-flex>
-							<v-flex xs12 sm6 pl-2>
-							<v-data-table
-								:headers='[{"text":"Top Referrers","value":"referrer", sortable: false, align: "truncate"},{"text":"Views", "value":"Pageviews", "width": 90, align: "right"},{"text":"Uniques","value":"Visitors", "width": 98, align: "right"}]'
-								:items="dialog_site.environment_selected.stats.referrers"
-								class="elevation-0 table-layout-fixed"
-							>
-								<template v-slot:body="{ items }">
-								<tbody>
-									<tr v-for="item in items">
-										<td class="text-truncate"><a :href="item.Hostname + item.Pathname" target="_blank">{{ item.Group || item.Hostname + item.Pathname }}</a></td>
-										<td class="text-right">{{ item.Pageviews | formatk }}</td>
-										<td class="text-right">{{ item.Visitors | formatk }}</td>
-									</tr>
-								</tbody>
-								</template>
-							</v-data-table>
-							</v-flex>
-							</v-layout>
 							</v-card>
 						</div>
 						</v-flex>
@@ -8039,14 +8001,9 @@ new Vue({
 					chart_dom.innerHTML = ""
 
 					environment.stats = response.data
-					
-					bymonth={};
-					environment.stats.stats.map( groupmonth );
-
-					k = Object.keys( bymonth );
-					names = Object.keys( bymonth ).map( k => bymonth[k].Name )
-					pageviews = Object.keys( bymonth ).map( k => bymonth[k].Pageviews )
-					visitors = Object.keys( bymonth ).map( k => bymonth[k].Visitors )
+					names = environment.stats.items.map( s => s.date )
+					pageviews = environment.stats.items.map( s => s.pageviews )
+					visitors = environment.stats.items.map( s => s.visits )
 					
 					// Generate chart
 					environment.chart = new frappe.Chart( "#" + chart_id, {
@@ -8082,10 +8039,7 @@ new Vue({
 						lineOptions: {
 							regionFill: 1 // default: 0
 						},
-						
 					})
-
-					
 				})
 				.catch( error => console.log( error ) );
 
