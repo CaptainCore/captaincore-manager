@@ -192,13 +192,3 @@ var pretty_timestamp_options = {
 function titleCase(string) {
 	return string.charAt(0).toUpperCase() + string.slice(1);
 }
-
-const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-function groupmonth(value, index, array) {
-	d = new Date(value['Date']);
-	key = (d.getFullYear()-1970)*12 + d.getMonth();
-	name = monthNames[d.getMonth()] + " " + d.getFullYear();
-	bymonth[key]=bymonth[key]||{Name: "",Visitors: value['Visitors'], Pageviews: value['Pageviews']};
-    bymonth[key]={Name: name, Visitors: bymonth[key].Visitors + value['Visitors'], Pageviews: bymonth[key].Pageviews + value['Pageviews']}
-}
