@@ -3067,14 +3067,15 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-text>
 					<div v-else>
 					<v-data-table
-						:headers="[{text:'Created At',value:'created_at'},{text:'WordPress',value:'core',width:'115px'},{text:'',value:'themes',width:'100px'},{text:'',value:'plugins',width:'100px'}]"
+						:headers="[{text:'Created At',value:'created_at'},{text:'WordPress',value:'core',width:'115px'},{text:'',value:'theme_count',width:'115px'},{text:'',value:'plugin_count',width:'115px'}]"
 						:items="dialog_site.environment_selected.quicksaves"
-						item-key="quicksave_id"
+						item-key="hash"
 						no-data-text="No quicksaves found."
                 		:ref="'quicksave_table_'+ dialog_site.site.site_id + '_' + dialog_site.environment_selected.environment"
 						@click:row="expandQuicksave( $event, dialog_site.site.site_id, dialog_site.environment_selected.environment )"
 						single-expand
 						show-expand
+						:footer-props="{ itemsPerPageOptions: [25,50,100,{'text':'All','value':-1}] }"
 						class="table-quicksaves"
 					>
 					<template v-slot:item.created_at="{ item }">
@@ -3083,16 +3084,16 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<template v-slot:item.core="{ item }">
 						{{ item.core }}
 					</template>
-					<template v-slot:item.themes="{ item }">
-						{{ item.themes.length }} themes
+					<template v-slot:item.theme_count="{ item }">
+						{{ item.theme_count }} themes
 					</template>
-					<template v-slot:item.plugins="{ item }">
-						{{ item.plugins.length }} plugins
+					<template v-slot:item.plugin_count="{ item }">
+						{{ item.plugin_count }} plugins
 					</template>
 					<template v-slot:expanded-item="{ item }">
-						<td colspan="5" style="position: relative;background: #fff; padding:0px">
+						<td colspan="7" style="position: relative;background: #fff; padding:0px">
 						<v-toolbar color="dark primary" dark dense light class="elevation-0">
-							<v-toolbar-title class="body-2">{{ item.git_status }}</v-toolbar-title>
+							<v-toolbar-title class="body-2">{{ item.status }}</v-toolbar-title>
 							<v-spacer></v-spacer>
 							<v-toolbar-items>
                         <v-btn text small @click="QuicksavesRollback( dialog_site.site.site_id, item)">Rollback Everything</v-btn>
@@ -3120,7 +3121,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										<v-text-field
 											v-model="item.search"
 											ref="quicksave_search"
-											@input="filterFiles( dialog_site.site.site_id, item.quicksave_id)"
+											@input="filterFiles( dialog_site.site.site_id, item.hash)"
 											append-icon="search"
 											label="Search"
 											single-line
@@ -3138,7 +3139,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										<tbody>
 											<tr v-for="i in items">
 												<td>
-													<a class="v-menu__activator" @click="QuicksaveFileDiff(item.site_id, item.quicksave_id, item.git_commit, i)">{{ i }}</a>
+													<a class="v-menu__activator" @click="QuicksaveFileDiff(item.hash, i)">{{ i }}</a>
 												</td>
 											</tr>
 										</tbody>
@@ -3148,32 +3149,72 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-card>
 						<v-card flat>
 							<v-data-table
-								:headers='[{"text":"Theme","value":"title"},{"text":"Version","value":"version"},{"text":"Status","value":"status"},{"text":"","value":"actions","width":"150px"}]'
+								:headers='[{"text":"Theme","value":"title"},{"text":"Version","value":"version","width":"150px"},{"text":"Status","value":"status","width":"150px"},{"text":"","value":"rollback","width":"150px"}]'
 								:items="item.themes"
 								item-key="name"
 								class="quicksave-table"
 							>
 							<template v-slot:body="{ items }">
 							<tbody>
+							<tr class="red lighten-4" v-for="theme in item.themes_deleted">
+								<td class="strikethrough">{{ theme.title || theme.name }}</td>
+								<td class="strikethrough">{{ theme.version }}</td>
+								<td class="strikethrough">{{ theme.status }}</td>
+								<td><v-btn depressed small @click="RollbackQuicksave(item.hash, 'theme', theme.name, 'previous')">Rollback</v-btn></td>
+								</tr>
 							<tr v-for="theme in items" v-bind:class="{ 'green lighten-5': theme.changed_version || theme.changed_status }">
 								<td>{{ theme.title || theme.name }}</td>
-								<td v-bind:class="{ 'green lighten-4': theme.changed_version }">{{ theme.version }}</td>
-								<td v-bind:class="{ 'green lighten-4': theme.changed_status }">{{ theme.status }}</td>
-								<td><v-btn depressed small @click="RollbackQuicksave(item.site_id, item.quicksave_id, 'theme', theme.name)">Rollback</v-btn></td>
+								<td v-bind:class="{ 'green lighten-4': theme.changed_version }">
+									{{ theme.version }}
+									<v-tooltip bottom>
+										<template v-slot:activator="{ on, attrs }"><v-icon small v-show="theme.changed_version" v-bind="attrs" v-on="on">mdi-information</v-icon></template>
+										<span>Changed from {{ theme.changed_version }}</span>
+									</v-tooltip>
+								</td>
+								<td v-bind:class="{ 'green lighten-4': theme.changed_status }">
+									{{ theme.status }}
+									<v-tooltip bottom>
+										<template v-slot:activator="{ on, attrs }"><v-icon small v-show="theme.changed_status" v-bind="attrs" v-on="on">mdi-information</v-icon></template>
+										<span>Changed from {{ theme.changed_status }}</span>
+									</v-tooltip>
+								</td>
+								<td>
+									<v-dialog max-width="600">
+										<template v-slot:activator="{ on, attrs }">
+											<v-btn depressed small v-bind="attrs" v-on="on">Rollback</v-btn>
+										</template>
+										<template v-slot:default="dialog">
+										<v-card>
+											<v-toolbar color="primary" dark>
+												Rollback '{{ theme.name }}' theme?
+												<v-spacer></v-spacer>
+												<v-btn icon @click="dialog.value = false">
+													<v-icon>close</v-icon>
+												</v-btn>
+											</v-toolbar>
+											<v-list>
+												<v-list-item two-line @click="RollbackQuicksave(item.hash, 'theme', theme.name, 'this', dialog)">
+												<v-list-item-content>
+													<v-list-item-title>This version</v-list-item-title>
+													<v-list-item-subtitle>{{ $options.filters.pretty_timestamp_epoch(item.created_at) }}</v-list-item-subtitle>
+												</v-list-item-content>
+												</v-list-item>
+												<v-list-item two-line @click="RollbackQuicksave(item.hash, 'theme', theme.name, 'previous', dialog)" v-show="item.previous_created_at">
+												<v-list-item-content>
+													<v-list-item-title>Previous version</v-list-item-title>
+													<v-list-item-subtitle>{{ $options.filters.pretty_timestamp_epoch(item.previous_created_at) }}</v-list-item-subtitle>
+												</v-list-item-content>
+												</v-list-item>
+											</v-list>
+										</v-card>
+										</template>
+									</v-dialog>
+								</td>
 							</tr>
 							</template>
-								<template v-slot:body.append="{ headers }">
-								<tr class="red lighten-4 strikethrough" v-for="theme in quicksave.deleted_themes">
-								<td>{{ theme.title || theme.name }}</td>
-								<td>{{ theme.version }}</td>
-								<td>{{ theme.status }}</td>
-								<td></td>
-								</tr>
-								</tbody>
-								</template>
 							</v-data-table>
 							<v-data-table
-								:headers='[{"text":"Plugin","value":"plugin"},{"text":"Version","value":"version"},{"text":"Status","value":"status"},{"text":"","value":"actions","width":"150px"}]'
+								:headers='[{"text":"Plugin","value":"plugin"},{"text":"Version","value":"version","width":"150px"},{"text":"Status","value":"status","width":"150px"},{"text":"","value":"rollback","width":"150px"}]'
 								:items="item.plugins"
 								item-key="name"
 								class="quicksave-table"
@@ -3182,21 +3223,61 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								>
 								<template v-slot:body="{ items }">
 								<tbody>
+								<tr class="red lighten-4" v-for="plugin in item.plugins_deleted">
+									<td class="strikethrough">{{ plugin.title || plugin.name }}</td>
+									<td class="strikethrough">{{ plugin.version }}</td>
+									<td class="strikethrough">{{ plugin.status }}</td>
+									<td><v-btn depressed small @click="RollbackQuicksave(item.hash, 'plugin', plugin.name, 'previous')">Rollback</v-btn></td>
+								</tr>
 								<tr v-for="plugin in items" v-bind:class="[{ 'green lighten-5': plugin.changed_version || plugin.changed_status },{ 'red lighten-4 strikethrough': plugin.deleted }]">
 								<td>{{ plugin.title || plugin.name }}</td>
-								<td v-bind:class="{ 'green lighten-4': plugin.changed_version }">{{ plugin.version }}</td>
-								<td v-bind:class="{ 'green lighten-4': plugin.changed_status }">{{ plugin.status }}</td>
-								<td><v-btn depressed small @click="RollbackQuicksave(item.site_id, item.quicksave_id, 'plugin', plugin.name)" v-show="plugin.status != 'must-use' && plugin.status != 'dropin'">Rollback</v-btn></td>
+								<td v-bind:class="{ 'green lighten-4': plugin.changed_version }">
+									{{ plugin.version }} 
+									<v-tooltip bottom>
+										<template v-slot:activator="{ on, attrs }"><v-icon small v-show="plugin.changed_version" v-bind="attrs" v-on="on">mdi-information</v-icon></template>
+										<span>Changed from {{ plugin.changed_version }}</span>
+									</v-tooltip>
+								</td>
+								<td v-bind:class="{ 'green lighten-4': plugin.changed_status }">
+									{{ plugin.status }}
+									<v-tooltip bottom>
+										<template v-slot:activator="{ on, attrs }"><v-icon small v-show="plugin.changed_status" v-bind="attrs" v-on="on">mdi-information</v-icon></template>
+										<span>Changed from {{ plugin.changed_status }}</span>
+									</v-tooltip>
+								</td>
+								<td>
+									<v-dialog max-width="600">
+										<template v-slot:activator="{ on, attrs }">
+											<v-btn depressed small v-bind="attrs" v-on="on" v-show="plugin.status != 'must-use' && plugin.status != 'dropin'">Rollback</v-btn>
+										</template>
+										<template v-slot:default="dialog">
+										<v-card>
+											<v-toolbar color="primary" dark>
+												Rollback '{{ plugin.name }}' plugin?
+												<v-spacer></v-spacer>
+												<v-btn icon @click="dialog.value = false">
+													<v-icon>close</v-icon>
+												</v-btn>
+											</v-toolbar>
+											<v-list>
+												<v-list-item two-line @click="RollbackQuicksave(item.hash, 'plugin', plugin.name, 'this', dialog)">
+												<v-list-item-content>
+													<v-list-item-title>This version <span v-show="plugin.changed_version" v-text="plugin.version"></span></v-list-item-title>
+													<v-list-item-subtitle>{{ $options.filters.pretty_timestamp_epoch(item.created_at) }}</v-list-item-subtitle>
+												</v-list-item-content>
+												</v-list-item>
+												<v-list-item two-line @click="RollbackQuicksave(item.hash, 'plugin', plugin.name, 'previous', dialog)" v-show="item.previous_created_at">
+												<v-list-item-content>
+													<v-list-item-title>Previous version <span v-show="plugin.changed_version" v-text="plugin.changed_version"></span></v-list-item-title>
+													<v-list-item-subtitle>{{ $options.filters.pretty_timestamp_epoch(item.previous_created_at) }}</v-list-item-subtitle>
+												</v-list-item-content>
+												</v-list-item>
+											</v-list>
+										</v-card>
+										</template>
+									</v-dialog>
+								</td>
 								</tr>
-								</template>
-								<template v-slot:body.append="{ headers }">
-								<tr class="red lighten-4 strikethrough" v-for="plugin in quicksave.deleted_plugins">
-								<td>{{ plugin.title || plugin.name }}</td>
-								<td>{{ plugin.version }}</td>
-								<td>{{ plugin.status }}</td>
-								<td></td>
-								</tr>
-								</tbody>
 								</template>
 							</v-data-table>
 						</v-card>
@@ -10649,12 +10730,23 @@ new Vue({
 			this.dialog_apply_https_urls.site_id = this.sites_selected.map( s => s.site_id );
 			this.dialog_apply_https_urls.site_name = this.sites_selected.length + " sites";
 		},
-		RollbackQuicksave( site_id, quicksave_id, addon_type, addon_name ){
+		RollbackQuicksave( hash, addon_type, addon_name, version, dialog ){
 			site = this.dialog_site.site
 			environment = this.dialog_site.environment_selected;
-			quicksave = environment.quicksaves.filter( quicksave => quicksave.quicksave_id == quicksave_id )[0];
+			quicksave = environment.quicksaves.filter( quicksave => quicksave.hash == hash )[0];
 			date = this.$options.filters.pretty_timestamp_epoch(quicksave.created_at);
-			description = "Rollback "+ addon_type + " " + addon_name +" to version as of " + date + " on " + site.name ;
+			previous_date = this.$options.filters.pretty_timestamp_epoch(quicksave.previous_created_at);
+			if ( version == "this" ) {
+				description = "Rollback "+ addon_type + " " + addon_name +" to version as of " + date + " on " + site.name;
+			}
+			if ( version == "previous" ) {
+				description = "Rollback "+ addon_type + " " + addon_name +" to version as of " + previous_date + " on " + site.name;
+			}
+
+			if ( typeof dialog.value == "boolean" ) {
+				dialog.value = false
+			}
+
 			should_proceed = confirm( description + "?");
 
 			if ( ! should_proceed ) {
@@ -10665,9 +10757,10 @@ new Vue({
 
 			var data = {
 				'action': 'captaincore_install',
-				'post_id': site_id,
+				'post_id': site.site_id,
 				'environment': this.dialog_site.environment_selected.environment,
-				'quicksave_id': quicksave_id,
+				'commit': hash,
+				'version': version,
 				'command': 'rollback',
 				'value'	: addon_name,
 				'addon_type': addon_type,
@@ -10699,7 +10792,6 @@ new Vue({
 				return;
 			}
 
-			site_id = this.dialog_file_diff.quicksave.site_id
 			site = this.dialog_site.site
 
 			description = "Rollback file " + this.dialog_file_diff.file_name  + " as of " + date
@@ -10710,9 +10802,9 @@ new Vue({
 
 			var data = {
 				'action': 'captaincore_install',
-				'post_id': site_id,
+				'post_id': site.site_id,
 				'environment': this.dialog_site.environment_selected.environment,
-				'quicksave_id': this.dialog_file_diff.quicksave.quicksave_id,
+				'hash': this.dialog_file_diff.quicksave.hash,
 				'command': 'quicksave_file_restore',
 				'value'	: this.dialog_file_diff.file_name,
 			};
@@ -10726,23 +10818,22 @@ new Vue({
 				.catch( error => console.log( error ) );
 
 		},
-		QuicksaveFileDiff( site_id, quicksave_id, git_commit, file_name ) {
+		QuicksaveFileDiff( hash, file_name ) {
 			site = this.dialog_site.site
 			environment = this.dialog_site.environment_selected
 			file_name = file_name.split("	")[1]
 			this.dialog_file_diff.response = ""
 			this.dialog_file_diff.file_name = file_name
 			this.dialog_file_diff.loading = true
-			this.dialog_file_diff.quicksave = environment.quicksaves.filter(quicksave => quicksave.quicksave_id == quicksave_id)[0]
+			this.dialog_file_diff.quicksave = environment.quicksaves.filter(quicksave => quicksave.hash == hash)[0]
 			this.dialog_file_diff.show = true
 
 			var data = {
 				'action': 'captaincore_install',
-				'post_id': site_id,
+				'post_id': site.site_id,
 				'environment': this.dialog_site.environment_selected.environment,
-				'quicksave_id': quicksave_id,
 				'command': 'quicksave_file_diff',
-				'commit': git_commit,
+				'commit': hash,
 				'value'	: file_name,
 			};
 
@@ -10821,8 +10912,8 @@ new Vue({
 
 			var data = {
 				'action': 'captaincore_install',
-				'post_id': quicksave.site_id,
-				'quicksave_id': quicksave.quicksave_id,
+				'post_id': site.site_id,
+				'hash': quicksave.hash,
 				'command': 'quicksave_rollback',
 				'environment': this.dialog_site.environment_selected.environment,
 			};
@@ -10850,7 +10941,7 @@ new Vue({
 				post_id: site_id,
 				command: 'view_quicksave_changes',
 				environment: this.dialog_site.environment_selected.environment,
-				value: quicksave.git_commit
+				value: quicksave.hash
 			};
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
@@ -10864,10 +10955,11 @@ new Vue({
 		},
 		expandQuicksave( item, site_id, environment ) {
 			table_name = "quicksave_table_" + site_id + "_" + environment;
-			if ( typeof this.$refs[table_name].expansion[item.quicksave_id] == 'boolean' ) {
+			if ( typeof this.$refs[table_name].expansion[item.hash] == 'boolean' ) {
 				this.$refs[table_name].expansion = ""
 			} else {
-				this.$refs[table_name].expansion = { [item.quicksave_id] : true }
+				this.getQuicksave( item.hash, site_id )
+				this.$refs[table_name].expansion = { [item.hash] : true }
 			}
 		},
 		viewQuicksaves() {
@@ -10910,8 +11002,29 @@ new Vue({
 				.then( response => {
 					this.snackbar.message = description
 					this.snackbar.show = true
-					this.jobs.filter(job => job.job_id == job_id)[0].status = "done"
+					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data
+					this.runCommand( response.data );
 			});
+		},
+		getQuicksave( hash, site_id ) {
+			environment = this.dialog_site.environment_selected.environment.toLowerCase()
+			axios.get(
+				`/wp-json/captaincore/v1/site/${site_id}/${environment}/quicksaves/${hash}`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					quicksave_selected = this.dialog_site.environment_selected.quicksaves.filter( q => q.hash == hash )
+					if ( quicksave_selected.length != 1 ) {
+						return
+					}
+					quicksave_selected[0].previous_created_at = response.data.previous_created_at
+					quicksave_selected[0].plugins = response.data.plugins
+					quicksave_selected[0].plugins_deleted = response.data.plugins_deleted
+					quicksave_selected[0].themes = response.data.themes
+					quicksave_selected[0].themes_deleted = response.data.themes_deleted
+					quicksave_selected[0].core = response.data.core
+					quicksave_selected[0].status = response.data.status
+				});
 		},
 		getBackup( backup_id, site_id ) {
 			environment = this.dialog_site.environment_selected.environment.toLowerCase()
@@ -11810,10 +11923,10 @@ new Vue({
 				this.dialog_modify_plan.plan.next_renewal = `${date} ${timestamp}`
 			}
 		},
-		filterFiles( site_id, quicksave_id ) {
+		filterFiles( site_id, hash ) {
 			site = this.dialog_site.site
 			environment = this.dialog_site.environment_selected;
-			quicksave = environment.quicksaves.filter( quicksave => quicksave.quicksave_id == quicksave_id )[0];
+			quicksave = environment.quicksaves.filter( quicksave => quicksave.hash == hash )[0];
 			search = quicksave.search;
 			quicksave.filtered_files = quicksave.view_files.filter( file => file.includes( search ) );
 		},

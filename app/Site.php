@@ -509,6 +509,43 @@ class Site {
 
     }
 
+    public function quicksave_get( $hash, $environment = "production" ) {
+
+        $command = "quicksave get {$this->site_id}-$environment $hash";
+        
+        // Disable https when debug enabled
+        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+            add_filter( 'https_ssl_verify', '__return_false' );
+        }
+
+        $data = [ 
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8', 
+                'token'        => CAPTAINCORE_CLI_TOKEN 
+            ],
+            'body'        => json_encode( [ "command" => $command ]),
+            'method'      => 'POST',
+            'data_format' => 'body'
+        ];
+
+        // Add command to dispatch server
+        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+        if ( is_wp_error( $response ) ) {
+            $error_message = $response->get_error_message();
+            return [];
+        }
+
+        $json    = json_decode( $response["body"] );
+
+        if ( json_last_error() != JSON_ERROR_NONE ) {
+            return [];
+        }
+
+        return $json;
+
+    }
+
     public function backup_get( $backup_id, $environment = "production" ) {
 
         $command = "backup get {$this->site_id}-$environment $backup_id";
@@ -1039,6 +1076,52 @@ class Site {
     }
 
     public function quicksaves( $environment = "both" ) {
+
+        $command = "quicksave list {$this->site_id}-$environment";
+        
+        // Disable https when debug enabled
+        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+            add_filter( 'https_ssl_verify', '__return_false' );
+        }
+
+        $data = [ 
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8',
+                'token'        => CAPTAINCORE_CLI_TOKEN
+            ],
+            'body'        => json_encode( [ "command" => $command ] ),
+            'method'      => 'POST', 
+            'data_format' => 'body'
+        ];
+
+        // Add command to dispatch server
+        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+        if ( is_wp_error( $response ) ) {
+            $error_message = $response->get_error_message();
+            return "Something went wrong: $error_message";
+        }
+
+        $quicksaves = json_decode( $response["body"] );
+
+        if ( json_last_error() != JSON_ERROR_NONE ) {
+            return [];
+        }
+
+        foreach( $quicksaves as $key => $quicksave ) {
+            $quicksaves[ $key ]->plugins        = [];
+            $quicksaves[ $key ]->themes         = [];
+            $quicksaves[ $key ]->core           = $quicksave->core;
+            $quicksaves[ $key ]->status         = "";
+            $quicksaves[ $key ]->view_changes   = false;
+            $quicksaves[ $key ]->view_files     = [];
+            $quicksaves[ $key ]->filtered_files = [];
+            $quicksaves[ $key ]->loading        = true;
+            $quicksaves[ $key ]->search         = "";
+        }
+
+        return $quicksaves;
+
         // Fetch relating environments
         $site            = ( new Sites )->get( $this->site_id );
         $db_environments = new Environments();

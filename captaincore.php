@@ -1600,24 +1600,6 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		];
 	}
 
-	if ( $command == 'quicksave-add' ) {
-		
-		$quicksave_check = ( new CaptainCore\Quicksaves )->get( $post->data->quicksave_id );
-		// Insert new quicksave
-		if ( empty( $quicksave_check ) ) {
-			( new CaptainCore\Quicksaves )->insert( (array) $post->data );
-		} else {
-			// Update existing quicksave
-			( new CaptainCore\Quicksaves )->update( (array) $post->data, [ "quicksave_id" => $post->data->quicksave_id ] );
-		}
-	
-		$response = [
-			"response"  => "Quicksave added for $site_id",
-			"quicksave" => $post->data,
-		];
-
-	}
-
 	// Updates visits and storage usage
 	if ( $command == 'usage-update' ) {
 
@@ -1954,6 +1936,19 @@ function captaincore_site_snapshot_download_func( $request ) {
 	exit;
 }
 
+function captaincore_site_quicksaves_get_func( $request ) {
+	$site_id     = $request['id'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$hash        = $request['hash'];
+	$environment = $request['environment'];
+	$site        = new CaptainCore\Site( $site_id );
+	return $site->quicksave_get( $hash, $environment );
+}
+
 function captaincore_site_backups_func( $request ) {
 	$site_id     = $request['id'];
 
@@ -2058,6 +2053,15 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/site/(?P<id>[\d]+)/quicksaves/(?P<environment>[a-zA-Z0-9-]+)', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_quicksaves_environment_func',
+			'show_in_index' => false
+		]
+	);
+
+	// Custom endpoint for CaptainCore site/<site-id>/<environment>/quicksaves/<hash>
+	register_rest_route(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/quicksaves/(?P<hash>[a-zA-Z0-9-]+)', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_site_quicksaves_get_func',
 			'show_in_index' => false
 		]
 	);
@@ -4975,6 +4979,7 @@ function captaincore_install_action_callback() {
 
 	$cmd          = $_POST['command'];
 	$value        = $_POST['value'];
+	$version      = $_POST['version'];
 	$commit       = $_POST['commit'];
 	$arguments    = $_POST['arguments'];
 	$filters      = $_POST['filters'];
@@ -4982,7 +4987,6 @@ function captaincore_install_action_callback() {
 	$date         = $_POST['date'];
 	$name         = $_POST['name'];
 	$environment  = $_POST['environment'];
-	$quicksave_id = $_POST['quicksave_id'];
 	$backup_id    = $_POST['backup_id'];
 	$link         = $_POST['link'];
 	$background   = $_POST['background'];
@@ -5202,30 +5206,22 @@ function captaincore_install_action_callback() {
 	}
 
 	if ( $cmd == 'quicksave_file_diff' ) {
-		$quicksaves = ( new CaptainCore\Quicksaves )->get( $quicksave_id );
-		$git_commit = $quicksaves->git_commit;
-		$command    = "quicksave file-diff $site $commit $value --html";
+		$command = "quicksave file-diff $site $commit $value --html";
 	}
 
 	if ( $cmd == 'rollback' ) {
 		$run_in_background = true;
-		$quicksaves = ( new CaptainCore\Quicksaves )->get( $quicksave_id );
-		$git_commit = $quicksaves->git_commit;
-		$command    = "quicksave rollback $site $git_commit --$addon_type=$value";
+		$command           = "quicksave rollback $site $commit --version=$version --$addon_type=$value";
 	}
 
 	if ( $cmd == 'quicksave_rollback' ) {
 		$run_in_background = true;
-		$quicksaves = ( new CaptainCore\Quicksaves )->get( $quicksave_id );
-		$git_commit = $quicksaves->git_commit;
-		$command    = "quicksave rollback $site $git_commit --all";
+		$command           = "quicksave rollback $site $commit --version=$version --all";
 	}
 
 	if ( $cmd == 'quicksave_file_restore' ) {
 		$run_in_background = true;
-		$quicksaves = ( new CaptainCore\Quicksaves )->get( $quicksave_id );
-		$git_commit = $quicksaves->git_commit;
-		$command    = "rollback $site $git_commit --file=$value";
+		$command           = "quicksave rollback $site $commit --version=$version --file=$value";
 	}
 
 	// Disable https when debug enabled
@@ -5332,7 +5328,7 @@ function captaincore_run_background_command( $command ) {
 		$error_message = $response->get_error_message();
 		return "Something went wrong: $error_message";
 	}
-	
+
 	return $response["body"];
 }
 
