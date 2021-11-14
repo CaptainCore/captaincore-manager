@@ -2498,7 +2498,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar color="grey lighten-4" dense light flat>
 						<v-toolbar-title>Stats</v-toolbar-title>
 						<v-spacer></v-spacer>
-						
 						<v-toolbar-items v-if="typeof dialog_new_site == 'object'">
 							<v-col v-show="dialog_site.environment_selected.fathom_analytics.length > 1">
 								<v-autocomplete
@@ -2594,6 +2593,38 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-card>
 						</div>
 						</v-flex>
+						</v-layout>
+						<v-divider></v-divider>
+						<v-subheader>Sharing</v-subheader>
+						<v-container v-if="dialog_site.environment_selected && dialog_site.environment_selected.stats.site" class="mb-10">
+						<v-row>
+							<v-col><v-card-text>
+							Stats are powered by <a href="https://usefathom.com" target="_new">Fathom Analytics</a>. To view stats dashboard directly, you can enable public or private sharing options.
+							<v-chip-group mandatory active-class="primary--text" v-model="dialog_site.environment_selected.stats.site.sharing" @change="shareStats()">
+								<v-chip value="none" filter>Off</v-chip>
+								<v-chip value="private" filter @click="dialog_site.environment_selected.stats_password = 'changeme'">Private</v-chip>
+								<v-chip value="public" filter>Public</v-chip>
+							</v-chip-group>
+							</v-card-text></v-col>
+							<v-col v-show="dialog_site.environment_selected.stats.site.sharing != 'none'">
+							<v-list-item :href="`https://app.usefathom.com/share/${ dialog_site.environment_selected.stats.site.id.toLowerCase() }/${dialog_site.environment_selected.stats.site.name}`" target="_new" dense>
+								<v-list-item-content>
+									<v-list-item-title>Share URL</v-list-item-title>
+									<v-list-item-subtitle>https://app.usefathom.com/share/{{ dialog_site.environment_selected.stats.site.id.toLowerCase() }}/{{ dialog_site.environment_selected.stats.site.name }}</v-list-item-subtitle>
+								</v-list-item-content>
+								<v-list-item-icon>
+									<v-icon>mdi-open-in-new</v-icon>
+								</v-list-item-icon>
+							</v-list-item>
+							<v-list-item v-show="dialog_site.environment_selected.stats.site.sharing == 'private'" class="mt-4">
+								<v-text-field label="Change Share Password" v-model="dialog_site.environment_selected.stats_password" spellcheck="false" clearable autofocus></v-text-field>
+								<v-list-item-icon>
+									<v-btn @click="shareStats()">Save</v-btn>
+								</v-list-item-icon>
+							</v-list-item>
+							<v-col>
+						</v-row>
+						</v-container>
 					</v-card>
 				</v-tab-item>
 				<v-tab-item :key="3" value="tab-Addons" :transition="false" :reverse-transition="false">
@@ -7978,6 +8009,31 @@ new Vue({
 						this.showSite( site )
 					}
 					setTimeout(this.fetchMissing, 1000)
+			})
+		},
+		shareStats() {
+			if ( ! this.dialog_site.environment_selected.stats.site.sharing ) {
+				return
+			}
+			if ( this.dialog_site.environment_selected.stats.site.sharing == 'private' && this.dialog_site.environment_selected.stats_password == '' ) {
+				return
+			}
+			var data = {
+				action: 'captaincore_ajax',
+				post_id: this.dialog_site.site.site_id,
+				command: 'shareStats',
+				fathom_id: this.dialog_site.environment_selected.stats.site.id,
+				sharing: this.dialog_site.environment_selected.stats.site.sharing
+			}
+
+			if ( this.dialog_site.environment_selected.stats_password != '' ) {
+				data.share_password = this.dialog_site.environment_selected.stats_password
+			}
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => { 
+					this.snackbar.message = "Stats sharing is " + this.dialog_site.environment_selected.stats.site.sharing
+					this.snackbar.show = true
 			})
 		},
 		fetchStats() {
