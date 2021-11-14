@@ -4117,6 +4117,40 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-divider></v-divider>
 								<v-subheader>Administrator Options</v-subheader>
 								<v-container>
+								<v-dialog max-width="600">
+									<template v-slot:activator="{ on, attrs }">
+									<v-btn class="mx-1" v-bind="attrs" v-on="on" depressed>Edit Domain</v-btn>
+									</template>
+									<template v-slot:default="dialog">
+									<v-card>
+										<v-toolbar color="primary" dark>
+										<v-btn icon @click="dialog.value = false">
+											<v-icon>close</v-icon>
+										</v-btn>
+										<v-toolbar-title>Edit Domain</v-toolbar-title></v-toolbar>
+										<v-card-text>
+										<v-autocomplete
+											v-model="dialog_domain.accounts"
+											multiple
+											chips
+											deletable-chips
+											label="Accounts"
+											:items="accounts"
+											item-text="name"
+											item-value="account_id"
+											class="mt-5"
+											spellcheck="false"
+											flat
+										></v-autocomplete>
+										</v-card-text>
+										<v-card-actions class="justify-end">
+											<v-btn color="primary" dark @click="dialog.value = false; updateDomainAccount()">
+												Save Domain
+											</v-btn>
+										</v-card-actions>
+									</v-card>
+									</template>
+								</v-dialog>
 									<v-btn class="mx-1" depressed @click="deleteDomain()">Delete Domain</v-btn>
 								</v-container>
 							</v-tab-item>
@@ -9129,6 +9163,29 @@ new Vue({
 					this.showAccount( this.route_path )
 				})
 				.catch( error => console.log( error ) );
+		},
+		updateDomainAccount() {
+			var data = {
+				action: 'captaincore_ajax',
+				command: 'updateDomainAccount',
+				value: this.dialog_domain.accounts,
+				domain_id: this.dialog_domain.domain.domain_id
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					// If error then response
+					if ( response.data.errors ) {
+						this.snackbar.message = error
+						this.snackbar.show = true
+						return
+					}
+					this.snackbar.message = "Domain updated"
+					this.snackbar.show = true
+				})
+				.catch( error => {
+					this.snackbar.message = error
+					this.snackbar.show = true
+				});
 		},
 		deleteAccount() {
 			account = this.dialog_account.records.account

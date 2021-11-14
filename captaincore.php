@@ -4263,6 +4263,7 @@ function captaincore_ajax_action_callback() {
 		'updateFathom',
 		'updateMailgun',
 		'updatePlan',
+		'updateDomainAccount',
 		'newSite',
 		'createSiteAccount',
 		'updateSite', 
@@ -4611,6 +4612,11 @@ function captaincore_ajax_action_callback() {
 		( new CaptainCore\Accounts )->update( [ "name" => trim( $account->name ), "billing_user_id" => $account->billing_user_id ], [ "account_id" => $account->account_id ] );
 		( new CaptainCore\Account( $account->account_id ) )->sync();
 		echo json_encode( $account ) ;
+	}
+
+	if ( $cmd == 'updateDomainAccount' ) {
+		$domain_id = $_POST['domain_id'];
+		( new CaptainCore\Domain( $domain_id ) )->assign_accounts( $value );
 	}
 
 	if ( $cmd == 'newRecipe' ) {
