@@ -987,6 +987,10 @@ class Site {
         }
         $fathom_ids = array_column( $selected_environment->fathom_analytics, "code" );
 
+        if ( empty( $fathom_ids ) ) {
+            return [ "Error" => "There was a problem retrieving stats." ];
+        }
+
         if ( empty( $fathom_id ) ) {
             $fathom_id = $fathom_ids[0];
         }
@@ -1005,6 +1009,7 @@ class Site {
         $response = wp_remote_get( $url, [ 
             "headers" => [ "Authorization" => "Bearer " . FATHOM_API_KEY ],
         ] );
+
         $site     = json_decode( $response['body'] );
         $response = [
             "fathom_id" => $fathom_id,
