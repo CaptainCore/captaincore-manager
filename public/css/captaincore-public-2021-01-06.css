@@ -331,6 +331,14 @@ div.website .logins {
   float: left;
 }
 
+.chart-container .graph-svg-tip.comparison .title {
+  color: #fff;
+}
+
+.stat-chart g.chart-legend {
+  display: none;
+}
+
 div.website .usage-stats {
   text-align: right;
   bottom: 12px;

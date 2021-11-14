@@ -23,7 +23,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <link href="https://cdn.jsdelivr.net/npm/vuetify@2.4.2/dist/vuetify.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
 <link href="<?php echo $plugin_url; ?>public/css/captaincore-public-2021-01-06.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.5.6/dist/frappe-charts.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.1/dist/frappe-charts.min.css" rel="stylesheet">
 </head>
 <body>
 <div id="app" v-cloak>
@@ -5936,7 +5936,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/moment.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.5.6/dist/frappe-charts.min.iife.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.1/dist/frappe-charts.min.umd.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/core.js"></script>
 <script>
 <?php if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { ?>
@@ -8085,21 +8085,19 @@ new Vue({
 								{
 									name: "Pageviews",
 									values: pageviews,
-									chartType: 'bar'
 								},
 								{
 									name: "Visitors",
 									values: visitors,
-									chartType: 'line'
 								},
 							],
 							yRegions: [
 								{ label: "", start: 0, end: 50, options: { labelPos: "right" } }
 							],
 						},
-						type: "axis-mixed",
+						type: "line",
 						height: 270,
-						colors: [ this.configurations.colors.primary, this.configurations.colors.success ],
+						colors: [ this.configurations.colors.accent, this.configurations.colors.primary ],
 						barOptions: {
 							spaceRatio: 0.1,
 						},
@@ -8107,9 +8105,9 @@ new Vue({
 							xAxisMode: "tick",
 							xIsSeries: true
 						},
-						
 						lineOptions: {
-							regionFill: 1 // default: 0
+							regionFill: 1,
+							hideDots: 1
 						},
 					})
 				})
