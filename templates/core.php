@@ -2514,6 +2514,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								></v-autocomplete>
 							</v-col>
 							<v-col style="max-width:150px;">
+								<v-select :items="['Hour', 'Day', 'Month', 'Year']" label="Date Grouping" v-model="stats.grouping" @change="fetchStats()"></v-select>
+							</v-col>
+							<v-col style="max-width:150px;">
 							<v-menu
 								v-model="stats.from_at_select"
 								:close-on-content-click="false"
@@ -6198,7 +6201,7 @@ new Vue({
 		current_user_hash: "<?php echo hash_hmac( 'sha256', $user->user_email, ( new CaptainCore\Configurations )->get()->intercom_secret_key ) ?>",
 		current_user_display_name: "<?php echo $user->display_name; ?>",
 		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->user_email; ?>", login: "<?php echo $user->user_login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", errors: [] },
-		stats: { from_at: "<?php echo date("Y-m-d", strtotime( date("Y-m-d" ). " -12 months" ) ); ?>", to_at: "<?php echo date("Y-m-d" ); ?>", from_at_select: false, to_at_select: false },
+		stats: { from_at: "<?php echo date("Y-m-d", strtotime( date("Y-m-d" ). " -12 months" ) ); ?>", to_at: "<?php echo date("Y-m-d" ); ?>", from_at_select: false, to_at_select: false, grouping: "Month" },
 		<?php if ( current_user_can( "administrator" ) ) { ?>
 		role: "administrator",
 		dialog_processes: { show: false, processes: [], conn: {}, stream: [], loading: true },
@@ -8167,6 +8170,7 @@ new Vue({
 				command: 'fetchStats',
 				from_at: this.stats.from_at,
 				to_at: this.stats.to_at,
+				grouping: this.stats.grouping,
 				environment: this.dialog_site.environment_selected.environment
 			}
 

@@ -962,7 +962,7 @@ class Site {
 
     }
 
-    public function stats( $environment = "production", $before = "", $after = "", $fathom_id = "" ) {
+    public function stats( $environment = "production", $before = "", $after = "", $grouping = "month", $fathom_id = "" ) {
 
         if ( empty( $after ) ) {
             $after = date( 'Y-m-d H:i:s' );
@@ -995,14 +995,31 @@ class Site {
             $fathom_id = $fathom_ids[0];
         }
     
-        $url      = "https://api.usefathom.com/v1/aggregations?entity=pageview&entity_id=$fathom_id&aggregates=visits,pageviews,avg_duration,bounce_rate&date_from=$before&date_to=$after&date_grouping=month&sort_by=timestamp:asc";
+        $url      = "https://api.usefathom.com/v1/aggregations?entity=pageview&entity_id=$fathom_id&aggregates=visits,pageviews,avg_duration,bounce_rate&date_from=$before&date_to=$after&date_grouping=$grouping&sort_by=timestamp:asc";
         $response = wp_remote_get( $url, [ 
             "headers" => [ "Authorization" => "Bearer " . FATHOM_API_KEY ],
         ] );
 
         $stats    = json_decode( $response['body'] );
-        foreach ( $stats as $stat ) {
-           $stat->date = date('M Y', strtotime( $stat->date ) );
+        if ( $grouping == "hour" ) {
+            foreach ( $stats as $stat ) {
+                $stat->date = date('M d Y ga', strtotime( $stat->date ) );
+            }
+        }
+        if ( $grouping == "day" ) {
+            foreach ( $stats as $stat ) {
+                $stat->date = date('M d Y', strtotime( $stat->date ) );
+            }
+        }
+        if ( $grouping == "month" ) {
+            foreach ( $stats as $stat ) {
+                $stat->date = date('M Y', strtotime( $stat->date ) );
+            }
+        }
+        if ( $grouping == "year" ) {
+            foreach ( $stats as $stat ) {
+                $stat->date = date('Y', strtotime( $stat->date ) );
+            }
         }
 
         $url      = "https://api.usefathom.com/v1/sites/$fathom_id";

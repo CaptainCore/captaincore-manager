@@ -4381,8 +4381,9 @@ function captaincore_ajax_action_callback() {
 	if ( $cmd == 'fetchStats' ) {
 		$before    = strtotime( $_POST['from_at'] );
 		$after     = strtotime( $_POST['to_at'] );
+		$grouping  = strtolower( $_POST['grouping'] );
 		$fathom_id = $_POST['fathom_id'];
-		$response  = ( new CaptainCore\Site( $post_id ) )->stats( $environment, $before, $after, $fathom_id );
+		$response  = ( new CaptainCore\Site( $post_id ) )->stats( $environment, $before, $after, $grouping, $fathom_id );
 		if ( is_wp_error( $response ) ) {
 			$error_message = $response->get_error_message();
 			echo json_encode( [ "error" => $error_message ] );
