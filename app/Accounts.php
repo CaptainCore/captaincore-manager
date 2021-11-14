@@ -137,4 +137,8 @@ class Accounts extends DB {
         }
     }
 
+    public function account_ids() {
+        return $this->accounts;
+    }
+
 }

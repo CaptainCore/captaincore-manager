@@ -23,6 +23,24 @@ class Domain {
         return $domain;
     }
 
+    public function accounts() {
+
+        $accountdomain = new AccountDomain();
+        $account_ids   = ( new Accounts )->account_ids();
+        $response      = [];
+
+        // Fetch current records
+        $current_account_ids = array_column ( $accountdomain->where( [ "domain_id" => $this->domain_id ] ), "account_id" );
+        foreach ( $current_account_ids as $current_account_id ) {
+            if ( in_array( $current_account_id, $account_ids ) ) {
+                $response[] = $current_account_id;
+            }
+        }
+
+        return $response;
+
+    }
+
     public function insert_accounts( $account_ids = [] ) {
 
         $accountdomain = new AccountDomain();
@@ -33,7 +51,7 @@ class Domain {
             $lookup = $accountdomain->where( [ "domain_id" => $this->domain_id, "account_id" => $account_id ] );
 
             // Add new record
-            if ( count($lookup) == 0 ) {
+            if ( count( $lookup ) == 0 ) {
                 $accountdomain->insert( [ "domain_id" => $this->domain_id, "account_id" => $account_id ] );
             }
 
@@ -120,6 +138,13 @@ class Domain {
     }
 
     public function fetch() {
+        return [
+            "provider" => self::fetch_remote(),
+            "accounts" => self::accounts(),
+        ];
+    }
+
+    public function fetch_remote() {
         $domain        = ( new Domains )->get( $this->domain_id );
         if ( empty( $domain->provider_id ) ) {
             return [ "errors" => [ "No remote domain found." ] ];
@@ -312,7 +337,7 @@ class Domain {
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8',
             ],
-            'body'        => json_encode( [ 
+            'body'      => json_encode( [ 
                 "field" => "whois_privacy", 
                 'value' => true
             ] ), 
@@ -325,9 +350,8 @@ class Domain {
         echo json_encode(  $response );
         if ( is_wp_error( $response ) ) {
             return json_decode( $response->get_error_message() );
-        } else {
-            return json_decode( $response['body'] );
         }
+        return json_decode( $response['body'] );
     }
 
     public function privacy_off() {
