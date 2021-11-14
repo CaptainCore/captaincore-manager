@@ -2568,7 +2568,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
 						</v-card-text>
 						<div v-for="e in dialog_site.site.environments" v-show="e.environment == dialog_site.environment_selected.environment">
-							<div :id="`chart_` + dialog_site.site.site_id + `_` + e.environment"></div>
+							<div :id="`chart_` + dialog_site.site.site_id + `_` + e.environment" class="stat-chart"></div>
 							<v-card flat v-if="dialog_site.environment_selected.stats && dialog_site.environment_selected.stats.summary">
 							<v-card-title class="text-center pa-0 mb-10">
 							<v-layout wrap>
