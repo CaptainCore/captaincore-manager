@@ -20,7 +20,11 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <link href="<?php echo home_url(); ?>/account/" rel="canonical">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/vuetify@2.4.2/dist/vuetify.min.css" rel="stylesheet">
+<?php if ( substr( $_SERVER['SERVER_NAME'], -10) == '.localhost' ) { ?>
+<link href="<?php echo $plugin_url; ?>public/css/vuetify.min.css" rel="stylesheet">
+<?php } else { ?>
+<link href="https://cdn.jsdelivr.net/npm/vuetify@2.5.14/dist/vuetify.min.css" rel="stylesheet">
+<?php } ?>
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
 <link href="<?php echo $plugin_url; ?>public/css/captaincore-public-2021-01-06.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.1/dist/frappe-charts.min.css" rel="stylesheet">
@@ -5930,7 +5934,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qs@6.9.1/dist/qs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios@0.19.0/dist/axios.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vuetify@2.4.2/dist/vuetify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@2.5.14/dist/vuetify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.20/dist/vue-upload-component.js"></script>
 <?php } ?>
 <script src="https://js.stripe.com/v3/"></script>
