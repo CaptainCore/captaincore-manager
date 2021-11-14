@@ -2531,7 +2531,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									v-model="stats.from_at"
 									label="From"
 									prepend-icon="mdi-calendar"
-									readonly
 									v-bind="attrs"
 									v-on="on"
 									width="100"
@@ -2555,7 +2554,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									v-model="stats.to_at"
 									label="To"
 									prepend-icon="mdi-calendar"
-									readonly
 									v-bind="attrs"
 									v-on="on"
 								></v-text-field>
@@ -2601,9 +2599,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</div>
 						</v-flex>
 						</v-layout>
+						<div v-if="dialog_site.environment_selected && dialog_site.environment_selected.stats.site" class="mb-10">
 						<v-divider></v-divider>
 						<v-subheader>Sharing</v-subheader>
-						<v-container v-if="dialog_site.environment_selected && dialog_site.environment_selected.stats.site" class="mb-10">
+						<v-container>
 						<v-row>
 							<v-col><v-card-text>
 							Stats are powered by <a href="https://usefathom.com" target="_new">Fathom Analytics</a>. To view stats dashboard directly, you can enable public or private sharing options.
@@ -2632,6 +2631,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-col>
 						</v-row>
 						</v-container>
+						</div>
 					</v-card>
 				</v-tab-item>
 				<v-tab-item :key="3" value="tab-Addons" :transition="false" :reverse-transition="false">
