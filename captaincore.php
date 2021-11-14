@@ -4366,6 +4366,13 @@ function captaincore_ajax_action_callback() {
 		echo json_encode( $response );
 	};
 
+	if ( $cmd == 'shareStats' ) {
+		$sharing        = $_POST['sharing'];
+		$share_password = $_POST['share_password'];
+		$fathom_id      = $_POST['fathom_id'];
+		$response       = ( new CaptainCore\Site( $post_id ) )->stats_sharing( $fathom_id, $sharing, $share_password );
+	}
+
 	if ( $cmd == 'fetchStats' ) {
 		$before    = strtotime( $_POST['from_at'] );
 		$after     = strtotime( $_POST['to_at'] );

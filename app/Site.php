@@ -842,6 +842,7 @@ class Site {
             $environment->plugins          = json_decode( $environment->plugins );
             $environment->themes           = json_decode( $environment->themes );
             $environment->stats            = 'Loading';
+            $environment->stats_password   = '';
             $environment->users            = 'Loading';
             $environment->users_search     =  '';
             $environment->backups          = 'Loading';
@@ -901,6 +902,29 @@ class Site {
         return $results;
     }
 
+    public function stats_sharing(  $fathom_id = "", $sharing = "", $share_password = "" ) {
+        $environments     = self::environments();
+        $fathom_ids       = [];
+        foreach( $environments as $environment ) {
+            $environment_fathom_ids = array_column( $environment->fathom_analytics, "code" );
+            foreach ( $environment_fathom_ids as $id ) {
+                $fathom_ids[] = strtolower( $id );
+            } 
+        }
+        if ( ! in_array( strtolower( $fathom_id ), $fathom_ids ) ) {
+            return;
+        }
+       
+        $url      = "https://api.usefathom.com/v1/sites/$fathom_id";
+        $response = wp_remote_post( $url, [ 
+            "headers" => [ "Authorization" => "Bearer " . FATHOM_API_KEY ],
+            'body'    => [ "sharing" => $sharing, "share_password" => $share_password ],
+        ] );
+
+        return json_decode( $response['body'] );
+
+    }
+
     public function stats( $environment = "production", $before = "", $after = "", $fathom_id = "" ) {
 
         if ( empty( $after ) ) {
@@ -934,13 +958,20 @@ class Site {
         $response = wp_remote_get( $url, [ 
             "headers" => [ "Authorization" => "Bearer " . FATHOM_API_KEY ],
         ] );
-        
-        $stats = json_decode( $response['body'] );
+
+        $stats    = json_decode( $response['body'] );
         foreach ( $stats as $stat ) {
            $stat->date = date('M Y', strtotime( $stat->date ) );
         }
+
+        $url      = "https://api.usefathom.com/v1/sites/$fathom_id";
+        $response = wp_remote_get( $url, [ 
+            "headers" => [ "Authorization" => "Bearer " . FATHOM_API_KEY ],
+        ] );
+        $site     = json_decode( $response['body'] );
         $response = [
             "fathom_id" => $fathom_id,
+            "site"      => $site,
             "summary"   => [
                 "pageviews"    => array_sum( array_column( $stats, "pageviews" ) ),
                 "visits"       => array_sum( array_column( $stats, "visits" ) ),
