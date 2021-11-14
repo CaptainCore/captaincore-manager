@@ -339,6 +339,11 @@ div.website .logins {
   display: none;
 }
 
+.chart-container .graph-svg-tip .svg-pointer {
+  transform: none;
+  background: none;
+}
+
 div.website .usage-stats {
   text-align: right;
   bottom: 12px;

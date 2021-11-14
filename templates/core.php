@@ -8098,9 +8098,6 @@ new Vue({
 						type: "line",
 						height: 270,
 						colors: [ this.configurations.colors.accent, this.configurations.colors.primary ],
-						barOptions: {
-							spaceRatio: 0.1,
-						},
 						axisOptions: {
 							xAxisMode: "tick",
 							xIsSeries: true
