@@ -10153,12 +10153,12 @@ new Vue({
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
-					if ( response.data.code == "no_domain" ) {
+					this.dialog_domain.accounts = response.data.accounts
+					if ( response.data.provider.errors ) {
 						this.dialog_domain.provider =  { contacts: {} }
 						return
-						
 					}
-					this.dialog_domain.provider = response.data
+					this.dialog_domain.provider = response.data.provider
 					if ( this.dialog_domain.provider.contacts.owner.country && this.dialog_domain.provider.contacts.owner.country != "" ) {
 						this.populateStatesFor( this.dialog_domain.provider.contacts.owner )
 					}
