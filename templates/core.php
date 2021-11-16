@@ -8214,9 +8214,6 @@ new Vue({
 									values: visitors,
 								},
 							],
-							yRegions: [
-								{ label: "", start: 0, end: 50, options: { labelPos: "right" } }
-							],
 						},
 						type: "line",
 						height: 270,
