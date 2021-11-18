@@ -10318,6 +10318,9 @@ new Vue({
 				}
 
 				if ( record.type == "TXT" ) {
+					if ( record.update.record_name == "@" ) {
+						record.update.record_name = ""
+					}
 					// Check for value wrapped in quotes. If not add them.
 					record.update.record_value.forEach( v => {
 						v.value = v.value.trim();
@@ -10346,12 +10349,12 @@ new Vue({
 
 				// Prepares new records
 				if ( record.new ) {
-					record.update.record_type = record.type;
+					record.update.record_type = record.type
 				}
 				
 				// Prepares new & modified records
 				if ( record.edit || record.new ) {
-					record.update.record_value = record_value;
+					record.update.record_value = record_value
 					record_updates.push( record.update );
 				}
 
@@ -10379,21 +10382,20 @@ new Vue({
 				'action': 'captaincore_dns',
 				'domain_key': domain_id,
 				'record_updates': record_updates
-			};
+			}
 
-			self = this;
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					self.dialog_domain.results = response.data;
-					self.reflectDNS();
+					this.dialog_domain.results = response.data
+					this.reflectDNS()
 					
 					// If no errors found then fetch new details
 					// self.modifyDNS( self.dialog_domain.domain );
 				})
 				.catch( error => {
-					self.snackbar.message = error;
-					self.snackbar.show = true;
-					self.dialog_domain.saving = false;
+					this.snackbar.message = error;
+					this.snackbar.show = true;
+					this.dialog_domain.saving = false;
 					//self.dialog_domain.results = response.data;
 				});
 		},
@@ -10417,8 +10419,13 @@ new Vue({
 
 					result.success = "Record added successfully";
 
-					// Removed existing new recording matching type, name, value and ttl.
-					this.dialog_domain.records = this.dialog_domain.records.filter( r => r.update.record_status != "new-record" && r.update.record_name != result.name )
+					// Remove existing new recording matching type, name, value and ttl.
+					this.dialog_domain.records = this.dialog_domain.records.filter( r => {
+						if ( r.update.record_status == "new-record" && r.update.record_name == result.name && r.update.record_type == result.type ) {
+							return false
+						}
+						return true
+					})
 
 					if ( result.type == "A" || result.type == "AAAA" || result.type == "SPF" ) {
 						record_value = [];
