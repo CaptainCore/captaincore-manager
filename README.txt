@@ -43,6 +43,35 @@ TODO
 TODO
 
 == Changelog ==
+
+= 0.16.0: Nov 20 2021
+* New: Stats powered by Fathom Analytics API
+* New: Stats sharing functionality via Fathom Analytics API
+* New: Stat timeframes hourly, daily, monthly and yearly
+* New: Stat date selectors
+* New: Intercom integration
+* New: Quicksave individual rollback options for this and previous version.
+* New: Quicksave info overviews to see how items were changes.
+* New: Add user dialog
+* New: Automatically switch billing plans
+* New: Edit domain accounts
+* New: Magic WordPress login
+* New: Failed customer renewal email
+* New: Billing features track overpayments, refunds, charges and credits to invoices
+* New: Subscription and upcoming renewal pages for admins.
+* Tweak: Upgraded Vuetify to v2.5.14
+* Tweak: Upgraded Frappe Charts to v1.6.1
+* Tweak: Expanded invoices to include credits, charges and refunds.
+* Tweak: Expanded adding removing domain DNS zones to regular users.
+* Tweak: Improved script and deployment prompts with better indication which environment will be affected.
+* Tweak: Improved listing of nameservers
+* Tweak: Filter version by OR operator
+* Tweak: Move package HTML2PDF to [CaptainCore Supporting Files](https://github.com/CaptainCore/captaincore-supporting-files) plugin
+* Fix: Compatibility with CaptainCore v0.12.0
+* Fix: DNS response logic after making edits
+* Fix: Magic login responses
+* Fix: Stripe credit cards on file to be properly associated with customer
+
 = 0.15.0: Jan 9 2021
 * New: Billing interface powered by WooCommerce and CaptainCore account plans.
 * New: Download PDFs for invoices.
@@ -98,7 +127,7 @@ TODO
 * New: Account method `calculate_usage`
 * New: Select sites that are currently filtered for bulk actions
 * Tweak: Upgraded Vuetify to v2.3.0
-* Tweak: Consistency improvements to interface. Domains section now behaves similar to the sites section. Expand content and removed unnessary borders.
+* Tweak: Consistency improvements to interface. Domains section now behaves similar to the sites section. Expand content and removed unnecessary borders.
 * Tweak: Moved bulk tools, task activity and filters to console
 * Tweak: Fix site storage bug
 
