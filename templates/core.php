@@ -5367,7 +5367,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-toolbar-items>
 						</v-toolbar>
 					<v-card flat>
-					<div v-if="typeof dialog_account.records.account.plan == 'object' && dialog_account.records.account.plan != null">
+					<div v-if="typeof dialog_account.records.account.plan == 'object' && dialog_account.records.account.plan != null && dialog_account.records.account.plan.next_renewal">
 						<v-card-text class="body-1">
 						<v-row>
 						<v-col>
@@ -5393,7 +5393,13 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-layout>
 						</v-col>
 						<v-col class="text-center">
-							<span class="text-uppercase caption">Next Renewal Estimate</span><br />
+							<span class="text-uppercase caption">Next Renewal Estimate</span>
+							<v-tooltip bottom>
+							<template v-slot:activator="{ on, attrs }">
+								<v-icon class="ml-1" v-bind="attrs" v-on="on">mdi-calendar</v-icon>
+							</template>
+							<span>Renews on {{ dialog_account.records.account.plan.next_renewal | pretty_timestamp_short }}</span>
+							</v-tooltip><br />
 							<span class="display-1 font-weight-thin" v-html="plan_usage_estimate"></span><br />
 							<span>
 							<v-dialog v-model="dialog_breakdown" max-width="980px">
@@ -5485,12 +5491,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-alert text :value="true" type="info" color="primary" class="mx-2">
 							<strong>{{ dialog_account.records.account.plan.name }} Plan</strong> supports up to {{ dialog_account.records.account.plan.limits.visits | formatLargeNumbers }} visits, {{ dialog_account.records.account.plan.limits.storage }}GB storage and {{ dialog_account.records.account.plan.limits.sites }} sites. Extra sites, storage and visits charged based on usage.
 						</v-alert>
-						</div>
-						<div v-else>
-						<v-alert text :value="true" type="info" color="primary" class="mx-2">
-							Development mode, no plan selected.
-						</v-alert>
-						</div>
 						<v-data-table
 							:headers='[{"text":"Name","value":"name"},{"text":"Storage","value":"storage"},{"text":"Visits","value":"visits"}]'
 							:items="dialog_account.records.usage_breakdown.sites"
@@ -5511,6 +5511,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</tbody>
 						</template>
 						</v-data-table>
+						</div>
+						<div v-else>
+						<v-alert text :value="true" type="info" color="primary" class="ma-2">
+							Hosting plan not active.
+						</v-alert>
+						</div>
 					</v-card>
 					</v-tab-item>
 					</v-tabs-items>
@@ -6457,6 +6463,13 @@ new Vue({
 			// takes in '2018-06-18 19:44:47' then returns "Monday, Jun 18, 2018, 7:44 PM"
 			formatted_date = new Date(date).toLocaleTimeString("en-us", pretty_timestamp_options);
 			return formatted_date;
+		},
+		pretty_timestamp_short: function (date) {
+			// takes in '2018-06-18 19:44:47' then returns "Monday, Jun 18, 2018, 7:44 PM"
+			formatted_date = new Date(date).toLocaleDateString("en-us", {
+				year: "numeric", month: "long", day: "numeric"
+			})
+			return formatted_date
 		},
 		pretty_timestamp_epoch: function (date) {
 			// takes in '1577584719' then returns "Monday, Jun 18, 2018, 7:44 PM"
