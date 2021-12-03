@@ -4854,7 +4854,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<p class="mt-5">Order was created on <strong>{{ dialog_invoice.response.created_at | pretty_timestamp_epoch }}</strong> and is currently <strong>{{ dialog_invoice.response.status }} payment</strong>.</p>
 						<v-data-table
 							:headers="[
-								{ text: 'Name', value: 'name', width: '120px' },
+								{ text: 'Name', value: 'name', width: '120px', align: 'start' },
 								{ text: 'Description', value: 'description' },
 								{ text: 'Quantity', value: 'quantity', width: '100px' },
 								{ text: 'Total', value: 'total' } ]"
@@ -4866,30 +4866,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<template v-slot:item.description="{ item }">
 								<div v-for="meta in item.description">
 									<div v-if="item.name == 'Hosting Plan' && meta.value.split( '\n' ).length > 1">
-									{{ meta.value.split( "\n" )[0] }}
-									<v-dialog max-width="900">
-									<template v-slot:activator="{ on, attrs }">
-										<a v-bind="attrs" v-on="on" class="caption mx-3">view details</a>
-									</template>
-									<template v-slot:default="dialog">
-									<v-card>
-										<v-card-title class="headline">
-										Hosting Plan - {{ meta.value.split( "\n" )[0] }}
-										</v-card-title>
-
-										<v-card-text class="mt-3">
-										{{ meta.value.split( "\n" )[2] }}
+									<v-card flat>
+										<v-card-subtitle class="px-0 pb-0"><strong>{{ meta.value.split( "\n" )[0] }}</strong></v-card-subtitle>
+										<v-card-text class="px-0">
+										<div class="text--primary">
+											{{ meta.value.split( "\n" )[2] }}
+										</div>
 										</v-card-text>
-
-										<v-divider></v-divider>
-
-										<v-card-actions>
-										<v-spacer></v-spacer>
-										<v-btn text @click="dialog.value = false">Close</v-btn>
-										</v-card-actions>
 									</v-card>
-									</template>
-									</v-dialog>
 									</div>
 									<p v-else-if="meta.key == 'Details'">{{ meta.value }}</p>
 								</div>
