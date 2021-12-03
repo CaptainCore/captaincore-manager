@@ -25,7 +25,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <?php } else { ?>
 <link href="https://cdn.jsdelivr.net/npm/vuetify@2.6.1/dist/vuetify.min.css" rel="stylesheet">
 <?php } ?>
-<link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.5.95/css/materialdesignicons.min.css" rel="stylesheet">
 <link href="<?php echo $plugin_url; ?>public/css/captaincore-public-2021-01-06.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.1/dist/frappe-charts.min.css" rel="stylesheet">
 </head>
@@ -109,7 +109,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
         </v-list-item>
         <v-list-item link href="/account/domains" @click.prevent="goToPath( '/account/domains' )">
           <v-list-item-icon>
-            <v-icon>mdi-library-books</v-icon>
+            <v-icon>mdi-text-box-multiple</v-icon>
           </v-list-item-icon>
           <v-list-item-content>
             <v-list-item-title>Domains</v-list-item-title>
@@ -117,7 +117,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
         </v-list-item>
 		<v-list-item link href="/account/accounts" @click.prevent="goToPath( '/account/accounts' )">
           <v-list-item-icon>
-            <v-icon>mdi-account-card-details</v-icon>
+            <v-icon>mdi-card-account-details</v-icon>
           </v-list-item-icon>
           <v-list-item-content>
             <v-list-item-title>Accounts</v-list-item-title>
@@ -2264,7 +2264,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									<v-flex xs12 sm8>
            							 	<v-tabs v-model="dialog_site.site.tabs_management" background-color="grey lighten-4" icons-and-text right show-arrows height="54">
 										<v-tab key="Info" href="#tab-Info">
-											Info <v-icon>mdi-library-books</v-icon>
+											Info <v-icon>mdi-text-box-multiple</v-icon>
 										</v-tab>
            							 	<v-tab key="Stats" href="#tab-Stats" @click="fetchStats()">
 											Stats <v-icon>mdi-chart-bar</v-icon>
@@ -4755,7 +4755,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-toolbar-items v-show="dialog_invoice.loading == false">
 							<v-tooltip bottom>
 								<template v-slot:activator="{ on }">
-									<v-btn text @click="downloadPDF()" v-on="on"><v-icon>mdi-file-pdf-outline</v-icon></v-btn>
+									<v-btn text @click="downloadPDF()" v-on="on"><v-icon>mdi-file-download</v-icon></v-btn>
 									<a ref="download_pdf" href="#"></a>
 								</template>
 								<span>Download PDF Invoice</span>
@@ -5198,7 +5198,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-tab>
 						<v-tab>
 							{{ dialog_account.records.domains.length }} Domains
-							<v-icon size="20" class="ml-1">mdi-library-books</v-icon>
+							<v-icon size="20" class="ml-1">mdi-text-box-multiple</v-icon>
 						</v-tab>
 						<v-tab>
 							Timeline
@@ -5604,7 +5604,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							{{ new_invite.account.website_count }} Sites
 						</v-tab>
 						<v-tab>
-							<v-icon class="mr-1">mdi-library-books</v-icon>
+							<v-icon class="mr-1">mdi-text-box-multiple</v-icon>
 							{{ new_invite.account.domain_count }} Domains
 						</v-tab>
 						</v-tabs>
