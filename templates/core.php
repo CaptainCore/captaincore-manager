@@ -4034,13 +4034,13 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</v-col>
 								</v-row>
 								<v-row>
-									<v-col class="text-right mx-3" v-show="!dialog_domain.loading">
+									<v-col class="text-left mx-3 mb-5" v-show="!dialog_domain.loading">
 										<v-btn class="mx-1" depressed color="primary" @click="saveDNS()" :dark="dialog_domain.records && dialog_domain.records.length != '0'" :disabled="dialog_domain.records && dialog_domain.records.length == '0'">Save Records</v-btn>
 										<a ref="export_domain" href="#"></a>
 									</v-col>
 								</v-row>
 								<v-row>
-									<v-col class="mx-3">
+									<v-col class="mx-3 mb-10">
 										<template v-for="result in dialog_domain.results">
 											<v-alert text :value="true" type="success" v-show="typeof result.success != 'undefined'">{{ result.success }}</v-alert>
 											<v-alert text :value="true" type="error" v-show="typeof result.errors != 'undefined'">{{ result.errors }}</v-alert>
