@@ -99,6 +99,10 @@ class Domains extends DB {
         if (  substr( $txt, 0, 2 ) != "ca" ) {
             return "TXT record doesn't look right. `$txt`";
         }
+
+         // Load domains from transient
+		$constellix_all_domains = get_transient( 'constellix_all_domains' );
+
         // If empty then update transient with large remote call
 		if ( empty( $constellix_all_domains ) ) {
 
@@ -111,7 +115,7 @@ class Domains extends DB {
 
 		// Search API for domain ID
 		foreach ( $constellix_all_domains as $item ) {
-			if ( $domain->name == $domain ) {
+			if ( $item->name == $domain ) {
                 $record = $item;
                 break;
 			}
@@ -125,12 +129,45 @@ class Domains extends DB {
             return "Domain $domain not found with DNS provider. Nameservers are `$nameservers`.";
         }
 
-        return "TO DO: adding $txt to $domain";
+        $txt_records  = constellix_api_get( "domains/{$record->id}/records/txt" );
+        foreach ( $txt_records as $txt_record ) {
+            if ( $txt_record->name == "" ) {
+                foreach( $txt_record->value as $value ) {
+                    if ( str_replace( '"', '', $value->value ) == $txt ) {
+                        return "Domain $domain already has $txt added.";
+                    }
+                }
+                $txt_record->value[] = [
+                    'value'       => "\"$txt\"",
+                    'disableFlag' => false,
+                ];
 
-        // Update record here
-        //$response  = constellix_api_get( "domains/{$domain->id}/records" );
+				$post = array(
+					'recordOption' => 'roundRobin',
+					'name'         => "",
+					'ttl'          => 3600,
+					'roundRobin'   => $txt_record->value,
+				);
+                $response = constellix_api_put( "domains/{$record->id}/records/txt/$txt_record->id", $post );
+			
+                return "Added `$txt` to $domain on existing TXT record.";
+            }
+        }
 
-        //return $response;
+        // add new empty Txt record
+        $post = [
+            'recordOption' => 'roundRobin',
+            'name'         => "",
+            'ttl'          => "3600",
+            'roundRobin'   => [ [
+                'value'       => $txt,
+                'disableFlag' => false,
+            ] ],
+        ];
+        $response = constellix_api_post( "domains/{$record->id}/records/txt", $post );
+
+        return "Adding `$txt` to $domain";
+
     }
 
     public function provider_login() {
