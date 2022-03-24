@@ -95,6 +95,44 @@ class Domains extends DB {
         return [ "domain_id" => $domain_id, "message" => "Deleted domain {$domain->name}" ];
     }
 
+    public function add_verification_record( $domain, $txt ) {
+        if (  substr( $txt, 0, 2 ) != "ca" ) {
+            return "TXT record doesn't look right. `$txt`";
+        }
+        // If empty then update transient with large remote call
+		if ( empty( $constellix_all_domains ) ) {
+
+			$constellix_all_domains = constellix_api_get( 'domains' );
+
+			// Save the API response so we don't have to call again until tomorrow.
+			set_transient( 'constellix_all_domains', $constellix_all_domains, HOUR_IN_SECONDS );
+
+		}
+
+		// Search API for domain ID
+		foreach ( $constellix_all_domains as $item ) {
+			if ( $domain->name == $domain ) {
+                $record = $item;
+                break;
+			}
+        }
+
+        if ( empty( $record ) ) {
+            $nameservers = implode ( array_column ( dns_get_record( $domain, DNS_NS ), "target" ), " " );
+            if ( empty( $nameservers ) ) {
+                return "Domain $domain not found with DNS provider and no nameservers were found.";
+            }
+            return "Domain $domain not found with DNS provider. Nameservers are `$nameservers`.";
+        }
+
+        return "TO DO: adding $txt to $domain";
+
+        // Update record here
+        //$response  = constellix_api_get( "domains/{$domain->id}/records" );
+
+        //return $response;
+    }
+
     public function provider_login() {
 
         $data = [ 
