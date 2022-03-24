@@ -1263,6 +1263,41 @@ function captaincore_client_options_func( WP_REST_Request $request ) {
 
 }
 
+function captaincore_missive_func( WP_REST_Request $request ) {
+
+	$key        = $request->get_header('X-Hook-Signature');
+	
+	if ( empty( $key ) ) {
+		return "Bad Request";
+	}
+
+	$computed_signature = 'sha256=' . hash_hmac( "sha256", $request->get_body(), CAPTAINCORE_MISSIVE_API );
+	if ( ! hash_equals( $computed_signature, $key ) ) {
+		return "Bad Request";
+	}
+
+	$errors     = [];
+	$missive    = json_decode( $request->get_body() );
+	$message_id = $missive->latest_message->id;
+	$message    = missive_api_get( "messages/$message_id")->messages->body;
+
+	preg_match('/The TXT record to validate your SSL certificate renewal is:<\/p><p>(.+?)<br>(.+?)<\/p>/', $message, $matches );
+	$domain     = $matches[1];
+	$txt_record = $matches[2];
+	$response   = ( new CaptainCore\Domains )->add_verification_record( $domain, $txt_record );
+	$errors     = implode( $errors, ", " );
+
+	missive_api_post( "posts", [ "posts" => [ 
+		"conversation"  => $missive->conversation->id,
+		"notification"  => [ "title" => "", "body" => "" ],
+		"username"      => "CaptainCore Bot", 
+		"username_icon" => "https://captaincore.io/logo.png",
+		"markdown"      => $response
+	] ] );
+
+	return;
+}
+
 function captaincore_api_func( WP_REST_Request $request ) {
 
 	$post          = json_decode( file_get_contents( 'php://input' ) );
@@ -2027,6 +2062,15 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/api', [
 			'methods'       => 'POST',
 			'callback'      => 'captaincore_api_func',
+			'show_in_index' => false
+		]
+	);
+
+	// Custom endpoint for CaptainCore API
+	register_rest_route(
+		'captaincore/v1', '/missive', [
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_missive_func',
 			'show_in_index' => false
 		]
 	);
