@@ -72,6 +72,7 @@ run_captaincore();
 require plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
 require 'includes/register-custom-fields.php';
 require 'includes/constellix-api/constellix-api.php';
+require 'includes/missive-api/missive-api.php';
 require 'includes/mailgun-api.php';
 require 'includes/process-functions.php';
 require 'includes/bulk-actions.php';
