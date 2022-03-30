@@ -1413,6 +1413,7 @@ class Site {
         $details         = json_decode( $site->details );
         $details->visits = array_sum( array_column( $environments, "visits" ) );
         $details->storage = array_sum( array_column( $environments, "storage" ) );
+        $details->username = $environments[0]->username;
         ( new Sites )->update( [ "details" => json_encode( $details ) ], [ "site_id" => $site->site_id ] );
     }
 

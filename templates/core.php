@@ -2081,6 +2081,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					]"
 					:items="sites"
 					:search="search"
+					:custom-filter="siteSearch"
 					item-key="site_id"
 					ref="site_datatable"
 					:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
@@ -7164,6 +7165,11 @@ new Vue({
 			}
 			// Order these
 			this.sites = this.sites.sort( this.compare( key, this.sort_direction ) );
+		},
+		siteSearch(value, search, item) {
+			return value != null &&
+				search != null &&
+				value.toString().includes(search) || item.username.toString().includes(search)
 		},
 		removeFromBulk( site_id ) {
 			this.sites_selected = this.sites_selected.filter(site => site.site_id != site_id);
