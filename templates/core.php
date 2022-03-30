@@ -44,48 +44,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<div class="flex" style="opacity:0;"><textarea id="clipboard" style="height:1px;display:flex;cursor:default"></textarea></div>
 		</v-toolbar-title>
 		<v-spacer></v-spacer>
-		<v-dialog v-model="dialog_processes.show" v-if="role == 'administrator'">
-		<template v-slot:activator="{ on, attrs }">
-		<v-btn icon v-bind="attrs" v-on="on" @click="fetchRunningProcesses()">
-			<v-icon>mdi-cogs</v-icon> 
-      	</v-btn>
-		</template>
-		<v-card>
-		<v-toolbar>
-          <v-toolbar-title>Running processes</v-toolbar-title>
-          <v-spacer></v-spacer>
-          <v-toolbar-items>
-		  <v-btn icon @click="dialog_processes.show = false; dialog_processes.conn.onclose()">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-          </v-toolbar-items>
-        </v-toolbar>
-		<v-data-table :headers="[{ text: 'Process ID', value: 'process_id' },{ text: 'Command', value: 'command' },{ text: 'Created At', value: 'created_at' },{ text: 'Status', value: 'completed_at' },{ text: '', value: 'progress' }]" :items="dialog_processes.processes" :loading="dialog_processes.loading">
-		<template v-slot:item.created_at="{ item }">
-			{{ item.created_at | pretty_timestamp_epoch }}
-		</template>
-		<template v-slot:item.completed_at="{ item }">
-			<span v-if="typeof item.completed_at == 'string'"><v-icon>mdi-check</v-icon> {{ item.completed_at | pretty_timestamp_epoch }}</span>
-			<div v-else-if="item.percentage < 100">
-			<v-progress-circular
-				:rotate="-90"
-				:size="50"
-				:width="5"
-				:value="item.percentage"
-				color="primary"
-				class="mr-3 my-1"
-				>
-			{{ Math.round( item.percentage * 10) / 10 }}%
-			</v-progress-circular>
-			{{ item.status }}
-			</div>
-			<div v-else>
-			<v-icon>mdi-check</v-icon> 
-			</div>
-		</template>
-		</v-data-table>
-		</v-card>
-		</v-dialog>
 		<v-tooltip bottom>
 			<template v-slot:activator="{ on }">
 				<v-btn icon href="/wp-admin/" v-show="role == 'administrator'" v-on="on">
