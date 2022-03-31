@@ -2405,7 +2405,26 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-btn>
 					</v-container>
 					</div>
-					<div v-show="role == 'administrator'">
+					<div v-show="role == 'administrator' && dialog_site.site.shared_with && dialog_site.site.shared_with.length > 0">
+					<v-divider></v-divider>
+					<v-subheader>Shared With</v-subheader>
+					<v-container>
+					<v-row dense v-if="dialog_site.site.shared_with && dialog_site.site.shared_with.length > 0" class="mt-3">
+						<v-col v-for="account in dialog_site.site.shared_with" :key="account.account_id" cols="4">
+						<v-card :href="`/account/accounts/${ account.account_id }`" @click.prevent="goToPath( '/account/accounts/' + account.account_id )">
+							<v-card-title v-html="account.name"></v-card-title>
+							<v-card-actions>
+							<v-avatar class="mr-2" tile :color="account.account_id == dialog_site.site.customer_id ? 'grey lighten-3' : 'none'">
+								<v-icon>mdi-account-circle</v-icon>
+							</v-avatar>
+							<v-avatar tile :color="account.account_id == dialog_site.site.account_id ? 'grey lighten-3' : 'none'">
+								<v-icon>mdi-currency-usd</v-icon>
+							</v-avatar>
+							</v-card-actions>
+						</v-card>
+					</v-col>
+					</v-row>
+					</v-container>
 					<v-divider></v-divider>
 					<v-subheader>Administrator Options</v-subheader>
 					<v-container>
