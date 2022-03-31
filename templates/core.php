@@ -2139,16 +2139,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-autocomplete>
 					</v-toolbar-title>
 					<v-spacer></v-spacer>
-					<v-toolbar-items>
-						<v-tooltip>
-							<template v-slot:activator="{ on }">
-								<v-btn text small @click="showLogEntry(dialog_site.site.site_id)" v-on="on" v-show="role == 'administrator'"><v-icon dark>mdi-check</v-icon></v-btn>
-							</template>
-							<span>Add Log Entry</span>
-						</v-tooltip>
-						<v-divider vertical class="mx-1" inset v-show="role == 'administrator'"></v-divider>
-						<v-btn text href="/account/sites" @click.prevent="goToPath( '/account/sites' )"><v-icon>mdi-arrow-left</v-icon> Back</v-btn>
-					</v-toolbar-items>
 				</v-toolbar>
 				<v-toolbar color="primary" dark dense>
 				<v-tabs v-model="dialog_site.site.tabs">
@@ -2161,6 +2151,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-tabs>
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
+					<v-btn text small @click="showLogEntry(dialog_site.site.site_id)" v-show="role == 'administrator'"><v-icon class="mr-1">mdi-note-check-outline</v-icon></v-btn>
 					<v-btn text @click="magicLoginSite(dialog_site.site.site_id)">Login to WordPress <v-icon>mdi-open-in-new</v-icon></v-btn>
 				</v-toolbar-items>
 				</v-toolbar>
@@ -3799,9 +3790,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							></v-autocomplete>
 							</v-toolbar-title>
 							<v-spacer></v-spacer>
-							<v-toolbar-items>
-								<v-btn text href="/account/domains" @click.prevent="goToPath( '/account/domains' )"><v-icon>mdi-arrow-left</v-icon> Back</v-btn>
-							</v-toolbar-items>
 						</v-toolbar>
 						<v-tabs v-model="dialog_domain.tabs" background-color="primary" dark>
 							<v-tab key="dns">
@@ -5098,8 +5086,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									<v-btn text small @click="dialog_configure_defaults.show = true" v-on="on"><v-icon dark>mdi-clipboard-check-outline</v-icon></v-btn>
 								</template><span>Configure Defaults</span>
 							</v-tooltip>
-							<v-divider vertical class="mx-1" inset></v-divider>
-							<v-btn text href="/account/accounts" @click.prevent="goToPath( '/account/accounts' )"><v-icon>mdi-arrow-left</v-icon> Back</v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
 					<v-tabs v-model="account_tab" background-color="primary" dark>
