@@ -1297,7 +1297,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-dialog
 					v-if="role == 'administrator'"
 					v-model="dialog_new_log_entry.show"
-					transition="dialog-bottom-transition"
 					scrollable
 					persistent
 					width="500"
@@ -1353,7 +1352,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-dialog
 					v-if="role == 'administrator'"
 					v-model="dialog_edit_log_entry.show"
-					transition="dialog-bottom-transition"
 					scrollable
 					width="500"
 				>
@@ -1409,11 +1407,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-text>
 					</v-card>
 				</v-dialog>
-				<v-dialog
-					v-model="dialog_mailgun.show"
-					transition="dialog-bottom-transition"
-					scrollable
-				>
+				<v-dialog v-model="dialog_mailgun.show" scrollable>
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_mailgun.show = false">
@@ -1447,11 +1441,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-text>
 					</v-card>
 				</v-dialog>
-				<v-dialog
-					v-model="dialog_backup_snapshot.show"
-					width="500"
-					transition="dialog-bottom-transition"
-				>
+				<v-dialog v-model="dialog_backup_snapshot.show" width="500">
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_backup_snapshot.show = false">
@@ -1603,11 +1593,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-text>
 					</v-card>
 				</v-dialog>
-				<v-dialog
-					v-model="dialog_toggle.show"
-					transition="dialog-bottom-transition"
-					scrollable
-				>
+				<v-dialog v-model="dialog_toggle.show" scrollable>
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_toggle.show = false">
@@ -1655,12 +1641,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-text>
 					</v-card>
 				</v-dialog>
-				<v-dialog
-					v-model="dialog_migration.show"
-					transition="dialog-bottom-transition"
-					scrollable
-					width="500"
-				>
+				<v-dialog v-model="dialog_migration.show" scrollable width="500">
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_migration.show = false">
@@ -1717,12 +1698,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-text>
 					</v-card>
 				</v-dialog>
-				<v-dialog
-					v-model="dialog_apply_https_urls.show"
-					transition="dialog-bottom-transition"
-					scrollable
-					width="500"
-				>
+				<v-dialog v-model="dialog_apply_https_urls.show" scrollable width="500">
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_apply_https_urls.show = false">
@@ -1748,11 +1724,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-text>
 					</v-card>
 				</v-dialog>
-				<v-dialog
-					v-model="dialog_file_diff.show"
-					transition="dialog-bottom-transition"
-					scrollable
-				>
+				<v-dialog v-model="dialog_file_diff.show" scrollable>
 				<v-card>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_file_diff.show = false">
