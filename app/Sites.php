@@ -129,6 +129,34 @@ class Sites extends DB {
         return $sites;
     }
 
+    public function fathom_sites( $force = false ) {
+        $fathom_sites = get_transient( 'fathom_sites' );
+
+		if ( ! empty( $fathom_sites ) && ! $force ) {
+			return $fathom_sites;
+		}
+
+        $last_key = "";
+        $sites    = [];
+        $results  = 100;
+        do {
+            if ( empty( $last_key ) ) {
+                $response = fathom_api_get( "sites", [ "limit" => 100 ] );
+            } else {
+                $response = fathom_api_get( "sites", [ "limit" => 100, "starting_after" => $last_key ] );
+            }
+            $results  = count( $response->data );
+            foreach( $response->data as $site ){
+                $sites[] = $site;
+            }
+            $last_key = end ( $response->data )->id;
+        } while ( $results == 100 );
+
+        set_transient( 'fathom_sites', $sites, HOUR_IN_SECONDS * 24 );
+
+        return $sites;
+    }
+
     public function list_details() {
 		$details = [];
         foreach( $this->sites as $site_id ) {
