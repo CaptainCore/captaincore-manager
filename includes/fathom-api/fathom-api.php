@@ -25,3 +25,24 @@ function fathom_api_get( $command, $parameters = [] ) {
 	}
 
 }
+
+function fathom_api_post( $command, $parameters = [] ) {
+
+    $args = [ 
+        'timeout' => 120,
+        "headers" => [
+            "Authorization" => "Bearer " . FATHOM_API_KEY
+        ],
+        'body'    => $parameters,
+        'method'  => 'POST',
+    ];
+
+    $remote = wp_remote_post( "https://api.usefathom.com/v1/$command", $args );
+
+	if ( is_wp_error( $remote ) ) {
+		return $remote->get_error_message();
+	} else {
+		return json_decode( $remote['body'] );
+	}
+
+}
