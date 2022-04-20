@@ -11,7 +11,7 @@ class Domains extends DB {
     public function __construct( $domains = [] ) {
         $user        = new User;
         $account_ids = $user->accounts();
-        
+
         // New array to collect IDs
         $domain_ids = [];
 
@@ -95,9 +95,28 @@ class Domains extends DB {
         return [ "domain_id" => $domain_id, "message" => "Deleted domain {$domain->name}" ];
     }
 
+    public function get_domain( $host ) {
+        $myhost = strtolower(trim($host));
+        $count = substr_count($myhost, '.');
+        if($count === 2){
+          if(strlen(explode('.', $myhost)[1]) > 3) $myhost = explode('.', $myhost, 2)[1];
+        } else if($count > 2){
+          $myhost = get_domain(explode('.', $myhost, 2)[1]);
+        }
+        return $myhost;
+      }      
+
     public function add_verification_record( $domain, $txt ) {
-        if (  substr( $txt, 0, 2 ) != "ca" ) {
+
+        $name = "";
+        
+        if ( substr( $txt, 0, 2 ) != "ca" ) {
             return "TXT record doesn't look right. `$txt`";
+        }
+
+        $primary_domain = self::get_domain( $domain );
+        if ( $primary_domain != $domain ) {
+            $name = rtrim ( substr ( $domain, 0, strrpos( $domain, $primary_domain ) ), "." );
         }
 
          // Load domains from transient
@@ -115,7 +134,7 @@ class Domains extends DB {
 
 		// Search API for domain ID
 		foreach ( $constellix_all_domains as $item ) {
-			if ( $item->name == $domain ) {
+			if ( $item->name == $primary_domain ) {
                 $record = $item;
                 break;
 			}
@@ -131,7 +150,7 @@ class Domains extends DB {
 
         $txt_records  = constellix_api_get( "domains/{$record->id}/records/txt" );
         foreach ( $txt_records as $txt_record ) {
-            if ( $txt_record->name == "" ) {
+            if ( $txt_record->name == $name ) {
                 foreach( $txt_record->value as $value ) {
                     if ( str_replace( '"', '', $value->value ) == $txt ) {
                         return "Domain $domain already has $txt added.";
@@ -142,22 +161,22 @@ class Domains extends DB {
                     'disableFlag' => false,
                 ];
 
-				$post = array(
+				$post = [
 					'recordOption' => 'roundRobin',
-					'name'         => "",
+					'name'         => $name,
 					'ttl'          => 3600,
 					'roundRobin'   => $txt_record->value,
-				);
+                ];
                 $response = constellix_api_put( "domains/{$record->id}/records/txt/$txt_record->id", $post );
 			
                 return "Added `$txt` to $domain on existing TXT record.";
             }
         }
 
-        // add new empty Txt record
+        // add new TXT record
         $post = [
             'recordOption' => 'roundRobin',
-            'name'         => "",
+            'name'         => $name,
             'ttl'          => "3600",
             'roundRobin'   => [ [
                 'value'       => $txt,

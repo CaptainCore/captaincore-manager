@@ -4112,9 +4112,33 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-btn @click="updateDomainContacts()" color="primary">
 									Update Contact Information
 								</v-btn>
+								
 								</v-col>
 								</v-row>
 								</v-card>
+							<v-divider></v-divider>
+							<v-subheader>Nameservers</v-subheader>
+							<v-card tile flat>
+								<v-overlay absolute :value="dialog_domain.updating_nameservers">
+								<v-progress-circular indeterminate size="64"></v-progress-circular>
+								</v-overlay>
+								<v-row no-gutters class="mx-3" v-for="(nameserver, index) in dialog_domain.provider.nameservers">
+									<v-col class="ma-1"><v-text-field v-model="nameserver.value" hide-details spellcheck="false"></v-text-field></v-col>
+									<v-col class="mt-1"><v-btn text small icon color="primary" class="ma-3" @click="dialog_domain.provider.nameservers.splice(index, 1)"><v-icon>mdi-delete</v-icon></v-btn></v-col>
+								</v-row>
+								<v-row class="mx-2">
+								<v-col cols="12">				
+									<v-btn depressed @click="dialog_domain.provider.nameservers.push( { value: '' } )">Add Additional Nameserver</v-btn>
+								</v-col>
+								</v-row>
+								<v-row class="mx-2 mb-5">
+								<v-col cols="12">
+								<v-btn @click="updateDomainNameservers()" color="primary">
+									Update Nameservers
+								</v-btn>
+								</v-col>
+								</v-row>
+							</v-card>
 							<v-divider></v-divider>
 							<v-subheader>Controls</v-subheader>
 								<v-container>
@@ -6065,7 +6089,7 @@ new Vue({
 		},
 		dialog_new_domain: { show: false, domain: { name: "", account_id: "" }, loading: false, errors: [] },
 		dialog_configure_defaults: { show: false, loading: false },
-		dialog_domain: { show: false, updating_contacts: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], results: [], errors: [], loading: true, saving: false, step: 1 },
+		dialog_domain: { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], results: [], errors: [], loading: true, saving: false, step: 1 },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $user->user_email; ?>", current_user_email: "<?php echo $user->user_email; ?>", filter_toggle: true, filter_options: [] },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
 		dialog_launch: { show: false, site: {}, domain: "" },
@@ -10040,6 +10064,33 @@ new Vue({
 					this.dialog_domain.loading = false
 				})
 		},
+		updateDomainNameservers() {
+			this.dialog_domain.updating_nameservers = true
+			axios.post( `/wp-json/captaincore/v1/domain/${domain.domain_id}/nameservers`, {
+					'nameservers': this.dialog_domain.provider.nameservers.map( ns => ns.value )
+				},{
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then( response => {
+					if ( response.data.error ) {
+						this.dialog_domain.updating_nameservers = false
+						this.snackbar.message = response.data.error
+						this.snackbar.show = true
+						this.dialog_domain.loading = false
+						return
+					}
+					this.dialog_domain.updating_nameservers = false
+					this.snackbar.message = response.data.response
+					this.snackbar.show = true
+					this.dialog_domain.loading = false
+				})
+				.catch( error => {
+					this.dialog_domain.updating_nameservers = false
+					this.snackbar.message = error
+					this.snackbar.show = true
+					this.dialog_domain.loading = false
+				})
+		},
 		domainLockUpdate() {
 			this.dialog_domain.update_lock = true
 			status = this.dialog_domain.provider.locked
@@ -10100,7 +10151,7 @@ new Vue({
 				})
 		},
 		modifyDNS( domain ) {
-			this.dialog_domain = { show: false, updating_contacts: false, auth_code: "", fetch_auth_code: false, provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], loading: true, saving: false, step: 2 };
+			this.dialog_domain = { show: false, updating_contacts: false, updating_nameservers: false, auth_code: "", fetch_auth_code: false, provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], loading: true, saving: false, step: 2 };
 			if ( domain.remote_id == null ) {
 				this.dialog_domain.errors = [ "Domain not found." ];
 				this.dialog_domain.domain = domain;

@@ -1727,12 +1727,6 @@ function captaincore_domain_func( $request ) {
 	if ( ! $verify ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
-	$domain = ( new CaptainCore\Domains )->get( $domain_id );
-
-	if ( empty( $domain->provider_id ) ) {
-		return new WP_Error( 'no_domain', 'No records', [ 'status' => 200 ] );
-	}
-
 	return ( new CaptainCore\Domain( $domain_id ) )->fetch();
 }
 
@@ -1775,6 +1769,15 @@ function captaincore_domain_update_contacts_func( $request ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
     return ( new CaptainCore\Domain( $domain_id ) )->set_contacts( $request['contacts'] );
+}
+
+function captaincore_domain_update_nameservers_func( $request ) {
+	$domain_id = $request['id'];
+	$verify    = ( new CaptainCore\Domains )->verify( $domain_id );
+	if ( ! $verify ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+    return ( new CaptainCore\Domain( $domain_id ) )->set_nameservers( $request['nameservers'] );
 }
 
 function captaincore_domain_auth_code_func( $request ) {
@@ -2219,6 +2222,14 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/domain/(?P<id>[\d]+)/contacts', [
 			'methods'       => 'POST',
 			'callback'      => 'captaincore_domain_update_contacts_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/domain/(?P<id>[\d]+)/nameservers', [
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_domain_update_nameservers_func',
 			'show_in_index' => false
 		]
 	);
