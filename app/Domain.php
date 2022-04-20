@@ -172,10 +172,14 @@ class Domain {
         if ( is_wp_error( $response ) ) {
             return json_decode( $response->get_error_message() );
         } else {
-            //echo $response['body'];
-            $response = json_decode( $response['body'] )->domain;
+            $response    = json_decode( $response['body'] )->domain;
+            $nameservers = [];
+            foreach( $response->nameservers as $nameserver ) {
+                $nameservers[] = [ "value" => $nameserver ];
+            }
             $domain   = [
                 "domain"        => $response->name,
+                "nameservers"   => $nameservers,
                 "contacts"      => [
                     "owner"   => $response->owner,
                     "admin"   => $response->admin,
@@ -492,6 +496,56 @@ class Domain {
         }
         if ( $response->succeeded == "true" ) {
             return [ "response" => "Contacts have been updated." ];
+        }
+    }
+
+    public function set_nameservers( $nameservers = [] ) {
+        $domain        = ( new Domains )->get( $this->domain_id );
+        if ( empty( $domain->provider_id ) ) {
+            return [ "errors" => [ "No remote domain found." ] ];
+        }
+        if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
+            ( new Domains )->provider_login();
+        }
+        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
+        $cookies     = [];
+        foreach ( $cookie_data as $key => $cookie ) {
+            $cookies[] = new \WP_Http_Cookie( [
+                'name'    => $cookie->name,
+                'value'   => $cookie->value,
+                'expires' => $cookie->expires,
+                'path'    => $cookie->path,
+                'domain'  => $cookie->domain,
+            ] );
+        }
+
+        $data = [ 
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8',
+            ],
+            'body'        => json_encode( [ 
+                "field" => "nameservers", 
+                'value' => $nameservers
+            ] ), 
+            'method'      => 'PUT', 
+            'data_format' => 'body',
+            'cookies'     => $cookies,
+        ];
+
+        $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
+        if ( is_wp_error( $response ) ) {
+            return json_decode( $response->get_error_message() );
+        }
+        $response = json_decode( $response['body'] );
+        if ( ! empty( $response->error ) ) {
+            return [ "error" => "There was a problem updating nameservers. Check formatting and try again." ];
+        }
+        if ( $response->succeeded == "true" ) {
+            return [ "response" => "Nameservers have been updated." ];
+        }
+        if ( $response->succeeded == "false" ) {
+            return [ "response" => $response->errors ];
         }
     }
 
