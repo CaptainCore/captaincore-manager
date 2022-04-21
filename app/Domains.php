@@ -99,19 +99,175 @@ class Domains extends DB {
         $myhost = strtolower(trim($host));
         $count = substr_count($myhost, '.');
         if($count === 2){
-          if(strlen(explode('.', $myhost)[1]) > 3) $myhost = explode('.', $myhost, 2)[1];
+            if(strlen(explode('.', $myhost)[1]) > 3) $myhost = explode('.', $myhost, 2)[1];
         } else if($count > 2){
-          $myhost = get_domain(explode('.', $myhost, 2)[1]);
+            $myhost = get_domain(explode('.', $myhost, 2)[1]);
         }
         return $myhost;
-      }      
+    }
 
-    public function add_verification_record( $domain, $txt ) {
+    public function attempt_fetch_verification_record ( $domain ) {
+
+        $data = [ 
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'X-Token'      => MY_KINSTA_TOKEN
+            ],
+            'body'        => json_encode( [
+                "variables" => [ 
+                    "idCompany" => MY_KINSTA_COMPANY
+                ],
+                "operationName" => "SiteListFull",
+                "query"         => 'query SiteListFull($idCompany: String!) {
+                    company(id: $idCompany) {
+                      name
+                      id
+                      sites {
+                        id
+                        ...siteData
+                        __typename
+                      }
+                      __typename
+                    }
+                  }
+                  
+                  fragment siteData on Site {
+                    id
+                    displayName
+                    name
+                    idCompany
+                    environment(name: "live") {
+                      id
+                      domains {
+                        id
+                        name
+                        __typename
+                      }
+                      __typename
+                    }
+                    __typename
+                  }'
+            ] )
+        ];
+
+         // Load domains from transient
+		$response = get_transient( 'kinsta_all_domains' );
+
+		// If empty then update transient with large remote call
+		if ( empty( $response ) ) {
+
+            $response = wp_remote_post( "https://my.kinsta.com/graphql", $data );
+
+            if ( is_wp_error( $response ) ) {
+                $to      = get_option('admin_email');
+                $subject = "Communication with Kinsta error";
+                $headers = [ 
+                    'Content-Type: text/html; charset=UTF-8',
+                ];
+                $body    = $response->get_error_message();
+                wp_mail( $to, $subject, $body, $headers );
+                return "";
+            }
+
+			$response = json_decode( $response['body'] );
+
+			// Save the API response so we don't have to call as often
+			set_transient( 'kinsta_all_domains', $response, HOUR_IN_SECONDS );
+
+		}
+
+        $idSite        = null;
+        $idEnvironment = null;
+        foreach ( $response->data->company->sites as $key => $site ) {
+            foreach ( $site->environment->domains as $check ) {
+                if ( $check->name == $domain ) {
+                    $idSite        = $response->data->company->sites[$key]->id;
+                    $idEnvironment = $response->data->company->sites[$key]->environment->id;
+                    break;
+                }
+            }
+            if ( ! empty ( $idSite ) ) {
+                break;
+            }
+        }
+
+        if ( empty( $idSite ) ) {
+            return "";
+        }
+
+        $data = [ 
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'X-Token'      => MY_KINSTA_TOKEN
+            ],
+            'body'        => json_encode( [
+                "variables" => [ 
+                    "idSite"        => $idSite,
+                    "idEnvironment" => $idEnvironment
+                ],
+                "operationName" => "FullSiteDomains",
+                "query" => 'query FullSiteDomains($idSite: String!, $idEnvironment: String!) {
+                    site(id: $idSite) {
+                      id
+                      environment(id: $idEnvironment) {
+                        id
+                        customHostnames {
+                          id
+                          rootDomain
+                          idRootDomain
+                          verificationRecords {
+                            name
+                            value
+                            __typename
+                          }
+                        }
+                      }
+                    }
+                  }'
+            ] )
+        ];
+
+        $response = wp_remote_post( "https://my.kinsta.com/graphql", $data );
+
+        if ( is_wp_error( $response ) ) {
+            $to      = get_option('admin_email');
+            $subject = "Communication with Kinsta error";
+            $headers = [ 
+                'Content-Type: text/html; charset=UTF-8',
+            ];
+            $body    = $response->get_error_message();
+            wp_mail( $to, $subject, $body, $headers );
+            return "";
+        }
+
+        $response = json_decode( $response['body'] );
+        foreach( $response->data->site->environment->customHostnames as $record ) {
+            if ( $record->verificationRecords ) {
+                foreach ($record->verificationRecords as $item ) {
+                    if ( $item->name == $domain ) {
+                        return $item->value;
+                    }
+                }
+            }
+        }
+
+        return "";
+
+    }
+
+    public function add_verification_record( $domain, $txt = "" ) {
 
         $name = "";
+
+        // Attempt to retrieve from Kinsta
+        if ( empty( $txt ) ) {
+            $txt = self::attempt_fetch_verification_record( $domain );
+        }
         
         if ( substr( $txt, 0, 2 ) != "ca" ) {
-            return "TXT record doesn't look right. `$txt`";
+            return "TXT record for $domain doesn't look right. `$txt`";
         }
 
         $primary_domain = self::get_domain( $domain );
