@@ -1282,10 +1282,9 @@ function captaincore_missive_func( WP_REST_Request $request ) {
 	$message_id = $missive->latest_message->id;
 	$message    = missive_api_get( "messages/$message_id")->messages->body;
 
-	preg_match('/The TXT record to validate your SSL certificate renewal is:<\/p><p>(.+?)<br>(.+?)<\/p>/', $message, $matches );
+	preg_match('/TXT record for (.+) in MyKinsta/', $message, $matches );
 	$domain     = $matches[1];
-	$txt_record = $matches[2];
-	$response   = ( new CaptainCore\Domains )->add_verification_record( $domain, $txt_record );
+	$response   = ( new CaptainCore\Domains )->add_verification_record( $domain );
 	$errors     = implode( $errors, ", " );
 
 	missive_api_post( "posts", [ "posts" => [ 
