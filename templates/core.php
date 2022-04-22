@@ -9992,7 +9992,7 @@ new Vue({
 				record.update.record_value.push({ level: "", value: "" });
 			}
 			if ( record.type == "SRV" ) {
-				record.update.record_value.push({ priority: 0, weight: 0, port: 443, value: "" });
+				record.update.record_value.push({ priority: 100, weight: 1, port: 443, value: "" });
 			}
 		},
 		viewRecord( record_id ){
@@ -10014,7 +10014,7 @@ new Vue({
 				record.update.record_value = [{ level: "", value: "" }];
 			}
 			if ( record.type == "SRV" ) {
-				record.update.record_value = [{ priority: 0, weight: 0, port: 443, value: "" }];
+				record.update.record_value = [{ priority: 100, weight: 1, port: 443, value: "" }];
 			}
 			if ( record.type == "CNAME" || record.type == "HTTPRedirection" ) {
 				record.update.record_value = "";
