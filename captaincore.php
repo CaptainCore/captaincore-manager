@@ -2651,7 +2651,11 @@ function captaincore_login_func( WP_REST_Request $request ) {
 			"remember"      => true,
 		];
 
-		$current_user = wp_signon( $credentials );
+		if ( function_exists( "wpgraphql_cors_signon" ) ) {
+			$current_user = wpgraphql_cors_signon( $credentials, true );
+		} else {
+			$current_user = wp_signon( $credentials );
+		} 
 
 		if ( $current_user->ID !== null ) {
 			return [ "message" =>  "Logged in." ];
