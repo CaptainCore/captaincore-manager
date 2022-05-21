@@ -14,6 +14,9 @@ class Configurations {
         if ( ! isset( $configurations->colors ) ) {
 			$configurations->colors = [];
         }
+        if ( ! isset( $configurations->remote_upload_uri ) ) {
+			$configurations->remote_upload_uri = get_option( 'options_remote_upload_uri' );
+        }
         if ( ! isset( $configurations->logo ) ) {
 			$configurations->logo = "";
         }
