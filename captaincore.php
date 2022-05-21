@@ -2178,6 +2178,16 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
+		'captaincore/v1', '/me/', [
+			'methods'       => 'GET',
+			'callback'      => function (WP_REST_Request $request) {
+				return ( new CaptainCore\User )->fetch();
+			},
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
 		'captaincore/v1', '/filters/(?P<name>[a-zA-Z0-9-,|_%]+)/versions/', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_filter_versions_func',
