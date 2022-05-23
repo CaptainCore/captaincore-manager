@@ -585,6 +585,11 @@ class Account {
         $site_url       = get_option('siteurl');
         $site_title     = get_option('blogname');
 
+        if ( empty( $recipient ) ) {
+            $user      = get_user_by( 'id', $plan->billing_user_id );
+            $recipient = $user->user_email;
+        }
+
         if ( ! empty( $plan->additional_emails ) ) {
 			$recipient .= ", {$plan->additional_emails}";
 		}
@@ -638,6 +643,11 @@ class Account {
         $recipient      = $address["email"];
         $site_url       = get_option('siteurl');
         $site_title     = get_option('blogname');
+
+        if ( empty( $recipient ) ) {
+            $user      = get_user_by( 'id', $plan->billing_user_id );
+            $recipient = $user->user_email;
+        }
 
         if ( ! empty( $plan->additional_emails ) ) {
 			$recipient .= ", {$plan->additional_emails}";
