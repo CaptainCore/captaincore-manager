@@ -611,6 +611,62 @@ class Account {
         wp_mail( $recipient, $subject, $message, $headers );
     }
 
+    public function outstanding_notify() {
+        $orders = wc_get_orders( [
+            'limit'      => -1,
+            'meta_key'   => 'captaincore_account_id',
+            'meta_value' => $this->account_id,
+            'orderby'    => 'date',
+            'order'      => 'DESC',
+            'status'     => 'wc-pending'
+        ] );
+        if ( count( $orders ) == 0 ) {
+            return;
+        }
+        $invoice_label  = "invoice";
+        if ( count( $orders ) > 1 ) {
+            $invoice_label  = "invoices";
+        }
+        foreach( $orders as $order ) {
+            $order->add_order_note( "Sent outstanding notice." );
+        }
+        $order_id       = $orders[0]->ID;
+        $account        = ( new Accounts )->get( $this->account_id );
+        $plan           = json_decode( $account->plan );
+        $customer       = new \WC_Customer( $plan->billing_user_id );
+        $address        = $customer->get_billing();
+        $recipient      = $address["email"];
+        $site_url       = get_option('siteurl');
+        $site_title     = get_option('blogname');
+
+        if ( ! empty( $plan->additional_emails ) ) {
+			$recipient .= ", {$plan->additional_emails}";
+		}
+
+        $from_name  = apply_filters( 'woocommerce_email_from_name', get_option( 'woocommerce_email_from_name' ), $this, $from_name );
+        $from_email = apply_filters( 'woocommerce_email_from_address', get_option( 'woocommerce_email_from_address' ), $this, $from_email );
+
+        $headers = [ 
+            "Content-Type: text/html; charset=UTF-8",
+            "From: $from_name <$from_email>"
+        ];
+        $link_style = "padding: 12px 32px; font-size: calc(18px / var(--type-scale-factor)); margin: 00px; display: inline-block; color: black; text-decoration: none; font-weight: bold; background-color: rgb(238, 238, 238) !important; border-color: rgb(238, 238, 238) !important;";
+        $subject    = $site_title . ' - Payment overdue account for ' . $account->name;
+
+        if ( ! empty( $address["first_name"] ) ) {
+            $message = "<p>". $address["first_name"] . ",</p><p></p>";
+        }
+        $message .= "<p>There are outstanding payments relating to your hosting plan with $site_title for account #{$this->account_id}. To keep hosting services active, please pay outstanding $invoice_label:</p>";
+        $message .= "<ul>";
+        foreach ( $orders as $key => $order ) {
+            $payment_link = captaincore_get_checkout_payment_url ( $order->get_checkout_payment_url() );
+            $message .= "<li><a href=\"$payment_link\">💰 Pay renewal order #{$order->ID} for {$order->get_formatted_order_total()} from {$order->get_date_created()->date('F jS Y')}</a></li>";
+        }
+        $message .= "</ul>";
+        $message .= "<a href=\"{$site_url}\">{$site_title}</a>";
+        wp_mail( $recipient, $subject, $message, $headers );
+    }
+
     public function auto_switch_plan() {
         $configurations = ( new Configurations )->get();
         $account        = ( new Accounts )->get( $this->account_id );
