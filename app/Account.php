@@ -661,7 +661,7 @@ class Account {
             "From: $from_name <$from_email>"
         ];
         $link_style = "padding: 12px 32px; font-size: calc(18px / var(--type-scale-factor)); margin: 00px; display: inline-block; color: black; text-decoration: none; font-weight: bold; background-color: rgb(238, 238, 238) !important; border-color: rgb(238, 238, 238) !important;";
-        $subject    = $site_title . ' - Payment overdue account for ' . $account->name;
+        $subject    = $site_title . ' - Payment overdue for account ' . $account->name;
 
         if ( ! empty( $address["first_name"] ) ) {
             $message = "<p>". $address["first_name"] . ",</p><p></p>";
