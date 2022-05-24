@@ -666,7 +666,7 @@ class Account {
         if ( ! empty( $address["first_name"] ) ) {
             $message = "<p>". $address["first_name"] . ",</p><p></p>";
         }
-        $message .= "<p>There are outstanding payments relating to your hosting plan with $site_title for account #{$this->account_id}. To keep hosting services active, please pay outstanding $invoice_label:</p>";
+        $message .= "<p>There are outstanding payments relating to your hosting plan with $site_title for account {$account->name} #{$this->account_id}. To keep hosting services active, please pay outstanding $invoice_label:</p>";
         $message .= "<ul>";
         foreach ( $orders as $key => $order ) {
             $payment_link = captaincore_get_checkout_payment_url ( $order->get_checkout_payment_url() );
