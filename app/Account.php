@@ -623,7 +623,7 @@ class Account {
             'meta_value' => $this->account_id,
             'orderby'    => 'date',
             'order'      => 'DESC',
-            'status'     => 'wc-pending'
+            'status'     => [ 'wc-pending', 'failed' ]
         ] );
         if ( count( $orders ) == 0 ) {
             return;
