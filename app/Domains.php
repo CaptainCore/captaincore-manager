@@ -157,7 +157,7 @@ class Domains extends DB {
 		// If empty then update transient with large remote call
 		if ( empty( $response ) ) {
 
-            $response = wp_remote_post( "https://my.kinsta.com/graphql", $data );
+            $response = wp_remote_post( "https://my.kinsta.com/gateway", $data );
 
             if ( is_wp_error( $response ) ) {
                 $to      = get_option('admin_email');
@@ -202,13 +202,13 @@ class Domains extends DB {
                 'Content-Type' => 'application/json',
                 'X-Token'      => MY_KINSTA_TOKEN
             ],
-            'body'        => json_encode( [
+            'body'    => json_encode( [
                 "variables" => [ 
                     "idSite"        => $idSite,
                     "idEnvironment" => $idEnvironment
                 ],
                 "operationName" => "FullSiteDomains",
-                "query" => 'query FullSiteDomains($idSite: String!, $idEnvironment: String!) {
+                "query"         => 'query FullSiteDomains($idSite: String!, $idEnvironment: String!) {
                     site(id: $idSite) {
                       id
                       environment(id: $idEnvironment) {
@@ -229,7 +229,7 @@ class Domains extends DB {
             ] )
         ];
 
-        $response = wp_remote_post( "https://my.kinsta.com/graphql", $data );
+        $response = wp_remote_post( "https://my.kinsta.com/gateway", $data );
 
         if ( is_wp_error( $response ) ) {
             $to      = get_option('admin_email');
