@@ -5236,7 +5236,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-tab-item :transition="false" :reverse-transition="false">
 							<v-data-table
 								v-show="typeof dialog_account.records.sites == 'object' && dialog_account.records.sites.length > 0"
-								:headers='[{"text":"Sites","value":"name"},{"text":"Storage","value":"storage"},{"text":"Visits","value":"visits"}]'
+								:headers='[{"text":"Sites","value":"name"},{"text":"Storage","value":"storage"},{"text":"Visits","value":"visits"},{"text":"","value":"actions","width":"110px",sortable: false}]'
 								:items="dialog_account.records.sites"
 								:items-per-page="-1"
 								hide-default-footer
@@ -5471,11 +5471,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-divider></v-divider>
 					<v-subheader>Administrator Options</v-subheader>
 					<v-container>
+					<v-btn small depressed @click="accountBulkTools()">
+						<v-icon small>mdi-filter-variant</v-icon> Bulk Tools on Sites
+					</v-btn>
 					<v-btn small depressed @click="editAccount()">
-						<v-icon>edit</v-icon> Edit Account
+						<v-icon small>edit</v-icon> Edit Account
 					</v-btn>
 					<v-btn small depressed color="error" @click="deleteAccount()">
-						<v-icon>delete</v-icon> Delete Account
+						<v-icon small>delete</v-icon> Delete Account
 					</v-btn>
 					</v-container>
 					</div>
@@ -9177,6 +9180,11 @@ new Vue({
 					this.dialog_account.step = 2;
 				})
 				.catch( error => console.log( error ) );
+		},
+		accountBulkTools() {
+			this.view_console.show = true
+			this.openConsole( 3 )
+			this.sites_selected = this.dialog_account.records.sites
 		},
 		editAccount() {
 			this.dialog_edit_account.show = true
