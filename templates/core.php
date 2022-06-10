@@ -5247,6 +5247,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<template v-slot:item.visits="{ item }">
 								{{ item.visits | formatLargeNumbers }}
 							</template>
+							<template v-slot:item.actions="{ item }">
+								<v-btn small @click="goToPath( `/account/sites/${item.site_id}` )">View</v-btn>
+							</template>
 							<template v-slot:body.append>
 								<tr>
 								<td class="text-right">
