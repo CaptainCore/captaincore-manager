@@ -5156,6 +5156,7 @@ function captaincore_install_action_callback() {
 	}
 	if ( $cmd == 'migrate' ) {
 		$run_in_background = true;
+		$value = urlencode( $value );
 		$command = "ssh $site --script=migrate -- --url=\"$value\"";
 		if ( $_POST['update_urls'] == "true" ) {
 			$command = "$command --update-urls";
