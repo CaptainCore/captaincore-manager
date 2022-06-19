@@ -4917,7 +4917,17 @@ function captaincore_ajax_action_callback() {
 		// Attempt to match current user to WordPress user
 		$users = json_decode( $environment->users );
 		foreach ( $users as $user ) {
-			if ( $user->user_email == $current_email ) {
+			if ( strpos( $user->roles, 'administrator') !== false && $user->user_email == $current_email ) {
+				$user_login = $user->user_login;
+				break;
+			}
+		}
+
+		$current_user_domain = array_pop(explode('@', $current_email));
+		// Attempt to match current user to a similar WordPress user
+		foreach ( $users as $user ) {
+			$user_domain = array_pop(explode('@', $user->user_email));
+			if ( strpos( $user->roles, 'administrator') !== false && $user_domain == $current_user_domain ) {
 				$user_login = $user->user_login;
 				break;
 			}
