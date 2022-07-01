@@ -299,9 +299,9 @@ class Domains extends DB {
         if ( empty( $record ) ) {
             $nameservers = implode ( array_column ( dns_get_record( $domain, DNS_NS ), "target" ), " " );
             if ( empty( $nameservers ) ) {
-                return "Domain $domain not found with DNS provider and no nameservers were found.";
+                return "Domain $domain not found with DNS provider and no nameservers were found. Manually add TXT verification record `$txt`.";
             }
-            return "Domain $domain not found with DNS provider. Nameservers are `$nameservers`.";
+            return "Domain $domain not found with DNS provider. Nameservers are `$nameservers`. Manually add TXT verification record `$txt`.";
         }
 
         $txt_records  = constellix_api_get( "domains/{$record->id}/records/txt" );
