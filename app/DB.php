@@ -357,7 +357,7 @@ class DB {
         if ( in_array("offload-off", $arguments->targets ) ) {
             $target_conditions[] = "AND {$wpdb->prefix}captaincore_environments.offload_enabled = '0'";
         }
-        $target_conditions = implode( $target_conditions, " " );
+        $target_conditions = implode( " ", $target_conditions );
 
         if ( ! empty( $arguments->field ) && in_array( $arguments->field, $environment_columns ) ) {
             $field_selection = ", {$wpdb->prefix}captaincore_environments.{$arguments->field}";
