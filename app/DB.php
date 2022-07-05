@@ -540,7 +540,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "25";
+        $required_version = (int) "26";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -619,6 +619,7 @@ class DB {
             storage varchar(20),
             visits varchar(20),
             core varchar(10),
+            core_verify_checksums boolean default 1,
             subsite_count varchar(10),
             home_url varchar(255),
             capture_pages longtext,
