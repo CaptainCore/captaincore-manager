@@ -802,6 +802,7 @@ class Site {
         $site->loading         = false;
         $site->key             = $details->key;
         $site->core            = $details->core;
+        $site->mailgun         = $details->mailgun;
         $site->console_errors  = isset( $details->console_errors ) ? $details->console_errors : "";
         $site->environment_vars = isset( $details->environment_vars ) ? $details->environment_vars : [];
         $site->subsites        = $details->subsites;
