@@ -293,18 +293,18 @@ class Account {
 
         $hosting_plan      = $account->plan->name;
 		$addons            = empty( $account->plan->usage->addons ) ? [] : $account->plan->usage->addons;
-		$storage           = $account->plan->usage->storage;
+		$storage           = empty( $account->plan->usage->storage ) ? 0 : $account->plan->usage->storage;
 		$visits            = $account->plan->usage->visits;
 		$visits_plan_limit = $account->plan->limits->visits;
-		$storage_limit     = $account->plan->limits->storage;
+		$storage_limit     = empty( $account->plan->limits->storage ) ? 0 : $account->plan->limits->storage;
         $sites_limit       = $account->plan->limits->sites;
 
-        if ( isset( $visits ) ) {
+        if ( ! empty( $visits ) && ! empty( $visits_plan_limit ) ) {
 			$visits_percent = round( $visits / $visits_plan_limit * 100, 0 );
 		}
         
         $storage_gbs     = round( $storage / 1024 / 1024 / 1024, 1 );
-		$storage_percent = round( $storage_gbs / $storage_limit * 100, 0 );
+		$storage_percent = empty ( $storage_limit ) ? 0 : round( $storage_gbs / $storage_limit * 100, 0 );
 
 		$result_sites = [];
 
