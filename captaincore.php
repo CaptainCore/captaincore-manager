@@ -5079,7 +5079,7 @@ function captaincore_install_action_callback() {
 	$domain       = $fetch->name;
 
 	$partners = get_field( 'partner', $post_id );
-	if ( $partners ) {
+	if ( $partners && is_string( $partners ) ) {
 		$preloadusers = implode( ',', $partners );
 	}
 
