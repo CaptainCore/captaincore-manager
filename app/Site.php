@@ -1059,7 +1059,7 @@ class Site {
         $environments    = $db_environments->fetch_environments( $this->site_id );
         $results = (object) [];
         foreach( $environments as $environment ) {
-            $users = json_decode( $environment->users );
+            $users = empty( $environment->users ) ? [] : json_decode( $environment->users );
             array_multisort(
                 array_column($users, 'roles'), SORT_ASC,
                 array_column($users, 'user_login'), SORT_ASC,
