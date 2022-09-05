@@ -2425,6 +2425,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-col>
 					</v-row>
 					</v-container>
+					</div>
+					<div v-show="role == 'administrator'">
 					<v-divider></v-divider>
 					<v-subheader>Administrator Options</v-subheader>
 					<v-container>
