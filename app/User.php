@@ -115,7 +115,7 @@ class User {
             $plan  = json_decode ( $account->plan );
             $total = $plan->price;
             foreach ( $plan->addons as $addon ) {
-                $total = $total + ( $addon->price * $addon->quantity );
+                $total = $total + ( (int) $addon->price * (int) $addon->quantity );
             }
             $plans[] = [
                 "account_id"      => $account->account_id,
@@ -156,7 +156,7 @@ class User {
             $plan_total   = $plan->price;
             if ( $plan->addons ) { 
                 foreach ( $plan->addons as $addon ) {
-                    $plan_total = $plan_total + ( $addon->price * $addon->quantity );
+                    $plan_total = $plan_total + ( (int) $addon->price * (int) $addon->quantity );
                 }
             }
             foreach( $revenue as $month => $amount ) {
@@ -165,14 +165,14 @@ class User {
                     $transactions->{$month} = $transactions->{$month} + 1;
                 }
                 if ( $plan->interval == "6" && $month == $next_renewal ) {
-                    $renew_modifier    = $renew_count * 6;
+                    $renew_modifier    = (int) $renew_count * 6;
                     $revenue->{$month} = $revenue->{$month} + $plan_total;
                     $next_renewal      = date( "M Y", strtotime("+$renew_modifier month", strtotime( $plan->next_renewal ) ) );
                     $renew_count++;
                     $transactions->{$month} = $transactions->{$month} + 1;
                 }
                 if ( $plan->interval == "3" && $month == $next_renewal ) {
-                    $renew_modifier    = $renew_count * 3;
+                    $renew_modifier    = (int) $renew_count * 3;
                     $revenue->{$month} = $revenue->{$month} + $plan_total;
                     $next_renewal      = date( "M Y", strtotime("+$renew_modifier month", strtotime( $plan->next_renewal ) ) );
                     $renew_count++;
