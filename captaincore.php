@@ -6441,6 +6441,7 @@ function load_captaincore_template( $original_template ) {
 	if ( ! function_exists( 'is_plugin_active' ) ){
 		require_once( ABSPATH . '/wp-admin/includes/plugin.php' );
 	}
+	header('X-Frame-Options: SAMEORIGIN'); 
     return plugin_dir_path( __FILE__ ) . 'templates/core.php';
   } else {
     return $original_template;
