@@ -6495,7 +6495,7 @@ function captaincore_footer_content() {
 function captaincore_footer_content_extracted() {
 	$output = [];
 	$footer = captaincore_footer_content();
-	preg_match_all('/<p id="user_switching_switch_on"><a href="(.+?)">(.+)<\/a><\/p>/', $footer, $results );
+	preg_match_all('/<p id="user_switching_switch_on" .+><a href="(.+?)">(.+)<\/a><\/p>/', $footer, $results );
 	if ( isset( $results ) && $results[1] ) {
 		foreach( $results[1] as $match ) {
 			$output[] = $match;
