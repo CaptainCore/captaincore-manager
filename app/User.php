@@ -207,7 +207,7 @@ class User {
             $user             = get_user_by( "ID", $this->user_id );
             $address["email"] =  $user->user_email;
         }
-        $invoices       = wc_get_orders( [ 'customer' => $this->user_id ] );
+        $invoices       = wc_get_orders( [ 'customer' => $this->user_id, 'posts_per_page' => "-1" ] );
         foreach ( $invoices as $key => $invoice ) {
             $order      = wc_get_order( $invoice );
             $item_count = $order->get_item_count();
