@@ -385,6 +385,9 @@ class Account {
     public function calculate_usage() {
         $account  = self::get();
         $sites    = $this->billing_sites();
+        if ( empty( $account->plan ) ) {
+            $account->plan = (object) [ "usage" => (object) [ "storage" => "", "visits" => "", "sites" => "" ] ];
+        }
         $account->plan->usage->storage = array_sum ( array_column( $sites, "storage" ) );
         $account->plan->usage->visits  = array_sum ( array_column( $sites, "visits" ) );
         $account->plan->usage->sites   = count( $sites );
