@@ -3347,7 +3347,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-layout>
 							<v-flex xs6 class="mx-2">
 								<v-autocomplete
-									:items='[{"name":"WP Engine","value":"wpengine"},{"name":"Kinsta","value":"kinsta"}]'
+									:items='[{"name":"Kinsta","value":"kinsta"},{"name":"Rocket.net","value":"rocketdotnet"},{"name":"WP Engine","value":"wpengine"}]'
 									item-text="name"
 									v-model="dialog_new_site.provider"
 									label="Provider"
@@ -3539,7 +3539,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-layout>
 						<v-flex xs6 class="mx-2">
 						<v-autocomplete
-							:items='[{"name":"WP Engine","value":"wpengine"},{"name":"Kinsta","value":"kinsta"}]'
+							:items='[{"name":"Kinsta","value":"kinsta"},{"name":"Rocket.net","value":"rocketdotnet"},{"name":"WP Engine","value":"wpengine"}]'
 							item-text="name"
 							v-model="dialog_edit_site.site.provider"
 							label="Provider"
@@ -6344,6 +6344,9 @@ new Vue({
 			}
 			if (value == 'kinsta') {
 				return "Kinsta"
+			}
+			if (value == 'rocketdotnet') {
+				return "Rocket.net"
 			}
 		},
 		formatSize: function (fileSizeInBytes) {
