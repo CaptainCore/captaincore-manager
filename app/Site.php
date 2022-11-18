@@ -853,7 +853,7 @@ class Site {
                 ];
             }
             $environment->fathom_analytics = ( ! empty( $details->fathom ) ? $details->fathom : [] );
-            if ( $site->provider == 'kinsta' ) {
+            if ( $site->provider == 'kinsta' || $site->provider == 'rocketdotnet' ) {
                 $environment->ssh = "ssh {$environment->username}@{$environment->address} -p {$environment->port}";
             }
             if ( $site->provider == 'kinsta' and $environment->database_username ) {
