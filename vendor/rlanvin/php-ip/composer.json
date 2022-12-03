@@ -1,0 +1,25 @@
+{
+    "name": "rlanvin/php-ip",
+    "type": "library",
+    "description": "IPv4/IPv6 manipulation library for PHP",
+    "keywords": ["ip","ipv4","ipv6"],
+    "homepage": "https://github.com/rlanvin/php-ip",
+    "license": "MIT",
+    "require": {
+        "php": ">=7.1",
+        "ext-gmp": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^6.5|^8.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "PhpIP\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "PhpIP\\Tests\\": "tests/"
+        }
+    }
+}
