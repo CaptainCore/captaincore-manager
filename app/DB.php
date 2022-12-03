@@ -540,7 +540,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "26";
+        $required_version = (int) "27";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -750,6 +750,36 @@ class DB {
         ) $charset_collate;";
         
         dbDelta($sql);
+
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_providers` (
+            provider_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            name varchar(255),
+            provider varchar(255),
+            status varchar(255),
+            details longtext,
+            credentials longtext,
+            configurations longtext,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+        PRIMARY KEY  (provider_id)
+        ) $charset_collate;";
+        
+        dbDelta($sql);
+
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_provider_actions` (
+            provider_action_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            provider_id bigint(20) UNSIGNED NOT NULL,
+            provider_key varchar(255),
+            user_id bigint(20) UNSIGNED NOT NULL,
+            status varchar(255),
+            action longtext,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+        PRIMARY KEY  (provider_action_id)
+        ) $charset_collate;";
+        
+        dbDelta($sql);
+
     
         $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_domains` (
             domain_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
