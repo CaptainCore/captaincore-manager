@@ -3355,8 +3355,7 @@ function captaincore_get_domains_per_partner( $partner_id ) {
 
 // Checks current user for valid permissions
 function captaincore_verify_permissions( $site_id ) {
-	$sites = new CaptainCore\Sites();
-	return $sites->verify( $site_id );
+	return ( new CaptainCore\Sites )->verify( $site_id );
 }
 
 // Checks current user for valid permissions

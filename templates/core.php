@@ -1940,7 +1940,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-toolbar-items>
 				</v-toolbar>
 			<v-sheet v-show="dialog_site.step == 1">
-			<v-card-text v-show="provider_requested_sites.length > 0" v-if="role == 'administrator'">
 			<v-dialog v-model="dialog_new_site_rocketdotnet.show" width="500">
 				<v-card>
 					<v-toolbar flat color="grey lighten-4">
@@ -2005,7 +2004,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-divider></v-divider>
 					<v-card-actions>
 					<v-spacer></v-spacer>
-					<v-btn color="primary" @click="requestKinstaSite">Create Site</v-btn>
+					<v-btn color="primary" @click="newRocketdotnetSite">Create Site</v-btn>
 					</v-card-actions>
 				</v-card>
 				</v-dialog>
@@ -2092,44 +2091,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-actions>
 				</v-card>
 				</v-dialog>
-				<v-stepper :value="request.step" v-for="(request, index) in provider_requested_sites" class="mb-3">
-					<v-toolbar flat dense class="primary white--text">
-						<strong>{{ request.name }}</strong>&nbsp;in {{ datacenters.filter( ( d ) => d.value == request.datacenter )[0].text }}
-						<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-stepper-header class="elevation-0">
-						<v-stepper-step step="1" :complete="request.step > 0">Creating site at Kinsta<small>{{ request.created_at | pretty_timestamp_epoch }}</small></v-stepper-step>
-						<v-divider></v-divider>
-						<v-stepper-step step="2" :complete="request.step > 1">Adding site<small v-show="request.processing_at">{{ request.processing_at | pretty_timestamp_epoch }}</small></v-stepper-step>
-						<v-divider></v-divider>
-						<v-stepper-step step="3" :complete="request.step > 2">Ready to use<small v-show="request.ready_at">{{ request.ready_at | pretty_timestamp_epoch }}</small></v-stepper-step>
-					</v-stepper-header>
-					<v-stepper-items>
-					<v-stepper-content step="2">
-						<v-list dense>
-						<v-list-item @click="copyText( request.username )" dense>
-						<v-list-item-content>
-							<v-list-item-title>Username</v-list-item-title>
-							<v-list-item-subtitle v-text="request.username"></v-list-item-subtitle>
-						</v-list-item-content>
-						<v-list-item-icon>
-							<v-icon>mdi-content-copy</v-icon>
-						</v-list-item-icon>
-						</v-list-item>
-						<v-list-item @click="copyText( request.password )" dense>
-						<v-list-item-content>
-							<v-list-item-title>Password</v-list-item-title>
-							<v-list-item-subtitle>{{ request.password }}</v-list-item-subtitle>
-						</v-list-item-content>
-						<v-list-item-icon>
-							<v-icon>mdi-content-copy</v-icon>
-						</v-list-item-icon>
-						</v-list-item>
-						</v-list>
-					</v-stepper-content>
-					<v-stepper-items>
-				</v-stepper>
-				</v-card-text>
 				<v-card-text v-show="requested_sites.length > 0">
 				<v-dialog v-model="dialog_site_request.show" width="500">
 				<v-card>
@@ -6840,7 +6801,6 @@ new Vue({
 		this.fetchAccounts()
 		this.fetchRecipes()
 		if ( this.role == 'administrator' ) {
-			this.checkRequestedProviderSites()
 			this.fetchProcesses()
 			this.fetchProviderActions()
 		}
@@ -7860,6 +7820,9 @@ new Vue({
 				}
 			});
 		},
+		newRocketdotnetSite() {
+
+		},
 		newKinstaSite() {
 			axios.post( '/wp-json/captaincore/v1/providers/kinsta/new-site', {
 				site: this.dialog_new_site_kinsta.site
@@ -7871,38 +7834,7 @@ new Vue({
 				this.snackbar.show = true
 				this.dialog_new_site_kinsta = { show: false, working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", domain: "", datacenter: "", shared_with: [], account_id: "", customer_id: "" } }
 				this.checkProviderActions()
-				// TO DO, request background process. Maybe something like:
-				//  '/wp-json/captaincore/v1/provider-actions/${response.data}/run'
-				// Could be triggered in a loop, maybe something like this.processProviderActions()
-
-				/*
-				this.
-				if ( response.site ) {
-					
-					this.fetchSites()
-					this.snackbar.message = `New site added ${site.name}`
-					this.snackbar.show = true
-					
-				}*/
 			});
-		},
-		requestKinstaSite() {
-			request = this.dialog_new_site_kinsta.site
-			request.step = 1
-			request.created_at = Math.round((new Date()).getTime() / 1000)
-			var data = {
-				'action': 'captaincore_account',
-				'command': "requestKinstaSite",
-				'value': request
-			}
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					this.provider_requested_sites = response.data
-					this.checkRequestedProviderSites()
-				})
-				.catch( error => console.log( error ) );
-			this.dialog_new_site_kinsta.site = { name: "", domain: "", datacenter: "" }
-			this.dialog_new_site_kinsta.show = false
 		},
 		requestSite() {
 			if ( this.dialog_request_site.request.name == "" || this.dialog_request_site.request.account_id == "" ) {
