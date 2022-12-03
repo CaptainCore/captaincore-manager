@@ -44,6 +44,38 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<div class="flex" style="opacity:0;"><textarea id="clipboard" style="height:1px;display:flex;cursor:default"></textarea></div>
 		</v-toolbar-title>
 		<v-spacer></v-spacer>
+		<v-menu v-model="notifications" :close-on-content-click="false" offset-y>
+			<template v-slot:activator="{ on, attrs }">
+				<v-btn icon v-bind="attrs" v-on="on" v-show="role == 'administrator'">
+				<v-badge dot color="error" :value="provider_actions.length">
+					<v-icon>mdi-bell-ring</v-icon>
+				</v-badge>
+				</v-btn>
+			</template>
+		<v-card width="600">
+			<v-list>
+			<v-list-item>
+				<v-list-item-content>
+				<v-list-item-title>Provider Activity</v-list-item-title>
+				</v-list-item-content>
+			</v-list-item>
+			</v-list>
+			<v-divider></v-divider>
+			<v-card flat v-show="provider_actions.length == 0">
+				<v-card-text>
+					<v-alert type="info" text>There are no background activities.</v-alert>
+				</v-card-text>
+			</v-card>
+			<v-list subheader three-line>
+			<v-list-item v-for="item in provider_actions">
+				<v-list-item-content>
+					<v-list-item-title>{{ item.created_at | pretty_timestamp }}</v-list-item-title>
+					<v-list-item-subtitle>Creating site {{ item.action.name }} at Kinsta datacenter {{ item.action.datacenter }}</v-list-item-subtitle>
+				</v-list-item-content>
+			</v-list-item>
+			</v-list>
+		</v-card>
+		</v-menu>
 		<v-tooltip bottom>
 			<template v-slot:activator="{ on }">
 				<v-btn icon href="/wp-admin/" v-show="role == 'administrator'" v-on="on">
@@ -1886,11 +1918,218 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</template>
 						<span>Advanced Options</span>
 						</v-tooltip>
-						<v-btn v-if="role == 'administrator'" text @click="goToPath( `/account/sites/new` )">Add Site <v-icon dark>add</v-icon></v-btn>
+						<v-menu open-on-hover text bottom offset-y v-if="role == 'administrator'">
+						<template v-slot:activator="{ on, attrs }">
+							<v-btn v-bind="attrs" v-on="on" text>
+								Add Site <v-icon dark>add</v-icon>
+							</v-btn>
+						</template>
+						<v-list>
+							<v-list-item @click="showNewSiteKinsta()">
+								<v-list-item-title>Kinsta (Experimental API)</v-list-item-title>
+							</v-list-item>
+							<!--<v-list-item @click="dialog_new_site_rocketdotnet.show = true">
+								<v-list-item-title>Rocket.net</v-list-item-title>
+							</v-list-item>-->
+							<v-list-item @click="goToPath( `/account/sites/new` )" href>
+								<v-list-item-title>Manually</v-list-item-title>
+							</v-list-item>
+						</v-list>
+						</v-menu>
 						<v-btn v-else text @click="dialog_request_site.show = true; dialog_request_site.request.account_id = accounts[0].account_id">Add Site <v-icon dark>add</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 			<v-sheet v-show="dialog_site.step == 1">
+			<v-card-text v-show="provider_requested_sites.length > 0" v-if="role == 'administrator'">
+			<v-dialog v-model="dialog_new_site_rocketdotnet.show" width="500">
+				<v-card>
+					<v-toolbar flat color="grey lighten-4">
+					<v-toolbar-title>New Rocket.net Site</v-toolbar-title>
+					<v-spacer></v-spacer>
+						<v-btn icon @click="dialog_new_site_rocketdotnet.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+					</v-toolbar>
+					<v-card-text>
+						<v-text-field label="Name" v-model="dialog_new_site_rocketdotnet.site.name"></v-text-field>
+						<v-autocomplete label="Datacenter" item-text="location" item-value="id" v-model="dialog_new_site_rocketdotnet.site.datacenter" :items='[{"id":2,"location":"US - Los Angeles"},{"id":4,"location":"EU - London"},{"id":7,"location":"DE - Frankfurt"},{"id":8,"location":"NL - Amsterdam"},{"id":15,"location":"US - Atlanta"},{"id":16,"location":"AU - Sydney"},{"id":19,"location":"US - Chicago"},{"id":20,"location":"SG - Singapore"},{"id":21,"location":"US - Ashburn"},{"id":22,"location":"US - Phoenix"}]'></v-autocomplete>
+						<v-autocomplete
+								:items="accounts"
+								v-model="dialog_new_site_rocketdotnet.site.shared_with"
+								label="Assign to an account"
+								item-text="name"
+								item-value="account_id"
+								chips
+								deletable-chips
+								multiple
+								return-object
+								hint="If a customer account is not assigned then site will be placed in a new account."
+								persistent-hint
+								:menu-props="{ closeOnContentClick:true, openOnClick: false }"
+							>
+							</v-autocomplete>
+							<v-expand-transition>
+							<v-row dense v-if="dialog_new_site_rocketdotnet.site.shared_with && dialog_new_site_rocketdotnet.site.shared_with.length > 0" class="mt-3">
+							<v-col v-for="account in dialog_new_site_rocketdotnet.site.shared_with" :key="account.account_id" cols="6">
+							<v-card>
+								<v-list-item>
+								<v-list-item-content>
+									<v-list-item-title v-text="account.name">Single-line item</v-list-item-title>
+								</v-list-item-content>
+								</v-list-item>
+								<v-card-actions class="py-0">
+								<v-tooltip top>
+								<template v-slot:activator="{ on, attrs }">
+								<v-btn-toggle v-model="dialog_new_site_rocketdotnet.site.customer_id" color="primary" group>
+									<v-btn text :value="account.account_id" v-bind="attrs" v-on="on">
+										<v-icon>mdi-account-circle</v-icon>
+									</v-btn>
+								</v-btn-toggle>
+								</template>
+								<span>Set as customer contact</span>
+								</v-tooltip>
+								<v-tooltip top>
+								<template v-slot:activator="{ on, attrs }">
+								<v-btn-toggle v-model="dialog_new_site_rocketdotnet.site.account_id" color="primary" group>
+									<v-btn text :value="account.account_id" v-bind="attrs" v-on="on">
+										<v-icon>mdi-currency-usd</v-icon>
+									</v-btn>
+								</v-btn-toggle>
+								</template>
+								<span>Set as billing contact</span>
+								</v-tooltip>
+								</v-card-actions>
+							</v-card>
+							</v-expand-transition>
+					</v-card-text>
+					<v-divider></v-divider>
+					<v-card-actions>
+					<v-spacer></v-spacer>
+					<v-btn color="primary" @click="requestKinstaSite">Create Site</v-btn>
+					</v-card-actions>
+				</v-card>
+				</v-dialog>
+				<v-dialog v-model="dialog_new_site_kinsta.show" width="500">
+				<v-card>
+					<v-toolbar flat color="grey lighten-4">
+					<v-toolbar-title>New Kinsta Site</v-toolbar-title>
+					<v-spacer></v-spacer>
+						<v-btn icon @click="dialog_new_site_kinsta.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+					</v-toolbar>
+					<v-card-text>
+						<v-text-field label="Name" v-model="dialog_new_site_kinsta.site.name"></v-text-field>
+						<v-text-field label="Domain" v-model="dialog_new_site_kinsta.site.domain"></v-text-field>
+						<v-autocomplete label="Datacenter" v-model="dialog_new_site_kinsta.site.datacenter" :items="datacenters"></v-autocomplete>
+						<v-autocomplete
+								:items="accounts"
+								v-model="dialog_new_site_kinsta.site.shared_with"
+								label="Assign to an account"
+								item-text="name"
+								item-value="account_id"
+								chips
+								deletable-chips
+								multiple
+								return-object
+								hint="If a customer account is not assigned then site will be placed in a new account."
+								persistent-hint
+								:menu-props="{ closeOnContentClick:true, openOnClick: false }"
+							>
+							</v-autocomplete>
+							<v-expand-transition>
+							<v-row dense v-if="dialog_new_site_kinsta.site.shared_with && dialog_new_site_kinsta.site.shared_with.length > 0" class="mt-3">
+							<v-col v-for="account in dialog_new_site_kinsta.site.shared_with" :key="account.account_id" cols="6">
+							<v-card>
+								<v-list-item>
+								<v-list-item-content>
+									<v-list-item-title v-text="account.name">Single-line item</v-list-item-title>
+								</v-list-item-content>
+								</v-list-item>
+								<v-card-actions class="py-0">
+								<v-tooltip top>
+								<template v-slot:activator="{ on, attrs }">
+								<v-btn-toggle v-model="dialog_new_site_kinsta.site.customer_id" color="primary" group>
+									<v-btn text :value="account.account_id" v-bind="attrs" v-on="on">
+										<v-icon>mdi-account-circle</v-icon>
+									</v-btn>
+								</v-btn-toggle>
+								</template>
+								<span>Set as customer contact</span>
+								</v-tooltip>
+								<v-tooltip top>
+								<template v-slot:activator="{ on, attrs }">
+								<v-btn-toggle v-model="dialog_new_site_kinsta.site.account_id" color="primary" group>
+									<v-btn text :value="account.account_id" v-bind="attrs" v-on="on">
+										<v-icon>mdi-currency-usd</v-icon>
+									</v-btn>
+								</v-btn-toggle>
+								</template>
+								<span>Set as billing contact</span>
+								</v-tooltip>
+								</v-card-actions>
+							</v-card>
+							</v-expand-transition>
+					</v-card-text>
+					<v-divider></v-divider>
+					<v-card flat v-show="dialog_new_site_kinsta.verifing">
+						<v-card-text>
+						Verifing Kinsta connection
+						<v-progress-linear indeterminate rounded height="6"></v-progress-linear>
+						</v-card-text>
+					</v-card>
+					<v-card flat v-show="! dialog_new_site_kinsta.verifing && ! dialog_new_site_kinsta.connection_verified">
+						<v-card-text>
+						<v-alert type="error">
+							Kinsta token outdated <v-text-field label="Token" v-model="dialog_new_site_kinsta.kinsta_token"></v-text-field>
+							<v-btn @click="connectKinsta">Connect</v-btn>
+						</v-alert>
+						</v-card-text>
+					</v-card>
+					<v-card-actions>
+					<v-spacer></v-spacer>
+					<v-btn color="primary" @click="newKinstaSite" :disabled="dialog_new_site_kinsta.verifing || ! dialog_new_site_kinsta.connection_verified">Create Site</v-btn>
+					</v-card-actions>
+				</v-card>
+				</v-dialog>
+				<v-stepper :value="request.step" v-for="(request, index) in provider_requested_sites" class="mb-3">
+					<v-toolbar flat dense class="primary white--text">
+						<strong>{{ request.name }}</strong>&nbsp;in {{ datacenters.filter( ( d ) => d.value == request.datacenter )[0].text }}
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-stepper-header class="elevation-0">
+						<v-stepper-step step="1" :complete="request.step > 0">Creating site at Kinsta<small>{{ request.created_at | pretty_timestamp_epoch }}</small></v-stepper-step>
+						<v-divider></v-divider>
+						<v-stepper-step step="2" :complete="request.step > 1">Adding site<small v-show="request.processing_at">{{ request.processing_at | pretty_timestamp_epoch }}</small></v-stepper-step>
+						<v-divider></v-divider>
+						<v-stepper-step step="3" :complete="request.step > 2">Ready to use<small v-show="request.ready_at">{{ request.ready_at | pretty_timestamp_epoch }}</small></v-stepper-step>
+					</v-stepper-header>
+					<v-stepper-items>
+					<v-stepper-content step="2">
+						<v-list dense>
+						<v-list-item @click="copyText( request.username )" dense>
+						<v-list-item-content>
+							<v-list-item-title>Username</v-list-item-title>
+							<v-list-item-subtitle v-text="request.username"></v-list-item-subtitle>
+						</v-list-item-content>
+						<v-list-item-icon>
+							<v-icon>mdi-content-copy</v-icon>
+						</v-list-item-icon>
+						</v-list-item>
+						<v-list-item @click="copyText( request.password )" dense>
+						<v-list-item-content>
+							<v-list-item-title>Password</v-list-item-title>
+							<v-list-item-subtitle>{{ request.password }}</v-list-item-subtitle>
+						</v-list-item-content>
+						<v-list-item-icon>
+							<v-icon>mdi-content-copy</v-icon>
+						</v-list-item-icon>
+						</v-list-item>
+						</v-list>
+					</v-stepper-content>
+					<v-stepper-items>
+				</v-stepper>
+				</v-card-text>
 				<v-card-text v-show="requested_sites.length > 0">
 				<v-dialog v-model="dialog_site_request.show" width="500">
 				<v-card>
@@ -6066,7 +6305,9 @@ new Vue({
 		},
 		configurations: <?php echo json_encode( ( new CaptainCore\Configurations )->get() ); ?>,
 		configurations_loading: true,
-		hosting_intervals: [{ text: 'Yearly', value: '12' },{ text: 'Monthly', value: '1' },{ text: 'Quarterly', value: '3' },{ text: 'Biannual', value: '6' }],
+		notifications: false,
+		provider_actions: [],
+		hosting_intervals: [{ text: 'Yearly', value: '12' },{ text: 'Monthly', value: '1' },{ Atext: 'Quarterly', value: '3' },{ text: 'Biannual', value: '6' }],
 		footer_height: "28px",
 		login: { user_login: "", user_password: "", errors: "", loading: false, lost_password: false, message: "" },
 		wp_nonce: "",
@@ -6080,6 +6321,7 @@ new Vue({
 		expanded: [],
 		accounts: [],
 		account_tab: null,
+		provider_actions: [],
 		modules: { billing: true, dns: <?php if ( defined( "CONSTELLIX_API_KEY" ) and defined( "CONSTELLIX_SECRET_KEY" ) ) { echo "true"; } else { echo "false"; } ?> },
 		dialog_bulk: { show: false, tabs_management: "tab-Sites", environment_selected: "Production" },
 		dialog_job: { show: false, task: {} },
@@ -6115,7 +6357,151 @@ new Vue({
 		dialog_new_account: { show: false, name: "", records: {} },
 		dialog_user: { show: false, user: {}, errors: [] },
 		dialog_new_user: { first_name: "", last_name: "", email: "", login: "", account_ids: [], errors: [] },
+		dialog_new_site_kinsta: { show: false, working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", domain: "", datacenter: "", shared_with: [], account_id: "", customer_id: "" } },
+		dialog_new_site_rocketdotnet: { show: false, site: { name: "", domain: "", datacenter: "", shared_with: [], account_id: "", customer_id: "" } },
 		dialog_request_site: { show: false, request: { name: "", account_id: "", notes: "" } },
+		datacenters: [
+			{
+				"text": "Taiwan (TW)",
+				"value": "asia-east1"
+			},
+			{
+				"text": "Hong Kong (HK)",
+				"value": "asia-east2"
+			},
+			{
+				"text": "Tokyo (JP)",
+				"value": "asia-northeast1"
+			},
+			{
+				"text": "Osaka (JP)",
+				"value": "asia-northeast2"
+			},
+			{
+				"text": "Seoul (KR)",
+				"value": "asia-northeast3"
+			},
+			{
+				"text": "Mumbai (IN)",
+				"value": "asia-south1"
+			},
+			{
+				"text": "Delhi (IN)",
+				"value": "asia-south2"
+			},
+			{
+				"text": "Singapore (SG)",
+				"value": "asia-southeast1"
+			},
+			{
+				"text": "Jakarta (ID)",
+				"value": "asia-southeast2"
+			},
+			{
+				"text": "Sydney (AU)",
+				"value": "australia-southeast1"
+			},
+			{
+				"text": "Melbourne (AU)",
+				"value": "australia-southeast2"
+			},
+			{
+				"text": "Warsaw (PL)",
+				"value": "europe-central2"
+			},
+			{
+				"text": "Finland (FI)",
+				"value": "europe-north1"
+			},
+			{
+				"text": "Madrid (ES)",
+				"value": "europe-southwest1"
+			},
+			{
+				"text": "Belgium (BE)",
+				"value": "europe-west1"
+			},
+			{
+				"text": "London (UK)",
+				"value": "europe-west2"
+			},
+			{
+				"text": "Frankfurt (DE)",
+				"value": "europe-west3"
+			},
+			{
+				"text": "Eemshaven (NL)",
+				"value": "europe-west4"
+			},
+			{
+				"text": "Zürich (CH)",
+				"value": "europe-west6"
+			},
+			{
+				"text": "Milan (IT)",
+				"value": "europe-west8"
+			},
+			{
+				"text": "Paris (FR)",
+				"value": "europe-west9"
+			},
+			{
+				"text": "Tel Aviv (IS)",
+				"value": "me-west1"
+			},
+			{
+				"text": "Montreal (CA)",
+				"value": "northamerica-northeast1"
+			},
+			{
+				"text": "Toronto (CA)",
+				"value": "northamerica-northeast2"
+			},
+			{
+				"text": "São Paulo (BR)",
+				"value": "southamerica-east1"
+			},
+			{
+				"text": "Santiago (CL)",
+				"value": "southamerica-west1"
+			},
+			{
+				"text": "Iowa (US Central)",
+				"value": "us-central1"
+			},
+			{
+				"text": "South Carolina (US East 1)",
+				"value": "us-east1"
+			},
+			{
+				"text": "Northern Virginia (US East 4)",
+				"value": "us-east4"
+			},
+			{
+				"text": "Columbus (US East 5)",
+				"value": "us-east5"
+			},
+			{
+				"text": "Dallas US (us-south1)",
+				"value": "us-south1"
+			},
+			{
+				"text": "Oregon (US West)",
+				"value": "us-west1"
+			},
+			{
+				"text": "Los Angeles (US West 2)",
+				"value": "us-west2"
+			},
+			{
+				"text": "Salt Lake City (US West 3)",
+				"value": "us-west3"
+			},
+			{
+				"text": "Las Vegas (US West 4)",
+				"value": "us-west4"
+			}
+		],
 		requested_sites: <?php echo json_encode( ( new CaptainCore\User )->fetch_requested_sites() ); ?>,
 		new_invite: { account: {}, records: {} },
 		new_account: { password: "" },
@@ -6455,7 +6841,9 @@ new Vue({
 		this.fetchAccounts()
 		this.fetchRecipes()
 		if ( this.role == 'administrator' ) {
-			this.fetchProcesses();
+			this.checkRequestedProviderSites()
+			this.fetchProcesses()
+			this.fetchProviderActions()
 		}
 		this.updateRoute( window.location.pathname )
 
@@ -7395,6 +7783,127 @@ new Vue({
 					}
 				})
 				.catch( error => console.log( error ) );
+		},
+		checkRequestedProviderSites() {
+			var data = {
+				'action': 'captaincore_account',
+				'command': "checkRequestedProviderSites",
+			}
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.provider_requested_sites = response.data
+					if ( this.provider_requested_sites.length > 0 && this.provider_requested_sites.filter( s => s.step == 1 && s.action_id ).length > 0 && this.role == 'administrator' ) {
+						setTimeout(this.checkRequestedProviderSites, 30000)
+					}
+				})
+				.catch( error => console.log( error ) );
+		},
+		verifyKinstaConnection() {
+			axios.get( '/wp-json/captaincore/v1/providers/kinsta/verify', {
+				headers: { 'X-WP-Nonce':this.wp_nonce }
+			})
+			.then( response => {
+				this.dialog_new_site_kinsta.connection_verified = response.data
+				this.dialog_new_site_kinsta.verifing = false
+			});
+		},
+		showNewSiteKinsta() {
+			this.dialog_new_site_kinsta.verifing = true
+			this.dialog_new_site_kinsta.connection_verified = false
+			this.dialog_new_site_kinsta.show = true
+			this.verifyKinstaConnection()
+		},
+		connectKinsta() {
+			this.dialog_new_site_kinsta.verifing = true
+			axios.post( '/wp-json/captaincore/v1/providers/kinsta/connect', {
+				token: this.dialog_new_site_kinsta.kinsta_token
+			}, {
+				headers: { 'X-WP-Nonce':this.wp_nonce }
+			})
+			.then( response => {
+				this.dialog_new_site_kinsta.connection_verified = response.data
+				this.dialog_new_site_kinsta.verifing = false
+			});
+		},
+		fetchProviderActions() {
+			axios.get( '/wp-json/captaincore/v1/provider-actions', {
+				headers: { 'X-WP-Nonce':this.wp_nonce }
+			}).then( response => {
+				this.provider_actions = response.data
+				if ( this.provider_actions.length > 0 ) {
+					setTimeout(this.checkProviderActions, 10000)
+				}
+			})
+		},
+		checkProviderActions() {
+			axios.get( '/wp-json/captaincore/v1/provider-actions/check', {
+				headers: { 'X-WP-Nonce':this.wp_nonce }
+			}).then( response => {
+				this.provider_actions = response.data
+				if ( this.provider_actions.length > 0 ) {
+					setTimeout(this.checkProviderActions, 10000)
+				}
+				this.runProviderActions()
+			})
+		},
+		runProviderActions() {
+			this.provider_actions.forEach( action => {
+				if ( action.status == "waiting" ) {
+					site = action
+					axios.get( `/wp-json/captaincore/v1/provider-actions/${action.provider_action_id}/run`, {
+						headers: { 'X-WP-Nonce':this.wp_nonce }
+					}).then( response => {
+						this.snackbar.message = `New site ${site.name} created at Kinsta's datacenter ${site.datacenter}.`
+						this.snackbar.show = true
+						this.provider_actions = response.data
+						this.fetchSites();
+					})
+				}
+			});
+		},
+		newKinstaSite() {
+			axios.post( '/wp-json/captaincore/v1/providers/kinsta/new-site', {
+				site: this.dialog_new_site_kinsta.site
+			}, {
+				headers: { 'X-WP-Nonce':this.wp_nonce }
+			})
+			.then( response => {
+				this.snackbar.message = `Site ${this.dialog_new_site_kinsta.site.name} is being created at Kinsta. Will notify once completed.`
+				this.snackbar.show = true
+				this.dialog_new_site_kinsta = { show: false, working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", domain: "", datacenter: "", shared_with: [], account_id: "", customer_id: "" } }
+				this.checkProviderActions()
+				// TO DO, request background process. Maybe something like:
+				//  '/wp-json/captaincore/v1/provider-actions/${response.data}/run'
+				// Could be triggered in a loop, maybe something like this.processProviderActions()
+
+				/*
+				this.
+				if ( response.site ) {
+					
+					this.fetchSites()
+					this.snackbar.message = `New site added ${site.name}`
+					this.snackbar.show = true
+					
+				}*/
+			});
+		},
+		requestKinstaSite() {
+			request = this.dialog_new_site_kinsta.site
+			request.step = 1
+			request.created_at = Math.round((new Date()).getTime() / 1000)
+			var data = {
+				'action': 'captaincore_account',
+				'command': "requestKinstaSite",
+				'value': request
+			}
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.provider_requested_sites = response.data
+					this.checkRequestedProviderSites()
+				})
+				.catch( error => console.log( error ) );
+			this.dialog_new_site_kinsta.site = { name: "", domain: "", datacenter: "" }
+			this.dialog_new_site_kinsta.show = false
 		},
 		requestSite() {
 			if ( this.dialog_request_site.request.name == "" || this.dialog_request_site.request.account_id == "" ) {
