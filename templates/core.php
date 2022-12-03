@@ -5266,14 +5266,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-col>
 					</v-layout>
 			</v-card>
-			<v-card tile v-if="route == 'subscriptions'" flat>
+			<v-card tile flat v-show="route == 'subscriptions'" v-if="role == 'administrator'">
 				<v-toolbar color="grey lighten-4" light flat>
 					<v-toolbar-title>Listing {{ subscriptions.length }} subscriptions</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-tooltip top v-if="toggle_site == true">
+						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-							<v-btn icon @click="toggle_plan = false" v-on="on">
+							<v-btn icon @click="toggle_plan = !toggle_plan" v-on="on">
 								<v-icon>mdi-poll</v-icon>
 							</v-btn>
 							</template>
@@ -5281,17 +5281,17 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-tooltip>
 					</v-toolbar-items>
 				</v-toolbar>
-					<v-data-table
-						:headers="[
-							{ text: 'Name', value: 'name' },
-							{ text: 'Interval', value: 'interval' },
-							{ text: 'Next Renewal', value: 'next_renewal' },
-							{ text: 'Price', value: 'total', width: '100px' }]"
-						:items="subscriptions"
-						:search="subscription_search"
-						:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
-						v-show="toggle_plan == true"
-					>
+				<v-data-table
+					:headers="[
+						{ text: 'Name', value: 'name' },
+						{ text: 'Interval', value: 'interval' },
+						{ text: 'Next Renewal', value: 'next_renewal' },
+						{ text: 'Price', value: 'total', width: '100px' }]"
+					:items="subscriptions"
+					:search="subscription_search"
+					:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
+					v-show="toggle_plan == true"
+				>
 					<template v-slot:top>
 					<v-card-text>
 					<v-row>
@@ -5316,7 +5316,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<div id="plan_chart"></div>
 					<v-subheader>{{ revenue_estimated_total() }}</v-subheader>
 					<div id="plan_chart_transactions"></div>
-					
 			</v-card>
 			<v-card tile v-if="route == 'accounts'" flat>
 			<v-sheet v-show="dialog_account.step == 1">
