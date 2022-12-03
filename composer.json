@@ -8,6 +8,7 @@
         "mailgun/mailgun-php": "^3.0",
         "kriswallsmith/buzz": "^1.0",
         "nyholm/psr7": "^1.2",
-        "beyondcode/fathom-api": "^1.0"
+        "beyondcode/fathom-api": "^1.0",
+        "badcow/dns": "^4.2"
     }
 }

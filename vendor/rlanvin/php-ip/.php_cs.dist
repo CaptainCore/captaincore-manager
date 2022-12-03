@@ -1,0 +1,35 @@
+<?php
+
+$header = <<<'EOF'
+Licensed under the MIT license.
+
+For the full copyright and license information, please view the LICENSE file.
+
+@author Rémi Lanvin <remi@cloudconnected.fr>
+
+@see https://github.com/rlanvin/php-ip
+EOF;
+
+$finder = PhpCsFixer\Finder::create()
+    ->in(__DIR__.'/src')
+    ->in(__DIR__.'/tests')
+;
+
+$config = PhpCsFixer\Config::create()
+    ->setRiskyAllowed(true)
+    ->setRules([
+        '@Symfony' => true,
+        'header_comment' => ['header' => $header, 'comment_type' => 'PHPDoc',],
+        'array_syntax' => ['syntax' => 'short'],
+        'yoda_style' => [
+            'always_move_variable' => false,
+            'equal' => false,
+            'identical' => false,
+            'less_and_greater' => false,
+        ],
+        'declare_strict_types' => true,
+    ])
+    ->setFinder($finder)
+;
+
+return $config;
