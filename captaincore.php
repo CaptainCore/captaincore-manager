@@ -89,7 +89,6 @@ function captaincore_failed_notify( $order_id, $old_status, $new_status ){
     if ( $new_status == 'failed' and $old_status != "failed" ){
 		$order      = wc_get_order( $order_id );
 		$account_id = $order->get_meta( "captaincore_account_id" );
-		echo "( new CaptainCore\Account( $account_id, true ) )->failed_notify();";
 		( new CaptainCore\Account( $account_id, true ) )->failed_notify();
     }
 }
@@ -1703,6 +1702,35 @@ function captaincore_billing_func( $request ) {
 	return ( new CaptainCore\User )->billing();
 }
 
+function captaincore_provider_verify_func( $request ) {
+	$provider = $request->get_param( "provider" );
+	return ( new CaptainCore\Provider( $provider ) )->verify();
+}
+
+function captaincore_provider_connect_func( $request ) {
+	$provider = $request->get_param( "provider" );
+	$token    = $request['token'];
+	return ( new CaptainCore\Provider( $provider ) )->update_token( $token );
+}
+
+function captaincore_provider_new_site_func( $request ) {
+	$provider = $request->get_param( "provider" );
+	$site     = $request['site'];
+	return ( new CaptainCore\Provider( $provider ) )->new_site( $site );
+}
+
+function captaincore_provider_actions_check_func( $request ) {
+	return ( new CaptainCore\ProviderAction )->check();
+}
+
+function captaincore_provider_actions_run_func( $request ) {
+	return ( new CaptainCore\ProviderAction( $request['id'] ) )->run();
+}
+
+function captaincore_provider_actions_func( $request ) {
+	return ( new CaptainCore\ProviderAction )->active();
+}
+
 function captaincore_sites_func( $request ) {
 	return ( new CaptainCore\Sites )->list();
 }
@@ -2173,6 +2201,54 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_sites_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/verify', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_provider_verify_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/connect', [
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_provider_connect_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/new-site', [
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_provider_new_site_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/provider-actions/check', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_provider_actions_check_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/provider-actions/(?P<id>[\d]+)/run', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_provider_actions_run_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/provider-actions', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_provider_actions_func',
 			'show_in_index' => false
 		]
 	);
