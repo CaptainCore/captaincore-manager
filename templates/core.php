@@ -6379,6 +6379,7 @@ new Vue({
 			php: 'mdi-file-code',
 		},
 		configurations: <?php echo json_encode( ( new CaptainCore\Configurations )->get() ); ?>,
+		configurations_step: 0,
 		configurations_loading: true,
 		notifications: false,
 		provider_actions: [],
