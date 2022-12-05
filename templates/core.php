@@ -6742,6 +6742,7 @@ new Vue({
 		states: wc_states,
 		states_selected: [],
 		sites: [],
+		providers: [],
 		users: [],
 		user_search: "",
 		header_themes: [
