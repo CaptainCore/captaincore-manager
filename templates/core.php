@@ -3631,7 +3631,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								></v-autocomplete>
 							</v-flex>
 							<v-flex xs6 class="mx-2">
-								<v-text-field :value="dialog_new_site.domain" @change.native="dialog_new_site.domain = $event.target.value" label="Domain name" required></v-text-field>
+								<v-text-field :value="dialog_new_site.name" @change.native="dialog_new_site.name = $event.target.value" label="Domain name" required></v-text-field>
 							</v-flex>
 						</v-layout>
 						<v-layout>
@@ -8102,7 +8102,7 @@ new Vue({
 				'command': "newSite",
 				'value': this.dialog_new_site
 			};
-			site_name = this.dialog_new_site.domain;
+			site_name = this.dialog_new_site.name;
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
