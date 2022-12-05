@@ -45,4 +45,57 @@ class Provider {
         return $class_name::new_site( $site );
     }
 
+    public function all() {
+        $providers = ( new Providers )->all();
+        foreach( $providers as $provider ) {
+            if ( ! empty( $provider->credentials ) ) {
+                $provider->credentials = json_decode( $provider->credentials );
+            }
+        }
+        return $providers;
+    }
+
+    public function create( $provider ) {
+
+        $provider    = (object) $provider;
+        $credentials = []; 
+
+        // Prep for response to return
+        $response = [ "errors" => [] ];
+
+        // Pull in current user
+        $current_user = wp_get_current_user();
+
+        // Validate
+        if ( $provider->name == '' ) {
+            $response['errors'][] = "Error: Provider name can't be empty.";
+        }
+        if ( $provider->provider == '' ) {
+            $response['errors'][] = "Error: Provider can't be empty.";
+        }
+
+        if ( count($response['errors']) > 0 ) {
+            return $response;
+        }
+
+        if ( is_array( $provider->credentials ) ) {
+            foreach ( $provider->credentials as $credential ) {
+                $credential = (object) $credential;
+                if ( ! empty( $credential->name ) && ! empty( $credential->value ) ) {
+                    $credentials[] = [ "name" => $credential->name, "value" => $credential->value ];
+                }
+            }
+        }
+        $time_now         = date("Y-m-d H:i:s");
+        $new_provider     = ( new Providers )->insert( [
+            "name"        => $provider->name,
+            "provider"    => $provider->provider,
+            "credentials" => json_encode( $credentials ),
+            "created_at"  => $time_now,
+            "updated_at"  => $time_now
+        ] );
+        return $new_provider;
+
+    }
+
 }

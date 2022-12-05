@@ -989,6 +989,83 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-card-text>
 		</v-card>
 		</v-dialog>
+		<v-dialog v-model="dialog_new_provider.show" scrollable width="500">
+		<v-card>
+			<v-toolbar flat dark color="primary">
+			<v-btn icon dark @click.native="dialog_new_provider.show = false">
+				<v-icon>close</v-icon>
+			</v-btn>
+			<v-toolbar-title>Add Provider</v-toolbar-title>
+				<v-spacer></v-spacer>
+			</v-toolbar>
+			<v-card-text>
+				<v-text-field :value="dialog_new_provider.provider.name" @change.native="dialog_new_provider.provider.name = $event.target.value" label="Provider Name" required class="mt-3"></v-text-field>
+				<v-autocomplete :items="provider_options" v-model="dialog_new_provider.provider.provider" label="Provider" required></v-autocomplete>
+				Credentials
+				<v-row no-gutters v-for="(item, index) in dialog_new_provider.provider.credentials">
+       				<v-col cols="12" sm="5">
+						<v-text-field hide-details :value="item.name" @change.native="item.name = $event.target.value" label="Name" required></v-text-field>
+					</v-col>
+					<v-col cols="12" sm="6">
+						<v-text-field hide-details :value="item.value" @change.native="item.value = $event.target.value" label="Value" required class="mx-2"></v-text-field>
+					</v-col>
+					<v-col sm="1">
+						<v-btn icon @click="dialog_new_provider.provider.credentials.splice(index, 1)" class="mt-2"><v-icon>mdi-delete</v-icon></v-btn>
+					</v-col>
+				</v-row>
+				<v-btn depressed class="my-2" @click="dialog_new_provider.provider.credentials.push( {'name':'', 'value': ''} )" >Add Additional Credential</v-btn></td>
+				<v-alert text :value="true" type="error" v-for="error in dialog_new_provider.errors">
+					{{ error }}
+				</v-alert>
+				<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="dialog_new_provider.loading"></v-progress-linear>
+				<v-flex xs12 text-right>
+					<v-btn color="primary" dark @click="addProvider()">
+						Add Provider
+					</v-btn>
+				</v-flex>
+			</v-card-text>
+		</v-card>
+		</v-dialog>
+		<v-dialog v-model="dialog_edit_provider.show" scrollable width="500">
+		<v-card>
+			<v-toolbar flat dark color="primary">
+			<v-btn icon dark @click.native="dialog_edit_provider.show = false">
+				<v-icon>close</v-icon>
+			</v-btn>
+			<v-toolbar-title>Add Provider</v-toolbar-title>
+				<v-spacer></v-spacer>
+			</v-toolbar>
+			<v-card-text>
+				<v-text-field :value="dialog_edit_provider.provider.name" @change.native="dialog_edit_provider.provider.name = $event.target.value" label="Provider Name" required class="mt-3"></v-text-field>
+				<v-autocomplete :items="provider_options" v-model="dialog_edit_provider.provider.provider" label="Provider" required></v-autocomplete>
+				Credentials
+				<v-row no-gutters v-for="(item, index) in dialog_edit_provider.provider.credentials">
+       				<v-col cols="12" sm="5">
+						<v-text-field hide-details :value="item.name" @change.native="item.name = $event.target.value" label="Name" required></v-text-field>
+					</v-col>
+					<v-col cols="12" sm="6">
+						<v-text-field hide-details :value="item.value" @change.native="item.value = $event.target.value" label="Value" required class="mx-2"></v-text-field>
+					</v-col>
+					<v-col sm="1">
+						<v-btn icon @click="dialog_edit_provider.provider.credentials.splice(index, 1)" class="mt-2"><v-icon>mdi-delete</v-icon></v-btn>
+					</v-col>
+				</v-row>
+				<v-btn depressed class="my-2" @click="dialog_edit_provider.provider.credentials.push( {'name':'', 'value': ''} )" >Add Additional Credential</v-btn></td>
+				<v-alert text :value="true" type="error" v-for="error in dialog_edit_provider.errors">
+					{{ error }}
+				</v-alert>
+				<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="dialog_edit_provider.loading"></v-progress-linear>
+				<v-flex xs12 text-right>
+					<v-btn color="error" text dark @click="deleteProvider()">
+						Delete Provider
+					</v-btn>
+					<v-btn color="primary" dark @click="updateProvider()">
+						Update Provider
+					</v-btn>
+				</v-flex>
+			</v-card-text>
+		</v-card>
+		</v-dialog>
 		<v-dialog v-model="dialog_configure_defaults.show" scrollable width="980">
 		<v-card>
 			<v-toolbar flat dark color="primary">
@@ -4528,224 +4605,262 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar-title>Configurations</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
-				<v-card-text>
-				<span class="body-2">Theme colors</span>
+				<v-tabs background-color="primary" dark dense v-model="configurations_step">
+					<v-tab>Branding</v-tab>
+					<!--<v-tab>Scheduled Tasks</v-tab>-->
+					<v-tab>Providers</v-tab>
+					<v-tab>Billing</v-tab>
+				</v-tabs>
+				<v-tabs-items v-model="configurations_step">
+					<v-tab-item key="0" :transition="false" :reverse-transition="false">
+						<v-card>
+						<v-card-text>
+							<v-row>
+								<v-col :md="2">
+									<v-text-field v-model="configurations.name" label="Name"></v-text-field>
+								</v-col>
+								<v-col :md="4">
+									<v-text-field v-model="configurations.url" label="URL"></v-text-field>
+								</v-col>
+								<v-col :md="4">
+									<v-text-field v-model="configurations.logo" label="Logo URL"></v-text-field>
+								</v-col>
+								<v-col :md="2">
+									<v-text-field v-model="configurations.logo_width" label="Logo Width"></v-text-field>
+								</v-col>
+							</v-row>
+							<span class="body-2">DNS Labels</span>
+							<v-row>
+								<v-col cols="9">
+									<v-textarea v-model="configurations.dns_introduction" label="Introduction" auto-grow rows="3"></v-textarea>
+								</v-col>
+								<v-col cols="3">
+									<v-textarea v-model="configurations.dns_nameservers" label="Nameservers" spellcheck="false" auto-grow></v-textarea>
+								</v-col>
+							</v-row>
+							<span class="body-2">Theme colors</span>
+					<v-row>
+						<v-col class="shrink" style="min-width: 172px;">
+							<v-text-field persistent-hint hint="Primary" v-model="$vuetify.theme.themes.light.primary" class="ma-0 pa-0" solo>
+							<template v-slot:append>
+								<v-menu v-model="colors.primary" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
+									<template v-slot:activator="{ on }">
+										<div :style="{ backgroundColor: $vuetify.theme.themes.light.primary, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
+									</template>
+									<v-card>
+										<v-card-text class="pa-0">
+											<v-color-picker v-model="$vuetify.theme.themes.light.primary" flat></v-color-picker>
+										</v-card-text>
+									</v-card>
+								</v-menu>
+							</template>
+							</v-text-field>
+						</v-col>
+						<v-col class="shrink" style="min-width: 172px;">
+							<v-text-field persistent-hint hint="Secondary" v-model="$vuetify.theme.themes.light.secondary" class="ma-0 pa-0" solo>
+							<template v-slot:append>
+								<v-menu v-model="colors.secondary" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
+									<template v-slot:activator="{ on }">
+										<div :style="{ backgroundColor: $vuetify.theme.themes.light.secondary, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
+									</template>
+									<v-card>
+										<v-card-text class="pa-0">
+											<v-color-picker v-model="$vuetify.theme.themes.light.secondary" flat></v-color-picker>
+										</v-card-text>
+									</v-card>
+								</v-menu>
+							</template>
+							</v-text-field>
+						</v-col>
+						<v-col class="shrink" style="min-width: 172px;">
+							<v-text-field persistent-hint hint="Accent" v-model="$vuetify.theme.themes.light.accent" class="ma-0 pa-0" solo>
+							<template v-slot:append>
+								<v-menu v-model="colors.accent" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
+									<template v-slot:activator="{ on }">
+										<div :style="{ backgroundColor: $vuetify.theme.themes.light.accent, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
+									</template>
+									<v-card>
+										<v-card-text class="pa-0">
+											<v-color-picker v-model="$vuetify.theme.themes.light.accent" flat></v-color-picker>
+										</v-card-text>
+									</v-card>
+								</v-menu>
+							</template>
+							</v-text-field>
+						</v-col>
+						<v-col class="shrink" style="min-width: 172px;">
+							<v-text-field persistent-hint hint="Error" v-model="$vuetify.theme.themes.light.error" class="ma-0 pa-0" solo>
+							<template v-slot:append>
+								<v-menu v-model="colors.error" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
+									<template v-slot:activator="{ on }">
+										<div :style="{ backgroundColor: $vuetify.theme.themes.light.error, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
+									</template>
+									<v-card>
+										<v-card-text class="pa-0">
+											<v-color-picker v-model="$vuetify.theme.themes.light.error" flat></v-color-picker>
+										</v-card-text>
+									</v-card>
+								</v-menu>
+							</template>
+							</v-text-field>
+						</v-col>
+						<v-col class="shrink" style="min-width: 172px;">
+							<v-text-field persistent-hint hint="Info" v-model="$vuetify.theme.themes.light.info" class="ma-0 pa-0" solo>
+							<template v-slot:append>
+								<v-menu v-model="colors.info" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
+									<template v-slot:activator="{ on }">
+										<div :style="{ backgroundColor: $vuetify.theme.themes.light.info, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
+									</template>
+									<v-card>
+										<v-card-text class="pa-0">
+											<v-color-picker v-model="$vuetify.theme.themes.light.info" flat></v-color-picker>
+										</v-card-text>
+									</v-card>
+								</v-menu>
+							</template>
+							</v-text-field>
+						</v-col>
+						<v-col class="shrink" style="min-width: 172px;">
+							<v-text-field persistent-hint hint="Success" v-model="$vuetify.theme.themes.light.success" class="ma-0 pa-0" solo>
+							<template v-slot:append>
+								<v-menu v-model="colors.success" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
+									<template v-slot:activator="{ on }">
+										<div :style="{ backgroundColor: $vuetify.theme.themes.light.success, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
+									</template>
+									<v-card>
+										<v-card-text class="pa-0">
+											<v-color-picker v-model="$vuetify.theme.themes.light.success" flat></v-color-picker>
+										</v-card-text>
+									</v-card>
+								</v-menu>
+							</template>
+							</v-text-field>
+						</v-col>
+						<v-col class="shrink" style="min-width: 172px;">
+							<v-text-field persistent-hint hint="Warning" v-model="$vuetify.theme.themes.light.warning" class="ma-0 pa-0" solo>
+							<template v-slot:append>
+								<v-menu v-model="colors.warning" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
+									<template v-slot:activator="{ on }">
+										<div :style="{ backgroundColor: $vuetify.theme.themes.light.warning, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
+									</template>
+									<v-card>
+										<v-card-text class="pa-0">
+											<v-color-picker v-model="$vuetify.theme.themes.light.warning" flat></v-color-picker>
+										</v-card-text>
+									</v-card>
+								</v-menu>
+							</template>
+							</v-text-field>
+						</v-col>
+					</v-row>
+						<v-row>
+							<v-col><v-btn @click="resetColors">Reset colors</a></v-btn></v-col>
+						</v-row>
+							</v-card-text>
+						</v-card>
+					</v-tab-item>
+					
+					<v-tab-item key="2" :transition="false" :reverse-transition="false">
+					<v-toolbar color="grey lighten-4" light flat>
+						<v-toolbar-title>Listing {{ providers.length }} providers</v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-toolbar-items>
+							<v-btn text @click="dialog_new_provider.show = true">Add Provider <v-icon dark>add</v-icon></v-btn>
+						</v-toolbar-items>
+					</v-toolbar>
+					<v-data-table
+						:headers="[{ text: 'Name', value: 'name' },{ text: 'Created', value: 'created_at' }]"
+						:items="providers"
+						:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
+					>
+					<template v-slot:body="{ items }">
+						<tbody>
+						<tr v-for="item in items" @click="editProvider( item )" style="cursor:pointer">
+							<td>{{ item.name }}</td>
+							<td>{{ item.created_at | pretty_timestamp }}</td>
+						</tr>
+						</tbody>
+					</template>
+					</v-data-table>
+					</v-tab-item>
+					<v-tab-item key="3" :transition="false" :reverse-transition="false">
+					<v-card>
+					<v-card-text>
+					<span class="body-2">WooCommerce Products</span>
+					<v-row class="mb-7">
+						<v-col>
+							<v-select v-model="configurations.woocommerce.hosting_plan" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Hosting Plan" hide-details></v-select>
+						</v-col>
+						<v-col>
+							<v-select v-model="configurations.woocommerce.addons" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Addons" hide-details></v-select>
+						</v-col>
+						<v-col>
+							<v-select v-model="configurations.woocommerce.charges" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Charges" hide-details></v-select>
+						</v-col>
+						<v-col>
+							<v-select v-model="configurations.woocommerce.credits" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Credits" hide-details></v-select>
+						</v-col>
+						<v-col>
+							<v-select v-model="configurations.woocommerce.usage" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Usage" hide-details></v-select>
+						</v-col>
+					</v-row>
+					<span class="body-2">Hosting Plans</span>
+					<v-row v-for="(plan, index) in configurations.hosting_plans">
+						<v-col>
+							<v-text-field v-model="plan.name" label="Name"></v-text-field>
+						</v-col>
+						<v-col style="max-width:100px">
+							<v-text-field v-model="plan.interval" label="Interval" hint="# of months" persistent-hint></v-text-field>
+						</v-col>
+						<v-col style="max-width:100px">
+							<v-text-field v-model="plan.price" label="Price"></v-text-field>
+						</v-col>
+						<v-col style="max-width:150px">
+							<v-text-field v-model="plan.limits.visits" label="Visits Limits"></v-text-field>
+						</v-col>
+						<v-col style="max-width:150px">
+							<v-text-field v-model="plan.limits.storage" label="Storage Limits"></v-text-field>
+						</v-col>
+						<v-col style="max-width:120px">
+							<v-text-field v-model="plan.limits.sites" label="Sites Limits"></v-text-field>
+						</v-col>
+						<v-col class="ma-0 pa-0" style="max-width:46px">
+							<v-btn color="red" icon @click="deletePlan( index )"><v-icon>mdi-delete</v-icon></v-btn>
+						</v-col>
+					</v-row>
+					<v-row>
+						<v-col><v-btn @click="addAdditionalPlan()">Add Additional Plan</v-btn></v-col>
+					</v-row>
+					<div class="seperator mt-5"></div>
+					<span class="body-2">Usage Pricing</span>
+					<v-row>
+						<v-col style="max-width:200px"><v-text-field label="Sites Quantity" v-model="configurations.usage_pricing.sites.quantity"></v-text-field></v-col>
+						<v-col style="max-width:150px"><v-text-field label="Sites Cost" v-model="configurations.usage_pricing.sites.cost"></v-text-field></v-col>
+						<v-col style="max-width:150px"><v-text-field label="Sites Interval" v-model="configurations.usage_pricing.sites.interval" hint="# of months" persistent-hint></v-text-fiel></v-col>
+					</v-row>
+					<v-row>
+						<v-col style="max-width:200px"><v-text-field label="Storage Quantity (GB)" v-model="configurations.usage_pricing.storage.quantity"></v-text-field></v-col>
+						<v-col style="max-width:150px"><v-text-field label="Storage Cost" v-model="configurations.usage_pricing.storage.cost"></v-text-field></v-col>
+						<v-col style="max-width:150px"><v-text-field label="Storage Interval" v-model="configurations.usage_pricing.storage.interval" hint="# of months" persistent-hint></v-text-fiel></v-col>
+					</v-row>
+					<v-row>
+						<v-col style="max-width:200px"><v-text-field label="Traffic Quantity (pageviews)" v-model="configurations.usage_pricing.traffic.quantity"></v-text-field></v-col>
+						<v-col style="max-width:150px"><v-text-field label="Traffic Cost" v-model="configurations.usage_pricing.traffic.cost"></v-text-field></v-col>
+						<v-col style="max-width:150px"><v-text-field label="Traffic Interval" v-model="configurations.usage_pricing.traffic.interval" hint="# of months" persistent-hint></v-text-fiel></v-col>
+					</v-row>
+					</v-card>
+					</v-card-text>
+					</v-tab-item>
+				</v-tabs-items>
 				<v-row>
-					<v-col class="shrink" style="min-width: 220px;">
-						<v-text-field persistent-hint hint="Primary" v-model="$vuetify.theme.themes.light.primary" class="ma-0 pa-0" solo>
-						<template v-slot:append>
-							<v-menu v-model="colors.primary" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
-								<template v-slot:activator="{ on }">
-									<div :style="{ backgroundColor: $vuetify.theme.themes.light.primary, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
-								</template>
-								<v-card>
-									<v-card-text class="pa-0">
-										<v-color-picker v-model="$vuetify.theme.themes.light.primary" flat></v-color-picker>
-									</v-card-text>
-								</v-card>
-							</v-menu>
-						</template>
-						</v-text-field>
-					</v-col>
-					<v-col class="shrink" style="min-width: 220px;">
-						<v-text-field persistent-hint hint="Secondary" v-model="$vuetify.theme.themes.light.secondary" class="ma-0 pa-0" solo>
-						<template v-slot:append>
-							<v-menu v-model="colors.secondary" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
-								<template v-slot:activator="{ on }">
-									<div :style="{ backgroundColor: $vuetify.theme.themes.light.secondary, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
-								</template>
-								<v-card>
-									<v-card-text class="pa-0">
-										<v-color-picker v-model="$vuetify.theme.themes.light.secondary" flat></v-color-picker>
-									</v-card-text>
-								</v-card>
-							</v-menu>
-						</template>
-						</v-text-field>
-					</v-col>
-					<v-col class="shrink" style="min-width: 220px;">
-						<v-text-field persistent-hint hint="Accent" v-model="$vuetify.theme.themes.light.accent" class="ma-0 pa-0" solo>
-						<template v-slot:append>
-							<v-menu v-model="colors.accent" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
-								<template v-slot:activator="{ on }">
-									<div :style="{ backgroundColor: $vuetify.theme.themes.light.accent, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
-								</template>
-								<v-card>
-									<v-card-text class="pa-0">
-										<v-color-picker v-model="$vuetify.theme.themes.light.accent" flat></v-color-picker>
-									</v-card-text>
-								</v-card>
-							</v-menu>
-						</template>
-						</v-text-field>
-					</v-col>
-					<v-col class="shrink" style="min-width: 220px;">
-						<v-text-field persistent-hint hint="Error" v-model="$vuetify.theme.themes.light.error" class="ma-0 pa-0" solo>
-						<template v-slot:append>
-							<v-menu v-model="colors.error" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
-								<template v-slot:activator="{ on }">
-									<div :style="{ backgroundColor: $vuetify.theme.themes.light.error, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
-								</template>
-								<v-card>
-									<v-card-text class="pa-0">
-										<v-color-picker v-model="$vuetify.theme.themes.light.error" flat></v-color-picker>
-									</v-card-text>
-								</v-card>
-							</v-menu>
-						</template>
-						</v-text-field>
-					</v-col>
-					<v-col class="shrink" style="min-width: 220px;">
-						<v-text-field persistent-hint hint="Info" v-model="$vuetify.theme.themes.light.info" class="ma-0 pa-0" solo>
-						<template v-slot:append>
-							<v-menu v-model="colors.info" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
-								<template v-slot:activator="{ on }">
-									<div :style="{ backgroundColor: $vuetify.theme.themes.light.info, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
-								</template>
-								<v-card>
-									<v-card-text class="pa-0">
-										<v-color-picker v-model="$vuetify.theme.themes.light.info" flat></v-color-picker>
-									</v-card-text>
-								</v-card>
-							</v-menu>
-						</template>
-						</v-text-field>
-					</v-col>
-					<v-col class="shrink" style="min-width: 220px;">
-						<v-text-field persistent-hint hint="Success" v-model="$vuetify.theme.themes.light.success" class="ma-0 pa-0" solo>
-						<template v-slot:append>
-							<v-menu v-model="colors.success" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
-								<template v-slot:activator="{ on }">
-									<div :style="{ backgroundColor: $vuetify.theme.themes.light.success, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
-								</template>
-								<v-card>
-									<v-card-text class="pa-0">
-										<v-color-picker v-model="$vuetify.theme.themes.light.success" flat></v-color-picker>
-									</v-card-text>
-								</v-card>
-							</v-menu>
-						</template>
-						</v-text-field>
-					</v-col>
-					<v-col class="shrink" style="min-width: 220px;">
-						<v-text-field persistent-hint hint="Warning" v-model="$vuetify.theme.themes.light.warning" class="ma-0 pa-0" solo>
-						<template v-slot:append>
-							<v-menu v-model="colors.warning" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
-								<template v-slot:activator="{ on }">
-									<div :style="{ backgroundColor: $vuetify.theme.themes.light.warning, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
-								</template>
-								<v-card>
-									<v-card-text class="pa-0">
-										<v-color-picker v-model="$vuetify.theme.themes.light.warning" flat></v-color-picker>
-									</v-card-text>
-								</v-card>
-							</v-menu>
-						</template>
-						</v-text-field>
-					</v-col>
-					<v-col><v-btn @click="resetColors">Reset colors</a></v-btn>
-				</v-row>
-				<v-row>
-					<v-col :md="2">
-						<v-text-field v-model="configurations.name" label="Name"></v-text-field>
-					</v-col>
-					<v-col :md="4">
-						<v-text-field v-model="configurations.url" label="URL"></v-text-field>
-					</v-col>
-					<v-col :md="4">
-						<v-text-field v-model="configurations.logo" label="Logo URL"></v-text-field>
-					</v-col>
-					<v-col :md="2">
-						<v-text-field v-model="configurations.logo_width" label="Logo Width"></v-text-field>
-					</v-col>
-				</v-row>
-				<v-row>
 					<v-col>
-						<v-text-field v-model="configurations.intercom_embed_id" label="Intercom Embed ID"></v-text-field>
-					</v-col>
-					<v-col>
-						<v-text-field v-model="configurations.intercom_secret_key" label="Intercom Secret Key"></v-text-field>
-					</v-col>
-				</v-row>
-				<v-row>
-					<v-col>
-						<v-textarea v-model="configurations.dns_introduction" label="DNS Introduction"></v-textarea>
+						<v-card flat>
+						<v-card-actions style="text-align:right">
+							<v-btn color="primary" dark @click="saveGlobalConfigurations()">Save Configurations</v-btn>
+						</v-card-actions>
+						</v-card>
 					</v-col>
 				</v-row>
-				<v-row>
-					<v-col>
-						<v-textarea v-model="configurations.dns_nameservers" label="DNS Nameservers"></v-textarea>
-					</v-col>
-				</v-row>
-				<span class="body-2">WooCommerce Products</span>
-				<v-row class="mb-7">
-					<v-col>
-						<v-select v-model="configurations.woocommerce.hosting_plan" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Hosting Plan" hide-details></v-select>
-					</v-col>
-					<v-col>
-						<v-select v-model="configurations.woocommerce.addons" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Addons" hide-details></v-select>
-					</v-col>
-					<v-col>
-						<v-select v-model="configurations.woocommerce.charges" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Charges" hide-details></v-select>
-					</v-col>
-					<v-col>
-						<v-select v-model="configurations.woocommerce.credits" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Credits" hide-details></v-select>
-					</v-col>
-					<v-col>
-						<v-select v-model="configurations.woocommerce.usage" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Usage" hide-details></v-select>
-					</v-col>
-				</v-row>
-				<span class="body-2">Hosting Plans</span>
-				<v-row v-for="(plan, index) in configurations.hosting_plans">
-					<v-col>
-						<v-text-field v-model="plan.name" label="Name"></v-text-field>
-					</v-col>
-					<v-col style="max-width:100px">
-						<v-text-field v-model="plan.interval" label="Interval" hint="# of months" persistent-hint></v-text-field>
-					</v-col>
-					<v-col style="max-width:100px">
-						<v-text-field v-model="plan.price" label="Price"></v-text-field>
-					</v-col>
-					<v-col style="max-width:150px">
-						<v-text-field v-model="plan.limits.visits" label="Visits Limits"></v-text-field>
-					</v-col>
-					<v-col style="max-width:150px">
-						<v-text-field v-model="plan.limits.storage" label="Storage Limits"></v-text-field>
-					</v-col>
-					<v-col style="max-width:120px">
-						<v-text-field v-model="plan.limits.sites" label="Sites Limits"></v-text-field>
-					</v-col>
-					<v-col class="ma-0 pa-0" style="max-width:46px">
-						<v-btn color="red" icon @click="deletePlan( index )"><v-icon>mdi-delete</v-icon></v-btn>
-					</v-col>
-				</v-row>
-				<v-row>
-					<v-col><v-btn @click="addAdditionalPlan()">Add Additional Plan</v-btn></v-col>
-				</v-row>
-				<div class="seperator mt-5"></div>
-				<span class="body-2">Usage Pricing</span>
-				<v-row>
-					<v-col style="max-width:200px"><v-text-field label="Sites Quantity" v-model="configurations.usage_pricing.sites.quantity"></v-text-field></v-col>
-					<v-col style="max-width:150px"><v-text-field label="Sites Cost" v-model="configurations.usage_pricing.sites.cost"></v-text-field></v-col>
-					<v-col style="max-width:150px"><v-text-field label="Sites Interval" v-model="configurations.usage_pricing.sites.interval" hint="# of months" persistent-hint></v-text-fiel></v-col>
-				</v-row>
-				<v-row>
-					<v-col style="max-width:200px"><v-text-field label="Storage Quantity (GB)" v-model="configurations.usage_pricing.storage.quantity"></v-text-field></v-col>
-					<v-col style="max-width:150px"><v-text-field label="Storage Cost" v-model="configurations.usage_pricing.storage.cost"></v-text-field></v-col>
-					<v-col style="max-width:150px"><v-text-field label="Storage Interval" v-model="configurations.usage_pricing.storage.interval" hint="# of months" persistent-hint></v-text-fiel></v-col>
-				</v-row>
-				<v-row>
-					<v-col style="max-width:200px"><v-text-field label="Traffic Quantity (pageviews)" v-model="configurations.usage_pricing.traffic.quantity"></v-text-field></v-col>
-					<v-col style="max-width:150px"><v-text-field label="Traffic Cost" v-model="configurations.usage_pricing.traffic.cost"></v-text-field></v-col>
-					<v-col style="max-width:150px"><v-text-field label="Traffic Interval" v-model="configurations.usage_pricing.traffic.interval" hint="# of months" persistent-hint></v-text-fiel></v-col>
-				</v-row>
-				<v-flex xs12 text-right>
-					<v-btn color="primary" dark @click="saveGlobalConfigurations()">
-						Save Configurations
-					</v-btn>
-				</v-flex>
-
-				</v-card-text>
 			</v-card>
 			<v-card tile v-if="route == 'billing'" flat>
 				<v-toolbar color="grey lighten-4" light flat v-show="dialog_billing.step == 1">
@@ -6298,6 +6413,8 @@ new Vue({
 			},
 		},
 		dialog_new_domain: { show: false, domain: { name: "", account_id: "" }, loading: false, errors: [] },
+		dialog_new_provider: { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] },
+		dialog_edit_provider: { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] },
 		dialog_configure_defaults: { show: false, loading: false },
 		dialog_domain: { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], results: [], errors: [], loading: true, saving: false, step: 1 },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $user->user_email; ?>", current_user_email: "<?php echo $user->user_email; ?>", filter_toggle: true, filter_options: [] },
@@ -6320,6 +6437,43 @@ new Vue({
 		dialog_new_site_kinsta: { show: false, working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", domain: "", datacenter: "", shared_with: [], account_id: "", customer_id: "" } },
 		dialog_new_site_rocketdotnet: { show: false, site: { name: "", domain: "", datacenter: "", shared_with: [], account_id: "", customer_id: "" } },
 		dialog_request_site: { show: false, request: { name: "", account_id: "", notes: "" } },
+		provider_options: [
+			{
+				"text": "Analytics - Fathom",
+				"value": "fathom"
+			},
+			{
+				"text": "DNS - Constellix",
+				"value": "constellix"
+			},
+			{
+				"text": "Domain - Hover.com",
+				"value": "hoverdotcom"
+			},
+			{
+				"text": "Email - Mailgun",
+				"value": "mailgun"
+			},
+			{
+				"text": "Hosting - Kinsta",
+				"value": "kinsta",
+				"fields": [ { name: "Token", value: "token" } ]
+			},
+			{
+				"text": "Hosting - Rocket.net",
+				"value": "rocketdotnet"
+			},
+			{
+				"text": "Hosting - WP Engine",
+				"value": "wpengine",
+				"fields": [ "authorization_basic" ]
+			},
+			{
+				"text": "Live chat - Intercom",
+				"value": "intercom",
+				"fields": [ "embed_id", "secret_key" ]
+			},
+		],
 		datacenters: [
 			{
 				"text": "Taiwan (TW)",
@@ -7077,6 +7231,7 @@ new Vue({
 			}
 			if ( this.route == "configurations" ) {
 				this.fetchConfigurations()
+				this.fetchProviders()
 				this.loading_page = false
 				this.selected_nav = ""
 			}
@@ -8206,6 +8361,15 @@ new Vue({
 			if ( this.role == 'administrator' && this.users.length == 0 ) {
 				this.fetchAllUsers()
 			}
+		},
+		fetchProviders() {
+			axios.get(
+				'/wp-json/captaincore/v1/providers', {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					this.providers = response.data
+				});
 		},
 		fetchDomains() {
 			axios.get(
@@ -10402,6 +10566,68 @@ new Vue({
 		},
 		addGlobalDefaultsUser() {
 			this.defaults.users.push({ email: "", first_name: "", last_name: "", role: "administrator", username: "" })
+		},
+		addProvider() {
+			axios.post( '/wp-json/captaincore/v1/providers', {
+				provider: this.dialog_new_provider.provider
+			}, {
+				headers: { 'X-WP-Nonce':this.wp_nonce }
+			})
+			.then( response => {
+				if ( response.data.errors ) {
+					this.dialog_new_provider.loading = false
+					this.dialog_new_provider.errors = response.data.errors
+					return
+				}
+				this.snackbar.message = `Provider ${this.dialog_new_provider.provider.name} has been added.`
+				this.snackbar.show = true
+				this.dialog_new_provider = { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] }
+				this.fetchProviders()
+			});
+		},
+		editProvider( provider ) {
+			this.dialog_edit_provider.provider = provider
+			this.dialog_edit_provider.show = true
+		},
+		updateProvider() {
+			provider_id = this.dialog_edit_provider.provider.provider_id
+			axios.put( `/wp-json/captaincore/v1/providers/${provider_id}`, {
+				provider: this.dialog_edit_provider.provider
+			}, {
+				headers: { 'X-WP-Nonce':this.wp_nonce }
+			})
+			.then( response => {
+				if ( response.data.errors ) {
+					this.dialog_edit_provider.loading = false
+					this.dialog_edit_provider.errors = response.data.errors
+					return
+				}
+				this.snackbar.message = `Provider ${this.dialog_edit_provider.provider.name} has been updated.`
+				this.snackbar.show = true
+				this.dialog_edit_provider = { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] }
+				this.fetchProviders()
+			});
+		},
+		deleteProvider() {
+			should_proceed = confirm("Delete provider " +  this.dialog_edit_provider.provider.name + "?");
+			if ( ! should_proceed ) {
+				return;
+			}
+			provider_id = this.dialog_edit_provider.provider.provider_id
+			axios.delete( `/wp-json/captaincore/v1/providers/${provider_id}`, {
+				headers: { 'X-WP-Nonce':this.wp_nonce }
+			})
+			.then( response => {
+				if ( response.data.errors ) {
+					this.dialog_edit_provider.loading = false
+					this.dialog_edit_provider.errors = response.data.errors
+					return
+				}
+				this.snackbar.message = `Provider ${this.dialog_edit_provider.provider.name} has been deleted.`
+				this.snackbar.show = true
+				this.dialog_edit_provider = { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] }
+				this.fetchProviders()
+			});
 		},
 		addDomain() {
 			this.dialog_new_domain.loading = true;

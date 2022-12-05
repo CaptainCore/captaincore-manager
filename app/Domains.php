@@ -112,7 +112,7 @@ class Domains extends DB {
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json',
-                'X-Token'      => CaptainCore\Providers\Kinsta::token()
+                'X-Token'      => CaptainCore\Providers\Kinsta::credentials("token")
             ],
             'body'        => json_encode( [
                 "variables" => [ 
@@ -200,7 +200,7 @@ class Domains extends DB {
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json',
-                'X-Token'      => CaptainCore\Providers\Kinsta::token()
+                'X-Token'      => CaptainCore\Providers\Kinsta::credentials("token")
             ],
             'body'    => json_encode( [
                 "variables" => [ 

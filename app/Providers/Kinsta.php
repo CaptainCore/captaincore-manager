@@ -9,7 +9,11 @@ class Kinsta {
         if ( $record == "" ) {
             return $credentials;
         }
-        return $credentials->{$record};
+        foreach( $credentials as $credential ) {
+            if ( $credential->name == $record ) {
+                return $credential->value;
+            }
+        }
     }
     
     public static function update_token( $token = "" ) {
@@ -233,8 +237,7 @@ class Kinsta {
     public static function fetch_sftp_password( $site_key = 0 ) {
         $password = self::credentials("password");
         $token    = self::credentials("token");
-
-        $data  = [ 
+        $data     = [ 
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json',
