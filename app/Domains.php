@@ -112,11 +112,11 @@ class Domains extends DB {
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json',
-                'X-Token'      => CaptainCore\Providers\Kinsta::credentials("token")
+                'X-Token'      => \CaptainCore\Providers\Kinsta::credentials("token")
             ],
             'body'        => json_encode( [
                 "variables" => [ 
-                    "idCompany" => CaptainCore\Providers\Kinsta::credentials("company_id")
+                    "idCompany" => \CaptainCore\Providers\Kinsta::credentials("company_id")
                 ],
                 "operationName" => "SiteListFull",
                 "query"         => 'query SiteListFull($idCompany: String!) {
@@ -200,7 +200,7 @@ class Domains extends DB {
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json',
-                'X-Token'      => CaptainCore\Providers\Kinsta::credentials("token")
+                'X-Token'      => \CaptainCore\Providers\Kinsta::credentials("token")
             ],
             'body'    => json_encode( [
                 "variables" => [ 
