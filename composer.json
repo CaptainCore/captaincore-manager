@@ -4,6 +4,9 @@
             "CaptainCore\\": "app/"
         }
     },
+    "config": {
+        "platform-check": false
+    },
     "require": {
         "mailgun/mailgun-php": "^3.0",
         "kriswallsmith/buzz": "^1.0",
