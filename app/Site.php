@@ -126,6 +126,9 @@ class Site {
 
         // Work with array as PHP object
         $site = (object) $site;
+        foreach( $site->environments as $key => $environment ) {
+            $site->environments[ $key ] = (object) $environment;
+        }
 
         // Prep for response to return
         $response = [ "errors" => [] ];
@@ -134,7 +137,7 @@ class Site {
         $current_user = wp_get_current_user();
 
         // Validate
-        if ( $site->domain == '' ) {
+        if ( $site->name == '' ) {
             $response['errors'][] = "Error: Domain can't be empty.";
         }
         if ( $site->site == '' ) {
@@ -146,26 +149,25 @@ class Site {
         if ( strlen($site->site) < 3 ) {
             $response['errors'][] = "Error: Site length less then 3 characters.";
         }
-        if ( $site->environments[0]['address'] == "" ) {
+        if ( $site->environments[0]->address == "" ) {
             $response['errors'][] = "Error: Production environment address can't be empty.";
         }
-        if ( $site->environments[0]['username'] == "" ) {
+        if ( $site->environments[0]->username == "" ) {
             $response['errors'][] = "Error: Production environment username can't be empty.";
         }
-        if ( $site->environments[0]['protocol'] == "" ) {
+        if ( $site->environments[0]->protocol == "" ) {
             $response['errors'][] = "Error: Production environment protocol can't be empty.";
         }
-        if ( $site->environments[0]['port'] == "" ) {
+        if ( $site->environments[0]->port == "" ) {
             $response['errors'][] = "Error: Production environment port can't be empty.";
         }
-        if ( $site->environments[0]['port'] != "" and ! ctype_digit( $site->environments[0]['port'] ) ) {
+        if ( $site->environments[0]->port != "" and ! ctype_digit( $site->environments[0]->port ) ) {
             $response['errors'][] = "Error: Production environment port can only be numbers.";
         }
-
-        if ( $site->environments[1]['port'] and ! ctype_digit( $site->environments[1]['port'] ) ) {
+        if ( ! empty ( $site->environments[1] ) and $site->environments[1]->port and ! ctype_digit( $site->environments[1]->port ) ) {
             $response['errors'][] = "Error: Staging environment port can only be numbers.";
         }
-        
+
         // Hunt for conflicting site names
         $site_check = ( new Sites )->where( [ "site" => $site->site ] );
 
@@ -178,7 +180,7 @@ class Site {
         }
 
         // Remove staging if empty
-        if ( $site->environments[1]['address'] == "" ) {
+        if ( empty( $site->environments[1]->address ) ) {
             unset( $site->environments[1] );
         }
 
@@ -195,7 +197,7 @@ class Site {
         $new_site = [
             'account_id'  => $site->account_id,
             'customer_id' => empty( $site->customer_id ) ? "" : $site->customer_id,
-            'name'        => $site->domain,
+            'name'        => $site->name,
             'site'        => $site->site,
             'provider'    => $site->provider,
             'created_at'  => $time_now,
@@ -227,42 +229,41 @@ class Site {
         self::assign_accounts( $shared_with_ids );
 
         // Update environments
-        $db_environments = new Environments();
         foreach ( $site->environments as $environment ) {
             $new_environment = [
                 'site_id'                 => $site_id,
                 'created_at'              => $time_now,
                 'updated_at'              => $time_now,
-                'environment'             => $environment['environment'],
-                'address'                 => $environment['address'],
-                'username'                => $environment['username'],
-                'password'                => $environment['password'],
-                'protocol'                => $environment['protocol'],
-                'port'                    => $environment['port'],
-                'home_directory'          => $environment['home_directory'],
-                'database_username'       => $environment['database_username'],
-                'database_password'       => $environment['database_password'],
-                'offload_enabled'         => $environment['offload_enabled'],
-                'offload_access_key'      => $environment['offload_access_key'],
-                'offload_secret_key'      => $environment['offload_secret_key'],
-                'offload_bucket'          => $environment['offload_bucket'],
-                'offload_path'            => $environment['offload_path'],
-                'updates_enabled'         => $environment['updates_enabled'],
-                'updates_exclude_plugins' => $environment['updates_exclude_plugins'],
-                'updates_exclude_themes'  => $environment['updates_exclude_themes'],
+                'environment'             => $environment->environment,
+                'address'                 => $environment->address,
+                'username'                => $environment->username,
+                'password'                => $environment->password,
+                'protocol'                => $environment->protocol,
+                'port'                    => $environment->port,
+                'home_directory'          => $environment->home_directory,
+                'database_username'       => $environment->database_username,
+                'database_password'       => $environment->database_password,
+                'offload_enabled'         => $environment->offload_enabled,
+                'offload_access_key'      => $environment->offload_access_key,
+                'offload_secret_key'      => $environment->offload_secret_key,
+                'offload_bucket'          => $environment->offload_bucket,
+                'offload_path'            => $environment->offload_path,
+                'updates_enabled'         => $environment->updates_enabled,
+                'updates_exclude_plugins' => $environment->updates_exclude_plugins,
+                'updates_exclude_themes'  => $environment->updates_exclude_themes,
             ];
-            $db_environments->insert( $new_environment );
+            ( new Environments )->insert( $new_environment );
         }
 
         // Generate new customer if needed
-        if ( $site->customer_id == "" ) {
+        if ( empty( $site->customer_id ) ) {
             $hosting_plans = json_decode( get_option('captaincore_hosting_plans') );
             if ( is_array( $hosting_plans ) ) {
                 $plan        = $hosting_plans[0];
                 $plan->usage = (object) [ "storage" => "0", "visits" => "", "sites" => "" ];
             }
             $new_account = [
-                "name"       => $site->domain,
+                "name"       => $site->name,
                 'created_at' => $time_now,
                 'updated_at' => $time_now,
                 'defaults'   => json_encode( [ "email" => "", "timezone" => "", "recipes" => [], "users" => [] ] ),
