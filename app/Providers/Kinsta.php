@@ -19,7 +19,11 @@ class Kinsta {
     public static function update_token( $token = "" ) {
         $provider    = ( new \CaptainCore\Provider( "kinsta" ) )->get();
         $credentials = self::credentials();
-        $credentials->token = $token;
+        foreach( $credentials as $credential ) {
+            if ( $credential->name == "token" ) {
+                $credential->value = $token;
+            }
+        }
         ( new \CaptainCore\Providers )->update( [ "credentials" => json_encode( $credentials ) ], [ "provider_id" => $provider->provider_id ] );
         return self::verify();
     }
