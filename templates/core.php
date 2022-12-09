@@ -6383,7 +6383,7 @@ new Vue({
 		configurations_loading: true,
 		notifications: false,
 		provider_actions: [],
-		hosting_intervals: [{ text: 'Yearly', value: '12' },{ text: 'Monthly', value: '1' },{ Atext: 'Quarterly', value: '3' },{ text: 'Biannual', value: '6' }],
+		hosting_intervals: [{ text: 'Yearly', value: '12' },{ text: 'Monthly', value: '1' },{ text: 'Quarterly', value: '3' },{ text: 'Biannual', value: '6' }],
 		footer_height: "28px",
 		login: { user_login: "", user_password: "", errors: "", loading: false, lost_password: false, message: "" },
 		wp_nonce: "",
