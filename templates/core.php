@@ -2621,6 +2621,15 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											<v-icon>mdi-open-in-new</v-icon>
 										</v-list-item-icon>
 										</v-list-item>
+										<v-list-item @click="fetchPHPmyadmin()" dense v-if="dialog_site.site.provider == 'rocketdotnet'">
+											<v-list-item-content>
+												<v-list-item-title>Database</v-list-item-title>
+												<v-list-item-subtitle>PHPmyadmin</v-list-item-subtitle>
+											</v-list-item-content>
+											<v-list-item-icon>
+												<v-icon>mdi-open-in-new</v-icon>
+											</v-list-item-icon>
+										</v-list-item>
 										<v-list-item @click="copyText( dialog_site.environment_selected.database_name )" dense>
 										<v-list-item-content>
 											<v-list-item-title>Database Name</v-list-item-title>
@@ -10235,6 +10244,17 @@ new Vue({
 					this.copyText( response.data[0].ssh )
 				});
 			
+		},
+		fetchPHPmyadmin(){
+			site_id = this.dialog_site.site.site_id
+			environment = this.dialog_site.environment_selected.environment.toLowerCase()
+			axios.get(
+				`/wp-json/captaincore/v1/site/${site_id}/${environment}/phpmyadmin`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					window.open( response.data )
+				});
 		},
 		scanErrors( site ) {
 			site.loading = true
