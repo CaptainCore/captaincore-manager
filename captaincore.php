@@ -1937,6 +1937,18 @@ function captaincore_running_func( $request ) {
 	return [];
 }
 
+function captaincore_site_phpmyadmin_func( $request ) {
+	$site_id     = $request['id'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$environment = $request['environment'];
+	$site        = new CaptainCore\Site( $site_id );
+	return $site->fetch_phpmyadmin();
+}
+
 function captaincore_processes_func( $request ) {
 	return ( new CaptainCore\Processes )->list();
 }
@@ -2255,6 +2267,13 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_sites_func',
+			'show_in_index' => false
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/phpmyadmin', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_site_phpmyadmin_func',
 			'show_in_index' => false
 		]
 	);

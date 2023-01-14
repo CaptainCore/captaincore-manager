@@ -836,6 +836,30 @@ class Site {
         return array_column( $environment_id, "environment_id" )[0];
     }
 
+    public function fetch_phpmyadmin() {
+
+        $site = ( new Sites )->get( $this->site_id );
+        if ( $site->provider == "rocketdotnet" ) {
+            $api_request = "https://api.rocket.net/v1/sites/{$site->provider_id}/pma/login";
+            $response    = wp_remote_get( $api_request  , [
+                'headers'     => [
+                    'Authorization' => 'Bearer ' . \CaptainCore\Providers\Rocketdotnet::credentials("token"),
+                    'accept'        => 'application/json',
+                ]
+            ]);
+
+            if ( is_wp_error( $response ) ) {
+                return $response->get_error_message();
+            }
+            
+            $response = json_decode( $response['body'] );
+            if ( ! empty( $response->result ) ) {
+                return $response->result->phpmyadmin_sign_on_url;
+            }
+        }
+        
+    }
+
     public function environments() {
         // Fetch relating environments
         $site         = ( new Sites )->get( $this->site_id );
