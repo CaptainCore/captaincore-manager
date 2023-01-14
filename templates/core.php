@@ -2611,8 +2611,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										<v-icon>mdi-content-copy</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
-									<div v-if="dialog_site.environment_selected.database">
-										<v-list-item :href="dialog_site.environment_selected.database" target="_blank" dense>
+									<div>
+										<v-list-item :href="dialog_site.environment_selected.database" target="_blank" dense  v-if="dialog_site.environment_selected.database">
 										<v-list-item-content>
 											<v-list-item-title>Database</v-list-item-title>
 											<v-list-item-subtitle v-text="dialog_site.environment_selected.database"></v-list-item-subtitle>
