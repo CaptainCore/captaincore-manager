@@ -540,7 +540,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "27";
+        $required_version = (int) "28";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -731,6 +731,18 @@ class DB {
         ) $charset_collate;";
         
         dbDelta($sql);
+
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_account_portals` (
+            account_portal_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            account_id bigint(20) UNSIGNED NOT NULL,
+            domain varchar(255),
+            configurations longtext,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+        PRIMARY KEY  (account_portal_id)
+        ) $charset_collate;";
+        
+        dbDelta($sql);
         
         // account_id determines which account is responsible for billing, customer_id determines customer ownership
         $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_sites` (
@@ -739,6 +751,7 @@ class DB {
             customer_id bigint(20) UNSIGNED NOT NULL,
             name varchar(255),
             site varchar(255),
+            provider_id bigint(20),
             provider varchar(255),
             token varchar(255),
             status varchar(255),
