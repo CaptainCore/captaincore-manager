@@ -7974,12 +7974,13 @@ new Vue({
 		runProviderActions() {
 			this.provider_actions.forEach( action => {
 				if ( action.status == "waiting" ) {
-					site = action
+					site = action.action
 					axios.get( `/wp-json/captaincore/v1/provider-actions/${action.provider_action_id}/run`, {
 						headers: { 'X-WP-Nonce':this.wp_nonce }
 					}).then( response => {
 						this.snackbar.message = `New site ${site.name} created at Kinsta's datacenter ${site.datacenter}.`
 						this.snackbar.show = true
+						this.fetchAccounts()
 						this.provider_actions = response.data
 						this.fetchSites();
 					})
