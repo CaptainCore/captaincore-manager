@@ -8162,6 +8162,7 @@ new Vue({
 			site_update = JSON.parse ( JSON.stringify ( this.dialog_edit_site.site ) )
 			site_update.shared_with = site_update.shared_with.map( a => a.account_id )
 			site_name = site_update.name
+			site_id   = site_update.site_id
 			var data = {
 				'action': 'captaincore_ajax',
 				'command': "updateSite",
@@ -8179,6 +8180,8 @@ new Vue({
 					}
 
 					if ( response.response = "Successfully updated site" ) {
+						this.fetchSiteEnvironments( site_id )
+						this.fetchSiteDetails( site_id )
 						this.dialog_site.step = 2
 						this.dialog_edit_site = { show: false, loading: false, site: {} }
 
