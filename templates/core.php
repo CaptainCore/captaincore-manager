@@ -11905,7 +11905,7 @@ new Vue({
 		addPlugin ( site_id ){
 			site = this.dialog_site.site
 			this.new_plugin.show = true
-			this.new_plugin.sites.push( site )
+			this.new_plugin.sites = [ site ]
 			this.new_plugin.site_name = site.name
 			this.new_plugin.current_plugins = this.dialog_site.environment_selected.plugins.map( p => p.name )
 			this.new_plugin.environment_selected = this.dialog_site.environment_selected.environment
@@ -12188,7 +12188,7 @@ new Vue({
 		addTheme ( site_id ) {
 			site = this.dialog_site.site
 			this.new_theme.show = true
-			this.new_theme.sites.push( site )
+			this.new_theme.sites = [ site ]
 			this.new_theme.site_name = site.name
 			this.new_theme.current_themes = this.dialog_site.environment_selected.themes.map( p => p.name )
 			this.new_theme.environment_selected = this.dialog_site.environment_selected.environment
