@@ -11947,7 +11947,7 @@ new Vue({
 					this.jobs.push({"job_id": job_id,"site_id": site_id, "environment": environment_selected, "description": description, "status": "queued", "command": "manage", stream: []})
 
 					// WP ClI command to send
-					wpcli = "wp plugin install " + response.data + " --force --skip-plugins --skip-themes";
+					wpcli = `wp plugin install '${response.data}' --force --skip-plugins --skip-themes`
 
 					var data = {
 						'action': 'captaincore_install',
@@ -12005,7 +12005,7 @@ new Vue({
 					this.jobs.push({"job_id": job_id,"site_id": site_id, "environment": environment_selected, "description": description, "status": "queued", "command": "manage", stream: []})
 
 					// WP ClI command to send
-					wpcli = "wp theme install " + response.data + " --force --skip-plugins --skip-themes";
+					wpcli = `wp theme install '${response.data}' --force --skip-plugins --skip-themes`
 
 					var data = {
 						'action': 'captaincore_install',
