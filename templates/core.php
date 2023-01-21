@@ -11947,16 +11947,15 @@ new Vue({
 					this.jobs.push({"job_id": job_id,"site_id": site_id, "environment": environment_selected, "description": description, "status": "queued", "command": "manage", stream: []})
 
 					// WP ClI command to send
-					wpcli = `wp plugin install '${response.data}' --force --skip-plugins --skip-themes`
+					wpcli = `wp plugin install --force --skip-plugins --skip-themes '${response.data}'`
 
 					var data = {
 						'action': 'captaincore_install',
 						'post_id': site_id,
-						'command': "manage",
-						'value': "ssh",
+						'command': "run",
+						'value': wpcli,
 						'background': true,
-						'environment': environment_selected,
-						'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+						'environment': environment_selected
 					};
 
 					axios.post( ajaxurl, Qs.stringify( data ) )
@@ -12005,16 +12004,15 @@ new Vue({
 					this.jobs.push({"job_id": job_id,"site_id": site_id, "environment": environment_selected, "description": description, "status": "queued", "command": "manage", stream: []})
 
 					// WP ClI command to send
-					wpcli = `wp theme install '${response.data}' --force --skip-plugins --skip-themes`
+					wpcli = `wp theme install --force --skip-plugins --skip-themes '${response.data}'`
 
 					var data = {
 						'action': 'captaincore_install',
 						'post_id': site_id,
-						'command': "manage",
-						'value': "ssh",
+						'command': "run",
+						'value': wpcli,
 						'background': true,
-						'environment': environment_selected,
-						'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+						'environment': environment_selected
 					};
 
 					axios.post( ajaxurl, Qs.stringify( data ) )
