@@ -1746,6 +1746,40 @@ function captaincore_provider_verify_func( $request ) {
 	return ( new CaptainCore\Provider( $provider ) )->verify();
 }
 
+function captaincore_provider_themes_func( $request ) {
+	if ( ! ( new CaptainCore\User )->role_check() ){
+		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
+	}
+	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) );
+	return $provider::themes();
+}
+
+function captaincore_provider_theme_download_func( $request ) {
+	$theme_id = $request->get_param( "id" );
+	if ( ! ( new CaptainCore\User )->role_check() ){
+		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
+	}
+	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) );
+	return $provider::download_theme( $theme_id );
+}
+
+function captaincore_provider_plugin_download_func( $request ) {
+	$plugin_id = $request->get_param( "id" );
+	if ( ! ( new CaptainCore\User )->role_check() ){
+		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
+	}
+	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) );
+	return $provider::download_plugin( $plugin_id );
+}
+
+function captaincore_provider_plugins_func( $request ) {
+	if ( ! ( new CaptainCore\User )->role_check() ){
+		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
+	}
+	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) );
+	return $provider::plugins();
+}
+
 function captaincore_provider_connect_func( $request ) {
 	if ( ! ( new CaptainCore\User )->is_admin() ){
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
@@ -2314,6 +2348,35 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/verify', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_provider_verify_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/themes', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_provider_themes_func',
+			'show_in_index' => false
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/plugins', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_provider_plugins_func',
+			'show_in_index' => false
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/theme/(?P<id>[a-zA-Z0-9-]+)/download', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_provider_theme_download_func',
+			'show_in_index' => false
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/plugin/(?P<id>[a-zA-Z0-9-]+)/download', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_provider_plugin_download_func',
 			'show_in_index' => false
 		]
 	);

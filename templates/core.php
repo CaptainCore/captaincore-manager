@@ -255,11 +255,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			>
 				<v-tab>From your computer</v-tab>
 				<v-tab>From WordPress.org</v-tab>
+				<v-tab>From Envato</v-tab>
 			</v-tabs>
 			<v-spacer></v-spacer>
 		</v-toolbar>
 		<v-tabs-items v-model="new_plugin.tabs">
-      <v-tab-item key="0">
+      <v-tab-item key="0" :transition="false">
 		<div class="upload-drag pt-4">
 		<div class="upload">
 			<div v-if="upload.length" class="mx-3">
@@ -289,21 +290,17 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		</div>
 		</div>
       </v-tab-item>
-			<v-tab-item key="1">
+			<v-tab-item key="1" :transition="false">
 				<v-layout justify-center class="pa-3">
-				<v-flex xs12 sm3>
-				</v-flex>
-				<v-flex xs12 sm6>
-					<div class="text-center">
-						<v-pagination v-if="new_plugin.api.info && new_plugin.api.info.pages > 1" :length="new_plugin.api.info.pages - 1" v-model="new_plugin.page" :total-visible="7" color="primary" @input="fetchPlugins"></v-pagination>
-					</div>
+				<v-flex xs12 sm9 pt-3>
+					<v-pagination v-if="new_plugin.api.info && new_plugin.api.info.pages > 1" :length="new_plugin.api.info.pages - 1" v-model="new_plugin.page" :total-visible="7" color="primary" @input="fetchPlugins"></v-pagination>
 				</v-flex>
 				<v-flex xs12 sm3>
 					<v-text-field label="Search plugins" light @click:append="new_plugin.search = $event.target.offsetParent.children[0].children[1].value; fetchPlugins()" v-on:keyup.enter="new_plugin.search = $event.target.value; fetchPlugins()" append-icon="search" :loading="new_plugin.loading"></v-text-field>
 					<!-- @change.native="new_plugin.search = $event.target.value; fetchPlugins" -->
 				</v-flex>
 			</v-layout>
-			<v-layout row wrap pa-2>
+			<v-layout row wrap pa-5>
 				<v-flex
 					v-for="item in new_plugin.api.items"
 					:key="item.slug"
@@ -330,10 +327,33 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</div>
 							<v-btn v-else small depressed @click="installPlugin( item )">Install</v-btn>
 						</v-card-actions>
-		</v-card>
+					</v-card>
 				</v-flex>
 			</v-layout>
       </v-tab-item>
+	  <v-tab-item key="2" :transition="false">
+			<v-layout row wrap pa-5>
+				<v-flex v-for="item in new_plugin.envato.items" :key="item.id" xs4 pa-2>
+					<v-card>
+					<v-layout style="min-height: 120px;">
+					<v-flex xs3 px-2 pt-2>
+						<v-img
+							:src='item.previews.icon_preview.icon_url'
+							contain
+						></v-img>
+					</v-flex>
+					<v-flex xs9 px-2 pt-2>
+						<span v-html="item.name"></span>
+					</v-flex>
+					</v-layout>
+						<v-card-actions>
+							<v-spacer></v-spacer>
+							<v-btn small depressed @click="installEnvatoPlugin( item )">Install</v-btn>
+						</v-card-actions>
+					</v-card>
+				</v-flex>
+			</v-layout>
+	  </v-tab-item>
     </v-tabs-items>
 		</v-card>
 		</v-dialog>
@@ -354,11 +374,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			>
 				<v-tab>From your computer</v-tab>
 				<v-tab>From WordPress.org</v-tab>
+				<v-tab>From Envato</v-tab>
 			</v-tabs>
 			<v-spacer></v-spacer>
 		</v-toolbar>
 		<v-tabs-items v-model="new_theme.tabs">
-      <v-tab-item key="0">
+      <v-tab-item key="0" :transition="false">
 		<div class="upload-drag pt-4">
 		<div class="upload">
 			<div v-if="upload.length" class="mx-3">
@@ -388,7 +409,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		</div>
 		</div>
 		</v-tab-item>
-			<v-tab-item key="1">
+			<v-tab-item key="1" :transition="false">
 				<v-layout justify-center class="pa-3">
 				<v-flex xs12 sm3>
 				</v-flex>
@@ -433,6 +454,26 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-flex>
 			</v-layout>
       </v-tab-item>
+	  <v-tab-item key="2" :transition="false">
+			<v-layout row wrap pa-5>
+				<v-flex v-for="item in new_theme.envato.items" :key="item.id" xs4 pa-2>
+					<v-card>
+					<v-layout style="min-height: 120px;">
+					<v-flex xs3 px-2 pt-2>
+						<v-img :src='item.previews.icon_preview.icon_url' contain></v-img>
+					</v-flex>
+					<v-flex xs9 px-2 pt-2>
+						<span v-html="item.name"></span>
+					</v-flex>
+					</v-layout>
+						<v-card-actions>
+							<v-spacer></v-spacer>
+							<v-btn small depressed @click="installEnvatoTheme( item )">Install</v-btn>
+						</v-card-actions>
+					</v-card>
+				</v-flex>
+			</v-layout>
+	  </v-tab-item>
     </v-tabs-items>
 		</v-card>
 		</v-dialog>
@@ -6483,6 +6524,11 @@ new Vue({
 				"value": "intercom",
 				"fields": [ "embed_id", "secret_key" ]
 			},
+			{
+				"text": "Marketplace - Envato",
+				"value": "envato",
+				"fields": [ "token" ]
+			},
 		],
 		datacenters: [
 			{
@@ -6726,8 +6772,8 @@ new Vue({
 		dialog_site_request: { show: false, request: {} },
 		dialog_edit_account: { show: false, account: {} },
 		roles: [{ name: "Subscriber", value: "subscriber" },{ name: "Contributor", value: "contributor" },{ name: "Author", value: "author" },{ name: "Editor", value: "editor" },{ name: "Administrator", value: "administrator" }],
-		new_plugin: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {} },
-		new_theme: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {} },
+		new_plugin: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {}, envato: {} },
+		new_theme: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {}, envato: {} },
 		bulk_edit: { show: false, site_id: null, type: null, items: [] },
 		upload: [],
 		console: 0,
@@ -11864,6 +11910,7 @@ new Vue({
 			this.new_plugin.current_plugins = this.dialog_site.environment_selected.plugins.map( p => p.name )
 			this.new_plugin.environment_selected = this.dialog_site.environment_selected.environment
 			this.fetchPlugins()
+			this.fetchEnvatoPlugins()
 		},
 		addPluginBulk() {
 			this.new_plugin.show = true
@@ -11872,6 +11919,123 @@ new Vue({
 			this.new_plugin.current_plugins = []
 			this.new_plugin.environment_selected = this.dialog_bulk.environment_selected
 			this.fetchPlugins()
+			this.fetchEnvatoPlugins()
+		},
+		installEnvatoPlugin ( plugin ) {
+			if ( this.new_plugin.sites.length ==  1 ) {
+				site_id = this.new_plugin.sites[0].site_id
+				environment_selected = this.new_plugin.sites[0].environment_selected
+			} else {
+				site_id = this.new_plugin.sites.map( s => s.site_id )
+				environment_selected = this.new_plugin.environment_selected.environment
+			}
+			site_name = this.new_plugin.site_name;
+			should_proceed = confirm("Proceed with installing plugin " + plugin.name + " on " + site_name + "?");
+			if ( ! should_proceed ) {
+				return;
+			}
+			
+			axios.get(
+				`/wp-json/captaincore/v1/providers/envato/plugin/${plugin.id}/download`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then( response => {
+
+					// Enable loading progress
+					description = `Installing plugin '${plugin.name}' to ${site_name}`
+					job_id = Math.round((new Date()).getTime())
+					this.jobs.push({"job_id": job_id,"site_id": site_id, "environment": environment_selected, "description": description, "status": "queued", "command": "manage", stream: []})
+
+					// WP ClI command to send
+					wpcli = "wp plugin install " + response.data + " --force --skip-plugins --skip-themes";
+
+					var data = {
+						'action': 'captaincore_install',
+						'post_id': site_id,
+						'command': "manage",
+						'value': "ssh",
+						'background': true,
+						'environment': environment_selected,
+						'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+					};
+
+					axios.post( ajaxurl, Qs.stringify( data ) )
+						.then( res => {
+							this.new_plugin.show = false
+							this.snackbar.message = description
+							this.snackbar.show = true
+							this.new_plugin.api.items = []
+							this.new_plugin.api.info = {}
+							this.new_plugin.envato = {}
+							this.new_plugin.loading = false;
+
+							// Updates job id with reponsed background job id
+							this.jobs.filter(job => job.job_id == job_id)[0].job_id = res.data
+							this.runCommand( res.data );
+						})
+						.catch(error => {
+							console.log(error.response)
+							this.new_plugin.show = true
+						});
+				})
+		},
+		installEnvatoTheme ( theme ) {
+			if ( this.new_theme.sites.length ==  1 ) {
+				site_id = this.new_theme.sites[0].site_id
+				environment_selected = this.new_theme.sites[0].environment_selected
+			} else {
+				site_id = this.new_theme.sites.map( s => s.site_id )
+				environment_selected = this.new_theme.environment_selected.environment
+			}
+			site_name = this.new_theme.site_name;
+			should_proceed = confirm("Proceed with installing theme " + theme.name + " on " + site_name + "?");
+			if ( ! should_proceed ) {
+				return;
+			}
+			
+			axios.get(
+				`/wp-json/captaincore/v1/providers/envato/theme/${theme.id}/download`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then( response => {
+
+					// Enable loading progress
+					description = `Installing plugin '${theme.name}' to ${site_name}`
+					job_id = Math.round((new Date()).getTime())
+					this.jobs.push({"job_id": job_id,"site_id": site_id, "environment": environment_selected, "description": description, "status": "queued", "command": "manage", stream: []})
+
+					// WP ClI command to send
+					wpcli = "wp theme install " + response.data + " --force --skip-plugins --skip-themes";
+
+					var data = {
+						'action': 'captaincore_install',
+						'post_id': site_id,
+						'command': "manage",
+						'value': "ssh",
+						'background': true,
+						'environment': environment_selected,
+						'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+					};
+
+					axios.post( ajaxurl, Qs.stringify( data ) )
+						.then( res => {
+							this.new_theme.show = false
+							this.snackbar.message = description
+							this.snackbar.show = true
+							this.new_theme.api.items = []
+							this.new_theme.api.info = {}
+							this.new_theme.envato = {}
+							this.new_theme.loading = false;
+
+							// Updates job id with reponsed background job id
+							this.jobs.filter(job => job.job_id == job_id)[0].job_id = res.data
+							this.runCommand( res.data );
+						})
+						.catch(error => {
+							console.log(error.response)
+							this.new_theme.show = true
+						});
+				})
 		},
 		installPlugin ( plugin ) {
 			if ( this.new_plugin.sites.length ==  1 ) {
@@ -12003,6 +12167,24 @@ new Vue({
 					self.new_plugin.loading = false;
 				});
 		},
+		fetchEnvatoThemes() {
+			axios.get(
+				`/wp-json/captaincore/v1/providers/envato/themes`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then( response => {
+					this.new_theme.envato.items = response.data
+				})
+		},
+		fetchEnvatoPlugins() {
+			axios.get(
+				`/wp-json/captaincore/v1/providers/envato/plugins`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then( response => {
+					this.new_plugin.envato.items = response.data
+				})
+		},
 		addTheme ( site_id ) {
 			site = this.dialog_site.site
 			this.new_theme.show = true
@@ -12011,6 +12193,7 @@ new Vue({
 			this.new_theme.current_themes = this.dialog_site.environment_selected.themes.map( p => p.name )
 			this.new_theme.environment_selected = this.dialog_site.environment_selected.environment
 			this.fetchThemes()
+			this.fetchEnvatoThemes()
 		},
 		addThemeBulk() {
 			this.new_theme.show = true
@@ -12018,6 +12201,7 @@ new Vue({
 			this.new_theme.site_name = this.new_theme.sites.length + " sites"
 			this.new_theme.environment_selected = this.dialog_bulk.environment_selected
 			this.fetchThemes()
+			this.fetchEnvatoThemes()
 		},
 		installTheme ( theme ) {
 
