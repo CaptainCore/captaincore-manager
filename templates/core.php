@@ -332,27 +332,33 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-layout>
       </v-tab-item>
 	  <v-tab-item key="2" :transition="false">
-			<v-layout row wrap pa-5>
-				<v-flex v-for="item in new_plugin.envato.items" :key="item.id" xs4 pa-2>
-					<v-card>
-					<v-layout style="min-height: 120px;">
-					<v-flex xs3 px-2 pt-2>
-						<v-img
-							:src='item.previews.icon_preview.icon_url'
-							contain
-						></v-img>
-					</v-flex>
-					<v-flex xs9 px-2 pt-2>
-						<span v-html="item.name"></span>
-					</v-flex>
-					</v-layout>
-						<v-card-actions>
-							<v-spacer></v-spacer>
-							<v-btn small depressed @click="installEnvatoPlugin( item )">Install</v-btn>
-						</v-card-actions>
-					</v-card>
+	  	<v-layout justify-center class="pa-3">
+			<v-flex xs12 sm9 pt-3></v-flex>
+			<v-flex xs12 sm3>
+				<v-text-field label="Search plugins" light v-model="new_plugin.envato.search" append-icon="search"></v-text-field>
+			</v-flex>
+		</v-layout>
+		<v-layout row wrap pa-5>
+			<v-flex v-for="item in filteredEnvatoPlugins" :key="item.id" xs4 pa-2>
+				<v-card>
+				<v-layout style="min-height: 120px;">
+				<v-flex xs3 px-2 pt-2>
+					<v-img
+						:src='item.previews.icon_preview.icon_url'
+						contain
+					></v-img>
 				</v-flex>
-			</v-layout>
+				<v-flex xs9 px-2 pt-2>
+					<span v-html="item.name"></span>
+				</v-flex>
+				</v-layout>
+					<v-card-actions>
+						<v-spacer></v-spacer>
+						<v-btn small depressed @click="installEnvatoPlugin( item )">Install</v-btn>
+					</v-card-actions>
+				</v-card>
+			</v-flex>
+		</v-layout>
 	  </v-tab-item>
     </v-tabs-items>
 		</v-card>
@@ -455,24 +461,30 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-layout>
       </v-tab-item>
 	  <v-tab-item key="2" :transition="false">
-			<v-layout row wrap pa-5>
-				<v-flex v-for="item in new_theme.envato.items" :key="item.id" xs4 pa-2>
-					<v-card>
-					<v-layout style="min-height: 120px;">
-					<v-flex xs3 px-2 pt-2>
-						<v-img :src='item.previews.icon_preview.icon_url' contain></v-img>
-					</v-flex>
-					<v-flex xs9 px-2 pt-2>
-						<span v-html="item.name"></span>
-					</v-flex>
-					</v-layout>
-						<v-card-actions>
-							<v-spacer></v-spacer>
-							<v-btn small depressed @click="installEnvatoTheme( item )">Install</v-btn>
-						</v-card-actions>
-					</v-card>
+		<v-layout justify-center class="pa-3">
+			<v-flex xs12 sm9 pt-3></v-flex>
+			<v-flex xs12 sm3>
+				<v-text-field label="Search themes" light v-model="new_theme.envato.search" append-icon="search"></v-text-field>
+			</v-flex>
+		</v-layout>
+		<v-layout row wrap pa-5>
+			<v-flex v-for="item in filteredEnvatoThemes" :key="item.id" xs4 pa-2>
+				<v-card>
+				<v-layout style="min-height: 120px;">
+				<v-flex xs3 px-2 pt-2>
+					<v-img :src='item.previews.icon_preview.icon_url' contain></v-img>
 				</v-flex>
-			</v-layout>
+				<v-flex xs9 px-2 pt-2>
+					<span v-html="item.name"></span>
+				</v-flex>
+				</v-layout>
+					<v-card-actions>
+						<v-spacer></v-spacer>
+						<v-btn small depressed @click="installEnvatoTheme( item )">Install</v-btn>
+					</v-card-actions>
+				</v-card>
+			</v-flex>
+		</v-layout>
 	  </v-tab-item>
     </v-tabs-items>
 		</v-card>
@@ -6772,8 +6784,8 @@ new Vue({
 		dialog_site_request: { show: false, request: {} },
 		dialog_edit_account: { show: false, account: {} },
 		roles: [{ name: "Subscriber", value: "subscriber" },{ name: "Contributor", value: "contributor" },{ name: "Author", value: "author" },{ name: "Editor", value: "editor" },{ name: "Administrator", value: "administrator" }],
-		new_plugin: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {}, envato: {} },
-		new_theme: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {}, envato: {} },
+		new_plugin: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {}, envato: { items: [], search: "" } },
+		new_theme: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {}, envato: { items: [], search: "" } },
 		bulk_edit: { show: false, site_id: null, type: null, items: [] },
 		upload: [],
 		console: 0,
@@ -7034,6 +7046,24 @@ new Vue({
 
 	},
 	computed: {
+		filteredEnvatoThemes() {
+			let themes = this.new_theme.envato.items
+			if ( this.new_theme.envato.search != "" ) {
+				themes = themes.filter( theme => {
+					return theme.name.toLowerCase().includes( this.new_theme.envato.search.toLowerCase() )
+				})
+			}
+			return themes
+		},
+		filteredEnvatoPlugins() {
+			let plugins = this.new_plugin.envato.items
+			if ( this.new_plugin.envato.search != "" ) {
+				plugins = plugins.filter( plugin => {
+					return plugin.name.toLowerCase().includes( this.new_plugin.envato.search.toLowerCase() )
+				})
+			}
+			return plugins
+		},
 		keySelections() {
 			keys = JSON.parse ( JSON.stringify (  this.keys ) )
 			keys.push( { key_id: "use_password", title: "Use SFTP Password" } )
@@ -12022,7 +12052,7 @@ new Vue({
 							this.snackbar.show = true
 							this.new_theme.api.items = []
 							this.new_theme.api.info = {}
-							this.new_theme.envato = {}
+							this.new_theme.envato = {  items: [], search: "" }
 							this.new_theme.loading = false;
 
 							// Updates job id with reponsed background job id
