@@ -11995,7 +11995,7 @@ new Vue({
 							this.snackbar.show = true
 							this.new_plugin.api.items = []
 							this.new_plugin.api.info = {}
-							this.new_plugin.envato = {}
+							this.new_plugin.envato = { items: [], search: "" }
 							this.new_plugin.loading = false;
 
 							// Updates job id with reponsed background job id
