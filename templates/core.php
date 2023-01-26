@@ -7382,7 +7382,6 @@ new Vue({
 				this.dialog_site.step = 2				
 				site = this.sites.filter( s => s.site_id == this.route_path )[0]
 				if ( site ) {
-					this.selected_site = site
 					this.showSite( site )
 				}
 			}
@@ -10288,6 +10287,7 @@ new Vue({
 			}
 		},
 		showSite( site ) {
+			this.selected_site = site
 			this.users_search = ""
 			this.dialog_site.loading = true
 			this.fetchSiteEnvironments( site.site_id )
