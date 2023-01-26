@@ -2457,11 +2457,11 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-img :src=`${remote_upload_uri}${dialog_site.site.site}_${dialog_site.site.site_id}/production/screenshots/${dialog_site.site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="dialog_site.site.screenshot_base"></v-img>
 					<v-toolbar-title>
 					<v-autocomplete
-						v-model="dialog_site.site"
+						v-model="selected_site"
 						:items="sites"
 						return-object
 						item-text="name"
-						@input="goToPath( `/account/sites/${dialog_site.site.site_id}` )"
+						@input="switchSite"
 						class="mt-5"
 						spellcheck="false"
 						flat
@@ -6788,6 +6788,7 @@ new Vue({
 		new_theme: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {}, envato: { items: [], search: "" } },
 		bulk_edit: { show: false, site_id: null, type: null, items: [] },
 		upload: [],
+		selected_site: {},
 		console: 0,
 		view_console: { show: false, open: false },
 		view_timeline: false,
@@ -7381,6 +7382,7 @@ new Vue({
 				this.dialog_site.step = 2				
 				site = this.sites.filter( s => s.site_id == this.route_path )[0]
 				if ( site ) {
+					this.selected_site = site
 					this.showSite( site )
 				}
 			}
@@ -10278,6 +10280,12 @@ new Vue({
 					this.snackbar.show = true;
 				})
 				.catch( error => console.log( error ) );
+		},
+		switchSite() {
+			if ( this.selected_site ) {
+				this.dialog_site.site = this.selected_site
+				this.goToPath( `/account/sites/${this.dialog_site.site.site_id}` )
+			}
 		},
 		showSite( site ) {
 			this.users_search = ""
