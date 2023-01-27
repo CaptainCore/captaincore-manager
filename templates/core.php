@@ -12074,12 +12074,11 @@ new Vue({
 				})
 		},
 		installPlugin ( plugin ) {
+			environment_selected = this.new_plugin.environment_selected
 			if ( this.new_plugin.sites.length ==  1 ) {
 				site_id = this.new_plugin.sites[0].site_id
-				environment_selected = this.new_plugin.sites[0].environment_selected
 			} else {
 				site_id = this.new_plugin.sites.map( s => s.site_id )
-				environment_selected = this.new_plugin.environment_selected.environment
 			}
 			site_name = this.new_plugin.site_name;
 			should_proceed = confirm("Proceed with installing plugin " + plugin.name + " on " + site_name + "?");
@@ -12240,13 +12239,11 @@ new Vue({
 			this.fetchEnvatoThemes()
 		},
 		installTheme ( theme ) {
-
+			environment_selected = this.new_theme.environment_selected
 			if ( this.new_theme.sites.length ==  1 ) {
-				site_id = this.new_theme.sites[0].site_id;
-				environment_selected = this.new_theme.sites[0].environment_selected
+				site_id = this.new_theme.sites[0].site_id
 			} else {
 				site_id = this.new_theme.sites.map( s => s.site_id )
-				environment_selected = this.new_theme.environment_selected
 			}
 
 			site_name = this.new_theme.site_name;
