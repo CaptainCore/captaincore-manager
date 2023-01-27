@@ -291,7 +291,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		</div>
       </v-tab-item>
 			<v-tab-item key="1" :transition="false">
-				<v-layout justify-center class="pa-3">
+			<v-layout justify-center class="pa-3">
 				<v-flex xs12 sm9 pt-3>
 					<v-pagination v-if="new_plugin.api.info && new_plugin.api.info.pages > 1" :length="new_plugin.api.info.pages - 1" v-model="new_plugin.page" :total-visible="7" color="primary" @input="fetchPlugins"></v-pagination>
 				</v-flex>
@@ -301,12 +301,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-flex>
 			</v-layout>
 			<v-layout row wrap pa-5>
-				<v-flex
-					v-for="item in new_plugin.api.items"
-					:key="item.slug"
-					xs4
-					pa-2
-				>
+				<v-flex v-for="item in new_plugin.api.items" :key="item.slug" xs4 pa-2>
 					<v-card>
 					<v-layout style="min-height: 120px;">
 					<v-flex xs3 px-2 pt-2>
@@ -8313,9 +8308,9 @@ new Vue({
 				post_id: site.site_id,
 				command: 'sync-data',
 				environment: this.dialog_site.environment_selected.environment
-			};
+			}
 
-			description = "Syncing " + site.name + " info";
+			description = "Syncing " + this.dialog_site.environment_selected.home_url + " info";
 
 			// Start job
 			job_id = Math.round((new Date()).getTime());
@@ -11944,7 +11939,7 @@ new Vue({
 			site = this.dialog_site.site
 			this.new_plugin.show = true
 			this.new_plugin.sites = [ site ]
-			this.new_plugin.site_name = site.name
+			this.new_plugin.site_name = this.dialog_site.environment_selected.home_url
 			this.new_plugin.current_plugins = this.dialog_site.environment_selected.plugins.map( p => p.name )
 			this.new_plugin.environment_selected = this.dialog_site.environment_selected.environment
 			this.fetchPlugins()
@@ -11960,12 +11955,11 @@ new Vue({
 			this.fetchEnvatoPlugins()
 		},
 		installEnvatoPlugin ( plugin ) {
+			environment_selected = this.new_plugin.environment_selected
 			if ( this.new_plugin.sites.length ==  1 ) {
 				site_id = this.new_plugin.sites[0].site_id
-				environment_selected = this.new_plugin.sites[0].environment_selected
 			} else {
 				site_id = this.new_plugin.sites.map( s => s.site_id )
-				environment_selected = this.new_plugin.environment_selected.environment
 			}
 			site_name = this.new_plugin.site_name;
 			should_proceed = confirm("Proceed with installing plugin " + plugin.name + " on " + site_name + "?");
@@ -12017,12 +12011,11 @@ new Vue({
 				})
 		},
 		installEnvatoTheme ( theme ) {
+			environment_selected = this.new_theme.environment_selected
 			if ( this.new_theme.sites.length ==  1 ) {
 				site_id = this.new_theme.sites[0].site_id
-				environment_selected = this.new_theme.sites[0].environment_selected
 			} else {
 				site_id = this.new_theme.sites.map( s => s.site_id )
-				environment_selected = this.new_theme.environment_selected.environment
 			}
 			site_name = this.new_theme.site_name;
 			should_proceed = confirm("Proceed with installing theme " + theme.name + " on " + site_name + "?");
@@ -12224,7 +12217,7 @@ new Vue({
 			site = this.dialog_site.site
 			this.new_theme.show = true
 			this.new_theme.sites = [ site ]
-			this.new_theme.site_name = site.name
+			this.new_theme.site_name = this.dialog_site.environment_selected.home_url
 			this.new_theme.current_themes = this.dialog_site.environment_selected.themes.map( p => p.name )
 			this.new_theme.environment_selected = this.dialog_site.environment_selected.environment
 			this.fetchThemes()
