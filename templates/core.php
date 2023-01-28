@@ -6355,7 +6355,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-tooltip top>
 			<template v-slot:activator="{ on }">
 				<v-btn text tile small @click="toggleConsole( 3 )" v-on="on">
-					<v-icon x-small>mdi-settings</v-icon> Site Bulk Tools
+					<v-icon x-small>mdi-filter-variant</v-icon> Site Bulk Tools
 					<div v-show="sites_selected.length > 0"><v-chip x-small label color="secondary" class="pa-1 ma-2">{{ sites_selected.length }} Selected</v-chip></div>
 				</v-btn>
 			</template><span>View Bulk Tools</span>
@@ -8955,7 +8955,7 @@ new Vue({
 			this.bulk_edit.show = true;
 			site = this.dialog_site.site
 			this.bulk_edit.site_id = site_id;
-			this.bulk_edit.site_name = site.name;
+			this.bulk_edit.site_name = this.dialog_site.environment_selected.home_url
 			this.bulk_edit.items = this.dialog_site.environment_selected[ type.toLowerCase() + "_selected" ];
 			this.bulk_edit.type = type;
 		},
@@ -8992,7 +8992,7 @@ new Vue({
 				'command': "manage",
 				'value': "ssh",
 				'background': true,
-				'environment': site.environment_selected,environment,
+				'environment': this.dialog_site.environment_selected.environment,
 				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
 			};
 
