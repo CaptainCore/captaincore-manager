@@ -1950,8 +1950,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-col cols="12">
 							<v-text-field label="Password" v-model="login.user_password" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']"></v-text-field>
 						</v-col>
+						<v-col cols="12" v-show="login.info || login.errors == 'One time password is invalid.'">
+							<v-text-field label="One Time Code" v-model="login.tfa_code" required :disabled="login.loading"></v-text-field>
+						</v-col>
 						<v-col cols="12">
 							<v-alert text type="error" v-show="login.errors">{{ login.errors }}</v-alert>
+							<v-alert text type="info" v-show="login.info">{{ login.info }}</v-alert>
 						</v-col>
 						<v-col cols="12">
 							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
@@ -1997,8 +2001,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-col cols="12">
 							<v-text-field label="Password" v-model="login.user_password" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']"></v-text-field>
 						</v-col>
+						<v-col cols="12" v-show="login.info || login.errors == 'One time password is invalid.'">
+							<v-text-field label="One Time Code" v-model="login.tfa_code" required :disabled="login.loading"></v-text-field>
+						</v-col>
 						<v-col cols="12">
 							<v-alert text type="error" v-show="login.errors">{{ login.errors }}</v-alert>
+							<v-alert text type="info" v-show="login.info">{{ login.info }}</v-alert>
 						</v-col>
 						<v-col cols="12">
 							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
@@ -5371,33 +5379,54 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar-items>
 					</v-toolbar-items>
 				</v-toolbar>
-				<v-card-text style="max-width:480px">
-					<v-row>
-						<v-col cols="12">
-						<v-list>
-						<v-list-item link href="https://gravatar.com" target="_blank">
-							<v-list-item-avatar>
-								<v-img :src="gravatar"></v-img>
-							</v-list-item-avatar>
-							<v-list-item-content>
-								<v-list-item-title>Edit thumbnail with Gravatar</v-list-item-title>
-							</v-list-item-content>
-							<v-list-item-icon>
-								<v-icon>mdi-open-in-new</v-icon>
-							</v-list-item-icon>
-						</v-list-item>
-						</v-list>
-						<v-text-field :value="profile.display_name" @change.native="profile.display_name = $event.target.value" label="Display Name"></v-text-field>
-						<v-text-field :value="profile.login" @change.native="profile.login = $event.target.value" label="Username" readonly disabled></v-text-field>
-						<v-text-field :value="profile.email" @change.native="profile.email = $event.target.value" label="Email"></v-text-field>
-						<v-text-field :value="profile.new_password" @change.native="profile.new_password = $event.target.value" type="password" label="New Password" hint="Leave empty to keep current password." persistent-hint></v-text-field>
-						</v-col>
-						<v-col cols="12" class="mt-3">
-							<v-alert text :value="true" type="error" v-for="error in profile.errors" class="mt-5">{{ error }}</v-alert>
-							<v-alert text :value="true" type="success" v-show="profile.success" class="mt-5">{{ profile.success }}</v-alert>
-							<v-btn color="primary" dark @click="updateAccount()">Save Account</v-btn>
-						</v-col>
-					</v-layout>
+				<v-card-text>
+				<v-row>
+					<v-col cols="6">
+					<v-list>
+					<v-list-item link href="https://gravatar.com" target="_blank">
+						<v-list-item-avatar>
+							<v-img :src="gravatar"></v-img>
+						</v-list-item-avatar>
+						<v-list-item-content>
+							<v-list-item-title>Edit thumbnail with Gravatar</v-list-item-title>
+						</v-list-item-content>
+						<v-list-item-icon>
+							<v-icon>mdi-open-in-new</v-icon>
+						</v-list-item-icon>
+					</v-list-item>
+					</v-list>
+					<v-text-field :value="profile.display_name" @change.native="profile.display_name = $event.target.value" label="Display Name"></v-text-field>
+					<v-text-field :value="profile.email" @change.native="profile.email = $event.target.value" label="Email"></v-text-field>
+					<v-text-field :value="profile.new_password" @change.native="profile.new_password = $event.target.value" type="password" label="New Password" hint="Leave empty to keep current password." persistent-hint></v-text-field>
+					<p>&nbsp;</p>
+					
+					<v-btn @click="disableTFA()" class="mb-7" v-if="profile.tfa_enabled">Turn off Two-Factor Authentication</v-btn>
+					<v-btn @click="enableTFA()" class="mb-7" v-else>Enable Two-Factor Authentication</v-btn>
+					<v-card v-show="profile.tfa_activate">
+						<v-card-text>
+							<p>Scan the QR code with your password application and enter 6 digit code. Advanced users can manually complete using <a :href="profile.tfa_uri" target="_blank">this link</a> or <a href="#copyToken" @click="copyText( profile.tfa_token )" >token</a>.</p>
+							<div id="tfa_qr_code" style="margin:auto;text-align:center;"></div>
+							<v-text-field outlined label="One time code" class="mt-3" v-model="login.tfa_code"></v-text-field>
+						</v-card-text>
+						<v-card-actions>
+							<v-btn @click="cancelTFA()" depressed>Cancel</v-btn>
+							<v-spacer></v-spacer>
+							<v-btn color="primary" dark @click="activateTFA()">Activate Two-Factor Authenticate</v-btn>
+						</v-card-actions>
+					</v-card>
+					</v-col>
+					<v-col cols="6">
+						
+					<v-col>
+				</v-row>
+				<v-row>
+					<v-col cols="12" class="mt-3">
+						<v-alert text :value="true" type="error" v-for="error in profile.errors" class="mt-5">{{ error }}</v-alert>
+						<v-alert text :value="true" type="success" v-show="profile.success" class="mt-5">{{ profile.success }}</v-alert>
+						<v-btn color="primary" dark @click="updateAccount()">Save Account</v-btn>
+					</v-col>
+				</v-row>
+				</v-card-text>
 			</v-card>
 			<v-card tile flat v-show="route == 'subscriptions'" v-if="role == 'administrator'">
 				<v-toolbar color="grey lighten-4" light flat>
@@ -6442,7 +6471,7 @@ new Vue({
 		provider_actions: [],
 		hosting_intervals: [{ text: 'Yearly', value: '12' },{ text: 'Monthly', value: '1' },{ text: 'Quarterly', value: '3' },{ text: 'Biannual', value: '6' }],
 		footer_height: "28px",
-		login: { user_login: "", user_password: "", errors: "", loading: false, lost_password: false, message: "" },
+		login: { user_login: "", user_password: "", errors: "", info: "", loading: false, lost_password: false, message: "", tfa_code: "" },
 		wp_nonce: "",
 		footer: <?php echo captaincore_footer_content_extracted(); ?>,
 		drawer: null,
@@ -6721,7 +6750,7 @@ new Vue({
 		current_user_registered: "<?php echo strtotime( $user->user_registered ); ?>",
 		current_user_hash: "<?php echo hash_hmac( 'sha256', $user->user_email, ( new CaptainCore\Configurations )->get()->intercom_secret_key ) ?>",
 		current_user_display_name: "<?php echo $user->display_name; ?>",
-		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->user_email; ?>", login: "<?php echo $user->user_login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", errors: [] },
+		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->user_email; ?>", login: "<?php echo $user->user_login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", errors: [], tfa_activate: false, tfa_enabled: <?php echo get_user_meta( $user->ID, 'captaincore_2fa_enabled', true ) ? get_user_meta( $user->ID, 'captaincore_2fa_enabled', true ) : 0; ?>, tfa_uri: "", tfa_token: "" },
 		stats: { from_at: "<?php echo date("Y-m-d", strtotime( date("Y-m-d" ). " -12 months" ) ); ?>", to_at: "<?php echo date("Y-m-d" ); ?>", from_at_select: false, to_at_select: false, grouping: "Month" },
 		<?php if ( current_user_can( "administrator" ) ) { ?>
 		role: "administrator",
@@ -7421,11 +7450,12 @@ new Vue({
 					'login': this.login
 				})
 				.then( response => {
-					if ( typeof response.data.errors === 'undefined' ) {
+					if ( typeof response.data.errors === 'undefined' && typeof response.data.info === 'undefined' ) {
 						window.location = "/account"
 						return
 					}
 					this.login.errors = response.data.errors
+					this.login.info = response.data.info
 					this.login.loading = false
 				})
 				.catch(error => {
@@ -9499,6 +9529,68 @@ new Vue({
 					this.dialog_new_user = { first_name: "", last_name: "", email: "", login: "", account_ids: [], errors: [] }
 				})
 				.catch( error => console.log( error ) );
+		},
+		disableTFA() {
+			axios.get(
+				`/wp-json/captaincore/v1/me/tfa_deactivate`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					if ( response.data ) {
+						this.profile.tfa_activate = false
+						this.profile.tfa_enabled = false
+						this.snackbar.message = "Two-Factor Authentication has been disabled."
+						this.snackbar.show = true
+						return
+					}
+					this.snackbar.message = "Token is not valid."
+				})
+		},
+		enableTFA() {
+			axios.get(
+				`/wp-json/captaincore/v1/me/tfa_activate`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					this.profile.tfa_uri = response.data
+					this.profile.tfa_token = response.data.split("=").pop()
+					let tfa_qr_code = document.getElementById("tfa_qr_code")
+					tfa_qr_code.innerHTML = ""
+					let qr_code = kjua({
+						crisp: false,
+						render: 'canvas',
+						text: this.profile.tfa_uri,
+						size: "150",
+					})
+					tfa_qr_code.appendChild(qr_code)
+					this.profile.tfa_activate = true
+				})
+		},
+		activateTFA() {
+			axios.post(
+				`/wp-json/captaincore/v1/me/tfa_validate`, {
+					token: this.login.tfa_code
+				}, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					if ( response.data ) {
+						this.profile.tfa_activate = false
+						this.profile.tfa_enabled = true
+						this.snackbar.message = "Two-Factor Authentication has been enabled."
+						this.snackbar.show = true
+						return
+					}
+					this.snackbar.message = "Token is not valid."
+					this.snackbar.show = true
+				})
+		},
+		
+		cancelTFA() {
+			let tfa_qr_code = document.getElementById("tfa_qr_code")
+			tfa_qr_code.innerHTML = ""
+			this.profile.tfa_uri = ""
+			this.profile.tfa_activate = false
 		},
 		updateAccount() {
 			var data = {
