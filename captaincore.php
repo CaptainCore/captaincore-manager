@@ -2432,6 +2432,36 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
+		'captaincore/v1', '/me/tfa_activate', [
+			'methods'       => 'GET',
+			'callback'      => function (WP_REST_Request $request) {
+				return ( new CaptainCore\User )->tfa_activate();
+			},
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/me/tfa_validate', [
+			'methods'       => 'POST',
+			'callback'      => function (WP_REST_Request $request) {
+				return ( new CaptainCore\User )->tfa_activate_verify( $request['token'] );
+			},
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/me/tfa_deactivate', [
+			'methods'       => 'GET',
+			'callback'      => function (WP_REST_Request $request) {
+				return ( new CaptainCore\User )->tfa_deactivate();
+			},
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
 		'captaincore/v1', '/filters/(?P<name>[a-zA-Z0-9-,|_%]+)/versions/', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_filter_versions_func',
@@ -2905,17 +2935,28 @@ function captaincore_login_func( WP_REST_Request $request ) {
 			"remember"      => true,
 		];
 
-		if ( function_exists( "wpgraphql_cors_signon" ) ) {
-			$current_user = wpgraphql_cors_signon( $credentials, true );
-		} else {
-			$current_user = wp_signon( $credentials );
-		} 
+		$current_user = wp_authenticate( $post->login->user_login, $post->login->user_password ); 
 
-		if ( $current_user->ID !== null ) {
-			return [ "message" =>  "Logged in." ];
-		} else {
+		if ( $current_user->ID === null ) {
 			return [ "errors" => "Login failed." ];
-		}		
+		}
+
+		$tfa_enabled = (bool) get_user_meta( $current_user->ID, 'captaincore_2fa_enabled', true );
+		if ( $tfa_enabled && empty( $post->login->tfa_code ) ) {
+			return [ "info" =>  "Enter one time password." ];
+		}
+		if ( $tfa_enabled ) {
+			$tfa_enabled_check = ( new CaptainCore\User( $current_user->ID, true ) )->tfa_login( $post->login->tfa_code );
+			if ( ! $tfa_enabled_check ) {
+				return [ "errors" =>  "One time password is invalid." ];
+			}
+		}
+		if ( function_exists( "wpgraphql_cors_signon" ) ) {
+			wpgraphql_cors_signon( $credentials, true );
+		} else {
+			wp_signon( $credentials );
+		} 
+		return [ "message" =>  "Logged in." ];
 	}
 
 	if ( $post->command == "signOut" ) {

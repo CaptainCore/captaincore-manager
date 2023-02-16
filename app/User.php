@@ -628,4 +628,43 @@ class User {
         return $this->user_id;
     }
 
+    public function tfa_activate() {
+        $user    = (object) self::fetch();
+        $otp     = \OTPHP\TOTP::generate();
+        $token   = $otp->getSecret();
+        $otp->setIssuer('Anchor Hosting');
+        $otp->setLabel( $user->email );
+        update_user_meta( $user->user_id , 'captaincore_2fa_token', $token );
+        return $otp->getProvisioningUri();
+    }
+
+    public function tfa_deactivate() {
+        $user    = (object) self::fetch();
+        delete_user_meta( $user->user_id , 'captaincore_2fa_token' );
+        delete_user_meta( $user->user_id , 'captaincore_2fa_enabled' );
+        return "Deaactivated";
+    }
+
+    public function tfa_activate_verify( $token ) {
+        $user   = (object) self::fetch();
+        $secret = get_user_meta( $user->user_id , 'captaincore_2fa_token', true );
+        $otp    = \OTPHP\TOTP::createFromSecret($secret); // create TOTP object from the secret.
+        $verify = $otp->verify($token);
+
+        if ( $verify ) {
+            update_user_meta( $user->user_id , 'captaincore_2fa_enabled', true );
+        }
+        
+        return $verify;
+    }
+
+    public function tfa_login( $token ) {
+        $user   = (object) self::fetch();
+        $secret = get_user_meta( $user->user_id , 'captaincore_2fa_token', true );
+        $otp    = \OTPHP\TOTP::createFromSecret($secret); // create TOTP object from the secret.
+        $verify = $otp->verify($token);
+        
+        return $verify;
+    }
+
 }
