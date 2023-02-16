@@ -29,6 +29,8 @@ return array(
     'Psr\\Http\\Client\\' => array($vendorDir . '/psr/http-client/src'),
     'Psr\\Container\\' => array($vendorDir . '/psr/container/src'),
     'PhpIP\\' => array($vendorDir . '/rlanvin/php-ip/src'),
+    'ParagonIE\\ConstantTime\\' => array($vendorDir . '/paragonie/constant_time_encoding/src'),
+    'OTPHP\\' => array($vendorDir . '/spomky-labs/otphp/src'),
     'Nyholm\\Psr7\\' => array($vendorDir . '/nyholm/psr7/src'),
     'Mailgun\\' => array($vendorDir . '/mailgun/mailgun-php/src'),
     'Http\\Promise\\' => array($vendorDir . '/php-http/promise/src'),

@@ -52,6 +52,11 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
             'Psr\\Http\\Client\\' => 16,
             'Psr\\Container\\' => 14,
             'PhpIP\\' => 6,
+            'ParagonIE\\ConstantTime\\' => 23,
+        ),
+        'O' => 
+        array (
+            'OTPHP\\' => 6,
         ),
         'N' => 
         array (
@@ -178,6 +183,14 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'PhpIP\\' => 
         array (
             0 => __DIR__ . '/..' . '/rlanvin/php-ip/src',
+        ),
+        'ParagonIE\\ConstantTime\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src',
+        ),
+        'OTPHP\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/spomky-labs/otphp/src',
         ),
         'Nyholm\\Psr7\\' => 
         array (
@@ -390,6 +403,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\ProviderAction' => __DIR__ . '/../..' . '/app/ProviderAction.php',
         'CaptainCore\\ProviderActions' => __DIR__ . '/../..' . '/app/ProviderActions.php',
         'CaptainCore\\Providers' => __DIR__ . '/../..' . '/app/Providers.php',
+        'CaptainCore\\Providers\\Envato' => __DIR__ . '/../..' . '/app/Providers/Envato.php',
         'CaptainCore\\Providers\\Fathom' => __DIR__ . '/../..' . '/app/Providers/Fathom.php',
         'CaptainCore\\Providers\\Hoverdotcom' => __DIR__ . '/../..' . '/app/Providers/Hoverdotcom.php',
         'CaptainCore\\Providers\\Kinsta' => __DIR__ . '/../..' . '/app/Providers/Kinsta.php',
@@ -759,6 +773,27 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'Nyholm\\Psr7\\Stream' => __DIR__ . '/..' . '/nyholm/psr7/src/Stream.php',
         'Nyholm\\Psr7\\UploadedFile' => __DIR__ . '/..' . '/nyholm/psr7/src/UploadedFile.php',
         'Nyholm\\Psr7\\Uri' => __DIR__ . '/..' . '/nyholm/psr7/src/Uri.php',
+        'OTPHP\\Factory' => __DIR__ . '/..' . '/spomky-labs/otphp/src/Factory.php',
+        'OTPHP\\FactoryInterface' => __DIR__ . '/..' . '/spomky-labs/otphp/src/FactoryInterface.php',
+        'OTPHP\\HOTP' => __DIR__ . '/..' . '/spomky-labs/otphp/src/HOTP.php',
+        'OTPHP\\HOTPInterface' => __DIR__ . '/..' . '/spomky-labs/otphp/src/HOTPInterface.php',
+        'OTPHP\\OTP' => __DIR__ . '/..' . '/spomky-labs/otphp/src/OTP.php',
+        'OTPHP\\OTPInterface' => __DIR__ . '/..' . '/spomky-labs/otphp/src/OTPInterface.php',
+        'OTPHP\\ParameterTrait' => __DIR__ . '/..' . '/spomky-labs/otphp/src/ParameterTrait.php',
+        'OTPHP\\TOTP' => __DIR__ . '/..' . '/spomky-labs/otphp/src/TOTP.php',
+        'OTPHP\\TOTPInterface' => __DIR__ . '/..' . '/spomky-labs/otphp/src/TOTPInterface.php',
+        'OTPHP\\Url' => __DIR__ . '/..' . '/spomky-labs/otphp/src/Url.php',
+        'ParagonIE\\ConstantTime\\Base32' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/Base32.php',
+        'ParagonIE\\ConstantTime\\Base32Hex' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/Base32Hex.php',
+        'ParagonIE\\ConstantTime\\Base64' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/Base64.php',
+        'ParagonIE\\ConstantTime\\Base64DotSlash' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/Base64DotSlash.php',
+        'ParagonIE\\ConstantTime\\Base64DotSlashOrdered' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/Base64DotSlashOrdered.php',
+        'ParagonIE\\ConstantTime\\Base64UrlSafe' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/Base64UrlSafe.php',
+        'ParagonIE\\ConstantTime\\Binary' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/Binary.php',
+        'ParagonIE\\ConstantTime\\EncoderInterface' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/EncoderInterface.php',
+        'ParagonIE\\ConstantTime\\Encoding' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/Encoding.php',
+        'ParagonIE\\ConstantTime\\Hex' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/Hex.php',
+        'ParagonIE\\ConstantTime\\RFC4648' => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src/RFC4648.php',
         'PhpIP\\IP' => __DIR__ . '/..' . '/rlanvin/php-ip/src/IP.php',
         'PhpIP\\IPBlock' => __DIR__ . '/..' . '/rlanvin/php-ip/src/IPBlock.php',
         'PhpIP\\IPBlockIterator' => __DIR__ . '/..' . '/rlanvin/php-ip/src/IPBlockIterator.php',
