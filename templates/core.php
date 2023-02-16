@@ -6404,6 +6404,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <script src="<?php echo $plugin_url; ?>public/js/vue.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/qs.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/axios.min.js"></script>
+<script src="<?php echo $plugin_url; ?>public/js/kjua.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/vuetify.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/vue-upload-component.js"></script>
 <?php } else { ?>
