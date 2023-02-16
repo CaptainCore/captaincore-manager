@@ -6404,7 +6404,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <script src="<?php echo $plugin_url; ?>public/js/vue.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/qs.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/axios.min.js"></script>
-<script src="<?php echo $plugin_url; ?>public/js/kjua.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/vuetify.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/vue-upload-component.js"></script>
 <?php } else { ?>
@@ -6416,6 +6415,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <?php } ?>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
+<script src="<?php echo $plugin_url; ?>public/js/kjua.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/moment.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.1/dist/frappe-charts.min.umd.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/core.js"></script>
