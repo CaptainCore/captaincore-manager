@@ -12123,7 +12123,7 @@ new Vue({
 				.then( response => {
 
 					// Enable loading progress
-					description = `Installing plugin '${theme.name}' to ${site_name}`
+					description = `Installing theme '${theme.name}' to ${site_name}`
 					job_id = Math.round((new Date()).getTime())
 					this.jobs.push({"job_id": job_id,"site_id": site_id, "environment": environment_selected, "description": description, "status": "queued", "command": "manage", stream: []})
 
