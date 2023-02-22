@@ -6474,6 +6474,7 @@ new Vue({
 		footer_height: "28px",
 		login: { user_login: "", user_password: "", errors: "", info: "", loading: false, lost_password: false, message: "", tfa_code: "" },
 		wp_nonce: "",
+		wp_nonce_retry: false,
 		footer: <?php echo captaincore_footer_content_extracted(); ?>,
 		drawer: null,
 		billing_loading: true,
@@ -7030,6 +7031,32 @@ new Vue({
 		}
 	},
 	mounted() {
+		axios.interceptors.response.use(
+			response => response,
+			error => {
+				const { config, response: { status }} = error;
+    			const originalRequest = config;
+				if (error.response.status === 403 && error.response.data.code == "rest_cookie_invalid_nonce" ) {
+					if ( this.wp_nonce_retry ) {
+						this.goToPath( '/account/login' )
+						this.wp_nonce_retry = false
+						return
+					}
+					// Attempt to retrieve a valid token
+					return axios.get( '/' ).then(response => {
+						html = response.data
+						const regex = /var wpApiSettings.+"nonce":"(.+)"/
+						const found = html.match(regex);
+						if ( typeof found[1] !== 'undefined' ) {
+							this.wp_nonce_retry = true
+							this.wp_nonce = found[1]
+							originalRequest.headers["X-WP-Nonce"] = found[1]
+							return axios(originalRequest);
+						}
+					})
+					return Promise.reject(error);
+				}
+			});
 		window.addEventListener('popstate', () => {
 			this.updateRoute( window.location.pathname )
 		})
