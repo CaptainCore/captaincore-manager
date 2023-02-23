@@ -1986,6 +1986,7 @@ function captaincore_site_phpmyadmin_func( $request ) {
 function captaincore_site_magiclogin_func( $request ) {
 	$site_id     = $request['id'];
 	$environment = $request['environment'];
+	$login       = $request['login'];
 
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
@@ -2004,29 +2005,31 @@ function captaincore_site_magiclogin_func( $request ) {
 		}
 	}
 
-	$current_user_domain = array_pop(explode('@', $current_email));
-	// Attempt to match current user to a similar WordPress user
-	foreach ( $users as $user ) {
-		$user_domain = array_pop(explode('@', $user->user_email));
-		if ( strpos( $user->roles, 'administrator') !== false && $user_domain == $current_user_domain ) {
-			$user_login = $user->user_login;
-			break;
-		}
-	}
-
-	// Select random WordPress admin
-	if ( empty( $user_login ) ) { 
+	if ( empty( $login ) ) {
+		$current_user_domain = array_pop(explode('@', $current_email));
+		// Attempt to match current user to a similar WordPress user
 		foreach ( $users as $user ) {
-			if ( strpos( $user->roles, 'administrator') !== false ) {
-				$user_login = $user->user_login;
+			$user_domain = array_pop(explode('@', $user->user_email));
+			if ( strpos( $user->roles, 'administrator') !== false && $user_domain == $current_user_domain ) {
+				$login = $user->user_login;
 				break;
+			}
+		}
+
+		// Select random WordPress admin
+		if ( empty( $login ) ) { 
+			foreach ( $users as $user ) {
+				if ( strpos( $user->roles, 'administrator') !== false ) {
+					$login = $user->user_login;
+					break;
+				}
 			}
 		}
 	}
 	$args     = [
 		"body" => json_encode( [
 				"command"    => "login",
-				"user_login" => $user_login,
+				"user_login" => $login,
 				"token"      => $environment->token,
 			] ),
 		"method"    => 'POST',
@@ -2367,6 +2370,13 @@ function captaincore_register_rest_endpoints() {
 	);
 	register_rest_route(
 		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/magiclogin', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_site_magiclogin_func',
+			'show_in_index' => false
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/magiclogin/(?P<login>[a-zA-Z0-9-]+)', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_magiclogin_func',
 			'show_in_index' => false
@@ -5234,24 +5244,6 @@ function captaincore_ajax_action_callback() {
 	if ( $cmd == 'fetch-update-logs' ) {
 		$results = ( new CaptainCore\Site( $post_id ))->update_logs();
 		echo json_encode($results);
-	}
-
-	if ( $cmd == 'fetch-one-time-login' ) {
-		$environment_id = ( new CaptainCore\Site( $post_id ) )->fetch_environment_id( $environment );
-		$environment    = ( new CaptainCore\Environments )->get( $environment_id );
-		$args     = [
-			"body" => json_encode( [
-					"command"    => "login",
-					"user_login" => $value,
-					"token"      => $environment->token,
-			 ] ),
-			"method"    => 'POST',
-			"sslverify" => false,
-		];
-		$response  = wp_remote_post( "{$environment->home_url}/wp-admin/admin-ajax.php?action=captaincore_quick_login", $args );
-		$login_url = $response["body"];
-		echo $login_url;
-		wp_die();
 	}
 
 	if ( $remote_command ) {
