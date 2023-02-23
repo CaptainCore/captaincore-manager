@@ -3050,7 +3050,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							{{ item.roles.split(",").join(" ") }}
 						</template>
 						<template v-slot:item.actions="{ item }">
-                    <v-btn small rounded @click="loginSite(dialog_site.site.site_id, item.user_login)" class="my-2">Login as</v-btn>
+                    <v-btn small rounded @click="magicLoginSite(dialog_site.site.site_id, item.user_login)" class="my-2">Login as</v-btn>
                     <v-btn icon small class="my-2" @click="deleteUserDialog( item.user_login, dialog_site.site.site_id)">
 							<v-icon small color="pink">delete</v-icon>
 						</v-btn>
@@ -7035,7 +7035,7 @@ new Vue({
 			response => response,
 			error => {
 				const { config, response: { status }} = error;
-    			const originalRequest = config;
+				const originalRequest = config;
 				if (error.response.status === 403 && error.response.data.code == "rest_cookie_invalid_nonce" ) {
 					if ( this.wp_nonce_retry ) {
 						this.goToPath( '/account/login' )
@@ -7787,50 +7787,19 @@ new Vue({
 		removeFromBulk( site_id ) {
 			this.sites_selected = this.sites_selected.filter(site => site.site_id != site_id);
 		},
-		loginSite(site_id, username) {
-
+		magicLoginSite( site_id, username ) {
 			// Adds new job
 			job_id = Math.round((new Date()).getTime());
-			description = "Login as '" + username + "' to " + this.dialog_site.environment_selected.home_url
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command":"login"});
-
-			// Prep AJAX request
-			var data = {
-				'action': 'captaincore_ajax',
-				'post_id': site_id,
-				'command': "fetch-one-time-login",
-				'value': username,
-				'environment': this.dialog_site.environment_selected.environment
-			}
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					if ( response.data.includes("http") ) {
-					window.open( response.data );
-						this.jobs.filter(job => job.job_id == job_id)[0].status = "done";
-					} else {
-						this.jobs.filter(job => job.job_id == job_id)[0].status = "error";
-						this.snackbar.message = description + " failed.";
-						this.snackbar.show = true;
-					}
-					
-				})
-				.catch(error => {
-					this.jobs.filter(job => job.job_id == job_id)[0].status = "error";
-					this.snackbar.message = description + " failed.";
-					this.snackbar.show = true;
-					console.log(error.response)
-			});
-		},
-		magicLoginSite( site_id ) {
-			// Adds new job
-			job_id = Math.round((new Date()).getTime());
-			description = "Magic login to " + this.dialog_site.environment_selected.home_url
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command":"login"});
-
 			environment = this.dialog_site.environment_selected.environment.toLowerCase()
-			axios.get(
-				`/wp-json/captaincore/v1/site/${site_id}/${environment}/magiclogin`, {
+			description = "Magic login to " + this.dialog_site.environment_selected.home_url
+			endpoint = `/wp-json/captaincore/v1/site/${site_id}/${environment}/magiclogin`
+			if ( username != "" ) {
+				description = `Login as ${username} to ${this.dialog_site.environment_selected.home_url}`
+				endpoint = `/wp-json/captaincore/v1/site/${site_id}/${environment}/magiclogin/${username}`
+			}
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command":"login"});
+
+			axios.get( endpoint, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
