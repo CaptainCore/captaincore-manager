@@ -7838,8 +7838,14 @@ new Vue({
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
+					if ( response.data.includes("There has been a critical error on this website") ) {
+						this.jobs.filter(job => job.job_id == job_id)[0].status = "error";
+						this.snackbar.message = description + " failed due to PHP error. Check server PHP logs.";
+						this.snackbar.show = true;
+						return
+					}
 					if ( response.data.includes("http") ) {
-					window.open( response.data );
+						window.open( response.data );
 						this.jobs.filter(job => job.job_id == job_id)[0].status = "done";
 					} else {
 						this.jobs.filter(job => job.job_id == job_id)[0].status = "error";
