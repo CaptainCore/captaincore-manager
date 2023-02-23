@@ -7828,16 +7828,12 @@ new Vue({
 			description = "Magic login to " + this.dialog_site.environment_selected.home_url
 			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command":"login"});
 
-			// Prep AJAX request
-			var data = {
-				'action': 'captaincore_ajax',
-				'post_id': site_id,
-				'command': "fetch-magic-login",
-				'environment': this.dialog_site.environment_selected.environment
-			}
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
+			environment = this.dialog_site.environment_selected.environment.toLowerCase()
+			axios.get(
+				`/wp-json/captaincore/v1/site/${site_id}/${environment}/magiclogin`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
 					if ( response.data.includes("There has been a critical error on this website") ) {
 						this.jobs.filter(job => job.job_id == job_id)[0].status = "error";
 						this.snackbar.message = description + " failed due to PHP error. Check server PHP logs.";
@@ -7852,14 +7848,13 @@ new Vue({
 						this.snackbar.message = description + " failed.";
 						this.snackbar.show = true;
 					}
-					
 				})
 				.catch(error => {
 					this.jobs.filter(job => job.job_id == job_id)[0].status = "error";
 					this.snackbar.message = description + " failed.";
 					this.snackbar.show = true;
 					console.log(error.response)
-			});
+				});
 		},
 		inputFile (newFile, oldFile) {
 

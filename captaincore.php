@@ -1983,6 +1983,60 @@ function captaincore_site_phpmyadmin_func( $request ) {
 	return $site->fetch_phpmyadmin();
 }
 
+function captaincore_site_magiclogin_func( $request ) {
+	$site_id     = $request['id'];
+	$environment = $request['environment'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$environment_id = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment );
+	$environment    = ( new CaptainCore\Environments )->get( $environment_id );
+	$current_email  = ( new CaptainCore\User )->fetch()["email"];
+
+	// Attempt to match current user to WordPress user
+	$users = json_decode( $environment->users );
+	foreach ( $users as $user ) {
+		if ( strpos( $user->roles, 'administrator') !== false && $user->user_email == $current_email ) {
+			$user_login = $user->user_login;
+			break;
+		}
+	}
+
+	$current_user_domain = array_pop(explode('@', $current_email));
+	// Attempt to match current user to a similar WordPress user
+	foreach ( $users as $user ) {
+		$user_domain = array_pop(explode('@', $user->user_email));
+		if ( strpos( $user->roles, 'administrator') !== false && $user_domain == $current_user_domain ) {
+			$user_login = $user->user_login;
+			break;
+		}
+	}
+
+	// Select random WordPress admin
+	if ( empty( $user_login ) ) { 
+		foreach ( $users as $user ) {
+			if ( strpos( $user->roles, 'administrator') !== false ) {
+				$user_login = $user->user_login;
+				break;
+			}
+		}
+	}
+	$args     = [
+		"body" => json_encode( [
+				"command"    => "login",
+				"user_login" => $user_login,
+				"token"      => $environment->token,
+			] ),
+		"method"    => 'POST',
+		"sslverify" => false,
+	];
+	$response  = wp_remote_post( "{$environment->home_url}/wp-admin/admin-ajax.php?action=captaincore_quick_login", $args );
+	$login_url = $response["body"];
+	return $login_url;
+}
+
 function captaincore_processes_func( $request ) {
 	return ( new CaptainCore\Processes )->list();
 }
@@ -2308,6 +2362,13 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/phpmyadmin', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_phpmyadmin_func',
+			'show_in_index' => false
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/magiclogin', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_site_magiclogin_func',
 			'show_in_index' => false
 		]
 	);
@@ -5182,54 +5243,6 @@ function captaincore_ajax_action_callback() {
 			"body" => json_encode( [
 					"command"    => "login",
 					"user_login" => $value,
-					"token"      => $environment->token,
-			 ] ),
-			"method"    => 'POST',
-			"sslverify" => false,
-		];
-		$response  = wp_remote_post( "{$environment->home_url}/wp-admin/admin-ajax.php?action=captaincore_quick_login", $args );
-		$login_url = $response["body"];
-		echo $login_url;
-		wp_die();
-	}
-
-	if ( $cmd == 'fetch-magic-login' ) {
-		$environment_id = ( new CaptainCore\Site( $post_id ) )->fetch_environment_id( $environment );
-		$environment    = ( new CaptainCore\Environments )->get( $environment_id );
-		$current_email  = ( new CaptainCore\User )->fetch()["email"];
-
-		// Attempt to match current user to WordPress user
-		$users = json_decode( $environment->users );
-		foreach ( $users as $user ) {
-			if ( strpos( $user->roles, 'administrator') !== false && $user->user_email == $current_email ) {
-				$user_login = $user->user_login;
-				break;
-			}
-		}
-
-		$current_user_domain = array_pop(explode('@', $current_email));
-		// Attempt to match current user to a similar WordPress user
-		foreach ( $users as $user ) {
-			$user_domain = array_pop(explode('@', $user->user_email));
-			if ( strpos( $user->roles, 'administrator') !== false && $user_domain == $current_user_domain ) {
-				$user_login = $user->user_login;
-				break;
-			}
-		}
-
-		// Select random WordPress admin
-		if ( empty( $user_login ) ) { 
-			foreach ( $users as $user ) {
-				if ( strpos( $user->roles, 'administrator') !== false ) {
-					$user_login = $user->user_login;
-					break;
-				}
-			}
-		}
-		$args     = [
-			"body" => json_encode( [
-					"command"    => "login",
-					"user_login" => $user_login,
 					"token"      => $environment->token,
 			 ] ),
 			"method"    => 'POST',
