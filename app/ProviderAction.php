@@ -33,12 +33,21 @@ class ProviderAction {
         return $actions;
     }
 
+    public function all() {
+        $actions = ( new ProviderActions )->all();
+        foreach( $actions as $action ) {
+            if ( ! empty( $action->action ) ) {
+                $action->action = json_decode( $action->action );
+            }
+        }
+        return $actions;
+    }
+
     public function run() {
         $action     = ( new ProviderActions )->get( $this->provider_action_id );
         $provider   = ( new Providers )->get( $action->provider_id );
         $class_name = "\CaptainCore\Providers\\" . ucfirst( $provider->provider );
         $result     = $class_name::action_result( $action->provider_key );
-        //echo " $action     = ( new ProviderActions )->get( {$this->provider_action_id} );";
         
         // Save Kinsta result from background activity
         $current_action = json_decode ( $action->action );
@@ -69,7 +78,7 @@ class ProviderAction {
                 $current_action->domain = "{$site->usr}.kinsta.cloud";
             }
             $current_action->shared_with = array_column( $current_action->shared_with, "account_id" );
-            
+
 		    $response = ( new Site )->create( [
                 "name"         => $current_action->domain,
                 "site"         => $site->name,
@@ -98,7 +107,7 @@ class ProviderAction {
         }
 
         return self::active();
-        
+
     }
 
 }
