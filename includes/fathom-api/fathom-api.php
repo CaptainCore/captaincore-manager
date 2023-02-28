@@ -9,7 +9,7 @@
 function fathom_api_get( $command, $parameters = [] ) {
 
     $args = [ 
-        "headers" => [ "Authorization" => "Bearer " . FATHOM_API_KEY ],
+        "headers" => [ "Authorization" => "Bearer " . CaptainCore\Providers\Fathom::credentials("api_key") ],
     ];
 
     if ( count( $parameters ) > 0 ) {
@@ -31,7 +31,7 @@ function fathom_api_post( $command, $parameters = [] ) {
     $args = [ 
         'timeout' => 120,
         "headers" => [
-            "Authorization" => "Bearer " . FATHOM_API_KEY
+            "Authorization" => "Bearer " . CaptainCore\Providers\Fathom::credentials("api_key")
         ],
         'body'    => $parameters,
         'method'  => 'POST',

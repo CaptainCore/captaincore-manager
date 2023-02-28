@@ -980,7 +980,7 @@ class Site {
        
         $url      = "https://api.usefathom.com/v1/sites/$fathom_id";
         $response = wp_remote_post( $url, [ 
-            "headers" => [ "Authorization" => "Bearer " . FATHOM_API_KEY ],
+            "headers" => [ "Authorization" => "Bearer " . \CaptainCore\Providers\Fathom::credentials("api_key") ],
             'body'    => [ "sharing" => $sharing, "share_password" => $share_password ],
         ] );
 
@@ -1023,7 +1023,7 @@ class Site {
     
         $url      = "https://api.usefathom.com/v1/aggregations?entity=pageview&entity_id=$fathom_id&aggregates=visits,pageviews,avg_duration,bounce_rate&date_from=$before&date_to=$after&date_grouping=$grouping&sort_by=timestamp:asc";
         $response = wp_remote_get( $url, [ 
-            "headers" => [ "Authorization" => "Bearer " . FATHOM_API_KEY ],
+            "headers" => [ "Authorization" => "Bearer " . \CaptainCore\Providers\Fathom::credentials("api_key") ],
         ] );
 
         $stats    = json_decode( $response['body'] );
@@ -1050,7 +1050,7 @@ class Site {
 
         $url      = "https://api.usefathom.com/v1/sites/$fathom_id";
         $response = wp_remote_get( $url, [ 
-            "headers" => [ "Authorization" => "Bearer " . FATHOM_API_KEY ],
+            "headers" => [ "Authorization" => "Bearer " . \CaptainCore\Providers\Fathom::credentials("api_key") ],
         ] );
 
         $site     = json_decode( $response['body'] );
