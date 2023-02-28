@@ -3354,6 +3354,68 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
 					</v-card-text>
 					<div v-else>
+					<v-toolbar dense flat>
+					<v-spacer></v-spacer>
+					<v-select :items="[{text: 'Themes', value: 'theme'}, {text: 'Plugins', value: 'plugin'}]" v-model="quicksave_search_type" label="Search for" dense style="max-width: 125px" class="mr-2" solo></v-select>
+					<v-select :items="[{text: 'Slug', value: 'name'}, {text: 'Title', value: 'title'}, {text: 'Status', value: 'status'}, {text: 'Version', value: 'version'}]" v-model="quicksave_search_field" label="By" dense style="max-width: 125px" class="mr-2" solo></v-select>
+					<v-text-field v-model="quicksave_search" dense autofocus label="Search historical activity" clearable light hide-details append-outer-icon="search" @keydown.enter="searchQuicksave" @click:append-outer="searchQuicksave" style="max-width:375px;" class="mb-3"></v-text-field>
+					</v-toolbar>
+					<div v-show="quicksave_search_results.loading" class="body-2 mx-5"><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular> searching quicksaves</div>
+					<v-card v-if="quicksave_search_results.items.length > 0" class="ma-4">
+					<v-app-bar flat dense>
+					<v-card-title>{{ quicksave_search_results.items.length }} search results</v-card-title>
+					<v-spacer></v-spacer>
+					<v-btn icon @click='quicksave_search_results = { loading: false, search: "", search_type: "", search_field: "", items: [] }'>
+						<v-icon>mdi-close</v-icon>
+					</v-btn>
+					</v-app-bar>
+					<v-card-text>
+					<v-data-table
+						:headers="[{text:'Created At',value:'created_at'},{text:'Item',value:'item'},{text:'',value:'actions'}]"
+						:items="quicksave_search_results.items"
+						item-key="hash"
+						no-data-text="No quicksaves found."
+						:footer-props="{ itemsPerPageOptions: [25,50,100,{'text':'All','value':-1}] }">
+						<template v-slot:item.created_at="{ item }">
+							{{ item.created_at | pretty_timestamp_epoch }}
+						</template>
+						<template v-slot:item.item="{ item }">
+							<span v-if="item.item == ''">
+								{{ quicksave_search_results.search }} not found
+							</span>
+							<span v-else>
+								{{ item.item.title }} {{ item.item.version }} {{ item.item.status }}
+							</span>
+						</template>
+						<template v-slot:item.actions="{ item }">
+						<v-dialog max-width="600">
+								<template v-slot:activator="{ on, attrs }">
+									<v-btn depressed small v-bind="attrs" v-on="on" v-if="item.item != ''">Rollback</v-btn>
+								</template>
+								<template v-slot:default="dialog">
+								<v-card>
+									<v-toolbar color="primary" dark>
+										Rollback '{{ item.item.title }}' {{ quicksave_search_results.search_type }}?
+										<v-spacer></v-spacer>
+										<v-btn icon @click="dialog.value = false">
+											<v-icon>close</v-icon>
+										</v-btn>
+									</v-toolbar>
+									<v-list>
+										<v-list-item two-line @click="RollbackQuicksave(item.hash, quicksave_search_results.search_type, item.item.name, 'this', dialog)">
+										<v-list-item-content>
+											<v-list-item-title>This version {{ item.item.version }}</v-list-item-title>
+											<v-list-item-subtitle>{{ $options.filters.pretty_timestamp_epoch(item.created_at) }}</v-list-item-subtitle>
+										</v-list-item-content>
+										</v-list-item>
+									</v-list>
+								</v-card>
+								</template>
+							</v-dialog>
+						</template>
+					</v-data-table>
+					</v-card-text>
+					</v-card>
 					<v-data-table
 						:headers="[{text:'Created At',value:'created_at'},{text:'WordPress',value:'core',width:'115px'},{text:'',value:'theme_count',width:'115px'},{text:'',value:'plugin_count',width:'115px'}]"
 						:items="dialog_site.environment_selected.quicksaves"
@@ -6800,6 +6862,10 @@ new Vue({
 		domains_loading: true,
 		sites_loading: true,
 		domain_search: "",
+		quicksave_search: "",
+		quicksave_search_results: { loading: false, search: "", search_type: "", search_field: "", items: [] },
+		quicksave_search_type: "plugin",
+		quicksave_search_field: "name",
 		account_search: "",
 		subscription_search: "",
 		revenue_estimated: [],
@@ -11879,6 +11945,24 @@ new Vue({
 					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data
 					this.runCommand( response.data );
 			});
+		},
+		searchQuicksave() {
+			this.quicksave_search_results.loading = true
+			site_id = this.dialog_site.site.site_id
+			environment = this.dialog_site.environment_selected.environment.toLowerCase()
+			search = `${this.quicksave_search_type}:${this.quicksave_search_field}:${this.quicksave_search}`
+			axios.get(
+				`/wp-json/captaincore/v1/quicksaves/search`, {
+					headers: {'X-WP-Nonce':this.wp_nonce},
+					params: { site_id: site_id, environment: environment, search: search }
+				})
+				.then(response => {
+					this.quicksave_search_results.loading = false
+					this.quicksave_search_results.search = this.quicksave_search
+					this.quicksave_search_results.search_type = this.quicksave_search_type
+					this.quicksave_search_results.search_field = this.quicksave_search_field
+					this.quicksave_search_results.items = response.data
+				});
 		},
 		getQuicksave( hash, site_id ) {
 			environment = this.dialog_site.environment_selected.environment.toLowerCase()
