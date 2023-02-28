@@ -353,8 +353,8 @@ class Domains extends DB {
                 'Content-Type' => 'application/json; charset=utf-8'
             ],
             'body'        => json_encode( [ 
-                "username" => HOVERCOM_USERNAME, 
-                'password' => HOVERCOM_PASSWORD 
+                "username" => CaptainCore\Providers\Hoverdotcom::credentials("username"), 
+                'password' => CaptainCore\Providers\Hoverdotcom::credentials("password")
             ] ), 
             'method'      => 'POST', 
             'data_format' => 'body'
