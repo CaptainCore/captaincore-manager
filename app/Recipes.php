@@ -28,7 +28,7 @@ class Recipes extends DB {
             unset( $recipe->created_at );
             $recipes[] = $recipe;
         }
-        usort($recipes, function($a, $b) { return strcmp($a->name, $b->name); });
+        usort($recipes, function($a, $b) { return strcmp($a->title, $b->title); });
         return $recipes;
     }
 
