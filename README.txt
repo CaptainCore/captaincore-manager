@@ -44,6 +44,31 @@ TODO
 
 == Changelog ==
 
+= 0.17.0: Feb 28 2023
+* New: Experimental integration with MyKinsta
+* New: TFA support with one time passwords. Built using OTPHP library and Kjua.js.
+* New: Envato integration, install paid themes and plugins
+* New: Nameserver support with Hover.com
+* New: Missive API
+* New: Site shared section
+* New: Quicksave search
+* New: Tables `captaincore_providers` and `captaincore_provider_actions`
+* New: REST endpoints for providers
+* New: CaptainCore\Run::CLI
+* New: CaptainCore\Providers\Hoverdotcom::credentials("username") to replace HOVERCOM_USERNAME
+* New: CaptainCore\Providers\Fathom::credentials to replace FATHOM_API_KEY
+* New: Endpoint for MagicLogin `/wp-json/captaincore/v1/sites/:id/:environment/magiclogin`
+* Tweak: Fathom Analytics API improvements
+* Tweak: Logged in improvements
+* Tweak: Cleaned up navigation
+* Tweak: Standardized dialog transitions
+* Tweak: Upgraded Vuetify to v2.6.4
+* Tweak: Upgraded Vue.js to v2.6.14
+* Tweak: Upgraded Material Design Icons to v6.5.95
+* Tweak: Removed legacy CPT classes
+* Fix: DNS save button layout
+* Fix: PHP 8 compatibility issues
+
 = 0.16.0: Nov 20 2021
 * New: Stats powered by Fathom Analytics API
 * New: Stats sharing functionality via Fathom Analytics API
