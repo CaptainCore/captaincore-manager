@@ -7858,10 +7858,12 @@ new Vue({
 			job_id = Math.round((new Date()).getTime());
 			environment = this.dialog_site.environment_selected.environment.toLowerCase()
 			description = "Magic login to " + this.dialog_site.environment_selected.home_url
-			endpoint = `/wp-json/captaincore/v1/site/${site_id}/${environment}/magiclogin`
-			if ( username != "" ) {
+			endpoint = `/wp-json/captaincore/v1/sites/${site_id}/${environment}/magiclogin`
+			console.log( username )
+			console.log( typeof username )
+			if ( typeof username != "undefined" ) {
 				description = `Login as ${username} to ${this.dialog_site.environment_selected.home_url}`
-				endpoint = `/wp-json/captaincore/v1/site/${site_id}/${environment}/magiclogin/${username}`
+				endpoint = `/wp-json/captaincore/v1/sites/${site_id}/${environment}/magiclogin/${username}`
 			}
 			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command":"login"});
 
