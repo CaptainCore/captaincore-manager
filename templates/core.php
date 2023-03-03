@@ -2575,7 +2575,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-layout body-1 px-6 class="row">
 								<v-flex xs12 md6 class="py-2">
 								<div class="block mt-6">
-                            		<a @click="showCaptures( dialog_site.site.site_id )"><v-img :src="dialog_site.environment_selected.screenshots.large" max-width="400" aspect-ratio="1.6" class="elevation-5" v-if="typeof dialog_site.environment_selected.screenshots != 'undefined' && dialog_site.environment_selected.screenshots.large" style="margin:auto;"></v-img></a>
+                            		<a @click="showCaptures( dialog_site.site.site_id )"><v-img :src="dialog_site.environment_selected.screenshots.large" max-width="400" aspect-ratio="1.6" class="elevation-5" v-if="typeof dialog_site.environment_selected.screenshots != 'undefined' && dialog_site.environment_selected.screenshots.large" style="margin:auto;" lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp"></v-img></a>
+									<a @click="showCaptures( dialog_site.site.site_id )"><v-img max-width="400" aspect-ratio="1.6" class="elevation-5" v-else style="margin:auto;" src="/wp-content/plugins/captaincore-manager/public/dummy.webp"></v-img></a>
 								</div>
 								<v-list dense style="padding:0px;max-width:350px;margin: auto;" class="mt-6">
 									<v-list-item :href="dialog_site.environment_selected.link" target="_blank" dense>
