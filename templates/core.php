@@ -10373,7 +10373,7 @@ new Vue({
 			this.dialog_captures.selected_page = this.dialog_captures.capture.pages[0]
 		},
 		closeCaptures() {
-			this.dialog_captures = { site: {}, pages: [{ page: ""}], capture: { pages: [] }, image_path:"", selected_page: "", captures: [], mode: "screenshot", loading: true, show: false, show_configure: false };
+			this.dialog_captures = { site: {}, auth: { username: "", password: ""}, pages: [{ page: ""}], capture: { pages: [] }, image_path:"", selected_page: "", captures: [], mode: "screenshot", loading: true, show: false, show_configure: false }
 		},
 		addAdditionalCapturePage() {
 			this.dialog_captures.pages.push({ page: "/" });
