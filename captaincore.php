@@ -2139,6 +2139,21 @@ function captaincore_filter_sites_func( $request ) {
 	return $response;
 }
 
+function captaincore_site_captures_new_func( $request ) {
+	$site_id     = $request['id'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$environment = strtolower( $request['environment'] );
+	$site        = new CaptainCore\Site( $site_id );
+	
+	// Remote Sync
+	captaincore_run_background_command( "capture $site_id-$environment" );
+	return $site_id;
+}
+
 function captaincore_site_captures_update_func( $request ) {
 	$site_id     = $request['id'];
 	$auth        = empty( $request['auth'] ) ? "" : $request['auth'];
@@ -2368,6 +2383,13 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	// Custom endpoint for CaptainCore site/<id>/<environment>/captures
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/captures/new', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_site_captures_new_func',
+			'show_in_index' => false
+		]
+	);
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/captures', [
 			'methods'       => 'POST',
