@@ -1721,6 +1721,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-btn text small @click="dialog_captures.show_configure = true" v-bind:class='{ "v-btn--active": dialog_bulk.show }' v-on="on"><small v-show="sites_selected.length > 0">({{ sites_selected.length }})</small><v-icon dark>mdi-cog</v-icon></v-btn>
 							</template><span>Capture configurations</span>
 						</v-tooltip>
+						<v-divider vertical class="mx-1" inset></v-divider>
+						<v-tooltip top>
+							<template v-slot:activator="{ on }">
+                    		<v-btn text @click="captureCheck()" v-on="on"><v-icon dark>mdi-sync</v-icon></v-btn>
+							</template><span>Check for new Capture</span>
+						</v-tooltip>
 						</v-toolbar-items>
 					</v-toolbar>
 					<v-card-text style="min-height:200px;">
@@ -3220,7 +3226,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
                     		<v-btn text @click="QuicksaveCheck( dialog_site.site.site_id )" v-on="on"><v-icon dark>mdi-sync</v-icon></v-btn>
-							</template><span>Manual check for new Quicksave</span>
+							</template><span>Check for new Quicksave</span>
 						</v-tooltip>
 					</v-toolbar-items>
 				</v-toolbar>
@@ -10343,6 +10349,18 @@ new Vue({
 				.catch( error => console.log( error ) );
 
 		},
+		captureCheck() {
+			environment = this.dialog_site.environment_selected.environment
+			axios.get( `/wp-json/captaincore/v1/sites/${site.site_id}/${environment}/captures/new`, {
+				headers: { 'X-WP-Nonce':this.wp_nonce }
+			})
+			.then( response => {
+				this.dialog_captures.show = false
+				this.snackbar.message = `Generating new capture if site changes detected.`
+				this.snackbar.show = true
+				
+			});
+		},
 		showCaptures( site_id ) {
 			this.dialog_captures.site = this.dialog_site.site
 			environment = this.dialog_site.environment_selected
@@ -10392,20 +10410,6 @@ new Vue({
 				this.dialog_captures.pages = [];
 				this.dialog_captures.auth = { username: "", password: "" }
 			});
-			var data = {
-				action: 'captaincore_ajax',
-				post_id: this.dialog_captures.site.site_id,
-				command: 'updateCapturePages',
-				environment: this.dialog_site.environment_selected.environment,
-				value: this.dialog_captures.pages,
-			};
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-			.then( response => {
-				this.dialog_captures.show = false;
-				this.dialog_captures.pages = [];
-			})
-			.catch( error => console.log( error ) );
 		},
 		addAdditionalPlan() {
 			this.configurations.hosting_plans.push( {"name":"","price":"","limits":{"visits":"","storage":"","sites":""}})
@@ -11833,7 +11837,7 @@ new Vue({
 		QuicksaveCheck( site_id ) {
 
 			site = this.dialog_site.site
-			should_proceed = confirm("Run a manual check for new files on " + site.name + "?")
+			should_proceed = confirm("Check for new files on " + site.name + "?")
 
 			if ( ! should_proceed ) {
 				return;
