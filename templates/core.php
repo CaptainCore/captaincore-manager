@@ -1718,8 +1718,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-toolbar-items>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn text small @click="dialog_captures.show_configure = true" v-bind:class='{ "v-btn--active": dialog_bulk.show }' v-on="on"><small v-show="sites_selected.length > 0">({{ sites_selected.length }})</small><v-icon dark>mdi-settings</v-icon></v-btn>
-							</template><span>Configure pages to capture</span>
+								<v-btn text small @click="dialog_captures.show_configure = true" v-bind:class='{ "v-btn--active": dialog_bulk.show }' v-on="on"><small v-show="sites_selected.length > 0">({{ sites_selected.length }})</small><v-icon dark>mdi-cog</v-icon></v-btn>
+							</template><span>Capture configurations</span>
 						</v-tooltip>
 						</v-toolbar-items>
 					</v-toolbar>
@@ -1729,13 +1729,27 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-btn icon @click="dialog_captures.show_configure = false">
 								<v-icon>close</v-icon>
 							</v-btn>
-							<v-toolbar-title>Configured pages to capture.</v-toolbar-title>
+							<v-toolbar-title>Capture configurations</v-toolbar-title>
 						</v-toolbar>
 						<v-card-text>
+							<v-subheader>Configured pages to capture</v-subheader>
 							<v-alert text type="info">Should start with a <code>/</code>. Example use <code>/</code> for the homepage and <code>/contact</code> for the the contact page.</v-alert>
-								<v-text-field v-for="item in dialog_captures.pages" label="Page URL" :value="item.page" @change.native="item.page = $event.target.value"></v-text-field>
-							<p><v-btn text small icon color="primary" @click="addAdditionalCapturePage"><v-icon>mdi-plus-box</v-icon></v-btn></p>
-							<p><v-btn color="primary" @click="updateCapturePages()">Save Pages</v-btn></p>
+							<v-row class="mx-1">
+								<v-col>
+									<v-text-field v-for="item in dialog_captures.pages" label="Page URL" :value="item.page" @change.native="item.page = $event.target.value" append-outer-icon="mdi-delete" @click:append-outer="dialog_captures.pages = dialog_captures.pages.filter( p => p !== item)"></v-text-field>
+								</v-col>
+							</v-row>
+							<p class="mx-1"><v-btn text small icon color="primary" @click="addAdditionalCapturePage"><v-icon>mdi-plus-box</v-icon></v-btn></p>
+							<v-subheader>Basic Auth</v-subheader>
+							<v-row class="mx-1">
+								<v-col>
+									<v-text-field label="Username" v-model="dialog_captures.auth.username"></v-text-field>
+								</v-col>
+								<v-col>
+									<v-text-field type="password" label="Password" v-model="dialog_captures.auth.password"></v-text-field>
+								</v-col>
+							</v-row>
+							<p><v-btn color="primary" @click="updateCaptureConfigurations()">Update Configurations</v-btn></p>
 						</v-card-text>
 					</v-card>
 					<v-container class="text-center" v-if="dialog_captures.captures.length > 0 && ! dialog_captures.loading">
@@ -6552,7 +6566,7 @@ new Vue({
 		dialog_bulk: { show: false, tabs_management: "tab-Sites", environment_selected: "Production" },
 		dialog_job: { show: false, task: {} },
 		dialog_breakdown: false,
-		dialog_captures: { site: {}, pages: [{ page: ""}], capture: { pages: [] }, image_path:"", selected_page: "", captures: [], mode: "screenshot", loading: true, show: false, show_configure: false },
+		dialog_captures: { site: {}, auth: { username: "", password: ""}, pages: [{ page: ""}], capture: { pages: [] }, image_path:"", selected_page: "", captures: [], mode: "screenshot", loading: true, show: false, show_configure: false },
 		dialog_delete_user: { show: false, site: {}, users: [], username: "", reassign: {} },
 		dialog_apply_https_urls: { show: false, site_id: "", site_name: "", sites: [] },
 		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
@@ -10333,6 +10347,9 @@ new Vue({
 			this.dialog_captures.site = this.dialog_site.site
 			environment = this.dialog_site.environment_selected
 			this.dialog_captures.pages = environment.capture_pages
+			if ( environment.details.auth ) {
+				this.dialog_captures.auth = environment.details.auth
+			}
 			if ( environment.capture_pages == "" || environment.capture_pages == null ) {
 				this.dialog_captures.pages = [{ page: "/" }]
 			}
@@ -10361,7 +10378,20 @@ new Vue({
 		addAdditionalCapturePage() {
 			this.dialog_captures.pages.push({ page: "/" });
 		},
-		updateCapturePages() {
+		updateCaptureConfigurations() {
+			site_id = this.dialog_captures.site.site_id
+			environment = this.dialog_site.environment_selected.environment
+			axios.post( `/wp-json/captaincore/v1/sites/${site_id}/${environment}/captures`, {
+				pages: this.dialog_captures.pages,
+				auth: this.dialog_captures.auth
+			}, {
+				headers: { 'X-WP-Nonce':this.wp_nonce }
+			})
+			.then( response => {
+				this.dialog_captures.show = false;
+				this.dialog_captures.pages = [];
+				this.dialog_captures.auth = { username: "", password: "" }
+			});
 			var data = {
 				action: 'captaincore_ajax',
 				post_id: this.dialog_captures.site.site_id,

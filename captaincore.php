@@ -2139,6 +2139,41 @@ function captaincore_filter_sites_func( $request ) {
 	return $response;
 }
 
+function captaincore_site_captures_update_func( $request ) {
+	$site_id     = $request['id'];
+	$auth        = empty( $request['auth'] ) ? "" : $request['auth'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$environment = $request['environment'];
+	$site        = new CaptainCore\Site( $site_id );
+	$pages       = json_encode( $request['pages'] );
+	$time_now    = date("Y-m-d H:i:s");
+
+	// Saves update settings for a site
+	$environment_update = [
+		'capture_pages' => $pages,
+		'updated_at'    => $time_now,
+	];
+
+	$environment_id  = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment );
+	
+	if ( ! empty( $auth['username'] ) ) {
+		$fetch         = ( new CaptainCore\Environments )->get( $environment_id );
+		$details       = ( isset( $fetch->details ) ? json_decode( $fetch->details ) : (object) [] );
+		$details->auth = $auth;
+		$environment_update['details'] = json_encode( $details );
+	}
+
+	( new CaptainCore\Environments )->update( $environment_update, [ "environment_id" => $environment_id ] );
+
+	// Remote Sync
+	captaincore_run_background_command( "site sync $site_id" );
+	return $site->captures( $environment );
+}
+
 function captaincore_site_snapshot_download_func( $request ) {
 	$site_id       = $request['id'];
 	$token         = $request['token'];
@@ -2333,6 +2368,13 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	// Custom endpoint for CaptainCore site/<id>/<environment>/captures
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/captures', [
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_site_captures_update_func',
+			'show_in_index' => false
+		]
+	);
 	register_rest_route(
 		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/captures', [
 			'methods'       => 'GET',
