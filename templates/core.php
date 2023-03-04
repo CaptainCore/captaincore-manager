@@ -2622,6 +2622,15 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										<v-icon>mdi-content-copy</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
+									<v-list-item @click="copyText( dialog_site.environment_selected.php_memory )" dense>
+									<v-list-item-content>
+										<v-list-item-title>Memory Limit</v-list-item-title>
+										<v-list-item-subtitle>{{ dialog_site.environment_selected.php_memory  }}</v-list-item-subtitle>
+									</v-list-item-content>
+									<v-list-item-icon>
+										<v-icon>mdi-content-copy</v-icon>
+									</v-list-item-icon>
+									</v-list-item>
 									<v-list-item @click="copyText( dialog_site.environment_selected.subsite_count + ' subsites')" dense v-if="dialog_site.environment_selected.subsite_count">
 									<v-list-item-content>
 										<v-list-item-title>Multisite</v-list-item-title>
