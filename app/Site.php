@@ -869,6 +869,7 @@ class Site {
         foreach ( $environments as $environment ) {
             $environment_name         = strtolower( $environment->environment );
             $details                  = ( isset( $environment->details ) ? json_decode( $environment->details ) : (object) [] );
+            $environment->captures    = count ( self::captures( $environment_name ) );
             $environment->screenshots = [];
             if ( intval( $environment->screenshot ) ) {
                 $screenshot_url_base       = "{$upload_uri}{$site->site}_{$site->site_id}/$environment_name/screenshots/{$details->screenshot_base}";
