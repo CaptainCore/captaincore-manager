@@ -1707,11 +1707,11 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-toolbar-title>Historical Captures of {{ dialog_captures.site.name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
-					<v-toolbar color="grey lighten-4" light flat v-if="dialog_captures.captures.length > 0">
-						<div style="max-width:250px;" class="mx-1 mt-8">
+					<v-toolbar color="grey lighten-4" light flat>
+						<div style="max-width:250px;" class="mx-1 mt-8" v-show="dialog_captures.captures.length != 0">
 							<v-select v-model="dialog_captures.capture" dense :items="dialog_captures.captures" item-text="created_at_friendly" item-value="capture_id" label="Taken On" return-object @change="switchCapture"></v-select>
 						</div>
-						<div style="max-width:150px;" class="mx-1 mt-8">
+						<div style="max-width:150px;" class="mx-1 mt-8" v-show="dialog_captures.captures.length != 0">
 							<v-select v-model="dialog_captures.selected_page" dense :items="dialog_captures.capture.pages" item-text="name" item-value="name" value="/" :label="`Contains ${dialog_captures.capture.pages.length} ${dialogCapturesPagesText}`" return-object></v-select>
 						</div>
 						<v-spacer></v-spacer>
@@ -2575,8 +2575,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-layout body-1 px-6 class="row">
 								<v-flex xs12 md6 class="py-2">
 								<div class="block mt-6">
-                            		<a @click="showCaptures( dialog_site.site.site_id )"><v-img :src="dialog_site.environment_selected.screenshots.large" max-width="400" aspect-ratio="1.6" class="elevation-5" v-if="typeof dialog_site.environment_selected.screenshots != 'undefined' && dialog_site.environment_selected.screenshots.large" style="margin:auto;" lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp"></v-img></a>
-									<a @click="showCaptures( dialog_site.site.site_id )"><v-img max-width="400" aspect-ratio="1.6" class="elevation-5" v-else style="margin:auto;" src="/wp-content/plugins/captaincore-manager/public/dummy.webp"></v-img></a>
+                            		<a @click="showCaptures( dialog_site.site.site_id )">
+										<v-img :src="dialog_site.environment_selected.screenshots.large" max-width="400" aspect-ratio="1.6" class="elevation-5" v-if="typeof dialog_site.environment_selected.screenshots != 'undefined' && dialog_site.environment_selected.screenshots.large" style="margin:auto;" lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp"></v-img>
+										<v-img max-width="400" aspect-ratio="1.6" class="elevation-5" v-else style="margin:auto;" src="/wp-content/plugins/captaincore-manager/public/dummy.webp"></v-img>
+								</a>
 								</div>
 								<v-list dense style="padding:0px;max-width:350px;margin: auto;" class="mt-6">
 									<v-list-item :href="dialog_site.environment_selected.link" target="_blank" dense>
@@ -2629,6 +2631,15 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</v-list-item-content>
 									<v-list-item-icon>
 										<v-icon>mdi-content-copy</v-icon>
+									</v-list-item-icon>
+									</v-list-item>
+									<v-list-item @click="showCaptures( dialog_site.site.site_id )" dense>
+									<v-list-item-content>
+										<v-list-item-title>Visual Captures</v-list-item-title>
+										<v-list-item-subtitle>{{ dialog_site.environment_selected.captures}}</v-list-item-subtitle>
+									</v-list-item-content>
+									<v-list-item-icon>
+										<v-icon>mdi-image</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
 									<v-list-item @click="copyText( dialog_site.environment_selected.subsite_count + ' subsites')" dense v-if="dialog_site.environment_selected.subsite_count">
