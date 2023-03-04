@@ -2590,22 +2590,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										<v-icon>mdi-open-in-new</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
-									<v-list-item @click="copySFTP( dialog_site.environment_selected )" dense>
-									<v-list-item-content>
-										<v-list-item-title>SFTP Info</v-list-item-title>
-									</v-list-item-content>
-									<v-list-item-icon>
-										<v-icon>mdi-content-copy</v-icon>
-									</v-list-item-icon>
-									</v-list-item>
-									<v-list-item @click="copyDatabase( dialog_site.environment_selected )" dense v-if="dialog_site.environment_selected.database">
-									<v-list-item-content>
-										<v-list-item-title>Database Info</v-list-item-title>
-									</v-list-item-content>
-									<v-list-item-icon>
-										<v-icon>mdi-content-copy</v-icon>
-									</v-list-item-icon>
-									</v-list-item>
 									<v-list-item @click="copyText( dialog_site.environment_selected.core )" dense v-show="dialog_site.environment_selected.token != 'basic'">
 									<v-list-item-content>
 										<v-list-item-title>WordPress Version</v-list-item-title>
@@ -2663,6 +2647,22 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								</v-flex>
 								<v-flex xs12 md6 class="keys py-2">
 								<v-list dense style="padding:0px;max-width:350px;margin: auto;">
+									<v-list-item @click="copySFTP( dialog_site.environment_selected )" dense>
+									<v-list-item-content>
+										<v-list-item-title>SFTP Info</v-list-item-title>
+									</v-list-item-content>
+									<v-list-item-icon>
+										<v-icon>mdi-content-copy</v-icon>
+									</v-list-item-icon>
+									</v-list-item>
+									<v-list-item @click="copyDatabase( dialog_site.environment_selected )" dense v-if="dialog_site.environment_selected.database">
+									<v-list-item-content>
+										<v-list-item-title>Database Info</v-list-item-title>
+									</v-list-item-content>
+									<v-list-item-icon>
+										<v-icon>mdi-content-copy</v-icon>
+									</v-list-item-icon>
+									</v-list-item>
 									<v-list-item @click="copyText( dialog_site.environment_selected.address )" dense>
 									<v-list-item-content>
 										<v-list-item-title>Address</v-list-item-title>
