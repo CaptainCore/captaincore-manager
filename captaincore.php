@@ -2164,8 +2164,21 @@ function captaincore_site_captures_update_func( $request ) {
 
 	$environment = $request['environment'];
 	$site        = new CaptainCore\Site( $site_id );
-	$pages       = json_encode( $request['pages'] );
 	$time_now    = date("Y-m-d H:i:s");
+	$pages       = $request['pages'];
+
+	// Make sure home page is added
+	$home_found = false;
+	foreach ( $pages as $page ) {
+		if ( $page["page"] == "/" ) {
+			$home_found = true;
+		}
+	}
+	if ( ! $home_found ) {
+		array_unshift( $pages, [ "page" => "/" ] );
+	}
+
+	$pages = json_encode( $pages );
 
 	// Saves update settings for a site
 	$environment_update = [
