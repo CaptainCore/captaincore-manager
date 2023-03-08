@@ -153,19 +153,11 @@ class Domain {
             ( new Domains )->provider_login();
         }
         $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
-        $cookies     = [];
-        foreach ( $cookie_data as $key => $cookie ) {
-            $cookies[] = new \WP_Http_Cookie( [
-                'name'    => $cookie->name,
-                'value'   => $cookie->value,
-                'expires' => $cookie->expires,
-                'path'    => $cookie->path,
-                'domain'  => $cookie->domain,
-            ] );
-        }
 
         $args = [
-            'cookies' => $cookies,
+            'headers' => [
+                'Cookie' => 'hoverauth=' . $cookie_data[0]->value
+            ]
         ];
 
         $response = wp_remote_get( "https://www.hover.com/api/control_panel/domains/{$domain->name}", $args );
@@ -204,19 +196,11 @@ class Domain {
             ( new Domains )->provider_login();
         }
         $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
-        $cookies     = [];
-        foreach ( $cookie_data as $key => $cookie ) {
-            $cookies[] = new \WP_Http_Cookie( [
-                'name'    => $cookie->name,
-                'value'   => $cookie->value,
-                'expires' => $cookie->expires,
-                'path'    => $cookie->path,
-                'domain'  => $cookie->domain,
-            ] );
-        }
 
         $args = [
-            'cookies' => $cookies,
+            'headers' => [
+                'Cookie' => 'hoverauth=' . $cookie_data[0]->value
+            ]
         ];
 
         $response = wp_remote_get( "https://www.hover.com/api/domains/{$domain->name}/auth_code", $args );
@@ -239,21 +223,12 @@ class Domain {
             ( new Domains )->provider_login();
         }
         $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
-        $cookies     = [];
-        foreach ( $cookie_data as $key => $cookie ) {
-            $cookies[] = new \WP_Http_Cookie( [
-                'name'    => $cookie->name,
-                'value'   => $cookie->value,
-                'expires' => $cookie->expires,
-                'path'    => $cookie->path,
-                'domain'  => $cookie->domain,
-            ] );
-        }
 
         $data = [ 
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8',
+                'Cookie' => 'hoverauth=' . $cookie_data[0]->value
             ],
             'body'        => json_encode( [ 
                 "field" => "locked", 
@@ -261,7 +236,6 @@ class Domain {
             ] ), 
             'method'      => 'PUT', 
             'data_format' => 'body',
-            'cookies'     => $cookies,
         ];
 
         $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
@@ -282,21 +256,12 @@ class Domain {
             ( new Domains )->provider_login();
         }
         $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
-        $cookies     = [];
-        foreach ( $cookie_data as $key => $cookie ) {
-            $cookies[] = new \WP_Http_Cookie( [
-                'name'    => $cookie->name,
-                'value'   => $cookie->value,
-                'expires' => $cookie->expires,
-                'path'    => $cookie->path,
-                'domain'  => $cookie->domain,
-            ] );
-        }
 
         $data = [ 
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8',
+                'Cookie' => 'hoverauth=' . $cookie_data[0]->value
             ],
             'body'        => json_encode( [ 
                 "field" => "locked", 
@@ -304,7 +269,6 @@ class Domain {
             ] ), 
             'method'      => 'PUT', 
             'data_format' => 'body',
-            'cookies'     => $cookies,
         ];
 
         $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
@@ -325,21 +289,12 @@ class Domain {
             ( new Domains )->provider_login();
         }
         $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
-        $cookies     = [];
-        foreach ( $cookie_data as $key => $cookie ) {
-            $cookies[] = new \WP_Http_Cookie( [
-                'name'    => $cookie->name,
-                'value'   => $cookie->value,
-                'expires' => $cookie->expires,
-                'path'    => $cookie->path,
-                'domain'  => $cookie->domain,
-            ] );
-        }
 
         $data = [ 
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8',
+                'Cookie' => 'hoverauth=' . $cookie_data[0]->value
             ],
             'body'      => json_encode( [ 
                 "field" => "whois_privacy", 
@@ -347,7 +302,6 @@ class Domain {
             ] ), 
             'method'      => 'PUT', 
             'data_format' => 'body',
-            'cookies'     => $cookies,
         ];
 
         $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
@@ -367,21 +321,12 @@ class Domain {
             ( new Domains )->provider_login();
         }
         $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
-        $cookies     = [];
-        foreach ( $cookie_data as $key => $cookie ) {
-            $cookies[] = new \WP_Http_Cookie( [
-                'name'    => $cookie->name,
-                'value'   => $cookie->value,
-                'expires' => $cookie->expires,
-                'path'    => $cookie->path,
-                'domain'  => $cookie->domain,
-            ] );
-        }
 
         $data = [ 
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8',
+                'Cookie' => 'hoverauth=' . $cookie_data[0]->value
             ],
             'body'        => json_encode( [ 
                 "field" => "whois_privacy", 
@@ -389,7 +334,6 @@ class Domain {
             ] ), 
             'method'      => 'PUT', 
             'data_format' => 'body',
-            'cookies'     => $cookies,
         ];
 
         $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
@@ -410,21 +354,12 @@ class Domain {
             ( new Domains )->provider_login();
         }
         $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
-        $cookies     = [];
-        foreach ( $cookie_data as $key => $cookie ) {
-            $cookies[] = new \WP_Http_Cookie( [
-                'name'    => $cookie->name,
-                'value'   => $cookie->value,
-                'expires' => $cookie->expires,
-                'path'    => $cookie->path,
-                'domain'  => $cookie->domain,
-            ] );
-        }
 
         $data = [ 
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8',
+                'Cookie' => 'hoverauth=' . $cookie_data[0]->value
             ],
             'body'        => json_encode( [ 
                 "field" => "autorenew", 
@@ -432,7 +367,6 @@ class Domain {
             ] ), 
             'method'      => 'PUT', 
             'data_format' => 'body',
-            'cookies'     => $cookies,
         ];
 
         $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
@@ -454,21 +388,12 @@ class Domain {
             ( new Domains )->provider_login();
         }
         $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
-        $cookies     = [];
-        foreach ( $cookie_data as $key => $cookie ) {
-            $cookies[] = new \WP_Http_Cookie( [
-                'name'    => $cookie->name,
-                'value'   => $cookie->value,
-                'expires' => $cookie->expires,
-                'path'    => $cookie->path,
-                'domain'  => $cookie->domain,
-            ] );
-        }
 
         $data = [ 
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8',
+                'Cookie' => 'hoverauth=' . $cookie_data[0]->value
             ],
             'body'        => json_encode( [
                 "id"       => "domain-{$domain->name}",
@@ -483,7 +408,6 @@ class Domain {
             ] ), 
             'method'      => 'PUT', 
             'data_format' => 'body',
-            'cookies'     => $cookies,
         ];
 
         $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/set_contacts", $data );
@@ -508,21 +432,12 @@ class Domain {
             ( new Domains )->provider_login();
         }
         $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
-        $cookies     = [];
-        foreach ( $cookie_data as $key => $cookie ) {
-            $cookies[] = new \WP_Http_Cookie( [
-                'name'    => $cookie->name,
-                'value'   => $cookie->value,
-                'expires' => $cookie->expires,
-                'path'    => $cookie->path,
-                'domain'  => $cookie->domain,
-            ] );
-        }
 
         $data = [ 
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8',
+                'Cookie' => 'hoverauth=' . $cookie_data[0]->value
             ],
             'body'        => json_encode( [ 
                 "field" => "nameservers", 
@@ -530,7 +445,6 @@ class Domain {
             ] ), 
             'method'      => 'PUT', 
             'data_format' => 'body',
-            'cookies'     => $cookies,
         ];
 
         $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
