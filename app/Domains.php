@@ -373,21 +373,12 @@ class Domains extends DB {
         if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
             self::provider_login();
         }
-        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
-        $cookies     = [];
-        foreach ( $cookie_data as $key => $cookie ) {
-            $cookies[] = new \WP_Http_Cookie( [
-                'name'    => $cookie->name,
-                'value'   => $cookie->value,
-                'expires' => $cookie->expires,
-                'path'    => $cookie->path,
-                'domain'  => $cookie->domain,
-            ] );
-        }
-
+        $auth = get_transient( 'captaincore_hovercom_auth' );
         $args = [
             'timeout' => 45,
-            'cookies' => $cookies,
+            'headers' => [
+                'Cookie' => 'hoverauth=' . $auth
+            ]
         ];
 
         $response = wp_remote_get( "https://www.hover.com/api/control_panel/domains", $args );

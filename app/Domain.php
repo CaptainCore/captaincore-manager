@@ -152,11 +152,10 @@ class Domain {
         if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
             ( new Domains )->provider_login();
         }
-        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
-
+        $auth = get_transient( 'captaincore_hovercom_auth' );
         $args = [
             'headers' => [
-                'Cookie' => 'hoverauth=' . $cookie_data[0]->value
+                'Cookie' => 'hoverauth=' . $auth
             ]
         ];
 
@@ -195,11 +194,10 @@ class Domain {
         if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
             ( new Domains )->provider_login();
         }
-        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
-
+        $auth = get_transient( 'captaincore_hovercom_auth' );
         $args = [
             'headers' => [
-                'Cookie' => 'hoverauth=' . $cookie_data[0]->value
+                'Cookie' => 'hoverauth=' . $auth
             ]
         ];
 
@@ -222,13 +220,12 @@ class Domain {
         if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
             ( new Domains )->provider_login();
         }
-        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
-
+        $auth = get_transient( 'captaincore_hovercom_auth' );
         $data = [ 
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8',
-                'Cookie' => 'hoverauth=' . $cookie_data[0]->value
+                'Cookie' => 'hoverauth=' . $auth
             ],
             'body'        => json_encode( [ 
                 "field" => "locked", 
@@ -255,13 +252,12 @@ class Domain {
         if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
             ( new Domains )->provider_login();
         }
-        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
-
+        $auth = get_transient( 'captaincore_hovercom_auth' );
         $data = [ 
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8',
-                'Cookie' => 'hoverauth=' . $cookie_data[0]->value
+                'Cookie' => 'hoverauth=' . $auth
             ],
             'body'        => json_encode( [ 
                 "field" => "locked", 
@@ -288,13 +284,12 @@ class Domain {
         if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
             ( new Domains )->provider_login();
         }
-        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
-
+        $auth = get_transient( 'captaincore_hovercom_auth' );
         $data = [ 
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8',
-                'Cookie' => 'hoverauth=' . $cookie_data[0]->value
+                'Cookie' => 'hoverauth=' . $auth
             ],
             'body'      => json_encode( [ 
                 "field" => "whois_privacy", 
@@ -320,13 +315,12 @@ class Domain {
         if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
             ( new Domains )->provider_login();
         }
-        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
-
+        $auth = get_transient( 'captaincore_hovercom_auth' );
         $data = [ 
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8',
-                'Cookie' => 'hoverauth=' . $cookie_data[0]->value
+                'Cookie' => 'hoverauth=' . $auth
             ],
             'body'        => json_encode( [ 
                 "field" => "whois_privacy", 
@@ -353,13 +347,12 @@ class Domain {
         if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
             ( new Domains )->provider_login();
         }
-        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
-
+        $auth = get_transient( 'captaincore_hovercom_auth' );
         $data = [ 
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8',
-                'Cookie' => 'hoverauth=' . $cookie_data[0]->value
+                'Cookie' => 'hoverauth=' . $auth
             ],
             'body'        => json_encode( [ 
                 "field" => "autorenew", 
@@ -387,13 +380,12 @@ class Domain {
         if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
             ( new Domains )->provider_login();
         }
-        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
-
+        $auth = get_transient( 'captaincore_hovercom_auth' );
         $data = [ 
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8',
-                'Cookie' => 'hoverauth=' . $cookie_data[0]->value
+                'Cookie' => 'hoverauth=' . $auth
             ],
             'body'        => json_encode( [
                 "id"       => "domain-{$domain->name}",
@@ -431,13 +423,12 @@ class Domain {
         if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
             ( new Domains )->provider_login();
         }
-        $cookie_data = json_decode( get_transient( 'captaincore_hovercom_auth' ) );
-
+        $auth = get_transient( 'captaincore_hovercom_auth' );
         $data = [ 
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8',
-                'Cookie' => 'hoverauth=' . $cookie_data[0]->value
+                'Cookie' => 'hoverauth=' . $auth
             ],
             'body'        => json_encode( [ 
                 "field" => "nameservers", 
