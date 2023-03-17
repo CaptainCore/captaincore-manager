@@ -12044,19 +12044,23 @@ new Vue({
 		getBackup( backup_id, site_id ) {
 			environment = this.dialog_site.environment_selected.environment.toLowerCase()
 			axios.get(
-				`/wp-json/captaincore/v1/site/${site_id}/${environment}/backups/${backup_id}`, {
+				`/wp-json/captaincore/v1/sites/${site_id}/${environment}/backups/${backup_id}`, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
-					backup_selected = this.dialog_site.environment_selected.backups.filter( b => b.id == backup_id )
-					if ( backup_selected.length != 1 ) {
-						return
+					if ( response.data.includes( "https://" ) ) {
+						axios.get( response.data ).then(response => { 
+							backup_selected = this.dialog_site.environment_selected.backups.filter( b => b.id == backup_id )
+							if ( backup_selected.length != 1 ) {
+								return
+							}
+							backup_selected[0].files = response.data.files
+							backup_selected[0].omitted = response.data.omitted
+							this.sortTree( backup_selected[0].files )
+							backup_selected[0].loading = false
+						})
 					}
-					backup_selected[0].files = response.data.files
-					backup_selected[0].omitted = response.data.omitted
-					this.sortTree( backup_selected[0].files )
-					backup_selected[0].loading = false
-				});
+				})
 		},
 		viewBackups() {
 			site_id = this.dialog_site.site.site_id

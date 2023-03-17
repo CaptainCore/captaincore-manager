@@ -24,6 +24,7 @@ class Site {
 
         // Fetch relating environments
         $environments = self::environments();
+        $upload_uri   = get_option( 'options_remote_upload_uri' );
         $details      = json_decode ( $site->details );
         $domain       = $site->name;
         $customer     = $site->account_id;
@@ -573,87 +574,7 @@ class Site {
             $error_message = $response->get_error_message();
             return [];
         }
-
-        $response["body"] = explode( PHP_EOL, $response["body"] );
-        $response["body"] = "[" . implode(",", $response["body"] ) . "]";
-
-        $json    = json_decode( $response["body"] );
-
-        if ( json_last_error() != JSON_ERROR_NONE ) {
-            return [];
-        }
-
-        function buildTree( $branches ) {
-            // Create a hierarchy where keys are the labels
-            $rootChildren = [];
-            $omitted      = false;
-            foreach($branches as $branch) {
-                $children =& $rootChildren;
-                $paths = explode( "/", $branch->path );
-                foreach( $paths as $label ) {
-                    if ( $label == "" ) { 
-                        continue;
-                    };
-                    $ext = "";
-                    if ( strpos( $label, "." ) !== false ) { 
-                        $ext = substr( $label, strpos( $label, "." ) + 1 );
-                    }
-                    if ( empty( $branch->count ) ) {
-                        $branch->count = 1;
-                    }
-                    if ( $branch->type == "dir" && $branch->count > 1 ) {
-                        $omitted = true;
-                    }
-                    if (!isset($children[$label])) $children[$label] = [ "//path" => $branch->path, "//type" => $branch->type, "//size" => $branch->size, "//count" => $branch->count, "//ext" => $ext ];
-                    $children =& $children[$label];
-                }
-            }
-            // Create target structure from that hierarchy
-            function recur($children) {
-                $result = [];
-                foreach( $children as $label => $grandchildren ) {
-                    $node = [ 
-                        "name"  => $label,
-                        "path"  => $grandchildren["//path"],
-                        "type"  => $grandchildren["//type"],
-                        "count" => $grandchildren["//count"],
-                        "size"  => $grandchildren["//size"],
-                        "ext"   => $grandchildren["//ext"]
-                    ];
-                    unset( $grandchildren["//path"] );
-                    unset( $grandchildren["//type"] );
-                    unset( $grandchildren["//size"] );
-                    unset( $grandchildren["//count"] );
-                    unset( $grandchildren["//ext"] );
-                    if ( count($grandchildren) ) { 
-                        $node["children"] = recur( $grandchildren );
-                    };
-                    $result[] = $node;
-                }
-                return $result;
-            }
-            return [ $omitted, recur($rootChildren) ];
-        }
-        
-        $results = buildTree( $json );
-        
-        function sortRecurse(&$array) {
-            usort($array, function($a, $b) {
-                $retval = $a['name'] <=> $b['name'];
-                return $retval;
-            });
-            foreach ($array as &$subarray) {
-                if ( isset( $subarray['children']) ) {
-                    sortRecurse($subarray['children']);
-                }
-            }
-            return $array;
-        }
-        
-        return [ 
-            "omitted" => $results[0],
-            "files"   => sortRecurse( $results[1] ),
-        ];
+        return $response["body"];
 
     }
 
@@ -864,7 +785,7 @@ class Site {
         // Fetch relating environments
         $site         = ( new Sites )->get( $this->site_id );
         $environments = ( new Environments )->fetch_environments( $this->site_id );
-        $upload_uri   = get_option( 'options_remote_upload_uri');
+        $upload_uri   = get_option( 'options_remote_upload_uri' );
        
         foreach ( $environments as $environment ) {
             $environment_name         = strtolower( $environment->environment );
