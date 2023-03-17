@@ -548,6 +548,36 @@ class Site {
 
     }
 
+    public function backup_show_file( $backup_id, $file_id, $environment = "production" ) {
+
+        $command = "backup show {$this->site_id}-$environment $backup_id \"$file_id\"";
+    
+        // Disable https when debug enabled
+        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+            add_filter( 'https_ssl_verify', '__return_false' );
+        }
+    
+        $data = [ 
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8', 
+                'token'        => CAPTAINCORE_CLI_TOKEN 
+            ],
+            'body'        => json_encode( [ "command" => $command ]),
+            'method'      => 'POST',
+            'data_format' => 'body'
+        ];
+    
+        // Add command to dispatch server
+        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+        if ( is_wp_error( $response ) ) {
+            $error_message = $response->get_error_message();
+            return [];
+        }
+    
+        return $response["body"];
+    }
+
     public function backup_get( $backup_id, $environment = "production" ) {
 
         $command = "backup get {$this->site_id}-$environment $backup_id";
@@ -616,6 +646,8 @@ class Site {
             $item->omitted = false;
             $item->files   = [];
             $item->tree    = [];
+            $item->active  = [];
+            $item->preview = "";
         }
 
         usort( $result, function ($a, $b) { return ( $a->time < $b->time ); });
