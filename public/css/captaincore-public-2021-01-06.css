@@ -1727,12 +1727,6 @@ table {
 	margin:0px;
 	padding:0px;
 }
-button {
-	padding: 0 16px;
-}
-button.btn--icon {
-	padding:0px;
-}
 .theme--dark.v-btn, .theme--dark .v-btn {
 	color: #fff !important;
 }

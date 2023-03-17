@@ -2259,7 +2259,8 @@ function captaincore_quicksaves_search_func( $request ) {
 }
 
 function captaincore_site_backups_get_func( $request ) {
-	$site_id     = $request['id'];
+	$site_id = $request['id'];
+	$file    = $request->get_param( 'file' );
 
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
@@ -2268,6 +2269,9 @@ function captaincore_site_backups_get_func( $request ) {
 	$backup_id   = $request['backup_id'];
 	$environment = $request['environment'];
 	$site        = new CaptainCore\Site( $site_id );
+	if ( ! empty( $file ) ) {
+		return $site->backup_show_file( $backup_id, $file, $environment );
+	}
 	return $site->backup_get( $backup_id, $environment );
 }
 

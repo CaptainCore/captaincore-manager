@@ -3334,12 +3334,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-treeview
 							v-model="item.tree"
 							:items="item.files"
+							:active.sync="item.active"
 							activatable
 							selectable
 							selection-type="leaf"
 							item-key="path"
 							open-on-click
 							return-object
+							@update:active="previewFile(item)"
 						>
 							<template v-slot:prepend="{ item, open }">
 							<v-icon v-if="item.type == 'dir'">
@@ -3355,8 +3357,28 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-col class="pa-5 text-center">
 						<v-alert type="info" dense text v-show="item.omitted">This backup has too many files to show. Uploaded files have been omitted for viewing purposes. Everything is still restorable.</v-alert>
 						<v-scroll-y-transition mode="out-in">
+						<v-card
+							v-if="item.active.length == 1"
+							class="pt-6 mx-auto"
+							flat
+						>
+							<v-card-text>
+							<h3 class="headline mb-2">
+								Previewing {{ item.active[0].name }}
+							</h3>
+							<p>{{ item.active[0].size | formatSize }}</p>
+							</v-card-text>
+							<div v-if="item.preview == ''">
+								<v-divider></v-divider>
+								<v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular>
+							</div>
+							<p v-else-if="item.preview == 'too-large'">File too large to preview.</p>
+							<v-card v-else class="text-left"><pre class="text-caption">{{ item.preview }}</pre></v-card>
+							<p class="mt-5 text-center"><a @click="item.active = []">Close preview</a></p>
+							</v-card-text>
+						</v-card>
 						<div
-							v-if="item.tree.length == 0"
+							v-else-if="item.tree.length == 0"
 							class="title font-weight-light"
 							style="align-self: center;"
 						>
@@ -3377,7 +3399,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-card-text>
 							<v-divider></v-divider>
 							<v-btn class="ma-2" @click="downloadBackup( item.id, item.tree )">Download<v-icon>mdi-file-download</v-icon></v-btn>
-							<p class="mt-5 text-center"><a @click="item.tree = []">Cancel selection</a>
+							<p class="mt-5 text-center"><a @click="item.tree = []">Cancel selection</a></p>
 						</v-card>
 						</v-scroll-y-transition>
 					</v-col>
@@ -12061,6 +12083,27 @@ new Vue({
 						})
 					}
 				})
+		},
+		previewFile( item ) {
+			item.preview = ""
+			if ( item.active.length == 1 ) {
+				site_id = this.dialog_site.site.site_id
+				environment = this.dialog_site.environment_selected.environment.toLowerCase()
+				file = item.active[0].path
+				if ( item.active[0].size > 500000 ) {
+					item.preview = "too-large"
+					return
+				}
+				axios.get(
+					`/wp-json/captaincore/v1/sites/${site_id}/${environment}/backups/${item.id}?file=${file}`, {
+						headers: {'X-WP-Nonce':this.wp_nonce}
+					})
+					.then(response => {
+						item.preview = response.data
+					})
+				return
+			}
+			item.preview = ""
 		},
 		viewBackups() {
 			site_id = this.dialog_site.site.site_id
