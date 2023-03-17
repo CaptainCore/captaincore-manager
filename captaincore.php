@@ -2257,6 +2257,7 @@ function captaincore_quicksaves_search_func( $request ) {
 
 	return ( new CaptainCore\Quicksave( $site_id ) )->search( $search, $environment );
 }
+
 function captaincore_site_backups_get_func( $request ) {
 	$site_id     = $request['id'];
 
@@ -2388,7 +2389,7 @@ function captaincore_register_rest_endpoints() {
 
 	// Custom endpoint for CaptainCore site/<site-id>/<environment>/backups/<backup-id>
 	register_rest_route(
-		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/backups/(?P<backup_id>[a-zA-Z0-9-]+)', [
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/backups/(?P<backup_id>[a-zA-Z0-9-]+)', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_backups_get_func',
 			'show_in_index' => false
