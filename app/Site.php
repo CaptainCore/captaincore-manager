@@ -550,7 +550,8 @@ class Site {
 
     public function backup_show_file( $backup_id, $file_id, $environment = "production" ) {
 
-        $command = "backup show {$this->site_id}-$environment $backup_id $file_id";
+        $file    = base64_encode( $file_id );
+        $command = "backup show {$this->site_id}-$environment $backup_id $file";
     
         // Disable https when debug enabled
         if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
