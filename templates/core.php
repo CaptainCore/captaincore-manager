@@ -3329,7 +3329,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<template v-slot:expanded-item="{ item }">
 						<td colspan="3" style="position: relative;background: #fff; padding:0px">
 						<v-row no-gutters justify="space-between">
-						<v-col cols="5" md="5" sm="12">
+						<v-col cols="4" md="4" sm="12">
 						<v-progress-circular indeterminate color="primary" class="ma-5" size="24" v-show="item.loading"></v-progress-circular></span>
 						<v-treeview
 							v-model="item.tree"
@@ -3353,13 +3353,13 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</template>
 						</v-treeview>
 						</v-col>
-						<v-divider vertical></v-divider>
+						<v-col class="shrink"><v-divider vertical></v-divider></v-col>
 						<v-col class="pa-5 text-center">
 						<v-alert type="info" dense text v-show="item.omitted">This backup has too many files to show. Uploaded files have been omitted for viewing purposes. Everything is still restorable.</v-alert>
 						<v-scroll-y-transition mode="out-in">
 						<v-card
 							v-if="item.active.length == 1"
-							class="pt-6 mx-auto"
+							class="pt-6"
 							flat
 						>
 							<v-card-text>
@@ -3373,7 +3373,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular>
 							</div>
 							<p v-else-if="item.preview == 'too-large'">File too large to preview.</p>
-							<v-card v-else class="text-left"><pre class="text-caption">{{ item.preview }}</pre></v-card>
+							<v-card v-else class="text-left overflow-auto mx-auto" style="width: 600px"><pre class="text-caption">{{ item.preview }}</pre></v-card>
 							<p class="mt-5 text-center"><a @click="item.active = []">Close preview</a></p>
 							</v-card-text>
 						</v-card>
