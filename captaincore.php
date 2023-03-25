@@ -2202,6 +2202,37 @@ function captaincore_site_captures_update_func( $request ) {
 	return $site->captures( $environment );
 }
 
+function captaincore_site_backup_update_func( $request ) {
+	$site_id  = $request['id'];
+	$settings = (object) $request->get_param( 'settings' );
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$site     = ( new CaptainCore\Sites() )->get( $site_id );
+	$time_now = date("Y-m-d H:i:s");
+	$details  = ( empty( $site->details ) ) ? (object) [] : json_decode( $site->details );
+
+	$details->backup_settings = [
+		"active"   => $settings->active,
+		"interval" => $settings->interval,
+		"mode"     => $settings->mode
+	];
+	
+	// Saves update settings for a site
+	$site_update = [
+		'details'    => json_encode( $details ),
+		'updated_at' => $time_now,
+	];
+
+	( new CaptainCore\Sites )->update( $site_update, [ "site_id" => $site_id ] );
+
+	// Remote Sync
+	captaincore_run_background_command( "site sync $site_id" );
+	return ( new CaptainCore\Site( $site_id ) )->fetch()->backup_settings;
+}
+
 function captaincore_site_snapshot_download_func( $request ) {
 	$site_id       = $request['id'];
 	$token         = $request['token'];
@@ -2412,6 +2443,13 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/captures', [
 			'methods'       => 'POST',
 			'callback'      => 'captaincore_site_captures_update_func',
+			'show_in_index' => false
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/backup', [
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_site_backup_update_func',
 			'show_in_index' => false
 		]
 	);
