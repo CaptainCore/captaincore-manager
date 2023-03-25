@@ -751,20 +751,21 @@ class Site {
     }
 
     public function fetch() {
-        $site                  = ( new Sites )->get( $this->site_id );
-        $details               = json_decode( $site->details );
-        $site->filtered        = true;
-        $site->loading         = false;
-        $site->key             = $details->key;
-        $site->core            = $details->core;
-        $site->mailgun         = $details->mailgun;
-        $site->console_errors  = isset( $details->console_errors ) ? $details->console_errors : "";
+        $site                   = ( new Sites )->get( $this->site_id );
+        $details                = json_decode( $site->details );
+        $site->filtered         = true;
+        $site->loading          = false;
+        $site->key              = $details->key;
+        $site->core             = $details->core;
+        $site->mailgun          = $details->mailgun;
+        $site->console_errors   = isset( $details->console_errors ) ? $details->console_errors : "";
         $site->environment_vars = isset( $details->environment_vars ) ? $details->environment_vars : [];
-        $site->subsites        = $details->subsites;
-        $site->storage         = $details->storage;
-        $site->visits          = $details->visits;
-        $site->outdated        = false;
-        $site->screenshot_base = $details->screenshot_base;
+        $site->backup_settings  = isset( $details->backup_settings ) ? $details->backup_settings : (object) [ "mode" => "local", "interval" => "daily", "active" => true ];
+        $site->subsites         = $details->subsites;
+        $site->storage          = $details->storage;
+        $site->visits           = $details->visits;
+        $site->outdated         = false;
+        $site->screenshot_base  = $details->screenshot_base;
         
         // Mark site as outdated if sync older then 48 hours
         if ( strtotime( $site->updated_at ) <= strtotime( "-48 hours" ) ) {
@@ -776,7 +777,6 @@ class Site {
         unset( $site->details );
         unset( $site->status );
         unset( $site->site_usage );
-        $site;
         return $site;
     }
 
@@ -805,7 +805,7 @@ class Site {
             if ( is_wp_error( $response ) ) {
                 return $response->get_error_message();
             }
-            
+
             $response = json_decode( $response['body'] );
             if ( ! empty( $response->result ) ) {
                 return $response->result->phpmyadmin_sign_on_url;

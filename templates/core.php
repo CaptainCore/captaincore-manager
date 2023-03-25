@@ -1598,6 +1598,27 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-text>
 					</v-card>
 				</v-dialog>
+				<v-dialog v-model="dialog_backup_configurations.show" width="500">
+				<v-card tile>
+					<v-toolbar flat dark color="primary">
+						<v-btn icon dark @click.native="dialog_backup_configurations.show = false">
+							<v-icon>close</v-icon>
+						</v-btn>
+						<v-toolbar-title>Backup configurations</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text>
+					<v-container>
+						<v-switch label="Active" v-model="dialog_backup_configurations.settings.active"></v-switch>
+						<v-select label="Schedule" v-model="dialog_backup_configurations.settings.interval" :items="[{ text: 'Weekly', value: 'weekly' },{ text: 'Daily', value: 'daily' },{ text: 'Every 12 hours', value: '12-hours' },{ text: 'Every 6 hours', value: '6-hours' },{ text: 'Every hour', value: '1-hour' }]"></v-select>
+						<v-select label="Mode" v-model="dialog_backup_configurations.settings.mode" :items="[{ text: 'Local copy', value: 'local' },{ text: 'Direct mount', value: 'direct' }]"></v-select>
+						<v-btn @click="saveBackupConfigurations()">
+							Update Configurations
+						</v-btn>
+					</v-container>
+					</v-card-text>
+					</v-card>
+				</v-dialog>
 				<v-dialog v-model="dialog_backup_snapshot.show" width="500">
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
@@ -3238,17 +3259,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar-title>Backups</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-tooltip top>
-							<template v-slot:activator="{ on }">
-                        <v-btn text small @click="promptBackupSnapshot( dialog_site.site.site_id )" v-on="on"><v-icon dark>mdi-cloud-download</v-icon></v-btn>
-							</template><span>Generate and Download Snapshot</span>
-						</v-tooltip>
-						<v-divider vertical class="mx-1" inset></v-divider>
-						<v-tooltip top>
-							<template v-slot:activator="{ on }">
-                    		<v-btn text @click="QuicksaveCheck( dialog_site.site.site_id )" v-on="on"><v-icon dark>mdi-sync</v-icon></v-btn>
-							</template><span>Check for new Quicksave</span>
-						</v-tooltip>
+                        <v-btn text @click="promptBackupSnapshot( dialog_site.site.site_id )">Download Snapshot <v-icon dark>mdi-cloud-download</v-icon></v-btn>
+                    	<v-btn text @click="QuicksaveCheck( dialog_site.site.site_id )">New Quicksave <v-icon dark>mdi-sync</v-icon></v-btn>
+						<v-btn text @click="dialog_backup_configurations.settings = dialog_site.site.backup_settings; dialog_backup_configurations.show = true" v-show="role == 'administrator'"><v-icon dark small>mdi-pencil</v-icon> Edit</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-sheet v-show="dialog_site.backup_step == 1" class="mt-7">
@@ -6632,6 +6645,7 @@ new Vue({
 		dialog_configure_defaults: { show: false, loading: false },
 		dialog_domain: { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], results: [], errors: [], loading: true, saving: false, step: 1 },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $user->user_email; ?>", current_user_email: "<?php echo $user->user_email; ?>", filter_toggle: true, filter_options: [] },
+		dialog_backup_configurations: { show: false, settings: { mode: "", interval: "", active: true } },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
 		dialog_launch: { show: false, site: {}, domain: "" },
 		dialog_toggle: { show: false, site_name: "", site_id: "" },
@@ -11989,6 +12003,19 @@ new Vue({
 				.then(response => { 
 					this.dialog_site.environment_selected.quicksaves = response.data
 				});
+		},
+		saveBackupConfigurations() {
+			site_id = this.dialog_site.site.site_id
+			axios.post( `/wp-json/captaincore/v1/sites/${site_id}/backup`, {
+				settings: this.dialog_site.site.backup_settings
+			}, {
+				headers: { 'X-WP-Nonce':this.wp_nonce }
+			})
+			.then( response => {
+				this.snackbar.message = `Backup settings for ${this.dialog_site.site.name} has been updated.`
+				this.snackbar.show = true
+				this.dialog_backup_configurations = { show: false, settings: { mode: "", interval: "", active: true } }
+			});
 		},
 		downloadBackup( backup_id, backup_tree ) {
 			directories = []
