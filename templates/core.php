@@ -127,7 +127,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
       <template v-slot:activator="{ on }">
 		<v-list>
 		<v-list-item link v-on="on">
-			<v-list-item-avatar>
+			<v-list-item-avatar rounded>
 				<v-img :src="gravatar"></v-img>
 			</v-list-item-avatar>
 			<v-list-item-content>
@@ -5522,7 +5522,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-col cols="6">
 					<v-list>
 					<v-list-item link href="https://gravatar.com" target="_blank">
-						<v-list-item-avatar>
+						<v-list-item-avatar rounded>
 							<v-img :src="gravatar"></v-img>
 						</v-list-item-avatar>
 						<v-list-item-content>
