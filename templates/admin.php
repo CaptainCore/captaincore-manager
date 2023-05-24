@@ -71,7 +71,7 @@ input.readonly,input[readonly],textarea.readonly,textarea[readonly] {
                     </v-col>
                 </v-row>
                 </v-container>
-                <v-btn color="primary" @click="saveConfigurations()">Save Configurations</v-btn> <v-chip class="mx-3" input-value="true" label small v-show="pending_changes ">Unsaved configurations pending</v-chip>
+                <v-btn color="primary" @click="saveConfigurations()">Save Configurations</v-btn>
             </v-card-text>
             </v-card>
             <v-snackbar v-model="snackbar">
