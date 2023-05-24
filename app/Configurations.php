@@ -108,8 +108,8 @@ class Configurations {
             $configurations->{$key} = $value;
         }
 		
-		update_site_option( 'captaincore_configurations', json_encode( $configurations ) );
-		( new CaptainCore\Configurations )->sync();
+        update_site_option( 'captaincore_configurations', json_encode( $configurations ) );
+        self::sync();
         return $configurations;
     }
 
