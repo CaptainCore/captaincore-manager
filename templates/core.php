@@ -247,12 +247,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-toolbar-title>Add plugin to {{ new_plugin.site_name }}</v-toolbar-title>
 			<v-spacer></v-spacer>
 		</v-toolbar>
-		<v-toolbar color="grey lighten-4" dense light flat>
-			<v-tabs
-				background-color="transparent"
-				v-model="new_plugin.tabs"
-				mandatory
-			>
+		<v-toolbar dense light flat>
+			<v-tabs v-model="new_plugin.tabs" mandatory>
 				<v-tab>From your computer</v-tab>
 				<v-tab>From WordPress.org</v-tab>
 				<v-tab>From Envato</v-tab>
@@ -367,12 +363,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-toolbar-title>Add theme to {{ new_theme.site_name }}</v-toolbar-title>
 			<v-spacer></v-spacer>
 		</v-toolbar>
-		<v-toolbar color="grey lighten-4" dense flat>
-			<v-tabs
-				background-color="transparent"
-				v-model="new_theme.tabs"
-				mandatory
-			>
+		<v-toolbar dense flat>
+			<v-tabs v-model="new_theme.tabs" mandatory>
 				<v-tab>From your computer</v-tab>
 				<v-tab>From WordPress.org</v-tab>
 				<v-tab>From Envato</v-tab>
@@ -612,7 +604,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
       </v-dialog>
 	  <v-dialog v-model="new_recipe.show" max-width="800px">
 	  	<v-card tile style="margin:auto;max-width:800px">
-			<v-toolbar flat color="grey lighten-4">
+			<v-toolbar flat>
 				<v-btn icon @click.native="new_recipe.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
@@ -643,7 +635,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 	  </v-dialog>
 	  <v-dialog v-model="dialog_new_account.show" max-width="800px" persistent scrollable v-if="role == 'administrator'">
 		<v-card tile>
-			<v-toolbar flat color="grey lighten-4">
+			<v-toolbar flat>
 				<v-btn icon @click.native="dialog_new_account.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
@@ -668,7 +660,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 	  </v-dialog>
 	  <v-dialog v-model="dialog_edit_account.show" max-width="800px" persistent scrollable>
 		<v-card tile>
-			<v-toolbar flat color="grey lighten-4">
+			<v-toolbar flat>
 				<v-btn icon @click.native="dialog_edit_account.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
@@ -693,7 +685,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 	  </v-dialog>
 	  <v-dialog v-model="dialog_cookbook.show" max-width="800px" persistent scrollable>
 		<v-card tile>
-			<v-toolbar flat color="grey lighten-4">
+			<v-toolbar flat>
 				<v-btn icon @click.native="dialog_cookbook.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
@@ -724,7 +716,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 	  </v-dialog>
 	  <v-dialog v-model="dialog_user.show" max-width="800px" persistent scrollable>
 		<v-card tile v-if="typeof dialog_user.user == 'object'">
-			<v-toolbar dense flat color="grey lighten-4">
+			<v-toolbar dense flat>
 				<v-btn icon @click.native="dialog_user.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
@@ -750,7 +742,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 	  </v-dialog>
 	  <v-dialog v-model="new_key.show" max-width="800px" v-if="role == 'administrator'">
 		<v-card tile style="margin:auto;max-width:800px">
-		<v-toolbar flat color="grey lighten-4">
+		<v-toolbar flat>
 			<v-btn icon @click.native="new_key.show = false">
 				<v-icon>close</v-icon>
 			</v-btn>
@@ -780,7 +772,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 	</v-dialog>
 	<v-dialog v-model="dialog_key.show" v-if="role == 'administrator'" max-width="800px" v-if="role == 'administrator'" persistent scrollable>
 		<v-card tile>
-		<v-toolbar flat color="grey lighten-4">
+		<v-toolbar flat>
 			<v-btn icon @click.native="dialog_key.show = false">
 				<v-icon>close</v-icon>
 			</v-btn>
@@ -820,7 +812,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 	</v-dialog>
 	  <v-dialog v-model="new_process.show" max-width="800px" v-if="role == 'administrator'" persistent scrollable>
 		<v-card tile>
-			<v-toolbar flat color="grey lighten-4">
+			<v-toolbar flat>
 				<v-btn icon @click.native="new_process.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
@@ -861,7 +853,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		</v-dialog>
 		<v-dialog v-model="dialog_edit_process.show" persistent max-width="800px" v-if="role == 'administrator'" persistent scrollable>
 		<v-card tile>
-			<v-toolbar flat color="grey lighten-4">
+			<v-toolbar flat>
 				<v-btn icon @click.native="dialog_edit_process.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
@@ -902,7 +894,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		</v-dialog>
 		<v-dialog v-model="dialog_handbook.show" v-if="role == 'administrator'" scrollable persistent>
 			<v-card tile>
-			<v-toolbar flat color="grey lighten-4">
+			<v-toolbar flat>
 				<v-btn icon @click.native="dialog_handbook.show = false">
 					<v-icon>close</v-icon>
 				</v-btn>
@@ -1728,7 +1720,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-toolbar-title>Historical Captures of {{ dialog_captures.site.name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
-					<v-toolbar color="grey lighten-4" light flat>
+					<v-toolbar light flat>
 						<div style="max-width:250px;" class="mx-1 mt-8" v-show="dialog_captures.captures.length != 0">
 							<v-select v-model="dialog_captures.capture" dense :items="dialog_captures.captures" item-text="created_at_friendly" item-value="capture_id" label="Taken On" return-object @change="switchCapture"></v-select>
 						</div>
@@ -1752,7 +1744,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-toolbar>
 					<v-card-text style="min-height:200px;">
 					<v-card v-show="dialog_captures.show_configure" class="mt-5 mb-3" style="max-width:850px;margin:auto;">
-						<v-toolbar color="grey lighten-4" dense light flat>
+						<v-toolbar dense light flat>
 							<v-btn icon @click="dialog_captures.show_configure = false">
 								<v-icon>close</v-icon>
 							</v-btn>
@@ -1949,7 +1941,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-row>
 				<v-col>
 				<v-card tile style="max-width: 400px;margin: auto;">
-					<v-toolbar color="grey lighten-4" light flat>
+					<v-toolbar light flat>
 						<v-toolbar-title>Create new account</v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
@@ -1964,7 +1956,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-col>
 				<v-col>
 				<v-card tile style="max-width: 400px;margin: auto;">
-					<v-toolbar color="grey lighten-4" light flat>
+					<v-toolbar light flat>
 						<v-toolbar-title>Login</v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
@@ -2015,7 +2007,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-card>
 			<template v-else>
 				<v-card tile style="max-width: 400px;margin: auto;">
-					<v-toolbar color="grey lighten-4" light flat>
+					<v-toolbar light flat>
 						<v-toolbar-title>Login</v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
@@ -2064,7 +2056,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</template>
 			</v-card>
 			<v-card tile v-if="route == 'sites'" id="sites" flat>
-			<v-toolbar v-show="dialog_site.step == 1" id="site_listings" flat color="grey lighten-4">
+			<v-toolbar v-show="dialog_site.step == 1" id="site_listings" flat>
 				<v-toolbar-title>Listing {{ sites.length }} sites</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -2116,7 +2108,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-sheet v-show="dialog_site.step == 1">
 			<v-dialog v-model="dialog_new_site_rocketdotnet.show" width="500">
 				<v-card>
-					<v-toolbar flat color="grey lighten-4">
+					<v-toolbar flat>
 					<v-toolbar-title>New Rocket.net Site</v-toolbar-title>
 					<v-spacer></v-spacer>
 						<v-btn icon @click="dialog_new_site_rocketdotnet.show = false">
@@ -2184,7 +2176,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-dialog>
 				<v-dialog v-model="dialog_new_site_kinsta.show" width="500">
 				<v-card>
-					<v-toolbar flat color="grey lighten-4">
+					<v-toolbar flat>
 					<v-toolbar-title>New Kinsta Site</v-toolbar-title>
 					<v-spacer></v-spacer>
 						<v-btn icon @click="dialog_new_site_kinsta.show = false">
@@ -2497,7 +2489,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-sheet>
 			<v-sheet v-show="dialog_site.step == 2" class="site">
 			<v-card flat>
-				<v-toolbar color="grey lighten-4" light flat>
+				<v-toolbar light flat>
 					<v-img :src=`${remote_upload_uri}${dialog_site.site.site}_${dialog_site.site.site_id}/production/screenshots/${dialog_site.site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="dialog_site.site.screenshot_base"></v-img>
 					<v-toolbar-title>
 					<v-autocomplete
@@ -2531,7 +2523,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-toolbar>
 				<v-tabs-items v-model="dialog_site.site.tabs">
 					<v-tab-item value="tab-Site-Management" :transition="false" :reverse-transition="false">
-						<div class="grey lighten-4 pb-2">
+						<div class="pb-2">
 						<v-layout wrap>
 							<v-flex sx12 sm4 px-2>
 							<v-layout>
@@ -2558,7 +2550,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</v-layout>
 									</v-flex>
 									<v-flex xs12 sm8>
-           							 	<v-tabs v-model="dialog_site.site.tabs_management" background-color="grey lighten-4" icons-and-text right show-arrows height="54">
+           							 	<v-tabs v-model="dialog_site.site.tabs_management" icons-and-text right show-arrows height="54">
 										<v-tab key="Info" href="#tab-Info">
 											Info <v-icon>mdi-text-box-multiple</v-icon>
 										</v-tab>
@@ -2586,7 +2578,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								</div>
         		<v-tabs-items v-model="dialog_site.site.tabs_management" v-if="dialog_site.loading != true">
 					<v-tab-item :key="1" value="tab-Info" :transition="false" :reverse-transition="false">
-						<v-toolbar color="grey lighten-4" dense light flat>
+						<v-toolbar dense light flat>
 							<v-toolbar-title>Info</v-toolbar-title>
 							<v-spacer></v-spacer>
 						</v-toolbar>
@@ -2846,7 +2838,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-tab-item>
 				<v-tab-item :key="100" value="tab-Stats" :transition="false" :reverse-transition="false">
 					<v-card flat>
-					<v-toolbar color="grey lighten-4" dense light flat>
+					<v-toolbar dense light flat>
 						<v-toolbar-title>Stats</v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items v-if="typeof dialog_new_site == 'object'">
@@ -2983,7 +2975,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-tab-item>
 				<v-tab-item :key="3" value="tab-Addons" :transition="false" :reverse-transition="false">
 					<v-card flat>
-					<v-toolbar color="grey lighten-4" dense light flat>
+					<v-toolbar dense light flat>
 						<v-toolbar-title>Addons <small>(Themes/Plugins)</small></v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items>
@@ -3076,7 +3068,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-tab-item>
 			<v-tab-item :key="4" value="tab-Users" :transition="false" :reverse-transition="false">
 				<v-card flat>
-				<v-toolbar color="grey lighten-4" dense light flat>
+				<v-toolbar dense light flat>
 					<v-toolbar-title>Users</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-text-field
@@ -3122,7 +3114,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card>
 			</v-tab-item>
 			<v-tab-item :key="5" value="tab-Updates" :transition="false" :reverse-transition="false">
-				<v-toolbar color="grey lighten-4" dense light flat>
+				<v-toolbar dense light flat>
 					<v-toolbar-title>Update Logs</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -3158,7 +3150,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card>
 			</v-tab-item>
 			<v-tab-item :key="6" value="tab-Scripts" :transition="false" :reverse-transition="false">
-				<v-toolbar color="grey lighten-4" dense light flat>
+				<v-toolbar dense light flat>
 					<v-toolbar-title>Scripts</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
@@ -3255,7 +3247,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card>
 			</v-tab-item>
 			<v-tab-item :key="7" value="tab-Backups" :transition="false" :reverse-transition="false">
-				<v-toolbar color="grey lighten-4" dense light flat>
+				<v-toolbar dense light flat>
 					<v-toolbar-title>Backups</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -3771,7 +3763,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		</v-card>
 	  </v-tab-item>
 		<v-tab-item :key="8" value="tab-Timeline" :transition="false" :reverse-transition="false">
-			<v-toolbar color="grey lighten-4" dense light flat>
+			<v-toolbar dense light flat>
 				<v-toolbar-title>Timeline</v-toolbar-title>
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
@@ -3808,7 +3800,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card>
 			</v-sheet>
 			<v-sheet v-show="dialog_site.step == 3">
-				<v-toolbar flat color="grey lighten-4">
+				<v-toolbar flat>
 					<v-toolbar-title>Add Site</v-toolbar-title>
 				<v-spacer></v-spacer>
 					<v-btn icon @click="goToPath( `/account/sites` )">
@@ -3904,7 +3896,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-layout>
 						<v-layout class="mt-5">
 							<v-flex class="mx-2" xs6 v-for="(key, index) in dialog_new_site.environments" :key="key.index">
-							<v-toolbar flat dense color="grey lighten-4">
+							<v-toolbar flat dense>
 								<div>{{ key.environment }} Environment</div>
 								<v-spacer></v-spacer>
 								<v-tooltip top v-if="key.environment == 'Staging'">
@@ -4000,7 +3992,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 	          </v-card-text>
 			</v-sheet>
 			<v-sheet v-show="dialog_site.step == 4">
-				<v-toolbar flat color="grey lighten-4">
+				<v-toolbar flat>
 					<v-toolbar-title>Edit Site {{ dialog_edit_site.site.name }}</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-btn icon @click.native="dialog_site.step = 2">
@@ -4098,7 +4090,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-layout>
 					<v-layout class="mt-5">
 						<v-flex class="mx-2" xs6 v-for="(key, index) in dialog_edit_site.site.environments" :key="key.index">
-							<v-toolbar flat dense color="grey lighten-4">
+							<v-toolbar flat dense>
 								<div>{{ key.environment }} Environment</div>
 								<v-spacer></v-spacer>
 								<v-tooltip top v-if="key.environment == 'Staging'">
@@ -4197,7 +4189,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-card>
 			<v-card tile v-if="route == 'domains'" flat>
 			<v-sheet v-show="dialog_domain.step == 1">
-				<v-toolbar color="grey lighten-4" light flat>
+				<v-toolbar flat>
 					<v-toolbar-title>Listing {{ allDomains }} domains</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -4277,7 +4269,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-sheet>
 				<v-sheet v-show="dialog_domain.step == 2">
 					<v-card tile flat>
-						<v-toolbar flat color="grey lighten-4">
+						<v-toolbar flat>
 							<v-toolbar-title>
 							<v-autocomplete
 								v-model="dialog_domain.domain"
@@ -4302,7 +4294,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-tabs>
 						<v-tabs-items v-model="dialog_domain.tabs">
 							<v-tab-item key="dns" :transition="false" :reverse-transition="false">
-							<v-toolbar flat dense color="grey lighten-4">
+							<v-toolbar flat dense>
 								<v-toolbar-title v-show="dnsRecords > 0"><small>{{ dnsRecords }} DNS records</small></v-toolbar-title>
 								<v-spacer></v-spacer>
 								<v-toolbar-items>
@@ -4477,7 +4469,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-overlay absolute :value="dialog_domain.updating_contacts">
 								<v-progress-circular indeterminate size="64"></v-progress-circular>
 								</v-overlay>
-								<v-tabs v-model="dialog_domain.contact_tabs" background-color="grey lighten-4" @change="populateStatesforContacts()">
+								<v-tabs v-model="dialog_domain.contact_tabs" @change="populateStatesforContacts()">
 									<v-tab key="owner">Owner</v-tab>
 									<v-tab key="admin">Admin</v-tab>
 									<v-tab key="technical">Technical</v-tab>
@@ -4687,7 +4679,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-sheet>
 			</v-card>
 			<v-card tile v-if="route == 'health'" flat>
-				<v-toolbar color="grey lighten-4" light flat>
+				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ filterSitesWithErrors.length }} sites with issues</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -4698,7 +4690,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						Results from daily scans of home pages. Web console errors are extracted from Google Chrome via Lighthouse CLI. Helpful for tracking down wide range of issues.  
 				</v-alert>
 					<v-card v-for="site in filterSitesWithErrors" flat class="mb-2" :key="site.site_id">
-					<v-toolbar color="grey lighten-4" light flat>
+					<v-toolbar light flat>
 						<v-img :src=`${remote_upload_uri}${site.site}_${site.site_id}/production/screenshots/${site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="site.screenshot_base"></v-img>
 						<v-toolbar-title>{{ site.name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -4732,7 +4724,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card-text>
 			</v-card>
 			<v-card tile v-if="route == 'cookbook'" flat>
-				<v-toolbar color="grey lighten-4" light flat>
+				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ filteredRecipes.length }} recipes</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -4761,7 +4753,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-data-table>
 			</v-card>
 			<v-card tile v-if="route == 'handbook' && role == 'administrator'" flat>
-				<v-toolbar color="grey lighten-4" light flat>
+				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ processes.length }} processes</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -4804,7 +4796,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card-text>
 			</v-card>
 			<v-card tile v-if="route == 'configurations' && role == 'administrator'" flat>
-				<v-toolbar color="grey lighten-4" light flat>
+				<v-toolbar light flat>
 					<v-toolbar-title>Configurations</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
@@ -4964,7 +4956,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-tab-item>
 					
 					<v-tab-item key="2" :transition="false" :reverse-transition="false">
-					<v-toolbar color="grey lighten-4" light flat>
+					<v-toolbar light flat>
 						<v-toolbar-title>Listing {{ providers.length }} providers</v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items>
@@ -5066,7 +5058,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-row>
 			</v-card>
 			<v-card tile v-if="route == 'billing'" flat>
-				<v-toolbar color="grey lighten-4" light flat v-show="dialog_billing.step == 1">
+				<v-toolbar light flat v-show="dialog_billing.step == 1">
 					<v-toolbar-title>Billing</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
@@ -5170,7 +5162,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</template>
 
 							<v-card>
-								<v-card-title class="grey lighten-4">
+								<v-card-title>
 									New payment method
 									<v-spacer></v-spacer>
 									<v-btn @click="new_payment.show = false" icon><v-icon>close</v-icon></v-btn>
@@ -5230,7 +5222,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-tab-items>
 				</v-flex>
 				<v-flex v-show="dialog_billing.step == 2">
-					<v-toolbar flat color="grey lighten-4">
+					<v-toolbar flat>
 						<v-toolbar-title v-show="dialog_invoice.loading == true">Loading...</v-toolbar-title>
 						<v-toolbar-title v-show="dialog_invoice.loading == false">Invoice #{{ dialog_invoice.response.order_id }}</v-toolbar-title>
 						<div class="flex-grow-1"></div>
@@ -5432,7 +5424,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-flex>
 			</v-card>
 			<v-card tile v-if="route == 'defaults' && role == 'administrator'" flat>
-				<v-toolbar color="grey lighten-4" light flat>
+				<v-toolbar light flat>
 					<v-toolbar-title>Site Defaults</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
@@ -5484,7 +5476,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card-text>
 			</v-card>
 			<v-card tile v-if="route == 'keys' && role == 'administrator'" flat>
-				<v-toolbar color="grey lighten-4" light flat>
+				<v-toolbar light flat>
 					<v-toolbar-title>Your SSH keys</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -5511,7 +5503,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card-text>
 			</v-card>
 			<v-card tile v-if="route == 'profile'" flat>
-				<v-toolbar color="grey lighten-4" light flat>
+				<v-toolbar light flat>
 					<v-toolbar-title>Edit profile</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -5567,7 +5559,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card-text>
 			</v-card>
 			<v-card tile flat v-show="route == 'subscriptions'" v-if="role == 'administrator'">
-				<v-toolbar color="grey lighten-4" light flat>
+				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ subscriptions.length }} subscriptions</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -5619,7 +5611,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-card>
 			<v-card tile v-if="route == 'accounts'" flat>
 			<v-sheet v-show="dialog_account.step == 1">
-				<v-toolbar color="grey lighten-4" light flat>
+				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ accounts.length }} accounts</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items v-if="role == 'administrator'">
@@ -5660,7 +5652,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-sheet>
 				<v-sheet v-show="dialog_account.step == 2">
 				<v-card flat v-if="dialog_account.show && typeof dialog_account.records.account == 'object'">
-					<v-toolbar flat color="grey lighten-4">
+					<v-toolbar flat>
 						<v-toolbar-title>{{ dialog_account.records.account.name }}</v-toolbar-title>
 						<div class="flex-grow-1"></div>
 						<v-toolbar-items>
@@ -5694,7 +5686,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-tabs>
 					<v-tabs-items v-model="account_tab">
 					<v-tab-item :transition="false" :reverse-transition="false">
-						<v-toolbar dense flat color="grey lighten-4">
+						<v-toolbar dense flat>
 							<div class="flex-grow-1"></div>
 							<v-toolbar-items>
 							<v-dialog v-model="dialog_account.new_invite" max-width="500px">
@@ -5847,7 +5839,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-data-table>
 					</v-tab-item>
 					<v-tab-item :transition="false" :reverse-transition="false">
-					<v-toolbar color="grey lighten-4" dense light flat>
+					<v-toolbar dense light flat>
 						<v-spacer></v-spacer>
 							<v-toolbar-items v-show="role == 'administrator'">
 								<v-btn text @click="modifyPlan()">Edit Plan <v-icon dark small class="ml-1">edit</v-icon></v-btn>
@@ -6026,7 +6018,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-sheet>
 			</v-card>
 			<v-card tile v-if="route == 'users'" flat>
-				<v-toolbar color="grey lighten-4" light flat>
+				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ users.length }} users</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -6088,7 +6080,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-progress-circular indeterminate size="64"></v-progress-circular>
 			</v-overlay>
 			<v-card tile v-else>
-				<v-toolbar color="grey lighten-4" light flat>
+				<v-toolbar light flat>
 					<v-toolbar-title>Account <strong><span v-html="new_invite.account.name"></span></strong> contains:</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
