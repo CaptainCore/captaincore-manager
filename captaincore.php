@@ -92,23 +92,6 @@ function captaincore_failed_notify( $order_id, $old_status, $new_status ){
 }
 add_action( 'woocommerce_order_status_changed', 'captaincore_failed_notify', 10, 3);
 
-function captaincore_rewrite() {
-	add_rewrite_rule( '^checkout-express/([^/]*)/?', 'index.php?pagename=checkout-express&callback=$matches[1]', 'top' );
-	add_rewrite_tag( '%site%', '([^&]+)' );
-	add_rewrite_tag( '%sitetoken%', '([^&]+)' );
-	add_rewrite_tag( '%callback%', '([^&]+)' );
-
-	register_taxonomy(
-		'process_role', [ 'captcore_process' ], [
-			'hierarchical'   => true,
-			'label'          => 'Roles',
-			'singular_label' => 'Role',
-			'rewrite'        => true,
-		]
-	);
-}
-add_action( 'init', 'captaincore_rewrite' );
-
 function captaincore_disable_gutenberg( $can_edit, $post_type ) {
 	$disabled_post_types = [ 'captcore_website', 'captcore_domain', 'captcore_customer', 'captcore_changelog' ];
 	if ( in_array( $post_type, $disabled_post_types ) ) {
@@ -6847,14 +6830,6 @@ function captaincore_fetch_socket_address() {
 	return $socket_address;
 }
 
-// Makes sure that any request going to /account/... will respond with a proper 200 http code
-add_action( 'init', 'captaincore_rewrites_init' );
-function captaincore_rewrites_init(){
-	$configurations = CaptainCore\Configurations::fetch();
-	$rule           = "^{$configurations->path}/(.+)";
-    add_rewrite_rule( $rule, 'index.php', 'top' );
-}
-
 // Load custom template for web requests going to "/account" or "/account/<..>/..."
 add_filter( 'template_include', 'load_captaincore_template' );
 function load_captaincore_template( $original_template ) {
@@ -6867,33 +6842,69 @@ function load_captaincore_template( $original_template ) {
 	wp_redirect( $configurations->path );
   }
   if ( $configurations->path == "/" && in_array( $current_page, $captaincore_pages ) ) {
-	if ( ! function_exists( 'is_plugin_active' ) ){
-		require_once( ABSPATH . '/wp-admin/includes/plugin.php' );
-	}
 	header('X-Frame-Options: SAMEORIGIN'); 
     return plugin_dir_path( __FILE__ ) . 'templates/core.php';
   }
 
   $page = trim( $configurations->path, "/" );
-  if ( is_page( $page ) || current( $request ) == $page ) {
-	if ( ! function_exists( 'is_plugin_active' ) ){
-		require_once( ABSPATH . '/wp-admin/includes/plugin.php' );
-	}
+  if ( ( is_page( $page ) || current( $request ) == $page ) && count( $request ) == 1 ) {
 	header('X-Frame-Options: SAMEORIGIN'); 
     return plugin_dir_path( __FILE__ ) . 'templates/core.php';
   }
+  if ( ( is_page( $page ) || current( $request ) == $page ) && count( $request ) > 1 && in_array( $request[1], $captaincore_pages ) ) {
+	header('X-Frame-Options: SAMEORIGIN'); 
+	return plugin_dir_path( __FILE__ ) . 'templates/core.php';
+}
   return $original_template;
+}
+
+// Makes sure that any request going to CaptainCore pages will respond with a proper 200 http code
+add_action('init', 'captaincore_rewrite');
+function captaincore_rewrite() {
+    global $wp_rewrite;
+	add_rewrite_rule( '^checkout-express/([^/]*)/?', 'index.php?pagename=checkout-express&callback=$matches[1]', 'top' );
+	add_rewrite_tag( '%site%', '([^&]+)' );
+	add_rewrite_tag( '%sitetoken%', '([^&]+)' );
+	add_rewrite_tag( '%callback%', '([^&]+)' );
+
+	$configurations    = CaptainCore\Configurations::fetch();
+	$captaincore_pages = ['accounts', 'billing', 'cookbook', 'configurations', 'connect', 'defaults', 'domains', 'handbook', 'health', 'keys', 'login', 'profile', 'sites', 'subscriptions', 'users'];
+	if ( $configurations->path == "/" ) {
+		foreach( $captaincore_pages as $captaincore_page ) {
+			add_rewrite_rule( "^$captaincore_page/?",'index.php','top');
+			add_rewrite_endpoint( $captaincore_page, EP_PERMALINK | EP_PAGES );
+		}
+	} else {
+		$custom_path = trim( $configurations->path, '"' );
+		add_rewrite_rule( "^$custom_path/?",'index.php','top');
+		add_rewrite_endpoint( $custom_path, EP_PERMALINK | EP_PAGES );
+	}
+	$wp_rewrite->flush_rules();
 }
 
 // Disable 404 redirects when unknown request goes to "/account/<..>/..." which allows a custom template to load. See https://wordpress.stackexchange.com/questions/3326/301-redirect-instead-of-404-when-url-is-a-prefix-of-a-post-or-page-name
 add_filter('redirect_canonical', 'disable_404_redirection_for_captaincore');
 function disable_404_redirection_for_captaincore($redirect_url) {
 	global $wp;
+	$configurations    = CaptainCore\Configurations::fetch();
+	$captaincore_pages = ['accounts', 'billing', 'cookbook', 'configurations', 'connect', 'defaults', 'domains', 'handbook', 'health', 'keys', 'login', 'profile', 'sites', 'subscriptions', 'users'];
+	if ( $configurations->path == "/" ) {
+		foreach( $captaincore_pages as $captaincore_page ) {
+			if ( strpos( $wp->request, "{$current_page}/" ) !== false ) {
+				return false;
+			}
+		}
+	}
 	if ( strpos( $wp->request, "checkout-express/" ) !== false ) {
 		return false;
 	}
-    if ( strpos( $wp->request, "account/" ) !== false ) {
-		return false;
+	$custom_path = trim($configurations->path, '/'). "/";
+	if ( strpos( $wp->request, $custom_path ) !== false ) {
+		foreach( $captaincore_pages as $captaincore_page ) {
+			if ( strpos( $wp->request, "{$custom_path}/{$current_page}/" ) !== false ) {
+				return false;
+			}
+		}
 	}
     return $redirect_url;
 }
