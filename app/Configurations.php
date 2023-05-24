@@ -11,14 +11,34 @@ class Configurations {
         if ( empty( $configurations ) ) {
             $configurations = (object) [];
         }
-        if ( ! isset( $configurations->colors ) ) {
-			$configurations->colors = [];
+        if ( empty ( $configurations->colors ) ) {
+			$configurations->colors = [
+                "primary"   => '#2c3e50',
+                "secondary" => '#424242',
+                "accent"    => '#82B1FF',
+                "error"     => '#FF5252',
+                "info"      => '#2196F3',
+                "success"   => '#4CAF50',
+                "warning"   => '#FFC107',
+            ];
+        }
+        if ( ! isset( $configurations->path ) ) {
+			$configurations->path = "/account/";
+        }
+        if ( ! isset( $configurations->mode ) ) {
+			$configurations->mode = "hosting";
         }
         if ( ! isset( $configurations->remote_upload_uri ) ) {
 			$configurations->remote_upload_uri = get_option( 'options_remote_upload_uri' );
         }
-        if ( ! isset( $configurations->logo ) ) {
-			$configurations->logo = "";
+        if ( empty( $configurations->logo ) ) {
+			$configurations->logo = "/wp-content/plugins/captaincore-manager/public/logo.webp";
+        }
+        if ( empty( $configurations->logo_width ) ) {
+            $configurations->logo_width = "32";
+        }
+        if ( ! isset( $configurations->name ) ) {
+			$configurations->name = "CaptainCore";
         }
         if ( ! isset( $configurations->scheduled_tasks ) ) {
 			$configurations->scheduled_tasks = [];
@@ -38,7 +58,7 @@ class Configurations {
         if ( ! isset( $configurations->intercom_secret_key ) ) {
 			$configurations->intercom_secret_key = "";
         }
-        if ( $configurations->dns_introduction ) {
+        if ( ! empty( $configurations->dns_introduction ) ) {
             $Parsedown = new \Parsedown();
 			$configurations->dns_introduction_html = $Parsedown->text( $configurations->dns_introduction );
         }
@@ -55,9 +75,9 @@ class Configurations {
         if ( empty( $configurations ) ) {
             $configurations = (object) [];
         }
-        if ( ! isset( $configurations->colors ) ) {
+        if ( empty ( $configurations->colors ) ) {
             $configurations->colors = [
-                "primary"   => '#1976D2',
+                "primary"   => '#2c3e50',
                 "secondary" => '#424242',
                 "accent"    => '#82B1FF',
                 "error"     => '#FF5252',
@@ -69,13 +89,28 @@ class Configurations {
         return $configurations->colors;
     }
 
-    public function update( $field, $value ) {
+    public function update_field( $field, $value ) {
         $configurations = json_decode( get_site_option( 'captaincore_configurations' ) );
         if ( empty( $configurations ) ) {
             $configurations = (object) [];
         }
         $configurations->{$field} = $value;
         update_site_option( 'captaincore_configurations', json_encode( $configurations ) );
+    }
+
+    public function update( $items ) {
+        
+        $configurations = json_decode( get_site_option( 'captaincore_configurations' ) );
+        if ( empty( $configurations ) ) {
+            $configurations = (object) [];
+        }
+        foreach( $items as $key => $value ) {
+            $configurations->{$key} = $value;
+        }
+		
+		update_site_option( 'captaincore_configurations', json_encode( $configurations ) );
+		( new CaptainCore\Configurations )->sync();
+        return $configurations;
     }
 
     public function sync() {
@@ -125,6 +160,14 @@ class Configurations {
         endwhile;
 
         return $products;
+    }
+
+    public static function fetch() {
+        return ( new Configurations )->get();
+    }
+
+    public static function get_json() {
+        return json_encode( ( new Configurations )->get() );
     }
 
 }

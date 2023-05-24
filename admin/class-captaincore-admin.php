@@ -51,8 +51,19 @@ class Captaincore_Admin {
 
 		$this->plugin_name = $plugin_name;
 		$this->version = $version;
+		add_action( 'admin_menu', [ $this, 'admin_menu' ] );
 
 	}
+
+	public function admin_menu() {
+        if ( current_user_can( 'manage_options' ) ) {
+            add_management_page( "CaptainCore", "CaptainCore", "manage_options", "captaincore", array( $this, 'admin_view' ) );
+        }
+    }
+
+	public function admin_view() {
+        require_once plugin_dir_path( __DIR__ ) . '/templates/admin.php';
+    }
 
 	/**
 	 * Register the stylesheets for the admin area.
