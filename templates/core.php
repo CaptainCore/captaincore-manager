@@ -4254,7 +4254,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				>
 				<template v-slot:body="{ items }">
 					<tbody>
-					<tr v-for="item in items" @click="goToPath( `/account/domains/${item.domain_id}`)" style="cursor:pointer">
+					<tr v-for="item in items" @click="goToPath( `/domains/${item.domain_id}`)" style="cursor:pointer">
 						<td>{{ item.name }}</td>
 						<td><v-icon v-show="item.remote_id != ''">mdi-check-circle</v-icon></td>
 						<td><v-icon v-show="item.provider_id != ''">mdi-check-circle</v-icon></td>
@@ -4272,7 +4272,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								:items="domains"
 								return-object
 								item-text="name"
-								@input="goToPath( `/account/domains/${dialog_domain.domain.domain_id}`)"
+								@input="goToPath( `/domains/${dialog_domain.domain.domain_id}`)"
 								class="mt-5"
 								spellcheck="false"
 								flat
