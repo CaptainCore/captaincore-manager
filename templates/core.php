@@ -1,4 +1,8 @@
-<!DOCTYPE html>
+<?php
+if ( ! function_exists('is_plugin_active') ) {
+    include_once(ABSPATH . 'wp-admin/includes/plugin.php');
+}
+?><!DOCTYPE html>
 <html>
 <head>
   <title><?php echo ( ! empty( get_option( 'options_business_name' ) ) ? get_option( 'options_business_name' ) . ' - ' : "" ); ?>Account</title>
