@@ -2093,7 +2093,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<!--<v-list-item @click="dialog_new_site_rocketdotnet.show = true">
 								<v-list-item-title>Rocket.net</v-list-item-title>
 							</v-list-item>-->
-							<v-list-item @click="goToPath( `/account/sites/new` )" href>
+							<v-list-item @click="goToPath( `/sites/new` )" href>
 								<v-list-item-title>Manually</v-list-item-title>
 							</v-list-item>
 						</v-list>
@@ -3799,7 +3799,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-toolbar flat>
 					<v-toolbar-title>Add Site</v-toolbar-title>
 				<v-spacer></v-spacer>
-					<v-btn icon @click="goToPath( `/account/sites` )">
+					<v-btn icon @click="goToPath( `/sites` )">
 						<v-icon>close</v-icon>
 					</v-btn>
 				</v-toolbar>
@@ -5092,7 +5092,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							${{ item.total }}
 						</template>
 						<template v-slot:item.actions="{ item }">
-							<v-btn small @click="goToPath( `/account/billing/${item.order_id}`)">Show Invoice</v-btn>
+							<v-btn small @click="goToPath( `/billing/${item.order_id}`)">Show Invoice</v-btn>
 						</template>
 						</v-data-table>
 						</v-tab-item>
@@ -5592,7 +5592,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</template>
 					<template v-slot:body="{ items }">
 						<tbody>
-						<tr v-for="item in items" :key="item.account_id" @click="goToPath( `/account/subscription/${item.account_id}`)" style="cursor:pointer;">
+						<tr v-for="item in items" :key="item.account_id" @click="goToPath( `/subscription/${item.account_id}`)" style="cursor:pointer;">
 							<td>{{ item.name }}</td>
 							<td>{{ item.interval | intervalLabel }}</td>
 							<td>{{ item.next_renewal }}</td>
@@ -5636,7 +5636,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</template>
 					<template v-slot:body="{ items }">
 						<tbody>
-						<tr v-for="item in items" :key="item.account_id" @click="goToPath( `/account/accounts/${item.account_id}`)" style="cursor:pointer;">
+						<tr v-for="item in items" :key="item.account_id" @click="goToPath( `/accounts/${item.account_id}`)" style="cursor:pointer;">
 							<td>{{ item.name }}</td>
 							<td><span v-show="item.metrics.users != '' && item.metrics.users != null">{{ item.metrics.users }}</span></td>
 							<td><span v-show="item.metrics.sites != '' && item.metrics.sites != null">{{ item.metrics.sites }}</span></td>
@@ -9276,7 +9276,7 @@ new Vue({
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					this.goToPath( '/account/sites' )
+					this.goToPath( '/sites' )
 					this.jobs.filter(job => job.job_id == job_id)[0].status = "done"
 					this.sites = this.sites.filter( site => site.site_id != site_id )
 					this.snackbar.message = "Deleting site "+ site_name + "."
@@ -10190,7 +10190,7 @@ new Vue({
 					// Remove item
 					this.accounts = this.accounts.filter( a => a.account_id != account.account_id )
 					this.snackbar.message = "Deleting account "+ account.name + "."
-					this.goToPath( '/account/accounts' )
+					this.goToPath( '/accounts' )
 				})
 				.catch( error => console.log( error ) );
 		},
@@ -11278,7 +11278,7 @@ new Vue({
 				.then( response => {
 					this.dialog_domain = { show: false, updating_contacts: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], loading: true, saving: false }
 					this.domains = this.domains.filter( d => d.domain_id != response.data.domain_id )
-					this.goToPath( '/account/domains' )
+					this.goToPath( '/domains' )
 					this.snackbar.message = response.data.message
 					this.snackbar.show = true
 					
