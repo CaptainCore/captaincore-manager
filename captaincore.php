@@ -1671,6 +1671,11 @@ function captaincore_configurations_func( $request ) {
 	return ( new CaptainCore\Configurations )->get();
 }
 
+function captaincore_configurations_update_func( $request ) {
+	$configurations = $request->get_param( "configurations" );
+	return ( new CaptainCore\Configurations )->update( $configurations );
+}
+
 function captaincore_subscriptions_func( $request ) {
 	return ( new CaptainCore\User )->subscriptions();
 }
@@ -2787,6 +2792,13 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/configurations/', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_configurations_func',
+			'show_in_index' => false
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/configurations/', [
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_configurations_update_func',
 			'show_in_index' => false
 		]
 	);
