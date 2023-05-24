@@ -2340,7 +2340,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-col>
 						<v-col class="grow">{{ site.name }}</v-col>
 						<v-col class="shrink pa-0">
-							<v-btn depressed small @click="goToPath( `/account/sites/${site.site_id}` )">
+							<v-btn depressed small @click="goToPath( `/sites/${site.site_id}` )">
 								<v-icon>edit</v-icon> Fix Credentials 
 							</v-btn>
 						</v-col>
@@ -2391,7 +2391,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</template>
 				<template v-slot:body="{ items }">
 					<tbody>
-					<tr v-for="item in items" :key="item.site_id" @click="goToPath( `/account/sites/${item.site_id}` )" style="cursor:pointer;">
+					<tr v-for="item in items" :key="item.site_id" @click="goToPath( `/sites/${item.site_id}` )" style="cursor:pointer;">
 						<td>
 							<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-100.jpg` class="elevation-1" width="50" v-show="item.screenshot_base"></v-img>
 						</td>
@@ -2451,7 +2451,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								cols="12"
 								sm="4"
 								>
-								<v-card tile style="cursor: pointer" @click="goToPath( `/account/sites/${item.site_id}` )">
+								<v-card tile style="cursor: pointer" @click="goToPath( `/sites/${item.site_id}` )">
 								<v-hover v-slot="{ hover }">
 									<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-800.jpg` :aspect-ratio="8/5" v-show="item.screenshot_base">
 									<v-fade-transition>
@@ -5776,7 +5776,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								{{ item.visits | formatLargeNumbers }}
 							</template>
 							<template v-slot:item.actions="{ item }">
-								<v-btn small @click="goToPath( `/account/sites/${item.site_id}` )">View</v-btn>
+								<v-btn small @click="goToPath( `/sites/${item.site_id}` )">View</v-btn>
 							</template>
 							<template v-slot:body.append>
 								<tr>
@@ -8366,7 +8366,7 @@ new Vue({
 
 					if ( response.response = "Successfully added new site" ) {
 						this.fetchSiteInfo( response.site_id )
-						this.goToPath( `/account/sites/${response.site_id}` )
+						this.goToPath( `/sites/${response.site_id}` )
 						// Fetch updated accounts
 						axios.get(
 							'/wp-json/captaincore/v1/accounts', {
@@ -10520,7 +10520,7 @@ new Vue({
 		switchSite() {
 			if ( this.selected_site ) {
 				this.dialog_site.site = this.selected_site
-				this.goToPath( `/account/sites/${this.dialog_site.site.site_id}` )
+				this.goToPath( `/sites/${this.dialog_site.site.site_id}` )
 			}
 		},
 		showSite( site ) {
