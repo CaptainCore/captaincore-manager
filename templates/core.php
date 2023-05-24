@@ -36,7 +36,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 	 	 <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none" v-show="route != 'login' || route != 'connect'"></v-app-bar-nav-icon>
          <v-toolbar-title>
 			<v-list flat color="transparent">
-		 	<v-list-item href="/account" @click.prevent="goToPath( '/account' )" style="padding:0px;" flat class="not-active">
+		 	<v-list-item :href="configurations.path" @click.prevent="goToPath( '/' )" style="padding:0px;" flat class="not-active">
 			 	<v-img :src="configurations.logo" contain :max-width="configurations.logo_width == '' ? 32 : configurations.logo_width" v-if="configurations.logo" class="mr-4"></v-img>
 				 {{ configurations.name }}
 			</v-list-item>
@@ -89,7 +89,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
       <v-list nav dense>
 	  	<v-list-item-group mandatory v-model="selected_nav" color="primary">
 		<v-list-item style="display:none"></v-list-item>
-        <v-list-item link href="/account/sites" @click.prevent="goToPath( '/account/sites' )">
+        <v-list-item link :href=`${configurations.path}sites` @click.prevent="goToPath( '/sites' )">
           <v-list-item-icon>
             <v-icon>mdi-wrench</v-icon>
           </v-list-item-icon>
@@ -97,7 +97,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
             <v-list-item-title>Sites</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-        <v-list-item link href="/account/domains" @click.prevent="goToPath( '/account/domains' )">
+        <v-list-item link :href=`${configurations.path}domains` @click.prevent="goToPath( '/domains' )">
           <v-list-item-icon>
             <v-icon>mdi-text-box-multiple</v-icon>
           </v-list-item-icon>
@@ -105,7 +105,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
             <v-list-item-title>Domains</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-		<v-list-item link href="/account/accounts" @click.prevent="goToPath( '/account/accounts' )">
+		<v-list-item link :href=`${configurations.path}accounts` @click.prevent="goToPath( '/accounts' )">
           <v-list-item-icon>
             <v-icon>mdi-card-account-details</v-icon>
           </v-list-item-icon>
@@ -113,7 +113,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
             <v-list-item-title>Accounts</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-		<v-list-item link href="/account/billing" @click.prevent="goToPath( '/account/billing' )" v-show="modules.billing">
+		<v-list-item link :href=`${configurations.path}billing` @click.prevent="goToPath( '/billing' )" v-show="modules.billing">
           <v-list-item-icon>
             <v-icon>mdi-currency-usd</v-icon>
           </v-list-item-icon>
@@ -141,7 +141,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
       </template>
       <v-list dense>
 	  <v-subheader>Developers</v-subheader>
-		<v-list-item link href="/account/cookbook" @click.prevent="goToPath( '/account/cookbook' )">
+		<v-list-item link :href=`${configurations.path}cookbook` @click.prevent="goToPath( '/cookbook' )">
         <v-list-item-icon>
             <v-icon>mdi-code-tags</v-icon>
           </v-list-item-icon>
@@ -149,7 +149,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
             <v-list-item-title>Cookbook</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-		<v-list-item link href="/account/health" @click.prevent="goToPath( '/account/health' )">
+		<v-list-item link :href=`${configurations.path}health` @click.prevent="goToPath( '/health' )">
           <v-list-item-icon>
             <v-icon>mdi-ladybug</v-icon>
           </v-list-item-icon>
@@ -158,7 +158,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
           </v-list-item-content>
         </v-list-item>
 		<v-subheader v-show="role == 'administrator'">Administrator</v-subheader>
-		<v-list-item link href="/account/configurations" @click.prevent="goToPath( '/account/configurations' )" v-show="role == 'administrator'">
+		<v-list-item link :href=`${configurations.path}configurations` @click.prevent="goToPath( '/configurations' )" v-show="role == 'administrator'">
           <v-list-item-icon>
             <v-icon>mdi-cogs</v-icon>
           </v-list-item-icon>
@@ -166,7 +166,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
             <v-list-item-title>Configurations</v-list-item-title>
           </v-list-item-content>
 		</v-list-item>
-		<v-list-item link href="/account/handbook" @click.prevent="goToPath( '/account/handbook' )" v-show="role == 'administrator'">
+		<v-list-item link :href=`${configurations.path}handbook` @click.prevent="goToPath( '/handbook' )" v-show="role == 'administrator'">
           <v-list-item-icon>
             <v-icon>mdi-map</v-icon>
           </v-list-item-icon>
@@ -174,7 +174,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
             <v-list-item-title>Handbook</v-list-item-title>
           </v-list-item-content>
 		</v-list-item>
-		<v-list-item link href="/account/defaults" @click.prevent="goToPath( '/account/defaults' )" v-show="role == 'administrator'">
+		<v-list-item link :href=`${configurations.path}defaults` @click.prevent="goToPath( '/defaults' )" v-show="role == 'administrator'">
           <v-list-item-icon>
             <v-icon>mdi-application</v-icon>
           </v-list-item-icon>
@@ -182,7 +182,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
             <v-list-item-title>Site Defaults</v-list-item-title>
           </v-list-item-content>
 		</v-list-item>
-		<v-list-item link href="/account/keys" @click.prevent="goToPath( '/account/keys' )"  v-show="role == 'administrator'">
+		<v-list-item link :href=`${configurations.path}keys` @click.prevent="goToPath( '/keys' )"  v-show="role == 'administrator'">
           <v-list-item-icon>
             <v-icon>mdi-key</v-icon>
           </v-list-item-icon>
@@ -191,7 +191,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
           </v-list-item-content>
 		</v-list-item>
 		</v-list-item-group>
-		<v-list-item link href="/account/subscriptions" @click.prevent="goToPath( '/account/subscriptions' )" v-show="role == 'administrator'">
+		<v-list-item link :href=`${configurations.path}subscriptions` @click.prevent="goToPath( '/subscriptions' )" v-show="role == 'administrator'">
           <v-list-item-icon>
             <v-icon>mdi-repeat</v-icon>
           </v-list-item-icon>
@@ -199,7 +199,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
             <v-list-item-title>Subscriptions</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-		<v-list-item link href="/account/users" @click.prevent="goToPath( '/account/users' )" v-show="role == 'administrator'">
+		<v-list-item link :href=`${configurations.path}users` @click.prevent="goToPath( '/users' )" v-show="role == 'administrator'">
           <v-list-item-icon>
             <v-icon>mdi-account-multiple</v-icon>
           </v-list-item-icon>
@@ -208,7 +208,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
           </v-list-item-content>
         </v-list-item>
 		<v-subheader>User</v-subheader>
-	  	<v-list-item link href="/account/profile" @click.prevent="goToPath( '/account/profile' )">
+	  	<v-list-item link :href=`${configurations.path}profile` @click.prevent="goToPath( '/profile' )">
           <v-list-item-icon>
             <v-icon>mdi-account-box</v-icon>
           </v-list-item-icon>
@@ -2807,7 +2807,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-container>
 					<v-row dense v-if="dialog_site.site.shared_with && dialog_site.site.shared_with.length > 0" class="mt-3">
 						<v-col v-for="account in dialog_site.site.shared_with" :key="account.account_id" cols="4">
-						<v-card :href="`/account/accounts/${ account.account_id }`" @click.prevent="goToPath( '/account/accounts/' + account.account_id )">
+						<v-card :href=`${configurations.path}accounts/${account.account_id}` @click.prevent="goToPath( '/accounts/' + account.account_id )">
 							<v-card-title v-html="account.name"></v-card-title>
 							<v-card-actions>
 							<v-avatar class="mr-2" tile :color="account.account_id == dialog_site.site.customer_id ? 'grey lighten-3' : 'none'">
@@ -5234,7 +5234,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								</template>
 								<span>Download PDF Invoice</span>
 							</v-tooltip>
-							<v-btn text href="/account/billing" @click.prevent="goToPath( '/account/billing' )"><v-icon>mdi-arrow-left</v-icon> Back</v-btn>
+							<v-btn text :href=`${configurations.path}billing` @click.prevent="goToPath( '/billing' )"><v-icon>mdi-arrow-left</v-icon> Back</v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
 					<v-card-text v-show="dialog_invoice.loading == false">
@@ -6848,21 +6848,22 @@ new Vue({
 		route_path: "",
 		route: "",
 		routes: {
-			'/account': '',
-			'/account/login': 'login',
-			'/account/sites': 'sites',
-			'/account/domains': 'domains',
-			'/account/health': 'health',
-			'/account/keys': 'keys',
-			'/account/defaults': 'defaults',
-			'/account/configurations': 'configurations',
-			'/account/profile' : 'profile',
-			'/account/users': 'users',
-			'/account/accounts': 'accounts',
-			'/account/handbook': 'handbook',
-			'/account/billing': 'billing',
-			'/account/cookbook': 'cookbook',
-			'/account/subscriptions': 'subscriptions',
+			'/': '',
+			'/accounts': 'accounts',
+			'/billing': 'billing',
+			'/cookbook': 'cookbook',
+			'/configurations': 'configurations',
+			'/connect': 'connect',
+			'/defaults': 'defaults',
+			'/domains': 'domains',
+			'/handbook': 'handbook',
+			'/health': 'health',
+			'/keys': 'keys',
+			'/login': 'login',
+			'/profile' : 'profile',
+			'/sites': 'sites',
+			'/subscriptions': 'subscriptions',
+			'/users': 'users',
 		},
 		selected_nav: "",
 		querystring: window.location.search,
@@ -7173,7 +7174,7 @@ new Vue({
 				const originalRequest = config;
 				if (error.response.status === 403 && error.response.data.code == "rest_cookie_invalid_nonce" ) {
 					if ( this.wp_nonce_retry ) {
-						this.goToPath( '/account/login' )
+						this.goToPath( window.location.origin + this.configurations.path + 'login' )
 						this.wp_nonce_retry = false
 						return
 					}
@@ -7193,20 +7194,21 @@ new Vue({
 				}
 			});
 		window.addEventListener('popstate', () => {
-			this.updateRoute( window.location.pathname )
+			path = window.location.pathname.replace( this.configurations.path, "/" )
+			this.updateRoute( path )
 		})
 		if ( typeof wpApiSettings == "undefined" ) {
-			window.history.pushState( {}, 'login', "/account/login" )
+			window.history.pushState( {}, 'login', window.location.origin + this.configurations.path + 'login' )
 			this.route = "login"
-			return;
+			return
 		} else {
 			this.wp_nonce = wpApiSettings.nonce
 		}
 		if ( this.socket == "/ws" ) {
 			console.log("Socket not defined")
-			window.history.pushState( {}, 'connect', "/account/connect" )
+			window.history.pushState( {}, 'connect', "/connect" )
 			this.route = "connect"
-			return;
+			return
 		}
 		this.checkRequestedSites()
 		this.fetchAccounts()
@@ -7215,7 +7217,8 @@ new Vue({
 			this.fetchProcesses()
 			this.fetchProviderActions()
 		}
-		this.updateRoute( window.location.pathname )
+		path = window.location.pathname.replace( this.configurations.path, "/" )
+		this.updateRoute( path )
 
 		if ( this.route == "" ) {
 			this.triggerRoute()
@@ -7444,7 +7447,7 @@ new Vue({
 		},
 		triggerRoute() {
 			if ( this.wp_nonce == "" ) {
-				window.history.pushState( {}, 'login', "/account/login" )
+				window.history.pushState( {}, 'login', window.location.origin + this.configurations.path + 'login' )
 				this.route = "login"
 				this.loading_page = false;
 				return;
@@ -7580,9 +7583,11 @@ new Vue({
 				}
 			}
 		},
-		goToPath ( href ) {
+		goToPath( href ) {
+			console.log( "goToPath: " + href )
 			this.updateRoute( href )
-			window.history.pushState( {}, this.routes[href], href )
+			path = this.configurations.path.endsWith('/') ? this.configurations.path.slice(0,-1) : this.configurations.path
+			window.history.pushState( {}, this.routes[ href ], window.location.origin + path + href )
 		},
 		resetPassword() {
 			this.login.loading = true
@@ -7630,7 +7635,7 @@ new Vue({
 				command: "signOut" 
 			})
 			.then( response => {
-				window.location = "/account/login"
+				window.location = this.configurations.path + "/login"
 				this.route = "login"
 				this.wp_nonce = "";
 			})

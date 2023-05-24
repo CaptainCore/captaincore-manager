@@ -6850,26 +6850,39 @@ function captaincore_fetch_socket_address() {
 // Makes sure that any request going to /account/... will respond with a proper 200 http code
 add_action( 'init', 'captaincore_rewrites_init' );
 function captaincore_rewrites_init(){
-    add_rewrite_rule( '^account/(.+)', 'index.php', 'top' );
+	$configurations = CaptainCore\Configurations::fetch();
+	$rule           = "^{$configurations->path}/(.+)";
+    add_rewrite_rule( $rule, 'index.php', 'top' );
 }
 
 // Load custom template for web requests going to "/account" or "/account/<..>/..."
 add_filter( 'template_include', 'load_captaincore_template' );
 function load_captaincore_template( $original_template ) {
   global $wp;
-  $request = explode( '/', $wp->request );
+  $configurations    = CaptainCore\Configurations::fetch();
+  $request           = explode( '/', $wp->request );
+  $current_page      = current( $request );
+  $captaincore_pages = ['accounts', 'billing', 'cookbook', 'configurations', 'connect', 'defaults', 'domains', 'handbook', 'health', 'keys', 'login', 'profile', 'sites', 'subscriptions', 'users'];
   if ( class_exists( 'WooCommerce' ) && is_account_page() && end( $request ) == 'my-account' ) {
-	wp_redirect("/account");
+	wp_redirect( $configurations->path );
   }
-  if ( is_page( 'account' ) || current( $request ) == "account" ) {
+  if ( $configurations->path == "/" && in_array( $current_page, $captaincore_pages ) ) {
 	if ( ! function_exists( 'is_plugin_active' ) ){
 		require_once( ABSPATH . '/wp-admin/includes/plugin.php' );
 	}
 	header('X-Frame-Options: SAMEORIGIN'); 
     return plugin_dir_path( __FILE__ ) . 'templates/core.php';
-  } else {
-    return $original_template;
   }
+
+  $page = trim( $configurations->path, "/" );
+  if ( is_page( $page ) || current( $request ) == $page ) {
+	if ( ! function_exists( 'is_plugin_active' ) ){
+		require_once( ABSPATH . '/wp-admin/includes/plugin.php' );
+	}
+	header('X-Frame-Options: SAMEORIGIN'); 
+    return plugin_dir_path( __FILE__ ) . 'templates/core.php';
+  }
+  return $original_template;
 }
 
 // Disable 404 redirects when unknown request goes to "/account/<..>/..." which allows a custom template to load. See https://wordpress.stackexchange.com/questions/3326/301-redirect-instead-of-404-when-url-is-a-prefix-of-a-post-or-page-name
