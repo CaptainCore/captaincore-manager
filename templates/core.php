@@ -80,14 +80,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-list>
 		</v-card>
 		</v-menu>
-		<v-tooltip bottom>
-			<template v-slot:activator="{ on }">
-				<v-btn icon href="/wp-admin/" v-show="role == 'administrator'" v-on="on">
-					<v-icon>mdi-wordpress</v-icon>
-				</v-btn>
-			</template>
-			<span>Go to /wp-admin/</span>
-		</v-tooltip>
       </v-app-bar>
 	  <v-navigation-drawer v-model="drawer" app mobile-breakpoint="960" clipped v-if="route != 'login' && route != 'connect'">
       <v-list nav dense>
