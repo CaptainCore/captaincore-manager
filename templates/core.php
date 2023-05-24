@@ -32,7 +32,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <body>
 <div id="app" v-cloak>
 	<v-app>
-	  <v-app-bar color="primary" dark app style="left:0px">
+	  <v-app-bar color="primary" dark app flat style="left:0px">
 	 	 <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none" v-show="route != 'login' || route != 'connect'"></v-app-bar-nav-icon>
          <v-toolbar-title>
 			<v-list flat color="transparent">
