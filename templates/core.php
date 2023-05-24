@@ -7429,13 +7429,13 @@ new Vue({
 	methods: {
 		updateRoute( href ) {
 			// Remove trailing slash
-			if ( href.slice(-1) == "/" ) {
+			if ( href.length > 1 && href.slice(-1) == "/" ) {
 				href = href.slice(0, -1)
 			}
 			// Catch all nested routes to their parent route.
 			if ( href.match(/\//g).length > 1 ) {
-				this.route_path = href.split('/').slice( 3 ).join( "/" )
-				href = href.split('/').slice( 0, 3 ).join( "/" )
+				this.route_path = href.split('/').slice( 2 ).join( "/" )
+				href = href.split('/').slice( 0, 2 ).join( "/" )
 			} else {
 				this.route_path = ""
 			}
