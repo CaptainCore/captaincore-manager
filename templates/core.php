@@ -30,7 +30,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <link href="https://cdn.jsdelivr.net/npm/vuetify@2.6.4/dist/vuetify.min.css" rel="stylesheet">
 <?php } ?>
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.5.95/css/materialdesignicons.min.css" rel="stylesheet">
-<link href="<?php echo $plugin_url; ?>public/css/captaincore-public-2021-01-06.css" rel="stylesheet">
+<link href="<?php echo $plugin_url; ?>public/css/captaincore-public-2023-05-25.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.1/dist/frappe-charts.min.css" rel="stylesheet">
 </head>
 <body>
@@ -2051,7 +2051,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card>
 			</template>
 			</v-card>
-			<v-card tile v-if="route == 'sites'" id="sites" flat>
+			<v-card v-if="route == 'sites'" id="sites" class="elevation-1 ma-4">
 			<v-toolbar v-show="dialog_site.step == 1" id="site_listings" flat>
 				<v-toolbar-title>Listing {{ sites.length }} sites</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -4183,7 +4183,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card-text>
 			</v-sheet>
 			</v-card>
-			<v-card tile v-if="route == 'domains'" flat>
+			<v-card v-if="route == 'domains'" class="elevation-1 ma-4">
 			<v-sheet v-show="dialog_domain.step == 1">
 				<v-toolbar flat>
 					<v-toolbar-title>Listing {{ allDomains }} domains</v-toolbar-title>
@@ -4674,7 +4674,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-sheet>
 			</v-card>
-			<v-card tile v-if="route == 'health'" flat>
+			<v-card v-if="route == 'health'" class="elevation-1 ma-4">
 				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ filterSitesWithErrors.length }} sites with issues</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -4719,7 +4719,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-card-text>
 			</v-card>
-			<v-card tile v-if="route == 'cookbook'" flat>
+			<v-card v-if="route == 'cookbook'" class="elevation-1 ma-4">
 				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ filteredRecipes.length }} recipes</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -4791,7 +4791,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-container>
 				</v-card-text>
 			</v-card>
-			<v-card tile v-if="route == 'configurations' && role == 'administrator'" flat>
+			<v-card tile v-if="route == 'configurations' && role == 'administrator'" class="elevation-1 ma-4">
 				<v-toolbar light flat>
 					<v-toolbar-title>Configurations</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5053,7 +5053,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-col>
 				</v-row>
 			</v-card>
-			<v-card tile v-if="route == 'billing'" flat>
+			<v-card tile v-if="route == 'billing'" class="elevation-1 ma-4">
 				<v-toolbar light flat v-show="dialog_billing.step == 1">
 					<v-toolbar-title>Billing</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5419,7 +5419,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card>
 				</v-flex>
 			</v-card>
-			<v-card tile v-if="route == 'defaults' && role == 'administrator'" flat>
+			<v-card v-if="route == 'defaults' && role == 'administrator'" class="elevation-1 ma-4">
 				<v-toolbar light flat>
 					<v-toolbar-title>Site Defaults</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5435,7 +5435,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-layout wrap>
 						<v-flex><v-autocomplete label="Default Recipes" v-model="defaults.recipes" ref="default_recipes" :items="recipes" item-text="title" item-value="recipe_id" multiple chips deletable-chips></v-autocomplete></v-flex>
 					</v-layout>
-
 					<span class="body-2">Default Users</span>
 					<v-data-table
 						:items="defaults.users"
@@ -5463,7 +5462,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</tr>
 						</template>
 					</v-data-table>
-
 					<v-flex xs12 text-right>
 						<v-btn color="primary" dark @click="saveGlobalDefaults()">
 							Save Changes
@@ -5471,7 +5469,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-flex>
 				</v-card-text>
 			</v-card>
-			<v-card tile v-if="route == 'keys' && role == 'administrator'" flat>
+			<v-card v-if="route == 'keys' && role == 'administrator'" class="elevation-1 ma-4">
 				<v-toolbar light flat>
 					<v-toolbar-title>Your SSH keys</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5498,7 +5496,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-container>
 				</v-card-text>
 			</v-card>
-			<v-card tile v-if="route == 'profile'" flat>
+			<v-card v-if="route == 'profile'" class="elevation-1 ma-4">
 				<v-toolbar light flat>
 					<v-toolbar-title>Edit profile</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5554,7 +5552,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-row>
 				</v-card-text>
 			</v-card>
-			<v-card tile flat v-show="route == 'subscriptions'" v-if="role == 'administrator'">
+			<v-card class="elevation-1 ma-4" v-show="route == 'subscriptions'" v-if="role == 'administrator'">
 				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ subscriptions.length }} subscriptions</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5605,7 +5603,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-subheader>{{ revenue_estimated_total() }}</v-subheader>
 					<div id="plan_chart_transactions"></div>
 			</v-card>
-			<v-card tile v-if="route == 'accounts'" flat>
+			<v-card v-if="route == 'accounts'" class="elevation-1 ma-4">
 			<v-sheet v-show="dialog_account.step == 1">
 				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ accounts.length }} accounts</v-toolbar-title>
@@ -6013,7 +6011,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-sheet>
 			</v-card>
-			<v-card tile v-if="route == 'users'" flat>
+			<v-card v-if="route == 'users'" class="elevation-1 ma-4">
 				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ users.length }} users</v-toolbar-title>
 					<v-spacer></v-spacer>

@@ -1875,3 +1875,7 @@ div.update_logs table tr td:nth-child(1) {
 .v-application .woocommerce-order-details p {
   margin-bottom: 0px;
 }
+
+body .v-navigation-drawer__border {
+  width: 0px;
+}
