@@ -3945,7 +3945,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-layout>
 						 	<v-flex xs6><v-progress-circular v-show="dialog_new_site.saving" indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></v-flex>
 							<v-flex xs6 text-right>
-								<v-dialog v-model="dialog_new_site.show_vars" scrollable hide-overlay max-width="400px">
+								<v-dialog v-model="dialog_new_site.show_vars" scrollable hide-overlay max-width="700px">
 								<template v-slot:activator="{ on }">
 									<v-btn v-on="on" class="mr-2">Configure Environment Vars</v-btn>
 								</template>
@@ -3961,20 +3961,13 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											</v-list-item-action>
 										</v-list-item>
 										</v-list>
-										<v-divider></v-divider>
-										<v-list>
-										<v-list-item v-for="(item, index) in dialog_new_site.environment_vars">
-											<v-list-item-title>
-												<v-row no-gutters>
-													<v-col><v-text-field :value="item.key" @change.native="item.key = $event.target.value" label="Key"></v-text-field></v-col>
-													<v-col><v-text-field :value="item.value" @change.native="item.value = $event.target.value" label="Value"></v-text-field></v-col>
-												</v-row>
-											</v-list-item-title>
-											<v-list-item-action>
-											<v-btn icon @click="removeEnvironmentVarNewSite(index)"><v-icon>mdi-delete</v-icon></v-btn>
-											</v-list-item-action>
-										</v-list-item>
-										</v-list>
+										<v-card-text>
+										<v-row v-for="(item, index) in dialog_new_site.environment_vars">
+											<v-col class="pb-0"><v-text-field hide-details :value="item.key" @change.native="item.key = $event.target.value" label="Key"></v-text-field></v-col>
+											<v-col class="pb-0"><v-text-field hide-details :value="item.value" @change.native="item.value = $event.target.value" label="Value"></v-text-field></v-col>
+											<v-col class="pb-0 pt-5" style="max-width:58px"><v-btn icon @click="removeEnvironmentVarNewSite(index)"><v-icon>mdi-delete</v-icon></v-btn></v-col>
+										</v-row>
+										</v-card-text>
 										<v-card-actions>
 										<v-spacer></v-spacer>
 										<v-btn color="primary" text @click="dialog_new_site.show_vars = false">Close</v-btn>
@@ -4138,7 +4131,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-layout>
 						<v-flex xs6><v-progress-circular v-show="dialog_edit_site.loading" indeterminate color="primary"></v-progress-linear></v-flex>
 						<v-flex xs6 text-right>
-						<v-dialog v-model="dialog_edit_site.show_vars" scrollable hide-overlay max-width="400px">
+						<v-dialog v-model="dialog_edit_site.show_vars" scrollable hide-overlay max-width="700px">
 						<template v-slot:activator="{ on }">
 							<v-btn v-on="on" class="mr-2">Configure Environment Vars</v-btn>
 						</template>
@@ -4154,20 +4147,13 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</v-list-item-action>
 								</v-list-item>
 								</v-list>
-								<v-divider></v-divider>
-								<v-list>
-								<v-list-item v-for="(item, index) in dialog_edit_site.site.environment_vars">
-									<v-list-item-title>
-										<v-row no-gutters>
-											<v-col><v-text-field :value="item.key" @change.native="item.key = $event.target.value" label="Key"></v-text-field></v-col>
-											<v-col><v-text-field :value="item.value" @change.native="item.value = $event.target.value" label="Value"></v-text-field></v-col>
-										</v-row>
-									</v-list-item-title>
-									<v-list-item-action>
-									<v-btn icon @click="removeEnvironmentVar(index)"><v-icon>mdi-delete</v-icon></v-btn>
-									</v-list-item-action>
-								</v-list-item>
-								</v-list>
+								<v-card-text>
+								<v-row v-for="(item, index) in dialog_edit_site.site.environment_vars">
+									<v-col class="pb-0"><v-text-field hide-details :value="item.key" @change.native="item.key = $event.target.value" label="Key"></v-text-field></v-col>
+									<v-col class="pb-0"><v-text-field hide-details :value="item.value" @change.native="item.value = $event.target.value" label="Value"></v-text-field></v-col>
+									<v-col class="pb-0 pt-5" style="max-width:58px"><v-btn icon @click="removeEnvironmentVar(index)"><v-icon>mdi-delete</v-icon></v-btn></v-col>
+								</v-row>
+								</v-card-text>
 								<v-card-actions>
 								<v-spacer></v-spacer>
 								<v-btn color="primary" text @click="dialog_edit_site.show_vars = false">Close</v-btn>
