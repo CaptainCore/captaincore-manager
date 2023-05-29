@@ -3836,11 +3836,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								item-text="title"
 								item-value="key_id"
 								label="Override SSH Key"
-								hint="Optionally set which SSH key is used. Will default to primary key."
+								hint="Will default to"
 								persistent-hint chips deletable-chips
 							>
+							<template v-slot:message="{ message, key }">
+								<span>{{ message }} <a :href=`${configurations.path}keys` @click.prevent="goToPath( '/keys' )" >primary SSH key</a>.</span>
+							</template>
 							</v-autocomplete>
-						</v-flex>
+					        </v-flex>
 						</v-layout>
 						<v-layout>
 							<v-flex xs12 class="mx-2">
@@ -4021,11 +4024,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								item-value="key_id"
 								v-model="dialog_edit_site.site.key"
 								label="Override SSH Key"
-								hint="Optionally set which SSH key is used. Will default to primary key."
-								persistent-hint
-								chips
-								deletable-chips
+								hint="Will default to"
+								persistent-hint chips deletable-chips
 							>
+							<template v-slot:message="{ message, key }">
+								<span>{{ message }} <a :href=`${configurations.path}keys` @click.prevent="goToPath( '/keys' )" >primary SSH key</a>.</span>
+							</template>
 							</v-autocomplete>
 						</v-flex>
 					</v-layout>
