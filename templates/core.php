@@ -239,7 +239,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card tile>
 		<v-toolbar flat dark color="primary">
 			<v-btn icon dark @click.native="new_plugin.show = false">
-				<v-icon>close</v-icon>
+				<v-icon>mdi-close</v-icon>
 			</v-btn>
 			<v-toolbar-title>Add plugin to {{ new_plugin.site_name }}</v-toolbar-title>
 			<v-spacer></v-spacer>
@@ -289,7 +289,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-pagination v-if="new_plugin.api.info && new_plugin.api.info.pages > 1" :length="new_plugin.api.info.pages - 1" v-model="new_plugin.page" :total-visible="7" color="primary" @input="fetchPlugins"></v-pagination>
 				</v-flex>
 				<v-flex xs12 sm3>
-					<v-text-field label="Search plugins" light @click:append="new_plugin.search = $event.target.offsetParent.children[0].children[1].value; fetchPlugins()" v-on:keyup.enter="new_plugin.search = $event.target.value; fetchPlugins()" append-icon="search" :loading="new_plugin.loading"></v-text-field>
+					<v-text-field label="Search plugins" light @click:append="new_plugin.search = $event.target.offsetParent.children[0].children[1].value; fetchPlugins()" v-on:keyup.enter="new_plugin.search = $event.target.value; fetchPlugins()" append-icon="mdi-magnify" :loading="new_plugin.loading"></v-text-field>
 					<!-- @change.native="new_plugin.search = $event.target.value; fetchPlugins" -->
 				</v-flex>
 			</v-layout>
@@ -323,7 +323,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 	  	<v-layout justify-center class="pa-3">
 			<v-flex xs12 sm9 pt-3></v-flex>
 			<v-flex xs12 sm3>
-				<v-text-field label="Search plugins" light v-model="new_plugin.envato.search" append-icon="search"></v-text-field>
+				<v-text-field label="Search plugins" light v-model="new_plugin.envato.search" append-icon="mdi-magnify"></v-text-field>
 			</v-flex>
 		</v-layout>
 		<v-layout row wrap pa-5>
@@ -355,7 +355,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card tile>
 		<v-toolbar flat dark color="primary">
 			<v-btn icon dark @click.native="new_theme.show = false">
-				<v-icon>close</v-icon>
+				<v-icon>mdi-close</v-icon>
 			</v-btn>
 			<v-toolbar-title>Add theme to {{ new_theme.site_name }}</v-toolbar-title>
 			<v-spacer></v-spacer>
@@ -409,7 +409,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</div>
 				</v-flex>
 				<v-flex xs12 sm3>
-					<v-text-field label="Search themes" light @click:append="new_theme.search = $event.target.offsetParent.children[0].children[1].value; fetchThemes()" v-on:keyup.enter="new_theme.search = $event.target.value; fetchThemes()" append-icon="search" :loading="new_theme.loading"></v-text-field>
+					<v-text-field label="Search themes" light @click:append="new_theme.search = $event.target.offsetParent.children[0].children[1].value; fetchThemes()" v-on:keyup.enter="new_theme.search = $event.target.value; fetchThemes()" append-icon="mdi-magnify" :loading="new_theme.loading"></v-text-field>
 				</v-flex>
 			</v-layout>
 			<v-layout row wrap pa-2>
@@ -448,7 +448,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-layout justify-center class="pa-3">
 			<v-flex xs12 sm9 pt-3></v-flex>
 			<v-flex xs12 sm3>
-				<v-text-field label="Search themes" light v-model="new_theme.envato.search" append-icon="search"></v-text-field>
+				<v-text-field label="Search themes" light v-model="new_theme.envato.search" append-icon="mdi-magnify"></v-text-field>
 			</v-flex>
 		</v-layout>
 		<v-layout row wrap pa-5>
@@ -477,7 +477,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card tile>
 			<v-toolbar flat dark color="primary">
 				<v-btn icon dark @click.native="bulk_edit.show = false">
-					<v-icon>close</v-icon>
+					<v-icon>mdi-close</v-icon>
 				</v-btn>
 				<v-toolbar-title>Bulk edit on {{ bulk_edit.site_name }}</v-toolbar-title>
 				<v-spacer></v-spacer>
@@ -492,7 +492,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-card>
 				<v-toolbar flat dense dark color="primary">
 					<v-btn icon dark @click.native="dialog_request_site.show = false">
-						<v-icon>close</v-icon>
+						<v-icon>mdi-close</v-icon>
 					</v-btn>
 					<v-toolbar-title>Create new WordPress site</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -517,7 +517,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card tile>
 			<v-toolbar flat dark color="primary">
 				<v-btn icon dark @click.native="dialog_mailgun_config.show = false">
-					<v-icon>close</v-icon>
+					<v-icon>mdi-close</v-icon>
 				</v-btn>
 				<v-toolbar-title>Configure Mailgun for {{ dialog_site.site.name }}</v-toolbar-title>
 				<v-spacer></v-spacer>
@@ -534,7 +534,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card tile>
 			<v-toolbar flat dark color="primary">
 				<v-btn icon dark @click.native="dialog_fathom.show = false">
-					<v-icon>close</v-icon>
+					<v-icon>mdi-close</v-icon>
 				</v-btn>
 				<v-toolbar-title>Configure Fathom for {{ dialog_fathom.site.name }}</v-toolbar-title>
 				<v-spacer></v-spacer>
@@ -553,7 +553,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</table>
 				<v-col cols="12" class="text-right">
 				<v-btn fab small @click='dialog_site.environment_selected.fathom_analytics.push({ "code": "", "domain" : "" })'>
-					<v-icon dark>add</v-icon>
+					<v-icon dark>mdi-plus</v-icon>
 				</v-btn>
 				</v-col>
 				<p class="mb-0">Fathom Lite</p>
@@ -568,7 +568,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</table>
 				<v-col cols="12" class="text-right">
 				<v-btn fab small @click="newFathomItem">
-					<v-icon dark>add</v-icon>
+					<v-icon dark>mdi-plus</v-icon>
 				</v-btn>
 				</v-col>
 				<v-btn color="primary" dark @click="saveFathomConfigurations()">Save Fathom configurations</v-btn>
@@ -603,7 +603,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 	  	<v-card tile style="margin:auto;max-width:800px">
 			<v-toolbar flat>
 				<v-btn icon @click.native="new_recipe.show = false">
-					<v-icon>close</v-icon>
+					<v-icon>mdi-close</v-icon>
 				</v-btn>
 				<v-toolbar-title>New Recipe</v-toolbar-title>
 				<v-spacer></v-spacer>
@@ -634,7 +634,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card tile>
 			<v-toolbar flat>
 				<v-btn icon @click.native="dialog_new_account.show = false">
-					<v-icon>close</v-icon>
+					<v-icon>mdi-close</v-icon>
 				</v-btn>
 				<v-toolbar-title>New Account</v-toolbar-title>
 				<v-spacer></v-spacer>
@@ -684,7 +684,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card tile>
 			<v-toolbar flat>
 				<v-btn icon @click.native="dialog_cookbook.show = false">
-					<v-icon>close</v-icon>
+					<v-icon>mdi-close</v-icon>
 				</v-btn>
 				<v-toolbar-title>Edit Recipe</v-toolbar-title>
 				<v-spacer></v-spacer>
@@ -715,7 +715,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card tile v-if="typeof dialog_user.user == 'object'">
 			<v-toolbar dense flat>
 				<v-btn icon @click.native="dialog_user.show = false">
-					<v-icon>close</v-icon>
+					<v-icon>mdi-close</v-icon>
 				</v-btn>
 				<v-toolbar-title>Edit user {{ dialog_user.user.name }}</v-toolbar-title>
 				<div class="flex-grow-1"></div>
@@ -741,7 +741,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card tile style="margin:auto;max-width:800px">
 		<v-toolbar flat>
 			<v-btn icon @click.native="new_key.show = false">
-				<v-icon>close</v-icon>
+				<v-icon>mdi-close</v-icon>
 			</v-btn>
 			<v-toolbar-title>New SSH Key</v-toolbar-title>
 			<v-spacer></v-spacer>
@@ -771,7 +771,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card tile>
 		<v-toolbar flat>
 			<v-btn icon @click.native="dialog_key.show = false">
-				<v-icon>close</v-icon>
+				<v-icon>mdi-close</v-icon>
 			</v-btn>
 			<v-toolbar-title>Edit SSH Key</v-toolbar-title>
 			<v-spacer></v-spacer>
@@ -811,7 +811,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card tile>
 			<v-toolbar flat>
 				<v-btn icon @click.native="new_process.show = false">
-					<v-icon>close</v-icon>
+					<v-icon>mdi-close</v-icon>
 				</v-btn>
 				<v-toolbar-title>New Process</v-toolbar-title>
 				<v-spacer></v-spacer>
@@ -852,7 +852,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card tile>
 			<v-toolbar flat>
 				<v-btn icon @click.native="dialog_edit_process.show = false">
-					<v-icon>close</v-icon>
+					<v-icon>mdi-close</v-icon>
 				</v-btn>
 				<v-toolbar-title>Edit Process</v-toolbar-title>
 				<v-spacer></v-spacer>
@@ -893,7 +893,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-card tile>
 			<v-toolbar flat>
 				<v-btn icon @click.native="dialog_handbook.show = false">
-					<v-icon>close</v-icon>
+					<v-icon>mdi-close</v-icon>
 				</v-btn>
 				<v-toolbar-title>{{ dialog_handbook.process.name }} <v-chip color="primary" text-color="white" text v-show="dialog_handbook.process.roles != ''">{{ dialog_handbook.process.roles }}</v-chip></v-toolbar-title>
 				<v-spacer></v-spacer>
@@ -915,7 +915,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card tile>
 			<v-toolbar flat dark color="primary">
 				<v-btn icon dark @click.native="dialog_update_settings.show = false">
-					<v-icon>close</v-icon>
+					<v-icon>mdi-close</v-icon>
 				</v-btn>
 				<v-toolbar-title>Save settings for {{ dialog_site.site.name }}</v-toolbar-title>
 				<v-spacer></v-spacer>
@@ -951,8 +951,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
         <v-card tile>
           <v-toolbar flat dark color="primary">
 				<v-btn icon dark @click.native="dialog_theme_and_plugin_checks.show = false">
-              <v-icon>close</v-icon>
-            </v-btn>
+					<v-icon>mdi-close</v-icon>
+				</v-btn>
 				<v-toolbar-title>Theme & plugin checks for {{ dialog_theme_and_plugin_checks.site.name }}</v-toolbar-title>
             <v-spacer></v-spacer>
           </v-toolbar>
@@ -1006,7 +1006,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card>
 			<v-toolbar flat dark color="primary">
 			<v-btn icon dark @click.native="dialog_new_domain.show = false">
-				<v-icon>close</v-icon>
+				<v-icon>mdi-close</v-icon>
 			</v-btn>
 			<v-toolbar-title>Add Domain</v-toolbar-title>
 				<v-spacer></v-spacer>
@@ -1030,7 +1030,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card>
 			<v-toolbar flat dark color="primary">
 			<v-btn icon dark @click.native="dialog_new_provider.show = false">
-				<v-icon>close</v-icon>
+				<v-icon>mdi-close</v-icon>
 			</v-btn>
 			<v-toolbar-title>Add Provider</v-toolbar-title>
 				<v-spacer></v-spacer>
@@ -1067,7 +1067,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card>
 			<v-toolbar flat dark color="primary">
 			<v-btn icon dark @click.native="dialog_edit_provider.show = false">
-				<v-icon>close</v-icon>
+				<v-icon>mdi-close</v-icon>
 			</v-btn>
 			<v-toolbar-title>Add Provider</v-toolbar-title>
 				<v-spacer></v-spacer>
@@ -1107,7 +1107,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card>
 			<v-toolbar flat dark color="primary">
 			<v-btn icon dark @click.native="dialog_configure_defaults.show = false">
-				<v-icon>close</v-icon>
+				<v-icon>mdi-close</v-icon>
 			</v-btn>
 			<v-toolbar-title>Configure Defaults</v-toolbar-title>
 				<v-spacer></v-spacer>
@@ -1168,7 +1168,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-card tile>
 				<v-toolbar flat dark color="primary">
 					<v-btn icon dark @click.native="dialog_customer_modify_plan.show = false">
-						<v-icon>close</v-icon>
+						<v-icon>mdi-close</v-icon>
 					</v-btn>
 					<v-toolbar-title>Edit plan for {{ dialog_customer_modify_plan.subscription.name }}</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -1247,7 +1247,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_modify_plan.show = false">
-							<v-icon>close</v-icon>
+							<v-icon>mdi-close</v-icon>
 						</v-btn>
 						<v-toolbar-title>Edit plan for {{ dialog_account.records.account.name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -1330,7 +1330,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-text-field label="Price" :value="addon.price" @change.native="addon.price = $event.target.value" hide-details>
 							</v-col>
 							<v-col cols="1" align-self="end">
-								<v-btn small text icon @click="removeAddon(index)"><v-icon>delete</v-icon></v-btn>
+								<v-btn small text icon @click="removeAddon(index)"><v-icon>mdi-delete</v-icon></v-btn>
 							</v-col>
 						</v-row>
 						<v-row class="mb-1">
@@ -1354,7 +1354,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-text-field label="Price" :value="item.price" @change.native="item.price = $event.target.value" hide-details>
 							</v-col>
 							<v-col cols="1" align-self="end">
-								<v-btn small text icon @click="removeCredit(index)"><v-icon>delete</v-icon></v-btn>
+								<v-btn small text icon @click="removeCredit(index)"><v-icon>mdi-delete</v-icon></v-btn>
 							</v-col>
 						</v-row>
 						<v-row class="mb-1">
@@ -1378,7 +1378,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-text-field label="Price" :value="item.price" @change.native="item.price = $event.target.value" hide-details>
 							</v-col>
 							<v-col cols="1" align-self="end">
-								<v-btn small text icon @click="removeCharge(index)"><v-icon>delete</v-icon></v-btn>
+								<v-btn small text icon @click="removeCharge(index)"><v-icon>mdi-delete</v-icon></v-btn>
 							</v-col>
 						</v-row>
 						<v-row class="mb-1">
@@ -1409,7 +1409,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_log_history.show = false">
-							<v-icon>close</v-icon>
+							<v-icon>mdi-close</v-icon>
 						</v-btn>
 						<v-toolbar-title>Log History</v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -1430,7 +1430,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<td class="justify-center" v-html="item.description"></td>
 					<td>
 						<v-btn text icon @click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)" v-if="role == 'administrator'">
-							<v-icon small>edit</v-icon>
+							<v-icon small>mdi-pencil</v-icon>
 						</v-btn>
 						{{ item.websites.map( site => site.name ).join(" ") }}
 					</td>
@@ -1450,7 +1450,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_new_log_entry.show = false">
-							<v-icon>close</v-icon>
+							<v-icon>mdi-close</v-icon>
 						</v-btn>
 						<v-toolbar-title>Add a new log entry <span v-if="dialog_new_log_entry.site_name">for {{ dialog_new_log_entry.site_name }}</span></v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -1504,7 +1504,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_edit_log_entry.show = false">
-							<v-icon>close</v-icon>
+							<v-icon>mdi-close</v-icon>
 						</v-btn>
 						<v-toolbar-title>Edit log entry <span v-if="dialog_edit_log_entry.site_name">for {{ dialog_edit_log_entry.site_name }}</span></v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -1557,7 +1557,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_mailgun.show = false">
-							<v-icon>close</v-icon>
+							<v-icon>mdi-close</v-icon>
 						</v-btn>
 						<v-toolbar-title>Mailgun Logs for {{ dialog_mailgun.site.name }} (Last 30 days)</v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -1591,7 +1591,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_backup_configurations.show = false">
-							<v-icon>close</v-icon>
+							<v-icon>mdi-close</v-icon>
 						</v-btn>
 						<v-toolbar-title>Backup configurations</v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -1612,7 +1612,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_backup_snapshot.show = false">
-							<v-icon>close</v-icon>
+							<v-icon>mdi-close</v-icon>
 						</v-btn>
 						<v-toolbar-title>Download Snapshot {{ dialog_backup_snapshot.site.name }} </v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -1645,7 +1645,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_delete_user.show = false">
-							<v-icon>close</v-icon>
+							<v-icon>mdi-close</v-icon>
 						</v-btn>
 						<v-toolbar-title>Delete user</v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -1685,7 +1685,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_launch.show = false">
-							<v-icon>close</v-icon>
+							<v-icon>mdi-close</v-icon>
 						</v-btn>
 						<v-toolbar-title>Launch Site {{ dialog_launch.site.name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -1712,7 +1712,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click="closeCaptures()">
-							<v-icon>close</v-icon>
+							<v-icon>mdi-close</v-icon>
 						</v-btn>
 						<v-toolbar-title>Historical Captures of {{ dialog_captures.site.name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -1743,7 +1743,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-card v-show="dialog_captures.show_configure" class="mt-5 mb-3" style="max-width:850px;margin:auto;">
 						<v-toolbar dense light flat>
 							<v-btn icon @click="dialog_captures.show_configure = false">
-								<v-icon>close</v-icon>
+								<v-icon>mdi-close</v-icon>
 							</v-btn>
 							<v-toolbar-title>Capture configurations</v-toolbar-title>
 						</v-toolbar>
@@ -1784,7 +1784,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_toggle.show = false">
-							<v-icon>close</v-icon>
+							<v-icon>mdi-close</v-icon>
 						</v-btn>
 						<v-toolbar-title>Toggle Site {{ dialog_toggle.site_name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -1832,7 +1832,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_migration.show = false">
-							<v-icon>close</v-icon>
+							<v-icon>mdi-close</v-icon>
 						</v-btn>
 						<v-toolbar-title>Migrate from backup to {{ dialog_migration.site_name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -1861,7 +1861,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_copy_site.show = false">
-							<v-icon>close</v-icon>
+							<v-icon>mdi-close</v-icon>
 						</v-btn>
 						<v-toolbar-title>Copy Site {{ dialog_copy_site.site.name }} to </v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -1889,7 +1889,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_apply_https_urls.show = false">
-							<v-icon>close</v-icon>
+							<v-icon>mdi-close</v-icon>
 						</v-btn>
 						<v-toolbar-title>Apply HTTPS Urls for {{ dialog_apply_https_urls.site_name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -1915,7 +1915,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_file_diff.show = false">
-							<v-icon>close</v-icon>
+							<v-icon>mdi-close</v-icon>
 						</v-btn>
 						<v-toolbar-title>File diff {{ dialog_file_diff.file_name}}</v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -2060,7 +2060,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-tooltip top v-if="toggle_site == true">
 							<template v-slot:activator="{ on }">
 							<v-btn icon @click="toggle_site = false" v-on="on">
-								<v-icon>image</v-icon>
+								<v-icon>mdi-image</v-icon>
 							</v-btn>
 							</template>
 							<span>View as Thumbnails</span>
@@ -2084,7 +2084,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-menu open-on-hover text bottom offset-y v-if="role == 'administrator'">
 						<template v-slot:activator="{ on, attrs }">
 							<v-btn v-bind="attrs" v-on="on" text>
-								Add Site <v-icon dark>add</v-icon>
+								Add Site <v-icon dark>mdi-plus</v-icon>
 							</v-btn>
 						</template>
 						<v-list>
@@ -2099,7 +2099,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-list-item>
 						</v-list>
 						</v-menu>
-						<v-btn v-else text @click="dialog_request_site.show = true; dialog_request_site.request.account_id = accounts[0].account_id">Add Site <v-icon dark>add</v-icon></v-btn>
+						<v-btn v-if="role != 'administrator' && configurations.mode == 'hosting'" text @click="dialog_request_site.show = true; dialog_request_site.request.account_id = accounts[0].account_id">Add Site <v-icon dark>mdi-plus</v-icon></v-btn>
+						<v-btn v-if="configurations.mode == 'maintenance'" text @click="goToPath( `/sites/new` )">Add Site <v-icon dark>mdi-plus</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 			<v-sheet v-show="dialog_site.step == 1">
@@ -2109,7 +2110,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar-title>New Rocket.net Site</v-toolbar-title>
 					<v-spacer></v-spacer>
 						<v-btn icon @click="dialog_new_site_rocketdotnet.show = false">
-							<v-icon>close</v-icon>
+							<v-icon>mdi-close</v-icon>
 						</v-btn>
 					</v-toolbar>
 					<v-card-text>
@@ -2177,7 +2178,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar-title>New Kinsta Site</v-toolbar-title>
 					<v-spacer></v-spacer>
 						<v-btn icon @click="dialog_new_site_kinsta.show = false">
-							<v-icon>close</v-icon>
+							<v-icon>mdi-close</v-icon>
 						</v-btn>
 					</v-toolbar>
 					<v-card-text>
@@ -2342,7 +2343,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-col class="grow">{{ site.name }}</v-col>
 						<v-col class="shrink pa-0">
 							<v-btn depressed small @click="goToPath( `/sites/${site.site_id}` )">
-								<v-icon>edit</v-icon> Fix Credentials 
+								<v-icon>mdi-pencil</v-icon> Fix Credentials 
 							</v-btn>
 						</v-col>
 						<v-col class="shrink">
@@ -2431,7 +2432,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-row>
 					<v-col></v-col>
 					<v-col cols="12" md="4">
-						<v-text-field class="mx-4" v-model="search" @input="filterSites" autofocus label="Search" clearable light hide-details append-icon="search"></v-text-field>	
+						<v-text-field class="mx-4" v-model="search" @input="filterSites" autofocus label="Search" clearable light hide-details append-icon="mdi-magnify"></v-text-field>	
 					</v-col>
 				</v-row>	
 				</v-card-text>
@@ -2506,7 +2507,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-toolbar color="primary" dark dense>
 				<v-tabs v-model="dialog_site.site.tabs">
 					<v-tab :key="1" href="#tab-Site-Management">
-						Site Management <v-icon size="24">mdi-settings</v-icon>
+						Site Management <v-icon size="24">mdi-cog</v-icon>
 					</v-tab>
 					<v-tab :key="8" href="#tab-Timeline" ripple @click="fetchTimeline( dialog_site.site.site_id )">
 						Timeline <v-icon size="24">mdi-timeline-text-outline</v-icon>
@@ -2794,7 +2795,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-icon>mdi-email-search</v-icon> Configure Mailgun
 					</v-btn>
 					<v-btn small depressed @click="copySite(dialog_site.site.site_id)">
-						<v-icon>file_copy</v-icon> Copy Site
+						<v-icon>mdi-content-duplicate</v-icon> Copy Site
 					</v-btn>
 					</v-container>
 					</div>
@@ -2824,10 +2825,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-subheader>Administrator Options</v-subheader>
 					<v-container>
 					<v-btn small depressed @click="editSite()">
-						<v-icon>edit</v-icon> Edit Site
+						<v-icon>mdi-pencil</v-icon> Edit Site
 					</v-btn>
 					<v-btn small depressed color="error" @click="deleteSite(dialog_site.site.site_id)">
-						<v-icon>delete</v-icon> Delete Site
+						<v-icon>mdi-delete</v-icon> Delete Site
 					</v-btn>
 					</v-container>
 					</div>
@@ -2897,7 +2898,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-date-picker v-model="stats.to_at" @input="stats.to_at_select = false; fetchStats()"></v-date-picker>
 							</v-menu>
 							</v-col>
-                    		<v-btn text @click="configureFathom( dialog_site.site.site_id )" v-show="role == 'administrator'"><v-icon dark small class="mr-1">mdi-pencil</v-icon> Edit</v-btn>
+                    		<v-btn text @click="configureFathom( dialog_site.site.site_id )" v-show="role == 'administrator'"><v-icon dark small>mdi-pencil</v-icon> Edit</v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
 						<div class="pa-3" v-if="typeof dialog_site.environment_selected.stats == 'string' && dialog_site.environment_selected.stats != 'Loading'">
@@ -2978,8 +2979,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-toolbar-items>
 							<v-btn text @click="bulkEdit(dialog_site.site.site_id, 'plugins')" v-if="dialog_site.environment_selected.plugins_selected.length != 0">Bulk Edit {{ dialog_site.environment_selected.plugins_selected.length }} plugins</v-btn>
 							<v-btn text @click="bulkEdit(dialog_site.site.site_id, 'themes')" v-if="dialog_site.environment_selected.themes_selected.length != 0">Bulk Edit {{ dialog_site.environment_selected.themes_selected.length }} themes</v-btn>
-                    <v-btn text @click="addTheme(dialog_site.site.site_id)">Add Theme <v-icon dark small>add</v-icon></v-btn>
-                    <v-btn text @click="addPlugin(dialog_site.site.site_id)">Add Plugin <v-icon dark small>add</v-icon></v-btn>
+							<v-btn text @click="addTheme(dialog_site.site.site_id)">Add Theme <v-icon dark small>mdi-plus</v-icon></v-btn>
+							<v-btn text @click="addPlugin(dialog_site.site.site_id)">Add Plugin <v-icon dark small>mdi-plus</v-icon></v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
 					<v-card-title v-if="typeof dialog_site.environment_selected.themes == 'string'">
@@ -3012,7 +3013,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</template>
 						<template v-slot:item.actions="{ item }" class="text-center px-0">
                     <v-btn icon small class="mx-0" @click="deleteTheme(item.name, dialog_site.site.site_id)">
-								<v-icon small color="pink">delete</v-icon>
+								<v-icon color="pink">mdi-delete</v-icon>
 							</v-btn>
 						</template>
 					</v-data-table>
@@ -3047,7 +3048,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</template>
 					<template v-slot:item.actions="{ item }" class="text-center px-0">
                 		<v-btn icon small class="mx-0" @click="deletePlugin(item.name, dialog_site.site.site_id)" v-if="item.status === 'active' || item.status === 'inactive'">
-							<v-icon small color="pink">delete</v-icon>
+							<v-icon color="pink">mdi-delete</v-icon>
 						</v-btn>
 					</template>
 					<template v-slot:body.append>
@@ -3071,7 +3072,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-text-field
 						v-model="users_search"
 						ref="users_search"
-						append-icon="search"
+						append-icon="mdi-magnify"
 						label="Search"
 						single-line
 						clearable
@@ -3103,7 +3104,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<template v-slot:item.actions="{ item }">
                     <v-btn small rounded @click="magicLoginSite(dialog_site.site.site_id, item.user_login)" class="my-2">Login as</v-btn>
                     <v-btn icon small class="my-2" @click="deleteUserDialog( item.user_login, dialog_site.site.site_id)">
-							<v-icon small color="pink">delete</v-icon>
+							<v-icon color="pink">mdi-delete</v-icon>
 						</v-btn>
 						</template>
 					  </v-data-table>
@@ -3173,7 +3174,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-subheader>Common</v-subheader>
 						<v-list-item @click="viewApplyHttpsUrls(dialog_site.site.site_id)" dense>
 						<v-list-item-icon>
-							<v-icon>launch</v-icon>
+							<v-icon>mdi-rocket-launch</v-icon>
 						</v-list-item-icon>
 						<v-list-item-content>
 							<v-list-item-title>Apply HTTPS Urls</v-list-item-title>
@@ -3181,7 +3182,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-list-item>
 						<v-list-item @click="siteDeploy(dialog_site.site.site_id)" dense>
 						<v-list-item-icon>
-							<v-icon>loop</v-icon>
+							<v-icon>mdi-refresh</v-icon>
 						</v-list-item-icon>
 						<v-list-item-content>
 							<v-list-item-title>Deploy Defaults</v-list-item-title>
@@ -3423,7 +3424,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-spacer></v-spacer>
 					<v-select :items="[{text: 'Themes', value: 'theme'}, {text: 'Plugins', value: 'plugin'}]" v-model="quicksave_search_type" label="Search for" dense style="max-width: 125px" class="mr-2" solo></v-select>
 					<v-select :items="[{text: 'Slug', value: 'name'}, {text: 'Title', value: 'title'}, {text: 'Status', value: 'status'}, {text: 'Version', value: 'version'}]" v-model="quicksave_search_field" label="By" dense style="max-width: 125px" class="mr-2" solo></v-select>
-					<v-text-field v-model="quicksave_search" dense autofocus label="Search historical activity" clearable light hide-details append-outer-icon="search" @keydown.enter="searchQuicksave" @click:append-outer="searchQuicksave" style="max-width:375px;" class="mb-3"></v-text-field>
+					<v-text-field v-model="quicksave_search" dense autofocus label="Search historical activity" clearable light hide-details append-outer-icon="mdi-magnify" @keydown.enter="searchQuicksave" @click:append-outer="searchQuicksave" style="max-width:375px;" class="mb-3"></v-text-field>
 					</v-toolbar>
 					<div v-show="quicksave_search_results.loading" class="body-2 mx-5"><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular> searching quicksaves</div>
 					<v-card v-if="quicksave_search_results.items.length > 0" class="ma-4">
@@ -3453,7 +3454,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</span>
 						</template>
 						<template v-slot:item.actions="{ item }">
-						<v-dialog max-width="600">
+							<v-dialog max-width="600">
 								<template v-slot:activator="{ on, attrs }">
 									<v-btn depressed small v-bind="attrs" v-on="on" v-if="item.item != ''">Rollback</v-btn>
 								</template>
@@ -3463,7 +3464,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										Rollback '{{ item.item.title }}' {{ quicksave_search_results.search_type }}?
 										<v-spacer></v-spacer>
 										<v-btn icon @click="dialog.value = false">
-											<v-icon>close</v-icon>
+											<v-icon>mdi-close</v-icon>
 										</v-btn>
 									</v-toolbar>
 									<v-list>
@@ -3511,15 +3512,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-toolbar-title class="body-2">{{ item.status }}</v-toolbar-title>
 							<v-spacer></v-spacer>
 							<v-toolbar-items>
-                        <v-btn text small @click="QuicksavesRollback( dialog_site.site.site_id, item)">Rollback Everything</v-btn>
-								<v-divider vertical class="mx-1" inset></v-divider>
-                        <v-btn text small @click="viewQuicksavesChanges( dialog_site.site.site_id, item)">View Changes</v-btn>
+                        		<v-btn text small @click="QuicksavesRollback( dialog_site.site.site_id, item)">Rollback Everything <v-icon>mdi-restore</v-icon></v-btn>
+                       			<v-btn text small @click="viewQuicksavesChanges( dialog_site.site.site_id, item)">View Changes <v-icon>mdi-file-compare</v-icon></v-btn>
 							</v-toolbar-items>
 						</v-toolbar>
 						<v-card flat v-show="item.view_changes == true" style="table-layout:fixed;margin:0px;overflow: scroll;padding: 0px;position: absolute;background-color: #fff;width: 100%;left: 0;top: 100%;height: 100%;z-index: 3;transform: translateY(-100%);">
 							<v-toolbar color="dark primary" dark dense light>
 								<v-btn icon dark @click.native="item.view_changes = false">
-									<v-icon>close</v-icon>
+									<v-icon>mdi-close</v-icon>
 								</v-btn>
 								<v-toolbar-title>List of changes</v-toolbar-title>
 								<v-spacer></v-spacer>
@@ -3537,7 +3537,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											v-model="item.search"
 											ref="quicksave_search"
 											@input="filterFiles( dialog_site.site.site_id, item.hash)"
-											append-icon="search"
+											append-icon="mdi-magnify"
 											label="Search"
 											single-line
 											hide-details
@@ -3604,7 +3604,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 												Rollback '{{ theme.name }}' theme?
 												<v-spacer></v-spacer>
 												<v-btn icon @click="dialog.value = false">
-													<v-icon>close</v-icon>
+													<v-icon>mdi-close</v-icon>
 												</v-btn>
 											</v-toolbar>
 											<v-list>
@@ -3671,7 +3671,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 												Rollback '{{ plugin.name }}' plugin?
 												<v-spacer></v-spacer>
 												<v-btn icon @click="dialog.value = false">
-													<v-icon>close</v-icon>
+													<v-icon>mdi-close</v-icon>
 												</v-btn>
 											</v-toolbar>
 											<v-list>
@@ -3784,7 +3784,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<td class="justify-center py-3" v-html="item.description"></td>
 					<td>
 						<v-btn text icon @click="editLogEntry(dialog_site.site.site_id, item.process_log_id)" v-if="role == 'administrator'">
-							<v-icon small>edit</v-icon>
+							<v-icon small>mdi-pencil</v-icon>
 						</v-btn>
 					</td>
 				</tr>
@@ -3799,9 +3799,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-sheet v-show="dialog_site.step == 3">
 				<v-toolbar flat>
 					<v-toolbar-title>Add Site</v-toolbar-title>
-				<v-spacer></v-spacer>
+					<v-spacer></v-spacer>
 					<v-btn icon @click="goToPath( `/sites` )">
-						<v-icon>close</v-icon>
+						<v-icon>mdi-close</v-icon>
 					</v-btn>
 				</v-toolbar>
 				<v-card-text v-if="role == 'administrator'">
@@ -3901,13 +3901,13 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-spacer></v-spacer>
 								<v-tooltip top v-if="key.environment == 'Staging'">
 									<template v-slot:activator="{ on }">
-										<v-btn text small icon color="red" @click="dialog_new_site.environments.splice( index )" v-on="on"><v-icon>delete</v-icon></v-btn>
+										<v-btn text small icon color="red" @click="dialog_new_site.environments.splice( index )" v-on="on"><v-icon>mdi-delete</v-icon></v-btn>
 									</template>
 									<span>Delete Environment</span>
 								</v-tooltip>
 								<v-tooltip top v-if="key.environment == 'Staging'">
 									<template v-slot:activator="{ on }">
-										<v-btn text small icon color="green" @click="new_site_preload_staging()" v-on="on"><v-icon>cached</v-icon></v-btn>
+										<v-btn text small icon color="green" @click="new_site_preload_staging()" v-on="on"><v-icon>mdi-cached</v-icon></v-btn>
 									</template>
 									<span>Preload based on Production</span>
 								</v-tooltip>
@@ -3989,7 +3989,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar-title>Edit Site {{ dialog_edit_site.site.name }}</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-btn icon @click.native="dialog_site.step = 2">
-						<v-icon>close</v-icon>
+						<v-icon>mdi-close</v-icon>
 						</v-btn>
 				</v-toolbar>
 				<v-card-text v-if="role == 'administrator'">
@@ -4089,13 +4089,13 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-spacer></v-spacer>
 								<v-tooltip top v-if="key.environment == 'Staging'">
 									<template v-slot:activator="{ on }">
-										<v-btn text small icon color="red" @click="dialog_edit_site.site.environments.splice( index )" v-on="on"><v-icon>delete</v-icon></v-btn>
+										<v-btn text small icon color="red" @click="dialog_edit_site.site.environments.splice( index )" v-on="on"><v-icon>mdi-delete</v-icon></v-btn>
 									</template>
 									<span>Delete Environment</span>
 								</v-tooltip>
 								<v-tooltip top v-if="key.environment == 'Staging'">
 									<template v-slot:activator="{ on }">
-										<v-btn text small icon color="green" @click="edit_site_preload_staging()" v-on="on"><v-icon>cached</v-icon></v-btn>
+										<v-btn text small icon color="green" @click="edit_site_preload_staging()" v-on="on"><v-icon>mdi-cached</v-icon></v-btn>
 									</template>
 									<span>Preload based on Production</span>
 								</v-tooltip>
@@ -4180,7 +4180,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar-title>Listing {{ allDomains }} domains</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn text @click="dialog_new_domain.show = true">Add Domain <v-icon dark>add</v-icon></v-btn>
+						<v-btn text @click="dialog_new_domain.show = true">Add Domain <v-icon dark>mdi-plus</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
@@ -4199,7 +4199,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-card>
 								<v-toolbar color="primary" dark>
 								<v-btn icon dark @click="dialog.value = false">
-									<v-icon>close</v-icon>
+									<v-icon>mdi-close</v-icon>
 								</v-btn>
 								<v-toolbar-title>Nameservers</v-toolbar-title>
 								<v-spacer></v-spacer>
@@ -4227,7 +4227,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-col class="ma-0 pa-0"sm="12" md="4">
 					<v-text-field
 						v-model="domain_search"
-						append-icon="search"
+						append-icon="mdi-magnify"
 						label="Search"
 						single-line
 						clearable
@@ -4236,7 +4236,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					></v-text-field>
 					</v-col>
 				</v-row>
-				</v-card-text>
+				<v-row>
+				<v-col>
 				<v-data-table
 					:headers="[{ text: 'Name', value: 'name' },{ text: 'DNS', value: 'remote_id', width: '88px' },{ text: 'Registration', value: 'provider_id', width: '120px' }]"
 					:items="domains"
@@ -4253,9 +4254,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</tbody>
 				</template>
 				</v-data-table>
+				</v-col>
+				</v-row>
+				</v-card-text>
 				</v-sheet>
 				<v-sheet v-show="dialog_domain.step == 2">
-					<v-card tile flat>
+					<v-card flat>
 						<v-toolbar flat>
 							<v-toolbar-title>
 							<v-autocomplete
@@ -4328,7 +4332,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										<v-progress-circular indeterminate color="primary" size="24" class="ma-5" v-show="dialog_domain.loading"></v-progress-circular>
 										<div class="v-data-table theme--light">
 										<div class="v-data-table__wrapper">
-										<table class="table-dns" v-show="dialog_domain.records.length > 0">
+										<table class="table-dns mb-3" v-show="dialog_domain.records.length > 0">
 											<thead class="v-data-table-header">
 											<tr>
 												<th width="175">Type</th>
@@ -4424,26 +4428,26 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										</table>
 										</div>
 										</div>
-										<v-btn depressed class="ml-2" @click="addRecord()" v-show="!dialog_domain.loading && !dialog_domain.saving && !dialog_domain.errors">Add Additional Record</v-btn>
+										<v-btn depressed class="ml-4" @click="addRecord()" v-show="!dialog_domain.loading && !dialog_domain.saving && !dialog_domain.errors">Add Additional Record</v-btn>
 									</v-col>
 								</v-row>
-								<v-row>
+								<v-row v-show="dialog_domain.saving">
 									<v-col>
-										<v-progress-circular indeterminate color="primary" size="24" class="ml-4" v-show="dialog_domain.saving"></v-progress-circular>
+										<v-progress-circular indeterminate color="primary" size="24" class="ml-4"></v-progress-circular>
 									</v-col>
 								</v-row>
-								<v-row>
-									<v-col class="text-left mx-3 mb-5" v-show="!dialog_domain.loading">
-										<v-btn class="mx-1" depressed color="primary" @click="saveDNS()" :dark="dialog_domain.records && dialog_domain.records.length != '0'" :disabled="dialog_domain.records && dialog_domain.records.length == '0'">Save Records</v-btn>
-										<a ref="export_domain" href="#"></a>
-									</v-col>
-								</v-row>
-								<v-row>
-									<v-col class="mx-3 mb-10">
+								<v-row v-show="dialog_domain.results">
+									<v-col class="mx-3">
 										<template v-for="result in dialog_domain.results">
 											<v-alert text :value="true" type="success" v-show="typeof result.success != 'undefined'">{{ result.success }}</v-alert>
 											<v-alert text :value="true" type="error" v-show="typeof result.errors != 'undefined'">{{ result.errors }}</v-alert>
 										</template>
+									</v-col>
+								</v-row>
+								<v-row>
+									<v-col class="text-left mx-3 mb-7" v-show="!dialog_domain.loading">
+										<v-btn class="mx-1" depressed color="primary" @click="saveDNS()" :dark="dialog_domain.records && dialog_domain.records.length != '0'" :disabled="dialog_domain.records && dialog_domain.records.length == '0'">Save Records</v-btn>
+										<a ref="export_domain" href="#"></a>
 									</v-col>
 								</v-row>
 							</v-tab-item>
@@ -4632,7 +4636,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									<v-card>
 										<v-toolbar color="primary" dark>
 										<v-btn icon @click="dialog.value = false">
-											<v-icon>close</v-icon>
+											<v-icon>mdi-close</v-icon>
 										</v-btn>
 										<v-toolbar-title>Edit Domain</v-toolbar-title></v-toolbar>
 										<v-card-text>
@@ -4715,7 +4719,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar-title>Listing {{ filteredRecipes.length }} recipes</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn text @click="new_recipe.show = true">Add recipe <v-icon dark>add</v-icon></v-btn>
+						<v-btn text @click="new_recipe.show = true">Add recipe <v-icon dark>mdi-plus</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
@@ -4758,7 +4762,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<span>Add Log Entry</span>
 						</v-tooltip>
 						<v-divider vertical class="mx-1" inset></v-divider>
-						<v-btn text @click="new_process.show = true">Add process <v-icon dark>add</v-icon></v-btn>
+						<v-btn text @click="new_process.show = true">Add process <v-icon dark>mdi-plus</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text style="max-height: 100%;">
@@ -4947,7 +4951,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-toolbar-title>Listing {{ providers.length }} providers</v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items>
-							<v-btn text @click="dialog_new_provider.show = true">Add Provider <v-icon dark>add</v-icon></v-btn>
+							<v-btn text @click="dialog_new_provider.show = true">Add Provider <v-icon dark>mdi-plus</v-icon></v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
 					<v-data-table
@@ -5052,7 +5056,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-flex xs12 text-right v-show="dialog_billing.step == 1">
 					<v-tabs v-model="billing_tabs" background-color="primary" dark>
 						<v-tab :key="1" href="#tab-Billing-Invoices" ripple>
-							Invoices <v-icon size="24">mdi-receipt</v-icon>
+							Invoices <v-icon size="24">mdi-receipt-text</v-icon>
 						</v-tab>
 						<v-tab :key="2" href="#tab-Billing-Overview">
 							My Plan <v-icon size="24">mdi-chart-donut</v-icon>
@@ -5152,7 +5156,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-card-title>
 									New payment method
 									<v-spacer></v-spacer>
-									<v-btn @click="new_payment.show = false" icon><v-icon>close</v-icon></v-btn>
+									<v-btn @click="new_payment.show = false" icon><v-icon>mdi-close</v-icon></v-btn>
 								</v-card-title>
 								<v-card-text class="mt-5">
 									<div id="new-card-element"></div>
@@ -5417,7 +5421,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-toolbar>
 				<v-card-text>
 					<v-alert text :value="true" type="info" class="mb-4 mt-4">
-						When new sites are added then the following default settings will be applied.
+						Configure default settings will can be applied by running the <strong>Deploy Defaults</strong> script.
 					</v-alert>
 					<v-layout wrap>
 						<v-flex xs6 pr-2><v-text-field :value="defaults.email" @change.native="defaults.email = $event.target.value" label="Default Email" required></v-text-field></v-flex>
@@ -5465,7 +5469,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar-title>Your SSH keys</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn text @click="new_key.show = true">Add SSH Key <v-icon dark>add</v-icon></v-btn>
+						<v-btn text @click="new_key.show = true">Add SSH Key <v-icon dark>mdi-plus</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text style="max-height: 100%;">
@@ -5574,7 +5578,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-row>
 						<v-col></v-col>
 						<v-col cols="12" md="4">
-							<v-text-field class="mx-4" v-model="subscription_search" autofocus append-icon="search" label="Search" single-line clearable hide-details></v-text-field>
+							<v-text-field class="mx-4" v-model="subscription_search" autofocus append-icon="mdi-magnify" label="Search" single-line clearable hide-details></v-text-field>
 						</v-col>
 					</v-row>
 					</v-card-text>
@@ -5600,9 +5604,16 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar-title>Listing {{ accounts.length }} accounts</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items v-if="role == 'administrator'">
-						<v-btn text @click="dialog_new_account.show = true">Add account <v-icon dark>add</v-icon></v-btn>
+						<v-btn text @click="dialog_new_account.show = true">Add account <v-icon dark>mdi-plus</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
+				<v-card-text>
+					<v-row>
+						<v-col></v-col>
+						<v-col cols="12" md="4">
+							<v-text-field class="mx-4" v-model="account_search" autofocus append-icon="mdi-magnify" label="Search" single-line clearable hide-details></v-text-field>
+						</v-col>
+					</v-row>
 					<v-data-table
 						:headers="[
 							{ text: 'Name', value: 'name' },
@@ -5613,16 +5624,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						:search="account_search"
 						:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
 					>
-					<template v-slot:top>
-					<v-card-text>
-					<v-row>
-						<v-col></v-col>
-						<v-col cols="12" md="4">
-							<v-text-field class="mx-4" v-model="account_search" autofocus append-icon="search" label="Search" single-line clearable hide-details></v-text-field>
-						</v-col>
-					</v-row>
-					</v-card-text>
-					</template>
 					<template v-slot:body="{ items }">
 						<tbody>
 						<tr v-for="item in items" :key="item.account_id" @click="goToPath( `/accounts/${item.account_id}`)" style="cursor:pointer;">
@@ -5634,6 +5635,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</tbody>
 					</template>
 					</v-data-table>
+					</v-card-text>
 				</v-sheet>
 				<v-sheet v-show="dialog_account.step == 2">
 				<v-card flat v-if="dialog_account.show && typeof dialog_account.records.account == 'object'">
@@ -5676,12 +5678,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-toolbar-items>
 							<v-dialog v-model="dialog_account.new_invite" max-width="500px">
 							<template v-slot:activator="{ on, attrs }">
-								<v-btn text @click="dialog_account.new_invite = true" v-bind="attrs" v-on="on">New Invite <v-icon dark>add</v-icon></v-btn>
+								<v-btn text @click="dialog_account.new_invite = true" v-bind="attrs" v-on="on">New Invite <v-icon dark>mdi-plus</v-icon></v-btn>
 							</template>
 							<v-card>
 								<v-toolbar flat dense dark color="primary" id="new_invite" class="mb-2">
 								<v-btn icon dark @click.native="dialog_account.new_invite = false">
-									<v-icon>close</v-icon>
+									<v-icon>mdi-close</v-icon>
 								</v-btn>
 								<v-toolbar-title>New Invitation</v-toolbar-title>
 								<v-spacer></v-spacer>
@@ -5814,7 +5816,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<td class="justify-center py-3" v-html="item.description"></td>
 							<td width="170px;">
 								<v-btn text icon @click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)" v-if="role == 'administrator'">
-									<v-icon small>edit</v-icon>
+									<v-icon small>mdi-pencil</v-icon>
 								</v-btn>
 								{{ item.websites.map( site => site.name ).join(" ") }}
 							</td>
@@ -5827,7 +5829,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar dense light flat>
 						<v-spacer></v-spacer>
 							<v-toolbar-items v-show="role == 'administrator'">
-								<v-btn text @click="modifyPlan()">Edit Plan <v-icon dark small class="ml-1">edit</v-icon></v-btn>
+								<v-btn text @click="modifyPlan()">Edit Plan <v-icon dark small class="ml-1">mdi-pencil</v-icon></v-btn>
 							</v-toolbar-items>
 						</v-toolbar>
 					<v-card flat>
@@ -5873,7 +5875,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-card>
 								<v-toolbar flat dark color="primary">
 									<v-btn icon dark @click.native="dialog_breakdown = false">
-										<v-icon>close</v-icon>
+										<v-icon>mdi-close</v-icon>
 									</v-btn>
 									<v-toolbar-title>Plan Estimate Breakdown</v-toolbar-title>
 									<v-spacer></v-spacer>
@@ -5992,10 +5994,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-icon small>mdi-filter-variant</v-icon> Bulk Tools on Sites
 					</v-btn>
 					<v-btn small depressed @click="editAccount()">
-						<v-icon small>edit</v-icon> Edit Account
+						<v-icon small>mdi-pencil</v-icon> Edit Account
 					</v-btn>
 					<v-btn small depressed color="error" @click="deleteAccount()">
-						<v-icon small>delete</v-icon> Delete Account
+						<v-icon small>mdi-delete</v-icon> Delete Account
 					</v-btn>
 					</v-container>
 					</div>
@@ -6009,13 +6011,13 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar-items>
 						<v-dialog max-width="600">
 							<template v-slot:activator="{ on, attrs }">
-								<v-btn text v-bind="attrs" v-on="on">Add user <v-icon dark>add</v-icon></v-btn>
+								<v-btn text v-bind="attrs" v-on="on">Add user <v-icon dark>mdi-plus</v-icon></v-btn>
 							</template>
 							<template v-slot:default="dialog">
 							<v-card>
 								<v-toolbar color="primary" dark>
 								<v-btn icon dark @click="dialog.value = false">
-									<v-icon>close</v-icon>
+									<v-icon>mdi-close</v-icon>
 								</v-btn>
 								<v-toolbar-title>Add user</v-toolbar-title>
 								<v-spacer></v-spacer>
@@ -6039,26 +6041,24 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-dialog>
 					</v-toolbar-items>
 				</v-toolbar>
+				<v-card-text>
+				<v-row>
+					<v-col></v-col>
+					<v-col cols="12" md="4">
+						<v-text-field class="mx-4" v-model="user_search" @input="filterSites" autofocus label="Search" clearable light hide-details append-icon="mdi-magnify"></v-text-field>	
+					</v-col>
+				</v-row>
 				<v-data-table
 					:headers="[{ text: 'Name', value: 'name' },{ text: 'Username', value: 'username' },{ text: 'Email', value: 'email' },{ text: '', value: 'user_id', align: 'end', sortable: false }]"
 					:items="users"
 					:search="user_search"
 					:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
 				>
-					<template v-slot:top>
-					<v-card-text>
-					<v-row>
-						<v-col></v-col>
-						<v-col cols="12" md="4">
-							<v-text-field class="mx-4" v-model="user_search" @input="filterSites" autofocus label="Search" clearable light hide-details append-icon="search"></v-text-field>	
-						</v-col>
-					</v-row>	
-					</v-card-text>
-					</template>
 					<template v-slot:item.user_id="{ item }">
 						<v-btn text color="primary" @click="editUser( item.user_id )">Edit User</v-btn>
 					</template>
 				</v-data-table>
+				</v-card-text>
 			</v-card>
 			<v-dialog v-if="route == 'invite'" value="true" scrollable persistance width="500" height="300">
 			<v-overlay :value="true" v-if="typeof new_invite.account.name == 'undefined'">
@@ -6155,7 +6155,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</template><span>Clear Task Activity</span>
 				</v-tooltip>
 				<v-btn small icon @click="closeConsole()">
-					<v-icon>close</v-icon>
+					<v-icon>mdi-close</v-icon>
 				</v-btn>
 			</v-toolbar>
 			<v-card-text style="height:130px; overflow-y:scroll;" class="ma-0 pa-0">
@@ -6216,7 +6216,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</template><span>Export Results</span>
 				</v-tooltip>
 				<v-btn small icon @click="closeConsole()">
-					<v-icon>close</v-icon>
+					<v-icon>mdi-close</v-icon>
 				</v-btn>
 			</v-toolbar>
 			<v-card-text style="height:130px; overflow-y:scroll; transform: scaleY(-1);" class="ma-0 py-0 px-5">
@@ -6264,7 +6264,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</template><span>Clear Filters</span>
 				</v-tooltip>
 				<v-btn small icon @click="closeConsole()">
-					<v-icon>close</v-icon>
+					<v-icon>mdi-close</v-icon>
 				</v-btn>
 			</v-toolbar>
 			<v-card-text style="height:130px; overflow-y:scroll;">
@@ -6366,7 +6366,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-tooltip top>
 					<template v-slot:activator="{ on }">
 					<v-btn small icon @click="addThemeBulk()" v-on="on">
-						<v-icon>add</v-icon>
+						<v-icon>mdi-plus</v-icon>
 					</v-btn>
 					</template>
 					<span>Add theme</span>
@@ -6374,7 +6374,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-tooltip top>
 					<template v-slot:activator="{ on }">
 					<v-btn small icon @click="addPluginBulk()" v-on="on">
-						<v-icon>add</v-icon>
+						<v-icon>mdi-plus</v-icon>
 					</v-btn>
 					</template>
 					<span>Add plugin</span>
@@ -6411,7 +6411,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</template><span>Clear Selections</span>
 				</v-tooltip>
 				<v-btn small icon @click="closeConsole()">
-					<v-icon>close</v-icon>
+					<v-icon>mdi-close</v-icon>
 				</v-btn>
 			</v-toolbar>
 				<v-card-text style="height:130px; overflow-y:scroll;">
@@ -6421,14 +6421,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-tooltip top>
 						<template v-slot:activator="{ on }">
 						<v-btn small icon @click="viewApplyHttpsUrlsBulk()" v-on="on">
-							<v-icon>launch</v-icon>
+							<v-icon>mdi-rocket-launch</v-icon>
 						</v-btn>
 						</template><span>Apply HTTPS Urls</span>
 					</v-tooltip>
 					<v-tooltip top>
 						<template v-slot:activator="{ on }">
 						<v-btn small icon @click="siteDeployBulk()" v-on="on">
-							<v-icon>loop</v-icon>
+							<v-icon>mdi-refresh</v-icon>
 						</v-btn>
 						</template><span>Deploy Defaults</span>
 					</v-tooltip>
@@ -6507,7 +6507,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		</v-col>
 		<v-col cols="1" class="text-right">
 		<v-btn icon tile small @click="view_console.show = false" v-show="view_console.open == false">
-			<v-icon x-small>close</v-icon>
+			<v-icon small>mdi-close</v-icon>
 		</v-btn>
 		</v-col>
 		</v-row>
