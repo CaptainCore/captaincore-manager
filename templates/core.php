@@ -22,16 +22,17 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <link rel='stylesheet' id='arve-pro-css' href='/wp-content/plugins/arve-pro/build/main.css' type='text/css' media='all' />
 <?php } ?>
 <link href="<?php echo home_url(); ?>/account/" rel="canonical">
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
 <?php if ( substr( $_SERVER['SERVER_NAME'], -10) == '.localhost' ) { ?>
 <link href="<?php echo $plugin_url; ?>public/css/vuetify.min.css" rel="stylesheet">
+<link href="<?php echo $plugin_url; ?>public/css/materialdesignicons.min.css" rel="stylesheet">
+<link href="<?php echo $plugin_url; ?>public/css/frappe-charts.min.css" rel="stylesheet">
 <?php } else { ?>
 <link href="https://cdn.jsdelivr.net/npm/vuetify@2.6.4/dist/vuetify.min.css" rel="stylesheet">
-<?php } ?>
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.5.95/css/materialdesignicons.min.css" rel="stylesheet">
-<link href="<?php echo $plugin_url; ?>public/css/captaincore-public-2023-05-25.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.1/dist/frappe-charts.min.css" rel="stylesheet">
+<?php } ?>
+<link href="<?php echo $plugin_url; ?>public/css/captaincore-public-2023-05-25.css" rel="stylesheet">
 </head>
 <body>
 <div id="app" v-cloak>
@@ -6520,18 +6521,22 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <script src="<?php echo $plugin_url; ?>public/js/axios.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/vuetify.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/vue-upload-component.js"></script>
+<script src="<?php echo $plugin_url; ?>public/js/stripe.min.js"></script>
+<script src="<?php echo $plugin_url; ?>public/js/numeral.min.js"></script>
+<script src="<?php echo $plugin_url; ?>public/js/frappe-charts.min.js"></script>
 <?php } else { ?>
 <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qs@6.9.1/dist/qs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios@0.19.0/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vuetify@2.6.4/dist/vuetify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.20/dist/vue-upload-component.js"></script>
-<?php } ?>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.1/dist/frappe-charts.min.umd.js"></script>
+<?php } ?>
 <script src="<?php echo $plugin_url; ?>public/js/kjua.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/moment.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.1/dist/frappe-charts.min.umd.js"></script>
+
 <script src="<?php echo $plugin_url; ?>public/js/core.js"></script>
 <script>
 <?php if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { ?>
