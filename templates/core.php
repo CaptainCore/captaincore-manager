@@ -2784,10 +2784,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-subheader>Site Options</v-subheader>
 					<v-container>
 					<v-btn small depressed @click="PushProductionToStaging( dialog_site.site.site_id )" v-show="dialog_site.site.provider == 'kinsta' && dialog_site.site.environments.length == 2">
-						<v-icon>local_shipping</v-icon> Push Production to Staging
+						<v-icon>mdi-truck</v-icon> Push Production to Staging
 					</v-btn>
 					<v-btn small depressed @click="PushStagingToProduction( dialog_site.site.site_id )" v-show="dialog_site.site.provider == 'kinsta' && dialog_site.site.environments.length == 2">
-						<v-icon class="reverse">local_shipping</v-icon> Push Staging to Production
+						<v-icon class="reverse">mdi-truck</v-icon> Push Staging to Production
 					</v-btn>
 					<v-btn small depressed @click="dialog_mailgun_config.show = true" v-show="role == 'administrator'">
 						<v-icon>mdi-email-search</v-icon> Configure Mailgun
@@ -4754,7 +4754,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-divider vertical class="mx-1" inset></v-divider>
 						<v-tooltip top>
 							<template v-slot:activator="{ on }">
-								<v-btn text small @click="showLogEntryGeneric()" v-on="on"><v-icon dark>mdi-check</v-icon></v-btn>
+								<v-btn text small @click="showLogEntryGeneric()" v-on="on"><v-icon dark>mdi-check-bold</v-icon></v-btn>
 							</template>
 							<span>Add Log Entry</span>
 						</v-tooltip>
