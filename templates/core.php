@@ -36,18 +36,16 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 </head>
 <body>
 <div id="app" v-cloak>
-	<v-app>
-	  <v-app-bar color="primary" dark app flat style="left:0px">
+	<v-app :style="{backgroundColor: $vuetify.theme.themes.light.accent}">
+	  <v-app-bar color="accent" dense app flat style="left:0px" class="pt-2">
 	 	 <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none" v-show="route != 'login' || route != 'connect'"></v-app-bar-nav-icon>
-         <v-toolbar-title>
-			<v-list flat color="transparent">
+			<v-list flat color="accent">
 		 	<v-list-item :href="configurations.path" @click.prevent="goToPath( '/' )" style="padding:0px;" flat class="not-active">
 			 	<v-img :src="configurations.logo" contain :max-width="configurations.logo_width == '' ? 32 : configurations.logo_width" v-if="configurations.logo" class="mr-4"></v-img>
 				 {{ configurations.name }}
 			</v-list-item>
 			</v-list>
-			<div class="flex" style="opacity:0;"><textarea id="clipboard" style="height:1px;display:flex;cursor:default"></textarea></div>
-		</v-toolbar-title>
+			<div class="flex" style="opacity:0;"><textarea id="clipboard" style="height:1px;width:10px;display:flex;cursor:default"></textarea></div>
 		<v-spacer></v-spacer>
 		<v-menu v-model="notifications" :close-on-content-click="false" offset-y>
 			<template v-slot:activator="{ on, attrs }">
@@ -82,7 +80,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		</v-card>
 		</v-menu>
       </v-app-bar>
-	  <v-navigation-drawer v-model="drawer" app mobile-breakpoint="960" clipped v-if="route != 'login' && route != 'connect'">
+	  <v-navigation-drawer v-model="drawer" app mobile-breakpoint="960" clipped v-if="route != 'login' && route != 'connect'" color="accent pt-5">
       <v-list nav dense>
 	  	<v-list-item-group mandatory v-model="selected_nav" color="primary">
 		<v-list-item style="display:none"></v-list-item>
@@ -2832,7 +2830,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-btn>
 					</v-container>
 					</div>
-					<v-layout class="mb-10"></v-layout>
 				</v-tab-item>
 				<v-tab-item :key="100" value="tab-Stats" :transition="false" :reverse-transition="false">
 					<v-card flat>
