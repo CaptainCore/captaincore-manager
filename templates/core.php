@@ -1952,7 +1952,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card>
 				</v-col>
 				<v-col>
-				<v-card tile style="max-width: 400px;margin: auto;">
+				<v-card style="max-width: 400px;margin: auto;" class="rounded-lg elevation-1">
 					<v-toolbar light flat>
 						<v-toolbar-title>Login</v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -1995,7 +1995,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-form>
 					</v-card-text>
 				</v-card>
-				<v-card tile flat style="max-width: 400px;margin: auto;" class="px-5">
+				<v-card tile flat style="max-width: 400px;margin: auto;" class="px-5" color="transparent">
 					<a @click="login.lost_password = true" class="caption" v-show="!login.lost_password">Lost your password?</a>
 					<a @click="login.lost_password = false" class="caption" v-show="login.lost_password">Back to login form.</a>
 				</v-card>
@@ -2003,7 +2003,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-row>
 			</v-card>
 			<template v-else>
-				<v-card tile style="max-width: 400px;margin: auto;">
+				<v-card style="max-width: 400px;margin: auto;" class="rounded-lg elevation-1">
 					<v-toolbar light flat>
 						<v-toolbar-title>Login</v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -2046,13 +2046,13 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-form>
 					</v-card-text>
 				</v-card>
-				<v-card tile flat style="max-width: 400px;margin: auto;" class="px-5">
+				<v-card flat style="max-width: 400px;margin: auto;" class="px-5" color="transparent">
 					<a @click="login.lost_password = true" class="caption" v-show="!login.lost_password">Lost your password?</a>
 					<a @click="login.lost_password = false" class="caption" v-show="login.lost_password">Back to login form.</a>
 				</v-card>
 			</template>
 			</v-card>
-			<v-card v-if="route == 'sites'" id="sites" class="elevation-1 ma-4">
+			<v-card v-if="route == 'sites'" id="sites" class="elevation-1 rounded-lg ma-4 py-1">
 			<v-toolbar v-show="dialog_site.step == 1" id="site_listings" flat>
 				<v-toolbar-title>Listing {{ sites.length }} sites</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -4174,7 +4174,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card-text>
 			</v-sheet>
 			</v-card>
-			<v-card v-if="route == 'domains'" class="elevation-1 ma-4">
+			<v-card v-if="route == 'domains'" class="elevation-1 rounded-lg ma-4 py-1">
 			<v-sheet v-show="dialog_domain.step == 1">
 				<v-toolbar flat>
 					<v-toolbar-title>Listing {{ allDomains }} domains</v-toolbar-title>
@@ -4669,7 +4669,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-sheet>
 			</v-card>
-			<v-card v-if="route == 'health'" class="elevation-1 ma-4">
+			<v-card v-if="route == 'health'" class="elevation-1 rounded-lg ma-4 py-1">
 				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ filterSitesWithErrors.length }} sites with issues</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -4714,7 +4714,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-card-text>
 			</v-card>
-			<v-card v-if="route == 'cookbook'" class="elevation-1 ma-4">
+			<v-card v-if="route == 'cookbook'" class="elevation-1 rounded-lg ma-4 py-1">
 				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ filteredRecipes.length }} recipes</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -4743,7 +4743,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</template>
 				</v-data-table>
 			</v-card>
-			<v-card tile v-if="route == 'handbook' && role == 'administrator'" flat>
+			<v-card v-if="route == 'handbook' && role == 'administrator'" class="elevation-1 rounded-lg ma-4 py-1">
 				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ processes.length }} processes</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -4786,7 +4786,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-container>
 				</v-card-text>
 			</v-card>
-			<v-card tile v-if="route == 'configurations' && role == 'administrator'" class="elevation-1 ma-4">
+			<v-card tile v-if="route == 'configurations' && role == 'administrator'" class="elevation-1 rounded-lg ma-4 py-1">
 				<v-toolbar light flat>
 					<v-toolbar-title>Configurations</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5048,7 +5048,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-col>
 				</v-row>
 			</v-card>
-			<v-card tile v-if="route == 'billing'" class="elevation-1 ma-4">
+			<v-card tile v-if="route == 'billing'" class="elevation-1 rounded-lg ma-4 py-1">
 				<v-toolbar light flat v-show="dialog_billing.step == 1">
 					<v-toolbar-title>Billing</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5414,7 +5414,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card>
 				</v-flex>
 			</v-card>
-			<v-card v-if="route == 'defaults' && role == 'administrator'" class="elevation-1 ma-4">
+			<v-card v-if="route == 'defaults' && role == 'administrator'" class="elevation-1 rounded-lg ma-4 py-1">
 				<v-toolbar light flat>
 					<v-toolbar-title>Site Defaults</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5464,7 +5464,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-flex>
 				</v-card-text>
 			</v-card>
-			<v-card v-if="route == 'keys' && role == 'administrator'" class="elevation-1 ma-4">
+			<v-card v-if="route == 'keys' && ( role == 'administrator' || configurations.mode == 'maintenance' )" class="elevation-1 rounded-lg ma-4 py-1">
 				<v-toolbar light flat>
 					<v-toolbar-title>Your SSH keys</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5491,7 +5491,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-container>
 				</v-card-text>
 			</v-card>
-			<v-card v-if="route == 'profile'" class="elevation-1 ma-4">
+			<v-card v-if="route == 'profile'" class="elevation-1 rounded-lg ma-4 py-1" max-width="700">
 				<v-toolbar light flat>
 					<v-toolbar-title>Edit profile</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5500,7 +5500,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-toolbar>
 				<v-card-text>
 				<v-row>
-					<v-col cols="6">
+					<v-col cols="12">
 					<v-list>
 					<v-list-item link href="https://gravatar.com" target="_blank">
 						<v-list-item-avatar rounded>
@@ -5534,9 +5534,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-card-actions>
 					</v-card>
 					</v-col>
-					<v-col cols="6">
-						
-					<v-col>
 				</v-row>
 				<v-row>
 					<v-col cols="12" class="mt-3">
@@ -5547,7 +5544,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-row>
 				</v-card-text>
 			</v-card>
-			<v-card class="elevation-1 ma-4" v-show="route == 'subscriptions'" v-if="role == 'administrator'">
+			<v-card class="elevation-1 rounded-lg ma-4 py-1" v-show="route == 'subscriptions'" v-if="role == 'administrator'">
 				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ subscriptions.length }} subscriptions</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5598,7 +5595,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-subheader>{{ revenue_estimated_total() }}</v-subheader>
 					<div id="plan_chart_transactions"></div>
 			</v-card>
-			<v-card v-if="route == 'accounts'" class="elevation-1 ma-4">
+			<v-card v-if="route == 'accounts'" class="elevation-1 rounded-lg ma-4 py-1">
 			<v-sheet v-show="dialog_account.step == 1">
 				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ accounts.length }} accounts</v-toolbar-title>
@@ -6004,7 +6001,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-sheet>
 			</v-card>
-			<v-card v-if="route == 'users'" class="elevation-1 ma-4">
+			<v-card v-if="route == 'users'" class="elevation-1 rounded-lg ma-4 py-1">
 				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ users.length }} users</v-toolbar-title>
 					<v-spacer></v-spacer>
