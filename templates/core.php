@@ -2359,6 +2359,11 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-alert>
 				</v-card>
 				</div>
+				<v-card-text>
+				<v-toolbar dense elevation="0" flat class="mb-3">
+					<v-spacer></v-spacer>
+					<v-text-field class="mx-4" v-model="search" @input="filterSites" autofocus label="Search" clearable light hide-details append-icon="mdi-magnify" style="max-width:300px;"></v-text-field>	
+				</v-toolbar>
 				<v-data-table
 					v-model="sites_selected"
 					:headers="[
@@ -2379,16 +2384,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
 					v-if="toggle_site"
 				>
-				<template v-slot:top>
-				<v-card-text>
-				<v-row>
-					<v-col></v-col>
-					<v-col cols="12" md="4">
-						<v-text-field class="mx-4" v-model="search" @input="filterSites" autofocus label="Search" clearable light hide-details append-icon="search"></v-text-field>	
-					</v-col>
-				</v-row>
-				</v-card-text>
-				</template>
 				<template v-slot:body="{ items }">
 					<tbody>
 					<tr v-for="item in items" :key="item.site_id" @click="goToPath( `/sites/${item.site_id}` )" style="cursor:pointer;">
@@ -2649,7 +2644,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										<v-list-item-title>Mailgun Logs</v-list-item-title>
 									</v-list-item-content>
 									<v-list-item-icon>
-										<v-icon>email</v-icon>
+										<v-icon>mdi-email</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
 								</v-list>
