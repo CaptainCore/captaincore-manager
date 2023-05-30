@@ -1928,7 +1928,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-dialog>
 			<v-container fluid v-show="loading_page != true" style="padding:0px;">
-			<v-card tile flat v-show="route == 'login'" class="mt-11">
+			<v-card tile flat v-if="route == 'login'" class="mt-11" color="transparent">
 				<v-card flat style="max-width:960px;margin: auto;margin-bottom:30px" v-if="fetchInvite.account">
 				<v-alert text type="info" style="border-radius: 4px;" elevation="2" dense color="primary" dark>
 					To accept invitation either <strong>create new account</strong> or <strong>login</strong> to an existing account.
