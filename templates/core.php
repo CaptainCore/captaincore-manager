@@ -545,7 +545,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<td><v-text-field v-model="tracker.domain" label="Domain" hide-details></v-text-field></td>
 					<td><v-text-field v-model="tracker.code" label="Code" hide-details></v-text-field></td>
 					<td>
-						<v-icon small @click="deleteFathomItem(tracker)">delete</v-icon>
+						<v-icon @click="deleteFathomItem(tracker)">mdi-delete</v-icon>
 					</td>
 				</tr>
 				</table>
@@ -560,7 +560,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<td><v-text-field v-model="tracker.domain" label="Domain" hide-details></v-text-field></td>
 					<td><v-text-field v-model="tracker.code" label="Code" hide-details></v-text-field></td>
 					<td>
-						<v-icon small @click="deleteFathomLiteItem(tracker)">delete</v-icon>
+						<v-icon @click="deleteFathomLiteItem(tracker)">mdi-delete</v-icon>
 					</td>
 				</tr>
 				</table>
@@ -982,7 +982,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-select>
 						</td>
 						<td class="justify-center layout px-0">
-							<v-icon small @click="deleteItem(item)">delete</v-icon>
+							<v-icon small @click="deleteItem(item)">mdi-delete</v-icon>
 						</td>
 					</tr>
 					<tr>
@@ -9029,7 +9029,7 @@ new Vue({
 						},
 						type: "line",
 						height: 270,
-						colors: [ this.configurations.colors.accent, this.configurations.colors.primary ],
+						colors: [ this.configurations.colors.secondary, this.configurations.colors.primary ],
 						axisOptions: {
 							xAxisMode: "tick",
 							xIsSeries: true
