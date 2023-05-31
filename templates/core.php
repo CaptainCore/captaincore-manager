@@ -657,7 +657,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card tile>
 			<v-toolbar flat>
 				<v-btn icon @click.native="dialog_edit_account.show = false">
-					<v-icon>close</v-icon>
+					<v-icon>mdi-close</v-icon>
 				</v-btn>
 				<v-toolbar-title>Edit Account</v-toolbar-title>
 				<v-spacer></v-spacer>
