@@ -3904,7 +3904,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									<span>Preload based on Production</span>
 								</v-tooltip>
 							</v-toolbar>
-							<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required hint="Should match included domain. Example: sitename.kinsta.cloud" persistent-hint></v-text-field>
+							<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required hint="Server IP address or server host" persistent-hint></v-text-field>
 							<v-text-field label="Home Directory" :value="key.home_directory" @change.native="key.home_directory = $event.target.value" required></v-text-field>
 							<v-layout>
 								<v-flex xs6 class="mr-1"><v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field></v-flex>
