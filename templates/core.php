@@ -7930,7 +7930,7 @@ new Vue({
 						return
 					}
 					if ( response.data.includes("http") ) {
-						window.open( response.data );
+						window.open( response.data.trim() );
 						this.jobs.filter(job => job.job_id == job_id)[0].status = "done";
 					} else {
 						this.jobs.filter(job => job.job_id == job_id)[0].status = "error";
