@@ -7562,7 +7562,6 @@ new Vue({
 			}
 		},
 		goToPath( href ) {
-			console.log( "goToPath: " + href )
 			this.updateRoute( href )
 			path = this.configurations.path.endsWith('/') ? this.configurations.path.slice(0,-1) : this.configurations.path
 			window.history.pushState( {}, this.routes[ href ], window.location.origin + path + href )
@@ -7597,7 +7596,7 @@ new Vue({
 				})
 				.then( response => {
 					if ( typeof response.data.errors === 'undefined' && typeof response.data.info === 'undefined' ) {
-						window.location = "/account"
+						window.location = window.location.origin + this.configurations.path
 						return
 					}
 					this.login.errors = response.data.errors
@@ -7613,7 +7612,7 @@ new Vue({
 				command: "signOut" 
 			})
 			.then( response => {
-				window.location = this.configurations.path + "/login"
+				window.location = window.location.origin + this.configurations.path + 'login'
 				this.route = "login"
 				this.wp_nonce = "";
 			})
@@ -8621,7 +8620,7 @@ new Vue({
 						this.fetchDomain( domain )
 					}
 					setTimeout(this.fetchMissing, 4000)
-				});
+				})
 		},
 		fetchAllUsers() {
 			axios.get(
@@ -10550,7 +10549,6 @@ new Vue({
 				.then( response => {
 					this.copyText( response.data[0].ssh )
 				});
-			
 		},
 		fetchPHPmyadmin(){
 			site_id = this.dialog_site.site.site_id
@@ -13187,7 +13185,7 @@ new Vue({
 				this.page = 1;
 		}
 	}
-});
+})
 
 </script>
 <?php if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
