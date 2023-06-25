@@ -37,10 +37,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <body>
 <div id="app" v-cloak>
 	<v-app :style="{backgroundColor: $vuetify.theme.themes.light.accent}">
-	  <v-app-bar color="accent" dense app flat style="left:0px" class="pt-2">
-	 	 <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none" v-show="route != 'login' || route != 'connect'"></v-app-bar-nav-icon>
+	  <v-app-bar color="accent" dense app flat style="left:0px" class="pt-2 pr-2">
+	 	 <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none" v-show="route != 'login' || route != 'welcome' || route != 'connect'"></v-app-bar-nav-icon>
 			<v-list flat color="accent">
-		 	<v-list-item :href="configurations.path" @click.prevent="goToPath( '/' )" style="padding:0px;" flat class="not-active">
+		 	<v-list-item :href="configurations.path" @click.prevent="goToPath( '/' )" flat class="not-active pl-0">
 			 	<v-img :src="configurations.logo" contain :max-width="configurations.logo_width == '' ? 32 : configurations.logo_width" v-if="configurations.logo" class="mr-4"></v-img>
 				 {{ configurations.name }}
 			</v-list-item>
