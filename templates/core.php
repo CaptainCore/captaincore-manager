@@ -12022,6 +12022,8 @@ new Vue({
 					this.snackbar.message = description
 					this.snackbar.show = true
 					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data
+					// Reset all file selections
+					this.dialog_site.environment_selected.backups.forEach( backup => backup.tree = [] )
 			});
 		},
 		searchQuicksave() {
