@@ -12003,7 +12003,7 @@ new Vue({
 			
 			description = "Generating downloadable zip for " + backup_tree.map( item => item.count ).reduce((a, b) => a + b, 0) + " items. Will send an email when ready."
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: [], "command": "downloadBackup"})
+			this.jobs.push({"job_id": job_id,"description": description, "status": "done", stream: [], "command": "downloadBackup"})
 
 			var data = {
 				'action': 'captaincore_install',
@@ -12022,7 +12022,6 @@ new Vue({
 					this.snackbar.message = description
 					this.snackbar.show = true
 					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data
-					this.runCommand( response.data );
 			});
 		},
 		searchQuicksave() {
@@ -12809,15 +12808,6 @@ new Vue({
 				
 				if ( job.command == "syncSite" ) {
 					self.fetchSiteInfo( job.site_id )
-				}
-
-				if ( job.command == "downloadBackup" ) {
-					maybe_url = job.stream[last_output_index - 1];
-					if ( maybe_url.includes("http") ) {
-						window.open( maybe_url );
-						self.snackbar.message = "Downloading zip."
-						self.snackbar.show = true
-					}
 				}
 
 				if ( job.command == "scanErrors" ) {
