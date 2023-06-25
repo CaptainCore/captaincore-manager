@@ -3888,7 +3888,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-layout>
 						<v-layout class="mt-5">
 							<v-flex class="mx-2" xs6 v-for="(key, index) in dialog_new_site.environments" :key="key.index">
-							<v-toolbar flat dense>
+							<v-toolbar flat dense color="accent">
 								<div>{{ key.environment }} Environment</div>
 								<v-spacer></v-spacer>
 								<v-tooltip top v-if="key.environment == 'Staging'">
@@ -4076,7 +4076,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-layout>
 					<v-layout class="mt-5">
 						<v-flex class="mx-2" xs6 v-for="(key, index) in dialog_edit_site.site.environments" :key="key.index">
-							<v-toolbar flat dense>
+							<v-toolbar flat dense color="accent">
 								<div>{{ key.environment }} Environment</div>
 								<v-spacer></v-spacer>
 								<v-tooltip top v-if="key.environment == 'Staging'">
