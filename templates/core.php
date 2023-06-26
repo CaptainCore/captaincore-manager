@@ -3094,7 +3094,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							{{ item.roles.split(",").join(" ") }}
 						</template>
 						<template v-slot:item.actions="{ item }">
-                    <v-btn small rounded @click="magicLoginSite(dialog_site.site.site_id, item.user_login)" class="my-2">Login as</v-btn>
+                    <v-btn small rounded @click="magicLoginSite(dialog_site.site.site_id, item)" class="my-2">Login as</v-btn>
                     <v-btn icon small class="my-2" @click="deleteUserDialog( item.user_login, dialog_site.site.site_id)">
 							<v-icon color="pink">mdi-delete</v-icon>
 						</v-btn>
@@ -7904,17 +7904,15 @@ new Vue({
 		removeFromBulk( site_id ) {
 			this.sites_selected = this.sites_selected.filter(site => site.site_id != site_id);
 		},
-		magicLoginSite( site_id, username ) {
+		magicLoginSite( site_id, user ) {
 			// Adds new job
 			job_id = Math.round((new Date()).getTime());
 			environment = this.dialog_site.environment_selected.environment.toLowerCase()
 			description = "Magic login to " + this.dialog_site.environment_selected.home_url
 			endpoint = `/wp-json/captaincore/v1/sites/${site_id}/${environment}/magiclogin`
-			console.log( username )
-			console.log( typeof username )
-			if ( typeof username != "undefined" ) {
-				description = `Login as ${username} to ${this.dialog_site.environment_selected.home_url}`
-				endpoint = `/wp-json/captaincore/v1/sites/${site_id}/${environment}/magiclogin/${username}`
+			if ( typeof user != "undefined" ) {
+				description = `Login as ${user.user_login} to ${this.dialog_site.environment_selected.home_url}`
+				endpoint = `/wp-json/captaincore/v1/sites/${site_id}/${environment}/magiclogin/${user.ID}`
 			}
 			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command":"login"});
 

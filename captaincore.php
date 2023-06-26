@@ -1972,10 +1972,14 @@ function captaincore_site_phpmyadmin_func( $request ) {
 function captaincore_site_magiclogin_func( $request ) {
 	$site_id     = $request['id'];
 	$environment = $request['environment'];
-	$login       = $request['login'];
 
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$user_id     = $request['user_id'];
+	if ( ! empty( $user_id ) ) {
+		$login = get_user_by( 'ID', $user_id )->user_login;
 	}
 
 	$environment_id = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment );
@@ -2005,7 +2009,7 @@ function captaincore_site_magiclogin_func( $request ) {
 		// Select random WordPress admin
 		if ( empty( $login ) ) { 
 			foreach ( $users as $user ) {
-				if ( strpos( $user->roles, 'administrator') !== false ) {
+				if ( strpos( $user->roles, 'administrator' ) !== false ) {
 					$login = $user->user_login;
 					break;
 				}
@@ -2022,7 +2026,7 @@ function captaincore_site_magiclogin_func( $request ) {
 		"sslverify" => false,
 	];
 	$response  = wp_remote_post( "{$environment->home_url}/wp-admin/admin-ajax.php?action=captaincore_quick_login", $args );
-	$login_url = $response["body"];
+	$login_url = trim( $response["body"] );
 	return $login_url;
 }
 
