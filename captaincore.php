@@ -1971,27 +1971,35 @@ function captaincore_site_phpmyadmin_func( $request ) {
 
 function captaincore_site_magiclogin_func( $request ) {
 	$site_id     = $request['id'];
+	$user_id     = $request['user_id'];
 	$environment = $request['environment'];
 
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
-	$user_id     = $request['user_id'];
-	if ( ! empty( $user_id ) ) {
-		$login = get_user_by( 'ID', $user_id )->user_login;
-	}
-
 	$environment_id = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment );
 	$environment    = ( new CaptainCore\Environments )->get( $environment_id );
 	$current_email  = ( new CaptainCore\User )->fetch()["email"];
+	$users          = json_decode( $environment->users );
 
+	// Match user by ID
+	if ( ! empty( $user_id ) ) {
+		foreach ( $users as $user ) {
+			if ( strpos( $user->roles, 'administrator') !== false && $user->ID == $user_id ) {
+				$login = $user->user_login;
+				break;
+			}
+		}
+	}
+	
 	// Attempt to match current user to WordPress user
-	$users = json_decode( $environment->users );
-	foreach ( $users as $user ) {
-		if ( strpos( $user->roles, 'administrator') !== false && $user->user_email == $current_email ) {
-			$user_login = $user->user_login;
-			break;
+	if ( empty( $login ) ) {
+		foreach ( $users as $user ) {
+			if ( strpos( $user->roles, 'administrator') !== false && $user->user_email == $current_email ) {
+				$login = $user->user_login;
+				break;
+			}
 		}
 	}
 
