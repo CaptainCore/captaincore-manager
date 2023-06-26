@@ -2512,7 +2512,7 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 	register_rest_route(
-		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/magiclogin/(?P<login>[a-zA-Z0-9 -\@.]+)', [
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/magiclogin/(?P<user_id>[\d]+)', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_magiclogin_func',
 			'show_in_index' => false
