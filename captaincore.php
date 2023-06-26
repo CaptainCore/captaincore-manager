@@ -1986,7 +1986,7 @@ function captaincore_site_magiclogin_func( $request ) {
 	// Match user by ID
 	if ( ! empty( $user_id ) ) {
 		foreach ( $users as $user ) {
-			if ( strpos( $user->roles, 'administrator') !== false && $user->ID == $user_id ) {
+			if ( $user->ID == $user_id ) {
 				$login = $user->user_login;
 				break;
 			}
@@ -1996,7 +1996,7 @@ function captaincore_site_magiclogin_func( $request ) {
 	// Attempt to match current user to WordPress user
 	if ( empty( $login ) ) {
 		foreach ( $users as $user ) {
-			if ( strpos( $user->roles, 'administrator') !== false && $user->user_email == $current_email ) {
+			if ( strpos( $user->roles, 'administrator' ) !== false && $user->user_email == $current_email ) {
 				$login = $user->user_login;
 				break;
 			}
@@ -2024,6 +2024,7 @@ function captaincore_site_magiclogin_func( $request ) {
 			}
 		}
 	}
+
 	$args     = [
 		"body" => json_encode( [
 				"command"    => "login",
