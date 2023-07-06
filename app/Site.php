@@ -745,7 +745,11 @@ class Site {
         $account_ids[] = $site->customer_id;
         $account_ids   = array_filter( array_unique( $account_ids ) );
         foreach ( $account_ids as $account_id ) {
-            $accounts[] = ( new Accounts )->get( $account_id );
+            $account    = ( new Accounts )->get( $account_id );
+            $accounts[] = (object) [ 
+                "account_id" => $account->account_id,
+                "name"       => $account->name,
+            ];
         }
         return $accounts;
     }
