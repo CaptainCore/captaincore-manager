@@ -348,6 +348,19 @@ class User {
             $available_gateways = WC()->payment_gateways->get_available_payment_gateways();
             $payment_method     = isset( $available_gateways[ 'stripe' ] ) ? $available_gateways[ 'stripe' ] : false;
             $order              = wc_get_order( $invoice_id );
+
+            if ( ! empty( $source_object->error ) && $source_object->error->code == "resource_missing" ) {
+
+                do_action( 'wc_gateway_stripe_process_payment_error', $source_object->error, $order );
+    
+                $order->update_status( 'failed' );
+    
+                return [
+                    'result'   => 'fail',
+                    'redirect' => '',
+                ];
+            }
+
             $order->set_payment_method( 'stripe' );
             $payment_method->save_source_to_order( $order, $prepared_source );
             $intent = $payment_method->create_intent( $order, $prepared_source );
