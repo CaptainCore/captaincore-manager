@@ -5494,6 +5494,7 @@ function captaincore_install_action_callback() {
 	$value        = $_POST['value'];
 	$version      = $_POST['version'];
 	$commit       = $_POST['commit'];
+	$hash         = $_POST['hash'];
 	$arguments    = $_POST['arguments'];
 	$filters      = $_POST['filters'];
 	$addon_type   = $_POST['addon_type'];
@@ -5735,7 +5736,7 @@ function captaincore_install_action_callback() {
 
 	if ( $cmd == 'quicksave_file_restore' ) {
 		$run_in_background = true;
-		$command           = "quicksave rollback $site $commit --version=$version --file=$value";
+		$command           = "quicksave rollback $site $hash --version=this --file=$value";
 	}
 
 	// Disable https when debug enabled
