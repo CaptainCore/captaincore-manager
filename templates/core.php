@@ -11508,7 +11508,8 @@ new Vue({
 					interval = i.text
 				}
 			})
-			should_proceed = confirm( `Update plan '${this.dialog_customer_modify_plan.subscription.name}' to ${this.dialog_customer_modify_plan.subscription.plan.name} and ${interval}?`);
+			should_proceed = confirm( `Update account (${this.dialog_customer_modify_plan.subscription.name}) to ${this.dialog_customer_modify_plan.subscription.plan.name} and ${interval}?`);
+			description = `Your account (${this.dialog_customer_modify_plan.subscription.name}) will be changed to ${this.dialog_customer_modify_plan.subscription.plan.name} and ${interval.toLowerCase()} here shortly.`
 			if ( ! should_proceed ) {
 				return;
 			}
