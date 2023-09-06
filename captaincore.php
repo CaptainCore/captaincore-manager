@@ -5506,7 +5506,7 @@ function captaincore_install_action_callback() {
 	$background   = $_POST['background'];
 	$job_id       = $_POST['job_id'];
 	$notes        = $_POST['notes'];
-	$fetch        = ( new CaptainCore\Site( $post_id ) )->get();
+	$fetch        = (object) ( new CaptainCore\Site( $post_id ) )->get();
 	$site         = $fetch->site;
 	$provider     = $fetch->provider;
 	$domain       = $fetch->name;
