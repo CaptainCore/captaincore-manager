@@ -3332,6 +3332,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							:active.sync="item.active"
 							activatable
 							selectable
+							selected-color="primary"
 							selection-type="leaf"
 							item-key="path"
 							open-on-click
