@@ -7033,7 +7033,7 @@ new Vue({
 			return units[ interval ]
 		},
 		safeUrl: function( url ) {
-			return url.replace('#', '%23' )
+			return url.replaceAll( '#', '%23' )
 		},
 		timeago: function( timestamp ){
 			return moment.utc( timestamp, "YYYY-MM-DD hh:mm:ss").fromNow();
