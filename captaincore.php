@@ -4356,9 +4356,15 @@ function captaincore_local_action_callback() {
 							 get_option( 'woocommerce_store_address_2' ). "<br /> 
 							 $store_city, $store_state $store_postcode<br />
 							 $store_country";
-		$customer_address  = "{$customer_billing->address_1}<br>
-							  {$customer_billing->address_2}<br>
-							  {$customer_billing->city}, {$customer_billing->state} {$customer_billing->postcode}<br>
+		$customer_address  = "<strong>{$account->name}</strong><br />";
+		if ( ! empty( $customer_billing->first_name ) || ! empty( $customer_billing->last_name ) ) {
+			$customer_address .= "{$customer_billing->first_name} {$customer_billing->last_name}<br>";
+		}
+		$customer_address .= "{$customer_billing->address_1}<br>";
+		if ( ! empty( $customer_billing->address_2 ) ) {
+			$customer_address .= "{$customer_billing->address_2}<br>";
+		}
+		$customer_address .= "{$customer_billing->city}, {$customer_billing->state} {$customer_billing->postcode}<br>
 							  {$customer_country}";
 		$created_at = $order_data->date_created->date( 'M jS Y' );
 		$html2pdf   = new \Spipu\Html2Pdf\Html2Pdf('P', 'A4', 'en');
@@ -4381,7 +4387,6 @@ th, td { padding: 4px 16px; border-bottom: 1px solid #59595b; vertical-align: to
    		{$store_address}
    </td>
    <td style="width:50%;">
-		<strong>{$account->name}</strong><br />
 		{$customer_address}
    </td>
 </tr>
