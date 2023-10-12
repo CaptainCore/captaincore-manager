@@ -680,6 +680,13 @@ class Account {
         wp_mail( $recipient, $subject, $message, $headers );
     }
 
+    public function get_billing() {
+        $account  = ( new Accounts )->get( $this->account_id );
+        $plan     = json_decode( $account->plan );
+        $customer = new \WC_Customer( $plan->billing_user_id );
+        return (object) $customer->get_billing();
+    }
+
     public function auto_switch_plan() {
         $configurations = ( new Configurations )->get();
         $account        = ( new Accounts )->get( $this->account_id );

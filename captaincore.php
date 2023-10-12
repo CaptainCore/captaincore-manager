@@ -4341,8 +4341,25 @@ function captaincore_local_action_callback() {
 			"total"          => number_format( (float) $order_data->total, 2, '.', '' ),
 		];
 
-		$account_id = $order->get_meta( 'captaincore_account_id' );
-		$account    = ( new CaptainCore\Accounts )->get( $account_id );
+		$account_id        = $order->get_meta( 'captaincore_account_id' );
+		$account           = ( new CaptainCore\Accounts )->get( $account_id );
+		$customer_billing  = ( new CaptainCore\Account( $account_id ) )->get_billing();
+		$customer_country  = WC()->countries->countries[ $customer_billing->country ];
+		$store_raw_country = get_option( 'woocommerce_default_country' );
+		$split_country     = explode( ":", $store_raw_country );
+		$store_country     = WC()->countries->countries[ $split_country[0] ];
+		$store_state       = $split_country[1];
+		$store_city        = get_option( 'woocommerce_store_city' );
+		$store_postcode    = get_option( 'woocommerce_store_postcode' );
+		$store_address     = get_option( 'blogname' ) . "<br />" . 
+							 get_option( 'woocommerce_store_address' ) . "<br/ >" . 
+							 get_option( 'woocommerce_store_address_2' ). "<br /> 
+							 $store_city, $store_state $store_postcode<br />
+							 $store_country";
+		$customer_address  = "{$customer_billing->address_1}<br>
+							  {$customer_billing->address_2}<br>
+							  {$customer_billing->city}, {$customer_billing->state} {$customer_billing->postcode}<br>
+							  {$customer_country}";
 		$created_at = $order_data->date_created->date( 'M jS Y' );
 		$html2pdf   = new \Spipu\Html2Pdf\Html2Pdf('P', 'A4', 'en');
 		$html       = <<<HEREDOC
@@ -4354,9 +4371,22 @@ hr { height:1px;border-width:0;color: #59595b;background-color: #59595b; }
 th, td { padding: 4px 16px; border-bottom: 1px solid #59595b; vertical-align: top; }
 </style>
 <page backtop="20px" backbottom="20px" backleft="20px" backright="20px">
-<p><img width="224" src="https://anchor.host/wp-content/uploads/2015/01/logo.png" alt="Anchor Hosting"></p>
+<p><img width="155" src="https://anchor.host/wp-content/uploads/2015/01/logo.png" alt="Anchor Hosting"></p>
 <hr />
-<h2>Invoice #{$order_data->id} for {$account->name}</h2>
+<h2>Invoice #{$order_data->id}</h2>
+<table cellspacing="0" style="width:100%;">
+<tbody>
+<tr>
+   <td style="width:50%;">
+   		{$store_address}
+   </td>
+   <td style="width:50%;">
+		<strong>{$account->name}</strong><br />
+		{$customer_address}
+   </td>
+</tr>
+</tbody>
+</table>
 <p>Order was created on <strong>{$created_at}</strong> and is currently <strong>{$response->status} payment</strong>.</p>
 <br /><br />
 <table cellspacing="0">
