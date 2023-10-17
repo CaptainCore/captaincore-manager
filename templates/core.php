@@ -5775,19 +5775,17 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-data-table>
 					</v-tab-item>
 					<v-tab-item :transition="false" :reverse-transition="false">
-							<v-data-table
-								v-show="typeof dialog_account.records.domains == 'object' && dialog_account.records.domains.length > 0"
-								:headers='[{"text":"Domain","value":"name"}]'
-								:items="dialog_account.records.domains"
-								:items-per-page="-1"
-								hide-default-footer
-							>
-							<template v-slot:item.actions="{ item }">
-							<v-btn text icon color="pink" v-if=>
-								<v-icon>mdi-delete</v-icon>
-							</v-btn>
-							</template>
-							</v-data-table>
+						<v-data-table
+							v-show="typeof dialog_account.records.domains == 'object' && dialog_account.records.domains.length > 0"
+							:headers='[{"text":"Domain","value":"name"},{"text":"","value":"actions","width":"110px",sortable:false}]'
+							:items="dialog_account.records.domains"
+							:items-per-page="-1"
+							hide-default-footer
+						>
+						<template v-slot:item.actions="{ item }">
+							<v-btn small @click="goToPath( `/domains/${item.domain_id}` )">View</v-btn>
+						</template>
+						</v-data-table>
 					</v-tab-item>
 					<v-tab-item :transition="false" :reverse-transition="false">
 						<v-data-table
