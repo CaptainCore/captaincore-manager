@@ -1152,7 +1152,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</tr>
 					</template>
 				</v-data-table>
-
+				<v-spacer class="my-5"></v-spacer>
+				<v-flex xs12>
+					<v-text-field :value="dialog_account.records.account.defaults.kinsta_emails" @change.native="dialog_account.records.account.defaults.kinsta_emails = $event.target.value" label="Kinsta Email Invite(s)" persistent-hint hint="Separated by a comma. Example: name@example.com, support@example.com. When Kinsta site is created from this panel, will share MyKinsta access with these email addresses."></v-text-field>
+				</v-flex>
 				<v-flex xs12 text-right>
 					<v-btn color="primary" dark @click="saveDefaults()">
 						Save Changes

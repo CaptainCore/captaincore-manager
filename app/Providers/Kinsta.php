@@ -521,5 +521,195 @@ class Kinsta {
 
     }
 
+    public static function company_users() {
+        $company_id = self::credentials("company_id");
+        $token      = self::credentials("token");
+        $data  = [ 
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'X-Token'      => "$token",
+            ],
+            'body'        => json_encode( [
+                "variables" => [
+                    "idCompany" => $company_id
+                ],
+                "operationName" => "CompanyUsers",
+                "query"         => 'fragment CompanyCapabilities on Capability {
+                    idCompany
+                    idSite
+                    idRole
+                    type
+                    permissions {
+                      type
+                      key
+                      idCompany
+                      idSite
+                      __typename
+                    }
+                    __typename
+                  }
+                  
+                  fragment CompanyUsersItem on CompanyUser {
+                    id
+                    user {
+                      id
+                      email
+                      image
+                      fullName
+                      has2FA
+                      isKinstaStaff
+                      intercomConversationUrl(cacheControl: CACHED_OR_RENEW)
+                      intercomConversationUrl_liveKeys(cacheControl: CACHED_OR_RENEW)
+                      __typename
+                    }
+                    capabilities {
+                      ...CompanyCapabilities
+                      __typename
+                    }
+                    capabilities_liveKeys
+                    __typename
+                  }
+                  
+                  fragment PendingInvitationsFragment on Invitation {
+                    id
+                    email
+                    capabilities {
+                      ...CompanyCapabilities
+                      __typename
+                    }
+                    __typename
+                  }
+                  
+                  fragment CompanyUser on User {
+                    id
+                    email
+                    image
+                    fullName
+                    isKinstaStaff
+                    __typename
+                  }
+                  
+                  query CompanyUsers($idCompany: String!) {
+                    company(id: $idCompany) {
+                      id
+                      name
+                      sites {
+                        id
+                        displayName
+                        __typename
+                      }
+                      users {
+                        ...CompanyUsersItem
+                        __typename
+                      }
+                      pendingInvitations {
+                        ...PendingInvitationsFragment
+                        __typename
+                      }
+                      sites_liveKeys
+                      users_liveKeys
+                      pendingInvitations_liveKeys
+                      __typename
+                    }
+                    user {
+                      ...CompanyUser
+                      __typename
+                    }
+                    user_liveKeys
+                  }'
+            ] )
+        ];
+
+        $response = wp_remote_post( "https://my.kinsta.com/gateway", $data );
+
+        if ( is_wp_error( $response ) ) {
+            return false;
+        }
+
+        $response = json_decode( $response['body'] );
+
+        if ( ! empty ( $response->errors ) ) {
+            return false;
+        }
+
+        if ( empty ( $response->data ) ) {
+            return false;
+        }
+        
+        return $response->data;
+
+    }
+
+    public static function invite_emails( $emails = [], $idSite = "" ) {
+        $users      = self::company_users();
+        $token      = self::credentials("token");
+        $company_id = self::credentials("company_id");
+        $user_ids   = [];
+        $response   = [];
+        foreach ( $users->company->users as $user ) {
+            if ( in_array( $user->user->email, $emails ) ) {
+                $capabilities = [];
+                $user_ids[]   = $user->user->id;
+                foreach( $user->capabilities as $site ) {
+                    $capabilities[] = (object) [
+                        "idSite" => $site->idSite,
+                        "idRole" => $site->idRole
+                    ];
+                }
+
+                // Add new site to shared access
+                $capabilities[] = (object) [
+                    "idSite" => $idSite,
+                    "idRole" => "site-admin"
+                ];
+                $response[]   = "Found {$user->user->email} adding the following capabilities";
+                $response[]   = $capabilities;
+            }
+        }
+
+        $data  = [ 
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'X-Token'      => "$token",
+            ],
+            'body'        => json_encode( [
+                "variables" => [ 
+                    "idCompany" => $company_id,
+                    "idUsers"   => $user_ids,
+                    "siteCapabilities" => $capabilities
+                ],
+                "operationName" => "EditSiteCapabilities",
+                "query"         => 'mutation EditSiteCapabilities($idCompany: String!, $idUsers: [String!]!, $siteCapabilities: [SiteCapability!]!) {
+                    idAction: editSiteCapabilities(
+                      idCompany: $idCompany
+                      idUsers: $idUsers
+                      siteCapabilities: $siteCapabilities
+                      runActionInBackground: true
+                    )
+                  }'
+            ] )
+        ];
+
+        $response = wp_remote_post( "https://my.kinsta.com/gateway", $data );
+
+        if ( is_wp_error( $response ) ) {
+            return false;
+        }
+
+        $response = json_decode( $response['body'] );
+
+        if ( ! empty ( $response->errors ) ) {
+            return false;
+        }
+
+        if ( empty ( $response->idAction ) ) {
+            return false;
+        }
+        
+        return $response->data->idAction;
+    }
+
 }
 
