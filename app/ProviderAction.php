@@ -103,6 +103,20 @@ class ProviderAction {
             ] );
 
             $site_id = $response["site_id"];
+            $account = ( new Account ( $current_action->account_id, true ) );
+            $account->calculate_totals();
+
+            $account_ids = ( new Site( $site_id ) )->shared_with_ids();
+            foreach( $account_ids as $account_id ) {
+                // Shared MyKinsta access if needed
+                $account       = ( new Account( $account_id, true ) );
+                $kinsta_emails = empty( $account->get()->defaults->kinsta_emails ) ? "" : $account->get()->defaults->kinsta_emails;
+                if ( ! empty( $kinsta_emails ) ) {
+                    $kinsta_emails = array_map( 'trim', explode( ",", $kinsta_emails ) );
+                    \CaptainCore\Providers\Kinsta::invite_emails( $kinsta_emails, $result->idSite );
+                }
+            }
+
             captaincore_run_background_command( "site sync $site_id --update-extras" );
         }
 
