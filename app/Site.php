@@ -754,6 +754,10 @@ class Site {
         return $accounts;
     }
 
+    public function shared_with_ids() {
+        return array_column( self::shared_with(), 'account_id' );
+    }
+
     public function fetch() {
         $site                   = ( new Sites )->get( $this->site_id );
         $details                = json_decode( $site->details );
