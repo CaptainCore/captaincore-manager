@@ -157,7 +157,7 @@ class Domains extends DB {
 		// If empty then update transient with large remote call
 		if ( empty( $response ) ) {
 
-            $response = wp_remote_post( "https://my.kinsta.com/gateway", $data );
+            $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
 
             if ( is_wp_error( $response ) ) {
                 $to      = get_option('admin_email');
@@ -229,7 +229,7 @@ class Domains extends DB {
             ] )
         ];
 
-        $response = wp_remote_post( "https://my.kinsta.com/gateway", $data );
+        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
 
         if ( is_wp_error( $response ) ) {
             $to      = get_option('admin_email');
