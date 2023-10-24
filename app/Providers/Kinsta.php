@@ -54,7 +54,7 @@ class Kinsta {
             ] )
         ];
 
-        $response = wp_remote_post( "https://my.kinsta.com/gateway", $data );
+        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
 
         if ( is_wp_error( $response ) ) {
             return false;
@@ -218,7 +218,7 @@ class Kinsta {
             ] )
         ];
 
-        $response = wp_remote_post( "https://my.kinsta.com/gateway", $data );
+        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
 
         if ( is_wp_error( $response ) ) {
             return false;
@@ -276,7 +276,7 @@ class Kinsta {
             ] )
         ];
 
-        $response = wp_remote_post( "https://my.kinsta.com/gateway", $data );
+        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
         $response = json_decode( $response['body'] );
 
         foreach( $response->data->site->environments as $env ) {
@@ -302,7 +302,7 @@ class Kinsta {
             ] )
         ];
 
-        $response = wp_remote_post( "https://my.kinsta.com/gateway", $data );
+        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
         $response = json_decode( $response['body'] );
 
         $data  = [ 
@@ -332,7 +332,7 @@ class Kinsta {
             ] )
         ];
 
-        $response = wp_remote_post( "https://my.kinsta.com/gateway", $data );
+        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
         $response = json_decode( $response['body'] );
 
         return $response->data->site->environment->sftpPassword;
@@ -376,7 +376,7 @@ class Kinsta {
             ] )
         ];
 
-        $response = wp_remote_post( "https://my.kinsta.com/gateway", $data );
+        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
         $response = json_decode( $response['body'] );
 
         foreach( $response->data->site->environments as $env ) {
@@ -469,7 +469,7 @@ class Kinsta {
             ] )
         ];
 
-        $response = wp_remote_post( "https://my.kinsta.com/gateway", $data );
+        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
 
         $response = json_decode( $response['body'] );
 
@@ -501,7 +501,7 @@ class Kinsta {
             ] )
         ];
 
-        $response = wp_remote_post( "https://my.kinsta.com/gateway", $data );
+        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
 
         if ( is_wp_error( $response ) ) {
             return false;
@@ -621,7 +621,7 @@ class Kinsta {
             ] )
         ];
 
-        $response = wp_remote_post( "https://my.kinsta.com/gateway", $data );
+        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
 
         if ( is_wp_error( $response ) ) {
             return false;
@@ -692,7 +692,7 @@ class Kinsta {
             ] )
         ];
 
-        $response = wp_remote_post( "https://my.kinsta.com/gateway", $data );
+        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
 
         if ( is_wp_error( $response ) ) {
             return false;
