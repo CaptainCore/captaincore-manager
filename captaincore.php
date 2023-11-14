@@ -1281,26 +1281,26 @@ function captaincore_missive_func( WP_REST_Request $request ) {
 function captaincore_api_func( WP_REST_Request $request ) {
 
 	$post          = json_decode( file_get_contents( 'php://input' ) );
-	$archive       = $post->archive;
-	$command       = $post->command;
-	$environment   = $post->environment;
-	$storage       = $post->storage;
-	$visits        = $post->visits;
-	$email         = $post->email;
-	$server        = $post->server;
-	$core          = $post->core;
-	$plugins       = $post->plugins;
-	$themes        = $post->themes;
-	$users         = $post->users;
-	$fathom        = $post->fathom;
-	$home_url      = $post->home_url;
-	$subsite_count = $post->subsite_count;
-	$git_status    = trim( base64_decode( $post->git_status ) );
-	$token_key     = $post->token_key;
-	$data          = $post->data;
-	$site_id       = $post->site_id;
-	$user_id       = $post->user_id;
-	$notes         = $post->notes;
+	$archive       = empty( $post->archive ) ? "" : $post->archive;
+	$command       = empty( $post->command ) ? "" : $post->command;
+	$environment   = empty( $post->environment ) ? "" : $post->environment;
+	$storage       = empty( $post->storage ) ? "" : $post->storage;
+	$visits        = empty( $post->visits ) ? "" : $post->visits;
+	$email         = empty( $post->email ) ? "" : $post->email;
+	$server        = empty( $post->server ) ? "" : $post->server;
+	$core          = empty( $post->core ) ? "" : $post->core;
+	$plugins       = empty( $post->plugins ) ? "" : $post->plugins;
+	$themes        = empty( $post->themes ) ? "" : $post->themes;
+	$users         = empty( $post->users ) ? "" : $post->users;
+	$fathom        = empty( $post->fathom ) ? "" : $post->fathom;
+	$home_url      = empty( $post->home_url ) ? "" : $post->home_url;
+	$subsite_count = empty( $post->subsite_count ) ? "" : $post->subsite_count;
+	$git_status    = empty( $post->git_status ) ? "" : trim( base64_decode( $post->git_status ) );
+	$token_key     = empty( $post->token_key ) ? "" : $post->token_key;
+	$data          = empty( $post->data ) ? "" : $post->data;
+	$site_id       = empty( $post->site_id ) ? "" : $post->site_id;
+	$user_id       = empty( $post->user_id ) ? "" : $post->user_id;
+	$notes         = empty( $post->notes ) ? "" : $post->notes;
 
 	// Error if token not valid
 	if ( $post->token != CAPTAINCORE_CLI_TOKEN ) {
