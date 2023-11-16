@@ -32,7 +32,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.5.95/css/materialdesignicons.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.1/dist/frappe-charts.min.css" rel="stylesheet">
 <?php } ?>
-<link href="<?php echo $plugin_url; ?>public/css/captaincore-public-2023-05-25.css" rel="stylesheet">
+<link href="<?php echo $plugin_url; ?>public/css/captaincore-public-2023-11-16.css" rel="stylesheet">
 </head>
 <body>
 <div id="app" v-cloak>
