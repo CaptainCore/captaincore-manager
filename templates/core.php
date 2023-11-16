@@ -3503,7 +3503,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						{{ item.plugin_count }} plugins
 					</template>
 					<template v-slot:expanded-item="{ item }">
-						<td colspan="7" style="position: relative;background: #eee; padding:0px">
+						<td colspan="7" style="position: relative;background: #eee; padding:0px" v-if="item.loading">
+							<span><v-progress-circular indeterminate color="primary" class="mx-16 mt-3 mb-7" size="24"></v-progress-circular></span>
+						</td>
+						<td colspan="7" style="position: relative;background: #eee; padding:0px" v-else>
 						<v-toolbar color="dark primary" dark dense light class="elevation-1 mx-16 mt-3" style="border-radius: 4px 4px 0 0;">
 							<v-toolbar-title class="body-2">{{ item.status }}</v-toolbar-title>
 							<v-spacer></v-spacer>
@@ -12064,6 +12067,7 @@ new Vue({
 					quicksave_selected[0].themes_deleted = response.data.themes_deleted
 					quicksave_selected[0].core = response.data.core
 					quicksave_selected[0].status = response.data.status
+					quicksave_selected[0].loading = false
 				});
 		},
 		getBackup( backup_id, site_id ) {
