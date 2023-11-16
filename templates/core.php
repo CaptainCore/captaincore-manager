@@ -3503,8 +3503,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						{{ item.plugin_count }} plugins
 					</template>
 					<template v-slot:expanded-item="{ item }">
-						<td colspan="7" style="position: relative;background: #fff; padding:0px">
-						<v-toolbar color="dark primary" dark dense light class="elevation-0">
+						<td colspan="7" style="position: relative;background: #eee; padding:0px">
+						<v-toolbar color="dark primary" dark dense light class="elevation-1 mx-16 mt-3" style="border-radius: 4px 4px 0 0;">
 							<v-toolbar-title class="body-2">{{ item.status }}</v-toolbar-title>
 							<v-spacer></v-spacer>
 							<v-toolbar-items>
@@ -3512,7 +3512,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
                        			<v-btn text small @click="viewQuicksavesChanges( dialog_site.site.site_id, item)">View Changes <v-icon>mdi-file-compare</v-icon></v-btn>
 							</v-toolbar-items>
 						</v-toolbar>
-						<v-card flat v-show="item.view_changes == true" style="table-layout:fixed;margin:0px;overflow: scroll;padding: 0px;position: absolute;background-color: #fff;width: 100%;left: 0;top: 100%;height: 100%;z-index: 3;transform: translateY(-100%);">
+						<v-dialog fullscreen hide-overlay v-model="item.view_changes == true">
+							<v-card>
 							<v-toolbar color="dark primary" dark dense light>
 								<v-btn icon dark @click.native="item.view_changes = false">
 									<v-icon>mdi-close</v-icon>
@@ -3520,45 +3521,46 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-toolbar-title>List of changes</v-toolbar-title>
 								<v-spacer></v-spacer>
 							</v-toolbar>
-								<v-card-text>
-									<v-card-title>
-										Files
-									</v-card-title>
-									<v-spacer></v-spacer>
-									<v-layout>
-										<v-flex sx12 sm9>
-										</v-flex sx12 sm3>
-										<v-flex>
-										<v-text-field
-											v-model="item.search"
-											ref="quicksave_search"
-											@input="filterFiles( dialog_site.site.site_id, item.hash)"
-											append-icon="mdi-magnify"
-											label="Search"
-											single-line
-											hide-details
-										></v-text-field>
-										</v-flex>
-									</v-layout>
-									<v-data-table 
-										:headers='[{"text":"File","value":"file"}]'
-										:items="item.filtered_files"
-										:loading="item.loading"
-										:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
-									>
-										<template v-slot:body="{ items }">
-										<tbody>
-											<tr v-for="i in items">
-												<td>
-													<a class="v-menu__activator" @click="QuicksaveFileDiff(item.hash, i)">{{ i }}</a>
-												</td>
-											</tr>
-										</tbody>
-										</template>
-									</v-data-table>
-								</v-card-text>
+							<v-card-text>
+								<v-card-title>
+									Files
+								</v-card-title>
+								<v-spacer></v-spacer>
+								<v-layout>
+									<v-flex sx12 sm9>
+									</v-flex sx12 sm3>
+									<v-flex>
+									<v-text-field
+										v-model="item.search"
+										ref="quicksave_search"
+										@input="filterFiles( dialog_site.site.site_id, item.hash)"
+										append-icon="mdi-magnify"
+										label="Search"
+										single-line
+										hide-details
+									></v-text-field>
+									</v-flex>
+								</v-layout>
+								<v-data-table 
+									:headers='[{"text":"File","value":"file"}]'
+									:items="item.filtered_files"
+									:loading="item.loading"
+									:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
+								>
+									<template v-slot:body="{ items }">
+									<tbody>
+										<tr v-for="i in items">
+											<td>
+												<a class="v-menu__activator" @click="QuicksaveFileDiff(item.hash, i)">{{ i }}</a>
+											</td>
+										</tr>
+									</tbody>
+									</template>
+								</v-data-table>
+							</v-card-text>
 							</v-card>
-						<v-card flat>
+						</v-dialog>
+						<v-card class="elevation-1 mx-16 mb-7">
 							<v-data-table
 								:headers='[{"text":"Theme","value":"title"},{"text":"Version","value":"version","width":"150px"},{"text":"Status","value":"status","width":"150px"},{"text":"","value":"rollback","width":"150px"}]'
 								:items="item.themes"
