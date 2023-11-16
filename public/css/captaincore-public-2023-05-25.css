@@ -1598,10 +1598,6 @@ pre {
 	padding-left: 0.3em;
 }
 
-.v-dialog__content--active {
-	z-index: 999999 !important;
-}
-
 li.v-expansion-panel__container {
     list-style: none;
 }
@@ -1878,4 +1874,13 @@ div.update_logs table tr td:nth-child(1) {
 
 body .v-navigation-drawer__border {
   width: 0px;
+}
+
+.theme--light.v-data-table>.v-data-table__wrapper>table>tbody>tr.v-data-table__expanded.v-data-table__expanded__row>td:last-child, 
+.theme--light.v-data-table>.v-data-table__wrapper>table>tbody>tr.v-data-table__expanded.v-data-table__expanded__row>td:not(.v-data-table__mobile-row), 
+.theme--light.v-data-table>.v-data-table__wrapper>table>tbody>tr.v-data-table__expanded.v-data-table__expanded__row>th:last-child, 
+.theme--light.v-data-table>.v-data-table__wrapper>table>tbody>tr.v-data-table__expanded.v-data-table__expanded__row>th:not(.v-data-table__mobile-row), 
+.theme--light.v-data-table>.v-data-table__wrapper>table>thead>tr.v-data-table__expanded.v-data-table__expanded__row>th {
+  border-bottom: 0;
+  background: #eee;
 }
