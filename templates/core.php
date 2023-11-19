@@ -232,7 +232,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
       </template>
 	  </v-navigation-drawer>
 	  <v-main>
-		<v-container fluid style="padding:0px">
+		<v-container fluid class="px-0 pb-15">
 		<v-dialog v-model="new_plugin.show" max-width="900px">
 		<v-card tile>
 		<v-toolbar flat dark color="primary">
