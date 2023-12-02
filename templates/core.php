@@ -1982,7 +1982,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-text-field label="Password" v-model="login.user_password" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']"></v-text-field>
 						</v-col>
 						<v-col cols="12" v-show="login.info || login.errors == 'One time password is invalid.'">
-							<v-text-field label="One Time Code" v-model="login.tfa_code" required :disabled="login.loading"></v-text-field>
+							<v-label>One Time Password</v-label>
+							<v-otp-input length="6" type="number" v-model="login.tfa_code" required :disabled="login.loading"></v-otp-input>
 						</v-col>
 						<v-col cols="12">
 							<v-alert text type="error" v-show="login.errors">{{ login.errors }}</v-alert>
@@ -2033,7 +2034,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-text-field label="Password" v-model="login.user_password" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']"></v-text-field>
 						</v-col>
 						<v-col cols="12" v-show="login.info || login.errors == 'One time password is invalid.'">
-							<v-text-field label="One Time Code" v-model="login.tfa_code" required :disabled="login.loading"></v-text-field>
+							<v-label>One Time Password</v-label>
+							<v-otp-input length="6" type="number" label="One time password" v-model="login.tfa_code" required :disabled="login.loading"></v-otp-input>
 						</v-col>
 						<v-col cols="12">
 							<v-alert text type="error" v-show="login.errors">{{ login.errors }}</v-alert>
