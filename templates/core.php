@@ -2507,6 +2507,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-tab :key="1" href="#tab-Site-Management">
 						Site Management <v-icon size="24">mdi-cog</v-icon>
 					</v-tab>
+					<v-tab :key="2" href="#tab-Modules" v-show="role == 'administrator'">
+						<span class="d-none d-sm-block">Modules</span> <v-icon size="24">mdi-toggle-switch-outline</v-icon>
+					</v-tab>
 					<v-tab :key="8" href="#tab-Timeline" ripple @click="fetchTimeline( dialog_site.site.site_id )">
 						Timeline <v-icon size="24">mdi-timeline-text-outline</v-icon>
 					</v-tab>
