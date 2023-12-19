@@ -324,7 +324,7 @@ class DB {
     static function fetch_sites_matching( $arguments = [] ) {
         global $wpdb;
         $arguments = (object) $arguments;
-        $filter    = (object) $arguments->filter;
+        $filter    = empty( $arguments->filter ) ? "" : (object) $arguments->filter;
         $table     = self::_table();
         $provider_conditions    = "";
         $environment_conditions = "";
@@ -342,21 +342,24 @@ class DB {
             $field_selection = ", {$table}.{$arguments->field}";
         }
 
-        if ( count( $arguments->targets ) > 0 ) {
+        if ( ! empty( $arguments->targets ) && count( $arguments->targets ) > 0 ) {
+            if ( in_array("updates-on", $arguments->targets ) ) {
+                $target_conditions[] = "AND {$wpdb->prefix}captaincore_environments.updates_enabled = '1'";
+            }
+            if ( in_array("updates-off", $arguments->targets ) ) {
+                $target_conditions[] = "AND {$wpdb->prefix}captaincore_environments.updates_enabled = '0'";
+            }
+            if ( in_array("offload-on", $arguments->targets ) ) {
+                $target_conditions[] = "AND {$wpdb->prefix}captaincore_environments.offload_enabled = '1'";
+            }
+            if ( in_array("offload-off", $arguments->targets ) ) {
+                $target_conditions[] = "AND {$wpdb->prefix}captaincore_environments.offload_enabled = '0'";
+            }
+            if ( in_array("monitor-on", $arguments->targets ) ) {
+                $target_conditions[] = "AND {$wpdb->prefix}captaincore_environments.monitor_enabled = '1'";
+            }
+        }
 
-        }
-        if ( in_array("updates-on", $arguments->targets ) ) {
-            $target_conditions[] = "AND {$wpdb->prefix}captaincore_environments.updates_enabled = '1'";
-        }
-        if ( in_array("updates-off", $arguments->targets ) ) {
-            $target_conditions[] = "AND {$wpdb->prefix}captaincore_environments.updates_enabled = '0'";
-        }
-        if ( in_array("offload-on", $arguments->targets ) ) {
-            $target_conditions[] = "AND {$wpdb->prefix}captaincore_environments.offload_enabled = '1'";
-        }
-        if ( in_array("offload-off", $arguments->targets ) ) {
-            $target_conditions[] = "AND {$wpdb->prefix}captaincore_environments.offload_enabled = '0'";
-        }
         $target_conditions = implode( " ", $target_conditions );
 
         if ( ! empty( $arguments->field ) && in_array( $arguments->field, $environment_columns ) ) {
@@ -540,7 +543,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "29";
+        $required_version = (int) "30";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -629,6 +632,7 @@ class DB {
             users longtext,
             details longtext,
             screenshot boolean,
+            monitor_enabled boolean,
             updates_enabled boolean,
             updates_exclude_themes longtext,
             updates_exclude_plugins longtext,
