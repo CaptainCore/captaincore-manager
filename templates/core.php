@@ -3762,6 +3762,22 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		 </v-container>
 		</v-card>
 	  </v-tab-item>
+	  <v-tab-item :key="2" value="tab-Modules" :transition="false" :reverse-transition="false" v-if="role == 'administrator'">
+		<v-toolbar dense light flat>
+			<v-toolbar-title>Modules</v-toolbar-title>
+			<v-spacer></v-spacer>
+		</v-toolbar>
+		<v-card flat>
+			<v-card-text>
+			<div v-for="environment in dialog_site.site.environments">
+				{{ environment.environment }}
+				<v-row class="ma-2">
+					<v-col cols="6" md="3"><v-switch label="Up-time Monitor" inset class="mx-3" :false-value="0" :true-value="1" v-model="environment.monitor_enabled" @change="updateMonitor( environment )"></v-switch></v-col>
+				</v-row>
+			</div>
+			</v-card-text>
+		</v-card>
+		</v-tab-item>
 		<v-tab-item :key="8" value="tab-Timeline" :transition="false" :reverse-transition="false">
 			<v-toolbar dense light flat>
 				<v-toolbar-title>Timeline</v-toolbar-title>
@@ -12961,6 +12977,21 @@ new Vue({
 			this.dialog_update_settings.environment.updates_enabled = environment.updates_enabled
 			this.dialog_update_settings.themes = environment.themes
 			this.dialog_update_settings.plugins = environment.plugins
+		},
+		updateMonitor( environment ) {
+			status = "OFF"
+			if ( environment.monitor_enabled == 1 ) {
+				status = "ON"
+			}
+			axios.post( `/wp-json/captaincore/v1/sites/${environment.site_id}/${environment.environment.toLowerCase()}/monitor`, {
+				monitor: environment.monitor_enabled
+			}, {
+				headers: { 'X-WP-Nonce':this.wp_nonce }
+			})
+			.then( response => {
+				this.snackbar.message = `Toggling monitor for ${environment.home_url} ${status}.`
+				this.snackbar.show = true
+			})
 		},
 		saveUpdateSettings() {
 			this.dialog_update_settings.loading = true;
