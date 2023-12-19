@@ -387,6 +387,7 @@ class Site {
                 'offload_secret_key'      => $environment['offload_secret_key'],
                 'offload_bucket'          => $environment['offload_bucket'],
                 'offload_path'            => $environment['offload_path'],
+                'monitor_enabled'         => $environment['monitor_enabled'],
                 'updates_enabled'         => $environment['updates_enabled'],
                 'updates_exclude_plugins' => $environment['updates_exclude_plugins'],
                 'updates_exclude_themes'  => $environment['updates_exclude_themes'],
