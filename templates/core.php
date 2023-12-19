@@ -3775,7 +3775,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<div v-for="environment in dialog_site.site.environments">
 				{{ environment.environment }}
 				<v-row class="ma-2">
-					<v-col cols="6" md="3"><v-switch label="Up-time Monitor" inset class="mx-3" :false-value="0" :true-value="1" v-model="environment.monitor_enabled" @change="updateMonitor( environment )"></v-switch></v-col>
+					<v-col cols="6" md="3"><v-switch v-model="environment.monitor_enabled" label="Up-time Monitor" inset class="mx-3" false-value="0" true-value="1" @change="updateMonitor( environment )"></v-switch></v-col>
 				</v-row>
 			</div>
 			</v-card-text>
