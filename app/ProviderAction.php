@@ -97,7 +97,9 @@ class ProviderAction {
                         "port"              => $site->environment->activeContainer->lxdSshPort,
                         "home_directory"    => "/www/{$site->path}/public",
                         "database_username" => $site->dbName,
-                        "environment"       => "Production"
+                        "environment"       => "Production",
+                        "monitor_enabled"   => "1",
+                        "updates_enabled"   => "1"
                     ]
                 ],
             ] );
