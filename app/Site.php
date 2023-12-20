@@ -249,6 +249,7 @@ class Site {
                 'offload_secret_key'      => $environment->offload_secret_key,
                 'offload_bucket'          => $environment->offload_bucket,
                 'offload_path'            => $environment->offload_path,
+                'monitor_enabled'         => $environment->monitor_enabled,
                 'updates_enabled'         => $environment->updates_enabled,
                 'updates_exclude_plugins' => $environment->updates_exclude_plugins,
                 'updates_exclude_themes'  => $environment->updates_exclude_themes,
@@ -361,6 +362,7 @@ class Site {
                     'offload_secret_key'      => $environment['offload_secret_key'],
                     'offload_bucket'          => $environment['offload_bucket'],
                     'offload_path'            => $environment['offload_path'],
+                    'monitor_enabled'         => $environment['monitor_enabled'],
                     'updates_enabled'         => $environment['updates_enabled'],
                     'updates_exclude_plugins' => $environment['updates_exclude_plugins'],
                     'updates_exclude_themes'  => $environment['updates_exclude_themes'],
@@ -879,6 +881,7 @@ class Site {
             $environment->quicksave_panel  = [];
             $environment->quicksave_search = '';
             $environment->capture_pages    = json_decode ( $environment->capture_pages );
+            $environment->monitor_enabled  = intval( $environment->monitor_enabled );
             $environment->updates_enabled  = intval( $environment->updates_enabled );
             $environment->updates_exclude_plugins = explode(",", $environment->updates_exclude_plugins );
             $environment->updates_exclude_themes = explode(",", $environment->updates_exclude_themes );
