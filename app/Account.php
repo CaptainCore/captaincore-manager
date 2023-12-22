@@ -422,6 +422,14 @@ class Account {
             $account = ( new Accounts )->get( $this->account_id );
             $plan    = json_decode( $account->plan );
         }
+        $units          = [];
+	    $units[1]       = "monthly";
+	    $units[3]       = "quarterly";
+		$units[6]       = "biannually";
+		$units[12]      = "yearly";
+        if ( ! empty( $plan->interval ) ) {
+            $plan_interval  = $units[ $plan->interval ];
+        } 
         $customer       = new \WC_Customer( $plan->billing_user_id );
         $address        = $customer->get_billing();
         $order          = wc_create_order(  [ 'customer_id' => $plan->billing_user_id ] );
@@ -439,7 +447,11 @@ class Account {
 
         $order->get_items()[ $line_item_id ]->set_subtotal( $plan->price );
         $order->get_items()[ $line_item_id ]->set_total( $plan->price );
-        $order->get_items()[ $line_item_id ]->add_meta_data( "Details", $plan->name . "\n\n" . $site_names );
+        if ( ! empty( $plan->interval ) ) {
+            $order->get_items()[ $line_item_id ]->add_meta_data( "Details", "{$plan->name} - $plan_interval\n\n" . $site_names );
+        } else {
+            $order->get_items()[ $line_item_id ]->add_meta_data( "Details", "{$plan->name}\n\n" . $site_names );
+        }
         $order->get_items()[ $line_item_id ]->save_meta_data();
         $order->get_items()[ $line_item_id ]->save();
         $calculated_total = $plan->price;
