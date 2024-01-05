@@ -680,4 +680,39 @@ class User {
         return $verify;
     }
 
+    public function profile() {
+
+        $user = wp_get_current_user();
+
+        if ( self::is_admin() ) {
+            $role = "administrator";
+        } else {
+            $role = "user";
+        }
+
+        if ( defined( 'CAPTAINCORE_CUSTOM_DOMAIN' ) ) {
+            $account_portals = ( new AccountPortals )->where( [ 'domain' => CAPTAINCORE_CUSTOM_DOMAIN ] );
+            foreach( $account_portals as $account_portal ) {
+                $account = ( new Account( $account_portal->account_id, true ) )->fetch();
+                if ( $account["owner"] ) {
+                    $role = "owner";
+                }
+
+            }
+        }
+
+        return (object) [
+            "email"        => $user->user_email,
+            "login"        => $user->user_login,
+            "registered"   => strtotime( $user->user_registered ),
+            "hash"         => hash_hmac( 'sha256', $user->user_email, ( new Configurations )->get()->intercom_secret_key ),
+            "display_name" => $user->display_name,
+            "first_name"   => $user->first_name,
+            "last_name"    => $user->last_name,
+            "tfa_enabled"  => get_user_meta( $user->ID, 'captaincore_2fa_enabled', true ) ? get_user_meta( $user->ID, 'captaincore_2fa_enabled', true ) : 0,
+            "role"         => $role
+
+        ];
+    }
+
 }
