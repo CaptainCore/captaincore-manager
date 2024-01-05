@@ -2425,16 +2425,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
 					v-else
 				>
-				<template v-slot:top>
-				<v-card-text>
-				<v-row>
-					<v-col></v-col>
-					<v-col cols="12" md="4">
-						<v-text-field class="mx-4" v-model="search" @input="filterSites" autofocus label="Search" clearable light hide-details append-icon="mdi-magnify"></v-text-field>	
-					</v-col>
-				</v-row>	
-				</v-card-text>
-				</template>
 				<template v-slot:body="{ items }">
 					<tbody>
 					<tr class="v-data-table__empty-wrapper">
