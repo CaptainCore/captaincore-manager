@@ -15,7 +15,7 @@ $plugin_url = plugin_dir_url( __DIR__ );
 captaincore_header_content_extracted();
 
 // Fetch current user details
-$user = wp_get_current_user();
+$user = ( new CaptainCore\User )->profile();
 
 if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <link rel='stylesheet' id='arve-main-css' href='/wp-content/plugins/advanced-responsive-video-embedder/build/main.css' type='text/css' media='all' />
@@ -6630,8 +6630,8 @@ new Vue({
 		dialog_new_provider: { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] },
 		dialog_edit_provider: { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] },
 		dialog_configure_defaults: { show: false, loading: false },
-		dialog_domain: { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], results: [], errors: [], loading: true, saving: false, step: 1 },
-		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $user->user_email; ?>", current_user_email: "<?php echo $user->user_email; ?>", filter_toggle: true, filter_options: [] },
+		dialog_domain: { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], results: [], errors: [], loading: true, saving: false, step: 1 },
+		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $user->email; ?>", current_user_email: "<?php echo $user->email; ?>", filter_toggle: true, filter_options: [] },
 		dialog_backup_configurations: { show: false, settings: { mode: "", interval: "", active: true } },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
 		dialog_launch: { show: false, site: {}, domain: "" },
@@ -6874,15 +6874,14 @@ new Vue({
 		billing: { payment_methods: [] },
 		subscriptions: [],
 		new_payment: { card: {}, show: false, error: "" },
-		current_user_email: "<?php echo $user->user_email; ?>",
-		current_user_login: "<?php echo $user->user_login; ?>",
-		current_user_registered: "<?php echo strtotime( $user->user_registered ); ?>",
-		current_user_hash: "<?php echo hash_hmac( 'sha256', $user->user_email, ( new CaptainCore\Configurations )->get()->intercom_secret_key ) ?>",
+		current_user_email: "<?php echo $user->email; ?>",
+		current_user_login: "<?php echo $user->login; ?>",
+		current_user_registered: "<?php echo $user->registered; ?>",
+		current_user_hash: "<?php echo $user->hash; ?>",
 		current_user_display_name: "<?php echo $user->display_name; ?>",
-		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->user_email; ?>", login: "<?php echo $user->user_login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", errors: [], tfa_activate: false, tfa_enabled: <?php echo get_user_meta( $user->ID, 'captaincore_2fa_enabled', true ) ? get_user_meta( $user->ID, 'captaincore_2fa_enabled', true ) : 0; ?>, tfa_uri: "", tfa_token: "" },
+		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->email; ?>", login: "<?php echo $user->login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", errors: [], tfa_activate: false, tfa_enabled: <?php echo $user->tfa_enabled; ?>, tfa_uri: "", tfa_token: "" },
 		stats: { from_at: "<?php echo date("Y-m-d", strtotime( date("Y-m-d" ). " -12 months" ) ); ?>", to_at: "<?php echo date("Y-m-d" ); ?>", from_at_select: false, to_at_select: false, grouping: "Month" },
-		<?php if ( current_user_can( "administrator" ) ) { ?>
-		role: "administrator",
+		role: "<?php echo $user->role; ?>",
 		dialog_processes: { show: false, processes: [], conn: {}, stream: [], loading: true },
 		dialog_new_log_entry: { show: false, sites: [], site_name: "", process: "", description: "" },
 		dialog_edit_log_entry: { show: false, site_name: "", log: {} },
@@ -6890,9 +6889,11 @@ new Vue({
 		dialog_handbook: { show: false, process: {} },
 		dialog_key: { show: false, key: {} },
 		new_process: { show: false, name: "", time_estimate: "", repeat_interval: "as-needed", repeat_quantity: "", roles: "", description: "" },
-		new_key: { show: false, title: "", key: "" },
 		dialog_edit_process: { show: false, process: {} },
 		process_roles: <?php echo ( ! empty( get_option('captaincore_process_roles') ) ? get_option('captaincore_process_roles') : "[]" ); ?>,
+		shared_with: [],
+		new_key: { show: false, title: "", key: "" },
+		new_key_user: { show: false, title: "", key: "" },
 		dialog_new_site: {
 			provider: "kinsta",
 			show: false,
@@ -6911,11 +6912,6 @@ new Vue({
 				{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",monitor_enabled: "0",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" }
 			],
 		},
-		shared_with: [],
-		<?php } else { ?>
-		role: "",
-		dialog_new_site: false,
-		shared_with: [],<?php } ?>
 		header_timeline: [
 			{"text":"Date","value":"date","sortable":false,"width":"220"},
 			{"text":"Done by","value":"done-by","sortable":false,"width":"135"},
