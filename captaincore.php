@@ -1992,7 +1992,7 @@ function captaincore_site_magiclogin_func( $request ) {
 			}
 		}
 	}
-	
+
 	// Attempt to match current user to WordPress user
 	if ( empty( $login ) ) {
 		foreach ( $users as $user ) {
@@ -2011,6 +2011,18 @@ function captaincore_site_magiclogin_func( $request ) {
 			if ( strpos( $user->roles, 'administrator') !== false && $user_domain == $current_user_domain ) {
 				$login = $user->user_login;
 				break;
+			}
+		}
+
+		// Select random WordPress admin with same first name
+		if ( empty( $login ) ) {
+			$current_email_name = array_shift(explode('@', $current_email));
+			foreach ( $users as $user ) {
+				$user_email_name = array_shift(explode('@', $user->user_email));
+				if ( strpos( $user->roles, 'administrator' ) !== false && $user_email_name == $current_email_name ) {
+					$login = $user->user_login;
+					break;
+				}
 			}
 		}
 
