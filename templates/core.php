@@ -2367,6 +2367,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card-text>
 				<v-toolbar dense elevation="0" flat class="mb-3">
 					<v-spacer></v-spacer>
+					<v-btn depressed small @click="filterUnassigned()" v-if="role == 'administrator'">{{ unassignedSiteCount }} unassign sites</v-btn>
 					<v-text-field class="mx-4" v-model="search" @input="filterSites" autofocus label="Search" clearable light hide-details append-icon="mdi-magnify" style="max-width:300px;"></v-text-field>	
 				</v-toolbar>
 				<v-data-table
@@ -7225,9 +7226,17 @@ new Vue({
 				user_hash: this.current_user_hash
 			});
 		}
-
 	},
 	computed: {
+		unassignedSiteCount() {
+			let count = 0
+			this.sites.forEach( s => {
+				if  ( s.account_id == "" || s.account_id == "0" ) {
+					count++
+				}
+			})
+			return count
+		},
 		filteredEnvatoThemes() {
 			let themes = this.new_theme.envato.items
 			if ( this.new_theme.envato.search != "" ) {
@@ -13147,7 +13156,16 @@ new Vue({
 			if ( value ) {
 				return true
 			}
-				return false
+			return false
+		},
+		filterUnassigned() {
+			this.sites.forEach( s => {
+				if  ( s.account_id == "" || s.account_id == "0" ) {
+					s.filtered = true
+				} else {
+					s.filtered = false
+				}
+			})
 		},
 		filterSites() {
 
