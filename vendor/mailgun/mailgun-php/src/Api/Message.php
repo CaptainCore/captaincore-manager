@@ -16,6 +16,7 @@ use Mailgun\Exception\InvalidArgumentException;
 use Mailgun\Message\BatchMessage;
 use Mailgun\Model\Message\SendResponse;
 use Mailgun\Model\Message\ShowResponse;
+use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -34,6 +35,7 @@ class Message extends HttpApi
      * @see https://documentation.mailgun.com/en/latest/api-sending.html#sending
      *
      * @return SendResponse|ResponseInterface
+     * @throws \Exception|ClientExceptionInterface
      */
     public function send(string $domain, array $params)
     {
@@ -71,7 +73,7 @@ class Message extends HttpApi
      *
      * @return SendResponse|ResponseInterface
      */
-    public function sendMime(string $domain, array $recipients, string  $message, array $params)
+    public function sendMime(string $domain, array $recipients, string $message, array $params)
     {
         Assert::string($domain);
         Assert::notEmpty($domain);
@@ -164,6 +166,9 @@ class Message extends HttpApi
         foreach ($params as $key => $value) {
             // If $value is not an array we cast it to an array
             foreach ((array) $value as $subValue) {
+                if (is_int($subValue)) {
+                    $subValue = (string)$subValue;
+                }
                 $postDataMultipart[] = [
                     'name' => $key,
                     'content' => $subValue,

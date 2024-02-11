@@ -35,6 +35,15 @@ final class ShowResponse implements ApiResponse
 
     public function getWebhookUrl(): ?string
     {
-        return $this->webhook['url'] ?? null;
+        foreach ($this->getWebhookUrls() as $url) {
+            return $url;
+        }
+
+        return null;
+    }
+
+    public function getWebhookUrls(): array
+    {
+        return $this->webhook['urls'] ?? [];
     }
 }

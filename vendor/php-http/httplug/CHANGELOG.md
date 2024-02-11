@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [2.3.0] - 2022-02-21
+
+### Changed
+
+- Enabled the `$onRejected` callback of `HttpRejectedPromise` to return a promise for implementing a retry
+  mechanism [#168](https://github.com/php-http/httplug/pull/168)
+
+## [2.2.0] - 2020-07-13
+
+### Changed
+
+- Support PHP 7.1-8.0
+
 ## [2.1.0] - 2019-12-27
 
 ### Changed

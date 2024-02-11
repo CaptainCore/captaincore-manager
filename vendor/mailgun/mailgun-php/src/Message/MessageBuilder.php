@@ -24,11 +24,11 @@ use Mailgun\Message\Exceptions\TooManyRecipients;
  */
 class MessageBuilder
 {
-    const RECIPIENT_COUNT_LIMIT = 1000;
+    public const RECIPIENT_COUNT_LIMIT = 1000;
 
-    const CAMPAIGN_ID_LIMIT = 3;
+    public const CAMPAIGN_ID_LIMIT = 3;
 
-    const TAG_LIMIT = 3;
+    public const TAG_LIMIT = 3;
 
     /**
      * @var array
@@ -84,9 +84,11 @@ class MessageBuilder
     }
 
     /**
+     * @param array $variables {
+     *
      *     @var string
-     *     @var string $first
-     *     @var string $last
+     *     @var string
+     *     @var string
      * }
      */
     protected function parseAddress(string $address, array $variables): string
@@ -229,6 +231,16 @@ class MessageBuilder
         return $this;
     }
 
+    /**
+     * @param string $template Name of the Mailgun template
+     */
+    public function setTemplate(string $template): self
+    {
+        $this->message['template'] = $template;
+
+        return $this;
+    }
+
     public function addCustomHeader(string $headerName, $headerData): self
     {
         if (!preg_match('/^h:/i', $headerName)) {
@@ -270,6 +282,20 @@ class MessageBuilder
 
         $this->message['attachment'][] = [
             'filePath' => $attachmentPath,
+            'filename' => $attachmentName,
+        ];
+
+        return $this;
+    }
+
+    public function addStringAttachment(string $attachmentContent, string $attachmentName = null): self
+    {
+        if (!isset($this->message['attachment'])) {
+            $this->message['attachment'] = [];
+        }
+
+        $this->message['attachment'][] = [
+            'fileContent' => $attachmentContent,
             'filename' => $attachmentName,
         ];
 

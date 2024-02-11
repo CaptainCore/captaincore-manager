@@ -19,7 +19,7 @@ use Psr\Http\Message\ResponseInterface;
 final class HttpClientRouter implements HttpClientRouterInterface
 {
     /**
-     * @var array
+     * @var (array{matcher: RequestMatcher, client: FlexibleHttpClient})[]
      */
     private $clients = [];
 
@@ -46,6 +46,12 @@ final class HttpClientRouter implements HttpClientRouterInterface
      */
     public function addClient($client, RequestMatcher $requestMatcher): void
     {
+        if (!$client instanceof ClientInterface && !$client instanceof HttpAsyncClient) {
+            throw new \TypeError(
+                sprintf('%s::addClient(): Argument #1 ($client) must be of type %s|%s, %s given', self::class, ClientInterface::class, HttpAsyncClient::class, get_debug_type($client))
+            );
+        }
+
         $this->clients[] = [
             'matcher' => $requestMatcher,
             'client' => new FlexibleHttpClient($client),
@@ -54,10 +60,8 @@ final class HttpClientRouter implements HttpClientRouterInterface
 
     /**
      * Choose an HTTP client given a specific request.
-     *
-     * @return ClientInterface|HttpAsyncClient
      */
-    private function chooseHttpClient(RequestInterface $request)
+    private function chooseHttpClient(RequestInterface $request): FlexibleHttpClient
     {
         foreach ($this->clients as $client) {
             if ($client['matcher']->matches($request)) {

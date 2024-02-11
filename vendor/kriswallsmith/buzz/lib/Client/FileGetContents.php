@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Buzz\Client;
 
 use Buzz\Configuration\ParameterBag;
-use Buzz\Message\HeaderConverter;
 use Buzz\Exception\NetworkException;
+use Buzz\Message\HeaderConverter;
 use Buzz\Message\ResponseBuilder;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -22,9 +22,10 @@ class FileGetContents extends AbstractClient implements BuzzClientInterface
         $content = file_get_contents($request->getUri()->__toString(), false, $context);
         error_reporting($level);
         if (false === $content) {
-            $error = error_get_last();
-
-            throw new NetworkException($request, $error['message']);
+            if ($error = error_get_last()) {
+                throw new NetworkException($request, $error['message']);
+            }
+            throw new NetworkException($request, 'Failed to get contents from '.$request->getUri()->__toString());
         }
 
         $requestBuilder = new ResponseBuilder($this->responseFactory);

@@ -11,13 +11,14 @@ declare(strict_types=1);
 
 namespace Mailgun\Api;
 
-use Mailgun\Exception\UnknownErrorException;
-use Mailgun\Hydrator\Hydrator;
-use Mailgun\Hydrator\NoopHydrator;
 use Mailgun\Exception\HttpClientException;
 use Mailgun\Exception\HttpServerException;
+use Mailgun\Exception\UnknownErrorException;
 use Mailgun\HttpClient\RequestBuilder;
+use Mailgun\Hydrator\Hydrator;
+use Mailgun\Hydrator\NoopHydrator;
 use Psr\Http\Client as Psr18;
+use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\ResponseInterface;
 
@@ -43,7 +44,12 @@ abstract class HttpApi
      */
     protected $requestBuilder;
 
-    public function __construct(ClientInterface $httpClient, RequestBuilder $requestBuilder, Hydrator $hydrator)
+    /**
+     * @param ClientInterface $httpClient
+     * @param RequestBuilder  $requestBuilder
+     * @param Hydrator        $hydrator
+     */
+    public function __construct($httpClient, RequestBuilder $requestBuilder, Hydrator $hydrator)
     {
         $this->httpClient = $httpClient;
         $this->requestBuilder = $requestBuilder;
@@ -53,6 +59,8 @@ abstract class HttpApi
     }
 
     /**
+     * @param class-string $class
+     *
      * @return mixed|ResponseInterface
      *
      * @throws \Exception
@@ -63,7 +71,7 @@ abstract class HttpApi
             return $response;
         }
 
-        if (200 !== $response->getStatusCode() && 201 !== $response->getStatusCode()) {
+        if (!in_array($response->getStatusCode(), [200, 201, 202], true)) {
             $this->handleErrors($response);
         }
 
@@ -86,11 +94,15 @@ abstract class HttpApi
             case 402:
                 throw HttpClientException::requestFailed($response);
             case 403:
-                throw  HttpClientException::forbidden($response);
+                throw HttpClientException::forbidden($response);
             case 404:
                 throw HttpClientException::notFound($response);
+            case 409:
+                throw HttpClientException::conflict($response);
             case 413:
                 throw HttpClientException::payloadTooLarge($response);
+            case 429:
+                throw HttpClientException::tooManyRequests($response);
             case 500 <= $statusCode:
                 throw HttpServerException::serverError($statusCode);
             default:
@@ -101,9 +113,10 @@ abstract class HttpApi
     /**
      * Send a GET request with query parameters.
      *
-     * @param string $path           Request path
-     * @param array  $parameters     GET parameters
-     * @param array  $requestHeaders Request Headers
+     * @param  string                   $path           Request path
+     * @param  array                    $parameters     GET parameters
+     * @param  array                    $requestHeaders Request Headers
+     * @throws ClientExceptionInterface
      */
     protected function httpGet(string $path, array $parameters = [], array $requestHeaders = []): ResponseInterface
     {
@@ -137,9 +150,10 @@ abstract class HttpApi
     /**
      * Send a POST request with raw data.
      *
-     * @param string       $path           Request path
-     * @param array|string $body           Request body
-     * @param array        $requestHeaders Request headers
+     * @param  string                   $path           Request path
+     * @param  array|string             $body           Request body
+     * @param  array                    $requestHeaders Request headers
+     * @throws ClientExceptionInterface
      */
     protected function httpPostRaw(string $path, $body, array $requestHeaders = []): ResponseInterface
     {
@@ -157,9 +171,10 @@ abstract class HttpApi
     /**
      * Send a PUT request.
      *
-     * @param string $path           Request path
-     * @param array  $parameters     PUT parameters
-     * @param array  $requestHeaders Request headers
+     * @param  string                   $path           Request path
+     * @param  array                    $parameters     PUT parameters
+     * @param  array                    $requestHeaders Request headers
+     * @throws ClientExceptionInterface
      */
     protected function httpPut(string $path, array $parameters = [], array $requestHeaders = []): ResponseInterface
     {
@@ -177,9 +192,10 @@ abstract class HttpApi
     /**
      * Send a DELETE request.
      *
-     * @param string $path           Request path
-     * @param array  $parameters     DELETE parameters
-     * @param array  $requestHeaders Request headers
+     * @param  string                   $path           Request path
+     * @param  array                    $parameters     DELETE parameters
+     * @param  array                    $requestHeaders Request headers
+     * @throws ClientExceptionInterface
      */
     protected function httpDelete(string $path, array $parameters = [], array $requestHeaders = []): ResponseInterface
     {
