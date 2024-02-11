@@ -4730,7 +4730,7 @@ function captaincore_account_action_callback() {
 	if ( $cmd == 'addDomain' ) {
 
 		$errors = [];
-		$name   = $_POST['value'];
+		$name   = trim( $_POST['value'] );
 
 		// If results still exists then give an error
 		if ( $name == "" ) {
