@@ -7919,6 +7919,7 @@ new Vue({
 			this.sites = this.sites.sort( this.compare( key, this.sort_direction ) );
 		},
 		siteSearch(value, search, item) {
+			search = search.toLowerCase()
 			return value != null &&
 				search != null &&
 				value.toString().includes(search) || item.username.toString().includes(search)
