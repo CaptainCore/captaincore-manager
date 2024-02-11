@@ -5,13 +5,15 @@
         }
     },
     "config": {
-        "platform-check": false
+        "platform-check": false,
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
     },
     "require": {
         "mailgun/mailgun-php": "^3.0",
         "kriswallsmith/buzz": "^1.0",
         "nyholm/psr7": "^1.2",
-        "beyondcode/fathom-api": "^1.0",
         "badcow/dns": "^4.2",
         "spomky-labs/otphp": "^11.1"
     }

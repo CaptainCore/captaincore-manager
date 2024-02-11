@@ -10,8 +10,10 @@ use Psr\Http\Message\{ServerRequestInterface, StreamInterface, UploadedFileInter
  * @author Michael Dowling and contributors to guzzlehttp/psr7
  * @author Tobias Nyholm <tobias.nyholm@gmail.com>
  * @author Martijn van der Ven <martijn@vanderven.se>
+ *
+ * @final This class should never be extended. See https://github.com/Nyholm/psr7/blob/master/doc/final.md
  */
-final class ServerRequest implements ServerRequestInterface
+class ServerRequest implements ServerRequestInterface
 {
     use MessageTrait;
     use RequestTrait;
@@ -75,6 +77,9 @@ final class ServerRequest implements ServerRequestInterface
         return $this->uploadedFiles;
     }
 
+    /**
+     * @return static
+     */
     public function withUploadedFiles(array $uploadedFiles)
     {
         $new = clone $this;
@@ -88,6 +93,9 @@ final class ServerRequest implements ServerRequestInterface
         return $this->cookieParams;
     }
 
+    /**
+     * @return static
+     */
     public function withCookieParams(array $cookies)
     {
         $new = clone $this;
@@ -101,6 +109,9 @@ final class ServerRequest implements ServerRequestInterface
         return $this->queryParams;
     }
 
+    /**
+     * @return static
+     */
     public function withQueryParams(array $query)
     {
         $new = clone $this;
@@ -109,11 +120,17 @@ final class ServerRequest implements ServerRequestInterface
         return $new;
     }
 
+    /**
+     * @return array|object|null
+     */
     public function getParsedBody()
     {
         return $this->parsedBody;
     }
 
+    /**
+     * @return static
+     */
     public function withParsedBody($data)
     {
         if (!\is_array($data) && !\is_object($data) && null !== $data) {
@@ -131,6 +148,9 @@ final class ServerRequest implements ServerRequestInterface
         return $this->attributes;
     }
 
+    /**
+     * @return mixed
+     */
     public function getAttribute($attribute, $default = null)
     {
         if (false === \array_key_exists($attribute, $this->attributes)) {

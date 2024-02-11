@@ -16,12 +16,12 @@ use Psr\Http\Message\ResponseInterface;
 final class BatchResult
 {
     /**
-     * @var \SplObjectStorage
+     * @var \SplObjectStorage<RequestInterface, ResponseInterface>
      */
     private $responses;
 
     /**
-     * @var \SplObjectStorage
+     * @var \SplObjectStorage<RequestInterface, ClientExceptionInterface>
      */
     private $exceptions;
 
@@ -65,7 +65,6 @@ final class BatchResult
 
     /**
      * Returns the response for a successful request.
-     *
      *
      * @throws \UnexpectedValueException If request was not part of the batch or failed
      */
@@ -125,7 +124,6 @@ final class BatchResult
 
     /**
      * Returns the exception for a failed request.
-     *
      *
      * @throws \UnexpectedValueException If request was not part of the batch or was successful
      */

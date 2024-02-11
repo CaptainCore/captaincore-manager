@@ -78,9 +78,19 @@ final class HttpClientException extends \RuntimeException implements Exception
         return new self('The endpoint you have tried to access does not exist. Check if the domain matches the domain you have configure on Mailgun.', 404, $response);
     }
 
+    public static function conflict(ResponseInterface $response)
+    {
+        return new self('Request conflicts with current state of the target resource.', 409, $response);
+    }
+
     public static function payloadTooLarge(ResponseInterface $response)
     {
         return new self('Payload too large, your total attachment size is too big.', 413, $response);
+    }
+
+    public static function tooManyRequests(ResponseInterface $response)
+    {
+        return new self('Too many requests.', 429, $response);
     }
 
     public static function forbidden(ResponseInterface $response)
