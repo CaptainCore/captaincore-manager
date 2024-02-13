@@ -11,9 +11,7 @@
         }
     },
     "require": {
-        "mailgun/mailgun-php": "^3.0",
         "kriswallsmith/buzz": "^1.0",
-        "nyholm/psr7": "^1.2",
         "badcow/dns": "^4.2",
         "spomky-labs/otphp": "^11.1"
     }
