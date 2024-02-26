@@ -10,24 +10,6 @@ class ProcessLog {
         $this->process_log_id = $process_log_id;
     }
 
-    public function get_legacy() {
-        $post     = get_post( $this->process_log_id );
-        $role_ids = [];
-        if ( $terms   = get_the_terms( $post->ID, 'process_role' ) ) {
-            $role_ids = wp_list_pluck( $terms, 'term_id' );
-        }
-        $process = (object) [
-            'process_id'   => get_post_meta( $post->ID, 'process', true ),
-            'created_at'   => get_the_date( 'Y-m-d H:i:s', $post->ID ),
-            'user_id'      => $post->post_author,
-            'description'  => get_post_meta( $post->ID, 'description', true ),
-            'public'       => get_post_meta( $post->ID, 'public', true ),
-            'status'       => get_post_meta( $post->ID, 'status', true ),
-            'completed_at' => get_post_meta( $post->ID, 'completed', true ),
-        ];
-        return $process;
-    }
-
     public function insert_sites( $site_ids = [] ) {
         $time_now         = date( 'Y-m-d H:i:s' );
         $process_log_site = new ProcessLogSite();

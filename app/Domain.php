@@ -10,19 +10,6 @@ class Domain {
         $this->domain_id = $domain_id;
     }
 
-    public function get_legacy() {
-        $post        = get_post( $this->domain_id );
-        $arguments   = [ 'fields' => 'ids', 'post_type' => 'captcore_customer', 'posts_per_page' => '-1','meta_query'=> [['key' => 'domains', 'value'  => '"'.  $this->domain_id .'"', 'compare' => 'LIKE' ]]];
-        $account_ids = get_posts($arguments);
-        $domain = (object) [
-            'created_at'  => get_the_date( 'Y-m-d H:i:s', $post->ID ),
-            'name'        => $post->post_title,
-            'remote_id'   => get_post_meta( $post->ID, 'domain_id', true ),
-            'permissions' => $account_ids,
-        ];
-        return $domain;
-    }
-
     public function accounts() {
 
         $accountdomain = new AccountDomain();
@@ -428,9 +415,9 @@ class Domain {
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8',
-                'Cookie' => 'hoverauth=' . $auth
+                'Cookie'       => 'hoverauth=' . $auth
             ],
-            'body'        => json_encode( [ 
+            'body' => json_encode( [ 
                 "field" => "nameservers", 
                 'value' => $nameservers
             ] ), 
