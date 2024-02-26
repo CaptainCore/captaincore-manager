@@ -16,10 +16,13 @@ class Account {
     }
 
     public function get() {
+        if ( empty( $this->account_id ) ) {
+            return;
+        }
         $account = ( new Accounts )->get( $this->account_id );
-        $account->defaults = json_decode( $account->defaults );
-        $account->plan     = json_decode( $account->plan );
-        $account->metrics  = json_decode( $account->metrics );
+        $account->defaults = empty( $account->defaults ) ? (object) [] : json_decode( $account->defaults );
+        $account->plan     = empty( $account->plan ) ? (object) [] : json_decode( $account->plan );
+        $account->metrics  = empty( $account->metrics ) ? (object) [] : json_decode( $account->metrics );
         return $account;
     }
 
@@ -123,7 +126,7 @@ class Account {
     public function account() {
         $account               = ( new Accounts )->get( $this->account_id );
         $defaults              = json_decode( $account->defaults );
-        $plan                  = json_decode( $account->plan );
+        $plan                  = empty( $account->plan ) ? (object) [] : json_decode( $account->plan );
         $plan->name            = empty( $plan->name ) ? "" : $plan->name;
         $plan->addons          = empty( $plan->addons ) ? [] : $plan->addons;
         $plan->charges         = empty( $plan->charges ) ? [] : $plan->charges;
@@ -150,7 +153,9 @@ class Account {
 
     public function domains() {
         $account_ids   = self::shared_with();
-        $account_ids[] = $this->account_id;
+        if ( ! empty ( $this->account_id ) ) {
+            $account_ids[] = $this->account_id;
+        }
         $results       = ( new AccountDomain )->fetch_domains( [ "account_id" => $account_ids ] );
         return $results;
     }
@@ -385,7 +390,7 @@ class Account {
     public function calculate_usage() {
         $account  = self::get();
         $sites    = $this->billing_sites();
-        if ( empty( $account->plan ) ) {
+        if ( empty( (array) $account->plan ) ) {
             $account->plan = (object) [ "usage" => (object) [ "storage" => "", "visits" => "", "sites" => "" ] ];
         }
         $account->plan->usage->storage = array_sum ( array_column( $sites, "storage" ) );
