@@ -64,6 +64,9 @@ function captaincore_cron_run() {
 }
 add_action( 'captaincore_cron', 'captaincore_cron_run' );
 
+// Hook to run Mailgun verify at a later time
+add_action( 'schedule_mailgun_verify', '\CaptainCore\Providers\Mailgun::verify', 10, 3 );
+
 function captaincore_failed_notify( $order_id, $old_status, $new_status ){
 	echo "Woocommerce  $order_id, $old_status, $new_status ";
     if ( $new_status == 'failed' and $old_status != "failed" ){
@@ -1143,6 +1146,18 @@ function captaincore_site_backups_get_func( $request ) {
 	return $site->backup_get( $backup_id, $environment );
 }
 
+function captaincore_site_mailgun_func( $request ) {
+	$site_id = $request['id'];
+	$name    = $request['name'];
+	// pull domain from site
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+	$site    = ( new CaptainCore\Sites )->get( $site_id );
+	CaptainCore\Providers\Mailgun::setup( $site->name );
+	CaptainCore\Run::CLI( "ssh $site->site --script=deploy-mailgun -- --key=\"" . MAILGUN_API_KEY . "\" --domain=$site->name --name=\"$name\"" );
+}
+
 function captaincore_site_captures_func( $request ) {
 	$site_id     = $request['id'];
 
@@ -1259,7 +1274,14 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
-	// Custom endpoint for CaptainCore site/<id>/<environment>/captures
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/mailgun/setup', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_site_mailgun_func',
+			'show_in_index' => false
+		]
+	);
+
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/captures/new', [
 			'methods'       => 'GET',
@@ -2841,6 +2863,7 @@ function captaincore_ajax_action_callback() {
 		'updateRecipe',
 		'updateSiteAccount',
 		'requestSite',
+		'mailgun'
 	];
 
 	if ( is_array( $_POST['post_id'] ) ) {
@@ -2910,31 +2933,30 @@ function captaincore_ajax_action_callback() {
 
 	if ( $cmd == 'mailgun' ) {
 		$mailgun  = $fetch->mailgun;
+		$response             = (object) [];
+		$response->items      = [];
+		$response->pagination = [];
 		if ( isset( $_POST['page'] ) ) {
-			$response = mailgun_events( $mailgun, $_POST['page'] );
+			$domains = CaptainCore\Remote\Mailgun::page( $mailgun, $_POST['page'] );
+
 		} else {
-			$response = mailgun_events( $mailgun );
+			$domains = CaptainCore\Remote\Mailgun::get( "v3/$mailgun/events", [ "event" => "accepted OR rejected OR delivered OR failed OR complained", 'limit' => 300 ] );
+		}
+		foreach ( $domains->items as $item ) {
+			$description = $item->recipient;
+			if ( $item->message->headers->from ) {
+				$from        = $item->message->headers->from;
+				$description = "{$from} -> {$description}";
+			}
+			$response->items[] = [
+				"timestamp"   => $item->timestamp,
+				"event"       => $item->event,
+				"description" => $description,
+				"message"     => $item->message,
+			];
+			$response->pagination["next"]     = $domains->paging->next;
 		}
 		echo json_encode( $response );
-	}
-
-	if ( $cmd == 'updateCapturePages' ) {
-		$value_json = json_encode($value);
-		$time_now   = date("Y-m-d H:i:s");
-		
-		// Saves update settings for a site
-		$environment_update = [
-			'capture_pages' => $value_json,
-			'updated_at'    => $time_now,
-		];
-
-		$environment_id = ( new CaptainCore\Site( $post_id ) )->fetch_environment_id( $environment );
-		( new CaptainCore\Environments )->update( $environment_update, [ "environment_id" => $environment_id ] );
-		
-		// Remote Sync
-		$remote_command = true;
-		$command        = "site sync $post_id";
-
 	}
 
 	if ( $cmd == 'fetchLink' ) {
