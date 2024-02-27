@@ -94,14 +94,14 @@ function captaincore_missive_func( WP_REST_Request $request ) {
 	$errors     = [];
 	$missive    = json_decode( $request->get_body() );
 	$message_id = $missive->latest_message->id;
-	$message    = missive_api_get( "messages/$message_id")->messages->body;
+	$message    = CaptainCore\Remote\Missive::get( "messages/$message_id")->messages->body;
 
 	preg_match('/TXT record for (.+) in MyKinsta/', $message, $matches );
 	$domain     = $matches[1];
 	$response   = ( new CaptainCore\Domains )->add_verification_record( $domain );
 	$errors     = implode( ", ", $errors );
 
-	missive_api_post( "posts", [ "posts" => [ 
+	CaptainCore\Remote\Missive::post( "posts", [ "posts" => [ 
 		"conversation"  => $missive->conversation->id,
 		"notification"  => [ "title" => "", "body" => "" ],
 		"username"      => "CaptainCore Bot", 
