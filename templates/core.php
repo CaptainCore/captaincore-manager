@@ -11704,6 +11704,20 @@ new Vue({
 				return;
 			}
 
+			if ( site.provider == "kinsta" ) {
+				axios.post( '/wp-json/captaincore/v1/providers/kinsta/deploy-to-staging', {
+					site_id: this.dialog_site.site.site_id
+				}, {
+					headers: { 'X-WP-Nonce':this.wp_nonce }
+				})
+				.then( response => {
+					this.snackbar.message = `Deploying ${this.dialog_site.site.environments[0].home_url} to staging at Kinsta. Will notify once completed.`
+					this.snackbar.show = true
+					this.checkProviderActions()
+				});
+				return;
+			}
+
 			var data = {
 				action: 'captaincore_install',
 				post_id: site.site_id,
@@ -11737,6 +11751,20 @@ new Vue({
 			description = `Pushing '${site_name}' to production environment`
 
 			if ( ! should_proceed ) {
+				return;
+			}
+
+			if ( site.provider == "kinsta" ) {
+				axios.post( '/wp-json/captaincore/v1/providers/kinsta/deploy-to-production', {
+						site_id: this.dialog_site.site.site_id
+					}, {
+						headers: { 'X-WP-Nonce':this.wp_nonce }
+					})
+					.then( response => {
+						this.snackbar.message = `Deploying ${this.dialog_site.site.environments[1].home_url} to production at Kinsta. Will notify once completed.`
+						this.snackbar.show = true
+						this.checkProviderActions()
+					});
 				return;
 			}
 

@@ -126,21 +126,7 @@ class Kinsta {
             ] )
         ];
 
-        $response = wp_remote_post( "https://my.kinsta.com/gateway", $data );
-
-//        {"operationName":"AddSite","variables":{"displayName":"testing captaincore","installMode":"new","idCompany":"1577","region":"us-east5","isSubdomainMultisite":false,"idMigrationForm":"","adminEmail":"support@anchor.host","adminPassword":"vNgdzeCd_t&KJ^6#","adminUser":"anchorhost","isMultisite":false,"siteTitle":"CaptainCore title","woocommerce":false,"wordpressseo":false,"wpLanguage":"en_US"},"query":"mutation AddSite($displayName: String!, $region: String, $installMode: InstallMode!, $idSourceEnv: String, $idSourceSnapshot: Int, $siteTitle: String, $adminUser: String, $adminPassword: String, $adminEmail: String, $woocommerce: Boolean, $wordpressseo: Boolean, $wordpressPluginEDD: Boolean, $wpLanguage: String, $isMultisite: Boolean, $isSubdomainMultisite: Boolean, $idCompany: String!, $idMigrationForm: String) {\n  idAction: addSite(\n    displayName: $displayName\n    region: $region\n    installMode: $installMode\n    idSourceEnv: $idSourceEnv\n    idSourceSnapshot: $idSourceSnapshot\n    siteTitle: $siteTitle\n    adminUser: $adminUser\n    adminPassword: $adminPassword\n    adminEmail: $adminEmail\n    woocommerce: $woocommerce\n    wordpressseo: $wordpressseo\n    wordpressPluginEDD: $wordpressPluginEDD\n    wpLanguage: $wpLanguage\n    isMultisite: $isMultisite\n    isSubdomainMultisite: $isSubdomainMultisite\n    idCompany: $idCompany\n    idMigrationForm: $idMigrationForm\n    runActionInBackground: true\n  )\n}\n"}
-//        response is {"data":{"idAction":12765378}}
-//
-//
-//        {"operationName":"Action","variables":{"idAction":12765378},"query":"query Action($idAction: Int!) {\n  action(id: $idAction) {\n    error\n    isDone\n    __typename\n  }\n  action_liveKeys(id: $idAction)\n}\n"}
-//        response is {"data":{"action":{"error":null,"isDone":false,"__typename":"Action"},"action_liveKeys":["de16ace036c654b3428e72206641e34c946f38d19dcbb26169700b5da4e9af97"]}}
-//
-//        {"operationName":"ActionResult","variables":{"idAction":12765378},"query":"query ActionResult($idAction: Int!) {\n  action(id: $idAction) {\n    error\n    result\n    __typename\n  }\n}\n"}
-//        responsee is {"data":{"action":{"error":null,"result":{"idSite":"42dca000-feba-4bfd-9cc3-9145968cdc52","idEnv":"83e56dd5-0ee9-4590-a5a9-2a407fc25f97"},"__typename":"Action"}}}
-//
-//        {"operationName":"DeleteLiveSite","variables":{"idSite":"42dca000-feba-4bfd-9cc3-9145968cdc52"},"query":"mutation DeleteLiveSite($idSite: String!) {\n  idAction: deleteLiveSite(idSite: $idSite, runActionInBackground: true)\n}\n"}
-//        {"data":{"idAction":12766202}}
-//
+        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
 
         if ( is_wp_error( $response ) ) {
             return false;
@@ -156,6 +142,8 @@ class Kinsta {
             return false;
         }
 
+        $site->command = "new-site";
+
         self::add_action( $response->data->idAction, $site );
 
         // Track new request in the background or maybe just create the site and fill in the data after the site is created?
@@ -163,6 +151,107 @@ class Kinsta {
 
         return $response->data->idAction;
 
+    }
+
+    public static function environments( $kinsta_id ) {
+        $response = \CaptainCore\Remote\Kinsta::get( "sites/$kinsta_id/environments" );
+        return $response->site->environments;
+    }
+
+    public static function deploy_to_staging( $site_id ) {
+
+        $site         = ( new \CaptainCore\Sites )->get( $site_id );
+        if ( empty( $site->provider_id ) ) {
+            return;
+        }
+        $environments = self::environments( $site->provider_id );
+        $api_key      = self::credentials("api");
+        $data         = [
+            "tag" => "Deploy to staging from API"
+        ];
+        $environment_production_id = "";
+        $environment_staging_id    = "";
+        foreach( $environments as $environment ) {
+            if ( $environment->name == "live" ) {
+                $environment_production_id = $environment->id;
+            }
+            if ( $environment->name == "staging" ) {
+                $environment_staging_id = $environment->id;
+            }
+        }
+        $response = \CaptainCore\Remote\Kinsta::post( "sites/environments/$environment_production_id/manual-backups", $data );
+
+        if ( empty ( $response->operation_id ) ) {
+            return false;
+        }
+
+        $action = (object) [
+            "command"                   => "deploy-to-staging",
+            "step"                      => 1,
+            "message"                   => "Deploying to staging environment",
+            "kinsta_site_id"            => $site->provider_id,
+            "environment_production_id" => $environment_production_id,
+            "environment_staging_id"    => $environment_staging_id,
+        ];
+
+        self::add_action( $response->operation_id, $action );
+        return $response->operation_id;
+
+    }
+
+    public static function deploy_to_production( $site_id ) {
+        $site         = ( new \CaptainCore\Sites )->get( $site_id );
+        if ( empty( $site->provider_id ) ) {
+            return;
+        }
+        $environments = self::environments( $site->provider_id );
+        $api_key      = self::credentials("api");
+
+        $environment_production_id = "";
+        $environment_staging_id    = "";
+        foreach( $environments as $environment ) {
+            if ( $environment->name == "live" ) {
+                $environment_production_id = $environment->id;
+            }
+            if ( $environment->name == "staging" ) {
+                $environment_staging_id = $environment->id;
+            }
+        }
+        $data = [
+            "source_env_id"          => $environment_staging_id,
+            "target_env_id"          => $environment_production_id,
+            "push_db"                => true,
+            "push_files"             => true,
+            "run_search_and_replace" => true
+        ];
+        $response = \CaptainCore\Remote\Kinsta::put( "sites/{$site->provider_id}/environments", $data );
+
+        if ( empty ( $response->operation_id ) ) {
+            return false;
+        }
+
+        $action = (object) [
+            "command"                   => "deploy-to-production",
+            "message"                   => "Deploying to production environment",
+            "kinsta_site_id"            => $site->provider_id,
+        ];
+
+        self::add_action( $response->operation_id, $action );
+        return $response->operation_id;
+
+    }
+
+    public static function provider_sync() {
+        $company_id   = self::credentials("company_id");
+        $response     = \CaptainCore\Remote\Kinsta::get( "sites?company=$company_id" );
+        $sites        = ( new \CaptainCore\Sites )->where( [ "provider" => "kinsta" ] );
+        foreach( $sites as $site ) {
+            foreach( $response->company->sites as $kinsta_site ) {
+                if ( $site->site == $kinsta_site->name ) {
+                    ( new  \CaptainCore\Sites )->update( [ "provider_id" => $kinsta_site->id ], [ "site_id" => $site->site_id ] );
+                }
+            }
+        }
     }
 
     public static function actions() {
@@ -194,8 +283,27 @@ class Kinsta {
         return;
     }
 
-    public static function action_check( $provider_key = 0 ) {
-        $token           = self::credentials("token");
+    public static function action_check( $provider_action_id = 0, $return_response = false ) {
+        $provider_action = ( new \CaptainCore\ProviderActions )->get( $provider_action_id );
+        $action          = json_decode( $provider_action->action );
+        if ( $action->command == "deploy-to-staging" ) {
+            $response = \CaptainCore\Remote\Kinsta::get( "operations/{$provider_action->provider_key}" );
+            if ( $response->status == "200" ) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+        if ( $action->command == "deploy-to-production" ) {
+            $response = \CaptainCore\Remote\Kinsta::get( "operations/{$provider_action->provider_key}" );
+            if ( $response->status == "200" ) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        $token = self::credentials("token");
         $data  = [ 
             'timeout' => 45,
             'headers' => [
@@ -204,7 +312,7 @@ class Kinsta {
             ],
             'body'        => json_encode( [
                 "variables" => [ 
-                    "idAction" => (int) $provider_key
+                    "idAction" => (int) $provider_action->provider_key
                 ],
                 "operationName" => "Action",
                 "query"         => 'query Action($idAction: Int!) {
@@ -232,6 +340,10 @@ class Kinsta {
 
         if ( empty ( $response->data->action ) ) {
             return false;
+        }
+
+        if ( $return_response ) {
+            return $response;
         }
         
         return $response->data->action->isDone;

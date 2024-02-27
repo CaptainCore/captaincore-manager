@@ -590,6 +590,24 @@ function captaincore_provider_new_site_func( $request ) {
 	return ( new CaptainCore\Provider( $provider ) )->new_site( $site );
 }
 
+function captaincore_provider_deploy_to_staging_func( $request ) {
+	$site_id = $request['site_id'];
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
+	}
+	$provider = $request->get_param( "provider" );
+	return ( new CaptainCore\Provider( $provider ) )->deploy_to_staging( $site_id );
+}
+
+function captaincore_provider_deploy_to_production_func( $request ) {
+	$site_id = $request['site_id'];
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
+	}
+	$provider = $request->get_param( "provider" );
+	return ( new CaptainCore\Provider( $provider ) )->deploy_to_production( $site_id );
+}
+
 function captaincore_provider_actions_check_func( $request ) {
 	if ( ! ( new CaptainCore\User )->is_admin() ){
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
@@ -1459,6 +1477,22 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/new-site', [
 			'methods'       => 'POST',
 			'callback'      => 'captaincore_provider_new_site_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/deploy-to-staging', [
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_provider_deploy_to_staging_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/deploy-to-production', [
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_provider_deploy_to_production_func',
 			'show_in_index' => false
 		]
 	);
