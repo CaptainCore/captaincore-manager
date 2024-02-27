@@ -4362,23 +4362,26 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 												<td><v-text-field label="Name" :value="record.update.record_name" @change.native="record.update.record_name = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
 												<td class="value" v-if="record.type == 'MX'">
 													<v-layout v-for="(value, value_index) in record.update.record_value">
-														<v-flex xs3><v-text-field label="Level" :value="value.level" @change.native="value.level = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-														<v-flex xs9><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field></v-flex>
+														<v-flex xs3><v-text-field label="Priority" :value="value.priority" @change.native="value.priority = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+														<v-flex xs9><v-text-field label="Server" :value="value.server" @change.native="value.server = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field></v-flex>
 													</v-layout>
 													<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
 												</td>
-												<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'SPF'">
+												<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'CNAME' || record.type == 'SPF'">
 													<div v-for="(value, value_index) in record.update.record_value" :key="`value-${index}-${value_index}`">
-														<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field>
+														<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving" v-show="record.type != 'CNAME'"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field>
 													</div>
-													<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
+													<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving && record.type != 'CNAME'"><v-icon>mdi-plus-box</v-icon></v-btn>
+												</td>
+												<td class="value" v-else-if="record.type == 'HTTP'">
+													<v-text-field label="Value" :value="record.update.record_value.url" @change.native="record.update.record_value.url = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
 												</td>
 												<td class="value" v-else-if="record.type == 'SRV'">
 													<v-layout v-for="value in record.update.record_value">
 														<v-flex xs2><v-text-field label="Priority" :value="value.priority" @change.native="value.priority = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
 														<v-flex xs2><v-text-field label="Weight" :value="value.weight" @change.native="value.weight = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
 														<v-flex xs2><v-text-field label="Port" :value="value.port" @change.native="value.port = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-														<v-flex xs6><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+														<v-flex xs6><v-text-field label="Host" :value="value.host" @change.native="value.host = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
 													</v-layout>
 													<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
 												</td>
@@ -4392,27 +4395,30 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 												</td>
 											</template>
 											<template v-else-if="record.new">
-												<td><v-select v-model="record.type" @input="changeRecordType( index )" item-text="name" item-value="value" :items='[{"name":"A","value":"A"},{"name":"AAAA","value":"AAAA"},{"name":"ANAME","value":"ANAME"},{"name":"CNAME","value":"CNAME"},{"name":"HTTP Redirect","value":"HTTPRedirection"},{"name":"MX","value":"MX"},{"name":"SRV","value":"SRV"},{"name":"TXT","value":"TXT"}]' label="Type" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-select></td>
+												<td><v-select v-model="record.type" @input="changeRecordType( index )" item-text="name" item-value="value" :items='[{"name":"A","value":"A"},{"name":"AAAA","value":"AAAA"},{"name":"ANAME","value":"ANAME"},{"name":"CNAME","value":"CNAME"},{"name":"HTTP Redirect","value":"HTTP"},{"name":"MX","value":"MX"},{"name":"SRV","value":"SRV"},{"name":"TXT","value":"TXT"}]' label="Type" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-select></td>
 												<td><v-text-field label="Name" :value="record.update.record_name" @change.native="record.update.record_name = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
 												<td class="value" v-if="record.type == 'MX'">
 													<v-layout v-for="(value, value_index) in record.update.record_value">
-														<v-flex xs3><v-text-field label="Level" :value="value.level" @change.native="value.level = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-														<v-flex xs9><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field></v-flex>
+														<v-flex xs3><v-text-field label="Priority" :value="value.priority" @change.native="value.priority = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+														<v-flex xs9><v-text-field label="Server" :value="value.server" @change.native="value.server = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field></v-flex>
 													</v-layout>
 													<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
 												</td>
-												<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'SPF'">
+												<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'CNAME' || record.type == 'TXT' || record.type == 'SPF'">
 													<div v-for="(value, value_index) in record.update.record_value" :key="`value-${index}-${value_index}`">
-														<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field>
+														<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving" v-show="record.type != 'CNAME'"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field>
 													</div>
-													<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
+													<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving && record.type != 'CNAME'"><v-icon>mdi-plus-box</v-icon></v-btn>
+												</td>
+												<td class="value" v-else-if="record.type == 'HTTP'">
+													<v-text-field label="Value" :value="record.update.record_value.url" @change.native="record.update.record_value.url = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
 												</td>
 												<td class="value" v-else-if="record.type == 'SRV'">
 													<v-layout v-for="value in record.update.record_value">
 														<v-flex xs2><v-text-field label="Priority" :value="value.priority" @change.native="value.priority = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
 														<v-flex xs2><v-text-field label="Weight" :value="value.weight" @change.native="value.weight = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
 														<v-flex xs2><v-text-field label="Port" :value="value.port" @change.native="value.port = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-														<v-flex xs6><v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
+														<v-flex xs6><v-text-field label="Host" :value="value.host" @change.native="value.host = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
 													</v-layout>
 												</td>
 												<td class="value" v-else>
@@ -4426,10 +4432,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											<template v-else>
 												<td>{{ record.type }}</td>
 												<td class="name">{{ record.name }}</td>
-												<td class="value" v-if="record.type == 'MX'"><div v-for="value in record.value">{{ value.level }} {{ value.value }}</div></td>
-												<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'SPF'"><div v-for="value in record.value">{{ value.value }}</div></td>
-												<td class="value" v-else-if="record.type == 'SRV'"><div v-for="value in record.value">{{ value.priority }} {{ value.weight }} {{ value.port }} {{ value.value }}</div></td>
-												<td class="value" v-else>{{ record.value }}</td>
+												<td class="value" v-if="record.type == 'MX'"><div v-for="value in record.value">{{ value.priority }} {{ value.server }}</div></td>
+												<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'CNAME' || record.type == 'TXT'"><div v-for="item in record.value">{{ item.value }}</div></td>
+												<td class="value" v-else-if="record.type == 'TXT'"><div v-for="item in record.value">{{ item.value.value }}</div></td>
+												<td class="value" v-else-if="record.type == 'SRV'"><div v-for="value in record.value">{{ value.priority }} {{ value.weight }} {{ value.port }} {{ value.host }}</div></td>
+												<td class="value" v-else-if="record.type == 'HTTP'">{{ record.value.url }}</td>
+												<td class="value" v-else>{{ record.value.value }}</td>
 												<td>{{ record.ttl }}</td>
 												<td class="text-right">
 													<v-btn text small icon color="primary" class="ma-0 pa-0" @click="editRecord( record.id )" :disabled="dialog_domain.saving"><v-icon>mdi-pencil-box</v-icon></v-btn>
@@ -4452,8 +4460,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-row v-show="dialog_domain.results">
 									<v-col class="mx-3">
 										<template v-for="result in dialog_domain.results">
-											<v-alert text :value="true" type="success" v-show="typeof result.success != 'undefined'">{{ result.success }}</v-alert>
-											<v-alert text :value="true" type="error" v-show="typeof result.errors != 'undefined'">{{ result.errors }}</v-alert>
+											<v-alert text :value="true" type="success" v-show="typeof result.success != 'undefined'" v-html="result.success"></v-alert>
+											<v-alert text :value="true" type="error" v-if="typeof result.errors != 'undefined'">{{ result.errors }}</v-alert>
 										</template>
 									</v-col>
 								</v-row>
@@ -11011,18 +11019,18 @@ new Vue({
 		},
 		addRecord() {
 			timestamp = new Date().getTime();
-			this.dialog_domain.records.push({ id: "new_" + timestamp, edit: false, delete: false, new: true, ttl: "3600", type: "A", value: [{"value": ""}], update: {"record_id": "new_" + timestamp, "record_type": "A", "record_name": "", "record_value": [{"value": ""}], "record_ttl": "3600", "record_status": "new-record" } });
+			this.dialog_domain.records.push({ id: "new_" + timestamp, edit: false, delete: false, new: true, ttl: "3600", type: "A", value: [{"value": "","enabled":true}], update: {"record_id": "new_" + timestamp, "record_type": "A", "record_name": "", "record_value": [{ value: "", enabled: true }], "record_ttl": "3600", "record_status": "new-record" } });
 		},
 		addRecordValue( index ) {
 			record = this.dialog_domain.records[index];
 			if ( record.type == "A" || record.type == "AAAA" || record.type == "ANAME" || record.type == "TXT" || record.type == "SPF" ) {
-				record.update.record_value.push({ value: "" });
+				record.update.record_value.push({ value: "", enabled: true });
 			}
 			if ( record.type == "MX" ) {
-				record.update.record_value.push({ level: "", value: "" });
+				record.update.record_value.push({ priority: "", server: "", enabled: true });
 			}
 			if ( record.type == "SRV" ) {
-				record.update.record_value.push({ priority: 100, weight: 1, port: 443, value: "" });
+				record.update.record_value.push({ priority: 100, weight: 1, port: 443, host: "", enabled: true });
 			}
 		},
 		viewRecord( record_id ){
@@ -11037,17 +11045,17 @@ new Vue({
 		},
 		changeRecordType( index ) {
 			record = this.dialog_domain.records.filter( (r, i) => i == index )[0];
-			if ( record.type == "A" || record.type == "AAAA" || record.type == "ANAME" || record.type == "TXT" || record.type == "SPF" ) {
-				record.update.record_value = [{ value: "" }];
+			if ( record.type == "A" || record.type == "AAAA" || record.type == "CNAME" || record.type == "ANAME" || record.type == "TXT" || record.type == "SPF" ) {
+				record.update.record_value = [{ value: "", enabled: true }];
 			}
 			if ( record.type == "MX" ) {
-				record.update.record_value = [{ level: "", value: "" }];
+				record.update.record_value = [{ priority: "", server: "", enabled: true }];
 			}
 			if ( record.type == "SRV" ) {
-				record.update.record_value = [{ priority: 100, weight: 1, port: 443, value: "" }];
+				record.update.record_value = [{ priority: 100, weight: 1, port: 443, host: "", enabled: true }];
 			}
-			if ( record.type == "CNAME" || record.type == "HTTPRedirection" ) {
-				record.update.record_value = "";
+			if ( record.type == "HTTP" ) {
+				record.update.record_value = [{ url: "", redirectType: "301" }];
 			}
 		},
 		deleteUserValue( delete_index ) {
@@ -11181,7 +11189,7 @@ new Vue({
 				})
 		},
 		modifyDNS( domain ) {
-			this.dialog_domain = { show: false, updating_contacts: false, updating_nameservers: false, auth_code: "", fetch_auth_code: false, provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], loading: true, saving: false, step: 2 };
+			this.dialog_domain = { show: false, updating_contacts: false, updating_nameservers: false, auth_code: "", fetch_auth_code: false, provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], loading: true, saving: false, step: 2 };
 			if ( domain.remote_id == null ) {
 				this.dialog_domain.errors = [ "Domain not found." ];
 				this.dialog_domain.domain = domain;
@@ -11207,14 +11215,7 @@ new Vue({
 					}
 
 					// Prep records with 
-					response.data.forEach( r => {
-						if ( r.type == "A" || r.type == "AAAA" ) {
-							new_value = [];
-							r.value.forEach( v => {
-								new_value.push({ "value": v });
-							});
-							r.value = new_value;
-						}
+					response.data.records.forEach( r => {
 						r.update = {
 							"record_id": JSON.parse(JSON.stringify(r.id)),
 							"record_type": JSON.parse(JSON.stringify(r.type)),
@@ -11227,8 +11228,9 @@ new Vue({
 						r.delete = false;
 					});
 					timestamp = new Date().getTime();
-					response.data.push({ id: "new_" + timestamp, edit: false, delete: false, new: true, ttl: "3600", type: "A", value: [{"value": ""}], update: {"record_id": "new_" + timestamp, "record_type": "A", "record_name": "", "record_value": [{"value": ""}], "record_ttl": "3600", "record_status": "new-record" } });
-					this.dialog_domain.records = response.data;
+					response.data.records.push({ id: "new_" + timestamp, edit: false, delete: false, new: true, ttl: "3600", type: "A", value: [{"value": "","enabled":true}], update: {"record_id": "new_" + timestamp, "record_type": "A", "record_name": "", "record_value": [{"value": "","enabled":true}], "record_ttl": "3600", "record_status": "new-record" } });
+					this.dialog_domain.records = response.data.records
+					this.dialog_domain.nameservers = response.data.nameservers
 					this.dialog_domain.loading = false;
 				});
 			this.dialog_domain.domain = domain;
@@ -11277,7 +11279,7 @@ new Vue({
 			}
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					this.dialog_domain = { show: false, updating_contacts: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], loading: true, saving: false }
+					this.dialog_domain = { show: false, updating_contacts: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], loading: true, saving: false }
 					this.domains = this.domains.filter( d => d.domain_id != response.data.domain_id )
 					this.goToPath( '/domains' )
 					this.snackbar.message = response.data.message
@@ -11297,43 +11299,48 @@ new Vue({
 
 			this.dialog_domain.records.forEach( record => {
 				// Format value for API
-				if ( record.type != "CNAME" && record.type != "HTTPRedirection" ) {
+				if ( record.type != "HTTP" ) {
 					record_value = [];
 					record.update.record_value.forEach( v => {
-						if ( v.value == "" ) {
+						if ( ! v.value  ) {
 							return
 						}
-						v.value = v.value.trim();
-						record_value.push( v );
+						if ( v.value.value  ) {
+							v.value.value = v.value.value.trim()
+							record_value.push( v )
+							return
+						}
+						v.value = v.value.trim()
+						if ( record.type == "CNAME" || record.type == "ANAME" ) {
+							// Check for value ending in period. If not add one.
+							if ( v.value.substr(v.value.length - 1) != "." ) {
+								v.value = v.value + ".";
+							}
+						}
+						record_value.push( v )
 					});
-				}
-
-				if ( record.type == "CNAME" ) {
-					// Check for value ending in period. If not add one.
-					record_value = record.update.record_value.trim();
-					if ( record_value.substr(record_value.length - 1) != "." ) {
-						record_value = record_value + ".";
-					}
 				}
 
 				if ( record.type == "MX" ) {
 					// Check for value ending in period. If not add one.
 					record.update.record_value.forEach( v => {
-						v.value = v.value.trim();
-						if ( v.value.substr(v.value.length - 1) != "." ) {
-							v.value = v.value + ".";
+						v.server = v.server.trim();
+						if ( v.server.substr(v.server.length - 1) != "." ) {
+							v.server = v.server + ".";
 						}
 					})
+					record_value = record.update.record_value
 				}
 
 				if ( record.type == "SRV" ) {
 					// Check for value ending in period. If not add one.
 					record.update.record_value.forEach( v => {
-						v.value = v.value.trim();
-						if ( v.value.substr(v.value.length - 1) != "." ) {
-							v.value = v.value + ".";
+						v.host = v.host.trim();
+						if ( v.host.substr(v.host.length - 1) != "." ) {
+							v.host = v.host + ".";
 						}
 					})
+					record_value = record.update.record_value
 				}
 
 				if ( record.type == "TXT" ) {
@@ -11352,8 +11359,8 @@ new Vue({
 					})
 				}
 
-				if ( record.type == "HTTPRedirection" ) {
-					record_value = record.update.record_value.trim();
+				if ( record.type == "HTTP" ) {
+					record_value = record.update.record_value.url.trim();
 				}
 
 				// Clean out empty values
@@ -11412,47 +11419,51 @@ new Vue({
 					// self.modifyDNS( self.dialog_domain.domain );
 				})
 				.catch( error => {
-					this.snackbar.message = error;
-					this.snackbar.show = true;
-					this.dialog_domain.saving = false;
+					this.dialog_domain.saving = false
 					//self.dialog_domain.results = response.data;
 				});
 		},
 		reflectDNS() {
 			this.dialog_domain.results.forEach( result => {
 
-				if ( result.success && result.success == "Record  updated successfully" ) {
+				if ( result.record_status == "edit-record" && typeof result.errors == 'undefined' ) {
 					record = this.dialog_domain.records.filter( r => r.id == result.record_id )[0];
-					record.edit = false;
-					record.name = JSON.parse(JSON.stringify( record.update.record_name ));
-					record.value = JSON.parse(JSON.stringify( record.update.record_value ));
-					record.ttl = JSON.parse(JSON.stringify( record.update.record_ttl ));
+					record.edit = false
+					record.name = JSON.parse(JSON.stringify( record.update.record_name ))
+					record.value = JSON.parse(JSON.stringify( record.update.record_value ))
+					record.ttl = JSON.parse(JSON.stringify( record.update.record_ttl ))
+
+					result.id = JSON.parse(JSON.stringify(result.data.id))
+					result.name = JSON.parse(JSON.stringify(record.update.record_name))
+					result.type = JSON.parse(JSON.stringify(record.update.record_type))
+					result.success = `<code>${result.type.toUpperCase()}</code> record <code>${result.name}</code> updated successfully`
 				}
 
-				if ( result.success && result.success == "Record  deleted successfully" ) {
-					this.dialog_domain.records = this.dialog_domain.records.filter( record => result.record_id != record.id );
+				if ( result.record_status == "remove-record" && result.message == 'Record deleted' ) {
+					this.dialog_domain.records = this.dialog_domain.records.filter( record => record.id != result.record_id );
+					result.success = `<code>${record.type.toUpperCase()}</code> record <code>${record.name}</code> deleted successfully`;
 				}
 
 				// Add new record
-				if ( typeof result.success == 'undefined' && typeof result.errors == 'undefined' && result.id != "" ) {
+				if ( result.record_status == "new-record" && typeof result.errors == 'undefined' && result.data.id != "" ) {
 
-					result.success = "Record added successfully";
+					result.success = `<code>${result.type.toUpperCase()}</code> record <code>${result.record_name}</code> added successfully`;
 
 					// Remove existing new recording matching type, name, value and ttl.
 					this.dialog_domain.records = this.dialog_domain.records.filter( r => {
-						if ( r.update.record_status == "new-record" && r.update.record_name == result.name && r.update.record_type == result.type ) {
+						if ( r.update.record_status == "new-record" && r.update.record_name == result.record_name && r.update.record_type.toUpperCase() == result.type.toUpperCase() ) {
 							return false
 						}
 						return true
 					})
 
-					if ( result.type == "A" || result.type == "AAAA" || result.type == "SPF" ) {
+					if ( result.type == "a" || result.type == "aaaa" || result.type == "spf" ) {
 						record_value = [];
-						result.value.forEach( r => {
-							record_value.push({ value: r });
+						result.record_value.forEach( r => {
+							record_value.push({ value: r.value, enabled: true });
 						});
 					} else {
-						record_value = result.value;
+						record_value = result.record_value
 					}
 
 					result.new = false
@@ -11460,13 +11471,18 @@ new Vue({
 					result.delete = false
 					result.value = JSON.parse(JSON.stringify(record_value))
 					result.update = {
-						"record_id": JSON.parse(JSON.stringify(result.id)),
+						"record_id": JSON.parse(JSON.stringify(result.data.id)),
 						"record_type": JSON.parse(JSON.stringify(result.type)),
-						"record_name": JSON.parse(JSON.stringify(result.name)),
+						"record_name": JSON.parse(JSON.stringify(result.record_name)),
 						"record_value": JSON.parse(JSON.stringify(record_value)),
-						"record_ttl": JSON.parse(JSON.stringify(result.ttl)),
+						"record_ttl": "3600",
 						"record_status": "edit-record"
 					}
+
+					result.id = JSON.parse(JSON.stringify(result.data.id))
+					result.name = JSON.parse(JSON.stringify(result.record_name))
+					result.type = JSON.parse(JSON.stringify(result.type.toUpperCase()))
+					result.ttl = "3600"
 
 					// Add new record
 					this.dialog_domain.records.push( result );
@@ -11489,7 +11505,7 @@ new Vue({
 					});
 				}
 
-				this.dialog_domain.saving = false;
+				this.dialog_domain.saving = false
 
 			});
 		},
