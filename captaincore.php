@@ -710,13 +710,16 @@ function captaincore_dns_func( $request ) {
 	}
 	$remote_id = ( new CaptainCore\Domains )->get( $domain_id )->remote_id;
 
-	$domain    = constellix_api_get( "domains/$remote_id" );
-	$response  = constellix_api_get( "domains/$remote_id/records" );
+	$domain    = CaptainCore\Remote\Constellix::get( "domains/$remote_id" );
+	$response  = CaptainCore\Remote\Constellix::get( "domains/$remote_id/records" );
 	if ( ! $response->errors ) {
-		array_multisort( array_column( $response, 'type' ), SORT_ASC, array_column( $response, 'name' ), SORT_ASC, $response );
+		array_multisort( array_column( $response->data, 'type' ), SORT_ASC, array_column( $response->data, 'name' ), SORT_ASC, $response->data );
 	}
 
-	return $response;
+	return [ 
+		"records"     => $response->data, 
+		"nameservers" => $domain->data->nameservers 
+	];
 }
 
 function captaincore_domains_func( $request ) {
@@ -1954,8 +1957,7 @@ function captaincore_dns_action_callback() {
 
 	$domain_id      = intval( $_POST['domain_key'] );
 	$record_updates = $_POST['record_updates'];
-
-	$responses = '[';
+	$responses      = [];
 
 	foreach ( $record_updates as $record_update ) {
 
@@ -1972,95 +1974,112 @@ function captaincore_dns_action_callback() {
 				// Formats MX records into array which API can read
 				$mx_records = [];
 				foreach ( $record_value as $mx_record ) {
-					$mx_records[] = array(
-						'value'       => $mx_record['value'],
-						'level'       => $mx_record['level'],
-						'disableFlag' => false,
-					);
+					$mx_records[] = [
+						'server'   => $mx_record['server'],
+						'priority' => $mx_record['priority'],
+						'enabled'  => true,
+					];
 				}
 
-				$post = array(
-					'recordOption' => 'roundRobin',
-					'name'         => $record_name,
-					'ttl'          => $record_ttl,
-					'roundRobin'   => $mx_records,
-				);
+				$post = [
+					'name'  => $record_name,
+					'type'  => $record_type,
+					'ttl'   => $record_ttl,
+					'value' => $mx_records,
+				];
 
-			} elseif ( $record_type == 'txt' or $record_type == 'a' or $record_type == 'aname' or $record_type == 'aaaa' or $record_type == 'spf' ) {
+			} elseif ( $record_type == 'txt' or $record_type == 'a' or $record_type == 'aname' or $record_type == 'cname' or $record_type == 'aaaa' or $record_type == 'spf' ) {
 
 				// Formats A and TXT records into array which API can read
 				$records = [];
 				foreach ( $record_value as $record ) {
-					$records[] = array(
-						'value'       => stripslashes( $record['value'] ),
-						'disableFlag' => false,
-					);
+					$records[] = [
+						'value'   => stripslashes( $record['value'] ),
+						'enabled' => true,
+					];
 				}
 
-				$post = array(
-					'recordOption' => 'roundRobin',
-					'name'         => "$record_name",
-					'ttl'          => $record_ttl,
-					'roundRobin'   => $records,
-				);
+				$post = [
+					'type'  => $record_type,
+					'name'  => "$record_name",
+					'ttl'   => $record_ttl,
+					'value' => $records,
+				];
 
-			} elseif ( $record_type == 'cname' ) {
+				$record_value = $records;
 
-				$post = array(
-					'name' => $record_name,
-					'host' => $record_value,
-					'ttl'  => $record_ttl,
-				);
+			} elseif ( $record_type == 'http' ) {
 
-			} elseif ( $record_type == 'httpredirection' ) {
+				$post = [
+					'name'  => $record_name,
+					'type'  => $record_type,
+					'ttl'   => $record_ttl,
+					'value' => [
+						'hard'         => true,
+						'url'          => $record_value,
+						'redirectType' => '301',
+					],	
+				];
 
-				$post = array(
-					'name'           => $record_name,
-					'ttl'            => $record_ttl,
-					'url'            => $record_value,
-					'redirectTypeId' => '3',
-				);
+				$record_value = [
+					'hard'         => true,
+					'url'          => $record_value,
+					'redirectType' => '301',
+				];
 
 			} elseif ( $record_type == 'srv' ) {
 
 				// Formats SRV records into array which API can read
 				$srv_records = [];
 				foreach ( $record_value as $srv_record ) {
-					$srv_records[] = array(
-						'value'    => $srv_record['value'],
+					$srv_records[] = [
+						'enabled'  => true,
+						'host'     => $srv_record['host'],
 						'priority' => $srv_record['priority'],
 						'weight'   => $srv_record['weight'],
 						'port'     => $srv_record['port'],
-					);
+					];
 				}
 
-				$post = array(
-					'recordOption' => 'roundRobin',
-					'name'         => $record_name,
-					'ttl'          => $record_ttl,
-					'roundRobin'   => $srv_records,
-				);
+				$post = [
+					'type'  => $record_type,
+					'name'  => $record_name,
+					'ttl'   => $record_ttl,
+					'value' => $srv_records,
+				];
 
 			} else {
-				$post = array(
-					'recordOption' => 'roundRobin',
-					'name'         => $record_name,
-					'ttl'          => $record_ttl,
-					'roundRobin'   => $record_value,
-				);
+				$post = [
+					'type'  => $record_type,
+					'name'  => $record_name,
+					'ttl'   => $record_ttl,
+					'value' => $record_value,
+				];
 
 			}
+			$response = CaptainCore\Remote\Constellix::post( "domains/$domain_id/records", $post );
 
-			$response = constellix_api_post( "domains/$domain_id/records/$record_type", $post );
+			if ( ! empty( $response->errors->general ) ) {
+				$response->errors = $response->errors->general;
+			}
 
-			foreach ( $response as $result ) {
-				if ( is_array( $result ) ) {
-					$result['errors'] = $result[0];
-					$responses        = $responses . json_encode( $result ) . ',';
-				} else {
-					$responses = $responses . json_encode( $result ) . ',';
+			if ( ! empty( $response->errors ) && is_object( $response->errors ) ) {
+				$errors = "";
+				foreach( $response->errors as $key => $value ){
+					$value  = implode( " and ", $value );
+					$errors = "{$errors}{$key}: {$value} ";
 				}
+				$response->errors = $errors;
 			}
+
+			$response->record_status = "new-record";
+			$response->record_id     = $response->data->id;
+			$response->record_name   = $record_name;
+			$response->record_value  = $record_value;
+			$response->type          = $record_type;
+
+			$responses[] = $response;
+
 		}
 
 		if ( $record_status == 'edit-record' ) {
@@ -2069,51 +2088,59 @@ function captaincore_dns_action_callback() {
 				// Formats MX records into array which API can read
 				$mx_records = [];
 				foreach ( $record_value as $mx_record ) {
-					$mx_records[] = array(
-						'value'       => $mx_record['value'],
-						'level'       => $mx_record['level'],
-						'disableFlag' => false,
-					);
+					$mx_records[] = [
+						'server'   => $mx_record['server'],
+						'priority' => $mx_record['priority'],
+						'enabled'  => true,
+					];
 				}
 
-				$post = array(
-					'recordOption' => 'roundRobin',
-					'name'         => $record_name,
-					'ttl'          => $record_ttl,
-					'roundRobin'   => $mx_records,
-				);
+				$post = [
+					'name'  => $record_name,
+					'type'  => $record_type,
+					'ttl'   => $record_ttl,
+					'value' => $mx_records,
+				];
 
-			} elseif ( $record_type == 'txt' or $record_type == 'a' or $record_type == 'aname' or $record_type == 'aaaa' or $record_type == 'spf' ) {
-
+			} elseif ( $record_type == 'txt' or $record_type == 'a' or $record_type == 'aname' or $record_type == 'cname' or $record_type == 'aaaa' or $record_type == 'spf' ) {
 				// Formats A and TXT records into array which API can read
 				$records = [];
 				foreach ( $record_value as $record ) {
-					$value = stripslashes( $record['value'] );
+					$value = is_string( $record['value'] ) ? stripslashes( $record['value'] ) : $record['value'];
+					if ( is_array( $record ) && ! empty( $record["value"] ) ) {
+						$record['value'] = stripslashes($record['value']);
+					}
+					if ( is_array( $record ) && ! empty( $record["enabled"] ) ) {
+						$record["enabled"] = true;
+						$records[] = $record;
+						continue;
+					}
 					// Wrap TXT value in double quotes if not currently
 					if ( $record_type == 'txt' and $value[0] != '"' and $value[-1] != '"' ) {
 						$value = "\"{$value}\"";
 					}
-					$records[] = array(
-						'value'       => $value,
-						'disableFlag' => false,
-					);
+					$records[] = $value;
 				}
 
-				$post = array(
-					'recordOption' => 'roundRobin',
-					'name'         => "$record_name",
-					'ttl'          => $record_ttl,
-					'roundRobin'   => $records,
-				);
+				$post = [
+					'name'  => "$record_name",
+					'type'  => $record_type,
+					'ttl'   => $record_ttl,
+					'value' => $records,
+				];
 
-			} elseif ( $record_type == 'httpredirection' ) {
+			} elseif ( $record_type == 'http' ) {
 
-				$post = array(
-					'name'           => $record_name,
-					'ttl'            => $record_ttl,
-					'url'            => $record_value,
-					'redirectTypeId' => '3',
-				);
+				$post = [
+					'name'  => $record_name,
+					'type'  => $record_type,
+					'ttl'   => $record_ttl,
+					'value' => [
+						'hard'         => true,
+						'url'          => $record_value,
+						'redirectType' => '301',
+					],	
+				];
 
 			} elseif ( $record_type == 'cname' ) {
 
@@ -2128,53 +2155,56 @@ function captaincore_dns_action_callback() {
 				// Formats SRV records into array which API can read
 				$srv_records = [];
 				foreach ( $record_value as $srv_record ) {
-					$srv_records[] = array(
-						'value'    => $srv_record['value'],
+					$srv_records[] = [
+						'host'     => $srv_record['host'],
 						'priority' => $srv_record['priority'],
 						'weight'   => $srv_record['weight'],
 						'port'     => $srv_record['port'],
-					);
+						'enabled'  => true,
+					];
 				}
 
-				$post = array(
-					'recordOption' => 'roundRobin',
-					'name'         => $record_name,
-					'ttl'          => $record_ttl,
-					'roundRobin'   => $srv_records,
-				);
+				$post = [
+					'type'  => $record_type,
+					'name'  => $record_name,
+					'ttl'   => $record_ttl,
+					'value' => $srv_records,
+				];
 
 			} else {
-				$post = array(
-					'recordOption' => 'roundRobin',
-					'name'         => $record_name,
-					'ttl'          => $record_ttl,
-					'roundRobin'   => array(
-						array(
-							'value'       => stripslashes( $record_value ),
-							'disableFlag' => false,
-						),
-					),
-				);
+				$post = [
+					'type'  => $record_type,
+					'name'  => $record_name,
+					'ttl'   => $record_ttl,
+					'value' => [
+						[
+							'value'   => stripslashes( $record_value ),
+							'enabled' => true,
+						],
+					],
+				];
 
 			}
-			$response              = constellix_api_put( "domains/$domain_id/records/$record_type/$record_id", $post );
-			$response->domain_id   = $domain_id;
-			$response->record_id   = $record_id;
-			$response->record_type = $record_type;
-			$responses             = $responses . json_encode( $response ) . ',';
+			$response                = CaptainCore\Remote\Constellix::put( "domains/$domain_id/records/$record_id", $post );
+			$response->domain_id     = $domain_id;
+			$response->record_id     = $record_id;
+			$response->record_type   = $record_type;
+			$response->record_status = $record_status;
+			$responses[]             = $response;
 		}
 
 		if ( $record_status == 'remove-record' ) {
-			$response              = constellix_api_delete( "domains/$domain_id/records/$record_type/$record_id" );
-			$response->domain_id   = $domain_id;
-			$response->record_id   = $record_id;
-			$response->record_type = $record_type;
-			$responses             = $responses . json_encode( $response ) . ',';
+			$response                = CaptainCore\Remote\Constellix::delete( "domains/$domain_id/records/$record_id" );
+			$response->domain_id     = $domain_id;
+			$response->record_id     = $record_id;
+			$response->record_type   = $record_type;
+			$response->record_status = $record_status;
+			$responses[]             = $response;
 		}
 	}
-	$responses = rtrim( $responses, ',' ) . ']';
+	//$responses = rtrim( $responses, ',' ) . ']';
 
-	echo $responses;
+	echo json_encode( $responses ) ;
 
 	wp_die(); // this is required to terminate immediately and return a proper response
 }

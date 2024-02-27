@@ -78,7 +78,7 @@ class Domain {
 		// If empty then update transient with large remote call
 		if ( empty( $constellix_all_domains ) ) {
 
-			$constellix_all_domains = constellix_api_get( 'domains' );
+			$constellix_all_domains = Remote\Constellix::get( 'domains' );
 
 			// Save the API response so we don't have to call again until tomorrow.
 			set_transient( 'constellix_all_domains', $constellix_all_domains, HOUR_IN_SECONDS );
@@ -95,24 +95,20 @@ class Domain {
         
         // Generate a new domain zone and add the new domain
         if ( empty( $remote_id ) ) {
-			$response = constellix_api_post( 'domains', [ 'names' => [ $domain->name ] ] );
-			foreach ( $response as $domain ) {
-				// Capture new domain IDs from $response
-                $remote_id = $domain->id;
-                if ( defined( 'CAPTAINCORE_CONSTELLIX_VANITY_ID' ) && defined( 'CAPTAINCORE_CONSTELLIX_SOA_NAME' ) ) {
-                    $response = constellix_api_put( "domains/$remote_id", [ 
-                        "vanityNameServer" => CAPTAINCORE_CONSTELLIX_VANITY_ID,
-                        "soa"              => [ 
-                            "primaryNameserver" => CAPTAINCORE_CONSTELLIX_SOA_NAME,
-                            "ttl"               => "86400",
-                            "refresh"           => "43200",
-                            "retry"             => "3600",
-                            "expire"            => "1209600",
-                            "negCache"          => "180",
-                        ]
-                    ] );
-                }
-			}
+            $arguments = [ 'name' => $domain->name ];
+            if ( defined( 'CAPTAINCORE_CONSTELLIX_VANITY_ID' ) && defined( 'CAPTAINCORE_CONSTELLIX_SOA_NAME' ) ) {
+                $arguments['vanityNameserver'] = CAPTAINCORE_CONSTELLIX_VANITY_ID;
+                $arguments['soa']              = [ 
+                    "primaryNameserver" => CAPTAINCORE_CONSTELLIX_SOA_NAME,
+                    "ttl"               => "86400",
+                    "refresh"           => "43200",
+                    "retry"             => "3600",
+                    "expire"            => "1209600",
+                    "negCache"          => "180",
+                ];
+            }
+            $response  = Remote\Constellix::post( 'domains', $arguments );
+            $remote_id = $response->data->id;
         }
 
         if ( ! empty( $response->errors ) ) {

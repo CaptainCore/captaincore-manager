@@ -86,7 +86,7 @@ class Domains extends DB {
         }
         $domain = self::get( $domain_id );
 		if ( $domain->remote_id  ) {
-			constellix_api_delete( "domains/{$domain->remote_id}" );
+			Remote\Constellix::delete( "domains/{$domain->remote_id}" );
 		}
         if ( $domain->provider_id  ) {
 			( new Domain( $domain_id ) )->renew_off();
@@ -281,7 +281,7 @@ class Domains extends DB {
         // If empty then update transient with large remote call
 		if ( empty( $constellix_all_domains ) ) {
 
-			$constellix_all_domains = constellix_api_get( 'domains' );
+			$constellix_all_domains = Remote\Constellix::get( 'domains' );
 
 			// Save the API response so we don't have to call again until tomorrow.
 			set_transient( 'constellix_all_domains', $constellix_all_domains, HOUR_IN_SECONDS );
@@ -304,7 +304,7 @@ class Domains extends DB {
             return "Domain $domain not found with DNS provider. Nameservers are `$nameservers`. Manually add TXT verification record `$txt`.";
         }
 
-        $txt_records  = constellix_api_get( "domains/{$record->id}/records/txt" );
+        $txt_records  = Remote\Constellix::get( "domains/{$record->id}/records/txt" );
         foreach ( $txt_records as $txt_record ) {
             if ( $txt_record->name == $name ) {
                 foreach( $txt_record->value as $value ) {
@@ -323,7 +323,7 @@ class Domains extends DB {
 					'ttl'          => 3600,
 					'roundRobin'   => $txt_record->value,
                 ];
-                $response = constellix_api_put( "domains/{$record->id}/records/txt/$txt_record->id", $post );
+                $response = Remote\Constellix::put( "domains/{$record->id}/records/txt/$txt_record->id", $post );
 			
                 return "Added `$txt` to $domain on existing TXT record.";
             }
@@ -339,7 +339,7 @@ class Domains extends DB {
                 'disableFlag' => false,
             ] ],
         ];
-        $response = constellix_api_post( "domains/{$record->id}/records/txt", $post );
+        $response = Remote\Constellix::post( "domains/{$record->id}/records/txt", $post );
 
         return "Adding `$txt` to $domain";
 

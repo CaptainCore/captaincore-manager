@@ -30,7 +30,7 @@ class Constellix {
         }
     }
 
-    function constellix_api_post( $endpoint, $parameters = [] ) {
+    public static function post( $endpoint, $parameters = [] ) {
 
         $timestamp = round( microtime( true ) * 1000 );
         $hmac      = base64_encode( hash_hmac( 'sha1', $timestamp, CONSTELLIX_SECRET_KEY, true ) );
@@ -45,12 +45,12 @@ class Constellix {
             'body'    => json_encode( $parameters ),
             'method'  => 'POST',
         ];
-        $remote    = wp_remote_post( "https://api.dns.constellix.com/v4/$endpoint", $args );
+        $response   = wp_remote_post( "https://api.dns.constellix.com/v4/$endpoint", $args );
     
-        if ( is_wp_error( $remote ) ) {
-            return $remote->get_error_message();
+        if ( is_wp_error( $response ) ) {
+            return $response->get_error_message();
         } else {
-            return json_decode( $remote['body'] );
+            return json_decode( $response['body'] );
         }
     
     }
@@ -92,7 +92,6 @@ class Constellix {
                 'x-cnsdns-hmac'        => $hmac,
                 'x-cnsdns-requestDate' => $timestamp,
             ],
-            'body'    => json_encode( $post ),
             'method'  => 'DELETE',
         ];
         $response  = wp_remote_post( "https://api.dns.constellix.com/v4/$endpoint", $args );
@@ -100,6 +99,10 @@ class Constellix {
         if ( is_wp_error( $response ) ) {
             return $response->get_error_message();
         } else {
+            $http_code = wp_remote_retrieve_response_code( $response );
+            if ( $http_code == "204" ) {
+                return (object)[ "message" => "Record deleted" ];
+            }
             return json_decode( $response['body'] );
         }
     
