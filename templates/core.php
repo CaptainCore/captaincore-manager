@@ -11436,18 +11436,32 @@ new Vue({
 					result.id = JSON.parse(JSON.stringify(result.data.id))
 					result.name = JSON.parse(JSON.stringify(record.update.record_name))
 					result.type = JSON.parse(JSON.stringify(record.update.record_type))
-					result.success = `<code>${result.type.toUpperCase()}</code> record <code>${result.name}</code> updated successfully`
+					if ( result.name == "" ) {
+						result.success = `<code>${result.type.toUpperCase()}</code> record <code>@</code> updated successfully`
+					} else {
+						result.success = `<code>${result.type.toUpperCase()}</code> record <code>${result.name}</code> updated successfully`
+					}
 				}
 
 				if ( result.record_status == "remove-record" && result.message == 'Record deleted' ) {
+					record_to_remove = this.dialog_domain.records.filter( record => record.id == result.record_id );
+					console.log( "record to remove " + JSON.stringify( record_to_remove ) )
+					record_name = record_to_remove[0].name
+					console.log( "name " + record_name )
 					this.dialog_domain.records = this.dialog_domain.records.filter( record => record.id != result.record_id );
-					result.success = `<code>${record.type.toUpperCase()}</code> record <code>${record.name}</code> deleted successfully`;
+					if ( record_name == "" ) {
+						result.success = `<code>${result.record_type.toUpperCase()}</code> record <code>@</code> deleted successfully`;
+					} else {
+						result.success = `<code>${result.record_type.toUpperCase()}</code> record <code>${record_name}</code> deleted successfully`;
+					}
 				}
 
-				// Add new record
 				if ( result.record_status == "new-record" && typeof result.errors == 'undefined' && result.data.id != "" ) {
-
-					result.success = `<code>${result.type.toUpperCase()}</code> record <code>${result.record_name}</code> added successfully`;
+					if ( result.record_name == "" ) {
+						result.success = `<code>${result.type.toUpperCase()}</code> record <code>@</code> added successfully`;
+					} else {
+						result.success = `<code>${result.type.toUpperCase()}</code> record <code>${result.record_name}</code> added successfully`;
+					}
 
 					// Remove existing new recording matching type, name, value and ttl.
 					this.dialog_domain.records = this.dialog_domain.records.filter( r => {
