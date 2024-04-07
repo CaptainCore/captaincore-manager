@@ -744,6 +744,30 @@ function captaincore_domains_func( $request ) {
 	return ( new CaptainCore\Domains() )->list();
 }
 
+function captaincore_domain_zone_func( $request ) {
+	$domain_id = $request->get_param( "id" );
+	$verify    = ( new CaptainCore\Domains )->verify( $domain_id );
+	if ( ! $verify ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+	return CaptainCore\Domain::zone( $domain_id );
+}
+function captaincore_domain_zone_import_func( $request ) {
+	$domain = $request->get_param( "domain" );
+	$zone   = $request->get_param( "zone" );
+	$lines  = explode( "\n", $zone );
+	$line   = $lines[0];
+	if ( str_contains( $line, "\$ORIGIN" ) ) {
+		$domain = str_replace( "\$ORIGIN", "", $line );
+		$domain = trim( $domain );
+		$domain = trim( $domain, "." );
+	}
+	if ( ! ( new CaptainCore\User )->role_check() ){
+		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
+	}
+	return CaptainCore\Domains::records( $domain, $zone );
+}
+
 function captaincore_recipes_func( $request ) {
 	return ( new CaptainCore\Recipes() )->list();
 }
@@ -1671,6 +1695,20 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/domains/', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_domains_func',
+			'show_in_index' => false
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/domains/(?P<id>[\d]+)/zone', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_domain_zone_func',
+			'show_in_index' => false
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/domains/import', [
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_domain_zone_import_func',
 			'show_in_index' => false
 		]
 	);

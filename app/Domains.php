@@ -399,4 +399,23 @@ class Domains extends DB {
         
     }
 
+    public static function records( $domain, $zone ) {
+        $records = [];
+        $zone    = \Badcow\DNS\Parser\Parser::parse("${domain}.", $zone );
+        foreach ($zone->getResourceRecords() as $record) {
+            $name = $record->getName();
+            $name = str_replace( "${domain}.", "", $name );
+            if ( $name == "@" ) {
+                $name = "";
+            }
+            $item = [
+                "name"  => $name,
+                "type"  => $record->getType(),
+                "value" => $record->getRdata()->toText()
+            ];
+            $records[] = $item;
+        }
+        return $records;
+    }
+
 }

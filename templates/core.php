@@ -4302,36 +4302,32 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-toolbar-title v-show="dnsRecords > 0"><small>{{ dnsRecords }} DNS records</small></v-toolbar-title>
 								<v-spacer></v-spacer>
 								<v-toolbar-items>
-								<v-dialog max-width="800">
-									<template v-slot:activator="{ on, attrs }">
-										<v-btn v-bind="attrs" v-on="on" text>Import <v-icon dark>mdi-file-upload</v-icon></v-btn>
-									</template>
-									<template v-slot:default="dialog">
+								<v-dialog max-width="800" v-model="dialog_domain.show_import">
 									<v-card>
 										<v-toolbar color="primary" dark>
 											Import DNS Records
 											<v-spacer></v-spacer>
 											<v-toolbar-items>
-												<v-btn text @click="dialog.value = false"><v-icon>mdi-close</v-icon></v-btn>
+												<v-btn text @click="dialog_domain.show_import = false"><v-icon>mdi-close</v-icon></v-btn>
 											</v-toolbar-items>
 										</v-toolbar>
 										<v-card-text class="mt-5">
 										<v-textarea 
-											placeholder="Paste JSON export here." 
+											placeholder="Paste DNS zone file" 
 											outlined
 											persistent-hint 
-											hint="Paste JSON export then click Load JSON. Warning, all existing records will be overwritten." 
+											hint="Paste DNS zone file then click import DNS records. Records changes will be shown in editor for confirmation." 
 											:value="dialog_domain.import_json" 
 											@change.native="dialog_domain.import_json = $event.target.value" 
 											spellcheck="false">
 										</v-textarea>
 										</v-card-text>
 										<v-card-actions class="justify-end">
-											<v-btn depressed class="ma-0" @click="importDomain()">Load JSON</v-btn>
+											<v-btn depressed class="ma-0" @click="loadDNSRecords()">Load DNS Records</v-btn>
 										</v-card-actions>
 									</v-card>
-									</template>
 								</v-dialog>
+									<v-btn text @click="dialog_domain.show_import = true">Import <v-icon dark>mdi-file-upload</v-icon></v-btn>
 									<v-btn text @click="exportDomain()">Export <v-icon dark>mdi-file-download</v-icon></v-btn>
 								</v-toolbar-items>
 							</v-toolbar>
@@ -4420,6 +4416,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 														<v-flex xs2><v-text-field label="Port" :value="value.port" @change.native="value.port = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
 														<v-flex xs6><v-text-field label="Host" :value="value.host" @change.native="value.host = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
 													</v-layout>
+													<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
 												</td>
 												<td class="value" v-else>
 													<v-text-field label="Value" :value="record.update.record_value" @change.native="record.update.record_value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
@@ -11237,33 +11234,65 @@ new Vue({
 			this.dialog_domain.show = true;
 			
 		},
-		importDomain() {
-			// Remove any pending new records
-			this.dialog_domain.records = this.dialog_domain.records.filter( record => ! record.new )
-			// Mark existing records to be deleted
-			this.dialog_domain.records.forEach( record => {
-				record.delete = true
-			})
-			// Process records to be imported and mark as new
-			import_json = JSON.parse( this.dialog_domain.import_json )
-			import_json.records.forEach( record => {
-				record.new = true
-				record.update.record_status = "new-record"
-				this.dialog_domain.records.push( record )
-			})
-			this.dialog_domain.import_json = ""
-			this.dialog_domain.show_import = false
-			this.addRecord()
-			this.snackbar.message = "Loaded DNS records from import. Review then save records."
-			this.snackbar.show = true
+		loadDNSRecords() {
+			axios.post(
+				`/wp-json/captaincore/v1/domains/import`, {
+					'domain': this.dialog_domain.domain.name,
+					'zone': this.dialog_domain.import_json
+				},{
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					import_json = response.data
+					// Remove any pending new records
+					this.dialog_domain.records = this.dialog_domain.records.filter( record => ! record.new )
+					// Mark existing records to be deleted
+					this.dialog_domain.records.forEach( record => {
+						record.delete = true
+					})
+					// Process records to be imported and mark as new
+					index = 0
+					import_json.forEach( record => {
+						if ( record.type == "SOA" || record.type == "NS" ) {
+							return;
+						}
+						timestamp = new Date().getTime();
+						key ="new_" + timestamp + "_" + index
+						item = { id: key, edit: false, delete: false, new: true, ttl: "3600", type: "A", value: [{"value": "","enabled":true}], update: {"record_id": key, "record_type": "A", "record_name": "", "record_value": [{ value: "", enabled: true }], "record_ttl": "3600", "record_status": "new-record" } };
+						item.type = record.type
+						item.update.record_name = record.name
+						item.update.record_type = record.type
+						item.update.record_value = [{ value: record.value, enabled: true }]
+						if ( record.type == "MX" ) {
+							value = record.value.split(" ")
+							item.update.record_value = [{ priority: value[0], server: value[1], enabled: true }]
+						}
+						if ( record.type == "SRV" ) {
+							value = record.value.split(" ")
+							item.update.record_value = [{ priority: value[0], weight: value[1], port: value[2], host: value[3], enabled: true }]
+						}
+						this.dialog_domain.records.push( item )
+						index++
+					})
+					this.dialog_domain.import_json = ""
+					this.dialog_domain.show_import = false
+					this.groupDNS()
+					this.addRecord()
+					this.snackbar.message = "Loaded DNS records from import. Review then save records."
+					this.snackbar.show = true
+				})
 		},
 		exportDomain() {
-			this.$refs.export_domain.download = `dns_records_${this.dialog_domain.domain.name}.json`;
-			export_records = this.dialog_domain.records.filter( record => ! record.new )
-            this.$refs.export_domain.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
-				records: export_records
-            }, null, 2));
-            this.$refs.export_domain.click();
+			axios.get(
+				`/wp-json/captaincore/v1/domains/${this.dialog_domain.domain.domain_id}/zone`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					this.$refs.export_domain.download = `${this.dialog_domain.domain.name}.zone`;
+					this.$refs.export_domain.href = "data:text/json;charset=utf-8," + encodeURIComponent(response.data);
+					this.$refs.export_domain.click();
+				})
+			
 		},
 		deleteDomain() {
 			should_proceed = confirm("Delete domain " +  this.dialog_domain.domain.name + "? All DNS records will be removed and domain will be removed.");
@@ -11292,10 +11321,40 @@ new Vue({
 					this.dialog_domain.loading = false
 				});
 		},
+		groupDNS() {
+			records_to_check = this.dialog_domain.records.filter( record => ! record.delete && record.update.record_value[0].value != "" && record.type != "CNAME" )
+			records_to_check.forEach( record => {
+				records_to_compare = records_to_check.filter( item => item.id != record.id && item.update.record_name == record.update.record_name && item.type == record.type && ! item.merged )
+				if ( records_to_compare.length > 0 ) {
+					record.edit = true
+					record.merged = true
+					records_to_compare.forEach( duplicate => {
+						record.update.record_value = record.update.record_value.concat( duplicate.update.record_value )
+						this.dialog_domain.records = this.dialog_domain.records.filter( r => r.id != duplicate.id )
+					})
+					//console.log(record.id + " has " + records_to_compare.length + " conflicting records")
+				}
+			})
+		},
 		saveDNS() {
+			this.groupDNS()
 			this.dialog_domain.saving = true;
 			domain_id = this.dialog_domain.domain.remote_id;
-			record_updates = [];
+			record_updates = []
+
+			// Warn if domain is included in DNS entries
+			record_warnings = []
+			this.dialog_domain.records.forEach( record => {
+				if ( record.type == "CNAME" && record.update.record_name.includes(this.dialog_domain.domain.name) ) {
+					record_warnings.push( record )
+				}
+			})
+			if ( this.dialog_domain.ignore_warnings != true && record_warnings != "" ) {
+				this.snackbar.message = "Show domain warnings."
+				this.snackbar.show = true
+				this.dialog_domain.saving = false
+				return;
+			}
 
 			this.dialog_domain.records.forEach( record => {
 				// Format value for API

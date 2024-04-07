@@ -437,4 +437,109 @@ class Domain {
         }
     }
 
+    public static function zone( $domain_id ) {
+        $domain      = ( new Domains )->get( $domain_id );
+        $domain_info = Remote\Constellix::get( "domains/$domain->remote_id" );
+        $records     = Remote\Constellix::get( "domains/$domain->remote_id/records" );
+        $zone        = new \Badcow\DNS\Zone( $domain->name .'.');
+        $zone->setDefaultTtl(3600);
+        $zone_record = new \Badcow\DNS\ResourceRecord;
+        $zone_record->setName( "@" );
+        $zone_record->setClass( "IN" );
+        $zone_record->setRdata( \Badcow\DNS\Rdata\Factory::Soa(
+            $domain_info->data->soa->primaryNameserver,
+            $domain_info->data->soa->email,
+            $domain_info->data->soa->serial,
+            $domain_info->data->soa->refresh,
+            $domain_info->data->soa->retry,
+            $domain_info->data->soa->expire,
+            $domain_info->data->soa->negativeCache
+        ));
+        $zone->addResourceRecord($zone_record);
+        foreach( $domain_info->data->nameservers as $nameserver ) {
+            $zone_record = new \Badcow\DNS\ResourceRecord;
+            $zone_record->setName( "@" );
+            $zone_record->setClass( "IN" );
+            $zone_record->setRdata( \Badcow\DNS\Rdata\Factory::Ns( $nameserver . "." ) );
+            $zone->addResourceRecord($zone_record);
+        }
+        foreach( $records->data as $record ) {
+            if ( empty( $record->name ) ) {
+                $record->name = "@";
+            }
+            if ( $record->type == "A" ) {
+                foreach( $record->value as $value ) {
+                    $zone_record = new \Badcow\DNS\ResourceRecord;
+                    $zone_record->setName( $record->name );
+                    $zone_record->setRdata( \Badcow\DNS\Rdata\Factory::A( $value->value ));
+                    $zone->addResourceRecord($zone_record);
+                }
+            }
+            if ( $record->type == "AAAA" ) {
+                foreach( $record->value as $value ) {
+                    $zone_record = new \Badcow\DNS\ResourceRecord;
+                    $zone_record->setName( $record->name );
+                    $zone_record->setRdata( \Badcow\DNS\Rdata\Factory::Aaaa( $value->value ));
+                    $zone->addResourceRecord($zone_record);
+                }
+            }
+            if ( $record->type == "CNAME" ) {
+                foreach( $record->value as $value ) {
+                    $zone_record = new \Badcow\DNS\ResourceRecord;
+                    $zone_record->setName( $record->name );
+                    $zone_record->setRdata( \Badcow\DNS\Rdata\Factory::Cname( $value->value ));
+                    $zone->addResourceRecord($zone_record);
+                }
+            }
+            if ( $record->type == "MX" ) {
+                foreach( $record->value as $value ) {
+                    $zone_record = new \Badcow\DNS\ResourceRecord;
+                    $zone_record->setName( $record->name );
+                    $zone_record->setRdata( \Badcow\DNS\Rdata\Factory::Mx( $value->priority, $value->server ));
+                    $zone->addResourceRecord($zone_record);
+                }
+            }
+            if ( $record->type == "SRV" ) {
+                foreach( $record->value as $value ) {
+                    $zone_record = new \Badcow\DNS\ResourceRecord;
+                    $zone_record->setName( $record->name );
+                    $zone_record->setRdata( \Badcow\DNS\Rdata\Factory::Srv( $value->priority, $value->weight, $value->port, $value->host ));
+                    $zone->addResourceRecord($zone_record);
+                }
+            }
+            if ( $record->type == "TXT" ) {
+                foreach( $record->value as $value ) {
+                    $zone_record = new \Badcow\DNS\ResourceRecord;
+                    $zone_record->setName( $record->name );
+                    $zone_record->setClass('IN');
+                    $zone_record->setRdata( \Badcow\DNS\Rdata\Factory::Txt(trim($value->value,'"'), 0, 200));
+                    $zone->addResourceRecord($zone_record);
+                }
+            }
+        }
+
+        $builder = new  \Badcow\DNS\AlignedBuilder();
+        $builder->addRdataFormatter('TXT', '\CaptainCore\Domain::specialTxtFormatter' );
+        $builder->build($zone);
+        return $builder->build($zone);
+    }
+
+    public static function specialTxtFormatter(\Badcow\DNS\Rdata\TXT $rdata, int $padding): string {
+        //If the text length is less than or equal to 50 characters, just return it unaltered.
+        if (strlen($rdata->getText()) <= 500) {
+            return sprintf('"%s"', addcslashes($rdata->getText(), '"\\'));
+        }
+    
+        $returnVal = "(\n";
+        $chunks = str_split($rdata->getText(), 500);
+        foreach ($chunks as $chunk) {
+            $returnVal .= str_repeat(' ', $padding).
+                sprintf('"%s"', addcslashes($chunk, '"\\')).
+                "\n";
+        }
+        $returnVal .= str_repeat(' ', $padding) . ")";
+    
+        return $returnVal;
+    }
+
 }
