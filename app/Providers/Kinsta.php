@@ -419,7 +419,9 @@ class Kinsta {
         $sites        = ( new \CaptainCore\Sites )->where( [ "provider" => "kinsta" ] );
         foreach( $sites as $site ) {
             foreach( $response->data->company->sites as $kinsta_site ) {
-                if ( $site->name == $kinsta_site->environment->primaryDomain->name ) {
+                $site_name = $kinsta_site->environment->primaryDomain->name;
+                $site_name = str_replace( "www.", "", $site_name );
+                if ( $site->name == $site_name ) {
                     ( new  \CaptainCore\Sites )->update( [ "provider_id" => $kinsta_site->id ], [ "site_id" => $site->site_id ] );
                 }
             }
