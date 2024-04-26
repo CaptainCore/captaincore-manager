@@ -8491,33 +8491,52 @@ new Vue({
 				.catch( error => console.log( error ) );
 		},
 		syncSite() {
-
 			site = this.dialog_site.site
-
-			var data = {
-				action: 'captaincore_install',
-				post_id: site.site_id,
-				command: 'sync-data',
-				environment: this.dialog_site.environment_selected.environment
-			}
-
+			environment = this.dialog_site.environment_selected.environment.toLowerCase()
 			description = "Syncing " + this.dialog_site.environment_selected.home_url + " info";
 
 			// Start job
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({ "job_id": job_id, "description": description, "status": "queued", stream: [], "command": "syncSite", "site_id": site.site_id });
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					// Updates job id with responsed background job id
-					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					this.runCommand( response.data );
+			axios.get(
+				`/wp-json/captaincore/v1/sites/${site.site_id}/${environment}/sync/data`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
-				.catch( error => console.log( error ) );
+				.then(response => {
+					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data
+					this.runCommand( response.data )
+				})
 
 		},
-		bulkSyncSites() {
+		syncSiteEnvironment( site_id, environment ) {
+			var data = {
+				'action': 'captaincore_ajax',
+				'command': "fetch-site-environments",
+				'post_id': site_id
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					environments = response.data
+					environment_selected = environments.filter( e => e.environment.toLowerCase() == environment.toLowerCase() )[0]
+				
+					description = "Syncing " + environment_selected.home_url + " info";
 
+					// Start job
+					job_id = Math.round((new Date()).getTime());
+					this.jobs.push({ "job_id": job_id, "description": description, "status": "queued", stream: [], "command": "syncSite", "site_id": site_id });
+
+					axios.get(
+						`/wp-json/captaincore/v1/sites/${site_id}/${environment}/sync/data`, {
+							headers: {'X-WP-Nonce':this.wp_nonce}
+						})
+						.then(response => {
+							this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data
+							this.runCommand( response.data )
+						})
+				});
+		},
+		bulkSyncSites() {
 			should_proceed = confirm("Sync " + this.sites_selected.length + " sites for " + this.dialog_bulk.environment_selected.toLowerCase() + " environments info?");
 
 			if ( ! should_proceed ) {
