@@ -543,7 +543,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "30";
+        $required_version = (int) "31";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -756,7 +756,7 @@ class DB {
             customer_id bigint(20) UNSIGNED NOT NULL,
             name varchar(255),
             site varchar(255),
-            provider_id bigint(20),
+            provider_id varchar(255),
             provider varchar(255),
             token varchar(255),
             status varchar(255),
