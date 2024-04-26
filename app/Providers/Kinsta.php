@@ -382,12 +382,44 @@ class Kinsta {
     }
 
     public static function provider_sync() {
+        $data = [
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'X-Token'      => self::credentials("token")
+            ],
+            'body' => json_encode( [
+                "variables" => [
+                    "idCompany" => self::credentials("company_id")
+                ],
+                "query"         => 'query ExportSites($idCompany: String!) {
+                    company(id: $idCompany) {
+                      id
+                      name
+                      sites {
+                        id
+                        name
+                        path
+                        createdAt
+                        environment(name: "live") {
+                          id
+                                  primaryDomain {
+                                      name
+                                  }
+                        }
+                      }
+                    }
+                  }'
+            ] )
+        ];
+
+        $response     = wp_remote_post( "https://graphql-router.kinsta.com", $data );
+        $response     = json_decode( $response['body'] );
         $company_id   = self::credentials("company_id");
-        $response     = \CaptainCore\Remote\Kinsta::get( "sites?company=$company_id" );
         $sites        = ( new \CaptainCore\Sites )->where( [ "provider" => "kinsta" ] );
         foreach( $sites as $site ) {
-            foreach( $response->company->sites as $kinsta_site ) {
-                if ( $site->site == $kinsta_site->name ) {
+            foreach( $response->data->company->sites as $kinsta_site ) {
+                if ( $site->name == $kinsta_site->environment->primaryDomain->name ) {
                     ( new  \CaptainCore\Sites )->update( [ "provider_id" => $kinsta_site->id ], [ "site_id" => $site->site_id ] );
                 }
             }
