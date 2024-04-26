@@ -49,7 +49,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-spacer></v-spacer>
 		<v-menu v-model="notifications" :close-on-content-click="false" offset-y>
 			<template v-slot:activator="{ on, attrs }">
-				<v-btn icon v-bind="attrs" v-on="on" v-show="role == 'administrator'">
+				<v-btn icon v-bind="attrs" v-on="on">
 				<v-badge dot color="error" :value="provider_actions.length">
 					<v-icon>mdi-bell-ring</v-icon>
 				</v-badge>
@@ -73,7 +73,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-list-item v-for="item in provider_actions">
 				<v-list-item-content>
 					<v-list-item-title>{{ item.created_at | pretty_timestamp }}</v-list-item-title>
-					<v-list-item-subtitle>Creating site {{ item.action.name }} at Kinsta datacenter {{ item.action.datacenter }}</v-list-item-subtitle>
+					<v-list-item-subtitle>{{ item.action.message }}</v-list-item-subtitle>
 				</v-list-item-content>
 			</v-list-item>
 			</v-list>
