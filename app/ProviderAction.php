@@ -11,7 +11,8 @@ class ProviderAction {
     }
 
     public function check() {
-        $actions = ( new ProviderActions )->where( [ "status" => "started" ] );
+        $user_id = get_current_user_id();
+        $actions = ( new ProviderActions )->where( [ "status" => "started", "user_id" => $user_id ] );
         foreach( $actions as $action ) {
             $provider   = ( new Providers )->get( $action->provider_id );
             $class_name = "\CaptainCore\Providers\\" . ucfirst( $provider->provider );
@@ -24,7 +25,8 @@ class ProviderAction {
     }
 
     public function active() {
-        $actions = ( new ProviderActions )->where( [ "status" => [ "'waiting'", "'started'" ] ] );
+        $user_id = get_current_user_id();
+        $actions = ( new ProviderActions )->where( [ "status" => [ "'waiting'", "'started'" ], "user_id" => $user_id ] );
         foreach( $actions as $action ) {
             if ( ! empty( $action->action ) ) {
                 $action->action = json_decode( $action->action );
@@ -34,7 +36,7 @@ class ProviderAction {
     }
 
     public function all() {
-        $actions = ( new ProviderActions )->all();
+        $actions = ( new ProviderActions )->mine();
         foreach( $actions as $action ) {
             if ( ! empty( $action->action ) ) {
                 $action->action = json_decode( $action->action );
@@ -44,7 +46,11 @@ class ProviderAction {
     }
 
     public function run() {
+        $user_id         = get_current_user_id();
         $provider_action = ( new ProviderActions )->get( $this->provider_action_id );
+        if ( $user_id != $provider_action->user_id ) {
+            return;
+        }
         $provider        = ( new Providers )->get( $provider_action->provider_id );
         $class_name      = "\CaptainCore\Providers\\" . ucfirst( $provider->provider );
         $current_action  = json_decode( $provider_action->action );

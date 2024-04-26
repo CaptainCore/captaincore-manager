@@ -609,21 +609,21 @@ function captaincore_provider_deploy_to_production_func( $request ) {
 }
 
 function captaincore_provider_actions_check_func( $request ) {
-	if ( ! ( new CaptainCore\User )->is_admin() ){
+	if ( ! ( new CaptainCore\User )->role_check() ){
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
 	return ( new CaptainCore\ProviderAction )->check();
 }
 
 function captaincore_provider_actions_run_func( $request ) {
-	if ( ! ( new CaptainCore\User )->is_admin() ){
+	if ( ! ( new CaptainCore\User )->role_check() ){
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
 	return ( new CaptainCore\ProviderAction( $request['id'] ) )->run();
 }
 
 function captaincore_provider_actions_func( $request ) {
-	if ( ! ( new CaptainCore\User )->is_admin() ){
+	if ( ! ( new CaptainCore\User )->role_check() ){
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
 	return ( new CaptainCore\ProviderAction )->active();
