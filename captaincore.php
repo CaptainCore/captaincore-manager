@@ -1340,6 +1340,13 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/sync/data', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_site_sync_data_func',
+			'show_in_index' => false
+		]
+	);
+	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/captures/new', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_captures_new_func',
