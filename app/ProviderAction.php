@@ -16,9 +16,12 @@ class ProviderAction {
         foreach( $actions as $action ) {
             $provider   = ( new Providers )->get( $action->provider_id );
             $class_name = "\CaptainCore\Providers\\" . ucfirst( $provider->provider );
-            $isDone     = $class_name::action_check( $action->provider_action_id );
-            if ( $isDone == true ) {
+            $status     = $class_name::action_check( $action->provider_action_id );
+            if ( $status == "200" ) {
                 ( new ProviderActions )->update( [ "status" => "waiting" ], [ "provider_action_id" => $action->provider_action_id ] );
+            }
+            if ( $status == "404" ) {
+                ( new ProviderActions )->update( [ "status" => "failed" ], [ "provider_action_id" => $action->provider_action_id ] );
             }
         }
         return self::active();
