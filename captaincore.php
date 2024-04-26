@@ -525,7 +525,7 @@ function captaincore_provider_delete_func( $request ) {
 
 function captaincore_provider_func( $request ) {
 	if ( ! ( new CaptainCore\User )->is_admin() ){
-		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
+		return [];
 	}
 	return ( new CaptainCore\Provider )->all();
 }

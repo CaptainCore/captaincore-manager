@@ -8223,8 +8223,26 @@ new Vue({
 					axios.get( `/wp-json/captaincore/v1/provider-actions/${action.provider_action_id}/run`, {
 						headers: { 'X-WP-Nonce':this.wp_nonce }
 					}).then( response => {
-						this.snackbar.message = `New site ${site.name} created at Kinsta's datacenter ${site.datacenter}.`
-						this.snackbar.show = true
+						if ( site.command == 'new-site' ) {
+							this.snackbar.message = `New site ${site.name} created at Kinsta's datacenter ${site.datacenter}.`
+							this.snackbar.show = true
+						}
+						if ( site.command == 'deploy-to-staging' && site.step == "2" ) {
+							this.snackbar.message = `Deployed ${site.name} to staging site.`
+							this.snackbar.show = true
+							if ( this.dialog_site.site.site_id == site.site_id ) {
+								this.syncSiteEnvironment( site.site_id, "staging" )
+								this.fetchSiteInfo( site.site_id )
+							}
+						}
+						if ( site.command == 'deploy-to-production' ) {
+							this.snackbar.message = `Deployed ${site.name} to production site.`
+							this.snackbar.show = true
+							if ( this.dialog_site.site.site_id == site.site_id ) {
+								this.syncSiteEnvironment( site.site_id, "production" )
+								this.fetchSiteInfo( site.site_id )
+							}
+						}
 						this.fetchAccounts()
 						this.provider_actions = response.data
 						this.fetchSites();

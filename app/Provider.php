@@ -33,6 +33,18 @@ class Provider {
         return $class_name::verify();
     }
 
+    public function deploy_to_staging( $site_id ) {
+        $provider   = self::get();
+        $class_name = "CaptainCore\Providers\\" . ucfirst( $provider->provider );
+        return $class_name::deploy_to_staging( $site_id );
+    }
+
+    public function deploy_to_production( $site_id ) {
+        $provider   = self::get();
+        $class_name = "CaptainCore\Providers\\" . ucfirst( $provider->provider );
+        return $class_name::deploy_to_production( $site_id );
+    }
+
     public function update_token( $token = "" ) {
         $provider = self::get();
         $class_name = "CaptainCore\Providers\\" . ucfirst( $provider->provider );
