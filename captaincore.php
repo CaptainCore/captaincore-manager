@@ -1162,6 +1162,18 @@ function captaincore_site_backups_func( $request ) {
 	return $site->backups( $environment );
 }
 
+function captaincore_site_sync_data_func( $request ) {
+	$site_id     = $request['id'];
+	$environment = $request['environment'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+	$site        = ( new CaptainCore\Sites )->get( $site_id );
+
+	return CaptainCore\Run::task( "sync-data {$site->site}-{$environment}" );
+}
+
 function captaincore_quicksaves_search_func( $request ) {
 	$site_id     = $request->get_param( 'site_id' );
 	$environment = $request->get_param( 'environment' );
