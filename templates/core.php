@@ -2777,7 +2777,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-divider></v-divider>
 					<v-subheader>Site Options</v-subheader>
 					<v-container>
-					<v-btn small depressed @click="PushProductionToStaging( dialog_site.site.site_id )" v-show="dialog_site.site.provider == 'kinsta' && dialog_site.site.environments.length == 2">
+					<v-btn small depressed @click="PushProductionToStaging( dialog_site.site.site_id )" v-show="dialog_site.site.provider == 'kinsta'">
 						<v-icon>mdi-truck</v-icon> Push Production to Staging
 					</v-btn>
 					<v-btn small depressed @click="PushStagingToProduction( dialog_site.site.site_id )" v-show="dialog_site.site.provider == 'kinsta' && dialog_site.site.environments.length == 2">
@@ -2786,7 +2786,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-btn small depressed @click="dialog_mailgun_config.show = true" v-show="role == 'administrator'">
 						<v-icon>mdi-email-search</v-icon> Configure Mailgun
 					</v-btn>
-					<v-btn small depressed @click="copySite(dialog_site.site.site_id)">
+					<v-btn small depressed @click="copySite(dialog_site.site.site_id)" v-show="role == 'administrator'">
 						<v-icon>mdi-content-duplicate</v-icon> Copy Site
 					</v-btn>
 					</v-container>
