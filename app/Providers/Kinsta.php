@@ -158,8 +158,126 @@ class Kinsta {
         return $response->site->environments;
     }
 
-    public static function deploy_to_staging( $site_id ) {
+    public static function connect_staging( $site_id ) {
+        $site         = ( new \CaptainCore\Sites )->get( $site_id );
+        $environments = ( new \CaptainCore\Environments )->where( [ "site_id" => $site_id ] );
+        if ( empty( $site->provider_id ) ) {
+            return;
+        }
+        foreach( $environments as $environment ) {
+            if ( $environment->environment == "Production" ) {
+                $production_environment = $environment;
+            }
+        }
+        $time_now        = date("Y-m-d H:i:s");
+        $response = \CaptainCore\Remote\Kinsta::get( "sites/{$site->provider_id}/environments" );
 
+        foreach( $response->site->environments as $kinsta_environment ) {
+            if ( $kinsta_environment->name == "staging" ) {
+                $new_environment = [
+                    'site_id'                 => $site_id,
+                    'created_at'              => $time_now,
+                    'updated_at'              => $time_now,
+                    'environment'             => "Staging",
+                    'address'                 => $kinsta_environment->ssh_connection->ssh_ip->external_ip,
+                    'username'                => $production_environment->username,
+                    'password'                => $production_environment->password,
+                    'protocol'                => $production_environment->protocol,
+                    'port'                    => $kinsta_environment->ssh_connection->ssh_port,
+                    'home_directory'          => $production_environment->home_directory,
+                    'database_username'       => $production_environment->database_username,
+                    'database_password'       => "",
+                    'offload_enabled'         => "",
+                    'offload_access_key'      => "",
+                    'offload_secret_key'      => "",
+                    'offload_bucket'          => "",
+                    'offload_path'            => "",
+                    'monitor_enabled'         => 0,
+                    'updates_enabled'         => 1,
+                    'updates_exclude_plugins' => "",
+                    'updates_exclude_themes'  => "",
+                ];
+                ( new \CaptainCore\Environments )->insert( $new_environment );
+                \CaptainCore\Run::CLI("site sync $site_id");
+            }
+        }
+    }
+
+    public static function sync_environments( $site_id ) {
+        $site         = ( new \CaptainCore\Sites )->get( $site_id );
+        $environments = ( new \CaptainCore\Environments )->where( [ "site_id" => $site_id ] );
+        if ( empty( $site->provider_id ) ) {
+            return;
+        }
+        foreach( $environments as $environment ) {
+            if ( $environment->environment == "Production" ) {
+                $production_environment = $environment;
+            }
+        }
+        $response = \CaptainCore\Remote\Kinsta::get( "sites/{$site->provider_id}/environments" );
+
+        foreach( $response->site->environments as $kinsta_environment ) {
+            if ( $kinsta_environment->name == "live" ) {
+                foreach( $environments as $environment ) {
+                    if ( $environment->environment == "Production" ) {
+                        ( new \CaptainCore\Environments )->update( [ 
+                            "address" => $kinsta_environment->ssh_connection->ssh_ip->external_ip,
+                            "port"    => $kinsta_environment->ssh_connection->ssh_port,
+                        ], [ "environment_id" => $environment->environment_id ] );
+                    }
+                }
+            }
+            if ( $kinsta_environment->name == "staging" ) {
+                foreach( $environments as $environment ) {
+                    if ( $environment->environment == "Staging" ) {
+                        ( new \CaptainCore\Environments )->update( [
+                            "address"        => $kinsta_environment->ssh_connection->ssh_ip->external_ip,
+                            "port"           => $kinsta_environment->ssh_connection->ssh_port,
+                            "username"       => $production_environment->username,
+                            "password"       => $production_environment->password,
+                            "protocol"       => $production_environment->protocol,
+                            "home_directory" => $production_environment->home_directory,
+                        ], [ "environment_id" => $environment->environment_id ]);
+                    }
+                }
+            }
+        }
+    }
+
+    public static function create_staging_and_deploy( $site_id ) {
+        $site         = ( new \CaptainCore\Sites )->get( $site_id );
+        if ( empty( $site->provider_id ) ) {
+            return;
+        }
+        $environments              = self::environments( $site->provider_id );
+        $environment_production_id = "";
+        foreach( $environments as $environment ) {
+            if ( $environment->name == "live" ) {
+                $environment_production_id = $environment->id;
+            }
+        }
+        $data = [ 
+            "display_name"  => "Staging",
+            "is_premium"    => false,
+            "source_env_id" => $environment_production_id
+        ];
+        $response = \CaptainCore\Remote\Kinsta::post( "sites/{$site->provider_id}/environments/clone", $data );
+
+        $action = (object) [
+            "command"                   => "deploy-to-staging",
+            "step"                      => 2,
+            "message"                   => "Deploying $site->name to staging environment",
+            "name"                      => $site->name,
+            "site_id"                   => $site_id,
+            "kinsta_site_id"            => $site->provider_id,
+            "environment_production_id" => $environment_production_id,
+        ];
+
+        self::add_action( $response->operation_id, $action );
+        return $response->operation_id;
+    }
+
+    public static function deploy_to_staging( $site_id ) {
         $site         = ( new \CaptainCore\Sites )->get( $site_id );
         if ( empty( $site->provider_id ) ) {
             return;
@@ -179,16 +297,29 @@ class Kinsta {
                 $environment_staging_id = $environment->id;
             }
         }
+        // If no staging then create that
+        if ( empty( $environment_staging_id ) ) {
+            return self::create_staging_and_deploy( $site_id );
+        }
         $response = \CaptainCore\Remote\Kinsta::post( "sites/environments/$environment_production_id/manual-backups", $data );
 
         if ( empty ( $response->operation_id ) ) {
             return false;
         }
 
+        $connect_staging = false;
+        $environments    = ( new \CaptainCore\Site( $site_id, true ) )->environments();
+        if ( count( $environments ) == 1 ) {
+            $connect_staging = true;
+        }
+
         $action = (object) [
             "command"                   => "deploy-to-staging",
             "step"                      => 1,
-            "message"                   => "Deploying to staging environment",
+            "message"                   => "Deploying $site->name to staging environment",
+            "name"                      => $site->name,
+            "site_id"                   => $site_id,
+            "connect_staging"           => $connect_staging,
             "kinsta_site_id"            => $site->provider_id,
             "environment_production_id" => $environment_production_id,
             "environment_staging_id"    => $environment_staging_id,
@@ -196,7 +327,6 @@ class Kinsta {
 
         self::add_action( $response->operation_id, $action );
         return $response->operation_id;
-
     }
 
     public static function deploy_to_production( $site_id ) {
@@ -230,9 +360,19 @@ class Kinsta {
             return false;
         }
 
+        $name          = "";
+        $environments  = ( new \CaptainCore\Site( $site_id, true ) )->environments();
+        foreach( $environments as $environment ) {
+            if ( $environment->environment == "Staging") {
+                $name = $environment->home_url;
+            }
+        }
+
         $action = (object) [
             "command"                   => "deploy-to-production",
-            "message"                   => "Deploying to production environment",
+            "message"                   => "Deploying $name to production environment",
+            "name"                      => $name,
+            "site_id"                   => $site_id,
             "kinsta_site_id"            => $site->provider_id,
         ];
 

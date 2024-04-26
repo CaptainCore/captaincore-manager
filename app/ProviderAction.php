@@ -71,31 +71,17 @@ class ProviderAction {
         if ( $current_action->command == "deploy-to-staging" ) {
             // Manual snapshot of production environment completed, start restore process
             if ( $current_action->step == 1 ) {
-                $api_key = $class_name::credentials("api");
-                $user_id = $class_name::credentials("user_id");
-                $data    = [
-                    'timeout' => 45,
-                    'headers' => [
-                        'Content-Type'  => 'application/json',
-                        'Authorization' => "Bearer $api_key",
-                    ]
-                ];
-
-                $response = wp_remote_get( "https://api.kinsta.com/v2/sites/environments/{$current_action->environment_production_id}/backups", $data );
-                if ( is_wp_error( $response ) ) {
-                    return false;
-                }
-        
-                $response = json_decode( $response['body'] );
+                $api_key  = $class_name::credentials("api");
+                $user_id  = $class_name::credentials("user_id");
+                $response = \CaptainCore\Remote\Kinsta::get( "sites/environments/{$current_action->environment_production_id}/backups" );
 
                 foreach( $response->environment->backups as $backup ) {
                     if ( $backup->type == "manual" ) {
-                        $data["body"] = json_encode( [
+                        $data = [
                             "backup_id"        => $backup->id,
                             "notified_user_id" => $user_id
-                        ]);
-                        $response = wp_remote_post( "https://api.kinsta.com/v2/sites/environments/{$current_action->environment_staging_id}/backups/restore", $data );
-                        $response = json_decode( $response['body'] );
+                        ];
+                        $response = \CaptainCore\Remote\Kinsta::post( "sites/environments/{$current_action->environment_staging_id}/backups/restore", $data );
                         break;
                     }
                 }
@@ -115,6 +101,9 @@ class ProviderAction {
             }
             // Resync staging info if needed
             if ( $current_action->step == 2 ) {
+                if ( empty( $current_action->environment_staging_id ) || ! empty( $current_action->connect_staging ) ) {
+                    \CaptainCore\Providers\Kinsta::connect_staging( $current_action->site_id );
+                }
                 $current_action->step = 3;
                 $action   = [
                     'action'     => json_encode ( $current_action ),
