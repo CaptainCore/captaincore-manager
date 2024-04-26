@@ -426,21 +426,9 @@ class Kinsta {
     public static function action_check( $provider_action_id = 0, $return_response = false ) {
         $provider_action = ( new \CaptainCore\ProviderActions )->get( $provider_action_id );
         $action          = json_decode( $provider_action->action );
-        if ( $action->command == "deploy-to-staging" ) {
+        if ( $action->command == "deploy-to-staging" || $action->command == "deploy-to-production" ) {
             $response = \CaptainCore\Remote\Kinsta::get( "operations/{$provider_action->provider_key}" );
-            if ( $response->status == "200" ) {
-                return true;
-            } else {
-                return false;
-            }
-        }
-        if ( $action->command == "deploy-to-production" ) {
-            $response = \CaptainCore\Remote\Kinsta::get( "operations/{$provider_action->provider_key}" );
-            if ( $response->status == "200" ) {
-                return true;
-            } else {
-                return false;
-            }
+            return $response->status;
         }
 
         $token = self::credentials("token");
