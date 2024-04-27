@@ -119,7 +119,7 @@ class ProviderAction {
         }
 
         if ( $current_action->command == "new-site" ) {
-            $result          = $class_name::action_result( $action->provider_key );
+            $result          = $class_name::action_result( $provider_action->provider_key );
             // Save Kinsta result from background activity
             $current_action->result = $result;
             if ( ! empty( $current_action ) ) {
