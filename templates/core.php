@@ -8638,12 +8638,14 @@ new Vue({
 								}
 							site_update[key] = site[key];
 							})
-							this.showSite( site_update )
 						}
 						if (lookup != 1 ) { 
 							// Add new site info
 							this.sites.push( site )
-							this.showSite( site )
+						}
+						if ( this.dialog_site.site.site_id == site.site_id ) {
+							site_update = this.sites.filter( s => s.site_id == site.site_id )[0]
+							this.showSite( site_update )
 						}
 					});
 				});
@@ -10570,7 +10572,6 @@ new Vue({
 		showSite( site ) {
 			this.selected_site = site
 			this.users_search = ""
-			this.dialog_site.loading = true
 			this.fetchSiteEnvironments( site.site_id )
 			this.fetchSiteDetails( site.site_id )
 			show_site = JSON.parse ( JSON.stringify ( site ) )
@@ -10582,6 +10583,8 @@ new Vue({
             show_site.timeline = []
 			show_site.shared_with = []
             show_site.loading = false
+			show_site.tabs = this.dialog_site.site.tabs
+			show_site.tabs_management = this.dialog_site.site.tabs_management
 			this.dialog_site.site = show_site
 			this.dialog_site.step = 2
 			this.dialog_new_site = {
