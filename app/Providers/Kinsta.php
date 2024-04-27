@@ -143,6 +143,7 @@ class Kinsta {
         }
 
         $site->command = "new-site";
+        $site->message = "Creating site $site->name at Kinsta datacenter $site->datacenter";
 
         self::add_action( $response->data->idAction, $site );
 
@@ -491,24 +492,28 @@ class Kinsta {
         $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
 
         if ( is_wp_error( $response ) ) {
-            return false;
+            return 404;
         }
 
         $response = json_decode( $response['body'] );
 
         if ( ! empty ( $response->errors ) ) {
-            return false;
+            return 404;
         }
 
         if ( empty ( $response->data->action ) ) {
-            return false;
+            return 202;
         }
 
         if ( $return_response ) {
             return $response;
         }
+
+        if ( $response->data->action->isDone ) {
+            return 200;
+        }
         
-        return $response->data->action->isDone;
+        return 202;
 
     }
 
