@@ -596,6 +596,7 @@ function captaincore_provider_deploy_to_staging_func( $request ) {
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
 	$provider = $request->get_param( "provider" );
+	CaptainCore\ProcessLog::insert( "Deploy production to staging", $site_id );
 	return ( new CaptainCore\Provider( $provider ) )->deploy_to_staging( $site_id );
 }
 
@@ -605,6 +606,7 @@ function captaincore_provider_deploy_to_production_func( $request ) {
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
 	$provider = $request->get_param( "provider" );
+	CaptainCore\ProcessLog::insert( "Deploy staging to production", $site_id );
 	return ( new CaptainCore\Provider( $provider ) )->deploy_to_production( $site_id );
 }
 
