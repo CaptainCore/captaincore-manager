@@ -179,7 +179,7 @@ class ProviderAction {
                         \CaptainCore\Providers\Kinsta::invite_emails( $kinsta_emails, $result->idSite );
                     }
                 }
-    
+                \CaptainCore\ProcessLog::insert( "Created site", $site_id );
                 captaincore_run_background_command( "site sync $site_id --update-extras" );
             }
         }
