@@ -3298,7 +3298,6 @@ function captaincore_ajax_action_callback() {
 	}
 
 	if ( $cmd == 'newLogEntry' ) {
-
 		$process_id = $_POST['process_id'];
 		$time_now   = date( 'Y-m-d H:i:s' );
 		$value      = str_replace( "\'", "'", $value );
@@ -3802,7 +3801,9 @@ function captaincore_install_action_callback() {
 	}
 	if ( $cmd == 'recipe' ) {
 		$run_in_background = true;
-		$command = "ssh $site --recipe=$value";
+		$command     = "ssh $site --recipe=$value";
+		$recipe_name = ( new CaptainCore\Recipes )->get( $value )->title;
+		CaptainCore\ProcessLog::insert( $recipe_name, $post_id );
 	}
 	if ( $cmd == 'launch' ) {
 		$run_in_background = true;
@@ -3811,14 +3812,17 @@ function captaincore_install_action_callback() {
 	if ( $cmd == 'reset-permissions' ) {
 		$run_in_background = true;
 		$command = "ssh $site --script=reset-permissions";
+		CaptainCore\ProcessLog::insert( "Reset file permissions", $post_id );
 	}
 	if ( $cmd == 'apply-https' ) {
 		$run_in_background = true;
 		$command = "ssh $site --script=apply-https";
+		CaptainCore\ProcessLog::insert( "Updated internal urls to HTTPS", $post_id );
 	}
 	if ( $cmd == 'apply-https-with-www' ) {
 		$run_in_background = true;
 		$command = "ssh $site --script=apply-https-with-www";
+		CaptainCore\ProcessLog::insert( "Updated internal urls to HTTPS with www", $post_id );
 	}
 	if ( $cmd == 'production-to-staging' ) {
 		$run_in_background = true;
@@ -3873,10 +3877,12 @@ function captaincore_install_action_callback() {
 	if ( $cmd == 'deactivate' ) {
 		$run_in_background = true;
 		$command           = "deactivate $site --name=\"$name\" --link=\"$link\"";
+		CaptainCore\ProcessLog::insert( "Suspended website", $post_id );
 	}
 	if ( $cmd == 'activate' ) {
 		$run_in_background = true;
 		$command           = "activate $site";
+		CaptainCore\ProcessLog::insert( "Restored website", $post_id );
 	}
 
 	if ( $cmd == 'view_quicksave_changes' ) {
