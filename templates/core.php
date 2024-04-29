@@ -1425,15 +1425,41 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<template v-slot:body="{ items }">
 				<tbody>
 				<tr v-for="item in items">
-					<td class="justify-center">{{ item.created_at | pretty_timestamp_epoch }}</td>
-					<td class="justify-center">{{ item.author }}</td>
-					<td class="justify-center">{{ item.name }}</td>
-					<td class="justify-center" v-html="item.description"></td>
-					<td>
-						<v-btn text icon @click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)" v-if="role == 'administrator'">
+					<td class="justify-center pt-3 pr-0 text-center shrink" style="vertical-align: top;">
+						<v-tooltip bottom>
+						<template v-slot:activator="{ on, attrs }">
+							<v-icon color="primary" dark v-bind="attrs" v-on="on" v-show="item.name">mdi-note</v-icon>
+						</template>
+						<span>{{ item.name }}</span>
+						</v-tooltip>
+						<v-icon color="primary" dark v-show="! item.name">mdi-checkbox-marked-circle</v-icon>
+					</td>
+					<td class="justify-center py-4" style="vertical-align: top;">
+						<div v-html="item.description" v-show="item.description"></div>
+					</td>
+					<td class="justify-center pt-2" style="vertical-align: top;width:180px;">
+					<v-row>
+						<v-col class="shrink pr-0"><v-img :src="item.author_avatar" width="34" class="rounded"></v-img></v-col>
+						<v-col class="pt-4">{{ item.author }}</v-col>
+					</v-row>
+					</td>
+					<td class="justify-center pt-3" style="vertical-align: top;">{{ item.created_at | pretty_timestamp_epoch }}</td>
+					<td class="justify-center pt-1 pr-0" style="vertical-align:top;width:77px;" v-if="role == 'administrator'">
+						<v-menu :nudge-width="200" open-on-hover bottom offset-y>
+						<template v-slot:activator="{ on, attrs }">
+							<v-icon small v-bind="attrs" v-on="on">mdi-information</v-icon>
+						</template>
+						<v-card>
+							<v-card-text>
+								<div v-for="site in item.websites">
+									<a :href=`${configurations.path}sites/${site.site_id}` @click.prevent="goToPath( `/sites/${site.site_id}` )">{{ site.name }}</a>
+								</div>
+							</v-card-text>
+						</v-card>
+						</v-menu>
+						<v-btn text icon @click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)">
 							<v-icon small>mdi-pencil</v-icon>
 						</v-btn>
-						{{ item.websites.map( site => site.name ).join(" ") }}
 					</td>
 				</tr>
 				</tbody>
@@ -3791,11 +3817,26 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<template v-slot:body="{ items }">
 					<tbody>
 					<tr v-for="item in items">
-					<td class="justify-center">{{ item.created_at | pretty_timestamp_epoch }}</td>
-					<td class="justify-center">{{ item.author }}</td>
-					<td class="justify-center">{{ item.name }}</td>
-					<td class="justify-center py-3" v-html="item.description"></td>
-					<td>
+					<td class="justify-center pt-3 pr-0 text-center shrink" style="vertical-align: top;">
+						<v-tooltip bottom>
+						<template v-slot:activator="{ on, attrs }">
+							<v-icon color="primary" dark v-bind="attrs" v-on="on" v-show="item.name">mdi-note</v-icon>
+						</template>
+						<span>{{ item.name }}</span>
+						</v-tooltip>
+						<v-icon color="primary" dark v-show="! item.name">mdi-checkbox-marked-circle</v-icon>
+					</td>
+					<td class="justify-center py-4" style="vertical-align: top;">
+						<div v-html="item.description" v-show="item.description"></div>
+					</td>
+					<td class="justify-center pt-2" style="vertical-align: top;">
+					<v-row>
+						<v-col class="shrink pr-0"><v-img :src="item.author_avatar" width="34" class="rounded"></v-img></v-col>
+						<v-col class="pt-4">{{ item.author }}</v-col>
+					</v-row>
+					</td>
+					<td class="justify-center pt-3" style="vertical-align: top;">{{ item.created_at | pretty_timestamp_epoch }}</td>
+					<td class="pt-1 pr-2" style="vertical-align: top;">
 						<v-btn text icon @click="editLogEntry(dialog_site.site.site_id, item.process_log_id)" v-if="role == 'administrator'">
 							<v-icon small>mdi-pencil</v-icon>
 						</v-btn>
@@ -5823,15 +5864,41 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<template v-slot:body="{ items }">
 						<tbody>
 						<tr v-for="item in items">
-							<td class="justify-center">{{ item.created_at | pretty_timestamp_epoch }}</td>
-							<td class="justify-center">{{ item.author }}</td>
-							<td class="justify-center">{{ item.name }}</td>
-							<td class="justify-center py-3" v-html="item.description"></td>
-							<td width="170px;">
-								<v-btn text icon @click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)" v-if="role == 'administrator'">
+							<td class="justify-center pt-3 pr-0 text-center shrink" style="vertical-align: top;">
+								<v-tooltip bottom>
+								<template v-slot:activator="{ on, attrs }">
+									<v-icon color="primary" dark v-bind="attrs" v-on="on" v-show="item.name">mdi-note</v-icon>
+								</template>
+								<span>{{ item.name }}</span>
+								</v-tooltip>
+								<v-icon color="primary" dark v-show="! item.name">mdi-checkbox-marked-circle</v-icon>
+							</td>
+							<td class="justify-center py-4" style="vertical-align: top;">
+								<div v-html="item.description" v-show="item.description"></div>
+							</td>
+							<td class="justify-center pt-2" style="vertical-align: top;width:180px;">
+							<v-row>
+								<v-col class="shrink pr-0"><v-img :src="item.author_avatar" width="34" class="rounded"></v-img></v-col>
+								<v-col class="pt-4">{{ item.author }}</v-col>
+							</v-row>
+							</td>
+							<td class="justify-center pt-3" style="vertical-align: top;">{{ item.created_at | pretty_timestamp_epoch }}</td>
+							<td class="justify-center pt-2 pr-0" style="vertical-align:top;width:77px;">
+								<v-menu :nudge-width="200" open-on-hover bottom offset-y>
+								<template v-slot:activator="{ on, attrs }">
+									<v-icon small v-bind="attrs" v-on="on" class="my-2">mdi-information</v-icon>
+								</template>
+								<v-card>
+									<v-card-text>
+										<div v-for="site in item.websites">
+											<a :href=`${configurations.path}sites/${site.site_id}` @click.prevent="goToPath( `/sites/${site.site_id}` )">{{ site.name }}</a>
+										</div>
+									</v-card-text>
+								</v-card>
+								</v-menu>
+								<v-btn small icon @click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)" v-if="role == 'administrator'">
 									<v-icon small>mdi-pencil</v-icon>
 								</v-btn>
-								{{ item.websites.map( site => site.name ).join(" ") }}
 							</td>
 						</tr>
 						</tbody>
@@ -6919,11 +6986,11 @@ new Vue({
 			],
 		},
 		header_timeline: [
+			{"text":"","value":"name","sortable":false,"width":"56"},
+			{"text":"Description","value":"name","sortable":false},
+			{"text":"Person","value":"done-by","sortable":false,"width":"180"},
 			{"text":"Date","value":"date","sortable":false,"width":"220"},
-			{"text":"Done by","value":"done-by","sortable":false,"width":"135"},
-			{"text":"Name","value":"name","sortable":false,"width":"165"},
-			{"text":"Notes","value":"notes","sortable":false},
-			{"text":"","value":"","sortable":false},
+			{"text":"","value":"","sortable":false,"width":"50"},
 		],
 		domains: [],
 		domains_loading: true,
