@@ -65,4 +65,21 @@ class ProcessLog {
         return $item;
     }
 
+    public static function insert( $message = "", $site_id ) {
+        $time_now        = date( 'Y-m-d H:i:s' );
+        $site_ids        = is_array( $site_id ) ? $site_id : [ $site_id ];
+        $process_log_new = (object) [
+            "process_id"   => 0,
+            'user_id'      => get_current_user_id(),
+            'public'       => 1,
+            'description'  => $message,
+            'status'       => 'completed',
+            'created_at'   => $time_now,
+            'updated_at'   => $time_now,
+            'completed_at' => $time_now
+        ];
+        $process_log_id_new = ( new ProcessLogs )->insert( (array) $process_log_new );
+        ( new \CaptainCore\ProcessLog( $process_log_id_new ) )->assign_sites( $site_ids );
+    }
+
 }
