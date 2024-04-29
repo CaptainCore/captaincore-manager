@@ -5326,26 +5326,27 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							outlined
 							v-else-if="typeof billing.address == 'object'"
 						>
+						<v-form ref="billing_form" v-model="billing.valid" lazy-validation>
 						<v-list-item three-line>
 							<v-list-item-content>
 								<div class="overline mb-4">
 								Billing Details
 								</div>
 								<v-row no-gutters>
-									<v-col class="mx-1"><v-text-field dense label="First Name" v-model="billing.address.first_name"></v-text-field></v-col>
-									<v-col class="mx-1"><v-text-field dense label="Last Name" v-model="billing.address.last_name"></v-text-field></v-col>
+									<v-col class="mx-1"><v-text-field dense label="First Name" v-model="billing.address.first_name" :rules="billing.rules.firstname"></v-text-field></v-col>
+									<v-col class="mx-1"><v-text-field dense label="Last Name" v-model="billing.address.last_name" :rules="billing.rules.lastname"></v-text-field></v-col>
 								</v-row>
 								<v-row no-gutters>
 									<v-col class="mx-1"><v-text-field dense label="Company name (optional)" v-model="billing.address.company"></v-text-field></v-col>
 								</v-row>
 								<v-row no-gutters>
-									<v-col class="mx-1"><v-text-field dense label="Street Address" persistent-hint hint="House number and street name" v-model="billing.address.address_1"></v-text-field></v-col>
+									<v-col class="mx-1"><v-text-field dense label="Street Address" persistent-hint hint="House number and street name" v-model="billing.address.address_1" :rules="billing.rules.address_1"></v-text-field></v-col>
 								</v-row>
 								<v-row no-gutters>
 									<v-col class="mx-1"><v-text-field dense label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="billing.address.address_2"></v-text-field></v-col>
 								</v-row>
 								<v-row no-gutters>
-									<v-col class="mx-1"><v-text-field label="Town" v-model="billing.address.city"></v-text-field></v-col>
+									<v-col class="mx-1"><v-text-field label="Town" v-model="billing.address.city" :rules="billing.rules.city"></v-text-field></v-col>
 								</v-row>
 								<v-row no-gutters>
 									<v-col class="mx-1">
@@ -5354,24 +5355,20 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</v-col>
 								</v-row>
 								<v-row no-gutters>
-									<v-col class="mx-1"><v-text-field dense label="Zip" v-model="billing.address.postcode"></v-text-field></v-col>
+									<v-col class="mx-1"><v-text-field dense label="Zip" v-model="billing.address.postcode" :rules="billing.rules.zip"></v-text-field></v-col>
 								</v-row>
 								<v-row no-gutters>
-									<v-col class="mx-1"><v-autocomplete dense label="Country" v-model="billing.address.country" :items="countries" @change="populateStates()"></v-autocomplete></v-col>
+									<v-col class="mx-1 mt-3"><v-autocomplete dense label="Country" v-model="billing.address.country" :items="countries" @change="populateStates()" :rules="billing.rules.country"></v-autocomplete></v-col>
 								</v-row>
 								<v-row no-gutters>
 									<v-col class="mx-1"><v-text-field dense label="Phone" v-model="billing.address.phone"></v-text-field></v-col>
 								</v-row>
 								<v-row no-gutters>
-									<v-col class="mx-1"><v-text-field dense label="Email" v-model="billing.address.email"></v-text-field></v-col>
+									<v-col class="mx-1"><v-text-field dense label="Email" v-model="billing.address.email" :rules="billing.rules.email"></v-text-field></v-col>
 								</v-row>
 							</v-list-item-content>
 							</v-list-item>
-							<v-card-actions>
-							<v-btn color="primary" outlined text @click="updateBilling()">
-								Save Billing Details
-							</v-btn>
-							</v-card-actions>
+							</v-form>
 						</v-card>
 					</v-col>
 					<v-col>
@@ -5465,7 +5462,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-list-item-content>
 							</v-list-item>
 							</v-card>
-							<v-btn color="primary" x-large @click="payInvoice()" width="100%" class="mb-7" v-show="dialog_invoice.response.status == 'pending' || dialog_invoice.response.status == 'failed'">Pay - ${{ dialog_invoice.response.total }}</v-btn>
+							<v-btn color="primary" elevation="7" x-large @click="verifyAndPayInvoice(dialog_invoice.response.order_id)" class="mb-7" v-show="dialog_invoice.response.status == 'pending' || dialog_invoice.response.status == 'failed'">Pay Invoice</v-btn>
 						</v-col>
 						</v-row>
 						</v-card>
@@ -6944,7 +6941,7 @@ new Vue({
 		custom_script: "",
 		recipes: [],
 		processes: [],
-		billing: { payment_methods: [] },
+		billing: { valid: true, rules: {}, payment_methods: [], address: { last_name: "", email: "", city: "", line1: "", line2: "", postal_code: "", state: "" } },
 		subscriptions: [],
 		new_payment: { card: {}, show: false, error: "" },
 		current_user_email: "<?php echo $user->email; ?>",
@@ -8969,9 +8966,6 @@ new Vue({
 				if ( this.billing.address.country != "" ) {
 					this.populateStates()
 				}
-				if ( this.billing.address.address_1 != "" ) {
-					this.dialog_invoice.customer = true
-				}
 				setTimeout(this.fetchMissing, 1000)
 			});
 		},
@@ -10104,18 +10098,19 @@ new Vue({
 						this.dialog_invoice.card.mount("#card-element")
 					}
 					this.dialog_invoice.loading = false
-					if ( typeof this.billing.address == 'object' && this.billing.address.address_1 != "" ) {
-						this.dialog_invoice.customer = true
-					}
 					this.dialog_invoice.show = true
 				})
 				.catch( error => console.log( error ) );
 		},
 		payInvoice( invoice_id ) {
-			this.dialog_invoice.paying = true
-			if ( this.dialog_invoice.customer != true ) {
-				this.updateBilling()
+			if ( ! this.$refs.billing_form.validate() ) {
+				this.snackbar.message = "Missing billing information"
+				this.snackbar.show = true
+				return
 			}
+        
+			this.dialog_invoice.paying = true
+				this.updateBilling()
 			invoice_id = this.dialog_invoice.response.order_id
 			self = this
 
@@ -10137,6 +10132,7 @@ new Vue({
 					},
 				}).then(function(result) {
 					if ( result.error ) {
+						self.dialog_invoice.paying = false
 						self.dialog_invoice.error = result.error.message
 						return
 					}
@@ -13174,6 +13170,21 @@ new Vue({
 					this.runCommand( response.data );
 				});
 		},
+		verifyAndPayInvoice( invoice_id ) {
+			this.billing.rules = { 
+				firstname: [v => !!v || 'First Name is required'],
+				lastname: [v => !!v || 'Last Name is required'],
+				address_1: [v => !!v || 'Address line 1 is required'],
+				city: [v => !!v || 'City is required'],
+				state: [v => !!v || 'State is required'],
+				zip: [v => !!v || 'Zip is required'],
+				email: [v => !!v || 'Email is required'],
+				country: [v => !!v || 'Country is required']
+			}
+			this.$nextTick(() => {
+				this.payInvoice( invoice_id )
+        	})
+		},
 		updateBilling() {
 			var data = {
 				'action': 'captaincore_account',
@@ -13183,11 +13194,6 @@ new Vue({
 
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					if ( this.dialog_invoice.paying == false ) {
-						this.snackbar.message = "Billing address info updated."
-						this.snackbar.show = true
-					}
-					this.dialog_invoice.customer = true
 					this.fetchBilling()
 				});
 		},

@@ -197,7 +197,6 @@ class User {
     }
 
     public function billing() {
-
         $customer       = new \WC_Customer( $this->user_id );
         $address        = $customer->get_billing();
         if ( empty( $address["country"] ) ) {
@@ -279,6 +278,8 @@ class User {
         }
 
         $billing = (object) [
+            "valid"           => true,
+            "rules"           => [ "firstname" => [], "lastname" => [], "address_1" => [], "city" => [], "state" => [], "zip" => [], "email" => [], "country" => [] ],
             "address"         => $address,
             "subscriptions"   => $subscriptions,
             "invoices"        => $invoices,
