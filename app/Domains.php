@@ -413,6 +413,9 @@ class Domains extends DB {
                 "type"  => $record->getType(),
                 "value" => $record->getRdata()->toText()
             ];
+            if ( $record->getType() == "TXT" && $record->getRdata()->toText() == "" ) {
+                continue;
+            }
             $records[] = $item;
         }
         return $records;

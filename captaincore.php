@@ -758,11 +758,12 @@ function captaincore_domain_zone_import_func( $request ) {
 	$domain = $request->get_param( "domain" );
 	$zone   = $request->get_param( "zone" );
 	$lines  = explode( "\n", $zone );
-	$line   = $lines[0];
+	foreach( $lines as $line ) {
 	if ( str_contains( $line, "\$ORIGIN" ) ) {
 		$domain = str_replace( "\$ORIGIN", "", $line );
 		$domain = trim( $domain );
 		$domain = trim( $domain, "." );
+		}
 	}
 	if ( ! ( new CaptainCore\User )->role_check() ){
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );

@@ -536,7 +536,8 @@ class Parser
         try {
             return Factory::textToRdataType($type, $iterator->getRemainingAsString());
         } catch (Exception $exception) {
-            throw new ParseException(sprintf('Could not extract Rdata from resource record "%s".', (string) $iterator), null, $exception);
+            // Ignore import failures
+            return Factory::textToRdataType("txt", "");
         }
     }
 
