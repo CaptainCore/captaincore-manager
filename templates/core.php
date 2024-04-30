@@ -11452,12 +11452,12 @@ new Vue({
 					record_warnings.push( record )
 				}
 			})
-			if ( this.dialog_domain.ignore_warnings != true && record_warnings != "" ) {
+			/* if ( this.dialog_domain.ignore_warnings != true && record_warnings != "" ) {
 				this.snackbar.message = "Show domain warnings."
 				this.snackbar.show = true
 				this.dialog_domain.saving = false
 				return;
-			}
+			} */
 
 			this.dialog_domain.records.forEach( record => {
 				// Format value for API
