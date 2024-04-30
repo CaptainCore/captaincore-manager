@@ -11425,7 +11425,7 @@ new Vue({
 				});
 		},
 		groupDNS() {
-			records_to_check = this.dialog_domain.records.filter( record => ! record.delete && record.update.record_value[0].value != "" && record.type != "CNAME" )
+			records_to_check = this.dialog_domain.records.filter( record => ! record.delete && record.type != "CNAME" && record.type != "HTTP" && record.update.record_value[0].value != "" )
 			records_to_check.forEach( record => {
 				records_to_compare = records_to_check.filter( item => item.id != record.id && item.update.record_name == record.update.record_name && item.type == record.type && ! item.merged )
 				if ( records_to_compare.length > 0 ) {
@@ -11448,7 +11448,7 @@ new Vue({
 			// Warn if domain is included in DNS entries
 			record_warnings = []
 			this.dialog_domain.records.forEach( record => {
-				if ( record.type == "CNAME" && record.update.record_name.includes(this.dialog_domain.domain.name) ) {
+				if ( record.edit || record.new && ( record.type == "CNAME" && record.update.record_name.includes(this.dialog_domain.domain.name) ) ) {
 					record_warnings.push( record )
 				}
 			})
@@ -11531,7 +11531,7 @@ new Vue({
 				}
 				
 				// Clean out empty values
-				if ( record.update.record_type == "CNAME" && record.update.record_value == "" ) {
+				if ( record.update.record_type == "CNAME" && record.update.record_value[0].value == "" ) {
 					return;
 				}
 
