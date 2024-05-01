@@ -2737,6 +2737,15 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										<v-icon>mdi-content-copy</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
+									<v-list-item @click="copyText( dialog_site.environment_selected.home_directory )" dense>
+									<v-list-item-content>
+										<v-list-item-title>Home directory</v-list-item-title>
+										<v-list-item-subtitle v-text="dialog_site.environment_selected.home_directory"></v-list-item-subtitle>
+									</v-list-item-content>
+									<v-list-item-icon>
+										<v-icon>mdi-content-copy</v-icon>
+									</v-list-item-icon>
+									</v-list-item>
 									<div>
 										<v-list-item :href="dialog_site.environment_selected.database" target="_blank" dense  v-if="dialog_site.environment_selected.database">
 										<v-list-item-content>
