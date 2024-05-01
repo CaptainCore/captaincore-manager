@@ -731,7 +731,7 @@ function captaincore_dns_func( $request ) {
 	$remote_id = ( new CaptainCore\Domains )->get( $domain_id )->remote_id;
 
 	$domain    = CaptainCore\Remote\Constellix::get( "domains/$remote_id" );
-	$response  = CaptainCore\Remote\Constellix::get( "domains/$remote_id/records" );
+	$response  = CaptainCore\Remote\Constellix::get( "domains/$remote_id/records?perPage=100" );
 	if ( ! $response->errors ) {
 		array_multisort( array_column( $response->data, 'type' ), SORT_ASC, array_column( $response->data, 'name' ), SORT_ASC, $response->data );
 	}
