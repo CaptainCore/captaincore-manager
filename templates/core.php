@@ -10944,7 +10944,7 @@ new Vue({
 			};
 
 			self = this;
-			description = "Deploying custom code on '" + site.name  +"'";
+			description = "Deploying custom code on " + this.dialog_site.environment_selected.home_url;
 
 			// Start job
 			job_id = Math.round((new Date()).getTime());
