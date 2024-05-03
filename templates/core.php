@@ -7883,6 +7883,9 @@ new Vue({
 			if ( this.dialog_site.site.tabs == "tab-Site-Management" && this.dialog_site.site.tabs_management == "tab-Stats" ) {
 				this.fetchStats()
 			}
+			if ( this.dialog_site.site.tabs == "tab-Site-Management" && this.dialog_site.site.tabs_management == "tab-Updates" ) {
+				this.viewUpdateLogs()
+			}
 			if ( this.dialog_site.site.tabs == "tab-Site-Management" && this.dialog_site.site.tabs_management == "tab-Backups" && this.dialog_site.backup_step == 2 ) {
 				this.viewBackups()
 			}
