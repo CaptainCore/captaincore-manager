@@ -12206,6 +12206,16 @@ new Vue({
 					this.dialog_site.environment_selected.quicksaves = response.data
 				});
 		},
+		viewUpdateLogs() {
+			axios.get(
+				'/wp-json/captaincore/v1/update-logs', {
+					headers: {'X-WP-Nonce':this.wp_nonce},
+					params: { site_id: this.dialog_site.site.site_id, environment: this.dialog_site.environment_selected.environment.toLowerCase() }
+				})
+				.then(response => { 
+					this.dialog_site.environment_selected.update_logs = response.data
+				});
+		},
 		saveBackupConfigurations() {
 			site_id = this.dialog_site.site.site_id
 			axios.post( `/wp-json/captaincore/v1/sites/${site_id}/backup`, {
@@ -12282,6 +12292,28 @@ new Vue({
 				})
 				.then(response => {
 					quicksave_selected = this.dialog_site.environment_selected.quicksaves.filter( q => q.hash == hash )
+					if ( quicksave_selected.length != 1 ) {
+						return
+					}
+					quicksave_selected[0].previous_created_at = response.data.previous_created_at
+					quicksave_selected[0].plugins = response.data.plugins
+					quicksave_selected[0].plugins_deleted = response.data.plugins_deleted
+					quicksave_selected[0].themes = response.data.themes
+					quicksave_selected[0].themes_deleted = response.data.themes_deleted
+					quicksave_selected[0].core = response.data.core
+					quicksave_selected[0].status = response.data.status
+					quicksave_selected[0].loading = false
+				});
+		},
+		getUpdateLogQuicksave( hash_before, hash_after, site_id ) {
+			environment = this.dialog_site.environment_selected.environment.toLowerCase()
+			axios.get(
+				`/wp-json/captaincore/v1/update-logs/${hash_before}_${hash_after}`, {
+					headers: {'X-WP-Nonce':this.wp_nonce},
+					params: { site_id: site_id, environment: environment }
+				})
+				.then(response => {
+					quicksave_selected = this.dialog_site.environment_selected.update_logs.filter( q => q.hash_before == hash_before && q.hash_after == hash_after )
 					if ( quicksave_selected.length != 1 ) {
 						return
 					}

@@ -1140,8 +1140,25 @@ function captaincore_site_snapshot_download_func( $request ) {
 	exit;
 }
 
-function captaincore_site_quicksaves_get_func( $request ) {
-	$site_id     = $request['id'];
+function captaincore_update_logs_get_func( $request ) {
+	$site_id     = $request->get_param( 'site_id' );
+	$environment = $request->get_param( 'environment' );
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$hash_before = $request['hash_before'];
+	$hash_after  = $request['hash_after'];
+	$environment = $request['environment'];
+	$command     = "update-log get $site_id-$environment $hash_before $hash_after";
+	$response    = CaptainCore\Run::CLI( $command );
+	return json_decode( $response );
+}
+
+function captaincore_quicksaves_get_func( $request ) {
+	$site_id     = $request->get_param( 'site_id' );
+	$environment = $request->get_param( 'environment' );
 
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
@@ -1149,8 +1166,45 @@ function captaincore_site_quicksaves_get_func( $request ) {
 
 	$hash        = $request['hash'];
 	$environment = $request['environment'];
-	$site        = new CaptainCore\Site( $site_id );
-	return $site->quicksave_get( $hash, $environment );
+	return ( new CaptainCore\Quicksave( $site_id ) )->get( $hash, $environment );
+}
+
+function captaincore_quicksaves_changed_func( $request ) {
+	$site_id     = $request->get_param( 'site_id' );
+	$environment = $request->get_param( 'environment' );
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$hash        = $request['hash'];
+	return ( new CaptainCore\Quicksave( $site_id ) )->changed( $hash, $environment );
+}
+
+function captaincore_quicksaves_filediff_func( $request ) {
+	$site_id     = $request->get_param( 'site_id' );
+	$environment = $request->get_param( 'environment' );
+	$file        = $request->get_param( 'file' );
+	$hash        = $request['hash'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+	return ( new CaptainCore\Quicksave( $site_id ) )->filediff( $hash, $environment, $file );
+}
+
+function captaincore_quicksaves_rollback_func( $request ) {
+	$site_id     = $request->get_param( 'site_id' );
+	$environment = strtolower( $request->get_param( 'environment' ) );
+	$type        = $request->get_param( 'type' );
+	$value       = empty( $request->get_param( 'value' ) ) ? "" : $request->get_param( 'value' );
+	$version     = $request->get_param( 'version' );
+	$hash        = $request['hash'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+	return ( new CaptainCore\Quicksave( $site_id ) )->rollback( $hash, $environment, $version, $type, $value );
 }
 
 function captaincore_site_backups_func( $request ) {
@@ -1299,6 +1353,22 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/quicksaves', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_quicksaves_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/update-logs', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_update_logs_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/update-logs/(?P<hash_before>[a-zA-Z0-9-]+)_(?P<hash_after>[a-zA-Z0-9-]+)', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_update_logs_get_func',
 			'show_in_index' => false
 		]
 	);
