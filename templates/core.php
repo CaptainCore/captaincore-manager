@@ -2579,7 +2579,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										<v-tab key="Users" href="#tab-Users" @click="fetchUsers()" v-show="dialog_site.environment_selected.token != 'basic'">
 											Users <v-icon>mdi-account-multiple</v-icon>
 										</v-tab>
-										<v-tab key="Updates" href="#tab-Updates" @click="fetchUpdateLogs( dialog_site.site.site_id )" v-show="dialog_site.environment_selected.token != 'basic'">
+										<v-tab key="Updates" href="#tab-Updates" @click="viewUpdateLogs( dialog_site.site.site_id )" v-show="dialog_site.environment_selected.token != 'basic'">
 											Updates <v-icon>mdi-book-open</v-icon>
 										</v-tab>
 										<v-tab key="Scripts" href="#tab-Scripts">
@@ -3150,27 +3150,168 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-card-text v-show="typeof dialog_site.environment_selected.update_logs == 'string'">
 						<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
 					</v-card-text>
-					<div v-if="typeof dialog_site.environment_selected.update_logs != 'string'">
+					<v-card class="mx-auto mb-4" max-width="500" outlined link hover @click="getUpdateLogQuicksave( item.hash_before, item.hash_after, dialog_site.site.site_id ); item.view_quicksave = true" v-for="item in dialog_site.environment_selected.update_logs" v-if="typeof dialog_site.environment_selected.update_logs == 'object'" :key="item.name">
+						<v-card-title>{{ item.created_at | pretty_timestamp_epoch }}<v-spacer></v-spacer><v-icon v-show="item.status == 'success'" color="success">mdi-check-circle</v-icon><v-icon v-show="item.status == 'failed'" color="error">mdi-alert-circle</v-icon></v-card-title>
+						<v-card-text>
+						<v-badge :content="item.themes_changed" :value="item.themes_changed" overlap class="mr-2 mb-2">
+							<v-chip label>{{ item.theme_count }} Themes</v-chip>
+						</v-badge>
+						<v-badge :content="item.plugins_changed" :value="item.plugins_changed" overlap class="mr-2 mb-2">
+							<v-chip label>{{ item.plugin_count }} Plugins</v-chip>
+						</v-badge>
+						<div>{{ item.status }}</div>
+						</v-card-text>
+						<v-dialog v-model="item.view_quicksave == true">
+						<v-toolbar color="dark primary" dark dense>
+							<v-btn icon dark @click.native="item.view_quicksave = false">
+								<v-icon>mdi-close</v-icon>
+							</v-btn>
+							<v-toolbar-title class="body-2"><strong class="mr-5">{{ item.created_at | pretty_timestamp_epoch }}</strong> {{ item.status }}</v-toolbar-title>
+							<v-spacer></v-spacer>
+							<!--<v-toolbar-items>
+								<v-btn text small @click="QuicksavesRollback( dialog_site.site.site_id, item)">Rollback Everything <v-icon>mdi-restore</v-icon></v-btn>
+								<v-btn text small @click="viewQuicksavesChanges( dialog_site.site.site_id, item)">View Changes <v-icon>mdi-file-compare</v-icon></v-btn>
+							</v-toolbar-items>-->
+						</v-toolbar>
+						<v-card v-if="item.loading">
+							<span><v-progress-circular indeterminate color="primary" class="mx-16 mt-7 mb-7" size="24"></v-progress-circular></span>
+						</v-card>
+						<v-card v-else>
 							<v-data-table
-								:headers='header_updatelog'
-								:items="dialog_site.environment_selected.update_logs"
-								class="update_logs"
-								:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
+								:headers='[{"text":"Theme","value":"title"},{"text":"Version","value":"version","width":"150px"},{"text":"Status","value":"status","width":"150px"},{"text":"","value":"rollback","width":"150px"}]'
+								:items="item.themes"
+								item-key="name"
+								class="quicksave-table"
 							>
 						    <template v-slot:body="{ items }">
 							<tbody>
-							<tr v-for="item in items">
-								<td>{{ item.created_at | pretty_timestamp_epoch }}</td>
-								<td>{{ item.type }}</td>
-								<td>{{ item.name }}</td>
-								<td class="text-right">{{ item.old_version }}</td>
-								<td class="text-right">{{ item.new_version }}</td>
-								<td>{{ item.status }}</td>
+							<tr class="red lighten-4" v-for="theme in item.themes_deleted">
+								<td class="strikethrough">{{ theme.title || theme.name }}</td>
+								<td class="strikethrough">{{ theme.version }}</td>
+								<td class="strikethrough">{{ theme.status }}</td>
+								<td><v-btn depressed small @click="RollbackUpdate(item.hash_before, 'theme', theme.name, item.started_at)">Rollback</v-btn></td>
 							</tr>
-							</tbody>
+							<tr v-for="theme in items" v-bind:class="{ 'green lighten-5': theme.changed_version || theme.changed_status }">
+								<td>{{ theme.title || theme.name }}</td>
+								<td v-bind:class="{ 'green lighten-4': theme.changed_version }">
+									{{ theme.version }}
+									<v-tooltip bottom>
+										<template v-slot:activator="{ on, attrs }"><v-icon small v-show="theme.changed_version" v-bind="attrs" v-on="on">mdi-information</v-icon></template>
+										<span>Changed from {{ theme.changed_version }}</span>
+									</v-tooltip>
+								</td>
+								<td v-bind:class="{ 'green lighten-4': theme.changed_status }">
+									{{ theme.status }}
+									<v-tooltip bottom>
+										<template v-slot:activator="{ on, attrs }"><v-icon small v-show="theme.changed_status" v-bind="attrs" v-on="on">mdi-information</v-icon></template>
+										<span>Changed from {{ theme.changed_status }}</span>
+									</v-tooltip>
+								</td>
+								<td>
+									<v-dialog max-width="600">
+										<template v-slot:activator="{ on, attrs }">
+											<v-btn depressed small v-bind="attrs" v-on="on">Rollback</v-btn>
+										</template>
+										<template v-slot:default="dialog">
+										<v-card>
+											<v-toolbar color="primary" dark>
+												Rollback '{{ theme.name }}' theme?
+												<v-spacer></v-spacer>
+												<v-btn icon @click="dialog.value = false">
+													<v-icon>mdi-close</v-icon>
+												</v-btn>
+											</v-toolbar>
+											<v-list>
+												<v-list-item two-line @click="RollbackUpdate(item.hash_after, 'theme', theme.name, item.created_at, dialog)">
+												<v-list-item-content>
+													<v-list-item-title>Updated version</v-list-item-title>
+													<v-list-item-subtitle>{{ $options.filters.pretty_timestamp_epoch(item.created_at) }}</v-list-item-subtitle>
+												</v-list-item-content>
+												</v-list-item>
+												<v-list-item two-line @click="RollbackUpdate(item.hash_before, 'theme', theme.name, item.started_at, dialog)">
+												<v-list-item-content>
+													<v-list-item-title>Previous version</v-list-item-title>
+													<v-list-item-subtitle>{{ $options.filters.pretty_timestamp_epoch(item.started_at) }}</v-list-item-subtitle>
+												</v-list-item-content>
+												</v-list-item>
+											</v-list>
+										</v-card>
+										</template>
+									</v-dialog>
+								</td>
+							</tr>
 						    </template>
 						  </v-data-table>
-						</div>
+							<v-data-table
+								:headers='[{"text":"Plugin","value":"plugin"},{"text":"Version","value":"version","width":"150px"},{"text":"Status","value":"status","width":"150px"},{"text":"","value":"rollback","width":"150px"}]'
+								:items="item.plugins"
+								item-key="name"
+								class="quicksave-table"
+								:items-per-page="25"
+								:footer-props="{ itemsPerPageOptions: [25,50,100,{'text':'All','value':-1}] }"
+								>
+								<template v-slot:body="{ items }">
+								<tbody>
+								<tr class="red lighten-4" v-for="plugin in item.plugins_deleted">
+									<td class="strikethrough">{{ plugin.title || plugin.name }}</td>
+									<td class="strikethrough">{{ plugin.version }}</td>
+									<td class="strikethrough">{{ plugin.status }}</td>
+									<td><v-btn depressed small @click="RollbackUpdate(item.hash_before, 'plugin', plugin.name, item.started_at)">Rollback</v-btn></td>
+								</tr>
+								<tr v-for="plugin in items" v-bind:class="[{ 'green lighten-5': plugin.changed_version || plugin.changed_status },{ 'red lighten-4 strikethrough': plugin.deleted }]">
+								<td>{{ plugin.title || plugin.name }}</td>
+								<td v-bind:class="{ 'green lighten-4': plugin.changed_version }">
+									{{ plugin.version }} 
+									<v-tooltip bottom>
+										<template v-slot:activator="{ on, attrs }"><v-icon small v-show="plugin.changed_version" v-bind="attrs" v-on="on">mdi-information</v-icon></template>
+										<span>Changed from {{ plugin.changed_version }}</span>
+									</v-tooltip>
+								</td>
+								<td v-bind:class="{ 'green lighten-4': plugin.changed_status }">
+									{{ plugin.status }}
+									<v-tooltip bottom>
+										<template v-slot:activator="{ on, attrs }"><v-icon small v-show="plugin.changed_status" v-bind="attrs" v-on="on">mdi-information</v-icon></template>
+										<span>Changed from {{ plugin.changed_status }}</span>
+									</v-tooltip>
+								</td>
+								<td>
+									<v-dialog max-width="600">
+										<template v-slot:activator="{ on, attrs }">
+											<v-btn depressed small v-bind="attrs" v-on="on" v-show="plugin.status != 'must-use' && plugin.status != 'dropin'">Rollback</v-btn>
+										</template>
+										<template v-slot:default="dialog">
+										<v-card>
+											<v-toolbar color="primary" dark>
+												Rollback '{{ plugin.name }}' plugin?
+												<v-spacer></v-spacer>
+												<v-btn icon @click="dialog.value = false">
+													<v-icon>mdi-close</v-icon>
+												</v-btn>
+											</v-toolbar>
+											<v-list>
+												<v-list-item two-line @click="RollbackUpdate(item.hash_after, 'plugin', plugin.name, item.created_at, dialog)">
+												<v-list-item-content>
+													<v-list-item-title>Updated version <span v-show="plugin.changed_version" v-text="plugin.version"></span></v-list-item-title>
+													<v-list-item-subtitle>{{ $options.filters.pretty_timestamp_epoch(item.created_at) }}</v-list-item-subtitle>
+												</v-list-item-content>
+												</v-list-item>
+												<v-list-item two-line @click="RollbackUpdate(item.hash_before, 'plugin', plugin.name, item.started_at, dialog)">
+												<v-list-item-content>
+													<v-list-item-title>Previous version <span v-show="plugin.changed_version" v-text="plugin.started_at"></span></v-list-item-title>
+													<v-list-item-subtitle>{{ $options.filters.pretty_timestamp_epoch(item.previous_created_at) }}</v-list-item-subtitle>
+												</v-list-item-content>
+												</v-list-item>
+											</v-list>
+										</v-card>
+										</template>
+									</v-dialog>
+								</td>
+								</tr>
+								</template>
+							</v-data-table>
+							</v-card>
+						</v-dialog>
+					</v-card>
 				</v-card>
 			</v-tab-item>
 			<v-tab-item :key="6" value="tab-Scripts" :transition="false" :reverse-transition="false">
@@ -8667,7 +8808,7 @@ new Vue({
 						this.fetchStats()
 					}
 					if ( this.dialog_site.site.tabs_management == "tab-Updates" ) {
-						this.fetchUpdateLogs( this.dialog_site.site.site_id )
+						this.viewUpdateLogs( this.dialog_site.site.site_id )
 					}
 					if ( this.dialog_site.site.tabs_management == "tab-Backups" ) {
 						this.viewQuicksaves()
