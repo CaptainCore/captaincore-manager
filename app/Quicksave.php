@@ -49,7 +49,7 @@ class Quicksave {
             return $response;
         }
         $command  = "quicksave rollback {$this->site_id}-{$environment} $hash --version=$version --$type=$value";
-        $response = Run::CLI( $command );
+        $response = Run::task( $command );
         return $response;
     }
 

@@ -12012,33 +12012,26 @@ new Vue({
 
 			site = this.dialog_site.site
 
-			var data = {
-				'action': 'captaincore_install',
-				'post_id': site.site_id,
-				'environment': this.dialog_site.environment_selected.environment,
-				'commit': hash,
-				'version': version,
-				'command': 'rollback',
-				'value'	: addon_name,
-				'addon_type': addon_type,
-			};
-
-			self = this;
-
 			// Start job
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					// Updates job id with reponsed background job id
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data );
-					self.snackbar.message = "Rollback in progress.";
-					self.snackbar.show = true;
+			axios.post(
+				`/wp-json/captaincore/v1/quicksaves/${hash}/rollback`, {
+						site_id: site.site_id, 
+						environment: this.dialog_site.environment_selected.environment, 
+						version: version,
+						type: addon_type,
+						value: addon_name
+					},
+					{ headers: {'X-WP-Nonce':this.wp_nonce} }
+				)
+				.then(response => {
+					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					this.runCommand( response.data );
+					this.snackbar.message = "Rollback in progress.";
+					this.snackbar.show = true;
 				})
-				.catch( error => console.log( error ) );
-
 		},
 		QuicksaveFileRestore() {
 
@@ -12085,21 +12078,14 @@ new Vue({
 			this.dialog_file_diff.quicksave = environment.quicksaves.filter(quicksave => quicksave.hash == hash)[0]
 			this.dialog_file_diff.show = true
 
-			var data = {
-				'action': 'captaincore_install',
-				'post_id': site.site_id,
-				'environment': this.dialog_site.environment_selected.environment,
-				'command': 'quicksave_file_diff',
-				'commit': hash,
-				'value'	: file_name,
-			};
-
-			self = this;
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					html = [];
-					response.data.split('\n').forEach(line => {
+			axios.get(
+				`/wp-json/captaincore/v1/quicksaves/${hash}/filediff`, {
+					headers: {'X-WP-Nonce':this.wp_nonce},
+					params: { site_id: site.site_id, environment: environment.environment.toLowerCase(), file: file_name }
+				})
+				.then(response => {
+					let html = []
+					JSON.parse ( JSON.stringify (  response.data ) ).split('\n').forEach(line => {
 						applied_css="";
 						if ( line[0] == "-" ) {
 							applied_css=" class='red lighten-4'";
@@ -12109,11 +12095,9 @@ new Vue({
 						}
 						html.push("<div"+applied_css+">" + line + "</div>");
 					});
-					self.dialog_file_diff.response = html.join('\n');
-					self.dialog_file_diff.loading = false;
+					this.dialog_file_diff.response = html.join('\n')
+					this.dialog_file_diff.loading = false
 				})
-				.catch( error => console.log( error ) );
-
 		},
 		QuicksaveCheck( site_id ) {
 
@@ -12189,26 +12173,19 @@ new Vue({
 
 		},
 		viewQuicksavesChanges( site_id, quicksave ) {
-
 			site = this.dialog_site.site
 			quicksave.view_changes = true;
 
-			var data = {
-				action: 'captaincore_install',
-				post_id: site_id,
-				command: 'view_quicksave_changes',
-				environment: this.dialog_site.environment_selected.environment,
-				value: quicksave.hash
-			};
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-			  .then( response => {
-					// Remove empty last row
+			axios.get(
+				`/wp-json/captaincore/v1/quicksaves/${quicksave.hash}/changed`, {
+					headers: {'X-WP-Nonce':this.wp_nonce},
+					params: { site_id: site_id, environment: this.dialog_site.environment_selected.environment.toLowerCase() }
+				})
+				.then(response => { 
 					quicksave.view_files = response.data.trim().split("\n");
 					quicksave.filtered_files = response.data.trim().split("\n");
 					quicksave.loading = false;
-				})
-			  .catch( error => console.log( error ) );
+				});
 		},
 		expandQuicksave( item, site_id, environment ) {
 			table_name = "quicksave_table_" + site_id + "_" + environment;
@@ -12221,8 +12198,9 @@ new Vue({
 		},
 		viewQuicksaves() {
 			axios.get(
-				'/wp-json/captaincore/v1/site/'+this.dialog_site.site.site_id+'/quicksaves/'+this.dialog_site.environment_selected.environment.toLowerCase(), {
-					headers: {'X-WP-Nonce':this.wp_nonce}
+				'/wp-json/captaincore/v1/quicksaves', {
+					headers: {'X-WP-Nonce':this.wp_nonce},
+					params: { site_id: this.dialog_site.site.site_id, environment: this.dialog_site.environment_selected.environment.toLowerCase() }
 				})
 				.then(response => { 
 					this.dialog_site.environment_selected.quicksaves = response.data
@@ -12298,8 +12276,9 @@ new Vue({
 		getQuicksave( hash, site_id ) {
 			environment = this.dialog_site.environment_selected.environment.toLowerCase()
 			axios.get(
-				`/wp-json/captaincore/v1/site/${site_id}/${environment}/quicksaves/${hash}`, {
-					headers: {'X-WP-Nonce':this.wp_nonce}
+				`/wp-json/captaincore/v1/quicksaves/${hash}`, {
+					headers: {'X-WP-Nonce':this.wp_nonce},
+					params: { site_id: site_id, environment: environment }
 				})
 				.then(response => {
 					quicksave_selected = this.dialog_site.environment_selected.quicksaves.filter( q => q.hash == hash )
