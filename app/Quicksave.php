@@ -45,7 +45,7 @@ class Quicksave {
     public function rollback( $hash, $environment = "production", $version, $type, $value = "" ) {
         if ( $type == "all") {
             $command  = "quicksave rollback {$this->site_id}-{$environment} $hash --version=$version --all";
-            $response = Run::CLI( $command );
+            $response = Run::task( $command );
             return $response;
         }
         $command  = "quicksave rollback {$this->site_id}-{$environment} $hash --version=$version --$type=$value";
