@@ -3168,10 +3168,11 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-btn>
 							<v-toolbar-title class="body-2"><strong class="mr-5">{{ item.created_at | pretty_timestamp_epoch }}</strong> {{ item.status }}</v-toolbar-title>
 							<v-spacer></v-spacer>
-							<!--<v-toolbar-items>
-								<v-btn text small @click="QuicksavesRollback( dialog_site.site.site_id, item)">Rollback Everything <v-icon>mdi-restore</v-icon></v-btn>
-								<v-btn text small @click="viewQuicksavesChanges( dialog_site.site.site_id, item)">View Changes <v-icon>mdi-file-compare</v-icon></v-btn>
-							</v-toolbar-items>-->
+							<v-toolbar-items>
+								<v-btn text small @click="rollbackUpdates( dialog_site.site.site_id, item, true)">Revert changes <v-icon>mdi-restore</v-icon></v-btn>
+								<v-btn text small @click="rollbackUpdates( dialog_site.site.site_id, item)">Reapply changes <v-icon>mdi-redo</v-icon></v-btn>
+								<v-btn text small @click="viewQuicksavesChangesItem( dialog_site.site.site_id, item)">View Changes <v-icon>mdi-file-compare</v-icon></v-btn>
+							</v-toolbar-items>
 						</v-toolbar>
 						<v-card v-if="item.loading">
 							<span><v-progress-circular indeterminate color="primary" class="mx-16 mt-7 mb-7" size="24"></v-progress-circular></span>
@@ -3757,7 +3758,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-toolbar-title class="body-2">{{ item.status }}</v-toolbar-title>
 							<v-spacer></v-spacer>
 							<v-toolbar-items>
-                        		<v-btn text small @click="QuicksavesRollback( dialog_site.site.site_id, item)">Rollback Everything <v-icon>mdi-restore</v-icon></v-btn>
+								<v-btn text small @click="QuicksavesRollback( dialog_site.site.site_id, item, 'previous' )" v-show="item.previous_created_at">Revert changes <v-icon>mdi-restore</v-icon></v-btn>
+								<v-btn text small @click="QuicksavesRollback( dialog_site.site.site_id, item, 'this' )">Reapply changes <v-icon>mdi-redo</v-icon></v-btn>
                        			<v-btn text small @click="viewQuicksavesChanges( dialog_site.site.site_id, item)">View Changes <v-icon>mdi-file-compare</v-icon></v-btn>
 							</v-toolbar-items>
 						</v-toolbar>
@@ -12477,10 +12479,15 @@ new Vue({
 				.catch( error => console.log( error ) );
 
 		},
-		QuicksavesRollback( site_id, quicksave ) {
-			date = this.$options.filters.pretty_timestamp_epoch(quicksave.created_at)
+		QuicksavesRollback( site_id, quicksave, version ) {
 			site = this.dialog_site.site
-			should_proceed = confirm("Will rollback all themes/plugins on " + site.name + " to " + date + ". Proceed?")
+			environment = this.dialog_site.environment_selected
+			created_at = quicksave.created_at
+			if ( version == 'previous' ) {
+				created_at = quicksave.previous_created_at
+			}
+			date = this.$options.filters.pretty_timestamp_epoch(created_at)
+			should_proceed = confirm("Will rollback all themes/plugins on " + environment.home_url + " to " + date + ". Proceed?")
 
 			if ( ! should_proceed ) {
 				return;
@@ -12491,25 +12498,60 @@ new Vue({
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
-			var data = {
-				'action': 'captaincore_install',
-				'post_id': site.site_id,
-				'hash': quicksave.hash,
-				'command': 'quicksave_rollback',
-				'environment': this.dialog_site.environment_selected.environment,
-			};
-
-			self = this;
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-			  .then( response => {
-					quicksave.loading = false;
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data );
-					self.snackbar.message = "Rollback in process.";
-					self.snackbar.show = true;
+			axios.post(
+				`/wp-json/captaincore/v1/quicksaves/${quicksave.hash}/rollback`, {
+						site_id: site.site_id, 
+						environment: environment.environment, 
+						version: version,
+						type: "all"
+					},
+					{ headers: {'X-WP-Nonce':this.wp_nonce} }
+				)
+				.then(response => {
+					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					quicksave.loading = false
+					this.runCommand( response.data );
+					this.snackbar.message = "Rollback in progress.";
+					this.snackbar.show = true;
 				})
-			  .catch( error => console.log( error ) );
+		},
+		rollbackUpdates( site_id, quicksave, previous ) {
+			hash = quicksave.hash_after
+			created_at = quicksave.created_at
+			if ( previous ) {
+				hash = quicksave.hash_before
+				created_at = quicksave.started_at
+			}
+			date = this.$options.filters.pretty_timestamp_epoch(created_at)
+			site = this.dialog_site.site
+			environment = this.dialog_site.environment_selected
+			should_proceed = confirm("Will rollback all themes/plugins on " + environment.home_url + " to " + date + ". Proceed?")
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			// Start job
+			description = "Quicksave rollback all themes/plugins on " + site.name + " to " + date + ".";
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
+
+			axios.post(
+				`/wp-json/captaincore/v1/quicksaves/${hash}/rollback`, {
+						site_id: site.site_id, 
+						environment: environment.environment, 
+						version: 'this',
+						type: "all"
+					},
+					{ headers: {'X-WP-Nonce':this.wp_nonce} }
+				)
+				.then(response => {
+					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					quicksave.view_quicksave = false;
+					this.runCommand( response.data );
+					this.snackbar.message = "Rollback in progress.";
+					this.snackbar.show = true;
+				})
 
 		},
 		viewQuicksavesChanges( site_id, quicksave ) {
