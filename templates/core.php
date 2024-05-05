@@ -3191,8 +3191,45 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<td class="strikethrough">{{ theme.status }}</td>
 								<td><v-btn depressed small @click="RollbackUpdate(item.hash_before, 'theme', theme.name, item.started_at)">Rollback</v-btn></td>
 							</tr>
-							<tr v-for="theme in items" v-bind:class="{ 'green lighten-5': theme.changed_version || theme.changed_status }">
-								<td>{{ theme.title || theme.name }}</td>
+							<tr v-for="theme in items" v-bind:class="{ 'green lighten-5': theme.changed || theme.changed_version || theme.changed_status }">
+								<td>
+									{{ theme.title || theme.name }}
+									<v-dialog max-width="600">
+										<template v-slot:activator="{ on, attrs }">
+											<v-btn depressed outlined small class="ml-2" v-bind="attrs" v-on="on" v-show="theme.changed || theme.changed_version" @click="viewQuicksavesChangesItem( item, `themes/${theme.name}/` )">View Changes</v-btn>
+										</template>
+										<template v-slot:default="dialog">
+										<v-card>
+											<v-toolbar color="primary" dark>
+												<v-btn icon @click="dialog.value = false">
+													<v-icon>mdi-close</v-icon>
+												</v-btn>
+												Changes for '{{ theme.name }}' theme
+												<v-spacer></v-spacer>
+											</v-toolbar>
+											<v-card-text>
+											<v-data-table 
+												:headers='[{"text":"File","value":"file"}]'
+												:items="item.response"
+												:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
+												v-show="item.response.length > 0"
+											>
+												<template v-slot:body="{ items }">									
+												<tbody >
+													<tr v-for="i in items">
+														<td>
+															<a class="v-menu__activator" @click="QuicksaveFileDiffUpdate(item.hash_after, i)">{{ i }}</a>
+														</td>
+													</tr>
+												</tbody>
+												</template>
+											</v-data-table>
+											<v-progress-linear indeterminate rounded height="6" v-show="item.response.length == 0" class="mt-7 mb-4"></v-progress-linear>	
+											</v-card-text>
+										</v-card>
+										</template>
+									</v-dialog>
+								</td>
 								<td v-bind:class="{ 'green lighten-4': theme.changed_version }">
 									{{ theme.version }}
 									<v-tooltip bottom>
@@ -3210,7 +3247,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<td>
 									<v-dialog max-width="600">
 										<template v-slot:activator="{ on, attrs }">
-											<v-btn depressed small v-bind="attrs" v-on="on">Rollback</v-btn>
+											<v-btn depressed outlined small v-bind="attrs" v-on="on">Rollback</v-btn>
 										</template>
 										<template v-slot:default="dialog">
 										<v-card>
@@ -3256,10 +3293,47 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									<td class="strikethrough">{{ plugin.title || plugin.name }}</td>
 									<td class="strikethrough">{{ plugin.version }}</td>
 									<td class="strikethrough">{{ plugin.status }}</td>
-									<td><v-btn depressed small @click="RollbackUpdate(item.hash_before, 'plugin', plugin.name, item.started_at)">Rollback</v-btn></td>
+									<td><v-btn depressed outlined small @click="RollbackUpdate(item.hash_before, 'plugin', plugin.name, item.started_at)">Rollback</v-btn></td>
 								</tr>
 								<tr v-for="plugin in items" v-bind:class="[{ 'green lighten-5': plugin.changed_version || plugin.changed_status },{ 'red lighten-4 strikethrough': plugin.deleted }]">
-								<td>{{ plugin.title || plugin.name }}</td>
+								<td>
+									{{ plugin.title || plugin.name }}
+									<v-dialog max-width="600">
+										<template v-slot:activator="{ on, attrs }">
+											<v-btn depressed outlined small class="ml-2" v-bind="attrs" v-on="on" v-show="plugin.changed || plugin.changed_version" @click="viewQuicksavesChangesItem( item, `plugins/${plugin.name}/` )">View Changes</v-btn>
+										</template>
+										<template v-slot:default="dialog">
+										<v-card>
+											<v-toolbar color="primary" dark>
+												<v-btn icon @click="dialog.value = false">
+													<v-icon>mdi-close</v-icon>
+												</v-btn>
+												Changes for '{{ plugin.name }}' plugin
+												<v-spacer></v-spacer>
+											</v-toolbar>
+											<v-card-text>
+											<v-data-table 
+												:headers='[{"text":"File","value":"file"}]'
+												:items="item.response"
+												:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
+												v-show="item.response.length > 0"
+											>
+												<template v-slot:body="{ items }">									
+												<tbody >
+													<tr v-for="i in items">
+														<td>
+															<a class="v-menu__activator" @click="QuicksaveFileDiffUpdate(item.hash_after, i)">{{ i }}</a>
+														</td>
+													</tr>
+												</tbody>
+												</template>
+											</v-data-table>
+											<v-progress-linear indeterminate rounded height="6" v-show="item.response.length == 0" class="mt-7 mb-4"></v-progress-linear>	
+											</v-card-text>
+										</v-card>
+										</template>
+									</v-dialog>
+								</td>
 								<td v-bind:class="{ 'green lighten-4': plugin.changed_version }">
 									{{ plugin.version }} 
 									<v-tooltip bottom>
@@ -3277,7 +3351,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<td>
 									<v-dialog max-width="600">
 										<template v-slot:activator="{ on, attrs }">
-											<v-btn depressed small v-bind="attrs" v-on="on" v-show="plugin.status != 'must-use' && plugin.status != 'dropin'">Rollback</v-btn>
+											<v-btn depressed outlined small v-bind="attrs" v-on="on" v-show="plugin.status != 'must-use' && plugin.status != 'dropin'">Rollback</v-btn>
 										</template>
 										<template v-slot:default="dialog">
 										<v-card>
@@ -3750,8 +3824,45 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<td class="strikethrough">{{ theme.status }}</td>
 								<td><v-btn depressed small @click="RollbackQuicksave(item.hash, 'theme', theme.name, 'previous')">Rollback</v-btn></td>
 								</tr>
-							<tr v-for="theme in items" v-bind:class="{ 'green lighten-5': theme.changed_version || theme.changed_status }">
-								<td>{{ theme.title || theme.name }}</td>
+							<tr v-for="theme in items" v-bind:class="{ 'green lighten-5': theme.changed || theme.changed_version || theme.changed_status }">
+								<td>
+									<v-chip color="primary" label x-small v-show="theme.new" class="mr-2">New</v-chip> {{ theme.title || theme.name }}
+									<v-dialog max-width="600">
+										<template v-slot:activator="{ on, attrs }">
+											<v-btn depressed outlined small class="ml-2" v-bind="attrs" v-on="on" v-show="theme.changed || theme.changed_version" @click="viewQuicksavesChangesItem( item, `themes/${theme.name}/` )">View Changes</v-btn>
+										</template>
+										<template v-slot:default="dialog">
+										<v-card>
+											<v-toolbar color="primary" dark>
+												<v-btn icon @click="dialog.value = false">
+													<v-icon>mdi-close</v-icon>
+												</v-btn>
+												Changes for '{{ theme.name }}' theme
+												<v-spacer></v-spacer>
+											</v-toolbar>
+											<v-card-text>
+											<v-data-table 
+												:headers='[{"text":"File","value":"file"}]'
+												:items="item.response"
+												:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
+												v-show="item.response.length > 0"
+											>
+												<template v-slot:body="{ items }">									
+												<tbody >
+													<tr v-for="i in items">
+														<td>
+															<a class="v-menu__activator" @click="QuicksaveFileDiff(item.hash, i)">{{ i }}</a>
+														</td>
+													</tr>
+												</tbody>
+												</template>
+											</v-data-table>
+											<v-progress-linear indeterminate rounded height="6" v-show="item.response.length == 0" class="mt-7 mb-4"></v-progress-linear>	
+											</v-card-text>
+										</v-card>
+										</template>
+									</v-dialog>
+								</td>
 								<td v-bind:class="{ 'green lighten-4': theme.changed_version }">
 									{{ theme.version }}
 									<v-tooltip bottom>
@@ -3769,7 +3880,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<td>
 									<v-dialog max-width="600">
 										<template v-slot:activator="{ on, attrs }">
-											<v-btn depressed small v-bind="attrs" v-on="on">Rollback</v-btn>
+											<v-btn depressed outlined small v-bind="attrs" v-on="on">Rollback</v-btn>
 										</template>
 										<template v-slot:default="dialog">
 										<v-card>
@@ -3817,8 +3928,45 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									<td class="strikethrough">{{ plugin.status }}</td>
 									<td><v-btn depressed small @click="RollbackQuicksave(item.hash, 'plugin', plugin.name, 'previous')">Rollback</v-btn></td>
 								</tr>
-								<tr v-for="plugin in items" v-bind:class="[{ 'green lighten-5': plugin.changed_version || plugin.changed_status },{ 'red lighten-4 strikethrough': plugin.deleted }]">
-								<td>{{ plugin.title || plugin.name }}</td>
+								<tr v-for="plugin in items" v-bind:class="[{ 'green lighten-5': plugin.changed || plugin.changed_version || plugin.changed_status },{ 'red lighten-4 strikethrough': plugin.deleted }]">
+								<td>
+								<v-chip color="primary" label x-small v-show="plugin.new" class="mr-2">New</v-chip> {{ plugin.title || plugin.name }}
+									<v-dialog max-width="600">
+										<template v-slot:activator="{ on, attrs }">
+											<v-btn depressed outlined small class="ml-2" v-bind="attrs" v-on="on" v-show="plugin.changed || plugin.changed_version" @click="viewQuicksavesChangesItem( item, `plugins/${plugin.name}/` )">View Changes</v-btn>
+										</template>
+										<template v-slot:default="dialog">
+										<v-card>
+											<v-toolbar color="primary" dark>
+												<v-btn icon @click="dialog.value = false">
+													<v-icon>mdi-close</v-icon>
+												</v-btn>
+												Changes for '{{ plugin.name }}' plugin
+												<v-spacer></v-spacer>
+											</v-toolbar>
+											<v-card-text>
+											<v-data-table 
+												:headers='[{"text":"File","value":"file"}]'
+												:items="item.response"
+												:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
+												v-show="item.response.length > 0"
+											>
+												<template v-slot:body="{ items }">									
+												<tbody >
+													<tr v-for="i in items">
+														<td>
+															<a class="v-menu__activator" @click="QuicksaveFileDiff(item.hash, i)">{{ i }}</a>
+														</td>
+													</tr>
+												</tbody>
+												</template>
+											</v-data-table>
+											<v-progress-linear indeterminate rounded height="6" v-show="item.response.length == 0" class="mt-7 mb-4"></v-progress-linear>	
+											</v-card-text>
+										</v-card>
+										</template>
+									</v-dialog>
+								</td>
 								<td v-bind:class="{ 'green lighten-4': plugin.changed_version }">
 									{{ plugin.version }} 
 									<v-tooltip bottom>
@@ -12131,6 +12279,48 @@ new Vue({
 			this.dialog_apply_https_urls.site_id = this.sites_selected.map( s => s.site_id );
 			this.dialog_apply_https_urls.site_name = this.sites_selected.length + " sites";
 		},
+		RollbackUpdate( hash, addon_type, addon_name, created_at, dialog ) {
+			site = this.dialog_site.site
+			date = this.$options.filters.pretty_timestamp_epoch( created_at );
+			description = "Rollback "+ addon_type + " " + addon_name +" to version as of " + date + " on " + site.name;
+
+			if ( typeof dialog.value == "boolean" ) {
+				dialog.value = false
+			}
+
+			should_proceed = confirm( description + "?");
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			site = this.dialog_site.site
+
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
+
+			this.dialog_site.environment_selected.update_logs.forEach( log => {
+				log.view_quicksave = false
+			})
+
+			axios.post(
+				`/wp-json/captaincore/v1/quicksaves/${hash}/rollback`, {
+						site_id: site.site_id, 
+						environment: this.dialog_site.environment_selected.environment, 
+						version: 'this',
+						type: addon_type,
+						value: addon_name
+					},
+					{ headers: {'X-WP-Nonce':this.wp_nonce} }
+				)
+				.then(response => {
+					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					this.runCommand( response.data );
+					this.snackbar.message = "Rollback in progress.";
+					this.snackbar.show = true;
+				})
+		},
 		RollbackQuicksave( hash, addon_type, addon_name, version, dialog ){
 			site = this.dialog_site.site
 			environment = this.dialog_site.environment_selected;
@@ -12178,12 +12368,15 @@ new Vue({
 				})
 		},
 		QuicksaveFileRestore() {
-
 			date = this.$options.filters.pretty_timestamp_epoch(this.dialog_file_diff.quicksave.created_at);
 			should_proceed = confirm("Rollback file " + this.dialog_file_diff.file_name  + " as of " + date);
 
 			if ( ! should_proceed ) {
 				return;
+			}
+			hash = this.dialog_file_diff.quicksave.hash
+			if ( typeof this.dialog_file_diff.quicksave.hash == "undefined" ) {
+				hash = this.dialog_file_diff.quicksave.hash_after
 			}
 
 			site = this.dialog_site.site
@@ -12198,7 +12391,7 @@ new Vue({
 				'action': 'captaincore_install',
 				'post_id': site.site_id,
 				'environment': this.dialog_site.environment_selected.environment,
-				'hash': this.dialog_file_diff.quicksave.hash,
+				'hash': hash,
 				'command': 'quicksave_file_restore',
 				'value'	: this.dialog_file_diff.file_name,
 			};
@@ -12243,8 +12436,38 @@ new Vue({
 					this.dialog_file_diff.loading = false
 				})
 		},
-		QuicksaveCheck( site_id ) {
+		QuicksaveFileDiffUpdate( hash, file_name ) {
+			site = this.dialog_site.site
+			environment = this.dialog_site.environment_selected
+			file_name = file_name.split("	")[1]
+			this.dialog_file_diff.response = ""
+			this.dialog_file_diff.file_name = file_name
+			this.dialog_file_diff.loading = true
+			this.dialog_file_diff.quicksave = environment.update_logs.filter(quicksave => quicksave.hash_after == hash)[0]
+			this.dialog_file_diff.show = true
 
+			axios.get(
+				`/wp-json/captaincore/v1/quicksaves/${hash}/filediff`, {
+					headers: {'X-WP-Nonce':this.wp_nonce},
+					params: { site_id: site.site_id, environment: environment.environment.toLowerCase(), file: file_name }
+				})
+				.then(response => {
+					let html = []
+					JSON.parse ( JSON.stringify (  response.data ) ).split('\n').forEach(line => {
+						applied_css="";
+						if ( line[0] == "-" ) {
+							applied_css=" class='red lighten-4'";
+						}
+						if ( line[0] == "+" ) {
+							applied_css=" class='green lighten-5'";
+						}
+						html.push("<div"+applied_css+">" + line + "</div>");
+					});
+					this.dialog_file_diff.response = html.join('\n')
+					this.dialog_file_diff.loading = false
+				})
+		},
+		QuicksaveCheck( site_id ) {
 			site = this.dialog_site.site
 			should_proceed = confirm("Check for new files on " + site.name + "?")
 
@@ -12281,7 +12504,6 @@ new Vue({
 
 		},
 		QuicksavesRollback( site_id, quicksave ) {
-
 			date = this.$options.filters.pretty_timestamp_epoch(quicksave.created_at)
 			site = this.dialog_site.site
 			should_proceed = confirm("Will rollback all themes/plugins on " + site.name + " to " + date + ". Proceed?")
@@ -12329,6 +12551,22 @@ new Vue({
 					quicksave.view_files = response.data.trim().split("\n");
 					quicksave.filtered_files = response.data.trim().split("\n");
 					quicksave.loading = false;
+				});
+		},
+		viewQuicksavesChangesItem( item, match ) {
+			item.response = []
+			hash = item.hash
+			site = this.dialog_site.site
+			if ( typeof hash == 'undefined' ) {
+				hash = item.hash_after
+			}
+			axios.get(
+				`/wp-json/captaincore/v1/quicksaves/${hash}/changed`, {
+					headers: {'X-WP-Nonce':this.wp_nonce},
+					params: { site_id: site.site_id, environment: this.dialog_site.environment_selected.environment.toLowerCase(), match: match }
+				})
+				.then(response => { 
+					item.response = response.data.trim().split("\n")
 				});
 		},
 		expandQuicksave( item, site_id, environment ) {
