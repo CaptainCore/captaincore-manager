@@ -320,24 +320,6 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	}
 
-	// Imports update log
-	if ( $command == 'update-log-add' ) {
-
-		$update_log_check = ( new CaptainCore\UpdateLogs )->get( $post->data->log_id );
-		// Insert new quicksave
-		if ( empty( $update_log_check ) ) {
-			( new CaptainCore\UpdateLogs )->insert( (array) $post->data );
-		} else {
-			// Update existing quicksave
-			( new CaptainCore\UpdateLogs )->update( (array) $post->data, [ "log_id" => $post->data->log_id ] );
-		}
-	
-		$response = [
-			"response"   => "Update log added for $site_id",
-			"update_log" => $post->data,
-		];
-	}
-
 	// Add capture
 	if ( $command == 'new-capture' ) {
 

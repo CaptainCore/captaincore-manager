@@ -1052,6 +1052,7 @@ class Site {
                 $update_logs[ $key ]->view_changes   = false;
                 $update_logs[ $key ]->view_files     = [];
                 $update_logs[ $key ]->filtered_files = [];
+                $update_logs[ $key ]->response       = [];
                 $update_logs[ $key ]->loading        = true;
                 $update_logs[ $key ]->search         = "";
             }
