@@ -168,7 +168,6 @@ return array(
     'CaptainCore\\Site' => $baseDir . '/app/Site.php',
     'CaptainCore\\Sites' => $baseDir . '/app/Sites.php',
     'CaptainCore\\Snapshots' => $baseDir . '/app/Snapshots.php',
-    'CaptainCore\\UpdateLogs' => $baseDir . '/app/UpdateLogs.php',
     'CaptainCore\\User' => $baseDir . '/app/User.php',
     'CaptainCore\\Users' => $baseDir . '/app/Users.php',
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',

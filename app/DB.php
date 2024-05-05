@@ -65,24 +65,6 @@ class DB {
         return $wpdb->query( $wpdb->prepare( $sql, $value ) );
     }
 
-    static function fetch_logs( $value, $environment_id ) {
-        global $wpdb;
-        $value          = intval( $value );
-        $environment_id = intval( $environment_id );
-        $sql            = 'SELECT * FROM ' . self::_table() . " WHERE `site_id` = '$value' and `environment_id` = '$environment_id' order by `created_at` DESC";
-        $results        = $wpdb->get_results( $sql );
-        $response       = [];
-        foreach ( $results as $result ) {
-            $update_log = json_decode( $result->update_log );
-            foreach ( $update_log as $log ) {
-                $log->type       = $result->update_type;
-                $log->created_at = strtotime( $result->created_at );
-                $response[]      = $log;
-            }
-        }
-        return $response;
-    }
-
     static function where( $conditions ) {
         global $wpdb;
         $where_statements = [];
@@ -554,18 +536,6 @@ class DB {
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         global $wpdb;
         $charset_collate = $wpdb->get_charset_collate();
-        
-        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_update_logs` (
-            log_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-            site_id bigint(20) UNSIGNED NOT NULL,
-            environment_id bigint(20) UNSIGNED NOT NULL,
-            created_at datetime NOT NULL,
-            update_type varchar(255),
-            update_log longtext,
-        PRIMARY KEY  (log_id)
-        ) $charset_collate;";
-        
-        dbDelta($sql);
 
         $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_captures` (
             capture_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,

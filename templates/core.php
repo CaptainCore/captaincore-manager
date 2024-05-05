@@ -9488,32 +9488,6 @@ new Vue({
 					})
 				})
 		},
-		fetchUpdateLogs() {
-
-			update_logs_count = this.dialog_site.site.update_logs.length;
-
-			// Fetch updates if none exists
-			if ( update_logs_count == 0 ) {
-
-				var data = {
-					'action': 'captaincore_ajax',
-					'post_id': this.dialog_site.site.site_id,
-					'command': "fetch-update-logs",
-				};
-
-				axios.post( ajaxurl, Qs.stringify( data ) )
-					.then( response => {
-						response = response.data
-						// Loop through environments and assign users
-						Object.keys(response).forEach( key => {
-							this.dialog_site.site.environments.filter( e => e.environment == key )[0].update_logs = response[key];
-							if ( response[key] == null ) {
-								this.dialog_site.site.environments.filter( e => e.environment == key )[0].update_logs = [];
-							}
-						});
-					});
-			}
-		},
 		argumentsForActions() {
 			arguments = [];
 			this.select_bulk_action.forEach(action => {
@@ -13475,7 +13449,7 @@ new Vue({
 				}
 
 				if ( job.command == "update-wp" ){
-					this.fetchUpdateLogs( job.site_id );
+					this.viewUpdateLogs( job.site_id );
 				}
 
 				// console.log( "Done: select token " + job_id + " found job " + job.job_id )

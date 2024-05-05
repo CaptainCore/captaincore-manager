@@ -258,7 +258,6 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\Site' => __DIR__ . '/../..' . '/app/Site.php',
         'CaptainCore\\Sites' => __DIR__ . '/../..' . '/app/Sites.php',
         'CaptainCore\\Snapshots' => __DIR__ . '/../..' . '/app/Snapshots.php',
-        'CaptainCore\\UpdateLogs' => __DIR__ . '/../..' . '/app/UpdateLogs.php',
         'CaptainCore\\User' => __DIR__ . '/../..' . '/app/User.php',
         'CaptainCore\\Users' => __DIR__ . '/../..' . '/app/Users.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
