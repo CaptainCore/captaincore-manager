@@ -141,9 +141,9 @@ class Sites extends DB {
         $results  = 100;
         do {
             if ( empty( $last_key ) ) {
-                $response = fathom_api_get( "sites", [ "limit" => 100 ] );
+                $response = CaptainCore\Remote\Fathom::get( "sites", [ "limit" => 100 ] );
             } else {
-                $response = fathom_api_get( "sites", [ "limit" => 100, "starting_after" => $last_key ] );
+                $response = CaptainCore\Remote\Fathom::get( "sites", [ "limit" => 100, "starting_after" => $last_key ] );
             }
             $results  = count( $response->data );
             foreach( $response->data as $site ){
