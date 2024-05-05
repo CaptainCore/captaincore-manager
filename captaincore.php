@@ -1172,13 +1172,14 @@ function captaincore_quicksaves_get_func( $request ) {
 function captaincore_quicksaves_changed_func( $request ) {
 	$site_id     = $request->get_param( 'site_id' );
 	$environment = $request->get_param( 'environment' );
+	$match       = $request->get_param( 'match' );
 
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
 	$hash        = $request['hash'];
-	return ( new CaptainCore\Quicksave( $site_id ) )->changed( $hash, $environment );
+	return ( new CaptainCore\Quicksave( $site_id ) )->changed( $hash, $environment, $match );
 }
 
 function captaincore_quicksaves_filediff_func( $request ) {

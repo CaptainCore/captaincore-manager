@@ -30,8 +30,8 @@ class Quicksave {
         return $json;
     }
 
-    public function changed( $hash, $environment = "production" ) {
-        $command  = "quicksave show-changes {$this->site_id}-$environment $hash";
+    public function changed( $hash, $environment = "production", $match = "" ) {
+        $command  = "quicksave show-changes {$this->site_id}-$environment $hash $match";
         $response = Run::CLI( $command );
         return $response;
     }
