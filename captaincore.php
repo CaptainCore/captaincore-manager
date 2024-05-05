@@ -2713,6 +2713,7 @@ HEREDOC;
 	if ( $cmd == 'fetchAccount' ) {
 		$account = new CaptainCore\Account( $value );
 		$account->calculate_usage();
+		$account->calculate_totals();
 		echo json_encode( $account->fetch() );
 	}
 	if ( $cmd == 'fetchUser' ) {
