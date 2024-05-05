@@ -3162,7 +3162,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<div>{{ item.status }}</div>
 						</v-card-text>
 						<v-dialog v-model="item.view_quicksave == true">
-						<v-toolbar color="dark primary" dark dense>
+						<v-toolbar color="primary" dark dense>
 							<v-btn icon dark @click.native="item.view_quicksave = false">
 								<v-icon>mdi-close</v-icon>
 							</v-btn>
@@ -3171,18 +3171,19 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-toolbar-items>
 								<v-btn text small @click="rollbackUpdates( dialog_site.site.site_id, item, true)">Revert changes <v-icon>mdi-restore</v-icon></v-btn>
 								<v-btn text small @click="rollbackUpdates( dialog_site.site.site_id, item)">Reapply changes <v-icon>mdi-redo</v-icon></v-btn>
-								<v-btn text small @click="viewQuicksavesChangesItem( dialog_site.site.site_id, item)">View Changes <v-icon>mdi-file-compare</v-icon></v-btn>
 							</v-toolbar-items>
 						</v-toolbar>
 						<v-card v-if="item.loading">
 							<span><v-progress-circular indeterminate color="primary" class="mx-16 mt-7 mb-7" size="24"></v-progress-circular></span>
 						</v-card>
-						<v-card v-else>
+						<v-card tile v-else>
 							<v-data-table
 								:headers='[{"text":"Theme","value":"title"},{"text":"Version","value":"version","width":"150px"},{"text":"Status","value":"status","width":"150px"},{"text":"","value":"rollback","width":"150px"}]'
 								:items="item.themes"
+								:items-per-page="-1"
+								hide-default-footer
 								item-key="name"
-								class="quicksave-table"
+								class="quicksave-table mb-7"
 							>
 						    <template v-slot:body="{ items }">
 							<tbody>
@@ -3284,9 +3285,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								:headers='[{"text":"Plugin","value":"plugin"},{"text":"Version","value":"version","width":"150px"},{"text":"Status","value":"status","width":"150px"},{"text":"","value":"rollback","width":"150px"}]'
 								:items="item.plugins"
 								item-key="name"
-								class="quicksave-table"
-								:items-per-page="25"
-								:footer-props="{ itemsPerPageOptions: [25,50,100,{'text':'All','value':-1}] }"
+								:items-per-page="-1"
+								hide-default-footer
+								class="quicksave-table pb-5"
 								>
 								<template v-slot:body="{ items }">
 								<tbody>
