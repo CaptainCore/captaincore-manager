@@ -99,23 +99,6 @@ input:not([type]), input[type=text]:not(.browser-default), input[type=password]:
 	font-size: 88%;
 }
 
-.captcore_process-template-default #primary.content-area ul li {
-  list-style-type: disc;
-}
-
-.single-captcore_process #main header.main {
-  padding: 50px 0 !important;
-}
-
-.single-captcore_process #main header.main .date-author {
-  margin-bottom: 0px !important;
-}
-
-.single-captcore_process #main header.main .btn {
-  margin-top: 1em;
-  font-size: 0.9em;
-}
-
 .content-area ul.acf-actions {
   margin: 0 0 10px 0;
   right: -3px;
@@ -656,11 +639,6 @@ h3.process {
 
 .process-log-update .acf-field.acf-field-select.acf-field-588bb7bd3cab6 label {
   display: none;
-}
-
-article.type-captcore_process {
-  z-index: 1;
-  position: relative;
 }
 
 .process-log-update .list {
@@ -1439,8 +1417,12 @@ html body {
 }
 
 .table-backups tbody > tr,
-.table-quicksaves tbody > tr {
+.table-quicksaves > div > table > tbody > tr {
 	cursor: pointer;
+}
+
+.table-quicksaves > div > table > tbody > tr.v-data-table__expanded__content {
+  cursor: initial;
 }
 
 .text-right .usage:last-child {
@@ -1883,4 +1865,8 @@ body .v-navigation-drawer__border {
 .theme--light.v-data-table>.v-data-table__wrapper>table>thead>tr.v-data-table__expanded.v-data-table__expanded__row>th {
   border-bottom: 0;
   background: #eee;
+}
+
+.theme--light.v-data-table.timeline>.v-data-table__wrapper>table>tbody>tr:hover:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper) {
+  background: transparent;
 }
