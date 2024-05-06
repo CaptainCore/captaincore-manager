@@ -44,6 +44,24 @@ TODO
 
 == Changelog ==
 
+= 0.18.0: May 6 2024
+* New: API wrappers for `CaptainCore\Remote\Constellix`, `CaptainCore\Remote\Kinsta`, `CaptainCore\Remote\Mailgun` and `CaptainCore\Remote\Missive`
+* New: MyKinsta shared access
+* New: Automatically track script actions in site timeline
+* New: DNS import and export with support for `.zone` format
+* New: Update logs powered by quicksaves
+* New: Granular level `show changes` within quicksaves and update logs
+* Tweak: Improvements to quicksave UI
+* Tweak: Improvements to rollback options
+* Tweak: Improvements to site timeline
+* Tweak: Improvements when adding new DNS records
+* Tweak: Upgraded Constellix API from v1 to v4
+* Tweak: Removed offical Mailgun PHP client
+* Tweak: Removed unused legacy code for CPTs and custom fields
+* Tweak: Removed legacy update logs
+* Tweak: Upgraded Vuetify to v2.7.1
+* Tweak: Upgraded Vue.js to v2.7.15
+
 = 0.17.0: Feb 28 2023
 * New: Experimental integration with MyKinsta
 * New: TFA support with one time passwords. Built using OTPHP library and Kjua.js.
@@ -128,7 +146,7 @@ TODO
 * Tweak: Expanded token support per environment.
 * Tweak: Reduce reliance on ACF.
 * Tweak: Removed legacy custom page templates.
-* Tweak: Expanded Quicksave endpoint for per environment.
+* Tweak: Expanded quicksave endpoint for per environment.
 * Fix: Kinsta database url for new format.
 * Fix: Locked down users api endpoint.
 
@@ -337,7 +355,7 @@ TODO
 * Tweak: Display domains on overview page if DNS is defined.
 * Tweak: Sites UI - Improve snapshot dialog
 * Tweak: Sites UI - Improve font used for code diff
-* Tweak: Sites UI - Track Quicksave progress
+* Tweak: Sites UI - Track quicksave progress
 * Tweak: Sites UI - Specify provider instead of extracting from the address.
 * Tweak: Sites UI - Snapshot options
 * Fix: Deactivate command passed to CLI
@@ -392,7 +410,7 @@ TODO
 * NEW: Sites UI - Quicksave check dialog
 * NEW: Sites UI - Quicksave compare and highlight changes.
 * Tweak: Upgraded Vue.js to 2.5.17.
-* Tweak: Permission bug fixes for Quicksaves.
+* Tweak: Permission bug fixes for quicksaves.
 * Tweak: Fixed bug preventing sites from resetting when cleared.
 * Tweak: Housecleaning - Moved files from /inc/ to /includes/.
 * Tweak: Sites UI - Email notify after site deployments
@@ -403,7 +421,7 @@ TODO
 * NEW: Combined interface for listing/managing sites - Combined old site listing and advanced options with new Vue.js interface.
 * NEW: Sites UI - Advanced tab (first draft)
 * Tweak: Sites UI - Major improvements for site management. Preparation for adding staging to manage ui, see concept video: https://vimeo.com/284488960/10872cca8e.
-* Tweak: Sites UI - Merged advanced tools with new Vue.js powered interface: HTTPS dialog, Site copy dialog, Download snapshot dialog, production/staging deployments, usage breakdown dialog, site toggle dialog and Quicksave file diff dialog.
+* Tweak: Sites UI - Merged advanced tools with new Vue.js powered interface: HTTPS dialog, Site copy dialog, Download snapshot dialog, production/staging deployments, usage breakdown dialog, site toggle dialog and quicksave file diff dialog.
 * Tweak: Function `captaincore_fetch_domains` now works with other user roles.
 * Tweak: Fixed FontAwesome on backend pages.
 * Tweak: Upgraded Vuetify to 1.1.13.

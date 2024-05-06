@@ -16,7 +16,7 @@
  * Plugin Name:       CaptainCore Manager
  * Plugin URI:        https://captaincore.io
  * Description:       WordPress management toolkit for geeky maintenance professionals.
- * Version:           0.17.0
+ * Version:           0.18.0
  * Author:            Austin Ginder
  * Author URI:        https://austinginder.com
  * License:           MIT License
