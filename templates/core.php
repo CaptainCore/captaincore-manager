@@ -3029,6 +3029,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						show-select
 						hide-default-footer
 						>
+						<template v-slot:item.title="{ item }">
+							<div v-html="item.title"></div>
+						</template>
 						<template v-slot:item.status="{ item }">
 							<div v-if="item.status === 'inactive' || item.status === 'parent' || item.status === 'child'">
                         		<v-switch hide-details v-model="item.status" false-value="inactive" true-value="active" @change="activateTheme( item.name, dialog_site.site.site_id )"></v-switch>
@@ -3161,22 +3164,28 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-badge>
 						<div>{{ item.status }}</div>
 						</v-card-text>
-						<v-dialog v-model="item.view_quicksave == true">
-						<v-toolbar color="primary" dark dense>
+						<v-dialog v-model="item.view_quicksave == true" max-width="980">
+						<v-toolbar color="primary" dark>
 							<v-btn icon dark @click.native="item.view_quicksave = false">
 								<v-icon>mdi-close</v-icon>
 							</v-btn>
-							<v-toolbar-title class="body-2"><strong class="mr-5">{{ item.created_at | pretty_timestamp_epoch }}</strong> {{ item.status }}</v-toolbar-title>
+							<v-toolbar-title>Updates on {{ item.created_at | pretty_timestamp_epoch }}</v-toolbar-title>
 							<v-spacer></v-spacer>
 							<v-toolbar-items>
+							<v-tooltip bottom>
+							<template v-slot:activator="{ on, attrs }">
+								<v-icon v-bind="attrs" v-on="on" class="ma-3">mdi-file-compare</v-icon>
+							</template>
+							<span>{{ item.status }}</span>
+							</v-tooltip>
 								<v-btn text small @click="rollbackUpdates( dialog_site.site.site_id, item, true)">Revert changes <v-icon>mdi-restore</v-icon></v-btn>
 								<v-btn text small @click="rollbackUpdates( dialog_site.site.site_id, item)">Reapply changes <v-icon>mdi-redo</v-icon></v-btn>
 							</v-toolbar-items>
 						</v-toolbar>
-						<v-card v-if="item.loading">
+						<v-card flat v-if="item.loading">
 							<span><v-progress-circular indeterminate color="primary" class="mx-16 mt-7 mb-7" size="24"></v-progress-circular></span>
 						</v-card>
-						<v-card tile v-else>
+						<v-card flat tile v-else>
 							<v-data-table
 								:headers='[{"text":"Theme","value":"title"},{"text":"Version","value":"version","width":"150px"},{"text":"Status","value":"status","width":"150px"},{"text":"","value":"rollback","width":"150px"}]'
 								:items="item.themes"
@@ -3817,7 +3826,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								:headers='[{"text":"Theme","value":"title"},{"text":"Version","value":"version","width":"150px"},{"text":"Status","value":"status","width":"150px"},{"text":"","value":"rollback","width":"150px"}]'
 								:items="item.themes"
 								item-key="name"
-								class="quicksave-table"
+								:items-per-page="-1"
+								hide-default-footer
+								class="quicksave-table mb-5"
 							>
 							<template v-slot:body="{ items }">
 							<tbody>
@@ -3825,7 +3836,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<td class="strikethrough">{{ theme.title || theme.name }}</td>
 								<td class="strikethrough">{{ theme.version }}</td>
 								<td class="strikethrough">{{ theme.status }}</td>
-								<td><v-btn depressed small @click="RollbackQuicksave(item.hash, 'theme', theme.name, 'previous')">Rollback</v-btn></td>
+								<td><v-btn depressed outlined small @click="RollbackQuicksave(item.hash, 'theme', theme.name, 'previous')">Rollback</v-btn></td>
 								</tr>
 							<tr v-for="theme in items" v-bind:class="{ 'green lighten-5': theme.changed || theme.changed_version || theme.changed_status }">
 								<td>
@@ -3920,8 +3931,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								:items="item.plugins"
 								item-key="name"
 								class="quicksave-table"
-								:items-per-page="25"
-								:footer-props="{ itemsPerPageOptions: [25,50,100,{'text':'All','value':-1}] }"
+								:items-per-page="-1"
+								hide-default-footer
 								>
 								<template v-slot:body="{ items }">
 								<tbody>
@@ -3929,7 +3940,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									<td class="strikethrough">{{ plugin.title || plugin.name }}</td>
 									<td class="strikethrough">{{ plugin.version }}</td>
 									<td class="strikethrough">{{ plugin.status }}</td>
-									<td><v-btn depressed small @click="RollbackQuicksave(item.hash, 'plugin', plugin.name, 'previous')">Rollback</v-btn></td>
+									<td><v-btn depressed outlined small @click="RollbackQuicksave(item.hash, 'plugin', plugin.name, 'previous')">Rollback</v-btn></td>
 								</tr>
 								<tr v-for="plugin in items" v-bind:class="[{ 'green lighten-5': plugin.changed || plugin.changed_version || plugin.changed_status },{ 'red lighten-4 strikethrough': plugin.deleted }]">
 								<td>
@@ -3987,7 +3998,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<td>
 									<v-dialog max-width="600">
 										<template v-slot:activator="{ on, attrs }">
-											<v-btn depressed small v-bind="attrs" v-on="on" v-show="plugin.status != 'must-use' && plugin.status != 'dropin'">Rollback</v-btn>
+											<v-btn depressed outlined small v-bind="attrs" v-on="on" v-show="plugin.status != 'must-use' && plugin.status != 'dropin'">Rollback</v-btn>
 										</template>
 										<template v-slot:default="dialog">
 										<v-card>
