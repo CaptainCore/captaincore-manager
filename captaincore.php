@@ -1243,6 +1243,32 @@ function captaincore_site_backups_get_func( $request ) {
 	return $site->backup_get( $backup_id, $environment );
 }
 
+function captaincore_site_logs_list_func( $request ) {
+	$site_id = $request['id'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$environment = $request['environment'];
+	$site        = ( new CaptainCore\Sites )->get( $site_id );
+	$response    = CaptainCore\Run::CLI( "logs list {$site->site}-$environment" );
+	return json_decode( $response );
+}
+
+function captaincore_site_logs_fetch_func( $request ) {
+	$site_id = $request['id'];
+	$file    = $request['file'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$environment = $request['environment'];
+	$site        = ( new CaptainCore\Sites )->get( $site_id );
+	return CaptainCore\Run::CLI( "logs get {$site->site}-$environment --file=\"$file\"" );
+}
+
 function captaincore_site_mailgun_func( $request ) {
 	$site_id = $request['id'];
 	$name    = $request['name'];
@@ -1418,6 +1444,22 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/backups/(?P<backup_id>[a-zA-Z0-9-]+)', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_backups_get_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/logs', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_site_logs_list_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/logs/fetch', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_site_logs_fetch_func',
 			'show_in_index' => false
 		]
 	);
