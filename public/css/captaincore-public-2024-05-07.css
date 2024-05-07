@@ -1870,3 +1870,16 @@ body .v-navigation-drawer__border {
 .theme--light.v-data-table.timeline>.v-data-table__wrapper>table>tbody>tr:hover:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper) {
   background: transparent;
 }
+
+.v-application pre[class*=language-] {
+  border-radius: 0px;
+  border:0px;
+}
+
+.language-log .token.operator {
+  background: none;
+}
+
+code.language-log {
+  padding: 0px;
+}
