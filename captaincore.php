@@ -1269,6 +1269,12 @@ function captaincore_site_logs_fetch_func( $request ) {
 	return CaptainCore\Run::CLI( "logs get {$site->site}-$environment --file=\"$file\"" );
 }
 
+function captaincore_site_environments_get_func( $request ) {
+	$site_id = $request['id'];
+	$site    = new CaptainCore\Site( $site_id );
+	return $site->environments();
+}
+
 function captaincore_site_mailgun_func( $request ) {
 	$site_id = $request['id'];
 	$name    = $request['name'];
@@ -1460,6 +1466,14 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/logs/fetch', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_logs_fetch_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/environments', [
+			'methods'       => 'GET',
+			'callback'      => 'captaincore_site_environments_get_func',
 			'show_in_index' => false
 		]
 	);
@@ -3675,11 +3689,6 @@ function captaincore_ajax_action_callback() {
 		$account->delete();
 	}
 
-	if ( $cmd == 'fetch-site-environments' ) {
-		$site         = new CaptainCore\Site( $post_id );
-		$environments = $site->environments();
-		echo json_encode( $environments );
-	}
 	if ( $cmd == 'fetch-site-details' ) {
 		$site        = new CaptainCore\Site( $post_id );
 		$account     = $site->account();
