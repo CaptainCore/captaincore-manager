@@ -878,6 +878,10 @@ class Site {
             $environment->quicksaves       = 'Loading';
             $environment->snapshots        = 'Loading';
             $environment->update_logs      = 'Loading';
+            $environment->server_logs      = [ "files" => [] ];
+            $environment->view_server_logs = false;
+            $environment->server_log_selected = "";
+            $environment->server_log_response = "";
             $environment->quicksave_panel  = [];
             $environment->quicksave_search = '';
             $environment->capture_pages    = json_decode ( $environment->capture_pages );
