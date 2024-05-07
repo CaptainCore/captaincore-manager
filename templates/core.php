@@ -8915,12 +8915,9 @@ new Vue({
 
 		},
 		syncSiteEnvironment( site_id, environment ) {
-			var data = {
-				'action': 'captaincore_ajax',
-				'command': "fetch-site-environments",
-				'post_id': site_id
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.get( `/wp-json/captaincore/v1/sites/${site_id}/environments`, {
+				headers: { 'X-WP-Nonce':this.wp_nonce }
+			})
 				.then( response => {
 					environments = response.data
 					environment_selected = environments.filter( e => e.environment.toLowerCase() == environment.toLowerCase() )[0]
@@ -8975,12 +8972,9 @@ new Vue({
 
 		},
 		fetchSiteEnvironments( site_id ) {
-			var data = {
-				'action': 'captaincore_ajax',
-				'command': "fetch-site-environments",
-				'post_id': site_id
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.get( `/wp-json/captaincore/v1/sites/${site_id}/environments`, {
+				headers: { 'X-WP-Nonce':this.wp_nonce }
+			})
 				.then( response => {
 					this.dialog_site.site.environments = response.data
 					this.dialog_site.site.environments.forEach( e => {
@@ -11011,12 +11005,9 @@ new Vue({
 			}
 		},
 		copySSH( site ) {
-			var data = {
-				'action': 'captaincore_ajax',
-				'command': "fetch-site-environments",
-				'post_id': site.site_id
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.get( `/wp-json/captaincore/v1/sites/${site.site_id}/environments`, {
+				headers: { 'X-WP-Nonce':this.wp_nonce }
+			})
 				.then( response => {
 					this.copyText( response.data[0].ssh )
 				});
