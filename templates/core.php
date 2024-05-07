@@ -33,6 +33,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.1/dist/frappe-charts.min.css" rel="stylesheet">
 <?php } ?>
 <link href="<?php echo $plugin_url; ?>public/css/captaincore-public-2023-11-16.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-twilight.min.css" rel="stylesheet" />
 </head>
 <body>
 <div id="app" v-cloak>
@@ -2592,6 +2594,19 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</v-flex>
 									</v-layout>
 								</div>
+				<v-dialog v-model="dialog_site.environment_selected.view_server_logs" fullscreen scrollable>
+					<v-card flat tile>
+						<v-toolbar dark color="primary" class="shrink">
+							<v-btn icon @click="dialog_site.environment_selected.view_server_logs = false"><v-icon>mdi-close</v-icon></v-btn>
+							<v-toolbar-title>Server logs for {{ dialog_site.environment_selected.home_url }}</v-toolbar-title>
+						</v-toolbar>
+						<v-card-text class="mt-5 pb-5">
+							<v-progress-circular indeterminate color="primary" class="mx-16 mt-7 mb-7" size="24" v-if="typeof dialog_site.environment_selected.server_logs != 'undefined' && dialog_site.environment_selected.server_logs.files == ''"></v-progress-circular></span>
+							<v-select v-model="dialog_site.environment_selected.server_log_selected" :items="dialog_site.environment_selected.server_logs.files" item-text="name" item-value="path" label="Select log" v-if="typeof dialog_site.environment_selected.server_logs != 'undefined' && dialog_site.environment_selected.server_logs.files != ''" @change="fetchLogs()"></v-select>
+							<pre style="font-size: 13px;" class="overflow-auto"><code class="language-log" v-html="dialog_site.environment_selected.server_log_response"></code></pre>
+						</v-card-text>
+					</v-card>
+				</v-dialog>
         		<v-tabs-items v-model="dialog_site.site.tabs_management" v-if="dialog_site.loading != true">
 					<v-tab-item :key="1" value="tab-Info" :transition="false" :reverse-transition="false">
 						<v-toolbar dense light flat>
@@ -2653,6 +2668,15 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</v-list-item-content>
 									<v-list-item-icon>
 										<v-icon>mdi-image</v-icon>
+									</v-list-item-icon>
+									</v-list-item>
+									<v-list-item @click="viewLogs( dialog_site.site.site_id )" dense>
+									<v-list-item-content>
+										<v-list-item-title>Server Logs</v-list-item-title>
+										<v-list-item-subtitle><code>error.log</code> and <code>access.log</code></v-list-item-subtitle>
+									</v-list-item-content>
+									<v-list-item-icon>
+										<v-icon>mdi-text-box-multiple</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
 									<v-list-item @click="copyText( dialog_site.environment_selected.subsite_count + ' subsites')" dense v-if="dialog_site.environment_selected.subsite_count">
@@ -6923,6 +6947,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.1/dist/frappe-charts.min.umd.js"></script>
 <?php } ?>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-log.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/kjua.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/moment.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/core.js"></script>
@@ -10807,6 +10833,33 @@ new Vue({
 				this.snackbar.message = `Generating new capture if site changes detected.`
 				this.snackbar.show = true
 				
+			});
+		},
+		viewLogs(){
+			site = this.dialog_site.site
+			environment = this.dialog_site.environment_selected
+			environment.view_server_logs = true
+			axios.get(
+				`/wp-json/captaincore/v1/sites/${site.site_id}/${environment.environment.toLowerCase()}/logs`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => { 
+					environment.server_logs = response.data
+				});
+		},
+		fetchLogs() {
+			site = this.dialog_site.site
+			environment = this.dialog_site.environment_selected
+			environment.view_server_logs = true
+			axios.get(
+				`/wp-json/captaincore/v1/sites/${site.site_id}/${environment.environment.toLowerCase()}/logs/fetch?file=${environment.server_log_selected}`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					window.Prism = window.Prism || {};
+					window.Prism.manual = true;
+					environment.server_log_response = Prism.highlight( response.data, Prism.languages.log, 'log')
+					Prism.highlightAll()
 			});
 		},
 		showCaptures( site_id ) {
