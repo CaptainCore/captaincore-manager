@@ -1259,6 +1259,7 @@ function captaincore_site_logs_list_func( $request ) {
 function captaincore_site_logs_fetch_func( $request ) {
 	$site_id = $request['id'];
 	$file    = $request['file'];
+	$limit   = $request['limit'];
 
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
@@ -1266,7 +1267,7 @@ function captaincore_site_logs_fetch_func( $request ) {
 
 	$environment = $request['environment'];
 	$site        = ( new CaptainCore\Sites )->get( $site_id );
-	return CaptainCore\Run::CLI( "logs get {$site->site}-$environment --file=\"$file\"" );
+	return CaptainCore\Run::CLI( "logs get {$site->site}-$environment --file=\"$file\" --limit=$limit" );
 }
 
 function captaincore_site_environments_get_func( $request ) {

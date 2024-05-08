@@ -2602,7 +2602,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-toolbar>
 						<v-card-text class="mt-5 pb-5">
 							<v-progress-circular indeterminate color="primary" class="mt-7 mb-7" size="24" v-if="typeof dialog_site.environment_selected.server_logs != 'undefined' && dialog_site.environment_selected.server_logs.files == ''"></v-progress-circular></span>
-							<v-autocomplete v-model="dialog_site.environment_selected.server_log_selected" :items="dialog_site.environment_selected.server_logs.files" item-text="name" item-value="path" label="Select log" v-if="typeof dialog_site.environment_selected.server_logs != 'undefined' && dialog_site.environment_selected.server_logs.files != ''" @change="fetchLogs()" spellcheck="false"></v-autocomplete>
+							<v-row v-if="typeof dialog_site.environment_selected.server_logs != 'undefined' && dialog_site.environment_selected.server_logs.files != ''" >
+								<v-col>
+									<v-autocomplete v-model="dialog_site.environment_selected.server_log_selected" :items="dialog_site.environment_selected.server_logs.files" item-text="name" item-value="path" label="Select log" @change="fetchLogs()" spellcheck="false"></v-autocomplete>
+								</v-col>
+								<v-col class="shrink" style="min-width:200px">
+									<v-select v-model="dialog_site.environment_selected.server_log_limit" :items="['100','1000','5000','10000']" label="Log limit" @change="fetchLogs()"></v-select>
+								</v-col>
+							</v-row>
 							<v-progress-circular indeterminate color="primary" class="mt-2" size="24" v-show="dialog_site.environment_selected.loading_server_logs"></v-progress-circular></span>
 							<pre style="font-size: 13px;" class="overflow-auto" v-show="dialog_site.environment_selected.server_log_response != ''"><code class="language-log" v-html="dialog_site.environment_selected.server_log_response"></code></pre>
 						</v-card-text>
@@ -10854,7 +10861,7 @@ new Vue({
 			environment.server_log_response = ""
 			environment.loading_server_logs = true
 			axios.get(
-				`/wp-json/captaincore/v1/sites/${site.site_id}/${environment.environment.toLowerCase()}/logs/fetch?file=${environment.server_log_selected}`, {
+				`/wp-json/captaincore/v1/sites/${site.site_id}/${environment.environment.toLowerCase()}/logs/fetch?file=${environment.server_log_selected}&limit=${environment.server_log_limit}`, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
