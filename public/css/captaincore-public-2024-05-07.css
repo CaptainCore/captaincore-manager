@@ -1883,3 +1883,9 @@ body .v-navigation-drawer__border {
 code.language-log {
   padding: 0px;
 }
+
+.language-css .token.string, .style .token.string, .token.entity, .token.operator, .token.url, 
+.v-application .token.error, .v-application .token.info {
+  background: transparent !important;
+
+}
