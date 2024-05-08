@@ -881,6 +881,7 @@ class Site {
             $environment->server_logs      = [ "files" => [] ];
             $environment->view_server_logs = false;
             $environment->loading_server_logs = false;
+            $environment->server_log_limit = "1000";
             $environment->server_log_selected = "";
             $environment->server_log_response = "";
             $environment->quicksave_panel  = [];
