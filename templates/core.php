@@ -51,7 +51,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-spacer></v-spacer>
 		<v-menu v-model="notifications" :close-on-content-click="false" offset-y>
 			<template v-slot:activator="{ on, attrs }">
-				<v-btn icon v-bind="attrs" v-on="on">
+				<v-btn icon v-bind="attrs" v-on="on" v-show="route != 'login'">
 				<v-badge dot color="error" :value="provider_actions.length">
 					<v-icon>mdi-bell-ring</v-icon>
 				</v-badge>
