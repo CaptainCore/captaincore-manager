@@ -2601,9 +2601,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-toolbar-title>Server logs for {{ dialog_site.environment_selected.home_url }}</v-toolbar-title>
 						</v-toolbar>
 						<v-card-text class="mt-5 pb-5">
-							<v-progress-circular indeterminate color="primary" class="mx-16 mt-7 mb-7" size="24" v-if="typeof dialog_site.environment_selected.server_logs != 'undefined' && dialog_site.environment_selected.server_logs.files == ''"></v-progress-circular></span>
+							<v-progress-circular indeterminate color="primary" class="mt-7 mb-7" size="24" v-if="typeof dialog_site.environment_selected.server_logs != 'undefined' && dialog_site.environment_selected.server_logs.files == ''"></v-progress-circular></span>
 							<v-select v-model="dialog_site.environment_selected.server_log_selected" :items="dialog_site.environment_selected.server_logs.files" item-text="name" item-value="path" label="Select log" v-if="typeof dialog_site.environment_selected.server_logs != 'undefined' && dialog_site.environment_selected.server_logs.files != ''" @change="fetchLogs()"></v-select>
-							<pre style="font-size: 13px;" class="overflow-auto"><code class="language-log" v-html="dialog_site.environment_selected.server_log_response"></code></pre>
+							<v-progress-circular indeterminate color="primary" class="mt-2" size="24" v-show="dialog_site.environment_selected.loading_server_logs"></v-progress-circular></span>
+							<pre style="font-size: 13px;" class="overflow-auto" v-show="dialog_site.environment_selected.server_log_response != ''"><code class="language-log" v-html="dialog_site.environment_selected.server_log_response"></code></pre>
 						</v-card-text>
 					</v-card>
 				</v-dialog>
@@ -10832,24 +10833,32 @@ new Vue({
 		viewLogs(){
 			site = this.dialog_site.site
 			environment = this.dialog_site.environment_selected
+			environment.server_logs.files = []
 			environment.view_server_logs = true
+			environment.server_log_response = ""
 			axios.get(
 				`/wp-json/captaincore/v1/sites/${site.site_id}/${environment.environment.toLowerCase()}/logs`, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => { 
 					environment.server_logs = response.data
+					if ( environment.server_logs.files.length > 0 ) {
+						environment.server_log_selected = environment.server_logs.files[0].path
+						this.fetchLogs()
+					}
 				});
 		},
 		fetchLogs() {
 			site = this.dialog_site.site
 			environment = this.dialog_site.environment_selected
-			environment.view_server_logs = true
+			environment.server_log_response = ""
+			environment.loading_server_logs = true
 			axios.get(
 				`/wp-json/captaincore/v1/sites/${site.site_id}/${environment.environment.toLowerCase()}/logs/fetch?file=${environment.server_log_selected}`, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
+					environment.loading_server_logs = false
 					window.Prism = window.Prism || {};
 					window.Prism.manual = true;
 					environment.server_log_response = Prism.highlight( response.data, Prism.languages.log, 'log')
