@@ -2602,7 +2602,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-toolbar>
 						<v-card-text class="mt-5 pb-5">
 							<v-progress-circular indeterminate color="primary" class="mt-7 mb-7" size="24" v-if="typeof dialog_site.environment_selected.server_logs != 'undefined' && dialog_site.environment_selected.server_logs.files == ''"></v-progress-circular></span>
-							<v-select v-model="dialog_site.environment_selected.server_log_selected" :items="dialog_site.environment_selected.server_logs.files" item-text="name" item-value="path" label="Select log" v-if="typeof dialog_site.environment_selected.server_logs != 'undefined' && dialog_site.environment_selected.server_logs.files != ''" @change="fetchLogs()"></v-select>
+							<v-autocomplete v-model="dialog_site.environment_selected.server_log_selected" :items="dialog_site.environment_selected.server_logs.files" item-text="name" item-value="path" label="Select log" v-if="typeof dialog_site.environment_selected.server_logs != 'undefined' && dialog_site.environment_selected.server_logs.files != ''" @change="fetchLogs()" spellcheck="false"></v-autocomplete>
 							<v-progress-circular indeterminate color="primary" class="mt-2" size="24" v-show="dialog_site.environment_selected.loading_server_logs"></v-progress-circular></span>
 							<pre style="font-size: 13px;" class="overflow-auto" v-show="dialog_site.environment_selected.server_log_response != ''"><code class="language-log" v-html="dialog_site.environment_selected.server_log_response"></code></pre>
 						</v-card-text>
