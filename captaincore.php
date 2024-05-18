@@ -93,6 +93,34 @@ function captaincore_missive_func( WP_REST_Request $request ) {
 
 	$errors     = [];
 	$missive    = json_decode( $request->get_body() );
+	$subject    = $missive->latest_message->subject;
+
+	if ( $subject == "Email Health Check" ) {
+		$message_id = $missive->latest_message->id;
+		$message    = CaptainCore\Remote\Missive::get( "messages/$message_id")->messages->body;
+		$message    = explode( " ", $message );
+		if ( count( $message ) != 3 ) {
+			return;
+		}
+		$site    = $message[0];
+		$site_id = is_string( $site ) ? explode( "-", $site )[0] : "";
+		$token   = $message[1];
+		$site    = CaptainCore\Sites::get( $site_id );
+	
+		if ( ! $site ) { 
+			return;
+		}
+
+		if ( ! is_numeric( $token ) || ! (int) $token == $token ) {
+			return;
+		}
+
+		CaptainCore\Run::CLI( "email-health response $site $token received" );
+
+		return;
+	}
+
+	if ( $subject == "Action is required to renew your SSL certificate" ) {
 	$message_id = $missive->latest_message->id;
 	$message    = CaptainCore\Remote\Missive::get( "messages/$message_id")->messages->body;
 
@@ -110,6 +138,7 @@ function captaincore_missive_func( WP_REST_Request $request ) {
 	] ] );
 
 	return;
+	}
 }
 
 function captaincore_api_func( WP_REST_Request $request ) {
