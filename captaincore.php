@@ -100,12 +100,12 @@ function captaincore_missive_func( WP_REST_Request $request ) {
 		if ( count( $message ) != 2 ) {
 			return;
 		}
-		$site    = $message[0];
-		$site_id = is_string( $site ) ? explode( "-", $site )[0] : "";
-		$token   = $message[1];
-		$site    = CaptainCore\Sites::get( $site_id );
+		$site       = $message[0];
+		$site_id    = is_string( $site ) ? explode( "-", $site )[0] : "";
+		$token      = $message[1];
+		$site_check = CaptainCore\Sites::get( $site_id );
 	
-		if ( ! $site ) { 
+		if ( ! $site_check ) { 
 			return;
 		}
 
