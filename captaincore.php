@@ -97,7 +97,7 @@ function captaincore_missive_func( WP_REST_Request $request ) {
 
 	if ( $subject == "Email Health Check" ) {
 		$message    = explode( " ", $missive->message->preview);
-		if ( count( $message ) != 3 ) {
+		if ( count( $message ) != 2 ) {
 			return;
 		}
 		$site    = $message[0];
