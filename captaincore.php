@@ -93,12 +93,10 @@ function captaincore_missive_func( WP_REST_Request $request ) {
 
 	$errors     = [];
 	$missive    = json_decode( $request->get_body() );
-	$subject    = $missive->latest_message->subject;
+	$subject    = empty( $missive->latest_message->subject ) ? $missive->message->subject : $missive->latest_message->subject;
 
 	if ( $subject == "Email Health Check" ) {
-		$message_id = $missive->latest_message->id;
-		$message    = CaptainCore\Remote\Missive::get( "messages/$message_id")->messages->body;
-		$message    = explode( " ", $message );
+		$message    = explode( " ", $missive->message->preview);
 		if ( count( $message ) != 3 ) {
 			return;
 		}
