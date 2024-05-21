@@ -339,7 +339,8 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		unset( $details->connection_errors );
 
 		if ( $current_environment->environment == "Production" ) {
-			$details->core = $post->data->core;
+			$details->core     = $post->data->core;
+			$details->subsites = $post->data->subsite_count;
 		}
 
 		// Mark Site as updated
