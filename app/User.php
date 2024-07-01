@@ -306,8 +306,7 @@ class User {
                 'source_object' => $source_object,
             ];
 
-            $available_gateways = WC()->payment_gateways->get_available_payment_gateways();
-            $payment_method     = isset( $available_gateways[ 'stripe' ] ) ? $available_gateways[ 'stripe' ] : false;
+            $payment_method     = WC()->payment_gateways()->payment_gateways()['stripe'];
             $order              = wc_get_order( $invoice_id );
             $payment_method->save_source_to_order( $order, $prepared_source );
             
@@ -346,8 +345,7 @@ class User {
                 'source_object' => $source_object,
             ];
 
-            $available_gateways = WC()->payment_gateways->get_available_payment_gateways();
-            $payment_method     = isset( $available_gateways[ 'stripe' ] ) ? $available_gateways[ 'stripe' ] : false;
+            $payment_method     = WC()->payment_gateways()->payment_gateways()['stripe'];
             $order              = wc_get_order( $invoice_id );
 
             if ( ! empty( $source_object->error ) && $source_object->error->code == "resource_missing" ) {
