@@ -769,8 +769,8 @@ class Kinsta {
                 "variables" => [ 
                     "idAction" => $provider_key
                 ],
-                "operationName" => "ActionResult",
-                "query"         => 'query ActionResult($idAction: Int!) {
+                "operationName" => "Action",
+                "query"         => 'query Action($idAction: Int!) {
                     action(id: $idAction) {
                         error
                         result
