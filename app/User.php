@@ -387,7 +387,7 @@ class User {
                 if ( ! empty( $intent->charges->data ) ) {
 				$response = end( $intent->charges->data );
                 } elseif ( ! empty( $intent->latest_charge ) ) {
-                    $response = $this->get_charge_object( $intent->latest_charge );
+                    $response = \WC_Stripe_API::request( [], 'charges/' . $intent->latest_charge, 'GET' );
                 }
 			}
 
