@@ -382,8 +382,13 @@ class User {
 			}
 
 			if ( ! empty( $intent ) ) {
+                $response = null
 				// Use the last charge within the intent to proceed.
+                if ( ! empty( $intent->charges->data ) ) {
 				$response = end( $intent->charges->data );
+                } elseif ( ! empty( $intent->latest_charge ) ) {
+                    $response = $this->get_charge_object( $intent->latest_charge );
+                }
 			}
 
 			// Process valid response.
