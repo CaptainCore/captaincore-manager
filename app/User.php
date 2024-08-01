@@ -382,7 +382,7 @@ class User {
 			}
 
 			if ( ! empty( $intent ) ) {
-                $response = null
+                $response = null;
 				// Use the last charge within the intent to proceed.
                 if ( ! empty( $intent->charges->data ) ) {
 				$response = end( $intent->charges->data );
