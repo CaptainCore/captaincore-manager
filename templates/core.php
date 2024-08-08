@@ -3196,7 +3196,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-badge>
 						<div>{{ item.status }}</div>
 						</v-card-text>
-						<v-dialog v-model="item.view_quicksave == true" max-width="980">
+						<v-dialog v-model="item.view_quicksave" max-width="980">
 						<v-toolbar color="primary" dark>
 							<v-btn icon dark @click.native="item.view_quicksave = false">
 								<v-icon>mdi-close</v-icon>
