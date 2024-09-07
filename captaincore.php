@@ -4265,36 +4265,6 @@ function cc_mime_types( $mimes ) {
 }
 add_filter( 'upload_mimes', 'cc_mime_types' );
 
-// After payment received, connect up the Stripe info into the subscription.
-function captaincore_woocommerce_payment_complete( $order_id ) {
-
-	$customer_id    = get_field( '_customer_user', $order_id );
-	$payment_tokens = WC_Payment_Tokens::get_customer_tokens( $customer_id );
-
-	foreach ( $payment_tokens as $payment_token ) {
-		$token_id = $payment_token->get_token();
-	}
-
-	$payment_cus_id  = get_field( '_stripe_customer_id', 'user_' . $customer_id );
-	$payment_card_id = $token_id;
-
-	// Find parent subscription id
-	if ( wcs_order_contains_subscription( $order_id ) ) {
-		$subscription    = wcs_get_subscriptions_for_order( $order_id );
-		$subscription_id = key( $subscription );
-	} else {
-		$subscription_id = get_field( '_subscription_renewal', $order_id );
-	}
-
-	update_post_meta( $subscription_id, '_stripe_customer_id', $payment_cus_id );
-	update_post_meta( $subscription_id, '_stripe_card_id', $payment_card_id );
-	update_post_meta( $subscription_id, '_requires_manual_renewal', 'false' );
-	update_post_meta( $subscription_id, '_payment_method', 'stripe' );
-	update_post_meta( $subscription_id, '_payment_method_title', 'Credit card' );
-
-}
-add_action( 'woocommerce_payment_complete', 'captaincore_woocommerce_payment_complete' );
-
 // Custom payment link for speedy checkout
 function captaincore_get_checkout_payment_url( $payment_url ) {
 
@@ -4315,21 +4285,6 @@ add_filter( 'woocommerce_email_recipient_customer_renewal_invoice', 'woocommerce
 add_filter( 'woocommerce_email_recipient_customer_invoice', 'woocommerce_email_customer_invoice_add_recipients', 10, 2 );
 
 function woocommerce_email_customer_invoice_add_recipients( $recipient, $order ) {
-
-	// Finds subscription for the order
-	$subscription = wcs_get_subscriptions_for_order( $order, [ 'order_type' => [ 'parent', 'renewal' ] ] );
-
-	if ( $subscription and array_values( $subscription )[0] ) {
-		// Find first subscription ID
-		$subscription_id = array_values( $subscription )[0]->id;
-		// Check ACF field for additional emails
-		$additional_emails = get_field( 'additional_emails', $subscription_id );
-
-		if ( $additional_emails ) {
-			// Found additional emails so add them to the $recipients list
-			$recipient .= ', ' . $additional_emails;
-		}
-	}
 
 	// Finds CaptainCore account
 	$account_id = $order->get_meta( 'captaincore_account_id' );

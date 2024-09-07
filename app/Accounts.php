@@ -121,7 +121,7 @@ class Accounts extends DB {
                 $plan->next_renewal = date("Y-m-d H:i:s", strtotime( "+{$plan->interval} month", $next_renewal ) );
                 unset( $plan->charges );
                 unset( $plan->credits );
-                if ( $plan->over_payment ) {
+                if ( ! empty( $plan->over_payment ) ) {
                     $plan->credits = [ 
                         (object) [
                             "name"     => "Previous credits",

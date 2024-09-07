@@ -287,7 +287,7 @@ class Account {
                 "user_id" => $user->ID,
                 "name"    => $user->display_name, 
                 "email"   => $user->user_email,
-                "level"   => ucfirst( $permission->level ),
+                "level"   => empty( $permission->level ) ? "" : ucfirst( $permission->level ),
             ];
         }
         return $results;
@@ -474,7 +474,7 @@ class Account {
             }
         }
 
-        if ( $plan->charges && count( $plan->charges ) > 0 ) {
+        if ( ! empty( $plan->charges ) && count( $plan->charges ) > 0 ) {
             foreach ( $plan->charges as $item ) {
                 $line_item_id = $order->add_product( get_product( $configurations->woocommerce->charges ), $item->quantity );
                 $order->get_items()[ $line_item_id ]->set_subtotal( $item->price * $item->quantity );
@@ -486,7 +486,7 @@ class Account {
             }
         }
 
-        if ( $plan->credits && count( $plan->credits ) > 0 ) {
+        if ( ! empty( $plan->credits ) && count( $plan->credits ) > 0 ) {
             foreach ( $plan->credits as $item ) {
                 $line_item_id = $order->add_product( get_product( $configurations->woocommerce->credits ), $item->quantity );
                 $order->get_items()[ $line_item_id ]->set_subtotal( -1 * abs( $item->price * $item->quantity ) );
@@ -615,8 +615,8 @@ class Account {
 			$recipient .= ", {$plan->additional_emails}";
 		}
 
-        $from_name  = apply_filters( 'woocommerce_email_from_name', get_option( 'woocommerce_email_from_name' ), $this, $from_name );
-        $from_email = apply_filters( 'woocommerce_email_from_address', get_option( 'woocommerce_email_from_address' ), $this, $from_email );
+        $from_name  = apply_filters( 'woocommerce_email_from_name', get_option( 'woocommerce_email_from_name' ), $this );
+        $from_email = apply_filters( 'woocommerce_email_from_address', get_option( 'woocommerce_email_from_address' ), $this );
 
         $headers = [ 
             "Content-Type: text/html; charset=UTF-8",
@@ -674,8 +674,8 @@ class Account {
 			$recipient .= ", {$plan->additional_emails}";
 		}
 
-        $from_name  = apply_filters( 'woocommerce_email_from_name', get_option( 'woocommerce_email_from_name' ), $this, $from_name );
-        $from_email = apply_filters( 'woocommerce_email_from_address', get_option( 'woocommerce_email_from_address' ), $this, $from_email );
+        $from_name  = apply_filters( 'woocommerce_email_from_name', get_option( 'woocommerce_email_from_name' ), $this );
+        $from_email = apply_filters( 'woocommerce_email_from_address', get_option( 'woocommerce_email_from_address' ), $this );
 
         $headers = [ 
             "Content-Type: text/html; charset=UTF-8",
@@ -722,7 +722,7 @@ class Account {
             }
 
             
-            if ( $plan->addons && count( $plan->addons ) > 0 ) {
+            if ( ! empty( $plan->addons ) && count( $plan->addons ) > 0 ) {
                 foreach ( $plan->addons as $addon ) {
                     $total += $addon->quantity * $addon->price;
                 }
