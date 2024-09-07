@@ -729,12 +729,12 @@ class Site {
     public function account() {
         $site    = ( new Sites )->get( $this->site_id );
         $account = ( new Accounts )->get( $site->account_id );
-        $plan    = json_decode( $account->plan );
+        $plan    =  empty( $account->plan ) ? "" : json_decode( $account->plan );
         $results = [
             'account_id' => $site->account_id,
-            'name'       => $account->name,
-            'plan'       => json_decode( $account->plan ),
-            'defaults'   => json_decode( $account->defaults ),
+            'name'       => empty( $account->name ) ? "" : $account->name,
+            'plan'       => $plan,
+            'defaults'   => empty( $account->defaults ) ? "" : json_decode( $account->defaults ),
         ];
         return $results;
     }
