@@ -50,7 +50,7 @@ class Site {
         $site_details->updated_at           = $site->updated_at;
         $site_details->name                 = $site->name;
         $site_details->key                  = $details->key;
-        $site_details->environment_vars     = $details->environment_vars;
+        $site_details->environment_vars     = empty( $details->environment_vars ) ? "" : $details->environment_vars;
         $site_details->site                 = $site->site;
         $site_details->provider             = $site->provider;
         $site_details->usage_breakdown      = [];
@@ -59,13 +59,14 @@ class Site {
         $site_details->loading_themes       = false;
         $site_details->environment_selected = 'Production';
         $site_details->mailgun              = $mailgun;
-        $site_details->subsite_count        = $subsite_count;
+        $site_details->status               = $site->status;
+        $site_details->subsite_count        = empty( $subsite_count ) ? 0 : $subsite_count;
         $site_details->tabs                 = 'tab-Site-Management';
         $site_details->tabs_management      = 'tab-Info';
-        $site_details->core                 = $environments[0]->core;
+        $site_details->core                 = empty( $environments[0]->core ) ? "" : $environments[0]->core;
         $site_details->storage              = $details->storage;
         $site_details->outdated				= false;
-        if ( is_string( $visits ) ) {
+        if ( ! empty( $visits ) && is_string( $visits ) ) {
             $site_details->visits = intval( $visits );
         }
         $site_details->update_logs            = [];
