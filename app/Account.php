@@ -401,9 +401,10 @@ class Account {
 
     public function calculate_totals() {
         $metrics = [ 
-            "sites"   => count( $this->billing_sites() ),
-            "users"   => count( $this->users() ),
-            "domains" => count( $this->domains() ),
+            "sites"                => count( $this->billing_sites() ),
+            "users"                => count( $this->users() ),
+            "domains"              => count( $this->domains() ),
+            "outstanding_invoices" => count( $this->outstanding_invoices() )
         ];
         ( new Accounts )->update( [ "metrics" => json_encode( $metrics ) ], [ "account_id" => $this->account_id ] );
         return [ "message" => "Account metrics updated." ];
@@ -717,6 +718,21 @@ class Account {
         $message .= "</ul>";
         $message .= "<a href=\"{$site_url}\">{$site_title}</a>";
         wp_mail( $recipient, $subject, $message, $headers );
+    }
+
+    public function outstanding_invoices() {
+        $orders = wc_get_orders( [
+            'limit'      => -1,
+            'meta_key'   => 'captaincore_account_id',
+            'meta_value' => $this->account_id,
+            'orderby'    => 'date',
+            'order'      => 'DESC',
+            'status'     => [ 'wc-pending', 'failed' ]
+        ] );
+        if ( empty ( $orders ) ) {
+            return [];
+        }
+        return $orders;
     }
 
     public function get_billing() {

@@ -6005,18 +6005,20 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
-					<v-row>
-						<v-col></v-col>
-						<v-col cols="12" md="4">
-							<v-text-field class="mx-4" v-model="account_search" autofocus append-icon="mdi-magnify" label="Search" single-line clearable hide-details></v-text-field>
-						</v-col>
-					</v-row>
+					<v-toolbar dense elevation="0" flat class="mb-3">
+						<v-spacer></v-spacer>
+						<v-btn-toggle v-model="toggle_account_filters">
+							<v-btn depressed small @click="filterOutstanding()" v-if="role == 'administrator'">{{ oustandingAccountCount }} outstanding</v-btn>
+						</v-btn-toggle>
+						<v-text-field class="mx-4" v-model="account_search" autofocus label="Search" clearable light hide-details append-icon="mdi-magnify" style="max-width:300px;"></v-text-field>	
+					</v-toolbar>
 					<v-data-table
 						:headers="[
 							{ text: 'Name', value: 'name' },
 							{ text: 'Users', value: 'metrics.users', width: '100px' },
 							{ text: 'Sites', value: 'metrics.sites', width: '100px' },
-							{ text: 'Domains', value: 'metrics.domains', width: '100px' }]"
+							{ text: 'Domains', value: 'metrics.domains', width: '100px' },
+							{ text: '', value: 'filtered', width: 0, class: 'hidden', filter: filteredAccounts }]"
 						:items="accounts"
 						:search="account_search"
 						:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
@@ -13901,12 +13903,27 @@ new Vue({
 			}
 			return false
 		},
+		filteredAccounts( value ) {
+			if ( value ) {
+				return true
+			}
+			return false
+		},
 		filterUnassigned() {
 			this.sites.forEach( s => {
 				if  ( s.account_id == "" || s.account_id == "0" ) {
 					s.filtered = true
 				} else {
 					s.filtered = false
+				}
+			})
+		},
+		filterOutstanding() {
+			this.accounts.forEach( account => {
+				if ( account.metrics.outstanding_invoices && account.metrics.outstanding_invoices > 0 ) {
+					account.filtered = true
+				} else {
+					account.filtered = false
 				}
 			})
 		},
