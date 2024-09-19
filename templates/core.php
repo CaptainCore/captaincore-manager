@@ -7049,6 +7049,7 @@ new Vue({
 		loading_page: true,
 		expanded: [],
 		accounts: [],
+		toggle_account_filters: [],
 		account_tab: null,
 		provider_actions: [],
 		modules: { billing: true, dns: <?php if ( defined( "CONSTELLIX_API_KEY" ) and defined( "CONSTELLIX_SECRET_KEY" ) ) { echo "true"; } else { echo "false"; } ?> },
