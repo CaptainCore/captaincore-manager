@@ -44,6 +44,7 @@ class Accounts extends DB {
 				'name'            => html_entity_decode( $account->name ),
 				'defaults'        => json_decode( $account->defaults ),
                 'metrics'         => json_decode( $account->metrics ),
+                'filtered'        => true
             ];
             if ( $result->defaults->users == "" ) {
                 $result->defaults->users = [];
