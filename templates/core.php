@@ -7677,6 +7677,15 @@ new Vue({
 			})
 			return count
 		},
+		oustandingAccountCount() {
+			let count = 0
+			this.accounts.forEach( account => {
+				if ( account.metrics.outstanding_invoices && account.metrics.outstanding_invoices > 0 ) {
+					count++
+				}
+			})
+			return count
+		},
 		filteredEnvatoThemes() {
 			let themes = this.new_theme.envato.items
 			if ( this.new_theme.envato.search != "" ) {
