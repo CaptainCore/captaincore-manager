@@ -99,6 +99,23 @@ class Account {
 
     }
 
+
+    public function invoices() {
+        $invoices       = wc_get_orders( [ 'meta_key' => 'captaincore_account_id', 'meta_value' => $this->account_id, 'posts_per_page' => "-1" ] );
+        foreach ( $invoices as $key => $invoice ) {
+            $order      = wc_get_order( $invoice );
+            $item_count = $order->get_item_count();
+            $invoices[$key]  = [
+                "order_id" => $order->id,
+                "name"     => get_the_author_meta( 'display_name', $order->user_id ),
+                "date"     => wc_format_datetime( $order->get_date_created() ),
+                "status"   => wc_get_order_status_name( $order->get_status() ),
+                "total"    => $order->get_total(),
+            ];
+        }
+        return $invoices;
+    }
+
     public function fetch() {
         if ( $this->account_id == "" ) {
             return [];
@@ -118,6 +135,10 @@ class Account {
 
         if ( $user_id == $account["plan"]->billing_user_id ) {
             $record["owner"] = true;
+        }
+        
+        if ( ( new User )->is_admin() ) {
+            $record["invoices"] = $this->invoices();
         }
         
         return $record;

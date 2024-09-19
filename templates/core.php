@@ -6064,6 +6064,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							Timeline
 							<v-icon size="20" class="ml-1">mdi-timeline-text-outline</v-icon>
 						</v-tab>
+						<v-tab v-show="role == 'administrator'">
+							Invoices <v-icon size="20" class="ml-1">mdi-receipt-text</v-icon>
+						</v-tab>
 						<v-tab v-show="role == 'administrator' || dialog_account.records.owner">
 							Plan <v-icon size="20" class="ml-1">mdi-chart-donut</v-icon>
 						</v-tab>
@@ -6243,6 +6246,25 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</td>
 						</tr>
 						</tbody>
+						</template>
+						</v-data-table>
+					</v-tab-item>
+					<v-tab-item :transition="false" :reverse-transition="false">
+					<v-data-table
+							:headers="[
+								{ text: 'Order', value: 'order_id', width: '130px' },
+								{ text: 'Date', value: 'date', width: '170px' },
+								{ text: 'Name', value: 'name' },
+								{ text: 'Status', value: 'status' },
+								{ text: 'Total', value: 'total', width: '120px' }]"
+							:items="dialog_account.records.invoices"
+							:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
+						>
+						<template v-slot:item.order_id="{ item }">
+							#{{ item.order_id }}
+						</template>
+						<template v-slot:item.total="{ item }">
+							${{ item.total }}
 						</template>
 						</v-data-table>
 					</v-tab-item>
