@@ -6403,7 +6403,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<strong>{{ dialog_account.records.account.plan.name }} Plan</strong> supports up to {{ dialog_account.records.account.plan.limits.visits | formatLargeNumbers }} visits, {{ dialog_account.records.account.plan.limits.storage }}GB storage and {{ dialog_account.records.account.plan.limits.sites }} sites. Extra sites, storage and visits charged based on usage.
 						</v-alert>
 						<v-data-table
-							:headers='[{"text":"Name","value":"name"},{"text":"Storage","value":"storage"},{"text":"Visits","value":"visits"}]'
+							:headers='[{"text":"Name","value":"name"},{"text":"Storage","value":"storage"},{"text":"Visits","value":"visits"},{"text":"","value":"actions","width":"110px",sortable: false}]'
 							:items="dialog_account.records.usage_breakdown.sites"
 							item-key="name"
 							:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
@@ -6414,6 +6414,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<td>{{ item.name }}</td>
 								<td>{{ item.storage | formatGBs }}GB</td>
 								<td>{{ item.visits }}</td>
+								<td><v-btn small @click="goToPath( `/sites/${item.site_id}` )">View</v-btn></td>
 							</tr>
 							<tr>
 								<td>Totals:</td>

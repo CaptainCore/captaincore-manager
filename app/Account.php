@@ -340,6 +340,7 @@ class Account {
             $website_for_customer_storage = $site->storage;
             $website_for_customer_visits  = $site->visits;
             $result_sites[] = [
+                'site_id' => $site->site_id,
                 'name'    => $site->name,
                 'storage' => $website_for_customer_storage,
                 'visits'  => $website_for_customer_visits
