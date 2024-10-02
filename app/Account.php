@@ -492,7 +492,7 @@ class Account {
                 $order->get_items()[ $line_item_id ]->add_meta_data( "Details", $item->name );
                 $order->get_items()[ $line_item_id ]->save_meta_data();
                 $order->get_items()[ $line_item_id ]->save();
-                $calculated_total = $calculated_total + ( $item->price * $item->quantity );
+                $calculated_total = (int) $calculated_total + ((int) $item->price * (int) $item->quantity );
             }
         }
 
@@ -525,7 +525,7 @@ class Account {
             if ( $plan->interval != $configurations->usage_pricing->sites->interval ) {
                 $price = $configurations->usage_pricing->sites->cost / ($configurations->usage_pricing->sites->interval / $plan->interval );
             }
-            $quantity     = $plan->usage->sites - $plan->limits->sites;
+            $quantity     = (int) $plan->usage->sites - (int) $plan->limits->sites;
             $total        = $price * $quantity;
             $line_item_id = $order->add_product( get_product( $configurations->woocommerce->usage ), $quantity );
             $order->get_items()[ $line_item_id ]->set_subtotal( $total );
@@ -536,7 +536,7 @@ class Account {
             $calculated_total = $calculated_total + $total;
         }
 
-        if ( $plan->usage->storage > ( $plan->limits->storage * 1024 * 1024 * 1024 ) ) {
+        if ( (int) $plan->usage->storage > ( (int) $plan->limits->storage * 1024 * 1024 * 1024 ) ) {
             $price    = $configurations->usage_pricing->storage->cost;
             if ( $plan->interval != $configurations->usage_pricing->storage->interval ) {
                 $price = $configurations->usage_pricing->storage->cost / ( $configurations->usage_pricing->storage->interval / $plan->interval );
@@ -558,7 +558,7 @@ class Account {
             if ( $plan->interval != $configurations->usage_pricing->traffic->interval ) {
                 $price = $configurations->usage_pricing->traffic->cost / ( $configurations->usage_pricing->traffic->interval / $plan->interval );
             }
-            $quantity     = ceil ( ( $plan->usage->visits - $plan->limits->visits ) / $configurations->usage_pricing->traffic->quantity );
+            $quantity     = ceil ( ( (int) $plan->usage->visits - (int) $plan->limits->visits ) / (int) $configurations->usage_pricing->traffic->quantity );
             $total        = $price * $quantity;
             $line_item_id = $order->add_product( get_product( $configurations->woocommerce->usage ), $quantity );
             $order->get_items()[ $line_item_id ]->set_subtotal( $total );
