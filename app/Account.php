@@ -699,25 +699,47 @@ class Account {
 
         $from_name  = apply_filters( 'woocommerce_email_from_name', get_option( 'woocommerce_email_from_name' ), $this );
         $from_email = apply_filters( 'woocommerce_email_from_address', get_option( 'woocommerce_email_from_address' ), $this );
+        $first_name = get_user_meta( $plan->billing_user_id, 'first_name', true );
+
+        $store_address     = get_option('woocommerce_store_address');
+        $store_address_2   = get_option('woocommerce_store_address_2');
+        $store_city        = get_option('woocommerce_store_city');
+        $store_postcode    = get_option('woocommerce_store_postcode');
+        $store_raw_country = get_option('woocommerce_default_country');
+
+        // Split the country and state
+        $split_country = explode(":", $store_raw_country);
+        $store_country = $split_country[0];
+        $countries = WC()->countries->countries;
+        $store_country_name = isset($countries[$store_country]) ? $countries[$store_country] : $store_country;
+        // Remove any text in parentheses
+        $store_country_name = preg_replace('/\s*\(.*?\)/', '', $store_country_name);
+        $store_state   = isset($split_country[1]) ? $split_country[1] : '';
+
+        // Build the full address
+        $full_address = "$store_address<br />$store_address_2<br />$store_city, $store_state $store_postcode<br />$store_country_name";
 
         $headers = [ 
             "Content-Type: text/html; charset=UTF-8",
             "From: $from_name <$from_email>"
         ];
         $link_style = "padding: 12px 32px; font-size: calc(18px / var(--type-scale-factor)); margin: 00px; display: inline-block; color: black; text-decoration: none; font-weight: bold; background-color: rgb(238, 238, 238) !important; border-color: rgb(238, 238, 238) !important;";
-        $subject    = $site_title . ' - Payment overdue for account ' . $account->name;
-
+        $subject    = "Payment overdue for services with $site_title";
         if ( ! empty( $address["first_name"] ) ) {
             $message = "<p>". $address["first_name"] . ",</p><p></p>";
         }
-        $message .= "<p>There are outstanding payments relating to your hosting plan with $site_title for account {$account->name} #{$this->account_id}. To keep hosting services active, please pay outstanding $invoice_label:</p>";
+        if ( empty( $address["first_name"] ) && ! empty( $first_name ) ) {
+            $message = "<p>". $first_name . ",</p><p></p>";
+        }
+        $message .= "<p>There are outstanding payments relating to your hosting plan with $site_title for account {$account->name} #{$this->account_id}. To keep hosting services active, please pay outstanding $invoice_label. Let us know if you have any questions.</p>";
         $message .= "<ul>";
         foreach ( $orders as $key => $order ) {
             $payment_link = captaincore_get_checkout_payment_url ( $order->get_checkout_payment_url() );
-            $message .= "<li><a href=\"$payment_link\">💰 Pay renewal order #{$order->ID} for {$order->get_formatted_order_total()} from {$order->get_date_created()->date('F jS Y')}</a></li>";
+            $message .= "<li><a href=\"$payment_link\">Renewal #{$order->ID} for {$order->get_formatted_order_total()} from {$order->get_date_created()->date('F jS Y')}</a></li>";
         }
         $message .= "</ul>";
-        $message .= "<a href=\"{$site_url}\">{$site_title}</a>";
+        $message .= "<a href=\"{$site_url}\">{$site_title}</a><br />";
+        $message .= "$full_address";
         wp_mail( $recipient, $subject, $message, $headers );
     }
 
