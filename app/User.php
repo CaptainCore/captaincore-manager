@@ -115,7 +115,7 @@ class User {
             $plan  = json_decode ( $account->plan );
             $total = $plan->price;
             foreach ( $plan->addons as $addon ) {
-                $total = $total + ( (int) $addon->price * (int) $addon->quantity );
+                $total = (int) $total + ( (int) $addon->price * (int) $addon->quantity );
             }
             $plans[] = [
                 "account_id"      => $account->account_id,
@@ -156,7 +156,7 @@ class User {
             $plan_total   = $plan->price;
             if ( $plan->addons ) { 
                 foreach ( $plan->addons as $addon ) {
-                    $plan_total = $plan_total + ( (int) $addon->price * (int) $addon->quantity );
+                    $plan_total = (int) $plan_total + ( (int) $addon->price * (int) $addon->quantity );
                 }
             }
             foreach( $revenue as $month => $amount ) {
