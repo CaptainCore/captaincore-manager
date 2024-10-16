@@ -138,6 +138,26 @@ class Accounts extends DB {
         }
     }
 
+    public static function process_outstanding_notifications() {
+        $accounts = self::with_renewals();
+        foreach ( $accounts as $account ) {
+            $orders = wc_get_orders( [
+                'limit'        => -1,
+                'meta_key'     => 'captaincore_account_id',
+                'meta_value'   => $account->account_id,
+                'orderby'      => 'date',
+                'order'        => 'DESC',
+                'status'       => [ 'wc-pending', 'failed' ],
+                'date_created' => '<' . strtotime('-30 days')
+            ] );
+            if ( count( $orders ) == 0 ) {
+                continue;
+            }
+            // Processing outstanding notifications for account
+            ( new Account( $account->account_id, true ) )->outstanding_notify();
+        }
+    }
+
     public function account_ids() {
         return $this->accounts;
     }
