@@ -7166,7 +7166,7 @@ new Vue({
 				"value": "asia-south2"
 			},
 			{
-				"text": "Singapore (SG)",
+				"text": "Singapore (SG) - C3D Machines",
 				"value": "asia-southeast1"
 			},
 			{
@@ -7194,7 +7194,7 @@ new Vue({
 				"value": "europe-southwest1"
 			},
 			{
-				"text": "Belgium (BE)",
+				"text": "Belgium (BE) - C3D Machines",
 				"value": "europe-west1"
 			},
 			{
@@ -7206,7 +7206,7 @@ new Vue({
 				"value": "europe-west3"
 			},
 			{
-				"text": "Eemshaven (NL)",
+				"text": "Eemshaven (NL) - C3D Machines",
 				"value": "europe-west4"
 			},
 			{
@@ -7242,15 +7242,15 @@ new Vue({
 				"value": "southamerica-west1"
 			},
 			{
-				"text": "Iowa (US Central)",
+				"text": "Iowa (US Central) - C3D Machines",
 				"value": "us-central1"
 			},
 			{
-				"text": "South Carolina (US East 1)",
+				"text": "South Carolina (US East 1) - C3D Machines",
 				"value": "us-east1"
 			},
 			{
-				"text": "Northern Virginia (US East 4)",
+				"text": "Northern Virginia (US East 4) - C3D Machines",
 				"value": "us-east4"
 			},
 			{
