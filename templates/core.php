@@ -47,7 +47,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-list-item>
 			</v-list>
 		<v-spacer></v-spacer>
-		<template v-slot:extension v-if="$vuetify.breakpoint.smAndDown">
+		<template v-slot:extension v-if="$vuetify.breakpoint.smAndDown && ( route != 'login' && route != 'welcome' && route != 'connect' )">
 		<v-bottom-navigation v-model="selected_nav" color="primary" class="elevation-0" background-color="transparent" height="37px">
 			<v-btn class="pa-0" value="" style="display:none">
 				<span class="v-tab"></span>
@@ -66,6 +66,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-btn>
 		</v-bottom-navigation>
 		</template>
+		<template v-if="route != 'login' && route != 'welcome' && route != 'connect'">
 		<v-bottom-navigation v-show="! $vuetify.breakpoint.smAndDown" v-model="selected_nav" color="primary" class="elevation-0" background-color="transparent" height="37px">
 			<v-btn class="pa-0" value="" style="display:none">
 				<span class="v-tab"></span>
@@ -84,7 +85,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-btn>
 		</v-bottom-navigation>
 		<div class="flex" style="opacity:0;"><textarea id="clipboard" style="height:1px;width:10px;display:flex;cursor:default"></textarea></div>
-		<template v-if="route != 'login' && route != 'welcome' && route != 'connect'">
+		
 		<v-menu v-model="notifications" :close-on-content-click="false" offset-y>
 			<template v-slot:activator="{ on, attrs }">
 				<v-btn icon v-bind="attrs" v-on="on" v-show="route != 'login'">
