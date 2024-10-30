@@ -6563,7 +6563,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card-text>
 			</v-card>
 			</v-container>
-			<v-container fluid v-show="loading_page">
+			<v-container v-show="loading_page">
 				Loading...
 			</v-container>
 			<v-snackbar
