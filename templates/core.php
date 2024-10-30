@@ -39,7 +39,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <body>
 <div id="app" v-cloak>
 	<v-app :style="{backgroundColor: $vuetify.theme.themes.light.accent}">
-	  <v-app-bar color="accent" dense app flat class="pt-2 pr-0" height="78px">
+	  <v-app-bar color="accent" dense app flat class="pa-0" height="60px">
 		<v-list flat color="accent" :class="{ grow: route != 'login' && route != 'welcome' && route != 'connect' }">
 		 	<v-list-item :href="configurations.path" @click.prevent="goToPath( '/' )" flat class="not-active pl-0">
 			 	<v-img :src="configurations.logo" contain :max-width="configurations.logo_width == '' ? 32 : configurations.logo_width" v-if="configurations.logo" class="mr-4"></v-img>
@@ -2080,8 +2080,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card>
 			</template>
 			</v-card>
-			<v-card v-if="route == 'sites'" id="sites" class="elevation-1 rounded-lg ma-4 py-1">
-			<v-toolbar v-show="dialog_site.step == 1" id="site_listings" flat>
+			<v-card v-if="route == 'sites'" id="sites" class="elevation-1 rounded-lg">
+			<v-toolbar v-show="dialog_site.step == 1 && sites.length > 0" id="site_listings" flat>
 				<v-toolbar-title>Listing {{ sites.length }} sites</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -4569,7 +4569,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card-text>
 			</v-sheet>
 			</v-card>
-			<v-card v-if="route == 'domains'" class="elevation-1 rounded-lg ma-4 py-1">
+			<v-card v-if="route == 'domains'" class="elevation-1 rounded-lg">
 			<v-sheet v-show="dialog_domain.step == 1">
 				<v-toolbar flat>
 					<v-toolbar-title>Listing {{ allDomains }} domains</v-toolbar-title>
@@ -5069,7 +5069,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-sheet>
 			</v-card>
-			<v-card v-if="route == 'health'" class="elevation-1 rounded-lg ma-4 py-1">
+			<v-card v-if="route == 'health'" class="elevation-1 rounded-lg">
 				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ filterSitesWithErrors.length }} sites with issues</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5114,7 +5114,94 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-card-text>
 			</v-card>
-			<v-card v-if="route == 'cookbook'" class="elevation-1 rounded-lg ma-4 py-1">
+			<v-card v-if="route == 'vulnerability-scans'" class="elevation-1 rounded-lg">
+				<v-toolbar light flat>
+					<v-toolbar-title>Listing vulnerabilities</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+					</v-toolbar-items>
+				</v-toolbar>
+				<v-card-text>
+				<v-alert :value="true" type="info" text>
+						Results from daily scans of using Wordfence.
+				</v-alert>
+					<v-card v-for="plugin in vulnerabilities.plugin" class="mb-2">
+					<v-toolbar light flat>
+						<v-toolbar-title>{{ plugin.title }}</v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-toolbar-items>
+							<v-btn small dense text @click="scanErrors( plugin.environments.map( env => env.enviroment_id ) )">
+								Sync <v-icon class="ml-1">mdi-sync</v-icon>
+							</v-btn>
+							<v-dialog :transition="false" max-width="800">
+								<template v-slot:activator="{ on, attrs }">
+								<v-btn v-bind="attrs" v-on="on" small dense text>
+									Console <v-icon class="ml-1">mdi-console</v-icon> 
+								</v-btn>
+								</template>
+								<template v-slot:default="dialog">
+								<v-card>
+									<v-toolbar flat dark color="primary" class="mb-3">
+										<v-btn icon dark @click="dialog.value = false">
+											<v-icon>mdi-close</v-icon>
+										</v-btn>
+										<v-toolbar-title>Console</v-toolbar-title>
+										<v-spacer></v-spacer>
+									</v-toolbar>
+									<v-card-text>
+									<v-chip small label v-for="enviroment in plugin.environments" class="mr-1 mb-1">{{ enviroment.home_url }}</v-chip>
+									<v-textarea
+										auto-grow
+										outlined
+										rows="4"
+										dense
+										hint="Custom bash script or WP-CLI commands"
+										persistent-hint
+										:value="custom_script" 
+										@change.native="custom_script = $event.target.value"
+										spellcheck="false"
+										class="code mt-1"
+									>
+									</v-textarea>
+									<v-btn small color="primary" dark @click="runCustomCodeBulkEnvironments( plugin.environments )">Run Custom Code</v-btn>
+									</v-card-text>
+								</v-card>
+								</template>
+							</v-dialog>
+							<v-btn small dense text @click="showLogEntry( plugin.environments.map( env => env.enviroment_id ) )" v-show="role == 'administrator'">
+								Log <v-icon class="ml-1">mdi-check</v-icon>
+							</v-btn>
+							<v-chip class="mt-4 ml-2" label :input-value="true">{{ plugin.environments.length }} affected environments</v-chip>
+						</v-toolbar-items>
+					</v-toolbar>
+					<v-simple-table dense class="disable_hover">
+						<template v-slot:default>
+						<tbody>
+							<tr v-for="enviroment in plugin.environments">
+							<td style="width:100px">{{ enviroment.home_url }}</td>
+							<td><v-chip label small>{{ enviroment.environment }}</v-chip> 
+							<v-menu open-on-hover offset-y v-for="vulnerability in enviroment.vulnerabilities">
+							<template v-slot:activator="{ on, attrs }">
+								<v-chip v-bind="attrs" v-on="on" class="mr-1" link label small :href="vulnerability.link" target="_blank" :color="cvssClass(vulnerability.cvss_rating)">
+								{{ vulnerability.cvss_score || "-" }}
+								</v-chip>
+							</template>
+							<v-card max-width="500px">
+								<v-card-title>{{ vulnerability.cve }}</v-card-title>
+								<v-card-subtitle>{{ vulnerability.title }}</v-card-subtitle>
+								<v-card-text>
+									<strong>{{ vulnerability.remediation }}</strong>
+								</v-card-text>
+							</v-card>
+							</v-menu>
+							</tr>
+						</tbody>
+						</template>
+					</v-simple-table>
+					</v-card>
+				</v-card-text>
+			</v-card>
+			<v-card v-if="route == 'cookbook'" class="elevation-1 rounded-lg">
 				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ filteredRecipes.length }} recipes</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5143,7 +5230,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</template>
 				</v-data-table>
 			</v-card>
-			<v-card v-if="route == 'handbook' && role == 'administrator'" class="elevation-1 rounded-lg ma-4 py-1">
+			<v-card v-if="route == 'handbook' && role == 'administrator'" class="elevation-1 rounded-lg">
 				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ processes.length }} processes</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5186,7 +5273,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-container>
 				</v-card-text>
 			</v-card>
-			<v-card tile v-if="route == 'configurations' && role == 'administrator'" class="elevation-1 rounded-lg ma-4 py-1">
+			<v-card tile v-if="route == 'configurations' && ( role == 'administrator' || role == 'owner' )" class="elevation-1 rounded-lg">
 				<v-toolbar light flat>
 					<v-toolbar-title>Configurations</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5448,7 +5535,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-col>
 				</v-row>
 			</v-card>
-			<v-card tile v-if="route == 'billing'" class="elevation-1 rounded-lg ma-4 py-1">
+			<v-card tile v-if="route == 'billing'" class="elevation-1 rounded-lg">
 				<v-toolbar light flat v-show="dialog_billing.step == 1">
 					<v-toolbar-title>Billing</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5811,7 +5898,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card>
 				</v-flex>
 			</v-card>
-			<v-card v-if="route == 'defaults' && role == 'administrator'" class="elevation-1 rounded-lg ma-4 py-1">
+			<v-card v-if="route == 'defaults' && role == 'administrator'" class="elevation-1 rounded-lg">
 				<v-toolbar light flat>
 					<v-toolbar-title>Site Defaults</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5888,7 +5975,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-container>
 				</v-card-text>
 			</v-card>
-			<v-card v-if="route == 'profile'" class="elevation-1 rounded-lg ma-4 py-1" max-width="700">
+			<v-card v-if="route == 'profile'" class="elevation-1 rounded-lg mx-auto" max-width="700">
 				<v-toolbar light flat>
 					<v-toolbar-title>Edit profile</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5941,7 +6028,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-row>
 				</v-card-text>
 			</v-card>
-			<v-card class="elevation-1 rounded-lg ma-4 py-1" v-show="route == 'subscriptions'" v-if="role == 'administrator'">
+			<v-card class="elevation-1 rounded-lg" v-show="role == 'administrator' && route == 'subscriptions'">
 				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ subscriptions.length }} subscriptions</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5992,7 +6079,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-subheader>{{ revenue_estimated_total() }}</v-subheader>
 					<div id="plan_chart_transactions"></div>
 			</v-card>
-			<v-card v-if="route == 'accounts'" class="elevation-1 rounded-lg ma-4 py-1">
+			<v-card v-if="route == 'accounts'" class="elevation-1 rounded-lg">
 			<v-sheet v-show="dialog_account.step == 1">
 				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ accounts.length }} accounts</v-toolbar-title>
@@ -6447,7 +6534,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-sheet>
 			</v-card>
-			<v-card v-if="route == 'users'" class="elevation-1 rounded-lg ma-4 py-1">
+			<v-card v-if="route == 'users'" class="elevation-1 rounded-lg">
 				<v-toolbar light flat>
 					<v-toolbar-title>Listing {{ users.length }} users</v-toolbar-title>
 					<v-spacer></v-spacer>
