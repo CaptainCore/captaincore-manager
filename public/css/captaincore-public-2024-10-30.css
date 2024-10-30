@@ -1464,7 +1464,8 @@ html body {
 	font-weight: bold;
 }
 
-.dns_introduction .theme--light.v-data-table>.v-data-table__wrapper>table>tbody>tr:hover:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper) {
+.dns_introduction .theme--light.v-data-table>.v-data-table__wrapper>table>tbody>tr:hover:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper), 
+.theme--light.v-data-table.disable_hover>.v-data-table__wrapper>table>tbody>tr:hover:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper) {
   background: none;
 }
 
