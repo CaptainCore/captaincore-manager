@@ -39,16 +39,52 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <body>
 <div id="app" v-cloak>
 	<v-app :style="{backgroundColor: $vuetify.theme.themes.light.accent}">
-	  <v-app-bar color="accent" dense app flat style="left:0px;min-height:64px" class="pt-2 pr-2">
-	 	 <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none" v-show="route != 'login' || route != 'welcome' || route != 'connect'"></v-app-bar-nav-icon>
-			<v-list flat color="accent">
+	  <v-app-bar color="accent" dense app flat class="pt-2 pr-0">
+		<v-list flat color="accent" :class="{ grow: route != 'login' && route != 'welcome' && route != 'connect' }">
 		 	<v-list-item :href="configurations.path" @click.prevent="goToPath( '/' )" flat class="not-active pl-0">
 			 	<v-img :src="configurations.logo" contain :max-width="configurations.logo_width == '' ? 32 : configurations.logo_width" v-if="configurations.logo" class="mr-4"></v-img>
-				 {{ configurations.name }}
+			<span v-show="! configurations.logo_only">{{ configurations.name }}</span>
 			</v-list-item>
 			</v-list>
-			<div class="flex" style="opacity:0;"><textarea id="clipboard" style="height:1px;width:10px;display:flex;cursor:default"></textarea></div>
 		<v-spacer></v-spacer>
+		<template v-slot:extension v-if="$vuetify.breakpoint.smAndDown">
+		<v-bottom-navigation v-model="selected_nav" color="primary" class="elevation-0" background-color="transparent" height="37px">
+			<v-btn class="pa-0" value="" style="display:none">
+				<span class="v-tab"></span>
+			</v-btn>
+			<v-btn class="pa-0" value="sites" :href=`${configurations.path}sites` @click.prevent="goToPath( '/sites' )">
+				<span class="v-tab">Sites</span>
+			</v-btn>
+			<v-btn class="pa-0" value="domains" :href=`${configurations.path}domains` @click.prevent="goToPath( '/domains' )">
+				<span class="v-tab">Domains</span>
+			</v-btn>
+			<v-btn class="pa-0" value="accounts" :href=`${configurations.path}accounts` @click.prevent="goToPath( '/accounts' )">
+				<span class="v-tab">Accounts</span>
+			</v-btn>
+			<v-btn class="pa-0" value="billing" :href=`${configurations.path}billing` @click.prevent="goToPath( '/billing' )" v-if="modules.billing">
+				<span class="v-tab">Billing</span>
+			</v-btn>
+		</v-bottom-navigation>
+		</template>
+		<v-bottom-navigation v-show="! $vuetify.breakpoint.smAndDown" v-model="selected_nav" color="primary" class="elevation-0" background-color="transparent" height="37px">
+			<v-btn class="pa-0" value="" style="display:none">
+				<span class="v-tab"></span>
+			</v-btn>
+			<v-btn class="pa-0" value="sites" :href=`${configurations.path}sites` @click.prevent="goToPath( '/sites' )">
+				<span class="v-tab">Sites</span>
+			</v-btn>
+			<v-btn class="pa-0" value="domains" :href=`${configurations.path}domains` @click.prevent="goToPath( '/domains' )">
+				<span class="v-tab">Domains</span>
+			</v-btn>
+			<v-btn class="pa-0" value="accounts" :href=`${configurations.path}accounts` @click.prevent="goToPath( '/accounts' )">
+				<span class="v-tab">Accounts</span>
+			</v-btn>
+			<v-btn class="pa-0" value="billing" :href=`${configurations.path}billing` @click.prevent="goToPath( '/billing' )" v-if="modules.billing">
+				<span class="v-tab">Billing</span>
+			</v-btn>
+		</v-bottom-navigation>
+		<div class="flex" style="opacity:0;"><textarea id="clipboard" style="height:1px;width:10px;display:flex;cursor:default"></textarea></div>
+		<template v-if="route != 'login' && route != 'welcome' && route != 'connect'">
 		<v-menu v-model="notifications" :close-on-content-click="false" offset-y>
 			<template v-slot:activator="{ on, attrs }">
 				<v-btn icon v-bind="attrs" v-on="on" v-show="route != 'login'">
@@ -81,62 +117,22 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-list>
 		</v-card>
 		</v-menu>
-      </v-app-bar>
-	  <v-navigation-drawer v-model="drawer" app mobile-breakpoint="960" clipped v-if="route != 'login' && route != 'connect'" color="accent pt-5">
-      <v-list nav dense>
-	  	<v-list-item-group mandatory v-model="selected_nav" color="primary">
-		<v-list-item style="display:none"></v-list-item>
-        <v-list-item link :href=`${configurations.path}sites` @click.prevent="goToPath( '/sites' )">
-          <v-list-item-icon>
-            <v-icon>mdi-wrench</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>Sites</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-        <v-list-item link :href=`${configurations.path}domains` @click.prevent="goToPath( '/domains' )">
-          <v-list-item-icon>
-            <v-icon>mdi-text-box-multiple</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>Domains</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-		<v-list-item link :href=`${configurations.path}accounts` @click.prevent="goToPath( '/accounts' )">
-          <v-list-item-icon>
-            <v-icon>mdi-card-account-details</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>Accounts</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-		<v-list-item link :href=`${configurations.path}billing` @click.prevent="goToPath( '/billing' )" v-show="modules.billing">
-          <v-list-item-icon>
-            <v-icon>mdi-currency-usd</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>Billing</v-list-item-title>
-          </v-list-item-content>
-		</v-list-item>
-      </v-list>
-	  <template v-slot:append>
-	  <v-menu offset-y top>
+	  <v-menu offset-y bottom>
       <template v-slot:activator="{ on }">
-		<v-list>
-		<v-list-item link v-on="on">
-			<v-list-item-avatar rounded>
+		<v-list color="transparent">
+		<v-list-item link v-on="on" color="primary">
+			<v-list-item-avatar rounded class="mr-0">
 				<v-img :src="gravatar"></v-img>
 			</v-list-item-avatar>
-			<v-list-item-content>
-				<v-list-item-title>{{ current_user_display_name }}</v-list-item-title>
-			</v-list-item-content>
 			<v-list-item-icon>
-				<v-icon>mdi-chevron-up</v-icon>
+				<v-icon>mdi-chevron-down</v-icon>
 			</v-list-item-icon>
 		</v-list-item>
 		</v-list>
       </template>
-      <v-list dense>
+      <v-list dense min-width="200px">
+	  <div class="body-1 mx-2 mb-1">{{ current_user_display_name }}</div>
+	  <v-divider></v-divider>
 	  <v-subheader>Developers</v-subheader>
 		<v-list-item link :href=`${configurations.path}cookbook` @click.prevent="goToPath( '/cookbook' )">
         <v-list-item-icon>
@@ -232,9 +228,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
       </v-list>
     </v-menu>
       </template>
-	  </v-navigation-drawer>
+      </v-app-bar>
 	  <v-main>
-		<v-container fluid class="px-0 pt-0 pb-15">
+		<v-container class="px-0 pt-4 pb-15">
 		<v-dialog v-model="new_plugin.show" max-width="900px">
 		<v-card tile>
 		<v-toolbar flat dark color="primary">
@@ -7914,7 +7910,7 @@ new Vue({
 				if ( this.allDomains == 0 ) {
 					this.loading_page = true;
 				}
-				this.selected_nav = 2
+				this.selected_nav = "domains"
 				this.fetchDomains()
 			}
 			if ( this.route == "users" ) {
@@ -7941,15 +7937,15 @@ new Vue({
 			}
 			if ( this.route == "profile" ) {
 				this.selected_nav = ""
-				this.loading_page = false;
+				this.loading_page = false
 			}
 			if ( this.route == "accounts" ) {
-				this.selected_nav = 3
+				this.selected_nav = "accounts"
 				this.loading_page = false;
 			}
 			if ( this.route == "billing" ) {
 				this.fetchBilling()
-				this.selected_nav = 4
+				this.selected_nav = "billing"
 				this.loading_page = false;
 			}
 			if ( this.route == "subscriptions" ) {
@@ -7967,7 +7963,7 @@ new Vue({
 				if ( this.sites.length == 0 ) {
 					this.loading_page = true;
 				}
-				this.selected_nav = 1
+				this.selected_nav = "sites"
 				this.fetchSites()
 			}
 			if ( this.route == "health" ) {
@@ -7988,7 +7984,7 @@ new Vue({
 					this.loading_page = true;
 				}
 				this.route = "sites"
-				this.selected_nav = 0
+				this.selected_nav = "sites"
 			}
 		},
 		triggerPath() {
