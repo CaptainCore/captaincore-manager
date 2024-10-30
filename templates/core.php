@@ -39,7 +39,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <body>
 <div id="app" v-cloak>
 	<v-app :style="{backgroundColor: $vuetify.theme.themes.light.accent}">
-	  <v-app-bar color="accent" dense app flat class="pt-2 pr-0">
+	  <v-app-bar color="accent" dense app flat class="pt-2 pr-0" height="78px">
 		<v-list flat color="accent" :class="{ grow: route != 'login' && route != 'welcome' && route != 'connect' }">
 		 	<v-list-item :href="configurations.path" @click.prevent="goToPath( '/' )" flat class="not-active pl-0">
 			 	<v-img :src="configurations.logo" contain :max-width="configurations.logo_width == '' ? 32 : configurations.logo_width" v-if="configurations.logo" class="mr-4"></v-img>
@@ -131,7 +131,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		</v-list-item>
 		</v-list>
       </template>
-      <v-list dense min-width="200px">
+      <v-list min-width="240px" rounded dense>
 	  <div class="body-1 mx-2 mb-1">{{ current_user_display_name }}</div>
 	  <v-divider></v-divider>
 	  <v-subheader>Developers</v-subheader>
