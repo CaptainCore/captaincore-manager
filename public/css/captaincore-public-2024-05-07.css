@@ -1889,3 +1889,7 @@ code.language-log {
   background: transparent !important;
 
 }
+
+.v-bottom-navigation a.v-btn.v-btn--active {
+  border-bottom: 2px solid;
+}
