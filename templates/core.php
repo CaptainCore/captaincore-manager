@@ -6121,8 +6121,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-data-table>
 					</v-card-text>
 				</v-sheet>
-				<v-sheet v-show="dialog_account.step == 2">
-				<v-card flat v-if="dialog_account.show && typeof dialog_account.records.account == 'object'">
+				<v-sheet v-show="dialog_account.step == 2" color="transparent">
+				<v-card flat v-if="dialog_account.show && typeof dialog_account.records.account == 'object'" rounded="xl">
 					<v-toolbar flat>
 						<v-toolbar-title>{{ dialog_account.records.account.name }}</v-toolbar-title>
 						<div class="flex-grow-1"></div>
