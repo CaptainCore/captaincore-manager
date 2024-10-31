@@ -85,8 +85,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-btn>
 		</v-bottom-navigation>
 		<div class="flex" style="opacity:0;"><textarea id="clipboard" style="height:1px;width:10px;display:flex;cursor:default"></textarea></div>
-		
-		<v-menu v-model="notifications" :close-on-content-click="false" offset-y>
+		<v-menu v-model="notifications" :close-on-content-click="false" content-class="elevation-0 v-sheet--outlined" offset-y rounded="xl">
 			<template v-slot:activator="{ on, attrs }">
 				<v-btn icon v-bind="attrs" v-on="on" v-show="route != 'login'">
 				<v-badge dot color="error" :value="provider_actions.length">
@@ -118,7 +117,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-list>
 		</v-card>
 		</v-menu>
-	  <v-menu offset-y bottom>
+	  <v-menu offset-y bottom dense allow-overflow content-class="elevation-0 v-sheet--outlined" rounded="xl">
       <template v-slot:activator="{ on }">
 		<v-list color="transparent">
 		<v-list-item link v-on="on" color="primary">
@@ -132,7 +131,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		</v-list>
       </template>
       <v-list min-width="240px" rounded dense>
-	  <div class="body-1 mx-2 mb-1">{{ current_user_display_name }}</div>
+	  <div class="body-2 mx-2 mb-1"><small>Welcome,</small><br />{{ current_user_display_name }}</div>
 	  <v-divider></v-divider>
 	  <v-subheader>Developers</v-subheader>
 		<v-list-item link :href=`${configurations.path}cookbook` @click.prevent="goToPath( '/cookbook' )">
@@ -2080,7 +2079,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card>
 			</template>
 			</v-card>
-			<v-card v-if="route == 'sites'" id="sites" class="elevation-1 rounded-lg">
+			<v-card v-if="route == 'sites'" id="sites" outlined rounded="xl">
 			<v-toolbar v-show="dialog_site.step == 1 && sites.length > 0" id="site_listings" flat>
 				<v-toolbar-title>Listing {{ sites.length }} sites</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -4569,9 +4568,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card-text>
 			</v-sheet>
 			</v-card>
-			<v-card v-if="route == 'domains'" class="elevation-1 rounded-lg">
-			<v-sheet v-show="dialog_domain.step == 1">
-				<v-toolbar flat>
+			<v-card v-if="route == 'domains'" outlined rounded="xl">
+			<v-sheet v-show="dialog_domain.step == 1" color="transparent">
+				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing {{ allDomains }} domains</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -5069,8 +5068,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-sheet>
 			</v-card>
-			<v-card v-if="route == 'health'" class="elevation-1 rounded-lg">
-				<v-toolbar light flat>
+			<v-card v-if="route == 'health'" outlined rounded="xl">
+				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing {{ filterSitesWithErrors.length }} sites with issues</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -5114,8 +5113,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-card-text>
 			</v-card>
-			<v-card v-if="route == 'vulnerability-scans'" class="elevation-1 rounded-lg">
-				<v-toolbar light flat>
+			<v-card v-if="route == 'vulnerability-scans'" outlined rounded="xl">
+				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing vulnerabilities</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -5201,8 +5200,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-card-text>
 			</v-card>
-			<v-card v-if="route == 'cookbook'" class="elevation-1 rounded-lg">
-				<v-toolbar light flat>
+			<v-card v-if="route == 'cookbook'" outlined rounded="xl">
+				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing {{ filteredRecipes.length }} recipes</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -5230,8 +5229,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</template>
 				</v-data-table>
 			</v-card>
-			<v-card v-if="route == 'handbook' && role == 'administrator'" class="elevation-1 rounded-lg">
-				<v-toolbar light flat>
+			<v-card v-if="route == 'handbook' && role == 'administrator'" outlined rounded="xl">
+				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing {{ processes.length }} processes</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -5273,8 +5272,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-container>
 				</v-card-text>
 			</v-card>
-			<v-card tile v-if="route == 'configurations' && ( role == 'administrator' || role == 'owner' )" class="elevation-1 rounded-lg">
-				<v-toolbar light flat>
+			<v-card v-if="route == 'configurations' && ( role == 'administrator' || role == 'owner' )" outlined rounded="xl">
+				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Configurations</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
@@ -5535,8 +5534,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-col>
 				</v-row>
 			</v-card>
-			<v-card tile v-if="route == 'billing'" class="elevation-1 rounded-lg">
-				<v-toolbar light flat v-show="dialog_billing.step == 1">
+			<v-card v-if="route == 'billing'" outlined rounded="xl">
+				<v-toolbar flat v-show="dialog_billing.step == 1" color="transparent">
 					<v-toolbar-title>Billing</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
@@ -5898,8 +5897,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card>
 				</v-flex>
 			</v-card>
-			<v-card v-if="route == 'defaults' && role == 'administrator'" class="elevation-1 rounded-lg">
-				<v-toolbar light flat>
+			<v-card v-if="route == 'defaults' && role == 'administrator'" outlined rounded="xl">
+				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Site Defaults</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
@@ -5975,8 +5974,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-container>
 				</v-card-text>
 			</v-card>
-			<v-card v-if="route == 'profile'" class="elevation-1 rounded-lg mx-auto" max-width="700">
-				<v-toolbar light flat>
+			<v-card v-if="route == 'profile'" outlined rounded="xl" class="mx-auto" max-width="700">
+				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Edit profile</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -6028,8 +6027,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-row>
 				</v-card-text>
 			</v-card>
-			<v-card class="elevation-1 rounded-lg" v-show="role == 'administrator' && route == 'subscriptions'">
-				<v-toolbar light flat>
+			<v-card v-show="role == 'administrator' && route == 'subscriptions'" outlined rounded="xl" >
+				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing {{ subscriptions.length }} subscriptions</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
@@ -6079,9 +6078,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-subheader>{{ revenue_estimated_total() }}</v-subheader>
 					<div id="plan_chart_transactions"></div>
 			</v-card>
-			<v-card v-if="route == 'accounts'" class="elevation-1 rounded-lg">
-			<v-sheet v-show="dialog_account.step == 1">
-				<v-toolbar light flat>
+			<v-card v-if="route == 'accounts'" outlined rounded="xl">
+			<v-sheet v-show="dialog_account.step == 1" color="transparent">
+				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing {{ accounts.length }} accounts</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items v-if="role == 'administrator'">
@@ -6534,8 +6533,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-sheet>
 			</v-card>
-			<v-card v-if="route == 'users'" class="elevation-1 rounded-lg">
-				<v-toolbar light flat>
+			<v-card v-if="route == 'users'" outlined rounded="xl">
+				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing {{ users.length }} users</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
