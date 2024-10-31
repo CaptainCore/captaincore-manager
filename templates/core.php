@@ -2130,7 +2130,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-btn v-if="configurations.mode == 'maintenance'" text @click="goToPath( `/sites/new` )">Add Site <v-icon dark>mdi-plus</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
-			<v-sheet v-show="dialog_site.step == 1">
+			<v-sheet v-show="dialog_site.step == 1" color="transparent">
 			<v-dialog v-model="dialog_new_site_rocketdotnet.show" width="500">
 				<v-card>
 					<v-toolbar flat>
@@ -4652,8 +4652,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-row>
 				</v-card-text>
 				</v-sheet>
-				<v-sheet v-show="dialog_domain.step == 2">
-					<v-card flat>
+				<v-sheet v-show="dialog_domain.step == 2" color="transparent">
+					<v-card flat rounded="xl">
 						<v-toolbar flat>
 							<v-toolbar-title>
 							<v-autocomplete
@@ -5554,7 +5554,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							Billing Address <v-icon size="24">mdi-map-marker</v-icon>
 						</v-tab>
 					</v-tabs>
-					<v-tabs-items v-model="billing_tabs">
+					<v-tabs-items v-model="billing_tabs" style="background:transparent">
 						<v-tab-item value="tab-Billing-Invoices" :transition="false" :reverse-transition="false">
 						<v-data-table
 							:loading="billing_loading"
@@ -5565,6 +5565,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								{ text: 'Total', value: 'total', width: '120px' },
 								{ text: '', value: 'actions', width: '140px' }]"
 							:items="billing.invoices"
+							style="background:transparent"
 						>
 						<template v-slot:item.order_id="{ item }">
 							#{{ item.order_id }}
@@ -5589,6 +5590,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								{ text: 'Status', value: 'status' },
 								{ text: '', value: 'actions', width: '140px' }]"
 							:items="billing.subscriptions"
+							style="background:transparent"
 						>
 						<template v-slot:item.account_id="{ item }">
 							#{{ item.account_id }}
@@ -5617,6 +5619,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								{ text: '', value: 'actions', width: '204px', align: 'end' }]"
 							:items="billing.payment_methods"
 							hide-default-footer
+							style="background:transparent"
 						>
 						<template v-slot:item.method="{ item }">
 							{{ item.method.brand }} ending in {{ item.method.last4 }} 
@@ -5637,7 +5640,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									Add new payment method
 								</v-btn>
 							</template>
-
 							<v-card>
 								<v-card-title>
 									New payment method
