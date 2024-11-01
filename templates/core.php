@@ -2288,7 +2288,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-card-title class="headline grey lighten-2">
 					Update site request
 					</v-card-title>
-
 					<v-card-text>
 						<v-text-field label="New Site URL" v-model="dialog_site_request.request.url"></v-text-field>
 						<v-text-field label="Name" v-model="dialog_site_request.request.name"></v-text-field>
@@ -2459,13 +2458,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-card flat>
 							<v-container fluid>
 							<v-row>
-								<v-col
-								v-for="item in items"
-								:key="item.site_id"
-								class="d-flex child-flex"
-								cols="12"
-								sm="4"
-								>
+								<v-col v-for="item in items" :key="item.site_id" class="d-flex child-flex" cols="12" sm="4">
 								<v-card tile style="cursor: pointer" @click="goToPath( `/sites/${item.site_id}` )">
 								<v-hover v-slot="{ hover }">
 									<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-800.jpg` :aspect-ratio="8/5" v-show="item.screenshot_base">
@@ -2498,9 +2491,24 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</template>
 				</v-data-table>
 			</v-sheet>
-			<v-sheet v-show="dialog_site.step == 2" class="site">
-			<v-card flat>
-				<v-toolbar light flat>
+			<v-sheet v-show="dialog_site.step == 2" class="site" color="transparent">
+			<v-card v-show="dialog_site.site.removed" flat rounded="xl">
+			<v-toolbar flat>
+					<v-img :src=`${remote_upload_uri}${dialog_site.site.site}_${dialog_site.site.site_id}/production/screenshots/${dialog_site.site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="dialog_site.site.screenshot_base"></v-img>
+					<v-toolbar-title>{{ dialog_site.site.name }}</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-card-text>
+				<v-row>
+					<v-col>
+						<div>This site has been marked for removal and will be removed within 24 hours. If that was not your intentions then:</div>
+						<v-btn class="ma-4" @click="cancelSiteRemoved()">cancel removal request</v-btn>
+					</v-col>
+				</v-row>
+				</v-card-text>
+			</v-card>
+			<v-card v-show="! dialog_site.site.removed" flat rounded="xl">
+				<v-toolbar flat>
 					<v-img :src=`${remote_upload_uri}${dialog_site.site.site}_${dialog_site.site.site_id}/production/screenshots/${dialog_site.site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="dialog_site.site.screenshot_base"></v-img>
 					<v-toolbar-title>
 					<v-autocomplete
