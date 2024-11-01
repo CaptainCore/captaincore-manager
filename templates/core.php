@@ -1977,7 +1977,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card>
 				</v-col>
 				<v-col>
-				<v-card style="max-width: 400px;margin: auto;" class="rounded-lg elevation-1">
+				<v-card style="max-width: 400px;margin: auto;" outlined rounded="xl">
 					<v-toolbar light flat>
 						<v-toolbar-title>Login</v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -2029,7 +2029,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-row>
 			</v-card>
 			<template v-else>
-				<v-card style="max-width: 400px;margin: auto;" class="rounded-lg elevation-1">
+				<v-card style="max-width: 400px;margin: auto;" outlined rounded="xl">
 					<v-toolbar light flat>
 						<v-toolbar-title>Login</v-toolbar-title>
 						<v-spacer></v-spacer>
@@ -4386,8 +4386,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-form>
 	          </v-card-text>
 			</v-sheet>
-			<v-sheet v-show="dialog_site.step == 4">
-				<v-toolbar flat>
+			<v-sheet v-show="dialog_site.step == 4" color="transparent">
+				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Edit Site {{ dialog_edit_site.site.name }}</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-btn icon @click.native="dialog_site.step = 2">
@@ -5709,7 +5709,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-tab-items>
 				</v-flex>
 				<v-flex v-show="dialog_billing.step == 2">
-					<v-toolbar flat>
+					<v-toolbar flat color="transparent">
 						<v-toolbar-title v-show="dialog_invoice.loading == true">Loading...</v-toolbar-title>
 						<v-toolbar-title v-show="dialog_invoice.loading == false">Invoice #{{ dialog_invoice.response.order_id }}</v-toolbar-title>
 						<div class="flex-grow-1"></div>
@@ -5899,7 +5899,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-list-item-content>
 							</v-list-item>
 							</v-card>
-							<v-btn color="primary" elevation="7" x-large @click="verifyAndPayInvoice(dialog_invoice.response.order_id)" class="mb-7" v-show="dialog_invoice.response.status == 'pending' || dialog_invoice.response.status == 'failed'">Pay Invoice</v-btn>
+							<v-btn color="primary" x-large @click="verifyAndPayInvoice(dialog_invoice.response.order_id)" class="mb-7" v-show="dialog_invoice.response.status == 'pending' || dialog_invoice.response.status == 'failed'">Pay Invoice</v-btn>
 						</v-col>
 						</v-row>
 						</v-card>
