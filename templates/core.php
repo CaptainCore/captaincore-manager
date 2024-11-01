@@ -13813,6 +13813,8 @@ new Vue({
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					this.fetchBilling()
+					this.snackbar.message = "Billing infomation updated."
+					this.snackbar.show = true
 				});
 		},
 		updateSettings() {
