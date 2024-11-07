@@ -653,14 +653,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 	  </v-dialog>
 	  <v-dialog v-model="dialog_edit_account.show" max-width="800px" persistent scrollable>
 		<v-card tile>
-			<v-toolbar flat>
+			<v-toolbar color="primary" dark flat>
 				<v-btn icon @click.native="dialog_edit_account.show = false">
 					<v-icon>mdi-close</v-icon>
 				</v-btn>
 				<v-toolbar-title>Edit Account</v-toolbar-title>
 				<v-spacer></v-spacer>
 			</v-toolbar>
-			<v-card-text style="max-height: 100%;">
+			<v-card-text style="max-height: 100%;" class="mt-3">
 			<v-container>
 			<v-layout row wrap>
 				<v-flex xs12 pa-2>
@@ -687,20 +687,20 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-toolbar>
 			<v-card-text style="max-height: 100%;">
 			<v-container>
-			<v-layout row wrap>
+			<v-row row wrap>
 				<v-flex xs12 pa-2>
 					<v-text-field label="Name" :value="dialog_cookbook.recipe.title" @change.native="dialog_cookbook.recipe.title = $event.target.value"></v-text-field>
 				</v-flex>
 				<v-flex xs12 pa-2>
 					<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="dialog_cookbook.recipe.content" @change.native="dialog_cookbook.recipe.content = $event.target.value" spellcheck="false"></v-textarea>
 				</v-flex>
-				<v-flex xs12 pa-2 v-if="role == 'administrator'">
+				<v-flex xs12 pa-2 v-if="role == 'administrator' || role == 'owner'">
 					<v-switch label="Public" v-model="dialog_cookbook.recipe.public" persistent-hint hint="Public by default. Turning off will make the recipe only viewable and useable by you." false-value="0" true-value="1"></v-switch>
 				</v-flex>
-				<v-flex xs12 text-right pa-0 ma-0>
-					<v-btn color="primary" dark @click="updateRecipe()">
-						Save Recipe
-					</v-btn>
+				<v-col cols="12" class="text-right">
+					<v-btn color="error" elevation="0" text dark @click="deleteRecipe()" class="mx-3">Delete Recipe</v-btn>
+					<v-btn color="primary" elevation="0" dark @click="updateRecipe()">Save Recipe</v-btn>
+				</v-col>
 				</v-flex>
 			</v-layout>
 			</v-container>
@@ -1387,7 +1387,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-row>
 						<v-row>
 						<v-col cols="12">
-							<v-text-field label="Additional Emails" persistent-hint hint="Separated by a comma. Example: austin@anchor.host, support@anchor.host" :value="dialog_modify_plan.plan.additional_emails" @change.native="dialog_modify_plan.plan.additional_emails = $event.target.value">
+							<v-text-field label="Additional Emails" persistent-hint hint="Separated by a comma. Example: name@example.com, support@example.com" :value="dialog_modify_plan.plan.additional_emails" @change.native="dialog_modify_plan.plan.additional_emails = $event.target.value">
 						</v-col>
 						</v-row>
 						<v-row>
@@ -1435,7 +1435,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<td class="justify-center py-4" style="vertical-align: top;">
 						<div v-html="item.description" v-show="item.description"></div>
 					</td>
-					<td class="justify-center pt-2" style="vertical-align: top;width:180px;">
+					<td class="justify-center pt-2" style="vertical-align:top; width:180px;">
 					<v-row>
 						<v-col class="shrink pr-0"><v-img :src="item.author_avatar" width="34" class="rounded"></v-img></v-col>
 						<v-col class="pt-4">{{ item.author }}</v-col>
@@ -1465,13 +1465,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-data-table>
 					</v-card-text>
 				</v-dialog>
-				<v-dialog
-					v-if="role == 'administrator'"
-					v-model="dialog_new_log_entry.show"
-					scrollable
-					persistent
-					width="500"
-				>
+				<v-dialog v-if="role == 'administrator' || role == 'owner'" v-model="dialog_new_log_entry.show" scrollable persistent width="500">
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
 						<v-btn icon dark @click.native="dialog_new_log_entry.show = false">
@@ -1578,13 +1572,13 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-text>
 					</v-card>
 				</v-dialog>
-				<v-dialog v-model="dialog_mailgun.show" scrollable>
+				<v-dialog v-model="dialog_mailgun.show" scrollable fullscreen>
 				<v-card tile>
-					<v-toolbar flat dark color="primary">
+					<v-toolbar flat dark color="primary" class="shrink">
 						<v-btn icon dark @click.native="dialog_mailgun.show = false">
 							<v-icon>mdi-close</v-icon>
 						</v-btn>
-						<v-toolbar-title>Mailgun Logs for {{ dialog_mailgun.site.name }} (Last 30 days)</v-toolbar-title>
+						<v-toolbar-title>Mailgun Logs for {{ dialog_mailgun.site.name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text>
@@ -1730,19 +1724,15 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-text>
 					</v-card>
 				</v-dialog>
-				<v-dialog
-					v-model="dialog_captures.show"
-					scrollable
-				>
+				<v-dialog v-model="dialog_captures.show" fullscreen scrollable>
 				<v-card tile>
-					<v-toolbar flat dark color="primary">
+					<v-toolbar flat dark color="primary" class="shrink">
 						<v-btn icon dark @click="closeCaptures()">
 							<v-icon>mdi-close</v-icon>
 						</v-btn>
 						<v-toolbar-title>Historical Captures of {{ dialog_captures.site.name }}</v-toolbar-title>
-						<v-spacer></v-spacer>
 					</v-toolbar>
-					<v-toolbar light flat>
+					<v-toolbar light flat class="shrink">
 						<div style="max-width:250px;" class="mx-1 mt-8" v-show="dialog_captures.captures.length != 0">
 							<v-select v-model="dialog_captures.capture" dense :items="dialog_captures.captures" item-text="created_at_friendly" item-value="capture_id" label="Taken On" return-object @change="switchCapture"></v-select>
 						</div>
@@ -2525,28 +2515,30 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
-				<v-toolbar color="primary" dark dense>
-				<v-tabs v-model="dialog_site.site.tabs">
+				<v-container class="pt-0">
+				<v-toolbar color="primary" dark flat dense rounded="lg">
+				<v-tabs v-model="dialog_site.site.tabs" dense left>
+					<v-tabs-slider color="transparent"></v-tabs-slider>
 					<v-tab :key="1" href="#tab-Site-Management">
-						Site Management <v-icon size="24">mdi-cog</v-icon>
+						<span class="d-none d-md-inline">Site Management</span><v-icon size="24">mdi-cog</v-icon>
 					</v-tab>
 					<v-tab :key="2" href="#tab-Modules" v-show="role == 'administrator'">
-						<span class="d-none d-sm-block">Modules</span> <v-icon size="24">mdi-toggle-switch-outline</v-icon>
+						<span class="d-none d-md-inline">Modules</span><v-icon size="24">mdi-toggle-switch-outline</v-icon>
 					</v-tab>
 					<v-tab :key="8" href="#tab-Timeline" ripple @click="fetchTimeline( dialog_site.site.site_id )">
-						Timeline <v-icon size="24">mdi-timeline-text-outline</v-icon>
+						<span class="d-none d-md-inline">Timeline</span><v-icon size="24">mdi-timeline-text-outline</v-icon>
 					</v-tab>
 				</v-tabs>
 				<v-spacer></v-spacer>
-				<v-toolbar-items>
-					<v-btn text small @click="showLogEntry(dialog_site.site.site_id)" v-show="role == 'administrator'"><v-icon class="mr-1">mdi-note-check-outline</v-icon></v-btn>
+				<v-toolbar-items style="margin-right: -16px;">
+					<v-btn text small @click="showLogEntry(dialog_site.site.site_id)" v-show="role == 'administrator' || role == 'owner'"><v-icon class="mr-1">mdi-note-check-outline</v-icon></v-btn>
 					<v-btn text @click="magicLoginSite(dialog_site.site.site_id)">Login to WordPress <v-icon>mdi-open-in-new</v-icon></v-btn>
 				</v-toolbar-items>
 				</v-toolbar>
 				<v-tabs-items v-model="dialog_site.site.tabs">
 					<v-tab-item value="tab-Site-Management" :transition="false" :reverse-transition="false">
-						<div class="pb-2">
-						<v-layout wrap>
+						<div>
+						<v-layout wrap class="mb-2">
 							<v-flex sx12 sm4 px-2>
 							<v-layout>
 							<v-flex style="width:180px;">
@@ -2572,7 +2564,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</v-layout>
 									</v-flex>
 									<v-flex xs12 sm8>
-           							 	<v-tabs v-model="dialog_site.site.tabs_management" icons-and-text right show-arrows height="54">
+								<v-tabs v-model="dialog_site.site.tabs_management" icons-and-text right show-arrows class="pr-3">
 										<v-tab key="Info" href="#tab-Info">
 											Info <v-icon>mdi-text-box-multiple</v-icon>
 										</v-tab>
@@ -2621,7 +2613,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-dialog>
         		<v-tabs-items v-model="dialog_site.site.tabs_management" v-if="dialog_site.loading != true">
 					<v-tab-item :key="1" value="tab-Info" :transition="false" :reverse-transition="false">
-						<v-toolbar dense light flat>
+						<v-toolbar dense flat>
 							<v-toolbar-title>Info</v-toolbar-title>
 							<v-spacer></v-spacer>
 						</v-toolbar>
@@ -2844,8 +2836,35 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-flex>
 						</v-layout>
 						</v-container>
+						<div v-show="dialog_site.site.shared_with && dialog_site.site.shared_with.length > 0">
+						<v-subheader>Shared With</v-subheader>
+						<v-container>
+						<v-row dense v-if="dialog_site.site.shared_with && dialog_site.site.shared_with.length > 0">
+							<v-col v-for="account in dialog_site.site.shared_with" :key="account.account_id" cols="12" md="4">
+							<v-card :href=`${configurations.path}accounts/${account.account_id}` @click.prevent="goToPath( '/accounts/' + account.account_id )" dense outlined rounded="xl">
+								<v-card-title class="text-body-1">
+									<span v-html="account.name"></span>
+									<v-spacer></v-spacer>
+									<v-tooltip bottom>
+									<template v-slot:activator="{ on, attrs }">
+										<v-icon color="primary" v-bind="attrs" v-on="on" size="26" v-show="account.account_id == dialog_site.site.customer_id" class="ml-1">mdi-account-circle</v-icon>
+									</template>
+									<span>Customer</span>
+									</v-tooltip>
+									<v-tooltip bottom>
+									<template v-slot:activator="{ on, attrs }">
+										<v-icon color="primary" v-bind="attrs" v-on="on" size="26" v-show="account.account_id == dialog_site.site.account_id" class="ml-1">mdi-credit-card</v-icon>
+									</template>
+									<span>Billing Contact</span>
+									</v-tooltip>
+								</v-card-title>
+								<v-card-subtitle>Account #{{ account.account_id }}</v-card-subtitle>
+							</v-card>
+						</v-col>
+						</v-row>
+						</v-container>
+					</div>
 					<div v-show="dialog_site.environment_selected.token != 'basic'">
-					<v-divider></v-divider>
 					<v-subheader>Site Options</v-subheader>
 					<v-container>
 					<v-btn small depressed @click="PushProductionToStaging( dialog_site.site.site_id )" v-show="dialog_site.site.provider == 'kinsta'">
@@ -2854,55 +2873,37 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-btn small depressed @click="PushStagingToProduction( dialog_site.site.site_id )" v-show="dialog_site.site.provider == 'kinsta' && dialog_site.site.environments.length == 2">
 						<v-icon class="reverse">mdi-truck</v-icon> Push Staging to Production
 					</v-btn>
-					<v-btn small depressed @click="dialog_mailgun_config.show = true" v-show="role == 'administrator'">
-						<v-icon>mdi-email-search</v-icon> Configure Mailgun
+					<v-dialog max-width="600">
+						<template v-slot:activator="{ on, attrs }">
+							<v-btn small depressed color="error" v-bind="attrs" v-on="on"><v-icon>mdi-delete</v-icon> Delete Site</v-btn>
+						</template>
+						<template v-slot:default="dialog">
+						<v-card>
+							<v-toolbar color="primary" dark>
+								<v-btn icon @click="dialog.value = false">
+									<v-icon>mdi-close</v-icon>
 					</v-btn>
-					<v-btn small depressed @click="copySite(dialog_site.site.site_id)" v-show="role == 'administrator'">
-						<v-icon>mdi-content-duplicate</v-icon> Copy Site
-					</v-btn>
-					</v-container>
-					</div>
-					<div v-show="role == 'administrator' && dialog_site.site.shared_with && dialog_site.site.shared_with.length > 0">
-					<v-divider></v-divider>
-					<v-subheader>Shared With</v-subheader>
-					<v-container>
-					<v-row dense v-if="dialog_site.site.shared_with && dialog_site.site.shared_with.length > 0" class="mt-3">
-						<v-col v-for="account in dialog_site.site.shared_with" :key="account.account_id" cols="4">
-						<v-card :href=`${configurations.path}accounts/${account.account_id}` @click.prevent="goToPath( '/accounts/' + account.account_id )">
-							<v-card-title v-html="account.name"></v-card-title>
-							<v-card-actions>
-							<v-avatar class="mr-2" tile :color="account.account_id == dialog_site.site.customer_id ? 'grey lighten-3' : 'none'">
-								<v-icon>mdi-account-circle</v-icon>
-							</v-avatar>
-							<v-avatar tile :color="account.account_id == dialog_site.site.account_id ? 'grey lighten-3' : 'none'">
-								<v-icon>mdi-currency-usd</v-icon>
-							</v-avatar>
-							</v-card-actions>
+								Are you sure you wish to delete this site?
+								<v-spacer></v-spacer>
+							</v-toolbar>
+							<v-card-text>
+							  <p class="pt-4">Deleting this site will also delete all environments associated with it.</p>
+							  <v-checkbox true-value="1" input-value="input.val" readonly v-for="environment in dialog_site.site.environments" :label="`${environment.environment} - ${environment.home_url}`"></v-checkbox>
+							  <v-btn @click="markSiteRemoved(); dialog.value = false" class="mr-2">Delete Site</v-btn>
+							</v-card-text>
 						</v-card>
-					</v-col>
-					</v-row>
-					</v-container>
-					</div>
-					<div v-show="role == 'administrator'">
-					<v-divider></v-divider>
-					<v-subheader>Administrator Options</v-subheader>
-					<v-container>
-					<v-btn small depressed @click="editSite()">
-						<v-icon>mdi-pencil</v-icon> Edit Site
-					</v-btn>
-					<v-btn small depressed color="error" @click="deleteSite(dialog_site.site.site_id)">
-						<v-icon>mdi-delete</v-icon> Delete Site
-					</v-btn>
+						</template>
+					</v-dialog>
 					</v-container>
 					</div>
 				</v-tab-item>
 				<v-tab-item :key="100" value="tab-Stats" :transition="false" :reverse-transition="false">
 					<v-card flat>
-					<v-toolbar dense light flat>
+					<v-toolbar flat dense class="mb-2">
 						<v-toolbar-title>Stats</v-toolbar-title>
 						<v-spacer></v-spacer>
-						<v-toolbar-items v-if="typeof dialog_new_site == 'object'">
-							<v-col v-show="dialog_site.environment_selected.fathom_analytics.length > 1">
+						<v-toolbar-items v-if="typeof dialog_new_site == 'object'" style="margin-right:-16px;" class="mt-2">
+							<v-col class="px-1" v-show="dialog_site.environment_selected.fathom_analytics.length > 1">
 								<v-autocomplete
 									:items='dialog_site.environment_selected.fathom_analytics'
 									item-text="domain"
@@ -2912,10 +2913,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									@change="fetchStats"
 								></v-autocomplete>
 							</v-col>
-							<v-col style="max-width:150px;">
-								<v-select :items="['Hour', 'Day', 'Month', 'Year']" label="Date Grouping" v-model="stats.grouping" @change="fetchStats()"></v-select>
+							<v-col class="px-1" style="max-width:140px;">
+								<v-select dense outlined :items="['Hour', 'Day', 'Month', 'Year']" label="Date Grouping" v-model="stats.grouping" @change="fetchStats()"></v-select>
 							</v-col>
-							<v-col style="max-width:150px;">
+							<v-col class="px-1" style="max-width:155px;">
 							<v-menu
 								v-model="stats.from_at_select"
 								:close-on-content-click="false"
@@ -2929,16 +2930,16 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-text-field
 									v-model="stats.from_at"
 									label="From"
-									prepend-icon="mdi-calendar"
+									append-icon="mdi-calendar"
 									v-bind="attrs"
 									v-on="on"
-									width="100"
+									dense outlined
 								></v-text-field>
 								</template>
 								<v-date-picker v-model="stats.from_at" @input="stats.from_at_select = false; fetchStats()"></v-date-picker>
 							</v-menu>
 							</v-col>
-							<v-col style="max-width:150px;">
+							<v-col class="px-1" style="max-width:155px;">
 							<v-menu
 								v-model="stats.to_at_select"
 								:close-on-content-click="false"
@@ -2952,9 +2953,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-text-field
 									v-model="stats.to_at"
 									label="To"
-									prepend-icon="mdi-calendar"
+									append-icon="mdi-calendar"
 									v-bind="attrs"
 									v-on="on"
+									dense outlined
 								></v-text-field>
 								</template>
 								<v-date-picker v-model="stats.to_at" @input="stats.to_at_select = false; fetchStats()"></v-date-picker>
@@ -3035,10 +3037,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-tab-item>
 				<v-tab-item :key="3" value="tab-Addons" :transition="false" :reverse-transition="false">
 					<v-card flat>
-					<v-toolbar dense light flat>
+					<v-toolbar dense flat>
 						<v-toolbar-title>Addons <small>(Themes/Plugins)</small></v-toolbar-title>
 						<v-spacer></v-spacer>
-						<v-toolbar-items>
+						<v-toolbar-items style="margin-right:-16px;">
 							<v-btn text @click="bulkEdit(dialog_site.site.site_id, 'plugins')" v-if="dialog_site.environment_selected.plugins_selected.length != 0">Bulk Edit {{ dialog_site.environment_selected.plugins_selected.length }} plugins</v-btn>
 							<v-btn text @click="bulkEdit(dialog_site.site.site_id, 'themes')" v-if="dialog_site.environment_selected.themes_selected.length != 0">Bulk Edit {{ dialog_site.environment_selected.themes_selected.length }} themes</v-btn>
 							<v-btn text @click="addTheme(dialog_site.site.site_id)">Add Theme <v-icon dark small>mdi-plus</v-icon></v-btn>
@@ -3131,21 +3133,22 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-tab-item>
 			<v-tab-item :key="4" value="tab-Users" :transition="false" :reverse-transition="false">
 				<v-card flat>
-				<v-toolbar dense light flat>
+				<v-toolbar flat dense class="mb-2">
 					<v-toolbar-title>Users</v-toolbar-title>
 					<v-spacer></v-spacer>
+					<v-toolbar-items style="margin-right:-16px;">
+						<v-col>
 					<v-text-field
 						v-model="users_search"
 						ref="users_search"
 						append-icon="mdi-magnify"
 						label="Search"
-						single-line
-						clearable
+							dense
 						hide-details
-						style="max-width:300px"
+							outlined
 					></v-text-field>
-					<v-toolbar-items>
                 <v-btn text @click="bulkEdit(dialog_site.site.site_id,'users')" v-if="dialog_site.environment_selected.users_selected.length != 0">Bulk Edit {{ dialog_site.environment_selected.users_selected.length }} users</v-btn>
+						</v-col>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text v-show="typeof dialog_site.environment_selected.users == 'string'">
@@ -3542,7 +3545,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-btn text @click="dialog_backup_configurations.settings = dialog_site.site.backup_settings; dialog_backup_configurations.show = true" v-show="role == 'administrator'"><v-icon dark small>mdi-pencil</v-icon> Edit</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
-				<v-sheet v-show="dialog_site.backup_step == 1" class="mt-7">
+				<v-sheet v-show="dialog_site.backup_step == 1">
 				  <v-card flat>
 				<v-row class="pa-4">
 				<v-col cols="12" md="4" class="px-2">
@@ -4196,6 +4199,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-card>
 		</v-tab-item>
 	</v-tabs>
+	</v-container>
 				</v-card>
 			</v-sheet>
 			<v-sheet v-show="dialog_site.step == 3">
@@ -4677,7 +4681,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-toolbar-title>
 							<v-spacer></v-spacer>
 						</v-toolbar>
-						<v-tabs v-model="dialog_domain.tabs" background-color="primary" dark>
+						<v-container class="pt-0">
+						<v-toolbar color="primary" dark flat dense rounded="lg">
+						<v-tabs v-model="dialog_domain.tabs" dense left>
+							<v-tabs-slider color="transparent"></v-tabs-slider>
 							<v-tab key="dns">
 								DNS Records <v-icon class="ml-1">mdi-table</v-icon>
 							</v-tab>
@@ -4685,6 +4692,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								Domain Management <v-icon class="ml-1">mdi-account-box</v-icon>
 							</v-tab>
 						</v-tabs>
+						</v-toolbar>
 						<v-tabs-items v-model="dialog_domain.tabs">
 							<v-tab-item key="dns" :transition="false" :reverse-transition="false">
 							<v-toolbar flat dense>
@@ -5032,47 +5040,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								</v-row>
 								</v-container>
 							</div>
-							<v-divider></v-divider>
-								<v-subheader>Administrator Options</v-subheader>
-								<v-container>
-								<v-dialog max-width="600">
-									<template v-slot:activator="{ on, attrs }">
-									<v-btn class="mx-1" v-bind="attrs" v-on="on" depressed>Edit Domain</v-btn>
-									</template>
-									<template v-slot:default="dialog">
-									<v-card>
-										<v-toolbar color="primary" dark>
-										<v-btn icon @click="dialog.value = false">
-											<v-icon>mdi-close</v-icon>
-										</v-btn>
-										<v-toolbar-title>Edit Domain</v-toolbar-title></v-toolbar>
-										<v-card-text>
-										<v-autocomplete
-											v-model="dialog_domain.accounts"
-											multiple
-											chips
-											deletable-chips
-											label="Accounts"
-											:items="accounts"
-											item-text="name"
-											item-value="account_id"
-											class="mt-5"
-											spellcheck="false"
-											flat
-										></v-autocomplete>
-										</v-card-text>
-										<v-card-actions class="justify-end">
-											<v-btn color="primary" dark @click="dialog.value = false; updateDomainAccount()">
-												Save Domain
-											</v-btn>
-										</v-card-actions>
-									</v-card>
-									</template>
-								</v-dialog>
-									<v-btn class="mx-1" depressed @click="deleteDomain()">Delete Domain</v-btn>
-								</v-container>
 							</v-tab-item>
 						</v-tabs-items>
+						</v-container>
 					</v-card>
 				</v-sheet>
 			</v-card>
@@ -5547,8 +5517,11 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar-title>Billing</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
+				<v-container class="pt-0">
 				<v-flex xs12 text-right v-show="dialog_billing.step == 1">
-					<v-tabs v-model="billing_tabs" background-color="primary" dark>
+				<v-toolbar color="primary" dark dense flat rounded="lg">
+					<v-tabs v-model="billing_tabs" dense left>
+						<v-tabs-slider color="transparent"></v-tabs-slider>
 						<v-tab :key="1" href="#tab-Billing-Invoices" ripple>
 							Invoices <v-icon size="24">mdi-receipt-text</v-icon>
 						</v-tab>
@@ -5562,6 +5535,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							Billing Address <v-icon size="24">mdi-map-marker</v-icon>
 						</v-tab>
 					</v-tabs>
+					</v-toolbar>
 					<v-tabs-items v-model="billing_tabs" style="background:transparent">
 						<v-tab-item value="tab-Billing-Invoices" :transition="false" :reverse-transition="false">
 						<v-data-table
@@ -5806,6 +5780,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-list-item-content>
 							</v-list-item>
 							</v-form>
+							<v-container>
 						</v-card>
 					</v-col>
 					<v-col>
@@ -6142,7 +6117,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-tooltip>
 						</v-toolbar-items>
 					</v-toolbar>
-					<v-tabs v-model="account_tab" background-color="primary" dark>
+					<v-container class="pt-0">
+					<v-toolbar color="primary" dark flat dense rounded="lg">
+					<v-tabs v-model="account_tab" dense left>
+						<v-tabs-slider color="transparent"></v-tabs-slider>
 						<v-tab>
 							{{ dialog_account.records.users.length }} Users
 							<v-icon size="20" class="ml-1">mdi-account</v-icon>
@@ -6166,6 +6144,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							Plan <v-icon size="20" class="ml-1">mdi-chart-donut</v-icon>
 						</v-tab>
 					</v-tabs>
+					</v-toolbar>
 					<v-tabs-items v-model="account_tab">
 					<v-tab-item :transition="false" :reverse-transition="false">
 						<v-toolbar dense flat>
@@ -6315,7 +6294,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<td class="justify-center py-4" style="vertical-align: top;">
 								<div v-html="item.description" v-show="item.description"></div>
 							</td>
-							<td class="justify-center pt-2" style="vertical-align: top;width:180px;">
+							<td class="justify-center pt-2" style="vertical-align:top; width:180px;">
 							<v-row>
 								<v-col class="shrink pr-0"><v-img :src="item.author_avatar" width="34" class="rounded"></v-img></v-col>
 								<v-col class="pt-4">{{ item.author }}</v-col>
@@ -6525,22 +6504,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 					</v-tab-item>
 					</v-tabs-items>
-					<div v-show="role == 'administrator'">
-					<v-divider></v-divider>
-					<v-subheader>Administrator Options</v-subheader>
-					<v-container>
-					<v-btn small depressed @click="accountBulkTools()">
-						<v-icon small>mdi-filter-variant</v-icon> Bulk Tools on Sites
-					</v-btn>
-					<v-btn small depressed @click="editAccount()">
-						<v-icon small>mdi-pencil</v-icon> Edit Account
-					</v-btn>
-					<v-btn small depressed color="error" @click="deleteAccount()">
-						<v-icon small>mdi-delete</v-icon> Delete Account
-					</v-btn>
 					</v-container>
-					</div>
-					</v-card>
 				</v-sheet>
 			</v-card>
 			<v-card v-if="route == 'users'" outlined rounded="xl">
@@ -6658,6 +6622,78 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-container>
 				</v-card-text>
 			</v-card>
+			<v-container v-if="route == 'sites' && role == 'administrator' && ! loading_page && dialog_site.step == 2" class="mt-5">
+				<v-subheader>Administrator Options</v-subheader>
+				<v-container>
+				<v-btn small outlined @click="dialog_mailgun_config.show = true">
+					<v-icon>mdi-email-search</v-icon> Configure Mailgun
+				</v-btn>
+				<v-btn small outlined @click="copySite(dialog_site.site.site_id)">
+					<v-icon>mdi-content-duplicate</v-icon> Copy Site
+				</v-btn>
+				<v-btn small outlined @click="editSite()">
+					<v-icon>mdi-pencil</v-icon> Edit Site
+				</v-btn>
+				<v-btn small outlined color="error" @click="deleteSite(dialog_site.site.site_id)">
+					<v-icon>mdi-delete</v-icon> Delete Site
+				</v-btn>
+				</v-container>
+			</v-container>	
+			<v-container v-if="route == 'domains' && role == 'administrator' && ! loading_page && dialog_domain.step == 2" class="mt-5">
+			<v-subheader>Administrator Options</v-subheader>
+			<v-dialog max-width="600">
+				<template v-slot:activator="{ on, attrs }">
+				<v-btn class="mx-1" v-bind="attrs" v-on="on" outlined>Edit Domain</v-btn>
+				</template>
+				<template v-slot:default="dialog">
+				<v-card>
+					<v-toolbar color="primary" dark>
+					<v-btn icon @click="dialog.value = false">
+						<v-icon>mdi-close</v-icon>
+					</v-btn>
+					<v-toolbar-title>Edit Domain</v-toolbar-title></v-toolbar>
+					<v-card-text>
+					<v-autocomplete
+						v-model="dialog_domain.accounts"
+						multiple
+						chips
+						deletable-chips
+						label="Accounts"
+						:items="accounts"
+						item-text="name"
+						item-value="account_id"
+						class="mt-5"
+						spellcheck="false"
+						flat
+					></v-autocomplete>
+					</v-card-text>
+					<v-card-actions class="justify-end">
+						<v-btn color="primary" dark @click="dialog.value = false; updateDomainAccount()">
+							Save Domain
+						</v-btn>
+					</v-card-actions>
+				</v-card>
+				</template>
+			</v-dialog>
+				<v-btn class="mx-1" outlined color="error" @click="deleteDomain()">Delete Domain</v-btn>
+			</v-container>
+			<v-container v-if="route == 'accounts' && role == 'administrator' && ! loading_page && dialog_account.step == 2" class="mt-5">
+					<v-subheader>Administrator Options</v-subheader>
+					<v-container>
+					<v-btn small outlined @click="accountBulkTools()">
+						<v-icon small>mdi-filter-variant</v-icon> Bulk Tools on Sites
+					</v-btn>
+					<v-btn small outlined @click="editAccountPortal()">
+						<v-icon small>mdi-pencil</v-icon> Edit Portal
+					</v-btn>
+					<v-btn small outlined @click="editAccount()">
+						<v-icon small>mdi-pencil</v-icon> Edit Account
+					</v-btn>
+					<v-btn small outlined color="error" @click="deleteAccount()">
+						<v-icon small>mdi-delete</v-icon> Delete Account
+					</v-btn>
+					</v-container>
+			</v-container>
 			</v-container>
 			<v-container v-show="loading_page">
 				Loading...
