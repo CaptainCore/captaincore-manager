@@ -2674,15 +2674,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										<v-icon>mdi-image</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
-									<v-list-item @click="viewLogs( dialog_site.site.site_id )" dense>
-									<v-list-item-content>
-										<v-list-item-title>Server Logs</v-list-item-title>
-										<v-list-item-subtitle><code>error.log</code> and <code>access.log</code></v-list-item-subtitle>
-									</v-list-item-content>
-									<v-list-item-icon>
-										<v-icon>mdi-text-box-multiple</v-icon>
-									</v-list-item-icon>
-									</v-list-item>
 									<v-list-item @click="copyText( dialog_site.environment_selected.subsite_count + ' subsites')" dense v-if="dialog_site.environment_selected.subsite_count">
 									<v-list-item-content>
 										<v-list-item-title>Multisite</v-list-item-title>
@@ -2690,14 +2681,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</v-list-item-content>
 									<v-list-item-icon>
 										<v-icon>mdi-content-copy</v-icon>
-									</v-list-item-icon>
-									</v-list-item>
-									<v-list-item @click="viewMailgunLogs()" dense v-if="dialog_site.site.mailgun">
-									<v-list-item-content>
-										<v-list-item-title>Mailgun Logs</v-list-item-title>
-									</v-list-item-content>
-									<v-list-item-icon>
-										<v-icon>mdi-email</v-icon>
 									</v-list-item-icon>
 									</v-list-item>
 								</v-list>
@@ -3034,6 +3017,36 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-container>
 						</div>
 					</v-card>
+				</v-tab-item>
+				<v-tab-item :key="104" value="tab-Logs" :transition="false" :reverse-transition="false">
+				<v-toolbar dense light flat>
+					<v-toolbar-title>Logs</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-sheet>
+				  <v-card flat>
+				<v-row class="pa-4">
+				<v-col cols="12" md="4" class="px-2">
+				<v-card class="mx-auto" max-width="344" outlined link hover @click="viewLogs( dialog_site.site.site_id )">
+					<v-card-title>Server Logs</v-card-title>
+					<v-card-subtitle><code>error.log</code> and <code>access.log</code></v-card-subtitle>
+				</v-card>
+				</v-col>
+				<v-col cols="12" md="4" class="px-2">
+				<v-card class="mx-auto" max-width="344" outlined link hover  @click="viewMailgunLogs()" v-if="dialog_site.site.mailgun">
+					<v-card-title>Email Logs</v-card-title>
+					<v-card-subtitle>Emails sent from your site via Mailgun</v-card-subtitle>
+				</v-card>
+				</v-col>
+				<v-col cols="12" md="4" class="px-2" v-show="dialog_site.environment_selected.token != 'basic'">
+				<v-card class="mx-auto" max-width="344" outlined link hover v-if="dialog_site.site.cleantalk">
+					<v-card-title>Spam Logs</v-card-title>
+					<v-card-subtitle>Logs from CleanTalk spam filter</v-card-subtitle>
+				</v-card>
+				</v-col>
+				</v-row>
+				</v-card>
+				</v-sheet>
 				</v-tab-item>
 				<v-tab-item :key="3" value="tab-Addons" :transition="false" :reverse-transition="false">
 					<v-card flat>
