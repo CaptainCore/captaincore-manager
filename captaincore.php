@@ -645,6 +645,51 @@ function captaincore_sites_func( $request ) {
 	return ( new CaptainCore\Sites )->list();
 }
 
+function captaincore_site_update_func( $request ) {
+	$site_id         = $request['id'];
+	$updated_details = $request['details'];
+
+	if ( ! is_numeric ( $site_id ) ) {
+		$site = ( new CaptainCore\Sites )->where( [ "site" => $site_id ] );
+		if ( count( $site ) == 1 ) {
+			$site_id = $site[0]->site_id;
+		}
+	}
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
+	}
+
+	$site    = CaptainCore\Sites::get( $site_id );
+	$details = empty( $site->details ) ? (object) [] : json_decode( $site->details );
+	foreach ( $updated_details as $field => $value ) {
+		$details->$field = $value;
+		if ( $field == "removed" ) {
+			$title = ( new CaptainCore\Configurations )->get()->name;
+			$user = (object) ( new CaptainCore\User )->fetch();
+			if ( $value == true ) {
+				$subject = "$title - Site Removal Request";
+				$message = "Site {$site->name} #{$site_id} has been requested to be removed.<br /><br />Requested By: {$user->name} #{$user->user_id}";
+			}
+			if ( $value != true ) {
+				$subject = "$title - Cancel Site Removal Request";
+				$message = "Site {$site->name} #{$site_id} has been requested to keep. Disregard previous removal request.<br /><br />Requested By: {$user->name} #{$user->user_id}";
+			}
+			wp_mail(
+				get_option( "admin_email" ),
+				$subject,
+				$message
+			);
+		}
+	}
+	$query = CaptainCore\Sites::update([
+			"details" => json_encode( $details )
+		], [
+			"site_id" => $site_id
+		]);
+	return;
+}
+
 function captaincore_site_func( $request ) {
 
 	$site_id = $request['id'];
@@ -1547,6 +1592,13 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/backup', [
 			'methods'       => 'POST',
 			'callback'      => 'captaincore_site_backup_update_func',
+			'show_in_index' => false
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)', [
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_site_update_func',
 			'show_in_index' => false
 		]
 	);
