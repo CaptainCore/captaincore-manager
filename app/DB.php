@@ -727,6 +727,7 @@ class DB {
             name varchar(255),
             site varchar(255),
             provider_id varchar(255),
+            provider_site_id varchar(255),
             provider varchar(255),
             token varchar(255),
             status varchar(255),
