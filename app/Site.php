@@ -766,6 +766,7 @@ class Site {
         $site                   = ( new Sites )->get( $this->site_id );
         $details                = json_decode( $site->details );
         $site->filtered         = true;
+        $site->removed          = isset( $details->removed ) ? $details->removed : false;
         $site->loading          = false;
         $site->key              = $details->key;
         $site->core             = $details->core;
