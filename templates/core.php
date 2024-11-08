@@ -9854,6 +9854,32 @@ new Vue({
 			this.dialog_edit_site.site = JSON.parse ( JSON.stringify ( this.dialog_site.site ) )
 			this.dialog_site.step = 4
 		},
+		cancelSiteRemoved() {
+			site_id = this.dialog_site.site.site_id
+			this.dialog_site.site.removed = false
+			this.snackbar.message = `Cancelling removal request for ${this.dialog_site.site.name}.`
+			this.snackbar.show = true
+			axios.post( `/wp-json/captaincore/v1/sites/${site_id}`, {
+				details: {
+					removed: false
+				}
+			}, {
+				headers: { 'X-WP-Nonce':this.wp_nonce }
+			})
+		},
+		markSiteRemoved() {
+			site_id = this.dialog_site.site.site_id
+			this.dialog_site.site.removed = true
+			this.snackbar.message = `Marking ${this.dialog_site.site.name} for removal.`
+			this.snackbar.show = true
+			axios.post( `/wp-json/captaincore/v1/sites/${site_id}`, {
+				details: {
+					removed: true
+				}
+			}, {
+				headers: { 'X-WP-Nonce':this.wp_nonce }
+			})
+		},
 		deleteSite( site_id ) {
 			site = this.dialog_site.site
 			site_name = site.name;
