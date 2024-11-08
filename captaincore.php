@@ -678,7 +678,8 @@ function captaincore_site_update_func( $request ) {
 			wp_mail(
 				get_option( "admin_email" ),
 				$subject,
-				$message
+				$message,
+				[ 'Content-Type: text/html; charset=UTF-8' ]
 			);
 		}
 	}
