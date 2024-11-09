@@ -2571,6 +2571,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
            							 	<v-tab key="Stats" href="#tab-Stats" @click="fetchStats()">
 											Stats <v-icon>mdi-chart-bar</v-icon>
 										</v-tab>
+									<v-tab key="Logs" href="#tab-Logs">
+										Logs <v-icon>mdi-file-document-multiple</v-icon>
+									</v-tab>
 										<v-tab key="Plugins" href="#tab-Addons" v-show="dialog_site.environment_selected.token != 'basic'">
 											Addons <v-icon>mdi-power-plug</v-icon>
 										</v-tab>
