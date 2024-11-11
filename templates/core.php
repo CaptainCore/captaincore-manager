@@ -6709,6 +6709,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-dialog>
 				<v-btn class="mx-1" outlined color="error" @click="deleteDomain()">Delete Domain</v-btn>
 			</v-container>
+			</v-container>
 			<v-container v-if="route == 'accounts' && role == 'administrator' && ! loading_page && dialog_account.step == 2" class="mt-5">
 					<v-subheader>Administrator Options</v-subheader>
 					<v-container>
@@ -6724,7 +6725,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-btn small outlined color="error" @click="deleteAccount()">
 						<v-icon small>mdi-delete</v-icon> Delete Account
 					</v-btn>
-					</v-container>
 					</v-container>
 			</v-container>
 			</v-container>
