@@ -6655,8 +6655,24 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-btn>
 				</v-container>
 			</v-container>	
-			<v-container v-if="route == 'domains' && role == 'administrator' && ! loading_page && dialog_domain.step == 2" class="mt-5">
+			<v-container v-if="route == 'domains' && role == 'administrator' && ! loading_page && dialog_domain.step == 2" class="mt-5 pb-0">
+			<v-subheader>Shared With</v-subheader>
+			<v-container>
+			<v-row dense v-if="dialog_domain.accounts && dialog_domain.accounts.length > 0">
+				<v-col v-for="account in dialog_domain.accounts" :key="account.account_id" cols="12" md="4">
+				<v-card :href=`${configurations.path}accounts/${account.account_id}` @click.prevent="goToPath( '/accounts/' + account.account_id )" dense outlined rounded="xl">
+					<v-card-title class="text-body-1">
+						<span v-html="account.name"></span>
+					</v-card-title>
+					<v-card-subtitle>Account #{{ account.account_id }}</v-card-subtitle>
+				</v-card>
+			</v-col>
+			</v-row>
+			</v-container>
+			</v-container>
+			<v-container v-if="route == 'domains' && role == 'administrator' && ! loading_page && dialog_domain.step == 2">
 			<v-subheader>Administrator Options</v-subheader>
+			<v-container>
 			<v-dialog max-width="600">
 				<template v-slot:activator="{ on, attrs }">
 				<v-btn class="mx-1" v-bind="attrs" v-on="on" outlined>Edit Domain</v-btn>
@@ -6670,7 +6686,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar-title>Edit Domain</v-toolbar-title></v-toolbar>
 					<v-card-text>
 					<v-autocomplete
-						v-model="dialog_domain.accounts"
+						v-model="dialog_domain.account_ids"
 						multiple
 						chips
 						deletable-chips
@@ -6708,6 +6724,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-btn small outlined color="error" @click="deleteAccount()">
 						<v-icon small>mdi-delete</v-icon> Delete Account
 					</v-btn>
+					</v-container>
 					</v-container>
 			</v-container>
 			</v-container>
@@ -10779,7 +10796,7 @@ new Vue({
 			var data = {
 				action: 'captaincore_ajax',
 				command: 'updateDomainAccount',
-				value: this.dialog_domain.accounts,
+				value: this.dialog_domain.account_ids,
 				domain_id: this.dialog_domain.domain.domain_id
 			};
 			axios.post( ajaxurl, Qs.stringify( data ) )
@@ -10792,6 +10809,7 @@ new Vue({
 					}
 					this.snackbar.message = "Domain updated"
 					this.snackbar.show = true
+					this.fetchDomain( this.dialog_domain.domain )
 				})
 				.catch( error => {
 					this.snackbar.message = error
@@ -11833,6 +11851,7 @@ new Vue({
 				})
 				.then(response => {
 					this.dialog_domain.accounts = response.data.accounts
+					this.dialog_domain.account_ids = response.data.accounts.map( a => a.account_id )
 					if ( response.data.provider.errors ) {
 						this.dialog_domain.provider =  { contacts: {} }
 						return
