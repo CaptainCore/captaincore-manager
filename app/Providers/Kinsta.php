@@ -162,7 +162,7 @@ class Kinsta {
     public static function connect_staging( $site_id ) {
         $site         = ( new \CaptainCore\Sites )->get( $site_id );
         $environments = ( new \CaptainCore\Environments )->where( [ "site_id" => $site_id ] );
-        if ( empty( $site->provider_id ) ) {
+        if ( empty( $site->provider_site_id ) ) {
             return;
         }
         foreach( $environments as $environment ) {
@@ -171,7 +171,7 @@ class Kinsta {
             }
         }
         $time_now        = date("Y-m-d H:i:s");
-        $response = \CaptainCore\Remote\Kinsta::get( "sites/{$site->provider_id}/environments" );
+        $response = \CaptainCore\Remote\Kinsta::get( "sites/{$site->provider_site_id}/environments" );
 
         foreach( $response->site->environments as $kinsta_environment ) {
             if ( $kinsta_environment->name == "staging" ) {
@@ -207,7 +207,7 @@ class Kinsta {
     public static function sync_environments( $site_id ) {
         $site         = ( new \CaptainCore\Sites )->get( $site_id );
         $environments = ( new \CaptainCore\Environments )->where( [ "site_id" => $site_id ] );
-        if ( empty( $site->provider_id ) ) {
+        if ( empty( $site->provider_site_id ) ) {
             return;
         }
         foreach( $environments as $environment ) {
@@ -215,7 +215,7 @@ class Kinsta {
                 $production_environment = $environment;
             }
         }
-        $response = \CaptainCore\Remote\Kinsta::get( "sites/{$site->provider_id}/environments" );
+        $response = \CaptainCore\Remote\Kinsta::get( "sites/{$site->provider_site_id}/environments" );
 
         foreach( $response->site->environments as $kinsta_environment ) {
             if ( $kinsta_environment->name == "live" ) {
@@ -247,10 +247,10 @@ class Kinsta {
 
     public static function create_staging_and_deploy( $site_id ) {
         $site         = ( new \CaptainCore\Sites )->get( $site_id );
-        if ( empty( $site->provider_id ) ) {
+        if ( empty( $site->provider_site_id ) ) {
             return;
         }
-        $environments              = self::environments( $site->provider_id );
+        $environments              = self::environments( $site->provider_site_id );
         $environment_production_id = "";
         foreach( $environments as $environment ) {
             if ( $environment->name == "live" ) {
@@ -262,7 +262,7 @@ class Kinsta {
             "is_premium"    => false,
             "source_env_id" => $environment_production_id
         ];
-        $response = \CaptainCore\Remote\Kinsta::post( "sites/{$site->provider_id}/environments/clone", $data );
+        $response = \CaptainCore\Remote\Kinsta::post( "sites/{$site->provider_site_id}/environments/clone", $data );
 
         $action = (object) [
             "command"                   => "deploy-to-staging",
@@ -270,7 +270,7 @@ class Kinsta {
             "message"                   => "Deploying $site->name to staging environment",
             "name"                      => $site->name,
             "site_id"                   => $site_id,
-            "kinsta_site_id"            => $site->provider_id,
+            "kinsta_site_id"            => $site->provider_site_id,
             "environment_production_id" => $environment_production_id,
         ];
 
@@ -280,10 +280,10 @@ class Kinsta {
 
     public static function deploy_to_staging( $site_id ) {
         $site         = ( new \CaptainCore\Sites )->get( $site_id );
-        if ( empty( $site->provider_id ) ) {
+        if ( empty( $site->provider_site_id ) ) {
             return;
         }
-        $environments = self::environments( $site->provider_id );
+        $environments = self::environments( $site->provider_site_id );
         $api_key      = self::credentials("api");
         $data         = [
             "tag" => "Deploy to staging from API"
@@ -321,7 +321,7 @@ class Kinsta {
             "name"                      => $site->name,
             "site_id"                   => $site_id,
             "connect_staging"           => $connect_staging,
-            "kinsta_site_id"            => $site->provider_id,
+            "kinsta_site_id"            => $site->provider_site_id,
             "environment_production_id" => $environment_production_id,
             "environment_staging_id"    => $environment_staging_id,
         ];
@@ -332,10 +332,10 @@ class Kinsta {
 
     public static function deploy_to_production( $site_id ) {
         $site         = ( new \CaptainCore\Sites )->get( $site_id );
-        if ( empty( $site->provider_id ) ) {
+        if ( empty( $site->provider_site_id ) ) {
             return;
         }
-        $environments = self::environments( $site->provider_id );
+        $environments = self::environments( $site->provider_site_id );
         $api_key      = self::credentials("api");
 
         $environment_production_id = "";
@@ -355,7 +355,7 @@ class Kinsta {
             "push_files"             => true,
             "run_search_and_replace" => true
         ];
-        $response = \CaptainCore\Remote\Kinsta::put( "sites/{$site->provider_id}/environments", $data );
+        $response = \CaptainCore\Remote\Kinsta::put( "sites/{$site->provider_site_id}/environments", $data );
 
         if ( empty ( $response->operation_id ) ) {
             return false;
@@ -374,7 +374,7 @@ class Kinsta {
             "message"                   => "Deploying $name to production environment",
             "name"                      => $name,
             "site_id"                   => $site_id,
-            "kinsta_site_id"            => $site->provider_id,
+            "kinsta_site_id"            => $site->provider_site_id,
         ];
 
         self::add_action( $response->operation_id, $action );
@@ -423,7 +423,7 @@ class Kinsta {
                 $site_name = $kinsta_site->environment->primaryDomain->name;
                 $site_name = str_replace( "www.", "", $site_name );
                 if ( $site->name == $site_name ) {
-                    ( new  \CaptainCore\Sites )->update( [ "provider_id" => $kinsta_site->id ], [ "site_id" => $site->site_id ] );
+                    ( new  \CaptainCore\Sites )->update( [ "provider_site_id" => $kinsta_site->id ], [ "site_id" => $site->site_id ] );
                 }
             }
         }
