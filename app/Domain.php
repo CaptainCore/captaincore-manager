@@ -20,7 +20,10 @@ class Domain {
         $current_account_ids = array_column ( $accountdomain->where( [ "domain_id" => $this->domain_id ] ), "account_id" );
         foreach ( $current_account_ids as $current_account_id ) {
             if ( in_array( $current_account_id, $account_ids ) ) {
-                $response[] = $current_account_id;
+                $response[] =[ 
+                    "account_id" => $current_account_id,
+                    "name"       => \CaptainCore\Accounts::get( $current_account_id )->name
+                ];
             }
         }
 
