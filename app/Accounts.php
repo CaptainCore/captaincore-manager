@@ -109,11 +109,13 @@ class Accounts extends DB {
     }
 
     public function process_renewals() {
-
         $accounts = self::with_renewals();
         $now      = strtotime( "now" );
         foreach ( $accounts as $account ) {
             $plan         = json_decode( $account->plan );
+            if ( empty( $plan->next_renewal ) ) {
+                continue;
+            }
             $next_renewal = strtotime ( $plan->next_renewal );
             if ( ! empty( $next_renewal ) && $next_renewal < $now ) {
                 echo "Processing renewal for {$account->name} as it's past {$plan->next_renewal}\n";
