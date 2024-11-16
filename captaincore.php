@@ -592,11 +592,31 @@ function captaincore_provider_connect_func( $request ) {
 }
 
 function captaincore_provider_new_site_func( $request ) {
-	if ( ! ( new CaptainCore\User )->is_admin() ){
-		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
-	}
+	$user     = (object) ( new CaptainCore\User )->fetch();
 	$provider = $request->get_param( "provider" );
-	$site     = $request['site'];
+	$site     = (object) $request['site'];
+	$errors   = [];
+	if ( empty( $site->name ) ) {
+		$errors[] = "Missing name";
+	}
+	if ( empty( $site->domain ) ) {
+		$errors[] = "Missing domain";
+	}
+	if ( ! ( new CaptainCore\User )->is_admin() && ! captaincore_verify_permissions_account( $site->account_id ) ){ 
+		$errors[] = "Permission denied";
+	}
+	if ( ! ( new CaptainCore\User )->is_admin() && ! empty( $site->provider_id ) && ( $site->provider_id != "1" ) ) {
+		$provider_lookup = CaptainCore\Providers::get( $site->provider_id );
+		if ( $provider_lookup->user_id != $user->user_id ) {
+			$errors[] = "Permission denied";
+		}
+	}
+	if ( ! empty( $errors ) ) {
+		return [
+			'errors' => $errors,
+		];
+	}
+
 	return ( new CaptainCore\Provider( $provider ) )->new_site( $site );
 }
 
