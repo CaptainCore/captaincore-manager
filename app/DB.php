@@ -525,7 +525,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "31";
+        $required_version = (int) "32";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -742,6 +742,7 @@ class DB {
 
         $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_providers` (
             provider_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) UNSIGNED NOT NULL,
             name varchar(255),
             provider varchar(255),
             status varchar(255),

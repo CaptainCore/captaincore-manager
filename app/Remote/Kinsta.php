@@ -4,8 +4,23 @@ namespace CaptainCore\Remote;
 
 class Kinsta {
 
+    private static $api_key;
+
+    public static function setApiKey( $key ) {
+        self::$api_key = $key;
+    }
+
+    private static function getApiKey() {
+        // Fallback to the default provider key if not set dynamically
+        return self::$api_key ?? \CaptainCore\Providers\Kinsta::credentials("api");
+    }
+
+    public static function showApiKey() {
+        return self::getApiKey();
+    }
+
     public static function get( $endpoint, $parameters = [] ) {
-        $api_key = \CaptainCore\Providers\Kinsta::credentials("api");
+        $api_key = self::getApiKey();
         $data    = [
             'timeout' => 45,
             'headers' => [
@@ -25,7 +40,7 @@ class Kinsta {
     }
 
     public static function post( $endpoint, $parameters = [] ) {
-        $api_key = \CaptainCore\Providers\Kinsta::credentials("api");
+        $api_key = self::getApiKey();
         $data    = [
             'timeout' => 45,
             'headers' => [
@@ -45,7 +60,7 @@ class Kinsta {
     }
 
     public static function put( $endpoint, $parameters = [] ) {
-        $api_key = \CaptainCore\Providers\Kinsta::credentials("api");
+        $api_key = self::getApiKey();
         $data    = [
             'timeout' => 45,
             'headers' => [

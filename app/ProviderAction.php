@@ -12,16 +12,36 @@ class ProviderAction {
 
     public function check() {
         $user_id = get_current_user_id();
-        $actions = ( new ProviderActions )->where( [ "status" => "started", "user_id" => $user_id ] );
-        foreach( $actions as $action ) {
-            $provider   = ( new Providers )->get( $action->provider_id );
+        $actions = ProviderActions::where( [ "status" => "started", "user_id" => $user_id ] );
+        foreach( $actions as $provider_action ) {
+            $provider = Providers::get( $provider_action->provider_id );
+            $action   = json_decode( $provider_action->action );
             $class_name = "\CaptainCore\Providers\\" . ucfirst( $provider->provider );
-            $status     = $class_name::action_check( $action->provider_action_id );
-            if ( $status == "200" ) {
-                ( new ProviderActions )->update( [ "status" => "waiting" ], [ "provider_action_id" => $action->provider_action_id ] );
+            if ( $action->command == "deploy-to-staging" || $action->command == "deploy-to-production" || $action->command == "new-site" ) {
+                $api = \CaptainCore\Providers\Kinsta::credentials("api");
+                \CaptainCore\Remote\Kinsta::setApiKey( $api );
+                if ( ! empty( $action->provider_id ) ) {
+                    $api = \CaptainCore\Providers\Kinsta::credentials("api", $provider_action->provider_id);
+                    \CaptainCore\Remote\Kinsta::setApiKey( $api );
+                }
+                $response         = \CaptainCore\Remote\Kinsta::get( "operations/{$provider_action->provider_key}" );
+                $action->response = $response;
+                $status           = $response->status;
             }
-            if ( $status == "404" ) {
-                ( new ProviderActions )->update( [ "status" => "failed" ], [ "provider_action_id" => $action->provider_action_id ] );
+            if ( empty( $status ) ) {
+                $status = $class_name::action_check( $action->provider_action_id );
+            }
+            if ( $status == "200" ) {
+                ( new ProviderActions )->update( [ "status" => "waiting" ], [ "provider_action_id" => $provider_action->provider_action_id ] );
+                continue;
+            }
+            if ( empty ( $action->attempts ) ) {
+                $action->attempts = 1;
+                ( new ProviderActions )->update( [ "action" => json_encode( $action ) ], [ "provider_action_id" => $provider_action->provider_action_id ] );
+                continue;
+            }
+            if ( $status == "404" || $status == "500" ) {
+                ( new ProviderActions )->update( [ "status" => "failed" ], [ "provider_action_id" => $provider_action->provider_action_id ] );
             }
         }
         return self::active();
@@ -54,13 +74,12 @@ class ProviderAction {
         if ( $user_id != $provider_action->user_id ) {
             return;
         }
-        $provider        = ( new Providers )->get( $provider_action->provider_id );
-        $class_name      = "\CaptainCore\Providers\\" . ucfirst( $provider->provider );
-        $current_action  = json_decode( $provider_action->action );
-        $time_now        = date( 'Y-m-d H:i:s' );
+        $provider       = Providers::get( $provider_action->provider_id );
+        $class_name     = "\CaptainCore\Providers\\" . ucfirst( $provider->provider );
+        $current_action = json_decode( $provider_action->action );
+        $time_now       = date( 'Y-m-d H:i:s' );
 
         if ( $current_action->command == "deploy-to-production" ) {
-
             $action = [
                 'action'     => json_encode ( $current_action ),
                 'updated_at' => $time_now,
@@ -68,7 +87,6 @@ class ProviderAction {
             ];
             ( new ProviderActions )->update( $action, [ "provider_action_id" => $this->provider_action_id ] );
             return self::active();
-
         }
 
         if ( $current_action->command == "deploy-to-staging" ) {
@@ -119,45 +137,53 @@ class ProviderAction {
         }
 
         if ( $current_action->command == "new-site" ) {
-            $result          = $class_name::action_result( $provider_action->provider_key );
-            // Save Kinsta result from background activity
+            if ( ! empty( $current_action->provider_id ) ) {
+                $api_key = \CaptainCore\Providers\Kinsta::credentials("api", $current_action->provider_id);
+                \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
+            }
+            $result      = \CaptainCore\Remote\Kinsta::get( "operations/{$provider_action->provider_key}" )->data;
+            $verify      = \CaptainCore\Providers\Kinsta::verify();
             $current_action->result = $result;
             if ( ! empty( $current_action ) ) {
-                // Generate new site. Kinsta site ID located within $result->idSite
-    
-                $site     = \CaptainCore\Providers\Kinsta::fetch_site_details( $result->idSite );
-                $password = \CaptainCore\Providers\Kinsta::fetch_sftp_password( $result->idSite );
-    
-                // Should check for name colisions and autogenerate ending of name 
-                $site_check = ( new Sites )->where( [ "site" => $site->usr ] );
+                $site        = \CaptainCore\Remote\Kinsta::get( "sites/{$result->idSite}" )->site;
+                $environment = \CaptainCore\Remote\Kinsta::get( "sites/{$result->idSite}/environments" )->site->environments[0];
+                $password    = $verify ? \CaptainCore\Providers\Kinsta::fetch_sftp_password( $result->idSite ) : "";
+
+                // Should check for name conflicts and autogenerate ending of name
+                $site_check = ( new Sites )->where( [ "site" => $site->name ] );
                 if ( count( $site_check ) > 0 ) {
                     $random_ending = substr( str_shuffle ( str_repeat( "0123456789abcdefghijklmnopqrstuvwxyz", 5 ) ), 0, 5 );
                     $site->name    = "{$site->name}_$random_ending";
                 }
-    
+
                 if ( empty ( $current_action->domain ) ) {
-                    $current_action->domain = "{$site->usr}.kinsta.cloud";
+                    $current_action->domain = "{$site->name}.kinsta.cloud";
                 }
                 $current_action->shared_with = array_column( $current_action->shared_with, "account_id" );
-    
+                $address        = $environment->ssh_connection->ssh_ip->external_ip;
+                $port           = $environment->ssh_connection->ssh_port;
+                $home_directory = \CaptainCore\Run::CLI( "ssh-detect $site->name $address $port" );
+
                 $response = ( new Site )->create( [
-                    "name"         => $current_action->domain,
-                    "site"         => $site->name,
-                    "key"          => "",
-                    "remote_key"   => $result->idSite,
-                    "shared_with"  => $current_action->shared_with,
-                    "account_id"   => $current_action->account_id,
-                    "customer_id"  => empty( $current_action->customer_id ) ? "" : $current_action->customer_id,
-                    'provider'     => "kinsta",
+                    "name"             => $current_action->domain,
+                    "site"             => $site->name,
+                    "key"              => "",
+                    "shared_with"      => $current_action->shared_with,
+                    "account_id"       => $current_action->account_id,
+                    "customer_id"      => empty( $current_action->customer_id ) ? "" : $current_action->customer_id,
+                    "verify"           => $verify,
+                    "provider"         => "kinsta",
+                    "provider_id"      => $current_action->provider_id,
+                    "provider_site_id" => $result->idSite,
                     "environments" => [
                         [
-                            "address"           => $site->environment->activeContainer->loadBalancer->extIP,
-                            "username"          => $site->usr,
+                            "address"           => $address,
+                            "username"          => $site->name,
                             "password"          => $password,
                             "protocol"          => "sftp",
-                            "port"              => $site->environment->activeContainer->lxdSshPort,
-                            "home_directory"    => "/www/{$site->path}/public",
-                            "database_username" => $site->dbName,
+                            "port"              => $port,
+                            "home_directory"    => $home_directory,
+                            "database_username" => $site->name,
                             "environment"       => "Production",
                             "monitor_enabled"   => "1",
                             "updates_enabled"   => "1"
@@ -170,13 +196,15 @@ class ProviderAction {
                 $account->calculate_totals();
     
                 $account_ids = ( new Site( $site_id ) )->shared_with_ids();
-                foreach( $account_ids as $account_id ) {
-                    // Shared MyKinsta access if needed
-                    $account       = ( new Account( $account_id, true ) );
-                    $kinsta_emails = empty( $account->get()->defaults->kinsta_emails ) ? "" : $account->get()->defaults->kinsta_emails;
-                    if ( ! empty( $kinsta_emails ) ) {
-                        $kinsta_emails = array_map( 'trim', explode( ",", $kinsta_emails ) );
-                        \CaptainCore\Providers\Kinsta::invite_emails( $kinsta_emails, $result->idSite );
+                if ( $verify ) {
+                    foreach( $account_ids as $account_id ) {
+                        // Shared MyKinsta access if needed
+                        $account       = ( new Account( $account_id, true ) );
+                        $kinsta_emails = empty( $account->get()->defaults->kinsta_emails ) ? "" : $account->get()->defaults->kinsta_emails;
+                        if ( ! empty( $kinsta_emails ) ) {
+                            $kinsta_emails = array_map( 'trim', explode( ",", $kinsta_emails ) );
+                            \CaptainCore\Providers\Kinsta::invite_emails( $kinsta_emails, $result->idSite );
+                        }
                     }
                 }
                 \CaptainCore\ProcessLog::insert( "Created site", $site_id );

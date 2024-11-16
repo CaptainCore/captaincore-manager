@@ -4,8 +4,12 @@ namespace CaptainCore\Providers;
 
 class Kinsta {
 
-    public static function credentials( $record = "" ) {
+    public static function credentials( $record = "", $provider_id = "" ) {
         $credentials = ( new \CaptainCore\Provider( "kinsta" ) )->credentials();
+        if ( ! empty( $provider_id ) ) {
+            $provider    = \CaptainCore\Providers::get( $provider_id );
+            $credentials = ! empty( $provider->credentials ) ? json_decode( $provider->credentials ) : [];
+        }
         if ( $record == "" ) {
             return $credentials;
         }
@@ -14,6 +18,29 @@ class Kinsta {
                 return $credential->value;
             }
         }
+    }
+    
+    public static function list() {
+        $providers = [];
+        $user      = (object) ( new \CaptainCore\User )->fetch();
+        if ( ( new \CaptainCore\User )->is_admin() ) {
+            $providers = \CaptainCore\Providers::where( ["provider" => "kinsta" ] );
+        }
+        if ( empty( $providers ) ) {
+            $providers_admin = \CaptainCore\Providers::where( [ "provider" => "kinsta", "user_id" => "0" ] );
+            $providers_user  = \CaptainCore\Providers::where( [ "provider" => "kinsta", "user_id" => $user->user_id ] );
+            $providers       = array_merge($providers_admin, $providers_user);
+        }
+        $filteredProviders = array_map(function($provider) {
+            $name = $provider->name . " " . $provider->provider;
+            return [
+                'provider_id' => $provider->provider_id,
+                'provider'    => $provider->provider,
+                'name'        => $provider->name
+            ];
+        }, $providers);
+
+        return $filteredProviders;
     }
     
     public static function update_token( $token = "" ) {
@@ -74,83 +101,40 @@ class Kinsta {
     }
 
     public static function new_site( $site ) {
-        $token      = self::credentials("token");
-        $company_id = self::credentials("company_id");
-        $site       = (object) $site;
-        $data  = [
-            'timeout' => 45,
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'X-Token'      => "$token",
-            ],
-            'body'        => json_encode( [
-                "operationName" => "AddSite",
-                "variables" => [
-                    "displayName"          => $site->name,
-                    "installMode"          => "new",
-                    "idCompany"            => $company_id,
-                    "region"               => $site->datacenter,
-                    "isSubdomainMultisite" => false,
-                    "idMigrationForm"      => "",
-                    "adminEmail"           => "support@anchor.host",
-                    "adminPassword"        => substr ( str_shuffle( "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" ), 0, 16 ),
-                    "adminUser"            => "anchorhost",
-                    "isMultisite"          => false,
-                    "siteTitle"            => $site->name,
-                    "woocommerce"          => false,
-                    "wordpressseo"         => false,
-                    "wpLanguage"           => "en_US"
-                ],
-                "query"         => 'mutation AddSite($displayName: String!, $region: String, $installMode: InstallMode!, $idSourceEnv: String, $idSourceSnapshot: Int, $siteTitle: String, $adminUser: String, $adminPassword: String, $adminEmail: String, $woocommerce: Boolean, $wordpressseo: Boolean, $wordpressPluginEDD: Boolean, $wpLanguage: String, $isMultisite: Boolean, $isSubdomainMultisite: Boolean, $idCompany: String!, $idMigrationForm: String) {
-                    idAction: addSite(
-                      displayName: $displayName
-                      region: $region
-                      installMode: $installMode
-                      idSourceEnv: $idSourceEnv
-                      idSourceSnapshot: $idSourceSnapshot
-                      siteTitle: $siteTitle
-                      adminUser: $adminUser
-                      adminPassword: $adminPassword
-                      adminEmail: $adminEmail
-                      woocommerce: $woocommerce
-                      wordpressseo: $wordpressseo
-                      wordpressPluginEDD: $wordpressPluginEDD
-                      wpLanguage: $wpLanguage
-                      isMultisite: $isMultisite
-                      isSubdomainMultisite: $isSubdomainMultisite
-                      idCompany: $idCompany
-                      idMigrationForm: $idMigrationForm
-                      runActionInBackground: true
-                    )
-                  }'
-            ] )
+        $user        = ( new \CaptainCore\User )->profile();
+        $token       = self::credentials("token");
+        $company_id  = self::credentials("company_id");
+        $username    = self::credentials("username");
+
+        if ( ! empty( $site->provider_id ) ) {
+            $api_key     = self::credentials("api", $site->provider_id);
+            $company_id  = self::credentials("company_id", $site->provider_id);
+            $username    = self::credentials("username", $site->provider_id);
+            \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
+        }
+
+        $site        = (object) $site;
+        $new_site    = [
+            "company"                => $company_id,
+            "display_name"           => $site->name,
+            "region"                 => $site->datacenter,
+            "is_subdomain_multisite" => false,
+            "install_mode"           => "new",
+            "admin_email"            => get_option( 'admin_email' ),
+            "admin_password"         => substr ( str_shuffle( "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" ), 0, 16 ),
+            "admin_user"             => $username,
+            "is_multisite"           => false,
+            "site_title"             => $site->name,
+            "woocommerce"            => false,
+            "wordpressseo"           => false,
+            "wp_language"            => "en_US"
         ];
-
-        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
-
-        if ( is_wp_error( $response ) ) {
-            return false;
-        }
-
-        $response = json_decode( $response['body'] );
-
-        if ( ! empty ( $response->errors ) ) {
-            return false;
-        }
-
-        if ( empty ( $response->data->idAction ) ) {
-            return false;
-        }
-
+        $response      = \CaptainCore\Remote\Kinsta::post( "sites", $new_site );
         $site->command = "new-site";
         $site->message = "Creating site $site->name at Kinsta datacenter $site->datacenter";
 
-        self::add_action( $response->data->idAction, $site );
-
-        // Track new request in the background or maybe just create the site and fill in the data after the site is created?
-        // The site should be hidden until ready
-
-        return $response->data->idAction;
+        self::add_action( $response->operation_id, $site );
+        return $response->operation_id;
 
     }
 
@@ -439,6 +423,9 @@ class Kinsta {
     public static function add_action( $action_id = 0, $action = "" ) {
 
         $provider = ( new \CaptainCore\Provider( "kinsta" ) )->get();
+        if ( ! empty( $action->provider_id ) ) {
+            $provider = \CaptainCore\Providers::get( $action->provider_id );
+        }
         $user_id  = ( new \CaptainCore\User )->user_id();
         $time_now = date("Y-m-d H:i:s");
 
@@ -453,21 +440,14 @@ class Kinsta {
         ];
 
         $provider_action_id = ( new \CaptainCore\ProviderActions )->insert( $provider_action );
-        //( new \CaptainCore\ProviderAction( $provider_action_id ) )->run();
-      
         return;
     }
 
     public static function action_check( $provider_action_id = 0, $return_response = false ) {
         $provider_action = ( new \CaptainCore\ProviderActions )->get( $provider_action_id );
         $action          = json_decode( $provider_action->action );
-        if ( $action->command == "deploy-to-staging" || $action->command == "deploy-to-production" ) {
-            $response = \CaptainCore\Remote\Kinsta::get( "operations/{$provider_action->provider_key}" );
-            return $response->status;
-        }
-
-        $token = self::credentials("token");
-        $data  = [ 
+        $token           = self::credentials("token");
+        $data            = [ 
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json',
