@@ -41,7 +41,14 @@ class ProviderAction {
                 continue;
             }
             if ( $status == "404" || $status == "500" ) {
-                ( new ProviderActions )->update( [ "status" => "failed" ], [ "provider_action_id" => $provider_action->provider_action_id ] );
+                $action->attempts++;
+                $update = [
+                    "action" => json_encode( $action ),
+                ];
+                if ( $action->attempts >= 3 ) {
+                    $update["status"] = "failed";
+                }
+                ProviderActions::update( $update, [ "provider_action_id" => $provider_action->provider_action_id ] );
             }
         }
         return self::active();
