@@ -171,7 +171,7 @@ class Site {
         }
 
         // Hunt for conflicting site names
-        $site_check = ( new Sites )->where( [ "site" => $site->site ] );
+        $site_check = Sites::where( [ "site" => $site->site ] );
 
         if ( count( $site_check ) > 0 ) {
             $response['errors'][] = "Error: Site name needs to be unique.";
@@ -186,6 +186,10 @@ class Site {
             unset( $site->environments[1] );
         }
 
+        if ( count($response['errors']) > 0 ) {
+            return $response;
+        }
+
         $time_now = date("Y-m-d H:i:s");
         $details  = (object) [
             "key"              => $site->key,
@@ -195,21 +199,25 @@ class Site {
             "visits"           => "",
             "mailgun"          => "",
             "core"             => "",
+            "verify"           => $site->verify,
+            "remote_key"       => empty( $site->remote_key ) ? "" : $site->remote_key
         ];
         $new_site = [
-            'account_id'  => $site->account_id,
-            'customer_id' => empty( $site->customer_id ) ? "" : $site->customer_id,
-            'name'        => $site->name,
-            'site'        => $site->site,
-            'provider'    => $site->provider,
-            'created_at'  => $time_now,
-            'updated_at'  => $time_now,
-            'details'     => json_encode( $details ),
-            'screenshot'  => '0',
-            'status'      => 'active',
+            'account_id'       => $site->account_id,
+            'customer_id'      => empty( $site->customer_id ) ? "" : $site->customer_id,
+            'name'             => $site->name,
+            'site'             => $site->site,
+            'provider'         => $site->provider,
+            'provider_id'      => empty( $site->provider_id ) ? null : $site->provider_id,
+            'provider_site_id' => empty( $site->provider_site_id ) ? null : $site->provider_site_id,
+            'created_at'       => $time_now,
+            'updated_at'       => $time_now,
+            'details'          => json_encode( $details ),
+            'screenshot'       => '0',
+            'status'           => 'active',
         ];
 
-        $site_id = ( new Sites )->insert( $new_site );
+        $site_id = Sites::insert( $new_site );
 
         if ( ! is_int( $site_id ) || $site_id == 0 ) {
             $response['response'] = json_encode( $new_site );

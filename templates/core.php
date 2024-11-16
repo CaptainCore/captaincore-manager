@@ -485,28 +485,20 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		</v-card>
 		</v-dialog>
 		<v-dialog v-model="dialog_request_site.show" max-width="600px">
-			<v-card>
-				<v-toolbar flat dense dark color="primary">
+			<v-card flat>
+				<v-toolbar flat dark color="primary">
 					<v-btn icon dark @click.native="dialog_request_site.show = false">
 						<v-icon>mdi-close</v-icon>
 					</v-btn>
-					<v-toolbar-title>Create new WordPress site</v-toolbar-title>
+					<v-toolbar-title class="pl-2">Request a new WordPress site</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
-				<v-card-text>
-					<v-row>
-						<v-col><v-text-field :value="dialog_request_site.request.name" @change.native="dialog_request_site.request.name = $event.target.value" label="Name or Domain" hint="Please enter a name or domain name you wish to use for the new WordPress site." persistent-hint></v-text-field></v-col>
-					</v-row>
-					<v-row>
-						<v-col><v-select v-model="dialog_request_site.request.account_id" label="Account" :items="accounts" item-text="name" item-value="account_id"></v-select></v-col>
-					</v-row>
-					<v-row>
-						<v-col><v-textarea :value="dialog_request_site.request.notes" @change.native="dialog_request_site.request.notes = $event.target.value" label="Notes" hint="Anything else you'd like to mention about this new site? (Optional)" persistent-hint></vtext-area></v-col>
-					</v-row>
+				<v-card-text class="pt-4">
+					<v-text-field :value="dialog_request_site.request.name" @change.native="dialog_request_site.request.name = $event.target.value" label="Name or Domain" hint="Please enter a name or domain name you wish to use for the new WordPress site." persistent-hint></v-text-field>
+					<v-select v-model="dialog_request_site.request.account_id" label="Account" :items="accounts" item-text="name" item-value="account_id"></v-select>
+					<v-textarea outlined persistant-hint :value="dialog_request_site.request.notes" @change.native="dialog_request_site.request.notes = $event.target.value" label="Notes" hint="Anything else you'd like to mention about this new site? (Optional)" persistent-hint></v-textarea>
+					<v-btn color="primary" class="pa-3 mt-4" @click="requestSite()">Request New Site</v-btn>
 				</v-card-text>
-				<v-card-actions>
-					<v-btn color="primary" class="pa-3" @click="requestSite()">Request New Site</v-btn>
-				</v-card-actions>
 			</v-card>
 		</v-dialog>
 		<v-dialog v-model="dialog_mailgun_config.show" max-width="500px">
@@ -2098,26 +2090,33 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</template>
 						<span>Advanced Options</span>
 						</v-tooltip>
-						<v-menu open-on-hover text bottom offset-y v-if="role == 'administrator'">
+						<v-menu open-on-hover text bottom offset-y>
 						<template v-slot:activator="{ on, attrs }">
 							<v-btn v-bind="attrs" v-on="on" text>
 								Add Site <v-icon dark>mdi-plus</v-icon>
 							</v-btn>
 						</template>
 						<v-list>
+							<v-list-item @click="dialog_request_site.show = true; dialog_request_site.request.account_id = accounts[0].account_id">
+								<v-list-item-title>Request new site</v-list-item-title>
+							</v-list-item>
 							<v-list-item @click="showNewSiteKinsta()">
-								<v-list-item-title>Kinsta (Experimental API)</v-list-item-title>
+								<v-list-item-title>Create new site</v-list-item-title>
+								<v-spacer></v-spacer>
+								<v-img src="/wp-content/plugins/captaincore-manager/public/img/kinsta-icon.svg" max-width="20px" class="ml-2"></v-img>
 							</v-list-item>
 							<!--<v-list-item @click="dialog_new_site_rocketdotnet.show = true">
 								<v-list-item-title>Rocket.net</v-list-item-title>
 							</v-list-item>-->
-							<v-list-item @click="goToPath( `/sites/new` )" href>
-								<v-list-item-title>Manually</v-list-item-title>
+							<v-list-item @click="goToPath( `/sites/new` )" href v-show="role == 'administrator' || role == 'owner'">
+								<v-list-item-title class="mr-4">Manually connect</v-list-item-title>
+								<v-spacer></v-spacer>
+								<v-icon>mdi-console-network</v-icon>
 							</v-list-item>
 						</v-list>
 						</v-menu>
-						<v-btn v-if="role != 'administrator' && configurations.mode == 'hosting'" text @click="dialog_request_site.show = true; dialog_request_site.request.account_id = accounts[0].account_id">Add Site <v-icon dark>mdi-plus</v-icon></v-btn>
-						<v-btn v-if="configurations.mode == 'maintenance'" text @click="goToPath( `/sites/new` )">Add Site <v-icon dark>mdi-plus</v-icon></v-btn>
+						<!-- <v-btn v-if="role != 'administrator' && role != 'owner' && configurations.mode == 'hosting'" text @click="dialog_request_site.show = true; dialog_request_site.request.account_id = accounts[0].account_id">Add Site <v-icon dark>mdi-plus</v-icon></v-btn>
+						<v-btn v-if="configurations.mode == 'maintenance'" text @click="goToPath( `/sites/new` )">Add Site <v-icon dark>mdi-plus</v-icon></v-btn>-->
 					</v-toolbar-items>
 				</v-toolbar>
 			<v-sheet v-show="dialog_site.step == 1" color="transparent">
@@ -2189,20 +2188,23 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-actions>
 				</v-card>
 				</v-dialog>
-				<v-dialog v-model="dialog_new_site_kinsta.show" width="500">
+				<v-dialog v-model="dialog_new_site_kinsta.show" width="550">
 				<v-card>
-					<v-toolbar flat>
-					<v-toolbar-title>New Kinsta Site</v-toolbar-title>
-					<v-spacer></v-spacer>
-						<v-btn icon @click="dialog_new_site_kinsta.show = false">
+					<v-toolbar flat dark color="primary">
+						<v-btn icon dark @click.native="dialog_new_site_kinsta.show = false">
 							<v-icon>mdi-close</v-icon>
 						</v-btn>
+						<v-toolbar-title class="pl-2">New WordPress Site</v-toolbar-title>
+						<v-spacer></v-spacer>
 					</v-toolbar>
-					<v-card-text>
+					<v-card-text class="mt-3">
+						<v-alert type="error" v-for="error in dialog_new_site_kinsta.errors">{{ error }}</v-alert>
 						<v-text-field label="Name" v-model="dialog_new_site_kinsta.site.name"></v-text-field>
 						<v-text-field label="Domain" v-model="dialog_new_site_kinsta.site.domain"></v-text-field>
-						<v-autocomplete label="Datacenter" v-model="dialog_new_site_kinsta.site.datacenter" :items="datacenters"></v-autocomplete>
+						<v-autocomplete outlined label="Hosting Provider" v-model="dialog_new_site_kinsta.site.provider_id" item-value="provider_id" :item-text="formatProviderLabel" :items="kinsta_providers" v-show="kinsta_providers.length > 1"></v-autocomplete>
+						<v-autocomplete outlined label="Datacenter" v-model="dialog_new_site_kinsta.site.datacenter" :items="datacenters" hint="Use 🚀 for the fastest servers" persistent-hint></v-autocomplete>
 						<v-autocomplete
+								v-if="role == 'administrator'"
 								:items="accounts"
 								v-model="dialog_new_site_kinsta.site.shared_with"
 								label="Assign to an account"
@@ -2211,14 +2213,20 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								chips
 								deletable-chips
 								multiple
+								outlined
 								return-object
+								class="mt-2"
 								hint="If a customer account is not assigned then site will be placed in a new account."
 								persistent-hint
 								:menu-props="{ closeOnContentClick:true, openOnClick: false }"
 							>
 							</v-autocomplete>
+							<div v-else>
+								<v-select outlined class="mt-3 mb-3" hide-details v-model="dialog_new_site_kinsta.site.account_id" label="Billing Account" :items="accounts" item-text="name" item-value="account_id"></v-select>
+								<v-select outlined clearable v-model="dialog_new_site_kinsta.site.customer_id" label="Customer Account" :items="accounts" item-text="name" item-value="account_id" hint="If a customer account is not assigned then site will be placed in a new account." persistent-hint></v-select>
+							</div>
 							<v-expand-transition>
-							<v-row dense v-if="dialog_new_site_kinsta.site.shared_with && dialog_new_site_kinsta.site.shared_with.length > 0" class="mt-3">
+							<v-row dense v-if="role == 'administrator' && dialog_new_site_kinsta.site.shared_with && dialog_new_site_kinsta.site.shared_with.length > 0" class="mt-3">
 							<v-col v-for="account in dialog_new_site_kinsta.site.shared_with" :key="account.account_id" cols="6">
 							<v-card>
 								<v-list-item>
@@ -2414,7 +2422,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<td>{{ item.core }}</td>
 						<td>{{ item.visits | formatLargeNumbers }}</td>
 						<td>{{ item.storage | formatGBs }}GB</td>
-						<td>{{ item.provider | formatProvider }}</td>
+						<td>
+							{{ item.provider | formatProvider }}<v-tooltip bottom>
+							<template v-slot:activator="{ on, attrs }">
+								<v-icon v-bind="attrs" v-on="on" class="ml-1" v-show="item.provider_id && item.provider_id != 1">mdi-cloud</v-icon>
+							</template>
+							<span>Maintenance only</span>
+							</v-tooltip>
+						</td>
 					</tr>
 					</tbody>
 				</template>
@@ -7253,7 +7268,7 @@ new Vue({
 		dialog_new_account: { show: false, name: "", records: {} },
 		dialog_user: { show: false, user: {}, errors: [] },
 		dialog_new_user: { first_name: "", last_name: "", email: "", login: "", account_ids: [], errors: [] },
-		dialog_new_site_kinsta: { show: false, working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", domain: "", datacenter: "", shared_with: [], account_id: "", customer_id: "" } },
+		dialog_new_site_kinsta: { show: false, errors: [], working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", provider_id: "1", domain: "", datacenter: "us-east4", shared_with: [], account_id: "", customer_id: "" } },
 		dialog_new_site_rocketdotnet: { show: false, site: { name: "", domain: "", datacenter: "", shared_with: [], account_id: "", customer_id: "" } },
 		dialog_request_site: { show: false, request: { name: "", account_id: "", notes: "" } },
 		provider_options: [
@@ -7300,7 +7315,7 @@ new Vue({
 		],
 		datacenters: [
 			{
-				"text": "Taiwan (TW)",
+				"text": "Taiwan (TW) 🚀",
 				"value": "asia-east1"
 			},
 			{
@@ -7324,11 +7339,11 @@ new Vue({
 				"value": "asia-south1"
 			},
 			{
-				"text": "Delhi (IN)",
+				"text": "Delhi (IN) 🚀",
 				"value": "asia-south2"
 			},
 			{
-				"text": "Singapore (SG) - C3D Machines",
+				"text": "Singapore (SG) 🚀",
 				"value": "asia-southeast1"
 			},
 			{
@@ -7336,7 +7351,7 @@ new Vue({
 				"value": "asia-southeast2"
 			},
 			{
-				"text": "Sydney (AU)",
+				"text": "Sydney (AU) 🚀",
 				"value": "australia-southeast1"
 			},
 			{
@@ -7356,7 +7371,7 @@ new Vue({
 				"value": "europe-southwest1"
 			},
 			{
-				"text": "Belgium (BE) - C3D Machines",
+				"text": "Belgium (BE) 🚀",
 				"value": "europe-west1"
 			},
 			{
@@ -7364,11 +7379,11 @@ new Vue({
 				"value": "europe-west2"
 			},
 			{
-				"text": "Frankfurt (DE)",
+				"text": "Frankfurt (DE) 🚀",
 				"value": "europe-west3"
 			},
 			{
-				"text": "Eemshaven (NL) - C3D Machines",
+				"text": "Eemshaven (NL) 🚀",
 				"value": "europe-west4"
 			},
 			{
@@ -7404,15 +7419,15 @@ new Vue({
 				"value": "southamerica-west1"
 			},
 			{
-				"text": "Iowa (US Central) - C3D Machines",
+				"text": "Iowa (US Central) 🚀",
 				"value": "us-central1"
 			},
 			{
-				"text": "South Carolina (US East 1) - C3D Machines",
+				"text": "South Carolina (US East 1) 🚀",
 				"value": "us-east1"
 			},
 			{
-				"text": "Northern Virginia (US East 4) - C3D Machines",
+				"text": "Northern Virginia (US East 4) 🚀",
 				"value": "us-east4"
 			},
 			{
@@ -7436,10 +7451,11 @@ new Vue({
 				"value": "us-west3"
 			},
 			{
-				"text": "Las Vegas (US West 4)",
+				"text": "Las Vegas (US West 4) 🚀",
 				"value": "us-west4"
 			}
 		],
+		kinsta_providers: <?php echo json_encode( CaptainCore\Providers\Kinsta::list() ); ?>,
 		requested_sites: <?php echo json_encode( ( new CaptainCore\User )->fetch_requested_sites() ); ?>,
 		new_invite: { account: {}, records: {} },
 		new_account: { password: "" },
@@ -8251,6 +8267,10 @@ new Vue({
 				this.wp_nonce = "";
 			})
 		},
+		formatProviderLabel( item ) {
+			provider = this.$options.filters.formatProvider( item.provider );
+			return `${item.name} (${provider})`;
+		},
 		copyText( value ) {
 			var clipboard = document.getElementById("clipboard");
 			clipboard.value = value;
@@ -8787,11 +8807,23 @@ new Vue({
 				this.dialog_new_site_kinsta.verifing = false
 			});
 		},
-		showNewSiteKinsta() {
+		showNewSiteDialog() {
 			this.dialog_new_site_kinsta.verifing = true
 			this.dialog_new_site_kinsta.connection_verified = false
 			this.dialog_new_site_kinsta.show = true
+		},
+		showNewSiteKinsta() {
+			this.dialog_new_site_kinsta.verifing = false
+			this.dialog_new_site_kinsta.connection_verified = true
+			this.dialog_new_site_kinsta.show = true
+			if ( this.role != 'administrator' ) {
+				this.dialog_new_site_kinsta.site.account_id = this.accounts[0].account_id
+			}
+			if ( this.role == 'administrator' ) {
+				this.dialog_new_site_kinsta.verifing = true
+				this.dialog_new_site_kinsta.connection_verified = false
 			this.verifyKinstaConnection()
+			}
 		},
 		connectKinsta() {
 			this.dialog_new_site_kinsta.verifing = true
@@ -8870,9 +8902,13 @@ new Vue({
 				headers: { 'X-WP-Nonce':this.wp_nonce }
 			})
 			.then( response => {
+				if ( response.data.errors ) {
+					this.dialog_new_site_kinsta.errors = response.data.errors
+					return
+				}
 				this.snackbar.message = `Site ${this.dialog_new_site_kinsta.site.name} is being created at Kinsta. Will notify once completed.`
 				this.snackbar.show = true
-				this.dialog_new_site_kinsta = { show: false, working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", domain: "", datacenter: "", shared_with: [], account_id: "", customer_id: "" } }
+				this.dialog_new_site_kinsta = { show: false, errors: [], working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", domain: "", datacenter: "us-east4", shared_with: [], account_id: "", customer_id: "" } }
 				this.checkProviderActions()
 			});
 		},
