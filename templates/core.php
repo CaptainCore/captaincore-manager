@@ -8908,7 +8908,8 @@ new Vue({
 				}
 				this.snackbar.message = `Site ${this.dialog_new_site_kinsta.site.name} is being created at Kinsta. Will notify once completed.`
 				this.snackbar.show = true
-				this.dialog_new_site_kinsta = { show: false, errors: [], working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", domain: "", datacenter: "us-east4", shared_with: [], account_id: "", customer_id: "" } }
+				provider_id = this.dialog_new_site_kinsta.site.provider_id
+				this.dialog_new_site_kinsta = { show: false, errors: [], working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", domain: "", provider_id: provider_id,datacenter: "us-east4", shared_with: [], account_id: "", customer_id: "" } }
 				this.checkProviderActions()
 			});
 		},
