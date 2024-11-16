@@ -18,6 +18,38 @@ class ProviderAction {
             $action   = json_decode( $provider_action->action );
             $class_name = "\CaptainCore\Providers\\" . ucfirst( $provider->provider );
             if ( $action->command == "deploy-to-staging" || $action->command == "deploy-to-production" || $action->command == "new-site" ) {
+                if ( $action->command == "new-site" && ! empty( $action->intial_response->message ) && $action->intial_response->message == "Too many requests, please try again later." && empty( $provider_action->provider_key )) {
+                    $site        = $action;
+                    $user        = ( new \CaptainCore\User )->profile();
+                    $token       = $class_name::credentials("token");
+                    $company_id  = $class_name::credentials("company_id");
+                    $username    = $class_name::credentials("username");
+
+                    if ( ! empty( $site->provider_id ) ) {
+                        $api_key     = $class_name::credentials("api", $site->provider_id);
+                        $company_id  = $class_name::credentials("company_id", $site->provider_id);
+                        $username    = $class_name::credentials("username", $site->provider_id);
+                        \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
+                    }
+                    $new_site    = [
+                        "company"                => $company_id,
+                        "display_name"           => $site->name,
+                        "region"                 => $site->datacenter,
+                        "is_subdomain_multisite" => false,
+                        "install_mode"           => "new",
+                        "admin_email"            => get_option( 'admin_email' ),
+                        "admin_password"         => substr ( str_shuffle( "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" ), 0, 16 ),
+                        "admin_user"             => $username,
+                        "is_multisite"           => false,
+                        "site_title"             => $site->name,
+                        "woocommerce"            => false,
+                        "wordpressseo"           => false,
+                        "wp_language"            => "en_US"
+                    ];
+                    $response      = \CaptainCore\Remote\Kinsta::post( "sites", $new_site );
+                    ProviderActions::update( [ "provider_key" => $response->operation_id ], [ "provider_action_id" => $provider_action->provider_action_id ] );
+                    continue;
+                }
                 $api = \CaptainCore\Providers\Kinsta::credentials("api");
                 \CaptainCore\Remote\Kinsta::setApiKey( $api );
                 if ( ! empty( $action->provider_id ) ) {
