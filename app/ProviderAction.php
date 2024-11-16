@@ -64,12 +64,12 @@ class ProviderAction {
                 $status = $class_name::action_check( $action->provider_action_id );
             }
             if ( $status == "200" ) {
-                ( new ProviderActions )->update( [ "status" => "waiting" ], [ "provider_action_id" => $provider_action->provider_action_id ] );
+                ProviderActions::update( [ "status" => "waiting" ], [ "provider_action_id" => $provider_action->provider_action_id ] );
                 continue;
             }
             if ( empty ( $action->attempts ) ) {
                 $action->attempts = 1;
-                ( new ProviderActions )->update( [ "action" => json_encode( $action ) ], [ "provider_action_id" => $provider_action->provider_action_id ] );
+                ProviderActions::update( [ "action" => json_encode( $action ) ], [ "provider_action_id" => $provider_action->provider_action_id ] );
                 continue;
             }
             if ( $status == "404" || $status == "500" ) {
@@ -180,7 +180,7 @@ class ProviderAction {
                 $api_key = \CaptainCore\Providers\Kinsta::credentials("api", $current_action->provider_id);
                 \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
             }
-            $result      = \CaptainCore\Remote\Kinsta::get( "operations/{$provider_action->provider_key}" )->data;
+            $result      = empty( $current_action->result ) ? \CaptainCore\Remote\Kinsta::get( "operations/{$provider_action->provider_key}" )->data : $current_action->result;
             $verify      = \CaptainCore\Providers\Kinsta::verify();
             $current_action->result = $result;
             if ( ! empty( $current_action ) ) {
