@@ -131,6 +131,7 @@ class Kinsta {
         ];
         $response      = \CaptainCore\Remote\Kinsta::post( "sites", $new_site );
         $site->command = "new-site";
+        $site->intial_response = $response;
         $site->message = "Creating site $site->name at Kinsta datacenter $site->datacenter";
 
         self::add_action( $response->operation_id, $site );
