@@ -8,9 +8,10 @@ class Provider {
 
     public function __construct( $provider_id = "" ) {
         if ( ! is_numeric( $provider_id ) ) {
-            $lookup = ( new Providers )->where( [ "provider" => $provider_id ] );
+            $lookup = Providers::where( [ "provider" => $provider_id ] );
             if ( count( $lookup ) > 0 ) {
-                $provider_id = $lookup[0]->provider_id;
+                $last_item_key = count($lookup) -1;
+                $provider_id   = $lookup[ $last_item_key ]->provider_id;
             }
         }
         $this->provider_id = $provider_id;
