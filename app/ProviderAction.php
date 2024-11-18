@@ -247,7 +247,7 @@ class ProviderAction {
                     }
                 }
                 \CaptainCore\ProcessLog::insert( "Created site", $site_id );
-                \CaptainCore\Run::CLI("site sync $site_id --update-extras");
+                \CaptainCore\Run::CLI("site sync $site_id --update-extras", true);
             }
         }
 
