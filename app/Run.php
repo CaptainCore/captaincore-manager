@@ -6,7 +6,7 @@ class Run {
 
     protected $account_id = "";
 
-    public static function CLI( $command = "" ) {
+    public static function CLI( $command = "", $background = false ) {
 
         if ( empty( $command ) ) {
             return;
@@ -29,7 +29,11 @@ class Run {
         ];
 
         // Add command to dispatch server
-        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+        $url = CAPTAINCORE_CLI_ADDRESS . "/run";
+        if ( $background ) {
+            $url = CAPTAINCORE_CLI_ADDRESS . "/run/background";
+        }
+        $response = wp_remote_post( $url, $data );
         if ( is_wp_error( $response ) ) {
             $error_message = $response->get_error_message();
             return [];
