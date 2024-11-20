@@ -43,6 +43,22 @@ class Kinsta {
         return $filteredProviders;
     }
     
+    public static function list_sites( $record = "", $provider_id = "" ) {
+        $providers = self::list();
+        $providers_with_sites = [];
+        foreach( $providers as $provider ) {
+            if ( $provider['provider_id'] == 1 ) {
+                continue;
+            }
+            $api_key = self::credentials("api", $provider['provider_id']);
+            \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
+            $response = \CaptainCore\Remote\Kinsta::get( "sites?company=". self::credentials("company_id", $provider['provider_id']) );
+            $sites = $response->company->sites;
+            $providers_with_sites[$provider['provider_id']] = $sites;
+        }
+        return $providers_with_sites;
+    }
+    
     public static function update_token( $token = "" ) {
         $provider    = ( new \CaptainCore\Provider( "kinsta" ) )->get();
         $credentials = self::credentials();
@@ -114,6 +130,28 @@ class Kinsta {
         }
 
         $site        = (object) $site;
+
+        if ( ! empty( $site->clone_site_id ) ) {
+            $environments = \CaptainCore\Remote\Kinsta::get( "sites/{$site->clone_site_id}/environments" );
+            foreach( $environments->site->environments as $environment ) {
+                if ( $environment->name == "live" ) {
+                    $environment_id = $environment->id;
+                }
+            }
+            $environment  = $environments->site->environments[0]->id;
+            $new_site = [
+                "company"                => $company_id,
+                "display_name"           => $site->name,
+                "source_env_id"          => $environment_id,
+            ];
+            $response      = \CaptainCore\Remote\Kinsta::post( "sites/clone", $new_site );
+            $site->command = "new-site";
+            $site->intial_response = $response;
+            $site->message = "Creating site $site->name at Kinsta via site clone";
+    
+            self::add_action( $response->operation_id, $site );
+            return $response->operation_id;
+        }
         $new_site    = [
             "company"                => $company_id,
             "display_name"           => $site->name,

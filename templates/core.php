@@ -2201,8 +2201,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-alert type="error" v-for="error in dialog_new_site_kinsta.errors">{{ error }}</v-alert>
 						<v-text-field label="Name" v-model="dialog_new_site_kinsta.site.name"></v-text-field>
 						<v-text-field label="Domain" v-model="dialog_new_site_kinsta.site.domain"></v-text-field>
-						<v-autocomplete outlined label="Hosting Provider" v-model="dialog_new_site_kinsta.site.provider_id" item-value="provider_id" :item-text="formatProviderLabel" :items="kinsta_providers" v-show="kinsta_providers.length > 1"></v-autocomplete>
-						<v-autocomplete outlined label="Datacenter" v-model="dialog_new_site_kinsta.site.datacenter" :items="datacenters" hint="Use 🚀 for the fastest servers" persistent-hint></v-autocomplete>
+						<v-autocomplete outlined label="Hosting Provider" v-model="dialog_new_site_kinsta.site.provider_id" item-value="provider_id" :item-text="formatProviderLabel" :items="kinsta_providers" v-show="kinsta_providers.length > 1" @change="populateCloneSites"></v-autocomplete>
+						<v-autocomplete outlined label="Datacenter" v-model="dialog_new_site_kinsta.site.datacenter" :items="datacenters" hint="Use 🚀 for the fastest servers" persistent-hint v-show="dialog_new_site_kinsta.site.clone_site_id == ''"></v-autocomplete>
+						<v-autocomplete outlined label="Clone Existing Site" v-model="dialog_new_site_kinsta.site.clone_site_id" item-value="id" item-text="display_name" hide-no-data hide-selected :items="clone_sites" clearable v-show="kinsta_providers.length > 1"></v-autocomplete>
 						<v-autocomplete
 								v-if="role == 'administrator'"
 								:items="accounts"
@@ -7268,7 +7269,7 @@ new Vue({
 		dialog_new_account: { show: false, name: "", records: {} },
 		dialog_user: { show: false, user: {}, errors: [] },
 		dialog_new_user: { first_name: "", last_name: "", email: "", login: "", account_ids: [], errors: [] },
-		dialog_new_site_kinsta: { show: false, errors: [], working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", provider_id: "1", domain: "", datacenter: "us-east4", shared_with: [], account_id: "", customer_id: "" } },
+		dialog_new_site_kinsta: { show: false, errors: [], working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", provider_id: "1", clone_site_id: "", domain: "", datacenter: "us-east4", shared_with: [], account_id: "", customer_id: "" } },
 		dialog_new_site_rocketdotnet: { show: false, site: { name: "", domain: "", datacenter: "", shared_with: [], account_id: "", customer_id: "" } },
 		dialog_request_site: { show: false, request: { name: "", account_id: "", notes: "" } },
 		provider_options: [
@@ -8909,7 +8910,7 @@ new Vue({
 				this.snackbar.message = `Site ${this.dialog_new_site_kinsta.site.name} is being created at Kinsta. Will notify once completed.`
 				this.snackbar.show = true
 				provider_id = this.dialog_new_site_kinsta.site.provider_id
-				this.dialog_new_site_kinsta = { show: false, errors: [], working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", domain: "", provider_id: provider_id,datacenter: "us-east4", shared_with: [], account_id: "", customer_id: "" } }
+				this.dialog_new_site_kinsta = { show: false, errors: [], working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", domain: "", clone_site_id: "", provider_id: provider_id, datacenter: "us-east4", shared_with: [], account_id: "", customer_id: "" } }
 				this.checkProviderActions()
 			});
 		},

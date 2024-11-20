@@ -599,6 +599,9 @@ function captaincore_provider_new_site_func( $request ) {
 	if ( empty( $site->name ) ) {
 		$errors[] = "Missing name";
 	}
+	if ( ! empty( $site->name ) && ( strlen( $site->name ) < 5 || strlen( $site->name ) > 32 ) ) {
+		$errors[] = "Name must be between 5 and 32 characters in length";
+	}
 	if ( empty( $site->domain ) ) {
 		$errors[] = "Missing domain";
 	}
