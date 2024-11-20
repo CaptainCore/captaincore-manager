@@ -7457,6 +7457,8 @@ new Vue({
 			}
 		],
 		kinsta_providers: <?php echo json_encode( CaptainCore\Providers\Kinsta::list() ); ?>,
+		kinsta_provider_sites: <?php echo json_encode( CaptainCore\Providers\Kinsta::list_sites() ); ?>,
+		clone_sites: [],
 		requested_sites: <?php echo json_encode( ( new CaptainCore\User )->fetch_requested_sites() ); ?>,
 		new_invite: { account: {}, records: {} },
 		new_account: { password: "" },
@@ -9546,6 +9548,14 @@ new Vue({
 				}
 				setTimeout(this.fetchMissing, 1000)
 			});
+		},
+		populateCloneSites( item ) {
+			console.log( item )
+			if ( this.kinsta_provider_sites[ item ] ) {
+				this.clone_sites = this.kinsta_provider_sites[ item ];
+				return
+			}
+			this.clone_sites = []
 		},
 		populateStatesFor( item ) {
 			states_selected = []
