@@ -657,6 +657,7 @@ class DB {
             recipe_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             user_id bigint(20) UNSIGNED NOT NULL,
             title varchar(255),
+            content longtext,
             public boolean,
             created_at datetime NOT NULL,
             updated_at datetime NOT NULL,
