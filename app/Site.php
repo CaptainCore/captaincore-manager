@@ -808,6 +808,9 @@ class Site {
 
     public function fetch_environment_id( $environment ) {
         $environment_id = ( new Environments )->where( [ "site_id" => $this->site_id, "environment" => $environment ] );
+        if ( empty( $environment_id ) ) {
+            return;
+        }
         return array_column( $environment_id, "environment_id" )[0];
     }
 
