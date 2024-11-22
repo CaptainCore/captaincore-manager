@@ -1564,6 +1564,42 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-text>
 					</v-card>
 				</v-dialog>
+				<v-dialog v-model="dialog_edit_script.show" scrollable max-width="750">
+				<v-card tile>
+					<v-toolbar flat dark color="primary">
+						<v-btn icon dark @click.native="dialog_edit_script.show = false">
+							<v-icon>mdi-close</v-icon>
+						</v-btn>
+						<v-toolbar-title>Edit script</v-toolbar-title>
+						<v-spacer></v-spacer>
+					</v-toolbar>
+					<v-card-text>
+					<v-container>
+						<v-menu ref="menu" v-model="script.menu_time" :close-on-content-click="false" :nudge-right="40" :return-value.sync="dialog_edit_script.script.run_at_time" transition="scale-transition" offset-y max-width="290px" min-width="290px">
+							<template v-slot:activator="{ on, attrs }">
+							<v-text-field v-model="dialog_edit_script.script.run_at_time" label="Time" prepend-icon="mdi-clock-time-four-outline" readonly v-bind="attrs" v-on="on"></v-text-field>
+							</template>
+							<v-time-picker v-if="script.menu_time" v-model="dialog_edit_script.script.run_at_time" full-width @click:minute="$refs.menu.save(dialog_edit_script.script.run_at_time)"></v-time-picker>
+						</v-menu>
+						<v-menu ref="script.menu_date" v-model="script.menu_date" :close-on-content-click="false" :return-value.sync="script.menu_date" transition="scale-transition" offset-y min-width="auto">
+							<template v-slot:activator="{ on, attrs }">
+							<v-text-field v-model="dialog_edit_script.script.run_at_date" label="Date" prepend-icon="mdi-calendar" readonly v-bind="attrs" v-on="on"></v-text-field>
+							</template>
+							<v-date-picker v-model="dialog_edit_script.script.run_at_date" @input="script.menu_date = false" no-title scrollable :min="new Date().toISOString().substr(0, 10)"></v-date-picker>
+						</v-menu>
+						<v-textarea label="Code" auto-grow :value="dialog_edit_script.script.code" @change.native="dialog_edit_script.script.code = $event.target.value"></v-textarea>
+						<v-flex xs12 text-right>
+							<v-btn outlined text color="error" dark @click="deleteScript(dialog_edit_script.script.script_id)">
+								Delete
+							</v-btn>
+							<v-btn color="primary" dark @click="updateScript()">
+								Update Script
+							</v-btn>
+						</v-flex>
+					</v-container>
+					</v-card-text>
+					</v-card>
+				</v-dialog>
 				<v-dialog v-model="dialog_mailgun.show" scrollable fullscreen>
 				<v-card tile>
 					<v-toolbar flat dark color="primary" class="shrink">
@@ -3475,22 +3511,68 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar-title>Scripts</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
+				<v-card outlined rounded="xl" v-show="dialog_site.environment_selected.scheduled_scripts.length > 0">
+				<v-subheader>Scheduled Scripts</v-subheader>
+				<v-data-table :headers='[ {"text":"","value":"name","sortable":false,"width":"56"}, {"text":"Code","value":"code","sortable":false}, {"text":"Person","value":"done-by","sortable":false,"width":"180"}, {"text":"Date","value":"date","sortable":false,"width":"220"}, {"text":"","value":"","sortable":false,"width":"50"}]' :items="dialog_site.environment_selected.scheduled_scripts" hide-default-footer :footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }" class="timeline">
+					<template v-slot:body="{ items }">
+					<tbody>
+					<tr v-for="item in items">
+						<td class="justify-center pt-3 pr-0 text-center shrink" style="vertical-align: top;">
+							<v-icon color="primary" dark>mdi-clipboard-clock</v-icon>
+						</td>
+						<td class="justify-center py-4" style="vertical-align: top;">
+							{{ item.code | previewCode }}
+						</td>
+						<td class="justify-center pt-2" style="vertical-align:top; width:180px;">
+						<v-row>
+							<v-col class="shrink pr-0"><v-img :src="item.author_avatar" width="34" class="rounded"></v-img></v-col>
+							<v-col class="pt-4">{{ item.author }}</v-col>
+						</v-row>
+						</td>
+						<td class="justify-center pt-3" style="vertical-align: top;">{{ item.run_at | pretty_timestamp_epoch }}</td>
+						<td class="justify-center pt-1 pr-0" style="vertical-align:top;width:77px;">
+							<v-btn text icon @click="editScript(item)">
+								<v-icon small>mdi-pencil</v-icon>
+							</v-btn>
+						</td>
+					</tr>
+					</tbody>
+					</template>
+				</v-data-table>
+				</v-card>
 				<v-card flat>
 					<v-card-title>
 					<v-row>
 					<v-col cols="12" md="8">
-					<v-subheader id="script_site">Custom bash script or WP-CLI commands</v-subheader>
-						<v-textarea
-							auto-grow
-							solo
-							label=""
-							hide-details
-							:value="custom_script" 
-							@change.native="custom_script = $event.target.value"
-							spellcheck="false"
-							class="code"
-						></v-textarea>
-                <v-btn small color="primary" dark @click="runCustomCode(dialog_site.site.site_id)">Run Custom Code</v-btn>
+					<v-subheader id="script_site" class="pl-0">Custom bash script or WP-CLI commands</v-subheader>
+					<v-textarea auto-grow outlined label="" hide-details :value="script.code" @change.native="script.code = $event.target.value" spellcheck="false" class="code"></v-textarea>
+                	<v-btn color="primary" dark @click="runCustomCode(dialog_site.site.site_id)" class="mt-3 mr-3">Run Code</v-btn> 
+					<v-menu v-model="script.menu" :close-on-content-click="false" :nudge-width="200" offset-x>
+					<template v-slot:activator="{ on, attrs }">
+						<v-btn v-bind="attrs" v-on="on" outlined text class="mt-3">Schedule later</v-btn>
+					</template>
+					<v-card>
+						<v-card-text>
+						<v-menu ref="menu" v-model="script.menu_time" :close-on-content-click="false" :nudge-right="40" :return-value.sync="script.time" transition="scale-transition" offset-y max-width="290px" min-width="290px">
+							<template v-slot:activator="{ on, attrs }">
+							<v-text-field v-model="script.time" label="Time" prepend-icon="mdi-clock-time-four-outline" readonly v-bind="attrs" v-on="on"></v-text-field>
+							</template>
+							<v-time-picker v-if="script.menu_time" v-model="script.time" full-width @click:minute="$refs.menu.save(script.time)"></v-time-picker>
+						</v-menu>
+						<v-menu ref="script.menu_date" v-model="script.menu_date" :close-on-content-click="false" :return-value.sync="script.menu_date" transition="scale-transition" offset-y min-width="auto">
+							<template v-slot:activator="{ on, attrs }">
+							<v-text-field v-model="script.date" label="Date" prepend-icon="mdi-calendar" readonly v-bind="attrs" v-on="on"></v-text-field>
+							</template>
+							<v-date-picker v-model="script.date" @input="script.menu_date = false" no-title scrollable :min="new Date().toISOString().substr(0, 10)"></v-date-picker>
+						</v-menu>
+						</v-card-text>
+						<v-card-actions>
+						<v-spacer></v-spacer>
+						<v-btn text @click="script.menu = false">Cancel</v-btn>
+						<v-btn color="primary" text @click="scheduleScript()">Schedule Code</v-btn>
+						</v-card-actions>
+					</v-card>
+					</v-menu>
 					</v-col>
 					<v-col cols="12" md="4">
 						<v-list dense>
@@ -5166,8 +5248,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										dense
 										hint="Custom bash script or WP-CLI commands"
 										persistent-hint
-										:value="custom_script" 
-										@change.native="custom_script = $event.target.value"
+										:value="script.code" 
+										@change.native="script.code = $event.target.value"
 										spellcheck="false"
 										class="code mt-1"
 									>
@@ -7084,8 +7166,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							dense
 							hint="Custom bash script or WP-CLI commands"
 							persistent-hint
-							:value="custom_script" 
-							@change.native="custom_script = $event.target.value"
+							:value="script.code" 
+							@change.native="script.code = $event.target.value"
 							spellcheck="false"
 							class="code"
 						>
@@ -7491,7 +7573,7 @@ new Vue({
 		jobs: [],
 		keys: [],
 		defaults: [],
-		custom_script: "",
+		script: { code: "", menu: false, menu_time: false, menu_date: false, time: "", date: "", timezone: "" },
 		recipes: [],
 		processes: [],
 		billing: { valid: true, rules: {}, payment_methods: [], address: { last_name: "", email: "", city: "", line1: "", line2: "", postal_code: "", state: "" } },
@@ -7508,6 +7590,7 @@ new Vue({
 		dialog_processes: { show: false, processes: [], conn: {}, stream: [], loading: true },
 		dialog_new_log_entry: { show: false, sites: [], site_name: "", process: "", description: "" },
 		dialog_edit_log_entry: { show: false, site_name: "", log: {} },
+		dialog_edit_script: { show: false, script: { script_id: "", code: "", run_at_time: "", run_at_date: "" } },
 		dialog_log_history: { show: false, logs: [], pagination: {} },
 		dialog_handbook: { show: false, process: {} },
 		dialog_key: { show: false, key: {} },
@@ -10160,6 +10243,43 @@ new Vue({
 				})
 				.catch( error => console.log( error ) )
 		},
+		editScript( script ) {
+			this.dialog_edit_script.show = true
+			this.dialog_edit_script.script.script_id = script.script_id
+			this.dialog_edit_script.script.code = script.code
+			d = new Date(0);
+			d.setUTCSeconds(script.run_at);
+			this.dialog_edit_script.script.run_at_date = d.toLocaleDateString("en-CA")
+			this.dialog_edit_script.script.run_at_time = d.toLocaleTimeString("en-US", {
+					hour: '2-digit',
+					minute: '2-digit',
+					hour12: false, // Use 24-hour format
+				});
+		},
+		updateScript() {
+			axios.post( `/wp-json/captaincore/v1/scripts/${this.dialog_edit_script.script.script_id}`, {
+					code: this.dialog_edit_script.script.code,
+					run_at: {
+						time: this.dialog_edit_script.script.run_at_time,
+						date: this.dialog_edit_script.script.run_at_date,
+						timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+					}
+				}, {
+					headers: { 'X-WP-Nonce':this.wp_nonce }
+				})
+				.then( response => {
+					this.snackbar.message = `Updated code to run on ${this.dialog_site.environment_selected.home_url} at ${this.script.time} ${this.script.date}.`
+					this.snackbar.show = true
+					this.script.code = "";
+					this.script.menu = false;
+					this.script.menu_date = false;
+					this.script.menu_time = false;
+					this.script.time = "";
+					this.script.date = "";
+					this.dialog_edit_script = { show: false, script: { script_id: "", code: "", run_at_time: "", run_at_date: "" } }
+					this.fetchSiteEnvironments( this.dialog_site.site.site_id )
+				});
+		},
 		editLogEntry( site_id, log_id ) {
 
 			// If not assigned that's fine but at least assign as string.
@@ -10918,7 +11038,7 @@ new Vue({
 			recipe = this.recipes.filter( recipe => recipe.recipe_id == recipe_id )[0];
 			this.snackbar.message = "Recipe '"+ recipe.title +"' loaded.";
 			this.snackbar.show = true;
-			this.custom_script = recipe.content;
+			this.script.code = recipe.content;
 		},
 		runRecipe( recipe_id, site_id ) {
 			recipe = this.recipes.filter( recipe => recipe.recipe_id == recipe_id )[0];
@@ -11537,6 +11657,53 @@ new Vue({
 				.catch( error => console.log( error ) )
 
 		},
+		deleteScript( script_id ) {
+			should_proceed = confirm( `Delete script?` )
+
+			if ( ! should_proceed ) {
+				return
+			}
+			axios.delete( `/wp-json/captaincore/v1/scripts/${script_id}`, {
+					headers: { 'X-WP-Nonce':this.wp_nonce }
+				})
+				.then( response => {
+					this.snackbar.message = `Deleted code to run on ${this.dialog_site.environment_selected.home_url} at ${this.dialog_edit_script.script.run_at_time} ${this.dialog_edit_script.script.run_at_date}.`
+					this.snackbar.show = true
+					this.script.code = "";
+					this.script.menu = false;
+					this.script.menu_date = false;
+					this.script.menu_time = false;
+					this.script.time = "";
+					this.script.date = "";
+					this.dialog_edit_script.show = false;
+					this.dialog_edit_script.script = { script_id: "", code: "", run_at_time: "", run_at_date: "" }
+					this.fetchSiteEnvironments( this.dialog_site.site.site_id )
+				});
+		},
+		scheduleScript() {
+			axios.post( `/wp-json/captaincore/v1/scripts/schedule`, {
+					environment_id: this.dialog_site.environment_selected.environment_id,
+					code: this.script.code,
+					run_at: {
+						time: this.script.time,
+						date: this.script.date,
+						timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+					}
+				}, {
+					headers: { 'X-WP-Nonce':this.wp_nonce }
+				})
+				.then( response => {
+					this.snackbar.message = `Scheduled code to run on ${this.dialog_site.environment_selected.home_url} at ${this.script.time} ${this.script.date}.`
+					this.snackbar.show = true
+					this.script.code = "";
+					this.script.menu = false;
+					this.script.menu_date = false;
+					this.script.menu_time = false;
+					this.script.time = "";
+					this.script.date = "";
+					this.fetchSiteEnvironments( this.dialog_site.site.site_id )
+				});
+		},
 		runCustomCode( site_id ) {
 
 			site = this.dialog_site.site
@@ -11551,7 +11718,7 @@ new Vue({
 				environment: this.dialog_site.environment_selected.environment,
 				post_id: site_id,
 				command: 'run',
-				value: this.custom_script,
+				value: this.script.code,
 				background: true
 			};
 
@@ -11569,7 +11736,7 @@ new Vue({
 					self.runCommand( response.data )
 					self.snackbar.message = description;
 					self.snackbar.show = true;
-					self.custom_script = "";
+					self.script.code = "";
 				})
 				.catch( error => console.log( error ) );
 
@@ -11584,14 +11751,14 @@ new Vue({
 				return;
 			}
 
-			wp_cli = this.custom_script;
+			wp_cli = this.script.code;
 
 			var data = {
 				action: 'captaincore_install',
 				environment: this.dialog_bulk.environment_selected,
 				post_id: site_ids,
 				command: 'run',
-				value: this.custom_script,
+				value: this.script.code,
 				background: true
 			};
 
@@ -11609,10 +11776,9 @@ new Vue({
 					self.runCommand( response.data )
 					self.snackbar.message = description;
 					self.snackbar.show = true;
-					self.custom_script = "";
+					self.script.code = "";
 				})
 				.catch( error => console.log( error ) );
-
 		},
 		fetchTimeline( site_id ) {
 			var data = {

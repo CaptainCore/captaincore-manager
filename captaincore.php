@@ -60,7 +60,8 @@ require plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
 require 'includes/Parsedown.php';
 
 function captaincore_cron_run() {
-    ( new CaptainCore\Accounts )->process_renewals();
+    CaptainCore\Accounts::process_renewals();
+    CaptainCore\Scripts::run_scheduled();
 }
 add_action( 'captaincore_cron', 'captaincore_cron_run' );
 
@@ -662,6 +663,54 @@ function captaincore_provider_actions_func( $request ) {
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
 	return ( new CaptainCore\ProviderAction )->active();
+}
+
+function captaincore_schedule_script_func( $request ) {
+	$environment_id = $request['environment_id'];
+	$code           = $request['code'];
+	$run_at         = (object) $request['run_at'];
+	$timestamp      = new DateTime("$run_at->date $run_at->time", new DateTimeZone($run_at->timezone));
+	$timestamp->setTimezone(new DateTimeZone('UTC'));
+	$time_now       = date("Y-m-d H:i:s");
+	$details 		= [
+		"run_at" => $timestamp->getTimestamp()
+	];
+	$new_script = CaptainCore\Scripts::insert( [
+		"environment_id" => $environment_id,
+		"user_id"        => get_current_user_id(),
+		"code"           => $code,
+		"details"        => json_encode( $details ),
+		"status"		 => "scheduled",
+		"created_at"     => $time_now,
+		"updated_at"     => $time_now,
+	] );
+	return $new_script;
+}
+
+function captaincore_update_script_func( $request ) {
+	$script_id = $request['id'];
+	$script    = CaptainCore\Scripts::get( $script_id );
+	$site_id   = CaptainCore\Environments::get( $script->environment_id )->site_id;
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
+	}
+	$details   = json_decode( $script->details );
+	$run_at    = (object) $request['run_at'];
+	$time_now  = date("Y-m-d H:i:s");
+	$timestamp = new DateTime("$run_at->date $run_at->time", new DateTimeZone($run_at->timezone));
+	$timestamp->setTimezone(new DateTimeZone('UTC'));
+	$details->run_at = $timestamp->getTimestamp();
+	return ( new CaptainCore\Scripts )->update( [ "code" => $request['code'], 'details' => json_encode( $details ) ], [ "script_id" => $script_id ] );
+}
+
+function captaincore_delete_script_func( $request ) {
+	$script_id = $request['id'];
+	$script    = CaptainCore\Scripts::get( $script_id );
+	$site_id   = CaptainCore\Environments::get( $script->environment_id )->site_id;
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
+	}
+	return ( new CaptainCore\Scripts )->delete( $script_id );
 }
 
 function captaincore_sites_func( $request ) {
@@ -1522,6 +1571,30 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/quicksaves/(?P<hash>[a-zA-Z0-9-]+)/rollback', [
 			'methods'       => 'POST',
 			'callback'      => 'captaincore_quicksaves_rollback_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/scripts/schedule', [
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_schedule_script_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/scripts/(?P<id>[\d]+)', [
+			'methods'       => 'DELETE',
+			'callback'      => 'captaincore_delete_script_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/scripts/(?P<id>[\d]+)', [
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_update_script_func',
 			'show_in_index' => false
 		]
 	);
