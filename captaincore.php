@@ -163,6 +163,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	$site_id       = empty( $post->site_id ) ? "" : $post->site_id;
 	$user_id       = empty( $post->user_id ) ? "" : $post->user_id;
 	$notes         = empty( $post->notes ) ? "" : $post->notes;
+	$response      = "";
 
 	// Error if token not valid
 	if ( $post->token != CAPTAINCORE_CLI_TOKEN ) {
