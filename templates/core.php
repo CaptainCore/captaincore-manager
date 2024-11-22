@@ -7742,6 +7742,13 @@ new Vue({
 		},
     },
 	filters: {
+		previewCode: function( text ) {
+			maxLength = 40
+			if (text.length > maxLength) {
+				return text.substring(0, maxLength) + '...';
+			}
+			return text;
+		},
 		intervalLabel: function( interval ) {
 			units = [] 
 			units[1] = "monthly"
