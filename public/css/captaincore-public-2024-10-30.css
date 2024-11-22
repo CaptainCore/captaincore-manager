@@ -1894,3 +1894,12 @@ code.language-log {
 .v-bottom-navigation a.v-btn.v-btn--active {
   border-bottom: 2px solid;
 }
+
+.v-application .v-picker .accent--text {
+  color: #000000 !important;
+  caret-color: #000000 !important;
+}
+.v-application .v-picker .accent {
+  color: #000000 !important;
+  border-color: #000000 !important;
+}

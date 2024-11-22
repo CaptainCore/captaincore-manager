@@ -916,6 +916,15 @@ class Site {
             if ( $environment->fathom == "" ) {
                 $environment->fathom = [ [ "domain" => "", "code" => ""] ];
             }
+            $scheduled_scripts = \CaptainCore\Scripts::where( [ "environment_id" => $environment->environment_id, "status" => "scheduled" ] );
+            foreach ( $scheduled_scripts as $scheduled_script ) {
+                $details                         = json_decode( $scheduled_script->details );
+                $scheduled_script->author        = get_the_author_meta( 'display_name', $scheduled_script->user_id );
+                $scheduled_script->author_avatar = "https://www.gravatar.com/avatar/" . md5( get_the_author_meta( 'email', $scheduled_script->user_id ) ) . "?s=80&d=mp";
+                $scheduled_script->run_at        = $details->run_at;
+                unset( $scheduled_script->user_id );
+            }
+            $environment->scheduled_scripts = $scheduled_scripts;
         }
 
         return $environments;
