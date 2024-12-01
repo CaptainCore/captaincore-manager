@@ -108,7 +108,7 @@ class Accounts extends DB {
         }
     }
 
-    public function process_renewals() {
+    public static function process_renewals() {
         $accounts = self::with_renewals();
         $now      = strtotime( "now" );
         foreach ( $accounts as $account ) {
