@@ -7368,6 +7368,10 @@ new Vue({
 				"value": "hoverdotcom"
 			},
 			{
+				"text": "Domain - Spaceship",
+				"value": "spaceship"
+			},
+			{
 				"text": "Email - Mailgun",
 				"value": "mailgun"
 			},
