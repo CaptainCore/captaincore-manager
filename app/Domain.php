@@ -131,42 +131,104 @@ class Domain {
     }
 
     public function fetch_remote() {
-        $domain        = ( new Domains )->get( $this->domain_id );
+        $domain        = Domains::get( $this->domain_id );
         if ( empty( $domain->provider_id ) ) {
             return [ "errors" => [ "No remote domain found." ] ];
         }
-        if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
-            ( new Domains )->provider_login();
-        }
-        $auth = get_transient( 'captaincore_hovercom_auth' );
-        $args = [
-            'headers' => [
-                'Cookie' => 'hoverauth=' . $auth
-            ]
-        ];
-
-        $response = wp_remote_get( "https://www.hover.com/api/control_panel/domains/{$domain->name}", $args );
-        if ( is_wp_error( $response ) ) {
-            return json_decode( $response->get_error_message() );
-        } else {
-            $response    = json_decode( $response['body'] )->domain;
-            $nameservers = [];
-            foreach( $response->nameservers as $nameserver ) {
-                $nameservers[] = [ "value" => $nameserver ];
+        $provider      = Providers::get( $domain->provider_id );
+        if ( $provider->provider == "hoverdotcom" ) {
+            
+            if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
+                ( new Domains )->provider_login();
             }
+            $auth = get_transient( 'captaincore_hovercom_auth' );
+            $args = [
+                'headers' => [
+                    'Cookie' => 'hoverauth=' . $auth
+                ]
+            ];
+
+            $response = wp_remote_get( "https://www.hover.com/api/control_panel/domains/{$domain->name}", $args );
+            if ( is_wp_error( $response ) ) {
+                return json_decode( $response->get_error_message() );
+            } else {
+                $response    = json_decode( $response['body'] )->domain;
+                $nameservers = [];
+                foreach( $response->nameservers as $nameserver ) {
+                    $nameservers[] = [ "value" => $nameserver ];
+                }
+                $domain   = [
+                    "domain"        => $response->name,
+                    "nameservers"   => $nameservers,
+                    "contacts"      => [
+                        "owner"   => $response->owner,
+                        "admin"   => $response->admin,
+                        "billing" => $response->billing,
+                        "tech"    => $response->tech,
+                    ],
+                    "locked"        => $response->locked,
+                    "whois_privacy" => $response->whois_privacy,
+                    "status"        => $response->status,
+                ];
+                return $domain;
+            }
+        }
+
+        if ( $provider->provider == "spaceship" ) {
+            $response             = \CaptainCore\Remote\Spaceship::get( "domains/{$domain->name}" );
+            $owner                = \CaptainCore\Remote\Spaceship::get( "contacts/{$response->contacts->registrant}" );
+            $admin                = $response->contacts->registrant == $response->contacts->admin ? $owner : \CaptainCore\Remote\Spaceship::get( "contacts/{$response->contacts->admin}" );
+            $billing              = $response->contacts->registrant == $response->contacts->billing ? $owner : \CaptainCore\Remote\Spaceship::get( "contacts/{$response->contacts->billing}" );
+            $tech                 = $response->contacts->registrant == $response->contacts->tech ? $owner : \CaptainCore\Remote\Spaceship::get( "contacts/{$response->contacts->tech}" );
+            $owner->first_name    = $owner->firstName;
+            $owner->last_name     = $owner->lastName;
+            $owner->org_name      = $owner->organization;
+            $owner->state         = $owner->stateProvince;
+            $owner->postal_code   = $owner->postalCode;
+            $admin->first_name    = $admin->firstName;
+            $admin->last_name     = $admin->lastName;
+            $admin->org_name      = $admin->organization;
+            $admin->state         = $admin->stateProvince;
+            $admin->postal_code   = $admin->postalCode;
+            $billing->first_name  = $billing->firstName;
+            $billing->last_name   = $billing->lastName;
+            $billing->org_name    = $billing->organization;
+            $billing->state       = $billing->stateProvince;
+            $billing->postal_code = $billing->postalCode;
+            $tech->first_name     = $tech->firstName;
+            $tech->last_name      = $tech->lastName;
+            $tech->org_name       = $tech->organization;
+            $tech->state          = $tech->stateProvince;
+            $tech->postal_code    = $tech->postalCode;
             $domain   = [
                 "domain"        => $response->name,
-                "nameservers"   => $nameservers,
+                "nameservers"   => array_map(function ($host) {
+                                        return ["value" => $host];
+                                    }, $response->nameservers->hosts),
                 "contacts"      => [
-                    "owner"   => $response->owner,
-                    "admin"   => $response->admin,
-                    "billing" => $response->billing,
-                    "tech"    => $response->tech,
+                    "owner"   => $owner,
+                    "admin"   => $admin,
+                    "billing" => $billing,
+                    "tech"    => $tech,
                 ],
-                "locked"        => $response->locked,
-                "whois_privacy" => $response->whois_privacy,
-                "status"        => $response->status,
+                "locked"        => empty( $response->eppStatuses ) ? "off" : "on",
+                "whois_privacy" => $response->privacyProtection->level == "high" ? "on" : "off",
+                "status"        => $response->lifecycleStatus,
             ];
+            unset( $domain['contacts']["owner"]->firstName );
+            unset( $domain['contacts']["owner"]->lastName );
+            unset( $domain['contacts']["owner"]->organization );
+            unset( $domain['contacts']["owner"]->stateProvince );
+            unset( $domain['contacts']["owner"]->postalCode );
+            unset( $domain['contacts']["admin"]->firstName );
+            unset( $domain['contacts']["admin"]->lastName );
+            unset( $domain['contacts']["admin"]->organization );
+            unset( $domain['contacts']["admin"]->stateProvince );
+            unset( $domain['contacts']["admin"]->postalCode );
+            unset( $domain['contacts']["billing"]->firstName );
+            unset( $domain['contacts']["billing"]->lastName );
+            unset( $domain['contacts']["billing"]->organization );
+            unset( $domain['contacts']["billing"]->stateProvince );
             return $domain;
         }
 
@@ -177,25 +239,31 @@ class Domain {
         if ( empty( $domain->provider_id ) ) {
             return [ "errors" => [ "No remote domain found." ] ];
         }
-        if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
-            ( new Domains )->provider_login();
-        }
-        $auth = get_transient( 'captaincore_hovercom_auth' );
-        $args = [
-            'headers' => [
-                'Cookie' => 'hoverauth=' . $auth
-            ]
-        ];
+        $provider      = Providers::get( $domain->provider_id );
+        if ( $provider->provider == "hoverdotcom" ) {
+            if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
+                ( new Domains )->provider_login();
+            }
+            $auth = get_transient( 'captaincore_hovercom_auth' );
+            $args = [
+                'headers' => [
+                    'Cookie' => 'hoverauth=' . $auth
+                ]
+            ];
 
-        $response = wp_remote_get( "https://www.hover.com/api/domains/{$domain->name}/auth_code", $args );
-        if ( is_wp_error( $response ) ) {
-            return json_decode( $response->get_error_message() );
+            $response = wp_remote_get( "https://www.hover.com/api/domains/{$domain->name}/auth_code", $args );
+            if ( is_wp_error( $response ) ) {
+                return json_decode( $response->get_error_message() );
+            }
+            $response = json_decode( $response['body'] );
+            if ( empty( $response->auth_code ) ) {
+                return "";
+            }
+            return $response->auth_code;
         }
-        $response = json_decode( $response['body'] );
-        if ( empty( $response->auth_code ) ) {
-            return "";
+        if ( $provider->provider == "spaceship" ) {
+            return \CaptainCore\Remote\Spaceship::get( "domains/{$domain->name}/transfer/auth-code" )->authCode;
         }
-        return $response->auth_code;
     }
 
     public function lock() {
@@ -203,30 +271,36 @@ class Domain {
         if ( empty( $domain->provider_id ) ) {
             return [ "errors" => [ "No remote domain found." ] ];
         }
-        if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
-            ( new Domains )->provider_login();
-        }
-        $auth = get_transient( 'captaincore_hovercom_auth' );
-        $data = [ 
-            'timeout' => 45,
-            'headers' => [
-                'Content-Type' => 'application/json; charset=utf-8',
-                'Cookie' => 'hoverauth=' . $auth
-            ],
-            'body'        => json_encode( [ 
-                "field" => "locked", 
-                'value' => true
-            ] ), 
-            'method'      => 'PUT', 
-            'data_format' => 'body',
-        ];
+        $provider      = Providers::get( $domain->provider_id );
+        if ( $provider->provider == "hoverdotcom" ) {
+            if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
+                ( new Domains )->provider_login();
+            }
+            $auth = get_transient( 'captaincore_hovercom_auth' );
+            $data = [ 
+                'timeout' => 45,
+                'headers' => [
+                    'Content-Type' => 'application/json; charset=utf-8',
+                    'Cookie' => 'hoverauth=' . $auth
+                ],
+                'body'        => json_encode( [ 
+                    "field" => "locked", 
+                    'value' => true
+                ] ), 
+                'method'      => 'PUT', 
+                'data_format' => 'body',
+            ];
 
-        $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
-        echo json_encode(  $response );
-        if ( is_wp_error( $response ) ) {
-            return json_decode( $response->get_error_message() );
-        } else {
-            return json_decode( $response['body'] );
+            $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
+            echo json_encode(  $response );
+            if ( is_wp_error( $response ) ) {
+                return json_decode( $response->get_error_message() );
+            } else {
+                return json_decode( $response['body'] );
+            }
+        }
+        if ( $provider->provider == "spaceship" ) {
+            return \CaptainCore\Remote\Spaceship::put( "domains/{$domain->name}/transfer/lock", [ "isLocked" => true ] );
         }
     }
 
@@ -235,30 +309,36 @@ class Domain {
         if ( empty( $domain->provider_id ) ) {
             return [ "errors" => [ "No remote domain found." ] ];
         }
-        if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
-            ( new Domains )->provider_login();
-        }
-        $auth = get_transient( 'captaincore_hovercom_auth' );
-        $data = [ 
-            'timeout' => 45,
-            'headers' => [
-                'Content-Type' => 'application/json; charset=utf-8',
-                'Cookie' => 'hoverauth=' . $auth
-            ],
-            'body'        => json_encode( [ 
-                "field" => "locked", 
-                'value' => false
-            ] ), 
-            'method'      => 'PUT', 
-            'data_format' => 'body',
-        ];
+        $provider      = Providers::get( $domain->provider_id );
+        if ( $provider->provider == "hoverdotcom" ) {
+            if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
+                ( new Domains )->provider_login();
+            }
+            $auth = get_transient( 'captaincore_hovercom_auth' );
+            $data = [ 
+                'timeout' => 45,
+                'headers' => [
+                    'Content-Type' => 'application/json; charset=utf-8',
+                    'Cookie' => 'hoverauth=' . $auth
+                ],
+                'body'        => json_encode( [ 
+                    "field" => "locked", 
+                    'value' => false
+                ] ), 
+                'method'      => 'PUT', 
+                'data_format' => 'body',
+            ];
 
-        $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
-        echo json_encode(  $response );
-        if ( is_wp_error( $response ) ) {
-            return json_decode( $response->get_error_message() );
-        } else {
-            return json_decode( $response['body'] );
+            $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
+            echo json_encode(  $response );
+            if ( is_wp_error( $response ) ) {
+                return json_decode( $response->get_error_message() );
+            } else {
+                return json_decode( $response['body'] );
+            }
+        }
+        if ( $provider->provider == "spaceship" ) {
+            return \CaptainCore\Remote\Spaceship::put( "domains/{$domain->name}/transfer/lock", [ "isLocked" => false ] );
         }
     }
 
@@ -267,30 +347,36 @@ class Domain {
         if ( empty( $domain->provider_id ) ) {
             return [ "errors" => [ "No remote domain found." ] ];
         }
-        if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
-            ( new Domains )->provider_login();
-        }
-        $auth = get_transient( 'captaincore_hovercom_auth' );
-        $data = [ 
-            'timeout' => 45,
-            'headers' => [
-                'Content-Type' => 'application/json; charset=utf-8',
-                'Cookie' => 'hoverauth=' . $auth
-            ],
-            'body'      => json_encode( [ 
-                "field" => "whois_privacy", 
-                'value' => true
-            ] ), 
-            'method'      => 'PUT', 
-            'data_format' => 'body',
-        ];
+        $provider      = Providers::get( $domain->provider_id );
+        if ( $provider->provider == "hoverdotcom" ) {
+            if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
+                ( new Domains )->provider_login();
+            }
+            $auth = get_transient( 'captaincore_hovercom_auth' );
+            $data = [ 
+                'timeout' => 45,
+                'headers' => [
+                    'Content-Type' => 'application/json; charset=utf-8',
+                    'Cookie' => 'hoverauth=' . $auth
+                ],
+                'body'      => json_encode( [ 
+                    "field" => "whois_privacy", 
+                    'value' => true
+                ] ), 
+                'method'      => 'PUT', 
+                'data_format' => 'body',
+            ];
 
-        $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
-        echo json_encode(  $response );
-        if ( is_wp_error( $response ) ) {
-            return json_decode( $response->get_error_message() );
+            $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
+            echo json_encode(  $response );
+            if ( is_wp_error( $response ) ) {
+                return json_decode( $response->get_error_message() );
+            }
+            return json_decode( $response['body'] );
         }
-        return json_decode( $response['body'] );
+        if ( $provider->provider == "spaceship" ) {
+            return \CaptainCore\Remote\Spaceship::put( "domains/{$domain->name}/privacy/preference", [ "privacyLevel" => "high", "userConsent" => true ] );
+        }
     }
 
     public function privacy_off() {
@@ -298,30 +384,36 @@ class Domain {
         if ( empty( $domain->provider_id ) ) {
             return [ "errors" => [ "No remote domain found." ] ];
         }
-        if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
-            ( new Domains )->provider_login();
-        }
-        $auth = get_transient( 'captaincore_hovercom_auth' );
-        $data = [ 
-            'timeout' => 45,
-            'headers' => [
-                'Content-Type' => 'application/json; charset=utf-8',
-                'Cookie' => 'hoverauth=' . $auth
-            ],
-            'body'        => json_encode( [ 
-                "field" => "whois_privacy", 
-                'value' => false
-            ] ), 
-            'method'      => 'PUT', 
-            'data_format' => 'body',
-        ];
+        $provider      = Providers::get( $domain->provider_id );
+        if ( $provider->provider == "hoverdotcom" ) {
+            if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
+                ( new Domains )->provider_login();
+            }
+            $auth = get_transient( 'captaincore_hovercom_auth' );
+            $data = [ 
+                'timeout' => 45,
+                'headers' => [
+                    'Content-Type' => 'application/json; charset=utf-8',
+                    'Cookie' => 'hoverauth=' . $auth
+                ],
+                'body'        => json_encode( [ 
+                    "field" => "whois_privacy", 
+                    'value' => false
+                ] ), 
+                'method'      => 'PUT', 
+                'data_format' => 'body',
+            ];
 
-        $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
-        echo json_encode(  $response );
-        if ( is_wp_error( $response ) ) {
-            return json_decode( $response->get_error_message() );
-        } else {
-            return json_decode( $response['body'] );
+            $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
+            echo json_encode(  $response );
+            if ( is_wp_error( $response ) ) {
+                return json_decode( $response->get_error_message() );
+            } else {
+                return json_decode( $response['body'] );
+            }
+        }
+        if ( $provider->provider == "spaceship" ) {
+            return \CaptainCore\Remote\Spaceship::put( "domains/{$domain->name}/privacy/preference", [ "privacyLevel" => "public", "userConsent" => true ] );
         }
     }
 
@@ -358,46 +450,98 @@ class Domain {
     }
 
     public function set_contacts( $contacts = [] ) {
-        $domain        = ( new Domains )->get( $this->domain_id );
+        $domain        = Domains::get( $this->domain_id );
         $contacts      = (object) $contacts;
         if ( empty( $domain->provider_id ) ) {
             return [ "errors" => [ "No remote domain found." ] ];
         }
-        if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
-            ( new Domains )->provider_login();
-        }
-        $auth = get_transient( 'captaincore_hovercom_auth' );
-        $data = [ 
-            'timeout' => 45,
-            'headers' => [
-                'Content-Type' => 'application/json; charset=utf-8',
-                'Cookie' => 'hoverauth=' . $auth
-            ],
-            'body'        => json_encode( [
-                "id"       => "domain-{$domain->name}",
-                "contacts" => [
-                    "nolock"  => true,
-                    "owner"   => $contacts->owner,
-                    "admin"   => $contacts->admin,
-                    "tech"    => $contacts->tech,
-                    "billing" => $contacts->billing,
+        $provider      = Providers::get( $domain->provider_id );
+        if ( $provider->provider == "hoverdotcom" ) {
+            if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
+                ( new Domains )->provider_login();
+            }
+            $auth = get_transient( 'captaincore_hovercom_auth' );
+            $data = [ 
+                'timeout' => 45,
+                'headers' => [
+                    'Content-Type' => 'application/json; charset=utf-8',
+                    'Cookie' => 'hoverauth=' . $auth
+                ],
+                'body'        => json_encode( [
+                    "id"       => "domain-{$domain->name}",
+                    "contacts" => [
+                        "nolock"  => true,
+                        "owner"   => $contacts->owner,
+                        "admin"   => $contacts->admin,
+                        "tech"    => $contacts->tech,
+                        "billing" => $contacts->billing,
 
-                ]
-            ] ), 
-            'method'      => 'PUT', 
-            'data_format' => 'body',
-        ];
+                    ]
+                ] ), 
+                'method'      => 'PUT', 
+                'data_format' => 'body',
+            ];
 
-        $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/set_contacts", $data );
-        if ( is_wp_error( $response ) ) {
-            return json_decode( $response->get_error_message() );
+            $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/set_contacts", $data );
+            if ( is_wp_error( $response ) ) {
+                return json_decode( $response->get_error_message() );
+            }
+            $response = json_decode( $response['body'] );
+            if ( ! empty( $response->error ) ) {
+                return [ "error" => "There was a problem updating the contact info. Check the formatting and try again." ];
+            }
+            if ( $response->succeeded == "true" ) {
+                return [ "response" => "Contacts have been updated." ];
+            }
         }
-        $response = json_decode( $response['body'] );
-        if ( ! empty( $response->error ) ) {
-            return [ "error" => "There was a problem updating the contact info. Check the formatting and try again." ];
-        }
-        if ( $response->succeeded == "true" ) {
-            return [ "response" => "Contacts have been updated." ];
+        if ( $provider->provider == "spaceship" ) {
+            $changed              = false;
+            $response             = \CaptainCore\Remote\Spaceship::get( "domains/{$domain->name}" );
+            $owner                = \CaptainCore\Remote\Spaceship::get( "contacts/{$response->contacts->registrant}" );
+            $admin                = $response->contacts->admin == $response->contacts->registrant ? $owner : \CaptainCore\Remote\Spaceship::get( "contacts/{$response->contacts->admin}" );
+            $billing              = $response->contacts->billing == $response->contacts->registrant ? $owner : \CaptainCore\Remote\Spaceship::get( "contacts/{$response->contacts->billing}" );
+            $tech                 = $response->contacts->tech == $response->contacts->registrant ? $owner : \CaptainCore\Remote\Spaceship::get( "contacts/{$response->contacts->tech}" );
+            foreach (['owner', 'admin', 'tech', 'billing'] as $record) {
+                if (isset($contacts->$record)) {
+                    $new_contact      = $contacts->$record;
+                    $existing_contact = ${$record};
+                    // Skip if no changes made
+                    if ( $existing_contact->firstName == $new_contact->first_name && $existing_contact->lastName == $new_contact->last_name && $existing_contact->email == $new_contact->email && $existing_contact->phone == $new_contact->phone && 
+                        $existing_contact->organization == $new_contact->org_name && $existing_contact->address1 == $new_contact->address1 && $existing_contact->address2 == $new_contact->address2 && $existing_contact->stateProvince == $new_contact->state &&
+                        $existing_contact->postalCode == $new_contact->postal_code && $existing_contact->city == $new_contact->city && $existing_contact->country == $new_contact->country ) {
+                        continue;
+                    }
+                    $changed = true;
+                    $updated_contact = [
+                        "firstName"       => $new_contact->first_name,
+                        "lastName"        => $new_contact->last_name,
+                        "organization"    => $new_contact->org_name,
+                        "email"           => $new_contact->email,
+                        "address1"        => $new_contact->address1,
+                        "address2"        => $new_contact->address2,
+                        "city"            => $new_contact->city,
+                        "country"         => $new_contact->country,
+                        "stateProvince"   => $new_contact->state,
+                        "postalCode"      => $new_contact->postal_code,
+                        "phone"           => $new_contact->phone
+                    ];
+                    $response_contact              = \CaptainCore\Remote\Spaceship::put( "contacts", $updated_contact );
+                    $response->contacts->{$record} = $response_contact->contactId;
+                }
+            }
+            if ( ! $changed ) {
+                return [ "response" => "No changes found." ];
+            }
+            $results = \CaptainCore\Remote\Spaceship::put( "domains/{$domain->name}/contacts", [
+                "registrant" => $response->contacts->registrant,
+                "admin"      => $response->contacts->admin,
+                "tech"       => $response->contacts->tech,
+                "billing"    => $repsonse->contacts->billing
+            ] );
+            if ( ! empty( $results->data ) ) {
+                return [ "error" => "There was a problem updating the contact info. Check the formatting and try again." . json_encode( $results->data ) ];
+            }
+            return [ "response" => "Contacts have been updated.". json_encode( $results ) ];
         }
     }
 
@@ -406,37 +550,47 @@ class Domain {
         if ( empty( $domain->provider_id ) ) {
             return [ "errors" => [ "No remote domain found." ] ];
         }
-        if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
-            ( new Domains )->provider_login();
-        }
-        $auth = get_transient( 'captaincore_hovercom_auth' );
-        $data = [ 
-            'timeout' => 45,
-            'headers' => [
-                'Content-Type' => 'application/json; charset=utf-8',
-                'Cookie'       => 'hoverauth=' . $auth
-            ],
-            'body' => json_encode( [ 
-                "field" => "nameservers", 
-                'value' => $nameservers
-            ] ), 
-            'method'      => 'PUT', 
-            'data_format' => 'body',
-        ];
+        $provider      = Providers::get( $domain->provider_id );
+        if ( $provider->provider == "hoverdotcom" ) {
+            if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
+                ( new Domains )->provider_login();
+            }
+            $auth = get_transient( 'captaincore_hovercom_auth' );
+            $data = [ 
+                'timeout' => 45,
+                'headers' => [
+                    'Content-Type' => 'application/json; charset=utf-8',
+                    'Cookie'       => 'hoverauth=' . $auth
+                ],
+                'body' => json_encode( [ 
+                    "field" => "nameservers", 
+                    'value' => $nameservers
+                ] ), 
+                'method'      => 'PUT', 
+                'data_format' => 'body',
+            ];
 
-        $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
-        if ( is_wp_error( $response ) ) {
-            return json_decode( $response->get_error_message() );
+            $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
+            if ( is_wp_error( $response ) ) {
+                return json_decode( $response->get_error_message() );
+            }
+            $response = json_decode( $response['body'] );
+            if ( ! empty( $response->error ) ) {
+                return [ "error" => "There was a problem updating nameservers. Check formatting and try again." ];
+            }
+            if ( $response->succeeded == "true" ) {
+                return [ "response" => "Nameservers have been updated." ];
+            }
+            if ( $response->succeeded == "false" ) {
+                return [ "response" => $response->errors ];
+            }
         }
-        $response = json_decode( $response['body'] );
-        if ( ! empty( $response->error ) ) {
-            return [ "error" => "There was a problem updating nameservers. Check formatting and try again." ];
-        }
-        if ( $response->succeeded == "true" ) {
+        if ( $provider->provider == "spaceship" ) {
+            $response = \CaptainCore\Remote\Spaceship::put( "domains/{$domain->name}/nameservers", [ "provider" => "custom", "hosts" => $nameservers ] );
+            if ( empty( $response->hosts ) || ! empty( $response->data ) ) {
+                return [ "error" => "There was a problem updating nameservers. Check formatting and try again." ];
+            }
             return [ "response" => "Nameservers have been updated." ];
-        }
-        if ( $response->succeeded == "false" ) {
-            return [ "response" => $response->errors ];
         }
     }
 
