@@ -525,7 +525,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "33";
+        $required_version = (int) "34";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -790,6 +790,7 @@ class DB {
             domain_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             remote_id varchar(255),
             provider_id varchar(255),
+            provider_domain_id varchar(255),
             status varchar(255),
             price varchar(255),
             name varchar(255),
