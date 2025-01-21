@@ -859,14 +859,20 @@ function captaincore_dns_func( $request ) {
 	}
 	$remote_id = ( new CaptainCore\Domains )->get( $domain_id )->remote_id;
 
-	$domain    = CaptainCore\Remote\Constellix::get( "domains/$remote_id" );
-	$response  = CaptainCore\Remote\Constellix::get( "domains/$remote_id/records?perPage=100" );
-	if ( ! $response->errors ) {
-		array_multisort( array_column( $response->data, 'type' ), SORT_ASC, array_column( $response->data, 'name' ), SORT_ASC, $response->data );
+	$domain  = CaptainCore\Remote\Constellix::get( "domains/$remote_id" );
+	$records = CaptainCore\Remote\Constellix::get( "domains/$remote_id/records?perPage=100" );
+	$steps     = ceil( $records->meta->pagination->total / 100 );
+	for ($i = 1; $i < $steps; $i++) {
+		$additional_records = CaptainCore\Remote\Constellix::get( "domains/$remote_id/records", [ "page" => $i + 1, "perPage" => 100 ] );
+		$records->data = array_merge($records->data, $additional_records->data);
+	}
+
+	if ( ! $records->errors ) {
+		array_multisort( array_column( $records->data, 'type' ), SORT_ASC, array_column( $records->data, 'name' ), SORT_ASC, $records->data );
 	}
 
 	return [ 
-		"records"     => $response->data, 
+		"records"     => $records->data, 
 		"nameservers" => $domain->data->nameservers 
 	];
 }
