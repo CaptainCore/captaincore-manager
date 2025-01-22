@@ -2875,7 +2875,38 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-layout>
 						</v-container>
 						<div v-show="dialog_site.site.shared_with && dialog_site.site.shared_with.length > 0">
-						<v-subheader>Shared With</v-subheader>
+						<v-subheader>Shared With 
+						<v-menu
+							:close-on-content-click="false"
+							:nudge-width="200"
+							offset-x
+							>
+							<template v-slot:activator="{ on, attrs }">
+								<v-btn small depressed class="ml-2" v-bind="attrs" v-on="on" v-show="accounts && accounts.length > 1">Add <v-icon class="ml-2">mdi-account-multiple-plus</v-icon></v-btn>
+							</template>
+							<template v-slot:default="dialog">
+							<v-card>
+								<v-list>
+								<v-list-item>
+									<v-list-item-content>
+									<v-autocomplete label="Accounts" hide-details outlined small-chips :items="accounts.filter( account => !dialog_site.site.shared_with.find( shared => shared.account_id == account.account_id ) )" item-text="name" item-value="account_id" v-model="dialog_site.grant_access" multiple chips deletable-chips style="max-width: 400px"></v-autocomplete>
+									</v-list-item-content>
+								</v-list-item>
+								</v-list>
+								<v-divider></v-divider>
+								<v-card-actions>
+								<v-spacer></v-spacer>
+								<v-btn text @click="dialog.value = false">
+									Cancel
+								</v-btn>
+								<v-btn color="primary" text @click="dialog.value = false; grantAccess()">
+									Grant Access
+								</v-btn>
+								</v-card-actions>
+							</v-card>
+							</template>
+							</v-menu>
+						</v-subheader>
 						<v-container>
 						<v-row dense v-if="dialog_site.site.shared_with && dialog_site.site.shared_with.length > 0">
 							<v-col v-for="account in dialog_site.site.shared_with" :key="account.account_id" cols="12" md="4">
@@ -7643,7 +7674,7 @@ new Vue({
 		new_recipe: { show: false, title: "", content: "", public: 1 },
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_billing: { step: 1 },
-		dialog_site: { loading: true, step: 1, backup_step: 1, environment_selected: { environment_id: "0", quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
+		dialog_site: { loading: true, step: 1, backup_step: 1, grant_access: [], environment_selected: { environment_id: "0", quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
 		dialog_site_request: { show: false, request: {} },
 		dialog_edit_account: { show: false, account: {} },
 		roles: [{ name: "Subscriber", value: "subscriber" },{ name: "Contributor", value: "contributor" },{ name: "Author", value: "author" },{ name: "Editor", value: "editor" },{ name: "Administrator", value: "administrator" }],
@@ -11386,6 +11417,19 @@ new Vue({
 				this.dialog_site.site = this.selected_site
 				this.goToPath( `/sites/${this.dialog_site.site.site_id}` )
 			}
+		},
+		grantAccess() {
+			axios.post( `/wp-json/captaincore/v1/sites/${this.dialog_site.site.site_id}/grant-access`, {
+					account_ids: this.dialog_site.grant_access
+				},{
+					headers: { 'X-WP-Nonce':this.wp_nonce }
+				})
+				.then( response => {
+					this.snackbar.message = "Access granted successfully"
+					this.snackbar.show = true
+					this.dialog_site.grant_access = []
+					this.fetchSiteDetails( this.dialog_site.site.site_id )
+			})
 		},
 		showSite( site ) {
 			this.selected_site = site
