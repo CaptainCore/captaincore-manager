@@ -861,9 +861,10 @@ function captaincore_dns_func( $request ) {
 
 	$domain  = CaptainCore\Remote\Constellix::get( "domains/$remote_id" );
 	$records = CaptainCore\Remote\Constellix::get( "domains/$remote_id/records?perPage=100" );
-	$steps     = ceil( $records->meta->pagination->total / 100 );
+	$steps   = ceil( $records->meta->pagination->total / 100 );
 	for ($i = 1; $i < $steps; $i++) {
-		$additional_records = CaptainCore\Remote\Constellix::get( "domains/$remote_id/records", [ "page" => $i + 1, "perPage" => 100 ] );
+		$page = $i + 1;
+		$additional_records = CaptainCore\Remote\Constellix::get( "domains/$remote_id/records?page=$page&perPage=100" );
 		$records->data = array_merge($records->data, $additional_records->data);
 	}
 

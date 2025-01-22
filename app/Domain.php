@@ -597,10 +597,11 @@ class Domain {
     public static function zone( $domain_id ) {
         $domain      = ( new Domains )->get( $domain_id );
         $domain_info = Remote\Constellix::get( "domains/$domain->remote_id" );
-        $records     = Remote\Constellix::get( "domains/$domain->remote_id/records", [ "perPage" => 100 ] );
+        $records     = Remote\Constellix::get( "domains/$domain->remote_id/records?perPage=100" );
         $steps       = ceil( $records->meta->pagination->total / 100 );
         for ($i = 1; $i < $steps; $i++) {
-            $additional_records = Remote\Constellix::get( "domains/$domain->remote_id/records", [ "page" => $i + 1, "perPage" => 100 ] );
+            $page = $i + 1;
+            $additional_records = Remote\Constellix::get( "domains/$domain->remote_id/records?page=$page&perPage=100" );
             $records->data = array_merge($records->data, $additional_records->data);
         }
         $zone        = new \Badcow\DNS\Zone( $domain->name .'.');
