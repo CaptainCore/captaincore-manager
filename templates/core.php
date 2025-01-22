@@ -2889,7 +2889,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-list>
 								<v-list-item>
 									<v-list-item-content>
-									<v-autocomplete label="Accounts" hide-details outlined small-chips :items="accounts.filter( account => !dialog_site.site.shared_with.find( shared => shared.account_id == account.account_id ) )" item-text="name" item-value="account_id" v-model="dialog_site.grant_access" multiple chips deletable-chips style="max-width: 400px"></v-autocomplete>
+									<v-autocomplete label="Accounts" hide-details outlined small-chips :items="accounts.filter( account => !dialog_site.site.shared_with.find( shared => shared.account_id == account.account_id ) )" item-text="name" item-value="account_id" v-model="dialog_site.grant_access" style="max-width: 400px"></v-autocomplete>
 									</v-list-item-content>
 								</v-list-item>
 								</v-list>
