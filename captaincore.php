@@ -1157,6 +1157,28 @@ function captaincore_site_captures_new_func( $request ) {
 	return $site_id;
 }
 
+function captaincore_site_grant_access_func( $request ) {
+	$site_id             = $request['id'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+	
+	$account_ids         = $request['account_ids'];
+	foreach ( $account_ids as $account_id ) {
+		if ( ! ( new CaptainCore\User )->is_admin() && ! captaincore_verify_permissions_account( $account_id ) ){ 
+			return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+		}
+	}
+		
+	$site                = new CaptainCore\Site( $site_id );
+	$accountsite         = new CaptainCore\AccountSite();
+	$current_account_ids = array_column ( $accountsite->where( [ "site_id" => $site_id ] ), "account_id" );
+	$account_ids         = array_unique(array_merge( $account_ids, $current_account_ids ) );
+	$site->assign_accounts( $account_ids );
+	return $site_id;
+}
+
 function captaincore_site_environment_monitor_update_func( $request ) {
 	$site_id = $request['id'];
 
@@ -1653,6 +1675,14 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/environments', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_environments_get_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/grant-access', [
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_site_grant_access_func',
 			'show_in_index' => false
 		]
 	);
