@@ -77,7 +77,7 @@ class ProviderAction {
                 $update = [
                     "action" => json_encode( $action ),
                 ];
-                if ( $action->attempts >= 3 ) {
+                if ( $action->attempts >= 10 ) {
                     $update["status"] = "failed";
                 }
                 ProviderActions::update( $update, [ "provider_action_id" => $provider_action->provider_action_id ] );
