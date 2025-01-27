@@ -752,7 +752,10 @@ function captaincore_site_update_func( $request ) {
 				get_option( "admin_email" ),
 				$subject,
 				$message,
-				[ 'Content-Type: text/html; charset=UTF-8' ]
+				[
+					'Content-Type: text/html; charset=UTF-8',
+					"Reply-To: {$user->name} <{$user->email}>"
+				],
 			);
 		}
 	}
