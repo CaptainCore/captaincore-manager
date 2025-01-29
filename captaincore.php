@@ -335,7 +335,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			"environment"     => $post->data,
 		];
 
-		$current_site = ( new CaptainCore\Sites )->get( $site_id );
+		$current_site = CaptainCore\Sites::get( $site_id );
 		$details      = json_decode( $current_site->details );
 
 		unset( $details->connection_errors );
@@ -345,8 +345,21 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			$details->subsites = $post->data->subsite_count;
 		}
 
+		if ( ! empty( $post->data->home_url ) ) {
+			$home_url = str_replace( "http://www.", "", $post->data->home_url );
+			$home_url = str_replace( "https://www.", "", $home_url );
+			$home_url = str_replace( "http://", "", $home_url );
+			$home_url = str_replace( "https://", "", $home_url );
+			$home_url = str_replace( "www.", "", $home_url );
+			$current_site->name = $home_url;
+		}
+
 		// Mark Site as updated
-		( new CaptainCore\Sites )->update( [ "updated_at" => $post->data->updated_at, "details" => json_encode( $details ) ], [ "site_id" => $site_id ] );
+		CaptainCore\Sites::update( [ 
+			"name"       => $current_site->name,
+			"updated_at" => $post->data->updated_at,
+			"details"    => json_encode( $details )
+		], [ "site_id" => $site_id ] );
 
 	}
 
