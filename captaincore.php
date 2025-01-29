@@ -3760,8 +3760,10 @@ function captaincore_ajax_action_callback() {
 	}
 
 	if ( $cmd == 'updateDomainAccount' ) {
-		$domain_id = $_POST['domain_id'];
+		$domain_id   = $_POST['domain_id'];
+		$provider_id = $_POST['provider_id'];
 		( new CaptainCore\Domain( $domain_id ) )->assign_accounts( $value );
+		CaptainCore\Domains::update( [ "provider_id" => $provider_id ], [ "domain_id" => $domain_id ] );
 	}
 
 	if ( $cmd == 'newRecipe' ) {
