@@ -345,7 +345,7 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			$details->subsites = $post->data->subsite_count;
 		}
 
-		if ( ! empty( $post->data->home_url ) ) {
+		if ( ! empty( $post->data->home_url ) && $current_environment->environment == "Production" ) {
 			$home_url = str_replace( "http://www.", "", $post->data->home_url );
 			$home_url = str_replace( "https://www.", "", $home_url );
 			$home_url = str_replace( "http://", "", $home_url );
