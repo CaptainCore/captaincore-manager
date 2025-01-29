@@ -12126,6 +12126,9 @@ new Vue({
 				})
 		},
 		fetchDomain( domain ) {
+			if ( this.role == "administrator" ) {
+				this.fetchProviders()
+			}
 			axios.get(
 				'/wp-json/captaincore/v1/domain/' + domain.domain_id, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
