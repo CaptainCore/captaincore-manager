@@ -124,9 +124,11 @@ class Domain {
     }
 
     public function fetch() {
+        $domain = Domains::get( $this->domain_id );
         return [
-            "provider" => self::fetch_remote(),
-            "accounts" => self::accounts(),
+            "provider"    => self::fetch_remote(),
+            "accounts"    => self::accounts(),
+            "provider_id" => $domain->provider_id
         ];
     }
 
@@ -201,10 +203,8 @@ class Domain {
             $tech->state          = $tech->stateProvince;
             $tech->postal_code    = $tech->postalCode;
             $domain   = [
-                "domain"        => $response->name,
-                "nameservers"   => array_map(function ($host) {
-                                        return ["value" => $host];
-                                    }, $response->nameservers->hosts),
+                "domain"        => empty( $response->name ) ? "" : $response->name,
+                "nameservers"   => empty( $response->nameservers->hosts ) ? [] : array_map(function ($host) { return ["value" => $host]; }, $response->nameservers->hosts),
                 "contacts"      => [
                     "owner"   => $owner,
                     "admin"   => $admin,

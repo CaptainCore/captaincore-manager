@@ -6827,6 +6827,17 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						spellcheck="false"
 						flat
 					></v-autocomplete>
+					<v-autocomplete
+						v-model="dialog_domain.provider_id"
+						label="Provider"
+						:items="providers.filter( item => item.provider == 'hoverdotcom' || item.provider == 'spaceship' )"
+						item-text="name"
+						item-value="provider_id"
+						class="mt-5"
+						spellcheck="false"
+						clearable
+						flat
+					></v-autocomplete>
 					</v-card-text>
 					<v-card-actions class="justify-end">
 						<v-btn color="primary" dark @click="dialog.value = false; updateDomainAccount()">
@@ -7363,7 +7374,7 @@ new Vue({
 		dialog_new_provider: { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] },
 		dialog_edit_provider: { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] },
 		dialog_configure_defaults: { show: false, loading: false },
-		dialog_domain: { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], results: [], errors: [], loading: true, saving: false, step: 1 },
+		dialog_domain: { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, ignore_warnings: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider_id: "", provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], results: [], errors: [], loading: true, saving: false, step: 1 },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $user->email; ?>", current_user_email: "<?php echo $user->email; ?>", filter_toggle: true, filter_options: [] },
 		dialog_backup_configurations: { show: false, settings: { mode: "", interval: "", active: true } },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
@@ -11007,7 +11018,8 @@ new Vue({
 				action: 'captaincore_ajax',
 				command: 'updateDomainAccount',
 				value: this.dialog_domain.account_ids,
-				domain_id: this.dialog_domain.domain.domain_id
+				domain_id: this.dialog_domain.domain.domain_id,
+				provider_id: this.dialog_domain.provider_id
 			};
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
@@ -12121,6 +12133,7 @@ new Vue({
 				.then(response => {
 					this.dialog_domain.accounts = response.data.accounts
 					this.dialog_domain.account_ids = response.data.accounts.map( a => a.account_id )
+					this.dialog_domain.provider_id = response.data.provider_id
 					if ( response.data.provider.errors ) {
 						this.dialog_domain.provider =  { contacts: {} }
 						return
@@ -12254,7 +12267,7 @@ new Vue({
 			}
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					this.dialog_domain = { show: false, updating_contacts: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], loading: true, saving: false }
+					this.dialog_domain = { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, ignore_warnings: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider_id: "", provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], results: [], errors: [], loading: true, saving: false, step: 1 }
 					this.domains = this.domains.filter( d => d.domain_id != response.data.domain_id )
 					this.goToPath( '/domains' )
 					this.snackbar.message = response.data.message
