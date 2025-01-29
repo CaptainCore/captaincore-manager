@@ -841,7 +841,7 @@ class Site {
     public function environments() {
         // Fetch relating environments
         $site            = Sites::get( $this->site_id );
-        $site_details    = ( isset( $site->details ) ? json_decode( $environment->details ) : (object) [] );
+        $site_details    = ( isset( $site->details ) ? json_decode( $site->details ) : (object) [] );
         $screenshot_base = $site_details->screenshot_base;
         $environments    = Environments::fetch_environments( $this->site_id );
         $upload_uri      = get_option( 'options_remote_upload_uri' );
