@@ -840,9 +840,11 @@ class Site {
 
     public function environments() {
         // Fetch relating environments
-        $site         = ( new Sites )->get( $this->site_id );
-        $environments = ( new Environments )->fetch_environments( $this->site_id );
-        $upload_uri   = get_option( 'options_remote_upload_uri' );
+        $site            = Sites::get( $this->site_id );
+        $site_details    = ( isset( $site->details ) ? json_decode( $environment->details ) : (object) [] );
+        $screenshot_base = $site_details->screenshot_base;
+        $environments    = Environments::fetch_environments( $this->site_id );
+        $upload_uri      = get_option( 'options_remote_upload_uri' );
        
         foreach ( $environments as $environment ) {
             $environment_name         = strtolower( $environment->environment );
@@ -850,7 +852,7 @@ class Site {
             $environment->captures    = count ( self::captures( $environment_name ) );
             $environment->screenshots = [];
             if ( intval( $environment->screenshot ) ) {
-                $screenshot_url_base       = "{$upload_uri}{$site->site}_{$site->site_id}/$environment_name/screenshots/{$details->screenshot_base}";
+                $screenshot_url_base       = "{$upload_uri}{$site->site}_{$site->site_id}/$environment_name/screenshots/{$screenshot_base}";
                 $environment->screenshots  = [
                     'small' => "{$screenshot_url_base}_thumb-100.jpg",
                     'large' => "{$screenshot_url_base}_thumb-800.jpg"
