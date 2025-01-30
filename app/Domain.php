@@ -330,7 +330,7 @@ class Domain {
             ];
 
             $response = wp_remote_request( "https://www.hover.com/api/control_panel/domains/domain-{$domain->name}", $data );
-            echo json_encode(  $response );
+
             if ( is_wp_error( $response ) ) {
                 return json_decode( $response->get_error_message() );
             } else {
