@@ -1181,6 +1181,10 @@ function captaincore_site_grant_access_func( $request ) {
 	}
 	
 	$account_ids         = $request['account_ids'];
+	if ( is_string( $account_ids ) ) {
+		$account_ids = [ $account_ids ];
+	}
+
 	foreach ( $account_ids as $account_id ) {
 		if ( ! ( new CaptainCore\User )->is_admin() && ! captaincore_verify_permissions_account( $account_id ) ){ 
 			return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
