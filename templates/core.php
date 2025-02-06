@@ -2423,7 +2423,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card>
 				</div>
 				<v-card-text v-show="sites.length > 0">
-				<div style="position: sticky; top: 60px; background: white; padding: 10px 0 20px 0;">
+				<div style="position: sticky; top: 60px; z-index:1; background: white; padding: 10px 0 20px 0;">
 				<v-toolbar dense elevation="0" flat class="mb-7">
 					<v-spacer></v-spacer>
 					<v-btn depressed small @click="filterUnassigned()" v-if="role == 'administrator'">{{ unassignedSiteCount }} unassign sites</v-btn>
