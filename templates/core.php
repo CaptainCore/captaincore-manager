@@ -1844,8 +1844,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								  </v-card-title>
 									<v-card-text>
 										<p>Will apply deactivate message with the following link back to the site owner.</p>
-										<v-text-field label="Business Name" :value="dialog_toggle.business_name"></v-text-field>
-										<v-text-field label="Business Link" :value="dialog_toggle.business_link"></v-text-field>
+										<v-text-field label="Business Name" @change.native="dialog_toggle.business_name = $event.target.value" :value="dialog_toggle.business_name"></v-text-field>
+										<v-text-field label="Business Link" @change.native="dialog_toggle.business_link = $event.target.value" :value="dialog_toggle.business_link"></v-text-field>
 										<v-btn @click="DeactivateSite(dialog_toggle.site_id)">
 											Deactivate Site
 										</v-btn>
@@ -7381,7 +7381,7 @@ new Vue({
 		dialog_backup_configurations: { show: false, settings: { mode: "", interval: "", active: true } },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
 		dialog_launch: { show: false, site: {}, domain: "" },
-		dialog_toggle: { show: false, site_name: "", site_id: "" },
+		dialog_toggle: { show: false, site_name: "", site_id: "", business_name: "", business_link: "" },
 		dialog_mailgun: { show: false, site: {}, response: { items: [], pagination: [] }, loading: false, pagination: {} },
 		dialog_migration: { show: false, sites: [], site_name: "", site_id: "", update_urls: true, backup_url: "" },
 		dialog_modify_plan: { show: false, site: {}, date_selector: false, hosting_plans: [], selected_plan: "", plan: { limits: {}, addons: [], charges: [], credits: [], next_renewal: "" }, customer_name: "", interval: "12" },
@@ -11378,11 +11378,11 @@ new Vue({
 		},
 		toggleSite( site_id ) {
 			site = this.sites.filter( site => site.site_id == site_id )[0]
-			this.dialog_toggle.show = true
-			this.dialog_toggle.site_id = site.site_id
-			this.dialog_toggle.site_name = site.name
 			this.dialog_toggle.business_name = this.configurations.name
 			this.dialog_toggle.business_link = this.configurations.url
+			this.dialog_toggle.site_id = site.site_id
+			this.dialog_toggle.site_name = site.name
+			this.dialog_toggle.show = true
 		},
 		toggleSiteBulk() {
 			sites = this.sites_selected
