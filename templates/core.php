@@ -2935,6 +2935,20 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-row>
 						</v-container>
 					</div>
+					<div v-if="dialog_site.site.domains && dialog_site.site.domains.length > 0">
+					<v-subheader>DNS zones</v-subheader>
+					<v-container>
+						<v-row dense>
+							<v-col v-for="domain in dialog_site.site.domains" :key="domain.domain_id" cols="12" md="4">
+							<v-card :href=`${configurations.path}domains/${domain.domain_id}` @click.prevent="goToPath( '/domains/' + domain.domain_id )" dense outlined rounded="xl">
+								<v-card-title class="text-body-1">
+									<span v-html="domain.name"></span>
+								</v-card-title>
+							</v-card>
+						</v-col>
+						</v-row>
+						</v-container>
+					</div>
 					<div v-show="dialog_site.environment_selected.token != 'basic'">
 					<v-subheader>Site Options</v-subheader>
 					<v-container>
@@ -9396,6 +9410,7 @@ new Vue({
 						this.dialog_site.site[ key ] = response.data.site[ key ]
 					})
 					this.dialog_site.site.account = response.data.account
+					this.dialog_site.site.domains = response.data.domains
 					this.dialog_site.site.shared_with = response.data.shared_with
 				});
 		},

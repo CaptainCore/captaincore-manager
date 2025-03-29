@@ -748,6 +748,22 @@ class Site {
         return $results;
     }
 
+    public function domains() {
+        $site          = ( new Sites )->get( $this->site_id );
+        $domains       = [];
+        $domain_ids   = ( new AccountDomain )->where( [ "account_id" => $site->customer_id ] );
+        $domain_ids   = array_column( $domain_ids, "domain_id" );
+        $domain_ids   = array_filter( array_unique( $domain_ids ) );
+        foreach ( $domain_ids as $domain_id ) {
+            $domain    = ( new Domains )->get( $domain_id );
+            $domains[] = (object) [ 
+                "domain_id" => $domain->domain_id,
+                "name"      => $domain->name,
+            ];
+        }
+        return $domains;
+    }
+
     public function shared_with() {
         $site          = ( new Sites )->get( $this->site_id );
         $accounts      = [];
