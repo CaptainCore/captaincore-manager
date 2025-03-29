@@ -3930,11 +3930,13 @@ function captaincore_ajax_action_callback() {
 	if ( $cmd == 'fetch-site-details' ) {
 		$site        = new CaptainCore\Site( $post_id );
 		$account     = $site->account();
+		$domains     = $site->domains();
 		$shared_with = $site->shared_with();
 		$site        = $site->fetch();
 		echo json_encode( [
 			"site"        => $site,
 			"account"     => $account,
+			"domains"     => $domains,
 			"shared_with" => $shared_with,
 		] );
 	}
