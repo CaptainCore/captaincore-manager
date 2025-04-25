@@ -6,10 +6,25 @@ class Configurations {
 
     protected $configurations = [];
 
-    public function get() {
+    public static function get() {
         $configurations = json_decode( get_site_option( 'captaincore_configurations' ) );
         if ( empty( $configurations ) ) {
             $configurations = (object) [];
+        }
+        if ( defined( 'CAPTAINCORE_CUSTOM_DOMAIN' ) ) {
+            $account_portals = ( new AccountPortals )->where( [ 'domain' => CAPTAINCORE_CUSTOM_DOMAIN ] );
+            foreach( $account_portals as $account_portal ) {
+                $portal_config                    = json_decode( $account_portal->configurations );
+                $configurations->path             = "/";
+                $configurations->name             = $portal_config->name;
+                $configurations->colors           = $portal_config->colors;
+                $configurations->logo_only        = $portal_config->logo_only == "true" ? true : false;
+                $configurations->logo             = $portal_config->logo;
+                $configurations->logo_width       = $portal_config->logo_width;
+                $configurations->dns_introduction = $portal_config->dns_introduction;
+                $configurations->dns_nameservers  = $portal_config->dns_nameservers;
+                $configurations->url              = $portal_config->url;
+            }
         }
         if ( empty ( $configurations->colors ) ) {
 			$configurations->colors = [
@@ -30,6 +45,9 @@ class Configurations {
         }
         if ( ! isset( $configurations->remote_upload_uri ) ) {
 			$configurations->remote_upload_uri = get_option( 'options_remote_upload_uri' );
+        }
+        if ( ! isset( $configurations->logo_only ) ) {
+			$configurations->logo_only = false;
         }
         if ( empty( $configurations->logo ) ) {
 			$configurations->logo = "/wp-content/plugins/captaincore-manager/public/logo.webp";
@@ -52,13 +70,16 @@ class Configurations {
         if ( ! isset( $configurations->usage_pricing ) ) {
 			$configurations->usage_pricing = (object) [ "sites" => [ "quantity" => "1", "cost" => "12.5" ], "storage" => [ "quantity" => "10", "cost" => "10" ], "traffic" => [ "quantity" => "1000000", "cost" => "100" ] ];
         }
+        if ( ! isset( $configurations->maintenance_pricing ) ) {
+			$configurations->maintenance_pricing = (object) [ "interval" => "1", "cost" => "2" ];
+        }
         if ( ! isset( $configurations->intercom_embed_id ) ) {
 			$configurations->intercom_embed_id = "";
         }
         if ( ! isset( $configurations->intercom_secret_key ) ) {
 			$configurations->intercom_secret_key = "";
         }
-        if ( ! empty( $configurations->dns_introduction ) ) {
+        if ( isset( $configurations->dns_introduction ) ) {
             $Parsedown = new \Parsedown();
 			$configurations->dns_introduction_html = $Parsedown->text( $configurations->dns_introduction );
         }
@@ -70,10 +91,17 @@ class Configurations {
         return $configurations;
     }
 
-    public function colors() {
+    public static function colors() {
         $configurations = json_decode( get_site_option( 'captaincore_configurations' ) );
         if ( empty( $configurations ) ) {
             $configurations = (object) [];
+        }
+        if ( defined( 'CAPTAINCORE_CUSTOM_DOMAIN' ) ) {
+            $account_portals = ( new AccountPortals )->where( [ 'domain' => CAPTAINCORE_CUSTOM_DOMAIN ] );
+            foreach( $account_portals as $account_portal ) {
+                $portal_config = json_decode( $account_portal->configurations );
+                return $portal_config->colors;
+            }
         }
         if ( empty ( $configurations->colors ) ) {
             $configurations->colors = [
@@ -143,7 +171,7 @@ class Configurations {
         return $response["body"];
     }
 
-    public function products() {
+    public static function products() {
         $products = [];
         $products_IDs = new \WP_Query( [
             'post_type'      => 'product',

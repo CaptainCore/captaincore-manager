@@ -5,7 +5,7 @@ if ( ! function_exists('is_plugin_active') ) {
 ?><!DOCTYPE html>
 <html>
 <head>
-  <title><?php echo ( ! empty( get_option( 'options_business_name' ) ) ? get_option( 'options_business_name' ) . ' - ' : "" ); ?>Account</title>
+  <title><?php echo CaptainCore\Configurations::get()->name; ?> - Account</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
   <meta charset="utf-8">
 <?php
@@ -41,11 +41,11 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 	<v-app :style="{backgroundColor: $vuetify.theme.themes.light.accent}">
 	  <v-app-bar color="accent" dense app flat class="pa-0" height="60px">
 		<v-list flat color="accent" :class="{ grow: route != 'login' && route != 'welcome' && route != 'connect' }">
-		 	<v-list-item :href="configurations.path" @click.prevent="goToPath( '/' )" flat class="not-active pl-0">
-			 	<v-img :src="configurations.logo" contain :max-width="configurations.logo_width == '' ? 32 : configurations.logo_width" v-if="configurations.logo" class="mr-4"></v-img>
-			<span v-show="! configurations.logo_only">{{ configurations.name }}</span>
-			</v-list-item>
-			</v-list>
+		<v-list-item :href="configurations.path" @click.prevent="goToPath( '/' )" flat class="not-active pl-0">
+			<v-img :src="configurations.logo" contain :max-width="configurations.logo_width == '' ? 32 : configurations.logo_width" v-if="configurations.logo" class="mr-4"></v-img>
+			<span v-show="configurations.logo_only != false">{{ configurations.name }}</span>
+		</v-list-item>
+		</v-list>
 		<v-spacer></v-spacer>
 		<template v-slot:extension v-if="$vuetify.breakpoint.smAndDown && ( route != 'login' && route != 'welcome' && route != 'connect' )">
 		<v-bottom-navigation v-model="selected_nav" color="primary" class="elevation-0" background-color="transparent" height="37px">
@@ -86,13 +86,13 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		</v-bottom-navigation>
 		<div class="flex" style="opacity:0;"><textarea id="clipboard" style="height:1px;width:10px;display:flex;cursor:default"></textarea></div>
 		<v-menu v-model="notifications" :close-on-content-click="false" content-class="elevation-0 v-sheet--outlined" offset-y rounded="xl">
-			<template v-slot:activator="{ on, attrs }">
-				<v-btn icon v-bind="attrs" v-on="on" v-show="route != 'login'">
-				<v-badge dot color="error" :value="provider_actions.length">
-					<v-icon>mdi-bell-ring</v-icon>
-				</v-badge>
-				</v-btn>
-			</template>
+		<template v-slot:activator="{ on, attrs }">
+			<v-btn icon v-bind="attrs" v-on="on" v-show="route != 'login'">
+			<v-badge dot color="error" :value="provider_actions.length">
+				<v-icon>mdi-bell-ring</v-icon>
+			</v-badge>
+			</v-btn>
+		</template>
 		<v-card width="600">
 			<v-list>
 			<v-list-item>
@@ -116,9 +116,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-list-item>
 			</v-list>
 		</v-card>
-		</v-menu>
+	  </v-menu>
 	  <v-menu offset-y bottom dense allow-overflow content-class="elevation-0 v-sheet--outlined" rounded="xl">
-      <template v-slot:activator="{ on }">
+		<template v-slot:activator="{ on }">
 		<v-list color="transparent">
 		<v-list-item link v-on="on" color="primary">
 			<v-list-item-avatar rounded class="mr-0">
@@ -150,8 +150,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
             <v-list-item-title>Health</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-		<v-subheader v-show="role == 'administrator'">Administrator</v-subheader>
-		<v-list-item link :href=`${configurations.path}configurations` @click.prevent="goToPath( '/configurations' )" v-show="role == 'administrator'">
+		<v-subheader v-show="role == 'administrator' || role == 'owner'">Administrator</v-subheader>
+		<v-list-item link :href=`${configurations.path}configurations` @click.prevent="goToPath( '/configurations' )" v-show="role == 'administrator' || role == 'owner'">
           <v-list-item-icon>
             <v-icon>mdi-cogs</v-icon>
           </v-list-item-icon>
@@ -159,7 +159,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
             <v-list-item-title>Configurations</v-list-item-title>
           </v-list-item-content>
 		</v-list-item>
-		<v-list-item link :href=`${configurations.path}handbook` @click.prevent="goToPath( '/handbook' )" v-show="role == 'administrator'">
+		<v-list-item link :href=`${configurations.path}handbook` @click.prevent="goToPath( '/handbook' )" v-show="role == 'administrator' || role == 'owner'">
           <v-list-item-icon>
             <v-icon>mdi-map</v-icon>
           </v-list-item-icon>
@@ -167,7 +167,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
             <v-list-item-title>Handbook</v-list-item-title>
           </v-list-item-content>
 		</v-list-item>
-		<v-list-item link :href=`${configurations.path}defaults` @click.prevent="goToPath( '/defaults' )" v-show="role == 'administrator'">
+		<v-list-item link :href=`${configurations.path}defaults` @click.prevent="goToPath( '/defaults' )" v-show="role == 'administrator' || role == 'owner'">
           <v-list-item-icon>
             <v-icon>mdi-application</v-icon>
           </v-list-item-icon>
@@ -175,7 +175,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
             <v-list-item-title>Site Defaults</v-list-item-title>
           </v-list-item-content>
 		</v-list-item>
-		<v-list-item link :href=`${configurations.path}keys` @click.prevent="goToPath( '/keys' )"  v-show="role == 'administrator'">
+		<v-list-item link :href=`${configurations.path}keys` @click.prevent="goToPath( '/keys' )">
           <v-list-item-icon>
             <v-icon>mdi-key</v-icon>
           </v-list-item-icon>
@@ -184,7 +184,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
           </v-list-item-content>
 		</v-list-item>
 		</v-list-item-group>
-		<v-list-item link :href=`${configurations.path}subscriptions` @click.prevent="goToPath( '/subscriptions' )" v-show="role == 'administrator'">
+		<v-list-item link :href=`${configurations.path}subscriptions` @click.prevent="goToPath( '/subscriptions' )" v-show="role == 'administrator' && configurations.mode == 'hosting'">
           <v-list-item-icon>
             <v-icon>mdi-repeat</v-icon>
           </v-list-item-icon>
@@ -192,7 +192,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
             <v-list-item-title>Subscriptions</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-		<v-list-item link :href=`${configurations.path}users` @click.prevent="goToPath( '/users' )" v-show="role == 'administrator'">
+		<v-list-item link :href=`${configurations.path}users` @click.prevent="goToPath( '/users' )" v-show="role == 'administrator' || role == 'owner'">
           <v-list-item-icon>
             <v-icon>mdi-account-multiple</v-icon>
           </v-list-item-icon>
@@ -226,7 +226,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
           </v-list-item-content>
         </v-list-item>
       </v-list>
-    </v-menu>
+      </v-menu>
       </template>
       </v-app-bar>
 	  <v-main>
@@ -605,7 +605,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-flex xs12 pa-2>
 					<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="new_recipe.content" @change.native="new_recipe.content = $event.target.value" spellcheck="false"></v-textarea>
 				</v-flex>
-				<v-flex xs12 pa-2 v-if="role == 'administrator'">
+				<v-flex xs12 pa-2 v-if="role == 'administrator' || role == 'owner'">
 					<v-switch label="Public" v-model="new_recipe.public" persistent-hint hint="Public by default. Turning off will make the recipe only viewable and useable by you." :false-value="0" :true-value="1"></v-switch>
 				</v-flex>
 				<v-flex xs12 text-right pa-0 ma-0>
@@ -795,7 +795,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-card-text>
 		</v-card>
 	</v-dialog>
-	  <v-dialog v-model="new_process.show" max-width="800px" v-if="role == 'administrator'" persistent scrollable>
+	  <v-dialog v-model="new_process.show" max-width="800px" v-if="role == 'administrator' || role == 'owner'" persistent scrollable>
 		<v-card tile>
 			<v-toolbar flat>
 				<v-btn icon @click.native="new_process.show = false">
@@ -5418,25 +5418,28 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-toolbar>
 				<v-tabs background-color="primary" dark dense v-model="configurations_step">
 					<v-tab>Branding</v-tab>
-					<!--<v-tab>Scheduled Tasks</v-tab>-->
+					<v-tab v-show="role == 'administrator'">Scheduled Tasks</v-tab>
 					<v-tab>Providers</v-tab>
-					<v-tab>Billing</v-tab>
+					<v-tab v-show="role == 'administrator'">Billing</v-tab>
 				</v-tabs>
 				<v-tabs-items v-model="configurations_step">
 					<v-tab-item key="0" :transition="false" :reverse-transition="false">
 						<v-card>
 						<v-card-text>
 							<v-row>
-								<v-col :md="2">
-									<v-text-field v-model="configurations.name" label="Name"></v-text-field>
-								</v-col>
 								<v-col :md="4">
+									<v-text-field v-model="configurations.name" label="Name"></v-text-field>
+									<v-switch v-model="configurations.logo_only" label="Show only logo"></v-switch>
+								</v-col>
+								<v-col :md="8">
 									<v-text-field v-model="configurations.url" label="URL"></v-text-field>
 								</v-col>
-								<v-col :md="4">
+							</v-row>
+							<v-row>
+								<v-col :md="8">
 									<v-text-field v-model="configurations.logo" label="Logo URL"></v-text-field>
 								</v-col>
-								<v-col :md="2">
+								<v-col :md="4">
 									<v-text-field v-model="configurations.logo_width" label="Logo Width"></v-text-field>
 								</v-col>
 							</v-row>
@@ -5570,7 +5573,77 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-card-text>
 						</v-card>
 					</v-tab-item>
-					
+					<v-tab-item key="1" :transition="false" :reverse-transition="false">
+					<v-card>
+						<v-card-text>
+						<span class="body-2">Scheduled Tasks</span>
+						<v-row>
+						<v-col>
+						<v-data-table
+							:items="configurations.scheduled_tasks"
+							:items-per-page="-1"
+							class="elevation-0"
+							hide-default-header
+							hide-default-footer
+						>
+						<template v-slot:body="{ items }">
+							<thead class="v-data-table-header">
+								<tr>
+									<th width="20px"></th>
+									<th width="150px">Target</th>
+									<th width="150px">Command</th>
+									<th>Arguments</th>
+									<th width="150px">Repeat</th>
+									<th width="150px">Repeat Quantity</th>
+									<th width="225px">Next Run</th>
+									<th></th>
+								</tr>
+							</thead>
+							<tbody>
+							<tr v-for="(item, index) in items" :key="item.task_id">
+								<td><v-icon>mdi-repeat</v-icon></td>
+								<td><v-select :items="['all', 'production', 'staging', 'custom']" label="" v-model="item.target" hide-details></v-select></td>
+								<td><v-select :items="['backup', 'monitor', 'quicksave', 'scan-errors', 'ssh', 'update']" label="" v-model="item.command" hide-details></v-select></td>
+								<td><v-text-field label="" v-model="item.arguments" hide-details></v-text-field></td>
+								<td><v-select :items="['Hourly', 'Daily', 'Weekly', 'Quarterly', 'Biannually', 'Yearly']" label="" v-model="item.repeat_interval" hide-details></v-select></td>
+								<td><v-text-field label="" v-model="item.repeat_quantity" type="number" hint="Example: 2 or 3 times" persistent-hint></v-text-field></td>
+								<td>
+									<v-menu
+										v-model="item.date_selector"
+										:close-on-content-click="false"
+										:nudge-right="40"
+										transition="scale-transition"
+										offset-y
+										min-width="290px"
+									>
+										<template v-slot:activator="{ on, attrs }">
+										<v-text-field
+											v-model="item.next_run"
+											:value="item.next_run"
+											label=""
+											prepend-icon="mdi-calendar"
+											v-bind="attrs"
+											v-on="on"
+										></v-text-field>
+										</template>
+										<v-date-picker @input="keepTimestampNextRun( $event, item ); item.date_selector = false"></v-date-picker>
+									</v-menu>
+								</td>
+								<td><v-btn small text icon @click="configurations.scheduled_tasks.splice( index, 1 )"><v-icon>mdi-delete</v-icon></v-btn></td>
+							</tr>
+							<tr>
+								<td colspan="8">
+									<v-row><v-col class="pa-5 pl-12"><v-btn class="pa-3" @click="configurations.scheduled_tasks.push( { repeat_interval:'Daily', repeat_at:'9pm',command:'backup',target:'all' })">New scheduled task</v-btn></v-col></v-row>
+								</td>
+							</tr>
+							</tbody>
+						</template>
+						</v-data-table>
+						</v-col>
+						</v-row>
+						</v-card-text>
+					</v-card>
+					</v-tab-item>
 					<v-tab-item key="2" :transition="false" :reverse-transition="false">
 					<v-toolbar light flat>
 						<v-toolbar-title>Listing {{ providers.length }} providers</v-toolbar-title>
@@ -5600,19 +5673,19 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<span class="body-2">WooCommerce Products</span>
 					<v-row class="mb-7">
 						<v-col>
-							<v-select v-model="configurations.woocommerce.hosting_plan" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Hosting Plan" hide-details></v-select>
+							<v-select v-model="configurations.woocommerce.hosting_plan" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-text="name" label="Hosting Plan" hide-details></v-select>
 						</v-col>
 						<v-col>
-							<v-select v-model="configurations.woocommerce.addons" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Addons" hide-details></v-select>
+							<v-select v-model="configurations.woocommerce.addons" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-text="name" label="Addons" hide-details></v-select>
 						</v-col>
 						<v-col>
-							<v-select v-model="configurations.woocommerce.charges" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Charges" hide-details></v-select>
+							<v-select v-model="configurations.woocommerce.charges" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-text="name" label="Charges" hide-details></v-select>
 						</v-col>
 						<v-col>
-							<v-select v-model="configurations.woocommerce.credits" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Credits" hide-details></v-select>
+							<v-select v-model="configurations.woocommerce.credits" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-text="name" label="Credits" hide-details></v-select>
 						</v-col>
 						<v-col>
-							<v-select v-model="configurations.woocommerce.usage" :items='<?php echo json_encode( ( new CaptainCore\Configurations )->products() ); ?>' item-value="id" item-text="name" label="Usage" hide-details></v-select>
+							<v-select v-model="configurations.woocommerce.usage" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-text="name" label="Usage" hide-details></v-select>
 						</v-col>
 					</v-row>
 					<span class="body-2">Hosting Plans</span>
@@ -5658,6 +5731,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-col style="max-width:200px"><v-text-field label="Traffic Quantity (pageviews)" v-model="configurations.usage_pricing.traffic.quantity"></v-text-field></v-col>
 						<v-col style="max-width:150px"><v-text-field label="Traffic Cost" v-model="configurations.usage_pricing.traffic.cost"></v-text-field></v-col>
 						<v-col style="max-width:150px"><v-text-field label="Traffic Interval" v-model="configurations.usage_pricing.traffic.interval" hint="# of months" persistent-hint></v-text-fiel></v-col>
+					</v-row>
+					<div class="seperator mt-5"></div>
+					<span class="body-2">Maintenance Pricing</span>
+					<v-row>
+						<v-col style="max-width:150px"><v-text-field label="Cost Per Site" v-model="configurations.maintenance_pricing.cost"></v-text-field></v-col>
+						<v-col style="max-width:150px"><v-text-field label="Interval" v-model="configurations.maintenance_pricing.interval" hint="# of months" persistent-hint></v-text-fiel></v-col>
 					</v-row>
 					</v-card>
 					</v-card-text>
@@ -7314,7 +7393,7 @@ wc_countries = []
 wc_states = []
 stripe = ""
 <?php } ?>
-(function(){var w=window;var ic=w.Intercom;if(typeof ic==="function"){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments);};i.q=[];i.c=function(args){i.q.push(args);};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/<?= ( new CaptainCore\Configurations )->get()->intercom_embed_id; ?>';var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);};if(document.readyState==='complete'){l();}else if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();			
+(function(){var w=window;var ic=w.Intercom;if(typeof ic==="function"){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments);};i.q=[];i.c=function(args){i.q.push(args);};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/<?= CaptainCore\Configurations::get()->intercom_embed_id; ?>';var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);};if(document.readyState==='complete'){l();}else if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();			
 ajaxurl = "/wp-admin/admin-ajax.php"
 Vue.component('file-upload', VueUploadComponent)
 new Vue({
@@ -7322,7 +7401,7 @@ new Vue({
 	vuetify: new Vuetify({
 		theme: {
 			themes: {
-				light: <?php echo json_encode( ( new CaptainCore\Configurations )->colors() ); ?>,
+				light: <?php echo json_encode( CaptainCore\Configurations::colors() ); ?>,
 			},
 		},
 	}),
