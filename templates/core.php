@@ -1473,6 +1473,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							:items="processes"
 							item-text="name"
 							item-value="process_id"
+							v-show="role == 'administrator'"
 						>
 						<template v-slot:item="data">
 							<template v-if="typeof data.item !== 'object'">
@@ -2313,7 +2314,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 					<v-card-actions>
 					<v-spacer></v-spacer>
-					<v-btn color="primary" @click="newKinstaSite" :disabled="dialog_new_site_kinsta.verifing || ! dialog_new_site_kinsta.connection_verified">Create Site</v-btn>
+						<v-btn color="primary" @click="newKinstaSite" :disabled="dialog_new_site_kinsta.verifing || ! dialog_new_site_kinsta.connection_verified">Create Site</v-btn>
 					</v-card-actions>
 				</v-card>
 				</v-dialog>
@@ -2593,7 +2594,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-tab-item value="tab-Site-Management" :transition="false" :reverse-transition="false">
 						<div>
 						<v-layout wrap class="mb-2">
-							<v-flex sx12 sm4 px-2>
+						<v-flex sx12 sm4 px-2>
 							<v-layout>
 							<v-flex style="width:180px;">
 								<v-select
@@ -2616,37 +2617,37 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								</v-tooltip>
 									</v-flex>
 									</v-layout>
-									</v-flex>
-									<v-flex xs12 sm8>
+								</v-flex>
+								<v-flex xs12 sm8>
 								<v-tabs v-model="dialog_site.site.tabs_management" icons-and-text right show-arrows class="pr-3">
-										<v-tab key="Info" href="#tab-Info">
-											Info <v-icon>mdi-text-box-multiple</v-icon>
-										</v-tab>
-           							 	<v-tab key="Stats" href="#tab-Stats" @click="fetchStats()">
-											Stats <v-icon>mdi-chart-bar</v-icon>
-										</v-tab>
+									<v-tab key="Info" href="#tab-Info">
+										Info <v-icon>mdi-text-box-multiple</v-icon>
+									</v-tab>
+									<v-tab key="Stats" href="#tab-Stats" @click="fetchStats()">
+										Stats <v-icon>mdi-chart-bar</v-icon>
+									</v-tab>
 									<v-tab key="Logs" href="#tab-Logs">
 										Logs <v-icon>mdi-file-document-multiple</v-icon>
 									</v-tab>
-										<v-tab key="Plugins" href="#tab-Addons" v-show="dialog_site.environment_selected.token != 'basic'">
-											Addons <v-icon>mdi-power-plug</v-icon>
-										</v-tab>
-										<v-tab key="Users" href="#tab-Users" @click="fetchUsers()" v-show="dialog_site.environment_selected.token != 'basic'">
-											Users <v-icon>mdi-account-multiple</v-icon>
-										</v-tab>
-										<v-tab key="Updates" href="#tab-Updates" @click="viewUpdateLogs( dialog_site.site.site_id )" v-show="dialog_site.environment_selected.token != 'basic'">
-											Updates <v-icon>mdi-book-open</v-icon>
-										</v-tab>
-										<v-tab key="Scripts" href="#tab-Scripts">
-											Scripts <v-icon>mdi-code-tags</v-icon>
-										</v-tab>
-										<v-tab key="Backups" href="#tab-Backups" @click="dialog_site.backup_step = 1">
-											Backups <v-icon>mdi-update</v-icon>
-										</v-tab>
-									</v-tabs>
-									</v-flex>
-									</v-layout>
-								</div>
+									<v-tab key="Plugins" href="#tab-Addons" v-show="dialog_site.environment_selected.token != 'basic'">
+										Addons <v-icon>mdi-power-plug</v-icon>
+									</v-tab>
+									<v-tab key="Users" href="#tab-Users" @click="fetchUsers()" v-show="dialog_site.environment_selected.token != 'basic'">
+										Users <v-icon>mdi-account-multiple</v-icon>
+									</v-tab>
+									<v-tab key="Updates" href="#tab-Updates" @click="viewUpdateLogs( dialog_site.site.site_id )" v-show="dialog_site.environment_selected.token != 'basic'">
+										Updates <v-icon>mdi-book-open</v-icon>
+									</v-tab>
+									<v-tab key="Scripts" href="#tab-Scripts">
+										Scripts <v-icon>mdi-code-tags</v-icon>
+									</v-tab>
+									<v-tab key="Backups" href="#tab-Backups" @click="dialog_site.backup_step = 1">
+										Backups <v-icon>mdi-update</v-icon>
+									</v-tab>
+								</v-tabs>
+							</v-flex>
+							</v-layout>
+						</div>
 				<v-dialog v-model="dialog_site.environment_selected.view_server_logs" fullscreen scrollable>
 					<v-card flat tile>
 						<v-toolbar dark color="primary" class="shrink">
@@ -2683,7 +2684,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
                             		<a @click="showCaptures( dialog_site.site.site_id )">
 										<v-img :src="dialog_site.environment_selected.screenshots.large" max-width="400" aspect-ratio="1.6" class="elevation-5" v-if="typeof dialog_site.environment_selected.screenshots != 'undefined' && dialog_site.environment_selected.screenshots.large" style="margin:auto;" lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp"></v-img>
 										<v-img max-width="400" aspect-ratio="1.6" class="elevation-5" v-else style="margin:auto;" src="/wp-content/plugins/captaincore-manager/public/dummy.webp"></v-img>
-								</a>
+									</a>
 								</div>
 								<v-list dense style="padding:0px;max-width:350px;margin: auto;" class="mt-6">
 									<v-list-item :href="dialog_site.environment_selected.link" target="_blank" dense>
@@ -2947,7 +2948,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-card>
 						</v-col>
 						</v-row>
-						</v-container>
+					</v-container>
 					</div>
 					<div v-show="dialog_site.environment_selected.token != 'basic'">
 					<v-subheader>Site Options</v-subheader>
@@ -2967,7 +2968,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-toolbar color="primary" dark>
 								<v-btn icon @click="dialog.value = false">
 									<v-icon>mdi-close</v-icon>
-					</v-btn>
+								</v-btn>
 								Are you sure you wish to delete this site?
 								<v-spacer></v-spacer>
 							</v-toolbar>
@@ -3194,7 +3195,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</div>
 						</template>
 						<template v-slot:item.actions="{ item }" class="text-center px-0">
-                    <v-btn icon small class="mx-0" @click="deleteTheme(item.name, dialog_site.site.site_id)">
+							<v-btn icon small class="mx-0" @click="deleteTheme(item.name, dialog_site.site.site_id)">
 								<v-icon color="pink">mdi-delete</v-icon>
 							</v-btn>
 						</template>
@@ -3253,16 +3254,16 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-spacer></v-spacer>
 					<v-toolbar-items style="margin-right:-16px;">
 						<v-col>
-					<v-text-field
-						v-model="users_search"
-						ref="users_search"
-						append-icon="mdi-magnify"
-						label="Search"
+						<v-text-field
+							v-model="users_search"
+							ref="users_search"
+							append-icon="mdi-magnify"
+							label="Search"
 							dense
-						hide-details
+							hide-details
 							outlined
-					></v-text-field>
-                <v-btn text @click="bulkEdit(dialog_site.site.site_id,'users')" v-if="dialog_site.environment_selected.users_selected.length != 0">Bulk Edit {{ dialog_site.environment_selected.users_selected.length }} users</v-btn>
+						></v-text-field>
+                		<v-btn text @click="bulkEdit(dialog_site.site.site_id,'users')" v-if="dialog_site.environment_selected.users_selected.length != 0">Bulk Edit {{ dialog_site.environment_selected.users_selected.length }} users</v-btn>
 						</v-col>
 					</v-toolbar-items>
 				</v-toolbar>
@@ -3299,8 +3300,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar-title>Update Logs</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-                <v-btn text @click="runUpdate(dialog_site.site.site_id)">Manual update <v-icon dark>mdi-sync</v-icon></v-btn>
-                <v-btn text @click="updateSettings(dialog_site.site.site_id)">Update Settings <v-icon dark>mdi-settings</v-icon></v-btn>
+						<v-btn text @click="runUpdate(dialog_site.site.site_id)">Manual update <v-icon dark>mdi-sync</v-icon></v-btn>
+						<v-btn text @click="updateSettings(dialog_site.site.site_id)">Update Settings <v-icon dark>mdi-settings</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card flat>
@@ -3348,14 +3349,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								item-key="name"
 								class="quicksave-table mb-7"
 							>
-						    <template v-slot:body="{ items }">
+							<template v-slot:body="{ items }">
 							<tbody>
 							<tr class="red lighten-4" v-for="theme in item.themes_deleted">
 								<td class="strikethrough">{{ theme.title || theme.name }}</td>
 								<td class="strikethrough">{{ theme.version }}</td>
 								<td class="strikethrough">{{ theme.status }}</td>
 								<td><v-btn depressed small @click="RollbackUpdate(item.hash_before, 'theme', theme.name, item.started_at)">Rollback</v-btn></td>
-							</tr>
+								</tr>
 							<tr v-for="theme in items" v-bind:class="{ 'green lighten-5': theme.changed || theme.changed_version || theme.changed_status }">
 								<td>
 									{{ theme.title || theme.name }}
@@ -3442,8 +3443,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</v-dialog>
 								</td>
 							</tr>
-						    </template>
-						  </v-data-table>
+							</template>
+							</v-data-table>
 							<v-data-table
 								:headers='[{"text":"Plugin","value":"plugin"},{"text":"Version","value":"version","width":"150px"},{"text":"Status","value":"status","width":"150px"},{"text":"","value":"rollback","width":"150px"}]'
 								:items="item.plugins"
@@ -3588,12 +3589,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-data-table>
 				</v-card>
 				<v-card flat>
-					<v-card-title>
+					<v-card-text>
 					<v-row>
 					<v-col cols="12" md="8">
 					<v-subheader id="script_site" class="pl-0">Custom bash script or WP-CLI commands</v-subheader>
 					<v-textarea auto-grow outlined label="" hide-details :value="script.code" @change.native="script.code = $event.target.value" spellcheck="false" class="code"></v-textarea>
-                	<v-btn color="primary" dark @click="runCustomCode(dialog_site.site.site_id)" class="mt-3 mr-3">Run Code</v-btn> 
+					<v-btn color="primary" dark @click="runCustomCode(dialog_site.site.site_id)" class="mt-3 mr-3">Run Code</v-btn> 
 					<v-menu v-model="script.menu" :close-on-content-click="false" :nudge-width="200" offset-x>
 					<template v-slot:activator="{ on, attrs }">
 						<v-btn v-bind="attrs" v-on="on" outlined text class="mt-3">Schedule later</v-btn>
@@ -6744,7 +6745,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 					</v-tab-item>
 					</v-tabs-items>
-					</v-container>
+				</v-container>
 				</v-sheet>
 			</v-card>
 			<v-card v-if="route == 'users'" outlined rounded="xl">
@@ -7364,7 +7365,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <script src="<?php echo $plugin_url; ?>public/js/axios.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/vuetify.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/vue-upload-component.js"></script>
-<script src="<?php echo $plugin_url; ?>public/js/stripe.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/numeral.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/frappe-charts.min.js"></script>
 <?php } else { ?>
@@ -7373,12 +7373,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <script src="https://cdn.jsdelivr.net/npm/axios@0.19.0/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vuetify@2.7.1/dist/vuetify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@2.8.20/dist/vue-upload-component.js"></script>
-<script src="https://js.stripe.com/v3/"></script>
 <script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.1/dist/frappe-charts.min.umd.js"></script>
 <?php } ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-log.min.js"></script>
+<script src="https://js.stripe.com/v3/"></script>
 <script src="<?php echo $plugin_url; ?>public/js/kjua.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/moment.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/core.js"></script>
@@ -8058,9 +8058,10 @@ new Vue({
 		this.checkRequestedSites()
 		this.fetchAccounts()
 		this.fetchRecipes()
-		if ( this.role == 'administrator' ) {
+		this.fetchProviderActions()
+		if ( this.role == 'administrator' || this.role == 'owner' ) {
+			this.fetchAccountPortals()
 			this.fetchProcesses()
-			this.fetchProviderActions()
 		}
 		path = window.location.pathname.replace( this.configurations.path, "/" )
 		this.updateRoute( path )
@@ -9056,7 +9057,7 @@ new Vue({
 			if ( this.role == 'administrator' ) {
 				this.dialog_new_site_kinsta.verifing = true
 				this.dialog_new_site_kinsta.connection_verified = false
-			this.verifyKinstaConnection()
+				this.verifyKinstaConnection()
 			}
 		},
 		connectKinsta() {
@@ -9637,7 +9638,7 @@ new Vue({
 				});
 		},
 		fetchKeys() {
-			if ( this.role != 'administrator' ) {
+			if ( this.role != 'administrator' ||  this.role != 'owner' ) {
 				return
 			}
 			axios.get(
@@ -9651,7 +9652,7 @@ new Vue({
 				});
 		},
 		fetchDefaults() {
-			if ( this.role != 'administrator' ) {
+			if ( this.role != 'administrator' || this.role != 'owner' ) {
 				return
 			}
 			axios.get(
@@ -9867,7 +9868,7 @@ new Vue({
 		},
 		fetchSites() {
 			this.sites_loading = false
-			if ( this.role == 'administrator' && this.keys.length == 0 ) {
+			if (( this.role == 'administrator' || this.role == 'owner' ) && this.keys.length == 0 ) {
 				axios.get(
 				'/wp-json/captaincore/v1/keys', {
 					headers: {'X-WP-Nonce':this.wp_nonce}
@@ -11579,9 +11580,9 @@ new Vue({
 			axios.get( `/wp-json/captaincore/v1/sites/${site.site_id}/environments`, {
 				headers: { 'X-WP-Nonce':this.wp_nonce }
 			})
-				.then( response => {
-					this.copyText( response.data[0].ssh )
-				});
+			.then( response => {
+				this.copyText( response.data[0].ssh )
+			});
 		},
 		fetchPHPmyadmin(){
 			site_id = this.dialog_site.site.site_id
@@ -12562,9 +12563,7 @@ new Vue({
 
 				if ( result.record_status == "remove-record" && result.message == 'Record deleted' ) {
 					record_to_remove = this.dialog_domain.records.filter( record => record.id == result.record_id );
-					console.log( "record to remove " + JSON.stringify( record_to_remove ) )
 					record_name = record_to_remove[0].name
-					console.log( "name " + record_name )
 					this.dialog_domain.records = this.dialog_domain.records.filter( record => record.id != result.record_id );
 					if ( record_name == "" ) {
 						result.success = `<code>${result.record_type.toUpperCase()}</code> record <code>@</code> deleted successfully`;
