@@ -756,6 +756,9 @@ class Site {
         $domain_ids   = array_filter( array_unique( $domain_ids ) );
         foreach ( $domain_ids as $domain_id ) {
             $domain    = ( new Domains )->get( $domain_id );
+            if ( empty( $domain->name ) || empty( $domain->domain_id ) ) {
+                continue;
+            }
             $domains[] = (object) [ 
                 "domain_id" => $domain->domain_id,
                 "name"      => $domain->name,
