@@ -894,6 +894,138 @@ function captaincore_dns_func( $request ) {
 	];
 }
 
+/**
+ * Formats DNS record data for the Constellix API.
+ *
+ * @param string $record_type   The type of the DNS record (A, AAAA, CNAME, etc.).
+ * @param string $record_name   The name of the DNS record.
+ * @param mixed  $record_value  The value of the DNS record.
+ * @param int    $record_ttl    The TTL for the DNS record.
+ * @return array The formatted post data for the API request.
+ */
+function captaincore_format_dns_record_for_api( $record_type, $record_name, $record_value, $record_ttl ) {
+    $record_type = strtolower( $record_type );
+    $post_data   = [
+        'name' => $record_name,
+        'type' => $record_type,
+        'ttl'  => $record_ttl,
+    ];
+
+    if ( in_array( $record_type, [ 'a', 'aaaa', 'aname', 'cname', 'txt', 'spf' ] ) ) {
+        $records = [];
+        foreach ( (array) $record_value as $record ) {
+            $records[] = [
+                'value'   => stripslashes( $record['value'] ),
+                'enabled' => true,
+            ];
+        }
+        $post_data['value'] = $records;
+    } elseif ( $record_type == 'mx' ) {
+        $mx_records = [];
+        foreach ( (array) $record_value as $mx_record ) {
+            $mx_records[] = [
+                'server'   => $mx_record['server'],
+                'priority' => $mx_record['priority'],
+                'enabled'  => true,
+            ];
+        }
+        $post_data['value'] = $mx_records;
+    } elseif ( $record_type == 'srv' ) {
+        $srv_records = [];
+        foreach ( (array) $record_value as $srv_record ) {
+            $srv_records[] = [
+                'host'     => $srv_record['host'],
+                'priority' => $srv_record['priority'],
+                'weight'   => $srv_record['weight'],
+                'port'     => $srv_record['port'],
+                'enabled'  => true,
+            ];
+        }
+        $post_data['value'] = $srv_records;
+    } elseif ( $record_type == 'http' ) {
+        $post_data['value'] = [
+            'hard'         => true,
+            'url'          => $record_value,
+            'redirectType' => '301',
+        ];
+    } else {
+        $post_data['value'] = $record_value;
+    }
+
+    return $post_data;
+}
+
+/**
+ * REST API callback to create a DNS record.
+ *
+ * @param WP_REST_Request $request The request object.
+ * @return WP_REST_Response|WP_Error The response object.
+ */
+function captaincore_create_dns_record( WP_REST_Request $request ) {
+    $domain_id    = $request['id'];
+	$remote_id    = ( new CaptainCore\Domains )->get( $domain_id )->remote_id;
+    $record_type  = $request->get_param( 'type' );
+    $record_name  = $request->get_param( 'name' );
+    $record_value = $request->get_param( 'value' );
+    $record_ttl   = $request->get_param( 'ttl' );
+
+    $post_data = captaincore_format_dns_record_for_api( $record_type, $record_name, $record_value, $record_ttl );
+    $response  = CaptainCore\Remote\Constellix::post( "domains/$remote_id/records", $post_data );
+
+    if ( ! empty( $response->errors ) ) {
+        $errors = is_object( $response->errors ) ? (array) $response->errors : $response->errors;
+        return new WP_Error( 'constellix_error', 'Failed to create DNS record.', [ 'status' => 400, 'details' => $errors ] );
+    }
+
+    return new WP_REST_Response( $response, 201 );
+}
+
+/**
+ * REST API callback to update a DNS record.
+ *
+ * @param WP_REST_Request $request The request object.
+ * @return WP_REST_Response|WP_Error The response object.
+ */
+function captaincore_update_dns_record( WP_REST_Request $request ) {
+    $domain_id    = $request['id'];
+	$remote_id    = ( new CaptainCore\Domains )->get( $domain_id )->remote_id;
+    $record_id    = $request['record_id'];
+    $record_type  = $request->get_param( 'type' );
+    $record_name  = $request->get_param( 'name' );
+    $record_value = $request->get_param( 'value' );
+    $record_ttl   = $request->get_param( 'ttl' );
+
+    $post_data = captaincore_format_dns_record_for_api( $record_type, $record_name, $record_value, $record_ttl );
+    $response  = CaptainCore\Remote\Constellix::put( "domains/$remote_id/records/$record_id", $post_data );
+
+    if ( ! empty( $response->errors ) ) {
+        $errors = is_object( $response->errors ) ? (array) $response->errors : $response->errors;
+        return new WP_Error( 'constellix_error', 'Failed to update DNS record.', [ 'status' => 400, 'details' => $errors ] );
+    }
+
+    return new WP_REST_Response( $response, 200 );
+}
+
+/**
+ * REST API callback to delete a DNS record.
+ *
+ * @param WP_REST_Request $request The request object.
+ * @return WP_REST_Response|WP_Error The response object.
+ */
+function captaincore_delete_dns_record( WP_REST_Request $request ) {
+    $domain_id = $request['id'];
+	$remote_id    = ( new CaptainCore\Domains )->get( $domain_id )->remote_id;
+    $record_id = $request['record_id'];
+
+    $response = CaptainCore\Remote\Constellix::delete( "domains/$remote_id/records/$record_id" );
+
+    if ( ! empty( $response->errors ) ) {
+        return new WP_Error( 'constellix_error', 'Failed to delete DNS record.', [ 'status' => 400, 'details' => $response->errors ] );
+    }
+
+    return new WP_REST_Response( [ 'message' => 'Record deleted successfully.' ], 200 );
+}
+
 function captaincore_domains_func( $request ) {
 	return ( new CaptainCore\Domains() )->list();
 }
@@ -2018,6 +2150,60 @@ function captaincore_register_rest_endpoints() {
 			'show_in_index' => false
 		]
 	);
+
+	// Endpoint to create a new DNS record for a domain
+    register_rest_route( 'captaincore/v1', '/dns/(?P<id>[\d]+)/records', [
+        'methods'             => 'POST',
+        'callback'            => 'captaincore_create_dns_record',
+        'permission_callback' => function( $request ) {
+			$domain_id = $request['id'];
+			$verify    = ( new CaptainCore\Domains )->verify( $domain_id );
+			if ( ! $verify ) {
+				return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+			}
+			return true;
+        },
+        'args'                => [
+            'type'   => [ 'required' => true, 'type' => 'string' ],
+            'name'   => [ 'required' => true, 'type' => 'string' ],
+            'value'  => [ 'required' => true ],
+            'ttl'    => [ 'required' => true, 'type' => 'integer', 'default' => 3600 ],
+        ],
+    ] );
+
+    // Endpoint to update an existing DNS record
+    register_rest_route( 'captaincore/v1', '/dns/(?P<id>[\d]+)/records/(?P<record_id>[\d]+)', [
+        'methods'             => 'PUT',
+        'callback'            => 'captaincore_update_dns_record',
+        'permission_callback' => function( $request ) {
+            $domain_id = $request['id'];
+			$verify    = ( new CaptainCore\Domains )->verify( $domain_id );
+			if ( ! $verify ) {
+				return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+			}
+			return true;
+        },
+        'args'                => [
+            'type'   => [ 'required' => true, 'type' => 'string' ],
+            'name'   => [ 'required' => true, 'type' => 'string' ],
+            'value'  => [ 'required' => true ],
+            'ttl'    => [ 'required' => true, 'type' => 'integer' ],
+        ],
+    ] );
+
+    // Endpoint to delete a DNS record
+    register_rest_route( 'captaincore/v1', '/dns/(?P<id>[\d]+)/records/(?P<record_id>[\d]+)', [
+        'methods'             => 'DELETE',
+        'callback'            => 'captaincore_delete_dns_record',
+        'permission_callback' => function( $request ) {
+            $domain_id = $request['id'];
+			$verify    = ( new CaptainCore\Domains )->verify( $domain_id );
+			if ( ! $verify ) {
+				return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+			}
+			return true;
+        },
+    ] );
 
 	register_rest_route(
 		'captaincore/v1', '/domain/(?P<id>[\d]+)', [
