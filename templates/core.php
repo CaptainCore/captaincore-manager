@@ -9678,6 +9678,8 @@ new Vue({
 				setTimeout(this.fetchMissing, 1000)
 			});
 		},
+		fetchAccountPortals() {
+		},
 		fetchConfigurations() {
 			axios.get(
 			'/wp-json/captaincore/v1/configurations', {
