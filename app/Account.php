@@ -414,13 +414,35 @@ class Account {
     public function calculate_usage() {
         $account  = self::get();
         $sites    = $this->billing_sites();
-        if ( empty( (array) $account->plan ) ) {
+
+        if ( empty( $account->plan ) || ( is_object( $account->plan ) && empty( get_object_vars( $account->plan ) ) ) ) {
             $account->plan = (object) [ "usage" => (object) [ "storage" => "", "visits" => "", "sites" => "" ] ];
         }
-        $account->plan->usage->storage = array_sum ( array_column( $sites, "storage" ) );
-        $account->plan->usage->visits  = array_sum ( array_column( $sites, "visits" ) );
+
+        // Initialize totals
+        $total_storage = 0;
+        $total_visits  = 0;
+    
+        // Loop through each site to sum up production usage
+        foreach ( $sites as $site_data ) {
+            $site_id = $site_data['site_id'];
+            // Fetch all environments for the current site
+            $environments = ( new Environments )->where( [ "site_id" => $site_id ] );
+            
+            // Loop through environments to find and sum production data
+            foreach ( $environments as $environment ) {
+                if ( $environment->environment == "Production" ) {
+                    $total_storage += (int) $environment->storage;
+                    $total_visits  += (int) $environment->visits;
+                }
+            }
+        }
+    
+        // Update the plan object with the calculated totals.
+        $account->plan->usage->storage = $total_storage;
+        $account->plan->usage->visits  = $total_visits;
         $account->plan->usage->sites   = count( $sites );
-        ( new Accounts )->update( [ "plan" => json_encode( $account->plan ) ], [ "account_id" => $this->account_id ] );
+        Accounts::update( [ "plan" => json_encode( $account->plan ) ], [ "account_id" => $this->account_id ] );
     }
         
     public function process_renewals() {
