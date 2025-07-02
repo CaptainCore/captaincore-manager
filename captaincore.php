@@ -60,6 +60,7 @@ require plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
 require 'includes/Parsedown.php';
 
 function captaincore_cron_run() {
+	CaptainCore\Accounts::auto_switch_plans();
     CaptainCore\Accounts::process_renewals();
     CaptainCore\Scripts::run_scheduled();
 }
