@@ -136,7 +136,7 @@ class Account {
         if ( $user_id == $account["plan"]->billing_user_id ) {
             $record["owner"] = true;
         }
-        
+
         if ( ( new User )->is_admin() ) {
             $record["invoices"] = $this->invoices();
         }
@@ -145,7 +145,7 @@ class Account {
     }
 
     public function account() {
-        $account               = ( new Accounts )->get( $this->account_id );
+        $account               = Accounts::get( $this->account_id );
         $defaults              = json_decode( $account->defaults );
         $plan                  = empty( $account->plan ) ? (object) [] : json_decode( $account->plan );
         $plan->name            = empty( $plan->name ) ? "" : $plan->name;
@@ -802,7 +802,6 @@ class Account {
                 $hosting_plan->interval = $plan->interval;
                 $hosting_plan->price    = $total;
             }
-
             
             if ( ! empty( $plan->addons ) && count( $plan->addons ) > 0 ) {
                 foreach ( $plan->addons as $addon ) {
@@ -810,6 +809,11 @@ class Account {
                 }
             }
     
+            if ( empty( $plan->usage ) ) {
+                self::calculate_usage();
+                $account = ( new Accounts )->get( $this->account_id );
+                $plan    = json_decode( $account->plan );
+            }
             if ( $plan->usage->sites > $hosting_plan->limits->sites ) {
                 $price    = $configurations->usage_pricing->sites->cost;
                 if ( $plan->interval != $configurations->usage_pricing->sites->interval ) {
@@ -851,15 +855,14 @@ class Account {
                     $new_hosting_plan = $hosting_plan;
                 }
             }
-            $new_hosting_plan->auto_pay        = $plan->auto_pay;
-            $new_hosting_plan->auto_switch     = $plan->auto_switch;
-            $new_hosting_plan->addons          = $plan->addons;
-            $new_hosting_plan->credits         = $plan->credits;
-            $new_hosting_plan->charges         = $plan->charges;
-            $new_hosting_plan->billing_user_id = $plan->billing_user_id;
-            $new_hosting_plan->next_renewal    = $plan->next_renewal;
-            echo "Switching to from {$plan->name} to {$cheapest_estimate->name}";
-            ( new Accounts )->update_plan( (array) $new_hosting_plan, $this->account_id );
+            $new_hosting_plan->auto_pay        = empty( $plan->auto_pay ) ? "" : $plan->auto_pay;
+            $new_hosting_plan->auto_switch     = empty( $plan->auto_switch ) ? "" : $plan->auto_switch;
+            $new_hosting_plan->addons          = empty( $plan->addons ) ? "" : $plan->addons;
+            $new_hosting_plan->credits         = empty( $plan->credits ) ? "" : $plan->credits;
+            $new_hosting_plan->charges         = empty( $plan->charges ) ? "" : $plan->charges;
+            $new_hosting_plan->billing_user_id = empty( $plan->billing_user_id ) ? "" : $plan->billing_user_id;
+            $new_hosting_plan->next_renewal    = empty( $plan->next_renewal ) ? "" : $plan->next_renewal;
+            ( new Accounts )->update_plan( $new_hosting_plan, $this->account_id );
         }
 
         return $estimates;

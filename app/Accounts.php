@@ -108,6 +108,23 @@ class Accounts extends DB {
         }
     }
 
+    public static function auto_switch_plans() {
+        $accounts = self::with_renewals();
+        foreach ( $accounts as $account ) {
+            $plan = json_decode( $account->plan );
+            if ( empty( $plan->next_renewal ) ) {
+                continue;
+            }
+            if ( ! empty( $plan->auto_switch ) && $plan->auto_switch == "true" ) {
+                ( new Account( $account->account_id, true ) )->auto_switch_plan();
+                $check_plan = json_decode( self::get( $account->account_id )->plan );
+                if ( $plan->name != $check_plan->name ) {
+                    echo "Auto switched plan for {$account->name} from {$plan->name} to {$check_plan->name}\n";
+                }
+            }
+        }
+    }
+
     public static function process_renewals() {
         $accounts = self::with_renewals();
         $now      = strtotime( "now" );
