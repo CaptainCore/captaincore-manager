@@ -862,7 +862,7 @@ class Account {
             $new_hosting_plan->charges         = empty( $plan->charges ) ? "" : $plan->charges;
             $new_hosting_plan->billing_user_id = empty( $plan->billing_user_id ) ? "" : $plan->billing_user_id;
             $new_hosting_plan->next_renewal    = empty( $plan->next_renewal ) ? "" : $plan->next_renewal;
-            ( new Accounts )->update_plan( $new_hosting_plan, $this->account_id );
+            ( new Accounts )->update_plan( (array) $new_hosting_plan, $this->account_id );
         }
 
         return $estimates;
