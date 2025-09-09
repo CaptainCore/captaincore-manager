@@ -3,17 +3,17 @@
  * included in this file.
  */
 
- nav {
+nav {
 	 background: none;
 	 box-shadow: none;
 	 -webkit-box-shadow: none;
  }
 
- nav ul li {
+nav ul li {
 	 float: none;
  }
 
- nav ul a:hover {
+nav ul a:hover {
     background: none;
 }
 body button:hover, input[type="button"]:hover, input[type="reset"]:hover, input[type="submit"]:hover {
@@ -79,20 +79,8 @@ input.valid:not([type]), input.valid:not([type]):focus, input[type=text].valid:n
     box-shadow: 0 1px 0 0 #27c3f3;
 }
 
-input:not([type]):focus:not([readonly]),input[type=text]:not(.browser-default):focus:not([readonly]),input[type=password]:not(.browser-default):focus:not([readonly]),input[type=email]:not(.browser-default):focus:not([readonly]),input[type=url]:not(.browser-default):focus:not([readonly]),input[type=time]:not(.browser-default):focus:not([readonly]),input[type=date]:not(.browser-default):focus:not([readonly]),input[type=datetime]:not(.browser-default):focus:not([readonly]),input[type=datetime-local]:not(.browser-default):focus:not([readonly]),input[type=tel]:not(.browser-default):focus:not([readonly]),input[type=number]:not(.browser-default):focus:not([readonly]),input[type=search]:not(.browser-default):focus:not([readonly]),textarea.materialize-textarea:focus:not([readonly]){
-	border-bottom:1px solid #27c3f3;
-	-webkit-box-shadow:0 1px 0 0 #27c3f3;
-	box-shadow:0 1px 0 0 #27c3f3
-}
-
 input:not([type]):focus.valid ~ label,input[type=text]:not(.browser-default):focus.valid ~ label,input[type=password]:not(.browser-default):focus.valid ~ label,input[type=email]:not(.browser-default):focus.valid ~ label,input[type=url]:not(.browser-default):focus.valid ~ label,input[type=time]:not(.browser-default):focus.valid ~ label,input[type=date]:not(.browser-default):focus.valid ~ label,input[type=datetime]:not(.browser-default):focus.valid ~ label,input[type=datetime-local]:not(.browser-default):focus.valid ~ label,input[type=tel]:not(.browser-default):focus.valid ~ label,input[type=number]:not(.browser-default):focus.valid ~ label,input[type=search]:not(.browser-default):focus.valid ~ label,textarea.materialize-textarea:focus.valid ~ label{
 	color:#27c3f3
-}
-
-input:not([type]), input[type=text]:not(.browser-default), input[type=password]:not(.browser-default), input[type=email]:not(.browser-default), input[type=url]:not(.browser-default), input[type=time]:not(.browser-default), input[type=date]:not(.browser-default), input[type=datetime]:not(.browser-default), input[type=datetime-local]:not(.browser-default), input[type=tel]:not(.browser-default), input[type=number]:not(.browser-default), input[type=search]:not(.browser-default), textarea.materialize-textarea {
-	font-size: 16px;
-	margin: 0px;
-	height: 4rem;
 }
 
 .input-field>label {
@@ -971,12 +959,12 @@ i.material-icons.reverse {
   padding: 0 2%;
 }
 
-.v-application #code_diff .red.lighten-4 {
+#code_diff .red.lighten-4 {
   color: #7d0909;
   background-color: #ff00002b;
 }
 
-.v-application #code_diff .green.lighten-5 {
+#code_diff .green.lighten-5 {
   color:#0b640b;
   background:#57d9574a;
 }
@@ -1462,6 +1450,7 @@ html body {
 .v-application .dns_introduction a {
 	text-decoration: underline;
 	font-weight: bold;
+  color: rgb(var(--v-theme-primary));
 }
 
 .dns_introduction .theme--light.v-data-table>.v-data-table__wrapper>table>tbody>tr:hover:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper), 
@@ -1902,4 +1891,39 @@ code.language-log {
 .v-application .v-picker .accent {
   color: #000000 !important;
   border-color: #000000 !important;
+}
+
+.clickable-rows {
+  cursor: pointer;
+}
+
+.v-alert {
+  display: flex;
+  font-size: 16px;
+}
+
+.v-alert code {
+  margin: 0px 6px;
+  background: #f6f6f645;
+  padding: 0px 4px;
+}
+
+.v-alert__content {
+  width: 100%;
+}
+
+.v-input.v-input--plain-underlined .v-field__append-inner {
+  padding: 0px;
+}
+
+.table-quicksaves tbody tr.v-data-table__tr:has(+ tr.v-data-table__expanded) {
+  background-color: #eeeeee;
+}
+
+.table-quicksaves tbody tr.v-data-table__tr:has(+ tr.v-data-table__expanded):not(:last-child)>td {
+  border-bottom: none;
+}
+
+a.v-btn.v-tab-item--selected.v-tab--selected.v-theme--light.v-btn--density-default.v-btn--size-default.v-btn--variant-text.v-tab {
+  /* color: rgb(var(--v-theme-accent)) */
 }
