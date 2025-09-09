@@ -33,8 +33,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.1/dist/frappe-charts.min.css" rel="stylesheet">
 <?php } ?>
 <link href="<?php echo $plugin_url; ?>public/css/captaincore-public-2024-10-30.css" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
-<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-twilight.min.css" rel="stylesheet" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism.min.css" rel="stylesheet" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism-twilight.min.css" rel="stylesheet" />
 </head>
 <body>
 <div id="app" v-cloak>
@@ -7376,8 +7376,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.1/dist/frappe-charts.min.umd.js"></script>
 <?php } ?>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-log.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/dayjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-log.min.js"></script>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="<?php echo $plugin_url; ?>public/js/kjua.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/moment.min.js"></script>
@@ -11415,7 +11416,7 @@ new Vue({
 					window.Prism.manual = true;
 					environment.server_log_response = Prism.highlight( response.data, Prism.languages.log, 'log')
 					Prism.highlightAll()
-			});
+				});
 		},
 		showCaptures( site_id ) {
 			this.dialog_captures.site = this.dialog_site.site
