@@ -128,542 +128,734 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		</v-menu>
       </template>
       </v-app-bar>
-	  <v-main>
-		<v-container class="px-0 pt-4 pb-15">
+	  <v-main class="mt-15 pt-5">
+		<div v-if="isMobile && ( route != 'login' && route != 'welcome' && route != 'connect' )">
+		<v-tabs v-model="selected_nav" style="width: fit-content;margin: auto;">
+			<v-tab value="" style="display:none"></v-tab>
+			<v-tab value="sites" :href=`${configurations.path}sites` @click.prevent="goToPath( '/sites' )">Sites</v-tab>
+			<v-tab value="domains" :href=`${configurations.path}domains` @click.prevent="goToPath( '/domains' )">Domains</v-tab>
+			<v-tab value="accounts" :href=`${configurations.path}accounts` @click.prevent="goToPath( '/accounts' )">Accounts</v-tab>
+			<v-tab value="billing" :href=`${configurations.path}billing` @click.prevent="goToPath( '/billing' )" v-if="modules.billing">Billing</v-tab>
+		</v-tabs>
+	  </div>
+		<v-container class="px-0 pt-4 py-15">
 		<v-dialog v-model="new_plugin.show" max-width="900px">
 		<v-card tile>
-		<v-toolbar flat dark color="primary">
+			<v-toolbar flat color="primary">
 			<v-btn icon dark @click.native="new_plugin.show = false">
 				<v-icon>mdi-close</v-icon>
 			</v-btn>
 			<v-toolbar-title>Add plugin to {{ new_plugin.site_name }}</v-toolbar-title>
 			<v-spacer></v-spacer>
-		</v-toolbar>
-		<v-toolbar dense light flat>
+			</v-toolbar>
+			<v-toolbar density="compact" flat>
 			<v-tabs v-model="new_plugin.tabs" mandatory>
-				<v-tab>From your computer</v-tab>
-				<v-tab>From WordPress.org</v-tab>
-				<v-tab>From Envato</v-tab>
+				<v-tab value="0">From your computer</v-tab>
+				<v-tab value="1">From WordPress.org</v-tab>
+				<v-tab value="2">From Envato</v-tab>
 			</v-tabs>
 			<v-spacer></v-spacer>
-		</v-toolbar>
-		<v-tabs-items v-model="new_plugin.tabs">
-      <v-tab-item key="0" :transition="false">
-		<div class="upload-drag pt-4">
-		<div class="upload">
-			<div v-if="upload.length" class="mx-3">
-				<div v-for="(file, index) in upload" :key="file.id">
-					<span>{{ file.name }}</span> -
-					<span>{{ file.size | formatSize }}</span> -
-					<span v-if="file.error">{{file.error}}</span>
-					<span v-else-if="file.success">success</span>
-					<span v-else-if="file.active">active
+			</v-toolbar>
+			<v-window v-model="new_plugin.tabs">
+			<v-window-item value="0" :transition="false" :reverse-transition="false">
+				<div class="upload-drag pt-4">
+				<div class="upload">
+					<div v-if="upload.length" class="mx-3">
+					<div v-for="(file, index) in upload" :key="file.id">
+						<span>{{ file.name }}</span> -
+						<span>{{ formatSize( file.size ) }}</span> -
+						<span v-if="file.error">{{file.error}}</span>
+						<span v-else-if="file.success">success</span>
+						<span v-else-if="file.active">active
 						<v-progress-linear v-model="file.progress"></v-progress-linear>
-					</span>
-					<span v-else></span>
-				</div>
-			</div>
-			<div v-else>
+						</span>
+						<span v-else></span>
+					</div>
+					</div>
+					<div v-else>
 					<div class="text-center">
-						<h4>Drop files anywhere to upload<br/>or</h4>
+						<h4>Drop files anywhere to upload<br />or</h4>
 						<label for="file" class="btn btn-lg btn-primary" style="padding: 0px 8px;">Select Files</label>
 					</div>
-			</div>
-			<div v-show="$refs.upload && $refs.upload.dropActive" class="drop-active">
-				<h3>Drop files to upload</h3>
-			</div>
-			<div class="upload-drag-btn">
-				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="<?php echo $plugin_url; ?>upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
-			</div>
-		</div>
-		</div>
-      </v-tab-item>
-			<v-tab-item key="1" :transition="false">
-			<v-layout justify-center class="pa-3">
-				<v-flex xs12 sm9 pt-3>
-					<v-pagination v-if="new_plugin.api.info && new_plugin.api.info.pages > 1" :length="new_plugin.api.info.pages - 1" v-model="new_plugin.page" :total-visible="7" color="primary" @input="fetchPlugins"></v-pagination>
-				</v-flex>
-				<v-flex xs12 sm3>
+					</div>
+					<div v-show="$refs.upload && $refs.upload.dropActive" class="drop-active">
+					<h3>Drop files to upload</h3>
+					</div>
+					<div class="upload-drag-btn">
+					<file-upload class="btn btn-primary" @input-file="inputFile" post-action="<?php echo $plugin_url; ?>upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
+					</div>
+				</div>
+				</div>
+			</v-window-item>
+			<v-window-item value="1" :transition="false" :reverse-transition="false">
+				<v-row justify="center" class="pa-3">
+				<v-col cols="12" sm="9" pt-3>
+					<v-pagination v-if="new_plugin.api.info && new_plugin.api.info.pages > 1" :length="new_plugin.api.info.pages - 1" v-model="new_plugin.page" :total-visible="7" color="primary" @update:model-value="fetchPlugins"></v-pagination>
+				</v-col>
+				<v-col cols="12" sm="3">
 					<v-text-field label="Search plugins" light @click:append="new_plugin.search = $event.target.offsetParent.children[0].children[1].value; fetchPlugins()" v-on:keyup.enter="new_plugin.search = $event.target.value; fetchPlugins()" append-icon="mdi-magnify" :loading="new_plugin.loading"></v-text-field>
-					<!-- @change.native="new_plugin.search = $event.target.value; fetchPlugins" -->
-				</v-flex>
-			</v-layout>
-			<v-layout row wrap pa-5>
-				<v-flex v-for="item in new_plugin.api.items" :key="item.slug" xs4 pa-2>
+				</v-col>
+				</v-row>
+				<v-row wrap pa-5>
+				<v-col v-for="item in new_plugin.api.items" :key="item.slug" cols="4" pa-2>
 					<v-card>
-					<v-layout style="min-height: 120px;">
-					<v-flex xs3 px-2 pt-2>
-						<v-img
-							:src='item.icons["1x"]'
-							contain
-						></v-img>
-					</v-flex>
-					<v-flex xs9 px-2 pt-2>
+					<v-row style="min-height: 120px;">
+						<v-col cols="3" px-2 pt-2>
+						<v-img :src='item.icons["1x"]' contain></v-img>
+						</v-col>
+						<v-col cols="9" px-2 pt-2>
 						<span v-html="item.name"></span>
-					</v-flex>
-					</v-layout>
-						<v-card-actions>
-							<v-spacer></v-spacer>
-							<div v-if="new_plugin.current_plugins.includes( item.slug )">
-							<v-btn small depressed @click="uninstallPlugin( item )">Uninstall</v-btn>
-							<v-btn small depressed disabled>Install</v-btn>
-							</div>
-							<v-btn v-else small depressed @click="installPlugin( item )">Install</v-btn>
-						</v-card-actions>
-					</v-card>
-				</v-flex>
-			</v-layout>
-      </v-tab-item>
-	  <v-tab-item key="2" :transition="false">
-	  	<v-layout justify-center class="pa-3">
-			<v-flex xs12 sm9 pt-3></v-flex>
-			<v-flex xs12 sm3>
-				<v-text-field label="Search plugins" light v-model="new_plugin.envato.search" append-icon="mdi-magnify"></v-text-field>
-			</v-flex>
-		</v-layout>
-		<v-layout row wrap pa-5>
-			<v-flex v-for="item in filteredEnvatoPlugins" :key="item.id" xs4 pa-2>
-				<v-card>
-				<v-layout style="min-height: 120px;">
-				<v-flex xs3 px-2 pt-2>
-					<v-img
-						:src='item.previews.icon_preview.icon_url'
-						contain
-					></v-img>
-				</v-flex>
-				<v-flex xs9 px-2 pt-2>
-					<span v-html="item.name"></span>
-				</v-flex>
-				</v-layout>
+						</v-col>
+					</v-row>
 					<v-card-actions>
 						<v-spacer></v-spacer>
-						<v-btn small depressed @click="installEnvatoPlugin( item )">Install</v-btn>
+						<div v-if="new_plugin.current_plugins.includes( item.slug )">
+						<v-btn size="small" variant="tonal" @click="uninstallPlugin( item )">Uninstall</v-btn>
+						<v-btn size="small" variant="tonal" disabled>Install</v-btn>
+						</div>
+						<v-btn v-else size="small" variant="tonal" @click="installPlugin( item )">Install</v-btn>
 					</v-card-actions>
-				</v-card>
-			</v-flex>
-		</v-layout>
-	  </v-tab-item>
-    </v-tabs-items>
+					</v-card>
+				</v-col>
+				</v-row>
+			</v-window-item>
+			<v-window-item value="2" :transition="false" :reverse-transition="false">
+				<v-row justify="center" class="pa-3">
+				<v-col cols="12" sm="9" pt-3></v-col>
+				<v-col cols="12" sm="3">
+					<v-text-field label="Search plugins" light v-model="new_plugin.envato.search" append-icon="mdi-magnify"></v-text-field>
+				</v-col>
+				</v-row>
+				<v-row wrap pa-5>
+				<v-col v-for="item in filteredEnvatoPlugins" :key="item.id" cols="4" pa-2>
+					<v-card>
+					<v-row style="min-height: 120px;">
+						<v-col cols="3" px-2 pt-2>
+						<v-img :src='item.previews.icon_preview.icon_url' contain></v-img>
+						</v-col>
+						<v-col cols="9" px-2 pt-2>
+						<span v-html="item.name"></span>
+						</v-col>
+					</v-row>
+					<v-card-actions>
+						<v-spacer></v-spacer>
+						<v-btn size="small" variant="tonal" @click="installEnvatoPlugin( item )">Install</v-btn>
+					</v-card-actions>
+					</v-card>
+				</v-col>
+				</v-row>
+			</v-window-item>
+			</v-window>
 		</v-card>
 		</v-dialog>
 		<v-dialog v-model="new_theme.show" max-width="900px">
 		<v-card tile>
-		<v-toolbar flat dark color="primary">
+			<v-toolbar flat color="primary">
 			<v-btn icon dark @click.native="new_theme.show = false">
 				<v-icon>mdi-close</v-icon>
 			</v-btn>
 			<v-toolbar-title>Add theme to {{ new_theme.site_name }}</v-toolbar-title>
 			<v-spacer></v-spacer>
-		</v-toolbar>
-		<v-toolbar dense flat>
+			</v-toolbar>
+			<v-toolbar density="compact" flat>
 			<v-tabs v-model="new_theme.tabs" mandatory>
-				<v-tab>From your computer</v-tab>
-				<v-tab>From WordPress.org</v-tab>
-				<v-tab>From Envato</v-tab>
+				<v-tab value="0">From your computer</v-tab>
+				<v-tab value="1">From WordPress.org</v-tab>
+				<v-tab value="2">From Envato</v-tab>
 			</v-tabs>
 			<v-spacer></v-spacer>
-		</v-toolbar>
-		<v-tabs-items v-model="new_theme.tabs">
-      <v-tab-item key="0" :transition="false">
-		<div class="upload-drag pt-4">
-		<div class="upload">
-			<div v-if="upload.length" class="mx-3">
-				<div v-for="(file, index) in upload" :key="file.id">
-					<span>{{ file.name }}</span> -
-					<span>{{ file.size | formatSize }}</span> -
-					<span v-if="file.error">{{file.error}}</span>
-					<span v-else-if="file.success">success</span>
-					<span v-else-if="file.active">active
+			</v-toolbar>
+			<v-window v-model="new_theme.tabs">
+			<v-window-item value="0" :transition="false">
+				<div class="upload-drag pt-4">
+				<div class="upload">
+					<div v-if="upload.length" class="mx-3">
+					<div v-for="(file, index) in upload" :key="file.id">
+						<span>{{ file.name }}</span> -
+						<span>{{ formatSize( file.size ) }}</span> -
+						<span v-if="file.error">{{file.error}}</span>
+						<span v-else-if="file.success">success</span>
+						<span v-else-if="file.active">active
 						<v-progress-linear v-model="file.progress"></v-progress-linear>
-					</span>
-					<span v-else></span>
-				</div>
-			</div>
-			<div v-else>
+						</span>
+						<span v-else></span>
+					</div>
+					</div>
+					<div v-else>
 					<div class="text-center">
-						<h4>Drop files anywhere to upload<br/>or</h4>
+						<h4>Drop files anywhere to upload<br />or</h4>
 						<label for="file" class="btn btn-lg btn-primary" style="padding: 0px 8px;">Select Files</label>
 					</div>
-			</div>
-			<div v-show="$refs.upload && $refs.upload.dropActive" class="drop-active">
-				<h3>Drop files to upload</h3>
-			</div>
-			<div class="upload-drag-btn">
-				<file-upload class="btn btn-primary" @input-file="inputFile" post-action="<?php echo $plugin_url; ?>upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
-			</div>
-		</div>
-		</div>
-		</v-tab-item>
-			<v-tab-item key="1" :transition="false">
-				<v-layout justify-center class="pa-3">
-				<v-flex xs12 sm3>
-				</v-flex>
-				<v-flex xs12 sm6>
-					<div class="text-center">
-						<v-pagination v-if="new_theme.api.info && new_theme.api.info.pages > 1" :length="new_theme.api.info.pages - 1" v-model="new_theme.page" :total-visible="7" color="primary" @input="fetchThemes"></v-pagination>
 					</div>
-				</v-flex>
-				<v-flex xs12 sm3>
+					<div v-show="$refs.upload && $refs.upload.dropActive" class="drop-active">
+					<h3>Drop files to upload</h3>
+					</div>
+					<div class="upload-drag-btn">
+					<file-upload class="btn btn-primary" @input-file="inputFile" post-action="<?php echo $plugin_url; ?>upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
+					</div>
+				</div>
+				</div>
+			</v-window-item>
+			<v-window-item value="1" :transition="false">
+				<v-row justify="center" class="pa-3">
+				<v-col cols="12" sm="3">
+				</v-col>
+				<v-col cols="12" sm="6">
+					<div class="text-center">
+					<v-pagination v-if="new_theme.api.info && new_theme.api.info.pages > 1" :length="new_theme.api.info.pages - 1" v-model="new_theme.page" :total-visible="7" color="primary" @update:model-value="fetchThemes"></v-pagination>
+					</div>
+				</v-col>
+				<v-col cols="12" sm="3">
 					<v-text-field label="Search themes" light @click:append="new_theme.search = $event.target.offsetParent.children[0].children[1].value; fetchThemes()" v-on:keyup.enter="new_theme.search = $event.target.value; fetchThemes()" append-icon="mdi-magnify" :loading="new_theme.loading"></v-text-field>
-				</v-flex>
-			</v-layout>
-			<v-layout row wrap pa-2>
-				<v-flex
-					v-if="new_theme.api.items"
-					v-for="item in new_theme.api.items"
-					:key="item.slug"
-					xs4
-					pa-2
-				>
+				</v-col>
+				</v-row>
+				<v-row wrap pa-2>
+				<v-col v-if="new_theme.api.items" v-for="item in new_theme.api.items" :key="item.slug" cols="4" pa-2>
 					<v-card>
-					<v-layout style="min-height: 120px;">
-					<v-flex xs3 px-2 pt-2>
-						<v-img
-							:src='item.screenshot_url'
-							contain
-						></v-img>
-					</v-flex>
-					<v-flex xs9 px-2 pt-2>
+					<v-row style="min-height: 120px;">
+						<v-col cols="3" px-2 pt-2>
+						<v-img :src='item.screenshot_url' contain></v-img>
+						</v-col>
+						<v-col cols="9" px-2 pt-2>
 						<span v-html="item.name"></span>
-					</v-flex>
-					</v-layout>
-						<v-card-actions>
-							<v-spacer></v-spacer>
-							<div v-if="new_theme.current_themes && new_theme.current_themes.includes( item.slug )">
-							<v-btn small depressed @click="uninstallTheme( item )">Uninstall</v-btn>
-							<v-btn small depressed disabled>Install</v-btn>
-							</div>
-							<v-btn v-else small depressed @click="installTheme( item )">Install</v-btn>
-						</v-card-actions>
-					</v-card>
-				</v-flex>
-			</v-layout>
-      </v-tab-item>
-	  <v-tab-item key="2" :transition="false">
-		<v-layout justify-center class="pa-3">
-			<v-flex xs12 sm9 pt-3></v-flex>
-			<v-flex xs12 sm3>
-				<v-text-field label="Search themes" light v-model="new_theme.envato.search" append-icon="mdi-magnify"></v-text-field>
-			</v-flex>
-		</v-layout>
-		<v-layout row wrap pa-5>
-			<v-flex v-for="item in filteredEnvatoThemes" :key="item.id" xs4 pa-2>
-				<v-card>
-				<v-layout style="min-height: 120px;">
-				<v-flex xs3 px-2 pt-2>
-					<v-img :src='item.previews.icon_preview.icon_url' contain></v-img>
-				</v-flex>
-				<v-flex xs9 px-2 pt-2>
-					<span v-html="item.name"></span>
-				</v-flex>
-				</v-layout>
+						</v-col>
+					</v-row>
 					<v-card-actions>
 						<v-spacer></v-spacer>
-						<v-btn small depressed @click="installEnvatoTheme( item )">Install</v-btn>
+						<div v-if="new_theme.current_themes && new_theme.current_themes.includes( item.slug )">
+						<v-btn size="small" variant="tonal" @click="uninstallTheme( item )">Uninstall</v-btn>
+						<v-btn size="small" variant="tonal" disabled>Install</v-btn>
+						</div>
+						<v-btn v-else size="small" variant="tonal" @click="installTheme( item )">Install</v-btn>
 					</v-card-actions>
-				</v-card>
-			</v-flex>
-		</v-layout>
-	  </v-tab-item>
-    </v-tabs-items>
+					</v-card>
+				</v-col>
+				</v-row>
+			</v-window-item>
+			<v-window-item value="2" :transition="false">
+				<v-row justify="center" class="pa-3">
+				<v-col cols="12" sm="9"></v-col>
+				<v-col cols="12" sm="3">
+					<v-text-field label="Search themes" light v-model="new_theme.envato.search" append-icon="mdi-magnify"></v-text-field>
+				</v-col>
+				</v-row>
+				<v-row wrap pa-5>
+				<v-col v-for="item in filteredEnvatoThemes" :key="item.id" cols="4" pa-2>
+					<v-card>
+					<v-row style="min-height: 120px;">
+						<v-col cols="3" px-2 pt-2>
+						<v-img :src='item.previews.icon_preview.icon_url' contain></v-img>
+						</v-col>
+						<v-col cols="9" px-2 pt-2>
+						<span v-html="item.name"></span>
+						</v-col>
+					</v-row>
+					<v-card-actions>
+						<v-spacer></v-spacer>
+						<v-btn size="small" variant="tonal" @click="installEnvatoTheme( item )">Install</v-btn>
+					</v-card-actions>
+					</v-card>
+				</v-col>
+				</v-row>
+			</v-window-item>
+			</v-window>
 		</v-card>
 		</v-dialog>
 		<v-dialog v-model="bulk_edit.show" max-width="600px">
 		<v-card tile>
-			<v-toolbar flat dark color="primary">
-				<v-btn icon dark @click.native="bulk_edit.show = false">
-					<v-icon>mdi-close</v-icon>
-				</v-btn>
-				<v-toolbar-title>Bulk edit on {{ bulk_edit.site_name }}</v-toolbar-title>
-				<v-spacer></v-spacer>
+			<v-toolbar flat color="primary">
+			<v-btn icon dark @click.native="bulk_edit.show = false">
+				<v-icon>mdi-close</v-icon>
+			</v-btn>
+			<v-toolbar-title>Bulk edit on {{ bulk_edit.site_name }}</v-toolbar-title>
+			<v-spacer></v-spacer>
 			</v-toolbar>
-		<v-card-text>
+			<v-card-text>
 			<h3>Bulk edit {{ bulk_edit.items.length }} {{ bulk_edit.type }}</h3>
-			<v-btn v-if="bulk_edit.type == 'plugins'" @click="bulkEditExecute('activate')">Activate</v-btn> <v-btn v-if="bulk_edit.type == 'plugins'" @click="bulkEditExecute('deactivate')">Deactivate</v-btn> <v-btn v-if="bulk_edit.type == 'plugins'" @click="bulkEditExecute('toggle')">Toggle</v-btn> <v-btn @click="bulkEditExecute('delete')">Delete</v-btn>
-		</v-card-text>
+			<v-btn v-if="bulk_edit.type == 'plugins'" @click="bulkEditExecute('activate')">Activate</v-btn>
+			<v-btn v-if="bulk_edit.type == 'plugins'" @click="bulkEditExecute('deactivate')">Deactivate</v-btn>
+			<v-btn v-if="bulk_edit.type == 'plugins'" @click="bulkEditExecute('toggle')">Toggle</v-btn>
+			<v-btn @click="bulkEditExecute('delete')">Delete</v-btn>
+			</v-card-text>
 		</v-card>
 		</v-dialog>
 		<v-dialog v-model="dialog_request_site.show" max-width="600px">
-			<v-card flat>
-				<v-toolbar flat dark color="primary">
-					<v-btn icon dark @click.native="dialog_request_site.show = false">
-						<v-icon>mdi-close</v-icon>
-					</v-btn>
-					<v-toolbar-title class="pl-2">Request a new WordPress site</v-toolbar-title>
-					<v-spacer></v-spacer>
-				</v-toolbar>
-				<v-card-text class="pt-4">
-					<v-text-field :value="dialog_request_site.request.name" @change.native="dialog_request_site.request.name = $event.target.value" label="Name or Domain" hint="Please enter a name or domain name you wish to use for the new WordPress site." persistent-hint></v-text-field>
-					<v-select v-model="dialog_request_site.request.account_id" label="Account" :items="accounts" item-text="name" item-value="account_id"></v-select>
-					<v-textarea outlined persistant-hint :value="dialog_request_site.request.notes" @change.native="dialog_request_site.request.notes = $event.target.value" label="Notes" hint="Anything else you'd like to mention about this new site? (Optional)" persistent-hint></v-textarea>
-					<v-btn color="primary" class="pa-3 mt-4" @click="requestSite()">Request New Site</v-btn>
-				</v-card-text>
-			</v-card>
-		</v-dialog>
-		<v-dialog v-model="dialog_mailgun_config.show" max-width="500px">
-		<v-card tile>
-			<v-toolbar flat dark color="primary">
-				<v-btn icon dark @click.native="dialog_mailgun_config.show = false">
-					<v-icon>mdi-close</v-icon>
-				</v-btn>
-				<v-toolbar-title>Configure Mailgun for {{ dialog_site.site.name }}</v-toolbar-title>
-				<v-spacer></v-spacer>
+		<v-card flat>
+			<v-toolbar flat color="primary">
+			<v-btn icon dark @click.native="dialog_request_site.show = false">
+				<v-icon>mdi-close</v-icon>
+			</v-btn>
+			<v-toolbar-title class="pl-2">Request a new WordPress site</v-toolbar-title>
 			</v-toolbar>
-			<v-card-text class="mt-4">
-				<v-text-field label="Mailgun Subdomain" :value="dialog_site.site.mailgun" @change.native="dialog_site.site.mailgun = $event.target.value"></v-text-field>
-				<v-flex xs12>
-					<v-btn  color="primary" dark @click="saveMailgun()">Save</v-btn>
-				</v-flex>
+			<v-card-text class="pt-4">
+			<v-text-field :model-value="dialog_request_site.request.name" @update:model-value="dialog_request_site.request.name = $event" label="Name or Domain" hint="Please enter a name or domain name you wish to use for the new WordPress site." persistent-hint variant="underlined"></v-text-field>
+			<v-autocomplete v-model="dialog_request_site.request.account_id" label="Account" :items="accounts" item-title="name" item-value="account_id" variant="underlined" auto-select-first></v-autocomplete>
+			<v-textarea outlined persistent-hint :model-value="dialog_request_site.request.notes" @update:model-value="dialog_request_site.request.notes = $event" label="Notes" hint="Anything else you'd like to mention about this new site? (Optional)" persistent-hint variant="underlined"></v-textarea>
+			<v-btn color="primary" class="pa-3 mt-4" @click="requestSite()">Request New Site</v-btn>
 			</v-card-text>
 		</v-card>
+		</v-dialog>
+		<v-dialog v-model="dialog_mailgun_config.show" max-width="500px">
+			<v-card>
+				<v-toolbar color="primary">
+					<v-btn icon @click="dialog_mailgun_config.show = false">
+						<v-icon>mdi-close</v-icon>
+					</v-btn>
+					<v-toolbar-title>Configure Mailgun for {{ dialog_site.site.name }}</v-toolbar-title>
+				</v-toolbar>
+				<v-card-text class="mt-4">
+					<v-text-field label="Mailgun Subdomain" v-model="dialog_site.site.mailgun" variant="underlined"></v-text-field>
+					<v-btn color="primary" @click="saveMailgun()">Save</v-btn>
+				</v-card-text>
+			</v-card>
 		</v-dialog>
 		<v-dialog v-model="dialog_fathom.show" max-width="500px">
 		<v-card tile>
 			<v-toolbar flat dark color="primary">
-				<v-btn icon dark @click.native="dialog_fathom.show = false">
-					<v-icon>mdi-close</v-icon>
-				</v-btn>
+				<v-btn icon="mdi-close" dark @click.native="dialog_fathom.show = false"></v-btn>
 				<v-toolbar-title>Configure Fathom for {{ dialog_fathom.site.name }}</v-toolbar-title>
-				<v-spacer></v-spacer>
 			</v-toolbar>
 			<v-card-text class="pt-3">
-				<v-progress-linear :indeterminate="true" v-if="dialog_fathom.loading"></v-progress-linear>
+				<v-progress-linear indeterminate v-if="dialog_fathom.loading"></v-progress-linear>
 				<p class="mb-0">Fathom Analytics</p>
-				<table>
-				<tr v-for="tracker in dialog_site.environment_selected.fathom_analytics">
-					<td><v-text-field v-model="tracker.domain" label="Domain" hide-details></v-text-field></td>
-					<td><v-text-field v-model="tracker.code" label="Code" hide-details></v-text-field></td>
+				<table style="width: 100%">
+					<tr v-for="tracker in dialog_site.environment_selected.fathom_analytics" :key="tracker.code">
 					<td>
+						<v-text-field variant="underlined" v-model="tracker.domain" label="Domain" hide-details></v-text-field>
+					</td>
+					<td>
+						<v-text-field variant="underlined" v-model="tracker.code" label="Code" hide-details></v-text-field>
+					</td>
+					<td style="width:32px;">
 						<v-icon @click="deleteFathomItem(tracker)">mdi-delete</v-icon>
 					</td>
-				</tr>
+					</tr>
 				</table>
-				<v-col cols="12" class="text-right">
-				<v-btn fab small @click='dialog_site.environment_selected.fathom_analytics.push({ "code": "", "domain" : "" })'>
-					<v-icon dark>mdi-plus</v-icon>
-				</v-btn>
-				</v-col>
-				<p class="mb-0">Fathom Lite</p>
-				<table>
-				<tr v-for="tracker in dialog_fathom.environment.fathom">
-					<td><v-text-field v-model="tracker.domain" label="Domain" hide-details></v-text-field></td>
-					<td><v-text-field v-model="tracker.code" label="Code" hide-details></v-text-field></td>
+				<v-row>
+					<v-col cols="12" class="text-right">
+					<v-btn
+						icon="mdi-plus"
+						size="small"
+						@click='dialog_site.environment_selected.fathom_analytics.push({ "code": "", "domain" : "" })'
+					></v-btn>
+					</v-col>
+				</v-row>
+				<p class="mb-0 mt-4">Fathom Lite</p>
+				<table style="width: 100%">
+					<tr v-for="tracker in dialog_fathom.environment.fathom" :key="tracker.code">
 					<td>
+						<v-text-field variant="underlined" v-model="tracker.domain" label="Domain" hide-details></v-text-field>
+					</td>
+					<td>
+						<v-text-field variant="underlined" v-model="tracker.code" label="Code" hide-details></v-text-field>
+					</td>
+					<td style="width:32px;">
 						<v-icon @click="deleteFathomLiteItem(tracker)">mdi-delete</v-icon>
 					</td>
-				</tr>
+					</tr>
 				</table>
-				<v-col cols="12" class="text-right">
-				<v-btn fab small @click="newFathomItem">
-					<v-icon dark>mdi-plus</v-icon>
+				<v-row>
+					<v-col cols="12" class="text-right">
+					<v-btn icon="mdi-plus" size="small" @click="newFathomItem"></v-btn>
+					</v-col>
+				</v-row>
+
+				<v-btn color="primary" dark @click="saveFathomConfigurations()">
+					Save Fathom configurations
 				</v-btn>
-				</v-col>
-				<v-btn color="primary" dark @click="saveFathomConfigurations()">Save Fathom configurations</v-btn>
-		</v-card-text>
+			</v-card-text>
 		</v-card>
 		</v-dialog>
 		<v-dialog v-model="dialog_fathom.editItem" max-width="500px">
-        <v-card>
-          <v-card-title>
-            <span class="headline">Edit Item</span>
-          </v-card-title>
-          <v-card-text>
-            <v-container grid-list-md>
-              <v-layout wrap>
-                <v-flex xs12 sm6 md4>
-                  <v-text-field v-model="dialog_fathom.editedItem.domain" label="Domain"></v-text-field>
-                </v-flex>
-                <v-flex xs12 sm6 md4>
-                  <v-text-field v-model="dialog_fathom.editedItem.code" label="Code"></v-text-field>
-                </v-flex>
-              </v-layout>
-            </v-container>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn color="blue darken-1" text @click="configureFathomClose">Cancel</v-btn>
-            <v-btn color="blue darken-1" text @click="configureFathomSave">Save</v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
-	  <v-dialog v-model="new_recipe.show" max-width="800px">
-	  	<v-card tile style="margin:auto;max-width:800px">
-			<v-toolbar flat>
-				<v-btn icon @click.native="new_recipe.show = false">
-					<v-icon>mdi-close</v-icon>
-				</v-btn>
-				<v-toolbar-title>New Recipe</v-toolbar-title>
+			<v-card>
+				<v-card-title>
+				<span class="text-h5">Edit Item</span>
+				</v-card-title>
+				<v-card-text>
+				<v-container>
+					<v-row>
+					<v-col cols="12" sm="6">
+						<v-text-field v-model="dialog_fathom.editedItem.domain" label="Domain"></v-text-field>
+					</v-col>
+					<v-col cols="12" sm="6">
+						<v-text-field v-model="dialog_fathom.editedItem.code" label="Code"></v-text-field>
+					</v-col>
+					</v-row>
+				</v-container>
+				</v-card-text>
+				<v-card-actions>
 				<v-spacer></v-spacer>
-			</v-toolbar>
-			<v-card-text style="max-height: 100%;">
+				<v-btn color="blue-darken-1" variant="text" @click="configureFathomClose">Cancel</v-btn>
+				<v-btn color="blue-darken-1" variant="text" @click="configureFathomSave">Save</v-btn>
+				</v-card-actions>
+			</v-card>
+	  </v-dialog>
+	  <v-dialog v-model="new_recipe.show" max-width="800px">
+	  <v-card rounded="0">
+		<v-toolbar elevation="0" color="primary">
+			<v-btn icon="mdi-close" @click="new_recipe.show = false"></v-btn>
+			<v-toolbar-title>New Recipe</v-toolbar-title>
+		</v-toolbar>
+		<v-card-text>
 			<v-container>
-			<v-layout row wrap>
-				<v-flex xs12 pa-2>
-					<v-text-field label="Name" :value="new_recipe.title" @change.native="new_recipe.title = $event.target.value"></v-text-field>
-				</v-flex>
-				<v-flex xs12 pa-2>
-					<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="new_recipe.content" @change.native="new_recipe.content = $event.target.value" spellcheck="false"></v-textarea>
-				</v-flex>
-				<v-flex xs12 pa-2 v-if="role == 'administrator' || role == 'owner'">
-					<v-switch label="Public" v-model="new_recipe.public" persistent-hint hint="Public by default. Turning off will make the recipe only viewable and useable by you." :false-value="0" :true-value="1"></v-switch>
-				</v-flex>
-				<v-flex xs12 text-right pa-0 ma-0>
-					<v-btn color="primary" dark @click="addRecipe()">
-						Add New Recipe
-					</v-btn>
-				</v-flex>
-			</v-layout>
+			<v-row>
+				<v-col cols="12">
+				<v-text-field variant="underlined" label="Name" v-model="new_recipe.title"></v-text-field>
+				</v-col>
+				<v-col cols="12">
+				<v-textarea variant="underlined" label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow v-model="new_recipe.content" spellcheck="false"></v-textarea>
+				</v-col>
+				<v-col cols="12" v-if="role == 'administrator' || role == 'owner'">
+				<v-switch label="Public" v-model="new_recipe.public" persistent-hint hint="Public by default. Turning off will make the recipe only viewable and useable by you." :false-value="0" :true-value="1" inset color="primary"></v-switch>
+				</v-col>
+				<v-col cols="12" class="text-end pa-0 ma-0">
+				<v-btn color="primary" @click="addRecipe()"> Add New Recipe </v-btn>
+				</v-col>
+			</v-row>
 			</v-container>
-			</v-card-text>
-		</v-card>
+		</v-card-text>
+	  </v-card>
 	  </v-dialog>
 	  <v-dialog v-model="dialog_new_account.show" max-width="800px" persistent scrollable v-if="role == 'administrator'">
-		<v-card tile>
-			<v-toolbar flat>
-				<v-btn icon @click.native="dialog_new_account.show = false">
-					<v-icon>mdi-close</v-icon>
-				</v-btn>
-				<v-toolbar-title>New Account</v-toolbar-title>
-				<v-spacer></v-spacer>
-			</v-toolbar>
-			<v-card-text style="max-height: 100%;">
+	  <v-card tile>
+		<v-toolbar flat color="primary">
+			<v-btn icon="mdi-close" @click.native="dialog_new_account.show = false"></v-btn>
+			<v-toolbar-title>New Account</v-toolbar-title>
+		</v-toolbar>
+		<v-card-text>
 			<v-container>
-			<v-layout row wrap>
-				<v-flex xs12 pa-2>
-					<v-text-field label="Name" :value="dialog_new_account.name" @change.native="dialog_new_account.name = $event.target.value"></v-text-field>
-				</v-flex>
-				<v-flex xs12 text-right pa-0 ma-0>
-					<v-btn color="primary" dark @click="createSiteAccount()">
-						Create Account
-					</v-btn>
-				</v-flex>
-			</v-layout>
+			<v-row>
+				<v-col cols="12" pa-2>
+				<v-text-field variant="underlined" label="Name" :model-value="dialog_new_account.name" @update:model-value="dialog_new_account.name = $event"></v-text-field>
+				</v-col>
+				<v-col cols="12" text-right pa-0 ma-0>
+				<v-btn color="primary" dark @click="createSiteAccount()">
+					Create Account
+				</v-btn>
+				</v-col>
+			</v-row>
 			</v-container>
-			</v-card-text>
+		</v-card-text>
 		</v-card>
 	  </v-dialog>
+	  <v-dialog v-model="dialog_account_portal.show" max-width="800px" persistent scrollable>
+      <v-card rounded="0">
+            <v-toolbar color="primary" flat>
+                <v-btn icon="mdi-close" @click="dialog_account_portal.show = false">
+                </v-btn>
+                <v-toolbar-title>Account Portal</v-toolbar-title>
+                <v-spacer></v-spacer>
+            </v-toolbar>
+            <v-card-text style="max-height: 100%;" class="mt-3">
+                <v-row>
+                    <v-col class="pb-0">
+                        <v-text-field label="Domain" :model-value="dialog_account_portal.portal.domain" @update:model-value="dialog_account_portal.portal.domain = $event" variant="underlined"></v-text-field>
+                    </v-col>
+                </v-row>
+                <v-row>
+                    <v-col cols="12" md="6" class="py-0">
+                        <v-text-field v-model="dialog_account_portal.portal.name" label="Name" variant="underlined"></v-text-field>
+                        <v-switch v-model="dialog_account_portal.portal.logo_only" label="Show only logo" color="primary" inset hide-details></v-switch>
+                    </v-col>
+                    <v-col cols="12" md="6" class="py-0">
+                        <v-text-field v-model="dialog_account_portal.portal.url" label="URL" variant="underlined"></v-text-field>
+                    </v-col>
+                    <v-col cols="12" md="6" class="py-0">
+                        <v-text-field v-model="dialog_account_portal.portal.logo" label="Logo URL" variant="underlined"></v-text-field>
+                    </v-col>
+                    <v-col cols="12" md="6" class="py-0">
+                        <v-text-field v-model="dialog_account_portal.portal.logo_width" label="Logo Width" variant="underlined"></v-text-field>
+                    </v-col>
+                </v-row>
+                    <span class="text-body-2">DNS Labels</span>
+                    <v-row>
+                        <v-col cols="9">
+                            <v-textarea v-model="dialog_account_portal.portal.dns_introduction" label="Introduction" auto-grow rows="3" variant="underlined"></v-textarea>
+                        </v-col>
+                        <v-col cols="3">
+                            <v-textarea v-model="dialog_account_portal.portal.dns_nameservers" label="Nameservers" spellcheck="false" auto-grow variant="underlined"></v-textarea>
+                        </v-col>
+                    </v-row>
+                        <span class="text-body-2">Theme colors</span>
+                    <v-row>
+                        <v-col class="shrink" style="min-width: 172px;">
+                            <v-text-field persistent-hint hint="Primary" v-model="dialog_account_portal.portal.colors.primary" class="ma-0 pa-0" variant="solo">
+                            <template v-slot:append-inner>
+                                <v-menu v-model="dialog_account_portal.colors.primary" location="bottom" :close-on-content-click="false">
+                                    <template v-slot:activator="{ props }">
+                                        <div :style="{ backgroundColor: dialog_account_portal.portal.colors.primary, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-bind="props"></div>
+                                    </template>
+                                    <v-card>
+                                        <v-card-text class="pa-0">
+                                            <v-color-picker v-model="dialog_account_portal.portal.colors.primary"></v-color-picker>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-menu>
+                            </template>
+                            </v-text-field>
+                        </v-col>
+                        <v-col class="shrink" style="min-width: 172px;">
+                            <v-text-field persistent-hint hint="Secondary" v-model="dialog_account_portal.portal.colors.secondary" class="ma-0 pa-0" variant="solo">
+                            <template v-slot:append-inner>
+                                <v-menu v-model="dialog_account_portal.colors.secondary" location="bottom" :close-on-content-click="false">
+                                    <template v-slot:activator="{ props }">
+                                        <div :style="{ backgroundColor: dialog_account_portal.portal.colors.secondary, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-bind="props"></div>
+                                    </template>
+                                    <v-card>
+                                        <v-card-text class="pa-0">
+                                            <v-color-picker v-model="dialog_account_portal.portal.colors.secondary"></v-color-picker>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-menu>
+                            </template>
+                            </v-text-field>
+                        </v-col>
+                        <v-col class="shrink" style="min-width: 172px;">
+                            <v-text-field persistent-hint hint="Accent" v-model="dialog_account_portal.portal.colors.accent" class="ma-0 pa-0" variant="solo">
+                            <template v-slot:append-inner>
+                                <v-menu v-model="dialog_account_portal.colors.accent" location="bottom" :close-on-content-click="false">
+                                    <template v-slot:activator="{ props }">
+                                        <div :style="{ backgroundColor: dialog_account_portal.portal.colors.accent, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-bind="props"></div>
+                                    </template>
+                                    <v-card>
+                                        <v-card-text class="pa-0">
+                                            <v-color-picker v-model="dialog_account_portal.portal.colors.accent"></v-color-picker>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-menu>
+                            </template>
+                            </v-text-field>
+                        </v-col>
+                        <v-col class="shrink" style="min-width: 172px;">
+                            <v-text-field persistent-hint hint="Error" v-model="dialog_account_portal.portal.colors.error" class="ma-0 pa-0" variant="solo">
+                            <template v-slot:append-inner>
+                                <v-menu v-model="dialog_account_portal.colors.error" location="bottom" :close-on-content-click="false">
+                                    <template v-slot:activator="{ props }">
+                                        <div :style="{ backgroundColor: dialog_account_portal.portal.colors.error, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-bind="props"></div>
+                                    </template>
+                                    <v-card>
+                                        <v-card-text class="pa-0">
+                                            <v-color-picker v-model="dialog_account_portal.portal.colors.error"></v-color-picker>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-menu>
+                            </template>
+                            </v-text-field>
+                        </v-col>
+                        <v-col class="shrink" style="min-width: 172px;">
+                            <v-text-field persistent-hint hint="Info" v-model="dialog_account_portal.portal.colors.info" class="ma-0 pa-0" variant="solo">
+                            <template v-slot:append-inner>
+                                <v-menu v-model="dialog_account_portal.colors.info" location="bottom" :close-on-content-click="false">
+                                    <template v-slot:activator="{ props }">
+                                        <div :style="{ backgroundColor: dialog_account_portal.portal.colors.info, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-bind="props"></div>
+                                    </template>
+                                    <v-card>
+                                        <v-card-text class="pa-0">
+                                            <v-color-picker v-model="dialog_account_portal.portal.colors.info"></v-color-picker>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-menu>
+                            </template>
+                            </v-text-field>
+                        </v-col>
+                        <v-col class="shrink" style="min-width: 172px;">
+                            <v-text-field persistent-hint hint="Success" v-model="dialog_account_portal.portal.colors.success" class="ma-0 pa-0" variant="solo">
+                            <template v-slot:append-inner>
+                                <v-menu v-model="dialog_account_portal.colors.success" location="bottom" :close-on-content-click="false">
+                                    <template v-slot:activator="{ props }">
+                                        <div :style="{ backgroundColor: dialog_account_portal.portal.colors.success, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-bind="props"></div>
+                                    </template>
+                                    <v-card>
+                                        <v-card-text class="pa-0">
+                                            <v-color-picker v-model="dialog_account_portal.portal.colors.success"></v-color-picker>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-menu>
+                            </template>
+                            </v-text-field>
+                        </v-col>
+                        <v-col class="shrink" style="min-width: 172px;">
+                            <v-text-field persistent-hint hint="Warning" v-model="dialog_account_portal.portal.colors.warning" class="ma-0 pa-0" variant="solo">
+                            <template v-slot:append-inner>
+                                <v-menu v-model="dialog_account_portal.colors.warning" location="bottom" :close-on-content-click="false">
+                                    <template v-slot:activator="{ props }">
+                                        <div :style="{ backgroundColor: dialog_account_portal.portal.colors.warning, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-bind="props"></div>
+                                    </template>
+                                    <v-card>
+                                        <v-card-text class="pa-0">
+                                            <v-color-picker v-model="dialog_account_portal.portal.colors.warning"></v-color-picker>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-menu>
+                            </template>
+                            </v-text-field>
+                        </v-col>
+                    </v-row>
+                    <v-row>
+                        <v-col><v-btn @click="resetPortalColors">Reset colors</v-btn></v-col>
+                    </v-row>
+                    <span class="text-body-2">Email Configurations</span>
+                    <v-row>
+                        <v-col><v-text-field v-model="dialog_account_portal.portal.email.encryption_type" variant="underlined"></v-text-field></v-col>
+                        <v-col><v-text-field v-model="dialog_account_portal.portal.email.host" variant="underlined"></v-text-field></v-col>
+                        <v-col><v-text-field v-model="dialog_account_portal.portal.email.auth" variant="underlined"></v-text-field></v-col>
+                        <v-col><v-text-field v-model="dialog_account_portal.portal.email.port" variant="underlined"></v-text-field></v-col>
+                    </v-row>
+                <div class="d-flex justify-end pa-0 ma-0">
+                    <v-btn color="primary" @click="updateAccountPortal()">
+                        Update Account Portal
+                    </v-btn>
+                </div>
+            </v-card-text>
+        </v-card>
+      </v-dialog>
 	  <v-dialog v-model="dialog_edit_account.show" max-width="800px" persistent scrollable>
-		<v-card tile>
-			<v-toolbar color="primary" dark flat>
-				<v-btn icon @click.native="dialog_edit_account.show = false">
-					<v-icon>mdi-close</v-icon>
-				</v-btn>
-				<v-toolbar-title>Edit Account</v-toolbar-title>
-				<v-spacer></v-spacer>
-			</v-toolbar>
-			<v-card-text style="max-height: 100%;" class="mt-3">
+	  <v-card tile>
+		<v-toolbar color="primary" dark flat>
+			<v-btn icon="mdi-close" @click.native="dialog_edit_account.show = false"></v-btn>
+			<v-toolbar-title>Edit Account</v-toolbar-title>
+			<v-spacer></v-spacer>
+		</v-toolbar>
+		<v-card-text>
 			<v-container>
-			<v-layout row wrap>
-				<v-flex xs12 pa-2>
-					<v-text-field label="Name" :value="dialog_edit_account.account.name" @change.native="dialog_edit_account.account.name = $event.target.value"></v-text-field>
-				</v-flex>
-				<v-flex xs12 text-right pa-0 ma-0>
-					<v-btn color="primary" dark @click="updateSiteAccount()">
-						Save Account
-					</v-btn>
-				</v-flex>
-			</v-layout>
+			<v-row>
+				<v-col cols="12" pa-2>
+					<v-text-field variant="underlined" hide-details label="Name" :model-value="dialog_edit_account.account.name" @update:model-value="dialog_edit_account.account.name = $event"></v-text-field>
+				</v-col>
+				<v-col cols="12" pa-2>
+					<v-autocomplete variant="underlined" hide-details label="Account Portal" item-title="domain" item-value="account_portal_id" v-model="dialog_edit_account.account.account_portal_id" :items="accountportals"></v-autocomplete>
+				</v-col>
+				<v-col cols="12" text-right pa-0 ma-0>
+				<v-btn color="primary" @click="updateSiteAccount()">
+					Save Account
+				</v-btn>
+				</v-col>
+			</v-row>
 			</v-container>
-			</v-card-text>
+		</v-card-text>
 		</v-card>
+
 	  </v-dialog>
 	  <v-dialog v-model="dialog_cookbook.show" max-width="800px" persistent scrollable>
 		<v-card tile>
 			<v-toolbar flat>
-				<v-btn icon @click.native="dialog_cookbook.show = false">
-					<v-icon>mdi-close</v-icon>
-				</v-btn>
-				<v-toolbar-title>Edit Recipe</v-toolbar-title>
-				<v-spacer></v-spacer>
+			<v-btn icon @click="dialog_cookbook.show = false"><v-icon>mdi-close</v-icon></v-btn>
+			<v-toolbar-title>Edit Recipe</v-toolbar-title>
+			<v-spacer></v-spacer>
 			</v-toolbar>
 			<v-card-text style="max-height: 100%;">
 			<v-container>
-			<v-row row wrap>
-				<v-flex xs12 pa-2>
-					<v-text-field label="Name" :value="dialog_cookbook.recipe.title" @change.native="dialog_cookbook.recipe.title = $event.target.value"></v-text-field>
-				</v-flex>
-				<v-flex xs12 pa-2>
-					<v-textarea label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow :value="dialog_cookbook.recipe.content" @change.native="dialog_cookbook.recipe.content = $event.target.value" spellcheck="false"></v-textarea>
-				</v-flex>
-				<v-flex xs12 pa-2 v-if="role == 'administrator' || role == 'owner'">
-					<v-switch label="Public" v-model="dialog_cookbook.recipe.public" persistent-hint hint="Public by default. Turning off will make the recipe only viewable and useable by you." false-value="0" true-value="1"></v-switch>
-				</v-flex>
+				<v-row>
+				<v-col cols="12"><v-text-field variant="underlined" label="Name" v-model="dialog_cookbook.recipe.title"></v-text-field></v-col>
+				<v-col cols="12"><v-textarea variant="underlined" label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow v-model="dialog_cookbook.recipe.content" spellcheck="false"></v-textarea></v-col>
+				<v-col cols="12" v-if="role == 'administrator' || role == 'owner'"><v-switch label="Public" v-model="dialog_cookbook.recipe.public" persistent-hint hint="Public by default. Turning off will make the recipe only viewable and useable by you." :false-value="0" :true-value="1" inset></v-switch></v-col>
 				<v-col cols="12" class="text-right">
-					<v-btn color="error" elevation="0" text dark @click="deleteRecipe()" class="mx-3">Delete Recipe</v-btn>
-					<v-btn color="primary" elevation="0" dark @click="updateRecipe()">Save Recipe</v-btn>
+					<v-btn color="error" elevation="0" @click="deleteRecipe()" class="mx-3">Delete Recipe</v-btn>
+					<v-btn color="primary" elevation="0" @click="updateRecipe()">Save Recipe</v-btn>
 				</v-col>
-				</v-flex>
-			</v-layout>
+				</v-row>
 			</v-container>
 			</v-card-text>
 		</v-card>
 	  </v-dialog>
 	  <v-dialog v-model="dialog_user.show" max-width="800px" persistent scrollable>
-		<v-card tile v-if="typeof dialog_user.user == 'object'">
-			<v-toolbar dense flat>
-				<v-btn icon @click.native="dialog_user.show = false">
+		<v-card v-if="typeof dialog_user.user == 'object'">
+			<v-toolbar density="compact">
+				<v-btn icon @click="dialog_user.show = false">
 					<v-icon>mdi-close</v-icon>
 				</v-btn>
 				<v-toolbar-title>Edit user {{ dialog_user.user.name }}</v-toolbar-title>
-				<div class="flex-grow-1"></div>
+				<v-spacer></v-spacer>
 			</v-toolbar>
 			<v-card-text>
-				<v-flex xs12 pa-2>
-					<v-text-field label="Name" :value="dialog_user.user.name" @change.native="dialog_user.user.name = $event.target.value"></v-text-field>
-				</v-flex>
-				<v-flex xs12 pa-2>
-					<v-text-field label="Email" :value="dialog_user.user.email" @change.native="dialog_user.user.email = $event.target.value"></v-text-field>
-				</v-flex>
-				<v-autocomplete :items="accounts" item-text="name" item-value="account_id" v-model="dialog_user.user.account_ids" label="Accounts" chips multiple deletable-chips></v-autocomplete>
-				<v-alert text :value="true" type="error" v-for="error in dialog_user.errors" class="mt-5">{{ error }}</v-alert>
-				<v-flex xs12 text-right pa-0 ma-0>
+				<v-col cols="12" class="pa-2">
+					<v-text-field label="Name" v-model="dialog_user.user.name" variant="underlined"></v-text-field>
+				</v-col>
+				<v-col cols="12" class="pa-2">
+					<v-text-field label="Email" v-model="dialog_user.user.email" variant="underlined"></v-text-field>
+				</v-col>
+				<v-autocomplete 
+					:items="accounts" 
+					item-title="name" 
+					item-value="account_id" 
+					v-model="dialog_user.user.account_ids" 
+					label="Accounts" 
+					chips 
+					multiple 
+					closable-chips
+					variant="underlined"
+				></v-autocomplete>
+				<v-alert variant="tonal" type="error" v-for="error in dialog_user.errors" class="mt-5">{{ error }}</v-alert>
+				<v-col cols="12" class="text-right pa-0 ma-0">
 					<v-btn color="primary" dark @click="saveUser()">
 						Save User
 					</v-btn>
-				</v-flex>
+				</v-col>
 			</v-card-text>
 		</v-card>
 	  </v-dialog>
-	  <v-dialog v-model="new_key.show" max-width="800px" v-if="role == 'administrator'">
-		<v-card tile style="margin:auto;max-width:800px">
-		<v-toolbar flat>
-			<v-btn icon @click.native="new_key.show = false">
-				<v-icon>mdi-close</v-icon>
-			</v-btn>
+	  <v-dialog v-model="new_key.show" max-width="800px" v-if="role == 'administrator' || role == 'owner'">
+		<v-card rounded="0" style="margin:auto;max-width:800px">
+		<v-toolbar>
+			<v-btn icon="mdi-close" @click="new_key.show = false"></v-btn>
+			<v-toolbar-title>New Management SSH Key</v-toolbar-title>
+			<v-spacer></v-spacer>
+		</v-toolbar>
+		<v-card-text style="max-height: 100%;">
+		<v-container>
+			<v-row>
+				<v-col cols="12" class="pa-2">
+					<v-text-field label="Name" :model-value="new_key.title" @update:model-value="new_key.title = $event" variant="underlined"></v-text-field>
+				</v-col>
+				<v-col cols="12" class="pa-2">
+					<v-textarea label="Private Key" persistent-hint hint="Contents of your private key file. Typically named something like 'id_rsa'. The corresponding public key will need to added to your host provider." auto-grow :model-value="new_key.key" @update:model-value="new_key.key = $event" spellcheck="false" variant="underlined"></v-textarea>
+				</v-col>
+				<v-col cols="12" class="text-right pa-0 ma-0">
+					<v-btn color="primary" @click="addNewKey()">
+						Add New SSH Key
+					</v-btn>
+				</v-col>
+			</v-row>
+		</v-container>
+		</v-card-text>
+		</v-card>
+	</v-dialog>
+
+	<v-dialog v-model="new_key_user.show" max-width="800px">
+		<v-card rounded="0" style="margin:auto;max-width:800px">
+		<v-toolbar>
+			<v-btn icon="mdi-close" @click="new_key_user.show = false"></v-btn>
 			<v-toolbar-title>New SSH Key</v-toolbar-title>
 			<v-spacer></v-spacer>
 		</v-toolbar>
 		<v-card-text style="max-height: 100%;">
 		<v-container>
-		<v-layout row wrap>
-			<v-flex xs12 pa-2>
-				<v-text-field label="Name" :value="new_key.title" @change.native="new_key.title = $event.target.value"></v-text-field>
-			</v-flex>
-			<v-flex xs12 pa-2>
-				<v-textarea label="Private Key" persistent-hint hint="Contents of your private key file. Typically named something like 'id_rsa'. The corresponding public key will need to added to your host provider." auto-grow :value="new_key.key" @change.native="new_key.key = $event.target.value" spellcheck="false"></v-textarea>
-			</v-flex>
-
-			<v-flex xs12 text-right pa-0 ma-0>
-				<v-btn color="primary" dark @click="addNewKey()">
-					Add New SSH Key
-				</v-btn>
-			</v-flex>
-			</v-flex>
-			</v-layout>
+			<v-row>
+				<v-col cols="12" class="pa-2">
+					<v-text-field label="Name" :model-value="new_key_user.title" @update:model-value="new_key_user.title = $event" variant="underlined"></v-text-field>
+				</v-col>
+				<v-col cols="12" class="pa-2">
+					<v-textarea label="Public Key" persistent-hint hint="Contents of your public key file. Typically found in '~/.ssh/id_rsa.pub'." auto-grow :model-value="new_key_user.key" @update:model-value="new_key_user.key = $event" spellcheck="false" variant="underlined"></v-textarea>
+				</v-col>
+				<v-col cols="12" class="text-right pa-0 ma-0">
+					<v-btn color="primary" @click="addNewKey()">
+						Add New SSH Key
+					</v-btn>
+				</v-col>
+			</v-row>
 		</v-container>
 		</v-card-text>
 		</v-card>
 	</v-dialog>
-	<v-dialog v-model="dialog_key.show" v-if="role == 'administrator'" max-width="800px" v-if="role == 'administrator'" persistent scrollable>
-		<v-card tile>
-		<v-toolbar flat>
-			<v-btn icon @click.native="dialog_key.show = false">
-				<v-icon>mdi-close</v-icon>
-			</v-btn>
+
+	<v-dialog v-model="dialog_key.show" v-if="role == 'administrator' || role == 'owner'" max-width="800px" persistent scrollable>
+		<v-card rounded="0">
+		<v-toolbar>
+			<v-btn icon="mdi-close" @click="dialog_key.show = false"></v-btn>
 			<v-toolbar-title>Edit SSH Key</v-toolbar-title>
 			<v-spacer></v-spacer>
 			<v-toolbar-items v-show="dialog_key.key.main == '0'">
-				<v-btn text @click="setKeyAsPrimary()">Set as Primary Key</v-btn>
+				<v-btn variant="text" @click="setKeyAsPrimary()" color="primary">Set as Primary Key</v-btn>
 			</v-toolbar-items>
 		</v-toolbar>
 		<v-card-text style="max-height: 100%;">
@@ -674,10 +866,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					{{ dialog_key.key.fingerprint }}
 				</v-col>
 				<v-col cols="12">
-					<v-text-field label="Name" :value="dialog_key.key.title" @change.native="dialog_key.key.title = $event.target.value"></v-text-field>
+					<v-text-field label="Name" :model-value="dialog_key.key.title" @update:model-value="dialog_key.key.title = $event" variant="underlined"></v-text-field>
 				</v-col>
 				<v-col cols="12">
-					<v-textarea label="Private Key" persistent-hint hint="Enter new private key to override existing key. The current key is not viewable." auto-grow :value="dialog_key.key.key" @change.native="dialog_key.key.key = $event.target.value" spellcheck="false"></v-textarea>
+					<v-textarea label="Private Key" persistent-hint hint="Enter new private key to override existing key. The current key is not viewable." auto-grow :model-value="dialog_key.key.key" @update:model-value="dialog_key.key.key = $event" spellcheck="false" variant="underlined"></v-textarea>
 				</v-col>
 			</v-row>
 			<v-row>
@@ -685,97 +877,75 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-btn @click="deleteKey()" class="mr-2">
 						Delete SSH Key
 					</v-btn>
-					<v-btn color="primary" dark @click="updateKey()">
+					<v-btn color="primary" @click="updateKey()">
 						Save SSH Key
 					</v-btn>
 				</v-col>
-			</v-layout>
+			</v-row>
 			</v-container>
 			</v-card-text>
 		</v-card>
 	</v-dialog>
-	  <v-dialog v-model="new_process.show" max-width="800px" v-if="role == 'administrator' || role == 'owner'" persistent scrollable>
-		<v-card tile>
-			<v-toolbar flat>
-				<v-btn icon @click.native="new_process.show = false">
-					<v-icon>mdi-close</v-icon>
-				</v-btn>
-				<v-toolbar-title>New Process</v-toolbar-title>
-				<v-spacer></v-spacer>
+	<v-dialog v-model="new_process.show" :persistent="true" width="800" v-if="role == 'administrator' || role == 'owner'">
+		<v-card>
+			<v-toolbar flat color="primary">
+			<v-btn icon @click="new_process.show = false"><v-icon>mdi-close</v-icon></v-btn>
+			<v-toolbar-title>New Process</v-toolbar-title>
+			<v-spacer></v-spacer>
 			</v-toolbar>
-			<v-card-text style="max-height: 100%;">
-			<v-container>
-			<v-layout row wrap>
-				<v-flex xs12 pa-2>
-					<v-text-field label="Name" :value="new_process.name" @change.native="new_process.name = $event.target.value"></v-text-field>
-				</v-flex>
-				<v-flex xs12 sm3 pa-2>
-					<v-text-field label="Time Estimate" hint="Example: 15 minutes" persistent-hint :value="new_process.time_estimate" @change.native="new_process.time_estimate = $event.target.value"></v-text-field>
-				</v-flex>
-				<v-flex xs12 sm3 pa-2>
-					<v-select :items='[{"text":"As needed","value":"as-needed"},{"text":"Daily","value":"1-daily"},{"text":"Weekly","value":"2-weekly"},{"text":"Monthly","value":"3-monthly"},{"text":"Yearly","value":"4-yearly"}]' label="Repeat" v-model="new_process.repeat_interval"></v-select>
-				</v-flex>
-				<v-flex xs12 sm3 pa-2>
-					<v-text-field label="Repeat Quantity"  hint="Example: 2 or 3 times" persistent-hint :value="new_process.repeat_quantity" @change.native="new_process.repeat_quantity = $event.target.value"></v-text-field>
-				</v-flex>
-				<v-flex xs12 sm3 pa-2>
-					<v-autocomplete :items="process_roles" item-text="name" item-value="role_id" label="Role" hide-details v-model="new_process.roles"></v-autocomplete>
-				</v-flex>
-				<v-flex xs12 pa-2>
-					<v-textarea label="Description" persistent-hint hint="Steps to accomplish this process. Markdown enabled." auto-grow :value="new_process.description" @change.native="new_process.description = $event.target.value"></v-textarea>
-				</v-flex>
-				<v-flex xs12 text-right pa-0 ma-0>
-					<v-btn color="primary" dark @click="addNewProcess()">
-						Add New Process
-					</v-btn>
-				</v-flex>
-				</v-flex>
-				</v-layout>
-			</v-container>
+			<v-card-text>
+				<v-row>
+					<v-col cols="12"><v-text-field label="Name" v-model="new_process.name" variant="underlined"></v-text-field></v-col>
+					<v-col cols="12" sm="3"><v-text-field label="Time Estimate" hint="Example: 15 minutes" persistent-hint v-model="new_process.time_estimate" variant="underlined"></v-text-field></v-col>
+					<v-col cols="12" sm="3"><v-select :items='[{"title":"As needed","value":"as-needed"},{"title":"Daily","value":"1-daily"},{"title":"Weekly","value":"2-weekly"},{"title":"Monthly","value":"3-monthly"},{"title":"Yearly","value":"4-yearly"}]' label="Repeat" v-model="new_process.repeat_interval" variant="underlined"></v-select></v-col>
+					<v-col cols="12" sm="3"><v-text-field label="Repeat Quantity" hint="Example: 2 or 3 times" persistent-hint v-model="new_process.repeat_quantity" variant="underlined"></v-text-field></v-col>
+					<v-col cols="12" sm="3"><v-autocomplete :items="process_roles" item-title="name" item-value="role_id" label="Role" hide-details v-model="new_process.roles" variant="underlined"></v-autocomplete></v-col>
+					<v-col cols="12"><v-textarea label="Description" persistent-hint hint="Steps to accomplish this process. Markdown enabled." auto-grow v-model="new_process.description" variant="underlined"></v-textarea></v-col>
+				</v-row>
 			</v-card-text>
-			</v-card>
+			<v-card-actions class="d-flex justify-end"><v-btn color="primary" @click="addNewProcess()">Add New Process</v-btn></v-card-actions>
+		</v-card>
 		</v-dialog>
-		<v-dialog v-model="dialog_edit_process.show" persistent max-width="800px" v-if="role == 'administrator'" persistent scrollable>
-		<v-card tile>
-			<v-toolbar flat>
-				<v-btn icon @click.native="dialog_edit_process.show = false">
+		<v-dialog v-model="dialog_edit_process.show" :persistent="true" width="800" v-if="role == 'administrator'">
+			<v-card>
+				<v-toolbar flat color="surface">
+				<v-btn icon @click="dialog_edit_process.show = false">
 					<v-icon>mdi-close</v-icon>
 				</v-btn>
 				<v-toolbar-title>Edit Process</v-toolbar-title>
 				<v-spacer></v-spacer>
-			</v-toolbar>
-			<v-card-text style="max-height: 100%;">
-			<v-container>
-			<v-layout row wrap>
-				<v-flex xs12 pa-2>
-					<v-text-field label="Name" :value="dialog_edit_process.process.name" @change.native="dialog_edit_process.process.name = $event.target.value"></v-text-field>
-				</v-flex>
-				<v-flex xs12 sm3 pa-2>
-					<v-text-field label="Time Estimate" hint="Example: 15 minutes" persistent-hint :value="dialog_edit_process.process.time_estimate" @change.native="dialog_edit_process.process.time_estimate = $event.target.value"></v-text-field>
-				</v-flex>
-				<v-flex xs12 sm3 pa-2>
-					<v-select :items='[{"text":"As needed","value":"as-needed"},{"text":"Daily","value":"1-daily"},{"text":"Weekly","value":"2-weekly"},{"text":"Monthly","value":"3-monthly"},{"text":"Yearly","value":"4-yearly"}]' label="Repeat" v-model="dialog_edit_process.process.repeat_interval"></v-select>
-				</v-flex>
-				<v-flex xs12 sm3 pa-2>
-					<v-text-field label="Repeat Quantity" hint="Example: 2 or 3 times" persistent-hint :value="dialog_edit_process.process.repeat_quantity" @change.native="dialog_edit_process.process.repeat_quantity = $event.target.value"></v-text-field>
-				</v-flex>
-				<v-flex xs12 sm3 pa-2>
-					<v-autocomplete :items="process_roles" item-text="name" item-value="role_id" label="Role" hide-details v-model="dialog_edit_process.process.roles"></v-autocomplete>
-				</v-flex>
-				<v-flex xs12 pa-2>
-					<v-textarea label="Description" persistent-hint hint="Steps to accomplish this process. Markdown enabled." auto-grow :value="dialog_edit_process.process.description" @change.native="dialog_edit_process.process.description = $event.target.value"></v-textarea>
-				</v-flex>
-				<v-flex xs12 text-right pa-0 ma-0>
-					<v-btn color="primary" dark @click="saveProcess()">
-						Save Process
-					</v-btn>
-				</v-flex>
-				</v-flex>
-				</v-layout>
-			</v-container>
-			</v-card-text>
+				</v-toolbar>
+				<v-card-text>
+				<v-container>
+					<v-row>
+					<v-col cols="12">
+						<v-text-field label="Name" v-model="dialog_edit_process.process.name" variant="underlined"></v-text-field>
+					</v-col>
+					<v-col cols="12" sm="3">
+						<v-text-field label="Time Estimate" hint="Example: 15 minutes" persistent-hint v-model="dialog_edit_process.process.time_estimate" variant="underlined"></v-text-field>
+					</v-col>
+					<v-col cols="12" sm="3">
+						<v-select :items='[{"title":"As needed","value":"as-needed"},{"title":"Daily","value":"1-daily"},{"title":"Weekly","value":"2-weekly"},{"title":"Monthly","value":"3-monthly"},{"title":"Yearly","value":"4-yearly"}]' label="Repeat" v-model="dialog_edit_process.process.repeat_interval" variant="underlined"></v-select>
+					</v-col>
+					<v-col cols="12" sm="3">
+						<v-text-field label="Repeat Quantity" hint="Example: 2 or 3 times" persistent-hint v-model="dialog_edit_process.process.repeat_quantity" variant="underlined"></v-text-field>
+					</v-col>
+					<v-col cols="12" sm="3">
+						<v-autocomplete :items="process_roles" item-title="name" item-value="role_id" label="Role" hide-details v-model="dialog_edit_process.process.roles" variant="underlined"></v-autocomplete>
+					</v-col>
+					<v-col cols="12">
+						<v-textarea label="Description" persistent-hint hint="Steps to accomplish this process. Markdown enabled." auto-grow v-model="dialog_edit_process.process.description" variant="underlined"></v-textarea>
+					</v-col>
+					</v-row>
+				</v-container>
+				</v-card-text>
+				<v-card-actions class="d-flex justify-end">
+				<v-btn color="primary" @click="saveProcess()">
+					Save Process
+				</v-btn>
+				</v-card-actions>
 			</v-card>
-		</v-dialog>
+			</v-dialog>
 		<v-dialog v-model="dialog_handbook.show" v-if="role == 'administrator'" scrollable persistent>
 			<v-card tile>
 			<v-toolbar flat>
@@ -785,52 +955,72 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-toolbar-title>{{ dialog_handbook.process.name }} <v-chip color="primary" text-color="white" text v-show="dialog_handbook.process.roles != ''">{{ dialog_handbook.process.roles }}</v-chip></v-toolbar-title>
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
-					<v-btn text @click="editProcess()">Edit</v-btn>
+					<v-btn variant="text" @click="editProcess()">Edit</v-btn>
 				</v-toolbar-items>
 			</v-toolbar>
 			<v-card-text style="max-height: 100%;">
-				<div class="caption my-3">
-					<v-icon small v-show="dialog_handbook.process.time_estimate != ''" style="padding:0px 5px">mdi-clock-outline</v-icon>{{ dialog_handbook.process.time_estimate }} 
-					<v-icon small v-show="dialog_handbook.process.repeat != '' && dialog_handbook.process.repeat != null" style="padding:0px 5px">mdi-calendar-repeat</v-icon>{{ dialog_handbook.process.repeat }} 
-					<v-icon small v-show="dialog_handbook.process.repeat_quantity != '' && dialog_handbook.process.repeat_quantity != null" style="padding:0px 5px">mdi-repeat</v-icon>{{ dialog_handbook.process.repeat_quantity }}
+				<div class="text-caption my-3">
+					<v-icon size="small" v-show="dialog_handbook.process.time_estimate != ''" style="padding:0px 5px">mdi-clock-outline</v-icon>{{ dialog_handbook.process.time_estimate }} 
+					<v-icon size="small" v-show="dialog_handbook.process.repeat != '' && dialog_handbook.process.repeat != null" style="padding:0px 5px">mdi-calendar-repeat</v-icon>{{ dialog_handbook.process.repeat }} 
+					<v-icon size="small" v-show="dialog_handbook.process.repeat_quantity != '' && dialog_handbook.process.repeat_quantity != null" style="padding:0px 5px">mdi-repeat</v-icon>{{ dialog_handbook.process.repeat_quantity }}
 				</div>
 				<span v-html="dialog_handbook.process.description"></span>
 			</v-card-text>
 			</v-card>
 		</v-dialog>
 		<v-dialog v-model="dialog_update_settings.show" max-width="500px">
-		<v-card tile>
-			<v-toolbar flat dark color="primary">
-				<v-btn icon dark @click.native="dialog_update_settings.show = false">
-					<v-icon>mdi-close</v-icon>
-				</v-btn>
+		<v-card rounded="0">
+			<v-toolbar flat color="primary">
+				<v-btn icon="mdi-close" @click="dialog_update_settings.show = false"></v-btn>
 				<v-toolbar-title>Save settings for {{ dialog_site.site.name }}</v-toolbar-title>
-				<v-spacer></v-spacer>
 			</v-toolbar>
 			<v-card-text>
-				<v-switch label="Automatic Updates" v-model="dialog_update_settings.environment.updates_enabled" :false-value="0" :true-value="1" class="mt-7"></v-switch>
+				<v-row>
+					<v-col>
+						<v-switch 
+							label="Automatic Updates" 
+							v-model="dialog_update_settings.environment.updates_enabled" 
+							:false-value="0" 
+							:true-value="1" 
+							color="primary" 
+							inset
+							hide-details
+							class="mt-4">
+						</v-switch>
+					</v-col>
+				</v-row>
+
 				<v-select
 					:items="dialog_update_settings.plugins"
-					item-text="title"
+					item-title="title"
 					item-value="name"
 					v-model="dialog_update_settings.environment.updates_exclude_plugins"
 					label="Excluded Plugins"
+					variant="underlined"
 					multiple
 					chips
+					closable-chips
 					persistent-hint
+					class="mt-4"
 				></v-select>
+
 				<v-select
 					:items="dialog_update_settings.themes"
-					item-text="title"
+					item-title="title"
 					item-value="name"
 					v-model="dialog_update_settings.environment.updates_exclude_themes"
 					label="Excluded Themes"
+					variant="underlined"
 					multiple
 					chips
+					closable-chips
 					persistent-hint
+					class="mt-4"
 				></v-select>
-				<v-progress-linear :indeterminate="true" v-if="dialog_update_settings.loading"></v-progress-linear>
-				<v-btn @click="saveUpdateSettings()">Save Update Settings</v-btn>
+
+				<v-progress-linear indeterminate v-if="dialog_update_settings.loading" class="my-4"></v-progress-linear>
+
+				<v-btn @click="saveUpdateSettings()" color="primary" class="mt-4">Save Update Settings</v-btn>
 			</v-card-text>
 		</v-card>
 		</v-dialog>
@@ -871,7 +1061,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-select>
 						</td>
 						<td class="justify-center layout px-0">
-							<v-icon small @click="deleteItem(item)">mdi-delete</v-icon>
+							<v-icon size="small" @click="deleteItem(item)">mdi-delete</v-icon>
 						</td>
 					</tr>
 					<tr>
@@ -890,229 +1080,279 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		</v-card>
 		</v-dialog>
 		<v-dialog v-model="dialog_new_domain.show" scrollable width="500">
-		<v-card>
-			<v-toolbar flat dark color="primary">
-			<v-btn icon dark @click.native="dialog_new_domain.show = false">
-				<v-icon>mdi-close</v-icon>
-			</v-btn>
-			<v-toolbar-title>Add Domain</v-toolbar-title>
-				<v-spacer></v-spacer>
-			</v-toolbar>
-			<v-card-text>
-				<v-text-field :value="dialog_new_domain.domain.name" @change.native="dialog_new_domain.domain.name = $event.target.value" label="Domain Name" required class="mt-3"></v-text-field>
-				<v-autocomplete :items="accounts" item-text="name" item-value="account_id" v-model="dialog_new_domain.domain.account_id" label="Account" required></v-autocomplete>
-				<v-alert text :value="true" type="error" v-for="error in dialog_new_domain.errors">
-					{{ error }}
-				</v-alert>
-				<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="dialog_new_domain.loading"></v-progress-linear>
-				<v-flex xs12 text-right>
-					<v-btn color="primary" dark @click="addDomain()">
-						Add domain
-					</v-btn>
-				</v-flex>
-			</v-card-text>
-		</v-card>
+			<v-card>
+				<v-toolbar color="primary">
+				<v-btn icon="mdi-close" @click="dialog_new_domain.show = false"></v-btn>
+				<v-toolbar-title>Add Domain</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-card-text>
+					<v-text-field variant="underlined" v-model="dialog_new_domain.domain.name" label="Domain Name" required class="mt-3"></v-text-field>
+					<v-autocomplete variant="underlined" :items="accounts" item-title="name" item-value="account_id" v-model="dialog_new_domain.domain.account_id" label="Account" required></v-autocomplete>
+					<v-alert variant="tonal" type="error" class="text-body-1 mb-3" v-for="error in dialog_new_domain.errors">
+						{{ error }}
+					</v-alert>
+					<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="dialog_new_domain.loading"></v-progress-linear>
+					<div class="d-flex justify-end">
+						<v-btn color="primary" @click="addDomain()">
+							Add domain
+						</v-btn>
+					</div>
+				</v-card-text>
+			</v-card>
 		</v-dialog>
 		<v-dialog v-model="dialog_new_provider.show" scrollable width="500">
-		<v-card>
-			<v-toolbar flat dark color="primary">
-			<v-btn icon dark @click.native="dialog_new_provider.show = false">
-				<v-icon>mdi-close</v-icon>
-			</v-btn>
-			<v-toolbar-title>Add Provider</v-toolbar-title>
-				<v-spacer></v-spacer>
-			</v-toolbar>
-			<v-card-text>
-				<v-text-field :value="dialog_new_provider.provider.name" @change.native="dialog_new_provider.provider.name = $event.target.value" label="Provider Name" required class="mt-3"></v-text-field>
-				<v-autocomplete :items="provider_options" v-model="dialog_new_provider.provider.provider" label="Provider" required></v-autocomplete>
-				Credentials
-				<v-row no-gutters v-for="(item, index) in dialog_new_provider.provider.credentials">
-       				<v-col cols="12" sm="5">
-						<v-text-field hide-details :value="item.name" @change.native="item.name = $event.target.value" label="Name" required></v-text-field>
-					</v-col>
-					<v-col cols="12" sm="6">
-						<v-text-field hide-details :value="item.value" @change.native="item.value = $event.target.value" label="Value" required class="mx-2"></v-text-field>
-					</v-col>
-					<v-col sm="1">
-						<v-btn icon @click="dialog_new_provider.provider.credentials.splice(index, 1)" class="mt-2"><v-icon>mdi-delete</v-icon></v-btn>
-					</v-col>
-				</v-row>
-				<v-btn depressed class="my-2" @click="dialog_new_provider.provider.credentials.push( {'name':'', 'value': ''} )" >Add Additional Credential</v-btn></td>
-				<v-alert text :value="true" type="error" v-for="error in dialog_new_provider.errors">
-					{{ error }}
-				</v-alert>
-				<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="dialog_new_provider.loading"></v-progress-linear>
-				<v-flex xs12 text-right>
-					<v-btn color="primary" dark @click="addProvider()">
-						Add Provider
-					</v-btn>
-				</v-flex>
-			</v-card-text>
-		</v-card>
+			<v-card>
+				<v-toolbar color="primary">
+				<v-btn icon="mdi-close" @click="dialog_new_provider.show = false"></v-btn>
+				<v-toolbar-title>Add Provider</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-card-text>
+					<v-text-field :model-value="dialog_new_provider.provider.name" @update:model-value="dialog_new_provider.provider.name = $event" label="Provider Name" required class="mt-3" variant="underlined"></v-text-field>
+					<v-autocomplete :items="provider_options" v-model="dialog_new_provider.provider.provider" label="Provider" required variant="underlined"></v-autocomplete>
+					Credentials
+					<v-row no-gutters v-for="(item, index) in dialog_new_provider.provider.credentials" :key="index">
+						<v-col cols="12" sm="5">
+							<v-text-field hide-details :model-value="item.name" @update:model-value="item.name = $event" label="Name" required variant="underlined"></v-text-field>
+						</v-col>
+						<v-col cols="12" sm="6">
+							<v-text-field hide-details :model-value="item.value" @update:model-value="item.value = $event" label="Value" required class="mx-2" variant="underlined"></v-text-field>
+						</v-col>
+						<v-col sm="1">
+							<v-btn icon="mdi-delete" variant="text" @click="dialog_new_provider.provider.credentials.splice(index, 1)" class="mt-2"></v-btn>
+						</v-col>
+					</v-row>
+					<v-btn variant="tonal" class="my-2" @click="dialog_new_provider.provider.credentials.push( {'name':'', 'value': ''} )" >Add Additional Credential</v-btn>
+					<v-alert variant="tonal" type="error" v-for="error in dialog_new_provider.errors" :key="error">
+						{{ error }}
+					</v-alert>
+					<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="dialog_new_provider.loading"></v-progress-linear>
+					<div class="d-flex justify-end">
+						<v-btn color="primary" @click="addProvider()">
+							Add Provider
+						</v-btn>
+					</div>
+				</v-card-text>
+			</v-card>
 		</v-dialog>
 		<v-dialog v-model="dialog_edit_provider.show" scrollable width="500">
-		<v-card>
-			<v-toolbar flat dark color="primary">
-			<v-btn icon dark @click.native="dialog_edit_provider.show = false">
-				<v-icon>mdi-close</v-icon>
-			</v-btn>
-			<v-toolbar-title>Add Provider</v-toolbar-title>
-				<v-spacer></v-spacer>
-			</v-toolbar>
-			<v-card-text>
-				<v-text-field :value="dialog_edit_provider.provider.name" @change.native="dialog_edit_provider.provider.name = $event.target.value" label="Provider Name" required class="mt-3"></v-text-field>
-				<v-autocomplete :items="provider_options" v-model="dialog_edit_provider.provider.provider" label="Provider" required></v-autocomplete>
-				Credentials
-				<v-row no-gutters v-for="(item, index) in dialog_edit_provider.provider.credentials">
-       				<v-col cols="12" sm="5">
-						<v-text-field hide-details :value="item.name" @change.native="item.name = $event.target.value" label="Name" required></v-text-field>
-					</v-col>
-					<v-col cols="12" sm="6">
-						<v-text-field hide-details :value="item.value" @change.native="item.value = $event.target.value" label="Value" required class="mx-2"></v-text-field>
-					</v-col>
-					<v-col sm="1">
-						<v-btn icon @click="dialog_edit_provider.provider.credentials.splice(index, 1)" class="mt-2"><v-icon>mdi-delete</v-icon></v-btn>
-					</v-col>
-				</v-row>
-				<v-btn depressed class="my-2" @click="dialog_edit_provider.provider.credentials.push( {'name':'', 'value': ''} )" >Add Additional Credential</v-btn></td>
-				<v-alert text :value="true" type="error" v-for="error in dialog_edit_provider.errors">
-					{{ error }}
-				</v-alert>
-				<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="dialog_edit_provider.loading"></v-progress-linear>
-				<v-flex xs12 text-right>
-					<v-btn color="error" text dark @click="deleteProvider()">
-						Delete Provider
-					</v-btn>
-					<v-btn color="primary" dark @click="updateProvider()">
-						Update Provider
-					</v-btn>
-				</v-flex>
-			</v-card-text>
-		</v-card>
+			<v-card>
+				<v-toolbar color="primary">
+				<v-btn icon="mdi-close" @click="dialog_edit_provider.show = false"></v-btn>
+				<v-toolbar-title>Edit Provider</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-card-text>
+					<v-text-field :model-value="dialog_edit_provider.provider.name" @update:model-value="dialog_edit_provider.provider.name = $event" label="Provider Name" required class="mt-3" variant="underlined"></v-text-field>
+					<v-autocomplete :items="provider_options" v-model="dialog_edit_provider.provider.provider" label="Provider" required variant="underlined"></v-autocomplete>
+					Credentials
+					<v-row no-gutters v-for="(item, index) in dialog_edit_provider.provider.credentials" :key="index">
+						<v-col cols="12" sm="5">
+							<v-text-field hide-details :model-value="item.name" @update:model-value="item.name = $event" label="Name" required variant="underlined"></v-text-field>
+						</v-col>
+						<v-col cols="12" sm="6">
+							<v-text-field hide-details :model-value="item.value" @update:model-value="item.value = $event" label="Value" required class="mx-2" variant="underlined"></v-text-field>
+						</v-col>
+						<v-col sm="1">
+							<v-btn icon="mdi-delete" @click="dialog_edit_provider.provider.credentials.splice(index, 1)" class="mt-2" variant="text"></v-btn>
+						</v-col>
+					</v-row>
+					<v-btn variant="tonal" class="my-2 mr-2" @click="dialog_edit_provider.provider.credentials.push( {'name':'', 'value': ''} )" >Add Additional Credential</v-btn>
+					<v-alert variant="tonal" type="error" v-for="error in dialog_edit_provider.errors" :key="error">
+						{{ error }}
+					</v-alert>
+					<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="dialog_edit_provider.loading"></v-progress-linear>
+					<div class="d-flex justify-end">
+						<v-btn color="error" variant="text" @click="deleteProvider()">
+							Delete Provider
+						</v-btn>
+						<v-btn color="primary" @click="updateProvider()">
+							Update Provider
+						</v-btn>
+					</div>
+				</v-card-text>
+			</v-card>
 		</v-dialog>
 		<v-dialog v-model="dialog_configure_defaults.show" scrollable width="980">
 		<v-card>
-			<v-toolbar flat dark color="primary">
-			<v-btn icon dark @click.native="dialog_configure_defaults.show = false">
-				<v-icon>mdi-close</v-icon>
-			</v-btn>
+			<v-toolbar flat color="primary">
+			<v-btn icon="mdi-close" dark @click.native="dialog_configure_defaults.show = false"></v-btn>
 			<v-toolbar-title>Configure Defaults</v-toolbar-title>
-				<v-spacer></v-spacer>
+			<v-spacer></v-spacer>
 			</v-toolbar>
 			<template v-if="dialog_configure_defaults.loading">
-				<v-progress-linear :indeterminate="true"></v-progress-linear>
+			<v-progress-linear :indeterminate="true"></v-progress-linear>
 			</template>
 			<v-card-text>
-				<template v-if="dialog_account.show">
-				<v-alert text :value="true" type="info" class="mb-4 mt-4">
-					When new sites are added to the account <strong>{{ dialog_account.records.account.name }}</strong> then the following default settings will be applied.  
-				</v-alert>
-				<v-layout wrap>
-					<v-flex xs6 pr-2><v-text-field :value="dialog_account.records.account.defaults.email" @change.native="dialog_account.records.account.defaults.email = $event.target.value" label="Default Email" required></v-text-field></v-flex>
-					<v-flex xs6 pl-2><v-autocomplete :items="timezones" label="Default Timezone" v-model="dialog_account.records.account.defaults.timezone"></v-autocomplete></v-flex>
-				</v-layout>
-				<v-layout wrap>
-					<v-flex><v-autocomplete label="Default Recipes" v-model="dialog_account.records.account.defaults.recipes" ref="default_recipes" :items="recipes" item-text="title" item-value="recipe_id" multiple chips deletable-chips :menu-props="{ closeOnContentClick:true, openOnClick: false }"></v-autocomplete></v-flex>
-				</v-layout>
+			<template v-if="dialog_account.show">
+				<v-alert variant="tonal" type="info" class="text-body-1 my-4" size="small">When new sites are added to the account <strong>{{ dialog_account.records.account.name }}</strong> then the following default settings will be applied.</v-alert>
+				<v-row wrap>
+				<v-col cols="6" pr-2>
+					<v-text-field variant="underlined" :model-value="dialog_account.records.account.defaults.email" @update:model-value="dialog_account.records.account.defaults.email = $event" label="Default Email" required></v-text-field>
+				</v-col>
+				<v-col cols="6" pl-2>
+					<v-autocomplete variant="underlined" :items="timezones" label="Default Timezone" v-model="dialog_account.records.account.defaults.timezone"></v-autocomplete>
+				</v-col>
+				</v-row>
+				<v-row wrap>
+				<v-col>
+					<v-autocomplete variant="underlined" label="Default Recipes" v-model="dialog_account.records.account.defaults.recipes" ref="default_recipes" :items="recipes" item-title="title" item-value="recipe_id" multiple chips closable-chips :menu-props="{ closeOnContentClick:true, openOnClick: false }"></v-autocomplete>
+				</v-col>
+				</v-row>
 				<span class="body-2">Default Users</span>
-				<v-data-table
-					:items="dialog_account.records.account.defaults.users"
-					hide-default-header
-					hide-default-footer
-					v-if="typeof dialog_account.records.account.defaults.users == 'object'"
-				>
+				<v-data-table :items="dialog_account.records.account.defaults.users" hide-default-header hide-default-footer v-if="typeof dialog_account.records.account.defaults.users == 'object'">
 				<template v-slot:body="{ items }">
-				<tbody>
 					<tr v-for="(item, index) in items" style="border-bottom: 0px;">
-						<td class="pa-1"><v-text-field :value="item.username" @change.native="item.username = $event.target.value" label="Username"></v-text-field></td>
-						<td class="pa-1"><v-text-field :value="item.email" @change.native="item.email = $event.target.value" label="Email"></v-text-field></td>
-						<td class="pa-1"><v-text-field :value="item.first_name" @change.native="item.first_name = $event.target.value" label="First Name"></v-text-field></td>
-						<td class="pa-1"><v-text-field :value="item.last_name" @change.native="item.last_name = $event.target.value" label="Last Name"></v-text-field></td>
-						<td class="pa-1" style="width:145px;"><v-select :value="item.role" v-model="item.role" :items="roles" label="Role" item-text="name"></v-select></td>
-						<td class="pa-1"><v-btn text small icon color="primary" @click="deleteUserValue( index )"><v-icon small>mdi-delete</v-icon></v-btn></td>
-					</tr>
-				</tbody>
-				</template>
-					<template v-slot:footer>
-					<tr style="border-top: 0px;">
-						<td colspan="5" style="padding:0px;">
-							<v-btn depressed small class="ma-0 mb-3" @click="addDefaultsUser()">Add Additional User</v-btn>
+						<td class="pa-1">
+							<v-text-field variant="underlined" :model-value="item.username" @update:model-value="item.username = $event" label="Username"></v-text-field>
+						</td>
+						<td class="pa-1">
+							<v-text-field variant="underlined" :model-value="item.email" @update:model-value="item.email = $event" label="Email"></v-text-field>
+						</td>
+						<td class="pa-1">
+							<v-text-field variant="underlined" :model-value="item.first_name" @update:model-value="item.first_name = $event" label="First Name"></v-text-field>
+						</td>
+						<td class="pa-1">
+							<v-text-field variant="underlined" :model-value="item.last_name" @update:model-value="item.last_name = $event" label="Last Name"></v-text-field>
+						</td>
+						<td class="pa-1" style="width:155px;">
+							<v-select variant="underlined" :model-value="item.role" v-model="item.role" :items="roles" label="Role" item-title="name"></v-select>
+						</td>
+						<td class="pa-1" style="width:50px;">
+							<v-btn variant="text" icon="mdi-delete" density="compact" color="primary" @click="deleteUserValue( index )"></v-btn>
 						</td>
 					</tr>
-					</template>
+				</template>
+				<template v-slot:bottom>
+					<div class="v-data-table-footer">
+					<v-row style="border-top: 0px;">
+						<v-col cols="12">
+						<v-btn variant="tonal" size="small" @click="addDefaultsUser()">Add Additional User</v-btn>
+						</v-col>
+					</v-row>
+					</div>
+				</template>
 				</v-data-table>
 				<v-spacer class="my-5"></v-spacer>
-				<v-flex xs12>
-					<v-text-field :value="dialog_account.records.account.defaults.kinsta_emails" @change.native="dialog_account.records.account.defaults.kinsta_emails = $event.target.value" label="Kinsta Email Invite(s)" persistent-hint hint="Separated by a comma. Example: name@example.com, support@example.com. When Kinsta site is created from this panel, will share MyKinsta access with these email addresses."></v-text-field>
-				</v-flex>
-				<v-flex xs12 text-right>
-					<v-btn color="primary" dark @click="saveDefaults()">
-						Save Changes
-					</v-btn>
-				</v-flex>
-				</template>
+				<v-row>
+				<v-col cols="12">
+					<v-text-field variant="underlined" :model-value="dialog_account.records.account.defaults.kinsta_emails" @update:model-value="dialog_account.records.account.defaults.kinsta_emails = $event" label="Kinsta Email Invite(s)" persistent-hint hint="Separated by a comma. Example: name@example.com, support@example.com. When Kinsta site is created from this panel, will share MyKinsta access with these email addresses."></v-text-field>
+				</v-col>
+				<v-col cols="12" text-right>
+				<v-btn color="primary" dark @click="saveDefaults()">
+					Save Changes
+				</v-btn>
+				</v-col>
+				</v-row>
+			</template>
 			</v-card-text>
 		</v-card>
 		</v-dialog>
 		<v-dialog v-model="dialog_customer_modify_plan.show" max-width="700">
 			<v-card tile>
-				<v-toolbar flat dark color="primary">
-					<v-btn icon dark @click.native="dialog_customer_modify_plan.show = false">
+				<v-toolbar elevation="0" color="primary">
+					<v-btn icon @click="dialog_customer_modify_plan.show = false">
 						<v-icon>mdi-close</v-icon>
 					</v-btn>
 					<v-toolbar-title>Edit plan for {{ dialog_customer_modify_plan.subscription.name }}</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
 				<v-card-text class="mt-4">
-					<v-layout row wrap>
-					<v-flex xs6 px-1>
-					<v-select
-						v-show="dialog_customer_modify_plan.hosting_plans.map( plan => plan.name ).includes( dialog_customer_modify_plan.selected_plan )"
-						v-model="dialog_customer_modify_plan.selected_plan"
-						label="Plan Name"
-						:items="dialog_customer_modify_plan.hosting_plans.map( plan => plan.name )"
-						:value="dialog_customer_modify_plan.subscription.plan.name"
-					></v-select>
-					</v-flex>
-					<v-flex xs6 px-1>
-					<v-select
-						v-show="dialog_customer_modify_plan.subscription.plan.interval != ''"
-						v-model="dialog_customer_modify_plan.subscription.plan.interval"
-						label="Plan Interval"
-						:items="hosting_intervals"
-						:value="dialog_customer_modify_plan.subscription.plan.interval"
-					></v-select>
-					</v-flex>
-					<v-flex xs6 px-1>
-						<v-switch v-if="typeof dialog_customer_modify_plan.subscription.plan.auto_pay != 'undefined'" v-model="dialog_customer_modify_plan.subscription.plan.auto_pay" false-value="false" true-value="true" label="Autopay"></v-switch>
-					</v-flex>
-					<v-flex xs6 px-1>
-						<v-text-field
-							disabled
-							:value="dialog_customer_modify_plan.subscription.plan.next_renewal"
-							label="Next Renewal Date"
-							prepend-icon="mdi-calendar"
-						></v-text-field>
-						</template>
-					</v-flex>
-					</v-layout>
-					<v-layout v-if="typeof dialog_customer_modify_plan.subscription.plan.name == 'string' && dialog_customer_modify_plan.subscription.plan.name == 'Custom'" row wrap>
-						<v-flex xs3 pa-1><v-text-field label="Storage (GBs)" :value="dialog_customer_modify_plan.subscription.plan.limits.storage" @change.native="dialog_customer_modify_plan.subscription.plan.limits.storage = $event.target.value"></v-text-field></v-flex>
-						<v-flex xs3 pa-1><v-text-field label="Visits" :value="dialog_customer_modify_plan.subscription.plan.limits.visits" @change.native="dialog_customer_modify_plan.subscription.plan.limits.visits = $event.target.value"></v-text-field></v-flex>
-						<v-flex xs3 pa-1><v-text-field label="Sites" :value="dialog_customer_modify_plan.subscription.plan.limits.sites" @change.native="dialog_customer_modify_plan.subscription.plan.limits.sites = $event.target.value"></v-text-field></v-flex>
-						<v-flex xs3 pa-1><v-text-field label="Price" :value="dialog_customer_modify_plan.subscription.plan.price" @change.native="dialog_customer_modify_plan.subscription.plan.price = $event.target.value"></v-text-field></v-flex>
-					</v-layout>
-					<v-layout v-else-if="Object.keys( dialog_customer_modify_plan.subscription.plan.limits ).length > 0" row wrap>
-						<v-flex xs3 pa-1><v-text-field label="Storage (GBs)" :value="dialog_customer_modify_plan.subscription.plan.limits.storage" disabled></v-text-field></v-flex>
-						<v-flex xs3 pa-1><v-text-field label="Visits" :value="dialog_customer_modify_plan.subscription.plan.limits.visits" disabled></v-text-field></v-flex>
-						<v-flex xs3 pa-1><v-text-field label="Sites" :value="dialog_customer_modify_plan.subscription.plan.limits.sites" disabled ></v-text-field></v-flex>
-						<v-flex xs3 pa-1><v-text-field label="Price" :value="dialog_customer_modify_plan.subscription.plan.price" disabled ></v-text-field></v-flex>
-					</v-layout>
+					<v-row>
+						<v-col cols="6" px-1>
+							<v-select
+								v-show="dialog_customer_modify_plan.hosting_plans.map( plan => plan.name ).includes( dialog_customer_modify_plan.selected_plan )"
+								v-model="dialog_customer_modify_plan.selected_plan"
+								label="Plan Name"
+								:items="dialog_customer_modify_plan.hosting_plans.map( plan => plan.name )"
+								:model-value="dialog_customer_modify_plan.subscription.plan.name"
+								variant="underlined"
+							></v-select>
+						</v-col>
+						<v-col cols="6" px-1>
+							<v-select
+								v-show="dialog_customer_modify_plan.subscription.plan.interval != ''"
+								v-model="dialog_customer_modify_plan.subscription.plan.interval"
+								label="Plan Interval"
+								:items="hosting_intervals"
+								:model-value="dialog_customer_modify_plan.subscription.plan.interval"
+								variant="underlined"
+							></v-select>
+						</v-col>
+						<v-col cols="6" px-1>
+							<v-switch
+								v-if="typeof dialog_customer_modify_plan.subscription.plan.auto_pay != 'undefined'"
+								v-model="dialog_customer_modify_plan.subscription.plan.auto_pay"
+								false-value="false"
+								true-value="true"
+								label="Autopay"
+							></v-switch>
+						</v-col>
+						<v-col cols="6" px-1>
+							<v-text-field
+								disabled
+								:model-value="dialog_customer_modify_plan.subscription.plan.next_renewal"
+								label="Next Renewal Date"
+								prepend-icon="mdi-calendar"
+								variant="underlined"
+							></v-text-field>
+						</v-col>
+					</v-row>
+					<v-row v-if="typeof dialog_customer_modify_plan.subscription.plan.name == 'string' && dialog_customer_modify_plan.subscription.plan.name == 'Custom'">
+						<v-col cols="3" pa-1>
+							<v-text-field
+								label="Storage (GBs)"
+								:model-value="dialog_customer_modify_plan.subscription.plan.limits.storage"
+								@update:model-value="dialog_customer_modify_plan.subscription.plan.limits.storage = $event"
+								variant="underlined"
+							></v-text-field>
+						</v-col>
+						<v-col cols="3" pa-1>
+							<v-text-field
+								label="Visits"
+								:model-value="dialog_customer_modify_plan.subscription.plan.limits.visits"
+								@update:model-value="dialog_customer_modify_plan.subscription.plan.limits.visits = $event"
+								variant="underlined"
+							></v-text-field>
+						</v-col>
+						<v-col cols="3" pa-1>
+							<v-text-field
+								label="Sites"
+								:model-value="dialog_customer_modify_plan.subscription.plan.limits.sites"
+								@update:model-value="dialog_customer_modify_plan.subscription.plan.limits.sites = $event"
+								variant="underlined"
+							></v-text-field>
+						</v-col>
+						<v-col cols="3" pa-1>
+							<v-text-field
+								label="Price"
+								:model-value="dialog_customer_modify_plan.subscription.plan.price"
+								@update:model-value="dialog_customer_modify_plan.subscription.plan.price = $event"
+								variant="underlined"
+							></v-text-field>
+						</v-col>
+					</v-row>
+					<v-row v-else-if="Object.keys( dialog_customer_modify_plan.subscription.plan.limits ).length > 0">
+						<v-col cols="3" pa-1>
+							<v-text-field label="Storage (GBs)" :model-value="dialog_customer_modify_plan.subscription.plan.limits.storage" disabled></v-text-field>
+						</v-col>
+						<v-col cols="3" pa-1>
+							<v-text-field label="Visits" :model-value="dialog_customer_modify_plan.subscription.plan.limits.visits" disabled></v-text-field>
+						</v-col>
+						<v-col cols="3" pa-1>
+							<v-text-field label="Sites" :model-value="dialog_customer_modify_plan.subscription.plan.limits.sites" disabled></v-text-field>
+						</v-col>
+						<v-col cols="3" pa-1>
+							<v-text-field label="Price" :model-value="dialog_customer_modify_plan.subscription.plan.price" disabled></v-text-field>
+						</v-col>
+					</v-row>
 					<v-data-table
 						v-show="dialog_customer_modify_plan.subscription.plan.addons.length > 0"
-						:headers='[{"text":"Name","value":"name"},{"text":"Quantity","value":"quantity"},{"text":"Price","value":"price"},{"text":"Total","value":"total"}]'
+						:headers='[{"title":"Name","value":"name"},{"title":"Quantity","value":"quantity"},{"title":"Price","value":"price"},{"title":"Total","value":"total"}]'
 						:items="dialog_customer_modify_plan.subscription.plan.addons"
-						:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }">
+						:items-per-page-options="[50,100,250,{title:'All',value:-1}]"
+					>
 						<template v-slot:item.price="{ item }">
 							${{ item.price }}
 						</template>
@@ -1120,187 +1360,176 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							${{ ( item.price * item.quantity ).toFixed(2) }}
 						</template>
 					</v-data-table>
-					<v-layout>
-					<v-flex xs12 text-right>
-						<v-btn color="red" dark @click="cancelPlan()">
-							Cancel Plan
-						</v-btn>
-						<v-btn color="primary" dark @click="requestPlanChanges()">
-							Request Changes
-						</v-btn>
-					</v-flex>
-					</v-layout>
+					<v-row>
+						<v-col cols="12" class="text-right">
+							<v-btn color="red" variant="flat" @click="cancelPlan()">
+								Cancel Plan
+							</v-btn>
+							<v-btn color="primary" variant="flat" @click="requestPlanChanges()">
+								Request Changes
+							</v-btn>
+						</v-col>
+					</v-row>
 				</v-card-text>
-				</v-card>
-			</v-dialog>
-			<v-dialog v-model="dialog_modify_plan.show" max-width="700">
-				<v-card tile>
-					<v-toolbar flat dark color="primary">
-						<v-btn icon dark @click.native="dialog_modify_plan.show = false">
-							<v-icon>mdi-close</v-icon>
-						</v-btn>
-						<v-toolbar-title>Edit plan for {{ dialog_account.records.account.name }}</v-toolbar-title>
-						<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-card-text class="mt-4">
-						<v-row dense>
-						<v-col cols="6">
-						<v-select
-							@change="loadHostingPlan()"
-							v-model="dialog_modify_plan.selected_plan"
-							label="Plan Name"
-							:items="dialog_modify_plan.hosting_plans.map( plan => plan.name )"
-							:value="dialog_modify_plan.plan.name"
-						></v-select>
+			</v-card>
+		</v-dialog>
+		<v-dialog v-model="dialog_modify_plan.show" max-width="700">
+			<v-card>
+				<v-toolbar flat color="primary">
+					<v-btn icon="mdi-close" @click="dialog_modify_plan.show = false"></v-btn>
+					<v-toolbar-title>Edit plan for {{ dialog_account.records.account.name }}</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-card-text class="mt-4">
+					<v-row dense>
+						<v-col cols="12" md="6">
+							<v-select
+								@update:model-value="loadHostingPlan()"
+								v-model="dialog_modify_plan.selected_plan"
+								label="Plan Name"
+								:items="(dialog_modify_plan.hosting_plans || []).map( plan => plan.name )"
+								variant="underlined"
+							></v-select>
 						</v-col>
-						<v-col cols="6">
-						<v-select
-							@change="calculateHostingPlan()"
-							v-model="dialog_modify_plan.plan.interval"
-							label="Plan Interval"
-							:items="hosting_intervals"
-							:value="dialog_modify_plan.plan.interval"
-						></v-select>
+						<v-col cols="12" md="6">
+							<v-select
+								@update:model-value="calculateHostingPlan()"
+								v-model="dialog_modify_plan.plan.interval"
+								label="Plan Interval"
+								:items="hosting_intervals || []"
+								variant="underlined"
+							></v-select>
 						</v-col>
-						<v-col cols="6">
-							<v-select v-if="typeof dialog_account.records.users == 'object'" label="Billing User" :items="dialog_account.records.users" :item-text="item => `${item.name} - ${item.email}`" item-value="user_id" v-model="dialog_modify_plan.plan.billing_user_id"></v-select>
+						<v-col cols="12" md="6">
+							<v-select v-if="typeof dialog_account.records.users == 'object'" label="Billing User" :items="dialog_account.records.users || []" :item-title="item => `${item.name} - ${item.email}`" item-value="user_id" v-model="dialog_modify_plan.plan.billing_user_id" variant="underlined"></v-select>
 						</v-col>
-						<v-col cols="6">
-						<v-menu
-							v-model="dialog_modify_plan.date_selector"
-							:close-on-content-click="false"
-							:nudge-right="40"
-							transition="scale-transition"
-							offset-y
-							min-width="290px"
-						>
-							<template v-slot:activator="{ on, attrs }">
-							<v-text-field
-								v-model="dialog_modify_plan.plan.next_renewal"
-								:value="dialog_modify_plan.plan.next_renewal"
-								label="Next Renewal Date"
-								prepend-icon="mdi-calendar"
-								v-bind="attrs"
-								v-on="on"
-							></v-text-field>
-							</template>
-							<v-date-picker @input="keepTimestamp( $event ); dialog_modify_plan.date_selector = false"></v-date-picker>
-						</v-menu>
+						<v-col cols="12" md="6">
+							<v-menu
+								v-model="dialog_modify_plan.date_selector"
+								:close-on-content-click="false"
+								location="bottom"
+							>
+								<template v-slot:activator="{ props }">
+								<v-text-field
+									v-model="dialog_modify_plan.plan.next_renewal"
+									label="Next Renewal Date"
+									append-inner-icon="mdi-calendar"
+									readonly
+									v-bind="props"
+									variant="underlined"
+								></v-text-field>
+								</template>
+								<v-date-picker @update:model-value="keepTimestamp" v-model="dialog_modify_plan.plan.next_renewal"></v-date-picker>
+							</v-menu>
 						</v-col>
-						</v-row>
-						<v-row dense>
-							<v-col><v-switch v-model="dialog_modify_plan.plan.auto_pay" false-value="false" true-value="true" label="Autopay"></v-switch></v-col>
-							<v-col><v-switch v-model="dialog_modify_plan.plan.auto_switch" false-value="false" true-value="true" label="Automatically switch plan"></v-switch></v-col>
-						</v-row>
-						<v-row v-if="typeof dialog_modify_plan.plan.name == 'string' && dialog_modify_plan.plan.name == 'Custom'" dense>
-							<v-col cols="3"><v-text-field label="Storage (GBs)" :value="dialog_modify_plan.plan.limits.storage" @change.native="dialog_modify_plan.plan.limits.storage = $event.target.value"></v-text-field></v-col>
-							<v-col cols="3"><v-text-field label="Visits" :value="dialog_modify_plan.plan.limits.visits" @change.native="dialog_modify_plan.plan.limits.visits = $event.target.value"></v-text-field></v-col>
-							<v-col cols="3"><v-text-field label="Sites" :value="dialog_modify_plan.plan.limits.sites" @change.native="dialog_modify_plan.plan.limits.sites = $event.target.value"></v-text-field></v-col>
-							<v-col cols="3"><v-text-field label="Price" :value="dialog_modify_plan.plan.price" @change.native="dialog_modify_plan.plan.price = $event.target.value"></v-text-field></v-col>
-						</v-row>
-						<v-row v-else dense>
-							<v-col cols="3"><v-text-field label="Storage (GBs)" :value="dialog_modify_plan.plan.limits.storage" disabled></v-text-field></v-col>
-							<v-col cols="3"><v-text-field label="Visits" :value="dialog_modify_plan.plan.limits.visits" disabled></v-text-field></v-col>
-							<v-col cols="3"><v-text-field label="Sites" :value="dialog_modify_plan.plan.limits.sites" disabled ></v-text-field></v-col>
-							<v-col cols="3"><v-text-field label="Price" :value="dialog_modify_plan.plan.price" disabled ></v-text-field></v-col>
-						</v-row>
-						<v-row dense>
-							<v-col>
-								<h3 v-show="typeof dialog_modify_plan.plan.addons == 'object' && dialog_modify_plan.plan.addons">Addons</h3>
-							</v-col>
-						</v-row>
-						<v-row dense v-for="(addon, index) in dialog_modify_plan.plan.addons">
-							<v-col cols="7">
-								<v-textarea auto-grow rows="1" label="Name" :value="addon.name" @change.native="addon.name = $event.target.value" hide-details></v-textarea>
-							</v-col>
-							<v-col cols="2">
-								<v-text-field label="Quantity" :value="addon.quantity" @change.native="addon.quantity = $event.target.value" hide-details>
-							</v-col>
-							<v-col cols="2">
-								<v-text-field label="Price" :value="addon.price" @change.native="addon.price = $event.target.value" hide-details>
-							</v-col>
-							<v-col cols="1" align-self="end">
-								<v-btn small text icon @click="removeAddon(index)"><v-icon>mdi-delete</v-icon></v-btn>
-							</v-col>
-						</v-row>
-						<v-row class="mb-1">
-							<v-col>
-								<v-btn small depressed @click="addAddon()">Add Addon</v-btn>
-							</v-col>
-						</v-row>
-						<v-row dense>
-							<v-col>
-								<h3 v-show="typeof dialog_modify_plan.plan.credits == 'object' && dialog_modify_plan.plan.credits">Credits</h3>
-							</v-col>
-						</v-row>
-						<v-row dense v-for="(item, index) in dialog_modify_plan.plan.credits">
-							<v-col cols="7">
-								<v-textarea auto-grow rows="1" label="Name" :value="item.name" @change.native="item.name = $event.target.value" hide-details></v-textarea>
-							</v-col>
-							<v-col cols="2">
-								<v-text-field label="Quantity" :value="item.quantity" @change.native="item.quantity = $event.target.value" hide-details>
-							</v-col>
-							<v-col cols="2">
-								<v-text-field label="Price" :value="item.price" @change.native="item.price = $event.target.value" hide-details>
-							</v-col>
-							<v-col cols="1" align-self="end">
-								<v-btn small text icon @click="removeCredit(index)"><v-icon>mdi-delete</v-icon></v-btn>
-							</v-col>
-						</v-row>
-						<v-row class="mb-1">
-							<v-col>
-								<v-btn small depressed @click="addCredit()">Add Credit</v-btn>
-							</v-col>
-						</v-row>
-						<v-row dense>
-							<v-col>
-								<h3 v-show="typeof dialog_modify_plan.plan.charges == 'object' && dialog_modify_plan.plan.credits">Charges</h3>
-							</v-col>
-						</v-row>
-						<v-row dense v-for="(item, index) in dialog_modify_plan.plan.charges">
-							<v-col cols="7">
-								<v-textarea auto-grow rows="1" label="Name" :value="item.name" @change.native="item.name = $event.target.value" hide-details></v-textarea>
-							</v-col>
-							<v-col cols="2">
-								<v-text-field label="Quantity" :value="item.quantity" @change.native="item.quantity = $event.target.value" hide-details>
-							</v-col>
-							<v-col cols="2">
-								<v-text-field label="Price" :value="item.price" @change.native="item.price = $event.target.value" hide-details>
-							</v-col>
-							<v-col cols="1" align-self="end">
-								<v-btn small text icon @click="removeCharge(index)"><v-icon>mdi-delete</v-icon></v-btn>
-							</v-col>
-						</v-row>
-						<v-row class="mb-1">
-							<v-col>
-								<v-btn small depressed @click="addCharge()">Add Charge</v-btn>
-							</v-col>
-						</v-row>
-						<v-row>
+					</v-row>
+					<v-row dense>
+						<v-col><v-switch v-model="dialog_modify_plan.plan.auto_pay" false-value="false" true-value="true" label="Autopay" color="primary" inset hide-details></v-switch></v-col>
+						<v-col><v-switch v-model="dialog_modify_plan.plan.auto_switch" false-value="false" true-value="true" label="Automatically switch plan" color="primary" inset hide-details></v-switch></v-col>
+					</v-row>
+					<v-row v-if="typeof dialog_modify_plan.plan.name == 'string' && dialog_modify_plan.plan.name == 'Custom'" dense>
+						<v-col cols="12" sm="3"><v-text-field label="Storage (GBs)" :model-value="dialog_modify_plan.plan.limits.storage" @update:model-value="dialog_modify_plan.plan.limits.storage = $event" variant="underlined"></v-text-field></v-col>
+						<v-col cols="12" sm="3"><v-text-field label="Visits" :model-value="dialog_modify_plan.plan.limits.visits" @update:model-value="dialog_modify_plan.plan.limits.visits = $event" variant="underlined"></v-text-field></v-col>
+						<v-col cols="12" sm="3"><v-text-field label="Sites" :model-value="dialog_modify_plan.plan.limits.sites" @update:model-value="dialog_modify_plan.plan.limits.sites = $event" variant="underlined"></v-text-field></v-col>
+						<v-col cols="12" sm="3"><v-text-field label="Price" :model-value="dialog_modify_plan.plan.price" @update:model-value="dialog_modify_plan.plan.price = $event" variant="underlined"></v-text-field></v-col>
+					</v-row>
+					<v-row v-else dense>
+						<v-col cols="12" sm="3"><v-text-field label="Storage (GBs)" :model-value="dialog_modify_plan.plan.limits.storage" disabled variant="underlined"></v-text-field></v-col>
+						<v-col cols="12" sm="3"><v-text-field label="Visits" :model-value="dialog_modify_plan.plan.limits.visits" disabled variant="underlined"></v-text-field></v-col>
+						<v-col cols="12" sm="3"><v-text-field label="Sites" :model-value="dialog_modify_plan.plan.limits.sites" disabled variant="underlined"></v-text-field></v-col>
+						<v-col cols="12" sm="3"><v-text-field label="Price" :model-value="dialog_modify_plan.plan.price" disabled variant="underlined"></v-text-field></v-col>
+					</v-row>
+					<v-row dense>
+						<v-col>
+							<h3 v-show="typeof dialog_modify_plan.plan.addons == 'object' && dialog_modify_plan.plan.addons">Addons</h3>
+						</v-col>
+					</v-row>
+					<v-row density="compact" v-for="(addon, index) in dialog_modify_plan.plan.addons" :key="`addon-${index}`">
+						<v-col cols="7">
+							<v-textarea auto-grow rows="1" label="Name" :model-value="addon.name" @update:model-value="addon.name = $event" hide-details variant="underlined"></v-textarea>
+						</v-col>
+						<v-col cols="2">
+							<v-text-field label="Quantity" :model-value="addon.quantity" @update:model-value="addon.quantity = $event" hide-details variant="underlined"></v-text-field>
+						</v-col>
+						<v-col cols="2">
+							<v-text-field label="Price" :model-value="addon.price" @update:model-value="addon.price = $event" hide-details variant="underlined"></v-text-field>
+						</v-col>
+						<v-col cols="1" align-self="center">
+							<v-btn size="small" variant="text" icon="mdi-delete" @click="removeAddon(index)"></v-btn>
+						</v-col>
+					</v-row>
+					<v-row class="mb-1">
+						<v-col>
+							<v-btn size="small" variant="tonal" @click="addAddon()">Add Addon</v-btn>
+						</v-col>
+					</v-row>
+					<v-row dense>
+						<v-col>
+							<h3 v-show="typeof dialog_modify_plan.plan.credits == 'object' && dialog_modify_plan.plan.credits">Credits</h3>
+						</v-col>
+					</v-row>
+					<v-row density="compact" v-for="(item, index) in dialog_modify_plan.plan.credits" :key="`credit-${index}`">
+						<v-col cols="7">
+							<v-textarea auto-grow rows="1" label="Name" :model-value="item.name" @update:model-value="item.name = $event" hide-details variant="underlined"></v-textarea>
+						</v-col>
+						<v-col cols="2">
+							<v-text-field label="Quantity" :model-value="item.quantity" @update:model-value="item.quantity = $event" hide-details variant="underlined"></v-text-field>
+						</v-col>
+						<v-col cols="2">
+							<v-text-field label="Price" :model-value="item.price" @update:model-value="item.price = $event" hide-details variant="underlined"></v-text-field>
+						</v-col>
+						<v-col cols="1" align-self="center">
+							<v-btn size="small" variant="text" icon="mdi-delete" @click="removeCredit(index)"></v-btn>
+						</v-col>
+					</v-row>
+					<v-row class="mb-1">
+						<v-col>
+							<v-btn size="small" variant="tonal" @click="addCredit()">Add Credit</v-btn>
+						</v-col>
+					</v-row>
+					<v-row dense>
+						<v-col>
+							<h3 v-show="typeof dialog_modify_plan.plan.charges == 'object' && dialog_modify_plan.plan.charges">Charges</h3>
+						</v-col>
+					</v-row>
+					<v-row density="compact" v-for="(item, index) in dialog_modify_plan.plan.charges" :key="`charge-${index}`">
+						<v-col cols="7">
+							<v-textarea auto-grow rows="1" label="Name" :model-value="item.name" @update:model-value="item.name = $event" hide-details variant="underlined"></v-textarea>
+						</v-col>
+						<v-col cols="2">
+							<v-text-field label="Quantity" :model-value="item.quantity" @update:model-value="item.quantity = $event" hide-details variant="underlined"></v-text-field>
+						</v-col>
+						<v-col cols="2">
+							<v-text-field label="Price" :model-value="item.price" @update:model-value="item.price = $event" hide-details variant="underlined"></v-text-field>
+						</v-col>
+						<v-col cols="1" align-self="center">
+							<v-btn size="small" variant="text" icon="mdi-delete" @click="removeCharge(index)"></v-btn>
+						</v-col>
+					</v-row>
+					<v-row class="mb-1">
+						<v-col>
+							<v-btn size="small" variant="tonal" @click="addCharge()">Add Charge</v-btn>
+						</v-col>
+					</v-row>
+					<v-row>
 						<v-col cols="12">
-							<v-text-field label="Additional Emails" persistent-hint hint="Separated by a comma. Example: name@example.com, support@example.com" :value="dialog_modify_plan.plan.additional_emails" @change.native="dialog_modify_plan.plan.additional_emails = $event.target.value">
+							<v-text-field label="Additional Emails" persistent-hint hint="Separated by a comma. Example: name@example.com, support@example.com" :model-value="dialog_modify_plan.plan.additional_emails" @update:model-value="dialog_modify_plan.plan.additional_emails = $event" variant="underlined"></v-text-field>
 						</v-col>
-						</v-row>
-						<v-row>
+					</v-row>
+					<v-row>
 						<v-col cols="12">
-							<v-btn color="primary" dark @click="updatePlan()">
+							<v-btn color="primary" @click="updatePlan()">
 								Save Changes
 							</v-btn>
 						</v-col>
-						</v-row>
-					</v-card-text>
-					</v-card>
-				</v-dialog>
-				<v-dialog
-					v-if="role == 'administrator'"
-					v-model="dialog_log_history.show"
-					scrollable
-				>
+					</v-row>
+				</v-card-text>
+			</v-card>
+		</v-dialog>
+				<v-dialog v-if="role == 'administrator'" v-model="dialog_log_history.show" scrollable>
 				<v-card tile>
-					<v-toolbar flat dark color="primary">
-						<v-btn icon dark @click.native="dialog_log_history.show = false">
-							<v-icon>mdi-close</v-icon>
-						</v-btn>
+					<v-toolbar flat color="primary">
+						<v-btn variant="text" @click.native="dialog_log_history.show = false" icon="mdi-close"></v-btn>
 						<v-toolbar-title>Log History</v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
@@ -1309,230 +1538,262 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						:headers="header_timeline"
 						:items="dialog_log_history.logs"
 						:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
+						:loading="dialog_log_history.loading"
+						loading-text="Loading... Please wait"
 						class="timeline"
 					>
-				<template v-slot:body="{ items }">
-				<tbody>
-				<tr v-for="item in items">
-					<td class="justify-center pt-3 pr-0 text-center shrink" style="vertical-align: top;">
-						<v-tooltip bottom>
-						<template v-slot:activator="{ on, attrs }">
-							<v-icon color="primary" dark v-bind="attrs" v-on="on" v-show="item.name">mdi-note</v-icon>
-						</template>
-						<span>{{ item.name }}</span>
-						</v-tooltip>
-						<v-icon color="primary" dark v-show="! item.name">mdi-checkbox-marked-circle</v-icon>
-					</td>
-					<td class="justify-center py-4" style="vertical-align: top;">
-						<div v-html="item.description" v-show="item.description"></div>
-					</td>
-					<td class="justify-center pt-2" style="vertical-align:top; width:180px;">
-					<v-row>
-						<v-col class="shrink pr-0"><v-img :src="item.author_avatar" width="34" class="rounded"></v-img></v-col>
-						<v-col class="pt-4">{{ item.author }}</v-col>
-					</v-row>
-					</td>
-					<td class="justify-center pt-3" style="vertical-align: top;">{{ item.created_at | pretty_timestamp_epoch }}</td>
-					<td class="justify-center pt-1 pr-0" style="vertical-align:top;width:77px;" v-if="role == 'administrator'">
-						<v-menu :nudge-width="200" open-on-hover bottom offset-y>
-						<template v-slot:activator="{ on, attrs }">
-							<v-icon small v-bind="attrs" v-on="on">mdi-information</v-icon>
-						</template>
-						<v-card>
-							<v-card-text>
+						<template v-slot:body="{ items }">
+						<tr v-for="item in items">
+						<td class="justify-center pt-3 pr-0 text-center shrink" style="vertical-align: top;">
+							<v-tooltip location="bottom">
+							<template v-slot:activator="{ props }">
+								<v-icon color="primary" v-bind="props" v-show="item.name">mdi-note</v-icon>
+							</template>
+							<span>{{ item.name }}</span>
+							</v-tooltip>
+							<v-icon color="primary" v-show="! item.name">mdi-checkbox-marked-circle</v-icon>
+						</td>
+						<td class="justify-center py-4" style="vertical-align: top;">
+							<div v-html="item.description" v-show="item.description"></div>
+						</td>
+						<td class="justify-center pt-2" style="vertical-align:top; width:180px;">
+							<v-row align="center" no-gutters>
+								<v-col cols="auto" class="pr-2">
+									<v-img :src="item.author_avatar" width="34" class="rounded"></v-img>
+								</v-col>
+								<v-col>
+									<div class="text-no-wrap">{{ item.author }}</div>
+								</v-col>
+							</v-row>
+						</td>
+						<td class="justify-center pt-3" style="vertical-align: top;">{{ pretty_timestamp_epoch( item.created_at ) }}</td>
+						<td class="justify-center pt-1 pr-0" style="vertical-align:top;width:77px;" v-if="role == 'administrator'">
+							<v-menu :nudge-width="200" open-on-hover bottom offset-y>
+							<template v-slot:activator="{ props }">
+								<v-icon size="small" density="compact" v-bind="props">mdi-information</v-icon>
+							</template>
+							<v-card>
+								<v-card-text>
 								<div v-for="site in item.websites">
-									<a :href=`${configurations.path}sites/${site.site_id}` @click.prevent="goToPath( `/sites/${site.site_id}` )">{{ site.name }}</a>
+									<a :href="`${configurations.path}sites/${site.site_id}`" @click.prevent="goToPath( `/sites/${site.site_id}` )">{{ site.name }}</a>
 								</div>
-							</v-card-text>
-						</v-card>
-						</v-menu>
-						<v-btn text icon @click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)">
-							<v-icon small>mdi-pencil</v-icon>
-						</v-btn>
-					</td>
-				</tr>
-				</tbody>
-				</template>
-			</v-data-table>
+								</v-card-text>
+							</v-card>
+							</v-menu>
+							<v-btn variant="text" density="compact" icon="mdi-pencil" @click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)"></v-btn>
+						</td>
+						</tr>
+						</template>
+					</v-data-table>
 					</v-card-text>
 				</v-dialog>
 				<v-dialog v-if="role == 'administrator' || role == 'owner'" v-model="dialog_new_log_entry.show" scrollable persistent width="500">
-				<v-card tile>
-					<v-toolbar flat dark color="primary">
-						<v-btn icon dark @click.native="dialog_new_log_entry.show = false">
-							<v-icon>mdi-close</v-icon>
-						</v-btn>
-						<v-toolbar-title>Add a new log entry <span v-if="dialog_new_log_entry.site_name">for {{ dialog_new_log_entry.site_name }}</span></v-toolbar-title>
-						<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-card-text>
+				<v-card rounded="0">
+				<v-toolbar elevation="0" color="primary">
+					<v-btn icon="mdi-close" @click="dialog_new_log_entry.show = false"></v-btn>
+					<v-toolbar-title>Add a new log entry <span v-if="dialog_new_log_entry.site_name">for {{ dialog_new_log_entry.site_name }}</span></v-toolbar-title>
+				</v-toolbar>
+				<v-card-text>
 					<v-container>
-						<v-autocomplete
-							v-model="dialog_new_log_entry.process"
-							:items="processes"
-							item-text="name"
-							item-value="process_id"
-							v-show="role == 'administrator'"
-						>
-						<template v-slot:item="data">
-							<template v-if="typeof data.item !== 'object'">
-								<div v-text="data.item"></div>
+					<v-autocomplete
+						v-model="dialog_new_log_entry.process"
+						:items="processes"
+						item-title="name"
+						item-value="process_id"
+						v-show="role == 'administrator'"
+						variant="underlined"
+					>
+						<template v-slot:item="{ props, item }">
+						<v-list-item v-bind="props" :title="null" :subtitle="null">
+							<template v-if="typeof item.raw !== 'object'">
+							<div v-text="item.raw"></div>
 							</template>
 							<template v-else>
-								<div>
-									<v-list-item-title v-html="data.item.name"></v-list-item-title>
-									<v-list-item-subtitle v-html="data.item.repeat_interval + ' - ' + data.item.roles"></v-list-item-subtitle>
-								</div>
+							<div>
+								<v-list-item-title v-html="item.raw.name"></v-list-item-title>
+								<v-list-item-subtitle v-html="item.raw.repeat_interval + ' - ' + item.raw.roles"></v-list-item-subtitle>
+							</div>
 							</template>
+						</v-list-item>
 						</template>
-						</v-autocomplete>
-						<v-autocomplete
-							v-model="dialog_new_log_entry.sites"
-							:items="sites"
-							item-text="name"
-							return-object
-							chips
-							deletable-chips 
-							multiple
-						>
-						</v-autocomplete>
-						<v-textarea label="Description" auto-grow :value="dialog_new_log_entry.description" @change.native="dialog_new_log_entry.description = $event.target.value"></v-textarea>
-						<v-flex xs12 text-right>
-							<v-btn color="primary" dark style="margin:0px;" @click="newLogEntry()">
-								Add Log Entry
-							</v-btn>
-						</v-flex>
+					</v-autocomplete>
+					<v-autocomplete
+						v-model="dialog_new_log_entry.sites"
+						:items="sites"
+						item-title="name"
+						return-object
+						chips
+						closable-chips
+						multiple
+						variant="underlined"
+					>
+					</v-autocomplete>
+					<v-textarea variant="underlined" label="Description" auto-grow v-model="dialog_new_log_entry.description"></v-textarea>
+					<v-col cols="12" class="text-right pa-0">
+						<v-btn color="primary" style="margin:0px;" @click="newLogEntry()"> Add Log Entry </v-btn>
+					</v-col>
 					</v-container>
-					</v-card-text>
-					</v-card>
+				</v-card-text>
+				</v-card>
 				</v-dialog>
-				<v-dialog
-					v-if="role == 'administrator'"
-					v-model="dialog_edit_log_entry.show"
-					scrollable
-					width="500"
-				>
-				<v-card tile>
-					<v-toolbar flat dark color="primary">
-						<v-btn icon dark @click.native="dialog_edit_log_entry.show = false">
-							<v-icon>mdi-close</v-icon>
-						</v-btn>
-						<v-toolbar-title>Edit log entry <span v-if="dialog_edit_log_entry.site_name">for {{ dialog_edit_log_entry.site_name }}</span></v-toolbar-title>
-						<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-card-text>
+				<v-dialog v-if="role == 'administrator'" v-model="dialog_edit_log_entry.show" scrollable width="500">
+				<v-card rounded="0">
+				<v-toolbar color="primary" elevation="0">
+					<v-btn icon="mdi-close" @click="dialog_edit_log_entry.show = false"></v-btn>
+					<v-toolbar-title>Edit log entry <span v-if="dialog_edit_log_entry.site_name">for {{ dialog_edit_log_entry.site_name }}</span></v-toolbar-title>
+				</v-toolbar>
+				<v-card-text>
 					<v-container>
-						<v-text-field
-							v-model="dialog_edit_log_entry.log.created_at_raw"
-							label="Date"
-						></v-text-field>
-						<v-autocomplete
-							v-model="dialog_edit_log_entry.log.process_id"
-							:items="processes"
-							item-text="name"
-							item-value="process_id"
-						>
-						<template v-slot:item="data">
-							<template v-if="typeof data.item !== 'object'">
-								<div v-text="data.item"></div>
+					<v-text-field variant="underlined" v-model="dialog_edit_log_entry.log.created_at_raw" label="Date"></v-text-field>
+					<v-autocomplete
+						variant="underlined"
+						v-model="dialog_edit_log_entry.log.process_id"
+						:items="processes"
+						item-title="name"
+						item-value="process_id"
+					>
+						<template v-slot:item="{ props, item }">
+						<v-list-item v-bind="props" :title="null" :subtitle="null">
+							<template v-if="typeof item.raw !== 'object'">
+							<div v-text="item.raw"></div>
 							</template>
 							<template v-else>
-								<div>
-									<v-list-item-title v-html="data.item.name"></v-list-item-title>
-									<v-list-item-subtitle v-html="data.item.repeat_interval + ' - ' + data.item.roles"></v-list-item-subtitle>
-								</div>
+							<div>
+								<v-list-item-title v-html="item.raw.name"></v-list-item-title>
+								<v-list-item-subtitle v-html="item.raw.repeat_interval + ' - ' + item.raw.roles"></v-list-item-subtitle>
+							</div>
 							</template>
+						</v-list-item>
 						</template>
-						</v-autocomplete>
-						<v-autocomplete
-							v-model="dialog_edit_log_entry.log.websites"
-							:items="sites"
-							item-text="name"
-							return-object
-							chips
-							deletable-chips 
-							multiple
-						>
-						</v-autocomplete>
-						<v-textarea label="Description" auto-grow :value="dialog_edit_log_entry.log.description_raw" @change.native="dialog_edit_log_entry.log.description_raw = $event.target.value"></v-textarea>
-						<v-flex xs12 text-right>
-							<v-btn color="primary" dark style="margin:0px;" @click="updateLogEntry()">
-								Save Log Entry
-							</v-btn>
-						</v-flex>
+					</v-autocomplete>
+					<v-autocomplete
+						v-model="dialog_edit_log_entry.log.websites"
+						variant="underlined"
+						:items="sites"
+						item-title="name"
+						return-object
+						chips
+						closable-chips
+						multiple
+					>
+					</v-autocomplete>
+					<v-textarea variant="underlined" label="Description" auto-grow v-model="dialog_edit_log_entry.log.description_raw"></v-textarea>
+					<v-col cols="12" class="text-right pa-0">
+						<v-btn color="primary" style="margin:0px;" @click="updateLogEntry()"> Save Log Entry </v-btn>
+					</v-col>
 					</v-container>
-					</v-card-text>
-					</v-card>
+				</v-card-text>
+				</v-card>
 				</v-dialog>
 				<v-dialog v-model="dialog_edit_script.show" scrollable max-width="750">
-				<v-card tile>
-					<v-toolbar flat dark color="primary">
-						<v-btn icon dark @click.native="dialog_edit_script.show = false">
-							<v-icon>mdi-close</v-icon>
-						</v-btn>
+				<v-card rounded="0">
+					<v-toolbar color="primary">
+						<v-btn icon="mdi-close" @click="dialog_edit_script.show = false"></v-btn>
 						<v-toolbar-title>Edit script</v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text>
 					<v-container>
-						<v-menu ref="menu" v-model="script.menu_time" :close-on-content-click="false" :nudge-right="40" :return-value.sync="dialog_edit_script.script.run_at_time" transition="scale-transition" offset-y max-width="290px" min-width="290px">
-							<template v-slot:activator="{ on, attrs }">
-							<v-text-field v-model="dialog_edit_script.script.run_at_time" label="Time" prepend-icon="mdi-clock-time-four-outline" readonly v-bind="attrs" v-on="on"></v-text-field>
+						<v-menu v-model="script.menu_time" :close-on-content-click="false" location="bottom">
+							<template v-slot:activator="{ props }">
+								<v-text-field 
+									v-model="dialog_edit_script.script.run_at_time" 
+									label="Time" 
+									prepend-icon="mdi-clock-time-four-outline" 
+									readonly 
+									v-bind="props" 
+									variant="underlined">
+								</v-text-field>
 							</template>
-							<v-time-picker v-if="script.menu_time" v-model="dialog_edit_script.script.run_at_time" full-width @click:minute="$refs.menu.save(dialog_edit_script.script.run_at_time)"></v-time-picker>
+							<v-time-picker 
+								v-if="script.menu_time" 
+								v-model="dialog_edit_script.script.run_at_time" 
+								@click:minute="script.menu_time = false"
+								width="290">
+							</v-time-picker>
 						</v-menu>
-						<v-menu ref="script.menu_date" v-model="script.menu_date" :close-on-content-click="false" :return-value.sync="script.menu_date" transition="scale-transition" offset-y min-width="auto">
-							<template v-slot:activator="{ on, attrs }">
-							<v-text-field v-model="dialog_edit_script.script.run_at_date" label="Date" prepend-icon="mdi-calendar" readonly v-bind="attrs" v-on="on"></v-text-field>
+						<v-menu v-model="script.menu_date" :close-on-content-click="false" location="bottom">
+							<template v-slot:activator="{ props }">
+								<v-text-field 
+									v-model="dialog_edit_script.script.run_at_date" 
+									label="Date" 
+									prepend-icon="mdi-calendar" 
+									readonly 
+									v-bind="props" 
+									variant="underlined">
+								</v-text-field>
 							</template>
-							<v-date-picker v-model="dialog_edit_script.script.run_at_date" @input="script.menu_date = false" no-title scrollable :min="new Date().toISOString().substr(0, 10)"></v-date-picker>
+							<v-date-picker 
+								v-model="dialog_edit_script.script.run_at_date" 
+								@update:modelValue="script.menu_date = false" 
+								hide-header 
+								scrollable 
+								:min="new Date().toISOString().substr(0, 10)">
+							</v-date-picker>
 						</v-menu>
-						<v-textarea label="Code" auto-grow :value="dialog_edit_script.script.code" @change.native="dialog_edit_script.script.code = $event.target.value"></v-textarea>
-						<v-flex xs12 text-right>
-							<v-btn outlined text color="error" dark @click="deleteScript(dialog_edit_script.script.script_id)">
+						<v-textarea 
+							label="Code" 
+							auto-grow 
+							:model-value="dialog_edit_script.script.code" 
+							@update:model-value="dialog_edit_script.script.code = $event" 
+							variant="underlined">
+						</v-textarea>
+						<div class="d-flex justify-end">
+							<v-btn 
+								variant="outlined" 
+								color="error" 
+								@click="deleteScript(dialog_edit_script.script.script_id)" 
+								class="mr-2">
 								Delete
 							</v-btn>
-							<v-btn color="primary" dark @click="updateScript()">
+							<v-btn color="primary" @click="updateScript()">
 								Update Script
 							</v-btn>
-						</v-flex>
+						</div>
 					</v-container>
 					</v-card-text>
 					</v-card>
 				</v-dialog>
 				<v-dialog v-model="dialog_mailgun.show" scrollable fullscreen>
-				<v-card tile>
-					<v-toolbar flat dark color="primary" class="shrink">
-						<v-btn icon dark @click.native="dialog_mailgun.show = false">
-							<v-icon>mdi-close</v-icon>
-						</v-btn>
+				<v-card rounded="0">
+					<v-toolbar color="primary" class="shrink">
+						<v-btn icon="mdi-close" @click="dialog_mailgun.show = false"></v-btn>
 						<v-toolbar-title>Mailgun Logs for {{ dialog_mailgun.site.name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text>
-					<v-container>
-						<v-data-table
-							:options.sync="dialog_mailgun.pagination"
-							:headers='[{"text":"Timestamp","value":"timestamp"},{"text":"Description","value":"description"},{"text":"Event","value":"event"}]'
-							:items="dialog_mailgun.response.items"
-							:items-per-page="50"
-							:footer-props="{ itemsPerPageOptions: [100] }"
-							@update:page="fetchMailgunPage"
-						>
-						<template v-slot:body="{ items }">
-						<tbody>
-						<tr v-for="item in items" :key="item.event.id">
-							<td class="justify-center">{{ item.timestamp | pretty_timestamp_epoch }}</td>
-							<td class="justify-center">{{ item.description }}</td>
-							<td class="justify-center">{{ item.event }}</td>
-						</tr>
-						</tbody>
-						</template>
-						</v-data-table>
-						<v-progress-circular indeterminate color="primary" class="ma-2" size="24" v-show="dialog_mailgun.loading"></v-progress-circular>
-					</v-container>
+						<v-container>
+							<v-data-table-server
+								v-model:page="dialog_mailgun.pagination.page"
+								@update:page="fetchMailgunPage"
+								:headers='[{"title":"Timestamp","key":"timestamp","sortable":false},{"title":"Description","key":"description","sortable":false},{"title":"Event","key":"event","sortable":false}]'
+								:items="dialog_mailgun.response.items"
+								:items-length="Number(dialog_mailgun.response.total_items_count) || 0"
+								:items-per-page="50"
+								:loading="dialog_mailgun.loading"
+								:items-per-page-options="[{value: 50, title: '50'}]"
+							>
+								<template v-slot:item="{ item }">
+									<tr :key="item.id || item.timestamp">
+										<td>{{ pretty_timestamp_epoch(item.timestamp) }}</td>
+										<td>{{ item.description }}</td>
+										<td>{{ item.event }}</td>
+									</tr>
+								</template>
+
+								<template v-slot:loading>
+									<v-skeleton-loader type="table-row@5"></v-skeleton-loader>
+								</template>
+
+								<template v-slot:no-data>
+									<div class="pa-4 text-center">No Mailgun logs available.</div>
+								</template>
+							</v-data-table-server>
+							
+							<v-progress-circular indeterminate color="primary" class="ma-2" size="24" v-if="dialog_mailgun.loading && (!dialog_mailgun.response.items || dialog_mailgun.response.items.length === 0)"></v-progress-circular>
+						</v-container>
 					</v-card-text>
-					</v-card>
+				</v-card>
 				</v-dialog>
 				<v-dialog v-model="dialog_backup_configurations.show" width="500">
 				<v-card tile>
@@ -1546,8 +1807,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-card-text>
 					<v-container>
 						<v-switch label="Active" v-model="dialog_backup_configurations.settings.active"></v-switch>
-						<v-select label="Schedule" v-model="dialog_backup_configurations.settings.interval" :items="[{ text: 'Weekly', value: 'weekly' },{ text: 'Daily', value: 'daily' },{ text: 'Every 12 hours', value: '12-hours' },{ text: 'Every 6 hours', value: '6-hours' },{ text: 'Every hour', value: '1-hour' }]"></v-select>
-						<v-select label="Mode" v-model="dialog_backup_configurations.settings.mode" :items="[{ text: 'Local copy', value: 'local' },{ text: 'Direct mount', value: 'direct' }]"></v-select>
+						<v-select label="Schedule" v-model="dialog_backup_configurations.settings.interval" :items="[{ title: 'Weekly', value: 'weekly' },{ title: 'Daily', value: 'daily' },{ title: 'Every 12 hours', value: '12-hours' },{ title: 'Every 6 hours', value: '6-hours' },{ title: 'Every hour', value: '1-hour' }]"></v-select>
+						<v-select label="Mode" v-model="dialog_backup_configurations.settings.mode" :items="[{ title: 'Local copy', value: 'local' },{ title: 'Direct', value: 'direct' }]"></v-select>
 						<v-btn @click="saveBackupConfigurations()">
 							Update Configurations
 						</v-btn>
@@ -1562,7 +1823,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-icon>mdi-close</v-icon>
 						</v-btn>
 						<v-toolbar-title>Download Snapshot {{ dialog_backup_snapshot.site.name }} </v-toolbar-title>
-						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text>
 					<v-container>
@@ -1570,11 +1830,11 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					
 							<v-switch v-model="dialog_backup_snapshot.filter_toggle" label="Everything"></v-switch>
 							<div v-show="dialog_backup_snapshot.filter_toggle === false">
-								<v-checkbox small hide-details v-model="dialog_backup_snapshot.filter_options" label="Database" value="database"></v-checkbox>
- 								<v-checkbox small hide-details v-model="dialog_backup_snapshot.filter_options" label="Themes" value="themes"></v-checkbox>
-								<v-checkbox small hide-details v-model="dialog_backup_snapshot.filter_options" label="Plugins" value="plugins"></v-checkbox>
-								<v-checkbox small hide-details v-model="dialog_backup_snapshot.filter_options" label="Uploads" value="uploads"></v-checkbox>
-								<v-checkbox small hide-details v-model="dialog_backup_snapshot.filter_options" label="Everything Else" value="everything-else"></v-checkbox>
+								<v-checkbox size="small" hide-details v-model="dialog_backup_snapshot.filter_options" label="Database" value="database"></v-checkbox>
+ 								<v-checkbox size="small" hide-details v-model="dialog_backup_snapshot.filter_options" label="Themes" value="themes"></v-checkbox>
+								<v-checkbox size="small" hide-details v-model="dialog_backup_snapshot.filter_options" label="Plugins" value="plugins"></v-checkbox>
+								<v-checkbox size="small" hide-details v-model="dialog_backup_snapshot.filter_options" label="Uploads" value="uploads"></v-checkbox>
+								<v-checkbox size="small" hide-details v-model="dialog_backup_snapshot.filter_options" label="Everything Else" value="everything-else"></v-checkbox>
 								<v-spacer><br /></v-spacer>
 							</div>
 						<v-btn @click="downloadBackupSnapshot()">
@@ -1584,72 +1844,66 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-text>
 					</v-card>
 				</v-dialog>
-				<v-dialog
-					v-model="dialog_delete_user.show"
-					scrollable
-					width="500px"
-				>
-				<v-card tile>
-					<v-toolbar flat dark color="primary">
-						<v-btn icon dark @click.native="dialog_delete_user.show = false">
-							<v-icon>mdi-close</v-icon>
-						</v-btn>
-						<v-toolbar-title>Delete user</v-toolbar-title>
-						<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-card-text>
-					<v-container>
-						<v-layout row wrap>
-						 <v-flex xs12 pa-2>
-								<span>To delete <strong>{{ dialog_delete_user.username }}</strong> from <strong>{{ dialog_delete_user.site.name }}</strong> ({{ dialog_delete_user.site.environment_selected }}), please reassign posts to another user.</span>
-								<v-autocomplete
-									:items="dialog_delete_user.users"
-									return-object
-									v-model="dialog_delete_user.reassign"
-									item-text="user_login"
-									label="Reassign posts to"
-									chips
-									hide-details
-									hide-selected
-									small-chips
-									deletable-chips
-								>
-								</v-autocomplete><br />
-								<v-btn @click="deleteUser()">
-									Delete User <strong>&nbsp;{{ dialog_delete_user.username }}</strong>
-								</v-btn>
-						 </v-flex>
-					 </v-layout>
-					</v-container>
-					</v-card-text>
+				<v-dialog v-model="dialog_delete_user.show" scrollable width="500px">
+					<v-card rounded="0">
+						<v-toolbar color="primary">
+							<v-btn icon="mdi-close" @click="dialog_delete_user.show = false"></v-btn>
+							<v-toolbar-title>Delete user</v-toolbar-title>
+							<v-spacer></v-spacer>
+						</v-toolbar>
+						<v-card-text>
+						<v-container>
+							<v-row>
+								<v-col cols="12" class="pa-2">
+										<span>To delete <strong>{{ dialog_delete_user.username }}</strong> from <strong>{{ dialog_delete_user.site.name }}</strong> ({{ dialog_site.environment_selected.environment }}), please reassign posts to another user.</span>
+										<v-autocomplete
+											:items="dialog_delete_user.users"
+											return-object
+											v-model="dialog_delete_user.reassign"
+											item-title="user_login"
+											label="Reassign posts to"
+											chips
+											hide-details
+											hide-selected
+											closable-chips
+											variant="underlined"
+											class="mt-4 mb-4"
+										>
+										</v-autocomplete>
+										<v-btn @click="deleteUser()" color="primary">
+											Delete User <strong>&nbsp;{{ dialog_delete_user.username }}</strong>
+										</v-btn>
+								</v-col>
+							</v-row>
+						</v-container>
+						</v-card-text>
 					</v-card>
 				</v-dialog>
-				<v-dialog
-					v-model="dialog_launch.show"
-					width="500px"
-					scrollable
-				>
-				<v-card tile>
-					<v-toolbar flat dark color="primary">
-						<v-btn icon dark @click.native="dialog_launch.show = false">
-							<v-icon>mdi-close</v-icon>
-						</v-btn>
-						<v-toolbar-title>Launch Site {{ dialog_launch.site.name }}</v-toolbar-title>
-						<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-card-text>
-					<v-container>
-						<v-layout row wrap>
-						 <v-flex xs12 pa-2>
-							<span>Will turn off search privacy and update development urls to the following live urls.</span><br /><br />
-							<v-text-field label="Domain" prefix="https://" :value="dialog_launch.domain" @change.native="dialog_launch.domain = $event.target.value"></v-text-field>
-							<v-btn @click="launchSite()">
-								Launch Site
-							</v-btn>
-						 </v-flex>
-					 </v-layout>
-					</v-container>
-					</v-card-text>
+				<v-dialog v-model="dialog_launch.show" width="500">
+					<v-card rounded="0">
+						<v-toolbar flat color="primary">
+							<v-btn icon="mdi-close" @click="dialog_launch.show = false"></v-btn>
+							<v-toolbar-title>Launch Site {{ dialog_launch.site.name }}</v-toolbar-title>
+						</v-toolbar>
+						<v-card-text>
+							<v-container>
+								<v-row>
+									<v-col cols="12" class="pa-2">
+										<span>Will turn off search privacy and update development URLs to the following live URLs.</span>
+										<br />
+										<v-text-field 
+											label="Domain" 
+											prefix="https://" 
+											v-model="dialog_launch.domain"
+											variant="underlined"
+										></v-text-field>
+										<v-btn @click="launchSite()" color="primary" class="mt-2">
+											Launch Site
+										</v-btn>
+									</v-col>
+								</v-row>
+							</v-container>
+						</v-card-text>
 					</v-card>
 				</v-dialog>
 				<v-dialog v-model="dialog_captures.show" fullscreen scrollable>
@@ -1660,46 +1914,46 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-btn>
 						<v-toolbar-title>Historical Captures of {{ dialog_captures.site.name }}</v-toolbar-title>
 					</v-toolbar>
-					<v-toolbar light flat class="shrink">
+					<v-toolbar flat class="px-4">
 						<div style="max-width:250px;" class="mx-1 mt-8" v-show="dialog_captures.captures.length != 0">
-							<v-select v-model="dialog_captures.capture" dense :items="dialog_captures.captures" item-text="created_at_friendly" item-value="capture_id" label="Taken On" return-object @change="switchCapture"></v-select>
+							<v-select v-model="dialog_captures.capture" density="compact" variant="underlined" :items="dialog_captures.captures" item-title="created_at_friendly" item-value="capture_id" label="Taken On" return-object @change="switchCapture"></v-select>
 						</div>
-						<div style="max-width:150px;" class="mx-1 mt-8" v-show="dialog_captures.captures.length != 0">
-							<v-select v-model="dialog_captures.selected_page" dense :items="dialog_captures.capture.pages" item-text="name" item-value="name" value="/" :label="`Contains ${dialog_captures.capture.pages.length} ${dialogCapturesPagesText}`" return-object></v-select>
+						<div style="min-width:150px;" class="mx-1 mt-8" v-show="dialog_captures.captures.length != 0">
+							<v-select v-model="dialog_captures.selected_page" density="compact" variant="underlined" :items="dialog_captures.capture.pages" item-title="name" item-value="name" value="/" :label="`Contains ${dialog_captures.capture.pages.length} ${dialogCapturesPagesText}`" return-object></v-select>
 						</div>
 						<v-spacer></v-spacer>
 						<v-toolbar-items>
-						<v-tooltip top>
-							<template v-slot:activator="{ on }">
-								<v-btn text small @click="dialog_captures.show_configure = true" v-bind:class='{ "v-btn--active": dialog_bulk.show }' v-on="on"><small v-show="sites_selected.length > 0">({{ sites_selected.length }})</small><v-icon dark>mdi-cog</v-icon></v-btn>
+						<v-tooltip location="top">
+							<template v-slot:activator="{ props }">
+								<v-btn variant="text" @click="dialog_captures.show_configure = true" v-bind:class='{ "v-btn--active": dialog_bulk.show }' v-bind="props"><small v-show="sites_selected.length > 0">({{ sites_selected.length }})</small><v-icon>mdi-cog</v-icon></v-btn>
 							</template><span>Capture configurations</span>
 						</v-tooltip>
 						<v-divider vertical class="mx-1" inset></v-divider>
-						<v-tooltip top>
-							<template v-slot:activator="{ on }">
-                    		<v-btn text @click="captureCheck()" v-on="on"><v-icon dark>mdi-sync</v-icon></v-btn>
+						<v-tooltip location="top">
+							<template v-slot:activator="{ props }">
+                    		<v-btn variant="text" @click="captureCheck()" v-bind="props" icon="mdi-sync"></v-btn>
 							</template><span>Check for new Capture</span>
 						</v-tooltip>
 						</v-toolbar-items>
 					</v-toolbar>
 					<v-card-text style="min-height:200px;">
 					<v-card v-show="dialog_captures.show_configure" class="mt-5 mb-3" style="max-width:850px;margin:auto;">
-						<v-toolbar dense light flat>
+						<v-toolbar density="compact" light flat>
 							<v-btn icon @click="dialog_captures.show_configure = false">
 								<v-icon>mdi-close</v-icon>
 							</v-btn>
 							<v-toolbar-title>Capture configurations</v-toolbar-title>
 						</v-toolbar>
 						<v-card-text>
-							<v-subheader>Configured pages to capture</v-subheader>
-							<v-alert text type="info">Should start with a <code>/</code>. Example use <code>/</code> for the homepage and <code>/contact</code> for the the contact page.</v-alert>
+							<v-list-subheader>Configured pages to capture</v-list-subheader>
+							<v-alert variant="text" type="info">Should start with a <code>/</code>. Example use <code>/</code> for the homepage and <code>/contact</code> for the the contact page.</v-alert>
 							<v-row class="mx-1">
 								<v-col>
-									<v-text-field v-for="item in dialog_captures.pages" label="Page URL" :value="item.page" @change.native="item.page = $event.target.value" append-outer-icon="mdi-delete" @click:append-outer="dialog_captures.pages = dialog_captures.pages.filter( p => p !== item)"></v-text-field>
+									<v-text-field v-for="item in dialog_captures.pages" label="Page URL" :model-value="item.page" @update:model-value="item.page = $event" append-outer-icon="mdi-delete" @click:append-outer="dialog_captures.pages = dialog_captures.pages.filter( p => p !== item)"></v-text-field>
 								</v-col>
 							</v-row>
-							<p class="mx-1"><v-btn text small icon color="primary" @click="addAdditionalCapturePage"><v-icon>mdi-plus-box</v-icon></v-btn></p>
-							<v-subheader>Basic Auth</v-subheader>
+							<p class="mx-1"><v-btn variant="text" size="small" icon color="primary" @click="addAdditionalCapturePage"><v-icon>mdi-plus-box</v-icon></v-btn></p>
+							<v-list-subheader>Basic Auth</v-list-subheader>
 							<v-row class="mx-1">
 								<v-col>
 									<v-text-field label="Username" v-model="dialog_captures.auth.username"></v-text-field>
@@ -1712,10 +1966,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-card-text>
 					</v-card>
 					<v-container class="text-center" v-if="dialog_captures.captures.length > 0 && ! dialog_captures.loading">
-						<img :src="`${dialog_captures.image_path}${dialog_captures.selected_page.image}` | safeUrl" style="max-width:100%;" class="elevation-5 mt-5">
+						<img :src="safeUrl( `${dialog_captures.image_path}${dialog_captures.selected_page.image}` )" style="max-width:100%;" class="elevation-5 mt-5">
 					</v-container>
 					<v-container v-show="dialog_captures.captures.length == 0 && ! dialog_captures.loading" class="mt-5">
-						<v-alert text type="info">There are no historical captures, yet.</v-alert>
+						<v-alert variant="text" type="info">There are no historical captures, yet.</v-alert>
 					</v-container>
 					<v-container v-show="dialog_captures.loading" class="mt-5">
 						<v-progress-linear indeterminate rounded height="6" class="mb-3"></v-progress-linear>
@@ -1723,191 +1977,280 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-text>
 					</v-card>
 				</v-dialog>
-				<v-dialog v-model="dialog_toggle.show" scrollable>
-				<v-card tile>
-					<v-toolbar flat dark color="primary">
-						<v-btn icon dark @click.native="dialog_toggle.show = false">
-							<v-icon>mdi-close</v-icon>
-						</v-btn>
+				<v-dialog v-model="dialog_toggle.show" width="700">
+				<v-card>
+					<v-toolbar color="primary" elevation="0">
+						<v-btn icon="mdi-close" @click="dialog_toggle.show = false"></v-btn>
 						<v-toolbar-title>Toggle Site {{ dialog_toggle.site_name }}</v-toolbar-title>
-						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text>
 					<v-container>
-						<v-layout row wrap>
-						 <v-flex xs6 pa-2>
-							 <v-card>
-								 <v-card-title primary-title>
-									<div>
-										<h3 class="headline mb-0">Deactivate Site</h3>
-									</div>
-								  </v-card-title>
-									<v-card-text>
-										<p>Will apply deactivate message with the following link back to the site owner.</p>
-										<v-text-field label="Business Name" @change.native="dialog_toggle.business_name = $event.target.value" :value="dialog_toggle.business_name"></v-text-field>
-										<v-text-field label="Business Link" @change.native="dialog_toggle.business_link = $event.target.value" :value="dialog_toggle.business_link"></v-text-field>
-										<v-btn @click="DeactivateSite(dialog_toggle.site_id)">
-											Deactivate Site
-										</v-btn>
-									</v-card-text>
-							 </v-card>
-						 </v-flex>
-						 <v-flex xs6 pa-2>
-							 <v-card>
-								 <v-card-title primary-title>
-									<div>
-										<h3 class="headline mb-0">Activate Site</h3>
-									</div>
-								  </v-card-title>
-									<v-card-text>
-										<v-btn @click="ActivateSite(dialog_toggle.site_id)">
-											Activate Site
-										</v-btn>
-									</v-card-text>
-							 </v-card>
-						 </v-flex>
-					 </v-layout>
+						<v-row>
+						<v-col cols="6" pa-2>
+							<v-card flat border="thin" variant="outlined">
+							<v-card-text>
+								<p>Will apply deactivate message with the following link back to the site owner.</p>
+								<v-text-field variant="underlined" label="Business Name" v-model="dialog_toggle.business_name" class="mt-3"></v-text-field>
+								<v-text-field variant="underlined" label="Business Link" v-model="dialog_toggle.business_link"></v-text-field>
+								<v-btn color="primary" @click="DeactivateSite(dialog_toggle.site_id)">Deactivate Site</v-btn>
+							</v-card-text>
+							</v-card>
+						</v-col>
+						<v-col cols="6" pa-2>
+							<v-card flat border="thin" variant="outlined">
+							<v-card-text>
+								<p>Will remove the deactivate message and allow the site to be re-activated.</p>
+								<v-btn color="primary" @click="ActivateSite(dialog_toggle.site_id)" class="mt-3">Activate Site</v-btn>
+							</v-card-text>
+							</v-card>
+						</v-col>
+						</v-row>
 					</v-container>
 					</v-card-text>
+				</v-card>
+				</v-dialog>
+				<v-dialog v-model="dialog_migration.show" width="500">
+					<v-card rounded="0">
+						<v-toolbar flat color="primary">
+							<v-btn icon="mdi-close" @click="dialog_migration.show = false"></v-btn>
+							<v-toolbar-title>Migrate from backup to {{ dialog_migration.site_name }}</v-toolbar-title>
+						</v-toolbar>
+						<v-card-text>
+							<v-alert variant="tonal" type="info" color="yellow-darken-4" class="mt-3">
+								Warning {{ dialog_migration.site_name }} will be overwritten with backup.
+							</v-alert>
+							<v-form ref="formSiteMigration" class="mt-4">
+								<v-text-field 
+									:rules="[v => !!v || 'Backup URL is required']" 
+									required 
+									label="Backup URL" 
+									placeholder="https://storage.googleapis.com/..../live-backup.zip" 
+									v-model="dialog_migration.backup_url"
+									variant="underlined"
+								></v-text-field>
+								<v-checkbox 
+									label="Update URLs" 
+									v-model="dialog_migration.update_urls" 
+									hint="Will change urls in database to match the existing site." 
+									persistent-hint
+								></v-checkbox>
+								<v-btn @click="validateSiteMigration" color="primary" class="mt-4">
+									Start Migration
+								</v-btn>
+							</v-form>
+						</v-card-text>
 					</v-card>
 				</v-dialog>
-				<v-dialog v-model="dialog_migration.show" scrollable width="500">
-				<v-card tile>
-					<v-toolbar flat dark color="primary">
-						<v-btn icon dark @click.native="dialog_migration.show = false">
-							<v-icon>mdi-close</v-icon>
-						</v-btn>
-						<v-toolbar-title>Migrate from backup to {{ dialog_migration.site_name }}</v-toolbar-title>
-						<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-card-text>
-						<v-alert text :value="true" type="info" color="yellow darken-4" class="mt-3">
-							Warning {{ dialog_migration.site_name }} will be overwritten with backup. 
-						</v-alert>
-						<p></p>
-						<v-form ref="formSiteMigration">
-						<v-text-field :rules="[v => !!v || 'Backup URL is required']" required label="Backup URL" placeholder="https://storage.googleapis.com/..../live-backup.zip" :value="dialog_migration.backup_url" @change.native="dialog_migration.backup_url = $event.target.value"></v-text-field>
-						<v-checkbox label="Update URLs" v-model="dialog_migration.update_urls" hint="Will change urls in database to match the existing site." persistent-hint></v-checkbox>
-						<p></p>
-						<v-btn @click="validateSiteMigration">
-							Start Migration
-						</v-btn>
-						</v-form>
-					</v-card-text>
+				<v-dialog v-model="dialog_copy_site.show" width="500">
+					<v-card rounded="0">
+						<v-toolbar flat color="primary">
+							<v-btn icon="mdi-close" @click="dialog_copy_site.show = false"></v-btn>
+							<v-toolbar-title>Copy Site {{ dialog_copy_site.site.name }} to...</v-toolbar-title>
+						</v-toolbar>
+						<v-card-text>
+							<v-container>
+								<v-autocomplete
+									:items="dialog_copy_site.options"
+									v-model="dialog_copy_site.destination"
+									label="Select Destination Site"
+									item-title="name"
+									item-value="id"
+									variant="underlined"
+									chips
+									closable-chips
+								></v-autocomplete>
+								<v-btn @click="startCopySite()" color="primary" class="mt-4">
+									Copy Site
+								</v-btn>
+							</v-container>
+						</v-card-text>
 					</v-card>
 				</v-dialog>
-				<v-dialog
-					v-model="dialog_copy_site.show"
-					scrollable
-					width="500"
-				>
-				<v-card tile>
-					<v-toolbar flat dark color="primary">
-						<v-btn icon dark @click.native="dialog_copy_site.show = false">
-							<v-icon>mdi-close</v-icon>
-						</v-btn>
-						<v-toolbar-title>Copy Site {{ dialog_copy_site.site.name }} to </v-toolbar-title>
-						<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-card-text>
-					<v-container>
-						<v-autocomplete
-						:items="dialog_copy_site.options"
-						v-model="dialog_copy_site.destination"
-						label="Select Destination Site"
-						item-text="name"
-						item-value="id"
-						chips
-						small-chips
-						deletable-chips
-						></v-autocomplete>
-						<v-btn @click="startCopySite()">
-							Copy Site
-						</v-btn>
-					</v-container>
-					</v-card-text>
-					</v-card>
-				</v-dialog>
-				<v-dialog v-model="dialog_apply_https_urls.show" scrollable width="500">
-				<v-card tile>
-					<v-toolbar flat dark color="primary">
-						<v-btn icon dark @click.native="dialog_apply_https_urls.show = false">
-							<v-icon>mdi-close</v-icon>
-						</v-btn>
-						<v-toolbar-title>Apply HTTPS Urls for {{ dialog_apply_https_urls.site_name }}</v-toolbar-title>
-						<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-card-text>
-					<v-container>
-						<v-alert text :value="true" type="info">
-							Domain needs to match current home url. Otherwise server domain mapping will need updated to prevent redirection loop.
-						</v-alert>
-						<p></p>
-						<span>Select url replacement option.</span><br />
-						<v-btn @click="applyHttpsUrls( 'apply-https' )">
-							Option 1: https://domain.tld
-						</v-btn><br />
-						<v-btn @click="applyHttpsUrls( 'apply-https-with-www' )">
-							Option 2: https://www.domain.tld
-						</v-btn>
-					</v-container>
-					</v-card-text>
+				<v-dialog v-model="dialog_apply_https_urls.show" width="500">
+					<v-card rounded="0">
+						<v-toolbar flat color="primary">
+							<v-btn icon="mdi-close" @click="dialog_apply_https_urls.show = false"></v-btn>
+							<v-toolbar-title>Apply HTTPS URLs for {{ dialog_apply_https_urls.site_name }}</v-toolbar-title>
+						</v-toolbar>
+						<v-card-text>
+							<v-container>
+								<v-alert variant="tonal" type="info" class="mb-4">
+									Domain needs to match current home URL. Otherwise, server domain mapping will need to be updated to prevent a redirection loop.
+								</v-alert>
+								<div class="text-subtitle-1 mb-3">Select URL replacement option:</div>
+								<v-btn color="primary" @click="applyHttpsUrls('apply-https')" class="mb-3" block>
+									Option 1: https://domain.tld
+								</v-btn>
+								<v-btn color="primary" @click="applyHttpsUrls('apply-https-with-www')" block>
+									Option 2: https://www.domain.tld
+								</v-btn>
+							</v-container>
+						</v-card-text>
 					</v-card>
 				</v-dialog>
 				<v-dialog v-model="dialog_file_diff.show" scrollable>
-				<v-card>
-					<v-toolbar flat dark color="primary">
-						<v-btn icon dark @click.native="dialog_file_diff.show = false">
-							<v-icon>mdi-close</v-icon>
-						</v-btn>
-						<v-toolbar-title>File diff {{ dialog_file_diff.file_name}}</v-toolbar-title>
-						<v-spacer></v-spacer>
-						<v-toolbar-items class="hidden-sm-and-down">
-							<v-btn text @click="QuicksaveFileRestore()">Restore this file</v-btn>
-						</v-toolbar-items>
-					</v-toolbar>
-					<v-card-text>
-						<v-container v-show="dialog_file_diff.loading" class="mt-5"><v-progress-linear :indeterminate="true" height="6"></v-progress-linear></v-container>
-						<v-container id="code_diff" v-html="dialog_file_diff.response" style='font-family:SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;'></v-container>
-					</v-card-text>
+					<v-card rounded="0">
+						<v-toolbar flat color="primary">
+							<v-btn icon="mdi-close" @click="dialog_file_diff.show = false"></v-btn>
+							<v-toolbar-title>File diff {{ dialog_file_diff.file_name }}</v-toolbar-title>
+							<v-spacer></v-spacer>
+							
+							<v-btn variant="text" @click="QuicksaveFileRestore()" class="d-none d-md-flex">
+								Restore this file
+							</v-btn>
+
+						</v-toolbar>
+						<v-card-text>
+							<v-container v-show="dialog_file_diff.loading" class="mt-5">
+								<v-progress-linear indeterminate height="6" color="primary"></v-progress-linear>
+							</v-container>
+							<v-container 
+								id="code_diff" 
+								v-html="dialog_file_diff.response" 
+								style='font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;'>
+							</v-container>
+						</v-card-text>
+					</v-card>
+				</v-dialog>
+				<v-dialog v-model="dialog_bulk_tools.show" fullscreen scrollable>
+					<v-card rounded="0">
+						<v-toolbar flat color="primary">
+							<v-btn icon="mdi-close" @click="dialog_bulk_tools.show = false"></v-btn>
+							<v-toolbar-title>Bulk Tools</v-toolbar-title>
+						</v-toolbar>
+						<v-toolbar flat color="transparent" class="ma-2 px-4">
+							<span class="mr-2 text-body-2">Run on:</span>
+							<v-select variant="outlined" v-model="dialog_bulk_tools.environment_selected" :items='[{"name":"Production Environment","value":"Production"},{"name":"Staging Environment","value":"Staging"}]' item-title="name" item-value="value" class="mx-1 mt-6" solo density="compact" chips small-chips style="max-width:240px;"></v-select>
+							<v-autocomplete variant="outlined" v-model="sites_selected" :items="sites" item-title="name" return-object density="compact" label="Search" multiple class="mx-1 mt-6" style="max-width: 240px;">
+								<template v-slot:selection="{ item, index }">
+									<div v-if="index === 0" class="d-flex align-center" style="white-space: nowrap;">
+										<v-chip class="me-1" size="small">
+											{{ item.title }}
+										</v-chip>
+										<span v-if="sites_selected.length > 1" class="text-caption">
+											+{{ sites_selected.length - 1 }}
+										</span>
+									</div>
+								</template>
+							</v-autocomplete>
+							<v-btn size="small" variant="tonal" class="mx-1" @click="sites_selected = []; snackbar.message = 'Selections cleared.'; snackbar.show = true" v-show="sites_selected && sites_selected.length > 0">Clear Selections</v-btn>
+							<v-btn size="small" variant="tonal" class="mx-1" v-show="filterCount" @click="sites_selected = sites.filter( s => s.filtered )">Select {{ sites.filter( s => s.filtered ).length }} sites in applied filters</v-btn>
+							<v-btn size="small" variant="tonal" class="mx-1" @click="sites_selected = sites">Select all {{ sites.length }} sites</v-btn>
+							<v-spacer></v-spacer>
+							<v-tooltip location="top">
+								<template v-slot:activator="{ props }">
+									<v-btn icon="mdi-plus" @click="addThemeBulk()" v-bind="props"></v-btn>
+								</template>
+								<span>Add theme</span>
+							</v-tooltip>
+							<v-tooltip location="top">
+								<template v-slot:activator="{ props }">
+								<v-btn icon="mdi-plus" @click="addPluginBulk()" v-bind="props"></v-btn>
+								</template>
+								<span>Add plugin</span>
+							</v-tooltip>
+							<v-tooltip location="top" v-if="role == 'administrator'">
+								<template v-slot:activator="{ props }">
+								<v-btn icon="mdi-checkbox-marked" @click="showLogEntryBulk()" v-bind="props"></v-btn>
+								</template>
+								<span>New Log Entry</span>
+							</v-tooltip>
+							<v-tooltip location="top">
+								<template v-slot:activator="{ props }">
+								<v-btn icon="mdi-open-in-new" @click="bulkactionLaunch()" v-bind="props"></v-btn>
+								</template>
+								<span>Open websites in browser</span>
+							</v-tooltip>
+							<v-tooltip location="top">
+								<template v-slot:activator="{ props }">
+								<v-btn icon="mdi-sync" @click="bulkSyncSites()" v-bind="props"></v-btn>
+								</template>
+								<span>Manual sync website details</span>
+							</v-tooltip>
+						</v-toolbar>
+						<v-card-text>
+							<v-row>
+								<v-col cols="12" md="4" class="py-0 my-0">
+								<small>Common Scripts</small><br />
+								<v-tooltip location="top">
+									<template v-slot:activator="{ props }">
+									<v-btn variant="text" size="small" icon="mdi-rocket-launch" @click="viewApplyHttpsUrlsBulk()" v-bind="props"></v-btn>
+									</template>
+									<span>Apply HTTPS Urls</span>
+								</v-tooltip>
+								<v-tooltip location="top">
+									<template v-slot:activator="{ props }">
+									<v-btn variant="text" size="small" icon="mdi-refresh" @click="siteDeployBulk()" v-bind="props"></v-btn>
+									</template>
+									<span>Deploy Defaults</span>
+								</v-tooltip>
+								<v-tooltip location="top">
+									<template v-slot:activator="{ props }">
+									<v-btn variant="text" size="small" icon="mdi-toggle-switch" @click="toggleSiteBulk()" v-bind="props"></v-btn>
+									</template>
+									<span>Toggle Site</span>
+								</v-tooltip><br />
+								<small>Other Scripts</small><br />
+								<v-tooltip location="top" density="compact" v-for="recipe in recipes.filter( r => r.public == 1 )">
+									<template v-slot:activator="{ props }">
+									<v-btn variant="text" size="small" icon="mdi-script-text-outline" @click="runRecipeBulk( recipe.recipe_id )" v-bind="props"></v-btn>
+									</template>
+									<span>{{ recipe.title }}</span>
+								</v-tooltip><br />
+								<small><span v-show="sites_selected.length > 0">Selected sites: </span>
+									<span v-for="site in sites_selected" style="display: inline-block;" v-if="dialog_bulk_tools.environment_selected == 'Production' || dialog_bulk_tools.environment_selected == 'Both'">{{ site.site }}&nbsp;</span>
+									<span v-for="site in sites_selected" style="display: inline-block;" v-if="dialog_bulk_tools.environment_selected == 'Staging' || dialog_bulk_tools.environment_selected == 'Both'">{{ site.site }}-staging&nbsp;</span>
+								</small>
+								</v-col>
+								<v-col cols="12" md="8" class="py-0 my-0">
+								<v-textarea variant="outlined" auto-grow solo rows="8" dense hint="Custom bash script or WP-CLI commands" persistent-hint :model-value="script.code" @update:model-value="script.code = $event" spellcheck="false" class="code">
+									<template v-slot:append-inner>
+									<div style="display: flex; align-items: flex-end; height: 100%;" class="pb-3">
+										<v-btn size="small" color="primary" dark @click="runCustomCodeBulk()">Run Custom Code</v-btn>
+									</div>
+									</template>
+								</v-textarea>
+								</v-col>
+							</v-row>
+						</v-card-text>
 					</v-card>
 				</v-dialog>
 			<v-container fluid v-show="loading_page != true" style="padding:0px;">
-			<v-card tile flat v-if="route == 'login'" class="mt-11" color="transparent">
+			<v-card rounded="0" flat v-if="route == 'login'" color="transparent">
 				<v-card flat style="max-width:960px;margin: auto;margin-bottom:30px" v-if="fetchInvite.account">
-				<v-alert text type="info" style="border-radius: 4px;" elevation="2" dense color="primary" dark>
+				<v-alert variant="text" type="info" style="border-radius: 4px;" elevation="2" density="compact" color="primary">
 					To accept invitation either <strong>create new account</strong> or <strong>login</strong> to an existing account.
 				</v-alert>
 				<v-row>
 				<v-col>
-				<v-card tile style="max-width: 400px;margin: auto;">
-					<v-toolbar light flat>
+				<v-card rounded="0" style="max-width: 400px;margin: auto;">
+					<v-toolbar>
 						<v-toolbar-title>Create new account</v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text>
-						<v-text-field readonly value="################" hint="Will use email where invite was sent to." persistent-hint label="Email" class="mt-3"></v-text-field>
-						<v-text-field type="password" v-model="new_account.password" label="Password" class="mt-3"></v-text-field>
-						<v-flex xs12>
-							<v-btn color="primary" dark @click="createAccount()">Create Account</v-btn>
-						</v-flex>
+						<v-text-field readonly value="################" hint="Will use email where invite was sent to." persistent-hint label="Email" class="mt-3" variant="underlined"></v-text-field>
+						<v-text-field type="password" v-model="new_account.password" label="Password" class="mt-3" variant="underlined"></v-text-field>
+						<v-col cols="12" class="px-0">
+							<v-btn color="primary" @click="createAccount()">Create Account</v-btn>
+						</v-col>
 				</v-card-text>
 				</v-card>
 				</v-col>
 				<v-col>
-				<v-card style="max-width: 400px;margin: auto;" outlined rounded="xl">
-					<v-toolbar light flat>
+				<v-card style="max-width: 358px;margin: auto;" variant="outlined" rounded="xl">
+					<v-toolbar>
 						<v-toolbar-title>Login</v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
 					<v-card-text class="my-2">
-					<v-form v-if="login.lost_password" ref="reset" @keyup.native.enter="resetPassword()">
+					<v-form v-if="login.lost_password" ref="reset" @keyup.enter="resetPassword()">
 					<v-row>
 						<v-col cols="12">
-							<v-text-field label="Username or Email" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
+							<v-text-field label="Username or Email" :model-value="login.user_login" @update:model-value="login.user_login = $event" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']" variant="underlined"></v-text-field>
 						</v-col>
 						<v-col cols="12">
-							<v-alert text type="success" v-show="login.message">{{ login.message }}</v-alert>
+							<v-alert variant="tonal" type="success" v-show="login.message">{{ login.message }}</v-alert>
 						</v-col>
 						<v-col cols="12">
 							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
@@ -1915,21 +2258,23 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-col>
 					</v-row>
 					</v-form>
-					<v-form lazy-validation ref="login" @keyup.native.enter="signIn()" v-else>
+					<v-form lazy-validation ref="login" @keyup.enter="signIn()" v-else>
 					<v-row>
 						<v-col cols="12">
-							<v-text-field label="Username or Email" v-model="login.user_login" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
+							<v-text-field label="Username or Email" v-model="login.user_login" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']" variant="underlined"></v-text-field>
 						</v-col>
 						<v-col cols="12">
-							<v-text-field label="Password" v-model="login.user_password" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']"></v-text-field>
+							<v-text-field label="Password" v-model="login.user_password" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']" variant="underlined"></v-text-field>
 						</v-col>
-						<v-col cols="12" v-show="login.info || login.errors == 'One time password is invalid.'">
-							<v-label>One Time Password</v-label>
-							<v-otp-input length="6" type="number" v-model="login.tfa_code" required :disabled="login.loading"></v-otp-input>
+						<v-col cols="12" v-show="login.info || login.errors == 'One time password is invalid.'" class="py-0">
+							<v-label class="ml-2">One Time Password</v-label>
+							<div class="d-flex justify-start">
+								<v-otp-input length="6" type="number" v-model="login.tfa_code" required :disabled="login.loading"></v-otp-input>
+							</div>
 						</v-col>
 						<v-col cols="12">
-							<v-alert text type="error" v-show="login.errors">{{ login.errors }}</v-alert>
-							<v-alert text type="info" v-show="login.info">{{ login.info }}</v-alert>
+							<v-alert variant="text" type="error" v-show="login.errors">{{ login.errors }}</v-alert>
+							<v-alert variant="text" type="info" v-show="login.info">{{ login.info }}</v-alert>
 						</v-col>
 						<v-col cols="12">
 							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
@@ -1939,16 +2284,16 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-form>
 					</v-card-text>
 				</v-card>
-				<v-card tile flat style="max-width: 400px;margin: auto;" class="px-5" color="transparent">
-					<a @click="login.lost_password = true" class="caption" v-show="!login.lost_password">Lost your password?</a>
-					<a @click="login.lost_password = false" class="caption" v-show="login.lost_password">Back to login form.</a>
+				<v-card rounded="0" flat style="max-width: 358px;margin: auto;" class="px-5" color="transparent">
+					<a href="#reset" @click="login.lost_password = true" class="text-caption" v-show="!login.lost_password">Lost your password?</a>
+					<a href="#login" @click="login.lost_password = false" class="text-caption" v-show="login.lost_password">Back to login form.</a>
 				</v-card>
 				</v-col>
 				</v-row>
 			</v-card>
 			<template v-else>
-				<v-card style="max-width: 400px;margin: auto;" outlined rounded="xl">
-					<v-toolbar light flat>
+				<v-card style="max-width: 358px;margin: auto;" flat border="thin" rounded="xl">
+					<v-toolbar flat color="transparent">
 						<v-toolbar-title>Login</v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
@@ -1956,10 +2301,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-form v-if="login.lost_password" @keyup.native.enter="resetPassword()" ref="reset">
 					<v-row>
 						<v-col cols="12">
-							<v-text-field label="Username or Email" v-model="login.user_login" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
+							<v-text-field label="Username or Email" v-model="login.user_login" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']" variant="underlined"></v-text-field>
 						</v-col>
 						<v-col cols="12">
-							<v-alert text type="success" v-show="login.message">{{ login.message }}</v-alert>
+							<v-alert variant="tonal" type="success" v-show="login.message">{{ login.message }}</v-alert>
 						</v-col>
 						<v-col cols="12">
 							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
@@ -1970,18 +2315,18 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-form lazy-validation ref="login" @keyup.native.enter="signIn()" v-else>
 					<v-row>
 						<v-col cols="12">
-							<v-text-field label="Username or Email" v-model="login.user_login" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
+							<v-text-field label="Username or Email" v-model="login.user_login" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']" variant="underlined"></v-text-field>
+							<v-text-field label="Password" v-model="login.user_password" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']" variant="underlined"></v-text-field>
+						</v-col>
+						<v-col cols="12" v-show="login.info || login.errors == 'One time password is invalid.'" class="py-0">
+							<v-label class="ml-2">One Time Password</v-label>
+							<div class="d-flex justify-start">
+								<v-otp-input length="6" type="number" label="One time password" v-model="login.tfa_code" required :disabled="login.loading"></v-otp-input>
+							</div>
 						</v-col>
 						<v-col cols="12">
-							<v-text-field label="Password" v-model="login.user_password" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']"></v-text-field>
-						</v-col>
-						<v-col cols="12" v-show="login.info || login.errors == 'One time password is invalid.'">
-							<v-label>One Time Password</v-label>
-							<v-otp-input length="6" type="number" label="One time password" v-model="login.tfa_code" required :disabled="login.loading"></v-otp-input>
-						</v-col>
-						<v-col cols="12">
-							<v-alert text type="error" v-show="login.errors">{{ login.errors }}</v-alert>
-							<v-alert text type="info" v-show="login.info">{{ login.info }}</v-alert>
+							<v-alert variant="tonal" type="error" v-show="login.errors">{{ login.errors }}</v-alert>
+							<v-alert variant="tonal" type="info" v-show="login.info">{{ login.info }}</v-alert>
 						</v-col>
 						<v-col cols="12">
 							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
@@ -1991,44 +2336,51 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-form>
 					</v-card-text>
 				</v-card>
-				<v-card flat style="max-width: 400px;margin: auto;" class="px-5" color="transparent">
-					<a @click="login.lost_password = true" class="caption" v-show="!login.lost_password">Lost your password?</a>
-					<a @click="login.lost_password = false" class="caption" v-show="login.lost_password">Back to login form.</a>
+				<v-card flat style="max-width: 358px;margin: auto;" class="px-5" color="transparent">
+					<a href="#reset" @click="login.lost_password = true" class="text-caption" v-show="!login.lost_password">Lost your password?</a>
+					<a href="#login" @click="login.lost_password = false" class="text-caption" v-show="login.lost_password">Back to login form.</a>
 				</v-card>
 			</template>
 			</v-card>
-			<v-card v-if="route == 'sites'" id="sites" outlined rounded="xl">
-			<v-toolbar v-show="dialog_site.step == 1 && sites.length > 0" id="site_listings" flat>
-				<v-toolbar-title>Listing {{ sites.length }} sites</v-toolbar-title>
+			<v-card v-if="route == 'sites'" id="sites" flat border="thin" rounded="xl">
+			<v-toolbar v-show="dialog_site.step == 1 && sites.length > 0" id="site_listings" flat color="transparent">
+				<v-toolbar-title>
+					<span v-if="isAnySiteFilterActive">Showing {{ filteredSites.length }} sites</span>
+    				<span v-else>Listing {{ sites.length }} sites</span>
+				</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-tooltip top v-if="toggle_site == true">
-							<template v-slot:activator="{ on }">
-							<v-btn icon @click="toggle_site = false" v-on="on">
+						<v-tooltip location="top" v-if="toggle_site == true">
+							<template v-slot:activator="{ props }">
+							<v-btn icon @click="toggle_site = false" v-bind="props">
 								<v-icon>mdi-image</v-icon>
 							</v-btn>
 							</template>
 							<span>View as Thumbnails</span>
-							</v-tooltip>
-							<v-tooltip top v-if="toggle_site == false">
-							<template v-slot:activator="{ on }">
-							<v-btn icon @click="toggle_site = true" v-on="on">
+						</v-tooltip>
+						<v-tooltip location="top" v-if="toggle_site == false">
+							<template v-slot:activator="{ props }">
+							<v-btn icon @click="toggle_site = true" v-bind="props">
 								<v-icon>mdi-table</v-icon>
 							</v-btn>
 							</template>
 							<span>View as List</span>
 						</v-tooltip>
-						<v-tooltip top>
-						<template v-slot:activator="{ on }">
-						<v-btn icon @click="view_console.show = !view_console.show" v-on="on">
-							<v-icon>mdi-console</v-icon>
-						</v-btn>
-						</template>
-						<span>Advanced Options</span>
+						<v-tooltip location="top">
+							<template v-slot:activator="{ props }">
+								<v-btn v-bind="props" variant="text" icon="mdi-toolbox" @click="dialog_bulk_tools.show = true"></v-btn>
+							</template>
+							<span>Bulk Tools</span>
+						</v-tooltip>
+						<v-tooltip location="top">
+							<template v-slot:activator="{ props }">
+								<v-btn icon="mdi-console" @click="view_console.show = !view_console.show" v-bind="props"></v-btn>
+							</template>
+							<span>Advanced Options</span>
 						</v-tooltip>
 						<v-menu open-on-hover text bottom offset-y>
-						<template v-slot:activator="{ on, attrs }">
-							<v-btn v-bind="attrs" v-on="on" text>
+						<template v-slot:activator="{ props }">
+							<v-btn v-bind="props" text>
 								Add Site <v-icon dark>mdi-plus</v-icon>
 							</v-btn>
 						</template>
@@ -2038,16 +2390,24 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-list-item>
 							<v-list-item @click="showNewSiteKinsta()">
 								<v-list-item-title>Create new site</v-list-item-title>
-								<v-spacer></v-spacer>
-								<v-img src="/wp-content/plugins/captaincore-manager/public/img/kinsta-icon.svg" max-width="20px" class="ml-2"></v-img>
+								<template v-slot:append>
+									<v-icon><v-img src="/wp-content/plugins/captaincore-manager/public/img/kinsta-icon.svg" max-width="20px"></v-img></v-icon>
+								</template>
+							</v-list-item>
+							<v-list-item @click="showNewSiteKinsta()" v-show="role == 'administrator' || kinsta_providers.length >= 2">
+								<v-list-item-title class="mr-2">Link existing</v-list-item-title>
+								<template v-slot:append>
+									<v-icon><v-img src="/wp-content/plugins/captaincore-manager/public/img/kinsta-icon.svg" max-width="20px"></v-img></v-icon>
+								</template>
 							</v-list-item>
 							<!--<v-list-item @click="dialog_new_site_rocketdotnet.show = true">
 								<v-list-item-title>Rocket.net</v-list-item-title>
 							</v-list-item>-->
 							<v-list-item @click="goToPath( `/sites/new` )" href v-show="role == 'administrator' || role == 'owner'">
 								<v-list-item-title class="mr-4">Manually connect</v-list-item-title>
-								<v-spacer></v-spacer>
-								<v-icon>mdi-console-network</v-icon>
+								<template v-slot:append>
+									<v-icon icon="mdi-console-network"></v-icon>
+								</template>
 							</v-list-item>
 						</v-list>
 						</v-menu>
@@ -2067,12 +2427,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-toolbar>
 					<v-card-text>
 						<v-text-field label="Name" v-model="dialog_new_site_rocketdotnet.site.name"></v-text-field>
-						<v-autocomplete label="Datacenter" item-text="location" item-value="id" v-model="dialog_new_site_rocketdotnet.site.datacenter" :items='[{"id":2,"location":"US - Los Angeles"},{"id":4,"location":"EU - London"},{"id":7,"location":"DE - Frankfurt"},{"id":8,"location":"NL - Amsterdam"},{"id":15,"location":"US - Atlanta"},{"id":16,"location":"AU - Sydney"},{"id":19,"location":"US - Chicago"},{"id":20,"location":"SG - Singapore"},{"id":21,"location":"US - Ashburn"},{"id":22,"location":"US - Phoenix"}]'></v-autocomplete>
+						<v-autocomplete label="Datacenter" item-title="location" item-value="id" v-model="dialog_new_site_rocketdotnet.site.datacenter" :items='[{"id":2,"location":"US - Los Angeles"},{"id":4,"location":"EU - London"},{"id":7,"location":"DE - Frankfurt"},{"id":8,"location":"NL - Amsterdam"},{"id":15,"location":"US - Atlanta"},{"id":16,"location":"AU - Sydney"},{"id":19,"location":"US - Chicago"},{"id":20,"location":"SG - Singapore"},{"id":21,"location":"US - Ashburn"},{"id":22,"location":"US - Phoenix"}]'></v-autocomplete>
 						<v-autocomplete
 								:items="accounts"
 								v-model="dialog_new_site_rocketdotnet.site.shared_with"
 								label="Assign to an account"
-								item-text="name"
+								item-title="name"
 								item-value="account_id"
 								chips
 								deletable-chips
@@ -2084,29 +2444,25 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							>
 							</v-autocomplete>
 							<v-expand-transition>
-							<v-row dense v-if="dialog_new_site_rocketdotnet.site.shared_with && dialog_new_site_rocketdotnet.site.shared_with.length > 0" class="mt-3">
+							<v-row density="compact" v-if="dialog_new_site_rocketdotnet.site.shared_with && dialog_new_site_rocketdotnet.site.shared_with.length > 0" class="mt-3">
 							<v-col v-for="account in dialog_new_site_rocketdotnet.site.shared_with" :key="account.account_id" cols="6">
 							<v-card>
-								<v-list-item>
-								<v-list-item-content>
-									<v-list-item-title v-text="account.name">Single-line item</v-list-item-title>
-								</v-list-item-content>
-								</v-list-item>
+								<v-list-item :title="account.name"></v-list-item>
 								<v-card-actions class="py-0">
-								<v-tooltip top>
-								<template v-slot:activator="{ on, attrs }">
+								<v-tooltip location="top">
+								<template v-slot:activator="{ props }">
 								<v-btn-toggle v-model="dialog_new_site_rocketdotnet.site.customer_id" color="primary" group>
-									<v-btn text :value="account.account_id" v-bind="attrs" v-on="on">
+									<v-btn variant="text" :value="account.account_id" v-bind="props">
 										<v-icon>mdi-account-circle</v-icon>
 									</v-btn>
 								</v-btn-toggle>
 								</template>
 								<span>Set as customer contact</span>
 								</v-tooltip>
-								<v-tooltip top>
-								<template v-slot:activator="{ on, attrs }">
+								<v-tooltip location="top">
+								<template v-slot:activator="{ props }">
 								<v-btn-toggle v-model="dialog_new_site_rocketdotnet.site.account_id" color="primary" group>
-									<v-btn text :value="account.account_id" v-bind="attrs" v-on="on">
+									<v-btn variant="text" :value="account.account_id" v-bind="props">
 										<v-icon>mdi-currency-usd</v-icon>
 									</v-btn>
 								</v-btn-toggle>
@@ -2126,318 +2482,503 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-dialog>
 				<v-dialog v-model="dialog_new_site_kinsta.show" width="550">
 				<v-card>
-					<v-toolbar flat dark color="primary">
-						<v-btn icon dark @click.native="dialog_new_site_kinsta.show = false">
+					<v-toolbar elevation="0" color="primary">
+						<v-btn icon @click="dialog_new_site_kinsta.show = false">
 							<v-icon>mdi-close</v-icon>
 						</v-btn>
 						<v-toolbar-title class="pl-2">New WordPress Site</v-toolbar-title>
 						<v-spacer></v-spacer>
 					</v-toolbar>
-					<v-card-text class="mt-3">
+					<v-card-text>
 						<v-alert type="error" v-for="error in dialog_new_site_kinsta.errors">{{ error }}</v-alert>
-						<v-text-field label="Name" v-model="dialog_new_site_kinsta.site.name"></v-text-field>
-						<v-text-field label="Domain" v-model="dialog_new_site_kinsta.site.domain"></v-text-field>
-						<v-autocomplete outlined label="Hosting Provider" v-model="dialog_new_site_kinsta.site.provider_id" item-value="provider_id" :item-text="formatProviderLabel" :items="kinsta_providers" v-show="kinsta_providers.length > 1" @change="populateCloneSites"></v-autocomplete>
-						<v-autocomplete outlined label="Datacenter" v-model="dialog_new_site_kinsta.site.datacenter" :items="datacenters" hint="Use 🚀 for the fastest servers" persistent-hint v-show="dialog_new_site_kinsta.site.clone_site_id == ''"></v-autocomplete>
-						<v-autocomplete outlined label="Clone Existing Site" v-model="dialog_new_site_kinsta.site.clone_site_id" item-value="id" item-text="display_name" hide-no-data hide-selected :items="clone_sites" clearable v-show="kinsta_providers.length > 1"></v-autocomplete>
+						<v-text-field label="Name" v-model="dialog_new_site_kinsta.site.name" variant="underlined"></v-text-field>
+						<v-text-field label="Domain" v-model="dialog_new_site_kinsta.site.domain" variant="underlined"></v-text-field>
+						<v-autocomplete variant="underlined" label="Hosting Provider" v-model="dialog_new_site_kinsta.site.provider_id" item-value="provider_id" :item-title="formatProviderLabel" :items="kinsta_providers" v-show="kinsta_providers.length > 1" @update:model-value="populateCloneSites"></v-autocomplete>
+						<v-autocomplete variant="underlined" label="Datacenter" v-model="dialog_new_site_kinsta.site.datacenter" :items="datacenters" hint="Use 🚀 for the fastest servers" persistent-hint v-show="dialog_new_site_kinsta.site.clone_site_id == ''"></v-autocomplete>
+						<v-autocomplete variant="underlined" label="Clone Existing Site" v-model="dialog_new_site_kinsta.site.clone_site_id" item-value="id" item-title="display_name" hide-no-data hide-selected :items="clone_sites" clearable v-show="kinsta_providers.length > 1"></v-autocomplete>
 						<v-autocomplete
-								v-if="role == 'administrator'"
-								:items="accounts"
-								v-model="dialog_new_site_kinsta.site.shared_with"
-								label="Assign to an account"
-								item-text="name"
-								item-value="account_id"
-								chips
-								deletable-chips
-								multiple
-								outlined
-								return-object
-								class="mt-2"
-								hint="If a customer account is not assigned then site will be placed in a new account."
-								persistent-hint
-								:menu-props="{ closeOnContentClick:true, openOnClick: false }"
-							>
-							</v-autocomplete>
-							<div v-else>
-								<v-select outlined class="mt-3 mb-3" hide-details v-model="dialog_new_site_kinsta.site.account_id" label="Billing Account" :items="accounts" item-text="name" item-value="account_id"></v-select>
-								<v-select outlined clearable v-model="dialog_new_site_kinsta.site.customer_id" label="Customer Account" :items="accounts" item-text="name" item-value="account_id" hint="If a customer account is not assigned then site will be placed in a new account." persistent-hint></v-select>
-							</div>
-							<v-expand-transition>
-							<v-row dense v-if="role == 'administrator' && dialog_new_site_kinsta.site.shared_with && dialog_new_site_kinsta.site.shared_with.length > 0" class="mt-3">
-							<v-col v-for="account in dialog_new_site_kinsta.site.shared_with" :key="account.account_id" cols="6">
-							<v-card>
-								<v-list-item>
-								<v-list-item-content>
-									<v-list-item-title v-text="account.name">Single-line item</v-list-item-title>
-								</v-list-item-content>
-								</v-list-item>
-								<v-card-actions class="py-0">
-								<v-tooltip top>
-								<template v-slot:activator="{ on, attrs }">
-								<v-btn-toggle v-model="dialog_new_site_kinsta.site.customer_id" color="primary" group>
-									<v-btn text :value="account.account_id" v-bind="attrs" v-on="on">
-										<v-icon>mdi-account-circle</v-icon>
-									</v-btn>
-								</v-btn-toggle>
-								</template>
-								<span>Set as customer contact</span>
-								</v-tooltip>
-								<v-tooltip top>
-								<template v-slot:activator="{ on, attrs }">
-								<v-btn-toggle v-model="dialog_new_site_kinsta.site.account_id" color="primary" group>
-									<v-btn text :value="account.account_id" v-bind="attrs" v-on="on">
-										<v-icon>mdi-currency-usd</v-icon>
-									</v-btn>
-								</v-btn-toggle>
-								</template>
-								<span>Set as billing contact</span>
-								</v-tooltip>
-								</v-card-actions>
-							</v-card>
-							</v-expand-transition>
+							v-if="role == 'administrator'"
+							:items="accounts"
+							v-model="dialog_new_site_kinsta.site.shared_with"
+							label="Assign to an account"
+							item-title="name"
+							item-value="account_id"
+							chips
+							closable-chips
+							multiple
+							return-object
+							class="mt-2"
+							hint="If a customer account is not assigned then site will be placed in a new account."
+							persistent-hint
+							:menu-props="{ closeOnContentClick:true, openOnClick: false }"
+							variant="underlined"
+						></v-autocomplete>
+						<div v-else>
+							<v-select variant="underlined" class="mt-3 mb-3" hide-details v-model="dialog_new_site_kinsta.site.account_id" label="Billing Account" :items="accounts" item-title="name" item-value="account_id"></v-select>
+							<v-select variant="underlined" clearable v-model="dialog_new_site_kinsta.site.customer_id" label="Customer Account" :items="accounts" item-title="name" item-value="account_id" hint="If a customer account is not assigned then site will be placed in a new account." persistent-hint></v-select>
+						</div>
+						<v-expand-transition>
+							<v-row density="compact" v-if="role == 'administrator' && dialog_new_site_kinsta.site.shared_with && dialog_new_site_kinsta.site.shared_with.length > 0" class="mt-3">
+								<v-col v-for="account in dialog_new_site_kinsta.site.shared_with" :key="account.account_id" cols="6">
+									<v-card>
+										<v-list-item :title="account.name"></v-list-item>
+										<v-card-actions class="py-0">
+											<v-tooltip location="top">
+												<template v-slot:activator="{ props }">
+													<v-btn-toggle v-model="dialog_new_site_kinsta.site.customer_id" color="primary" group>
+														<v-btn variant="text" icon="mdi-account-circle" :value="account.account_id" v-bind="props"></v-btn>
+													</v-btn-toggle>
+												</template>
+												<span>Set as customer contact</span>
+											</v-tooltip>
+											<v-tooltip location="top">
+												<template v-slot:activator="{ props }">
+													<v-btn-toggle v-model="dialog_new_site_kinsta.site.account_id" color="primary" group>
+														<v-btn variant="text" icon="mdi-currency-usd" :value="account.account_id" v-bind="props"></v-btn>
+													</v-btn-toggle>
+												</template>
+												<span>Set as billing contact</span>
+											</v-tooltip>
+										</v-card-actions>
+									</v-card>
+								</v-col>
+							</v-row>
+						</v-expand-transition>
+						<v-card elevation="0" v-show="dialog_new_site_kinsta.verifing">
+							<v-card-text>
+								Verifying Kinsta connection
+								<v-progress-linear indeterminate rounded height="6"></v-progress-linear>
+							</v-card-text>
+						</v-card>
+						<v-card elevation="0" v-show="! dialog_new_site_kinsta.verifing && ! dialog_new_site_kinsta.connection_verified">
+							<v-card-text>
+								<v-alert type="error">
+									Kinsta token outdated 
+									<v-text-field label="Token" v-model="dialog_new_site_kinsta.kinsta_token" variant="underlined" single-line>
+										<template v-slot:append>
+											<v-btn @click="connectKinsta">Connect</v-btn>
+										</template>
+									</v-text-field>
+								</v-alert>
+							</v-card-text>
+						</v-card>
 					</v-card-text>
 					<v-divider></v-divider>
-					<v-card flat v-show="dialog_new_site_kinsta.verifing">
-						<v-card-text>
-						Verifing Kinsta connection
-						<v-progress-linear indeterminate rounded height="6"></v-progress-linear>
-						</v-card-text>
-					</v-card>
-					<v-card flat v-show="! dialog_new_site_kinsta.verifing && ! dialog_new_site_kinsta.connection_verified">
-						<v-card-text>
-						<v-alert type="error">
-							Kinsta token outdated <v-text-field label="Token" v-model="dialog_new_site_kinsta.kinsta_token"></v-text-field>
-							<v-btn @click="connectKinsta">Connect</v-btn>
-						</v-alert>
-						</v-card-text>
-					</v-card>
 					<v-card-actions>
-					<v-spacer></v-spacer>
+						<v-spacer></v-spacer>
 						<v-btn color="primary" @click="newKinstaSite" :disabled="dialog_new_site_kinsta.verifing || ! dialog_new_site_kinsta.connection_verified">Create Site</v-btn>
 					</v-card-actions>
 				</v-card>
 				</v-dialog>
 				<v-card-text v-show="requested_sites.length > 0">
 				<v-dialog v-model="dialog_site_request.show" width="500">
-				<v-card>
-					<v-card-title class="headline grey lighten-2">
-					Update site request
-					</v-card-title>
-					<v-card-text>
-						<v-text-field label="New Site URL" v-model="dialog_site_request.request.url"></v-text-field>
-						<v-text-field label="Name" v-model="dialog_site_request.request.name"></v-text-field>
-						<v-textarea label="Notes" v-model="dialog_site_request.request.notes"></v-textarea>
-					</v-card-text>
-					<v-divider></v-divider>
-					<v-card-actions>
-					<v-spacer></v-spacer>
-					<v-btn @click="dialog_site_request.show = false">Cancel</v-btn>
-					<v-btn color="primary" @click="updateRequestSite">Save</v-btn>
-					</v-card-actions>
-				</v-card>
-				</v-dialog>
-				<v-stepper :value="request.step" v-for="(request, index) in requested_sites" class="mb-3">
-					<v-toolbar flat dense class="primary white--text">
-						<div v-if="role == 'administrator'">Requested by {{ user_name( request.user_id ) }} -&nbsp;</div><strong>{{ request.name }}</strong>&nbsp;in {{ account_name( request.account_id ) }}
+					<v-card>
+						<v-toolbar color="primary" density="compact" class="px-4">Update site request</v-toolbar>
+						<v-card-text>
+						<v-text-field
+							label="New Site URL"
+							v-model="dialog_site_request.request.url"
+							variant="underlined"
+						></v-text-field>
+						<v-text-field
+							label="Name"
+							v-model="dialog_site_request.request.name"
+							variant="underlined"
+						></v-text-field>
+						<v-textarea
+							label="Notes"
+							v-model="dialog_site_request.request.notes"
+							variant="underlined"
+						></v-textarea>
+						</v-card-text>
+						<v-divider></v-divider>
+						<v-card-actions>
 						<v-spacer></v-spacer>
-						<v-btn small @click="modifyRequest( index )" v-show="role == 'administrator'" class="mx-1">Modify</v-btn>
-						<v-btn small @click="finishRequest( index )" v-if="request.step == 3" class="mx-1">Finish</v-btn>
-						<v-btn small @click="cancelRequest( index )" v-else class="mx-1">Cancel</v-btn>
-					</v-toolbar>
-					<v-stepper-header class="elevation-0">
-						<v-stepper-step step="1" :complete="request.step > 0">Requesting site<small>{{ request.created_at | pretty_timestamp_epoch }}</small></v-stepper-step>
-						<v-divider></v-divider>
-						<v-stepper-step step="2" :complete="request.step > 1">Preparing new site<small v-show="request.processing_at">{{ request.processing_at | pretty_timestamp_epoch }}</small></v-stepper-step>
-						<v-divider></v-divider>
-						<v-stepper-step step="3" :complete="request.step > 2">Ready to use<small v-show="request.ready_at">{{ request.ready_at | pretty_timestamp_epoch }}</small></v-stepper-step>
-					</v-stepper-header>
-					<v-stepper-items>
-					<v-stepper-content step="1">
-					<div>{{ request.notes }}</div>
+						<v-btn @click="dialog_site_request.show = false">Cancel</v-btn>
+						<v-btn color="primary" @click="updateRequestSite">Save</v-btn>
+						</v-card-actions>
+					</v-card>
+					</v-dialog>
+				<v-stepper :model-value="request.step" v-for="(request, index) in requested_sites" class="mb-3">
+				<v-toolbar elevation="0" color="primary" class="text-white px-3" density="compact">
+					<div v-if="role == 'administrator'">Requested by {{ user_name( request.user_id ) }} -&nbsp;</div><strong>{{ request.name }}</strong>&nbsp;in {{ account_name( request.account_id ) }}
+					<v-spacer></v-spacer>
+					<v-btn size="small" @click="modifyRequest( index )" v-show="role == 'administrator'" class="mx-1" variant="tonal">Modify</v-btn>
+					<v-btn size="small" @click="finishRequest( index )" v-if="request.step === 3" class="mx-1" variant="tonal">Finish</v-btn>
+					<v-btn size="small" @click="cancelRequest( index )" v-else class="mx-1" variant="tonal">Cancel</v-btn>
+				</v-toolbar>
+				<v-stepper-header class="elevation-0">
+					<v-stepper-item value="1" :complete="request.step > 0" color="primary" class="text-left">Requesting site<br /><small>{{ pretty_timestamp_epoch ( request.created_at ) }}</small></v-stepper-item>
+					<v-divider></v-divider>
+					<v-stepper-item value="2" :complete="request.step > 1" color="primary" class="text-left">Preparing new site<br /><small v-show="request.processing_at">{{ pretty_timestamp_epoch ( request.processing_at ) }}</small></v-stepper-item>
+					<v-divider></v-divider>
+					<v-stepper-item value="3" :complete="request.step > 2" color="primary" class="text-left">Ready to use<br /><small v-show="request.ready_at">{{ pretty_timestamp_epoch ( request.ready_at ) }}</small></v-stepper-item>
+				</v-stepper-header>
+				<v-stepper-window>
+					<v-stepper-window-item value="1">
+						<div>{{ request.notes }}</div>
 						<v-btn color="primary" @click="continueRequestSite( request )" v-show="role == 'administrator'">
 							Continue
 						</v-btn>
-					</v-stepper-content>
-					<v-stepper-content step="2">
-					<div v-show="role == 'administrator'">
-						<v-btn @click="backRequestSite( request )">
-							Back
-						</v-btn>
-						<v-btn color="primary" @click="continueRequestSite( request )">
-							Continue
-						</v-btn>
-					</div>
-					</v-stepper-content>
-					<v-stepper-content step="3">
-						<v-card v-if="typeof request.url == 'string' && request.url != ''" class="elevation-2 ma-2">
-						<v-list dense>
-							<v-list-item :href="request.url" target="_blank" dense>
-							<v-list-item-content>
-								<v-list-item-title>Link</v-list-item-title>
-								<v-list-item-subtitle v-text="request.url"></v-list-item-subtitle>
-							</v-list-item-content>
-							<v-list-item-icon>
-								<v-icon>mdi-open-in-new</v-icon>
-							</v-list-item-icon>
-							</v-list-item>
-						</v-list>
+					</v-stepper-window-item>
+					<v-stepper-window-item value="2">
+						<div v-show="role == 'administrator'">
+							<v-btn @click="backRequestSite( request )" variant="text">
+								Back
+							</v-btn>
+							<v-btn color="primary" @click="continueRequestSite( request )">
+								Continue
+							</v-btn>
+						</div>
+					</v-stepper-window-item>
+					<v-stepper-window-item value="3">
+						<v-card v-if="typeof request.url == 'string' && request.url != ''" elevation="2" class="ma-2">
+							<v-list density="compact">
+								<v-list-item :href="request.url" target="_blank" density="compact" :subtitle="request.url">
+									<v-list-item-title>Link</v-list-item-title>
+									<template v-slot:append>
+										<v-icon>mdi-open-in-new</v-icon>
+									</template>
+								</v-list-item>
+							</v-list>
 						</v-card>
-					<div v-show="role == 'administrator'">
-						<v-btn @click="backRequestSite( request )">
-							Back
-						</v-btn>
-						<v-btn color="primary" @click="continueRequestSite( request )">
-							Continue
-						</v-btn>
-					</div>
-					</v-stepper-content>
-					</v-stepper-items>
-				</v-stepper>
+						<div v-show="role == 'administrator'">
+							<v-btn @click="backRequestSite( request )" variant="text">
+								Back
+							</v-btn>
+							<v-btn color="primary" @click="continueRequestSite( request )">
+								Continue
+							</v-btn>
+						</div>
+					</v-stepper-window-item>
+				</v-stepper-window>
+			</v-stepper>
 				</v-card-text>
-				<div class="ma-5" v-if="role == 'administrator'">
-				<v-card v-for="site in filterSitesWithConnectionErrors" flat :key="site.site_id">
-				<v-alert text type="error" dense>
-					<v-row align="center">
-						<v-col class="shrink">
-							<v-img :src=`${remote_upload_uri}${site.site}_${site.site_id}/production/screenshots/${site.screenshot_base}_thumb-100.jpg` class="elevation-1" max-width="50" v-show="site.screenshot_base"></v-img>
+				<v-card-text v-if="sites.length == 0 && configurations.mode == 'hosting'" class="text-center ma-auto" style="max-width: 500px;">
+					<v-card flat @click="dialog_request_site.show = true; dialog_request_site.request.account_id = accounts[0].account_id" class="pa-5">
+						<v-img src="/wp-content/plugins/captaincore-manager/public/boat-island-line-illustration.webp" max-width="300px" class="mx-auto"></v-img>
+						<a class="subtitle-1 px-5 py-3" :style="{ backgroundColor: 'rgb(var(--v-theme-accent))' }">Add your first WordPress site</a>
+					</v-card>
+				</v-card-text>
+				<v-card-text v-if="sites.length == 0 && configurations.mode == 'maintenance'" class="text-center ma-auto" style="max-width: 500px;">
+					<v-card flat @click="goToPath( `/sites/new` )" class="pa-5">
+						<v-img src="/wp-content/plugins/captaincore-manager/public/boat-island-line-illustration.webp" max-width="300px" class="mx-auto"></v-img>
+						<a class="subtitle-1 px-5 py-3" :style="{ backgroundColor: 'rgb(var(--v-theme-accent))' }">Add your first WordPress site</a>
+					</v-card>
+				</v-card-text>
+				<v-card-text v-show="sites.length > 0">
+					<v-toolbar color="transparent" flat>
+						<v-spacer></v-spacer>
+
+						<v-btn
+							:variant="isUnassignedFilterActive ? 'tonal' : 'outlined'"
+							size="small"
+							@click="toggleUnassignedFilter()"
+							v-if="role == 'administrator'"
+							class="mr-2">
+							{{ unassignedSiteCount }} unassigned
+						</v-btn>
+
+						<v-menu offset-y v-model="themeFilterMenu" :close-on-content-click="false">
+							<template v-slot:activator="{ props }">
+								<v-btn
+									v-bind="props"
+									size="small"
+									class="mr-2"
+									:variant="themeFiltersApplied ? 'tonal' : 'outlined'">
+									Filter by Theme <v-icon right dark>mdi-menu-down</v-icon>
+								</v-btn>
+							</template>
+							<v-card width="350">
+								<v-card-text>
+									<v-autocomplete
+										:model-value="applied_theme_filters"
+										@update:model-value="updatePrimaryFilters('themes', $event)"
+										:items="site_filters.filter(f => f.type === 'themes')"
+										item-title="search"
+										label="Select Theme"
+										variant="underlined"
+										autofocus
+										return-object
+										multiple
+										chips
+										closable-chips
+										hide-details
+										:menu-props="{ maxWidth: '350px' }"
+									></v-autocomplete>
+								</v-card-text>
+							</v-card>
+						</v-menu>
+
+						<v-menu offset-y v-model="pluginFilterMenu" :close-on-content-click="false">
+							<template v-slot:activator="{ props }">
+								<v-btn
+									v-bind="props"
+									size="small"
+									class="mr-2"
+									:variant="pluginFiltersApplied ? 'tonal' : 'outlined'">
+									Filter by Plugin <v-icon right dark>mdi-menu-down</v-icon>
+								</v-btn>
+							</template>
+							<v-card width="350">
+								<v-card-text>
+									<v-autocomplete
+										:model-value="applied_plugin_filters"
+										@update:model-value="updatePrimaryFilters('plugins', $event)"
+										:items="site_filters.filter(f => f.type === 'plugins')"
+										item-title="search"
+										label="Select Plugin"
+										variant="underlined"
+										autofocus
+										return-object
+										multiple
+										chips
+										closable-chips
+										hide-details
+										:menu-props="{ maxWidth: '350px' }"
+									></v-autocomplete>
+								</v-card-text>
+							</v-card>
+						</v-menu>
+
+						<v-tooltip location="top" v-if="isAnySiteFilterActive">
+							<template v-slot:activator="{ props }">
+								<v-btn
+									v-bind="props"
+									icon="mdi-filter-off"
+									size="small"
+									variant="tonal"
+									@click="clearSiteFilters()">
+								</v-btn>
+							</template>
+							<span>Clear Filters</span>
+						</v-tooltip>
+
+						<v-btn-toggle
+							v-if="totalAdvancedFilters > 1"
+							v-model="filter_logic"
+							mandatory
+							density="compact"
+							class="ml-2"
+							variant="outlined"
+							divided
+						>
+							<v-btn value="and">AND</v-btn>
+							<v-btn value="or">OR</v-btn>
+						</v-btn-toggle>
+
+
+						<v-text-field
+							v-model="search"
+							autofocus
+							density="compact"
+							variant="outlined"
+							label="Search"
+							clearable
+							hide-details
+							append-inner-icon="mdi-magnify"
+							spellcheck="false"
+							style="max-width:300px;"
+							class="ml-4">
+						</v-text-field>
+					</v-toolbar>
+					<!-- Version and Status Filters -->
+					<v-card color="transparent" class="pt-4" flat v-if="site_filter_version || site_filter_status">
+					<v-row>
+						<v-col cols="6" class="py-1">
+							<template v-for="(primaryFilter, index) in combinedAppliedFilters" :key="primaryFilter.name + '-version'">
+								<v-autocomplete
+									ref="versionFilterRefs"
+									v-if="primaryFilter && getVersionsForFilter(primaryFilter.name).length > 0"
+									v-model="primaryFilter.selected_versions"
+									@update:model-value="closeVersionFilter(index)"
+									:items="getVersionsForFilter(primaryFilter.name)"
+									:label="'Select Version for ' + primaryFilter.title"
+									class="mb-2"
+									item-title="name"
+									return-object
+									chips
+									multiple
+									hide-details
+									hide-selected
+									closable-chips
+									density="compact"
+									variant="outlined"
+								>
+									 <template v-slot:item="{ item, props }">
+										<v-list-item v-bind="props" :title="item.raw.name">
+											<template v-slot:append>
+												<v-chip size="x-small" label class="ml-2">{{ item.raw.count }} sites</v-chip>
+											</template>
+										</v-list-item>
+									</template>
+									<template v-slot:append>
+										<v-btn-toggle
+											v-if="primaryFilter.selected_versions?.length > 1"
+											v-model="filter_version_logic"
+											mandatory
+											density="compact"
+											variant="text"
+											divided
+										>
+											<v-btn value="and" size="x-small">AND</v-btn>
+											<v-btn value="or" size="x-small">OR</v-btn>
+										</v-btn-toggle>
+									</template>
+								</v-autocomplete>
+							</template>
 						</v-col>
-						<v-col class="grow">{{ site.name }}</v-col>
-						<v-col class="shrink pa-0">
-							<v-btn depressed small @click="goToPath( `/sites/${site.site_id}` )">
-								<v-icon>mdi-pencil</v-icon> Fix Credentials 
-							</v-btn>
-						</v-col>
-						<v-col class="shrink">
-							<v-btn depressed small @click="checkSSH( site )">
-								Check SSH connection <v-icon class="ml-1">mdi-sync</v-icon>
-							</v-btn>
+
+						<v-col cols="6" class="py-1">
+							<template v-for="(primaryFilter, index) in combinedAppliedFilters" :key="primaryFilter.name + '-status'">
+								<v-autocomplete
+									ref="statusFilterRefs"
+									v-if="primaryFilter && getStatusesForFilter(primaryFilter.name).length > 0"
+									v-model="primaryFilter.selected_statuses"
+									@update:model-value="closeStatusFilter(index)"
+									:items="getStatusesForFilter(primaryFilter.name)"
+									:label="'Select Status for ' + primaryFilter.title"
+									class="mb-2"
+									item-title="name"
+									return-object
+									chips
+									multiple
+									hide-details
+									hide-selected
+									closable-chips
+									density="compact"
+									variant="outlined"
+								>
+									<template v-slot:item="{ item, props }">
+										<v-list-item v-bind="props" :title="item.raw.name">
+											<template v-slot:append>
+												<v-chip size="x-small" label class="ml-2">{{ item.raw.count }} sites</v-chip>
+											</template>
+										</v-list-item>
+									</template>
+									<template v-slot:append>
+										<v-btn-toggle
+											v-if="primaryFilter.selected_statuses?.length > 1"
+											v-model="filter_status_logic"
+											mandatory
+											density="compact"
+											variant="text"
+											divided
+										>
+											<v-btn value="and" size="x-small">AND</v-btn>
+											<v-btn value="or" size="x-small">OR</v-btn>
+										</v-btn-toggle>
+									</template>
+								</v-autocomplete>
+							</template>
 						</v-col>
 					</v-row>
-					<v-overlay absolute :value="site.loading">
-					<v-progress-circular
-						indeterminate
-						size="32"
-					></v-progress-circular>
-					</v-overlay>
-				</v-alert>
 				</v-card>
-				</div>
-				<v-card-text v-show="sites.length > 0">
-				<div style="position: sticky; top: 60px; z-index:1; background: white; padding: 10px 0 20px 0;">
-				<v-toolbar dense elevation="0" flat class="mb-7">
-					<v-spacer></v-spacer>
-					<v-btn depressed small @click="filterUnassigned()" v-if="role == 'administrator'">{{ unassignedSiteCount }} unassign sites</v-btn>
-					<v-text-field class="mx-4" v-model="search" @input="filterSites" autofocus label="Search" clearable light hide-details append-icon="mdi-magnify" style="max-width:300px;"></v-text-field>	
-				</v-toolbar>
-				</div>
+				</v-card-text>
 				<v-data-table
 					v-model="sites_selected"
 					:headers="[
-						{ text: '', width: 30, value: 'thumbnail' },
-						{ text: 'Name', align: 'left', sortable: true, value: 'name' },
-						{ text: 'Subsites', value: 'subsites', width: 104 },
-						{ text: 'WordPress', value: 'core', width: 114 },
-						{ text: 'Visits', value: 'visits', width: 98 },
-						{ text: 'Storage', value: 'storage', width: 98 },
-						{ text: 'Provider', value: 'provider', width: 104 },
-						{ text: '', value: 'filtered', width: 0, class: 'hidden', filter: filteredSites }
+						{ title: '', key: 'thumbnail', sortable: false, width: 50 },
+						{ title: 'Name', key: 'name', align: 'left', sortable: true },
+						{ title: 'Subsites', key: 'subsites', sortable: true, width: 104 },
+						{ title: 'WordPress', key: 'core', sortable: true, width: 114 },
+						{ title: 'Visits', key: 'visits', sortable: true, width: 98 },
+						{ title: 'Storage', key: 'storage', sortable: true, width: 98 },
+						{ title: 'Provider', key: 'provider', sortable: true, width: 120 }
 					]"
-					:items="sites"
-					:search="search"
-					:custom-filter="siteSearch"
-					item-key="site_id"
+					:items="filteredSites"
+					item-value="site_id"
 					ref="site_datatable"
-					:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
+					:items-per-page="100"
+					:items-per-page-options="[
+						{ value: 100, title: '100' },
+						{ value: 250, title: '250' },
+						{ value: 500, title: '500' },
+						{ value: -1, title: 'All' }
+					]"
+					@click:row="(event, { item }) => goToPath(`/sites/${item.site_id}`)"
+					hover
 					v-if="toggle_site"
 				>
-				<template v-slot:body="{ items }">
-					<tbody>
-					<tr v-for="item in items" :key="item.site_id" @click="goToPath( `/sites/${item.site_id}` )" style="cursor:pointer;">
-						<td>
-							<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-100.jpg` class="elevation-1" width="50" v-show="item.screenshot_base"></v-img>
-						</td>
-						<td>{{ item.name }}</td>
-						<td>{{ item.subsites }}<span v-show="items.subsites"> sites</span></td>
-						<td>{{ item.core }}</td>
-						<td>{{ item.visits | formatLargeNumbers }}</td>
-						<td>{{ item.storage | formatGBs }}GB</td>
-						<td>
-							{{ item.provider | formatProvider }}<v-tooltip bottom>
-							<template v-slot:activator="{ on, attrs }">
-								<v-icon v-bind="attrs" v-on="on" class="ml-1" v-show="item.provider_id && item.provider_id != 1">mdi-cloud</v-icon>
-							</template>
-							<span>Maintenance only</span>
-							</v-tooltip>
-						</td>
-					</tr>
-					</tbody>
-				</template>
-				</v-data-table>
-				<v-data-table
-					v-model="sites_selected"
-					:headers="[
-						{ text: '', width: 30, value: 'thumbnail' },
-						{ text: 'Name', align: 'left', sortable: true, value: 'name' },
-						{ text: 'Subsites', value: 'subsites', width: 104 },
-						{ text: 'WordPress', value: 'core', width: 114 },
-						{ text: 'Visits', value: 'visits', width: 98 },
-						{ text: 'Storage', value: 'storage', width: 98 },
-						{ text: 'Provider', value: 'provider', width: 104 },
-						{ text: '', value: 'filtered', width: 0, class: 'hidden', filter: filteredSites }
-					]"
-					:items="sites"
-					:search="search"
-					item-key="site_id"
-					ref="site_datatable"
-					hide-default-header
-					:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
-					v-else
-				>
-				<template v-slot:body="{ items }">
-					<tbody>
-					<tr class="v-data-table__empty-wrapper">
-						<td colspan="9">
-						<v-row>
-						<v-col cols="12">
-						<v-card flat>
-							<v-container fluid>
-							<v-row>
-								<v-col v-for="item in items" :key="item.site_id" class="d-flex child-flex" cols="12" sm="4">
-								<v-card tile style="cursor: pointer" @click="goToPath( `/sites/${item.site_id}` )">
-								<v-hover v-slot="{ hover }">
-									<v-img :src=`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-800.jpg` :aspect-ratio="8/5" v-show="item.screenshot_base">
-									<v-fade-transition>
-									<div v-if="! hover" style="background-image: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5)); height: 100%;" class="d-flex">
-									<v-row align="end">
-									<v-col>
-										<div class="body-1 pa-1 white--text">{{ item.name }}</div>
-									</v-col>
-									</v-row>
-									</div>
-									</v-fade-transition>
-									<template v-slot:placeholder>
-										<v-row class="fill-height ma-0" align="center" justify="center">
-											<v-progress-circular indeterminate color="grey lighten-5"></v-progress-circular>
-										</v-row>
-									</template>
-									</v-img>
-									</v-hover>
-								</v-card>
-								</v-col>
-							</v-row>
-							</v-container>
+					<template v-slot:item.thumbnail="{ item }">
+						<v-img
+							:src="`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-100.jpg`"
+							class="elevation-1 my-1"
+							width="50"
+							aspect-ratio="1.6"
+							v-show="item.screenshot_base"
+							lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp"
+						></v-img>
+					</template>
+
+					<template v-slot:item.subsites="{ item }">
+						{{ item.subsites }}<span v-show="item.subsites"> sites</span>
+					</template>
+
+					<template v-slot:item.visits="{ item }">
+						{{ formatLargeNumbers(item.visits) }}
+					</template>
+
+					<template v-slot:item.storage="{ item }">
+						{{ formatGBs(item.storage) }}GB
+					</template>
+
+					<template v-slot:item.provider="{ item }">
+						{{ formatProvider(item.provider) }}
+						<v-tooltip location="bottom">
+						<template v-slot:activator="{ props }">
+							<v-icon v-bind="props" class="ml-1 mr-0" v-show="item.provider_id && item.provider_id != 1">mdi-cloud</v-icon>
+						</template>
+						<span>Maintenance only</span>
+						</v-tooltip>
+					</template>
+
+					<template v-slot:no-data>
+						No sites found.
+					</template>
+
+					</v-data-table>
+					<v-container fluid v-else>
+					<v-row>
+						<v-col v-for="item in filteredSites" :key="item.site_id" cols="12" sm="6" md="4" lg="3">
+						<v-card @click="goToPath(`/sites/${item.site_id}`)">
+							<v-hover v-slot="{ isHovering, props }">
+							<v-img
+								v-bind="props"
+								:src="`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-800.jpg`"
+								:aspect-ratio="16/10"
+								cover
+								v-show="item.screenshot_base"
+								lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp"
+							>
+								<v-fade-transition>
+								<div
+									v-if="!isHovering"
+									style="background-image: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5)); height: 100%;"
+									class="d-flex align-end"
+								>
+									<div class="body-1 pa-2 text-white">{{ item.name }}</div>
+								</div>
+								</v-fade-transition>
+								<template v-slot:placeholder>
+								<v-row class="fill-height ma-0" align="center" justify="center">
+									<v-progress-circular indeterminate color="grey-lighten-5"></v-progress-circular>
+								</v-row>
+								</template>
+							</v-img>
+							</v-hover>
+							<v-card-title v-if="!item.screenshot_base">{{ item.name }}</v-card-title>
 						</v-card>
 						</v-col>
 					</v-row>
-						</td>
-					</tr>
-					</tbody>
-				</template>
-				</v-data-table>
+					<v-row v-if="!filteredSites || filteredSites.length === 0">
+						<v-col>No sites found.</v-col>
+					</v-row>
+					</v-container>
 			</v-sheet>
 			<v-sheet v-show="dialog_site.step == 2" class="site" color="transparent">
 			<v-card v-show="dialog_site.site.removed" flat rounded="xl">
-			<v-toolbar flat>
+			<v-toolbar flat color="transparent">
 					<v-img :src=`${remote_upload_uri}${dialog_site.site.site}_${dialog_site.site.site_id}/production/screenshots/${dialog_site.site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="dialog_site.site.screenshot_base"></v-img>
 					<v-toolbar-title>{{ dialog_site.site.name }}</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -2446,401 +2987,266 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-row>
 					<v-col>
 						<div>This site has been marked for removal and will be removed within 24 hours. If that was not your intentions then:</div>
-						<v-btn class="ma-4" @click="cancelSiteRemoved()">cancel removal request</v-btn>
+						<v-btn color="primary" class="ma-4" @click="cancelSiteRemoved()">cancel removal request</v-btn>
 					</v-col>
 				</v-row>
 				</v-card-text>
 			</v-card>
 			<v-card v-show="! dialog_site.site.removed" flat rounded="xl">
-				<v-toolbar flat>
-					<v-img :src=`${remote_upload_uri}${dialog_site.site.site}_${dialog_site.site.site_id}/production/screenshots/${dialog_site.site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="dialog_site.site.screenshot_base"></v-img>
+				<v-toolbar flat color="transparent">
+					<v-img :src=`${remote_upload_uri}${dialog_site.site.site}_${dialog_site.site.site_id}/production/screenshots/${dialog_site.site.screenshot_base}_thumb-100.jpg` class="elevation-1 ml-5" max-width="50" v-show="dialog_site.site.screenshot_base"></v-img>
 					<v-toolbar-title>
 					<v-autocomplete
 						v-model="selected_site"
+						ref="autocompleteRef"
 						:items="sites"
+						item-title="name"
+						item-value="site_id"
 						return-object
-						item-text="name"
-						@input="switchSite"
-						class="mt-5"
+						@update:model-value="switchSite"
+						density="compact"
+						variant="outlined"
 						spellcheck="false"
+						style="max-width: 300px;"
 						flat
+						hide-details
 					>
 					</v-autocomplete>
 					</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
 				<v-container class="pt-0">
-				<v-toolbar color="primary" dark flat dense rounded="lg">
-				<v-tabs v-model="dialog_site.site.tabs" dense left>
-					<v-tabs-slider color="transparent"></v-tabs-slider>
-					<v-tab :key="1" href="#tab-Site-Management">
-						<span class="d-none d-md-inline">Site Management</span><v-icon size="24">mdi-cog</v-icon>
+				<v-toolbar color="primary" flat density="compact" rounded="lg">
+				<v-tabs v-model="dialog_site.site.tabs" density="compact" hide-slider>
+					<v-tab value="tab-Site-Management">
+						Site Management <v-icon icon="mdi-cog" class="ml-1"></v-icon>
 					</v-tab>
-					<v-tab :key="2" href="#tab-Modules" v-show="role == 'administrator'">
-						<span class="d-none d-md-inline">Modules</span><v-icon size="24">mdi-toggle-switch-outline</v-icon>
+					<v-tab value="tab-Modules" v-show="role == 'administrator'">
+						Modules <v-icon size="24" icon="mdi-toggle-switch-outline" class="ml-1"></v-icon>
 					</v-tab>
-					<v-tab :key="8" href="#tab-Timeline" ripple @click="fetchTimeline( dialog_site.site.site_id )">
-						<span class="d-none d-md-inline">Timeline</span><v-icon size="24">mdi-timeline-text-outline</v-icon>
+					<v-tab value="tab-Timeline" ripple @click="fetchTimeline( dialog_site.site.site_id )">
+						Timeline <v-icon size="24" icon="mdi-timeline-text-outline" class="ml-1"></v-icon>
 					</v-tab>
 				</v-tabs>
 				<v-spacer></v-spacer>
-				<v-toolbar-items style="margin-right: -16px;">
-					<v-btn text small @click="showLogEntry(dialog_site.site.site_id)" v-show="role == 'administrator' || role == 'owner'"><v-icon class="mr-1">mdi-note-check-outline</v-icon></v-btn>
-					<v-btn text @click="magicLoginSite(dialog_site.site.site_id)">Login to WordPress <v-icon>mdi-open-in-new</v-icon></v-btn>
+				<v-toolbar-items>
+					<v-btn variant="text" @click="showLogEntry(dialog_site.site.site_id)" v-show="role == 'administrator' || role == 'owner'" icon="mdi-note-check-outline"></v-btn>
+					<v-btn variant="text" @click="magicLoginSite(dialog_site.site.site_id)">Login to WordPress <v-icon>mdi-open-in-new</v-icon></v-btn>
 				</v-toolbar-items>
 				</v-toolbar>
-				<v-tabs-items v-model="dialog_site.site.tabs">
-					<v-tab-item value="tab-Site-Management" :transition="false" :reverse-transition="false">
+				<v-window v-model="dialog_site.site.tabs">
+					<v-window-item value="tab-Site-Management" :transition="false" :reverse-transition="false">
 						<div>
-						<v-layout wrap class="mb-2">
-						<v-flex sx12 sm4 px-2>
-							<v-layout>
-							<v-flex style="width:180px;">
-								<v-select
-									v-model="dialog_site.environment_selected"
-									:items="dialog_site.site.environments"
-									return-object
-									item-text="environment_label"
-									@input="triggerEnvironmentUpdate"
-									style="height:54px;">
-								</v-select>
-								</v-flex>
-								<v-flex>
-								<v-tooltip bottom>
-									<template v-slot:activator="{ on }">
-									<v-btn small icon @click="syncSite()" style="margin: 12px auto 0 0;" v-on="on">
-										<v-icon color="grey">mdi-sync</v-icon>
-									</v-btn>
-									</template>
-									<span>Manual sync website details. Last sync {{ dialog_site.site.updated_at | timeago }}.</span>
-								</v-tooltip>
-									</v-flex>
-									</v-layout>
-								</v-flex>
-								<v-flex xs12 sm8>
-								<v-tabs v-model="dialog_site.site.tabs_management" icons-and-text right show-arrows class="pr-3">
-									<v-tab key="Info" href="#tab-Info">
-										Info <v-icon>mdi-text-box-multiple</v-icon>
-									</v-tab>
-									<v-tab key="Stats" href="#tab-Stats" @click="fetchStats()">
-										Stats <v-icon>mdi-chart-bar</v-icon>
-									</v-tab>
-									<v-tab key="Logs" href="#tab-Logs">
-										Logs <v-icon>mdi-file-document-multiple</v-icon>
-									</v-tab>
-									<v-tab key="Plugins" href="#tab-Addons" v-show="dialog_site.environment_selected.token != 'basic'">
-										Addons <v-icon>mdi-power-plug</v-icon>
-									</v-tab>
-									<v-tab key="Users" href="#tab-Users" @click="fetchUsers()" v-show="dialog_site.environment_selected.token != 'basic'">
-										Users <v-icon>mdi-account-multiple</v-icon>
-									</v-tab>
-									<v-tab key="Updates" href="#tab-Updates" @click="viewUpdateLogs( dialog_site.site.site_id )" v-show="dialog_site.environment_selected.token != 'basic'">
-										Updates <v-icon>mdi-book-open</v-icon>
-									</v-tab>
-									<v-tab key="Scripts" href="#tab-Scripts">
-										Scripts <v-icon>mdi-code-tags</v-icon>
-									</v-tab>
-									<v-tab key="Backups" href="#tab-Backups" @click="dialog_site.backup_step = 1">
-										Backups <v-icon>mdi-update</v-icon>
-									</v-tab>
+						<v-row class="mb-2">
+						<v-col class="pt-7" style="max-width: 280px;">
+							<v-select
+								v-model="dialog_site.environment_selected"
+								:items="dialog_site.site.environments"
+								item-title="environment_label"
+								item-value="id" 
+								return-object
+								@update:modelValue="triggerEnvironmentUpdate"
+								label="Environment"
+								variant="outlined"
+								density="compact"
+							>
+							</v-select>
+						</v-col>
+						<div class="mt-5">
+							<v-tooltip location="bottom">
+								<template v-slot:activator="{ props }">
+									<v-btn size="large" variant="text" @click="syncSite()" style="position: relative; left: -16px;" v-bind="props" icon="mdi-sync" color="grey"></v-btn>
+								</template>
+								<span>Manual sync website details. Last sync {{ timeago( dialog_site.site.updated_at ) }}.</span>
+							</v-tooltip>
+						</div>
+						<v-col>
+								<v-tabs
+									v-model="dialog_site.site.tabs_management"
+									align-tabs="end"
+									show-arrows
+									class="pr-3"
+									density="compact"
+									color="primary"
+									stacked
+								>
+									<v-tab value="tab-Info" style="min-width: 50px;padding: 0px 10px;"><v-icon>mdi-text-box-multiple</v-icon> Info</v-tab>
+									<v-tab value="tab-Stats" style="min-width: 50px;padding: 0px 10px;" @click="fetchStats()"><v-icon start>mdi-chart-bar</v-icon> Stats</v-tab>
+									<v-tab value="tab-Logs" style="min-width: 50px;padding: 0px 10px;"><v-icon start>mdi-file-document-multiple</v-icon> Logs</v-tab>
+									<v-tab value="tab-Addons" style="min-width: 50px;padding: 0px 10px;" v-if="dialog_site.environment_selected.token !== 'basic'"><v-icon start>mdi-power-plug</v-icon> Addons</v-tab>
+									<v-tab value="tab-Users" style="min-width: 50px;padding: 0px 10px;" @click="fetchUsers()" v-if="dialog_site.environment_selected.token !== 'basic'"><v-icon start>mdi-account-multiple</v-icon> Users</v-tab>
+									<v-tab value="tab-Updates" style="min-width: 50px;padding: 0px 10px;" @click="viewUpdateLogs(dialog_site.site.site_id)" v-if="dialog_site.environment_selected.token !== 'basic'"><v-icon start>mdi-book-open</v-icon> Updates</v-tab>
+									<v-tab value="tab-Scripts" style="min-width: 50px;padding: 0px 10px;"><v-icon start>mdi-code-tags</v-icon> Scripts</v-tab>
+									<v-tab value="tab-Backups" style="min-width: 50px;padding: 0px 10px;" @click="dialog_site.backup_step = 1"><v-icon start>mdi-update</v-icon> Backups</v-tab>
 								</v-tabs>
-							</v-flex>
-							</v-layout>
+							</v-col>
+							</v-row>
 						</div>
 				<v-dialog v-model="dialog_site.environment_selected.view_server_logs" fullscreen scrollable>
-					<v-card flat tile>
-						<v-toolbar dark color="primary" class="shrink">
-							<v-btn icon @click="dialog_site.environment_selected.view_server_logs = false"><v-icon>mdi-close</v-icon></v-btn>
+					<v-card flat rounded="0">
+						<v-toolbar color="primary" class="shrink">
+							<v-btn icon="mdi-close" @click="dialog_site.environment_selected.view_server_logs = false"></v-btn>
 							<v-toolbar-title>Server logs for {{ dialog_site.environment_selected.home_url }}</v-toolbar-title>
 						</v-toolbar>
 						<v-card-text class="mt-5 pb-5">
-							<v-progress-circular indeterminate color="primary" class="mt-7 mb-7" size="24" v-if="typeof dialog_site.environment_selected.server_logs != 'undefined' && dialog_site.environment_selected.server_logs.files == ''"></v-progress-circular></span>
+							<v-progress-circular 
+								indeterminate 
+								color="primary" 
+								class="mt-7 mb-7" 
+								size="24" 
+								v-if="typeof dialog_site.environment_selected.server_logs != 'undefined' && dialog_site.environment_selected.server_logs.files == ''">
+							</v-progress-circular>
+							
 							<v-row v-if="typeof dialog_site.environment_selected.server_logs != 'undefined' && dialog_site.environment_selected.server_logs.files != ''" >
 								<v-col>
-									<v-autocomplete v-model="dialog_site.environment_selected.server_log_selected" :items="dialog_site.environment_selected.server_logs.files" item-text="name" item-value="path" label="Select log" @change="fetchLogs()" spellcheck="false"></v-autocomplete>
+									<v-autocomplete 
+										v-model="dialog_site.environment_selected.server_log_selected" 
+										:items="dialog_site.environment_selected.server_logs.files" 
+										item-title="name" 
+										item-value="path" 
+										variant="underlined" 
+										label="Select log" 
+										@update:model-value="fetchLogs()" 
+										spellcheck="false">
+									</v-autocomplete>
 								</v-col>
-								<v-col class="shrink" style="min-width:200px">
-									<v-select v-model="dialog_site.environment_selected.server_log_limit" :items="['100','1000','5000','10000']" label="Log limit" @change="fetchLogs()"></v-select>
+								<v-col class="shrink" style="min-width:200px;max-width:200px">
+									<v-select 
+										v-model="dialog_site.environment_selected.server_log_limit" 
+										:items="['100','1000','5000','10000']" 
+										variant="underlined" 
+										label="Log limit" 
+										@update:model-value="fetchLogs()">
+									</v-select>
 								</v-col>
 							</v-row>
-							<v-progress-circular indeterminate color="primary" class="mt-2" size="24" v-show="dialog_site.environment_selected.loading_server_logs"></v-progress-circular></span>
+
+							<v-progress-circular 
+								indeterminate 
+								color="primary" 
+								class="mt-2" 
+								size="24" 
+								v-show="dialog_site.environment_selected.loading_server_logs">
+							</v-progress-circular>
+							
 							<pre style="font-size: 13px;" class="overflow-auto" v-show="dialog_site.environment_selected.server_log_response != ''"><code class="language-log" v-html="dialog_site.environment_selected.server_log_response"></code></pre>
 						</v-card-text>
 					</v-card>
 				</v-dialog>
-        		<v-tabs-items v-model="dialog_site.site.tabs_management" v-if="dialog_site.loading != true">
-					<v-tab-item :key="1" value="tab-Info" :transition="false" :reverse-transition="false">
-						<v-toolbar dense flat>
+        		<v-window v-model="dialog_site.site.tabs_management" v-if="dialog_site.loading != true">
+					<v-window-item :key="1" value="tab-Info" :transition="false" :reverse-transition="false">
+						<v-toolbar density="compact" flat color="transparent">
 							<v-toolbar-title>Info</v-toolbar-title>
-							<v-spacer></v-spacer>
 						</v-toolbar>
                			 <v-card flat>
 							<v-container fluid>
-							<v-alert type="info" text v-show="dialog_site.environment_selected.token == 'basic'">This site doesn't appear to be WordPress. Backups will still work however other management functions have been disabled.</v-alert>
-							<v-layout body-1 px-6 class="row">
-								<v-flex xs12 md6 class="py-2">
-								<div class="block mt-6">
-                            		<a @click="showCaptures( dialog_site.site.site_id )">
-										<v-img :src="dialog_site.environment_selected.screenshots.large" max-width="400" aspect-ratio="1.6" class="elevation-5" v-if="typeof dialog_site.environment_selected.screenshots != 'undefined' && dialog_site.environment_selected.screenshots.large" style="margin:auto;" lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp"></v-img>
-										<v-img max-width="400" aspect-ratio="1.6" class="elevation-5" v-else style="margin:auto;" src="/wp-content/plugins/captaincore-manager/public/dummy.webp"></v-img>
-									</a>
+							<v-alert type="info" variant="text" v-show="dialog_site.environment_selected.token == 'basic'">This site doesn't appear to be WordPress. Backups will still work however other management functions have been disabled.</v-alert>
+							<v-row>
+							<v-col cols="12" md="6" class="py-2">
+							<div class="block mt-6 text-center">
+								<a href="#screenshots" @click="showCaptures(dialog_site.site.site_id)">
+								<v-img v-if="dialog_site.environment_selected.screenshots?.large" :src="dialog_site.environment_selected.screenshots.large" max-width="400" aspect-ratio="1.6" class="elevation-5 mx-auto" lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp">
+									<template v-slot:placeholder>
+									<v-row class="fill-height ma-0" align="center" justify="center">
+										<v-progress-circular indeterminate color="grey-lighten-5"></v-progress-circular>
+									</v-row>
+									</template>
+								</v-img>
+								<v-img v-else max-width="400" aspect-ratio="1.6" class="elevation-5 mx-auto" src="/wp-content/plugins/captaincore-manager/public/dummy.webp"></v-img>
+								</a>
+							</div>
+							<v-list density="compact" class="mt-6 mx-auto" style="max-width: 350px; background: transparent; padding: 0px;">
+								<v-list-item :href="dialog_site.environment_selected.link" target="_blank" density="compact" title="Link" :subtitle="dialog_site.environment_selected.link" append-icon="mdi-open-in-new" link></v-list-item>
+								<v-list-item v-if="dialog_site.environment_selected.token !== 'basic'" @click="copyText(dialog_site.environment_selected.core)" density="compact" title="WordPress Version" :subtitle="dialog_site.environment_selected.core" append-icon="mdi-content-copy"></v-list-item>
+								<v-list-item @click="copyText(formatSize(dialog_site.environment_selected.storage))" density="compact" title="Storage" :subtitle="formatSize(dialog_site.environment_selected.storage)" append-icon="mdi-content-copy"></v-list-item>
+								<v-list-item @click="copyText(dialog_site.environment_selected.php_memory)" density="compact" title="Memory Limit" :subtitle="dialog_site.environment_selected.php_memory" append-icon="mdi-content-copy" v-show="dialog_site.environment_selected.php_memory"></v-list-item>
+								<v-list-item @click="showCaptures(dialog_site.site.site_id)" density="compact" title="Visual Captures" :subtitle="dialog_site.environment_selected.captures?.toString()" append-icon="mdi-image"></v-list-item>
+								<v-list-item v-if="dialog_site.environment_selected.subsite_count" @click="copyText(`${dialog_site.environment_selected.subsite_count} subsites`)" density="compact" title="Multisite" :subtitle="`${dialog_site.environment_selected.subsite_count} subsites`" append-icon="mdi-content-copy"></v-list-item>
+							</v-list>
+							</v-col>
+
+							<v-col cols="12" md="6" class="keys py-2">
+							<v-list density="compact" class="mx-auto" style="max-width: 350px; background: transparent; padding: 0px;">
+								<v-list-item @click="copySFTP(dialog_site.environment_selected)" density="compact" title="SFTP Info" append-icon="mdi-content-copy"></v-list-item>
+								<v-list-item v-if="dialog_site.environment_selected.database" @click="copyDatabase(dialog_site.environment_selected)" density="compact" title="Database Info" append-icon="mdi-content-copy"></v-list-item>
+								<v-list-item @click="copyText(dialog_site.environment_selected.address)" density="compact" title="Address" :subtitle="dialog_site.environment_selected.address" append-icon="mdi-content-copy"></v-list-item>
+								<v-list-item @click="copyText(dialog_site.environment_selected.username)" density="compact" title="Username" :subtitle="dialog_site.environment_selected.username" append-icon="mdi-content-copy"></v-list-item>
+								<v-list-item @click="copyText(dialog_site.environment_selected.password)" density="compact" title="Password" subtitle="##########" append-icon="mdi-content-copy"></v-list-item>
+								<v-list-item @click="copyText(dialog_site.environment_selected.protocol)" density="compact" title="Protocol" :subtitle="dialog_site.environment_selected.protocol" append-icon="mdi-content-copy"></v-list-item>
+								<v-list-item @click="copyText(dialog_site.environment_selected.port)" density="compact" title="Port" :subtitle="dialog_site.environment_selected.port?.toString()" append-icon="mdi-content-copy"></v-list-item>
+								<v-list-item @click="copyText(dialog_site.environment_selected.home_directory)" density="compact" title="Home directory" :subtitle="dialog_site.environment_selected.home_directory" append-icon="mdi-content-copy"></v-list-item>
+
+								<div v-if="dialog_site.environment_selected.database_name">
+								<v-list-item v-if="dialog_site.environment_selected.database && dialog_site.site.provider !== 'rocketdotnet'" :href="dialog_site.environment_selected.database" target="_blank" density="compact" title="Database" :subtitle="dialog_site.environment_selected.database" append-icon="mdi-open-in-new" link></v-list-item>
+								<v-list-item v-if="dialog_site.site.provider === 'rocketdotnet'" @click="fetchPHPmyadmin()" density="compact" title="Database" subtitle="PHPmyadmin" append-icon="mdi-open-in-new"></v-list-item>
+								<v-list-item @click="copyText(dialog_site.environment_selected.database_name)" density="compact" title="Database Name" :subtitle="dialog_site.environment_selected.database_name" append-icon="mdi-content-copy"></v-list-item>
+								<v-list-item @click="copyText(dialog_site.environment_selected.database_username)" density="compact" title="Database Username" :subtitle="dialog_site.environment_selected.database_username" append-icon="mdi-content-copy"></v-list-item>
+								<v-list-item @click="copyText(dialog_site.environment_selected.database_password)" density="compact" title="Database Password" subtitle="##########" append-icon="mdi-content-copy"></v-list-item>
 								</div>
-								<v-list dense style="padding:0px;max-width:350px;margin: auto;" class="mt-6">
-									<v-list-item :href="dialog_site.environment_selected.link" target="_blank" dense>
-									<v-list-item-content>
-										<v-list-item-title>Link</v-list-item-title>
-										<v-list-item-subtitle v-text="dialog_site.environment_selected.link"></v-list-item-subtitle>
-									</v-list-item-content>
-									<v-list-item-icon>
-										<v-icon>mdi-open-in-new</v-icon>
-									</v-list-item-icon>
-									</v-list-item>
-									<v-list-item @click="copyText( dialog_site.environment_selected.core )" dense v-show="dialog_site.environment_selected.token != 'basic'">
-									<v-list-item-content>
-										<v-list-item-title>WordPress Version</v-list-item-title>
-										<v-list-item-subtitle v-text="dialog_site.environment_selected.core"></v-list-item-subtitle>
-									</v-list-item-content>
-									<v-list-item-icon>
-										<v-icon>mdi-content-copy</v-icon>
-									</v-list-item-icon>
-									</v-list-item>
-									<v-list-item @click="copyText( $options.filters.formatSize( dialog_site.environment_selected.storage ) )" dense>
-									<v-list-item-content>
-										<v-list-item-title>Storage</v-list-item-title>
-										<v-list-item-subtitle>{{ dialog_site.environment_selected.storage | formatSize }}</v-list-item-subtitle>
-									</v-list-item-content>
-									<v-list-item-icon>
-										<v-icon>mdi-content-copy</v-icon>
-									</v-list-item-icon>
-									</v-list-item>
-									<v-list-item @click="copyText( dialog_site.environment_selected.php_memory )" dense>
-									<v-list-item-content>
-										<v-list-item-title>Memory Limit</v-list-item-title>
-										<v-list-item-subtitle>{{ dialog_site.environment_selected.php_memory  }}</v-list-item-subtitle>
-									</v-list-item-content>
-									<v-list-item-icon>
-										<v-icon>mdi-content-copy</v-icon>
-									</v-list-item-icon>
-									</v-list-item>
-									<v-list-item @click="showCaptures( dialog_site.site.site_id )" dense>
-									<v-list-item-content>
-										<v-list-item-title>Visual Captures</v-list-item-title>
-										<v-list-item-subtitle>{{ dialog_site.environment_selected.captures}}</v-list-item-subtitle>
-									</v-list-item-content>
-									<v-list-item-icon>
-										<v-icon>mdi-image</v-icon>
-									</v-list-item-icon>
-									</v-list-item>
-									<v-list-item @click="copyText( dialog_site.environment_selected.subsite_count + ' subsites')" dense v-if="dialog_site.environment_selected.subsite_count">
-									<v-list-item-content>
-										<v-list-item-title>Multisite</v-list-item-title>
-										<v-list-item-subtitle>{{ dialog_site.environment_selected.subsite_count }} subsites</v-list-item-subtitle>
-									</v-list-item-content>
-									<v-list-item-icon>
-										<v-icon>mdi-content-copy</v-icon>
-									</v-list-item-icon>
-									</v-list-item>
-								</v-list>
-								</v-flex>
-								<v-flex xs12 md6 class="keys py-2">
-								<v-list dense style="padding:0px;max-width:350px;margin: auto;">
-									<v-list-item @click="copySFTP( dialog_site.environment_selected )" dense>
-									<v-list-item-content>
-										<v-list-item-title>SFTP Info</v-list-item-title>
-									</v-list-item-content>
-									<v-list-item-icon>
-										<v-icon>mdi-content-copy</v-icon>
-									</v-list-item-icon>
-									</v-list-item>
-									<v-list-item @click="copyDatabase( dialog_site.environment_selected )" dense v-if="dialog_site.environment_selected.database">
-									<v-list-item-content>
-										<v-list-item-title>Database Info</v-list-item-title>
-									</v-list-item-content>
-									<v-list-item-icon>
-										<v-icon>mdi-content-copy</v-icon>
-									</v-list-item-icon>
-									</v-list-item>
-									<v-list-item @click="copyText( dialog_site.environment_selected.address )" dense>
-									<v-list-item-content>
-										<v-list-item-title>Address</v-list-item-title>
-										<v-list-item-subtitle v-text="dialog_site.environment_selected.address"></v-list-item-subtitle>
-									</v-list-item-content>
-									<v-list-item-icon>
-										<v-icon>mdi-content-copy</v-icon>
-									</v-list-item-icon>
-									</v-list-item>
-									<v-list-item @click="copyText( dialog_site.environment_selected.username )" dense>
-									<v-list-item-content>
-										<v-list-item-title>Username</v-list-item-title>
-										<v-list-item-subtitle v-text="dialog_site.environment_selected.username"></v-list-item-subtitle>
-									</v-list-item-content>
-									<v-list-item-icon>
-										<v-icon>mdi-content-copy</v-icon>
-									</v-list-item-icon>
-									</v-list-item>
-									<v-list-item @click="copyText( dialog_site.environment_selected.password )" dense>
-									<v-list-item-content>
-										<v-list-item-title>Password</v-list-item-title>
-										<v-list-item-subtitle>##########</v-list-item-subtitle>
-									</v-list-item-content>
-									<v-list-item-icon>
-										<v-icon>mdi-content-copy</v-icon>
-									</v-list-item-icon>
-									</v-list-item>
-									<v-list-item @click="copyText( dialog_site.environment_selected.protocol )" dense>
-									<v-list-item-content>
-										<v-list-item-title>Protocol</v-list-item-title>
-										<v-list-item-subtitle v-text="dialog_site.environment_selected.protocol"></v-list-item-subtitle>
-									</v-list-item-content>
-									<v-list-item-icon>
-										<v-icon>mdi-content-copy</v-icon>
-									</v-list-item-icon>
-									</v-list-item>
-									<v-list-item @click="copyText( dialog_site.environment_selected.port )" dense>
-									<v-list-item-content>
-										<v-list-item-title>Port</v-list-item-title>
-										<v-list-item-subtitle v-text="dialog_site.environment_selected.port"></v-list-item-subtitle>
-									</v-list-item-content>
-									<v-list-item-icon>
-										<v-icon>mdi-content-copy</v-icon>
-									</v-list-item-icon>
-									</v-list-item>
-									<v-list-item @click="copyText( dialog_site.environment_selected.home_directory )" dense>
-									<v-list-item-content>
-										<v-list-item-title>Home directory</v-list-item-title>
-										<v-list-item-subtitle v-text="dialog_site.environment_selected.home_directory"></v-list-item-subtitle>
-									</v-list-item-content>
-									<v-list-item-icon>
-										<v-icon>mdi-content-copy</v-icon>
-									</v-list-item-icon>
-									</v-list-item>
-									<div>
-										<v-list-item :href="dialog_site.environment_selected.database" target="_blank" dense  v-if="dialog_site.environment_selected.database">
-										<v-list-item-content>
-											<v-list-item-title>Database</v-list-item-title>
-											<v-list-item-subtitle v-text="dialog_site.environment_selected.database"></v-list-item-subtitle>
-										</v-list-item-content>
-										<v-list-item-icon>
-											<v-icon>mdi-open-in-new</v-icon>
-										</v-list-item-icon>
-										</v-list-item>
-										<v-list-item @click="fetchPHPmyadmin()" dense v-if="dialog_site.site.provider == 'rocketdotnet'">
-											<v-list-item-content>
-												<v-list-item-title>Database</v-list-item-title>
-												<v-list-item-subtitle>PHPmyadmin</v-list-item-subtitle>
-											</v-list-item-content>
-											<v-list-item-icon>
-												<v-icon>mdi-open-in-new</v-icon>
-											</v-list-item-icon>
-										</v-list-item>
-										<v-list-item @click="copyText( dialog_site.environment_selected.database_name )" dense>
-										<v-list-item-content>
-											<v-list-item-title>Database Name</v-list-item-title>
-											<v-list-item-subtitle v-text="dialog_site.environment_selected.database_name"></v-list-item-subtitle>
-										</v-list-item-content>
-										<v-list-item-icon>
-											<v-icon>mdi-content-copy</v-icon>
-										</v-list-item-icon>
-										</v-list-item>
-										<v-list-item @click="copyText( dialog_site.environment_selected.database_username )" dense>
-										<v-list-item-content>
-											<v-list-item-title>Database Username</v-list-item-title>
-											<v-list-item-subtitle v-text="dialog_site.environment_selected.database_username"></v-list-item-subtitle>
-										</v-list-item-content>
-										<v-list-item-icon>
-											<v-icon>mdi-content-copy</v-icon>
-										</v-list-item-icon>
-										</v-list-item>
-										<v-list-item @click="copyText( dialog_site.environment_selected.database_password )" dense>
-										<v-list-item-content>
-											<v-list-item-title>Database Password</v-list-item-title>
-											<v-list-item-subtitle>##########</v-list-item-subtitle>
-										</v-list-item-content>
-										<v-list-item-icon>
-											<v-icon>mdi-content-copy</v-icon>
-										</v-list-item-icon>
-										</v-list-item>
-									</div>
-									<div v-if="dialog_site.environment_selected.ssh">
-										<v-list-item @click="copyText( dialog_site.environment_selected.ssh )" dense>
-										<v-list-item-content>
-											<v-list-item-title>SSH Connection</v-list-item-title>
-											<v-list-item-subtitle v-text="dialog_site.environment_selected.ssh"></v-list-item-subtitle>
-										</v-list-item-content>
-										<v-list-item-icon>
-											<v-icon>mdi-content-copy</v-icon>
-										</v-list-item-icon>
-										</v-list-item>
-									</div>
-								</v-list>
-							</v-flex>
-						</v-layout>
+
+								<div v-if="dialog_site.environment_selected.ssh">
+								<v-list-item @click="copyText(dialog_site.environment_selected.ssh)" density="compact" title="SSH Connection" :subtitle="dialog_site.environment_selected.ssh" append-icon="mdi-content-copy"></v-list-item>
+								</div>
+							</v-list>
+							</v-col>
+						</v-row>
 						</v-container>
 						<div v-show="dialog_site.site.shared_with && dialog_site.site.shared_with.length > 0">
-						<v-subheader>Shared With 
-						<v-menu
-							:close-on-content-click="false"
-							:nudge-width="200"
-							offset-x
-							>
-							<template v-slot:activator="{ on, attrs }">
-								<v-btn small depressed class="ml-2" v-bind="attrs" v-on="on" v-show="accounts && accounts.length > 1">Add <v-icon class="ml-2">mdi-account-multiple-plus</v-icon></v-btn>
+						<v-list-subheader class="ml-4">Shared With 
+						<v-menu :close-on-content-click="false" :nudge-width="200" offset-x>
+							<template v-slot:activator="{ props }">
+								<v-btn size="small" variant="tonal" class="ml-2" v-bind="props" v-show="accounts && accounts.length > 1">Add <v-icon class="ml-2">mdi-account-multiple-plus</v-icon></v-btn>
 							</template>
-							<template v-slot:default="dialog">
-							<v-card>
+							<v-card min-width="300">
 								<v-list>
 								<v-list-item>
-									<v-list-item-content>
-									<v-autocomplete label="Accounts" hide-details outlined small-chips :items="accounts.filter( account => !dialog_site.site.shared_with.find( shared => shared.account_id == account.account_id ) )" item-text="name" item-value="account_id" v-model="dialog_site.grant_access" style="max-width: 400px"></v-autocomplete>
-									</v-list-item-content>
+									<v-autocomplete label="Accounts" hide-details outlined small-chips :items="accounts.filter( account => !dialog_site.site.shared_with.find( shared => shared.account_id == account.account_id ) )" item-title="name" item-value="account_id" v-model="dialog_site.grant_access" style="max-width: 400px"></v-autocomplete>
 								</v-list-item>
 								</v-list>
 								<v-divider></v-divider>
 								<v-card-actions>
 								<v-spacer></v-spacer>
-								<v-btn text @click="dialog.value = false">
-									Cancel
-								</v-btn>
-								<v-btn color="primary" text @click="dialog.value = false; grantAccess()">
+								<v-btn color="primary" text @click="isActive.value = false; grantAccess()">
 									Grant Access
 								</v-btn>
 								</v-card-actions>
 							</v-card>
-							</template>
-							</v-menu>
-						</v-subheader>
+						</v-menu>
+						</v-list-subheader>
 						<v-container>
-						<v-row dense v-if="dialog_site.site.shared_with && dialog_site.site.shared_with.length > 0">
+						<v-row density="compact" v-if="dialog_site.site.shared_with && dialog_site.site.shared_with.length > 0">
 							<v-col v-for="account in dialog_site.site.shared_with" :key="account.account_id" cols="12" md="4">
-							<v-card :href=`${configurations.path}accounts/${account.account_id}` @click.prevent="goToPath( '/accounts/' + account.account_id )" dense outlined rounded="xl">
-								<v-card-title class="text-body-1">
-									<span v-html="account.name"></span>
+							<v-card :href="`${configurations.path}accounts/${account.account_id}`" @click.prevent="goToPath( '/accounts/' + account.account_id )" density="compact" flat border="thin" rounded="xl">
+								<v-card-title class="text-body-1 d-flex align-center">
+									<span v-html="account.name" class="text-truncate overflow-hidden d-inline-block"></span>
 									<v-spacer></v-spacer>
-									<v-tooltip bottom>
-									<template v-slot:activator="{ on, attrs }">
-										<v-icon color="primary" v-bind="attrs" v-on="on" size="26" v-show="account.account_id == dialog_site.site.customer_id" class="ml-1">mdi-account-circle</v-icon>
-									</template>
-									<span>Customer</span>
+									<div class="d-flex align-center flex-shrink-0">
+									<v-tooltip location="bottom">
+										<template v-slot:activator="{ props }">
+										<v-icon color="primary" v-bind="props" size="26" v-show="account.account_id == dialog_site.site.customer_id" class="ml-1">mdi-account-circle</v-icon>
+										</template>
+										<span>Customer</span>
 									</v-tooltip>
-									<v-tooltip bottom>
-									<template v-slot:activator="{ on, attrs }">
-										<v-icon color="primary" v-bind="attrs" v-on="on" size="26" v-show="account.account_id == dialog_site.site.account_id" class="ml-1">mdi-credit-card</v-icon>
-									</template>
-									<span>Billing Contact</span>
+									<v-tooltip location="bottom">
+										<template v-slot:activator="{ props }">
+										<v-icon color="primary" v-bind="props" size="26" v-show="account.account_id == dialog_site.site.account_id" class="ml-1">mdi-credit-card</v-icon>
+										</template>
+										<span>Billing Contact</span>
 									</v-tooltip>
+									</div>
 								</v-card-title>
-								<v-card-subtitle>Account #{{ account.account_id }}</v-card-subtitle>
+								<v-card-subtitle class="mb-3">Account #{{ account.account_id }}</v-card-subtitle>
 							</v-card>
 						</v-col>
 						</v-row>
 						</v-container>
 					</div>
 					<div v-if="dialog_site.site.domains && dialog_site.site.domains.length > 0">
-					<v-subheader>DNS zones</v-subheader>
+					<v-list-subheader>DNS zones</v-list-subheader>
 					<v-container>
 						<v-row dense>
 							<v-col v-for="domain in dialog_site.site.domains" :key="domain.domain_id" cols="12" md="4">
-							<v-card :href=`${configurations.path}domains/${domain.domain_id}` @click.prevent="goToPath( '/domains/' + domain.domain_id )" dense outlined rounded="xl">
+							<v-card :href=`${configurations.path}domains/${domain.domain_id}` @click.prevent="goToPath( '/domains/' + domain.domain_id )" density="compact" flat border="thin" rounded="xl">
 								<v-card-title class="text-body-1">
 									<span v-html="domain.name"></span>
 								</v-card-title>
@@ -2850,58 +3256,57 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-container>
 					</div>
 					<div v-show="dialog_site.environment_selected.token != 'basic'">
-					<v-subheader>Site Options</v-subheader>
-					<v-container>
-					<v-btn small depressed @click="PushProductionToStaging( dialog_site.site.site_id )" v-show="dialog_site.site.provider == 'kinsta'">
-						<v-icon>mdi-truck</v-icon> Push Production to Staging
-					</v-btn>
-					<v-btn small depressed @click="PushStagingToProduction( dialog_site.site.site_id )" v-show="dialog_site.site.provider == 'kinsta' && dialog_site.site.environments.length == 2">
-						<v-icon class="reverse">mdi-truck</v-icon> Push Staging to Production
-					</v-btn>
-					<v-dialog max-width="600">
-						<template v-slot:activator="{ on, attrs }">
-							<v-btn small depressed color="error" v-bind="attrs" v-on="on"><v-icon>mdi-delete</v-icon> Delete Site</v-btn>
+					<v-card color="transparent" density="compact" flat subtitle="Site Options">
+						<template v-slot:actions>
+						<v-btn size="small" variant="tonal" @click="PushProductionToStaging( dialog_site.site.site_id )" v-show="dialog_site.site && dialog_site.site.provider && dialog_site.site.provider == 'kinsta'">
+							<v-icon>mdi-truck</v-icon> Push Production to Staging
+						</v-btn>
+						<v-btn size="small" variant="tonal" @click="PushStagingToProduction( dialog_site.site.site_id )" v-show="dialog_site.site && dialog_site.site.provider && dialog_site.site.provider == 'kinsta' && typeof dialog_site.site.environments == 'object' && dialog_site.site.environments.length == 2">
+							<v-icon class="reverse">mdi-truck</v-icon> Push Staging to Production
+						</v-btn>
+						<v-dialog max-width="600">
+							<template v-slot:activator="{ props }">
+								<v-btn size="small" variant="tonal" color="error" v-bind="props"><v-icon>mdi-delete</v-icon> Delete Site</v-btn>
+							</template>
+							<template v-slot:default="{ isActive }">
+							<v-card>
+								<v-toolbar color="primary" dark>
+									<v-btn icon="mdi-close" @click="isActive.value = false"></v-btn>
+									Are you sure you wish to delete this site?
+									<v-spacer></v-spacer>
+								</v-toolbar>
+								<v-card-text>
+								<p class="pt-3 text-body-1">Deleting this site will also delete all environments associated with it.</p>
+								<v-checkbox :model-value="true" readonly v-for="environment in dialog_site.site.environments" :label="`${environment.environment} - ${environment.home_url}`" color="primary"></v-checkbox>
+								<v-btn color="primary" @click="markSiteRemoved(); isActive.value = false" class="mr-2">Delete Site</v-btn>
+								</v-card-text>
+							</v-card>
+							</template>
+						</v-dialog>
 						</template>
-						<template v-slot:default="dialog">
-						<v-card>
-							<v-toolbar color="primary" dark>
-								<v-btn icon @click="dialog.value = false">
-									<v-icon>mdi-close</v-icon>
-								</v-btn>
-								Are you sure you wish to delete this site?
-								<v-spacer></v-spacer>
-							</v-toolbar>
-							<v-card-text>
-							  <p class="pt-4">Deleting this site will also delete all environments associated with it.</p>
-							  <v-checkbox true-value="1" input-value="input.val" readonly v-for="environment in dialog_site.site.environments" :label="`${environment.environment} - ${environment.home_url}`"></v-checkbox>
-							  <v-btn @click="markSiteRemoved(); dialog.value = false" class="mr-2">Delete Site</v-btn>
-							</v-card-text>
-						</v-card>
-						</template>
-					</v-dialog>
-					</v-container>
+					</v-card>
 					</div>
-				</v-tab-item>
-				<v-tab-item :key="100" value="tab-Stats" :transition="false" :reverse-transition="false">
+				</v-window-item>
+				<v-window-item :key="100" value="tab-Stats" :transition="false" :reverse-transition="false">
 					<v-card flat>
-					<v-toolbar flat dense class="mb-2">
+					<v-toolbar flat density="compact" color="transparent" class="mb-2">
 						<v-toolbar-title>Stats</v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items v-if="typeof dialog_new_site == 'object'" style="margin-right:-16px;" class="mt-2">
-							<v-col class="px-1" v-show="dialog_site.environment_selected.fathom_analytics.length > 1">
+							<div class="px-1" v-show="dialog_site.environment_selected.fathom_analytics.length > 1">
 								<v-autocomplete
 									:items='dialog_site.environment_selected.fathom_analytics'
-									item-text="domain"
+									item-title="domain"
 									item-value="code"
 									v-model="dialog_site.environment_selected.stats.fathom_id"
 									label="Domain"
 									@change="fetchStats"
 								></v-autocomplete>
-							</v-col>
-							<v-col class="px-1" style="max-width:140px;">
-								<v-select dense outlined :items="['Hour', 'Day', 'Month', 'Year']" label="Date Grouping" v-model="stats.grouping" @change="fetchStats()"></v-select>
-							</v-col>
-							<v-col class="px-1" style="max-width:155px;">
+							</div>
+							<div class="px-1" style="width:150px;">
+								<v-select density="compact" variant="outlined" :items="['Hour', 'Day', 'Month', 'Year']" label="Date Grouping" v-model="stats.grouping" @change="fetchStats()"></v-select>
+							</div>
+							<div class="px-1" style="width:162px;">
 							<v-menu
 								v-model="stats.from_at_select"
 								:close-on-content-click="false"
@@ -2911,20 +3316,13 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								down
 								min-width="auto"
 							>
-								<template v-slot:activator="{ on, attrs }">
-								<v-text-field
-									v-model="stats.from_at"
-									label="From"
-									append-icon="mdi-calendar"
-									v-bind="attrs"
-									v-on="on"
-									dense outlined
-								></v-text-field>
+								<template v-slot:activator="{ props }">
+								<v-text-field v-model="stats.from_at" label="From" append-icon="mdi-calendar" v-bind="props" density="compact" variant="outlined"></v-text-field>
 								</template>
 								<v-date-picker v-model="stats.from_at" @input="stats.from_at_select = false; fetchStats()"></v-date-picker>
 							</v-menu>
-							</v-col>
-							<v-col class="px-1" style="max-width:155px;">
+							</div>
+							<div class="px-1" style="width:162px;">
 							<v-menu
 								v-model="stats.to_at_select"
 								:close-on-content-click="false"
@@ -2934,27 +3332,27 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								down
 								min-width="auto"
 							>
-								<template v-slot:activator="{ on, attrs }">
+								<template v-slot:activator="{ props }">
 								<v-text-field
 									v-model="stats.to_at"
 									label="To"
 									append-icon="mdi-calendar"
-									v-bind="attrs"
-									v-on="on"
-									dense outlined
+									v-bind="props"
+									density="compact"
+									variant="outlined"
 								></v-text-field>
 								</template>
 								<v-date-picker v-model="stats.to_at" @input="stats.to_at_select = false; fetchStats()"></v-date-picker>
 							</v-menu>
-							</v-col>
-                    		<v-btn text @click="configureFathom( dialog_site.site.site_id )" v-show="role == 'administrator'"><v-icon dark small>mdi-pencil</v-icon> Edit</v-btn>
+							</div>
+                    		<v-btn variant="text" @click="configureFathom( dialog_site.site.site_id )" v-show="role == 'administrator'"><v-icon dark small>mdi-pencil</v-icon> Edit</v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
 						<div class="pa-3" v-if="typeof dialog_site.environment_selected.stats == 'string' && dialog_site.environment_selected.stats != 'Loading'">
 							{{ dialog_site.environment_selected.stats }}
 						</div>
-						<v-layout wrap>
-						<v-flex xs12>
+						<v-row>
+						<v-col>
 						<v-card-text v-show="dialog_site.environment_selected.stats == 'Loading'">
 							<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
 						</v-card-text>
@@ -2962,245 +3360,228 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<div :id="`chart_` + dialog_site.site.site_id + `_` + e.environment" class="stat-chart"></div>
 							<v-card flat v-if="dialog_site.environment_selected.stats && dialog_site.environment_selected.stats.summary">
 							<v-card-title class="text-center pa-0 mb-10">
-							<v-layout wrap>
-							<v-flex xs6 sm3>
-								<span class="text-uppercase caption">Unique Visitors</span><br />
-								<span class="display-1 font-weight-thin text-uppercase">{{ dialog_site.environment_selected.stats.summary.visits | formatk }}</span>
-							</v-flex>
-							<v-flex xs6 sm3>
-								<span class="text-uppercase caption">Pageviews</span><br />
-								<span class="display-1 font-weight-thin text-uppercase">{{ dialog_site.environment_selected.stats.summary.pageviews | formatk }}</span>
-							</v-flex>
-							<v-flex xs6 sm3>
-								<span class="text-uppercase caption">Avg Time On Site</span><br />
-								<span class="display-1 font-weight-thin text-uppercase">{{ dialog_site.environment_selected.stats.summary.avg_duration | formatTime }}</span>
-							</v-flex>
-							<v-flex xs6 sm3>
-								<span class="text-uppercase caption">Bounce Rate</span><br />
-								<span class="display-1 font-weight-thin text-uppercase">{{ dialog_site.environment_selected.stats.summary.bounce_rate | formatPercentageFixed }}</span>
-							</v-flex>
-							</v-layout>
+							<v-row>
+							<v-col cols="6" sm="3">
+								<span class="text-uppercase text-caption">Unique Visitors</span><br />
+								<span class="text-h4 font-weight-thin text-uppercase">{{ formatk( dialog_site.environment_selected.stats.summary.visits ) }}</span>
+							</v-col>
+							<v-col cols="6" sm="3">
+								<span class="text-uppercase text-caption">Pageviews</span><br />
+								<span class="text-h4 font-weight-thin text-uppercase">{{ formatk( dialog_site.environment_selected.stats.summary.pageviews ) }}</span>
+							</v-col>
+							<v-col cols="6" sm="3">
+								<span class="text-uppercase text-caption">Avg Time On Site</span><br />
+								<span class="text-h4 font-weight-thin text-uppercase">{{ formatTime( dialog_site.environment_selected.stats.summary.avg_duration ) }}</span>
+							</v-col>
+							<v-col cols="6" sm="3">
+								<span class="text-uppercase text-caption">Bounce Rate</span><br />
+								<span class="text-h4 font-weight-thin text-uppercase">{{ formatPercentageFixed( dialog_site.environment_selected.stats.summary.bounce_rate ) }}</span>
+							</v-col>
+							</v-row>
 							</v-card-title>
 							</v-card>
 						</div>
-						</v-flex>
-						</v-layout>
+						</v-col>
+						</v-row>
 						<div v-if="dialog_site.environment_selected && dialog_site.environment_selected.stats.site" class="mb-10">
 						<v-divider></v-divider>
-						<v-subheader>Sharing</v-subheader>
-						<v-container>
-						<v-row>
-							<v-col><v-card-text>
-							Stats are powered by <a href="https://usefathom.com" target="_new">Fathom Analytics</a>. To view stats dashboard directly, you can enable public or private sharing options.
-							<v-chip-group mandatory active-class="primary--text" v-model="dialog_site.environment_selected.stats.site.sharing" @change="shareStats()">
-								<v-chip value="none" filter>Off</v-chip>
-								<v-chip value="private" filter @click="dialog_site.environment_selected.stats_password = 'changeme'">Private</v-chip>
-								<v-chip value="public" filter>Public</v-chip>
-							</v-chip-group>
-							</v-card-text></v-col>
-							<v-col v-show="dialog_site.environment_selected.stats.site.sharing != 'none'">
-							<v-list-item :href="`https://app.usefathom.com/share/${ dialog_site.environment_selected.stats.site.id.toLowerCase() }/${dialog_site.environment_selected.stats.site.name}`" target="_new" dense>
-								<v-list-item-content>
-									<v-list-item-title>Share URL</v-list-item-title>
-									<v-list-item-subtitle>https://app.usefathom.com/share/{{ dialog_site.environment_selected.stats.site.id.toLowerCase() }}/{{ dialog_site.environment_selected.stats.site.name }}</v-list-item-subtitle>
-								</v-list-item-content>
-								<v-list-item-icon>
+						<v-tab>Sharing</v-tab>
+							<v-row>
+								<v-col>
+								<v-card-text>
+									Stats are powered by <a href="https://usefathom.com" target="_new">Fathom Analytics</a>. To view the stats dashboard directly, you can enable public or private sharing options.
+									<v-chip-group mandatory active-class="primary-text" v-model="dialog_site.environment_selected.stats.site.sharing" @change="shareStats()">
+									<v-chip value="none" filter>Off</v-chip>
+									<v-chip value="private" filter @click="dialog_site.environment_selected.stats_password = 'changeme'">Private</v-chip>
+									<v-chip value="public" filter>Public</v-chip>
+									</v-chip-group>
+								</v-card-text>
+								</v-col>
+								<v-col v-show="dialog_site.environment_selected.stats.site.sharing != 'none'">
+								<v-list-item :href="`https://app.usefathom.com/share/${ dialog_site.environment_selected.stats.site.id.toLowerCase() }/${dialog_site.environment_selected.stats.site.name}`" target="_new" density="compact" lines="two">
+									<template v-slot:title>Share URL</template>
+									<template v-slot:subtitle>https://app.usefathom.com/share/{{ dialog_site.environment_selected.stats.site.id.toLowerCase() }}/{{ dialog_site.environment_selected.stats.site.name }}</template>
+									<template v-slot:append>
 									<v-icon>mdi-open-in-new</v-icon>
-								</v-list-item-icon>
-							</v-list-item>
-							<v-list-item v-show="dialog_site.environment_selected.stats.site.sharing == 'private'" class="mt-4">
-								<v-text-field label="Change Share Password" v-model="dialog_site.environment_selected.stats_password" spellcheck="false" clearable autofocus></v-text-field>
-								<v-list-item-icon>
+									</template>
+								</v-list-item>
+								<v-list-item v-show="dialog_site.environment_selected.stats.site.sharing == 'private'" class="mt-4" lines="two">
+									<template v-slot:title>
+									<v-text-field label="Change Share Password" v-model="dialog_site.environment_selected.stats_password" spellcheck="false" clearable autofocus></v-text-field>
+									</template>
+									<template v-slot:append>
 									<v-btn @click="shareStats()">Save</v-btn>
-								</v-list-item-icon>
-							</v-list-item>
-							<v-col>
-						</v-row>
-						</v-container>
+									</template>
+								</v-list-item>
+								</v-col>
+							</v-row>
 						</div>
 					</v-card>
-				</v-tab-item>
-				<v-tab-item :key="104" value="tab-Logs" :transition="false" :reverse-transition="false">
-				<v-toolbar dense light flat>
+				</v-window-item>
+				<v-window-item :key="104" value="tab-Logs" :transition="false" :reverse-transition="false">
+				<v-toolbar density="compact" color="transparent" flat>
 					<v-toolbar-title>Logs</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
 				<v-sheet>
-				  <v-card flat>
+				<v-card flat>
 				<v-row class="pa-4">
-				<v-col cols="12" md="4" class="px-2">
-				<v-card class="mx-auto" max-width="344" outlined link hover @click="viewLogs( dialog_site.site.site_id )">
-					<v-card-title>Server Logs</v-card-title>
-					<v-card-subtitle><code>error.log</code> and <code>access.log</code></v-card-subtitle>
-				</v-card>
-				</v-col>
-				<v-col cols="12" md="4" class="px-2">
-				<v-card class="mx-auto" max-width="344" outlined link hover  @click="viewMailgunLogs()" v-if="dialog_site.site.mailgun">
-					<v-card-title>Email Logs</v-card-title>
-					<v-card-subtitle>Emails sent from your site via Mailgun</v-card-subtitle>
-				</v-card>
-				</v-col>
-				<v-col cols="12" md="4" class="px-2" v-show="dialog_site.environment_selected.token != 'basic'">
-				<v-card class="mx-auto" max-width="344" outlined link hover v-if="dialog_site.site.cleantalk">
-					<v-card-title>Spam Logs</v-card-title>
-					<v-card-subtitle>Logs from CleanTalk spam filter</v-card-subtitle>
-				</v-card>
-				</v-col>
+					<v-col cols="12" md="4" class="px-2">
+					<v-card class="mx-auto pb-2" max-width="344" variant="outlined" border="thin" hover @click="viewLogs(dialog_site.site.site_id)">
+						<v-card-title>Server Logs</v-card-title>
+						<v-card-subtitle><code>error.log</code> and <code>access.log</code></v-card-subtitle>
+					</v-card>
+					</v-col>
+					<v-col cols="12" md="4" class="px-2">
+					<v-card class="mx-auto pb-2" max-width="344" variant="outlined" border="thin" hover @click="viewMailgunLogs()" v-if="dialog_site.site.mailgun">
+						<v-card-title>Email Logs</v-card-title>
+						<v-card-subtitle>Emails sent from your site via Mailgun</v-card-subtitle>
+					</v-card>
+					</v-col>
+					<v-col cols="12" md="4" class="px-2" v-show="dialog_site.environment_selected.token != 'basic'">
+					<v-card class="mx-auto pb-2" max-width="344" variant="outlined" border="thin" hover v-if="dialog_site.site.cleantalk">
+						<v-card-title>Spam Logs</v-card-title>
+						<v-card-subtitle>Logs from CleanTalk spam filter</v-card-subtitle>
+					</v-card>
+					</v-col>
 				</v-row>
 				</v-card>
 				</v-sheet>
-				</v-tab-item>
-				<v-tab-item :key="3" value="tab-Addons" :transition="false" :reverse-transition="false">
-					<v-card flat>
-					<v-toolbar dense flat>
-						<v-toolbar-title>Addons <small>(Themes/Plugins)</small></v-toolbar-title>
-						<v-spacer></v-spacer>
-						<v-toolbar-items style="margin-right:-16px;">
-							<v-btn text @click="bulkEdit(dialog_site.site.site_id, 'plugins')" v-if="dialog_site.environment_selected.plugins_selected.length != 0">Bulk Edit {{ dialog_site.environment_selected.plugins_selected.length }} plugins</v-btn>
-							<v-btn text @click="bulkEdit(dialog_site.site.site_id, 'themes')" v-if="dialog_site.environment_selected.themes_selected.length != 0">Bulk Edit {{ dialog_site.environment_selected.themes_selected.length }} themes</v-btn>
-							<v-btn text @click="addTheme(dialog_site.site.site_id)">Add Theme <v-icon dark small>mdi-plus</v-icon></v-btn>
-							<v-btn text @click="addPlugin(dialog_site.site.site_id)">Add Plugin <v-icon dark small>mdi-plus</v-icon></v-btn>
-						</v-toolbar-items>
-					</v-toolbar>
-					<v-card-title v-if="typeof dialog_site.environment_selected.themes == 'string'">
+				</v-window-item>
+				<v-window-item :key="3" value="tab-Addons" :transition="false" :reverse-transition="false">
+				<v-card flat color="transparent">
+				<v-toolbar density="compact" flat color="transparent">
+					<v-toolbar-title>Addons <small>(Themes/Plugins)</small></v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+					<v-btn @click="bulkEdit(dialog_site.site.site_id, 'plugins')" v-if="dialog_site.environment_selected.plugins_selected.length != 0">Bulk Edit {{ dialog_site.environment_selected.plugins_selected.length }} plugins</v-btn>
+					<v-btn @click="bulkEdit(dialog_site.site.site_id, 'themes')" v-if="dialog_site.environment_selected.themes_selected.length != 0">Bulk Edit {{ dialog_site.environment_selected.themes_selected.length }} themes</v-btn>
+					<v-btn @click="addTheme(dialog_site.site.site_id)">Add Theme <v-icon size="small">mdi-plus</v-icon></v-btn>
+					<v-btn @click="addPlugin(dialog_site.site.site_id)">Add Plugin <v-icon size="small">mdi-plus</v-icon></v-btn>
+					</v-toolbar-items>
+				</v-toolbar>
+				<v-card-title v-if="typeof dialog_site.environment_selected.themes == 'string'">
 					<div>
-						Updating themes...
-						<v-progress-linear :indeterminate="true"></v-progress-linear>
+					Updating themes...
+					<v-progress-linear :indeterminate="true"></v-progress-linear>
 					</div>
-					</v-card-title>
-					<div v-else>
-					<v-subheader>Themes</v-subheader>
-					<v-data-table
-						v-model="dialog_site.environment_selected.themes_selected"
-						:headers="header_themes"
-						:items="dialog_site.environment_selected.themes"
-						:loading="dialog_site.site.loading_themes"
-						:items-per-page="-1"
-						:footer-props="{ itemsPerPageOptions: [{'text':'All','value':-1}] }"
-						item-key="name"
-						value="name"
-						show-select
-						hide-default-footer
-						>
-						<template v-slot:item.title="{ item }">
-							<div v-html="item.title"></div>
-						</template>
-						<template v-slot:item.status="{ item }">
-							<div v-if="item.status === 'inactive' || item.status === 'parent' || item.status === 'child'">
-                        		<v-switch hide-details v-model="item.status" false-value="inactive" true-value="active" @change="activateTheme( item.name, dialog_site.site.site_id )"></v-switch>
-							</div>
-							<div v-else>
-								{{ item.status }}
-							</div>
-						</template>
-						<template v-slot:item.actions="{ item }" class="text-center px-0">
-							<v-btn icon small class="mx-0" @click="deleteTheme(item.name, dialog_site.site.site_id)">
-								<v-icon color="pink">mdi-delete</v-icon>
-							</v-btn>
-						</template>
-					</v-data-table>
-				</div>
-					<v-card-title v-if="typeof dialog_site.environment_selected.plugins == 'string'">
-						<div>
-							Updating plugins...
-							<v-progress-linear :indeterminate="true"></v-progress-linear>
-						</div>
-					</v-card-title>
-					<div v-else>
-					<v-subheader>Plugins</v-subheader>
-					<v-data-table
-						:headers="header_plugins"
-						:items="dialog_site.environment_selected.plugins.filter(plugin => plugin.status != 'must-use' && plugin.status != 'dropin')"
-						:loading="dialog_site.site.loading_plugins"
-						:items-per-page="-1"
-						:footer-props="{ itemsPerPageOptions: [{'text':'All','value':-1}] }"
-						v-model="dialog_site.environment_selected.plugins_selected"
-						item-key="name"
-						value="name"
-						show-select
-						hide-default-footer
-					>
+				</v-card-title>
+				<div v-else>
+					<v-list-subheader>Themes</v-list-subheader>
+					<v-data-table v-model="dialog_site.environment_selected.themes_selected" :headers="header_themes" :items="dialog_site.environment_selected.themes" :loading="dialog_site.site.loading_themes" :items-per-page="-1" :items-per-page-options="[{'title':'All','value':-1}]" item-value="name" show-select hide-default-footer>
+					<template v-slot:item.title="{ item }">
+						<div v-html="item.title"></div>
+					</template>
 					<template v-slot:item.status="{ item }">
-						<div v-if="item.status === 'inactive' || item.status === 'active'">
-                			<v-switch hide-details v-model="item.status" false-value="inactive" true-value="active" @change="togglePlugin(item.name, item.status, dialog_site.site.site_id)"></v-switch>
+						<div v-if="item.status === 'inactive' || item.status === 'parent' || item.status === 'child'">
+						<v-switch hide-details v-model="item.status" false-value="inactive" true-value="active" @update:model-value="activateTheme( item.name, dialog_site.site.site_id )"></v-switch>
 						</div>
 						<div v-else>
-							{{ item.status }}
+						{{ item.status }}
 						</div>
 					</template>
-					<template v-slot:item.actions="{ item }" class="text-center px-0">
-                		<v-btn icon small class="mx-0" @click="deletePlugin(item.name, dialog_site.site.site_id)" v-if="item.status === 'active' || item.status === 'inactive'">
-							<v-icon color="pink">mdi-delete</v-icon>
+					<template v-slot:item.actions="{ item }">
+						<v-btn variant="text" class="mx-0" @click="deleteTheme(item.name, dialog_site.site.site_id)">
+						<v-icon color="pink">mdi-delete</v-icon>
+						</v-btn>
+					</template>
+					</v-data-table>
+				</div>
+				<v-card-title v-if="typeof dialog_site.environment_selected.plugins == 'string'">
+					<div>
+					Updating plugins...
+					<v-progress-linear :indeterminate="true"></v-progress-linear>
+					</div>
+				</v-card-title>
+				<div v-else>
+					<v-list-subheader>Plugins</v-list-subheader>
+					<v-data-table :headers="header_plugins" :items="dialog_site.environment_selected.plugins.filter(plugin => plugin.status != 'must-use' && plugin.status != 'dropin')" :loading="dialog_site.site.loading_plugins" :items-per-page="-1" :items-per-page-options="[{'title':'All','value':-1}]" v-model="dialog_site.environment_selected.plugins_selected" item-key="name" show-select hide-default-footer>
+					<template v-slot:item.status="{ item }">
+						<div v-if="item.status === 'inactive' || item.status === 'active'">
+						<v-switch hide-details v-model="item.status" false-value="inactive" true-value="active" @update:model-value="togglePlugin(item.name, item.status, dialog_site.site.site_id)"></v-switch>
+						</div>
+						<div v-else>
+						{{ item.status }}
+						</div>
+					</template>
+					<template v-slot:item.actions="{ item }">
+						<v-btn variant="text" class="mx-0" @click="deletePlugin(item.name, dialog_site.site.site_id)" v-if="item.status === 'active' || item.status === 'inactive'">
+						<v-icon color="pink">mdi-delete</v-icon>
 						</v-btn>
 					</template>
 					<template v-slot:body.append>
 						<tr v-for="plugin in dialog_site.environment_selected.plugins.filter(plugin => plugin.status == 'must-use' || plugin.status == 'dropin')">
-							<td></td>
-							<td>{{ plugin.title }}</td>
-							<td>{{ plugin.name }}</td>
-							<td>{{ plugin.version }}</td>
-							<td>{{ plugin.status }}</td>
-							<td class="text-center px-0"></td>
+						<td></td>
+						<td>{{ plugin.title }}</td>
+						<td>{{ plugin.name }}</td>
+						<td>{{ plugin.version }}</td>
+						<td>{{ plugin.status }}</td>
+						<td class="text-center px-0"></td>
 						</tr>
 					</template>
 					</v-data-table>
 				</div>
-			</v-tab-item>
-			<v-tab-item :key="4" value="tab-Users" :transition="false" :reverse-transition="false">
+				</v-card>
+
+			</v-window-item>
+			<v-window-item :key="4" value="tab-Users" :transition="false" :reverse-transition="false">
 				<v-card flat>
-				<v-toolbar flat dense class="mb-2">
-					<v-toolbar-title>Users</v-toolbar-title>
-					<v-spacer></v-spacer>
-					<v-toolbar-items style="margin-right:-16px;">
-						<v-col>
+					<v-toolbar flat density="compact" color="transparent" class="mb-2">
+						<v-toolbar-title>Users</v-toolbar-title>
+						<v-spacer></v-spacer>
 						<v-text-field
 							v-model="users_search"
 							ref="users_search"
-							append-icon="mdi-magnify"
+							append-inner-icon="mdi-magnify"
 							label="Search"
-							dense
+							density="compact"
 							hide-details
-							outlined
+							variant="outlined"
+							class="me-2"
+							style="max-width: 350px;"
 						></v-text-field>
-                		<v-btn text @click="bulkEdit(dialog_site.site.site_id,'users')" v-if="dialog_site.environment_selected.users_selected.length != 0">Bulk Edit {{ dialog_site.environment_selected.users_selected.length }} users</v-btn>
-						</v-col>
-					</v-toolbar-items>
-				</v-toolbar>
-				<v-card-text v-show="typeof dialog_site.environment_selected.users == 'string'">
-					<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
-				</v-card-text>
+						<v-btn variant="text" @click="bulkEdit(dialog_site.site.site_id,'users')" v-if="dialog_site.environment_selected.users_selected.length != 0">
+							Bulk Edit {{ dialog_site.environment_selected.users_selected.length }} users
+						</v-btn>
+					</v-toolbar>
+					<v-card-text v-show="typeof dialog_site.environment_selected.users == 'string'">
+						<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
+					</v-card-text>
 					<div v-if="typeof dialog_site.environment_selected.users != 'string'">
 						<v-data-table
-							:headers='header_users'
-							:items-per-page="50"
-							:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
+							:headers="header_users"
 							:items="dialog_site.environment_selected.users"
-							item-key="user_login"
+							:items-per-page="50"
+							:items-per-page-options="[
+								{ value: 50, title: '50' },
+								{ value: 100, title: '100' },
+								{ value: 250, title: '250' },
+								{ value: -1, title: 'All' }
+							]"
+							item-value="user_login"
 							v-model="dialog_site.environment_selected.users_selected"
 							class="table_users"
 							:search="users_search"
 							show-select
 						>
-						<template v-slot:item.roles="{ item }">
-							{{ item.roles.split(",").join(" ") }}
-						</template>
-						<template v-slot:item.actions="{ item }">
-                    <v-btn small rounded @click="magicLoginSite(dialog_site.site.site_id, item)" class="my-2">Login as</v-btn>
-                    <v-btn icon small class="my-2" @click="deleteUserDialog( item.user_login, dialog_site.site.site_id)">
-							<v-icon color="pink">mdi-delete</v-icon>
-						</v-btn>
-						</template>
-					  </v-data-table>
+							<template v-slot:item.roles="{ item }">
+								{{ item.roles.split(",").join(" ") }}
+							</template>
+							<template v-slot:item.actions="{ item }">
+								<v-btn variant="tonal" size="small" rounded @click="magicLoginSite(dialog_site.site.site_id, item)" class="my-2">Login as</v-btn>
+								<v-btn variant="text" class="my-2" @click="deleteUserDialog(item.user_login, dialog_site.site.site_id)" icon="mdi-delete" color="red"></v-btn>
+							</template>
+						</v-data-table>
 					</div>
 				</v-card>
-			</v-tab-item>
-			<v-tab-item :key="5" value="tab-Updates" :transition="false" :reverse-transition="false">
-				<v-toolbar dense light flat>
+			</v-window-item>
+			<v-window-item :key="5" value="tab-Updates" :transition="false" :reverse-transition="false">
+				<v-toolbar density="compact" color="transparent" flat>
 					<v-toolbar-title>Update Logs</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn text @click="runUpdate(dialog_site.site.site_id)">Manual update <v-icon dark>mdi-sync</v-icon></v-btn>
-						<v-btn text @click="updateSettings(dialog_site.site.site_id)">Update Settings <v-icon dark>mdi-settings</v-icon></v-btn>
+						<v-btn variant="text" @click="runUpdate(dialog_site.site.site_id)">Manual update <v-icon dark>mdi-sync</v-icon></v-btn>
+						<v-btn variant="text" @click="updateSettings(dialog_site.site.site_id)">Update Settings <v-icon dark>mdi-settings</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card flat>
@@ -3208,259 +3589,230 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
 					</v-card-text>
 					<v-card class="mx-auto mb-4" max-width="500" outlined link hover @click="getUpdateLogQuicksave( item.hash_before, item.hash_after, dialog_site.site.site_id ); item.view_quicksave = true" v-for="item in dialog_site.environment_selected.update_logs" v-if="typeof dialog_site.environment_selected.update_logs == 'object'" :key="item.name">
-						<v-card-title>{{ item.created_at | pretty_timestamp_epoch }}<v-spacer></v-spacer><v-icon v-show="item.status == 'success'" color="success">mdi-check-circle</v-icon><v-icon v-show="item.status == 'failed'" color="error">mdi-alert-circle</v-icon></v-card-title>
+						<v-card-title>{{ pretty_timestamp_epoch( item.created_at ) }}<v-spacer></v-spacer><v-icon v-show="item.status == 'success'" color="success">mdi-check-circle</v-icon><v-icon v-show="item.status == 'failed'" color="error">mdi-alert-circle</v-icon></v-card-title>
 						<v-card-text>
-						<v-badge :content="item.themes_changed" :value="item.themes_changed" overlap class="mr-2 mb-2">
+						<v-badge :content="item.themes_changed" :value="item.themes_changed" overlap class="mr-2 mb-2" color="primary">
 							<v-chip label>{{ item.theme_count }} Themes</v-chip>
 						</v-badge>
-						<v-badge :content="item.plugins_changed" :value="item.plugins_changed" overlap class="mr-2 mb-2">
+						<v-badge :content="item.plugins_changed" :value="item.plugins_changed" overlap class="mr-2 mb-2" color="primary">
 							<v-chip label>{{ item.plugin_count }} Plugins</v-chip>
 						</v-badge>
 						<div>{{ item.status }}</div>
 						</v-card-text>
 						<v-dialog v-model="item.view_quicksave" max-width="980">
-						<v-toolbar color="primary" dark>
-							<v-btn icon dark @click.native="item.view_quicksave = false">
-								<v-icon>mdi-close</v-icon>
-							</v-btn>
-							<v-toolbar-title>Updates on {{ item.created_at | pretty_timestamp_epoch }}</v-toolbar-title>
-							<v-spacer></v-spacer>
-							<v-toolbar-items>
-							<v-tooltip bottom>
-							<template v-slot:activator="{ on, attrs }">
-								<v-icon v-bind="attrs" v-on="on" class="ma-3">mdi-file-compare</v-icon>
+						<v-toolbar color="primary">
+							<v-btn icon="mdi-close" @click="item.view_quicksave = false"></v-btn>
+							<v-toolbar-title>Updates on {{ pretty_timestamp_epoch( item.created_at ) }}</v-toolbar-title>
+							<v-tooltip location="bottom">
+							<template v-slot:activator="{ props }">
+								<v-icon v-bind="props" class="ma-3" size="small">mdi-file-compare</v-icon>
 							</template>
 							<span>{{ item.status }}</span>
 							</v-tooltip>
-								<v-btn text small @click="rollbackUpdates( dialog_site.site.site_id, item, true)">Revert changes <v-icon>mdi-restore</v-icon></v-btn>
-								<v-btn text small @click="rollbackUpdates( dialog_site.site.site_id, item)">Reapply changes <v-icon>mdi-redo</v-icon></v-btn>
-							</v-toolbar-items>
+							<v-btn variant="text" size="small" @click="rollbackUpdates( dialog_site.site.site_id, item, true)">Revert changes <v-icon>mdi-restore</v-icon></v-btn>
+							<v-btn variant="text" size="small" @click="rollbackUpdates( dialog_site.site.site_id, item)">Reapply changes <v-icon>mdi-redo</v-icon></v-btn>
 						</v-toolbar>
-						<v-card flat v-if="item.loading">
+						<v-card v-if="item.loading" elevation="0">
 							<span><v-progress-circular indeterminate color="primary" class="mx-16 mt-7 mb-7" size="24"></v-progress-circular></span>
 						</v-card>
-						<v-card flat tile v-else>
+						<v-card v-else elevation="0" rounded="0">
 							<v-data-table
-								:headers='[{"text":"Theme","value":"title"},{"text":"Version","value":"version","width":"150px"},{"text":"Status","value":"status","width":"150px"},{"text":"","value":"rollback","width":"150px"}]'
-								:items="item.themes"
-								:items-per-page="-1"
-								hide-default-footer
-								item-key="name"
-								class="quicksave-table mb-7"
+							:headers='[{"title":"Theme","key":"title"},{"title":"Version","key":"version","width":"150px"},{"title":"Status","key":"status","width":"150px"},{"title":"","key":"rollback","width":"150px"}]'
+							:items="item.themes"
+							:items-per-page="-1"
+							hide-default-footer
+							item-value="name"
+							class="quicksave-table mb-7"
 							>
 							<template v-slot:body="{ items }">
-							<tbody>
-							<tr class="red lighten-4" v-for="theme in item.themes_deleted">
-								<td class="strikethrough">{{ theme.title || theme.name }}</td>
-								<td class="strikethrough">{{ theme.version }}</td>
-								<td class="strikethrough">{{ theme.status }}</td>
-								<td><v-btn depressed small @click="RollbackUpdate(item.hash_before, 'theme', theme.name, item.started_at)">Rollback</v-btn></td>
+								<tr class="bg-red-lighten-4" v-for="theme in item.themes_deleted" :key="'deleted-'+theme.name">
+									<td class="strikethrough">{{ theme.title || theme.name }}</td>
+									<td class="strikethrough">{{ theme.version }}</td>
+									<td class="strikethrough">{{ theme.status }}</td>
+									<td><v-btn variant="tonal" size="small" @click="RollbackUpdate(item.hash_before, 'theme', theme.name, item.started_at)">Rollback</v-btn></td>
 								</tr>
-							<tr v-for="theme in items" v-bind:class="{ 'green lighten-5': theme.changed || theme.changed_version || theme.changed_status }">
-								<td>
+								<tr v-for="theme in items" :key="theme.name" :class="{ 'bg-green-lighten-5': theme.changed || theme.changed_version || theme.changed_status }">
+									<td>
 									{{ theme.title || theme.name }}
 									<v-dialog max-width="600">
-										<template v-slot:activator="{ on, attrs }">
-											<v-btn depressed outlined small class="ml-2" v-bind="attrs" v-on="on" v-show="theme.changed || theme.changed_version" @click="viewQuicksavesChangesItem( item, `themes/${theme.name}/` )">View Changes</v-btn>
+										<template v-slot:activator="{ props }">
+										<v-btn variant="outlined" size="small" class="ml-2" v-bind="props" v-show="theme.changed || theme.changed_version" @click="viewQuicksavesChangesItem( item, `themes/${theme.name}/` )">View Changes</v-btn>
 										</template>
-										<template v-slot:default="dialog">
+										<template v-slot:default="{ isActive }">
 										<v-card>
-											<v-toolbar color="primary" dark>
-												<v-btn icon @click="dialog.value = false">
-													<v-icon>mdi-close</v-icon>
-												</v-btn>
-												Changes for '{{ theme.name }}' theme
-												<v-spacer></v-spacer>
+											<v-toolbar color="primary">
+											<v-btn icon="mdi-close" @click="isActive.value = false"></v-btn>
+											Changes for '{{ theme.name }}' theme
+											<v-spacer></v-spacer>
 											</v-toolbar>
 											<v-card-text>
-											<v-data-table 
-												:headers='[{"text":"File","value":"file"}]'
+											<v-data-table
+												:headers='[{"title":"File","key":"file"}]'
 												:items="item.response"
-												:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
+												:items-per-page-options="[50,100,250,{'title':'All','value':-1}]"
 												v-show="item.response.length > 0"
 											>
-												<template v-slot:body="{ items }">									
-												<tbody >
-													<tr v-for="i in items">
-														<td>
-															<a class="v-menu__activator" @click="QuicksaveFileDiffUpdate(item.hash_after, i)">{{ i }}</a>
-														</td>
+												<template v-slot:body="{ items }">
+													<tr v-for="i in items" :key="i">
+													<td>
+														<a class="v-menu__activator" @click="QuicksaveFileDiffUpdate(item.hash_after, i)">{{ i }}</a>
+													</td>
 													</tr>
-												</tbody>
 												</template>
 											</v-data-table>
-											<v-progress-linear indeterminate rounded height="6" v-show="item.response.length == 0" class="mt-7 mb-4"></v-progress-linear>	
+											<v-progress-linear indeterminate rounded height="6" v-show="item.response.length == 0" class="mt-7 mb-4" color="primary"></v-progress-linear>
 											</v-card-text>
 										</v-card>
 										</template>
 									</v-dialog>
-								</td>
-								<td v-bind:class="{ 'green lighten-4': theme.changed_version }">
+									</td>
+									<td :class="{ 'bg-green-lighten-4': theme.changed_version }">
 									{{ theme.version }}
-									<v-tooltip bottom>
-										<template v-slot:activator="{ on, attrs }"><v-icon small v-show="theme.changed_version" v-bind="attrs" v-on="on">mdi-information</v-icon></template>
+									<v-tooltip location="bottom">
+										<template v-slot:activator="{ props }"><v-icon size="small" v-show="theme.changed_version" v-bind="props">mdi-information</v-icon></template>
 										<span>Changed from {{ theme.changed_version }}</span>
 									</v-tooltip>
-								</td>
-								<td v-bind:class="{ 'green lighten-4': theme.changed_status }">
+									</td>
+									<td :class="{ 'bg-green-lighten-4': theme.changed_status }">
 									{{ theme.status }}
-									<v-tooltip bottom>
-										<template v-slot:activator="{ on, attrs }"><v-icon small v-show="theme.changed_status" v-bind="attrs" v-on="on">mdi-information</v-icon></template>
+									<v-tooltip location="bottom">
+										<template v-slot:activator="{ props }"><v-icon size="small" v-show="theme.changed_status" v-bind="props">mdi-information</v-icon></template>
 										<span>Changed from {{ theme.changed_status }}</span>
 									</v-tooltip>
-								</td>
-								<td>
+									</td>
+									<td>
 									<v-dialog max-width="600">
-										<template v-slot:activator="{ on, attrs }">
-											<v-btn depressed outlined small v-bind="attrs" v-on="on">Rollback</v-btn>
+										<template v-slot:activator="{ props }">
+										<v-btn variant="outlined" size="small" v-bind="props">Rollback</v-btn>
 										</template>
-										<template v-slot:default="dialog">
+										<template v-slot:default="{ isActive }">
 										<v-card>
-											<v-toolbar color="primary" dark>
+											<v-toolbar color="primary">
+												<v-btn icon="mdi-close" @click="isActive.value = false"></v-btn>
 												Rollback '{{ theme.name }}' theme?
-												<v-spacer></v-spacer>
-												<v-btn icon @click="dialog.value = false">
-													<v-icon>mdi-close</v-icon>
-												</v-btn>
 											</v-toolbar>
 											<v-list>
-												<v-list-item two-line @click="RollbackUpdate(item.hash_after, 'theme', theme.name, item.created_at, dialog)">
-												<v-list-item-content>
-													<v-list-item-title>Updated version</v-list-item-title>
-													<v-list-item-subtitle>{{ $options.filters.pretty_timestamp_epoch(item.created_at) }}</v-list-item-subtitle>
-												</v-list-item-content>
-												</v-list-item>
-												<v-list-item two-line @click="RollbackUpdate(item.hash_before, 'theme', theme.name, item.started_at, dialog)">
-												<v-list-item-content>
-													<v-list-item-title>Previous version</v-list-item-title>
-													<v-list-item-subtitle>{{ $options.filters.pretty_timestamp_epoch(item.started_at) }}</v-list-item-subtitle>
-												</v-list-item-content>
-												</v-list-item>
+											<v-list-item lines="two" @click="RollbackUpdate(item.hash_after, 'theme', theme.name, item.created_at, dialog)">
+												<v-list-item-title>Updated version</v-list-item-title>
+												<v-list-item-subtitle>{{ pretty_timestamp_epoch(item.created_at) }}</v-list-item-subtitle>
+											</v-list-item>
+											<v-list-item lines="two" @click="RollbackUpdate(item.hash_before, 'theme', theme.name, item.started_at, dialog)">
+												<v-list-item-title>Previous version</v-list-item-title>
+												<v-list-item-subtitle>{{ pretty_timestamp_epoch(item.started_at) }}</v-list-item-subtitle>
+											</v-list-item>
 											</v-list>
 										</v-card>
 										</template>
 									</v-dialog>
-								</td>
-							</tr>
+									</td>
+								</tr>
 							</template>
 							</v-data-table>
 							<v-data-table
-								:headers='[{"text":"Plugin","value":"plugin"},{"text":"Version","value":"version","width":"150px"},{"text":"Status","value":"status","width":"150px"},{"text":"","value":"rollback","width":"150px"}]'
-								:items="item.plugins"
-								item-key="name"
-								:items-per-page="-1"
-								hide-default-footer
-								class="quicksave-table pb-5"
-								>
-								<template v-slot:body="{ items }">
-								<tbody>
-								<tr class="red lighten-4" v-for="plugin in item.plugins_deleted">
+							:headers='[{"title":"Plugin","key":"plugin"},{"title":"Version","key":"version","width":"150px"},{"title":"Status","key":"status","width":"150px"},{"title":"","key":"rollback","width":"150px"}]'
+							:items="item.plugins"
+							item-value="name"
+							:items-per-page="-1"
+							hide-default-footer
+							class="quicksave-table pb-5"
+							>
+							<template v-slot:body="{ items }">
+								<tr class="bg-red-lighten-4" v-for="plugin in item.plugins_deleted" :key="'deleted-'+plugin.name">
 									<td class="strikethrough">{{ plugin.title || plugin.name }}</td>
 									<td class="strikethrough">{{ plugin.version }}</td>
 									<td class="strikethrough">{{ plugin.status }}</td>
-									<td><v-btn depressed outlined small @click="RollbackUpdate(item.hash_before, 'plugin', plugin.name, item.started_at)">Rollback</v-btn></td>
+									<td><v-btn variant="outlined" size="small" @click="RollbackUpdate(item.hash_before, 'plugin', plugin.name, item.started_at)">Rollback</v-btn></td>
 								</tr>
-								<tr v-for="plugin in items" v-bind:class="[{ 'green lighten-5': plugin.changed_version || plugin.changed_status },{ 'red lighten-4 strikethrough': plugin.deleted }]">
-								<td>
+								<tr v-for="plugin in items" :key="plugin.name" :class="[{ 'bg-green-lighten-5': plugin.changed_version || plugin.changed_status },{ 'bg-red-lighten-4 strikethrough': plugin.deleted }]">
+									<td>
 									{{ plugin.title || plugin.name }}
 									<v-dialog max-width="600">
-										<template v-slot:activator="{ on, attrs }">
-											<v-btn depressed outlined small class="ml-2" v-bind="attrs" v-on="on" v-show="plugin.changed || plugin.changed_version" @click="viewQuicksavesChangesItem( item, `plugins/${plugin.name}/` )">View Changes</v-btn>
+										<template v-slot:activator="{ props }">
+										<v-btn variant="outlined" size="small" class="ml-2" v-bind="props" v-show="plugin.changed || plugin.changed_version" @click="viewQuicksavesChangesItem( item, `plugins/${plugin.name}/` )">View Changes</v-btn>
 										</template>
-										<template v-slot:default="dialog">
+										<template v-slot:default="{ isActive }">
 										<v-card>
-											<v-toolbar color="primary" dark>
-												<v-btn icon @click="dialog.value = false">
-													<v-icon>mdi-close</v-icon>
-												</v-btn>
-												Changes for '{{ plugin.name }}' plugin
-												<v-spacer></v-spacer>
+											<v-toolbar color="primary">
+											<v-btn icon="mdi-close" @click="isActive.value = false"></v-btn>
+											Changes for '{{ plugin.name }}' plugin
+											<v-spacer></v-spacer>
 											</v-toolbar>
 											<v-card-text>
-											<v-data-table 
-												:headers='[{"text":"File","value":"file"}]'
+											<v-data-table
+												:headers='[{"title":"File","key":"file"}]'
 												:items="item.response"
-												:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
+												:items-per-page-options="[50,100,250,{'title':'All','value':-1}]"
 												v-show="item.response.length > 0"
 											>
-												<template v-slot:body="{ items }">									
-												<tbody >
-													<tr v-for="i in items">
-														<td>
-															<a class="v-menu__activator" @click="QuicksaveFileDiffUpdate(item.hash_after, i)">{{ i }}</a>
-														</td>
+												<template v-slot:body="{ items }">
+													<tr v-for="i in items" :key="i">
+													<td>
+														<a class="v-menu__activator" @click="QuicksaveFileDiffUpdate(item.hash_after, i)">{{ i }}</a>
+													</td>
 													</tr>
-												</tbody>
 												</template>
 											</v-data-table>
-											<v-progress-linear indeterminate rounded height="6" v-show="item.response.length == 0" class="mt-7 mb-4"></v-progress-linear>	
+											<v-progress-linear indeterminate rounded height="6" v-show="item.response.length == 0" class="mt-7 mb-4" color="primary"></v-progress-linear>
 											</v-card-text>
 										</v-card>
 										</template>
 									</v-dialog>
-								</td>
-								<td v-bind:class="{ 'green lighten-4': plugin.changed_version }">
-									{{ plugin.version }} 
-									<v-tooltip bottom>
-										<template v-slot:activator="{ on, attrs }"><v-icon small v-show="plugin.changed_version" v-bind="attrs" v-on="on">mdi-information</v-icon></template>
+									</td>
+									<td :class="{ 'bg-green-lighten-4': plugin.changed_version }">
+									{{ plugin.version }}
+									<v-tooltip location="bottom">
+										<template v-slot:activator="{ props }"><v-icon size="small" v-show="plugin.changed_version" v-bind="props">mdi-information</v-icon></template>
 										<span>Changed from {{ plugin.changed_version }}</span>
 									</v-tooltip>
-								</td>
-								<td v-bind:class="{ 'green lighten-4': plugin.changed_status }">
+									</td>
+									<td :class="{ 'bg-green-lighten-4': plugin.changed_status }">
 									{{ plugin.status }}
-									<v-tooltip bottom>
-										<template v-slot:activator="{ on, attrs }"><v-icon small v-show="plugin.changed_status" v-bind="attrs" v-on="on">mdi-information</v-icon></template>
+									<v-tooltip location="bottom">
+										<template v-slot:activator="{ props }"><v-icon size="small" v-show="plugin.changed_status" v-bind="props">mdi-information</v-icon></template>
 										<span>Changed from {{ plugin.changed_status }}</span>
 									</v-tooltip>
-								</td>
-								<td>
+									</td>
+									<td>
 									<v-dialog max-width="600">
-										<template v-slot:activator="{ on, attrs }">
-											<v-btn depressed outlined small v-bind="attrs" v-on="on" v-show="plugin.status != 'must-use' && plugin.status != 'dropin'">Rollback</v-btn>
+										<template v-slot:activator="{ props }">
+										<v-btn variant="outlined" size="small" v-bind="props" v-show="plugin.status != 'must-use' && plugin.status != 'dropin'">Rollback</v-btn>
 										</template>
-										<template v-slot:default="dialog">
+										<template v-slot:default="{ isActive }">
 										<v-card>
-											<v-toolbar color="primary" dark>
+											<v-toolbar color="primary">
+												<v-btn icon="mdi-close" @click="isActive.value = false"></v-btn>
 												Rollback '{{ plugin.name }}' plugin?
-												<v-spacer></v-spacer>
-												<v-btn icon @click="dialog.value = false">
-													<v-icon>mdi-close</v-icon>
-												</v-btn>
 											</v-toolbar>
 											<v-list>
-												<v-list-item two-line @click="RollbackUpdate(item.hash_after, 'plugin', plugin.name, item.created_at, dialog)">
-												<v-list-item-content>
-													<v-list-item-title>Updated version <span v-show="plugin.changed_version" v-text="plugin.version"></span></v-list-item-title>
-													<v-list-item-subtitle>{{ $options.filters.pretty_timestamp_epoch(item.created_at) }}</v-list-item-subtitle>
-												</v-list-item-content>
-												</v-list-item>
-												<v-list-item two-line @click="RollbackUpdate(item.hash_before, 'plugin', plugin.name, item.started_at, dialog)">
-												<v-list-item-content>
-													<v-list-item-title>Previous version <span v-show="plugin.changed_version" v-text="plugin.started_at"></span></v-list-item-title>
-													<v-list-item-subtitle>{{ $options.filters.pretty_timestamp_epoch(item.previous_created_at) }}</v-list-item-subtitle>
-												</v-list-item-content>
-												</v-list-item>
+											<v-list-item lines="two" @click="RollbackUpdate(item.hash_after, 'plugin', plugin.name, item.created_at, dialog)">
+												<v-list-item-title>Updated version <span v-show="plugin.changed_version" v-text="plugin.version"></span></v-list-item-title>
+												<v-list-item-subtitle>{{ pretty_timestamp_epoch(item.created_at) }}</v-list-item-subtitle>
+											</v-list-item>
+											<v-list-item lines="two" @click="RollbackUpdate(item.hash_before, 'plugin', plugin.name, item.started_at, dialog)">
+												<v-list-item-title>Previous version <span v-show="plugin.changed_version" v-text="plugin.started_at"></span></v-list-item-title>
+												<v-list-item-subtitle>{{ pretty_timestamp_epoch(item.previous_created_at) }}</v-list-item-subtitle>
+											</v-list-item>
 											</v-list>
 										</v-card>
 										</template>
 									</v-dialog>
-								</td>
+									</td>
 								</tr>
-								</template>
+							</template>
 							</v-data-table>
-							</v-card>
+						</v-card>
 						</v-dialog>
 					</v-card>
 				</v-card>
-			</v-tab-item>
-			<v-tab-item :key="6" value="tab-Scripts" :transition="false" :reverse-transition="false">
-				<v-toolbar dense light flat>
+			</v-window-item>
+			<v-window-item :key="6" value="tab-Scripts" :transition="false" :reverse-transition="false">
+				<v-toolbar density="compact" color="transparent" flat>
 					<v-toolbar-title>Scripts</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
-				<v-card outlined rounded="xl" v-show="dialog_site.environment_selected.scheduled_scripts.length > 0">
-				<v-subheader>Scheduled Scripts</v-subheader>
-				<v-data-table :headers='[ {"text":"","value":"name","sortable":false,"width":"56"}, {"text":"Code","value":"code","sortable":false}, {"text":"Person","value":"done-by","sortable":false,"width":"180"}, {"text":"Date","value":"date","sortable":false,"width":"220"}, {"text":"","value":"","sortable":false,"width":"50"}]' :items="dialog_site.environment_selected.scheduled_scripts" hide-default-footer :footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }" class="timeline">
+				<v-card flat border="thin" rounded="xl" v-show="dialog_site.environment_selected.scheduled_scripts.length > 0">
+				<v-list-subheader>Scheduled Scripts</v-list-subheader>
+				<v-data-table :headers='[ {"title":"","value":"name","sortable":false,"width":"56"}, {"title":"Code","value":"code","sortable":false}, {"title":"Person","value":"done-by","sortable":false,"width":"180"}, {"title":"Date","value":"date","sortable":false,"width":"220"}, {"title":"","value":"","sortable":false,"width":"50"}]' :items="dialog_site.environment_selected.scheduled_scripts" hide-default-footer :footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }" class="timeline">
 					<template v-slot:body="{ items }">
 					<tbody>
 					<tr v-for="item in items">
@@ -3468,7 +3820,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-icon color="primary" dark>mdi-clipboard-clock</v-icon>
 						</td>
 						<td class="justify-center py-4" style="vertical-align: top;">
-							{{ item.code | previewCode }}
+							{{ previewCode( item.code ) }}
 						</td>
 						<td class="justify-center pt-2" style="vertical-align:top; width:180px;">
 						<v-row>
@@ -3476,9 +3828,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-col class="pt-4">{{ item.author }}</v-col>
 						</v-row>
 						</td>
-						<td class="justify-center pt-3" style="vertical-align: top;">{{ item.run_at | pretty_timestamp_epoch }}</td>
+						<td class="justify-center pt-3" style="vertical-align: top;">{{ pretty_timestamp_epoch( item.run_at ) }}</td>
 						<td class="justify-center pt-1 pr-0" style="vertical-align:top;width:77px;">
-							<v-btn text icon @click="editScript(item)">
+							<v-btn variant="text" icon @click="editScript(item)">
 								<v-icon small>mdi-pencil</v-icon>
 							</v-btn>
 						</td>
@@ -3491,119 +3843,106 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-card-text>
 					<v-row>
 					<v-col cols="12" md="8">
-					<v-subheader id="script_site" class="pl-0">Custom bash script or WP-CLI commands</v-subheader>
-					<v-textarea auto-grow outlined label="" hide-details :value="script.code" @change.native="script.code = $event.target.value" spellcheck="false" class="code"></v-textarea>
+					<v-list-subheader id="script_site" class="pl-0">Custom bash script or WP-CLI commands</v-list-subheader>
+					<v-textarea auto-grow variant="outlined" label="" hide-details :model-value="script.code" @update:model-value="script.code = $event" spellcheck="false" class="code"></v-textarea>
 					<v-btn color="primary" dark @click="runCustomCode(dialog_site.site.site_id)" class="mt-3 mr-3">Run Code</v-btn> 
 					<v-menu v-model="script.menu" :close-on-content-click="false" :nudge-width="200" offset-x>
-					<template v-slot:activator="{ on, attrs }">
-						<v-btn v-bind="attrs" v-on="on" outlined text class="mt-3">Schedule later</v-btn>
+					<template v-slot:activator="{ props }">
+						<v-btn v-bind="props" outlined text class="mt-3">Schedule later</v-btn>
 					</template>
 					<v-card>
 						<v-card-text>
 						<v-menu ref="menu" v-model="script.menu_time" :close-on-content-click="false" :nudge-right="40" :return-value.sync="script.time" transition="scale-transition" offset-y max-width="290px" min-width="290px">
-							<template v-slot:activator="{ on, attrs }">
-							<v-text-field v-model="script.time" label="Time" prepend-icon="mdi-clock-time-four-outline" readonly v-bind="attrs" v-on="on"></v-text-field>
+							<template v-slot:activator="{ props }">
+							<v-text-field v-model="script.time" label="Time" prepend-icon="mdi-clock-time-four-outline" readonly v-bind="props"></v-text-field>
 							</template>
 							<v-time-picker v-if="script.menu_time" v-model="script.time" full-width @click:minute="$refs.menu.save(script.time)"></v-time-picker>
 						</v-menu>
 						<v-menu ref="script.menu_date" v-model="script.menu_date" :close-on-content-click="false" :return-value.sync="script.menu_date" transition="scale-transition" offset-y min-width="auto">
-							<template v-slot:activator="{ on, attrs }">
-							<v-text-field v-model="script.date" label="Date" prepend-icon="mdi-calendar" readonly v-bind="attrs" v-on="on"></v-text-field>
+							<template v-slot:activator="{ props }">
+							<v-text-field v-model="script.date" label="Date" prepend-icon="mdi-calendar" readonly v-bind="props"></v-text-field>
 							</template>
 							<v-date-picker v-model="script.date" @input="script.menu_date = false" no-title scrollable :min="new Date().toISOString().substr(0, 10)"></v-date-picker>
 						</v-menu>
 						</v-card-text>
 						<v-card-actions>
 						<v-spacer></v-spacer>
-						<v-btn text @click="script.menu = false">Cancel</v-btn>
+						<v-btn variant="text" @click="script.menu = false">Cancel</v-btn>
 						<v-btn color="primary" text @click="scheduleScript()">Schedule Code</v-btn>
 						</v-card-actions>
 					</v-card>
 					</v-menu>
+					<div class="mt-3">
+						<a>View completed scripts</a>
+					</div>
 					</v-col>
 					<v-col cols="12" md="4">
-						<v-list dense>
-						<v-subheader>Common</v-subheader>
-						<v-list-item @click="viewApplyHttpsUrls(dialog_site.site.site_id)" dense>
-						<v-list-item-icon>
+					<v-list density="compact">
+						<v-list-subheader>Common</v-list-subheader>
+						<v-list-item @click="viewApplyHttpsUrls(dialog_site.site.site_id)" density="compact">
+						<template v-slot:prepend>
 							<v-icon>mdi-rocket-launch</v-icon>
-						</v-list-item-icon>
-						<v-list-item-content>
-							<v-list-item-title>Apply HTTPS Urls</v-list-item-title>
-						</v-list-item-content>
+						</template>
+						<v-list-item-title>Apply HTTPS Urls</v-list-item-title>
 						</v-list-item>
-						<v-list-item @click="siteDeploy(dialog_site.site.site_id)" dense>
-						<v-list-item-icon>
+						<v-list-item @click="siteDeploy(dialog_site.site.site_id)" density="compact">
+						<template v-slot:prepend>
 							<v-icon>mdi-refresh</v-icon>
-						</v-list-item-icon>
-						<v-list-item-content>
-							<v-list-item-title>Deploy Defaults</v-list-item-title>
-						</v-list-item-content>
+						</template>
+						<v-list-item-title>Deploy Defaults</v-list-item-title>
 						</v-list-item>
-						<v-list-item @click="launchSiteDialog(dialog_site.site.site_id)" dense>
-						<v-list-item-icon>
+						<v-list-item @click="launchSiteDialog(dialog_site.site.site_id)" density="compact">
+						<template v-slot:prepend>
 							<v-icon>mdi-rocket</v-icon>
-						</v-list-item-icon>
-						<v-list-item-content>
-							<v-list-item-title>Launch Site</v-list-item-title>
-						</v-list-item-content>
+						</template>
+						<v-list-item-title>Launch Site</v-list-item-title>
 						</v-list-item>
-						<v-list-item @click="showSiteMigration(dialog_site.site.site_id)" dense>
-						<v-list-item-icon>
+						<v-list-item @click="showSiteMigration(dialog_site.site.site_id)" density="compact">
+						<template v-slot:prepend>
 							<v-icon>mdi-truck</v-icon>
-						</v-list-item-icon>
-						<v-list-item-content>
-							<v-list-item-title>Migrate from backup</v-list-item-title>
-						</v-list-item-content>
+						</template>
+						<v-list-item-title>Migrate from backup</v-list-item-title>
 						</v-list-item>
-						<v-list-item @click="resetPermissions(dialog_site.site.site_id)" dense>
-						<v-list-item-icon>
+						<v-list-item @click="resetPermissions(dialog_site.site.site_id)" density="compact">
+						<template v-slot:prepend>
 							<v-icon>mdi-file-lock</v-icon>
-						</v-list-item-icon>
-						<v-list-item-content>
-							<v-list-item-title>Reset Permissions</v-list-item-title>
-						</v-list-item-content>
+						</template>
+						<v-list-item-title>Reset Permissions</v-list-item-title>
 						</v-list-item>
-						<v-list-item @click="toggleSite(dialog_site.site.site_id)" dense>
-						<v-list-item-icon>
+						<v-list-item @click="toggleSite(dialog_site.site.site_id)" density="compact">
+						<template v-slot:prepend>
 							<v-icon>mdi-toggle-switch</v-icon>
-						</v-list-item-icon>
-						<v-list-item-content>
-							<v-list-item-title>Toggle Site</v-list-item-title>
-						</v-list-item-content>
+						</template>
+						<v-list-item-title>Toggle Site</v-list-item-title>
 						</v-list-item>
-						<v-subheader v-show="recipes.filter( r => r.public == 1 ).length > 0">Other</v-subheader>
-						<v-list-item @click="runRecipe( recipe.recipe_id, dialog_site.site.site_id )" dense v-for="recipe in recipes.filter( r => r.public == 1 )">
-						<v-list-item-icon>
+						<v-list-subheader v-show="recipes.filter( r => r.public == 1 ).length > 0">Other</v-list-subheader>
+						<v-list-item @click="runRecipe( recipe.recipe_id, dialog_site.site.site_id )" density="compact" v-for="recipe in recipes.filter( r => r.public == 1 )">
+						<template v-slot:prepend>
 							<v-icon>mdi-script-text-outline</v-icon>
-						</v-list-item-icon>
-						<v-list-item-content>
-							<v-list-item-title v-text="recipe.title"></v-list-item-title>
-						</v-list-item-content>
+						</template>
+						<v-list-item-title>{{ recipe.title }}</v-list-item-title>
 						</v-list-item>
-						<v-subheader v-show="recipes.filter( r => r.public != 1 ).length > 0">User</v-subheader>
-						<v-list-item @click="loadRecipe( recipe.recipe_id ); $vuetify.goTo( '#script_site' );" dense v-for="recipe in recipes.filter( r => r.public != 1 )">
-						<v-list-item-icon>
+						<v-list-subheader v-show="recipes.filter( r => r.public != 1 ).length > 0">User</v-list-subheader>
+						<v-list-item @click="loadRecipe( recipe.recipe_id )" density="compact" v-for="recipe in recipes.filter( r => r.public != 1 )">
+						<template v-slot:prepend>
 							<v-icon>mdi-script-text-outline</v-icon>
-						</v-list-item-icon>
-						<v-list-item-content>
-							<v-list-item-title v-text="recipe.title"></v-list-item-title>
-						</v-list-item-content>
+						</template>
+						<v-list-item-title>{{ recipe.title }}</v-list-item-title>
 						</v-list-item>
-						</v-list>
+					</v-list>
 					</v-col>
 					</v-row>
-					</v-card-title>
+					</v-card-text>
 				</v-card>
-			</v-tab-item>
-			<v-tab-item :key="7" value="tab-Backups" :transition="false" :reverse-transition="false">
-				<v-toolbar dense light flat>
+			</v-window-item>
+			<v-window-item :key="7" value="tab-Backups" :transition="false" :reverse-transition="false">
+				<v-toolbar density="compact" color="transparent" flat>
 					<v-toolbar-title>Backups</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-                        <v-btn text @click="promptBackupSnapshot( dialog_site.site.site_id )">Download Snapshot <v-icon dark>mdi-cloud-download</v-icon></v-btn>
-                    	<v-btn text @click="QuicksaveCheck( dialog_site.site.site_id )">New Quicksave <v-icon dark>mdi-sync</v-icon></v-btn>
-						<v-btn text @click="dialog_backup_configurations.settings = dialog_site.site.backup_settings; dialog_backup_configurations.show = true" v-show="role == 'administrator'"><v-icon dark small>mdi-pencil</v-icon> Edit</v-btn>
+                        <v-btn variant="text" @click="promptBackupSnapshot( dialog_site.site.site_id )">Download Snapshot <v-icon dark>mdi-cloud-download</v-icon></v-btn>
+                    	<v-btn variant="text" @click="QuicksaveCheck( dialog_site.site.site_id )">New Quicksave <v-icon dark>mdi-sync</v-icon></v-btn>
+						<v-btn variant="text" @click="dialog_backup_configurations.settings = dialog_site.site.backup_settings; dialog_backup_configurations.show = true" v-show="role == 'administrator'"><v-icon dark small>mdi-pencil</v-icon> Edit</v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-sheet v-show="dialog_site.backup_step == 1">
@@ -3613,13 +3952,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card
 					class="mx-auto"
 					max-width="344"
-					outlined
+					variant="outlined"
+					border="thin"
 					link
 					hover
 					@click="viewBackups(); dialog_site.backup_step = 2"
 				>
 					<v-card-title>Backups</v-card-title>
-					<v-card-subtitle>Original file and database backups.</v-card-subtitle>
+					<v-card-subtitle style="white-space: normal;">Original file and database backups.</v-card-subtitle>
 					<v-card-text>
 						<span v-if="typeof dialog_site.environment_selected.details.backup_count == 'number'">{{ dialog_site.environment_selected.details.backup_count }} backups</v-show>
 					</v-card-text>
@@ -3629,13 +3969,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card
 					class="mx-auto"
 					max-width="344"
-					outlined
+					variant="outlined"
+					border="thin"
 					link
 					hover
 					@click="viewQuicksaves(); dialog_site.backup_step = 3"
 				>
 					<v-card-title>Quicksaves</v-card-title>
-					<v-card-subtitle>Know what changed and when. Easily rollback themes or plugins. Super helpful for troubleshooting maintenance issues.</v-card-subtitle>
+					<v-card-subtitle style="white-space: normal;">Know what changed and when. Easily rollback themes or plugins. Super helpful for troubleshooting maintenance issues.</v-card-subtitle>
 					<v-card-text>
 						<span v-if="typeof dialog_site.environment_selected.details.quicksave_usage == 'object'">{{ dialog_site.environment_selected.details.quicksave_usage.count }} quicksaves</v-show>
 					</v-card-text>
@@ -3645,13 +3986,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card
 					class="mx-auto"
 					max-width="344"
-					outlined
+					variant="outlined"
+					border="thin"
 					link
 					hover
 					@click="viewSnapshots( dialog_site.site.site_id ); dialog_site.backup_step = 4"
 				>
 					<v-card-title>Snapshots</v-card-title>
-					<v-card-subtitle>Manually generated snapshots zips.</v-card-subtitle>
+					<v-card-subtitle style="white-space: normal;">Manually generated snapshots zips.</v-card-subtitle>
 					<v-card-text>
 						<span v-if="typeof dialog_site.environment_selected.details.snapshot_count == 'number'">{{ dialog_site.environment_selected.details.snapshot_count }} snapshots</v-show>
 					</v-card-text>
@@ -3662,193 +4004,218 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-sheet>
 				<v-sheet v-show="dialog_site.backup_step == 2">
 				<v-card flat>
-					<v-subheader><a @click="dialog_site.backup_step = 1">Types</a>&nbsp;/ Backups</v-subheader>
+					<v-list-subheader><a @click="dialog_site.backup_step = 1" class="ml-5">Types</a>&nbsp;/ Backups</v-list-subheader>
 					<v-card-text v-if="typeof dialog_site.environment_selected.backups == 'string'">
 						<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
 					</v-card-text>
 					<div v-else>
 					<v-data-table
-						:headers="[{text:'Created At',value:'time'},{text:'Backup ID',value:'short_id',width:'115px'}]"
+						:headers="[{title:'Created At', key:'time'}, {title:'Backup ID', key:'short_id', width:'120px'}]"
 						:items="dialog_site.environment_selected.backups"
-						item-key="id"
+						item-value="id"
 						no-data-text="No backups found."
-                		:ref="'backup_table_'+ dialog_site.site.site_id + '_' + dialog_site.environment_selected.environment"
-						single-expand
+						:ref="'backup_table_'+ dialog_site.site.site_id + '_' + dialog_site.environment_selected.environment"
 						show-expand
 						class="table-backups"
-						@click:row="expandBackup( $event, dialog_site.site.site_id, dialog_site.environment_selected.environment )"
+						v-model:expanded="dialog_site.environment_selected.expanded_backups"
+						@click:row="(event, { item }) => handleRowClick(item)"
 					>
-					<template v-slot:item.time="{ item }">
-						{{ item.time | pretty_timestamp }}
-					</template>
-					<template v-slot:expanded-item="{ item }">
-						<td colspan="3" style="position: relative;background: #fff; padding:0px">
-						<v-row no-gutters justify="space-between">
-						<v-col cols="4" md="4" sm="12">
-						<v-progress-circular indeterminate color="primary" class="ma-5" size="24" v-show="item.loading"></v-progress-circular></span>
-						<v-treeview
-							v-model="item.tree"
-							:items="item.files"
-							:active.sync="item.active"
-							activatable
-							selectable
-							selected-color="primary"
-							selection-type="leaf"
-							item-key="path"
-							open-on-click
-							return-object
-							@update:active="previewFile(item)"
-						>
-							<template v-slot:prepend="{ item, open }">
-							<v-icon v-if="item.type == 'dir'">
-								{{ open ? 'mdi-folder-open' : 'mdi-folder' }}
-							</v-icon>
-							<v-icon v-else>
-								{{ files[item.ext] ? files[item.ext] : 'mdi-file' }}
-							</v-icon>
-							</template>
-						</v-treeview>
-						</v-col>
-						<v-col class="shrink"><v-divider vertical></v-divider></v-col>
-						<v-col class="pa-5 text-center">
-						<v-alert type="info" dense text v-show="item.omitted">This backup has too many files to show. Uploaded files have been omitted for viewing purposes. Everything is still restorable.</v-alert>
-						<v-scroll-y-transition mode="out-in">
-						<v-card
-							v-if="item.active.length == 1"
-							class="pt-6"
-							flat
-						>
-							<v-card-text>
-							<h3 class="headline mb-2">
-								Previewing {{ item.active[0].name }}
-							</h3>
-							<p>{{ item.active[0].size | formatSize }}</p>
-							</v-card-text>
-							<div v-if="item.preview == ''">
-								<v-divider></v-divider>
-								<v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular>
-							</div>
-							<p v-else-if="item.preview == 'too-large'">File too large to preview.</p>
-							<v-card v-else class="text-left overflow-auto mx-auto" style="width: 600px"><pre class="text-caption">{{ item.preview }}</pre></v-card>
-							<p class="mt-5 text-center"><a @click="item.active = []">Close preview</a></p>
-							</v-card-text>
-						</v-card>
-						<div
-							v-else-if="item.tree.length == 0"
-							class="title font-weight-light"
-							style="align-self: center;"
-						>
-							Select a file or folder.<br />
-							<a class="body-2" @click="item.tree = item.files">Select everything</a>
-						</div>
-						<v-card
-							v-else
-							class="pt-6 mx-auto"
-							flat
-							max-width="400"
-						>
-							<v-card-text>
-							<h3 class="headline mb-2">
-								{{ item.tree.map( item => item.count ).reduce((a, b) => a + b, 0)  }} items selected
-							</h3>
-							<p>{{ item.tree.map( item => item.size ).reduce((a, b) => a + b, 0) | formatSize }}</p>
-							</v-card-text>
-							<v-divider></v-divider>
-							<v-btn class="ma-2" @click="downloadBackup( item.id, item.tree )">Download<v-icon>mdi-file-download</v-icon></v-btn>
-							<p class="mt-5 text-center"><a @click="item.tree = []">Cancel selection</a></p>
-						</v-card>
-						</v-scroll-y-transition>
-					</v-col>
-					</v-row>
-						</td>
-					</template>
+						<template v-slot:item.time="{ item }">
+							{{ pretty_timestamp( item.time ) }}
+						</template>
+						<template v-slot:expanded-row="{ item }"> <td colspan="3" style="position: relative; padding:0px">
+								<v-row no-gutters justify="space-between">
+									<v-col cols="4" md="4" sm="12">
+										<v-progress-circular indeterminate color="primary" class="ma-5" size="24" v-show="item.loading"></v-progress-circular>
+										<v-treeview
+											v-model:selected="item.tree"
+											v-model:activated="item.active"
+											:items="item.files"
+											:load-children="handleLoadChildren"
+											activatable
+											selectable
+											select-strategy="independent"
+											selected-color="primary"
+											item-value="path"
+											item-title="name"
+											density="compact"
+											color="primary"
+											open-on-click
+											@update:activated="previewFile(item)"
+											@update:selected="newPaths => handleTreeSelection(item, newPaths)"
+										>
+											<template v-slot:prepend="{ item: nodeItem, open }">
+												<v-icon v-if="nodeItem.type == 'dir'">
+													{{ open ? 'mdi-folder-open' : 'mdi-folder' }}
+												</v-icon>
+												<v-icon v-else>
+													{{ files[nodeItem.ext] ? files[nodeItem.ext] : 'mdi-file' }}
+												</v-icon>
+											</template>
+										</v-treeview>
+									</v-col>
+									<v-col class="flex-grow-0 flex-shrink-0 border-e"></v-col>
+									<v-col class="flex-grow-1 flex-shrink-0 text-center">
+										<v-alert type="info" density="compact" variant="text" v-show="item.omitted">This backup has too many files to show. Uploaded files have been omitted for viewing purposes. Everything is still restorable.</v-alert>
+											<v-card v-if="item.active_node" class="pt-3 pt-6" flat>
+												<div v-if="item.active_node.type === 'dir'">
+													<v-card-text>
+														<h3 class="text-h6 mb-2">
+															<v-icon start>mdi-folder-outline</v-icon>
+															Folder: {{ item.active_node.name }}
+														</h3>
+														<p class="text-body-1 mt-4">
+															Contains {{ item.active_node.stats.fileCount }} files
+														</p>
+														<p class="text-body-1">
+															Total Size: {{ formatSize(item.active_node.stats.totalSize) }}
+														</p>
+													</v-card-text>
+													<v-card-actions class="justify-center">
+														<p class="mt-5"><v-btn variant="tonal" @click="item.active = []; item.active_node = null">Close</v-btn></p>
+													</v-card-actions>
+												</div>
+
+												<div v-else-if="item.active_node.type === 'file'">
+													<v-card-text>
+														<h3 class="text-h6 mb-2" ref="filePreviewTitle">
+															Previewing {{ item.active_node.name }}
+														</h3>
+														<p>{{ formatSize( item.active_node.size ) }}</p>
+													</v-card-text>
+													<div v-if="item.preview == ''">
+														<v-divider></v-divider>
+														<v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular>
+													</div>
+													<p v-else-if="item.preview == 'too-large'">File too large to preview.</p>
+													<v-card v-else-if="item.active_node.ext === 'svg'" class="text-center overflow-auto" flat style="max-width: 950px;font-size: 10px;zoom: 0.8; margin-left: 20px;">
+														<div v-html="item.preview" style="max-width:400px; height: auto; overflow: auto; margin:auto;"></div>
+													</v-card>
+													<v-card v-else-if="item.isPreviewImage" class="text-center overflow-auto" flat style="max-width: 950px;font-size: 10px;zoom: 0.8; margin-left: 20px;">
+														<img :src="item.preview" style="max-width:100%;">
+													</v-card>
+													<v-card v-else class="text-left bg-black overflow-auto" flat style="max-width: 950px;font-size: 10px;zoom: 0.8; margin-left: 20px;">
+														<pre class="line-numbers"><code :class="'language-' + (item.active_node.ext || 'markup')" v-html="item.preview"></code></pre>
+													</v-card>
+													<v-card-actions class="justify-center">
+														<p class="mt-5">
+															<v-btn variant="tonal" @click="item.active = []; item.active_node = null">Close preview</v-btn>
+															<v-btn v-if="item.isPreviewImage" variant="tonal" color="primary" :href="item.preview" :download="item.active_node.name" class="ml-2" :disabled="item.preview == ''">Download</v-btn>
+														</p>
+													</v-card-actions>
+												</div>
+											</v-card>
+											<div v-else-if="item.tree && item.tree.length == 0" class="text-h6 font-weight-light mt-5" style="align-self: center;">
+												Select a file or folder.<br />
+												<a class="text-body-2" @click="selectAllInBackup(item)">Select everything</a>
+											</div>
+											<v-card
+												v-else-if="item.tree && item.tree.length > 0" class="pt-6 mx-auto"
+												flat
+												max-width="400"
+											>
+												<v-card-text>
+													<h3 class="text-h6 mb-2"> {{ item.tree.length }} items selected</h3>
+													<p>{{ formatSize ( item.calculated_total ) }}</p>
+												</v-card-text>
+												<v-divider></v-divider>
+												<v-row class="mt-5">
+													<v-col class="text-center" cols="12">
+														<v-btn variant="tonal" @click="downloadBackup( item.id, item.tree )">Download<v-icon end icon="mdi-file-download"></v-icon></v-btn>
+													</v-col>
+												</v-row>
+												<v-row>
+													<v-col class="text-center" cols="12">
+														<a @click="item.tree = []" style="cursor: pointer;">Cancel selection</a>
+													</v-col>
+												</v-row>
+											</v-card>
+									</v-col>
+								</v-row>
+							</td>
+						</template>
 					</v-data-table>
 					</div>
 				</v-card>
 				</v-sheet>
 				<v-sheet v-show="dialog_site.backup_step == 3">
-				<v-card flat>
-					<v-subheader><a @click="dialog_site.backup_step = 1 ">Types</a>&nbsp;/ Quicksaves</v-subheader>
-					<v-card-text v-if="typeof dialog_site.environment_selected.quicksaves == 'string'">
-						<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
-					</v-card-text>
-					<div v-else>
-					<v-toolbar dense flat>
-					<v-spacer></v-spacer>
-					<v-select :items="[{text: 'Themes', value: 'theme'}, {text: 'Plugins', value: 'plugin'}]" v-model="quicksave_search_type" label="Search for" dense style="max-width: 125px" class="mr-2" solo></v-select>
-					<v-select :items="[{text: 'Slug', value: 'name'}, {text: 'Title', value: 'title'}, {text: 'Status', value: 'status'}, {text: 'Version', value: 'version'}]" v-model="quicksave_search_field" label="By" dense style="max-width: 125px" class="mr-2" solo></v-select>
-					<v-text-field v-model="quicksave_search" dense autofocus label="Search historical activity" clearable light hide-details append-outer-icon="mdi-magnify" @keydown.enter="searchQuicksave" @click:append-outer="searchQuicksave" style="max-width:375px;" class="mb-3"></v-text-field>
+				<v-card elevation="0">
+				<v-list-subheader><a @click="dialog_site.backup_step = 1">Types</a>&nbsp;/ Quicksaves</v-list-subheader>
+				<v-card-text v-if="typeof dialog_site.environment_selected.quicksaves == 'string'">
+					<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
+				</v-card-text>
+				<div v-else>
+					<v-toolbar elevation="0" color="transparent">
+						<v-spacer></v-spacer>
+						<v-select hide-details variant="outlined" :items="[{title: 'Themes', value: 'theme'}, {title: 'Plugins', value: 'plugin'}]" v-model="quicksave_search_type" label="Search for" density="compact" style="max-width: 125px" class="mr-2"></v-select>
+						<v-select hide-details variant="outlined" :items="[{title: 'Slug', value: 'name'}, {title: 'Title', value: 'title'}, {title: 'Status', value: 'status'}, {title: 'Version', value: 'version'}]" v-model="quicksave_search_field" label="By" density="compact" style="max-width: 125px" class="mr-2"></v-select>
+						<v-text-field hide-details variant="outlined" v-model="quicksave_search" density="compact" autofocus label="Search historical activity" clearable hide-details append-inner-icon="mdi-magnify" @keydown.enter="searchQuicksave" @click:append="searchQuicksave" style="max-width:375px;"></v-text-field>
 					</v-toolbar>
-					<div v-show="quicksave_search_results.loading" class="body-2 mx-5"><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular> searching quicksaves</div>
+					<div v-show="quicksave_search_results.loading" class="text-body-2 mx-5"><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular> searching quicksaves</div>
 					<v-card v-if="quicksave_search_results.items.length > 0" class="ma-4">
-					<v-app-bar flat dense>
-					<v-card-title>{{ quicksave_search_results.items.length }} search results</v-card-title>
-					<v-spacer></v-spacer>
-					<v-btn icon @click='quicksave_search_results = { loading: false, search: "", search_type: "", search_field: "", items: [] }'>
-						<v-icon>mdi-close</v-icon>
-					</v-btn>
+					<v-app-bar elevation="0" density="compact">
+						<v-card-title> {{ quicksave_search_results.items.length }} search results </v-card-title>
+						<v-spacer></v-spacer>
+						<v-btn icon="mdi-close" @click='quicksave_search_results = { loading: false, search: "", search_type: "", search_field: "", items: [] }'></v-btn>
 					</v-app-bar>
 					<v-card-text>
-					<v-data-table
-						:headers="[{text:'Created At',value:'created_at'},{text:'Item',value:'item'},{text:'',value:'actions'}]"
+						<v-data-table
+						:headers="[{title:'Created At',key:'created_at'},{title:'Item',key:'item'},{title:'',key:'actions'}]"
 						:items="quicksave_search_results.items"
-						item-key="hash"
+						item-value="hash"
 						no-data-text="No quicksaves found."
-						:footer-props="{ itemsPerPageOptions: [25,50,100,{'text':'All','value':-1}] }">
+						:items-per-page-options="[25,50,100,{'title':'All','value':-1}]">
 						<template v-slot:item.created_at="{ item }">
-							{{ item.created_at | pretty_timestamp_epoch }}
+							{{ pretty_timestamp_epoch( item.created_at ) }}
 						</template>
 						<template v-slot:item.item="{ item }">
 							<span v-if="item.item == ''">
-								{{ quicksave_search_results.search }} not found
+							{{ quicksave_search_results.search }} not found
 							</span>
 							<span v-else>
-								{{ item.item.title }} {{ item.item.version }} {{ item.item.status }}
+							{{ item.item.title }} {{ item.item.version }} {{ item.item.status }}
 							</span>
 						</template>
 						<template v-slot:item.actions="{ item }">
 							<v-dialog max-width="600">
-								<template v-slot:activator="{ on, attrs }">
-									<v-btn depressed small v-bind="attrs" v-on="on" v-if="item.item != ''">Rollback</v-btn>
-								</template>
-								<template v-slot:default="dialog">
+							<template v-slot:activator="{ props }">
+								<v-btn variant="tonal" size="small" v-bind="props" v-if="item.item != ''">Rollback</v-btn>
+							</template>
+							<template v-slot:default="{ isActive }">
 								<v-card>
-									<v-toolbar color="primary" dark>
-										Rollback '{{ item.item.title }}' {{ quicksave_search_results.search_type }}?
-										<v-spacer></v-spacer>
-										<v-btn icon @click="dialog.value = false">
-											<v-icon>mdi-close</v-icon>
-										</v-btn>
-									</v-toolbar>
-									<v-list>
-										<v-list-item two-line @click="RollbackQuicksave(item.hash, quicksave_search_results.search_type, item.item.name, 'this', dialog)">
-										<v-list-item-content>
-											<v-list-item-title>This version {{ item.item.version }}</v-list-item-title>
-											<v-list-item-subtitle>{{ $options.filters.pretty_timestamp_epoch(item.created_at) }}</v-list-item-subtitle>
-										</v-list-item-content>
-										</v-list-item>
-									</v-list>
+								<v-toolbar color="primary">
+									<v-btn icon="mdi-close" @click="isActive.value = false"></v-btn>
+									Rollback '{{ item.item.title }}' {{ quicksave_search_results.search_type }}?									
+								</v-toolbar>
+								<v-list>
+									<v-list-item lines="two" @click="RollbackQuicksave(item.hash, quicksave_search_results.search_type, item.item.name, 'this', dialog)">
+									<v-list-item-title>This version {{ item.item.version }}</v-list-item-title>
+									<v-list-item-subtitle>{{ pretty_timestamp_epoch(item.created_at) }}</v-list-item-subtitle>
+									</v-list-item>
+								</v-list>
 								</v-card>
-								</template>
+							</template>
 							</v-dialog>
 						</template>
-					</v-data-table>
+						</v-data-table>
 					</v-card-text>
 					</v-card>
 					<v-data-table
-						:headers="[{text:'Created At',value:'created_at'},{text:'WordPress',value:'core',width:'115px'},{text:'',value:'theme_count',width:'115px'},{text:'',value:'plugin_count',width:'115px'}]"
+						:headers="[{title:'Created At',key:'created_at'},{title:'WordPress',key:'core',width:'115px'},{title:'',key:'theme_count',width:'115px'},{title:'',key:'plugin_count',width:'115px'}]"
 						:items="dialog_site.environment_selected.quicksaves"
-						item-key="hash"
+						item-value="hash"
 						no-data-text="No quicksaves found."
-                		:ref="'quicksave_table_'+ dialog_site.site.site_id + '_' + dialog_site.environment_selected.environment"
-						@click:row="expandQuicksave( $event, dialog_site.site.site_id, dialog_site.environment_selected.environment )"
-						single-expand
+						:ref="'quicksave_table_'+ dialog_site.site.site_id + '_' + dialog_site.environment_selected.environment"
+						@click:row="(event, { item }) => getQuicksave( item.hash, dialog_site.site.site_id )"
+						@update:expanded="handleExpansionUpdate"
 						show-expand
-						:footer-props="{ itemsPerPageOptions: [25,50,100,{'text':'All','value':-1}] }"
+						expand-on-click
+						:items-per-page-options="[25,50,100,{'title':'All','value':-1}]"
 						class="table-quicksaves"
+						:expanded="expanded"
 					>
 					<template v-slot:item.created_at="{ item }">
-						{{ item.created_at | pretty_timestamp_epoch }}
+						{{ pretty_timestamp_epoch( item.created_at ) }}
 					</template>
 					<template v-slot:item.core="{ item }">
 						{{ item.core }}
@@ -3859,293 +4226,263 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<template v-slot:item.plugin_count="{ item }">
 						{{ item.plugin_count }} plugins
 					</template>
-					<template v-slot:expanded-item="{ item }">
-						<td colspan="7" style="position: relative;background: #eee; padding:0px" v-if="item.loading">
-							<span><v-progress-circular indeterminate color="primary" class="mx-16 mt-3 mb-7" size="24"></v-progress-circular></span>
+					<template v-slot:expanded-row="{ columns, item }">
+						<tr class="v-data-table__expanded">
+						<td :colspan="columns.length" style="position: relative;background: #eee; padding:0px" v-if="item.loading">
+						<span><v-progress-circular indeterminate color="primary" class="mx-16 mt-3 mb-7" size="24"></v-progress-circular></span>
 						</td>
-						<td colspan="7" style="position: relative;background: #eee; padding:0px" v-else>
-						<v-toolbar color="dark primary" dark dense light class="elevation-1 mx-16 mt-3" style="border-radius: 4px 4px 0 0;">
-							<v-toolbar-title class="body-2">{{ item.status }}</v-toolbar-title>
-							<v-spacer></v-spacer>
-							<v-toolbar-items>
-								<v-btn text small @click="QuicksavesRollback( dialog_site.site.site_id, item, 'previous' )" v-show="item.previous_created_at">Revert changes <v-icon>mdi-restore</v-icon></v-btn>
-								<v-btn text small @click="QuicksavesRollback( dialog_site.site.site_id, item, 'this' )">Reapply changes <v-icon>mdi-redo</v-icon></v-btn>
-                       			<v-btn text small @click="viewQuicksavesChanges( dialog_site.site.site_id, item)">View Changes <v-icon>mdi-file-compare</v-icon></v-btn>
-							</v-toolbar-items>
+						<td :colspan="columns.length" class="pa-5" style="position: relative;background: #eee;" v-else>
+						<v-toolbar color="primary" density="compact" class="elevation-1" style="border-radius: 4px 4px 0 0;">
+							<v-toolbar-title class="text-body-2">{{ item.status }}</v-toolbar-title>
+							<v-btn variant="text" size="small" @click="QuicksavesRollback( dialog_site.site.site_id, item, 'previous' )" v-show="item.previous_created_at">Revert changes <v-icon>mdi-restore</v-icon></v-btn>
+							<v-btn variant="text" size="small" @click="QuicksavesRollback( dialog_site.site.site_id, item, 'this' )">Reapply changes <v-icon>mdi-redo</v-icon></v-btn>
+							<v-btn variant="text" size="small" @click="viewQuicksavesChanges( dialog_site.site.site_id, item)">View Changes <v-icon>mdi-file-compare</v-icon></v-btn>
 						</v-toolbar>
-						<v-dialog fullscreen hide-overlay v-model="item.view_changes == true">
-							<v-card>
-							<v-toolbar color="dark primary" dark dense light>
-								<v-btn icon dark @click.native="item.view_changes = false">
-									<v-icon>mdi-close</v-icon>
-								</v-btn>
-								<v-toolbar-title>List of changes</v-toolbar-title>
-								<v-spacer></v-spacer>
-							</v-toolbar>
-							<v-card-text>
-								<v-card-title>
-									Files
-								</v-card-title>
-								<v-spacer></v-spacer>
-								<v-layout>
-									<v-flex sx12 sm9>
-									</v-flex sx12 sm3>
-									<v-flex>
-									<v-text-field
-										v-model="item.search"
-										ref="quicksave_search"
-										@input="filterFiles( dialog_site.site.site_id, item.hash)"
-										append-icon="mdi-magnify"
-										label="Search"
-										single-line
-										hide-details
-									></v-text-field>
-									</v-flex>
-								</v-layout>
-								<v-data-table 
-									:headers='[{"text":"File","value":"file"}]'
-									:items="item.filtered_files"
-									:loading="item.loading"
-									:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
-								>
-									<template v-slot:body="{ items }">
-									<tbody>
-										<tr v-for="i in items">
-											<td>
-												<a class="v-menu__activator" @click="QuicksaveFileDiff(item.hash, i)">{{ i }}</a>
-											</td>
-										</tr>
-									</tbody>
-									</template>
-								</v-data-table>
-							</v-card-text>
+						<v-dialog fullscreen scrim="false" v-model="item.view_changes">
+							<v-card rounded="0">
+								<v-toolbar color="primary" density="compact">
+									<v-btn icon="mdi-close" @click="item.view_changes = false"></v-btn>
+									<v-toolbar-title>List of changes</v-toolbar-title>
+								</v-toolbar>
+								<v-card-text>
+									<v-row no-gutters align="center">
+										<v-col>
+											<v-card-title class="px-0">Files</v-card-title>
+										</v-col>
+										<v-col cols="12" sm="4" md="3">
+											<v-text-field
+												v-model="item.search"
+												ref="quicksave_search"
+												@update:model-value="filterFiles(dialog_site.site.site_id, item.hash)"
+												append-inner-icon="mdi-magnify"
+												label="Search"
+												density="compact"
+												variant="outlined"
+												hide-details
+												clearable
+											></v-text-field>
+										</v-col>
+									</v-row>
+									<v-data-table
+										:headers='[{"title":"File","key":"file"}]'
+										:items="item.filtered_files"
+										:loading="item.loading"
+										:items-per-page-options="[50,100,250,{'title':'All','value':-1}]"
+										class="mt-4"
+									>
+										<template v-slot:item="{ item: file }">
+											<tr>
+												<td>
+													<a style="cursor: pointer;" @click="QuicksaveFileDiff(item.hash, file)">{{ file }}</a>
+												</td>
+											</tr>
+										</template>
+									</v-data-table>
+								</v-card-text>
 							</v-card>
 						</v-dialog>
-						<v-card class="elevation-1 mx-16 mb-7">
+						<v-card class="elevation-1 mx-0 mb-3">
 							<v-data-table
-								:headers='[{"text":"Theme","value":"title"},{"text":"Version","value":"version","width":"150px"},{"text":"Status","value":"status","width":"150px"},{"text":"","value":"rollback","width":"150px"}]'
-								:items="item.themes"
-								item-key="name"
-								:items-per-page="-1"
-								hide-default-footer
-								class="quicksave-table mb-5"
+							:headers='[{"title":"Theme","key":"title"},{"title":"Version","key":"version","width":"150px"},{"title":"Status","key":"status","width":"150px"},{"title":"","key":"rollback","width":"150px"}]'
+							:items="item.themes"
+							item-value="name"
+							:items-per-page="-1"
+							hide-default-footer
+							class="quicksave-table mb-5"
 							>
 							<template v-slot:body="{ items }">
-							<tbody>
-							<tr class="red lighten-4" v-for="theme in item.themes_deleted">
-								<td class="strikethrough">{{ theme.title || theme.name }}</td>
-								<td class="strikethrough">{{ theme.version }}</td>
-								<td class="strikethrough">{{ theme.status }}</td>
-								<td><v-btn depressed outlined small @click="RollbackQuicksave(item.hash, 'theme', theme.name, 'previous')">Rollback</v-btn></td>
+								<tr class="bg-red-lighten-4" v-for="theme in item.themes_deleted" :key="'deleted-'+theme.name">
+									<td class="strikethrough">{{ theme.title || theme.name }}</td>
+									<td class="strikethrough">{{ theme.version }}</td>
+									<td class="strikethrough">{{ theme.status }}</td>
+									<td><v-btn variant="outlined" size="small" @click="RollbackQuicksave(item.hash, 'theme', theme.name, 'previous')">Rollback</v-btn></td>
 								</tr>
-							<tr v-for="theme in items" v-bind:class="{ 'green lighten-5': theme.changed || theme.changed_version || theme.changed_status }">
-								<td>
-									<v-chip color="primary" label x-small v-show="theme.new" class="mr-2">New</v-chip> {{ theme.title || theme.name }}
+								<tr v-for="theme in items" :key="theme.name" :class="{ 'bg-green-lighten-5': theme.changed || theme.changed_version || theme.changed_status }">
+									<td>
+									<v-chip color="primary" label size="x-small" v-show="theme.new" class="mr-2">New</v-chip> {{ theme.title || theme.name }}
 									<v-dialog max-width="600">
-										<template v-slot:activator="{ on, attrs }">
-											<v-btn depressed outlined small class="ml-2" v-bind="attrs" v-on="on" v-show="theme.changed || theme.changed_version" @click="viewQuicksavesChangesItem( item, `themes/${theme.name}/` )">View Changes</v-btn>
+										<template v-slot:activator="{ props }">
+										<v-btn variant="outlined" size="small" class="ml-2" v-bind="props" v-show="theme.changed || theme.changed_version" @click="viewQuicksavesChangesItem( item, `themes/${theme.name}/` )">View Changes</v-btn>
 										</template>
-										<template v-slot:default="dialog">
+										<template v-slot:default="{ isActive }">
 										<v-card>
-											<v-toolbar color="primary" dark>
-												<v-btn icon @click="dialog.value = false">
-													<v-icon>mdi-close</v-icon>
-												</v-btn>
-												Changes for '{{ theme.name }}' theme
-												<v-spacer></v-spacer>
+											<v-toolbar color="primary">
+											<v-btn icon="mdi-close" @click="isActive.value = false"></v-btn>
+											Changes for '{{ theme.name }}' theme
+											<v-spacer></v-spacer>
 											</v-toolbar>
 											<v-card-text>
-											<v-data-table 
-												:headers='[{"text":"File","value":"file"}]'
+											<v-data-table
+												:headers='[{"title":"File","key":"file"}]'
 												:items="item.response"
-												:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
+												:items-per-page-options="[50,100,250,{'title':'All','value':-1}]"
 												v-show="item.response.length > 0"
 											>
-												<template v-slot:body="{ items }">									
-												<tbody >
-													<tr v-for="i in items">
-														<td>
-															<a class="v-menu__activator" @click="QuicksaveFileDiff(item.hash, i)">{{ i }}</a>
-														</td>
+												<template v-slot:body="{ items }">
+													<tr v-for="i in items" :key="i">
+													<td>
+														<a class="v-menu__activator" @click="QuicksaveFileDiff(item.hash, i)">{{ i }}</a>
+													</td>
 													</tr>
-												</tbody>
 												</template>
 											</v-data-table>
-											<v-progress-linear indeterminate rounded height="6" v-show="item.response.length == 0" class="mt-7 mb-4"></v-progress-linear>	
+											<v-progress-linear indeterminate rounded height="6" v-show="item.response.length == 0" class="mt-7 mb-4"></v-progress-linear>
 											</v-card-text>
 										</v-card>
 										</template>
 									</v-dialog>
-								</td>
-								<td v-bind:class="{ 'green lighten-4': theme.changed_version }">
+									</td>
+									<td :class="{ 'bg-green-lighten-4': theme.changed_version }">
 									{{ theme.version }}
-									<v-tooltip bottom>
-										<template v-slot:activator="{ on, attrs }"><v-icon small v-show="theme.changed_version" v-bind="attrs" v-on="on">mdi-information</v-icon></template>
+									<v-tooltip location="bottom">
+										<template v-slot:activator="{ props }"><v-icon size="small" v-show="theme.changed_version" v-bind="props">mdi-information</v-icon></template>
 										<span>Changed from {{ theme.changed_version }}</span>
 									</v-tooltip>
-								</td>
-								<td v-bind:class="{ 'green lighten-4': theme.changed_status }">
+									</td>
+									<td :class="{ 'bg-green-lighten-4': theme.changed_status }">
 									{{ theme.status }}
-									<v-tooltip bottom>
-										<template v-slot:activator="{ on, attrs }"><v-icon small v-show="theme.changed_status" v-bind="attrs" v-on="on">mdi-information</v-icon></template>
+									<v-tooltip location="bottom">
+										<template v-slot:activator="{ props }"><v-icon size="small" v-show="theme.changed_status" v-bind="props">mdi-information</v-icon></template>
 										<span>Changed from {{ theme.changed_status }}</span>
 									</v-tooltip>
-								</td>
-								<td>
+									</td>
+									<td>
 									<v-dialog max-width="600">
-										<template v-slot:activator="{ on, attrs }">
-											<v-btn depressed outlined small v-bind="attrs" v-on="on">Rollback</v-btn>
+										<template v-slot:activator="{ props }">
+										<v-btn variant="outlined" size="small" v-bind="props">Rollback</v-btn>
 										</template>
-										<template v-slot:default="dialog">
+										<template v-slot:default="{ isActive }">
 										<v-card>
-											<v-toolbar color="primary" dark>
+											<v-toolbar color="primary">
+												<v-btn icon="mdi-close" @click="isActive.value = false"></v-btn>
 												Rollback '{{ theme.name }}' theme?
-												<v-spacer></v-spacer>
-												<v-btn icon @click="dialog.value = false">
-													<v-icon>mdi-close</v-icon>
-												</v-btn>
 											</v-toolbar>
 											<v-list>
-												<v-list-item two-line @click="RollbackQuicksave(item.hash, 'theme', theme.name, 'this', dialog)">
-												<v-list-item-content>
-													<v-list-item-title>This version</v-list-item-title>
-													<v-list-item-subtitle>{{ $options.filters.pretty_timestamp_epoch(item.created_at) }}</v-list-item-subtitle>
-												</v-list-item-content>
-												</v-list-item>
-												<v-list-item two-line @click="RollbackQuicksave(item.hash, 'theme', theme.name, 'previous', dialog)" v-show="item.previous_created_at">
-												<v-list-item-content>
-													<v-list-item-title>Previous version</v-list-item-title>
-													<v-list-item-subtitle>{{ $options.filters.pretty_timestamp_epoch(item.previous_created_at) }}</v-list-item-subtitle>
-												</v-list-item-content>
-												</v-list-item>
+											<v-list-item lines="two" @click="RollbackQuicksave(item.hash, 'theme', theme.name, 'this', dialog)">
+												<v-list-item-title>This version</v-list-item-title>
+												<v-list-item-subtitle>{{ pretty_timestamp_epoch(item.created_at) }}</v-list-item-subtitle>
+											</v-list-item>
+											<v-list-item lines="two" @click="RollbackQuicksave(item.hash, 'theme', theme.name, 'previous', dialog)" v-show="item.previous_created_at">
+												<v-list-item-title>Previous version</v-list-item-title>
+												<v-list-item-subtitle>{{ pretty_timestamp_epoch(item.previous_created_at) }}</v-list-item-subtitle>
+											</v-list-item>
 											</v-list>
 										</v-card>
 										</template>
 									</v-dialog>
-								</td>
-							</tr>
+									</td>
+								</tr>
 							</template>
 							</v-data-table>
 							<v-data-table
-								:headers='[{"text":"Plugin","value":"plugin"},{"text":"Version","value":"version","width":"150px"},{"text":"Status","value":"status","width":"150px"},{"text":"","value":"rollback","width":"150px"}]'
-								:items="item.plugins"
-								item-key="name"
-								class="quicksave-table"
-								:items-per-page="-1"
-								hide-default-footer
-								>
-								<template v-slot:body="{ items }">
-								<tbody>
-								<tr class="red lighten-4" v-for="plugin in item.plugins_deleted">
+							:headers='[{"title":"Plugin","key":"plugin"},{"title":"Version","key":"version","width":"150px"},{"title":"Status","key":"status","width":"150px"},{"title":"","key":"rollback","width":"150px"}]'
+							:items="item.plugins"
+							item-value="name"
+							class="quicksave-table"
+							:items-per-page="-1"
+							hide-default-footer
+							>
+							<template v-slot:body="{ items }">
+								<tr class="bg-red-lighten-4" v-for="plugin in item.plugins_deleted" :key="'deleted-'+plugin.name">
 									<td class="strikethrough">{{ plugin.title || plugin.name }}</td>
 									<td class="strikethrough">{{ plugin.version }}</td>
 									<td class="strikethrough">{{ plugin.status }}</td>
-									<td><v-btn depressed outlined small @click="RollbackQuicksave(item.hash, 'plugin', plugin.name, 'previous')">Rollback</v-btn></td>
+									<td><v-btn variant="outlined" size="small" @click="RollbackQuicksave(item.hash, 'plugin', plugin.name, 'previous')">Rollback</v-btn></td>
 								</tr>
-								<tr v-for="plugin in items" v-bind:class="[{ 'green lighten-5': plugin.changed || plugin.changed_version || plugin.changed_status },{ 'red lighten-4 strikethrough': plugin.deleted }]">
-								<td>
-								<v-chip color="primary" label x-small v-show="plugin.new" class="mr-2">New</v-chip> {{ plugin.title || plugin.name }}
+								<tr v-for="plugin in items" :key="plugin.name" :class="[{ 'bg-green-lighten-5': plugin.changed || plugin.changed_version || plugin.changed_status },{ 'bg-red-lighten-4 strikethrough': plugin.deleted }]">
+									<td>
+									<v-chip color="primary" label size="x-small" v-show="plugin.new" class="mr-2">New</v-chip> {{ plugin.title || plugin.name }}
 									<v-dialog max-width="600">
-										<template v-slot:activator="{ on, attrs }">
-											<v-btn depressed outlined small class="ml-2" v-bind="attrs" v-on="on" v-show="plugin.changed || plugin.changed_version" @click="viewQuicksavesChangesItem( item, `plugins/${plugin.name}/` )">View Changes</v-btn>
+										<template v-slot:activator="{ props }">
+										<v-btn variant="outlined" size="small" class="ml-2" v-bind="props" v-show="plugin.changed || plugin.changed_version" @click="viewQuicksavesChangesItem( item, `plugins/${plugin.name}/` )">View Changes</v-btn>
 										</template>
-										<template v-slot:default="dialog">
+										<template v-slot:default="{ isActive }">
 										<v-card>
-											<v-toolbar color="primary" dark>
-												<v-btn icon @click="dialog.value = false">
-													<v-icon>mdi-close</v-icon>
-												</v-btn>
-												Changes for '{{ plugin.name }}' plugin
-												<v-spacer></v-spacer>
+											<v-toolbar color="primary">
+											<v-btn icon="mdi-close" @click="isActive.value = false"></v-btn>
+											Changes for '{{ plugin.name }}' plugin
+											<v-spacer></v-spacer>
 											</v-toolbar>
 											<v-card-text>
-											<v-data-table 
-												:headers='[{"text":"File","value":"file"}]'
+											<v-data-table
+												:headers='[{"title":"File","key":"file"}]'
 												:items="item.response"
-												:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
+												:items-per-page-options="[50,100,250,{'title':'All','value':-1}]"
 												v-show="item.response.length > 0"
 											>
-												<template v-slot:body="{ items }">									
-												<tbody >
-													<tr v-for="i in items">
-														<td>
-															<a class="v-menu__activator" @click="QuicksaveFileDiff(item.hash, i)">{{ i }}</a>
-														</td>
+												<template v-slot:body="{ items }">
+													<tr v-for="i in items" :key="i">
+													<td>
+														<a class="v-menu__activator" @click="QuicksaveFileDiff(item.hash, i)">{{ i }}</a>
+													</td>
 													</tr>
-												</tbody>
 												</template>
 											</v-data-table>
-											<v-progress-linear indeterminate rounded height="6" v-show="item.response.length == 0" class="mt-7 mb-4"></v-progress-linear>	
+											<v-progress-linear indeterminate rounded height="6" v-show="item.response.length == 0" class="mt-7 mb-4"></v-progress-linear>
 											</v-card-text>
 										</v-card>
 										</template>
 									</v-dialog>
-								</td>
-								<td v-bind:class="{ 'green lighten-4': plugin.changed_version }">
-									{{ plugin.version }} 
-									<v-tooltip bottom>
-										<template v-slot:activator="{ on, attrs }"><v-icon small v-show="plugin.changed_version" v-bind="attrs" v-on="on">mdi-information</v-icon></template>
+									</td>
+									<td :class="{ 'bg-green-lighten-4': plugin.changed_version }">
+									{{ plugin.version }}
+									<v-tooltip location="bottom">
+										<template v-slot:activator="{ props }"><v-icon size="small" v-show="plugin.changed_version" v-bind="props">mdi-information</v-icon></template>
 										<span>Changed from {{ plugin.changed_version }}</span>
 									</v-tooltip>
-								</td>
-								<td v-bind:class="{ 'green lighten-4': plugin.changed_status }">
+									</td>
+									<td :class="{ 'bg-green-lighten-4': plugin.changed_status }">
 									{{ plugin.status }}
-									<v-tooltip bottom>
-										<template v-slot:activator="{ on, attrs }"><v-icon small v-show="plugin.changed_status" v-bind="attrs" v-on="on">mdi-information</v-icon></template>
+									<v-tooltip location="bottom">
+										<template v-slot:activator="{ props }"><v-icon size="small" v-show="plugin.changed_status" v-bind="props">mdi-information</v-icon></template>
 										<span>Changed from {{ plugin.changed_status }}</span>
 									</v-tooltip>
-								</td>
-								<td>
+									</td>
+									<td>
 									<v-dialog max-width="600">
-										<template v-slot:activator="{ on, attrs }">
-											<v-btn depressed outlined small v-bind="attrs" v-on="on" v-show="plugin.status != 'must-use' && plugin.status != 'dropin'">Rollback</v-btn>
+										<template v-slot:activator="{ props }">
+										<v-btn variant="outlined" size="small" v-bind="props" v-show="plugin.status != 'must-use' && plugin.status != 'dropin'">Rollback</v-btn>
 										</template>
-										<template v-slot:default="dialog">
+										<template v-slot:default="{ isActive }">
 										<v-card>
-											<v-toolbar color="primary" dark>
+											<v-toolbar color="primary">
+												<v-btn icon="mdi-close" @click="isActive.value = false"></v-btn>
 												Rollback '{{ plugin.name }}' plugin?
-												<v-spacer></v-spacer>
-												<v-btn icon @click="dialog.value = false">
-													<v-icon>mdi-close</v-icon>
-												</v-btn>
 											</v-toolbar>
 											<v-list>
-												<v-list-item two-line @click="RollbackQuicksave(item.hash, 'plugin', plugin.name, 'this', dialog)">
-												<v-list-item-content>
-													<v-list-item-title>This version <span v-show="plugin.changed_version" v-text="plugin.version"></span></v-list-item-title>
-													<v-list-item-subtitle>{{ $options.filters.pretty_timestamp_epoch(item.created_at) }}</v-list-item-subtitle>
-												</v-list-item-content>
-												</v-list-item>
-												<v-list-item two-line @click="RollbackQuicksave(item.hash, 'plugin', plugin.name, 'previous', dialog)" v-show="item.previous_created_at">
-												<v-list-item-content>
-													<v-list-item-title>Previous version <span v-show="plugin.changed_version" v-text="plugin.changed_version"></span></v-list-item-title>
-													<v-list-item-subtitle>{{ $options.filters.pretty_timestamp_epoch(item.previous_created_at) }}</v-list-item-subtitle>
-												</v-list-item-content>
-												</v-list-item>
+											<v-list-item lines="two" @click="RollbackQuicksave(item.hash, 'plugin', plugin.name, 'this', dialog)">
+												<v-list-item-title>This version <span v-show="plugin.changed_version" v-text="plugin.version"></span></v-list-item-title>
+												<v-list-item-subtitle>{{ pretty_timestamp_epoch(item.created_at) }}</v-list-item-subtitle>
+											</v-list-item>
+											<v-list-item lines="two" @click="RollbackQuicksave(item.hash, 'plugin', plugin.name, 'previous', dialog)" v-show="item.previous_created_at">
+												<v-list-item-title>Previous version <span v-show="plugin.changed_version" v-text="plugin.changed_version"></span></v-list-item-title>
+												<v-list-item-subtitle>{{ pretty_timestamp_epoch(item.previous_created_at) }}</v-list-item-subtitle>
+											</v-list-item>
 											</v-list>
 										</v-card>
 										</template>
 									</v-dialog>
-								</td>
+									</td>
 								</tr>
-								</template>
+							</template>
 							</v-data-table>
 						</v-card>
 						</td>
+					</tr>
 					</template>
 					</v-data-table>
-					</div>
-					</v-card>
-					</v-sheet>
+				</div>
+				</v-card>
+				</v-sheet>
 					<v-sheet v-show="dialog_site.backup_step == 4">
 					<v-card flat>
-					<v-subheader><a @click="dialog_site.backup_step = 1">Types </a>&nbsp;/ Snapshots</v-subheader>
+					<v-list-subheader><a @click="dialog_site.backup_step = 1">Types </a>&nbsp;/ Snapshots</v-list-subheader>
 					<v-card-text v-if="typeof dialog_site.environment_selected.snapshots == 'string'">
 						<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
 					</v-card-text>
 					<div v-else>
 					<v-data-table
-						:headers="[{text:'Created At',value:'created_at',width:'250px'},{text:'User',value:'user',width:'125px'},{text:'Storage',value:'storage',width:'100px'},{text:'Notes',value:'notes'},{text:'',value:'actions',sortable: false,width:'190px'}]"
+						:headers="[{title:'Created At',value:'created_at',width:'250px'},{title:'User',value:'user',width:'125px'},{title:'Storage',value:'storage',width:'100px'},{title:'Notes',value:'notes'},{title:'',value:'actions',sortable: false,width:'190px'}]"
 						:items="dialog_site.environment_selected.snapshots"
 						item-key="snapshot_id"
 						no-data-text="No snapshots found."
@@ -4154,48 +4491,48 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						{{ item.user.name }}
 					</template>
 					<template v-slot:item.created_at="{ item }">
-						{{ item.created_at | pretty_timestamp_epoch }}
+						{{ pretty_timestamp_epoch( item.created_at ) }}
 					</template>
 					<template v-slot:item.storage="{ item }">
-						{{ item.storage | formatSize }}
+						{{ formatSize( item.storage ) }}
 					</template>
 					<template v-slot:item.actions="{ item }">
 					<template v-if="item.token && new Date() < new Date( item.expires_at )">
-						<v-tooltip bottom>
-							<template v-slot:activator="{ on }">
-                    <v-btn small icon @click="fetchLink( dialog_site.site.site_id, item.snapshot_id )" v-on="on">
+						<v-tooltip location="bottom">
+							<template v-slot:activator="{ props }">
+                    			<v-btn size="small" icon @click="fetchLink( dialog_site.site.site_id, item.snapshot_id )" v-bind="props">
 								<v-icon color="grey">mdi-sync</v-icon>
 							</v-btn>
 							</template>
 							<span>Generate new link. Link valid for 24hrs.</span>
 						</v-tooltip>
-                <v-btn small rounded :href="`/wp-json/captaincore/v1/site/${dialog_site.site.site_id}/snapshots/${item.snapshot_id}-${item.token}/${item.snapshot_name.slice(0, -4)}`">Download</v-btn>
+                <v-btn size="small" rounded :href="`/wp-json/captaincore/v1/site/${dialog_site.site.site_id}/snapshots/${item.snapshot_id}-${item.token}/${item.snapshot_name.slice(0, -4)}`">Download</v-btn>
 					</template>
 					<template v-else>
-						<v-tooltip bottom>
-							<template v-slot:activator="{ on }">
-                    <v-btn small icon @click="fetchLink( dialog_site.site.site_id, item.snapshot_id )" v-on="on">
+						<v-tooltip location="bottom">
+							<template v-slot:activator="{ props }">
+                    <v-btn size="small" icon @click="fetchLink( dialog_site.site.site_id, item.snapshot_id )" v-bind="props">
 								<v-icon color="grey">mdi-sync</v-icon>
 							</v-btn>
 							</template>
 							<span>Generate new link. Link valid for 24hrs.</span>
 						</v-tooltip>
-						<v-btn small rounded disabled>Download</v-btn>
+						<v-btn size="small" rounded disabled>Download</v-btn>
 					</template>
 					</template>
 					</v-data-table>
 					</div>
 					</v-sheet>
-			</v-tab-item>
-		</v-tabs-items>
+			</v-window-item>
+		</v-window>
 		<v-card flat v-else>
 		<v-container fluid>
        		<div><span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span></div>
 		 </v-container>
 		</v-card>
-	  </v-tab-item>
-	  <v-tab-item :key="2" value="tab-Modules" :transition="false" :reverse-transition="false" v-if="role == 'administrator'">
-		<v-toolbar dense light flat>
+	  </v-window-item>
+	  <v-window-item :key="2" value="tab-Modules" :transition="false" :reverse-transition="false" v-if="role == 'administrator'">
+		<v-toolbar density="compact" light flat>
 			<v-toolbar-title>Modules</v-toolbar-title>
 			<v-spacer></v-spacer>
 		</v-toolbar>
@@ -4204,483 +4541,548 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<div v-for="environment in dialog_site.site.environments">
 				{{ environment.environment }}
 				<v-row class="ma-2">
-					<v-col cols="6" md="3"><v-switch v-model="environment.monitor_enabled" label="Up-time Monitor" inset class="mx-3" :false-value="0" :true-value="1" @change="updateMonitor( environment )"></v-switch></v-col>
+					<v-col cols="6" md="3"><v-switch v-model="environment.monitor_enabled" label="Up-time Monitor" inset hide-details :false-value="0" :true-value="1" @change="toggleMonitor( environment )"></v-switch></v-col>
+					<v-col cols="6" md="3">
+						<v-switch v-model="environment.updates_enabled" label="Managed Updates" inset hide-details :false-value="0" :true-value="1" @change="toggleUpdates( environment )"></v-switch>
+						<v-dialog max-width="600">
+							<template v-slot:activator="{ props }">
+								<v-btn size="small" variant="tonal" class="ml-12 mt-1" v-bind="props">Manage Exclusions</v-btn>
+							</template>
+							<template v-slot:default="{ isActive }">
+							<v-card>
+								<v-toolbar flat dark color="primary">
+									<v-btn icon dark @click.native="isActive.value = false">
+										<v-icon>mdi-close</v-icon>
+									</v-btn>
+									<v-toolbar-title>Update Exclusions</v-toolbar-title>
+									<v-spacer></v-spacer>
+								</v-toolbar>
+								<v-card-text class="mt-3">
+								<v-autocomplete
+									:items="environment.plugins"
+									:item-title="item => `${item.title} (${item.name})`"
+									item-value="name"
+									v-model="environment.updates_exclude_plugins"
+									label="Plugins"
+									multiple
+									chips
+									persistent-hint
+								></v-autocomplete>
+								<v-autocomplete
+									:items="environment.themes"
+									item-title="title"
+									item-value="name"
+									v-model="environment.updates_exclude_themes"
+									label="Themes"
+									multiple
+									chips
+									persistent-hint
+								></v-autocomplete>
+								<v-btn variant="tonal" color="primary" @click="isActive.value = false">Save</v-btn>
+								</v-card-text>
+							</v-card>
+							</template>
+						</v-dialog>
+					</v-col>
 				</v-row>
 			</div>
 			</v-card-text>
 		</v-card>
-		</v-tab-item>
-		<v-tab-item :key="8" value="tab-Timeline" :transition="false" :reverse-transition="false">
-			<v-toolbar dense light flat>
+		</v-window-item>
+		<v-window-item :key="8" value="tab-Timeline" :transition="false" :reverse-transition="false">
+			<v-toolbar density="compact" color="transparent" flat>
 				<v-toolbar-title>Timeline</v-toolbar-title>
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
-					<v-btn text @click="exportTimeline()">Export <v-icon dark>mdi-file-download</v-icon></v-btn>
+					<v-btn variant="text" @click="exportTimeline()">Export <v-icon dark>mdi-file-download</v-icon></v-btn>
 					<a ref="export_json" href="#"></a>
 				</v-toolbar-items>
 			</v-toolbar>
 			<v-card flat>
 			<v-data-table
 				:headers="header_timeline"
-        		:items="dialog_site.site.timeline"
-				item-key="process_log_id"
+				:items="dialog_site.site.timeline"
+				item-value="process_log_id"
 				class="timeline"
-				>
-				<template v-slot:body="{ items }">
-					<tbody>
-					<tr v-for="item in items">
-					<td class="justify-center pt-3 pr-0 text-center shrink" style="vertical-align: top;">
-						<v-tooltip bottom>
-						<template v-slot:activator="{ on, attrs }">
-							<v-icon color="primary" dark v-bind="attrs" v-on="on" v-show="item.name">mdi-note</v-icon>
+			>
+				<template v-slot:item="{ item }">
+				<tr>
+					<td class="justify-center pt-3 pr-0 text-center shrink" style="vertical-align: top">
+					<v-tooltip location="bottom">
+						<template v-slot:activator="{ props }">
+						<v-icon
+							v-if="item.name"
+							color="primary"
+							v-bind="props"
+							icon="mdi-note"
+						></v-icon>
 						</template>
 						<span>{{ item.name }}</span>
-						</v-tooltip>
-						<v-icon color="primary" dark v-show="! item.name">mdi-checkbox-marked-circle</v-icon>
+					</v-tooltip>
+					<v-icon
+						v-if="!item.name"
+						color="primary"
+						icon="mdi-checkbox-marked-circle"
+					></v-icon>
 					</td>
-					<td class="justify-center py-4" style="vertical-align: top;">
-						<div v-html="item.description" v-show="item.description"></div>
+					<td class="justify-center py-4" style="vertical-align: top">
+					<div v-if="item.description" v-html="item.description"></div>
 					</td>
-					<td class="justify-center pt-2" style="vertical-align: top;">
-					<v-row>
-						<v-col class="shrink pr-0"><v-img :src="item.author_avatar" width="34" class="rounded"></v-img></v-col>
-						<v-col class="pt-4">{{ item.author }}</v-col>
+					<td class="pt-2" style="vertical-align: top;">
+					<v-row align="center" no-gutters>
+						<v-col cols="auto" class="pr-2">
+							<v-img :src="item.author_avatar" width="34" class="rounded"></v-img>
+						</v-col>
+						<v-col>
+							<div class="text-no-wrap">{{ item.author }}</div>
+						</v-col>
 					</v-row>
 					</td>
-					<td class="justify-center pt-3" style="vertical-align: top;">{{ item.created_at | pretty_timestamp_epoch }}</td>
-					<td class="pt-1 pr-2" style="vertical-align: top;">
-						<v-btn text icon @click="editLogEntry(dialog_site.site.site_id, item.process_log_id)" v-if="role == 'administrator'">
-							<v-icon small>mdi-pencil</v-icon>
-						</v-btn>
+					<td class="justify-center pt-3" style="vertical-align: top">
+					{{ pretty_timestamp_epoch(item.created_at) }}
+					</td>
+					<td class="pt-1 pr-2" style="vertical-align: top">
+					<v-btn
+						v-if="role == 'administrator'"
+						variant="text"
+						icon
+						@click="editLogEntry(dialog_site.site.site_id, item.process_log_id)"
+					>
+						<v-icon size="small" icon="mdi-pencil"></v-icon>
+					</v-btn>
 					</td>
 				</tr>
-				</tbody>
 				</template>
 			</v-data-table>
+			</v-data-table>
 			</v-card>
-		</v-tab-item>
+		</v-window-item>
 	</v-tabs>
 	</v-container>
 				</v-card>
 			</v-sheet>
-			<v-sheet v-show="dialog_site.step == 3">
-				<v-toolbar flat>
+			<v-sheet v-show="dialog_site.step == 3" rounded="xl">
+				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Add Site</v-toolbar-title>
 					<v-spacer></v-spacer>
-					<v-btn icon @click="goToPath( `/sites` )">
-						<v-icon>mdi-close</v-icon>
-					</v-btn>
+					<v-btn icon="mdi-close" @click="goToPath( `/sites` )"></v-btn>
 				</v-toolbar>
-				<v-card-text v-if="role == 'administrator'">
+				<v-card-text>
 					<v-form ref="form" :disabled="dialog_new_site.saving">
-						<v-layout v-for="error in dialog_new_site.errors">
-							<v-flex xs12>
-								<v-alert text :value="true" type="error">
+						<v-row v-for="error in dialog_new_site.errors" :key="error">
+							<v-col cols="12">
+								<v-alert variant="tonal" type="error">
 								{{ error }}
 								</v-alert>
-							</v-flex>
-						 </v-layout>
-						<v-layout>
-							<v-flex xs6 class="mx-2">
+							</v-col>
+						</v-row>
+						<v-row>
+							<v-col cols="12" md="6" class="py-1">
 								<v-autocomplete
 									:items='[{"name":"Kinsta","value":"kinsta"},{"name":"Rocket.net","value":"rocketdotnet"},{"name":"WP Engine","value":"wpengine"}]'
-									item-text="name"
+									item-title="name"
 									v-model="dialog_new_site.provider"
 									label="Provider"
+									variant="underlined"
 								></v-autocomplete>
-							</v-flex>
-							<v-flex xs6 class="mx-2">
-								<v-text-field :value="dialog_new_site.name" @change.native="dialog_new_site.name = $event.target.value" label="Domain name" required></v-text-field>
-							</v-flex>
-						</v-layout>
-						<v-layout>
-							<v-flex xs6 class="mx-2">
-						    	<v-text-field :value="dialog_new_site.site" @change.native="dialog_new_site.site = $event.target.value" label="Site name" required hint="Should match provider site name." persistent-hint></v-text-field>
-						</v-flex>
-							<v-flex xs6 class="mx-2">
-							<v-autocomplete
-								:items="keySelections"
-								v-model="dialog_new_site.key"
-								item-text="title"
-								item-value="key_id"
-								label="Override SSH Key"
-								hint="Will default to"
-								persistent-hint chips deletable-chips
-							>
-							<template v-slot:message="{ message, key }">
-								<span>{{ message }} <a :href=`${configurations.path}keys` @click.prevent="goToPath( '/keys' )" >primary SSH key</a>.</span>
-							</template>
-							</v-autocomplete>
-					        </v-flex>
-						</v-layout>
-						<v-layout>
-							<v-flex xs12 class="mx-2">
-							<v-autocomplete
-								:items="accounts"
-								v-model="dialog_new_site.shared_with"
-								label="Assign to an account"
-								item-text="name"
-								item-value="account_id"
-								chips
-								deletable-chips
-								multiple
-								return-object
-								hint="If a customer account is not assigned then a new account will be created automatically."
-								persistent-hint
-								:menu-props="{ closeOnContentClick:true, openOnClick: false }"
-							>
-							</v-autocomplete>
-							<v-expand-transition>
-							<v-row dense v-if="dialog_new_site.shared_with && dialog_new_site.shared_with.length > 0" class="mt-3">
-							<v-col v-for="account in dialog_new_site.shared_with" :key="account.account_id" cols="4">
-							<v-card>
-								<v-card-title v-text="account.name"></v-card-title>
-								<v-card-actions>
-								<v-tooltip top>
-								<template v-slot:activator="{ on, attrs }">
-								<v-btn-toggle v-model="dialog_new_site.customer_id" color="primary" group>
-									<v-btn text :value="account.account_id" v-bind="attrs" v-on="on">
-										<v-icon>mdi-account-circle</v-icon>
-									</v-btn>
-								</v-btn-toggle>
-								</template>
-								<span>Set as customer contact</span>
-								</v-tooltip>
-								<v-tooltip top>
-								<template v-slot:activator="{ on, attrs }">
-								<v-btn-toggle v-model="dialog_new_site.account_id" color="primary" group>
-									<v-btn text :value="account.account_id" v-bind="attrs" v-on="on">
-										<v-icon>mdi-currency-usd</v-icon>
-									</v-btn>
-								</v-btn-toggle>
-								</template>
-								<span>Set as billing contact</span>
-								</v-tooltip>
-								</v-card-actions>
-							</v-card>
-							</v-expand-transition>
-						</v-flex>
-						</v-layout>
-						<v-layout class="mt-5">
-							<v-flex class="mx-2" xs6 v-for="(key, index) in dialog_new_site.environments" :key="key.index">
-							<v-toolbar flat dense color="accent">
-								<div>{{ key.environment }} Environment</div>
-								<v-spacer></v-spacer>
-								<v-tooltip top v-if="key.environment == 'Staging'">
-									<template v-slot:activator="{ on }">
-										<v-btn text small icon color="red" @click="dialog_new_site.environments.splice( index )" v-on="on"><v-icon>mdi-delete</v-icon></v-btn>
+							</v-col>
+							<v-col cols="12" md="6" class="py-1">
+								<v-text-field :model-value="dialog_new_site.name" @update:model-value="dialog_new_site.name = $event" label="Domain name" required variant="underlined"></v-text-field>
+							</v-col>
+						</v-row>
+						<v-row>
+							<v-col cols="12" md="6" class="py-1">
+								<v-text-field :model-value="dialog_new_site.site" @update:model-value="dialog_new_site.site = $event" label="Site name" required hint="Should match provider site name." persistent-hint variant="underlined"></v-text-field>
+							</v-col>
+							<v-col cols="12" md="6" class="py-1">
+								<v-autocomplete
+									:items="keySelections"
+									v-model="dialog_new_site.key"
+									item-title="title"
+									item-value="key_id"
+									label="Override SSH Key"
+									hint="Will default to"
+									persistent-hint
+									chips
+									closable-chips
+									variant="underlined"
+								>
+									<template v-slot:message="{ message, key }">
+										<span>{{ message }} <a :href="`${configurations.path}keys`" @click.prevent="goToPath( '/keys' )" >primary SSH key</a>.</span>
 									</template>
-									<span>Delete Environment</span>
-								</v-tooltip>
-								<v-tooltip top v-if="key.environment == 'Staging'">
-									<template v-slot:activator="{ on }">
-										<v-btn text small icon color="green" @click="new_site_preload_staging()" v-on="on"><v-icon>mdi-cached</v-icon></v-btn>
+								</v-autocomplete>
+							</v-col>
+						</v-row>
+						<v-row v-show="configurations.mode == 'hosting'">
+							<v-col cols="12">
+								<v-autocomplete
+									:items="accounts"
+									v-model="dialog_new_site.shared_with"
+									label="Assign to an account"
+									item-title="name"
+									item-value="account_id"
+									chips
+									closable-chips
+									multiple
+									return-object
+									hint="If a customer account is not assigned then a new account will be created automatically."
+									persistent-hint
+									:menu-props="{ closeOnContentClick:true, openOnClick: false }"
+									variant="underlined"
+								>
+								</v-autocomplete>
+								<v-expand-transition>
+									<v-row density="compact" v-if="dialog_new_site.shared_with && dialog_new_site.shared_with.length > 0" class="mt-3">
+										<v-col v-for="account in dialog_new_site.shared_with" :key="account.account_id" cols="12" sm="6" md="4">
+											<v-card>
+												<v-card-title>{{ account.name }}</v-card-title>
+												<v-card-actions>
+													<v-tooltip location="top">
+														<template v-slot:activator="{ props }">
+															<v-btn-toggle v-model="dialog_new_site.customer_id" color="primary">
+																<v-btn variant="text" :value="account.account_id" v-bind="props" icon="mdi-account-circle"></v-btn>
+															</v-btn-toggle>
+														</template>
+														<span>Set as customer contact</span>
+													</v-tooltip>
+													<v-tooltip location="top">
+														<template v-slot:activator="{ props }">
+															<v-btn-toggle v-model="dialog_new_site.account_id" color="primary">
+																<v-btn variant="text" :value="account.account_id" v-bind="props" icon="mdi-currency-usd"></v-btn>
+															</v-btn-toggle>
+														</template>
+														<span>Set as billing contact</span>
+													</v-tooltip>
+												</v-card-actions>
+											</v-card>
+										</v-col>
+									</v-row>
+								</v-expand-transition>
+							</v-col>
+						</v-row>
+						<v-row class="mt-5">
+							<v-col cols="12" md="6" class="py-1" v-for="(key, index) in dialog_new_site.environments" :key="key.index">
+								<v-toolbar flat density="compact" color="accent" class="pl-2">
+									<div>{{ key.environment }} Environment</div>
+									<v-spacer></v-spacer>
+									<v-tooltip location="top" v-if="key.environment == 'Staging'">
+										<template v-slot:activator="{ props }">
+											<v-btn variant="text" size="small" icon="mdi-delete" color="red" @click="dialog_new_site.environments.splice( index, 1 )" v-bind="props"></v-btn>
+										</template>
+										<span>Delete Environment</span>
+									</v-tooltip>
+									<v-tooltip location="top" v-if="key.environment == 'Staging'">
+										<template v-slot:activator="{ props }">
+											<v-btn variant="text" size="small" icon="mdi-cached" color="green" @click="new_site_preload_staging()" v-bind="props"></v-btn>
+										</template>
+										<span>Preload based on Production</span>
+									</v-tooltip>
+								</v-toolbar>
+								<v-text-field label="Address" :model-value="key.address" @update:model-value="key.address = $event" required hint="Server IP address or server host" persistent-hint variant="underlined"></v-text-field>
+								<v-text-field label="Home Directory" :model-value="key.home_directory" @update:model-value="key.home_directory = $event" required variant="underlined"></v-text-field>
+								<v-row dense>
+									<v-col cols="6"><v-text-field label="Username" :model-value="key.username" @update:model-value="key.username = $event" required variant="underlined"></v-text-field></v-col>
+									<v-col cols="6"><v-text-field label="Password" :model-value="key.password" @update:model-value="key.password = $event" required variant="underlined"></v-text-field></v-col>
+								</v-row>
+								<v-row dense>
+									<v-col cols="6"><v-text-field label="Protocol" :model-value="key.protocol" @update:model-value="key.protocol = $event" required variant="underlined"></v-text-field></v-col>
+									<v-col cols="6"><v-text-field label="Port" :model-value="key.port" @update:model-value="key.port = $event" required variant="underlined"></v-text-field></v-col>
+								</v-row>
+								<v-row dense>
+									<v-col cols="6"><v-switch label="Automatic Updates" v-model="key.updates_enabled" false-value="0" true-value="1" color="primary" inset hide-details></v-switch></v-col>
+									<v-col cols="6" v-if="typeof key.offload_enabled != 'undefined' && key.offload_enabled == 1">
+										<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" color="primary" inset hide-details></v-switch>
+									</v-col>
+								</v-row>
+								<div v-if="key.offload_enabled == 1">
+									<v-row dense>
+										<v-col cols="6"><v-select label="Offload Provider" :model-value="key.offload_provider" @update:model-value="key.offload_provider = $event" :items='[{ provider:"s3", label: "Amazon S3" },{ provider:"do", label:"Digital Ocean" }]' item-title="label" item-value="provider" clearable variant="underlined"></v-select></v-col>
+										<v-col cols="6"><v-text-field label="Offload Access Key" :model-value="key.offload_access_key" @update:model-value="key.offload_access_key = $event" required variant="underlined"></v-text-field></v-col>
+									</v-row>
+									<v-row dense>
+										<v-col cols="6"><v-text-field label="Offload Secret Key" :model-value="key.offload_secret_key" @update:model-value="key.offload_secret_key = $event" required variant="underlined"></v-text-field></v-col>
+										<v-col cols="6"><v-text-field label="Offload Bucket" :model-value="key.offload_bucket" @update:model-value="key.offload_bucket = $event" required variant="underlined"></v-text-field></v-col>
+									</v-row>
+									<v-row dense>
+										<v-col cols="6"><v-text-field label="Offload Path" :model-value="key.offload_path" @update:model-value="key.offload_path = $event" required variant="underlined"></v-text-field></v-col>
+									</v-row>
+								</div>
+							</v-col>
+							<v-col cols="12" md="6" class="py-2" v-show="dialog_new_site.environments && dialog_new_site.environments.length == 1">
+								<v-btn @click='dialog_new_site.environments.push( {"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",monitor_enabled:"0",updates_enabled:"1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" } )' variant="outlined">Add Staging Environment</v-btn>
+							</v-col>
+						</v-row>
+						<v-row>
+							<v-col cols="6">
+								<v-progress-circular v-show="dialog_new_site.saving" indeterminate color="primary" class="ma-2" size="24"></v-progress-circular>
+							</v-col>
+							<v-col cols="6" class="text-end">
+								<v-dialog v-model="dialog_new_site.show_vars" scrollable max-width="700px">
+									<template v-slot:activator="{ props }">
+										<v-btn v-bind="props" class="mr-2" color="secondary" variant="tonal">Configure Environment Vars</v-btn>
 									</template>
-									<span>Preload based on Production</span>
-								</v-tooltip>
-							</v-toolbar>
-							<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required hint="Server IP address or server host" persistent-hint></v-text-field>
-							<v-text-field label="Home Directory" :value="key.home_directory" @change.native="key.home_directory = $event.target.value" required></v-text-field>
-							<v-layout>
-								<v-flex xs6 class="mr-1"><v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field></v-flex>
-								<v-flex xs6 class="ml-1"><v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field></v-flex>
-							</v-layout>
-							<v-layout>
-								<v-flex xs6 class="mr-1"><v-text-field label="Protocol" :value="key.protocol" @change.native="key.protocol = $event.target.value" required></v-text-field></v-flex>
-								<v-flex xs6 class="mr-1"><v-text-field label="Port" :value="key.port" @change.native="key.port = $event.target.value" required></v-text-field></v-flex>
-							</v-layout>
-							<v-layout>
-								<v-flex xs6 class="mr-1"><v-switch label="Automatic Updates" v-model="key.updates_enabled" false-value="0" true-value="1"></v-switch></v-flex>
-								<v-flex xs6 class="mr-1" v-if="typeof key.offload_enabled != 'undefined' && key.offload_enabled == 1">
-									<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
-								</v-flex>
-							</v-layout>
-							<div v-if="key.offload_enabled == 1">
-							<v-layout>
-								<v-flex xs6 class="mr-1"><v-select label="Offload Provider" :value="key.offload_provider" @change.native="key.offload_provider = $event.target.value" :items='[{ provider:"s3", label: "Amazon S3" },{ provider:"do", label:"Digital Ocean" }]' item-text="label" item-value="provider" clearable></v-select></v-flex>
-								<v-flex xs6 class="mr-1"><v-text-field label="Offload Access Key" :value="key.offload_access_key" @change.native="key.offload_access_key = $event.target.value" required></v-text-field></v-flex>
-							</v-layout>
-							<v-layout>
-								<v-flex xs6 class="mr-1"><v-text-field label="Offload Secret Key" :value="key.offload_secret_key" @change.native="key.offload_secret_key = $event.target.value" required></v-text-field></v-flex>
-								<v-flex xs6 class="mr-1"><v-text-field label="Offload Bucket" :value="key.offload_bucket" @change.native="key.offload_bucket = $event.target.value" required></v-text-field></v-flex>
-							</v-layout>
-							<v-layout>
-								<v-flex xs6 class="mr-1"><v-text-field label="Offload Path" :value="key.offload_path" @change.native="key.offload_path = $event.target.value" required></v-text-field></v-flex>
-							</v-layout>
-						</div>
-							</v-flex>
-							<v-flex class="mx-2" xs6 v-show="dialog_new_site.environments && dialog_new_site.environments.length == 1">
-								<v-btn @click='dialog_new_site.environments.push( {"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",monitor_enabled:"0",updates_enabled:"1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" } )'>Add Staging Environment</v-btn>
-							</v-flex>		
-						</v-layout>
-						<v-layout>
-						 	<v-flex xs6><v-progress-circular v-show="dialog_new_site.saving" indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></v-flex>
-							<v-flex xs6 text-right>
-								<v-dialog v-model="dialog_new_site.show_vars" scrollable hide-overlay max-width="700px">
-								<template v-slot:activator="{ on }">
-									<v-btn v-on="on" class="mr-2">Configure Environment Vars</v-btn>
-								</template>
-								<v-card>
+									<v-card>
 										<v-list>
-										<v-list-item>
-											<v-list-item-content>
-											<v-list-item-title>Environment Vars</v-list-item-title>
-											<v-list-item-subtitle>Pass along with SSH requests</v-list-item-subtitle>
-											</v-list-item-content>
-											<v-list-item-action>
-												<v-btn @click="addEnvironmentVarNewSite()">Add</v-btn>
-											</v-list-item-action>
-										</v-list-item>
+											<v-list-item>
+												<v-list-item-title>Environment Vars</v-list-item-title>
+												<v-list-item-subtitle>Pass along with SSH requests</v-list-item-subtitle>
+												<template v-slot:append>
+													<v-btn @click="addEnvironmentVarNewSite()">Add</v-btn>
+												</template>
+											</v-list-item>
 										</v-list>
 										<v-card-text>
-										<v-row v-for="(item, index) in dialog_new_site.environment_vars">
-											<v-col class="pb-0"><v-text-field hide-details :value="item.key" @change.native="item.key = $event.target.value" label="Key"></v-text-field></v-col>
-											<v-col class="pb-0"><v-text-field hide-details :value="item.value" @change.native="item.value = $event.target.value" label="Value"></v-text-field></v-col>
-											<v-col class="pb-0 pt-5" style="max-width:58px"><v-btn icon @click="removeEnvironmentVarNewSite(index)"><v-icon>mdi-delete</v-icon></v-btn></v-col>
-										</v-row>
+											<v-row v-for="(item, index) in dialog_new_site.environment_vars" :key="index">
+												<v-col class="pb-0">
+													<v-text-field hide-details :model-value="item.key" @update:model-value="item.key = $event" label="Key" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="pb-0">
+													<v-text-field hide-details :model-value="item.value" @update:model-value="item.value = $event" label="Value" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="pb-0 pt-5" style="max-width:58px">
+													<v-btn icon="mdi-delete" @click="removeEnvironmentVarNewSite(index)" variant="text"></v-btn>
+												</v-col>
+											</v-row>
 										</v-card-text>
 										<v-card-actions>
-										<v-spacer></v-spacer>
-										<v-btn color="primary" text @click="dialog_new_site.show_vars = false">Close</v-btn>
+											<v-spacer></v-spacer>
+											<v-btn color="primary" variant="text" @click="dialog_new_site.show_vars = false">Close</v-btn>
 										</v-card-actions>
 									</v-card>
 								</v-dialog>
-								<v-btn color="primary" right @click="submitNewSite()">Add Site</v-btn>
-							</v-flex>
-						</v-layout>
-				</v-form>
-	          </v-card-text>
+								<v-btn color="primary" @click="submitNewSite()">Add Site</v-btn>
+							</v-col>
+						</v-row>
+					</v-form>
+				</v-card-text>
 			</v-sheet>
 			<v-sheet v-show="dialog_site.step == 4" color="transparent">
-				<v-toolbar flat color="transparent">
-					<v-toolbar-title>Edit Site {{ dialog_edit_site.site.name }}</v-toolbar-title>
-					<v-spacer></v-spacer>
-					<v-btn icon @click.native="dialog_site.step = 2">
-						<v-icon>mdi-close</v-icon>
-						</v-btn>
-				</v-toolbar>
-				<v-card-text v-if="role == 'administrator'">
+			<v-toolbar elevation="0" color="transparent">
+				<v-toolbar-title>Edit Site {{ dialog_edit_site.site.name }}</v-toolbar-title>
+				<v-spacer></v-spacer>
+				<v-btn icon="mdi-close" @click="dialog_site.step = 2"></v-btn>
+			</v-toolbar>
+			<v-card-text v-if="role == 'administrator'">
 				<v-form ref="form" :disabled="dialog_edit_site.loading">
-					<v-layout v-for="error in dialog_edit_site.errors">
-						<v-flex xs12>
-							<v-alert text :value="true" type="error">
-							{{ error }}
-							</v-alert>
-						</v-flex>
-					</v-layout>
-					<v-layout>
-						<v-flex xs6 class="mx-2">
-						<v-autocomplete
-							:items='[{"name":"Kinsta","value":"kinsta"},{"name":"Rocket.net","value":"rocketdotnet"},{"name":"WP Engine","value":"wpengine"}]'
-							item-text="name"
-							v-model="dialog_edit_site.site.provider"
-							label="Provider"
-						></v-autocomplete>
-						</v-flex>
-						<v-flex xs6 class="mx-2">
-							<v-text-field :value="dialog_edit_site.site.name" @change.native="dialog_edit_site.site.name = $event.target.value" label="Domain name" required></v-text-field>
-						</v-flex>
-					</v-layout>
-					<v-layout>
-						<v-flex xs6 class="mx-2">
-							<v-text-field :value="dialog_edit_site.site.site" @change.native="dialog_edit_site.site.site = $event.target.value" label="Site name (not changeable)" disabled></v-text-field>
-						</v-flex>
-						<v-flex xs6 class="mx-2">
-							<v-autocomplete
-								:items="keySelections"
-								item-text="title"
-								item-value="key_id"
-								v-model="dialog_edit_site.site.key"
-								label="Override SSH Key"
-								hint="Will default to"
-								persistent-hint chips deletable-chips
-							>
-							<template v-slot:message="{ message, key }">
-								<span>{{ message }} <a :href=`${configurations.path}keys` @click.prevent="goToPath( '/keys' )" >primary SSH key</a>.</span>
-							</template>
-							</v-autocomplete>
-						</v-flex>
-					</v-layout>
-					<v-layout>
-						<v-flex xs12 class="mx-2">
-							<v-autocomplete
-								:items="accounts"
-								v-model="dialog_edit_site.site.shared_with"
-								label="Assign to an account"
-								item-text="name"
-								item-value="account_id"
-								chips
-								deletable-chips
-								multiple
-								return-object
-								hint="If a customer account is not assigned then a new account will be created automatically."
-								persistent-hint
-								:menu-props="{ closeOnContentClick:true, openOnClick: false }"
-							>
-							</v-autocomplete>
-							<v-expand-transition>
-							<v-row dense v-if="dialog_edit_site.site.shared_with && dialog_edit_site.site.shared_with.length > 0" class="mt-3">
-							<v-col v-for="account in dialog_edit_site.site.shared_with" :key="account.account_id" cols="4">
+				<v-row v-for="(error, index) in dialog_edit_site.errors" :key="index">
+					<v-col cols="12">
+					<v-alert variant="tonal" type="error" class="mb-2"> {{ error }} </v-alert>
+					</v-col>
+				</v-row>
+				<v-row dense>
+					<v-col cols="6">
+					<v-autocomplete
+						:items='[{"name":"Kinsta","value":"kinsta"},{"name":"Rocket.net","value":"rocketdotnet"},{"name":"WP Engine","value":"wpengine"}]'
+						item-title="name"
+						item-value="value"
+						v-model="dialog_edit_site.site.provider"
+						label="Provider"
+						variant="underlined"
+					></v-autocomplete>
+					</v-col>
+					<v-col cols="6">
+						<v-text-field v-model="dialog_edit_site.site.name" label="Domain name" required variant="underlined"></v-text-field>
+					</v-col>
+				</v-row>
+				<v-row dense>
+					<v-col cols="6">
+						<v-text-field v-model="dialog_edit_site.site.site" label="Site name (not changeable)" disabled variant="underlined"></v-text-field>
+					</v-col>
+					<v-col cols="6">
+					<v-autocomplete
+						:items="keySelections"
+						item-title="title"
+						item-value="key_id"
+						v-model="dialog_edit_site.site.key"
+						label="Override SSH Key"
+						hint="Will default to"
+						variant="underlined"
+						persistent-hint
+						closable-chips
+						chips
+					>
+						<template v-slot:message="{ message }">
+						<span>{{ message }} <a :href="`${configurations.path}keys`" @click.prevent="goToPath( '/keys' )">primary SSH key</a>.</span>
+						</template>
+					</v-autocomplete>
+					</v-col>
+				</v-row>
+				<v-row dense>
+					<v-col cols="12" class="mx-2">
+					<v-autocomplete
+						:items="accounts"
+						v-model="dialog_edit_site.site.shared_with"
+						label="Assign to an account"
+						item-title="name"
+						item-value="account_id"
+						chips
+						closable-chips
+						multiple
+						return-object
+						hint="If a customer account is not assigned then a new account will be created automatically."
+						persistent-hint
+						:menu-props="{ closeOnClick: false }"
+						close-on-content-click
+						variant="underlined"
+					>
+					</v-autocomplete>
+					<v-expand-transition>
+						<v-row density="compact" v-if="dialog_edit_site.site.shared_with && dialog_edit_site.site.shared_with.length > 0" class="mt-3">
+						<v-col v-for="account in dialog_edit_site.site.shared_with" :key="account.account_id" cols="4">
 							<v-card>
-								<v-card-title v-html="account.name"></v-card-title>
-								<v-card-actions>
-								<v-tooltip top>
-								<template v-slot:activator="{ on, attrs }">
-								<v-btn-toggle v-model="dialog_edit_site.site.customer_id" color="primary" group>
-									<v-btn text :value="account.account_id" v-bind="attrs" v-on="on">
-										<v-icon>mdi-account-circle</v-icon>
-									</v-btn>
-								</v-btn-toggle>
+							<v-card-title v-html="account.name"></v-card-title>
+							<v-card-actions>
+								<v-tooltip location="top">
+								<template v-slot:activator="{ props }">
+									<v-btn-toggle v-model="dialog_edit_site.site.customer_id" color="primary" mandatory>
+									<v-btn :value="account.account_id" v-bind="props" icon="mdi-account-circle"></v-btn>
+									</v-btn-toggle>
 								</template>
 								<span>Set as customer contact</span>
 								</v-tooltip>
-								<v-tooltip top>
-								<template v-slot:activator="{ on, attrs }">
-								<v-btn-toggle v-model="dialog_edit_site.site.account_id" color="primary" group>
-									<v-btn text :value="account.account_id" v-bind="attrs" v-on="on">
-										<v-icon>mdi-currency-usd</v-icon>
-									</v-btn>
-								</v-btn-toggle>
+								<v-tooltip location="top">
+								<template v-slot:activator="{ props }">
+									<v-btn-toggle v-model="dialog_edit_site.site.account_id" color="primary" mandatory>
+									<v-btn :value="account.account_id" v-bind="props" icon="mdi-currency-usd"></v-btn>
+									</v-btn-toggle>
 								</template>
 								<span>Set as billing contact</span>
 								</v-tooltip>
-								</v-card-actions>
+							</v-card-actions>
 							</v-card>
-							</v-expand-transition>
-						</v-flex>
-					</v-layout>
-					<v-layout class="mt-5">
-						<v-flex class="mx-2" xs6 v-for="(key, index) in dialog_edit_site.site.environments" :key="key.index">
-							<v-toolbar flat dense color="accent">
-								<div>{{ key.environment }} Environment</div>
-								<v-spacer></v-spacer>
-								<v-tooltip top v-if="key.environment == 'Staging'">
-									<template v-slot:activator="{ on }">
-										<v-btn text small icon color="red" @click="dialog_edit_site.site.environments.splice( index )" v-on="on"><v-icon>mdi-delete</v-icon></v-btn>
-									</template>
-									<span>Delete Environment</span>
-								</v-tooltip>
-								<v-tooltip top v-if="key.environment == 'Staging'">
-									<template v-slot:activator="{ on }">
-										<v-btn text small icon color="green" @click="edit_site_preload_staging()" v-on="on"><v-icon>mdi-cached</v-icon></v-btn>
-									</template>
-									<span>Preload based on Production</span>
-								</v-tooltip>
-							</v-toolbar>
-							<v-text-field label="Address" :value="key.address" @change.native="key.address = $event.target.value" required></v-text-field>
-							<v-text-field label="Home Directory" :value="key.home_directory" @change.native="key.home_directory = $event.target.value" required></v-text-field>
-							<v-layout>
-								<v-flex xs6 class="mr-1"><v-text-field label="Username" :value="key.username" @change.native="key.username = $event.target.value" required></v-text-field></v-flex>
-								<v-flex xs6 class="ml-1"><v-text-field label="Password" :value="key.password" @change.native="key.password = $event.target.value" required></v-text-field></v-flex>
-							</v-layout>
-							<v-layout>
-								<v-flex xs6 class="mr-1"><v-text-field label="Protocol" :value="key.protocol" @change.native="key.protocol = $event.target.value" required></v-text-field></v-flex>
-								<v-flex xs6 class="mr-1"><v-text-field label="Port" :value="key.port" @change.native="key.port = $event.target.value" required></v-text-field></v-flex>
-							</v-layout>
-							<v-layout>
-									<v-flex xs6 class="mr-1" v-if="typeof key.offload_enabled != 'undefined' && key.offload_enabled == 1">
-										<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" left></v-switch>
-									</v-flex>
-							</v-layout>
-							<div v-if="key.offload_enabled == 1">
-							<v-layout>
-								<v-flex xs6 class="mr-1"><v-select label="Offload Provider" :value="key.offload_provider" @change.native="key.offload_provider = $event.target.value" :items='[{ provider:"s3", label: "Amazon S3" },{ provider:"do", label:"Digital Ocean" }]' item-text="label" item-value="provider" clearable></v-select></v-flex>
-								<v-flex xs6 class="mr-1"><v-text-field label="Offload Access Key" :value="key.offload_access_key" @change.native="key.offload_access_key = $event.target.value" required></v-text-field></v-flex>
-							</v-layout>
-							<v-layout>
-								<v-flex xs6 class="mr-1"><v-text-field label="Offload Secret Key" :value="key.offload_secret_key" @change.native="key.offload_secret_key = $event.target.value" required></v-text-field></v-flex>
-								<v-flex xs6 class="mr-1"><v-text-field label="Offload Bucket" :value="key.offload_bucket" @change.native="key.offload_bucket = $event.target.value" required></v-text-field></v-flex>
-							</v-layout>
-							<v-layout>
-								<v-flex xs6 class="mr-1"><v-text-field label="Offload Path" :value="key.offload_path" @change.native="key.offload_path = $event.target.value" required></v-text-field></v-flex>
-							</v-layout>
+						</v-col>
+						</v-row>
+					</v-expand-transition>
+					</v-col>
+				</v-row>
+				<v-row class="mt-5">
+					<v-col cols="6" v-for="(key, index) in dialog_edit_site.site.environments" :key="key.environment">
+					<v-toolbar elevation="0" density="compact" color="accent">
+						<div>{{ key.environment }} Environment</div>
+						<v-spacer></v-spacer>
+						<v-tooltip location="top" v-if="key.environment == 'Staging'">
+						<template v-slot:activator="{ props }">
+							<v-btn variant="text" size="small" icon="mdi-delete" color="red" @click="dialog_edit_site.site.environments.splice( index, 1 )" v-bind="props"></v-btn>
+						</template>
+						<span>Delete Environment</span>
+						</v-tooltip>
+						<v-tooltip location="top" v-if="key.environment == 'Staging'">
+						<template v-slot:activator="{ props }">
+							<v-btn variant="text" size="small" icon="mdi-cached" color="green" @click="edit_site_preload_staging()" v-bind="props"></v-btn>
+						</template>
+						<span>Preload based on Production</span>
+						</v-tooltip>
+					</v-toolbar>
+					<v-row dense>
+						<v-col cols="12"><v-text-field label="Address" v-model="key.address" required variant="underlined"></v-text-field></v-col>
+					</v-row>
+					<v-row dense>
+						<v-col cols="12"><v-text-field label="Home Directory" v-model="key.home_directory" required variant="underlined"></v-text-field></v-col>
+					</v-row>
+					<v-row dense>
+						<v-col cols="6"><v-text-field label="Username" v-model="key.username" required variant="underlined"></v-text-field></v-col>
+						<v-col cols="6"><v-text-field label="Password" v-model="key.password" required variant="underlined"></v-text-field></v-col>
+					</v-row>
+					<v-row dense>
+						<v-col cols="6"><v-text-field label="Protocol" v-model="key.protocol" required variant="underlined"></v-text-field></v-col>
+						<v-col cols="6"><v-text-field label="Port" v-model="key.port" required variant="underlined"></v-text-field></v-col>
+					</v-row>
+					<v-row dense>
+						<v-col cols="6" v-if="typeof key.offload_enabled != 'undefined' && key.offload_enabled == 1">
+							<v-switch label="Use Offload" v-model="key.offload_enabled" false-value="0" true-value="1" color="primary" inset></v-switch>
+						</v-col>
+					</v-row>
+					<div v-if="key.offload_enabled == 1">
+						<v-row>
+						<v-col cols="6"><v-select label="Offload Provider" v-model="key.offload_provider" :items='[{ provider:"s3", label: "Amazon S3" },{ provider:"do", label:"Digital Ocean" }]' item-title="label" item-value="provider" clearable></v-select></v-col>
+						<v-col cols="6"><v-text-field label="Offload Access Key" v-model="key.offload_access_key" required variant="underlined"></v-text-field></v-col>
+						</v-row>
+						<v-row>
+						<v-col cols="6"><v-text-field label="Offload Secret Key" v-model="key.offload_secret_key" required variant="underlined"></v-text-field></v-col>
+						<v-col cols="6"><v-text-field label="Offload Bucket" v-model="key.offload_bucket" required variant="underlined"></v-text-field></v-col>
+						</v-row>
+						<v-row>
+						<v-col cols="6"><v-text-field label="Offload Path" v-model="key.offload_path" required variant="underlined"></v-text-field></v-col>
+						</v-row>
 					</div>
-						</v-flex>
-						<v-flex class="mx-2" xs6 v-show="dialog_edit_site.site.environments && dialog_edit_site.site.environments.length == 1">
-							<v-btn @click='dialog_edit_site.site.environments.push( {"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",monitor_enabled: "0",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" } )'>Add Staging Environment</v-btn>
-						</v-flex>	
-					</v-layout>
-					<v-layout>
-						<v-flex xs6><v-progress-circular v-show="dialog_edit_site.loading" indeterminate color="primary"></v-progress-linear></v-flex>
-						<v-flex xs6 text-right>
-						<v-dialog v-model="dialog_edit_site.show_vars" scrollable hide-overlay max-width="700px">
-						<template v-slot:activator="{ on }">
-							<v-btn v-on="on" class="mr-2">Configure Environment Vars</v-btn>
+					</v-col>
+					<v-col class="mx-2" cols="6" v-show="dialog_edit_site.site.environments && dialog_edit_site.site.environments.length == 1">
+					<v-btn @click='dialog_edit_site.site.environments.push( {"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"",monitor_enabled: "0",updates_enabled: "1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" } )'>Add Staging Environment</v-btn>
+					</v-col>
+				</v-row>
+				<v-row>
+					<v-col cols="6"><v-progress-circular v-show="dialog_edit_site.loading" indeterminate color="primary"></v-progress-circular></v-col>
+					<v-col cols="6" class="text-right">
+					<v-dialog v-model="dialog_edit_site.show_vars" scrollable scrim="false" max-width="700px">
+						<template v-slot:activator="{ props }">
+						<v-btn v-bind="props" class="mr-2">Configure Environment Vars</v-btn>
 						</template>
 						<v-card>
-								<v-list>
-								<v-list-item>
-									<v-list-item-content>
-									<v-list-item-title>Environment Vars</v-list-item-title>
-									<v-list-item-subtitle>Pass along with SSH requests</v-list-item-subtitle>
-									</v-list-item-content>
-									<v-list-item-action>
-										<v-btn @click="addEnvironmentVar()">Add</v-btn>
-									</v-list-item-action>
-								</v-list-item>
-								</v-list>
-								<v-card-text>
-								<v-row v-for="(item, index) in dialog_edit_site.site.environment_vars">
-									<v-col class="pb-0"><v-text-field hide-details :value="item.key" @change.native="item.key = $event.target.value" label="Key"></v-text-field></v-col>
-									<v-col class="pb-0"><v-text-field hide-details :value="item.value" @change.native="item.value = $event.target.value" label="Value"></v-text-field></v-col>
-									<v-col class="pb-0 pt-5" style="max-width:58px"><v-btn icon @click="removeEnvironmentVar(index)"><v-icon>mdi-delete</v-icon></v-btn></v-col>
-								</v-row>
-								</v-card-text>
-								<v-card-actions>
-								<v-spacer></v-spacer>
-								<v-btn color="primary" text @click="dialog_edit_site.show_vars = false">Close</v-btn>
-								</v-card-actions>
-				</v-card>
-						</v-dialog>
-							<v-btn right @click="updateSite" color="primary">
-								Save Changes
-							</v-btn>
-						</v-flex>
-					 </v-layout>
+						<v-list>
+							<v-list-item>
+							<div>
+								<v-list-item-title>Environment Vars</v-list-item-title>
+								<v-list-item-subtitle>Pass along with SSH requests</v-list-item-subtitle>
+							</div>
+							<template v-slot:append>
+								<v-btn @click="addEnvironmentVar()">Add</v-btn>
+							</template>
+							</v-list-item>
+						</v-list>
+						<v-card-text>
+							<v-row v-for="(item, index) in dialog_edit_site.site.environment_vars" :key="index">
+							<v-col class="pb-0"><v-text-field hide-details v-model="item.key" label="Key"></v-text-field></v-col>
+							<v-col class="pb-0"><v-text-field hide-details v-model="item.value" label="Value"></v-text-field></v-col>
+							<v-col class="pb-0 pt-5" style="max-width:58px"><v-btn icon="mdi-delete" @click="removeEnvironmentVar(index)"></v-btn></v-col>
+							</v-row>
+						</v-card-text>
+						<v-card-actions>
+							<v-spacer></v-spacer>
+							<v-btn color="primary" variant="text" @click="dialog_edit_site.show_vars = false">Close</v-btn>
+						</v-card-actions>
+						</v-card>
+					</v-dialog>
+					<v-btn @click="updateSite" color="primary"> Save Changes </v-btn>
+					</v-col>
+				</v-row>
 				</v-form>
-				</v-card-text>
+			</v-card-text>
 			</v-sheet>
+
 			</v-card>
-			<v-card v-if="route == 'domains'" outlined rounded="xl">
+			<v-card v-if="route == 'domains'" flat border="thin" rounded="xl">
 			<v-sheet v-show="dialog_domain.step == 1" color="transparent">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing {{ allDomains }} domains</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn text @click="dialog_new_domain.show = true">Add Domain <v-icon dark>mdi-plus</v-icon></v-btn>
+						<v-btn variant="text" @click="dialog_new_domain.show = true">Add Domain <v-icon dark>mdi-plus</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
 				<v-card flat class="mb-4 dns_introduction" v-show="configurations.dns_nameservers != ''">
-					<v-alert :value="true" type="info" text>
-						<v-row>
-						<v-col class="grow">
+					<v-alert type="info" variant="tonal">
+						<v-row class="flex-nowrap">
+						<v-col class="flex-grow-1 flex-shrink-0">
 							<div v-html="configurations.dns_introduction_html"></div>
 						</v-col>
-						<v-col class="shrink">
+						<v-col class="flex-shrink-1 flex-grow-0">
 						<v-dialog max-width="440">
-							<template v-slot:activator="{ on, attrs }">
-								<v-btn v-bind="attrs" v-on="on" color="primary">Show Nameservers</v-btn>
+							<template v-slot:activator="{ props }">
+								<v-btn v-bind="props" color="primary">Show Nameservers</v-btn>
 							</template>
-							<template v-slot:default="dialog">
+							<template v-slot:default="{ isActive }">
 							<v-card>
-								<v-toolbar color="primary" dark>
-								<v-btn icon dark @click="dialog.value = false">
-									<v-icon>mdi-close</v-icon>
-								</v-btn>
+								<v-toolbar color="primary">
+								<v-btn icon="mdi-close" @click="isActive.value = false"></v-btn>
 								<v-toolbar-title>Nameservers</v-toolbar-title>
 								<v-spacer></v-spacer>
 								</v-toolbar>
-								<v-list-item
-									v-for="nameserver in configurations.dns_nameservers.split('\n')"
-									@click="copyText( nameserver )"
-									link
-								>
-									<v-list-item-title v-text="nameserver"></v-list-item-title>
-									<v-list-item-icon>
+								<v-list-item v-for="nameserver in configurations.dns_nameservers.split('\n')" @click="copyText( nameserver )" link>
+								<v-list-item-title>{{ nameserver }}</v-list-item-title>
+								<template v-slot:append>
 									<v-icon>mdi-content-copy</v-icon>
-									</v-list-item-icon>
-									<v-divider></v-divider>
+								</template>
 								</v-list-item>
 							</v-card>
 							</template>
@@ -4689,37 +5091,29 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-row>
 					</v-alert>
 				</v-card>
-				<v-row class="ma-0 pa-0">
-					<v-col class="ma-0 pa-0"></v-col>
-					<v-col class="ma-0 pa-0"sm="12" md="4">
-					<v-text-field
-						v-model="domain_search"
-						append-icon="mdi-magnify"
-						label="Search"
-						single-line
-						clearable
-						autofocus
-						hide-details
-					></v-text-field>
-					</v-col>
-				</v-row>
-				<v-row>
+				<v-toolbar color="transparent" flat>
+					<div class="v-spacer"></div>
+					<v-text-field v-model="domain_search" append-inner-icon="mdi-magnify" label="Search" density="compact" variant="outlined" clearable autofocus hide-details flat style="max-width:300px;"></v-text-field>
+				</v-toolbar>
 				<v-col>
 				<v-data-table
-					:headers="[{ text: 'Name', value: 'name' },{ text: 'DNS', value: 'remote_id', width: '88px' },{ text: 'Registration', value: 'provider_id', width: '120px' }]"
+					:headers="[{ title: 'Name', value: 'name' },{ title: 'DNS', value: 'remote_id', width: '88px' },{ title: 'Registration', value: 'provider_id', width: '120px' }]"
 					:items="domains"
 					:search="domain_search"
-					:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
+					:items-per-page="100"
+					:items-per-page-options="[100,250,500,{'title':'All','value':-1}]"
+					item-value="domain_id"
+					hover
+					density="comfortable"
+					@click:row="(event, { item }) => goToPath(`/domains/${item.domain_id}`)"
+					style="cursor:pointer"
 				>
-				<template v-slot:body="{ items }">
-					<tbody>
-					<tr v-for="item in items" @click="goToPath( `/domains/${item.domain_id}`)" style="cursor:pointer">
-						<td>{{ item.name }}</td>
-						<td><v-icon v-show="item.remote_id != ''">mdi-check-circle</v-icon></td>
-						<td><v-icon v-show="item.provider_id != ''">mdi-check-circle</v-icon></td>
-					</tr>
-					</tbody>
-				</template>
+					<template v-slot:item.remote_id="{ value }">
+						<v-icon v-if="value != null && value !== ''" icon="mdi-check-circle"></v-icon>
+					</template>
+					<template v-slot:item.provider_id="{ value }">
+						<v-icon v-if="value != null && value !== ''" icon="mdi-check-circle"></v-icon>
+					</template>
 				</v-data-table>
 				</v-col>
 				</v-row>
@@ -4727,81 +5121,80 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-sheet>
 				<v-sheet v-show="dialog_domain.step == 2" color="transparent">
 					<v-card flat rounded="xl">
-						<v-toolbar flat>
+						<v-toolbar flat color="transparent">
 							<v-toolbar-title>
 							<v-autocomplete
 								v-model="dialog_domain.domain"
 								:items="domains"
 								return-object
-								item-text="name"
-								@input="goToPath( `/domains/${dialog_domain.domain.domain_id}`)"
+								item-title="name"
+								@update:model-value="(event) => goToPath( `/domains/${dialog_domain.domain.domain_id}`)"
 								class="mt-5"
 								spellcheck="false"
+								density="compact"
+								variant="outlined"
 								flat
+								style="max-width: 300px;"
 							></v-autocomplete>
 							</v-toolbar-title>
 							<v-spacer></v-spacer>
 						</v-toolbar>
 						<v-container class="pt-0">
-						<v-toolbar color="primary" dark flat dense rounded="lg">
-						<v-tabs v-model="dialog_domain.tabs" dense left>
-							<v-tabs-slider color="transparent"></v-tabs-slider>
-							<v-tab key="dns">
-								DNS Records <v-icon class="ml-1">mdi-table</v-icon>
+						<v-toolbar color="primary" dark flat density="compact" rounded="lg">
+						<v-tabs v-model="dialog_domain.tabs" density="compact" mandatory hide-slider>
+							<v-tab value="dns">
+								DNS Records <v-icon class="ml-1" icon="mdi-table"></v-icon>
 							</v-tab>
-							<v-tab key="domain">
-								Domain Management <v-icon class="ml-1">mdi-account-box</v-icon>
+							<v-tab value="domain">
+								Domain Management <v-icon class="ml-1" icon="mdi-account-box"></v-icon>
 							</v-tab>
 						</v-tabs>
 						</v-toolbar>
-						<v-tabs-items v-model="dialog_domain.tabs">
-							<v-tab-item key="dns" :transition="false" :reverse-transition="false">
-							<v-toolbar flat dense>
+						<v-window v-model="dialog_domain.tabs">
+							<v-window-item value="dns" :transition="false" :reverse-transition="false">
+							<v-toolbar flat density="compact" color="transparent">
 								<v-toolbar-title v-show="dnsRecords > 0"><small>{{ dnsRecords }} DNS records</small></v-toolbar-title>
 								<v-spacer></v-spacer>
 								<v-toolbar-items>
 								<v-dialog max-width="800" v-model="dialog_domain.show_import">
 									<v-card>
-										<v-toolbar color="primary" dark>
-											Import DNS Records
-											<v-spacer></v-spacer>
-											<v-toolbar-items>
-												<v-btn text @click="dialog_domain.show_import = false"><v-icon>mdi-close</v-icon></v-btn>
-											</v-toolbar-items>
+										<v-toolbar color="primary">
+											<v-btn icon="mdi-close" @click="dialog_domain.show_import = false"></v-btn>
+										<v-toolbar-title>Import DNS Records</v-toolbar-title>
+										<v-spacer></v-spacer>
 										</v-toolbar>
 										<v-card-text class="mt-5">
 										<v-textarea 
 											placeholder="Paste DNS zone file" 
-											outlined
+											variant="outlined"
 											persistent-hint 
 											hint="Paste DNS zone file then click import DNS records. Records changes will be shown in editor for confirmation." 
-											:value="dialog_domain.import_json" 
-											@change.native="dialog_domain.import_json = $event.target.value" 
+											v-model="dialog_domain.import_json"
 											spellcheck="false">
 										</v-textarea>
 										</v-card-text>
 										<v-card-actions class="justify-end">
-											<v-btn depressed class="ma-0" @click="loadDNSRecords()">Load DNS Records</v-btn>
+											<v-btn variant="tonal" class="ma-0" @click="loadDNSRecords()">Load DNS Records</v-btn>
 										</v-card-actions>
 									</v-card>
 								</v-dialog>
-									<v-btn text @click="dialog_domain.show_import = true">Import <v-icon dark>mdi-file-upload</v-icon></v-btn>
-									<v-btn text @click="exportDomain()">Export <v-icon dark>mdi-file-download</v-icon></v-btn>
+									<v-btn variant="text" @click="dialog_domain.show_import = true">Import <v-icon dark>mdi-file-upload</v-icon></v-btn>
+									<v-btn variant="text" @click="exportDomain()">Export <v-icon dark>mdi-file-download</v-icon></v-btn>
 								</v-toolbar-items>
 							</v-toolbar>
 								<v-row v-if="dialog_domain.errors">
 									<v-col class="ma-3">
-										<v-alert text :value="true" type="error" v-for="error in dialog_domain.errors">{{ error }}</v-alert>
+										<v-alert variant="tonal" type="error" v-for="error in dialog_domain.errors">{{ error }}</v-alert>
 									</v-col>
 								</v-row>
 								<v-row>
 									<v-col>
 										<v-progress-circular indeterminate color="primary" size="24" class="ma-5" v-show="dialog_domain.loading"></v-progress-circular>
-										<div class="v-data-table theme--light">
-										<div class="v-data-table__wrapper">
+										<div class="v-table v-table--has-top v-table--has-bottom v-table--density-default v-data-table">
+										<div class="v-table__wrapper">
 										<table class="table-dns mb-3" v-show="dialog_domain.records.length > 0">
 											<thead class="v-data-table-header">
-											<tr>
+											<tr class="v-data-table__td v-data-table-column--align-start v-data-table__th">
 												<th width="175">Type</th>
 												<th width="200">Name</th>
 												<th>Value</th>
@@ -4810,79 +5203,85 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											</tr>
 											</thead>
 											<tbody>
-											<tr v-for="(record, index) in dialog_domain.records" :key="record.id" v-bind:class="{ new: record.new, edit: record.edit, delete: record.delete }">
+											<tr v-for="(record, index) in dialog_domain.records" :key="record.id" v-bind:class="{ new: record.new, edit: record.edit, delete: record.delete }" class="v-data-table__tr">
 											<template v-if="record.edit">
-												<td class="pt-3">{{ record.type }}</td>
-												<td><v-text-field label="Name" :value="record.update.record_name" @change.native="record.update.record_name = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
-												<td class="value" v-if="record.type == 'MX'">
-													<v-layout v-for="(value, value_index) in record.update.record_value">
-														<v-flex xs3><v-text-field label="Priority" :value="value.priority" @change.native="value.priority = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-														<v-flex xs9><v-text-field label="Server" :value="value.server" @change.native="value.server = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field></v-flex>
-													</v-layout>
-													<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
-												</td>
-												<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'CNAME' || record.type == 'SPF'">
-													<div v-for="(value, value_index) in record.update.record_value" :key="`value-${index}-${value_index}`">
-														<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving" v-show="record.type != 'CNAME'"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field>
-													</div>
-													<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving && record.type != 'CNAME'"><v-icon>mdi-plus-box</v-icon></v-btn>
-												</td>
-												<td class="value" v-else-if="record.type == 'HTTP'">
-													<v-text-field label="Value" :value="record.update.record_value.url" @change.native="record.update.record_value.url = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
-												</td>
-												<td class="value" v-else-if="record.type == 'SRV'">
-													<v-layout v-for="value in record.update.record_value">
-														<v-flex xs2><v-text-field label="Priority" :value="value.priority" @change.native="value.priority = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-														<v-flex xs2><v-text-field label="Weight" :value="value.weight" @change.native="value.weight = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-														<v-flex xs2><v-text-field label="Port" :value="value.port" @change.native="value.port = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-														<v-flex xs6><v-text-field label="Host" :value="value.host" @change.native="value.host = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-													</v-layout>
-													<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
-												</td>
-												<td class="value" v-else>
-													<v-text-field label="Value" :value="record.update.record_value" @change.native="record.update.record_value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
-												</td>
-												<td><v-text-field label="TTL" :value="record.update.record_ttl" @change.native="record.update.record_ttl = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
-												<td class="text-right pt-3">
-													<v-btn text small icon color="primary" class="ma-0 pa-0" @click="viewRecord( record.id )" :disabled="dialog_domain.saving"><v-icon>mdi-pencil-box</v-icon></v-btn>
-													<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecord( record.id )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn>
-												</td>
+											<td class="pt-3">{{ record.type }}</td>
+											<td><v-text-field variant="underlined" label="Name" :model-value="record.update.record_name" @update:model-value="record.update.record_name = $event" :disabled="dialog_domain.saving"></v-text-field></td>
+											<td class="value" v-if="record.type == 'MX'">
+												<v-row v-for="(value, value_index) in record.update.record_value" :key="`mx-edit-${index}-${value_index}`" no-gutters>
+													<v-col cols="3"><v-text-field variant="underlined" hide-details label="Priority" :model-value="value.priority" @update:model-value="value.priority = $event" :disabled="dialog_domain.saving"></v-text-field></v-col>
+													<v-col cols="9"><v-text-field variant="underlined" hide-details label="Server" :model-value="value.server" @update:model-value="value.server = $event" :disabled="dialog_domain.saving">
+														<template v-slot:append-inner><v-btn variant="text" icon="mdi-delete" color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"></v-btn></template></v-text-field>
+													</v-col>
+												</v-row>
+												<v-btn icon="mdi-plus-box" variant="text" density="compact" color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"></v-btn>
+											</td>
+											<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'TXT' || record.type == 'CNAME' || record.type == 'SPF'">
+												<div v-for="(value, value_index) in record.update.record_value" :key="`value-edit-${index}-${value_index}`">
+													<v-text-field variant="underlined" hide-details label="Value" :model-value="value.value" @update:model-value="value.value = $event" :disabled="dialog_domain.saving">
+														<template v-slot:append-inner><v-btn variant="text" icon="mdi-delete" color="primary" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving" v-show="record.type != 'CNAME'"></v-btn></template>
+													</v-text-field>
+												</div>
+												<v-btn icon="mdi-plus-box" variant="text" density="compact" color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving && record.type != 'CNAME'"></v-btn>
+											</td>
+											<td class="value" v-else-if="record.type == 'HTTP'">
+												<v-text-field variant="underlined" label="Value" :model-value="record.update.record_value.url" @update:model-value="record.update.record_value.url = $event" :disabled="dialog_domain.saving"></v-text-field>
+											</td>
+											<td class="value" v-else-if="record.type == 'SRV'">
+												<v-row v-for="(value, value_index) in record.update.record_value" :key="`srv-edit-${index}-${value_index}`">
+												<v-col cols="2"><v-text-field variant="underlined" label="Priority" :model-value="value.priority" @update:model-value="value.priority = $event" :disabled="dialog_domain.saving"></v-text-field></v-col>
+												<v-col cols="2"><v-text-field variant="underlined" label="Weight" :model-value="value.weight" @update:model-value="value.weight = $event" :disabled="dialog_domain.saving"></v-text-field></v-col>
+												<v-col cols="2"><v-text-field variant="underlined" label="Port" :model-value="value.port" @update:model-value="value.port = $event" :disabled="dialog_domain.saving"></v-text-field></v-col>
+												<v-col cols="6"><v-text-field variant="underlined" label="Host" :model-value="value.host" @update:model-value="value.host = $event" :disabled="dialog_domain.saving"></v-text-field></v-col>
+												</v-row>
+												<v-btn icon="mdi-plus-box" variant="text" density="compact" color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"></v-btn>
+											</td>
+											<td class="value" v-else>
+												<v-text-field variant="underlined" label="Value" :model-value="record.update.record_value" @update:model-value="record.update.record_value = $event" :disabled="dialog_domain.saving"></v-text-field>
+											</td>
+											<td><v-text-field variant="underlined" label="TTL" :model-value="record.update.record_ttl" @update:model-value="record.update.record_ttl = $event" :disabled="dialog_domain.saving"></v-text-field></td>
+											<td class="text-right pt-3">
+												<v-btn variant="text" color="primary" density="compact" @click="viewRecord( record.id )" :disabled="dialog_domain.saving" icon="mdi-pencil-box"></v-btn>
+												<v-btn variant="text" color="primary" density="compact" @click="deleteRecord( record.id )" :disabled="dialog_domain.saving" icon="mdi-delete"></v-btn>
+											</td>
 											</template>
 											<template v-else-if="record.new">
-												<td><v-select v-model="record.type" @input="changeRecordType( index )" item-text="name" item-value="value" :items='[{"name":"A","value":"A"},{"name":"AAAA","value":"AAAA"},{"name":"ANAME","value":"ANAME"},{"name":"CNAME","value":"CNAME"},{"name":"HTTP Redirect","value":"HTTP"},{"name":"MX","value":"MX"},{"name":"SRV","value":"SRV"},{"name":"TXT","value":"TXT"}]' label="Type" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-select></td>
-												<td><v-text-field label="Name" :value="record.update.record_name" @change.native="record.update.record_name = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
-												<td class="value" v-if="record.type == 'MX'">
-													<v-layout v-for="(value, value_index) in record.update.record_value">
-														<v-flex xs3><v-text-field label="Priority" :value="value.priority" @change.native="value.priority = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-														<v-flex xs9><v-text-field label="Server" :value="value.server" @change.native="value.server = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field></v-flex>
-													</v-layout>
-													<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
-												</td>
-												<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'CNAME' || record.type == 'TXT' || record.type == 'SPF'">
-													<div v-for="(value, value_index) in record.update.record_value" :key="`value-${index}-${value_index}`">
-														<v-text-field label="Value" :value="value.value" @change.native="value.value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'><template v-slot:append-outer><v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving" v-show="record.type != 'CNAME'"><v-icon>mdi-delete</v-icon></v-btn></template></v-text-field>
-													</div>
-													<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving && record.type != 'CNAME'"><v-icon>mdi-plus-box</v-icon></v-btn>
-												</td>
-												<td class="value" v-else-if="record.type == 'HTTP'">
-													<v-text-field label="Value" :value="record.update.record_value.url" @change.native="record.update.record_value.url = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
-												</td>
-												<td class="value" v-else-if="record.type == 'SRV'">
-													<v-layout v-for="value in record.update.record_value">
-														<v-flex xs2><v-text-field label="Priority" :value="value.priority" @change.native="value.priority = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-														<v-flex xs2><v-text-field label="Weight" :value="value.weight" @change.native="value.weight = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-														<v-flex xs2><v-text-field label="Port" :value="value.port" @change.native="value.port = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-														<v-flex xs6><v-text-field label="Host" :value="value.host" @change.native="value.host = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></v-flex>
-													</v-layout>
-													<v-btn icon small color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"><v-icon>mdi-plus-box</v-icon></v-btn>
-												</td>
-												<td class="value" v-else>
-													<v-text-field label="Value" :value="record.update.record_value" @change.native="record.update.record_value = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field>
-												</td>
-												<td><v-text-field label="TTL" :value="record.update.record_ttl" @change.native="record.update.record_ttl = $event.target.value" v-bind:class='{ "v-input--is-disabled": dialog_domain.saving }'></v-text-field></td>
-												<td class="text-right pt-3">
-													<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteRecord( index )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn>
-												</td>
+											<td><v-select variant="underlined" v-model="record.type" @update:modelValue="changeRecordType( index )" item-title="name" item-value="value" :items='[{"name":"A","value":"A"},{"name":"AAAA","value":"AAAA"},{"name":"ANAME","value":"ANAME"},{"name":"CNAME","value":"CNAME"},{"name":"HTTP Redirect","value":"HTTP"},{"name":"MX","value":"MX"},{"name":"SRV","value":"SRV"},{"name":"TXT","value":"TXT"}]' label="Type" :disabled="dialog_domain.saving"></v-select></td>
+											<td><v-text-field variant="underlined" label="Name" :model-value="record.update.record_name" @update:model-value="record.update.record_name = $event" :disabled="dialog_domain.saving"></v-text-field></td>
+											<td class="value" v-if="record.type == 'MX'">
+												<v-row v-for="(value, value_index) in record.update.record_value" :key="`mx-new-${index}-${value_index}`">
+												<v-col cols="3"><v-text-field variant="underlined" hide-details label="Priority" :model-value="value.priority" @update:model-value="value.priority = $event" :disabled="dialog_domain.saving"></v-text-field></v-col>
+												<v-col cols="9"><v-text-field variant="underlined" hide-details label="Server" :model-value="value.server" @update:model-value="value.server = $event" :disabled="dialog_domain.saving"><template v-slot:append-inner><v-btn variant="text" icon="mdi-delete" color="primary" density="compact" size="small" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving"></v-btn></template></v-text-field></v-col>
+												</v-row>
+												<v-btn icon="mdi-plus-box" variant="text" color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"></v-btn>
+											</td>
+											<td class="value" v-else-if="record.type == 'A' || record.type == 'AAAA' || record.type == 'ANAME' || record.type == 'CNAME' || record.type == 'TXT' || record.type == 'SPF'">
+												<div v-for="(value, value_index) in record.update.record_value" :key="`value-new-${index}-${value_index}`">
+													<v-text-field variant="underlined" hide-details label="Value" :model-value="record.update.record_value[value_index].value" @update:model-value="record.update.record_value[value_index].value = $event" :disabled="dialog_domain.saving">
+														<template v-slot:append-inner><v-btn variant="text" icon="mdi-delete" color="primary" class="ma-0 pa-0" @click="deleteRecordValue( index, value_index )" :disabled="dialog_domain.saving" v-show="record.type != 'CNAME'"></v-btn></template>
+													</v-text-field>
+												</div>
+												<v-btn icon="mdi-plus-box" variant="text" density="compact" color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving && record.type != 'CNAME'"></v-btn>
+											</td>
+											<td class="value" v-else-if="record.type == 'HTTP'">
+												<v-text-field variant="underlined" label="Value" :model-value="record.update.record_value.url" @update:model-value="record.update.record_value.url = $event" :disabled="dialog_domain.saving"></v-text-field>
+											</td>
+											<td class="value" v-else-if="record.type == 'SRV'">
+												<v-row v-for="(value, value_index) in record.update.record_value" :key="`srv-new-${index}-${value_index}`">
+												<v-col cols="2"><v-text-field variant="underlined" label="Priority" :model-value="value.priority" @update:model-value="value.priority = $event" :disabled="dialog_domain.saving"></v-text-field></v-col>
+												<v-col cols="2"><v-text-field variant="underlined" label="Weight" :model-value="value.weight" @update:model-value="value.weight = $event" :disabled="dialog_domain.saving"></v-text-field></v-col>
+												<v-col cols="2"><v-text-field variant="underlined" label="Port" :model-value="value.port" @update:model-value="value.port = $event" :disabled="dialog_domain.saving"></v-text-field></v-col>
+												<v-col cols="6"><v-text-field variant="underlined" label="Host" :model-value="value.host" @update:model-value="value.host = $event" :disabled="dialog_domain.saving"></v-text-field></v-col>
+												</v-row>
+												<v-btn icon="mdi-plus-box" variant="text" density="compact" color="primary" class="ma-0 mb-3" @click="addRecordValue( index )" v-show="!dialog_domain.loading && !dialog_domain.saving"></v-btn>
+											</td>
+											<td class="value" v-else>
+												<v-text-field variant="underlined" label="Value" :model-value="record.update.record_value" @update:model-value="record.update.record_value = $event" :disabled="dialog_domain.saving"></v-text-field>
+											</td>
+											<td><v-text-field variant="underlined" label="TTL" :model-value="record.update.record_ttl" @update:model-value="record.update.record_ttl = $event" :disabled="dialog_domain.saving"></v-text-field></td>
+											<td class="text-right pt-3">
+												<v-btn variant="text" icon="mdi-delete" color="primary" density="compact" @click="deleteRecord( index )" :disabled="dialog_domain.saving"></v-btn>
+											</td>
 											</template>
 											<template v-else>
 												<td>{{ record.type }}</td>
@@ -4895,8 +5294,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 												<td class="value" v-else>{{ record.value.value }}</td>
 												<td>{{ record.ttl }}</td>
 												<td class="text-right">
-													<v-btn text small icon color="primary" class="ma-0 pa-0" @click="editRecord( record.id )" :disabled="dialog_domain.saving"><v-icon>mdi-pencil-box</v-icon></v-btn>
-													<v-btn text small icon color="primary" class="ma-0 pa-0" @click="deleteCurrentRecord( record.id )" :disabled="dialog_domain.saving"><v-icon>mdi-delete</v-icon></v-btn>
+													<v-btn variant="text" icon="mdi-pencil" color="primary" density="compact" @click="editRecord( record.id )" :disabled="dialog_domain.saving"></v-btn>
+													<v-btn variant="text" icon="mdi-delete" color="primary" density="compact" @click="deleteCurrentRecord( record.id )" :disabled="dialog_domain.saving"></v-btn>
 												</td>
 											</template>
 											</tr>
@@ -4904,7 +5303,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										</table>
 										</div>
 										</div>
-										<v-btn depressed class="ml-4" @click="addRecord()" v-show="!dialog_domain.loading && !dialog_domain.saving && !dialog_domain.errors">Add Additional Record</v-btn>
+										<v-btn variant="tonal" class="ml-4" @click="addRecord()" v-show="!dialog_domain.loading && !dialog_domain.saving && !dialog_domain.errors">Add Additional Record</v-btn>
 									</v-col>
 								</v-row>
 								<v-row v-show="dialog_domain.saving">
@@ -4912,202 +5311,289 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										<v-progress-circular indeterminate color="primary" size="24" class="ml-4"></v-progress-circular>
 									</v-col>
 								</v-row>
-								<v-row v-show="dialog_domain.results">
-									<v-col class="mx-3">
-										<template v-for="result in dialog_domain.results">
-											<v-alert text :value="true" type="success" v-show="typeof result.success != 'undefined'" v-html="result.success"></v-alert>
-											<v-alert text :value="true" type="error" v-if="typeof result.errors != 'undefined'">{{ result.errors }}</v-alert>
-										</template>
-									</v-col>
-								</v-row>
+								<div v-show="dialog_domain.results">
+									<template v-for="result in dialog_domain.results">
+										<v-alert type="success" v-show="typeof result.success != 'undefined'" v-html="result.success" class="text-body-2 ma-4"></v-alert>
+										<v-alert type="error" v-if="typeof result.errors != 'undefined'" class="text-body-2 ma-4">{{ result.errors }}</v-alert>
+									</template>
+								</div>
 								<v-row>
 									<v-col class="text-left mx-3 mb-7" v-show="!dialog_domain.loading">
-										<v-btn class="mx-1" depressed color="primary" @click="saveDNS()" :dark="dialog_domain.records && dialog_domain.records.length != '0'" :disabled="dialog_domain.records && dialog_domain.records.length == '0'">Save Records</v-btn>
+										<v-btn class="mx-1" color="primary" @click="saveDNS()" :dark="dialog_domain.records && dialog_domain.records.length != '0'" :disabled="dialog_domain.records && dialog_domain.records.length == '0'">Save Records</v-btn>
 										<a ref="export_domain" href="#"></a>
 									</v-col>
 								</v-row>
-							</v-tab-item>
-							<v-tab-item key="domain" :transition="false" :reverse-transition="false">
-								<v-col v-show="! dialog_domain.provider.domain">
-									<v-alert type="info" color="primary" text>Domain is registered through another provider.</v-alert>
-								</v-col>
-								<div v-show="dialog_domain.provider.domain">
-								<v-card tile flat>
-								<v-overlay absolute :value="dialog_domain.updating_contacts">
-								<v-progress-circular indeterminate size="64"></v-progress-circular>
-								</v-overlay>
-								<v-tabs v-model="dialog_domain.contact_tabs" @change="populateStatesforContacts()">
-									<v-tab key="owner">Owner</v-tab>
-									<v-tab key="admin">Admin</v-tab>
-									<v-tab key="technical">Technical</v-tab>
-									<v-tab key="billing">Billing</v-tab>
-								</v-tabs>
-								<v-tabs-items v-model="dialog_domain.contact_tabs" class="mt-2">
-								<v-tab-item key="owner" v-if="dialog_domain.provider.contacts.owner">
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="First Name" v-model="dialog_domain.provider.contacts.owner.first_name"></v-text-field></v-col>
-									<v-col class="ma-1"><v-text-field label="Last Name" v-model="dialog_domain.provider.contacts.owner.last_name"></v-text-field></v-col>
-									<v-col class="ma-1"><v-text-field label="Company name (optional)" v-model="dialog_domain.provider.contacts.owner.org_name"></v-text-field></v-col>
-								</v-row>
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="Street Address" persistent-hint hint="House number and street name" v-model="dialog_domain.provider.contacts.owner.address1"></v-text-field></v-col>
-								</v-row>
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="dialog_domain.provider.contacts.owner.address2"></v-text-field></v-col>
-								</v-row>
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="Town" v-model="dialog_domain.provider.contacts.owner.city"></v-text-field></v-col>
-									<v-col class="ma-1">
-										<v-autocomplete label="State" v-model="dialog_domain.provider.contacts.owner.state" :items="states_selected" v-if="states_selected.length > 0"></v-autocomplete>
-										<v-text-field label="State" v-model="dialog_domain.provider.contacts.owner.state" v-else></v-text-field>
-									</v-col>
-									<v-col class="ma-1"><v-text-field label="Zip" v-model="dialog_domain.provider.contacts.owner.postal_code"></v-text-field></v-col>
-									<v-col class="ma-1"><v-autocomplete label="Country" v-model="dialog_domain.provider.contacts.owner.country" :items="countries" @change="populateStatesFor( dialog_domain.provider.contacts.owner )"></v-autocomplete></v-col>
-								</v-row>
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="Phone" v-model="dialog_domain.provider.contacts.owner.phone"></v-text-field></v-col>
-									<v-col class="ma-1"><v-text-field label="Email" v-model="dialog_domain.provider.contacts.owner.email"></v-text-field></v-col>
-								</v-row>
-								</v-tab-item>
-								<v-tab-item key="admin" v-if="dialog_domain.provider.contacts.admin">
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="First Name" v-model="dialog_domain.provider.contacts.admin.first_name"></v-text-field></v-col>
-									<v-col class="ma-1"><v-text-field label="Last Name" v-model="dialog_domain.provider.contacts.admin.last_name"></v-text-field></v-col>
-									<v-col class="ma-1"><v-text-field label="Company name (optional)" v-model="dialog_domain.provider.contacts.admin.org_name"></v-text-field></v-col>
-								</v-row>
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="Street Address" persistent-hint hint="House number and street name" v-model="dialog_domain.provider.contacts.admin.address1"></v-text-field></v-col>
-								</v-row>
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="dialog_domain.provider.contacts.admin.address2"></v-text-field></v-col>
-								</v-row>
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="Town" v-model="dialog_domain.provider.contacts.admin.city"></v-text-field></v-col>
-									<v-col class="ma-1">
-										<v-autocomplete label="State" v-model="dialog_domain.provider.contacts.admin.state" :items="states_selected" v-if="states_selected.length > 0"></v-autocomplete>
-										<v-text-field label="State" v-model="dialog_domain.provider.contacts.admin.state" v-else></v-text-field>
-									</v-col>
-									<v-col class="ma-1"><v-text-field label="Zip" v-model="dialog_domain.provider.contacts.admin.postal_code"></v-text-field></v-col>
-									<v-col class="ma-1"><v-autocomplete label="Country" v-model="dialog_domain.provider.contacts.admin.country" :items="countries" @change="populateStatesFor( dialog_domain.provider.contacts.admin )"></v-autocomplete></v-col>
-								</v-row>
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="Phone" v-model="dialog_domain.provider.contacts.admin.phone"></v-text-field></v-col>
-									<v-col class="ma-1"><v-text-field label="Email" v-model="dialog_domain.provider.contacts.admin.email"></v-text-field></v-col>
-								</v-row>
-								</v-tab-item>
-								<v-tab-item key="tech" v-if="dialog_domain.provider.contacts.tech">
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="First Name" v-model="dialog_domain.provider.contacts.tech.first_name"></v-text-field></v-col>
-									<v-col class="ma-1"><v-text-field label="Last Name" v-model="dialog_domain.provider.contacts.tech.last_name"></v-text-field></v-col>
-									<v-col class="ma-1"><v-text-field label="Company name (optional)" v-model="dialog_domain.provider.contacts.tech.org_name"></v-text-field></v-col>
-								</v-row>
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="Street Address" persistent-hint hint="House number and street name" v-model="dialog_domain.provider.contacts.tech.address1"></v-text-field></v-col>
-								</v-row>
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="dialog_domain.provider.contacts.tech.address2"></v-text-field></v-col>
-								</v-row>
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="Town" v-model="dialog_domain.provider.contacts.tech.city"></v-text-field></v-col>
-									<v-col class="ma-1">
-										<v-autocomplete label="State" v-model="dialog_domain.provider.contacts.tech.state" :items="states_selected" v-if="states_selected.length > 0"></v-autocomplete>
-										<v-text-field label="State" v-model="dialog_domain.provider.contacts.tech.state" v-else></v-text-field>
-									</v-col>
-									<v-col class="ma-1"><v-text-field label="Zip" v-model="dialog_domain.provider.contacts.tech.postal_code"></v-text-field></v-col>
-									<v-col class="ma-1"><v-autocomplete label="Country" v-model="dialog_domain.provider.contacts.tech.country" :items="countries" @change="populateStatesFor( dialog_domain.provider.contacts.tech )"></v-autocomplete></v-col>
-								</v-row>
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="Phone" v-model="dialog_domain.provider.contacts.tech.phone"></v-text-field></v-col>
-									<v-col class="ma-1"><v-text-field label="Email" v-model="dialog_domain.provider.contacts.tech.email"></v-text-field></v-col>
-								</v-row>
-								</v-tab-item>
-								<v-tab-item key="billing" v-if="dialog_domain.provider.contacts.billing">
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="First Name" v-model="dialog_domain.provider.contacts.billing.first_name"></v-text-field></v-col>
-									<v-col class="ma-1"><v-text-field label="Last Name" v-model="dialog_domain.provider.contacts.billing.last_name"></v-text-field></v-col>
-									<v-col class="ma-1"><v-text-field label="Company name (optional)" v-model="dialog_domain.provider.contacts.billing.org_name"></v-text-field></v-col>
-								</v-row>
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="Street Address" persistent-hint hint="House number and street name" v-model="dialog_domain.provider.contacts.billing.address1"></v-text-field></v-col>
-								</v-row>
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="dialog_domain.provider.contacts.billing.address2"></v-text-field></v-col>
-								</v-row>
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="Town" v-model="dialog_domain.provider.contacts.billing.city"></v-text-field></v-col>
-									<v-col class="ma-1">
-										<v-autocomplete label="State" v-model="dialog_domain.provider.contacts.billing.state" :items="states_selected" v-if="states_selected.length > 0"></v-autocomplete>
-										<v-text-field label="State" v-model="dialog_domain.provider.contacts.billing.state" v-else></v-text-field>
-									</v-col>
-									<v-col class="ma-1"><v-text-field label="Zip" v-model="dialog_domain.provider.contacts.billing.postal_code"></v-text-field></v-col>
-									<v-col class="ma-1"><v-autocomplete label="Country" v-model="dialog_domain.provider.contacts.billing.country" :items="countries" @change="populateStatesFor( dialog_domain.provider.contacts.billing )"></v-autocomplete></v-col>
-								</v-row>
-								<v-row no-gutters class="mx-3">
-									<v-col class="ma-1"><v-text-field label="Phone" v-model="dialog_domain.provider.contacts.billing.phone"></v-text-field></v-col>
-									<v-col class="ma-1"><v-text-field label="Email" v-model="dialog_domain.provider.contacts.billing.email"></v-text-field></v-col>
-								</v-row>
-								</v-tab-item>
-								</v-tabs-items>
-								<v-row class="mx-2 mb-5">
-								<v-col cols="12">
-								<v-btn @click="updateDomainContacts()" color="primary">
-									Update Contact Information
-								</v-btn>
-								
-								</v-col>
-								</v-row>
+							</v-window-item>
+							<v-window-item value="domain" :transition="false" :reverse-transition="false">
+							<v-col v-show="!dialog_domain.provider.domain">
+								<v-alert type="info" color="primary" variant="tonal" class="text-body-2">Domain is registered through another provider.</v-alert>
+							</v-col>
+							<div v-show="dialog_domain.provider.domain">
+								<v-card flat>
+									<v-overlay :model-value="dialog_domain.updating_contacts" class="align-center justify-center" contained>
+										<v-progress-circular indeterminate size="64"></v-progress-circular>
+									</v-overlay>
+									<v-tabs v-model="dialog_domain.contact_tabs" @update:model-value="populateStatesforContacts()">
+										<v-tab value="owner">Owner</v-tab>
+										<v-tab value="admin">Admin</v-tab>
+										<v-tab value="technical">Technical</v-tab>
+										<v-tab value="billing">Billing</v-tab>
+									</v-tabs>
+									<v-window v-model="dialog_domain.contact_tabs" class="mt-2">
+										<v-window-item value="owner" v-if="dialog_domain.provider.contacts.owner">
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="First Name" v-model="dialog_domain.provider.contacts.owner.first_name" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-text-field label="Last Name" v-model="dialog_domain.provider.contacts.owner.last_name" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-text-field label="Company name (optional)" v-model="dialog_domain.provider.contacts.owner.org_name" variant="underlined"></v-text-field>
+												</v-col>
+											</v-row>
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="Street Address" persistent-hint hint="House number and street name" v-model="dialog_domain.provider.contacts.owner.address1" variant="underlined"></v-text-field>
+												</v-col>
+											</v-row>
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="dialog_domain.provider.contacts.owner.address2" variant="underlined"></v-text-field>
+												</v-col>
+											</v-row>
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="Town" v-model="dialog_domain.provider.contacts.owner.city" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-autocomplete label="State" v-model="dialog_domain.provider.contacts.owner.state" :items="states_selected" variant="underlined" v-if="states_selected.length > 0"></v-autocomplete>
+													<v-text-field label="State" v-model="dialog_domain.provider.contacts.owner.state" variant="underlined" v-else></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-text-field label="Zip" v-model="dialog_domain.provider.contacts.owner.postal_code" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-autocomplete label="Country" v-model="dialog_domain.provider.contacts.owner.country" :items="countries" @update:model-value="populateStatesFor( dialog_domain.provider.contacts.owner )" variant="underlined"></v-autocomplete>
+												</v-col>
+											</v-row>
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="Phone" v-model="dialog_domain.provider.contacts.owner.phone" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-text-field label="Email" v-model="dialog_domain.provider.contacts.owner.email" variant="underlined"></v-text-field>
+												</v-col>
+											</v-row>
+										</v-window-item>
+										<v-window-item value="admin" v-if="dialog_domain.provider.contacts.admin">
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="First Name" v-model="dialog_domain.provider.contacts.admin.first_name" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-text-field label="Last Name" v-model="dialog_domain.provider.contacts.admin.last_name" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-text-field label="Company name (optional)" v-model="dialog_domain.provider.contacts.admin.org_name" variant="underlined"></v-text-field>
+												</v-col>
+											</v-row>
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="Street Address" persistent-hint hint="House number and street name" v-model="dialog_domain.provider.contacts.admin.address1" variant="underlined"></v-text-field>
+												</v-col>
+											</v-row>
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="dialog_domain.provider.contacts.admin.address2" variant="underlined"></v-text-field>
+												</v-col>
+											</v-row>
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="Town" v-model="dialog_domain.provider.contacts.admin.city" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-autocomplete label="State" v-model="dialog_domain.provider.contacts.admin.state" :items="states_selected" variant="underlined" v-if="states_selected.length > 0"></v-autocomplete>
+													<v-text-field label="State" v-model="dialog_domain.provider.contacts.admin.state" variant="underlined" v-else></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-text-field label="Zip" v-model="dialog_domain.provider.contacts.admin.postal_code" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-autocomplete label="Country" v-model="dialog_domain.provider.contacts.admin.country" :items="countries" @update:model-value="populateStatesFor( dialog_domain.provider.contacts.admin )" variant="underlined"></v-autocomplete>
+												</v-col>
+											</v-row>
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="Phone" v-model="dialog_domain.provider.contacts.admin.phone" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-text-field label="Email" v-model="dialog_domain.provider.contacts.admin.email" variant="underlined"></v-text-field>
+												</v-col>
+											</v-row>
+										</v-window-item>
+										<v-window-item value="technical" v-if="dialog_domain.provider.contacts.tech">
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="First Name" v-model="dialog_domain.provider.contacts.tech.first_name" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-text-field label="Last Name" v-model="dialog_domain.provider.contacts.tech.last_name" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-text-field label="Company name (optional)" v-model="dialog_domain.provider.contacts.tech.org_name" variant="underlined"></v-text-field>
+												</v-col>
+											</v-row>
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="Street Address" persistent-hint hint="House number and street name" v-model="dialog_domain.provider.contacts.tech.address1" variant="underlined"></v-text-field>
+												</v-col>
+											</v-row>
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="dialog_domain.provider.contacts.tech.address2" variant="underlined"></v-text-field>
+												</v-col>
+											</v-row>
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="Town" v-model="dialog_domain.provider.contacts.tech.city" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-autocomplete label="State" v-model="dialog_domain.provider.contacts.tech.state" :items="states_selected" variant="underlined" v-if="states_selected.length > 0"></v-autocomplete>
+													<v-text-field label="State" v-model="dialog_domain.provider.contacts.tech.state" variant="underlined" v-else></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-text-field label="Zip" v-model="dialog_domain.provider.contacts.tech.postal_code" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-autocomplete label="Country" v-model="dialog_domain.provider.contacts.tech.country" :items="countries" @update:model-value="populateStatesFor( dialog_domain.provider.contacts.tech )" variant="underlined"></v-autocomplete>
+												</v-col>
+											</v-row>
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="Phone" v-model="dialog_domain.provider.contacts.tech.phone" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-text-field label="Email" v-model="dialog_domain.provider.contacts.tech.email" variant="underlined"></v-text-field>
+												</v-col>
+											</v-row>
+										</v-window-item>
+										<v-window-item value="billing" v-if="dialog_domain.provider.contacts.billing">
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="First Name" v-model="dialog_domain.provider.contacts.billing.first_name" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-text-field label="Last Name" v-model="dialog_domain.provider.contacts.billing.last_name" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-text-field label="Company name (optional)" v-model="dialog_domain.provider.contacts.billing.org_name" variant="underlined"></v-text-field>
+												</v-col>
+											</v-row>
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="Street Address" persistent-hint hint="House number and street name" v-model="dialog_domain.provider.contacts.billing.address1" variant="underlined"></v-text-field>
+												</v-col>
+											</v-row>
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="dialog_domain.provider.contacts.billing.address2" variant="underlined"></v-text-field>
+												</v-col>
+											</v-row>
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="Town" v-model="dialog_domain.provider.contacts.billing.city" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-autocomplete label="State" v-model="dialog_domain.provider.contacts.billing.state" :items="states_selected" variant="underlined" v-if="states_selected.length > 0"></v-autocomplete>
+													<v-text-field label="State" v-model="dialog_domain.provider.contacts.billing.state" variant="underlined" v-else></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-text-field label="Zip" v-model="dialog_domain.provider.contacts.billing.postal_code" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-autocomplete label="Country" v-model="dialog_domain.provider.contacts.billing.country" :items="countries" @update:model-value="populateStatesFor( dialog_domain.provider.contacts.billing )" variant="underlined"></v-autocomplete>
+												</v-col>
+											</v-row>
+											<v-row no-gutters class="mx-3">
+												<v-col class="ma-1">
+													<v-text-field label="Phone" v-model="dialog_domain.provider.contacts.billing.phone" variant="underlined"></v-text-field>
+												</v-col>
+												<v-col class="ma-1">
+													<v-text-field label="Email" v-model="dialog_domain.provider.contacts.billing.email" variant="underlined"></v-text-field>
+												</v-col>
+											</v-row>
+										</v-window-item>
+									</v-window>
+									<v-row class="mx-2 mb-5">
+										<v-col cols="12">
+											<v-btn @click="updateDomainContacts()" color="primary">
+												Update Contact Information
+											</v-btn>
+										</v-col>
+									</v-row>
 								</v-card>
-							<v-divider></v-divider>
-							<v-subheader>Nameservers</v-subheader>
-							<v-card tile flat>
-								<v-overlay absolute :value="dialog_domain.updating_nameservers">
-								<v-progress-circular indeterminate size="64"></v-progress-circular>
-								</v-overlay>
-								<v-row no-gutters class="mx-3" v-for="(nameserver, index) in dialog_domain.provider.nameservers">
-									<v-col class="ma-1"><v-text-field v-model="nameserver.value" hide-details spellcheck="false"></v-text-field></v-col>
-									<v-col class="mt-1"><v-btn text small icon color="primary" class="ma-3" @click="dialog_domain.provider.nameservers.splice(index, 1)"><v-icon>mdi-delete</v-icon></v-btn></v-col>
-								</v-row>
-								<v-row class="mx-2">
-								<v-col cols="12">				
-									<v-btn depressed @click="dialog_domain.provider.nameservers.push( { value: '' } )">Add Additional Nameserver</v-btn>
-								</v-col>
-								</v-row>
-								<v-row class="mx-2 mb-5">
-								<v-col cols="12">
-								<v-btn @click="updateDomainNameservers()" color="primary">
-									Update Nameservers
-								</v-btn>
-								</v-col>
-								</v-row>
-							</v-card>
-							<v-divider></v-divider>
-							<v-subheader>Controls</v-subheader>
+								<v-divider></v-divider>
+								<v-list-subheader>Nameservers</v-list-subheader>
+								<v-card flat>
+									<v-overlay :model-value="dialog_domain.updating_nameservers" class="align-center justify-center" contained>
+										<v-progress-circular indeterminate size="64"></v-progress-circular>
+									</v-overlay>
+									<v-row no-gutters class="mx-3" v-for="(nameserver, index) in dialog_domain.provider.nameservers" :key="index">
+										<v-col class="ma-1">
+											<v-text-field v-model="nameserver.value" hide-details spellcheck="false" variant="underlined"></v-text-field>
+										</v-col>
+										<v-col class="mt-1">
+											<v-btn variant="text" size="small" icon color="primary" class="ma-3" @click="dialog_domain.provider.nameservers.splice(index, 1)">
+												<v-icon>mdi-delete</v-icon>
+											</v-btn>
+										</v-col>
+									</v-row>
+									<v-row class="mx-2">
+										<v-col cols="12">
+											<v-btn variant="tonal" @click="dialog_domain.provider.nameservers.push({ value: '' })">Add Additional Nameserver</v-btn>
+										</v-col>
+									</v-row>
+									<v-row class="mx-2 mb-5">
+										<v-col cols="12">
+											<v-btn @click="updateDomainNameservers()" color="primary">
+												Update Nameservers
+											</v-btn>
+										</v-col>
+									</v-row>
+								</v-card>
+								<v-divider></v-divider>
+								<v-list-subheader>Controls</v-list-subheader>
 								<v-container>
-								<v-row>
-									<v-col v-if="dialog_domain.auth_code != ''">
-										<v-list-item @click="copyText( dialog_domain.auth_code )" dense>
-										<v-list-item-icon>
-											<v-icon>mdi-content-copy</v-icon>
-										</v-list-item-icon>
-										<v-list-item-content>
-											<v-list-item-title>Auth Code</v-list-item-title>
-											<v-list-item-subtitle v-text="dialog_domain.auth_code"></v-list-item-subtitle>
-										</v-list-item-content>
-										</v-list-item>
-									</v-col>
-									<v-col v-else><v-btn class="mx-1" depressed @click="retrieveAuthCode()" :loading="dialog_domain.fetch_auth_code">Retrieve Auth Code</v-btn></v-col>
-									<v-col><v-switch v-model="dialog_domain.provider.locked" :loading="dialog_domain.update_lock" :disabled="dialog_domain.update_lock" false-value="off" true-value="on" :label="`Lock is ${dialog_domain.provider.locked}`" @change="domainLockUpdate()"></v-switch></v-col>
-									<v-col><v-switch v-model="dialog_domain.provider.whois_privacy" :loading="dialog_domain.update_privacy" :disabled="dialog_domain.update_privacy" false-value="off" true-value="on" :label="`Privacy is ${dialog_domain.provider.whois_privacy}`" @change="domainPrivacyUpdate()"></v-switch></v-col>
-								</v-row>
+									<v-row>
+										<v-col v-if="dialog_domain.auth_code != ''">
+											<v-list-item @click="copyText(dialog_domain.auth_code)" density="compact" lines="two">
+												<template v-slot:prepend>
+													<v-icon>mdi-content-copy</v-icon>
+												</template>
+												<v-list-item-title>Auth Code</v-list-item-title>
+												<v-list-item-subtitle v-text="dialog_domain.auth_code"></v-list-item-subtitle>
+											</v-list-item>
+										</v-col>
+										<v-col v-else>
+											<v-btn class="mx-1" variant="tonal" @click="retrieveAuthCode()" :loading="dialog_domain.fetch_auth_code">Retrieve Auth Code</v-btn>
+										</v-col>
+										<v-col>
+											<v-switch v-model="dialog_domain.provider.locked" :loading="dialog_domain.update_lock" :disabled="dialog_domain.update_lock" false-value="off" true-value="on" :label="`Lock is ${dialog_domain.provider.locked}`" @update:model-value="domainLockUpdate()"></v-switch>
+										</v-col>
+										<v-col>
+											<v-switch v-model="dialog_domain.provider.whois_privacy" :loading="dialog_domain.update_privacy" :disabled="dialog_domain.update_privacy" false-value="off" true-value="on" :label="`Privacy is ${dialog_domain.provider.whois_privacy}`" @update:model-value="domainPrivacyUpdate()"></v-switch>
+										</v-col>
+									</v-row>
 								</v-container>
 							</div>
-							</v-tab-item>
-						</v-tabs-items>
+						</v-window-item>
+						</v-window>
 						</v-container>
 					</v-card>
 				</v-sheet>
 			</v-card>
-			<v-card v-if="route == 'health'" outlined rounded="xl">
+			<v-card v-if="route == 'health'" flat border="thin" rounded="xl">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing {{ filterSitesWithErrors.length }} sites with issues</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5115,7 +5601,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
-				<v-alert :value="true" type="info" text>
+				<v-alert type="info" variant="text">
 						Results from daily scans of home pages. Web console errors are extracted from Google Chrome via Lighthouse CLI. Helpful for tracking down wide range of issues.  
 				</v-alert>
 					<v-card v-for="site in filterSitesWithErrors" flat class="mb-2" :key="site.site_id">
@@ -5124,16 +5610,16 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-toolbar-title>{{ site.name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items>
-							<v-btn small text @click="scanErrors( site )">
+							<v-btn size="small" text @click="scanErrors( site )">
 								Scan <v-icon class="ml-1">mdi-sync</v-icon>
 							</v-btn>
-							<v-btn small text :href="`http://${site.name}`" target="_blank">
+							<v-btn size="small" text :href="`http://${site.name}`" target="_blank">
 								View <v-icon class="ml-1">mdi-open-in-new</v-icon> 
 							</v-btn>
-							<v-btn small text @click="copySSH( site )">
+							<v-btn size="small" text @click="copySSH( site )">
 								SSH <v-icon class="ml-1">mdi-content-copy</v-icon> 
 							</v-btn>
-							<v-btn small text @click="showLogEntry( site.site_id )" v-show="role == 'administrator'">
+							<v-btn size="small" text @click="showLogEntry( site.site_id )" v-show="role == 'administrator'">
 								Log <v-icon class="ml-1">mdi-check</v-icon>
 							</v-btn>
 							<v-chip class="mt-4 ml-2" label :input-value="true">{{ site.console_errors.length }} issues</v-chip>
@@ -5152,7 +5638,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-card-text>
 			</v-card>
-			<v-card v-if="route == 'vulnerability-scans'" outlined rounded="xl">
+			<v-card v-if="route == 'vulnerability-scans'" flat border="thin" rounded="xl">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing vulnerabilities</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -5160,7 +5646,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
-				<v-alert :value="true" type="info" text>
+				<v-alert type="info" variant="text">
 						Results from daily scans of using Wordfence.
 				</v-alert>
 					<v-card v-for="plugin in vulnerabilities.plugin" class="mb-2">
@@ -5168,26 +5654,26 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-toolbar-title>{{ plugin.title }}</v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items>
-							<v-btn small dense text @click="scanErrors( plugin.environments.map( env => env.enviroment_id ) )">
+							<v-btn size="small" density="compact" text @click="scanErrors( plugin.environments.map( env => env.enviroment_id ) )">
 								Sync <v-icon class="ml-1">mdi-sync</v-icon>
 							</v-btn>
 							<v-dialog :transition="false" max-width="800">
-								<template v-slot:activator="{ on, attrs }">
-								<v-btn v-bind="attrs" v-on="on" small dense text>
+								<template v-slot:activator="{ props }">
+								<v-btn v-bind="props" size="small" density="compact" text>
 									Console <v-icon class="ml-1">mdi-console</v-icon> 
 								</v-btn>
 								</template>
-								<template v-slot:default="dialog">
+								<template v-slot:default="{ isActive }">
 								<v-card>
 									<v-toolbar flat dark color="primary" class="mb-3">
-										<v-btn icon dark @click="dialog.value = false">
+										<v-btn icon dark @click="isActive.value = false">
 											<v-icon>mdi-close</v-icon>
 										</v-btn>
 										<v-toolbar-title>Console</v-toolbar-title>
 										<v-spacer></v-spacer>
 									</v-toolbar>
 									<v-card-text>
-									<v-chip small label v-for="enviroment in plugin.environments" class="mr-1 mb-1">{{ enviroment.home_url }}</v-chip>
+									<v-chip size="small" label v-for="enviroment in plugin.environments" class="mr-1 mb-1">{{ enviroment.home_url }}</v-chip>
 									<v-textarea
 										auto-grow
 										outlined
@@ -5195,32 +5681,32 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										dense
 										hint="Custom bash script or WP-CLI commands"
 										persistent-hint
-										:value="script.code" 
-										@change.native="script.code = $event.target.value"
+										:model-value="script.code"
+										@update:model-value="script.code = $event"
 										spellcheck="false"
 										class="code mt-1"
 									>
 									</v-textarea>
-									<v-btn small color="primary" dark @click="runCustomCodeBulkEnvironments( plugin.environments )">Run Custom Code</v-btn>
+									<v-btn size="small" color="primary" dark @click="runCustomCodeBulkEnvironments( plugin.environments )">Run Custom Code</v-btn>
 									</v-card-text>
 								</v-card>
 								</template>
 							</v-dialog>
-							<v-btn small dense text @click="showLogEntry( plugin.environments.map( env => env.enviroment_id ) )" v-show="role == 'administrator'">
+							<v-btn size="small" density="compact" text @click="showLogEntry( plugin.environments.map( env => env.enviroment_id ) )" v-show="role == 'administrator'">
 								Log <v-icon class="ml-1">mdi-check</v-icon>
 							</v-btn>
 							<v-chip class="mt-4 ml-2" label :input-value="true">{{ plugin.environments.length }} affected environments</v-chip>
 						</v-toolbar-items>
 					</v-toolbar>
-					<v-simple-table dense class="disable_hover">
+					<v-table density="compact" class="disable_hover">
 						<template v-slot:default>
 						<tbody>
 							<tr v-for="enviroment in plugin.environments">
 							<td style="width:100px">{{ enviroment.home_url }}</td>
 							<td><v-chip label small>{{ enviroment.environment }}</v-chip> 
 							<v-menu open-on-hover offset-y v-for="vulnerability in enviroment.vulnerabilities">
-							<template v-slot:activator="{ on, attrs }">
-								<v-chip v-bind="attrs" v-on="on" class="mr-1" link label small :href="vulnerability.link" target="_blank" :color="cvssClass(vulnerability.cvss_rating)">
+							<template v-slot:activator="{ props }">
+								<v-chip v-bind="props" class="mr-1" link label size="small" :href="vulnerability.link" target="_blank" :color="cvssClass(vulnerability.cvss_rating)">
 								{{ vulnerability.cvss_score || "-" }}
 								</v-chip>
 							</template>
@@ -5235,457 +5721,445 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</tr>
 						</tbody>
 						</template>
-					</v-simple-table>
+					</v-table>
 					</v-card>
 				</v-card-text>
 			</v-card>
-			<v-card v-if="route == 'cookbook'" outlined rounded="xl">
+			<v-card v-if="route == 'cookbook'" flat border="thin" rounded="xl">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing {{ filteredRecipes.length }} recipes</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-btn text @click="new_recipe.show = true">Add recipe <v-icon dark>mdi-plus</v-icon></v-btn>
+						<v-btn variant="text" @click="new_recipe.show = true">Add recipe <v-icon dark>mdi-plus</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
-				<v-alert :value="true" type="info" text>
-						Warning, this is for developers only 💻. The cookbook contains user made "recipes" or scripts which are deployable to one or many sites. Bash script and WP-CLI commands welcomed. For ideas refer to <code><a href="https://captaincore.io/cookbook/" target="_blank">captaincore.io/cookbook</a></code>.
+				<v-alert type="info" variant="tonal">
+					Warning, this is for developers only 💻. The cookbook contains user made "recipes" or scripts which are deployable to one or many sites. Bash script and WP-CLI commands welcomed. For ideas refer to <code><a href="https://captaincore.io/cookbook/" target="_blank">captaincore.io/cookbook</a></code>.
 				</v-alert>
 				</v-card-text>
 				<v-data-table
-					:headers="[{ text: 'Title', value: 'title' }]"
+				no-data-text="No recipes found."
+					:headers="[{ title: 'Title', value: 'title' }]"
 					:items="filteredRecipes"
-					:sort-by="['title']"
-					:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
-					v-show="filteredRecipes.length != 0"
+					:sort-by="[{ key: 'title', order: 'asc' }]"
+					:items-per-page="100"
+					:items-per-page-options="[100,250,500,{'title':'All','value':-1}]"
+					item-value="recipe_id"
+					hover
+					class="clickable-rows"
+					@click:row="(event, { item }) => editRecipe( item.recipe_id )"
 				>
-				<template v-slot:body="{ items }">
-					<tbody>
-					<tr v-for="item in items" :key="item.recipe_id" @click="editRecipe( item.recipe_id )" style="cursor:pointer;">
-						<td>{{ item.title }}</td>
-					</tr>
-					</tbody>
-				</template>
 				</v-data-table>
 			</v-card>
-			<v-card v-if="route == 'handbook' && role == 'administrator'" outlined rounded="xl">
+			<v-card v-if="route == 'handbook' && role == 'administrator'" flat border="thin" rounded="xl">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing {{ processes.length }} processes</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-tooltip top>
-							<template v-slot:activator="{ on }">
-								<v-btn text small @click="fetchProcessLogs()" v-on="on"><v-icon dark>mdi-timeline-text-outline</v-icon></v-btn>
+						<v-tooltip location="top">
+							<template v-slot:activator="{ props }">
+								<v-btn variant="text" @click="fetchProcessLogs()" v-bind="props" icon="mdi-timeline-text-outline"></v-btn>
 							</template>
 							<span>Log History</span>
 						</v-tooltip>
 						<v-divider vertical class="mx-1" inset></v-divider>
-						<v-tooltip top>
-							<template v-slot:activator="{ on }">
-								<v-btn text small @click="showLogEntryGeneric()" v-on="on"><v-icon dark>mdi-check-bold</v-icon></v-btn>
+						<v-tooltip location="top">
+							<template v-slot:activator="{ props }">
+								<v-btn variant="text" @click="showLogEntryGeneric()" v-bind="props" icon="mdi-check-bold"></v-btn>
 							</template>
 							<span>Add Log Entry</span>
 						</v-tooltip>
 						<v-divider vertical class="mx-1" inset></v-divider>
-						<v-btn text @click="new_process.show = true">Add process <v-icon dark>mdi-plus</v-icon></v-btn>
+						<v-btn variant="text" @click="new_process.show = true">Add process <v-icon dark>mdi-plus</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text style="max-height: 100%;">
-					<v-container fluid grid-list-lg>
-					<v-layout row wrap>
-					<v-flex xs12 v-for="process in processes">
+				<v-container fluid>
+					<v-row>
+					<v-col cols="12" v-for="process in processes">
 						<v-card :hover="true" @click="viewProcess( process.process_id )">
-						<v-card-title primary-title class="pt-2">
+						<v-card-title class="pt-2">
 							<div>
-								<span class="title">{{ process.name }}</a> <v-chip color="primary" text-color="white" text v-show="process.roles != ''">{{ process.roles }}</v-chip></span>
-								<div class="caption">
-									<v-icon v-show="process.time_estimate != ''" style="padding:0px 5px">mdi-clock-outline</v-icon>{{ process.time_estimate }} 
-									<v-icon v-show="process.repeat_interval != '' && process.repeat_interval != null" style="padding:0px 5px">mdi-calendar-repeat</v-icon>{{ process.repeat_interval }} 
-									<v-icon v-show="process.repeat_quantity != '' && process.repeat_quantity != null" style="padding:0px 5px">mdi-repeat</v-icon>{{ process.repeat_quantity }}
-								</div>
+							<span class="text-h6">{{ process.name }}</span>
+							<v-chip color="primary" text-color="white" v-show="process.roles != ''">{{ process.roles }}</v-chip>
+							<div class="text-caption">
+								<v-icon v-show="process.time_estimate != ''" style="padding:0px 5px">mdi-clock-outline</v-icon>{{ process.time_estimate }}
+								<v-icon v-show="process.repeat_interval != '' && process.repeat_interval != null" style="padding:0px 5px">mdi-calendar-repeat</v-icon>{{ process.repeat_interval }}
+								<v-icon v-show="process.repeat_quantity != '' && process.repeat_quantity != null" style="padding:0px 5px">mdi-repeat</v-icon>{{ process.repeat_quantity }}
+							</div>
 							</div>
 						</v-card-title>
 						</v-card>
-					</v-flex>
-					</v-layout>
-					</v-container>
+					</v-col>
+					</v-row>
+				</v-container>
 				</v-card-text>
 			</v-card>
-			<v-card v-if="route == 'configurations' && ( role == 'administrator' || role == 'owner' )" outlined rounded="xl">
+			<v-card v-if="route == 'configurations' && ( role == 'administrator' || role == 'owner' )" flat border="thin" rounded="xl">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Configurations</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
-				<v-tabs background-color="primary" dark dense v-model="configurations_step">
-					<v-tab>Branding</v-tab>
-					<v-tab v-show="role == 'administrator'">Scheduled Tasks</v-tab>
-					<v-tab>Providers</v-tab>
-					<v-tab v-show="role == 'administrator'">Billing</v-tab>
+				<v-tabs bg-color="primary" v-model="configurations_step">
+					<v-tab value="branding">Branding</v-tab>
+					<v-tab value="tasks" v-show="role == 'administrator'">Scheduled Tasks</v-tab>
+					<v-tab value="providers">Providers</v-tab>
+					<v-tab value="billing" v-show="role == 'administrator'">Billing</v-tab>
 				</v-tabs>
-				<v-tabs-items v-model="configurations_step">
-					<v-tab-item key="0" :transition="false" :reverse-transition="false">
-						<v-card>
-						<v-card-text>
-							<v-row>
-								<v-col :md="4">
-									<v-text-field v-model="configurations.name" label="Name"></v-text-field>
-									<v-switch v-model="configurations.logo_only" label="Show only logo"></v-switch>
-								</v-col>
-								<v-col :md="8">
-									<v-text-field v-model="configurations.url" label="URL"></v-text-field>
-								</v-col>
-							</v-row>
-							<v-row>
-								<v-col :md="8">
-									<v-text-field v-model="configurations.logo" label="Logo URL"></v-text-field>
-								</v-col>
-								<v-col :md="4">
-									<v-text-field v-model="configurations.logo_width" label="Logo Width"></v-text-field>
-								</v-col>
-							</v-row>
-							<span class="body-2">DNS Labels</span>
-							<v-row>
-								<v-col cols="9">
-									<v-textarea v-model="configurations.dns_introduction" label="Introduction" auto-grow rows="3"></v-textarea>
-								</v-col>
-								<v-col cols="3">
-									<v-textarea v-model="configurations.dns_nameservers" label="Nameservers" spellcheck="false" auto-grow></v-textarea>
-								</v-col>
-							</v-row>
-							<span class="body-2">Theme colors</span>
-					<v-row>
-						<v-col class="shrink" style="min-width: 172px;">
-							<v-text-field persistent-hint hint="Primary" v-model="$vuetify.theme.themes.light.primary" class="ma-0 pa-0" solo>
-							<template v-slot:append>
-								<v-menu v-model="colors.primary" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
-									<template v-slot:activator="{ on }">
-										<div :style="{ backgroundColor: $vuetify.theme.themes.light.primary, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
-									</template>
-									<v-card>
-										<v-card-text class="pa-0">
-											<v-color-picker v-model="$vuetify.theme.themes.light.primary" flat></v-color-picker>
-										</v-card-text>
-									</v-card>
-								</v-menu>
-							</template>
-							</v-text-field>
-						</v-col>
-						<v-col class="shrink" style="min-width: 172px;">
-							<v-text-field persistent-hint hint="Secondary" v-model="$vuetify.theme.themes.light.secondary" class="ma-0 pa-0" solo>
-							<template v-slot:append>
-								<v-menu v-model="colors.secondary" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
-									<template v-slot:activator="{ on }">
-										<div :style="{ backgroundColor: $vuetify.theme.themes.light.secondary, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
-									</template>
-									<v-card>
-										<v-card-text class="pa-0">
-											<v-color-picker v-model="$vuetify.theme.themes.light.secondary" flat></v-color-picker>
-										</v-card-text>
-									</v-card>
-								</v-menu>
-							</template>
-							</v-text-field>
-						</v-col>
-						<v-col class="shrink" style="min-width: 172px;">
-							<v-text-field persistent-hint hint="Accent" v-model="$vuetify.theme.themes.light.accent" class="ma-0 pa-0" solo>
-							<template v-slot:append>
-								<v-menu v-model="colors.accent" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
-									<template v-slot:activator="{ on }">
-										<div :style="{ backgroundColor: $vuetify.theme.themes.light.accent, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
-									</template>
-									<v-card>
-										<v-card-text class="pa-0">
-											<v-color-picker v-model="$vuetify.theme.themes.light.accent" flat></v-color-picker>
-										</v-card-text>
-									</v-card>
-								</v-menu>
-							</template>
-							</v-text-field>
-						</v-col>
-						<v-col class="shrink" style="min-width: 172px;">
-							<v-text-field persistent-hint hint="Error" v-model="$vuetify.theme.themes.light.error" class="ma-0 pa-0" solo>
-							<template v-slot:append>
-								<v-menu v-model="colors.error" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
-									<template v-slot:activator="{ on }">
-										<div :style="{ backgroundColor: $vuetify.theme.themes.light.error, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
-									</template>
-									<v-card>
-										<v-card-text class="pa-0">
-											<v-color-picker v-model="$vuetify.theme.themes.light.error" flat></v-color-picker>
-										</v-card-text>
-									</v-card>
-								</v-menu>
-							</template>
-							</v-text-field>
-						</v-col>
-						<v-col class="shrink" style="min-width: 172px;">
-							<v-text-field persistent-hint hint="Info" v-model="$vuetify.theme.themes.light.info" class="ma-0 pa-0" solo>
-							<template v-slot:append>
-								<v-menu v-model="colors.info" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
-									<template v-slot:activator="{ on }">
-										<div :style="{ backgroundColor: $vuetify.theme.themes.light.info, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
-									</template>
-									<v-card>
-										<v-card-text class="pa-0">
-											<v-color-picker v-model="$vuetify.theme.themes.light.info" flat></v-color-picker>
-										</v-card-text>
-									</v-card>
-								</v-menu>
-							</template>
-							</v-text-field>
-						</v-col>
-						<v-col class="shrink" style="min-width: 172px;">
-							<v-text-field persistent-hint hint="Success" v-model="$vuetify.theme.themes.light.success" class="ma-0 pa-0" solo>
-							<template v-slot:append>
-								<v-menu v-model="colors.success" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
-									<template v-slot:activator="{ on }">
-										<div :style="{ backgroundColor: $vuetify.theme.themes.light.success, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
-									</template>
-									<v-card>
-										<v-card-text class="pa-0">
-											<v-color-picker v-model="$vuetify.theme.themes.light.success" flat></v-color-picker>
-										</v-card-text>
-									</v-card>
-								</v-menu>
-							</template>
-							</v-text-field>
-						</v-col>
-						<v-col class="shrink" style="min-width: 172px;">
-							<v-text-field persistent-hint hint="Warning" v-model="$vuetify.theme.themes.light.warning" class="ma-0 pa-0" solo>
-							<template v-slot:append>
-								<v-menu v-model="colors.warning" top nudge-bottom="126" nudge-left="14" :close-on-content-click="false">
-									<template v-slot:activator="{ on }">
-										<div :style="{ backgroundColor: $vuetify.theme.themes.light.warning, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-on="on"></div>
-									</template>
-									<v-card>
-										<v-card-text class="pa-0">
-											<v-color-picker v-model="$vuetify.theme.themes.light.warning" flat></v-color-picker>
-										</v-card-text>
-									</v-card>
-								</v-menu>
-							</template>
-							</v-text-field>
-						</v-col>
-					</v-row>
-						<v-row>
-							<v-col><v-btn @click="resetColors">Reset colors</a></v-btn></v-col>
-						</v-row>
+				<v-window v-model="configurations_step">
+					<v-window-item value="branding" :transition="false" :reverse-transition="false">
+						<v-card flat>
+							<v-card-text>
+								<v-row>
+									<v-col cols="12" md="4">
+										<v-text-field v-model="configurations.name" label="Name" variant="underlined"></v-text-field>
+										<v-switch v-model="configurations.logo_only" label="Show only logo" color="primary" inset hide-details></v-switch>
+									</v-col>
+									<v-col cols="12" md="8">
+										<v-text-field v-model="configurations.url" label="URL" variant="underlined"></v-text-field>
+									</v-col>
+								</v-row>
+								<v-row>
+									<v-col cols="12" md="8">
+										<v-text-field v-model="configurations.logo" label="Logo URL" variant="underlined"></v-text-field>
+									</v-col>
+									<v-col cols="12" md="4">
+										<v-text-field v-model="configurations.logo_width" label="Logo Width" variant="underlined"></v-text-field>
+									</v-col>
+								</v-row>
+								<span class="text-body-2">DNS Labels</span>
+								<v-row>
+									<v-col cols="12" md="9">
+										<v-textarea v-model="configurations.dns_introduction" label="Introduction" auto-grow rows="3" variant="underlined"></v-textarea>
+									</v-col>
+									<v-col cols="12" md="3">
+										<v-textarea v-model="configurations.dns_nameservers" label="Nameservers" spellcheck="false" auto-grow variant="underlined"></v-textarea>
+									</v-col>
+								</v-row>
+								<span class="text-body-2">Theme colors</span>
+								<v-row>
+									<v-col class="shrink">
+										<v-text-field persistent-hint hint="Primary" v-model="currentThemeColors.primary" class="ma-0 pa-0" variant="solo">
+											<template v-slot:append-inner>
+												<v-menu v-model="colors.primary" location="bottom" :close-on-content-click="false">
+													<template v-slot:activator="{ props }">
+														<div :style="{ backgroundColor: currentThemeColors.primary, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-bind="props"></div>
+													</template>
+													<v-card>
+														<v-card-text class="pa-0">
+															<v-color-picker v-model="currentThemeColors.primary"></v-color-picker>
+														</v-card-text>
+													</v-card>
+												</v-menu>
+											</template>
+										</v-text-field>
+									</v-col>
+									<v-col class="shrink">
+										<v-text-field persistent-hint hint="Secondary" v-model="currentThemeColors.secondary" class="ma-0 pa-0" variant="solo">
+											<template v-slot:append-inner>
+												<v-menu v-model="colors.secondary" location="bottom" :close-on-content-click="false">
+													<template v-slot:activator="{ props }">
+														<div :style="{ backgroundColor: currentThemeColors.secondary, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-bind="props"></div>
+													</template>
+													<v-card>
+														<v-card-text class="pa-0">
+															<v-color-picker v-model="currentThemeColors.secondary"></v-color-picker>
+														</v-card-text>
+													</v-card>
+												</v-menu>
+											</template>
+										</v-text-field>
+									</v-col>
+									<v-col class="shrink">
+										<v-text-field persistent-hint hint="Accent" v-model="currentThemeColors.accent" class="ma-0 pa-0" variant="solo">
+											<template v-slot:append-inner>
+												<v-menu v-model="colors.accent" location="bottom" :close-on-content-click="false">
+													<template v-slot:activator="{ props }">
+														<div :style="{ backgroundColor: 'rgb(var(--v-theme-accent))', cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-bind="props"></div>
+													</template>
+													<v-card>
+														<v-card-text class="pa-0">
+															<v-color-picker v-model="currentThemeColors.accent"></v-color-picker>
+														</v-card-text>
+													</v-card>
+												</v-menu>
+											</template>
+										</v-text-field>
+									</v-col>
+									<v-col class="shrink">
+										<v-text-field persistent-hint hint="Error" v-model="currentThemeColors.error" class="ma-0 pa-0" variant="solo">
+											<template v-slot:append-inner>
+												<v-menu v-model="colors.error" location="bottom" :close-on-content-click="false">
+													<template v-slot:activator="{ props }">
+														<div :style="{ backgroundColor: currentThemeColors.error, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-bind="props"></div>
+													</template>
+													<v-card>
+														<v-card-text class="pa-0">
+															<v-color-picker v-model="currentThemeColors.error"></v-color-picker>
+														</v-card-text>
+													</v-card>
+												</v-menu>
+											</template>
+										</v-text-field>
+									</v-col>
+									<v-col class="shrink">
+										<v-text-field persistent-hint hint="Info" v-model="currentThemeColors.info" class="ma-0 pa-0" variant="solo">
+											<template v-slot:append-inner>
+												<v-menu v-model="colors.info" location="bottom" :close-on-content-click="false">
+													<template v-slot:activator="{ props }">
+														<div :style="{ backgroundColor: currentThemeColors.info, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-bind="props"></div>
+													</template>
+													<v-card>
+														<v-card-text class="pa-0">
+															<v-color-picker v-model="currentThemeColors.info"></v-color-picker>
+														</v-card-text>
+													</v-card>
+												</v-menu>
+											</template>
+										</v-text-field>
+									</v-col>
+									<v-col class="shrink">
+										<v-text-field persistent-hint hint="Success" v-model="currentThemeColors.success" class="ma-0 pa-0" variant="solo">
+											<template v-slot:append-inner>
+												<v-menu v-model="colors.success" location="bottom" :close-on-content-click="false">
+													<template v-slot:activator="{ props }">
+														<div :style="{ backgroundColor: currentThemeColors.success, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-bind="props"></div>
+													</template>
+													<v-card>
+														<v-card-text class="pa-0">
+															<v-color-picker v-model="currentThemeColors.success"></v-color-picker>
+														</v-card-text>
+													</v-card>
+												</v-menu>
+											</template>
+										</v-text-field>
+									</v-col>
+									<v-col class="shrink">
+										<v-text-field persistent-hint hint="Warning" v-model="currentThemeColors.warning" class="ma-0 pa-0" variant="solo">
+											<template v-slot:append-inner>
+												<v-menu v-model="colors.warning" location="bottom" :close-on-content-click="false">
+													<template v-slot:activator="{ props }">
+														<div :style="{ backgroundColor: currentThemeColors.warning, cursor: 'pointer', height: '30px', width: '30px', borderRadius: '4px', transition: 'border-radius 200ms ease-in-out' }" v-bind="props"></div>
+													</template>
+													<v-card>
+														<v-card-text class="pa-0">
+															<v-color-picker v-model="currentThemeColors.warning"></v-color-picker>
+														</v-card-text>
+													</v-card>
+												</v-menu>
+											</template>
+										</v-text-field>
+									</v-col>
+								</v-row>
+								<v-row>
+									<v-col><v-btn @click="resetColors">Reset colors</v-btn></v-col>
+								</v-row>
 							</v-card-text>
 						</v-card>
-					</v-tab-item>
-					<v-tab-item key="1" :transition="false" :reverse-transition="false">
-					<v-card>
-						<v-card-text>
-						<span class="body-2">Scheduled Tasks</span>
-						<v-row>
-						<v-col>
+					</v-window-item>
+					<v-window-item value="tasks" :transition="false" :reverse-transition="false">
+						<v-card flat>
+							<v-card-text>
+								<span class="text-body-2">Scheduled Tasks</span>
+								<v-row>
+									<v-col>
+										<v-data-table
+											:items="configurations.scheduled_tasks"
+											:items-per-page="-1"
+											class="elevation-0"
+											hide-default-footer
+										>
+											<template v-slot:headers>
+												<thead>
+													<tr>
+														<th width="20px"></th>
+														<th width="150px">Target</th>
+														<th width="150px">Command</th>
+														<th>Arguments</th>
+														<th width="150px">Repeat</th>
+														<th width="150px">Repeat Quantity</th>
+														<th width="225px">Next Run</th>
+														<th></th>
+													</tr>
+												</thead>
+											</template>
+											<template v-slot:item="{ item, index }">
+												<tr>
+													<td><v-icon>mdi-repeat</v-icon></td>
+													<td><v-select :items="['all', 'production', 'staging', 'custom']" v-model="item.target" hide-details variant="underlined" density="compact"></v-select></td>
+													<td><v-select :items="['backup', 'monitor', 'quicksave', 'scan-errors', 'ssh', 'update']" v-model="item.command" hide-details variant="underlined" density="compact"></v-select></td>
+													<td><v-text-field v-model="item.arguments" hide-details variant="underlined" density="compact"></v-text-field></td>
+													<td><v-select :items="['Hourly', 'Daily', 'Weekly', 'Quarterly', 'Biannually', 'Yearly']" v-model="item.repeat_interval" hide-details variant="underlined" density="compact"></v-select></td>
+													<td><v-text-field v-model="item.repeat_quantity" type="number" hint="Example: 2 or 3 times" persistent-hint variant="underlined" density="compact"></v-text-field></td>
+													<td>
+														<v-menu v-model="item.date_selector" :close-on-content-click="false" location="bottom">
+															<template v-slot:activator="{ props }">
+																<v-text-field
+																	v-model="item.next_run"
+																	label=""
+																	prepend-icon="mdi-calendar"
+																	readonly
+																	v-bind="props"
+																	variant="underlined"
+																	density="compact"
+																></v-text-field>
+															</template>
+															<v-date-picker @update:model-value="keepTimestampNextRun($event, item); item.date_selector = false"></v-date-picker>
+														</v-menu>
+													</td>
+													<td><v-btn size="small" variant="text" icon="mdi-delete" @click="configurations.scheduled_tasks.splice( index, 1 )"></v-btn></td>
+												</tr>
+											</template>
+											<template v-slot:bottom>
+												<div class="pa-4">
+													<v-btn @click="configurations.scheduled_tasks.push( { repeat_interval:'Daily', repeat_at:'9pm',command:'backup',target:'all' })">New scheduled task</v-btn>
+												</div>
+											</template>
+										</v-data-table>
+									</v-col>
+								</v-row>
+							</v-card-text>
+						</v-card>
+					</v-window-item>
+					<v-window-item value="providers" :transition="false" :reverse-transition="false">
+						<v-toolbar flat color="transparent">
+							<v-toolbar-title>Listing {{ providers.length }} providers</v-toolbar-title>
+							<v-spacer></v-spacer>
+							<v-btn variant="text" @click="dialog_new_provider.show = true">Add Provider <v-icon>mdi-plus</v-icon></v-btn>
+						</v-toolbar>
 						<v-data-table
-							:items="configurations.scheduled_tasks"
-							:items-per-page="-1"
-							class="elevation-0"
-							hide-default-header
-							hide-default-footer
+							:headers="[{ title: 'Name', key: 'name' },{ title: 'Created', key: 'created_at' }]"
+							:items="providers"
+							:items-per-page="100"
+							:items-per-page-options="[100,250,500,{'title':'All','value':-1}]"
+							@click:row="(event, { item }) => editProvider(item)"
+							hover
+							style="cursor:pointer"
 						>
-						<template v-slot:body="{ items }">
-							<thead class="v-data-table-header">
-								<tr>
-									<th width="20px"></th>
-									<th width="150px">Target</th>
-									<th width="150px">Command</th>
-									<th>Arguments</th>
-									<th width="150px">Repeat</th>
-									<th width="150px">Repeat Quantity</th>
-									<th width="225px">Next Run</th>
-									<th></th>
-								</tr>
-							</thead>
-							<tbody>
-							<tr v-for="(item, index) in items" :key="item.task_id">
-								<td><v-icon>mdi-repeat</v-icon></td>
-								<td><v-select :items="['all', 'production', 'staging', 'custom']" label="" v-model="item.target" hide-details></v-select></td>
-								<td><v-select :items="['backup', 'monitor', 'quicksave', 'scan-errors', 'ssh', 'update']" label="" v-model="item.command" hide-details></v-select></td>
-								<td><v-text-field label="" v-model="item.arguments" hide-details></v-text-field></td>
-								<td><v-select :items="['Hourly', 'Daily', 'Weekly', 'Quarterly', 'Biannually', 'Yearly']" label="" v-model="item.repeat_interval" hide-details></v-select></td>
-								<td><v-text-field label="" v-model="item.repeat_quantity" type="number" hint="Example: 2 or 3 times" persistent-hint></v-text-field></td>
-								<td>
-									<v-menu
-										v-model="item.date_selector"
-										:close-on-content-click="false"
-										:nudge-right="40"
-										transition="scale-transition"
-										offset-y
-										min-width="290px"
-									>
-										<template v-slot:activator="{ on, attrs }">
-										<v-text-field
-											v-model="item.next_run"
-											:value="item.next_run"
-											label=""
-											prepend-icon="mdi-calendar"
-											v-bind="attrs"
-											v-on="on"
-										></v-text-field>
-										</template>
-										<v-date-picker @input="keepTimestampNextRun( $event, item ); item.date_selector = false"></v-date-picker>
-									</v-menu>
-								</td>
-								<td><v-btn small text icon @click="configurations.scheduled_tasks.splice( index, 1 )"><v-icon>mdi-delete</v-icon></v-btn></td>
-							</tr>
-							<tr>
-								<td colspan="8">
-									<v-row><v-col class="pa-5 pl-12"><v-btn class="pa-3" @click="configurations.scheduled_tasks.push( { repeat_interval:'Daily', repeat_at:'9pm',command:'backup',target:'all' })">New scheduled task</v-btn></v-col></v-row>
-								</td>
-							</tr>
-							</tbody>
-						</template>
+							<template v-slot:item.created_at="{ item }">
+								{{ pretty_timestamp( item.created_at ) }}
+							</template>
 						</v-data-table>
-						</v-col>
-						</v-row>
-						</v-card-text>
-					</v-card>
-					</v-tab-item>
-					<v-tab-item key="2" :transition="false" :reverse-transition="false">
-					<v-toolbar light flat>
-						<v-toolbar-title>Listing {{ providers.length }} providers</v-toolbar-title>
-						<v-spacer></v-spacer>
-						<v-toolbar-items>
-							<v-btn text @click="dialog_new_provider.show = true">Add Provider <v-icon dark>mdi-plus</v-icon></v-btn>
-						</v-toolbar-items>
-					</v-toolbar>
-					<v-data-table
-						:headers="[{ text: 'Name', value: 'name' },{ text: 'Created', value: 'created_at' }]"
-						:items="providers"
-						:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
-					>
-					<template v-slot:body="{ items }">
-						<tbody>
-						<tr v-for="item in items" @click="editProvider( item )" style="cursor:pointer">
-							<td>{{ item.name }}</td>
-							<td>{{ item.created_at | pretty_timestamp }}</td>
-						</tr>
-						</tbody>
-					</template>
-					</v-data-table>
-					</v-tab-item>
-					<v-tab-item key="3" :transition="false" :reverse-transition="false">
-					<v-card>
-					<v-card-text>
-					<span class="body-2">WooCommerce Products</span>
-					<v-row class="mb-7">
-						<v-col>
-							<v-select v-model="configurations.woocommerce.hosting_plan" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-text="name" label="Hosting Plan" hide-details></v-select>
-						</v-col>
-						<v-col>
-							<v-select v-model="configurations.woocommerce.addons" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-text="name" label="Addons" hide-details></v-select>
-						</v-col>
-						<v-col>
-							<v-select v-model="configurations.woocommerce.charges" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-text="name" label="Charges" hide-details></v-select>
-						</v-col>
-						<v-col>
-							<v-select v-model="configurations.woocommerce.credits" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-text="name" label="Credits" hide-details></v-select>
-						</v-col>
-						<v-col>
-							<v-select v-model="configurations.woocommerce.usage" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-text="name" label="Usage" hide-details></v-select>
-						</v-col>
-					</v-row>
-					<span class="body-2">Hosting Plans</span>
-					<v-row v-for="(plan, index) in configurations.hosting_plans">
-						<v-col>
-							<v-text-field v-model="plan.name" label="Name"></v-text-field>
-						</v-col>
-						<v-col style="max-width:100px">
-							<v-text-field v-model="plan.interval" label="Interval" hint="# of months" persistent-hint></v-text-field>
-						</v-col>
-						<v-col style="max-width:100px">
-							<v-text-field v-model="plan.price" label="Price"></v-text-field>
-						</v-col>
-						<v-col style="max-width:150px">
-							<v-text-field v-model="plan.limits.visits" label="Visits Limits"></v-text-field>
-						</v-col>
-						<v-col style="max-width:150px">
-							<v-text-field v-model="plan.limits.storage" label="Storage Limits"></v-text-field>
-						</v-col>
-						<v-col style="max-width:120px">
-							<v-text-field v-model="plan.limits.sites" label="Sites Limits"></v-text-field>
-						</v-col>
-						<v-col class="ma-0 pa-0" style="max-width:46px">
-							<v-btn color="red" icon @click="deletePlan( index )"><v-icon>mdi-delete</v-icon></v-btn>
-						</v-col>
-					</v-row>
-					<v-row>
-						<v-col><v-btn @click="addAdditionalPlan()">Add Additional Plan</v-btn></v-col>
-					</v-row>
-					<div class="seperator mt-5"></div>
-					<span class="body-2">Usage Pricing</span>
-					<v-row>
-						<v-col style="max-width:200px"><v-text-field label="Sites Quantity" v-model="configurations.usage_pricing.sites.quantity"></v-text-field></v-col>
-						<v-col style="max-width:150px"><v-text-field label="Sites Cost" v-model="configurations.usage_pricing.sites.cost"></v-text-field></v-col>
-						<v-col style="max-width:150px"><v-text-field label="Sites Interval" v-model="configurations.usage_pricing.sites.interval" hint="# of months" persistent-hint></v-text-fiel></v-col>
-					</v-row>
-					<v-row>
-						<v-col style="max-width:200px"><v-text-field label="Storage Quantity (GB)" v-model="configurations.usage_pricing.storage.quantity"></v-text-field></v-col>
-						<v-col style="max-width:150px"><v-text-field label="Storage Cost" v-model="configurations.usage_pricing.storage.cost"></v-text-field></v-col>
-						<v-col style="max-width:150px"><v-text-field label="Storage Interval" v-model="configurations.usage_pricing.storage.interval" hint="# of months" persistent-hint></v-text-fiel></v-col>
-					</v-row>
-					<v-row>
-						<v-col style="max-width:200px"><v-text-field label="Traffic Quantity (pageviews)" v-model="configurations.usage_pricing.traffic.quantity"></v-text-field></v-col>
-						<v-col style="max-width:150px"><v-text-field label="Traffic Cost" v-model="configurations.usage_pricing.traffic.cost"></v-text-field></v-col>
-						<v-col style="max-width:150px"><v-text-field label="Traffic Interval" v-model="configurations.usage_pricing.traffic.interval" hint="# of months" persistent-hint></v-text-fiel></v-col>
-					</v-row>
-					<div class="seperator mt-5"></div>
-					<span class="body-2">Maintenance Pricing</span>
-					<v-row>
-						<v-col style="max-width:150px"><v-text-field label="Cost Per Site" v-model="configurations.maintenance_pricing.cost"></v-text-field></v-col>
-						<v-col style="max-width:150px"><v-text-field label="Interval" v-model="configurations.maintenance_pricing.interval" hint="# of months" persistent-hint></v-text-fiel></v-col>
-					</v-row>
-					</v-card>
-					</v-card-text>
-					</v-tab-item>
-				</v-tabs-items>
+					</v-window-item>
+					<v-window-item value="billing" :transition="false" :reverse-transition="false">
+						<v-card flat>
+							<v-card-text>
+								<span class="text-body-2">WooCommerce Products</span>
+								<v-row class="mb-7">
+									<v-col>
+										<v-select v-model="configurations.woocommerce.hosting_plan" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-title="name" label="Hosting Plan" hide-details variant="underlined"></v-select>
+									</v-col>
+									<v-col>
+										<v-select v-model="configurations.woocommerce.addons" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-title="name" label="Addons" hide-details variant="underlined"></v-select>
+									</v-col>
+									<v-col>
+										<v-select v-model="configurations.woocommerce.charges" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-title="name" label="Charges" hide-details variant="underlined"></v-select>
+									</v-col>
+									<v-col>
+										<v-select v-model="configurations.woocommerce.credits" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-title="name" label="Credits" hide-details variant="underlined"></v-select>
+									</v-col>
+									<v-col>
+										<v-select v-model="configurations.woocommerce.usage" :items='<?php echo json_encode( CaptainCore\Configurations::products() ); ?>' item-value="id" item-title="name" label="Usage" hide-details variant="underlined"></v-select>
+									</v-col>
+								</v-row>
+								<span class="text-body-2">Hosting Plans</span>
+								<v-row v-for="(plan, index) in configurations.hosting_plans" :key="index" align="center">
+									<v-col>
+										<v-text-field v-model="plan.name" label="Name" variant="underlined" hide-details></v-text-field>
+									</v-col>
+									<v-col style="max-width:100px">
+										<v-text-field v-model="plan.interval" label="Interval" hint="# of months" persistent-hint variant="underlined" hide-details></v-text-field>
+									</v-col>
+									<v-col style="max-width:100px">
+										<v-text-field v-model="plan.price" label="Price" variant="underlined" hide-details></v-text-field>
+									</v-col>
+									<v-col style="max-width:150px">
+										<v-text-field v-model="plan.limits.visits" label="Visits Limits" variant="underlined" hide-details></v-text-field>
+									</v-col>
+									<v-col style="max-width:150px">
+										<v-text-field v-model="plan.limits.storage" label="Storage Limits" variant="underlined" hide-details></v-text-field>
+									</v-col>
+									<v-col style="max-width:120px">
+										<v-text-field v-model="plan.limits.sites" label="Sites Limits" variant="underlined" hide-details></v-text-field>
+									</v-col>
+									<v-col class="ma-0 pa-0" style="max-width:46px">
+										<v-btn color="red" icon="mdi-delete" @click="deletePlan( index )" variant="text"></v-btn>
+									</v-col>
+								</v-row>
+								<v-row>
+									<v-col><v-btn @click="addAdditionalPlan()" variant="outlined" color="secondary">Add Additional Plan</v-btn></v-col>
+								</v-row>
+								<v-divider class="my-5"></v-divider>
+								<span class="text-body-2">Usage Pricing</span>
+								<v-row>
+									<v-col style="max-width:200px"><v-text-field label="Sites Quantity" v-model="configurations.usage_pricing.sites.quantity" variant="underlined"></v-text-field></v-col>
+									<v-col style="max-width:150px"><v-text-field label="Sites Cost" v-model="configurations.usage_pricing.sites.cost" variant="underlined"></v-text-field></v-col>
+									<v-col style="max-width:150px"><v-text-field label="Sites Interval" v-model="configurations.usage_pricing.sites.interval" hint="# of months" persistent-hint variant="underlined"></v-text-field></v-col>
+								</v-row>
+								<v-row>
+									<v-col style="max-width:200px"><v-text-field label="Storage Quantity (GB)" v-model="configurations.usage_pricing.storage.quantity" variant="underlined"></v-text-field></v-col>
+									<v-col style="max-width:150px"><v-text-field label="Storage Cost" v-model="configurations.usage_pricing.storage.cost" variant="underlined"></v-text-field></v-col>
+									<v-col style="max-width:150px"><v-text-field label="Storage Interval" v-model="configurations.usage_pricing.storage.interval" hint="# of months" persistent-hint variant="underlined"></v-text-field></v-col>
+								</v-row>
+								<v-row>
+									<v-col style="max-width:200px"><v-text-field label="Traffic Quantity (pageviews)" v-model="configurations.usage_pricing.traffic.quantity" variant="underlined"></v-text-field></v-col>
+									<v-col style="max-width:150px"><v-text-field label="Traffic Cost" v-model="configurations.usage_pricing.traffic.cost" variant="underlined"></v-text-field></v-col>
+									<v-col style="max-width:150px"><v-text-field label="Traffic Interval" v-model="configurations.usage_pricing.traffic.interval" hint="# of months" persistent-hint variant="underlined"></v-text-field></v-col>
+								</v-row>
+								<v-divider class="my-5"></v-divider>
+								<span class="text-body-2">Maintenance Pricing</span>
+								<v-row>
+									<v-col style="max-width:150px"><v-text-field label="Cost Per Site" v-model="configurations.maintenance_pricing.cost" variant="underlined"></v-text-field></v-col>
+									<v-col style="max-width:150px"><v-text-field label="Interval" v-model="configurations.maintenance_pricing.interval" hint="# of months" persistent-hint variant="underlined"></v-text-field></v-col>
+								</v-row>
+							</v-card-text>
+						</v-card>
+					</v-window-item>
+				</v-window>
 				<v-row>
 					<v-col>
 						<v-card flat>
-						<v-card-actions style="text-align:right">
-							<v-btn color="primary" dark @click="saveGlobalConfigurations()">Save Configurations</v-btn>
-						</v-card-actions>
+							<v-card-text class="justify-end">
+								<v-btn color="primary" @click="saveGlobalConfigurations()">Save Configurations</v-btn>
+							</v-card-text>
 						</v-card>
 					</v-col>
 				</v-row>
 			</v-card>
-			<v-card v-if="route == 'billing'" outlined rounded="xl">
+			<v-card v-if="route == 'billing'" flat border="thin" rounded="xl">
 				<v-toolbar flat v-show="dialog_billing.step == 1" color="transparent">
 					<v-toolbar-title>Billing</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
 				<v-container class="pt-0">
-				<v-flex xs12 text-right v-show="dialog_billing.step == 1">
-				<v-toolbar color="primary" dark dense flat rounded="lg">
-					<v-tabs v-model="billing_tabs" dense left>
-						<v-tabs-slider color="transparent"></v-tabs-slider>
-						<v-tab :key="1" href="#tab-Billing-Invoices" ripple>
-							Invoices <v-icon size="24">mdi-receipt-text</v-icon>
+				<div v-show="dialog_billing.step == 1">
+				<v-toolbar color="primary" density="compact" flat rounded="lg">
+					<v-tabs v-model="billing_tabs" density="compact" align-tabs="start" hide-slider>
+						<v-tab :key="1" value="tab-Billing-Invoices">
+							Invoices <v-icon size="24" class="ml-1">mdi-receipt-text</v-icon>
 						</v-tab>
-						<v-tab :key="2" href="#tab-Billing-Overview">
-							My Plan <v-icon size="24">mdi-chart-donut</v-icon>
+						<v-tab :key="2" value="tab-Billing-Overview">
+							My Plan <v-icon size="24" class="ml-1">mdi-chart-donut</v-icon>
 						</v-tab>
-						<v-tab :key="3" href="#tab-Billing-Payment-Methods" ripple>
-							Payment Methods <v-icon size="24">mdi-credit-card-outline</v-icon>
+						<v-tab :key="3" value="tab-Billing-Payment-Methods">
+							Payment Methods <v-icon size="24" class="ml-1">mdi-credit-card-outline</v-icon>
 						</v-tab>
-						<v-tab :key="4" href="#tab-Billing-Address" ripple>
-							Billing Address <v-icon size="24">mdi-map-marker</v-icon>
+						<v-tab :key="4" value="tab-Billing-Address">
+							Billing Address <v-icon size="24" class="ml-1">mdi-map-marker</v-icon>
 						</v-tab>
 					</v-tabs>
 					</v-toolbar>
-					<v-tabs-items v-model="billing_tabs" style="background:transparent">
-						<v-tab-item value="tab-Billing-Invoices" :transition="false" :reverse-transition="false">
+					<v-window v-model="billing_tabs" style="background:transparent">
+						<v-window-item value="tab-Billing-Invoices" :transition="false" :reverse-transition="false">
 						<v-data-table
 							:loading="billing_loading"
 							:headers="[
-								{ text: 'Order', value: 'order_id', width: '130px' },
-								{ text: 'Date', value: 'date' },
-								{ text: 'Status', value: 'status' },
-								{ text: 'Total', value: 'total', width: '120px' },
-								{ text: '', value: 'actions', width: '140px' }]"
+								{ title: 'Order', key: 'order_id', width: '130px' },
+								{ title: 'Date', key: 'date' },
+								{ title: 'Status', key: 'status' },
+								{ title: 'Total', key: 'total', width: '120px' },
+								{ title: '', key: 'actions', width: '140px', sortable: false }]"
 							:items="billing.invoices"
 							style="background:transparent"
 						>
@@ -5696,21 +6170,21 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							${{ item.total }}
 						</template>
 						<template v-slot:item.actions="{ item }">
-							<v-btn small @click="goToPath( `/billing/${item.order_id}`)">Show Invoice</v-btn>
+							<v-btn size="small" @click="goToPath( `/billing/${item.order_id}`)" color="primary">Show Invoice</v-btn>
 						</template>
 						</v-data-table>
-						</v-tab-item>
-						<v-tab-item value="tab-Billing-Overview" :transition="false" :reverse-transition="false">
+						</v-window-item>
+						<v-window-item value="tab-Billing-Overview" :transition="false" :reverse-transition="false">
 						<v-data-table
 							:loading="billing_loading"
 							:headers="[
-								{ text: 'Account', value: 'account_id', width: '100px' },
-								{ text: 'Name', value: 'name' },
-								{ text: 'Renewal Date', value: 'next_renewal' },
-								{ text: 'Plan', value: 'plan' },
-								{ text: 'Price', value: 'price' },
-								{ text: 'Status', value: 'status' },
-								{ text: '', value: 'actions', width: '140px' }]"
+								{ title: 'Account', key: 'account_id', width: '100px' },
+								{ title: 'Name', key: 'name' },
+								{ title: 'Renewal Date', key: 'next_renewal' },
+								{ title: 'Plan', key: 'plan' },
+								{ title: 'Price', key: 'price' },
+								{ title: 'Status', key: 'status' },
+								{ title: '', key: 'actions', width: '140px', sortable: false }]"
 							:items="billing.subscriptions"
 							style="background:transparent"
 						>
@@ -5724,225 +6198,187 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<span v-html="my_plan_usage_estimate( item.plan )"></span>
 						</template>
 						<template v-slot:item.next_renewal="{ item }">
-							<span v-if="item.plan.next_renewal != '' && item.plan.next_renewal != null">{{ item.plan.next_renewal | pretty_timestamp }}</span>
+							<span v-if="item.plan.next_renewal != '' && item.plan.next_renewal != null">{{ pretty_timestamp( item.plan.next_renewal ) }}</span>
 						</template>
 						<template v-slot:item.actions="{ item }">
-							<v-btn small @click="customerModifyPlan( item )">Modify Plan</v-btn>
+							<v-btn color="primary" size="small" @click="customerModifyPlan( item )">Modify Plan</v-btn>
 						</template>
 						</v-data-table>
-						</v-tab-item>
-						<v-tab-item value="tab-Billing-Payment-Methods" :transition="false" :reverse-transition="false">
+						</v-window-item>
+						<v-window-item value="tab-Billing-Payment-Methods" :transition="false" :reverse-transition="false">
 						<v-data-table
 							v-if="billing.payment_methods"
 							:loading="billing_loading"
 							:headers="[
-								{ text: 'Method', value: 'method' },
-								{ text: 'Expires', value: 'expires' },
-								{ text: '', value: 'actions', width: '204px', align: 'end' }]"
+								{ title: 'Method', key: 'method.brand' },
+								{ title: 'Expires', key: 'expires' },
+								{ title: '', key: 'actions', width: '204px', align: 'end', sortable: false }
+							]"
 							:items="billing.payment_methods"
 							hide-default-footer
 							style="background:transparent"
 						>
-						<template v-slot:item.method="{ item }">
-							{{ item.method.brand }} ending in {{ item.method.last4 }} 
-						</template>
-						<template v-slot:item.actions="{ item }">
-							<v-btn small disabled v-show="item.is_default">Primary Method</v-btn>
-							<v-btn small v-show="!item.is_default" @click="setAsPrimary( item.token )">Set as Primary</v-btn>
-							<v-btn color="red" icon @click="deletePaymentMethod( item.token )"><v-icon>mdi-delete</v-icon></v-btn>
-						</template>
-						<template
-							v-slot:body.append="{ headers }"
-						>
-							<tr>
-							<td :colspan="headers.length" class="text-left">
-							<v-dialog max-width="500" v-model="new_payment.show" eager>
-							<template v-slot:activator="{ on, attrs }">
-								<v-btn small v-bind="attrs" v-on="on" @click="prepNewPayment()">
-									Add new payment method
-								</v-btn>
+							<template v-slot:item.method.brand="{ item }">
+								{{ item.method.brand }} ending in {{ item.method.last4 }}
 							</template>
-							<v-card>
-								<v-card-title>
-									New payment method
-									<v-spacer></v-spacer>
-									<v-btn @click="new_payment.show = false" icon><v-icon>mdi-close</v-icon></v-btn>
-								</v-card-title>
-								<v-card-text class="mt-5">
-									<div id="new-card-element"></div>
-									<v-alert text dense border="left" type="warning" v-show="new_payment.error != ''">
-										{{ new_payment.error }}
-									</v-alert>
-								</v-card-text>
-								<v-divider></v-divider>
-								<v-card-actions>
-								<v-spacer></v-spacer>
-									<v-btn @click="addPaymentMethod">Add Payment Method</v-btn>
-								</v-card-actions>
-							</v-card>
-							</v-dialog>
-							</td>
-							</tr>
-						</template>
+							<template v-slot:item.actions="{ item }">
+								<v-btn size="small" disabled v-show="item.is_default">Primary Method</v-btn>
+								<v-btn size="small" v-show="!item.is_default" @click="setAsPrimary( item.token )" color="primary">Set as Primary</v-btn>
+								<v-btn color="red" icon="mdi-delete" size="small" @click="deletePaymentMethod( item.token )" variant="text"></v-btn>
+							</template>
+							<template v-slot:bottom>
+								<div class="text-left pa-2">
+									<v-dialog max-width="500" v-model="new_payment.show">
+										<template v-slot:activator="{ props }">
+											<v-btn size="small" v-bind="props" variant="tonal" class="ml-2 mb-2">
+												Add new payment method
+											</v-btn>
+										</template>
+										<v-card>
+											<v-toolbar flat>
+												<v-toolbar-title>New payment method</v-toolbar-title>
+												<v-spacer></v-spacer>
+												<v-btn @click="new_payment.show = false" icon="mdi-close" variant="text"></v-btn>
+											</v-toolbar>
+											<v-card-text class="mt-5">
+												<div id="new-card-element"></div>
+												<v-alert variant="text" density="compact" border="start" type="warning" v-show="new_payment.error != ''">
+													{{ new_payment.error }}
+												</v-alert>
+											</v-card-text>
+											<v-divider></v-divider>
+											<v-card-actions>
+												<v-spacer></v-spacer>
+												<v-btn @click="addPaymentMethod" color="primary" variant="tonal">Add Payment Method</v-btn>
+											</v-card-actions>
+										</v-card>
+									</v-dialog>
+								</div>
+							</template>
 						</v-data-table>
-						</v-tab-item>
-						<v-tab-item value="tab-Billing-Address" :transition="false" :reverse-transition="false">
-						<v-subheader>Billing Address</v-subheader>
+					</v-window-item>
+					<v-window-item value="tab-Billing-Address" :transition="false" :reverse-transition="false" class="pt-3">
 						<template v-if="typeof billing.address == 'object'">
 						<v-row no-gutters class="mx-3">
-							<v-col class="ma-1"><v-text-field label="First Name" v-model="billing.address.first_name"></v-text-field></v-col>
-							<v-col class="ma-1"><v-text-field label="Last Name" v-model="billing.address.last_name"></v-text-field></v-col>
-							<v-col class="ma-1"><v-text-field label="Company name (optional)" v-model="billing.address.company"></v-text-field></v-col>
+							<v-col class="ma-1"><v-text-field label="First Name" v-model="billing.address.first_name" variant="underlined"></v-text-field></v-col>
+							<v-col class="ma-1"><v-text-field label="Last Name" v-model="billing.address.last_name" variant="underlined"></v-text-field></v-col>
+							<v-col class="ma-1"><v-text-field label="Company name (optional)" v-model="billing.address.company" variant="underlined"></v-text-field></v-col>
 						</v-row>
 						<v-row no-gutters class="mx-3">
-							<v-col class="ma-1"><v-text-field label="Street Address" persistent-hint hint="House number and street name" v-model="billing.address.address_1"></v-text-field></v-col>
+							<v-col class="ma-1"><v-text-field label="Street Address" persistent-hint hint="House number and street name" v-model="billing.address.address_1" variant="underlined"></v-text-field></v-col>
 						</v-row>
 						<v-row no-gutters class="mx-3">
-							<v-col class="ma-1"><v-text-field label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="billing.address.address_2"></v-text-field></v-col>
+							<v-col class="ma-1"><v-text-field label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="billing.address.address_2" variant="underlined"></v-text-field></v-col>
 						</v-row>
 						<v-row no-gutters class="mx-3">
-							<v-col class="ma-1"><v-text-field label="Town" v-model="billing.address.city"></v-text-field></v-col>
+							<v-col class="ma-1"><v-text-field label="Town" v-model="billing.address.city" variant="underlined"></v-text-field></v-col>
 							<v-col class="ma-1">
-								<v-autocomplete label="State" v-model="billing.address.state" :items="states_selected" v-if="states_selected.length > 0"></v-autocomplete>
-								<v-text-field label="State" v-model="billing.address.state" v-else></v-text-field>
+								<v-autocomplete label="State" v-model="billing.address.state" :items="states_selected" v-if="states_selected.length > 0" variant="underlined"></v-autocomplete>
+								<v-text-field label="State" v-model="billing.address.state" variant="underlined" v-else></v-text-field>
 							</v-col>
-							<v-col class="ma-1"><v-text-field label="Zip" v-model="billing.address.postcode"></v-text-field></v-col>
-							<v-col class="ma-1"><v-autocomplete label="Country" v-model="billing.address.country" :items="countries" @change="populateStates()"></v-autocomplete></v-col>
+							<v-col class="ma-1"><v-text-field label="Zip" v-model="billing.address.postcode" variant="underlined"></v-text-field></v-col>
+							<v-col class="ma-1"><v-autocomplete label="Country" v-model="billing.address.country" :items="countries" @update:model-value="populateStates()" variant="underlined"></v-autocomplete></v-col>
 						</v-row>
 						<v-row no-gutters class="mx-3">
-							<v-col class="ma-1"><v-text-field label="Phone" v-model="billing.address.phone"></v-text-field></v-col>
-							<v-col class="ma-1"><v-text-field label="Email" v-model="billing.address.email"></v-text-field></v-col>
+							<v-col class="ma-1"><v-text-field label="Phone" v-model="billing.address.phone" variant="underlined"></v-text-field></v-col>
+							<v-col class="ma-1"><v-text-field label="Email" v-model="billing.address.email" variant="underlined"></v-text-field></v-col>
 						</v-row>
 						<v-row no-gutters class="mx-3 mb-3 text-left">
-						<v-btn small @click="updateBilling()">
+						<v-btn size="small" @click="updateBilling()" variant="tonal">
 							Update Billing Address
 						</v-btn>
 						</v-row>
 						</template>
-						</v-tab-item>
-					</v-tab-items>
-				</v-flex>
-				<v-flex v-show="dialog_billing.step == 2">
+						</v-window-item>
+					</v-window>
+				</div>
+				<div v-show="dialog_billing.step == 2">
 					<v-toolbar flat color="transparent">
 						<v-toolbar-title v-show="dialog_invoice.loading == true">Loading...</v-toolbar-title>
 						<v-toolbar-title v-show="dialog_invoice.loading == false">Invoice #{{ dialog_invoice.response.order_id }}</v-toolbar-title>
-						<div class="flex-grow-1"></div>
+						<v-spacer></v-spacer>
 						<v-toolbar-items v-show="dialog_invoice.loading == false">
-							<v-tooltip bottom>
-								<template v-slot:activator="{ on }">
-									<v-btn text @click="downloadPDF()" v-on="on"><v-icon>mdi-file-download</v-icon></v-btn>
-									<a ref="download_pdf" href="#"></a>
+							<v-tooltip location="bottom">
+								<template v-slot:activator="{ props }">
+									<v-btn variant="text" @click="downloadPDF()" v-bind="props" icon="mdi-file-download"></v-btn>
+									<a ref="download_pdf" href="#" style="display: none;"></a>
 								</template>
 								<span>Download PDF Invoice</span>
 							</v-tooltip>
-							<v-btn text :href=`${configurations.path}billing` @click.prevent="goToPath( '/billing' )"><v-icon>mdi-arrow-left</v-icon> Back</v-btn>
+							<v-btn variant="text" @click="goToPath( '/billing' )"><v-icon>mdi-arrow-left</v-icon> Back</v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
 					<v-card-text v-show="dialog_invoice.loading == false">
 					<v-card flat>
 					<v-row>
-						<v-overlay absolute :value="dialog_invoice.paying">
+						<v-overlay contained v-model="dialog_invoice.paying" class="align-center justify-center">
 							<v-progress-circular indeterminate size="64"></v-progress-circular>
 						</v-overlay>
 						<v-col style="max-width:360px" v-show="dialog_invoice.response.status == 'pending' || dialog_invoice.response.status == 'failed'">
-						<v-card
-							class="mb-7"
-							outlined
-							v-if="typeof billing.address == 'object' && dialog_invoice.customer"
-						>
-							<v-list-item three-line>
-							<v-list-item-content>
-								<div class="overline mb-4">
+						<v-card class="mb-7" variant="outlined" v-if="typeof billing.address == 'object' && dialog_invoice.customer">
+							<v-list-item class="pa-4">
+								<div class="text-overline mb-4">
 								Billing Details
 								</div>
-								<v-list-item-title class="headline mb-1">
+								<v-list-item-title class="text-h5 mb-1">
 								{{ billing.address.first_name }} {{ billing.address.last_name }}
 								</v-list-item-title>
 								<v-list-item-subtitle>{{ billing.address.company }}</v-list-item-subtitle>
-								<div v-html="billingAddress" class="body-2"></div>
-								<div v-show="billing.address.phone != ''" class="body-2"><v-icon small>mdi-phone</v-icon> <a :href="'tel:'+ billing.address.phone">{{ billing.address.phone }}</a></div>
-								<div v-show="billing.address.email != ''" class="body-2"><v-icon small>mdi-email</v-icon> <a :href="'mailto:'+ billing.address.email">{{ billing.address.email }}</a></div>
-							</v-list-item-content>
+								<div v-html="billingAddress" class="text-body-2"></div>
+								<div v-show="billing.address.phone != ''" class="text-body-2"><v-icon size="small">mdi-phone</v-icon> <a :href="'tel:'+ billing.address.phone">{{ billing.address.phone }}</a></div>
+								<div v-show="billing.address.email != ''" class="text-body-2"><v-icon size="small">mdi-email</v-icon> <a :href="'mailto:'+ billing.address.email">{{ billing.address.email }}</a></div>
 							</v-list-item>
 
 							<v-card-actions>
-							<v-btn color="primary" outlined text @click="dialog_invoice.customer = false">
+							<v-btn color="primary" variant="outlined" @click="dialog_invoice.customer = false">
 								Modify Billing Details
 							</v-btn>
 							</v-card-actions>
 						</v-card>
-						<v-card
-							class="mb-7"
-							max-width="360"
-							outlined
-							v-else-if="typeof billing.address == 'object'"
-						>
-						<v-form ref="billing_form" v-model="billing.valid" lazy-validation>
-						<v-list-item three-line>
-							<v-list-item-content>
-								<div class="overline mb-4">
-								Billing Details
-								</div>
-								<v-row no-gutters>
-									<v-col class="mx-1"><v-text-field dense label="First Name" v-model="billing.address.first_name" :rules="billing.rules.firstname"></v-text-field></v-col>
-									<v-col class="mx-1"><v-text-field dense label="Last Name" v-model="billing.address.last_name" :rules="billing.rules.lastname"></v-text-field></v-col>
-								</v-row>
-								<v-row no-gutters>
-									<v-col class="mx-1"><v-text-field dense label="Company name (optional)" v-model="billing.address.company"></v-text-field></v-col>
-								</v-row>
-								<v-row no-gutters>
-									<v-col class="mx-1"><v-text-field dense label="Street Address" persistent-hint hint="House number and street name" v-model="billing.address.address_1" :rules="billing.rules.address_1"></v-text-field></v-col>
-								</v-row>
-								<v-row no-gutters>
-									<v-col class="mx-1"><v-text-field dense label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="billing.address.address_2"></v-text-field></v-col>
-								</v-row>
-								<v-row no-gutters>
-									<v-col class="mx-1"><v-text-field label="Town" v-model="billing.address.city" :rules="billing.rules.city"></v-text-field></v-col>
-								</v-row>
-								<v-row no-gutters>
-									<v-col class="mx-1">
-										<v-autocomplete label="State" v-model="billing.address.state" :items="states_selected" v-if="states_selected.length > 0"></v-autocomplete>
-										<v-text-field label="State" v-model="billing.address.state" v-else></v-text-field>
-									</v-col>
-								</v-row>
-								<v-row no-gutters>
-									<v-col class="mx-1"><v-text-field dense label="Zip" v-model="billing.address.postcode" :rules="billing.rules.zip"></v-text-field></v-col>
-								</v-row>
-								<v-row no-gutters>
-									<v-col class="mx-1 mt-3"><v-autocomplete dense label="Country" v-model="billing.address.country" :items="countries" @change="populateStates()" :rules="billing.rules.country"></v-autocomplete></v-col>
-								</v-row>
-								<v-row no-gutters>
-									<v-col class="mx-1"><v-text-field dense label="Phone" v-model="billing.address.phone"></v-text-field></v-col>
-								</v-row>
-								<v-row no-gutters>
-									<v-col class="mx-1"><v-text-field dense label="Email" v-model="billing.address.email" :rules="billing.rules.email"></v-text-field></v-col>
-								</v-row>
-							</v-list-item-content>
-							</v-list-item>
+						<v-card class="mb-7" max-width="360" flat border="thin" rounded="xl" v-else-if="typeof billing.address == 'object'">
+							<v-form ref="billing_form" v-model="billing.valid" lazy-validation>
+								<v-list-item class="pa-4">
+										<div class="text-overline mb-4">
+										Billing Details
+										</div>
+										<v-row no-gutters>
+											<v-col class="pr-1"><v-text-field density="compact" label="First Name" v-model="billing.address.first_name" :rules="billing.rules.firstname" variant="underlined"></v-text-field></v-col>
+											<v-col class="pl-1"><v-text-field density="compact" label="Last Name" v-model="billing.address.last_name" :rules="billing.rules.lastname" variant="underlined"></v-text-field></v-col>
+										</v-row>
+										<v-text-field density="compact" label="Company name (optional)" v-model="billing.address.company" variant="underlined"></v-text-field>
+										<v-text-field density="compact" label="Street Address" persistent-hint hint="House number and street name" v-model="billing.address.address_1" :rules="billing.rules.address_1" variant="underlined"></v-text-field>
+										<v-text-field density="compact" label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="billing.address.address_2" variant="underlined"></v-text-field>
+										<v-text-field label="Town" v-model="billing.address.city" :rules="billing.rules.city" variant="underlined"></v-text-field>
+										<v-autocomplete label="State" v-model="billing.address.state" :items="states_selected" v-if="states_selected.length > 0" variant="underlined"></v-autocomplete>
+										<v-text-field label="State" v-model="billing.address.state" v-else variant="underlined"></v-text-field>
+										<v-text-field density="compact" label="Zip" v-model="billing.address.postcode" :rules="billing.rules.zip" variant="underlined"></v-text-field>
+										<v-autocomplete density="compact" label="Country" v-model="billing.address.country" :items="countries" @update:modelValue="populateStates()" :rules="billing.rules.country" variant="underlined"></v-autocomplete>
+										<v-text-field density="compact" label="Phone" v-model="billing.address.phone" variant="underlined"></v-text-field>
+										<v-text-field density="compact" label="Email" v-model="billing.address.email" :rules="billing.rules.email" variant="underlined"></v-text-field>
+								</v-list-item>
 							</v-form>
-							<v-container>
 						</v-card>
 					</v-col>
 					<v-col>
-					<p class="mt-5">Order was created on <strong>{{ dialog_invoice.response.created_at | pretty_timestamp_epoch }}</strong> and is currently <strong>{{ dialog_invoice.response.status }} payment</strong>.</p>
+					<p class="mt-5">Order was created on <strong>{{ pretty_timestamp_epoch( dialog_invoice.response.created_at ) }}</strong> and is currently <strong>{{ dialog_invoice.response.status }} payment</strong>.</p>
 						<v-data-table
 							:headers="[
-								{ text: 'Name', value: 'name', width: '120px', align: 'start' },
-								{ text: 'Description', value: 'description' },
-								{ text: 'Quantity', value: 'quantity', width: '100px' },
-								{ text: 'Total', value: 'total' } ]"
+								{ title: 'Name', key: 'name', width: '120px', align: 'start' },
+								{ title: 'Description', key: 'description', sortable: false },
+								{ title: 'Quantity', key: 'quantity', width: '100px' },
+								{ title: 'Total', key: 'total' } ]"
 							:items='dialog_invoice.response.line_items'
 							:items-per-page="-1"
 							hide-default-footer
 							class="mb-5 invoice"
 							>
 							<template v-slot:item.description="{ item }">
-								<div v-for="meta in item.description">
+								<div v-for="(meta, i) in item.description" :key="i">
 									<div v-if="item.name == 'Hosting Plan' && meta.value.split( '\n' ).length > 1">
 									<v-card flat>
 										<v-card-subtitle class="px-0 pb-0"><strong>{{ meta.value.split( "\n" )[0] }}</strong></v-card-subtitle>
 										<v-card-text class="px-0">
-										<div class="text--primary">
+										<div class="text-primary">
 											{{ meta.value.split( "\n" )[2] }}
 										</div>
 										</v-card-text>
@@ -5955,50 +6391,44 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<template v-slot:item.total="{ item }">
 								<div v-html="item.total"></div>
 							</template>
-							<template v-slot:body.append="{ headers }">
+							<template v-slot:tfoot>
 								<tr>
-									<td colspan="3" class="text-right">Total:</td>
-									<td><span class="font-weight-bold subtitle-1">${{ dialog_invoice.response.total }}</td>
+									<td colspan="3" class="text-right font-weight-bold">Total:</td>
+									<td class="font-weight-bold text-subtitle-1">${{ dialog_invoice.response.total }}</td>
 								</tr>
 							</template>
 						</v-data-table>
-						<v-card class="mb-7" outlined v-if="dialog_invoice.response.paid_on && dialog_invoice.response.status == 'completed'">
-							<v-list-item three-line>
-							<v-list-item-content>
-								<div class="overline mb-4">
+						<v-card class="mb-7" flat border="thin" rounded="xl" v-if="dialog_invoice.response.paid_on && dialog_invoice.response.status == 'completed'">
+							<v-list-item class="pa-4">
+								<div class="text-overline mb-4">
 								Payment Details
 								</div>
 								<v-list-item-title class="mb-1">
 								{{ dialog_invoice.response.payment_method }}
 								</v-list-item-title>
 								<v-list-item-subtitle>{{ dialog_invoice.response.paid_on }}</v-list-item-subtitle>
-							</v-list-item-content>
 							</v-list-item>
 						</v-card>
-						<v-card
-							class="mb-7"
-							v-show="dialog_invoice.response.status == 'pending' || dialog_invoice.response.status == 'failed'"
-							outlined
-						>
-						<v-list-item three-line>
-							<v-list-item-content>
-								<div class="overline mb-4">
-								Credit Card
-								</div>
-								<v-container py-0 px-3>
+						<v-card class="mb-7" v-show="dialog_invoice.response.status == 'pending' || dialog_invoice.response.status == 'failed'" flat border="thin" rounded="xl">
+						<v-list-item class="pa-4">
+							<div class="text-overline mb-4">
+							Credit Card
+							</div>
+							<v-container class="py-0 px-3">
 								<v-radio-group v-model="dialog_invoice.payment_method" v-if="typeof billing.payment_methods != 'undefined'">
-							<v-radio
-								v-for="card in billing.payment_methods"
-								:label="`${card.method.brand} ending in ${card.method.last4} expires ${card.expires}`"
-								:value="card.token"
-							></v-radio>
-							<v-radio label="Add new payment method" value="new"></v-radio>
-							</v-radio-group>
+									<v-radio
+										v-for="card in billing.payment_methods"
+										:key="card.token"
+										:label="`${card.method.brand} ending in ${card.method.last4} expires ${card.expires}`"
+										:value="card.token"
+									></v-radio>
+									<v-radio label="Add new payment method" value="new"></v-radio>
+								</v-radio-group>
 							</v-container>
-							<v-card max-width="450px" outlined v-show="dialog_invoice.payment_method == 'new'" class="mb-4">
+							<v-card max-width="450px" variant="outlined" v-show="dialog_invoice.payment_method == 'new'" class="mb-4">
 								<v-card-text>
 								<div id="card-element"></div>
-								<v-alert text dense border="left" type="error" v-show="dialog_invoice.error != ''" class="mt-4">
+								<v-alert variant="text" density="compact" border="start" type="error" v-show="dialog_invoice.error != ''" class="mt-4">
 									{{ dialog_invoice.error }}
 								</v-alert>
 								</v-card-text>
@@ -6011,95 +6441,112 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-card flat class="mr-1"><v-img contain width="42px" src="/wp-content/plugins/woocommerce-gateway-stripe/assets/images/jcb.svg" class="stripe-jcb-icon stripe-icon" alt="JCB"></v-img></v-card>
 								<v-card flat class="mr-1"><v-img contain width="42px" src="/wp-content/plugins/woocommerce-gateway-stripe/assets/images/diners.svg" class="stripe-diners-icon stripe-icon" alt="Diners"></v-img></v-card>
 							</v-card>
-							</v-list-item-content>
 							</v-list-item>
 							</v-card>
-							<v-btn color="primary" x-large @click="verifyAndPayInvoice(dialog_invoice.response.order_id)" class="mb-7" v-show="dialog_invoice.response.status == 'pending' || dialog_invoice.response.status == 'failed'">Pay Invoice</v-btn>
+							<v-btn color="primary" size="x-large" @click="verifyAndPayInvoice(dialog_invoice.response.order_id)" class="mb-7" v-show="dialog_invoice.response.status == 'pending' || dialog_invoice.response.status == 'failed'">Pay Invoice</v-btn>
 						</v-col>
 						</v-row>
 						</v-card>
 					</v-card-text>
-				</v-card>
-				</v-flex>
+				</div>
+				</v-container>
 			</v-card>
-			<v-card v-if="route == 'defaults' && role == 'administrator'" outlined rounded="xl">
+			<v-card v-if="route == 'defaults' && role == 'administrator'" flat border="thin" rounded="xl">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Site Defaults</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
 				<v-card-text>
-					<v-alert text :value="true" type="info" class="mb-4 mt-4">
-						Configure default settings will can be applied by running the <strong>Deploy Defaults</strong> script.
-					</v-alert>
-					<v-layout wrap>
-						<v-flex xs6 pr-2><v-text-field :value="defaults.email" @change.native="defaults.email = $event.target.value" label="Default Email" required></v-text-field></v-flex>
-						<v-flex xs6 pl-2><v-autocomplete :items="timezones" label="Default Timezone" v-model="defaults.timezone"></v-autocomplete></v-flex>
-					</v-layout>
-					<v-layout wrap>
-						<v-flex><v-autocomplete label="Default Recipes" v-model="defaults.recipes" ref="default_recipes" :items="recipes" item-text="title" item-value="recipe_id" multiple chips deletable-chips></v-autocomplete></v-flex>
-					</v-layout>
-					<span class="body-2">Default Users</span>
-					<v-data-table
-						:items="defaults.users"
-						hide-default-header
-						hide-default-footer
-						v-if="typeof defaults.users == 'object'"
-					>
-					<template v-slot:body="{ items }">
-					<tbody>
-						<tr v-for="(item, index) in items" style="border-bottom: 0px;">
-							<td class="pa-1"><v-text-field :value="item.username" @change.native="item.username = $event.target.value" label="Username"></v-text-field></td>
-							<td class="pa-1"><v-text-field :value="item.email" @change.native="item.email = $event.target.value" label="Email"></v-text-field></td>
-							<td class="pa-1"><v-text-field :value="item.first_name" @change.native="item.first_name = $event.target.value" label="First Name"></v-text-field></td>
-							<td class="pa-1"><v-text-field :value="item.last_name" @change.native="item.last_name = $event.target.value" label="Last Name"></v-text-field></td>
-							<td class="pa-1" style="width:145px;"><v-select :value="item.role" v-model="item.role" :items="roles" label="Role" item-text="name"></v-select></td>
-							<td class="pa-1"><v-btn text small icon color="primary" @click="deleteGlobalUserValue( index )"><v-icon small>mdi-delete</v-icon></v-btn></td>
-						</tr>
-					</tbody>
-					</template>
-						<template v-slot:footer>
-						<tr style="border-top: 0px;">
-							<td colspan="5" style="padding:0px;">
-								<v-btn depressed small class="ma-0 mb-3" @click="addGlobalDefaultsUser()">Add Additional User</v-btn>
-							</td>
-						</tr>
-						</template>
-					</v-data-table>
-					<v-flex xs12 text-right>
-						<v-btn color="primary" dark @click="saveGlobalDefaults()">
-							Save Changes
-						</v-btn>
-					</v-flex>
+				<v-alert variant="tonal" type="info" class="mb-4 mt-4">Configure default settings will can be applied by running the <strong>Deploy Defaults</strong> script.</v-alert>
+				<v-row wrap>
+					<v-col cols="6" pr-2>
+					<v-text-field :model-value="defaults.email" @update:model-value="defaults.email = $event" label="Default Email" required></v-text-field>
+					</v-col>
+					<v-col cols="6" pl-2>
+					<v-autocomplete :items="timezones" label="Default Timezone" v-model="defaults.timezone"></v-autocomplete>
+					</v-col>
+				</v-row>
+				<v-row wrap>
+					<v-col>
+					<v-autocomplete label="Default Recipes" v-model="defaults.recipes" ref="default_recipes" :items="recipes" item-title="title" item-value="recipe_id" multiple chips closable-chips></v-autocomplete>
+					</v-col>
+				</v-row>
+				<span class="body-2">Default Users</span>
+				<v-data-table :items="defaults.users" hide-default-header hide-default-footer v-if="typeof defaults.users == 'object'">
+				<template v-slot:body="{ items }">
+					<tr v-for="(item, index) in items" style="border-top: 0px;">
+						<td class="pa-1">
+						<v-text-field variant="underlined" :model-value="item.username" @update:model-value="defaults.users[index].username = $event" label="Username"></v-text-field>
+						</td>
+						<td class="pa-1">
+						<v-text-field variant="underlined" :model-value="item.email" @update:model-value="defaults.users[index].email = $event" label="Email"></v-text-field>
+						</td>
+						<td class="pa-1">
+						<v-text-field variant="underlined" :model-value="item.first_name" @update:model-value="defaults.users[index].first_name = $event" label="First Name"></v-text-field>
+						</td>
+						<td class="pa-1">
+						<v-text-field variant="underlined" :model-value="item.last_name" @update:model-value="defaults.users[index].last_name = $event" label="Last Name"></v-text-field>
+						</td>
+						<td class="pa-1" style="width:145px;">
+						<v-select variant="underlined" :model-value="item.role" v-model="defaults.users[index].role" :items="roles" label="Role" item-title="name"></v-select>
+						</td>
+						<td class="pa-1" style="width: 60px;">
+							<v-btn variant="text" icon="mdi-delete" color="primary" @click="deleteGlobalUserValue( index )"></v-btn>
+						</td>
+					</tr>
+				</template>
+				</v-data-table>
+
+				<v-row>
+				<v-col cols="12">
+					<v-btn variant="tonal" size="small" @click="addGlobalDefaultsUser()" class="mt-3">Add Additional User</v-btn>
+				</v-col>
+				<v-col cols="12">
+					<v-btn color="primary" @click="saveGlobalDefaults()">
+					Save Changes
+					</v-btn>
+				</v-col>
 				</v-card-text>
+
 			</v-card>
-			<v-card v-if="route == 'keys' && ( role == 'administrator' || configurations.mode == 'maintenance' )" class="elevation-1 rounded-lg ma-4 py-1">
-				<v-toolbar light flat>
+			<v-card v-if="route == 'keys'" flat border="thin" rounded="xl">
+				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Your SSH keys</v-toolbar-title>
 					<v-spacer></v-spacer>
-					<v-toolbar-items>
-						<v-btn text @click="new_key.show = true">Add SSH Key <v-icon dark>mdi-plus</v-icon></v-btn>
-					</v-toolbar-items>
+					<v-btn variant="text" @click="new_key.show = true" v-show="role == 'administrator'">
+						Add Management SSH Key <v-icon>mdi-plus</v-icon>
+					</v-btn>
+					<v-btn variant="text" @click="new_key_user.show = true">
+						Add SSH Key <v-icon>mdi-plus</v-icon>
+					</v-btn>
 				</v-toolbar>
-				<v-card-text style="max-height: 100%;">
-					<v-container fluid grid-list-lg>
-					<v-layout row wrap>
-					<v-flex xs12 v-for="key in keys" :key="key.key_id">
-						<v-card :hover="true" @click="viewKey( key.key_id )">
-						<v-card-title primary-title class="pt-2">
-							<div>
-								<span class="title">{{ key.title }} <v-chip v-show="key.main == '1'" :input-value="true">Primary Key</v-chip></span>
-							</div>
-						</v-card-title>
-						<v-card-text>
-							<v-chip color="primary" text-color="white" text>{{ key.fingerprint }}</v-chip>
-						</v-card-text>
-						</v-card>
-					</v-flex>
-					</v-layout>
+				<v-card-text>
+					<v-container fluid>
+						<v-alert type="info" variant="text" class="mb-4">
+							<v-row>
+								<v-col>
+									It's recommended to use SSH keys for SFTP and SSH access instead of passwords. If you don't already have a key pair then <a href="https://docs.digitalocean.com/products/droplets/how-to/add-ssh-keys/create-with-openssh/" target="_blank" rel="noopener noreferrer">read this article on creating SSH keys</a>. Next add your public key here. Then use your private SSH key when connecting over SFTP or SSH instead of your password.
+								</v-col>
+							</v-row>
+						</v-alert>
+						
+						<v-row>
+							<v-col cols="12" v-for="key in keys" :key="key.key_id" class="py-2">
+								<v-card hover @click="viewKey(key.key_id)">
+									<v-card-title class="pt-2">
+										<span class="text-h6">{{ key.title }}</span>
+										<v-chip v-show="key.main == '1'" color="primary" class="ml-2">Primary Key</v-chip>
+									</v-card-title>
+									<v-card-text>
+										<v-chip color="blue-grey-darken-1">{{ key.fingerprint }}</v-chip>
+									</v-card-text>
+								</v-card>
+							</v-col>
+						</v-row>
 					</v-container>
 				</v-card-text>
 			</v-card>
-			<v-card v-if="route == 'profile'" outlined rounded="xl" class="mx-auto" max-width="700">
+			<v-card v-if="route == 'profile'" flat border="thin" rounded="xl" class="mx-auto" max-width="700">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Edit profile</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -6110,24 +6557,27 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-row>
 					<v-col cols="12">
 					<v-list>
-					<v-list-item link href="https://gravatar.com" target="_blank">
-						<v-list-item-avatar rounded>
-							<v-img :src="gravatar"></v-img>
-						</v-list-item-avatar>
-						<v-list-item-content>
-							<v-list-item-title>Edit thumbnail with Gravatar</v-list-item-title>
-						</v-list-item-content>
-						<v-list-item-icon>
-							<v-icon>mdi-open-in-new</v-icon>
-						</v-list-item-icon>
+					<v-list-item
+						link
+						href="https://gravatar.com"
+						target="_blank"
+						title="Edit thumbnail with Gravatar"
+						append-icon="mdi-open-in-new"
+						density="compact"
+					>
+					<template v-slot:prepend>
+					<v-avatar rounded="lg">
+						<v-img :src="gravatar"></v-img> 
+					</v-avatar>
+					</template>
 					</v-list-item>
 					</v-list>
-					<v-text-field :value="profile.display_name" @change.native="profile.display_name = $event.target.value" label="Display Name"></v-text-field>
-					<v-text-field :value="profile.email" @change.native="profile.email = $event.target.value" label="Email"></v-text-field>
-					<v-text-field :value="profile.new_password" @change.native="profile.new_password = $event.target.value" type="password" label="New Password" hint="Leave empty to keep current password." persistent-hint></v-text-field>
+					<v-text-field :model-value="profile.display_name" @update:model-value="profile.display_name = $event" label="Display Name" variant="underlined"></v-text-field>
+					<v-text-field :model-value="profile.email" @update:model-value="profile.email = $event" label="Email" variant="underlined"></v-text-field>
+					<v-text-field :model-value="profile.new_password" @update:model-value="profile.new_password = $event" type="password" label="New Password" hint="Leave empty to keep current password." persistent-hint variant="underlined"></v-text-field>
 					<p>&nbsp;</p>
 					
-					<v-btn @click="disableTFA()" class="mb-7" v-if="profile.tfa_enabled">Turn off Two-Factor Authentication</v-btn>
+					<v-btn @click="disableTFA()" class="mb-7" v-if="profile.tfa_enabled" color="primary" variant="outlined">Turn off Two-Factor Authentication</v-btn>
 					<v-btn @click="enableTFA()" class="mb-7" v-else>Enable Two-Factor Authentication</v-btn>
 					<v-card v-show="profile.tfa_activate">
 						<v-card-text>
@@ -6145,122 +6595,145 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-row>
 				<v-row>
 					<v-col cols="12" class="mt-3">
-						<v-alert text :value="true" type="error" v-for="error in profile.errors" class="mt-5">{{ error }}</v-alert>
-						<v-alert text :value="true" type="success" v-show="profile.success" class="mt-5">{{ profile.success }}</v-alert>
+						<v-alert variant="tonal" type="error" v-for="error in profile.errors" class="mt-5">{{ error }}</v-alert>
+						<v-alert variant="tonal" type="success" v-show="profile.success" class="mt-5">{{ profile.success }}</v-alert>
 						<v-btn color="primary" dark @click="updateAccount()">Save Account</v-btn>
 					</v-col>
 				</v-row>
 				</v-card-text>
 			</v-card>
-			<v-card v-show="role == 'administrator' && route == 'subscriptions'" outlined rounded="xl" >
+			<v-card v-show="role == 'administrator' && route == 'subscriptions'" flat border="thin" rounded="xl" >
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing {{ subscriptions.length }} subscriptions</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
-						<v-tooltip top>
-							<template v-slot:activator="{ on }">
-							<v-btn icon @click="toggle_plan = !toggle_plan" v-on="on">
-								<v-icon>mdi-poll</v-icon>
-							</v-btn>
+						<v-tooltip location="top">
+							<template v-slot:activator="{ props }">
+								<v-btn icon="mdi-poll" @click="toggle_plan = !toggle_plan" v-bind="props"></v-btn>
 							</template>
 							<span>View reports</span>
 						</v-tooltip>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-data-table
-					:headers="[
-						{ text: 'Name', value: 'name' },
-						{ text: 'Interval', value: 'interval' },
-						{ text: 'Next Renewal', value: 'next_renewal' },
-						{ text: 'Price', value: 'total', width: '100px' }]"
-					:items="subscriptions"
-					:search="subscription_search"
-					:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
-					v-show="toggle_plan == true"
+				:headers="[
+					{ title: 'Name', value: 'name' },
+					{ title: 'Interval', value: 'interval' },
+					{ title: 'Next Renewal', value: 'next_renewal' },
+					{ title: 'Price', value: 'total', width: '100px' }]"
+				:items="subscriptions"
+				:search="subscription_search"
+				:items-per-page="100"
+				:items-per-page-options="[100,250,500,{'title':'All','value':-1}]"
+				v-show="toggle_plan == true"
 				>
-					<template v-slot:top>
+				<template v-slot:top>
 					<v-card-text>
 					<v-row>
 						<v-col></v-col>
 						<v-col cols="12" md="4">
-							<v-text-field class="mx-4" v-model="subscription_search" autofocus append-icon="mdi-magnify" label="Search" single-line clearable hide-details></v-text-field>
+						<v-text-field class="mx-4" v-model="subscription_search" autofocus append-icon="mdi-magnify" label="Search" single-line clearable hide-details></v-text-field>
 						</v-col>
 					</v-row>
 					</v-card-text>
-					</template>
-					<template v-slot:body="{ items }">
-						<tbody>
-						<tr v-for="item in items" :key="item.account_id" @click="goToPath( `/subscription/${item.account_id}`)" style="cursor:pointer;">
-							<td>{{ item.name }}</td>
-							<td>{{ item.interval | intervalLabel }}</td>
-							<td>{{ item.next_renewal }}</td>
-							<td>${{ item.total }}</td>
-						</tr>
-						</tbody>
-					</template>
-					</v-data-table>
+				</template>
+				<template v-slot:body="{ items }">
+					<tbody>
+					<tr v-for="item in items" :key="item.account_id" @click="goToPath( `/subscription/${item.account_id}`)" style="cursor:pointer;">
+						<td>{{ item.name }}</td>
+						<td>{{ intervalLabel( item.interval ) }}</td>
+						<td>{{ item.next_renewal }}</td>
+						<td>${{ item.total }}</td>
+					</tr>
+					</tbody>
+				</template>
+				</v-data-table>
+
 					<div id="plan_chart"></div>
-					<v-subheader>{{ revenue_estimated_total() }}</v-subheader>
+					<v-list-subheader>{{ revenue_estimated_total() }}</v-list-subheader>
 					<div id="plan_chart_transactions"></div>
 			</v-card>
-			<v-card v-if="route == 'accounts'" outlined rounded="xl">
+			<v-card v-if="route == 'accounts'" flat border="thin" rounded="xl">
 			<v-sheet v-show="dialog_account.step == 1" color="transparent">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing {{ accounts.length }} accounts</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items v-if="role == 'administrator'">
-						<v-btn text @click="dialog_new_account.show = true">Add account <v-icon dark>mdi-plus</v-icon></v-btn>
+						<v-btn variant="text" @click="dialog_new_account.show = true">Add account <v-icon dark>mdi-plus</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
+				<v-toolbar color="transparent" flat>
+					<v-spacer></v-spacer>
+					 <v-btn
+						:variant="isOutstandingFilterActive ? 'tonal' : 'outlined'"
+						size="small"
+						@click="toggleOutstandingFilter()"
+						v-if="role == 'administrator'"
+						class="mr-2">
+						{{ oustandingAccountCount }} outstanding
+					</v-btn>
+
+					<v-btn
+						:variant="isEmptyFilterActive ? 'tonal' : 'outlined'"
+						size="small"
+						@click="toggleEmptyFilter()"
+						v-if="role == 'administrator'"
+						class="mr-2">
+						{{ emptyAccountCount }} empty
+					</v-btn>
+
+					<v-tooltip location="top" v-if="isAnyAccountFilterActive">
+						<template v-slot:activator="{ props }">
+							<v-btn
+								v-bind="props"
+								icon="mdi-filter-off"
+								size="small"
+								variant="tonal"
+								@click="clearAccountFilters()">
+							</v-btn>
+						</template>
+						<span>Clear Filters</span>
+					</v-tooltip>
+					<v-text-field class="mx-4" variant="outlined" density="compact" v-model="account_search" autofocus label="Search" clearable light hide-details append-inner-icon="mdi-magnify" style="max-width:300px;"></v-text-field>	
+				</v-toolbar>
 				<v-card-text>
-					<v-toolbar dense elevation="0" flat class="mb-3">
-						<v-spacer></v-spacer>
-						<v-btn-toggle v-model="toggle_account_filters">
-							<v-btn depressed small @click="filterOutstanding()" v-if="role == 'administrator'">{{ oustandingAccountCount }} outstanding</v-btn>
-						</v-btn-toggle>
-						<v-text-field class="mx-4" v-model="account_search" autofocus label="Search" clearable light hide-details append-icon="mdi-magnify" style="max-width:300px;"></v-text-field>	
-					</v-toolbar>
 					<v-data-table
 						:headers="[
-							{ text: 'Name', value: 'name' },
-							{ text: 'Users', value: 'metrics.users', width: '100px' },
-							{ text: 'Sites', value: 'metrics.sites', width: '100px' },
-							{ text: 'Domains', value: 'metrics.domains', width: '100px' },
-							{ text: '', value: 'filtered', width: 0, class: 'hidden', filter: filteredAccounts }]"
-						:items="accounts"
+							{ title: 'Name', value: 'name' },
+							{ title: 'Users', value: 'metrics.users', width: '100px' },
+							{ title: 'Sites', value: 'metrics.sites', width: '100px' },
+							{ title: 'Domains', value: 'metrics.domains', width: '100px' }]"
+						:items="filteredAccountsData"
 						:search="account_search"
-						:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
+						:items-per-page="100"
+						:items-per-page-options="[100,250,500,{'title':'All','value':-1}]"
+						item-value="account_id"
+						hover
+						density="comfortable"
+						@click:row="(event, { item }) => goToPath(`/accounts/${item.account_id}`)"
+						class="clickable-rows"
 					>
-					<template v-slot:body="{ items }">
-						<tbody>
-						<tr v-for="item in items" :key="item.account_id" @click="goToPath( `/accounts/${item.account_id}`)" style="cursor:pointer;">
-							<td>{{ item.name }}</td>
-							<td><span v-show="item.metrics.users != '' && item.metrics.users != null">{{ item.metrics.users }}</span></td>
-							<td><span v-show="item.metrics.sites != '' && item.metrics.sites != null">{{ item.metrics.sites }}</span></td>
-							<td><span v-show="item.metrics.domains != '' && item.metrics.domains != null">{{ item.metrics.domains }}</span></td>
-						</tr>
-						</tbody>
-					</template>
+						<template v-slot:item.metrics.users="{ value }">
+						<span v-if="value != null && value !== ''">{{ value }}</span>
+						</template>
+						<template v-slot:item.metrics.sites="{ value }">
+						<span v-if="value != null && value !== ''">{{ value }}</span>
+						</template>
+						<template v-slot:item.metrics.domains="{ value }">
+						<span v-if="value != null && value !== ''">{{ value }}</span>
+						</template>
+
 					</v-data-table>
 					</v-card-text>
 				</v-sheet>
 				<v-sheet v-show="dialog_account.step == 2" color="transparent">
 				<v-card flat v-if="dialog_account.show && typeof dialog_account.records.account == 'object'" rounded="xl">
-					<v-toolbar flat>
+					<v-toolbar flat color="transparent">
 						<v-toolbar-title>{{ dialog_account.records.account.name }}</v-toolbar-title>
-						<div class="flex-grow-1"></div>
-						<v-toolbar-items>
-							<v-tooltip top>
-								<template v-slot:activator="{ on }">
-									<v-btn text small @click="dialog_configure_defaults.show = true" v-on="on"><v-icon dark>mdi-clipboard-check-outline</v-icon></v-btn>
-								</template><span>Configure Defaults</span>
-							</v-tooltip>
-						</v-toolbar-items>
 					</v-toolbar>
 					<v-container class="pt-0">
-					<v-toolbar color="primary" dark flat dense rounded="lg">
-					<v-tabs v-model="account_tab" dense left>
-						<v-tabs-slider color="transparent"></v-tabs-slider>
+					<v-toolbar color="primary" dark flat density="compact" rounded="lg">
+					<v-tabs v-model="account_tab" density="compact" left hide-slider>
 						<v-tab>
 							{{ dialog_account.records.users.length }} Users
 							<v-icon size="20" class="ml-1">mdi-account</v-icon>
@@ -6285,17 +6758,17 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-tab>
 					</v-tabs>
 					</v-toolbar>
-					<v-tabs-items v-model="account_tab">
-					<v-tab-item :transition="false" :reverse-transition="false">
-						<v-toolbar dense flat>
+					<v-window v-model="account_tab">
+					<v-window-item :transition="false" :reverse-transition="false">
+						<v-toolbar density="compact" flat color="transparent">
 							<div class="flex-grow-1"></div>
 							<v-toolbar-items>
 							<v-dialog v-model="dialog_account.new_invite" max-width="500px">
-							<template v-slot:activator="{ on, attrs }">
-								<v-btn text @click="dialog_account.new_invite = true" v-bind="attrs" v-on="on">New Invite <v-icon dark>mdi-plus</v-icon></v-btn>
+							<template v-slot:activator="{ props }">
+								<v-btn variant="text" @click="dialog_account.new_invite = true" v-bind="props">New Invite <v-icon dark>mdi-plus</v-icon></v-btn>
 							</template>
 							<v-card>
-								<v-toolbar flat dense dark color="primary" id="new_invite" class="mb-2">
+								<v-toolbar flat density="compact" dark color="primary" id="new_invite" class="mb-2">
 								<v-btn icon dark @click.native="dialog_account.new_invite = false">
 									<v-icon>mdi-close</v-icon>
 								</v-btn>
@@ -6305,7 +6778,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-card-text>
 								<v-row>
 									<v-col cols="12">
-										<v-text-field label="Email" :value="dialog_account.new_invite_email" @change.native="dialog_account.new_invite_email = $event.target.value"></v-text-field>
+										<v-text-field variant="underlined" label="Email" :model-value="dialog_account.new_invite_email" @update:model-value="dialog_account.new_invite_email = $event"></v-text-field>
 									</v-col>
 									<v-col cols="12">
 										<v-btn color="primary" dark @click="sendAccountInvite()">
@@ -6320,7 +6793,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-toolbar>
 							<v-data-table
 								v-show="typeof dialog_account.records.users == 'object' && dialog_account.records.users.length > 0"
-								:headers='[{"text":"Name","value":"name"},{"text":"Email","value":"email"},{"text":"","value":"level"},{"text":"","value":"actions"}]'
+								:headers='[{"title":"Name","value":"name"},{"title":"Email","value":"email"},{"title":"","value":"level"},{"title":"","value":"actions"}]'
 								:items="dialog_account.records.users"
 								:sort-by='["level","name"]'
 								sort-desc
@@ -6328,14 +6801,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								hide-default-footer
 							>
 							<template v-slot:item.actions="{ item }">
-							<v-btn text icon color="pink" @click="removeAccountAccess( item.user_id )" v-if="role == 'administrator' || dialog_account.records.owner && item.level != 'Owner'">
+							<v-btn variant="text" icon color="pink" @click="removeAccountAccess( item.user_id )" v-if="role == 'administrator' || dialog_account.records.owner && item.level != 'Owner'">
 								<v-icon>mdi-delete</v-icon>
 							</v-btn>
 							</template>
 							</v-data-table>
 							<v-data-table
 								v-show="typeof dialog_account.records.invites == 'object' && dialog_account.records.invites.length > 0"
-								:headers='[{"text":"Email","value":"email"},{"text":"Created","value":"created_at"},{"text":"","value":"actions"}]'
+								:headers='[{"title":"Email","value":"email"},{"title":"Created","value":"created_at"},{"title":"","value":"actions"}]'
 								:items="dialog_account.records.invites"
 								:items-per-page="-1"
 								hide-default-footer
@@ -6345,43 +6818,43 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<tr>
 								<td colspan="3" style="padding:0px;padding-top:16px;">
 									<v-divider></v-divider>
-									<v-subheader>Invites</v-subheader>
+									<v-list-subheader>Invites</v-list-subheader>
 								</td>
 								</tr>
 							</template>
 							<template v-slot:item.created_at="{ item }">
-							{{ item.created_at | pretty_timestamp }}
+							{{ pretty_timestamp( item.created_at ) }}
 							</template>
 							<template v-slot:item.actions="{ item }">
-							<v-tooltip top>
-								<template v-slot:activator="{ on }">
-									<v-btn text icon v-on="on" @click="copyInviteLink( item.account_id, item.token )"><v-icon dark>mdi-link-variant</v-icon></v-btn>
+							<v-tooltip location="top">
+								<template v-slot:activator="{ props }">
+									<v-btn variant="text" icon v-bind="props" @click="copyInviteLink( item.account_id, item.token )"><v-icon dark>mdi-link-variant</v-icon></v-btn>
 								</template><span>Copy Invite Link</span>
 							</v-tooltip>
-							<v-tooltip top>
-								<template v-slot:activator="{ on }">
-									<v-btn text icon color="pink" @click="deleteInvite( item.invite_id )" v-on="on"><v-icon dark>mdi-delete</v-icon></v-btn>
+							<v-tooltip location="top">
+								<template v-slot:activator="{ props }">
+									<v-btn variant="text" icon color="pink" @click="deleteInvite( item.invite_id )" v-bind="props"><v-icon dark>mdi-delete</v-icon></v-btn>
 								</template><span>Delete Invite</span>
 							</v-tooltip>
 							</template>
 							</v-data-table>
-					</v-tab-item>
-					<v-tab-item :transition="false" :reverse-transition="false">
+					</v-window-item>
+					<v-window-item :transition="false" :reverse-transition="false">
 							<v-data-table
 								v-show="typeof dialog_account.records.sites == 'object' && dialog_account.records.sites.length > 0"
-								:headers='[{"text":"Sites","value":"name"},{"text":"Storage","value":"storage"},{"text":"Visits","value":"visits"},{"text":"","value":"actions","width":"110px",sortable: false}]'
+								:headers='[{"title":"Sites","value":"name"},{"title":"Storage","value":"storage"},{"title":"Visits","value":"visits"},{"title":"","value":"actions","width":"110px",sortable: false}]'
 								:items="dialog_account.records.sites"
 								:items-per-page="-1"
 								hide-default-footer
 							>
 							<template v-slot:item.storage="{ item }">
-								{{ item.storage | formatGBs }}GB
+								{{ formatGBs( item.storage ) }}GB
 							</template>
 							<template v-slot:item.visits="{ item }">
-								{{ item.visits | formatLargeNumbers }}
+								{{ formatLargeNumbers( item.visits ) }}
 							</template>
 							<template v-slot:item.actions="{ item }">
-								<v-btn small @click="goToPath( `/sites/${item.site_id}` )">View</v-btn>
+								<v-btn size="small" @click="goToPath( `/sites/${item.site_id}` )">View</v-btn>
 							</template>
 							<template v-slot:body.append>
 								<tr>
@@ -6389,29 +6862,29 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									Totals: 
 								</td>
 								<td>
-									{{ dialog_account.records.account.plan.usage.storage | formatGBs }}GB
+									{{ formatGBs( dialog_account.records.account.plan.usage.storage ) }}GB
 								</td>
 								<td>
-									{{ dialog_account.records.account.plan.usage.visits | formatLargeNumbers }}
+									{{ formatLargeNumbers( dialog_account.records.account.plan.usage.visits ) }}
 								</td>
 								</tr>
 							</template>
 							</v-data-table>
-					</v-tab-item>
-					<v-tab-item :transition="false" :reverse-transition="false">
+					</v-window-item>
+					<v-window-item :transition="false" :reverse-transition="false">
 						<v-data-table
 							v-show="typeof dialog_account.records.domains == 'object' && dialog_account.records.domains.length > 0"
-							:headers='[{"text":"Domain","value":"name"},{"text":"","value":"actions","width":"110px",sortable:false}]'
+							:headers='[{"title":"Domain","value":"name"},{"title":"","value":"actions","width":"110px",sortable:false}]'
 							:items="dialog_account.records.domains"
 							:items-per-page="-1"
 							hide-default-footer
 						>
 						<template v-slot:item.actions="{ item }">
-							<v-btn small @click="goToPath( `/domains/${item.domain_id}` )">View</v-btn>
+							<v-btn size="small" @click="goToPath( `/domains/${item.domain_id}` )">View</v-btn>
 						</template>
 						</v-data-table>
-					</v-tab-item>
-					<v-tab-item :transition="false" :reverse-transition="false">
+					</v-window-item>
+					<v-window-item :transition="false" :reverse-transition="false">
 						<v-data-table
 							:headers="header_timeline"
 							:items="dialog_account.records.timeline"
@@ -6419,13 +6892,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							class="timeline"
 							v-if="typeof dialog_account.records.timeline != 'undefined' || dialog_account.records.timeline != null"
 						>
-						<template v-slot:body="{ items }">
-						<tbody>
-						<tr v-for="item in items">
+						<template v-slot:tbody>
+						<tr v-for="item in dialog_account.records.timeline" :key="item.id">
 							<td class="justify-center pt-3 pr-0 text-center shrink" style="vertical-align: top;">
-								<v-tooltip bottom>
-								<template v-slot:activator="{ on, attrs }">
-									<v-icon color="primary" dark v-bind="attrs" v-on="on" v-show="item.name">mdi-note</v-icon>
+								<v-tooltip location="bottom">
+								<template v-slot:activator="{ props }">
+									<v-icon color="primary" dark v-bind="props" v-show="item.name">mdi-note</v-icon>
 								</template>
 								<span>{{ item.name }}</span>
 								</v-tooltip>
@@ -6440,11 +6912,11 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-col class="pt-4">{{ item.author }}</v-col>
 							</v-row>
 							</td>
-							<td class="justify-center pt-3" style="vertical-align: top;">{{ item.created_at | pretty_timestamp_epoch }}</td>
+							<td class="justify-center pt-3" style="vertical-align: top;">{{ pretty_timestamp_epoch( item.created_at ) }}</td>
 							<td class="justify-center pt-2 pr-0" style="vertical-align:top;width:77px;">
 								<v-menu :nudge-width="200" open-on-hover bottom offset-y>
-								<template v-slot:activator="{ on, attrs }">
-									<v-icon small v-bind="attrs" v-on="on" class="my-2">mdi-information</v-icon>
+								<template v-slot:activator="{ props }">
+									<v-icon size="small" v-bind="props" class="my-2">mdi-information</v-icon>
 								</template>
 								<v-card>
 									<v-card-text>
@@ -6454,251 +6926,298 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</v-card-text>
 								</v-card>
 								</v-menu>
-								<v-btn small icon @click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)" v-if="role == 'administrator'">
-									<v-icon small>mdi-pencil</v-icon>
-								</v-btn>
+								<v-btn size="small" variant="text" @click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)" v-if="role == 'administrator'" icon="mdi-pencil"></v-btn>
 							</td>
 						</tr>
-						</tbody>
 						</template>
 						</v-data-table>
-					</v-tab-item>
-					<v-tab-item :transition="false" :reverse-transition="false">
-					<v-data-table
-							:headers="[
-								{ text: 'Order', value: 'order_id', width: '130px' },
-								{ text: 'Date', value: 'date', width: '170px' },
-								{ text: 'Name', value: 'name' },
-								{ text: 'Status', value: 'status' },
-								{ text: 'Total', value: 'total', width: '120px' }]"
-							:items="dialog_account.records.invoices"
-							:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
-						>
-						<template v-slot:item.order_id="{ item }">
-							#{{ item.order_id }}
-						</template>
-						<template v-slot:item.total="{ item }">
-							${{ item.total }}
-						</template>
-						</v-data-table>
-					</v-tab-item>
-					<v-tab-item :transition="false" :reverse-transition="false">
-					<v-toolbar dense light flat>
-						<v-spacer></v-spacer>
-							<v-toolbar-items v-show="role == 'administrator'">
-								<v-btn text @click="modifyPlan()">Edit Plan <v-icon dark small class="ml-1">mdi-pencil</v-icon></v-btn>
-							</v-toolbar-items>
-						</v-toolbar>
-					<v-card flat>
-					<div v-if="typeof dialog_account.records.account.plan == 'object' && dialog_account.records.account.plan != null && dialog_account.records.account.plan.next_renewal">
-						<v-card-text class="body-1">
-						<v-row>
-						<v-col>
-						<v-layout align-center justify-left row/>
-							<div style="padding: 10px 10px 10px 20px;">
-								<v-progress-circular :size="50" :value="( dialog_account.records.account.plan.usage.storage / ( dialog_account.records.account.plan.limits.storage * 1024 * 1024 * 1024 ) ) * 100 | formatPercentage" color="primary"><span v-html="$options.filters.account_storage_percentage( dialog_account.records.account )"></span></v-progress-circular>
-							</div>
-							<div style="line-height: 0.85em;">
-								Storage <br /><small>{{ dialog_account.records.account.plan.usage.storage | formatGBs }}GB / {{ dialog_account.records.account.plan.limits.storage }}GB</small><br />
-							</div>
-							<div style="padding: 10px 10px 10px 20px;">
-								<v-progress-circular :size="50" :value="( dialog_account.records.account.plan.usage.visits / dialog_account.records.account.plan.limits.visits * 100 ) | formatPercentage" color="primary"><span v-html="$options.filters.account_visits_percentage( dialog_account.records.account )"></span></v-progress-circular>
-							</div>
-							<div style="line-height: 0.85em;">
-								Visits <br /><small>{{ dialog_account.records.account.plan.usage.visits | formatLargeNumbers }} / {{ dialog_account.records.account.plan.limits.visits | formatLargeNumbers }}</small><br />
-							</div>
-							<div style="padding: 10px 10px 10px 20px;">
-								<v-progress-circular :size="50" :value="( dialog_account.records.account.plan.usage.sites / dialog_account.records.account.plan.limits.sites * 100 ) | formatPercentage" color="blue darken-4"><span v-html="$options.filters.account_site_percentage( dialog_account.records.account )"></span></v-progress-circular>
-							</div>
-							<div  style="line-height: 0.85em;">
-								Sites <br /><small>{{ dialog_account.records.account.plan.usage.sites }} / {{ dialog_account.records.account.plan.limits.sites }}</small><br />
-							</div>
-						</v-layout>
-						</v-col>
-						<v-col class="text-center">
-							<span class="text-uppercase caption">Next Renewal Estimate</span>
-							<v-tooltip bottom>
-							<template v-slot:activator="{ on, attrs }">
-								<v-icon class="ml-1" v-bind="attrs" v-on="on">mdi-calendar</v-icon>
-							</template>
-							<span>Renews on {{ dialog_account.records.account.plan.next_renewal | pretty_timestamp_short }}</span>
-							</v-tooltip><br />
-							<span class="display-1 font-weight-thin" v-html="plan_usage_estimate"></span><br />
-							<span>
-							<v-dialog v-model="dialog_breakdown" max-width="980px">
-								<template v-slot:activator="{ on, attrs }">
-									<a v-bind="attrs" v-on="on">See breakdown</a>
-								</template>
-								<v-card>
-								<v-toolbar flat dark color="primary">
-									<v-btn icon dark @click.native="dialog_breakdown = false">
-										<v-icon>mdi-close</v-icon>
-									</v-btn>
-									<v-toolbar-title>Plan Estimate Breakdown</v-toolbar-title>
-									<v-spacer></v-spacer>
-								</v-toolbar>
-								<v-card-text>
-									<v-simple-table>
-									<template v-slot:default>
-									<thead>
-										<tr>
-											<th class="text-left">Type</th>
-											<th class="text-left">Name</th>
-											<th class="text-left">Quantity</th>
-											<th class="text-left">Price</th>
-											<th class="text-left">Total</th>
-										</tr>
-									</thead>
-									<tbody>
-										<tr>
-											<td>Plan</td>
-											<td>{{ dialog_account.records.account.plan.name }}</td>
-											<td>1</td>
-											<td class="text-right">${{ dialog_account.records.account.plan.price }}</td>
-											<td class="text-right">${{ dialog_account.records.account.plan.price }}</td>
-										</tr>
-										<tr v-if="( parseInt( dialog_account.records.account.plan.usage.sites ) - parseInt( dialog_account.records.account.plan.limits.sites ) ) >= 1">
-											<td>Extra</td>
-											<td>Sites</td>
-											<td>{{ parseInt( dialog_account.records.account.plan.usage.sites ) - parseInt( dialog_account.records.account.plan.limits.sites ) }}</td>
-											<td class="text-right">${{ plan_usage_pricing_sites }}</td>
-											<td class="text-right">${{ plan_usage_pricing_sites * ( parseInt( dialog_account.records.account.plan.usage.sites ) - parseInt( dialog_account.records.account.plan.limits.sites ) ) }}</td>
-										</tr>
-										<tr v-if="(( parseInt( dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( dialog_account.records.account.plan.limits.storage ) ) >= 1">
-											<td>Extra</td>
-											<td>Storage</td>
-											<td>{{ Math.ceil ( ( ( parseInt( dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( dialog_account.records.account.plan.limits.storage ) ) / 10 ) }}</td>
-											<td class="text-right">${{ plan_usage_pricing_storage }}</td>
-											<td class="text-right">${{ plan_usage_pricing_storage * Math.ceil ( ( ( parseInt( dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( dialog_account.records.account.plan.limits.storage ) ) / 10 ) }}</td>
-										</tr>
-										<tr v-if="Math.ceil ( ( parseInt( dialog_account.records.account.plan.usage.visits ) - parseInt( dialog_account.records.account.plan.limits.visits ) ) / parseInt ( configurations.usage_pricing.traffic.quantity ) ) >= 1">
-											<td>Extra</td>
-											<td>Visits</td>
-											<td>{{ Math.ceil ( ( parseInt( dialog_account.records.account.plan.usage.visits ) - parseInt( dialog_account.records.account.plan.limits.visits ) ) / parseInt ( configurations.usage_pricing.traffic.quantity ) ) }}</td>
-											<td class="text-right">${{ plan_usage_pricing_visits }}</td>
-											<td class="text-right">${{ plan_usage_pricing_visits * Math.ceil ( ( parseInt( dialog_account.records.account.plan.usage.visits ) - parseInt( dialog_account.records.account.plan.limits.visits ) ) / parseInt ( configurations.usage_pricing.traffic.quantity ) ) }}</td>
-										</tr>
-										<tr v-for="item in dialog_account.records.account.plan.addons">
-											<td>Addon</td>
-											<td>{{ item.name }}</td>
-											<td>{{ item.quantity }}</td>
-											<td class="text-right">${{ item.price }}</td>
-											<td class="text-right">${{ ( item.quantity * item.price ).toFixed(2) }}</td>
-										</tr>
-										<tr v-for="item in dialog_account.records.account.plan.charges">
-											<td>Charge</td>
-											<td>{{ item.name }}</td>
-											<td>{{ item.quantity }}</td>
-											<td class="text-right">${{ item.price }}</td>
-											<td class="text-right">${{ ( item.quantity * item.price ).toFixed(2) }}</td>
-										</tr>
-										<tr v-for="item in dialog_account.records.account.plan.credits">
-											<td>Credit</td>
-											<td>{{ item.name }}</td>
-											<td>{{ item.quantity }}</td>
-											<td class="text-right">-${{ item.price }}</td>
-											<td class="text-right">-${{ ( item.quantity * item.price ).toFixed(2) }}</td>
-										</tr>
-										<tr>
-											<td colspan="5" class="body-1">Total: <span v-html="plan_usage_estimate"></span></td>
-										</tr>
-									</tbody>
-									</template>
-								</v-simple-table>
-								</v-card-text>
-								</v-card>
-							</v-dialog>	
-						</v-col>
-						</v-row>
-						</v-card-text>
-						<v-alert text :value="true" type="info" color="primary" class="mx-2">
-							<strong>{{ dialog_account.records.account.plan.name }} Plan</strong> supports up to {{ dialog_account.records.account.plan.limits.visits | formatLargeNumbers }} visits, {{ dialog_account.records.account.plan.limits.storage }}GB storage and {{ dialog_account.records.account.plan.limits.sites }} sites. Extra sites, storage and visits charged based on usage.
-						</v-alert>
+					</v-window-item>
+					<v-window-item :transition="false" :reverse-transition="false">
 						<v-data-table
-							:headers='[{"text":"Name","value":"name"},{"text":"Storage","value":"storage"},{"text":"Visits","value":"visits"},{"text":"","value":"actions","width":"110px",sortable: false}]'
-							:items="dialog_account.records.usage_breakdown.sites"
-							item-key="name"
-							:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
+							:headers="[
+								{ title: 'Order', key: 'order_id', width: '130px' },
+								{ title: 'Date', key: 'date', width: '170px' },
+								{ title: 'Name', key: 'name' },
+								{ title: 'Status', key: 'status' },
+								{ title: 'Total', key: 'total', width: '120px' }]"
+							:items="dialog_account.records.invoices || []"
+							:items-per-page="100"
+							:items-per-page-options="[100,250,500,{'title':'All','value':-1}]"
 						>
-						<template v-slot:body="{ items }">
-						<tbody>
-							<tr v-for="item in items">
-								<td>{{ item.name }}</td>
-								<td>{{ item.storage | formatGBs }}GB</td>
-								<td>{{ item.visits }}</td>
-								<td><v-btn small @click="goToPath( `/sites/${item.site_id}` )">View</v-btn></td>
-							</tr>
-							<tr>
-								<td>Totals:</td>
-						<td v-for="total in dialog_account.records.usage_breakdown.total" v-html="total"></td>
-							</tr>
-						</tbody>
-						</template>
+							<template v-slot:item.order_id="{ item }">
+								#{{ item.order_id }}
+							</template>
+							<template v-slot:item.total="{ item }">
+								${{ item.total }}
+							</template>
 						</v-data-table>
-						</div>
-						<div v-else>
-						<v-alert text :value="true" type="info" color="primary" class="ma-2">
-							Hosting plan not active.
-						</v-alert>
-						</div>
-					</v-card>
-					</v-tab-item>
-					</v-tabs-items>
+					</v-window-item>
+					<v-window-item :transition="false" :reverse-transition="false">
+						<v-toolbar density="compact" color="transparent" flat>
+							<v-spacer></v-spacer>
+							<div v-show="role == 'administrator'">
+								<v-btn variant="text" @click="modifyPlan()">Edit Plan <v-icon size="small" class="ml-1">mdi-pencil</v-icon></v-btn>
+							</div>
+						</v-toolbar>
+						<v-card flat>
+							<div v-if="typeof dialog_account.records.account.plan == 'object' && dialog_account.records.account.plan != null && dialog_account.records.account.plan.next_renewal">
+								<v-card-text class="text-body-1">
+									<v-row>
+										<v-col>
+											<v-row align="center" no-gutters>
+												<v-col cols="auto" class="pa-2 d-flex align-center">
+													<v-progress-circular :size="50" :model-value="formatPercentage (( dialog_account.records.account.plan.usage.storage / ( dialog_account.records.account.plan.limits.storage * 1024 * 1024 * 1024 ) ) * 100 )" color="primary"><span v-html="account_storage_percentage( dialog_account.records.account )"></span></v-progress-circular>
+													<div class="ml-2" style="line-height: 1.2em;">
+														Storage <br /><small>{{ formatGBs( dialog_account.records.account.plan.usage.storage ) }}GB / {{ dialog_account.records.account.plan.limits.storage }}GB</small>
+													</div>
+												</v-col>
+												<v-col cols="auto" class="pa-2 d-flex align-center">
+													<v-progress-circular :size="50" :model-value="formatPercentage (( dialog_account.records.account.plan.usage.visits / dialog_account.records.account.plan.limits.visits * 100 ) )" color="primary"><span v-html="account_visits_percentage( dialog_account.records.account )"></span></v-progress-circular>
+													<div class="ml-2" style="line-height: 1.2em;">
+														Visits <br /><small>{{ formatLargeNumbers( dialog_account.records.account.plan.usage.visits ) }} / {{ formatLargeNumbers( dialog_account.records.account.plan.limits.visits ) }}</small>
+													</div>
+												</v-col>
+												<v-col cols="auto" class="pa-2 d-flex align-center">
+													<v-progress-circular :size="50" :model-value="formatPercentage(( dialog_account.records.account.plan.usage.sites / dialog_account.records.account.plan.limits.sites * 100 ) )" color="blue-darken-4"><span v-html="account_site_percentage( dialog_account.records.account )"></span></v-progress-circular>
+													<div class="ml-2" style="line-height: 1.2em;">
+														Sites <br /><small>{{ dialog_account.records.account.plan.usage.sites }} / {{ dialog_account.records.account.plan.limits.sites }}</small>
+													</div>
+												</v-col>
+											</v-row>
+										</v-col>
+										<v-col class="text-center">
+											<span class="text-uppercase text-caption">Next Renewal Estimate</span>
+											<v-tooltip location="bottom">
+												<template v-slot:activator="{ props }">
+													<v-icon class="ml-1" v-bind="props">mdi-calendar</v-icon>
+												</template>
+												<span>Renews on {{ pretty_timestamp_short( dialog_account.records.account.plan.next_renewal ) }}</span>
+											</v-tooltip><br />
+											<span class="text-h4 font-weight-thin" v-html="plan_usage_estimate"></span><br />
+											<v-dialog v-model="dialog_breakdown" max-width="980px">
+												<template v-slot:activator="{ props }">
+													<a v-bind="props" style="cursor: pointer;">See breakdown</a>
+												</template>
+												<v-card>
+													<v-toolbar flat color="primary">
+														<v-btn icon="mdi-close" @click="dialog_breakdown = false"></v-btn>
+														<v-toolbar-title>Plan Estimate Breakdown</v-toolbar-title>
+													</v-toolbar>
+													<v-card-text>
+														<div class="v-table v-table--has-top v-table--has-bottom v-table--density-default v-data-table mb-3">
+														<div class="v-table__wrapper">
+														<table>
+															<thead>
+																<tr>
+																	<th class="text-left">Type</th>
+																	<th class="text-left">Name</th>
+																	<th class="text-left">Quantity</th>
+																	<th class="text-right">Price</th>
+																	<th class="text-right">Total</th>
+																</tr>
+															</thead>
+															<tbody>
+																<tr>
+																	<td>Plan</td>
+																	<td>{{ dialog_account.records.account.plan.name }}</td>
+																	<td>1</td>
+																	<td class="text-right">${{ dialog_account.records.account.plan.price }}</td>
+																	<td class="text-right">${{ dialog_account.records.account.plan.price }}</td>
+																</tr>
+																<tr v-if="( parseInt( dialog_account.records.account.plan.usage.sites ) - parseInt( dialog_account.records.account.plan.limits.sites ) ) >= 1">
+																	<td>Extra</td>
+																	<td>Sites</td>
+																	<td>{{ parseInt( dialog_account.records.account.plan.usage.sites ) - parseInt( dialog_account.records.account.plan.limits.sites ) }}</td>
+																	<td class="text-right">${{ plan_usage_pricing_sites }}</td>
+																	<td class="text-right">${{ plan_usage_pricing_sites * ( parseInt( dialog_account.records.account.plan.usage.sites ) - parseInt( dialog_account.records.account.plan.limits.sites ) ) }}</td>
+																</tr>
+																<tr v-if="(( parseInt( dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( dialog_account.records.account.plan.limits.storage ) ) >= 1">
+																	<td>Extra</td>
+																	<td>Storage</td>
+																	<td>{{ Math.ceil ( ( ( parseInt( dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( dialog_account.records.account.plan.limits.storage ) ) / 10 ) }}</td>
+																	<td class="text-right">${{ plan_usage_pricing_storage }}</td>
+																	<td class="text-right">${{ plan_usage_pricing_storage * Math.ceil ( ( ( parseInt( dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( dialog_account.records.account.plan.limits.storage ) ) / 10 ) }}</td>
+																</tr>
+																<tr v-if="Math.ceil ( ( parseInt( dialog_account.records.account.plan.usage.visits ) - parseInt( dialog_account.records.account.plan.limits.visits ) ) / parseInt ( configurations.usage_pricing.traffic.quantity ) ) >= 1">
+																	<td>Extra</td>
+																	<td>Visits</td>
+																	<td>{{ Math.ceil ( ( parseInt( dialog_account.records.account.plan.usage.visits ) - parseInt( dialog_account.records.account.plan.limits.visits ) ) / parseInt ( configurations.usage_pricing.traffic.quantity ) ) }}</td>
+																	<td class="text-right">${{ plan_usage_pricing_visits }}</td>
+																	<td class="text-right">${{ plan_usage_pricing_visits * Math.ceil ( ( parseInt( dialog_account.records.account.plan.usage.visits ) - parseInt( dialog_account.records.account.plan.limits.visits ) ) / parseInt ( configurations.usage_pricing.traffic.quantity ) ) }}</td>
+																</tr>
+																<tr v-for="item in dialog_account.records.account.plan.addons">
+																	<td>Addon</td>
+																	<td>{{ item?.name }}</td>
+																	<td>{{ item?.quantity }}</td>
+																	<td class="text-right">${{ item?.price }}</td>
+																	<td class="text-right">${{ ( item?.quantity * item?.price ).toFixed(2) }}</td>
+																</tr>
+																<tr v-for="item in dialog_account.records.account.plan.charges">
+																	<td>Charge</td>
+																	<td>{{ item?.name }}</td>
+																	<td>{{ item?.quantity }}</td>
+																	<td class="text-right">${{ item?.price }}</td>
+																	<td class="text-right">${{ ( item?.quantity * item?.price ).toFixed(2) }}</td>
+																</tr>
+																<tr v-for="item in dialog_account.records.account.plan.credits">
+																	<td>Credit</td>
+																	<td>{{ item?.name }}</td>
+																	<td>{{ item?.quantity }}</td>
+																	<td class="text-right">-${{ item?.price }}</td>
+																	<td class="text-right">-${{ ( item?.quantity * item?.price ).toFixed(2) }}</td>
+																</tr>
+																<tr>
+																	<td colspan="5" class="text-body-1">Total: <span v-html="plan_usage_estimate"></span></td>
+																</tr>
+															</tbody>
+														</table>
+														</div>
+														</div>
+													</v-card-text>
+												</v-card>
+											</v-dialog>
+										</v-col>
+									</v-row>
+								</v-card-text>
+								<v-alert variant="tonal" type="info" color="primary" class="mx-2">
+									<strong>{{ dialog_account.records.account.plan.name }} Plan</strong> supports up to {{ formatLargeNumbers( dialog_account.records.account.plan.limits.visits ) }} visits, {{ dialog_account.records.account.plan.limits.storage }}GB storage and {{ dialog_account.records.account.plan.limits.sites }} sites. Extra sites, storage and visits charged based on usage.
+								</v-alert>
+								<v-data-table
+									:headers='[
+										{"title":"Name","key":"name"},
+										{"title":"Storage","key":"storage"},
+										{"title":"Visits","key":"visits"},
+										{"title":"","key":"actions", "width":"110px", "sortable": false}
+									]'
+									:items="dialog_account.records.usage_breakdown.sites || []"
+									item-value="name"
+									:items-per-page="-1"
+									hide-default-footer
+									class="mb-3"
+								>
+									<template v-slot:item.storage="{ item }">
+										{{ formatGBs(item.storage) }}GB
+									</template>
+
+									<template v-slot:item.actions="{ item }">
+										<v-btn size="small" @click="goToPath(`/sites/${item.site_id}`)">View</v-btn>
+									</template>
+
+									<template v-slot:tfoot>
+										<tfoot>
+											<tr>
+												<td><strong>Totals:</strong></td>
+												
+												<td v-for="(total, index) in dialog_account.records.usage_breakdown.total || []" :key="index" v-html="total"></td>
+
+												<td></td>
+											</tr>
+										</tfoot>
+									</template>
+								</v-data-table>
+								<v-alert variant="tonal" type="info" color="secondary" class="mx-2">
+									Includes {{(dialog_account.records.usage_breakdown.maintenance_sites || []).length}} connected sites. Connected sites are charged for maintenance services only. Their usage does not count towards your plan.
+								</v-alert>
+								<v-data-table
+									:headers='[
+										{"title":"Name","key":"name"},
+										{"title":"Storage","key":"storage"},
+										{"title":"Visits","key":"visits"},
+										{"title":"","key":"actions","width":"110px", "sortable": false}
+									]'
+									:items="dialog_account.records.usage_breakdown.maintenance_sites || []"
+									item-value="name"
+									:items-per-page="-1"
+									hide-default-footer
+								>
+									<template v-slot:item.storage="{ item }">
+										{{ formatGBs(item.storage) }}GB
+									</template>
+
+									<template v-slot:item.actions="{ item }">
+										<v-btn size="small" @click="goToPath(`/sites/${item.site_id}`)">View</v-btn>
+									</template>
+								</v-data-table>
+							</div>
+							<div v-else>
+								<v-alert variant="tonal" type="info" color="primary" class="text-body-1 ma-2">
+									Hosting plan not active.
+								</v-alert>
+							</div>
+						</v-card>
+					</v-window-item>
+
+					</v-window>
 				</v-container>
 				</v-sheet>
 			</v-card>
-			<v-card v-if="route == 'users'" outlined rounded="xl">
+			<v-card v-if="route == 'users'" flat border="thin" rounded="xl">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing {{ users.length }} users</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items>
 						<v-dialog max-width="600">
-							<template v-slot:activator="{ on, attrs }">
-								<v-btn text v-bind="attrs" v-on="on">Add user <v-icon dark>mdi-plus</v-icon></v-btn>
-							</template>
-							<template v-slot:default="dialog">
-							<v-card>
-								<v-toolbar color="primary" dark>
-								<v-btn icon dark @click="dialog.value = false">
-									<v-icon>mdi-close</v-icon>
+							<template v-slot:activator="{ props }">
+								<v-btn variant="text" v-bind="props">
+									Add user <v-icon dark>mdi-plus</v-icon>
 								</v-btn>
-								<v-toolbar-title>Add user</v-toolbar-title>
-								<v-spacer></v-spacer>
-								</v-toolbar>
-								<v-card-text class="pt-3">
-									<v-row>
-										<v-col><v-text-field :value="dialog_new_user.first_name" @change.native="dialog_new_user.first_name = $event.target.value" label="First Name"></v-text-field></v-col>
-										<v-col><v-text-field :value="dialog_new_user.last_name" @change.native="dialog_new_user.last_name = $event.target.value" label="Last Name"></v-text-field></v-col>
-									</v-row>
-									<v-text-field :value="dialog_new_user.email" @change.native="dialog_new_user.email = $event.target.value" label="Email"></v-text-field>
-									<v-text-field :value="dialog_new_user.login" @change.native="dialog_new_user.login = $event.target.value" label="Username"></v-text-field>
-									<v-autocomplete :items="accounts" item-text="name" item-value="account_id" v-model="dialog_new_user.account_ids" label="Accounts" chips multiple deletable-chips></v-autocomplete>
-									<v-alert text :value="true" type="error" v-for="error in dialog_new_user.errors" class="mt-5">{{ error }}</v-alert>
-									
-									<v-flex xs12 mt-5>
-										<v-btn color="primary" dark @click="newUser( dialog )">Create User</v-btn>
-									</v-flex>
-								</v-card-text>
-							</v-card>
+							</template>
+							<template v-slot:default="{ isActive }">
+								<v-card>
+									<v-toolbar color="primary" dark>
+										<v-btn icon dark @click="isActive.value = false">
+											<v-icon>mdi-close</v-icon>
+										</v-btn>
+										<v-toolbar-title>Add user</v-toolbar-title>
+										<v-spacer></v-spacer>
+									</v-toolbar>
+									<v-card-text class="pt-3">
+										<v-row>
+											<v-col>
+												<v-text-field v-model="dialog_new_user.first_name" label="First Name" variant="underlined"></v-text-field>
+											</v-col>
+											<v-col>
+												<v-text-field v-model="dialog_new_user.last_name" label="Last Name" variant="underlined"></v-text-field>
+											</v-col>
+										</v-row>
+										<v-text-field v-model="dialog_new_user.email" label="Email" variant="underlined"></v-text-field>
+										<v-text-field v-model="dialog_new_user.login" label="Username" variant="underlined"></v-text-field>
+										<v-autocomplete 
+											:items="accounts" 
+											item-title="name" 
+											item-value="account_id" 
+											v-model="dialog_new_user.account_ids" 
+											label="Accounts" 
+											chips 
+											multiple 
+											closable-chips
+											variant="underlined"
+										></v-autocomplete>
+										<v-alert variant="tonal" type="error" v-for="error in dialog_new_user.errors" class="mt-5">{{ error }}</v-alert>
+										<v-col cols="12" class="mt-5">
+											<v-btn color="primary" dark @click="newUser(isActive)">Create User</v-btn>
+										</v-col>
+									</v-card-text>
+								</v-card>
 							</template>
 						</v-dialog>
 					</v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
-				<v-row>
-					<v-col></v-col>
-					<v-col cols="12" md="4">
-						<v-text-field class="mx-4" v-model="user_search" @input="filterSites" autofocus label="Search" clearable light hide-details append-icon="mdi-magnify"></v-text-field>	
-					</v-col>
-				</v-row>
+				<v-toolbar flat color="transparent">
+					<v-spacer></v-spacer>
+					<v-text-field class="mx-4" variant="outlined" density="compact" v-model="user_search" autofocus label="Search" clearable light hide-details append-inner-icon="mdi-magnify" style="max-width:300px;"></v-text-field>	
+				</v-toolbar>
 				<v-data-table
-					:headers="[{ text: 'Name', value: 'name' },{ text: 'Username', value: 'username' },{ text: 'Email', value: 'email' },{ text: '', value: 'user_id', align: 'end', sortable: false }]"
+					:headers="[{ title: 'Name', value: 'name' },{ title: 'Username', value: 'username' },{ title: 'Email', value: 'email' },{ title: '', value: 'user_id', align: 'end', sortable: false }]"
 					:items="users"
 					:search="user_search"
-					:footer-props="{ itemsPerPageOptions: [100,250,500,{'text':'All','value':-1}] }"
+					density="comfortable"
+					:items-per-page="100"
+					:items-per-page-options="[100,250,500,{'title':'All','value':-1}]"
 				>
 					<template v-slot:item.user_id="{ item }">
-						<v-btn text color="primary" @click="editUser( item.user_id )">Edit User</v-btn>
+						<v-btn variant="text" color="primary" @click="editUser( item.user_id )">Edit User</v-btn>
 					</template>
 				</v-data-table>
 				</v-card-text>
@@ -6727,28 +7246,28 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</template>
 				</v-toolbar>
 				<v-card-text style="height:300px;">
-					<v-tabs-items v-model="account_tab">
-					<v-tab-item>
+					<v-window v-model="account_tab">
+					<v-window-item>
 						<v-data-table
 							v-show="typeof new_invite.sites == 'object' && new_invite.sites.length > 0"
-							:headers='[{"text":"Sites","value":"name"}]'
+							:headers='[{"title":"Sites","value":"name"}]'
 							:items="new_invite.sites"
 							:items-per-page="-1"
 							hide-default-footer
 						>
 						</v-data-table>
-					</v-tab-item>
-					<v-tab-item>
+					</v-window-item>
+					<v-window-item>
 						<v-data-table
 							v-show="typeof new_invite.domains == 'object' && new_invite.domains.length > 0"
-							:headers='[{"text":"Domain","value":"name"}]'
+							:headers='[{"title":"Domain","value":"name"}]'
 							:items="new_invite.domains"
 							:items-per-page="-1"
 							hide-default-footer
 						>
 						</v-data-table>
-					</v-tab-item>
-					</v-tabs-items>
+					</v-window-item>
+					</v-window>
 						</v-card-text>
 						<v-divider></v-divider>
 						<v-card-actions>
@@ -6763,50 +7282,49 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card-text>
 			</v-card>
 			<v-container v-if="route == 'sites' && role == 'administrator' && ! loading_page && dialog_site.step == 2" class="mt-5">
-				<v-subheader>Administrator Options</v-subheader>
-				<v-container>
-				<v-btn small outlined @click="dialog_mailgun_config.show = true">
-					<v-icon>mdi-email-search</v-icon> Configure Mailgun
-				</v-btn>
-				<v-btn small outlined @click="copySite(dialog_site.site.site_id)">
-					<v-icon>mdi-content-duplicate</v-icon> Copy Site
-				</v-btn>
-				<v-btn small outlined @click="editSite()">
-					<v-icon>mdi-pencil</v-icon> Edit Site
-				</v-btn>
-				<v-btn small outlined color="error" @click="deleteSite(dialog_site.site.site_id)">
-					<v-icon>mdi-delete</v-icon> Delete Site
-				</v-btn>
-				</v-container>
-			</v-container>	
+				<v-card color="transparent" density="compact" flat subtitle="Administrator Options">
+					<template v-slot:actions>
+						<v-btn size="small" variant="outlined" @click="dialog_mailgun_config.show = true">
+							<v-icon icon="mdi-email-search"></v-icon> Configure Mailgun
+						</v-btn>
+						<v-btn size="small" variant="outlined" @click="copySite(dialog_site.site.site_id)">
+							<v-icon icon="mdi-content-duplicate"></v-icon> Copy Site
+						</v-btn>
+						<v-btn size="small" variant="outlined" @click="editSite()">
+							<v-icon icon="mdi-pencil"></v-icon> Edit Site
+						</v-btn>
+						<v-btn size="small" variant="outlined" color="error" @click="deleteSite(dialog_site.site.site_id)">
+							<v-icon icon="mdi-delete"></v-icon> Delete Site
+						</v-btn>
+					</template>
+				</v-card>
+			</v-container>
 			<v-container v-if="route == 'domains' && role == 'administrator' && ! loading_page && dialog_domain.step == 2" class="mt-5 pb-0">
-			<v-subheader>Shared With</v-subheader>
+			<v-list-subheader class="ml-4">Shared With</v-list-subheader>
 			<v-container>
-			<v-row dense v-if="dialog_domain.accounts && dialog_domain.accounts.length > 0">
+			<v-row density="compact" v-if="dialog_domain.accounts && dialog_domain.accounts.length > 0">
 				<v-col v-for="account in dialog_domain.accounts" :key="account.account_id" cols="12" md="4">
-				<v-card :href=`${configurations.path}accounts/${account.account_id}` @click.prevent="goToPath( '/accounts/' + account.account_id )" dense outlined rounded="xl">
+				<v-card :href=`${configurations.path}accounts/${account.account_id}` @click.prevent="goToPath( '/accounts/' + account.account_id )" density="compact" flat border="thin" rounded="xl">
 					<v-card-title class="text-body-1">
 						<span v-html="account.name"></span>
 					</v-card-title>
-					<v-card-subtitle>Account #{{ account.account_id }}</v-card-subtitle>
+					<v-card-subtitle class="mb-3">Account #{{ account.account_id }}</v-card-subtitle>
 				</v-card>
 			</v-col>
 			</v-row>
 			</v-container>
 			</v-container>
 			<v-container v-if="route == 'domains' && role == 'administrator' && ! loading_page && dialog_domain.step == 2">
-			<v-subheader>Administrator Options</v-subheader>
-			<v-container>
-			<v-dialog max-width="600">
-				<template v-slot:activator="{ on, attrs }">
-				<v-btn class="mx-1" v-bind="attrs" v-on="on" outlined>Edit Domain</v-btn>
+				<v-card color="transparent" density="compact" flat subtitle="Administrator Options">
+					<template v-slot:actions>
+					<v-dialog max-width="600">
+				<template v-slot:activator="{ props }">
+				<v-btn v-bind="props" variant="outlined">Edit Domain</v-btn>
 				</template>
-				<template v-slot:default="dialog">
+				<template v-slot:default="{ isActive }">
 				<v-card>
 					<v-toolbar color="primary" dark>
-					<v-btn icon @click="dialog.value = false">
-						<v-icon>mdi-close</v-icon>
-					</v-btn>
+					<v-btn icon="mdi-close" @click="isActive.value = false"></v-btn>
 					<v-toolbar-title>Edit Domain</v-toolbar-title></v-toolbar>
 					<v-card-text>
 					<v-autocomplete
@@ -6816,446 +7334,174 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						deletable-chips
 						label="Accounts"
 						:items="accounts"
-						item-text="name"
+						item-title="name"
 						item-value="account_id"
 						class="mt-5"
 						spellcheck="false"
 						flat
+						variant="underlined"
 					></v-autocomplete>
 					<v-autocomplete
 						v-model="dialog_domain.provider_id"
 						label="Provider"
 						:items="providers.filter( item => item.provider == 'hoverdotcom' || item.provider == 'spaceship' )"
-						item-text="name"
+						item-title="name"
 						item-value="provider_id"
 						class="mt-5"
 						spellcheck="false"
 						clearable
 						flat
+						variant="underlined"
 					></v-autocomplete>
 					</v-card-text>
 					<v-card-actions class="justify-end">
-						<v-btn color="primary" dark @click="dialog.value = false; updateDomainAccount()">
+						<v-btn color="primary" variant="outlined" @click="isActive.value = false; updateDomainAccount()">
 							Save Domain
 						</v-btn>
 					</v-card-actions>
 				</v-card>
 				</template>
 			</v-dialog>
-				<v-btn class="mx-1" outlined color="error" @click="deleteDomain()">Delete Domain</v-btn>
+				<v-btn variant="outlined" color="error" @click="deleteDomain()">Delete Domain</v-btn>
+					</template>
+				</v-card>
 			</v-container>
+			<v-container v-if="route == 'accounts' && ! loading_page && dialog_account.step == 2" class="mt-5">
+				<v-card color="transparent" density="compact" flat subtitle="Site Options">
+					<template v-slot:actions>
+						<v-btn size="small" variant="outlined" @click="dialog_configure_defaults.show = true">
+							<v-icon icon="mdi-clipboard-check-outline"></v-icon> Configure Defaults
+						</v-btn>
+					</template>
+				</v-card>
 			</v-container>
-			<v-container v-if="route == 'accounts' && role == 'administrator' && ! loading_page && dialog_account.step == 2" class="mt-5">
-					<v-subheader>Administrator Options</v-subheader>
-					<v-container>
-					<v-btn small outlined @click="accountBulkTools()">
-						<v-icon small>mdi-filter-variant</v-icon> Bulk Tools on Sites
-					</v-btn>
-					<v-btn small outlined @click="editAccountPortal()">
-						<v-icon small>mdi-pencil</v-icon> Edit Portal
-					</v-btn>
-					<v-btn small outlined @click="editAccount()">
-						<v-icon small>mdi-pencil</v-icon> Edit Account
-					</v-btn>
-					<v-btn small outlined color="error" @click="deleteAccount()">
-						<v-icon small>mdi-delete</v-icon> Delete Account
-					</v-btn>
-					</v-container>
+			<v-container v-if="route == 'accounts' && role == 'administrator' && ! loading_page && dialog_account.step == 2">
+				<v-card color="transparent" density="compact" flat subtitle="Administrator Options">
+					<template v-slot:actions>
+						<v-btn size="small" variant="outlined" @click="accountBulkTools()">
+							<v-icon small>mdi-filter-variant</v-icon> Bulk Tools on Sites
+						</v-btn>
+						<v-btn size="small" variant="outlined" @click="editAccountPortal()">
+							<v-icon small>mdi-pencil</v-icon> Edit Portal
+						</v-btn>
+						<v-btn size="small" variant="outlined" @click="editAccount()">
+							<v-icon small>mdi-pencil</v-icon> Edit Account
+						</v-btn>
+						<v-btn size="small" variant="outlined" color="error" @click="deleteAccount()">
+							<v-icon small>mdi-delete</v-icon> Delete Account
+						</v-btn>
+					</template>
+				</v-card>
 			</v-container>
 			</v-container>
 			<v-container v-show="loading_page">
 				Loading...
 			</v-container>
-			<v-snackbar
-				:timeout="3000"
-				:multi-line="true"
-				v-model="snackbar.show"
-				style="z-index: 9999999;"
-			>
+			<v-snackbar :timeout="3000" :multi-line="true" v-model="snackbar.show" style="z-index: 9999999;">
 				{{ snackbar.message }}
-				<v-btn dark text @click.native="snackbar.show = false">Close</v-btn>
+				<v-btn variant="text" @click.native="snackbar.show = false">Close</v-btn>
 			</v-snackbar>
 		</template>
 		</v-container>
-		</v-main>
-		<v-footer app padless :height="footer_height" class="pa-0 ma-0" style="font-size:12px;z-index:10" class="console" v-if="view_console.show == true">
-		<div class="ma-0 pa-0" style="width: 100%;">
-		<v-row no-gutters>
-        <v-col>
-		<v-card v-show="view_console.open == true" class="pa-0 ma-0" flat style="height:174px;" color="transparent">
-			<v-window v-model="console">
-			<v-window-item :value="0">
-			</v-window-item>
-			<v-window-item :value="1">
-			<v-toolbar flat dense color="transparent">
-			<span>Task Activity</span>
-			<v-spacer></v-spacer>
-				<v-tooltip top>
-					<template v-slot:activator="{ on }">
-					<v-btn v-on="on" small icon @click.native="jobs = []; snackbar.message = 'Task activity cleared.'; snackbar.show = true">
-						<v-icon>mdi-trash-can-outline</v-icon>
-					</v-btn>
-					</template><span>Clear Task Activity</span>
+		<v-navigation-drawer v-model="view_console.show" location="bottom" :rail="! view_console.open" rail-width="32" width="210" tile temporary :scrim="false">
+		<v-sheet>
+			<v-window v-model="active_console" class="ml-2">
+			<v-window-item :value="0" :transition="false" :reverse-transition="false"></v-window-item>
+			<v-window-item :value="1" :transition="false" :reverse-transition="false">
+				<v-toolbar flat density="compact" color="transparent">
+				<span>Task Activity</span>
+				<v-spacer></v-spacer>
+				<v-tooltip location="top">
+					<template v-slot:activator="{ props }">
+						<v-btn v-bind="props" size="small" icon="mdi-trash-can-outline" @click.native="jobs = []; snackbar.message = 'Task activity cleared.'; snackbar.show = true"></v-btn>
+					</template>
+					<span>Clear Task Activity</span>
 				</v-tooltip>
-				<v-btn small icon @click="closeConsole()">
-					<v-icon>mdi-close</v-icon>
-				</v-btn>
-			</v-toolbar>
-			<v-card-text style="height:130px; overflow-y:scroll;" class="ma-0 pa-0">
-			<v-data-table
-				:headers="[{ text: 'Description', value: 'description' },
-							{ text: 'Status', value: 'status' },
-							{ text: 'Response', value: 'response' }]"
-				:items="jobs.slice().reverse()"
-				class="transparent elevation-0 pa-0 ma-0"
-				hide-default-header hide-default-footer dense
-			>
-				<template v-slot:body="{ items }">
-				<tbody>
-				<tr>
-					<td class="ma-0 pa-0">
-				<v-list dense flat class="transparent ma-0 pa-0">
-				<v-list-item-group>
-					<template v-for="(item, index) in items">
-					<v-list-item :key="item.job_id" @click="viewJob( item.job_id )">
-						<template v-slot:default="{ active, toggle }">
-						<v-list-item-content>
-							<v-list-item-subtitle>
-								<v-chip v-if="item.status == 'done'" x-small label color="green" dark class="mr-2">Done</v-chip>
-								<v-chip v-else-if="item.status == 'error'" x-small label color="red" dark class="mr-2">Error</v-chip>
-								<v-chip v-else x-small label color="primary" dark class="mr-2">Running</v-chip>
+				<v-btn size="small" icon="mdi-close" @click="closeConsole()"></v-btn>
+				</v-toolbar>
+				<v-card-text style="height:130px; overflow-y:scroll;" class="ma-0 pa-0">
+				<v-data-table :headers="[{ title: 'Description', value: 'description' },{ title: 'Status', value: 'status' },{ title: 'Response', value: 'response' }]" :items="jobs.slice().reverse()" class="transparent elevation-0 pa-0 ma-0" hide-default-header hide-default-footer density="compact">
+					<template v-slot:body="{ items }">
+						<tr>
+						<td class="ma-0 pa-0">
+							<v-list density="compact" flat class="transparent ma-0 pa-0">
+							<v-list-item density="compact" class="px-0" min-height="0" v-for="(item, index) in items" :key="item.job_id" @click="viewJob( item.job_id )">
+								<v-list-item-subtitle>
+								<v-chip v-if="item.status == 'done'" size="x-small" color="green" class="mr-2" variant="outlined">Done</v-chip>
+								<v-chip v-else-if="item.status == 'error'" size="x-small" color="red" class="mr-2" variant="outlined">Error</v-chip>
+								<v-chip v-else size="x-small" color="primary" class="mr-2" variant="outlined">Running</v-chip>
 								{{ item.description }}
 								<small v-if="typeof item.stream == 'object'" class="ml-2">{{ item.stream.slice(-1)[0] }}</small>
-							</v-list-item-subtitle>
-						</v-list-item-content>
-						<v-list-item-icon class="ma-0" v-if="item.status != 'done' && item.status != 'error'">
-							<v-btn style="margin-top:2.5px" text x-small @click.stop="killCommand(item.job_id)">Cancel</v-btn>
-						</v-list-item-icon>
-						</template>
-					</v-list-item>
+								</v-list-item-subtitle>
+								<template v-slot:append v-if="item.status != 'done' && item.status != 'error'">
+									<v-btn style="margin-top:2.5px" variant="text" size="x-small" @click.stop="killCommand(item.job_id)">Cancel</v-btn>
+								</template>
+							</v-list-item>
+							</v-list>
+						</td>
+						</tr>
 					</template>
-				</v-list-item-group>
-				</v-list>
-				</td>
-				</tr>
-				</tbody>
-				</template>
-			</v-data-table>
-			</v-card-text>
+				</v-data-table>
+				</v-card-text>
 			</v-window-item>
-			<v-window-item :value="4">
-			<v-toolbar flat dense color="transparent">
-			<span>Task - {{ dialog_job.task.description }}</span>
-			<v-spacer></v-spacer>
-				<v-btn text tile small @click.native="console = 1">
+			<v-window-item :value="4" :transition="false" :reverse-transition="false">
+				<v-toolbar flat density="compact" color="transparent">
+				<span class="text-body-2">Task - {{ dialog_job.task.description }}</span>
+				<v-spacer></v-spacer>
+				<v-btn variant="text" size="small" @click.native="active_console = 1">
 					<v-icon>mdi-arrow-left</v-icon> Back to Task Activity
 				</v-btn>
 				<a ref="export_task" href="#"></a>
-				<v-tooltip top>
-					<template v-slot:activator="{ on }">
-					<v-btn v-on="on" small icon @click.native="exportTaskResults()">
-						<v-icon>mdi-file-download</v-icon>
-					</v-btn>
-					</template><span>Export Results</span>
-				</v-tooltip>
-				<v-btn small icon @click="closeConsole()">
-					<v-icon>mdi-close</v-icon>
-				</v-btn>
-			</v-toolbar>
-			<v-card-text style="height:130px; overflow-y:scroll; transform: scaleY(-1);" class="ma-0 py-0 px-5">
-				<v-layout row wrap>
-					<v-flex xs12 pa-2>
-					<v-card text width="100%" class="transparent elevation-0">
-						<small mv-1 style="display: block; transform: scaleY(-1);"><div v-for="s in dialog_job.task.stream">{{ s }}</div></small>
-		</v-card>
-					</v-flex>
-				</v-layout>
-			</v-card-text>
-			</v-window-item>
-			<v-window-item :value="2">
-			<v-toolbar flat dense color="transparent">
-			<span class="mr-2">Filters</span>
-			<v-autocomplete
-				v-model="applied_site_filter"
-				@input="filterSites"
-				:items="site_filters"
-				ref="applied_site_filter"
-				return-object
-				item-text="search"
-				label="Select Theme and/or Plugin"
-				class="siteFilter mx-1"
-				chips
-				allow-overflow
-				small-chips
-				solo
-				multiple
-				hide-details
-				hide-selected
-				deletable-chips
-				dense
-				height="24"
-				style="max-width: 420px"
-				:menu-props="{ closeOnContentClick:true, openOnClick: false }"
-			>
-			</v-autocomplete>
-			<v-spacer></v-spacer>
-				<v-tooltip top>
-					<template v-slot:activator="{ on }">
-					<v-btn v-on="on" small icon @click.native="clearFilters(); snackbar.message = 'Filters cleared.'; snackbar.show = true">
-						<v-icon>mdi-trash-can-outline</v-icon>
-					</v-btn>
-					</template><span>Clear Filters</span>
-				</v-tooltip>
-				<v-btn small icon @click="closeConsole()">
-					<v-icon>mdi-close</v-icon>
-				</v-btn>
-			</v-toolbar>
-			<v-card-text style="height:130px; overflow-y:scroll;">
-		<v-layout row>
-			<v-flex xs6 px-1>
-				 <v-autocomplete
-					v-model="applied_site_filter_version"
-					v-for="filter in site_filter_version"
-					@input="filterSites"
-					ref="applied_site_filter_version"
-					:items="filter.versions"
-					:key="filter.name"
-					:label="'Select Version for '+ filter.name"
-					class="mb-1"
-					item-text="name"
-					return-object
-					chips
-					small-chips
-					solo
-					multiple
-					hide-details
-					hide-selected
-					deletable-chips
-					dense
-				 >
-				 <template v-slot:item="data">
-						<div class="v-list-item__title"><strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span></div>
-				 </template>
-				</v-autocomplete>
-			</v-flex>
-			<v-flex xs6 px-1>
-				<v-autocomplete
-					v-model="applied_site_filter_status"
-					v-for="filter in site_filter_status"
-					:items="filter.statuses"
-					:key="filter.name"
-					:label="'Select Status for '+ filter.name"
-					class="mb-1"
-					@input="filterSites"
-					item-text="name"
-					return-object
-					chips
-					small-chips
-					solo
-					multiple
-					hide-details
-					hide-selected
-					deletable-chips
-					dense
-				>
-				<template slot="item" slot-scope="data">
-					<div class="v-list-item__title"><strong>{{ data.item.name }}</strong>&nbsp;<span>({{ data.item.count }})</span></div>
-				</template>
-				</v-autocomplete>
-			</v-flex>
-			</v-layout>
-			</v-window-item>
-			<v-window-item :value="3">
-			<v-toolbar flat dense color="transparent">
-			<span class="mr-2">Bulk Tools</span>
-			<v-select
-				v-model="dialog_bulk.environment_selected"
-				:items='[{"name":"Production Environment","value":"Production"},{"name":"Staging Environment","value":"Staging"}]'
-				item-text="name"
-				item-value="value"
-				@change="triggerEnvironmentUpdate()"
-				class="mx-1 mt-6"
-				solo
-				dense
-				chips
-				small-chips
-				style="max-width:240px;">
-			</v-select>
-			<v-autocomplete
-				v-model="sites_selected"
-				:items="sites"
-				item-text="name"
-				return-object
-				chips
-				small-chips
-				dense
-				solo
-				label="Search"
-				multiple
-				class="mx-1 mt-6"
-				style="max-width:240px;"
-			>
-			<template v-slot:selection="{ item, index }">
-				<span v-if="index === 0" class="v-chip--select v-chip v-chip--clickable v-chip--no-color theme--light v-size--small"><span class="v-chip__content">{{ sites_selected.length }} sites selected</span></span>
-			</template>
-			</v-autocomplete>
-			<v-btn small text v-show="filterCount" @click="sites_selected = sites.filter( s => s.filtered )">
-				Select {{ sites.filter( s => s.filtered ).length }} sites in applied filters
-			</v-btn>
-			<v-btn small text @click="sites_selected = sites">
-				Select all {{ sites.length }} sites
-			</v-btn>
-			<v-spacer></v-spacer>
-				<v-tooltip top>
-					<template v-slot:activator="{ on }">
-					<v-btn small icon @click="addThemeBulk()" v-on="on">
-						<v-icon>mdi-plus</v-icon>
-					</v-btn>
+				<v-tooltip location="top">
+					<template v-slot:activator="{ props }">
+						<v-btn v-bind="props" size="small" icon="mdi-file-download" @click.native="exportTaskResults()"></v-btn>
 					</template>
-					<span>Add theme</span>
+					<span>Export Results</span>
 				</v-tooltip>
-				<v-tooltip top>
-					<template v-slot:activator="{ on }">
-					<v-btn small icon @click="addPluginBulk()" v-on="on">
-						<v-icon>mdi-plus</v-icon>
-					</v-btn>
-					</template>
-					<span>Add plugin</span>
-				</v-tooltip>
-				<v-tooltip top v-if="role == 'administrator'">
-					<template v-slot:activator="{ on }">
-					<v-btn small icon @click="showLogEntryBulk()" v-on="on">
-						<v-icon>mdi-checkbox-marked</v-icon>
-					</v-btn>
-					</template>
-					<span>New Log Entry</span>
-				</v-tooltip>
-				<v-tooltip top>
-					<template v-slot:activator="{ on }">
-					<v-btn small icon @click="bulkactionLaunch()" v-on="on">
-						<v-icon>mdi-open-in-new</v-icon>
-					</v-btn>
-					</template>
-					<span>Open websites in browser</span>
-				</v-tooltip>
-				<v-tooltip top>
-					<template v-slot:activator="{ on }">
-					<v-btn small icon @click="bulkSyncSites()" v-on="on">
-						<v-icon>mdi-sync</v-icon>
-					</v-btn>
-					</template>
-					<span>Manual sync website details</span>
-				</v-tooltip>
-				<v-tooltip top>
-					<template v-slot:activator="{ on }">
-					<v-btn small icon @click="sites_selected = []; snackbar.message = 'Selections cleared.'; snackbar.show = true" v-on="on">
-						<v-icon>mdi-trash-can-outline</v-icon>
-					</v-btn>
-					</template><span>Clear Selections</span>
-				</v-tooltip>
-				<v-btn small icon @click="closeConsole()">
-					<v-icon>mdi-close</v-icon>
-				</v-btn>
-			</v-toolbar>
-				<v-card-text style="height:130px; overflow-y:scroll;">
-				<v-row>
-				<v-col cols="12" md="4" class="py-0 my-0">
-					<small>Common Scripts</small><br />
-					<v-tooltip top>
-						<template v-slot:activator="{ on }">
-						<v-btn small icon @click="viewApplyHttpsUrlsBulk()" v-on="on">
-							<v-icon>mdi-rocket-launch</v-icon>
-						</v-btn>
-						</template><span>Apply HTTPS Urls</span>
-					</v-tooltip>
-					<v-tooltip top>
-						<template v-slot:activator="{ on }">
-						<v-btn small icon @click="siteDeployBulk()" v-on="on">
-							<v-icon>mdi-refresh</v-icon>
-						</v-btn>
-						</template><span>Deploy Defaults</span>
-					</v-tooltip>
-					<v-tooltip top>
-						<template v-slot:activator="{ on }">
-						<v-btn small icon @click="toggleSiteBulk()" v-on="on">
-							<v-icon>mdi-toggle-switch</v-icon>
-						</v-btn>
-						</template><span>Toggle Site</span>
-					</v-tooltip><br />
-					<small>Other Scripts</small><br />
-					<v-tooltip top dense v-for="recipe in recipes.filter( r => r.public == 1 )">
-						<template v-slot:activator="{ on }">
-						<v-btn small icon @click="runRecipeBulk( recipe.recipe_id )" v-on="on">
-							<v-icon>mdi-script-text-outline</v-icon>
-						</v-btn>
-						</template><span>{{ recipe.title }}</span>
-					</v-tooltip><br />
-					<small><span v-show="sites_selected.length > 0">Selected sites: </span>
-						<span v-for="site in sites_selected" style="display: inline-block;" v-if="dialog_bulk.environment_selected == 'Production' || dialog_bulk.environment_selected == 'Both'">{{ site.site }}&nbsp;</span>
-						<span v-for="site in sites_selected" style="display: inline-block;" v-if="dialog_bulk.environment_selected == 'Staging' || dialog_bulk.environment_selected == 'Both'">{{ site.site }}-staging&nbsp;</span>
-					</small>
-				</v-col>
-				<v-col cols="12" md="8" class="py-0 my-0">
-					<v-textarea
-							auto-grow
-							solo
-							rows="4"
-							dense
-							hint="Custom bash script or WP-CLI commands"
-							persistent-hint
-							:value="script.code" 
-							@change.native="script.code = $event.target.value"
-							spellcheck="false"
-							class="code"
-						>
-						<template v-slot:append-outer>
-							<v-btn small color="primary" dark @click="runCustomCodeBulk()">Run Custom Code</v-btn>
-						</template>
-					</v-textarea>
-		</v-col>
-		</v-row>
-			</v-card>
+				<v-btn size="small" icon="mdi-close" @click="closeConsole()"></v-btn>
+				</v-toolbar>
+				<v-card-text style="height:130px; overflow-y:scroll; transform: scaleY(-1);" class="ma-0 py-0 px-5">
+				<v-row wrap>
+					<v-col cols="12" class="pa-0 ma-0">
+					<v-card flat width="100%" color="transparent" class="mt-3">
+						<small mv-1 style="display: block; transform: scaleY(-1);">
+						<div v-for="s in dialog_job.task.stream">{{ s }}</div>
+						</small>
+					</v-card>
+					</v-col>
+				</v-row>
+				</v-card-text>
 			</v-window-item>
 			</v-window>
-		</v-card>
-		</v-col>
-		</v-row>
-		<v-row no-gutters justify="center">
-        <v-col cols="11">
-		<v-tooltip top>
-			<template v-slot:activator="{ on }">
-				<v-btn text tile small @click="toggleConsole( 1 )" v-on="on">
+			<v-row no-gutters justify="center" style="height: 30px;overflow: hidden;">
+			<v-col cols="11">
+				<v-tooltip location="top">
+				<template v-slot:activator="{ props }">
+					<v-btn variant="text" size="small" @click="toggleConsole( 1 )" v-bind="props">
 					<v-icon x-small>mdi-cogs</v-icon> Task Activity
-					<div v-show="runningJobs"><v-chip x-small label color="secondary" class="pa-1 ma-2">{{ runningJobs }} Running</v-chip> <v-progress-circular indeterminate class="ml-2" size="16" width="2"></v-progress-circular></div>
-					<div v-show="! runningJobs && completedJobs"><v-chip x-small label color="secondary" class="pa-1 ma-2">{{ completedJobs }} Completed</v-chip></div>
-				</v-btn>
-			</template><span>View Task Activity</span>
-		</v-tooltip>
-		<v-tooltip top>
-			<template v-slot:activator="{ on }">
-				<v-btn text tile small @click="toggleConsole( 2 )" v-on="on">
-					<v-icon x-small>mdi-filter</v-icon> Site Filters
-					<div v-show="filterCount"><v-chip x-small label color="secondary" class="pa-1 ma-2">{{ filterCount }} Applied</v-chip></div>
-				</v-btn>
-			</template><span>View Filters</span>
-		</v-tooltip>
-		<v-tooltip top>
-			<template v-slot:activator="{ on }">
-				<v-btn text tile small @click="toggleConsole( 3 )" v-on="on">
-					<v-icon x-small>mdi-filter-variant</v-icon> Site Bulk Tools
-					<div v-show="sites_selected.length > 0"><v-chip x-small label color="secondary" class="pa-1 ma-2">{{ sites_selected.length }} Selected</v-chip></div>
-				</v-btn>
-			</template><span>View Bulk Tools</span>
-		</v-tooltip>
-		</v-col>
-		<v-col cols="1" class="text-right">
-		<v-btn icon tile small @click="view_console.show = false" v-show="view_console.open == false">
-			<v-icon small>mdi-close</v-icon>
-		</v-btn>
-		</v-col>
-		</v-row>
-		</div>
-		</v-footer>
+					<div v-show="runningJobs">
+						<v-chip size="x-small" density="compact" label color="secondary" class="py-2 mx-2">{{ runningJobs }} Running</v-chip>
+						<v-progress-circular indeterminate class="ml-2" size="16" width="2"></v-progress-circular>
+					</div>
+					<div v-show="! runningJobs && completedJobs">
+						<v-chip size="x-small" density="compact" label color="secondary" class="py-2 mx-2">{{ completedJobs }} Completed</v-chip>
+					</div>
+					</v-btn>
+				</template>
+				<span>View Task Activity</span>
+				</v-tooltip>
+			</v-col>
+			<v-col cols="1" class="text-right">
+				<v-btn-group style="position: relative; top: -8px;"><v-btn icon="mdi-menu" variant="text" size="small" @click="view_console.show = false"></v-btn></v-btn-group>
+			</v-col>
+			</v-row>
+		</v-sheet>
+		</v-navigation-drawer>
+		<v-snackbar :timeout="3000" :multi-line="true" v-model="snackbar.show" style="z-index: 9999999;">
+			{{ snackbar.message }}
+			<v-btn variant="text" @click.native="snackbar.show = false">Close</v-btn>
+		</v-snackbar>
+		</v-main>
 	</v-app>
 </div>
 <?php if ( substr( $_SERVER['SERVER_NAME'], -10) == '.localhost' ) { ?>
