@@ -42,6 +42,76 @@ class Run {
         return $response["body"];
     }
 
+    /**
+     * Executes a remote CLI command and streams the raw output directly.
+     * Ideal for binary data like images.
+     */
+    public static function CLI_Stream( $command = "" ) {
+        if ( empty( $command ) ) {
+            return;
+        }
+
+        $url = CAPTAINCORE_CLI_ADDRESS . "/run/stream";
+        $payload = json_encode([ "command" => $command ]);
+        $headers = [
+            'Content-Type: application/json; charset=utf-8',
+            'token: ' . CAPTAINCORE_CLI_TOKEN,
+            'Content-Length: ' . strlen( $payload )
+        ];
+
+        $ch = curl_init();
+        curl_setopt( $ch, CURLOPT_URL, $url );
+        curl_setopt( $ch, CURLOPT_POST, true );
+        curl_setopt( $ch, CURLOPT_POSTFIELDS, $payload );
+        curl_setopt( $ch, CURLOPT_HTTPHEADER, $headers );
+        curl_setopt( $ch, CURLOPT_TIMEOUT, 60 ); // Increased timeout for larger files
+        
+        // This is the key: disable the return transfer and set a write function.
+        // This tells cURL to output data chunks directly as they are received.
+        curl_setopt( $ch, CURLOPT_RETURNTRANSFER, false );
+        curl_setopt( $ch, CURLOPT_WRITEFUNCTION, function( $curl, $data ) {
+            echo $data; // Echo the raw data chunk
+            return strlen( $data ); // Return bytes handled
+        });
+
+        // Disable SSL verification if debug is on
+        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+            curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
+        }
+        
+        // Execute the request. The output is streamed directly.
+        curl_exec( $ch );
+        curl_close( $ch );
+    }
+
+    public static function background( $command = "" ) {
+        
+        // Disable https when debug enabled
+        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+            add_filter( 'https_ssl_verify', '__return_false' );
+        }
+    
+        $data = [
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8', 
+                'token'        => CAPTAINCORE_CLI_TOKEN 
+            ],
+            'body'        => json_encode( [ "command" => $command ]), 
+            'method'      => 'POST', 
+            'data_format' => 'body'
+        ];
+    
+        // Add command to dispatch server
+        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run/background", $data );
+        if ( is_wp_error( $response ) ) {
+            $error_message = $response->get_error_message();
+            return "Something went wrong: $error_message";
+        }
+    
+        return $response["body"];
+    }
+
     public static function task( $command = "" ) {
         
         // Disable https when debug enabled
