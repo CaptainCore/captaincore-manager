@@ -129,6 +129,15 @@ class Sites extends DB {
         return $sites;
     }
 
+    public function fetch_sites_matching_filters( $filters = [] ) {
+        $allowed_site_ids = $this->sites;
+        if ( empty( $allowed_site_ids ) ) {
+            return [];
+        }
+        // Call the updated DB method with permissions and filters
+        return self::fetch_sites_filtered( (array) $filters, $allowed_site_ids );
+    }
+
     public function fathom_sites( $force = false ) {
         $fathom_sites = get_transient( 'fathom_sites' );
 

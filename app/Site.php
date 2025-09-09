@@ -1068,27 +1068,27 @@ class Site {
 
     public function update_logs( $environment = "both" ) {
 
-            $command     = "update-log list {$this->site_id}-$environment";
-            $response    = Run::CLI( $command );
-            $update_logs = json_decode( $response );
-            if ( json_last_error() != JSON_ERROR_NONE ) {
-                return [];
-            }
+        $command     = "update-log list {$this->site_id}-$environment";
+        $response    = Run::CLI( $command );
+        $update_logs = json_decode( $response );
+        if ( json_last_error() != JSON_ERROR_NONE ) {
+            return [];
+        }
 
-            foreach( $update_logs as $key => $update_log ) {
-                $update_logs[ $key ]->plugins        = [];
-                $update_logs[ $key ]->themes         = [];
-                $update_logs[ $key ]->core           = $update_log->core;
-                $update_logs[ $key ]->view_quicksave = false;
-                $update_logs[ $key ]->view_changes   = false;
-                $update_logs[ $key ]->view_files     = [];
-                $update_logs[ $key ]->filtered_files = [];
-                $update_logs[ $key ]->response       = [];
-                $update_logs[ $key ]->loading        = true;
-                $update_logs[ $key ]->search         = "";
-            }
+        foreach( $update_logs as $key => $update_log ) {
+            $update_logs[ $key ]->plugins        = [];
+            $update_logs[ $key ]->themes         = [];
+            $update_logs[ $key ]->core           = $update_log->core;
+            $update_logs[ $key ]->view_quicksave = false;
+            $update_logs[ $key ]->view_changes   = false;
+            $update_logs[ $key ]->view_files     = [];
+            $update_logs[ $key ]->filtered_files = [];
+            $update_logs[ $key ]->response       = [];
+            $update_logs[ $key ]->loading        = true;
+            $update_logs[ $key ]->search         = "";
+        }
 
-            return $update_logs;
+        return $update_logs;
     }
 
     public function users() {

@@ -1271,6 +1271,13 @@ function captaincore_site_snapshots_func( $request ) {
 	return $results;
 }
 
+function captaincore_filters_sites_func( WP_REST_Request $request ) {
+    $filters       = $request->get_json_params();
+    $sites_handler = new CaptainCore\Sites(); // This instance gets the current user's permissions
+    $sites         = $sites_handler->fetch_sites_matching_filters( $filters ); // Call the new non-static method
+    return [ "sites" => $sites ];
+}
+
 function captaincore_filter_versions_func( $request ) {
 	$name     = str_replace( "%20", " ", $request['name'] );
 	$filters  = explode( ",", $name );
@@ -1285,6 +1292,30 @@ function captaincore_filter_statuses_func( $request ) {
 	return $response;
 }
 
+function captaincore_filters_func( $request ) {
+
+	$themes  = empty( $request['themes'] ) ? [] : $request['themes'];
+	$plugins = empty( $request['plugins'] ) ? [] : $request['plugins'];
+	$core    = empty( $request['core'] ) ? [] : $request['core'];
+	if ( is_string( $core ) ) {
+		$core = [ $core ];
+	}
+
+	$theme_filters  = ( new CaptainCore\Environments )->filters_for_themes( $themes );
+	$plugin_filters = ( new CaptainCore\Environments )->filters_for_plugins( $plugins );
+	$core_filters   = ( new CaptainCore\Environments )->filters_for_core();
+	$sites          = ( new CaptainCore\Sites )->fetch_sites_matching_filters( $request['themes'], $request['plugins'], $core );
+	$response = [
+		"filters" => [
+			"themes"        => $theme_filters,
+			"plugins"       => $plugin_filters,
+			"core"          => $core_filters,
+			"core_versions" => $core
+		],
+		"sites" => $sites
+	];
+	return $response;
+}
 
 function captaincore_filter_sites_func( $request ) {
 	$name     = str_replace( "%20", " ", $request['name'] );
@@ -1313,7 +1344,10 @@ function captaincore_filter_sites_func( $request ) {
 		"versions" => $versions,
 		"statuses" => $statuses,
 	] );
-	$response = $sites;
+	$response = [
+		"filters" => $filters,
+		"sites" => $sites
+	];
 	return $response;
 }
 
@@ -2161,6 +2195,14 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
+		'captaincore/v1', '/filters/sites', [
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_filters_sites_func',
+			'show_in_index' => false,
+		]
+	);
+
+	register_rest_route(
 		'captaincore/v1', '/filters/(?P<name>[a-zA-Z0-9-,|_%]+)/versions/', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_filter_versions_func',
@@ -2180,6 +2222,14 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/filters/(?P<name>[a-zA-Z0-9-,+_%)]+)/sites/versions=(?:(?P<versions>[a-zA-Z0-9-,+\.|]+))?/statuses=(?:(?P<statuses>[a-zA-Z0-9-,+\.|]+))?', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_filter_sites_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/filters', [
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_filters_func',
 			'show_in_index' => false
 		]
 	);

@@ -406,6 +406,97 @@ class DB {
         return $results;
     }
 
+    static function fetch_sites_filtered( $filters = [], $allowed_site_ids = [] ) {
+        global $wpdb;
+        $table              = self::_table();
+        $environments_table = "{$wpdb->prefix}captaincore_environments";
+        
+        // Base conditions that are always ANDed
+        $base_conditions = [
+            "{$environments_table}.environment = 'production'",
+            "{$table}.status = 'active'",
+        ];
+
+        // Add permission check
+        if ( ! empty( $allowed_site_ids ) ) {
+            $allowed_ids_str = implode( ',', array_map( 'intval', $allowed_site_ids ) );
+            $base_conditions[] = "{$table}.site_id IN ($allowed_ids_str)";
+        }
+        
+        $filters = (object) $filters;
+
+        // Retrieve logic operators from the frontend, defaulting to 'AND'
+        $primary_logic   = ( ! empty( $filters->logic ) && strtolower( $filters->logic ) === 'or' ) ? 'OR' : 'AND';
+        $version_logic   = ( ! empty( $filters->version_logic ) && strtolower( $filters->version_logic ) === 'or' ) ? 'OR' : 'AND';
+        $status_logic    = ( ! empty( $filters->status_logic ) && strtolower( $filters->status_logic ) === 'or' ) ? 'OR' : 'AND';
+
+        // Grouping filters by type for better organization and control
+        $theme_filters   = $filters->themes ?? [];
+        $plugin_filters  = $filters->plugins ?? [];
+        $version_filters = $filters->versions ?? [];
+        $status_filters  = $filters->statuses ?? [];
+        $all_filter_clauses = [];
+
+        // Helper function to create REGEXP pattern
+        $create_pattern = function( $name, $version = '[^"]*', $status = '[^"]*' ) {
+            $pattern = '{"name":"' . $name . '","title":"[^"]*","status":"' . $status . '","version":"' . $version . '"}';
+            $pattern = str_replace( "{", "[{]", $pattern );
+            $pattern = str_replace( "}", "[}]", $pattern );
+            return $pattern;
+        };
+
+        // Build clauses for primary filters (themes/plugins)
+        $primary_clauses = [];
+        foreach ( $theme_filters as $theme ) {
+            $pattern = $create_pattern( $theme['name'] );
+            $primary_clauses[] = "{$environments_table}.themes REGEXP '{$pattern}'";
+        }
+        foreach ( $plugin_filters as $plugin ) {
+            $pattern = $create_pattern( $plugin['name'] );
+            $primary_clauses[] = "{$environments_table}.plugins REGEXP '{$pattern}'";
+        }
+
+        // Build clauses for secondary filters (versions/statuses)
+        $secondary_clauses = [];
+        if ( ! empty( $version_filters ) ) {
+            $version_sub_clauses = [];
+            foreach ( $version_filters as $version ) {
+                if ( empty( $version['slug'] ) ) { continue; }
+                $pattern = $create_pattern( $version['slug'], $version['name'] );
+                $version_sub_clauses[] = "{$environments_table}.{$version['type']} REGEXP '{$pattern}'";
+            }
+            if ( ! empty( $version_sub_clauses ) ) {
+                $secondary_clauses[] = "( " . implode( " {$version_logic} ", $version_sub_clauses ) . " )";
+            }
+        }
+        if ( ! empty( $status_filters ) ) {
+            $status_sub_clauses = [];
+            foreach ( $status_filters as $status ) {
+                if ( empty( $status['slug'] ) ) { continue; }
+                $pattern = $create_pattern( $status['slug'], '[^"]*', $status['name'] );
+                $status_sub_clauses[] = "{$environments_table}.{$status['type']} REGEXP '{$pattern}'";
+            }
+            if ( ! empty( $status_sub_clauses ) ) {
+                $secondary_clauses[] = "( " . implode( " {$status_logic} ", $status_sub_clauses ) . " )";
+            }
+        }
+        
+        $all_filter_clauses = array_merge( $primary_clauses, $secondary_clauses );
+
+        $where_clause = implode( " AND ", $base_conditions );
+        if ( ! empty( $all_filter_clauses ) ) {
+            $where_clause .= " AND ( " . implode( " {$primary_logic} ", $all_filter_clauses ) . " )";
+        }
+
+        $sql = "SELECT {$table}.site
+                FROM {$table}
+                INNER JOIN {$environments_table} ON {$table}.site_id = {$environments_table}.site_id
+                WHERE {$where_clause}
+                ORDER BY {$table}.name ASC";
+        
+        return array_column( $wpdb->get_results( $sql ), 'site' );
+    }
+
     static function fetch_sites_matching_versions_statuses( $arguments = [] ) {
         global $wpdb;
         $arguments  = (object) $arguments;
