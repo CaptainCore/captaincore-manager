@@ -14281,7 +14281,7 @@ const app = createApp({
 			this.new_plugin.sites = this.sites_selected
 			this.new_plugin.site_name = this.new_plugin.sites.length + " sites"
 			this.new_plugin.current_plugins = []
-			this.new_plugin.environment_selected = this.dialog_bulk.environment_selected
+			this.new_plugin.environment_selected = this.dialog_bulk_tools.environment_selected
 			this.fetchPlugins()
 			this.fetchEnvatoPlugins()
 		},
