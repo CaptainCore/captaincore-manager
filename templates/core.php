@@ -7530,7 +7530,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <script src="<?php echo $plugin_url; ?>public/js/core.js"></script>
 <script>
 <?php if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { ?>
-wc_countries = <?php $countries = ( new WC_Countries )->get_allowed_countries(); foreach ( $countries as $key => $county ) { $results[] = [ "text" => $county, "value" => $key ]; }; echo json_encode( $results ); ?>;
+wc_countries = <?php $countries = ( new WC_Countries )->get_allowed_countries(); foreach ( $countries as $key => $county ) { $results[] = [ "title" => $county, "value" => $key ]; }; echo json_encode( $results ); ?>;
 wc_states = <?php echo json_encode( array_merge( WC()->countries->get_allowed_country_states(), WC()->countries->get_shipping_country_states() ) ); ?>;
 wc_address_i18n_params = <?php echo json_encode( WC()->countries->get_country_locale() ); ?>;
 stripe = Stripe('<?php echo ( new WC_Gateway_Stripe )->publishable_key; ?>');
@@ -7625,7 +7625,7 @@ const app = createApp({
 		isOutstandingFilterActive: false,
 		isEmptyFilterActive: false,
 		provider_actions: [],
-		hosting_intervals: [{ text: 'Yearly', value: '12' },{ text: 'Monthly', value: '1' },{ text: 'Quarterly', value: '3' },{ text: 'Biannual', value: '6' }],
+		hosting_intervals: [{ title: 'Yearly', value: '12' },{ title: 'Monthly', value: '1' },{ title: 'Quarterly', value: '3' },{ title: 'Biannual', value: '6' }],
 		footer_height: "28px",
 		login: { user_login: "", user_password: "", errors: "", info: "", loading: false, lost_password: false, message: "", tfa_code: "" },
 		wp_nonce: "",
@@ -7639,18 +7639,19 @@ const app = createApp({
 		loading_page: true,
 		expanded: [],
 		accounts: [],
-		toggle_account_filters: [],
+		accountportals: [],
 		account_tab: null,
-		provider_actions: [],
-		modules: { billing: true, dns: <?php if ( defined( "CONSTELLIX_API_KEY" ) and defined( "CONSTELLIX_SECRET_KEY" ) ) { echo "true"; } else { echo "false"; } ?> },
+		modules: { billing: <?php if ( defined( "CAPTAINCORE_CUSTOM_DOMAIN" ) ) { echo "false"; } else { echo "true"; } ?>, dns: <?php if ( defined( "CONSTELLIX_API_KEY" ) and defined( "CONSTELLIX_SECRET_KEY" ) ) { echo "true"; } else { echo "false"; } ?> },
 		dialog_bulk: { show: false, tabs_management: "tab-Sites", environment_selected: "Production" },
+		dialog_bulk_tools: { show: false, environment_selected: "Production" },
 		dialog_job: { show: false, task: {} },
 		dialog_breakdown: false,
 		dialog_captures: { site: {}, auth: { username: "", password: ""}, pages: [{ page: ""}], capture: { pages: [] }, image_path:"", selected_page: "", captures: [], mode: "screenshot", loading: true, show: false, show_configure: false },
-		dialog_delete_user: { show: false, site: {}, users: [], username: "", reassign: {} },
+		dialog_delete_user: { show: false, site: {}, users: [], username: "", reassign: null },
 		dialog_apply_https_urls: { show: false, site_id: "", site_name: "", sites: [] },
-		dialog_copy_site: { show: false, site: {}, options: [], destination: "" },
+		dialog_copy_site: { show: false, site: {}, options: [], destination: null },
 		dialog_edit_site: { show: false, show_vars: false, loading: false, site: {
+				key: "",
 				environments: [
 					{"environment": "Production", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"","monitor_enabled":"1","updates_enabled":"1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" },
 					{"environment": "Staging", "site": "", "address": "","username":"","password":"","protocol":"sftp","port":"2222","home_directory":"","monitor_enabled":"0","updates_enabled":"1","offload_enabled": false,"offload_provider":"","offload_access_key":"","offload_secret_key":"","offload_bucket":"","offload_path":"" }
@@ -7661,7 +7662,7 @@ const app = createApp({
 		dialog_new_provider: { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] },
 		dialog_edit_provider: { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] },
 		dialog_configure_defaults: { show: false, loading: false },
-		dialog_domain: { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, ignore_warnings: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider_id: "", provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], results: [], errors: [], loading: true, saving: false, step: 1 },
+		dialog_domain: { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, ignore_warnings: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider_id: "", provider: { contacts: {} }, contact_tabs: "", tabs: "dns", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], results: [], errors: [], loading: true, saving: false, step: 1 },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $user->email; ?>", current_user_email: "<?php echo $user->email; ?>", filter_toggle: true, filter_options: [] },
 		dialog_backup_configurations: { show: false, settings: { mode: "", interval: "", active: true } },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
@@ -7672,10 +7673,10 @@ const app = createApp({
 		dialog_modify_plan: { show: false, site: {}, date_selector: false, hosting_plans: [], selected_plan: "", plan: { limits: {}, addons: [], charges: [], credits: [], next_renewal: "" }, customer_name: "", interval: "12" },
 		dialog_customer_modify_plan: { show: false, hosting_plans: [], selected_plan: "", subscription: {  plan: { limits: {}, addons: [], next_renewal: "" } } },
 		dialog_theme_and_plugin_checks: { show: false, site: {}, loading: false },
-		dialog_update_settings: { show: false, environment: {}, themes: [], plugins: [], loading: false },
+		dialog_update_settings: { show: false, environment: { updates_enabled: 1 }, themes: [], plugins: [], loading: false },
 		dialog_fathom: { show: false, site: {}, environment: {}, loading: false, editItem: false, editedItem: {}, editedIndex: -1 },
 		dialog_mailgun_config: { show: false, loading: false },
-		dialog_account: { show: false, records: { account: { defaults: { recipes: [] } } }, new_invite: false, new_invite_email: "", step: 1 },
+		dialog_account: { show: false, loading: false, records: { account: { defaults: { recipes: [] } } }, new_invite: false, new_invite_email: "", step: 1 },
 		dialog_invoice: { show: false, loading: false, paying: false, customer: false, response: "", payment_method: "", card: {}, error: "" },
 		dialog_new_account: { show: false, name: "", records: {} },
 		dialog_user: { show: false, user: {}, errors: [] },
@@ -7685,189 +7686,189 @@ const app = createApp({
 		dialog_request_site: { show: false, request: { name: "", account_id: "", notes: "" } },
 		provider_options: [
 			{
-				"text": "Analytics - Fathom",
+				"title": "Analytics - Fathom",
 				"value": "fathom"
 			},
 			{
-				"text": "DNS - Constellix",
+				"title": "DNS - Constellix",
 				"value": "constellix"
 			},
 			{
-				"text": "Domain - Hover.com",
+				"title": "Domain - Hover.com",
 				"value": "hoverdotcom"
 			},
 			{
-				"text": "Domain - Spaceship",
+				"title": "Domain - Spaceship",
 				"value": "spaceship"
 			},
 			{
-				"text": "Email - Mailgun",
+				"title": "Email - Mailgun",
 				"value": "mailgun"
 			},
 			{
-				"text": "Hosting - Kinsta",
+				"title": "Hosting - Kinsta",
 				"value": "kinsta",
 				"fields": [ { name: "Token", value: "token" } ]
 			},
 			{
-				"text": "Hosting - Rocket.net",
+				"title": "Hosting - Rocket.net",
 				"value": "rocketdotnet"
 			},
 			{
-				"text": "Hosting - WP Engine",
+				"title": "Hosting - WP Engine",
 				"value": "wpengine",
 				"fields": [ "authorization_basic" ]
 			},
 			{
-				"text": "Live chat - Intercom",
+				"title": "Live chat - Intercom",
 				"value": "intercom",
 				"fields": [ "embed_id", "secret_key" ]
 			},
 			{
-				"text": "Marketplace - Envato",
+				"title": "Marketplace - Envato",
 				"value": "envato",
 				"fields": [ "token" ]
 			},
 		],
 		datacenters: [
 			{
-				"text": "Taiwan (TW) 🚀",
+				"title": "Taiwan (TW) 🚀",
 				"value": "asia-east1"
 			},
 			{
-				"text": "Hong Kong (HK)",
+				"title": "Hong Kong (HK)",
 				"value": "asia-east2"
 			},
 			{
-				"text": "Tokyo (JP)",
+				"title": "Tokyo (JP)",
 				"value": "asia-northeast1"
 			},
 			{
-				"text": "Osaka (JP)",
+				"title": "Osaka (JP)",
 				"value": "asia-northeast2"
 			},
 			{
-				"text": "Seoul (KR)",
+				"title": "Seoul (KR)",
 				"value": "asia-northeast3"
 			},
 			{
-				"text": "Mumbai (IN)",
+				"title": "Mumbai (IN)",
 				"value": "asia-south1"
 			},
 			{
-				"text": "Delhi (IN) 🚀",
+				"title": "Delhi (IN) 🚀",
 				"value": "asia-south2"
 			},
 			{
-				"text": "Singapore (SG) 🚀",
+				"title": "Singapore (SG) 🚀",
 				"value": "asia-southeast1"
 			},
 			{
-				"text": "Jakarta (ID)",
+				"title": "Jakarta (ID)",
 				"value": "asia-southeast2"
 			},
 			{
-				"text": "Sydney (AU) 🚀",
+				"title": "Sydney (AU) 🚀",
 				"value": "australia-southeast1"
 			},
 			{
-				"text": "Melbourne (AU)",
+				"title": "Melbourne (AU)",
 				"value": "australia-southeast2"
 			},
 			{
-				"text": "Warsaw (PL)",
+				"title": "Warsaw (PL)",
 				"value": "europe-central2"
 			},
 			{
-				"text": "Finland (FI)",
+				"title": "Finland (FI)",
 				"value": "europe-north1"
 			},
 			{
-				"text": "Madrid (ES)",
+				"title": "Madrid (ES)",
 				"value": "europe-southwest1"
 			},
 			{
-				"text": "Belgium (BE) 🚀",
+				"title": "Belgium (BE) 🚀",
 				"value": "europe-west1"
 			},
 			{
-				"text": "London (UK)",
+				"title": "London (UK)",
 				"value": "europe-west2"
 			},
 			{
-				"text": "Frankfurt (DE) 🚀",
+				"title": "Frankfurt (DE) 🚀",
 				"value": "europe-west3"
 			},
 			{
-				"text": "Eemshaven (NL) 🚀",
+				"title": "Eemshaven (NL) 🚀",
 				"value": "europe-west4"
 			},
 			{
-				"text": "Zürich (CH)",
+				"title": "Zürich (CH)",
 				"value": "europe-west6"
 			},
 			{
-				"text": "Milan (IT)",
+				"title": "Milan (IT)",
 				"value": "europe-west8"
 			},
 			{
-				"text": "Paris (FR)",
+				"title": "Paris (FR)",
 				"value": "europe-west9"
 			},
 			{
-				"text": "Tel Aviv (IS)",
+				"title": "Tel Aviv (IS)",
 				"value": "me-west1"
 			},
 			{
-				"text": "Montreal (CA)",
+				"title": "Montreal (CA)",
 				"value": "northamerica-northeast1"
 			},
 			{
-				"text": "Toronto (CA)",
+				"title": "Toronto (CA)",
 				"value": "northamerica-northeast2"
 			},
 			{
-				"text": "São Paulo (BR)",
+				"title": "São Paulo (BR)",
 				"value": "southamerica-east1"
 			},
 			{
-				"text": "Santiago (CL)",
+				"title": "Santiago (CL)",
 				"value": "southamerica-west1"
 			},
 			{
-				"text": "Iowa (US Central) 🚀",
+				"title": "Iowa (US Central) 🚀",
 				"value": "us-central1"
 			},
 			{
-				"text": "South Carolina (US East 1) 🚀",
+				"title": "South Carolina (US East 1) 🚀",
 				"value": "us-east1"
 			},
 			{
-				"text": "Northern Virginia (US East 4) 🚀",
+				"title": "Northern Virginia (US East 4) 🚀",
 				"value": "us-east4"
 			},
 			{
-				"text": "Columbus (US East 5)",
+				"title": "Columbus (US East 5)",
 				"value": "us-east5"
 			},
 			{
-				"text": "Dallas US (us-south1)",
+				"title": "Dallas US (us-south1)",
 				"value": "us-south1"
 			},
 			{
-				"text": "Oregon (US West)",
+				"title": "Oregon (US West)",
 				"value": "us-west1"
 			},
 			{
-				"text": "Los Angeles (US West 2)",
+				"title": "Los Angeles (US West 2)",
 				"value": "us-west2"
 			},
 			{
-				"text": "Salt Lake City (US West 3)",
+				"title": "Salt Lake City (US West 3)",
 				"value": "us-west3"
 			},
 			{
-				"text": "Las Vegas (US West 4) 🚀",
+				"title": "Las Vegas (US West 4) 🚀",
 				"value": "us-west4"
 			}
 		],
@@ -7924,7 +7925,7 @@ const app = createApp({
 		dialog_new_log_entry: { show: false, sites: [], site_name: "", process: "", description: "" },
 		dialog_edit_log_entry: { show: false, site_name: "", log: {} },
 		dialog_edit_script: { show: false, script: { script_id: "", code: "", run_at_time: "", run_at_date: "" } },
-		dialog_log_history: { show: false, logs: [], pagination: {} },
+		dialog_log_history: { show: false, loading: true, logs: [], pagination: {} },
 		dialog_handbook: { show: false, process: {} },
 		dialog_key: { show: false, key: {} },
 		new_process: { show: false, name: "", time_estimate: "", repeat_interval: "as-needed", repeat_quantity: "", roles: "", description: "" },
@@ -7939,9 +7940,9 @@ const app = createApp({
 			show_vars: false,
 			environment_vars: [],
 			saving: false,
-			key: "",
+			key: null,
 			site: "",
-			domain: "",
+			name: "",
 			errors: [],
 			shared_with: [],
 			account_id: "",
@@ -7952,11 +7953,11 @@ const app = createApp({
 			],
 		},
 		header_timeline: [
-			{"text":"","value":"name","sortable":false,"width":"56"},
-			{"text":"Description","value":"name","sortable":false},
-			{"text":"Person","value":"done-by","sortable":false,"width":"180"},
-			{"text":"Date","value":"date","sortable":false,"width":"220"},
-			{"text":"","value":"","sortable":false,"width":"50"},
+			{"title":"","value":"name","sortable":false,"width":"56"},
+			{"title":"Description","value":"name","sortable":false},
+			{"title":"Person","value":"done-by","sortable":false,"width":"180"},
+			{"title":"Date","value":"date","sortable":false,"width":"220"},
+			{"title":"","value":"","sortable":false,"width":"50"},
 		],
 		domains: [],
 		domains_loading: true,
@@ -7970,18 +7971,20 @@ const app = createApp({
 		subscription_search: "",
 		revenue_estimated: [],
 		new_recipe: { show: false, title: "", content: "", public: 1 },
+		backup_set_files: [],
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_billing: { step: 1 },
-		dialog_site: { loading: true, step: 1, backup_step: 1, grant_access: [], environment_selected: { environment_id: "0", quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
+		dialog_site: { loading: true, step: 1, backup_step: 1, grant_access: [], environment_selected: { environment_id: "0", expanded_backups: [], quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], key: null, tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
 		dialog_site_request: { show: false, request: {} },
 		dialog_edit_account: { show: false, account: {} },
+		dialog_account_portal: { show: false, portal: { domain: "", configuration: {}, email: { host: "", port: "", encryption_type: "tls", username: "", password: "" }, colors: { primary: "#0D47A1", secondary: "#424242", accent: "#82B1FF", error: "#FF5252", info: "#0D47A1", success: "#4CAF50", warning: "#FFC107" } }, colors: { primary: false, secondary: false, accent: false, error: false, info: false, success: false, warning: false } },
 		roles: [{ name: "Subscriber", value: "subscriber" },{ name: "Contributor", value: "contributor" },{ name: "Author", value: "author" },{ name: "Editor", value: "editor" },{ name: "Administrator", value: "administrator" }],
 		new_plugin: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {}, envato: { items: [], search: "" } },
 		new_theme: { show: false, sites: [], site_name: "", environment_selected: "", loading: false, tabs: null, page: 1, search: "", api: {}, envato: { items: [], search: "" } },
 		bulk_edit: { show: false, site_id: null, type: null, items: [] },
 		upload: [],
 		selected_site: {},
-		console: 0,
+		active_console: 0,
 		view_console: { show: false, open: false },
 		view_timeline: false,
 		search: null,
@@ -8063,6 +8066,7 @@ const app = createApp({
 		 ],
 		 select_bulk_action_arguments: null,
 		 snackbar: { show: false, message: "" }
+	  }
 	},
 	watch: {
 		route() {
@@ -8074,136 +8078,112 @@ const app = createApp({
 		runningJobs() {
 			this.view_console.show = true
 		},
-    },
-	filters: {
-		previewCode: function( text ) {
-			maxLength = 40
-			if (text.length > maxLength) {
-				return text.substring(0, maxLength) + '...';
+		combinedAppliedFilters(newFilters, oldFilters) {
+			// Only proceed if the primary filters have actually changed.
+			if (JSON.stringify(newFilters) === JSON.stringify(oldFilters)) {
+				return;
 			}
-			return text;
-		},
-		intervalLabel: function( interval ) {
-			units = [] 
-			units[1] = "monthly"
-			units[3] = "quarterly"
-			units[6] = "biannually"
-			units[12] = "yearly"
-			return units[ interval ]
-		},
-		safeUrl: function( url ) {
-			return url.replaceAll( '#', '%23' )
-		},
-		timeago: function( timestamp ){
-			return moment.utc( timestamp, "YYYY-MM-DD hh:mm:ss").fromNow();
-		},
-		formatTime: function ( value ) {
-			var sec_num = parseInt(value, 10); // don't forget the second param
-			var hours   = Math.floor(sec_num / 3600);
-			var minutes = Math.floor((sec_num - (hours * 3600)) / 60);
-			var seconds = sec_num - (hours * 3600) - (minutes * 60);
 
-			if (hours   < 10) {hours   = "0"+hours;}
-			if (minutes < 10) {minutes = "0"+minutes;}
-			if (seconds < 10) {seconds = "0"+seconds;}
-			return minutes + ':' + seconds;
-		},
-		formatProvider: function (value) {
-			if (value == 'wpengine') {
-				return "WP Engine"
+			// If all primary filters are now gone, reset secondary options and update the site list.
+			if (!newFilters || newFilters.length === 0) {
+				this.site_filter_version = null;
+				this.site_filter_status = null;
+				this.filterSites(); // This will reset the site list via the API
+				return;
 			}
-			if (value == 'kinsta') {
-				return "Kinsta"
-			}
-			if (value == 'rocketdotnet') {
-				return "Rocket.net"
-			}
-		},
-		formatSize: function (fileSizeInBytes) {
-			var i = -1;
-			var byteUnits = [' kB', ' MB', ' GB', ' TB', 'PB', 'EB', 'ZB', 'YB'];
-			do {
-				fileSizeInBytes = fileSizeInBytes / 1024;
-				i++;
-			} while (fileSizeInBytes > 1024);
-    		return Math.max(fileSizeInBytes, 0.1).toFixed(1) + byteUnits[i];
-		},
-		formatGBs: function (fileSizeInBytes) {
-			fileSizeInBytes = fileSizeInBytes / 1024 / 1024 / 1024;
-			return Math.max(fileSizeInBytes, 0.1).toFixed(2);
-		},
-		formatLargeNumbers: function (number) {
-			if ( isNaN(number) || number == null ) {
-				return null;
-			} else {
-				return number.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,');
-			}
-		},
-		formatk: function (num) {
-			if (num < 9999 ) {
-				return numeral(num).format('0,0');
-			}
-			if (num < 99999 ) {
-				return numeral(num).format('0.0a');
-			}
-			if (num < 999999 ) {
-				return numeral(num).format('0a');
-			}
-			return numeral(num).format('0.00a');
-		},
-		formatPercentage: function (percentage) {
-			return Math.max(percentage, 0.1).toFixed(0);
-		},
-		formatPercentageFixed: function (percentage) {
-			return (Math.max(percentage, 0.1) * 100 ).toFixed(2) + '%';
-		},
-		account_storage_percentage: function ( account ) {
-			percentage = ( account.plan.usage.storage / ( account.plan.limits.storage * 1024 * 1024 * 1024 ) ) * 100
-			percentage_formatted = Math.max(percentage, 0.1).toFixed(0)
-			results = `<small>${percentage_formatted}</small>`
-			if ( percentage >= 100 ) {
-				results = `<i aria-hidden="true" class="v-icon notranslate mdi mdi-check"></i>`
-			}
-			return results
-		},
-		account_visits_percentage: function ( account ) {
-			percentage = ( account.plan.usage.visits / account.plan.limits.visits ) * 100
-			percentage_formatted = Math.max(percentage, 0.1).toFixed(0)
-			results = `<small>${percentage_formatted}</small>`
-			if ( percentage >= 100 ) {
-				results = `<i aria-hidden="true" class="v-icon notranslate mdi mdi-check"></i>`
-			}
-			return results
-		},
-		account_site_percentage: function ( account ) {
-			percentage = account.plan.usage.sites / account.plan.limits.sites * 100
-			percentage_formatted = Math.max(percentage, 0.1).toFixed(0)
-			results = `<small>${percentage_formatted}</small>`
-			if ( percentage >= 100 ) {
-				results = `<i aria-hidden="true" class="v-icon notranslate mdi mdi-check"></i>`
-			}
-			return results
-		},
-		pretty_timestamp: function (date) {
-			// takes in '2018-06-18 19:44:47' then returns "Monday, Jun 18, 2018, 7:44 PM"
-			formatted_date = new Date(date).toLocaleTimeString("en-us", pretty_timestamp_options);
-			return formatted_date;
-		},
-		pretty_timestamp_short: function (date) {
-			// takes in '2018-06-18 19:44:47' then returns "Monday, Jun 18, 2018, 7:44 PM"
-			formatted_date = new Date(date).toLocaleDateString("en-us", {
-				year: "numeric", month: "long", day: "numeric"
+
+			const filterNames = newFilters.map(f => f.name).join(',');
+
+			axios.get(`/wp-json/captaincore/v1/filters/${filterNames}/versions/`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
 			})
-			return formatted_date
+			.then(response => {
+				this.site_filter_version = response.data;
+			})
+			.catch(error => {
+				console.error("Error fetching filter versions:", error);
+				this.site_filter_version = null;
+			});
+
+			axios.get(`/wp-json/captaincore/v1/filters/${filterNames}/statuses/`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.site_filter_status = response.data;
+			})
+			.catch(error => {
+				console.error("Error fetching filter statuses:", error);
+				this.site_filter_status = null;
+			});
 		},
-		pretty_timestamp_epoch: function (date) {
-			// takes in '1577584719' then returns "Monday, Jun 18, 2018, 7:44 PM"
-			d = new Date(0);
-			d.setUTCSeconds(date);
-			formatted_date = d.toLocaleTimeString("en-us", pretty_timestamp_options);
-			return formatted_date;
+		filter_logic() {
+			this.filterSites();
+		},
+		'filter_version_logic': function() {
+			this.filterSites();
+		},
+		'filter_status_logic': function() {
+			this.filterSites();
+		},
+		'new_payment.show'(isOpening) {
+			if (isOpening) {
+				this.$nextTick(() => {
+					this.prepNewPayment();
+				});
+			}
+		},
+		'dialog_site.environment_selected.expanded_backups': function(newlyExpandedIds, previouslyExpandedIds) {
+			const siteId = this.dialog_site.site.site_id;
+
+			const currentExpandedArray = Array.isArray(newlyExpandedIds) ? newlyExpandedIds : [];
+			const previousExpandedArray = Array.isArray(previouslyExpandedIds) ? previouslyExpandedIds : [];
+
+			if (currentExpandedArray.length > 1) {
+				let intendedTargetId = null;
+
+				const previousIdsSet = new Set(previousExpandedArray);
+				const addedIds = currentExpandedArray.filter(id => !previousIdsSet.has(id));
+
+				if (addedIds.length === 1) {
+					intendedTargetId = addedIds[0];
+				} else if (currentExpandedArray.length > 0) {
+					intendedTargetId = currentExpandedArray[currentExpandedArray.length - 1];
+				}
+
+				if (intendedTargetId) {
+					this.dialog_site.environment_selected.expanded_backups = [intendedTargetId];
+					return;
+				} else {
+					if (this.dialog_site.environment_selected.expanded_backups.length > 0) {
+						this.dialog_site.environment_selected.expanded_backups = [];
+					}
+					return;
+				}
+			}
+
+			const finalExpandedId = (currentExpandedArray.length === 1) ? currentExpandedArray[0] : null;
+			const previousSingleId = (previousExpandedArray.length === 1) ? previousExpandedArray[0] : null;
+
+			if (finalExpandedId) {
+				const needsAction = (finalExpandedId !== previousSingleId) ||
+									(previousExpandedArray.length > 1 && currentExpandedArray.length === 1);
+
+				if (needsAction) {
+					const itemToExpand = this.dialog_site.environment_selected.backups.find(b => b.id === finalExpandedId);
+					if (itemToExpand) {
+						this.getBackup(itemToExpand.id, siteId);
+					}
+				}
+			} else {
+				if (previousExpandedArray.length > 0) {
+					// This block is where you would put any logic that needs to run
+					// when an item is collapsed (e.g., clearing details).
+					// If there's no specific action beyond what was previously logged,
+					// this can remain as is or be used for future collapse handling.
+				}
+			}
 		}
-	},
+    },
 	mounted() {
 		const savedTheme = localStorage.getItem('captaincore-theme');
         if (savedTheme) {
@@ -8280,6 +8260,9 @@ const app = createApp({
 		}
 	},
 	computed: {
+		hasProviderActions() {
+			return this.provider_actions.length > 0;
+		},
 		unassignedSiteCount() {
 			let count = 0
 			this.sites.forEach( s => {
@@ -8471,17 +8454,19 @@ const app = createApp({
 			return Object.keys( this.domains ).length;
 		},
 		plan_usage_pricing_sites() {
+			let unit_price = 0;
 			extra_sites = parseInt( this.dialog_account.records.account.plan.usage.sites ) - parseInt( this.dialog_account.records.account.plan.limits.sites )
 			if ( extra_sites > 0 ) {
 				unit_price = this.configurations.usage_pricing.sites.cost
 				if ( this.configurations.usage_pricing.sites.interval != this.dialog_account.records.account.plan.interval ) {
 					unit_price = this.configurations.usage_pricing.sites.cost / this.configurations.usage_pricing.sites.interval
 					unit_price = unit_price * this.dialog_account.records.account.plan.interval
-		}
+				}
 			}
 			return unit_price
-	},
+		},
 		plan_usage_pricing_storage() {
+			let unit_price = 0;
 			extra_storage = ( parseInt( this.dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( this.dialog_account.records.account.plan.limits.storage ) 
 			if ( extra_storage > 0 ) {
 				unit_price = this.configurations.usage_pricing.storage.cost
@@ -8493,6 +8478,7 @@ const app = createApp({
 			return unit_price
 		},
 		plan_usage_pricing_visits() {
+			let unit_price = 0;
 			extra_visits = Math.ceil ( ( parseInt( this.dialog_account.records.account.plan.usage.visits ) - parseInt( this.dialog_account.records.account.plan.limits.visits ) ) / parseInt ( this.configurations.usage_pricing.traffic.quantity ) )
 			if ( extra_visits > 0 ) {
 				unit_price = this.configurations.usage_pricing.traffic.cost
@@ -8780,8 +8766,31 @@ const app = createApp({
 				this.wp_nonce = "";
 			})
 		},
+		getAllNodePaths(nodes) {
+			let allPaths = [];
+			for (const node of nodes) {
+				allPaths.push(node.path); // Add the parent node's path
+				if (node.children && node.children.length > 0) {
+					allPaths = allPaths.concat(this.getAllNodePaths(node.children)); // Recursively add children paths
+				}
+			}
+			return allPaths;
+		},
+		selectAllInBackup(item) {
+			// 1. Select all nodes for the v-treeview by their unique path.
+			// This will now correctly update the checkboxes visually.
+			item.tree = this.getAllNodePaths(this.backup_set_files);
+
+			// 2. Calculate the total size directly from the raw, top-level data.
+			// This bypasses the selection-based calculation and gives the true total.
+			let totalSize = 0;
+			for (const rootNode of this.backup_set_files) {
+				totalSize += this.getActualNodeSize(rootNode); // getActualNodeSize is already recursive
+			}
+			item.calculated_total = totalSize;
+		},
 		formatProviderLabel( item ) {
-			provider = this.$options.filters.formatProvider( item.provider );
+			provider = this.formatProvider( item.provider );
 			return `${item.name} (${provider})`;
 		},
 		copyText( value ) {
@@ -8958,12 +8967,32 @@ const app = createApp({
 				warning: '#FFC107'
 			}
 		},
-		sortTree( data ) {
+		resetPortalColors() {
+			this.dialog_account_portal.portal.colors = {
+				primary: '#1976D2',
+				secondary: '#424242',
+				accent: '#82B1FF',
+				error: '#FF5252',
+				info: '#2196F3',
+				success: '#4CAF50',
+				warning: '#FFC107'
+			}
+		},
+		sortTree( data, uniqueIdCounter = 0 ) {
 			if ( ! data ) { return }
+			for (let i = 0; i < data.length; i++) {
+				const item = data[i];
+				if (item && typeof item.name !== 'undefined' && item.name !== null) {
+					item.name = String(item.name);
+				} else if (item && (typeof item.name === 'undefined' || item.name === null)) {
+					item.name = "";
+				}
+			}
             data.sort( (a, b) => a.type > b.type || a.name > b.name )
             for ( var i = 0; i< data.length; i++ ) {
                 var val = data[i]
-                if ( val.children ) { this.sortTree( val.children ) }
+				val.id = uniqueIdCounter++;
+                if ( val.children ) { this.sortTree( val.children, uniqueIdCounter ) }
             }
 		},
 		saveGlobalConfigurations() {
@@ -9023,53 +9052,32 @@ const app = createApp({
 		},
 		viewJob( job_id ) {
 			this.dialog_job.task = this.jobs.filter( j => j.job_id == job_id )[0];
-			this.console = 4
+			this.active_console = 4
 		},
 		toggleConsole( index ) {
 			if ( this.console != index ) {
 				this.footer_height = "202px"
 				this.view_console.open = true
-				this.console = index
+				this.active_console = index
 				return
 			}
 			if ( this.footer_height == "28px" ) {
 				this.footer_height = "202px"
 				this.view_console.open = true
-				this.console = index
+				this.active_console = index
 			} else {
 				this.footer_height = "28px"
 				this.view_console.open = false
-				this.console = 0
+				this.active_console = 0
 			}
 		},
 		openConsole( index ) {
-			this.console = index
+			this.active_console = index
 			this.view_console.open = true
-			this.footer_height = "202px"
 		},
 		closeConsole() {
 			this.view_console.open = false
-			this.footer_height = "28px"
-		},
-		sortSites( key ) {
-			if ( this.toggle_site_counter.key == key ) {
-				this.toggle_site_counter.count++;
-				this.sort_direction = "asc";
-			} else {
-				this.toggle_site_counter.key = key;
-				this.toggle_site_counter.count = 1;
-				this.sort_direction = "desc";
-			}
-			// Reset sort to default on 3rd click
-			if ( this.toggle_site_counter.count == 3 ) {
-				this.sites = this.sites.sort( this.compare( "name", this.sort_direction ) );
-				this.toggle_site_counter = { key: "", count: 0 };
-				this.toggle_site_sort = null;
-				this.sort_direction = "desc";
-				return
-			}
-			// Order these
-			this.sites = this.sites.sort( this.compare( key, this.sort_direction ) );
+			this.active_console = 0
 		},
 		siteSearch(value, search, item) {
 			const searchLower = search?.toString().toLowerCase() ?? '';
@@ -9175,7 +9183,7 @@ const app = createApp({
 							this.jobs.push({"job_id": job_id, "site_id": site_ids, "description": description, "status": "queued", stream: [], "command": "manage"});
 
 							// Builds WP-CLI
-							wp_cli = "wp plugin install '" + new_response.url + "' --force --activate"
+							wp_cli = `wp plugin install --skip-plugins --skip-themes --force --activate '${new_response.url}'`
 
 							// Prep AJAX request
 							var data = {
@@ -9310,20 +9318,6 @@ const app = createApp({
 				})
 				.catch( error => console.log( error ) );
 		},
-		checkRequestedProviderSites() {
-			var data = {
-				'action': 'captaincore_account',
-				'command': "checkRequestedProviderSites",
-			}
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					this.provider_requested_sites = response.data
-					if ( this.provider_requested_sites.length > 0 && this.provider_requested_sites.filter( s => s.step == 1 && s.action_id ).length > 0 && this.role == 'administrator' ) {
-						setTimeout(this.checkRequestedProviderSites, 30000)
-					}
-				})
-				.catch( error => console.log( error ) );
-		},
 		verifyKinstaConnection() {
 			axios.get( '/wp-json/captaincore/v1/providers/kinsta/verify', {
 				headers: { 'X-WP-Nonce':this.wp_nonce }
@@ -9435,7 +9429,7 @@ const app = createApp({
 				this.snackbar.message = `Site ${this.dialog_new_site_kinsta.site.name} is being created at Kinsta. Will notify once completed.`
 				this.snackbar.show = true
 				provider_id = this.dialog_new_site_kinsta.site.provider_id
-				this.dialog_new_site_kinsta = { show: false, errors: [], working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", domain: "", clone_site_id: "", provider_id: provider_id, datacenter: "us-east4", shared_with: [], account_id: "", customer_id: "" } }
+				this.dialog_new_site_kinsta = { show: false, errors: [], working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", domain: "", clone_site_id: "", provider_id: provider_id, datacenter: "us-east4", domains: [], shared_with: [], account_id: "", customer_id: "" } }
 				this.checkProviderActions()
 			});
 		},
@@ -9543,14 +9537,14 @@ const app = createApp({
 			this.dialog_new_site.saving = true
 			new_site = this.dialog_new_site
 			new_site.shared_with = new_site.shared_with.map( a => a.account_id )
-			var data = {
-				'action': 'captaincore_ajax',
-				'command': "newSite",
-				'value': this.dialog_new_site
-			};
 			site_name = this.dialog_new_site.name;
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post(
+				`/wp-json/captaincore/v1/sites`, {
+					site: this.dialog_new_site
+				}, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
 				.then( response => {
 					// Read JSON response
 					var response = response.data;
@@ -9686,28 +9680,28 @@ const app = createApp({
 			axios.get( `/wp-json/captaincore/v1/sites/${site_id}/environments`, {
 				headers: { 'X-WP-Nonce':this.wp_nonce }
 			})
-				.then( response => {
-					environments = response.data
-					environment_selected = environments.filter( e => e.environment.toLowerCase() == environment.toLowerCase() )[0]
-				
-					description = "Syncing " + environment_selected.home_url + " info";
+			.then( response => {
+				environments = response.data
+				environment_selected = environments.filter( e => e.environment.toLowerCase() == environment.toLowerCase() )[0]
+			
+				description = "Syncing " + environment_selected.home_url + " info";
 
-					// Start job
-					job_id = Math.round((new Date()).getTime());
-					this.jobs.push({ "job_id": job_id, "description": description, "status": "queued", stream: [], "command": "syncSite", "site_id": site_id });
+				// Start job
+				job_id = Math.round((new Date()).getTime());
+				this.jobs.push({ "job_id": job_id, "description": description, "status": "queued", stream: [], "command": "syncSite", "site_id": site_id });
 
-					axios.get(
-						`/wp-json/captaincore/v1/sites/${site_id}/${environment}/sync/data`, {
-							headers: {'X-WP-Nonce':this.wp_nonce}
-						})
-						.then(response => {
-							this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data
-							this.runCommand( response.data )
-						})
-				});
+				axios.get(
+					`/wp-json/captaincore/v1/sites/${site_id}/${environment}/sync/data`, {
+						headers: {'X-WP-Nonce':this.wp_nonce}
+					})
+					.then(response => {
+						this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data
+						this.runCommand( response.data )
+					})
+			});
 		},
 		bulkSyncSites() {
-			should_proceed = confirm("Sync " + this.sites_selected.length + " sites for " + this.dialog_bulk.environment_selected.toLowerCase() + " environments info?");
+			should_proceed = confirm("Sync " + this.sites_selected.length + " sites for " + this.dialog_bulk_tools.environment_selected.toLowerCase() + " environments info?");
 
 			if ( ! should_proceed ) {
 				return;
@@ -9720,7 +9714,7 @@ const app = createApp({
 				action: 'captaincore_install',
 				post_id: site_ids,
 				command: 'sync-data',
-				environment: this.dialog_bulk.environment_selected
+				environment: this.dialog_bulk_tools.environment_selected
 			};
 
 			self = this;
@@ -9743,31 +9737,31 @@ const app = createApp({
 			axios.get( `/wp-json/captaincore/v1/sites/${site_id}/environments`, {
 				headers: { 'X-WP-Nonce':this.wp_nonce }
 			})
-				.then( response => {
-					this.dialog_site.site.environments = response.data
-					this.dialog_site.site.environments.forEach( e => {
-						e.environment_label = e.environment + " Environment"
-					})
-					if ( this.dialog_site.step == 2 && typeof this.dialog_site.environment_selected != 'undefined' ) {
-						this.dialog_site.environment_selected = this.dialog_site.site.environments.filter( e => e.environment == this.dialog_site.environment_selected.environment )[0]
-					} else {
-						this.dialog_site.environment_selected = this.dialog_site.site.environments[0]
-					}
-					this.dialog_site.loading = false
-					if ( this.dialog_site.site.tabs_management == "tab-Users" ) {
-						this.fetchUsers()
-					}
-					if ( this.dialog_site.site.tabs_management == "tab-Stats" ) {
-						this.fetchStats()
-					}
-					if ( this.dialog_site.site.tabs_management == "tab-Updates" ) {
-						this.viewUpdateLogs( this.dialog_site.site.site_id )
-					}
-					if ( this.dialog_site.site.tabs_management == "tab-Backups" ) {
-						this.viewQuicksaves()
-						this.viewSnapshots()
-					}
-				});
+			.then( response => {
+				this.dialog_site.site.environments = response.data
+				this.dialog_site.site.environments.forEach( e => {
+					e.environment_label = e.environment + " Environment"
+				})
+				if ( this.dialog_site.step == 2 && typeof this.dialog_site.environment_selected != 'undefined' ) {
+					this.dialog_site.environment_selected = this.dialog_site.site.environments.filter( e => e.environment == this.dialog_site.environment_selected.environment )[0]
+				} else {
+					this.dialog_site.environment_selected = this.dialog_site.site.environments[0]
+				}
+				this.dialog_site.loading = false
+				if ( this.dialog_site.site.tabs_management == "tab-Users" ) {
+					this.fetchUsers()
+				}
+				if ( this.dialog_site.site.tabs_management == "tab-Stats" ) {
+					this.fetchStats()
+				}
+				if ( this.dialog_site.site.tabs_management == "tab-Updates" ) {
+					this.viewUpdateLogs( this.dialog_site.site.site_id )
+				}
+				if ( this.dialog_site.site.tabs_management == "tab-Backups" ) {
+					this.viewQuicksaves()
+					this.viewSnapshots()
+				}
+			});
 		},
 		fetchSiteDetails( site_id ) {
 			var data = {
@@ -9943,7 +9937,7 @@ const app = createApp({
 				});
 		},
 		fetchDefaults() {
-			if ( this.role != 'administrator' || this.role != 'owner' ) {
+			if ( this.role != 'administrator' && this.role != 'owner' ) {
 				return
 			}
 			axios.get(
@@ -10092,14 +10086,21 @@ const app = createApp({
 			}
 			states_by_country = Object.entries( select )
 			states_by_country.forEach( ([key, value]) => {
-				states_selected.push( { "text": value, "value": key } )
+				states_selected.push( { "title": value, "value": key } )
 			})
 			this.states_selected = states_selected
 		},
 		populateStatesforContacts() {
-			contacts = [ "owner", "admin", "tech", "billing" ]
-			key = contacts[ this.dialog_domain.contact_tabs ]
-			this.populateStatesFor( this.dialog_domain.provider.contacts[ key ] )
+			const contacts = ["owner", "admin", "tech", "billing"];
+			const key = contacts[this.dialog_domain.contact_tabs];
+			
+			if (this.dialog_domain.provider.contacts && this.dialog_domain.provider.contacts[key]) {
+				this.populateStatesFor(this.dialog_domain.provider.contacts[key]);
+			} else {
+				// Optionally handle the case where the contact object doesn't exist
+				// for the selected tab, e.g., by clearing the states.
+				this.states_selected = [];
+			}
 		},
 		populateStates() {
 			states_selected = []
@@ -10110,7 +10111,7 @@ const app = createApp({
 			}
 			states_by_country = Object.entries( select )
 			states_by_country.forEach( ([key, value]) => {
-				states_selected.push( { "text": value, "value": key } )
+				states_selected.push( { "title": value, "value": key } )
 			})
 			this.states_selected = states_selected
 		},
@@ -10571,6 +10572,7 @@ const app = createApp({
 				});
 		},
 		fetchProcessLogs() {
+			this.dialog_log_history.loading = true
 			this.dialog_log_history.show = true;
 			var data = {
 				action: 'captaincore_ajax',
@@ -10578,7 +10580,8 @@ const app = createApp({
 			};
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					this.dialog_log_history.logs = response.data;
+					this.dialog_log_history.logs = response.data
+					this.dialog_log_history.loading = false
 				})
 				.catch( error => console.log( error ) );
 		},
@@ -10644,28 +10647,25 @@ const app = createApp({
 				.catch( error => console.log( error ) )
 		},
 		updateLogEntry() {
-			site_id = this.dialog_edit_log_entry.log.websites.map( s => s.site_id )
+			const logData = this.dialog_edit_log_entry.log;
+			const processLogId = logData.process_log_id;
 
-			var data = {
-				action: 'captaincore_ajax',
-				command: 'updateLogEntry',
-				post_id: site_id,
-				log: this.dialog_edit_log_entry.log,
-			};
+			this.dialog_edit_log_entry.show = false;
 
-			this.dialog_edit_log_entry.show = false
-			this.dialog_edit_log_entry.sites = []
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					Object.keys(response.data).forEach( site_id => {
-						if ( site_id == this.dialog_site.site.site_id ) {
-							this.dialog_site.site.timeline = response.data[site_id]
-						}
-					})
-					this.dialog_edit_log_entry.log = {}
-				})
-				.catch( error => console.log( error ) )
+			axios.post(`/wp-json/captaincore/v1/process-logs/${processLogId}`, logData, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				Object.keys(response.data).forEach(site_id => {
+					if (site_id == this.dialog_site.site.site_id) {
+						this.dialog_site.site.timeline = response.data[site_id];
+					}
+				});
+				this.dialog_edit_log_entry.log = {};
+			})
+			.catch(error => {
+				console.error("Error updating log entry:", error);
+			});
 		},
 		editScript( script ) {
 			this.dialog_edit_script.show = true
@@ -10900,7 +10900,7 @@ const app = createApp({
 					this.fetchUsers()
 					this.snackbar.message = "New user added."
 					this.snackbar.show = true
-					dialog.value = false
+					isActive.value = false
 					this.dialog_new_user = { first_name: "", last_name: "", email: "", login: "", account_ids: [], errors: [] }
 				})
 				.catch( error => console.log( error ) );
@@ -11242,7 +11242,7 @@ const app = createApp({
 			}
         
 			this.dialog_invoice.paying = true
-				this.updateBilling()
+			this.updateBilling()
 			invoice_id = this.dialog_invoice.response.order_id
 			self = this
 
@@ -11356,19 +11356,18 @@ const app = createApp({
 			this.dialog_edit_account.account = this.dialog_account.records.account
 		},
 		createSiteAccount() {
-			var data = {
-				action: 'captaincore_ajax',
-				command: 'createSiteAccount',
-				value: this.dialog_new_account.name
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
+			axios.post(
+				`/wp-json/captaincore/v1/accounts`, {
+					name: this.dialog_new_account.name
+				}, {
+					headers: { 'X-WP-Nonce':this.wp_nonce }
+				})
+				.then(response => {
 					this.fetchAccounts()
 					this.dialog_new_account.show = false
 					this.dialog_new_account.name = ""
 					this.dialog_account.step = 1
-				})
-				.catch( error => console.log( error ) );
+				});
 		},
 		updateSiteAccount() {
 			var data = {
@@ -11464,6 +11463,7 @@ const app = createApp({
 			this.snackbar.message = "Recipe '"+ recipe.title +"' loaded.";
 			this.snackbar.show = true;
 			this.script.code = recipe.content;
+			this.goTo( '#script_site', { offset: -70 } );
 		},
 		runRecipe( recipe_id, site_id ) {
 			recipe = this.recipes.filter( recipe => recipe.recipe_id == recipe_id )[0];
@@ -11534,6 +11534,25 @@ const app = createApp({
 				})
 				.catch( error => console.log( error ) );
 
+		},
+		deleteRecipe() {
+			recipe = this.dialog_cookbook.recipe
+			should_proceed = confirm( `Delete recipe ${recipe.title}?` )
+
+			if ( ! should_proceed ) {
+				return;
+			}
+			var data = {
+				action: 'captaincore_ajax',
+				command: 'updateRecipe',
+				value: this.dialog_cookbook.recipe
+			};
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.dialog_cookbook.show = false;
+					this.recipes = response.data;
+				})
+				.catch( error => console.log( error ) );
 		},
 		updateRecipe() {
 			var data = {
@@ -11797,8 +11816,10 @@ const app = createApp({
 		},
 		switchSite() {
 			if ( this.selected_site ) {
+				this.selected_site.tabs = this.dialog_site.site.tabs
+				this.selected_site.tabs_management = this.dialog_site.site.tabs_management
 				this.dialog_site.site = this.selected_site
-				this.goToPath( `/sites/${this.dialog_site.site.site_id}` )
+				this.goToPath( `/sites/${this.selected_site.site_id}` )
 			}
 		},
 		grantAccess() {
@@ -11830,6 +11851,9 @@ const app = createApp({
             show_site.loading = false
 			show_site.tabs = this.dialog_site.site.tabs
 			show_site.tabs_management = this.dialog_site.site.tabs_management
+			if ( show_site.key == "" ) {
+				show_site.key = null
+			}
 			this.dialog_site.site = show_site
 			this.dialog_site.step = 2
 			this.dialog_new_site = {
@@ -11862,7 +11886,7 @@ const app = createApp({
 			site_id = this.dialog_site.site.site_id
 			environment = this.dialog_site.environment_selected.environment.toLowerCase()
 			axios.get(
-				`/wp-json/captaincore/v1/site/${site_id}/${environment}/phpmyadmin`, {
+				`/wp-json/captaincore/v1/sites/${site_id}/${environment}/phpmyadmin`, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
@@ -11951,7 +11975,7 @@ const app = createApp({
 			site_name = this.dialog_toggle.site_name;
 
 			if ( Array.isArray( site_id ) ) { 
-				environment = this.dialog_bulk.environment_selected;
+				environment = this.dialog_bulk_tools.environment_selected
 			} else {
 				environment = this.dialog_site.environment_selected.environment
 			}
@@ -11993,7 +12017,7 @@ const app = createApp({
 			site_name = this.dialog_toggle.site_name;
 
 			if ( Array.isArray( site_id ) ) { 
-				environment = this.dialog_bulk.environment_selected
+				environment = this.dialog_bulk_tools.environment_selected
 			} else {
 				environment = this.dialog_site.environment_selected.environment
 			}
@@ -12075,7 +12099,7 @@ const app = createApp({
 
 			var data = {
 				action: 'captaincore_install',
-				environment: this.dialog_bulk.environment_selected,
+				environment: this.dialog_bulk_tools.environment_selected,
 				post_id: site_ids,
 				command: 'deploy-defaults'
 			}
@@ -12179,8 +12203,32 @@ const app = createApp({
 				.catch( error => console.log( error ) );
 
 		},
-		runCustomCodeBulk(){
+		runCustomCodeBulkEnvironments( environments ) {
+			should_proceed = confirm( `Deploy custom code on ${environments.length} environments?` );
+			if ( ! should_proceed ) {
+				return;
+			}
+			wp_cli = this.script.code;
 
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id, "description": description, "status": "queued", stream: []});
+
+			axios.put( `/wp-json/captaincore/v1/run/code`, {
+					environments: environments.map( environment => environment.enviroment_id ),
+					code: this.script.code
+				}, {
+					headers: { 'X-WP-Nonce':this.wp_nonce }
+				})
+			.then( response => {
+				this.snackbar.message = `Running custom code on ${environments.length} environments.`
+				this.snackbar.show = true
+				this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+				this.runCommand( response.data )
+				this.script.code = "";
+			});
+		},
+		runCustomCodeBulk(){
 			sites = this.sites_selected;
 			site_ids = sites.map( s => s.site_id );
 			should_proceed = confirm("Deploy custom code on "+ sites.length +" sites?");
@@ -12193,7 +12241,7 @@ const app = createApp({
 
 			var data = {
 				action: 'captaincore_install',
-				environment: this.dialog_bulk.environment_selected,
+				environment: this.dialog_bulk_tools.environment_selected,
 				post_id: site_ids,
 				command: 'run',
 				value: this.script.code,
@@ -12516,10 +12564,11 @@ const app = createApp({
 					if ( this.dialog_domain.provider.contacts.owner.country && this.dialog_domain.provider.contacts.owner.country != "" ) {
 						this.populateStatesFor( this.dialog_domain.provider.contacts.owner )
 					}
+					this.dialog_domain.tabs = "dns"
 				})
 		},
 		modifyDNS( domain ) {
-			this.dialog_domain = { show: false, updating_contacts: false, updating_nameservers: false, auth_code: "", fetch_auth_code: false, provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], loading: true, saving: false, step: 2 };
+			this.dialog_domain = { show: false, updating_contacts: false, updating_nameservers: false, auth_code: "", fetch_auth_code: false, provider: { contacts: {} }, contact_tabs: "", tabs: "dns", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], loading: true, saving: false, step: 2 };
 			if ( domain.remote_id == null ) {
 				this.dialog_domain.errors = [ "Domain not found." ];
 				this.dialog_domain.domain = domain;
@@ -12544,8 +12593,16 @@ const app = createApp({
 						return
 					}
 
+					const records = response.data.records || [];
+
+					if ( records.length == 0 ) {
+						this.dialog_domain.loading = false
+						this.dialog_domain.errors = [ "DNS zone not found." ];
+						return
+					}
+
 					// Prep records with 
-					response.data.records.forEach( r => {
+					records.forEach( r => {
 						r.update = {
 							"record_id": JSON.parse(JSON.stringify(r.id)),
 							"record_type": JSON.parse(JSON.stringify(r.type)),
@@ -12558,8 +12615,8 @@ const app = createApp({
 						r.delete = false;
 					});
 					timestamp = new Date().getTime();
-					response.data.records.push({ id: "new_" + timestamp, edit: false, delete: false, new: true, ttl: "3600", type: "A", value: [{"value": "","enabled":true}], update: {"record_id": "new_" + timestamp, "record_type": "A", "record_name": "", "record_value": [{"value": "","enabled":true}], "record_ttl": "3600", "record_status": "new-record" } });
-					this.dialog_domain.records = response.data.records
+					records.push({ id: "new_" + timestamp, edit: false, delete: false, new: true, ttl: "3600", type: "A", value: [{"value": "","enabled":true}], update: {"record_id": "new_" + timestamp, "record_type": "A", "record_name": "", "record_value": [{"value": "","enabled":true}], "record_ttl": "3600", "record_status": "new-record" } });
+					this.dialog_domain.records = records
 					this.dialog_domain.nameservers = response.data.nameservers
 					this.dialog_domain.loading = false;
 				});
@@ -12641,7 +12698,7 @@ const app = createApp({
 			}
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					this.dialog_domain = { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, ignore_warnings: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider_id: "", provider: { contacts: {} }, contact_tabs: "", tabs: "", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], results: [], errors: [], loading: true, saving: false, step: 1 }
+					this.dialog_domain = { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, ignore_warnings: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider_id: "", provider: { contacts: {} }, contact_tabs: "", tabs: "dns", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], results: [], errors: [], loading: true, saving: false, step: 1 }
 					this.domains = this.domains.filter( d => d.domain_id != response.data.domain_id )
 					this.goToPath( '/domains' )
 					this.snackbar.message = response.data.message
@@ -13208,11 +13265,11 @@ const app = createApp({
 		},
 		RollbackUpdate( hash, addon_type, addon_name, created_at, dialog ) {
 			site = this.dialog_site.site
-			date = this.$options.filters.pretty_timestamp_epoch( created_at );
+			date = this.pretty_timestamp_epoch( created_at );
 			description = "Rollback "+ addon_type + " " + addon_name +" to version as of " + date + " on " + site.name;
 
 			if ( typeof dialog.value == "boolean" ) {
-				dialog.value = false
+				isActive.value = false
 			}
 
 			should_proceed = confirm( description + "?");
@@ -13252,8 +13309,8 @@ const app = createApp({
 			site = this.dialog_site.site
 			environment = this.dialog_site.environment_selected;
 			quicksave = environment.quicksaves.filter( quicksave => quicksave.hash == hash )[0];
-			date = this.$options.filters.pretty_timestamp_epoch(quicksave.created_at);
-			previous_date = this.$options.filters.pretty_timestamp_epoch(quicksave.previous_created_at);
+			date = this.pretty_timestamp_epoch(quicksave.created_at);
+			previous_date = this.pretty_timestamp_epoch(quicksave.previous_created_at);
 			if ( version == "this" ) {
 				description = "Rollback "+ addon_type + " " + addon_name +" to version as of " + date + " on " + site.name;
 			}
@@ -13262,7 +13319,7 @@ const app = createApp({
 			}
 
 			if ( typeof dialog.value == "boolean" ) {
-				dialog.value = false
+				isActive.value = false
 			}
 
 			should_proceed = confirm( description + "?");
@@ -13295,7 +13352,7 @@ const app = createApp({
 				})
 		},
 		QuicksaveFileRestore() {
-			date = this.$options.filters.pretty_timestamp_epoch(this.dialog_file_diff.quicksave.created_at);
+			date = this.pretty_timestamp_epoch(this.dialog_file_diff.quicksave.created_at);
 			should_proceed = confirm("Rollback file " + this.dialog_file_diff.file_name  + " as of " + date);
 
 			if ( ! should_proceed ) {
@@ -13437,7 +13494,7 @@ const app = createApp({
 			if ( version == 'previous' ) {
 				created_at = quicksave.previous_created_at
 			}
-			date = this.$options.filters.pretty_timestamp_epoch(created_at)
+			date = this.pretty_timestamp_epoch(created_at)
 			should_proceed = confirm("Will rollback all themes/plugins on " + environment.home_url + " to " + date + ". Proceed?")
 
 			if ( ! should_proceed ) {
@@ -13473,7 +13530,7 @@ const app = createApp({
 				hash = quicksave.hash_before
 				created_at = quicksave.started_at
 			}
-			date = this.$options.filters.pretty_timestamp_epoch(created_at)
+			date = this.pretty_timestamp_epoch(created_at)
 			site = this.dialog_site.site
 			environment = this.dialog_site.environment_selected
 			should_proceed = confirm("Will rollback all themes/plugins on " + environment.home_url + " to " + date + ". Proceed?")
@@ -13536,14 +13593,13 @@ const app = createApp({
 					item.response = response.data.trim().split("\n")
 				});
 		},
-		expandQuicksave( item, site_id, environment ) {
-			table_name = "quicksave_table_" + site_id + "_" + environment;
-			if ( typeof this.$refs[table_name].expansion[item.hash] == 'boolean' ) {
-				this.$refs[table_name].expansion = ""
+		handleExpansionUpdate(newExpandedArray) {
+			if (newExpandedArray.length > this.expanded.length) {
+				const newlyExpandedItemKey = newExpandedArray[newExpandedArray.length - 1];
+				this.expanded = [newlyExpandedItemKey];
 			} else {
-				this.getQuicksave( item.hash, site_id )
-				this.$refs[table_name].expansion = { [item.hash] : true }
-			}
+				this.expanded = newExpandedArray;
+			}	
 		},
 		viewQuicksaves() {
 			axios.get(
@@ -13578,41 +13634,94 @@ const app = createApp({
 				this.dialog_backup_configurations = { show: false, settings: { mode: "", interval: "", active: true } }
 			});
 		},
-		downloadBackup( backup_id, backup_tree ) {
-			directories = []
-			site_id = this.dialog_site.site.site_id
+		downloadBackup(backup_id, backup_tree) {
+			const site_id = this.dialog_site.site.site_id;
+			const selectedFilePaths = [];
+			const selectedDirectoryPaths = [];
 
-			files = backup_tree.map( item => item.path )
-			backup_tree.forEach ( item => {
-				if ( item.type == "dir" && item.size > 1 ) {
-					directories.push( item.path )
+			if (!backup_tree || backup_tree.length === 0) {
+				this.snackbar.message = "No items selected for download.";
+				this.snackbar.show = true;
+				return;
+			}
+
+			// Create a Set of all selected paths for efficient lookup
+			const allSelectedPaths = new Set(backup_tree.map(node => node.path));
+
+			for (const item of backup_tree) {
+				const itemPath = item.path;
+				const parentPath = this.getParentPath(itemPath);
+
+				// Only process this item if its parent is NOT also selected,
+				// or if it has no parent (is a root item).
+				if (parentPath === null || !allSelectedPaths.has(parentPath)) {
+					if (item.type === "file") {
+						selectedFilePaths.push(itemPath);
+					} else if (item.type === "dir") {
+						selectedDirectoryPaths.push(itemPath);
+					}
 				}
-			})
-			
-			description = "Generating downloadable zip for " + backup_tree.map( item => item.count ).reduce((a, b) => a + b, 0) + " items. Will send an email when ready."
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "done", stream: [], "command": "downloadBackup"})
+			}
 
-			var data = {
+			if (selectedFilePaths.length === 0 && selectedDirectoryPaths.length === 0) {
+				// This can happen if only child items of an already selected parent were in backup_tree
+				// but got filtered out. Or if backup_tree was empty to begin with.
+				this.snackbar.message = "No top-level items to download based on selection.";
+				this.snackbar.show = true;
+				return;
+			}
+			
+			const totalTopLevelItems = selectedFilePaths.length + selectedDirectoryPaths.length;
+			const description = `Generating downloadable zip for ${totalTopLevelItems} top-level item(s). Will send an email when ready.`;
+			const job_id = Math.round((new Date()).getTime());
+			
+			this.jobs.push({ 
+				"job_id": job_id, 
+				"description": description, 
+				"status": "pending", // Start with a pending status
+				stream: [], 
+				"command": "downloadBackup" 
+			});
+
+			const data = {
 				'action': 'captaincore_install',
 				'post_id': site_id,
 				'command': "backup_download",
 				'value': {
-					files: JSON.stringify( files ),
-					directories: JSON.stringify( directories ),
+					files: JSON.stringify(selectedFilePaths),
+					directories: JSON.stringify(selectedDirectoryPaths),
 					backup_id: backup_id,
 				},
 				'environment': this.dialog_site.environment_selected.environment,
 			};
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					this.snackbar.message = description
-					this.snackbar.show = true
-					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data
-					// Reset all file selections
-					this.dialog_site.environment_selected.backups.forEach( backup => backup.tree = [] )
-			});
+			axios.post(ajaxurl, Qs.stringify(data))
+				.then(response => {
+					this.snackbar.message = description; // Or a more specific success message
+					this.snackbar.show = true;
+					const jobIndex = this.jobs.findIndex(job => job.job_id === job_id);
+					if (jobIndex !== -1) {
+						this.jobs[jobIndex].job_id = response.data; // Assuming response.data is the actual new job_id from backend
+						this.jobs[jobIndex].status = "processing"; // Or "done" if backend confirms completion
+					}
+					// Reset all file selections for the current item
+					const currentBackupItem = this.dialog_site.environment_selected.backups.find(b => b.id === backup_id);
+					if (currentBackupItem) {
+						currentBackupItem.tree = [];
+						if (this.calculateTreeStorage) { // If you have this method
+							this.calculateTreeStorage(currentBackupItem);
+						}
+					}
+				})
+				.catch(error => {
+					console.error("Error requesting backup download:", error);
+					this.snackbar.message = "Failed to start download process.";
+					this.snackbar.show = true;
+					const jobIndex = this.jobs.findIndex(job => job.job_id === job_id);
+					if (jobIndex !== -1) {
+						this.jobs[jobIndex].status = "error";
+					}
+				});
 		},
 		searchQuicksave() {
 			this.quicksave_search_results.loading = true
@@ -13676,47 +13785,239 @@ const app = createApp({
 					quicksave_selected[0].loading = false
 				});
 		},
-		getBackup( backup_id, site_id ) {
-			environment = this.dialog_site.environment_selected.environment.toLowerCase()
+		mapNodeForTreeview(node) {
+			const mappedNode = {
+				id: node.id,
+				name: node.name,
+				size: node.size,
+				count: node.count,
+				type: node.type,
+				path: node.path
+			};
+			if (node.children && node.children.length > 0) {
+				mappedNode.children = []; // Mark that children exist but are not loaded
+			} else if (node.children && node.children.length === 0) {
+				mappedNode.children = []; // Explicitly an empty folder, already "loaded"
+			}
+			// If no 'children' property, it's a file, so no 'childNodes'
+			return mappedNode;
+		},
+		getBackup(backup_id, site_id) {
+			const environment = this.dialog_site.environment_selected.environment.toLowerCase();
+			const backup_item = this.dialog_site.environment_selected.backups.find(b => b.id === backup_id);
+
+			if (!backup_item) {
+				console.error("Target backup item not found in local list:", backup_id);
+				return;
+			}
+
 			axios.get(
 				`/wp-json/captaincore/v1/sites/${site_id}/${environment}/backups/${backup_id}`, {
-					headers: {'X-WP-Nonce':this.wp_nonce}
+					headers: { 'X-WP-Nonce': this.wp_nonce }
 				})
-				.then(response => {
-					if ( response.data.includes( "https://" ) ) {
-						axios.get( response.data ).then(response => { 
-							backup_selected = this.dialog_site.environment_selected.backups.filter( b => b.id == backup_id )
-							if ( backup_selected.length != 1 ) {
-								return
-							}
-							backup_selected[0].files = response.data.files
-							backup_selected[0].omitted = response.data.omitted
-							this.sortTree( backup_selected[0].files )
-							backup_selected[0].loading = false
-						})
+				.then(response1 => {
+					if (response1.data && typeof response1.data === 'string' && response1.data.includes("https://")) {
+						const dataUrl = response1.data;
+						axios.get(dataUrl)
+							.then(response2 => {
+								files = response2.data.files || [];
+								backup_item.omitted = response2.data.omitted || false;
+
+								if (files && files.length > 0) {
+									this.sortTree(files);
+								}
+								
+								// Initialize/reset properties for the expanded view and v-treeview
+								backup_item.tree = [];
+								backup_item.active = [];
+								backup_item.active_node = null;
+								backup_item.preview = ''; // Reset preview content
+								this.backup_set_files = files;
+								backup_item.files = files.map(this.mapNodeForTreeview);
+								backup_item.calculated_total = 0
+								backup_item.loading = false;
+							})
+							.catch(error2 => {
+								console.error(`Error fetching backup data from URL (${dataUrl}):`, error2);
+								backup_item.calculated_total = 0;
+								backup_item.loading = false;
+								backup_item.files = []; // Set a default state on error
+								backup_item.omitted = true; // Indicate an issue
+								backup_item.tree = [];
+								backup_item.active = [];
+								backup_item.preview = 'Error loading files.'; // Provide feedback
+							});
+					} else {
+						console.warn("Initial backup API response was not a valid URL or did not meet criteria. Data:", response1.data);
+						backup_item.calculated_total = 0;
+						backup_item.loading = false;
+						backup_item.files = [];
+						backup_item.omitted = true;
+						backup_item.tree = [];
+						backup_item.active = [];
+						backup_item.preview = 'Could not retrieve file list location.';
 					}
 				})
+				.catch(error1 => {
+					console.error("Error fetching initial backup information:", error1);
+					if (backup_item) { // Ensure backup_item exists before modifying
+						backup_item.calculated_total = 0;
+						backup_item.loading = false;
+						backup_item.files = [];
+						backup_item.omitted = true;
+						backup_item.tree = [];
+						backup_item.active = [];
+						backup_item.preview = 'Error retrieving backup details.';
+					}
+				});
 		},
-		previewFile( item ) {
-			item.preview = ""
-			if ( item.active.length == 1 ) {
-				site_id = this.dialog_site.site.site_id
-				environment = this.dialog_site.environment_selected.environment.toLowerCase()
-				file = item.active[0].path
-				if ( item.active[0].size > 500000 ) {
-					item.preview = "too-large"
-					return
+		previewFile(item) {
+			item.preview = "";
+			item.active_node = null;
+			item.isPreviewImage = false; 
+
+			if (item.active && item.active.length === 1) {
+				const filePath = item.active[0];
+				const node = this.findNodeByPath(this.backup_set_files, filePath);
+
+				if (node) {
+					item.active_node = node; // Store the node regardless of type
+
+					// Scroll to the title after the DOM has updated
+					this.$nextTick(() => {
+						if (this.$refs.filePreviewTitle) {
+							this.goTo(this.$refs.filePreviewTitle, { duration: 300, offset: -120 });
+						}
+					});
+
+					if (node.type === 'dir') {
+						// It's a directory, calculate stats and attach them
+						const stats = this.calculateFolderStats(node);
+						item.active_node.stats = stats;
+					} else if (node.type === 'file') {
+						const site_id = this.dialog_site.site.site_id;
+						const environment = this.dialog_site.environment_selected.environment.toLowerCase();
+						const extension = (node.ext || '').split('.').pop().toLowerCase();
+						const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp']; // Remove 'svg' from here
+
+						// Handle SVG as text (XML) for inline rendering
+						if (extension === 'svg') {
+							item.isPreviewImage = false; // Not treated as img
+							axios.get(`/wp-json/captaincore/v1/sites/${site_id}/${environment}/backups/${item.id}?file=${filePath}`, {
+								headers: { 'X-WP-Nonce': this.wp_nonce }
+							})
+							.then(response => {
+								item.preview = response.data; // Raw SVG XML string for v-html
+							})
+							.catch(error => {
+								console.error("Error fetching SVG preview:", error);
+								item.preview = "Error loading SVG.";
+							});
+							return;
+						}
+
+						// Handle raster images as before (blob -> data URL)
+						if (imageExtensions.includes(extension)) {
+							item.isPreviewImage = true;
+							axios.get(`/wp-json/captaincore/v1/sites/${site_id}/${environment}/backups/${item.id}?file=${filePath}`, {
+								headers: { 'X-WP-Nonce': this.wp_nonce },
+								responseType: 'blob'
+							})
+							.then(response => {
+								const reader = new FileReader();
+								reader.readAsDataURL(response.data);
+								reader.onloadend = () => {
+									item.preview = reader.result;
+								};
+							})
+							.catch(error => {
+								console.error("Error fetching image preview:", error);
+								item.preview = "Error loading image.";
+							});
+							return;
+						}
+
+						// Handle other text/code files as before
+						if (node.size > 500000) {
+							item.preview = "too-large";
+							return;
+						}
+
+						item.isPreviewImage = false;
+
+						axios.get(
+							`/wp-json/captaincore/v1/sites/${site_id}/${environment}/backups/${item.id}?file=${filePath}`, {
+								headers: { 'X-WP-Nonce': this.wp_nonce }
+							})
+							.then(response => {
+								const content = response.data;
+								const langExtension = node.ext || 'markup';
+								const language = Prism.languages[langExtension] ? langExtension : 'markup';
+
+								if (Prism.languages[language]) {
+									item.preview = Prism.highlight(content, Prism.languages[language], language);
+								} else {
+									// Fallback for unsupported languages: escape HTML to prevent rendering issues
+									const esc = document.createElement('textarea');
+									esc.textContent = content;
+									item.preview = esc.innerHTML;
+								}
+							})
+							.catch(error => {
+								console.error("Error fetching file preview:", error);
+								item.preview = "Error loading preview.";
+							});
+					}
+				} else {
+					item.preview = "Could not find file details.";
 				}
-				axios.get(
-					`/wp-json/captaincore/v1/sites/${site_id}/${environment}/backups/${item.id}?file=${file}`, {
-						headers: {'X-WP-Nonce':this.wp_nonce}
-					})
-					.then(response => {
-						item.preview = response.data
-					})
-				return
 			}
-			item.preview = ""
+		},
+		calculateTreeStorage(currentItem, selectedPaths) {
+			if (!currentItem || !selectedPaths || selectedPaths.length === 0) {
+				if (currentItem) currentItem.calculated_total = 0;
+				return;
+			}
+
+			let newTotalSize = 0;
+			const selectedPathsSet = new Set(selectedPaths);
+
+			for (const nodePath of selectedPaths) {
+				const parentPath = this.getParentPath(nodePath);
+
+				// Only add the size if the parent folder is not also selected, to avoid double counting.
+				if (parentPath === null || !selectedPathsSet.has(parentPath)) {
+					const rawNode = this.findNodeByPath(this.backup_set_files, nodePath);
+					if (rawNode) {
+						// Recursively get the size of the entire node (folder or file)
+						newTotalSize += this.getActualNodeSize(rawNode);
+					} else {
+						console.warn(`Raw node not found for path: ${nodePath}.`);
+					}
+				}
+			}
+			currentItem.calculated_total = newTotalSize;
+		},
+		calculateFolderStats(folderNode) {
+			let totalSize = 0;
+			let fileCount = 0;
+
+			if (!folderNode || !Array.isArray(folderNode.children)) {
+				return { totalSize, fileCount };
+			}
+
+			for (const child of folderNode.children) {
+				if (child.type === 'file') {
+					totalSize += child.size || 0;
+					fileCount++;
+				} else if (child.type === 'dir') {
+					const stats = this.calculateFolderStats(child);
+					totalSize += stats.totalSize;
+					fileCount += stats.fileCount;
+				}
+			}
+
+			return { totalSize, fileCount };
 		},
 		viewBackups() {
 			site_id = this.dialog_site.site.site_id
@@ -13729,14 +14030,153 @@ const app = createApp({
 					this.dialog_site.environment_selected.backups = response.data
 				});
 		},
-		expandBackup( item, site_id, environment ) {
-			table_name = "backup_table_" + site_id + "_" + environment;
-			if ( typeof this.$refs[table_name].expansion[item.id] == 'boolean' ) {
-				this.$refs[table_name].expansion = ""
+		handleRowClick( item ) {
+			const currentExpanded = this.dialog_site.environment_selected.expanded_backups;
+			const itemId = item.id; // Corresponds to `item-value="id"` on v-data-table
+			if (currentExpanded.includes(itemId)) {
+				this.dialog_site.environment_selected.expanded_backups = [];
 			} else {
-				this.getBackup( item.id, site_id )
-				this.$refs[table_name].expansion = { [item.id] : true }
+				this.dialog_site.environment_selected.expanded_backups = [itemId];
 			}
+		},
+		findNodeByPath(nodes, path) {
+			for (const node of nodes) {
+				if (node.path === path) {
+					return node;
+				}
+				if (node.type === 'dir' && Array.isArray(node.children)) {
+					const found = this.findNodeByPath(node.children, path);
+					if (found) return found;
+				}
+			}
+			return null;
+		},
+		getAllDescendantPaths(node) {
+			let paths = [];
+			if (node && node.children && Array.isArray(node.children)) {
+				for (const child of node.children) {
+					paths.push(child.path);
+					paths = paths.concat(this.getAllDescendantPaths(child));
+				}
+			}
+			return paths;
+		},
+		findNodeByPath(nodes, path) {
+			for (const node of nodes) {
+				if (node.path === path) {
+					return node;
+				}
+				if (node.type === 'dir' && Array.isArray(node.children)) {
+					const found = this.findNodeByPath(node.children, path);
+					if (found) return found;
+				}
+			}
+			return null;
+		},
+		getAllDescendantPaths(node) {
+			let paths = [];
+			if (node && node.children && Array.isArray(node.children)) {
+				for (const child of node.children) {
+					paths.push(child.path);
+					paths = paths.concat(this.getAllDescendantPaths(child));
+				}
+			}
+			return paths;
+		},
+		handleTreeSelection(backupItem, newSelectedPaths) {
+			// `lastCalculatedTree` holds the state from our function's last run. This is our reliable "old" state.
+			const fullTreeData = this.backup_set_files;
+			// Note: `backupItem.tree` is already updated by v-model, so we use our own state tracking property.
+			const oldSelection = new Set(backupItem.lastCalculatedTree || []);
+			const newSelectionFromComponent = new Set(newSelectedPaths);
+
+			// Determine the single path that was toggled by the user by comparing the component's new state
+			// with our last known state.
+			const addedPath = newSelectedPaths.find(path => !oldSelection.has(path));
+			const removedPath = (backupItem.lastCalculatedTree || []).find(path => !newSelectionFromComponent.has(path));
+
+			// Start with the reliable "old" selection and apply the detected change.
+			const finalSelection = new Set(backupItem.lastCalculatedTree || []);
+
+			if (addedPath) {
+				// A path was added. Add it and all its descendants to our selection set.
+				finalSelection.add(addedPath);
+				const node = this.findNodeByPath(fullTreeData, addedPath);
+				if (node && node.type === 'dir') {
+					const descendants = this.getAllDescendantPaths(node);
+					descendants.forEach(descendantPath => finalSelection.add(descendantPath));
+				}
+			} else if (removedPath) {
+				// A path was removed. Remove it, its descendants, and any parent paths from our selection set.
+				finalSelection.delete(removedPath);
+				const node = this.findNodeByPath(fullTreeData, removedPath);
+				if (node && node.type === 'dir') {
+					const descendants = this.getAllDescendantPaths(node);
+					descendants.forEach(descendantPath => finalSelection.delete(descendantPath));
+				}
+				
+				// Recursively uncheck parents
+				let parentPath = this.getParentPath(removedPath);
+				while (parentPath) {
+					finalSelection.delete(parentPath);
+					parentPath = this.getParentPath(parentPath);
+				}
+			}
+
+			const finalTreeArray = Array.from(finalSelection);
+			
+			// === CRITICAL STEP ===
+			// 1. Update the v-model with our calculated, correct selection state.
+			backupItem.tree = finalTreeArray;
+			// 2. Store this state for the next time the function is called.
+			backupItem.lastCalculatedTree = finalTreeArray;
+
+			// Recalculate storage in the next DOM update cycle.
+			this.$nextTick(() => {
+				this.calculateTreeStorage(backupItem, backupItem.tree);
+			});
+		},
+		handleLoadChildren(item) { // 'item' is the treeview node being expanded
+			const originalRawNode = this.findNodeByPath(this.backup_set_files, item.path);
+			if (originalRawNode && originalRawNode.children && Array.isArray(originalRawNode.children)) {
+				item.children = originalRawNode.children.map(childNode => this.mapNodeForTreeview(childNode));
+			} else {
+				item.children = [];
+			}
+		},
+		getParentPath(path) {
+			if (!path || path === "/") {
+				return null; // Root or invalid path has no parent to check against
+			}
+			const lastSlashIndex = path.lastIndexOf('/');
+			if (lastSlashIndex === -1) {
+				// This case should ideally not happen if all paths are absolute
+				return null;
+			}
+			if (lastSlashIndex === 0) {
+				// Parent of "/foo" is "/"
+				return "/";
+			}
+			// Parent of "/foo/bar" is "/foo"
+			return path.substring(0, lastSlashIndex);
+		},
+		getActualNodeSize(rawNode) {
+			if (!rawNode) {
+				return 0;
+			}
+			if (rawNode.type === 'file') {
+				return rawNode.size || 0;
+			}
+			if (rawNode.type === 'dir') {
+				let totalSize = 0; // Folders themselves often have size 0 in listings
+				if (Array.isArray(rawNode.children)) {
+					for (const childRawNode of rawNode.children) {
+						totalSize += this.getActualNodeSize(childRawNode); // Recursive call
+					}
+				}
+				return totalSize;
+			}
+			return 0;
 		},
 		viewSnapshots() {
 			site = this.dialog_site.site
@@ -13976,7 +14416,7 @@ const app = createApp({
 			this.jobs.push({"job_id": job_id,"site_id": site_id, "environment": environment_selected, "description": description, "status": "queued", "command": "manage", stream: []});
 
 			// WP ClI command to send
-			wpcli = "wp plugin install " + plugin.download_link + " --force";
+			wpcli = `wp plugin install --force --skip-plugins --skip-themes '${plugin.download_link}'`
 
 			var data = {
 				'action': 'captaincore_install',
@@ -14118,7 +14558,7 @@ const app = createApp({
 			this.new_theme.show = true
 			this.new_theme.sites = this.sites_selected
 			this.new_theme.site_name = this.new_theme.sites.length + " sites"
-			this.new_theme.environment_selected = this.dialog_bulk.environment_selected
+			this.new_theme.environment_selected = this.dialog_bulk_tools.environment_selected
 			this.fetchThemes()
 			this.fetchEnvatoThemes()
 		},
@@ -14385,7 +14825,6 @@ const app = createApp({
 			job.status = "error"
 		},
 		runCommand( job_id ) {
-
 			job = this.jobs.filter(job => job.job_id == job_id)[0]
 			self = this;
 			// console.log( "Start: select token " + job_id + " found job " + job.job_id )
@@ -14578,7 +15017,7 @@ const app = createApp({
 			this.dialog_update_settings.themes = environment.themes
 			this.dialog_update_settings.plugins = environment.plugins
 		},
-		updateMonitor( environment ) {
+		toggleMonitor( environment ) {
 			status = "OFF"
 			if ( environment.monitor_enabled == 1 ) {
 				status = "ON"
@@ -14741,11 +15180,141 @@ const app = createApp({
 				today = new Date().getFullYear()+'-'+("0"+(new Date().getMonth()+1)).slice(-2)+'-'+("0"+new Date().getDate()).slice(-2)
 				this.dialog_modify_plan.plan.next_renewal = `${today} 5:00:00`
 			} else if ( this.dialog_modify_plan.plan.next_renewal == "" ) {
-				this.dialog_modify_plan.plan.next_renewal = `${date} 5:00:00`
+				formatted_date = dayjs(date.value).format('YYYY-MM-DD')
+				this.dialog_modify_plan.plan.next_renewal = `${formatted_date} 5:00:00`
 			} else {
-				timestamp = this.dialog_modify_plan.plan.next_renewal.split(" ")[1]
-				this.dialog_modify_plan.plan.next_renewal = `${date} ${timestamp}`
+				formatted_date = dayjs(date.value).format('YYYY-MM-DD')
+				timestamp = dayjs(date.value).format('hh:mm:ss')
+				this.dialog_modify_plan.plan.next_renewal = `${formatted_date} ${timestamp}`
 			}
+			this.dialog_modify_plan.date_selector = false
+		},
+		previewCode ( text ) {
+			maxLength = 40
+			if (text.length > maxLength) {
+				return text.substring(0, maxLength) + '...';
+			}
+			return text;
+		},
+		intervalLabel ( interval ) {
+			units = [] 
+			units[1] = "monthly"
+			units[3] = "quarterly"
+			units[6] = "biannually"
+			units[12] = "yearly"
+			return units[ interval ]
+		},
+		safeUrl ( url ) {
+			return url.replaceAll( '#', '%23' )
+		},
+		timeago ( timestamp ){
+			return moment.utc( timestamp, "YYYY-MM-DD hh:mm:ss").fromNow();
+		},
+		formatTime ( value ) {
+			var sec_num = parseInt(value, 10); // don't forget the second param
+			var hours   = Math.floor(sec_num / 3600);
+			var minutes = Math.floor((sec_num - (hours * 3600)) / 60);
+			var seconds = sec_num - (hours * 3600) - (minutes * 60);
+
+			if (hours   < 10) {hours   = "0"+hours;}
+			if (minutes < 10) {minutes = "0"+minutes;}
+			if (seconds < 10) {seconds = "0"+seconds;}
+			return minutes + ':' + seconds;
+		},
+		formatProvider (value) {
+			if (value == 'wpengine') {
+				return "WP Engine"
+			}
+			if (value == 'kinsta') {
+				return "Kinsta"
+			}
+			if (value == 'rocketdotnet') {
+				return "Rocket.net"
+			}
+		},
+		formatSize (fileSizeInBytes) {
+			var i = -1;
+			var byteUnits = [' kB', ' MB', ' GB', ' TB', 'PB', 'EB', 'ZB', 'YB'];
+			do {
+				fileSizeInBytes = fileSizeInBytes / 1024;
+				i++;
+			} while (fileSizeInBytes > 1024);
+    		return Math.max(fileSizeInBytes, 0.1).toFixed(1) + byteUnits[i];
+		},
+		formatGBs (fileSizeInBytes) {
+			fileSizeInBytes = fileSizeInBytes / 1024 / 1024 / 1024;
+			return Math.max(fileSizeInBytes, 0.1).toFixed(2);
+		},
+		formatLargeNumbers (number) {
+			if ( isNaN(number) || number == null ) {
+				return null;
+			} else {
+				return number.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,');
+			}
+		},
+		formatk (num) {
+			if (num < 9999 ) {
+				return numeral(num).format('0,0');
+			}
+			if (num < 99999 ) {
+				return numeral(num).format('0.0a');
+			}
+			if (num < 999999 ) {
+				return numeral(num).format('0a');
+			}
+			return numeral(num).format('0.00a');
+		},
+		formatPercentage (percentage) {
+			return Math.max(percentage, 0.1).toFixed(0);
+		},
+		formatPercentageFixed (percentage) {
+			return (Math.max(percentage, 0.1) * 100 ).toFixed(2) + '%';
+		},
+		account_storage_percentage ( account ) {
+			percentage = ( account.plan.usage.storage / ( account.plan.limits.storage * 1024 * 1024 * 1024 ) ) * 100
+			percentage_formatted = Math.max(percentage, 0.1).toFixed(0)
+			results = `<small>${percentage_formatted}</small>`
+			if ( percentage >= 100 ) {
+				results = `<i aria-hidden="true" class="v-icon notranslate mdi mdi-check"></i>`
+			}
+			return results
+		},
+		account_visits_percentage ( account ) {
+			percentage = ( account.plan.usage.visits / account.plan.limits.visits ) * 100
+			percentage_formatted = Math.max(percentage, 0.1).toFixed(0)
+			results = `<small>${percentage_formatted}</small>`
+			if ( percentage >= 100 ) {
+				results = `<i aria-hidden="true" class="v-icon notranslate mdi mdi-check"></i>`
+			}
+			return results
+		},
+		account_site_percentage ( account ) {
+			percentage = account.plan.usage.sites / account.plan.limits.sites * 100
+			percentage_formatted = Math.max(percentage, 0.1).toFixed(0)
+			results = `<small>${percentage_formatted}</small>`
+			if ( percentage >= 100 ) {
+				results = `<i aria-hidden="true" class="v-icon notranslate mdi mdi-check"></i>`
+			}
+			return results
+		},
+		pretty_timestamp (date) {
+			// takes in '2018-06-18 19:44:47' then returns "Monday, Jun 18, 2018, 7:44 PM"
+			formatted_date = new Date(date).toLocaleTimeString("en-us", pretty_timestamp_options);
+			return formatted_date;
+		},
+		pretty_timestamp_short (date) {
+			// takes in '2018-06-18 19:44:47' then returns "Monday, Jun 18, 2018, 7:44 PM"
+			formatted_date = new Date(date).toLocaleDateString("en-us", {
+				year: "numeric", month: "long", day: "numeric"
+			})
+			return formatted_date
+		},
+		pretty_timestamp_epoch (date) {
+			// takes in '1577584719' then returns "Monday, Jun 18, 2018, 7:44 PM"
+			d = new Date(0);
+			d.setUTCSeconds(date);
+			formatted_date = d.toLocaleTimeString("en-us", pretty_timestamp_options);
+			return formatted_date;
 		},
 		filterFiles( site_id, hash ) {
 			site = this.dialog_site.site
@@ -14754,93 +15323,160 @@ const app = createApp({
 			search = quicksave.search;
 			quicksave.filtered_files = quicksave.view_files.filter( file => file.includes( search ) );
 		},
-		filteredSites( value ) {
-			if ( value ) {
-				return true
-			}
-			return false
-		},
 		filteredAccounts( value ) {
 			if ( value ) {
 				return true
 			}
 			return false
 		},
-		filterUnassigned() {
-			this.sites.forEach( s => {
-				if  ( s.account_id == "" || s.account_id == "0" ) {
-					s.filtered = true
-				} else {
-					s.filtered = false
-				}
-			})
+		clearSiteFilters() {
+			this.search = '';
+			this.isUnassignedFilterActive = false;
+			this.applied_theme_filters = [];
+			this.applied_plugin_filters = [];
+			// The watcher on combinedAppliedFilters will clear the version/status data.
+			
+			// Manually reset all sites to be visible. The computed property will then re-evaluate.
+			this.sites.forEach(site => {
+				site.filtered = true;
+			});
+
+			this.snackbar.message = "Filters cleared.";
+			this.snackbar.show = true;
 		},
-		filterOutstanding() {
-			this.accounts.forEach( account => {
-				if ( account.metrics.outstanding_invoices && account.metrics.outstanding_invoices > 0 ) {
-					account.filtered = true
+		toggleUnassignedFilter() {
+			this.isUnassignedFilterActive = !this.isUnassignedFilterActive;
+		},
+		applySiteFilters() {
+			this.sites.forEach(site => {
+				// This logic assumes only one filter type (unassigned) sets the flag.
+				// If advanced filters are also used, they will override this.
+				if (this.isUnassignedFilterActive) {
+					site.filtered = site.account_id === "" || site.account_id === "0";
 				} else {
-					account.filtered = false
+					// If the unassigned filter is off, we must not interfere with the advanced filter.
+					// A more complex integration is needed if they must work together.
+					// For now, this assumes they are used separately.
+					if (!this.applied_site_filter.length > 0) {
+						site.filtered = true;
+					}
 				}
-			})
+			});
+		},
+		toggleEmptyFilter() {
+			this.isEmptyFilterActive = !this.isEmptyFilterActive;
+			this.applyAccountFilters();
+		},
+		clearAccountFilters() {
+			this.account_search = '';
+			this.isOutstandingFilterActive = false;
+			this.isEmptyFilterActive = false;
+			this.applyAccountFilters();
+			this.snackbar.message = "Filters cleared.";
+			this.snackbar.show = true;
+		},
+		toggleOutstandingFilter() {
+			this.isOutstandingFilterActive = !this.isOutstandingFilterActive;
+			this.applyAccountFilters();
+		},
+		applyAccountFilters() {
+			this.accounts.forEach(account => {
+				let passesFilter = true;
+
+				if (this.isOutstandingFilterActive) {
+					passesFilter = passesFilter && (account.metrics.outstanding_invoices && account.metrics.outstanding_invoices > 0);
+				}
+
+				if (this.isEmptyFilterActive) {
+					passesFilter = passesFilter && (account.metrics.users === 0 && account.metrics.sites === 0 && account.metrics.domains === 0);
+				}
+
+				const searchLower = this.account_search ? this.account_search.toLowerCase() : '';
+				if (searchLower) {
+					const nameMatch = account.name && account.name.toLowerCase().includes(searchLower);
+					passesFilter = passesFilter && nameMatch;
+				}
+
+				account.filtered = passesFilter;
+			});
+		},
+		updatePrimaryFilters(type, value) {
+			// This method ensures new filter items have properties to hold their selections
+			value.forEach(item => {
+				if (!item.selected_versions) item.selected_versions = [];
+				if (!item.selected_statuses) item.selected_statuses = [];
+			});
+
+			if (type === 'themes') {
+				this.applied_theme_filters = value;
+				this.themeFilterMenu = false;
+			} else if (type === 'plugins') {
+				this.applied_plugin_filters = value;
+				this.pluginFilterMenu = false;
+			}
+			this.filterSites();
+		},
+		getVersionsForFilter(filterName) {
+			if (!this.site_filter_version) return [];
+			const filterData = this.site_filter_version.find(f => f && f.name === filterName);
+			return filterData ? filterData.versions : [];
+		},
+		getStatusesForFilter(filterName) {
+			if (!this.site_filter_status) return [];
+			const filterData = this.site_filter_status.find(f => f && f.name === filterName);
+			return filterData ? filterData.statuses : [];
 		},
 		filterSites() {
-
-			if ( this.applied_site_filter.length > 0 || this.search ) {
-
-				search = this.search;
-				filterby = this.applied_site_filter;
-				filterbyversions = this.applied_site_filter_version;
-				filterbystatuses = this.applied_site_filter_status;
-				filter_versions = [];
-				filter_statuses = [];
-				versions = [];
-				statuses = [];
-
-				if ( this.applied_site_filter_version.length > 0 ) {
-					// Find all themes/plugins which have selected version
-					this.applied_site_filter_version.forEach(filter => {
-						if(!versions.includes(filter.slug)) {
-							versions.push(filter.slug);
-						}
-					})
-					}
-
-				if ( this.applied_site_filter_status.length > 0 ) {
-					// Find all themes/plugins which have selcted version
-					this.applied_site_filter_status.forEach(filter => {
-						if(!statuses.includes(filter.slug)) {
-							statuses.push(filter.slug);
-					}
-					})
-				}
-
-				if ( filterby ) {
-					this.fetchFilterVersions ( filterby )
-					this.fetchFilterStatus ( filterby )
-					site_filters = {
-						filters: this.applied_site_filter,
-						versions: this.applied_site_filter_version,
-						statuses: this.applied_site_filter_status,
-							}
-					this.fetchFilteredSites ( site_filters )
-							}
-
-				}
-
-				// Neither filter is set so set all sites to filtered true.
-				if ( this.applied_site_filter.length == 0 && !this.search ) {
-					this.site_filter_status = [];
-					this.site_filter_version = [];
-				this.sites.forEach( s => {
-					s.filtered = true
+			// If no advanced filters are selected, fetch all sites.
+			if (this.combinedAppliedFilters.length === 0) {
+				axios.post('/wp-json/captaincore/v1/filters/sites', {}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
 				})
-				}
+				.then(response => {
+					const sites_filtered_by_backend = new Set(response.data.sites);
+					this.sites.forEach(s => {
+						s.filtered = sites_filtered_by_backend.has(s.site);
+					});
+				});
+				return;
+			}
 
-				this.page = 1;
-		}
+			// Consolidate selected versions and statuses from individual filters
+			const allSelectedVersions = this.combinedAppliedFilters.flatMap(filter => filter.selected_versions || []);
+			const allSelectedStatuses = this.combinedAppliedFilters.flatMap(filter => filter.selected_statuses || []);
+
+			// Construct the filter object for the backend
+			const filters = {
+				logic: this.filter_logic,
+				version_logic: this.filter_version_logic, // Add new version logic
+				status_logic: this.filter_status_logic, // Add new status logic
+				themes: this.applied_theme_filters.map( ({ name, title, search, type }) => ({ name, title, search, type }) ),
+				plugins: this.applied_plugin_filters.map( ({ name, title, search, type }) => ({ name, title, search, type }) ),
+				versions: allSelectedVersions,
+				statuses: allSelectedStatuses,
+			};
+
+			axios.post('/wp-json/captaincore/v1/filters/sites', filters, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				const sites_filtered_by_backend = new Set(response.data.sites);
+				this.sites.forEach(s => {
+					s.filtered = sites_filtered_by_backend.has(s.site);
+				});
+			})
+			.catch(error => {
+				console.error("Error fetching filtered sites:", error);
+			});
+
+			this.page = 1;
+		},
 	}
-})
+});
+
+app.use(vuetify);
+app.component('file-upload', VueUploadComponent);
+app.mount('#app');
 
 </script>
 <?php if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
