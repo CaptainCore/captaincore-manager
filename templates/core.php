@@ -38,57 +38,38 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 </head>
 <body>
 <div id="app" v-cloak>
-	<v-app :style="{backgroundColor: $vuetify.theme.themes.light.accent}">
-	  <v-app-bar color="accent" dense app flat class="pa-0" height="60px">
-		<v-list flat color="accent" :class="{ grow: route != 'login' && route != 'welcome' && route != 'connect' }">
-		<v-list-item :href="configurations.path" @click.prevent="goToPath( '/' )" flat class="not-active pl-0">
-			<v-img :src="configurations.logo" contain :max-width="configurations.logo_width == '' ? 32 : configurations.logo_width" v-if="configurations.logo" class="mr-4"></v-img>
+	<v-app :style="{backgroundColor: 'rgb(var(--v-theme-accent))'}" :theme="theme">
+	  <v-app-bar color="accent" density="compact" app flat class="pa-2">
+		<v-list flat bg-color="transparent" :class="{ grow: route != 'login' && route != 'welcome' && route != 'connect' }" style="z-index: 10;">
+		<v-list-item :href="configurations.path" @click.prevent="goToPath( '/' )" flat class="not-active">
+			<template v-slot:prepend>
+				<div style="width:40px;">
+					<v-img :src="configurations.logo" :max-width="configurations.logo_width == '' ? 32 : configurations.logo_width" v-if="configurations.logo" class="pr-2"></v-img>
+				</div>
+			</template>
 			<span v-show="configurations.logo_only != false">{{ configurations.name }}</span>
 		</v-list-item>
 		</v-list>
 		<v-spacer></v-spacer>
-		<template v-slot:extension v-if="$vuetify.breakpoint.smAndDown && ( route != 'login' && route != 'welcome' && route != 'connect' )">
-		<v-bottom-navigation v-model="selected_nav" color="primary" class="elevation-0" background-color="transparent" height="37px">
-			<v-btn class="pa-0" value="" style="display:none">
-				<span class="v-tab"></span>
-			</v-btn>
-			<v-btn class="pa-0" value="sites" :href=`${configurations.path}sites` @click.prevent="goToPath( '/sites' )">
-				<span class="v-tab">Sites</span>
-			</v-btn>
-			<v-btn class="pa-0" value="domains" :href=`${configurations.path}domains` @click.prevent="goToPath( '/domains' )">
-				<span class="v-tab">Domains</span>
-			</v-btn>
-			<v-btn class="pa-0" value="accounts" :href=`${configurations.path}accounts` @click.prevent="goToPath( '/accounts' )">
-				<span class="v-tab">Accounts</span>
-			</v-btn>
-			<v-btn class="pa-0" value="billing" :href=`${configurations.path}billing` @click.prevent="goToPath( '/billing' )" v-if="modules.billing">
-				<span class="v-tab">Billing</span>
-			</v-btn>
-		</v-bottom-navigation>
-		</template>
 		<template v-if="route != 'login' && route != 'welcome' && route != 'connect'">
-		<v-bottom-navigation v-show="! $vuetify.breakpoint.smAndDown" v-model="selected_nav" color="primary" class="elevation-0" background-color="transparent" height="37px">
-			<v-btn class="pa-0" value="" style="display:none">
-				<span class="v-tab"></span>
-			</v-btn>
-			<v-btn class="pa-0" value="sites" :href=`${configurations.path}sites` @click.prevent="goToPath( '/sites' )">
-				<span class="v-tab">Sites</span>
-			</v-btn>
-			<v-btn class="pa-0" value="domains" :href=`${configurations.path}domains` @click.prevent="goToPath( '/domains' )">
-				<span class="v-tab">Domains</span>
-			</v-btn>
-			<v-btn class="pa-0" value="accounts" :href=`${configurations.path}accounts` @click.prevent="goToPath( '/accounts' )">
-				<span class="v-tab">Accounts</span>
-			</v-btn>
-			<v-btn class="pa-0" value="billing" :href=`${configurations.path}billing` @click.prevent="goToPath( '/billing' )" v-if="modules.billing">
-				<span class="v-tab">Billing</span>
-			</v-btn>
-		</v-bottom-navigation>
+		<div v-if="! isMobile" style="z-index: 1;">
+		<v-tabs v-model="selected_nav">
+			<v-tab class="pa-0" value="" style="display:none"></v-tab>
+			<v-tab class="pa-0" value="sites" :href=`${configurations.path}sites` @click.prevent="goToPath( '/sites' )">Sites</v-tab>
+			<v-tab class="pa-0" value="domains" :href=`${configurations.path}domains` @click.prevent="goToPath( '/domains' )">Domains</v-tab>
+			<v-tab class="pa-0" value="accounts" :href=`${configurations.path}accounts` @click.prevent="goToPath( '/accounts' )">Accounts</v-tab>
+			<v-tab class="pa-0" value="billing" :href=`${configurations.path}billing` @click.prevent="goToPath( '/billing' )" v-if="modules.billing">Billing</v-tab>
+		</v-tabs>
+		</div>
+		<v-spacer></v-spacer>
 		<div class="flex" style="opacity:0;"><textarea id="clipboard" style="height:1px;width:10px;display:flex;cursor:default"></textarea></div>
+		<v-btn @click="toggleTheme" icon style="z-index: 10;">
+            <v-icon>{{ theme === 'light' ? 'mdi-weather-sunny' : 'mdi-weather-night' }}</v-icon>
+        </v-btn>
 		<v-menu v-model="notifications" :close-on-content-click="false" content-class="elevation-0 v-sheet--outlined" offset-y rounded="xl">
-		<template v-slot:activator="{ on, attrs }">
-			<v-btn icon v-bind="attrs" v-on="on" v-show="route != 'login'">
-			<v-badge dot color="error" :value="provider_actions.length">
+		<template v-slot:activator="{ props }">
+			<v-btn icon v-bind="props" v-show="route != 'login'" style="z-index: 10;">
+			<v-badge dot color="error" :model-value="hasProviderActions">
 				<v-icon>mdi-bell-ring</v-icon>
 			</v-badge>
 			</v-btn>
@@ -96,137 +77,55 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card width="600">
 			<v-list>
 			<v-list-item>
-				<v-list-item-content>
 				<v-list-item-title>Provider Activity</v-list-item-title>
-				</v-list-item-content>
 			</v-list-item>
 			</v-list>
 			<v-divider></v-divider>
 			<v-card flat v-show="provider_actions.length == 0">
 				<v-card-text>
-					<v-alert type="info" text>There are no background activities.</v-alert>
+					<v-alert type="info" variant="tonal">There are no background activities.</v-alert>
 				</v-card-text>
 			</v-card>
-			<v-list subheader three-line>
+			<v-list subheader lines="3">
 			<v-list-item v-for="item in provider_actions">
-				<v-list-item-content>
-					<v-list-item-title>{{ item.created_at | pretty_timestamp }}</v-list-item-title>
-					<v-list-item-subtitle>{{ item.action.message }}</v-list-item-subtitle>
-				</v-list-item-content>
+				<v-list-item-title>{{ pretty_timestamp( item.created_at ) }}</v-list-item-title>
+				<v-list-item-subtitle>{{ item.action.message }}</v-list-item-subtitle>
 			</v-list-item>
 			</v-list>
 		</v-card>
 	  </v-menu>
-	  <v-menu offset-y bottom dense allow-overflow content-class="elevation-0 v-sheet--outlined" rounded="xl">
-		<template v-slot:activator="{ on }">
-		<v-list color="transparent">
-		<v-list-item link v-on="on" color="primary">
-			<v-list-item-avatar rounded class="mr-0">
+	  <v-menu location="bottom end" density="compact" rounded="lg">
+		<template v-slot:activator="{ props }">
+			<v-btn v-bind="props" variant="text" rounded="lg" style="z-index:10;height: 48px;">
+			<v-avatar size="32" rounded="sm">
 				<v-img :src="gravatar"></v-img>
-			</v-list-item-avatar>
-			<v-list-item-icon>
-				<v-icon>mdi-chevron-down</v-icon>
-			</v-list-item-icon>
-		</v-list-item>
+			</v-avatar>
+			<v-icon class="ml-1">mdi-chevron-down</v-icon>
+			</v-btn>
+		</template>
+
+		<v-list min-width="240px" rounded="xl" density="compact" border="thin" class="elevation-0 text-body-2">
+			<div class="body-2 mx-4 mb-1"><small>Welcome,</small><br />{{ current_user_display_name }}</div>
+			<v-divider></v-divider>
+			<v-list-subheader>Developers</v-list-subheader>
+			<v-list-item link :href="`${configurations.path}cookbook`" @click.prevent="goToPath('/cookbook')" title="Cookbook" prepend-icon="mdi-code-tags"></v-list-item>
+			<v-list-item link :href="`${configurations.path}vulnerability-scans`" @click.prevent="goToPath('/vulnerability-scans')" title="Vulnerability Scans" v-show="role == 'administrator'" prepend-icon="mdi-lock-open-alert"></v-list-item>
+			<v-list-item link :href="`${configurations.path}health`" @click.prevent="goToPath('/health')" title="Health" prepend-icon="mdi-ladybug"></v-list-item>
+			
+			<v-list-subheader v-show="role == 'administrator' || role == 'owner'">Administrator</v-list-subheader>
+			<v-list-item link :href="`${configurations.path}configurations`" @click.prevent="goToPath('/configurations')" title="Configurations" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-cogs"></v-list-item>
+			<v-list-item link :href="`${configurations.path}handbook`" @click.prevent="goToPath('/handbook')" title="Handbook" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-map"></v-list-item>
+			<v-list-item link :href="`${configurations.path}defaults`" @click.prevent="goToPath('/defaults')" title="Site Defaults" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-application"></v-list-item>
+			<v-list-item link :href="`${configurations.path}keys`" @click.prevent="goToPath('/keys')" title="SSH Keys" prepend-icon="mdi-key"></v-list-item>
+			<v-list-item link :href="`${configurations.path}subscriptions`" @click.prevent="goToPath('/subscriptions')" title="Subscriptions" v-show="role == 'administrator' && configurations.mode == 'hosting'" prepend-icon="mdi-repeat"></v-list-item>
+			<v-list-item link :href="`${configurations.path}users`" @click.prevent="goToPath('/users')" title="Users" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-account-multiple"></v-list-item>
+			
+			<v-list-subheader>User</v-list-subheader>
+			<v-list-item link :href="`${configurations.path}profile`" @click.prevent="goToPath('/profile')" title="Profile" prepend-icon="mdi-account-box"></v-list-item>
+			<v-list-item link v-if="footer.switch_to_link" :href="footer.switch_to_link" :title="footer.switch_to_text" prepend-icon="mdi-logout"></v-list-item>
+			<v-list-item link @click="signOut()" title="Log Out" prepend-icon="mdi-logout"></v-list-item>
 		</v-list>
-      </template>
-      <v-list min-width="240px" rounded dense>
-	  <div class="body-2 mx-2 mb-1"><small>Welcome,</small><br />{{ current_user_display_name }}</div>
-	  <v-divider></v-divider>
-	  <v-subheader>Developers</v-subheader>
-		<v-list-item link :href=`${configurations.path}cookbook` @click.prevent="goToPath( '/cookbook' )">
-        <v-list-item-icon>
-            <v-icon>mdi-code-tags</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>Cookbook</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-		<v-list-item link :href=`${configurations.path}health` @click.prevent="goToPath( '/health' )">
-          <v-list-item-icon>
-            <v-icon>mdi-ladybug</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>Health</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-		<v-subheader v-show="role == 'administrator' || role == 'owner'">Administrator</v-subheader>
-		<v-list-item link :href=`${configurations.path}configurations` @click.prevent="goToPath( '/configurations' )" v-show="role == 'administrator' || role == 'owner'">
-          <v-list-item-icon>
-            <v-icon>mdi-cogs</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>Configurations</v-list-item-title>
-          </v-list-item-content>
-		</v-list-item>
-		<v-list-item link :href=`${configurations.path}handbook` @click.prevent="goToPath( '/handbook' )" v-show="role == 'administrator' || role == 'owner'">
-          <v-list-item-icon>
-            <v-icon>mdi-map</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>Handbook</v-list-item-title>
-          </v-list-item-content>
-		</v-list-item>
-		<v-list-item link :href=`${configurations.path}defaults` @click.prevent="goToPath( '/defaults' )" v-show="role == 'administrator' || role == 'owner'">
-          <v-list-item-icon>
-            <v-icon>mdi-application</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>Site Defaults</v-list-item-title>
-          </v-list-item-content>
-		</v-list-item>
-		<v-list-item link :href=`${configurations.path}keys` @click.prevent="goToPath( '/keys' )">
-          <v-list-item-icon>
-            <v-icon>mdi-key</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>SSH Keys</v-list-item-title>
-          </v-list-item-content>
-		</v-list-item>
-		</v-list-item-group>
-		<v-list-item link :href=`${configurations.path}subscriptions` @click.prevent="goToPath( '/subscriptions' )" v-show="role == 'administrator' && configurations.mode == 'hosting'">
-          <v-list-item-icon>
-            <v-icon>mdi-repeat</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>Subscriptions</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-		<v-list-item link :href=`${configurations.path}users` @click.prevent="goToPath( '/users' )" v-show="role == 'administrator' || role == 'owner'">
-          <v-list-item-icon>
-            <v-icon>mdi-account-multiple</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>Users</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-		<v-subheader>User</v-subheader>
-	  	<v-list-item link :href=`${configurations.path}profile` @click.prevent="goToPath( '/profile' )">
-          <v-list-item-icon>
-            <v-icon>mdi-account-box</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>Profile</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-		<v-list-item link v-if="footer.switch_to_link" :href="footer.switch_to_link">
-          <v-list-item-icon>
-            <v-icon>mdi-logout</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>{{ footer.switch_to_text }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-	  	<v-list-item link @click="signOut()">
-          <v-list-item-icon>
-            <v-icon>mdi-logout</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>Log Out</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-      </v-list>
-      </v-menu>
+		</v-menu>
       </template>
       </v-app-bar>
 	  <v-main>
@@ -7396,17 +7295,58 @@ stripe = ""
 <?php } ?>
 (function(){var w=window;var ic=w.Intercom;if(typeof ic==="function"){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments);};i.q=[];i.c=function(args){i.q.push(args);};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/<?= CaptainCore\Configurations::get()->intercom_embed_id; ?>';var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);};if(document.readyState==='complete'){l();}else if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();			
 ajaxurl = "/wp-admin/admin-ajax.php"
-Vue.component('file-upload', VueUploadComponent)
-new Vue({
-	el: '#app',
-	vuetify: new Vuetify({
-		theme: {
-			themes: {
-				light: <?php echo json_encode( CaptainCore\Configurations::colors() ); ?>,
+
+const captainCoreColors = <?php echo json_encode( CaptainCore\Configurations::colors() ); ?>;
+
+const { createApp, ref, computed, reactive } = Vue;
+const { createVuetify, useDisplay, useGoTo } = Vuetify;
+
+const vuetify = createVuetify({
+	components: {
+		...Vuetify.components,      // Spread all standard Vuetify components
+	},
+	theme: {
+		defaultTheme: 'light',
+		themes: {
+			light: {
+				dark: false,
+				colors: captainCoreColors
 			},
-		},
-	}),
-	data: {
+			dark: {
+				dark: true,
+				colors: {
+					primary: '#757575',
+					secondary: '#424242',
+					accent: '#313131',
+					error: '#FF5252',
+					info: '#2196F3',
+					success: '#4CAF50',
+					warning: '#FFC107',
+                    surface: '#212121',
+                    background: '#121212',
+				}
+			}
+		}
+	}
+});
+
+const app = createApp({
+	setup() {
+        // Call useDisplay to get reactive display properties
+        const { smAndDown, mdAndUp, lgOnly, name } = useDisplay();
+		const currentThemeColors = reactive(captainCoreColors);
+		const goTo = useGoTo()
+
+        return {
+            isMobile: smAndDown, // Expose smAndDown to the template as 'isMobile'
+            currentBreakpoint: name, // Example: expose the current breakpoint name
+			currentThemeColors,
+			goTo
+        };
+    },
+    data() {
+	  return {
+		theme: 'light',
 		colors: { 
 			primary: false,
 			secondary: false,
@@ -8013,6 +7953,11 @@ new Vue({
 		}
 	},
 	mounted() {
+		const savedTheme = localStorage.getItem('captaincore-theme');
+        if (savedTheme) {
+            this.theme = savedTheme;
+            this.$vuetify.theme.global.name.value = savedTheme;
+        }
 		axios.interceptors.response.use(
 			response => response,
 			error => {
@@ -8295,6 +8240,11 @@ new Vue({
 		}
 	},
 	methods: {
+		toggleTheme() {
+            this.theme = this.theme === 'light' ? 'dark' : 'light';
+            this.$vuetify.theme.global.name.value = this.theme;
+            localStorage.setItem('captaincore-theme', this.theme);
+        },
 		updateRoute( href ) {
 			// Remove trailing slash
 			if ( href.length > 1 && href.slice(-1) == "/" ) {
@@ -8666,7 +8616,7 @@ new Vue({
 			};
 		},
 		resetColors() {
-			this.$vuetify.theme.themes.light = {
+			this.currentThemeColors = {
 				primary: '#1976D2',
 				secondary: '#424242',
 				accent: '#82B1FF',
@@ -8686,7 +8636,7 @@ new Vue({
 		},
 		saveGlobalConfigurations() {
 			this.dialog_configure_defaults.loading = true;
-			this.configurations.colors = this.$vuetify.theme.themes.light
+			this.configurations.colors = this.currentThemeColors
 			// Prep AJAX request
 			var data = {
 				'action': 'captaincore_local',
