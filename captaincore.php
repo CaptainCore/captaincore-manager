@@ -495,6 +495,32 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 }
 
+/**
+ * REST API callback to update a process log entry.
+ *
+ * @param WP_REST_Request $request The request object.
+ * @return WP_REST_Response|WP_Error The response object.
+ */
+function captaincore_update_log_entry_func( WP_REST_Request $request ) {
+	$process_log        = (object) $request->get_json_params();
+	$site_ids           = array_column( $process_log->websites, 'site_id' );
+	$process_log_update = [
+		'process_id'  => $process_log->process,
+		'user_id'     => get_current_user_id(),
+		'description' => str_replace( "\'", "'", $process_log->description_raw ),
+		'public'      => $process_log->public,
+		'status'      => $process_log->status,
+		'updated_at'  => date( 'Y-m-d H:i:s' ),
+	];
+	( new CaptainCore\ProcessLogs )->update( (array) $process_log_update, [ "process_log_id" => $process_log->process_log_id ] );
+	( new CaptainCore\ProcessLog( $process_log->process_log_id) )->assign_sites( $site_ids );
+	$timelines = [];
+	foreach ( $site_ids as $site_id ) {
+		$timelines[ $site_id ] = ( new CaptainCore\Site( $site_id ) )->process_logs();
+	}
+	return new WP_REST_Response( $timelines, 200 );
+}
+
 function captaincore_accounts_func( $request ) {
 	return ( new CaptainCore\Accounts )->list();
 }
@@ -1677,7 +1703,21 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
-	// Custom endpoint for CaptainCore API
+	register_rest_route(
+		'captaincore/v1', '/process-logs/(?P<id>[\d]+)', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_update_log_entry_func',
+			'permission_callback' => function (WP_REST_Request $request) {
+				$log_update = (object) $request->get_json_params();
+				if ( empty( $log_update->websites ) ) {
+					return new WP_Error( 'missing_sites', 'Associated sites are required.', [ 'status' => 400 ] );
+				}
+				$site_ids = array_column( $log_update->websites, 'site_id' );
+				return captaincore_verify_permissions( $site_ids );
+			},
+		]
+	);
+
 	register_rest_route(
 		'captaincore/v1', '/missive', [
 			'methods'       => 'POST',
