@@ -7373,6 +7373,11 @@ const app = createApp({
 		configurations_step: 0,
 		configurations_loading: true,
 		notifications: false,
+		themeFilterMenu: false,
+		pluginFilterMenu: false,
+		isUnassignedFilterActive: false,
+		isOutstandingFilterActive: false,
+		isEmptyFilterActive: false,
 		provider_actions: [],
 		hosting_intervals: [{ text: 'Yearly', value: '12' },{ text: 'Monthly', value: '1' },{ text: 'Quarterly', value: '3' },{ text: 'Biannual', value: '6' }],
 		footer_height: "28px",
@@ -7739,6 +7744,9 @@ const app = createApp({
 		sites_selected: [],
 		sites_filtered: [],
 		site_selected: null,
+		filter_logic: "and",
+		filter_version_logic: "and",
+		filter_status_logic: "and",
 		site_filters: <?php echo json_encode( ( new CaptainCore\Environments )->filters() ); ?>,
 		site_filter_version: null,
 		site_filter_status: null,
@@ -7755,38 +7763,36 @@ const app = createApp({
 		users: [],
 		user_search: "",
 		header_themes: [
-			{ text: 'Name', value: 'title' },
-			{ text: 'Slug', value: 'name' },
-			{ text: 'Version', value: 'version' },
-			{ text: 'Status', value: 'status', width: "100px" },
-			{ text: 'Actions', value: 'actions', width: "90px", sortable: false }
+			{ title: 'Name', value: 'title' },
+			{ title: 'Slug', value: 'name' },
+			{ title: 'Version', value: 'version' },
+			{ title: 'Status', value: 'status', width: "100px" },
+			{ title: 'Actions', value: 'actions', width: "90px", sortable: false }
 		],
 		header_plugins: [
-			{ text: 'Name', value: 'title' },
-			{ text: 'Slug', value: 'name' },
-			{ text: 'Version', value: 'version' },
-			{ text: 'Status', value: 'status', width: "100px" },
-			{ text: 'Actions', value: 'actions', width: "90px", sortable: false }
+			{ title: 'Name', value: 'title' },
+			{ title: 'Slug', value: 'name' },
+			{ title: 'Version', value: 'version' },
+			{ title: 'Status', value: 'status', width: "100px" },
+			{ title: 'Actions', value: 'actions', width: "90px", sortable: false }
 		],
 		header_updatelog: [
-			{ text: 'Date', value: 'date' },
-			{ text: 'Type', value: 'type' },
-			{ text: 'Name', value: 'name' },
-			{ text: 'Old Version', value: 'old_version' },
-			{ text: 'New Version', value: 'new_version' },
-			{ text: 'Status', value: 'status' }
+			{ title: 'Date', value: 'date' },
+			{ title: 'Type', value: 'type' },
+			{ title: 'Name', value: 'name' },
+			{ title: 'Old Version', value: 'old_version' },
+			{ title: 'New Version', value: 'new_version' },
+			{ title: 'Status', value: 'status' }
 		],
-		 header_users: [
-			{ text: 'Login', value: 'user_login' },
-			{ text: 'Display Name', value: 'display_name' },
-			{ text: 'Email', value: 'user_email' },
-			{ text: 'Role(s)', value: 'roles' },
-			{ text: 'Actions', value: 'actions', sortable: false }
+		header_users: [
+			{ title: 'Login', key: 'user_login' },
+			{ title: 'Display Name', key: 'display_name' },
+			{ title: 'Email', key: 'user_email' },
+			{ title: 'Role(s)', key: 'roles' },
+			{ title: '', key: 'actions', sortable: false, align: 'end' }
 		],
-		applied_site_filter: [],
-		applied_site_filter_logic: [],
-		applied_site_filter_version: [],
-		applied_site_filter_status: [],
+		applied_theme_filters: [],
+		applied_plugin_filters: [],
 		select_bulk_action: null,
 		bulk_actions: [
 			{ header: "Script" },
@@ -8037,6 +8043,81 @@ const app = createApp({
 			})
 			return count
 		},
+		 themeFiltersApplied() {
+			return this.applied_theme_filters.length > 0;
+		},
+		pluginFiltersApplied() {
+			return this.applied_plugin_filters.length > 0;
+		},
+		isAnySiteFilterActive() {
+			return this.isUnassignedFilterActive || (this.search && this.search.length > 0) || (this.combinedAppliedFilters && this.combinedAppliedFilters.length > 0);
+		},
+		combinedAppliedFilters() {
+			return [...this.applied_theme_filters, ...this.applied_plugin_filters];
+		},
+		isAnyAccountFilterActive() {
+			return this.isOutstandingFilterActive || this.isEmptyFilterActive || (this.account_search && this.account_search.length > 0);
+		},
+		emptyAccountCount() {
+			let count = 0;
+			this.accounts.forEach(account => {
+				if (account.metrics.users === 0 && account.metrics.sites === 0 && account.metrics.domains === 0) {
+					count++;
+				}
+			});
+			return count;
+		},
+		totalAdvancedFilters() {
+			if (!this.combinedAppliedFilters) {
+				return 0;
+			}
+			const primaryCount = this.combinedAppliedFilters.length;
+			const secondaryCount = this.combinedAppliedFilters.reduce((acc, filter) => {
+				return acc + (filter.selected_versions?.length || 0) + (filter.selected_statuses?.length || 0);
+			}, 0);
+			return primaryCount + secondaryCount;
+		},
+		filteredAccountsData() {
+			let filtered = this.accounts.filter(account => account.filtered);
+
+			if (this.isOutstandingFilterActive) {
+				filtered = filtered.filter(account => account.metrics.outstanding_invoices && account.metrics.outstanding_invoices > 0);
+			}
+
+			if (this.isEmptyFilterActive) {
+				filtered = filtered.filter(account => account.metrics.users === 0 && account.metrics.sites === 0 && account.metrics.domains === 0);
+			}
+
+			const searchLower = this.account_search ? this.account_search.toLowerCase() : '';
+			if (searchLower) {
+				filtered = filtered.filter(account => {
+					const nameMatch = account.name && account.name.toLowerCase().includes(searchLower);
+					return nameMatch;
+				});
+			}
+			return filtered;
+		},
+		filteredSites() {
+			// Start with the base list of sites, whose `filtered` property is managed by the API calls.
+			let filtered = this.sites.filter(site => site.filtered);
+
+			// Apply the unassigned filter
+			if (this.isUnassignedFilterActive) {
+				filtered = filtered.filter(site => site.account_id === "" || site.account_id === "0");
+			}
+
+			// Apply the text search
+			const searchLower = this.search ? this.search.toLowerCase() : '';
+			if (searchLower) {
+				filtered = filtered.filter(site => {
+					const nameMatch = site.name && site.name.toLowerCase().includes(searchLower);
+					const usernameMatch = site.site && site.site.toLowerCase().includes(searchLower);
+					return nameMatch || usernameMatch;
+				});
+			}
+
+			return filtered;
+		},
 		oustandingAccountCount() {
 			let count = 0
 			this.accounts.forEach( account => {
@@ -8114,7 +8195,7 @@ const app = createApp({
 			return this.sites.filter( s => s.connection_errors != "" )
 		},
 		filterCount() {
-			return this.applied_site_filter.length + this.applied_site_filter_version.length + this.applied_site_filter_status.length
+			return this.combinedAppliedFilters.length;
 		},
 		runningJobs() {
 			return this.jobs.filter(job => job.status != 'done' && job.status != 'error' ).length;
@@ -8497,18 +8578,23 @@ const app = createApp({
 		},
 		clearFilters() {
 			this.applied_site_filter = []
-			this.applied_site_filter_version = []
-			this.applied_site_filter_status = []
-			this.site_filter_version = []
-			this.site_filter_status = []
 			this.filterSites()
 		},
-		removeFilter (item) {
-			const index = this.applied_site_filter.indexOf(item.name)
-			if (index >= 0) { 
-				this.applied_site_filter.splice(index, 1);
-				this.filterSites();
-			}
+		closeVersionFilter(index) {
+			this.$nextTick(() => {
+				if (this.$refs.versionFilterRefs && this.$refs.versionFilterRefs[index]) {
+					this.$refs.versionFilterRefs[index].blur();
+				}
+			});
+			this.filterSites(); // Trigger filtering
+		},
+        closeStatusFilter(index) {
+			this.$nextTick(() => {
+				if (this.$refs.statusFilterRefs && this.$refs.statusFilterRefs[index]) {
+					this.$refs.statusFilterRefs[index].blur();
+				}
+			});
+			this.filterSites(); // Trigger filtering
 		},
 		user_name( user_id ) {
 			users = this.users.filter( u => u.user_id == user_id )
@@ -8740,7 +8826,17 @@ const app = createApp({
 			this.sites = this.sites.sort( this.compare( key, this.sort_direction ) );
 		},
 		siteSearch(value, search, item) {
-			search = search.toLowerCase()
+			const searchLower = search?.toString().toLowerCase() ?? '';
+			if (searchLower === '') {
+				return true; // Match all items if search is empty
+			}
+
+			const valueString = value?.toString().toLowerCase() ?? '';
+    		const valueMatch = valueString.includes(searchLower);
+			const usernameString = item?.username?.toString().toLowerCase() ?? '';
+			const usernameMatch = usernameString.includes(searchLower);
+			return valueMatch || usernameMatch;
+
 			return value != null &&
 				search != null &&
 				value.toString().includes(search) || item.username.toString().includes(search)
@@ -8893,9 +8989,7 @@ const app = createApp({
 								console.log( error.response )
 							});
 					}
-
 				}
-
 			}
 
 			// Automatically activate upload
@@ -9774,50 +9868,31 @@ const app = createApp({
 			})
 			this.states_selected = states_selected
 		},
-		fetchFilterVersions( filters ) {
-			filters = filters.map( f => f.name ).join(",")
-			if ( filters != "" ) {
-			axios.get(
-			`/wp-json/captaincore/v1/filters/${filters}/versions`, {
-				headers: {'X-WP-Nonce':this.wp_nonce}
-			})
-			.then(response => {
-				this.site_filter_version = response.data
-			})
-			}
-		},
-		fetchFilterStatus( filters ) {
-			filters = filters.map( f => f.name ).join(",")
-			if ( filters != "" ) {
-			axios.get(
-			`/wp-json/captaincore/v1/filters/${filters}/statuses`, {
-				headers: {'X-WP-Nonce':this.wp_nonce}
-			})
-			.then(response => {
-				this.site_filter_status = response.data
-			})
-			}
-		},
-		fetchFilteredSites( site_filters ) {
-			filters = site_filters.filters.map( f => f.name + "+" + f.type ).join(",")
-			versions = site_filters.versions.map( v => v.name + '+' + v.slug + '+' + v.type ).join(',')
-			statuses = site_filters.statuses.map( v => v.name + '+' + v.slug + '+' + v.type ).join(',')
-			if ( filters != "" ) {
-			axios.get(
-			`/wp-json/captaincore/v1/filters/${filters}/sites/versions=${versions}/statuses=${statuses}`, {
-				headers: {'X-WP-Nonce':this.wp_nonce}
-			})
-			.then(response => {
-				sites_filtered = response.data
-				this.sites.forEach( s => {
-					if ( sites_filtered.includes( s.site ) ) {
-						s.filtered = true
-					} else {
-						s.filtered = false
-					}
+		fetchFilteredSites() {
+			const themes = this.applied_theme_filters;
+			const plugins = this.applied_plugin_filters;
+			// Map the version and status objects to just their names, which the backend likely expects.
+			const versions = this.applied_site_filter_version.map(v => v.name);
+			const statuses = this.applied_site_filter_status.map(s => s.name);
+			
+			axios.post(
+				`/wp-json/captaincore/v1/filters`, {
+					themes,
+					plugins,
+					versions,
+					statuses
+				}, {
+					headers: {'X-WP-Nonce': this.wp_nonce}
 				})
-			})
-			}
+				.then(response => {
+					const sites_filtered_by_backend = new Set(response.data.sites);
+					this.sites.forEach(s => {
+						s.filtered = sites_filtered_by_backend.has(s.site);
+					});
+				})
+				.catch(error => {
+					console.error("Error fetching filtered sites:", error);
+				});
 		},
 		fetchSites() {
 			this.sites_loading = false
