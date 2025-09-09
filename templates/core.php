@@ -14598,7 +14598,7 @@ const app = createApp({
 
 </script>
 <?php if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.4.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 <script type='text/javascript' src='/wp-content/plugins/arve-pro/build/main.js'></script>
 <script type='text/javascript' src='/wp-content/plugins/advanced-responsive-video-embedder/build/main.js'></script>
 <?php } ?>
