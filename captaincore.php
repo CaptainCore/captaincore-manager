@@ -173,9 +173,9 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Error if site not valid
-	$current_site = ( new CaptainCore\Sites )->get( $site_id );
-	if ( $current_site == "" && $site_id != "" && $command != "default-get" && $command != "configuration-get" ) {
-		return new WP_Error( 'command_invalid', 'Invalid Command', [ 'status' => 404 ] );
+	$current_site = CaptainCore\Sites::get( $site_id );
+	if ( empty( $current_site ) && $site_id != "" && $command != "default-get" && $command != "configuration-get" ) {
+		return new WP_Error( 'command_invalid', "Invalid Command for $site_id", [ 'status' => 404 ] );
 	}
 
 	$site_name      = $current_site->site;
@@ -1372,7 +1372,7 @@ function captaincore_site_grant_access_func( $request ) {
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
-	
+
 	$account_ids         = $request['account_ids'];
 	if ( is_string( $account_ids ) ) {
 		$account_ids = [ $account_ids ];
@@ -1383,7 +1383,7 @@ function captaincore_site_grant_access_func( $request ) {
 			return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 		}
 	}
-		
+
 	$site                = new CaptainCore\Site( $site_id );
 	$accountsite         = new CaptainCore\AccountSite();
 	$current_account_ids = array_column ( $accountsite->where( [ "site_id" => $site_id ] ), "account_id" );
@@ -2392,7 +2392,6 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
-	// Custom endpoint for domains
 	register_rest_route(
 		'captaincore/v1', '/users/', [
 			'methods'       => 'GET',
@@ -2426,7 +2425,6 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
-	// Custom endpoint for CaptainCore billing
 	register_rest_route(
 		'captaincore/v1', '/billing/', [
 			'methods'       => 'GET',
@@ -5219,6 +5217,12 @@ function captaincore_footer_content_extracted() {
 		foreach( $results[2] as $match ) {
 			$output[] = $match;
 		}
+	}
+	if ( empty( $output ) ) {
+		return json_encode( [
+			"switch_to_link" => "",
+			"switch_to_text" => ""
+		] );
 	}
 	return json_encode( [
 		"switch_to_link" => html_entity_decode( $output[0] ),
