@@ -116,7 +116,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-list-item link :href="`${configurations.path}configurations`" @click.prevent="goToPath('/configurations')" title="Configurations" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-cogs"></v-list-item>
 			<v-list-item link :href="`${configurations.path}handbook`" @click.prevent="goToPath('/handbook')" title="Handbook" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-map"></v-list-item>
 			<v-list-item link :href="`${configurations.path}defaults`" @click.prevent="goToPath('/defaults')" title="Site Defaults" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-application"></v-list-item>
-			<v-list-item link :href="`${configurations.path}keys`" @click.prevent="goToPath('/keys')" title="SSH Keys" prepend-icon="mdi-key"></v-list-item>
+			<v-list-item link :href="`${configurations.path}keys`" @click.prevent="goToPath('/keys')" title="SSH Keys" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-key"></v-list-item>
 			<v-list-item link :href="`${configurations.path}subscriptions`" @click.prevent="goToPath('/subscriptions')" title="Subscriptions" v-show="role == 'administrator' && configurations.mode == 'hosting'" prepend-icon="mdi-repeat"></v-list-item>
 			<v-list-item link :href="`${configurations.path}users`" @click.prevent="goToPath('/users')" title="Users" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-account-multiple"></v-list-item>
 			
@@ -403,7 +403,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-btn>
 					<v-toolbar-title>Configure Mailgun for {{ dialog_site.site.name }}</v-toolbar-title>
 				</v-toolbar>
-				<v-card-text class="mt-4">
+				<v-card-text>
 					<v-text-field label="Mailgun Subdomain" v-model="dialog_site.site.mailgun" variant="underlined"></v-text-field>
 					<v-btn color="primary" @click="saveMailgun()">Save</v-btn>
 				</v-card-text>
@@ -1203,23 +1203,23 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<span class="body-2">Default Users</span>
 				<v-data-table :items="dialog_account.records.account.defaults.users" hide-default-header hide-default-footer v-if="typeof dialog_account.records.account.defaults.users == 'object'">
 				<template v-slot:body="{ items }">
-					<tr v-for="(item, index) in items" style="border-bottom: 0px;">
-						<td class="pa-1">
+					<tr v-for="(item, index) in items">
+						<td class="px-1" style="border: 0px;">
 							<v-text-field variant="underlined" :model-value="item.username" @update:model-value="item.username = $event" label="Username"></v-text-field>
 						</td>
-						<td class="pa-1">
+						<td class="px-1" style="border: 0px;">
 							<v-text-field variant="underlined" :model-value="item.email" @update:model-value="item.email = $event" label="Email"></v-text-field>
 						</td>
-						<td class="pa-1">
+						<td class="px-1" style="border: 0px;">
 							<v-text-field variant="underlined" :model-value="item.first_name" @update:model-value="item.first_name = $event" label="First Name"></v-text-field>
 						</td>
-						<td class="pa-1">
+						<td class="px-1" style="border: 0px;">
 							<v-text-field variant="underlined" :model-value="item.last_name" @update:model-value="item.last_name = $event" label="Last Name"></v-text-field>
 						</td>
-						<td class="pa-1" style="width:155px;">
+						<td class="px-1" style="border: 0px;width:155px;">
 							<v-select variant="underlined" :model-value="item.role" v-model="item.role" :items="roles" label="Role" item-title="name"></v-select>
 						</td>
-						<td class="pa-1" style="width:50px;">
+						<td class="px-1" style="border: 0px;width:50px;">
 							<v-btn variant="text" icon="mdi-delete" density="compact" color="primary" @click="deleteUserValue( index )"></v-btn>
 						</td>
 					</tr>
@@ -2048,7 +2048,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-toolbar-title>Copy Site {{ dialog_copy_site.site.name }} to...</v-toolbar-title>
 						</v-toolbar>
 						<v-card-text>
-							<v-container>
 								<v-autocomplete
 									:items="dialog_copy_site.options"
 									v-model="dialog_copy_site.destination"
@@ -2059,10 +2058,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									chips
 									closable-chips
 								></v-autocomplete>
-								<v-btn @click="startCopySite()" color="primary" class="mt-4">
+							<v-btn @click="startCopySite()" color="primary" class="mt-3">
 									Copy Site
 								</v-btn>
-							</v-container>
 						</v-card-text>
 					</v-card>
 				</v-dialog>
@@ -2812,9 +2810,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											</template>
 										</v-list-item>
 									</template>
-									<template v-slot:append>
+									<template v-slot:append v-if="primaryFilter.selected_versions?.length > 1">
 										<v-btn-toggle
-											v-if="primaryFilter.selected_versions?.length > 1"
 											v-model="filter_version_logic"
 											mandatory
 											density="compact"
@@ -2856,9 +2853,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											</template>
 										</v-list-item>
 									</template>
-									<template v-slot:append>
+									<template v-slot:append v-if="primaryFilter.selected_statuses?.length > 1">
 										<v-btn-toggle
-											v-if="primaryFilter.selected_statuses?.length > 1"
 											v-model="filter_status_logic"
 											mandatory
 											density="compact"
@@ -2875,6 +2871,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-row>
 				</v-card>
 				</v-card-text>
+				<v-card-text v-if="toggle_site">
 				<v-data-table
 					v-model="sites_selected"
 					:headers="[
@@ -2898,7 +2895,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					]"
 					@click:row="(event, { item }) => goToPath(`/sites/${item.site_id}`)"
 					hover
-					v-if="toggle_site"
 				>
 					<template v-slot:item.thumbnail="{ item }">
 						<v-img
@@ -2938,6 +2934,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</template>
 
 					</v-data-table>
+					</v-card-text>
 					<v-container fluid v-else>
 					<v-row>
 						<v-col v-for="item in filteredSites" :key="item.site_id" cols="12" sm="6" md="4" lg="3">
@@ -3258,15 +3255,18 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<div v-show="dialog_site.environment_selected.token != 'basic'">
 					<v-card color="transparent" density="compact" flat subtitle="Site Options">
 						<template v-slot:actions>
-						<v-btn size="small" variant="tonal" @click="PushProductionToStaging( dialog_site.site.site_id )" v-show="dialog_site.site && dialog_site.site.provider && dialog_site.site.provider == 'kinsta'">
-							<v-icon>mdi-truck</v-icon> Push Production to Staging
+						<v-btn size="small" variant="tonal" @click="PushProductionToStaging( dialog_site.site.site_id )" prepend-icon="mdi-truck" v-show="dialog_site.site && dialog_site.site.provider && dialog_site.site.provider == 'kinsta'">
+							Push Production to Staging
 						</v-btn>
 						<v-btn size="small" variant="tonal" @click="PushStagingToProduction( dialog_site.site.site_id )" v-show="dialog_site.site && dialog_site.site.provider && dialog_site.site.provider == 'kinsta' && typeof dialog_site.site.environments == 'object' && dialog_site.site.environments.length == 2">
-							<v-icon class="reverse">mdi-truck</v-icon> Push Staging to Production
+							<template v-slot:prepend>
+								<v-icon style="transform: scaleX(-1);">mdi-truck</v-icon>
+							</template>
+							Pull Staging to Production
 						</v-btn>
 						<v-dialog max-width="600">
 							<template v-slot:activator="{ props }">
-								<v-btn size="small" variant="tonal" color="error" v-bind="props"><v-icon>mdi-delete</v-icon> Delete Site</v-btn>
+								<v-btn size="small" variant="tonal" color="error" v-bind="props" prepend-icon="mdi-delete"> Delete Site</v-btn>
 							</template>
 							<template v-slot:default="{ isActive }">
 							<v-card>
@@ -3304,7 +3304,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								></v-autocomplete>
 							</div>
 							<div class="px-1" style="width:150px;">
-								<v-select density="compact" variant="outlined" :items="['Hour', 'Day', 'Month', 'Year']" label="Date Grouping" v-model="stats.grouping" @change="fetchStats()"></v-select>
+								<v-select density="compact" variant="outlined" :items="['Hour', 'Day', 'Month', 'Year']" label="Date Grouping" v-model="stats.grouping" @update:model-value="fetchStats()"></v-select>
 							</div>
 							<div class="px-1" style="width:162px;">
 							<v-menu
@@ -3319,7 +3319,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<template v-slot:activator="{ props }">
 								<v-text-field v-model="stats.from_at" label="From" append-icon="mdi-calendar" v-bind="props" density="compact" variant="outlined"></v-text-field>
 								</template>
-								<v-date-picker v-model="stats.from_at" @input="stats.from_at_select = false; fetchStats()"></v-date-picker>
+								<v-date-picker :model-value="new Date(stats.from_at)" @update:model-value="handleDateChange($event, 'from_at')"></v-date-picker>
 							</v-menu>
 							</div>
 							<div class="px-1" style="width:162px;">
@@ -3342,7 +3342,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									variant="outlined"
 								></v-text-field>
 								</template>
-								<v-date-picker v-model="stats.to_at" @input="stats.to_at_select = false; fetchStats()"></v-date-picker>
+								<v-date-picker :model-value="new Date(stats.to_at)" @update:model-value="handleDateChange($event, 'to_at')"></v-date-picker>
 							</v-menu>
 							</div>
                     		<v-btn variant="text" @click="configureFathom( dialog_site.site.site_id )" v-show="role == 'administrator'"><v-icon dark small>mdi-pencil</v-icon> Edit</v-btn>
@@ -3390,7 +3390,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-col>
 								<v-card-text>
 									Stats are powered by <a href="https://usefathom.com" target="_new">Fathom Analytics</a>. To view the stats dashboard directly, you can enable public or private sharing options.
-									<v-chip-group mandatory active-class="primary-text" v-model="dialog_site.environment_selected.stats.site.sharing" @change="shareStats()">
+									<v-chip-group mandatory active-class="primary-text" v-model="dialog_site.environment_selected.stats.site.sharing" @update:model-value="shareStats()">
 									<v-chip value="none" filter>Off</v-chip>
 									<v-chip value="private" filter @click="dialog_site.environment_selected.stats_password = 'changeme'">Private</v-chip>
 									<v-chip value="public" filter>Public</v-chip>
@@ -5031,9 +5031,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-list>
 						<v-card-text>
 							<v-row v-for="(item, index) in dialog_edit_site.site.environment_vars" :key="index">
-							<v-col class="pb-0"><v-text-field hide-details v-model="item.key" label="Key"></v-text-field></v-col>
-							<v-col class="pb-0"><v-text-field hide-details v-model="item.value" label="Value"></v-text-field></v-col>
-							<v-col class="pb-0 pt-5" style="max-width:58px"><v-btn icon="mdi-delete" @click="removeEnvironmentVar(index)"></v-btn></v-col>
+							<v-col class="pb-0"><v-text-field hide-details v-model="item.key" label="Key" variant="underlined"></v-text-field></v-col>
+							<v-col class="pb-0"><v-text-field hide-details v-model="item.value" label="Value" variant="underlined"></v-text-field></v-col>
+							<v-col class="pb-0 pt-5" style="max-width:58px"><v-btn variant="text" icon="mdi-delete" @click="removeEnvironmentVar(index)"></v-btn></v-col>
 							</v-row>
 						</v-card-text>
 						<v-card-actions>
@@ -5095,7 +5095,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<div class="v-spacer"></div>
 					<v-text-field v-model="domain_search" append-inner-icon="mdi-magnify" label="Search" density="compact" variant="outlined" clearable autofocus hide-details flat style="max-width:300px;"></v-text-field>
 				</v-toolbar>
-				<v-col>
 				<v-data-table
 					:headers="[{ title: 'Name', value: 'name' },{ title: 'DNS', value: 'remote_id', width: '88px' },{ title: 'Registration', value: 'provider_id', width: '120px' }]"
 					:items="domains"
@@ -5115,8 +5114,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-icon v-if="value != null && value !== ''" icon="mdi-check-circle"></v-icon>
 					</template>
 				</v-data-table>
-				</v-col>
-				</v-row>
 				</v-card-text>
 				</v-sheet>
 				<v-sheet v-show="dialog_domain.step == 2" color="transparent">
@@ -5597,42 +5594,35 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing {{ filterSitesWithErrors.length }} sites with issues</v-toolbar-title>
 					<v-spacer></v-spacer>
-					<v-toolbar-items>
-					</v-toolbar-items>
+					<v-toolbar-items></v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
 				<v-alert type="info" variant="text">
 						Results from daily scans of home pages. Web console errors are extracted from Google Chrome via Lighthouse CLI. Helpful for tracking down wide range of issues.  
 				</v-alert>
 					<v-card v-for="site in filterSitesWithErrors" flat class="mb-2" :key="site.site_id">
-					<v-toolbar light flat>
-						<v-img :src=`${remote_upload_uri}${site.site}_${site.site_id}/production/screenshots/${site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="site.screenshot_base"></v-img>
+					<v-toolbar flat class="px-4">
+						<v-img :src="`${remote_upload_uri}${site.site}_${site.site_id}/production/screenshots/${site.screenshot_base}_thumb-100.jpg`" class="elevation-1 mr-3" max-width="50" v-show="site.screenshot_base"></v-img>
 						<v-toolbar-title>{{ site.name }}</v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items>
-							<v-btn size="small" text @click="scanErrors( site )">
-								Scan <v-icon class="ml-1">mdi-sync</v-icon>
-							</v-btn>
-							<v-btn size="small" text :href="`http://${site.name}`" target="_blank">
-								View <v-icon class="ml-1">mdi-open-in-new</v-icon> 
-							</v-btn>
-							<v-btn size="small" text @click="copySSH( site )">
-								SSH <v-icon class="ml-1">mdi-content-copy</v-icon> 
-							</v-btn>
-							<v-btn size="small" text @click="showLogEntry( site.site_id )" v-show="role == 'administrator'">
-								Log <v-icon class="ml-1">mdi-check</v-icon>
-							</v-btn>
-							<v-chip class="mt-4 ml-2" label :input-value="true">{{ site.console_errors.length }} issues</v-chip>
+						<v-btn size="small" variant="text" @click="scanErrors( site )">Scan <v-icon class="ml-1">mdi-sync</v-icon></v-btn>
+						<v-btn size="small" variant="text" :href="`http://${site.name}`" target="_blank">View <v-icon class="ml-1">mdi-open-in-new</v-icon></v-btn>
+						<v-btn size="small" variant="text" @click="copySSH( site )">SSH <v-icon class="ml-1">mdi-content-copy</v-icon></v-btn>
+						<v-btn size="small" variant="text" @click="showLogEntry( site.site_id )" v-show="role == 'administrator'">Log <v-icon class="ml-1">mdi-check</v-icon></v-btn>
+						<v-chip class="mt-4 ml-2" label :value="true">{{ site.console_errors.length }} issues</v-chip>
 						</v-toolbar-items>
 					</v-toolbar>
-					<v-card class="elevation-0 mx-auto" v-for="error in site.console_errors">
+					<v-card class="elevation-0 mx-auto" v-for="error in site.console_errors" :key="error.source">
+						<v-card-item>
 						<v-card-title>{{ error.source }}</v-card-title>
-						<v-card-subtitle><a :href="error.url">{{ error.url }}</a></small></v-card-subtitle>
+						<v-card-subtitle><a :href="error.url">{{ error.url }}</a></v-card-subtitle>
+						</v-card-item>
 						<v-card-text>
 							<pre><code>{{ error.description }}</code></pre>
 						</v-card-text>
 					</v-card>
-					<v-overlay absolute :value="site.loading">
+					<v-overlay absolute :model-value="site.loading">
 						<v-progress-circular indeterminate size="64" width="4"></v-progress-circular>
 					</v-overlay>
 					</v-card>
@@ -6550,45 +6540,40 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Edit profile</v-toolbar-title>
 					<v-spacer></v-spacer>
-					<v-toolbar-items>
-					</v-toolbar-items>
+					<v-toolbar-items></v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
 				<v-row>
 					<v-col cols="12">
 					<v-list>
-					<v-list-item
-						link
-						href="https://gravatar.com"
-						target="_blank"
-						title="Edit thumbnail with Gravatar"
-						append-icon="mdi-open-in-new"
-						density="compact"
-					>
+						<v-list-item link href="https://gravatar.com" target="_blank" title="Edit thumbnail with Gravatar" append-icon="mdi-open-in-new" density="compact">
 					<template v-slot:prepend>
-					<v-avatar rounded="lg">
-						<v-img :src="gravatar"></v-img> 
-					</v-avatar>
+							<v-avatar rounded="lg"><v-img :src="gravatar"></v-img></v-avatar>
 					</template>
 					</v-list-item>
 					</v-list>
-					<v-text-field :model-value="profile.display_name" @update:model-value="profile.display_name = $event" label="Display Name" variant="underlined"></v-text-field>
-					<v-text-field :model-value="profile.email" @update:model-value="profile.email = $event" label="Email" variant="underlined"></v-text-field>
-					<v-text-field :model-value="profile.new_password" @update:model-value="profile.new_password = $event" type="password" label="New Password" hint="Leave empty to keep current password." persistent-hint variant="underlined"></v-text-field>
-					<p>&nbsp;</p>
-					
+						<v-text-field v-model="profile.display_name" label="Display Name" variant="underlined"></v-text-field>
+						<v-text-field v-model="profile.email" label="Email" variant="underlined"></v-text-field>
+						<v-text-field v-model="profile.new_password" type="password" label="New Password" hint="Leave empty to keep current password." persistent-hint variant="underlined"></v-text-field>
+						<div class="mb-5"></div>
 					<v-btn @click="disableTFA()" class="mb-7" v-if="profile.tfa_enabled" color="primary" variant="outlined">Turn off Two-Factor Authentication</v-btn>
-					<v-btn @click="enableTFA()" class="mb-7" v-else>Enable Two-Factor Authentication</v-btn>
-					<v-card v-show="profile.tfa_activate">
+						<v-btn @click="enableTFA()" class="mb-7" v-else color="primary">Enable Two-Factor Authentication</v-btn>
+						<v-card v-show="profile.tfa_activate" flat border="thin" rounded="xl">
 						<v-card-text>
+							<v-row>
+								<v-col class="text-center align-self-center" cols="7">
 							<p>Scan the QR code with your password application and enter 6 digit code. Advanced users can manually complete using <a :href="profile.tfa_uri" target="_blank">this link</a> or <a href="#copyToken" @click="copyText( profile.tfa_token )" >token</a>.</p>
+								</v-col>
+								<v-col>
 							<div id="tfa_qr_code" style="margin:auto;text-align:center;"></div>
-							<v-text-field outlined label="One time code" class="mt-3" v-model="login.tfa_code"></v-text-field>
+								</v-col>
+							</v-row>
+							<v-text-field label="One time code" class="mt-3" v-model="login.tfa_code" variant="outlined"></v-text-field>
 						</v-card-text>
 						<v-card-actions>
-							<v-btn @click="cancelTFA()" depressed>Cancel</v-btn>
+							<v-btn @click="cancelTFA()" variant="flat">Cancel</v-btn>
 							<v-spacer></v-spacer>
-							<v-btn color="primary" dark @click="activateTFA()">Activate Two-Factor Authenticate</v-btn>
+							<v-btn color="primary" @click="activateTFA()" variant="tonal">Activate Two-Factor Authenticate</v-btn>
 						</v-card-actions>
 					</v-card>
 					</v-col>
@@ -6597,7 +6582,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-col cols="12" class="mt-3">
 						<v-alert variant="tonal" type="error" v-for="error in profile.errors" class="mt-5">{{ error }}</v-alert>
 						<v-alert variant="tonal" type="success" v-show="profile.success" class="mt-5">{{ profile.success }}</v-alert>
-						<v-btn color="primary" dark @click="updateAccount()">Save Account</v-btn>
+						<v-btn color="primary" @click="updateAccount()">Save Account</v-btn>
 					</v-col>
 				</v-row>
 				</v-card-text>
@@ -6727,7 +6712,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-text>
 				</v-sheet>
 				<v-sheet v-show="dialog_account.step == 2" color="transparent">
-				<v-card flat v-if="dialog_account.show && typeof dialog_account.records.account == 'object'" rounded="xl">
+				<div v-if="dialog_account.loading" class="text-center pa-10">
+					<v-progress-circular indeterminate color="primary"></v-progress-circular>
+				</div>
+				<v-card flat v-else-if="dialog_account.show && typeof dialog_account.records.account == 'object'" rounded="xl">
 					<v-toolbar flat color="transparent">
 						<v-toolbar-title>{{ dialog_account.records.account.name }}</v-toolbar-title>
 					</v-toolbar>
@@ -6854,7 +6842,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								{{ formatLargeNumbers( item.visits ) }}
 							</template>
 							<template v-slot:item.actions="{ item }">
-								<v-btn size="small" @click="goToPath( `/sites/${item.site_id}` )">View</v-btn>
+								<v-btn size="small" variant="tonal" @click="goToPath( `/sites/${item.site_id}` )">View</v-btn>
 							</template>
 							<template v-slot:body.append>
 								<tr>
@@ -6880,53 +6868,51 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							hide-default-footer
 						>
 						<template v-slot:item.actions="{ item }">
-							<v-btn size="small" @click="goToPath( `/domains/${item.domain_id}` )">View</v-btn>
+							<v-btn size="small" variant="tonal" @click="goToPath( `/domains/${item.domain_id}` )">View</v-btn>
 						</template>
 						</v-data-table>
 					</v-window-item>
 					<v-window-item :transition="false" :reverse-transition="false">
-						<v-data-table
-							:headers="header_timeline"
-							:items="dialog_account.records.timeline"
-							:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
-							class="timeline"
-							v-if="typeof dialog_account.records.timeline != 'undefined' || dialog_account.records.timeline != null"
-						>
-						<template v-slot:tbody>
-						<tr v-for="item in dialog_account.records.timeline" :key="item.id">
-							<td class="justify-center pt-3 pr-0 text-center shrink" style="vertical-align: top;">
+						<v-data-table :headers="header_timeline" :items="dialog_account.records.timeline" item-value="process_log_id" :items-per-page-options="[50, 100, 250, { title: 'All', value: -1 }]" :items-per-page="50" class="timeline">
+							<template v-slot:item="{ item }">
+								<tr>
+									<td class="pt-3 pr-0 text-center shrink" style="vertical-align: top;">
 								<v-tooltip location="bottom">
 								<template v-slot:activator="{ props }">
-									<v-icon color="primary" dark v-bind="props" v-show="item.name">mdi-note</v-icon>
+												<v-icon v-if="item.name" color="primary" v-bind="props" icon="mdi-note"></v-icon>
+												<v-icon v-else color="primary" icon="mdi-checkbox-marked-circle"></v-icon>
 								</template>
 								<span>{{ item.name }}</span>
 								</v-tooltip>
-								<v-icon color="primary" dark v-show="! item.name">mdi-checkbox-marked-circle</v-icon>
 							</td>
-							<td class="justify-center py-4" style="vertical-align: top;">
-								<div v-html="item.description" v-show="item.description"></div>
+									<td class="py-4" style="vertical-align: top;">
+										<div v-if="item.description" v-html="item.description"></div>
 							</td>
-							<td class="justify-center pt-2" style="vertical-align:top; width:180px;">
-							<v-row>
-								<v-col class="shrink pr-0"><v-img :src="item.author_avatar" width="34" class="rounded"></v-img></v-col>
-								<v-col class="pt-4">{{ item.author }}</v-col>
+									<td class="pt-2" style="vertical-align: top; width: 180px;">
+										<v-row align="center" no-gutters>
+											<v-col cols="auto" class="pr-2">
+												<v-avatar :image="item.author_avatar" size="34" rounded></v-avatar>
+											</v-col>
+											<v-col>
+												<div class="text-no-wrap">{{ item.author }}</div>
+											</v-col>
 							</v-row>
 							</td>
-							<td class="justify-center pt-3" style="vertical-align: top;">{{ pretty_timestamp_epoch( item.created_at ) }}</td>
-							<td class="justify-center pt-2 pr-0" style="vertical-align:top;width:77px;">
-								<v-menu :nudge-width="200" open-on-hover bottom offset-y>
+									<td class="pt-3" style="vertical-align: top;">{{ pretty_timestamp_epoch( item.created_at ) }}</td>
+									<td class="pa-0" style="vertical-align: top;">
+										<v-menu :nudge-width="200" open-on-hover location="bottom">
 								<template v-slot:activator="{ props }">
-									<v-icon size="small" v-bind="props" class="my-2">mdi-information</v-icon>
+												<v-icon class="my-2" v-bind="props" size="small" icon="mdi-information"></v-icon>
 								</template>
 								<v-card>
 									<v-card-text>
-										<div v-for="site in item.websites">
-											<a :href=`${configurations.path}sites/${site.site_id}` @click.prevent="goToPath( `/sites/${site.site_id}` )">{{ site.name }}</a>
+													<div v-for="site in item.websites" :key="site.site_id">
+														<a :href="`${configurations.path}sites/${site.site_id}`" @click.prevent="goToPath(`/sites/${site.site_id}`)">{{ site.name }}</a>
 										</div>
 									</v-card-text>
 								</v-card>
 								</v-menu>
-								<v-btn size="small" variant="text" @click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)" v-if="role == 'administrator'" icon="mdi-pencil"></v-btn>
+										<v-btn v-if="role === 'administrator'" @click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)" variant="text" icon="mdi-pencil" size="small"></v-btn>
 							</td>
 						</tr>
 						</template>
@@ -7209,7 +7195,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-text-field class="mx-4" variant="outlined" density="compact" v-model="user_search" autofocus label="Search" clearable light hide-details append-inner-icon="mdi-magnify" style="max-width:300px;"></v-text-field>	
 				</v-toolbar>
 				<v-data-table
-					:headers="[{ title: 'Name', value: 'name' },{ title: 'Username', value: 'username' },{ title: 'Email', value: 'email' },{ title: '', value: 'user_id', align: 'end', sortable: false }]"
+					:headers="[{ title: 'Name', key: 'name' },{ title: 'Username', key: 'username' },{ title: 'Email', key: 'email' },{ title: '', key: 'user_id', align: 'end', sortable: false }]"
 					:items="users"
 					:search="user_search"
 					density="comfortable"
@@ -7217,7 +7203,28 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					:items-per-page-options="[100,250,500,{'title':'All','value':-1}]"
 				>
 					<template v-slot:item.user_id="{ item }">
-						<v-btn variant="text" color="primary" @click="editUser( item.user_id )">Edit User</v-btn>
+						<v-menu :nudge-width="200" open-on-hover location="bottom" @update:model-value="isOpen => fetchUserAccounts(item, isOpen)">
+							<template v-slot:activator="{ props }">
+								<v-icon class="my-2" v-bind="props" size="small" icon="mdi-information"></v-icon>
+							</template>
+							<v-card>
+								<v-card-text>
+									<div v-if="item._accounts_loading" class="text-center pa-2">
+										<v-progress-circular indeterminate size="24"></v-progress-circular>
+									</div>
+
+									<div v-else-if="item._accounts_data">
+										<div v-if="item._accounts_data.length === 0">
+											No accounts assigned.
+										</div>
+										<div v-else v-for="account in item._accounts_data" :key="account.account_id">
+											<a :href="`${configurations.path}accounts/${account.account_id}`" @click.prevent="goToPath(`/accounts/${account.account_id}`)">{{ account.name }}</a>
+										</div>
+									</div>
+								</v-card-text>
+							</v-card>
+						</v-menu>
+						<v-btn variant="text" color="primary" @click="editUser( item.user_id )" icon="mdi-pencil" size="small"></v-btn>
 					</template>
 				</v-data-table>
 				</v-card-text>
@@ -7284,17 +7291,17 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-container v-if="route == 'sites' && role == 'administrator' && ! loading_page && dialog_site.step == 2" class="mt-5">
 				<v-card color="transparent" density="compact" flat subtitle="Administrator Options">
 					<template v-slot:actions>
-						<v-btn size="small" variant="outlined" @click="dialog_mailgun_config.show = true">
-							<v-icon icon="mdi-email-search"></v-icon> Configure Mailgun
+						<v-btn size="small" variant="outlined" @click="dialog_mailgun_config.show = true" prepend-icon="mdi-email-search">
+							Configure Mailgun
 						</v-btn>
-						<v-btn size="small" variant="outlined" @click="copySite(dialog_site.site.site_id)">
-							<v-icon icon="mdi-content-duplicate"></v-icon> Copy Site
+						<v-btn size="small" variant="outlined" @click="copySite(dialog_site.site.site_id)" prepend-icon="mdi-content-duplicate">
+							Copy Site
 						</v-btn>
-						<v-btn size="small" variant="outlined" @click="editSite()">
-							<v-icon icon="mdi-pencil"></v-icon> Edit Site
+						<v-btn size="small" variant="outlined" @click="editSite()" prepend-icon="mdi-pencil">
+							Edit Site
 						</v-btn>
-						<v-btn size="small" variant="outlined" color="error" @click="deleteSite(dialog_site.site.site_id)">
-							<v-icon icon="mdi-delete"></v-icon> Delete Site
+						<v-btn size="small" variant="outlined" color="error" @click="deleteSite(dialog_site.site.site_id)" prepend-icon="mdi-delete">
+							Delete Site
 						</v-btn>
 					</template>
 				</v-card>
@@ -7367,10 +7374,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card>
 			</v-container>
 			<v-container v-if="route == 'accounts' && ! loading_page && dialog_account.step == 2" class="mt-5">
-				<v-card color="transparent" density="compact" flat subtitle="Site Options">
+				<v-card color="transparent" density="compact" flat subtitle="Account Options">
 					<template v-slot:actions>
-						<v-btn size="small" variant="outlined" @click="dialog_configure_defaults.show = true">
-							<v-icon icon="mdi-clipboard-check-outline"></v-icon> Configure Defaults
+						<v-btn size="small" variant="outlined" @click="dialog_configure_defaults.show = true" prepend-icon="mdi-clipboard-check-outline">
+							Configure Defaults
 						</v-btn>
 					</template>
 				</v-card>
@@ -7378,17 +7385,17 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-container v-if="route == 'accounts' && role == 'administrator' && ! loading_page && dialog_account.step == 2">
 				<v-card color="transparent" density="compact" flat subtitle="Administrator Options">
 					<template v-slot:actions>
-						<v-btn size="small" variant="outlined" @click="accountBulkTools()">
-							<v-icon small>mdi-filter-variant</v-icon> Bulk Tools on Sites
+						<v-btn size="small" variant="outlined" @click="accountBulkTools()" prepend-icon="mdi-filter-variant">
+							Bulk Tools on Sites
 						</v-btn>
-						<v-btn size="small" variant="outlined" @click="editAccountPortal()">
-							<v-icon small>mdi-pencil</v-icon> Edit Portal
+						<v-btn size="small" variant="outlined" @click="editAccountPortal()" prepend-icon="mdi-pencil">
+							Edit Portal
 						</v-btn>
-						<v-btn size="small" variant="outlined" @click="editAccount()">
-							<v-icon small>mdi-pencil</v-icon> Edit Account
+						<v-btn size="small" variant="outlined" @click="editAccount()" prepend-icon="mdi-pencil">
+							Edit Account
 						</v-btn>
-						<v-btn size="small" variant="outlined" color="error" @click="deleteAccount()">
-							<v-icon small>mdi-delete</v-icon> Delete Account
+						<v-btn size="small" variant="outlined" color="error" @click="deleteAccount()" prepend-icon="mdi-delete">
+							Delete Account
 						</v-btn>
 					</template>
 				</v-card>
@@ -7426,13 +7433,11 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<td class="ma-0 pa-0">
 							<v-list density="compact" flat class="transparent ma-0 pa-0">
 							<v-list-item density="compact" class="px-0" min-height="0" v-for="(item, index) in items" :key="item.job_id" @click="viewJob( item.job_id )">
-								<v-list-item-subtitle>
-								<v-chip v-if="item.status == 'done'" size="x-small" color="green" class="mr-2" variant="outlined">Done</v-chip>
-								<v-chip v-else-if="item.status == 'error'" size="x-small" color="red" class="mr-2" variant="outlined">Error</v-chip>
-								<v-chip v-else size="x-small" color="primary" class="mr-2" variant="outlined">Running</v-chip>
+								<v-chip v-if="item.status == 'done'" size="x-small" color="green" class="mr-2" variant="flat">Done</v-chip>
+								<v-chip v-else-if="item.status == 'error'" size="x-small" color="red" class="mr-2" variant="flat">Error</v-chip>
+								<v-chip v-else size="x-small" color="primary" class="mr-2" variant="flat">Running</v-chip>
 								{{ item.description }}
 								<small v-if="typeof item.stream == 'object'" class="ml-2">{{ item.stream.slice(-1)[0] }}</small>
-								</v-list-item-subtitle>
 								<template v-slot:append v-if="item.status != 'done' && item.status != 'error'">
 									<v-btn style="margin-top:2.5px" variant="text" size="x-small" @click.stop="killCommand(item.job_id)">Cancel</v-btn>
 								</template>
@@ -7957,7 +7962,7 @@ const app = createApp({
 			{"title":"Description","value":"name","sortable":false},
 			{"title":"Person","value":"done-by","sortable":false,"width":"180"},
 			{"title":"Date","value":"date","sortable":false,"width":"220"},
-			{"title":"","value":"","sortable":false,"width":"50"},
+			{"title":"","value":"","sortable":false,"width":"58"},
 		],
 		domains: [],
 		domains_loading: true,
@@ -10191,6 +10196,21 @@ const app = createApp({
 					this.snackbar.show = true
 			})
 		},
+		handleDateChange(date, field) {
+			// Use dayjs to format the date object to the required YYYY-MM-DD format
+			const formattedDate = dayjs(date).format('YYYY-MM-DD');
+
+			if (field === 'from_at') {
+				this.stats.from_at = formattedDate;
+				this.stats.from_at_select = false;
+			} else if (field === 'to_at') {
+				this.stats.to_at = formattedDate;
+				this.stats.to_at_select = false;
+			}
+
+			// Now that the data is correctly formatted, fetch the stats
+			this.fetchStats();
+		},
 		fetchStats() {
 
 			fathom_id = this.dialog_site.environment_selected.stats.fathom_id
@@ -11082,6 +11102,33 @@ const app = createApp({
 			this.querystring = ""
 			this.route = ""
 		},
+		fetchUserAccounts(userItem, isOpen) {
+			// Only fetch when the menu is opening and data isn't already there or loading.
+			if (!isOpen || userItem._accounts_data || userItem._accounts_loading) {
+				return;
+			}
+
+			userItem._accounts_loading = true;
+
+			axios.get(`/wp-json/captaincore/v1/users/${userItem.user_id}/accounts`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				const accountIds = response.data; // This is the array of IDs, e.g., [1, 23]
+				
+				// Map the IDs to full account objects from the master `this.accounts` list
+				userItem._accounts_data = accountIds.map(id => {
+					return this.accounts.find(acc => acc.account_id == id);
+				}).filter(Boolean); // .filter(Boolean) removes any undefined results if an account wasn't found
+			})
+			.catch(error => {
+				console.error(`Error fetching accounts for user ${userItem.user_id}:`, error);
+				userItem._accounts_data = [{ name: 'Error loading accounts.' }]; 
+			})
+			.finally(() => {
+				userItem._accounts_loading = false;
+			});
+		},
 		editUser( user_id ) {
 			var data = {
 				action: 'captaincore_local',
@@ -11332,6 +11379,7 @@ const app = createApp({
 			})
 		},
 		showAccount( account_id ) {
+			this.dialog_account.loading = true;
 			account = this.accounts.filter( account => account.account_id == account_id )[0];
 			var data = {
 				action: 'captaincore_local',
@@ -11343,13 +11391,17 @@ const app = createApp({
 					this.dialog_account.records = response.data
 					this.dialog_account.show = true;
 					this.dialog_account.step = 2;
+					this.dialog_account.loading = false;
 				})
-				.catch( error => console.log( error ) );
+				.catch( error => {
+					console.log( error );
+					this.dialog_account.loading = false;
+				});
 		},
 		accountBulkTools() {
-			this.view_console.show = true
-			this.openConsole( 3 )
-			this.sites_selected = this.dialog_account.records.sites
+			this.sites_selected = this.dialog_account.records.sites;
+			this.goToPath('/sites');
+			this.dialog_bulk_tools.show = true;
 		},
 		editAccount() {
 			this.dialog_edit_account.show = true
