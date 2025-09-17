@@ -8203,7 +8203,7 @@ const app = createApp({
 				const originalRequest = config;
 				if (error.response.status === 403 && error.response.data.code == "rest_cookie_invalid_nonce" ) {
 					if ( this.wp_nonce_retry ) {
-						this.goToPath( window.location.origin + this.configurations.path + 'login' )
+						this.goToPath( '/login' )
 						this.wp_nonce_retry = false
 						return
 					}
