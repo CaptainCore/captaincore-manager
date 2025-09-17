@@ -129,7 +129,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		</v-menu>
       </template>
       </v-app-bar>
-	  <v-main class="mt-15 pt-5">
+	  <v-main class="mt-5">
 		<div v-if="isMobile && ( route != 'login' && route != 'welcome' && route != 'connect' )">
 		<v-tabs v-model="selected_nav" style="width: fit-content;margin: auto;">
 			<v-tab value="" style="display:none"></v-tab>
