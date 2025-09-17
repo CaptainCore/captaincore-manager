@@ -7,6 +7,7 @@ if ( ! function_exists('is_plugin_active') ) {
 <head>
   <title><?php echo CaptainCore\Configurations::get()->name; ?> - Account</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+  <meta name="description" content="Manage your sites, billing, and account details.">
   <meta charset="utf-8">
 <?php
 $plugin_url = plugin_dir_url( __DIR__ );
