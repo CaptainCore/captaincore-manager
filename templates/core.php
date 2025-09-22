@@ -1420,7 +1420,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									variant="underlined"
 								></v-text-field>
 								</template>
-								<v-date-picker @update:model-value="keepTimestamp" v-model="dialog_modify_plan.plan.next_renewal"></v-date-picker>
+								<v-date-picker @update:model-value="keepTimestamp" :model-value="dialog_modify_plan.plan.next_renewal ? new Date(dialog_modify_plan.plan.next_renewal.split(' ')[0]) : null"></v-date-picker>
 							</v-menu>
 						</v-col>
 					</v-row>
@@ -7087,7 +7087,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</template>
 
 									<template v-slot:item.actions="{ item }">
-										<v-btn size="small" @click="goToPath(`/sites/${item.site_id}`)">View</v-btn>
+										<v-btn variant="tonal" size="small" @click="goToPath(`/sites/${item.site_id}`)">View</v-btn>
 									</template>
 
 									<template v-slot:tfoot>
@@ -7102,10 +7102,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										</tfoot>
 									</template>
 								</v-data-table>
-								<v-alert variant="tonal" type="info" color="secondary" class="mx-2">
-									Includes {{(dialog_account.records.usage_breakdown.maintenance_sites || []).length}} connected sites. Connected sites are charged for maintenance services only. Their usage does not count towards your plan.
-								</v-alert>
-								<v-data-table
+								<v-alert variant="tonal" type="info" color="secondary" class="mx-2" v-if="dialog_account.records.usage_breakdown.maintenance_sites && dialog_account.records.usage_breakdown.maintenance_sites.length > 0">
+									Includes {{ dialog_account.records.usage_breakdown.maintenance_sites.length }} connected sites. Connected sites are charged for maintenance services only.
+									<v-data-table
 									:headers='[
 										{"title":"Name","key":"name"},
 										{"title":"Storage","key":"storage"},
@@ -7122,9 +7121,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</template>
 
 									<template v-slot:item.actions="{ item }">
-										<v-btn size="small" @click="goToPath(`/sites/${item.site_id}`)">View</v-btn>
+										<v-btn variant="tonal" size="small" @click="goToPath(`/sites/${item.site_id}`)">View</v-btn>
 									</template>
 								</v-data-table>
+								</v-alert>
 							</div>
 							<div v-else>
 								<v-alert variant="tonal" type="info" color="primary" class="text-body-1 ma-2">
@@ -13117,6 +13117,7 @@ const app = createApp({
 
 			// Remove commas
 			plan.limits.visits = plan.limits.visits.replace(/,/g, '')
+			plan.addons = plan.addons.filter( addon => ! addon.required )
 			this.dialog_account.records.account.plan.limits = plan.limits
 			this.dialog_account.records.account.plan.name = plan.name
 			this.dialog_account.records.account.plan.price = plan.price
@@ -15228,19 +15229,33 @@ const app = createApp({
 				item.next_run = `${date} ${timestamp}`
 			}
 		},
-		keepTimestamp: function ( date ) {
-			if ( typeof this.dialog_modify_plan.plan.next_renewal == 'undefined' ) {
-				today = new Date().getFullYear()+'-'+("0"+(new Date().getMonth()+1)).slice(-2)+'-'+("0"+new Date().getDate()).slice(-2)
-				this.dialog_modify_plan.plan.next_renewal = `${today} 5:00:00`
-			} else if ( this.dialog_modify_plan.plan.next_renewal == "" ) {
-				formatted_date = dayjs(date.value).format('YYYY-MM-DD')
-				this.dialog_modify_plan.plan.next_renewal = `${formatted_date} 5:00:00`
-			} else {
-				formatted_date = dayjs(date.value).format('YYYY-MM-DD')
-				timestamp = dayjs(date.value).format('hh:mm:ss')
-				this.dialog_modify_plan.plan.next_renewal = `${formatted_date} ${timestamp}`
+		keepTimestamp: function ( newDate ) {
+			// If the user clears the date, newDate will be null.
+			if (!newDate) {
+				this.dialog_modify_plan.plan.next_renewal = '';
+				this.dialog_modify_plan.date_selector = false;
+				return;
 			}
-			this.dialog_modify_plan.date_selector = false
+
+			let timePart = '05:00:00';
+			const currentRenewal = this.dialog_modify_plan.plan.next_renewal;
+
+			// Check if there is an existing valid time part in the model to preserve it
+			if (currentRenewal && typeof currentRenewal === 'string' && currentRenewal.includes(' ')) {
+				const parts = currentRenewal.split(' ');
+				if (parts.length > 1 && parts[1].match(/^\d{2}:\d{2}:\d{2}$/)) {
+					timePart = parts[1];
+				}
+			}
+
+			// Format the new date from the picker (which is a Date object)
+			const datePart = dayjs(newDate).format('YYYY-MM-DD');
+
+			// Combine the new date with the preserved time and update the model
+			this.dialog_modify_plan.plan.next_renewal = `${datePart} ${timePart}`;
+			
+			// Close the date picker menu
+			this.dialog_modify_plan.date_selector = false;
 		},
 		previewCode ( text ) {
 			maxLength = 40
