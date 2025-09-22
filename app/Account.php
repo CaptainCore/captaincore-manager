@@ -155,6 +155,23 @@ class Account {
         $plan->limits          = empty( $plan->limits ) ? (object) [ "storage" => 0, "visits" => 0, "sites" => 0 ] : $plan->limits;
         $plan->interval        = empty( $plan->interval ) ? "12" : $plan->interval;
         $plan->billing_user_id = empty( $plan->billing_user_id ) ? 0 : (int) $plan->billing_user_id;
+        // Patch in maintenance only sites
+        $sites                 = Sites::where( [ "account_id" => $this->account_id, "status" => "active" ] );
+        $maintenance_sites     = [];
+        foreach ( $sites as $site ) {
+            if ( ! empty( $site->provider_id ) ) {
+                $maintenance_sites[] = $site;
+            }
+        }
+        if ( ! empty( $maintenance_sites ) ) {
+            $maintenance_sites_addons = (object) [
+                "name"     => "Managed WordPress sites",
+                "price"    => 2,
+                "quantity" => count( $maintenance_sites ),
+                "required" => true
+            ];
+            array_unshift($plan->addons, $maintenance_sites_addons );
+        }
         if ( ! is_array( $defaults->users ) ) {
             $defaults->users = [];
         }
@@ -186,16 +203,22 @@ class Account {
             return [];
         }
         // Fetch sites assigned as owners
-        $all_site_ids = [];
-        $site_ids = array_column( ( new Sites )->where( [ "account_id" => $this->account_id, "status" => "active" ] ), "site_id" );
-        foreach ( $site_ids as $site_id ) {
-            $all_site_ids[] = $site_id;
+        $site_ids            = [];
+        $maintenance_site_id = [];
+        $sites = Sites::where( [ "account_id" => $this->account_id, "status" => "active" ] );
+        foreach ( $sites as $site ) {
+            if ( empty ( $site->provider_id ) ) {
+                $site_ids[] = $site->site_id;
+                continue;
+            }
+            $maintenance_site_id[] = $site->site_id;
         }
-        $results  = [];
-        $all_site_ids = array_unique( $all_site_ids );
 
-        foreach ($all_site_ids as $site_id) {
-            $site      = ( new Sites )->get( $site_id );
+        $results  = [];
+        $site_ids = array_unique( $site_ids );
+
+        foreach ($site_ids as $site_id) {
+            $site      = Sites::get( $site_id );
             $details   = json_decode( $site->details );
             $results[] = [
                 "site_id" => $site_id,
@@ -336,10 +359,19 @@ class Account {
 		$result_sites = [];
 
         foreach ( $site_ids as $site_id ) {
-            $site                         = ( new Site( $site_id ))->get();
-            $website_for_customer_storage = $site->storage;
-            $website_for_customer_visits  = $site->visits;
-            $result_sites[] = [
+            $site                         = ( new Site( $site_id ))->fetch();
+            $website_for_customer_storage = empty( $site->storage ) ? 0 : $site->storage;
+            $website_for_customer_visits  = empty( $site->visits ) ? 0 : $site->visits;
+            if ( empty( $site->provider_id ) ) {
+                $result_sites[] = [
+                    'site_id' => $site->site_id,
+                    'name'    => $site->name,
+                    'storage' => $website_for_customer_storage,
+                    'visits'  => $website_for_customer_visits
+                ];
+                continue;
+            }
+            $result_maintenance_sites[] = [
                 'site_id' => $site->site_id,
                 'name'    => $site->name,
                 'storage' => $website_for_customer_storage,
@@ -347,8 +379,13 @@ class Account {
             ];
         }
 
+        if ( empty( $visits_percent ) ) {
+			$visits_percent = 0;
+		}
+
         return [ 
-            'sites' => $result_sites,
+            'sites'             => $result_sites,
+            'maintenance_sites' => $result_maintenance_sites,
             'total' => [
                 "{$storage_percent}% storage<br /><strong>{$storage_gbs}GB/{$storage_limit}GB</strong>",
                 "{$visits_percent}% traffic<br /><strong>" . number_format( $visits ) . "</strong> <small>Yearly Estimate</small>"
