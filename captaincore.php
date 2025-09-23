@@ -525,6 +525,32 @@ function captaincore_accounts_func( $request ) {
 	return ( new CaptainCore\Accounts )->list();
 }
 
+function captaincore_accounts_create_func( $request ) {
+	$name        = $request->get_param( "name" );
+	$time_now    = date("Y-m-d H:i:s");
+	$new_account = [ 
+		"name"       => trim( $name ),
+		"status"     => "active",
+		"created_at" => $time_now,
+		"updated_at" => $time_now,
+		"defaults"   => json_encode( [ 
+			"email"    => "",
+			"timezone" => "",
+			"recipes"  => [],
+			"users"    => [],
+		] )
+	];
+	if ( defined( 'CAPTAINCORE_CUSTOM_DOMAIN' ) ) {
+		$account_portal = CaptainCore\AccountPortals::current();
+		$new_account["account_portal_id"] = $account_portal->account_portal_id;
+	}
+	$account_id = ( new CaptainCore\Accounts )->insert( $new_account );
+	( new CaptainCore\Account( $account_id, true ) )->calculate_totals();
+	( new CaptainCore\Account( $account_id, true ) )->sync();
+	return $account_id;
+}
+
+
 function captaincore_configurations_func( $request ) {
 	return ( new CaptainCore\Configurations )->get();
 }
@@ -2427,6 +2453,13 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/accounts/', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_accounts_func',
+			'show_in_index' => false
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/accounts/', [
+			'methods'       => 'POST',
+			'callback'      => 'captaincore_accounts_create_func',
 			'show_in_index' => false
 		]
 	);
