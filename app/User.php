@@ -224,42 +224,6 @@ class User {
             $plan->addons                = ( empty( $plan->addons ) ) ? [] : $plan->addons;
             $subscriptions[ $key ]->plan = $plan;
         }
-        // Fetch WooCommerce subscriptions
-        $current_subscriptions = wcs_get_users_subscriptions( $this->user_id );
-        foreach ( $current_subscriptions as $key => $subscription ) {
-            $interval   = $subscription->get_billing_period();
-            $line_items = $subscription->get_data()["line_items"];
-            $line_item  = array_shift ( array_values ( $line_items ) );
-            $details    = $line_item->get_meta_data();
-            foreach ( $details as $detail ) {
-                $item = $detail->get_data();
-                if ( isset( $item["key"]) && $item["key"] == "Details" ) {
-                    $name = $item["value"];
-                }
-            }
-
-            if ( $interval == "month" ) {
-                $interval_count = "1";
-            } else {
-                $interval_count = "12";
-            }
-            $subscriptions[] = [
-                "account_id" => $subscription->id,
-                "name"       => $name,
-                "type"       => "woocommerce",
-                "plan"       => (object) [
-                    "name"         => $line_item->get_name(),
-                    "next_renewal" => empty( $subscription->get_date( "next_payment" ) ) ? "" : $subscription->get_date( "next_payment" ),
-                    "price"        => $subscription->get_total(),
-                    "usage"        => (object) [],
-                    "limits"       => (object) [],
-                    "interval"     => $interval_count,
-                    "addons"       => [],
-                ],
-                "payment_method"  => $subscription->get_payment_method_to_display( 'customer' ),
-                "status"          => wcs_get_subscription_status_name( $subscription->get_status() ),
-            ];
-        }
         $payment_methods = [];
         $payment_tokens  = \WC_Payment_Tokens::get_customer_tokens( $this->user_id );
         foreach ( $payment_tokens as $payment_token ) {
@@ -351,9 +315,9 @@ class User {
             if ( ! empty( $source_object->error ) && $source_object->error->code == "resource_missing" ) {
 
                 do_action( 'wc_gateway_stripe_process_payment_error', $source_object->error, $order );
-    
+
                 $order->update_status( 'failed' );
-    
+
                 return [
                     'result'   => 'fail',
                     'redirect' => '',
