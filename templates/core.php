@@ -30,7 +30,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <link href="<?php echo $plugin_url; ?>public/css/frappe-charts.min.css" rel="stylesheet">
 <?php } else { ?>
 <link href="https://cdn.jsdelivr.net/npm/vuetify@3.9.0/dist/vuetify.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.5.95/css/materialdesignicons.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.1/dist/frappe-charts.min.css" rel="stylesheet">
 <?php } ?>
 <link href="<?php echo $plugin_url; ?>public/css/captaincore-public-2025-09-16.css" rel="stylesheet">
