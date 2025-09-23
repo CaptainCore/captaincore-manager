@@ -2400,6 +2400,28 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	register_rest_route(
+		'captaincore/v1', '/users/(?P<id>[\d]+)/accounts', [
+			'methods'             => "GET",
+			'callback'            => function( WP_REST_Request $request ) {
+				$user     = new CaptainCore\User;
+				if ( ! $user->is_admin() ) {
+					return new WP_REST_Response( $account_ids, 403 );
+				}
+
+				$user_id = (int) $request->get_param( 'id' );
+
+				if ( empty( $user_id ) ) {
+					return new WP_Error( 'no_user_id', 'Invalid user ID.', [ 'status' => 404 ] );
+				}
+
+				$user = ( new CaptainCore\User( $user_id, true ) )->fetch();
+				$account_ids = $user["account_ids"];
+
+				return new WP_REST_Response( $account_ids, 200 );
+			},
+    ] );
+
 	// Custom endpoint for CaptainCore accounts
 	register_rest_route(
 		'captaincore/v1', '/accounts/', [
