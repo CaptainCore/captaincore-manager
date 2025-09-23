@@ -544,6 +544,24 @@ class Account {
         $order->get_items()[ $line_item_id ]->save();
         $calculated_total = $plan->price;
 
+        // Patch in maintenance only sites
+        $sites                 = Sites::where( [ "account_id" => $this->account_id, "status" => "active" ] );
+        $maintenance_sites     = [];
+        foreach ( $sites as $site ) {
+            if ( ! empty( $site->provider_id ) ) {
+                $maintenance_sites[] = $site;
+            }
+        }
+        if ( ! empty( $maintenance_sites ) ) {
+            $maintenance_sites_addons = (object) [
+                "name"     => "Managed WordPress sites",
+                "price"    => 2,
+                "quantity" => count( $maintenance_sites ),
+                "required" => true
+            ];
+            array_unshift($plan->addons, $maintenance_sites_addons );
+        }
+
         if ( $plan->addons && count( $plan->addons ) > 0 ) {
             foreach ( $plan->addons as $item ) {
                 $line_item_id = $order->add_product( get_product( $configurations->woocommerce->addons ), $item->quantity );
