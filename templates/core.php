@@ -1447,16 +1447,16 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-row>
 					<v-row density="compact" v-for="(addon, index) in dialog_modify_plan.plan.addons" :key="`addon-${index}`">
 						<v-col cols="7">
-							<v-textarea auto-grow rows="1" label="Name" :model-value="addon.name" @update:model-value="addon.name = $event" hide-details variant="underlined"></v-textarea>
+							<v-textarea auto-grow rows="1" label="Name" :model-value="addon.name" @update:model-value="addon.name = $event" hide-details variant="underlined" :disabled="addon.required"></v-textarea>
 						</v-col>
 						<v-col cols="2">
-							<v-text-field label="Quantity" :model-value="addon.quantity" @update:model-value="addon.quantity = $event" hide-details variant="underlined"></v-text-field>
+							<v-text-field label="Quantity" :model-value="addon.quantity" @update:model-value="addon.quantity = $event" hide-details variant="underlined" :disabled="addon.required"></v-text-field>
 						</v-col>
 						<v-col cols="2">
-							<v-text-field label="Price" :model-value="addon.price" @update:model-value="addon.price = $event" hide-details variant="underlined"></v-text-field>
+							<v-text-field label="Price" :model-value="addon.price" @update:model-value="addon.price = $event" hide-details variant="underlined" :disabled="addon.required"></v-text-field>
 						</v-col>
 						<v-col cols="1" align-self="center">
-							<v-btn size="small" variant="text" icon="mdi-delete" @click="removeAddon(index)"></v-btn>
+							<v-btn size="small" variant="text" icon="mdi-delete" @click="removeAddon(index)" v-show="! addon.required"></v-btn>
 						</v-col>
 					</v-row>
 					<v-row class="mb-1">
@@ -2881,8 +2881,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						{ title: 'Subsites', key: 'subsites', sortable: true, width: 104 },
 						{ title: 'WordPress', key: 'core', sortable: true, width: 114 },
 						{ title: 'Visits', key: 'visits', sortable: true, width: 98 },
-						{ title: 'Storage', key: 'storage', sortable: true, width: 98 },
-						{ title: 'Provider', key: 'provider', sortable: true, width: 120 }
+						{ title: 'Storage', key: 'storage', sortable: true, width: 90 },
+						{ title: 'Provider', key: 'provider', sortable: true, width: 130 }
 					]"
 					:items="filteredSites"
 					item-value="site_id"
@@ -2924,7 +2924,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						{{ formatProvider(item.provider) }}
 						<v-tooltip location="bottom">
 						<template v-slot:activator="{ props }">
-							<v-icon v-bind="props" class="ml-1 mr-0" v-show="item.provider_id && item.provider_id != 1">mdi-cloud</v-icon>
+							<v-icon icon="mdi-cloud" color="secondary" v-bind="props" class="ml-1 mr-0" v-show="item.provider_id && item.provider_id != 1"></v-icon>
 						</template>
 						<span>Maintenance only</span>
 						</v-tooltip>
