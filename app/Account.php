@@ -159,7 +159,7 @@ class Account {
         $sites                 = Sites::where( [ "account_id" => $this->account_id, "status" => "active" ] );
         $maintenance_sites     = [];
         foreach ( $sites as $site ) {
-            if ( ! empty( $site->provider_id ) ) {
+            if ( ! empty( $site->provider_id ) && ( $site->provider_id != "1" ) ) {
                 $maintenance_sites[] = $site;
             }
         }
@@ -548,7 +548,7 @@ class Account {
         $sites                 = Sites::where( [ "account_id" => $this->account_id, "status" => "active" ] );
         $maintenance_sites     = [];
         foreach ( $sites as $site ) {
-            if ( ! empty( $site->provider_id ) ) {
+            if ( ! empty( $site->provider_id ) && ( $site->provider_id != "1" ) ) {
                 $maintenance_sites[] = $site;
             }
         }
