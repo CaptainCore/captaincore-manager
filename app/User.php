@@ -328,65 +328,65 @@ class User {
             $payment_method->save_source_to_order( $order, $prepared_source );
             $intent = $payment_method->create_intent( $order, $prepared_source );
             // Confirm the intent after locking the order to make sure webhooks will not interfere.
-			if ( empty( $intent->error ) ) {
-				$payment_method->lock_order_payment( $order, $intent );
-				$intent = $payment_method->confirm_intent( $intent, $order, $prepared_source );
-			}
+            if ( empty( $intent->error ) ) {
+                $payment_method->lock_order_payment( $order, $intent );
+                $intent = $payment_method->confirm_intent( $intent, $order, $prepared_source );
+            }
 
-			if ( ! empty( $intent->error ) ) {
-				$payment_method->maybe_remove_non_existent_customer( $intent->error, $order );
+            if ( ! empty( $intent->error ) ) {
+                $payment_method->maybe_remove_non_existent_customer( $intent->error, $order );
 
-				// We want to retry.
-				if ( $payment_method->is_retryable_error( $intent->error ) ) {
-					return $payment_method->retry_after_error( $intent, $order, $retry, $force_save_source, $previous_error, $use_order_source );
-				}
+                // We want to retry.
+                if ( $payment_method->is_retryable_error( $intent->error ) ) {
+                    return $payment_method->retry_after_error( $intent, $order, $retry, $force_save_source, $previous_error, $use_order_source );
+                }
 
-				$payment_method->unlock_order_payment( $order );
-				$payment_method->throw_localized_message( $intent, $order );
-			}
+                $payment_method->unlock_order_payment( $order );
+                $payment_method->throw_localized_message( $intent, $order );
+            }
 
-			if ( ! empty( $intent ) ) {
+            if ( ! empty( $intent ) ) {
                 $response = null;
-				// Use the last charge within the intent to proceed.
+                // Use the last charge within the intent to proceed.
                 if ( ! empty( $intent->charges->data ) ) {
-				$response = end( $intent->charges->data );
+                    $response = end( $intent->charges->data );
                 } elseif ( ! empty( $intent->latest_charge ) ) {
                     $response = \WC_Stripe_API::request( [], 'charges/' . $intent->latest_charge, 'GET' );
                 }
-			}
+            }
 
-			// Process valid response.
-			$payment_method->process_response( $response, $order );
+            // Process valid response.
+            $payment_method->process_response( $response, $order );
 
-			// Remove cart.
-			if ( isset( WC()->cart ) ) {
-				WC()->cart->empty_cart();
-			}
+            // Remove cart.
+            if ( isset( WC()->cart ) ) {
+                WC()->cart->empty_cart();
+            }
 
-			// Unlock the order.
+            // Unlock the order.
             $payment_method->unlock_order_payment( $order );
-            
+
             $order->update_status( 'completed' );
 
-			// Return thank you page redirect.
-			return array(
-				'result'   => 'success',
-				'redirect' => $payment_method->get_return_url( $order ),
-			);
+            // Return thank you page redirect.
+            return array(
+                'result'   => 'success',
+                'redirect' => $payment_method->get_return_url( $order ),
+            );
 
-		} catch ( \WC_Stripe_Exception $e ) {
-			\WC_Stripe_Logger::log( 'Error: ' . $e->getMessage() );
+        } catch ( \WC_Stripe_Exception $e ) {
+            \WC_Stripe_Logger::log( 'Error: ' . $e->getMessage() );
 
-			do_action( 'wc_gateway_stripe_process_payment_error', $e, $order );
+            do_action( 'wc_gateway_stripe_process_payment_error', $e, $order );
 
-			/* translators: error message */
-			$order->update_status( 'failed' );
+            /* translators: error message */
+            $order->update_status( 'failed' );
 
-			return array(
-				'result'   => 'fail',
-				'redirect' => '',
-			);
-		}
+            return array(
+                'result'   => 'fail',
+                'redirect' => '',
+            );
+        }
 
     }
 
