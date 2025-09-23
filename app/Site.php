@@ -77,7 +77,7 @@ class Site {
         $site_details->pagination             = [ 'sortBy' => 'roles' ];
 
         // Mark site as outdated if sync older then 48 hours
-        if ( strtotime( $environments[0]->updated_at ) <= strtotime( "-48 hours" ) ) {
+        if ( ! empty( $environments[0]->updated_at ) && strtotime( $environments[0]->updated_at ) <= strtotime( "-48 hours" ) ) {
             $site_details->outdated           = true;
         }
 
@@ -651,25 +651,25 @@ class Site {
     }
 
     public function generate_screenshot() {
-        $site         = ( new Sites )->get( $this->site_id );
+        $site         = Sites::get( $this->site_id );
         $environments = self::environments();
         
         foreach( $environments as $environment ) {
-            $capture = ( new Captures )->latest_capture( [ "site_id" => $this->site_id, "environment_id" => $environment->environment_id ] );
+            $capture = Captures::latest_capture( [ "site_id" => $this->site_id, "environment_id" => $environment->environment_id ] );
             if ( empty( $capture ) ) {
                 continue;
             }
             $created_at               = strtotime( $capture->created_at );
             $git_commit_short         = substr( $capture->git_commit, 0, 7 );
-            $details                  = ( isset( $environment->details ) ? json_decode( $environment->details ) : (object) [] );
+            $details                  = isset( $environment->details ) ? $environment->details : (object) [];
             $details->screenshot_base = "{$created_at}_${git_commit_short}";
-            ( new Environments )->update( [ "screenshot" => true, "details" => json_encode( $details ) ], [ "environment_id" => $environment->environment_id ] );
+            Environments::update( [ "screenshot" => true, "details" => json_encode( $details ) ], [ "environment_id" => $environment->environment_id ] );
 
             // Update sites if needed
             if ( $environment->environment == "Production" ) {
                 $details                  = json_decode( $site->details );
                 $details->screenshot_base = "{$created_at}_${git_commit_short}";
-                ( new Sites )->update( [ "screenshot" => true, "details" => json_encode( $details ) ], [ "site_id" => $site->site_id ] );
+                Sites::update( [ "screenshot" => true, "details" => json_encode( $details ) ], [ "site_id" => $site->site_id ] );
             }
         }
         self::sync();
@@ -777,7 +777,7 @@ class Site {
         $site->filtered         = true;
         $site->removed          = isset( $details->removed ) ? $details->removed : false;
         $site->loading          = false;
-        $site->key              = $details->key;
+        $site->key              = empty( $details->key ) ? null : $details->key;
         $site->core             = $details->core;
         $site->mailgun          = $details->mailgun;
         $site->console_errors   = isset( $details->console_errors ) ? $details->console_errors : "";
@@ -843,7 +843,7 @@ class Site {
         // Fetch relating environments
         $site            = Sites::get( $this->site_id );
         $site_details    = ( isset( $site->details ) ? json_decode( $site->details ) : (object) [] );
-        $screenshot_base = $site_details->screenshot_base;
+        $screenshot_base = empty( $site_details->screenshot_base ) ? "" : $site_details->screenshot_base;
         $environments    = Environments::fetch_environments( $this->site_id );
         $upload_uri      = get_option( 'options_remote_upload_uri' );
        
@@ -905,11 +905,12 @@ class Site {
             $environment->capture_pages    = json_decode ( $environment->capture_pages );
             $environment->monitor_enabled  = intval( $environment->monitor_enabled );
             $environment->updates_enabled  = intval( $environment->updates_enabled );
-            $environment->updates_exclude_plugins = explode(",", $environment->updates_exclude_plugins );
-            $environment->updates_exclude_themes = explode(",", $environment->updates_exclude_themes );
+            $environment->updates_exclude_plugins = !empty($environment->updates_exclude_plugins) ? explode(",", $environment->updates_exclude_plugins) : [];
+            $environment->updates_exclude_themes  = !empty($environment->updates_exclude_themes) ? explode(",", $environment->updates_exclude_themes) : [];
             $environment->themes_selected  = [];
             $environment->plugins_selected = [];
             $environment->users_selected   = [];
+            $environment->expanded_backups = [];
             if ( $environment->details == "" ) {
                 $environment->details = [];
             }
@@ -1047,7 +1048,7 @@ class Site {
         }
 
         $url      = "https://api.usefathom.com/v1/sites/$fathom_id";
-        $response = wp_remote_get( $url, [ 
+        $response = wp_remote_get( $url, [
             "headers" => [ "Authorization" => "Bearer " . \CaptainCore\Providers\Fathom::credentials("api_key") ],
         ] );
 
@@ -1178,17 +1179,31 @@ class Site {
         return $process_logs;
     }
     public function update_details() {
-        $site = ( new Sites )->get( $this->site_id );
+        $site = Sites::get( $this->site_id );
         if ( $site == "" ) {
             $response['response'] = 'Error: Site ID not found.';
             return $response;
         }
         $environments    = self::environments();
         $details         = json_decode( $site->details );
-        $details->visits = array_sum( array_column( $environments, "visits" ) );
-        $details->storage = array_sum( array_column( $environments, "storage" ) );
+        
+        // Initialize totals
+        $total_visits  = 0;
+        $total_storage = 0;
+
+        // Loop through environments and sum up only production usage
+        foreach ( $environments as $environment ) {
+            if ( $environment->environment == "Production" ) {
+                $total_visits  += (int) $environment->visits;
+                $total_storage += (int) $environment->storage;
+            }
+        }
+
+        $details->visits   = $total_visits;
+        $details->storage  = $total_storage;
         $details->username = $environments[0]->username;
-        ( new Sites )->update( [ "details" => json_encode( $details ) ], [ "site_id" => $site->site_id ] );
+        
+        Sites::update( [ "details" => json_encode( $details ) ], [ "site_id" => $site->site_id ] );
     }
 
 }
