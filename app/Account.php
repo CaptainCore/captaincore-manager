@@ -362,7 +362,7 @@ class Account {
             $site                         = ( new Site( $site_id ))->fetch();
             $website_for_customer_storage = empty( $site->storage ) ? 0 : $site->storage;
             $website_for_customer_visits  = empty( $site->visits ) ? 0 : $site->visits;
-            if ( empty( $site->provider_id ) && $site->provider_id != "1" ) {
+            if ( empty( $site->provider_id ) || $site->provider_id == "1" ) {
                 $result_sites[] = [
                     'site_id' => $site->site_id,
                     'name'    => $site->name,
