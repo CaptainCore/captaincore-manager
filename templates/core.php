@@ -3190,26 +3190,26 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-row>
 						</v-container>
 						<div v-show="dialog_site.site.shared_with && dialog_site.site.shared_with.length > 0">
-						<v-list-subheader class="ml-4">Shared With 
-						<v-menu :close-on-content-click="false" :nudge-width="200" offset-x>
-							<template v-slot:activator="{ props }">
-								<v-btn size="small" variant="tonal" class="ml-2" v-bind="props" v-show="accounts && accounts.length > 1">Add <v-icon class="ml-2">mdi-account-multiple-plus</v-icon></v-btn>
-							</template>
-							<v-card min-width="300">
-								<v-list>
-								<v-list-item>
-									<v-autocomplete label="Accounts" hide-details outlined small-chips :items="accounts.filter( account => !dialog_site.site.shared_with.find( shared => shared.account_id == account.account_id ) )" item-title="name" item-value="account_id" v-model="dialog_site.grant_access" style="max-width: 400px"></v-autocomplete>
-								</v-list-item>
-								</v-list>
-								<v-divider></v-divider>
-								<v-card-actions>
-								<v-spacer></v-spacer>
-								<v-btn color="primary" text @click="isActive.value = false; grantAccess()">
-									Grant Access
-								</v-btn>
-								</v-card-actions>
-							</v-card>
-						</v-menu>
+						<v-list-subheader class="ml-4">Shared With
+							<v-menu v-model="dialog_site.grant_access_menu" :close-on-content-click="false" :nudge-width="200" offset-x>
+								<template v-slot:activator="{ props }">
+									<v-btn size="small" variant="tonal" class="ml-2" v-bind="props" v-show="accounts && accounts.length > 1">Add <v-icon class="ml-2">mdi-account-multiple-plus</v-icon></v-btn>
+								</template>
+								<v-card min-width="300">
+									<v-list>
+										<v-list-item>
+											<v-autocomplete label="Accounts" hide-details outlined small-chips :items="accounts.filter( account => !dialog_site.site.shared_with.find( shared => shared.account_id == account.account_id ) )" item-title="name" item-value="account_id" v-model="dialog_site.grant_access" style="max-width: 400px"></v-autocomplete>
+										</v-list-item>
+									</v-list>
+									<v-divider></v-divider>
+									<v-card-actions>
+										<v-spacer></v-spacer>
+										<v-btn color="primary" text @click="grantAccess(); dialog_site.grant_access_menu = false">
+											Grant Access
+										</v-btn>
+									</v-card-actions>
+								</v-card>
+							</v-menu>
 						</v-list-subheader>
 						<v-container>
 						<v-row density="compact" v-if="dialog_site.site.shared_with && dialog_site.site.shared_with.length > 0">
@@ -7980,7 +7980,7 @@ const app = createApp({
 		backup_set_files: [],
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_billing: { step: 1 },
-		dialog_site: { loading: true, step: 1, backup_step: 1, grant_access: [], environment_selected: { environment_id: "0", expanded_backups: [], quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], key: null, tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
+		dialog_site: { loading: true, step: 1, backup_step: 1, grant_access: [], grant_access_menu: false, environment_selected: { environment_id: "0", expanded_backups: [], quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], key: null, tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
 		dialog_site_request: { show: false, request: {} },
 		dialog_edit_account: { show: false, account: {} },
 		dialog_account_portal: { show: false, portal: { domain: "", configuration: {}, email: { host: "", port: "", encryption_type: "tls", username: "", password: "" }, colors: { primary: "#0D47A1", secondary: "#424242", accent: "#82B1FF", error: "#FF5252", info: "#0D47A1", success: "#4CAF50", warning: "#FFC107" } }, colors: { primary: false, secondary: false, accent: false, error: false, info: false, success: false, warning: false } },
