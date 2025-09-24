@@ -89,7 +89,7 @@ class Domain {
 		}
 
 		// Search API for domain ID
-		foreach ( $constellix_all_domains as $item ) {
+		foreach ( $constellix_all_domains->data as $item ) {
 			if ( $domain->name == $item->name ) {
                 $remote_id = $item->id;
                 break;
@@ -111,7 +111,10 @@ class Domain {
                 ];
             }
             $response  = Remote\Constellix::post( 'domains', $arguments );
-            $remote_id = $response->data->id;
+            if ( ! empty( $response->data ) ) {
+                $remote_id = $response->data->id;
+            }
+
         }
 
         if ( ! empty( $response->errors ) ) {
