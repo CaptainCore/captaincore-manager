@@ -1405,17 +1405,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-select v-if="typeof dialog_account.records.users == 'object'" label="Billing User" :items="dialog_account.records.users || []" :item-title="item => `${item.name} - ${item.email}`" item-value="user_id" v-model="dialog_modify_plan.plan.billing_user_id" variant="underlined"></v-select>
 						</v-col>
 						<v-col cols="12" md="6">
-							<v-menu
-								v-model="dialog_modify_plan.date_selector"
-								:close-on-content-click="false"
-								location="bottom"
-							>
+							<v-menu v-model="dialog_modify_plan.date_selector" :close-on-content-click="false" location="bottom">
 								<template v-slot:activator="{ props }">
 								<v-text-field
 									v-model="dialog_modify_plan.plan.next_renewal"
 									label="Next Renewal Date"
 									append-inner-icon="mdi-calendar"
-									readonly
 									v-bind="props"
 									variant="underlined"
 								></v-text-field>
