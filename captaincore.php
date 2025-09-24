@@ -835,15 +835,110 @@ function captaincore_site_update_func( $request ) {
 
 function captaincore_site_func( $request ) {
 
-	$site_id = $request['id'];
+	$site_id     = $request['site'];
+	$extras      = empty( $request['extras'] ) ? [] : $request['extras'];
+	$environment = "production";
 
-	if ( ! captaincore_verify_permissions( $site_id ) ) {
-		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	if( strpos( $request['site'], "-" ) !== false ) {
+		$split       = explode( "-", $site_id );
+		$site_id     = $split[0];
+		$environment = $split[1];
 	}
 
-	$site = new CaptainCore\Site( $site_id );
-	return $site->get();
+	if( strpos( $request['site'], "@" ) !== false ) {
+		$split       = explode( "@", $site_id );
+		$site_id     = $split[0];
+		$provider    = $split[1];
+	}
 
+	if( strpos( $environment, "@" ) !== false ) {
+		$split       = explode( "@", $environment );
+		$environment = $split[0];
+		$provider    = $split[1];
+	}
+
+	$format  = empty( $request->get_param( "format" ) ) ? "json" : $request->get_param( "format" );
+	$field   = empty( $request->get_param( "field" ) ) ? "" : $request->get_param( "field" );
+
+	if ( ! is_numeric ( $site_id ) ) {
+		$site = ( new CaptainCore\Sites )->where( [ "site" => $site_id ] );
+		if ( count( $site ) == 1 ) {
+			$site_id = $site[0]->site_id;
+		}
+	}
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
+	}
+
+	$site = ( new CaptainCore\Site( $site_id, $environment ) )->get( $format, $field, $extras );
+
+	if ( ! empty( $field ) ) {
+		if ( empty ( $site->{$field} ) ) {
+			return;
+		}
+		return [ 
+			"format" => "field",
+			"data"   => $site->{$field}
+		];
+	}
+
+	return $site;
+
+}
+
+function captaincore_run_code_func( $request ) {
+	$site_id     = $request['id'];
+	$before      = strtotime( $request['from_at'] );
+	$after       = strtotime( $request['to_at'] );
+	$grouping    = strtolower( $request['grouping'] );
+	$environment = $request['environment'];
+	$fathom_id   = $request['fathom_id'];
+	return ( new CaptainCore\Site( $site_id ) )->stats( $environment, $before, $after, $grouping, $fathom_id );
+	if ( ! $verify ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+    return ( new CaptainCore\Domain( $domain_id ) )->set_contacts( $request['contacts'] );
+	if ( is_wp_error( $response ) ) {
+		$error_message = $response->get_error_message();
+		echo json_encode( [ "error" => $error_message ] );
+		wp_die();
+		return;
+	}
+	echo json_encode( $response ); 
+}
+
+function captaincore_site_analytics_func( $request ) {
+	$site_id     = $request['id'];
+	$before      = strtotime( $request['from_at'] );
+	$after       = strtotime( $request['to_at'] );
+	$grouping    = strtolower( $request['grouping'] );
+	$environment = $request['environment'];
+	$fathom_id   = $request['fathom_id'];
+	return ( new CaptainCore\Site( $site_id ) )->stats( $environment, $before, $after, $grouping, $fathom_id );
+	//return "( new CaptainCore\Site( $site_id ) )->stats( $environment, $before, $after, $grouping, $fathom_id )";
+	if ( ! $verify ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+    return ( new CaptainCore\Domain( $domain_id ) )->set_contacts( $request['contacts'] );
+	if ( is_wp_error( $response ) ) {
+		$error_message = $response->get_error_message();
+		echo json_encode( [ "error" => $error_message ] );
+		wp_die();
+		return;
+	}
+	echo json_encode( $response ); 
+}
+
+function captaincore_domain_check_func( $request ) {
+	return $request['domain'];
+	return new WP_REST_Response(null, 200);
+	return new WP_REST_Response(null, 403);
+	$authorized_domains = ( new CaptainCore\Domains )->authorized_domains();
+	if ( in_array( $request['domain'], $authorized_domains ) ) {
+		return "Domain Authorized";
+	}
+	return new WP_REST_Response(null, 503);
 }
 
 function captaincore_domain_func( $request ) {
@@ -2016,9 +2111,17 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
-	// Custom endpoint for CaptainCore site
 	register_rest_route(
-		'captaincore/v1', '/site/(?P<id>[\d]+)', [
+		'captaincore/v1', '/sites', [
+			'methods'       => 'POST',
+			'callback'      => function (WP_REST_Request $request) {
+				return ( new CaptainCore\Site )->create( $request["site"] );
+			},
+			'show_in_index' => false
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<site>[a-zA-Z0-9-]+)', [
 			'methods'       => 'GET',
 			'callback'      => 'captaincore_site_func',
 			'show_in_index' => false
