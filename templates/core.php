@@ -12648,7 +12648,7 @@ const app = createApp({
 
 					const records = response.data.records || [];
 
-					if ( records.length == 0 ) {
+					if ( response.data.records == null ) {
 						this.dialog_domain.loading = false
 						this.dialog_domain.errors = [ "DNS zone not found." ];
 						return
