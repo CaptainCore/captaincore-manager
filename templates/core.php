@@ -3193,7 +3193,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-card min-width="300">
 									<v-list>
 										<v-list-item>
-											<v-autocomplete label="Accounts" hide-details outlined small-chips :items="accounts.filter( account => !dialog_site.site.shared_with.find( shared => shared.account_id == account.account_id ) )" item-title="name" item-value="account_id" v-model="dialog_site.grant_access" style="max-width: 400px"></v-autocomplete>
+											<v-autocomplete ref="accountAutocomplete" label="Accounts" hide-details outlined small-chips :items="accounts.filter( account => !dialog_site.site.shared_with.find( shared => shared.account_id == account.account_id ) )" item-title="name" item-value="account_id" v-model="dialog_site.grant_access" style="max-width: 400px"></v-autocomplete>
 										</v-list-item>
 									</v-list>
 									<v-divider></v-divider>
@@ -8079,6 +8079,15 @@ const app = createApp({
 		runningJobs() {
 			this.view_console.show = true
 		},
+		'dialog_site.grant_access_menu'(val) {
+            if (val) {
+                setTimeout(() => {
+					if (this.$refs.accountAutocomplete) {
+						this.$refs.accountAutocomplete.focus();
+					}
+				}, 100);
+            }
+        },
 		combinedAppliedFilters(newFilters, oldFilters) {
 			// Only proceed if the primary filters have actually changed.
 			if (JSON.stringify(newFilters) === JSON.stringify(oldFilters)) {
