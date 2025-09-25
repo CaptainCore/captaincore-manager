@@ -3235,8 +3235,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-container>
 					</div>
 					<div v-if="dialog_site.site.domains && dialog_site.site.domains.length > 0">
-					<v-list-subheader>DNS zones</v-list-subheader>
 					<v-container>
+						<v-list-subheader>DNS zones</v-list-subheader>
 						<v-row dense>
 							<v-col v-for="domain in dialog_site.site.domains" :key="domain.domain_id" cols="12" md="4">
 							<v-card :href=`${configurations.path}domains/${domain.domain_id}` @click.prevent="goToPath( '/domains/' + domain.domain_id )" density="compact" flat border="thin" rounded="xl">
@@ -3387,9 +3387,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-card-text>
 									Stats are powered by <a href="https://usefathom.com" target="_new">Fathom Analytics</a>. To view the stats dashboard directly, you can enable public or private sharing options.
 									<v-chip-group mandatory active-class="primary-text" v-model="dialog_site.environment_selected.stats.site.sharing" @update:model-value="shareStats()">
-									<v-chip value="none" filter>Off</v-chip>
-									<v-chip value="private" filter @click="dialog_site.environment_selected.stats_password = 'changeme'">Private</v-chip>
-									<v-chip value="public" filter>Public</v-chip>
+										<v-chip value="none" filter>Off</v-chip>
+										<v-chip value="private" filter @click="dialog_site.environment_selected.stats_password = 'changeme'">Private</v-chip>
+										<v-chip value="public" filter>Public</v-chip>
 									</v-chip-group>
 								</v-card-text>
 								</v-col>
@@ -5171,8 +5171,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										</v-card-actions>
 									</v-card>
 								</v-dialog>
-									<v-btn variant="text" @click="dialog_domain.show_import = true">Import <v-icon dark>mdi-file-upload</v-icon></v-btn>
-									<v-btn variant="text" @click="exportDomain()">Export <v-icon dark>mdi-file-download</v-icon></v-btn>
+									<v-btn variant="text" @click="dialog_domain.show_import = true">Import <v-icon icon="mdi-file-upload" class="ml-1"></v-icon></v-btn>
+									<v-btn variant="text" @click="exportDomain()">Export <v-icon icon="mdi-file-download" class="ml-1"></v-icon></v-btn>
 								</v-toolbar-items>
 							</v-toolbar>
 								<v-row v-if="dialog_domain.errors">
@@ -5615,7 +5615,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-card-subtitle><a :href="error.url">{{ error.url }}</a></v-card-subtitle>
 						</v-card-item>
 						<v-card-text>
-							<pre><code>{{ error.description }}</code></pre>
+						<pre><code>{{ error.description }}</code></pre>
 						</v-card-text>
 					</v-card>
 					<v-overlay absolute :model-value="site.loading">
@@ -6539,29 +6539,29 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar-items></v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
-				<v-row>
+					<v-row>
 					<v-col cols="12">
-					<v-list>
+						<v-list>
 						<v-list-item link href="https://gravatar.com" target="_blank" title="Edit thumbnail with Gravatar" append-icon="mdi-open-in-new" density="compact">
-					<template v-slot:prepend>
+							<template v-slot:prepend>
 							<v-avatar rounded="lg"><v-img :src="gravatar"></v-img></v-avatar>
-					</template>
-					</v-list-item>
-					</v-list>
+							</template>
+						</v-list-item>
+						</v-list>
 						<v-text-field v-model="profile.display_name" label="Display Name" variant="underlined"></v-text-field>
 						<v-text-field v-model="profile.email" label="Email" variant="underlined"></v-text-field>
 						<v-text-field v-model="profile.new_password" type="password" label="New Password" hint="Leave empty to keep current password." persistent-hint variant="underlined"></v-text-field>
 						<div class="mb-5"></div>
-					<v-btn @click="disableTFA()" class="mb-7" v-if="profile.tfa_enabled" color="primary" variant="outlined">Turn off Two-Factor Authentication</v-btn>
+						<v-btn @click="disableTFA()" class="mb-7" v-if="profile.tfa_enabled" color="primary" variant="outlined">Turn off Two-Factor Authentication</v-btn>
 						<v-btn @click="enableTFA()" class="mb-7" v-else color="primary">Enable Two-Factor Authentication</v-btn>
 						<v-card v-show="profile.tfa_activate" flat border="thin" rounded="xl">
 						<v-card-text>
 							<v-row>
 								<v-col class="text-center align-self-center" cols="7">
-							<p>Scan the QR code with your password application and enter 6 digit code. Advanced users can manually complete using <a :href="profile.tfa_uri" target="_blank">this link</a> or <a href="#copyToken" @click="copyText( profile.tfa_token )" >token</a>.</p>
+									<p>Scan the QR code with your password application and enter 6 digit code. Advanced users can manually complete using <a :href="profile.tfa_uri" target="_blank">this link</a> or <a href="#copyToken" @click="copyText( profile.tfa_token )" >token</a>.</p>
 								</v-col>
 								<v-col>
-							<div id="tfa_qr_code" style="margin:auto;text-align:center;"></div>
+									<div id="tfa_qr_code" style="margin:auto;text-align:center;"></div>
 								</v-col>
 							</v-row>
 							<v-text-field label="One time code" class="mt-3" v-model="login.tfa_code" variant="outlined"></v-text-field>
@@ -6571,16 +6571,16 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-spacer></v-spacer>
 							<v-btn color="primary" @click="activateTFA()" variant="tonal">Activate Two-Factor Authenticate</v-btn>
 						</v-card-actions>
-					</v-card>
+						</v-card>
 					</v-col>
-				</v-row>
-				<v-row>
+					</v-row>
+					<v-row>
 					<v-col cols="12" class="mt-3">
 						<v-alert variant="tonal" type="error" v-for="error in profile.errors" class="mt-5">{{ error }}</v-alert>
 						<v-alert variant="tonal" type="success" v-show="profile.success" class="mt-5">{{ profile.success }}</v-alert>
 						<v-btn color="primary" @click="updateAccount()">Save Account</v-btn>
 					</v-col>
-				</v-row>
+					</v-row>
 				</v-card-text>
 			</v-card>
 			<v-card v-show="role == 'administrator' && route == 'subscriptions'" flat border="thin" rounded="xl" >
@@ -6873,17 +6873,17 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<template v-slot:item="{ item }">
 								<tr>
 									<td class="pt-3 pr-0 text-center shrink" style="vertical-align: top;">
-								<v-tooltip location="bottom">
-								<template v-slot:activator="{ props }">
+										<v-tooltip location="bottom">
+											<template v-slot:activator="{ props }">
 												<v-icon v-if="item.name" color="primary" v-bind="props" icon="mdi-note"></v-icon>
 												<v-icon v-else color="primary" icon="mdi-checkbox-marked-circle"></v-icon>
-								</template>
-								<span>{{ item.name }}</span>
-								</v-tooltip>
-							</td>
+											</template>
+											<span>{{ item.name }}</span>
+										</v-tooltip>
+									</td>
 									<td class="py-4" style="vertical-align: top;">
 										<div v-if="item.description" v-html="item.description"></div>
-							</td>
+									</td>
 									<td class="pt-2" style="vertical-align: top; width: 180px;">
 										<v-row align="center" no-gutters>
 											<v-col cols="auto" class="pr-2">
@@ -6892,26 +6892,26 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											<v-col>
 												<div class="text-no-wrap">{{ item.author }}</div>
 											</v-col>
-							</v-row>
-							</td>
+										</v-row>
+									</td>
 									<td class="pt-3" style="vertical-align: top;">{{ pretty_timestamp_epoch( item.created_at ) }}</td>
 									<td class="pa-0" style="vertical-align: top;">
 										<v-menu :nudge-width="200" open-on-hover location="bottom">
-								<template v-slot:activator="{ props }">
+											<template v-slot:activator="{ props }">
 												<v-icon class="my-2" v-bind="props" size="small" icon="mdi-information"></v-icon>
-								</template>
-								<v-card>
-									<v-card-text>
+											</template>
+											<v-card>
+												<v-card-text>
 													<div v-for="site in item.websites" :key="site.site_id">
 														<a :href="`${configurations.path}sites/${site.site_id}`" @click.prevent="goToPath(`/sites/${site.site_id}`)">{{ site.name }}</a>
-										</div>
-									</v-card-text>
-								</v-card>
-								</v-menu>
+													</div>
+												</v-card-text>
+											</v-card>
+										</v-menu>
 										<v-btn v-if="role === 'administrator'" @click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)" variant="text" icon="mdi-pencil" size="small"></v-btn>
-							</td>
-						</tr>
-						</template>
+									</td>
+								</tr>
+							</template>
 						</v-data-table>
 					</v-window-item>
 					<v-window-item :transition="false" :reverse-transition="false">
@@ -7061,7 +7061,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										</v-col>
 									</v-row>
 								</v-card-text>
-								<v-alert variant="tonal" type="info" color="primary" class="mx-2">
+								<v-alert variant="tonal" type="info" class="mx-2">
 									<strong>{{ dialog_account.records.account.plan.name }} Plan</strong> supports up to {{ formatLargeNumbers( dialog_account.records.account.plan.limits.visits ) }} visits, {{ dialog_account.records.account.plan.limits.storage }}GB storage and {{ dialog_account.records.account.plan.limits.sites }} sites. Extra sites, storage and visits charged based on usage.
 								</v-alert>
 								<v-data-table
@@ -7097,8 +7097,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										</tfoot>
 									</template>
 								</v-data-table>
-								<v-alert variant="tonal" type="info" color="secondary" class="mx-2" v-if="dialog_account.records.usage_breakdown.maintenance_sites && dialog_account.records.usage_breakdown.maintenance_sites.length > 0">
-									Includes {{ dialog_account.records.usage_breakdown.maintenance_sites.length }} connected sites. Connected sites are charged for maintenance services only.
+								<v-alert variant="tonal" type="info" class="mx-2" v-if="dialog_account.records.usage_breakdown.maintenance_sites && dialog_account.records.usage_breakdown.maintenance_sites.length > 0">
+									Includes {{ dialog_account.records.usage_breakdown.maintenance_sites.length }} connected sites. Connected sites are charged for management services only.
 									<v-data-table
 									:headers='[
 										{"title":"Name","key":"name"},
@@ -7481,11 +7481,11 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-btn variant="text" size="small" @click="toggleConsole( 1 )" v-bind="props">
 					<v-icon x-small>mdi-cogs</v-icon> Task Activity
 					<div v-show="runningJobs">
-						<v-chip size="x-small" density="compact" label color="secondary" class="py-2 mx-2">{{ runningJobs }} Running</v-chip>
+						<v-chip size="x-small" density="compact" label color="secondary" class="py-2 mx-2" variant="flat">{{ runningJobs }} Running</v-chip>
 						<v-progress-circular indeterminate class="ml-2" size="16" width="2"></v-progress-circular>
 					</div>
 					<div v-show="! runningJobs && completedJobs">
-						<v-chip size="x-small" density="compact" label color="secondary" class="py-2 mx-2">{{ completedJobs }} Completed</v-chip>
+						<v-chip size="x-small" density="compact" label color="secondary" class="py-2 mx-2" variant="flat">{{ completedJobs }} Completed</v-chip>
 					</div>
 					</v-btn>
 				</template>
