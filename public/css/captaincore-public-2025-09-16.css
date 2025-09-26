@@ -1935,7 +1935,7 @@ code.language-log {
 }
 
 /* For Light Theme */
-.v-theme--light tr.change-added
+.v-theme--light tr.change-added,
   .v-theme--light div.change-added {
     background-color: #E8F5E9 !important; /* A light green */
 }
@@ -1959,4 +1959,3 @@ code.language-log {
 .v-theme--dark td.change-specific {
     background-color: rgba(176, 190, 197, 0.3) !important; /* Blue-grey color with 30% opacity */
 }
-
