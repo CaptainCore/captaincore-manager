@@ -4558,6 +4558,9 @@ function captaincore_install_action_callback() {
 		$site = implode( " ", $site_names );
 	}
 
+	$run_in_background_silent = false;
+	$run_in_background        = false;
+
 	if ( $background ) {
 		$run_in_background = true;
 	}
@@ -4709,7 +4712,7 @@ function captaincore_install_action_callback() {
 	}
 
 	if ( $cmd == 'backup_download' ) {
-		$run_in_background = true;
+		$run_in_background_silent = true;
 		$value             = (object) $value;
 		$current_user      = wp_get_current_user();
 		$email             = $current_user->user_email;
@@ -4789,10 +4792,30 @@ function captaincore_install_action_callback() {
 		wp_die(); // this is required to terminate immediately and return a proper response
 	}
 
+	if ( $run_in_background_silent ) {
+
+		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run/background", $data );
+		
+		if ( is_wp_error( $response ) ) {
+			// If the request has failed, show the error message
+			echo $response->get_error_message();
+			wp_die();
+		}
+
+		$response = json_decode( $response["body"] );
+
+		if ( $response && $response->token ) { 
+			echo $response->token;
+		}
+
+		wp_die(); // this is required to terminate immediately and return a proper response
+	}
+		
+
 	if ( $run_in_background ) {
 
 		// Add command to dispatch server
-		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run/background", $data );
+		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/tasks", $data );
 		
 		if ( is_wp_error( $response ) ) {
 			// If the request has failed, show the error message
