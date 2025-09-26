@@ -4718,9 +4718,7 @@ function captaincore_install_action_callback() {
 			"directories" => json_decode ( stripslashes_deep( $value->directories ) ),
 		];
 		$payload           = base64_encode( json_encode( $payload ) );
-		captaincore_run_background_command( "backup download $site $value->backup_id --email=$email --payload='$payload'" );
-		echo "Generating downloadable zip.";
-		wp_die();
+		$command =  "backup download $site $value->backup_id --email=$email --payload='$payload'";
 	}
 
 	if ( $cmd == 'manage' ) {
@@ -4794,7 +4792,7 @@ function captaincore_install_action_callback() {
 	if ( $run_in_background ) {
 
 		// Add command to dispatch server
-		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/tasks", $data );
+		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run/background", $data );
 		
 		if ( is_wp_error( $response ) ) {
 			// If the request has failed, show the error message
