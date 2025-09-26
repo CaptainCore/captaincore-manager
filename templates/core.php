@@ -2098,10 +2098,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-container v-show="dialog_file_diff.loading" class="mt-5">
 								<v-progress-linear indeterminate height="6" color="primary"></v-progress-linear>
 							</v-container>
-							<v-container 
-								id="code_diff" 
-								v-html="dialog_file_diff.response" 
-								style='font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;'>
+							<v-container id="code_diff" v-html="dialog_file_diff.response">
 							</v-container>
 						</v-card-text>
 					</v-card>
@@ -3621,13 +3618,13 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							class="quicksave-table mb-7"
 							>
 							<template v-slot:body="{ items }">
-								<tr class="bg-red-lighten-4" v-for="theme in item.themes_deleted" :key="'deleted-'+theme.name">
+								<tr class="change-removed" v-for="theme in item.themes_deleted" :key="'deleted-'+theme.name">
 									<td class="strikethrough">{{ theme.title || theme.name }}</td>
 									<td class="strikethrough">{{ theme.version }}</td>
 									<td class="strikethrough">{{ theme.status }}</td>
 									<td><v-btn variant="tonal" size="small" @click="RollbackUpdate(item.hash_before, 'theme', theme.name, item.started_at)">Rollback</v-btn></td>
 								</tr>
-								<tr v-for="theme in items" :key="theme.name" :class="{ 'bg-green-lighten-5': theme.changed || theme.changed_version || theme.changed_status }">
+								<tr v-for="theme in items" :key="theme.name" :class="{ 'change-added': theme.changed || theme.changed_version || theme.changed_status }">
 									<td>
 									{{ theme.title || theme.name }}
 									<v-dialog max-width="600">
@@ -3651,7 +3648,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 												<template v-slot:body="{ items }">
 													<tr v-for="i in items" :key="i">
 													<td>
-														<a class="v-menu__activator" @click="QuicksaveFileDiffUpdate(item.hash_after, i)">{{ i }}</a>
+														<a class="v-menu__activator" @click="QuicksaveFileDiffUpdate(item.hash_after, i)" style="cursor: pointer">{{ i }}</a>
 													</td>
 													</tr>
 												</template>
@@ -3662,14 +3659,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										</template>
 									</v-dialog>
 									</td>
-									<td :class="{ 'bg-green-lighten-4': theme.changed_version }">
+									<td :class="{ 'change-specific': theme.changed_version }">
 									{{ theme.version }}
 									<v-tooltip location="bottom">
 										<template v-slot:activator="{ props }"><v-icon size="small" v-show="theme.changed_version" v-bind="props">mdi-information</v-icon></template>
 										<span>Changed from {{ theme.changed_version }}</span>
 									</v-tooltip>
 									</td>
-									<td :class="{ 'bg-green-lighten-4': theme.changed_status }">
+									<td :class="{ 'change-specific': theme.changed_status }">
 									{{ theme.status }}
 									<v-tooltip location="bottom">
 										<template v-slot:activator="{ props }"><v-icon size="small" v-show="theme.changed_status" v-bind="props">mdi-information</v-icon></template>
@@ -3719,7 +3716,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									<td class="strikethrough">{{ plugin.status }}</td>
 									<td><v-btn variant="outlined" size="small" @click="RollbackUpdate(item.hash_before, 'plugin', plugin.name, item.started_at)">Rollback</v-btn></td>
 								</tr>
-								<tr v-for="plugin in items" :key="plugin.name" :class="[{ 'bg-green-lighten-5': plugin.changed_version || plugin.changed_status },{ 'bg-red-lighten-4 strikethrough': plugin.deleted }]">
+								<tr v-for="plugin in items" :key="plugin.name" :class="[{ 'change-added': plugin.changed_version || plugin.changed_status },{ 'bg-red-lighten-4 strikethrough': plugin.deleted }]">
 									<td>
 									{{ plugin.title || plugin.name }}
 									<v-dialog max-width="600">
@@ -3743,7 +3740,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 												<template v-slot:body="{ items }">
 													<tr v-for="i in items" :key="i">
 													<td>
-														<a class="v-menu__activator" @click="QuicksaveFileDiffUpdate(item.hash_after, i)">{{ i }}</a>
+														<a class="v-menu__activator" @click="QuicksaveFileDiffUpdate(item.hash_after, i)" style="cursor: pointer">{{ i }}</a>
 													</td>
 													</tr>
 												</template>
@@ -3754,14 +3751,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										</template>
 									</v-dialog>
 									</td>
-									<td :class="{ 'bg-green-lighten-4': plugin.changed_version }">
+									<td :class="{ 'change-specific': plugin.changed_version }">
 									{{ plugin.version }}
 									<v-tooltip location="bottom">
 										<template v-slot:activator="{ props }"><v-icon size="small" v-show="plugin.changed_version" v-bind="props">mdi-information</v-icon></template>
 										<span>Changed from {{ plugin.changed_version }}</span>
 									</v-tooltip>
 									</td>
-									<td :class="{ 'bg-green-lighten-4': plugin.changed_status }">
+									<td :class="{ 'change-specific': plugin.changed_status }">
 									{{ plugin.status }}
 									<v-tooltip location="bottom">
 										<template v-slot:activator="{ props }"><v-icon size="small" v-show="plugin.changed_status" v-bind="props">mdi-information</v-icon></template>
@@ -4293,7 +4290,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									<td class="strikethrough">{{ theme.status }}</td>
 									<td><v-btn variant="outlined" size="small" @click="RollbackQuicksave(item.hash, 'theme', theme.name, 'previous')">Rollback</v-btn></td>
 								</tr>
-								<tr v-for="theme in items" :key="theme.name" :class="{ 'bg-green-lighten-5': theme.changed || theme.changed_version || theme.changed_status }">
+								<tr v-for="theme in items" :key="theme.name" :class="{ 'change-added': theme.changed || theme.changed_version || theme.changed_status }">
 									<td>
 									<v-chip color="primary" label size="x-small" v-show="theme.new" class="mr-2">New</v-chip> {{ theme.title || theme.name }}
 									<v-dialog max-width="600">
@@ -4317,7 +4314,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 												<template v-slot:body="{ items }">
 													<tr v-for="i in items" :key="i">
 													<td>
-														<a class="v-menu__activator" @click="QuicksaveFileDiff(item.hash, i)">{{ i }}</a>
+														<a class="v-menu__activator" @click="QuicksaveFileDiff(item.hash, i)" style="cursor: pointer">{{ i }}</a>
 													</td>
 													</tr>
 												</template>
@@ -4328,14 +4325,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										</template>
 									</v-dialog>
 									</td>
-									<td :class="{ 'bg-green-lighten-4': theme.changed_version }">
+									<td :class="{ 'change-specific': theme.changed_version }">
 									{{ theme.version }}
 									<v-tooltip location="bottom">
 										<template v-slot:activator="{ props }"><v-icon size="small" v-show="theme.changed_version" v-bind="props">mdi-information</v-icon></template>
 										<span>Changed from {{ theme.changed_version }}</span>
 									</v-tooltip>
 									</td>
-									<td :class="{ 'bg-green-lighten-4': theme.changed_status }">
+									<td :class="{ 'change-specific': theme.changed_status }">
 									{{ theme.status }}
 									<v-tooltip location="bottom">
 										<template v-slot:activator="{ props }"><v-icon size="small" v-show="theme.changed_status" v-bind="props">mdi-information</v-icon></template>
@@ -4385,7 +4382,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									<td class="strikethrough">{{ plugin.status }}</td>
 									<td><v-btn variant="outlined" size="small" @click="RollbackQuicksave(item.hash, 'plugin', plugin.name, 'previous')">Rollback</v-btn></td>
 								</tr>
-								<tr v-for="plugin in items" :key="plugin.name" :class="[{ 'bg-green-lighten-5': plugin.changed || plugin.changed_version || plugin.changed_status },{ 'bg-red-lighten-4 strikethrough': plugin.deleted }]">
+								<tr v-for="plugin in items" :key="plugin.name" :class="[{ 'change-added': plugin.changed || plugin.changed_version || plugin.changed_status },{ 'bg-red-lighten-4 strikethrough': plugin.deleted }]">
 									<td>
 									<v-chip color="primary" label size="x-small" v-show="plugin.new" class="mr-2">New</v-chip> {{ plugin.title || plugin.name }}
 									<v-dialog max-width="600">
@@ -4409,7 +4406,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 												<template v-slot:body="{ items }">
 													<tr v-for="i in items" :key="i">
 													<td>
-														<a class="v-menu__activator" @click="QuicksaveFileDiff(item.hash, i)">{{ i }}</a>
+														<a class="v-menu__activator" @click="QuicksaveFileDiff(item.hash, i)" style="cursor: pointer">{{ i }}</a>
 													</td>
 													</tr>
 												</template>
@@ -4420,14 +4417,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										</template>
 									</v-dialog>
 									</td>
-									<td :class="{ 'bg-green-lighten-4': plugin.changed_version }">
+									<td :class="{ 'change-specific': plugin.changed_version }">
 									{{ plugin.version }}
 									<v-tooltip location="bottom">
 										<template v-slot:activator="{ props }"><v-icon size="small" v-show="plugin.changed_version" v-bind="props">mdi-information</v-icon></template>
 										<span>Changed from {{ plugin.changed_version }}</span>
 									</v-tooltip>
 									</td>
-									<td :class="{ 'bg-green-lighten-4': plugin.changed_status }">
+									<td :class="{ 'change-specific': plugin.changed_status }">
 									{{ plugin.status }}
 									<v-tooltip location="bottom">
 										<template v-slot:activator="{ props }"><v-icon size="small" v-show="plugin.changed_status" v-bind="props">mdi-information</v-icon></template>
@@ -13467,10 +13464,10 @@ const app = createApp({
 					JSON.parse ( JSON.stringify (  response.data ) ).split('\n').forEach(line => {
 						applied_css="";
 						if ( line[0] == "-" ) {
-							applied_css=" class='red lighten-4'";
+							applied_css=" class='change-removed'";
 						}
 						if ( line[0] == "+" ) {
-							applied_css=" class='green lighten-5'";
+							applied_css=" class='change-added'";
 						}
 						html.push("<div"+applied_css+">" + line + "</div>");
 					});
@@ -13498,10 +13495,10 @@ const app = createApp({
 					JSON.parse ( JSON.stringify (  response.data ) ).split('\n').forEach(line => {
 						applied_css="";
 						if ( line[0] == "-" ) {
-							applied_css=" class='red lighten-4'";
+							applied_css=" class='change-removed'";
 						}
 						if ( line[0] == "+" ) {
-							applied_css=" class='green lighten-5'";
+							applied_css=" class='change-added'";
 						}
 						html.push("<div"+applied_css+">" + line + "</div>");
 					});
