@@ -959,6 +959,11 @@ i.material-icons.reverse {
   padding: 0 2%;
 }
 
+#code_diff {
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+}
+
 #code_diff .red.lighten-4 {
   color: #7d0909;
   background-color: #ff00002b;
@@ -1928,3 +1933,30 @@ code.language-log {
 .table-quicksaves tbody tr.v-data-table__tr:has(+ tr.v-data-table__expanded):not(:last-child)>td {
   border-bottom: none;
 }
+
+/* For Light Theme */
+.v-theme--light tr.change-added
+  .v-theme--light div.change-added {
+    background-color: #E8F5E9 !important; /* A light green */
+}
+.v-theme--light tr.change-removed,
+.v-theme--light div.change-removed {
+    background-color: #FFEBEE !important; /* A light red */
+}
+.v-theme--light td.change-specific {
+    background-color: #CFD8DC !important; /* A light blue-grey */
+}
+
+/* For Dark Theme */
+.v-theme--dark tr.change-added,
+.v-theme--dark div.change-added {
+    background-color: rgba(76, 175, 80, 0.2) !important; /* Success color with 20% opacity */
+}
+.v-theme--dark tr.change-removed,
+.v-theme--dark div.change-removed {
+    background-color: rgba(255, 82, 82, 0.2) !important; /* Error color with 20% opacity */
+}
+.v-theme--dark td.change-specific {
+    background-color: rgba(176, 190, 197, 0.3) !important; /* Blue-grey color with 30% opacity */
+}
+
