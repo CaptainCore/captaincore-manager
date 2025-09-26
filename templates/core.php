@@ -4224,10 +4224,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</template>
 					<template v-slot:expanded-row="{ columns, item }">
 						<tr class="v-data-table__expanded">
-						<td :colspan="columns.length" style="position: relative;background: #eee; padding:0px" v-if="item.loading">
-						<span><v-progress-circular indeterminate color="primary" class="mx-16 mt-3 mb-7" size="24"></v-progress-circular></span>
+						<td :colspan="columns.length" style="position: relative; padding:0px" v-if="item.loading">
+							<span><v-progress-circular indeterminate color="primary" class="mx-16 mt-3 mb-7" size="24"></v-progress-circular></span>
 						</td>
-						<td :colspan="columns.length" class="pa-5" style="position: relative;background: #eee;" v-else>
+						<td :colspan="columns.length" class="pa-5" style="position: relative;" v-else>
 						<v-toolbar color="primary" density="compact" class="elevation-1" style="border-radius: 4px 4px 0 0;">
 							<v-toolbar-title class="text-body-2">{{ item.status }}</v-toolbar-title>
 							<v-btn variant="text" size="small" @click="QuicksavesRollback( dialog_site.site.site_id, item, 'previous' )" v-show="item.previous_created_at">Revert changes <v-icon>mdi-restore</v-icon></v-btn>

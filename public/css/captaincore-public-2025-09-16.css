@@ -1916,8 +1916,13 @@ code.language-log {
   padding: 0px;
 }
 
-.table-quicksaves tbody tr.v-data-table__tr:has(+ tr.v-data-table__expanded) {
+.table-quicksaves.v-theme--light tbody tr.v-data-table__tr:has(+ tr.v-data-table__expanded),
+.table-quicksaves.v-theme--light tbody tr.v-data-table__expanded > td {
   background-color: #eeeeee;
+}
+.table-quicksaves.v-theme--dark tbody tr.v-data-table__tr:has(+ tr.v-data-table__expanded),
+.table-quicksaves.v-theme--dark tbody tr.v-data-table__expanded > td {
+  background-color: #333;
 }
 
 .table-quicksaves tbody tr.v-data-table__tr:has(+ tr.v-data-table__expanded):not(:last-child)>td {
