@@ -13700,20 +13700,23 @@ const app = createApp({
 				return;
 			}
 
-			// Create a Set of all selected paths for efficient lookup
-			const allSelectedPaths = new Set(backup_tree.map(node => node.path));
+			// backup_tree is an array of paths (strings).
+			const allSelectedPaths = new Set(backup_tree);
 
-			for (const item of backup_tree) {
-				const itemPath = item.path;
+			for (const itemPath of backup_tree) {
 				const parentPath = this.getParentPath(itemPath);
 
 				// Only process this item if its parent is NOT also selected,
 				// or if it has no parent (is a root item).
 				if (parentPath === null || !allSelectedPaths.has(parentPath)) {
-					if (item.type === "file") {
-						selectedFilePaths.push(itemPath);
-					} else if (item.type === "dir") {
-						selectedDirectoryPaths.push(itemPath);
+					// Find the node in the full tree to get its type
+					const node = this.findNodeByPath(this.backup_set_files, itemPath);
+					if (node) { // Check if node was found
+						if (node.type === "file") {
+							selectedFilePaths.push(itemPath);
+						} else if (node.type === "dir") {
+							selectedDirectoryPaths.push(itemPath);
+						}
 					}
 				}
 			}
@@ -13730,13 +13733,7 @@ const app = createApp({
 			const description = `Generating downloadable zip for ${totalTopLevelItems} top-level item(s). Will send an email when ready.`;
 			const job_id = Math.round((new Date()).getTime());
 			
-			this.jobs.push({ 
-				"job_id": job_id, 
-				"description": description, 
-				"status": "pending", // Start with a pending status
-				stream: [], 
-				"command": "downloadBackup" 
-			});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "done", stream: [], "command": "downloadBackup"})
 
 			const data = {
 				'action': 'captaincore_install',
@@ -13754,11 +13751,6 @@ const app = createApp({
 				.then(response => {
 					this.snackbar.message = description; // Or a more specific success message
 					this.snackbar.show = true;
-					const jobIndex = this.jobs.findIndex(job => job.job_id === job_id);
-					if (jobIndex !== -1) {
-						this.jobs[jobIndex].job_id = response.data; // Assuming response.data is the actual new job_id from backend
-						this.jobs[jobIndex].status = "processing"; // Or "done" if backend confirms completion
-					}
 					// Reset all file selections for the current item
 					const currentBackupItem = this.dialog_site.environment_selected.backups.find(b => b.id === backup_id);
 					if (currentBackupItem) {
