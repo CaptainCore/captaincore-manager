@@ -7882,7 +7882,7 @@ const app = createApp({
 			}
 		],
 		kinsta_providers: <?php echo json_encode( CaptainCore\Providers\Kinsta::list() ); ?>,
-		kinsta_provider_sites: <?php echo json_encode( CaptainCore\Providers\Kinsta::list_sites() ); ?>,
+		kinsta_provider_sites: [<?php //echo json_encode( CaptainCore\Providers\Kinsta::list_sites() ); ?>],
 		clone_sites: [],
 		requested_sites: <?php echo json_encode( ( new CaptainCore\User )->fetch_requested_sites() ); ?>,
 		new_invite: { account: {}, records: {} },
