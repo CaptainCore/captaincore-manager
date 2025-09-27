@@ -1912,10 +1912,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-toolbar>
 					<v-toolbar flat class="px-4">
 						<div style="max-width:250px;" class="mx-1 mt-8" v-show="dialog_captures.captures.length != 0">
-							<v-select v-model="dialog_captures.capture" density="compact" variant="underlined" :items="dialog_captures.captures" item-title="created_at_friendly" item-value="capture_id" label="Taken On" return-object @change="switchCapture"></v-select>
+							<v-select v-model="dialog_captures.capture" density="compact" variant="underlined" :items="dialog_captures.captures" item-title="created_at_friendly" item-value="capture_id" label="Taken On" return-object @update:model-value="switchCapture"></v-select>
 						</div>
 						<div style="min-width:150px;" class="mx-1 mt-8" v-show="dialog_captures.captures.length != 0">
-							<v-select v-model="dialog_captures.selected_page" density="compact" variant="underlined" :items="dialog_captures.capture.pages" item-title="name" item-value="name" value="/" :label="`Contains ${dialog_captures.capture.pages.length} ${dialogCapturesPagesText}`" return-object></v-select>
+							<v-select v-model="dialog_captures.selected_page" density="compact" variant="underlined" :items="dialog_captures.capture.pages" item-title="name" item-value="name" value="/" :label="`Contains ${dialog_captures.capture.pages.length} ${dialogCapturesPagesText}`" return-object @update:model-value="dialog_captures.image_loading = true"></v-select>
 						</div>
 						<v-spacer></v-spacer>
 						<v-toolbar-items>
@@ -1962,7 +1962,18 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-card-text>
 					</v-card>
 					<v-container class="text-center" v-if="dialog_captures.captures.length > 0 && ! dialog_captures.loading">
-						<img :src="safeUrl( `${dialog_captures.image_path}${dialog_captures.selected_page.image}` )" style="max-width:100%;" class="elevation-5 mt-5">
+						<div style="position: relative; display: inline-block;">
+							<img 
+								:src="safeUrl( `${dialog_captures.image_path}${dialog_captures.selected_page.image}` )" 
+								style="max-width:100%;" 
+								class="elevation-5 mt-5"
+								@load="dialog_captures.image_loading = false"
+								@error="dialog_captures.image_loading = false"
+							>
+							<v-overlay :model-value="dialog_captures.image_loading" class="align-start justify-center" contained persistent>
+								<v-progress-circular indeterminate size="64" style="top: 200px;"></v-progress-circular>
+							</v-overlay>
+						</div>
 					</v-container>
 					<v-container v-show="dialog_captures.captures.length == 0 && ! dialog_captures.loading" class="mt-5">
 						<v-alert variant="text" type="info">There are no historical captures, yet.</v-alert>
@@ -7644,7 +7655,7 @@ const app = createApp({
 		dialog_bulk_tools: { show: false, environment_selected: "Production" },
 		dialog_job: { show: false, task: {} },
 		dialog_breakdown: false,
-		dialog_captures: { site: {}, auth: { username: "", password: ""}, pages: [{ page: ""}], capture: { pages: [] }, image_path:"", selected_page: "", captures: [], mode: "screenshot", loading: true, show: false, show_configure: false },
+		dialog_captures: { site: {}, auth: { username: "", password: ""}, pages: [{ page: ""}], capture: { pages: [] }, image_path:"", selected_page: "", captures: [], mode: "screenshot", loading: true, image_loading: false, show: false, show_configure: false },
 		dialog_delete_user: { show: false, site: {}, users: [], username: "", reassign: null },
 		dialog_apply_https_urls: { show: false, site_id: "", site_name: "", sites: [] },
 		dialog_copy_site: { show: false, site: {}, options: [], destination: null },
@@ -11789,6 +11800,7 @@ const app = createApp({
 				});
 		},
 		switchCapture() {
+			this.dialog_captures.image_loading = true;
 			this.dialog_captures.selected_page = this.dialog_captures.capture.pages[0]
 		},
 		closeCaptures() {
