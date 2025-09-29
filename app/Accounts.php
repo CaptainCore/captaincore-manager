@@ -59,10 +59,12 @@ class Accounts extends DB {
     }
 
     public function update_plan( $new_plan, $account_id ) {
-        $account  = self::get( $account_id );
-        $plan     = empty( $account->plan ) ? (object) [] : json_decode( $account->plan );
-        $new_plan = (object) $new_plan;
-        $total    = is_array( $plan->price ) ? 0 : $plan->price;
+        $account        = self::get( $account_id );
+        $plan           = empty( $account->plan ) ? (object) [] : json_decode( $account->plan );
+        $new_plan       = (object) $new_plan;
+        $total          = is_array( $plan->price ) ? 0 : $plan->price;
+        $configurations = ( new Configurations )->get();
+
         if ( is_array( $plan->addons ) && count( $plan->addons ) > 0 ) {
             foreach( $plan->addons as $addon ) {
                 $total = $total + $addon->price;
@@ -88,9 +90,33 @@ class Accounts extends DB {
         if ( $plan->status == "" ) {
             $plan->status == "pending";
         }
+        
+        // If the plan name is the same but the interval changed, recalculate the price.
+        if ( $plan->name == $new_plan->name && $plan->interval != $new_plan->interval ) {
+            // Find the original plan from configurations to get its base price and interval
+            $original_plan = null;
+            foreach ( $configurations->hosting_plans as $hosting_plan ) {
+                if ( $hosting_plan->name == $new_plan->name ) {
+                    $original_plan = $hosting_plan;
+                    break;
+                }
+            }
+
+            if ( $original_plan ) {
+                // Calculate the price per month from the original plan's defaults
+                $unit_price = $original_plan->price / $original_plan->interval;
+                // Set the new price based on the new interval
+                $plan->price = $unit_price * $new_plan->interval;
+            } else {
+                 // Fallback for custom plans or if template not found
+                 $plan->price = empty( $new_plan->price ) ? "" : $new_plan->price;
+            }
+        } else {
+            // This is the original logic, which works for changing plan types.
+            $plan->price = empty( $new_plan->price ) ? "" : $new_plan->price;
+        }
 
         $plan->name              = empty( $new_plan->name ) ? "" : $new_plan->name;
-        $plan->price             = empty( $new_plan->price ) ? "" : $new_plan->price;
         $plan->addons            = empty( $new_plan->addons ) ? "" : $new_plan->addons;
         $plan->credits           = empty( $new_plan->credits ) ? "" : $new_plan->credits;
         $plan->charges           = empty( $new_plan->charges ) ? "" : $new_plan->charges;
