@@ -10920,9 +10920,9 @@ const app = createApp({
 		},
 		newUser( dialog ) {
 			var data = {
-				action: 'captaincore_local',
-				command: 'newUser',
-				value: this.dialog_new_user,
+				'action': 'captaincore_local',
+				'command': 'newUser',
+				'value': this.dialog_new_user,
 			};
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
@@ -10930,10 +10930,10 @@ const app = createApp({
 						this.dialog_new_user.errors = response.data.errors
 						return
 					}
-					this.fetchUsers()
+					this.fetchAllUsers()
 					this.snackbar.message = "New user added."
 					this.snackbar.show = true
-					isActive.value = false
+					dialog.value = false
 					this.dialog_new_user = { first_name: "", last_name: "", email: "", login: "", account_ids: [], errors: [] }
 				})
 				.catch( error => console.log( error ) );
