@@ -4317,8 +4317,8 @@ function captaincore_ajax_action_callback() {
 		// Saves update settings for a site
 		$environment_update = [
 			'updates_enabled'         => $value["updates_enabled"],
-			'updates_exclude_themes'  => implode(",", $value["updates_exclude_themes"]),
-			'updates_exclude_plugins' => implode(",", $value["updates_exclude_plugins"]),
+			'updates_exclude_themes'  => implode(",", $value["updates_exclude_themes"] ?? []),
+			'updates_exclude_plugins' => implode(",", $value["updates_exclude_plugins"] ?? []),
 			'updated_at'              => date("Y-m-d H:i:s") 
 		];
 		$environment_id = ( new CaptainCore\Site( $post_id ) )->fetch_environment_id( $environment );
