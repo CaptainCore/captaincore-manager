@@ -207,7 +207,7 @@ class Account {
         $maintenance_site_id = [];
         $sites = Sites::where( [ "account_id" => $this->account_id, "status" => "active" ] );
         foreach ( $sites as $site ) {
-            if ( empty ( $site->provider_id ) ) {
+            if ( empty ( $site->provider_id ) || $site->provider_id == "1" ) {
                 $site_ids[] = $site->site_id;
                 continue;
             }
