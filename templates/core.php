@@ -2396,12 +2396,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									<v-icon><v-img src="/wp-content/plugins/captaincore-manager/public/img/kinsta-icon.svg" max-width="20px"></v-img></v-icon>
 								</template>
 							</v-list-item>
-							<v-list-item @click="showNewSiteKinsta()" v-show="role == 'administrator' || kinsta_providers.length >= 2">
-								<v-list-item-title class="mr-2">Link existing</v-list-item-title>
-								<template v-slot:append>
-									<v-icon><v-img src="/wp-content/plugins/captaincore-manager/public/img/kinsta-icon.svg" max-width="20px"></v-img></v-icon>
-								</template>
-							</v-list-item>
 							<!--<v-list-item @click="dialog_new_site_rocketdotnet.show = true">
 								<v-list-item-title>Rocket.net</v-list-item-title>
 							</v-list-item>-->
@@ -10087,13 +10081,24 @@ const app = createApp({
 				setTimeout(this.fetchMissing, 1000)
 			});
 		},
-		populateCloneSites( item ) {
-			console.log( item )
-			if ( this.kinsta_provider_sites[ item ] ) {
-				this.clone_sites = this.kinsta_provider_sites[ item ];
-				return
-			}
-			this.clone_sites = []
+		populateCloneSites(destination_provider_id) {
+			let all_other_sites = [];
+			
+			// this.kinsta_provider_sites is the array: [{"11": [...]}, {"12": [...]}]
+			this.kinsta_provider_sites.forEach(providerObject => {
+				// Get the key from the object (e.g., "11" or "12")
+				const providerId = Object.keys(providerObject)[0];
+				
+				if (providerId == destination_provider_id) {
+					// Get the array of sites for this provider
+					const sites = providerObject[providerId];
+					// Add these sites to our collection
+					all_other_sites = all_other_sites.concat(sites);
+				}
+			});
+			
+			// Update the component's data property
+			this.clone_sites = all_other_sites;
 		},
 		populateStatesFor( item ) {
 			states_selected = []
