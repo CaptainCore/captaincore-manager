@@ -13377,7 +13377,7 @@ const app = createApp({
 					this.snackbar.show = true;
 				})
 		},
-		RollbackQuicksave( hash, addon_type, addon_name, version, dialog ){
+		RollbackQuicksave( hash, addon_type, addon_name, version, isActive ){
 			site = this.dialog_site.site
 			environment = this.dialog_site.environment_selected;
 			quicksave = environment.quicksaves.filter( quicksave => quicksave.hash == hash )[0];
@@ -13390,7 +13390,7 @@ const app = createApp({
 				description = "Rollback "+ addon_type + " " + addon_name +" to version as of " + previous_date + " on " + site.name;
 			}
 
-			if ( typeof dialog.value == "boolean" ) {
+			if ( isActive && typeof isActive.value == "boolean" ) {
 				isActive.value = false
 			}
 
