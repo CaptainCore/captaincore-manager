@@ -200,7 +200,12 @@ class Site {
             "mailgun"          => "",
             "core"             => "",
             "verify"           => $site->verify,
-            "remote_key"       => empty( $site->remote_key ) ? "" : $site->remote_key
+            "remote_key"       => empty( $site->remote_key ) ? "" : $site->remote_key,
+            "backup_settings"  => (object) [
+                "mode"     => "direct",
+                "interval" => "daily",
+                "active"   => true
+            ],
         ];
         $new_site = [
             'account_id'       => $site->account_id,
@@ -787,7 +792,7 @@ class Site {
         $site->storage          = $details->storage;
         $site->visits           = $details->visits;
         $site->outdated         = false;
-        $site->screenshot_base  = $details->screenshot_base;
+        $site->screenshot_base  = isset( $details->screenshot_base ) ? $details->screenshot_base : "";
         
         // Mark site as outdated if sync older then 48 hours
         if ( strtotime( $site->updated_at ) <= strtotime( "-48 hours" ) ) {
