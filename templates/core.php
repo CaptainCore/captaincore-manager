@@ -3493,7 +3493,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card-title>
 				<div v-else>
 					<v-list-subheader>Plugins</v-list-subheader>
-					<v-data-table :headers="header_plugins" :items="dialog_site.environment_selected.plugins.filter(plugin => plugin.status != 'must-use' && plugin.status != 'dropin')" :loading="dialog_site.site.loading_plugins" :items-per-page="-1" :items-per-page-options="[{'title':'All','value':-1}]" v-model="dialog_site.environment_selected.plugins_selected" item-key="name" show-select hide-default-footer>
+					<v-data-table :headers="header_plugins" :items="dialog_site.environment_selected.plugins.filter(plugin => plugin.status != 'must-use' && plugin.status != 'dropin')" :loading="dialog_site.site.loading_plugins" :items-per-page="-1" :items-per-page-options="[{'title':'All','value':-1}]" v-model="dialog_site.environment_selected.plugins_selected" item-value="name" show-select hide-default-footer>
 					<template v-slot:item.status="{ item }">
 						<div v-if="item.status === 'inactive' || item.status === 'active'">
 						<v-switch hide-details v-model="item.status" false-value="inactive" true-value="active" @update:model-value="togglePlugin(item.name, item.status, dialog_site.site.site_id)"></v-switch>
@@ -14776,7 +14776,7 @@ const app = createApp({
 
 			description = titleCase(action) + " plugin '" + plugin_name + "' from " + site_name;
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id, "description": description, "status": "queued", stream: [], conn: {}});
+			this.jobs.push({"job_id": job_id, "description": description, "status": "queued", stream: [], conn: {}, command: "manage", enviroment: this.dialog_site.environment_selected.environment});
 
 			// WP ClI command to send
 			wpcli = "wp plugin " + action + " " + plugin_name;
@@ -14819,7 +14819,7 @@ const app = createApp({
 			site_name = this.dialog_site.site.name;
 			description = "Delete plugin '" + plugin_name + "' from " + site_name;
 			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
+			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: [], command: "manage", enviroment: this.dialog_site.environment_selected.environment});
 
 			// WP ClI command to send
 			wpcli = "wp plugin delete " + plugin_name;
@@ -14937,7 +14937,7 @@ const app = createApp({
 				}
 
 				if ( job.command == "manage" && !job.environment ) {
-					self.syncSite( job.site_id );
+					self.syncSite( job.site_id, "Production" );
 				}
 
 				if ( job.command == "saveUpdateSettings" ){
