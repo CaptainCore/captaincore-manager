@@ -1845,16 +1845,25 @@ function captaincore_quicksaves_func( $request ) {
 	return $results;
 }
 
-add_action( 'rest_api_init', 'captaincore_register_rest_endpoints' );
+/**
+ * Checks if a user is logged in for REST API endpoints.
+ *
+ * @return bool True if the user is logged in, false otherwise.
+ */
+function captaincore_permission_check() {
+    return is_user_logged_in();
+}
 
+add_action( 'rest_api_init', 'captaincore_register_rest_endpoints' );
 function captaincore_register_rest_endpoints() {
 
 	// Custom endpoint for CaptainCore API
 	register_rest_route(
 		'captaincore/v1', '/api', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_api_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_api_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false,
 		]
 	);
 
@@ -1875,499 +1884,561 @@ function captaincore_register_rest_endpoints() {
 
 	register_rest_route(
 		'captaincore/v1', '/missive', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_missive_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_missive_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/login', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_login_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_login_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/quicksaves', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_quicksaves_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_quicksaves_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/update-logs', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_update_logs_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_update_logs_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/update-logs/(?P<hash_before>[a-zA-Z0-9-]+)_(?P<hash_after>[a-zA-Z0-9-]+)', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_update_logs_get_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_update_logs_get_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/quicksaves/search', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_quicksaves_search_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_quicksaves_search_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/quicksaves/(?P<hash>[a-zA-Z0-9-]+)', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_quicksaves_get_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_quicksaves_get_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/quicksaves/(?P<hash>[a-zA-Z0-9-]+)/changed', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_quicksaves_changed_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_quicksaves_changed_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/quicksaves/(?P<hash>[a-zA-Z0-9-]+)/filediff', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_quicksaves_filediff_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_quicksaves_filediff_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/quicksaves/(?P<hash>[a-zA-Z0-9-]+)/rollback', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_quicksaves_rollback_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_quicksaves_rollback_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/scripts/schedule', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_schedule_script_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_schedule_script_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/scripts/(?P<id>[\d]+)', [
-			'methods'       => 'DELETE',
-			'callback'      => 'captaincore_delete_script_func',
-			'show_in_index' => false
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_delete_script_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/scripts/(?P<id>[\d]+)', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_update_script_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_update_script_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/site/(?P<id>[\d]+)/analytics', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_site_analytics_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_analytics_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	// Custom endpoint for CaptainCore site/<site-id>/<environment>/backups
 	register_rest_route(
 		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/backups', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_site_backups_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_backups_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	// Custom endpoint for CaptainCore site/<site-id>/<environment>/backups/<backup-id>
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/backups/(?P<backup_id>[a-zA-Z0-9-]+)', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_site_backups_get_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_backups_get_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/logs', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_site_logs_list_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_logs_list_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/logs/fetch', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_site_logs_fetch_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_logs_fetch_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/environments', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_site_environments_get_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_environments_get_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/grant-access', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_site_grant_access_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_grant_access_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/mailgun/setup', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_site_mailgun_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_mailgun_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/sync/data', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_site_sync_data_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_sync_data_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/captures/new', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_site_captures_new_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_captures_new_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/monitor', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_site_environment_monitor_update_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_environment_monitor_update_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/captures', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_site_captures_update_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_captures_update_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/backup', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_site_backup_update_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_backup_update_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_site_update_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_update_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 	register_rest_route(
 		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/captures', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_site_captures_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_captures_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	// Custom endpoint for CaptainCore site/<id>/snapshots
 	register_rest_route(
 		'captaincore/v1', '/site/(?P<id>[\d]+)/snapshots', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_site_snapshots_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_snapshots_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	// Custom endpoint for CaptainCore site
 	register_rest_route(
 		'captaincore/v1', '/site/(?P<id>[\d]+)/snapshots/(?P<snapshot_id>[\d]+)-(?P<token>[a-zA-Z0-9-]+)/(?P<snapshot_name>[a-zA-Z0-9-]+)', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_site_snapshot_download_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_snapshot_download_func',
+			'permission_callback' => '__return_true', // Public endpoint
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/sites', [
-			'methods'       => 'POST',
-			'callback'      => function (WP_REST_Request $request) {
+			'methods'             => 'POST',
+			'callback'            => function (WP_REST_Request $request) {
 				return ( new CaptainCore\Site )->create( $request["site"] );
 			},
-			'show_in_index' => false
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<site>[a-zA-Z0-9-]+)', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_site_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	// Custom endpoint for CaptainCore site
 	register_rest_route(
 		'captaincore/v1', '/sites/', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_sites_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_sites_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 	register_rest_route(
-		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/phpmyadmin', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_site_phpmyadmin_func',
-			'show_in_index' => false
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/phpmyadmin', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_phpmyadmin_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/magiclogin', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_site_magiclogin_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_magiclogin_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/magiclogin/(?P<user_id>[\d]+)', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_site_magiclogin_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_magiclogin_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/providers', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_provider_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_provider_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/providers', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_provider_new_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_provider_new_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/providers/(?P<id>[a-zA-Z0-9-]+)', [
-			'methods'       => 'PUT',
-			'callback'      => 'captaincore_provider_update_func',
-			'show_in_index' => false
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_provider_update_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/providers/(?P<id>[a-zA-Z0-9-]+)', [
-			'methods'       => 'DELETE',
-			'callback'      => 'captaincore_provider_delete_func',
-			'show_in_index' => false
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_provider_delete_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/verify', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_provider_verify_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_provider_verify_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/themes', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_provider_themes_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_provider_themes_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 	register_rest_route(
 		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/plugins', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_provider_plugins_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_provider_plugins_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 	register_rest_route(
 		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/theme/(?P<id>[a-zA-Z0-9-]+)/download', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_provider_theme_download_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_provider_theme_download_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 	register_rest_route(
 		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/plugin/(?P<id>[a-zA-Z0-9-]+)/download', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_provider_plugin_download_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_provider_plugin_download_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/connect', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_provider_connect_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_provider_connect_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/new-site', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_provider_new_site_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_provider_new_site_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/deploy-to-staging', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_provider_deploy_to_staging_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_provider_deploy_to_staging_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/deploy-to-production', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_provider_deploy_to_production_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_provider_deploy_to_production_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/provider-actions/check', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_provider_actions_check_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_provider_actions_check_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/provider-actions/(?P<id>[\d]+)/run', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_provider_actions_run_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_provider_actions_run_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/provider-actions', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_provider_actions_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_provider_actions_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/me/', [
-			'methods'       => 'GET',
-			'callback'      => function (WP_REST_Request $request) {
+			'methods'             => 'GET',
+			'callback'            => function (WP_REST_Request $request) {
 				return ( new CaptainCore\User )->fetch();
 			},
-			'show_in_index' => false
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/me/tfa_activate', [
-			'methods'       => 'GET',
-			'callback'      => function (WP_REST_Request $request) {
+			'methods'             => 'GET',
+			'callback'            => function (WP_REST_Request $request) {
 				return ( new CaptainCore\User )->tfa_activate();
 			},
-			'show_in_index' => false
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/me/tfa_validate', [
-			'methods'       => 'POST',
-			'callback'      => function (WP_REST_Request $request) {
+			'methods'             => 'POST',
+			'callback'            => function (WP_REST_Request $request) {
 				return ( new CaptainCore\User )->tfa_activate_verify( $request['token'] );
 			},
-			'show_in_index' => false
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/me/tfa_deactivate', [
-			'methods'       => 'GET',
-			'callback'      => function (WP_REST_Request $request) {
+			'methods'             => 'GET',
+			'callback'            => function (WP_REST_Request $request) {
 				return ( new CaptainCore\User )->tfa_deactivate();
 			},
-			'show_in_index' => false
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/filters/sites', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_filters_sites_func',
-			'show_in_index' => false,
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_filters_sites_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/filters/(?P<name>[a-zA-Z0-9-,|_%]+)/versions/', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_filter_versions_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_filter_versions_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/filters/(?P<name>[a-zA-Z0-9-,|_%]+)/statuses/', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_filter_statuses_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_filter_statuses_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/filters/(?P<name>[a-zA-Z0-9-,+_%)]+)/sites/versions=(?:(?P<versions>[a-zA-Z0-9-,+\.|]+))?/statuses=(?:(?P<statuses>[a-zA-Z0-9-,+\.|]+))?', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_filter_sites_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_filter_sites_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/filters', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_filters_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_filters_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/dns/(?P<id>[\d]+)', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_dns_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_dns_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
@@ -2427,105 +2498,127 @@ function captaincore_register_rest_endpoints() {
 
 	register_rest_route(
 		'captaincore/v1', '/domain/(?P<id>[\d]+)', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_domain_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_domain_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/domain/(?P<id>[\d]+)/contacts', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_domain_update_contacts_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_domain_update_contacts_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/domain/(?P<id>[\d]+)/nameservers', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_domain_update_nameservers_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_domain_update_nameservers_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/domain/(?P<id>[\d]+)/lock_(?P<status>[a-zA-Z0-9-,|_%]+)', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_domain_lock_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_domain_lock_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/domain/(?P<id>[\d]+)/privacy_(?P<status>[a-zA-Z0-9-,|_%]+)', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_domain_privacy_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_domain_privacy_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/domain/(?P<id>[\d]+)/auth_code', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_domain_auth_code_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_domain_auth_code_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/recipes/', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_recipes_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_recipes_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/recipes/(?P<id>[a-zA-Z0-9-]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_recipes_delete_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/running/', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_running_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_running_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	// Custom endpoint for recipes
 	register_rest_route(
 		'captaincore/v1', '/processes/', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_processes_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_processes_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	// Custom endpoint for domains
 	register_rest_route(
 		'captaincore/v1', '/domains/', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_domains_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_domains_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 	register_rest_route(
 		'captaincore/v1', '/domains/(?P<id>[\d]+)/zone', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_domain_zone_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_domain_zone_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 	register_rest_route(
 		'captaincore/v1', '/domains/import', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_domain_zone_import_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_domain_zone_import_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/users/', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_users_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_users_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
@@ -2549,79 +2642,90 @@ function captaincore_register_rest_endpoints() {
 
 				return new WP_REST_Response( $account_ids, 200 );
 			},
-    ] );
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
 
 	// Custom endpoint for CaptainCore accounts
 	register_rest_route(
 		'captaincore/v1', '/accounts/', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_accounts_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_accounts_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 	register_rest_route(
 		'captaincore/v1', '/accounts/', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_accounts_create_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_accounts_create_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	// Custom endpoint for CaptainCore configurations
 	register_rest_route(
 		'captaincore/v1', '/configurations/', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_configurations_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_configurations_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 	register_rest_route(
 		'captaincore/v1', '/configurations/', [
-			'methods'       => 'POST',
-			'callback'      => 'captaincore_configurations_update_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_configurations_update_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/billing/', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_billing_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_billing_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/subscriptions/', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_subscriptions_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_subscriptions_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
 		'captaincore/v1', '/upcoming_subscriptions/', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_upcoming_subscriptions_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_upcoming_subscriptions_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	// Custom endpoint for keys
 	register_rest_route(
 		'captaincore/v1', '/keys/', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_keys_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_keys_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
 	// Custom endpoint for defaults
 	register_rest_route(
 		'captaincore/v1', '/defaults/', [
-			'methods'       => 'GET',
-			'callback'      => 'captaincore_defaults_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_defaults_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 
@@ -2809,42 +2913,6 @@ function human_filesize( $bytes, $decimals = 2 ) {
 	$factor = floor( ( strlen( $bytes ) - 1 ) / 3 );
 	return sprintf( "%.{$decimals}f", $bytes / pow( 1024, $factor ) ) . @$size[ $factor ];
 }
-
-function checkApiAuth( $result ) {
-
-	if ( ! empty( $result ) ) {
-			return $result;
-	}
-
-	global $wp;
-
-	// Strips first part of endpoint
-	$endpoint_all = str_replace( 'wp-json/wp/v2/', '', $wp->request );
-	if ( strpos( $wp->request, 'wp-json/captaincore/v1' ) !== false ) {
-		return $result;
-	}
-
-	// Breaks apart endpoint into array
-	$endpoint_all = explode( '/', $endpoint_all );
-
-	// Grabs only the first part of the endpoint
-	$endpoint = $endpoint_all[0];
-
-	// User not logged in so do custom token auth
-	if ( ! is_user_logged_in() ) {
-
-		if ( $endpoint == 'posts' ) {
-			return $result;
-		}
-
-		// User not logged in and no valid bypass token found
-		return new WP_Error( 'rest_not_logged_in', 'You are not currently logged in.', array( 'status' => 401 ) );
-
-	}
-	return $result;
-
-}
-add_filter( 'rest_authentication_errors', 'checkApiAuth' );
 
 // Checks current user for valid permissions
 function captaincore_verify_permissions( $site_id ) {
