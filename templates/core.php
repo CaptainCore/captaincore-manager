@@ -12241,7 +12241,7 @@ const app = createApp({
 		runCustomCode( site_id ) {
 
 			site = this.dialog_site.site
-			should_proceed = confirm("Deploy custom code on "+site.name+"?");
+			should_proceed = confirm("Deploy custom code on " + this.dialog_site.environment_selected.home_url + "?");
 
 			if ( ! should_proceed ) {
 				return;
@@ -13329,7 +13329,7 @@ const app = createApp({
 			site = this.dialog_site.site
 			this.dialog_apply_https_urls.show = true;
 			this.dialog_apply_https_urls.site_id = site_id
-			this.dialog_apply_https_urls.site_name = site.name;
+			this.dialog_apply_https_urls.site_name = this.dialog_site.environment_selected.home_url;
 		},
 		viewApplyHttpsUrlsBulk() {
 			this.dialog_apply_https_urls.show = true;
