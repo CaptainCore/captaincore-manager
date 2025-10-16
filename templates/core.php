@@ -13346,12 +13346,12 @@ const app = createApp({
 			this.dialog_apply_https_urls.site_id = this.sites_selected.map( s => s.site_id );
 			this.dialog_apply_https_urls.site_name = this.sites_selected.length + " sites";
 		},
-		RollbackUpdate( hash, addon_type, addon_name, created_at, dialog ) {
+		RollbackUpdate( hash, addon_type, addon_name, created_at, isActive ) {
 			site = this.dialog_site.site
 			date = this.pretty_timestamp_epoch( created_at );
 			description = "Rollback "+ addon_type + " " + addon_name +" to version as of " + date + " on " + site.name;
 
-			if ( typeof dialog.value == "boolean" ) {
+			if ( isActive && typeof isActive.value == "boolean" ) {
 				isActive.value = false
 			}
 
