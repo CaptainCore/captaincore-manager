@@ -7408,6 +7408,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-snackbar>
 		</template>
 		</v-container>
+		<div :style="{ height: view_console.open ? '180px' : '0' }"></div>
 		<v-navigation-drawer v-model="view_console.show" location="bottom" :rail="! view_console.open" rail-width="32" width="210" tile temporary :scrim="false">
 		<v-sheet>
 			<v-window v-model="active_console" class="ml-2">
