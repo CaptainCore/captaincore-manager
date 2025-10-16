@@ -9748,7 +9748,7 @@ const app = createApp({
 		},
 		fetchSiteEnvironments( site_id ) {
 			axios.get( `/wp-json/captaincore/v1/sites/${site_id}/environments`, {
-				headers: { 'X-WP-Nonce':this.wp_nonce }
+				headers: {'X-WP-Nonce':this.wp_nonce}
 			})
 			.then( response => {
 				this.dialog_site.site.environments = response.data
@@ -9756,7 +9756,17 @@ const app = createApp({
 					e.environment_label = e.environment + " Environment"
 				})
 				if ( this.dialog_site.step == 2 && typeof this.dialog_site.environment_selected != 'undefined' ) {
-					this.dialog_site.environment_selected = this.dialog_site.site.environments.filter( e => e.environment == this.dialog_site.environment_selected.environment )[0]
+					// Try to find the same environment on the new site
+					const matchingEnv = this.dialog_site.site.environments.find(e => e.environment === this.dialog_site.environment_selected.environment);
+					
+					// If a matching environment is found, use it. Otherwise, default to the first one.
+					if (matchingEnv) {
+						this.dialog_site.environment_selected = matchingEnv;
+					} else if (this.dialog_site.site.environments.length > 0) {
+						this.dialog_site.environment_selected = this.dialog_site.site.environments[0];
+					} else {
+						this.dialog_site.environment_selected = {};
+					}
 				} else {
 					this.dialog_site.environment_selected = this.dialog_site.site.environments[0]
 				}
