@@ -113,10 +113,56 @@ class ProviderAction {
         if ( $user_id != $provider_action->user_id ) {
             return;
         }
+    
         $provider       = Providers::get( $provider_action->provider_id );
         $class_name     = "\CaptainCore\Providers\\" . ucfirst( $provider->provider );
         $current_action = json_decode( $provider_action->action );
         $time_now       = date( 'Y-m-d H:i:s' );
+
+        if ( $current_action->command == "new-site" && ! empty( $current_action->step ) && $provider->provider == "kinsta" ) {
+
+            // Check if the "Disable Edge Caching" step just finished
+            if ( $current_action->step == "disable_edge_caching" ) {
+                
+                // Now, call the "Set Image Optimization" endpoint
+                $response = \CaptainCore\Remote\Kinsta::put( 
+                    "sites/cdn/image-optimization", 
+                    [ 
+                        "environment_id" => $current_action->live_environment_id, 
+                        "image_optimization_type" => "lossless" 
+                    ] 
+                );
+
+                if ( ! empty( $response->operation_id ) ) {
+                    // Update the action to track the *next* operation
+                    $current_action->step = "set_image_optimization";
+                    $action = [
+                        'provider_key' => $response->operation_id,
+                        'action'       => json_encode($current_action),
+                        'updated_at'   => $time_now,
+                        'status'       => "started", // Keep it "started" to be checked again
+                    ];
+                    ( new ProviderActions )->update( $action, [ "provider_action_id" => $this->provider_action_id ] );
+                    return self::active();
+                }
+                // If API call failed, just proceed to sync
+            }
+
+            // Check if the "Set Image Optimization" step just finished
+            if ( $current_action->step == "set_image_optimization" ) {
+                // This was the last API step, now run the background sync
+                \CaptainCore\Run::CLI("site sync {$current_action->site_id} --update-extras", true);
+                
+                // Now we can finally mark the whole chain as "done"
+                $action = [
+                    'action'     => json_encode($current_action), // Save the final state
+                    'updated_at' => $time_now,
+                    'status'     => "done",
+                ];
+                ( new ProviderActions )->update( $action, [ "provider_action_id" => $this->provider_action_id ] );
+                return self::active();
+            }
+        }
 
         if ( $current_action->command == "deploy-to-production" ) {
             $action = [
@@ -159,6 +205,7 @@ class ProviderAction {
                 ( new ProviderActions )->update( $action, [ "provider_action_id" => $this->provider_action_id ] );
                 return self::active();
             }
+            
             // Resync staging info if needed
             if ( $current_action->step == 2 ) {
                 if ( empty( $current_action->environment_staging_id ) || ! empty( $current_action->connect_staging ) ) {
@@ -183,21 +230,27 @@ class ProviderAction {
             $result      = empty( $current_action->result ) ? \CaptainCore\Remote\Kinsta::get( "operations/{$provider_action->provider_key}" )->data : $current_action->result;
             $verify      = \CaptainCore\Providers\Kinsta::verify();
             $current_action->result = $result;
+            $site_name   = $current_action->name;
             if ( ! empty( $current_action ) ) {
                 $site        = \CaptainCore\Remote\Kinsta::get( "sites/{$result->idSite}" )->site;
                 $environment = \CaptainCore\Remote\Kinsta::get( "sites/{$result->idSite}/environments" )->site->environments[0];
+                $live_environment_id = $environment->id; // Get the environment ID
                 $password    = $verify ? \CaptainCore\Providers\Kinsta::fetch_sftp_password( $result->idSite ) : "";
 
-                // Should check for name conflicts and autogenerate ending of name
-                $site_check = ( new Sites )->where( [ "site" => $site->name ] );
-                if ( count( $site_check ) > 0 ) {
-                    $random_ending = substr( str_shuffle ( str_repeat( "0123456789abcdefghijklmnopqrstuvwxyz", 5 ) ), 0, 5 );
-                    $site->name    = "{$site->name}_$random_ending";
+                // Check for CaptainCore site name conflicts and loop until a unique name is found
+                $original_kinsta_name = $site->name;
+                
+                while ( count( ( new Sites )->where( [ "site" => $site->name ] ) ) > 0 ) {
+                    // If a conflict exists, append a random 5-character string and check again
+                    $random_suffix = substr( str_shuffle ( str_repeat( "0123456789abcdefghijklmnopqrstuvwxyz", 5 ) ), 0, 1 );
+                    $site->name     = "{$original_kinsta_name}{$random_suffix}";
                 }
 
                 if ( empty ( $current_action->domain ) ) {
+                    // Use the *final* unique name for the .kinsta.cloud domain
                     $current_action->domain = "{$site->name}.kinsta.cloud";
                 }
+                
                 $current_action->shared_with = array_column( $current_action->shared_with, "account_id" );
                 $address        = $environment->ssh_connection->ssh_ip->external_ip;
                 $port           = $environment->ssh_connection->ssh_port;
@@ -247,7 +300,38 @@ class ProviderAction {
                     }
                 }
                 \CaptainCore\ProcessLog::insert( "Created site", $site_id );
-                \CaptainCore\Run::CLI("site sync $site_id --update-extras", true);
+                
+                if ($provider->provider == "kinsta") {
+                    $response = \CaptainCore\Remote\Kinsta::put( 
+                        "sites/edge-caching/status", 
+                        [ 
+                            "environment_id" => $live_environment_id, 
+                            "enabled" => false 
+                        ] 
+                    );
+
+                    if ( ! empty( $response->operation_id ) ) {
+                        // Update the ProviderAction to track this new operation
+                        $current_action->step = "disable_edge_caching";
+                        $current_action->live_environment_id = $live_environment_id; // Pass env ID
+                        $current_action->site_id = $site_id; // Pass CaptainCore site ID
+                        
+                        $action = [
+                            'provider_key' => $response->operation_id, // New operation to track
+                            'action'       => json_encode($current_action),
+                            'updated_at'   => $time_now,
+                            'status'       => "started", // Set back to "started"
+                        ];
+                        ( new ProviderActions )->update( $action, [ "provider_action_id" => $this->provider_action_id ] );
+                        return self::active(); // Exit, so it gets checked again
+                    } else {
+                        // Kinsta API call failed, just run sync and finish
+                        \CaptainCore\Run::CLI("site sync $site_id --update-extras", true);
+                    }
+                } else {
+                    // Not Kinsta, just run sync and finish
+                    \CaptainCore\Run::CLI("site sync $site_id --update-extras", true);
+                }
             }
         }
 
