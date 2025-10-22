@@ -58,6 +58,14 @@ class Provider {
         return $class_name::new_site( $site );
     }
 
+    public function get_push_targets( $source_site_id, $source_environment_id ) {
+		return $this->call_static_method( 'get_push_targets', [ $source_site_id, $source_environment_id ] );
+	}
+
+	public function push_environment( $source_environment_id, $target_environment_id ) {
+		return $this->call_static_method( 'push_environment', [ $source_environment_id, $target_environment_id ] );
+	}
+
     public function all() {
         $providers = ( new Providers )->all();
         foreach( $providers as $provider ) {
@@ -109,6 +117,22 @@ class Provider {
         ] );
         return $new_provider;
 
+    }
+
+    private function get_provider_class_name() {
+        $provider = self::get();
+        if ( ! $provider || empty( $provider->provider ) ) {
+            return null;
+        }
+        return "CaptainCore\Providers\\" . ucfirst( $provider->provider );
+    }
+
+    private function call_static_method( $method, $args = [] ) {
+        $class_name = $this->get_provider_class_name();
+        if ( ! $class_name || ! method_exists( $class_name, $method ) ) {
+            return new \WP_Error( 'not_supported', "Provider '{$class_name}' does not support method '{$method}'." );
+        }
+        return call_user_func_array( [ $class_name, $method ], $args );
     }
 
 }

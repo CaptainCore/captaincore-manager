@@ -410,6 +410,77 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card-text>
 			</v-card>
 		</v-dialog>
+		<v-dialog v-model="dialog_push_to_other.show" max-width="700px" scrollable>
+            <v-card rounded="xl">
+                <v-toolbar color="primary" flat>
+                    <v-btn icon="mdi-close" @click="dialog_push_to_other.show = false"></v-btn>
+                    <v-toolbar-title>Push {{ dialog_push_to_other.source_site?.name }} ({{ dialog_push_to_other.source_env?.environment }}) to...</v-toolbar-title>
+                </v-toolbar>
+                <v-card-text>
+                    <v-text-field
+                        v-model="dialog_push_to_other.search"
+                        label="Search target sites"
+                        variant="underlined"
+                        prepend-inner-icon="mdi-magnify"
+                        clearable
+                        hide-details
+                        class="mb-4"
+                    ></v-text-field>
+
+                    <v-progress-linear indeterminate v-if="dialog_push_to_other.loading"></v-progress-linear>
+
+                    <v-alert type="info" variant="tonal" v-if="!dialog_push_to_other.loading && Object.keys(filteredPushTargets).length === 0">
+                        No other Kinsta sites found for this provider account, or search yielded no results.
+                    </v-alert>
+
+                    <v-list lines="two" v-if="!dialog_push_to_other.loading && Object.keys(filteredPushTargets).length > 0">
+						<template v-for="(site, siteId, siteIndex) in filteredPushTargets" :key="siteId">
+							<v-list-subheader>{{ site.name }}</v-list-subheader>
+							<v-list-item
+								v-for="(env, envIndex) in site.environments"
+								:key="env.environment_id"  
+								:subtitle="env.home_url"
+							>
+								<v-list-item-title>{{ env.name }} Environment</v-list-item-title>
+								<template v-slot:append>
+									<v-btn
+										size="small"
+										color="primary"
+										@click="confirmPushToOther(site, env)" 
+										variant="tonal"
+										:disabled="isPushTargetSameAsSource(site, env)" 
+									>
+										Push here
+									</v-btn>
+								</template>
+							</v-list-item>
+							<v-divider v-if="siteIndex < Object.keys(filteredPushTargets).length - 1" class="my-2"></v-divider>
+						</template>
+					</v-list>
+                </v-card-text>
+            </v-card>
+        </v-dialog>
+        <v-dialog v-model="dialog_push_to_other.confirm.show" max-width="500px">
+            <v-card rounded="xl">
+                <v-toolbar color="warning" flat>
+                    <v-toolbar-title>Confirm Push Operation</v-toolbar-title>
+                </v-toolbar>
+                <v-card-text class="text-body-1 pa-4">
+                    Are you sure you want to push
+                    <br/><strong>{{ dialog_push_to_other.source_site?.name }} ({{ dialog_push_to_other.source_env?.environment }})</strong>
+                    <br/>to overwrite
+                    <br/><strong>{{ dialog_push_to_other.target_site?.name }} ({{ dialog_push_to_other.target_env?.name }})</strong>
+                    <br/>at <a :href="'//' + dialog_push_to_other.target_env?.home_url" target="_blank">{{ dialog_push_to_other.target_env?.home_url }}</a>?
+                    <br/><br/>
+                    <strong class="text-error">This action cannot be undone.</strong> It will replace both the files and database of the target environment.
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn variant="text" @click="dialog_push_to_other.confirm.show = false">Cancel</v-btn>
+                    <v-btn color="warning" @click="executePushToOther()">Confirm Push</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
 		<v-dialog v-model="dialog_fathom.show" max-width="500px">
 		<v-card tile>
 			<v-toolbar flat dark color="primary">
@@ -3261,6 +3332,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-icon style="transform: scaleX(-1);">mdi-truck</v-icon>
 							</template>
 							Pull Staging to Production
+						</v-btn>
+						<v-btn
+							size="small"
+							variant="tonal"
+							@click="showPushToOtherDialog()"
+							prepend-icon="mdi-source-branch"
+							v-show="dialog_site.site && dialog_site.site.provider && dialog_site.site.provider == 'kinsta'">
+							Push to another...
 						</v-btn>
 						<v-dialog max-width="600">
 							<template v-slot:activator="{ props }">
@@ -7926,6 +8005,19 @@ const app = createApp({
 		stats: { from_at: "<?php echo date("Y-m-d", strtotime( date("Y-m-d" ). " -12 months" ) ); ?>", to_at: "<?php echo date("Y-m-d" ); ?>", from_at_select: false, to_at_select: false, grouping: "Month" },
 		role: "<?php echo $user->role; ?>",
 		dialog_processes: { show: false, processes: [], conn: {}, stream: [], loading: true },
+		dialog_push_to_other: {
+            show: false,
+            loading: false,
+            search: '',
+            targets: [], // Array of { site_id, name, kinsta_site_id, environments: [{ environment_id, name, home_url }] }
+            source_site: null, // CaptainCore site object
+            source_env: null, // CaptainCore environment object
+            target_site: null, // Target site object from targets array
+            target_env: null, // Target environment object from targets array
+            confirm: {
+                show: false,
+            }
+        },
 		dialog_new_log_entry: { show: false, sites: [], site_name: "", process: "", description: "" },
 		dialog_edit_log_entry: { show: false, site_name: "", log: {} },
 		dialog_edit_script: { show: false, script: { script_id: "", code: "", run_at_time: "", run_at_date: "" } },
@@ -8273,6 +8365,70 @@ const app = createApp({
 		}
 	},
 	computed: {
+		groupedPushTargets() {
+			// Ensure targets is always an array
+			const targetsArray = Array.isArray(this.dialog_push_to_other.targets) ? this.dialog_push_to_other.targets : [];
+
+			if (targetsArray.length === 0) {
+				return {};
+			}
+			return targetsArray.reduce((acc, envTarget) => {
+				// Ensure essential properties exist before trying to group
+				const siteId = envTarget?.site_id;
+				const siteName = envTarget?.name || 'Unknown Site'; // Default name
+				const environmentName = envTarget?.environment || 'Unknown Env'; // Default name
+				const environmentId = envTarget?.environment_id; // CaptainCore Env ID
+				const homeUrl = envTarget?.home_url || siteName; // Fallback URL
+
+				// Skip if crucial IDs are missing
+				if (!siteId || !environmentId) {
+					console.warn("Skipping push target due to missing site_id or environment_id:", envTarget);
+					return acc;
+				}
+
+				if (!acc[siteId]) {
+					acc[siteId] = {
+						site_id: siteId,
+						name: siteName,
+						environments: []
+					};
+				}
+				// Add the environment details
+				acc[siteId].environments.push({
+					environment_id: environmentId,
+					name: environmentName,
+					home_url: homeUrl
+				});
+				return acc;
+			}, {});
+		},
+
+		filteredPushTargets() {
+			const grouped = this.groupedPushTargets;
+			const siteIds = Object.keys(grouped);
+
+			if (!this.dialog_push_to_other.search) {
+				return grouped; // Return the full grouped object if no search
+			}
+
+			const searchLower = this.dialog_push_to_other.search.toLowerCase();
+			const filteredGrouped = {};
+
+			siteIds.forEach(siteId => {
+				const site = grouped[siteId];
+				const siteNameMatch = site.name.toLowerCase().includes(searchLower);
+				// Check environments within the site
+				const envUrlMatch = site.environments.some(env =>
+					env.home_url && env.home_url.toLowerCase().includes(searchLower)
+				);
+
+				if (siteNameMatch || envUrlMatch) {
+					filteredGrouped[siteId] = site; // Include the whole site if it or any env matches
+				}
+			});
+
+			return filteredGrouped;
+		},
 		hasProviderActions() {
 			return this.provider_actions.length > 0;
 		},
@@ -9061,8 +9217,89 @@ const app = createApp({
 				})
 				.catch(error => {
 					console.log(error.response)
-			});
-		},
+		showPushToOtherDialog() {
+            const sourceSite = this.dialog_site.site;
+            const sourceEnv = this.dialog_site.environment_selected;
+
+            if (!sourceSite || !sourceEnv ) {
+                this.snackbar.message = "This site does not have a provider configured.";
+                this.snackbar.show = true;
+                return;
+            }
+
+            this.dialog_push_to_other.source_site = sourceSite;
+            this.dialog_push_to_other.source_env = sourceEnv;
+            this.dialog_push_to_other.show = true;
+            this.dialog_push_to_other.loading = true;
+            this.dialog_push_to_other.targets = [];
+            this.dialog_push_to_other.search = '';
+
+            // MODIFIED: Call the new generic endpoint
+            axios.get(`/wp-json/captaincore/v1/sites/${sourceSite.site_id}/environments/${sourceEnv.environment_id}/push-targets`, {
+                headers: { 'X-WP-Nonce': this.wp_nonce }
+            })
+            .then(response => {
+                this.dialog_push_to_other.targets = response.data;
+                this.dialog_push_to_other.loading = false;
+            })
+            .catch(error => {
+                console.error("Error fetching push targets:", error);
+                this.snackbar.message = "Error fetching target sites: " + (error.response?.data?.message || error.message);
+                this.snackbar.show = true;
+                this.dialog_push_to_other.loading = false;
+                this.dialog_push_to_other.show = false;
+            });
+        },
+
+        isPushTargetSameAsSource(targetSite, targetEnv) {
+             // targetEnv now has environment_id (CaptainCore ID)
+             // source_env also has environment_id (CaptainCore ID)
+             return targetEnv.environment_id === this.dialog_push_to_other.source_env?.environment_id;
+        },
+
+        confirmPushToOther(targetSite, targetEnv) {
+            this.dialog_push_to_other.target_site = targetSite;
+            this.dialog_push_to_other.target_env = targetEnv;
+            this.dialog_push_to_other.confirm.show = true;
+        },
+
+        executePushToOther() {
+            this.dialog_push_to_other.confirm.show = false;
+            this.dialog_push_to_other.show = false;
+
+            const sourceEnv = this.dialog_push_to_other.source_env;
+            const targetEnv = this.dialog_push_to_other.target_env;
+			const sourceSite = this.dialog_push_to_other.source_site; // for job description
+            const targetSite = this.dialog_push_to_other.target_site; // for job description
+
+            if (!sourceEnv || !targetEnv) {
+                this.snackbar.message = "Error: Missing source or target information.";
+                this.snackbar.show = true;
+                return;
+            }
+
+            const description = `Pushing ${sourceSite.name} (${sourceEnv.environment}) to ${targetSite.name} (${targetEnv.name})`;
+
+            // Call the new generic endpoint with CaptainCore environment IDs
+            axios.post('/wp-json/captaincore/v1/sites/environments/push', {
+                source_environment_id: sourceEnv.environment_id,
+                target_environment_id: targetEnv.environment_id
+            }, {
+                headers: { 'X-WP-Nonce': this.wp_nonce }
+            })
+            .then(response => {
+                this.snackbar.message = "Push operation started.";
+                this.snackbar.show = true;
+                if (response.data.operation_id) {
+                     this.checkProviderActions(); // Start checking provider actions
+                }
+            })
+            .catch(error => {
+                console.error("Error executing push:", error);
+                this.snackbar.message = "Error starting push: " + (error.response?.data?.message || error.message);
+                this.snackbar.show = true;
+            });
+        },
 		viewJob( job_id ) {
 			this.dialog_job.task = this.jobs.filter( j => j.job_id == job_id )[0];
 			this.active_console = 4

@@ -1255,6 +1255,102 @@ function captaincore_site_phpmyadmin_func( $request ) {
 	return $site->fetch_phpmyadmin();
 }
 
+/**
+ * REST Callback: Get Push Targets for a specific environment
+ */
+function captaincore_get_push_targets_func( WP_REST_Request $request ) {
+	$site_id        = (int) $request['site_id'];
+	$environment_id = (int) $request['environment_id'];
+
+	// Verify permission for the source site
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied for source site.', [ 'status' => 403 ] );
+	}
+
+	$source_site = CaptainCore\Sites::get( $site_id );
+	if ( ! $source_site ) {
+		return new WP_Error( 'no_provider', 'Source site has no provider configured.', [ 'status' => 400 ] );
+	}
+
+	$provider = new CaptainCore\Provider( $source_site->provider );
+	$response = $provider->get_push_targets( $site_id, $environment_id );
+
+	if ( is_wp_error( $response ) ) {
+		return $response;
+	}
+	
+	return new WP_REST_Response( $response, 200 );
+}
+
+
+/**
+ * REST Callback: Initiate Environment Push
+ */
+function captaincore_push_environment_func( WP_REST_Request $request ) {
+	$params = $request->get_json_params();
+
+	$source_environment_id   = (int) $params['source_environment_id']; // CaptainCore Environment ID
+	$target_environment_id   = (int) $params['target_environment_id']; // CaptainCore Environment ID
+
+	// Get source environment and site to find the provider
+	$source_env  = CaptainCore\Environments::get( $source_environment_id );
+	$target_env  = CaptainCore\Environments::get( $target_environment_id );
+	if ( ! $source_env ) {
+		return new WP_Error( 'invalid_source', 'Invalid source environment.', [ 'status' => 400 ] );
+	}
+	if ( ! $target_env ) {
+		return new WP_Error( 'invalid_target', 'Invalid target environment.', [ 'status' => 400 ] );
+	}
+
+	$source_site = CaptainCore\Sites::get( $source_env->site_id );
+	$target_site = CaptainCore\Sites::get( $target_env->site_id );
+	if ( ! $source_site ) {
+		return new WP_Error( 'no_site', 'Source site not found.', [ 'status' => 400 ] );
+	}
+	if ( ! $target_site ) {
+		return new WP_Error( 'no_site', 'Target site not found.', [ 'status' => 400 ] );
+	}
+
+	// Verify permission for the source site
+	if ( ! captaincore_verify_permissions( $source_site->site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied for source site.', [ 'status' => 403 ] );
+	}
+	if ( ! captaincore_verify_permissions( $target_site->site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied for target site.', [ 'status' => 403 ] );
+	}
+
+	// Use the Provider class instance
+	$provider = new CaptainCore\Provider( $source_site->provider );
+
+	// Call the push_environment method
+	$response = $provider->push_environment( $source_environment_id, $target_environment_id );
+
+	if ( is_wp_error( $response ) ) {
+		return $response; // Propagate WP_Error
+	}
+
+	// Check Kinsta API response structure for success/operation_id
+	if ( isset( $response->operation_id ) ) {
+		// Add action for tracking
+		 $action_details = (object) [
+			"command"                   => "push_environment",
+			"message"                   => "Pushing {$source_site->name} ({$source_env->environment}) to target environment",
+			"source_site_id"            => $source_site->site_id,
+			"source_environment_id"     => $source_environment_id,
+			"target_environment_id" 	=> $target_environment_id,
+			"provider_id"               => $source_site->provider_id,
+		];
+		// Assumes Kinsta for now, this part could also be abstracted
+		CaptainCore\Providers\Kinsta::add_action( $response->operation_id, $action_details );
+
+		return new WP_REST_Response( [ 'operation_id' => $response->operation_id, 'message' => $response->message ?? 'Push operation started.' ], 202 ); // Accepted
+	} elseif ( isset( $response->message ) ) {
+		 return new WP_REST_Response( [ 'message' => $response->message ], 200 );
+	} else {
+		return new WP_Error( 'api_error', 'Unexpected response from provider API during push.', [ 'status' => 500, 'details' => $response ] );
+	}
+}
+
 function captaincore_site_magiclogin_func( $request ) {
 	$site_id     = $request['id'];
 	$user_id     = $request['user_id'];
@@ -2192,6 +2288,36 @@ function captaincore_register_rest_endpoints() {
 			'callback'            => 'captaincore_site_magiclogin_func',
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<site_id>[\d]+)/environments/(?P<environment_id>[\d]+)/push-targets', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_get_push_targets_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'args'                => [
+				'site_id' => [
+					'validate_callback' => function($param, $request, $key) {
+						return is_numeric($param);
+					}
+				],
+				'environment_id' => [
+					'validate_callback' => function($param, $request, $key) {
+						return is_numeric($param);
+					}
+				],
+			],
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/environments/push', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_push_environment_func',
+			'permission_callback' => 'captaincore_permission_check',
+			 'args'                => [
+				'source_environment_id' => [ 'required' => true, 'type' => 'integer' ],
+				'target_environment_id' => [ 'required' => true, 'type' => 'integer' ],
+			],
 		]
 	);
 	register_rest_route(
