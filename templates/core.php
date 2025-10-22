@@ -419,44 +419,42 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
                 <v-card-text>
                     <v-text-field
                         v-model="dialog_push_to_other.search"
-                        label="Search target sites"
+                        label="Search target sites/domains"
                         variant="underlined"
                         prepend-inner-icon="mdi-magnify"
                         clearable
                         hide-details
-                        class="mb-4"
+                        @update:model-value="dialog_push_to_other.currentPage = 1" class="mb-4"
                     ></v-text-field>
 
                     <v-progress-linear indeterminate v-if="dialog_push_to_other.loading"></v-progress-linear>
 
-                    <v-alert type="info" variant="tonal" v-if="!dialog_push_to_other.loading && Object.keys(filteredPushTargets).length === 0">
-                        No other Kinsta sites found for this provider account, or search yielded no results.
-                    </v-alert>
+                    <v-alert type="info" variant="tonal" v-if="!dialog_push_to_other.loading && filteredPushTargets.length === 0"> No other Kinsta sites found for this provider account, or search yielded no results.</v-alert>
 
-                    <v-list lines="two" v-if="!dialog_push_to_other.loading && Object.keys(filteredPushTargets).length > 0">
-						<template v-for="(site, siteId, siteIndex) in filteredPushTargets" :key="siteId">
-							<v-list-subheader>{{ site.name }}</v-list-subheader>
-							<v-list-item
-								v-for="(env, envIndex) in site.environments"
-								:key="env.environment_id"  
-								:subtitle="env.home_url"
-							>
-								<v-list-item-title>{{ env.name }} Environment</v-list-item-title>
-								<template v-slot:append>
-									<v-btn
-										size="small"
-										color="primary"
-										@click="confirmPushToOther(site, env)" 
-										variant="tonal"
-										:disabled="isPushTargetSameAsSource(site, env)" 
-									>
-										Push here
-									</v-btn>
-								</template>
-							</v-list-item>
-							<v-divider v-if="siteIndex < Object.keys(filteredPushTargets).length - 1" class="my-2"></v-divider>
-						</template>
-					</v-list>
+                    <v-list lines="two" v-if="!dialog_push_to_other.loading && paginatedPushTargets.length > 0">
+                        <template v-for="(target, index) in paginatedPushTargets" :key="target.environment_id">
+                            <v-list-item :subtitle="target.home_url">
+                                <v-list-item-title>{{ target.site_name }} ({{ target.env_name }})</v-list-item-title>
+                                <template v-slot:append>
+                                    <v-btn
+                                        size="small"
+                                        color="primary"
+                                        @click="confirmPushToOther(target)" variant="tonal"
+                                        :disabled="isPushTargetSameAsSource(target)" >
+                                        Push here
+                                    </v-btn>
+                                </template>
+                            </v-list-item>
+                             <v-divider v-if="index < paginatedPushTargets.length - 1" class="my-1"></v-divider> </template>
+                    </v-list>
+                    <v-pagination
+                        v-if="!dialog_push_to_other.loading && totalPagesPushTargets > 1"
+                        v-model="dialog_push_to_other.currentPage"
+                        :length="totalPagesPushTargets"
+                        :total-visible="7"
+                        density="compact"
+                        class="mt-4"
+                    ></v-pagination>
                 </v-card-text>
             </v-card>
         </v-dialog>
@@ -8006,18 +8004,20 @@ const app = createApp({
 		role: "<?php echo $user->role; ?>",
 		dialog_processes: { show: false, processes: [], conn: {}, stream: [], loading: true },
 		dialog_push_to_other: {
-            show: false,
-            loading: false,
-            search: '',
-            targets: [], // Array of { site_id, name, kinsta_site_id, environments: [{ environment_id, name, home_url }] }
-            source_site: null, // CaptainCore site object
-            source_env: null, // CaptainCore environment object
-            target_site: null, // Target site object from targets array
-            target_env: null, // Target environment object from targets array
-            confirm: {
-                show: false,
-            }
-        },
+			show: false,
+			loading: false,
+			search: '',
+			targets: [],
+			source_site: null,
+			source_env: null,
+			target_site: null,
+			target_env: null,
+			confirm: {
+				show: false,
+			},
+			currentPage: 1,
+			itemsPerPage: 100,
+		},
 		dialog_new_log_entry: { show: false, sites: [], site_name: "", process: "", description: "" },
 		dialog_edit_log_entry: { show: false, site_name: "", log: {} },
 		dialog_edit_script: { show: false, script: { script_id: "", code: "", run_at_time: "", run_at_date: "" } },
@@ -8402,33 +8402,45 @@ const app = createApp({
 				return acc;
 			}, {});
 		},
-
 		filteredPushTargets() {
-			const grouped = this.groupedPushTargets;
-			const siteIds = Object.keys(grouped);
+            // Ensure targets is always an array
+            const targetsArray = Array.isArray(this.dialog_push_to_other.targets) ? this.dialog_push_to_other.targets : [];
 
-			if (!this.dialog_push_to_other.search) {
-				return grouped; // Return the full grouped object if no search
-			}
+            if (targetsArray.length === 0) {
+                return [];
+            }
 
-			const searchLower = this.dialog_push_to_other.search.toLowerCase();
-			const filteredGrouped = {};
+            // Flatten the structure: [{site_id, site_name, environment_id, env_name, home_url}, ...]
+            let flatTargets = targetsArray.map(envTarget => ({
+                    site_id: envTarget?.site_id,
+                    site_name: envTarget?.name || 'Unknown Site',
+                    environment_id: envTarget?.environment_id,
+                    env_name: envTarget?.environment || 'Unknown Env',
+                    home_url: envTarget?.home_url || envTarget?.name || 'Unknown URL'
+                })).filter(target => target.site_id && target.environment_id); // Ensure basic validity
 
-			siteIds.forEach(siteId => {
-				const site = grouped[siteId];
-				const siteNameMatch = site.name.toLowerCase().includes(searchLower);
-				// Check environments within the site
-				const envUrlMatch = site.environments.some(env =>
-					env.home_url && env.home_url.toLowerCase().includes(searchLower)
-				);
 
-				if (siteNameMatch || envUrlMatch) {
-					filteredGrouped[siteId] = site; // Include the whole site if it or any env matches
-				}
-			});
+            // Apply search filter
+            if (!this.dialog_push_to_other.search) {
+                return flatTargets; // Return full flat list if no search
+            }
 
-			return filteredGrouped;
-		},
+            const searchLower = this.dialog_push_to_other.search.toLowerCase();
+            return flatTargets.filter(target => {
+                const siteNameMatch = target.site_name.toLowerCase().includes(searchLower);
+                const homeUrlMatch = target.home_url && target.home_url.toLowerCase().includes(searchLower);
+                return siteNameMatch || homeUrlMatch;
+            });
+        },
+        paginatedPushTargets() {
+            const start = (this.dialog_push_to_other.currentPage - 1) * this.dialog_push_to_other.itemsPerPage;
+            const end = start + this.dialog_push_to_other.itemsPerPage;
+            // Use the flat filteredPushTargets array here
+            return this.filteredPushTargets.slice(start, end);
+        },
+        totalPagesPushTargets() {
+             return Math.ceil(this.filteredPushTargets.length / this.dialog_push_to_other.itemsPerPage);
+        },
 		hasProviderActions() {
 			return this.provider_actions.length > 0;
 		},
@@ -9252,19 +9264,14 @@ const app = createApp({
                 this.dialog_push_to_other.show = false;
             });
         },
-
-        isPushTargetSameAsSource(targetSite, targetEnv) {
-             // targetEnv now has environment_id (CaptainCore ID)
-             // source_env also has environment_id (CaptainCore ID)
+        isPushTargetSameAsSource(targetEnv) {
              return targetEnv.environment_id === this.dialog_push_to_other.source_env?.environment_id;
         },
-
-        confirmPushToOther(targetSite, targetEnv) {
-            this.dialog_push_to_other.target_site = targetSite;
-            this.dialog_push_to_other.target_env = targetEnv;
+        confirmPushToOther(target) {
+            this.dialog_push_to_other.target_site = { name: target.site_name, site_id: target.site_id };
+            this.dialog_push_to_other.target_env = { name: target.env_name, environment_id: target.environment_id, home_url: target.home_url };
             this.dialog_push_to_other.confirm.show = true;
         },
-
         executePushToOther() {
             this.dialog_push_to_other.confirm.show = false;
             this.dialog_push_to_other.show = false;
