@@ -19,7 +19,7 @@ class Kinsta {
             }
         }
     }
-    
+
     public static function list() {
         $providers = [];
         $user      = (object) ( new \CaptainCore\User )->fetch();
@@ -42,7 +42,7 @@ class Kinsta {
 
         return $filteredProviders;
     }
-    
+
     public static function list_sites( $record = "", $provider_id = "" ) {
         $providers = self::list();
         $providers_with_sites = [];
@@ -1192,3 +1192,5 @@ class Kinsta {
         return new \WP_Error( 'env_not_found', 'The specified environment was not found on Kinsta.', [ 'status' => 404 ] );
     }
 
+
+}
