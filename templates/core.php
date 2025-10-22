@@ -9217,6 +9217,8 @@ const app = createApp({
 				})
 				.catch(error => {
 					console.log(error.response)
+			});
+		},
 		showPushToOtherDialog() {
             const sourceSite = this.dialog_site.site;
             const sourceEnv = this.dialog_site.environment_selected;
