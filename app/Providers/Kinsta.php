@@ -939,6 +939,161 @@ class Kinsta {
 
     }
 
+    /**
+     * Get list of Kinsta sites/environments eligible to be pushed to.
+     */
+    public static function get_push_targets( $source_site_id, $source_environment_id ) {
+        global $wpdb; // Access the WordPress database object
+
+        // --- Get Source Site Info ---
+        $source_site = \CaptainCore\Sites::get( $source_site_id );
+        // Need provider_id for filtering targets to the same Kinsta account
+        $provider_id = $source_site->provider_id;
+
+        // --- Get Allowed Sites for Current User ---
+        $user_sites = new \CaptainCore\Sites(); // Instantiate to get user-specific permissions
+        $allowed_site_ids = $user_sites->site_ids(); // Get the array of site IDs the user can access
+
+        // If the user has no allowed sites, return early
+        if ( empty( $allowed_site_ids ) ) {
+            return [];
+        }
+
+        // --- Prepare Database Query ---
+        $sites_table        = $wpdb->prefix . 'captaincore_sites';
+        $environments_table = $wpdb->prefix . 'captaincore_environments';
+
+        // Prepare base WHERE clauses safely
+        $where_clauses = [
+            $wpdb->prepare( "s.provider = %s", "kinsta" ),
+            $wpdb->prepare( "s.status = %s", "active" ),
+            $wpdb->prepare( "e.environment_id != %d", $source_environment_id ),
+        ];
+
+        // Add provider_id filtering logic (ensures push targets are within the same Kinsta account)
+        if ( empty( $provider_id ) || $provider_id == '1' ) { // Treat provider_id 1 (often default/unmanaged) or empty as needing matching targets
+             $where_clauses[] = "( s.provider_id = '1' OR s.provider_id IS NULL )";
+        } else {
+             // If source has a specific Kinsta provider_id, target must match
+             $where_clauses[] = $wpdb->prepare( "s.provider_id = %s", $provider_id );
+        }
+
+        // --- Add User Permission Filter ---
+        // Safely create the IN clause for allowed site IDs
+        $allowed_ids_sql = implode( ',', array_map( 'intval', $allowed_site_ids ) ); // Ensure integers
+        $where_clauses[] = "s.site_id IN ( $allowed_ids_sql )"; // Add the IN clause
+
+        $where_sql = implode( ' AND ', $where_clauses );
+
+        // Construct the final optimized query string
+        // Note: $allowed_ids_sql is already sanitized by array_map('intval', ...)
+        $sql = "SELECT s.site_id, s.name, e.environment, e.environment_id, e.home_url
+                FROM $environments_table e
+                INNER JOIN $sites_table s ON e.site_id = s.site_id
+                WHERE $where_sql
+                ORDER BY s.name ASC";
+
+        $results = $wpdb->get_results( $sql ); // Execute the query
+
+        // Map results directly to the target format
+        $targets = [];
+        if ( $results ) {
+            foreach ( $results as $row ) {
+                $targets[] = [
+                    'site_id'        => (int) $row->site_id,
+                    'name'           => $row->name,
+                    'environment'    => $row->environment,
+                    'environment_id' => (int) $row->environment_id,
+                    'home_url'       => $row->home_url ?? $row->name,
+                ];
+            }
+        }
+
+        return $targets;
+    }
+
+    /**
+     * Pushes one Kinsta environment to another.
+     *
+     * @param int $source_environment_id The CaptainCore ID of the source environment.
+     * @param int $target_environment_id The CaptainCore ID of the target environment.
+     * @return object|WP_Error Kinsta API response object or WP_Error on failure.
+     */
+    public static function push_environment( $source_environment_id, $target_environment_id ) {
+		// Get source env and site
+		$source_env  = \CaptainCore\Environments::get( $source_environment_id );
+		$source_site = \CaptainCore\Sites::get( $source_env->site_id );
+		
+		// Get target env and site
+		$target_env  = \CaptainCore\Environments::get( $target_environment_id );
+		$target_site = \CaptainCore\Sites::get( $target_env->site_id );
+
+		if ( ! $source_site || ! $target_site || $source_site->provider_id != $target_site->provider_id ) {
+			return new \WP_Error('provider_mismatch', 'Source and target sites are not managed by the same provider account.', ['status' => 400]);
+		}
+
+        $api_key = self::credentials("api", $source_site->provider_id);
+        if ( ! $api_key ) {
+             return new \WP_Error('kinsta_api_key_missing', 'Kinsta API key not configured or set for the request.', ['status' => 500]);
+        }
+		\CaptainCore\Remote\Kinsta::setApiKey( $api_key );
+
+		// --- Fetch Source Kinsta Env ID ---
+		$source_kinsta_env_id = self::get_kinsta_env_id_from_cc_env( $source_site, $source_env );
+		if ( is_wp_error( $source_kinsta_env_id ) ) {
+			return $source_kinsta_env_id;
+		}
+
+		// --- Fetch Target Kinsta Env ID ---
+		$target_kinsta_env_id = self::get_kinsta_env_id_from_cc_env( $target_site, $target_env );
+		if ( is_wp_error( $target_kinsta_env_id ) ) {
+			return $target_kinsta_env_id;
+		}
+		
+        $data = [
+            "source_env_id"          => $source_kinsta_env_id,
+            "target_env_id"          => $target_kinsta_env_id,
+            "push_db"                => true,
+            "push_files"             => true,
+        ];
+
+        // Call Kinsta API
+        $response = \CaptainCore\Remote\Kinsta::put( "sites/{$source_site->provider_site_id}/environments", $data );
+
+        if ( ! $response || isset( $response->error ) || (isset($response->status) && $response->status >= 400) ) {
+            $error_message = $response->message ?? 'Unknown Kinsta API error during push.';
+            return new \WP_Error( 'kinsta_push_failed', $error_message, [ 'status' => $response->status ?? 500, 'details' => $response ] );
+        }
+
+        return $response;
+    }
+
+	/**
+	 * Helper to get Kinsta Environment ID from a CaptainCore Environment object
+	 */
+	private static function get_kinsta_env_id_from_cc_env( $cc_site, $cc_env ) {
+		if ( ! $cc_site || ! $cc_env || empty( $cc_site->provider_site_id ) ) {
+			return new \WP_Error( 'invalid_input', 'Invalid CaptainCore site or environment object.' );
+		}
+
+		$kinsta_environments_response = \CaptainCore\Remote\Kinsta::get( "sites/{$cc_site->provider_site_id}/environments" );
+
+		if ( ! $kinsta_environments_response || isset( $kinsta_environments_response->error ) || ! isset( $kinsta_environments_response->site->environments ) ) {
+			return new \WP_Error( 'kinsta_api_error', "Could not fetch environments from Kinsta for site {$cc_site->name}.", [ 'status' => 500, 'details' => $kinsta_environments_response ] );
+		}
+
+		$cc_env_name_lower = strtolower( $cc_env->environment );
+		$kinsta_env_name_match = ( $cc_env_name_lower == 'production' ) ? 'live' : $cc_env_name_lower;
+		
+		foreach ( $kinsta_environments_response->site->environments as $kinsta_env ) {
+			if ( strtolower( $kinsta_env->name ) == $kinsta_env_name_match ) {
+				return $kinsta_env->id; // Found it
+			}
+		}
+
+		return new \WP_Error( 'kinsta_env_not_found', "Could not find matching Kinsta environment for {$cc_site->name} ({$cc_env->environment}).", [ 'status' => 404 ] );
+	}
+
     public static function invite_emails( $emails = [], $idSite = "" ) {
         $users      = self::company_users();
         $token      = self::credentials("token");
@@ -1009,5 +1164,31 @@ class Kinsta {
         return $response->data->idAction;
     }
 
-}
+    /**
+     * Private helper to get the Kinsta Environment ID.
+     */
+    private static function get_kinsta_env_id( $site_id, $environment_name ) {
+        $site = ( new \CaptainCore\Sites )->get( $site_id );
+        if ( ! $site || $site->provider != 'kinsta' || empty( $site->provider_site_id ) ) {
+            return new \WP_Error( 'not_kinsta_site', 'This is not a Kinsta-managed site.', [ 'status' => 400 ] );
+        }
+        
+        // Use the site's provider_id if available, otherwise default
+        $api_key = self::credentials("api", $site->provider_id );
+        \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
+
+        $response = \CaptainCore\Remote\Kinsta::get( "sites/{$site->provider_site_id}/environments" );
+
+        if ( ! $response || isset( $response->error ) || ! isset( $response->site->environments ) ) {
+            return new \WP_Error( 'kinsta_api_error', 'Could not fetch environments from Kinsta.', [ 'status' => 500, 'details' => $response ] );
+        }
+
+        foreach ( $response->site->environments as $env ) {
+            if ( strtolower( $env->name ) == strtolower( $environment_name ) ) {
+                return $env->id;
+            }
+        }
+
+        return new \WP_Error( 'env_not_found', 'The specified environment was not found on Kinsta.', [ 'status' => 404 ] );
+    }
 
