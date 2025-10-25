@@ -300,6 +300,7 @@ class ProviderAction {
                     }
                 }
                 \CaptainCore\ProcessLog::insert( "Created site", $site_id );
+                \CaptainCore\Run::CLI("site sync $site_id --update-extras", true);
                 
                 if ($provider->provider == "kinsta") {
                     $response = \CaptainCore\Remote\Kinsta::put( 
@@ -324,13 +325,7 @@ class ProviderAction {
                         ];
                         ( new ProviderActions )->update( $action, [ "provider_action_id" => $this->provider_action_id ] );
                         return self::active(); // Exit, so it gets checked again
-                    } else {
-                        // Kinsta API call failed, just run sync and finish
-                        \CaptainCore\Run::CLI("site sync $site_id --update-extras", true);
                     }
-                } else {
-                    // Not Kinsta, just run sync and finish
-                    \CaptainCore\Run::CLI("site sync $site_id --update-extras", true);
                 }
             }
         }
