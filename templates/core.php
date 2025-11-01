@@ -12023,17 +12023,27 @@ const app = createApp({
 			environment = this.dialog_site.environment_selected
 			environment.server_log_response = ""
 			environment.loading_server_logs = true
-			axios.get(
-				`/wp-json/captaincore/v1/sites/${site.site_id}/${environment.environment.toLowerCase()}/logs/fetch?file=${environment.server_log_selected}&limit=${environment.server_log_limit}`, {
+			
+			// Data to be sent in the POST body
+			const postData = {
+				file: environment.server_log_selected,
+				limit: environment.server_log_limit
+			};
+
+			axios.post(
+				`/wp-json/captaincore/v1/sites/${site.site_id}/${environment.environment.toLowerCase()}/logs/fetch`, 
+				postData, // POST data
+				{
 					headers: {'X-WP-Nonce':this.wp_nonce}
-				})
-				.then(response => {
-					environment.loading_server_logs = false
-					window.Prism = window.Prism || {};
-					window.Prism.manual = true;
-					environment.server_log_response = Prism.highlight( response.data, Prism.languages.log, 'log')
-					Prism.highlightAll()
-				});
+				}
+			)
+			.then(response => {
+				environment.loading_server_logs = false
+				window.Prism = window.Prism || {};
+				window.Prism.manual = true;
+				environment.server_log_response = Prism.highlight( response.data, Prism.languages.log, 'log')
+				Prism.highlightAll()
+			});
 		},
 		showCaptures( site_id ) {
 			this.dialog_captures.site = this.dialog_site.site
