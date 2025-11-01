@@ -62,12 +62,12 @@ class Accounts extends DB {
         $account        = self::get( $account_id );
         $plan           = empty( $account->plan ) ? (object) [] : json_decode( $account->plan );
         $new_plan       = (object) $new_plan;
-        $total          = is_array( $plan->price ) ? 0 : $plan->price;
+        $total          = is_array( $plan->price ) ? 0 : (float) $plan->price;
         $configurations = ( new Configurations )->get();
 
         if ( is_array( $plan->addons ) && count( $plan->addons ) > 0 ) {
             foreach( $plan->addons as $addon ) {
-                $total = $total + $addon->price;
+                $total = $total + (float) $addon->price;
             }
         }
 
