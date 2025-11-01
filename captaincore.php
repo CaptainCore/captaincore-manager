@@ -1864,8 +1864,11 @@ function captaincore_site_logs_list_func( $request ) {
 
 function captaincore_site_logs_fetch_func( $request ) {
 	$site_id = $request['id'];
-	$file    = $request['file'];
-	$limit   = $request['limit'];
+	
+	// Get parameters from the POST body
+	$params = $request->get_json_params();
+	$file   = $params['file'] ?? '';
+	$limit  = $params['limit'] ?? '1000'; // Default limit if not provided
 
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
@@ -2134,8 +2137,17 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
-		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/logs/fetch', [
+		'captaincore/v1', '/sites/vulnerability-scans', [
 			'methods'             => 'GET',
+			'callback'            => 'captaincore_sites_vulnerability_scans_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/logs/fetch', [
+			'methods'             => 'POST',
 			'callback'            => 'captaincore_site_logs_fetch_func',
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
