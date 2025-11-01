@@ -853,14 +853,14 @@ class Account {
             $total = $hosting_plan->price;
 
             if ( $plan->interval != $hosting_plan->interval ) {
-                $total = ( $hosting_plan->price / $hosting_plan->interval ) * $plan->interval;
+                $total = ( (float) $hosting_plan->price / (int) $hosting_plan->interval ) * (int) $plan->interval;
                 $hosting_plan->interval = $plan->interval;
                 $hosting_plan->price    = $total;
             }
             
             if ( ! empty( $plan->addons ) && count( $plan->addons ) > 0 ) {
                 foreach ( $plan->addons as $addon ) {
-                    $total += $addon->quantity * $addon->price;
+                    $total += (float) $addon->quantity * (float) $addon->price;
                 }
             }
     
