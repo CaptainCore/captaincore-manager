@@ -479,6 +479,25 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
                 </v-card-actions>
             </v-card>
         </v-dialog>
+		<v-dialog v-model="dialog_domain.confirm_mx_overwrite" max-width="500px" persistent>
+			<v-card>
+				<v-toolbar color="warning" flat>
+					<v-toolbar-title>Confirm MX Record Overwrite</v-toolbar-title>
+				</v-toolbar>
+				<v-card-text class="text-body-1">
+					This domain already has existing MX records. Activating email forwarding will
+					<strong>delete all existing MX records</strong>
+					and replace them with the ones required by Forward Email.
+					<br><br>
+					Are you sure you want to proceed?
+				</v-card-text>
+				<v-card-actions>
+					<v-spacer></v-spacer>
+					<v-btn variant="text" @click="dialog_domain.confirm_mx_overwrite = false">Cancel</v-btn>
+					<v-btn color="warning" @click="activateEmailForwarding(true)">Confirm Overwrite</v-btn>
+				</v-card-actions>
+			</v-card>
+		</v-dialog>
 		<v-dialog v-model="dialog_fathom.show" max-width="500px">
 		<v-card tile>
 			<v-toolbar flat dark color="primary">
@@ -5217,6 +5236,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-tab value="dns">
 								DNS Records <v-icon class="ml-1" icon="mdi-table"></v-icon>
 							</v-tab>
+							<v-tab value="email-forwarding" v-if="dialog_domain.details.forward_email_id" @click="fetchEmailForwards">
+								Email Forwarding <v-icon class="ml-1" icon="mdi-email-arrow-right"></v-icon>
+							</v-tab>
 							<v-tab value="domain">
 								Domain Management <v-icon class="ml-1" icon="mdi-account-box"></v-icon>
 							</v-tab>
@@ -5660,6 +5682,127 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								</v-container>
 							</div>
 						</v-window-item>
+						<v-window-item value="email-forwarding" :transition="false" :reverse-transition="false">
+
+								<v-alert
+									v-if="!dialog_domain.forwards_domain.loading && dialog_domain.forwards_domain.data && (!dialog_domain.forwards_domain.data.has_mx_record || !dialog_domain.forwards_domain.data.has_txt_record)"
+									type="info"
+									variant="tonal"
+									class="ma-4"
+									border="start"
+								>
+									<v-alert-title>Domain Not Yet Verified</v-alert-title>
+									<p>Your domain's DNS records have not yet been verified by Forward Email. Please ensure the following records are correctly added to your domain's DNS settings.</p>
+									
+									<v-list density="compact" bg-color="transparent" class="mt-2">
+										<v-list-item prepend-icon="mdi-table" title="MX Record (Priority 10)">
+											<v-list-item-subtitle>mx1.forwardemail.net</v-list-item-subtitle>
+										</v-list-item>
+										<v-list-item prepend-icon="mdi-table" title="MX Record (Priority 10)">
+											<v-list-item-subtitle>mx2.forwardemail.net</v-list-item-subtitle>
+										</v-list-item>
+										<v-list-item prepend-icon="mdi-table" title="TXT Record (@)">
+											<v-list-item-subtitle>forward-email-site-verification={{ dialog_domain.forwards_domain.data.verification_record }}</v-list-item-subtitle>
+										</v-list-item>
+									</v-list>
+
+									<v-btn
+										color="primary"
+										@click="verifyForwardEmailDns(dialog_domain.domain.domain_id)"
+										:loading="dialog_domain.forwards_domain.loading"
+										class="mt-2"
+									>
+										Verify DNS Records
+									</v-btn>
+								</v-alert>
+
+								<v-toolbar flat density="compact" color="transparent">
+									<v-toolbar-title v-show="!dialog_domain.forwards.loading"><small>{{ dialog_domain.forwards.items.length }} email forwards</small></v-toolbar-title>
+									<v-spacer></v-spacer>
+									<v-toolbar-items>
+										<v-btn variant="text" @click="addEmailForward()" :disabled="dialog_domain.forwards.loading">Add Forward <v-icon icon="mdi-plus" class="ml-1"></v-icon></v-btn>
+									</v-toolbar-items>
+								</v-toolbar>
+								
+								<v-data-table
+									:loading="dialog_domain.forwards.loading"
+									:disabled="dialog_domain.forwards.loading"
+									:headers="[
+										{ title: 'Alias (Prefix)', key: 'name', width: '200px' },
+										{ title: 'Forwarding To (Recipients)', key: 'recipients_string' },
+										{ title: 'Enabled', key: 'is_enabled', width: '100px' },
+										{ title: 'Actions', key: 'actions', width: '120px', align: 'end', sortable: false }
+									]"
+									:items="dialog_domain.forwards.items"
+									:items-per-page="100"
+									:items-per-page-options="[100,250,500,{'title':'All','value':-1}]"
+									item-value="id"
+									density="comfortable"
+								>
+									<template v-slot:item.name="{ item }">
+										<code>{{ item.name }}</code>
+									</template>
+									<template v-slot:item.is_enabled="{ item }">
+										<v-switch
+											v-model="item.is_enabled"
+											@update:model-value="inlineUpdateEmailForward(item, $event)"
+											color="primary"
+											inset
+											hide-details
+											density="compact"
+											:loading="dialog_domain.forwards.loading"
+											:disabled="dialog_domain.forwards.loading"
+										></v-switch>
+									</template>
+									<template v-slot:item.actions="{ item }">
+										<v-btn variant="text" icon="mdi-pencil" color="primary" density="compact" @click="editEmailForward(item)" :disabled="dialog_domain.forwards.loading"></v-btn>
+										<v-btn variant="text" icon="mdi-delete" color="error" density="compact" @click="deleteEmailForward(item)" :disabled="dialog_domain.forwards.loading"></v-btn>
+									</template>
+								</v-data-table>
+
+								<v-dialog v-model="dialog_domain.forwards.show_dialog" max-width="600px" persistent>
+									<v-card>
+										<v-toolbar color="primary" flat>
+											<v-toolbar-title>{{ dialog_domain.forwards.edited_index > -1 ? 'Edit' : 'Add' }} Email Forward</v-toolbar-title>
+										</v-toolbar>
+										<v-card-text>
+											<v-container>
+												<v-text-field
+													v-model="dialog_domain.forwards.edited_item.name"
+													label="Alias (Prefix)"
+													:suffix="'@' + dialog_domain.domain.name"
+													variant="underlined"
+													hint="The part before the @. Use '*' for a catch-all."
+													persistent-hint
+												></v-text-field>
+												<v-textarea
+													v-model="dialog_domain.forwards.edited_item.recipients_string"
+													label="Forwarding To (Recipients)"
+													variant="underlined"
+													hint="Comma-separated email addresses."
+													persistent-hint
+													rows="3"
+													auto-grow
+													class="mt-4"
+												></v-textarea>
+												<v-switch
+													v-model="dialog_domain.forwards.edited_item.is_enabled"
+													label="Enabled"
+													color="primary"
+													inset
+													hide-details
+													class="mt-4"
+												></v-switch>
+											</v-container>
+										</v-card-text>
+										<v-card-actions>
+											<v-spacer></v-spacer>
+											<v-btn variant="text" @click="closeEmailForwardDialog()">Cancel</v-btn>
+											<v-btn color="primary" @click="saveEmailForward()" :loading="dialog_domain.forwards.loading">Save</v-btn>
+										</v-card-actions>
+									</v-card>
+								</v-dialog>
+							</v-window-item>
 						</v-window>
 						</v-container>
 					</v-card>
@@ -7396,6 +7539,31 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-row>
 			</v-container>
 			</v-container>
+			<v-container v-if="route == 'domains' && ! loading_page && dialog_domain.step == 2" class="mt-5">
+				<v-card color="transparent" density="compact" flat subtitle="Domain Options">
+					<template v-slot:actions>
+						<v-btn 
+							size="small" 
+							variant="outlined" 
+							@click="activateEmailForwarding(false)" 
+							prepend-icon="mdi-email-arrow-right"
+							:loading="dialog_domain.activating_forwarding"
+							v-if="!dialog_domain.details.forward_email_id"
+						>
+							Activate Email Forwarding
+						</v-btn>
+						<v-chip
+							v-if="dialog_domain.details.forward_email_id"
+							color="primary"
+							label
+							variant="tonal"
+							prepend-icon="mdi-check"
+						>
+							Email Forwarding is active
+						</v-chip>
+					</template>
+				</v-card>
+			</v-container>
 			<v-container v-if="route == 'domains' && role == 'administrator' && ! loading_page && dialog_domain.step == 2">
 				<v-card color="transparent" density="compact" flat subtitle="Administrator Options">
 					<template v-slot:actions>
@@ -7743,7 +7911,7 @@ const app = createApp({
 		dialog_new_provider: { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] },
 		dialog_edit_provider: { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] },
 		dialog_configure_defaults: { show: false, loading: false },
-		dialog_domain: { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, ignore_warnings: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider_id: "", provider: { contacts: {} }, contact_tabs: "", tabs: "dns", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], results: [], errors: [], loading: true, saving: false, step: 1 },
+		dialog_domain: { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, ignore_warnings: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider_id: "", provider: { contacts: {} }, contact_tabs: "", tabs: "dns", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], results: [], errors: [], loading: true, saving: false, step: 1, details: {}, activating_forwarding: false, confirm_mx_overwrite: false, forwards_domain: { loading: false, data: null }, forwards: { loading: false, items: [], show_dialog: false, edited_item: { name: '', recipients: '', is_enabled: true }, edited_index: -1 } },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $user->email; ?>", current_user_email: "<?php echo $user->email; ?>", filter_toggle: true, filter_options: [] },
 		dialog_backup_configurations: { show: false, settings: { mode: "", interval: "", active: true } },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
@@ -12898,6 +13066,7 @@ const app = createApp({
 					this.dialog_domain.accounts = response.data.accounts
 					this.dialog_domain.account_ids = response.data.accounts.map( a => a.account_id )
 					this.dialog_domain.provider_id = response.data.provider_id
+					this.dialog_domain.details = response.data.details || {}
 					if ( response.data.provider.errors ) {
 						this.dialog_domain.provider =  { contacts: {} }
 						return
@@ -12906,11 +13075,253 @@ const app = createApp({
 					if ( this.dialog_domain.provider.contacts.owner.country && this.dialog_domain.provider.contacts.owner.country != "" ) {
 						this.populateStatesFor( this.dialog_domain.provider.contacts.owner )
 					}
-					this.dialog_domain.tabs = "dns"
+					if (this.dialog_domain.details.forward_email_id) {
+						this.fetchEmailForwards();
+					} else {
+						this.dialog_domain.tabs = "dns";
+					}
 				})
 		},
+		activateEmailForwarding( overwrite = false ) {
+			this.dialog_domain.activating_forwarding = true;
+			// Close the confirmation dialog if it was open
+			if (overwrite) {
+				this.dialog_domain.confirm_mx_overwrite = false;
+			}
+			
+			const domain_id = this.dialog_domain.domain.domain_id;
+			axios.post(`/wp-json/captaincore/v1/domain/${domain_id}/activate-forward-email`, {
+				overwrite_mx: overwrite // Pass the overwrite flag
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.dialog_domain.activating_forwarding = false;
+				if (response.data.id) {
+					this.snackbar.message = "Email forwarding successfully activated. DNS records are being added.";
+					this.snackbar.show = true;
+					this.dialog_domain.details.forward_email_id = response.data.id;
+					// Switch to the new tab and load the forwards
+					this.dialog_domain.tabs = "email-forwarding";
+					this.fetchEmailForwards();
+				} else {
+					this.snackbar.message = "Error: " + (response.data.message || "Could not activate forwarding.");
+					this.snackbar.show = true;
+				}
+			})
+			.catch(error => {
+				this.dialog_domain.activating_forwarding = false;
+				// Check for the specific conflict error
+				if (error.response && error.response.data && error.response.data.code === 'mx_conflict') {
+					// Open the confirmation dialog
+					this.dialog_domain.confirm_mx_overwrite = true;
+				} else {
+					// Show any other errors normally
+					this.snackbar.message = "Error: " + (error.response?.data?.message || error.message);
+					this.snackbar.show = true;
+				}
+			});
+		},
+		verifyForwardEmailDns( domain_id ) {
+			this.dialog_domain.forwards_domain.loading = true;
+			axios.get(
+				`/wp-json/captaincore/v1/domain/${domain_id}/email-forwarding/status?verify=true`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					this.dialog_domain.forwards_domain.data = response.data;
+					this.dialog_domain.forwards_domain.loading = false;
+					if (response.data.has_mx_record && response.data.has_txt_record) {
+						this.snackbar.message = "Domain verified successfully!";
+					} else {
+						this.snackbar.message = "Verification check complete. Domain is not yet verified.";
+					}
+					this.snackbar.show = true;
+				})
+				.catch(error => {
+					this.snackbar.message = "Error checking verification: " + (error.response?.data?.message || error.message);
+					this.snackbar.show = true;
+					this.dialog_domain.forwards_domain.loading = false;
+				});
+		},
+		fetchEmailForwards() {
+			this.dialog_domain.forwards.loading = true;
+			this.dialog_domain.forwards_domain.loading = true; // Also set domain loading
+			const domain_id = this.dialog_domain.domain.domain_id;
+
+			// Fetch Aliases
+			axios.get(`/wp-json/captaincore/v1/domain/${domain_id}/email-forwards`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.dialog_domain.forwards.items = response.data.map(alias => {
+					// Convert recipients array to a comma-separated string for editing
+					alias.recipients_string = alias.recipients.join(', ');
+					return alias;
+				});
+				this.dialog_domain.forwards.loading = false;
+			})
+			.catch(error => {
+				this.snackbar.message = "Error fetching email forwards: " + (error.response?.data?.message || error.message);
+				this.snackbar.show = true;
+				this.dialog_domain.forwards.loading = false;
+			});
+
+			// Also Fetch Domain Verification Status
+			axios.get(
+				`/wp-json/captaincore/v1/domain/${domain_id}/email-forwarding/status`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					this.dialog_domain.forwards_domain.data = response.data;
+					this.dialog_domain.forwards_domain.loading = false;
+				})
+				.catch(error => {
+					this.snackbar.message = "Error fetching domain status: " + (error.response?.data?.message || error.message);
+					this.snackbar.show = true;
+					this.dialog_domain.forwards_domain.loading = false;
+				});
+		},
+		addEmailForward() {
+			this.dialog_domain.forwards.edited_index = -1;
+			this.dialog_domain.forwards.edited_item = { name: '', recipients_string: '', is_enabled: true };
+			this.dialog_domain.forwards.show_dialog = true;
+		},
+		editEmailForward(item) {
+			this.dialog_domain.forwards.edited_index = this.dialog_domain.forwards.items.indexOf(item);
+			this.dialog_domain.forwards.edited_item = { ...item }; // Clone item for editing
+			this.dialog_domain.forwards.show_dialog = true;
+		},
+		saveEmailForward() {
+			this.dialog_domain.forwards.loading = true;
+			const domain_id = this.dialog_domain.domain.domain_id;
+			const item = this.dialog_domain.forwards.edited_item;
+			
+			// Convert comma-separated string back to array of recipients
+			const payload = {
+				name: item.name,
+				is_enabled: item.is_enabled,
+				recipients: item.recipients_string.split(',').map(email => email.trim()).filter(email => email),
+			};
+
+			let apiCall;
+			if (this.dialog_domain.forwards.edited_index > -1) {
+				// Update existing
+				const alias_id = item.id;
+				apiCall = axios.put(`/wp-json/captaincore/v1/domain/${domain_id}/email-forwards/${alias_id}`, payload, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				});
+			} else {
+				// Create new
+				apiCall = axios.post(`/wp-json/captaincore/v1/domain/${domain_id}/email-forwards`, payload, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				});
+			}
+
+			apiCall.then(response => {
+				this.snackbar.message = "Email forward saved successfully.";
+				this.snackbar.show = true;
+				this.closeEmailForwardDialog();
+				this.fetchEmailForwards(); // Refresh list
+			})
+			.catch(error => {
+				this.snackbar.message = "Error: " + (error.response?.data?.message || error.message);
+				this.snackbar.show = true;
+				this.dialog_domain.forwards.loading = false;
+			});
+		},
+		deleteEmailForward(item) {
+			if (!confirm(`Are you sure you want to delete the alias "${item.name}@${this.dialog_domain.domain.name}"?`)) {
+				return;
+			}
+			this.dialog_domain.forwards.loading = true;
+			const domain_id = this.dialog_domain.domain.domain_id;
+			const alias_id = item.id;
+
+			axios.delete(`/wp-json/captaincore/v1/domain/${domain_id}/email-forwards/${alias_id}`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.snackbar.message = "Email forward deleted successfully.";
+				this.snackbar.show = true;
+				this.fetchEmailForwards(); // Refresh list
+			})
+			.catch(error => {
+				this.snackbar.message = "Error deleting: " + (error.response?.data?.message || error.message);
+				this.snackbar.show = true;
+				this.dialog_domain.forwards.loading = false;
+			});
+		},
+		closeEmailForwardDialog() {
+			this.dialog_domain.forwards.show_dialog = false;
+			this.$nextTick(() => {
+				this.dialog_domain.forwards.edited_item = { name: '', recipients: '', is_enabled: true };
+				this.dialog_domain.forwards.edited_index = -1;
+			});
+		},
+		inlineUpdateEmailForward(item, is_enabled) {
+			const domain_id = this.dialog_domain.domain.domain_id;
+			const alias_id = item.id;
+
+			// The API PUT endpoint requires the full object, not just the changed field.
+			// We build the payload from the 'item' in the table row.
+			const payload = {
+				name: item.name,
+				is_enabled: is_enabled,
+				recipients: item.recipients_string.split(',').map(email => email.trim()).filter(email => email),
+			};
+			
+			this.dialog_domain.forwards.loading = true;
+
+			axios.put(`/wp-json/captaincore/v1/domain/${domain_id}/email-forwards/${alias_id}`, payload, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.snackbar.message = `Forward '${item.name}' ${is_enabled ? 'enabled' : 'disabled'}.`;
+				this.snackbar.show = true;
+				// v-model already updated the item, so we just stop loading.
+				this.dialog_domain.forwards.loading = false;
+			})
+			.catch(error => {
+				this.snackbar.message = "Error: " + (error.response?.data?.message || error.message);
+				this.snackbar.show = true;
+				// Revert the switch on error
+				item.is_enabled = !is_enabled; 
+				this.dialog_domain.forwards.loading = false;
+			});
+		},
 		modifyDNS( domain ) {
-			this.dialog_domain = { show: false, updating_contacts: false, updating_nameservers: false, auth_code: "", fetch_auth_code: false, provider: { contacts: {} }, contact_tabs: "", tabs: "dns", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], loading: true, saving: false, step: 2 };
+			this.dialog_domain = { 
+				show: false, 
+				updating_contacts: false, 
+				updating_nameservers: false, 
+				auth_code: "", 
+				fetch_auth_code: false, 
+				provider: { contacts: {} }, 
+				contact_tabs: "", 
+				tabs: "dns", 
+				show_import: false, 
+				import_json: "", 
+				domain: {}, 
+				records: [], 
+				nameservers: [], 
+				results: [], 
+				errors: [], 
+				loading: true, 
+				saving: false, 
+				step: 2,
+				details: {},
+				activating_forwarding: false,
+				confirm_mx_overwrite: false,
+				forwards_domain: { loading: false, data: null }, 
+				forwards: {
+					loading: false,
+					items: [],
+					show_dialog: false,
+					edited_item: { name: '', recipients: '', is_enabled: true },
+					edited_index: -1,
+				}
+			};
 			if ( domain.remote_id == null ) {
 				this.dialog_domain.errors = [ "Domain not found." ];
 				this.dialog_domain.domain = domain;

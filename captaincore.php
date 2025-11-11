@@ -1203,6 +1203,42 @@ function captaincore_domain_zone_import_func( $request ) {
 	return CaptainCore\Domains::records( $domain, $zone );
 }
 
+/**
+ * REST API callback to get Forward Email domain status and optionally trigger verification.
+ *
+ * @param WP_REST_Request $request The request object.
+ * @return WP_REST_Response|WP_Error The response object.
+ */
+function captaincore_domain_email_forwarding_status_func( WP_REST_Request $request ) {
+    $domain_id = $request['id'];
+    $verify    = $request->get_param('verify'); // Check if 'verify' query param is set
+
+    // Verify user permissions for this domain
+    if ( ! ( new CaptainCore\Domains )->verify( $domain_id ) ) {
+        return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+    }
+
+    $domain = ( new CaptainCore\Domains )->get( $domain_id );
+    if ( empty( $domain->name ) ) {
+        return new WP_Error( 'no_domain', 'Domain not found.', [ 'status' => 404 ] );
+    }
+
+    // If verify=true, trigger a re-check with Forward Email first
+    if ( $verify ) {
+        // This endpoint triggers a check and returns the updated domain object.
+        \CaptainCore\Remote\ForwardEmail::get( "domains/{$domain->name}/verify-records" );
+    }
+
+    // Always return the current domain status from Forward Email
+    $response = \CaptainCore\Remote\ForwardEmail::get( "domains/{$domain->name}" );
+    
+    if ( is_wp_error( $response ) ) {
+        return $response;
+    }
+
+    return new WP_REST_Response( $response, 200 );
+}
+
 function captaincore_recipes_func( $request ) {
 	return ( new CaptainCore\Recipes() )->list();
 }
@@ -2683,6 +2719,98 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/domain/(?P<id>[\d]+)/auth_code', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_domain_auth_code_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/domain/(?P<id>[\d]+)/activate-forward-email', [
+			'methods'             => 'POST',
+			'callback'            => function( WP_REST_Request $request ) {
+				$domain_id = $request['id'];
+				if ( ! ( new CaptainCore\Domains )->verify( $domain_id ) ) {
+					return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+				}
+				// Get 'overwrite_mx' param from the request body
+				$params = $request->get_json_params();
+				$overwrite_mx = $params['overwrite_mx'] ?? false;
+				
+				return ( new CaptainCore\Domain( $domain_id ) )->activate_email_forwarding( $overwrite_mx );
+			},
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/domain/(?P<id>[\d]+)/email-forwards', [
+			'methods'             => 'GET',
+			'callback'            => function( WP_REST_Request $request ) {
+				$domain_id = $request['id'];
+				if ( ! ( new CaptainCore\Domains )->verify( $domain_id ) ) {
+					return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+				}
+				return ( new CaptainCore\Domain( $domain_id ) )->get_email_forwards();
+			},
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/domain/(?P<id>[\d]+)/email-forwards', [
+			'methods'             => 'POST',
+			'callback'            => function( WP_REST_Request $request ) {
+				$domain_id = $request['id'];
+				if ( ! ( new CaptainCore\Domains )->verify( $domain_id ) ) {
+					return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+				}
+				$alias_input = $request->get_json_params();
+				return ( new CaptainCore\Domain( $domain_id ) )->add_email_forward( $alias_input );
+			},
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/domain/(?P<id>[\d]+)/email-forwards/(?P<alias_id>[a-zA-Z0-9-]+)', [
+			'methods'             => 'PUT',
+			'callback'            => function( WP_REST_Request $request ) {
+				$domain_id = $request['id'];
+				$alias_id  = $request['alias_id'];
+				if ( ! ( new CaptainCore\Domains )->verify( $domain_id ) ) {
+					return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+				}
+				$alias_input = $request->get_json_params();
+				return ( new CaptainCore\Domain( $domain_id ) )->update_email_forward( $alias_id, $alias_input );
+			},
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/domain/(?P<id>[\d]+)/email-forwards/(?P<alias_id>[a-zA-Z0-9-]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => function( WP_REST_Request $request ) {
+				$domain_id = $request['id'];
+				$alias_id  = $request['alias_id'];
+				if ( ! ( new CaptainCore\Domains )->verify( $domain_id ) ) {
+					return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+				}
+				return ( new CaptainCore\Domain( $domain_id ) )->delete_email_forward( $alias_id );
+			},
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	
+	register_rest_route(
+		'captaincore/v1', '/domain/(?P<id>[\d]+)/email-forwarding/status', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_domain_email_forwarding_status_func',
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
 		]
