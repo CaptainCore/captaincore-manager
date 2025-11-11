@@ -128,10 +128,12 @@ class Domain {
 
     public function fetch() {
         $domain = Domains::get( $this->domain_id );
+        $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details ); 
         return [
             "provider"    => self::fetch_remote(),
             "accounts"    => self::accounts(),
-            "provider_id" => $domain->provider_id
+            "provider_id" => $domain->provider_id,
+            "details"     => $details,
         ];
     }
 
@@ -236,6 +238,241 @@ class Domain {
         }
 
     }
+
+    public function activate_email_forwarding( $overwrite_mx = false ) {
+        $domain = ( new Domains )->get( $this->domain_id );
+        $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
+
+        if ( ! empty( $details->forward_email_id ) ) {
+            return new \WP_Error( 'already_active', 'Email forwarding is already active for this domain.' );
+        }
+
+        // 1. Check for DNS conflicts *before* calling the Forward Email API
+        $constellix_domain = ( new Domains )->get( $this->domain_id );
+        $at_mx_records = [];
+        $existing_at_txt_record = null; 
+        $has_existing_at_mx = false;
+
+        if ( ! empty( $constellix_domain->remote_id ) ) {
+            
+            $all_records_response = \CaptainCore\Remote\Constellix::get( "domains/{$constellix_domain->remote_id}/records" );
+            
+            if ( is_object( $all_records_response ) && isset( $all_records_response->data ) && is_array( $all_records_response->data ) ) {
+                foreach ( $all_records_response->data as $record ) {
+                    if ( $record->type === 'MX' && $record->name === "" ) { 
+                        $at_mx_records[] = $record;
+                    }
+                    if ( $record->type === 'TXT' && $record->name === "" ) { 
+                        $existing_at_txt_record = $record; 
+                    }
+                }
+            }
+            
+            $has_existing_at_mx = ( count( $at_mx_records ) > 0 );
+
+            if ( $has_existing_at_mx && ! $overwrite_mx ) {
+                return new \WP_Error( 'mx_conflict', 'Existing MX records found. Please confirm to overwrite.', [ 'status' => 409 ] );
+            }
+        }
+
+        // 2. No conflicts (or user approved overwrite), proceed with Forward Email API
+        $response = \CaptainCore\Remote\ForwardEmail::post( "domains", [ "domain" => $domain->name ] );
+
+        if ( is_wp_error( $response ) || isset( $response->message ) ) {
+            $existing_domain_response = \CaptainCore\Remote\ForwardEmail::get( "domains/{$domain->name}" );
+            if ( !is_wp_error( $existing_domain_response ) && !isset( $existing_domain_response->message ) && isset( $existing_domain_response->id ) ) {
+                $response = $existing_domain_response;
+            } else {
+                return new \WP_Error( 'api_error', $response->message ?? 'Failed to create or retrieve domain on Forward Email.' );
+            }
+        }
+
+        if ( empty( $response->id ) || empty( $response->verification_record ) ) {
+            return new \WP_Error( 'api_response_invalid', 'Invalid response from Forward Email API.' );
+        }
+
+        $forward_email_id    = $response->id;
+        $verification_record = $response->verification_record;
+
+        // 3. Apply DNS changes (if managed)
+        if ( ! empty( $constellix_domain->remote_id ) ) {
+            
+            // 3a. Add TXT Verification Record
+            $record_name = ""; // '@' record
+            // *** FIX: Add quotes to the TXT value, as required by Constellix ***
+            $record_value = "\"forward-email-site-verification={$verification_record}\"";
+            
+            // We already found the $existing_at_txt_record in Step 1
+            if ( $existing_at_txt_record ) {
+                // UPDATE existing '@' TXT record
+                $record_id = $existing_at_txt_record->id;
+                $current_values = $existing_at_txt_record->value; 
+                
+                $value_exists = false;
+                foreach ( $current_values as $value_obj ) {
+                    // Check if the *exact* quoted string already exists
+                    if ( $value_obj->value === $record_value ) {
+                        $value_exists = true;
+                        break;
+                    }
+                }
+
+                if ( ! $value_exists ) {
+                    // Value does not exist, append it as an object
+                    $new_value_obj = (object) [ 'value' => $record_value, 'enabled' => true ];
+                    $current_values[] = $new_value_obj;
+                    
+                    // The formatter will now use the raw values (with quotes)
+                    $formatted_data = self::_format_dns_record_for_api( 'txt', $record_name, $current_values, 3600 );
+                    $dns_response = \CaptainCore\Remote\Constellix::put( "domains/{$constellix_domain->remote_id}/records/{$record_id}", $formatted_data );
+                    error_log( json_encode( $dns_response ) );
+                    
+                    if ( ! empty( $dns_response->errors ) ) {
+                        error_log( 'CaptainCore: Failed to UPDATE Forward Email TXT record on Constellix for domain ' . $domain->name . ': ' . json_encode( $dns_response->errors ) );
+                    }
+                }
+
+            } else {
+                // CREATE new '@' TXT record
+                // *** FIX: Add quotes to the TXT value here too ***
+                $record_data_value = [ [ 'value' => $record_value, 'enabled' => true ] ];
+                $formatted_data = self::_format_dns_record_for_api( 'txt', $record_name, $record_data_value, 3600 );
+                $dns_response = \CaptainCore\Remote\Constellix::post( "domains/{$constellix_domain->remote_id}/records", $formatted_data );
+                
+                if ( ! empty( $dns_response->errors ) ) {
+                    error_log( 'CaptainCore: Failed to CREATE Forward Email TXT record on Constellix for domain ' . $domain->name . ': ' . json_encode( $dns_response->errors ) );
+                }
+            }
+
+            // 3b. Handle MX Records
+            // We already have $has_existing_at_mx and $at_mx_records from Step 1
+            if ( $has_existing_at_mx && $overwrite_mx ) {
+                // User confirmed overwrite, delete existing '@' MX records.
+                foreach ( $at_mx_records as $record ) {
+                    \CaptainCore\Remote\Constellix::delete( "domains/{$constellix_domain->remote_id}/records/mx/{$record->id}" );
+                }
+            }
+
+            // Add new Forward Email MX records (if none existed, or if we just deleted them)
+            if ( !$has_existing_at_mx || $overwrite_mx ) {
+                $new_mx_records = [
+                    [ 'priority' => 10, 'server' => 'mx1.forwardemail.net.' ],
+                    [ 'priority' => 10, 'server' => 'mx2.forwardemail.net.' ],
+                ];
+                $mx_record_data = [
+                    'name'  => '', // '@' record
+                    'type'  => 'mx',
+                    'ttl'   => 3600,
+                    'value' => $new_mx_records,
+                ];
+                $formatted_mx_data = self::_format_dns_record_for_api( 'mx', '', $mx_record_data['value'], 3600 );
+                $mx_dns_response = \CaptainCore\Remote\Constellix::post( "domains/{$constellix_domain->remote_id}/records", $formatted_mx_data );
+
+                if ( ! empty( $mx_dns_response->errors ) ) {
+                    error_log( 'CaptainCore: Failed to add Forward Email MX records to Constellix for domain ' . $domain->name . ': ' . json_encode( $mx_dns_response->errors ) );
+                }
+            }
+        }
+
+        // 4. Save the Forward Email ID to the domain details (only after success)
+        $details->forward_email_id = $forward_email_id;
+        \CaptainCore\Remote\ForwardEmail::get( "domains/{$forward_email_id}/verify-records" );
+        ( new Domains )->update( [ "details" => json_encode( $details ) ], [ "domain_id" => $this->domain_id ] );
+
+        return $response;
+    }
+
+    public function get_email_forwards() {
+        $domain = ( new Domains )->get( $this->domain_id );
+        if ( empty( $domain->name ) ) {
+            return new \WP_Error( 'no_domain', 'Domain not found.' );
+        }
+        return \CaptainCore\Remote\ForwardEmail::get( "domains/{$domain->name}/aliases" );
+    }
+
+    public function add_email_forward( $alias_input ) {
+        $domain = ( new Domains )->get( $this->domain_id );
+        if ( empty( $domain->name ) ) {
+            return new \WP_Error( 'no_domain', 'Domain not found.' );
+        }
+        return \CaptainCore\Remote\ForwardEmail::post( "domains/{$domain->name}/aliases", $alias_input );
+    }
+
+    public function update_email_forward( $alias_id, $alias_input ) {
+        $domain = ( new Domains )->get( $this->domain_id );
+        if ( empty( $domain->name ) ) {
+            return new \WP_Error( 'no_domain', 'Domain not found.' );
+        }
+        return \CaptainCore\Remote\ForwardEmail::put( "domains/{$domain->name}/aliases/{$alias_id}", $alias_input );
+    }
+
+    public function delete_email_forward( $alias_id ) {
+        $domain = ( new Domains )->get( $this->domain_id );
+        if ( empty( $domain->name ) ) {
+            return new \WP_Error( 'no_domain', 'Domain not found.' );
+        }
+        return \CaptainCore\Remote\ForwardEmail::delete( "domains/{$domain->name}/aliases/{$alias_id}" );
+    }
+
+    /**
+	 * Formats DNS record data for the Constellix API.
+	 * (Internal helper copied from captaincore.php)
+	 */
+	private static function _format_dns_record_for_api( $record_type, $record_name, $record_value, $record_ttl ) {
+		$record_type = strtolower( $record_type );
+		$post_data   = [
+			'name' => $record_name,
+			'type' => $record_type,
+			'ttl'  => $record_ttl,
+		];
+
+		if ( in_array( $record_type, [ 'a', 'aaaa', 'aname', 'cname', 'txt', 'spf' ] ) ) {
+			$records = [];
+			foreach ( (array) $record_value as $record ) {
+                $record_obj = (object) $record;
+				$records[] = [
+					'value'   => $record_obj->value,
+					'enabled' => $record_obj->enabled ?? true,
+				];
+			}
+			$post_data['value'] = $records;
+		} elseif ( $record_type == 'mx' ) {
+			$mx_records = [];
+			foreach ( (array) $record_value as $mx_record ) {
+                $mx_record_obj = (object) $mx_record;
+				$mx_records[] = [
+					'server'   => $mx_record_obj->server, 
+					'priority' => $mx_record_obj->priority, 
+					'enabled'  => $mx_record_obj->enabled ?? true, // Preserve enabled state
+				];
+			}
+			$post_data['value'] = $mx_records;
+		} elseif ( $record_type == 'srv' ) {
+			$srv_records = [];
+			foreach ( (array) $record_value as $srv_record ) {
+                $srv_record_obj = (object) $srv_record;
+				$srv_records[] = [
+					'host'     => $srv_record_obj->host, 
+					'priority' => $srv_record_obj->priority, 
+					'weight'   => $srv_record_obj->weight, 
+					'port'     => $srv_record_obj->port, 
+					'enabled'  => $srv_record_obj->enabled ?? true, // Preserve enabled state
+				];
+			}
+			$post_data['value'] = $srv_records;
+		} elseif ( $record_type == 'http' ) {
+            $url = is_object($record_value) ? $record_value->url : $record_value;
+			$post_data['value'] = [
+				'hard'         => true,
+				'url'          => $url,
+				'redirectType' => '301',
+			];
+		} else {
+			$post_data['value'] = $record_value;
+		}
+
+		return $post_data;
+	}
 
     public function auth_code() {
         $domain        = ( new Domains )->get( $this->domain_id );
