@@ -7783,6 +7783,10 @@ const app = createApp({
 				"value": "spaceship"
 			},
 			{
+				"title": "Email - Forward Email",
+				"value": "forwardemail"
+			},
+			{
 				"title": "Email - Mailgun",
 				"value": "mailgun"
 			},
