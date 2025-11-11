@@ -247,6 +247,31 @@ class Domain {
             return new \WP_Error( 'already_active', 'Email forwarding is already active for this domain.' );
         }
 
+        // Check if domain already exists and is verified on Forward Email
+        $existing_domain_response = \CaptainCore\Remote\ForwardEmail::get( "domains/{$domain->name}" );
+
+        if ( !is_wp_error( $existing_domain_response ) && !isset( $existing_domain_response->message ) && isset( $existing_domain_response->id ) ) {
+            // Domain exists on Forward Email.
+            
+            // Check if it's already fully verified.
+            if ( $existing_domain_response->has_mx_record && $existing_domain_response->has_txt_record ) {
+                // Domain exists and is verified. Just link it.
+                $details->forward_email_id = $existing_domain_response->id;
+                ( new Domains )->update( [ "details" => json_encode( $details ) ], [ "domain_id" => $this->domain_id ] );
+                
+                // Return the domain object, just as if we had activated it.
+                return $existing_domain_response; 
+            }
+            
+            // Domain exists but is NOT verified. We need to proceed with DNS setup.
+            // We can skip the "create" step later by using this response object.
+            $response = $existing_domain_response;
+            
+        } else {
+            // Domain does not exist on Forward Email. We will need to create it.
+            $response = null; 
+        }
+
         // 1. Check for DNS conflicts *before* calling the Forward Email API
         $constellix_domain = ( new Domains )->get( $this->domain_id );
         $at_mx_records = [];
@@ -260,7 +285,7 @@ class Domain {
             if ( is_object( $all_records_response ) && isset( $all_records_response->data ) && is_array( $all_records_response->data ) ) {
                 foreach ( $all_records_response->data as $record ) {
                     if ( $record->type === 'MX' && $record->name === "" ) { 
-                        $at_mx_records[] = $record;
+                     $at_mx_records[] = $record;
                     }
                     if ( $record->type === 'TXT' && $record->name === "" ) { 
                         $existing_at_txt_record = $record; 
@@ -276,14 +301,16 @@ class Domain {
         }
 
         // 2. No conflicts (or user approved overwrite), proceed with Forward Email API
-        $response = \CaptainCore\Remote\ForwardEmail::post( "domains", [ "domain" => $domain->name ] );
+        if ( is_null($response) ) {
+            $response = \CaptainCore\Remote\ForwardEmail::post( "domains", [ "domain" => $domain->name ] );
 
-        if ( is_wp_error( $response ) || isset( $response->message ) ) {
-            $existing_domain_response = \CaptainCore\Remote\ForwardEmail::get( "domains/{$domain->name}" );
-            if ( !is_wp_error( $existing_domain_response ) && !isset( $existing_domain_response->message ) && isset( $existing_domain_response->id ) ) {
-                $response = $existing_domain_response;
-            } else {
-                return new \WP_Error( 'api_error', $response->message ?? 'Failed to create or retrieve domain on Forward Email.' );
+            if ( is_wp_error( $response ) || isset( $response->message ) ) {
+                $existing_domain_response_fallback = \CaptainCore\Remote\ForwardEmail::get( "domains/{$domain->name}" );
+                if ( !is_wp_error( $existing_domain_response_fallback ) && !isset( $existing_domain_response_fallback->message ) && isset( $existing_domain_response_fallback->id ) ) {
+                    $response = $existing_domain_response_fallback;
+                } else {
+                    return new \WP_Error( 'api_error', $response->message ?? 'Failed to create or retrieve domain on Forward Email.' );
+                }
             }
         }
 
@@ -291,7 +318,7 @@ class Domain {
             return new \WP_Error( 'api_response_invalid', 'Invalid response from Forward Email API.' );
         }
 
-        $forward_email_id    = $response->id;
+        $forward_email_id = $response->id;
         $verification_record = $response->verification_record;
 
         // 3. Apply DNS changes (if managed)
