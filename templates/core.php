@@ -5397,7 +5397,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										</table>
 										</div>
 										</div>
-										<v-btn variant="tonal" class="ml-4" @click="addRecord()" v-show="!dialog_domain.loading && !dialog_domain.saving && !dialog_domain.errors">Add Additional Record</v-btn>
+										<v-btn variant="tonal" class="ml-4" @click="addRecord()" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
 									</v-col>
 								</v-row>
 								<v-row v-show="dialog_domain.saving">
