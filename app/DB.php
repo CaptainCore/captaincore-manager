@@ -616,7 +616,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "34";
+        $required_version = (int) "35";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -885,6 +885,7 @@ class DB {
             status varchar(255),
             price varchar(255),
             name varchar(255),
+            details longtext,
             created_at datetime NOT NULL,
             updated_at datetime NOT NULL,
         PRIMARY KEY  (domain_id)
