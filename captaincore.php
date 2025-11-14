@@ -4065,6 +4065,10 @@ function captaincore_account_action_callback() {
 		// Pay with new credit card
 		if ( isset( $_POST['source_id'] ) ) {
 			$response       = $user->add_payment_method( $_POST['source_id'] );
+			if ( isset( $response->error ) ) {
+				echo json_encode( $response );
+				wp_die();
+			}
 			$payment_tokens = WC_Payment_Tokens::get_customer_tokens( $user->user_id() );
 			foreach ( $payment_tokens as $payment_token ) { 
 				if( $payment_token->get_token() == $_POST['source_id'] ) {
