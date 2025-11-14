@@ -11770,9 +11770,19 @@ const app = createApp({
 					}
 					axios.post( ajaxurl, Qs.stringify( data ) )
 						.then( response => {
+							if ( response.data && response.data.error ) {
+								self.dialog_invoice.paying = false;
+								self.dialog_invoice.error = response.data.error;
+								return;
+							}
 							self.dialog_invoice.paying = false
 							self.showInvoice( invoice_id )
 							self.fetchBilling()
+						})
+						.catch( error => {
+							console.log( error );
+							self.dialog_invoice.paying = false;
+							self.dialog_invoice.error = "An unexpected error occurred. Please try again.";
 						})
 				})
 				return
@@ -11789,6 +11799,11 @@ const app = createApp({
 					this.dialog_invoice.paying = false
 					this.showInvoice( invoice_id )
 					this.fetchBilling()
+				})
+				.catch( error => {
+					console.log( error );
+					this.dialog_invoice.paying = false;
+					this.dialog_invoice.error = "An unexpected error occurred. Please try again.";
 				})
 		},
 		addPaymentMethod() {

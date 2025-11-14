@@ -39,17 +39,29 @@ class User {
     }
 
     public function add_payment_method( $source_id ) {
-        $customer    = new \WC_Stripe_Customer( $this->user_id );
-        $customer_id = $customer->get_id();
-        if ( ! $customer_id ) {
-            $customer->set_id( $customer->create_customer() );
+        try {
+            $customer    = new \WC_Stripe_Customer( $this->user_id );
             $customer_id = $customer->get_id();
-        } else {
-            $customer_id = $customer->update_customer();
+            if ( ! $customer_id ) {
+                $customer->set_id( $customer->create_customer() );
+                $customer_id = $customer->get_id();
+            } else {
+                $customer_id = $customer->update_customer();
+            }
+            $response = $customer->add_source( $source_id );
+            
+            if ( is_wp_error( $response ) ) {
+                return (object) [ 'error' => $response->get_error_message() ];
+            }
+            if ( ! empty( $response->error ) ) {
+                return (object) [ 'error' => $response->error->message ];
+            }
+
+            $customer->attach_source( $source_id );
+            return $response;
+        } catch ( \WC_Stripe_Exception $e ) {
+            return (object) [ 'error' => $e->getMessage() ];
         }
-        $response = $customer->add_source( $source_id );
-        $customer->attach_source( $source_id );
-        return $response;
     }
 
     public function delete_payment_method( $token_id ) {
