@@ -7982,6 +7982,11 @@ const app = createApp({
 				"value": "envato",
 				"fields": [ "token" ]
 			},
+			{
+				"title": "Plugin - Gravity SMTP",
+				"value": "gravitysmtp",
+				"fields": [ "license", "download_url" ]
+			},
 		],
 		datacenters: [
 			{
