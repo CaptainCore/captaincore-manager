@@ -5307,7 +5307,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card-text>
 				</v-sheet>
 				<v-sheet v-show="dialog_domain.step == 2" color="transparent">
-					<v-card flat rounded="xl">
+					<div v-if="dialog_domain.loading" class="text-center pa-10">
+						<v-progress-circular indeterminate color="primary"></v-progress-circular>
+					</div>
+					<v-card v-else flat rounded="xl">
 						<v-toolbar flat color="transparent">
 							<v-toolbar-title>
 							<v-autocomplete
@@ -5342,7 +5345,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-toolbar>
 						<v-window v-model="dialog_domain.tabs">
 							<v-window-item value="dns" :transition="false" :reverse-transition="false">
-							<v-toolbar flat density="compact" color="transparent">
+							<v-toolbar flat density="compact" color="transparent" v-if="dialog_domain.domain.remote_id">
 								<v-toolbar-title v-show="dnsRecords > 0"><small>{{ dnsRecords }} DNS records</small></v-toolbar-title>
 								<v-spacer></v-spacer>
 								<v-toolbar-items>
@@ -5372,9 +5375,19 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									<v-btn variant="text" @click="exportDomain()">Export <v-icon icon="mdi-file-download" class="ml-1"></v-icon></v-btn>
 								</v-toolbar-items>
 							</v-toolbar>
-								<v-row v-if="dialog_domain.errors">
+								<v-row v-if="dialog_domain.errors && dialog_domain.errors.length > 0">
 									<v-col class="ma-3">
 										<v-alert variant="tonal" type="error" v-for="error in dialog_domain.errors">{{ error }}</v-alert>
+									</v-col>
+								</v-row>
+								<v-row v-if="dialog_domain.info && dialog_domain.info.length > 0">
+									<v-col class="ma-3">
+										<v-alert variant="tonal" type="info" color="primary">
+											<div v-for="info in dialog_domain.info">{{ info }}</div>
+											<v-btn color="primary" @click="activateDNSZone(dialog_domain.domain)" :loading="dialog_domain.deleting_dns_zone" class="mt-3" v-if="!dialog_domain.domain.remote_id">
+												Activate DNS Zone
+											</v-btn>
+										</v-alert>
 									</v-col>
 								</v-row>
 								<v-row>
@@ -7901,6 +7914,39 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card>
 				</template>
 			</v-dialog>
+				<v-btn 
+					variant="outlined" 
+					color="primary" 
+					@click="activateDNSZone(dialog_domain.domain)" 
+					:loading="dialog_domain.deleting_dns_zone"
+					v-if="!dialog_domain.domain.remote_id">
+					Activate DNS Zone
+				</v-btn>
+				<v-btn 
+					variant="outlined" 
+					color="error" 
+					@click="dialog_domain.confirm_delete_dns_zone = true" 
+					:loading="dialog_domain.deleting_dns_zone"
+					v-if="dialog_domain.domain.remote_id">
+					Delete DNS Zone
+				</v-btn>
+				<v-dialog v-model="dialog_domain.confirm_delete_dns_zone" max-width="500px" persistent>
+					<v-card>
+						<v-toolbar color="error" flat>
+							<v-toolbar-title>Confirm DNS Zone Deletion</v-toolbar-title>
+						</v-toolbar>
+						<v-card-text class="text-body-1">
+							Are you sure you want to delete the DNS zone for <strong>{{ dialog_domain.domain.name }}</strong>?
+							<br><br>
+							This will remove all associated DNS records from the DNS provider (Constellix). This action cannot be undone.
+						</v-card-text>
+						<v-card-actions>
+							<v-spacer></v-spacer>
+							<v-btn variant="text" @click="dialog_domain.confirm_delete_dns_zone = false">Cancel</v-btn>
+							<v-btn color="error" @click="deleteDNSZone(dialog_domain.domain)">Confirm Deletion</v-btn>
+						</v-card-actions>
+					</v-card>
+				</v-dialog>
 				<v-btn variant="outlined" color="error" @click="deleteDomain()">Delete Domain</v-btn>
 					</template>
 				</v-card>
@@ -13804,6 +13850,52 @@ const app = createApp({
 					this.$refs.export_domain.click();
 				})
 			
+		},
+		activateDNSZone(domain) {
+			this.dialog_domain.deleting_dns_zone = true;
+			axios.post(`/wp-json/captaincore/v1/domain/${domain.domain_id}/activate-dns-zone`, {}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.snackbar.message = response.data.message || "DNS zone activated.";
+				this.snackbar.show = true;
+				// Update the local domain object with the new remote_id
+				this.dialog_domain.domain.remote_id = response.data.remote_id;
+				// Manually refresh DNS records tab since it's now active
+				this.modifyDNS(this.dialog_domain.domain);
+				this.fetchDomain(this.dialog_domain.domain);
+			})
+			.catch(error => {
+				this.snackbar.message = "Error: " + (error.response?.data?.message || error.message);
+				this.snackbar.show = true;
+			})
+			.finally(() => {
+				this.dialog_domain.deleting_dns_zone = false;
+			});
+		},
+		deleteDNSZone(domain) {
+			this.dialog_domain.deleting_dns_zone = true;
+			this.dialog_domain.confirm_delete_dns_zone = false;
+
+			axios.delete(`/wp-json/captaincore/v1/domain/${domain.domain_id}/dns-zone`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.snackbar.message = response.data.message || "DNS zone deleted.";
+				this.snackbar.show = true;
+				// Clear the remote_id locally
+				this.dialog_domain.domain.remote_id = null;
+				// Clear the records list as the zone is gone
+				this.dialog_domain.records = [];
+				this.dialog_domain.info = [ "DNS zone is not active. Activate it to manage DNS records." ];
+			})
+			.catch(error => {
+				this.snackbar.message = "Error: " + (error.response?.data?.message || error.message);
+				this.snackbar.show = true;
+			})
+			.finally(() => {
+				this.dialog_domain.deleting_dns_zone = false;
+			});
 		},
 		deleteDomain() {
 			should_proceed = confirm("Delete domain " +  this.dialog_domain.domain.name + "? All DNS records will be removed and domain will be removed.");
