@@ -4420,6 +4420,26 @@ function captaincore_account_action_callback() {
 			$errors[] = "Domain can't be empty.";
 		}
 
+		// If user is not admin, get account_id from the selected site's customer_id
+		if ( ! $user->is_admin() ) {
+			$site_id = intval( $_POST['site_id'] );
+			if ( empty( $site_id ) ) {
+				$errors[] = "Website must be selected.";
+			} else {
+				// Verify user has permission to this site
+				if ( ! captaincore_verify_permissions( $site_id ) ) {
+					$errors[] = "Permission denied for selected site.";
+				} else {
+					$site = CaptainCore\Sites::get( $site_id );
+					if ( $site && ! empty( $site->customer_id ) ) {
+						$account_id = $site->customer_id;
+					} else {
+						$errors[] = "Selected site does not have a valid customer assigned.";
+					}
+				}
+			}
+		}
+
 		// Check for duplicate domain.
 		$domain_exists = ( new CaptainCore\Domains )->where( [ "name" => $name ] );
 

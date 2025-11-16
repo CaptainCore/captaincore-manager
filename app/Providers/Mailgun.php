@@ -34,15 +34,12 @@ class Mailgun {
             return "Mailgun domain $mailgun_subdomain already entered and verified";
         }
 
-        // Load Constellix domains from transient
-        $constellix_domains = \CaptainCore\Remote\Constellix::all( "domains" );
+        // Search Constellix directly for an exact domain match
+        $search_response = \CaptainCore\Remote\Constellix::get( "search/domains", [ "name" => $domain ] );
 
-        // Check Consellix for domain
-        foreach ( $constellix_domains as $constellix_domain ) {
-            // Search API for domain ID
-            if ( $constellix_domain->name == $domain ) {
-                $domain_id = $constellix_domain->id;
-            }
+        // Check if the domain was found
+        if ( ! empty( $search_response->data ) && count( $search_response->data ) > 0 ) {
+            $domain_id = $search_response->data[0]->id;
         }
 
         if ( empty( $domain_id ) && defined( 'WP_CLI' ) ) {
