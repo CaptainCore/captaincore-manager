@@ -479,6 +479,57 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
                 </v-card-actions>
             </v-card>
         </v-dialog>
+		<v-dialog v-model="dialog_mailgun_deploy.show" max-width="700px" scrollable>
+			<v-card rounded="xl">
+				<v-toolbar color="primary" flat>
+					<v-btn icon="mdi-close" @click="dialog_mailgun_deploy.show = false"></v-btn>
+					<v-toolbar-title>Deploy to Connected Site</v-toolbar-title>
+				</v-toolbar>
+				<v-card-text>
+					<v-text-field
+						v-model="dialog_mailgun_deploy.search"
+						label="Search connected sites..."
+						variant="underlined"
+						prepend-inner-icon="mdi-magnify"
+						clearable
+						hide-details
+						@update:model-value="dialog_mailgun_deploy.currentPage = 1" class="mb-4"
+					></v-text-field>
+
+					<v-alert type="info" variant="tonal" v-if="filteredMailgunDeployTargets.length === 0">
+						No connected sites found matching your search.
+					</v-alert>
+
+					<v-list lines="two" v-if="paginatedMailgunDeployTargets.length > 0">
+						<template v-for="(site, index) in paginatedMailgunDeployTargets" :key="site.id + site.environment">
+							<v-list-item :subtitle="site.home_url">
+								<v-list-item-title>{{ site.name }} ({{ site.environment }})</v-list-item-title>
+								<template v-slot:append>
+									<v-btn
+										size="small"
+										color="primary"
+										@click="showMailgunDeployPrompt(site, dialog_domain); dialog_mailgun_deploy.show = false"
+										variant="tonal"
+									>
+										Deploy
+									</v-btn>
+								</template>
+							</v-list-item>
+								<v-divider v-if="index < paginatedMailgunDeployTargets.length - 1" class="my-1"></v-divider>
+						</template>
+					</v-list>
+					
+					<v-pagination
+						v-if="totalPagesMailgunDeployTargets > 1"
+						v-model="dialog_mailgun_deploy.currentPage"
+						:length="totalPagesMailgunDeployTargets"
+						:total-visible="7"
+						density="compact"
+						class="mt-4"
+					></v-pagination>
+				</v-card-text>
+			</v-card>
+		</v-dialog>
 		<v-dialog v-model="dialog_domain.confirm_mx_overwrite" max-width="500px" persistent>
 			<v-card>
 				<v-toolbar color="warning" flat>
@@ -2304,6 +2355,51 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-row>
 						</v-card-text>
 					</v-card>
+				</v-dialog>
+				<v-dialog v-model="mailgun.subdomainDialog" max-width="500px">
+				<v-card>
+					<v-card-title>Activate Mailgun for {{ mailgun.activeDomain.name }}</v-card-title>
+					<v-card-text>
+					<p>Enter a subdomain to use for Mailgun. This will create 'mg.{{ mailgun.activeDomain.name }}' by default.</p>
+					<v-form v-model="mailgun.validSubdomain">
+						<v-text-field
+						v-model="mailgun.subdomain"
+						label="Subdomain"
+						:suffix="'.' + mailgun.activeDomain.name"
+						:rules="mailgun.subdomainRules"
+						required
+						></v-text-field>
+					</v-form>
+					</v-card-text>
+					<v-card-actions>
+					<v-spacer></v-spacer>
+					<v-btn text @click="mailgun.subdomainDialog = false">Cancel</v-btn>
+					<v-btn color="blue darken-1" @click="submitMailgunActivation" :disabled="!mailgun.validSubdomain">Submit</v-btn>
+					</v-card-actions>
+				</v-card>
+				</v-dialog>
+				<v-dialog v-model="mailgun.deployDialog" max-width="500px">
+				<v-card>
+					<v-card-title>Deploy Gravity SMTP</v-card-title>
+					<v-card-text>
+					<v-form v-model="mailgun.deployFormValid" ref="mailgunDeployForm">
+						<p>Configure the "Send From Name" for {{ mailgun.activeSite.name }}.</p>
+						<v-text-field
+							v-model="mailgun.deployName"
+							label="Send From Name"
+							:rules="[v => !!v || 'Send From Name is required']"
+							required
+							variant="underlined"
+							class="mt-2"
+						></v-text-field>
+					</v-form>
+					</v-card-text>
+					<v-card-actions>
+					<v-spacer></v-spacer>
+					<v-btn text @click="mailgun.deployDialog = false">Cancel</v-btn>
+					<v-btn color="blue darken-1" @click="submitMailgunDeploy">Deploy</v-btn>
+					</v-card-actions>
+				</v-card>
 				</v-dialog>
 			<v-container fluid v-show="loading_page != true" style="padding:0px;">
 			<v-card rounded="0" flat v-if="route == 'login'" color="transparent">
@@ -5803,6 +5899,181 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</v-card>
 								</v-dialog>
 							</v-window-item>
+							<v-window-item value="mailgun" v-if="dialog_domain.details.mailgun_id" :transition="false" :reverse-transition="false">
+							<v-card flat>
+								<v-card-text>
+
+									<v-container v-if="mailgun.loading" class="text-center pa-5">
+										<v-progress-circular
+											indeterminate
+											color="primary"
+											size="32"
+										></v-progress-circular>
+										<p class="mt-3 mb-0">Loading Mailgun details...</p>
+									</v-container>
+
+									<v-container v-else-if="mailgun.data.domain">
+
+										<div v-if="!mailgun.data.domain.state || mailgun.data.domain.state === 'unverified'">
+                                            <h4>Verify Domain</h4>
+                                            <p>Please add the following DNS records to verify your domain:</p>
+                                            
+                                            <v-card variant="tonal" class="my-4 pa-2" v-if="mailgun.data.sending_dns_records && mailgun.data.sending_dns_records.length > 0">
+                                                <div class="text-subtitle-1">Sending Records</div>
+                                                <v-list density="compact" class="py-0" bg-color="transparent">
+                                                    <template v-for="(record, index) in mailgun.data.sending_dns_records" :key="'send-'+index">
+                                                        <div class="px-2 pt-2">
+                                                            <v-list-item-subtitle class="py-1 align-center">
+                                                                <v-icon 
+                                                                    :icon="record.valid == 'valid' ? 'mdi-check-circle' : 'mdi-close-circle'"
+                                                                    :color="record.valid == 'valid' ? 'success' : 'error'"
+                                                                    size="small"
+                                                                    class="mr-2"
+                                                                ></v-icon>
+                                                                {{ record.record_type }} record
+                                                            </v-list-item-subtitle>
+                                                            
+                                                            <v-list-item
+                                                                @click="copyText(record.name)"
+                                                                title="Name"
+                                                                :subtitle="record.name"
+                                                                append-icon="mdi-content-copy"
+                                                                class="copyable-list-item ml-3"
+                                                            >
+                                                                <template v-slot:subtitle="{ subtitle }">
+                                                                    <code style="word-break: break-all; white-space: normal;">{{ subtitle }}</code>
+                                                                </template>
+                                                            </v-list-item>
+                                                            
+                                                            <v-list-item
+                                                                @click="copyText(record.value)"
+                                                                title="Value"
+                                                                :subtitle="record.value"
+                                                                append-icon="mdi-content-copy"
+                                                                class="copyable-list-item ml-3"
+                                                            >
+                                                                <template v-slot:subtitle="{ subtitle }">
+                                                                    <code style="word-break: break-all; white-space: normal;">{{ subtitle }}</code>
+                                                                </template>
+                                                            </v-list-item>
+                                                        </div>
+                                                        <v-divider v-if="index < mailgun.data.sending_dns_records.length - 1" class="mt-2"></v-divider>
+                                                    </template>
+                                                </v-list>
+                                            </v-card>
+                                            
+                                            <v-card variant="tonal" class="my-4 pa-2" v-if="mailgun.data.receiving_dns_records && mailgun.data.receiving_dns_records.length > 0">
+                                                <div class="text-subtitle-1">Receiving Records (MX)</div>
+                                                <v-list density="compact" class="py-0" bg-color="transparent">
+                                                    <template v-for="(record, index) in mailgun.data.receiving_dns_records" :key="'rec-'+index">
+                                                        <div class="px-2 pt-2">
+                                                            <v-list-item-subtitle class="py-1 align-center">
+                                                                <v-icon 
+                                                                    :icon="record.valid == 'valid' ? 'mdi-check-circle' : 'mdi-close-circle'"
+                                                                    :color="record.valid == 'valid' ? 'success' : 'error'"
+                                                                    size="small"
+                                                                    class="mr-2"
+                                                                ></v-icon>
+                                                                {{ record.record_type }} record
+                                                            </v-list-item-subtitle>
+
+															<v-list-item
+                                                                @click="copyText(record.name)"
+                                                                title="Name"
+                                                                :subtitle="record.name"
+                                                                append-icon="mdi-content-copy"
+                                                                class="copyable-list-item ml-3"
+                                                            >
+                                                                <template v-slot:subtitle="{ subtitle }">
+                                                                    <code style="word-break: break-all; white-space: normal;">{{ subtitle }}</code>
+                                                                </template>
+                                                            </v-list-item>
+                                                            
+                                                            <v-list-item
+                                                                @click="copyText(record.priority)"
+                                                                title="Priority"
+                                                                :subtitle="record.priority"
+                                                                append-icon="mdi-content-copy"
+                                                                class="copyable-list-item ml-3"
+                                                            >
+                                                                <template v-slot:subtitle="{ subtitle }">
+                                                                    <code>{{ subtitle }}</code>
+                                                                </template>
+                                                            </v-list-item>
+                                                            
+                                                            <v-list-item
+                                                                @click="copyText(record.value)"
+                                                                title="Value"
+                                                                :subtitle="record.value"
+                                                                append-icon="mdi-content-copy"
+                                                                class="copyable-list-item ml-3"
+                                                            >
+                                                                <template v-slot:subtitle="{ subtitle }">
+                                                                    <code style="word-break: break-all; white-space: normal;">{{ subtitle }}</code>
+                                                                </template>
+                                                            </v-list-item>
+                                                        </div>
+                                                        <v-divider v-if="index < mailgun.data.receiving_dns_records.length - 1" class="mt-2"></v-divider>
+                                                    </template>
+                                                </v-list>
+                                            </v-card>
+
+                                            <v-btn color="primary" @click="verifyMailgunDomain(dialog_domain)" :loading="mailgun.loadingVerify" prepend-icon="mdi-check-network">
+                                                Attempt to Verify Domain
+                                            </v-btn>
+                                        </div>
+
+										<div v-else>
+											<v-list dense>
+												<v-list-item>
+													<v-list-item-content>
+														<v-list-item-subtitle>Status</v-list-item-subtitle>
+														<v-list-item-title class="text-capitalize">
+															<v-chip :color="mailgun.data.domain.state == 'active' ? 'green' : 'orange'" dark small>{{ mailgun.data.domain.state }}</v-chip>
+														</v-list-item-title>
+													</v-list-item-content>
+												</v-list-item>
+												<v-list-item>
+													<v-list-item-content>
+														<v-list-item-subtitle>Zone</v-list-item-subtitle>
+														<v-list-item-title>{{ mailgun.data.domain.name }}</v-list-item-title>
+													</v-list-item-content>
+												</v-list-item>
+												<v-list-item>
+													<v-list-item-content>
+														<v-list-item-subtitle>Created At</v-list-item-subtitle>
+														<v-list-item-title>{{ new Date(mailgun.data.domain.created_at).toLocaleString() }}</v-list-item-title>
+													</v-list-item-content>
+												</v-list-item>
+											</v-list>
+											
+											<v-btn
+												color="primary"
+												@click="openMailgunDeployDialog()"
+												:disabled="!dialog_domain.connected_sites || dialog_domain.connected_sites.length === 0 || mailgun.loadingDeploy"
+												:loading="mailgun.loadingDeploy"
+												class="mt-2"
+											>
+												Deploy to...
+												<v-icon end>mdi-chevron-down</v-icon>
+											</v-btn>
+											<p v-if="!dialog_domain.connected_sites || dialog_domain.connected_sites.length === 0" class="mt-4 pa-4 text-grey">
+												No connected sites found for this domain.
+											</p>
+										</div>
+
+									</v-container>
+									
+									<v-container v-else class="text-center pa-5">
+										<p>This domain has not been configured with Mailgun.</p>
+										<v-btn color="primary" @click="mailgun.subdomainDialog = true">
+											Setup Mailgun
+										</v-btn>
+									</v-container>
+
+								</v-card-text>
+							</v-card>
+						</v-window-item>
 						</v-window>
 						</v-container>
 					</v-card>
@@ -7539,7 +7810,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-row>
 			</v-container>
 			</v-container>
-			<v-container v-if="route == 'domains' && ! loading_page && dialog_domain.step == 2" class="mt-5">
+			<v-container v-if="route == 'domains' && ! loading_page && dialog_domain.step == 2 && ! dialog_domain.loading" class="mt-5">
 				<v-card color="transparent" density="compact" flat subtitle="Domain Options">
 					<template v-slot:actions>
 						<v-btn 
@@ -7561,15 +7832,33 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						>
 							Email Forwarding is active
 						</v-chip>
+						<v-btn
+							size="small"
+							variant="outlined"
+							@click="showMailgunActivatePrompt(dialog_domain.domain)"
+							v-if="!dialog_domain.details.mailgun_id"
+							:loading="mailgun.loadingActivate"
+							:disabled="mailgun.loadingActivate"
+						>
+							<template v-slot:loader>
+								<v-progress-circular indeterminate size="16" width="2" class="mx-2"></v-progress-circular>
+								Activating Mailgun...
+							</template>
+							<v-icon left>mdi-rocket-launch</v-icon>
+							Activate Mailgun
+						</v-btn>
+						<v-chip label color="primary" variant="tonal" prepend-icon="mdi-check" v-if="dialog_domain.details.mailgun_id">
+							Mailgun zone created
+						</v-chip>
 					</template>
 				</v-card>
 			</v-container>
-			<v-container v-if="route == 'domains' && role == 'administrator' && ! loading_page && dialog_domain.step == 2">
+			<v-container v-if="route == 'domains' && role == 'administrator' && ! loading_page && dialog_domain.step == 2 && ! dialog_domain.loading">
 				<v-card color="transparent" density="compact" flat subtitle="Administrator Options">
 					<template v-slot:actions>
 					<v-dialog max-width="600">
 				<template v-slot:activator="{ props }">
-				<v-btn v-bind="props" variant="outlined">Edit Domain</v-btn>
+					<v-btn v-bind="props" variant="outlined">Edit Domain</v-btn>
 				</template>
 				<template v-slot:default="{ isActive }">
 				<v-card>
@@ -8243,6 +8532,30 @@ const app = createApp({
 		account_search: "",
 		subscription_search: "",
 		revenue_estimated: [],
+		mailgun: {
+            subdomainDialog: false,
+            deployDialog: false,
+            subdomain: 'mg',
+            deployName: '',
+			deployFormValid: true,
+            activeDomain: null,
+            activeSite: null,
+            validSubdomain: false,
+            loadingVerify: false,
+			loadingActivate: false,
+			loadingDeploy: false,
+            subdomainRules: [
+                v => !!v || 'Subdomain is required',
+            ],
+            data: null,
+            loading: false,
+        },
+		dialog_mailgun_deploy: {
+            show: false,
+            search: '',
+            currentPage: 1,
+            itemsPerPage: 10,
+        },
 		new_recipe: { show: false, title: "", content: "", public: 1 },
 		backup_set_files: [],
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
@@ -8618,6 +8931,29 @@ const app = createApp({
         totalPagesPushTargets() {
              return Math.ceil(this.filteredPushTargets.length / this.dialog_push_to_other.itemsPerPage);
         },
+		filteredMailgunDeployTargets() {
+			if (!this.dialog_domain.connected_sites || this.dialog_domain.connected_sites.length === 0) {
+				return [];
+			}
+			if (!this.dialog_mailgun_deploy.search) {
+				return this.dialog_domain.connected_sites;
+			}
+			const searchLower = this.dialog_mailgun_deploy.search.toLowerCase();
+			return this.dialog_domain.connected_sites.filter(site => {
+				const nameMatch = site.name && site.name.toLowerCase().includes(searchLower);
+				const urlMatch = site.home_url && site.home_url.toLowerCase().includes(searchLower);
+				const envMatch = site.environment && site.environment.toLowerCase().includes(searchLower);
+				return nameMatch || urlMatch || envMatch;
+			});
+		},
+		paginatedMailgunDeployTargets() {
+			const start = (this.dialog_mailgun_deploy.currentPage - 1) * this.dialog_mailgun_deploy.itemsPerPage;
+			const end = start + this.dialog_mailgun_deploy.itemsPerPage;
+			return this.filteredMailgunDeployTargets.slice(start, end);
+		},
+		totalPagesMailgunDeployTargets() {
+			return Math.ceil(this.filteredMailgunDeployTargets.length / this.dialog_mailgun_deploy.itemsPerPage);
+		},
 		hasProviderActions() {
 			return this.provider_actions.length > 0;
 		},
@@ -13078,7 +13414,7 @@ const app = createApp({
 			if ( this.role == "administrator" ) {
 				this.fetchProviders()
 			}
-			axios.get(
+			return axios.get(
 				'/wp-json/captaincore/v1/domain/' + domain.domain_id, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
@@ -13086,6 +13422,7 @@ const app = createApp({
 					this.dialog_domain.accounts = response.data.accounts
 					this.dialog_domain.account_ids = response.data.accounts.map( a => a.account_id )
 					this.dialog_domain.provider_id = response.data.provider_id
+					this.dialog_domain.connected_sites = response.data.connected_sites
 					this.dialog_domain.details = response.data.details || {}
 					if ( response.data.provider.errors ) {
 						this.dialog_domain.provider =  { contacts: {} }
@@ -13095,12 +13432,21 @@ const app = createApp({
 					if ( this.dialog_domain.provider.contacts.owner.country && this.dialog_domain.provider.contacts.owner.country != "" ) {
 						this.populateStatesFor( this.dialog_domain.provider.contacts.owner )
 					}
+                    
+                    let tabSet = false;
 					if (this.dialog_domain.details.forward_email_id) {
 						this.fetchEmailForwards();
-					} else {
+					}
+                    if (this.dialog_domain.details.mailgun_id) {
+                        this.fetchMailgunDetails();
+                    }
+                    if (!tabSet) { // Default to DNS
 						this.dialog_domain.tabs = "dns";
 					}
 				})
+				.finally(() => {
+					this.dialog_domain.loading = false;
+				});
 		},
 		activateEmailForwarding( overwrite = false ) {
 			this.dialog_domain.activating_forwarding = true;
@@ -15703,6 +16049,167 @@ const app = createApp({
 					this.dialog_mailgun_config.show = false;
 				});
 		},
+		fetchMailgunDetails() {
+			// Reset state
+			this.mailgun.data = null;
+			this.mailgun.loading = true;
+
+			// Check if the CaptainCore domain object and its ID exist
+			if (this.dialog_domain && this.dialog_domain.domain && this.dialog_domain.domain.domain_id) {
+				
+				const domain_id = this.dialog_domain.domain.domain_id;
+
+				axios.get(`/wp-json/captaincore/v1/domain/${domain_id}/mailgun`, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
+				.then(response => {
+					this.mailgun.data = response.data;
+				})
+				.catch(error => {
+					console.error("Error fetching Mailgun details:", error);
+					// Check for the specific "not configured" error
+					if (error.response && error.response.data && error.response.data.code === 'mailgun_not_configured') {
+						// This is an expected state, not an "error" to show.
+						// The UI will show the "Setup Mailgun" button.
+					} else {
+						// Show other, unexpected errors
+						this.snackbar.message = "Error fetching Mailgun details: " + (error.response?.data?.message || error.message);
+						this.snackbar.show = true;
+					}
+				})
+				.finally(() => {
+					this.mailgun.loading = false;
+				});
+
+			} else {
+				// No domain ID found, so don't fetch anything
+				this.mailgun.loading = false;
+			}
+		},
+		showMailgunActivatePrompt(domain) {
+			this.mailgun.activeDomain = domain;
+			this.mailgun.subdomain = 'mg';
+			this.mailgun.subdomainDialog = true;
+		},
+		async submitMailgunActivation() {
+			this.mailgun.subdomainDialog = false;
+			this.mailgun.loadingActivate = true;
+			const domain_id = this.dialog_domain.domain.domain_id;
+			const fullDomain = `${this.mailgun.subdomain}.${this.mailgun.activeDomain.name}`;
+			
+			try {
+				await axios.post(`/wp-json/captaincore/v1/domain/${domain_id}/mailgun/setup`, { 
+					domain_id: this.mailgun.activeDomain.domain_id, 
+					domain: fullDomain 
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				});
+
+				// Refresh domain data to show new tab and "zone created"
+				await this.fetchDomain( this.mailgun.activeDomain ); // <-- Wait for fetch to complete
+				} catch (error) {
+					console.error("Error activating Mailgun:", error)
+					this.snackbar.message = "Error activating Mailgun: " + (error.response?.data?.message || error.message);
+					this.snackbar.show = true;
+				} finally {
+					// This runs after try or catch, ensuring the loader always stops
+					this.mailgun.loadingActivate = false;
+				}
+		},
+		verifyMailgunDomain(domain) {
+			this.mailgun.loadingVerify = true;
+            const domain_id = this.dialog_domain.domain.domain_id;
+
+			// 1. Updated endpoint to include domain_id
+			axios.post(`/wp-json/captaincore/v1/domain/${domain_id}/mailgun/verify`, { 
+					domain: this.mailgun.data.domain.name // Send the mailgun zone name
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+                this.mailgun.loadingVerify = false;
+
+                // 2. Update local data instead of reloading
+				if (response.data && response.data.domain) {
+                    // Update the domain state
+					this.mailgun.data.domain.state = response.data.domain.state;
+
+                    // Update the DNS record statuses
+                    if (response.data.sending_dns_records) {
+                        this.mailgun.data.sending_dns_records = response.data.sending_dns_records;
+                    }
+                    if (response.data.receiving_dns_records) {
+                        this.mailgun.data.receiving_dns_records = response.data.receiving_dns_records;
+                    }
+
+                    // 3. Show snackbar feedback
+					if (response.data.domain.state === 'active') {
+						this.snackbar.message = "Domain verified successfully!";
+						this.snackbar.show = true;
+					} else {
+						this.snackbar.message = "Verification check complete. Domain is not yet verified.";
+						this.snackbar.show = true;
+					}
+				} else {
+                    // Fallback if response is unexpected
+					this.snackbar.message = "Verification check complete.";
+					this.snackbar.show = true;
+                }
+			})
+			.catch(error => {
+				console.error("Error verifying Mailgun domain:", error)
+				this.mailgun.loadingVerify = false;
+                this.snackbar.message = "Error during verification: " + (error.response?.data?.message || error.message);
+                this.snackbar.show = true;
+			});
+		},
+		showMailgunDeployPrompt(site, domain) {
+			this.mailgun.activeSite = site;
+			this.mailgun.activeDomain = domain;
+			this.mailgun.deployName = '';
+			this.mailgun.deployDialog = true;
+		},
+		submitMailgunDeploy() {
+			// First, validate the form
+			this.$refs.mailgunDeployForm.validate();
+
+			// Check if the form is valid
+			if (!this.mailgun.deployFormValid) {
+				this.snackbar.message = "Please fill in all required fields.";
+				this.snackbar.show = true;
+				return; // Stop execution if form is invalid
+			}
+
+			// Form is valid, proceed
+			this.mailgun.deployDialog = false;
+			this.mailgun.loadingDeploy = true; // <-- Set loading to true
+			const domain_id = this.dialog_domain.domain.domain_id;
+			axios.post(`/wp-json/captaincore/v1/domain/${domain_id}/mailgun/deploy`, {
+				site_id: this.mailgun.activeSite.id,
+				environment: this.mailgun.activeSite.environment,
+				domain: this.dialog_domain.details.mailgun_zone.name,
+				from_name: this.mailgun.deployName
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				// Show success message
+				this.snackbar.message = "Mailgun deployment completed successfully.";
+				this.snackbar.show = true;
+			})
+			.catch(error => {
+				this.snackbar.message = "Error deploying Mailgun: " + (error.response?.data?.message || error.message);
+				this.snackbar.show = true;
+			})
+			.finally(() => {
+				this.mailgun.loadingDeploy = false;
+			});
+		},
+		openMailgunDeployDialog() {
+            this.dialog_mailgun_deploy.search = '';
+            this.dialog_mailgun_deploy.currentPage = 1;
+            this.dialog_mailgun_deploy.show = true;
+        },
 		saveFathomConfigurations() {
 			site = this.dialog_fathom.site;
 			environment = this.dialog_fathom.environment;
