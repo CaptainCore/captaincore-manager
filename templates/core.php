@@ -7930,6 +7930,15 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					v-if="dialog_domain.domain.remote_id">
 					Delete DNS Zone
 				</v-btn>
+				<v-btn
+					variant="outlined"
+					color="error"
+					@click="confirmDeleteMailgunZone(dialog_domain.domain)"
+					:loading="mailgun.loadingActivate"
+					v-if="dialog_domain.details.mailgun_id"
+				>
+					Delete Mailgun Zone
+				</v-btn>
 				<v-dialog v-model="dialog_domain.confirm_delete_dns_zone" max-width="500px" persistent>
 					<v-card>
 						<v-toolbar color="error" flat>
@@ -7948,7 +7957,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-dialog>
 				<v-btn variant="outlined" color="error" @click="deleteDomain()">Delete Domain</v-btn>
-					</template>
+				</template>
 				</v-card>
 			</v-container>
 			<v-container v-if="route == 'accounts' && ! loading_page && dialog_account.step == 2" class="mt-5">
@@ -16304,6 +16313,48 @@ const app = createApp({
             this.dialog_mailgun_deploy.currentPage = 1;
             this.dialog_mailgun_deploy.show = true;
         },
+		confirmDeleteMailgunZone(domain) {
+			if (!confirm(`Are you sure you want to delete the Mailgun zone "${this.dialog_domain.details.mailgun_zone}"? This will stop email services configured through Mailgun but will not delete your DNS records.`)) {
+				return;
+			}
+			this.deleteMailgunZone(domain);
+		},
+		deleteMailgunZone(domain) {
+			this.mailgun.loadingActivate = true; // Use the same loader as activation
+			const domain_id = domain.domain_id;
+
+			axios.delete(`/wp-json/captaincore/v1/domain/${domain_id}/mailgun`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.snackbar.message = response.data.message || "Mailgun zone deleted successfully.";
+				this.snackbar.show = true;
+				
+				// Update the local domain details to hide the button and tab
+				if (response.data.domain && response.data.domain.details) {
+					this.dialog_domain.details = response.data.domain.details;
+				} else {
+					// Fallback: manually clear local data
+					this.dialog_domain.details.mailgun_id = null;
+					this.dialog_domain.details.mailgun_zone = null;
+					this.dialog_domain.details.mailgun_smtp_password = null;
+				}
+				
+				// Switch back to the DNS tab if we were on the Mailgun tab
+				if (this.dialog_domain.tabs === 'mailgun') {
+					this.dialog_domain.tabs = 'dns';
+				}
+				// Clear mailgun data
+				this.mailgun.data = null;
+			})
+			.catch(error => {
+				this.snackbar.message = "Error deleting Mailgun zone: " + (error.response?.data?.message || error.message);
+				this.snackbar.show = true;
+			})
+			.finally(() => {
+				this.mailgun.loadingActivate = false;
+			});
+		},
 		saveFathomConfigurations() {
 			site = this.dialog_fathom.site;
 			environment = this.dialog_fathom.environment;

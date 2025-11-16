@@ -137,7 +137,7 @@ class Mailgun {
 
         $query = ( empty( $data ) ) ? "" : "?". http_build_query( $data );
 
-        $remote = wp_remote_get( "https://api.mailgun.net/$command$query", $args );
+        $remote = wp_remote_request( "https://api.mailgun.net/$command$query", $args );
 
         if ( is_wp_error( $remote ) ) {
             return $remote->get_error_message();
