@@ -5335,8 +5335,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-tab value="email-forwarding" v-if="dialog_domain.details.forward_email_id" @click="fetchEmailForwards">
 								Email Forwarding <v-icon class="ml-1" icon="mdi-email-arrow-right"></v-icon>
 							</v-tab>
-							<v-tab value="domain">
-								Domain Management <v-icon class="ml-1" icon="mdi-account-box"></v-icon>
+							<v-tab value="mailgun" v-if="dialog_domain.details.mailgun_id">
+								Mailgun
 							</v-tab>
 						</v-tabs>
 						</v-toolbar>
@@ -5493,7 +5493,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										</table>
 										</div>
 										</div>
-										<v-btn variant="tonal" class="ml-4" @click="addRecord()" v-show="!dialog_domain.loading && !dialog_domain.saving">Add Additional Record</v-btn>
+										<v-btn variant="tonal" class="ml-4" @click="addRecord()" v-show="!dialog_domain.loading && !dialog_domain.saving && dialog_domain.domain.remote_id">Add Additional Record</v-btn>
 									</v-col>
 								</v-row>
 								<v-row v-show="dialog_domain.saving">
@@ -5508,7 +5508,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</template>
 								</div>
 								<v-row>
-									<v-col class="text-left mx-3 mb-7" v-show="!dialog_domain.loading">
+									<v-col class="text-left mx-3 mb-7" v-show="!dialog_domain.loading && dialog_domain.domain.remote_id">
 										<v-btn class="mx-1" color="primary" @click="saveDNS()" :dark="dialog_domain.records && dialog_domain.records.length != '0'" :disabled="dialog_domain.records && dialog_domain.records.length == '0'">Save Records</v-btn>
 										<a ref="export_domain" href="#"></a>
 									</v-col>
@@ -7795,7 +7795,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</template>
 				</v-card>
 			</v-container>
-			<v-container v-if="route == 'domains' && role == 'administrator' && ! loading_page && dialog_domain.step == 2" class="mt-5 pb-0">
+			<v-container v-if="route == 'domains' && role == 'administrator' && ! loading_page && dialog_domain.step == 2 && ! dialog_domain.loading" class="mt-5 pb-0">
 			<v-list-subheader class="ml-4">Shared With</v-list-subheader>
 			<v-container>
 			<v-row density="compact" v-if="dialog_domain.accounts && dialog_domain.accounts.length > 0">
@@ -8200,7 +8200,7 @@ const app = createApp({
 		dialog_new_provider: { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] },
 		dialog_edit_provider: { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] },
 		dialog_configure_defaults: { show: false, loading: false },
-		dialog_domain: { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, ignore_warnings: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider_id: "", provider: { contacts: {} }, contact_tabs: "", tabs: "dns", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], results: [], errors: [], loading: true, saving: false, step: 1, details: {}, activating_forwarding: false, confirm_mx_overwrite: false, forwards_domain: { loading: false, data: null }, forwards: { loading: false, items: [], show_dialog: false, edited_item: { name: '', recipients: '', is_enabled: true }, edited_index: -1 } },
+		dialog_domain: { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, ignore_warnings: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider_id: "", provider: { contacts: {} }, contact_tabs: "", tabs: "dns", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], results: [], errors: [], info: [], loading: true, saving: false, step: 1, details: {}, activating_forwarding: false, confirm_mx_overwrite: false, forwards_domain: { loading: false, data: null }, forwards: { loading: false, items: [], show_dialog: false, edited_item: { name: '', recipients: '', is_enabled: true }, edited_index: -1 } },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $user->email; ?>", current_user_email: "<?php echo $user->email; ?>", filter_toggle: true, filter_options: [] },
 		dialog_backup_configurations: { show: false, settings: { mode: "", interval: "", active: true } },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
@@ -13657,28 +13657,31 @@ const app = createApp({
 			});
 		},
 		modifyDNS( domain ) {
-			this.dialog_domain = { 
-				show: false, 
-				updating_contacts: false, 
-				updating_nameservers: false, 
-				auth_code: "", 
-				fetch_auth_code: false, 
-				provider: { contacts: {} }, 
-				contact_tabs: "", 
-				tabs: "dns", 
-				show_import: false, 
-				import_json: "", 
-				domain: {}, 
-				records: [], 
-				nameservers: [], 
-				results: [], 
-				errors: [], 
-				loading: true, 
-				saving: false, 
+			this.dialog_domain = {
+				show: false,
+				updating_contacts: false,
+				updating_nameservers: false,
+				auth_code: "",
+				fetch_auth_code: false,
+				provider: { contacts: {} },
+				contact_tabs: "",
+				tabs: "dns",
+				show_import: false,
+				import_json: "",
+				domain: {},
+				records: [],
+				nameservers: [],
+				results: [],
+				errors: [],
+				info: [],
+				loading: true,
+				saving: false,
 				step: 2,
 				details: {},
 				activating_forwarding: false,
 				confirm_mx_overwrite: false,
+				deleting_dns_zone: false,
+				confirm_delete_dns_zone: false,
 				forwards_domain: { loading: false, data: null }, 
 				forwards: {
 					loading: false,
@@ -13689,7 +13692,7 @@ const app = createApp({
 				}
 			};
 			if ( domain.remote_id == null ) {
-				this.dialog_domain.errors = [ "Domain not found." ];
+				this.dialog_domain.info = [ "DNS zone is not active. Activate it to manage DNS records." ];
 				this.dialog_domain.domain = domain;
 				this.dialog_domain.loading = false
 				this.dialog_domain.show = true;
@@ -13716,7 +13719,8 @@ const app = createApp({
 
 					if ( response.data.records == null ) {
 						this.dialog_domain.loading = false
-						this.dialog_domain.errors = [ "DNS zone not found." ];
+						this.dialog_domain.domain.remote_id = null
+						this.dialog_domain.info = [ "DNS zone is not active. Activate it to manage DNS records." ];
 						return
 					}
 
@@ -13737,11 +13741,9 @@ const app = createApp({
 					records.push({ id: "new_" + timestamp, edit: false, delete: false, new: true, ttl: "3600", type: "A", value: [{"value": "","enabled":true}], update: {"record_id": "new_" + timestamp, "record_type": "A", "record_name": "", "record_value": [{"value": "","enabled":true}], "record_ttl": "3600", "record_status": "new-record" } });
 					this.dialog_domain.records = records
 					this.dialog_domain.nameservers = response.data.nameservers
-					this.dialog_domain.loading = false;
 				});
 			this.dialog_domain.domain = domain;
 			this.dialog_domain.show = true;
-			
 		},
 		loadDNSRecords() {
 			axios.post(
