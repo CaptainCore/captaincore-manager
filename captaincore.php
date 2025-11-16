@@ -1921,16 +1921,249 @@ function captaincore_site_environments_get_func( $request ) {
 	return $site->environments();
 }
 
-function captaincore_site_mailgun_func( $request ) {
-	$site_id = $request['id'];
-	$name    = $request['name'];
-	// pull domain from site
-	if ( ! captaincore_verify_permissions( $site_id ) ) {
+/**
+ * Handles Mailgun setup request.
+ */
+function captaincore_mailgun_setup( WP_REST_Request $request ) {
+    $domain_id   = $request->get_param( 'id' );
+    $full_domain = $request->get_param( 'domain' );
+
+	$verify    = ( new CaptainCore\Domains )->verify( $domain_id );
+	if ( ! $verify ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
-	$site    = ( new CaptainCore\Sites )->get( $site_id );
-	CaptainCore\Providers\Mailgun::setup( $site->name );
-	CaptainCore\Run::CLI( "ssh $site->site --script=deploy-mailgun -- --key=\"" . MAILGUN_API_KEY . "\" --domain=$site->name --name=\"$name\"" );
+
+    // 1. Run the setup (this remains the same)
+    $setup_result = CaptainCore\Providers\Mailgun::setup( $full_domain );
+    
+    // 2. Fetch the newly created zone using the correct method
+    $zone_details = CaptainCore\Remote\Mailgun::get( "v4/domains/$full_domain" );
+
+    // 3. Add details to the domain
+    $domain = ( new \CaptainCore\Domains )->get( $domain_id );
+    if ( ! $domain ) {
+        return new WP_Error( 'domain_not_found', 'Domain not found in CaptainCore.', [ 'status' => 404 ] );
+    }
+
+    // Decode existing details or create new object
+    $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
+
+    // Add new data to the details object
+    $details->mailgun_id   = $zone_details->domain->id;
+    $details->mailgun_zone = $zone_details->domain->name;
+
+   \CaptainCore\Domains::update(
+        [ 'details' => json_encode( $details ) ],
+        [ 'domain_id' => $domain_id ]
+    );
+
+    // Re-fetch the updated CaptainCore domain object
+    $updated_domain = ( new \CaptainCore\Domains )->get( $domain_id );
+    if ( $updated_domain && ! empty( $updated_domain->details ) ) {
+        // Ensure details are decoded for the frontend
+        $updated_domain->details = json_decode( $updated_domain->details ); 
+    }
+
+    // Return the full domain object along with a success message
+    return new WP_REST_Response( 
+        [ 
+            'success' => true, 
+            'message' => 'Mailgun zone created and DNS records are being added.',
+            'domain'  => $updated_domain // Send the full, updated domain object
+        ], 
+        200 
+    );
+}
+
+/**
+ * Handles fetching Mailgun domain details by CaptainCore domain ID.
+ */
+function captaincore_get_domain_mailgun_details( WP_REST_Request $request ) {
+    $domain_id = $request->get_param( 'id' );
+
+    // Verify user permissions for this domain
+    if ( ! ( new CaptainCore\Domains )->verify( $domain_id ) ) {
+        return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+    }
+
+    // Get the domain record from the DB
+    $domain = ( new \CaptainCore\Domains )->get( $domain_id );
+    if ( ! $domain ) {
+        return new WP_Error( 'domain_not_found', 'Domain not found in CaptainCore.', [ 'status' => 404 ] );
+    }
+
+    // Decode existing details or create new object
+    $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
+
+    // Get the Mailgun domain name from details
+    $domain_name = $details->mailgun_zone ?? null;
+
+    if ( empty( $domain_name ) ) {
+        return new WP_Error( 'mailgun_not_configured', 'Mailgun is not configured for this domain.', [ 'status' => 404 ] );
+    }
+
+    // Call the Mailgun API using the existing wrapper
+    $response = \CaptainCore\Remote\Mailgun::get( "v4/domains/{$domain_name}", [ 'h:with_dns' => 'true' ] );
+
+    if ( is_wp_error( $response ) || ( isset( $response->message ) && $response->message == "Domain not found" ) ) {
+        return new WP_Error( 'mailgun_api_error', 'Domain not found in Mailgun.', [ 'status' => 404, 'details' => $response ] );
+    }
+
+    if ( isset( $response->domain ) && $domain->name && $domain_name ) {
+        
+        // $domain->name is the root domain (e.g., "austinginder.com")
+        $root_domain = $domain->name; 
+        
+        // $domain_name is the mailgun zone (e.g., "mg.austinginder.com")
+        $mailgun_zone_name = $domain_name; 
+
+        // Helper function to clean the record name
+        $cleanup_record_name = function( $record ) use ( $root_domain ) {
+            if ( ! empty( $record->name ) ) { 
+                $record->original_name = $record->name;
+                $name = rtrim( $record->name, '.' ); // Remove trailing dot
+
+                // Remove the root domain suffix (e.g., ".austinginder.com")
+                $suffix = '.' . $root_domain;
+                if ( substr( $name, -strlen( $suffix ) ) === $suffix ) {
+                    $name = substr( $name, 0, -strlen( $suffix ) );
+                }
+                
+                // Handle the case where the name *was* the root domain
+                if ( $name === $root_domain ) {
+                     $name = '@'; // Use '@' for root
+                }
+
+                $record->name = $name;
+            }
+            return $record;
+        };
+
+        // Apply the cleanup to sending records (which HAVE a 'name' property)
+        if ( ! empty( $response->sending_dns_records ) && is_array( $response->sending_dns_records ) ) {
+            $response->sending_dns_records = array_map( $cleanup_record_name, $response->sending_dns_records );
+        }
+
+        // Manually add the zone name to receiving records (which LACK a 'name' property)
+        // BEFORE cleaning them.
+        if ( ! empty( $response->receiving_dns_records ) && is_array( $response->receiving_dns_records ) ) {
+            foreach( $response->receiving_dns_records as $record ) {
+                if ( ! isset( $record->name ) ) {
+                    $record->name = $mailgun_zone_name; // Add the missing 'name'
+                }
+            }
+            // Now that they have names, apply the same cleanup
+            $response->receiving_dns_records = array_map( $cleanup_record_name, $response->receiving_dns_records );
+        }
+    }
+
+    // Return the modified domain object
+    if ( isset( $response ) ) {
+         return new WP_REST_Response( $response, 200 );
+    }
+
+    return new WP_Error( 'mailgun_api_error', 'Unexpected response from Mailgun.', [ 'status' => 500, 'details' => $response ] );
+}
+
+/**
+ * Handles Mailgun deploy request.
+ */
+function captaincore_mailgun_deploy( WP_REST_Request $request ) {
+    $site_id   = $request->get_param( 'site_id' );
+    $domain_id = $request->get_param( 'id' );
+    $from_name = $request->get_param( 'from_name' );
+	$environment_name = $request->get_param( 'environment' );
+	if ( empty( $from_name ) ) {
+        return new WP_Error( 'from_name_required', 'The "Send From Name" cannot be empty.', [ 'status' => 400 ] );
+    }
+
+	$verify    = ( new CaptainCore\Domains )->verify( $domain_id );
+	if ( ! $verify ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+    $site = \CaptainCore\Sites::get( $site_id );
+    if ( ! $site->site ) {
+        return new WP_Error( 'site_not_found', 'Site not found', [ 'status' => 404 ] );
+    }
+
+	$site_slug = $site->site;
+            
+	// Check if environment is staging and append suffix
+	if ( $environment_name && strtolower( $environment_name ) != "production" ) {
+		$site_slug = "{$site_slug}-" . strtolower( $environment_name );
+	}
+
+	$domain = ( new CaptainCore\Domains )->get( $domain_id );
+    $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
+
+	if ( empty( $details->mailgun_smtp_password ) ) {
+		// 1. Generate random password via Mailgun API
+		$password = wp_generate_password(32, false);
+		$response = \CaptainCore\Remote\Mailgun::put( "v4/domains/$details->mailgun_zone", [ "smtp_password" => $password ] );
+
+		// 2. Store password to the domain details (optional but recommended)
+		$details->mailgun_smtp_password = $password;
+		( new CaptainCore\Domains )->update( [ "details" => json_encode( $details ) ], [ "domain_id" => $domain_id ] );
+	}
+
+    // 3. Fetch GravitySMTP credentials
+    $credentials  = ( new \CaptainCore\Provider( "gravitysmtp" ) )->credentials();
+    $license      = '';
+    $download_url = '';
+
+    foreach ( $credentials as $credential ) {
+        if ( $credential->name == "license" ) {
+            $license = $credential->value;
+        }
+        if ( $credential->name == "download_url" ) {
+            $download_url = $credential->value;
+        }
+    }
+
+    // 4. Run the deploy command (this remains the same)
+    $command = sprintf(
+        "ssh %s --script=deploy-mailgun -- --key=%s --name=%s --domain=%s --password=%s --gravitysmtp_zip=%s",
+        $site_slug,
+        json_encode( $license ),
+        json_encode( $from_name ),
+        json_encode( $details->mailgun_zone ),
+        json_encode( $details->mailgun_smtp_password ),
+        json_encode( $download_url )
+    );
+
+    $result = CaptainCore\Run::CLI( $command );
+
+    return new WP_REST_Response( [ 'success' => true, 'output' => $result ], 200 );
+}
+
+/**
+ * Handles Mailgun verification request.
+ */
+function captaincore_mailgun_verify( WP_REST_Request $request ) {
+    $domain_id = $request->get_param( 'id' );
+    $verify    = ( new CaptainCore\Domains )->verify( $domain_id );
+	if ( ! $verify ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$domain = CaptainCore\Domains::get( $domain_id );
+	$details = isset( $domain->details ) ? json_decode( $domain->details ) : (object) [];
+
+	if ( empty( $details->mailgun_zone ) ) {
+		return new WP_Error( 'mailgun_zone_missing', 'Mailgun zone not found.', [ 'status' => 404 ] );
+	}
+
+    $result = CaptainCore\Remote\Mailgun::put( "v4/domains/{$details->mailgun_zone}/verify" );
+    
+    if ( is_wp_error( $result ) || ! isset( $result->domain ) ) {
+        // Handle potential error from Mailgun
+        return new WP_Error( 'mailgun_api_error', 'Failed to verify domain.', [ 'status' => 500, 'details' => $result ] );
+    }
+    
+    return new WP_REST_Response( $result, 200 );
+}
+
 }
 
 function captaincore_site_captures_func( $request ) {
@@ -2208,14 +2441,29 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
-	register_rest_route(
-		'captaincore/v1', '/sites/(?P<id>[\d]+)/mailgun/setup', [
-			'methods'             => 'GET',
-			'callback'            => 'captaincore_site_mailgun_func',
-			'permission_callback' => 'captaincore_permission_check',
-			'show_in_index'       => false,
-		]
-	);
+	register_rest_route( 'captaincore/v1', '/domain/(?P<id>[\d]+)/mailgun', [
+		'methods'  => 'GET',
+		'callback' => 'captaincore_get_domain_mailgun_details',
+		'permission_callback' => 'captaincore_permission_check', 
+	] );
+
+	register_rest_route( 'captaincore/v1', '/domain/(?P<id>[\d]+)/mailgun/setup', [
+        'methods'  => 'POST',
+        'callback' => 'captaincore_mailgun_setup',
+        'permission_callback' => 'captaincore_permission_check',
+    ] );
+
+    register_rest_route( 'captaincore/v1', '/domain/(?P<id>[\d]+)/mailgun/verify', [
+        'methods'  => 'POST',
+        'callback' => 'captaincore_mailgun_verify',
+        'permission_callback' => 'captaincore_permission_check',
+    ] );
+
+    register_rest_route( 'captaincore/v1', '/domain/(?P<id>[\d]+)/mailgun/deploy', [
+        'methods'  => 'POST',
+        'callback' => 'captaincore_mailgun_deploy',
+        'permission_callback' => 'captaincore_permission_check',
+    ] );
 
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/sync/data', [
