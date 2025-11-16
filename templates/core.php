@@ -1228,7 +1228,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-toolbar>
 				<v-card-text>
 					<v-text-field variant="underlined" v-model="dialog_new_domain.domain.name" label="Domain Name" required class="mt-3"></v-text-field>
-					<v-autocomplete variant="underlined" :items="accounts" item-title="name" item-value="account_id" v-model="dialog_new_domain.domain.account_id" label="Account" required></v-autocomplete>
+					<v-autocomplete variant="underlined" :items="accounts" item-title="name" item-value="account_id" v-model="dialog_new_domain.domain.account_id" label="Account" required v-if="role == 'administrator'"></v-autocomplete>
+					<v-autocomplete variant="underlined" :items="sites" item-title="name" item-value="site_id" v-model="dialog_new_domain.domain.site_id" label="Website" required v-if="role != 'administrator'"></v-autocomplete>
 					<v-alert variant="tonal" type="error" class="text-body-1 mb-3" v-for="error in dialog_new_domain.errors">
 						{{ error }}
 					</v-alert>
@@ -13290,6 +13291,12 @@ const app = createApp({
 				account_id: this.dialog_new_domain.domain.account_id
 			};
 
+			// If user is not admin, send site_id instead
+			if (this.role != 'administrator') {
+				data.site_id = this.dialog_new_domain.domain.site_id;
+				delete data.account_id; // Remove account_id if not admin
+			}
+
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					// If error then response
@@ -13480,23 +13487,18 @@ const app = createApp({
 					this.dialog_domain.connected_sites = response.data.connected_sites
 					this.dialog_domain.details = response.data.details || {}
 					if ( response.data.provider.errors ) {
-						this.dialog_domain.provider =  { contacts: {} }
-						return
+						this.dialog_domain.provider = { contacts: {} }
+					} else {
+						this.dialog_domain.provider = response.data.provider
 					}
-					this.dialog_domain.provider = response.data.provider
-					if ( this.dialog_domain.provider.contacts.owner.country && this.dialog_domain.provider.contacts.owner.country != "" ) {
+					if ( this.dialog_domain.provider.contacts.owner && this.dialog_domain.provider.contacts.owner.country && this.dialog_domain.provider.contacts.owner.country != "" ) {
 						this.populateStatesFor( this.dialog_domain.provider.contacts.owner )
 					}
-                    
-                    let tabSet = false;
 					if (this.dialog_domain.details.forward_email_id) {
 						this.fetchEmailForwards();
 					}
-                    if (this.dialog_domain.details.mailgun_id) {
-                        this.fetchMailgunDetails();
-                    }
-                    if (!tabSet) { // Default to DNS
-						this.dialog_domain.tabs = "dns";
+					if (this.dialog_domain.details.mailgun_id) {
+						this.fetchMailgunDetails();
 					}
 				})
 				.finally(() => {
@@ -16209,7 +16211,18 @@ const app = createApp({
 				});
 
 				// Refresh domain data to show new tab and "zone created"
-				await this.fetchDomain( this.mailgun.activeDomain ); // <-- Wait for fetch to complete
+				await this.fetchDomain( this.mailgun.activeDomain );
+
+				// Re-fetch the DNS records to show the new Mailgun records
+				this.modifyDNS( this.mailgun.activeDomain );
+
+				// Show success message
+				this.snackbar.message = `Mailgun zone ${fullDomain} created successfully.`;
+				this.snackbar.show = true;
+
+				// Switch to the Mailgun tab
+				this.dialog_domain.tabs = "mailgun";
+
 				} catch (error) {
 					console.error("Error activating Mailgun:", error)
 					this.snackbar.message = "Error activating Mailgun: " + (error.response?.data?.message || error.message);
