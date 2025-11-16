@@ -130,11 +130,69 @@ class Domain {
         $domain = Domains::get( $this->domain_id );
         $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details ); 
         return [
-            "provider"    => self::fetch_remote(),
-            "accounts"    => self::accounts(),
-            "provider_id" => $domain->provider_id,
-            "details"     => $details,
+            "provider"        => self::fetch_remote(),
+            "accounts"        => self::accounts(),
+            "provider_id"     => $domain->provider_id,
+            "connected_sites" => self::connected_sites(),
+            "details"         => $details,
         ];
+    }
+
+    public function connected_sites() {
+        $domain = Domains::get( $this->domain_id );
+        $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details ); 
+        
+        // New logic starts here
+        $domain_accounts = self::accounts();
+        $connected_sites = [];
+        $seen_site_ids   = []; // Use this to get unique site IDs first.
+
+        if ( ! empty( $domain_accounts ) ) {
+            foreach ( $domain_accounts as $account ) {
+                $account_id = $account['account_id'];
+                // Use admin 'true' flag to ensure Account class can fetch sites
+                // `sites()` returns array of [ 'site_id' => ..., 'name' => ... ]
+                $account_sites = ( new \CaptainCore\Account( $account_id, true ) )->sites(); 
+                
+                if ( ! empty( $account_sites ) ) {
+                    foreach ( $account_sites as $site ) {
+                        // Ensure site list is unique
+                        if ( ! isset( $seen_site_ids[ $site['site_id'] ] ) ) {
+                            $seen_site_ids[ $site['site_id'] ] = $site['name'];
+                        }
+                    }
+                }
+            }
+        }
+
+        // Now, loop through the unique site IDs and get their environments
+        if ( ! empty( $seen_site_ids ) ) {
+            foreach ( $seen_site_ids as $site_id => $site_name ) {
+                // Fetch environments for this site
+                $environments = ( new \CaptainCore\Environments )->where( [ "site_id" => $site_id ] );
+                
+                if ( ! empty( $environments ) ) {
+                    foreach($environments as $env) {
+                        // Add an entry for each environment
+                        $connected_sites[] = [
+                            "id" => $site_id, // Match JS 'site.id'
+                            "name" => $site_name,
+                            "environment" => $env->environment,
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Sort the results: Primary by name (ASC), Secondary by environment (DESC - so Prod comes before Stage)
+        if ( ! empty( $connected_sites ) ) {
+            $names = array_column( $connected_sites, 'name' );
+            $envs  = array_column( $connected_sites, 'environment' );
+            // Sort by name ASC, then environment DESC
+            array_multisort( $names, SORT_ASC, $envs, SORT_ASC, $connected_sites );
+        }
+
+        return $connected_sites;
     }
 
     public function fetch_remote() {
