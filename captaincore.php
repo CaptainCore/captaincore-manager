@@ -2164,6 +2164,76 @@ function captaincore_mailgun_verify( WP_REST_Request $request ) {
     return new WP_REST_Response( $result, 200 );
 }
 
+/**
+ * REST API callback to activate a DNS zone for a domain.
+ * This re-uses the fetch_remote_id logic which creates a zone if one doesn't exist.
+ *
+ * @param WP_REST_Request $request The request object.
+ * @return WP_REST_Response|WP_Error The response object.
+ */
+function captaincore_domain_activate_dns_zone_func( WP_REST_Request $request ) {
+    $domain_id = $request['id'];
+
+    // Verify user permissions for this domain
+    if ( ! ( new CaptainCore\Domains )->verify( $domain_id ) ) {
+        return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+    }
+
+    $domain = new \CaptainCore\Domain( $domain_id );
+    $remote_id = $domain->fetch_remote_id();
+
+    if ( is_array( $remote_id ) && isset( $remote_id["errors"] ) ) {
+        return new WP_Error( 'activation_failed', 'Failed to activate DNS zone.', [ 'status' => 500, 'details' => $remote_id["errors"] ] );
+    }
+
+    if ( empty( $remote_id ) ) {
+        return new WP_Error( 'activation_failed', 'Could not retrieve or create remote ID.', [ 'status' => 500 ] );
+    }
+
+    // Refetch the domain to confirm the remote_id is set
+    $updated_domain = ( new \CaptainCore\Domains )->get( $domain_id );
+
+    return new WP_REST_Response( [ 'message' => 'DNS zone activated successfully.', 'remote_id' => $updated_domain->remote_id ], 200 );
+}
+
+/**
+ * REST API callback to delete a DNS zone from Constellix and update local record.
+ *
+ * @param WP_REST_Request $request The request object.
+ * @return WP_REST_Response|WP_Error The response object.
+ */
+function captaincore_domain_delete_dns_zone_func( WP_REST_Request $request ) {
+    $domain_id = $request['id'];
+
+    // Verify user permissions for this domain
+    if ( ! ( new CaptainCore\Domains )->verify( $domain_id ) ) {
+        return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+    }
+
+    $domain = ( new \CaptainCore\Domains )->get( $domain_id );
+    if ( ! $domain || empty( $domain->remote_id ) ) {
+        return new WP_Error( 'zone_not_found', 'No active DNS zone found for this domain.', [ 'status' => 404 ] );
+    }
+
+    // Call Constellix to delete the domain zone
+    $response = \CaptainCore\Remote\Constellix::delete( "domains/{$domain->remote_id}" );
+
+    // Check for errors from Constellix
+    if ( is_wp_error( $response ) || ( isset( $response->errors ) && ! empty( $response->errors ) ) ) {
+        // Even if it's "Domain not found", we'll proceed to clear our local record.
+        // But if it's another error, we might want to be cautious.
+        if ( ! ( isset( $response->errors ) && strpos( $response->errors[0], 'Domain not found' ) !== false ) ) {
+            // Log or handle other potential deletion errors if needed
+        }
+    }
+
+    // Regardless of remote error (especially if it's "not found"), clear the local remote_id
+    \CaptainCore\Domains::update(
+        [ 'remote_id' => null ],
+        [ 'domain_id' => $domain_id ]
+    );
+
+    return new WP_REST_Response( [ 'message' => 'DNS zone deleted successfully.' ], 200 );
 }
 
 function captaincore_site_captures_func( $request ) {
@@ -3126,6 +3196,18 @@ function captaincore_register_rest_endpoints() {
 			'show_in_index'       => false,
 		]
 	);
+
+    register_rest_route( 'captaincore/v1', '/domain/(?P<id>[\d]+)/activate-dns-zone', [
+        'methods'             => 'POST',
+        'callback'            => 'captaincore_domain_activate_dns_zone_func',
+        'permission_callback' => 'captaincore_permission_check',
+    ] );
+
+    register_rest_route( 'captaincore/v1', '/domain/(?P<id>[\d]+)/dns-zone', [
+        'methods'             => 'DELETE',
+        'callback'            => 'captaincore_domain_delete_dns_zone_func',
+        'permission_callback' => 'captaincore_permission_check',
+    ] );
 
 	register_rest_route(
 		'captaincore/v1', '/users/', [
