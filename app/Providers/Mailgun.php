@@ -4,139 +4,149 @@ namespace CaptainCore\Providers;
 
 class Mailgun {
 
-    public static function setup( $domain = "" ) {
+    public static function setup( $mailgun_subdomain = "" ) {
         // Prep to handle remote responses
         $responses = '';
 
         // Prep Mailgun domain variable
-        $mailgun_subdomain = "mg.$domain";
         $domain_found      = false;
         $domain_unverified = false;
 
-        // Fetch all domains from Mailgun
-        $response = \CaptainCore\Remote\Mailgun::get( "v4/domains" );
-        foreach ( $$response->items as $domain ) {
-            if ( $domain->name == $mailgun_subdomain ) {
-                $domain_found = true;
-                if ( $domain->state == "unverified" ) {
-                    $domain_unverified = true;
-                }
-            }
+        // Default retry delay in seconds if the header is missing
+        $default_retry_delay = 60;
+        
+        // Match the main domain and TLD
+        if (preg_match('/([a-z0-9\-]+\.[a-z]{2,})$/i', $mailgun_subdomain, $matches)) {
+            $domain = $matches[1];
+        }
+
+        // Fetch domains from Mailgun
+        $mailgun_domain = \CaptainCore\Remote\Mailgun::get( "v4/domains/$mailgun_subdomain" );
+
+        if ( ! empty( $mailgun_domain->message ) && $mailgun_domain->message == "Domain not found" ) {
+            // Create domain in Mailgun
+            $mailgun_domain = \CaptainCore\Remote\Mailgun::post( "v4/domains", [ 'name' => $mailgun_subdomain ] );
         }
 
         // If Mailgun domain already exists then exit
-        if ( $domain_found && ! $domain_unverified ) {
+        $valid_records = array_column( $mailgun_domain->sending_dns_records, "valid" );
+        if ( ! in_array( "unknown", $valid_records ) ) {
             return "Mailgun domain $mailgun_subdomain already entered and verified";
         }
 
-        if ( ! $domain_found ) {
-            // Create domain in Mailgun
-            $result = \CaptainCore\Remote\Mailgun::post( "v4/domains", [ 'name' => $mailgun_subdomain ] );
-        }
-
-        // Fetch domain from Mailgun
-        $domain = \CaptainCore\Remote\Mailgun::get( "v4/domains/$mailgun_subdomain" );
-
         // Load Constellix domains from transient
-        $constellix_domains = get_transient( 'constellix_all_domains' );
-
-        // If empty then update transient with large remote call
-        if ( empty( $constellix_domains ) ) {
-
-            // Fetch Constellix domains
-            $constellix_domains = \CaptainCore\Remote\Constellix::get( "domains" );
-
-            // Save the API response
-            set_transient( 'constellix_all_domains', $constellix_domains, HOUR_IN_SECONDS );
-
-        }
+        $constellix_domains = \CaptainCore\Remote\Constellix::all( "domains" );
 
         // Check Consellix for domain
         foreach ( $constellix_domains as $constellix_domain ) {
-
             // Search API for domain ID
-            if ( $domain == $constellix_domain->name ) {
+            if ( $constellix_domain->name == $domain ) {
                 $domain_id = $constellix_domain->id;
             }
         }
 
+        if ( empty( $domain_id ) && defined( 'WP_CLI' ) ) {
+            echo "Domain not found with Constellix, skipping adding DNS records. Manually add these:\n";
+            foreach ( $mailgun_domain->receiving_dns_records as $record ) {
+                if ( $record->record_type == 'MX' and $record->valid != 'valid' ) {
+                    echo "MX record mg to $record->value\n";
+                }
+            }
+            foreach ( $mailgun_domain->sending_dns_records as $record ) {
+                $record_name_without_domain = str_replace( ".{$domain}", "", $record->original_name );
+                if ( $record->record_type == 'TXT' and $record->valid != 'valid' ) {
+                    echo "TXT record $record_name_without_domain to $record->value\n";
+                }
+                if ( $record->record_type == 'CNAME' and $record->valid != 'valid' ) {
+                    echo "CNAME record $record_name_without_domain to $record->value\n";
+                }
+            }
+        }
+
         // Found domain ID from Consellix so add Mailgun dns records
-        if ( $domain_id ) {
+        if ( ! empty( $domain_id ) ) {
+
+            $mx_name = str_replace( ".{$domain}", "", $mailgun_subdomain );
 
             // Loop through Mailgun's API new receiving records and prep for Constellix
             $mx_records = [];
-            foreach ( $domain->receiving_dns_records as $record ) {
+            foreach ( $mailgun_domain->receiving_dns_records as $record ) {
                 if ( $record->record_type == 'MX' and $record->valid != 'valid' ) {
                     $mx_records[] = [
-                        'value'       => $record->value . '.',
-                        'level'       => $record->priority,
-                        'disableFlag' => false,
+                        'server'   => $record->value . '.',
+						'priority' => $record->priority,
+						'enabled'  => true,
                     ];
                 }
             }
-
-            // Prep new Constellix records
-            $record_type = 'mx';
-            $post        = [
-                'recordOption' => 'roundRobin',
-                'name'         => 'mg',
-                'ttl'          => '3600',
-                'roundRobin'   => $mx_records,
+            // Formats MX records into array which API can read
+            $post = [
+                'name'  => $mx_name,
+                'type'  => 'mx',
+                'ttl'   => '3600',
+                'value' => $mx_records,
             ];
+            // Post to new MX records to Constellix - using post_raw()
+            $response = \CaptainCore\Remote\Constellix::post_raw( "domains/$domain_id/records", $post );
 
-            // Post to new MX records to Constellix
-            $response = \CaptainCore\Remote\Constellix::post( "domains/$domain_id/records/$record_type", $post );
-
-            // Capture responses
-            foreach ( $response as $result ) {
-                if ( is_array( $result ) ) {
-                    $result['errors'] = $result[0];
-                    $responses        = $responses . json_encode( $result ) . ',';
-                } else {
-                    $responses = $responses . json_encode( $result ) . ',';
-                }
+            // Check for rate limiting
+            if ( ( isset($response->body->message) && $response->body->message == "You have made too many requests, please wait and try again later" ) || ( isset($response->headers['x-ratelimit-remaining']) && $response->headers['x-ratelimit-remaining'] == 0 ) ) {
+                $retry_delay = $response->headers['x-ratelimit-reset'] ?? $default_retry_delay;
+                wp_schedule_single_event( time() + (int)$retry_delay, 'schedule_mailgun_retry', [ $mailgun_subdomain ] );
+                error_log("CaptainCore: Mailgun setup rate-limited when adding MX. Retrying in $retry_delay seconds.");
+                return "Rate-limited. Retrying in $retry_delay seconds."; // Stop execution
             }
+            error_log( "CaptainCore: Mailgun setup adding MX records for $domain. Request: " . json_encode($post) . " Response: " . json_encode($response->body) );
 
             // Loop through Mailgun's API new receiving records and prep for Constellix
-            foreach ( $domain->sending_dns_records as $record ) {
+            foreach ( $mailgun_domain->sending_dns_records as $record ) {
                 if ( $record->record_type == 'TXT' and $record->valid != 'valid' ) {
-                    $record_name_without_domain = str_replace( '.' . $domain, '', $record->name );
-                    $post                       = [
-                        'recordOption' => 'roundRobin',
-                        'name'         => $record_name_without_domain,
-                        'ttl'          => '3600',
-                        'roundRobin'   => [ [
-                                'value'       => $record->value,
-                                'disableFlag' => false,
+                    $record_name_without_domain = str_replace( ".{$domain}", "", $record->name );
+                    $post = [
+                        'name'  => $record_name_without_domain,
+                        'type'  => 'txt',
+                        'ttl'   => '3600',
+                        'value' => [ 
+                            [
+                                'value'   => $record->value,
+                                'enabled' => true,
                             ],
                         ],
                     ];
-                    $response = \CaptainCore\Remote\Constellix::post( "domains/$domain_id/records/txt", $post );
-                    foreach ( $response as $result ) {
-                        if ( is_array( $result ) ) {
-                            $result['errors'] = $result[0];
-                            $responses        = $responses . json_encode( $result ) . ',';
-                        } else {
-                            $responses = $responses . json_encode( $result ) . ',';
-                        }
+                    $response = \CaptainCore\Remote\Constellix::post_raw( "domains/$domain_id/records", $post );
+
+                    // Check for rate limiting
+                    if ( ( isset($response->body->message) && $response->body->message == "You have made too many requests, please wait and try again later" ) || ( isset($response->headers['x-ratelimit-remaining']) && $response->headers['x-ratelimit-remaining'] == 0 ) ) {
+                        $retry_delay = $response->headers['x-ratelimit-reset'] ?? $default_retry_delay;
+                        wp_schedule_single_event( time() + (int)$retry_delay, 'schedule_mailgun_retry', [ $mailgun_subdomain ] );
+                        error_log("CaptainCore: Mailgun setup rate-limited when adding TXT. Retrying in $retry_delay seconds.");
+                        return "Rate-limited. Retrying in $retry_delay seconds."; // Stop execution
                     }
+                    error_log( "CaptainCore: Mailgun setup adding TXT record for $domain. Request: " . json_encode($post) . " Response: " . json_encode($response->body) );
                 }
                 if ( $record->record_type == 'CNAME' and $record->valid != 'valid' ) {
-                    $record_name_without_domain = str_replace( '.' . $domain, '', $record->name );
+                    $record_name_without_domain = str_replace( ".{$domain}", "", $record->name );
                     $post = [
-                        'name' => $record_name_without_domain,
-                        'host' => "$record->value.",
-                        'ttl'  => 3600,
+                        'name'  => $record_name_without_domain,
+                        'type'  => 'cname',
+                        'ttl'   => 3600,
+                        'value' => [ 
+                            [
+                                'value'   => "$record->value.",
+                                'enabled' => true,
+                            ] 
+                        ],
                     ];
-                    $response = \CaptainCore\Remote\Constellix::post( "domains/$domain_id/records/cname", $post );
-                    foreach ( $response as $result ) {
-                        if ( is_array( $result ) ) {
-                            $result['errors'] = $result[0];
-                            $responses        = $responses . json_encode( $result ) . ',';
-                        } else {
-                            $responses = $responses . json_encode( $result ) . ',';
-                        }
+                    $response = \CaptainCore\Remote\Constellix::post_raw( "domains/$domain_id/records", $post );
+
+                    // Check for rate limiting
+                    if ( ( isset($response->body->message) && $response->body->message == "You have made too many requests, please wait and try again later" ) || ( isset($response->headers['x-ratelimit-remaining']) && $response->headers['x-ratelimit-remaining'] == 0 ) ) {
+                        $retry_delay = $response->headers['x-ratelimit-reset'] ?? $default_retry_delay;
+                        wp_schedule_single_event( time() + (int)$retry_delay, 'schedule_mailgun_retry', [ $mailgun_subdomain ] );
+                        error_log("CaptainCore: Mailgun setup rate-limited when adding CNAME. Retrying in $retry_delay seconds.");
+                        return "Rate-limited. Retrying in $retry_delay seconds."; // Stop execution
                     }
+                    error_log( "CaptainCore: Mailgun setup adding CNAME record for $domain. Request: " . json_encode($post) . " Response: " . json_encode($response->body) );
                 }
             }
         }
@@ -154,13 +164,7 @@ class Mailgun {
 
     public static function verify( $domain ) {
         $response = \CaptainCore\Remote\Mailgun::put( "v4/domains/$domain/verify" );
-
-        // Check if records are valid. If not need to flag the domain
-        // (TO DO: add place to flag domain with automattic retry schedule. 60sec, 3 minutes, 6 minutes, 1hr, 24hrs)
-       // \WP_CLI::log( "Response: $domain {$response->domain->state}" );
-
         return $response->domain->state;
     }
 
 }
-
