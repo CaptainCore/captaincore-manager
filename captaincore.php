@@ -2069,6 +2069,82 @@ function captaincore_get_domain_mailgun_details( WP_REST_Request $request ) {
 }
 
 /**
+ * Handles Mailgun deletion request.
+ */
+function captaincore_mailgun_delete( WP_REST_Request $request ) {
+    $domain_id = $request->get_param( 'id' );
+
+    // Verify user permissions for this domain
+    if ( ! ( new CaptainCore\Domains )->verify( $domain_id ) ) {
+        return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+    }
+
+    $domain = ( new \CaptainCore\Domains )->get( $domain_id );
+    if ( ! $domain ) {
+        return new WP_Error( 'domain_not_found', 'Domain not found in CaptainCore.', [ 'status' => 404 ] );
+    }
+
+    $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
+
+    // Get the Mailgun domain name from details
+    $domain_name = $details->mailgun_zone ?? null;
+
+    if ( empty( $domain_name ) ) {
+        // Nothing to delete, just return success
+        return new WP_REST_Response( [ 'message' => 'No Mailgun zone configured.' ], 200 );
+    }
+
+    // Call the Mailgun API to delete the domain
+    $response = \CaptainCore\Remote\Mailgun::delete( "v3/domains/{$domain_name}" );
+
+    // Check for errors.
+    if ( is_wp_error( $response ) ) {
+        // Handle transport-level errors (curl, etc.)
+        return new \WP_Error( 'mailgun_api_error', 'Failed to delete domain from Mailgun.', [ 'status' => 500, 'details' => $response ] );
+    }
+
+    // Check for API-level errors
+    if ( isset( $response->message ) ) {
+        // These are acceptable messages from Mailgun that mean "success" or "already done"
+        $success_messages = [
+            "Domain not found",
+            "Domain will be deleted in the background",
+            "Domain has been deleted", // The original synchronous success message
+        ];
+
+        if ( ! in_array( $response->message, $success_messages ) ) {
+            // It's a real error message we don't recognize
+            return new \WP_Error( 'mailgun_api_error', 'Failed to delete domain from Mailgun.', [ 'status' => 500, 'details' => $response ] );
+        }
+    }
+
+    // Deletion was successful, asynchronous, or domain didn't exist, so clear our local data
+    unset( $details->mailgun_id );
+    unset( $details->mailgun_zone );
+    unset( $details->mailgun_smtp_password );
+
+   \CaptainCore\Domains::update(
+        [ 'details' => json_encode( $details ) ],
+        [ 'domain_id' => $domain_id ]
+    );
+
+    // Re-fetch the updated domain to send back
+    $updated_domain = ( new \CaptainCore\Domains )->get( $domain_id );
+    if ( $updated_domain && ! empty( $updated_domain->details ) ) {
+        $updated_domain->details = json_decode( $updated_domain->details ); 
+    }
+
+    return new WP_REST_Response( 
+        [ 
+            'success' => true, 
+            'message' => 'Mailgun zone deleted successfully.',
+            'domain'  => $updated_domain
+        ], 
+        200 
+    );
+}
+
+/**
  * Handles Mailgun deploy request.
  */
 function captaincore_mailgun_deploy( WP_REST_Request $request ) {
@@ -2519,6 +2595,12 @@ function captaincore_register_rest_endpoints() {
 		'callback' => 'captaincore_get_domain_mailgun_details',
 		'permission_callback' => 'captaincore_permission_check', 
 	] );
+
+	register_rest_route( 'captaincore/v1', '/domain/(?P<id>[\d]+)/mailgun', [
+        'methods'  => 'DELETE',
+        'callback' => 'captaincore_mailgun_delete',
+        'permission_callback' => 'captaincore_permission_check',
+    ] );
 
 	register_rest_route( 'captaincore/v1', '/domain/(?P<id>[\d]+)/mailgun/setup', [
         'methods'  => 'POST',
