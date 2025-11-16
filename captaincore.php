@@ -69,6 +69,9 @@ add_action( 'captaincore_cron', 'captaincore_cron_run' );
 // Hook to run Mailgun verify at a later time
 add_action( 'schedule_mailgun_verify', '\CaptainCore\Providers\Mailgun::verify', 10, 3 );
 
+// Hook to run Mailgun setup retry if rate-limited
+add_action( 'schedule_mailgun_retry', '\CaptainCore\Providers\Mailgun::setup', 10, 1 );
+
 function captaincore_failed_notify( $order_id, $old_status, $new_status ){
 	echo "Woocommerce  $order_id, $old_status, $new_status ";
     if ( $new_status == 'failed' and $old_status != "failed" ){
