@@ -13,16 +13,19 @@ class Domain {
     public function accounts() {
 
         $accountdomain = new AccountDomain();
-        $account_ids   = ( new Accounts )->account_ids();
         $response      = [];
 
         // Fetch current records
         $current_account_ids = array_column ( $accountdomain->where( [ "domain_id" => $this->domain_id ] ), "account_id" );
         foreach ( $current_account_ids as $current_account_id ) {
-            if ( in_array( $current_account_id, $account_ids ) ) {
+            // Get the account details
+            $account = \CaptainCore\Accounts::get( $current_account_id );
+
+            // Ensure the account exists before adding it to the response
+            if ( $account ) {
                 $response[] =[ 
                     "account_id" => $current_account_id,
-                    "name"       => \CaptainCore\Accounts::get( $current_account_id )->name
+                    "name"       => $account->name
                 ];
             }
         }
