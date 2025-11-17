@@ -7838,12 +7838,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</template>
 				</v-card>
 			</v-container>
-			<v-container v-if="route == 'domains' && role == 'administrator' && ! loading_page && dialog_domain.step == 2 && ! dialog_domain.loading" class="mt-5 pb-0">
+			<v-container v-if="route == 'domains' && ! loading_page && dialog_domain.step == 2 && ! dialog_domain.loading" class="mt-5 pb-0">
 			<v-list-subheader class="ml-4">Shared With</v-list-subheader>
 			<v-container>
 			<v-row density="compact" v-if="dialog_domain.accounts && dialog_domain.accounts.length > 0">
 				<v-col v-for="account in dialog_domain.accounts" :key="account.account_id" cols="12" md="4">
-				<v-card :href=`${configurations.path}accounts/${account.account_id}` @click.prevent="goToPath( '/accounts/' + account.account_id )" density="compact" flat border="thin" rounded="xl">
+				<v-card :href="role == 'administrator' ? `${configurations.path}accounts/${account.account_id}` : null" @click.prevent="role == 'administrator' ? goToPath( '/accounts/' + account.account_id ) : null" :disabled="role != 'administrator'" :ripple="role == 'administrator'" density="compact" flat border="thin" rounded="xl">
 					<v-card-title class="text-body-1">
 						<span v-html="account.name"></span>
 					</v-card-title>
