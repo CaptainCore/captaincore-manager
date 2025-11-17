@@ -16305,6 +16305,8 @@ const app = createApp({
 
 				// 4. Use the fresh data from the response to update the local state
 				if (response.data.domain && response.data.domain.details) {
+					this.dialog_domain.accounts = response.data.domain.accounts; 
+					this.dialog_domain.connected_sites = response.data.domain.connected_sites; 
 					this.dialog_domain.details = response.data.domain.details; 
 				} else {
 					// Fallback if the response format is wrong
