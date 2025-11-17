@@ -5374,6 +5374,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-tab value="dns">
 								DNS Records <v-icon class="ml-1" icon="mdi-table"></v-icon>
 							</v-tab>
+							<v-tab value="domain">
+								Domain Management <v-icon class="ml-1" icon="mdi-account-box"></v-icon>
+							</v-tab>
 							<v-tab value="email-forwarding" v-if="dialog_domain.details.forward_email_id" @click="fetchEmailForwards">
 								Email Forwarding <v-icon class="ml-1" icon="mdi-email-arrow-right"></v-icon>
 							</v-tab>
