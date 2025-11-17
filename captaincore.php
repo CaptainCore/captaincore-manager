@@ -1018,6 +1018,44 @@ function captaincore_domain_auth_code_func( $request ) {
 	return ( new CaptainCore\Domain( $domain_id ) )->auth_code();
 }
 
+/**
+ * REST API callback to update a domain's account link based on a site.
+ * Verifies user has permission for both the domain and the site.
+ *
+ * @param WP_REST_Request $request The request object.
+ * @return WP_REST_Response|WP_Error The response object.
+ */
+function captaincore_domain_update_site_link_func( WP_REST_Request $request ) {
+    $domain_id = $request['id'];
+    $site_id   = $request->get_param('site_id');
+
+    if ( empty($site_id) ) {
+        return new WP_Error( 'missing_param', 'Site ID is required.', [ 'status' => 400 ] );
+    }
+
+    // Verify permissions for both domain and site
+    if ( ! ( new \CaptainCore\Domains )->verify( $domain_id ) ) {
+        return new WP_Error( 'permission_denied_domain', 'Permission denied for this domain.', [ 'status' => 403 ] );
+    }
+    if ( ! ( new \CaptainCore\Sites )->verify( $site_id ) ) {
+        return new WP_Error( 'permission_denied_site', 'Permission denied for the selected site.', [ 'status' => 403 ] );
+    }
+
+    // Get the site to find its customer account
+    $site = \CaptainCore\Sites::get( $site_id );
+    if ( ! $site || empty( $site->customer_id ) || $site->customer_id == "0" ) {
+        return new WP_Error( 'no_customer_account', 'The selected site does not have a valid customer account linked.', [ 'status' => 400 ] );
+    }
+
+    $account_id_to_link = $site->customer_id;
+
+    // Use the existing assign_accounts method to link the domain to this single account
+    // This will overwrite any existing links, which matches the client-side's expectation.
+    ( new \CaptainCore\Domain( $domain_id ) )->assign_accounts( [ $account_id_to_link ] );
+
+    return new WP_REST_Response( [ 'message' => 'Domain billing account updated successfully.' ], 200 );
+}
+
 function captaincore_dns_func( $request ) {
 	$domain_id = $request['id'];
 	$verify    = ( new CaptainCore\Domains )->verify( $domain_id );
@@ -3124,6 +3162,23 @@ function captaincore_register_rest_endpoints() {
 			'callback'            => 'captaincore_domain_auth_code_func',
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/domain/(?P<id>[\d]+)/update-site-link', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_domain_update_site_link_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'args'                => [
+				'id' => [
+					'validate_callback' => function($param) { return is_numeric($param); }
+				],
+				'site_id' => [
+					'required' => true,
+					'validate_callback' => function($param) { return is_numeric($param); }
+				],
+			],
 		]
 	);
 
