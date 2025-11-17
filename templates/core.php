@@ -16203,25 +16203,34 @@ const app = createApp({
 			const fullDomain = `${this.mailgun.subdomain}.${this.mailgun.activeDomain.name}`;
 			
 			try {
-				await axios.post(`/wp-json/captaincore/v1/domain/${domain_id}/mailgun/setup`, { 
+				// 1. Make the POST request and *capture the response*
+				const response = await axios.post(`/wp-json/captaincore/v1/domain/${domain_id}/mailgun/setup`, { 
 					domain_id: this.mailgun.activeDomain.domain_id, 
 					domain: fullDomain 
 				}, {
 					headers: { 'X-WP-Nonce': this.wp_nonce }
 				});
 
-				// Refresh domain data to show new tab and "zone created"
-				await this.fetchDomain( this.mailgun.activeDomain );
+				// 2. Now that details are fresh, fetch content for the new tab
+				this.fetchMailgunDetails(); // This populates this.mailgun.data for the tab content
 
-				// Re-fetch the DNS records to show the new Mailgun records
-				this.modifyDNS( this.mailgun.activeDomain );
+				// 3. This refetches DNS records for the DNS tab
+				this.modifyDNS( this.dialog_domain.domain );
+
+				// 4. Use the fresh data from the response to update the local state
+				if (response.data.domain && response.data.domain.details) {
+					this.dialog_domain.details = response.data.domain.details; 
+				} else {
+					// Fallback if the response format is wrong
+					throw new Error("Activation response did not include updated domain data.");
+				}
+
+				// 5. Switch to the new tab
+				this.dialog_domain.tabs = 'mailgun';
 
 				// Show success message
 				this.snackbar.message = `Mailgun zone ${fullDomain} created successfully.`;
 				this.snackbar.show = true;
-
-				// Switch to the Mailgun tab
-				this.dialog_domain.tabs = "mailgun";
 
 				} catch (error) {
 					console.error("Error activating Mailgun:", error)
@@ -16230,11 +16239,12 @@ const app = createApp({
 				} finally {
 					// This runs after try or catch, ensuring the loader always stops
 					this.mailgun.loadingActivate = false;
+					this.dialog_domain.loading = false;
 				}
 		},
 		verifyMailgunDomain(domain) {
 			this.mailgun.loadingVerify = true;
-            const domain_id = this.dialog_domain.domain.domain_id;
+			const domain_id = this.dialog_domain.domain.domain_id;
 
 			// 1. Updated endpoint to include domain_id
 			axios.post(`/wp-json/captaincore/v1/domain/${domain_id}/mailgun/verify`, { 
