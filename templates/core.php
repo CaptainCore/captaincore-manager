@@ -8685,24 +8685,17 @@ const app = createApp({
 		selected_site: {},
 		active_console: 0,
 		view_console: { show: false, open: false },
-		view_timeline: false,
 		search: null,
 		users_search: "",
-		advanced_filter: false,
 		sites_selected: [],
-		sites_filtered: [],
-		site_selected: null,
 		filter_logic: "and",
 		filter_version_logic: "and",
 		filter_status_logic: "and",
 		site_filters: <?php echo json_encode( ( new CaptainCore\Environments )->filters() ); ?>,
 		site_filter_version: null,
 		site_filter_status: null,
-		sort_direction: "asc",
 		toggle_site: true,
 		toggle_plan: true,
-		toggle_site_sort: null,
-		toggle_site_counter: { key: "", count: 0 },
 		countries: wc_countries,
 		states: wc_states,
 		states_selected: [],
@@ -8723,14 +8716,6 @@ const app = createApp({
 			{ title: 'Version', value: 'version' },
 			{ title: 'Status', value: 'status', width: "100px" },
 			{ title: 'Actions', value: 'actions', width: "90px", sortable: false }
-		],
-		header_updatelog: [
-			{ title: 'Date', value: 'date' },
-			{ title: 'Type', value: 'type' },
-			{ title: 'Name', value: 'name' },
-			{ title: 'Old Version', value: 'old_version' },
-			{ title: 'New Version', value: 'new_version' },
-			{ title: 'Status', value: 'status' }
 		],
 		header_users: [
 			{ title: 'Login', key: 'user_login' },
@@ -9638,10 +9623,6 @@ const app = createApp({
 				this.viewSnapshots()
 			}
 		},
-		clearFilters() {
-			this.applied_site_filter = []
-			this.filterSites()
-		},
 		closeVersionFilter(index) {
 			this.$nextTick(() => {
 				if (this.$refs.versionFilterRefs && this.$refs.versionFilterRefs[index]) {
@@ -9725,43 +9706,6 @@ const app = createApp({
 				response += ` <small>per ${unit}</small>`
 			}
 			return response
-		},
-		compare(key, order='asc') {
-			return function(a, b) {
-				//if(!a.hasOwnProperty(key) || !b.hasOwnProperty(key)) {
-				//	// property doesn't exist on either object
-				//	return 0;
-				//}
-				if ( key == 'name' ) {
-					varA = a.name || "";
-					varB = b.name || "";
-				}
-				if ( key == 'multisite' ) {
-					varA = parseInt(a.subsite_count) || 0;
-					varB = parseInt(b.subsite_count) || 0;
-				}
-				if ( key == 'visits' ) {
-					varA = parseInt(a[key].replace(/\,/g,'')) || 0;
-					varB = parseInt(b[key].replace(/\,/g,'')) || 0;
-				}
-				if ( key == 'storage' ) {
-					varA = parseInt(a.storage) || 0;
-					varB = parseInt(b.storage) || 0;
-				}
-				if ( key == 'provider' ) {
-					varA = a.provider || "";
-					varB = b.provider || "";
-				}
-				let comparison = 0;
-				if (varA > varB) {
-					comparison = 1;
-				} else if (varA < varB) {
-					comparison = -1;
-				}
-				return (
-					(order == 'desc') ? (comparison * -1) : comparison
-				);
-			};
 		},
 		resetColors() {
 			this.currentThemeColors = {
@@ -9963,25 +9907,6 @@ const app = createApp({
 		closeConsole() {
 			this.view_console.open = false
 			this.active_console = 0
-		},
-		siteSearch(value, search, item) {
-			const searchLower = search?.toString().toLowerCase() ?? '';
-			if (searchLower === '') {
-				return true; // Match all items if search is empty
-			}
-
-			const valueString = value?.toString().toLowerCase() ?? '';
-    		const valueMatch = valueString.includes(searchLower);
-			const usernameString = item?.username?.toString().toLowerCase() ?? '';
-			const usernameMatch = usernameString.includes(searchLower);
-			return valueMatch || usernameMatch;
-
-			return value != null &&
-				search != null &&
-				value.toString().includes(search) || item.username.toString().includes(search)
-		},
-		removeFromBulk( site_id ) {
-			this.sites_selected = this.sites_selected.filter(site => site.site_id != site_id);
 		},
 		magicLoginSite( site_id, user ) {
 			// Adds new job
@@ -10211,11 +10136,6 @@ const app = createApp({
 				this.dialog_new_site_kinsta.connection_verified = response.data
 				this.dialog_new_site_kinsta.verifing = false
 			});
-		},
-		showNewSiteDialog() {
-			this.dialog_new_site_kinsta.verifing = true
-			this.dialog_new_site_kinsta.connection_verified = false
-			this.dialog_new_site_kinsta.show = true
 		},
 		showNewSiteKinsta() {
 			this.dialog_new_site_kinsta.verifing = false
@@ -11021,32 +10941,6 @@ const app = createApp({
 			})
 			this.states_selected = states_selected
 		},
-		fetchFilteredSites() {
-			const themes = this.applied_theme_filters;
-			const plugins = this.applied_plugin_filters;
-			// Map the version and status objects to just their names, which the backend likely expects.
-			const versions = this.applied_site_filter_version.map(v => v.name);
-			const statuses = this.applied_site_filter_status.map(s => s.name);
-			
-			axios.post(
-				`/wp-json/captaincore/v1/filters`, {
-					themes,
-					plugins,
-					versions,
-					statuses
-				}, {
-					headers: {'X-WP-Nonce': this.wp_nonce}
-				})
-				.then(response => {
-					const sites_filtered_by_backend = new Set(response.data.sites);
-					this.sites.forEach(s => {
-						s.filtered = sites_filtered_by_backend.has(s.site);
-					});
-				})
-				.catch(error => {
-					console.error("Error fetching filtered sites:", error);
-				});
-		},
 		fetchSites() {
 			this.sites_loading = false
 			if (( this.role == 'administrator' || this.role == 'owner' ) && this.keys.length == 0 ) {
@@ -11203,17 +11097,6 @@ const app = createApp({
 							}
 					})
 				})
-		},
-		argumentsForActions() {
-			arguments = [];
-			this.select_bulk_action.forEach(action => {
-				this.bulk_actions.filter(bulk_action => bulk_action.value == action).forEach(filtered_action => {
-					if ( filtered_action.arguments ) {
-						filtered_action.arguments.forEach(argument => arguments.push({ name: argument.name, value: argument.value, command: action }) );
-					}
-				});
-			});
-			this.select_bulk_action_arguments = arguments;
 		},
 		bulkEdit ( site_id, type ) {
 			this.bulk_edit.show = true;
@@ -16129,11 +16012,6 @@ const app = createApp({
 				});
 
 		},
-		themeAndPluginChecks( site_id ) {
-			site = this.dialog_site.site
-			this.dialog_theme_and_plugin_checks.site = site;
-			this.dialog_theme_and_plugin_checks.show = true;
-		},
 		killCommand( job_id ) {
 			job = this.jobs.filter(job => job.job_id == job_id)[0]
 			job.conn.send( '{ "token" : "'+ job.job_id +'", "action" : "kill" }' );
@@ -16908,12 +16786,6 @@ const app = createApp({
 			quicksave = environment.quicksaves.filter( quicksave => quicksave.hash == hash )[0];
 			search = quicksave.search;
 			quicksave.filtered_files = quicksave.view_files.filter( file => file.includes( search ) );
-		},
-		filteredAccounts( value ) {
-			if ( value ) {
-				return true
-			}
-			return false
 		},
 		clearSiteFilters() {
 			this.search = '';
