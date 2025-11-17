@@ -5381,7 +5381,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								Email Forwarding <v-icon class="ml-1" icon="mdi-email-arrow-right"></v-icon>
 							</v-tab>
 							<v-tab value="mailgun" v-if="dialog_domain.details.mailgun_id">
-								Mailgun
+								Mailgun <v-icon class="ml-1" icon="mdi-email"></v-icon>
 							</v-tab>
 						</v-tabs>
 						</v-toolbar>
@@ -6075,6 +6075,16 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 
                                             <v-btn color="primary" @click="verifyMailgunDomain(dialog_domain)" :loading="mailgun.loadingVerify" prepend-icon="mdi-check-network">
                                                 Attempt to Verify Domain
+                                            </v-btn>
+
+											<v-btn 
+                                                color="secondary" 
+                                                @click="copyMailgunRecordsToClipboard()" 
+                                                prepend-icon="mdi-content-copy"
+                                                variant="tonal"
+                                                class="ml-2"
+                                            >
+                                                Copy Records
                                             </v-btn>
                                         </div>
 
@@ -16379,6 +16389,36 @@ const app = createApp({
                 this.snackbar.message = "Error during verification: " + (error.response?.data?.message || error.message);
                 this.snackbar.show = true;
 			});
+		},
+		copyMailgunRecordsToClipboard() {
+			if (!this.mailgun.data || !this.dialog_domain.details.mailgun_zone) {
+				this.snackbar.message = "No records to copy.";
+				this.snackbar.show = true;
+				return;
+			}
+
+			let recordsText = `Mailgun DNS Records for ${this.dialog_domain.domain.name}:\n\n`;
+
+			if (this.mailgun.data.sending_dns_records && this.mailgun.data.sending_dns_records.length > 0) {
+				this.mailgun.data.sending_dns_records.forEach(record => {
+					recordsText += `Type: ${record.record_type}\n`;
+					recordsText += `Name: ${record.name}\n`;
+					recordsText += `Value: ${record.value}\n\n`;
+				});
+			}
+
+			if (this.mailgun.data.receiving_dns_records && this.mailgun.data.receiving_dns_records.length > 0) {
+				this.mailgun.data.receiving_dns_records.forEach(record => {
+					recordsText += `Type: ${record.record_type}\n`;
+					recordsText += `Name: ${record.name}\n`;
+					recordsText += `Priority: ${record.priority}\n`;
+					recordsText += `Value: ${record.value}\n\n`;
+				});
+			}
+
+			this.copyText(recordsText);
+			this.snackbar.message = "DNS records copied to clipboard.";
+			this.snackbar.show = true;
 		},
 		showMailgunDeployPrompt(site, domain) {
 			this.mailgun.activeSite = site;
