@@ -1259,6 +1259,15 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-text-field variant="underlined" v-model="dialog_new_domain.domain.name" label="Domain Name" required class="mt-3"></v-text-field>
 					<v-autocomplete variant="underlined" :items="accounts" item-title="name" item-value="account_id" v-model="dialog_new_domain.domain.account_id" label="Account" required v-if="role == 'administrator'"></v-autocomplete>
 					<v-autocomplete variant="underlined" :items="sites" item-title="name" item-value="site_id" v-model="dialog_new_domain.domain.site_id" label="Website" required v-if="role != 'administrator'"></v-autocomplete>
+					<v-switch
+						v-model="dialog_new_domain.domain.create_dns_zone"
+						label="Create DNS Zone"
+						color="primary"
+						inset
+						persistent-hint
+						hint="Automatically create and manage DNS records for this domain."
+						class="mt-2"
+					></v-switch>
 					<v-alert variant="tonal" type="error" class="text-body-1 mb-3" v-for="error in dialog_new_domain.errors">
 						{{ error }}
 					</v-alert>
@@ -8287,7 +8296,7 @@ const app = createApp({
 				],
 			},
 		},
-		dialog_new_domain: { show: false, domain: { name: "", account_id: "", site_id: "" }, loading: false, errors: [] },
+		dialog_new_domain: { show: false, domain: { name: "", account_id: "", site_id: "", create_dns_zone: true }, loading: false, errors: [] },
 		dialog_new_provider: { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] },
 		dialog_edit_provider: { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] },
 		dialog_configure_defaults: { show: false, loading: false },
@@ -13323,7 +13332,8 @@ const app = createApp({
 				action: 'captaincore_account',
 				command: 'addDomain',
 				value: this.dialog_new_domain.domain.name,
-				account_id: this.dialog_new_domain.domain.account_id
+				account_id: this.dialog_new_domain.domain.account_id,
+				create_dns_zone: this.dialog_new_domain.domain.create_dns_zone
 			};
 
 			// If user is not admin, send site_id instead
@@ -13341,7 +13351,7 @@ const app = createApp({
 						return;
 					}
 					this.dialog_new_domain.loading = false;
-					this.dialog_new_domain = { show: false, domain: { name: "", customer: "" } };
+					this.dialog_new_domain = { show: false, domain: { name: "", account_id: "", site_id: "", create_dns_zone: true }, loading: false, errors: [] };
 					this.domains.push( response.data )
 					this.domains.sort((a, b) => (a.name > b.name) ? 1 : -1)
 					this.snackbar.message = "Added new domain " + response.data.name;
