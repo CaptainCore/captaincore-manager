@@ -13995,12 +13995,15 @@ const app = createApp({
 			}
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					this.dialog_domain = { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, ignore_warnings: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider_id: "", provider: { contacts: {} }, contact_tabs: "", tabs: "dns", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], results: [], errors: [], loading: true, saving: false, step: 1 }
-					this.domains = this.domains.filter( d => d.domain_id != response.data.domain_id )
-					this.goToPath( '/domains' )
-					this.snackbar.message = response.data.message
-					this.snackbar.show = true
-					
+					// Set loading to false
+					this.dialog_domain.loading = false;
+					// Remove the domain from the local array
+					this.domains = this.domains.filter( d => d.domain_id != response.data.domain_id );
+					// Navigate back to the domains list (this will set dialog_domain.step = 1)
+					this.goToPath( '/domains' );
+					// Show snackbar
+					this.snackbar.message = response.data.message;
+					this.snackbar.show = true;
 				})
 				.catch( error => {
 					this.snackbar.message = error
