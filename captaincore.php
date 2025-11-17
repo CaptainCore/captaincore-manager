@@ -4469,6 +4469,8 @@ function captaincore_account_action_callback() {
 
 		$errors = [];
 		$name   = trim( $_POST['value'] );
+		// Get the new flag. Default to true if not set.
+        $create_dns_zone = isset( $_POST['create_dns_zone'] ) ? ( $_POST['create_dns_zone'] === 'true' || $_POST['create_dns_zone'] === '1' ) : true;
 
 		// If results still exists then give an error
 		if ( $name == "" ) {
@@ -4525,17 +4527,22 @@ function captaincore_account_action_callback() {
 		// Assign domain to account
 		( new CaptainCore\Domain( $domain_id ) )->insert_accounts( [ $account_id ] );
 
-		// Execute remote code
-		$response = ( new CaptainCore\Domain( $domain_id ) )->fetch_remote_id();
-		if ( is_array( $response ) ) {
-			foreach ( $response["errors"] as $error ) {
-				$errors[] = $error;
+		$remote_id = null;
+
+		// Conditionally execute remote code
+		if ( $create_dns_zone ) {
+			$response = ( new CaptainCore\Domain( $domain_id ) )->fetch_remote_id();
+			if ( is_array( $response ) && isset( $response["errors"] ) ) { // Check if $response is an error array
+				foreach ( $response["errors"] as $error ) {
+					$errors[] = $error;
+				}
+				echo json_encode( [ "errors" => $errors ] );
+				wp_die();
 			}
-			echo json_encode( [ "errors" => $errors ] );
-			wp_die();
+			$remote_id = $response; // Store the remote_id if successful
 		}
 
-		echo json_encode( [ "name" => $name, "domain_id" => $domain_id, "remote_id" => $response ] );
+		echo json_encode( [ "name" => $name, "domain_id" => $domain_id, "remote_id" => $remote_id ] );
 
 	}
 
