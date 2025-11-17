@@ -1998,19 +1998,15 @@ function captaincore_mailgun_setup( WP_REST_Request $request ) {
         [ 'domain_id' => $domain_id ]
     );
 
-    // Re-fetch the updated CaptainCore domain object
-    $updated_domain = ( new \CaptainCore\Domains )->get( $domain_id );
-    if ( $updated_domain && ! empty( $updated_domain->details ) ) {
-        // Ensure details are decoded for the frontend
-        $updated_domain->details = json_decode( $updated_domain->details ); 
-    }
+    // Re-fetch the updated domain
+    $updated_domain = ( new \CaptainCore\Domain( $domain_id ) )->fetch();
 
     // Return the full domain object along with a success message
     return new WP_REST_Response( 
         [ 
             'success' => true, 
             'message' => 'Mailgun zone created and DNS records are being added.',
-            'domain'  => $updated_domain // Send the full, updated domain object
+            'domain'  => $updated_domain
         ], 
         200 
     );
@@ -2166,11 +2162,8 @@ function captaincore_mailgun_delete( WP_REST_Request $request ) {
         [ 'domain_id' => $domain_id ]
     );
 
-    // Re-fetch the updated domain to send back
-    $updated_domain = ( new \CaptainCore\Domains )->get( $domain_id );
-    if ( $updated_domain && ! empty( $updated_domain->details ) ) {
-        $updated_domain->details = json_decode( $updated_domain->details ); 
-    }
+    // Re-fetch the updated domain to send back (with full data)
+    $updated_domain = ( new \CaptainCore\Domain( $domain_id ) )->fetch();
 
     return new WP_REST_Response( 
         [ 
