@@ -12171,10 +12171,17 @@ const app = createApp({
 					};
 					axios.post( ajaxurl, Qs.stringify( data ) )
 						.then( response => {
+							if ( response.data && response.data.error ) {
+								self.new_payment.error = response.data.error;
+								return;
+							}
 							self.fetchBilling()
 							self.new_payment = { card: {}, show: false, error: "" }
 						})
-						.catch( error => console.log( error ) )
+						.catch( error => {
+							console.log( error );
+							self.new_payment.error = "An unexpected error occurred. Please try again.";
+						} )
 			})
 		},
 		showAccount( account_id ) {
