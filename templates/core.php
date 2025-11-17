@@ -507,6 +507,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<template v-slot:append>
 									<v-btn
 										size="small"
+										variant="tonal"
+										@click="magicLoginForDeployTarget(site)"
+										class="mr-2"
+									>
+										Login
+									</v-btn>
+									<v-btn
+										size="small"
 										color="primary"
 										@click="showMailgunDeployPrompt(site, dialog_domain); dialog_mailgun_deploy.show = false"
 										variant="tonal"
@@ -9918,6 +9926,40 @@ const app = createApp({
 				description = `Login as ${user.user_login} to ${this.dialog_site.environment_selected.home_url}`
 				endpoint = `/wp-json/captaincore/v1/sites/${site_id}/${environment}/magiclogin/${user.ID}`
 			}
+			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command":"login"});
+
+			axios.get( endpoint, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					if ( response.data.includes("There has been a critical error on this website") ) {
+						this.jobs.filter(job => job.job_id == job_id)[0].status = "error";
+						this.snackbar.message = description + " failed due to PHP error. Check server PHP logs.";
+						this.snackbar.show = true;
+						return
+					}
+					if ( response.data.includes("http") ) {
+						window.open( response.data.trim() );
+						this.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+					} else {
+						this.jobs.filter(job => job.job_id == job_id)[0].status = "error";
+						this.snackbar.message = description + " failed.";
+						this.snackbar.show = true;
+					}
+				})
+				.catch(error => {
+					this.jobs.filter(job => job.job_id == job_id)[0].status = "error";
+					this.snackbar.message = description + " failed.";
+					this.snackbar.show = true;
+					console.log(error.response)
+				});
+		},
+		magicLoginForDeployTarget(target) {
+			let job_id = Math.round((new Date()).getTime());
+			let environment = target.environment.toLowerCase();
+			let description = `Magic login to ${target.home_url}`;
+			let endpoint = `/wp-json/captaincore/v1/sites/${target.id}/${environment}/magiclogin`;
+			
 			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command":"login"});
 
 			axios.get( endpoint, {
