@@ -549,6 +549,35 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card-actions>
 			</v-card>
 		</v-dialog>
+		<v-dialog v-model="dialog_domain.update_account.show" max-width="500px">
+			<v-card>
+				<v-toolbar color="primary" dark>
+					<v-btn icon="mdi-close" @click="dialog_domain.update_account.show = false"></v-btn>
+					<v-toolbar-title>Update Domain Account</v-toolbar-title>
+				</v-toolbar>
+				<v-card-text>
+					<v-autocomplete
+						v-model="dialog_domain.update_account.site"
+						:items="sites"
+						item-title="name"
+						item-value="site_id"
+						label="Link to different site"
+						return-object
+						hint="The domain's billing account will be linked to this site's customer account."
+						persistent-hint
+						class="mt-5"
+						spellcheck="false"
+						flat
+						variant="underlined"
+					></v-autocomplete>
+				</v-card-text>
+				<v-card-actions class="justify-end">
+					<v-btn color="primary" variant="outlined" @click="updateDomainSiteLink()">
+						Update
+					</v-btn>
+				</v-card-actions>
+			</v-card>
+		</v-dialog>
 		<v-dialog v-model="dialog_fathom.show" max-width="500px">
 		<v-card tile>
 			<v-toolbar flat dark color="primary">
@@ -7829,6 +7858,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<template v-slot:actions>
 						<v-btn 
 							size="small" 
+							variant="outlined"
+							@click="dialog_domain.update_account.show = true">
+							Update Account
+						</v-btn>
+						<v-btn 
+							size="small" 
 							variant="outlined" 
 							@click="activateEmailForwarding(false)" 
 							prepend-icon="mdi-email-arrow-right"
@@ -8252,11 +8287,11 @@ const app = createApp({
 				],
 			},
 		},
-		dialog_new_domain: { show: false, domain: { name: "", account_id: "" }, loading: false, errors: [] },
+		dialog_new_domain: { show: false, domain: { name: "", account_id: "", site_id: "" }, loading: false, errors: [] },
 		dialog_new_provider: { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] },
 		dialog_edit_provider: { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] },
 		dialog_configure_defaults: { show: false, loading: false },
-		dialog_domain: { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, ignore_warnings: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider_id: "", provider: { contacts: {} }, contact_tabs: "", tabs: "dns", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], results: [], errors: [], info: [], loading: true, saving: false, step: 1, details: {}, activating_forwarding: false, confirm_mx_overwrite: false, forwards_domain: { loading: false, data: null }, forwards: { loading: false, items: [], show_dialog: false, edited_item: { name: '', recipients: '', is_enabled: true }, edited_index: -1 } },
+		dialog_domain: { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, ignore_warnings: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider_id: "", provider: { contacts: {} }, contact_tabs: "", tabs: "dns", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], results: [], errors: [], info: [], loading: true, saving: false, step: 1, details: {}, activating_forwarding: false, confirm_mx_overwrite: false, forwards_domain: { loading: false, data: null }, forwards: { loading: false, items: [], show_dialog: false, edited_item: { name: '', recipients: '', is_enabled: true }, edited_index: -1 }, update_account: { show: false, site: null } },
 		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $user->email; ?>", current_user_email: "<?php echo $user->email; ?>", filter_toggle: true, filter_options: [] },
 		dialog_backup_configurations: { show: false, settings: { mode: "", interval: "", active: true } },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
@@ -13318,6 +13353,42 @@ const app = createApp({
 					this.dialog_new_domain.loading = false;
 				});
 		},
+		updateDomainSiteLink() {
+			if (!this.dialog_domain.update_account.site) {
+				this.snackbar.message = "Please select a site.";
+				this.snackbar.show = true;
+				return;
+			}
+			
+			const selectedSite = this.dialog_domain.update_account.site;
+			const domain_id = this.dialog_domain.domain.domain_id;
+			const site_id = selectedSite.site_id; // Get the site_id
+			
+			if (!site_id || site_id == "0") {
+				this.snackbar.message = "The selected site is not valid.";
+				this.snackbar.show = true;
+				return;
+			}
+
+			axios.post(`/wp-json/captaincore/v1/domain/${domain_id}/update-site-link`, {
+				site_id: site_id
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then( response => {
+				this.snackbar.message = response.data.message || "Domain billing account updated successfully."; // Use message from REST response
+				this.snackbar.show = true;
+				this.dialog_domain.update_account.show = false;
+				this.dialog_domain.update_account.site = null;
+				
+				// Re-fetch domain data to reflect changes
+				this.fetchDomain( this.dialog_domain.domain ); 
+			})
+			.catch( error => {
+				this.snackbar.message = "An error occurred: " + (error.response?.data?.message || error.message);
+				this.snackbar.show = true;
+			});
+		},
 		addRecord() {
 			timestamp = new Date().getTime();
 			this.dialog_domain.records.push({ id: "new_" + timestamp, edit: false, delete: false, new: true, ttl: "3600", type: "A", value: [{"value": "","enabled":true}], update: {"record_id": "new_" + timestamp, "record_type": "A", "record_name": "", "record_value": [{ value: "", enabled: true }], "record_ttl": "3600", "record_status": "new-record" } });
@@ -13472,7 +13543,7 @@ const app = createApp({
 					}
 				})
 		},
-		fetchDomain( domain ) {
+		fetchDomain( domain, tab = 'dns' ) {
 			if ( this.role == "administrator" ) {
 				this.fetchProviders()
 			}
@@ -13503,6 +13574,7 @@ const app = createApp({
 				})
 				.finally(() => {
 					this.dialog_domain.loading = false;
+					this.dialog_domain.tabs = tab;
 				});
 		},
 		activateEmailForwarding( overwrite = false ) {
@@ -13746,7 +13818,8 @@ const app = createApp({
 					show_dialog: false,
 					edited_item: { name: '', recipients: '', is_enabled: true },
 					edited_index: -1,
-				}
+				},
+				update_account: { show: false, site: null }
 			};
 			if ( domain.remote_id == null ) {
 				this.dialog_domain.info = [ "DNS zone is not active. Activate it to manage DNS records." ];
