@@ -2241,19 +2241,19 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-toolbar-title>Copy Site {{ dialog_copy_site.site.name }} to...</v-toolbar-title>
 						</v-toolbar>
 						<v-card-text>
-								<v-autocomplete
-									:items="dialog_copy_site.options"
-									v-model="dialog_copy_site.destination"
-									label="Select Destination Site"
-									item-title="name"
-									item-value="id"
-									variant="underlined"
-									chips
-									closable-chips
-								></v-autocomplete>
+							<v-autocomplete
+								:items="dialog_copy_site.options"
+								v-model="dialog_copy_site.destination"
+								label="Select Destination Site"
+								item-title="name"
+								item-value="id"
+								variant="underlined"
+								chips
+								closable-chips
+							></v-autocomplete>
 							<v-btn @click="startCopySite()" color="primary" class="mt-3">
-									Copy Site
-								</v-btn>
+								Copy Site
+							</v-btn>
 						</v-card-text>
 					</v-card>
 				</v-dialog>
@@ -3203,9 +3203,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-container>
 			</v-sheet>
 			<v-sheet v-show="dialog_site.step == 2" class="site" color="transparent">
-			<v-card v-show="dialog_site.site.removed" flat rounded="xl">
-			<v-toolbar flat color="transparent">
-					<v-img :src=`${remote_upload_uri}${dialog_site.site.site}_${dialog_site.site.site_id}/production/screenshots/${dialog_site.site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3" max-width="50" v-show="dialog_site.site.screenshot_base"></v-img>
+			<v-card v-show="dialog_site.site.removed" elevation="0" rounded="xl">
+				<v-toolbar elevation="0" color="transparent">
+					<v-img :src=`${remote_upload_uri}${dialog_site.site.site}_${dialog_site.site.site_id}/production/screenshots/${dialog_site.site.screenshot_base}_thumb-100.jpg` class="elevation-1 mr-3 ml-5" max-width="50" v-show="dialog_site.site.screenshot_base"></v-img>
 					<v-toolbar-title>{{ dialog_site.site.name }}</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
@@ -3213,7 +3213,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-row>
 					<v-col>
 						<div>This site has been marked for removal and will be removed within 24 hours. If that was not your intentions then:</div>
-						<v-btn color="primary" class="ma-4" @click="cancelSiteRemoved()">cancel removal request</v-btn>
+						<v-btn color="primary" class="mt-4" @click="cancelSiteRemoved()">cancel removal request</v-btn>
 					</v-col>
 				</v-row>
 				</v-card-text>
@@ -3507,15 +3507,23 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</template>
 							<template v-slot:default="{ isActive }">
 							<v-card>
-								<v-toolbar color="primary" dark>
+								<v-toolbar color="primary">
 									<v-btn icon="mdi-close" @click="isActive.value = false"></v-btn>
 									Are you sure you wish to delete this site?
 									<v-spacer></v-spacer>
 								</v-toolbar>
 								<v-card-text>
 								<p class="pt-3 text-body-1">Deleting this site will also delete all environments associated with it.</p>
-								<v-checkbox :model-value="true" readonly v-for="environment in dialog_site.site.environments" :label="`${environment.environment} - ${environment.home_url}`" color="primary"></v-checkbox>
-								<v-btn color="primary" @click="markSiteRemoved(); isActive.value = false" class="mr-2">Delete Site</v-btn>
+								<v-checkbox 
+									:model-value="true" 
+									readonly 
+									v-for="environment in dialog_site.site.environments" 
+									:label="`${environment.environment} - ${environment.home_url}`" 
+									color="primary" 
+									hide-details
+									density="compact"
+								></v-checkbox>
+								<v-btn color="primary" @click="markSiteRemoved(); isActive.value = false" class="mr-2 mt-2">Delete Site</v-btn>
 								</v-card-text>
 							</v-card>
 							</template>
@@ -5579,7 +5587,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-window-item>
 							<v-window-item value="domain" :transition="false" :reverse-transition="false">
 							<v-col v-show="!dialog_domain.provider.domain">
-								<v-alert type="info" color="primary" variant="tonal" class="text-body-2">Domain is registered through another provider.</v-alert>
+								<v-alert type="info" color="primary" variant="tonal">Domain is registered through another provider.</v-alert>
 							</v-col>
 							<div v-show="dialog_domain.provider.domain">
 								<v-card flat>
@@ -6159,9 +6167,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-toolbar-items></v-toolbar-items>
 				</v-toolbar>
 				<v-card-text>
-				<v-alert type="info" variant="text">
-						Results from daily scans of home pages. Web console errors are extracted from Google Chrome via Lighthouse CLI. Helpful for tracking down wide range of issues.  
-				</v-alert>
+					<v-alert type="info" variant="text">
+						Results from daily scans of home pages. Web console errors are extracted from Google Chrome via Lighthouse CLI. Helpful for tracking down wide range of issues.
+					</v-alert>
 					<v-card v-for="site in filterSitesWithErrors" flat class="mb-2" :key="site.site_id">
 					<v-toolbar flat class="px-4">
 						<v-img :src="`${remote_upload_uri}${site.site}_${site.site_id}/production/screenshots/${site.screenshot_base}_thumb-100.jpg`" class="elevation-1 mr-3" max-width="50" v-show="site.screenshot_base"></v-img>
