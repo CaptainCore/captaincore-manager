@@ -114,6 +114,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-list-item link :href="`${configurations.path}health`" @click.prevent="goToPath('/health')" title="Health" prepend-icon="mdi-ladybug"></v-list-item>
 			
 			<v-list-subheader v-show="role == 'administrator' || role == 'owner'">Administrator</v-list-subheader>
+			<v-list-item link :href="`${configurations.path}archives`" @click.prevent="goToPath('/archives')" title="Archives" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-folder-zip-outline"></v-list-item>
 			<v-list-item link :href="`${configurations.path}configurations`" @click.prevent="goToPath('/configurations')" title="Configurations" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-cogs"></v-list-item>
 			<v-list-item link :href="`${configurations.path}handbook`" @click.prevent="goToPath('/handbook')" title="Handbook" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-map"></v-list-item>
 			<v-list-item link :href="`${configurations.path}defaults`" @click.prevent="goToPath('/defaults')" title="Site Defaults" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-application"></v-list-item>
@@ -7106,6 +7107,100 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-container>
 				</v-card-text>
 			</v-card>
+			<v-card v-if="route == 'archives'" flat border="thin" rounded="xl">
+				<v-toolbar flat color="transparent" class="pr-3">
+					<v-toolbar-title>
+						Listing {{ archives.length }} archives
+						<small class="text-caption text-grey ml-2" v-if="archives.length > 0">
+							({{ formatSize(totalArchivesSize) }})
+						</small>
+					</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-text-field 
+						v-model="archive_search" 
+						append-inner-icon="mdi-magnify" 
+						label="Search" 
+						density="compact" 
+						variant="outlined" 
+						clearable 
+						hide-details 
+						flat 
+						style="max-width:300px;">
+					</v-text-field>
+				</v-toolbar>
+				<v-card-text>
+					<v-data-table
+						:headers="[
+							{ title: 'Name', key: 'name' },
+							{ title: 'Size', key: 'size', width: '120px' },
+							{ title: 'Modified', key: 'mod_time', width: '220px' },
+							{ title: 'Actions', key: 'actions', align: 'end', sortable: false, width: '150px' }
+						]"
+						:items="archives"
+						:search="archive_search"
+						:sort-by="[{ key: 'mod_time', order: 'desc' }]"
+						:loading="archives_loading"
+						:items-per-page="100"
+						:items-per-page-options="[25, 50, 100, { title: 'All', value: -1 }]"
+						density="comfortable"
+						hover
+					>
+						<template v-slot:item.name="{ item }">
+							<v-icon icon="mdi-file-zip-box-outline" size="small" class="mr-2"></v-icon>
+							{{ item.name || item.raw.name }}
+						</template>
+
+						<template v-slot:item.size="{ item }">
+							{{ formatSize(item.size || item.raw.size) }}
+						</template>
+
+						<template v-slot:item.mod_time="{ item }">
+							{{ pretty_timestamp(item.mod_time || item.raw.mod_time) }}
+						</template>
+
+						<template v-slot:item.actions="{ item }">
+							<v-btn 
+								size="small" 
+								variant="tonal" 
+								color="primary" 
+								prepend-icon="mdi-link"
+								@click="generateArchiveLink(item.raw || item)"
+							>
+								Get Link
+							</v-btn>
+						</template>
+					</v-data-table>
+				</v-card-text>
+				<v-dialog v-model="dialog_archive_link.show" max-width="600px">
+					<v-card>
+						<v-toolbar color="primary" flat>
+							<v-toolbar-title>Share Archive</v-toolbar-title>
+							<v-spacer></v-spacer>
+							<v-btn icon="mdi-close" @click="dialog_archive_link.show = false"></v-btn>
+						</v-toolbar>
+						<v-card-text class="pt-4">
+							<div v-if="dialog_archive_link.loading" class="text-center my-4">
+								<v-progress-circular indeterminate color="primary"></v-progress-circular>
+								<p class="mt-2">Generating public link...</p>
+							</div>
+							<div v-else>
+								<p class="mb-2">Public download link (valid for 7 days):</p>
+								<v-text-field 
+									v-model="dialog_archive_link.url" 
+									readonly 
+									variant="outlined"
+									append-inner-icon="mdi-content-copy"
+									@click:append-inner="copyText(dialog_archive_link.url)"
+								></v-text-field>
+							</div>
+						</v-card-text>
+						<v-card-actions>
+							<v-spacer></v-spacer>
+							<v-btn variant="text" @click="dialog_archive_link.show = false">Close</v-btn>
+						</v-card-actions>
+					</v-card>
+				</v-dialog>
+			</v-card>
 			<v-card v-if="route == 'profile'" flat border="thin" rounded="xl" class="mx-auto" max-width="700">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Edit profile</v-toolbar-title>
@@ -8282,6 +8377,10 @@ const app = createApp({
 			gif: 'mdi-file-image',
 			php: 'mdi-file-code',
 		},
+		archives: [],
+		archives_loading: false,
+		archive_search: "",
+		dialog_archive_link: { show: false, url: "", loading: false },
 		configurations: <?php echo json_encode( ( new CaptainCore\Configurations )->get() ); ?>,
 		configurations_step: 0,
 		configurations_loading: true,
@@ -9573,6 +9672,53 @@ const app = createApp({
 				this.route = "login"
 				this.wp_nonce = "";
 			})
+		},
+		fetchArchives() {
+			this.archives_loading = true;
+			axios.get('/wp-json/captaincore/v1/archive', {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				// Map keys to lowercase to avoid case-sensitivity issues in DOM templates
+				this.archives = response.data.map( item => {
+					return {
+						name: item.Name,
+						size: item.Size,
+						mod_time: item.ModTime,
+						path: item.Path
+					}
+				});
+				this.archives_loading = false;
+				this.loading_page = false;
+			})
+			.catch(error => {
+				console.error("Error fetching archives:", error);
+				this.snackbar.message = "Failed to load archives.";
+				this.snackbar.show = true;
+				this.archives_loading = false;
+			});
+		},
+		generateArchiveLink(item) {
+			this.dialog_archive_link.show = true;
+			this.dialog_archive_link.loading = true;
+			this.dialog_archive_link.url = "";
+
+			// The backend endpoint expects a POST with 'file' param
+			axios.post('/wp-json/captaincore/v1/archive/share', {
+				file: item.path
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.dialog_archive_link.url = response.data.link;
+				this.dialog_archive_link.loading = false;
+			})
+			.catch(error => {
+				console.error("Error generating link:", error);
+				this.snackbar.message = "Failed to generate link.";
+				this.snackbar.show = true;
+				this.dialog_archive_link.show = false;
+			});
 		},
 		getAllNodePaths(nodes) {
 			let allPaths = [];
