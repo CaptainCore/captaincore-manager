@@ -397,20 +397,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-card-text>
 		</v-card>
 		</v-dialog>
-		<v-dialog v-model="dialog_mailgun_config.show" max-width="500px">
-			<v-card>
-				<v-toolbar color="primary">
-					<v-btn icon @click="dialog_mailgun_config.show = false">
-						<v-icon>mdi-close</v-icon>
-					</v-btn>
-					<v-toolbar-title>Configure Mailgun for {{ dialog_site.site.name }}</v-toolbar-title>
-				</v-toolbar>
-				<v-card-text>
-					<v-text-field label="Mailgun Subdomain" v-model="dialog_site.site.mailgun" variant="underlined"></v-text-field>
-					<v-btn color="primary" @click="saveMailgun()">Save</v-btn>
-				</v-card-text>
-			</v-card>
-		</v-dialog>
 		<v-dialog v-model="dialog_push_to_other.show" max-width="700px" scrollable>
             <v-card rounded="xl">
                 <v-toolbar color="primary" flat>
@@ -1938,45 +1924,188 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-dialog>
 				<v-dialog v-model="dialog_mailgun.show" scrollable fullscreen>
-				<v-card rounded="0">
-					<v-toolbar color="primary" class="shrink">
-						<v-btn icon="mdi-close" @click="dialog_mailgun.show = false"></v-btn>
-						<v-toolbar-title>Mailgun Logs for {{ dialog_mailgun.site.name }}</v-toolbar-title>
-						<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-card-text>
-						<v-container>
-							<v-data-table-server
-								v-model:page="dialog_mailgun.pagination.page"
-								@update:page="fetchMailgunPage"
-								:headers='[{"title":"Timestamp","key":"timestamp","sortable":false},{"title":"Description","key":"description","sortable":false},{"title":"Event","key":"event","sortable":false}]'
-								:items="dialog_mailgun.response.items"
-								:items-length="Number(dialog_mailgun.response.total_items_count) || 0"
-								:items-per-page="50"
-								:loading="dialog_mailgun.loading"
-								:items-per-page-options="[{value: 50, title: '50'}]"
+					<v-card rounded="0">
+						<v-toolbar color="primary" class="shrink">
+							<v-btn icon="mdi-close" @click="dialog_mailgun.show = false"></v-btn>
+							<v-toolbar-title>Mailgun Logs for {{ dialog_mailgun.site.name }}
+								<span v-if="dialog_mailgun.response.items.length" class="text-caption ml-2">
+									({{ dialog_mailgun.response.items.length }})
+								</span>
+							</v-toolbar-title>
+							<v-spacer></v-spacer>
+							<v-btn 
+								class="mr-4" 
+								v-if="dialog_mailgun.response.paging && dialog_mailgun.response.paging.next" 
+								variant="outlined" 
+								@click="loadMoreMailgunLogs" 
+								:loading="dialog_mailgun.loadingMore"
 							>
-								<template v-slot:item="{ item }">
-									<tr :key="item.id || item.timestamp">
-										<td>{{ pretty_timestamp_epoch(item.timestamp) }}</td>
-										<td>{{ item.description }}</td>
-										<td>{{ item.event }}</td>
-									</tr>
-								</template>
+								Load More
+							</v-btn>
+							<v-progress-linear
+								:active="dialog_mailgun.loadingMore"
+								indeterminate
+								absolute
+								bottom
+								color="white"
+							></v-progress-linear>
+						</v-toolbar>
+						
+						<v-card-text>
+							<v-container>
+								<v-data-table
+									:headers='[
+										{"title":"Timestamp","key":"timestamp","sortable":false, "width": "194px"},
+										{"title":"Event","key":"event","sortable":false, "width": "94px"},
+										{"title":"From","key":"from","sortable":false},
+										{"title":"To","key":"to","sortable":false},
+										{"title":"Subject","key":"subject","sortable":false}
+									]'
+									:items="dialog_mailgun.response.items"
+									:items-per-page="-1"
+									:loading="dialog_mailgun.loading"
+									hide-default-footer
+								>
+									<template v-slot:item="{ item }">
+										<tr :key="item.id || item.timestamp" @click="viewMailgunEventDetails(item)" style="cursor: pointer" class="v-data-table__tr">
+											<td class="text-caption">{{ pretty_timestamp_epoch(item.timestamp) }}</td>
+											<td>
+												<v-chip size="x-small" label :color="item.event === 'failed' ? 'error' : (item.event === 'delivered' ? 'success' : 'primary')">
+													{{ item.event }}
+												</v-chip>
+											</td>
+											<td class="text-caption">
+												<div style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+													{{ item.message?.headers?.from || item.envelope?.sender || '-' }}
+												</div>
+											</td>
+											<td class="text-caption">
+												<div style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+													{{ item.message?.headers?.to || item.envelope?.targets || '-' }}
+												</div>
+											</td>
+											<td class="text-caption">
+												<div style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+													{{ item.message?.headers?.subject || '-' }}
+												</div>
+											</td>
+										</tr>
+									</template>
 
-								<template v-slot:loading>
-									<v-skeleton-loader type="table-row@5"></v-skeleton-loader>
-								</template>
+									<template v-slot:loading>
+										<v-skeleton-loader type="table-row@5"></v-skeleton-loader>
+									</template>
 
-								<template v-slot:no-data>
-									<div class="pa-4 text-center">No Mailgun logs available.</div>
-								</template>
-							</v-data-table-server>
-							
-							<v-progress-circular indeterminate color="primary" class="ma-2" size="24" v-if="dialog_mailgun.loading && (!dialog_mailgun.response.items || dialog_mailgun.response.items.length === 0)"></v-progress-circular>
-						</v-container>
-					</v-card-text>
-				</v-card>
+									<template v-slot:no-data>
+										<div class="pa-4 text-center">No Mailgun logs available.</div>
+									</template>
+								</v-data-table>
+								
+								<div v-if="dialog_mailgun.loadingMore" class="text-center pa-4">
+									<v-progress-circular indeterminate color="primary" size="24"></v-progress-circular>
+								</div>
+
+							</v-container>
+						</v-card-text>
+					</v-card>
+				</v-dialog>
+				<v-dialog v-model="dialog_mailgun_details.show" max-width="800px" scrollable>
+					<v-card>
+						<v-toolbar color="primary" flat>
+							<v-btn icon="mdi-close" @click="dialog_mailgun_details.show = false"></v-btn>
+							<v-toolbar-title>Event Details</v-toolbar-title>
+						</v-toolbar>
+						<v-card-text class="pa-0">
+							<v-container>
+								<v-row>
+									<v-col cols="12" md="6">
+										<v-list density="compact" class="pa-0">
+											<v-list-subheader class="px-4">General</v-list-subheader>
+											<v-list-item>
+												<v-list-item-title>Timestamp</v-list-item-title>
+												<v-list-item-subtitle>{{ pretty_timestamp_epoch(dialog_mailgun_details.item.timestamp) }}</v-list-item-subtitle>
+											</v-list-item>
+											<v-list-item>
+												<v-list-item-title>Event</v-list-item-title>
+												<v-list-item-subtitle>
+													<v-chip size="x-small" label :color="dialog_mailgun_details.item.event === 'failed' ? 'error' : (dialog_mailgun_details.item.event === 'delivered' ? 'success' : 'primary')">
+														{{ dialog_mailgun_details.item.event }}
+													</v-chip>
+												</v-list-item-subtitle>
+											</v-list-item>
+											<v-list-item>
+												<v-list-item-title>ID</v-list-item-title>
+												<v-list-item-subtitle class="text-caption">{{ dialog_mailgun_details.item.id }}</v-list-item-subtitle>
+											</v-list-item>
+											<v-list-item v-if="dialog_mailgun_details.item['log-level']">
+												<v-list-item-title>Log Level</v-list-item-title>
+												<v-list-item-subtitle>{{ dialog_mailgun_details.item['log-level'] }}</v-list-item-subtitle>
+											</v-list-item>
+										</v-list>
+									</v-col>
+									<v-col cols="12" md="6">
+										<v-list density="compact" class="pa-0">
+											<v-list-subheader class="px-4">Message</v-list-subheader>
+											<v-list-item>
+												<v-list-item-title>Subject</v-list-item-title>
+												<v-list-item-subtitle style="white-space: normal; line-height: 1.2;">{{ dialog_mailgun_details.item.message?.headers?.subject || '-' }}</v-list-item-subtitle>
+											</v-list-item>
+											<v-list-item>
+												<v-list-item-title>From</v-list-item-title>
+												<v-list-item-subtitle>{{ dialog_mailgun_details.item.message?.headers?.from || dialog_mailgun_details.item.envelope?.sender || '-' }}</v-list-item-subtitle>
+											</v-list-item>
+											<v-list-item>
+												<v-list-item-title>To</v-list-item-title>
+												<v-list-item-subtitle>{{ dialog_mailgun_details.item.message?.headers?.to || dialog_mailgun_details.item.envelope?.targets || '-' }}</v-list-item-subtitle>
+											</v-list-item>
+											<v-list-item>
+												<v-list-item-title>Size</v-list-item-title>
+												<v-list-item-subtitle>{{ formatSize(dialog_mailgun_details.item.message?.size) }}</v-list-item-subtitle>
+											</v-list-item>
+										</v-list>
+									</v-col>
+								</v-row>
+
+								<v-divider class="my-2"></v-divider>
+
+								<div v-if="dialog_mailgun_details.item['delivery-status']" class="mb-3">
+									<v-list-subheader>Delivery Status</v-list-subheader>
+									<v-alert
+										:type="dialog_mailgun_details.item['delivery-status'].code >= 400 ? 'error' : 'success'"
+										variant="tonal"
+										density="compact"
+										class="mb-2 mx-4"
+									>
+										<strong>{{ dialog_mailgun_details.item['delivery-status'].code }}</strong> {{ dialog_mailgun_details.item['delivery-status'].message }}
+										<div v-if="dialog_mailgun_details.item['delivery-status'].description" class="text-caption">{{ dialog_mailgun_details.item['delivery-status'].description }}</div>
+									</v-alert>
+									<v-row dense class="px-4">
+										<v-col cols="6" md="3">
+											<div class="text-caption text-medium-emphasis">MX Host</div>
+											<div class="text-body-2">{{ dialog_mailgun_details.item['delivery-status']['mx-host'] || '-' }}</div>
+										</v-col>
+										<v-col cols="6" md="3">
+											<div class="text-caption text-medium-emphasis">IP</div>
+											<div class="text-body-2">{{ dialog_mailgun_details.item.envelope?.['sending-ip'] || '-' }}</div>
+										</v-col>
+										<v-col cols="6" md="3">
+											<div class="text-caption text-medium-emphasis">TLS</div>
+											<div class="text-body-2">{{ dialog_mailgun_details.item['delivery-status'].tls ? 'Verified' : 'No' }}</div>
+										</v-col>
+										<v-col cols="6" md="3">
+											<div class="text-caption text-medium-emphasis">Attempts</div>
+											<div class="text-body-2">{{ dialog_mailgun_details.item['delivery-status']['attempt-no'] || 1 }}</div>
+										</v-col>
+									</v-row>
+								</div>
+								
+								<v-divider class="my-3"></v-divider>
+								
+								<h3 class="text-subtitle-1 mb-2 px-4">Raw Data</h3>
+								<pre class="mx-4" style="white-space: pre-wrap; background: rgb(var(--v-theme-surface)); padding: 10px; border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); border-radius: 4px; overflow: auto; max-height: 400px; font-size: 12px;">{{ JSON.stringify(dialog_mailgun_details.item, null, 2) }}</pre>
+							</v-container>
+						</v-card-text>
+					</v-card>
 				</v-dialog>
 				<v-dialog v-model="dialog_backup_configurations.show" width="500">
 				<v-card tile>
@@ -3676,12 +3805,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-card class="mx-auto pb-2" max-width="344" variant="outlined" border="thin" hover @click="viewLogs(dialog_site.site.site_id)">
 						<v-card-title>Server Logs</v-card-title>
 						<v-card-subtitle><code>error.log</code> and <code>access.log</code></v-card-subtitle>
-					</v-card>
-					</v-col>
-					<v-col cols="12" md="4" class="px-2">
-					<v-card class="mx-auto pb-2" max-width="344" variant="outlined" border="thin" hover @click="viewMailgunLogs()" v-if="dialog_site.site.mailgun">
-						<v-card-title>Email Logs</v-card-title>
-						<v-card-subtitle>Emails sent from your site via Mailgun</v-card-subtitle>
 					</v-card>
 					</v-col>
 					<v-col cols="12" md="4" class="px-2" v-show="dialog_site.environment_selected.token != 'basic'">
@@ -6128,7 +6251,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 													</v-list-item-content>
 												</v-list-item>
 											</v-list>
-											
+											<v-btn color="primary" class="mt-2 mr-2" @click="viewDomainMailgunLogs(dialog_domain.domain)">View Logs</v-btn>
 											<v-btn
 												color="primary"
 												@click="openMailgunDeployDialog()"
@@ -8434,7 +8557,8 @@ const app = createApp({
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
 		dialog_launch: { show: false, site: {}, domain: "" },
 		dialog_toggle: { show: false, site_name: "", site_id: "", business_name: "", business_link: "" },
-		dialog_mailgun: { show: false, site: {}, response: { items: [], pagination: [] }, loading: false, pagination: {} },
+		dialog_mailgun: { show: false, site: {}, response: { items: [], paging: {} }, loading: false, loadingMore: false, domain_id: null },
+		dialog_mailgun_details: { show: false, event: {} },
 		dialog_migration: { show: false, sites: [], site_name: "", site_id: "", update_urls: true, backup_url: "" },
 		dialog_modify_plan: { show: false, site: {}, date_selector: false, hosting_plans: [], selected_plan: "", plan: { limits: {}, addons: [], charges: [], credits: [], next_renewal: "" }, customer_name: "", interval: "12" },
 		dialog_customer_modify_plan: { show: false, hosting_plans: [], selected_plan: "", subscription: {  plan: { limits: {}, addons: [], next_renewal: "" } } },
@@ -8659,6 +8783,7 @@ const app = createApp({
 		routes: {
 			'/': '',
 			'/accounts': 'accounts',
+			'/archives': 'archives',
 			'/billing': 'billing',
 			'/cookbook': 'cookbook',
 			'/configurations': 'configurations',
@@ -9263,6 +9388,10 @@ const app = createApp({
 			})
 			return count
 		},
+		totalArchivesSize() {
+			// Sum up the 'size' of all items in the archives array
+			return this.archives.reduce((total, item) => total + (item.size || 0), 0);
+		},
 		filteredEnvatoThemes() {
 			let themes = this.new_theme.envato.items
 			if ( this.new_theme.envato.search != "" ) {
@@ -9493,6 +9622,10 @@ const app = createApp({
 			if ( this.route == "connect" ) {
 				this.selected_nav = ""
 				this.loading_page = false;
+			}
+			if ( this.route == "archives" ) {
+				this.selected_nav = ""
+				this.fetchArchives()
 			}
 			if ( this.route == "domains" ) {
 				if ( this.allDomains == 0 ) {
@@ -12636,43 +12769,64 @@ const app = createApp({
 				})
 				.catch( error => console.log( error ) );
 		},
-		viewMailgunLogs() {
-			this.dialog_mailgun = { show: true, site: this.dialog_site.site, response: { items: [], pagination: [] }, loading: true, pagination: {} };
-			var data = {
-				action: 'captaincore_ajax',
-				post_id: this.dialog_site.site.site_id,
-				command: 'mailgun'
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					this.dialog_mailgun.loading = false;
-					this.dialog_mailgun.response = response.data;
-				})
-				.catch( error => {
-					this.snackbar.message = "Failed loading logs from Mailgun. Please try again."
-					this.snackbar.show = true
-					this.dialog_mailgun.loading = false
-					console.log( error )
-				} );
+		viewDomainMailgunLogs(domain) {
+			this.dialog_mailgun.site = { name: domain.name }; // Reusing 'site' prop for title
+			this.dialog_mailgun.domain_id = domain.domain_id; // Store ID for pagination
+			this.dialog_mailgun.response.items = [];
+			this.dialog_mailgun.show = true;
+			this.fetchDomainMailgunLogs();
 		},
-		fetchMailgunPage() {
-			// If we are on the last page and the number records are at max, check for new records
-			if ( this.dialog_mailgun.pagination.page * 100 == this.dialog_mailgun.response.items.length ) {
+		fetchDomainMailgunLogs(pageUrl = null) {
+			// If pageUrl exists, we are appending (Load More), so use specific flag
+			// Otherwise, we are doing a fresh load, so use the main loading flag
+			if (pageUrl) {
+				this.dialog_mailgun.loadingMore = true;
+			} else {
 				this.dialog_mailgun.loading = true;
-				var data = {
-					action: 'captaincore_ajax',
-					post_id: this.dialog_mailgun.site.site_id,
-					command: 'mailgun',
-					page: this.dialog_mailgun.response.pagination["next"],
-				};
-				axios.post( ajaxurl, Qs.stringify( data ) )
-					.then( response => {
-						this.dialog_mailgun.loading = false;
-						this.dialog_mailgun.response.pagination = response.data.pagination
-						response.data.items.forEach( item => this.dialog_mailgun.response.items.push( item ) )
-					})
-					.catch( error => console.log( error ) );
 			}
+			
+			let url = `/wp-json/captaincore/v1/domain/${this.dialog_mailgun.domain_id}/mailgun/events`;
+			let params = {};
+			
+			if (pageUrl) {
+				params.page_url = pageUrl;
+			}
+
+			axios.get(url, { 
+				headers: { 'X-WP-Nonce': this.wp_nonce },
+				params: params 
+			})
+			.then(response => {
+				if (pageUrl) {
+					this.dialog_mailgun.response.items = [
+						...this.dialog_mailgun.response.items,
+						...response.data.items
+					];
+					this.dialog_mailgun.response.paging = response.data.paging;
+				} else {
+					this.dialog_mailgun.response = response.data;
+				}
+			})
+			.catch(error => {
+				console.error(error);
+				this.snackbar.message = "Error fetching logs: " + (error.response?.data?.message || error.message);
+				this.snackbar.show = true;
+			})
+			.finally(() => {
+				// Turn off both loading flags
+				this.dialog_mailgun.loading = false;
+				this.dialog_mailgun.loadingMore = false;
+			});
+		},
+		loadMoreMailgunLogs() {
+			// Check if we have a next page link
+			if (this.dialog_mailgun.response.paging && this.dialog_mailgun.response.paging.next) {
+				this.fetchDomainMailgunLogs(this.dialog_mailgun.response.paging.next);
+			}
+		},
+		viewMailgunEventDetails( item ) {
+			this.dialog_mailgun_details.item = item
+			this.dialog_mailgun_details.show = true
 		},
 		launchSiteDialog( site_id ) {
 			site = this.sites.filter( site => site.site_id == site_id )[0];

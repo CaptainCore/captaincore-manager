@@ -2247,6 +2247,37 @@ function captaincore_mailgun_deploy( WP_REST_Request $request ) {
     return new WP_REST_Response( [ 'success' => true, 'output' => $result ], 200 );
 }
 
+function captaincore_domain_mailgun_events_func( $request ) {
+    $domain_id = $request['id'];
+    $params    = $request->get_query_params();
+    
+    if ( ! ( new CaptainCore\Domains )->verify( $domain_id ) ) {
+        return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+    }
+
+    $domain  = ( new CaptainCore\Domains )->get( $domain_id );
+    $details = json_decode( $domain->details );
+    
+    if ( empty( $details->mailgun_zone ) ) {
+        return new WP_Error( 'mailgun_not_configured', 'Mailgun not configured for this domain.', [ 'status' => 404 ] );
+    }
+    
+    $zone = $details->mailgun_zone;
+
+    // If paging URL is provided, use it directly (decoding it first if necessary)
+    if ( ! empty( $params['page_url'] ) ) {
+        $response = CaptainCore\Remote\Mailgun::get( "", [], $params['page_url'] ); // You might need to adjust Remote\Mailgun::get to handle full URLs or use a specific method
+        // Note: CaptainCore\Remote\Mailgun::page() exists but seems designed for the AJAX handler. 
+        // A simpler approach for the existing Mailgun::get class:
+        // If passing a full URL to Mailgun::get isn't supported, use Mailgun::page logic here.
+        $response = CaptainCore\Remote\Mailgun::page( $zone, $params['page_url'] );
+    } else {
+        $response = CaptainCore\Remote\Mailgun::get( "v3/$zone/events", $params );
+    }
+    
+    return $response;
+}
+
 /**
  * Handles Mailgun verification request.
  */
@@ -2681,6 +2712,12 @@ function captaincore_register_rest_endpoints() {
     register_rest_route( 'captaincore/v1', '/domain/(?P<id>[\d]+)/mailgun/deploy', [
         'methods'  => 'POST',
         'callback' => 'captaincore_mailgun_deploy',
+        'permission_callback' => 'captaincore_permission_check',
+    ] );
+
+	register_rest_route( 'captaincore/v1', '/domain/(?P<id>[\d]+)/mailgun/events', [
+        'methods'  => 'GET',
+        'callback' => 'captaincore_domain_mailgun_events_func',
         'permission_callback' => 'captaincore_permission_check',
     ] );
 
