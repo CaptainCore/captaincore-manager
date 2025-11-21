@@ -2449,6 +2449,39 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
+		'captaincore/v1', '/archive', [
+			'methods'             => 'GET',
+			'callback'            => function( $request ) {
+				if ( ! current_user_can( 'manage_options' ) ) {
+					return new WP_Error( 'rest_forbidden', 'Forbidden', [ 'status' => 403 ] );
+				}
+				// Returns JSON directly from Rclone
+				$response = \CaptainCore\Run::CLI( "archive list" );
+				return json_decode( $response );
+			},
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/archive/share', [
+			'methods'             => 'POST',
+			'callback'            => function( $request ) {
+				if ( ! current_user_can( 'manage_options' ) ) {
+					return new WP_Error( 'rest_forbidden', 'Forbidden', [ 'status' => 403 ] );
+				}
+				
+				$file = $request->get_param( 'file' );
+				
+				// Returns the raw URL string from b2 command
+				$response = \CaptainCore\Run::CLI( "archive share $file" );
+				return [ 'link' => trim($response) ];
+			},
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
 		'captaincore/v1', '/quicksaves', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_quicksaves_func',
@@ -6108,7 +6141,7 @@ function load_captaincore_template( $original_template ) {
   $configurations    = CaptainCore\Configurations::fetch();
   $request           = explode( '/', $wp->request );
   $current_page      = current( $request );
-  $captaincore_pages = ['accounts', 'billing', 'cookbook', 'configurations', 'connect', 'defaults', 'domains', 'handbook', 'health', 'keys', 'login', 'profile', 'sites', 'subscriptions', 'users'];
+  $captaincore_pages = [ 'archives', 'accounts', 'billing', 'cookbook', 'configurations', 'connect', 'defaults', 'domains', 'handbook', 'health', 'keys', 'login', 'welcome', 'profile', 'sites', 'subscriptions', 'users', 'vulnerability-scans'];
   if ( class_exists( 'WooCommerce' ) && is_account_page() && end( $request ) == 'my-account' ) {
 	wp_redirect( $configurations->path );
   }
