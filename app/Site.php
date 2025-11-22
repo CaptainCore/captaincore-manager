@@ -5,9 +5,11 @@ namespace CaptainCore;
 class Site {
 
     protected $site_id = "";
+    protected $environment = "";
 
-    public function __construct( $site_id = "" ) {
-        $this->site_id = $site_id;
+    public function __construct( $site_id = "", $environment = "production" ) {
+        $this->site_id     = $site_id;
+        $this->environment = $environment;
     }
 
     public function get() {
