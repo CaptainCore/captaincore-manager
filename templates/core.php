@@ -3533,8 +3533,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-list-item @click="copyText(dialog_site.environment_selected.home_directory)" density="compact" title="Home directory" :subtitle="dialog_site.environment_selected.home_directory" append-icon="mdi-content-copy"></v-list-item>
 
 								<div v-if="dialog_site.environment_selected.database_name">
-								<v-list-item v-if="dialog_site.environment_selected.database && dialog_site.site.provider !== 'rocketdotnet'" :href="dialog_site.environment_selected.database" target="_blank" density="compact" title="Database" :subtitle="dialog_site.environment_selected.database" append-icon="mdi-open-in-new" link></v-list-item>
-								<v-list-item v-if="dialog_site.site.provider === 'rocketdotnet'" @click="fetchPHPmyadmin()" density="compact" title="Database" subtitle="PHPmyadmin" append-icon="mdi-open-in-new"></v-list-item>
+								<v-list-item v-if="dialog_site.environment_selected.database && dialog_site.site.provider !== 'rocketdotnet' && dialog_site.site.provider !== 'kinsta'" :href="dialog_site.environment_selected.database" target="_blank" density="compact" title="Database" :subtitle="dialog_site.environment_selected.database" append-icon="mdi-open-in-new" link></v-list-item>
+								<v-list-item v-if="dialog_site.site.provider === 'rocketdotnet' || dialog_site.site.provider === 'kinsta'" @click="fetchPHPmyadmin()" density="compact" title="Database" subtitle="PHPmyadmin" append-icon="mdi-open-in-new"></v-list-item>
 								<v-list-item @click="copyText(dialog_site.environment_selected.database_name)" density="compact" title="Database Name" :subtitle="dialog_site.environment_selected.database_name" append-icon="mdi-content-copy"></v-list-item>
 								<v-list-item @click="copyText(dialog_site.environment_selected.database_username)" density="compact" title="Database Username" :subtitle="dialog_site.environment_selected.database_username" append-icon="mdi-content-copy"></v-list-item>
 								<v-list-item @click="copyText(dialog_site.environment_selected.database_password)" density="compact" title="Database Password" subtitle="##########" append-icon="mdi-content-copy"></v-list-item>
@@ -13104,6 +13104,8 @@ const app = createApp({
 		fetchPHPmyadmin(){
 			site_id = this.dialog_site.site.site_id
 			environment = this.dialog_site.environment_selected.environment.toLowerCase()
+			this.snackbar.message = "Opening PHPMyAdmin for " + this.dialog_site.environment_selected.home_url
+			this.snackbar.show = true
 			axios.get(
 				`/wp-json/captaincore/v1/sites/${site_id}/${environment}/phpmyadmin`, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
