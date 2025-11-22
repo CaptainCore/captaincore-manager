@@ -841,6 +841,10 @@ class Site {
                 return $response->result->phpmyadmin_sign_on_url;
             }
         }
+
+        if ( $site->provider == "kinsta" ) {
+            return \CaptainCore\Providers\Kinsta::get_phpmyadmin_url( $this->site_id, $this->environment );
+        }
         
     }
 

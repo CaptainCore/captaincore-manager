@@ -1192,5 +1192,30 @@ class Kinsta {
         return new \WP_Error( 'env_not_found', 'The specified environment was not found on Kinsta.', [ 'status' => 404 ] );
     }
 
+    /**
+     * Get phpMyAdmin login URL for a Kinsta environment.
+     */
+    public static function get_phpmyadmin_url( $site_id, $env_name ) {
+        if ( strtolower( $env_name ) == "production" ) {
+            $env_name = "live";
+        }
+        $kinsta_env_id = self::get_kinsta_env_id( $site_id, $env_name );
+        if ( is_wp_error( $kinsta_env_id ) ) {
+            return $kinsta_env_id;
+        }
+
+        $site = ( new \CaptainCore\Sites )->get( $site_id );
+        $api_key = self::credentials("api", $site->provider_id );
+        \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
+
+        $response = \CaptainCore\Remote\Kinsta::post( "sites/environments/{$kinsta_env_id}/pma-login-token" );
+        
+        if ( ! $response || isset( $response->error ) || ! isset($response->url) ) {
+             return new \WP_Error( 'kinsta_api_error', 'Error generating phpMyAdmin URL.', [ 'status' => 500, 'details' => $response ] );
+        }
+        
+        return $response->url;
+    }
+
 
 }

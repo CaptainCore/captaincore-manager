@@ -1328,7 +1328,7 @@ function captaincore_site_phpmyadmin_func( $request ) {
 	}
 
 	$environment = $request['environment'];
-	$site        = new CaptainCore\Site( $site_id );
+	$site        = new CaptainCore\Site( $site_id, $environment );
 	return $site->fetch_phpmyadmin();
 }
 
