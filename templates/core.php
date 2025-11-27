@@ -7375,56 +7375,66 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-row>
 				</v-card-text>
 			</v-card>
-			<v-card v-show="role == 'administrator' && route == 'subscriptions'" flat border="thin" rounded="xl" >
+			<v-card v-show="role == 'administrator' && route == 'subscriptions'" flat border="thin" rounded="xl">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing {{ subscriptions.length }} subscriptions</v-toolbar-title>
 					<v-spacer></v-spacer>
-					<v-toolbar-items>
-						<v-tooltip location="top">
-							<template v-slot:activator="{ props }">
-								<v-btn icon="mdi-poll" @click="toggle_plan = !toggle_plan" v-bind="props"></v-btn>
-							</template>
-							<span>View reports</span>
-						</v-tooltip>
-					</v-toolbar-items>
+					<v-tooltip location="top">
+						<template v-slot:activator="{ props }">
+							<v-btn icon="mdi-poll" @click="toggle_plan = !toggle_plan" v-bind="props" variant="text"></v-btn>
+						</template>
+						<span>View reports</span>
+					</v-tooltip>
 				</v-toolbar>
+				
 				<v-data-table
-				:headers="[
-					{ title: 'Name', value: 'name' },
-					{ title: 'Interval', value: 'interval' },
-					{ title: 'Next Renewal', value: 'next_renewal' },
-					{ title: 'Price', value: 'total', width: '100px' }]"
-				:items="subscriptions"
-				:search="subscription_search"
-				:items-per-page="100"
-				:items-per-page-options="[100,250,500,{'title':'All','value':-1}]"
-				v-show="toggle_plan == true"
+					:headers="[
+						{ title: 'Name', key: 'name' },
+						{ title: 'Interval', key: 'interval' },
+						{ title: 'Next Renewal', key: 'next_renewal' },
+						{ title: 'Price', key: 'total', width: '100px' }]"
+					:items="subscriptions"
+					:search="subscription_search"
+					:items-per-page="100"
+					:items-per-page-options="[100,250,500,{'title':'All','value':-1}]"
+					v-show="toggle_plan == true"
+					hover
+					@click:row="(event, { item }) => goToPath(`/subscription/${item.account_id}`)"
+					style="cursor:pointer;"
 				>
-				<template v-slot:top>
-					<v-card-text>
-					<v-row>
-						<v-col></v-col>
-						<v-col cols="12" md="4">
-						<v-text-field class="mx-4" v-model="subscription_search" autofocus append-icon="mdi-magnify" label="Search" single-line clearable hide-details></v-text-field>
-						</v-col>
-					</v-row>
-					</v-card-text>
-				</template>
-				<template v-slot:body="{ items }">
-					<tbody>
-					<tr v-for="item in items" :key="item.account_id" @click="goToPath( `/subscription/${item.account_id}`)" style="cursor:pointer;">
-						<td>{{ item.name }}</td>
-						<td>{{ intervalLabel( item.interval ) }}</td>
-						<td>{{ item.next_renewal }}</td>
-						<td>${{ item.total }}</td>
-					</tr>
-					</tbody>
-				</template>
+					<template v-slot:top>
+						<v-card-text>
+							<v-row>
+								<v-col></v-col>
+								<v-col cols="12" md="4">
+									<v-text-field 
+										class="mx-4" 
+										v-model="subscription_search" 
+										autofocus 
+										append-inner-icon="mdi-magnify" 
+										label="Search" 
+										single-line 
+										clearable 
+										hide-details
+										variant="underlined"
+									></v-text-field>
+								</v-col>
+							</v-row>
+						</v-card-text>
+					</template>
+
+					<template v-slot:item.interval="{ item }">
+						{{ intervalLabel( item.interval ) }}
+					</template>
+
+					<template v-slot:item.total="{ item }">
+						${{ item.total }}
+					</template>
 				</v-data-table>
 
-					<div id="plan_chart"></div>
-					<v-list-subheader>{{ revenue_estimated_total() }}</v-list-subheader>
-					<div id="plan_chart_transactions"></div>
+				<div id="plan_chart"></div>
+				<v-list-subheader>{{ revenue_estimated_total() }}</v-list-subheader>
+				<div id="plan_chart_transactions"></div>
 			</v-card>
 			<v-card v-if="route == 'accounts'" flat border="thin" rounded="xl">
 			<v-sheet v-show="dialog_account.step == 1" color="transparent">
