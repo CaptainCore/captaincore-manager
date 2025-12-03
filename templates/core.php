@@ -1558,7 +1558,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-row dense>
 						<v-col cols="12" md="6">
 							<v-select
-								@update:model-value="loadHostingPlan()"
+								@update:model-value="loadHostingPlan($event)"
 								v-model="dialog_modify_plan.selected_plan"
 								label="Plan Name"
 								:items="(dialog_modify_plan.hosting_plans || []).map( plan => plan.name )"
@@ -14678,7 +14678,7 @@ const app = createApp({
 		removeCharge( remove_item ) {
 			this.dialog_modify_plan.plan.charges = this.dialog_modify_plan.plan.charges.filter( (item, index) => index != remove_item );
 		},
-		loadHostingPlan() {
+		loadHostingPlan( selected_plan ) {
 			current_auto_pay = this.dialog_modify_plan.plan.auto_pay
 			current_auto_switch = this.dialog_modify_plan.plan.auto_switch
 			billing_user_id = this.dialog_modify_plan.plan.billing_user_id
@@ -14693,7 +14693,10 @@ const app = createApp({
 			if ( typeof this.dialog_modify_plan.plan.credits != 'undefined' ) {
 				current_credits = JSON.parse(JSON.stringify( this.dialog_modify_plan.plan.credits ) )
 			}
-			selected_plan = this.dialog_modify_plan.selected_plan
+			if ( !selected_plan ) {
+				selected_plan = this.dialog_modify_plan.selected_plan
+			}
+
 			hosting_plan = this.dialog_modify_plan.hosting_plans.filter( plan => plan.name == selected_plan )[0]
 			if ( typeof hosting_plan == "undefined" ) {
 				return
