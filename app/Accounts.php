@@ -108,12 +108,12 @@ class Accounts extends DB {
                 // Set the new price based on the new interval
                 $plan->price = $unit_price * $new_plan->interval;
             } else {
-                 // Fallback for custom plans or if template not found
-                 $plan->price = empty( $new_plan->price ) ? "" : $new_plan->price;
+                // Fallback for custom plans or if template not found
+                $plan->price = ( $new_plan->price === "" ) ? "" : $new_plan->price;
             }
         } else {
             // This is the original logic, which works for changing plan types.
-            $plan->price = empty( $new_plan->price ) ? "" : $new_plan->price;
+            $plan->price = ( $new_plan->price === "" ) ? "" : $new_plan->price;
         }
 
         $plan->name              = empty( $new_plan->name ) ? "" : $new_plan->name;
