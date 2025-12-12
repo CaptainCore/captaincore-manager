@@ -8581,7 +8581,7 @@ const app = createApp({
 		dialog_new_account: { show: false, name: "", records: {} },
 		dialog_user: { show: false, user: {}, errors: [] },
 		dialog_new_user: { first_name: "", last_name: "", email: "", login: "", account_ids: [], errors: [] },
-		dialog_new_site_kinsta: { show: false, errors: [], working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", provider_id: "1", clone_site_id: "", domain: "", datacenter: "us-east4", shared_with: [], account_id: "", customer_id: "" } },
+		dialog_new_site_kinsta: { show: false, errors: [], working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", provider_id: "1", clone_site_id: "", domain: "", datacenter: "us-ashburn-1", shared_with: [], account_id: "", customer_id: "" } },
 		dialog_new_site_rocketdotnet: { show: false, site: { name: "", domain: "", datacenter: "", shared_with: [], account_id: "", customer_id: "" } },
 		dialog_request_site: { show: false, request: { name: "", account_id: "", notes: "" } },
 		provider_options: [
@@ -8753,8 +8753,12 @@ const app = createApp({
 				"value": "us-east1"
 			},
 			{
-				"title": "Northern Virginia (US East 4) 🚀",
-				"value": "us-east4"
+				"title": "Ashburn (US East) 🚀",
+				"value": "us-ashburn-1"
+			},
+			{
+				"title": "Chicago (US Central) 🚀",
+				"value": "us-chicago-1"
 			},
 			{
 				"title": "Columbus (US East 5)",
@@ -10573,7 +10577,7 @@ const app = createApp({
 				this.snackbar.message = `Site ${this.dialog_new_site_kinsta.site.name} is being created at Kinsta. Will notify once completed.`
 				this.snackbar.show = true
 				provider_id = this.dialog_new_site_kinsta.site.provider_id
-				this.dialog_new_site_kinsta = { show: false, errors: [], working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", domain: "", clone_site_id: "", provider_id: provider_id, datacenter: "us-east4", domains: [], shared_with: [], account_id: "", customer_id: "" } }
+				this.dialog_new_site_kinsta = { show: false, errors: [], working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", domain: "", clone_site_id: "", provider_id: provider_id, datacenter: "us-ashburn-1", domains: [], shared_with: [], account_id: "", customer_id: "" } }
 				this.checkProviderActions()
 			});
 		},
