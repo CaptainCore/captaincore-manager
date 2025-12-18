@@ -3276,25 +3276,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 														<h3 class="text-body-1 font-weight-bold text-high-emphasis mr-1 text-truncate cursor-pointer text-decoration-none hover-primary" @click="goToPath(`/sites/${item.raw.site_id}`)">
 															{{ item.raw.name }}
 														</h3>
-														
-														<v-chip
-															v-if="item.raw.provider_id && item.raw.provider_id != 1"
-															size="x-small"
-															variant="tonal"
-															color="primary"
-															class="font-weight-bold text-uppercase"
-															label
-														>
-															{{ formatProvider(item.raw.provider) }}
-														</v-chip>
-
-														<v-chip
-															size="x-small"
-															variant="tonal"
-															:color="parseFloat(item.raw.core) < 6.0 ? 'warning' : 'default'"
-															class="font-weight-bold"
-															label
-														>
+														<v-chip size="x-small" variant="tonal" :color="parseFloat(item.raw.core) < 6.0 ? 'warning' : 'default'" class="font-weight-bold" label>
 															WP {{ item.raw.core }}
 														</v-chip>
 													</div>
