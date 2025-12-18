@@ -2224,7 +2224,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-btn icon dark @click="closeCaptures()">
 							<v-icon>mdi-close</v-icon>
 						</v-btn>
-						<v-toolbar-title>Historical Captures of {{ dialog_captures.site.name }}</v-toolbar-title>
+						<v-toolbar-title>Visual Captures of {{ dialog_captures.site.name }}</v-toolbar-title>
 					</v-toolbar>
 					<v-toolbar flat class="px-4">
 						<div style="max-width:250px;" class="mx-1 mt-8" v-show="dialog_captures.captures.length != 0">
@@ -2292,7 +2292,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</div>
 					</v-container>
 					<v-container v-show="dialog_captures.captures.length == 0 && ! dialog_captures.loading" class="mt-5">
-						<v-alert variant="text" type="info">There are no historical captures, yet.</v-alert>
+						<v-alert variant="text" type="info">There are no visual captures, yet.</v-alert>
 					</v-container>
 					<v-container v-show="dialog_captures.loading" class="mt-5">
 						<v-progress-linear indeterminate rounded height="6" class="mb-3"></v-progress-linear>
@@ -2709,39 +2709,29 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-toolbar v-show="dialog_site.step == 1 && sites.length > 0" id="site_listings" flat color="transparent">
 				<v-toolbar-title>
 					<span v-if="isAnySiteFilterActive">Showing {{ filteredSites.length }} sites</span>
-    				<span v-else>Listing {{ sites.length }} sites</span>
+					<span v-else>Listing {{ sites.length }} sites</span>
 				</v-toolbar-title>
-					<v-spacer></v-spacer>
-					<v-toolbar-items>
-						<v-tooltip location="top" v-if="toggle_site == true">
-							<template v-slot:activator="{ props }">
-							<v-btn icon @click="toggle_site = false" v-bind="props">
-								<v-icon>mdi-image</v-icon>
-							</v-btn>
-							</template>
-							<span>View as Thumbnails</span>
-						</v-tooltip>
-						<v-tooltip location="top" v-if="toggle_site == false">
-							<template v-slot:activator="{ props }">
-							<v-btn icon @click="toggle_site = true" v-bind="props">
-								<v-icon>mdi-table</v-icon>
-							</v-btn>
-							</template>
-							<span>View as List</span>
-						</v-tooltip>
-						<v-tooltip location="top">
-							<template v-slot:activator="{ props }">
-								<v-btn v-bind="props" variant="text" icon="mdi-toolbox" @click="dialog_bulk_tools.show = true"></v-btn>
-							</template>
-							<span>Bulk Tools</span>
-						</v-tooltip>
-						<v-tooltip location="top">
-							<template v-slot:activator="{ props }">
-								<v-btn icon="mdi-console" @click="view_console.show = !view_console.show" v-bind="props"></v-btn>
-							</template>
-							<span>Advanced Options</span>
-						</v-tooltip>
-						<v-menu open-on-hover text bottom offset-y>
+				<v-spacer></v-spacer>
+				<v-toolbar-items>
+					<v-btn-toggle v-model="toggle_site" mandatory variant="outlined" divided class="mr-2 align-self-center" color="primary" density="comfortable">
+						<v-btn value="cards" icon="mdi-card-text" title="Command Center"></v-btn>
+						<v-btn value="table" icon="mdi-table" title="Table View"></v-btn>
+						<v-btn value="grid" icon="mdi-view-grid" title="Thumbnail View"></v-btn>
+					</v-btn-toggle>
+
+					<v-tooltip location="top">
+						<template v-slot:activator="{ props }">
+							<v-btn v-bind="props" variant="text" icon="mdi-toolbox" @click="dialog_bulk_tools.show = true"></v-btn>
+						</template>
+						<span>Bulk Tools</span>
+					</v-tooltip>
+					<v-tooltip location="top">
+						<template v-slot:activator="{ props }">
+							<v-btn icon="mdi-console" @click="view_console.show = !view_console.show" v-bind="props"></v-btn>
+						</template>
+						<span>Advanced Options</span>
+					</v-tooltip>
+					<v-menu open-on-hover text bottom offset-y>
 						<template v-slot:activator="{ props }">
 							<v-btn v-bind="props" text>
 								Add Site <v-icon dark>mdi-plus</v-icon>
@@ -2757,9 +2747,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									<v-icon><v-img src="/wp-content/plugins/captaincore-manager/public/img/kinsta-icon.svg" max-width="20px"></v-img></v-icon>
 								</template>
 							</v-list-item>
-							<!--<v-list-item @click="dialog_new_site_rocketdotnet.show = true">
-								<v-list-item-title>Rocket.net</v-list-item-title>
-							</v-list-item>-->
 							<v-list-item @click="goToPath( `/sites/new` )" href v-show="role == 'administrator' || role == 'owner'">
 								<v-list-item-title class="mr-4">Manually connect</v-list-item-title>
 								<template v-slot:append>
@@ -2767,11 +2754,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								</template>
 							</v-list-item>
 						</v-list>
-						</v-menu>
-						<!-- <v-btn v-if="role != 'administrator' && role != 'owner' && configurations.mode == 'hosting'" text @click="dialog_request_site.show = true; dialog_request_site.request.account_id = accounts[0].account_id">Add Site <v-icon dark>mdi-plus</v-icon></v-btn>
-						<v-btn v-if="configurations.mode == 'maintenance'" text @click="goToPath( `/sites/new` )">Add Site <v-icon dark>mdi-plus</v-icon></v-btn>-->
-					</v-toolbar-items>
-				</v-toolbar>
+					</v-menu>
+				</v-toolbar-items>
+			</v-toolbar>
 			<v-sheet v-show="dialog_site.step == 1" color="transparent">
 			<v-dialog v-model="dialog_new_site_rocketdotnet.show" width="500">
 				<v-card>
@@ -3230,107 +3215,298 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-row>
 				</v-card>
 				</v-card-text>
-				<v-card-text v-if="toggle_site">
-				<v-data-table
-					v-model="sites_selected"
-					:headers="[
-						{ title: '', key: 'thumbnail', sortable: false, width: 50 },
-						{ title: 'Name', key: 'name', align: 'left', sortable: true },
-						{ title: 'Subsites', key: 'subsites', sortable: true, width: 104 },
-						{ title: 'WordPress', key: 'core', sortable: true, width: 114 },
-						{ title: 'Visits', key: 'visits', sortable: true, width: 98 },
-						{ title: 'Storage', key: 'storage', sortable: true, width: 90 },
-						{ title: 'Provider', key: 'provider', sortable: true, width: 130 }
-					]"
-					:items="filteredSites"
-					item-value="site_id"
-					ref="site_datatable"
-					:items-per-page="100"
-					:items-per-page-options="[
-						{ value: 100, title: '100' },
-						{ value: 250, title: '250' },
-						{ value: 500, title: '500' },
-						{ value: -1, title: 'All' }
-					]"
-					@click:row="(event, { item }) => goToPath(`/sites/${item.site_id}`)"
-					hover
-				>
-					<template v-slot:item.thumbnail="{ item }">
-						<v-img
-							:src="`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-100.jpg`"
-							class="elevation-1 my-1"
-							width="50"
-							aspect-ratio="1.6"
-							v-show="item.screenshot_base"
-							lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp"
-						></v-img>
-					</template>
+				<v-sheet v-show="dialog_site.step == 1 && sites.length > 0" class="px-4 pb-4" color="transparent">
+					<v-data-iterator v-if="toggle_site === 'cards'" :items="filteredSites" :items-per-page="100" :search="search">
+						<template v-slot:default="{ items }">
+							<v-row dense>
+								<v-col cols="12" v-for="item in items" :key="item.raw.site_id">
+									
+									<v-hover v-slot="{ isHovering, props }">
+										<v-card 
+											v-bind="props"
+											class="rounded-xl transition-swing group"
+											elevation="0"
+											border="thin"
+											color="surface"
+											:style="isHovering ? 'border-color: rgb(var(--v-border-color), 0.2) !important;' : 'border-color: rgba(var(--v-border-color), 0.1) !important;'"
+											style="transition: border-color 0.2s ease-in-out;"
+										>
+											<div class="d-flex flex-wrap flex-sm-nowrap align-center pa-3">
+												
+												<div class="flex-shrink-0 mr-4 position-relative cursor-pointer" @click="goToPath(`/sites/${item.raw.site_id}`)">
+													<v-img
+														:src="`${remote_upload_uri}${item.raw.site}_${item.raw.site_id}/production/screenshots/${item.raw.screenshot_base}_thumb-800.jpg`"
+														width="160"
+														aspect-ratio="1.6"
+														cover
+														class="rounded-lg border-thin"
+														v-if="item.raw.screenshot_base"
+														lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp"
+													>
+														<template v-slot:placeholder>
+														<div class="d-flex align-center justify-center fill-height bg-grey-lighten-4">
+															<v-progress-circular
+															color="grey-lighten-1"
+															indeterminate
+															size="20"
+															></v-progress-circular>
+														</div>
+														</template>
+														<div 
+															v-if="isHovering"
+															class="position-absolute w-100 h-100"
+															style="background: rgba(0,0,0,0.03);"
+														></div>
+													</v-img>
+													
+													<v-sheet 
+														v-else 
+														width="160" 
+														height="100" 
+														color="surface-variant" 
+														class="rounded-lg d-flex align-center justify-center border-thin overflow-hidden"
+													>
+														<v-icon class="text-medium-emphasis" size="40">mdi-monitor-shimmer</v-icon>
+													</v-sheet>
+												</div>
 
-					<template v-slot:item.subsites="{ item }">
-						{{ item.subsites }}<span v-show="item.subsites"> sites</span>
-					</template>
+												<div class="flex-grow-1 pr-4" style="min-width: 200px;">
+													
+													<div class="d-flex align-center flex-wrap gap-2">
+														<h3 class="text-body-1 font-weight-bold text-high-emphasis mr-1 text-truncate cursor-pointer text-decoration-none hover-primary" @click="goToPath(`/sites/${item.raw.site_id}`)">
+															{{ item.raw.name }}
+														</h3>
+														
+														<v-chip
+															v-if="item.raw.provider_id && item.raw.provider_id != 1"
+															size="x-small"
+															variant="tonal"
+															color="primary"
+															class="font-weight-bold text-uppercase"
+															label
+														>
+															{{ formatProvider(item.raw.provider) }}
+														</v-chip>
 
-					<template v-slot:item.visits="{ item }">
-						{{ formatLargeNumbers(item.visits) }}
-					</template>
+														<v-chip
+															size="x-small"
+															variant="tonal"
+															:color="parseFloat(item.raw.core) < 6.0 ? 'warning' : 'default'"
+															class="font-weight-bold"
+															label
+														>
+															WP {{ item.raw.core }}
+														</v-chip>
+													</div>
 
-					<template v-slot:item.storage="{ item }">
-						{{ formatGBs(item.storage) }}GB
-					</template>
+													<div class="mb-2" style="line-height:1em;">
+														<a 
+															v-if="item.raw.home_url || item.raw.domain"
+															:href="item.raw.home_url || '//' + item.raw.domain" 
+															target="_blank" 
+															class="text-caption text-medium-emphasis text-decoration-none hover-primary d-inline-flex align-center"
+														>
+															{{ item.raw.home_url || item.raw.domain }} 
+															<v-icon size="16" class="ml-1 opacity-70" icon="mdi-open-in-new"></v-icon>
+														</a>
+														<span v-else class="text-caption text-disabled font-italic">
+															No URL detected
+														</span>
+													</div>
 
-					<template v-slot:item.provider="{ item }">
-						{{ formatProvider(item.provider) }}
-						<v-tooltip location="bottom">
-						<template v-slot:activator="{ props }">
-							<v-icon icon="mdi-cloud" color="secondary" v-bind="props" class="ml-1 mr-0" v-show="item.provider_id && item.provider_id != 1"></v-icon>
+													<div class="d-flex align-center text-caption text-medium-emphasis gap-6" style="line-height: 1em;">
+														<div class="d-flex align-center mr-6" title="Monthly Visits">
+															<v-avatar color="surface-variant" size="28" class="mr-3">
+																<v-icon size="16">mdi-chart-bar</v-icon>
+															</v-avatar>
+															<div>
+																<div class="font-weight-bold text-high-emphasis text-caption">{{ formatLargeNumbers(item.raw.visits) }}</div>
+																<div class="text-xs">Visits</div>
+															</div>
+														</div>
+
+														<div class="d-flex align-center mr-6" title="Storage Usage" style="line-height: 1em;">
+															<v-avatar color="surface-variant" size="28" class="mr-3">
+																<v-icon size="16">mdi-database-outline</v-icon>
+															</v-avatar>
+															<div>
+																<div class="font-weight-bold text-high-emphasis text-caption">{{ formatGBs(item.raw.storage) }} <span class="text-caption font-weight-regular">GB</span></div>
+																<div class="text-xs">Storage</div>
+															</div>
+														</div>
+														
+														<div v-if="item.raw.subsites" class="d-flex align-center" title="Subsites">
+															<v-avatar color="surface-variant" size="28" class="mr-3">
+																<v-icon size="16">mdi-file-tree</v-icon>
+															</v-avatar>
+															<div>
+																<div class="font-weight-bold text-high-emphasis text-body-2">{{ item.raw.subsites }}</div>
+																<div class="text-xs">Sites</div>
+															</div>
+														</div>
+													</div>
+												</div>
+
+												<div class="d-flex flex-column flex-sm-row align-end align-sm-center justify-end flex-shrink-0 mt-3 mt-sm-0 w-100 w-sm-auto pl-sm-2 gap-2">
+													
+													<v-btn
+														color="primary"
+														variant="flat"
+														class="text-capitalize font-weight-bold w-100 w-sm-auto mr-2"
+														height="42"
+														rounded="lg"
+														prepend-icon="mdi-login-variant"
+														elevation="0"
+														@click="magicLoginSite(item.raw.site_id)"
+													>
+														Login
+													</v-btn>
+
+													<v-btn 
+														variant="outlined" 
+														class="hidden-xs text-capitalize w-sm-auto"
+														height="42"
+														rounded="lg"
+														:color="isHovering ? 'primary' : 'medium-emphasis'"
+														:style="isHovering ? '' : 'border-color: rgba(var(--v-border-color), 0.3)'"
+														@click="goToPath(`/sites/${item.raw.site_id}`)"
+													>
+														Manage
+													</v-btn>
+
+													<v-menu location="bottom end">
+														<template v-slot:activator="{ props }">
+															<v-btn 
+																icon="mdi-dots-vertical" 
+																variant="text" 
+																color="medium-emphasis"
+																v-bind="props"
+																density="comfortable"
+																class="ml-1"
+															></v-btn>
+														</template>
+														<v-list density="compact" width="220" class="rounded-lg elevation-4 py-2">
+															<v-list-item @click="magicLoginSite(item.raw.site_id)" prepend-icon="mdi-login" title="Login" class="d-sm-none"></v-list-item>
+															<v-list-item :href="`${configurations.path}sites/${item.raw.site_id}/updates`" @click.prevent="goToPath(`/sites/${item.raw.site_id}/updates`)" prepend-icon="mdi-history" title="Update Logs"></v-list-item>
+															<v-list-item :href="`${configurations.path}sites/${item.raw.site_id}/backups`" @click.prevent="goToPath(`/sites/${item.raw.site_id}/backups`)" prepend-icon="mdi-cloud-upload-outline" title="Backups"></v-list-item>
+															<v-list-item :href="`${configurations.path}sites/${item.raw.site_id}/quicksaves`" @click.prevent="goToPath(`/sites/${item.raw.site_id}/quicksaves`)" prepend-icon="mdi-file-restore" title="Version History"></v-list-item>
+															<v-divider class="my-2"></v-divider>
+															<v-list-item :href="`${configurations.path}sites/${item.raw.site_id}/visual-captures`" @click.prevent="goToPath(`/sites/${item.raw.site_id}/visual-captures`)" prepend-icon="mdi-camera-burst" title="Visual Captures"></v-list-item>
+														</v-list>
+													</v-menu>
+
+												</div>
+											</div>
+										</v-card>
+									</v-hover>
+								</v-col>
+							</v-row>
 						</template>
-						<span>Maintenance only</span>
-						</v-tooltip>
-					</template>
+						<template v-slot:footer="{ page, pageCount, prevPage, nextPage }">
+							<div class="d-flex align-center justify-center pa-6">
+								<v-btn icon="mdi-arrow-left" variant="tonal" density="comfortable" rounded="circle" size="small" color="medium-emphasis" @click="prevPage" :disabled="page === 1"></v-btn>
+								<span class="mx-4 text-body-2 font-weight-medium text-medium-emphasis">Page {{ page }} of {{ pageCount }}</span>
+								<v-btn icon="mdi-arrow-right" variant="tonal" density="comfortable" rounded="circle" size="small" color="medium-emphasis" @click="nextPage" :disabled="page === pageCount"></v-btn>
+							</div>
+						</template>
+					</v-data-iterator>
 
-					<template v-slot:no-data>
-						No sites found.
-					</template>
-
-					</v-data-table>
-					</v-card-text>
-					<v-container fluid v-else>
-					<v-row>
-						<v-col v-for="item in filteredSites" :key="item.site_id" cols="12" sm="6" md="4" lg="3">
-						<v-card @click="goToPath(`/sites/${item.site_id}`)">
-							<v-hover v-slot="{ isHovering, props }">
+					<v-data-table
+						v-if="toggle_site === 'table' || toggle_site === true"
+						v-model="sites_selected"
+						:headers="[
+							{ title: '', key: 'thumbnail', sortable: false, width: 50 },
+							{ title: 'Name', key: 'name', align: 'left', sortable: true },
+							{ title: 'Subsites', key: 'subsites', sortable: true, width: 104 },
+							{ title: 'WordPress', key: 'core', sortable: true, width: 114 },
+							{ title: 'Visits', key: 'visits', sortable: true, width: 98 },
+							{ title: 'Storage', key: 'storage', sortable: true, width: 90 },
+							{ title: 'Provider', key: 'provider', sortable: true, width: 130 }
+						]"
+						:items="filteredSites"
+						item-value="site_id"
+						ref="site_datatable"
+						:items-per-page="100"
+						:items-per-page-options="[
+							{ value: 100, title: '100' },
+							{ value: 250, title: '250' },
+							{ value: 500, title: '500' },
+							{ value: -1, title: 'All' }
+						]"
+						@click:row="(event, { item }) => goToPath(`/sites/${item.site_id}`)"
+						hover
+					>
+						<template v-slot:item.thumbnail="{ item }">
 							<v-img
-								v-bind="props"
-								:src="`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-800.jpg`"
-								:aspect-ratio="16/10"
-								cover
+								:src="`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-100.jpg`"
+								class="elevation-1 my-1"
+								width="50"
+								aspect-ratio="1.6"
 								v-show="item.screenshot_base"
 								lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp"
-							>
-								<v-fade-transition>
-								<div
-									v-if="!isHovering"
-									style="background-image: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5)); height: 100%;"
-									class="d-flex align-end"
-								>
-									<div class="body-1 pa-2 text-white">{{ item.name }}</div>
-								</div>
-								</v-fade-transition>
-								<template v-slot:placeholder>
-								<v-row class="fill-height ma-0" align="center" justify="center">
-									<v-progress-circular indeterminate color="grey-lighten-5"></v-progress-circular>
-								</v-row>
-								</template>
-							</v-img>
-							</v-hover>
-							<v-card-title v-if="!item.screenshot_base">{{ item.name }}</v-card-title>
-						</v-card>
-						</v-col>
-					</v-row>
-					<v-row v-if="!filteredSites || filteredSites.length === 0">
-						<v-col>No sites found.</v-col>
-					</v-row>
-					</v-container>
+							></v-img>
+						</template>
+						<template v-slot:item.subsites="{ item }">
+							{{ item.subsites }}<span v-show="item.subsites"> sites</span>
+						</template>
+						<template v-slot:item.visits="{ item }">
+							{{ formatLargeNumbers(item.visits) }}
+						</template>
+						<template v-slot:item.storage="{ item }">
+							{{ formatGBs(item.storage) }}GB
+						</template>
+						<template v-slot:item.provider="{ item }">
+							{{ formatProvider(item.provider) }}
+							<v-icon icon="mdi-cloud" color="secondary" class="ml-1 mr-0" v-show="item.provider_id && item.provider_id != 1" title="Maintenance only"></v-icon>
+						</template>
+						<template v-slot:no-data>No sites found.</template>
+					</v-data-table>
+
+					<v-data-iterator
+						v-if="toggle_site === 'grid' || toggle_site === false"
+						:items="filteredSites"
+						:items-per-page="100"
+						:search="search"
+					>
+						<template v-slot:default="{ items }">
+							<v-row>
+								<v-col v-for="item in items" :key="item.raw.site_id" cols="12" sm="6" md="4" lg="3">
+									<v-card @click="goToPath(`/sites/${item.raw.site_id}`)">
+										<v-hover v-slot="{ isHovering, props }">
+											<v-img
+												v-bind="props"
+												:src="`${remote_upload_uri}${item.raw.site}_${item.raw.site_id}/production/screenshots/${item.raw.screenshot_base}_thumb-800.jpg`"
+												:aspect-ratio="16/10"
+												cover
+												v-show="item.raw.screenshot_base"
+												lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp"
+											>
+												<v-fade-transition>
+													<div v-if="!isHovering" style="background-image: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5)); height: 100%;" class="d-flex align-end">
+														<div class="body-1 pa-2 text-white">{{ item.raw.name }}</div>
+													</div>
+												</v-fade-transition>
+												<template v-slot:placeholder>
+													<v-row class="fill-height ma-0" align="center" justify="center">
+														<v-progress-circular indeterminate color="grey-lighten-5"></v-progress-circular>
+													</v-row>
+												</template>
+											</v-img>
+										</v-hover>
+										<v-card-title v-if="!item.raw.screenshot_base">{{ item.raw.name }}</v-card-title>
+									</v-card>
+								</v-col>
+							</v-row>
+						</template>
+						<template v-slot:footer="{ page, pageCount, prevPage, nextPage }">
+							<div class="d-flex align-center justify-center pa-4">
+								<v-btn icon="mdi-chevron-left" variant="text" @click="prevPage" :disabled="page === 1"></v-btn>
+								<span class="mx-2 text-caption">Page {{ page }} of {{ pageCount }}</span>
+								<v-btn icon="mdi-chevron-right" variant="text" @click="nextPage" :disabled="page === pageCount"></v-btn>
+							</div>
+						</template>
+					</v-data-iterator>
+				</v-sheet>
 			</v-sheet>
 			<v-sheet v-show="dialog_site.step == 2" class="site" color="transparent">
 			<v-card v-show="dialog_site.site.removed" elevation="0" rounded="xl">
@@ -3374,13 +3550,13 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-container class="pt-0">
 				<v-toolbar color="primary" flat density="compact" rounded="lg">
 				<v-tabs v-model="dialog_site.site.tabs" density="compact" hide-slider>
-					<v-tab value="tab-Site-Management">
+					<v-tab value="tab-Site-Management" :href="`${configurations.path}sites/${dialog_site.site.site_id}`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}`)">
 						Site Management <v-icon icon="mdi-cog" class="ml-1"></v-icon>
 					</v-tab>
-					<v-tab value="tab-Modules" v-show="role == 'administrator'">
+					<v-tab value="tab-Modules" :href="`${configurations.path}sites/${dialog_site.site.site_id}`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}`)" v-show="role == 'administrator'">
 						Modules <v-icon size="24" icon="mdi-toggle-switch-outline" class="ml-1"></v-icon>
 					</v-tab>
-					<v-tab value="tab-Timeline" ripple @click="fetchTimeline( dialog_site.site.site_id )">
+					<v-tab value="tab-Timeline" :href="`${configurations.path}sites/${dialog_site.site.site_id}`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}`)" ripple @click="fetchTimeline( dialog_site.site.site_id )">
 						Timeline <v-icon size="24" icon="mdi-timeline-text-outline" class="ml-1"></v-icon>
 					</v-tab>
 				</v-tabs>
@@ -3417,23 +3593,15 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-tooltip>
 						</div>
 						<v-col>
-								<v-tabs
-									v-model="dialog_site.site.tabs_management"
-									align-tabs="end"
-									show-arrows
-									class="pr-3"
-									density="compact"
-									color="primary"
-									stacked
-								>
-									<v-tab value="tab-Info" style="min-width: 50px;padding: 0px 10px;"><v-icon>mdi-text-box-multiple</v-icon> Info</v-tab>
-									<v-tab value="tab-Stats" style="min-width: 50px;padding: 0px 10px;" @click="fetchStats()"><v-icon start>mdi-chart-bar</v-icon> Stats</v-tab>
-									<v-tab value="tab-Logs" style="min-width: 50px;padding: 0px 10px;"><v-icon start>mdi-file-document-multiple</v-icon> Logs</v-tab>
-									<v-tab value="tab-Addons" style="min-width: 50px;padding: 0px 10px;" v-if="dialog_site.environment_selected.token !== 'basic'"><v-icon start>mdi-power-plug</v-icon> Addons</v-tab>
-									<v-tab value="tab-Users" style="min-width: 50px;padding: 0px 10px;" @click="fetchUsers()" v-if="dialog_site.environment_selected.token !== 'basic'"><v-icon start>mdi-account-multiple</v-icon> Users</v-tab>
-									<v-tab value="tab-Updates" style="min-width: 50px;padding: 0px 10px;" @click="viewUpdateLogs(dialog_site.site.site_id)" v-if="dialog_site.environment_selected.token !== 'basic'"><v-icon start>mdi-book-open</v-icon> Updates</v-tab>
-									<v-tab value="tab-Scripts" style="min-width: 50px;padding: 0px 10px;"><v-icon start>mdi-code-tags</v-icon> Scripts</v-tab>
-									<v-tab value="tab-Backups" style="min-width: 50px;padding: 0px 10px;" @click="dialog_site.backup_step = 1"><v-icon start>mdi-update</v-icon> Backups</v-tab>
+								<v-tabs v-model="dialog_site.site.tabs_management" align-tabs="end" show-arrows class="pr-3" density="compact" color="primary" stacked>
+									<v-tab value="tab-Info" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}`)"><v-icon>mdi-text-box-multiple</v-icon> Info</v-tab>
+									<v-tab value="tab-Stats" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/stats`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/stats`)"><v-icon start>mdi-chart-bar</v-icon> Stats</v-tab>
+									<v-tab value="tab-Logs" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/logs`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/logs`)"><v-icon start>mdi-file-document-multiple</v-icon> Logs</v-tab>
+									<v-tab value="tab-Addons" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/addons`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/addons`)" v-if="dialog_site.environment_selected.token !== 'basic'"><v-icon start>mdi-power-plug</v-icon> Addons</v-tab>
+									<v-tab value="tab-Users" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/users`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/users`)" v-if="dialog_site.environment_selected.token !== 'basic'"><v-icon start>mdi-account-multiple</v-icon> Users</v-tab>
+									<v-tab value="tab-Updates" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/updates`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/updates`)" v-if="dialog_site.environment_selected.token !== 'basic'"><v-icon start>mdi-book-open</v-icon> Updates</v-tab>
+									<v-tab value="tab-Scripts" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/scripts`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/scripts`)"><v-icon start>mdi-code-tags</v-icon> Scripts</v-tab>
+									<v-tab value="tab-Backups" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/backup-overview`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/backup-overview`)"><v-icon start>mdi-update</v-icon> Backups</v-tab>
 								</v-tabs>
 							</v-col>
 							</v-row>
@@ -3500,7 +3668,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-row>
 							<v-col cols="12" md="6" class="py-2">
 							<div class="block mt-6 text-center">
-								<a href="#screenshots" @click="showCaptures(dialog_site.site.site_id)">
+								<a href="visual-captures" @click.prevent="showCaptures(dialog_site.site.site_id)">
 								<v-img v-if="dialog_site.environment_selected.screenshots?.large" :src="dialog_site.environment_selected.screenshots.large" max-width="400" aspect-ratio="1.6" class="elevation-5 mx-auto" lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp">
 									<template v-slot:placeholder>
 									<v-row class="fill-height ma-0" align="center" justify="center">
@@ -4325,7 +4493,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					border="thin"
 					link
 					hover
-					@click="viewBackups(); dialog_site.backup_step = 2"
+					:href="`${configurations.path}sites/${dialog_site.site.site_id}/backups`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/backups`)"
 				>
 					<v-card-title>Backups</v-card-title>
 					<v-card-subtitle style="white-space: normal;">Original file and database backups.</v-card-subtitle>
@@ -4342,7 +4510,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					border="thin"
 					link
 					hover
-					@click="viewQuicksaves(); dialog_site.backup_step = 3"
+					:href="`${configurations.path}sites/${dialog_site.site.site_id}/quicksaves`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/quicksaves`)"
 				>
 					<v-card-title>Quicksaves</v-card-title>
 					<v-card-subtitle style="white-space: normal;">Know what changed and when. Easily rollback themes or plugins. Super helpful for troubleshooting maintenance issues.</v-card-subtitle>
@@ -4359,7 +4527,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					border="thin"
 					link
 					hover
-					@click="viewSnapshots( dialog_site.site.site_id ); dialog_site.backup_step = 4"
+					:href="`${configurations.path}sites/${dialog_site.site.site_id}/snapshots`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/snapshots`)"
 				>
 					<v-card-title>Snapshots</v-card-title>
 					<v-card-subtitle style="white-space: normal;">Manually generated snapshots zips.</v-card-subtitle>
@@ -8948,7 +9116,7 @@ const app = createApp({
 		site_filters: <?php echo json_encode( ( new CaptainCore\Environments )->filters() ); ?>,
 		site_filter_version: null,
 		site_filter_status: null,
-		toggle_site: true,
+		toggle_site: 'cards',
 		toggle_plan: true,
 		countries: wc_countries,
 		states: wc_states,
@@ -9749,6 +9917,113 @@ const app = createApp({
 				this.dialog_site.step = 3
 				return
 			}
+			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/addons" ) ) {
+				this.dialog_site.step = 2
+				site_id = this.route_path.replace("/addons","")
+				site = this.sites.filter( s => s.site_id == site_id )[0]
+				if ( site ) {
+					this.showSite( site, "addons" )
+				}
+				return
+			}
+			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/logs" ) ) {
+				this.dialog_site.step = 2
+				site_id = this.route_path.replace("/logs","")
+				site = this.sites.filter( s => s.site_id == site_id )[0]
+				if ( site ) {
+					this.showSite( site, "logs" )
+				}
+				return
+			}
+			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/stats" ) ) {
+				this.dialog_site.step = 2
+				site_id = this.route_path.replace("/stats","")
+				site = this.sites.filter( s => s.site_id == site_id )[0]
+				if ( site ) {
+					this.showSite( site, "stats" )
+					this.fetchStats()
+				}
+				return
+			}
+			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/backup-overview" ) ) {
+				this.dialog_site.step = 2
+				site_id = this.route_path.replace("/backup-overview","")
+				site = this.sites.filter( s => s.site_id == site_id )[0]
+				if ( site ) {
+					this.showSite( site, "backups" )
+				}
+				this.dialog_site.backup_step = 1
+				return
+			}
+			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/backups" ) ) {
+				this.dialog_site.step = 2
+				site_id = this.route_path.replace("/backups","")
+				site = this.sites.filter( s => s.site_id == site_id )[0]
+				if ( site ) {
+					this.showSite( site, "backups" )
+				}
+				this.dialog_site.backup_step = 2
+				return
+			}
+			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/quicksaves" ) ) {
+				this.dialog_site.step = 2
+				site_id = this.route_path.replace("/quicksaves","")
+				site = this.sites.filter( s => s.site_id == site_id )[0]
+				if ( site ) {
+					this.showSite( site, "quicksaves" )
+				}
+				this.dialog_site.backup_step = 3
+				return
+			}
+			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/snapshots" ) ) {
+				this.dialog_site.step = 2
+				site_id = this.route_path.replace("/snapshots","")
+				site = this.sites.filter( s => s.site_id == site_id )[0]
+				if ( site ) {
+					this.showSite( site, "snapshots" )
+				}
+				this.dialog_site.backup_step = 4
+				return
+			}
+			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/scripts" ) ) {
+				this.dialog_site.step = 2
+				site_id = this.route_path.replace("/scripts","")
+				site = this.sites.filter( s => s.site_id == site_id )[0]
+				if ( site ) {
+					this.showSite( site, "scripts" )
+				}
+				return
+			}
+			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/updates" ) ) {
+				this.dialog_site.step = 2
+				site_id = this.route_path.replace("/updates","")
+				site = this.sites.filter( s => s.site_id == site_id )[0]
+				if ( site ) {
+					this.showSite( site, "updates" )
+					this.viewUpdateLogs(site_id)
+				}
+				return
+			}
+			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/users" ) ) {
+				this.dialog_site.step = 2
+				site_id = this.route_path.replace("/users","")
+				site = this.sites.filter( s => s.site_id == site_id )[0]
+				if ( site ) {
+					this.showSite( site, "users" )
+					this.fetchUsers()
+				}
+				return
+			}
+			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/visual-captures" ) ) {
+				this.dialog_site.step = 2
+				site_id = this.route_path.replace("/visual-captures","")
+				site = this.sites.filter( s => s.site_id == site_id )[0]
+				if ( site ) {
+					this.showSite( site, 'visual-captures' )
+				}
+				return
+			}
+			
 			if ( this.route == "sites" && this.route_path != "" ) {
 				this.dialog_site.step = 2				
 				site = this.sites.filter( s => s.site_id == this.route_path )[0]
@@ -10918,6 +11193,22 @@ const app = createApp({
 				if ( this.dialog_site.site.tabs_management == "tab-Backups" ) {
 					this.viewQuicksaves()
 					this.viewSnapshots()
+					this.dialog_site.backup_step = 1
+				}
+				if ( this.dialog_site.site.tabs_management == "tab-Backups" && this.route_path.endsWith( "/backups" ) ) {
+					this.viewBackups()
+					this.dialog_site.backup_step = 2
+				}
+				if ( this.dialog_site.site.tabs_management == "tab-Backups" && this.route_path.endsWith( "/quicksaves" ) ) {
+					this.viewQuicksaves()
+					this.dialog_site.backup_step = 3
+				}
+				if ( this.dialog_site.site.tabs_management == "tab-Backups" && this.route_path.endsWith( "/snapshots" ) ) {
+					this.viewSnapshots()
+					this.dialog_site.backup_step = 4
+				}
+				if ( this.dialog_site.site.tabs_management == "tab-Info" && this.route_path.endsWith( "/visual-captures" ) ) {
+					this.showCaptures( this.dialog_site.site.site_id )
 				}
 			});
 		},
@@ -12941,7 +13232,13 @@ const app = createApp({
 			});
 		},
 		showCaptures( site_id ) {
+			this.dialog_captures.site = null;
+    		this.dialog_captures.captures = [];
 			this.dialog_captures.site = this.dialog_site.site
+			if ( this.dialog_site.environment_selected.site_id == "" || this.dialog_site.environment_selected.site_id != site_id ) {
+				this.fetchSiteEnvironments( site_id )
+				return
+			}
 			environment = this.dialog_site.environment_selected
 			this.dialog_captures.pages = environment.capture_pages
 			if ( environment.details.auth ) {
@@ -13068,7 +13365,7 @@ const app = createApp({
 					this.fetchSiteDetails( this.dialog_site.site.site_id )
 			})
 		},
-		showSite( site ) {
+		showSite( site, tab = 'info' ) {
 			this.selected_site = site
 			this.users_search = ""
 			this.fetchSiteEnvironments( site.site_id )
@@ -13083,7 +13380,29 @@ const app = createApp({
 			show_site.shared_with = []
             show_site.loading = false
 			show_site.tabs = this.dialog_site.site.tabs
-			show_site.tabs_management = this.dialog_site.site.tabs_management
+			if ( tab === 'backups' ) {
+				show_site.tabs_management = 'tab-Backups';
+			} else if ( tab === 'quicksaves' ) {
+				show_site.tabs_management = 'tab-Backups';
+			} else if ( tab === 'snapshots' ) {
+				show_site.tabs_management = 'tab-Backups';
+			} else if ( tab === 'updates' ) {
+				show_site.tabs_management = 'tab-Updates';
+			} else if ( tab === 'scripts' ) {
+				show_site.tabs_management = 'tab-Scripts';
+			} else if ( tab === 'users' ) {
+				show_site.tabs_management = 'tab-Users';
+			} else if ( tab === 'addons' ) {
+				show_site.tabs_management = 'tab-Addons';
+			} else if ( tab === 'logs' ) {
+				show_site.tabs_management = 'tab-Logs';
+			} else if ( tab === 'stats' ) {
+				show_site.tabs_management = 'tab-Stats';
+			} else if ( tab === 'visual-captures' ) {
+				show_site.tabs_management = 'tab-Info'
+			} else {
+				show_site.tabs_management = 'tab-Info'
+			}
 			if ( show_site.key == "" ) {
 				show_site.key = null
 			}
