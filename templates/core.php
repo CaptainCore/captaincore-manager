@@ -14509,7 +14509,7 @@ const app = createApp({
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
-					this.$refs.export_domain.download = `${this.dialog_domain.domain.name}.zone`;
+					this.$refs.export_domain.download = `${this.dialog_domain.domain.name}.txt`;
 					this.$refs.export_domain.href = "data:text/json;charset=utf-8," + encodeURIComponent(response.data);
 					this.$refs.export_domain.click();
 				})
