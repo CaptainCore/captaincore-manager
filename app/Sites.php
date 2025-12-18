@@ -105,6 +105,7 @@ class Sites extends DB {
             $site->key               = $details->key;
             $site->core              = $details->core;
             $site->username          = isset( $details->username ) ? $details->username : "";
+            $site->home_url          = isset( $details->home_url ) ? $details->home_url : "";
             $site->console_errors    = isset( $details->console_errors ) ? $details->console_errors : "";
             $site->connection_errors = isset( $details->connection_errors ) ? $details->connection_errors : "";
             $site->subsites          = $details->subsites;
