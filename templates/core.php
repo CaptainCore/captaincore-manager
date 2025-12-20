@@ -2721,15 +2721,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 
 					<v-tooltip location="top">
 						<template v-slot:activator="{ props }">
-							<v-btn v-bind="props" variant="text" icon="mdi-toolbox" @click="dialog_bulk_tools.show = true"></v-btn>
-						</template>
-						<span>Bulk Tools</span>
-					</v-tooltip>
-					<v-tooltip location="top">
-						<template v-slot:activator="{ props }">
 							<v-btn icon="mdi-console" @click="view_console.show = !view_console.show" v-bind="props"></v-btn>
 						</template>
-						<span>Advanced Options</span>
+						<span>Terminal Console</span>
 					</v-tooltip>
 					<v-menu open-on-hover text bottom offset-y>
 						<template v-slot:activator="{ props }">
@@ -8449,99 +8443,342 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-snackbar>
 		</template>
 		</v-container>
-		<div :style="{ height: view_console.open ? '180px' : '0' }"></div>
-		<v-navigation-drawer v-model="view_console.show" location="bottom" :rail="! view_console.open" rail-width="32" width="210" tile temporary :scrim="false">
-		<v-sheet>
-			<v-window v-model="active_console" class="ml-2">
-			<v-window-item :value="0" :transition="false" :reverse-transition="false"></v-window-item>
-			<v-window-item :value="1" :transition="false" :reverse-transition="false">
-				<v-toolbar flat density="compact" color="transparent">
-				<span>Task Activity</span>
-				<v-spacer></v-spacer>
-				<v-tooltip location="top">
-					<template v-slot:activator="{ props }">
-						<v-btn v-bind="props" size="small" icon="mdi-trash-can-outline" @click.native="jobs = []; snackbar.message = 'Task activity cleared.'; snackbar.show = true"></v-btn>
-					</template>
-					<span>Clear Task Activity</span>
-				</v-tooltip>
-				<v-btn size="small" icon="mdi-close" @click="closeConsole()"></v-btn>
-				</v-toolbar>
-				<v-card-text style="height:130px; overflow-y:scroll;" class="ma-0 pa-0">
-				<v-data-table :headers="[{ title: 'Description', value: 'description' },{ title: 'Status', value: 'status' },{ title: 'Response', value: 'response' }]" :items="jobs.slice().reverse()" class="transparent elevation-0 pa-0 ma-0" hide-default-header hide-default-footer density="compact">
-					<template v-slot:body="{ items }">
-						<tr>
-						<td class="ma-0 pa-0">
-							<v-list density="compact" flat class="transparent ma-0 pa-0">
-							<v-list-item density="compact" class="px-0" min-height="0" v-for="(item, index) in items" :key="item.job_id" @click="viewJob( item.job_id )">
-								<v-chip v-if="item.status == 'done'" size="x-small" color="green" class="mr-2" variant="flat">Done</v-chip>
-								<v-chip v-else-if="item.status == 'error'" size="x-small" color="red" class="mr-2" variant="flat">Error</v-chip>
-								<v-chip v-else size="x-small" color="primary" class="mr-2" variant="flat">Running</v-chip>
-								{{ item.description }}
-								<small v-if="typeof item.stream == 'object'" class="ml-2">{{ item.stream.slice(-1)[0] }}</small>
-								<template v-slot:append v-if="item.status != 'done' && item.status != 'error'">
-									<v-btn style="margin-top:2.5px" variant="text" size="x-small" @click.stop="killCommand(item.job_id)">Cancel</v-btn>
+		<v-dialog v-model="terminal_schedule.show" max-width="500px">
+            <v-card rounded="lg">
+                <v-toolbar color="primary" density="compact" flat>
+                    <v-toolbar-title>Schedule Script</v-toolbar-title>
+                    <v-spacer></v-spacer>
+                    <v-btn icon="mdi-close" @click="terminal_schedule.show = false"></v-btn>
+                </v-toolbar>
+                <v-card-text class="pt-4">
+                    <p class="text-body-2 mb-4">
+                        Scheduling command for <strong>{{ view_console.selected_targets.length }}</strong> environment(s).
+                    </p>
+                    
+                    <v-row>
+                        <v-col cols="12" sm="6">
+                            <v-menu v-model="terminal_schedule.menu_date" :close-on-content-click="false" location="bottom">
+                                <template v-slot:activator="{ props }">
+                                    <v-text-field
+                                        v-model="terminal_schedule.date"
+                                        label="Date"
+                                        prepend-inner-icon="mdi-calendar"
+                                        readonly
+                                        v-bind="props"
+                                        variant="outlined"
+                                        density="compact"
+                                        hide-details
+                                    ></v-text-field>
+                                </template>
+                                <v-date-picker 
+									v-model="terminal_schedule.date_obj" 
+									@update:model-value="onTerminalDateChange" 
+									hide-header 
+									:min="new Date().toISOString().substr(0, 10)"
+									color="primary"
+								></v-date-picker>
+                            </v-menu>
+                        </v-col>
+                        <v-col cols="12" sm="6">
+                            <v-menu v-model="terminal_schedule.menu_time" :close-on-content-click="false" location="bottom">
+                                <template v-slot:activator="{ props }">
+                                    <v-text-field
+                                        v-model="terminal_schedule.time"
+                                        label="Time"
+                                        prepend-inner-icon="mdi-clock-time-four-outline"
+                                        readonly
+                                        v-bind="props"
+                                        variant="outlined"
+                                        density="compact"
+                                        hide-details
+                                    ></v-text-field>
+                                </template>
+                                <v-time-picker
+                                    v-if="terminal_schedule.menu_time"
+                                    v-model="terminal_schedule.time"
+                                    format="24hr"
+                                    @click:minute="terminal_schedule.menu_time = false"
+                                    color="primary"
+                                ></v-time-picker>
+                            </v-menu>
+                        </v-col>
+                    </v-row>
+                    
+                    <div class="bg-grey-lighten-4 rounded pa-3 mt-4 text-caption font-monospace overflow-y-auto" style="max-height: 100px;">
+                        {{ script.code }}
+                    </div>
+
+                </v-card-text>
+                <v-card-actions class="pa-4">
+                    <v-spacer></v-spacer>
+                    <v-btn variant="text" @click="terminal_schedule.show = false">Cancel</v-btn>
+                    <v-btn 
+                        color="primary" 
+                        variant="flat"
+                        @click="confirmTerminalSchedule"
+                        :loading="terminal_schedule.loading"
+                        :disabled="!terminal_schedule.date || !terminal_schedule.time"
+                    >
+                        Schedule
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+		<!-- Terminal Window Overlay -->
+		<v-expand-transition>
+			<v-card 
+				v-if="view_console.terminal_open" 
+				class="terminal-window elevation-12" 
+				:class="{ 'terminal-fullscreen': view_console.fullscreen }"
+				theme="dark" 
+				rounded="xl"
+			>
+				
+				<!-- Header -->
+				<div class="terminal-header d-flex align-center px-4 py-2 bg-grey-darken-4 flex-shrink-0 border-b">
+					<div class="d-flex gap-2 mr-4">
+						<!-- Red: Close -->
+						<div class="window-dot bg-red" @click="view_console.terminal_open = false" style="cursor:pointer"></div>
+						<!-- Yellow: Toggle Sidebar -->
+						<div class="window-dot bg-yellow" @click="view_console.show_sidebar = !view_console.show_sidebar" style="cursor:pointer" title="Toggle Sidebar"></div>
+						<!-- Green: Fullscreen -->
+						<div class="window-dot bg-green" @click="toggleFullscreen" style="cursor:pointer" title="Toggle Fullscreen"></div>
+					</div>
+					
+					<!-- Dynamic Header Title based on selection -->
+					<span class="text-caption text-grey text-center flex-grow-1 font-monospace text-truncate px-4">
+						captaincore-cli — 
+						<span v-if="view_console.selected_targets.length === 0">Select target</span>
+						<span v-else-if="view_console.selected_targets.length === 1">{{ view_console.selected_targets[0].home_url }}</span>
+						<span v-else>{{ view_console.selected_targets.length }} environments selected</span>
+					</span>
+
+					<v-btn icon="mdi-page-layout-sidebar-left" variant="text" density="compact" size="small" @click="view_console.show_sidebar = !view_console.show_sidebar" :color="view_console.show_sidebar ? 'primary' : 'grey'"></v-btn>
+					<v-btn icon="mdi-close" variant="text" density="compact" size="small" @click="view_console.terminal_open = false"></v-btn>
+				</div>
+
+				<div class="d-flex flex-grow-1" style="overflow: hidden;">
+					
+					<!-- LEFT SIDEBAR -->
+					<v-expand-x-transition>
+						<div v-if="view_console.show_sidebar" class="terminal-sidebar d-flex flex-column border-e bg-grey-darken-4" style="width: 300px; min-width: 300px; height: 100%;">
+							
+							<!-- FIXED TOP AREA -->
+							<div class="flex-shrink-0">
+								<!-- Targets Area -->
+								<div class="pa-4 border-b">
+									<div class="text-caption text-medium-emphasis mb-1 font-weight-bold">TARGETS</div>
+									<v-autocomplete
+										v-model="view_console.selected_targets"
+										:items="environments"
+										item-title="home_url"
+										item-value="environment_id"
+										return-object
+										label="Select Environments"
+										variant="outlined"
+										density="compact"
+										hide-details
+										multiple
+										clearable
+										spellcheck="false"
+									>
+										<template v-slot:selection="{ item, index }">
+											<!-- Show chips if 3 or fewer are selected -->
+											<v-chip v-if="view_console.selected_targets.length <= 3" size="x-small" label class="mr-1">
+												{{ item.raw.home_url }}
+											</v-chip>
+											<!-- Otherwise show a summary string once (at index 0) -->
+											<span v-else-if="index === 0" class="text-caption font-weight-bold py-1">
+												{{ view_console.selected_targets.length }} environments selected
+											</span>
+										</template>
+
+										<template v-slot:item="{ props, item }">
+											<v-list-item v-bind="props" :title="item.raw.home_url" :subtitle="item.raw.name + ' (' + item.raw.environment + ')'"></v-list-item>
+										</template>
+									</v-autocomplete>
+									
+									<div class="d-flex justify-end mt-1" v-if="view_console.selected_targets.length > 0">
+										<v-btn size="x-small" variant="text" @click="view_console.selected_targets = []" color="grey">Clear Selection</v-btn>
+									</div>
+								</div>
+
+								<v-tabs v-model="view_console.sidebar_tab" density="compact" color="primary" grow class="border-b">
+									<v-tab value="system" class="text-caption font-weight-bold">System</v-tab>
+									<v-tab value="cookbook" class="text-caption font-weight-bold">Cookbook</v-tab>
+								</v-tabs>
+							</div>
+
+							<div class="flex-grow-1 overflow-hidden">
+								<v-window v-model="view_console.sidebar_tab" class="fill-height">
+									
+									<v-window-item value="system" class="fill-height overflow-y-auto">
+										<v-list class="bg-transparent" density="compact">
+											<template v-for="tool in system_tools" :key="tool.method">
+												<!-- Only render if not adminOnly OR if user is admin -->
+												<v-list-item 
+													v-if="!tool.adminOnly || role == 'administrator'"
+													:title="tool.title" 
+													@click="runSystemTool(tool.method)" 
+													link
+												>
+													<template v-slot:prepend>
+														<v-icon :icon="tool.icon" size="small" class="mr-2 text-primary"></v-icon>
+													</template>
+												</v-list-item>
+											</template>
+										</v-list>
+									</v-window-item>
+
+									<v-window-item value="cookbook" class="fill-height overflow-y-auto">
+										<div class="px-4 pt-4 pb-2 sticky-top bg-grey-darken-4" style="position: sticky; top: 0; z-index: 2;">
+											<v-text-field v-model="view_console.search" label="Search Recipes" variant="outlined" density="compact" prepend-inner-icon="mdi-magnify" hide-details bg-color="rgba(0,0,0,0.3)"></v-text-field>
+										</div>
+										<v-list class="bg-transparent" density="compact">
+											<v-list-item v-for="recipe in filteredQuickRunRecipes" :key="recipe.recipe_id" :title="recipe.title" @click="previewRecipeInInput(recipe)" link>
+												<template v-slot:prepend>
+													<v-icon icon="mdi-script-text-outline" size="small" class="mr-2 opacity-60"></v-icon>
+												</template>
+											</v-list-item>
+										</v-list>
+									</v-window-item>
+
+								</v-window>
+							</div>
+						</div>
+					</v-expand-x-transition>
+
+					<!-- RIGHT MAIN (Output & Input - Unchanged from previous step, verify structure remains) -->
+					<div class="terminal-main">
+						<div class="terminal-output" ref="terminalBody">
+							<div v-for="job in jobs" :key="job.job_id" class="mb-4">
+								<div class="d-flex align-center text-green-accent-3 font-weight-bold mb-1 opacity-80" style="font-size: 11px;">
+									<span class="mr-2">➜</span>
+									<span class="text-truncate" style="max-width: 80%;">{{ job.description }}</span>
+									
+									<v-spacer></v-spacer>
+
+									<v-btn
+										v-if="job.status === 'running' || job.status === 'queued'" 
+										size="x-small"
+										color="red-accent-1"
+										class="mr-4"
+										@click="killCommand(job.job_id)"
+										title="Stop Process"
+									>
+									Cancel
+									</v-btn>
+
+									<span class="text-grey flex-shrink-0">{{ pretty_timestamp(job.created_at || new Date()) }}</span>
+								</div>
+								<div v-for="(line, i) in job.stream" :key="i" class="text-grey-lighten-1 text-break">
+									<span v-if="line.trim() !== 'Finished.'">{{ line }}</span>
+								</div>
+								<div v-if="job.status === 'error'" class="text-error mt-1 font-weight-bold">
+									<v-icon size="small" color="error">mdi-alert-circle</v-icon> Process failed.
+								</div>
+								<div v-if="job.status === 'running'" class="mt-1">
+									<span class="cursor-block">▋</span>
+								</div>
+							</div>
+							<div v-if="jobs.length === 0" class="d-flex align-center justify-center fill-height text-grey-darken-2">
+								<div class="text-center">
+									<v-icon size="64" class="mb-2">mdi-console-network</v-icon><br>
+									Select environments from the sidebar<br>and enter a command.
+								</div>
+							</div>
+						</div>
+
+						<div class="terminal-input-area">
+							<v-textarea
+								v-model="script.code"
+								ref="terminalInput"
+								placeholder="Enter command or script..."
+								variant="plain"
+								rows="1"
+								auto-grow
+								max-rows="10"
+								hide-details
+								density="compact"
+								class="terminal-input-field"
+								@keydown.ctrl.enter.prevent="executeTerminalCommand"
+								@keydown.meta.enter.prevent="executeTerminalCommand"
+							>
+								<template v-slot:prepend>
+									<span class="text-green-accent-3 font-weight-bold">$</span>
 								</template>
-							</v-list-item>
-							</v-list>
-						</td>
-						</tr>
-					</template>
-				</v-data-table>
-				</v-card-text>
-			</v-window-item>
-			<v-window-item :value="4" :transition="false" :reverse-transition="false">
-				<v-toolbar flat density="compact" color="transparent">
-				<span class="text-body-2">Task - {{ dialog_job.task.description }}</span>
-				<v-spacer></v-spacer>
-				<v-btn variant="text" size="small" @click.native="active_console = 1">
-					<v-icon>mdi-arrow-left</v-icon> Back to Task Activity
-				</v-btn>
-				<a ref="export_task" href="#"></a>
-				<v-tooltip location="top">
-					<template v-slot:activator="{ props }">
-						<v-btn v-bind="props" size="small" icon="mdi-file-download" @click.native="exportTaskResults()"></v-btn>
-					</template>
-					<span>Export Results</span>
-				</v-tooltip>
-				<v-btn size="small" icon="mdi-close" @click="closeConsole()"></v-btn>
-				</v-toolbar>
-				<v-card-text style="height:130px; overflow-y:scroll; transform: scaleY(-1);" class="ma-0 py-0 px-5">
-				<v-row wrap>
-					<v-col cols="12" class="pa-0 ma-0">
-					<v-card flat width="100%" color="transparent" class="mt-3">
-						<small mv-1 style="display: block; transform: scaleY(-1);">
-						<div v-for="s in dialog_job.task.stream">{{ s }}</div>
-						</small>
-					</v-card>
-					</v-col>
-				</v-row>
-				</v-card-text>
-			</v-window-item>
-			</v-window>
-			<v-row no-gutters justify="center" style="height: 30px;overflow: hidden;">
-			<v-col cols="11">
-				<v-tooltip location="top">
-				<template v-slot:activator="{ props }">
-					<v-btn variant="text" size="small" @click="toggleConsole( 1 )" v-bind="props">
-					<v-icon x-small>mdi-cogs</v-icon> Task Activity
-					<div v-show="runningJobs">
-						<v-chip size="x-small" density="compact" label color="secondary" class="py-2 mx-2" variant="flat">{{ runningJobs }} Running</v-chip>
-						<v-progress-circular indeterminate class="ml-2" size="16" width="2"></v-progress-circular>
+								<template v-slot:append>
+                                    <!-- Added Schedule Button -->
+									<v-btn
+										variant="plain"
+										icon="mdi-clock-plus-outline"
+										density="compact"
+										size="normal"
+										color="grey-lighten-1"
+										class="mr-1"
+										title="Schedule Script"
+										:disabled="!script.code"
+										style="background: none;"
+										@click="openTerminalSchedule"
+									></v-btn>
+									<v-btn 
+										variant="tonal" 
+										density="comfortable"
+										class="px-2 ml-2"
+										style="min-width: auto; height: 24px;"
+										@click="executeTerminalCommand" 
+										:disabled="!script.code"
+									>
+										<span class="text-capitalize mr-3">Run</span>
+										<span class="text-caption font-weight-black">{{ runShortcutLabel }}</span>
+									</v-btn>
+								</template>
+							</v-textarea>
+						</div>
 					</div>
-					<div v-show="! runningJobs && completedJobs">
-						<v-chip size="x-small" density="compact" label color="secondary" class="py-2 mx-2" variant="flat">{{ completedJobs }} Completed</v-chip>
+				</div>
+			</v-card>
+		</v-expand-transition>
+		<div class="activity-island-container">
+			<v-fade-transition>
+				<v-card v-if="(runningJobs > 0 || view_console.show) && !view_console.fullscreen" elevation="10" rounded="pill" color="surface" class="activity-island pr-1" border @click="view_console.terminal_open = !view_console.terminal_open">
+					<div class="d-flex align-center pl-4 pr-2 py-2" style="cursor: pointer; min-width: 300px; max-width: 600px;">
+						<!-- Spinner/Status Icon -->
+						<div class="mr-3 d-flex align-center">
+							<v-progress-circular
+								v-if="runningJobs > 0"
+								indeterminate
+								color="primary"
+								size="20"
+								width="2"
+							></v-progress-circular>
+							<v-icon v-else color="success" size="20">mdi-check-circle</v-icon>
+						</div>
+
+						<!-- Live Stream Text -->
+						<div class="d-flex flex-column flex-grow-1 overflow-hidden mr-3">
+							<span class="text-caption font-weight-bold text-truncate">
+								{{ activeJobDescription || 'Console Ready' }}
+							</span>
+							<span class="text-caption text-medium-emphasis font-monospace text-truncate">
+								{{ activeJobLastLine || 'Waiting for output...' }}
+							</span>
+						</div>
+
+						<!-- Toggle Chevron -->
+						<v-btn
+							icon
+							variant="text"
+							size="small"
+							density="comfortable"
+							:style="{ transform: view_console.terminal_open ? 'rotate(180deg)' : 'rotate(0deg)' }"
+						>
+							<v-icon>mdi-chevron-up</v-icon>
+						</v-btn>
 					</div>
-					</v-btn>
-				</template>
-				<span>View Task Activity</span>
-				</v-tooltip>
-			</v-col>
-			<v-col cols="1" class="text-right">
-				<v-btn-group style="position: relative; top: -8px;"><v-btn icon="mdi-menu" variant="text" size="small" @click="view_console.show = false"></v-btn></v-btn-group>
-			</v-col>
-			</v-row>
-		</v-sheet>
-		</v-navigation-drawer>
+				</v-card>
+			</v-fade-transition>
+		</div>
 		<v-snackbar :timeout="3000" :multi-line="true" v-model="snackbar.show" style="z-index: 9999999;">
 			{{ snackbar.message }}
 			<v-btn variant="text" @click.native="snackbar.show = false">Close</v-btn>
@@ -9088,7 +9325,26 @@ const app = createApp({
 		upload: [],
 		selected_site: {},
 		active_console: 0,
-		view_console: { show: false, open: false },
+		view_console: { show: false, terminal_open: false, show_sidebar: true, fullscreen: false, selected_targets: [], search: '', sidebar_tab: 'system' },
+			terminal_schedule: {
+			show: false,
+			date: "",
+			date_obj: null,
+			time: "",
+			menu_date: false,
+			menu_time: false,
+			loading: false
+		},
+		system_tools: [
+			{ title: 'Apply HTTPS Urls', icon: 'mdi-rocket-launch', method: 'viewApplyHttpsUrlsBulk' },
+			{ title: 'Deploy Defaults', icon: 'mdi-refresh', method: 'siteDeployBulk' },
+			{ title: 'Toggle Site Status', icon: 'mdi-toggle-switch', method: 'toggleSiteBulk' },
+			{ title: 'Manual Sync Details', icon: 'mdi-sync', method: 'bulkSyncSites' },
+			{ title: 'Add Plugin', icon: 'mdi-plus-box', method: 'addPluginBulk' },
+			{ title: 'Add Theme', icon: 'mdi-plus', method: 'addThemeBulk' },
+			{ title: 'New Log Entry', icon: 'mdi-checkbox-marked', method: 'showLogEntryBulk', adminOnly: true },
+			{ title: 'Open in Browser', icon: 'mdi-open-in-new', method: 'bulkactionLaunch' },
+		],
 		search: null,
 		users_search: "",
 		sites_selected: [],
@@ -9229,6 +9485,19 @@ const app = createApp({
 				});
 			}
 		},
+		'view_console.terminal_open'(val) {
+			if (val) {
+				// Scroll to bottom immediately upon opening
+				this.scrollToTerminalBottom();
+				
+				// Focus the input field for immediate typing
+				setTimeout(() => {
+					if (this.$refs.terminalInput) {
+						this.$refs.terminalInput.focus();
+					}
+				}, 100);
+			}
+		},
 		'dialog_site.environment_selected.expanded_backups': function(newlyExpandedIds, previouslyExpandedIds) {
 			const siteId = this.dialog_site.site.site_id;
 
@@ -9317,6 +9586,23 @@ const app = createApp({
 			path = window.location.pathname.replace( this.configurations.path, "/" )
 			this.updateRoute( path )
 		})
+		 window.addEventListener('keydown', (e) => {
+			// Check for Cmd (Mac) or Ctrl (Windows/Linux) + K
+			if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+				e.preventDefault(); // Prevent browser search bar from opening
+				
+				// Toggle terminal visibility
+				this.view_console.terminal_open = !this.view_console.terminal_open;
+				if (this.view_console.terminal_open) {
+					this.view_console.show = true;
+				}
+			}
+			if (e.key === 'Escape') {
+				// If Esc is pressed, close terminal and hide the activity island
+				this.view_console.terminal_open = false;
+				this.view_console.show = false;
+			}
+		});
 		if ( typeof wpApiSettings == "undefined" ) {
 			window.history.pushState( {}, 'login', window.location.origin + this.configurations.path + 'login' )
 			this.route = "login"
@@ -10445,6 +10731,443 @@ const app = createApp({
                 this.snackbar.show = true;
             });
         },
+		sortEnvironments(environments) {
+			if (!environments || !Array.isArray(environments)) return [];
+			// Create a copy to prevent mutation warnings
+			return [...environments].sort((a, b) => {
+				// Production always comes first
+				if (a.environment === 'Production') return -1;
+				if (b.environment === 'Production') return 1;
+				
+				// Staging comes second
+				if (a.environment === 'Staging') return -1;
+				if (b.environment === 'Staging') return 1;
+				
+				// Otherwise sort alphabetically
+				return a.environment.localeCompare(b.environment);
+			});
+		},
+		getVisibleEnvironments(site) {
+			if (!site.environments) return [];
+			const matched = site.environments.filter(env => this.isEnvironmentMatched(env));
+			return this.sortEnvironments(matched);
+		},
+		isEnvMatch(env) {
+			if (!this.search && this.combinedAppliedFilters.length === 0) return true;
+			
+			let match = true;
+			const searchLower = this.search ? this.search.toLowerCase() : '';
+
+			// Search matches home_url or username
+			if (searchLower) {
+				match = (env.home_url && env.home_url.toLowerCase().includes(searchLower)) ||
+						(env.username && env.username.toLowerCase().includes(searchLower));
+			}
+
+			// Advanced filters (Themes/Plugins)
+			if (match && this.combinedAppliedFilters.length > 0) {
+				match = this.combinedAppliedFilters.every(filter => {
+					const list = filter.type === 'themes' ? env.themes : env.plugins;
+					return list && list.some(item => item.name === filter.name);
+				});
+			}
+
+			return match;
+		},
+		isEnvironmentMatched(env) {
+			// 1. Text Search (Matches URL or Username)
+			const searchLower = this.search ? this.search.toLowerCase() : '';
+			let searchMatch = true;
+			if (searchLower) {
+				searchMatch = (env.home_url && env.home_url.toLowerCase().includes(searchLower)) ||
+							(env.username && env.username.toLowerCase().includes(searchLower));
+			}
+
+			// 2. API Filter Logic (Themes/Plugins/Core)
+			// If advanced filters are active, we check the list of IDs returned by the server
+			let filterMatch = true;
+			if (this.combinedAppliedFilters.length > 0) {
+				
+				// Prevent flash of 0 results while waiting for API response
+				if (this.sites_loading) {
+					return true;
+				}
+
+				// Cast IDs to strings/numbers consistently if needed, but usually types match from JSON
+				filterMatch = this.filtered_environment_ids.includes(env.environment_id);
+			}
+
+			return searchMatch && filterMatch;
+		},
+		selectAllMatchesToTerminal() {
+			const targets = [];
+			
+			// Iterate through currently visible sites
+			this.filteredSites.forEach(site => {
+				// Iterate through that site's environments
+				if (site.environments) {
+					site.environments.forEach(env => {
+						// Check if the specific environment matches current filters
+						if (this.isEnvironmentMatched(env)) {
+							// Create the target object expected by the console
+							targets.push({
+								site_id: site.site_id,
+								name: site.name,
+								environment_id: env.environment_id,
+								environment: env.environment,
+								home_url: env.home_url
+							});
+						}
+					});
+				}
+			});
+
+			if (targets.length === 0) {
+				this.snackbar.message = "No environments match current filters.";
+				this.snackbar.show = true;
+				return;
+			}
+
+			this.view_console.selected_targets = targets;
+			this.view_console.terminal_open = true;
+			this.view_console.show_sidebar = true;
+			this.view_console.show = true
+		},
+		// Open the global terminal targeting the currently selected environment in the dialog
+		openTerminalForCurrentEnv( focusInput = true ) {
+			const site = this.dialog_site.site;
+			const env = this.dialog_site.environment_selected;
+			
+			// 1. Set the target
+			this.view_console.selected_targets = [{
+				site_id: site.site_id,
+				name: site.name,
+				environment_id: env.environment_id,
+				environment: env.environment,
+				home_url: env.home_url
+			}];
+
+			// 2. Open the UI
+			this.view_console.terminal_open = true;
+			this.view_console.show_sidebar = true;
+			this.view_console.show = true;
+
+			// 3. Focus input
+			if (focusInput) {
+				this.$nextTick(() => {
+					if (this.$refs.terminalInput) {
+						this.$refs.terminalInput.focus();
+					}
+				});
+			}
+		},
+		
+		// Bridge existing actions to use the terminal UI if desired, 
+		// or just helper to run specific recipes from the UI cards
+		runRecipeFromUI(recipe) {
+			this.openTerminalForCurrentEnv(false);
+			// Pre-fill the code
+			this.script.code = recipe.content;
+			// Execute immediately? Or let user review? 
+			// Let's preview it in the input for safety as per terminal pattern
+			this.$nextTick(() => {
+				if (this.$refs.terminalInput) {
+					this.$refs.terminalInput.focus();
+				}
+			});
+		},
+		runSystemTool(methodName) {
+			if (this.view_console.selected_targets.length === 0) {
+				this.snackbar.message = "Please select at least one target environment first.";
+				this.snackbar.show = true;
+				return;
+			}
+
+			// Map Terminal targets to the format existing bulk methods expect (sites_selected)
+			// We temporarily sync the selections so the existing dialogs work.
+			this.sites_selected = this.view_console.selected_targets.map(t => {
+				return this.sites.find(s => s.site_id == t.site_id);
+			}).filter(Boolean);
+
+			// Set the bulk environment to match the terminal's context
+			// Note: This logic assumes all selected targets share the same env (Prod/Staging) 
+			// or defaults to the first selected one.
+			this.dialog_bulk_tools.environment_selected = this.view_console.selected_targets[0].environment;
+
+			// Call the existing method
+			this[methodName]();
+		},
+		runScript( site_id, environment_id = null ) {
+			let env;
+			
+			if ( environment_id ) {
+				// Find specific environment passed from UI
+				env = this.environments.find(e => e.environment_id == environment_id);
+			} else {
+				// Fallback to Production if not specified
+				env = this.environments.find(e => e.environment === 'Production' && e.site_id == site_id );
+			}
+
+			if ( !env ) {
+				this.view_console.terminal_open = true;
+				this.view_console.show_sidebar = true;
+				return
+			}
+			this.view_console.selected_targets = [ env ];
+
+			// Open terminal and sidebar
+			this.view_console.terminal_open = true;
+			this.view_console.show_sidebar = true;
+
+			// Focus the input field
+			this.$nextTick(() => {
+				if (this.$refs.terminalInput) {
+					this.$refs.terminalInput.focus();
+				}
+			});
+		},
+		openQuickRun(site) {
+			// Set the global site context
+			this.dialog_site.site = site;
+
+			// Auto-select the production environment of the clicked site in the terminal
+			if (site.environments && site.environments.length > 0) {
+				// Find production or default to the first available environment
+				const env = site.environments.find(e => e.environment === 'Production') || site.environments[0];
+				this.view_console.selected_targets = [{
+					unique_id: `${site.site_id}_${env.environment}`,
+					site_id: site.site_id,
+					site_name: site.name,
+					environment_id: env.environment_id,
+					environment: env.environment,
+					home_url: env.home_url
+				}];
+			}
+
+			// Open terminal and sidebar
+			this.view_console.terminal_open = true;
+			this.view_console.show_sidebar = true;
+
+			// Focus the input field for immediate typing
+			this.$nextTick(() => {
+				if (this.$refs.terminalInput) {
+					this.$refs.terminalInput.focus();
+				}
+			});
+		},
+		scrollToTerminalBottom() {
+			this.$nextTick(() => {
+				const terminal = this.$refs.terminalBody;
+				// Use .$el if it's a component, or just the ref if it's a standard element (v-card-text)
+				const element = terminal.$el || terminal; 
+				if (element) {
+					element.scrollTop = element.scrollHeight;
+				}
+			});
+		},
+		scrollToTerminalBottom() {
+			this.$nextTick(() => {
+				const terminal = this.$refs.terminalBody;
+				if (terminal) {
+					terminal.scrollTop = terminal.scrollHeight;
+				}
+			});
+		},
+
+		toggleFullscreen() {
+			this.view_console.fullscreen = !this.view_console.fullscreen;
+		},
+
+		// 2. Execute from bottom input
+		executeTerminalCommand() {
+			if (!this.script.code || this.script.code.trim() === "") return;
+
+			const targets = this.view_console.selected_targets;
+
+			if (!targets || targets.length === 0) {
+				this.snackbar.message = "Please select at least one target environment.";
+				this.snackbar.show = true;
+				this.view_console.show_sidebar = true;
+				return;
+			}
+			
+			const targetPayload = targets.map(t => {
+				// If we have an explicit environment_id, prefer that
+				if (t.environment_id) return { enviroment_id: t.environment_id }; // Note typo 'enviroment_id' in legacy API if applicable
+				
+				// Fallback or just passing metadata if your API handles it differently
+				return { site_id: t.site_id, environment: t.environment };
+			});
+
+			const description = targets.length === 1 
+				? `Running command on ${targets[0].home_url}`
+				: `Running command on ${targets.length} environments`;
+
+			// 1. Clear Input
+			const cmd = this.script.code;
+			this.script.code = "";
+
+			// 2. Start Job Entry
+			const job_id = Math.round((new Date()).getTime());
+			this.jobs.push({ 
+				"job_id": job_id, 
+				"description": description, 
+				"status": "queued", 
+				"stream": [],
+				"created_at": new Date()
+			});
+
+			// 3. Call Bulk Endpoint
+			// This reuses the logic from 'runCustomCodeBulkEnvironments'
+			axios.post(`/wp-json/captaincore/v1/run/code`, {
+				environments: targetPayload.map(t => t.enviroment_id || t), // Adjust based on your exact API needs
+				code: cmd
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				// Attach WebSocket ID
+				const job = this.jobs.find(j => j.job_id === job_id);
+				if (job) {
+					job.job_id = response.data; // Server returns the actual job token
+					this.runCommand(response.data);
+				}
+				this.scrollToTerminalBottom();
+			})
+			.catch(error => {
+				const job = this.jobs.find(j => j.job_id === job_id);
+				if (job) {
+					job.status = "error";
+					job.stream.push("Error starting command: " + (error.response?.data?.message || error.message));
+				}
+			});
+
+			// 4. Focus back
+			this.$nextTick(() => {
+				if(this.$refs.terminalInput) this.$refs.terminalInput.focus();
+			});
+		},
+
+		// 3. Populate input when clicking a recipe (instead of auto-running)
+		previewRecipeInInput(recipe) {
+			this.script.code = recipe.content;
+			this.$nextTick(() => {
+				this.$refs.terminalInput.focus();
+			});
+		},
+
+		// 4. Handle switching sites from the terminal sidebar
+		switchTerminalSite(newSite) {
+			// Update the global context used by runCustomCode
+			this.dialog_site.site = newSite;
+			// Attempt to set environment (default to Production)
+			if (newSite.environments && newSite.environments.length > 0) {
+				this.dialog_site.environment_selected = newSite.environments[0];
+			} else {
+				// Fallback if detailed data isn't loaded
+				this.dialog_site.environment_selected = { environment: "Production", home_url: newSite.name };
+			}
+		},
+		openProductionSite(site) {
+			let url = site.name; // Default fallback
+			
+			// Try to find Production environment URL
+			if (site.environments) {
+				const prod = site.environments.find(e => e.environment === 'Production');
+				if (prod && prod.home_url) {
+					url = prod.home_url;
+				}
+			}
+			
+			// Ensure protocol exists
+			if (!url.startsWith('http')) {
+				url = 'https://' + url;
+			}
+			
+			window.open(url, '_blank');
+		},
+		openEnvironmentTool(site, env, slug) {
+			// 1. Tell the dialog which environment ID we want to load
+			this.dialog_site.desired_environment_id = env.environment_id;
+
+			// 2. Construct path. If slug is empty, go to main info page
+			const path = slug ? `/sites/${site.site_id}/${slug}` : `/sites/${site.site_id}`;
+
+			// 3. Navigate
+			this.goToPath(path);
+		},
+		onTerminalDateChange(newDate) {
+			this.terminal_schedule.date = dayjs(newDate).format('YYYY-MM-DD');
+			this.terminal_schedule.menu_date = false;
+		},
+
+		openTerminalSchedule() {
+			if (!this.script.code || this.script.code.trim() === "") return;
+			
+			if (this.view_console.selected_targets.length === 0) {
+				this.snackbar.message = "Please select at least one target environment.";
+				this.snackbar.show = true;
+				return;
+			}
+
+			// Set default time to tomorrow 5am or next hour
+			const tomorrow = dayjs().add(1, 'day');
+			this.terminal_schedule.date = tomorrow.format('YYYY-MM-DD');
+			this.terminal_schedule.date_obj = new Date(tomorrow); // For v-date-picker model
+			this.terminal_schedule.time = "05:00";
+			this.terminal_schedule.show = true;
+		},
+
+		confirmTerminalSchedule() {
+			this.terminal_schedule.loading = true;
+			const targets = this.view_console.selected_targets;
+			const code = this.script.code;
+			const promises = [];
+
+			// Determine environment IDs. Handle both legacy object format and new format if mixed.
+			// Similar logic to executeTerminalCommand payload preparation.
+			targets.forEach(target => {
+				const envId = target.environment_id || target.enviroment_id; // Handle typo if present in data
+				
+				if (envId) {
+					const payload = {
+						environment_id: envId,
+						code: code,
+						run_at: {
+							time: this.terminal_schedule.time,
+							date: this.terminal_schedule.date,
+							timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+						}
+					};
+
+					const req = axios.post(`/wp-json/captaincore/v1/scripts/schedule`, payload, {
+						headers: { 'X-WP-Nonce': this.wp_nonce }
+					});
+					promises.push(req);
+				}
+			});
+
+			Promise.all(promises)
+				.then(() => {
+					this.snackbar.message = `Script scheduled for ${targets.length} environment(s).`;
+					this.snackbar.show = true;
+					this.terminal_schedule.show = false;
+					this.script.code = ""; // Clear input after scheduling
+					
+					// If we are currently viewing the environment in the background, refresh scripts list
+					if (this.dialog_site.environment_selected && this.dialog_site.site.site_id) {
+						this.fetchSiteEnvironments(this.dialog_site.site.site_id);
+					}
+				})
+				.catch(error => {
+					console.error("Error scheduling scripts:", error);
+					this.snackbar.message = "Error scheduling scripts. Check console.";
+					this.snackbar.show = true;
+				})
+				.finally(() => {
+					this.terminal_schedule.loading = false;
+				});
+		},
 		viewJob( job_id ) {
 			this.dialog_job.task = this.jobs.filter( j => j.job_id == job_id )[0];
 			this.active_console = 4
@@ -10474,40 +11197,44 @@ const app = createApp({
 			this.view_console.open = false
 			this.active_console = 0
 		},
-		magicLoginSite( site_id, user ) {
-			// Adds new job
-			job_id = Math.round((new Date()).getTime());
-			environment = this.dialog_site.environment_selected.environment.toLowerCase()
-			description = "Magic login to " + this.dialog_site.environment_selected.home_url
-			endpoint = `/wp-json/captaincore/v1/sites/${site_id}/${environment}/magiclogin`
+		magicLoginSite( site_id, user, environment ) {
+			// Determine Environment
+			if ( ! environment ) {
+				if ( this.dialog_site && this.dialog_site.environment_selected ) {
+					environment = this.dialog_site.environment_selected.environment
+				} else {
+					environment = "production" // Fallback
+				}
+			}
+			environment = environment.toLowerCase()
+
+			let endpoint = `/wp-json/captaincore/v1/sites/${site_id}/${environment}/magiclogin`
 			if ( typeof user != "undefined" ) {
-				description = `Login as ${user.user_login} to ${this.dialog_site.environment_selected.home_url}`
 				endpoint = `/wp-json/captaincore/v1/sites/${site_id}/${environment}/magiclogin/${user.ID}`
 			}
-			this.jobs.push({"job_id": job_id,"description": description, "status": "running", "command":"login"});
+			this.snackbar.message = "Requesting magic login...";
+			this.snackbar.show = true;
 
 			axios.get( endpoint, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
 					if ( response.data.includes("There has been a critical error on this website") ) {
-						this.jobs.filter(job => job.job_id == job_id)[0].status = "error";
-						this.snackbar.message = description + " failed due to PHP error. Check server PHP logs.";
+						this.snackbar.message = "Login failed due to PHP error. Check server PHP logs.";
 						this.snackbar.show = true;
 						return
 					}
 					if ( response.data.includes("http") ) {
 						window.open( response.data.trim() );
-						this.jobs.filter(job => job.job_id == job_id)[0].status = "done";
+						this.snackbar.message = "Login successful. Opening window...";
+						this.snackbar.show = true;
 					} else {
-						this.jobs.filter(job => job.job_id == job_id)[0].status = "error";
-						this.snackbar.message = description + " failed.";
+						this.snackbar.message = "Login failed.";
 						this.snackbar.show = true;
 					}
 				})
 				.catch(error => {
-					this.jobs.filter(job => job.job_id == job_id)[0].status = "error";
-					this.snackbar.message = description + " failed.";
+					this.snackbar.message = "Login request failed.";
 					this.snackbar.show = true;
 					console.log(error.response)
 				});
@@ -12821,9 +13548,37 @@ const app = createApp({
 				});
 		},
 		accountBulkTools() {
+			// 1. Select the sites belonging to this account
 			this.sites_selected = this.dialog_account.records.sites;
+			
+			// 2. Navigate to Sites tab
 			this.goToPath('/sites');
-			this.dialog_bulk_tools.show = true;
+
+			// 3. Open Terminal
+			this.view_console.terminal_open = true;
+			this.view_console.show_sidebar = true;
+
+			// 4. Populate Terminal Targets based on the account's sites
+			// We filter to find the "Production" environment for these sites to target by default
+			const targets = [];
+			this.sites_selected.forEach(site => {
+				// Find existing site object in main list to get full env data
+				const fullSite = this.sites.find(s => s.site_id == site.site_id);
+				if (fullSite && fullSite.environments) {
+					const prod = fullSite.environments.find(e => e.environment === 'Production') || fullSite.environments[0];
+					if (prod) {
+						targets.push({
+							site_id: fullSite.site_id,
+							name: fullSite.name,
+							environment_id: prod.environment_id,
+							environment: prod.environment,
+							home_url: prod.home_url
+						});
+					}
+				}
+			});
+
+			this.view_console.selected_targets = targets;
 		},
 		editAccount() {
 			this.dialog_edit_account.show = true
@@ -16157,7 +16912,10 @@ const app = createApp({
 			this.new_plugin.sites = this.sites_selected
 			this.new_plugin.site_name = this.new_plugin.sites.length + " sites"
 			this.new_plugin.current_plugins = []
-			this.new_plugin.environment_selected = this.dialog_bulk_tools.environment_selected
+			
+			// Default to Production if multiple, or specific if mapped from terminal
+			this.new_plugin.environment_selected = "Production" 
+			
 			this.fetchPlugins()
 			this.fetchEnvatoPlugins()
 		},
@@ -16690,10 +17448,12 @@ const app = createApp({
 
 		},
 		killCommand( job_id ) {
-			job = this.jobs.filter(job => job.job_id == job_id)[0]
-			job.conn.send( '{ "token" : "'+ job.job_id +'", "action" : "kill" }' );
-			//job.conn.close();
-			job.status = "error"
+			const job = this.jobs.find(j => j.job_id == job_id);
+			if (job && job.conn && job.conn.readyState === WebSocket.OPEN) {
+				job.conn.send( JSON.stringify({ token: job.job_id, action: "kill" }) );
+				job.status = "error";
+				job.stream.push("➜ Process terminated by user.");
+			}
 		},
 		runCommand( job_id ) {
 			job = this.jobs.filter(job => job.job_id == job_id)[0]
@@ -16703,7 +17463,18 @@ const app = createApp({
 			job.conn = new WebSocket( this.socket );
 			job.conn.onopen = () => job.conn.send( '{ "token" : "'+ job.job_id +'", "action" : "start" }' );
 			
-			job.conn.onmessage = (session) => self.writeSocket( job_id, session );
+			// Inside runCommand:
+			job.conn.onmessage = (session) => {
+				self.writeSocket(job_id, session);
+				self.view_console.show = true;
+				
+				if (self.view_console.terminal_open) {
+					// Use a small timeout to allow Vue to render text height changes
+					setTimeout(() => {
+						self.scrollToTerminalBottom();
+					}, 10);
+				}
+			};
 			job.conn.onclose = () => {
 				job = self.jobs.filter(job => job.job_id == job_id)[0]
 				last_output_index = job.stream.length - 1;
@@ -17252,44 +18023,35 @@ const app = createApp({
 
 		},
 		bulkactionLaunch() {
-			if ( this.dialog_bulk.environment_selected == "Production" || this.dialog_bulk.environment_selected == "Both" ) {
-				this.sites_selected.forEach(site => window.open(site.environments[0].home_url));
+			// If the terminal is open, we should use the targets selected in the console directly
+			if (this.view_console.terminal_open && this.view_console.selected_targets.length > 0) {
+				this.view_console.selected_targets.forEach(target => {
+					if (target.home_url) {
+						// Ensure URL has a protocol
+						const url = target.home_url.startsWith('http') ? target.home_url : `https://${target.home_url}`;
+						window.open(url);
+					}
+				});
+				return;
 			}
-			if ( this.dialog_bulk.environment_selected == "Staging" || this.dialog_bulk.environment_selected == "Both" ) {
-				this.sites_selected.forEach(site => { 
-				if ( site.environments[1].home_url ) {
-						window.open( site.environments[1].home_url );
-				}
+
+			// Default behavior for the main Sites list bulk tools
+			if (this.dialog_bulk_tools.environment_selected == "Production" || this.dialog_bulk_tools.environment_selected == "Both") {
+				this.sites_selected.forEach(site => {
+					if (site.environments && site.environments[0] && site.environments[0].home_url) {
+						window.open(site.environments[0].home_url);
+					}
 				});
 			}
-		},
-		bulkactionSubmit() {
-			site_ids = this.sites.filter( site => site.selected ).map( site => site.site_id );
-			site_names = this.sites.filter( site => site.selected ).map( site => site.name );
-
-			var data = {
-			  'action': 'captaincore_install',
-				'post_id': site_ids,
-				'command': "manage",
-				'background': true,
-				'value': this.select_bulk_action,
-				'arguments': this.select_bulk_action_arguments
-		  };
-
-			var self = this;
-
-			description = "Running bulk " + this.select_bulk_action + " on " + site_names.join(" ");
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: [], "command": "manage"});
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data );
-					self.snackbar.message = description;
-					self.snackbar.show = true;
-					self.dialog = false;
-		  	});
+			if (this.dialog_bulk_tools.environment_selected == "Staging" || this.dialog_bulk_tools.environment_selected == "Both") {
+				this.sites_selected.forEach(site => {
+					// Find the staging environment specifically
+					const staging = site.environments ? site.environments.find(e => e.environment === "Staging") : null;
+					if (staging && staging.home_url) {
+						window.open(staging.home_url);
+					}
+				});
+			}
 		},
 		keepTimestampNextRun: function ( date, item ) {
 			if ( typeof item.next_run == 'undefined' ) {
@@ -17469,9 +18231,9 @@ const app = createApp({
 			this.isUnassignedFilterActive = false;
 			this.applied_theme_filters = [];
 			this.applied_plugin_filters = [];
-			// The watcher on combinedAppliedFilters will clear the version/status data.
+			this.filtered_environment_ids = []; // Clear server results
 			
-			// Manually reset all sites to be visible. The computed property will then re-evaluate.
+			// Manually reset all sites to be visible.
 			this.sites.forEach(site => {
 				site.filtered = true;
 			});
