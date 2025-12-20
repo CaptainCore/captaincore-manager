@@ -852,24 +852,31 @@ class Site {
 
     public function environments() {
         // Fetch relating environments
-        $site            = Sites::get( $this->site_id );
-        $site_details    = ( isset( $site->details ) ? json_decode( $site->details ) : (object) [] );
-        $screenshot_base = empty( $site_details->screenshot_base ) ? "" : $site_details->screenshot_base;
-        $environments    = Environments::fetch_environments( $this->site_id );
-        $upload_uri      = get_option( 'options_remote_upload_uri' );
+        $site         = Sites::get( $this->site_id );
+        $environments = Environments::fetch_environments( $this->site_id );
+        $upload_uri   = get_option( 'options_remote_upload_uri' );
        
         foreach ( $environments as $environment ) {
             $environment_name         = strtolower( $environment->environment );
             $details                  = ( isset( $environment->details ) ? json_decode( $environment->details ) : (object) [] );
             $environment->captures    = count ( self::captures( $environment_name ) );
             $environment->screenshots = [];
-            if ( intval( $environment->screenshot ) ) {
-                $screenshot_url_base       = "{$upload_uri}{$site->site}_{$site->site_id}/$environment_name/screenshots/{$screenshot_base}";
+            
+            // Extract screenshot_base from the ENVIRONMENT details, not the site details
+            $screenshot_base = empty( $details->screenshot_base ) ? "" : $details->screenshot_base;
+
+            // Pass this back to the frontend so Vue knows a screenshot exists
+            $environment->screenshot_base = $screenshot_base;
+
+            // If we have a base, construct the full URLs
+            if ( ! empty( $screenshot_base ) ) {
+                $screenshot_url_base       = "{$upload_uri}/{$site->site}_{$site->site_id}/$environment_name/screenshots/{$screenshot_base}";
                 $environment->screenshots  = [
                     'small' => "{$screenshot_url_base}_thumb-100.jpg",
                     'large' => "{$screenshot_url_base}_thumb-800.jpg"
                 ];
             }
+
             $environment->fathom_analytics = ( ! empty( $details->fathom ) ? $details->fathom : [] );
             if ( $site->provider == 'kinsta' || $site->provider == 'rocketdotnet' ) {
                 $environment->ssh = "ssh {$environment->username}@{$environment->address} -p {$environment->port}";
