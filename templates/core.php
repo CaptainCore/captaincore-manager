@@ -5755,10 +5755,21 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-row>
 					</v-alert>
 				</v-card>
-				<v-toolbar color="transparent" flat>
-					<div class="v-spacer"></div>
-					<v-text-field v-model="domain_search" append-inner-icon="mdi-magnify" label="Search" density="compact" variant="outlined" clearable autofocus hide-details flat style="max-width:300px;"></v-text-field>
-				</v-toolbar>
+				<v-row class="my-2" justify="end">
+					<v-col cols="12" md="4" lg="3">
+						<v-text-field 
+							v-model="domain_search" 
+							append-inner-icon="mdi-magnify" 
+							label="Search" 
+							density="compact" 
+							variant="outlined" 
+							clearable 
+							autofocus 
+							hide-details 
+							flat
+						></v-text-field>
+					</v-col>
+				</v-row>
 				<v-data-table
 					:headers="[{ title: 'Name', value: 'name' },{ title: 'DNS', value: 'remote_id', width: '88px' },{ title: 'Registration', value: 'provider_id', width: '120px' }]"
 					:items="domains"
@@ -6524,29 +6535,27 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
                                         </div>
 
 										<div v-else>
-											<v-list dense>
+											<v-list density="compact">
 												<v-list-item>
-													<v-list-item-content>
-														<v-list-item-subtitle>Status</v-list-item-subtitle>
-														<v-list-item-title class="text-capitalize">
-															<v-chip :color="mailgun.data.domain.state == 'active' ? 'green' : 'orange'" dark small>{{ mailgun.data.domain.state }}</v-chip>
-														</v-list-item-title>
-													</v-list-item-content>
+													<v-list-item-subtitle>Status</v-list-item-subtitle>
+													<v-list-item-title class="text-capitalize">
+														<v-chip :color="mailgun.data.domain.state == 'active' ? 'success' : 'warning'" size="small" label variant="flat">
+															{{ mailgun.data.domain.state }}
+														</v-chip>
+													</v-list-item-title>
 												</v-list-item>
 												<v-list-item>
-													<v-list-item-content>
-														<v-list-item-subtitle>Zone</v-list-item-subtitle>
-														<v-list-item-title>{{ mailgun.data.domain.name }}</v-list-item-title>
-													</v-list-item-content>
+													<v-list-item-subtitle>Zone</v-list-item-subtitle>
+													<v-list-item-title>{{ mailgun.data.domain.name }}</v-list-item-title>
 												</v-list-item>
 												<v-list-item>
-													<v-list-item-content>
-														<v-list-item-subtitle>Created At</v-list-item-subtitle>
-														<v-list-item-title>{{ new Date(mailgun.data.domain.created_at).toLocaleString() }}</v-list-item-title>
-													</v-list-item-content>
+													<v-list-item-subtitle>Created At</v-list-item-subtitle>
+													<v-list-item-title>{{ new Date(mailgun.data.domain.created_at).toLocaleString() }}</v-list-item-title>
 												</v-list-item>
 											</v-list>
+											
 											<v-btn color="primary" class="mt-2 mr-2" @click="viewDomainMailgunLogs(dialog_domain.domain)">View Logs</v-btn>
+											
 											<v-btn
 												color="primary"
 												@click="openMailgunDeployDialog()"
@@ -6557,7 +6566,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 												Deploy to...
 												<v-icon end>mdi-chevron-down</v-icon>
 											</v-btn>
-											<p v-if="!dialog_domain.connected_sites || dialog_domain.connected_sites.length === 0" class="mt-4 pa-4 text-grey">
+											
+											<p v-if="!dialog_domain.connected_sites || dialog_domain.connected_sites.length === 0" class="mt-4 pa-4 text-medium-emphasis text-caption">
 												No connected sites found for this domain.
 											</p>
 										</div>
@@ -7740,40 +7750,70 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-btn variant="text" @click="dialog_new_account.show = true">Add account <v-icon dark>mdi-plus</v-icon></v-btn>
 					</v-toolbar-items>
 				</v-toolbar>
-				<v-toolbar color="transparent" flat>
-					<v-spacer></v-spacer>
-					 <v-btn
-						:variant="isOutstandingFilterActive ? 'tonal' : 'outlined'"
-						size="small"
-						@click="toggleOutstandingFilter()"
-						v-if="role == 'administrator'"
-						class="mr-2">
-						{{ oustandingAccountCount }} outstanding
-					</v-btn>
+				<v-row align="center" justify="end" class="mb-4 mx-1">
+    
+					<v-col cols="12" md="auto" class="d-flex flex-wrap align-center justify-end gap-2">
+    
+				<!-- Outstanding Invoices Filter -->
+				<v-btn
+					:variant="isOutstandingFilterActive ? 'flat' : 'text'"
+					:color="isOutstandingFilterActive ? 'error' : 'medium-emphasis'"
+					size="small"
+					rounded="pill"
+					@click="toggleOutstandingFilter()"
+					v-if="role == 'administrator'"
+					class="mr-2 mb-1"
+					title="Show accounts with unpaid invoices"
+				>
+					<v-icon start icon="mdi-cash-remove"></v-icon>
+					{{ oustandingAccountCount }} Outstanding
+				</v-btn>
 
+				<!-- Empty Accounts Filter -->
+				<v-btn
+					:variant="isEmptyFilterActive ? 'flat' : 'text'"
+					:color="isEmptyFilterActive ? 'warning' : 'medium-emphasis'"
+					size="small"
+					rounded="pill"
+					@click="toggleEmptyFilter()"
+					v-if="role == 'administrator'"
+					class="mr-2 mb-1"
+					title="Show accounts with no sites, domains, or users"
+				>
+					<v-icon start icon="mdi-inbox-remove-outline"></v-icon>
+					{{ emptyAccountCount }} Empty
+				</v-btn>
+
+				<!-- Clear Filters (Animated entry) -->
+				<v-slide-x-transition>
 					<v-btn
-						:variant="isEmptyFilterActive ? 'tonal' : 'outlined'"
+						v-if="isAnyAccountFilterActive"
+						icon="mdi-filter-off"
 						size="small"
-						@click="toggleEmptyFilter()"
-						v-if="role == 'administrator'"
-						class="mr-2">
-						{{ emptyAccountCount }} empty
+						variant="text"
+						color="medium-emphasis"
+						class="mr-2 mb-1"
+						@click="clearAccountFilters()"
+						title="Clear all filters"
+					>
 					</v-btn>
+				</v-slide-x-transition>
 
-					<v-tooltip location="top" v-if="isAnyAccountFilterActive">
-						<template v-slot:activator="{ props }">
-							<v-btn
-								v-bind="props"
-								icon="mdi-filter-off"
-								size="small"
-								variant="tonal"
-								@click="clearAccountFilters()">
-							</v-btn>
-						</template>
-						<span>Clear Filters</span>
-					</v-tooltip>
-					<v-text-field class="mx-4" variant="outlined" density="compact" v-model="account_search" autofocus label="Search" clearable light hide-details append-inner-icon="mdi-magnify" style="max-width:300px;"></v-text-field>	
-				</v-toolbar>
+			</v-col>
+
+					<v-col cols="12" md="4" lg="3">
+						<v-text-field 
+							variant="outlined" 
+							density="compact" 
+							v-model="account_search" 
+							autofocus 
+							label="Search" 
+							clearable 
+							hide-details 
+							append-inner-icon="mdi-magnify"
+						></v-text-field> 
+					</v-col>
+				</v-row>
 				<v-card-text>
 					<v-data-table
 						:headers="[
@@ -8384,9 +8424,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-container v-if="route == 'sites' && role == 'administrator' && ! loading_page && dialog_site.step == 2" class="mt-5">
 				<v-card color="transparent" density="compact" flat subtitle="Administrator Options">
 					<template v-slot:actions>
-						<v-btn size="small" variant="outlined" @click="dialog_mailgun_config.show = true" prepend-icon="mdi-email-search">
-							Configure Mailgun
-						</v-btn>
 						<v-btn size="small" variant="outlined" @click="copySite(dialog_site.site.site_id)" prepend-icon="mdi-content-duplicate">
 							Copy Site
 						</v-btn>
@@ -9022,8 +9059,8 @@ const vuetify = createVuetify({
 					info: '#2196F3',
 					success: '#4CAF50',
 					warning: '#FFC107',
-                    surface: '#212121',
-                    background: '#121212',
+					surface: '#212121',
+					background: '#121212',
 				}
 			}
 		}
@@ -11047,14 +11084,13 @@ const app = createApp({
 		selectAllMatchesToTerminal() {
 			const targets = [];
 			
-			// Iterate through currently visible sites
+			// Iterate through currently visible sites (filteredSites)
 			this.filteredSites.forEach(site => {
 				// Iterate through that site's environments
 				if (site.environments) {
 					site.environments.forEach(env => {
 						// Check if the specific environment matches current filters
 						if (this.isEnvironmentMatched(env)) {
-							// Create the target object expected by the console
 							targets.push({
 								site_id: site.site_id,
 								name: site.name,
@@ -11076,7 +11112,9 @@ const app = createApp({
 			this.view_console.selected_targets = targets;
 			this.view_console.terminal_open = true;
 			this.view_console.show_sidebar = true;
-			this.view_console.show = true
+			this.view_console.show = true;
+			this.snackbar.message = `${targets.length} environments selected based on filters.`;
+			this.snackbar.show = true;
 		},
 		// Open the global terminal targeting the currently selected environment in the dialog
 		openTerminalForCurrentEnv( focusInput = true ) {
