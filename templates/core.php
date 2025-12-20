@@ -1882,24 +1882,24 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-time-picker>
 						</v-menu>
 						<v-menu v-model="script.menu_date" :close-on-content-click="false" location="bottom">
-							<template v-slot:activator="{ props }">
-								<v-text-field 
-									v-model="dialog_edit_script.script.run_at_date" 
-									label="Date" 
-									prepend-icon="mdi-calendar" 
-									readonly 
-									v-bind="props" 
-									variant="underlined">
-								</v-text-field>
-							</template>
-							<v-date-picker 
+						<template v-slot:activator="{ props }">
+							<v-text-field 
 								v-model="dialog_edit_script.script.run_at_date" 
-								@update:modelValue="script.menu_date = false" 
-								hide-header 
-								scrollable 
-								:min="new Date().toISOString().substr(0, 10)">
-							</v-date-picker>
-						</v-menu>
+								label="Date" 
+								prepend-icon="mdi-calendar" 
+								readonly 
+								v-bind="props" 
+								variant="underlined">
+							</v-text-field>
+						</template>
+						<v-date-picker 
+							v-model="dialog_edit_script.script.run_at_date" 
+							@update:model-value="script.menu_date = false" 
+							hide-header 
+							scrollable 
+							:min="new Date().toISOString().substr(0, 10)">
+						</v-date-picker>
+					</v-menu>
 						<v-textarea 
 							label="Code" 
 							auto-grow 
@@ -2708,8 +2708,15 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-card v-if="route == 'sites'" id="sites" flat border="thin" rounded="xl">
 			<v-toolbar v-show="dialog_site.step == 1 && sites.length > 0" id="site_listings" flat color="transparent">
 				<v-toolbar-title>
-					<span v-if="isAnySiteFilterActive">Showing {{ filteredSites.length }} sites</span>
-					<span v-else>Listing {{ sites.length }} sites</span>
+					<span v-if="sites_loading">Searching...</span>
+					<span v-else-if="isAnySiteFilterActive">
+						Showing {{ filteredSites.length }} sites
+						<small class="text-caption text-medium-emphasis ml-1">({{ filteredEnvironmentsCount }} environments)</small>
+					</span>
+					<span v-else>
+						Listing {{ sites.length }} sites
+						<small class="text-caption text-medium-emphasis ml-1">({{ totalEnvironmentsCount }} environments)</small>
+					</span>
 				</v-toolbar-title>
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
@@ -3003,29 +3010,38 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-card-text>
 				<v-card-text v-show="sites.length > 0">
-					<v-toolbar color="transparent" flat>
-						<v-spacer></v-spacer>
-
+					<v-row align="center" justify="end" class="my-1">
+						<v-col cols="12" md="auto" class="d-flex flex-wrap align-center justify-end gap-2">
 						<v-btn
-							:variant="isUnassignedFilterActive ? 'tonal' : 'outlined'"
+							:variant="isUnassignedFilterActive ? 'flat' : 'text'"
+							:color="isUnassignedFilterActive ? 'warning' : 'medium-emphasis'"
 							size="small"
+							rounded="pill"
 							@click="toggleUnassignedFilter()"
 							v-if="role == 'administrator'"
-							class="mr-2">
-							{{ unassignedSiteCount }} unassigned
+							class="mr-2 mb-1"
+						>
+							<v-icon start icon="mdi-alert-circle-outline"></v-icon>
+							{{ unassignedSiteCount }} Unassigned
 						</v-btn>
 
+						<!-- Theme Filter -->
 						<v-menu offset-y v-model="themeFilterMenu" :close-on-content-click="false">
 							<template v-slot:activator="{ props }">
 								<v-btn
 									v-bind="props"
 									size="small"
-									class="mr-2"
-									:variant="themeFiltersApplied ? 'tonal' : 'outlined'">
-									Filter by Theme <v-icon right dark>mdi-menu-down</v-icon>
+									rounded="pill"
+									class="mr-2 mb-1"
+									:variant="themeFiltersApplied ? 'tonal' : 'text'"
+									:color="themeFiltersApplied ? 'primary' : 'medium-emphasis'"
+								>
+									<v-icon start>mdi-palette</v-icon>
+									Theme
+									<v-icon end>mdi-chevron-down</v-icon>
 								</v-btn>
 							</template>
-							<v-card width="350">
+							<v-card width="350" rounded="xl" elevation="4">
 								<v-card-text>
 									<v-autocomplete
 										:model-value="applied_theme_filters"
@@ -3033,14 +3049,15 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										:items="site_filters.filter(f => f.type === 'themes')"
 										item-title="search"
 										label="Select Theme"
-										variant="underlined"
+										variant="outlined"
+										density="compact"
 										autofocus
 										return-object
 										multiple
 										chips
 										closable-chips
 										hide-details
-										:menu-props="{ maxWidth: '350px' }"
+										color="primary"
 									></v-autocomplete>
 								</v-card-text>
 							</v-card>
@@ -3051,12 +3068,17 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-btn
 									v-bind="props"
 									size="small"
-									class="mr-2"
-									:variant="pluginFiltersApplied ? 'tonal' : 'outlined'">
-									Filter by Plugin <v-icon right dark>mdi-menu-down</v-icon>
+									rounded="pill"
+									class="mr-2 mb-1"
+									:variant="pluginFiltersApplied ? 'tonal' : 'text'"
+									:color="pluginFiltersApplied ? 'primary' : 'medium-emphasis'"
+								>
+									<v-icon start>mdi-power-plug</v-icon>
+									Plugin
+									<v-icon end>mdi-chevron-down</v-icon>
 								</v-btn>
 							</template>
-							<v-card width="350">
+							<v-card width="350" rounded="xl" elevation="4">
 								<v-card-text>
 									<v-autocomplete
 										:model-value="applied_plugin_filters"
@@ -3064,60 +3086,68 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										:items="site_filters.filter(f => f.type === 'plugins')"
 										item-title="search"
 										label="Select Plugin"
-										variant="underlined"
+										variant="outlined"
+										density="compact"
 										autofocus
 										return-object
 										multiple
 										chips
 										closable-chips
 										hide-details
-										:menu-props="{ maxWidth: '350px' }"
+										color="primary"
 									></v-autocomplete>
 								</v-card-text>
 							</v-card>
 						</v-menu>
 
-						<v-tooltip location="top" v-if="isAnySiteFilterActive">
-							<template v-slot:activator="{ props }">
-								<v-btn
-									v-bind="props"
-									icon="mdi-filter-off"
-									size="small"
-									variant="tonal"
-									@click="clearSiteFilters()">
-								</v-btn>
-							</template>
-							<span>Clear Filters</span>
-						</v-tooltip>
+						<!-- Clear Filters (Only shows when active) -->
+						<v-slide-x-transition>
+							<v-btn
+								v-if="isAnySiteFilterActive"
+								icon="mdi-filter-off"
+								size="small"
+								variant="text"
+								color="error"
+								class="mr-2 mb-1"
+								@click="clearSiteFilters()"
+								title="Clear all filters"
+							>
+							</v-btn>
+						</v-slide-x-transition>
 
 						<v-btn-toggle
 							v-if="totalAdvancedFilters > 1"
 							v-model="filter_logic"
 							mandatory
 							density="compact"
-							class="ml-2"
+							class="mb-1" 
 							variant="outlined"
+							rounded="xl"
 							divided
+							color="primary"
+							style="height: 28px;"
 						>
-							<v-btn value="and">AND</v-btn>
-							<v-btn value="or">OR</v-btn>
+							<v-btn value="and" size="small" class="text-caption">AND</v-btn>
+							<v-btn value="or" size="small" class="text-caption">OR</v-btn>
 						</v-btn-toggle>
 
+					</v-col>
 
-						<v-text-field
-							v-model="search"
-							autofocus
-							density="compact"
-							variant="outlined"
-							label="Search"
-							clearable
-							hide-details
-							append-inner-icon="mdi-magnify"
-							spellcheck="false"
-							style="max-width:300px;"
-							class="ml-4">
-						</v-text-field>
-					</v-toolbar>
+						<v-col cols="12" md="3">
+							<v-text-field
+								v-model="search"
+								autofocus
+								density="compact"
+								variant="outlined"
+								label="Search"
+								clearable
+								hide-details
+								append-inner-icon="mdi-magnify"
+								spellcheck="false"
+							>
+							</v-text-field>
+						</v-col>
+					</v-row>
 					<!-- Version and Status Filters -->
 					<v-card color="transparent" class="pt-4" flat v-if="site_filter_version || site_filter_status">
 					<v-row>
@@ -3214,83 +3244,89 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<template v-slot:default="{ items }">
 							<v-row dense>
 								<v-col cols="12" v-for="item in items" :key="item.raw.site_id">
-									
 									<v-hover v-slot="{ isHovering, props }">
 										<v-card 
 											v-bind="props"
-											class="rounded-xl transition-swing group"
+											class="rounded-lg transition-swing mb-2"
 											elevation="0"
 											border="thin"
 											color="surface"
-											:style="isHovering ? 'border-color: rgb(var(--v-border-color), 0.2) !important;' : 'border-color: rgba(var(--v-border-color), 0.1) !important;'"
-											style="transition: border-color 0.2s ease-in-out;"
+											:style="isHovering ? 'border-color: rgb(var(--v-border-color), 0.3) !important;' : 'border-color: rgba(var(--v-border-color), 0.1) !important;'"
 										>
-											<div class="d-flex flex-wrap flex-sm-nowrap align-center pa-3">
-												
-												<div class="flex-shrink-0 mr-4 position-relative cursor-pointer" @click="goToPath(`/sites/${item.raw.site_id}`)">
-													<v-img
-														:src="`${remote_upload_uri}${item.raw.site}_${item.raw.site_id}/production/screenshots/${item.raw.screenshot_base}_thumb-800.jpg`"
-														width="160"
-														aspect-ratio="1.6"
-														cover
-														class="rounded-lg border-thin"
-														v-if="item.raw.screenshot_base"
-														lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp"
-													>
-														<template v-slot:placeholder>
-														<div class="d-flex align-center justify-center fill-height bg-grey-lighten-4">
-															<v-progress-circular
-															color="grey-lighten-1"
-															indeterminate
-															size="20"
-															></v-progress-circular>
-														</div>
-														</template>
-														<div 
-															v-if="isHovering"
-															class="position-absolute w-100 h-100"
-															style="background: rgba(0,0,0,0.03);"
-														></div>
-													</v-img>
-													
-													<v-sheet 
-														v-else 
-														width="160" 
-														height="100" 
-														color="surface-variant" 
-														class="rounded-lg d-flex align-center justify-center border-thin overflow-hidden"
-													>
-														<v-icon class="text-medium-emphasis" size="40">mdi-monitor-shimmer</v-icon>
-													</v-sheet>
-												</div>
+											<a :href="`${configurations.path}sites/${item.raw.site_id}`" class="px-4 py-1 d-flex align-center border-b bg-accent cursor-pointer text-decoration-none text-high-emphasis" @click.prevent="goToPath(`/sites/${item.raw.site_id}`)">
+												<v-icon icon="mdi-web" size="small" class="mr-2 opacity-60" color="primary"></v-icon>
+												<h3 class="text-subtitle-2 font-weight-black">
+													{{ item.raw.name }}
+												</h3>
+												<v-spacer></v-spacer>
+												<v-btn variant="text" size="x-small" color="primary" class="font-weight-bold" tag="span">
+													Manage Site
+												</v-btn>
+											</a>
 
-												<div class="flex-grow-1 pr-4" style="min-width: 200px;">
-													
-													<div class="d-flex align-center flex-wrap gap-2">
-														<h3 class="text-body-1 font-weight-bold text-high-emphasis mr-1 text-truncate cursor-pointer text-decoration-none hover-primary" @click="goToPath(`/sites/${item.raw.site_id}`)">
-															{{ item.raw.name }}
-														</h3>
-														<v-chip size="x-small" variant="tonal" :color="parseFloat(item.raw.core) < 6.0 ? 'warning' : 'default'" class="font-weight-bold" label>
-															WP {{ item.raw.core }}
-														</v-chip>
-													</div>
-
-													<div class="mb-2" style="line-height:1em;">
-														<a 
-															v-if="item.raw.home_url || item.raw.domain"
-															:href="item.raw.home_url || '//' + item.raw.domain" 
-															target="_blank" 
-															class="text-caption text-medium-emphasis text-decoration-none hover-primary d-inline-flex align-center"
+											<template v-for="(env, index) in getVisibleEnvironments(item.raw)" :key="env.environment_id">
+												<div class="d-flex flex-wrap flex-sm-nowrap align-center pa-2 px-4">
+													<div 
+														class="flex-shrink-0 mr-5 position-relative cursor-pointer" 
+														@click="openEnvironmentTool(item.raw, env, '')"
+														title="Open Site Info"
+													>
+														<v-img
+															:src="`${remote_upload_uri}${item.raw.site}_${item.raw.site_id}/${env.environment.toLowerCase()}/screenshots/${env.screenshot_base}_thumb-800.jpg`"
+															width="150"
+															aspect-ratio="1.6"
+															cover
+															class="rounded-lg border-thin bg-grey-lighten-4 elevation-1"
+															v-if="env.screenshot_base"
+															lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp"
 														>
-															{{ item.raw.home_url || item.raw.domain }} 
-															<v-icon size="16" class="ml-1 opacity-70" icon="mdi-open-in-new"></v-icon>
-														</a>
-														<span v-else class="text-caption text-disabled font-italic">
-															No URL detected
-														</span>
-													</div>
+															<template v-slot:placeholder>
+																<div class="d-flex align-center justify-center fill-height bg-grey-lighten-4">
+																	<v-progress-circular color="grey-lighten-1" indeterminate size="16"></v-progress-circular>
+																</div>
+															</template>
+															<template v-slot:error>
+																<div class="d-flex align-center justify-center fill-height bg-surface-variant">
+																	<v-icon size="small" class="text-medium-emphasis">mdi-monitor-shimmer</v-icon>
+																</div>
+															</template>
+														</v-img>
+														
+														<v-sheet 
+																v-else 
+																width="150" 
+																height="94" 
+																color="surface-variant" 
+																class="rounded-lg d-flex align-center justify-center border-thin"
+															>
+																<v-icon size="large" class="text-medium-emphasis">mdi-monitor-shimmer</v-icon>
+															</v-sheet>
+														</div>
 
-													<div class="d-flex align-center text-caption text-medium-emphasis gap-6" style="line-height: 1em;">
+													<div class="flex-grow-1 pr-4" style="min-width: 200px;">
+														<div class="d-flex align-center mb-0">
+															<v-chip size="x-small" label class="mr-2 font-weight-black" :color="env.environment == 'Production' ? 'green-darken-1' : 'brown-darken-1'">
+																{{ env.environment.toUpperCase() }}
+															</v-chip>
+															<v-chip size="x-small" variant="tonal" class="text-caption font-weight-bold" :color="parseFloat(env.core) < 6.0 ? 'warning' : 'default'" label>
+																WP {{ env.core }}
+															</v-chip>
+														</div>
+
+														<div class="mb-1">
+															<a 
+																v-if="env.home_url"
+																:href="env.home_url" 
+																target="_blank" 
+																class="text-caption text-medium-emphasis text-decoration-none hover-primary d-inline-flex align-center"
+															>
+																{{ env.home_url }} 
+																<v-icon size="12" class="ml-1 opacity-70" icon="mdi-open-in-new"></v-icon>
+															</a>
+															<span v-else class="text-caption text-disabled font-italic">No URL detected</span>
+														</div>
+
+														<div class="d-flex align-center text-caption text-medium-emphasis gap-6" style="line-height: 1em;">
 														<div class="d-flex align-center mr-6" title="Monthly Visits">
 															<v-avatar color="surface-variant" size="28" class="mr-3">
 																<v-icon size="16">mdi-chart-bar</v-icon>
@@ -3321,69 +3357,67 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 															</div>
 														</div>
 													</div>
+													</div>
+
+													<div class="d-flex align-center justify-end flex-shrink-0 mt-3 mt-sm-0 gap-2">
+														<v-btn
+															color="primary"
+															variant="flat"
+															class="font-weight-bold text-capitalize"
+															rounded="lg"
+															prepend-icon="mdi-login-variant"
+															elevation="0"
+															@click="magicLoginSite(item.raw.site_id, undefined, env.environment)"
+														>
+															Login
+														</v-btn>
+
+														<v-menu location="bottom end">
+															<template v-slot:activator="{ props }">
+																<v-btn icon="mdi-dots-vertical" variant="text" color="medium-emphasis" v-bind="props" density="comfortable"></v-btn>
+															</template>
+															<v-list density="compact" width="240" class="rounded-lg elevation-4 py-2">
+																<v-list-item 
+																	@click="openEnvironmentTool(item.raw, env, 'updates')" 
+																	prepend-icon="mdi-history" 
+																	title="Update Logs">
+																</v-list-item>
+																
+																<v-list-item 
+																	@click="openEnvironmentTool(item.raw, env, 'backups')" 
+																	prepend-icon="mdi-cloud-upload-outline" 
+																	title="Backups">
+																</v-list-item>
+																
+																<v-list-item 
+																	@click="openEnvironmentTool(item.raw, env, 'quicksaves')" 
+																	prepend-icon="mdi-file-restore" 
+																	title="Version History">
+																</v-list-item>
+																
+																<v-list-item 
+																	@click="runScript( item.raw.site_id, env.environment_id )" 
+																	prepend-icon="mdi-console-line" 
+																	title="Run Script">
+																</v-list-item>
+																
+																<v-divider class="my-2"></v-divider>
+																
+																<v-list-item 
+																	@click="openEnvironmentTool(item.raw, env, 'visual-captures')" 
+																	prepend-icon="mdi-camera-burst" 
+																	title="Visual Captures">
+																</v-list-item>
+															</v-list>
+														</v-menu>
+													</div>
 												</div>
-
-												<div class="d-flex flex-column flex-sm-row align-end align-sm-center justify-end flex-shrink-0 mt-3 mt-sm-0 w-100 w-sm-auto pl-sm-2 gap-2">
-													
-													<v-btn
-														color="primary"
-														variant="flat"
-														class="text-capitalize font-weight-bold w-100 w-sm-auto mr-2"
-														height="42"
-														rounded="lg"
-														prepend-icon="mdi-login-variant"
-														elevation="0"
-														@click="magicLoginSite(item.raw.site_id)"
-													>
-														Login
-													</v-btn>
-
-													<v-btn 
-														variant="outlined" 
-														class="hidden-xs text-capitalize w-sm-auto"
-														height="42"
-														rounded="lg"
-														:color="isHovering ? 'primary' : 'medium-emphasis'"
-														:style="isHovering ? '' : 'border-color: rgba(var(--v-border-color), 0.3)'"
-														@click="goToPath(`/sites/${item.raw.site_id}`)"
-													>
-														Manage
-													</v-btn>
-
-													<v-menu location="bottom end">
-														<template v-slot:activator="{ props }">
-															<v-btn 
-																icon="mdi-dots-vertical" 
-																variant="text" 
-																color="medium-emphasis"
-																v-bind="props"
-																density="comfortable"
-																class="ml-1"
-															></v-btn>
-														</template>
-														<v-list density="compact" width="220" class="rounded-lg elevation-4 py-2">
-															<v-list-item @click="magicLoginSite(item.raw.site_id)" prepend-icon="mdi-login" title="Login" class="d-sm-none"></v-list-item>
-															<v-list-item :href="`${configurations.path}sites/${item.raw.site_id}/updates`" @click.prevent="goToPath(`/sites/${item.raw.site_id}/updates`)" prepend-icon="mdi-history" title="Update Logs"></v-list-item>
-															<v-list-item :href="`${configurations.path}sites/${item.raw.site_id}/backups`" @click.prevent="goToPath(`/sites/${item.raw.site_id}/backups`)" prepend-icon="mdi-cloud-upload-outline" title="Backups"></v-list-item>
-															<v-list-item :href="`${configurations.path}sites/${item.raw.site_id}/quicksaves`" @click.prevent="goToPath(`/sites/${item.raw.site_id}/quicksaves`)" prepend-icon="mdi-file-restore" title="Version History"></v-list-item>
-															<v-divider class="my-2"></v-divider>
-															<v-list-item :href="`${configurations.path}sites/${item.raw.site_id}/visual-captures`" @click.prevent="goToPath(`/sites/${item.raw.site_id}/visual-captures`)" prepend-icon="mdi-camera-burst" title="Visual Captures"></v-list-item>
-														</v-list>
-													</v-menu>
-
-												</div>
-											</div>
+												<v-divider v-if="index < getVisibleEnvironments(item.raw).length - 1" class="mx-4 opacity-30"></v-divider>
+											</template>
 										</v-card>
 									</v-hover>
 								</v-col>
 							</v-row>
-						</template>
-						<template v-slot:footer="{ page, pageCount, prevPage, nextPage }">
-							<div class="d-flex align-center justify-center pa-6">
-								<v-btn icon="mdi-arrow-left" variant="tonal" density="comfortable" rounded="circle" size="small" color="medium-emphasis" @click="prevPage" :disabled="page === 1"></v-btn>
-								<span class="mx-4 text-body-2 font-weight-medium text-medium-emphasis">Page {{ page }} of {{ pageCount }}</span>
-								<v-btn icon="mdi-arrow-right" variant="tonal" density="comfortable" rounded="circle" size="small" color="medium-emphasis" @click="nextPage" :disabled="page === pageCount"></v-btn>
-							</div>
 						</template>
 					</v-data-iterator>
 
@@ -3394,13 +3428,13 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							{ title: '', key: 'thumbnail', sortable: false, width: 50 },
 							{ title: 'Name', key: 'name', align: 'left', sortable: true },
 							{ title: 'Subsites', key: 'subsites', sortable: true, width: 104 },
-							{ title: 'WordPress', key: 'core', sortable: true, width: 114 },
+							{ title: 'WordPress', key: 'current_env.core', sortable: true, width: 114 },
 							{ title: 'Visits', key: 'visits', sortable: true, width: 98 },
 							{ title: 'Storage', key: 'storage', sortable: true, width: 90 },
 							{ title: 'Provider', key: 'provider', sortable: true, width: 130 }
 						]"
-						:items="filteredSites"
-						item-value="site_id"
+						:items="flattenedSiteEnvironments"
+						item-value="unique_key"
 						ref="site_datatable"
 						:items-per-page="100"
 						:items-per-page-options="[
@@ -3409,21 +3443,58 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							{ value: 500, title: '500' },
 							{ value: -1, title: 'All' }
 						]"
-						@click:row="(event, { item }) => goToPath(`/sites/${item.site_id}`)"
+						@click:row="(event, { item }) => openEnvironmentTool(item, item.current_env, '')"
+						:loading="sites_loading"
 						hover
 					>
+						<template v-slot:no-data>
+							<div v-if="sites_loading" class="d-flex justify-center align-center py-10">
+								<v-progress-circular indeterminate color="primary"></v-progress-circular>
+							</div>
+							<div v-else>No sites found.</div>
+						</template>
+
 						<template v-slot:item.thumbnail="{ item }">
 							<v-img
-								:src="`${remote_upload_uri}${item.site}_${item.site_id}/production/screenshots/${item.screenshot_base}_thumb-100.jpg`"
-								class="elevation-1 my-1"
+								:src="`${remote_upload_uri}${item.site}_${item.site_id}/${item.current_env.environment.toLowerCase()}/screenshots/${item.current_env.screenshot_base}_thumb-100.jpg`"
+								class="elevation-1 my-1 rounded"
 								width="50"
 								aspect-ratio="1.6"
-								v-show="item.screenshot_base"
+								v-if="item.current_env.screenshot_base"
 								lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp"
+								cover
 							></v-img>
+							<v-sheet
+								v-else
+								width="50"
+								height="31"
+								color="surface-variant"
+								class="rounded d-flex align-center justify-center border-thin my-1"
+							>
+								<v-icon size="x-small" class="text-medium-emphasis">mdi-monitor-shimmer</v-icon>
+							</v-sheet>
+						</template>
+						<template v-slot:item.name="{ item }">
+							<div class="d-flex align-center">
+								<span class="font-weight-bold mr-2">{{ item.name }}</span>
+								<v-chip 
+									size="x-small" 
+									label 
+									class="font-weight-black" 
+									:color="item.current_env.environment == 'Production' ? 'green-darken-1' : 'brown-darken-1'"
+								>
+									{{ item.current_env.environment.toUpperCase() }}
+								</v-chip>
+							</div>
+							<div class="text-caption text-medium-emphasis" v-if="item.current_env.home_url">
+								{{ item.current_env.home_url }}
+							</div>
 						</template>
 						<template v-slot:item.subsites="{ item }">
 							{{ item.subsites }}<span v-show="item.subsites"> sites</span>
+						</template>
+						<template v-slot:item.current_env.core="{ item }">
+							{{ item.current_env.core }}
 						</template>
 						<template v-slot:item.visits="{ item }">
 							{{ formatLargeNumbers(item.visits) }}
@@ -3435,31 +3506,44 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							{{ formatProvider(item.provider) }}
 							<v-icon icon="mdi-cloud" color="secondary" class="ml-1 mr-0" v-show="item.provider_id && item.provider_id != 1" title="Maintenance only"></v-icon>
 						</template>
-						<template v-slot:no-data>No sites found.</template>
 					</v-data-table>
 
 					<v-data-iterator
 						v-if="toggle_site === 'grid' || toggle_site === false"
-						:items="filteredSites"
+						:items="flattenedSiteEnvironments"
 						:items-per-page="100"
 						:search="search"
 					>
+						<template v-slot:no-data>
+							<div v-if="sites_loading" class="d-flex justify-center align-center py-10">
+								<v-progress-circular indeterminate color="primary"></v-progress-circular>
+							</div>
+							<div v-else class="text-center py-10 text-medium-emphasis">No sites found.</div>
+						</template>
 						<template v-slot:default="{ items }">
 							<v-row>
-								<v-col v-for="item in items" :key="item.raw.site_id" cols="12" sm="6" md="4" lg="3">
-									<v-card @click="goToPath(`/sites/${item.raw.site_id}`)">
+								<v-col v-for="item in items" :key="item.raw.unique_key" cols="12" sm="6" md="4" lg="3">
+									<v-card @click="openEnvironmentTool(item.raw, item.raw.current_env, '')" border="thin">
 										<v-hover v-slot="{ isHovering, props }">
 											<v-img
 												v-bind="props"
-												:src="`${remote_upload_uri}${item.raw.site}_${item.raw.site_id}/production/screenshots/${item.raw.screenshot_base}_thumb-800.jpg`"
+												:src="`${remote_upload_uri}${item.raw.site}_${item.raw.site_id}/${item.raw.current_env.environment.toLowerCase()}/screenshots/${item.raw.current_env.screenshot_base}_thumb-800.jpg`"
 												:aspect-ratio="16/10"
 												cover
-												v-show="item.raw.screenshot_base"
+												v-if="item.raw.current_env.screenshot_base"
 												lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp"
 											>
 												<v-fade-transition>
-													<div v-if="!isHovering" style="background-image: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5)); height: 100%;" class="d-flex align-end">
-														<div class="body-1 pa-2 text-white">{{ item.raw.name }}</div>
+													<div v-if="!isHovering" style="background-image: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.8)); height: 100%;" class="d-flex align-end justify-space-between pa-2">
+														<div class="body-1 text-white font-weight-bold text-truncate">{{ item.raw.name }}</div>
+														<v-chip 
+															size="x-small" 
+															label 
+															class="font-weight-black mb-1 ml-2" 
+															:color="item.raw.current_env.environment == 'Production' ? 'green-darken-1' : 'brown-darken-1'"
+														>
+															{{ item.raw.current_env.environment.toUpperCase() }}
+														</v-chip>
 													</div>
 												</v-fade-transition>
 												<template v-slot:placeholder>
@@ -3468,8 +3552,30 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 													</v-row>
 												</template>
 											</v-img>
+											<v-sheet 
+												v-else 
+												v-bind="props"
+												:aspect-ratio="16/10" 
+												height="200"
+												color="surface-variant" 
+												class="d-flex align-center justify-center"
+											>
+												<div class="text-center" style="width: 100%;">
+													<v-icon size="large" class="text-medium-emphasis mb-2">mdi-monitor-shimmer</v-icon>
+													<div class="px-2">
+														<div class="body-1 font-weight-bold text-truncate">{{ item.raw.name }}</div>
+														<v-chip 
+															size="x-small" 
+															label 
+															class="font-weight-black mt-1" 
+															:color="item.raw.current_env.environment == 'Production' ? 'green-darken-1' : 'brown-darken-1'"
+														>
+															{{ item.raw.current_env.environment.toUpperCase() }}
+														</v-chip>
+													</div>
+												</div>
+											</v-sheet>
 										</v-hover>
-										<v-card-title v-if="!item.raw.screenshot_base">{{ item.raw.name }}</v-card-title>
 									</v-card>
 								</v-col>
 							</v-row>
@@ -8567,7 +8673,28 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<div class="flex-shrink-0">
 								<!-- Targets Area -->
 								<div class="pa-4 border-b">
-									<div class="text-caption text-medium-emphasis mb-1 font-weight-bold">TARGETS</div>
+									
+									<!-- Header Row with Label and Quick Fill Button -->
+									<div class="d-flex align-center justify-space-between mb-2">
+										<div class="text-caption text-medium-emphasis font-weight-bold">TARGETS</div>
+										
+										<!-- NEW BUTTON HERE -->
+										<v-slide-y-transition>
+											<v-btn
+												v-if="filteredEnvironmentsCount > 0"
+												size="x-small"
+												variant="tonal"
+												color="secondary"
+												class="px-2"
+												@click="selectAllMatchesToTerminal"
+												title="Populate targets based on current site filters"
+											>
+												<v-icon start size="small">mdi-filter-check</v-icon>
+												Add {{ filteredEnvironmentsCount }} Filtered
+											</v-btn>
+										</v-slide-y-transition>
+									</div>
+
 									<v-autocomplete
 										v-model="view_console.selected_targets"
 										:items="environments"
@@ -8598,8 +8725,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										</template>
 									</v-autocomplete>
 									
-									<div class="d-flex justify-end mt-1" v-if="view_console.selected_targets.length > 0">
-										<v-btn size="x-small" variant="text" @click="view_console.selected_targets = []" color="grey">Clear Selection</v-btn>
+									<div class="d-flex justify-end mt-2" v-if="view_console.selected_targets.length > 0">
+										<v-btn size="x-small" variant="text" @click="view_console.selected_targets = []" color="grey" class="px-0">Clear Selection</v-btn>
 									</div>
 								</div>
 
