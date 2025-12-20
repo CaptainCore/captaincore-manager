@@ -163,7 +163,6 @@ class Sites extends DB {
             $site->storage           = $details->storage;
             $site->visits            = $details->visits;
             $site->outdated          = false;
-            $site->screenshot_base   = isset( $details->screenshot_base ) ? $details->screenshot_base : "";
             $site->environments      = $details->environments ?? [];
 
             // Fallback for sites that haven't cached their environments yet
