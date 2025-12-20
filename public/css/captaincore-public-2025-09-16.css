@@ -1959,3 +1959,142 @@ code.language-log {
 .v-theme--dark td.change-specific {
     background-color: rgba(176, 190, 197, 0.3) !important; /* Blue-grey color with 30% opacity */
 }
+
+/* Activity Island Styling */
+.activity-island-container {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2000;
+}
+
+.activity-island {
+    backdrop-filter: blur(10px);
+    background: rgba(var(--v-theme-surface), 0.9) !important;
+    border: 1px solid rgba(var(--v-border-color), 0.2);
+}
+
+/* Terminal Window Styling */
+.terminal-window {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 95vw;
+    max-width: 1200px; /* Wider to accommodate sidebar */
+    height: 600px;     /* Fixed height for stability */
+    z-index: 1999;
+    border: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Important for inner scrolling */
+}
+
+.terminal-input-area .v-btn {
+  font-family: monospace;
+  background: rgba(var(--v-theme-primary), 0.1);
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
+.terminal-input-area .v-input__append {
+  align-items: end;
+  margin-bottom: 7px;
+}
+
+.terminal-window .v-tab--selected {
+    color: #FFFFFF !important;
+    opacity: 1 !important;
+}
+.terminal-window .v-tab:not(.v-tab--selected) {
+    color: #9e9e9e !important;
+}
+
+/* Sidebar styling */
+.terminal-sidebar {
+    background-color: #121212; /* VS Code sidebar color */
+    border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.terminal-sidebar .v-window {
+    height: 100%;
+}
+
+.terminal-sidebar .v-window-item {
+    height: 100%;
+    overflow-y: auto !important;
+}
+
+.terminal-sidebar .v-autocomplete .v-chip {
+    max-width: 120px;
+    overflow: hidden;
+}
+
+.sticky-top {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Main Terminal Area */
+.terminal-main {
+    background-color: #000;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+/* Output Stream Area */
+.terminal-output {
+    flex-grow: 1;
+    overflow-y: auto;
+    font-family: 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 16px;
+}
+
+/* Fixed Bottom Input Area */
+.terminal-input-area {
+    background-color: #1e1e1e;
+    border-top: 1px solid #333;
+    padding: 4px 16px;
+    flex-shrink: 0;
+}
+
+/* Input Field Customization */
+.terminal-input-field .v-field__input {
+    font-family: 'Fira Code', 'Consolas', monospace !important;
+    font-size: 13px;
+    color: #fff !important;
+    padding-top: 8px;
+}
+
+.terminal-input-field .v-input__prepend, 
+.terminal-input-field .v-input__append {
+    padding-top: 4px !important; 
+}
+
+.terminal-window.terminal-fullscreen {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100%;
+    bottom: 0;
+    border: none;
+    border-radius: 0 !important;
+}
+
+.window-dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 3px; }
+.cursor-block { animation: blink 1s step-end infinite; }
+
+.cursor-block {
+    animation: blink 1s step-end infinite;
+}
+
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* Ensure monospace font looks good */
+.font-monospace {
+    font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace !important;
+}

@@ -893,25 +893,146 @@ function captaincore_site_func( $request ) {
 
 }
 
-function captaincore_run_code_func( $request ) {
-	$site_id     = $request['id'];
-	$before      = strtotime( $request['from_at'] );
-	$after       = strtotime( $request['to_at'] );
-	$grouping    = strtolower( $request['grouping'] );
-	$environment = $request['environment'];
-	$fathom_id   = $request['fathom_id'];
-	return ( new CaptainCore\Site( $site_id ) )->stats( $environment, $before, $after, $grouping, $fathom_id );
-	if ( ! $verify ) {
-		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
-	}
-    return ( new CaptainCore\Domain( $domain_id ) )->set_contacts( $request['contacts'] );
-	if ( is_wp_error( $response ) ) {
-		$error_message = $response->get_error_message();
-		echo json_encode( [ "error" => $error_message ] );
-		wp_die();
-		return;
-	}
-	echo json_encode( $response ); 
+/**
+ * Generalized REST API for bulk site operations.
+ */
+function captaincore_bulk_tools_func( WP_REST_Request $request ) {
+    $params       = $request->get_json_params();
+    $tool         = isset( $params['tool'] ) ? $params['tool'] : '';
+    $environments = isset( $params['environments'] ) ? $params['environments'] : [];
+    $extra_params = isset( $params['params'] ) ? $params['params'] : [];
+    $targets      = [];
+
+    if ( empty( $tool ) || empty( $environments ) ) {
+        return new WP_Error( 'missing_data', 'Tool and at least one environment are required', [ 'status' => 400 ] );
+    }
+
+    foreach ( $environments as $environment_id ) {
+        $env_obj = CaptainCore\Environments::get( $environment_id );
+        if ( $env_obj ) {
+            $site_obj = CaptainCore\Sites::get( $env_obj->site_id );
+            // Security: Check individual site permissions
+            if ( captaincore_verify_permissions( $site_obj->site_id ) ) {
+                $targets[] = "{$site_obj->site}-" . strtolower( $env_obj->environment );
+            }
+        }
+    }
+
+    if ( empty( $targets ) ) {
+        return new WP_Error( 'invalid_targets', 'No valid targets found or permission denied.', [ 'status' => 403 ] );
+    }
+
+    $target_string = implode( " ", array_unique( $targets ) );
+
+    // Map the tool name to the CLI command
+    switch ( $tool ) {
+        case 'sync-data':
+            $command = "sync-data $target_string";
+            break;
+        case 'deploy-defaults':
+            $command = "site deploy-defaults $target_string";
+            break;
+        case 'activate':
+            $command = "activate $target_string";
+            break;
+        case 'deactivate':
+            $name    = escapeshellarg( $extra_params['business_name'] ?? '' );
+            $link    = escapeshellarg( $extra_params['business_link'] ?? '' );
+            $command = "deactivate $target_string --name=$name --link=$link";
+            break;
+        case 'apply-https':
+            $script  = ( ! empty( $extra_params['www'] ) ) ? 'apply-https-with-www' : 'apply-https';
+            $command = "ssh $target_string --script=$script";
+            break;
+        case 'scan-errors':
+            $command = "scan-errors $target_string";
+            break;
+        case 'backup':
+            $command = "backup $target_string";
+            break;
+        case 'snapshot':
+            $command = "snapshot generate $target_string";
+            break;
+        default:
+            return new WP_Error( 'invalid_tool', 'The requested tool is not supported.', [ 'status' => 400 ] );
+    }
+
+    return CaptainCore\Run::task( $command );
+}
+
+function captaincore_run_code_func( WP_REST_Request $request ) {
+    $params       = $request->get_json_params();
+    $code         = isset( $params['code'] ) ? $params['code'] : '';
+    $environments = isset( $params['environments'] ) ? $params['environments'] : [];
+    $targets      = [];
+
+    if ( empty( $code ) ) {
+        return new WP_Error( 'missing_code', 'Code is required', [ 'status' => 400 ] );
+    }
+
+    if ( empty( $environments ) ) {
+        return new WP_Error( 'missing_environments', 'At least one environment is required', [ 'status' => 400 ] );
+    }
+
+    foreach ( $environments as $env_data ) {
+        $environment_id = null;
+        $site_obj       = null;
+        $env_name       = null;
+
+        // 1. Handle simple integer ID (e.g. [3365, 3358])
+        if ( is_numeric( $env_data ) ) {
+            $environment_id = $env_data;
+        } 
+        // 2. Handle Object/Array structure
+        elseif ( is_array( $env_data ) || is_object( $env_data ) ) {
+            $env_data = (object) $env_data;
+            
+            if ( ! empty( $env_data->environment_id ) ) {
+                $environment_id = $env_data->environment_id;
+            } elseif ( ! empty( $env_data->enviroment_id ) ) { // Handle common frontend typo
+                $environment_id = $env_data->enviroment_id;
+            } elseif ( ! empty( $env_data->site_id ) && ! empty( $env_data->environment ) ) {
+                // Fallback: Direct site_id + environment name provided
+                if ( captaincore_verify_permissions( $env_data->site_id ) ) {
+                    $site_obj = CaptainCore\Sites::get( $env_data->site_id );
+                    $env_name = strtolower( $env_data->environment );
+                }
+            }
+        }
+
+        // If we found an Environment ID, look up the details from the DB
+        if ( $environment_id ) {
+            $env_obj = CaptainCore\Environments::get( $environment_id );
+            if ( $env_obj ) {
+                $site_obj = CaptainCore\Sites::get( $env_obj->site_id );
+                $env_name = strtolower( $env_obj->environment );
+                
+                // Security Check
+                if ( ! captaincore_verify_permissions( $site_obj->site_id ) ) {
+                    continue; 
+                }
+            }
+        }
+
+        // Construct the target string (e.g., "my-site-production")
+        if ( $site_obj && $env_name ) {
+            $targets[] = "{$site_obj->site}-{$env_name}";
+        }
+    }
+
+    if ( empty( $targets ) ) {
+        return new WP_Error( 'invalid_targets', 'No valid targets found or permission denied.', [ 'status' => 403 ] );
+    }
+
+    // Dedup targets and format command
+    $targets       = array_unique( $targets );
+    $target_string = implode( " ", $targets );
+    $encoded_code  = base64_encode( stripslashes_deep( $code ) );
+    
+    // Dispatch to CLI
+    $command = "run $target_string --code=$encoded_code";
+
+    return CaptainCore\Run::task( $command );
 }
 
 function captaincore_site_analytics_func( $request ) {
@@ -1570,9 +1691,9 @@ function captaincore_site_snapshots_func( $request ) {
 
 function captaincore_filters_sites_func( WP_REST_Request $request ) {
     $filters       = $request->get_json_params();
-    $sites_handler = new CaptainCore\Sites(); // This instance gets the current user's permissions
-    $sites         = $sites_handler->fetch_sites_matching_filters( $filters ); // Call the new non-static method
-    return [ "sites" => $sites ];
+    $sites_handler = new CaptainCore\Sites();
+    $results       = $sites_handler->fetch_sites_matching_filters( $filters ); 
+    return [ "results" => $results ];
 }
 
 function captaincore_filter_versions_func( $request ) {
@@ -2586,6 +2707,15 @@ function captaincore_register_rest_endpoints() {
 			'show_in_index'       => false,
 		]
 	);
+	
+	register_rest_route(
+		'captaincore/v1', '/run/code', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_run_code_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
 
 	register_rest_route(
 		'captaincore/v1', '/scripts/schedule', [
@@ -2642,6 +2772,12 @@ function captaincore_register_rest_endpoints() {
 			'show_in_index'       => false,
 		]
 	);
+
+	register_rest_route( 'captaincore/v1', '/sites/bulk-tools', [
+		'methods'             => 'POST',
+		'callback'            => 'captaincore_bulk_tools_func',
+		'permission_callback' => 'captaincore_permission_check',
+	]);
 
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/logs', [
@@ -2883,6 +3019,16 @@ function captaincore_register_rest_endpoints() {
 			'show_in_index'       => false,
 		]
 	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/magiclogin/(?P<user_id>[\d]+)', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_magiclogin_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
 
 	register_rest_route(
 		'captaincore/v1', '/providers', [
