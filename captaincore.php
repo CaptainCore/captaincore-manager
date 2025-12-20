@@ -944,6 +944,15 @@ function captaincore_bulk_tools_func( WP_REST_Request $request ) {
             $script  = ( ! empty( $extra_params['www'] ) ) ? 'apply-https-with-www' : 'apply-https';
             $command = "ssh $target_string --script=$script";
             break;
+		case 'launch':
+			$domain_raw = $extra_params['domain'] ?? '';
+			$domain = preg_replace( '#^https?://#', '', $domain_raw );
+			$domain = rtrim( $domain, '/' );
+			if ( ! preg_match( '/^[a-z0-9\-\.]+$/i', $domain ) ) {
+				return new WP_Error( 'invalid_domain', 'Invalid domain name format.', [ 'status' => 400 ] );
+			}
+			$command = "ssh $target_string --script=launch -- --domain=$domain";
+			break;
         case 'scan-errors':
             $command = "scan-errors $target_string";
             break;

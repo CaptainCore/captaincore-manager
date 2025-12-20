@@ -9697,6 +9697,7 @@ const app = createApp({
 			{ title: 'Add Plugin', icon: 'mdi-plus-box', method: 'addPluginBulk' },
 			{ title: 'Add Theme', icon: 'mdi-plus', method: 'addThemeBulk' },
 			{ title: 'New Log Entry', icon: 'mdi-checkbox-marked', method: 'showLogEntryBulk', adminOnly: true },
+			{ title: 'Launch Site', icon: 'mdi-earth', method: 'launchSiteDialog' },
 			{ title: 'Open in Browser', icon: 'mdi-open-in-new', method: 'bulkactionLaunch' },
 		],
 		search: null,
@@ -14305,42 +14306,129 @@ const app = createApp({
 			site = this.sites.filter( site => site.site_id == site_id )[0];
 			this.dialog_launch.site = site
 			this.dialog_launch.show = true
+		},launchSiteDialog( site_id ) {
+			if ( site_id ) {
+				// Single site mode (triggered from Site Details > Scripts)
+				const site = this.sites.find( s => s.site_id == site_id );
+				this.dialog_launch.site = site || {};
+				this.dialog_launch.mode = 'single';
+			} else {
+				// Bulk mode (triggered from Terminal System Tools)
+				if (this.view_console.selected_targets.length === 0) {
+					this.snackbar.message = "Please select target environments.";
+					this.snackbar.show = true;
+					return;
+				}
+				// Create a dummy site object for the dialog display
+				this.dialog_launch.site = { name: `${this.view_console.selected_targets.length} environments` };
+				this.dialog_launch.mode = 'bulk';
+			}
+			
+			this.dialog_launch.domain = "";
+			this.dialog_launch.show = true;
 		},
 		launchSite() {
-
 			if ( this.dialog_launch.domain == "" ) {
 				this.snackbar.message = "Domain is required. Launch cancelled.";
 				this.snackbar.show = true;
-				return
+				return;
 			}
 
-			site = this.dialog_launch.site
+			let envIds = [];
+			const domain = this.dialog_launch.domain;
+			const siteName = this.dialog_launch.site.name;
 
-			var data = {
-				action: 'captaincore_install',
-				post_id: site.site_id,
-				command: 'launch',
-				value: this.dialog_launch.domain
-			};
+			// Determine Target Environments
+			if ( this.dialog_launch.mode === 'bulk' ) {
+				// Use terminal selections
+				envIds = this.view_console.selected_targets.map(t => t.environment_id);
+			} else {
+				// Single site context
+				const siteId = this.dialog_launch.site.site_id;
+				
+				// If we are currently viewing the site in the main dialog, use the selected environment
+				if (this.dialog_site.site && this.dialog_site.site.site_id == siteId && this.dialog_site.environment_selected) {
+					envIds = [this.dialog_site.environment_selected.environment_id];
+				} else {
+					// Fallback: Find Production environment for the site
+					const fullSite = this.sites.find(s => s.site_id == siteId);
+					if (fullSite && fullSite.environments) {
+						const prod = fullSite.environments.find(e => e.environment === 'Production') || fullSite.environments[0];
+						if (prod) envIds = [prod.environment_id];
+					}
+				}
+			}
 
-			description = "Lauching site '" + site.name + "'";
+			if (envIds.length === 0) {
+				this.snackbar.message = "Could not determine target environment for launch.";
+				this.snackbar.show = true;
+				return;
+			}
 
-			// Start job
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", "command": "manage", stream: []});
+			let should_proceed = confirm(`Launch ${siteName} to ${domain}? This will update URLs and configuration.`);
+			if ( ! should_proceed ) {
+				return;
+			}
 
-			self = this;
+			const description = `Launching ${siteName} to ${domain}`;
+			const job_id = Math.round((new Date()).getTime());
+			
+			this.jobs.push({
+				"job_id": job_id,
+				"description": description, 
+				"status": "queued", 
+				"stream": []
+			});
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.dialog_launch.site = {};
-					self.dialog_launch.domain = "";
-					self.dialog_launch.show = false;
-					self.runCommand( response.data )
-				})
-				.catch( error => console.log( error ) );
+			// Use the bulk-tools endpoint which handles 'launch' and params
+			axios.post('/wp-json/captaincore/v1/sites/bulk-tools', {
+				tool: 'launch',
+				environments: envIds,
+				params: {
+					domain: domain
+				}
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then( response => {
+				const job = this.jobs.find(j => j.job_id == job_id);
+				if (job) {
+					job.job_id = response.data;
+					this.runCommand( response.data );
+				}
+				
+				this.dialog_launch.site = {};
+				this.dialog_launch.domain = "";
+				this.dialog_launch.show = false;
+				this.snackbar.message = "Launch process started.";
+				this.snackbar.show = true;
+			})
+			.catch( error => {
+				console.error(error);
+				const job = this.jobs.find(j => j.job_id == job_id);
+				
+				// Safely extract error message
+				let errorMessage = error.message || "Unknown error";
+				if ( error.response && error.response.data ) {
+					// Check for WP REST API error message format
+					if ( error.response.data.message ) {
+						errorMessage = error.response.data.message;
+					} else if ( typeof error.response.data === 'string' ) {
+						errorMessage = error.response.data;
+					}
+				}
 
+				if (job) {
+					job.status = 'error';
+					// Push error to the terminal output stream so it's visible in the console window
+					if ( job.stream ) {
+						job.stream.push("Error: " + errorMessage);
+					}
+				}
+
+				this.snackbar.message = "Error launching site: " + errorMessage;
+				this.snackbar.show = true;
+			});
 		},
 		captureCheck() {
 			environment = this.dialog_site.environment_selected.environment
