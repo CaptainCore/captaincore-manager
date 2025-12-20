@@ -94,6 +94,57 @@ class Sites extends DB {
         }
         return false;
     }
+
+    public static function update_environments_cache( $site_id = "" ) {
+        $sites_to_process = [];
+
+        // If specific ID provided, process just one.
+        if ( ! empty( $site_id ) ) {
+            $sites_to_process[] = self::get( $site_id );
+        } else {
+            // Otherwise process all.
+            $site_ids = self::select_all();
+            foreach ( $site_ids as $id ) {
+                $sites_to_process[] = self::get( $id );
+            }
+        }
+
+        foreach ( $sites_to_process as $site ) {
+            if ( ! $site ) continue;
+
+            // Fetch all environments for this site to build the cache
+            $all_envs = ( new Environments )->where( [ "site_id" => $site->site_id ] );
+            $env_cache = [];
+            
+            foreach ( $all_envs as $env ) {
+                $env_details = empty( $env->details ) ? (object) [] : json_decode( $env->details );
+                $env_cache[] = [
+                    "environment_id"  => $env->environment_id,
+                    "environment"     => $env->environment,
+                    "home_url"        => $env->home_url,
+                    "core"            => $env->core,
+                    "subsites"        => $env->subsite_count,
+                    "storage"         => $env->storage,
+                    "visits"          => $env->visits,
+                    "username"        => $env->username,
+                    "address"         => $env->address,
+                    "port"            => $env->port,
+                    "screenshot"      => (bool) $env->screenshot,
+                    "screenshot_base" => empty( $env_details->screenshot_base ) ? "" : $env_details->screenshot_base,
+                ];
+            }
+
+            // Update site details
+            $details = json_decode( $site->details );
+            $details->environments = $env_cache;
+
+            self::update( [ "details" => json_encode( $details ) ], [ "site_id" => $site->site_id ] );
+
+            if ( defined( 'WP_CLI' ) && WP_CLI ) {
+                \WP_CLI::log( "Updated environment cache for {$site->name} (#{$site->site_id})" );
+            }
+        }
+    }
 	
 	public function list() {
         $sites        = [];
@@ -113,6 +164,23 @@ class Sites extends DB {
             $site->visits            = $details->visits;
             $site->outdated          = false;
             $site->screenshot_base   = isset( $details->screenshot_base ) ? $details->screenshot_base : "";
+            $site->environments      = $details->environments ?? [];
+
+            // Fallback for sites that haven't cached their environments yet
+            if ( empty( $site->environments ) ) {
+                $site->environments = [
+                    (object) [
+                        "environment_id"  => "",
+                        "environment"     => "Production",
+                        "home_url"        => $site->home_url,
+                        "core"            => $site->core,
+                        "subsites"        => $site->subsites,
+                        "storage"         => $site->storage,
+                        "visits"          => $site->visits,
+                        "screenshot_base" => $site->screenshot_base,
+                    ]
+                ];
+            }
             
             // Mark site as outdated if sync older then 48 hours
             if ( strtotime( $site->updated_at ) <= strtotime( "-48 hours" ) ) {
