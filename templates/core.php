@@ -11228,7 +11228,9 @@ const app = createApp({
 			return searchMatch && filterMatch;
 		},
 		selectAllMatchesToTerminal() {
-			const targets = [];
+			const newTargets = [];
+			// Create a Set of currently selected IDs for efficient lookup (normalize to string)
+			const currentIds = new Set(this.view_console.selected_targets.map(t => String(t.environment_id)));
 			
 			// Iterate through currently visible sites (filteredSites)
 			this.filteredSites.forEach(site => {
@@ -11237,32 +11239,42 @@ const app = createApp({
 					site.environments.forEach(env => {
 						// Check if the specific environment matches current filters
 						if (this.isEnvironmentMatched(env)) {
-							targets.push({
-								site_id: site.site_id,
-								name: site.name,
-								environment_id: env.environment_id,
-								environment: env.environment,
-								home_url: env.home_url
-							});
+							const envIdStr = String(env.environment_id);
+							// Only add if not already selected
+							if (!currentIds.has(envIdStr)) {
+								newTargets.push({
+									site_id: site.site_id,
+									name: site.name,
+									environment_id: env.environment_id,
+									environment: env.environment,
+									home_url: env.home_url
+								});
+								// Add to set to prevent duplicates if data has issues
+								currentIds.add(envIdStr);
+							}
 						}
 					});
 				}
 			});
 
-			if (targets.length === 0) {
-				this.snackbar.message = "No environments match current filters.";
+			if (newTargets.length === 0) {
+				if (this.filteredEnvironmentsCount > 0) {
+					this.snackbar.message = "All filtered environments are already selected.";
+				} else {
+					this.snackbar.message = "No environments match current filters.";
+				}
 				this.snackbar.show = true;
 				return;
 			}
 
-			this.view_console.selected_targets = targets;
+			// Append only new, unique targets
+			this.view_console.selected_targets.push(...newTargets);
+			
 			this.view_console.terminal_open = true;
-			this.view_console.show_sidebar = true;
 			this.view_console.show = true;
-			this.snackbar.message = `${targets.length} environments selected based on filters.`;
+			this.snackbar.message = `${newTargets.length} environments added to selection.`;
 			this.snackbar.show = true;
 		},
-		// Open the global terminal targeting the currently selected environment in the dialog
 		openTerminalForCurrentEnv( focusInput = true ) {
 			const site = this.dialog_site.site;
 			const env = this.dialog_site.environment_selected;
@@ -11290,9 +11302,27 @@ const app = createApp({
 				});
 			}
 		},
-		
-		// Bridge existing actions to use the terminal UI if desired, 
-		// or just helper to run specific recipes from the UI cards
+		toggleConsoleTarget(env) {
+			const index = this.view_console.selected_targets.findIndex(t => t.environment_id == env.environment_id);
+			if (index > -1) {
+				this.view_console.selected_targets.splice(index, 1);
+			} else {
+				// Normalize the object structure to match what the autocomplete uses
+				this.view_console.selected_targets.push({
+					site_id: env.site_id,
+					name: env.name,
+					environment_id: env.environment_id,
+					environment: env.environment,
+					home_url: env.home_url
+				});
+			}
+		},
+		onConsoleTargetIntersect(isIntersecting, entries, observer) {
+			if (isIntersecting) {
+				// Load the next batch
+				this.view_console.target_limit += 20;
+			}
+		},
 		runRecipeFromUI(recipe) {
 			this.openTerminalForCurrentEnv(false);
 			// Pre-fill the code
@@ -11315,7 +11345,20 @@ const app = createApp({
 			// Map Terminal targets to the format existing bulk methods expect (sites_selected)
 			// We temporarily sync the selections so the existing dialogs work.
 			this.sites_selected = this.view_console.selected_targets.map(t => {
-				return this.sites.find(s => s.site_id == t.site_id);
+				const originalSite = this.sites.find(s => s.site_id == t.site_id);
+				if (!originalSite) return null;
+				
+				// Create a shallow copy to attach context without polluting the global store
+				const siteContext = Object.assign({}, originalSite);
+				
+				// Attach the specific environment selection from the terminal target
+				// This allows getEnvironmentIdsFromSelection to prioritize this ID
+				siteContext.environment_selected = {
+					environment_id: t.environment_id,
+					environment: t.environment
+				};
+				
+				return siteContext;
 			}).filter(Boolean);
 
 			// Set the bulk environment to match the terminal's context
@@ -12301,6 +12344,27 @@ const app = createApp({
 		bulkSyncSites() {
 			this.executeBulkTool('sync-data', {}, "Syncing data for environments");
 		},
+		getEnvironmentIdsFromSelection(sites, defaultEnvName = "Production") {
+			return sites.map(site => {
+				// 1. Check if the site object has a specifically assigned environment object
+				if (site.current_env && site.current_env.environment_id) {
+					return site.current_env.environment_id;
+				}
+
+				// 2. Check if the site object has a selected environment
+				if (site.environment_selected && site.environment_selected.environment_id) {
+					return site.environment_selected.environment_id;
+				}
+
+				// 3. Fallback: Search the environments array for the default name
+				if (site.environments && Array.isArray(site.environments)) {
+					const match = site.environments.find(e => e.environment.toLowerCase() === defaultEnvName.toLowerCase());
+					if (match) return match.environment_id;
+				}
+				
+				return null;
+			}).filter(id => id !== null);
+		},
 		fetchVulnerabilityScans() {
 			axios.get( `/wp-json/captaincore/v1/sites/vulnerability-scans`, {
 				headers: { 'X-WP-Nonce':this.wp_nonce }
@@ -12918,23 +12982,31 @@ const app = createApp({
 			this.bulk_edit.type = type;
 		},
 		bulkEditExecute ( action ) {
-			site_id = this.bulk_edit.site_id;
-			site = this.dialog_site.site
-			object_type = this.bulk_edit.type;
-			object_singular = this.bulk_edit.type.slice(0, -1);
-			items = this.bulk_edit.items.map(item => item.name).join(" ");
+			const site_id = this.bulk_edit.site_id;
+			const site = this.dialog_site.site;
+			const env = this.dialog_site.environment_selected;
+			const object_type = this.bulk_edit.type;
+			const object_singular = this.bulk_edit.type.slice(0, -1);
+			
+			let items = this.bulk_edit.items.map(item => item.name).join(" ");
 			if ( object_singular == "user" ) {
 				items = this.bulk_edit.items.map(item => item.user_login).join(" ");
 			}
 
 			// Start job
-			site_name = this.bulk_edit.site_name;
-			description = "Bulk action '" + action + " " + this.bulk_edit.type + "' on " + site_name;
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id, "site_id": site_id, "description": description, "status": "queued", stream: [], "command": "manage"});
+			const site_name = this.bulk_edit.site_name;
+			const description = "Bulk action '" + action + " " + this.bulk_edit.type + "' on " + site_name;
+			const jobId = Math.round((new Date()).getTime());
+			
+			this.jobs.push({
+				"job_id": jobId, 
+				"description": description, 
+				"status": "queued", 
+				"stream": []
+			});
 
 			// WP ClI command to send
-			wpcli = "wp " + object_singular + " " + action + " " + items;
+			const wpcli = `wp ${object_singular} ${action} ${items} --skip-themes --skip-plugins`;
 
 			// Set to loading.
 			site.environments[0][ object_type ] = "Updating";
@@ -12944,24 +13016,22 @@ const app = createApp({
 
 			this.bulk_edit.show = false;
 
-			var data = {
-				'action': 'captaincore_install',
-				'post_id': site_id,
-				'command': "manage",
-				'value': "ssh",
-				'background': true,
-				'environment': this.dialog_site.environment_selected.environment,
-				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
-			};
-
-			self = this;
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data );
-				});
-
+			axios.post(`/wp-json/captaincore/v1/run/code`, {
+				environments: [env.environment_id],
+				code: wpcli
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then( response => {
+				const job = this.jobs.find(j => j.job_id == jobId);
+				if (job) {
+					job.job_id = response.data;
+					this.runCommand( response.data );
+				}
+			})
+			.catch(error => {
+				console.log(error.response);
+			});
 		},
 		fetchLink( site_id, snapshot_id ) {
 			site = this.dialog_site.site
@@ -13144,47 +13214,72 @@ const app = createApp({
 		},
 		applyHttpsUrls( command ) {
 
-			site_id = this.dialog_apply_https_urls.site_id
-			site_name = this.dialog_apply_https_urls.site_name
+			const site_id = this.dialog_apply_https_urls.site_id;
+			const site_name = this.dialog_apply_https_urls.site_name;
+			let envIds = [];
 
 			if ( Array.isArray( site_id ) ) { 
-				environment = this.dialog_bulk.environment_selected
+				// Bulk context: resolve IDs based on selected sites and the global environment toggle (Production/Staging)
+				const envName = this.dialog_bulk_tools.environment_selected || "Production";
+				envIds = this.getEnvironmentIdsFromSelection(this.sites_selected, envName);
 			} else {
-				environment = this.dialog_site.environment_selected.environment
+				// Single site context: use the currently viewed environment
+				if (this.dialog_site.environment_selected && this.dialog_site.environment_selected.environment_id) {
+					envIds = [this.dialog_site.environment_selected.environment_id];
+				}
 			}
 
-			should_proceed = confirm("Will apply ssl urls to '"+site_name+"'. Proceed?");
+			if (envIds.length === 0) {
+				this.snackbar.message = "No target environments found.";
+				this.snackbar.show = true;
+				return;
+			}
+
+			let should_proceed = confirm("Will apply ssl urls to '"+site_name+"'. Proceed?");
 
 			if ( ! should_proceed ) {
 				return;
 			}
 
 			// Start job
-			description = "Applying HTTPS urls to " + site_name;
-			job_id = Math.round((new Date()).getTime());
+			const description = "Applying HTTPS urls to " + site_name;
+			const job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
-			var data = {
-				'action': 'captaincore_install',
-				'environment': environment,
-				'post_id': site_id,
-				'command': command,
-			};
+			const extra_params = {};
+            if (command === 'apply-https-with-www') {
+                extra_params.www = true;
+            }
 
-			self = this;
-
-			// since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					// Updates job id with reponsed background job id
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data );
-					self.dialog_apply_https_urls.site_id = "";
-					self.dialog_apply_https_urls.site_name = "";
-					self.dialog_apply_https_urls.show = false;
-					self.snackbar.message = "Applying HTTPS Urls";
-					self.snackbar.show = true;
-				});
+			// Use the generic bulk-tools endpoint which handles standard commands like apply-https
+			axios.post('/wp-json/captaincore/v1/sites/bulk-tools', {
+				tool: 'apply-https',
+				environments: envIds,
+				params: extra_params
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then( response => {
+				// Updates job id with the returned operation ID to start WebSocket streaming
+				const job = this.jobs.find(j => j.job_id == job_id);
+				if (job) {
+					job.job_id = response.data;
+					this.runCommand( response.data );
+				}
+				
+				this.dialog_apply_https_urls.site_id = "";
+				this.dialog_apply_https_urls.site_name = "";
+				this.dialog_apply_https_urls.show = false;
+				this.snackbar.message = "Applying HTTPS Urls";
+				this.snackbar.show = true;
+			})
+			.catch(error => {
+				const job = this.jobs.find(j => j.job_id == job_id);
+				if (job) job.status = "error";
+				console.error(error);
+				this.snackbar.message = "Error: " + (error.response?.data?.message || error.message);
+				this.snackbar.show = true;
+			});
 		},
 		fetchProcessLogs() {
 			this.dialog_log_history.loading = true
@@ -14977,41 +15072,40 @@ const app = createApp({
 				});
 		},
 		runCustomCode( site_id ) {
-
-			site = this.dialog_site.site
-			should_proceed = confirm("Deploy custom code on " + this.dialog_site.environment_selected.home_url + "?");
+			const site = this.dialog_site.site;
+			const env = this.dialog_site.environment_selected;
+			
+			let should_proceed = confirm("Deploy custom code on " + env.home_url + "?");
 
 			if ( ! should_proceed ) {
 				return;
 			}
 
-			var data = {
-				action: 'captaincore_install',
-				environment: this.dialog_site.environment_selected.environment,
-				post_id: site_id,
-				command: 'run',
-				value: this.script.code,
-				background: true
-			};
+			const description = "Deploying custom code on " + env.home_url;
+			const jobId = Math.round((new Date()).getTime());
+			
+			this.jobs.push({
+				"job_id": jobId, 
+				"description": description, 
+				"status": "queued", 
+				"stream": []
+			});
 
-			self = this;
-			description = "Deploying custom code on " + this.dialog_site.environment_selected.home_url;
-
-			// Start job
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id, "description": description, "status": "queued", stream: []});
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					// Updates job id with reponsed background job id
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data )
-					self.snackbar.message = description;
-					self.snackbar.show = true;
-					self.script.code = "";
-				})
-				.catch( error => console.log( error ) );
-
+			axios.post(`/wp-json/captaincore/v1/run/code`, {
+				environments: [env.environment_id],
+				code: this.script.code
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then( response => {
+				const job = this.jobs.find(j => j.job_id == jobId);
+				if (job) {
+					job.job_id = response.data;
+					this.runCommand( response.data );
+				}
+				this.script.code = "";
+			})
+			.catch( error => console.log( error ) );
 		},
 		runCustomCodeBulkEnvironments( environments ) {
 			should_proceed = confirm( `Deploy custom code on ${environments.length} environments?` );
@@ -17302,81 +17396,104 @@ const app = createApp({
 				});
 		},
 		activateTheme( theme_name, site_id ) {
-
-			site = this.dialog_site.site
+			const site = this.dialog_site.site;
+			const env = this.dialog_site.environment_selected;
 
 			// Enable loading progress
 			site.loading_themes = true;
-			this.dialog_site.environment_selected.themes.filter(theme => theme.name != theme_name).forEach( theme => theme.status = "inactive" );
+			
+			// Optimistic UI update
+			env.themes.filter(theme => theme.name != theme_name).forEach( theme => theme.status = "inactive" );
 
 			// Start job
-			site_name = site.name;
-			description = "Activating theme '" + theme_name + "' on " + site_name;
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
-
-			// WP ClI command to send
-			wpcli = "wp theme activate " + theme_name;
-
-			var data = {
-				'action': 'captaincore_install',
-				'post_id': site_id,
-				'command': "manage",
-				'value': "ssh",
-				'background': true,
-				'environment': this.dialog_site.environment_selected.environment,
-				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+			const site_name = site.name;
+			const description = "Activating theme '" + theme_name + "' on " + site_name;
+			const jobId = Math.round((new Date()).getTime());
+			
+			const onFinish = () => {
+				site.loading_themes = false;
 			};
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					site.loading_themes = false;
-					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+			this.jobs.push({
+				"job_id": jobId,
+				"description": description, 
+				"status": "queued", 
+				"stream": [],
+				"on_finish": onFinish
+			});
+
+			// WP ClI command to send
+			const wpcli = `wp theme activate ${theme_name} --skip-themes --skip-plugins`;
+
+			axios.post(`/wp-json/captaincore/v1/run/code`, {
+				environments: [env.environment_id],
+				code: wpcli
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then( response => {
+				const job = this.jobs.find(j => j.job_id == jobId);
+				if (job) {
+					job.job_id = response.data;
 					this.runCommand( response.data );
+				}
+			})
+			.catch(error => {
+				console.log(error.response);
+				site.loading_themes = false;
 			});
 		},
 		deleteTheme (theme_name, site_id) {
-
-			should_proceed = confirm("Are you sure you want to delete theme " + theme_name + "?");
+			let should_proceed = confirm("Are you sure you want to delete theme " + theme_name + "?");
 
 			if ( ! should_proceed ) {
 				return;
 			}
 
-			site = this.dialog_site.site
+			const site = this.dialog_site.site;
+			const env = this.dialog_site.environment_selected;
 
 			// Enable loading progress
 			site.loading_themes = true;
-			description = "Deleting theme '" +theme_name + "' from " + site.name;
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
-
-			// WP ClI command to send
-			wpcli = "wp theme delete " + theme_name;
-
-			var data = {
-				'action': 'captaincore_install',
-				'post_id': site_id,
-				'command': "manage",
-				'value': "ssh",
-				'background': true,
-				'environment': this.dialog_site.environment_selected.environment,
-				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+			const description = "Deleting theme '" +theme_name + "' from " + site.name;
+			const jobId = Math.round((new Date()).getTime());
+			
+			const onFinish = () => {
+				site.loading_themes = false;
 			};
 
-			self = this;
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					environment = this.dialog_site.environment_selected
-					updated_themes = environment.themes.filter(theme => theme.name != theme_name);
-					environment.themes = updated_themes;
-					site.loading_themes = false;
-					// Updates job id with reponsed background job id
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data );
+			this.jobs.push({
+				"job_id": jobId,
+				"description": description, 
+				"status": "queued", 
+				"stream": [],
+				"on_finish": onFinish
 			});
 
+			// WP ClI command to send
+			const wpcli = `wp theme delete ${theme_name} --skip-themes --skip-plugins`;
+
+			axios.post(`/wp-json/captaincore/v1/run/code`, {
+				environments: [env.environment_id],
+				code: wpcli
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then( response => {
+				// Optimistic update
+				const updated_themes = env.themes.filter(theme => theme.name != theme_name);
+				env.themes = updated_themes;
+
+				const job = this.jobs.find(j => j.job_id == jobId);
+				if (job) {
+					job.job_id = response.data;
+					this.runCommand( response.data );
+				}
+			})
+			.catch(error => {
+				console.log(error.response);
+				site.loading_themes = false;
+			});
 		},
 		addPlugin ( site_id ){
 			site = this.dialog_site.site
@@ -17401,220 +17518,376 @@ const app = createApp({
 			this.fetchEnvatoPlugins()
 		},
 		installEnvatoPlugin ( plugin ) {
-			environment_selected = this.new_plugin.environment_selected
-			if ( this.new_plugin.sites.length ==  1 ) {
-				site_id = this.new_plugin.sites[0].site_id
-			} else {
-				site_id = this.new_plugin.sites.map( s => s.site_id )
-			}
-			site_name = this.new_plugin.site_name;
-			should_proceed = confirm("Proceed with installing plugin " + plugin.name + " on " + site_name + "?");
+			const site_count_label = this.new_plugin.sites.length === 1 ? this.new_plugin.sites[0].name : `${this.new_plugin.sites.length} sites`;
+			let should_proceed = confirm("Proceed with installing plugin " + plugin.name + " on " + site_count_label + "?");
 			if ( ! should_proceed ) {
 				return;
 			}
 			
+			this.new_plugin.show = false;
+			this.snackbar.message = `Downloading ${plugin.name} from Envato...`;
+			this.snackbar.show = true;
+
 			axios.get(
 				`/wp-json/captaincore/v1/providers/envato/plugin/${plugin.id}/download`, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
-				.then( response => {
+			.then( response => {
+				const downloadUrl = response.data;
+				const installJobId = Math.round((new Date()).getTime());
 
-					// Enable loading progress
-					description = `Installing plugin '${plugin.name}' to ${site_name}`
-					job_id = Math.round((new Date()).getTime())
-					this.jobs.push({"job_id": job_id,"site_id": site_id, "environment": environment_selected, "description": description, "status": "queued", "command": "manage", stream: []})
+				let envName = this.new_plugin.environment_selected || "Production";
+				if ( this.new_plugin.sites.length == 1 && this.new_plugin.sites[0].environment_selected ) {
+					envName = this.new_plugin.sites[0].environment_selected.environment || envName;
+				}
+				const envIds = this.getEnvironmentIdsFromSelection(this.new_plugin.sites, envName);
 
-					// WP ClI command to send
-					wpcli = `wp plugin install --force --skip-plugins --skip-themes '${response.data}'`
+				if (envIds.length === 0) return;
 
-					var data = {
-						'action': 'captaincore_install',
-						'post_id': site_id,
-						'command': "run",
-						'value': wpcli,
-						'background': true,
-						'environment': environment_selected
-					};
+				const onInstallFinish = () => {
+					const syncDesc = `Syncing data for ${site_count_label}`;
+					const syncJobId = installJobId + 1;
+					
+					this.jobs.push({
+						"job_id": syncJobId,
+						"description": syncDesc, 
+						"status": "queued", 
+						"stream": [],
+						"command": "syncSite",
+						"site_id": this.new_plugin.sites.map(s => s.site_id)
+					});
 
-					axios.post( ajaxurl, Qs.stringify( data ) )
-						.then( res => {
-							this.new_plugin.show = false
-							this.snackbar.message = description
-							this.snackbar.show = true
-							this.new_plugin.api.items = []
-							this.new_plugin.api.info = {}
-							this.new_plugin.envato = { items: [], search: "" }
-							this.new_plugin.loading = false;
+					axios.post('/wp-json/captaincore/v1/sites/bulk-tools', {
+						tool: 'sync-data',
+						environments: envIds
+					}, { headers: { 'X-WP-Nonce': this.wp_nonce } })
+					.then(res => {
+						const job = this.jobs.find(j => j.job_id == syncJobId);
+						if (job) {
+							job.job_id = res.data;
+							this.runCommand(res.data);
+						}
+					});
+				};
 
-							// Updates job id with reponsed background job id
-							this.jobs.filter(job => job.job_id == job_id)[0].job_id = res.data
-							this.runCommand( res.data );
-						})
-						.catch(error => {
-							console.log(error.response)
-							this.new_plugin.show = true
-						});
-				})
+				this.jobs.push({
+					"job_id": installJobId,
+					"description": `Installing plugin '${plugin.name}' to ${site_count_label}`, 
+					"status": "queued", 
+					"stream": [],
+					"on_finish": onInstallFinish
+				});
+
+				const wpcli = `wp plugin install --force --skip-plugins --skip-themes '${downloadUrl}'`;
+
+				axios.post(`/wp-json/captaincore/v1/run/code`, {
+					environments: envIds,
+					code: wpcli
+				}, { headers: { 'X-WP-Nonce': this.wp_nonce } })
+				.then(res => {
+					const job = this.jobs.find(j => j.job_id == installJobId);
+					if (job) {
+						job.job_id = res.data;
+						this.runCommand(res.data);
+					}
+				});
+
+				// Clear dialog state
+				this.new_plugin.api.items = [];
+				this.new_plugin.api.info = {};
+				this.new_plugin.envato = { items: [], search: "" };
+				this.new_plugin.loading = false;
+			})
+			.catch(error => {
+				console.log(error.response);
+				this.snackbar.message = "Failed to get download link.";
+				this.snackbar.show = true;
+				this.new_plugin.show = true;
+			});
 		},
 		installEnvatoTheme ( theme ) {
-			environment_selected = this.new_theme.environment_selected
-			if ( this.new_theme.sites.length ==  1 ) {
-				site_id = this.new_theme.sites[0].site_id
-			} else {
-				site_id = this.new_theme.sites.map( s => s.site_id )
-			}
-			site_name = this.new_theme.site_name;
-			should_proceed = confirm("Proceed with installing theme " + theme.name + " on " + site_name + "?");
+			const site_count_label = this.new_theme.sites.length === 1 ? this.new_theme.sites[0].name : `${this.new_theme.sites.length} sites`;
+			let should_proceed = confirm("Proceed with installing theme " + theme.name + " on " + site_count_label + "?");
 			if ( ! should_proceed ) {
 				return;
 			}
 			
+			this.new_theme.show = false;
+			this.snackbar.message = `Downloading ${theme.name} from Envato...`;
+			this.snackbar.show = true;
+
 			axios.get(
 				`/wp-json/captaincore/v1/providers/envato/theme/${theme.id}/download`, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
-				.then( response => {
+			.then( response => {
+				const downloadUrl = response.data;
+				const installJobId = Math.round((new Date()).getTime());
 
-					// Enable loading progress
-					description = `Installing theme '${theme.name}' to ${site_name}`
-					job_id = Math.round((new Date()).getTime())
-					this.jobs.push({"job_id": job_id,"site_id": site_id, "environment": environment_selected, "description": description, "status": "queued", "command": "manage", stream: []})
+				let envName = this.new_theme.environment_selected || "Production";
+				if ( this.new_theme.sites.length == 1 && this.new_theme.sites[0].environment_selected ) {
+					envName = this.new_theme.sites[0].environment_selected.environment || envName;
+				}
+				const envIds = this.getEnvironmentIdsFromSelection(this.new_theme.sites, envName);
 
-					// WP ClI command to send
-					wpcli = `wp theme install --force --skip-plugins --skip-themes '${response.data}'`
+				if (envIds.length === 0) return;
 
-					var data = {
-						'action': 'captaincore_install',
-						'post_id': site_id,
-						'command': "run",
-						'value': wpcli,
-						'background': true,
-						'environment': environment_selected
-					};
+				const onInstallFinish = () => {
+					const syncDesc = `Syncing data for ${site_count_label}`;
+					const syncJobId = installJobId + 1;
+					
+					this.jobs.push({
+						"job_id": syncJobId,
+						"description": syncDesc, 
+						"status": "queued", 
+						"stream": [],
+						"command": "syncSite",
+						"site_id": this.new_theme.sites.map(s => s.site_id)
+					});
 
-					axios.post( ajaxurl, Qs.stringify( data ) )
-						.then( res => {
-							this.new_theme.show = false
-							this.snackbar.message = description
-							this.snackbar.show = true
-							this.new_theme.api.items = []
-							this.new_theme.api.info = {}
-							this.new_theme.envato = {  items: [], search: "" }
-							this.new_theme.loading = false;
+					axios.post('/wp-json/captaincore/v1/sites/bulk-tools', {
+						tool: 'sync-data',
+						environments: envIds
+					}, { headers: { 'X-WP-Nonce': this.wp_nonce } })
+					.then(res => {
+						const job = this.jobs.find(j => j.job_id == syncJobId);
+						if (job) {
+							job.job_id = res.data;
+							this.runCommand(res.data);
+						}
+					});
+				};
 
-							// Updates job id with reponsed background job id
-							this.jobs.filter(job => job.job_id == job_id)[0].job_id = res.data
-							this.runCommand( res.data );
-						})
-						.catch(error => {
-							console.log(error.response)
-							this.new_theme.show = true
-						});
-				})
+				this.jobs.push({
+					"job_id": installJobId,
+					"description": `Installing theme '${theme.name}' to ${site_count_label}`, 
+					"status": "queued", 
+					"stream": [],
+					"on_finish": onInstallFinish
+				});
+
+				const wpcli = `wp theme install --force --skip-plugins --skip-themes '${downloadUrl}'`;
+
+				axios.post(`/wp-json/captaincore/v1/run/code`, {
+					environments: envIds,
+					code: wpcli
+				}, { headers: { 'X-WP-Nonce': this.wp_nonce } })
+				.then(res => {
+					const job = this.jobs.find(j => j.job_id == installJobId);
+					if (job) {
+						job.job_id = res.data;
+						this.runCommand(res.data);
+					}
+				});
+
+				// Clear dialog state
+				this.new_theme.api.items = [];
+				this.new_theme.api.info = {};
+				this.new_theme.envato = { items: [], search: "" };
+				this.new_theme.loading = false;
+			})
+			.catch(error => {
+				console.log(error.response);
+				this.snackbar.message = "Failed to get download link.";
+				this.snackbar.show = true;
+				this.new_theme.show = true;
+			});
 		},
 		installPlugin ( plugin ) {
-			environment_selected = this.new_plugin.environment_selected
-			if ( this.new_plugin.sites.length ==  1 ) {
-				site_id = this.new_plugin.sites[0].site_id
-			} else {
-				site_id = this.new_plugin.sites.map( s => s.site_id )
-			}
-			site_name = this.new_plugin.site_name;
-			should_proceed = confirm("Proceed with installing plugin " + plugin.name + " on " + site_name + "?");
+			const site_count_label = this.new_plugin.sites.length === 1 ? this.new_plugin.sites[0].name : `${this.new_plugin.sites.length} sites`;
+			let should_proceed = confirm("Proceed with installing plugin " + plugin.name + " on " + site_count_label + "?");
+			
 			if ( ! should_proceed ) {
 				return;
 			}
 
-			// Enable loading progress
-			description = "Installing plugin '" +plugin.name + "' to " + site_name;
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"site_id": site_id, "environment": environment_selected, "description": description, "status": "queued", "command": "manage", stream: []});
+			// 1. Close UI
+			this.new_plugin.show = false;
+			this.snackbar.message = "Installation started.";
+			this.snackbar.show = true;
+			this.new_plugin.api.items = [];
+			this.new_plugin.api.info = {};
+			this.new_plugin.loading = false;
 
-			// WP ClI command to send
-			wpcli = `wp plugin install --force --skip-plugins --skip-themes '${plugin.download_link}'`
+			// 2. Determine Targets
+			let envName = this.new_plugin.environment_selected || "Production";
+			
+			// If single site mode, check if a specific environment was active
+			if ( this.new_plugin.sites.length == 1 && this.new_plugin.sites[0].environment_selected ) {
+				envName = this.new_plugin.sites[0].environment_selected.environment || envName;
+			}
 
-			var data = {
-				'action': 'captaincore_install',
-				'post_id': site_id,
-				'command': "manage",
-				'value': "ssh",
-				'background': true,
-				'environment': environment_selected,
-				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
-			};
+			// Get distinct Environment IDs
+			const envIds = this.getEnvironmentIdsFromSelection(this.new_plugin.sites, envName);
+			
+			if (envIds.length === 0) {
+				this.snackbar.message = "Error: Could not determine target environments.";
+				this.snackbar.show = true;
+				return;
+			}
 
-			self = this;
+			// 3. Setup Install Job
+			const installDesc = `Installing plugin '${plugin.name}' to ${site_count_label}`;
+			const installJobId = Math.round((new Date()).getTime());
+			const wpcli = `wp plugin install --force --skip-plugins --skip-themes '${plugin.download_link}'`;
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					self.new_plugin.show = false
-					self.snackbar.message = description
-					self.snackbar.show = true
-					self.new_plugin.api.items = []
-					self.new_plugin.api.info = {}
-					self.new_plugin.loading = false;
-
-					// Updates job id with reponsed background job id
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data );
-				})
-				.catch(error => {
-					console.log(error.response)
-					self.new_plugin.show = true
+			// Define what happens after install finishes
+			const onInstallFinish = () => {
+				const syncDesc = `Syncing data for ${site_count_label}`;
+				const syncJobId = installJobId + 1;
+				
+				this.jobs.push({
+					"job_id": syncJobId,
+					"description": syncDesc, 
+					"status": "queued", 
+					"stream": [],
+					"command": "syncSite", 
+					"site_id": this.new_plugin.sites.map(s => s.site_id) // For local refresh
 				});
 
+				axios.post('/wp-json/captaincore/v1/sites/bulk-tools', {
+					tool: 'sync-data',
+					environments: envIds // Send the exact same IDs we installed to
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
+				.then(response => {
+					const job = this.jobs.find(j => j.job_id == syncJobId);
+					if (job) {
+						job.job_id = response.data;
+						this.runCommand(response.data);
+					}
+				});
+			};
+
+			// Push Install Job
+			this.jobs.push({
+				"job_id": installJobId,
+				"description": installDesc, 
+				"status": "queued", 
+				"stream": [],
+				"on_finish": onInstallFinish // Attach callback
+			});
+
+			axios.post(`/wp-json/captaincore/v1/run/code`, {
+				environments: envIds,
+				code: wpcli
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				const job = this.jobs.find(j => j.job_id == installJobId);
+				if (job) {
+					job.job_id = response.data;
+					this.runCommand(response.data);
+				}
+			})
+			.catch(error => {
+				console.error(error);
+				const job = this.jobs.find(j => j.job_id == installJobId);
+				if (job) {
+					job.status = 'error';
+					job.stream.push("Failed to start installation: " + (error.response?.data?.message || error.message));
+				}
+			});
 		},
 		uninstallPlugin ( plugin ) {
-			if ( this.new_plugin.sites.length ==  1 ) {
-				site_id = this.new_plugin.sites[0].site_id;
-				environment_selected = this.new_plugin.sites[0].environment_selected
-			} else {
-				site_id = this.new_plugin.sites.map( s => s.site_id )
-				environment_selected = this.new_plugin.environment_selected
-			}
-			site_name = this.new_plugin.site_name;
-			should_proceed = confirm("Proceed with uninstalling plugin " + plugin.name + " from " + site_name + "?");
+			const site_count_label = this.new_plugin.sites.length === 1 ? this.new_plugin.sites[0].name : `${this.new_plugin.sites.length} sites`;
+			let should_proceed = confirm("Proceed with uninstalling plugin " + plugin.name + " from " + site_count_label + "?");
+			
 			if ( ! should_proceed ) {
 				return;
 			}
-			// Enable loading progress
-			description = "Uninstalling plugin '" +plugin.name + "' from " + site_name;
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"site_id": site_id, "environment": environment_selected, "description": description, "status": "queued", "command": "manage", stream: []});
 
-			// WP ClI command to send
-			wpcli = "wp plugin delete " + plugin.slug;
+			// 1. Close UI
+			this.new_plugin.show = false;
+			this.snackbar.message = "Uninstallation started.";
+			this.snackbar.show = true;
+			this.new_plugin.api.items = [];
+			this.new_plugin.api.info = {};
+			this.new_plugin.loading = false;
 
-			var data = {
-				'action': 'captaincore_install',
-				'post_id': site_id,
-				'command': "manage",
-				'value': "ssh",
-				'background': true,
-				'environment': environment_selected,
-				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
-			};
+			// 2. Determine Targets
+			let envName = this.new_plugin.environment_selected || "Production";
+			
+			// If single site mode, check if a specific environment was active
+			if ( this.new_plugin.sites.length == 1 && this.new_plugin.sites[0].environment_selected ) {
+				envName = this.new_plugin.sites[0].environment_selected.environment || envName;
+			}
 
-			self = this;
+			// Get distinct Environment IDs
+			const envIds = this.getEnvironmentIdsFromSelection(this.new_plugin.sites, envName);
+			
+			if (envIds.length === 0) {
+				this.snackbar.message = "Error: Could not determine target environments.";
+				this.snackbar.show = true;
+				return;
+			}
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					self.new_plugin.show = false
-					self.snackbar.message = description
-					self.snackbar.show = true
-					self.new_plugin.api.items = []
-					self.new_plugin.api.info = {}
-					self.new_plugin.loading = false;
+			// 3. Setup Job
+			const description = `Uninstalling plugin '${plugin.name}' from ${site_count_label}`;
+			const jobId = Math.round((new Date()).getTime());
+			const wpcli = `wp plugin delete ${plugin.slug} --skip-themes --skip-plugins`;
 
-					// Updates job id with reponsed background job id
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data );
-				})
-				.catch(error => {
-					console.log(error.response)
-					self.new_plugin.show = true
+			// Define what happens after finish
+			const onFinish = () => {
+				const syncDesc = `Syncing data for ${site_count_label}`;
+				const syncJobId = jobId + 1;
+				
+				this.jobs.push({
+					"job_id": syncJobId,
+					"description": syncDesc, 
+					"status": "queued", 
+					"stream": [],
+					"command": "syncSite", 
+					"site_id": this.new_plugin.sites.map(s => s.site_id) // For local refresh
 				});
 
+				axios.post('/wp-json/captaincore/v1/sites/bulk-tools', {
+					tool: 'sync-data',
+					environments: envIds // Send the exact same IDs we installed to
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
+				.then(response => {
+					const job = this.jobs.find(j => j.job_id == syncJobId);
+					if (job) {
+						job.job_id = response.data;
+						this.runCommand(response.data);
+					}
+				});
+			};
+
+			// Push Job
+			this.jobs.push({
+				"job_id": jobId,
+				"description": description, 
+				"status": "queued", 
+				"stream": [],
+				"on_finish": onFinish // Attach callback
+			});
+
+			axios.post(`/wp-json/captaincore/v1/run/code`, {
+				environments: envIds,
+				code: wpcli
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				const job = this.jobs.find(j => j.job_id == jobId);
+				if (job) {
+					job.job_id = response.data;
+					this.runCommand(response.data);
+				}
+			})
+			.catch(error => {
+				console.error(error);
+				const job = this.jobs.find(j => j.job_id == jobId);
+				if (job) {
+					job.status = 'error';
+					job.stream.push("Failed to start uninstallation: " + (error.response?.data?.message || error.message));
+				}
+			});
 		},
 		fetchPlugins() {
 			this.new_plugin.loading = true;
@@ -17681,112 +17954,170 @@ const app = createApp({
 			this.fetchEnvatoThemes()
 		},
 		installTheme ( theme ) {
-			environment_selected = this.new_theme.environment_selected
-			if ( this.new_theme.sites.length ==  1 ) {
-				site_id = this.new_theme.sites[0].site_id
-			} else {
-				site_id = this.new_theme.sites.map( s => s.site_id )
-			}
-
-			site_name = this.new_theme.site_name;
-
-			should_proceed = confirm("Proceed with installing theme " + theme.name + " on " + site_name + "?");
+			const site_count_label = this.new_theme.sites.length === 1 ? this.new_theme.sites[0].name : `${this.new_theme.sites.length} sites`;
+			let should_proceed = confirm("Proceed with installing theme " + theme.name + " on " + site_count_label + "?");
 
 			if ( ! should_proceed ) {
 				return;
 			}
 
-			// Enable loading progress
-			description = "Installing theme '" + theme.name + "' to " + site_name;
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"site_id": site_id, "environment": environment_selected, "description": description, "status": "queued", "command": "manage", stream: []});
+			// 1. Close UI
+			this.new_theme.show = false;
+			this.snackbar.message = "Installation started.";
+			this.snackbar.show = true;
+			this.new_theme.api.items = [];
+			this.new_theme.api.info = {};
+			this.new_theme.loading = false;
 
-			// WP ClI command to send
-			wpcli = "wp theme install " + theme.slug + " --force";
+			// 2. Determine Targets
+			let envName = this.new_theme.environment_selected || "Production";
+			if ( this.new_theme.sites.length == 1 && this.new_theme.sites[0].environment_selected ) {
+				envName = this.new_theme.sites[0].environment_selected.environment || envName;
+			}
+			const envIds = this.getEnvironmentIdsFromSelection(this.new_theme.sites, envName);
+			
+			if (envIds.length === 0) return;
 
-			var data = {
-				'action': 'captaincore_install',
-				'post_id': site_id,
-				'command': "manage",
-				'value': "ssh",
-				'background': true,
-				'environment': environment_selected,
-				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
-			};
+			// 3. JOB 1: Install Theme
+			const installDesc = `Installing theme '${theme.name}' to ${site_count_label}`;
+			const installJobId = Math.round((new Date()).getTime());
+			const wpcli = `wp theme install '${theme.slug}' --force`;
 
-			self = this;
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					self.new_theme.show = false
-					self.snackbar.message = description
-					self.snackbar.show = true
-					self.new_theme.api.items = []
-					self.new_theme.api.info = {}
-					self.new_theme.loading = false;
-
-					// Updates job id with reponsed background job id
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data );
-				})
-				.catch(error => {
-					console.log(error.response)
-					self.new_theme.show = true
+			// Define Sync Callback
+			const onInstallFinish = () => {
+				const syncDesc = `Syncing data for ${site_count_label}`;
+				const syncJobId = installJobId + 1;
+				
+				this.jobs.push({
+					"job_id": syncJobId,
+					"description": syncDesc, 
+					"status": "queued", 
+					"stream": [],
+					"command": "syncSite",
+					"site_id": this.new_theme.sites.map(s => s.site_id)
 				});
 
+				axios.post('/wp-json/captaincore/v1/sites/bulk-tools', {
+					tool: 'sync-data',
+					environments: envIds
+				}, { headers: { 'X-WP-Nonce': this.wp_nonce } })
+				.then(response => {
+					const job = this.jobs.find(j => j.job_id == syncJobId);
+					if (job) {
+						job.job_id = response.data;
+						this.runCommand(response.data);
+					}
+				});
+			};
+
+			this.jobs.push({ 
+				"job_id": installJobId, 
+				"description": installDesc, 
+				"status": "queued", 
+				"stream": [],
+				"on_finish": onInstallFinish
+			});
+
+			axios.post(`/wp-json/captaincore/v1/run/code`, {
+				environments: envIds,
+				code: wpcli
+			}, { headers: { 'X-WP-Nonce': this.wp_nonce } })
+			.then(response => {
+				const job = this.jobs.find(j => j.job_id == installJobId);
+				if (job) {
+					job.job_id = response.data;
+					this.runCommand(response.data);
+				}
+			});
 		},
 		uninstallTheme ( theme ) {
-			if ( this.new_theme.sites.length ==  1 ) {
-				site_id = this.new_theme.sites[0].site_id;
-				environment_selected = this.new_theme.sites[0].environment_selected
-			} else {
-				site_id = this.new_theme.sites.map( s => s.site_id )
-				environment_selected = this.new_theme.environment_selected
-			}
-			site_name = this.new_theme.site_name;
-			should_proceed = confirm("Proceed with uninstalling theme " + theme.name + " from " + site_name + "?");
+			const site_count_label = this.new_theme.sites.length === 1 ? this.new_theme.sites[0].name : `${this.new_theme.sites.length} sites`;
+			let should_proceed = confirm("Proceed with uninstalling theme " + theme.name + " from " + site_count_label + "?");
+
 			if ( ! should_proceed ) {
 				return;
 			}
 
-			// Enable loading progress
-			description = "Uninstalling theme '" + theme.name + "' from " + site_name;
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"site_id": site_id, "environment" : environment_selected, "description": description, "status": "queued", "command": "manage", stream: []});
+			// 1. Close UI
+			this.new_theme.show = false;
+			this.snackbar.message = "Uninstallation started.";
+			this.snackbar.show = true;
+			this.new_theme.api.items = [];
+			this.new_theme.api.info = {};
+			this.new_theme.loading = false;
 
-			// WP ClI command to send
-			wpcli = "wp theme delete " + theme.slug;
+			// 2. Determine Targets
+			let envName = this.new_theme.environment_selected || "Production";
+			if ( this.new_theme.sites.length == 1 && this.new_theme.sites[0].environment_selected ) {
+				envName = this.new_theme.sites[0].environment_selected.environment || envName;
+			}
+			const envIds = this.getEnvironmentIdsFromSelection(this.new_theme.sites, envName);
+			
+			if (envIds.length === 0) {
+				this.snackbar.message = "Error: Could not determine target environments.";
+				this.snackbar.show = true;
+				return;
+			}
 
-			var data = {
-				'action': 'captaincore_install',
-				'post_id': site_id,
-				'command': "manage",
-				'value': "ssh",
-				'background': true,
-				'environment': environment_selected,
-				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
-			};
+			// 3. Setup Job
+			const description = `Uninstalling theme '${theme.name}' from ${site_count_label}`;
+			const jobId = Math.round((new Date()).getTime());
+			const wpcli = `wp theme delete ${theme.slug} --skip-themes --skip-plugins`;
 
-			self = this;
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					self.new_theme.show = false
-					self.snackbar.message = description
-					self.snackbar.show = true
-					self.new_theme.api.items = []
-					self.new_theme.api.info = {}
-					self.new_theme.loading = false;
-
-					// Updates job id with reponsed background job id
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data );
-				})
-				.catch(error => {
-					console.log(error.response)
-					self.new_theme.show = true
+			// Define Sync Callback
+			const onFinish = () => {
+				const syncDesc = `Syncing data for ${site_count_label}`;
+				const syncJobId = jobId + 1;
+				
+				this.jobs.push({
+					"job_id": syncJobId,
+					"description": syncDesc, 
+					"status": "queued", 
+					"stream": [],
+					"command": "syncSite",
+					"site_id": this.new_theme.sites.map(s => s.site_id)
 				});
 
+				axios.post('/wp-json/captaincore/v1/sites/bulk-tools', {
+					tool: 'sync-data',
+					environments: envIds
+				}, { headers: { 'X-WP-Nonce': this.wp_nonce } })
+				.then(response => {
+					const job = this.jobs.find(j => j.job_id == syncJobId);
+					if (job) {
+						job.job_id = response.data;
+						this.runCommand(response.data);
+					}
+				});
+			};
+
+			this.jobs.push({ 
+				"job_id": jobId, 
+				"description": description, 
+				"status": "queued", 
+				"stream": [],
+				"on_finish": onFinish
+			});
+
+			axios.post(`/wp-json/captaincore/v1/run/code`, {
+				environments: envIds,
+				code: wpcli
+			}, { headers: { 'X-WP-Nonce': this.wp_nonce } })
+			.then(response => {
+				const job = this.jobs.find(j => j.job_id == jobId);
+				if (job) {
+					job.job_id = response.data;
+					this.runCommand(response.data);
+				}
+			})
+			.catch(error => {
+				console.error(error);
+				const job = this.jobs.find(j => j.job_id == jobId);
+				if (job) {
+					job.status = 'error';
+					job.stream.push("Failed to start uninstallation: " + (error.response?.data?.message || error.message));
+				}
+			});
 		},
 		fetchThemes() {
 			this.new_theme.loading = true;
@@ -17814,13 +18145,14 @@ const app = createApp({
 				});
 		},
 		togglePlugin (plugin_name, plugin_status, site_id) {
-
-			site = this.dialog_site.site
+			const site = this.dialog_site.site;
+			const env = this.dialog_site.environment_selected;
 
 			// Enable loading progress
-			this.dialog_site.site.loading_plugins = true
-			site_name = this.dialog_site.site.name
+			this.dialog_site.site.loading_plugins = true;
+			const site_name = site.name;
 
+			let action = "";
 			if (plugin_status == "inactive") {
 				action = "deactivate";
 			}
@@ -17828,78 +18160,101 @@ const app = createApp({
 				action = "activate";
 			}
 
-			description = titleCase(action) + " plugin '" + plugin_name + "' from " + site_name;
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id, "description": description, "status": "queued", stream: [], conn: {}, command: "manage", enviroment: this.dialog_site.environment_selected.environment});
-
-			// WP ClI command to send
-			wpcli = "wp plugin " + action + " " + plugin_name;
-
-			var data = {
-				'action': 'captaincore_install',
-				'post_id': site_id,
-				'command': "manage",
-				'value': "ssh",
-				'background': true,
-				'environment': this.dialog_site.environment_selected.environment,
-				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+			const description = titleCase(action) + " plugin '" + plugin_name + "' from " + site_name;
+			const jobId = Math.round((new Date()).getTime());
+			
+			// Callback to turn off loading
+			const onFinish = () => {
+				this.dialog_site.site.loading_plugins = false;
 			};
 
-			self = this;
+			this.jobs.push({
+				"job_id": jobId, 
+				"description": description, 
+				"status": "queued", 
+				"stream": [], 
+				"on_finish": onFinish
+			});
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-				self.sites.filter(site => site.site_id == site_id)[0].loading_plugins = false;
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data )
-				})
-				.catch(error => {
-					console.log(error.response)
+			// WP ClI command to send
+			const wpcli = `wp plugin ${action} ${plugin_name} --skip-themes --skip-plugins`;
+
+			axios.post(`/wp-json/captaincore/v1/run/code`, {
+				environments: [env.environment_id],
+				code: wpcli
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then( response => {
+				const job = this.jobs.find(j => j.job_id == jobId);
+				if (job) {
+					job.job_id = response.data;
+					this.runCommand( response.data );
+				}
+			})
+			.catch(error => {
+				console.log(error.response);
+				this.dialog_site.site.loading_plugins = false;
+				const job = this.jobs.find(j => j.job_id == jobId);
+				if (job) {
+					job.status = 'error';
+					job.stream.push("Failed to start: " + (error.response?.data?.message || error.message));
+				}
 			});
 		},
 		deletePlugin (plugin_name, site_id) {
-
-			should_proceed = confirm("Are you sure you want to delete plugin " + plugin_name + "?");
+			let should_proceed = confirm("Are you sure you want to delete plugin " + plugin_name + "?");
 
 			if ( ! should_proceed ) {
 				return;
 			}
 
-			site = this.dialog_site.site
+			const site = this.dialog_site.site;
+			const env = this.dialog_site.environment_selected;
 
 			// Enable loading progress
 			this.dialog_site.site.loading_plugins = true;
 
-			site_name = this.dialog_site.site.name;
-			description = "Delete plugin '" + plugin_name + "' from " + site_name;
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: [], command: "manage", enviroment: this.dialog_site.environment_selected.environment});
-
-			// WP ClI command to send
-			wpcli = "wp plugin delete " + plugin_name;
-
-			var data = {
-				'action': 'captaincore_install',
-				'post_id': site_id,
-				'command': "manage",
-				'value': "ssh",
-				'background': true,
-				'environment': this.dialog_site.environment_selected.environment,
-				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
+			const site_name = site.name;
+			const description = "Delete plugin '" + plugin_name + "' from " + site_name;
+			const jobId = Math.round((new Date()).getTime());
+			
+			// Callback to clean up UI
+			const onFinish = () => {
+				this.dialog_site.site.loading_plugins = false;
 			};
 
-			self = this;
+			this.jobs.push({
+				"job_id": jobId,
+				"description": description, 
+				"status": "queued", 
+				"stream": [], 
+				"on_finish": onFinish
+			});
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					environment = this.dialog_site.environment_selected
-					updated_plugins = environment.plugins.filter(plugin => plugin.name != plugin_name);
-					environment.plugins = updated_plugins;
-					self.sites.filter(site => site.site_id == site_id)[0].loading_plugins = false;
+			// WP ClI command to send
+			const wpcli = `wp plugin delete ${plugin_name} --skip-themes --skip-plugins`;
 
-					// Updates job id with reponsed background job id
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data );
+			axios.post(`/wp-json/captaincore/v1/run/code`, {
+				environments: [env.environment_id],
+				code: wpcli
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then( response => {
+				// Optimistically update list
+				const updated_plugins = env.plugins.filter(plugin => plugin.name != plugin_name);
+				env.plugins = updated_plugins;
+				
+				const job = this.jobs.find(j => j.job_id == jobId);
+				if (job) {
+					job.job_id = response.data;
+					this.runCommand( response.data );
+				}
+			})
+			.catch(error => {
+				console.log(error.response);
+				this.dialog_site.site.loading_plugins = false;
 			});
 		},
 		runUpdate( site_id ) {
@@ -17942,18 +18297,24 @@ const app = createApp({
 		runCommand( job_id ) {
 			job = this.jobs.filter(job => job.job_id == job_id)[0]
 			self = this;
-			// console.log( "Start: select token " + job_id + " found job " + job.job_id )
 
 			job.conn = new WebSocket( this.socket );
-			job.conn.onopen = () => job.conn.send( '{ "token" : "'+ job.job_id +'", "action" : "start" }' );
 			
-			// Inside runCommand:
+			// Wait for connection to be OPEN before sending
+			job.conn.onopen = () => {
+				if (job.conn.readyState === WebSocket.OPEN) {
+					job.conn.send( '{ "token" : "'+ job.job_id +'", "action" : "start" }' );
+				}
+			};
+			
 			job.conn.onmessage = (session) => {
 				self.writeSocket(job_id, session);
-				self.view_console.show = true;
+				// Only auto-show console if not bulk action to prevent flickering
+				if ( self.view_console.selected_targets.length <= 1 ) {
+					self.view_console.show = true;
+				}
 				
 				if (self.view_console.terminal_open) {
-					// Use a small timeout to allow Vue to render text height changes
 					setTimeout(() => {
 						self.scrollToTerminalBottom();
 					}, 10);
@@ -17961,13 +18322,24 @@ const app = createApp({
 			};
 			job.conn.onclose = () => {
 				job = self.jobs.filter(job => job.job_id == job_id)[0]
-				last_output_index = job.stream.length - 1;
-				last_output = job.stream[last_output_index];
+				// Safety check if job was removed
+				if (!job) return;
 
-				if ( last_output == "Finished.") {
-					job.status = "done"
+				if ( job.stream && job.stream.length > 0 ) {
+					last_output_index = job.stream.length - 1;
+					last_output = job.stream[last_output_index];
+
+					if ( last_output && last_output.trim() == "Finished.") {
+						job.status = "done"
+						if ( typeof job.on_finish === 'function' ) {
+							job.on_finish()
+						}
+					} else {
+						job.status = "error"
+					}
 				} else {
-					job.status = "error"
+					// Assume error if stream is empty on close
+					job.status = "error" 
 				}
 
 				if ( job.command == "checkSSH" ) {
@@ -17991,26 +18363,22 @@ const app = createApp({
 
 				if ( job.command == "scanErrors" ) {
 					self.fetchSiteInfo( job.site_id )
-					self.sites.filter( s => s.site_id == job.site_id )[0].loading = false
+					if (self.sites.filter( s => s.site_id == job.site_id )[0]) {
+						self.sites.filter( s => s.site_id == job.site_id )[0].loading = false
+					}
 				}
 
 				if ( job.command == "manage" && job.environment ) {
-					self.syncSite( job.site_id, job.environment );
+					self.syncSiteEnvironment( job.site_id, job.environment );
 				}
 
 				if ( job.command == "manage" && !job.environment ) {
-					self.syncSite( job.site_id, "Production" );
-				}
-
-				if ( job.command == "saveUpdateSettings" ){
-					// to do
+					self.syncSiteEnvironment( job.site_id, "Production" );
 				}
 
 				if ( job.command == "update-wp" ){
 					this.viewUpdateLogs( job.site_id );
 				}
-
-				// console.log( "Done: select token " + job_id + " found job " + job.job_id )
 			}
 		},
 		writeSocket( job_id, session ) {
@@ -18464,47 +18832,51 @@ const app = createApp({
 				this.snackbar.show = true;
 				return;
 			}
-			username = this.dialog_delete_user.username
-			site = this.dialog_delete_user.site
-			environment = this.dialog_site.environment_selected;
-			should_proceed = confirm("Are you sure you want to delete user " + username + "?");
+			const username = this.dialog_delete_user.username;
+			const site = this.dialog_delete_user.site;
+			const env = this.dialog_site.environment_selected;
+			
+			let should_proceed = confirm("Are you sure you want to delete user " + username + "?");
 
 			if ( ! should_proceed ) {
 				return;
 			}
-			site_id = site.site_id
-			site_name = site.name;
-			description = "Delete user '" + username + "' from " + site_name + " (" + this.dialog_site.environment_selected.environment + ")";
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"site_id":site_id,"command":"manage","description": description, "status": "queued", stream: []});
+			
+			const site_name = site.name;
+			const description = "Delete user '" + username + "' from " + site_name + " (" + env.environment + ")";
+			const jobId = Math.round((new Date()).getTime());
+			
+			this.jobs.push({
+				"job_id": jobId,
+				"description": description, 
+				"status": "queued", 
+				"stream": []
+			});
 
 			// WP ClI command to send
-			wpcli = "wp user delete " + username + " --reassign=" + this.dialog_delete_user.reassign.ID;
+			const wpcli = `wp user delete ${username} --reassign=${this.dialog_delete_user.reassign.ID} --skip-themes --skip-plugins`;
 
-			var data = {
-				'action': 'captaincore_install',
-				'post_id': site_id,
-				'command': "manage",
-				'value': "ssh",
-				'background': true,
-				'environment': this.dialog_site.environment_selected.environment,
-				'arguments': { "name":"Commands","value":"command","command":"ssh","input": wpcli }
-			};
-
-			self = this;
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					environment.users = environment.users.filter(user => user.username != username);
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data );
-					self.dialog_delete_user.show = false
-					self.dialog_delete_user.site = {}
-					self.dialog_delete_user.reassign = {}
-					self.dialog_delete_user.username = ""
-					self.dialog_delete_user.users = []
-				});
-
+			axios.post(`/wp-json/captaincore/v1/run/code`, {
+				environments: [env.environment_id],
+				code: wpcli
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then( response => {
+				env.users = env.users.filter(user => user.username != username);
+				
+				const job = this.jobs.find(j => j.job_id == jobId);
+				if (job) {
+					job.job_id = response.data;
+					this.runCommand( response.data );
+				}
+				
+				this.dialog_delete_user.show = false;
+				this.dialog_delete_user.site = {};
+				this.dialog_delete_user.reassign = {};
+				this.dialog_delete_user.username = "";
+				this.dialog_delete_user.users = [];
+			});
 		},
 		bulkactionLaunch() {
 			// If the terminal is open, we should use the targets selected in the console directly
