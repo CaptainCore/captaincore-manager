@@ -4425,132 +4425,177 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card>
 			</v-window-item>
 			<v-window-item :key="6" value="tab-Scripts" :transition="false" :reverse-transition="false">
-				<v-toolbar density="compact" color="transparent" flat>
-					<v-toolbar-title>Scripts</v-toolbar-title>
-					<v-spacer></v-spacer>
-				</v-toolbar>
-				<v-card flat border="thin" rounded="xl" v-show="dialog_site.environment_selected.scheduled_scripts.length > 0">
-				<v-list-subheader>Scheduled Scripts</v-list-subheader>
-				<v-data-table :headers='[ {"title":"","value":"name","sortable":false,"width":"56"}, {"title":"Code","value":"code","sortable":false}, {"title":"Person","value":"done-by","sortable":false,"width":"180"}, {"title":"Date","value":"date","sortable":false,"width":"220"}, {"title":"","value":"","sortable":false,"width":"50"}]' :items="dialog_site.environment_selected.scheduled_scripts" hide-default-footer :footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }" class="timeline">
-					<template v-slot:body="{ items }">
-					<tbody>
-					<tr v-for="item in items">
-						<td class="justify-center pt-3 pr-0 text-center shrink" style="vertical-align: top;">
-							<v-icon color="primary" dark>mdi-clipboard-clock</v-icon>
-						</td>
-						<td class="justify-center py-4" style="vertical-align: top;">
-							{{ previewCode( item.code ) }}
-						</td>
-						<td class="justify-center pt-2" style="vertical-align:top; width:180px;">
-						<v-row>
-							<v-col class="shrink pr-0"><v-img :src="item.author_avatar" width="34" class="rounded"></v-img></v-col>
-							<v-col class="pt-4">{{ item.author }}</v-col>
-						</v-row>
-						</td>
-						<td class="justify-center pt-3" style="vertical-align: top;">{{ pretty_timestamp_epoch( item.run_at ) }}</td>
-						<td class="justify-center pt-1 pr-0" style="vertical-align:top;width:77px;">
-							<v-btn variant="text" icon @click="editScript(item)">
-								<v-icon small>mdi-pencil</v-icon>
-							</v-btn>
-						</td>
-					</tr>
-					</tbody>
-					</template>
-				</v-data-table>
-				</v-card>
-				<v-card flat>
+				<v-card flat color="transparent">
 					<v-card-text>
-					<v-row>
-					<v-col cols="12" md="8">
-					<v-list-subheader id="script_site" class="pl-0">Custom bash script or WP-CLI commands</v-list-subheader>
-					<v-textarea auto-grow variant="outlined" label="" hide-details :model-value="script.code" @update:model-value="script.code = $event" spellcheck="false" class="code"></v-textarea>
-					<v-btn color="primary" dark @click="runCustomCode(dialog_site.site.site_id)" class="mt-3 mr-3">Run Code</v-btn> 
-					<v-menu v-model="script.menu" :close-on-content-click="false" :nudge-width="200" offset-x>
-					<template v-slot:activator="{ props }">
-						<v-btn v-bind="props" outlined text class="mt-3">Schedule later</v-btn>
-					</template>
-					<v-card>
-						<v-card-text>
-						<v-menu ref="menu" v-model="script.menu_time" :close-on-content-click="false" :nudge-right="40" :return-value.sync="script.time" transition="scale-transition" offset-y max-width="290px" min-width="290px">
-							<template v-slot:activator="{ props }">
-							<v-text-field v-model="script.time" label="Time" prepend-icon="mdi-clock-time-four-outline" readonly v-bind="props"></v-text-field>
-							</template>
-							<v-time-picker v-if="script.menu_time" v-model="script.time" full-width @click:minute="$refs.menu.save(script.time)"></v-time-picker>
-						</v-menu>
-						<v-menu ref="script.menu_date" v-model="script.menu_date" :close-on-content-click="false" :return-value.sync="script.menu_date" transition="scale-transition" offset-y min-width="auto">
-							<template v-slot:activator="{ props }">
-							<v-text-field v-model="script.date" label="Date" prepend-icon="mdi-calendar" readonly v-bind="props"></v-text-field>
-							</template>
-							<v-date-picker v-model="script.date" @input="script.menu_date = false" no-title scrollable :min="new Date().toISOString().substr(0, 10)"></v-date-picker>
-						</v-menu>
-						</v-card-text>
-						<v-card-actions>
-						<v-spacer></v-spacer>
-						<v-btn variant="text" @click="script.menu = false">Cancel</v-btn>
-						<v-btn color="primary" text @click="scheduleScript()">Schedule Code</v-btn>
-						</v-card-actions>
-					</v-card>
-					</v-menu>
-					<div class="mt-3">
-						<a>View completed scripts</a>
-					</div>
-					</v-col>
-					<v-col cols="12" md="4">
-					<v-list density="compact">
-						<v-list-subheader>Common</v-list-subheader>
-						<v-list-item @click="viewApplyHttpsUrls(dialog_site.site.site_id)" density="compact">
-						<template v-slot:prepend>
-							<v-icon>mdi-rocket-launch</v-icon>
-						</template>
-						<v-list-item-title>Apply HTTPS Urls</v-list-item-title>
-						</v-list-item>
-						<v-list-item @click="siteDeploy(dialog_site.site.site_id)" density="compact">
-						<template v-slot:prepend>
-							<v-icon>mdi-refresh</v-icon>
-						</template>
-						<v-list-item-title>Deploy Defaults</v-list-item-title>
-						</v-list-item>
-						<v-list-item @click="launchSiteDialog(dialog_site.site.site_id)" density="compact">
-						<template v-slot:prepend>
-							<v-icon>mdi-rocket</v-icon>
-						</template>
-						<v-list-item-title>Launch Site</v-list-item-title>
-						</v-list-item>
-						<v-list-item @click="showSiteMigration(dialog_site.site.site_id)" density="compact">
-						<template v-slot:prepend>
-							<v-icon>mdi-truck</v-icon>
-						</template>
-						<v-list-item-title>Migrate from backup</v-list-item-title>
-						</v-list-item>
-						<v-list-item @click="resetPermissions(dialog_site.site.site_id)" density="compact">
-						<template v-slot:prepend>
-							<v-icon>mdi-file-lock</v-icon>
-						</template>
-						<v-list-item-title>Reset Permissions</v-list-item-title>
-						</v-list-item>
-						<v-list-item @click="toggleSite(dialog_site.site.site_id)" density="compact">
-						<template v-slot:prepend>
-							<v-icon>mdi-toggle-switch</v-icon>
-						</template>
-						<v-list-item-title>Toggle Site</v-list-item-title>
-						</v-list-item>
-						<v-list-subheader v-show="recipes.filter( r => r.public == 1 ).length > 0">Other</v-list-subheader>
-						<v-list-item @click="runRecipe( recipe.recipe_id, dialog_site.site.site_id )" density="compact" v-for="recipe in recipes.filter( r => r.public == 1 )">
-						<template v-slot:prepend>
-							<v-icon>mdi-script-text-outline</v-icon>
-						</template>
-						<v-list-item-title>{{ recipe.title }}</v-list-item-title>
-						</v-list-item>
-						<v-list-subheader v-show="recipes.filter( r => r.public != 1 ).length > 0">User</v-list-subheader>
-						<v-list-item @click="loadRecipe( recipe.recipe_id )" density="compact" v-for="recipe in recipes.filter( r => r.public != 1 )">
-						<template v-slot:prepend>
-							<v-icon>mdi-script-text-outline</v-icon>
-						</template>
-						<v-list-item-title>{{ recipe.title }}</v-list-item-title>
-						</v-list-item>
-					</v-list>
-					</v-col>
-					</v-row>
+						
+						<!-- 1. TERMINAL INTEGRATION BAR -->
+						<v-card variant="tonal" color="primary" class="mb-6" rounded="lg">
+							<v-card-text class="d-flex align-center py-3">
+								<v-icon start size="large" class="mr-4">mdi-console-line</v-icon>
+								<div>
+									<div class="text-subtitle-1 font-weight-bold">Command Console</div>
+									<div class="text-caption">Run WP-CLI commands, Bash scripts, or Recipes on {{ dialog_site.environment_selected.environment }}.</div>
+								</div>
+								<v-spacer></v-spacer>
+								<v-btn color="primary" variant="flat" @click="openTerminalForCurrentEnv()">
+									Open Terminal
+									<v-icon end>mdi-open-in-new</v-icon>
+								</v-btn>
+							</v-card-text>
+						</v-card>
+
+						<!-- 2. SYSTEM TOOLS GRID -->
+						<v-row class="mb-2">
+							<v-col cols="12">
+								<h3 class="text-subtitle-2 text-medium-emphasis text-uppercase mb-2">System Tools</h3>
+							</v-col>
+							
+							<v-col cols="12" sm="6" md="4">
+								<v-card hover border="thin" @click="siteDeploy(dialog_site.site.site_id)" height="100%">
+									<v-list-item lines="two">
+										<template v-slot:prepend>
+											<v-avatar color="blue-lighten-5" class="rounded-lg" variant="flat">
+												<v-icon color="blue-darken-2">mdi-refresh</v-icon>
+											</v-avatar>
+										</template>
+										<v-list-item-title class="font-weight-bold">Deploy Defaults</v-list-item-title>
+										<v-list-item-subtitle>Apply standard config & plugins</v-list-item-subtitle>
+									</v-list-item>
+								</v-card>
+							</v-col>
+
+							<v-col cols="12" sm="6" md="4">
+								<v-card hover border="thin" @click="viewApplyHttpsUrls(dialog_site.site.site_id)" height="100%">
+									<v-list-item lines="two">
+										<template v-slot:prepend>
+											<v-avatar color="green-lighten-5" class="rounded-lg" variant="flat">
+												<v-icon color="green-darken-2">mdi-lock-check</v-icon>
+											</v-avatar>
+										</template>
+										<v-list-item-title class="font-weight-bold">Apply HTTPS</v-list-item-title>
+										<v-list-item-subtitle>Search & replace http:// to https://</v-list-item-subtitle>
+									</v-list-item>
+								</v-card>
+							</v-col>
+
+							<v-col cols="12" sm="6" md="4">
+								<v-card hover border="thin" @click="resetPermissions(dialog_site.site.site_id)" height="100%">
+									<v-list-item lines="two">
+										<template v-slot:prepend>
+											<v-avatar color="orange-lighten-5" class="rounded-lg" variant="flat">
+												<v-icon color="orange-darken-2">mdi-file-lock</v-icon>
+											</v-avatar>
+										</template>
+										<v-list-item-title class="font-weight-bold">Reset Permissions</v-list-item-title>
+										<v-list-item-subtitle>Fix file ownership & groups</v-list-item-subtitle>
+									</v-list-item>
+								</v-card>
+							</v-col>
+
+							<v-col cols="12" sm="6" md="4">
+								<v-card hover border="thin" @click="toggleSite(dialog_site.site.site_id)" height="100%">
+									<v-list-item lines="two">
+										<template v-slot:prepend>
+											<v-avatar color="grey-lighten-3" class="rounded-lg" variant="flat">
+												<v-icon color="grey-darken-3">mdi-toggle-switch</v-icon>
+											</v-avatar>
+										</template>
+										<v-list-item-title class="font-weight-bold">Maintenance Mode</v-list-item-title>
+										<v-list-item-subtitle>Toggle site accessibility</v-list-item-subtitle>
+									</v-list-item>
+								</v-card>
+							</v-col>
+
+							<v-col cols="12" sm="6" md="4">
+								<v-card hover border="thin" @click="launchSiteDialog(dialog_site.site.site_id)" height="100%">
+									<v-list-item lines="two">
+										<template v-slot:prepend>
+											<v-avatar color="purple-lighten-5" class="rounded-lg" variant="flat">
+												<v-icon color="purple-darken-2">mdi-rocket-launch</v-icon>
+											</v-avatar>
+										</template>
+										<v-list-item-title class="font-weight-bold">Launch Site</v-list-item-title>
+										<v-list-item-subtitle>Go live domain replacement</v-list-item-subtitle>
+									</v-list-item>
+								</v-card>
+							</v-col>
+
+							<v-col cols="12" sm="6" md="4">
+								<v-card hover border="thin" @click="showSiteMigration(dialog_site.site.site_id)" height="100%">
+									<v-list-item lines="two">
+										<template v-slot:prepend>
+											<v-avatar color="teal-lighten-5" class="rounded-lg" variant="flat">
+												<v-icon color="teal-darken-2">mdi-truck-fast</v-icon>
+											</v-avatar>
+										</template>
+										<v-list-item-title class="font-weight-bold">Migrate Backup</v-list-item-title>
+										<v-list-item-subtitle>Import from external URL</v-list-item-subtitle>
+									</v-list-item>
+								</v-card>
+							</v-col>
+						</v-row>
+
+						<v-divider class="my-6"></v-divider>
+
+						<!-- 3. RECIPES (If available) -->
+						<div v-show="recipes.filter( r => r.public == 1 ).length > 0">
+							<v-row class="mb-2">
+								<v-col cols="12" class="d-flex align-center">
+									<h3 class="text-subtitle-2 text-medium-emphasis text-uppercase">Recipes</h3>
+								</v-col>
+								
+								<!-- Show first 6 Public Recipes -->
+								<v-col cols="12" sm="6" md="4" v-for="recipe in recipes.filter( r => r.public == 1 )" :key="recipe.recipe_id">
+									<v-card hover border="thin" @click="runRecipe( recipe.recipe_id, dialog_site.site.site_id )" height="100%" density="compact">
+										<v-card-text class="d-flex align-center">
+											<v-icon size="small" class="mr-2 text-medium-emphasis">mdi-script-text-outline</v-icon>
+											<span class="text-body-2 font-weight-medium text-truncate">{{ recipe.title }}</span>
+										</v-card-text>
+									</v-card>
+								</v-col>
+							</v-row>
+							<v-divider class="my-6"></v-divider>
+						</div>
+
+						<!-- 4. SCHEDULED SCRIPTS HISTORY -->
+						<div v-if="dialog_site.environment_selected.scheduled_scripts.length > 0">
+							<h3 class="text-subtitle-2 text-medium-emphasis text-uppercase mb-2">Scheduled Scripts</h3>
+							<v-card flat border="thin" rounded="lg">
+								<v-data-table 
+									:headers='[ {"title":"","value":"icon","sortable":false,"width":"56"}, {"title":"Code","value":"code","sortable":false}, {"title":"User","value":"author","sortable":false,"width":"180"}, {"title":"Run Date","value":"run_at","sortable":false,"width":"220"}, {"title":"","value":"actions","sortable":false,"width":"50"}]' 
+									:items="dialog_site.environment_selected.scheduled_scripts" 
+									hide-default-footer 
+									:footer-props="{ itemsPerPageOptions: [50,100,250,{'text':'All','value':-1}] }"
+								>
+									<template v-slot:item.icon>
+										<div class="text-center"><v-icon color="primary" size="small">mdi-clock-outline</v-icon></div>
+									</template>
+									<template v-slot:item.code="{ item }">
+										<code class="text-caption bg-grey-lighten-4 pa-1 rounded">{{ previewCode( item.code ) }}</code>
+									</template>
+									<template v-slot:item.author="{ item }">
+										<div class="d-flex align-center">
+											<v-avatar size="24" class="mr-2"><v-img :src="item.author_avatar"></v-img></v-avatar>
+											<span class="text-caption">{{ item.author }}</span>
+										</div>
+									</template>
+									<template v-slot:item.run_at="{ item }">
+										<span class="text-caption">{{ pretty_timestamp_epoch( item.run_at ) }}</span>
+									</template>
+									<template v-slot:item.actions="{ item }">
+										<v-btn variant="text" icon density="compact" @click="editScript(item)">
+											<v-icon size="small">mdi-pencil</v-icon>
+										</v-btn>
+									</template>
+								</v-data-table>
+							</v-card>
+						</div>
+						
+						<!-- Empty State for History -->
+						<div v-else class="text-center py-4 text-caption text-medium-emphasis">
+							No scheduled scripts found for this environment.
+						</div>
+
 					</v-card-text>
 				</v-card>
 			</v-window-item>
