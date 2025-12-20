@@ -141,24 +141,30 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		</v-tabs>
 	  </div>
 		<v-container class="px-0 pt-4 py-15">
-		<v-dialog v-model="new_plugin.show" max-width="900px">
-		<v-card tile>
+		<v-dialog v-model="new_plugin.show" max-width="900px" scrollable>
+		<v-card rounded="xl" height="700px">
 			<v-toolbar flat color="primary">
 			<v-btn icon dark @click.native="new_plugin.show = false">
 				<v-icon>mdi-close</v-icon>
 			</v-btn>
-			<v-toolbar-title>Add plugin to {{ new_plugin.site_name }}</v-toolbar-title>
+			<v-toolbar-title>
+				Add plugin to 
+				<span v-if="new_plugin.sites.length === 1">{{ new_plugin.sites[0].name }}</span>
+				<span v-else>{{ new_plugin.sites.length }} sites</span>
+			</v-toolbar-title>
 			<v-spacer></v-spacer>
 			</v-toolbar>
-			<v-toolbar density="compact" flat>
-			<v-tabs v-model="new_plugin.tabs" mandatory>
-				<v-tab value="0">From your computer</v-tab>
-				<v-tab value="1">From WordPress.org</v-tab>
-				<v-tab value="2">From Envato</v-tab>
-			</v-tabs>
-			<v-spacer></v-spacer>
-			</v-toolbar>
-			<v-window v-model="new_plugin.tabs">
+			<div class="flex-grow-0">
+				<v-tabs v-model="new_plugin.tabs" bg-color="surface" color="primary" mandatory>
+					<v-tab value="0">Upload</v-tab>
+					<v-tab value="1">WordPress.org</v-tab>
+					<v-tab value="2">Envato</v-tab>
+				</v-tabs>
+				<v-divider></v-divider>
+			</div>
+			
+			<v-card-text class="pa-0" style="height: 100%; overflow-y: auto;">
+			<v-window v-model="new_plugin.tabs" class="fill-height">
 			<v-window-item value="0" :transition="false" :reverse-transition="false">
 				<div class="upload-drag pt-4">
 				<div class="upload">
@@ -189,87 +195,132 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</div>
 				</div>
 			</v-window-item>
-			<v-window-item value="1" :transition="false" :reverse-transition="false">
-				<v-row justify="center" class="pa-3">
-				<v-col cols="12" sm="9" pt-3>
-					<v-pagination v-if="new_plugin.api.info && new_plugin.api.info.pages > 1" :length="new_plugin.api.info.pages - 1" v-model="new_plugin.page" :total-visible="7" color="primary" @update:model-value="fetchPlugins"></v-pagination>
-				</v-col>
-				<v-col cols="12" sm="3">
-					<v-text-field label="Search plugins" light @click:append="new_plugin.search = $event.target.offsetParent.children[0].children[1].value; fetchPlugins()" v-on:keyup.enter="new_plugin.search = $event.target.value; fetchPlugins()" append-icon="mdi-magnify" :loading="new_plugin.loading"></v-text-field>
-				</v-col>
-				</v-row>
-				<v-row wrap pa-5>
-				<v-col v-for="item in new_plugin.api.items" :key="item.slug" cols="4" pa-2>
-					<v-card>
-					<v-row style="min-height: 120px;">
-						<v-col cols="3" px-2 pt-2>
-						<v-img :src='item.icons["1x"]' contain></v-img>
+			<v-window-item value="1" :transition="false" :reverse-transition="false" class="fill-height">
+				<div style="position: sticky; top: 0; z-index: 2; background: rgb(var(--v-theme-surface));" class="pa-4 border-b">
+					<v-row align="center" dense>
+						<v-col cols="12" md="8">
+							<v-text-field 
+								variant="outlined" 
+								density="compact" 
+								hide-details 
+								label="Search WordPress.org" 
+								@click:append="new_plugin.search = $event.target.offsetParent.children[0].children[1].value; fetchPlugins()" 
+								v-on:keyup.enter="new_plugin.search = $event.target.value; fetchPlugins()" 
+								append-inner-icon="mdi-magnify" 
+								:loading="new_plugin.loading">
+							</v-text-field>
 						</v-col>
-						<v-col cols="9" px-2 pt-2>
-						<span v-html="item.name"></span>
+						<v-col cols="12" md="4" class="d-flex justify-end">
+							<v-pagination 
+								v-if="new_plugin.api.info && new_plugin.api.info.pages > 1" 
+								:length="new_plugin.api.info.pages - 1" 
+								v-model="new_plugin.page" 
+								:total-visible="5" 
+								density="compact"
+								rounded="circle"
+								@update:model-value="fetchPlugins">
+							</v-pagination>
 						</v-col>
 					</v-row>
-					<v-card-actions>
-						<v-spacer></v-spacer>
-						<div v-if="new_plugin.current_plugins.includes( item.slug )">
-						<v-btn size="small" variant="tonal" @click="uninstallPlugin( item )">Uninstall</v-btn>
-						<v-btn size="small" variant="tonal" disabled>Install</v-btn>
-						</div>
-						<v-btn v-else size="small" variant="tonal" @click="installPlugin( item )">Install</v-btn>
-					</v-card-actions>
-					</v-card>
-				</v-col>
-				</v-row>
+				</div>
+				
+				<v-container fluid class="pa-4">
+					<v-row>
+						<v-col v-for="item in new_plugin.api.items" :key="item.slug" cols="12" sm="6" md="4">
+							<v-card border flat height="100%" class="d-flex flex-column">
+								<div class="d-flex pa-3">
+									<v-avatar size="64" rounded="0" class="mr-3">
+										<v-img :src='item.icons["1x"]' contain></v-img>
+									</v-avatar>
+									<div>
+										<div class="text-subtitle-2 font-weight-bold" v-html="item.name" style="line-height: 1.2;"></div>
+										<div class="text-caption text-medium-emphasis mt-1">Version {{ item.version }}</div>
+									</div>
+								</div>
+								<v-card-text class="pt-0 text-caption text-truncate">
+									{{ item.short_description }}
+								</v-card-text>
+								<v-spacer></v-spacer>
+								<v-divider></v-divider>
+								<v-card-actions>
+									<v-spacer></v-spacer>
+									<div v-if="new_plugin.current_plugins.includes( item.slug )">
+										<v-btn size="small" variant="text" color="error" @click="uninstallPlugin( item )">Uninstall</v-btn>
+										<v-btn size="small" variant="tonal" disabled>Installed</v-btn>
+									</div>
+									<v-btn v-else size="small" color="primary" variant="flat" @click="installPlugin( item )">Install</v-btn>
+								</v-card-actions>
+							</v-card>
+						</v-col>
+					</v-row>
+				</v-container>
 			</v-window-item>
-			<v-window-item value="2" :transition="false" :reverse-transition="false">
-				<v-row justify="center" class="pa-3">
-				<v-col cols="12" sm="9" pt-3></v-col>
-				<v-col cols="12" sm="3">
-					<v-text-field label="Search plugins" light v-model="new_plugin.envato.search" append-icon="mdi-magnify"></v-text-field>
-				</v-col>
-				</v-row>
-				<v-row wrap pa-5>
-				<v-col v-for="item in filteredEnvatoPlugins" :key="item.id" cols="4" pa-2>
-					<v-card>
-					<v-row style="min-height: 120px;">
-						<v-col cols="3" px-2 pt-2>
-						<v-img :src='item.previews.icon_preview.icon_url' contain></v-img>
-						</v-col>
-						<v-col cols="9" px-2 pt-2>
-						<span v-html="item.name"></span>
+			<v-window-item value="2" :transition="false" :reverse-transition="false" class="fill-height">
+				<div style="position: sticky; top: 0; z-index: 2; background: rgb(var(--v-theme-surface));" class="pa-4 border-b">
+					<v-text-field 
+						variant="outlined" 
+						density="compact" 
+						hide-details 
+						label="Search Envato Purchases" 
+						v-model="new_plugin.envato.search" 
+						append-inner-icon="mdi-magnify">
+					</v-text-field>
+				</div>
+				<v-container fluid class="pa-4">
+					<v-row>
+						<v-col v-for="item in filteredEnvatoPlugins" :key="item.id" cols="12" sm="6" md="4">
+							<v-card border flat height="100%" class="d-flex flex-column">
+								<div class="d-flex pa-3">
+									<v-avatar size="64" rounded="0" class="mr-3">
+										<v-img :src='item.previews.icon_preview.icon_url' contain></v-img>
+									</v-avatar>
+									<div>
+										<div class="text-subtitle-2 font-weight-bold" v-html="item.name" style="line-height: 1.2;"></div>
+										<div class="text-caption text-medium-emphasis mt-1">ID: {{ item.id }}</div>
+									</div>
+								</div>
+								<v-spacer></v-spacer>
+								<v-divider></v-divider>
+								<v-card-actions>
+									<v-spacer></v-spacer>
+									<v-btn size="small" color="primary" variant="flat" @click="installEnvatoPlugin( item )">Install</v-btn>
+								</v-card-actions>
+							</v-card>
 						</v-col>
 					</v-row>
-					<v-card-actions>
-						<v-spacer></v-spacer>
-						<v-btn size="small" variant="tonal" @click="installEnvatoPlugin( item )">Install</v-btn>
-					</v-card-actions>
-					</v-card>
-				</v-col>
-				</v-row>
+				</v-container>
 			</v-window-item>
 			</v-window>
+			</v-card-text>
 		</v-card>
 		</v-dialog>
-		<v-dialog v-model="new_theme.show" max-width="900px">
-		<v-card tile>
+		<v-dialog v-model="new_theme.show" max-width="900px" scrollable>
+		<v-card rounded="xl" height="700px">
 			<v-toolbar flat color="primary">
 			<v-btn icon dark @click.native="new_theme.show = false">
 				<v-icon>mdi-close</v-icon>
 			</v-btn>
-			<v-toolbar-title>Add theme to {{ new_theme.site_name }}</v-toolbar-title>
+			<v-toolbar-title>
+				Add theme to 
+				<span v-if="new_theme.sites.length === 1">{{ new_theme.sites[0].name }}</span>
+				<span v-else>{{ new_theme.sites.length }} sites</span>
+			</v-toolbar-title>
 			<v-spacer></v-spacer>
 			</v-toolbar>
-			<v-toolbar density="compact" flat>
-			<v-tabs v-model="new_theme.tabs" mandatory>
-				<v-tab value="0">From your computer</v-tab>
-				<v-tab value="1">From WordPress.org</v-tab>
-				<v-tab value="2">From Envato</v-tab>
-			</v-tabs>
-			<v-spacer></v-spacer>
-			</v-toolbar>
-			<v-window v-model="new_theme.tabs">
-			<v-window-item value="0" :transition="false">
-				<div class="upload-drag pt-4">
+			<div class="flex-grow-0">
+				<v-tabs v-model="new_theme.tabs" bg-color="surface" color="primary" mandatory>
+					<v-tab value="0">Upload</v-tab>
+					<v-tab value="1">WordPress.org</v-tab>
+					<v-tab value="2">Envato</v-tab>
+				</v-tabs>
+				<v-divider></v-divider>
+			</div>
+			
+			<v-card-text class="pa-0" style="height: 100%; overflow-y: auto;">
+			<v-window v-model="new_theme.tabs" class="fill-height">
+			<v-window-item value="0" :transition="false" :reverse-transition="false">
+				<!-- Same upload HTML as plugin dialog -->
+                <div class="upload-drag pt-4">
 				<div class="upload">
 					<div v-if="upload.length" class="mx-3">
 					<div v-for="(file, index) in upload" :key="file.id">
@@ -298,69 +349,99 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</div>
 				</div>
 			</v-window-item>
-			<v-window-item value="1" :transition="false">
-				<v-row justify="center" class="pa-3">
-				<v-col cols="12" sm="3">
-				</v-col>
-				<v-col cols="12" sm="6">
-					<div class="text-center">
-					<v-pagination v-if="new_theme.api.info && new_theme.api.info.pages > 1" :length="new_theme.api.info.pages - 1" v-model="new_theme.page" :total-visible="7" color="primary" @update:model-value="fetchThemes"></v-pagination>
-					</div>
-				</v-col>
-				<v-col cols="12" sm="3">
-					<v-text-field label="Search themes" light @click:append="new_theme.search = $event.target.offsetParent.children[0].children[1].value; fetchThemes()" v-on:keyup.enter="new_theme.search = $event.target.value; fetchThemes()" append-icon="mdi-magnify" :loading="new_theme.loading"></v-text-field>
-				</v-col>
-				</v-row>
-				<v-row wrap pa-2>
-				<v-col v-if="new_theme.api.items" v-for="item in new_theme.api.items" :key="item.slug" cols="4" pa-2>
-					<v-card>
-					<v-row style="min-height: 120px;">
-						<v-col cols="3" px-2 pt-2>
-						<v-img :src='item.screenshot_url' contain></v-img>
+			<v-window-item value="1" :transition="false" :reverse-transition="false" class="fill-height">
+				<div style="position: sticky; top: 0; z-index: 2; background: rgb(var(--v-theme-surface));" class="pa-4 border-b">
+					<v-row align="center" dense>
+						<v-col cols="12" md="8">
+							<v-text-field 
+								variant="outlined" 
+								density="compact" 
+								hide-details 
+								label="Search WordPress.org" 
+								@click:append="new_theme.search = $event.target.offsetParent.children[0].children[1].value; fetchThemes()" 
+								v-on:keyup.enter="new_theme.search = $event.target.value; fetchThemes()" 
+								append-inner-icon="mdi-magnify" 
+								:loading="new_theme.loading">
+							</v-text-field>
 						</v-col>
-						<v-col cols="9" px-2 pt-2>
-						<span v-html="item.name"></span>
+						<v-col cols="12" md="4" class="d-flex justify-end">
+							<v-pagination 
+								v-if="new_theme.api.info && new_theme.api.info.pages > 1" 
+								:length="new_theme.api.info.pages - 1" 
+								v-model="new_theme.page" 
+								:total-visible="5" 
+								density="compact"
+								rounded="circle"
+								@update:model-value="fetchThemes">
+							</v-pagination>
 						</v-col>
 					</v-row>
-					<v-card-actions>
-						<v-spacer></v-spacer>
-						<div v-if="new_theme.current_themes && new_theme.current_themes.includes( item.slug )">
-						<v-btn size="small" variant="tonal" @click="uninstallTheme( item )">Uninstall</v-btn>
-						<v-btn size="small" variant="tonal" disabled>Install</v-btn>
-						</div>
-						<v-btn v-else size="small" variant="tonal" @click="installTheme( item )">Install</v-btn>
-					</v-card-actions>
-					</v-card>
-				</v-col>
-				</v-row>
+				</div>
+				
+				<v-container fluid class="pa-4">
+					<v-row>
+						<v-col v-if="new_theme.api.items" v-for="item in new_theme.api.items" :key="item.slug" cols="12" sm="6" md="4">
+							<v-card border flat height="100%" class="d-flex flex-column">
+								<v-img :src="item.screenshot_url" height="150" cover></v-img>
+								<div class="pa-3">
+									<div class="text-subtitle-2 font-weight-bold" v-html="item.name" style="line-height: 1.2;"></div>
+									<div class="text-caption text-medium-emphasis mt-1">Version {{ item.version }}</div>
+								</div>
+								<v-spacer></v-spacer>
+								<v-divider></v-divider>
+								<v-card-actions>
+									<v-spacer></v-spacer>
+								<v-divider></v-divider>
+								<v-card-actions>
+									<v-spacer></v-spacer>
+									<div v-if="new_theme.current_themes && new_theme.current_themes.includes( item.slug )">
+										<v-btn size="small" variant="text" color="error" @click="uninstallTheme( item )">Uninstall</v-btn>
+										<v-btn size="small" variant="tonal" disabled>Installed</v-btn>
+									</div>
+									<v-btn v-else size="small" color="primary" variant="flat" @click="installTheme( item )">Install</v-btn>
+								</v-card-actions>
+							</v-card>
+						</v-col>
+					</v-row>
+				</v-container>
 			</v-window-item>
-			<v-window-item value="2" :transition="false">
-				<v-row justify="center" class="pa-3">
-				<v-col cols="12" sm="9"></v-col>
-				<v-col cols="12" sm="3">
-					<v-text-field label="Search themes" light v-model="new_theme.envato.search" append-icon="mdi-magnify"></v-text-field>
-				</v-col>
-				</v-row>
-				<v-row wrap pa-5>
-				<v-col v-for="item in filteredEnvatoThemes" :key="item.id" cols="4" pa-2>
-					<v-card>
-					<v-row style="min-height: 120px;">
-						<v-col cols="3" px-2 pt-2>
-						<v-img :src='item.previews.icon_preview.icon_url' contain></v-img>
-						</v-col>
-						<v-col cols="9" px-2 pt-2>
-						<span v-html="item.name"></span>
+			<v-window-item value="2" :transition="false" :reverse-transition="false" class="fill-height">
+				<div style="position: sticky; top: 0; z-index: 2; background: rgb(var(--v-theme-surface));" class="pa-4 border-b">
+					<v-text-field 
+						variant="outlined" 
+						density="compact" 
+						hide-details 
+						label="Search Envato Purchases" 
+						v-model="new_theme.envato.search" 
+						append-inner-icon="mdi-magnify">
+					</v-text-field>
+				</div>
+				<v-container fluid class="pa-4">
+					<v-row>
+						<v-col v-for="item in filteredEnvatoThemes" :key="item.id" cols="12" sm="6" md="4">
+							<v-card border flat height="100%" class="d-flex flex-column">
+								<div class="d-flex pa-3">
+									<v-avatar size="64" rounded="0" class="mr-3">
+										<v-img :src='item.previews.icon_preview.icon_url' contain></v-img>
+									</v-avatar>
+									<div>
+										<div class="text-subtitle-2 font-weight-bold" v-html="item.name" style="line-height: 1.2;"></div>
+										<div class="text-caption text-medium-emphasis mt-1">ID: {{ item.id }}</div>
+									</div>
+								</div>
+								<v-spacer></v-spacer>
+								<v-divider></v-divider>
+								<v-card-actions>
+									<v-spacer></v-spacer>
+									<v-btn size="small" color="primary" variant="flat" @click="installEnvatoTheme( item )">Install</v-btn>
+								</v-card-actions>
+							</v-card>
 						</v-col>
 					</v-row>
-					<v-card-actions>
-						<v-spacer></v-spacer>
-						<v-btn size="small" variant="tonal" @click="installEnvatoTheme( item )">Install</v-btn>
-					</v-card-actions>
-					</v-card>
-				</v-col>
-				</v-row>
+				</v-container>
 			</v-window-item>
 			</v-window>
+			</v-card-text>
 		</v-card>
 		</v-dialog>
 		<v-dialog v-model="bulk_edit.show" max-width="600px">
@@ -2728,7 +2809,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 
 					<v-tooltip location="top">
 						<template v-slot:activator="{ props }">
-							<v-btn icon="mdi-console" @click="view_console.show = !view_console.show" v-bind="props"></v-btn>
+							<v-btn icon="mdi-console" @click="view_console.terminal_open = !view_console.terminal_open; view_console.show = true" v-bind="props"></v-btn>
 						</template>
 						<span>Terminal Console</span>
 					</v-tooltip>
@@ -3100,21 +3181,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-card>
 						</v-menu>
 
-						<!-- Clear Filters (Only shows when active) -->
-						<v-slide-x-transition>
-							<v-btn
-								v-if="isAnySiteFilterActive"
-								icon="mdi-filter-off"
-								size="small"
-								variant="text"
-								color="error"
-								class="mr-2 mb-1"
-								@click="clearSiteFilters()"
-								title="Clear all filters"
-							>
-							</v-btn>
-						</v-slide-x-transition>
-
 						<v-btn-toggle
 							v-if="totalAdvancedFilters > 1"
 							v-model="filter_logic"
@@ -3133,20 +3199,34 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 
 					</v-col>
 
-						<v-col cols="12" md="3">
-							<v-text-field
-								v-model="search"
-								autofocus
-								density="compact"
-								variant="outlined"
-								label="Search"
-								clearable
-								hide-details
-								append-inner-icon="mdi-magnify"
-								spellcheck="false"
-							>
-							</v-text-field>
-						</v-col>
+					<v-col cols="12" md="3">
+						<v-text-field
+							v-model="search"
+							autofocus
+							density="compact"
+							variant="outlined"
+							label="Search"
+							hide-details
+							spellcheck="false"
+						>
+							<!-- Custom Clear/Search Icons inside the input -->
+							<template v-slot:append-inner>
+								<v-fade-transition>
+									<v-btn
+										v-if="isAnySiteFilterActive"
+										icon="mdi-filter-off"
+										size="x-small"
+										variant="text"
+										color="error"
+										class="mr-1"
+										@click="clearSiteFilters()"
+										title="Clear all filters"
+									></v-btn>
+								</v-fade-transition>
+								<v-icon color="medium-emphasis">mdi-magnify</v-icon>
+							</template>
+						</v-text-field>
+					</v-col>
 					</v-row>
 					<!-- Version and Status Filters -->
 					<v-card color="transparent" class="pt-4" flat v-if="site_filter_version || site_filter_status">
@@ -3659,7 +3739,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								item-title="environment_label"
 								item-value="id" 
 								return-object
-								@update:modelValue="triggerEnvironmentUpdate"
+								@update:model-value="triggerEnvironmentUpdate"
 								label="Environment"
 								variant="outlined"
 								density="compact"
@@ -3750,15 +3830,23 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-row>
 							<v-col cols="12" md="6" class="py-2">
 							<div class="block mt-6 text-center">
-								<a href="visual-captures" @click.prevent="showCaptures(dialog_site.site.site_id)">
-								<v-img v-if="dialog_site.environment_selected.screenshots?.large" :src="dialog_site.environment_selected.screenshots.large" max-width="400" aspect-ratio="1.6" class="elevation-5 mx-auto" lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp">
+								<a :href="`${configurations.path}sites/${dialog_site.site.site_id}/visual-captures`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/visual-captures`)" class="text-decoration-none">
+								<v-img v-if="dialog_site.environment_selected.screenshot_base" :src="`${remote_upload_uri}${dialog_site.site.site}_${dialog_site.site.site_id}/${dialog_site.environment_selected.environment.toLowerCase()}/screenshots/${dialog_site.environment_selected.screenshot_base}_thumb-800.jpg`" max-width="400" aspect-ratio="1.6" class="elevation-5 mx-auto rounded-lg" cover lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp">
 									<template v-slot:placeholder>
 									<v-row class="fill-height ma-0" align="center" justify="center">
 										<v-progress-circular indeterminate color="grey-lighten-5"></v-progress-circular>
 									</v-row>
 									</template>
 								</v-img>
-								<v-img v-else max-width="400" aspect-ratio="1.6" class="elevation-5 mx-auto" src="/wp-content/plugins/captaincore-manager/public/dummy.webp"></v-img>
+								<v-sheet 
+									v-else 
+									max-width="400" 
+									height="250" 
+									color="surface-variant" 
+									class="elevation-5 mx-auto rounded-lg d-flex align-center justify-center border-thin"
+								>
+									<v-icon size="64" class="text-medium-emphasis">mdi-monitor-shimmer</v-icon>
+								</v-sheet>
 								</a>
 							</div>
 							<v-list density="compact" class="mt-6 mx-auto" style="max-width: 350px; background: transparent; padding: 0px;">
@@ -5937,7 +6025,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											</td>
 											</template>
 											<template v-else-if="record.new">
-											<td><v-select variant="underlined" v-model="record.type" @update:modelValue="changeRecordType( index )" item-title="name" item-value="value" :items='[{"name":"A","value":"A"},{"name":"AAAA","value":"AAAA"},{"name":"ANAME","value":"ANAME"},{"name":"CNAME","value":"CNAME"},{"name":"HTTP Redirect","value":"HTTP"},{"name":"MX","value":"MX"},{"name":"SRV","value":"SRV"},{"name":"TXT","value":"TXT"}]' label="Type" :disabled="dialog_domain.saving"></v-select></td>
+											<td><v-select variant="underlined" v-model="record.type" @update:model-value="changeRecordType( index )" item-title="name" item-value="value" :items='[{"name":"A","value":"A"},{"name":"AAAA","value":"AAAA"},{"name":"ANAME","value":"ANAME"},{"name":"CNAME","value":"CNAME"},{"name":"HTTP Redirect","value":"HTTP"},{"name":"MX","value":"MX"},{"name":"SRV","value":"SRV"},{"name":"TXT","value":"TXT"}]' label="Type" :disabled="dialog_domain.saving"></v-select></td>
 											<td><v-text-field variant="underlined" label="Name" :model-value="record.update.record_name" @update:model-value="record.update.record_name = $event" :disabled="dialog_domain.saving"></v-text-field></td>
 											<td class="value" v-if="record.type == 'MX'">
 												<v-row v-for="(value, value_index) in record.update.record_value" :key="`mx-new-${index}-${value_index}`">
@@ -7341,7 +7429,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										<v-autocomplete label="State" v-model="billing.address.state" :items="states_selected" v-if="states_selected.length > 0" variant="underlined"></v-autocomplete>
 										<v-text-field label="State" v-model="billing.address.state" v-else variant="underlined"></v-text-field>
 										<v-text-field density="compact" label="Zip" v-model="billing.address.postcode" :rules="billing.rules.zip" variant="underlined"></v-text-field>
-										<v-autocomplete density="compact" label="Country" v-model="billing.address.country" :items="countries" @update:modelValue="populateStates()" :rules="billing.rules.country" variant="underlined"></v-autocomplete>
+										<v-autocomplete density="compact" label="Country" v-model="billing.address.country" :items="countries" @update:model-value="populateStates()" :rules="billing.rules.country" variant="underlined"></v-autocomplete>
 										<v-text-field density="compact" label="Phone" v-model="billing.address.phone" variant="underlined"></v-text-field>
 										<v-text-field density="compact" label="Email" v-model="billing.address.email" :rules="billing.rules.email" variant="underlined"></v-text-field>
 								</v-list-item>
@@ -8713,7 +8801,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
             </v-card>
         </v-dialog>
 		<!-- Terminal Window Overlay -->
-		<v-expand-transition>
+		<v-slide-y-reverse-transition>
 			<v-card 
 				v-if="view_console.terminal_open" 
 				class="terminal-window elevation-12" 
@@ -8753,65 +8841,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							
 							<!-- FIXED TOP AREA -->
 							<div class="flex-shrink-0">
-								<!-- Targets Area -->
-								<div class="pa-4 border-b">
-									
-									<!-- Header Row with Label and Quick Fill Button -->
-									<div class="d-flex align-center justify-space-between mb-2">
-										<div class="text-caption text-medium-emphasis font-weight-bold">TARGETS</div>
-										
-										<!-- NEW BUTTON HERE -->
-										<v-slide-y-transition>
-											<v-btn
-												v-if="filteredEnvironmentsCount > 0"
-												size="x-small"
-												variant="tonal"
-												color="secondary"
-												class="px-2"
-												@click="selectAllMatchesToTerminal"
-												title="Populate targets based on current site filters"
-											>
-												<v-icon start size="small">mdi-filter-check</v-icon>
-												Add {{ filteredEnvironmentsCount }} Filtered
-											</v-btn>
-										</v-slide-y-transition>
-									</div>
-
-									<v-autocomplete
-										v-model="view_console.selected_targets"
-										:items="environments"
-										item-title="home_url"
-										item-value="environment_id"
-										return-object
-										label="Select Environments"
-										variant="outlined"
-										density="compact"
-										hide-details
-										multiple
-										clearable
-										spellcheck="false"
-									>
-										<template v-slot:selection="{ item, index }">
-											<!-- Show chips if 3 or fewer are selected -->
-											<v-chip v-if="view_console.selected_targets.length <= 3" size="x-small" label class="mr-1">
-												{{ item.raw.home_url }}
-											</v-chip>
-											<!-- Otherwise show a summary string once (at index 0) -->
-											<span v-else-if="index === 0" class="text-caption font-weight-bold py-1">
-												{{ view_console.selected_targets.length }} environments selected
-											</span>
-										</template>
-
-										<template v-slot:item="{ props, item }">
-											<v-list-item v-bind="props" :title="item.raw.home_url" :subtitle="item.raw.name + ' (' + item.raw.environment + ')'"></v-list-item>
-										</template>
-									</v-autocomplete>
-									
-									<div class="d-flex justify-end mt-2" v-if="view_console.selected_targets.length > 0">
-										<v-btn size="x-small" variant="text" @click="view_console.selected_targets = []" color="grey" class="px-0">Clear Selection</v-btn>
-									</div>
-								</div>
-
 								<v-tabs v-model="view_console.sidebar_tab" density="compact" color="primary" grow class="border-b">
 									<v-tab value="system" class="text-caption font-weight-bold">System</v-tab>
 									<v-tab value="cookbook" class="text-caption font-weight-bold">Cookbook</v-tab>
@@ -8914,10 +8943,124 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								@keydown.meta.enter.prevent="executeTerminalCommand"
 							>
 								<template v-slot:prepend>
-									<span class="text-green-accent-3 font-weight-bold">$</span>
+									<div class="d-flex align-center">
+										<!-- Target Selector Menu -->
+										<v-menu 
+											v-model="view_console.target_menu" 
+											:close-on-content-click="false" 
+											location="top start" 
+											offset="10"
+											max-height="400"
+										>
+											<template v-slot:activator="{ props }">
+												<v-btn 
+													v-bind="props"
+													icon
+													density="compact" 
+													variant="plain"
+													class="mr-2"
+													:color="view_console.selected_targets.length > 0 ? 'green-accent-3' : 'grey'"
+													title="Select Target Environments"
+													style="background:none;"
+												>
+													<v-icon>mdi-at</v-icon>
+												</v-btn>
+											</template>
+
+											<v-card width="350" class="rounded-lg" elevation="10" theme="dark" border>
+												<!-- Header -->
+												<div class="pa-2 border-b bg-grey-darken-4 sticky-top">
+													<v-text-field
+														v-model="view_console.target_search"
+														ref="targetSearchInput"
+														density="compact"
+														variant="outlined"
+														placeholder="Search targets..."
+														prepend-inner-icon="mdi-magnify"
+														hide-details
+														class="text-caption"
+														spellcheck="false"
+													></v-text-field>
+													
+													<div class="d-flex justify-space-between align-center mt-2 px-1">
+														<span class="text-caption text-grey">
+															{{ view_console.selected_targets.length }} selected
+														</span>
+														<div>
+															<v-btn
+																v-if="filteredEnvironmentsCount > 0"
+																size="x-small"
+																variant="text"
+																color="secondary"
+																class="mr-1"
+																@click="selectAllMatchesToTerminal"
+																title="Populate targets based on current site filters"
+															>
+																Add {{ filteredEnvironmentsCount }} Filtered
+															</v-btn>
+															<v-btn 
+																size="x-small" 
+																variant="text" 
+																color="red-accent-2" 
+																v-if="view_console.selected_targets.length > 0"
+																@click="view_console.selected_targets = []"
+															>
+																Clear All
+															</v-btn>
+														</div>
+													</div>
+												</div>
+
+												<!-- Scrollable List -->
+												<v-list density="compact" class="bg-grey-darken-3 overflow-y-auto" style="max-height: 300px;">
+													
+													<!-- Render only displayed items -->
+													<v-list-item 
+														v-for="env in displayedConsoleTargets" 
+														:key="env.environment_id"
+														@click="toggleConsoleTarget(env)"
+														:active="isTargetSelected(env)"
+														color="green-accent-3"
+													>
+														<template v-slot:prepend>
+															<v-checkbox-btn 
+																:model-value="isTargetSelected(env)"
+																density="compact"
+																color="green-accent-3"
+															></v-checkbox-btn>
+														</template>
+														
+														<v-list-item-title class="font-weight-bold text-caption font-monospace">
+															{{ env.home_url }}
+														</v-list-item-title>
+														<v-list-item-subtitle class="text-caption">
+															{{ env.name }} ({{ env.environment }})
+														</v-list-item-subtitle>
+													</v-list-item>
+													
+													<!-- Infinite Scroll Sentinel -->
+													<div 
+														v-if="displayedConsoleTargets.length < allFilteredConsoleTargets.length" 
+														v-intersect="onConsoleTargetIntersect"
+														class="pa-2 text-center text-caption text-grey"
+													>
+														Loading more...
+													</div>
+
+													<!-- Empty State -->
+													<div v-if="allFilteredConsoleTargets.length === 0" class="pa-4 text-center text-caption text-grey">
+														No environments found.
+													</div>
+												</v-list>
+											</v-card>
+										</v-menu>
+
+										<span class="text-green-accent-3 font-weight-bold mr-1">$</span>
+									</div>
 								</template>
+
 								<template v-slot:append>
-                                    <!-- Added Schedule Button -->
+									<!-- Schedule Button -->
 									<v-btn
 										variant="plain"
 										icon="mdi-clock-plus-outline"
@@ -8930,6 +9073,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										style="background: none;"
 										@click="openTerminalSchedule"
 									></v-btn>
+									
+									<!-- Run Button -->
 									<v-btn 
 										variant="tonal" 
 										density="comfortable"
@@ -8947,7 +9092,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</div>
 				</div>
 			</v-card>
-		</v-expand-transition>
+		</v-slide-y-reverse-transition>
 		<div class="activity-island-container">
 			<v-fade-transition>
 				<v-card v-if="(runningJobs > 0 || view_console.show) && !view_console.fullscreen" elevation="10" rounded="pill" color="surface" class="activity-island pr-1" border @click="view_console.terminal_open = !view_console.terminal_open">
