@@ -9779,6 +9779,12 @@ const app = createApp({
 		runningJobs() {
 			this.view_console.show = true
 		},
+		'view_console.show_sidebar'(val) {
+        	localStorage.setItem('captaincore-terminal-sidebar', val);
+		},
+		'view_console.fullscreen'(val) {
+			localStorage.setItem('captaincore-terminal-fullscreen', val);
+		},
 		'dialog_site.grant_access_menu'(val) {
             if (val) {
                 setTimeout(() => {
@@ -9855,6 +9861,23 @@ const app = createApp({
 				}, 100);
 			}
 		},
+		'view_console.target_search'() {
+			this.view_console.target_limit = 100;
+			// Scroll list to top if possible (optional)
+		},
+		'view_console.target_menu'(isOpen) {
+			if (isOpen) {
+				this.view_console.target_limit = 100;
+				this.view_console.target_search = ''; // Optional: clear search on open
+				
+				// Focus the search box on open
+				setTimeout(() => {
+					if (this.$refs.targetSearchInput) {
+						this.$refs.targetSearchInput.focus();
+					}
+				}, 100);
+			}
+		},
 		'dialog_site.environment_selected.expanded_backups': function(newlyExpandedIds, previouslyExpandedIds) {
 			const siteId = this.dialog_site.site.site_id;
 
@@ -9910,9 +9933,20 @@ const app = createApp({
 	mounted() {
 		const savedTheme = localStorage.getItem('captaincore-theme');
         if (savedTheme) {
-            this.theme = savedTheme;
-            this.$vuetify.theme.global.name.value = savedTheme;
-        }
+        this.theme = savedTheme;
+        this.$vuetify.theme.global.name.value = savedTheme;
+		}
+
+		// 2. NEW: Load Terminal Settings
+		const savedSidebar = localStorage.getItem('captaincore-terminal-sidebar');
+		if (savedSidebar !== null) {
+			this.view_console.show_sidebar = (savedSidebar === 'true');
+		}
+
+		const savedFullscreen = localStorage.getItem('captaincore-terminal-fullscreen');
+		if (savedFullscreen !== null) {
+			this.view_console.fullscreen = (savedFullscreen === 'true');
+		}
 		axios.interceptors.response.use(
 			response => response,
 			error => {
@@ -10170,6 +10204,11 @@ const app = createApp({
 			// Start with sites filtered by the server-side logic (e.g. unassigned, initial load)
 			let filtered = this.sites.filter(site => site.filtered);
 
+			// Apply Unassigned Filter
+			if (this.isUnassignedFilterActive) {
+				filtered = filtered.filter(site => site.account_id === "" || site.account_id === "0");
+			}
+
 			// Apply Client-Side filtering based on environments
 			// A site is visible if AT LEAST ONE of its environments matches the criteria.
 			
@@ -10348,6 +10387,44 @@ const app = createApp({
 				.then(response => {
 					return response.data
 			})
+		},
+		filteredConsoleTargets() {
+			const search = this.view_console.target_search ? this.view_console.target_search.toLowerCase() : '';
+			
+			if (!search) return this.environments;
+
+			return this.environments.filter(env => {
+				const url = env.home_url || '';
+				const name = env.name || '';
+				const envType = env.environment || '';
+				
+				return url.toLowerCase().includes(search) || 
+					name.toLowerCase().includes(search) || 
+					envType.toLowerCase().includes(search);
+			});
+		},
+		isTargetSelected() {
+			return (env) => {
+				return this.view_console.selected_targets.some(t => t.environment_id == env.environment_id);
+			};
+		},
+		allFilteredConsoleTargets() {
+			const search = this.view_console.target_search ? this.view_console.target_search.toLowerCase() : '';
+			
+			if (!search) return this.environments;
+
+			return this.environments.filter(env => {
+				const url = env.home_url || '';
+				const name = env.name || '';
+				const envType = env.environment || '';
+				
+				return url.toLowerCase().includes(search) || 
+					name.toLowerCase().includes(search) || 
+					envType.toLowerCase().includes(search);
+			});
+		},
+		displayedConsoleTargets() {
+			return this.allFilteredConsoleTargets.slice(0, this.view_console.target_limit);
 		},
 		dnsRecords() {
 			count = 0;
