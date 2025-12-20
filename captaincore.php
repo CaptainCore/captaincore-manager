@@ -1552,6 +1552,67 @@ function captaincore_push_environment_func( WP_REST_Request $request ) {
 	}
 }
 
+/**
+ * REST Callback: List Environments
+ */
+function captaincore_environments_func( WP_REST_Request $request ) {
+
+	global $wpdb;
+
+	// --- Get Allowed Sites for Current User ---
+	$user_sites = new \CaptainCore\Sites(); // Instantiate to get user-specific permissions
+	$allowed_site_ids = $user_sites->site_ids(); // Get the array of site IDs the user can access
+
+	// If the user has no allowed sites, return early
+	if ( empty( $allowed_site_ids ) ) {
+		return [];
+	}
+
+	// --- Prepare Database Query ---
+	$sites_table        = $wpdb->prefix . 'captaincore_sites';
+	$environments_table = $wpdb->prefix . 'captaincore_environments';
+
+	// Prepare base WHERE clauses safely
+	$where_clauses = [
+		$wpdb->prepare( "s.provider = %s", "kinsta" ),
+		$wpdb->prepare( "s.status = %s", "active" ),
+		$wpdb->prepare( "e.environment_id != %d", $source_environment_id ),
+	];
+
+	// --- Add User Permission Filter ---
+	// Safely create the IN clause for allowed site IDs
+	$allowed_ids_sql = implode( ',', array_map( 'intval', $allowed_site_ids ) ); // Ensure integers
+	$where_clauses[] = "s.site_id IN ( $allowed_ids_sql )"; // Add the IN clause
+
+	$where_sql = implode( ' AND ', $where_clauses );
+
+	// Construct the final optimized query string
+	// Note: $allowed_ids_sql is already sanitized by array_map('intval', ...)
+	$sql = "SELECT s.site_id, s.name, e.environment, e.environment_id, e.home_url
+			FROM $environments_table e
+			INNER JOIN $sites_table s ON e.site_id = s.site_id
+			WHERE $where_sql
+			ORDER BY s.name ASC";
+
+	$results = $wpdb->get_results( $sql ); // Execute the query
+
+	// Map results directly to the target format
+	$targets = [];
+	if ( $results ) {
+		foreach ( $results as $row ) {
+			$targets[] = [
+				'site_id'        => (int) $row->site_id,
+				'name'           => $row->name,
+				'environment'    => $row->environment,
+				'environment_id' => (int) $row->environment_id,
+				'home_url'       => $row->home_url ?? $row->name,
+			];
+		}
+	}
+
+	return $targets;
+}
+
 function captaincore_site_magiclogin_func( $request ) {
 	$site_id     = $request['id'];
 	$user_id     = $request['user_id'];
@@ -3168,6 +3229,14 @@ function captaincore_register_rest_endpoints() {
 			'callback'            => 'captaincore_provider_actions_func',
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/environments', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_environments_func',
+			'permission_callback' => 'captaincore_permission_check',
 		]
 	);
 
