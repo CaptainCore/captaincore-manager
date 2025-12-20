@@ -9314,7 +9314,7 @@ const app = createApp({
 		backup_set_files: [],
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_billing: { step: 1 },
-		dialog_site: { loading: true, step: 1, backup_step: 1, grant_access: [], grant_access_menu: false, environment_selected: { environment_id: "0", expanded_backups: [], quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], key: null, tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
+		dialog_site: { loading: true, step: 1, backup_step: 1, grant_access: [], grant_access_menu: false, desired_environment_id: null, environment_selected: { environment_id: "0", expanded_backups: [], quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], key: null, tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
 		dialog_site_request: { show: false, request: {} },
 		dialog_edit_account: { show: false, account: {} },
 		dialog_account_portal: { show: false, portal: { domain: "", configuration: {}, email: { host: "", port: "", encryption_type: "tls", username: "", password: "" }, colors: { primary: "#0D47A1", secondary: "#424242", accent: "#82B1FF", error: "#FF5252", info: "#0D47A1", success: "#4CAF50", warning: "#FFC107" } }, colors: { primary: false, secondary: false, accent: false, error: false, info: false, success: false, warning: false } },
@@ -9359,6 +9359,8 @@ const app = createApp({
 		countries: wc_countries,
 		states: wc_states,
 		states_selected: [],
+		environments: [],
+		filtered_environment_ids: [],
 		sites: [],
 		providers: [],
 		users: [],
@@ -9620,6 +9622,7 @@ const app = createApp({
 		this.fetchAccounts()
 		this.fetchRecipes()
 		this.fetchProviderActions()
+		this.fetchEnvironments()
 		if ( this.role == 'administrator' || this.role == 'owner' ) {
 			this.fetchAccountPortals()
 			this.fetchProcesses()
@@ -9809,25 +9812,47 @@ const app = createApp({
 			return filtered;
 		},
 		filteredSites() {
-			// Start with the base list of sites, whose `filtered` property is managed by the API calls.
+			// Start with sites filtered by the server-side logic (e.g. unassigned, initial load)
 			let filtered = this.sites.filter(site => site.filtered);
 
-			// Apply the unassigned filter
-			if (this.isUnassignedFilterActive) {
-				filtered = filtered.filter(site => site.account_id === "" || site.account_id === "0");
+			// Apply Client-Side filtering based on environments
+			// A site is visible if AT LEAST ONE of its environments matches the criteria.
+			
+			// Optimizations:
+			// If no search and no filters, show everything returned by base logic
+			if (!this.search && this.combinedAppliedFilters.length === 0) {
+				return filtered;
 			}
 
-			// Apply the text search
-			const searchLower = this.search ? this.search.toLowerCase() : '';
-			if (searchLower) {
-				filtered = filtered.filter(site => {
-					const nameMatch = site.name && site.name.toLowerCase().includes(searchLower);
-					const usernameMatch = site.site && site.site.toLowerCase().includes(searchLower);
-					return nameMatch || usernameMatch;
+			return filtered.filter(site => {
+				// Fallback for sites with no environments array (shouldn't happen with new logic, but safe)
+				if (!site.environments || site.environments.length === 0) return false;
+
+				// Check if ANY environment matches
+				return site.environments.some(env => this.isEnvironmentMatched(env));
+			});
+		},
+		runShortcutLabel() {
+			const isMac = typeof window !== 'undefined' && 
+						(navigator.platform.toUpperCase().indexOf('MAC') >= 0 || 
+						navigator.userAgent.toUpperCase().indexOf('MAC') >= 0);
+			return isMac ? '⌘⏎' : 'Ctrl+↵';
+		},
+		flattenedSiteEnvironments() {
+			let flattened = [];
+			this.filteredSites.forEach(site => {
+				const visibleEnvs = this.getVisibleEnvironments(site);
+				visibleEnvs.forEach(env => {
+					// Create a shallow copy of the site object so we don't mutate the original
+					let entry = Object.assign({}, site);
+					// Attach the specific environment data to this entry for the view to consume
+					entry.current_env = env;
+					// Create a unique key for list rendering
+					entry.unique_key = env.environment_id;
+					flattened.push(entry);
 				});
-			}
-
-			return filtered;
+			});
+			return flattened;
 		},
 		oustandingAccountCount() {
 			let count = 0
@@ -9920,6 +9945,54 @@ const app = createApp({
 		},
 		filteredRecipes() {
 			return this.recipes.filter( recipe => recipe.user_id != 'system' );
+		},
+		totalEnvironmentsCount() {
+			return this.sites.reduce((acc, site) => acc + (site.environments ? site.environments.length : 0), 0);
+		},
+		filteredEnvironmentsCount() {
+			let count = 0;
+			this.filteredSites.forEach(site => {
+				site.environments.forEach(env => {
+					if (this.isEnvironmentMatched(env)) count++;
+				});
+			});
+			return count;
+		},
+		filteredSitesCount() {
+			// Counts how many individual environments match the current filters
+			let count = 0;
+			this.filteredSites.forEach(site => {
+				if (!site.environments) return;
+				site.environments.forEach(env => {
+					if (this.isEnvMatch(env)) count++;
+				});
+			});
+			return count;
+		},
+		filteredQuickRunRecipes() {
+			if (!this.view_console.search) return this.recipes;
+			const search = this.view_console.search.toLowerCase();
+			return this.recipes.filter(r => r.title.toLowerCase().includes(search));
+		},
+		activeJobDescription() {
+			const active = this.jobs.find(j => j.status === 'running') || this.jobs[this.jobs.length - 1];
+			return active ? active.description : '';
+		},
+		activeJobLastLine() {
+			const active = this.jobs.find(j => j.status === 'running') || this.jobs[this.jobs.length - 1];
+			if (active && active.stream && active.stream.length > 0) {
+				return active.stream[active.stream.length - 1];
+			}
+			return '';
+		},
+		availableEnvironments() {
+			axios.get(
+				'/wp-json/captaincore/v1/environments', {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					return response.data
+			})
 		},
 		dnsRecords() {
 			count = 0;
@@ -11832,38 +11905,63 @@ const app = createApp({
 					})
 			});
 		},
-		bulkSyncSites() {
-			should_proceed = confirm("Sync " + this.sites_selected.length + " sites for " + this.dialog_bulk_tools.environment_selected.toLowerCase() + " environments info?");
-
-			if ( ! should_proceed ) {
+		executeBulkTool(toolName, extraParams = {}, description = "") {
+			const env_ids = this.view_console.selected_targets.map(t => t.environment_id);
+			
+			if (env_ids.length === 0) {
+				this.snackbar.message = "Please select target environments in the sidebar.";
+				this.snackbar.show = true;
 				return;
 			}
 
-			site_ids = this.sites_selected.map( site => site.site_id );
-			site_names = this.sites_selected.length + " sites";
+			if (!description) {
+				description = `Running ${toolName} on ${env_ids.length} environments`;
+			}
 
-			var data = {
-				action: 'captaincore_install',
-				post_id: site_ids,
-				command: 'sync-data',
-				environment: this.dialog_bulk_tools.environment_selected
-			};
+			const job_id = Math.round((new Date()).getTime());
+			this.jobs.push({ "job_id": job_id, "description": description, "status": "queued", "stream": [] });
 
-			self = this;
-			description = "Syncing " + site_names + " site info";
+			axios.post('/wp-json/captaincore/v1/sites/bulk-tools', {
+				tool: toolName,
+				environments: env_ids,
+				params: extraParams
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				const job = this.jobs.find(j => j.job_id === job_id);
+				if (job) {
+					job.job_id = response.data;
+					this.runCommand(response.data);
+				}
+			})
+			.catch(error => {
+				const job = this.jobs.find(j => j.job_id === job_id);
+				if (job) job.status = "error";
+				this.snackbar.message = "Operation failed: " + (error.response?.data?.message || error.message);
+				this.snackbar.show = true;
+			});
+		},
+		bulkSyncSites() {
+			this.executeBulkTool('sync-data', {}, "Syncing data for environments");
+		},
+		fetchVulnerabilityScans() {
+			axios.get( `/wp-json/captaincore/v1/sites/vulnerability-scans`, {
+				headers: { 'X-WP-Nonce':this.wp_nonce }
+			})
+			.then( response => {
+				this.vulnerabilities = response.data
+			});
+		},
+		openEnvironmentTool(site, env, slug) {
+			// 1. Tell the dialog which environment ID we want to load once data is fetched
+			this.dialog_site.desired_environment_id = env.environment_id;
 
-			// Start job
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({ "job_id": job_id, "description": description, "status": "queued", stream: [], "command": "syncSite", "site_id": site_ids });
+			// 2. Construct path (e.g. /sites/123/updates)
+			const path = `/sites/${site.site_id}/${slug}`;
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					// Updates job id with reponsed background job id
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data )
-				})
-				.catch( error => console.log( error ) );
-
+			// 3. Navigate
+			this.goToPath(path);
 		},
 		fetchSiteEnvironments( site_id ) {
 			axios.get( `/wp-json/captaincore/v1/sites/${site_id}/environments`, {
@@ -11874,17 +11972,25 @@ const app = createApp({
 				this.dialog_site.site.environments.forEach( e => {
 					e.environment_label = e.environment + " Environment"
 				})
-				if ( this.dialog_site.step == 2 && typeof this.dialog_site.environment_selected != 'undefined' ) {
-					// Try to find the same environment on the new site
+
+				// Check if we requested a specific environment via the UI
+				if ( this.dialog_site.desired_environment_id ) {
+					const desiredEnv = this.dialog_site.site.environments.find( e => e.environment_id == this.dialog_site.desired_environment_id );
+					if ( desiredEnv ) {
+						this.dialog_site.environment_selected = desiredEnv;
+					} else {
+						this.dialog_site.environment_selected = this.dialog_site.site.environments[0];
+					}
+					// Reset the flag
+					this.dialog_site.desired_environment_id = null;
+				} 
+				// Logic for handling "Add Site" step 2 (existing logic)
+				else if ( this.dialog_site.step == 2 && typeof this.dialog_site.environment_selected != 'undefined' && this.dialog_site.environment_selected.environment ) {
 					const matchingEnv = this.dialog_site.site.environments.find(e => e.environment === this.dialog_site.environment_selected.environment);
-					
-					// If a matching environment is found, use it. Otherwise, default to the first one.
 					if (matchingEnv) {
 						this.dialog_site.environment_selected = matchingEnv;
-					} else if (this.dialog_site.site.environments.length > 0) {
-						this.dialog_site.environment_selected = this.dialog_site.site.environments[0];
 					} else {
-						this.dialog_site.environment_selected = {};
+						this.dialog_site.environment_selected = this.dialog_site.site.environments[0] || {};
 					}
 				} else {
 					this.dialog_site.environment_selected = this.dialog_site.site.environments[0]
@@ -12302,11 +12408,17 @@ const app = createApp({
 				.then(response => {
 					this.sites = response.data
 					this.loading_page = false
-					if ( this.dialog_site.step == 2 && this.route_path != "" ) {
-						site = this.sites.filter( d => d.site_id == this.route_path )[0]
-						this.showSite( site )
-					}
+					this.triggerPath()
 					setTimeout(this.fetchMissing, 1000)
+			})
+		},
+		fetchEnvironments() {
+			axios.get(
+				'/wp-json/captaincore/v1/environments', {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					this.environments = response.data
 			})
 		},
 		shareStats() {
@@ -13728,42 +13840,6 @@ const app = createApp({
 				})
 				.catch( error => console.log( error ) );
 		},
-		runRecipeBulk( recipe_id ){
-
-			sites = this.sites_selected;
-			site_ids = sites.map( s => s.site_id );
-			recipe = this.recipes.filter( recipe => recipe.recipe_id == recipe_id )[0];
-
-			should_proceed = confirm("Run recipe '"+ recipe.title +"' on " +  sites.length + " sites?");
-
-			if ( ! should_proceed ) {
-				return;
-			}
-
-			var data = {
-				action: 'captaincore_install',
-				post_id: site_ids,
-				command: 'recipe',
-				environment: this.dialog_bulk.environment_selected,
-				value: recipe_id
-			};
-
-			description = "Run recipe '"+ recipe.title +"' on '" + sites.length + "'";
-
-			// Start job
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", "command": "recipe", stream: []});
-
-			self = this;
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data )
-				})
-				.catch( error => console.log( error ) );
-
-		},
 		deleteRecipe() {
 			recipe = this.dialog_cookbook.recipe
 			should_proceed = confirm( `Delete recipe ${recipe.title}?` )
@@ -14505,7 +14581,7 @@ const app = createApp({
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id, "description": description, "status": "queued", stream: []});
 
-			axios.put( `/wp-json/captaincore/v1/run/code`, {
+			axios.post( `/wp-json/captaincore/v1/run/code`, {
 					environments: environments.map( environment => environment.enviroment_id ),
 					code: this.script.code
 				}, {
@@ -14518,44 +14594,6 @@ const app = createApp({
 				this.runCommand( response.data )
 				this.script.code = "";
 			});
-		},
-		runCustomCodeBulk(){
-			sites = this.sites_selected;
-			site_ids = sites.map( s => s.site_id );
-			should_proceed = confirm("Deploy custom code on "+ sites.length +" sites?");
-
-			if ( ! should_proceed ) {
-				return;
-			}
-
-			wp_cli = this.script.code;
-
-			var data = {
-				action: 'captaincore_install',
-				environment: this.dialog_bulk_tools.environment_selected,
-				post_id: site_ids,
-				command: 'run',
-				value: this.script.code,
-				background: true
-			};
-
-			self = this;
-			description = "Deploying custom code on '" + sites.length + " sites'";
-
-			// Start job
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id, "description": description, "status": "queued", stream: []});
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					// Updates job id with reponsed background job id
-					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					self.runCommand( response.data )
-					self.snackbar.message = description;
-					self.snackbar.show = true;
-					self.script.code = "";
-				})
-				.catch( error => console.log( error ) );
 		},
 		fetchTimeline( site_id ) {
 			var data = {
@@ -17192,7 +17230,10 @@ const app = createApp({
 			this.new_theme.show = true
 			this.new_theme.sites = this.sites_selected
 			this.new_theme.site_name = this.new_theme.sites.length + " sites"
-			this.new_theme.environment_selected = this.dialog_bulk_tools.environment_selected
+			
+			// Default to Production if multiple
+			this.new_theme.environment_selected = "Production"
+			
 			this.fetchThemes()
 			this.fetchEnvatoThemes()
 		},
@@ -18324,19 +18365,15 @@ const app = createApp({
 			return filterData ? filterData.statuses : [];
 		},
 		filterSites() {
-			// If no advanced filters are selected, fetch all sites.
+			// If no advanced filters are selected, reset everything
 			if (this.combinedAppliedFilters.length === 0) {
-				axios.post('/wp-json/captaincore/v1/filters/sites', {}, {
-					headers: { 'X-WP-Nonce': this.wp_nonce }
-				})
-				.then(response => {
-					const sites_filtered_by_backend = new Set(response.data.sites);
-					this.sites.forEach(s => {
-						s.filtered = sites_filtered_by_backend.has(s.site);
-					});
-				});
+				// Make all sites visible locally
+				this.sites.forEach(s => s.filtered = true);
+				this.filtered_environment_ids = [];
 				return;
 			}
+
+			this.sites_loading = true; // Optional visual feedback
 
 			// Consolidate selected versions and statuses from individual filters
 			const allSelectedVersions = this.combinedAppliedFilters.flatMap(filter => filter.selected_versions || []);
@@ -18345,8 +18382,8 @@ const app = createApp({
 			// Construct the filter object for the backend
 			const filters = {
 				logic: this.filter_logic,
-				version_logic: this.filter_version_logic, // Add new version logic
-				status_logic: this.filter_status_logic, // Add new status logic
+				version_logic: this.filter_version_logic,
+				status_logic: this.filter_status_logic,
 				themes: this.applied_theme_filters.map( ({ name, title, search, type }) => ({ name, title, search, type }) ),
 				plugins: this.applied_plugin_filters.map( ({ name, title, search, type }) => ({ name, title, search, type }) ),
 				versions: allSelectedVersions,
@@ -18357,16 +18394,25 @@ const app = createApp({
 				headers: { 'X-WP-Nonce': this.wp_nonce }
 			})
 			.then(response => {
-				const sites_filtered_by_backend = new Set(response.data.sites);
+				const results = response.data.results || [];
+				
+				// 1. Store matching environment IDs for isEnvironmentMatched()
+				this.filtered_environment_ids = results.map(r => r.environment_id);
+				
+				// 2. Update site visibility based on whether they have ANY matching environment
+				const matchingSiteIds = new Set(results.map(r => r.site_id));
+				
 				this.sites.forEach(s => {
-					s.filtered = sites_filtered_by_backend.has(s.site);
+					s.filtered = matchingSiteIds.has(s.site_id);
 				});
 			})
 			.catch(error => {
 				console.error("Error fetching filtered sites:", error);
+			})
+			.finally(() => {
+				this.sites_loading = false;
+				this.page = 1;
 			});
-
-			this.page = 1;
 		},
 	}
 });
