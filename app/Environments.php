@@ -80,7 +80,7 @@ class Environments extends DB {
         }
         usort($results->themes, function($a, $b) { return strcmp( strtolower($a['search']), strtolower($b['search']) ); });
         usort($results->plugins, function($a, $b) { return strcmp( strtolower($a['search']), strtolower($b['search']) ); });
-        return array_merge( [[ 'header' => "Themes" ]], $results->themes, [[ 'header' => "Plugins" ]], $results->plugins );
+        return array_merge( [[ 'type' => 'subheader', 'title' => "Themes", 'name' => 'themes', 'search' => 'Themes' ]], $results->themes, [[ 'type' => 'subheader', 'title' => "Plugins", 'name' => 'plugins', 'search' => 'Plugins' ]], $results->plugins );
 
     }
 
@@ -91,20 +91,20 @@ class Environments extends DB {
 
         if ( $user->is_admin() ) {
             $account_ids = [];
-            $filters = self::fetch_filters_for_admins( "Production" );
+            $filters = self::fetch_filters_for_admins( "all" );
         }
 
         // Loop through each account for current user and fetch SiteIDs
         foreach ( $account_ids as $account_id ) {
             // Fetch filters assigned as owners
-            $results = self::fetch_filters_for_account( $account_id, "Production" );
+            $results = self::fetch_filters_for_account( $account_id, "all" );
             if ( is_array( $results ) ) {
                 foreach ( $results as $result ) {
                     $filters[] = $result;
                 }
             }
             // Fetch filters assigned as shared access
-            $results = self::fetch_filters_for_shared_accounts( $account_id, "Production" );
+            $results = self::fetch_filters_for_shared_accounts( $account_id, "all" );
             if ( is_array( $results ) ) {
                 foreach ( $results as $result ) {
                     $filters[] = $result;
@@ -180,20 +180,20 @@ class Environments extends DB {
 
         if ( $user->is_admin() ) {
             $account_ids = [];
-            $filters = self::fetch_filters_for_admins( "Production" );
+            $filters = self::fetch_filters_for_admins( "all" );
         }
 
         // Loop through each account for current user and fetch SiteIDs
         foreach ( $account_ids as $account_id ) {
             // Fetch filters assigned as owners
-            $results = self::fetch_filters_for_account( $account_id, "Production" );
+            $results = self::fetch_filters_for_account( $account_id, "all" );
             if ( is_array( $results ) ) {
                 foreach ( $results as $result ) {
                     $filters[] = $result;
                 }
             }
             // Fetch filters assigned as shared access
-            $results = self::fetch_filters_for_shared_accounts( $account_id, "Production" );
+            $results = self::fetch_filters_for_shared_accounts( $account_id, "all" );
             if ( is_array( $results ) ) {
                 foreach ( $results as $result ) {
                     $filters[] = $result;
