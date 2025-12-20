@@ -321,23 +321,25 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Sync site data
+	// Sync site data
 	if ( $command == 'sync-data' and ! empty( $post->data ) ) {
 		
 		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
-		$environment         = strtolower( $current_environment->environment );
+		$environment_name    = strtolower( $current_environment->environment );
 		$upload_dir          = wp_upload_dir();
-		$screenshot_check    = $upload_dir['basedir'] . "/screenshots/{$site_name}_{$site_id}/$environment/screenshot-800.png";
+		$screenshot_check    = $upload_dir['basedir'] . "/screenshots/{$site_name}_{$site_id}/$environment_name/screenshot-800.png";
+		
 		if ( file_exists( $screenshot_check ) ) {
-			$environment_update['screenshot'] = true;
+			$post->data->screenshot = true;
 		} else {
-			$environment_update['screenshot'] = false;
+			$post->data->screenshot = false;
 		}
+
+		// Update the specific environment record
 		( new CaptainCore\Environments )->update( (array) $post->data, [ "environment_id" => $post->data->environment_id ] );
 
-		$response = [
-			"response"        => "Completed sync-data for $site_id",
-			"environment"     => $post->data,
-		];
+		// Rebuild the cache for this site using the central method
+		CaptainCore\Sites::update_environments_cache( $site_id );
 
 		$current_site = CaptainCore\Sites::get( $site_id );
 		$details      = json_decode( $current_site->details );
@@ -351,21 +353,21 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 		if ( ! empty( $post->data->home_url ) && $current_environment->environment == "Production" ) {
 			$details->home_url = $post->data->home_url;
-			$home_url = str_replace( "http://www.", "", $post->data->home_url );
-			$home_url = str_replace( "https://www.", "", $home_url );
-			$home_url = str_replace( "http://", "", $home_url );
-			$home_url = str_replace( "https://", "", $home_url );
-			$home_url = str_replace( "www.", "", $home_url );
+			$home_url = str_replace( [ "http://www.", "https://www.", "http://", "https://", "www." ], "", $post->data->home_url );
 			$current_site->name = $home_url;
 		}
 
-		// Mark Site as updated
+		// Mark Site as updated and save the compiled details
 		CaptainCore\Sites::update( [ 
 			"name"       => $current_site->name,
 			"updated_at" => $post->data->updated_at,
 			"details"    => json_encode( $details )
 		], [ "site_id" => $site_id ] );
 
+		$response = [
+			"response"        => "Completed sync-data and cached environments for $site_id",
+			"environment"     => $post->data,
+		];
 	}
 
 	// Add capture
