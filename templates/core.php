@@ -3621,24 +3621,55 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			</v-card>
 			<v-card v-show="! dialog_site.site.removed" flat rounded="xl">
 				<v-toolbar flat color="transparent">
-					<v-img :src=`${remote_upload_uri}${dialog_site.site.site}_${dialog_site.site.site_id}/production/screenshots/${dialog_site.site.screenshot_base}_thumb-100.jpg` class="elevation-1 ml-5" max-width="50" v-show="dialog_site.site.screenshot_base"></v-img>
-					<v-toolbar-title>
-					<v-autocomplete
-						v-model="selected_site"
-						ref="autocompleteRef"
-						:items="sites"
-						item-title="name"
-						item-value="site_id"
-						return-object
-						@update:model-value="switchSite"
-						density="compact"
-						variant="outlined"
-						spellcheck="false"
-						style="max-width: 300px;"
-						flat
-						hide-details
+					<v-img
+						:key="dialog_site.site.site_id"
+						:src="currentSiteThumbnail" 
+						class="elevation-1 ml-5 rounded flex-grow-0" 
+						width="50" 
+						max-width="50"
+						aspect-ratio="1.6"
+						cover
 					>
-					</v-autocomplete>
+						<template v-slot:placeholder>
+							<div class="d-flex align-center justify-center fill-height bg-grey-lighten-4">
+								<v-progress-circular 
+									indeterminate 
+									color="grey-lighten-1" 
+									size="16"
+									width="2"
+								></v-progress-circular>
+							</div>
+						</template>
+						<template v-slot:error>
+							<v-sheet 
+								width="50" 
+								max-width="50"
+								height="31" 
+								color="surface-variant" 
+								class="elevation-1 ml-5 rounded d-flex align-center justify-center border-thin flex-grow-0"
+							>
+								<v-icon size="x-small" class="text-medium-emphasis">mdi-monitor-shimmer</v-icon>
+							</v-sheet>
+						</template>
+					</v-img>
+
+					<v-toolbar-title>
+						<v-autocomplete
+							v-model="selected_site"
+							ref="autocompleteRef"
+							:items="sites"
+							item-title="name"
+							item-value="site_id"
+							return-object
+							@update:model-value="switchSite"
+							density="compact"
+							variant="outlined"
+							spellcheck="false"
+							style="max-width: 300px;"
+							flat
+							hide-details
+						>
+						</v-autocomplete>
 					</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
@@ -3764,13 +3795,31 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-col cols="12" md="6" class="py-2">
 							<div class="block mt-6 text-center">
 								<a :href="`${configurations.path}sites/${dialog_site.site.site_id}/visual-captures`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/visual-captures`)" class="text-decoration-none">
-								<v-img v-if="dialog_site.environment_selected.screenshot_base" :src="`${remote_upload_uri}${dialog_site.site.site}_${dialog_site.site.site_id}/${dialog_site.environment_selected.environment.toLowerCase()}/screenshots/${dialog_site.environment_selected.screenshot_base}_thumb-800.jpg`" max-width="400" aspect-ratio="1.6" class="elevation-5 mx-auto rounded-lg" cover lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp">
+								
+								<!-- Image exists: Try to load it -->
+								<v-img 
+									v-if="dialog_site.environment_selected.screenshot_base" 
+									:src="`${remote_upload_uri}${dialog_site.site.site}_${dialog_site.site.site_id}/${dialog_site.environment_selected.environment.toLowerCase()}/screenshots/${dialog_site.environment_selected.screenshot_base}_thumb-800.jpg`" 
+									max-width="400" 
+									aspect-ratio="1.6" 
+									class="elevation-5 mx-auto rounded-lg" 
+									cover 
+									lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp"
+								>
 									<template v-slot:placeholder>
-									<v-row class="fill-height ma-0" align="center" justify="center">
-										<v-progress-circular indeterminate color="grey-lighten-5"></v-progress-circular>
-									</v-row>
+										<div class="d-flex align-center justify-center fill-height bg-grey-lighten-4">
+											<v-progress-circular indeterminate color="grey-lighten-1"></v-progress-circular>
+										</div>
+									</template>
+									<!-- Logic for 404/Load Error -->
+									<template v-slot:error>
+										<div class="d-flex align-center justify-center fill-height bg-surface-variant">
+											<v-icon size="64" class="text-medium-emphasis">mdi-monitor-shimmer</v-icon>
+										</div>
 									</template>
 								</v-img>
+
+								<!-- Logic for no screenshot data -->
 								<v-sheet 
 									v-else 
 									max-width="400" 
@@ -10103,6 +10152,15 @@ const app = createApp({
 		},
 		totalPagesMailgunDeployTargets() {
 			return Math.ceil(this.filteredMailgunDeployTargets.length / this.dialog_mailgun_deploy.itemsPerPage);
+		},
+		currentSiteThumbnail() {
+			const site = this.dialog_site.site;
+			// Check if required data exists
+			if (!site || !site.site_id || !site.screenshot_base) {
+				return null;
+			}
+			// Build URL
+			return `${this.remote_upload_uri}${site.site}_${site.site_id}/production/screenshots/${site.screenshot_base}_thumb-100.jpg`;
 		},
 		hasProviderActions() {
 			return this.provider_actions.length > 0;
