@@ -4626,18 +4626,26 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-divider class="my-6"></v-divider>
 
 						<!-- 3. RECIPES (If available) -->
-						<div v-show="recipes.filter( r => r.public == 1 ).length > 0">
+						<div v-show="recipes.length > 0">
 							<v-row class="mb-2">
 								<v-col cols="12" class="d-flex align-center">
 									<h3 class="text-subtitle-2 text-medium-emphasis text-uppercase">Recipes</h3>
 								</v-col>
-								
-								<!-- Show first 6 Public Recipes -->
-								<v-col cols="12" sm="6" md="4" v-for="recipe in recipes.filter( r => r.public == 1 )" :key="recipe.recipe_id">
-									<v-card hover border="thin" @click="runRecipe( recipe.recipe_id, dialog_site.site.site_id )" height="100%" density="compact">
+								<v-col cols="12" sm="6" md="4" v-for="recipe in recipes" :key="recipe.recipe_id">
+									<v-card hover border="thin" @click="handleRecipeClick(recipe)" height="100%" density="compact">
 										<v-card-text class="d-flex align-center">
-											<v-icon size="small" class="mr-2 text-medium-emphasis">mdi-script-text-outline</v-icon>
+											<!-- Icon: Package for Public, Script for Private -->
+											<v-icon size="small" class="mr-2" :class="recipe.public == 1 ? 'text-primary' : 'text-medium-emphasis'">
+												{{ recipe.public == 1 ? 'mdi-package-variant-closed' : 'mdi-script-text-outline' }}
+											</v-icon>
+											
 											<span class="text-body-2 font-weight-medium text-truncate">{{ recipe.title }}</span>
+											
+											<v-spacer></v-spacer>
+											
+											<!-- Status Icon: Lock for Public, Console for Private -->
+											<v-icon v-if="recipe.public == 1" size="x-small" class="text-disabled" title="System Package (Runs Immediately)">mdi-lock-outline</v-icon>
+											<v-icon v-else size="x-small" class="text-medium-emphasis" title="Load into Console">mdi-console-line</v-icon>
 										</v-card-text>
 									</v-card>
 								</v-col>
@@ -8809,7 +8817,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				theme="dark" 
 				rounded="xl"
 			>
-				
 				<!-- Header -->
 				<div class="terminal-header d-flex align-center px-4 py-2 bg-grey-darken-4 flex-shrink-0 border-b">
 					<div class="d-flex gap-2 mr-4">
@@ -8832,14 +8839,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-btn icon="mdi-page-layout-sidebar-left" variant="text" density="compact" size="small" @click="view_console.show_sidebar = !view_console.show_sidebar" :color="view_console.show_sidebar ? 'primary' : 'grey'"></v-btn>
 					<v-btn icon="mdi-close" variant="text" density="compact" size="small" @click="view_console.terminal_open = false"></v-btn>
 				</div>
-
 				<div class="d-flex flex-grow-1" style="overflow: hidden;">
-					
-					<!-- LEFT SIDEBAR -->
 					<v-expand-x-transition>
 						<div v-if="view_console.show_sidebar" class="terminal-sidebar d-flex flex-column border-e bg-grey-darken-4" style="width: 300px; min-width: 300px; height: 100%;">
-							
-							<!-- FIXED TOP AREA -->
 							<div class="flex-shrink-0">
 								<v-tabs v-model="view_console.sidebar_tab" density="compact" color="primary" grow class="border-b">
 									<v-tab value="system" class="text-caption font-weight-bold">System</v-tab>
@@ -8873,11 +8875,41 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											<v-text-field v-model="view_console.search" label="Search Recipes" variant="outlined" density="compact" prepend-inner-icon="mdi-magnify" hide-details bg-color="rgba(0,0,0,0.3)"></v-text-field>
 										</div>
 										<v-list class="bg-transparent" density="compact">
-											<v-list-item v-for="recipe in filteredQuickRunRecipes" :key="recipe.recipe_id" :title="recipe.title" @click="previewRecipeInInput(recipe)" link>
-												<template v-slot:prepend>
-													<v-icon icon="mdi-script-text-outline" size="small" class="mr-2 opacity-60"></v-icon>
+											<!-- Wrap each item in a tooltip -->
+											<v-tooltip 
+												v-for="recipe in filteredQuickRunRecipes" 
+												:key="recipe.recipe_id" 
+												:text="recipe.title" 
+												location="right" 
+												max-width="300"
+												:disabled="recipe.title.length <= 24"
+											>
+												<template v-slot:activator="{ props }">
+													<v-list-item 
+														v-bind="props" 
+														@click="handleTerminalRecipeClick(recipe)" 
+														link
+													>
+														<template v-slot:prepend>
+															<v-icon 
+																:icon="recipe.public == 1 ? 'mdi-package-variant-closed' : 'mdi-script-text-outline'" 
+																size="small" 
+																class="mr-2" 
+																:class="recipe.public == 1 ? 'text-primary' : 'opacity-60'">
+															</v-icon>
+														</template>
+														
+														<!-- Use the title slot explicitly so we can force truncation -->
+														<v-list-item-title class="text-truncate">
+															{{ recipe.title }}
+														</v-list-item-title>
+
+														<template v-slot:append>
+															<v-icon v-if="recipe.public == 1" size="x-small" class="text-disabled">mdi-lock-outline</v-icon>
+														</template>
+													</v-list-item>
 												</template>
-											</v-list-item>
+											</v-tooltip>
 										</v-list>
 									</v-window-item>
 
@@ -9679,7 +9711,7 @@ const app = createApp({
 		upload: [],
 		selected_site: {},
 		active_console: 0,
-		view_console: { show: false, terminal_open: false, show_sidebar: true, fullscreen: false, selected_targets: [], search: '', sidebar_tab: 'system' },
+		view_console: { show: false, terminal_open: false, show_sidebar: true, fullscreen: false, selected_targets: [], search: '', sidebar_tab: 'system', target_search: '', target_menu: false, target_limit: 100 },
 			terminal_schedule: {
 			show: false,
 			date: "",
@@ -10378,15 +10410,6 @@ const app = createApp({
 				return active.stream[active.stream.length - 1];
 			}
 			return '';
-		},
-		availableEnvironments() {
-			axios.get(
-				'/wp-json/captaincore/v1/environments', {
-					headers: {'X-WP-Nonce':this.wp_nonce}
-				})
-				.then(response => {
-					return response.data
-			})
 		},
 		filteredConsoleTargets() {
 			const search = this.view_console.target_search ? this.view_console.target_search.toLowerCase() : '';
@@ -11414,6 +11437,7 @@ const app = createApp({
 		},
 		runSystemTool(methodName) {
 			if (this.view_console.selected_targets.length === 0) {
+				this.view_console.target_menu = true;
 				this.snackbar.message = "Please select at least one target environment first.";
 				this.snackbar.show = true;
 				return;
@@ -11507,22 +11531,12 @@ const app = createApp({
 		scrollToTerminalBottom() {
 			this.$nextTick(() => {
 				const terminal = this.$refs.terminalBody;
-				// Use .$el if it's a component, or just the ref if it's a standard element (v-card-text)
 				const element = terminal.$el || terminal; 
 				if (element) {
 					element.scrollTop = element.scrollHeight;
 				}
 			});
 		},
-		scrollToTerminalBottom() {
-			this.$nextTick(() => {
-				const terminal = this.$refs.terminalBody;
-				if (terminal) {
-					terminal.scrollTop = terminal.scrollHeight;
-				}
-			});
-		},
-
 		toggleFullscreen() {
 			this.view_console.fullscreen = !this.view_console.fullscreen;
 		},
@@ -11534,9 +11548,9 @@ const app = createApp({
 			const targets = this.view_console.selected_targets;
 
 			if (!targets || targets.length === 0) {
+				this.view_console.target_menu = true;
 				this.snackbar.message = "Please select at least one target environment.";
 				this.snackbar.show = true;
-				this.view_console.show_sidebar = true;
 				return;
 			}
 			
@@ -11654,6 +11668,7 @@ const app = createApp({
 			if (!this.script.code || this.script.code.trim() === "") return;
 			
 			if (this.view_console.selected_targets.length === 0) {
+				this.view_console.target_menu = true;
 				this.snackbar.message = "Please select at least one target environment.";
 				this.snackbar.show = true;
 				return;
@@ -12385,7 +12400,8 @@ const app = createApp({
 			const env_ids = this.view_console.selected_targets.map(t => t.environment_id);
 			
 			if (env_ids.length === 0) {
-				this.snackbar.message = "Please select target environments in the sidebar.";
+				this.view_console.target_menu = true;
+				this.snackbar.message = "Please select target environments.";
 				this.snackbar.show = true;
 				return;
 			}
@@ -14415,6 +14431,94 @@ const app = createApp({
 				})
 				.catch( error => console.log( error ) );
 		},
+		handleRecipeClick(recipe) {
+            if (recipe.public == 1) {
+                // Public: Run immediately (Existing behavior)
+                this.runRecipe( recipe.recipe_id, this.dialog_site.site.site_id );
+            } else {
+                // Private: Load into terminal for editing
+                this.openTerminalWithRecipe(recipe);
+            }
+        },
+        openTerminalWithRecipe(recipe) {
+            // 1. Open Terminal targeting current environment
+            this.openTerminalForCurrentEnv();
+            
+            // 2. Pre-fill the code
+            this.script.code = recipe.content;
+            
+            // 3. Ensure input is focused
+            this.$nextTick(() => {
+                if (this.$refs.terminalInput) {
+                    this.$refs.terminalInput.focus();
+                }
+            });
+        },
+		handleTerminalRecipeClick(recipe) {
+            if (recipe.public == 1) {
+                // Public: Run Immediately on selected targets
+                this.runRecipeFromTerminal(recipe);
+            } else {
+                // Private: Load into input (Existing behavior)
+                this.previewRecipeInInput(recipe);
+            }
+        },
+        runRecipeFromTerminal(recipe) {
+            const targets = this.view_console.selected_targets;
+            if (!targets || targets.length === 0) {
+                this.view_console.target_menu = true;
+                this.snackbar.message = "Please select at least one target environment.";
+                this.snackbar.show = true;
+                return;
+            }
+
+            const confirmMsg = targets.length === 1 
+                ? `Run recipe '${recipe.title}' on ${targets[0].home_url}?`
+                : `Run recipe '${recipe.title}' on ${targets.length} environments?`;
+
+            if (!confirm(confirmMsg)) return;
+
+            // Construct payload similar to executeTerminalCommand
+            const targetPayload = targets.map(t => {
+                if (t.environment_id) return { enviroment_id: t.environment_id };
+                return { site_id: t.site_id, environment: t.environment };
+            });
+
+            const description = `Running recipe '${recipe.title}' on ${targets.length} environment(s)`;
+            const job_id = Math.round((new Date()).getTime());
+
+            // Push Job
+            this.jobs.push({ 
+                "job_id": job_id, 
+                "description": description, 
+                "status": "queued", 
+                "stream": [],
+                "created_at": new Date()
+            });
+
+            // Execute via run/code endpoint using recipe content
+            axios.post(`/wp-json/captaincore/v1/run/code`, {
+                environments: targetPayload.map(t => t.enviroment_id || t),
+                code: recipe.content
+            }, {
+                headers: { 'X-WP-Nonce': this.wp_nonce }
+            })
+            .then(response => {
+                const job = this.jobs.find(j => j.job_id === job_id);
+                if (job) {
+                    job.job_id = response.data;
+                    this.runCommand(response.data);
+                }
+                this.scrollToTerminalBottom();
+            })
+            .catch(error => {
+                const job = this.jobs.find(j => j.job_id === job_id);
+                if (job) {
+                    job.status = "error";
+                    job.stream.push("Error starting command: " + (error.response?.data?.message || error.message));
+                }
+            });
+        },
 		viewDomainMailgunLogs(domain) {
 			this.dialog_mailgun.site = { name: domain.name }; // Reusing 'site' prop for title
 			this.dialog_mailgun.domain_id = domain.domain_id; // Store ID for pagination
@@ -14475,10 +14579,6 @@ const app = createApp({
 			this.dialog_mailgun_details.show = true
 		},
 		launchSiteDialog( site_id ) {
-			site = this.sites.filter( site => site.site_id == site_id )[0];
-			this.dialog_launch.site = site
-			this.dialog_launch.show = true
-		},launchSiteDialog( site_id ) {
 			if ( site_id ) {
 				// Single site mode (triggered from Site Details > Scripts)
 				const site = this.sites.find( s => s.site_id == site_id );
@@ -14487,6 +14587,7 @@ const app = createApp({
 			} else {
 				// Bulk mode (triggered from Terminal System Tools)
 				if (this.view_console.selected_targets.length === 0) {
+					this.view_console.target_menu = true;
 					this.snackbar.message = "Please select target environments.";
 					this.snackbar.show = true;
 					return;

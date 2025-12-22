@@ -2086,7 +2086,10 @@ code.language-log {
     left: 0 !important;
     border: none;
     border-radius: 0 !important;
-    z-index: 2001;
+}
+
+.terminal-sidebar .v-list-item__prepend>.v-icon~.v-list-item__spacer {
+  width: 8px;
 }
 
 .window-dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 3px; }
