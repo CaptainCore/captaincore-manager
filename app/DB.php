@@ -411,9 +411,8 @@ class DB {
         $table              = self::_table();
         $environments_table = "{$wpdb->prefix}captaincore_environments";
         
-        // Base conditions that are always ANDed
+        // Base conditions
         $base_conditions = [
-            "{$environments_table}.environment = 'production'",
             "{$table}.status = 'active'",
         ];
 
@@ -425,16 +424,17 @@ class DB {
         
         $filters = (object) $filters;
 
-        // Retrieve logic operators from the frontend, defaulting to 'AND'
+        // Retrieve logic operators
         $primary_logic   = ( ! empty( $filters->logic ) && strtolower( $filters->logic ) === 'or' ) ? 'OR' : 'AND';
         $version_logic   = ( ! empty( $filters->version_logic ) && strtolower( $filters->version_logic ) === 'or' ) ? 'OR' : 'AND';
         $status_logic    = ( ! empty( $filters->status_logic ) && strtolower( $filters->status_logic ) === 'or' ) ? 'OR' : 'AND';
 
-        // Grouping filters by type for better organization and control
+        // Filters
         $theme_filters   = $filters->themes ?? [];
         $plugin_filters  = $filters->plugins ?? [];
         $version_filters = $filters->versions ?? [];
         $status_filters  = $filters->statuses ?? [];
+        
         $all_filter_clauses = [];
 
         // Helper function to create REGEXP pattern
@@ -445,7 +445,7 @@ class DB {
             return $pattern;
         };
 
-        // Build clauses for primary filters (themes/plugins)
+        // Themes/Plugins
         $primary_clauses = [];
         foreach ( $theme_filters as $theme ) {
             $pattern = $create_pattern( $theme['name'] );
@@ -456,7 +456,7 @@ class DB {
             $primary_clauses[] = "{$environments_table}.plugins REGEXP '{$pattern}'";
         }
 
-        // Build clauses for secondary filters (versions/statuses)
+        // Versions/Statuses
         $secondary_clauses = [];
         if ( ! empty( $version_filters ) ) {
             $version_sub_clauses = [];
@@ -488,13 +488,14 @@ class DB {
             $where_clause .= " AND ( " . implode( " {$primary_logic} ", $all_filter_clauses ) . " )";
         }
 
-        $sql = "SELECT {$table}.site
+        // Return site_id and environment_id
+        $sql = "SELECT {$table}.site_id, {$environments_table}.environment_id
                 FROM {$table}
                 INNER JOIN {$environments_table} ON {$table}.site_id = {$environments_table}.site_id
                 WHERE {$where_clause}
                 ORDER BY {$table}.name ASC";
         
-        return array_column( $wpdb->get_results( $sql ), 'site' );
+        return $wpdb->get_results( $sql );
     }
 
     static function fetch_sites_matching_versions_statuses( $arguments = [] ) {
