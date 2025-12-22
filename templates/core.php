@@ -1705,12 +1705,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-text-field label="Price" :model-value="addon.price" @update:model-value="addon.price = $event" hide-details variant="underlined" :disabled="addon.required"></v-text-field>
 						</v-col>
 						<v-col cols="1" align-self="center">
-							<v-btn size="small" variant="text" icon="mdi-delete" @click="removeAddon(index)" v-show="! addon.required"></v-btn>
+							<v-btn size="small" variant="text" icon="mdi-delete" @click="removePlanItem('addons', index)" v-show="! addon.required"></v-btn>
 						</v-col>
 					</v-row>
 					<v-row class="mb-1">
 						<v-col>
-							<v-btn size="small" variant="tonal" @click="addAddon()">Add Addon</v-btn>
+							<v-btn size="small" variant="tonal" @click="addPlanItem('addons')">Add Addon</v-btn>
 						</v-col>
 					</v-row>
 					<v-row dense>
@@ -1729,12 +1729,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-text-field label="Price" :model-value="item.price" @update:model-value="item.price = $event" hide-details variant="underlined"></v-text-field>
 						</v-col>
 						<v-col cols="1" align-self="center">
-							<v-btn size="small" variant="text" icon="mdi-delete" @click="removeCredit(index)"></v-btn>
+							<v-btn size="small" variant="text" icon="mdi-delete" @click="removePlanItem('credits', index)"></v-btn>
 						</v-col>
 					</v-row>
 					<v-row class="mb-1">
 						<v-col>
-							<v-btn size="small" variant="tonal" @click="addCredit()">Add Credit</v-btn>
+							<v-btn size="small" variant="tonal" @click="addPlanItem('credits')">Add Credit</v-btn>
 						</v-col>
 					</v-row>
 					<v-row dense>
@@ -1753,12 +1753,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-text-field label="Price" :model-value="item.price" @update:model-value="item.price = $event" hide-details variant="underlined"></v-text-field>
 						</v-col>
 						<v-col cols="1" align-self="center">
-							<v-btn size="small" variant="text" icon="mdi-delete" @click="removeCharge(index)"></v-btn>
+							<v-btn size="small" variant="text" icon="mdi-delete" @click="removePlanItem('charges', index)"></v-btn>
 						</v-col>
 					</v-row>
 					<v-row class="mb-1">
 						<v-col>
-							<v-btn size="small" variant="tonal" @click="addCharge()">Add Charge</v-btn>
+							<v-btn size="small" variant="tonal" @click="addPlanItem('charges')">Add Charge</v-btn>
 						</v-col>
 					</v-row>
 					<v-row>
@@ -2840,70 +2840,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-toolbar-items>
 			</v-toolbar>
 			<v-sheet v-show="dialog_site.step == 1" color="transparent">
-			<v-dialog v-model="dialog_new_site_rocketdotnet.show" width="500">
-				<v-card>
-					<v-toolbar flat>
-					<v-toolbar-title>New Rocket.net Site</v-toolbar-title>
-					<v-spacer></v-spacer>
-						<v-btn icon @click="dialog_new_site_rocketdotnet.show = false">
-							<v-icon>mdi-close</v-icon>
-						</v-btn>
-					</v-toolbar>
-					<v-card-text>
-						<v-text-field label="Name" v-model="dialog_new_site_rocketdotnet.site.name"></v-text-field>
-						<v-autocomplete label="Datacenter" item-title="location" item-value="id" v-model="dialog_new_site_rocketdotnet.site.datacenter" :items='[{"id":2,"location":"US - Los Angeles"},{"id":4,"location":"EU - London"},{"id":7,"location":"DE - Frankfurt"},{"id":8,"location":"NL - Amsterdam"},{"id":15,"location":"US - Atlanta"},{"id":16,"location":"AU - Sydney"},{"id":19,"location":"US - Chicago"},{"id":20,"location":"SG - Singapore"},{"id":21,"location":"US - Ashburn"},{"id":22,"location":"US - Phoenix"}]'></v-autocomplete>
-						<v-autocomplete
-								:items="accounts"
-								v-model="dialog_new_site_rocketdotnet.site.shared_with"
-								label="Assign to an account"
-								item-title="name"
-								item-value="account_id"
-								chips
-								deletable-chips
-								multiple
-								return-object
-								hint="If a customer account is not assigned then site will be placed in a new account."
-								persistent-hint
-								:menu-props="{ closeOnContentClick:true, openOnClick: false }"
-							>
-							</v-autocomplete>
-							<v-expand-transition>
-							<v-row density="compact" v-if="dialog_new_site_rocketdotnet.site.shared_with && dialog_new_site_rocketdotnet.site.shared_with.length > 0" class="mt-3">
-							<v-col v-for="account in dialog_new_site_rocketdotnet.site.shared_with" :key="account.account_id" cols="6">
-							<v-card>
-								<v-list-item :title="account.name"></v-list-item>
-								<v-card-actions class="py-0">
-								<v-tooltip location="top">
-								<template v-slot:activator="{ props }">
-								<v-btn-toggle v-model="dialog_new_site_rocketdotnet.site.customer_id" color="primary" group>
-									<v-btn variant="text" :value="account.account_id" v-bind="props">
-										<v-icon>mdi-account-circle</v-icon>
-									</v-btn>
-								</v-btn-toggle>
-								</template>
-								<span>Set as customer contact</span>
-								</v-tooltip>
-								<v-tooltip location="top">
-								<template v-slot:activator="{ props }">
-								<v-btn-toggle v-model="dialog_new_site_rocketdotnet.site.account_id" color="primary" group>
-									<v-btn variant="text" :value="account.account_id" v-bind="props">
-										<v-icon>mdi-currency-usd</v-icon>
-									</v-btn>
-								</v-btn-toggle>
-								</template>
-								<span>Set as billing contact</span>
-								</v-tooltip>
-								</v-card-actions>
-							</v-card>
-							</v-expand-transition>
-					</v-card-text>
-					<v-divider></v-divider>
-					<v-card-actions>
-					<v-spacer></v-spacer>
-					<v-btn color="primary" @click="newRocketdotnetSite">Create Site</v-btn>
-					</v-card-actions>
-				</v-card>
-				</v-dialog>
 				<v-dialog v-model="dialog_new_site_kinsta.show" width="550">
 				<v-card>
 					<v-toolbar elevation="0" color="primary">
@@ -3458,35 +3394,32 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 															</template>
 															<v-list density="compact" width="240" class="rounded-lg elevation-4 py-2">
 																<v-list-item 
-																	@click="openEnvironmentTool(item.raw, env, 'updates')" 
-																	prepend-icon="mdi-history" 
-																	title="Update Logs">
-																</v-list-item>
-																
-																<v-list-item 
 																	@click="openEnvironmentTool(item.raw, env, 'backups')" 
 																	prepend-icon="mdi-cloud-upload-outline" 
 																	title="Backups">
 																</v-list-item>
-																
+																<v-list-item 
+																	@click="openEnvironmentTool(item.raw, env, 'updates')" 
+																	prepend-icon="mdi-history" 
+																	title="Update Logs">
+																</v-list-item>	
 																<v-list-item 
 																	@click="openEnvironmentTool(item.raw, env, 'quicksaves')" 
 																	prepend-icon="mdi-file-restore" 
 																	title="Version History">
 																</v-list-item>
+																<v-list-item 
+																	@click="openEnvironmentTool(item.raw, env, 'visual-captures')" 
+																	prepend-icon="mdi-camera-burst" 
+																	title="Visual Captures">
+																</v-list-item>
+
+																<v-divider class="my-2"></v-divider>
 																
 																<v-list-item 
 																	@click="runScript( item.raw.site_id, env.environment_id )" 
 																	prepend-icon="mdi-console-line" 
 																	title="Run Script">
-																</v-list-item>
-																
-																<v-divider class="my-2"></v-divider>
-																
-																<v-list-item 
-																	@click="openEnvironmentTool(item.raw, env, 'visual-captures')" 
-																	prepend-icon="mdi-camera-burst" 
-																	title="Visual Captures">
 																</v-list-item>
 															</v-list>
 														</v-menu>
@@ -5533,7 +5466,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</v-tooltip>
 									<v-tooltip location="top" v-if="key.environment == 'Staging'">
 										<template v-slot:activator="{ props }">
-											<v-btn variant="text" size="small" icon="mdi-cached" color="green" @click="new_site_preload_staging()" v-bind="props"></v-btn>
+											<v-btn variant="text" size="small" icon="mdi-cached" color="green" @click="preloadStagingEnvironment(dialog_new_site)" v-bind="props"></v-btn>
 										</template>
 										<span>Preload based on Production</span>
 									</v-tooltip>
@@ -5728,7 +5661,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-tooltip>
 						<v-tooltip location="top" v-if="key.environment == 'Staging'">
 						<template v-slot:activator="{ props }">
-							<v-btn variant="text" size="small" icon="mdi-cached" color="green" @click="edit_site_preload_staging()" v-bind="props"></v-btn>
+							<v-btn variant="text" size="small" icon="mdi-cached" color="green" @click="preloadStagingEnvironment(dialog_edit_site.site)"v-bind="props"></v-btn>
 						</template>
 						<span>Preload based on Production</span>
 						</v-tooltip>
@@ -8971,6 +8904,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								hide-details
 								density="compact"
 								class="terminal-input-field"
+								spellcheck="false"
 								@keydown.ctrl.enter.prevent="executeTerminalCommand"
 								@keydown.meta.enter.prevent="executeTerminalCommand"
 							>
@@ -9386,6 +9320,10 @@ const app = createApp({
 				"title": "Hosting - Kinsta",
 				"value": "kinsta",
 				"fields": [ { name: "Token", value: "token" } ]
+			},
+			{
+				"title": "Hosting - GridPane",
+				"value": "gridpane"
 			},
 			{
 				"title": "Hosting - Rocket.net",
@@ -10593,12 +10531,8 @@ const app = createApp({
 				this.loading_page = false;
 				return;
 			}
-			if ( this.route == "login" ) {
-				this.selected_nav = ""
-				this.loading_page = false;
-			}
-			if ( this.route == "connect" ) {
-				this.selected_nav = ""
+			if ( ["login", "connect", "cookbook", "handbook", "profile"].includes(this.route) ) {
+				this.selected_nav = "";
 				this.loading_page = false;
 			}
 			if ( this.route == "archives" ) {
@@ -10616,14 +10550,6 @@ const app = createApp({
 				this.selected_nav = ""
 				this.fetchAllUsers();
 			}
-			if ( this.route == "cookbook" ) {
-				this.selected_nav = ""
-				this.loading_page = false;
-			}
-			if ( this.route == "handbook" ) {
-				this.selected_nav = ""
-				this.loading_page = false;
-			}
 			if ( this.route == "keys" ) {
 				this.selected_nav = ""
 				this.loading_page = false;
@@ -10633,10 +10559,6 @@ const app = createApp({
 				this.selected_nav = ""
 				this.loading_page = false;
 				this.fetchDefaults()
-			}
-			if ( this.route == "profile" ) {
-				this.selected_nav = ""
-				this.loading_page = false
 			}
 			if ( this.route == "accounts" ) {
 				this.selected_nav = "accounts"
@@ -10966,13 +10888,37 @@ const app = createApp({
 			return `${item.name} (${provider})`;
 		},
 		copyText( value ) {
+			// Use modern Clipboard API if available (works better inside Dialogs)
+			if (navigator.clipboard) {
+				navigator.clipboard.writeText(value).then(() => {
+					this.snackbar.message = "Copied to clipboard.";
+					this.snackbar.show = true;
+				}).catch(err => {
+					console.error('Async: Could not copy text: ', err);
+					// Fallback if async fails
+					this.copyTextFallback(value);
+				});
+			} else {
+				// Fallback for older browsers
+				this.copyTextFallback(value);
+			}
+		},
+
+		// Add this helper method for the fallback logic
+		copyTextFallback( value ) {
 			var clipboard = document.getElementById("clipboard");
 			clipboard.value = value;
-			clipboard.focus()
-			clipboard.select()
-			document.execCommand("copy");
-			this.snackbar.message = "Copied to clipboard.";
-			this.snackbar.show = true;
+			clipboard.focus();
+			clipboard.select();
+			try {
+				document.execCommand("copy");
+				this.snackbar.message = "Copied to clipboard.";
+				this.snackbar.show = true;
+			} catch (err) {
+				console.error('Fallback: Oops, unable to copy', err);
+				this.snackbar.message = "Failed to copy to clipboard.";
+				this.snackbar.show = true;
+			}
 		},
 		copyInviteLink( account, token ) {
 			link = window.location.origin + window.location.pathname + `?account=${account}&token=${token}`
@@ -11732,35 +11678,6 @@ const app = createApp({
 					this.terminal_schedule.loading = false;
 				});
 		},
-		viewJob( job_id ) {
-			this.dialog_job.task = this.jobs.filter( j => j.job_id == job_id )[0];
-			this.active_console = 4
-		},
-		toggleConsole( index ) {
-			if ( this.console != index ) {
-				this.footer_height = "202px"
-				this.view_console.open = true
-				this.active_console = index
-				return
-			}
-			if ( this.footer_height == "28px" ) {
-				this.footer_height = "202px"
-				this.view_console.open = true
-				this.active_console = index
-			} else {
-				this.footer_height = "28px"
-				this.view_console.open = false
-				this.active_console = 0
-			}
-		},
-		openConsole( index ) {
-			this.active_console = index
-			this.view_console.open = true
-		},
-		closeConsole() {
-			this.view_console.open = false
-			this.active_console = 0
-		},
 		magicLoginSite( site_id, user, environment ) {
 			// Determine Environment
 			if ( ! environment ) {
@@ -11954,53 +11871,28 @@ const app = createApp({
 				}
 			}
 		},
-		new_site_preload_staging() {
+		preloadStagingEnvironment( targetObject ) {
 			// Copy production address to staging field
-			this.dialog_new_site.environments[1].address = this.dialog_new_site.environments[0].address;
-			if ( this.dialog_new_site.environments[0].address.includes(".kinsta.cloud") ) {
-				this.dialog_new_site.environments[1].address = "staging-" + this.dialog_new_site.environments[0].address
+			targetObject.environments[1].address = targetObject.environments[0].address;
+			
+			if ( targetObject.environments[0].address.includes(".kinsta.cloud") ) {
+				targetObject.environments[1].address = "staging-" + targetObject.environments[0].address
 			}
 
-			if ( this.dialog_new_site.provider == "kinsta" ) {
+			if ( targetObject.provider == "kinsta" ) {
 				// Copy production username to staging field
-				this.dialog_new_site.environments[1].username = this.dialog_new_site.environments[0].username;
+				targetObject.environments[1].username = targetObject.environments[0].username;
 				// Copy production password to staging field (If Kinsta address)
-				this.dialog_new_site.environments[1].password = this.dialog_new_site.environments[0].password;
+				targetObject.environments[1].password = targetObject.environments[0].password;
 			} else {
 				// Copy production username to staging field with staging suffix
-				this.dialog_new_site.environments[1].username = this.dialog_new_site.environments[0].username + "-staging";
+				targetObject.environments[1].username = targetObject.environments[0].username + "-staging";
 			}
 
-			// Copy production port to staging field
-			this.dialog_new_site.environments[1].port = this.dialog_new_site.environments[0].port;
-			// Copy production protocol to staging field
-			this.dialog_new_site.environments[1].protocol = this.dialog_new_site.environments[0].protocol;
-			// Copy production home directory to staging field
-			this.dialog_new_site.environments[1].home_directory = this.dialog_new_site.environments[0].home_directory;
-		},
-		edit_site_preload_staging() {
-			// Copy production address to staging field
-			this.dialog_edit_site.site.environments[1].address = this.dialog_edit_site.site.environments[0].address;
-			if ( this.dialog_edit_site.site.environments[0].address.includes(".kinsta.cloud") ) {
-				this.dialog_edit_site.site.environments[1].address = "staging-" + this.dialog_edit_site.site.environments[0].address
-			}
-
-			if ( this.dialog_edit_site.site.provider == "kinsta" ) {
-				// Copy production username to staging field
-				this.dialog_edit_site.site.environments[1].username = this.dialog_edit_site.site.environments[0].username;
-				// Copy production password to staging field (If Kinsta address)
-				this.dialog_edit_site.site.environments[1].password = this.dialog_edit_site.site.environments[0].password;
-			} else {
-				// Copy production username to staging field with staging suffix
-				this.dialog_edit_site.site.environments[1].username = this.dialog_edit_site.site.environments[0].username + "-staging";
-			}
-
-			// Copy production port to staging field
-			this.dialog_edit_site.site.environments[1].port = this.dialog_edit_site.site.environments[0].port;
-			// Copy production protocol to staging field
-			this.dialog_edit_site.site.environments[1].protocol = this.dialog_edit_site.site.environments[0].protocol;
-			// Copy production home directory to staging field
-			this.dialog_edit_site.site.environments[1].home_directory = this.dialog_edit_site.site.environments[0].home_directory;
+			// Copy remaining fields
+			targetObject.environments[1].port = targetObject.environments[0].port;
+			targetObject.environments[1].protocol = targetObject.environments[0].protocol;
+			targetObject.environments[1].home_directory = targetObject.environments[0].home_directory;
 		},
 		checkRequestedSites() {
 			var data = {
@@ -12107,9 +11999,6 @@ const app = createApp({
 					})
 				}
 			});
-		},
-		newRocketdotnetSite() {
-
 		},
 		newKinstaSite() {
 			axios.post( '/wp-json/captaincore/v1/providers/kinsta/new-site', {
@@ -13394,15 +13283,6 @@ const app = createApp({
 			this.dialog_new_log_entry.sites = [];
 			this.dialog_new_log_entry.sites.push( site );
 			this.dialog_new_log_entry.site_name = site.name;
-		},
-		exportTaskResults() {
-			unique_name = this.dialog_job.task.job_id.substring( 0, 10 )
-			this.$refs.export_task.download = `task-${unique_name}.json`;
-            this.$refs.export_task.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
-				description: this.dialog_job.task.description,
-                results: this.dialog_job.task.stream
-            }, null, 2));
-            this.$refs.export_task.click();
 		},
 		exportTimeline() {
 			this.$refs.export_json.download = "timeline.json";
@@ -14895,8 +14775,27 @@ const app = createApp({
 			})
 		},
 		showSite( site, tab = 'info' ) {
-			this.selected_site = site
-			this.users_search = ""
+			this.selected_site = site;
+			this.users_search = "";
+
+			// Determine the target tab string
+			let target_tab_management = 'tab-Info';
+			if ( tab === 'backups' || tab === 'quicksaves' || tab === 'snapshots' ) target_tab_management = 'tab-Backups';
+			else if ( tab === 'updates' ) target_tab_management = 'tab-Updates';
+			else if ( tab === 'scripts' ) target_tab_management = 'tab-Scripts';
+			else if ( tab === 'users' ) target_tab_management = 'tab-Users';
+			else if ( tab === 'addons' ) target_tab_management = 'tab-Addons';
+			else if ( tab === 'logs' ) target_tab_management = 'tab-Logs';
+			else if ( tab === 'stats' ) target_tab_management = 'tab-Stats';
+			
+			if ( this.dialog_site.site.site_id == site.site_id ) {
+				this.dialog_site.site.tabs_management = target_tab_management;
+				// Still fetch fresh data in background if needed
+				this.fetchSiteEnvironments( site.site_id );
+				this.fetchSiteDetails( site.site_id );
+				return; 
+			}
+
 			this.fetchSiteEnvironments( site.site_id )
 			this.fetchSiteDetails( site.site_id )
 			show_site = JSON.parse ( JSON.stringify ( site ) )
@@ -15222,30 +15121,6 @@ const app = createApp({
 					this.script.date = "";
 					this.dialog_edit_script.show = false;
 					this.dialog_edit_script.script = { script_id: "", code: "", run_at_time: "", run_at_date: "" }
-					this.fetchSiteEnvironments( this.dialog_site.site.site_id )
-				});
-		},
-		scheduleScript() {
-			axios.post( `/wp-json/captaincore/v1/scripts/schedule`, {
-					environment_id: this.dialog_site.environment_selected.environment_id,
-					code: this.script.code,
-					run_at: {
-						time: this.script.time,
-						date: this.script.date,
-						timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-					}
-				}, {
-					headers: { 'X-WP-Nonce':this.wp_nonce }
-				})
-				.then( response => {
-					this.snackbar.message = `Scheduled code to run on ${this.dialog_site.environment_selected.home_url} at ${this.script.time} ${this.script.date}.`
-					this.snackbar.show = true
-					this.script.code = "";
-					this.script.menu = false;
-					this.script.menu_date = false;
-					this.script.menu_time = false;
-					this.script.time = "";
-					this.script.date = "";
 					this.fetchSiteEnvironments( this.dialog_site.site.site_id )
 				});
 		},
@@ -16379,16 +16254,6 @@ const app = createApp({
 			this.dialog_modify_plan.customer_name = this.dialog_site.site.account.name;
 			this.dialog_modify_plan.show = true;
 		},
-		editPlan() {
-			this.dialog_modify_plan.plan = Object.assign({}, this.dialog_account.records.account.plan)
-			// Adds commas
-			if ( this.dialog_modify_plan.plan.limits.visits != null ) {
-				this.dialog_modify_plan.plan.limits.visits  = this.dialog_modify_plan.plan.limits.visits.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-			}
-			this.dialog_modify_plan.selected_plan = this.dialog_account.records.account.plan.name;
-			this.dialog_modify_plan.customer_name = this.dialog_account.records.account.name;
-			this.dialog_modify_plan.show = true;
-		},
 		requestPlanChanges() {
 			interval = "Month"
 			this.hosting_intervals.forEach( i => {
@@ -16473,23 +16338,12 @@ const app = createApp({
 			});
 
 		},
-		addAddon() {
-			this.dialog_modify_plan.plan.addons.push({ "name": "", "quantity": "", "price": "" });
+		addPlanItem(type) {
+			// type = 'addons', 'credits', or 'charges'
+			this.dialog_modify_plan.plan[type].push({ "name": "", "quantity": "", "price": "" });
 		},
-		removeAddon( remove_item ) {
-			this.dialog_modify_plan.plan.addons = this.dialog_modify_plan.plan.addons.filter( (item, index) => index != remove_item );
-		},
-		addCredit() {
-			this.dialog_modify_plan.plan.credits.push({ "name": "", "quantity": "", "price": "" });
-		},
-		removeCredit( remove_item ) {
-			this.dialog_modify_plan.plan.credits = this.dialog_modify_plan.plan.credits.filter( (item, index) => index != remove_item );
-		},
-		addCharge() {
-			this.dialog_modify_plan.plan.charges.push({ "name": "", "quantity": "", "price": "" });
-		},
-		removeCharge( remove_item ) {
-			this.dialog_modify_plan.plan.charges = this.dialog_modify_plan.plan.charges.filter( (item, index) => index != remove_item );
+		removePlanItem(type, index) {
+			this.dialog_modify_plan.plan[type].splice(index, 1);
 		},
 		loadHostingPlan( selected_plan ) {
 			current_auto_pay = this.dialog_modify_plan.plan.auto_pay
@@ -17422,28 +17276,6 @@ const app = createApp({
 			} else {
 				this.dialog_site.environment_selected.expanded_backups = [itemId];
 			}
-		},
-		findNodeByPath(nodes, path) {
-			for (const node of nodes) {
-				if (node.path === path) {
-					return node;
-				}
-				if (node.type === 'dir' && Array.isArray(node.children)) {
-					const found = this.findNodeByPath(node.children, path);
-					if (found) return found;
-				}
-			}
-			return null;
-		},
-		getAllDescendantPaths(node) {
-			let paths = [];
-			if (node && node.children && Array.isArray(node.children)) {
-				for (const child of node.children) {
-					paths.push(child.path);
-					paths = paths.concat(this.getAllDescendantPaths(child));
-				}
-			}
-			return paths;
 		},
 		findNodeByPath(nodes, path) {
 			for (const node of nodes) {
