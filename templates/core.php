@@ -5439,7 +5439,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-row>
 							<v-col cols="12" md="6" class="py-1">
 								<v-autocomplete
-									:items='[{"name":"Kinsta","value":"kinsta"},{"name":"Rocket.net","value":"rocketdotnet"},{"name":"WP Engine","value":"wpengine"}]'
+									:items='[{"name":"Kinsta","value":"kinsta"},{"name":"GridPane","value":"gridpane"},{"name":"Rocket.net","value":"rocketdotnet"},{"name":"WP Engine","value":"wpengine"}]'
 									item-title="name"
 									v-model="dialog_new_site.provider"
 									label="Provider"
@@ -5632,7 +5632,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-row dense>
 					<v-col cols="6">
 					<v-autocomplete
-						:items='[{"name":"Kinsta","value":"kinsta"},{"name":"Rocket.net","value":"rocketdotnet"},{"name":"WP Engine","value":"wpengine"}]'
+						:items='[{"name":"Kinsta","value":"kinsta"},{"name":"GridPane","value":"gridpane"},{"name":"Rocket.net","value":"rocketdotnet"},{"name":"WP Engine","value":"wpengine"}]'
 						item-title="name"
 						item-value="value"
 						v-model="dialog_edit_site.site.provider"
