@@ -84,6 +84,69 @@ class Environments extends DB {
 
     }
 
+    public function filters_for_core() {
+
+        $filters     = [];
+        $user        = new User;
+        $account_ids = $user->accounts();
+
+        if ( $user->is_admin() ) {
+            $account_ids = [];
+            $filters = self::fetch_filters_for_admins( "all" );
+        }
+
+        // Loop through each account for current user and fetch SiteIDs
+        foreach ( $account_ids as $account_id ) {
+            // Fetch filters assigned as owners
+            $results = self::fetch_filters_for_account( $account_id, "all" );
+            if ( is_array( $results ) ) {
+                foreach ( $results as $result ) {
+                    $filters[] = $result;
+                }
+            }
+            // Fetch filters assigned as shared access
+            $results = self::fetch_filters_for_shared_accounts( $account_id, "all" );
+            if ( is_array( $results ) ) {
+                foreach ( $results as $result ) {
+                    $filters[] = $result;
+                }
+            }
+        }
+
+        // Pull out themes and plugins and remove empty results
+        $results         = [];
+        $filter_core_set = array_filter(array_column( $filters, 'core' ));
+
+        foreach ( $filter_core_set as $version ) {
+            $count = empty( $results[ $version ] ) ? 1 : $results[ $version ][ "count" ] + 1;
+            $results[ $version ] = [
+                "name"  => $version,
+                "count" => $count,
+            ];
+        }
+
+        usort( $results, function($a, $b) { return $a['count'] < $b['count']; });
+        return $results;
+
+        $response = [];
+        foreach($results as $key => $value) {
+            $versions = array_values( $value[0] );
+            $statuses = array_values( $value[1] );
+            
+            usort( $statuses, function($a, $b) { return $a['count'] < $b['count']; });
+            $response[] = [
+                "name"     => $key,
+                "versions" => $versions,
+                "statuses" => $statuses,
+                "version"  => $value[2],
+                "status"   => $value[3]
+            ];
+        }
+
+        return $response;
+    }
+
+
     public function filters_for_versions( $search_filters = [] ) {
         $filters     = [];
         $user        = new User;
