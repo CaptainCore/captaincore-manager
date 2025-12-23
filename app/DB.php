@@ -238,7 +238,7 @@ class DB {
         if ( $environment != "all" ) {
             $environment_conditions = "AND {$table}.`environment` = '$environment'";
         }
-        $sql = "SELECT {$table}.themes, {$table}.plugins
+        $sql = "SELECT {$table}.themes, {$table}.plugins, {$table}.core
                 FROM {$table}
                 INNER JOIN {$wpdb->prefix}captaincore_sites ON {$table}.site_id = {$wpdb->prefix}captaincore_sites.site_id
                 WHERE {$wpdb->prefix}captaincore_sites.`status` = 'active' $environment_conditions";
@@ -253,7 +253,7 @@ class DB {
         if ( $environment != "all" ) {
             $environment_conditions = "AND {$table}.`environment` = '$environment'";
         }
-        $sql = "SELECT {$table}.themes, {$table}.plugins
+        $sql = "SELECT {$table}.themes, {$table}.plugins, {$table}.core
                 FROM {$table}
                 INNER JOIN {$wpdb->prefix}captaincore_sites ON {$table}.site_id = {$wpdb->prefix}captaincore_sites.site_id
                 WHERE {$wpdb->prefix}captaincore_sites.account_id = $account_id AND {$wpdb->prefix}captaincore_sites.`status` = 'active' $environment_conditions";
@@ -445,6 +445,7 @@ class DB {
         $plugin_filters  = $filters->plugins ?? [];
         $version_filters = $filters->versions ?? [];
         $status_filters  = $filters->statuses ?? [];
+        $core_filters    = $filters->core ?? [];
         
         $all_filter_clauses = [];
 
@@ -497,6 +498,16 @@ class DB {
         $where_clause = implode( " AND ", $base_conditions );
         if ( ! empty( $all_filter_clauses ) ) {
             $where_clause .= " AND ( " . implode( " {$primary_logic} ", $all_filter_clauses ) . " )";
+        }
+
+        // Core Filter Logic
+        if ( ! empty( $core_filters ) ) {
+            $core_clauses = [];
+            foreach ( $core_filters as $version ) {
+                $safe_version = esc_sql( $version );
+                $core_clauses[] = "{$environments_table}.core = '{$safe_version}'";
+            }
+            $where_clause .= " AND ( " . implode( " OR ", $core_clauses ) . " )";
         }
 
         // Return site_id and environment_id

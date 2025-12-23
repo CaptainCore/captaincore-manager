@@ -3042,6 +3042,52 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							{{ unassignedSiteCount }} Unassigned
 						</v-btn>
 
+						<!-- Core Filter -->
+						<v-menu offset-y v-model="coreFilterMenu" :close-on-content-click="false">
+							<template v-slot:activator="{ props }">
+								<v-btn
+									v-bind="props"
+									size="small"
+									rounded="pill"
+									class="mr-2 mb-1"
+									:variant="coreFiltersApplied ? 'tonal' : 'text'"
+									:color="coreFiltersApplied ? 'primary' : 'medium-emphasis'"
+								>
+									<v-icon start>mdi-wordpress</v-icon>
+									Core
+									<v-icon end>mdi-chevron-down</v-icon>
+								</v-btn>
+							</template>
+							<v-card width="350" rounded="xl" elevation="4">
+								<v-card-text>
+									<v-autocomplete
+										:model-value="applied_core_filters"
+										@update:model-value="updatePrimaryFilters('core', $event)"
+										:items="site_filters_core"
+										item-title="name"
+										label="Select Version"
+										variant="outlined"
+										density="compact"
+										autofocus
+										return-object
+										multiple
+										chips
+										closable-chips
+										hide-details
+										color="primary"
+									>
+										<template v-slot:item="{ item, props }">
+											<v-list-item v-bind="props" :title="item.raw.name">
+												<template v-slot:append>
+													<v-chip size="x-small" label class="ml-2">{{ item.raw.count }} sites</v-chip>
+												</template>
+											</v-list-item>
+										</template>
+									</v-autocomplete>
+								</v-card-text>
+							</v-card>
+						</v-menu>
+
 						<!-- Theme Filter -->
 						<v-menu offset-y v-model="themeFilterMenu" :close-on-content-click="false">
 							<template v-slot:activator="{ props }">
@@ -9794,6 +9840,7 @@ const app = createApp({
 		],
 		applied_theme_filters: [],
 		applied_plugin_filters: [],
+		applied_core_filters: [],
 		select_bulk_action: null,
 		bulk_actions: [
 			{ header: "Script" },
@@ -10246,8 +10293,11 @@ const app = createApp({
 		pluginFiltersApplied() {
 			return this.applied_plugin_filters.length > 0;
 		},
+		coreFiltersApplied() {
+			return this.applied_core_filters.length > 0;
+		},
 		isAnySiteFilterActive() {
-			return this.isUnassignedFilterActive || (this.search && this.search.length > 0) || (this.combinedAppliedFilters && this.combinedAppliedFilters.length > 0);
+			return this.isUnassignedFilterActive || (this.search && this.search.length > 0) || (this.combinedAppliedFilters && this.combinedAppliedFilters.length > 0) || this.coreFiltersApplied;
 		},
 		combinedAppliedFilters() {
 			return [...this.applied_theme_filters, ...this.applied_plugin_filters];
@@ -11351,7 +11401,7 @@ const app = createApp({
 			return this.sortEnvironments(matched);
 		},
 		isEnvMatch(env) {
-			if (!this.search && this.combinedAppliedFilters.length === 0) return true;
+			if (!this.search && this.combinedAppliedFilters.length === 0 && this.applied_core_filters.length === 0) return true;
 			
 			let match = true;
 			const searchLower = this.search ? this.search.toLowerCase() : '';
@@ -11360,6 +11410,13 @@ const app = createApp({
 			if (searchLower) {
 				match = (env.home_url && env.home_url.toLowerCase().includes(searchLower)) ||
 						(env.username && env.username.toLowerCase().includes(searchLower));
+			}
+
+			// Core Filter
+			if (match && this.applied_core_filters.length > 0) {
+				match = this.applied_core_filters.some(filter => {
+					return filter.name === env.core;
+				});
 			}
 
 			// Advanced filters (Themes/Plugins)
@@ -11384,7 +11441,7 @@ const app = createApp({
 			// 2. API Filter Logic (Themes/Plugins/Core)
 			// If advanced filters are active, we check the list of IDs returned by the server
 			let filterMatch = true;
-			if (this.combinedAppliedFilters.length > 0) {
+			if (this.combinedAppliedFilters.length > 0 || this.applied_core_filters.length > 0) {
 				
 				// Prevent flash of 0 results while waiting for API response
 				if (this.sites_loading) {
@@ -11392,7 +11449,7 @@ const app = createApp({
 				}
 
 				// Cast IDs to strings/numbers consistently if needed, but usually types match from JSON
-				filterMatch = this.filtered_environment_ids.includes(env.environment_id);
+				filterMatch = this.filtered_environment_ids.some(id => id == env.environment_id);
 			}
 
 			return searchMatch && filterMatch;
@@ -19221,6 +19278,7 @@ const app = createApp({
 			this.isUnassignedFilterActive = false;
 			this.applied_theme_filters = [];
 			this.applied_plugin_filters = [];
+			this.applied_core_filters = [];
 			this.filtered_environment_ids = []; // Clear server results
 			
 			// Manually reset all sites to be visible.
@@ -19300,6 +19358,9 @@ const app = createApp({
 			} else if (type === 'plugins') {
 				this.applied_plugin_filters = value;
 				this.pluginFilterMenu = false;
+			} else if (type === 'core') {
+				this.applied_core_filters = value;
+				this.coreFilterMenu = false;
 			}
 			this.filterSites();
 		},
@@ -19315,7 +19376,7 @@ const app = createApp({
 		},
 		filterSites() {
 			// If no advanced filters are selected, reset everything
-			if (this.combinedAppliedFilters.length === 0) {
+			if (this.combinedAppliedFilters.length === 0 && this.applied_core_filters.length === 0) {
 				// Make all sites visible locally
 				this.sites.forEach(s => s.filtered = true);
 				this.filtered_environment_ids = [];
@@ -19335,6 +19396,7 @@ const app = createApp({
 				status_logic: this.filter_status_logic,
 				themes: this.applied_theme_filters.map( ({ name, title, search, type }) => ({ name, title, search, type }) ),
 				plugins: this.applied_plugin_filters.map( ({ name, title, search, type }) => ({ name, title, search, type }) ),
+				core: this.applied_core_filters.map( ({ name }) => name ),
 				versions: allSelectedVersions,
 				statuses: allSelectedStatuses,
 			};
