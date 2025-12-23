@@ -3426,21 +3426,20 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 															variant="flat"
 															class="font-weight-bold text-capitalize mr-2"
 															rounded="lg"
-															append-icon="mdi-cog"
+															prepend-icon="mdi-cog"
 															elevation="0"
 														>
 															Manage Site
 														</v-btn>
-														<v-btn
-															color="primary"
-															variant="flat"
-															class="font-weight-bold text-capitalize"
-															rounded="lg"
-															append-icon="mdi-login-variant"
-															elevation="0"
-															@click="magicLoginSite(item.raw.site_id, undefined, env.environment)"
+														<v-btn 
+															variant="tonal" 
+															class="text-none font-weight-bold" 
+															rounded="lg" 
+															append-icon="mdi-wordpress"
+															:loading="env.isLoggingIn"
+															@click="magicLoginSite(item.raw.site_id, null, env)"
 														>
-															Login
+															WP Login
 														</v-btn>
 
 														<v-menu location="bottom end">
@@ -3744,7 +3743,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
 					<v-btn variant="text" @click="showLogEntry(dialog_site.site.site_id)" v-show="role == 'administrator' || role == 'owner'" icon="mdi-note-check-outline"></v-btn>
-					<v-btn variant="text" @click="magicLoginSite(dialog_site.site.site_id)">Login to WordPress <v-icon>mdi-open-in-new</v-icon></v-btn>
+					<v-btn variant="text" @click="magicLoginSite(dialog_site.site.site_id, null, dialog_site.environment_selected)" :loading="dialog_site.environment_selected.isLoggingIn">Login to WordPress <v-icon>mdi-open-in-new</v-icon></v-btn>
 				</v-toolbar-items>
 				</v-toolbar>
 				<v-window v-model="dialog_site.site.tabs">
@@ -4344,7 +4343,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								{{ item.roles.split(",").join(" ") }}
 							</template>
 							<template v-slot:item.actions="{ item }">
-								<v-btn variant="tonal" size="small" rounded @click="magicLoginSite(dialog_site.site.site_id, item)" class="my-2">Login as</v-btn>
+								<v-btn variant="tonal" size="small" rounded @click="magicLoginSite(dialog_site.site.site_id, item, dialog_site.environment_selected)" :loading="item.isLoggingIn" class="my-2">Login as</v-btn>
 								<v-btn variant="text" class="my-2" @click="deleteUserDialog(item.user_login, dialog_site.site.site_id)" icon="mdi-delete" color="red"></v-btn>
 							</template>
 						</v-data-table>
@@ -11870,47 +11869,50 @@ const app = createApp({
 					this.terminal_schedule.loading = false;
 				});
 		},
-		magicLoginSite( site_id, user, environment ) {
-			// Determine Environment
-			if ( ! environment ) {
-				if ( this.dialog_site && this.dialog_site.environment_selected ) {
-					environment = this.dialog_site.environment_selected.environment
-				} else {
-					environment = "production" // Fallback
-				}
-			}
-			environment = environment.toLowerCase()
+		magicLoginSite(site_id, user, environment_obj) {
+			// 1. Fallback: If environment_obj isn't passed, use the one currently selected in the dialog
+			const targetEnv = environment_obj || this.dialog_site.environment_selected;
 
-			let endpoint = `/wp-json/captaincore/v1/sites/${site_id}/${environment}/magiclogin`
-			if ( typeof user != "undefined" ) {
-				endpoint = `/wp-json/captaincore/v1/sites/${site_id}/${environment}/magiclogin/${user.ID}`
-			}
-			this.snackbar.message = "Requesting magic login...";
-			this.snackbar.show = true;
+			// 2. Guard: If we still don't have an environment, default to 'production' or exit
+			let environment_name = typeof targetEnv === 'object' ? targetEnv.environment : targetEnv;
+			if (!environment_name) environment_name = 'production'; 
+			
+			let env_key = environment_name.toLowerCase();
 
-			axios.get( endpoint, {
-					headers: {'X-WP-Nonce':this.wp_nonce}
-				})
-				.then(response => {
-					if ( response.data.includes("There has been a critical error on this website") ) {
-						this.snackbar.message = "Login failed due to PHP error. Check server PHP logs.";
-						this.snackbar.show = true;
-						return
-					}
-					if ( response.data.includes("http") ) {
-						window.open( response.data.trim() );
-						this.snackbar.message = "Login successful. Opening window...";
-						this.snackbar.show = true;
-					} else {
-						this.snackbar.message = "Login failed.";
-						this.snackbar.show = true;
-					}
-				})
-				.catch(error => {
-					this.snackbar.message = "Login request failed.";
+			// 3. Set loading state on the specific user (item) AND the environment object
+			if (user && typeof user === 'object') user.isLoggingIn = true;
+			if (targetEnv && typeof targetEnv === 'object') targetEnv.isLoggingIn = true;
+
+			let endpoint = `/wp-json/captaincore/v1/sites/${site_id}/${env_key}/magiclogin`;
+			if (user && user.ID) {
+				endpoint = `/wp-json/captaincore/v1/sites/${site_id}/${env_key}/magiclogin/${user.ID}`;
+			}
+
+			axios.get(endpoint, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				if (response.data.includes("There has been a critical error on this website")) {
+					this.snackbar.message = "Login failed due to PHP error. Check server PHP logs.";
 					this.snackbar.show = true;
-					console.log(error.response)
-				});
+					return;
+				}
+				if (response.data.includes("http")) {
+					window.open(response.data.trim());
+				} else {
+					this.snackbar.message = "Login failed.";
+					this.snackbar.show = true;
+				}
+			})
+			.catch(error => {
+				this.snackbar.message = "Login request failed.";
+				this.snackbar.show = true;
+			})
+			.finally(() => {
+				// 4. Reset loading states
+				if (user && typeof user === 'object') user.isLoggingIn = false;
+				if (targetEnv && typeof targetEnv === 'object') targetEnv.isLoggingIn = false;
+			});
 		},
 		magicLoginForDeployTarget(target) {
 			let job_id = Math.round((new Date()).getTime());
