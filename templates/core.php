@@ -3321,9 +3321,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 													{{ item.raw.name }}
 												</h3>
 												<v-spacer></v-spacer>
-												<v-btn variant="text" size="x-small" color="primary" class="font-weight-bold" tag="span">
-													Manage Site
-												</v-btn>
 											</a>
 
 											<template v-for="(env, index) in getVisibleEnvironments(item.raw)" :key="env.environment_id">
@@ -3422,12 +3419,24 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 													</div>
 
 													<div class="d-flex align-center justify-end flex-shrink-0 mt-3 mt-sm-0 gap-2">
+														<v-btn 
+															:href="`${configurations.path}sites/${item.raw.site_id}`"
+															@click.prevent="openEnvironmentTool(item.raw, env, '')"
+															color="primary"
+															variant="flat"
+															class="font-weight-bold text-capitalize mr-2"
+															rounded="lg"
+															append-icon="mdi-cog"
+															elevation="0"
+														>
+															Manage Site
+														</v-btn>
 														<v-btn
 															color="primary"
 															variant="flat"
 															class="font-weight-bold text-capitalize"
 															rounded="lg"
-															prepend-icon="mdi-login-variant"
+															append-icon="mdi-login-variant"
 															elevation="0"
 															@click="magicLoginSite(item.raw.site_id, undefined, env.environment)"
 														>
@@ -9804,6 +9813,7 @@ const app = createApp({
 		filter_version_logic: "and",
 		filter_status_logic: "and",
 		site_filters: <?php echo json_encode( ( new CaptainCore\Environments )->filters() ); ?>,
+		site_filters_core: <?php echo json_encode( ( new CaptainCore\Environments )->filters_for_core() ); ?>,
 		site_filter_version: null,
 		site_filter_status: null,
 		toggle_site: 'cards',
