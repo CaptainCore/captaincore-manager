@@ -3646,7 +3646,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								max-width="50"
 								height="31" 
 								color="surface-variant" 
-								class="elevation-1 ml-5 rounded d-flex align-center justify-center border-thin flex-grow-0"
+								class="elevation-1 rounded d-flex align-center justify-center border-thin flex-grow-0"
 							>
 								<v-icon size="x-small" class="text-medium-emphasis">mdi-monitor-shimmer</v-icon>
 							</v-sheet>
@@ -3788,7 +3788,39 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-toolbar density="compact" flat color="transparent">
 							<v-toolbar-title>Info</v-toolbar-title>
 						</v-toolbar>
-               			 <v-card flat>
+						<v-card v-if="currentEnvironmentAction" flat class="d-flex align-center justify-center text-center pa-10" style="min-height: 400px; background: transparent;">
+							<div>
+								<div class="mb-6 position-relative d-inline-block">
+									<v-progress-circular
+										indeterminate
+										color="primary"
+										size="80"
+										width="6"
+									></v-progress-circular>
+									<v-icon
+										color="primary"
+										size="32"
+										class="position-absolute"
+										style="top: 50%; left: 50%; transform: translate(-50%, -50%);"
+									>
+										mdi-source-branch
+									</v-icon>
+								</div>
+								
+								<h2 class="text-h5 font-weight-bold mb-3">
+									Pushing to {{ dialog_site.environment_selected.environment }}...
+								</h2>
+								
+								<p class="text-body-1 text-medium-emphasis mb-6" style="max-width: 600px; margin: 0 auto;">
+									{{ currentEnvironmentAction.message || "We're busy pushing content to this environment." }}
+								</p>
+
+								<v-alert type="info" variant="tonal" border="start" class="text-left mx-auto" style="max-width: 500px;">
+									This environment is currently locked for changes. A backup is automatically being made which you can use to roll back if necessary. We'll notify you as soon as the process is complete.
+								</v-alert>
+							</div>
+						</v-card>
+						<v-card flat v-else>
 							<v-container fluid>
 							<v-alert type="info" variant="text" v-show="dialog_site.environment_selected.token == 'basic'">This site doesn't appear to be WordPress. Backups will still work however other management functions have been disabled.</v-alert>
 							<v-row>
@@ -10161,6 +10193,40 @@ const app = createApp({
 			}
 			// Build URL
 			return `${this.remote_upload_uri}${site.site}_${site.site_id}/production/screenshots/${site.screenshot_base}_thumb-100.jpg`;
+		},
+		currentEnvironmentAction() {
+			// Returns the active provider action (job) if it targets the currently selected environment
+			if (!this.dialog_site.environment_selected || !this.provider_actions.length) {
+				return null;
+			}
+			
+			const currentEnvId = this.dialog_site.environment_selected.environment_id;
+
+			// Find an action that is 'started' or 'waiting' (not done) that matches this env ID
+			// Note: provider_actions is populated by fetchProviderActions/checkProviderActions from the DB
+			const matchingAction = this.provider_actions.find(item => {
+				const actionData = item.action; // This is the JSON decoded 'action' column
+				if (!actionData) return false;
+
+				// Check generic push
+				if (actionData.command === 'push_environment' && actionData.target_environment_id == currentEnvId) {
+					return true;
+				}
+
+				// Check specific Kinsta staging push (legacy logic fallback)
+				if (actionData.command === 'deploy-to-staging' && actionData.site_id == this.dialog_site.site.site_id && this.dialog_site.environment_selected.environment === 'Staging') {
+					return true;
+				}
+
+				// Check specific Kinsta production push (legacy logic fallback)
+				if (actionData.command === 'deploy-to-production' && actionData.site_id == this.dialog_site.site.site_id && this.dialog_site.environment_selected.environment === 'Production') {
+					return true;
+				}
+
+				return false;
+			});
+
+			return matchingAction ? matchingAction.action : null;
 		},
 		hasProviderActions() {
 			return this.provider_actions.length > 0;
