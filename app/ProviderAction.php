@@ -88,7 +88,7 @@ class ProviderAction {
 
     public function active() {
         $user_id = get_current_user_id();
-        $actions = ( new ProviderActions )->where( [ "status" => [ "'waiting'", "'started'" ], "user_id" => $user_id ] );
+        $actions = ( new ProviderActions )->where( [ "status" => [ "waiting", "started" ], "user_id" => $user_id ] );
         foreach( $actions as $action ) {
             if ( ! empty( $action->action ) ) {
                 $action->action = json_decode( $action->action );

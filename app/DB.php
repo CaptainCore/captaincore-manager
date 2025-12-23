@@ -67,18 +67,29 @@ class DB {
 
     static function where( $conditions ) {
         global $wpdb;
-        $where_statements = [];
-        foreach ( $conditions as $row => $value ) {
+        $where_clauses = [];
+        $values = [];
+
+        foreach ( $conditions as $column => $value ) {
+            $column = preg_replace('/[^a-zA-Z0-9_]/', '', $column);
+            
             if ( is_array( $value ) ) {
-                $values = implode( ", ", $value );
-                $where_statements[] =  "`{$row}` IN ($values)";
-                continue;
+                $placeholders = implode( ',', array_fill( 0, count( $value ), '%s' ) );
+                $where_clauses[] = "`$column` IN ($placeholders)";
+                $values = array_merge( $values, $value );
+            } else {
+                $where_clauses[] = "`$column` = %s";
+                $values[] = $value;
             }
-            $where_statements[] =  "`{$row}` = '{$value}'";
         }
-        $where_statements = implode( " AND ", $where_statements );
-        $sql = 'SELECT * FROM ' . self::_table() . " WHERE $where_statements order by `created_at` DESC";
-        return $wpdb->get_results( $sql );
+
+        if ( empty( $where_clauses ) ) {
+            return [];
+        }
+
+        $sql = "SELECT * FROM " . self::_table() . " WHERE " . implode( " AND ", $where_clauses ) . " ORDER BY `created_at` DESC";
+
+        return $wpdb->get_results( $wpdb->prepare( $sql, $values ) );
     }
 
     static function where_compare( $conditions ) {
