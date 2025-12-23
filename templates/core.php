@@ -9363,6 +9363,7 @@ const app = createApp({
 		notifications: false,
 		themeFilterMenu: false,
 		pluginFilterMenu: false,
+		coreFilterMenu: false,
 		isUnassignedFilterActive: false,
 		isOutstandingFilterActive: false,
 		isEmptyFilterActive: false,
