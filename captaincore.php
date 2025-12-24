@@ -2120,6 +2120,81 @@ function captaincore_site_backups_get_func( $request ) {
 	return $site->backup_get( $backup_id, $environment );
 }
 
+function captaincore_site_invite_preview_func( $request ) {
+    $site_id = $request['id'];
+    
+    // 1. Security Check: Does current user have access to this specific site?
+    if ( ! captaincore_verify_permissions( $site_id ) ) {
+        return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+    }
+
+    $site = CaptainCore\Sites::get( $site_id );
+    if ( ! $site ) {
+        return new WP_Error( 'not_found', 'Site not found.', [ 'status' => 404 ] );
+    }
+
+    // 2. Resolve to Customer Account (permissions are linked to accounts)
+    $account_id = $site->customer_id;
+    if ( empty( $account_id ) ) {
+        $account_id = $site->account_id;
+    }
+
+    // 3. Calculate Scope (Run as admin privilege to get accurate counts of what is being shared)
+    $account_obj = new CaptainCore\Account( $account_id, true );
+    
+    $all_sites   = $account_obj->sites();
+    $all_domains = $account_obj->domains();
+    $account_rec = CaptainCore\Accounts::get( $account_id );
+
+    $site_count   = count( $all_sites );
+    $domain_count = count( $all_domains );
+
+    // 4. Check if current user has full access to this account
+    // This determines if they see the specific list or just the counts
+    $user_id = get_current_user_id();
+    $user    = new CaptainCore\User( $user_id );
+    $has_account_access = $user->verify_accounts( [ $account_id ] );
+
+    return [
+        'site_name'          => $site->name,
+        'account_name'       => $account_rec->name,
+        'total_sites'        => $site_count,
+        'total_domains'      => $domain_count,
+        'has_account_access' => $has_account_access,
+        'sites_list'         => $has_account_access ? $all_sites : [], 
+        'domains_list'       => $has_account_access ? $all_domains : [],
+    ];
+}
+
+function captaincore_site_invite_func( $request ) {
+    $site_id = $request['id'];
+    $email   = $request->get_param('email');
+
+    if ( ! is_email( $email ) ) {
+        return new WP_Error( 'invalid_email', 'Invalid email address.', [ 'status' => 400 ] );
+    }
+
+    // 1. Security Check
+    if ( ! captaincore_verify_permissions( $site_id ) ) {
+        return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+    }
+
+    $site = CaptainCore\Sites::get( $site_id );
+    
+    // 2. Resolve Account
+    $account_id = $site->customer_id ? $site->customer_id : $site->account_id;
+
+    // 3. Perform Invite
+    $account_obj = new CaptainCore\Account( $account_id, true );
+    $account_obj->invite( $email );
+
+    // 4. Return Generic Success Message (Privacy Protection)
+    // We ignore the specific return from invite() to prevent user enumeration
+    return [ 
+        "message" => "Invitation sent successfully." 
+    ];
+}
+
 function captaincore_site_logs_list_func( $request ) {
 	$site_id = $request['id'];
 
@@ -2823,7 +2898,6 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
-	// Custom endpoint for CaptainCore site/<site-id>/<environment>/backups
 	register_rest_route(
 		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/backups', [
 			'methods'             => 'GET',
@@ -2833,7 +2907,6 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
-	// Custom endpoint for CaptainCore site/<site-id>/<environment>/backups/<backup-id>
 	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/backups/(?P<backup_id>[a-zA-Z0-9-]+)', [
 			'methods'             => 'GET',
@@ -2842,6 +2915,22 @@ function captaincore_register_rest_endpoints() {
 			'show_in_index'       => false,
 		]
 	);
+
+	register_rest_route(
+        'captaincore/v1', '/sites/(?P<id>[\d]+)/invite-preview', [
+            'methods'             => 'GET',
+            'callback'            => 'captaincore_site_invite_preview_func',
+            'permission_callback' => 'captaincore_permission_check',
+        ]
+    );
+
+    register_rest_route(
+        'captaincore/v1', '/sites/(?P<id>[\d]+)/invite', [
+            'methods'             => 'POST',
+            'callback'            => 'captaincore_site_invite_func',
+            'permission_callback' => 'captaincore_permission_check',
+        ]
+    );
 
 	register_rest_route( 'captaincore/v1', '/sites/bulk-tools', [
 		'methods'             => 'POST',
