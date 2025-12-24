@@ -2272,6 +2272,88 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-card-text>
 					</v-card>
 				</v-dialog>
+				<v-dialog v-model="dialog_share.show" max-width="600">
+					<v-card rounded="xl">
+						<v-toolbar color="primary" flat>
+							<v-btn icon="mdi-close" @click="dialog_share.show = false"></v-btn>
+							<v-toolbar-title>Share Access</v-toolbar-title>
+						</v-toolbar>
+						<v-card-text class="pt-5">
+							<div v-if="dialog_share.loading" class="text-center py-5">
+								<v-progress-circular indeterminate color="primary"></v-progress-circular>
+							</div>
+							<div v-else>
+								<p class="text-body-2 mb-4">
+									Invite a user to manage <strong>{{ dialog_share.preview.site_name }}</strong>.
+								</p>
+								<v-text-field
+									v-model="dialog_share.email"
+									label="Email Address"
+									placeholder="colleague@example.com"
+									variant="outlined"
+									prepend-inner-icon="mdi-email"
+									autofocus
+									@keydown.enter="sendSiteInvite"
+								></v-text-field>
+
+								<v-expand-transition>
+									<v-alert
+										v-if="dialog_share.email && isValidEmail(dialog_share.email)"
+										icon="mdi-information-outline"
+										variant="tonal"
+										color="info"
+										class="mt-2 mb-4 text-body-2"
+										border="start"
+									>
+										<!-- Scenario A: Inviter has full account access (Show specific details) -->
+										<div v-if="dialog_share.preview.has_account_access">
+											Inviting <strong>{{ dialog_share.email }}</strong> will grant them access to the account <strong>{{ dialog_share.preview.account_name }}</strong>. This includes:
+											<ul class="ml-4 mt-2">
+												<li>
+													<strong>{{ dialog_share.preview.total_sites }} Website{{ dialog_share.preview.total_sites !== 1 ? 's' : '' }}:</strong> 
+													<span class="text-caption text-medium-emphasis d-block" v-if="dialog_share.preview.sites_list.length > 0">
+														{{ dialog_share.preview.sites_list.map(s => s.name).join(', ') }}
+													</span>
+												</li>
+												<li v-if="dialog_share.preview.total_domains > 0">
+													<strong>{{ dialog_share.preview.total_domains }} Domain{{ dialog_share.preview.total_domains !== 1 ? 's' : '' }}</strong>
+												</li>
+											</ul>
+										</div>
+
+										<!-- Scenario B: Inviter has shared access (Show counts only) -->
+										<div v-else>
+											Inviting <strong>{{ dialog_share.email }}</strong> will grant them access to <strong>{{ dialog_share.preview.site_name }}</strong>
+											<span v-if="dialog_share.preview.total_sites > 1">
+												along with {{ dialog_share.preview.total_sites - 1 }} other site{{ (dialog_share.preview.total_sites - 1) !== 1 ? 's' : '' }}
+											</span>
+											<span v-if="dialog_share.preview.total_domains > 0">
+												and {{ dialog_share.preview.total_domains }} domain{{ dialog_share.preview.total_domains !== 1 ? 's' : '' }}
+											</span>
+											linked to this website's customer account.
+										</div>
+									</v-alert>
+								</v-expand-transition>
+
+								<v-alert v-if="dialog_share.error" type="error" variant="tonal" class="mt-2">
+									{{ dialog_share.error }}
+								</v-alert>
+							</div>
+						</v-card-text>
+						<v-card-actions class="pa-4">
+							<v-spacer></v-spacer>
+							<v-btn variant="text" @click="dialog_share.show = false">Cancel</v-btn>
+							<v-btn 
+								color="primary" 
+								@click="sendSiteInvite()" 
+								:loading="dialog_share.sending"
+								:disabled="!isValidEmail(dialog_share.email)"
+							>
+								Send Invite
+							</v-btn>
+						</v-card-actions>
+					</v-card>
+				</v-dialog>
 				<v-dialog v-model="dialog_launch.show" width="500">
 					<v-card rounded="0">
 						<v-toolbar flat color="primary">
@@ -2660,131 +2742,210 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card>
 				</v-dialog>
 			<v-container fluid v-show="loading_page != true" style="padding:0px;">
-			<v-card rounded="0" flat v-if="route == 'login'" color="transparent">
-				<v-card flat style="max-width:960px;margin: auto;margin-bottom:30px" v-if="fetchInvite.account">
-				<v-alert variant="text" type="info" style="border-radius: 4px;" elevation="2" density="compact" color="primary">
-					To accept invitation either <strong>create new account</strong> or <strong>login</strong> to an existing account.
-				</v-alert>
-				<v-row>
-				<v-col>
-				<v-card rounded="0" style="max-width: 400px;margin: auto;">
-					<v-toolbar>
-						<v-toolbar-title>Create new account</v-toolbar-title>
-						<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-card-text>
-						<v-text-field readonly value="################" hint="Will use email where invite was sent to." persistent-hint label="Email" class="mt-3" variant="underlined"></v-text-field>
-						<v-text-field type="password" v-model="new_account.password" label="Password" class="mt-3" variant="underlined"></v-text-field>
-						<v-col cols="12" class="px-0">
-							<v-btn color="primary" @click="createAccount()">Create Account</v-btn>
+			<v-card rounded="0" flat v-if="route == 'login'" color="transparent" class="fill-height d-flex align-center justify-center">
+
+				<!-- Invite Acceptance Screen -->
+				<div v-if="fetchInvite.account" class="w-100 py-10">
+					<div class="text-center mb-8">
+						<v-alert
+							color="primary"
+							variant="tonal"
+							class="d-inline-block text-left"
+							style="max-width: 600px;"
+							border="start"
+							density="comfortable"
+						>
+							<template v-slot:prepend>
+								<v-icon icon="mdi-information"></v-icon>
+							</template>
+							To accept the invitation for this account, please either <strong>create a new account</strong> or <strong>login</strong> to an existing account.
+						</v-alert>
+					</div>
+
+					<v-row justify="center" class="ma-0">
+						<!-- Create Account Column -->
+						<v-col cols="12" md="6" lg="4" class="d-flex justify-center justify-md-end px-4 mb-4 mb-md-0">
+							<v-card style="width: 100%; max-width: 380px;" flat border="thin" rounded="xl" class="d-flex flex-column">
+								<v-toolbar flat color="transparent" density="comfortable" class="border-b">
+									<v-toolbar-title class="text-h6 font-weight-regular pl-4">Create new account</v-toolbar-title>
+								</v-toolbar>
+								<v-card-text class="pt-6 pb-6 px-5 flex-grow-1">
+									<div class="text-caption text-medium-emphasis mb-1">Email</div>
+									<v-text-field 
+										readonly 
+										value="################" 
+										hint="Will use email where invite was sent to." 
+										persistent-hint 
+										variant="outlined"
+										density="compact"
+										bg-color="grey-lighten-5"
+										class="mb-4"
+										hide-details="auto"
+									></v-text-field>
+
+									<div class="text-caption text-medium-emphasis mb-1">Password</div>
+									<v-text-field 
+										type="password" 
+										v-model="new_account.password" 
+										variant="outlined" 
+										density="compact"
+										hide-details
+									></v-text-field>
+									
+									<v-btn 
+										color="primary" 
+										@click="createAccount()" 
+										block 
+										size="large"
+										class="mt-6 font-weight-bold"
+										flat
+									>
+										Create Account
+									</v-btn>
+								</v-card-text>
+							</v-card>
 						</v-col>
-				</v-card-text>
-				</v-card>
-				</v-col>
-				<v-col>
-				<v-card style="max-width: 358px;margin: auto;" variant="outlined" rounded="xl">
-					<v-toolbar>
-						<v-toolbar-title>Login</v-toolbar-title>
-						<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-card-text class="my-2">
-					<v-form v-if="login.lost_password" ref="reset" @keyup.enter="resetPassword()">
-					<v-row>
-						<v-col cols="12">
-							<v-text-field label="Username or Email" :model-value="login.user_login" @update:model-value="login.user_login = $event" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']" variant="underlined"></v-text-field>
-						</v-col>
-						<v-col cols="12">
-							<v-alert variant="tonal" type="success" v-show="login.message">{{ login.message }}</v-alert>
-						</v-col>
-						<v-col cols="12">
-							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
-							<v-btn color="primary" @click="resetPassword()" :disabled="login.loading">Reset Password</v-btn>
+
+						<!-- Login Column -->
+						<v-col cols="12" md="6" lg="4" class="d-flex justify-center justify-md-start px-4">
+							<v-card style="width: 100%; max-width: 380px;" flat border="thin" rounded="xl">
+								<v-toolbar flat color="transparent" density="comfortable" class="border-b">
+									<v-toolbar-title class="text-h6 font-weight-regular pl-4">Login</v-toolbar-title>
+								</v-toolbar>
+								<v-card-text class="pt-6 pb-2 px-5">
+									<!-- Reset Password Form -->
+									<v-form v-if="login.lost_password" ref="reset_invite" @submit.prevent="resetPassword()">
+										<div class="text-caption text-medium-emphasis mb-1">Username or Email</div>
+										<v-text-field 
+											:model-value="login.user_login" 
+											@update:model-value="login.user_login = $event" 
+											required 
+											:disabled="login.loading" 
+											:rules="[v => !!v || 'Username is required']" 
+											variant="outlined" 
+											density="compact"
+											class="mb-4"
+										></v-text-field>
+
+										<v-alert variant="tonal" type="success" v-show="login.message" density="compact" class="mb-4">{{ login.message }}</v-alert>
+										<v-progress-linear indeterminate rounded height="4" class="mb-4" v-show="login.loading" color="primary"></v-progress-linear>
+										
+										<v-btn color="primary" type="submit" :disabled="login.loading" block size="large" flat class="font-weight-bold">Reset Password</v-btn>
+									</v-form>
+									
+									<!-- Login Form -->
+									<v-form lazy-validation ref="login_invite" @submit.prevent="signIn()" v-else>
+										<div class="text-caption text-medium-emphasis mb-1">Username or Email</div>
+										<v-text-field 
+											v-model="login.user_login" 
+											required 
+											:disabled="login.loading" 
+											:rules="[v => !!v || 'Username is required']" 
+											variant="outlined" 
+											density="compact"
+											class="mb-4"
+											hide-details="auto"
+										></v-text-field>
+										
+										<div class="text-caption text-medium-emphasis mb-1">Password</div>
+										<v-text-field 
+											v-model="login.user_password" 
+											required 
+											:disabled="login.loading" 
+											type="password" 
+											:rules="[v => !!v || 'Password is required']" 
+											variant="outlined" 
+											density="compact"
+											class="mb-4"
+											hide-details="auto"
+										></v-text-field>
+
+										<div v-show="login.info || login.errors == 'One time password is invalid.'" class="mb-4">
+											<div class="text-caption text-medium-emphasis mb-1">One Time Password</div>
+											<v-otp-input 
+												length="6" 
+												type="number" 
+												v-model="login.tfa_code" 
+												required 
+												:disabled="login.loading"
+												variant="outlined"
+												density="compact"
+												min-height="40"
+											></v-otp-input>
+										</div>
+
+										<v-alert variant="tonal" type="error" v-show="login.errors" density="compact" class="mb-4">{{ login.errors }}</v-alert>
+										<v-alert variant="tonal" type="info" v-show="login.info" density="compact" class="mb-4">{{ login.info }}</v-alert>
+										<v-progress-linear indeterminate rounded height="4" class="mb-4" v-show="login.loading" color="primary"></v-progress-linear>
+
+										<v-btn color="primary" type="submit" :disabled="login.loading" block size="large" flat class="font-weight-bold">Login</v-btn>
+									</v-form>
+								</v-card-text>
+								<div class="px-5 pb-6 text-center">
+									<a href="#reset" @click.prevent="login.lost_password = true" class="text-caption text-decoration-underline text-primary" v-show="!login.lost_password">Lost your password?</a>
+									<a href="#login" @click.prevent="login.lost_password = false" class="text-caption text-decoration-underline text-primary" v-show="login.lost_password">Back to login form.</a>
+								</div>
+							</v-card>
 						</v-col>
 					</v-row>
-					</v-form>
-					<v-form lazy-validation ref="login" @keyup.enter="signIn()" v-else>
-					<v-row>
-						<v-col cols="12">
-							<v-text-field label="Username or Email" v-model="login.user_login" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']" variant="underlined"></v-text-field>
-						</v-col>
-						<v-col cols="12">
-							<v-text-field label="Password" v-model="login.user_password" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']" variant="underlined"></v-text-field>
-						</v-col>
-						<v-col cols="12" v-show="login.info || login.errors == 'One time password is invalid.'" class="py-0">
-							<v-label class="ml-2">One Time Password</v-label>
-							<div class="d-flex justify-start">
-								<v-otp-input length="6" type="number" v-model="login.tfa_code" required :disabled="login.loading"></v-otp-input>
-							</div>
-						</v-col>
-						<v-col cols="12">
-							<v-alert variant="text" type="error" v-show="login.errors">{{ login.errors }}</v-alert>
-							<v-alert variant="text" type="info" v-show="login.info">{{ login.info }}</v-alert>
-						</v-col>
-						<v-col cols="12">
-							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
-							<v-btn color="primary" @click="signIn()" :disabled="login.loading">Login</v-btn>
-						</v-col>
-					</v-row>
-					</v-form>
-					</v-card-text>
-				</v-card>
-				<v-card rounded="0" flat style="max-width: 358px;margin: auto;" class="px-5" color="transparent">
-					<a href="#reset" @click="login.lost_password = true" class="text-caption" v-show="!login.lost_password">Lost your password?</a>
-					<a href="#login" @click="login.lost_password = false" class="text-caption" v-show="login.lost_password">Back to login form.</a>
-				</v-card>
-				</v-col>
-				</v-row>
-			</v-card>
-			<template v-else>
-				<v-card style="max-width: 358px;margin: auto;" flat border="thin" rounded="xl">
-					<v-toolbar flat color="transparent">
-						<v-toolbar-title>Login</v-toolbar-title>
-						<v-spacer></v-spacer>
-					</v-toolbar>
-					<v-card-text class="my-2">
-					<v-form v-if="login.lost_password" @keyup.native.enter="resetPassword()" ref="reset">
-					<v-row>
-						<v-col cols="12">
-							<v-text-field label="Username or Email" v-model="login.user_login" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']" variant="underlined"></v-text-field>
-						</v-col>
-						<v-col cols="12">
-							<v-alert variant="tonal" type="success" v-show="login.message">{{ login.message }}</v-alert>
-						</v-col>
-						<v-col cols="12">
-							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
-							<v-btn color="primary" @click="resetPassword()" :disabled="login.loading">Reset Password</v-btn>
-						</v-col>
-					</v-row>
-					</v-form>
-					<v-form lazy-validation ref="login" @keyup.native.enter="signIn()" v-else>
-					<v-row>
-						<v-col cols="12">
-							<v-text-field label="Username or Email" v-model="login.user_login" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']" variant="underlined"></v-text-field>
-							<v-text-field label="Password" v-model="login.user_password" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']" variant="underlined"></v-text-field>
-						</v-col>
-						<v-col cols="12" v-show="login.info || login.errors == 'One time password is invalid.'" class="py-0">
-							<v-label class="ml-2">One Time Password</v-label>
-							<div class="d-flex justify-start">
-								<v-otp-input length="6" type="number" label="One time password" v-model="login.tfa_code" required :disabled="login.loading"></v-otp-input>
-							</div>
-						</v-col>
-						<v-col cols="12">
-							<v-alert variant="tonal" type="error" v-show="login.errors">{{ login.errors }}</v-alert>
-							<v-alert variant="tonal" type="info" v-show="login.info">{{ login.info }}</v-alert>
-						</v-col>
-						<v-col cols="12">
-							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
-							<v-btn color="primary" @click="signIn()" :disabled="login.loading">Login</v-btn>
-						</v-col>
-					</v-row>
-					</v-form>
-					</v-card-text>
-				</v-card>
-				<v-card flat style="max-width: 358px;margin: auto;" class="px-5" color="transparent">
-					<a href="#reset" @click="login.lost_password = true" class="text-caption" v-show="!login.lost_password">Lost your password?</a>
-					<a href="#login" @click="login.lost_password = false" class="text-caption" v-show="login.lost_password">Back to login form.</a>
-				</v-card>
-			</template>
+				</div>
+
+				<!-- Standalone Login (Standard) -->
+				<template v-else>
+					<v-card style="max-width: 358px; width: 100%; margin: auto;" flat border="thin" rounded="xl">
+						<v-toolbar flat color="transparent" density="comfortable">
+							<v-toolbar-title class="text-h6 font-weight-regular pl-4">Login</v-toolbar-title>
+							<v-spacer></v-spacer>
+						</v-toolbar>
+						<v-divider></v-divider>
+						<v-card-text class="my-2 px-5 py-6">
+						<v-form v-if="login.lost_password" @submit.prevent="resetPassword()" ref="reset">
+						<v-row dense>
+							<v-col cols="12">
+								<div class="text-caption text-medium-emphasis mb-1">Username or Email</div>
+								<v-text-field :model-value="login.user_login" @update:model-value="login.user_login = $event" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']" variant="outlined" density="compact" hide-details="auto" class="mb-4"></v-text-field>
+							</v-col>
+							<v-col cols="12">
+								<v-alert variant="tonal" type="success" v-show="login.message" density="compact" class="mb-4">{{ login.message }}</v-alert>
+							</v-col>
+							<v-col cols="12">
+								<v-progress-linear indeterminate rounded height="4" class="mb-4" v-show="login.loading" color="primary"></v-progress-linear>
+								<v-btn color="primary" type="submit" :disabled="login.loading" block size="large" flat class="font-weight-bold">Reset Password</v-btn>
+							</v-col>
+						</v-row>
+						</v-form>
+						<v-form lazy-validation ref="login" @submit.prevent="signIn()" v-else>
+						<v-row dense>
+							<v-col cols="12">
+								<div class="text-caption text-medium-emphasis mb-1">Username or Email</div>
+								<v-text-field v-model="login.user_login" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']" variant="outlined" density="compact" hide-details="auto" class="mb-4"></v-text-field>
+								
+								<div class="text-caption text-medium-emphasis mb-1">Password</div>
+								<v-text-field v-model="login.user_password" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']" variant="outlined" density="compact" hide-details="auto" class="mb-4"></v-text-field>
+							</v-col>
+							<v-col cols="12" v-show="login.info || login.errors == 'One time password is invalid.'" class="py-0">
+								<div class="text-caption text-medium-emphasis mb-1">One Time Password</div>
+								<div class="d-flex justify-start mb-4">
+									<v-otp-input length="6" type="number" v-model="login.tfa_code" required :disabled="login.loading" variant="outlined" density="compact" min-height="40"></v-otp-input>
+								</div>
+							</v-col>
+							<v-col cols="12">
+								<v-alert variant="tonal" type="error" v-show="login.errors" density="compact" class="mb-4">{{ login.errors }}</v-alert>
+								<v-alert variant="tonal" type="info" v-show="login.info" density="compact" class="mb-4">{{ login.info }}</v-alert>
+							</v-col>
+							<v-col cols="12">
+								<v-progress-linear indeterminate rounded height="4" class="mb-4" v-show="login.loading" color="primary"></v-progress-linear>
+								<v-btn color="primary" type="submit" :disabled="login.loading" block size="large" flat class="font-weight-bold">Login</v-btn>
+							</v-col>
+						</v-row>
+						</v-form>
+						</v-card-text>
+						<div class="px-5 pb-6 text-center">
+							<a href="#reset" @click.prevent="login.lost_password = true" class="text-caption text-decoration-underline text-primary" v-show="!login.lost_password">Lost your password?</a>
+							<a href="#login" @click.prevent="login.lost_password = false" class="text-caption text-decoration-underline text-primary" v-show="login.lost_password">Back to login form.</a>
+						</div>
+					</v-card>
+				</template>
 			</v-card>
 			<v-card v-if="route == 'sites'" id="sites" flat border="thin" rounded="xl">
 			<v-toolbar v-show="dialog_site.step == 1 && sites.length > 0" id="site_listings" flat color="transparent">
@@ -3742,8 +3903,28 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-tabs>
 				<v-spacer></v-spacer>
 				<v-toolbar-items>
-					<v-btn variant="text" @click="showLogEntry(dialog_site.site.site_id)" v-show="role == 'administrator' || role == 'owner'" icon="mdi-note-check-outline"></v-btn>
-					<v-btn variant="text" @click="magicLoginSite(dialog_site.site.site_id, null, dialog_site.environment_selected)" :loading="dialog_site.environment_selected.isLoggingIn">Login to WordPress <v-icon>mdi-open-in-new</v-icon></v-btn>
+					<v-tooltip text="New Log Entry" location="top">
+					<template v-slot:activator="{ props }">
+						<v-btn
+						v-bind="props"
+						v-show="role == 'administrator' || role == 'owner'"
+						variant="text"
+						icon="mdi-note-check-outline"
+						@click="showLogEntry(dialog_site.site.site_id)"
+						></v-btn>
+					</template>
+					</v-tooltip>
+					<v-tooltip text="Share access" location="top">
+					<template v-slot:activator="{ props }">
+						<v-btn
+						v-bind="props"
+						variant="text"
+						icon="mdi-share-variant-outline"
+						@click="openShareDialog(dialog_site.site)"
+						></v-btn>
+					</template>
+					</v-tooltip>
+					<v-btn variant="text" @click="magicLoginSite(dialog_site.site.site_id, null, dialog_site.environment_selected)" :loading="dialog_site.environment_selected.isLoggingIn">Login to WordPress <v-icon class="ml-1"s>mdi-open-in-new</v-icon></v-btn>
 				</v-toolbar-items>
 				</v-toolbar>
 				<v-window v-model="dialog_site.site.tabs">
@@ -11947,6 +12128,55 @@ const app = createApp({
 					this.snackbar.show = true;
 					console.log(error.response)
 				});
+		},
+		isValidEmail(email) {
+			return /.+@.+\..+/.test(email);
+		},
+		openShareDialog(site) {
+			this.dialog_share.show = true;
+			this.dialog_share.loading = true;
+			this.dialog_share.site_id = site.site_id;
+			this.dialog_share.email = "";
+			this.dialog_share.error = "";
+			
+			// Fetch preview data
+			axios.get(`/wp-json/captaincore/v1/sites/${site.site_id}/invite-preview`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.dialog_share.preview = response.data;
+				this.dialog_share.loading = false;
+			})
+			.catch(error => {
+				console.error(error);
+				this.dialog_share.loading = false;
+				this.snackbar.message = "Error loading share details.";
+				this.snackbar.show = true;
+				this.dialog_share.show = false;
+			});
+		},
+		sendSiteInvite() {
+			this.dialog_share.sending = true;
+			this.dialog_share.error = "";
+
+			axios.post(`/wp-json/captaincore/v1/sites/${this.dialog_share.site_id}/invite`, {
+				email: this.dialog_share.email
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.dialog_share.sending = false;
+				this.dialog_share.show = false;
+				this.snackbar.message = response.data.message || "Invitation sent successfully.";
+				this.snackbar.show = true;
+			})
+			.catch(error => {
+				this.dialog_share.sending = false;
+				const msg = error.response && error.response.data && error.response.data.message 
+					? error.response.data.message 
+					: "Error sending invite.";
+				this.dialog_share.error = msg;
+			});
 		},
 		inputFile (newFile, oldFile) {
 
