@@ -9590,6 +9590,22 @@ const app = createApp({
 		dialog_backup_configurations: { show: false, settings: { mode: "", interval: "", active: true } },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
 		dialog_launch: { show: false, site: {}, domain: "" },
+		dialog_share: {
+			show: false,
+			loading: false,
+			sending: false,
+			site_id: null,
+			email: "",
+			error: "",
+			preview: {
+				site_name: "",
+				account_name: "",
+				total_sites: 0,
+				total_domains: 0,
+				has_account_access: false,
+				sites_list: []
+			}
+		},
 		dialog_toggle: { show: false, site_name: "", site_id: "", business_name: "", business_link: "" },
 		dialog_mailgun: { show: false, site: {}, response: { items: [], paging: {} }, loading: false, loadingMore: false, domain_id: null },
 		dialog_mailgun_details: { show: false, event: {} },
