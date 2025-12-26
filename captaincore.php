@@ -838,6 +838,27 @@ function captaincore_site_update_func( $request ) {
 		]);
 	return;
 }
+function captaincore_site_delete_func( $request ) {
+	$site_id = $request['id'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+	}
+
+	$site = new CaptainCore\Site( $site_id );
+	$site_data = $site->get();
+	$name = $site_data->name;
+
+	captaincore_run_background_command( "site delete {$site_data->site}" );
+
+	// Remove from CaptainCore Manager Database
+	$site->mark_inactive();
+
+	return [ 
+		"site_id" => $site_id,
+		"message" => "Site $name deleted." 
+	];
+}
 
 function captaincore_site_func( $request ) {
 
@@ -3065,6 +3086,13 @@ function captaincore_register_rest_endpoints() {
 			'callback'            => 'captaincore_site_update_func',
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_site_delete_func',
+			'permission_callback' => 'captaincore_permission_check',
 		]
 	);
 	register_rest_route(
@@ -5554,15 +5582,6 @@ function captaincore_ajax_action_callback() {
 		$site     = new CaptainCore\Site( $value["site_id"] );
 		$response = $site->update( $value );
 		echo json_encode( $response );
-	}
-
-	if ( $cmd == 'deleteSite' ) {
-		// Delete site on CaptainCore CLI
-		captaincore_run_background_command( "site delete $site" );
-
-		// Delete site locally
-		$site = new CaptainCore\Site( $post_id );
-		$site->mark_inactive();
 	}
 
 	if ( $cmd == 'deleteAccount' ) {

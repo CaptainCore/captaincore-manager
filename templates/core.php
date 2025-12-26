@@ -13572,27 +13572,24 @@ const app = createApp({
 			if ( ! should_proceed ) {
 				return;
 			}
+			
+			this.dialog_site.step = 1;
 
-			// Start job
-			description = "Deleting site " + site_name;
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({"job_id": job_id,"description": description, "status": "queued"});
-			this.dialog_site.step = 1
-
-			var data = {
-				'action': 'captaincore_ajax',
-				'command': 'deleteSite',
-				'post_id': site.site_id
-			};
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => {
-					this.goToPath( '/sites' )
-					this.jobs.filter(job => job.job_id == job_id)[0].status = "done"
-					this.sites = this.sites.filter( site => site.site_id != site_id )
-					this.snackbar.message = "Deleting site "+ site_name + "."
-				})
-				.catch( error => console.log( error ) );
+			axios.delete( `/wp-json/captaincore/v1/sites/${site_id}`, {
+				headers: { 'X-WP-Nonce':this.wp_nonce }
+			})
+			.then( response => {
+				this.goToPath( '/sites' )
+				// Update local list
+				this.sites = this.sites.filter( site => site.site_id != site_id )
+				this.snackbar.message = response.data.message
+				this.snackbar.show = true
+			})
+			.catch( error => {
+				console.log( error )
+				this.snackbar.message = "Error deleting site."
+				this.snackbar.show = true
+			});
 		},
 		startCopySite() {
 			site_name = this.dialog_copy_site.site.name;
