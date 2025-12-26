@@ -4100,7 +4100,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</div>
 							<v-list density="compact" class="mt-6 mx-auto" style="max-width: 350px; background: transparent; padding: 0px;">
 								<v-list-item :href="dialog_site.environment_selected.link" target="_blank" density="compact" title="Link" :subtitle="dialog_site.environment_selected.link" append-icon="mdi-open-in-new" link></v-list-item>
-								<v-list-item density="compact" title="Created" :subtitle="pretty_timestamp(dialog_site.site.created_at)" append-icon="mdi-calendar"></v-list-item>
+								<v-list-item density="compact" title="Created" :subtitle="pretty_timestamp(dialog_site.environment_selected.created_at)" append-icon="mdi-calendar"></v-list-item>
 								<v-list-item v-if="dialog_site.environment_selected.token !== 'basic'" @click="copyText(dialog_site.environment_selected.core)" density="compact" title="WordPress Version" :subtitle="dialog_site.environment_selected.core" append-icon="mdi-content-copy"></v-list-item>
 								<v-list-item @click="copyText(formatSize(dialog_site.environment_selected.storage))" density="compact" title="Storage" :subtitle="formatSize(dialog_site.environment_selected.storage)" append-icon="mdi-content-copy"></v-list-item>
 								<v-list-item @click="copyText(dialog_site.environment_selected.php_memory)" density="compact" title="Memory Limit" :subtitle="dialog_site.environment_selected.php_memory" append-icon="mdi-content-copy" v-show="dialog_site.environment_selected.php_memory"></v-list-item>
