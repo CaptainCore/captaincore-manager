@@ -2381,13 +2381,13 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-card-text>
 					</v-card>
 				</v-dialog>
-				<v-dialog v-model="dialog_captures.show" fullscreen scrollable>
+				<v-dialog :model-value="dialog_captures.show" @update:model-value="val => !val && closeCaptures()" fullscreen scrollable>
 				<v-card tile>
 					<v-toolbar flat dark color="primary" class="shrink">
 						<v-btn icon dark @click="closeCaptures()">
 							<v-icon>mdi-close</v-icon>
 						</v-btn>
-						<v-toolbar-title>Visual Captures of {{ dialog_captures.site.name }}</v-toolbar-title>
+						<v-toolbar-title>Visual Captures of {{ dialog_site.environment_selected.home_url }}</v-toolbar-title>
 					</v-toolbar>
 					<v-toolbar flat class="px-4">
 						<div style="max-width:250px;" class="mx-1 mt-8" v-show="dialog_captures.captures.length != 0">
@@ -15118,6 +15118,9 @@ const app = createApp({
 			this.dialog_captures.selected_page = this.dialog_captures.capture.pages[0]
 		},
 		closeCaptures() {
+			if (this.dialog_site.site.site_id) {
+				this.goToPath( `/sites/${this.dialog_site.site.site_id}` )
+			}
 			this.dialog_captures = { site: {}, auth: { username: "", password: ""}, pages: [{ page: ""}], capture: { pages: [] }, image_path:"", selected_page: "", captures: [], mode: "screenshot", loading: true, show: false, show_configure: false }
 		},
 		addAdditionalCapturePage() {
