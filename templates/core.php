@@ -3552,7 +3552,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 																<v-icon size="16">mdi-chart-bar</v-icon>
 															</v-avatar>
 															<div>
-																<div class="font-weight-bold text-high-emphasis text-caption">{{ formatLargeNumbers(item.raw.visits) }}</div>
+																<div class="font-weight-bold text-high-emphasis text-caption">{{ formatLargeNumbers(env.visits) }}</div>
 																<div class="text-xs">Visits</div>
 															</div>
 														</div>
@@ -3562,7 +3562,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 																<v-icon size="16">mdi-database-outline</v-icon>
 															</v-avatar>
 															<div>
-																<div class="font-weight-bold text-high-emphasis text-caption">{{ formatGBs(item.raw.storage) }} <span class="text-caption font-weight-regular">GB</span></div>
+																<div class="font-weight-bold text-high-emphasis text-caption">{{ formatGBs(env.storage) }} <span class="text-caption font-weight-regular">GB</span></div>
 																<div class="text-xs">Storage</div>
 															</div>
 														</div>
