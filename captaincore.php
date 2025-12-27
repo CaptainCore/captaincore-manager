@@ -321,18 +321,18 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	}
 
 	// Sync site data
-	// Sync site data
 	if ( $command == 'sync-data' and ! empty( $post->data ) ) {
 		
 		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
 		$environment_name    = strtolower( $current_environment->environment );
-		$upload_dir          = wp_upload_dir();
-		$screenshot_check    = $upload_dir['basedir'] . "/screenshots/{$site_name}_{$site_id}/$environment_name/screenshot-800.png";
-		
-		if ( file_exists( $screenshot_check ) ) {
+		$capture             = CaptainCore\Captures::latest_capture( [ "site_id" => $site_id, "environment_id" => $post->data->environment_id ] );
+		if ( ! empty( $capture ) ) {
+			$created_at       = strtotime( $capture->created_at );
+			$git_commit_short = substr( $capture->git_commit, 0, 7 );
+			$details          = isset( $current_environment->details ) ? json_decode( $current_environment->details ) : (object) [];
+			$details->screenshot_base = "{$created_at}_{$git_commit_short}";
+			$post->data->details = json_encode( $details );
 			$post->data->screenshot = true;
-		} else {
-			$post->data->screenshot = false;
 		}
 
 		// Update the specific environment record
