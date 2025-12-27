@@ -493,6 +493,11 @@ class Account {
 
     public function calculate_usage() {
         $account  = self::get();
+        
+        if ( empty( $account ) ) {
+            return;
+        }
+
         $sites    = $this->billing_sites();
 
         if ( empty( $account->plan ) || ( is_object( $account->plan ) && empty( get_object_vars( $account->plan ) ) ) ) {

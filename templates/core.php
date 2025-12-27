@@ -3780,29 +3780,32 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 													</v-row>
 												</template>
 											</v-img>
-											<v-sheet 
+											<v-responsive 
 												v-else 
-												v-bind="props"
-												:aspect-ratio="16/10" 
-												height="200"
-												color="surface-variant" 
-												class="d-flex align-center justify-center"
+												v-bind="props" 
+												:aspect-ratio="16/10"
 											>
-												<div class="text-center" style="width: 100%;">
-													<v-icon size="large" class="text-medium-emphasis mb-2">mdi-monitor-shimmer</v-icon>
-													<div class="px-2">
-														<div class="body-1 font-weight-bold text-truncate">{{ item.raw.name }}</div>
-														<v-chip 
-															size="x-small" 
-															label 
-															class="font-weight-black mt-1" 
-															:color="item.raw.current_env.environment == 'Production' ? 'green-darken-1' : 'brown-darken-1'"
-														>
-															{{ item.raw.current_env.environment.toUpperCase() }}
-														</v-chip>
+												<v-sheet 
+													color="surface-variant" 
+													class="d-flex align-center justify-center fill-height" 
+													height="100%"
+												>
+													<div class="text-center" style="width: 100%;">
+														<v-icon size="large" class="text-medium-emphasis mb-2">mdi-monitor-shimmer</v-icon>
+														<div class="px-2">
+															<div class="body-1 font-weight-bold text-truncate">{{ item.raw.name }}</div>
+															<v-chip 
+																size="x-small" 
+																label 
+																class="font-weight-black mt-1" 
+																:color="item.raw.current_env.environment == 'Production' ? 'green-darken-1' : 'brown-darken-1'"
+															>
+																{{ item.raw.current_env.environment.toUpperCase() }}
+															</v-chip>
+														</div>
 													</div>
-												</div>
-											</v-sheet>
+												</v-sheet>
+											</v-responsive>
 										</v-hover>
 									</v-card>
 								</v-col>
@@ -17839,8 +17842,14 @@ const app = createApp({
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => { 
-						site.environments[0].snapshots = response.data.Production
-						site.environments[1].snapshots = response.data.Staging				
+					// Dynamically map snapshots to their specific environment object
+					site.environments.forEach( env => {
+						if ( response.data[ env.environment ] ) {
+							env.snapshots = response.data[ env.environment ]
+						} else {
+							env.snapshots = []
+						}
+					})
 				});
 		},
 		activateTheme( theme_name, site_id ) {
