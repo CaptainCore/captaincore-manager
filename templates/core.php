@@ -3725,10 +3725,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							{{ item.current_env.core }}
 						</template>
 						<template v-slot:item.visits="{ item }">
-							{{ formatLargeNumbers(item.visits) }}
+							{{ formatLargeNumbers(item.current_env.visits) }}
 						</template>
 						<template v-slot:item.storage="{ item }">
-							{{ formatGBs(item.storage) }}GB
+							{{ formatGBs(item.current_env.storage) }}GB
 						</template>
 						<template v-slot:item.provider="{ item }">
 							{{ formatProvider(item.provider) }}
