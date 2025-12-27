@@ -9381,42 +9381,55 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		</v-slide-y-reverse-transition>
 		<div class="activity-island-container">
 			<v-fade-transition>
-				<v-card v-if="(runningJobs > 0 || view_console.show) && !view_console.fullscreen" elevation="10" rounded="pill" color="surface" class="activity-island pr-1" border @click="view_console.terminal_open = !view_console.terminal_open">
-					<div class="d-flex align-center pl-4 pr-2 py-2" style="cursor: pointer; min-width: 300px; max-width: 600px;">
-						<!-- Spinner/Status Icon -->
-						<div class="mr-3 d-flex align-center">
-							<v-progress-circular
-								v-if="runningJobs > 0"
-								indeterminate
-								color="primary"
-								size="20"
-								width="2"
-							></v-progress-circular>
-							<v-icon v-else color="success" size="20">mdi-check-circle</v-icon>
-						</div>
+				<div v-if="(runningJobs > 0 || view_console.show) && !view_console.fullscreen" class="d-flex flex-column align-center">
+					<v-card elevation="10" rounded="pill" color="surface" class="activity-island pr-1" border @click="view_console.terminal_open = !view_console.terminal_open">
+						<div class="d-flex align-center pl-4 pr-2 py-2" style="cursor: pointer; min-width: 300px; max-width: 600px;">
+							<!-- Spinner/Status Icon -->
+							<div class="mr-3 d-flex align-center">
+								<v-progress-circular
+									v-if="runningJobs > 0"
+									indeterminate
+									color="primary"
+									size="20"
+									width="2"
+								></v-progress-circular>
+								<v-icon v-else color="success" size="20">mdi-check-circle</v-icon>
+							</div>
 
-						<!-- Live Stream Text -->
-						<div class="d-flex flex-column flex-grow-1 overflow-hidden mr-3">
-							<span class="text-caption font-weight-bold text-truncate">
-								{{ activeJobDescription || 'Console Ready' }}
-							</span>
-							<span class="text-caption text-medium-emphasis font-monospace text-truncate">
-								{{ activeJobLastLine || 'Waiting for output...' }}
-							</span>
-						</div>
+							<!-- Live Stream Text -->
+							<div class="d-flex flex-column flex-grow-1 overflow-hidden mr-3">
+								<span class="text-caption font-weight-bold text-truncate">
+									{{ activeJobDescription || 'Console Ready' }}
+								</span>
+								<span class="text-caption text-medium-emphasis font-monospace text-truncate">
+									{{ activeJobLastLine || 'Waiting for output...' }}
+								</span>
+							</div>
 
-						<!-- Toggle Chevron -->
-						<v-btn
-							icon
-							variant="text"
-							size="small"
-							density="comfortable"
-							:style="{ transform: view_console.terminal_open ? 'rotate(180deg)' : 'rotate(0deg)' }"
-						>
-							<v-icon>mdi-chevron-up</v-icon>
-						</v-btn>
-					</div>
-				</v-card>
+							<!-- Toggle Chevron -->
+							<v-btn
+								icon
+								variant="text"
+								size="small"
+								density="comfortable"
+								:style="{ transform: view_console.terminal_open ? 'rotate(180deg)' : 'rotate(0deg)' }"
+							>
+								<v-icon>mdi-chevron-up</v-icon>
+							</v-btn>
+						</div>
+					</v-card>
+					<!-- Close/Hide Button -->
+					<v-btn 
+						icon="mdi-chevron-down" 
+						variant="text" 
+						size="x-small" 
+						density="compact"
+						color="medium-emphasis" 
+						class="mt-1" 
+						@click="view_console.show = false; view_console.terminal_open = false"
+						title="Hide Console"
+					></v-btn>
+				</div>
 			</v-fade-transition>
 		</div>
 		<v-snackbar :timeout="3000" :multi-line="true" v-model="snackbar.show" style="z-index: 9999999;">
