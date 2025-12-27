@@ -9192,6 +9192,20 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									Cancel
 									</v-btn>
 
+									<v-tooltip v-else text="Copy Output" location="bottom">
+										<template v-slot:activator="{ props }">
+											<v-btn 
+												icon="mdi-content-copy" 
+												variant="text" 
+												size="small" 
+												color="medium-emphasis" 
+												class="mr-2"
+												v-bind="props" 
+												@click="copyText(job.stream.join('\n'))"
+											></v-btn>
+										</template>
+									</v-tooltip>
+
 									<span class="text-grey flex-shrink-0">{{ pretty_timestamp(job.created_at || new Date()) }}</span>
 								</div>
 								<div v-for="(line, i) in job.stream" :key="i" class="text-grey-lighten-1 text-break">
