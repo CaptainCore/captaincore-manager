@@ -9201,7 +9201,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 												color="medium-emphasis" 
 												class="mr-2"
 												v-bind="props" 
-												@click="copyText(job.stream.join('\n'))"
+												@click="copyJobStream(job)"
 											></v-btn>
 										</template>
 									</v-tooltip>
@@ -11315,8 +11315,6 @@ const app = createApp({
 				this.copyTextFallback(value);
 			}
 		},
-
-		// Add this helper method for the fallback logic
 		copyTextFallback( value ) {
 			var clipboard = document.getElementById("clipboard");
 			clipboard.value = value;
@@ -11331,6 +11329,14 @@ const app = createApp({
 				this.snackbar.message = "Failed to copy to clipboard.";
 				this.snackbar.show = true;
 			}
+		},
+		copyJobStream(job) {
+			if (!job.stream || job.stream.length === 0) return;
+			
+			// Exclude the last line and join
+			const textToCopy = job.stream.slice(0, -1).join('\n');
+			
+			this.copyText(textToCopy);
 		},
 		copyInviteLink( account, token ) {
 			link = window.location.origin + window.location.pathname + `?account=${account}&token=${token}`
