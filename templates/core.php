@@ -13264,26 +13264,61 @@ const app = createApp({
 			this.states_selected = states_selected
 		},
 		fetchSites() {
-			this.sites_loading = false
-			if (( this.role == 'administrator' || this.role == 'owner' ) && this.keys.length == 0 ) {
-				axios.get(
-				'/wp-json/captaincore/v1/keys', {
-					headers: {'X-WP-Nonce':this.wp_nonce}
-				})
-				.then(response => {
-					this.keys = response.data
-				})
+			// Check keys if admin/owner
+			if ((this.role == 'administrator' || this.role == 'owner') && this.keys.length == 0) {
+				axios.get('/wp-json/captaincore/v1/keys', {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				}).then(response => {
+					this.keys = response.data;
+				});
 			}
-			axios.get(
-				'/wp-json/captaincore/v1/sites', {
-					headers: {'X-WP-Nonce':this.wp_nonce}
-				})
-				.then(response => {
-					this.sites = response.data
-					this.loading_page = false
-					this.triggerPath()
-					setTimeout(this.fetchMissing, 1000)
+
+			// Fetch Sites
+			axios.get('/wp-json/captaincore/v1/sites', {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
 			})
+			.then(response => {
+				let incomingSites = response.data;
+
+				// 1. Check if filters are active in the UI
+				if (this.isAnySiteFilterActive) {
+					
+					// 2. If we have cached matches (environment IDs), apply them locally immediately
+					if (this.filtered_environment_ids && this.filtered_environment_ids.length > 0) {
+						// Use a Set for O(1) lookups
+						const allowedEnvIds = new Set(this.filtered_environment_ids);
+
+						incomingSites.forEach(site => {
+							// A site is visible (filtered=true) if ANY of its environments match the filter list
+							if (site.environments && site.environments.length > 0) {
+								site.filtered = site.environments.some(env => allowedEnvIds.has(env.environment_id));
+							} else {
+								site.filtered = false;
+							}
+						});
+					} else {
+						// 3. Filters are active but we have no cached IDs (stale state).
+						// Hide everything temporarily to prevent flashing wrong data, then re-run server filter.
+						incomingSites.forEach(s => s.filtered = false);
+						this.filterSites();
+					}
+				} else {
+					// 4. No filters active, everything is visible
+					incomingSites.forEach(site => site.filtered = true);
+				}
+
+				// 5. Assign to state
+				this.sites = incomingSites;
+				
+				this.sites_loading = false;
+				this.loading_page = false;
+				this.triggerPath();
+				setTimeout(this.fetchMissing, 1000);
+			})
+			.catch(error => {
+				console.error(error);
+				this.sites_loading = false;
+			});
 		},
 		fetchEnvironments() {
 			axios.get(
