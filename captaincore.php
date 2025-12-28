@@ -428,13 +428,6 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 		( new CaptainCore\Captures )->insert( $new_capture );
 
-		// Update pointer to new thumbnails for site
-		if ( $environment == "production" ) {
-			$site                     = ( new CaptainCore\Sites )->get( $site_id );
-			$details                  = json_decode( $site->details );
-			$details->screenshot_base = "{$data->created_at}_${git_commit_short}";
-			( new CaptainCore\Sites )->update( [ "screenshot" => true, "details" => json_encode( $details ) ], [ "site_id" => $site_id ] );
-		}
 		// Update pointer to new thumbnails for environment
 		$environment              = ( new CaptainCore\Environments )->get( $environment_id );
 		$details                  = ( isset( $environment->details ) ? json_decode( $environment->details ) : (object) [] );
@@ -4715,7 +4708,7 @@ HEREDOC;
 		$user     = new CaptainCore\User;
 		$accounts = $user->accounts();
 		$record   = (object) $value;
-		if ( ! in_array( $record->account_id, $accounts ) && ! $user->is_admin() ) { 
+		if ( ! in_array( $record->account_id, $accounts ) && ! $user->is_admin() ) {
 			echo json_encode( "Permission denied" );
 			wp_die();
 		}
@@ -5089,10 +5082,8 @@ function captaincore_ajax_action_callback() {
 		'updateMailgun',
 		'updatePlan',
 		'updateDomainAccount',
-		'newSite',
 		'createSiteAccount',
-		'updateSite', 
-		'deleteSite',
+		'updateSite',
 		'deleteAccount'
 	];
 	if ( ! $user->is_admin() && in_array( $_POST['command'], $admin_commands ) ) {
@@ -5108,7 +5099,7 @@ function captaincore_ajax_action_callback() {
 	
 	$fetch          = (new CaptainCore\Site( $post_id ))->get();
 	$site           = $fetch->site;
-	$environment    = $_POST['environment'];
+	$environment    = isset( $_POST['environment'] ) ? $_POST['environment'] : '';
 	$remote_command = false;
 
 	if ( $cmd == 'mailgun' ) {
@@ -5568,13 +5559,6 @@ function captaincore_ajax_action_callback() {
 		$command           = "site sync $post_id";
 		$remote_command    = true;
 		$run_in_background = true;
-	}
-
-	if ( $cmd == 'newSite' ) {
-		// Create new site
-		$site     = new CaptainCore\Site();
-		$response = $site->create( $value );
-		echo json_encode( $response );
 	}
 
 	if ( $cmd == 'updateSite' ) {
