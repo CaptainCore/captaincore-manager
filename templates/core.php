@@ -11573,11 +11573,13 @@ const app = createApp({
 			return allPaths;
 		},
 		selectAllInBackup(item) {
-			// 1. Select all nodes for the v-treeview by their unique path.
-			// This will now correctly update the checkboxes visually.
-			item.tree = this.getAllNodePaths(this.backup_set_files);
+			const allPaths = this.getAllNodePaths(this.backup_set_files);
+			// Update both the v-model and the internal tracker to prevent
+			// the @update:selected handler from misinterpreting the change.
+			item.tree = allPaths;
+			item.lastCalculatedTree = allPaths; 
 
-			// 2. Calculate the total size directly from the raw, top-level data.
+			// Calculate the total size directly from the raw, top-level data.
 			// This bypasses the selection-based calculation and gives the true total.
 			let totalSize = 0;
 			for (const rootNode of this.backup_set_files) {
