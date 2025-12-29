@@ -549,52 +549,104 @@ class Account {
 		return $response;
 	}
 
+    public function failed_notify( $order_id = "" ) {
+        // If we have a specific order ID, send the Invoice email for it.
+        // This replaces the generic "Payment Failed" notice with a "Here is your Invoice to pay" notice.
+        if ( ! empty( $order_id ) ) {
+            $order = wc_get_order( $order_id );
+            $order->add_order_note( "Sent invoice (auto-pay failed)." );
+            \CaptainCore\Mailer::send_order_invoice( $order_id );
+            return;
+        }
+
+        // Fallback for legacy calls without ID (grab the latest failed order)
+        $orders = wc_get_orders( [
+            'limit'      => 1,
+            'meta_key'   => 'captaincore_account_id',
+            'meta_value' => $this->account_id,
+            'orderby'    => 'date',
+            'order'      => 'DESC',
+            'status'     => 'failed'
+        ] );
+
+        if ( count( $orders ) > 0 ) {
+            $order = $orders[0];
+            $order->add_order_note( "Sent invoice (auto-pay failed)." );
+            \CaptainCore\Mailer::send_order_invoice( $order->get_id() );
+        }
+    }
+
     public function generate_order() {
         $configurations = ( new Configurations )->get();
         $account        = ( new Accounts )->get( $this->account_id );
         $plan           = json_decode( $account->plan );
-        if ( $plan->auto_switch == "true" ) {
+        
+        // 1. Handle Auto-Switch (adjust plan before billing if needed)
+        if ( isset( $plan->auto_switch ) && $plan->auto_switch == "true" ) {
             self::auto_switch_plan();
+            // Re-fetch account details after switch
             $account = ( new Accounts )->get( $this->account_id );
             $plan    = json_decode( $account->plan );
         }
-        $units          = [];
-	    $units[1]       = "monthly";
-	    $units[3]       = "quarterly";
-		$units[6]       = "biannually";
-		$units[12]      = "yearly";
-        if ( ! empty( $plan->interval ) ) {
-            $plan_interval  = $units[ $plan->interval ];
-        } 
-        $customer       = new \WC_Customer( $plan->billing_user_id );
-        $address        = $customer->get_billing();
-        $order          = wc_create_order(  [ 'customer_id' => $plan->billing_user_id ] );
+        
+        // 2. Formatting Helpers
+        $units     = [ 1 => "monthly", 3 => "quarterly", 6 => "biannually", 12 => "yearly" ];
+        $plan_interval = ! empty( $plan->interval ) ? $units[ $plan->interval ] : '';
+        
+        // 3. Create WooCommerce Order
+        $customer = new \WC_Customer( $plan->billing_user_id );
+        $address  = $customer->get_billing();
+        $order    = wc_create_order( [ 'customer_id' => $plan->billing_user_id ] );
         $order->update_meta_data( "captaincore_account_id", $this->account_id );
+        $order->save();
 
-        $site_names     = array_column( self::billing_sites(), "name" );
+        // Helper for billing sites list
+        $billing_sites = self::billing_sites();
+        $site_names    = array_column( $billing_sites, "name" );
         sort( $site_names );
-        $site_names     = implode( ", ", $site_names );
+        $site_names_str = implode( ", ", $site_names );
 
         if ( ! empty( $address ) ) {
             $order->set_address( $address, 'billing' );
         }
 
-        $line_item_id     = $order->add_product( get_product( $configurations->woocommerce->hosting_plan ), 1 );
+        $calculated_total = 0;
+        $billing_mode = isset( $plan->billing_mode ) ? $plan->billing_mode : 'standard';
 
-        $order->get_items()[ $line_item_id ]->set_subtotal( $plan->price );
-        $order->get_items()[ $line_item_id ]->set_total( $plan->price );
-        if ( ! empty( $plan->interval ) ) {
-            $order->get_items()[ $line_item_id ]->add_meta_data( "Details", "{$plan->name} - $plan_interval\n\n" . $site_names );
+        // 4. Add Line Items: Hosting Plan
+        if ( $billing_mode === 'per_site' ) {
+            // Per Site Billing
+            $site_count     = count( $billing_sites );
+            $price_per_site = (float) $plan->price;
+            $plan_total     = $price_per_site * $site_count;
+
+            $line_item_id = $order->add_product( get_product( $configurations->woocommerce->hosting_plan ), 1 );
+            $order->get_items()[ $line_item_id ]->set_subtotal( $plan_total );
+            $order->get_items()[ $line_item_id ]->set_total( $plan_total );
+            
+            $details_text = "Billing Per Site\n{$site_count} sites @ $" . number_format($price_per_site, 2) . " / {$plan_interval}\n\n{$site_names_str}";
+
+            $order->get_items()[ $line_item_id ]->add_meta_data( "Details", $details_text );
+            $order->get_items()[ $line_item_id ]->save();
+
+            $calculated_total = $plan_total;
+
         } else {
-            $order->get_items()[ $line_item_id ]->add_meta_data( "Details", "{$plan->name}\n\n" . $site_names );
+            // Standard Billing
+            $line_item_id = $order->add_product( get_product( $configurations->woocommerce->hosting_plan ), 1 );
+            $order->get_items()[ $line_item_id ]->set_subtotal( $plan->price );
+            $order->get_items()[ $line_item_id ]->set_total( $plan->price );
+            
+            $details_text = ! empty( $plan->interval ) ? "{$plan->name} - $plan_interval\n\n{$site_names_str}" : "{$plan->name}\n\n{$site_names_str}";
+            $order->get_items()[ $line_item_id ]->add_meta_data( "Details", $details_text );
+            $order->get_items()[ $line_item_id ]->save();
+            
+            $calculated_total = $plan->price;
         }
-        $order->get_items()[ $line_item_id ]->save_meta_data();
-        $order->get_items()[ $line_item_id ]->save();
-        $calculated_total = $plan->price;
 
-        // Patch in maintenance only sites
-        $sites                 = Sites::where( [ "account_id" => $this->account_id, "status" => "active" ] );
-        $maintenance_sites     = [];
+        // 5. Add Line Items: Maintenance Sites
+        $sites = Sites::where( [ "account_id" => $this->account_id, "status" => "active" ] );
+        $maintenance_sites = [];
         foreach ( $sites as $site ) {
             if ( ! empty( $site->provider_id ) && ( $site->provider_id != "1" ) ) {
                 $maintenance_sites[] = $site;
@@ -607,102 +659,106 @@ class Account {
                 "quantity" => count( $maintenance_sites ),
                 "required" => true
             ];
-            array_unshift($plan->addons, $maintenance_sites_addons );
+            // Prepend to addons array for processing below
+            if ( ! isset( $plan->addons ) ) $plan->addons = [];
+            array_unshift( $plan->addons, $maintenance_sites_addons );
         }
 
-        if ( $plan->addons && count( $plan->addons ) > 0 ) {
+        // 6. Add Line Items: Addons
+        if ( ! empty( $plan->addons ) ) {
             foreach ( $plan->addons as $item ) {
                 $line_item_id = $order->add_product( get_product( $configurations->woocommerce->addons ), $item->quantity );
                 $order->get_items()[ $line_item_id ]->set_subtotal( $item->price * $item->quantity );
                 $order->get_items()[ $line_item_id ]->set_total( $item->price * $item->quantity );
                 $order->get_items()[ $line_item_id ]->add_meta_data( "Details", $item->name );
-                $order->get_items()[ $line_item_id ]->save_meta_data();
                 $order->get_items()[ $line_item_id ]->save();
-                $calculated_total = (int) $calculated_total + ((int) $item->price * (int) $item->quantity );
+                $calculated_total += ( (float) $item->price * (int) $item->quantity );
             }
         }
 
-        if ( ! empty( $plan->charges ) && count( $plan->charges ) > 0 ) {
+        // 7. Add Line Items: Charges
+        if ( ! empty( $plan->charges ) ) {
             foreach ( $plan->charges as $item ) {
                 $line_item_id = $order->add_product( get_product( $configurations->woocommerce->charges ), $item->quantity );
                 $order->get_items()[ $line_item_id ]->set_subtotal( $item->price * $item->quantity );
                 $order->get_items()[ $line_item_id ]->set_total( $item->price * $item->quantity );
                 $order->get_items()[ $line_item_id ]->add_meta_data( "Details", $item->name );
-                $order->get_items()[ $line_item_id ]->save_meta_data();
                 $order->get_items()[ $line_item_id ]->save();
-                $calculated_total = $calculated_total + ( $item->price * $item->quantity );
+                $calculated_total += ( $item->price * $item->quantity );
             }
         }
 
-        if ( ! empty( $plan->credits ) && count( $plan->credits ) > 0 ) {
+        // 8. Add Line Items: Credits
+        if ( ! empty( $plan->credits ) ) {
             foreach ( $plan->credits as $item ) {
                 $line_item_id = $order->add_product( get_product( $configurations->woocommerce->credits ), $item->quantity );
-                $order->get_items()[ $line_item_id ]->set_subtotal( -1 * abs( $item->price * $item->quantity ) );
-                $order->get_items()[ $line_item_id ]->set_total( -1 * abs( $item->price * $item->quantity ) );
+                $credit_amt   = -1 * abs( $item->price * $item->quantity );
+                $order->get_items()[ $line_item_id ]->set_subtotal( $credit_amt );
+                $order->get_items()[ $line_item_id ]->set_total( $credit_amt );
                 $order->get_items()[ $line_item_id ]->add_meta_data( "Details", $item->name );
-                $order->get_items()[ $line_item_id ]->save_meta_data();
                 $order->get_items()[ $line_item_id ]->save();
-                $calculated_total = $calculated_total + ( -1 * abs( $item->price * $item->quantity ) );
+                $calculated_total += $credit_amt;
             }
         }
 
-        if ( $plan->usage->sites > $plan->limits->sites ) {
-            $price    = $configurations->usage_pricing->sites->cost;
-            if ( $plan->interval != $configurations->usage_pricing->sites->interval ) {
-                $price = $configurations->usage_pricing->sites->cost / ($configurations->usage_pricing->sites->interval / $plan->interval );
+        // 9. Add Line Items: Usage Overages (Standard Mode Only)
+        if ( $billing_mode !== 'per_site' ) {
+            // Sites Overage
+            if ( $plan->usage->sites > $plan->limits->sites ) {
+                $price    = $configurations->usage_pricing->sites->cost;
+                if ( $plan->interval != $configurations->usage_pricing->sites->interval ) {
+                    $price = $configurations->usage_pricing->sites->cost / ($configurations->usage_pricing->sites->interval / $plan->interval );
+                }
+                $quantity     = (int) $plan->usage->sites - (int) $plan->limits->sites;
+                $total        = $price * $quantity;
+                $line_item_id = $order->add_product( get_product( $configurations->woocommerce->usage ), $quantity );
+                $order->get_items()[ $line_item_id ]->set_subtotal( $total );
+                $order->get_items()[ $line_item_id ]->set_total( $total );
+                $order->get_items()[ $line_item_id ]->add_meta_data( "Details", "Extra Sites" );
+                $order->get_items()[ $line_item_id ]->save();
+                $calculated_total += $total;
             }
-            $quantity     = (int) $plan->usage->sites - (int) $plan->limits->sites;
-            $total        = $price * $quantity;
-            $line_item_id = $order->add_product( get_product( $configurations->woocommerce->usage ), $quantity );
-            $order->get_items()[ $line_item_id ]->set_subtotal( $total );
-            $order->get_items()[ $line_item_id ]->set_total( $total );
-            $order->get_items()[ $line_item_id ]->add_meta_data( "Details", "Extra Sites" );
-            $order->get_items()[ $line_item_id ]->save_meta_data();
-            $order->get_items()[ $line_item_id ]->save();
-            $calculated_total = $calculated_total + $total;
+
+            // Storage Overage
+            if ( (int) $plan->usage->storage > ( (int) $plan->limits->storage * 1024 * 1024 * 1024 ) ) {
+                $price    = $configurations->usage_pricing->storage->cost;
+                if ( $plan->interval != $configurations->usage_pricing->storage->interval ) {
+                    $price = $configurations->usage_pricing->storage->cost / ( $configurations->usage_pricing->storage->interval / $plan->interval );
+                }
+                $extra_storage = ( $plan->usage->storage / 1024 / 1024 / 1024 ) - $plan->limits->storage;
+                $quantity      = ceil ( $extra_storage / $configurations->usage_pricing->storage->quantity );
+                $total         = $price * $quantity;
+                $line_item_id  = $order->add_product( get_product( $configurations->woocommerce->usage ), $quantity );
+                $order->get_items()[ $line_item_id ]->set_subtotal( $total );
+                $order->get_items()[ $line_item_id ]->set_total( $total );
+                $order->get_items()[ $line_item_id ]->add_meta_data( "Details", "Extra Storage" );
+                $order->get_items()[ $line_item_id ]->save();
+                $calculated_total += $total;
+            }
+
+            // Visits Overage
+            if ( $plan->usage->visits > $plan->limits->visits ) {
+                $price     = $configurations->usage_pricing->traffic->cost;
+                if ( $plan->interval != $configurations->usage_pricing->traffic->interval ) {
+                    $price = $configurations->usage_pricing->traffic->cost / ( $configurations->usage_pricing->traffic->interval / $plan->interval );
+                }
+                $quantity     = ceil ( ( (int) $plan->usage->visits - (int) $plan->limits->visits ) / (int) $configurations->usage_pricing->traffic->quantity );
+                $total        = $price * $quantity;
+                $line_item_id = $order->add_product( get_product( $configurations->woocommerce->usage ), $quantity );
+                $order->get_items()[ $line_item_id ]->set_subtotal( $total );
+                $order->get_items()[ $line_item_id ]->set_total( $total );
+                $order->get_items()[ $line_item_id ]->add_meta_data( "Details", "Extra Visits" );
+                $order->get_items()[ $line_item_id ]->save();
+                $calculated_total += $total;
+            }
         }
 
-        if ( (int) $plan->usage->storage > ( (int) $plan->limits->storage * 1024 * 1024 * 1024 ) ) {
-            $price    = $configurations->usage_pricing->storage->cost;
-            if ( $plan->interval != $configurations->usage_pricing->storage->interval ) {
-                $price = $configurations->usage_pricing->storage->cost / ( $configurations->usage_pricing->storage->interval / $plan->interval );
-            }
-            $extra_storage = ( $plan->usage->storage / 1024 / 1024 / 1024 ) - $plan->limits->storage;
-            $quantity      = ceil ( $extra_storage / $configurations->usage_pricing->storage->quantity );
-            $total         = $price * $quantity;
-            $line_item_id  = $order->add_product( get_product( $configurations->woocommerce->usage ), $quantity );
-            $order->get_items()[ $line_item_id ]->set_subtotal( $total );
-            $order->get_items()[ $line_item_id ]->set_total( $total );
-            $order->get_items()[ $line_item_id ]->add_meta_data( "Details", "Extra Storage" );
-            $order->get_items()[ $line_item_id ]->save_meta_data();
-            $order->get_items()[ $line_item_id ]->save();
-            $calculated_total = $calculated_total + $total;
-        }
-
-        if ( $plan->usage->visits > $plan->limits->visits ) {
-            $price     = $configurations->usage_pricing->traffic->cost;
-            if ( $plan->interval != $configurations->usage_pricing->traffic->interval ) {
-                $price = $configurations->usage_pricing->traffic->cost / ( $configurations->usage_pricing->traffic->interval / $plan->interval );
-            }
-            $quantity     = ceil ( ( (int) $plan->usage->visits - (int) $plan->limits->visits ) / (int) $configurations->usage_pricing->traffic->quantity );
-            $total        = $price * $quantity;
-            $line_item_id = $order->add_product( get_product( $configurations->woocommerce->usage ), $quantity );
-            $order->get_items()[ $line_item_id ]->set_subtotal( $total );
-            $order->get_items()[ $line_item_id ]->set_total( $total );
-            $order->get_items()[ $line_item_id ]->add_meta_data( "Details", "Extra Visits" );
-            $order->get_items()[ $line_item_id ]->save_meta_data();
-            $order->get_items()[ $line_item_id ]->save();
-            $calculated_total = $calculated_total + $total;
-        }
-
-        // Adjust credits if overpayment received
         if ( $calculated_total < 0 ) {
-            $over_payment   = 1 * abs( $calculated_total );
+            $over_payment = abs( $calculated_total );
             $line_item_id = $order->add_product( get_product( $configurations->woocommerce->charges ), 1 );
             $order->get_items()[ $line_item_id ]->set_subtotal( $over_payment );
             $order->get_items()[ $line_item_id ]->set_total( $over_payment );
             $order->get_items()[ $line_item_id ]->add_meta_data( "Details", "Overpayment will be applied to next invoice as credit." );
-            $order->get_items()[ $line_item_id ]->save_meta_data();
             $order->get_items()[ $line_item_id ]->save();
             $plan->over_payment = $over_payment;
             ( new Accounts )->update( [ "plan" => json_encode( $plan ) ], [ "account_id" => $this->account_id ] );
@@ -711,78 +767,67 @@ class Account {
         $order->calculate_totals();
         $default_payment = ( new \WC_Payment_Tokens )->get_customer_default_token( $plan->billing_user_id );
 
-        if ( $order->get_total() > 0 && $plan->auto_pay == "true" && ! empty( $default_payment ) ) {
+        // 14. Check for Outstanding Backlog (Moved up before Auto-Pay return)
+        $thirty_days_ago = strtotime( '-30 days' );
+        
+        // Only look for orders that are older than 30 days and unpaid
+        $old_outstanding = wc_get_orders( [
+            'limit'        => 1, // We only need to know if at least one exists
+            'meta_key'     => 'captaincore_account_id',
+            'meta_value'   => $this->account_id,
+            'status'       => [ 'wc-pending', 'failed' ],
+            'date_created' => '<' . $thirty_days_ago, 
+            'return'       => 'ids',
+        ]);
+        
+        // If we found at least one old order
+        if ( ! empty( $old_outstanding ) ) {
+             // Fetch ALL outstanding orders to display in the email
+             $all_outstanding = wc_get_orders( [
+                'limit'      => -1,
+                'meta_key'   => 'captaincore_account_id',
+                'meta_value' => $this->account_id,
+                'status'     => [ 'wc-pending', 'failed' ],
+             ]);
+             
+             \CaptainCore\Mailer::send_outstanding_payment_notice( $this->account_id, $all_outstanding );
+             $order->add_order_note( __( 'CaptainCore outstanding payment notice sent (Backlog > 30 days detected).', 'captaincore' ), false, true );
+        }
+
+        $auto_pay_success = false;
+
+        // 11. Attempt Auto-Pay
+        if ( $order->get_total() > 0 && isset($plan->auto_pay) && $plan->auto_pay == "true" && ! empty( $default_payment ) ) {
             $payment_id = $default_payment->get_id();
-            ( new User( $plan->billing_user_id, true ) )->pay_invoice( $order->get_id(), $payment_id );
+            
+            // Attempt Payment
+            // If failed, hooks in captaincore.php -> captaincore_failed_notify -> failed_notify() triggers the Invoice Email.
+            $payment_result = ( new User( $plan->billing_user_id, true ) )->pay_invoice( $order->get_id(), $payment_id );
+            
+            if ( isset( $payment_result['result'] ) && $payment_result['result'] === 'success' ) {
+                $auto_pay_success = true;
+            }
+        }
+
+        // 12. Handle $0 Total (Free) or Successful Auto-Pay
+        if ( $order->get_total() == 0 || $auto_pay_success ) {
+            if ( $order->get_total() == 0 ) {
+                $order->update_status( 'completed' );
+                // Admin notification hook will catch this status change automatically
+            }
             return;
         }
 
-        if ( $order->get_total() == 0 ) {
-            $order->update_status( 'completed' );
-        }
+        // Refresh order status to ensure we don't send duplicates if auto-pay failed (which triggers its own email via hooks)
+        $order = wc_get_order( $order->get_id() );
 
-        WC()->mailer()->customer_invoice( $order );
-        $order->add_order_note( __( 'Order details sent to customer.', 'woocommerce' ), false, true );
-        do_action( 'woocommerce_after_resend_order_email', $order, 'customer_invoice' );
-    }
-
-    public function failed_notify() {
-        $orders = wc_get_orders( [
-            'limit'      => -1,
-            'meta_key'   => 'captaincore_account_id',
-            'meta_value' => $this->account_id,
-            'orderby'    => 'date',
-            'order'      => 'DESC',
-            'status'     => 'failed'
-        ] );
-        if ( count( $orders ) == 0 ) {
-            return;
+        // 13. Send Customer Invoice (Manual Payment Needed)
+        // If we are here, auto-pay was either not attempted, or it failed (and failed_notify sent an email).
+        // If it's a fresh manual invoice (pending), we send the email now.
+        if ( $order->get_status() === 'pending' ) {
+            \CaptainCore\Mailer::send_order_invoice( $order->get_id() );
+            $order->add_order_note( __( 'CaptainCore invoice sent to customer.', 'captaincore' ), false, true );
         }
-        $invoice_label  = "invoice";
-        if ( count( $orders ) > 1 ) {
-            $invoice_label  = "invoices";
-        }
-        foreach( $orders as $order ) {
-            $order->add_order_note( "Sent payment failure notice." );
-        }
-        $order_id       = $orders[0]->ID;
-        $account        = ( new Accounts )->get( $this->account_id );
-        $plan           = json_decode( $account->plan );
-        $customer       = new \WC_Customer( $plan->billing_user_id );
-        $address        = $customer->get_billing();
-        $recipient      = $address["email"];
-        $site_url       = get_option('siteurl');
-        $site_title     = get_option('blogname');
-
-        if ( empty( $recipient ) ) {
-            $user      = get_user_by( 'id', $plan->billing_user_id );
-            $recipient = $user->user_email;
-        }
-
-        if ( ! empty( $plan->additional_emails ) ) {
-			$recipient .= ", {$plan->additional_emails}";
-		}
-
-        $from_name  = apply_filters( 'woocommerce_email_from_name', get_option( 'woocommerce_email_from_name' ), $this );
-        $from_email = apply_filters( 'woocommerce_email_from_address', get_option( 'woocommerce_email_from_address' ), $this );
-
-        $headers = [ 
-            "Content-Type: text/html; charset=UTF-8",
-            "From: $from_name <$from_email>"
-        ];
-        $link_style = "padding: 12px 32px; font-size: calc(18px / var(--type-scale-factor)); margin: 00px; display: inline-block; color: black; text-decoration: none; font-weight: bold; background-color: rgb(238, 238, 238) !important; border-color: rgb(238, 238, 238) !important;";
-        $subject    = 'Invoice for renewal order #'.$order_id;
-        if ( ! empty( $address["first_name"] ) ) {
-            $message = "<p>". $address["first_name"] . ",</p><p></p>";
-        }
-        $message .= "<p>The automatic payment to renew your hosting plan with $site_title for account #{$this->account_id} has failed. To keep hosting services active, please pay outstanding $invoice_label:</p>";
-        foreach ( $orders as $key => $order ) {
-            $payment_link = captaincore_get_checkout_payment_url ( $order->get_checkout_payment_url() );
-            $message .= "<p><a href=\"$payment_link\" style=\"$link_style\">💰 Pay renewal order #{$order->ID} for {$order->get_formatted_order_total()} from {$order->get_date_created()->date('F jS Y')}</a></p>";
-        }
-        $message .= "</ul>";
-        $message .= "<a href=\"{$site_url}\">{$site_title}</a>";
-        wp_mail( $recipient, $subject, $message, $headers );
     }
 
     public function outstanding_notify() {
@@ -794,78 +839,16 @@ class Account {
             'order'      => 'DESC',
             'status'     => [ 'wc-pending', 'failed' ]
         ] );
+
         if ( count( $orders ) == 0 ) {
             return;
         }
-        $invoice_label  = "invoice";
-        if ( count( $orders ) > 1 ) {
-            $invoice_label  = "invoices";
-        }
+
         foreach( $orders as $order ) {
-            $order->add_order_note( "Sent outstanding notice." );
-        }
-        $order_id       = $orders[0]->ID;
-        $account        = ( new Accounts )->get( $this->account_id );
-        $plan           = json_decode( $account->plan );
-        $customer       = new \WC_Customer( $plan->billing_user_id );
-        $address        = $customer->get_billing();
-        $recipient      = $address["email"];
-        $site_url       = get_option('siteurl');
-        $site_title     = get_option('blogname');
-
-        if ( empty( $recipient ) ) {
-            $user      = get_user_by( 'id', $plan->billing_user_id );
-            $recipient = $user->user_email;
+            $order->add_order_note( "Sent outstanding notice (CaptainCore)." );
         }
 
-        if ( ! empty( $plan->additional_emails ) ) {
-			$recipient .= ", {$plan->additional_emails}";
-		}
-
-        $from_name  = apply_filters( 'woocommerce_email_from_name', get_option( 'woocommerce_email_from_name' ), $this );
-        $from_email = apply_filters( 'woocommerce_email_from_address', get_option( 'woocommerce_email_from_address' ), $this );
-        $first_name = get_user_meta( $plan->billing_user_id, 'first_name', true );
-
-        $store_address     = get_option('woocommerce_store_address');
-        $store_address_2   = get_option('woocommerce_store_address_2');
-        $store_city        = get_option('woocommerce_store_city');
-        $store_postcode    = get_option('woocommerce_store_postcode');
-        $store_raw_country = get_option('woocommerce_default_country');
-
-        // Split the country and state
-        $split_country = explode(":", $store_raw_country);
-        $store_country = $split_country[0];
-        $countries = WC()->countries->countries;
-        $store_country_name = isset($countries[$store_country]) ? $countries[$store_country] : $store_country;
-        // Remove any text in parentheses
-        $store_country_name = preg_replace('/\s*\(.*?\)/', '', $store_country_name);
-        $store_state   = isset($split_country[1]) ? $split_country[1] : '';
-
-        // Build the full address
-        $full_address = "$store_address<br />$store_address_2<br />$store_city, $store_state $store_postcode<br />$store_country_name";
-
-        $headers = [ 
-            "Content-Type: text/html; charset=UTF-8",
-            "From: $from_name <$from_email>"
-        ];
-        $link_style = "padding: 12px 32px; font-size: calc(18px / var(--type-scale-factor)); margin: 00px; display: inline-block; color: black; text-decoration: none; font-weight: bold; background-color: rgb(238, 238, 238) !important; border-color: rgb(238, 238, 238) !important;";
-        $subject    = "Payment overdue for services with $site_title";
-        if ( ! empty( $address["first_name"] ) ) {
-            $message = "<p>". $address["first_name"] . ",</p><p></p>";
-        }
-        if ( empty( $address["first_name"] ) && ! empty( $first_name ) ) {
-            $message = "<p>". $first_name . ",</p><p></p>";
-        }
-        $message .= "<p>There are outstanding payments relating to your hosting plan with $site_title for account {$account->name} #{$this->account_id}. To keep hosting services active, please pay outstanding $invoice_label. Let us know if you have any questions.</p>";
-        $message .= "<ul>";
-        foreach ( $orders as $key => $order ) {
-            $payment_link = captaincore_get_checkout_payment_url ( $order->get_checkout_payment_url() );
-            $message .= "<li><a href=\"$payment_link\">Renewal #{$order->ID} for {$order->get_formatted_order_total()} from {$order->get_date_created()->date('F jS Y')}</a></li>";
-        }
-        $message .= "</ul>";
-        $message .= "<a href=\"{$site_url}\">{$site_title}</a><br />";
-        $message .= "$full_address";
-        wp_mail( $recipient, $subject, $message, $headers );
+        \CaptainCore\Mailer::send_outstanding_payment_notice( $this->account_id, $orders );
     }
 
     public function outstanding_invoices() {
