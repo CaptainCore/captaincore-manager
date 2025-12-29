@@ -11,31 +11,31 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
     );
 
     public static $prefixLengthsPsr4 = array (
-        'S' => 
+        'S' =>
         array (
             'Symfony\\Component\\OptionsResolver\\' => 34,
         ),
-        'P' => 
+        'P' =>
         array (
             'Psr\\Http\\Message\\' => 17,
             'Psr\\Http\\Client\\' => 16,
             'PhpIP\\' => 6,
             'ParagonIE\\ConstantTime\\' => 23,
         ),
-        'O' => 
+        'O' =>
         array (
             'OTPHP\\' => 6,
         ),
-        'H' => 
+        'H' =>
         array (
             'Http\\Promise\\' => 13,
             'Http\\Client\\' => 12,
         ),
-        'C' => 
+        'C' =>
         array (
             'CaptainCore\\' => 12,
         ),
-        'B' => 
+        'B' =>
         array (
             'Buzz\\' => 5,
             'Base32\\' => 7,
@@ -44,52 +44,52 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
     );
 
     public static $prefixDirsPsr4 = array (
-        'Symfony\\Component\\OptionsResolver\\' => 
+        'Symfony\\Component\\OptionsResolver\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/options-resolver',
         ),
-        'Psr\\Http\\Message\\' => 
+        'Psr\\Http\\Message\\' =>
         array (
             0 => __DIR__ . '/..' . '/psr/http-factory/src',
             1 => __DIR__ . '/..' . '/psr/http-message/src',
         ),
-        'Psr\\Http\\Client\\' => 
+        'Psr\\Http\\Client\\' =>
         array (
             0 => __DIR__ . '/..' . '/psr/http-client/src',
         ),
-        'PhpIP\\' => 
+        'PhpIP\\' =>
         array (
             0 => __DIR__ . '/..' . '/rlanvin/php-ip/src',
         ),
-        'ParagonIE\\ConstantTime\\' => 
+        'ParagonIE\\ConstantTime\\' =>
         array (
             0 => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src',
         ),
-        'OTPHP\\' => 
+        'OTPHP\\' =>
         array (
             0 => __DIR__ . '/..' . '/spomky-labs/otphp/src',
         ),
-        'Http\\Promise\\' => 
+        'Http\\Promise\\' =>
         array (
             0 => __DIR__ . '/..' . '/php-http/promise/src',
         ),
-        'Http\\Client\\' => 
+        'Http\\Client\\' =>
         array (
             0 => __DIR__ . '/..' . '/php-http/httplug/src',
         ),
-        'CaptainCore\\' => 
+        'CaptainCore\\' =>
         array (
             0 => __DIR__ . '/../..' . '/app',
         ),
-        'Buzz\\' => 
+        'Buzz\\' =>
         array (
             0 => __DIR__ . '/..' . '/kriswallsmith/buzz/lib',
         ),
-        'Base32\\' => 
+        'Base32\\' =>
         array (
             0 => __DIR__ . '/..' . '/christian-riesen/base32/src',
         ),
-        'Badcow\\DNS\\' => 
+        'Badcow\\DNS\\' =>
         array (
             0 => __DIR__ . '/..' . '/badcow/dns/lib',
         ),
@@ -232,6 +232,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\Invite' => __DIR__ . '/../..' . '/app/Invite.php',
         'CaptainCore\\Invites' => __DIR__ . '/../..' . '/app/Invites.php',
         'CaptainCore\\Keys' => __DIR__ . '/../..' . '/app/Keys.php',
+        'CaptainCore\\Mailer' => __DIR__ . '/../..' . '/app/Mailer.php',
         'CaptainCore\\Process' => __DIR__ . '/../..' . '/app/Process.php',
         'CaptainCore\\ProcessLog' => __DIR__ . '/../..' . '/app/ProcessLog.php',
         'CaptainCore\\ProcessLogSite' => __DIR__ . '/../..' . '/app/ProcessLogSite.php',
@@ -244,6 +245,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\Providers\\Envato' => __DIR__ . '/../..' . '/app/Providers/Envato.php',
         'CaptainCore\\Providers\\Fathom' => __DIR__ . '/../..' . '/app/Providers/Fathom.php',
         'CaptainCore\\Providers\\ForwardEmail' => __DIR__ . '/../..' . '/app/Providers/ForwardEmail.php',
+        'CaptainCore\\Providers\\GridPane' => __DIR__ . '/../..' . '/app/Providers/GridPane.php',
         'CaptainCore\\Providers\\Hoverdotcom' => __DIR__ . '/../..' . '/app/Providers/Hoverdotcom.php',
         'CaptainCore\\Providers\\Kinsta' => __DIR__ . '/../..' . '/app/Providers/Kinsta.php',
         'CaptainCore\\Providers\\Mailgun' => __DIR__ . '/../..' . '/app/Providers/Mailgun.php',
@@ -251,14 +253,17 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\Providers\\Spaceship' => __DIR__ . '/../..' . '/app/Providers/Spaceship.php',
         'CaptainCore\\Quicksave' => __DIR__ . '/../..' . '/app/Quicksave.php',
         'CaptainCore\\Recipes' => __DIR__ . '/../..' . '/app/Recipes.php',
+        'CaptainCore\\Remote\\Cloudflare' => __DIR__ . '/../..' . '/app/Remote/Cloudflare.php',
         'CaptainCore\\Remote\\Constellix' => __DIR__ . '/../..' . '/app/Remote/Constellix.php',
         'CaptainCore\\Remote\\Fathom' => __DIR__ . '/../..' . '/app/Remote/Fathom.php',
         'CaptainCore\\Remote\\ForwardEmail' => __DIR__ . '/../..' . '/app/Remote/ForwardEmail.php',
+        'CaptainCore\\Remote\\GridPane' => __DIR__ . '/../..' . '/app/Remote/GridPane.php',
         'CaptainCore\\Remote\\Kinsta' => __DIR__ . '/../..' . '/app/Remote/Kinsta.php',
         'CaptainCore\\Remote\\Mailgun' => __DIR__ . '/../..' . '/app/Remote/Mailgun.php',
         'CaptainCore\\Remote\\Missive' => __DIR__ . '/../..' . '/app/Remote/Missive.php',
         'CaptainCore\\Remote\\Spaceship' => __DIR__ . '/../..' . '/app/Remote/Spaceship.php',
         'CaptainCore\\Run' => __DIR__ . '/../..' . '/app/Run.php',
+        'CaptainCore\\Scripts' => __DIR__ . '/../..' . '/app/Scripts.php',
         'CaptainCore\\Site' => __DIR__ . '/../..' . '/app/Site.php',
         'CaptainCore\\Sites' => __DIR__ . '/../..' . '/app/Sites.php',
         'CaptainCore\\Snapshots' => __DIR__ . '/../..' . '/app/Snapshots.php',
