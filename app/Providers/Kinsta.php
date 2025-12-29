@@ -1217,5 +1217,207 @@ class Kinsta {
         return $response->url;
     }
 
+    /**
+     * Get list of domains for a Kinsta environment.
+     */
+    public static function get_domains( $site_id, $environment = 'production' ) {
+        
+        $kinsta_env_name = ( $environment == 'production' ) ? 'live' : $environment;
+        $site            = \CaptainCore\Sites::get( $site_id );
+        $kinsta_site_id  = $site->provider_site_id;
+
+        if ( empty( $kinsta_site_id ) ) {
+            return new \WP_Error( 'kinsta_missing_id', 'Kinsta Remote ID not set for this site.' );
+        }
+
+        // 1. Fetch Environments to find the specific Environment ID
+        $env_response = \CaptainCore\Remote\Kinsta::get( "sites/{$kinsta_site_id}/environments" );
+
+        if ( is_wp_error( $env_response ) ) {
+            return $env_response;
+        }
+
+        $env_id = null;
+        $environments = $env_response->site->environments ?? [];
+
+        foreach ( $environments as $env ) {
+            if ( strtolower( $env->name ) === strtolower( $kinsta_env_name ) ) {
+                $env_id = $env->id;
+                break;
+            }
+        }
+
+        if ( ! $env_id ) {
+            return new \WP_Error( 'kinsta_env_not_found', "Kinsta environment '{$kinsta_env_name}' not found." );
+        }
+
+        // 2. Fetch Domains for the specific environment
+        $response = \CaptainCore\Remote\Kinsta::get( "sites/environments/{$env_id}/domains" );
+
+        if ( is_wp_error( $response ) ) {
+            return $response;
+        }
+
+        $domains = $response->environment->site_domains ?? [];
+
+        // 3. Check verification status for each domain
+        foreach ( $domains as $key => $domain ) {
+            
+            $is_active = true;
+            $verification_records = [];
+
+            if ( strpos( $domain->name, '*.' ) !== false ) {
+                unset( $domains[$key] );
+                continue;
+            }
+
+            if ( strpos( $domain->name, 'kinsta.cloud' ) !== false ) {
+                $is_active = true;
+            } else {
+                $verify_response = \CaptainCore\Remote\Kinsta::get( "sites/environments/domains/{$domain->id}/verification-records" );
+                
+                if ( ! is_wp_error( $verify_response ) && ! empty( $verify_response->site_domain->verification_records ) ) {
+                    $is_active = false;
+                    // FIX: array_values() forces this to be a strictly indexed JSON array [{},{}]
+                    // preventing Vue from seeing "empty" slots or object keys.
+                    $verification_records = array_values( $verify_response->site_domain->verification_records );
+                }
+            }
+
+            $domains[$key]->is_active = $is_active;
+            $domains[$key]->verification_records = $verification_records;
+        }
+
+        return array_values( $domains );
+    }
+
+    /**
+     * Add a domain to a Kinsta environment.
+     */
+    public static function add_domain( $site_id, $env_name, $params ) {
+        if ( strtolower( $env_name ) == "production" ) {
+            $env_name = "live";
+        }
+        $kinsta_env_id = self::get_kinsta_env_id( $site_id, $env_name );
+        if ( is_wp_error( $kinsta_env_id ) ) {
+            return $kinsta_env_id;
+        }
+
+        $site = ( new \CaptainCore\Sites )->get( $site_id );
+        $api_key = self::credentials("api", $site->provider_id );
+        \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
+
+        $body = [
+            'domain_name' => $params['domain_name'],
+            'is_wildcardless' => $params['is_wildcardless'] ?? false,
+        ];
+
+        return \CaptainCore\Remote\Kinsta::post( "sites/environments/{$kinsta_env_id}/domains", $body );
+    }
+
+    /**
+     * Delete a domain from a Kinsta environment.
+     */
+    public static function delete_domain( $site_id, $env_name, $params ) {
+        if ( strtolower( $env_name ) == "production" ) {
+            $env_name = "live";
+        }
+        $kinsta_env_id = self::get_kinsta_env_id( $site_id, $env_name );
+        if ( is_wp_error( $kinsta_env_id ) ) {
+            return $kinsta_env_id;
+        }
+
+        $site = \CaptainCore\Sites::get( $site_id );
+        $api_key = self::credentials("api", $site->provider_id );
+        \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
+        
+        $body = [
+            'domain_ids' => $params['domain_ids'], // Expecting an array
+        ];
+
+        return \CaptainCore\Remote\Kinsta::delete( "sites/environments/{$kinsta_env_id}/domains", $body );
+    }
+
+    /**
+     * Set the primary domain for a Kinsta environment.
+     */
+    public static function set_primary_domain( $site_id, $env_name, $params ) {
+        if ( strtolower( $env_name ) == "production" ) {
+            $env_name = "live";
+        }
+        $kinsta_env_id = self::get_kinsta_env_id( $site_id, $env_name );
+        if ( is_wp_error( $kinsta_env_id ) ) {
+            return $kinsta_env_id;
+        }
+
+        $site = ( new \CaptainCore\Sites )->get( $site_id );
+        $api_key = self::credentials("api", $site->provider_id );
+        \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
+
+        $body = [
+            'domain_id' => $params['domain_id'],
+            'run_search_and_replace' => $params['run_search_and_replace'] ?? true,
+        ];
+
+        return \CaptainCore\Remote\Kinsta::put( "sites/environments/{$kinsta_env_id}/change-primary-domain", $body );
+    }
+
+    /**
+     * Fetch verification records for a specific domain.
+     */
+    public function get_verification_records( $domain_id ) {
+        $response = \CaptainCore\Remote\Kinsta::get( "sites/environments/domains/{$domain_id}/verification-records" );
+
+        if ( is_wp_error( $response ) ) {
+            return $response;
+        }
+
+        // Access as object: $response->site_domain->verification_records
+        return $response->site_domain->verification_records ?? [];
+    }
+
+    /**
+     * "Check" verification by re-fetching the domain details.
+     * Kinsta checks in the background, so we just need to pull the latest status.
+     */
+    public function check_verification( $site_id, $domain_id ) {
+        $site           = \CaptainCore\Sites::get( $site_id );
+        $kinsta_site_id = $site->provider_site_id;
+        
+        // 1. Get Environment ID (assuming 'live')
+        $env_response = \CaptainCore\Remote\Kinsta::get( "sites/{$kinsta_site_id}/environments" );
+        if ( is_wp_error( $env_response ) ) return $env_response;
+
+        $env_id = null;
+        $environments = $env_response->site->environments ?? [];
+
+        foreach ( $environments as $env ) {
+            if ( $env->name === 'live' ) {
+                $env_id = $env->id; 
+                break;
+            }
+        }
+
+        if ( ! $env_id ) return new \WP_Error( 'env_not_found', 'Kinsta environment not found.' );
+
+        // 2. Re-fetch domains to get latest status
+        $response = \CaptainCore\Remote\Kinsta::get( "sites/environments/{$env_id}/domains" );
+        
+        if ( is_wp_error( $response ) ) return $response;
+
+        $domains = $response->site->domains ?? [];
+        
+        // Find our specific domain object
+        foreach ( $domains as $domain ) {
+            if ( $domain->id === $domain_id ) {
+                // Map is_active status on this single object before returning
+                $status = $domain->status ?? '';
+                $domain->is_active = ( $status === 'live' );
+                return $domain; 
+            }
+        }
+
+        return new \WP_Error( 'domain_not_found', 'Domain not found in Kinsta response.' );
+    }
 
 }

@@ -135,4 +135,20 @@ class Provider {
         return call_user_func_array( [ $class_name, $method ], $args );
     }
 
+    public function get_domains( $site_id, $env_name ) {
+        return $this->call_static_method( 'get_domains', [ $site_id, $env_name ] ); // Changed from self::call_static_method()
+    }
+
+    public function add_domain( $site_id, $env_name, $params ) {
+        return $this->call_static_method( 'add_domain', [ $site_id, $env_name, $params ] ); // Changed from self::call_static_method()
+    }
+
+    public function delete_domain( $site_id, $env_name, $params ) {
+        return $this->call_static_method( 'delete_domain', [ $site_id, $env_name, $params ] ); // Changed from self::call_static_method()
+    }
+
+    public function set_primary_domain( $site_id, $env_name, $params ) {
+        return $this->call_static_method( 'set_primary_domain', [ $site_id, $env_name, $params ] ); // Changed from self::call_static_method()
+    }
+
 }

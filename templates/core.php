@@ -606,6 +606,178 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card-text>
 			</v-card>
 		</v-dialog>
+		<v-dialog v-model="dialog_domain_mappings.show" max-width="900px" scrollable>
+		<v-card>
+			<v-card-title class="headline d-flex justify-space-between">
+			<span>Domain Mappings</span>
+			<v-btn icon variant="text" @click="fetchDomains(dialog_domain_mappings.site_id)">
+				<v-icon>mdi-refresh</v-icon>
+			</v-btn>
+			</v-card-title>
+
+			<v-divider></v-divider>
+
+			<v-card-text style="height: 400px;">
+
+				<v-alert 
+					v-if="dialog_domain_mappings.errors.length > 0" 
+					type="error" 
+					variant="tonal" 
+					class="mt-4"
+					closable
+					@click:close="dialog_domain_mappings.errors = []"
+				>
+					<div v-for="error in dialog_domain_mappings.errors" :key="error">{{ error }}</div>
+				</v-alert>
+			
+				<v-data-table
+					:headers="[
+						{ title: 'Domain Name', key: 'name', align: 'start' },
+						{ title: 'Status', key: 'status', width: '120px' },
+						{ title: 'Primary', key: 'primary', align: 'center', width: '100px', sortable: false },
+						{ title: 'Actions', key: 'actions', align: 'end', sortable: false, width: '150px' }
+					]"
+					:items="dialog_domain_mappings.domains"
+					:items-per-page="-1"
+					:loading="dialog_domain_mappings.loading"
+					hide-default-footer
+					density="comfortable"
+					class="elevation-0 mt-2"
+				>
+					<template v-slot:no-data>
+						<div class="text-center pa-4 text-grey">
+							No domains mapped yet. Add one below.
+						</div>
+					</template>
+
+					<template v-slot:item.name="{ item }">
+						<strong>{{ item.name }}</strong>
+					</template>
+
+					<template v-slot:item.status="{ item }">
+						<v-chip v-if="item.is_active" color="success" size="small" label variant="tonal">Active</v-chip>
+						<v-chip v-else color="warning" size="small" label variant="tonal">Pending</v-chip>
+					</template>
+
+					<template v-slot:item.primary="{ item }">
+						<v-icon v-if="item.name.includes('kinsta.cloud')" color="grey lighten-2" title="System Domain">mdi-cloud</v-icon>
+						<v-icon v-else-if="dialog_site.environment_selected.home_url.includes(item.name)" color="amber" title="Primary Domain">mdi-star</v-icon>
+						<v-tooltip location="top" v-else>
+							<template v-slot:activator="{ props }">
+								<v-btn v-bind="props" icon="mdi-star-outline" size="small" variant="text" color="grey" @click="setPrimaryDomainMapping(item)"></v-btn>
+							</template>
+							<span>Set as Primary</span>
+						</v-tooltip>
+					</template>
+
+					<template v-slot:item.actions="{ item }">
+						<v-btn 
+							v-if="!item.is_active && item.verification_records && item.verification_records.length > 0" 
+							size="small" color="primary" variant="tonal" class="mr-2" 
+							@click="openVerificationModal(item)"
+						>Verify</v-btn>
+						<v-btn icon="mdi-delete" size="small" color="error" variant="text" @click="deleteDomainMapping(item)"></v-btn>
+					</template>
+				</v-data-table>
+
+				<div class="d-flex align-center mt-4 pt-2" style="border-top: 1px solid rgba(0,0,0,0.12);">
+					<v-text-field
+						v-model="dialog_domain_mappings.new_domain"
+						label="Enter domain name (e.g. example.com)"
+						variant="underlined"
+						hide-details
+						class="mr-4"
+						@keydown.enter="addDomainMapping"
+						:disabled="dialog_domain_mappings.loading"
+					></v-text-field>
+					<v-btn 
+						color="primary" 
+						@click="addDomainMapping"
+						:loading="dialog_domain_mappings.loading"
+						:disabled="!dialog_domain_mappings.new_domain"
+						prepend-icon="mdi-plus"
+					>
+						Add Domain
+					</v-btn>
+				</div>
+
+			</v-card-text>
+
+			<v-divider></v-divider>
+
+			<v-card-actions>
+			<v-spacer></v-spacer>
+			<v-btn color="primary" text @click="dialog_domain_mappings.show = false">Close</v-btn>
+			</v-card-actions>
+		</v-card>
+			<v-dialog v-model="verificationDialog.show" max-width="600px">
+				<v-card v-if="verificationDialog.domain">
+					<v-toolbar color="primary" density="compact" flat>
+						<v-toolbar-title class="text-white">
+							Verify {{ verificationDialog.domain.name }}
+						</v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-btn icon="mdi-close" variant="text" color="white" @click="verificationDialog.show = false"></v-btn>
+					</v-toolbar>
+					
+					<v-card-text class="pt-4">
+						<p class="mb-4">Please add the following DNS records to your domain provider (Cloudflare, GoDaddy, Namecheap, etc.) to prove ownership.</p>
+						
+						<v-table 
+							density="compact" 
+							class="elevation-1 mb-4" 
+							v-if="verificationDialog.domain && verificationDialog.domain.verification_records && verificationDialog.domain.verification_records.length > 0"
+						>
+							<thead>
+								<tr>
+									<th>Type</th>
+									<th>Name / Host</th>
+									<th class="text-right">Value</th>
+								</tr>
+							</thead>
+							<tbody>
+								<template v-for="(record, i) in verificationDialog.domain.verification_records" :key="i">
+									<tr v-if="record">
+										<td><strong>{{ record.type }}</strong></td>
+										<td>
+											{{ record.name }}
+											<v-btn icon size="x-small" variant="text" @click="copyText(record.name)">
+												<v-icon size="small">mdi-content-copy</v-icon>
+											</v-btn>
+										</td>
+										<td class="text-right">
+											<span style="max-width: 200px; display: inline-block; overflow: hidden; text-overflow: ellipsis; vertical-align: middle;">
+												{{ record.value }}
+											</span>
+											<v-btn icon size="x-small" variant="text" @click="copyText(record.value)">
+												<v-icon size="small">mdi-content-copy</v-icon>
+											</v-btn>
+										</td>
+									</tr>
+								</template>
+							</tbody>
+						</v-table>
+						<v-alert type="info" density="compact" variant="tonal" icon="mdi-clock-outline">
+							DNS changes may take a few minutes to propagate.
+						</v-alert>
+					</v-card-text>
+
+					<v-divider></v-divider>
+
+					<v-card-actions>
+						<v-spacer></v-spacer>
+						<v-btn variant="text" @click="verificationDialog.show = false">Cancel</v-btn>
+						<v-btn 
+							color="primary" 
+							:loading="verificationDialog.loading" 
+							@click="attemptVerification"
+						>
+							Attempt to Verify
+						</v-btn>
+					</v-card-actions>
+				</v-card>
+			</v-dialog>
+		</v-dialog>
 		<v-dialog v-model="dialog_domain.confirm_mx_overwrite" max-width="500px" persistent>
 			<v-card>
 				<v-toolbar color="warning" flat>
@@ -1665,6 +1837,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									v-model="dialog_modify_plan.plan.next_renewal"
 									label="Next Renewal Date"
 									append-inner-icon="mdi-calendar"
+									readonly
 									v-bind="props"
 									variant="underlined"
 								></v-text-field>
@@ -8826,6 +8999,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-container v-if="route == 'sites' && role == 'administrator' && ! loading_page && dialog_site.step == 2" class="mt-5">
 				<v-card color="transparent" density="compact" flat subtitle="Administrator Options">
 					<template v-slot:actions>
+						<v-btn size="small" variant="outlined" @click="showDomainMappings()" prepend-icon="mdi-dns" v-if="dialog_site.site.provider == 'kinsta' || dialog_site.site.provider == 'rocketdotnet'">
+							Configure Domains
+						</v-btn>
 						<v-btn size="small" variant="outlined" @click="copySite(dialog_site.site.site_id)" prepend-icon="mdi-content-duplicate">
 							Copy Site
 						</v-btn>
@@ -9746,6 +9922,8 @@ const app = createApp({
 		dialog_mailgun_config: { show: false, loading: false },
 		dialog_account: { show: false, loading: false, records: { account: { defaults: { recipes: [] } } }, new_invite: false, new_invite_email: "", step: 1 },
 		dialog_invoice: { show: false, loading: false, paying: false, customer: false, response: "", payment_method: "", card: {}, error: "" },
+		dialog_domain_mappings: { show: false, loading: true, domains: [], new_domain: "", errors: [], site_id: null, env_name: "" },
+		verificationDialog: { show: false, domain: {}, loading: false },
 		dialog_new_account: { show: false, name: "", records: {} },
 		dialog_user: { show: false, user: {}, errors: [] },
 		dialog_new_user: { first_name: "", last_name: "", email: "", login: "", account_ids: [], errors: [] },
@@ -10372,15 +10550,9 @@ const app = createApp({
     },
 	mounted() {
 		const savedTheme = localStorage.getItem('captaincore-theme');
-        if (savedTheme) {
-        this.theme = savedTheme;
-        this.$vuetify.theme.global.name.value = savedTheme;
-		}
-
-		// 2. NEW: Load Terminal Settings
-		const savedSidebar = localStorage.getItem('captaincore-terminal-sidebar');
-		if (savedSidebar !== null) {
-			this.view_console.show_sidebar = (savedSidebar === 'true');
+		if (savedTheme) {
+			this.theme = savedTheme;
+			this.$vuetify.theme.global.name.value = savedTheme;
 		}
 
 		const savedFullscreen = localStorage.getItem('captaincore-terminal-fullscreen');
@@ -11698,6 +11870,149 @@ const app = createApp({
 					console.log(error.response)
 			});
 		},
+		showDomainMappings() {
+			this.dialog_domain_mappings.show = true;
+			this.dialog_domain_mappings.loading = true;
+			this.dialog_domain_mappings.errors = [];
+			this.dialog_domain_mappings.new_domain = "";
+			this.dialog_domain_mappings.site_id = this.dialog_site.site.site_id;
+			this.dialog_domain_mappings.env_name = this.dialog_site.environment_selected.environment;
+			this.fetchDomainMappings();
+		},
+		fetchDomainMappings() {
+			this.dialog_domain_mappings.loading = true;
+			const site_id = this.dialog_domain_mappings.site_id;
+			const env_name = this.dialog_domain_mappings.env_name.toLowerCase();
+
+			axios.get(`/wp-json/captaincore/v1/sites/${site_id}/${env_name}/domains`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.dialog_domain_mappings.domains = response.data;
+				this.dialog_domain_mappings.loading = false;
+			})
+			.catch(error => {
+				console.error("Error fetching domain mappings:", error);
+				this.dialog_domain_mappings.errors = ["Failed to fetch domains. " + (error.response?.data?.message || error.message)];
+				this.dialog_domain_mappings.loading = false;
+			});
+		},
+		addDomainMapping() {
+			if (!this.dialog_domain_mappings.new_domain) return;
+			this.dialog_domain_mappings.loading = true;
+			const site_id = this.dialog_domain_mappings.site_id;
+			const env_name = this.dialog_domain_mappings.env_name.toLowerCase();
+
+			axios.post(`/wp-json/captaincore/v1/sites/${site_id}/${env_name}/domains`, {
+				domain_name: this.dialog_domain_mappings.new_domain
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.snackbar.message = `Domain '${this.dialog_domain_mappings.new_domain}' is being added.`;
+				this.snackbar.show = true;
+				this.dialog_domain_mappings.new_domain = "";
+				// API is async, so we wait a bit before refetching
+				setTimeout(this.fetchDomainMappings, 5000);
+			})
+			.catch(error => {
+				console.error("Error adding domain mapping:", error);
+				this.dialog_domain_mappings.errors = ["Failed to add domain. " + (error.response?.data?.message || error.message)];
+				this.dialog_domain_mappings.loading = false;
+			});
+		},
+		deleteDomainMapping(domain) {
+			if (!confirm(`Are you sure you want to delete the domain '${domain.name}'? This cannot be undone.`)) return;
+			this.dialog_domain_mappings.loading = true;
+			const site_id = this.dialog_domain_mappings.site_id;
+			const env_name = this.dialog_domain_mappings.env_name.toLowerCase();
+
+			axios.delete(`/wp-json/captaincore/v1/sites/${site_id}/${env_name}/domains`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce },
+				data: { domain_ids: [domain.id] }
+			})
+			.then(response => {
+				this.snackbar.message = `Domain '${domain.name}' is being deleted.`;
+				this.snackbar.show = true;
+				// API is async, so we wait a bit before refetching
+				setTimeout(this.fetchDomainMappings, 5000);
+			})
+			.catch(error => {
+				console.error("Error deleting domain mapping:", error);
+				this.dialog_domain_mappings.errors = ["Failed to delete domain. " + (error.response?.data?.message || error.message)];
+				this.dialog_domain_mappings.loading = false;
+			});
+		},
+		setPrimaryDomainMapping(domain) {
+			if (!confirm(`Are you sure you want to set '${domain.name}' as the primary domain? This will run a search-and-replace on your site.`)) return;
+			this.dialog_domain_mappings.loading = true;
+			const site_id = this.dialog_domain_mappings.site_id;
+			const env_name = this.dialog_domain_mappings.env_name.toLowerCase();
+
+			axios.put(`/wp-json/captaincore/v1/sites/${site_id}/${env_name}/domains/primary`, {
+				domain_id: domain.id,
+				run_search_and_replace: true
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.snackbar.message = `Setting '${domain.name}' as primary domain. This may take a few minutes.`;
+				this.snackbar.show = true;
+				// API is async, so we wait a bit before refetching
+				setTimeout(this.fetchDomainMappings, 5000);
+			})
+			.catch(error => {
+				console.error("Error setting primary domain mapping:", error);
+				this.dialog_domain_mappings.errors = ["Failed to set primary domain. " + (error.response?.data?.message || error.message)];
+				this.dialog_domain_mappings.loading = false;
+			});
+		},
+		openVerificationModal(domain) {
+			console.log(domain)
+			this.verificationDialog.domain = domain;
+			this.verificationDialog.show = true;
+		},
+		attemptVerification() {
+			this.verificationDialog.loading = true;
+			const domain = this.verificationDialog.domain;
+			const site_id = this.dialog_domain_mappings.site_id;
+
+			const payload = {
+				action: 'captaincore_ajax_check_verification',
+				site_id: site_id,
+				domain_id: domain.id,
+				nonce: this.captaincore_nonce // Ensure you pass your nonce
+			};
+
+			// Example Axios call
+			axios.post(ajaxurl, new URLSearchParams(payload))
+			.then(response => {
+				this.verificationDialog.loading = false;
+
+				if (response.data.success) {
+					const updatedDomain = response.data.data;
+
+					// Update the domain in the main list
+					const index = this.dialog_domain_mappings.domains.findIndex(d => d.id === updatedDomain.id);
+					if (index !== -1) {
+						// Use Vue.set or splice to ensure reactivity
+						this.dialog_domain_mappings.domains[index] = updatedDomain;
+					}
+
+					if (updatedDomain.is_active) {
+						this.verificationDialog.show = false;
+					} else {
+						alert("Kinsta is still waiting for DNS propagation. Please try again in a minute.");
+					}
+				} else {
+					alert(response.data.data || "Verification check failed.");
+				}
+			})
+			.catch(error => {
+				this.verificationDialog.loading = false;
+				console.error(error);
+			});
+		},
 		showPushToOtherDialog() {
             const sourceSite = this.dialog_site.site;
             const sourceEnv = this.dialog_site.environment_selected;
@@ -11914,7 +12229,6 @@ const app = createApp({
 
 			// 2. Open the UI
 			this.view_console.terminal_open = true;
-			this.view_console.show_sidebar = true;
 			this.view_console.show = true;
 
 			// 3. Focus input
@@ -12007,14 +12321,12 @@ const app = createApp({
 
 			if ( !env ) {
 				this.view_console.terminal_open = true;
-				this.view_console.show_sidebar = true;
 				return
 			}
 			this.view_console.selected_targets = [ env ];
 
 			// Open terminal and sidebar
 			this.view_console.terminal_open = true;
-			this.view_console.show_sidebar = true;
 
 			// Focus the input field
 			this.$nextTick(() => {
@@ -12043,7 +12355,6 @@ const app = createApp({
 
 			// Open terminal and sidebar
 			this.view_console.terminal_open = true;
-			this.view_console.show_sidebar = true;
 
 			// Focus the input field for immediate typing
 			this.$nextTick(() => {
@@ -12205,7 +12516,6 @@ const app = createApp({
 			this.terminal_schedule.time = "05:00";
 			this.terminal_schedule.show = true;
 		},
-
 		confirmTerminalSchedule() {
 			this.terminal_schedule.loading = true;
 			const targets = this.view_console.selected_targets;
