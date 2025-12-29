@@ -261,6 +261,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\Remote\\Mailgun' => __DIR__ . '/../..' . '/app/Remote/Mailgun.php',
         'CaptainCore\\Remote\\Missive' => __DIR__ . '/../..' . '/app/Remote/Missive.php',
         'CaptainCore\\Remote\\Spaceship' => __DIR__ . '/../..' . '/app/Remote/Spaceship.php',
+        'CaptainCore\\Router' => __DIR__ . '/../..' . '/app/Router.php',
         'CaptainCore\\Run' => __DIR__ . '/../..' . '/app/Run.php',
         'CaptainCore\\Scripts' => __DIR__ . '/../..' . '/app/Scripts.php',
         'CaptainCore\\Site' => __DIR__ . '/../..' . '/app/Site.php',

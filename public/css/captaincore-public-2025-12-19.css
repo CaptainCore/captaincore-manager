@@ -2013,26 +2013,6 @@ code.language-log {
     color: #9e9e9e !important;
 }
 
-/* Sidebar styling */
-.terminal-sidebar {
-    background-color: #121212; /* VS Code sidebar color */
-    border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
-.terminal-sidebar .v-window {
-    height: 100%;
-}
-
-.terminal-sidebar .v-window-item {
-    height: 100%;
-    overflow-y: auto !important;
-}
-
-.terminal-sidebar .v-autocomplete .v-chip {
-    max-width: 120px;
-    overflow: hidden;
-}
-
 .sticky-top {
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -2088,15 +2068,45 @@ code.language-log {
     border-radius: 0 !important;
 }
 
-.terminal-sidebar .v-list-item__prepend>.v-icon~.v-list-item__spacer {
-  width: 8px;
-}
-
 .window-dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 3px; }
 .cursor-block { animation: blink 1s step-end infinite; }
 
 .cursor-block {
     animation: blink 1s step-end infinite;
+}
+
+/* Recipe Menu Tweaks */
+.recipe-menu-list .v-list-item {
+  min-height: 36px !important;
+  /* Slightly taller for larger icons */
+  padding-inline-start: 12px !important;
+}
+
+/* Tighten spacing between icon and text */
+.recipe-menu-list .v-list-item__prepend {
+  width: 28px !important;
+  margin-inline-end: 0px !important;
+}
+
+/* Increase icon size and contrast */
+.recipe-menu-list .v-icon {
+  font-size: 20px !important;
+  /* Larger than 'small' */
+  opacity: 1 !important;
+  /* Remove opacity for better contrast */
+}
+
+/* Improve Text Contrast */
+.recipe-menu-list .v-list-item-title {
+  color: #FFFFFF !important;
+  /* Force white text */
+  font-size: 0.85rem !important;
+  font-weight: 500;
+}
+
+/* Hover State Contrast */
+.recipe-menu-list .v-list-item--link:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
