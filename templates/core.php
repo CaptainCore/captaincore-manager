@@ -1673,22 +1673,38 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-menu>
 						</v-col>
 					</v-row>
-					<v-row dense>
-						<v-col><v-switch v-model="dialog_modify_plan.plan.auto_pay" false-value="false" true-value="true" label="Autopay" color="primary" inset hide-details></v-switch></v-col>
-						<v-col><v-switch v-model="dialog_modify_plan.plan.auto_switch" false-value="false" true-value="true" label="Automatically switch plan" color="primary" inset hide-details></v-switch></v-col>
+					<v-row dense align="center">
+						<v-col cols="12" md="4"><v-switch v-model="dialog_modify_plan.plan.auto_pay" false-value="false" true-value="true" label="Autopay" color="primary" inset hide-details></v-switch></v-col>
+						<v-col cols="12" md="4"><v-switch v-model="dialog_modify_plan.plan.auto_switch" false-value="false" true-value="true" label="Auto switch plan" color="primary" inset hide-details></v-switch></v-col>
+                        <v-col cols="12" md="4" class="pt-2">
+                             <v-radio-group v-model="dialog_modify_plan.plan.billing_mode" inline hide-details density="compact">
+                                <v-radio label="Standard" value="standard"></v-radio>
+                                <v-radio label="Per Site" value="per_site"></v-radio>
+                            </v-radio-group>
+                        </v-col>
 					</v-row>
-					<v-row v-if="typeof dialog_modify_plan.plan.name == 'string' && dialog_modify_plan.plan.name == 'Custom'" dense>
+                    
+                    <v-row v-if="dialog_modify_plan.plan.billing_mode === 'per_site'" dense>
+						<v-col cols="12" sm="3"><v-text-field label="Storage" value="Unlimited" disabled variant="underlined"></v-text-field></v-col>
+						<v-col cols="12" sm="3"><v-text-field label="Visits" value="Unlimited" disabled variant="underlined"></v-text-field></v-col>
+						<v-col cols="12" sm="3"><v-text-field label="Sites" :model-value="(dialog_account.records.account.plan.usage.sites || 0) + ' Active'" disabled variant="underlined" hint="Billed based on count" persistent-hint></v-text-field></v-col>
+						<v-col cols="12" sm="3"><v-text-field label="Price Per Site" v-model="dialog_modify_plan.plan.price" variant="underlined" prefix="$"></v-text-field></v-col>
+					</v-row>
+
+					<v-row v-else-if="typeof dialog_modify_plan.plan.name == 'string' && dialog_modify_plan.plan.name == 'Custom'" dense>
 						<v-col cols="12" sm="3"><v-text-field label="Storage (GBs)" :model-value="dialog_modify_plan.plan.limits.storage" @update:model-value="dialog_modify_plan.plan.limits.storage = $event" variant="underlined"></v-text-field></v-col>
 						<v-col cols="12" sm="3"><v-text-field label="Visits" :model-value="dialog_modify_plan.plan.limits.visits" @update:model-value="dialog_modify_plan.plan.limits.visits = $event" variant="underlined"></v-text-field></v-col>
 						<v-col cols="12" sm="3"><v-text-field label="Sites" :model-value="dialog_modify_plan.plan.limits.sites" @update:model-value="dialog_modify_plan.plan.limits.sites = $event" variant="underlined"></v-text-field></v-col>
 						<v-col cols="12" sm="3"><v-text-field label="Price" :model-value="dialog_modify_plan.plan.price" @update:model-value="dialog_modify_plan.plan.price = $event" variant="underlined"></v-text-field></v-col>
 					</v-row>
+
 					<v-row v-else dense>
 						<v-col cols="12" sm="3"><v-text-field label="Storage (GBs)" :model-value="dialog_modify_plan.plan.limits.storage" disabled variant="underlined"></v-text-field></v-col>
 						<v-col cols="12" sm="3"><v-text-field label="Visits" :model-value="dialog_modify_plan.plan.limits.visits" disabled variant="underlined"></v-text-field></v-col>
 						<v-col cols="12" sm="3"><v-text-field label="Sites" :model-value="dialog_modify_plan.plan.limits.sites" disabled variant="underlined"></v-text-field></v-col>
 						<v-col cols="12" sm="3"><v-text-field label="Price" :model-value="dialog_modify_plan.plan.price" disabled variant="underlined"></v-text-field></v-col>
 					</v-row>
+
 					<v-row dense>
 						<v-col>
 							<h3 v-show="typeof dialog_modify_plan.plan.addons == 'object' && dialog_modify_plan.plan.addons">Addons</h3>
@@ -8434,22 +8450,52 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										<v-col>
 											<v-row align="center" no-gutters>
 												<v-col cols="auto" class="pa-2 d-flex align-center">
-													<v-progress-circular :size="50" :model-value="formatPercentage (( dialog_account.records.account.plan.usage.storage / ( dialog_account.records.account.plan.limits.storage * 1024 * 1024 * 1024 ) ) * 100 )" color="primary"><span v-html="account_storage_percentage( dialog_account.records.account )"></span></v-progress-circular>
-													<div class="ml-2" style="line-height: 1.2em;">
-														Storage <br /><small>{{ formatGBs( dialog_account.records.account.plan.usage.storage ) }}GB / {{ dialog_account.records.account.plan.limits.storage }}GB</small>
-													</div>
+													<template v-if="dialog_account.records.account.plan.billing_mode === 'per_site'">
+														<v-avatar variant="tonal" color="primary" size="50">
+															<v-icon>mdi-database</v-icon>
+														</v-avatar>
+														<div class="ml-2" style="line-height: 1.2em;">
+															Storage <br /><small>{{ formatGBs( dialog_account.records.account.plan.usage.storage ) }}GB</small>
+														</div>
+													</template>
+													<template v-else>
+														<v-progress-circular :size="50" :model-value="formatPercentage (( dialog_account.records.account.plan.usage.storage / ( dialog_account.records.account.plan.limits.storage * 1024 * 1024 * 1024 ) ) * 100 )" color="primary"><span v-html="account_storage_percentage( dialog_account.records.account )"></span></v-progress-circular>
+														<div class="ml-2" style="line-height: 1.2em;">
+															Storage <br /><small>{{ formatGBs( dialog_account.records.account.plan.usage.storage ) }}GB / {{ dialog_account.records.account.plan.limits.storage }}GB</small>
+														</div>
+													</template>
 												</v-col>
 												<v-col cols="auto" class="pa-2 d-flex align-center">
-													<v-progress-circular :size="50" :model-value="formatPercentage (( dialog_account.records.account.plan.usage.visits / dialog_account.records.account.plan.limits.visits * 100 ) )" color="primary"><span v-html="account_visits_percentage( dialog_account.records.account )"></span></v-progress-circular>
-													<div class="ml-2" style="line-height: 1.2em;">
-														Visits <br /><small>{{ formatLargeNumbers( dialog_account.records.account.plan.usage.visits ) }} / {{ formatLargeNumbers( dialog_account.records.account.plan.limits.visits ) }}</small>
-													</div>
+													<template v-if="dialog_account.records.account.plan.billing_mode === 'per_site'">
+														<v-avatar variant="tonal" color="primary" size="50">
+															<v-icon>mdi-chart-bar</v-icon>
+														</v-avatar>
+														<div class="ml-2" style="line-height: 1.2em;">
+															Visits <br /><small>{{ formatLargeNumbers( dialog_account.records.account.plan.usage.visits ) }}</small>
+														</div>
+													</template>
+													<template v-else>
+														<v-progress-circular :size="50" :model-value="formatPercentage (( dialog_account.records.account.plan.usage.visits / dialog_account.records.account.plan.limits.visits * 100 ) )" color="primary"><span v-html="account_visits_percentage( dialog_account.records.account )"></span></v-progress-circular>
+														<div class="ml-2" style="line-height: 1.2em;">
+															Visits <br /><small>{{ formatLargeNumbers( dialog_account.records.account.plan.usage.visits ) }} / {{ formatLargeNumbers( dialog_account.records.account.plan.limits.visits ) }}</small>
+														</div>
+													</template>
 												</v-col>
 												<v-col cols="auto" class="pa-2 d-flex align-center">
-													<v-progress-circular :size="50" :model-value="formatPercentage(( dialog_account.records.account.plan.usage.sites / dialog_account.records.account.plan.limits.sites * 100 ) )" color="blue-darken-4"><span v-html="account_site_percentage( dialog_account.records.account )"></span></v-progress-circular>
-													<div class="ml-2" style="line-height: 1.2em;">
-														Sites <br /><small>{{ dialog_account.records.account.plan.usage.sites }} / {{ dialog_account.records.account.plan.limits.sites }}</small>
-													</div>
+													<template v-if="dialog_account.records.account.plan.billing_mode === 'per_site'">
+														<v-avatar variant="tonal" color="blue-darken-4" size="50">
+															<v-icon>mdi-web</v-icon>
+														</v-avatar>
+														<div class="ml-2" style="line-height: 1.2em;">
+															Sites <br /><small>{{ dialog_account.records.account.plan.usage.sites }} Active</small>
+														</div>
+													</template>
+													<template v-else>
+														<v-progress-circular :size="50" :model-value="formatPercentage(( dialog_account.records.account.plan.usage.sites / dialog_account.records.account.plan.limits.sites * 100 ) )" color="blue-darken-4"><span v-html="account_site_percentage( dialog_account.records.account )"></span></v-progress-circular>
+														<div class="ml-2" style="line-height: 1.2em;">
+															Sites <br /><small>{{ dialog_account.records.account.plan.usage.sites }} / {{ dialog_account.records.account.plan.limits.sites }}</small>
+														</div>
+													</template>
 												</v-col>
 											</v-row>
 										</v-col>
@@ -8485,7 +8531,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 																</tr>
 															</thead>
 															<tbody>
-																<tr>
+																<tr v-if="dialog_account.records.account.plan.billing_mode === 'per_site'">
+																	<td>Plan</td>
+																	<td>Per Site</td>
+																	<td>{{ dialog_account.records.account.plan.usage.sites }}</td>
+																	<td class="text-right">${{ dialog_account.records.account.plan.price }}</td>
+																	<td class="text-right">${{ (dialog_account.records.account.plan.usage.sites * dialog_account.records.account.plan.price).toFixed(2) }}</td>
+																</tr>
+																<tr v-else>
 																	<td>Plan</td>
 																	<td>{{ dialog_account.records.account.plan.name }}</td>
 																	<td>1</td>
@@ -10855,73 +10908,112 @@ const app = createApp({
 		},
 		plan_usage_estimate() {
 			if ( typeof this.dialog_account.records.account.plan == 'object' ) {
-				extras = 0
-				addons = 0
-				credits = 0
-				charges = 0
-				this.dialog_account.records.account.plan.addons.forEach( item => {
-					if ( item.price != "" ) {
-						addons = addons + parseFloat( ( item.quantity * item.price ).toFixed(2) )
-					}
-				})
-				this.dialog_account.records.account.plan.credits.forEach( item => {
-					if ( item.price != "" ) {
-						credits = credits + parseFloat( ( item.quantity * item.price ).toFixed(2) )
-					}
-				})
-				this.dialog_account.records.account.plan.charges.forEach( item => {
-					if ( item.price != "" ) {
-						charges = charges + parseFloat( ( item.quantity * item.price ).toFixed(2) )
-					}
-				})
-				units = [] 
+				const plan = this.dialog_account.records.account.plan;
+				let extras = 0
+				let addons = 0
+				let credits = 0
+				let charges = 0
+				let base_cost = 0
+
+				// Calculate Addons, Credits, Charges (Common to both modes)
+				if ( plan.addons ) {
+					plan.addons.forEach( item => {
+						if ( item.price != "" ) {
+							addons = addons + parseFloat( ( item.quantity * item.price ).toFixed(2) )
+						}
+					})
+				}
+				if ( plan.credits ) {
+					plan.credits.forEach( item => {
+						if ( item.price != "" ) {
+							credits = credits + parseFloat( ( item.quantity * item.price ).toFixed(2) )
+						}
+					})
+				}
+				if ( plan.charges ) {
+					plan.charges.forEach( item => {
+						if ( item.price != "" ) {
+							charges = charges + parseFloat( ( item.quantity * item.price ).toFixed(2) )
+						}
+					})
+				}
+
+				// Determine Interval Label
+				let units = [] 
 				units[1] = "month"
 				units[3] = "quarter"
 				units[6] = "biannually"
 				units[12] = "year"
-				unit = units[ this.dialog_account.records.account.plan.interval ]
-				extra_sites = parseInt( this.dialog_account.records.account.plan.usage.sites ) - parseInt( this.dialog_account.records.account.plan.limits.sites )
-				extra_storage = Math.ceil ( ( ( parseInt( this.dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( this.dialog_account.records.account.plan.limits.storage ) ) / 10 )
-				extra_visits = Math.ceil ( ( parseInt( this.dialog_account.records.account.plan.usage.visits ) - parseInt( this.dialog_account.records.account.plan.limits.visits ) ) / parseInt ( this.configurations.usage_pricing.traffic.quantity ) )
-				if ( extra_sites > 0 ) {
-					unit_price = this.configurations.usage_pricing.sites.cost
-					if ( this.configurations.usage_pricing.sites.interval != this.dialog_account.records.account.plan.interval ) {
-						unit_price = this.configurations.usage_pricing.sites.cost / this.configurations.usage_pricing.sites.interval
-						unit_price = unit_price * this.dialog_account.records.account.plan.interval
+				let unit = units[ plan.interval ]
+
+				// Check Billing Mode
+				let billing_mode = plan.billing_mode || 'standard';
+
+				if ( billing_mode === 'per_site' ) {
+					// --- Per Site Mode Logic ---
+					// Price is treated as "Price Per Site"
+					let site_count = parseInt( plan.usage.sites || 0 );
+					let price_per_site = parseFloat( plan.price || 0 );
+					
+					base_cost = site_count * price_per_site;
+					// Extras (overages) remain 0 in this mode
+				} else {
+					// --- Standard Mode Logic ---
+					// Price is treated as "Base Plan Price" + Overages
+					base_cost = parseFloat( plan.price || 0 );
+
+					let extra_sites = parseInt( plan.usage.sites ) - parseInt( plan.limits.sites )
+					let extra_storage = Math.ceil ( ( ( parseInt( plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( plan.limits.storage ) ) / 10 )
+					let extra_visits = Math.ceil ( ( parseInt( plan.usage.visits ) - parseInt( plan.limits.visits ) ) / parseInt ( this.configurations.usage_pricing.traffic.quantity ) )
+
+					if ( extra_sites > 0 ) {
+						let unit_price = this.configurations.usage_pricing.sites.cost
+						if ( this.configurations.usage_pricing.sites.interval != plan.interval ) {
+							unit_price = this.configurations.usage_pricing.sites.cost / this.configurations.usage_pricing.sites.interval
+							unit_price = unit_price * plan.interval
+						}
+						extras = extras + ( extra_sites * unit_price )
 					}
-					extras = extras + ( extra_sites * unit_price )
-				}
-				if ( extra_storage > 0 ) {
-					unit_price = this.configurations.usage_pricing.storage.cost
-					if ( this.configurations.usage_pricing.storage.interval != this.dialog_account.records.account.plan.interval ) {
-						unit_price = this.configurations.usage_pricing.storage.cost / this.configurations.usage_pricing.storage.interval
-						unit_price = unit_price * this.dialog_account.records.account.plan.interval
+					if ( extra_storage > 0 ) {
+						let unit_price = this.configurations.usage_pricing.storage.cost
+						if ( this.configurations.usage_pricing.storage.interval != plan.interval ) {
+							unit_price = this.configurations.usage_pricing.storage.cost / this.configurations.usage_pricing.storage.interval
+							unit_price = unit_price * plan.interval
+						}
+						extras = extras + ( extra_storage * unit_price )
 					}
-					extras = extras + ( extra_storage * unit_price )
-				}
-				if ( extra_visits > 0 ) {
-					unit_price = this.configurations.usage_pricing.traffic.cost
-					if ( this.configurations.usage_pricing.traffic.interval != this.dialog_account.records.account.plan.interval ) {
-						unit_price = this.configurations.usage_pricing.traffic.cost / this.configurations.usage_pricing.traffic.interval
-						unit_price = unit_price * this.dialog_account.records.account.plan.interval
+					if ( extra_visits > 0 ) {
+						let unit_price = this.configurations.usage_pricing.traffic.cost
+						if ( this.configurations.usage_pricing.traffic.interval != plan.interval ) {
+							unit_price = this.configurations.usage_pricing.traffic.cost / this.configurations.usage_pricing.traffic.interval
+							unit_price = unit_price * plan.interval
+						}
+						extras = extras + ( extra_visits * unit_price )
 					}
-					extras = extras + ( extra_visits * unit_price )
 				}
-				total = ( parseFloat( addons ) + parseFloat( charges ) - parseFloat( credits )+ parseFloat( extras ) + parseFloat( this.dialog_account.records.account.plan.price ) ).toFixed(2)
+
+				// Final Calculation
+				let total = ( parseFloat( addons ) + parseFloat( charges ) - parseFloat( credits ) + parseFloat( extras ) + parseFloat( base_cost ) ).toFixed(2)
+				
 				if ( total < 0 ) {
 					total = 0;
 				}
-				return `$${total} <small>per ${unit}</small>`
+				
+				let output = `$${total}`;
+				if ( typeof unit != 'undefined' ) {
+					output += ` <small>per ${unit}</small>`;
+				}
+				return output;
 			}
 			return ""
-		}
+		},
 	},
 	methods: {
 		toggleTheme() {
-            this.theme = this.theme === 'light' ? 'dark' : 'light';
-            this.$vuetify.theme.global.name.value = this.theme;
-            localStorage.setItem('captaincore-theme', this.theme);
-        },
+			this.theme = this.theme === 'light' ? 'dark' : 'light';
+			this.$vuetify.theme.global.name.value = this.theme;
+			localStorage.setItem('captaincore-theme', this.theme);
+		},
 		updateRoute( href ) {
 			// Remove trailing slash
 			if ( href.length > 1 && href.slice(-1) == "/" ) {
@@ -16755,6 +16847,12 @@ const app = createApp({
 			this.dialog_modify_plan.hosting_plans = JSON.parse(JSON.stringify( this.configurations.hosting_plans ))
 			this.dialog_modify_plan.hosting_plans.push( {"name":"Custom","interval":"12","price":"","limits":{"visits":"","storage":"","sites":""}} )
 			this.dialog_modify_plan.plan = JSON.parse(JSON.stringify( this.dialog_account.records.account.plan ))
+			
+            // Default billing mode if not set
+            if ( typeof this.dialog_modify_plan.plan.billing_mode == "undefined" ) {
+				this.dialog_modify_plan.plan.billing_mode = "standard"
+			}
+
 			// Adds commas
 			if ( this.dialog_modify_plan.plan.limits.visits != null ) {
 				this.dialog_modify_plan.plan.limits.visits = this.dialog_modify_plan.plan.limits.visits.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
@@ -16858,6 +16956,9 @@ const app = createApp({
 			this.dialog_modify_plan.plan[type].splice(index, 1);
 		},
 		loadHostingPlan( selected_plan ) {
+			if ( selected_plan ) {
+				this.dialog_modify_plan.selected_plan = selected_plan
+			}
 			current_auto_pay = this.dialog_modify_plan.plan.auto_pay
 			current_auto_switch = this.dialog_modify_plan.plan.auto_switch
 			billing_user_id = this.dialog_modify_plan.plan.billing_user_id
@@ -16879,6 +16980,9 @@ const app = createApp({
 			hosting_plan = this.dialog_modify_plan.hosting_plans.filter( plan => plan.name == selected_plan )[0]
 			if ( typeof hosting_plan == "undefined" ) {
 				return
+			}
+			if ( typeof hosting_plan.billing_mode == "undefined" ) {
+				hosting_plan.billing_mode = "standard"
 			}
 			hosting_plan.addons = current_addons
 			hosting_plan.charges = current_charges
@@ -16904,11 +17008,23 @@ const app = createApp({
 		},
 		calculateHostingPlan() {
 			original_plan = this.dialog_modify_plan.hosting_plans.filter( p => p.name == this.dialog_modify_plan.selected_plan )[0]
-			if ( this.dialog_modify_plan.plan.interval == original_plan.interval ) {
-				this.dialog_modify_plan.plan.price = JSON.parse(JSON.stringify( original_plan.price ))
+
+			if ( ! original_plan.price || original_plan.price === "" ) {
+				this.dialog_modify_plan.plan.price = "";
+				return;
+			}
+
+			// Ensure we are working with numbers
+			let original_price = parseFloat(original_plan.price);
+			let original_interval = parseInt(original_plan.interval);
+			let current_interval = parseInt(this.dialog_modify_plan.plan.interval);
+
+			if ( current_interval == original_interval ) {
+				this.dialog_modify_plan.plan.price = original_price;
 			} else {
-				unit_price = original_plan.price / original_plan.interval
-				this.dialog_modify_plan.plan.price = unit_price * this.dialog_modify_plan.plan.interval
+				// Calculate monthly unit price then multiply by new interval
+				let unit_price = original_price / original_interval;
+				this.dialog_modify_plan.plan.price = (unit_price * current_interval).toFixed(2);
 			}
 		},
 		PushProductionToStaging( site_id ) {
