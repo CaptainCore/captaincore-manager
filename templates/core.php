@@ -12465,7 +12465,19 @@ const app = createApp({
 			this.terminal_schedule.date = dayjs(newDate).format('YYYY-MM-DD');
 			this.terminal_schedule.menu_date = false;
 		},
+		openSaveAsRecipe() {
+			if (!this.script.code || this.script.code.trim() === "") return;
 
+			// reset recipe object
+			this.new_recipe.title = ""; 
+			this.new_recipe.public = 1;
+
+			// Pre-fill content with terminal input
+			this.new_recipe.content = this.script.code; 
+
+			// Open the existing New Recipe dialog
+			this.new_recipe.show = true;
+		},
 		openTerminalSchedule() {
 			if (!this.script.code || this.script.code.trim() === "") return;
 			
@@ -15031,7 +15043,6 @@ const app = createApp({
 
 			// 3. Open Terminal
 			this.view_console.terminal_open = true;
-			this.view_console.show_sidebar = true;
 
 			// 4. Populate Terminal Targets based on the account's sites
 			// We filter to find the "Production" environment for these sites to target by default
