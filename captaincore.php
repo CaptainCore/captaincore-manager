@@ -72,16 +72,54 @@ add_action( 'schedule_mailgun_verify', '\CaptainCore\Providers\Mailgun::verify',
 // Hook to run Mailgun setup retry if rate-limited
 add_action( 'schedule_mailgun_retry', '\CaptainCore\Providers\Mailgun::setup', 10, 1 );
 
+/* -------------------------------------------------------------------------
+ *  CUSTOM EMAIL TRIGGERS
+ * ------------------------------------------------------------------------- */
+
 function captaincore_failed_notify( $order_id, $old_status, $new_status ){
 	echo "Woocommerce  $order_id, $old_status, $new_status ";
     if ( $new_status == 'failed' and $old_status != "failed" ){
 		$order      = wc_get_order( $order_id );
 		$account_id = $order->get_meta( "captaincore_account_id" );
-		( new CaptainCore\Account( $account_id, true ) )->failed_notify();
+		( new CaptainCore\Account( $account_id, true ) )->failed_notify( $order_id );
     }
 }
 add_action( 'woocommerce_order_status_changed', 'captaincore_failed_notify', 10, 3);
 
+// 1. Customer Receipt (When order is marked completed)
+add_action( 'woocommerce_order_status_completed', function( $order_id ) {
+    $order = wc_get_order( $order_id );
+    // Ensure we don't send duplicates if status bounces, check meta
+    if ( $order && $order->get_meta( 'captaincore_account_id' ) && ! $order->get_meta( '_captaincore_receipt_sent' ) ) {
+        \CaptainCore\Mailer::send_customer_receipt( $order_id );
+        $order->update_meta_data( '_captaincore_receipt_sent', 'true' );
+        $order->save();
+    }
+}, 20, 1 );
+
+// 2. Admin New Order (Processing, On-Hold, or Completed)
+function captaincore_trigger_admin_new_order( $order_id ) {
+    if ( ! $order_id ) return;
+
+    $order = wc_get_order( $order_id );
+    if ( ! $order ) return;
+
+    // Check if we already sent the admin email to avoid duplicates
+    if ( $order->get_meta( '_captaincore_admin_email_sent' ) ) return;
+    
+    // Only for CaptainCore orders
+    if ( ! $order->get_meta( 'captaincore_account_id' ) ) return;
+
+    \CaptainCore\Mailer::send_admin_new_order( $order_id );
+    
+    // Mark as sent
+    $order->update_meta_data( '_captaincore_admin_email_sent', 'true' );
+    $order->save();
+}
+
+// Hook into multiple points to catch successful payments
+add_action( 'woocommerce_order_status_completed', 'captaincore_trigger_admin_new_order', 25, 1 );
+add_action( 'woocommerce_payment_complete', 'captaincore_trigger_admin_new_order', 25, 1 );
 
 function captaincore_missive_func( WP_REST_Request $request ) {
 
