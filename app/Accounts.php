@@ -87,8 +87,8 @@ class Accounts extends DB {
             }
         }
 
-        if ( $plan->status == "" ) {
-            $plan->status == "pending";
+        if ( empty( $plan->status ) ) {
+            $plan->status = "pending";
         }
         
         // If the plan name is the same but the interval changed, recalculate the price.
@@ -117,6 +117,7 @@ class Accounts extends DB {
         }
 
         $plan->name              = empty( $new_plan->name ) ? "" : $new_plan->name;
+        $plan->billing_mode      = empty( $new_plan->billing_mode ) ? "standard" : $new_plan->billing_mode;
         $plan->addons            = empty( $new_plan->addons ) ? "" : $new_plan->addons;
         $plan->credits           = empty( $new_plan->credits ) ? "" : $new_plan->credits;
         $plan->charges           = empty( $new_plan->charges ) ? "" : $new_plan->charges;
