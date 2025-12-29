@@ -4432,7 +4432,7 @@ function captaincore_local_action_callback() {
 				$errors[] = $result->get_error_message();
 			} else {
 				( new CaptainCore\User( $result, true ) )->assign_accounts( $account->account_ids );
-				wp_new_user_notification( $result, null, 'user' );
+				CaptainCore\Mailer::notify_new_user( $result );
 			}
 		}
 
@@ -6588,7 +6588,7 @@ function disable_404_redirection_for_captaincore($redirect_url) {
 	$captaincore_pages = ['accounts', 'billing', 'cookbook', 'configurations', 'connect', 'defaults', 'domains', 'handbook', 'health', 'keys', 'login', 'profile', 'sites', 'subscriptions', 'users'];
 	if ( $configurations->path == "/" ) {
 		foreach( $captaincore_pages as $captaincore_page ) {
-			if ( strpos( $wp->request, "{$current_page}/" ) !== false ) {
+			if ( strpos( $wp->request, "{$captaincore_page}/" ) !== false ) {
 				return false;
 			}
 		}
@@ -6605,6 +6605,127 @@ function disable_404_redirection_for_captaincore($redirect_url) {
 		}
 	}
     return $redirect_url;
+}
+
+/* -------------------------------------------------------------------------
+ *  CUSTOM LOGIN URL REDIRECT
+ * ------------------------------------------------------------------------- */
+
+add_filter( 'login_url', 'captaincore_override_login_url', 10, 3 );
+
+function captaincore_override_login_url( $login_url, $redirect, $force_reauth ) {
+    // 1. Get the CaptainCore mount path (e.g., "/account/")
+    $configurations = \CaptainCore\Configurations::get();
+    $path           = isset( $configurations->path ) ? $configurations->path : '/account/';
+    
+    // 2. Build the new login URL (e.g., https://anchor.localhost/account/login)
+    // The Vue router defined in templates/core.php handles the '/login' endpoint
+    $custom_login_url = home_url( untrailingslashit( $path ) . '/login' );
+
+    // 3. Preserve redirect parameters if they exist
+    if ( ! empty( $redirect ) ) {
+        $custom_login_url = add_query_arg( 'redirect_to', urlencode( $redirect ), $custom_login_url );
+    }
+
+    return $custom_login_url;
+}
+
+/* -------------------------------------------------------------------------
+ *  OVERRIDE DEFAULT WP PASSWORD RESET EMAIL
+ * ------------------------------------------------------------------------- */
+
+add_filter( 'retrieve_password_message', 'captaincore_custom_password_reset_email', 10, 4 );
+
+function captaincore_custom_password_reset_email( $message, $key, $user_login, $user_data ) {
+    
+    // Trigger our custom HTML email
+    CaptainCore\Mailer::send_password_reset( $user_data, $key );
+
+    // Return false to prevent WordPress from sending the default plain-text email
+    return false;
+}
+
+/* -------------------------------------------------------------------------
+ *  CUSTOM LOGIN PAGE BRANDING
+ * ------------------------------------------------------------------------- */
+
+// 1. Change the Logo Image and Button Colors using CSS
+add_action( 'login_enqueue_scripts', 'captaincore_login_stylesheet' );
+function captaincore_login_stylesheet() {
+    $config = \CaptainCore\Configurations::get();
+    
+    // Fetch settings or set defaults
+    $logo_url      = ! empty( $config->logo ) ? $config->logo : '';
+    $brand_color   = ! empty( $config->colors->primary ) ? $config->colors->primary : '#0073aa'; // Default WP Blue
+    $accent_color  = ! empty( $config->colors->accent ) ? $config->colors->accent : '#f0f0f1';
+    
+    ?>
+    <style type="text/css">
+        /* Background Styling */
+        body.login {
+            background-color: #f7fafc; /* Optional: Change page background */
+        }
+
+        /* Custom Logo */
+        #login h1 a, .login h1 a {
+            background-image: url(<?php echo esc_url( $logo_url ); ?>);
+            height: 80px;
+            width: 320px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            padding-bottom: 30px;
+        }
+
+        /* Primary Buttons (Login, Save Password, Generate) */
+        .wp-core-ui .button-primary {
+            background-color: <?php echo esc_attr( $brand_color ); ?> !important;
+            border-color: <?php echo esc_attr( $brand_color ); ?> !important;
+            text-shadow: none !important;
+            box-shadow: none !important;
+            transition: opacity 0.3s ease;
+        }
+        .wp-core-ui .button-primary:hover,
+        .wp-core-ui .button-primary:focus {
+            opacity: 0.9;
+        }
+
+        /* Secondary Buttons */
+        .wp-core-ui .button-secondary {
+            color: <?php echo esc_attr( $brand_color ); ?> !important;
+            border-color: <?php echo esc_attr( $brand_color ); ?> !important;
+        }
+
+        /* Links (Lost Password, Back to Site) */
+        .login #nav a, .login #backtoblog a {
+            color: #718096 !important;
+            transition: color 0.3s ease;
+        }
+        .login #nav a:hover, .login #backtoblog a:hover {
+            color: <?php echo esc_attr( $brand_color ); ?> !important;
+        }
+
+        /* Form Input Focus */
+        input[type=text]:focus, 
+        input[type=password]:focus, 
+        input[type=email]:focus {
+            border-color: <?php echo esc_attr( $brand_color ); ?> !important;
+            box-shadow: 0 0 0 1px <?php echo esc_attr( $brand_color ); ?> !important;
+        }
+    </style>
+    <?php
+}
+
+// 2. Change the Logo Link URL (Clicking logo goes to homepage instead of wordpress.org)
+add_filter( 'login_headerurl', 'captaincore_login_logo_url' );
+function captaincore_login_logo_url() {
+    return home_url();
+}
+
+// 3. Change the Logo Title Text
+add_filter( 'login_headertext', 'captaincore_login_logo_url_title' );
+function captaincore_login_logo_url_title() {
+    return get_bloginfo( 'name' );
 }
 
 function captaincore_head_content() {

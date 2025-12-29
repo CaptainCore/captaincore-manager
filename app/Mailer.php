@@ -543,9 +543,108 @@ class Mailer {
         );
     }
     
+    /* -------------------------------------------------------------------------
+     *  6. NEW USER NOTIFICATION
+     * ------------------------------------------------------------------------- */
     static public function notify_new_user( $user_id = "" ) {
-        self::prepare();
-        wp_mail();
+        $user = get_userdata( $user_id );
+        if ( ! $user ) return;
+
+        // 1. Prepare Data
+        $config        = Configurations::get();
+        $brand_color   = $config->colors->primary ?? '#0D47A1';
+        $site_name     = get_bloginfo( 'name' ); // e.g., "Anchor Hosting"
+        $admin_email   = get_option( 'admin_email' );
+        
+        // Handle First Name or fallback to Login
+        $first_name = ! empty( $user->first_name ) ? $user->first_name : $user->user_login;
+
+        // 2. Generate One-time Password Set-up Link
+        $key = get_password_reset_key( $user );
+        if ( is_wp_error( $key ) ) {
+            return;
+        }
+        $action_link = network_site_url( "wp-login.php?action=rp&key=$key&login=" . rawurlencode( $user->user_login ), 'login' );
+
+        // 3. Construct Body HTML
+        $content_html = "
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+                <p>Welcome to {$site_name}. With the following, you can sign into your {$site_name} account in order to manage WordPress hosting services. Let me know at <a href='mailto:{$admin_email}' style='color: {$brand_color}; text-decoration: none;'>{$admin_email}</a> if you have any questions.</p>
+                
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin: 25px 0; text-align: center;'>
+                    <p style='margin-bottom: 5px; font-size: 14px; color: #718096; text-transform: uppercase; letter-spacing: 0.05em;'>Your Login</p>
+                    <div style='font-size: 20px; font-weight: 700; color: #2d3748; margin-bottom: 20px;'>{$user->user_login}</div>
+                    
+                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 0 auto;'>
+                        <tr>
+                            <td style='border-radius: 4px; background-color: {$brand_color};'>
+                                <a href='{$action_link}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 4px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>One time set-up password link &rarr;</a>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <p style='margin-top: 30px;'>
+                    Austin Ginder
+                </p>
+            </div>
+        ";
+
+        // 4. Send using the established layout
+        self::send_email_with_layout( 
+            $user->user_email, 
+            "Welcome to {$site_name}", 
+            "Hey {$first_name},", 
+            "Account Created", 
+            $content_html 
+        );
+    }
+
+    /* -------------------------------------------------------------------------
+     *  7. PASSWORD RESET NOTIFICATION
+     * ------------------------------------------------------------------------- */
+    static public function send_password_reset( $user, $key ) {
+        if ( ! $user ) return;
+
+        // 1. Prepare Data
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $site_name   = get_bloginfo( 'name' );
+        $login       = $user->user_login;
+
+        // 2. Generate Reset Link (Points to wp-login.php?action=rp)
+        $reset_link = network_site_url( "wp-login.php?action=rp&key=$key&login=" . rawurlencode( $login ), 'login' );
+
+        // 3. Construct Body HTML
+        $content_html = "
+            <div style='text-align: center; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+                <p>Someone has requested a password reset for the following account:</p>
+                
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin: 20px 0; display: inline-block;'>
+                    <strong style='color: #2d3748;'>{$login}</strong>
+                </div>
+
+                <p>If this was a mistake, just ignore this email and nothing will happen.</p>
+                <p>To reset your password, click the button below:</p>
+
+                <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 30px auto;'>
+                    <tr>
+                        <td style='border-radius: 4px; background-color: {$brand_color};'>
+                            <a href='{$reset_link}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 4px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Reset Password &rarr;</a>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        ";
+
+        // 4. Send email
+        self::send_email_with_layout( 
+            $user->user_email, 
+            "Password Reset Request", 
+            "Reset Password", 
+            $site_name, 
+            $content_html 
+        );
     }
 
 }
