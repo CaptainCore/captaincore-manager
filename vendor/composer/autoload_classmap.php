@@ -171,6 +171,7 @@ return array(
     'CaptainCore\\Remote\\Mailgun' => $baseDir . '/app/Remote/Mailgun.php',
     'CaptainCore\\Remote\\Missive' => $baseDir . '/app/Remote/Missive.php',
     'CaptainCore\\Remote\\Spaceship' => $baseDir . '/app/Remote/Spaceship.php',
+    'CaptainCore\\Router' => $baseDir . '/app/Router.php',
     'CaptainCore\\Run' => $baseDir . '/app/Run.php',
     'CaptainCore\\Scripts' => $baseDir . '/app/Scripts.php',
     'CaptainCore\\Site' => $baseDir . '/app/Site.php',

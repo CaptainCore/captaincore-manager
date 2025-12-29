@@ -9128,8 +9128,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<div class="d-flex gap-2 mr-4">
 						<!-- Red: Close -->
 						<div class="window-dot bg-red" @click="view_console.terminal_open = false" style="cursor:pointer"></div>
-						<!-- Yellow: Toggle Sidebar -->
-						<div class="window-dot bg-yellow" @click="view_console.show_sidebar = !view_console.show_sidebar" style="cursor:pointer" title="Toggle Sidebar"></div>
+						<div class="window-dot bg-yellow"></div>
 						<!-- Green: Fullscreen -->
 						<div class="window-dot bg-green" @click="toggleFullscreen" style="cursor:pointer" title="Toggle Fullscreen"></div>
 					</div>
@@ -9142,88 +9141,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<span v-else>{{ view_console.selected_targets.length }} environments selected</span>
 					</span>
 
-					<v-btn icon="mdi-page-layout-sidebar-left" variant="text" density="compact" size="small" @click="view_console.show_sidebar = !view_console.show_sidebar" :color="view_console.show_sidebar ? 'primary' : 'grey'"></v-btn>
 					<v-btn icon="mdi-close" variant="text" density="compact" size="small" @click="view_console.terminal_open = false"></v-btn>
 				</div>
 				<div class="d-flex flex-grow-1" style="overflow: hidden;">
-					<v-expand-x-transition>
-						<div v-if="view_console.show_sidebar" class="terminal-sidebar d-flex flex-column border-e bg-grey-darken-4" style="width: 300px; min-width: 300px; height: 100%;">
-							<div class="flex-shrink-0">
-								<v-tabs v-model="view_console.sidebar_tab" density="compact" color="primary" grow class="border-b">
-									<v-tab value="system" class="text-caption font-weight-bold">System</v-tab>
-									<v-tab value="cookbook" class="text-caption font-weight-bold">Cookbook</v-tab>
-								</v-tabs>
-							</div>
-
-							<div class="flex-grow-1 overflow-hidden">
-								<v-window v-model="view_console.sidebar_tab" class="fill-height">
-									
-									<v-window-item value="system" class="fill-height overflow-y-auto">
-										<v-list class="bg-transparent" density="compact">
-											<template v-for="tool in system_tools" :key="tool.method">
-												<!-- Only render if not adminOnly OR if user is admin -->
-												<v-list-item 
-													v-if="!tool.adminOnly || role == 'administrator'"
-													:title="tool.title" 
-													@click="runSystemTool(tool.method)" 
-													link
-												>
-													<template v-slot:prepend>
-														<v-icon :icon="tool.icon" size="small" class="mr-2 text-primary"></v-icon>
-													</template>
-												</v-list-item>
-											</template>
-										</v-list>
-									</v-window-item>
-
-									<v-window-item value="cookbook" class="fill-height overflow-y-auto">
-										<div class="px-4 pt-4 pb-2 sticky-top bg-grey-darken-4" style="position: sticky; top: 0; z-index: 2;">
-											<v-text-field v-model="view_console.search" label="Search Recipes" variant="outlined" density="compact" prepend-inner-icon="mdi-magnify" hide-details bg-color="rgba(0,0,0,0.3)"></v-text-field>
-										</div>
-										<v-list class="bg-transparent" density="compact">
-											<!-- Wrap each item in a tooltip -->
-											<v-tooltip 
-												v-for="recipe in filteredQuickRunRecipes" 
-												:key="recipe.recipe_id" 
-												:text="recipe.title" 
-												location="right" 
-												max-width="300"
-												:disabled="recipe.title.length <= 24"
-											>
-												<template v-slot:activator="{ props }">
-													<v-list-item 
-														v-bind="props" 
-														@click="handleTerminalRecipeClick(recipe)" 
-														link
-													>
-														<template v-slot:prepend>
-															<v-icon 
-																:icon="recipe.public == 1 ? 'mdi-package-variant-closed' : 'mdi-script-text-outline'" 
-																size="small" 
-																class="mr-2" 
-																:class="recipe.public == 1 ? 'text-primary' : 'opacity-60'">
-															</v-icon>
-														</template>
-														
-														<!-- Use the title slot explicitly so we can force truncation -->
-														<v-list-item-title class="text-truncate">
-															{{ recipe.title }}
-														</v-list-item-title>
-
-														<template v-slot:append>
-															<v-icon v-if="recipe.public == 1" size="x-small" class="text-disabled">mdi-lock-outline</v-icon>
-														</template>
-													</v-list-item>
-												</template>
-											</v-tooltip>
-										</v-list>
-									</v-window-item>
-
-								</v-window>
-							</div>
-						</div>
-					</v-expand-x-transition>
-
+					
 					<!-- RIGHT MAIN (Output & Input - Unchanged from previous step, verify structure remains) -->
 					<div class="terminal-main">
 						<div class="terminal-output" ref="terminalBody">
@@ -9407,13 +9328,138 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 												</v-list>
 											</v-card>
 										</v-menu>
+										<v-menu 
+											v-model="view_console.recipe_menu" 
+											:close-on-content-click="false" 
+											location="top start" 
+											offset="10"
+											max-height="400"
+										>
+											<template v-slot:activator="{ props }">
+												<v-btn 
+													v-bind="props"
+													icon
+													density="compact" 
+													variant="plain"
+													class="mr-2"
+													:color="view_console.recipe_menu ? 'primary' : 'grey'"
+													title="Cookbook & System Tools"
+													style="background:none;"
+												>
+													<v-icon>mdi-book-open-page-variant-outline</v-icon>
+												</v-btn>
+											</template>
+
+											<v-card width="350" class="rounded-lg" elevation="10" theme="dark" border>
+												<!-- Header / Search -->
+												<div class="pa-2 border-b bg-grey-darken-4 sticky-top">
+													<v-text-field
+														v-model="view_console.recipe_menu_search"
+														ref="recipeSearchInput"
+														density="compact"
+														variant="outlined"
+														placeholder="Search..."
+														prepend-inner-icon="mdi-magnify"
+														hide-details
+														class="text-caption"
+														spellcheck="false"
+													></v-text-field>
+													
+													<v-tabs v-model="view_console.recipe_menu_tab" density="compact" color="primary" grow class="mt-2" height="32">
+														<v-tab value="system" class="text-caption">System</v-tab>
+														<v-tab value="cookbook" class="text-caption">Cookbook</v-tab>
+													</v-tabs>
+												</div>
+
+												<!-- Content -->
+												<div style="height: 300px; overflow-y: auto;" class="bg-grey-darken-3">
+													<v-window v-model="view_console.recipe_menu_tab">
+														
+														<v-window-item value="system">
+															<v-list density="compact" class="bg-transparent recipe-menu-list">
+																<template v-for="tool in filteredSystemToolsMenu" :key="tool.method">
+																	<v-list-item 
+																		v-if="!tool.adminOnly || role == 'administrator'"
+																		:title="tool.title" 
+																		@click="runSystemTool(tool.method); view_console.recipe_menu = false" 
+																		link
+																		class="text-caption"
+																	>
+																		<template v-slot:prepend>
+																			<v-icon :icon="tool.icon" size="small" class="mr-2 text-primary"></v-icon>
+																		</template>
+																	</v-list-item>
+																</template>
+																<div v-if="filteredSystemToolsMenu.length === 0" class="pa-4 text-center text-caption text-grey">
+																	No tools match your search.
+																</div>
+															</v-list>
+														</v-window-item>
+
+														<v-window-item value="cookbook">
+															<v-list density="compact" class="bg-transparent recipe-menu-list">
+																<v-tooltip 
+																	v-for="recipe in filteredRecipeMenuRecipes" 
+																	:key="recipe.recipe_id" 
+																	:text="recipe.title" 
+																	location="right" 
+																	max-width="300"
+																	:disabled="recipe.title.length <= 30"
+																>
+																	<template v-slot:activator="{ props }">
+																		<v-list-item 
+																			v-bind="props" 
+																			@click="handleTerminalRecipeClick(recipe); view_console.recipe_menu = false" 
+																			link
+																			class="text-caption"
+																		>
+																			<template v-slot:prepend>
+																				<v-icon 
+																					:icon="recipe.public == 1 ? 'mdi-package-variant-closed' : 'mdi-script-text-outline'" 
+																					size="small" 
+																					class="mr-2" 
+																					:class="recipe.public == 1 ? 'text-primary' : 'opacity-60'">
+																				</v-icon>
+																			</template>
+																			
+																			<v-list-item-title class="text-truncate">
+																				{{ recipe.title }}
+																			</v-list-item-title>
+
+																			<template v-slot:append>
+																				<v-icon v-if="recipe.public == 1" size="x-small" class="text-disabled">mdi-lock-outline</v-icon>
+																			</template>
+																		</v-list-item>
+																	</template>
+																</v-tooltip>
+																<div v-if="filteredRecipeMenuRecipes.length === 0" class="pa-4 text-center text-caption text-grey">
+																	No recipes match your search.
+																</div>
+															</v-list>
+														</v-window-item>
+
+													</v-window>
+												</div>
+											</v-card>
+										</v-menu>
 
 										<span class="text-green-accent-3 font-weight-bold mr-1">$</span>
 									</div>
 								</template>
 
 								<template v-slot:append>
-									<!-- Schedule Button -->
+									<v-btn
+										variant="plain"
+										icon="mdi-content-save-outline"
+										density="compact"
+										size="normal"
+										color="grey-lighten-1"
+										class="mr-1"
+										title="Save as Recipe"
+										:disabled="!script.code"
+										style="background: none;"
+										@click="openSaveAsRecipe"
+									></v-btn>
 									<v-btn
 										variant="plain"
 										icon="mdi-clock-plus-outline"
@@ -9426,8 +9472,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										style="background: none;"
 										@click="openTerminalSchedule"
 									></v-btn>
-									
-									<!-- Run Button -->
 									<v-btn 
 										variant="tonal" 
 										density="comfortable"
@@ -10066,7 +10110,7 @@ const app = createApp({
 		upload: [],
 		selected_site: {},
 		active_console: 0,
-		view_console: { show: false, terminal_open: false, show_sidebar: true, fullscreen: false, selected_targets: [], search: '', sidebar_tab: 'system', target_search: '', target_menu: false, target_limit: 100 },
+		view_console: { show: false, terminal_open: false, fullscreen: false, selected_targets: [], search: '', target_search: '', target_menu: false, target_limit: 100, recipe_menu: false, recipe_menu_search: '', recipe_menu_tab: 'system' },
 			terminal_schedule: {
 			show: false,
 			date: "",
@@ -10168,11 +10212,18 @@ const app = createApp({
 		runningJobs() {
 			this.view_console.show = true
 		},
-		'view_console.show_sidebar'(val) {
-        	localStorage.setItem('captaincore-terminal-sidebar', val);
-		},
 		'view_console.fullscreen'(val) {
 			localStorage.setItem('captaincore-terminal-fullscreen', val);
+		},
+		'view_console.recipe_menu'(isOpen) {
+			if (isOpen) {
+				this.view_console.recipe_menu_search = '';
+				setTimeout(() => {
+					if (this.$refs.recipeSearchInput) {
+						this.$refs.recipeSearchInput.focus();
+					}
+				}, 100);
+			}
 		},
 		'dialog_site.grant_access_menu'(val) {
             if (val) {
@@ -10500,6 +10551,16 @@ const app = createApp({
         totalPagesPushTargets() {
              return Math.ceil(this.filteredPushTargets.length / this.dialog_push_to_other.itemsPerPage);
         },
+		filteredRecipeMenuRecipes() {
+			if (!this.view_console.recipe_menu_search) return this.recipes;
+			const search = this.view_console.recipe_menu_search.toLowerCase();
+			return this.recipes.filter(r => r.title.toLowerCase().includes(search));
+		},
+		filteredSystemToolsMenu() {
+			if (!this.view_console.recipe_menu_search) return this.system_tools;
+			const search = this.view_console.recipe_menu_search.toLowerCase();
+			return this.system_tools.filter(t => t.title.toLowerCase().includes(search));
+		},
 		filteredMailgunDeployTargets() {
 			if (!this.dialog_domain.connected_sites || this.dialog_domain.connected_sites.length === 0) {
 				return [];
