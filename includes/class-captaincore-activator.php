@@ -32,6 +32,11 @@ class Captaincore_Activator {
 	public static function activate() {
 		wp_schedule_event( time(), 'hourly', 'captaincore_cron' );
 		CaptainCore\DB::upgrade();
+		// Add the rewrite rules first
+        captaincore_rewrite(); 
+        
+        // Then flush them
+		flush_rewrite_rules(); 
 		function captaincore_activation_redirect() {
 			if( ! defined( 'WP_CLI' ) ) {
 				wp_safe_redirect( '/account' );
