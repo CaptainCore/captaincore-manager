@@ -647,4 +647,155 @@ class Mailer {
         );
     }
 
+    /* -------------------------------------------------------------------------
+     *  8. ACCESS GRANTED NOTIFICATION (Existing User)
+     * ------------------------------------------------------------------------- */
+    static public function send_access_granted_notification( $to_email, $account_name, $sites = [], $domains = [] ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $login_url   = home_url() . ( $config->path ?? '/account/' );
+
+        // 1. Build Site List Preview
+        $site_list_html = "";
+        if ( ! empty( $sites ) ) {
+            $site_list_html = "<div style='background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin-top: 20px; text-align: left;'>
+                <h4 style='margin: 0 0 10px; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Included Sites</h4>
+                <ul style='margin: 0; padding-left: 20px; color: #4a5568; font-size: 14px;'>";
+            
+            $count = 0;
+            foreach ( $sites as $s ) {
+                if ( $count >= 5 ) {
+                    $remaining = count( $sites ) - 5;
+                    $site_list_html .= "<li style='margin-bottom: 4px; font-style: italic; color: #718096;'>...and $remaining more.</li>";
+                    break;
+                }
+                // Handle array format from Account::sites()
+                $name = is_array($s) ? $s['name'] : $s->name;
+                $site_list_html .= "<li style='margin-bottom: 4px;'>{$name}</li>";
+                $count++;
+            }
+            $site_list_html .= "</ul></div>";
+        }
+
+        $domain_text = "";
+        $domain_count = count($domains);
+        if ( $domain_count > 0 ) {
+            $domain_text = " and {$domain_count} domain" . ($domain_count !== 1 ? 's' : '');
+        }
+
+        $intro_text = "<p style='margin-bottom: 25px; line-height: 1.6;'>You have been granted access to the account <strong>{$account_name}</strong>.</p>";
+        $intro_text .= "<p style='margin-bottom: 0; line-height: 1.6;'>This includes access to " . count($sites) . " website(s){$domain_text}.</p>";
+
+        $action_button = "
+            <div style='text-align: center; margin: 35px 0;'>
+                <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 0 auto;'>
+                    <tr>
+                        <td style='border-radius: 4px; background-color: {$brand_color};'>
+                            <a href='{$login_url}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 4px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Log in to Dashboard &rarr;</a>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        ";
+
+        self::send_email_with_layout( 
+            $to_email, 
+            "Access granted to {$account_name}", 
+            "Access Granted", 
+            $account_name, 
+            $intro_text . $site_list_html . $action_button
+        );
+    }
+
+    /* -------------------------------------------------------------------------
+     *  9. NEW USER INVITE (Account Creation)
+     * ------------------------------------------------------------------------- */
+    static public function send_invite_new_user( $to_email, $account_name, $invite_url ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $site_name   = get_bloginfo( 'name' );
+
+        $intro_text = "<p style='margin-bottom: 25px; line-height: 1.6;'>You have been granted access to the account <strong>{$account_name}</strong>.</p>";
+        $intro_text .= "<p style='margin-bottom: 0; line-height: 1.6;'>Please click the button below to accept the invitation and set up your login.</p>";
+
+        $action_button = "
+            <div style='text-align: center; margin: 35px 0;'>
+                <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 0 auto;'>
+                    <tr>
+                        <td style='border-radius: 4px; background-color: {$brand_color};'>
+                            <a href='{$invite_url}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 4px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Accept Invitation &rarr;</a>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <p style='text-align: center; font-size: 12px; color: #a0aec0;'>If the button doesn't work, copy and paste this link:<br><a href='{$invite_url}' style='color: {$brand_color};'>{$invite_url}</a></p>
+        ";
+
+        self::send_email_with_layout( 
+            $to_email, 
+            "Hosting account invite: {$account_name}", 
+            "You're Invited", 
+            "to {$site_name}", 
+            $intro_text . $action_button
+        );
+    }
+
+    /* -------------------------------------------------------------------------
+     *  10. SNAPSHOT READY
+     * ------------------------------------------------------------------------- */
+    static public function send_snapshot_ready( $to_email, $site_name, $snapshot_id, $download_url ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+
+        $intro_text = "<p style='margin-bottom: 25px; line-height: 1.6;'>The snapshot you requested for <strong>{$site_name}</strong> is ready.</p>";
+        $intro_text .= "<div style='background-color: #f7fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 25px; text-align: center;'><strong>Snapshot #{$snapshot_id}</strong><br><small style='color: #718096;'>Link expires in 7 days.</small></div>";
+
+        $action_button = "
+            <div style='text-align: center; margin: 35px 0;'>
+                <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 0 auto;'>
+                    <tr>
+                        <td style='border-radius: 4px; background-color: {$brand_color};'>
+                            <a href='{$download_url}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 4px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Download Snapshot &rarr;</a>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        ";
+
+        self::send_email_with_layout( 
+            $to_email, 
+            "Snapshot #{$snapshot_id} Ready", 
+            "Snapshot Ready", 
+            $site_name, 
+            $intro_text . $action_button
+        );
+    }
+
+    /* -------------------------------------------------------------------------
+     *  11. GENERIC PROCESS NOTIFICATION (Copy/Deploy)
+     * ------------------------------------------------------------------------- */
+    static public function send_process_completed( $to_email, $subject, $headline, $subheadline, $message, $link_url = '' ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+
+        $content = "<p style='margin-bottom: 25px; line-height: 1.6;'>{$message}</p>";
+
+        if ( ! empty( $link_url ) ) {
+            $content .= "
+                <div style='text-align: center; margin: 35px 0;'>
+                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 0 auto;'>
+                        <tr>
+                            <td style='border-radius: 4px; background-color: {$brand_color};'>
+                                <a href='{$link_url}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 4px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>View Site &rarr;</a>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <p style='text-align: center; font-size: 12px; color: #a0aec0;'><a href='{$link_url}' style='color: {$brand_color};'>{$link_url}</a></p>
+            ";
+        }
+
+        self::send_email_with_layout( $to_email, $subject, $headline, $subheadline, $content );
+    }
+
 }

@@ -234,12 +234,11 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$business_name    = get_field('business_name', 'option');
 
 		// Send out completed email notice
-		$to      = $email;
-		$subject = "$business_name - Copy site ($site_source) to ($site_destination) completed";
-		$body    = "Completed copying $site_source to $site_destination.<br /><br /><a href=\"http://$site_destination\">$site_destination</a>";
-		$headers = [ 'Content-Type: text/html; charset=UTF-8' ];
+        $subject = "$business_name - Copy site ($site_source) to ($site_destination) completed";
+        $message = "Completed copying <strong>$site_source</strong> to <strong>$site_destination</strong>.";
+        $url     = "http://$site_destination";
 
-		wp_mail( $to, $subject, $body, $headers );
+        \CaptainCore\Mailer::send_process_completed( $email, $subject, "Copy Completed", $site_destination, $message, $url );
 
 		echo 'copy-site email sent';
 
@@ -249,18 +248,16 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	if ( $command == 'production-to-staging' and $email ) {
 
 		$business_name = get_field('business_name', 'option');
-		$domain_name = get_the_title( $site_id );
-		$db          = new CaptainCore\Site( $site_id );
-		$site        = $db->get();
-		$link        = $site->environments[1]["link"];
+		$domain_name   = get_the_title( $site_id );
+		$db            = new CaptainCore\Site( $site_id );
+		$site          = $db->get();
+		$link          = $site->environments[1]["link"];
 
 		// Send out completed email notice
-		$to      = $email;
-		$subject = "$business_name - Deploy to Staging ($domain_name)";
-		$body    = 'Deploy to staging completed for ' . $domain_name . '.<br /><br /><a href="' . $link . '">' . $link . '</a>';
-		$headers = [ 'Content-Type: text/html; charset=UTF-8' ];
+        $subject = "$business_name - Deploy to Staging ($domain_name)";
+        $message = "Deploy to staging completed for <strong>$domain_name</strong>.";
 
-		wp_mail( $to, $subject, $body, $headers );
+        \CaptainCore\Mailer::send_process_completed( $email, $subject, "Deploy Completed", "Staging Environment", $message, $link );
 
 		echo 'production-to-staging email sent';
 
@@ -270,18 +267,16 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	if ( $command == 'staging-to-production' and $email ) {
 
 		$business_name = get_field('business_name', 'option');
-		$domain_name = get_the_title( $site_id );
-		$db          = new CaptainCore\Site( $site_id );
-		$site        = $db->get();
-		$link        = $site->environments[0]["link"];
+		$domain_name   = get_the_title( $site_id );
+		$db            = new CaptainCore\Site( $site_id );
+		$site          = $db->get();
+		$link          = $site->environments[0]["link"];
 
 		// Send out completed email notice
-		$to      = $email;
-		$subject = "$business_name - Deploy to Production ($domain_name)";
-		$body    = 'Deploy to production completed for ' . $domain_name . '.<br /><br /><a href="' . $link . '">' . $link . '</a>';
-		$headers =  [ 'Content-Type: text/html; charset=UTF-8' ];
+        $subject = "$business_name - Deploy to Production ($domain_name)";
+        $message = "Deploy to production completed for <strong>$domain_name</strong>.";
 
-		wp_mail( $to, $subject, $body, $headers );
+        \CaptainCore\Mailer::send_process_completed( $email, $subject, "Deploy Completed", "Production Environment", $message, $link );
 
 		echo 'staging-to-production email sent';
 
@@ -3805,7 +3800,7 @@ function captaincore_register_rest_endpoints() {
 			'callback'            => function( WP_REST_Request $request ) {
 				$user     = new CaptainCore\User;
 				if ( ! $user->is_admin() ) {
-					return new WP_REST_Response( $account_ids, 403 );
+					return new WP_REST_Response( [], 403 );
 				}
 
 				$user_id = (int) $request->get_param( 'id' );
@@ -6092,16 +6087,8 @@ function captaincore_download_snapshot_email( $snapshot_id ) {
 	$file_name    = substr($snapshot->snapshot_name, 0, -4);
 	$download_url = "{$home_url}/wp-json/captaincore/v1/site/{$snapshot->site_id}/snapshots/{$snapshot->snapshot_id}-{$snapshot->token}/{$file_name}";
 
-	// Build email
-	$company = get_field( 'business_name', 'option' );
-	$to      = $snapshot->email;
-	$subject = "$company - Snapshot #$snapshot_id";
-	$body    = "Snapshot #{$snapshot_id} for {$domain}. Expires after 1 week.<br /><br /><a href=\"{$download_url}\">Download Snapshot</a>";
-	$headers = [ 'Content-Type: text/html; charset=UTF-8' ];
-
-	// Send email
-	wp_mail( $to, $subject, $body, $headers );
-
+    // Use Mailer
+    \CaptainCore\Mailer::send_snapshot_ready( $snapshot->email, $domain, $snapshot_id, $download_url );
 }
 
 function captaincore_snapshot_download_link( $snapshot_id ) {
