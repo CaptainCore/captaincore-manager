@@ -11262,235 +11262,200 @@ const app = createApp({
 			this.route = this.routes[ href ]
 		},
 		triggerRoute() {
-			if ( this.wp_nonce == "" ) {
-				window.history.pushState( {}, 'login', window.location.origin + this.configurations.path + 'login' )
-				this.route = "login"
+			if (this.route_path === "") {
+				this.dialog_domain.step = 1;
+				this.dialog_site.step = 1;
+				this.dialog_account.step = 1;
+				this.dialog_billing.step = 1;
+			}
+
+			if (this.socket == "/ws") {
+				window.history.pushState({}, 'login', "/connect");
+				this.route = "connect";
 				this.loading_page = false;
 				return;
 			}
-			if ( ["login", "connect", "cookbook", "handbook", "profile"].includes(this.route) ) {
+			if (this.wp_nonce == "") {
+				window.history.pushState({}, 'login', window.location.origin + this.configurations.path + 'login');
+				this.route = "login";
+				this.loading_page = false;
+				return;
+			}
+
+			// Static Routes
+			if (["login", "connect", "cookbook", "handbook", "profile"].includes(this.route)) {
 				this.selected_nav = "";
 				this.loading_page = false;
 			}
-			if ( this.route == "archives" ) {
-				this.selected_nav = ""
-				this.fetchArchives()
+
+			if (this.route == "archives") {
+				this.selected_nav = "";
+				this.fetchArchives();
 			}
-			if ( this.route == "domains" ) {
-				if ( this.allDomains == 0 ) {
-					this.loading_page = true;
-				}
-				this.selected_nav = "domains"
-				this.fetchDomains()
+
+			if (this.route == "domains") {
+				if (this.allDomains == 0) this.loading_page = true;
+				this.selected_nav = "domains";
+				this.fetchDomains();
 			}
-			if ( this.route == "users" ) {
-				this.selected_nav = ""
+
+			if (this.route == "users") {
+				this.selected_nav = "";
 				this.fetchAllUsers();
 			}
-			if ( this.route == "keys" ) {
-				this.selected_nav = ""
+
+			if (this.route == "keys") {
+				this.selected_nav = "";
 				this.loading_page = false;
-				this.fetchKeys()
+				this.fetchKeys();
 			}
-			if ( this.route == "defaults" ) {
-				this.selected_nav = ""
+
+			if (this.route == "defaults") {
+				this.selected_nav = "";
 				this.loading_page = false;
-				this.fetchDefaults()
+				this.fetchDefaults();
 			}
-			if ( this.route == "accounts" ) {
-				this.selected_nav = "accounts"
-				this.loading_page = false;
-			}
-			if ( this.route == "billing" ) {
-				this.fetchBilling()
-				this.selected_nav = "billing"
+
+			if (this.route == "accounts") {
+				this.selected_nav = "accounts";
 				this.loading_page = false;
 			}
-			if ( this.route == "subscriptions" ) {
-				this.fetchSubscriptions()
-				this.selected_nav = ""
+
+			if (this.route == "billing") {
+				this.fetchBilling();
+				this.selected_nav = "billing";
 				this.loading_page = false;
 			}
-			if ( this.route == "configurations" ) {
-				this.fetchConfigurations()
-				this.fetchProviders()
-				this.loading_page = false
-				this.selected_nav = ""
-			}
-			if ( this.route == "sites" ) {
-				if ( this.sites.length == 0 ) {
-					this.loading_page = true;
-				}
-				this.selected_nav = "sites"
-				this.fetchSites()
-			}
-			if ( this.route == "health" ) {
-				if ( this.sites.length == 0 ) {
-					this.loading_page = true;
-				}
-				this.selected_nav = ""
-				this.fetchSites()
-			}
-			if ( this.fetchInvite.account ) {
-				this.fetchInviteInfo()
-				this.route = "invite"
+
+			if (this.route == "subscriptions") {
+				this.fetchSubscriptions();
+				this.selected_nav = "";
 				this.loading_page = false;
-				return
 			}
-			if ( this.route == "" ) {
-				if ( this.sites.length == 0 ) {
-					this.loading_page = true;
-				}
-				this.route = "sites"
-				this.selected_nav = "sites"
+
+			if (this.route == "configurations") {
+				this.fetchConfigurations();
+				this.fetchProviders();
+				this.loading_page = false;
+				this.selected_nav = "";
+			}
+
+			if (this.route == "sites") {
+				if (this.sites.length == 0) this.loading_page = true;
+				this.selected_nav = "sites";
+				this.fetchSites();
+			}
+
+			if (this.route == "health") {
+				if (this.sites.length == 0) this.loading_page = true;
+				this.selected_nav = "";
+				this.fetchSites();
+			}
+
+			if (this.route == "vulnerability-scans") {
+				this.fetchVulnerabilityScans();
+			}
+
+			if (this.fetchInvite.account) {
+				this.fetchInviteInfo();
+				this.route = "invite";
+				this.loading_page = false;
+				return;
+			}
+
+			if (this.route == "") {
+				if (this.sites.length == 0) this.loading_page = true;
+				this.route = "sites";
+				this.selected_nav = "sites";
 			}
 		},
 		triggerPath() {
-			if ( this.route_path == "" ) {
-				this.dialog_domain.step = 1
-				this.dialog_site.step = 1
-				this.dialog_account.step = 1
-				this.dialog_billing.step = 1
+			if (this.route_path === "") {
+				this.dialog_domain.step = 1;
+				this.dialog_site.step = 1;
+				this.dialog_account.step = 1;
+				this.dialog_billing.step = 1;
+				return;
 			}
-			if ( this.route == "domains" && this.route_path != "" ) {
-				this.dialog_domain.step = 2				
-				domain = this.domains.filter( d => d.domain_id == this.route_path )[0]
-				if ( domain ) {
-					this.modifyDNS( domain )
-					this.fetchDomain( domain )
+
+			if (this.route === "domains") {
+				this.dialog_domain.step = 2;
+				const domain = this.domains.find(d => d.domain_id == this.route_path);
+				if (domain) {
+					this.modifyDNS(domain);
+					this.fetchDomain(domain);
 				}
+				return;
 			}
-			if ( this.route == "billing" && this.route_path != "" ) {
-				this.dialog_billing.step = 2
-				this.showInvoice( this.route_path )
-				return
-			}
-			if ( this.route == "billing" ) {
-				this.dialog_billing.step = 1
-			}
-			if ( this.route == "sites" && this.route_path == "new" ) {
-				this.dialog_site.step = 3
-				return
-			}
-			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/addons" ) ) {
-				this.dialog_site.step = 2
-				site_id = this.route_path.replace("/addons","")
-				site = this.sites.filter( s => s.site_id == site_id )[0]
-				if ( site ) {
-					this.showSite( site, "addons" )
+
+			if (this.route === "accounts") {
+				this.dialog_account.step = 2;
+				const account = this.accounts.find(a => a.account_id == this.route_path);
+				if (account) {
+					this.showAccount(account.account_id);
 				}
-				return
+				return;
 			}
-			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/logs" ) ) {
-				this.dialog_site.step = 2
-				site_id = this.route_path.replace("/logs","")
-				site = this.sites.filter( s => s.site_id == site_id )[0]
-				if ( site ) {
-					this.showSite( site, "logs" )
+
+			if (this.route === "billing") {
+				this.dialog_billing.step = 2;
+				this.showInvoice(this.route_path);
+				return;
+			}
+
+			if (this.route === "sites") {
+				
+				// Handle "Add New" route
+				if (this.route_path === "new") {
+					this.dialog_site.step = 3;
+					return;
 				}
-				return
-			}
-			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/stats" ) ) {
-				this.dialog_site.step = 2
-				site_id = this.route_path.replace("/stats","")
-				site = this.sites.filter( s => s.site_id == site_id )[0]
-				if ( site ) {
-					this.showSite( site, "stats" )
-					this.fetchStats()
-				}
-				return
-			}
-			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/backup-overview" ) ) {
-				this.dialog_site.step = 2
-				site_id = this.route_path.replace("/backup-overview","")
-				site = this.sites.filter( s => s.site_id == site_id )[0]
-				if ( site ) {
-					this.showSite( site, "backups" )
-				}
-				this.dialog_site.backup_step = 1
-				return
-			}
-			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/backups" ) ) {
-				this.dialog_site.step = 2
-				site_id = this.route_path.replace("/backups","")
-				site = this.sites.filter( s => s.site_id == site_id )[0]
-				if ( site ) {
-					this.showSite( site, "backups" )
-				}
-				this.dialog_site.backup_step = 2
-				return
-			}
-			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/quicksaves" ) ) {
-				this.dialog_site.step = 2
-				site_id = this.route_path.replace("/quicksaves","")
-				site = this.sites.filter( s => s.site_id == site_id )[0]
-				if ( site ) {
-					this.showSite( site, "quicksaves" )
-				}
-				this.dialog_site.backup_step = 3
-				return
-			}
-			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/snapshots" ) ) {
-				this.dialog_site.step = 2
-				site_id = this.route_path.replace("/snapshots","")
-				site = this.sites.filter( s => s.site_id == site_id )[0]
-				if ( site ) {
-					this.showSite( site, "snapshots" )
-				}
-				this.dialog_site.backup_step = 4
-				return
-			}
-			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/scripts" ) ) {
-				this.dialog_site.step = 2
-				site_id = this.route_path.replace("/scripts","")
-				site = this.sites.filter( s => s.site_id == site_id )[0]
-				if ( site ) {
-					this.showSite( site, "scripts" )
-				}
-				return
-			}
-			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/updates" ) ) {
-				this.dialog_site.step = 2
-				site_id = this.route_path.replace("/updates","")
-				site = this.sites.filter( s => s.site_id == site_id )[0]
-				if ( site ) {
-					this.showSite( site, "updates" )
-					this.viewUpdateLogs(site_id)
-				}
-				return
-			}
-			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/users" ) ) {
-				this.dialog_site.step = 2
-				site_id = this.route_path.replace("/users","")
-				site = this.sites.filter( s => s.site_id == site_id )[0]
-				if ( site ) {
-					this.showSite( site, "users" )
-					this.fetchUsers()
-				}
-				return
-			}
-			if ( this.route == "sites" && this.route_path != "" && this.route_path.endsWith( "/visual-captures" ) ) {
-				this.dialog_site.step = 2
-				site_id = this.route_path.replace("/visual-captures","")
-				site = this.sites.filter( s => s.site_id == site_id )[0]
-				if ( site ) {
-					this.showSite( site, 'visual-captures' )
-				}
-				return
-			}
-			
-			if ( this.route == "sites" && this.route_path != "" ) {
-				this.dialog_site.step = 2				
-				site = this.sites.filter( s => s.site_id == this.route_path )[0]
-				if ( site ) {
-					this.showSite( site )
-				}
-			}
-			if ( this.route == "accounts" && this.route_path != "" ) {
-				this.dialog_account.step = 2				
-				account = this.accounts.filter( a => a.account_id == this.route_path )[0]
-				if ( account ) {
-					this.showAccount( account.account_id )
+
+				// Parse ID and Action (e.g. "155/addons" -> id: 155, action: "addons")
+				const parts = this.route_path.split('/');
+				const siteId = parts[0];
+				const action = parts[1] || 'info'; // Default to info if no action exists
+
+				const site = this.sites.find(s => s.site_id == siteId);
+				if (!site) return;
+
+				// Configuration map for all site sub-pages
+				const actionMap = {
+					'info':             { tab: 'info' }, // Default
+					'addons':           { tab: 'addons' },
+					'logs':             { tab: 'logs' },
+					'scripts':          { tab: 'scripts' },
+					'visual-captures':  { tab: 'visual-captures' },
+					
+					// Actions with specific API callbacks
+					'stats':            { tab: 'stats', callback: () => this.fetchStats() },
+					'updates':          { tab: 'updates', callback: () => this.viewUpdateLogs(siteId) },
+					'users':            { tab: 'users', callback: () => this.fetchUsers() },
+					
+					// Backups have specific sub-steps
+					'backup-overview':  { tab: 'backups', backupStep: 1 },
+					'backups':          { tab: 'backups', backupStep: 2, callback: () => this.viewBackups() },
+					'quicksaves':       { tab: 'backups', backupStep: 3, callback: () => this.viewQuicksaves() },
+					'snapshots':        { tab: 'backups', backupStep: 4, callback: () => this.viewSnapshots() },
+				};
+
+				const config = actionMap[action];
+
+				if (config) {
+					this.dialog_site.step = 2;
+					
+					// Load the site data and switch tabs
+					this.showSite(site, config.tab);
+
+					// Handle specific backup steps
+					if (config.backupStep) {
+						this.dialog_site.backup_step = config.backupStep;
+					}
+
+					// Run specific data fetchers if required
+					if (config.callback) {
+						config.callback();
+					}
 				}
 			}
 		},
