@@ -138,7 +138,6 @@ return array(
     'CaptainCore\\Domain' => $baseDir . '/app/Domain.php',
     'CaptainCore\\Domains' => $baseDir . '/app/Domains.php',
     'CaptainCore\\Environments' => $baseDir . '/app/Environments.php',
-    'CaptainCore\\Fleets' => $baseDir . '/app/Fleets.php',
     'CaptainCore\\Invite' => $baseDir . '/app/Invite.php',
     'CaptainCore\\Invites' => $baseDir . '/app/Invites.php',
     'CaptainCore\\Keys' => $baseDir . '/app/Keys.php',
