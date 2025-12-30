@@ -8113,15 +8113,15 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					>
 						<template v-slot:item.name="{ item }">
 							<v-icon icon="mdi-file-zip-box-outline" size="small" class="mr-2"></v-icon>
-							{{ item.name || item.raw.name }}
+							{{ item.raw ? item.raw.name : item.name }}
 						</template>
 
 						<template v-slot:item.size="{ item }">
-							{{ formatSize(item.size || item.raw.size) }}
+							{{ formatSize(item.raw ? item.raw.size : item.size) }}
 						</template>
 
 						<template v-slot:item.mod_time="{ item }">
-							{{ pretty_timestamp(item.mod_time || item.raw.mod_time) }}
+							{{ pretty_timestamp(item.raw ? item.raw.mod_time : item.mod_time) }}
 						</template>
 
 						<template v-slot:item.actions="{ item }">
