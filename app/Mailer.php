@@ -797,4 +797,79 @@ class Mailer {
         self::send_email_with_layout( $to_email, $subject, $headline, $subheadline, $content );
     }
 
+    /* -------------------------------------------------------------------------
+     *  12. SITE REMOVAL REQUEST (Admin Notify)
+     * ------------------------------------------------------------------------- */
+    static public function send_site_removal_request( $site, $user, $is_removal ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $site_name   = get_bloginfo( 'name' );
+        $admin_email = get_option( 'admin_email' );
+
+        // Determine content based on action (Remove vs Cancel)
+        if ( $is_removal ) {
+            $subject     = "{$site_name} - Site Removal Request";
+            $headline    = "Removal Requested";
+            $subheadline = $site->name;
+            $intro_text  = "A request has been submitted to remove the following site.";
+            $status_color = "#e53e3e"; // Red
+            $status_text  = "Removal Pending";
+        } else {
+            $subject     = "{$site_name} - Cancel Site Removal Request";
+            $headline    = "Removal Cancelled";
+            $subheadline = $site->name;
+            $intro_text  = "A request has been submitted to keep this site. Please disregard the previous removal request.";
+            $status_color = "#38a169"; // Green
+            $status_text  = "Active";
+        }
+
+        $content_html = "
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+                <p style='margin-bottom: 25px;'>{$intro_text}</p>
+                
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                    <table width='100%' cellpadding='0' cellspacing='0'>
+                        <tr>
+                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site Name</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site->name}</td>
+                        </tr>
+                        <tr>
+                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site ID</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>#{$site->site_id}</td>
+                        </tr>
+                        <tr>
+                            <td style='padding-top: 10px; border-top: 1px solid #edf2f7; color: #718096; font-size: 14px;'>Requested By</td>
+                            <td style='padding-top: 10px; border-top: 1px solid #edf2f7; color: #2d3748; font-weight: 600; text-align: right;'>
+                                {$user->name} <span style='color: #a0aec0; font-weight: 400;'>(#{$user->user_id})</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div style='text-align: center;'>
+                    <div style='display: inline-block; background-color: {$status_color}; color: #ffffff; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                        {$status_text}
+                    </div>
+                </div>
+            </div>
+        ";
+
+        // Reply to the user requesting the action
+        // Check if name exists to format correctly
+        if ( ! empty( $user->name ) ) {
+            $headers = [ "Reply-To: {$user->name} <{$user->email}>" ];
+        } else {
+            $headers = [ "Reply-To: <{$user->email}>" ];
+        }
+
+        self::send_email_with_layout( 
+            $admin_email, 
+            $subject, 
+            $headline, 
+            $subheadline, 
+            $content_html,
+            $headers
+        );
+    }
+
 }

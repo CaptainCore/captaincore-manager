@@ -955,35 +955,18 @@ function captaincore_site_update_func( $request ) {
 
 	$site    = CaptainCore\Sites::get( $site_id );
 	$details = empty( $site->details ) ? (object) [] : json_decode( $site->details );
+	
 	foreach ( $updated_details as $field => $value ) {
 		$details->$field = $value;
+		
 		if ( $field == "removed" ) {
-			$title = ( new CaptainCore\Configurations )->get()->name;
 			$user = (object) ( new CaptainCore\User )->fetch();
-			if ( $value == true ) {
-				$subject = "$title - Site Removal Request";
-				$message = "Site {$site->name} #{$site_id} has been requested to be removed.<br /><br />Requested By: {$user->name} #{$user->user_id}";
-			}
-			if ( $value != true ) {
-				$subject = "$title - Cancel Site Removal Request";
-				$message = "Site {$site->name} #{$site_id} has been requested to keep. Disregard previous removal request.<br /><br />Requested By: {$user->name} #{$user->user_id}";
-			}
-			wp_mail(
-				get_option( "admin_email" ),
-				$subject,
-				$message,
-				[
-					'Content-Type: text/html; charset=UTF-8',
-					"Reply-To: {$user->name} <{$user->email}>"
-				],
-			);
+			// $value is boolean: true (remove) or false (cancel removal)
+			\CaptainCore\Mailer::send_site_removal_request( $site, $user, $value );
 		}
 	}
-	$query = CaptainCore\Sites::update([
-			"details" => json_encode( $details )
-		], [
-			"site_id" => $site_id
-		]);
+
+	$query = CaptainCore\Sites::update(["details" => json_encode( $details ) ], [ "site_id" => $site_id ]);
 	return;
 }
 function captaincore_site_delete_func( $request ) {
