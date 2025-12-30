@@ -7970,6 +7970,19 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-card>
 							</v-list-item>
 							</v-card>
+							<v-expand-transition>
+								<v-alert
+									v-if="dialog_invoice.error"
+									type="error"
+									variant="tonal"
+									class="mb-6"
+									border="start"
+									closable
+									@click:close="dialog_invoice.error = ''"
+								>
+									{{ dialog_invoice.error }}
+								</v-alert>
+							</v-expand-transition>
 							<v-btn color="primary" size="x-large" @click="verifyAndPayInvoice(dialog_invoice.response.order_id)" class="mb-7" v-show="dialog_invoice.response.status == 'pending' || dialog_invoice.response.status == 'failed'">Pay Invoice</v-btn>
 						</v-col>
 						</v-row>
@@ -14852,6 +14865,9 @@ const app = createApp({
 				.catch( error => console.log( error ) );
 		},
 		showInvoice( order_id ) {
+			if ( !this.dialog_invoice.show ) {
+				this.dialog_invoice.error = "";
+			}
 			this.dialog_invoice.loading = true
 			var data = {
 				action: 'captaincore_local',
@@ -14896,17 +14912,22 @@ const app = createApp({
 				.catch( error => console.log( error ) );
 		},
 		payInvoice( invoice_id ) {
+			// 1. Validate Form
 			if ( ! this.$refs.billing_form.validate() ) {
 				this.snackbar.message = "Missing billing information"
 				this.snackbar.show = true
 				return
 			}
-        
+
+			// 2. Prepare UI State
 			this.dialog_invoice.paying = true
+			this.dialog_invoice.error = "" // Clear any previous errors
 			this.updateBilling()
+			
 			invoice_id = this.dialog_invoice.response.order_id
 			self = this
 
+			// 3. Handle "New Payment Method" Logic
 			if ( this.dialog_invoice.payment_method == 'new' ) {
 				stripe.createSource( this.dialog_invoice.card, {
 					type: "card",
@@ -14924,24 +14945,40 @@ const app = createApp({
 						},
 					},
 				}).then(function(result) {
+					// Handle Stripe JS Error (Pre-backend)
 					if ( result.error ) {
 						self.dialog_invoice.paying = false
 						self.dialog_invoice.error = result.error.message
 						return
 					}
+					
 					var data = {
 						action: 'captaincore_account',
 						command: 'payInvoice',
 						value: invoice_id,
 						source_id: result.source.id,
 					}
+					
 					axios.post( ajaxurl, Qs.stringify( data ) )
 						.then( response => {
+							// Handle "Add Payment Method" backend error
 							if ( response.data && response.data.error ) {
 								self.dialog_invoice.paying = false;
 								self.dialog_invoice.error = response.data.error;
 								return;
 							}
+							
+							// Handle "Payment Failed" backend response
+							if ( response.data && response.data.result === 'fail' ) {
+								self.dialog_invoice.paying = false;
+								self.dialog_invoice.error = response.data.message || "Payment failed.";
+								if ( self.dialog_invoice.response ) {
+									self.dialog_invoice.response.status = 'failed';
+								}
+								return;
+							}
+							
+							// Success
 							self.dialog_invoice.paying = false
 							self.showInvoice( invoice_id )
 							self.fetchBilling()
@@ -14955,14 +14992,29 @@ const app = createApp({
 				return
 			}
 
+			// 4. Handle "Existing Payment Method" Logic
 			var data = {
 				action: 'captaincore_account',
 				command: 'payInvoice',
 				value: invoice_id,
 				payment_id: this.dialog_invoice.payment_method,
 			}
+			
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
+					// Handle "Payment Failed" backend response
+					if ( response.data && response.data.result === 'fail' ) {
+						this.dialog_invoice.paying = false
+						this.dialog_invoice.error = response.data.message || "Payment failed."
+						
+						// Ensure UI reflects failed status without reloading (which wipes the error)
+						if ( this.dialog_invoice.response ) {
+							this.dialog_invoice.response.status = 'failed'
+						}
+						return
+					}
+
+					// Success
 					this.dialog_invoice.paying = false
 					this.showInvoice( invoice_id )
 					this.fetchBilling()
@@ -19746,8 +19798,6 @@ const app = createApp({
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
 					this.fetchBilling()
-					this.snackbar.message = "Billing infomation updated."
-					this.snackbar.show = true
 				});
 		},
 		updateSettings() {
