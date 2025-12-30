@@ -333,6 +333,7 @@ class User {
                 return [
                     'result'   => 'fail',
                     'redirect' => '',
+                    'message'  => $source_object->error->message,
                 ];
             }
 
@@ -397,6 +398,7 @@ class User {
             return array(
                 'result'   => 'fail',
                 'redirect' => '',
+                'message'  => $e->getLocalizedMessage(),
             );
         }
 

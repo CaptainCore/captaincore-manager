@@ -5099,15 +5099,21 @@ function captaincore_account_action_callback() {
 			$payment_tokens = WC_Payment_Tokens::get_customer_tokens( $user->user_id() );
 			foreach ( $payment_tokens as $payment_token ) { 
 				if( $payment_token->get_token() == $_POST['source_id'] ) {
-					$user->pay_invoice( $_POST['value'], $payment_token->get_id() );
+                    // Capture response
+					$result = $user->pay_invoice( $_POST['value'], $payment_token->get_id() );
 					$user->set_as_primary( $payment_token->get_id() );
+                    // Echo response
+                    echo json_encode( $result );
 				}
 			}
 			wp_die();
 		}
 		// Pay with existing credit card
-		$user->pay_invoice( $_POST['value'], $_POST['payment_id'] );
+        // Capture response
+		$result = $user->pay_invoice( $_POST['value'], $_POST['payment_id'] );
 		$user->set_as_primary( $_POST['payment_id'] );
+        // Echo response
+        echo json_encode( $result );
 	};
 
 	if ( $cmd == 'setAsPrimary' ) {
