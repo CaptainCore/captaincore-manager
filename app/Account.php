@@ -415,41 +415,8 @@ class Account {
             $account_rec = ( new Accounts )->get( $this->account_id );
             $sites       = $this->sites();
             $domains     = $this->domains();
-            $site_list   = "";
-
-            // Build Site List Preview (Limit to 5 for brevity in email)
-            if ( ! empty( $sites ) ) {
-                $site_list .= "<ul>";
-                $count = 0;
-                foreach ( $sites as $s ) {
-                    if ( $count >= 5 ) { 
-                        $remaining = count( $sites ) - 5;
-                        $site_list .= "<li><em>...and $remaining more sites.</em></li>";
-                        break;
-                    }
-                    $site_list .= "<li>{$s['name']}</li>";
-                    $count++;
-                }
-                $site_list .= "</ul>";
-            }
-
-            $domain_text = "";
-            if ( count( $domains ) > 0 ) {
-                $domain_text = " and " . count( $domains ) . " domain(s)";
-            }
-
-            // Fetch current configuration to get the correct mount path
-            $configurations = Configurations::get();
-            $login_url      = home_url() . $configurations->path;
             
-            $subject   = "Access granted to {$account_rec->name}";
-            $body      = "You have been granted access to the account <strong>{$account_rec->name}</strong>.<br /><br />";
-            $body     .= "This includes access to " . count($sites) . " website(s){$domain_text}:<br />";
-            $body     .= $site_list;
-            $body     .= "<br /><a href=\"{$login_url}\">Log in to Dashboard</a>";
-
-            $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
-            wp_mail( $email, $subject, $body, $headers );
+            \CaptainCore\Mailer::send_access_granted_notification( $email, $account_rec->name, $sites, $domains );
 
             return [ "message" => "Account already exists. Access granted and notification sent." ];
         }
@@ -468,14 +435,10 @@ class Account {
 
         // Send out invite email
         $configurations = Configurations::get();
-        $invite_url = home_url() . $configurations->path . "?account={$this->account_id}&token={$token}";
+        $invite_url     = home_url() . $configurations->path . "?account={$this->account_id}&token={$token}";
+        $account_name   = ( new Accounts )->get( $this->account_id )->name;
         
-        $name    = ( new Accounts )->get( $this->account_id )->name;
-        $subject = "Hosting account invite";
-        $body    = "You've been granted access to account '$name'. Click here to accept:<br /><br /><a href=\"{$invite_url}\">$invite_url</a>";
-        $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
-
-        wp_mail( $email, $subject, $body, $headers );
+        \CaptainCore\Mailer::send_invite_new_user( $email, $account_name, $invite_url );
 
         return [ "message" => "Invite has been sent." ];
     }
@@ -550,12 +513,11 @@ class Account {
 	}
 
     public function failed_notify( $order_id = "" ) {
-        // If we have a specific order ID, send the Invoice email for it.
-        // This replaces the generic "Payment Failed" notice with a "Here is your Invoice to pay" notice.
+        // If we have a specific order ID, send the Failed Payment notice.
         if ( ! empty( $order_id ) ) {
             $order = wc_get_order( $order_id );
-            $order->add_order_note( "Sent invoice (auto-pay failed)." );
-            \CaptainCore\Mailer::send_order_invoice( $order_id );
+            $order->add_order_note( "Sent failed payment notice." );
+            \CaptainCore\Mailer::send_failed_payment_notice( $this->account_id, [ $order ] );
             return;
         }
 
@@ -571,8 +533,8 @@ class Account {
 
         if ( count( $orders ) > 0 ) {
             $order = $orders[0];
-            $order->add_order_note( "Sent invoice (auto-pay failed)." );
-            \CaptainCore\Mailer::send_order_invoice( $order->get_id() );
+            $order->add_order_note( "Sent failed payment notice." );
+            \CaptainCore\Mailer::send_failed_payment_notice( $this->account_id, [ $order ] );
         }
     }
 
