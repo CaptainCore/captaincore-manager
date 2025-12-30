@@ -488,8 +488,7 @@ class Mailer {
             "Receipt for Order #{$order_id}", 
             "Receipt #{$order_id}", 
             $date, 
-            $intro_html . $items_html . $billing_html,
-            [ "Bcc: $admin_email" ]
+            $intro_html . $items_html . $billing_html
         );
     }
 
@@ -535,11 +534,11 @@ class Mailer {
         ";
 
         self::send_email_with_layout( 
-            $admin_email, 
-            "[New Order] #{$order_id} - {$customer_name} - {$total}", 
-            "New Order #{$order_id}", 
-            $date, 
-            $content_html 
+            $admin_email,
+            "[New Order] #{$order_id} - {$customer_name}",
+            "New Order #{$order_id}",
+            $date,
+            $content_html
         );
     }
     
