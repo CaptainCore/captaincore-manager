@@ -767,6 +767,125 @@ function captaincore_provider_actions_func( $request ) {
 	return ( new CaptainCore\ProviderAction )->active();
 }
 
+/**
+ * Generic REST callback to get domains for a site's environment.
+ */
+function captaincore_site_domains_get_func( WP_REST_Request $request ) {
+    $site_id = $request['id'];
+    $env_name = $request['environment'];
+
+    if ( ! captaincore_verify_permissions( $site_id ) ) {
+        return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+    }
+
+    $site = ( new CaptainCore\Sites )->get( $site_id );
+    if ( ! $site || empty( $site->provider ) ) {
+        return new WP_Error( 'no_provider', 'Site has no provider configured.', [ 'status' => 400 ] );
+    }
+
+	if ( empty($site->provider_id) ) {
+		$provider = ( new \CaptainCore\Provider( $site->provider ) );
+	} else {
+		$provider = new \CaptainCore\Provider( $site->provider_id );
+	}
+    $response = $provider->get_domains( $site_id, $env_name );
+
+    if ( is_wp_error( $response ) ) {
+        return $response;
+    }
+
+    return new WP_REST_Response( $response, 200 );
+}
+
+/**
+ * Generic REST callback to add a domain to a site's environment.
+ */
+function captaincore_site_domain_add_func( WP_REST_Request $request ) {
+    $site_id  = $request['id'];
+    $env_name = $request['environment'];
+    $params   = $request->get_json_params();
+
+    if ( ! captaincore_verify_permissions( $site_id ) ) {
+        return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+    }
+
+    $site = ( new CaptainCore\Sites )->get( $site_id );
+    if ( ! $site || empty( $site->provider ) ) {
+        return new WP_Error( 'no_provider', 'Site has no provider configured.', [ 'status' => 400 ] );
+    }
+
+	if ( empty($site->provider_id) ) {
+		$provider = ( new \CaptainCore\Provider( $site->provider ) );
+	} else {
+		$provider = new \CaptainCore\Provider( $site->provider_id );
+	}
+    $response = $provider->add_domain( $site_id, $env_name, $params );
+
+    if ( is_wp_error( $response ) ) {
+        return $response;
+    }
+
+    return new WP_REST_Response( $response, 202 );
+}
+
+/**
+ * Generic REST callback to delete a domain from a site's environment.
+ */
+function captaincore_site_domain_delete_func( WP_REST_Request $request ) {
+    $site_id  = $request['id'];
+    $env_name = $request['environment'];
+    $params   = $request->get_json_params();
+
+    if ( ! captaincore_verify_permissions( $site_id ) ) {
+        return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+    }
+
+    $site = ( new CaptainCore\Sites )->get( $site_id );
+    if ( ! $site || empty( $site->provider ) ) {
+        return new WP_Error( 'no_provider', 'Site has no provider configured.', [ 'status' => 400 ] );
+    }
+
+	if ( empty($site->provider_id) ) {
+		$provider = ( new \CaptainCore\Provider( $site->provider ) );
+	} else {
+		$provider = new \CaptainCore\Provider( $site->provider_id );
+	}
+    $response = $provider->delete_domain( $site_id, $env_name, $params );
+
+    if ( is_wp_error( $response ) ) {
+        return $response;
+    }
+
+    return new WP_REST_Response( $response, 202 );
+}
+
+/**
+ * Generic REST callback to set the primary domain for a site's environment.
+ */
+function captaincore_site_domain_primary_func( WP_REST_Request $request ) {
+    $site_id  = $request['id'];
+    $env_name = $request['environment'];
+    $params   = $request->get_json_params();
+
+    if ( ! captaincore_verify_permissions( $site_id ) ) {
+        return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+    }
+
+    $site = ( new CaptainCore\Sites )->get( $site_id );
+    if ( ! $site || empty( $site->provider ) ) {
+        return new WP_Error( 'no_provider', 'Site has no provider configured.', [ 'status' => 400 ] );
+    }
+
+    $provider = new \CaptainCore\Provider( $site->provider_id );
+    $response = $provider->set_primary_domain( $site_id, $env_name, $params );
+
+    if ( is_wp_error( $response ) ) {
+        return $response;
+    }
+
+    return new WP_REST_Response( $response, 202 );
+}
+
 function captaincore_schedule_script_func( $request ) {
 	$environment_id = $request['environment_id'];
 	$code           = $request['code'];
@@ -3236,15 +3355,42 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Generic Domain Management (Replaces old Kinsta-specific routes)
 	register_rest_route(
-		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/magiclogin/(?P<user_id>[\d]+)', [
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/domains', [
 			'methods'             => 'GET',
-			'callback'            => 'captaincore_site_magiclogin_func',
+			'callback'            => 'captaincore_site_domains_get_func',
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
 		]
 	);
 
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/domains', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_domain_add_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/domains', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_site_domain_delete_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/domains/primary', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_site_domain_primary_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
 
 	register_rest_route(
 		'captaincore/v1', '/providers', [
