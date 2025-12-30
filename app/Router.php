@@ -9,6 +9,7 @@ class Router {
         add_filter( 'query_vars', [ $this, 'add_query_vars' ] );
         add_filter( 'template_include', [ $this, 'load_template' ] );
         add_action( 'template_redirect', [ $this, 'handle_checkout_express' ] );
+        add_filter( 'redirect_canonical', [ $this, 'disable_canonical_redirect' ] );
     }
 
     /**
@@ -63,6 +64,20 @@ class Router {
         $vars[] = 'captaincore_route';
         $vars[] = 'captaincore_callback';
         return $vars;
+    }
+
+    /**
+     * Disable canonical redirects for CaptainCore App routes.
+     * This prevents WP from forcing trailing slashes (e.g., /account/sites -> /account/sites/).
+     *
+     * @param string $redirect_url The URL WordPress intends to redirect to.
+     * @return string|false The URL or false to cancel the redirect.
+     */
+    public function disable_canonical_redirect( $redirect_url ) {
+        if ( get_query_var( 'captaincore_app' ) ) {
+            return false;
+        }
+        return $redirect_url;
     }
 
     /**
