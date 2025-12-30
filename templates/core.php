@@ -3308,61 +3308,62 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-btn color="primary" @click="updateRequestSite">Save</v-btn>
 						</v-card-actions>
 					</v-card>
-					</v-dialog>
+				</v-dialog>
 				<v-stepper :model-value="request.step" v-for="(request, index) in requested_sites" class="mb-3">
-				<v-toolbar elevation="0" color="primary" class="text-white px-3" density="compact">
-					<div v-if="role == 'administrator'">Requested by {{ user_name( request.user_id ) }} -&nbsp;</div><strong>{{ request.name }}</strong>&nbsp;in {{ account_name( request.account_id ) }}
-					<v-spacer></v-spacer>
-					<v-btn size="small" @click="modifyRequest( index )" v-show="role == 'administrator'" class="mx-1" variant="tonal">Modify</v-btn>
-					<v-btn size="small" @click="finishRequest( index )" v-if="request.step === 3" class="mx-1" variant="tonal">Finish</v-btn>
-					<v-btn size="small" @click="cancelRequest( index )" v-else class="mx-1" variant="tonal">Cancel</v-btn>
-				</v-toolbar>
-				<v-stepper-header class="elevation-0">
-					<v-stepper-item value="1" :complete="request.step > 0" color="primary" class="text-left">Requesting site<br /><small>{{ pretty_timestamp_epoch ( request.created_at ) }}</small></v-stepper-item>
-					<v-divider></v-divider>
-					<v-stepper-item value="2" :complete="request.step > 1" color="primary" class="text-left">Preparing new site<br /><small v-show="request.processing_at">{{ pretty_timestamp_epoch ( request.processing_at ) }}</small></v-stepper-item>
-					<v-divider></v-divider>
-					<v-stepper-item value="3" :complete="request.step > 2" color="primary" class="text-left">Ready to use<br /><small v-show="request.ready_at">{{ pretty_timestamp_epoch ( request.ready_at ) }}</small></v-stepper-item>
-				</v-stepper-header>
-				<v-stepper-window>
-					<v-stepper-window-item value="1">
-						<div>{{ request.notes }}</div>
-						<v-btn color="primary" @click="continueRequestSite( request )" v-show="role == 'administrator'">
-							Continue
-						</v-btn>
-					</v-stepper-window-item>
-					<v-stepper-window-item value="2">
-						<div v-show="role == 'administrator'">
-							<v-btn @click="backRequestSite( request )" variant="text">
-								Back
-							</v-btn>
-							<v-btn color="primary" @click="continueRequestSite( request )">
+					<v-toolbar elevation="0" color="primary" class="text-white px-3" density="compact">
+						<div v-if="role == 'administrator'">Requested by {{ user_name( request.user_id ) }} -&nbsp;</div><strong>{{ request.name }}</strong>&nbsp;in {{ account_name( request.account_id ) }}
+						<v-spacer></v-spacer>
+						<v-btn size="small" @click="modifyRequest( index )" v-show="role == 'administrator'" class="mx-1" variant="tonal">Modify</v-btn>
+						<v-btn size="small" @click="finishRequest( index )" v-if="request.step === 3" class="mx-1" variant="tonal">Finish</v-btn>
+						<v-btn size="small" @click="cancelRequest( index )" v-else class="mx-1" variant="tonal">Cancel</v-btn>
+					</v-toolbar>
+					<v-stepper-header class="elevation-0">
+						<!-- Changed values to numbers (:value) to match DB integer types -->
+						<v-stepper-item :value="1" :complete="request.step > 0" color="primary" class="text-left">Requesting site<br /><small>{{ pretty_timestamp_epoch ( request.created_at ) }}</small></v-stepper-item>
+						<v-divider></v-divider>
+						<v-stepper-item :value="2" :complete="request.step > 1" color="primary" class="text-left">Preparing new site<br /><small v-show="request.processing_at">{{ pretty_timestamp_epoch ( request.processing_at ) }}</small></v-stepper-item>
+						<v-divider></v-divider>
+						<v-stepper-item :value="3" :complete="request.step > 2" color="primary" class="text-left">Ready to use<br /><small v-show="request.ready_at">{{ pretty_timestamp_epoch ( request.ready_at ) }}</small></v-stepper-item>
+					</v-stepper-header>
+					<v-stepper-window>
+						<v-stepper-window-item :value="1">
+							<div>{{ request.notes }}</div>
+							<v-btn color="primary" @click="continueRequestSite( request )" v-show="role == 'administrator'" class="mt-4">
 								Continue
 							</v-btn>
-						</div>
-					</v-stepper-window-item>
-					<v-stepper-window-item value="3">
-						<v-card v-if="typeof request.url == 'string' && request.url != ''" elevation="2" class="ma-2">
-							<v-list density="compact">
-								<v-list-item :href="request.url" target="_blank" density="compact" :subtitle="request.url">
-									<v-list-item-title>Link</v-list-item-title>
-									<template v-slot:append>
-										<v-icon>mdi-open-in-new</v-icon>
-									</template>
-								</v-list-item>
-							</v-list>
-						</v-card>
-						<div v-show="role == 'administrator'">
-							<v-btn @click="backRequestSite( request )" variant="text">
-								Back
-							</v-btn>
-							<v-btn color="primary" @click="continueRequestSite( request )">
-								Continue
-							</v-btn>
-						</div>
-					</v-stepper-window-item>
-				</v-stepper-window>
-			</v-stepper>
+						</v-stepper-window-item>
+						<v-stepper-window-item :value="2">
+							<div v-show="role == 'administrator'" class="mt-4">
+								<v-btn @click="backRequestSite( request )" variant="text">
+									Back
+								</v-btn>
+								<v-btn color="primary" @click="continueRequestSite( request )">
+									Continue
+								</v-btn>
+							</div>
+						</v-stepper-window-item>
+						<v-stepper-window-item :value="3">
+							<v-card v-if="typeof request.url == 'string' && request.url != ''" elevation="2" class="ma-2">
+								<v-list density="compact">
+									<v-list-item :href="request.url" target="_blank" density="compact" :subtitle="request.url">
+										<v-list-item-title>Link</v-list-item-title>
+										<template v-slot:append>
+											<v-icon>mdi-open-in-new</v-icon>
+										</template>
+									</v-list-item>
+								</v-list>
+							</v-card>
+							<div v-show="role == 'administrator'" class="mt-4">
+								<v-btn @click="backRequestSite( request )" variant="text">
+									Back
+								</v-btn>
+								<v-btn color="primary" @click="continueRequestSite( request )">
+									Continue
+								</v-btn>
+							</div>
+						</v-stepper-window-item>
+					</v-stepper-window>
+				</v-stepper>
 				</v-card-text>
 				<v-card-text v-if="sites.length == 0 && configurations.mode == 'hosting'" class="text-center ma-auto" style="max-width: 500px;">
 					<v-card flat @click="dialog_request_site.show = true; dialog_request_site.request.account_id = accounts[0].account_id" class="pa-5">
