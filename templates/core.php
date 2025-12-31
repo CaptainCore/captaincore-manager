@@ -13779,9 +13779,10 @@ const app = createApp({
 			})
 			.then(response => {
 				let incomingSites = response.data;
+				const advancedFiltersActive = (this.combinedAppliedFilters && this.combinedAppliedFilters.length > 0) || this.coreFiltersApplied || this.backupModeFilter !== null;
 
 				// 1. Check if filters are active in the UI
-				if (this.isAnySiteFilterActive) {
+				if (advancedFiltersActive) {
 					
 					// 2. If we have cached matches (environment IDs), apply them locally immediately
 					if (this.filtered_environment_ids && this.filtered_environment_ids.length > 0) {
