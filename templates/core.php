@@ -10048,19 +10048,19 @@ const app = createApp({
 			},
 			{
 				"title": "Tokyo (JP)",
-				"value": "asia-northeast1"
+				"value": "ap-tokyo-1"
 			},
 			{
 				"title": "Osaka (JP)",
-				"value": "asia-northeast2"
+				"value": "ap-osaka-1"
 			},
 			{
 				"title": "Seoul (KR)",
-				"value": "asia-northeast3"
+				"value": "ap-seoul-1"
 			},
 			{
 				"title": "Mumbai (IN)",
-				"value": "asia-south1"
+				"value": "ap-mumbai-1"
 			},
 			{
 				"title": "Delhi (IN) 🚀",
@@ -10072,15 +10072,15 @@ const app = createApp({
 			},
 			{
 				"title": "Jakarta (ID)",
-				"value": "asia-southeast2"
+				"value": "ap-singapore-1"
 			},
 			{
 				"title": "Sydney (AU) 🚀",
-				"value": "australia-southeast1"
+				"value": "ap-sydney-1"
 			},
 			{
 				"title": "Melbourne (AU)",
-				"value": "australia-southeast2"
+				"value": "ap-melbourne-1"
 			},
 			{
 				"title": "Warsaw (PL)",
@@ -10092,7 +10092,7 @@ const app = createApp({
 			},
 			{
 				"title": "Madrid (ES)",
-				"value": "europe-southwest1"
+				"value": "eu-madrid-1"
 			},
 			{
 				"title": "Belgium (BE) 🚀",
@@ -10100,11 +10100,11 @@ const app = createApp({
 			},
 			{
 				"title": "London (UK)",
-				"value": "europe-west2"
+				"value": "uk-london-1"
 			},
 			{
 				"title": "Frankfurt (DE) 🚀",
-				"value": "europe-west3"
+				"value": "eu-frankfurt-1"
 			},
 			{
 				"title": "Eemshaven (NL) 🚀",
@@ -10112,15 +10112,15 @@ const app = createApp({
 			},
 			{
 				"title": "Zürich (CH)",
-				"value": "europe-west6"
+				"value": "eu-zurich-1"
 			},
 			{
 				"title": "Milan (IT)",
-				"value": "europe-west8"
+				"value": "eu-milan-1"
 			},
 			{
 				"title": "Paris (FR)",
-				"value": "europe-west9"
+				"value": "eu-paris-1"
 			},
 			{
 				"title": "Tel Aviv (IS)",
@@ -10128,19 +10128,19 @@ const app = createApp({
 			},
 			{
 				"title": "Montreal (CA)",
-				"value": "northamerica-northeast1"
+				"value": "ca-montreal-1"
 			},
 			{
 				"title": "Toronto (CA)",
-				"value": "northamerica-northeast2"
+				"value": "ca-toronto-1"
 			},
 			{
 				"title": "São Paulo (BR)",
-				"value": "southamerica-east1"
+				"value": "sa-saopaulo-1"
 			},
 			{
 				"title": "Santiago (CL)",
-				"value": "southamerica-west1"
+				"value": "sa-santiago-1"
 			},
 			{
 				"title": "Iowa (US Central) 🚀",
