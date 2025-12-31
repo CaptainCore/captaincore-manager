@@ -3393,6 +3393,40 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							{{ unassignedSiteCount }} Unassigned
 						</v-btn>
 
+						<v-menu offset-y :close-on-content-click="false">
+							<template v-slot:activator="{ props }">
+								<v-btn
+									v-bind="props"
+									size="small"
+									rounded="pill"
+									class="mr-2 mb-1"
+									:variant="backupModeFilter ? 'tonal' : 'text'"
+									:color="backupModeFilter ? 'primary' : 'medium-emphasis'"
+									v-if="role == 'administrator'"
+								>
+									<v-icon start>mdi-cloud-upload</v-icon>
+									Backup
+									<v-icon end>mdi-chevron-down</v-icon>
+								</v-btn>
+							</template>
+							<v-card width="220" rounded="xl" elevation="4">
+								<v-card-text>
+									<v-list-subheader class="px-0" style="height: 32px; min-height: 32px;">Backup Mode</v-list-subheader>
+									<v-radio-group 
+										v-model="backupModeFilter" 
+										density="compact" 
+										hide-details 
+										class="mt-1"
+										@update:model-value="filterSites"
+									>
+										<v-radio label="All" :value="null" color="primary"></v-radio>
+										<v-radio label="Direct" value="direct" color="primary"></v-radio>
+										<v-radio label="Local" value="local" color="primary"></v-radio>
+									</v-radio-group>
+								</v-card-text>
+							</v-card>
+						</v-menu>
+
 						<!-- Core Filter -->
 						<v-menu offset-y v-model="coreFilterMenu" :close-on-content-click="false">
 							<template v-slot:activator="{ props }">
@@ -10365,6 +10399,7 @@ const app = createApp({
 			{ title: 'Role(s)', key: 'roles' },
 			{ title: '', key: 'actions', sortable: false, align: 'end' }
 		],
+		backupModeFilter: null,
 		applied_theme_filters: [],
 		applied_plugin_filters: [],
 		applied_core_filters: [],
@@ -10463,6 +10498,9 @@ const app = createApp({
 				console.error("Error fetching filter statuses:", error);
 				this.site_filter_status = null;
 			});
+		},
+		backupModeFilter() {
+			this.filterSites();
 		},
 		filter_logic() {
 			this.filterSites();
@@ -10835,7 +10873,7 @@ const app = createApp({
 			return this.applied_core_filters.length > 0;
 		},
 		isAnySiteFilterActive() {
-			return this.isUnassignedFilterActive || (this.search && this.search.length > 0) || (this.combinedAppliedFilters && this.combinedAppliedFilters.length > 0) || this.coreFiltersApplied;
+			return this.isUnassignedFilterActive || (this.search && this.search.length > 0) || (this.combinedAppliedFilters && this.combinedAppliedFilters.length > 0) || this.coreFiltersApplied || this.backupModeFilter !== null;
 		},
 		combinedAppliedFilters() {
 			return [...this.applied_theme_filters, ...this.applied_plugin_filters];
@@ -20229,7 +20267,7 @@ const app = createApp({
 		},
 		filterSites() {
 			// If no advanced filters are selected, reset everything
-			if (this.combinedAppliedFilters.length === 0 && this.applied_core_filters.length === 0) {
+			if (this.combinedAppliedFilters.length === 0 && this.applied_core_filters.length === 0 && this.backupModeFilter === null) {
 				// Make all sites visible locally
 				this.sites.forEach(s => s.filtered = true);
 				this.filtered_environment_ids = [];
@@ -20252,6 +20290,7 @@ const app = createApp({
 				core: this.applied_core_filters.map( ({ name }) => name ),
 				versions: allSelectedVersions,
 				statuses: allSelectedStatuses,
+				backup_mode: this.backupModeFilter
 			};
 
 			axios.post('/wp-json/captaincore/v1/filters/sites', filters, {

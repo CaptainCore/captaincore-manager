@@ -435,6 +435,12 @@ class DB {
         
         $filters = (object) $filters;
 
+        if ( ! empty( $filters->backup_mode ) ) {
+            $mode = esc_sql( $filters->backup_mode );
+            // Search the JSON details column for the specific mode
+            $base_conditions[] = "{$table}.details LIKE '%\"mode\":\"{$mode}\"%'";
+        }
+
         // Retrieve logic operators
         $primary_logic   = ( ! empty( $filters->logic ) && strtolower( $filters->logic ) === 'or' ) ? 'OR' : 'AND';
         $version_logic   = ( ! empty( $filters->version_logic ) && strtolower( $filters->version_logic ) === 'or' ) ? 'OR' : 'AND';
