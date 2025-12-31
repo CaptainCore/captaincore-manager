@@ -1837,7 +1837,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									v-model="dialog_modify_plan.plan.next_renewal"
 									label="Next Renewal Date"
 									append-inner-icon="mdi-calendar"
-									readonly
 									v-bind="props"
 									variant="underlined"
 								></v-text-field>
