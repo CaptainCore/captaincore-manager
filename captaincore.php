@@ -6404,6 +6404,12 @@ function captaincore_fetch_socket_address() {
 add_filter( 'login_url', 'captaincore_override_login_url', 10, 3 );
 
 function captaincore_override_login_url( $login_url, $redirect, $force_reauth ) {
+    
+    // Do not override URL if generating via WP-CLI.
+    if ( defined( 'WP_CLI' ) && WP_CLI ) {
+        return $login_url;
+    }
+
     // 1. Get the CaptainCore mount path (e.g., "/account/")
     $configurations = \CaptainCore\Configurations::get();
     $path           = isset( $configurations->path ) ? $configurations->path : '/account/';
@@ -6418,6 +6424,25 @@ function captaincore_override_login_url( $login_url, $redirect, $force_reauth ) 
     }
 
     return $custom_login_url;
+}
+
+/* -------------------------------------------------------------------------
+ *  REDIRECTS FOR LOGGED IN USERS
+ * ------------------------------------------------------------------------- */
+
+// Intercept access to WooCommerce "My Account" page
+add_action( 'template_redirect', 'captaincore_redirect_woo_to_app' );
+
+function captaincore_redirect_woo_to_app() {
+    // Check if on WooCommerce Account page and user is logged in
+    if ( function_exists( 'is_account_page' ) && is_account_page() && is_user_logged_in() ) {
+        
+        $configurations = \CaptainCore\Configurations::get();
+        $path           = isset( $configurations->path ) ? $configurations->path : '/account/';
+
+        wp_redirect( home_url( $path ) );
+        exit;
+    }
 }
 
 /* -------------------------------------------------------------------------
