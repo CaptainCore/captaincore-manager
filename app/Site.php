@@ -789,7 +789,7 @@ class Site {
         $site->mailgun          = $details->mailgun;
         $site->console_errors   = isset( $details->console_errors ) ? $details->console_errors : "";
         $site->environment_vars = isset( $details->environment_vars ) ? $details->environment_vars : [];
-        $site->backup_settings  = isset( $details->backup_settings ) ? $details->backup_settings : (object) [ "mode" => "local", "interval" => "daily", "active" => true ];
+        $site->backup_settings  = isset( $details->backup_settings ) ? $details->backup_settings : (object) [ "mode" => "direct", "interval" => "daily", "active" => true ];
         $site->subsites         = $details->subsites;
         $site->storage          = $details->storage;
         $site->visits           = $details->visits;
