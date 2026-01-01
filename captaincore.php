@@ -599,6 +599,11 @@ function captaincore_subscriptions_func( $request ) {
 	return ( new CaptainCore\User )->subscriptions();
 }
 
+function captaincore_subscription_details_func( $request ) {
+    $account_id = $request->get_param( "id" );
+    return ( new CaptainCore\User )->get_subscription_details( $account_id );
+}
+
 function captaincore_upcoming_subscriptions_func( $request ) {
 	return ( new CaptainCore\User )->upcoming_subscriptions();
 }
@@ -3996,6 +4001,15 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/subscriptions/', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_subscriptions_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/subscriptions/(?P<id>[\d]+)', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_subscription_details_func',
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
 		]

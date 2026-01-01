@@ -8280,15 +8280,17 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-data-table
 					:headers="[
 						{ title: 'Name', key: 'name' },
+						{ title: 'Type', key: 'billing_mode' },
 						{ title: 'Interval', key: 'interval' },
 						{ title: 'Next Renewal', key: 'next_renewal' },
-						{ title: 'Price', key: 'total', width: '100px' }]"
+						{ title: 'Price', key: 'total', width: '100px', align: 'end' }]"
 					:items="subscriptions"
 					:search="subscription_search"
 					:items-per-page="100"
 					:items-per-page-options="[100,250,500,{'title':'All','value':-1}]"
 					v-show="toggle_plan == true"
 					hover
+                    density="comfortable"
 					@click:row="(event, { item }) => goToPath(`/subscription/${item.account_id}`)"
 					style="cursor:pointer;"
 				>
@@ -8313,6 +8315,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-card-text>
 					</template>
 
+                    <template v-slot:item.billing_mode="{ item }">
+                        <v-chip size="x-small" label class="text-uppercase">{{ item.billing_mode || 'Standard' }}</v-chip>
+					</template>
+
 					<template v-slot:item.interval="{ item }">
 						{{ intervalLabel( item.interval ) }}
 					</template>
@@ -8326,6 +8332,206 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-list-subheader>{{ revenue_estimated_total() }}</v-list-subheader>
 				<div id="plan_chart_transactions"></div>
 			</v-card>
+            <v-card v-if="role == 'administrator' && route == 'subscription'" flat border="thin" rounded="xl">
+                <v-toolbar flat color="transparent">
+                    <v-btn icon="mdi-arrow-left" @click="goToPath('/subscriptions')" variant="text"></v-btn>
+                    <v-toolbar-title v-if="view_subscription.loading">Loading...</v-toolbar-title>
+                    <v-toolbar-title v-else>
+                        {{ view_subscription.data.account.name }} 
+                        <span class="text-caption text-medium-emphasis">#{{ view_subscription.data.account.id }}</span>
+                    </v-toolbar-title>
+                    <v-spacer></v-spacer>
+                    <v-btn 
+                        v-if="!view_subscription.loading"
+                        color="primary" 
+                        variant="flat" 
+                        @click="editAccountPlan(view_subscription.data.account.id)"
+                    >
+                        Edit Plan
+                    </v-btn>
+                </v-toolbar>
+
+                <div v-if="view_subscription.loading" class="d-flex justify-center align-center pa-10">
+                    <v-progress-circular indeterminate color="primary"></v-progress-circular>
+                </div>
+
+                <v-card-text v-else>
+                    <!-- Top Summary Cards -->
+                    <v-row>
+                        <v-col cols="12" sm="6" md="3">
+                            <v-card variant="tonal" class="pa-2 h-100">
+                                <v-card-item title="Lifetime Value">
+                                    <template v-slot:subtitle>
+                                        <span class="text-h5 font-weight-bold text-primary">${{ formatMoney(view_subscription.data.stats.ltv) }}</span>
+                                    </template>
+                                </v-card-item>
+                            </v-card>
+                        </v-col>
+                         <v-col cols="12" sm="6" md="3">
+                            <v-card variant="tonal" class="pa-2 h-100">
+                                <v-card-item title="Renewal Price">
+                                    <template v-slot:subtitle>
+                                        <!-- Safe access to plan data -->
+                                        <span class="text-h5 font-weight-bold text-success" v-html="my_plan_usage_estimate(view_subscription.data.plan)"></span>
+                                    </template>
+                                </v-card-item>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="12" sm="6" md="3">
+                            <v-card variant="tonal" class="pa-2 h-100">
+                                <v-card-item title="Next Renewal">
+                                    <template v-slot:subtitle>
+                                        <div class="text-h6 mt-1">{{ pretty_timestamp_short(view_subscription.data.plan.next_renewal) }}</div>
+                                    </template>
+                                </v-card-item>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="12" sm="6" md="3">
+                            <v-card variant="tonal" class="pa-2 h-100">
+                                <v-card-item title="Status">
+                                    <template v-slot:subtitle>
+                                        <div class="mt-1">
+                                            <v-chip 
+                                                :color="view_subscription.data.plan.status === 'active' ? 'success' : 'warning'" 
+                                                label
+                                            >
+                                                {{ view_subscription.data.plan.status || 'Active' }}
+                                            </v-chip>
+                                            <v-chip 
+                                                v-if="view_subscription.data.plan.auto_pay === 'true'" 
+                                                color="info" 
+                                                label 
+                                                class="ml-2"
+                                                variant="outlined"
+                                            >
+                                                Auto-Pay
+                                            </v-chip>
+                                        </div>
+                                    </template>
+                                </v-card-item>
+                            </v-card>
+                        </v-col>
+                    </v-row>
+
+                    <v-row class="mt-4">
+                        <!-- Left Column: Details -->
+                        <v-col cols="12" md="8">
+                            <v-card variant="outlined" class="mb-4">
+                                <v-card-title>Invoice History</v-card-title>
+                                <v-data-table
+                                    :headers="[
+                                        { title: 'Invoice', key: 'order_number' },
+                                        { title: 'Date', key: 'date' },
+                                        { title: 'Status', key: 'status' },
+                                        { title: 'Total', key: 'total', align: 'end' },
+                                        { title: '', key: 'actions', align: 'end', sortable: false }
+                                    ]"
+                                    :items="view_subscription.data.invoices"
+                                    density="compact"
+                                    :items-per-page="10"
+                                >
+                                    <template v-slot:item.order_number="{ item }">
+                                        #{{ item.order_number }}
+                                    </template>
+                                    <template v-slot:item.date="{ item }">
+                                        {{ pretty_timestamp(item.date) }}
+                                    </template>
+                                    <template v-slot:item.status="{ item }">
+                                        <v-chip size="x-small" :color="getStatusColor(item.status)" label>{{ item.status }}</v-chip>
+                                    </template>
+                                    <template v-slot:item.total="{ item }">
+                                        ${{ item.total }}
+                                    </template>
+                                    <template v-slot:item.actions="{ item }">
+                                        <v-btn icon="mdi-open-in-new" variant="text" size="small" :href="item.view_url" target="_blank"></v-btn>
+                                    </template>
+                                </v-data-table>
+                            </v-card>
+
+                            <v-card variant="outlined">
+                                <v-card-title>Plan Configuration</v-card-title>
+                                <v-card-text>
+                                    <v-table density="compact">
+                                        <tbody>
+                                            <tr>
+                                                <td class="font-weight-bold" width="200">Billing Mode</td>
+                                                <td class="text-uppercase">{{ view_subscription.data.plan.billing_mode || 'Standard' }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="font-weight-bold">Base Price</td>
+                                                <td>${{ view_subscription.data.plan.price }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="font-weight-bold">Interval</td>
+                                                <td>Every {{ view_subscription.data.plan.interval }} Month(s)</td>
+                                            </tr>
+                                        </tbody>
+                                    </v-table>
+
+                                    <div v-if="view_subscription.data.plan.addons && view_subscription.data.plan.addons.length > 0" class="mt-4">
+                                        <div class="text-subtitle-2 mb-2">Addons</div>
+                                        <v-table density="compact" class="bg-grey-lighten-5 rounded">
+                                            <thead>
+                                                <tr>
+                                                    <th>Name</th>
+                                                    <th>Qty</th>
+                                                    <th>Price</th>
+                                                    <th class="text-right">Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <template v-for="(addon, i) in view_subscription.data.plan.addons" :key="i">
+                                                    <tr v-if="addon">
+                                                        <td>{{ addon.name }}</td>
+                                                        <td>{{ addon.quantity }}</td>
+                                                        <td>${{ addon.price }}</td>
+                                                        <td class="text-right">${{ (parseFloat(addon.price || 0) * parseInt(addon.quantity || 0)).toFixed(2) }}</td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </v-table>
+                                    </div>
+                                </v-card-text>
+                            </v-card>
+                        </v-col>
+
+                        <!-- Right Column: Usage/Stats -->
+                        <v-col cols="12" md="4">
+                             <v-card variant="outlined" class="mb-4">
+                                <v-card-title>Usage Overview</v-card-title>
+                                <v-list density="compact">
+                                    <v-list-item>
+                                        <template v-slot:prepend><v-icon icon="mdi-web" color="primary"></v-icon></template>
+                                        <v-list-item-title>{{ view_subscription.data.stats.sites_count }}</v-list-item-title>
+                                        <v-list-item-subtitle>Active Websites</v-list-item-subtitle>
+                                    </v-list-item>
+                                    <v-divider inset></v-divider>
+                                    <v-list-item>
+                                        <template v-slot:prepend><v-icon icon="mdi-domain" color="primary"></v-icon></template>
+                                        <v-list-item-title>{{ view_subscription.data.stats.domains_count }}</v-list-item-title>
+                                        <v-list-item-subtitle>Domains</v-list-item-subtitle>
+                                    </v-list-item>
+                                     <v-divider inset></v-divider>
+                                    <v-list-item>
+                                        <template v-slot:prepend><v-icon icon="mdi-database" color="primary"></v-icon></template>
+                                        <v-list-item-title v-html="view_subscription.data.stats.storage_usage"></v-list-item-title>
+                                        <v-list-item-subtitle>Storage</v-list-item-subtitle>
+                                    </v-list-item>
+                                     <v-divider inset></v-divider>
+                                    <v-list-item>
+                                        <template v-slot:prepend><v-icon icon="mdi-chart-bar" color="primary"></v-icon></template>
+                                        <v-list-item-title v-html="view_subscription.data.stats.visits_usage"></v-list-item-title>
+                                        <v-list-item-subtitle>Visits</v-list-item-subtitle>
+                                    </v-list-item>
+                                </v-list>
+                                <v-card-actions>
+                                    <v-btn block variant="tonal" @click="goToPath(`/accounts/${view_subscription.data.account.id}`)">View Account</v-btn>
+                                </v-card-actions>
+                            </v-card>
+                        </v-col>
+                    </v-row>
+                </v-card-text>
+            </v-card>
 			<v-card v-if="route == 'accounts'" flat border="thin" rounded="xl">
 			<v-sheet v-show="dialog_account.step == 1" color="transparent">
 				<v-toolbar flat color="transparent">
@@ -10256,6 +10462,7 @@ const app = createApp({
 			'/profile' : 'profile',
 			'/sites': 'sites',
 			'/subscriptions': 'subscriptions',
+			'/subscription': 'subscription',
 			'/users': 'users',
 		},
 		selected_nav: "",
@@ -10271,6 +10478,15 @@ const app = createApp({
 		processes: [],
 		billing: { valid: true, rules: {}, payment_methods: [], address: { last_name: "", email: "", city: "", line1: "", line2: "", postal_code: "", state: "" } },
 		subscriptions: [],
+		view_subscription: {
+            loading: true,
+            data: {
+                account: {},
+                plan: {},
+                invoices: [],
+                stats: {}
+            }
+        },
 		new_payment: { card: {}, show: false, error: "" },
 		current_user_email: "<?php echo $user->email; ?>",
 		current_user_login: "<?php echo $user->login; ?>",
@@ -11513,6 +11729,19 @@ const app = createApp({
 				this.showInvoice(this.route_path);
 				return;
 			}
+
+			if (this.route === "subscriptions") {
+                this.fetchSubscriptions();
+                return;
+            }
+
+            if (this.route === "subscription") {
+                const accountId = this.route_path;
+                if (accountId) {
+                    this.fetchSubscriptionDetails(accountId);
+                }
+                return;
+            }
 
 			if (this.route === "sites") {
 				
@@ -13764,6 +13993,54 @@ const app = createApp({
 				}
 				setTimeout(this.fetchMissing, 1000)
 			});
+		},
+		fetchSubscriptionDetails(accountId) {
+			this.view_subscription.loading = true;
+			this.view_subscription.data = { account: {}, plan: {}, invoices: [], stats: {} }; // Reset
+
+			axios.get(`/wp-json/captaincore/v1/subscriptions/${accountId}`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.view_subscription.data = response.data;
+				this.view_subscription.loading = false;
+				this.loading_page = false;
+			})
+			.catch(error => {
+				console.error("Error fetching subscription details:", error);
+				this.snackbar.message = "Failed to load subscription.";
+				this.snackbar.show = true;
+				this.view_subscription.loading = false;
+			});
+		},
+		editAccountPlan(accountId) {
+			// Re-use existing dialog logic
+			this.dialog_account.records = { account: { account_id: accountId } }; // Partial mock to satisfy modifyPlan
+			
+			// We need to fetch the full account object first to populate the dialog correctly
+			// modifyPlan() expects this.dialog_account.records.account.plan to exist
+			axios.get(`/wp-json/captaincore/v1/accounts?include=${accountId}`, { // Or generic account fetch
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			}).then(() => {
+					// Actually the showAccount method is better suited
+					this.showAccount(accountId);
+					// Wait for showAccount to populate, then trigger modify
+					// Since showAccount is async but doesn't return promise here easily, 
+					// we might need to rely on the user clicking "Edit" inside the account view, 
+					// OR refactor showAccount to return a promise.
+					
+					// Alternative: Just open the account view
+					this.goToPath(`/accounts/${accountId}`);
+			});
+		},
+		formatMoney(amount) {
+			return parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+		},
+		getStatusColor(status) {
+			if (status === 'completed') return 'success';
+			if (status === 'pending') return 'warning';
+			if (status === 'failed') return 'error';
+			return 'default';
 		},
 		populateCloneSites(destination_provider_id) {
 			let all_other_sites = [];
@@ -20227,6 +20504,7 @@ const app = createApp({
 		clearSiteFilters() {
 			this.search = '';
 			this.isUnassignedFilterActive = false;
+			this.backupModeFilter = null;
 			this.applied_theme_filters = [];
 			this.applied_plugin_filters = [];
 			this.applied_core_filters = [];
