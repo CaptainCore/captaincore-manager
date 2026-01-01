@@ -83,15 +83,52 @@ class Mailer {
      * ------------------------------------------------------------------------- */
     private static function get_line_items_html( $order, $brand_color ) {
         $items_html = '';
+        $account_id = $order->get_meta( 'captaincore_account_id' );
+
         foreach ( $order->get_items() as $item_id => $item ) {
             $product_name = $item->get_name();
+            $qty          = $item->get_quantity();
             $total_price  = wc_price( $item->get_total(), array( 'currency' => $order->get_currency() ) );
             
-            $meta_data = $item->get_meta_data();
-            $details = '';
+            if ( $qty > 1 ) {
+                $product_name .= " x {$qty}";
+            }
+
+            $meta_data             = $item->get_meta_data();
+            $details               = '';
+            $is_managed_sites_item = false;
+
+            // Check if Product Name indicates this is the managed sites item
+            if ( strpos( $product_name, "Managed WordPress sites" ) !== false ) {
+                $is_managed_sites_item = true;
+            }
+
             foreach ( $meta_data as $meta ) {
                 if ( $meta->key === 'Details' ) {
                     $details = '<div style="font-size: 12px; color: #718096; margin-top: 4px;">' . nl2br( $meta->value ) . '</div>';
+                    
+                    // Check if the Details meta indicates this is the managed sites item
+                    if ( strpos( $meta->value, "Managed WordPress sites" ) !== false ) {
+                        $is_managed_sites_item = true;
+                    }
+                }
+            }
+
+            // Expand Managed WordPress sites details if flag was set by Name or Meta
+            if ( $is_managed_sites_item && $account_id ) {
+                $sites = \CaptainCore\Sites::where( [ "account_id" => $account_id, "status" => "active" ] );
+                $maintenance_sites = [];
+                foreach ( $sites as $site ) {
+                    // Filter for sites that are not using the default provider (ID 1)
+                    if ( ! empty( $site->provider_id ) && ( $site->provider_id != "1" ) ) {
+                        $maintenance_sites[] = $site->name;
+                    }
+                }
+                if ( ! empty( $maintenance_sites ) ) {
+                    sort($maintenance_sites);
+                    $site_list_html = implode(", ", $maintenance_sites);
+                    $count = count($maintenance_sites);
+                    $details .= "<div style='font-size: 12px; color: #718096; margin-top: 8px; line-height: 1.5em;'><strong>{$count} Sites Included:</strong><br/>{$site_list_html}</div>";
                 }
             }
 
@@ -101,7 +138,7 @@ class Mailer {
                     <div style='font-weight: 600; color: #2d3748;'>{$product_name}</div>
                     {$details}
                 </td>
-                <td style='padding: 12px 0; border-bottom: 1px solid #edf2f7; text-align: right; vertical-align: top; color: #2d3748;'>
+                <td style='padding: 12px 0; border-bottom: 1px solid #edf2f7; text-align: right; vertical-align: top; color: #2d3748; width: 1%; white-space: nowrap;'>
                     {$total_price}
                 </td>
             </tr>";
@@ -114,8 +151,8 @@ class Mailer {
         <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='font-size: 14px;'>
             {$items_html}
             <tr>
-                <td style='padding-top: 15px; font-weight: 700; color: #2d3748; text-align: right;'>Total</td>
-                <td style='padding-top: 15px; font-weight: 700; color: {$brand_color}; text-align: right; font-size: 16px;'>{$total}</td>
+                <td style='padding-top: 15px; padding-right: 15px; font-weight: 700; color: #2d3748; text-align: right;'>Total</td>
+                <td style='padding-top: 15px; font-weight: 700; color: {$brand_color}; text-align: right; font-size: 16px; white-space: nowrap;'>{$total}</td>
             </tr>
         </table>";
     }
@@ -446,7 +483,10 @@ class Mailer {
         $config      = Configurations::get();
         $brand_color = $config->colors->primary ?? '#0D47A1';
         $admin_email = get_option( 'admin_email' );
-        
+
+        // Add Admin as BCC
+        $headers = [ "Bcc: $admin_email" ];
+
         $total   = $order->get_formatted_order_total();
         $date    = $order->get_date_created()->date( 'F j, Y' );
         $billing = $order->get_address( 'billing' );
@@ -488,7 +528,8 @@ class Mailer {
             "Receipt for Order #{$order_id}", 
             "Receipt #{$order_id}", 
             $date, 
-            $intro_html . $items_html . $billing_html
+            $intro_html . $items_html . $billing_html,
+            $headers
         );
     }
 
