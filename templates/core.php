@@ -8821,7 +8821,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</v-row>
 								</v-card-text>
 								<v-alert variant="tonal" type="info" class="mx-2">
-									<strong>{{ dialog_account.records.account.plan.name }} Plan</strong> supports up to {{ formatLargeNumbers( dialog_account.records.account.plan.limits.visits ) }} visits, {{ dialog_account.records.account.plan.limits.storage }}GB storage and {{ dialog_account.records.account.plan.limits.sites }} sites. Extra sites, storage and visits charged based on usage.
+									<span v-if="dialog_account.records.account.plan.billing_mode === 'per_site'">
+										<strong>Custom Plan</strong> charges ${{ dialog_account.records.account.plan.price }} per site. Currently managing {{ dialog_account.records.account.plan.usage.sites }} active sites.
+									</span>
+									<span v-else>
+										<strong>{{ dialog_account.records.account.plan.name }} Plan</strong> supports up to {{ formatLargeNumbers( dialog_account.records.account.plan.limits.visits ) }} visits, {{ dialog_account.records.account.plan.limits.storage }}GB storage and {{ dialog_account.records.account.plan.limits.sites }} sites. Extra sites, storage and visits charged based on usage.
+									</span>
 								</v-alert>
 								<v-data-table
 									:headers='[
