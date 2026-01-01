@@ -913,4 +913,70 @@ class Mailer {
         );
     }
 
+    /* -------------------------------------------------------------------------
+     *  13. NEW SITE REQUEST (Admin Notify)
+     * ------------------------------------------------------------------------- */
+    static public function send_site_request_notification( $site_name, $site_notes, $account_name, $user ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $admin_email = get_option( 'admin_email' );
+
+        $subject     = "New Site Request: {$site_name}";
+        $headline    = "New Site Requested";
+        $subheadline = $site_name;
+
+        // Notes Section
+        $notes_html = "";
+        if ( ! empty( $site_notes ) ) {
+            $notes_html = "
+                <div style='margin-top: 25px; padding-top: 20px; border-top: 1px solid #edf2f7;'>
+                    <h4 style='margin: 0 0 10px; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Notes</h4>
+                    <p style='margin: 0; font-style: italic; color: #4a5568;'>\"" . nl2br( esc_html( $site_notes ) ) . "\"</p>
+                </div>
+            ";
+        }
+
+        $content_html = "
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+                <p style='margin-bottom: 25px;'>A new site request has been submitted.</p>
+                
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px;'>
+                    <table width='100%' cellpadding='0' cellspacing='0'>
+                        <tr>
+                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site Name</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
+                        </tr>
+                        <tr>
+                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Account</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$account_name}</td>
+                        </tr>
+                        <tr>
+                            <td style='padding-top: 10px; border-top: 1px solid #edf2f7; color: #718096; font-size: 14px;'>Requested By</td>
+                            <td style='padding-top: 10px; border-top: 1px solid #edf2f7; color: #2d3748; font-weight: 600; text-align: right;'>
+                                {$user->name} <span style='color: #a0aec0; font-weight: 400;'>(#{$user->user_id})</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                {$notes_html}
+            </div>
+        ";
+
+        // Reply to the user requesting the action
+        if ( ! empty( $user->name ) ) {
+            $headers = [ "Reply-To: {$user->name} <{$user->email}>" ];
+        } else {
+            $headers = [ "Reply-To: <{$user->email}>" ];
+        }
+
+        self::send_email_with_layout( 
+            $admin_email, 
+            $subject, 
+            $headline, 
+            $subheadline, 
+            $content_html,
+            $headers
+        );
+    }
+
 }
