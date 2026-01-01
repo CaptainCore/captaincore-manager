@@ -34,16 +34,20 @@ class Accounts extends DB {
     }
 
 	public function list() {
-		$accounts = [];
-		foreach ( $this->accounts as $account_id ) {
-			$account  = self::get( $account_id );
-			$defaults = json_decode( $account->defaults );
-			$result = (object) [
+        $accounts = [];
+        foreach ( $this->accounts as $account_id ) {
+            $account  = self::get( $account_id );
+            $defaults = json_decode( $account->defaults );
+            $plan     = json_decode( $account->plan );
+            $plan_name = isset( $plan->name ) ? $plan->name : '';
+
+            $result = (object) [
                 'account_id'      => $account->account_id,
                 'billing_user_id' => (int) $account->billing_user_id,
-				'name'            => html_entity_decode( $account->name ),
-				'defaults'        => json_decode( $account->defaults ),
+                'name'            => html_entity_decode( $account->name ),
+                'defaults'        => json_decode( $account->defaults ),
                 'metrics'         => json_decode( $account->metrics ),
+                'plan_name'       => $plan_name,
                 'filtered'        => true
             ];
             if ( $result->defaults->users == "" ) {
@@ -52,10 +56,10 @@ class Accounts extends DB {
             if ( $result->defaults->recipes == "" ) {
                 $result->defaults->recipes = [];
             }
-			$accounts[] = $result;
-		}
-		usort($accounts, function($a, $b) { return strcmp( strtolower($a->name), strtolower($b->name) ); });
-		return $accounts;
+            $accounts[] = $result;
+        }
+        usort($accounts, function($a, $b) { return strcmp( strtolower($a->name), strtolower($b->name) ); });
+        return $accounts;
     }
 
     public function update_plan( $new_plan, $account_id ) {
