@@ -120,27 +120,169 @@ class User {
         return false;
     }
 
+    private function prepare_plan_for_display( $account_id, $account_data ) {
+        $plan = $account_data->plan;
+        
+        // Ensure addons is an array
+        if ( ! isset( $plan->addons ) || ! is_array( $plan->addons ) ) {
+            $plan->addons = [];
+        }
+
+        $billing_mode = isset( $plan->billing_mode ) ? $plan->billing_mode : 'standard';
+        $total = 0;
+
+        // 1. Base Price Calculation
+        if ( $billing_mode === 'per_site' ) {
+            // Count active sites for billing
+            $sites = Sites::where( [ "account_id" => $account_id, "status" => "active" ] );
+            $billing_sites_count = 0;
+            
+            foreach ( $sites as $site ) {
+                if ( empty( $site->provider_id ) || $site->provider_id == "1" ) {
+                    $billing_sites_count++;
+                }
+            }
+            
+            $price_per_site = (float) $plan->price;
+            $total = $price_per_site * $billing_sites_count;
+        } else {
+            $total = (float) $plan->price;
+        }
+
+        // 2. Addons Calculation
+        foreach ( $plan->addons as $addon ) {
+            if ( isset($addon->price) && isset($addon->quantity) ) {
+                $total += ( (float) $addon->price * (int) $addon->quantity );
+            }
+        }
+
+        // 3. Dynamic Maintenance Sites (Managed WordPress sites)
+        $all_sites = Sites::where( [ "account_id" => $account_id, "status" => "active" ] );
+        $maintenance_count = 0;
+        foreach ( $all_sites as $site ) {
+            // Check for non-default provider (e.g. Kinsta/Rocket)
+            if ( ! empty( $site->provider_id ) && ( $site->provider_id != "1" ) ) {
+                $maintenance_count++;
+            }
+        }
+        
+        if ( $maintenance_count > 0 ) {
+            $maintenance_cost = 2; // Hardcoded or fetch from config
+            $total += ( $maintenance_count * $maintenance_cost );
+            
+            // Inject into addons array for display purposes
+            // We use array_unshift on a copy or check if it exists to avoid duplication if called repeatedly
+            // Since this is a fresh fetch, unshift is fine.
+            array_unshift($plan->addons, (object)[
+                "name" => "Managed WordPress sites",
+                "price" => $maintenance_cost,
+                "quantity" => $maintenance_count
+            ]);
+        }
+
+        return [
+            "plan"         => $plan,
+            "billing_mode" => $billing_mode,
+            "total"        => number_format($total, 2, '.', ''),
+        ];
+    }
+
     public function subscriptions() {
         $plans         = [];
         $with_renewals = self::with_renewals();
-        foreach ( $with_renewals as $account ) {
-            $plan  = json_decode ( $account->plan );
-            $total = $plan->price;
-            foreach ( $plan->addons as $addon ) {
-                $total = (int) $total + ( (int) $addon->price * (int) $addon->quantity );
+        
+        foreach ( $with_renewals as $account_row ) {
+            $account_id   = $account_row->account_id;
+            $account      = new Account( $account_id, true );
+            $account_data = $account->get(); 
+            $plan_raw     = $account_data->plan;
+
+            // FILTER: Skip if next_renewal is empty (Inactive)
+            if ( empty( $plan_raw->next_renewal ) ) {
+                continue;
             }
+
+            // Use the helper
+            $calculated = $this->prepare_plan_for_display( $account_id, $account_data );
+            $plan       = $calculated['plan'];
+
             $plans[] = [
-                "account_id"      => $account->account_id,
-                "name"            => $account->name,
+                "account_id"      => $account_id,
+                "name"            => $account_data->name,
                 "next_renewal"    => $plan->next_renewal,
                 "interval"        => $plan->interval,
+                "billing_mode"    => $calculated['billing_mode'],
                 "addons"          => $plan->addons,
-                "price"           => $plan->price,
-                "total"           => $total,
+                "base_price"      => $plan->price,
+                "total"           => $calculated['total'],
                 "billing_user_id" => $plan->billing_user_id,
+                "status"          => isset($plan->status) ? $plan->status : 'active',
             ];
         }
         return $plans;
+    }
+
+    public function get_subscription_details( $account_id ) {
+        if ( ! self::is_admin() ) {
+            return new \WP_Error( 'forbidden', 'Permission denied', [ 'status' => 403 ] );
+        }
+
+        $account_obj = new Account( $account_id, true );
+        $account     = $account_obj->get();
+        
+        // Use the helper to get calculated addons and totals
+        $calculated = $this->prepare_plan_for_display( $account_id, $account );
+        $plan       = $calculated['plan']; // This now includes the dynamic addons
+
+        // Fetch Invoices (Orders)
+        $orders = wc_get_orders( [
+            'limit'      => -1,
+            'meta_key'   => 'captaincore_account_id',
+            'meta_value' => $account_id,
+            'orderby'    => 'date',
+            'order'      => 'DESC',
+        ] );
+
+        $invoices = [];
+        $ltv      = 0;
+
+        foreach ( $orders as $order ) {
+            $total = $order->get_total();
+            
+            if ( $order->get_status() == 'completed' ) {
+                $ltv += (float) $total;
+            }
+
+            $invoices[] = [
+                "order_id"     => $order->get_id(),
+                "order_number" => $order->get_order_number(),
+                "date"         => $order->get_date_created()->date('Y-m-d H:i:s'),
+                "status"       => $order->get_status(),
+                "total"        => $total,
+                "view_url"     => $order->get_edit_order_url(),
+                "item_count"   => $order->get_item_count(),
+            ];
+        }
+
+        $sites   = $account_obj->sites();
+        $domains = $account_obj->domains();
+        $usage   = $account_obj->usage_breakdown();
+
+        return [
+            "account" => [
+                "id"   => $account->account_id,
+                "name" => $account->name,
+            ],
+            "plan" => $plan, // Now safely contains arrays
+            "stats" => [
+                "sites_count"   => count($sites),
+                "domains_count" => count($domains),
+                "storage_usage" => $usage['total'][0],
+                "visits_usage"  => $usage['total'][1],
+                "ltv"           => $ltv
+            ],
+            "invoices" => $invoices
+        ];
     }
 
     public function upcoming_subscriptions() {
@@ -506,22 +648,17 @@ class User {
         $requested_sites   = self::requested_sites();
         $requested_sites[] = $site;
         update_user_meta( $this->user_id, 'requested_sites', $requested_sites );
+
         $site    = (object) $site;
         $user    = (object) self::fetch();
         $account = ( new Accounts )->get( $site->account_id );
-        $body    = "{$user->name} is requesting a new site <strong>'{$site->name}'</strong> for account '{$account->name}'.";
-        if ( $site->notes != "" ) {
-            $body = "$body<br /><br />Message from {$user->name}:<br />{$site->notes}";
-        }
-        
-        // Send out admin email notice
-		$to      = get_option('admin_email');
-		$subject = "Request new site '{$site->name}' from {$user->name}";
-		$headers = [ 
-            'Content-Type: text/html; charset=UTF-8',
-            "Reply-To: {$user->name} <{$user->email}>"
-        ];
-		wp_mail( $to, $subject, $body, $headers );
+
+        \CaptainCore\Mailer::send_site_request_notification( 
+            $site->name, 
+            $site->notes, 
+            $account->name, 
+            $user 
+        );
     }
 
     public function update_request_site( $site ) {
