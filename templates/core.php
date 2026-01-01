@@ -8329,7 +8329,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-card v-if="route == 'accounts'" flat border="thin" rounded="xl">
 			<v-sheet v-show="dialog_account.step == 1" color="transparent">
 				<v-toolbar flat color="transparent">
-					<v-toolbar-title>Listing {{ accounts.length }} accounts</v-toolbar-title>
+					<v-toolbar-title>
+						<span v-if="isAnyAccountFilterActive">
+							Showing {{ filteredAccountsData.length }} accounts
+						</span>
+						<span v-else>
+							Listing {{ accounts.length }} accounts
+						</span>
+					</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items v-if="role == 'administrator'">
 						<v-btn variant="text" @click="dialog_new_account.show = true">Add account <v-icon dark>mdi-plus</v-icon></v-btn>
@@ -8353,8 +8360,46 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-icon start icon="mdi-cash-remove"></v-icon>
 					{{ oustandingAccountCount }} Outstanding
 				</v-btn>
-
-				<!-- Empty Accounts Filter -->
+				<v-menu offset-y v-model="planFilterMenu" :close-on-content-click="false">
+					<template v-slot:activator="{ props }">
+						<v-btn
+							v-bind="props"
+							size="small"
+							rounded="pill"
+							class="mr-2 mb-1"
+							:variant="planFiltersApplied ? 'flat' : 'text'"
+							:color="planFiltersApplied ? 'primary' : 'medium-emphasis'"
+							v-if="role == 'administrator'"
+							title="Filter by Hosting Plan"
+						>
+							<v-icon start>mdi-chart-donut</v-icon>
+							Plans
+							<v-icon end>mdi-chevron-down</v-icon>
+						</v-btn>
+					</template>
+					<v-card width="300" rounded="xl" elevation="4">
+						<v-card-text>
+							<v-autocomplete
+								v-model="applied_plan_filters"
+								:items="availableAccountPlans"
+								label="Select Plan"
+								variant="outlined"
+								density="compact"
+								multiple
+								chips
+								closable-chips
+								hide-details
+								color="primary"
+								clearable
+								autofocus
+							>
+								<template v-slot:item="{ item, props }">
+									<v-list-item v-bind="props" :title="item.raw"></v-list-item>
+								</template>
+							</v-autocomplete>
+						</v-card-text>
+					</v-card>
+				</v-menu>
 				<v-btn
 					:variant="isEmptyFilterActive ? 'flat' : 'text'"
 					:color="isEmptyFilterActive ? 'warning' : 'medium-emphasis'"
@@ -8368,22 +8413,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-icon start icon="mdi-inbox-remove-outline"></v-icon>
 					{{ emptyAccountCount }} Empty
 				</v-btn>
-
-				<!-- Clear Filters (Animated entry) -->
-				<v-slide-x-transition>
-					<v-btn
-						v-if="isAnyAccountFilterActive"
-						icon="mdi-filter-off"
-						size="small"
-						variant="text"
-						color="medium-emphasis"
-						class="mr-2 mb-1"
-						@click="clearAccountFilters()"
-						title="Clear all filters"
-					>
-					</v-btn>
-				</v-slide-x-transition>
-
 			</v-col>
 
 					<v-col cols="12" md="4" lg="3">
@@ -8393,10 +8422,24 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							v-model="account_search" 
 							autofocus 
 							label="Search" 
-							clearable 
 							hide-details 
-							append-inner-icon="mdi-magnify"
-						></v-text-field> 
+						>
+							<template v-slot:append-inner>
+								<v-fade-transition>
+									<v-btn
+										v-if="isAnyAccountFilterActive"
+										icon="mdi-filter-off"
+										size="x-small"
+										variant="text"
+										color="error"
+										class="mr-1"
+										@click="clearAccountFilters()"
+										title="Clear all filters"
+									></v-btn>
+								</v-fade-transition>
+								<v-icon color="medium-emphasis">mdi-magnify</v-icon>
+							</template>
+						</v-text-field> 
 					</v-col>
 				</v-row>
 				<v-card-text>
