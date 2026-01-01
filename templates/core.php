@@ -8808,21 +8808,21 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 																	<td class="text-right">${{ dialog_account.records.account.plan.price }}</td>
 																	<td class="text-right">${{ dialog_account.records.account.plan.price }}</td>
 																</tr>
-																<tr v-if="( parseInt( dialog_account.records.account.plan.usage.sites ) - parseInt( dialog_account.records.account.plan.limits.sites ) ) >= 1">
+																<tr v-if="dialog_account.records.account.plan.billing_mode !== 'per_site' && ( parseInt( dialog_account.records.account.plan.usage.sites ) - parseInt( dialog_account.records.account.plan.limits.sites ) ) >= 1">
 																	<td>Extra</td>
 																	<td>Sites</td>
 																	<td>{{ parseInt( dialog_account.records.account.plan.usage.sites ) - parseInt( dialog_account.records.account.plan.limits.sites ) }}</td>
 																	<td class="text-right">${{ plan_usage_pricing_sites }}</td>
 																	<td class="text-right">${{ plan_usage_pricing_sites * ( parseInt( dialog_account.records.account.plan.usage.sites ) - parseInt( dialog_account.records.account.plan.limits.sites ) ) }}</td>
 																</tr>
-																<tr v-if="(( parseInt( dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( dialog_account.records.account.plan.limits.storage ) ) >= 1">
+																<tr v-if="dialog_account.records.account.plan.billing_mode !== 'per_site' && (( parseInt( dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( dialog_account.records.account.plan.limits.storage ) ) >= 1">
 																	<td>Extra</td>
 																	<td>Storage</td>
 																	<td>{{ Math.ceil ( ( ( parseInt( dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( dialog_account.records.account.plan.limits.storage ) ) / 10 ) }}</td>
 																	<td class="text-right">${{ plan_usage_pricing_storage }}</td>
 																	<td class="text-right">${{ plan_usage_pricing_storage * Math.ceil ( ( ( parseInt( dialog_account.records.account.plan.usage.storage ) / 1024 / 1024 / 1024 ) - parseInt( dialog_account.records.account.plan.limits.storage ) ) / 10 ) }}</td>
 																</tr>
-																<tr v-if="Math.ceil ( ( parseInt( dialog_account.records.account.plan.usage.visits ) - parseInt( dialog_account.records.account.plan.limits.visits ) ) / parseInt ( configurations.usage_pricing.traffic.quantity ) ) >= 1">
+																<tr v-if="dialog_account.records.account.plan.billing_mode !== 'per_site' && Math.ceil ( ( parseInt( dialog_account.records.account.plan.usage.visits ) - parseInt( dialog_account.records.account.plan.limits.visits ) ) / parseInt ( configurations.usage_pricing.traffic.quantity ) ) >= 1">
 																	<td>Extra</td>
 																	<td>Visits</td>
 																	<td>{{ Math.ceil ( ( parseInt( dialog_account.records.account.plan.usage.visits ) - parseInt( dialog_account.records.account.plan.limits.visits ) ) / parseInt ( configurations.usage_pricing.traffic.quantity ) ) }}</td>
@@ -10447,6 +10447,8 @@ const app = createApp({
 			{ title: '', key: 'actions', sortable: false, align: 'end' }
 		],
 		backupModeFilter: null,
+		planFilterMenu: false,
+		applied_plan_filters: [],
 		applied_theme_filters: [],
 		applied_plugin_filters: [],
 		applied_core_filters: [],
@@ -10925,8 +10927,11 @@ const app = createApp({
 		combinedAppliedFilters() {
 			return [...this.applied_theme_filters, ...this.applied_plugin_filters];
 		},
+		planFiltersApplied() {
+			return this.applied_plan_filters.length > 0;
+		},
 		isAnyAccountFilterActive() {
-			return this.isOutstandingFilterActive || this.isEmptyFilterActive || (this.account_search && this.account_search.length > 0);
+			return this.isOutstandingFilterActive || this.isEmptyFilterActive || this.planFiltersApplied || (this.account_search && this.account_search.length > 0);
 		},
 		emptyAccountCount() {
 			let count = 0;
@@ -10949,15 +10954,15 @@ const app = createApp({
 		},
 		filteredAccountsData() {
 			let filtered = this.accounts.filter(account => account.filtered);
-
 			if (this.isOutstandingFilterActive) {
 				filtered = filtered.filter(account => account.metrics.outstanding_invoices && account.metrics.outstanding_invoices > 0);
 			}
-
 			if (this.isEmptyFilterActive) {
 				filtered = filtered.filter(account => account.metrics.users === 0 && account.metrics.sites === 0 && account.metrics.domains === 0);
 			}
-
+			if (this.planFiltersApplied) {
+				filtered = filtered.filter(account => this.applied_plan_filters.includes(account.plan_name));
+			}
 			const searchLower = this.account_search ? this.account_search.toLowerCase() : '';
 			if (searchLower) {
 				filtered = filtered.filter(account => {
@@ -10966,6 +10971,13 @@ const app = createApp({
 				});
 			}
 			return filtered;
+		},
+		availableAccountPlans() {
+			const plans = this.accounts
+				.map(acc => acc.plan_name)
+				.filter(name => name && name.trim() !== ""); // Filter out empty or null
+			
+			return [...new Set(plans)].sort(); // Return unique, sorted array
 		},
 		filteredSites() {
 			// Start with sites filtered by the server-side logic (e.g. unassigned, initial load)
