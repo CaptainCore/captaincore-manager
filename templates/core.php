@@ -8440,7 +8440,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
                                 </v-data-table>
                             </v-card>
 
-                            <v-card border flat rounded="xl" class="overflow-hidden">
+                            <v-card variant="outlined" class="mb-4">
 								<v-toolbar color="surface" density="compact" class="px-4 border-b">
 									<v-icon color="primary" class="mr-2">mdi-cog-box</v-icon>
 									<v-toolbar-title class="text-subtitle-2 font-weight-bold text-uppercase" style="letter-spacing: 0.05em;">
@@ -8463,8 +8463,15 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											<div class="text-body-2 font-weight-black text-uppercase">{{ view_subscription.data.plan.interval }} Month(s)</div>
 										</v-col>
 									</v-row>
-
-									<v-table density="default" hover class="bg-transparent">
+									
+									<v-table 
+										v-if="(view_subscription.data.plan.addons && view_subscription.data.plan.addons.length > 0) || 
+											(view_subscription.data.plan.charges && view_subscription.data.plan.charges.length > 0) || 
+											(view_subscription.data.plan.credits && view_subscription.data.plan.credits.length > 0)" 
+										density="default" 
+										hover 
+										class="bg-transparent"
+									>
 										<template v-slot:default>
 											<thead>
 												<tr>
@@ -8523,13 +8530,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 														<td class="text-right text-subtitle-2 font-weight-bold text-success pr-6">-${{ (parseFloat(item.price || 0) * parseInt(item.quantity || 0)).toFixed(2) }}</td>
 													</tr>
 												</template>
-
-												<tr v-if="(!view_subscription.data.plan.addons || view_subscription.data.plan.addons.length === 0) && (!view_subscription.data.plan.charges || view_subscription.data.plan.charges.length === 0) && (!view_subscription.data.plan.credits || view_subscription.data.plan.credits.length === 0)">
-													<td colspan="4" class="text-center py-8">
-														<v-icon color="medium-emphasis" size="large" class="mb-2">mdi-package-variant</v-icon>
-														<div class="text-body-2 text-medium-emphasis">No additional line items configured for this plan.</div>
-													</td>
-												</tr>
 											</tbody>
 										</template>
 									</v-table>
