@@ -8341,14 +8341,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
                         <span class="text-caption text-medium-emphasis">#{{ view_subscription.data.account.id }}</span>
                     </v-toolbar-title>
                     <v-spacer></v-spacer>
-                    <v-btn 
-                        v-if="!view_subscription.loading"
-                        color="primary" 
-                        variant="flat" 
-                        @click="editAccountPlan(view_subscription.data.account.id)"
-                    >
-                        Edit Plan
-                    </v-btn>
                 </v-toolbar>
 
                 <div v-if="view_subscription.loading" class="d-flex justify-center align-center pa-10">
@@ -8448,51 +8440,110 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
                                 </v-data-table>
                             </v-card>
 
-                            <v-card variant="outlined">
-                                <v-card-title>Plan Configuration</v-card-title>
-                                <v-card-text>
-                                    <v-table density="compact">
-                                        <tbody>
-                                            <tr>
-                                                <td class="font-weight-bold" width="200">Billing Mode</td>
-                                                <td class="text-uppercase">{{ view_subscription.data.plan.billing_mode || 'Standard' }}</td>
-                                            </tr>
-                                            <tr>
-                                                <td class="font-weight-bold">Base Price</td>
-                                                <td>${{ view_subscription.data.plan.price }}</td>
-                                            </tr>
-                                            <tr>
-                                                <td class="font-weight-bold">Interval</td>
-                                                <td>Every {{ view_subscription.data.plan.interval }} Month(s)</td>
-                                            </tr>
-                                        </tbody>
-                                    </v-table>
+                            <v-card border flat rounded="xl" class="overflow-hidden">
+								<v-toolbar color="surface" density="compact" class="px-4 border-b">
+									<v-icon color="primary" class="mr-2">mdi-cog-box</v-icon>
+									<v-toolbar-title class="text-subtitle-2 font-weight-bold text-uppercase" style="letter-spacing: 0.05em;">
+										Plan Configuration
+									</v-toolbar-title>
+								</v-toolbar>
 
-                                    <div v-if="view_subscription.data.plan.addons && view_subscription.data.plan.addons.length > 0" class="mt-4">
-                                        <div class="text-subtitle-2 mb-2">Addons</div>
-                                        <v-table density="compact" class="bg-grey-lighten-5 rounded">
-                                            <thead>
-                                                <tr>
-                                                    <th>Name</th>
-                                                    <th>Qty</th>
-                                                    <th>Price</th>
-                                                    <th class="text-right">Total</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <template v-for="(addon, i) in view_subscription.data.plan.addons" :key="i">
-                                                    <tr v-if="addon">
-                                                        <td>{{ addon.name }}</td>
-                                                        <td>{{ addon.quantity }}</td>
-                                                        <td>${{ addon.price }}</td>
-                                                        <td class="text-right">${{ (parseFloat(addon.price || 0) * parseInt(addon.quantity || 0)).toFixed(2) }}</td>
-                                                    </tr>
-                                                </template>
-                                            </tbody>
-                                        </v-table>
-                                    </div>
-                                </v-card-text>
-                            </v-card>
+								<v-card-text class="pa-0">
+									<v-row no-gutters class="border-b py-4" style="background-color: rgba(var(--v-theme-on-surface), 0.03)">
+										<v-col cols="4" class="px-6 border-e">
+											<div class="text-caption text-medium-emphasis text-uppercase font-weight-bold mb-1">Billing Mode</div>
+											<div class="text-body-2 font-weight-black text-uppercase">{{ view_subscription.data.plan.billing_mode || 'Standard' }}</div>
+										</v-col>
+										<v-col cols="4" class="px-6 border-e">
+											<div class="text-caption text-medium-emphasis text-uppercase font-weight-bold mb-1">Base Price</div>
+											<div class="text-body-2 font-weight-black text-primary">${{ view_subscription.data.plan.price }}</div>
+										</v-col>
+										<v-col cols="4" class="px-6">
+											<div class="text-caption text-medium-emphasis text-uppercase font-weight-bold mb-1">Interval</div>
+											<div class="text-body-2 font-weight-black text-uppercase">{{ view_subscription.data.plan.interval }} Month(s)</div>
+										</v-col>
+									</v-row>
+
+									<v-table density="default" hover class="bg-transparent">
+										<template v-slot:default>
+											<thead>
+												<tr>
+													<th class="text-left font-weight-bold text-caption text-uppercase text-medium-emphasis pl-6 py-3">Description</th>
+													<th class="text-center font-weight-bold text-caption text-uppercase text-medium-emphasis py-3" width="100">Qty</th>
+													<th class="text-right font-weight-bold text-caption text-uppercase text-medium-emphasis py-3" width="140">Unit Price</th>
+													<th class="text-right font-weight-bold text-caption text-uppercase text-medium-emphasis pr-6 py-3" width="140">Total</th>
+												</tr>
+											</thead>
+											<tbody>
+												<template v-for="(item, i) in view_subscription.data.plan.addons" :key="'addon-' + i">
+													<tr v-if="item" class="border-b transition-swing">
+														<td class="pl-6 py-4">
+															<div class="text-subtitle-2 font-weight-bold mb-1">{{ item.name }}</div>
+															<div class="d-flex align-center">
+																<v-icon size="x-small" color="medium-emphasis" class="mr-1">mdi-puzzle-outline</v-icon>
+																<span class="text-caption text-medium-emphasis">Standard Addon</span>
+															</div>
+														</td>
+														<td class="text-center text-body-2">
+															<v-chip size="small" variant="tonal" label>{{ item.quantity }}</v-chip>
+														</td>
+														<td class="text-right text-body-2 text-medium-emphasis">${{ parseFloat(item.price).toFixed(2) }}</td>
+														<td class="text-right text-subtitle-2 font-weight-bold pr-6">${{ (parseFloat(item.price || 0) * parseInt(item.quantity || 0)).toFixed(2) }}</td>
+													</tr>
+												</template>
+
+												<template v-for="(item, i) in view_subscription.data.plan.charges" :key="'charge-' + i">
+													<tr v-if="item" class="border-b" style="background-color: rgba(var(--v-theme-error), 0.05); border-left: 4px solid rgb(var(--v-theme-error)) !important;">
+														<td class="pl-5 py-4"> <div class="text-subtitle-2 font-weight-bold text-error mb-1">{{ item.name }}</div>
+															<div class="d-flex align-center">
+																<v-icon size="x-small" color="error" class="mr-1">mdi-flash</v-icon>
+																<span class="text-caption text-error">One-time Charge</span>
+															</div>
+														</td>
+														<td class="text-center text-body-2">
+															<v-chip size="small" color="error" variant="flat" label>{{ item.quantity }}</v-chip>
+														</td>
+														<td class="text-right text-body-2 text-error" style="opacity: 0.9">${{ parseFloat(item.price).toFixed(2) }}</td>
+														<td class="text-right text-subtitle-2 font-weight-bold text-error pr-6">${{ (parseFloat(item.price || 0) * parseInt(item.quantity || 0)).toFixed(2) }}</td>
+													</tr>
+												</template>
+
+												<template v-for="(item, i) in view_subscription.data.plan.credits" :key="'credit-' + i">
+													<tr v-if="item" class="border-b" style="background-color: rgba(var(--v-theme-success), 0.05); border-left: 4px solid rgb(var(--v-theme-success)) !important;">
+														<td class="pl-5 py-4"> <div class="text-subtitle-2 font-weight-bold text-success mb-1">{{ item.name }}</div>
+															<div class="d-flex align-center">
+																<v-icon size="x-small" color="success" class="mr-1">mdi-tag-outline</v-icon>
+																<span class="text-caption text-success">Credit / Discount</span>
+															</div>
+														</td>
+														<td class="text-center text-body-2">
+															<v-chip size="small" color="success" variant="flat" label>{{ item.quantity }}</v-chip>
+														</td>
+														<td class="text-right text-body-2 text-success" style="opacity: 0.9">-${{ parseFloat(item.price).toFixed(2) }}</td>
+														<td class="text-right text-subtitle-2 font-weight-bold text-success pr-6">-${{ (parseFloat(item.price || 0) * parseInt(item.quantity || 0)).toFixed(2) }}</td>
+													</tr>
+												</template>
+
+												<tr v-if="(!view_subscription.data.plan.addons || view_subscription.data.plan.addons.length === 0) && (!view_subscription.data.plan.charges || view_subscription.data.plan.charges.length === 0) && (!view_subscription.data.plan.credits || view_subscription.data.plan.credits.length === 0)">
+													<td colspan="4" class="text-center py-8">
+														<v-icon color="medium-emphasis" size="large" class="mb-2">mdi-package-variant</v-icon>
+														<div class="text-body-2 text-medium-emphasis">No additional line items configured for this plan.</div>
+													</td>
+												</tr>
+											</tbody>
+										</template>
+									</v-table>
+
+									<div class="d-flex align-center pa-6 border-t" style="background-color: rgba(var(--v-theme-on-surface), 0.03)">
+										<v-spacer></v-spacer>
+										<div class="text-right">
+											<div class="text-caption text-medium-emphasis text-uppercase font-weight-bold mb-1">Projected Renewal Total</div>
+											<div class="text-h5 font-weight-black text-primary" v-html="my_plan_usage_estimate(view_subscription.data.plan)"></div>
+											<div class="text-caption text-disabled mt-1">Due {{ pretty_timestamp_short(view_subscription.data.plan.next_renewal) }}</div>
+										</div>
+									</div>
+								</v-card-text>
+							</v-card>
                         </v-col>
 
                         <!-- Right Column: Usage/Stats -->
@@ -14011,26 +14062,6 @@ const app = createApp({
 				this.snackbar.message = "Failed to load subscription.";
 				this.snackbar.show = true;
 				this.view_subscription.loading = false;
-			});
-		},
-		editAccountPlan(accountId) {
-			// Re-use existing dialog logic
-			this.dialog_account.records = { account: { account_id: accountId } }; // Partial mock to satisfy modifyPlan
-			
-			// We need to fetch the full account object first to populate the dialog correctly
-			// modifyPlan() expects this.dialog_account.records.account.plan to exist
-			axios.get(`/wp-json/captaincore/v1/accounts?include=${accountId}`, { // Or generic account fetch
-				headers: { 'X-WP-Nonce': this.wp_nonce }
-			}).then(() => {
-					// Actually the showAccount method is better suited
-					this.showAccount(accountId);
-					// Wait for showAccount to populate, then trigger modify
-					// Since showAccount is async but doesn't return promise here easily, 
-					// we might need to rely on the user clicking "Edit" inside the account view, 
-					// OR refactor showAccount to return a promise.
-					
-					// Alternative: Just open the account view
-					this.goToPath(`/accounts/${accountId}`);
 			});
 		},
 		formatMoney(amount) {

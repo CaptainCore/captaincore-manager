@@ -121,28 +121,26 @@ class User {
     }
 
     private function prepare_plan_for_display( $account_id, $account_data ) {
-        $plan = $account_data->plan;
+        $plan    = $account_data->plan;
+        $configs = Configurations::get();
         
-        // Ensure addons is an array
-        if ( ! isset( $plan->addons ) || ! is_array( $plan->addons ) ) {
-            $plan->addons = [];
-        }
+        // Ensure arrays exist
+        if ( ! isset( $plan->addons ) || ! is_array( $plan->addons ) ) { $plan->addons = []; }
+        if ( ! isset( $plan->charges ) || ! is_array( $plan->charges ) ) { $plan->charges = []; }
+        if ( ! isset( $plan->credits ) || ! is_array( $plan->credits ) ) { $plan->credits = []; }
 
         $billing_mode = isset( $plan->billing_mode ) ? $plan->billing_mode : 'standard';
         $total = 0;
 
         // 1. Base Price Calculation
         if ( $billing_mode === 'per_site' ) {
-            // Count active sites for billing
             $sites = Sites::where( [ "account_id" => $account_id, "status" => "active" ] );
             $billing_sites_count = 0;
-            
             foreach ( $sites as $site ) {
                 if ( empty( $site->provider_id ) || $site->provider_id == "1" ) {
                     $billing_sites_count++;
                 }
             }
-            
             $price_per_site = (float) $plan->price;
             $total = $price_per_site * $billing_sites_count;
         } else {
@@ -156,23 +154,32 @@ class User {
             }
         }
 
-        // 3. Dynamic Maintenance Sites (Managed WordPress sites)
+        // 3. Charges Calculation
+        foreach ( $plan->charges as $charge ) {
+            if ( isset($charge->price) && isset($charge->quantity) ) {
+                $total += ( (float) $charge->price * (int) $charge->quantity );
+            }
+        }
+
+        // 4. Credits Calculation
+        foreach ( $plan->credits as $credit ) {
+            if ( isset($credit->price) && isset($credit->quantity) ) {
+                $total -= ( (float) $credit->price * (int) $credit->quantity );
+            }
+        }
+
+        // 5. Dynamic Maintenance Sites (Managed WordPress sites)
         $all_sites = Sites::where( [ "account_id" => $account_id, "status" => "active" ] );
         $maintenance_count = 0;
         foreach ( $all_sites as $site ) {
-            // Check for non-default provider (e.g. Kinsta/Rocket)
             if ( ! empty( $site->provider_id ) && ( $site->provider_id != "1" ) ) {
                 $maintenance_count++;
             }
         }
         
         if ( $maintenance_count > 0 ) {
-            $maintenance_cost = 2; // Hardcoded or fetch from config
+            $maintenance_cost = 2; 
             $total += ( $maintenance_count * $maintenance_cost );
-            
-            // Inject into addons array for display purposes
-            // We use array_unshift on a copy or check if it exists to avoid duplication if called repeatedly
-            // Since this is a fresh fetch, unshift is fine.
             array_unshift($plan->addons, (object)[
                 "name" => "Managed WordPress sites",
                 "price" => $maintenance_cost,
@@ -180,10 +187,47 @@ class User {
             ]);
         }
 
+        // 6. Usage Overages (Standard Mode Only)
+        if ( $billing_mode !== 'per_site' && ! empty( $plan->usage ) ) {
+            
+            // Sites Overage
+            if ( (int) $plan->usage->sites > (int) $plan->limits->sites ) {
+                $price = $configs->usage_pricing->sites->cost;
+                if ( $plan->interval != $configs->usage_pricing->sites->interval ) {
+                    $price = $configs->usage_pricing->sites->cost / ( $configs->usage_pricing->sites->interval / $plan->interval );
+                }
+                $total += $price * ( (int) $plan->usage->sites - (int) $plan->limits->sites );
+            }
+
+            // Storage Overage
+            $storage_bytes = (float) $plan->usage->storage;
+            $limit_bytes   = (float) $plan->limits->storage * 1024 * 1024 * 1024;
+            if ( $storage_bytes > $limit_bytes ) {
+                $price = $configs->usage_pricing->storage->cost;
+                if ( $plan->interval != $configs->usage_pricing->storage->interval ) {
+                    $price = $configs->usage_pricing->storage->cost / ( $configs->usage_pricing->storage->interval / $plan->interval );
+                }
+                $extra_gb = ($storage_bytes / 1024 / 1024 / 1024) - (float) $plan->limits->storage;
+                $quantity = ceil( $extra_gb / $configs->usage_pricing->storage->quantity );
+                $total += $price * $quantity;
+            }
+
+            // Visits Overage
+            if ( (int) $plan->usage->visits > (int) $plan->limits->visits ) {
+                $price = $configs->usage_pricing->traffic->cost;
+                if ( $plan->interval != $configs->usage_pricing->traffic->interval ) {
+                    $price = $configs->usage_pricing->traffic->cost / ( $configs->usage_pricing->traffic->interval / $plan->interval );
+                }
+                $extra_visits = (int) $plan->usage->visits - (int) $plan->limits->visits;
+                $quantity     = ceil( $extra_visits / (int) $configs->usage_pricing->traffic->quantity );
+                $total += $price * $quantity;
+            }
+        }
+
         return [
             "plan"         => $plan,
             "billing_mode" => $billing_mode,
-            "total"        => number_format($total, 2, '.', ''),
+            "total"        => number_format( max(0, $total), 2, '.', ''),
         ];
     }
 
