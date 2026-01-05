@@ -282,7 +282,7 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
-     *  PAYMENT FAILED NOTICE (Mimics Invoice)
+     *  PAYMENT FAILED NOTICE
      * ------------------------------------------------------------------------- */
     static public function send_failed_payment_notice( $account_id, $orders ) {
         if ( empty( $orders ) ) return;
@@ -292,7 +292,7 @@ class Mailer {
         $site_name   = get_bloginfo( 'name' );
         $admin_email = get_option( 'admin_email' );
         
-        $headers = [ "Bcc: $admin_email" ];
+        $headers = [ "Bcc: $admin_email", "Reply-To: $admin_email" ];
 
         $account   = ( new Accounts )->get( $account_id );
         $plan      = json_decode( $account->plan );
@@ -846,12 +846,8 @@ class Mailer {
         ";
 
         // Reply to the user requesting the action
-        // Check if name exists to format correctly
-        if ( ! empty( $user->name ) ) {
-            $headers = [ "Reply-To: {$user->name} <{$user->email}>" ];
-        } else {
-            $headers = [ "Reply-To: <{$user->email}>" ];
-        }
+        $reply_to = ! empty( $user->name ) ? "{$user->name} <{$user->email}>" : $user->email;
+        $headers = [ "Reply-To: $reply_to" ];
 
         self::send_email_with_layout( 
             $admin_email, 
