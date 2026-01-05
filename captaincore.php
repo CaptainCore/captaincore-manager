@@ -100,30 +100,6 @@ add_action( 'woocommerce_order_status_completed', function( $order_id ) {
     }
 }, 20, 1 );
 
-// 2. Admin New Order (Processing, On-Hold, or Completed)
-function captaincore_trigger_admin_new_order( $order_id ) {
-    if ( ! $order_id ) return;
-
-    $order = wc_get_order( $order_id );
-    if ( ! $order ) return;
-
-    // Check if we already sent the admin email to avoid duplicates
-    if ( $order->get_meta( '_captaincore_admin_email_sent' ) ) return;
-    
-    // Only for CaptainCore orders
-    if ( ! $order->get_meta( 'captaincore_account_id' ) ) return;
-
-    \CaptainCore\Mailer::send_admin_new_order( $order_id );
-    
-    // Mark as sent
-    $order->update_meta_data( '_captaincore_admin_email_sent', 'true' );
-    $order->save();
-}
-
-// Hook into multiple points to catch successful payments
-add_action( 'woocommerce_order_status_completed', 'captaincore_trigger_admin_new_order', 25, 1 );
-add_action( 'woocommerce_payment_complete', 'captaincore_trigger_admin_new_order', 25, 1 );
-
 function captaincore_missive_func( WP_REST_Request $request ) {
 
 	$key        = $request->get_header('X-Hook-Signature');

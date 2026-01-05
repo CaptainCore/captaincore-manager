@@ -228,7 +228,7 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
-     *  1. STANDARD INVOICE (Success/Pending)
+     *  STANDARD INVOICE (Success/Pending)
      * ------------------------------------------------------------------------- */
     static public function send_order_invoice( $order_id ) {
         $order = wc_get_order( $order_id );
@@ -282,7 +282,7 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
-     *  2. PAYMENT FAILED NOTICE (Mimics Invoice)
+     *  PAYMENT FAILED NOTICE (Mimics Invoice)
      * ------------------------------------------------------------------------- */
     static public function send_failed_payment_notice( $account_id, $orders ) {
         if ( empty( $orders ) ) return;
@@ -398,7 +398,7 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
-     *  3. ACCOUNT OUTSTANDING NOTICE (Summary)
+     *  ACCOUNT OUTSTANDING NOTICE (Summary)
      * ------------------------------------------------------------------------- */
     static public function send_outstanding_payment_notice( $account_id, $orders ) {
         if ( empty( $orders ) ) return;
@@ -474,7 +474,7 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
-     *  4. CUSTOMER RECEIPT (Order Completed)
+     *  CUSTOMER RECEIPT (Order Completed)
      * ------------------------------------------------------------------------- */
     static public function send_customer_receipt( $order_id ) {
         $order = wc_get_order( $order_id );
@@ -532,59 +532,9 @@ class Mailer {
             $headers
         );
     }
-
-    /* -------------------------------------------------------------------------
-     *  5. ADMIN NEW ORDER NOTIFICATION
-     * ------------------------------------------------------------------------- */
-    static public function send_admin_new_order( $order_id ) {
-        $order = wc_get_order( $order_id );
-        if ( ! $order ) return;
-
-        $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
-        $admin_email = get_option( 'admin_email' );
-
-        $total         = $order->get_formatted_order_total();
-        $date          = $order->get_date_created()->date( 'F j, Y @ g:i a' );
-        $customer_name = $order->get_formatted_billing_full_name();
-        $edit_link     = admin_url( 'post.php?post=' . $order_id . '&action=edit' );
-
-        if ( empty( trim( $customer_name ) ) ) {
-            $user = get_user_by( 'id', $order->get_customer_id() );
-            $customer_name = $user ? $user->display_name : 'Guest';
-        }
-
-        $items_html   = self::get_line_items_html( $order, $brand_color );
-        $billing_html = self::get_billing_address_html( $order );
-
-        $content_html = "
-            <div style='text-align: center; margin-bottom: 30px;'>
-                <h2 style='font-size: 20px; font-weight: 700; color: #2d3748; margin: 0 0 5px;'>{$customer_name}</h2>
-                <div style='font-size: 24px; font-weight: 700; color: {$brand_color}; margin-bottom: 20px;'>{$total}</div>
-                
-                <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 0 auto;'>
-                    <tr>
-                        <td style='border-radius: 4px; background-color: #2d3748;'>
-                            <a href='{$edit_link}' target='_blank' style='border: 1px solid #2d3748; border-radius: 4px; color: #ffffff; display: inline-block; font-size: 14px; font-weight: 600; padding: 10px 20px; text-decoration: none;'>View in Admin</a>
-                        </td>
-                    </tr>
-                </table>
-            </div>
-            {$items_html}
-            {$billing_html}
-        ";
-
-        self::send_email_with_layout( 
-            $admin_email,
-            "[New Order] #{$order_id} - {$customer_name}",
-            "New Order #{$order_id}",
-            $date,
-            $content_html
-        );
-    }
     
     /* -------------------------------------------------------------------------
-     *  6. NEW USER NOTIFICATION
+     *  NEW USER NOTIFICATION
      * ------------------------------------------------------------------------- */
     static public function notify_new_user( $user_id = "" ) {
         $user = get_userdata( $user_id );
@@ -641,7 +591,7 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
-     *  7. PASSWORD RESET NOTIFICATION
+     *  PASSWORD RESET NOTIFICATION
      * ------------------------------------------------------------------------- */
     static public function send_password_reset( $user, $key ) {
         if ( ! $user ) return;
@@ -688,7 +638,7 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
-     *  8. ACCESS GRANTED NOTIFICATION (Existing User)
+     *  ACCESS GRANTED NOTIFICATION (Existing User)
      * ------------------------------------------------------------------------- */
     static public function send_access_granted_notification( $to_email, $account_name, $sites = [], $domains = [] ) {
         $config      = Configurations::get();
@@ -748,7 +698,7 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
-     *  9. NEW USER INVITE (Account Creation)
+     *  NEW USER INVITE (Account Creation)
      * ------------------------------------------------------------------------- */
     static public function send_invite_new_user( $to_email, $account_name, $invite_url ) {
         $config      = Configurations::get();
@@ -781,7 +731,7 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
-     *  10. SNAPSHOT READY
+     *  SNAPSHOT READY
      * ------------------------------------------------------------------------- */
     static public function send_snapshot_ready( $to_email, $site_name, $snapshot_id, $download_url ) {
         $config      = Configurations::get();
@@ -812,7 +762,7 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
-     *  11. GENERIC PROCESS NOTIFICATION (Copy/Deploy)
+     *  GENERIC PROCESS NOTIFICATION (Copy/Deploy)
      * ------------------------------------------------------------------------- */
     static public function send_process_completed( $to_email, $subject, $headline, $subheadline, $message, $link_url = '' ) {
         $config      = Configurations::get();
@@ -839,7 +789,7 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
-     *  12. SITE REMOVAL REQUEST (Admin Notify)
+     *  SITE REMOVAL REQUEST (Admin Notify)
      * ------------------------------------------------------------------------- */
     static public function send_site_removal_request( $site, $user, $is_removal ) {
         $config      = Configurations::get();
@@ -914,7 +864,7 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
-     *  13. NEW SITE REQUEST (Admin Notify)
+     *  NEW SITE REQUEST (Admin Notify)
      * ------------------------------------------------------------------------- */
     static public function send_site_request_notification( $site_name, $site_notes, $account_name, $user ) {
         $config      = Configurations::get();
