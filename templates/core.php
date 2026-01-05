@@ -2376,6 +2376,73 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-card-text>
 					</v-card>
 				</v-dialog>
+				<v-dialog v-model="dialog_mailgun_suppressions.show" fullscreen scrollable>
+					<v-card rounded="0" class="d-flex flex-column" style="height: 100%; max-height: 80vh;">
+						<v-toolbar color="primary" flat class="flex-grow-0">
+							<v-btn icon="mdi-close" @click="dialog_mailgun_suppressions.show = false"></v-btn>
+							<v-toolbar-title>Mailgun Suppressions</v-toolbar-title>
+							<v-spacer></v-spacer>
+							<v-btn icon="mdi-refresh" variant="text" @click="fetchMailgunSuppressions()"></v-btn>
+						</v-toolbar>
+						
+						<div class="flex-grow-0">
+							<v-tabs v-model="dialog_mailgun_suppressions.active_tab" bg-color="primary" @update:model-value="fetchMailgunSuppressions">
+								<v-tab value="bounces">Bounces</v-tab>
+								<v-tab value="unsubscribes">Unsubscribes</v-tab>
+								<v-tab value="complaints">Complaints</v-tab>
+								<v-tab value="whitelists">Allowlist</v-tab>
+							</v-tabs>
+						</div>
+
+						<v-card-text class="pa-0 flex-grow-1" style="min-height: 0;">
+							<v-data-table
+								:headers="getSuppressionHeaders()"
+								:items="dialog_mailgun_suppressions.items"
+								:loading="dialog_mailgun_suppressions.loading"
+								no-data-text="No records found"
+								density="comfortable"
+								fixed-header
+							>
+								<template v-slot:item.created_at="{ item }">
+									{{ item.created_at ? pretty_timestamp(item.created_at) : '-' }}
+								</template>
+								<template v-slot:item.createdAt="{ item }">
+									{{ item.createdAt ? pretty_timestamp(item.createdAt) : '-' }}
+								</template>
+								
+								<!-- Bounces Specific -->
+								<template v-slot:item.error="{ item }">
+									<span class="text-caption text-error">{{ item.error }}</span>
+								</template>
+
+								<!-- Unsubscribes Specific -->
+								<template v-slot:item.tags="{ item }">
+									<v-chip v-for="tag in item.tags" :key="tag" size="x-small" class="mr-1">{{ tag }}</v-chip>
+									<span v-if="!item.tags || item.tags.length === 0" class="text-caption text-medium-emphasis">* (All)</span>
+								</template>
+
+								<!-- Allowlist Specific -->
+								<template v-slot:item.reason="{ item }">
+									<span class="text-caption">{{ item.reason }}</span>
+								</template>
+								<template v-slot:item.value="{ item }">
+									<strong>{{ item.value }}</strong> <span class="text-caption">({{ item.type }})</span>
+								</template>
+
+								<template v-slot:item.actions="{ item }">
+									<v-btn 
+										color="error" 
+										variant="text" 
+										size="small" 
+										icon="mdi-delete" 
+										@click="deleteMailgunSuppression(item)"
+										title="Remove from list"
+									></v-btn>
+								</template>
+							</v-data-table>
+						</v-card-text>
+					</v-card>
+				</v-dialog>
 				<v-dialog v-model="dialog_backup_configurations.show" width="500">
 				<v-card tile>
 					<v-toolbar flat dark color="primary">
@@ -7127,6 +7194,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											</v-list>
 											
 											<v-btn color="primary" class="mt-2 mr-2" @click="viewDomainMailgunLogs(dialog_domain.domain)">View Logs</v-btn>
+											<v-btn color="secondary" variant="tonal" class="mt-2 mr-2" @click="openMailgunSuppressions(dialog_domain.domain)">View Suppressions</v-btn>
 											
 											<v-btn
 												color="primary"
@@ -10264,6 +10332,7 @@ const app = createApp({
 		},
 		dialog_toggle: { show: false, site_name: "", site_id: "", business_name: "", business_link: "" },
 		dialog_mailgun: { show: false, site: {}, response: { items: [], paging: {} }, loading: false, loadingMore: false, domain_id: null },
+		dialog_mailgun_suppressions: { show: false, loading: false, active_tab: 'bounces', items: [], domain_id: null },
 		dialog_mailgun_details: { show: false, event: {} },
 		dialog_migration: { show: false, sites: [], site_name: "", site_id: "", update_urls: true, backup_url: "" },
 		dialog_modify_plan: { show: false, site: {}, date_selector: false, hosting_plans: [], selected_plan: "", plan: { limits: {}, addons: [], charges: [], credits: [], next_renewal: "" }, customer_name: "", interval: "12" },
@@ -15866,6 +15935,109 @@ const app = createApp({
 		viewMailgunEventDetails( item ) {
 			this.dialog_mailgun_details.item = item
 			this.dialog_mailgun_details.show = true
+		},
+		openMailgunSuppressions(domain) {
+			this.dialog_mailgun_suppressions.domain_id = domain.domain_id;
+			this.dialog_mailgun_suppressions.active_tab = 'bounces';
+			this.dialog_mailgun_suppressions.items = [];
+			this.dialog_mailgun_suppressions.show = true;
+			this.fetchMailgunSuppressions();
+		},
+		fetchMailgunSuppressions() {
+			this.dialog_mailgun_suppressions.loading = true;
+			this.dialog_mailgun_suppressions.items = [];
+			
+			const domain_id = this.dialog_mailgun_suppressions.domain_id;
+			const type = this.dialog_mailgun_suppressions.active_tab;
+
+			axios.get(`/wp-json/captaincore/v1/domain/${domain_id}/mailgun/suppressions/${type}`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				let items = response.data.items || [];
+				
+				// Client-side sort: Newest First
+				// Bounces/Unsubscribes/Complaints use 'created_at'
+				// Allowlist uses 'createdAt'
+				items.sort((a, b) => {
+					const dateA = new Date(a.created_at || a.createdAt);
+					const dateB = new Date(b.created_at || b.createdAt);
+					return dateB - dateA; // Descending order
+				});
+
+				this.dialog_mailgun_suppressions.items = items;
+			})
+			.catch(error => {
+				console.error(error);
+				this.snackbar.message = "Error fetching suppressions: " + (error.response?.data?.message || error.message);
+				this.snackbar.show = true;
+			})
+			.finally(() => {
+				this.dialog_mailgun_suppressions.loading = false;
+			});
+		},
+		getSuppressionHeaders() {
+			const type = this.dialog_mailgun_suppressions.active_tab;
+			const commonActions = { title: '', key: 'actions', align: 'end', sortable: false };
+			
+			if (type === 'bounces') {
+				return [
+					{ title: 'Address', key: 'address' },
+					{ title: 'Code', key: 'code', width: '80px' },
+					{ title: 'Error', key: 'error' },
+					{ title: 'Date', key: 'created_at', width: '180px' },
+					commonActions
+				];
+			} else if (type === 'unsubscribes') {
+				return [
+					{ title: 'Address', key: 'address' },
+					{ title: 'Tags', key: 'tags' },
+					{ title: 'Date', key: 'created_at', width: '180px' },
+					commonActions
+				];
+			} else if (type === 'complaints') {
+				return [
+					{ title: 'Address', key: 'address' },
+					{ title: 'Date', key: 'created_at', width: '180px' },
+					commonActions
+				];
+			} else if (type === 'whitelists') {
+				return [
+					{ title: 'Value', key: 'value' }, // Address or Domain
+					{ title: 'Reason', key: 'reason' },
+					{ title: 'Date', key: 'createdAt', width: '180px' }, // Note camelCase from API
+					commonActions
+				];
+			}
+			return [];
+		},
+		deleteMailgunSuppression(item) {
+			// Determine the identifier (usually address, but 'value' for whitelist)
+			const type = this.dialog_mailgun_suppressions.active_tab;
+			const identifier = type === 'whitelists' ? item.value : item.address;
+
+			if (!confirm(`Are you sure you want to remove ${identifier} from the ${type} list?`)) {
+				return;
+			}
+
+			this.dialog_mailgun_suppressions.loading = true;
+			const domain_id = this.dialog_mailgun_suppressions.domain_id;
+
+			axios.delete(`/wp-json/captaincore/v1/domain/${domain_id}/mailgun/suppressions/${type}`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce },
+				params: { address: identifier } // Passing as query param for DELETE
+			})
+			.then(response => {
+				this.snackbar.message = response.data.message || "Entry removed.";
+				this.snackbar.show = true;
+				// Refresh list
+				this.fetchMailgunSuppressions();
+			})
+			.catch(error => {
+				this.snackbar.message = "Error removing entry: " + (error.response?.data?.message || error.message);
+				this.snackbar.show = true;
+				this.dialog_mailgun_suppressions.loading = false;
+			});
 		},
 		launchSiteDialog( site_id ) {
 			if ( site_id ) {

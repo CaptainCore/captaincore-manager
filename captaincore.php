@@ -2708,6 +2708,105 @@ function captaincore_mailgun_verify( WP_REST_Request $request ) {
 }
 
 /**
+ * List Mailgun Suppressions (Bounces, Unsubscribes, Complaints, Allowlist)
+ */
+function captaincore_domain_mailgun_suppressions_list( WP_REST_Request $request ) {
+    $domain_id = $request['id'];
+    $type      = $request['type']; // bounces, unsubscribes, complaints, whitelists
+
+    if ( ! ( new CaptainCore\Domains )->verify( $domain_id ) ) {
+        return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+    }
+
+    $domain = ( new CaptainCore\Domains )->get( $domain_id );
+    $details = json_decode( $domain->details );
+
+    if ( empty( $details->mailgun_zone ) ) {
+        return new WP_Error( 'mailgun_not_configured', 'Mailgun not configured for this domain.', [ 'status' => 404 ] );
+    }
+
+    $zone = $details->mailgun_zone;
+    $endpoint = "";
+
+    // Map internal types to Mailgun API endpoints
+    switch ( $type ) {
+        case 'bounces':
+            $endpoint = "v3/$zone/bounces";
+            break;
+        case 'unsubscribes':
+            $endpoint = "v3/$zone/unsubscribes";
+            break;
+        case 'complaints':
+            $endpoint = "v3/$zone/complaints";
+            break;
+        case 'whitelists': // "Allowlist" in UI, "whitelists" in API v3
+            $endpoint = "v3/$zone/whitelists";
+            break;
+        default:
+            return new WP_Error( 'invalid_type', 'Invalid suppression type.', [ 'status' => 400 ] );
+    }
+
+    // Fetch from Mailgun using the wrapper
+    $response = CaptainCore\Remote\Mailgun::get( $endpoint, [ 'limit' => 1000 ] );
+
+    if ( is_wp_error( $response ) ) {
+        return $response;
+    }
+
+    return new WP_REST_Response( $response, 200 );
+}
+
+/**
+ * Delete a specific Mailgun Suppression
+ */
+function captaincore_domain_mailgun_suppressions_delete( WP_REST_Request $request ) {
+    $domain_id = $request['id'];
+    $type      = $request['type'];
+    $address   = $request->get_param('address');
+
+    if ( ! ( new CaptainCore\Domains )->verify( $domain_id ) ) {
+        return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+    }
+
+    $domain = ( new CaptainCore\Domains )->get( $domain_id );
+    $details = json_decode( $domain->details );
+
+    if ( empty( $details->mailgun_zone ) ) {
+        return new WP_Error( 'mailgun_not_configured', 'Mailgun not configured for this domain.', [ 'status' => 404 ] );
+    }
+
+    $zone = $details->mailgun_zone;
+    $endpoint = "";
+
+    // Map internal types to Mailgun API endpoints
+    switch ( $type ) {
+        case 'bounces':
+            $endpoint = "v3/$zone/bounces/" . urlencode( $address );
+            break;
+        case 'unsubscribes':
+            $endpoint = "v3/$zone/unsubscribes/" . urlencode( $address );
+            break;
+        case 'complaints':
+            $endpoint = "v3/$zone/complaints/" . urlencode( $address );
+            break;
+        case 'whitelists':
+            $endpoint = "v3/$zone/whitelists/" . urlencode( $address );
+            break;
+        default:
+            return new WP_Error( 'invalid_type', 'Invalid suppression type.', [ 'status' => 400 ] );
+    }
+
+    // Execute Delete
+    $response = CaptainCore\Remote\Mailgun::delete( $endpoint );
+
+    if ( is_wp_error( $response ) ) {
+        return $response;
+    }
+
+    return new WP_REST_Response( $response, 200 );
+}
+
+/**
  * REST API callback to activate a DNS zone for a domain.
  * This re-uses the fetch_remote_id logic which creates a zone if one doesn't exist.
  *
@@ -3150,6 +3249,21 @@ function captaincore_register_rest_endpoints() {
         'methods'  => 'GET',
         'callback' => 'captaincore_domain_mailgun_events_func',
         'permission_callback' => 'captaincore_permission_check',
+    ] );
+
+	register_rest_route( 'captaincore/v1', '/domain/(?P<id>[\d]+)/mailgun/suppressions/(?P<type>[a-z]+)', [
+        'methods'  => 'GET',
+        'callback' => 'captaincore_domain_mailgun_suppressions_list',
+        'permission_callback' => 'captaincore_permission_check',
+    ] );
+
+    register_rest_route( 'captaincore/v1', '/domain/(?P<id>[\d]+)/mailgun/suppressions/(?P<type>[a-z]+)', [
+        'methods'  => 'DELETE',
+        'callback' => 'captaincore_domain_mailgun_suppressions_delete',
+        'permission_callback' => 'captaincore_permission_check',
+        'args'     => [
+            'address' => [ 'required' => true ]
+        ]
     ] );
 
 	register_rest_route(
