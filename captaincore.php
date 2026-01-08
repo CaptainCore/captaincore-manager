@@ -5954,6 +5954,9 @@ function captaincore_install_action_callback() {
 	$background   = $_POST['background'];
 	$job_id       = $_POST['job_id'];
 	$notes        = $_POST['notes'];
+	$subject      = isset($_POST['subject']) ? $_POST['subject'] : '';
+	$status_msg   = isset($_POST['status_msg']) ? $_POST['status_msg'] : '';
+	$action_text  = isset($_POST['action_text']) ? $_POST['action_text'] : '';
 	$fetch        = (object) ( new CaptainCore\Site( $post_id ) )->get();
 	$site         = $fetch->site;
 	$provider     = $fetch->provider;
@@ -6133,7 +6136,14 @@ function captaincore_install_action_callback() {
 	}
 	if ( $cmd == 'deactivate' ) {
 		$run_in_background = true;
-		$command           = "deactivate $site --name=\"$name\" --link=\"$link\"";
+		
+		$subject     = $subject;
+		$status_msg  = $status_msg;
+		$action_text = $action_text;
+
+		// Construct command with new arguments
+		$command = "deactivate $site --name=\"$name\" --link=\"$link\" --subject=\"$subject\" --status=\"$status_msg\" --action=\"$action_text\"";
+		
 		CaptainCore\ProcessLog::insert( "Suspended website", $post_id );
 	}
 	if ( $cmd == 'activate' ) {

@@ -2718,7 +2718,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-text>
 					</v-card>
 				</v-dialog>
-				<v-dialog v-model="dialog_toggle.show" width="700">
+				<v-dialog v-model="dialog_toggle.show" width="850">
 				<v-card>
 					<v-toolbar color="primary" elevation="0">
 						<v-btn icon="mdi-close" @click="dialog_toggle.show = false"></v-btn>
@@ -2730,10 +2730,13 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-col cols="6" pa-2>
 							<v-card flat border="thin" variant="outlined">
 							<v-card-text>
-								<p>Will apply deactivate message with the following link back to the site owner.</p>
+								<p>Will apply deactivate message with the following settings.</p>
 								<v-text-field variant="underlined" label="Business Name" v-model="dialog_toggle.business_name" class="mt-3"></v-text-field>
 								<v-text-field variant="underlined" label="Business Link" v-model="dialog_toggle.business_link"></v-text-field>
-								<v-btn color="primary" @click="DeactivateSite(dialog_toggle.site_id)">Deactivate Site</v-btn>
+								<v-text-field variant="underlined" label="Heading (Subject)" v-model="dialog_toggle.subject"></v-text-field>
+								<v-textarea variant="underlined" label="Status Message" v-model="dialog_toggle.status" rows="2" auto-grow></v-textarea>
+								<v-text-field variant="underlined" label="Action Text" v-model="dialog_toggle.action"></v-text-field>
+								<v-btn color="primary" @click="DeactivateSite(dialog_toggle.site_id)" class="mt-4">Deactivate Site</v-btn>
 							</v-card-text>
 							</v-card>
 						</v-col>
@@ -10330,7 +10333,7 @@ const app = createApp({
 				sites_list: []
 			}
 		},
-		dialog_toggle: { show: false, site_name: "", site_id: "", business_name: "", business_link: "" },
+		dialog_toggle: { show: false, site_name: "", site_id: "", business_name: "", business_link: "", subject: "Website Inactive", status: "This website is currently unavailable.", action: "Site owners may contact" },
 		dialog_mailgun: { show: false, site: {}, response: { items: [], paging: {} }, loading: false, loadingMore: false, domain_id: null },
 		dialog_mailgun_suppressions: { show: false, loading: false, active_tab: 'bounces', items: [], domain_id: null },
 		dialog_mailgun_details: { show: false, event: {} },
@@ -16293,6 +16296,12 @@ const app = createApp({
 			this.dialog_toggle.business_link = this.configurations.url
 			this.dialog_toggle.site_id = site.site_id
 			this.dialog_toggle.site_name = site.name
+			
+			// Reset to defaults
+			this.dialog_toggle.subject = "Website Inactive"
+			this.dialog_toggle.status = "This website is currently unavailable."
+			this.dialog_toggle.action = "Site owners may contact"
+			
 			this.dialog_toggle.show = true
 		},
 		toggleSiteBulk() {
@@ -16552,7 +16561,10 @@ const app = createApp({
 				command: 'deactivate',
 				environment: environment,
 				name: this.dialog_toggle.business_name,
-				link: this.dialog_toggle.business_link
+				link: this.dialog_toggle.business_link,
+				subject: this.dialog_toggle.subject,
+				status_msg: this.dialog_toggle.status,
+				action_text: this.dialog_toggle.action
 			};
 
 			self = this;
