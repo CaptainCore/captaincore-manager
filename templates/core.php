@@ -9728,8 +9728,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<div class="terminal-header d-flex align-center px-4 py-2 bg-grey-darken-4 flex-shrink-0 border-b">
 					<div class="d-flex gap-2 mr-4">
 						<!-- Red: Close -->
-						<div class="window-dot bg-red" @click="view_console.terminal_open = false" style="cursor:pointer"></div>
-						<div class="window-dot bg-yellow"></div>
+						<div class="window-dot bg-red" @click="view_console.show = false; view_console.terminal_open = false" style="cursor:pointer"></div>
+						<div class="window-dot bg-yellow" @click="view_console.terminal_open = false" style="cursor:pointer"></div>
 						<!-- Green: Fullscreen -->
 						<div class="window-dot bg-green" @click="toggleFullscreen" style="cursor:pointer" title="Toggle Fullscreen"></div>
 					</div>
