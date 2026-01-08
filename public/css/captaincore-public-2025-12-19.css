@@ -2115,3 +2115,17 @@ code.language-log {
 .font-monospace {
     font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace !important;
 }
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rotating {
+  animation: rotate 1s linear infinite;
+}
