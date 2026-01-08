@@ -4243,11 +4243,13 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-col>
 						<div class="mt-5">
 							<v-tooltip location="bottom">
-								<template v-slot:activator="{ props }">
-									<v-btn size="large" variant="text" @click="syncSite()" style="position: relative; left: -16px;" v-bind="props" icon="mdi-sync" color="grey"></v-btn>
-								</template>
-								<span>Manual sync website details. Last sync {{ timeago( dialog_site.site.updated_at ) }}.</span>
-							</v-tooltip>
+							<template v-slot:activator="{ props }">
+								<v-btn size="large" icon variant="text" @click="syncSite()" style="position: relative; left: -16px;" v-bind="props" color="grey">
+									<v-icon :class="{ 'rotating': dialog_site.syncing }">mdi-sync</v-icon>
+								</v-btn>
+							</template>
+							<span>Manual sync website details. Last sync {{ timeago( dialog_site.site.updated_at ) }}.</span>
+						</v-tooltip>
 						</div>
 						<v-col>
 								<v-tabs v-model="dialog_site.site.tabs_management" align-tabs="end" show-arrows class="pr-3" density="compact" color="primary" stacked>
@@ -10711,7 +10713,7 @@ const app = createApp({
 		backup_set_files: [],
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_billing: { step: 1 },
-		dialog_site: { loading: true, step: 1, backup_step: 1, grant_access: [], grant_access_menu: false, desired_environment_id: null, environment_selected: { environment_id: "0", expanded_backups: [], quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], key: null, tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
+		dialog_site: { loading: true, syncing: false, step: 1, backup_step: 1, grant_access: [], grant_access_menu: false, desired_environment_id: null, environment_selected: { environment_id: "0", expanded_backups: [], quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], key: null, tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
 		dialog_site_request: { show: false, request: {} },
 		dialog_edit_account: { show: false, account: {} },
 		dialog_account_portal: { show: false, portal: { domain: "", configuration: {}, email: { host: "", port: "", encryption_type: "tls", username: "", password: "" }, colors: { primary: "#0D47A1", secondary: "#424242", accent: "#82B1FF", error: "#FF5252", info: "#0D47A1", success: "#4CAF50", warning: "#FFC107" } }, colors: { primary: false, secondary: false, accent: false, error: false, info: false, success: false, warning: false } },
@@ -13625,6 +13627,7 @@ const app = createApp({
 				.catch( error => console.log( error ) );
 		},
 		syncSite() {
+			this.dialog_site.syncing = true;
 			site = this.dialog_site.site
 			environment = this.dialog_site.environment_selected.environment.toLowerCase()
 			description = "Syncing " + this.dialog_site.environment_selected.home_url + " info";
@@ -13640,6 +13643,10 @@ const app = createApp({
 				.then(response => {
 					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data
 					this.runCommand( response.data )
+				})
+				.catch(error => {
+					this.dialog_site.syncing = false;
+					console.log(error);
 				})
 
 		},
@@ -19995,6 +20002,7 @@ const app = createApp({
 				
 				if ( job.command == "syncSite" ) {
 					self.fetchSiteInfo( job.site_id )
+					self.dialog_site.syncing = false;
 				}
 
 				if ( job.command == "scanErrors" ) {
