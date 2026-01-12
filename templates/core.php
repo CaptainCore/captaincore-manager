@@ -15731,7 +15731,7 @@ const app = createApp({
 
 			var data = {
 				action: 'captaincore_install',
-				post_id: site.site_id,
+				post_id: site_id,
 				command: 'recipe',
 				environment: this.dialog_site.environment_selected.environment,
 				value: recipe_id
