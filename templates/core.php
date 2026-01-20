@@ -3756,6 +3756,97 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card>
 				</v-card-text>
 				<v-sheet v-show="dialog_site.step == 1 && sites.length > 0" class="px-4 pb-4" color="transparent">
+					<!-- START PINNED ENVIRONMENTS SECTION -->
+					<div v-if="pinnedItems.length > 0 && (toggle_site === 'cards' || toggle_site === 'grid' || toggle_site === 'table') && !sites_loading" class="mb-6">
+						<div class="d-flex align-center mb-2">
+							<v-icon icon="mdi-pin" size="small" class="mr-2 text-medium-emphasis"></v-icon>
+							<span class="text-subtitle-2 text-uppercase text-medium-emphasis font-weight-bold" style="letter-spacing: 1px;">Pinned Environments</span>
+						</div>
+						<v-row>
+							<v-col v-for="item in pinnedItems" :key="'pinned-' + item.environment_id" cols="6" sm="4" md="3" lg="2">
+								<v-card 
+									@click="openEnvironmentTool(item.site, item.environment, '')" 
+									border="thin"
+									class="d-flex flex-column transition-swing"
+									height="100%"
+									hover
+								>
+									<!-- Large Thumbnail Area -->
+									<v-img 
+										:src="getEnvironmentScreenshot(item.site, item.environment)"
+										cover
+										class="bg-surface-variant"
+										:aspect-ratio="16/10"
+									>
+										<!-- Floating Unpin Button -->
+										<div class="d-flex justify-end pa-2" style="position: relative; z-index: 2;">
+											<v-tooltip location="bottom" text="Unpin Environment">
+												<template v-slot:activator="{ props }">
+													<v-btn 
+														v-bind="props"
+														icon 
+														density="compact" 
+														size="x-small" 
+														variant="flat" 
+														color="surface" 
+														class="elevation-1"
+														@click.stop="togglePin(item.site, item.environment)"
+													>
+														<v-icon color="primary" size="small">mdi-pin-off</v-icon>
+													</v-btn>
+												</template>
+											</v-tooltip>
+										</div>
+
+										<!-- Fallback Icon (if no screenshot) -->
+										<div 
+											v-if="!getEnvironmentScreenshot(item.site, item.environment)" 
+											class="d-flex align-center justify-center fill-height" 
+											style="position: absolute; top: 0; left: 0; width: 100%; z-index: 0;"
+										>
+											<v-icon icon="mdi-web" size="48" class="text-disabled opacity-50"></v-icon>
+										</div>
+									</v-img>
+
+									<!-- Title -->
+									<div class="px-3 pt-3">
+										<div class="text-subtitle-2 font-weight-bold text-truncate">
+											{{ item.site.name }}
+										</div>
+										<div class="text-caption text-medium-emphasis">
+											{{ item.environment.environment }}
+										</div>
+									</div>
+
+									<v-spacer></v-spacer>
+
+									<!-- Actions Footer -->
+									<div class="d-flex align-center justify-space-between px-2 py-2">
+										<v-btn 
+											size="x-small" 
+											variant="text" 
+											prepend-icon="mdi-cog" 
+											@click.stop="openEnvironmentTool(item.site, item.environment, '')"
+											color="medium-emphasis"
+										>
+											Manage
+										</v-btn>
+										<v-btn 
+											size="x-small" 
+											variant="text" 
+											prepend-icon="mdi-wordpress" 
+											@click.stop="magicLoginSite(item.site.site_id, null, item.environment)"
+											color="medium-emphasis"
+										>
+											WP Login
+										</v-btn>
+									</div>
+								</v-card>
+							</v-col>
+						</v-row>
+						<v-divider class="my-4"></v-divider>
+					</div>
+					<!-- END PINNED ENVIRONMENTS SECTION -->
 					<v-data-iterator v-if="toggle_site === 'cards'" :items="filteredSites" :items-per-page="100" :search="search">
 						<template v-slot:default="{ items }">
 							<v-row dense>
@@ -3778,7 +3869,27 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											</a>
 
 											<template v-for="(env, index) in getVisibleEnvironments(item.raw)" :key="env.environment_id">
-												<div class="d-flex flex-wrap flex-sm-nowrap align-center pa-2 px-4">
+												<div class="d-flex flex-wrap flex-sm-nowrap align-center pa-2 px-4 position-relative group">
+													<div class="position-absolute" style="top: 15px; left: 25px; z-index: 2;">
+														<v-tooltip location="top" :text="isPinned(env.environment_id) ? 'Unpin Environment' : 'Pin Environment'">
+															<template v-slot:activator="{ props }">
+																<v-btn 
+																	v-bind="props"
+																	icon 
+																	variant="flat" 
+																	density="compact" 
+																	size="x-small" 
+																	color="surface"
+																	class="elevation-1"
+																	@click.stop="togglePin(item.raw, env)"
+																>
+																	<v-icon size="small" :color="isPinned(env.environment_id) ? 'primary' : 'medium-emphasis'">
+																		{{ isPinned(env.environment_id) ? 'mdi-pin' : 'mdi-pin-outline' }}
+																	</v-icon>
+																</v-btn>
+															</template>
+														</v-tooltip>
+													</div>
 													<div 
 														class="flex-shrink-0 mr-5 position-relative cursor-pointer" 
 														@click="openEnvironmentTool(item.raw, env, '')"
@@ -3974,7 +4085,24 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</div>
 							<div v-else>No sites found.</div>
 						</template>
-
+						<template v-slot:item.pin="{ item }">
+							<v-tooltip location="right" :text="isPinned(item.current_env.environment_id) ? 'Unpin Environment' : 'Pin Environment'">
+								<template v-slot:activator="{ props }">
+									<v-btn 
+										v-bind="props"
+										icon 
+										variant="text" 
+										density="compact" 
+										size="small" 
+										@click.stop="togglePin(item, item.current_env)"
+									>
+										<v-icon :color="isPinned(item.current_env.environment_id) ? 'primary' : 'medium-emphasis'">
+											{{ isPinned(item.current_env.environment_id) ? 'mdi-pin' : 'mdi-pin-outline' }}
+										</v-icon>
+									</v-btn>
+								</template>
+							</v-tooltip>
+						</template>
 						<template v-slot:item.thumbnail="{ item }">
 							<v-img
 								:src="`${remote_upload_uri}${item.site}_${item.site_id}/${item.current_env.environment.toLowerCase()}/screenshots/${item.current_env.screenshot_base}_thumb-100.jpg`"
@@ -4054,6 +4182,26 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 												v-if="item.raw.current_env.screenshot_base"
 												lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp"
 											>
+												<div style="position: absolute; top: -3px; right: 5px; z-index: 2;">
+													<v-tooltip location="top" :text="isPinned(item.raw.current_env.environment_id) ? 'Unpin Environment' : 'Pin Environment'">
+														<template v-slot:activator="{ props }">
+															<v-btn 
+																v-bind="props"
+																icon 
+																variant="flat" 
+																density="compact" 
+																size="x-small" 
+																color="surface"
+																class="elevation-1"
+																@click.stop="togglePin(item.raw, item.raw.current_env)"
+															>
+																<v-icon size="small" :color="isPinned(item.raw.current_env.environment_id) ? 'primary' : 'grey'">
+																	{{ isPinned(item.raw.current_env.environment_id) ? 'mdi-pin' : 'mdi-pin-outline' }}
+																</v-icon>
+															</v-btn>
+														</template>
+													</v-tooltip>
+												</div>
 												<v-fade-transition>
 													<div v-if="!isHovering" style="background-image: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.8)); height: 100%;" class="d-flex align-end justify-space-between pa-2">
 														<div class="body-1 text-white font-weight-bold text-truncate">{{ item.raw.name }}</div>
@@ -4084,17 +4232,44 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 													height="100%"
 												>
 													<div class="text-center" style="width: 100%;">
-														<v-icon size="large" class="text-medium-emphasis mb-2">mdi-monitor-shimmer</v-icon>
-														<div class="px-2">
-															<div class="body-1 font-weight-bold text-truncate">{{ item.raw.name }}</div>
-															<v-chip 
-																size="x-small" 
-																label 
-																class="font-weight-black mt-1" 
-																:color="item.raw.current_env.environment == 'Production' ? 'green-darken-1' : 'brown-darken-1'"
-															>
-																{{ item.raw.current_env.environment.toUpperCase() }}
-															</v-chip>
+														<!-- Syncing Indicator Logic -->
+														<div v-if="!item.raw.current_env.address || item.raw.just_added" class="d-flex flex-column align-center">
+															<v-progress-circular indeterminate size="24" color="primary" class="mb-2"></v-progress-circular>
+															<span class="text-caption text-medium-emphasis">Generating Preview...</span>
+														</div>
+														<div v-else>
+															<div style="position: absolute; top: -3px; right: 5px; z-index: 2;">
+																<v-tooltip location="top" :text="isPinned(item.raw.current_env.environment_id) ? 'Unpin Environment' : 'Pin Environment'">
+																	<template v-slot:activator="{ props }">
+																		<v-btn 
+																			v-bind="props"
+																			icon 
+																			variant="flat" 
+																			density="compact" 
+																			size="x-small" 
+																			color="surface"
+																			class="elevation-1"
+																			@click.stop="togglePin(item.raw, item.raw.current_env)"
+																		>
+																			<v-icon size="small" :color="isPinned(item.raw.current_env.environment_id) ? 'primary' : 'grey'">
+																				{{ isPinned(item.raw.current_env.environment_id) ? 'mdi-pin' : 'mdi-pin-outline' }}
+																			</v-icon>
+																		</v-btn>
+																	</template>
+																</v-tooltip>
+															</div>
+															<v-icon size="large" class="text-medium-emphasis mb-2">mdi-monitor-shimmer</v-icon>
+															<div class="px-2">
+																<div class="body-1 font-weight-bold text-truncate">{{ item.raw.name }}</div>
+																<v-chip 
+																	size="x-small" 
+																	label 
+																	class="font-weight-black mt-1" 
+																	:color="item.raw.current_env.environment == 'Production' ? 'green-darken-1' : 'brown-darken-1'"
+																>
+																	{{ item.raw.current_env.environment.toUpperCase() }}
+																</v-chip>
+															</div>
 														</div>
 													</div>
 												</v-sheet>
@@ -10996,7 +11171,8 @@ const app = createApp({
 			this.theme = savedTheme;
 			this.$vuetify.theme.global.name.value = savedTheme;
 		}
-
+		this.profile.pinned_environments = <?php echo json_encode( $user->pinned_environments ); ?>;
+		this.pinned_environments = this.profile.pinned_environments;
 		const savedFullscreen = localStorage.getItem('captaincore-terminal-fullscreen');
 		if (savedFullscreen !== null) {
 			this.view_console.fullscreen = (savedFullscreen === 'true');
@@ -11197,6 +11373,25 @@ const app = createApp({
 		},
 		totalPagesMailgunDeployTargets() {
 			return Math.ceil(this.filteredMailgunDeployTargets.length / this.dialog_mailgun_deploy.itemsPerPage);
+		},
+		pinnedItems() {
+			if (this.pinned_environments.length === 0) return [];
+			
+			const items = [];
+			this.pinned_environments.forEach(pin => {
+				const site = this.sites.find(s => s.site_id == pin.site_id);
+				if (site && site.environments) {
+					const env = site.environments.find(e => e.environment_id == pin.environment_id);
+					if (env) {
+						items.push({
+							site: site,
+							environment: env,
+							environment_id: env.environment_id // for keying
+						});
+					}
+				}
+			});
+			return items;
 		},
 		currentSiteThumbnail() {
 			const site = this.dialog_site.site;
@@ -12301,6 +12496,39 @@ const app = createApp({
 				.catch(error => {
 					console.log(error.response)
 			});
+		},
+		togglePin(site, environment) {
+			const pinIndex = this.pinned_environments.findIndex(p => p.environment_id == environment.environment_id);
+			
+			if (pinIndex > -1) {
+				// Unpin
+				this.pinned_environments.splice(pinIndex, 1);
+				this.snackbar.message = `${environment.environment} environment unpinned`;
+			} else {
+				// Pin
+				this.pinned_environments.push({
+					site_id: site.site_id,
+					environment_id: environment.environment_id
+				});
+				this.snackbar.message = `${environment.environment} environment pinned`;
+			}
+			
+			this.snackbar.show = true;
+			this.saveUserPins();
+		},
+		isPinned(environment_id) {
+			return this.pinned_environments.some(p => p.environment_id == environment_id);
+		},
+		saveUserPins() {
+			axios.post('/wp-json/captaincore/v1/me/pins', this.pinned_environments, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			}).catch(error => {
+				console.error("Error saving pins:", error);
+			});
+		},
+		getEnvironmentScreenshot(site, env) {
+			if (!env || !env.screenshot_base) return null;
+			return `${this.remote_upload_uri}${site.site}_${site.site_id}/${env.environment.toLowerCase()}/screenshots/${env.screenshot_base}_thumb-800.jpg`;
 		},
 		showDomainMappings() {
 			this.dialog_domain_mappings.show = true;
