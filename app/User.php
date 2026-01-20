@@ -864,17 +864,23 @@ class User {
             }
         }
 
-        return (object) [
-            "email"        => $user->user_email,
-            "login"        => $user->user_login,
-            "registered"   => strtotime( $user->user_registered ),
-            "hash"         => hash_hmac( 'sha256', $user->user_email, ( new Configurations )->get()->intercom_secret_key ),
-            "display_name" => $user->display_name,
-            "first_name"   => $user->first_name,
-            "last_name"    => $user->last_name,
-            "tfa_enabled"  => get_user_meta( $user->ID, 'captaincore_2fa_enabled', true ) ? get_user_meta( $user->ID, 'captaincore_2fa_enabled', true ) : 0,
-            "role"         => $role
+        // Fetch Pinned Environments
+        $pinned = get_user_meta( $user->ID, 'captaincore_pinned_environments', true );
+        if ( empty( $pinned ) || ! is_array( $pinned ) ) {
+            $pinned = [];
+        }
 
+        return (object) [
+            "email"               => $user->user_email,
+            "login"               => $user->user_login,
+            "registered"          => strtotime( $user->user_registered ),
+            "hash"                => hash_hmac( 'sha256', $user->user_email, ( new Configurations )->get()->intercom_secret_key ),
+            "display_name"        => $user->display_name,
+            "first_name"          => $user->first_name,
+            "last_name"           => $user->last_name,
+            "tfa_enabled"         => get_user_meta( $user->ID, 'captaincore_2fa_enabled', true ) ? get_user_meta( $user->ID, 'captaincore_2fa_enabled', true ) : 0,
+            "role"                => $role,
+            "pinned_environments" => $pinned
         ];
     }
 

@@ -1026,6 +1026,20 @@ function captaincore_site_func( $request ) {
 
 }
 
+function captaincore_me_update_pins_func( WP_REST_Request $request ) {
+    $pins = $request->get_json_params();
+    $user_id = get_current_user_id();
+    
+    // Basic validation
+    if ( ! is_array( $pins ) ) {
+        return new WP_Error( 'invalid_data', 'Pins must be an array.', [ 'status' => 400 ] );
+    }
+
+    update_user_meta( $user_id, 'captaincore_pinned_environments', $pins );
+
+    return new WP_REST_Response( [ 'success' => true, 'pins' => $pins ], 200 );
+}
+
 /**
  * Generalized REST API for bulk site operations.
  */
@@ -3629,6 +3643,14 @@ function captaincore_register_rest_endpoints() {
 			'show_in_index'       => false,
 		]
 	);
+
+	register_rest_route(
+        'captaincore/v1', '/me/pins', [
+            'methods'             => 'POST',
+            'callback'            => 'captaincore_me_update_pins_func',
+            'permission_callback' => 'captaincore_permission_check',
+        ]
+    );
 
 	register_rest_route(
 		'captaincore/v1', '/me/tfa_activate', [
