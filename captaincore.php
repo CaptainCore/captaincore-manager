@@ -320,15 +320,32 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	if ( $command == 'update-environment' and ! empty( $post->data ) ) {
 		
 		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
+
+		// Ensure screenshot_base is up to date with latest capture
+		$capture = CaptainCore\Captures::latest_capture( [ "site_id" => $site_id, "environment_id" => $post->data->environment_id ] );
+		if ( ! empty( $capture ) ) {
+			$created_at       = strtotime( $capture->created_at );
+			$git_commit_short = substr( $capture->git_commit, 0, 7 );
+			// Use incoming details if present, otherwise fallback to DB details
+			$details_json = ! empty( $post->data->details ) ? $post->data->details : ( $current_environment->details ?? '{}' );
+			$details = json_decode( $details_json );
+			$details->screenshot_base = "{$created_at}_{$git_commit_short}";
+			$post->data->details = json_encode( $details );
+			$post->data->screenshot = true;
+		}
+
 		( new CaptainCore\Environments )->update( (array) $post->data, [ "environment_id" => $post->data->environment_id ] );
+
+		// Rebuild the cache for this site so listings match details
+		CaptainCore\Sites::update_environments_cache( $site_id );
+		
+		// Mark Site as updated
+		( new CaptainCore\Sites )->update( [ "updated_at" => $post->data->updated_at ], [ "site_id" => $site_id ] );
 
 		$response = [
 			"response"        => "Completed update-environment for $site_id",
 			"environment"     => $post->data,
 		];
-		
-		// Mark Site as updated
-		( new CaptainCore\Sites )->update( [ "updated_at" => $post->data->updated_at ], [ "site_id" => $site_id ] );
 
 	}
 
@@ -445,6 +462,9 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$details                  = ( isset( $environment->details ) ? json_decode( $environment->details ) : (object) [] );
 		$details->screenshot_base = "{$data->created_at}_${git_commit_short}";
 		( new CaptainCore\Environments )->update( [ "screenshot" => true, "details" => json_encode( $details ) ], [ "environment_id" => $environment_id ] );
+
+		// Sync cache to ensure Listings page sees the new capture immediately
+		CaptainCore\Sites::update_environments_cache( $site_id );
 
 	}
 
