@@ -1282,11 +1282,11 @@ class Report {
     }
 
     /**
-     * Send email with embedded image
+     * Send email with CID-embedded chart image
      *
      * @param string $to        Recipient email
      * @param string $subject   Email subject
-     * @param string $html      HTML content
+     * @param string $html      HTML content (should have src='cid:xxx' reference)
      * @param array  $image     Image data array with 'image' and 'cid' keys, or null
      * @return bool Success
      */
@@ -1294,29 +1294,32 @@ class Report {
         // Prepare Mailer settings (for SMTP config)
         Mailer::prepare();
 
-        // If we have an image, add it via phpmailer_init hook
+        // If we have an image, embed it via phpmailer_init hook
         if ( $image && ! empty( $image['image'] ) && ! empty( $image['cid'] ) ) {
-            $embed_callback = function( $phpmailer ) use ( $image ) {
+            $image_data = $image['image'];
+            $image_cid  = $image['cid'];
+
+            // Add hook to embed image when PHPMailer is initialized
+            $embed_callback = function( $phpmailer ) use ( $image_data, $image_cid ) {
                 $phpmailer->addStringEmbeddedImage(
-                    $image['image'],
-                    $image['cid'],
+                    $image_data,
+                    $image_cid,
                     'traffic-chart.webp',
                     'base64',
                     'image/webp'
                 );
             };
 
-            // Add hook with high priority to run after SMTP config
             add_action( 'phpmailer_init', $embed_callback, 999 );
         }
 
         // Set HTML content type
         $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
 
-        // Send using wp_mail
+        // Send using wp_mail (HTML already has src='cid:xxx' from render())
         $result = wp_mail( $to, $subject, $html, $headers );
 
-        // Remove our hook
+        // Remove our hook after sending
         if ( isset( $embed_callback ) ) {
             remove_action( 'phpmailer_init', $embed_callback, 999 );
         }
