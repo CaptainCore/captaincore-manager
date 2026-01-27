@@ -799,7 +799,7 @@ class Report {
                                             <td width='33%' style='padding: 10px;'>
                                                 <div style='background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; text-align: center;'>
                                                     <div style='font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; margin-bottom: 8px;'>Backups</div>
-                                                    <div style='font-size: 28px; font-weight: 700; color: #2d3748;'>{$backups_formatted}</div>" . ( ! empty( $data->backups_since ) ? "<div style='font-size: 11px; color: #718096; margin-top: 6px;'>since {$data->backups_since}</div>" : "" ) . "<div style='font-size: 10px; color: #a0aec0; margin-top: 4px;'>Backups each 24hrs</div>
+                                                    <div style='font-size: 28px; font-weight: 700; color: #2d3748;'>{$backups_formatted}</div>" . ( ! empty( $data->backups_since ) ? "<div style='font-size: 11px; color: #718096; margin-top: 6px;'>since {$data->backups_since}</div>" : "" ) . "<div style='font-size: 10px; color: #a0aec0; margin-top: 4px;'>Scheduled Daily</div>
                                                 </div>
                                             </td>
                                             <td width='33%' style='padding: 10px;'>
