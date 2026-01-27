@@ -260,6 +260,276 @@ class Report {
     }
 
     /**
+     * Generate chart as WebP using GD library
+     *
+     * @param object $data Report data
+     * @return array|string Array with 'image' and 'cid' keys, or empty string if failed
+     */
+    public static function generate_chart_image( $data ) {
+        $result = [
+            'cid'   => 'chart-' . md5( serialize( $data->chart_labels ) ),
+            'image' => null,
+        ];
+
+        // Generate WebP directly using GD library
+        if ( extension_loaded( 'gd' ) ) {
+            try {
+                $image_data = self::generate_chart_webp_gd( $data );
+                if ( ! empty( $image_data ) ) {
+                    $result['image'] = $image_data;
+                }
+            } catch ( \Exception $e ) {
+                // GD failed, chart will be skipped
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Generate chart WebP using GD library
+     *
+     * @param object $data Report data
+     * @return string|null WebP binary data or null on failure
+     */
+    private static function generate_chart_webp_gd( $data ) {
+        $config          = Configurations::get();
+        $primary_color   = $config->colors->primary ?? '#0D47A1';
+        $secondary_color = $config->colors->secondary ?? '#90CAF9';
+
+        // Chart dimensions at 2x for retina displays
+        $scale        = 2;
+        $width        = 520 * $scale;
+        $height       = 180 * $scale;
+        $padding_left = 45 * $scale;
+        $padding_right = 15 * $scale;
+        $padding_top  = 12 * $scale;
+        $padding_bottom = 40 * $scale;
+
+        $chart_width  = $width - $padding_left - $padding_right;
+        $chart_height = $height - $padding_top - $padding_bottom;
+
+        $labels    = $data->chart_labels;
+        $pageviews = $data->chart_pageviews;
+        $visits    = $data->chart_visits;
+
+        if ( empty( $labels ) || count( $labels ) < 2 ) {
+            return null;
+        }
+
+        $count = count( $labels );
+
+        // Find max value for scaling
+        $max_value = max( max( $pageviews ), max( $visits ) );
+        $max_value = $max_value > 0 ? $max_value : 1;
+
+        // Round up to nice number for y-axis with more granular steps
+        $magnitude = pow( 10, floor( log10( $max_value ) ) );
+        $normalized = $max_value / $magnitude;
+        if ( $normalized <= 2 ) {
+            $max_value = ceil( $normalized * 5 ) / 5 * $magnitude; // Round to nearest 0.2
+        } elseif ( $normalized <= 5 ) {
+            $max_value = ceil( $normalized * 2 ) / 2 * $magnitude; // Round to nearest 0.5
+        } else {
+            $max_value = ceil( $normalized ) * $magnitude;
+        }
+
+        // Create image
+        $img = imagecreatetruecolor( $width, $height );
+
+        // Enable anti-aliasing
+        imageantialias( $img, true );
+
+        // Colors - softer, more professional palette
+        $white      = imagecolorallocate( $img, 255, 255, 255 );
+        $gray_light = imagecolorallocate( $img, 240, 242, 245 ); // Very light grid
+        $gray_text  = imagecolorallocate( $img, 155, 165, 180 ); // Soft gray text
+
+        // Parse primary color for visitors (brand color)
+        $primary_rgb  = self::hex_to_rgb_array( $primary_color );
+        $primary      = imagecolorallocate( $img, $primary_rgb[0], $primary_rgb[1], $primary_rgb[2] );
+        $primary_fill = imagecolorallocatealpha( $img, $primary_rgb[0], $primary_rgb[1], $primary_rgb[2], 75 );
+
+        // Pageviews uses soft gray tones
+        $secondary      = imagecolorallocate( $img, 160, 165, 175 ); // Soft gray stroke
+        $secondary_fill = imagecolorallocatealpha( $img, 210, 215, 225, 50 ); // Very light gray fill
+
+        // Fill background
+        imagefill( $img, 0, 0, $white );
+
+        // Find a TrueType font
+        $font_file = self::find_font();
+        $font_size = 9 * $scale; // Font size in points (smaller for cleaner look)
+
+        // Draw more Y-axis gridlines (5 lines)
+        $num_gridlines = 5;
+        for ( $i = 0; $i <= $num_gridlines; $i++ ) {
+            $val = ( $i / $num_gridlines ) * $max_value;
+            $y = $padding_top + $chart_height - ( $i / $num_gridlines ) * $chart_height;
+
+            // Grid line
+            imagesetthickness( $img, 1 );
+            imageline( $img, $padding_left, (int) $y, $width - $padding_right, (int) $y, $gray_light );
+
+            // Y-axis label (only show a few to avoid clutter)
+            if ( $i % 2 == 0 || $i == $num_gridlines ) {
+                $formatted = self::format_number_short( (int) $val );
+
+                if ( $font_file ) {
+                    // Use TrueType font
+                    $bbox = imagettfbbox( $font_size, 0, $font_file, $formatted );
+                    $text_width = $bbox[2] - $bbox[0];
+                    $x_pos = $padding_left - 15 * $scale - $text_width;
+                    imagettftext( $img, $font_size, 0, (int) $x_pos, (int) $y + $font_size / 3, $gray_text, $font_file, $formatted );
+                } else {
+                    // Fallback to built-in font
+                    imagestring( $img, 5, $padding_left - 50 * $scale, (int) $y - 7, $formatted, $gray_text );
+                }
+            }
+        }
+
+        // Calculate points
+        $pageview_points = [];
+        $visit_points = [];
+
+        for ( $i = 0; $i < $count; $i++ ) {
+            $x = $padding_left + ( $i / ( $count - 1 ) ) * $chart_width;
+            $pv_y = $padding_top + $chart_height - ( ( $pageviews[ $i ] / $max_value ) * $chart_height );
+            $v_y  = $padding_top + $chart_height - ( ( $visits[ $i ] / $max_value ) * $chart_height );
+
+            $pageview_points[] = [ (int) $x, (int) $pv_y ];
+            $visit_points[]    = [ (int) $x, (int) $v_y ];
+        }
+
+        // Draw filled areas
+        $baseline = $padding_top + $chart_height;
+
+        // Pageviews area (gray - drawn first, behind)
+        $pv_polygon = [];
+        $pv_polygon[] = $padding_left;
+        $pv_polygon[] = $baseline;
+        foreach ( $pageview_points as $pt ) {
+            $pv_polygon[] = $pt[0];
+            $pv_polygon[] = $pt[1];
+        }
+        $pv_polygon[] = $padding_left + $chart_width;
+        $pv_polygon[] = $baseline;
+        imagefilledpolygon( $img, $pv_polygon, $secondary_fill );
+
+        // Visits area (primary color - drawn second, in front)
+        $v_polygon = [];
+        $v_polygon[] = $padding_left;
+        $v_polygon[] = $baseline;
+        foreach ( $visit_points as $pt ) {
+            $v_polygon[] = $pt[0];
+            $v_polygon[] = $pt[1];
+        }
+        $v_polygon[] = $padding_left + $chart_width;
+        $v_polygon[] = $baseline;
+        imagefilledpolygon( $img, $v_polygon, $primary_fill );
+
+        // Draw lines (thicker for visibility)
+        imagesetthickness( $img, 2 * $scale );
+
+        // Pageviews line (gray)
+        for ( $i = 0; $i < count( $pageview_points ) - 1; $i++ ) {
+            imageline( $img, $pageview_points[$i][0], $pageview_points[$i][1],
+                           $pageview_points[$i+1][0], $pageview_points[$i+1][1], $secondary );
+        }
+
+        // Visits line (primary color)
+        for ( $i = 0; $i < count( $visit_points ) - 1; $i++ ) {
+            imageline( $img, $visit_points[$i][0], $visit_points[$i][1],
+                           $visit_points[$i+1][0], $visit_points[$i+1][1], $primary );
+        }
+
+        imagesetthickness( $img, 1 );
+
+        // X-axis labels - show fewer labels to avoid crowding
+        $x_label_y = $padding_top + $chart_height + 18 * $scale;
+
+        // Determine label interval - show max 6-7 labels
+        $max_labels = 6;
+        $label_interval = max( 1, ceil( $count / $max_labels ) );
+
+        for ( $i = 0; $i < $count; $i += $label_interval ) {
+            $x = $padding_left + ( $i / ( $count - 1 ) ) * $chart_width;
+            $label = date( 'M j', strtotime( $labels[ $i ] ) );
+
+            if ( $font_file ) {
+                // Use TrueType font
+                $bbox = imagettfbbox( $font_size, 0, $font_file, $label );
+                $label_width = $bbox[2] - $bbox[0];
+                imagettftext( $img, $font_size, 0, (int) ( $x - $label_width / 2 ), (int) $x_label_y, $gray_text, $font_file, $label );
+            } else {
+                // Fallback to built-in font
+                $label_width = strlen( $label ) * 9;
+                imagestring( $img, 5, (int) ( $x - $label_width / 2 ), (int) $x_label_y - 15, $label, $gray_text );
+            }
+        }
+
+        // Output to WebP (much smaller file size than PNG)
+        ob_start();
+        imagewebp( $img, null, 85 ); // Quality 85 is a good balance
+        $webp_data = ob_get_clean();
+
+        imagedestroy( $img );
+
+        return $webp_data;
+    }
+
+    /**
+     * Convert hex color to RGB array
+     *
+     * @param string $hex Hex color
+     * @return array [r, g, b]
+     */
+    private static function hex_to_rgb_array( $hex ) {
+        $hex = ltrim( $hex, '#' );
+        if ( strlen( $hex ) == 3 ) {
+            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+        }
+        return [
+            hexdec( substr( $hex, 0, 2 ) ),
+            hexdec( substr( $hex, 2, 2 ) ),
+            hexdec( substr( $hex, 4, 2 ) ),
+        ];
+    }
+
+    /**
+     * Find a TrueType font file on the system
+     *
+     * @return string|false Font file path or false if not found
+     */
+    private static function find_font() {
+        // Common font paths to check
+        $font_paths = [
+            // macOS
+            '/System/Library/Fonts/Helvetica.ttc',
+            '/System/Library/Fonts/SFNSText.ttf',
+            '/System/Library/Fonts/SFNS.ttf',
+            '/Library/Fonts/Arial.ttf',
+            '/System/Library/Fonts/Supplemental/Arial.ttf',
+            // Linux
+            '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+            '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+            '/usr/share/fonts/truetype/freefont/FreeSans.ttf',
+            '/usr/share/fonts/TTF/DejaVuSans.ttf',
+            // Windows
+            'C:/Windows/Fonts/arial.ttf',
+            'C:/Windows/Fonts/calibri.ttf',
+        ];
+
+        foreach ( $font_paths as $path ) {
+            if ( file_exists( $path ) && is_readable( $path ) ) {
+                return $path;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Generate SVG chart for stats
      *
      * @param object $data Report data
@@ -276,7 +546,7 @@ class Report {
         $padding_left = 50;
         $padding_right = 20;
         $padding_top  = 20;
-        $padding_bottom = 70; // Extra space for x-axis labels + legend
+        $padding_bottom = 70;
 
         $chart_width  = $width - $padding_left - $padding_right;
         $chart_height = $height - $padding_top - $padding_bottom;
@@ -313,7 +583,7 @@ class Report {
             $visit_points[]    = round( $x, 1 ) . ',' . round( $v_y, 1 );
         }
 
-        // Create area fill paths (closed polygon)
+        // Create area fill paths
         $baseline = $padding_top + $chart_height;
 
         $pv_area_points = $pageview_points;
@@ -324,34 +594,33 @@ class Report {
         array_unshift( $v_area_points, $padding_left . ',' . $baseline );
         $v_area_points[] = ( $padding_left + $chart_width ) . ',' . $baseline;
 
-        // Format labels for display (show ~5 labels max)
+        // Format labels for display
         $label_interval = max( 1, floor( $count / 5 ) );
         $x_labels_svg   = '';
-        $x_label_y      = $padding_top + $chart_height + 20; // Position below chart area
+        $x_label_y      = $padding_top + $chart_height + 20;
         $last_label_i   = 0;
 
         for ( $i = 0; $i < $count; $i += $label_interval ) {
             $x = $padding_left + ( $i / ( $count - 1 ) ) * $chart_width;
             $label = date( 'M j', strtotime( $labels[ $i ] ) );
-            $x_labels_svg .= "<text x='{$x}' y='{$x_label_y}' text-anchor='middle' fill='#718096' font-size='11'>{$label}</text>";
+            $x_labels_svg .= "<text x='{$x}' y='{$x_label_y}' text-anchor='middle' fill='#718096' font-size='11' font-family='Arial, sans-serif'>{$label}</text>";
             $last_label_i = $i;
         }
-        // Show last label only if it's far enough from the previous label (at least half an interval)
+
         $gap_to_end = $count - 1 - $last_label_i;
         if ( $gap_to_end >= $label_interval * 0.6 ) {
             $x = $padding_left + $chart_width;
             $label = date( 'M j', strtotime( $labels[ $count - 1 ] ) );
-            $x_labels_svg .= "<text x='{$x}' y='{$x_label_y}' text-anchor='middle' fill='#718096' font-size='11'>{$label}</text>";
+            $x_labels_svg .= "<text x='{$x}' y='{$x_label_y}' text-anchor='middle' fill='#718096' font-size='11' font-family='Arial, sans-serif'>{$label}</text>";
         }
 
-        // Y-axis labels (0, mid, max)
+        // Y-axis labels
         $y_labels_svg = '';
         $y_values = [ 0, $max_value / 2, $max_value ];
         foreach ( $y_values as $val ) {
             $y = $padding_top + $chart_height - ( ( $val / $max_value ) * $chart_height );
             $formatted = self::format_number_short( $val );
-            $y_labels_svg .= "<text x='" . ( $padding_left - 10 ) . "' y='" . ( $y + 4 ) . "' text-anchor='end' fill='#718096' font-size='11'>{$formatted}</text>";
-            // Grid line
+            $y_labels_svg .= "<text x='" . ( $padding_left - 10 ) . "' y='" . ( $y + 4 ) . "' text-anchor='end' fill='#718096' font-size='11' font-family='Arial, sans-serif'>{$formatted}</text>";
             $y_labels_svg .= "<line x1='{$padding_left}' y1='{$y}' x2='" . ( $width - $padding_right ) . "' y2='{$y}' stroke='#e2e8f0' stroke-width='1'/>";
         }
 
@@ -359,36 +628,20 @@ class Report {
         $primary_rgb   = self::hex_to_rgb( $primary_color );
         $secondary_rgb = self::hex_to_rgb( $secondary_color );
 
-        $svg = "
-        <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 {$width} {$height}' style='width: 100%; height: auto; max-width: {$width}px;'>
-            <!-- Background -->
-            <rect width='{$width}' height='{$height}' fill='white'/>
-
-            <!-- Grid lines -->
-            {$y_labels_svg}
-
-            <!-- Pageviews area fill -->
-            <polygon points='" . implode( ' ', $pv_area_points ) . "' fill='rgba({$secondary_rgb}, 0.3)'/>
-
-            <!-- Pageviews line -->
-            <polyline points='" . implode( ' ', $pageview_points ) . "' fill='none' stroke='{$secondary_color}' stroke-width='2.5'/>
-
-            <!-- Visits area fill -->
-            <polygon points='" . implode( ' ', $v_area_points ) . "' fill='rgba({$primary_rgb}, 0.3)'/>
-
-            <!-- Visits line -->
-            <polyline points='" . implode( ' ', $visit_points ) . "' fill='none' stroke='{$primary_color}' stroke-width='2.5'/>
-
-            <!-- X-axis labels -->
-            {$x_labels_svg}
-
-            <!-- Legend -->
-            <rect x='" . ( $width / 2 - 80 ) . "' y='" . ( $height - 25 ) . "' width='12' height='12' fill='{$secondary_color}' rx='2'/>
-            <text x='" . ( $width / 2 - 63 ) . "' y='" . ( $height - 15 ) . "' fill='#4a5568' font-size='11'>Pageviews</text>
-
-            <rect x='" . ( $width / 2 + 20 ) . "' y='" . ( $height - 25 ) . "' width='12' height='12' fill='{$primary_color}' rx='2'/>
-            <text x='" . ( $width / 2 + 37 ) . "' y='" . ( $height - 15 ) . "' fill='#4a5568' font-size='11'>Visitors</text>
-        </svg>";
+        $svg = "<?xml version='1.0' encoding='UTF-8'?>
+<svg xmlns='http://www.w3.org/2000/svg' width='{$width}' height='{$height}' viewBox='0 0 {$width} {$height}'>
+    <rect width='{$width}' height='{$height}' fill='white'/>
+    {$y_labels_svg}
+    <polygon points='" . implode( ' ', $pv_area_points ) . "' fill='rgba({$secondary_rgb}, 0.3)'/>
+    <polyline points='" . implode( ' ', $pageview_points ) . "' fill='none' stroke='{$secondary_color}' stroke-width='2.5'/>
+    <polygon points='" . implode( ' ', $v_area_points ) . "' fill='rgba({$primary_rgb}, 0.3)'/>
+    <polyline points='" . implode( ' ', $visit_points ) . "' fill='none' stroke='{$primary_color}' stroke-width='2.5'/>
+    {$x_labels_svg}
+    <rect x='" . ( $width / 2 - 80 ) . "' y='" . ( $height - 25 ) . "' width='12' height='12' fill='{$secondary_color}' rx='2'/>
+    <text x='" . ( $width / 2 - 63 ) . "' y='" . ( $height - 15 ) . "' fill='#4a5568' font-size='11' font-family='Arial, sans-serif'>Pageviews</text>
+    <rect x='" . ( $width / 2 + 20 ) . "' y='" . ( $height - 25 ) . "' width='12' height='12' fill='{$primary_color}' rx='2'/>
+    <text x='" . ( $width / 2 + 37 ) . "' y='" . ( $height - 15 ) . "' fill='#4a5568' font-size='11' font-family='Arial, sans-serif'>Visitors</text>
+</svg>";
 
         return trim( $svg );
     }
@@ -408,6 +661,18 @@ class Report {
         $g = hexdec( substr( $hex, 2, 2 ) );
         $b = hexdec( substr( $hex, 4, 2 ) );
         return "{$r}, {$g}, {$b}";
+    }
+
+    /**
+     * Convert hex color to RGBA string
+     *
+     * @param string $hex Hex color
+     * @param float $alpha Alpha value (0-1)
+     * @return string RGBA value as "rgba(r, g, b, a)"
+     */
+    private static function hex_to_rgba( $hex, $alpha = 1 ) {
+        $rgb = self::hex_to_rgb( $hex );
+        return "rgba({$rgb}, {$alpha})";
     }
 
     /**
@@ -454,10 +719,11 @@ class Report {
      */
     public static function render( $data ) {
 
-        $config      = Configurations::get();
-        $brand_color = $config->colors->primary ?? '#0D47A1';
-        $logo_url    = $config->logo ?? '';
-        $site_name   = get_bloginfo( 'name' );
+        $config          = Configurations::get();
+        $brand_color     = $config->colors->primary ?? '#0D47A1';
+        $secondary_color = $config->colors->secondary ?? '#90CAF9';
+        $logo_url        = $config->logo ?? '';
+        $site_name       = get_bloginfo( 'name' );
 
         $sites_list = implode( ', ', $data->sites );
 
@@ -474,23 +740,42 @@ class Report {
         $chart_html  = '';
         $stats_html  = '';
 
+        // Store chart image data for embedding
+        $chart_image = null;
+
         if ( $has_stats ) {
-            // Generate chart SVG if we have enough data points
+            // Generate chart image if we have enough data points
             if ( ! empty( $data->chart_labels ) && count( $data->chart_labels ) > 1 ) {
-                $chart_svg = self::generate_chart_svg( $data );
-                $chart_html = "
+                $chart_image = self::generate_chart_image( $data );
+
+                if ( ! empty( $chart_image ) && is_array( $chart_image ) ) {
+                    // Use CID reference for embedded image
+                    $chart_cid = $chart_image['cid'];
+                    $chart_html = "
                                     <!-- Stats Chart -->
                                     <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-bottom: 20px;'>
                                         <tr>
                                             <td style='padding: 10px;'>
                                                 <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; text-align: center;'>
                                                     <div style='font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; margin-bottom: 12px;'>Traffic Overview</div>
-                                                    {$chart_svg}
+                                                    <img src='cid:{$chart_cid}' alt='Traffic Chart' style='width: 100%; max-width: 520px; height: auto;' />
+                                                    <div style='margin-top: 15px; text-align: center;'>
+                                                        <span style='display: inline-block; margin-right: 25px;'>
+                                                            <span style='display: inline-block; width: 14px; height: 14px; background-color: #c8cdd7; border: 2px solid #787d87; border-radius: 2px; vertical-align: middle; margin-right: 8px;'></span>
+                                                            <span style='font-size: 13px; color: #5a6070; vertical-align: middle;'>Pageviews</span>
+                                                        </span>
+                                                        <span style='display: inline-block;'>
+                                                            <span style='display: inline-block; width: 14px; height: 14px; background-color: {$brand_color}; opacity: 0.7; border: 2px solid {$brand_color}; border-radius: 2px; vertical-align: middle; margin-right: 8px;'></span>
+                                                            <span style='font-size: 13px; color: #5a6070; vertical-align: middle;'>Visitors</span>
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
                                     </table>
-                ";
+                                    <!-- End Stats Chart -->
+                    ";
+                }
             }
 
             // Stats row (Visits / Pageviews / Storage)
@@ -557,52 +842,50 @@ class Report {
                                     </table>";
         }
 
-        // Build updates HTML if we have plugin or theme updates
-        $updates_html = '';
-        if ( ! empty( $data->plugin_updates ) || ! empty( $data->theme_updates ) ) {
-            $updates_rows = '';
+        // Checkmark SVG icon
+        $checkmark_svg = "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='{$brand_color}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='vertical-align: middle; margin-right: 8px;'><circle cx='12' cy='12' r='10' fill='none' stroke='{$brand_color}' stroke-width='1.5'/><polyline points='9 12 11.5 14.5 16 9' fill='none'/></svg>";
 
-            // Add theme updates first
-            foreach ( $data->theme_updates as $theme ) {
-                $title       = htmlspecialchars( $theme['title'] ?: $theme['name'] );
-                $old_version = htmlspecialchars( $theme['old_version'] );
-                $new_version = htmlspecialchars( $theme['new_version'] );
-                $updates_rows .= "
-                    <tr>
-                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #4a5568; text-align: left;'>{$title}</td>
-                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 11px; color: #a0aec0; text-align: center; white-space: nowrap;'>Theme</td>
-                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #718096; text-align: right; white-space: nowrap;'>{$old_version} → {$new_version}</td>
-                    </tr>";
-            }
+        // Plus SVG icon for added items
+        $plus_svg = "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='#48bb78' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='vertical-align: middle; margin-right: 8px;'><circle cx='12' cy='12' r='10' fill='none' stroke='#48bb78' stroke-width='1.5'/><line x1='12' y1='8' x2='12' y2='16'/><line x1='8' y1='12' x2='16' y2='12'/></svg>";
 
-            // Add plugin updates
+        // Minus SVG icon for removed items
+        $minus_svg = "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='#e53e3e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='vertical-align: middle; margin-right: 8px;'><circle cx='12' cy='12' r='10' fill='none' stroke='#e53e3e' stroke-width='1.5'/><line x1='8' y1='12' x2='16' y2='12'/></svg>";
+
+        // Build plugin updates HTML
+        $plugin_updates_html = '';
+        if ( ! empty( $data->plugin_updates ) ) {
+            $plugin_count = count( $data->plugin_updates );
+            $plugin_word = $plugin_count === 1 ? 'plugin was' : 'plugins were';
+            $plugin_rows = '';
+
             foreach ( $data->plugin_updates as $plugin ) {
                 $title       = htmlspecialchars( $plugin['title'] ?: $plugin['name'] );
                 $old_version = htmlspecialchars( $plugin['old_version'] );
                 $new_version = htmlspecialchars( $plugin['new_version'] );
-                $updates_rows .= "
+                $plugin_rows .= "
                     <tr>
-                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #4a5568; text-align: left;'>{$title}</td>
-                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 11px; color: #a0aec0; text-align: center; white-space: nowrap;'>Plugin</td>
-                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #718096; text-align: right; white-space: nowrap;'>{$old_version} → {$new_version}</td>
+                        <td style='padding: 14px 12px; border-bottom: 1px solid #edf2f7; font-size: 14px; font-weight: 500; color: #2d3748; text-align: left;'>{$title}</td>
+                        <td style='padding: 14px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #718096; text-align: right; white-space: nowrap;'>
+                            <span style='background: #edf2f7; padding: 4px 8px; border-radius: 4px; font-family: monospace;'>{$old_version}</span>
+                            <span style='color: #a0aec0; margin: 0 6px;'>&rarr;</span>
+                            <span style='background: " . self::hex_to_rgba( $brand_color, 0.1 ) . "; color: {$brand_color}; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-weight: 600;'>{$new_version}</span>
+                        </td>
                     </tr>";
             }
 
-            $total_updates = count( $data->plugin_updates ) + count( $data->theme_updates );
-            $updates_html = "
-                                    <!-- Updates -->
+            $plugin_updates_html = "
+                                    <!-- Plugin Updates -->
                                     <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 30px;'>
+                                        <tr>
+                                            <td style='padding: 20px 10px 10px; text-align: center;'>
+                                                {$checkmark_svg}<span style='font-size: 18px; font-weight: 600; color: #2d3748; vertical-align: middle;'>{$plugin_count} {$plugin_word} updated.</span>
+                                            </td>
+                                        </tr>
                                         <tr>
                                             <td style='padding: 10px;'>
                                                 <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;'>
-                                                    <div style='font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; padding: 15px 15px 10px; text-align: center;'>Updated During Period ({$total_updates})</div>
                                                     <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%'>
-                                                        <tr style='background-color: #f7fafc;'>
-                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: left;'>Name</td>
-                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: center; width: 70px;'>Type</td>
-                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: right; width: 120px;'>Version</td>
-                                                        </tr>
-                                                        {$updates_rows}
+                                                        {$plugin_rows}
                                                     </table>
                                                 </div>
                                             </td>
@@ -610,48 +893,83 @@ class Report {
                                     </table>";
         }
 
-        // Build added items HTML
-        $added_html = '';
-        if ( ! empty( $data->plugins_added ) || ! empty( $data->themes_added ) ) {
-            $added_rows = '';
+        // Build theme updates HTML
+        $theme_updates_html = '';
+        if ( ! empty( $data->theme_updates ) ) {
+            $theme_count = count( $data->theme_updates );
+            $theme_word = $theme_count === 1 ? 'theme was' : 'themes were';
+            $theme_rows = '';
 
-            foreach ( $data->themes_added as $theme ) {
-                $title   = htmlspecialchars( $theme['title'] ?: $theme['name'] );
-                $version = htmlspecialchars( $theme['version'] );
-                $added_rows .= "
+            foreach ( $data->theme_updates as $theme ) {
+                $title       = htmlspecialchars( $theme['title'] ?: $theme['name'] );
+                $old_version = htmlspecialchars( $theme['old_version'] );
+                $new_version = htmlspecialchars( $theme['new_version'] );
+                $theme_rows .= "
                     <tr>
-                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #4a5568; text-align: left;'>{$title}</td>
-                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 11px; color: #a0aec0; text-align: center; white-space: nowrap;'>Theme</td>
-                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #718096; text-align: right; white-space: nowrap;'>{$version}</td>
+                        <td style='padding: 14px 12px; border-bottom: 1px solid #edf2f7; font-size: 14px; font-weight: 500; color: #2d3748; text-align: left;'>{$title}</td>
+                        <td style='padding: 14px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #718096; text-align: right; white-space: nowrap;'>
+                            <span style='background: #edf2f7; padding: 4px 8px; border-radius: 4px; font-family: monospace;'>{$old_version}</span>
+                            <span style='color: #a0aec0; margin: 0 6px;'>&rarr;</span>
+                            <span style='background: " . self::hex_to_rgba( $brand_color, 0.1 ) . "; color: {$brand_color}; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-weight: 600;'>{$new_version}</span>
+                        </td>
                     </tr>";
             }
+
+            $theme_updates_html = "
+                                    <!-- Theme Updates -->
+                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 30px;'>
+                                        <tr>
+                                            <td style='padding: 20px 10px 10px; text-align: center;'>
+                                                {$checkmark_svg}<span style='font-size: 18px; font-weight: 600; color: #2d3748; vertical-align: middle;'>{$theme_count} {$theme_word} updated.</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style='padding: 10px;'>
+                                                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;'>
+                                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%'>
+                                                        {$theme_rows}
+                                                    </table>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>";
+        }
+
+        // Combine updates HTML
+        $updates_html = $plugin_updates_html . $theme_updates_html;
+
+        // Build plugins added HTML
+        $plugins_added_html = '';
+        if ( ! empty( $data->plugins_added ) ) {
+            $plugin_count = count( $data->plugins_added );
+            $plugin_word = $plugin_count === 1 ? 'plugin was' : 'plugins were';
+            $plugin_rows = '';
 
             foreach ( $data->plugins_added as $plugin ) {
                 $title   = htmlspecialchars( $plugin['title'] ?: $plugin['name'] );
                 $version = htmlspecialchars( $plugin['version'] );
-                $added_rows .= "
+                $plugin_rows .= "
                     <tr>
-                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #4a5568; text-align: left;'>{$title}</td>
-                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 11px; color: #a0aec0; text-align: center; white-space: nowrap;'>Plugin</td>
-                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #718096; text-align: right; white-space: nowrap;'>{$version}</td>
+                        <td style='padding: 14px 12px; border-bottom: 1px solid #edf2f7; font-size: 14px; font-weight: 500; color: #2d3748; text-align: left;'>{$title}</td>
+                        <td style='padding: 14px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #718096; text-align: right; white-space: nowrap;'>
+                            <span style='background: rgba(72, 187, 120, 0.1); color: #48bb78; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-weight: 600;'>{$version}</span>
+                        </td>
                     </tr>";
             }
 
-            $total_added = count( $data->plugins_added ) + count( $data->themes_added );
-            $added_html = "
-                                    <!-- Added -->
-                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 20px;'>
+            $plugins_added_html = "
+                                    <!-- Plugins Added -->
+                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 30px;'>
+                                        <tr>
+                                            <td style='padding: 20px 10px 10px; text-align: center;'>
+                                                {$plus_svg}<span style='font-size: 18px; font-weight: 600; color: #2d3748; vertical-align: middle;'>{$plugin_count} {$plugin_word} added.</span>
+                                            </td>
+                                        </tr>
                                         <tr>
                                             <td style='padding: 10px;'>
                                                 <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;'>
-                                                    <div style='font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #48bb78; padding: 15px 15px 10px; text-align: center;'>Added During Period ({$total_added})</div>
                                                     <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%'>
-                                                        <tr style='background-color: #f7fafc;'>
-                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: left;'>Name</td>
-                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: center; width: 70px;'>Type</td>
-                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: right; width: 120px;'>Version</td>
-                                                        </tr>
-                                                        {$added_rows}
+                                                        {$plugin_rows}
                                                     </table>
                                                 </div>
                                             </td>
@@ -659,54 +977,128 @@ class Report {
                                     </table>";
         }
 
-        // Build removed items HTML
-        $removed_html = '';
-        if ( ! empty( $data->plugins_removed ) || ! empty( $data->themes_removed ) ) {
-            $removed_rows = '';
+        // Build themes added HTML
+        $themes_added_html = '';
+        if ( ! empty( $data->themes_added ) ) {
+            $theme_count = count( $data->themes_added );
+            $theme_word = $theme_count === 1 ? 'theme was' : 'themes were';
+            $theme_rows = '';
 
-            foreach ( $data->themes_removed as $theme ) {
+            foreach ( $data->themes_added as $theme ) {
                 $title   = htmlspecialchars( $theme['title'] ?: $theme['name'] );
                 $version = htmlspecialchars( $theme['version'] );
-                $removed_rows .= "
+                $theme_rows .= "
                     <tr>
-                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #4a5568; text-align: left;'>{$title}</td>
-                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 11px; color: #a0aec0; text-align: center; white-space: nowrap;'>Theme</td>
-                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #718096; text-align: right; white-space: nowrap;'>{$version}</td>
+                        <td style='padding: 14px 12px; border-bottom: 1px solid #edf2f7; font-size: 14px; font-weight: 500; color: #2d3748; text-align: left;'>{$title}</td>
+                        <td style='padding: 14px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #718096; text-align: right; white-space: nowrap;'>
+                            <span style='background: rgba(72, 187, 120, 0.1); color: #48bb78; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-weight: 600;'>{$version}</span>
+                        </td>
                     </tr>";
             }
+
+            $themes_added_html = "
+                                    <!-- Themes Added -->
+                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 30px;'>
+                                        <tr>
+                                            <td style='padding: 20px 10px 10px; text-align: center;'>
+                                                {$plus_svg}<span style='font-size: 18px; font-weight: 600; color: #2d3748; vertical-align: middle;'>{$theme_count} {$theme_word} added.</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style='padding: 10px;'>
+                                                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;'>
+                                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%'>
+                                                        {$theme_rows}
+                                                    </table>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>";
+        }
+
+        // Combine added HTML
+        $added_html = $plugins_added_html . $themes_added_html;
+
+        // Build plugins removed HTML
+        $plugins_removed_html = '';
+        if ( ! empty( $data->plugins_removed ) ) {
+            $plugin_count = count( $data->plugins_removed );
+            $plugin_word = $plugin_count === 1 ? 'plugin was' : 'plugins were';
+            $plugin_rows = '';
 
             foreach ( $data->plugins_removed as $plugin ) {
                 $title   = htmlspecialchars( $plugin['title'] ?: $plugin['name'] );
                 $version = htmlspecialchars( $plugin['version'] );
-                $removed_rows .= "
+                $plugin_rows .= "
                     <tr>
-                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #4a5568; text-align: left;'>{$title}</td>
-                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 11px; color: #a0aec0; text-align: center; white-space: nowrap;'>Plugin</td>
-                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #718096; text-align: right; white-space: nowrap;'>{$version}</td>
+                        <td style='padding: 14px 12px; border-bottom: 1px solid #edf2f7; font-size: 14px; font-weight: 500; color: #2d3748; text-align: left;'>{$title}</td>
+                        <td style='padding: 14px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #718096; text-align: right; white-space: nowrap;'>
+                            <span style='background: rgba(229, 62, 62, 0.1); color: #e53e3e; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-weight: 600;'>{$version}</span>
+                        </td>
                     </tr>";
             }
 
-            $total_removed = count( $data->plugins_removed ) + count( $data->themes_removed );
-            $removed_html = "
-                                    <!-- Removed -->
-                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 20px;'>
+            $plugins_removed_html = "
+                                    <!-- Plugins Removed -->
+                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 30px;'>
+                                        <tr>
+                                            <td style='padding: 20px 10px 10px; text-align: center;'>
+                                                {$minus_svg}<span style='font-size: 18px; font-weight: 600; color: #2d3748; vertical-align: middle;'>{$plugin_count} {$plugin_word} removed.</span>
+                                            </td>
+                                        </tr>
                                         <tr>
                                             <td style='padding: 10px;'>
                                                 <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;'>
-                                                    <div style='font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #e53e3e; padding: 15px 15px 10px; text-align: center;'>Removed During Period ({$total_removed})</div>
                                                     <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%'>
-                                                        <tr style='background-color: #f7fafc;'>
-                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: left;'>Name</td>
-                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: center; width: 70px;'>Type</td>
-                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: right; width: 120px;'>Version</td>
-                                                        </tr>
-                                                        {$removed_rows}
+                                                        {$plugin_rows}
                                                     </table>
                                                 </div>
                                             </td>
                                         </tr>
                                     </table>";
         }
+
+        // Build themes removed HTML
+        $themes_removed_html = '';
+        if ( ! empty( $data->themes_removed ) ) {
+            $theme_count = count( $data->themes_removed );
+            $theme_word = $theme_count === 1 ? 'theme was' : 'themes were';
+            $theme_rows = '';
+
+            foreach ( $data->themes_removed as $theme ) {
+                $title   = htmlspecialchars( $theme['title'] ?: $theme['name'] );
+                $version = htmlspecialchars( $theme['version'] );
+                $theme_rows .= "
+                    <tr>
+                        <td style='padding: 14px 12px; border-bottom: 1px solid #edf2f7; font-size: 14px; font-weight: 500; color: #2d3748; text-align: left;'>{$title}</td>
+                        <td style='padding: 14px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #718096; text-align: right; white-space: nowrap;'>
+                            <span style='background: rgba(229, 62, 62, 0.1); color: #e53e3e; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-weight: 600;'>{$version}</span>
+                        </td>
+                    </tr>";
+            }
+
+            $themes_removed_html = "
+                                    <!-- Themes Removed -->
+                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 30px;'>
+                                        <tr>
+                                            <td style='padding: 20px 10px 10px; text-align: center;'>
+                                                {$minus_svg}<span style='font-size: 18px; font-weight: 600; color: #2d3748; vertical-align: middle;'>{$theme_count} {$theme_word} removed.</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style='padding: 10px;'>
+                                                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;'>
+                                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%'>
+                                                        {$theme_rows}
+                                                    </table>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>";
+        }
+
+        // Combine removed HTML
+        $removed_html = $plugins_removed_html . $themes_removed_html;
 
         // Build process logs HTML
         $process_logs_html = '';
@@ -845,7 +1237,10 @@ class Report {
         </html>
         ";
 
-        return $message;
+        return (object) [
+            'html'        => $message,
+            'chart_image' => $chart_image,
+        ];
     }
 
     /**
@@ -864,8 +1259,29 @@ class Report {
         }
 
         $data    = self::generate( $site_ids, $start_date, $end_date );
-        $html    = self::render( $data );
+        $result  = self::render( $data );
+        $html    = $result->html;
         $subject = "Maintenance Report - " . $data->start_date . " to " . $data->end_date;
+
+        // If we have a chart image, embed using base64 data URI
+        if ( ! empty( $result->chart_image ) && is_array( $result->chart_image ) && ! empty( $result->chart_image['image'] ) ) {
+            $base64 = base64_encode( $result->chart_image['image'] );
+            $data_uri = 'data:image/webp;base64,' . $base64;
+
+            // Replace CID reference with data URI
+            $html = str_replace(
+                "src='cid:" . $result->chart_image['cid'] . "'",
+                "src='" . $data_uri . "'",
+                $html
+            );
+        } elseif ( ! empty( $result->chart_image ) && is_array( $result->chart_image ) ) {
+            // No PNG available - remove the chart section from email
+            $html = preg_replace(
+                '/<!-- Stats Chart -->.*?<!-- End Stats Chart -->/s',
+                '',
+                $html
+            );
+        }
 
         Mailer::send( $recipient, $subject, $html );
 
@@ -908,6 +1324,7 @@ class Report {
 
     /**
      * Preview report HTML without sending
+     * For preview, we use base64 data URI which works in browsers
      *
      * @param array  $site_ids   Array of site IDs
      * @param string $start_date Start date for stats
@@ -915,8 +1332,23 @@ class Report {
      * @return string HTML content
      */
     public static function preview( $site_ids = [], $start_date = "", $end_date = "" ) {
-        $data = self::generate( $site_ids, $start_date, $end_date );
-        return self::render( $data );
+        $data   = self::generate( $site_ids, $start_date, $end_date );
+        $result = self::render( $data );
+        $html   = $result->html;
+
+        // For preview, convert CID reference to data URI (works in browsers)
+        if ( ! empty( $result->chart_image ) && is_array( $result->chart_image ) && ! empty( $result->chart_image['image'] ) ) {
+            $base64 = base64_encode( $result->chart_image['image'] );
+            $data_uri = 'data:image/webp;base64,' . $base64;
+
+            $html = str_replace(
+                "src='cid:" . $result->chart_image['cid'] . "'",
+                "src='" . $data_uri . "'",
+                $html
+            );
+        }
+
+        return $html;
     }
 
     /**
