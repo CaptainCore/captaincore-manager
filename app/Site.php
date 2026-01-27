@@ -1071,18 +1071,67 @@ class Site {
         ] );
 
         $site     = json_decode( $response['body'] );
+        $stats_count = count( $stats );
         $response = [
             "fathom_id" => $fathom_id,
             "site"      => $site,
             "summary"   => [
                 "pageviews"    => array_sum( array_column( $stats, "pageviews" ) ),
                 "visits"       => array_sum( array_column( $stats, "visits" ) ),
-                "bounce_rate"  => array_sum( array_column( $stats, "bounce_rate" ) ) / count ( $stats ),
-                "avg_duration" => array_sum( array_column( $stats, "avg_duration" ) ) / count ( $stats ),
+                "bounce_rate"  => $stats_count > 0 ? array_sum( array_column( $stats, "bounce_rate" ) ) / $stats_count : 0,
+                "avg_duration" => $stats_count > 0 ? array_sum( array_column( $stats, "avg_duration" ) ) / $stats_count : 0,
             ],
             "items"     => $stats
         ];
         return $response;
+    }
+
+    public function top_pages( $environment = "production", $before = "", $after = "", $limit = 10 ) {
+
+        if ( empty( $after ) ) {
+            $after = time();
+        }
+
+        if ( empty( $before ) ) {
+            $before = strtotime( "-30 days" );
+        }
+
+        $before = date( 'Y-m-d H:i:s', $before );
+        $after  = date( 'Y-m-d H:i:s', $after );
+
+        $environments = self::environments();
+        foreach( $environments as $e ) {
+            if ( strtolower( $e->environment ) == strtolower( $environment ) ) {
+                $selected_environment = $e;
+            }
+        }
+        if ( empty( $selected_environment ) ) {
+            return [];
+        }
+        $fathom_ids = array_column( $selected_environment->fathom_analytics, "code" );
+
+        if ( empty( $fathom_ids ) ) {
+            return [];
+        }
+
+        $fathom_id = $fathom_ids[0];
+
+        $url      = "https://api.usefathom.com/v1/aggregations?entity=pageview&entity_id={$fathom_id}&aggregates=visits,uniques,pageviews&field_grouping=pathname&date_from={$before}&date_to={$after}&sort_by=pageviews:desc&limit={$limit}";
+        $response = wp_remote_get( $url, [
+            "headers" => [ "Authorization" => "Bearer " . \CaptainCore\Providers\Fathom::credentials("api_key") ],
+        ] );
+
+        if ( is_wp_error( $response ) ) {
+            return [];
+        }
+
+        $pages = json_decode( $response['body'] );
+
+        if ( ! is_array( $pages ) ) {
+            return [];
+        }
+
+        return $pages;
     }
 
     public function update_logs( $environment = "both" ) {

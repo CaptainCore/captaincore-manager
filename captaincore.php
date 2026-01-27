@@ -4176,7 +4176,286 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Report endpoints (admin only)
+	register_rest_route(
+		'captaincore/v1', '/report/send', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_report_send_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/report/preview', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_report_preview_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/report/default-recipient', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_report_default_recipient_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/scheduled-reports', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_scheduled_reports_list_func',
+			'permission_callback' => function() {
+				return is_user_logged_in();
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/scheduled-reports', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_scheduled_reports_create_func',
+			'permission_callback' => function() {
+				return is_user_logged_in();
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/scheduled-reports/(?P<id>\d+)', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_scheduled_reports_update_func',
+			'permission_callback' => function() {
+				return is_user_logged_in();
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/scheduled-reports/(?P<id>\d+)', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_scheduled_reports_delete_func',
+			'permission_callback' => function() {
+				return is_user_logged_in();
+			},
+			'show_in_index'       => false,
+		]
+	);
+
 };
+
+/**
+ * REST endpoint: Send maintenance report email
+ */
+function captaincore_report_send_func( WP_REST_Request $request ) {
+	$params     = $request->get_json_params();
+	$site_ids   = $params['site_ids'] ?? [];
+	$start_date = $params['start_date'] ?? '';
+	$end_date   = $params['end_date'] ?? '';
+	$recipient  = $params['recipient'] ?? '';
+
+	if ( empty( $site_ids ) ) {
+		return new WP_Error( 'missing_sites', 'At least one site is required.', [ 'status' => 400 ] );
+	}
+
+	if ( empty( $recipient ) ) {
+		return new WP_Error( 'missing_recipient', 'Recipient email is required.', [ 'status' => 400 ] );
+	}
+
+	$result = CaptainCore\Report::send( $site_ids, $start_date, $end_date, $recipient );
+
+	if ( $result ) {
+		return [ 'success' => true, 'message' => "Report sent to {$recipient}" ];
+	}
+
+	return new WP_Error( 'send_failed', 'Failed to send report.', [ 'status' => 500 ] );
+}
+
+/**
+ * REST endpoint: Preview maintenance report HTML
+ */
+function captaincore_report_preview_func( WP_REST_Request $request ) {
+	$params     = $request->get_json_params();
+	$site_ids   = $params['site_ids'] ?? [];
+	$start_date = $params['start_date'] ?? '';
+	$end_date   = $params['end_date'] ?? '';
+
+	if ( empty( $site_ids ) ) {
+		return new WP_Error( 'missing_sites', 'At least one site is required.', [ 'status' => 400 ] );
+	}
+
+	$html = CaptainCore\Report::preview( $site_ids, $start_date, $end_date );
+
+	return [ 'html' => $html ];
+}
+
+/**
+ * REST endpoint: Get default recipient email from billing account
+ */
+function captaincore_report_default_recipient_func( WP_REST_Request $request ) {
+	$params   = $request->get_json_params();
+	$site_ids = $params['site_ids'] ?? [];
+
+	if ( empty( $site_ids ) ) {
+		return new WP_Error( 'missing_sites', 'At least one site is required.', [ 'status' => 400 ] );
+	}
+
+	$email = CaptainCore\Report::get_default_recipient( $site_ids );
+
+	return [ 'email' => $email ];
+}
+
+/**
+ * REST endpoint: List all scheduled reports
+ */
+function captaincore_scheduled_reports_list_func( WP_REST_Request $request ) {
+	$reports     = CaptainCore\ScheduledReports::all();
+	$user_id     = get_current_user_id();
+	$is_admin    = current_user_can( 'manage_options' );
+	$result      = [];
+
+	// Decode site_ids for each report and add site names
+	foreach ( $reports as $report ) {
+		// Non-admins can only see their own reports
+		if ( ! $is_admin && (int) $report->user_id !== $user_id ) {
+			continue;
+		}
+
+		$report->site_ids = json_decode( $report->site_ids, true );
+		$report->site_names = [];
+		foreach ( $report->site_ids as $site_id ) {
+			$site = new CaptainCore\Site( $site_id );
+			if ( $site->get() ) {
+				$report->site_names[] = $site->get()->name;
+			}
+		}
+		$result[] = $report;
+	}
+
+	return $result;
+}
+
+/**
+ * REST endpoint: Create scheduled report
+ */
+function captaincore_scheduled_reports_create_func( WP_REST_Request $request ) {
+	$params = $request->get_json_params();
+
+	$site_ids  = $params['site_ids'] ?? [];
+	$interval  = $params['interval'] ?? 'monthly';
+	$recipient = $params['recipient'] ?? '';
+
+	if ( empty( $site_ids ) ) {
+		return new WP_Error( 'missing_sites', 'At least one site is required.', [ 'status' => 400 ] );
+	}
+
+	if ( empty( $recipient ) ) {
+		return new WP_Error( 'missing_recipient', 'Recipient email is required.', [ 'status' => 400 ] );
+	}
+
+	// Verify user has access to all requested sites (unless admin)
+	if ( ! current_user_can( 'manage_options' ) ) {
+		$user_sites       = new CaptainCore\Sites();
+		$allowed_site_ids = $user_sites->site_ids();
+
+		foreach ( $site_ids as $site_id ) {
+			if ( ! in_array( (int) $site_id, $allowed_site_ids ) ) {
+				return new WP_Error( 'unauthorized_site', 'You do not have access to one or more of the selected sites.', [ 'status' => 403 ] );
+			}
+		}
+	}
+
+	$id = CaptainCore\ScheduledReports::create( [
+		'site_ids'  => $site_ids,
+		'interval'  => $interval,
+		'recipient' => $recipient,
+	] );
+
+	return [ 'success' => true, 'id' => $id ];
+}
+
+/**
+ * REST endpoint: Update scheduled report
+ */
+function captaincore_scheduled_reports_update_func( WP_REST_Request $request ) {
+	$id       = $request->get_param( 'id' );
+	$params   = $request->get_json_params();
+	$user_id  = get_current_user_id();
+	$is_admin = current_user_can( 'manage_options' );
+
+	// Get the existing report
+	$report = CaptainCore\ScheduledReports::get( $id );
+	if ( ! $report ) {
+		return new WP_Error( 'not_found', 'Scheduled report not found.', [ 'status' => 404 ] );
+	}
+
+	// Non-admins can only update their own reports
+	if ( ! $is_admin && (int) $report->user_id !== $user_id ) {
+		return new WP_Error( 'unauthorized', 'You do not have permission to update this report.', [ 'status' => 403 ] );
+	}
+
+	$update_data = [];
+	if ( isset( $params['site_ids'] ) ) {
+		// Verify user has access to all requested sites (unless admin)
+		if ( ! $is_admin ) {
+			$user_sites       = new CaptainCore\Sites();
+			$allowed_site_ids = $user_sites->site_ids();
+
+			foreach ( $params['site_ids'] as $site_id ) {
+				if ( ! in_array( (int) $site_id, $allowed_site_ids ) ) {
+					return new WP_Error( 'unauthorized_site', 'You do not have access to one or more of the selected sites.', [ 'status' => 403 ] );
+				}
+			}
+		}
+		$update_data['site_ids'] = $params['site_ids'];
+	}
+	if ( isset( $params['interval'] ) ) {
+		$update_data['interval'] = $params['interval'];
+	}
+	if ( isset( $params['recipient'] ) ) {
+		$update_data['recipient'] = $params['recipient'];
+	}
+
+	CaptainCore\ScheduledReports::update_report( $id, $update_data );
+
+	return [ 'success' => true ];
+}
+
+/**
+ * REST endpoint: Delete scheduled report
+ */
+function captaincore_scheduled_reports_delete_func( WP_REST_Request $request ) {
+	$id       = $request->get_param( 'id' );
+	$user_id  = get_current_user_id();
+	$is_admin = current_user_can( 'manage_options' );
+
+	// Get the existing report
+	$report = CaptainCore\ScheduledReports::get( $id );
+	if ( ! $report ) {
+		return new WP_Error( 'not_found', 'Scheduled report not found.', [ 'status' => 404 ] );
+	}
+
+	// Non-admins can only delete their own reports
+	if ( ! $is_admin && (int) $report->user_id !== $user_id ) {
+		return new WP_Error( 'unauthorized', 'You do not have permission to delete this report.', [ 'status' => 403 ] );
+	}
+
+	CaptainCore\ScheduledReports::delete_report( $id );
+
+	return [ 'success' => true ];
+}
 
 function captaincore_login_func( WP_REST_Request $request ) {
 
