@@ -8614,15 +8614,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							>
 								Download HTML
 							</v-btn>
-							<v-btn
-								color="primary"
-								variant="flat"
-								prepend-icon="mdi-send"
-								:disabled="!report.recipient"
-								@click="sendReport; report.show_preview = false"
-							>
-								Send Report
-							</v-btn>
 						</v-card-actions>
 					</v-card>
 				</v-dialog>

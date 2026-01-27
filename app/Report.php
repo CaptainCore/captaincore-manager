@@ -1263,19 +1263,11 @@ class Report {
         $html    = $result->html;
         $subject = "Maintenance Report - " . $data->start_date . " to " . $data->end_date;
 
-        // If we have a chart image, embed using base64 data URI
-        if ( ! empty( $result->chart_image ) && is_array( $result->chart_image ) && ! empty( $result->chart_image['image'] ) ) {
-            $base64 = base64_encode( $result->chart_image['image'] );
-            $data_uri = 'data:image/webp;base64,' . $base64;
+        // If we have a chart image, embed using CID (required for Gmail)
+        $has_chart = ! empty( $result->chart_image ) && is_array( $result->chart_image ) && ! empty( $result->chart_image['image'] );
 
-            // Replace CID reference with data URI
-            $html = str_replace(
-                "src='cid:" . $result->chart_image['cid'] . "'",
-                "src='" . $data_uri . "'",
-                $html
-            );
-        } elseif ( ! empty( $result->chart_image ) && is_array( $result->chart_image ) ) {
-            // No PNG available - remove the chart section from email
+        if ( ! $has_chart ) {
+            // No image available - remove the chart section from email
             $html = preg_replace(
                 '/<!-- Stats Chart -->.*?<!-- End Stats Chart -->/s',
                 '',
@@ -1283,9 +1275,53 @@ class Report {
             );
         }
 
-        Mailer::send( $recipient, $subject, $html );
+        // Use custom send with embedded image support
+        self::send_with_embedded_image( $recipient, $subject, $html, $has_chart ? $result->chart_image : null );
 
         return true;
+    }
+
+    /**
+     * Send email with embedded image
+     *
+     * @param string $to        Recipient email
+     * @param string $subject   Email subject
+     * @param string $html      HTML content
+     * @param array  $image     Image data array with 'image' and 'cid' keys, or null
+     * @return bool Success
+     */
+    private static function send_with_embedded_image( $to, $subject, $html, $image = null ) {
+        // Prepare Mailer settings (for SMTP config)
+        Mailer::prepare();
+
+        // If we have an image, add it via phpmailer_init hook
+        if ( $image && ! empty( $image['image'] ) && ! empty( $image['cid'] ) ) {
+            $embed_callback = function( $phpmailer ) use ( $image ) {
+                $phpmailer->addStringEmbeddedImage(
+                    $image['image'],
+                    $image['cid'],
+                    'traffic-chart.webp',
+                    'base64',
+                    'image/webp'
+                );
+            };
+
+            // Add hook with high priority to run after SMTP config
+            add_action( 'phpmailer_init', $embed_callback, 999 );
+        }
+
+        // Set HTML content type
+        $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
+
+        // Send using wp_mail
+        $result = wp_mail( $to, $subject, $html, $headers );
+
+        // Remove our hook
+        if ( isset( $embed_callback ) ) {
+            remove_action( 'phpmailer_init', $embed_callback, 999 );
+        }
+
+        return $result;
     }
 
     /**
