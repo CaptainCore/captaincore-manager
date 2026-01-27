@@ -116,6 +116,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-list-subheader v-show="role == 'administrator' || role == 'owner'">Administrator</v-list-subheader>
 			<v-list-item link :href="`${configurations.path}archives`" @click.prevent="goToPath('/archives')" title="Archives" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-folder-zip-outline"></v-list-item>
 			<v-list-item link :href="`${configurations.path}configurations`" @click.prevent="goToPath('/configurations')" title="Configurations" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-cogs"></v-list-item>
+			<v-list-item link :href="`${configurations.path}reports`" @click.prevent="goToPath('/reports')" title="Reports" v-show="role == 'administrator'" prepend-icon="mdi-file-chart"></v-list-item>
 			<v-list-item link :href="`${configurations.path}handbook`" @click.prevent="goToPath('/handbook')" title="Handbook" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-map"></v-list-item>
 			<v-list-item link :href="`${configurations.path}defaults`" @click.prevent="goToPath('/defaults')" title="Site Defaults" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-application"></v-list-item>
 			<v-list-item link :href="`${configurations.path}keys`" @click.prevent="goToPath('/keys')" title="SSH Keys" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-key"></v-list-item>
@@ -8462,6 +8463,248 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-dialog>
 			</v-card>
+			<v-card v-if="route == 'reports' && role == 'administrator'" flat border="thin" rounded="xl" class="mx-auto" max-width="900">
+				<v-toolbar flat color="transparent">
+					<v-toolbar-title>Maintenance Reports</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-card-text>
+					<v-alert type="info" variant="tonal" class="mb-6">
+						Generate maintenance reports for your clients. Select one or more sites, choose a date range for stats, and send a summary email.
+					</v-alert>
+					<v-row>
+						<v-col cols="12">
+							<v-autocomplete
+								v-model="report.site_ids"
+								:items="sites"
+								item-title="name"
+								item-value="site_id"
+								label="Select Sites"
+								multiple
+								chips
+								closable-chips
+								variant="outlined"
+								density="comfortable"
+								prepend-inner-icon="mdi-web"
+								@update:model-value="fetchReportDefaultRecipient"
+							>
+								<template v-slot:chip="{ props, item }">
+									<v-chip v-bind="props" :text="item.raw.name" size="small"></v-chip>
+								</template>
+							</v-autocomplete>
+						</v-col>
+					</v-row>
+					<v-row>
+						<v-col cols="12" md="6">
+							<v-text-field
+								v-model="report.start_date"
+								label="Stats Start Date"
+								type="date"
+								variant="outlined"
+								density="comfortable"
+								prepend-inner-icon="mdi-calendar-start"
+							></v-text-field>
+						</v-col>
+						<v-col cols="12" md="6">
+							<v-text-field
+								v-model="report.end_date"
+								label="Stats End Date"
+								type="date"
+								variant="outlined"
+								density="comfortable"
+								prepend-inner-icon="mdi-calendar-end"
+							></v-text-field>
+						</v-col>
+					</v-row>
+					<v-row>
+						<v-col cols="12">
+							<v-text-field
+								v-model="report.recipient"
+								label="Recipient Email"
+								type="email"
+								variant="outlined"
+								density="comfortable"
+								prepend-inner-icon="mdi-email"
+								hint="Defaults to the billing account email"
+								persistent-hint
+							></v-text-field>
+						</v-col>
+					</v-row>
+					<v-row class="mt-4">
+						<v-col cols="12" class="d-flex gap-3">
+							<v-btn
+								class="mr-2"
+								color="primary"
+								variant="outlined"
+								prepend-icon="mdi-eye"
+								:loading="report.loading"
+								:disabled="report.site_ids.length === 0"
+								@click="previewReport"
+							>
+								Preview Report
+							</v-btn>
+							<v-menu v-model="report.show_schedule_menu" :close-on-content-click="false" location="bottom">
+								<template v-slot:activator="{ props }">
+									<v-btn
+										class="mr-2"
+										color="primary"
+										variant="tonal"
+										prepend-icon="mdi-calendar-clock"
+										:disabled="report.site_ids.length === 0 || !report.recipient"
+										v-bind="props"
+									>
+										Schedule
+									</v-btn>
+								</template>
+								<v-card min-width="280">
+									<v-card-text>
+										<v-select
+											v-model="report.schedule_interval"
+											:items="[
+												{ title: 'Monthly', value: 'monthly' },
+												{ title: 'Quarterly', value: 'quarterly' },
+												{ title: 'Yearly', value: 'yearly' }
+											]"
+											label="Interval"
+											variant="outlined"
+											density="comfortable"
+											hide-details
+										></v-select>
+									</v-card-text>
+									<v-card-actions>
+										<v-spacer></v-spacer>
+										<v-btn variant="text" @click="report.show_schedule_menu = false">Cancel</v-btn>
+										<v-btn color="primary" variant="flat" @click="scheduleReport">Schedule</v-btn>
+									</v-card-actions>
+								</v-card>
+							</v-menu>
+							<v-btn
+								color="primary"
+								variant="flat"
+								prepend-icon="mdi-send"
+								:loading="report.sending"
+								:disabled="report.site_ids.length === 0 || !report.recipient"
+								@click="sendReport"
+							>
+								Send Report
+							</v-btn>
+						</v-col>
+					</v-row>
+				</v-card-text>
+				<v-dialog v-model="report.show_preview" max-width="700px" scrollable>
+					<v-card>
+						<v-toolbar color="primary" flat>
+							<v-toolbar-title>Report Preview</v-toolbar-title>
+							<v-spacer></v-spacer>
+							<v-btn icon="mdi-close" @click="report.show_preview = false"></v-btn>
+						</v-toolbar>
+						<v-card-text class="pa-0">
+							<iframe
+								:srcdoc="report.preview_html"
+								style="width: 100%; height: 600px; border: none;"
+							></iframe>
+						</v-card-text>
+						<v-card-actions>
+							<v-spacer></v-spacer>
+							<v-btn variant="text" @click="report.show_preview = false">Close</v-btn>
+							<v-btn
+								variant="outlined"
+								prepend-icon="mdi-download"
+								@click="downloadReportHtml"
+							>
+								Download HTML
+							</v-btn>
+							<v-btn
+								color="primary"
+								variant="flat"
+								prepend-icon="mdi-send"
+								:disabled="!report.recipient"
+								@click="sendReport; report.show_preview = false"
+							>
+								Send Report
+							</v-btn>
+						</v-card-actions>
+					</v-card>
+				</v-dialog>
+				<v-snackbar v-model="report.snackbar" :timeout="4000" color="success">
+					{{ report.snackbar_message }}
+				</v-snackbar>
+			</v-card>
+			<v-card v-if="route == 'reports' && role == 'administrator' && report.scheduled_reports.length > 0" flat border="thin" rounded="xl" class="mx-auto mt-6" max-width="900">
+				<v-toolbar flat color="transparent">
+					<v-toolbar-title>Scheduled Reports</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-list>
+					<v-list-item
+						v-for="scheduled in report.scheduled_reports"
+						:key="scheduled.scheduled_report_id"
+					>
+						<template v-slot:prepend>
+							<v-icon icon="mdi-calendar-clock" color="primary"></v-icon>
+						</template>
+						<v-list-item-title>
+							{{ scheduled.site_names.join(', ') }}
+						</v-list-item-title>
+						<v-list-item-subtitle>
+							{{ scheduled.interval.charAt(0).toUpperCase() + scheduled.interval.slice(1) }} to {{ scheduled.recipient }}
+							<span class="text-caption ml-2">(Next: {{ new Date(scheduled.next_run).toLocaleDateString() }})</span>
+						</v-list-item-subtitle>
+						<template v-slot:append>
+							<v-btn icon="mdi-pencil" variant="text" size="small" @click="editScheduledReport(scheduled)"></v-btn>
+							<v-btn icon="mdi-delete" variant="text" size="small" color="error" @click="deleteScheduledReport(scheduled.scheduled_report_id)"></v-btn>
+						</template>
+					</v-list-item>
+				</v-list>
+			</v-card>
+			<v-dialog v-model="report.show_edit_dialog" max-width="500px">
+				<v-card>
+					<v-toolbar color="primary" flat>
+						<v-toolbar-title>Edit Scheduled Report</v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-btn icon="mdi-close" @click="report.show_edit_dialog = false"></v-btn>
+					</v-toolbar>
+					<v-card-text v-if="report.editing_report">
+						<v-autocomplete
+							v-model="report.editing_report.site_ids"
+							:items="sites"
+							item-title="name"
+							item-value="site_id"
+							label="Select Sites"
+							multiple
+							chips
+							closable-chips
+							variant="outlined"
+							density="comfortable"
+							class="mb-4"
+						></v-autocomplete>
+						<v-select
+							v-model="report.editing_report.interval"
+							:items="[
+								{ title: 'Monthly', value: 'monthly' },
+								{ title: 'Quarterly', value: 'quarterly' },
+								{ title: 'Yearly', value: 'yearly' }
+							]"
+							label="Interval"
+							variant="outlined"
+							density="comfortable"
+							class="mb-4"
+						></v-select>
+						<v-text-field
+							v-model="report.editing_report.recipient"
+							label="Recipient Email"
+							type="email"
+							variant="outlined"
+							density="comfortable"
+						></v-text-field>
+					</v-card-text>
+					<v-card-actions>
+						<v-spacer></v-spacer>
+						<v-btn variant="text" @click="report.show_edit_dialog = false">Cancel</v-btn>
+						<v-btn color="primary" variant="flat" @click="updateScheduledReport">Save</v-btn>
+					</v-card-actions>
+				</v-card>
+			</v-dialog>
 			<v-card v-if="route == 'profile'" flat border="thin" rounded="xl" class="mx-auto" max-width="700">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Edit profile</v-toolbar-title>
@@ -10531,6 +10774,33 @@ const app = createApp({
 		dialog_new_site_kinsta: { show: false, errors: [], working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", provider_id: "1", clone_site_id: "", domain: "", datacenter: "us-ashburn-1", shared_with: [], account_id: "", customer_id: "" } },
 		dialog_new_site_rocketdotnet: { show: false, site: { name: "", domain: "", datacenter: "", shared_with: [], account_id: "", customer_id: "" } },
 		dialog_request_site: { show: false, request: { name: "", account_id: "", notes: "" } },
+		report: {
+			loading: false,
+			sending: false,
+			site_ids: [],
+			start_date: (() => {
+				const now = new Date();
+				const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+				return firstDayLastMonth.toISOString().split('T')[0];
+			})(),
+			end_date: (() => {
+				const now = new Date();
+				const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+				return lastDayLastMonth.toISOString().split('T')[0];
+			})(),
+			recipient: "",
+			preview_html: "",
+			show_preview: false,
+			snackbar: false,
+			snackbar_message: "",
+			// Scheduled reports
+			show_schedule_menu: false,
+			schedule_interval: "monthly",
+			scheduled_reports: [],
+			scheduled_loading: false,
+			show_edit_dialog: false,
+			editing_report: null
+		},
 		provider_options: [
 			{
 				"title": "Analytics - Fathom",
@@ -10738,6 +11008,7 @@ const app = createApp({
 		],
 		kinsta_providers: <?php echo json_encode( CaptainCore\Providers\Kinsta::list() ); ?>,
 		kinsta_provider_sites: [<?php echo json_encode( CaptainCore\Providers\Kinsta::list_sites() ); ?>],
+		pinned_environments: [],
 		clone_sites: [],
 		requested_sites: <?php echo json_encode( ( new CaptainCore\User )->fetch_requested_sites() ); ?>,
 		new_invite: { account: {}, records: {} },
@@ -10760,6 +11031,7 @@ const app = createApp({
 			'/keys': 'keys',
 			'/login': 'login',
 			'/profile' : 'profile',
+			'/reports': 'reports',
 			'/sites': 'sites',
 			'/subscriptions': 'subscriptions',
 			'/subscription': 'subscription',
@@ -11940,6 +12212,12 @@ const app = createApp({
 				this.fetchArchives();
 			}
 
+			if (this.route == "reports") {
+				this.selected_nav = "";
+				this.loading_page = false;
+				this.fetchScheduledReports();
+			}
+
 			if (this.route == "domains") {
 				if (this.allDomains == 0) this.loading_page = true;
 				this.selected_nav = "domains";
@@ -12220,6 +12498,150 @@ const app = createApp({
 				this.snackbar.message = "Failed to generate link.";
 				this.snackbar.show = true;
 				this.dialog_archive_link.show = false;
+			});
+		},
+		fetchReportDefaultRecipient() {
+			if (this.report.site_ids.length === 0) {
+				this.report.recipient = "";
+				return;
+			}
+			axios.post('/wp-json/captaincore/v1/report/default-recipient', {
+				site_ids: this.report.site_ids
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				if (response.data.email) {
+					this.report.recipient = response.data.email;
+				}
+			})
+			.catch(error => {
+				console.error("Error fetching default recipient:", error);
+			});
+		},
+		previewReport() {
+			if (this.report.site_ids.length === 0) return;
+
+			this.report.loading = true;
+			axios.post('/wp-json/captaincore/v1/report/preview', {
+				site_ids: this.report.site_ids,
+				start_date: this.report.start_date,
+				end_date: this.report.end_date
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.report.preview_html = response.data.html;
+				this.report.show_preview = true;
+				this.report.loading = false;
+			})
+			.catch(error => {
+				console.error("Error previewing report:", error);
+				this.report.snackbar_message = "Failed to generate preview.";
+				this.report.snackbar = true;
+				this.report.loading = false;
+			});
+		},
+		sendReport() {
+			if (this.report.site_ids.length === 0 || !this.report.recipient) return;
+
+			this.report.sending = true;
+			axios.post('/wp-json/captaincore/v1/report/send', {
+				site_ids: this.report.site_ids,
+				start_date: this.report.start_date,
+				end_date: this.report.end_date,
+				recipient: this.report.recipient
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.report.snackbar_message = response.data.message;
+				this.report.snackbar = true;
+				this.report.sending = false;
+				this.report.show_preview = false;
+			})
+			.catch(error => {
+				console.error("Error sending report:", error);
+				this.report.snackbar_message = "Failed to send report.";
+				this.report.snackbar = true;
+				this.report.sending = false;
+			});
+		},
+		downloadReportHtml() {
+			const blob = new Blob([this.report.preview_html], { type: 'text/html' });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `maintenance-report-${this.report.start_date}-to-${this.report.end_date}.html`;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+		},
+		fetchScheduledReports() {
+			axios.get('/wp-json/captaincore/v1/scheduled-reports', {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.report.scheduled_reports = response.data;
+			})
+			.catch(error => {
+				console.error("Error fetching scheduled reports:", error);
+			});
+		},
+		scheduleReport() {
+			axios.post('/wp-json/captaincore/v1/scheduled-reports', {
+				site_ids: this.report.site_ids,
+				interval: this.report.schedule_interval,
+				recipient: this.report.recipient
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.report.show_schedule_menu = false;
+				this.report.snackbar_message = "Report scheduled successfully";
+				this.report.snackbar = true;
+				this.fetchScheduledReports();
+			})
+			.catch(error => {
+				console.error("Error scheduling report:", error);
+			});
+		},
+		editScheduledReport(scheduled) {
+			this.report.editing_report = { ...scheduled };
+			this.report.show_edit_dialog = true;
+		},
+		updateScheduledReport() {
+			const id = this.report.editing_report.scheduled_report_id;
+			axios.put(`/wp-json/captaincore/v1/scheduled-reports/${id}`, {
+				site_ids: this.report.editing_report.site_ids,
+				interval: this.report.editing_report.interval,
+				recipient: this.report.editing_report.recipient
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.report.show_edit_dialog = false;
+				this.report.snackbar_message = "Scheduled report updated";
+				this.report.snackbar = true;
+				this.fetchScheduledReports();
+			})
+			.catch(error => {
+				console.error("Error updating scheduled report:", error);
+			});
+		},
+		deleteScheduledReport(id) {
+			if (!confirm("Are you sure you want to delete this scheduled report?")) return;
+			axios.delete(`/wp-json/captaincore/v1/scheduled-reports/${id}`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.report.snackbar_message = "Scheduled report deleted";
+				this.report.snackbar = true;
+				this.fetchScheduledReports();
+			})
+			.catch(error => {
+				console.error("Error deleting scheduled report:", error);
 			});
 		},
 		getAllNodePaths(nodes) {

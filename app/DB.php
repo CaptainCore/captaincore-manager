@@ -645,7 +645,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "35";
+        $required_version = (int) "36";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -953,9 +953,24 @@ class DB {
             updated_at datetime NOT NULL,
         PRIMARY KEY  (account_site_id)
         ) $charset_collate;";
-        
+
         dbDelta($sql);
-    
+
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_scheduled_reports` (
+            scheduled_report_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            site_ids longtext NOT NULL,
+            `interval` varchar(20) NOT NULL,
+            recipient varchar(255) NOT NULL,
+            user_id bigint(20) UNSIGNED NOT NULL,
+            next_run datetime NOT NULL,
+            last_run datetime DEFAULT NULL,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+        PRIMARY KEY  (scheduled_report_id)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
         if ( ! empty( $wpdb->last_error ) ) {
             return $wpdb->last_error;
         }
