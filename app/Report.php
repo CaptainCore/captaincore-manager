@@ -43,6 +43,9 @@ class Report {
         // For process logs
         $all_process_logs = [];
 
+        // For visual captures
+        $all_visual_captures = [];
+
         // Convert dates to timestamps for Fathom
         $before = ! empty( $start_date ) ? strtotime( $start_date ) : strtotime( "-30 days" );
         $after  = ! empty( $end_date ) ? strtotime( $end_date ) : time();
@@ -205,6 +208,38 @@ class Report {
                     ];
                 }
             }
+
+            // Get visual captures for date range
+            $captures = $site->captures( "production" );
+            $upload_uri = get_option( 'options_remote_upload_uri' );
+            foreach ( $captures as $capture ) {
+                $capture_timestamp = strtotime( $capture->created_at );
+                if ( $capture_timestamp >= $before && $capture_timestamp <= $after ) {
+                    // Find homepage capture image
+                    $homepage_image = null;
+                    if ( ! empty( $capture->pages ) ) {
+                        foreach ( $capture->pages as $page ) {
+                            if ( $page->name === '/' ) {
+                                $homepage_image = $page->image;
+                                break;
+                            }
+                        }
+                        // Fallback to first page if no homepage
+                        if ( ! $homepage_image && ! empty( $capture->pages[0]->image ) ) {
+                            $homepage_image = $capture->pages[0]->image;
+                        }
+                    }
+
+                    if ( $homepage_image ) {
+                        $image_url = "{$upload_uri}{$site_data->site}_{$site_data->site_id}/production/captures/{$homepage_image}";
+                        $all_visual_captures[] = [
+                            'date'  => $capture_timestamp,
+                            'url'   => $image_url,
+                            'site'  => $site_data->name,
+                        ];
+                    }
+                }
+            }
         }
 
         // Sort stats by date
@@ -231,6 +266,11 @@ class Report {
             $wordpress_version = implode( ', ', $unique_wp_versions );
         }
 
+        // Sort visual captures by date descending
+        usort( $all_visual_captures, function( $a, $b ) {
+            return $b['date'] - $a['date'];
+        } );
+
         return (object) [
             'sites'           => $sites_list,
             'updates'         => $total_updates,
@@ -256,6 +296,7 @@ class Report {
             'plugins_removed'  => array_values( $all_plugins_removed ),
             'themes_removed'   => array_values( $all_themes_removed ),
             'process_logs'     => $all_process_logs,
+            'visual_captures'  => $all_visual_captures,
         ];
     }
 
@@ -1144,6 +1185,43 @@ class Report {
                                     </table>";
         }
 
+        // Build visual captures HTML
+        $visual_captures_html = '';
+        if ( ! empty( $data->visual_captures ) ) {
+            // Image icon SVG
+            $image_icon = "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='{$brand_color}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='vertical-align: middle; margin-right: 8px;'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><circle cx='8.5' cy='8.5' r='1.5'/><polyline points='21 15 16 10 5 21'/></svg>";
+
+            $capture_rows = '';
+
+            foreach ( $data->visual_captures as $capture ) {
+                $date = date( 'M jS', $capture['date'] );
+                $url  = htmlspecialchars( $capture['url'] );
+                $capture_rows .= "
+                    <tr>
+                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7;'>
+                            {$image_icon}<a href='{$url}' target='_blank' style='color: {$brand_color}; text-decoration: none; font-size: 14px; vertical-align: middle;'>{$date}</a>
+                        </td>
+                    </tr>";
+            }
+
+            $total_captures = count( $data->visual_captures );
+            $visual_captures_html = "
+                                    <!-- Visual Captures -->
+                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 30px;'>
+                                        <tr>
+                                            <td style='padding: 10px;'>
+                                                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;'>
+                                                    <div style='font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; padding: 15px 15px 10px; text-align: center;'>Visual Captures ({$total_captures})</div>
+                                                    <p style='font-size: 13px; color: #718096; margin: 0; padding: 0 15px 15px; text-align: center;'>Whenever changes are detected, we take a full-sized screenshot of the homepage.</p>
+                                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%'>
+                                                        {$capture_rows}
+                                                    </table>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>";
+        }
+
         $message = "
         <!DOCTYPE html>
         <html>
@@ -1213,6 +1291,8 @@ class Report {
 
                                     {$process_logs_html}
 
+                                    {$visual_captures_html}
+
                                 </td>
                             </tr>
 
@@ -1261,7 +1341,18 @@ class Report {
         $data    = self::generate( $site_ids, $start_date, $end_date );
         $result  = self::render( $data );
         $html    = $result->html;
-        $subject = "Maintenance Report - " . $data->start_date . " to " . $data->end_date;
+
+        // Build subject with shorter date format and site name for uniqueness
+        $before_ts = ! empty( $start_date ) ? strtotime( $start_date ) : strtotime( "-30 days" );
+        $after_ts  = ! empty( $end_date ) ? strtotime( $end_date ) : time();
+        $date_range = date( 'M j', $before_ts ) . ' - ' . date( 'M j, Y', $after_ts );
+
+        // Include site name(s) for uniqueness (prevents email grouping)
+        $site_label = count( $data->sites ) === 1
+            ? $data->sites[0]
+            : count( $data->sites ) . ' sites';
+
+        $subject = "Maintenance Report: {$site_label} ({$date_range})";
 
         // If we have a chart image, embed using CID (required for Gmail)
         $has_chart = ! empty( $result->chart_image ) && is_array( $result->chart_image ) && ! empty( $result->chart_image['image'] );
