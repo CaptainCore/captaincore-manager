@@ -917,6 +917,67 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
+     *  PLAN CHANGE REQUEST (Admin Notify)
+     * ------------------------------------------------------------------------- */
+    static public function send_plan_change_request( $subscription, $user ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $site_name   = get_bloginfo( 'name' );
+        $admin_email = get_option( 'admin_email' );
+
+        $subject     = "{$site_name} - Plan Change Request";
+        $headline    = "Change Requested";
+        $subheadline = $subscription->name;
+
+        $content_html = "
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+                <p style='margin-bottom: 25px;'>A request has been submitted to change the following plan.</p>
+
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                    <table width='100%' cellpadding='0' cellspacing='0'>
+                        <tr>
+                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Current Plan</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$subscription->name}</td>
+                        </tr>
+                        <tr>
+                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>New Plan</td>
+                            <td style='padding-bottom: 10px; color: {$brand_color}; font-weight: 600; text-align: right;'>{$subscription->plan['name']}</td>
+                        </tr>
+                        <tr>
+                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>New Interval</td>
+                            <td style='padding-bottom: 10px; color: {$brand_color}; font-weight: 600; text-align: right;'>{$subscription->plan['interval']}</td>
+                        </tr>
+                        <tr>
+                            <td style='padding-top: 10px; border-top: 1px solid #edf2f7; color: #718096; font-size: 14px;'>Requested By</td>
+                            <td style='padding-top: 10px; border-top: 1px solid #edf2f7; color: #2d3748; font-weight: 600; text-align: right;'>
+                                {$user['name']} <span style='color: #a0aec0; font-weight: 400;'>({$user['email']})</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div style='text-align: center;'>
+                    <div style='display: inline-block; background-color: {$brand_color}; color: #ffffff; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                        Change Pending
+                    </div>
+                </div>
+            </div>
+        ";
+
+        // Reply to the user requesting the action
+        $headers = [ "Reply-To: {$user['name']} <{$user['email']}>" ];
+
+        self::send_email_with_layout(
+            $admin_email,
+            $subject,
+            $headline,
+            $subheadline,
+            $content_html,
+            $headers
+        );
+    }
+
+    /* -------------------------------------------------------------------------
      *  NEW SITE REQUEST (Admin Notify)
      * ------------------------------------------------------------------------- */
     static public function send_site_request_notification( $site_name, $site_notes, $account_name, $user ) {
