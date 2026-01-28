@@ -239,7 +239,8 @@ class Report {
                     }
 
                     if ( $homepage_image ) {
-                        $image_url = "{$upload_uri}{$site_data->site}_{$site_data->site_id}/production/captures/{$homepage_image}";
+                        $encoded_image = rawurlencode( $homepage_image );
+                        $image_url = "{$upload_uri}{$site_data->site}_{$site_data->site_id}/production/captures/{$encoded_image}";
                         $all_visual_captures[] = [
                             'date'  => $capture_timestamp,
                             'url'   => $image_url,

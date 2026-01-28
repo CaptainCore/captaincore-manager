@@ -8578,16 +8578,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</v-card-actions>
 								</v-card>
 							</v-menu>
-							<v-btn
-								color="primary"
-								variant="flat"
-								prepend-icon="mdi-send"
-								:loading="report.sending"
-								:disabled="report.site_ids.length === 0 || !report.recipient"
-								@click="sendReport"
-							>
-								Send Report
-							</v-btn>
 						</v-col>
 					</v-row>
 				</v-card-text>
@@ -8601,18 +8591,41 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-card-text class="pa-0">
 							<iframe
 								:srcdoc="report.preview_html"
-								style="width: 100%; height: 600px; border: none;"
+								style="width: 100%; height: 500px; border: none;"
 							></iframe>
 						</v-card-text>
-						<v-card-actions>
-							<v-spacer></v-spacer>
-							<v-btn variant="text" @click="report.show_preview = false">Close</v-btn>
-							<v-btn
+						<v-divider></v-divider>
+						<v-card-text class="py-3">
+							<v-text-field
+								v-model="report.recipient"
+								label="Send to"
+								type="email"
 								variant="outlined"
+								density="compact"
+								prepend-inner-icon="mdi-email"
+								hide-details
+							></v-text-field>
+						</v-card-text>
+						<v-divider></v-divider>
+						<v-card-actions>
+							<v-btn
+								variant="text"
 								prepend-icon="mdi-download"
 								@click="downloadReportHtml"
 							>
 								Download HTML
+							</v-btn>
+							<v-spacer></v-spacer>
+							<v-btn variant="text" @click="report.show_preview = false">Close</v-btn>
+							<v-btn
+								color="primary"
+								variant="flat"
+								prepend-icon="mdi-send"
+								:loading="report.sending"
+								:disabled="!report.recipient"
+								@click="sendReport"
+							>
+								Send Report
 							</v-btn>
 						</v-card-actions>
 					</v-card>
