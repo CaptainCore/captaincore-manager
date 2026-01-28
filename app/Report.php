@@ -548,11 +548,15 @@ class Report {
 
     /**
      * Generate icon images for email embedding (checkmark, plus, minus)
+     * Only generates icons that are actually needed to avoid unused attachments
      *
-     * @param string $brand_color Primary brand color for checkmark icon
+     * @param string $brand_color     Primary brand color for checkmark icon
+     * @param bool   $needs_checkmark Whether to generate checkmark icon
+     * @param bool   $needs_plus      Whether to generate plus icon
+     * @param bool   $needs_minus     Whether to generate minus icon
      * @return array Array of icon data with 'cid' and 'image' keys
      */
-    public static function generate_icon_images( $brand_color = '#0D47A1' ) {
+    public static function generate_icon_images( $brand_color = '#0D47A1', $needs_checkmark = true, $needs_plus = true, $needs_minus = true ) {
         $icons = [
             'checkmark' => [
                 'cid'   => 'icon-checkmark-' . md5( $brand_color ),
@@ -574,14 +578,18 @@ class Report {
 
         $size = 56; // 28px * 2 for retina
 
-        // Generate checkmark icon (brand color)
-        $icons['checkmark']['image'] = self::generate_circle_icon( $size, $brand_color, 'checkmark' );
+        // Only generate icons that are actually needed
+        if ( $needs_checkmark ) {
+            $icons['checkmark']['image'] = self::generate_circle_icon( $size, $brand_color, 'checkmark' );
+        }
 
-        // Generate plus icon (green)
-        $icons['plus']['image'] = self::generate_circle_icon( $size, '#48bb78', 'plus' );
+        if ( $needs_plus ) {
+            $icons['plus']['image'] = self::generate_circle_icon( $size, '#48bb78', 'plus' );
+        }
 
-        // Generate minus icon (red)
-        $icons['minus']['image'] = self::generate_circle_icon( $size, '#e53e3e', 'minus' );
+        if ( $needs_minus ) {
+            $icons['minus']['image'] = self::generate_circle_icon( $size, '#e53e3e', 'minus' );
+        }
 
         return $icons;
     }
@@ -592,7 +600,7 @@ class Report {
      * @param int    $size   Image size in pixels
      * @param string $color  Hex color for stroke
      * @param string $symbol Symbol type: 'checkmark', 'plus', or 'minus'
-     * @return string|null PNG binary data or null on failure
+     * @return string|null WebP binary data or null on failure
      */
     private static function generate_circle_icon( $size, $color, $symbol ) {
         $img = imagecreatetruecolor( $size, $size );
@@ -645,14 +653,14 @@ class Report {
             imageline( $img, (int) ( $cx - $line_len ), (int) $cy, (int) ( $cx + $line_len ), (int) $cy, $stroke );
         }
 
-        // Output to PNG
+        // Output to WebP (smaller file size, supports transparency)
         ob_start();
-        imagepng( $img, null, 9 );
-        $png_data = ob_get_clean();
+        imagewebp( $img, null, 90 );
+        $webp_data = ob_get_clean();
 
         imagedestroy( $img );
 
-        return $png_data;
+        return $webp_data;
     }
 
     /**
@@ -1001,13 +1009,18 @@ class Report {
                                     </table>";
         }
 
-        // Generate icon images for email embedding (SVGs don't work in Gmail)
-        $icons = self::generate_icon_images( $brand_color );
+        // Determine which icons are needed based on report data
+        $needs_checkmark = ! empty( $data->plugin_updates ) || ! empty( $data->theme_updates );
+        $needs_plus      = ! empty( $data->plugins_added ) || ! empty( $data->themes_added );
+        $needs_minus     = ! empty( $data->plugins_removed ) || ! empty( $data->themes_removed );
+
+        // Generate only the icons that are actually needed (SVGs don't work in Gmail)
+        $icons = self::generate_icon_images( $brand_color, $needs_checkmark, $needs_plus, $needs_minus );
 
         // Icon HTML using CID references
-        $checkmark_icon = "<img src='cid:{$icons['checkmark']['cid']}' alt='✓' width='28' height='28' style='vertical-align: middle; margin-right: 8px;' />";
-        $plus_icon = "<img src='cid:{$icons['plus']['cid']}' alt='+' width='28' height='28' style='vertical-align: middle; margin-right: 8px;' />";
-        $minus_icon = "<img src='cid:{$icons['minus']['cid']}' alt='-' width='28' height='28' style='vertical-align: middle; margin-right: 8px;' />";
+        $checkmark_icon = $needs_checkmark ? "<img src='cid:{$icons['checkmark']['cid']}' alt='✓' width='28' height='28' style='vertical-align: middle; margin-right: 8px;' />" : '';
+        $plus_icon = $needs_plus ? "<img src='cid:{$icons['plus']['cid']}' alt='+' width='28' height='28' style='vertical-align: middle; margin-right: 8px;' />" : '';
+        $minus_icon = $needs_minus ? "<img src='cid:{$icons['minus']['cid']}' alt='-' width='28' height='28' style='vertical-align: middle; margin-right: 8px;' />" : '';
 
         // Build plugin updates HTML
         $plugin_updates_html = '';
@@ -1592,8 +1605,8 @@ class Report {
                     $images_to_embed[] = [
                         'data'     => $icon['image'],
                         'cid'      => $icon['cid'],
-                        'filename' => "icon-{$icon_name}.png",
-                        'mimetype' => 'image/png',
+                        'filename' => "icon-{$icon_name}.webp",
+                        'mimetype' => 'image/webp',
                     ];
                 }
             }
@@ -1631,7 +1644,7 @@ class Report {
                             $image['cid'],
                             $image['filename'] ?? 'image.png',
                             'base64',
-                            $image['mimetype'] ?? 'image/png'
+                            $image['mimetype'] ?? 'image/webp'
                         );
                     }
                 }
@@ -1721,7 +1734,7 @@ class Report {
             foreach ( $result->icons as $icon ) {
                 if ( ! empty( $icon['image'] ) && ! empty( $icon['cid'] ) ) {
                     $base64 = base64_encode( $icon['image'] );
-                    $data_uri = 'data:image/png;base64,' . $base64;
+                    $data_uri = 'data:image/webp;base64,' . $base64;
 
                     $html = str_replace(
                         "src='cid:" . $icon['cid'] . "'",
