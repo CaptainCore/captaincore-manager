@@ -75,45 +75,53 @@ class Report {
                 }
             }
 
-            // Count updates (all-time) and find earliest
+            // Count updates up to end date and find earliest
             $update_logs = $site->update_logs( "production" );
             if ( is_array( $update_logs ) && count( $update_logs ) > 0 ) {
-                $total_updates += count( $update_logs );
-                // Find oldest update log
-                $oldest_update = end( $update_logs );
-                if ( ! empty( $oldest_update->created_at ) ) {
-                    $update_time = is_numeric( $oldest_update->created_at ) ? (int) $oldest_update->created_at : strtotime( $oldest_update->created_at );
-                    if ( $update_time && ( $earliest_update === null || $update_time < $earliest_update ) ) {
-                        $earliest_update = $update_time;
+                foreach ( $update_logs as $log ) {
+                    if ( ! empty( $log->created_at ) ) {
+                        $update_time = is_numeric( $log->created_at ) ? (int) $log->created_at : strtotime( $log->created_at );
+                        // Only count updates on or before the report end date
+                        if ( $update_time && $update_time <= $after ) {
+                            $total_updates++;
+                            if ( $earliest_update === null || $update_time < $earliest_update ) {
+                                $earliest_update = $update_time;
+                            }
+                        }
                     }
                 }
             }
 
-            // Count backups (all-time) and find earliest
+            // Count backups up to end date and find earliest
             $backups = $site->backups( "production" );
             if ( is_array( $backups ) && count( $backups ) > 0 ) {
-                $total_backups += count( $backups );
-                // Backups are sorted descending by time, so last item is oldest
-                $oldest_backup = end( $backups );
-                if ( ! empty( $oldest_backup->time ) ) {
-                    // Convert to timestamp if it's a string
-                    $backup_time = is_numeric( $oldest_backup->time ) ? (int) $oldest_backup->time : strtotime( $oldest_backup->time );
-                    if ( $backup_time && ( $earliest_backup === null || $backup_time < $earliest_backup ) ) {
-                        $earliest_backup = $backup_time;
+                foreach ( $backups as $backup ) {
+                    if ( ! empty( $backup->time ) ) {
+                        $backup_time = is_numeric( $backup->time ) ? (int) $backup->time : strtotime( $backup->time );
+                        // Only count backups on or before the report end date
+                        if ( $backup_time && $backup_time <= $after ) {
+                            $total_backups++;
+                            if ( $earliest_backup === null || $backup_time < $earliest_backup ) {
+                                $earliest_backup = $backup_time;
+                            }
+                        }
                     }
                 }
             }
 
-            // Count quicksaves (all-time) and find earliest
+            // Count quicksaves up to end date and find earliest
             $quicksaves = $site->quicksaves( "production" );
             if ( is_array( $quicksaves ) && count( $quicksaves ) > 0 ) {
-                $total_quicksaves += count( $quicksaves );
-                // Quicksaves are sorted descending by created_at, so last item is oldest
-                $oldest_quicksave = end( $quicksaves );
-                if ( ! empty( $oldest_quicksave->created_at ) ) {
-                    $qs_time = (int) $oldest_quicksave->created_at;
-                    if ( $qs_time && ( $earliest_quicksave === null || $qs_time < $earliest_quicksave ) ) {
-                        $earliest_quicksave = $qs_time;
+                foreach ( $quicksaves as $qs ) {
+                    if ( ! empty( $qs->created_at ) ) {
+                        $qs_time = (int) $qs->created_at;
+                        // Only count quicksaves on or before the report end date
+                        if ( $qs_time && $qs_time <= $after ) {
+                            $total_quicksaves++;
+                            if ( $earliest_quicksave === null || $qs_time < $earliest_quicksave ) {
+                                $earliest_quicksave = $qs_time;
+                            }
+                        }
                     }
                 }
             }
@@ -538,6 +546,115 @@ class Report {
     }
 
     /**
+     * Generate icon images for email embedding (checkmark, plus, minus)
+     *
+     * @param string $brand_color Primary brand color for checkmark icon
+     * @return array Array of icon data with 'cid' and 'image' keys
+     */
+    public static function generate_icon_images( $brand_color = '#0D47A1' ) {
+        $icons = [
+            'checkmark' => [
+                'cid'   => 'icon-checkmark-' . md5( $brand_color ),
+                'image' => null,
+            ],
+            'plus' => [
+                'cid'   => 'icon-plus',
+                'image' => null,
+            ],
+            'minus' => [
+                'cid'   => 'icon-minus',
+                'image' => null,
+            ],
+        ];
+
+        if ( ! extension_loaded( 'gd' ) ) {
+            return $icons;
+        }
+
+        $size = 56; // 28px * 2 for retina
+
+        // Generate checkmark icon (brand color)
+        $icons['checkmark']['image'] = self::generate_circle_icon( $size, $brand_color, 'checkmark' );
+
+        // Generate plus icon (green)
+        $icons['plus']['image'] = self::generate_circle_icon( $size, '#48bb78', 'plus' );
+
+        // Generate minus icon (red)
+        $icons['minus']['image'] = self::generate_circle_icon( $size, '#e53e3e', 'minus' );
+
+        return $icons;
+    }
+
+    /**
+     * Generate a circle icon with symbol
+     *
+     * @param int    $size   Image size in pixels
+     * @param string $color  Hex color for stroke
+     * @param string $symbol Symbol type: 'checkmark', 'plus', or 'minus'
+     * @return string|null PNG binary data or null on failure
+     */
+    private static function generate_circle_icon( $size, $color, $symbol ) {
+        $img = imagecreatetruecolor( $size, $size );
+
+        // Enable anti-aliasing
+        imageantialias( $img, true );
+
+        // Transparent background
+        imagesavealpha( $img, true );
+        $transparent = imagecolorallocatealpha( $img, 0, 0, 0, 127 );
+        imagefill( $img, 0, 0, $transparent );
+
+        // Parse color
+        $rgb = self::hex_to_rgb_array( $color );
+        $stroke = imagecolorallocate( $img, $rgb[0], $rgb[1], $rgb[2] );
+
+        // Draw circle
+        $cx = $size / 2;
+        $cy = $size / 2;
+        $radius = ( $size / 2 ) - 4;
+        $thickness = 3;
+
+        // Draw thick circle using multiple arcs
+        for ( $i = 0; $i < $thickness; $i++ ) {
+            imagearc( $img, (int) $cx, (int) $cy, (int) ( $radius * 2 - $i ), (int) ( $radius * 2 - $i ), 0, 360, $stroke );
+        }
+
+        // Draw symbol
+        imagesetthickness( $img, 4 );
+
+        if ( $symbol === 'checkmark' ) {
+            // Checkmark: two lines forming a check
+            $x1 = $cx - $radius * 0.35;
+            $y1 = $cy;
+            $x2 = $cx - $radius * 0.05;
+            $y2 = $cy + $radius * 0.3;
+            $x3 = $cx + $radius * 0.4;
+            $y3 = $cy - $radius * 0.25;
+
+            imageline( $img, (int) $x1, (int) $y1, (int) $x2, (int) $y2, $stroke );
+            imageline( $img, (int) $x2, (int) $y2, (int) $x3, (int) $y3, $stroke );
+        } elseif ( $symbol === 'plus' ) {
+            // Plus: vertical and horizontal lines
+            $line_len = $radius * 0.5;
+            imageline( $img, (int) $cx, (int) ( $cy - $line_len ), (int) $cx, (int) ( $cy + $line_len ), $stroke );
+            imageline( $img, (int) ( $cx - $line_len ), (int) $cy, (int) ( $cx + $line_len ), (int) $cy, $stroke );
+        } elseif ( $symbol === 'minus' ) {
+            // Minus: horizontal line
+            $line_len = $radius * 0.5;
+            imageline( $img, (int) ( $cx - $line_len ), (int) $cy, (int) ( $cx + $line_len ), (int) $cy, $stroke );
+        }
+
+        // Output to PNG
+        ob_start();
+        imagepng( $img, null, 9 );
+        $png_data = ob_get_clean();
+
+        imagedestroy( $img );
+
+        return $png_data;
+    }
+
+    /**
      * Find a TrueType font file on the system
      *
      * @return string|false Font file path or false if not found
@@ -883,14 +1000,13 @@ class Report {
                                     </table>";
         }
 
-        // Checkmark SVG icon
-        $checkmark_svg = "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='{$brand_color}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='vertical-align: middle; margin-right: 8px;'><circle cx='12' cy='12' r='10' fill='none' stroke='{$brand_color}' stroke-width='1.5'/><polyline points='9 12 11.5 14.5 16 9' fill='none'/></svg>";
+        // Generate icon images for email embedding (SVGs don't work in Gmail)
+        $icons = self::generate_icon_images( $brand_color );
 
-        // Plus SVG icon for added items
-        $plus_svg = "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='#48bb78' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='vertical-align: middle; margin-right: 8px;'><circle cx='12' cy='12' r='10' fill='none' stroke='#48bb78' stroke-width='1.5'/><line x1='12' y1='8' x2='12' y2='16'/><line x1='8' y1='12' x2='16' y2='12'/></svg>";
-
-        // Minus SVG icon for removed items
-        $minus_svg = "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='#e53e3e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='vertical-align: middle; margin-right: 8px;'><circle cx='12' cy='12' r='10' fill='none' stroke='#e53e3e' stroke-width='1.5'/><line x1='8' y1='12' x2='16' y2='12'/></svg>";
+        // Icon HTML using CID references
+        $checkmark_icon = "<img src='cid:{$icons['checkmark']['cid']}' alt='✓' width='28' height='28' style='vertical-align: middle; margin-right: 8px;' />";
+        $plus_icon = "<img src='cid:{$icons['plus']['cid']}' alt='+' width='28' height='28' style='vertical-align: middle; margin-right: 8px;' />";
+        $minus_icon = "<img src='cid:{$icons['minus']['cid']}' alt='-' width='28' height='28' style='vertical-align: middle; margin-right: 8px;' />";
 
         // Build plugin updates HTML
         $plugin_updates_html = '';
@@ -919,7 +1035,7 @@ class Report {
                                     <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 30px;'>
                                         <tr>
                                             <td style='padding: 20px 10px 10px; text-align: center;'>
-                                                {$checkmark_svg}<span style='font-size: 18px; font-weight: 600; color: #2d3748; vertical-align: middle;'>{$plugin_count} {$plugin_word} updated.</span>
+                                                {$checkmark_icon}<span style='font-size: 18px; font-weight: 600; color: #2d3748; vertical-align: middle;'>{$plugin_count} {$plugin_word} updated.</span>
                                             </td>
                                         </tr>
                                         <tr>
@@ -961,7 +1077,7 @@ class Report {
                                     <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 30px;'>
                                         <tr>
                                             <td style='padding: 20px 10px 10px; text-align: center;'>
-                                                {$checkmark_svg}<span style='font-size: 18px; font-weight: 600; color: #2d3748; vertical-align: middle;'>{$theme_count} {$theme_word} updated.</span>
+                                                {$checkmark_icon}<span style='font-size: 18px; font-weight: 600; color: #2d3748; vertical-align: middle;'>{$theme_count} {$theme_word} updated.</span>
                                             </td>
                                         </tr>
                                         <tr>
@@ -1003,7 +1119,7 @@ class Report {
                                     <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 30px;'>
                                         <tr>
                                             <td style='padding: 20px 10px 10px; text-align: center;'>
-                                                {$plus_svg}<span style='font-size: 18px; font-weight: 600; color: #2d3748; vertical-align: middle;'>{$plugin_count} {$plugin_word} added.</span>
+                                                {$plus_icon}<span style='font-size: 18px; font-weight: 600; color: #2d3748; vertical-align: middle;'>{$plugin_count} {$plugin_word} added.</span>
                                             </td>
                                         </tr>
                                         <tr>
@@ -1042,7 +1158,7 @@ class Report {
                                     <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 30px;'>
                                         <tr>
                                             <td style='padding: 20px 10px 10px; text-align: center;'>
-                                                {$plus_svg}<span style='font-size: 18px; font-weight: 600; color: #2d3748; vertical-align: middle;'>{$theme_count} {$theme_word} added.</span>
+                                                {$plus_icon}<span style='font-size: 18px; font-weight: 600; color: #2d3748; vertical-align: middle;'>{$theme_count} {$theme_word} added.</span>
                                             </td>
                                         </tr>
                                         <tr>
@@ -1084,7 +1200,7 @@ class Report {
                                     <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 30px;'>
                                         <tr>
                                             <td style='padding: 20px 10px 10px; text-align: center;'>
-                                                {$minus_svg}<span style='font-size: 18px; font-weight: 600; color: #2d3748; vertical-align: middle;'>{$plugin_count} {$plugin_word} removed.</span>
+                                                {$minus_icon}<span style='font-size: 18px; font-weight: 600; color: #2d3748; vertical-align: middle;'>{$plugin_count} {$plugin_word} removed.</span>
                                             </td>
                                         </tr>
                                         <tr>
@@ -1123,7 +1239,7 @@ class Report {
                                     <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 30px;'>
                                         <tr>
                                             <td style='padding: 20px 10px 10px; text-align: center;'>
-                                                {$minus_svg}<span style='font-size: 18px; font-weight: 600; color: #2d3748; vertical-align: middle;'>{$theme_count} {$theme_word} removed.</span>
+                                                {$minus_icon}<span style='font-size: 18px; font-weight: 600; color: #2d3748; vertical-align: middle;'>{$theme_count} {$theme_word} removed.</span>
                                             </td>
                                         </tr>
                                         <tr>
@@ -1185,26 +1301,106 @@ class Report {
                                     </table>";
         }
 
-        // Build visual captures HTML
+        // Build visual captures HTML (calendar-style week view)
         $visual_captures_html = '';
         if ( ! empty( $data->visual_captures ) ) {
-            // Image icon SVG
-            $image_icon = "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='{$brand_color}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='vertical-align: middle; margin-right: 8px;'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><circle cx='8.5' cy='8.5' r='1.5'/><polyline points='21 15 16 10 5 21'/></svg>";
+            $total_captures = count( $data->visual_captures );
 
-            $capture_rows = '';
-
+            // Group captures by date (Y-m-d) for lookup
+            $captures_by_date = [];
             foreach ( $data->visual_captures as $capture ) {
-                $date = date( 'M jS', $capture['date'] );
-                $url  = htmlspecialchars( $capture['url'] );
-                $capture_rows .= "
-                    <tr>
-                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7;'>
-                            {$image_icon}<a href='{$url}' target='_blank' style='color: {$brand_color}; text-decoration: none; font-size: 14px; vertical-align: middle;'>{$date}</a>
-                        </td>
-                    </tr>";
+                $date_key = date( 'Y-m-d', $capture['date'] );
+                if ( ! isset( $captures_by_date[ $date_key ] ) ) {
+                    $captures_by_date[ $date_key ] = $capture;
+                }
             }
 
-            $total_captures = count( $data->visual_captures );
+            // Find date range from the report
+            $start_ts = strtotime( $data->start_date );
+            $end_ts   = strtotime( $data->end_date );
+
+            // Adjust to start on Sunday of the first week
+            $start_dow = date( 'w', $start_ts );
+            $calendar_start = strtotime( "-{$start_dow} days", $start_ts );
+
+            // Adjust to end on Saturday of the last week
+            $end_dow = date( 'w', $end_ts );
+            $days_to_saturday = ( 6 - $end_dow );
+            $calendar_end = strtotime( "+{$days_to_saturday} days", $end_ts );
+
+            // Build calendar weeks
+            $calendar_html = '';
+            $current_date = $calendar_start;
+            $current_month = '';
+            $start_month_year = date( 'F Y', $start_ts );
+
+            while ( $current_date <= $calendar_end ) {
+                // Find the dominant month for this week (the month that has more days in it)
+                $week_dates = [];
+                $temp_date = $current_date;
+                for ( $d = 0; $d < 7; $d++ ) {
+                    $week_dates[] = $temp_date;
+                    $temp_date = strtotime( '+1 day', $temp_date );
+                }
+
+                // Count days per month in this week
+                $month_counts = [];
+                foreach ( $week_dates as $wd ) {
+                    $m = date( 'F Y', $wd );
+                    $month_counts[ $m ] = ( $month_counts[ $m ] ?? 0 ) + 1;
+                }
+                arsort( $month_counts );
+                $dominant_month = key( $month_counts );
+
+                // For the first week, use the report's start month if dominant month is earlier
+                if ( $current_month === '' && strtotime( $dominant_month ) < $start_ts ) {
+                    $dominant_month = $start_month_year;
+                }
+
+                // Add month header if entering a new month
+                if ( $dominant_month !== $current_month ) {
+                    $current_month = $dominant_month;
+                    $calendar_html .= "
+                        <tr>
+                            <td colspan='7' style='padding: 15px 12px 8px; text-align: left; font-size: 14px; font-weight: 600; color: #2d3748; border-bottom: 2px solid #e2e8f0;'>{$current_month}</td>
+                        </tr>";
+                }
+
+                $week_html = '<tr>';
+
+                for ( $day = 0; $day < 7; $day++ ) {
+                    $date_key    = date( 'Y-m-d', $current_date );
+                    $day_num     = date( 'j', $current_date );
+                    $is_in_range = ( $current_date >= $start_ts && $current_date <= $end_ts );
+
+                    if ( isset( $captures_by_date[ $date_key ] ) && $is_in_range ) {
+                        // Has capture - make it a link
+                        $url = htmlspecialchars( $captures_by_date[ $date_key ]['url'] );
+                        $week_html .= "
+                            <td style='padding: 6px 4px; text-align: center; border: 1px solid #edf2f7;'>
+                                <a href='{$url}' target='_blank' style='display: block; padding: 8px 4px; background-color: " . self::hex_to_rgba( $brand_color, 0.1 ) . "; border-radius: 4px; color: {$brand_color}; text-decoration: none; font-size: 13px; font-weight: 600;'>{$day_num}</a>
+                            </td>";
+                    } elseif ( $is_in_range ) {
+                        // In range but no capture
+                        $week_html .= "
+                            <td style='padding: 6px 4px; text-align: center; border: 1px solid #edf2f7;'>
+                                <span style='display: block; padding: 8px 4px; color: #cbd5e0; font-size: 13px;'>{$day_num}</span>
+                            </td>";
+                    } else {
+                        // Outside report range
+                        $week_html .= "
+                            <td style='padding: 6px 4px; text-align: center; border: 1px solid #edf2f7; background-color: #f9fafb;'>
+                                <span style='display: block; padding: 8px 4px; color: #e2e8f0; font-size: 13px;'>{$day_num}</span>
+                            </td>";
+                    }
+
+                    $current_date = strtotime( '+1 day', $current_date );
+                }
+
+                $week_html .= '</tr>';
+                $calendar_html .= $week_html;
+            }
+
             $visual_captures_html = "
                                     <!-- Visual Captures -->
                                     <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 30px;'>
@@ -1212,9 +1408,18 @@ class Report {
                                             <td style='padding: 10px;'>
                                                 <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;'>
                                                     <div style='font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; padding: 15px 15px 10px; text-align: center;'>Visual Captures ({$total_captures})</div>
-                                                    <p style='font-size: 13px; color: #718096; margin: 0; padding: 0 15px 15px; text-align: center;'>Whenever changes are detected, we take a full-sized screenshot of the homepage.</p>
-                                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%'>
-                                                        {$capture_rows}
+                                                    <p style='font-size: 13px; color: #718096; margin: 0; padding: 0 15px 15px; text-align: center;'>Whenever changes are detected, we take a full-sized screenshot of the homepage. Highlighted days are clickable.</p>
+                                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='table-layout: fixed;'>
+                                                        <tr style='background-color: #f7fafc;'>
+                                                            <td style='padding: 8px 4px; text-align: center; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; width: 14.28%;'>Sun</td>
+                                                            <td style='padding: 8px 4px; text-align: center; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; width: 14.28%;'>Mon</td>
+                                                            <td style='padding: 8px 4px; text-align: center; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; width: 14.28%;'>Tue</td>
+                                                            <td style='padding: 8px 4px; text-align: center; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; width: 14.28%;'>Wed</td>
+                                                            <td style='padding: 8px 4px; text-align: center; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; width: 14.28%;'>Thu</td>
+                                                            <td style='padding: 8px 4px; text-align: center; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; width: 14.28%;'>Fri</td>
+                                                            <td style='padding: 8px 4px; text-align: center; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; width: 14.28%;'>Sat</td>
+                                                        </tr>
+                                                        {$calendar_html}
                                                     </table>
                                                 </div>
                                             </td>
@@ -1320,6 +1525,7 @@ class Report {
         return (object) [
             'html'        => $message,
             'chart_image' => $chart_image,
+            'icons'       => $icons,
         ];
     }
 
@@ -1366,39 +1572,68 @@ class Report {
             );
         }
 
+        // Collect all images to embed
+        $images_to_embed = [];
+
+        if ( $has_chart ) {
+            $images_to_embed[] = [
+                'data'     => $result->chart_image['image'],
+                'cid'      => $result->chart_image['cid'],
+                'filename' => 'traffic-chart.webp',
+                'mimetype' => 'image/webp',
+            ];
+        }
+
+        // Add icon images
+        if ( ! empty( $result->icons ) ) {
+            foreach ( $result->icons as $icon_name => $icon ) {
+                if ( ! empty( $icon['image'] ) ) {
+                    $images_to_embed[] = [
+                        'data'     => $icon['image'],
+                        'cid'      => $icon['cid'],
+                        'filename' => "icon-{$icon_name}.png",
+                        'mimetype' => 'image/png',
+                    ];
+                }
+            }
+        }
+
         // Use custom send with embedded image support
-        self::send_with_embedded_image( $recipient, $subject, $html, $has_chart ? $result->chart_image : null );
+        self::send_with_embedded_images( $recipient, $subject, $html, $images_to_embed );
 
         return true;
     }
 
     /**
-     * Send email with CID-embedded chart image
+     * Send email with multiple CID-embedded images
      *
      * @param string $to        Recipient email
      * @param string $subject   Email subject
-     * @param string $html      HTML content (should have src='cid:xxx' reference)
-     * @param array  $image     Image data array with 'image' and 'cid' keys, or null
+     * @param string $html      HTML content (should have src='cid:xxx' references)
+     * @param array  $images    Array of image data arrays with 'data', 'cid', 'filename', 'mimetype' keys
      * @return bool Success
      */
-    private static function send_with_embedded_image( $to, $subject, $html, $image = null ) {
+    private static function send_with_embedded_images( $to, $subject, $html, $images = [] ) {
         // Prepare Mailer settings (for SMTP config)
         Mailer::prepare();
 
-        // If we have an image, embed it via phpmailer_init hook
-        if ( $image && ! empty( $image['image'] ) && ! empty( $image['cid'] ) ) {
-            $image_data = $image['image'];
-            $image_cid  = $image['cid'];
+        $embed_callback = null;
 
-            // Add hook to embed image when PHPMailer is initialized
-            $embed_callback = function( $phpmailer ) use ( $image_data, $image_cid ) {
-                $phpmailer->addStringEmbeddedImage(
-                    $image_data,
-                    $image_cid,
-                    'traffic-chart.webp',
-                    'base64',
-                    'image/webp'
-                );
+        // If we have images, embed them via phpmailer_init hook
+        if ( ! empty( $images ) ) {
+            // Add hook to embed images when PHPMailer is initialized
+            $embed_callback = function( $phpmailer ) use ( $images ) {
+                foreach ( $images as $image ) {
+                    if ( ! empty( $image['data'] ) && ! empty( $image['cid'] ) ) {
+                        $phpmailer->addStringEmbeddedImage(
+                            $image['data'],
+                            $image['cid'],
+                            $image['filename'] ?? 'image.png',
+                            'base64',
+                            $image['mimetype'] ?? 'image/png'
+                        );
+                    }
+                }
             };
 
             add_action( 'phpmailer_init', $embed_callback, 999 );
@@ -1411,7 +1646,7 @@ class Report {
         $result = wp_mail( $to, $subject, $html, $headers );
 
         // Remove our hook after sending
-        if ( isset( $embed_callback ) ) {
+        if ( $embed_callback !== null ) {
             remove_action( 'phpmailer_init', $embed_callback, 999 );
         }
 
@@ -1466,7 +1701,9 @@ class Report {
         $result = self::render( $data );
         $html   = $result->html;
 
-        // For preview, convert CID reference to data URI (works in browsers)
+        // For preview, convert CID references to data URIs (works in browsers)
+
+        // Convert chart image CID to data URI
         if ( ! empty( $result->chart_image ) && is_array( $result->chart_image ) && ! empty( $result->chart_image['image'] ) ) {
             $base64 = base64_encode( $result->chart_image['image'] );
             $data_uri = 'data:image/webp;base64,' . $base64;
@@ -1476,6 +1713,22 @@ class Report {
                 "src='" . $data_uri . "'",
                 $html
             );
+        }
+
+        // Convert icon CIDs to data URIs
+        if ( ! empty( $result->icons ) ) {
+            foreach ( $result->icons as $icon ) {
+                if ( ! empty( $icon['image'] ) && ! empty( $icon['cid'] ) ) {
+                    $base64 = base64_encode( $icon['image'] );
+                    $data_uri = 'data:image/png;base64,' . $base64;
+
+                    $html = str_replace(
+                        "src='cid:" . $icon['cid'] . "'",
+                        "src='" . $data_uri . "'",
+                        $html
+                    );
+                }
+            }
         }
 
         return $html;
