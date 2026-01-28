@@ -5361,15 +5361,7 @@ function captaincore_account_action_callback() {
 		}
 		foreach ( $billing->subscriptions as $subscription ) {
 			if ( $subscription->account_id == $current_subscription->account_id && $subscription->name == $current_subscription->name  ) {
-				
-				// Build email
-				$to      = get_option( 'admin_email' );
-				$subject = "Request cancel plan '{$current_subscription->name}'";
-				$body    = "Request cancel plan '{$current_subscription->name}' #{$current_subscription->account_id} from {$current_user['name']}, <a href='mailto:{$current_user['email']}'>{$current_user['email']}</a>.";
-				$headers = [ 'Content-Type: text/html; charset=UTF-8' ];
-
-				// Send email
-				wp_mail( $to, $subject, $body, $headers );
+				CaptainCore\Mailer::send_cancel_plan_request( $current_subscription, $current_user );
 			}
 		}
 
