@@ -600,7 +600,7 @@ class Report {
      * @param int    $size   Image size in pixels
      * @param string $color  Hex color for stroke
      * @param string $symbol Symbol type: 'checkmark', 'plus', or 'minus'
-     * @return string|null WebP binary data or null on failure
+     * @return string|null PNG binary data or null on failure
      */
     private static function generate_circle_icon( $size, $color, $symbol ) {
         $img = imagecreatetruecolor( $size, $size );
@@ -653,14 +653,14 @@ class Report {
             imageline( $img, (int) ( $cx - $line_len ), (int) $cy, (int) ( $cx + $line_len ), (int) $cy, $stroke );
         }
 
-        // Output to WebP (smaller file size, supports transparency)
+        // Output to PNG (best transparency support in email clients)
         ob_start();
-        imagewebp( $img, null, 90 );
-        $webp_data = ob_get_clean();
+        imagepng( $img, null, 9 );
+        $png_data = ob_get_clean();
 
         imagedestroy( $img );
 
-        return $webp_data;
+        return $png_data;
     }
 
     /**
@@ -1605,8 +1605,8 @@ class Report {
                     $images_to_embed[] = [
                         'data'     => $icon['image'],
                         'cid'      => $icon['cid'],
-                        'filename' => "icon-{$icon_name}.webp",
-                        'mimetype' => 'image/webp',
+                        'filename' => "icon-{$icon_name}.png",
+                        'mimetype' => 'image/png',
                     ];
                 }
             }
@@ -1644,7 +1644,7 @@ class Report {
                             $image['cid'],
                             $image['filename'] ?? 'image.png',
                             'base64',
-                            $image['mimetype'] ?? 'image/webp'
+                            $image['mimetype'] ?? 'image/png'
                         );
                     }
                 }
@@ -1734,7 +1734,7 @@ class Report {
             foreach ( $result->icons as $icon ) {
                 if ( ! empty( $icon['image'] ) && ! empty( $icon['cid'] ) ) {
                     $base64 = base64_encode( $icon['image'] );
-                    $data_uri = 'data:image/webp;base64,' . $base64;
+                    $data_uri = 'data:image/png;base64,' . $base64;
 
                     $html = str_replace(
                         "src='cid:" . $icon['cid'] . "'",
