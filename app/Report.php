@@ -963,7 +963,7 @@ class Report {
                                             <td width='33%' style='padding: 10px;'>
                                                 <div style='background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; text-align: center;'>
                                                     <div style='font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; margin-bottom: 8px;'>Storage</div>
-                                                    <div style='font-size: 32px; font-weight: 700; color: {$brand_color};'>{$storage_formatted}</div>
+                                                    <div style='font-size: 32px; font-weight: 700; color: {$brand_color}; white-space: nowrap;'>{$storage_formatted}</div>
                                                 </div>
                                             </td>
                                         </tr>";
