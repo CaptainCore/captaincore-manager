@@ -3952,7 +3952,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 														</div>
 
 														<div class="d-flex align-center text-caption text-medium-emphasis gap-6" style="line-height: 1em;">
-														<div class="d-flex align-center mr-6" title="Monthly Visits">
+														<div class="d-flex align-center mr-6" title="Yearly Visits">
 															<v-avatar color="surface-variant" size="28" class="mr-3">
 																<v-icon size="16">mdi-chart-bar</v-icon>
 															</v-avatar>
