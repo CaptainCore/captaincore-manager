@@ -5370,15 +5370,7 @@ function captaincore_account_action_callback() {
 	if ( $cmd == 'requestPlanChanges' ) {
 		$current_user = $user->fetch();
 		$subscription = (object) $_POST['value'];
-		
-		// Build email
-		$to      = get_option( 'admin_email' );
-		$subject = "Request plan change from {$current_user['name']} <{$current_user['email']}>";
-		$body    = "Change subscription '{$subscription->name}' to {$subscription->plan['name']} and {$subscription->plan['interval']} interval.";
-		$headers = [ 'Content-Type: text/html; charset=UTF-8' ];
-
-		// Send email
-		wp_mail( $to, $subject, $body, $headers );
+		CaptainCore\Mailer::send_plan_change_request( $subscription, $current_user );
 	}
 
 	$account_id = intval( $_POST['account_id'] );
