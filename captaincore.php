@@ -65,6 +65,7 @@ require 'includes/Parsedown.php';
 function captaincore_cron_run() {
 	CaptainCore\Accounts::auto_switch_plans();
     CaptainCore\Accounts::process_renewals();
+    CaptainCore\Accounts::process_pending_ach_payments();
     CaptainCore\Scripts::run_scheduled();
 }
 add_action( 'captaincore_cron', 'captaincore_cron_run' );

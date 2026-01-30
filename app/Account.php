@@ -727,7 +727,10 @@ class Account {
         }
 
         $order->calculate_totals();
-        $default_payment = ( new \WC_Payment_Tokens )->get_customer_default_token( $plan->billing_user_id );
+        
+        // Get default payment method (supports both cards and ACH)
+        $user = new User( $plan->billing_user_id, true );
+        $default_payment = $user->get_default_payment_method();
 
         // 14. Check for Outstanding Backlog (Moved up before Auto-Pay return)
         $thirty_days_ago = strtotime( '-30 days' );
@@ -758,13 +761,14 @@ class Account {
 
         $auto_pay_success = false;
 
-        // 11. Attempt Auto-Pay
+        // 11. Attempt Auto-Pay (supports both card and ACH payment methods)
         if ( $order->get_total() > 0 && isset($plan->auto_pay) && $plan->auto_pay == "true" && ! empty( $default_payment ) ) {
-            $payment_id = $default_payment->get_id();
+            // Get the appropriate payment ID based on type
+            $payment_id = $default_payment->token;
             
             // Attempt Payment
             // If failed, hooks in captaincore.php -> captaincore_failed_notify -> failed_notify() triggers the Invoice Email.
-            $payment_result = ( new User( $plan->billing_user_id, true ) )->pay_invoice( $order->get_id(), $payment_id );
+            $payment_result = $user->pay_invoice( $order->get_id(), $payment_id );
             
             if ( isset( $payment_result['result'] ) && $payment_result['result'] === 'success' ) {
                 $auto_pay_success = true;
