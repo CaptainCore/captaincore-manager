@@ -995,7 +995,7 @@ class Mailer {
             $notes_html = "
                 <div style='margin-top: 25px; padding-top: 20px; border-top: 1px solid #edf2f7;'>
                     <h4 style='margin: 0 0 10px; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Notes</h4>
-                    <p style='margin: 0; font-style: italic; color: #4a5568;'>\"" . nl2br( esc_html( $site_notes ) ) . "\"</p>
+                    <p style='margin: 0; font-style: italic; color: #4a5568;'>\"" . nl2br( esc_html( wp_unslash( $site_notes ) ) ) . "\"</p>
                 </div>
             ";
         }
