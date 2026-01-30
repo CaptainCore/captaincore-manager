@@ -213,4 +213,98 @@ class Accounts extends DB {
         return $this->accounts;
     }
 
+    /**
+     * Check for on-hold orders with pending ACH payments and update their status.
+     * ACH payments typically take 4-5 business days to complete.
+     */
+    public static function process_pending_ach_payments() {
+        // Find all on-hold orders that have a Stripe intent ID (indicating ACH payment)
+        $orders = wc_get_orders( [
+            'limit'      => -1,
+            'status'     => 'on-hold',
+            'meta_query' => [
+                [
+                    'key'     => '_stripe_intent_id',
+                    'compare' => 'EXISTS',
+                ],
+            ],
+        ] );
+
+        if ( empty( $orders ) ) {
+            return;
+        }
+
+        foreach ( $orders as $order ) {
+            $intent_id = $order->get_meta( '_stripe_intent_id' );
+            if ( empty( $intent_id ) ) {
+                continue;
+            }
+
+            // Skip if not a PaymentIntent (could be a SetupIntent or other)
+            if ( strpos( $intent_id, 'pi_' ) !== 0 ) {
+                continue;
+            }
+
+            try {
+                // Retrieve the PaymentIntent from Stripe
+                $intent = \WC_Stripe_API::request( [], "payment_intents/{$intent_id}", 'GET' );
+
+                if ( ! empty( $intent->error ) ) {
+                    \WC_Stripe_Logger::log( "ACH status check error for order #{$order->get_id()}: " . $intent->error->message );
+                    continue;
+                }
+
+                // Check the payment intent status
+                switch ( $intent->status ) {
+                    case 'succeeded':
+                        // Payment completed successfully
+                        $order->add_order_note( sprintf( 
+                            'ACH payment completed successfully (PaymentIntent: %s).', 
+                            $intent_id 
+                        ) );
+                        $order->update_status( 'completed', 'ACH payment cleared.' );
+                        break;
+
+                    case 'canceled':
+                        // Payment was canceled
+                        $order->add_order_note( sprintf( 
+                            'ACH payment was canceled (PaymentIntent: %s).', 
+                            $intent_id 
+                        ) );
+                        $order->update_status( 'failed', 'ACH payment canceled.' );
+                        break;
+
+                    case 'requires_payment_method':
+                        // Payment failed (e.g., insufficient funds, account closed)
+                        $failure_message = $intent->last_payment_error->message ?? 'Unknown error';
+                        $order->add_order_note( sprintf( 
+                            'ACH payment failed: %s (PaymentIntent: %s).', 
+                            $failure_message,
+                            $intent_id 
+                        ) );
+                        $order->update_status( 'failed', 'ACH payment failed: ' . $failure_message );
+                        break;
+
+                    case 'processing':
+                        // Still processing - no action needed
+                        // ACH payments can take 4-5 business days
+                        break;
+
+                    default:
+                        // Log unexpected status for debugging
+                        \WC_Stripe_Logger::log( sprintf(
+                            "Unexpected PaymentIntent status '%s' for order #%d (Intent: %s)",
+                            $intent->status,
+                            $order->get_id(),
+                            $intent_id
+                        ) );
+                        break;
+                }
+
+            } catch ( \Exception $e ) {
+                \WC_Stripe_Logger::log( "ACH status check exception for order #{$order->get_id()}: " . $e->getMessage() );
+            }
+        }
+    }
+
 }
