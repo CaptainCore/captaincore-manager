@@ -76,6 +76,13 @@ add_action( 'schedule_mailgun_verify', '\CaptainCore\Providers\Mailgun::verify',
 add_action( 'schedule_mailgun_retry', '\CaptainCore\Providers\Mailgun::setup', 10, 1 );
 
 /* -------------------------------------------------------------------------
+ *  WP-CLI COMMANDS
+ * ------------------------------------------------------------------------- */
+if ( defined( 'WP_CLI' ) && WP_CLI ) {
+	WP_CLI::add_command( 'captaincore web-risk-check', [ 'CaptainCore\WebRiskCheck', 'run' ] );
+}
+
+/* -------------------------------------------------------------------------
  *  CUSTOM EMAIL TRIGGERS
  * ------------------------------------------------------------------------- */
 
