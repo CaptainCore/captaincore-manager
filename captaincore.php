@@ -1916,6 +1916,22 @@ function captaincore_recipes_func( $request ) {
 	return ( new CaptainCore\Recipes() )->list();
 }
 
+function captaincore_recipes_delete_func( $request ) {
+	$recipe_id = $request->get_param( "id" );
+	if ( ! ( new CaptainCore\Recipes )->verify( $recipe_id ) ) {
+		return new WP_Error( 'permission_denied', "You do not have permission to delete this recipe.", [ 'status' => 403 ] );
+	}
+	
+	$result = ( new CaptainCore\Recipes )->delete( $recipe_id );
+
+	if ( $result ) {
+		CaptainCore\Run::CLI( "recipe delete {$recipe_id}" );
+		return;
+	}
+	
+	return new WP_Error( 'delete_failed', "Failed to delete recipe.", [ 'status' => 500 ] );
+}
+
 function captaincore_running_func( $request ) {
 
 	$current_user = wp_get_current_user();

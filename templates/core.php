@@ -1168,8 +1168,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-col cols="12"><v-textarea variant="underlined" label="Content" persistent-hint hint="Bash script and WP-CLI commands welcomed." auto-grow v-model="dialog_cookbook.recipe.content" spellcheck="false"></v-textarea></v-col>
 				<v-col cols="12" v-if="role == 'administrator' || role == 'owner'"><v-switch label="Public" v-model="dialog_cookbook.recipe.public" persistent-hint hint="Public by default. Turning off will make the recipe only viewable and useable by you." :false-value="0" :true-value="1" inset></v-switch></v-col>
 				<v-col cols="12" class="text-right">
-					<v-btn color="error" elevation="0" @click="deleteRecipe()" class="mx-3">Delete Recipe</v-btn>
-					<v-btn color="primary" elevation="0" @click="updateRecipe()">Save Recipe</v-btn>
+					<v-btn color="error" elevation="0" @click="deleteRecipe()" class="mx-3" v-if="dialog_cookbook.recipe.user_id !== 'system'">Delete Recipe</v-btn>
+					<v-btn color="primary" elevation="0" @click="updateRecipe()" v-if="dialog_cookbook.recipe.user_id !== 'system'">Save Recipe</v-btn>
 				</v-col>
 				</v-row>
 			</v-container>
@@ -17156,24 +17156,89 @@ const app = createApp({
 				})
 				.catch( error => console.log( error ) );
 		},
-		deleteRecipe() {
-			recipe = this.dialog_cookbook.recipe
-			should_proceed = confirm( `Delete recipe ${recipe.title}?` )
+		runRecipeBulk( recipe_id ) {
+			recipe = this.recipes.filter( recipe => recipe.recipe_id == recipe_id )[0];
+			sites = this.sites_selected;
+			site_ids = sites.map( site => site.site_id );
+			environment = this.dialog_bulk_tools.environment_selected;
+
+			if ( sites.length === 0 ) {
+				this.snackbar.message = "Please select at least one site.";
+				this.snackbar.show = true;
+				return;
+			}
+
+			should_proceed = confirm( `Run recipe '${recipe.title}' on ${sites.length} site(s)?` );
 
 			if ( ! should_proceed ) {
 				return;
 			}
+
 			var data = {
-				action: 'captaincore_ajax',
-				command: 'updateRecipe',
-				value: this.dialog_cookbook.recipe
+				action: 'captaincore_install',
+				post_id: site_ids,
+				command: 'recipe',
+				environment: environment,
+				value: recipe_id
 			};
+
+			description = `Run recipe '${recipe.title}' on ${sites.length} site(s)`;
+
+			// Start job
+			job_id = Math.round((new Date()).getTime());
+			this.jobs.push({"job_id": job_id, "description": description, "status": "queued", "command": "recipe", stream: []});
+
+			self = this;
+
 			axios.post( ajaxurl, Qs.stringify( data ) )
 				.then( response => {
-					this.dialog_cookbook.show = false;
-					this.recipes = response.data;
+					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
+					self.runCommand( response.data );
+					self.snackbar.message = description;
+					self.snackbar.show = true;
 				})
 				.catch( error => console.log( error ) );
+		},
+		deleteRecipe() {
+			recipe = this.dialog_cookbook.recipe
+
+			// Only allow deletion of own recipes (unless admin)
+			if ( recipe.user_id === 'system' ) {
+				this.snackbar.message = "You cannot delete system recipes.";
+				this.snackbar.show = true;
+				return;
+			}
+
+			should_proceed = confirm( `Delete recipe "${recipe.title}"?` )
+
+			if ( ! should_proceed ) {
+				return;
+			}
+
+			axios.delete( `/wp-json/captaincore/v1/recipes/${recipe.recipe_id}`, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
+				.then( response => {
+					if ( response.data.error ) {
+						this.snackbar.message = response.data.error;
+						this.snackbar.show = true;
+						return;
+					}
+					this.dialog_cookbook.show = false;
+					// Remove deleted recipe from local array
+					this.recipes = this.recipes.filter( r => r.recipe_id !== recipe.recipe_id );
+					this.snackbar.message = `Recipe "${recipe.title}" deleted.`;
+					this.snackbar.show = true;
+				})
+				.catch( error => {
+					if ( error.response && error.response.data && error.response.data.message ) {
+						this.snackbar.message = error.response.data.message;
+					} else {
+						this.snackbar.message = "Failed to delete recipe.";
+					}
+					this.snackbar.show = true;
+					console.log( error );
+				});
 		},
 		updateRecipe() {
 			var data = {
