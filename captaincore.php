@@ -5545,11 +5545,16 @@ HEREDOC;
 			$order_data->total = $order_data->total - $item->get_amount();
 		}
 
-		$payment_gateways      = WC()->payment_gateways->payment_gateways();
-		$payment_method        = $order->get_payment_method();
+		$payment_method_title  = $order->get_payment_method_title();
+		if ( empty( $payment_method_title ) ) {
+			// Fallback to gateway title if order doesn't have a custom title
+			$payment_gateways     = WC()->payment_gateways->payment_gateways();
+			$payment_method       = $order->get_payment_method();
+			$payment_method_title = isset( $payment_gateways[ $payment_method ] ) ? $payment_gateways[ $payment_method ]->get_title() : "Check";
+		}
 		$payment_method_string = sprintf(
 			__( 'Payment via %s', 'woocommerce' ),
-			esc_html( isset( $payment_gateways[ $payment_method ] ) ? $payment_gateways[ $payment_method ]->get_title() : "Check" )
+			esc_html( $payment_method_title )
 		);
 
 		if ( $order->get_date_paid() ) {
