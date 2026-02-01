@@ -645,7 +645,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "36";
+        $required_version = (int) "37";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -967,6 +967,18 @@ class DB {
             created_at datetime NOT NULL,
             updated_at datetime NOT NULL,
         PRIMARY KEY  (scheduled_report_id)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_web_risk_logs` (
+            web_risk_log_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            total_sites int(11) UNSIGNED NOT NULL,
+            threats_found int(11) UNSIGNED NOT NULL,
+            errors_count int(11) UNSIGNED NOT NULL,
+            details longtext,
+            created_at datetime NOT NULL,
+        PRIMARY KEY  (web_risk_log_id)
         ) $charset_collate;";
 
         dbDelta($sql);

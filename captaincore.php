@@ -4453,7 +4453,17 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
-};
+	// Web Risk Logs endpoint (admin only)
+	register_rest_route(
+		'captaincore/v1', '/web-risk-logs', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_web_risk_logs_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
 
 /**
  * REST endpoint: Send maintenance report email
@@ -4654,6 +4664,13 @@ function captaincore_scheduled_reports_delete_func( WP_REST_Request $request ) {
 	CaptainCore\ScheduledReports::delete_report( $id );
 
 	return [ 'success' => true ];
+}
+
+/**
+ * REST endpoint: List Web Risk check logs
+ */
+function captaincore_web_risk_logs_func( WP_REST_Request $request ) {
+	return ( new CaptainCore\WebRiskLogs() )->list();
 }
 
 function captaincore_login_func( WP_REST_Request $request ) {

@@ -117,6 +117,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-list-item link :href="`${configurations.path}archives`" @click.prevent="goToPath('/archives')" title="Archives" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-folder-zip-outline"></v-list-item>
 			<v-list-item link :href="`${configurations.path}configurations`" @click.prevent="goToPath('/configurations')" title="Configurations" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-cogs"></v-list-item>
 			<v-list-item link :href="`${configurations.path}reports`" @click.prevent="goToPath('/reports')" title="Reports" v-show="role == 'administrator'" prepend-icon="mdi-file-chart"></v-list-item>
+			<v-list-item link :href="`${configurations.path}web-risk`" @click.prevent="goToPath('/web-risk')" title="Web Risk" v-show="role == 'administrator'" prepend-icon="mdi-shield-alert"></v-list-item>
 			<v-list-item link :href="`${configurations.path}handbook`" @click.prevent="goToPath('/handbook')" title="Handbook" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-map"></v-list-item>
 			<v-list-item link :href="`${configurations.path}defaults`" @click.prevent="goToPath('/defaults')" title="Site Defaults" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-application"></v-list-item>
 			<v-list-item link :href="`${configurations.path}keys`" @click.prevent="goToPath('/keys')" title="SSH Keys" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-key"></v-list-item>
@@ -7937,6 +7938,153 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-col>
 				</v-row>
 			</v-card>
+			<v-card v-if="route == 'web-risk' && role == 'administrator'" flat border="thin" rounded="xl">
+				<v-toolbar flat color="transparent">
+					<v-toolbar-title>Web Risk Logs</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-card-text class="pt-0">
+					<v-alert v-if="web_risk_logs.length === 0 && !web_risk_logs_loading" type="info" variant="tonal">
+						No Web Risk check logs found. Logs are recorded each time the Web Risk check runs.
+					</v-alert>
+					<v-data-table
+						v-if="web_risk_logs.length > 0 || web_risk_logs_loading"
+						:loading="web_risk_logs_loading"
+						:headers="[
+							{ title: 'Date/Time', key: 'created_at' },
+							{ title: 'Sites Checked', key: 'total_sites', align: 'center' },
+							{ title: 'Threats', key: 'threats_found', align: 'center' },
+							{ title: 'Errors', key: 'errors_count', align: 'center' },
+							{ title: '', key: 'actions', width: '100px', sortable: false }
+						]"
+						:items="web_risk_logs"
+						:items-per-page="25"
+						density="comfortable"
+						hover
+					>
+						<template v-slot:item.created_at="{ item }">
+							{{ pretty_timestamp( item.created_at ) }}
+						</template>
+						<template v-slot:item.total_sites="{ item }">
+							{{ item.total_sites.toLocaleString() }}
+						</template>
+						<template v-slot:item.threats_found="{ item }">
+							<v-chip
+								:color="item.threats_found > 0 ? 'error' : 'success'"
+								size="small"
+								variant="flat"
+							>
+								{{ item.threats_found }}
+							</v-chip>
+						</template>
+						<template v-slot:item.errors_count="{ item }">
+							<v-chip
+								v-if="item.errors_count > 0"
+								color="warning"
+								size="small"
+								variant="flat"
+							>
+								{{ item.errors_count }}
+							</v-chip>
+							<span v-else class="text-medium-emphasis">0</span>
+						</template>
+						<template v-slot:item.actions="{ item }">
+							<v-btn
+								icon="mdi-chevron-right"
+								variant="text"
+								size="small"
+								@click="web_risk_dialog.log = item; web_risk_dialog.show = true"
+							></v-btn>
+						</template>
+					</v-data-table>
+				</v-card-text>
+			</v-card>
+			<v-dialog v-model="web_risk_dialog.show" max-width="700px" scrollable>
+				<v-card v-if="web_risk_dialog.log">
+					<v-toolbar color="primary" flat>
+						<v-toolbar-title>Web Risk Check Details</v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-btn icon="mdi-close" @click="web_risk_dialog.show = false"></v-btn>
+					</v-toolbar>
+					<v-card-text>
+						<v-row class="mb-4">
+							<v-col cols="6" md="3" class="text-center">
+								<div class="text-h4">{{ web_risk_dialog.log.total_sites.toLocaleString() }}</div>
+								<div class="text-caption text-medium-emphasis">Sites Checked</div>
+							</v-col>
+							<v-col cols="6" md="3" class="text-center">
+								<div class="text-h4" :class="web_risk_dialog.log.threats_found > 0 ? 'text-error' : 'text-success'">
+									{{ web_risk_dialog.log.threats_found }}
+								</div>
+								<div class="text-caption text-medium-emphasis">Threats Found</div>
+							</v-col>
+							<v-col cols="6" md="3" class="text-center">
+								<div class="text-h4" :class="web_risk_dialog.log.errors_count > 0 ? 'text-warning' : ''">
+									{{ web_risk_dialog.log.errors_count }}
+								</div>
+								<div class="text-caption text-medium-emphasis">API Errors</div>
+							</v-col>
+							<v-col cols="6" md="3" class="text-center">
+								<div class="text-body-1">{{ pretty_timestamp( web_risk_dialog.log.created_at ) }}</div>
+								<div class="text-caption text-medium-emphasis">Check Date</div>
+							</v-col>
+						</v-row>
+						<v-divider class="mb-4"></v-divider>
+						<div v-if="web_risk_dialog.log.details && web_risk_dialog.log.details.threats && web_risk_dialog.log.details.threats.length > 0">
+							<h4 class="text-subtitle-1 mb-2">Threats Detected</h4>
+							<v-list density="compact">
+								<v-list-item
+									v-for="(threat, index) in web_risk_dialog.log.details.threats"
+									:key="'threat-' + index"
+								>
+									<template v-slot:prepend>
+										<v-icon color="error" size="small">mdi-alert-circle</v-icon>
+									</template>
+									<v-list-item-title>
+										<a :href="threat.home_url" target="_blank" class="text-decoration-none">{{ threat.site_name }}</a>
+									</v-list-item-title>
+									<v-list-item-subtitle>
+										<v-chip
+											v-for="type in threat.threat_types"
+											:key="type"
+											size="x-small"
+											:color="type === 'MALWARE' ? 'error' : (type === 'SOCIAL_ENGINEERING' ? 'warning' : 'orange')"
+											class="mr-1"
+											variant="flat"
+										>
+											{{ type.replace(/_/g, ' ') }}
+										</v-chip>
+									</v-list-item-subtitle>
+								</v-list-item>
+							</v-list>
+						</div>
+						<div v-else-if="web_risk_dialog.log.threats_found === 0" class="text-center py-4">
+							<v-icon color="success" size="48">mdi-check-circle</v-icon>
+							<div class="text-h6 mt-2">All Clear</div>
+							<div class="text-medium-emphasis">No threats were detected during this check.</div>
+						</div>
+						<div v-if="web_risk_dialog.log.details && web_risk_dialog.log.details.errors && web_risk_dialog.log.details.errors.length > 0" class="mt-4">
+							<h4 class="text-subtitle-1 mb-2">API Errors</h4>
+							<v-list density="compact">
+								<v-list-item
+									v-for="(error, index) in web_risk_dialog.log.details.errors"
+									:key="'error-' + index"
+								>
+									<template v-slot:prepend>
+										<v-icon color="warning" size="small">mdi-alert</v-icon>
+									</template>
+									<v-list-item-title>{{ error.name }}</v-list-item-title>
+									<v-list-item-subtitle>{{ error.error }}</v-list-item-subtitle>
+								</v-list-item>
+							</v-list>
+						</div>
+					</v-card-text>
+					<v-card-actions>
+						<v-spacer></v-spacer>
+						<v-btn variant="text" @click="web_risk_dialog.show = false">Close</v-btn>
+					</v-card-actions>
+				</v-card>
+			</v-dialog>
 			<v-card v-if="route == 'billing'" flat border="thin" rounded="xl">
 				<v-toolbar flat v-show="dialog_billing.step == 1" color="transparent">
 					<v-toolbar-title>Billing</v-toolbar-title>
@@ -11032,6 +11180,7 @@ const app = createApp({
 			'/domains': 'domains',
 			'/handbook': 'handbook',
 			'/health': 'health',
+			'/web-risk': 'web-risk',
 			'/keys': 'keys',
 			'/login': 'login',
 			'/profile' : 'profile',
@@ -12283,6 +12432,12 @@ const app = createApp({
 
 			if (this.route == "vulnerability-scans") {
 				this.fetchVulnerabilityScans();
+			}
+
+			if (this.route == "web-risk") {
+				this.fetchWebRiskLogs();
+				this.loading_page = false;
+				this.selected_nav = "";
 			}
 
 			if (this.fetchInvite.account) {
@@ -14683,6 +14838,20 @@ const app = createApp({
 				this.configurations = response.data
 				this.configurations_loading = false
 				setTimeout(this.fetchMissing, 1000)
+			});
+		},
+		fetchWebRiskLogs() {
+			this.web_risk_logs_loading = true;
+			axios.get(
+			'/wp-json/captaincore/v1/web-risk-logs', {
+				headers: {'X-WP-Nonce':this.wp_nonce}
+			})
+			.then(response => {
+				this.web_risk_logs = response.data;
+				this.web_risk_logs_loading = false;
+			})
+			.catch(error => {
+				this.web_risk_logs_loading = false;
 			});
 		},
 		fetchSubscriptions() {
