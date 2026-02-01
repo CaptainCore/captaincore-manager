@@ -376,29 +376,31 @@ class Domain {
         // 3. Apply DNS changes (if managed via Constellix)
         if ( ! empty( $constellix_domain->remote_id ) ) {
             
-            // Handle MX Records - delete existing if user confirmed overwrite
-            if ( $has_existing_at_mx && $overwrite_mx ) {
-                foreach ( $at_mx_records as $record ) {
-                    \CaptainCore\Remote\Constellix::delete( "domains/{$constellix_domain->remote_id}/records/mx/{$record->id}" );
-                }
-            }
-
             // Add MX records for receiving (from Mailgun's response)
-            if ( ! $has_existing_at_mx || $overwrite_mx ) {
-                if ( ! empty( $mailgun_domain->receiving_dns_records ) ) {
-                    $mx_records = [];
-                    foreach ( $mailgun_domain->receiving_dns_records as $record ) {
-                        // Add all MX records from Mailgun (don't skip based on valid status)
-                        if ( $record->record_type === 'MX' ) {
-                            $mx_records[] = [
-                                'server'   => $record->value . '.',
-                                'priority' => $record->priority ?? 10,
-                                'enabled'  => true,
-                            ];
-                        }
+            if ( ! empty( $mailgun_domain->receiving_dns_records ) ) {
+                $mx_records = [];
+                foreach ( $mailgun_domain->receiving_dns_records as $record ) {
+                    // Add all MX records from Mailgun (don't skip based on valid status)
+                    if ( $record->record_type === 'MX' ) {
+                        $mx_records[] = [
+                            'server'   => $record->value . '.',
+                            'priority' => $record->priority ?? 10,
+                            'enabled'  => true,
+                        ];
                     }
-                    if ( ! empty( $mx_records ) ) {
-                        $formatted_mx_data = self::_format_dns_record_for_api( 'mx', '', $mx_records, 3600 );
+                }
+                if ( ! empty( $mx_records ) ) {
+                    $formatted_mx_data = self::_format_dns_record_for_api( 'mx', '', $mx_records, 3600 );
+                    
+                    if ( $has_existing_at_mx && $overwrite_mx ) {
+                        // Update existing MX record using PUT (use the first record's ID)
+                        $existing_mx_id = $at_mx_records[0]->id;
+                        $mx_dns_response = \CaptainCore\Remote\Constellix::put( "domains/{$constellix_domain->remote_id}/records/{$existing_mx_id}", $formatted_mx_data );
+                        if ( ! empty( $mx_dns_response->errors ) ) {
+                            error_log( 'CaptainCore: Failed to update Mailgun MX records for ' . $domain->name . ': ' . json_encode( $mx_dns_response->errors ) );
+                        }
+                    } elseif ( ! $has_existing_at_mx ) {
+                        // Create new MX record using POST
                         $mx_dns_response = \CaptainCore\Remote\Constellix::post( "domains/{$constellix_domain->remote_id}/records", $formatted_mx_data );
                         if ( ! empty( $mx_dns_response->errors ) ) {
                             error_log( 'CaptainCore: Failed to add Mailgun MX records for ' . $domain->name . ': ' . json_encode( $mx_dns_response->errors ) );
@@ -434,7 +436,7 @@ class Domain {
                             $new_values[] = [ 'value' => $record->value, 'enabled' => true ];
                             
                             $txt_data = self::_format_dns_record_for_api( 'txt', $record_name, $new_values, $existing_record->ttl ?? 3600 );
-                            $response = \CaptainCore\Remote\Constellix::put( "domains/{$constellix_domain->remote_id}/records/txt/{$existing_record->id}", $txt_data );
+                            $response = \CaptainCore\Remote\Constellix::put( "domains/{$constellix_domain->remote_id}/records/{$existing_record->id}", $txt_data );
                             if ( ! empty( $response->errors ) ) {
                                 error_log( 'CaptainCore: Failed to update TXT record for ' . $domain->name . ': ' . json_encode( $response->errors ) );
                             }
