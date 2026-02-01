@@ -92,12 +92,13 @@ class ScheduledReports extends DB {
      * Calculate next run date based on interval
      */
     public static function calculate_next_run( $interval ) {
-        $now = new \DateTime();
+        $timezone = wp_timezone();
+        $now = new \DateTime( 'now', $timezone );
 
         switch ( $interval ) {
             case 'monthly':
                 // First day of next month
-                $next = new \DateTime( 'first day of next month' );
+                $next = new \DateTime( 'first day of next month', $timezone );
                 break;
             case 'quarterly':
                 // First day of next quarter
@@ -105,17 +106,17 @@ class ScheduledReports extends DB {
                 $quarter_month = ( ceil( $month / 3 ) * 3 ) + 1;
                 if ( $quarter_month > 12 ) {
                     $quarter_month = 1;
-                    $next = new \DateTime( $now->format( 'Y' ) + 1 . '-' . str_pad( $quarter_month, 2, '0', STR_PAD_LEFT ) . '-01' );
+                    $next = new \DateTime( $now->format( 'Y' ) + 1 . '-' . str_pad( $quarter_month, 2, '0', STR_PAD_LEFT ) . '-01', $timezone );
                 } else {
-                    $next = new \DateTime( $now->format( 'Y' ) . '-' . str_pad( $quarter_month, 2, '0', STR_PAD_LEFT ) . '-01' );
+                    $next = new \DateTime( $now->format( 'Y' ) . '-' . str_pad( $quarter_month, 2, '0', STR_PAD_LEFT ) . '-01', $timezone );
                 }
                 break;
             case 'yearly':
                 // First day of next year
-                $next = new \DateTime( ( $now->format( 'Y' ) + 1 ) . '-01-01' );
+                $next = new \DateTime( ( $now->format( 'Y' ) + 1 ) . '-01-01', $timezone );
                 break;
             default:
-                $next = new \DateTime( 'first day of next month' );
+                $next = new \DateTime( 'first day of next month', $timezone );
         }
 
         return $next->format( 'Y-m-d H:i:s' );
@@ -125,13 +126,14 @@ class ScheduledReports extends DB {
      * Get date range for report based on interval
      */
     public static function get_date_range( $interval ) {
-        $now = new \DateTime();
+        $timezone = wp_timezone();
+        $now = new \DateTime( 'now', $timezone );
 
         switch ( $interval ) {
             case 'monthly':
                 // Previous month
-                $start = new \DateTime( 'first day of last month' );
-                $end = new \DateTime( 'last day of last month' );
+                $start = new \DateTime( 'first day of last month', $timezone );
+                $end = new \DateTime( 'last day of last month', $timezone );
                 break;
             case 'quarterly':
                 // Previous quarter
@@ -145,18 +147,18 @@ class ScheduledReports extends DB {
                 }
                 $start_month = ( ( $prev_quarter - 1 ) * 3 ) + 1;
                 $end_month = $prev_quarter * 3;
-                $start = new \DateTime( $year . '-' . str_pad( $start_month, 2, '0', STR_PAD_LEFT ) . '-01' );
-                $end = new \DateTime( $year . '-' . str_pad( $end_month, 2, '0', STR_PAD_LEFT ) . '-' . cal_days_in_month( CAL_GREGORIAN, $end_month, $year ) );
+                $start = new \DateTime( $year . '-' . str_pad( $start_month, 2, '0', STR_PAD_LEFT ) . '-01', $timezone );
+                $end = new \DateTime( $year . '-' . str_pad( $end_month, 2, '0', STR_PAD_LEFT ) . '-' . cal_days_in_month( CAL_GREGORIAN, $end_month, $year ), $timezone );
                 break;
             case 'yearly':
                 // Previous year
                 $prev_year = $now->format( 'Y' ) - 1;
-                $start = new \DateTime( $prev_year . '-01-01' );
-                $end = new \DateTime( $prev_year . '-12-31' );
+                $start = new \DateTime( $prev_year . '-01-01', $timezone );
+                $end = new \DateTime( $prev_year . '-12-31', $timezone );
                 break;
             default:
-                $start = new \DateTime( 'first day of last month' );
-                $end = new \DateTime( 'last day of last month' );
+                $start = new \DateTime( 'first day of last month', $timezone );
+                $end = new \DateTime( 'last day of last month', $timezone );
         }
 
         return [
