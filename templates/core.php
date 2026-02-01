@@ -8106,6 +8106,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-tab :key="4" value="tab-Billing-Address">
 							Billing Address <v-icon size="24" class="ml-1">mdi-map-marker</v-icon>
 						</v-tab>
+						<v-tab :key="5" value="tab-Billing-Pending-ACH" v-if="role == 'administrator' && pending_ach_verifications.length > 0">
+							Pending ACH <v-chip size="x-small" color="warning" class="ml-1">{{ pending_ach_verifications.length }}</v-chip>
+						</v-tab>
 					</v-tabs>
 					</v-toolbar>
 					<v-window v-model="billing_tabs" style="background:transparent">
@@ -8169,19 +8172,36 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							:loading="billing_loading"
 							:headers="[
 								{ title: 'Method', key: 'method.brand' },
-								{ title: 'Expires', key: 'expires' },
-								{ title: '', key: 'actions', width: '204px', align: 'end', sortable: false }
+								{ title: 'Details', key: 'expires' },
+								{ title: '', key: 'actions', width: '280px', align: 'end', sortable: false }
 							]"
 							:items="billing.payment_methods"
 							hide-default-footer
 							style="background:transparent"
 						>
 							<template v-slot:item.method.brand="{ item }">
-								{{ item.method.brand }} ending in {{ item.method.last4 }}
+								<div class="d-flex align-center">
+									<v-icon v-if="item.type === 'ach'" class="mr-2" size="small">mdi-bank</v-icon>
+									<v-icon v-else class="mr-2" size="small">mdi-credit-card</v-icon>
+									<span v-if="item.type === 'ach'">
+										{{ item.method.bank_name || 'Bank Account' }} ({{ item.method.account_type }}) ending in {{ item.method.last4 }}
+									</span>
+									<span v-else>
+										{{ item.method.brand }} ending in {{ item.method.last4 }}
+									</span>
+								</div>
+							</template>
+							<template v-slot:item.expires="{ item }">
+								<span v-if="item.type === 'ach'">
+									<v-chip v-if="item.verified" color="success" size="small" variant="tonal">Verified</v-chip>
+									<v-chip v-else color="warning" size="small" variant="tonal">Pending Verification</v-chip>
+								</span>
+								<span v-else>{{ item.expires }}</span>
 							</template>
 							<template v-slot:item.actions="{ item }">
+								<v-btn size="small" v-if="item.type === 'ach' && !item.verified" @click="openVerifyBankAccount(item)" color="warning" class="mr-1">Verify</v-btn>
 								<v-btn size="small" disabled v-show="item.is_default">Primary Method</v-btn>
-								<v-btn size="small" v-show="!item.is_default" @click="setAsPrimary( item.token )" color="primary">Set as Primary</v-btn>
+								<v-btn size="small" v-show="!item.is_default && item.verified !== false" @click="setAsPrimary( item.token )" color="primary">Set as Primary</v-btn>
 								<v-btn color="red" icon="mdi-delete" size="small" @click="deletePaymentMethod( item.token )" variant="text"></v-btn>
 							</template>
 							<template v-slot:bottom>
@@ -8196,18 +8216,97 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											<v-toolbar flat>
 												<v-toolbar-title>New payment method</v-toolbar-title>
 												<v-spacer></v-spacer>
-												<v-btn @click="new_payment.show = false" icon="mdi-close" variant="text"></v-btn>
+												<v-btn @click="closeNewPaymentDialog" icon="mdi-close" variant="text"></v-btn>
 											</v-toolbar>
-											<v-card-text class="mt-5">
-												<div id="new-card-element"></div>
-												<v-alert variant="text" density="compact" border="start" type="warning" v-show="new_payment.error != ''">
+											<v-card-text>
+												<v-btn-toggle v-model="new_payment.type" mandatory class="mb-4" density="comfortable">
+													<v-btn value="card" variant="outlined">
+														<v-icon start>mdi-credit-card</v-icon>
+														Credit Card
+													</v-btn>
+													<v-btn value="ach" variant="outlined">
+														<v-icon start>mdi-bank</v-icon>
+														Bank Account
+													</v-btn>
+												</v-btn-toggle>
+												
+												<!-- Card Payment Form -->
+												<div v-show="new_payment.type === 'card'" class="mt-4">
+													<div id="new-card-element"></div>
+												</div>
+												
+												<!-- ACH Bank Account Form -->
+												<div v-show="new_payment.type === 'ach'" class="mt-4">
+													<v-alert type="info" variant="tonal" density="compact" class="mb-4">
+														Connect your bank account securely. You'll be redirected to verify your account instantly, or receive micro-deposits for verification within 1-2 business days.
+													</v-alert>
+													<v-text-field 
+														v-model="new_payment.account_holder_name" 
+														label="Account Holder Name" 
+														variant="underlined"
+														:rules="[v => !!v || 'Name is required']"
+													></v-text-field>
+												</div>
+												
+												<v-alert variant="text" density="compact" border="start" type="warning" v-show="new_payment.error != ''" class="mt-3">
 													{{ new_payment.error }}
+												</v-alert>
+												<v-alert variant="text" density="compact" border="start" type="success" v-show="new_payment.success != ''" class="mt-3">
+													{{ new_payment.success }}
 												</v-alert>
 											</v-card-text>
 											<v-divider></v-divider>
 											<v-card-actions>
 												<v-spacer></v-spacer>
-												<v-btn @click="addPaymentMethod" color="primary" variant="tonal">Add Payment Method</v-btn>
+												<v-btn v-if="new_payment.type === 'card'" @click="addPaymentMethod" color="primary" variant="tonal" :loading="new_payment.loading">Add Card</v-btn>
+												<v-btn v-if="new_payment.type === 'ach'" @click="addBankAccount" color="primary" variant="tonal" :loading="new_payment.loading">Connect Bank Account</v-btn>
+											</v-card-actions>
+										</v-card>
+									</v-dialog>
+									
+									<!-- Verify Bank Account Dialog -->
+									<v-dialog max-width="450" v-model="verify_bank.show">
+										<v-card>
+											<v-toolbar flat>
+												<v-toolbar-title>Verify Bank Account</v-toolbar-title>
+												<v-spacer></v-spacer>
+												<v-btn @click="verify_bank.show = false" icon="mdi-close" variant="text"></v-btn>
+											</v-toolbar>
+											<v-card-text>
+												<p class="mb-4">Stripe sent two small deposits to your bank account. Enter the amounts below to verify your account.</p>
+												<v-row>
+													<v-col cols="6">
+														<v-text-field 
+															v-model="verify_bank.amount1" 
+															label="First deposit (cents)" 
+															type="number"
+															prefix="$0."
+															variant="underlined"
+															placeholder="32"
+														></v-text-field>
+													</v-col>
+													<v-col cols="6">
+														<v-text-field 
+															v-model="verify_bank.amount2" 
+															label="Second deposit (cents)" 
+															type="number"
+															prefix="$0."
+															variant="underlined"
+															placeholder="45"
+														></v-text-field>
+													</v-col>
+												</v-row>
+												<v-alert variant="text" density="compact" border="start" type="warning" v-show="verify_bank.error != ''">
+													{{ verify_bank.error }}
+												</v-alert>
+												<v-alert variant="text" density="compact" border="start" type="success" v-show="verify_bank.success != ''">
+													{{ verify_bank.success }}
+												</v-alert>
+											</v-card-text>
+											<v-divider></v-divider>
+											<v-card-actions>
+												<v-spacer></v-spacer>
+												<v-btn @click="verifyBankAccount" color="primary" variant="tonal" :loading="verify_bank.loading">Verify Account</v-btn>
 											</v-card-actions>
 										</v-card>
 									</v-dialog>
@@ -8247,6 +8346,78 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-btn>
 						</v-row>
 						</template>
+						</v-window-item>
+						<!-- Admin: Pending ACH Verifications -->
+						<v-window-item value="tab-Billing-Pending-ACH" :transition="false" :reverse-transition="false" v-if="role == 'administrator'">
+							<v-alert type="info" variant="tonal" density="compact" class="ma-3">
+								These customers have added bank accounts that require micro-deposit verification.
+							</v-alert>
+							<v-data-table
+								:headers="[
+									{ title: 'Customer', key: 'user_name' },
+									{ title: 'Email', key: 'user_email' },
+									{ title: 'Bank', key: 'bank_name' },
+									{ title: 'Account', key: 'last4' },
+									{ title: '', key: 'actions', width: '120px', sortable: false }
+								]"
+								:items="pending_ach_verifications"
+								hide-default-footer
+								style="background:transparent"
+							>
+								<template v-slot:item.last4="{ item }">
+									{{ item.account_type }} ending in {{ item.last4 }}
+								</template>
+								<template v-slot:item.actions="{ item }">
+									<v-btn size="small" color="primary" @click="openAdminVerifyBankAccount(item)">Verify</v-btn>
+								</template>
+							</v-data-table>
+							
+							<!-- Admin Verify Dialog -->
+							<v-dialog max-width="450" v-model="admin_verify_bank.show">
+								<v-card>
+									<v-toolbar flat>
+										<v-toolbar-title>Verify Bank Account</v-toolbar-title>
+										<v-spacer></v-spacer>
+										<v-btn @click="admin_verify_bank.show = false" icon="mdi-close" variant="text"></v-btn>
+									</v-toolbar>
+									<v-card-text>
+										<p class="mb-2"><strong>Customer:</strong> {{ admin_verify_bank.user_name }}</p>
+										<p class="mb-4"><strong>Bank:</strong> {{ admin_verify_bank.bank_name }} ({{ admin_verify_bank.account_type }}) ending in {{ admin_verify_bank.last4 }}</p>
+										<p class="mb-4">Enter the two micro-deposit amounts the customer received:</p>
+										<v-row>
+											<v-col cols="6">
+												<v-text-field 
+													v-model="admin_verify_bank.amount1" 
+													label="First deposit (cents)" 
+													type="number"
+													prefix="$0."
+													variant="underlined"
+												></v-text-field>
+											</v-col>
+											<v-col cols="6">
+												<v-text-field 
+													v-model="admin_verify_bank.amount2" 
+													label="Second deposit (cents)" 
+													type="number"
+													prefix="$0."
+													variant="underlined"
+												></v-text-field>
+											</v-col>
+										</v-row>
+										<v-alert variant="text" density="compact" border="start" type="warning" v-show="admin_verify_bank.error != ''">
+											{{ admin_verify_bank.error }}
+										</v-alert>
+										<v-alert variant="text" density="compact" border="start" type="success" v-show="admin_verify_bank.success != ''">
+											{{ admin_verify_bank.success }}
+										</v-alert>
+									</v-card-text>
+									<v-divider></v-divider>
+									<v-card-actions>
+										<v-spacer></v-spacer>
+										<v-btn @click="adminVerifyBankAccount" color="primary" variant="tonal" :loading="admin_verify_bank.loading">Verify Account</v-btn>
+									</v-card-actions>
+								</v-card>
+							</v-dialog>
 						</v-window-item>
 					</v-window>
 				</div>
@@ -8373,13 +8544,22 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							Credit Card
 							</div>
 							<v-container class="py-0 px-3">
-								<v-radio-group v-model="dialog_invoice.payment_method" v-if="typeof billing.payment_methods != 'undefined'">
+							<v-radio-group v-model="dialog_invoice.payment_method" v-if="typeof billing.payment_methods != 'undefined'">
 									<v-radio
-										v-for="card in billing.payment_methods"
-										:key="card.token"
-										:label="`${card.method.brand} ending in ${card.method.last4} expires ${card.expires}`"
-										:value="card.token"
-									></v-radio>
+										v-for="pm in verifiedPaymentMethods"
+										:key="pm.token"
+										:value="pm.token"
+									>
+										<template v-slot:label>
+											<v-icon size="small" class="mr-1">{{ pm.type === 'ach' ? 'mdi-bank' : 'mdi-credit-card' }}</v-icon>
+											<span v-if="pm.type === 'ach'">
+												{{ pm.method.bank_name || 'Bank Account' }} ending in {{ pm.method.last4 }}
+											</span>
+											<span v-else>
+												{{ pm.method.brand }} ending in {{ pm.method.last4 }} expires {{ pm.expires }}
+											</span>
+										</template>
+									</v-radio>
 									<v-radio label="Add new payment method" value="new"></v-radio>
 								</v-radio-group>
 							</v-container>
@@ -10839,6 +11019,9 @@ const app = createApp({
 		configurations: <?php echo json_encode( ( new CaptainCore\Configurations )->get() ); ?>,
 		configurations_step: 0,
 		configurations_loading: true,
+		web_risk_logs: [],
+		web_risk_logs_loading: false,
+		web_risk_dialog: { show: false, log: null },
 		notifications: false,
 		themeFilterMenu: false,
 		pluginFilterMenu: false,
@@ -11212,13 +11395,16 @@ const app = createApp({
                 stats: {}
             }
         },
-		new_payment: { card: {}, show: false, error: "" },
+		new_payment: { card: {}, show: false, error: "", success: "", type: "card", loading: false, account_holder_name: "" },
+		verify_bank: { show: false, token_id: null, amount1: "", amount2: "", error: "", success: "", loading: false },
+		admin_verify_bank: { show: false, token_id: null, user_id: null, user_name: "", user_email: "", bank_name: "", account_type: "", last4: "", amount1: "", amount2: "", error: "", success: "", loading: false },
+		pending_ach_verifications: [],
 		current_user_email: "<?php echo $user->email; ?>",
 		current_user_login: "<?php echo $user->login; ?>",
 		current_user_registered: "<?php echo $user->registered; ?>",
 		current_user_hash: "<?php echo $user->hash; ?>",
 		current_user_display_name: "<?php echo $user->display_name; ?>",
-		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->email; ?>", login: "<?php echo $user->login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", errors: [], tfa_activate: false, tfa_enabled: <?php echo $user->tfa_enabled; ?>, tfa_uri: "", tfa_token: "" },
+		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->email; ?>", login: "<?php echo $user->login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", pinned_environments: [], errors: [], tfa_activate: false, tfa_enabled: <?php echo $user->tfa_enabled; ?>, tfa_uri: "", tfa_token: "" },
 		stats: { from_at: "<?php echo date("Y-m-d", strtotime( date("Y-m-d" ). " -12 months" ) ); ?>", to_at: "<?php echo date("Y-m-d" ); ?>", from_at_select: false, to_at_select: false, grouping: "Month" },
 		role: "<?php echo $user->role; ?>",
 		dialog_processes: { show: false, processes: [], conn: {}, stream: [], loading: true },
@@ -11670,6 +11856,7 @@ const app = createApp({
 		if ( this.role == 'administrator' || this.role == 'owner' ) {
 			this.fetchAccountPortals()
 			this.fetchProcesses()
+			this.fetchPendingACHVerifications()
 		}
 		path = window.location.pathname.replace( this.configurations.path, "/" )
 		this.updateRoute( path )
@@ -11690,6 +11877,11 @@ const app = createApp({
 		}
 	},
 	computed: {
+		verifiedPaymentMethods() {
+			// Filter to only show verified payment methods (cards are always verified, ACH must be verified)
+			if ( !this.billing.payment_methods ) return []
+			return this.billing.payment_methods.filter( pm => pm.verified !== false )
+		},
 		groupedPushTargets() {
 			// Ensure targets is always an array
 			const targetsArray = Array.isArray(this.dialog_push_to_other.targets) ? this.dialog_push_to_other.targets : [];
@@ -16336,6 +16528,8 @@ const app = createApp({
 		},
 		addPaymentMethod() {
 			self = this
+			this.new_payment.loading = true
+			this.new_payment.error = ""
 			stripe.createSource( this.new_payment.card, {
 					type: "card",
 					currency: 'usd',
@@ -16354,6 +16548,8 @@ const app = createApp({
 				}).then(function(result) {
 					if ( result.error ) {
 						self.new_payment.error = result.error.message
+						self.new_payment.loading = false
+						return
 					}
 					var data = {
 						action: 'captaincore_account',
@@ -16362,18 +16558,276 @@ const app = createApp({
 					};
 					axios.post( ajaxurl, Qs.stringify( data ) )
 						.then( response => {
+							self.new_payment.loading = false
 							if ( response.data && response.data.error ) {
 								self.new_payment.error = response.data.error;
 								return;
 							}
 							self.fetchBilling()
-							self.new_payment = { card: {}, show: false, error: "" }
+							self.closeNewPaymentDialog()
 						})
 						.catch( error => {
 							console.log( error );
+							self.new_payment.loading = false
 							self.new_payment.error = "An unexpected error occurred. Please try again.";
 						} )
 			})
+		},
+		closeNewPaymentDialog() {
+			this.new_payment = { card: {}, show: false, error: "", success: "", type: "card", loading: false, account_holder_name: "" }
+		},
+		async addBankAccount() {
+			const self = this
+			this.new_payment.loading = true
+			this.new_payment.error = ""
+			this.new_payment.success = ""
+			
+			// Validate account holder name
+			if ( !this.new_payment.account_holder_name.trim() ) {
+				this.new_payment.error = "Please enter the account holder name"
+				this.new_payment.loading = false
+				return
+			}
+			
+			try {
+				// Step 1: Create SetupIntent on server via REST API
+				const setupResponse = await axios.post( '/wp-json/captaincore/v1/billing/ach/setup-intent', {}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
+				
+				if ( setupResponse.data.error ) {
+					this.new_payment.error = setupResponse.data.error
+					this.new_payment.loading = false
+					return
+				}
+				
+				const clientSecret = setupResponse.data.client_secret
+				const setupIntentId = setupResponse.data.setup_intent_id
+				
+				// Step 2: Collect bank account using Stripe.js Financial Connections
+				const { setupIntent, error } = await stripe.collectBankAccountForSetup({
+					clientSecret: clientSecret,
+					params: {
+						payment_method_type: 'us_bank_account',
+						payment_method_data: {
+							billing_details: {
+								name: this.new_payment.account_holder_name,
+								email: this.billing.address.email,
+							},
+						},
+					},
+					expand: ['payment_method'],
+				})
+				
+				if ( error ) {
+					this.new_payment.error = error.message
+					this.new_payment.loading = false
+					return
+				}
+				
+				// Check if user closed the modal without completing
+				if ( setupIntent.status === 'requires_payment_method' ) {
+					this.new_payment.loading = false
+					return
+				}
+				
+				// Step 3: If instant verification succeeded, confirm the SetupIntent
+				if ( setupIntent.status === 'requires_confirmation' ) {
+					const { setupIntent: confirmedIntent, error: confirmError } = await stripe.confirmUsBankAccountSetup(clientSecret)
+					
+					if ( confirmError ) {
+						this.new_payment.error = confirmError.message
+						this.new_payment.loading = false
+						return
+					}
+				}
+				
+				// Step 4: Save the payment method to WooCommerce via REST API
+				const saveResponse = await axios.post( '/wp-json/captaincore/v1/billing/ach/payment-method', {
+					setup_intent_id: setupIntentId
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
+				
+				this.new_payment.loading = false
+				
+				if ( saveResponse.data.error ) {
+					this.new_payment.error = saveResponse.data.error
+					return
+				}
+				
+				// Show success message
+				if ( saveResponse.data.verified ) {
+					this.new_payment.success = "Bank account added and verified successfully!"
+					setTimeout(() => {
+						this.fetchBilling()
+						this.closeNewPaymentDialog()
+					}, 2000)
+				} else {
+					this.new_payment.success = saveResponse.data.message
+					setTimeout(() => {
+						this.fetchBilling()
+						this.closeNewPaymentDialog()
+					}, 3000)
+				}
+				
+			} catch ( error ) {
+				console.log( error )
+				this.new_payment.loading = false
+				if ( error.response && error.response.data && error.response.data.message ) {
+					this.new_payment.error = error.response.data.message
+				} else {
+					this.new_payment.error = "An unexpected error occurred. Please try again."
+				}
+			}
+		},
+		openVerifyBankAccount( item ) {
+			this.verify_bank = {
+				show: true,
+				token_id: item.token,
+				amount1: "",
+				amount2: "",
+				error: "",
+				success: "",
+				loading: false
+			}
+		},
+		async verifyBankAccount() {
+			this.verify_bank.loading = true
+			this.verify_bank.error = ""
+			this.verify_bank.success = ""
+			
+			const amount1 = parseInt( this.verify_bank.amount1 )
+			const amount2 = parseInt( this.verify_bank.amount2 )
+			
+			if ( !amount1 || !amount2 || amount1 <= 0 || amount2 <= 0 ) {
+				this.verify_bank.error = "Please enter both deposit amounts in cents"
+				this.verify_bank.loading = false
+				return
+			}
+			
+			try {
+				const response = await axios.post( '/wp-json/captaincore/v1/billing/ach/verify', {
+					token_id: this.verify_bank.token_id,
+					amounts: [ amount1, amount2 ]
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
+				
+				this.verify_bank.loading = false
+				
+				if ( response && response.data && response.data.message ) {
+					this.verify_bank.success = response.data.message
+				} else {
+					this.verify_bank.success = "Bank account verified successfully!"
+				}
+				setTimeout(() => {
+					this.verify_bank.show = false
+					this.fetchBilling()
+				}, 2000)
+				
+			} catch ( error ) {
+				console.log( 'Verify error:', error )
+				console.log( 'Error response:', error.response )
+				this.verify_bank.loading = false
+				// Handle WordPress REST API error format
+				let errorMessage = "An unexpected error occurred. Please try again."
+				if ( error && error.response && error.response.data ) {
+					if ( error.response.data.message ) {
+						errorMessage = error.response.data.message
+					} else if ( error.response.data.data && error.response.data.data.message ) {
+						errorMessage = error.response.data.data.message
+					}
+				} else if ( error && error.message ) {
+					errorMessage = error.message
+				}
+				this.verify_bank.error = errorMessage
+			}
+		},
+		async fetchPendingACHVerifications() {
+			if ( this.role !== 'administrator' ) return
+			
+			try {
+				const response = await axios.get( '/wp-json/captaincore/v1/billing/ach/pending', {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
+				
+				if ( response.data && Array.isArray( response.data ) ) {
+					this.pending_ach_verifications = response.data
+				}
+			} catch ( error ) {
+				console.log( error )
+			}
+		},
+		openAdminVerifyBankAccount( item ) {
+			this.admin_verify_bank = {
+				show: true,
+				token_id: item.token_id,
+				user_id: item.user_id,
+				user_name: item.user_name,
+				user_email: item.user_email,
+				bank_name: item.bank_name,
+				account_type: item.account_type,
+				last4: item.last4,
+				amount1: "",
+				amount2: "",
+				error: "",
+				success: "",
+				loading: false
+			}
+		},
+		async adminVerifyBankAccount() {
+			this.admin_verify_bank.loading = true
+			this.admin_verify_bank.error = ""
+			this.admin_verify_bank.success = ""
+			
+			const amount1 = parseInt( this.admin_verify_bank.amount1 )
+			const amount2 = parseInt( this.admin_verify_bank.amount2 )
+			
+			if ( !amount1 || !amount2 || amount1 <= 0 || amount2 <= 0 ) {
+				this.admin_verify_bank.error = "Please enter both deposit amounts in cents"
+				this.admin_verify_bank.loading = false
+				return
+			}
+			
+			try {
+				const response = await axios.post( '/wp-json/captaincore/v1/billing/ach/admin-verify', {
+					token_id: this.admin_verify_bank.token_id,
+					user_id: this.admin_verify_bank.user_id,
+					amounts: [ amount1, amount2 ]
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
+				
+				this.admin_verify_bank.loading = false
+				
+				if ( response && response.data && response.data.message ) {
+					this.admin_verify_bank.success = response.data.message
+				} else {
+					this.admin_verify_bank.success = "Bank account verified successfully!"
+				}
+				setTimeout(() => {
+					this.admin_verify_bank.show = false
+					this.fetchPendingACHVerifications()
+				}, 2000)
+				
+			} catch ( error ) {
+				console.log( 'Admin verify error:', error )
+				console.log( 'Error response:', error.response )
+				this.admin_verify_bank.loading = false
+				// Handle WordPress REST API error format
+				let errorMessage = "An unexpected error occurred. Please try again."
+				if ( error && error.response && error.response.data ) {
+					if ( error.response.data.message ) {
+						errorMessage = error.response.data.message
+					} else if ( error.response.data.data && error.response.data.data.message ) {
+						errorMessage = error.response.data.data.message
+					}
+				} else if ( error && error.message ) {
+					errorMessage = error.message
+				}
+				this.admin_verify_bank.error = errorMessage
+			}
 		},
 		showAccount( account_id ) {
 			this.dialog_account.loading = true;
