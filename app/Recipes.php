@@ -32,5 +32,34 @@ class Recipes extends DB {
         return $recipes;
     }
 
+    public function verify( $recipe_id = "" ) {
+        $user    = new User;
+        $user_id = get_current_user_id();
+
+        // Admins can access all recipes
+        if ( $user->is_admin() ) {
+            return true;
+        }
+
+        // Check multiple recipe ids
+        if ( is_array( $recipe_id ) ) {
+            foreach ( $recipe_id as $id ) {
+                $recipe = self::get( $id );
+                if ( ! $recipe || $recipe->user_id != $user_id ) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // Check individual recipe id
+        $recipe = self::get( $recipe_id );
+        if ( $recipe && $recipe->user_id == $user_id ) {
+            return true;
+        }
+
+        return false;
+    }
+
 
 }
