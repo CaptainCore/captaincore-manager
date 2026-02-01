@@ -108,6 +108,196 @@ add_action( 'woocommerce_order_status_completed', function( $order_id ) {
     }
 }, 20, 1 );
 
+// 2. Newsletter Email (When a post is published)
+function captaincore_send_newsletter_on_publish( $new_status, $old_status, $post ) {
+    // Only trigger on new publish, not updates to already published posts
+    if ( $new_status !== 'publish' || $old_status === 'publish' ) {
+        return;
+    }
+
+    // Only for standard posts
+    if ( $post->post_type !== 'post' ) {
+        return;
+    }
+
+    // Prevent duplicate sends
+    if ( get_post_meta( $post->ID, '_captaincore_newsletter_sent', true ) ) {
+        return;
+    }
+
+    // Get all email subscribers
+    $subscribers = get_users( [ 'role' => 'email_subscriber' ] );
+
+    if ( empty( $subscribers ) ) {
+        return;
+    }
+
+    // Send to each subscriber
+    foreach ( $subscribers as $user ) {
+        \CaptainCore\Mailer::send_new_post_notification( $post->ID, $user );
+    }
+
+    // Store send history as JSON for admin display
+    $send_history = [
+        'sent_at'          => current_time( 'mysql' ),
+        'recipient_count'  => count( $subscribers ),
+    ];
+    update_post_meta( $post->ID, '_captaincore_newsletter_sent', wp_json_encode( $send_history ) );
+}
+add_action( 'transition_post_status', 'captaincore_send_newsletter_on_publish', 10, 3 );
+
+/* -------------------------------------------------------------------------
+ *  EMAIL SUBSCRIPTION MANAGEMENT
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Manage subscription to email newsletters (subscribe/unsubscribe via token)
+ */
+function captaincore_subscription_management() {
+    global $pagenow;
+
+    if ( 'wp-signup.php' !== $pagenow || ! isset( $_GET['id'], $_GET['email'], $_GET['token'], $_GET['action'] ) ) {
+        return;
+    }
+
+    $email    = sanitize_email( $_GET['email'] );
+    $home_url = get_home_url();
+    $user     = get_user_by( 'ID', absint( $_GET['id'] ) );
+
+    if ( ! $user || $user->user_email !== $email ) {
+        wp_die( "<p style='text-align:center'>Invalid email subscription token.</p>", "Manage subscription" );
+    }
+
+    $user_token = wp_hash( $user->user_registered );
+    if ( $_GET['token'] !== $user_token ) {
+        wp_die( "<p style='text-align:center'>Invalid email subscription token.</p>", "Manage subscription" );
+    }
+
+    $user_id    = $user->ID;
+    $user_email = $user->user_email;
+
+    if ( $_GET['action'] === 'subscribe' ) {
+        $user->add_role( 'email_subscriber' );
+        $html = "<p style='text-align:center'>Your email <strong>{$email}</strong> has been subscribed.<br>
+            <small>Click here to <a href='{$home_url}/wp-signup.php?id={$user_id}&email={$user_email}&token={$user_token}&action=unsubscribe'>unsubscribe</a></small></p>";
+        wp_die( $html, "Subscribe to email newsletters" );
+    }
+
+    if ( $_GET['action'] === 'unsubscribe' ) {
+        $user->remove_role( 'email_subscriber' );
+        $html = "<p style='text-align:center'>Your email <strong>{$email}</strong> has been unsubscribed.<br>
+            <small>Click here to <a href='{$home_url}/wp-signup.php?id={$user_id}&email={$user_email}&token={$user_token}&action=subscribe'>resubscribe</a></small></p>";
+        wp_die( $html, "Unsubscribe from email newsletters" );
+    }
+}
+add_action( 'init', 'captaincore_subscription_management' );
+
+/**
+ * Manage subscription signup via Gravity Forms confirmation
+ */
+function captaincore_subscription_signup() {
+    global $pagenow;
+
+    if ( 'wp-signup.php' !== $pagenow || ! isset( $_GET['entry_email'], $_GET['entry_id'], $_GET['action'] ) ) {
+        return;
+    }
+
+    if ( ! class_exists( 'GFAPI' ) ) {
+        return;
+    }
+
+    $entry   = GFAPI::get_entry( absint( $_GET['entry_id'] ) );
+    $form_id = $entry['form_id'] ?? null;
+
+    // Verify Form ID #4 (newsletter signup form)
+    if ( $form_id != '4' ) {
+        wp_die( "<p style='text-align:center'>Invalid email subscription signup link.</p>", "Manage subscription" );
+    }
+
+    $email = sanitize_email( $_GET['entry_email'] );
+    if ( ! $entry || empty( $entry[2] ) || $entry[2] !== $email ) {
+        wp_die( "<p style='text-align:center'>Invalid email subscription signup link.</p>", "Manage subscription" );
+    }
+
+    $home_url = get_home_url();
+    $user     = get_user_by( 'email', $email );
+
+    // Create user if needed
+    if ( ! $user ) {
+        $user_id = wp_insert_user( [
+            'user_login' => $email,
+            'user_email' => $email,
+            'role'       => 'email_subscriber',
+        ] );
+        $user = get_user_by( 'ID', $user_id );
+    }
+
+    $user_token = wp_hash( $user->user_registered );
+    $user_id    = $user->ID;
+    $user_email = $user->user_email;
+
+    if ( $_GET['action'] === 'subscribe_confirm' ) {
+        $user->add_role( 'email_subscriber' );
+        $html = "<p style='text-align:center'>Your email <strong>{$email}</strong> has been subscribed.<br>
+            <small>Click here to <a href='{$home_url}/wp-signup.php?id={$user_id}&email={$user_email}&token={$user_token}&action=unsubscribe'>unsubscribe</a></small></p>";
+        wp_die( $html, "Subscribe to email newsletters" );
+    }
+}
+add_action( 'init', 'captaincore_subscription_signup' );
+
+/**
+ * Register meta box for newsletter send history on post edit screen
+ */
+function captaincore_newsletter_meta_box() {
+    add_meta_box(
+        'captaincore_newsletter_status',
+        'Newsletter Status',
+        'captaincore_newsletter_meta_box_callback',
+        'post',
+        'side',
+        'default'
+    );
+}
+add_action( 'add_meta_boxes', 'captaincore_newsletter_meta_box' );
+
+/**
+ * Display newsletter send history in meta box
+ */
+function captaincore_newsletter_meta_box_callback( $post ) {
+    $send_history = get_post_meta( $post->ID, '_captaincore_newsletter_sent', true );
+
+    if ( empty( $send_history ) ) {
+        echo '<p style="color: #666;">Newsletter has not been sent for this post.</p>';
+        
+        // Show subscriber count for context
+        $subscribers = get_users( [ 'role' => 'email_subscriber', 'count_total' => true ] );
+        $count = count( $subscribers );
+        if ( $count > 0 ) {
+            echo '<p style="color: #666; font-size: 12px;">There are currently <strong>' . $count . '</strong> email subscribers.</p>';
+        }
+        return;
+    }
+
+    $history = json_decode( $send_history, true );
+
+    if ( is_array( $history ) && isset( $history['sent_at'] ) ) {
+        $sent_at         = $history['sent_at'];
+        $recipient_count = $history['recipient_count'] ?? 0;
+        $formatted_date  = date_i18n( 'F j, Y \a\t g:i a', strtotime( $sent_at ) );
+
+        echo '<div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 10px; border-radius: 4px;">';
+        echo '<p style="margin: 0 0 5px; color: #155724;"><strong>Sent successfully</strong></p>';
+        echo '<p style="margin: 0; font-size: 12px; color: #155724;">';
+        echo 'Sent <strong>' . $recipient_count . '</strong> email' . ( $recipient_count !== 1 ? 's' : '' ) . '<br>';
+        echo '<span style="color: #666;">' . esc_html( $formatted_date ) . '</span>';
+        echo '</p>';
+        echo '</div>';
+    } else {
+        // Legacy format (just timestamp string)
+        echo '<p style="color: #155724;">Newsletter sent on ' . esc_html( $send_history ) . '</p>';
+    }
+}
+
 function captaincore_missive_func( WP_REST_Request $request ) {
 
 	$key        = $request->get_header('X-Hook-Signature');

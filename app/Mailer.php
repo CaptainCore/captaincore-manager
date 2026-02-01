@@ -1043,4 +1043,93 @@ class Mailer {
         );
     }
 
+    /* -------------------------------------------------------------------------
+     *  HELPER: Make Images Responsive for Email
+     * ------------------------------------------------------------------------- */
+    private static function make_images_responsive( $content ) {
+        // Add responsive styles to all img tags
+        $content = preg_replace(
+            '/<img([^>]+)>/i',
+            '<img$1 style="max-width: 100% !important; height: auto !important;">',
+            $content
+        );
+        // Clean up any duplicate style attributes
+        $content = preg_replace( '/style="([^"]*)"([^>]*)style="([^"]*)"/i', 'style="$1 $3"$2', $content );
+        return $content;
+    }
+
+    /* -------------------------------------------------------------------------
+     *  HELPER: Generate Secure Unsubscribe URL
+     * ------------------------------------------------------------------------- */
+    public static function generate_unsubscribe_url( $user_id ) {
+        $user = get_user_by( 'ID', $user_id );
+        if ( ! $user ) {
+            return '';
+        }
+
+        $token = wp_hash( $user->user_registered );
+        return add_query_arg( [
+            'id'     => $user_id,
+            'email'  => $user->user_email,
+            'token'  => $token,
+            'action' => 'unsubscribe'
+        ], home_url( '/wp-signup.php' ) );
+    }
+
+    /* -------------------------------------------------------------------------
+     *  NEW POST NOTIFICATION (Newsletter to Subscribers)
+     * ------------------------------------------------------------------------- */
+    static public function send_new_post_notification( $post_id, $user ) {
+        $post = get_post( $post_id );
+        if ( ! $post || ! $user ) {
+            return;
+        }
+
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+
+        // Get post data
+        $post_title   = get_the_title( $post );
+        $post_content = apply_filters( 'the_content', $post->post_content );
+        $post_content = self::make_images_responsive( $post_content );
+        $permalink    = get_permalink( $post );
+        $author       = get_the_author_meta( 'display_name', $post->post_author );
+        $featured_img = get_the_post_thumbnail_url( $post, 'large' );
+        $unsubscribe  = self::generate_unsubscribe_url( $user->ID );
+
+        // Build featured image HTML
+        $featured_html = '';
+        if ( $featured_img ) {
+            $featured_html = "
+                <div style='margin-bottom: 25px;'>
+                    <img src='{$featured_img}' alt='" . esc_attr( $post_title ) . "' style='width: 100%; height: auto; display: block; border-radius: 4px;'>
+                </div>
+            ";
+        }
+
+        // Build content HTML
+        $content_html = "
+            {$featured_html}
+            <div style='font-size: 16px; line-height: 1.6; color: #4a5568;'>
+                {$post_content}
+            </div>
+            <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #edf2f7; text-align: center;'>
+                <p style='margin: 0 0 15px;'>
+                    <a href='{$permalink}' style='color: {$brand_color}; text-decoration: none; font-weight: 600;'>View on website &rarr;</a>
+                </p>
+                <p style='margin: 0; font-size: 12px; color: #a0aec0;'>
+                    <a href='{$unsubscribe}' style='color: #a0aec0; text-decoration: underline;'>Unsubscribe</a>
+                </p>
+            </div>
+        ";
+
+        self::send_email_with_layout(
+            $user->user_email,
+            "[New post] {$post_title}",
+            $post_title,
+            "By {$author}",
+            $content_html
+        );
+    }
+
 }
