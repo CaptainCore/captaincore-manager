@@ -22,16 +22,48 @@ class WebRiskCheck {
 	 * [--dry-run]
 	 * : Show what would be checked without calling the API.
 	 *
+	 * [--test]
+	 * : Send a test email with sample threat data.
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     wp captaincore web-risk-check
 	 *     wp captaincore web-risk-check --dry-run
+	 *     wp captaincore web-risk-check --test
 	 *
 	 * @param array $args       Positional arguments.
 	 * @param array $assoc_args Associative arguments.
 	 */
 	public static function run( $args = [], $assoc_args = [] ) {
 		$dry_run = isset( $assoc_args['dry-run'] );
+		$test    = isset( $assoc_args['test'] );
+
+		// Handle test mode - send sample email with fake threats
+		if ( $test ) {
+			\WP_CLI::log( 'Sending test email with sample threat data...' );
+
+			$sample_threats = [
+				[
+					'site_id'      => 123,
+					'site_name'    => 'example-site.com',
+					'home_url'     => 'https://example-site.com',
+					'threat_types' => [ 'MALWARE' ],
+					'expire_time'  => date( 'c', strtotime( '+1 day' ) ),
+				],
+				[
+					'site_id'      => 456,
+					'site_name'    => 'test-website.org',
+					'home_url'     => 'https://test-website.org',
+					'threat_types' => [ 'SOCIAL_ENGINEERING', 'UNWANTED_SOFTWARE' ],
+					'expire_time'  => date( 'c', strtotime( '+1 day' ) ),
+				],
+			];
+
+			self::send_summary_email( $sample_threats, 1307 );
+
+			\WP_CLI::success( 'Test email sent to ' . get_option( 'admin_email' ) );
+			return;
+		}
 
 		// Check if API key is configured (skip for dry-run)
 		if ( ! $dry_run && ! defined( 'GOOGLE_WEB_RISK_API_KEY' ) ) {
@@ -197,12 +229,12 @@ class WebRiskCheck {
 				</thead>
 				<tbody>%s</tbody>
 			</table>
-			<div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin-top: 20px;">
+			<div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin-top: 20px; text-align: left;">
 				<h4 style="margin: 0 0 10px; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;">Threat Type Reference</h4>
-				<ul style="margin: 0; padding-left: 20px; color: #4a5568; font-size: 13px; line-height: 1.8;">
-					<li><strong>MALWARE</strong> - Site may be distributing malicious software</li>
-					<li><strong>SOCIAL_ENGINEERING</strong> - Site may be involved in phishing or deceptive practices</li>
-					<li><strong>UNWANTED_SOFTWARE</strong> - Site may be distributing unwanted software</li>
+				<ul style="margin: 0; padding-left: 20px; color: #4a5568; font-size: 13px; line-height: 1.8; text-align: left;">
+					<li style="text-align: left;"><strong>MALWARE</strong> - Site may be distributing malicious software</li>
+					<li style="text-align: left;"><strong>SOCIAL_ENGINEERING</strong> - Site may be involved in phishing or deceptive practices</li>
+					<li style="text-align: left;"><strong>UNWANTED_SOFTWARE</strong> - Site may be distributing unwanted software</li>
 				</ul>
 			</div>',
 			$table_rows
