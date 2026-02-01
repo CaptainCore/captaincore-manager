@@ -3413,15 +3413,6 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
-		'captaincore/v1', '/sites/vulnerability-scans', [
-			'methods'             => 'GET',
-			'callback'            => 'captaincore_sites_vulnerability_scans_func',
-			'permission_callback' => 'captaincore_permission_check',
-			'show_in_index'       => false,
-		]
-	);
-
-	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/logs/fetch', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_site_logs_fetch_func',
