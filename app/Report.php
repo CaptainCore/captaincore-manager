@@ -1957,8 +1957,15 @@ class Report {
 
                 if ( isset( $start_plugins[ $plugin->name ] ) ) {
                     // Plugin exists in both - check for update
-                    $old_version = $start_plugins[ $plugin->name ]->version;
-                    if ( version_compare( $plugin->version, $old_version, '>' ) ) {
+                    $old_version = $start_plugins[ $plugin->name ]->version ?? '';
+                    // If old_version is empty, treat as newly added plugin
+                    if ( empty( $old_version ) ) {
+                        $added_plugins[] = [
+                            'name'    => $plugin->name,
+                            'title'   => $plugin->title,
+                            'version' => $plugin->version,
+                        ];
+                    } elseif ( version_compare( $plugin->version, $old_version, '>' ) ) {
                         $updated_plugins[] = [
                             'name'        => $plugin->name,
                             'title'       => $plugin->title,
@@ -2003,8 +2010,15 @@ class Report {
 
                 if ( isset( $start_themes[ $theme->name ] ) ) {
                     // Theme exists in both - check for update
-                    $old_version = $start_themes[ $theme->name ]->version;
-                    if ( version_compare( $theme->version, $old_version, '>' ) ) {
+                    $old_version = $start_themes[ $theme->name ]->version ?? '';
+                    // If old_version is empty, treat as newly added theme
+                    if ( empty( $old_version ) ) {
+                        $added_themes[] = [
+                            'name'    => $theme->name,
+                            'title'   => $theme->title,
+                            'version' => $theme->version,
+                        ];
+                    } elseif ( version_compare( $theme->version, $old_version, '>' ) ) {
                         $updated_themes[] = [
                             'name'        => $theme->name,
                             'title'       => $theme->title,
