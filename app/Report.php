@@ -1889,7 +1889,7 @@ class Report {
         $quicksaves = $site->quicksaves( "production" );
 
         if ( empty( $quicksaves ) || ! is_array( $quicksaves ) ) {
-            return [ 'plugins' => [], 'themes' => [] ];
+            return [ 'plugins' => [], 'themes' => [], 'added_plugins' => [], 'added_themes' => [], 'removed_plugins' => [], 'removed_themes' => [] ];
         }
 
         // Find quicksave closest to start date (before or at start)
@@ -1919,11 +1919,11 @@ class Report {
 
         // If no end quicksave or same as start, no updates to report
         if ( $end_quicksave === null || $start_quicksave === null ) {
-            return [ 'plugins' => [], 'themes' => [] ];
+            return [ 'plugins' => [], 'themes' => [], 'added_plugins' => [], 'added_themes' => [], 'removed_plugins' => [], 'removed_themes' => [] ];
         }
 
         if ( $start_quicksave->hash === $end_quicksave->hash ) {
-            return [ 'plugins' => [], 'themes' => [] ];
+            return [ 'plugins' => [], 'themes' => [], 'added_plugins' => [], 'added_themes' => [], 'removed_plugins' => [], 'removed_themes' => [] ];
         }
 
         // Fetch full details of both quicksaves
@@ -1932,7 +1932,7 @@ class Report {
         $end_details   = $qs_helper->get( $end_quicksave->hash, "production" );
 
         if ( empty( $start_details ) || empty( $end_details ) ) {
-            return [ 'plugins' => [], 'themes' => [] ];
+            return [ 'plugins' => [], 'themes' => [], 'added_plugins' => [], 'added_themes' => [], 'removed_plugins' => [], 'removed_themes' => [] ];
         }
 
         $updated_plugins = [];
