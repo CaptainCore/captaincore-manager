@@ -4465,6 +4465,193 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// ACH Bank Account Payment Methods
+	register_rest_route(
+		'captaincore/v1', '/billing/ach/setup-intent', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_ach_create_setup_intent',
+			'permission_callback' => function() {
+				return is_user_logged_in();
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/billing/ach/payment-method', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_ach_add_payment_method',
+			'permission_callback' => function() {
+				return is_user_logged_in();
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/billing/ach/verify', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_ach_verify_bank_account',
+			'permission_callback' => function() {
+				return is_user_logged_in();
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/billing/ach/pending', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_ach_get_pending_verifications',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/billing/ach/admin-verify', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_ach_admin_verify_bank_account',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+};
+
+/**
+ * REST endpoint: Create SetupIntent for ACH bank account collection
+ */
+function captaincore_ach_create_setup_intent( WP_REST_Request $request ) {
+	$user = new CaptainCore\User();
+	$result = $user->create_ach_setup_intent();
+	
+	if ( isset( $result->error ) ) {
+		return new WP_Error( 'setup_intent_error', $result->error, [ 'status' => 400 ] );
+	}
+	
+	return rest_ensure_response( $result );
+}
+
+/**
+ * REST endpoint: Add ACH payment method after SetupIntent completion
+ */
+function captaincore_ach_add_payment_method( WP_REST_Request $request ) {
+	
+	$params = $request->get_json_params();
+	$setup_intent_id = sanitize_text_field( $params['setup_intent_id'] ?? '' );
+	
+	if ( empty( $setup_intent_id ) ) {
+		return new WP_Error( 'missing_param', 'setup_intent_id is required', [ 'status' => 400 ] );
+	}
+	
+	$user = new CaptainCore\User();
+	$result = $user->add_ach_payment_method( $setup_intent_id );
+	
+	if ( isset( $result->error ) ) {
+		return new WP_Error( 'add_payment_error', $result->error, [ 'status' => 400 ] );
+	}
+	
+	return rest_ensure_response( $result );
+}
+
+/**
+ * REST endpoint: Verify bank account using micro-deposit amounts
+ */
+function captaincore_ach_verify_bank_account( WP_REST_Request $request ) {
+	$params = $request->get_json_params();
+	$token_id = $params['token_id'] ?? '';
+	$amounts = $params['amounts'] ?? [];
+	
+	// Handle both ACH tokens (string like "ach_xxx") and legacy WC tokens (integer)
+	if ( is_numeric( $token_id ) ) {
+		$token_id = intval( $token_id );
+	} else {
+		$token_id = sanitize_text_field( $token_id );
+	}
+	
+	if ( empty( $token_id ) ) {
+		return new WP_Error( 'missing_param', 'token_id is required', [ 'status' => 400 ] );
+	}
+	
+	if ( ! is_array( $amounts ) || count( $amounts ) !== 2 ) {
+		return new WP_Error( 'invalid_amounts', 'Two deposit amounts are required', [ 'status' => 400 ] );
+	}
+	
+	$amounts = array_map( 'intval', $amounts );
+	
+	$user = new CaptainCore\User();
+	$result = $user->verify_bank_account( $token_id, $amounts );
+	
+	if ( isset( $result->error ) ) {
+		return new WP_Error( 'verify_error', $result->error, [ 'status' => 400 ] );
+	}
+	
+	return rest_ensure_response( $result );
+}
+
+/**
+ * REST endpoint: Get all pending ACH verifications (admin only)
+ */
+function captaincore_ach_get_pending_verifications( WP_REST_Request $request ) {
+	$pending = CaptainCore\User::get_pending_ach_verifications();
+	return rest_ensure_response( $pending );
+}
+
+/**
+ * REST endpoint: Admin verify bank account on behalf of customer
+ */
+function captaincore_ach_admin_verify_bank_account( WP_REST_Request $request ) {
+	$params = $request->get_json_params();
+	$token_id = $params['token_id'] ?? '';
+	$user_id = intval( $params['user_id'] ?? 0 );
+	$amounts = $params['amounts'] ?? [];
+	
+	// Handle both ACH tokens (string like "ach_xxx") and legacy WC tokens (integer)
+	if ( is_numeric( $token_id ) ) {
+		$token_id = intval( $token_id );
+	} else {
+		$token_id = sanitize_text_field( $token_id );
+	}
+	
+	if ( empty( $token_id ) ) {
+		return new WP_Error( 'missing_param', 'token_id is required', [ 'status' => 400 ] );
+	}
+	
+	if ( ! is_array( $amounts ) || count( $amounts ) !== 2 ) {
+		return new WP_Error( 'invalid_amounts', 'Two deposit amounts are required', [ 'status' => 400 ] );
+	}
+	
+	$amounts = array_map( 'intval', $amounts );
+	
+	// For ACH tokens stored in user meta, we need the user_id
+	if ( is_string( $token_id ) && strpos( $token_id, 'ach_' ) === 0 ) {
+		if ( empty( $user_id ) ) {
+			return new WP_Error( 'missing_param', 'user_id is required for ACH tokens', [ 'status' => 400 ] );
+		}
+		$token_owner = new CaptainCore\User( $user_id, true );
+	} else {
+		// Get the WC token to find the owner
+		$token = WC_Payment_Tokens::get( $token_id );
+		if ( ! $token ) {
+			return new WP_Error( 'token_not_found', 'Payment token not found', [ 'status' => 404 ] );
+		}
+		$token_owner = new CaptainCore\User( $token->get_user_id(), true );
+	}
+	
+	$result = $token_owner->verify_bank_account( $token_id, $amounts );
+	
+	if ( isset( $result->error ) ) {
+		return new WP_Error( 'verify_error', $result->error, [ 'status' => 400 ] );
+	}
+	
+	return rest_ensure_response( $result );
+}
+
 /**
  * REST endpoint: Send maintenance report email
  */
