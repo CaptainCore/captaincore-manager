@@ -81,6 +81,7 @@ add_action( 'schedule_mailgun_retry', '\CaptainCore\Providers\Mailgun::setup', 1
  * ------------------------------------------------------------------------- */
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command( 'captaincore web-risk-check', [ 'CaptainCore\WebRiskCheck', 'run' ] );
+	WP_CLI::add_command( 'captaincore scheduled-reports', 'CaptainCore\ScheduledReportsCLI' );
 }
 
 /* -------------------------------------------------------------------------
