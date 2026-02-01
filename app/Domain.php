@@ -369,7 +369,22 @@ class Domain {
             $mailgun_domain = \CaptainCore\Remote\Mailgun::post( "v4/domains", [ 'name' => $domain->name ] );
         }
 
-        if ( empty( $mailgun_domain->domain ) && empty( $mailgun_domain->name ) ) {
+        // Check for errors from Mailgun API
+        if ( ! empty( $mailgun_domain->errors ) ) {
+            return new \WP_Error( 'api_error', 'Mailgun API error: ' . json_encode( $mailgun_domain->errors ) );
+        }
+
+        // Handle different response structures from GET vs POST
+        // GET /v4/domains/{name} returns: { "name": "...", "receiving_dns_records": [...], ... }
+        // POST /v4/domains returns: { "domain": { "name": "..." }, "receiving_dns_records": [...], ... }
+        if ( ! empty( $mailgun_domain->domain ) ) {
+            // POST response - domain info is nested under 'domain' key
+            $mailgun_domain_info = $mailgun_domain->domain;
+        } elseif ( ! empty( $mailgun_domain->name ) ) {
+            // GET response - domain info is at root level
+            $mailgun_domain_info = $mailgun_domain;
+        } else {
+            error_log( 'CaptainCore: Unexpected Mailgun response for ' . $domain->name . ': ' . json_encode( $mailgun_domain ) );
             return new \WP_Error( 'api_error', 'Failed to create or retrieve domain on Mailgun.' );
         }
 
@@ -472,14 +487,14 @@ class Domain {
         wp_schedule_single_event( time() + 60, 'schedule_mailgun_verify', [ $domain->name ] );
 
         // 6. Save the Mailgun forwarding ID to domain details
-        $details->mailgun_forwarding_id = $mailgun_domain->domain->id ?? $mailgun_domain->id ?? $domain->name;
+        $details->mailgun_forwarding_id = $mailgun_domain_info->id ?? $domain->name;
         ( new Domains )->update( [ "details" => json_encode( $details ) ], [ "domain_id" => $this->domain_id ] );
 
         // Return a response object for the frontend
         return (object) [
             'id'                => $details->mailgun_forwarding_id,
             'name'              => $domain->name,
-            'mailgun_domain'    => $mailgun_domain->domain ?? $mailgun_domain,
+            'mailgun_domain'    => $mailgun_domain_info,
             'has_mx_record'     => true,
             'forwarding_active' => true,
         ];
