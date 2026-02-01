@@ -1398,7 +1398,16 @@ class User {
     }
 
     public function fetch() {
-        $user     = get_user_by( "ID", $this->user_id );
+        $user = get_user_by( "ID", $this->user_id );
+        if ( ! $user ) {
+            return [
+                "user_id"     => $this->user_id,
+                "account_ids" => [],
+                "username"    => "",
+                "email"       => "",
+                "name"        => "Unknown User",
+            ];
+        }
         $record = [
             "user_id"     => $this->user_id,
             "account_ids" => $this->accounts(),
