@@ -110,7 +110,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-divider></v-divider>
 			<v-list-subheader>Developers</v-list-subheader>
 			<v-list-item link :href="`${configurations.path}cookbook`" @click.prevent="goToPath('/cookbook')" title="Cookbook" prepend-icon="mdi-code-tags"></v-list-item>
-			<v-list-item link :href="`${configurations.path}vulnerability-scans`" @click.prevent="goToPath('/vulnerability-scans')" title="Vulnerability Scans" v-show="role == 'administrator'" prepend-icon="mdi-lock-open-alert"></v-list-item>
 			<v-list-item link :href="`${configurations.path}health`" @click.prevent="goToPath('/health')" title="Health" prepend-icon="mdi-ladybug"></v-list-item>
 			
 			<v-list-subheader v-show="role == 'administrator' || role == 'owner'">Administrator</v-list-subheader>
@@ -7449,93 +7448,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-card-text>
 			</v-card>
-			<v-card v-if="route == 'vulnerability-scans'" flat border="thin" rounded="xl">
-				<v-toolbar flat color="transparent">
-					<v-toolbar-title>Listing vulnerabilities</v-toolbar-title>
-					<v-spacer></v-spacer>
-					<v-toolbar-items>
-					</v-toolbar-items>
-				</v-toolbar>
-				<v-card-text>
-				<v-alert type="info" variant="text">
-						Results from daily scans of using Wordfence.
-				</v-alert>
-					<v-card v-for="plugin in vulnerabilities.plugin" class="mb-2">
-					<v-toolbar light flat>
-						<v-toolbar-title>{{ plugin.title }}</v-toolbar-title>
-						<v-spacer></v-spacer>
-						<v-toolbar-items>
-							<v-btn size="small" density="compact" text @click="scanErrors( plugin.environments.map( env => env.enviroment_id ) )">
-								Sync <v-icon class="ml-1">mdi-sync</v-icon>
-							</v-btn>
-							<v-dialog :transition="false" max-width="800">
-								<template v-slot:activator="{ props }">
-								<v-btn v-bind="props" size="small" density="compact" text>
-									Console <v-icon class="ml-1">mdi-console</v-icon> 
-								</v-btn>
-								</template>
-								<template v-slot:default="{ isActive }">
-								<v-card>
-									<v-toolbar flat dark color="primary" class="mb-3">
-										<v-btn icon dark @click="isActive.value = false">
-											<v-icon>mdi-close</v-icon>
-										</v-btn>
-										<v-toolbar-title>Console</v-toolbar-title>
-										<v-spacer></v-spacer>
-									</v-toolbar>
-									<v-card-text>
-									<v-chip size="small" label v-for="enviroment in plugin.environments" class="mr-1 mb-1">{{ enviroment.home_url }}</v-chip>
-									<v-textarea
-										auto-grow
-										outlined
-										rows="4"
-										dense
-										hint="Custom bash script or WP-CLI commands"
-										persistent-hint
-										:model-value="script.code"
-										@update:model-value="script.code = $event"
-										spellcheck="false"
-										class="code mt-1"
-									>
-									</v-textarea>
-									<v-btn size="small" color="primary" dark @click="runCustomCodeBulkEnvironments( plugin.environments )">Run Custom Code</v-btn>
-									</v-card-text>
-								</v-card>
-								</template>
-							</v-dialog>
-							<v-btn size="small" density="compact" text @click="showLogEntry( plugin.environments.map( env => env.enviroment_id ) )" v-show="role == 'administrator'">
-								Log <v-icon class="ml-1">mdi-check</v-icon>
-							</v-btn>
-							<v-chip class="mt-4 ml-2" label :input-value="true">{{ plugin.environments.length }} affected environments</v-chip>
-						</v-toolbar-items>
-					</v-toolbar>
-					<v-table density="compact" class="disable_hover">
-						<template v-slot:default>
-						<tbody>
-							<tr v-for="enviroment in plugin.environments">
-							<td style="width:100px">{{ enviroment.home_url }}</td>
-							<td><v-chip label small>{{ enviroment.environment }}</v-chip> 
-							<v-menu open-on-hover offset-y v-for="vulnerability in enviroment.vulnerabilities">
-							<template v-slot:activator="{ props }">
-								<v-chip v-bind="props" class="mr-1" link label size="small" :href="vulnerability.link" target="_blank" :color="cvssClass(vulnerability.cvss_rating)">
-								{{ vulnerability.cvss_score || "-" }}
-								</v-chip>
-							</template>
-							<v-card max-width="500px">
-								<v-card-title>{{ vulnerability.cve }}</v-card-title>
-								<v-card-subtitle>{{ vulnerability.title }}</v-card-subtitle>
-								<v-card-text>
-									<strong>{{ vulnerability.remediation }}</strong>
-								</v-card-text>
-							</v-card>
-							</v-menu>
-							</tr>
-						</tbody>
-						</template>
-					</v-table>
-					</v-card>
-				</v-card-text>
-			</v-card>
 			<v-card v-if="route == 'cookbook'" flat border="thin" rounded="xl">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing {{ filteredRecipes.length }} recipes</v-toolbar-title>
@@ -12620,10 +12532,6 @@ const app = createApp({
 				if (this.sites.length == 0) this.loading_page = true;
 				this.selected_nav = "";
 				this.fetchSites();
-			}
-
-			if (this.route == "vulnerability-scans") {
-				this.fetchVulnerabilityScans();
 			}
 
 			if (this.route == "web-risk") {
