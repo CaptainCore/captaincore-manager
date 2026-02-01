@@ -787,7 +787,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-card-text class="text-body-1">
 					This domain already has existing MX records. Activating email forwarding will
 					<strong>delete all existing MX records</strong>
-					and replace them with the ones required by Forward Email.
+					and replace them with the ones required by Mailgun.
 					<br><br>
 					Are you sure you want to proceed?
 				</v-card-text>
@@ -4053,7 +4053,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-row>
 						</template>
 					</v-data-iterator>
-
 					<v-data-table
 						v-if="toggle_site === 'table' || toggle_site === true"
 						v-model="sites_selected"
@@ -6643,7 +6642,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-tab value="domain">
 								Domain Management <v-icon class="ml-1" icon="mdi-account-box"></v-icon>
 							</v-tab>
-							<v-tab value="email-forwarding" v-if="dialog_domain.details.forward_email_id" @click="fetchEmailForwards">
+							<v-tab value="email-forwarding" v-if="dialog_domain.details.mailgun_forwarding_id" @click="fetchEmailForwards">
 								Email Forwarding <v-icon class="ml-1" icon="mdi-email-arrow-right"></v-icon>
 							</v-tab>
 							<v-tab value="mailgun" v-if="dialog_domain.details.mailgun_id">
@@ -7101,37 +7100,101 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-window-item>
 						<v-window-item value="email-forwarding" :transition="false" :reverse-transition="false">
 
-								<v-alert
-									v-if="!dialog_domain.forwards_domain.loading && dialog_domain.forwards_domain.data && (!dialog_domain.forwards_domain.data.has_mx_record || !dialog_domain.forwards_domain.data.has_txt_record)"
-									type="info"
-									variant="tonal"
-									class="ma-4"
-									border="start"
-								>
-									<v-alert-title>Domain Not Yet Verified</v-alert-title>
-									<p>Your domain's DNS records have not yet been verified by Forward Email. Please ensure the following records are correctly added to your domain's DNS settings.</p>
-									
-									<v-list density="compact" bg-color="transparent" class="mt-2">
-										<v-list-item prepend-icon="mdi-table" title="MX Record (Priority 10)">
-											<v-list-item-subtitle>mx1.forwardemail.net</v-list-item-subtitle>
-										</v-list-item>
-										<v-list-item prepend-icon="mdi-table" title="MX Record (Priority 10)">
-											<v-list-item-subtitle>mx2.forwardemail.net</v-list-item-subtitle>
-										</v-list-item>
-										<v-list-item prepend-icon="mdi-table" title="TXT Record (@)">
-											<v-list-item-subtitle>forward-email-site-verification={{ dialog_domain.forwards_domain.data.verification_record }}</v-list-item-subtitle>
-										</v-list-item>
-									</v-list>
+								<v-container v-if="dialog_domain.forwards_domain.loading" class="text-center pa-5">
+									<v-progress-circular indeterminate color="primary" size="32"></v-progress-circular>
+									<p class="mt-3 mb-0">Loading verification status...</p>
+								</v-container>
 
-									<v-btn
-										color="primary"
-										@click="verifyForwardEmailDns(dialog_domain.domain.domain_id)"
-										:loading="dialog_domain.forwards_domain.loading"
-										class="mt-2"
-									>
-										Verify DNS Records
-									</v-btn>
-								</v-alert>
+								<div v-else-if="dialog_domain.forwards_domain.data && dialog_domain.forwards_domain.data.state !== 'active'">
+									<v-alert type="warning" variant="tonal" class="ma-4" border="start">
+										<v-alert-title>Domain Not Yet Verified</v-alert-title>
+										<p>Please add the following DNS records to verify your domain with Mailgun for email forwarding.</p>
+									</v-alert>
+
+									<v-card variant="tonal" class="mx-4 mb-4 pa-2" v-if="dialog_domain.forwards_domain.data.sending_dns_records && dialog_domain.forwards_domain.data.sending_dns_records.length > 0">
+										<div class="text-subtitle-1 font-weight-bold">Sending/Verification Records</div>
+										<v-list density="compact" class="py-0" bg-color="transparent">
+											<template v-for="(record, index) in dialog_domain.forwards_domain.data.sending_dns_records" :key="'send-'+index">
+												<div class="px-2 pt-2">
+													<v-list-item-subtitle class="py-1 align-center">
+														<v-icon 
+															:icon="record.valid == 'valid' ? 'mdi-check-circle' : 'mdi-close-circle'"
+															:color="record.valid == 'valid' ? 'success' : 'error'"
+															size="small"
+															class="mr-2"
+														></v-icon>
+														{{ record.record_type }} record
+													</v-list-item-subtitle>
+													<v-list-item
+														@click="copyText(record.name)"
+														title="Name"
+														:subtitle="record.name"
+														append-icon="mdi-content-copy"
+														class="copyable-list-item ml-3"
+													>
+														<template v-slot:subtitle="{ subtitle }">
+															<code style="word-break: break-all; white-space: normal;">{{ subtitle }}</code>
+														</template>
+													</v-list-item>
+													<v-list-item
+														@click="copyText(record.value)"
+														title="Value"
+														:subtitle="record.value"
+														append-icon="mdi-content-copy"
+														class="copyable-list-item ml-3"
+													>
+														<template v-slot:subtitle="{ subtitle }">
+															<code style="word-break: break-all; white-space: normal;">{{ subtitle }}</code>
+														</template>
+													</v-list-item>
+												</div>
+												<v-divider v-if="index < dialog_domain.forwards_domain.data.sending_dns_records.length - 1" class="mt-2"></v-divider>
+											</template>
+										</v-list>
+									</v-card>
+
+									<v-card variant="tonal" class="mx-4 mb-4 pa-2" v-if="dialog_domain.forwards_domain.data.receiving_dns_records && dialog_domain.forwards_domain.data.receiving_dns_records.length > 0">
+										<div class="text-subtitle-1 font-weight-bold">Receiving Records (MX)</div>
+										<v-list density="compact" class="py-0" bg-color="transparent">
+											<template v-for="(record, index) in dialog_domain.forwards_domain.data.receiving_dns_records" :key="'rec-'+index">
+												<div class="px-2 pt-2">
+													<v-list-item-subtitle class="py-1 align-center">
+														<v-icon 
+															:icon="record.valid == 'valid' ? 'mdi-check-circle' : 'mdi-close-circle'"
+															:color="record.valid == 'valid' ? 'success' : 'error'"
+															size="small"
+															class="mr-2"
+														></v-icon>
+														{{ record.record_type }} record (Priority {{ record.priority }})
+													</v-list-item-subtitle>
+													<v-list-item
+														@click="copyText(record.value)"
+														title="Value"
+														:subtitle="record.value"
+														append-icon="mdi-content-copy"
+														class="copyable-list-item ml-3"
+													>
+														<template v-slot:subtitle="{ subtitle }">
+															<code style="word-break: break-all; white-space: normal;">{{ subtitle }}</code>
+														</template>
+													</v-list-item>
+												</div>
+												<v-divider v-if="index < dialog_domain.forwards_domain.data.receiving_dns_records.length - 1" class="mt-2"></v-divider>
+											</template>
+										</v-list>
+									</v-card>
+
+									<div class="mx-4 mb-4">
+										<v-btn
+											color="primary"
+											@click="verifyForwardEmailDns(dialog_domain.domain.domain_id)"
+											:loading="dialog_domain.forwards_domain.loading"
+										>
+											<v-icon icon="mdi-refresh" class="mr-2"></v-icon>
+											Verify DNS Records
+										</v-btn>
+									</div>
+								</div>
 
 								<v-toolbar flat density="compact" color="transparent">
 									<v-toolbar-title v-show="!dialog_domain.forwards.loading"><small>{{ dialog_domain.forwards.items.length }} email forwards</small></v-toolbar-title>
@@ -7147,7 +7210,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									:headers="[
 										{ title: 'Alias (Prefix)', key: 'name', width: '200px' },
 										{ title: 'Forwarding To (Recipients)', key: 'recipients_string' },
-										{ title: 'Enabled', key: 'is_enabled', width: '100px' },
 										{ title: 'Actions', key: 'actions', width: '120px', align: 'end', sortable: false }
 									]"
 									:items="dialog_domain.forwards.items"
@@ -7158,18 +7220,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								>
 									<template v-slot:item.name="{ item }">
 										<code>{{ item.name }}</code>
-									</template>
-									<template v-slot:item.is_enabled="{ item }">
-										<v-switch
-											v-model="item.is_enabled"
-											@update:model-value="inlineUpdateEmailForward(item, $event)"
-											color="primary"
-											inset
-											hide-details
-											density="compact"
-											:loading="dialog_domain.forwards.loading"
-											:disabled="dialog_domain.forwards.loading"
-										></v-switch>
 									</template>
 									<template v-slot:item.actions="{ item }">
 										<v-btn variant="text" icon="mdi-pencil" color="primary" density="compact" @click="editEmailForward(item)" :disabled="dialog_domain.forwards.loading"></v-btn>
@@ -7202,14 +7252,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 													auto-grow
 													class="mt-4"
 												></v-textarea>
-												<v-switch
-													v-model="dialog_domain.forwards.edited_item.is_enabled"
-													label="Enabled"
-													color="primary"
-													inset
-													hide-details
-													class="mt-4"
-												></v-switch>
 											</v-container>
 										</v-card-text>
 										<v-card-actions>
@@ -7217,6 +7259,190 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											<v-btn variant="text" @click="closeEmailForwardDialog()">Cancel</v-btn>
 											<v-btn color="primary" @click="saveEmailForward()" :loading="dialog_domain.forwards.loading">Save</v-btn>
 										</v-card-actions>
+									</v-card>
+								</v-dialog>
+
+								<v-divider class="my-4"></v-divider>
+
+								<v-toolbar flat density="compact" color="transparent">
+									<v-toolbar-title>
+										<small>Email Forwarding Logs</small>
+										<span v-if="dialog_domain.forwarding_logs.items.length" class="text-caption ml-2">
+											({{ dialog_domain.forwarding_logs.items.length }})
+										</span>
+									</v-toolbar-title>
+									<v-spacer></v-spacer>
+									<v-toolbar-items>
+										<v-btn variant="text" @click="fetchEmailForwardingLogs()" :loading="dialog_domain.forwarding_logs.loading">
+											<v-icon icon="mdi-refresh" class="mr-1"></v-icon> Refresh
+										</v-btn>
+									</v-toolbar-items>
+								</v-toolbar>
+
+								<v-container v-if="dialog_domain.forwarding_logs.loading && dialog_domain.forwarding_logs.items.length === 0" class="text-center pa-5">
+									<v-progress-circular indeterminate color="primary" size="32"></v-progress-circular>
+									<p class="mt-3 mb-0">Loading logs...</p>
+								</v-container>
+
+								<v-alert v-else-if="!dialog_domain.forwarding_logs.items || dialog_domain.forwarding_logs.items.length === 0" type="info" variant="tonal" class="ma-4">
+									No email forwarding logs found. Logs will appear here once emails are received and forwarded.
+								</v-alert>
+
+								<v-data-table
+									v-else
+									:headers="[
+										{ title: 'Timestamp', key: 'timestamp', sortable: false, width: '194px' },
+										{ title: 'Event', key: 'event', sortable: false, width: '94px' },
+										{ title: 'From', key: 'from', sortable: false },
+										{ title: 'To', key: 'to', sortable: false },
+										{ title: 'Subject', key: 'subject', sortable: false },
+									]"
+									:items="dialog_domain.forwarding_logs.items"
+									:items-per-page="-1"
+									hide-default-footer
+									density="comfortable"
+								>
+									<template v-slot:item="{ item }">
+										<tr :key="item.id || item.timestamp" @click="viewForwardingLogDetails(item)" style="cursor: pointer" class="v-data-table__tr">
+											<td class="text-caption">{{ new Date(item.timestamp * 1000).toLocaleString() }}</td>
+											<td>
+												<v-chip size="x-small" label :color="item.event === 'failed' ? 'error' : (item.event === 'delivered' ? 'success' : (item.event === 'stored' ? 'info' : 'primary'))">
+													{{ item.event }}
+												</v-chip>
+											</td>
+											<td class="text-caption">
+												<div style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+													{{ item.message?.headers?.from || item.envelope?.sender || '-' }}
+												</div>
+											</td>
+											<td class="text-caption">
+												<div style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+													{{ item.message?.headers?.to || item.recipient || '-' }}
+												</div>
+											</td>
+											<td class="text-caption">
+												<div style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+													{{ item.message?.headers?.subject || '-' }}
+												</div>
+											</td>
+										</tr>
+									</template>
+
+									<template v-slot:loading>
+										<v-skeleton-loader type="table-row@5"></v-skeleton-loader>
+									</template>
+
+									<template v-slot:no-data>
+										<div class="pa-4 text-center">No email forwarding logs available.</div>
+									</template>
+								</v-data-table>
+
+								<div class="text-center pa-4" v-if="dialog_domain.forwarding_logs.paging && dialog_domain.forwarding_logs.paging.next">
+									<v-btn 
+										variant="outlined" 
+										@click="loadMoreEmailForwardingLogs()" 
+										:loading="dialog_domain.forwarding_logs.loadingMore"
+									>
+										Load More
+									</v-btn>
+								</div>
+
+								<v-dialog v-model="dialog_forwarding_log_details.show" max-width="800px" scrollable>
+									<v-card>
+										<v-toolbar color="primary" flat>
+											<v-btn icon="mdi-close" @click="dialog_forwarding_log_details.show = false"></v-btn>
+											<v-toolbar-title>Event Details</v-toolbar-title>
+										</v-toolbar>
+										<v-card-text class="pa-0">
+											<v-container>
+												<v-row>
+													<v-col cols="12" md="6">
+														<v-list density="compact" class="pa-0">
+															<v-list-subheader class="px-4">General</v-list-subheader>
+															<v-list-item>
+																<v-list-item-title>Timestamp</v-list-item-title>
+																<v-list-item-subtitle>{{ new Date(dialog_forwarding_log_details.item.timestamp * 1000).toLocaleString() }}</v-list-item-subtitle>
+															</v-list-item>
+															<v-list-item>
+																<v-list-item-title>Event</v-list-item-title>
+																<v-list-item-subtitle>
+																	<v-chip size="x-small" label :color="dialog_forwarding_log_details.item.event === 'failed' ? 'error' : (dialog_forwarding_log_details.item.event === 'delivered' ? 'success' : (dialog_forwarding_log_details.item.event === 'stored' ? 'info' : 'primary'))">
+																		{{ dialog_forwarding_log_details.item.event }}
+																	</v-chip>
+																</v-list-item-subtitle>
+															</v-list-item>
+															<v-list-item>
+																<v-list-item-title>ID</v-list-item-title>
+																<v-list-item-subtitle class="text-caption">{{ dialog_forwarding_log_details.item.id }}</v-list-item-subtitle>
+															</v-list-item>
+															<v-list-item v-if="dialog_forwarding_log_details.item['log-level']">
+																<v-list-item-title>Log Level</v-list-item-title>
+																<v-list-item-subtitle>{{ dialog_forwarding_log_details.item['log-level'] }}</v-list-item-subtitle>
+															</v-list-item>
+														</v-list>
+													</v-col>
+													<v-col cols="12" md="6">
+														<v-list density="compact" class="pa-0">
+															<v-list-subheader class="px-4">Message</v-list-subheader>
+															<v-list-item>
+																<v-list-item-title>Subject</v-list-item-title>
+																<v-list-item-subtitle style="white-space: normal; line-height: 1.2;">{{ dialog_forwarding_log_details.item.message?.headers?.subject || '-' }}</v-list-item-subtitle>
+															</v-list-item>
+															<v-list-item>
+																<v-list-item-title>From</v-list-item-title>
+																<v-list-item-subtitle>{{ dialog_forwarding_log_details.item.message?.headers?.from || dialog_forwarding_log_details.item.envelope?.sender || '-' }}</v-list-item-subtitle>
+															</v-list-item>
+															<v-list-item>
+																<v-list-item-title>To</v-list-item-title>
+																<v-list-item-subtitle>{{ dialog_forwarding_log_details.item.message?.headers?.to || dialog_forwarding_log_details.item.recipient || '-' }}</v-list-item-subtitle>
+															</v-list-item>
+															<v-list-item>
+																<v-list-item-title>Size</v-list-item-title>
+																<v-list-item-subtitle>{{ formatSize(dialog_forwarding_log_details.item.message?.size) }}</v-list-item-subtitle>
+															</v-list-item>
+														</v-list>
+													</v-col>
+												</v-row>
+
+												<v-divider class="my-2"></v-divider>
+
+												<div v-if="dialog_forwarding_log_details.item['delivery-status']" class="mb-3">
+													<v-list-subheader>Delivery Status</v-list-subheader>
+													<v-alert
+														:type="dialog_forwarding_log_details.item['delivery-status'].code >= 400 ? 'error' : 'success'"
+														variant="tonal"
+														density="compact"
+														class="mb-2 mx-4"
+													>
+														<strong>{{ dialog_forwarding_log_details.item['delivery-status'].code }}</strong> {{ dialog_forwarding_log_details.item['delivery-status'].message }}
+														<div v-if="dialog_forwarding_log_details.item['delivery-status'].description" class="text-caption">{{ dialog_forwarding_log_details.item['delivery-status'].description }}</div>
+													</v-alert>
+													<v-row dense class="px-4">
+														<v-col cols="6" md="3">
+															<div class="text-caption text-medium-emphasis">MX Host</div>
+															<div class="text-body-2">{{ dialog_forwarding_log_details.item['delivery-status']['mx-host'] || '-' }}</div>
+														</v-col>
+														<v-col cols="6" md="3">
+															<div class="text-caption text-medium-emphasis">IP</div>
+															<div class="text-body-2">{{ dialog_forwarding_log_details.item.envelope?.['sending-ip'] || '-' }}</div>
+														</v-col>
+														<v-col cols="6" md="3">
+															<div class="text-caption text-medium-emphasis">TLS</div>
+															<div class="text-body-2">{{ dialog_forwarding_log_details.item['delivery-status'].tls ? 'Verified' : 'No' }}</div>
+														</v-col>
+														<v-col cols="6" md="3">
+															<div class="text-caption text-medium-emphasis">Attempts</div>
+															<div class="text-body-2">{{ dialog_forwarding_log_details.item['delivery-status']['attempt-no'] || 1 }}</div>
+														</v-col>
+													</v-row>
+												</div>
+												
+												<v-divider class="my-3"></v-divider>
+												
+												<h3 class="text-subtitle-1 mb-2 px-4">Raw Data</h3>
+												<pre class="mx-4" style="white-space: pre-wrap; background: rgb(var(--v-theme-surface)); padding: 10px; border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); border-radius: 4px; overflow: auto; max-height: 400px; font-size: 12px;">{{ JSON.stringify(dialog_forwarding_log_details.item, null, 2) }}</pre>
+											</v-container>
+										</v-card-text>
 									</v-card>
 								</v-dialog>
 							</v-window-item>
@@ -11004,6 +11230,7 @@ const app = createApp({
 		dialog_mailgun: { show: false, site: {}, response: { items: [], paging: {} }, loading: false, loadingMore: false, domain_id: null },
 		dialog_mailgun_suppressions: { show: false, loading: false, active_tab: 'bounces', items: [], domain_id: null },
 		dialog_mailgun_details: { show: false, event: {} },
+		dialog_forwarding_log_details: { show: false, item: {} },
 		dialog_migration: { show: false, sites: [], site_name: "", site_id: "", update_urls: true, backup_url: "" },
 		dialog_modify_plan: { show: false, site: {}, date_selector: false, hosting_plans: [], selected_plan: "", plan: { limits: {}, addons: [], charges: [], credits: [], next_renewal: "" }, customer_name: "", interval: "12" },
 		dialog_customer_modify_plan: { show: false, hosting_plans: [], selected_plan: "", subscription: {  plan: { limits: {}, addons: [], next_renewal: "" } } },
@@ -14644,14 +14871,6 @@ const app = createApp({
 				
 				return null;
 			}).filter(id => id !== null);
-		},
-		fetchVulnerabilityScans() {
-			axios.get( `/wp-json/captaincore/v1/sites/vulnerability-scans`, {
-				headers: { 'X-WP-Nonce':this.wp_nonce }
-			})
-			.then( response => {
-				this.vulnerabilities = response.data
-			});
 		},
 		openEnvironmentTool(site, env, slug) {
 			// 1. Tell the dialog which environment ID we want to load once data is fetched
@@ -18316,7 +18535,7 @@ const app = createApp({
 					if ( this.dialog_domain.provider.contacts.owner && this.dialog_domain.provider.contacts.owner.country && this.dialog_domain.provider.contacts.owner.country != "" ) {
 						this.populateStatesFor( this.dialog_domain.provider.contacts.owner )
 					}
-					if (this.dialog_domain.details.forward_email_id) {
+					if (this.dialog_domain.details.mailgun_forwarding_id) {
 						this.fetchEmailForwards();
 					}
 					if (this.dialog_domain.details.mailgun_id) {
@@ -18343,10 +18562,10 @@ const app = createApp({
 			})
 			.then(response => {
 				this.dialog_domain.activating_forwarding = false;
-				if (response.data.id) {
+				if (response.data.id || response.data.forwarding_active) {
 					this.snackbar.message = "Email forwarding successfully activated. DNS records are being added.";
 					this.snackbar.show = true;
-					this.dialog_domain.details.forward_email_id = response.data.id;
+					this.dialog_domain.details.mailgun_forwarding_id = response.data.id;
 					// Switch to the new tab and load the forwards
 					this.dialog_domain.tabs = "email-forwarding";
 					this.fetchEmailForwards();
@@ -18377,10 +18596,10 @@ const app = createApp({
 				.then(response => {
 					this.dialog_domain.forwards_domain.data = response.data;
 					this.dialog_domain.forwards_domain.loading = false;
-					if (response.data.has_mx_record && response.data.has_txt_record) {
+					if (response.data.state === 'active') {
 						this.snackbar.message = "Domain verified successfully!";
 					} else {
-						this.snackbar.message = "Verification check complete. Domain is not yet verified.";
+						this.snackbar.message = "Verification check complete. Some DNS records are still pending verification.";
 					}
 					this.snackbar.show = true;
 				})
@@ -18427,10 +18646,13 @@ const app = createApp({
 					this.snackbar.show = true;
 					this.dialog_domain.forwards_domain.loading = false;
 				});
+
+			// Also fetch forwarding logs
+			this.fetchEmailForwardingLogs();
 		},
 		addEmailForward() {
 			this.dialog_domain.forwards.edited_index = -1;
-			this.dialog_domain.forwards.edited_item = { name: '', recipients_string: '', is_enabled: true };
+			this.dialog_domain.forwards.edited_item = { name: '', recipients_string: '' };
 			this.dialog_domain.forwards.show_dialog = true;
 		},
 		editEmailForward(item) {
@@ -18446,7 +18668,6 @@ const app = createApp({
 			// Convert comma-separated string back to array of recipients
 			const payload = {
 				name: item.name,
-				is_enabled: item.is_enabled,
 				recipients: item.recipients_string.split(',').map(email => email.trim()).filter(email => email),
 			};
 
@@ -18501,40 +18722,100 @@ const app = createApp({
 		closeEmailForwardDialog() {
 			this.dialog_domain.forwards.show_dialog = false;
 			this.$nextTick(() => {
-				this.dialog_domain.forwards.edited_item = { name: '', recipients: '', is_enabled: true };
+				this.dialog_domain.forwards.edited_item = { name: '', recipients: '' };
 				this.dialog_domain.forwards.edited_index = -1;
 			});
 		},
-		inlineUpdateEmailForward(item, is_enabled) {
-			const domain_id = this.dialog_domain.domain.domain_id;
-			const alias_id = item.id;
+		confirmDeleteEmailForwarding(domain) {
+			if (!confirm(`Are you sure you want to delete email forwarding for "${domain.name}"? This will remove all email forwards and stop forwarding emails. This action cannot be undone.`)) {
+				return;
+			}
+			this.deleteEmailForwarding(domain);
+		},
+		deleteEmailForwarding(domain) {
+			this.dialog_domain.deleting_forwarding = true;
+			const domain_id = domain.domain_id;
 
-			// The API PUT endpoint requires the full object, not just the changed field.
-			// We build the payload from the 'item' in the table row.
-			const payload = {
-				name: item.name,
-				is_enabled: is_enabled,
-				recipients: item.recipients_string.split(',').map(email => email.trim()).filter(email => email),
-			};
-			
-			this.dialog_domain.forwards.loading = true;
-
-			axios.put(`/wp-json/captaincore/v1/domain/${domain_id}/email-forwards/${alias_id}`, payload, {
+			axios.delete(`/wp-json/captaincore/v1/domain/${domain_id}/email-forwarding`, {
 				headers: { 'X-WP-Nonce': this.wp_nonce }
 			})
 			.then(response => {
-				this.snackbar.message = `Forward '${item.name}' ${is_enabled ? 'enabled' : 'disabled'}.`;
+				this.snackbar.message = response.data.message || "Email forwarding deleted successfully.";
 				this.snackbar.show = true;
-				// v-model already updated the item, so we just stop loading.
-				this.dialog_domain.forwards.loading = false;
+				
+				// Update the local domain details
+				if (response.data.domain && response.data.domain.details) {
+					this.dialog_domain.details = response.data.domain.details;
+				} else {
+					// Fallback: manually clear local data
+					this.dialog_domain.details.mailgun_forwarding_id = null;
+				}
+				
+				// Clear forwards data
+				this.dialog_domain.forwards.items = [];
+				this.dialog_domain.forwarding_logs.items = [];
+				
+				// Switch back to the DNS tab
+				if (this.dialog_domain.tabs === 'email-forwarding') {
+					this.dialog_domain.tabs = 'dns';
+				}
 			})
 			.catch(error => {
-				this.snackbar.message = "Error: " + (error.response?.data?.message || error.message);
+				this.snackbar.message = "Error deleting email forwarding: " + (error.response?.data?.message || error.message);
 				this.snackbar.show = true;
-				// Revert the switch on error
-				item.is_enabled = !is_enabled; 
-				this.dialog_domain.forwards.loading = false;
+			})
+			.finally(() => {
+				this.dialog_domain.deleting_forwarding = false;
 			});
+		},
+		fetchEmailForwardingLogs() {
+			this.dialog_domain.forwarding_logs.loading = true;
+			const domain_id = this.dialog_domain.domain.domain_id;
+
+			axios.get(`/wp-json/captaincore/v1/domain/${domain_id}/email-forwarding/logs`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.dialog_domain.forwarding_logs.items = response.data.items || [];
+				this.dialog_domain.forwarding_logs.paging = response.data.paging || null;
+				this.dialog_domain.forwarding_logs.loading = false;
+			})
+			.catch(error => {
+				this.snackbar.message = "Error fetching forwarding logs: " + (error.response?.data?.message || error.message);
+				this.snackbar.show = true;
+				this.dialog_domain.forwarding_logs.loading = false;
+			});
+		},
+		loadMoreEmailForwardingLogs() {
+			if (!this.dialog_domain.forwarding_logs.paging?.next) {
+				return;
+			}
+			this.dialog_domain.forwarding_logs.loadingMore = true;
+			const domain_id = this.dialog_domain.domain.domain_id;
+			const nextPage = this.dialog_domain.forwarding_logs.paging.next;
+
+			axios.get(`/wp-json/captaincore/v1/domain/${domain_id}/email-forwarding/logs`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce },
+				params: { page_url: nextPage }
+			})
+			.then(response => {
+				// Append new items to existing items
+				this.dialog_domain.forwarding_logs.items = [
+					...this.dialog_domain.forwarding_logs.items,
+					...(response.data.items || [])
+				];
+				this.dialog_domain.forwarding_logs.paging = response.data.paging || null;
+				this.dialog_domain.forwarding_logs.loadingMore = false;
+			})
+			.catch(error => {
+				this.snackbar.message = "Error loading more logs: " + (error.response?.data?.message || error.message);
+				this.snackbar.show = true;
+				this.dialog_domain.forwarding_logs.loadingMore = false;
+			});
+		},
+		viewForwardingLogDetails(item) {
+			this.dialog_forwarding_log_details.item = item;
+			this.dialog_forwarding_log_details.show = true;
 		},
 		modifyDNS( domain ) {
 			this.dialog_domain = {
@@ -18567,9 +18848,10 @@ const app = createApp({
 					loading: false,
 					items: [],
 					show_dialog: false,
-					edited_item: { name: '', recipients: '', is_enabled: true },
+					edited_item: { name: '', recipients: '' },
 					edited_index: -1,
 				},
+				forwarding_logs: { loading: false, loadingMore: false, items: [], paging: null },
 				update_account: { show: false, site: null }
 			};
 			if ( domain.remote_id == null ) {

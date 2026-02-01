@@ -1563,22 +1563,38 @@ function captaincore_dns_func( $request ) {
 	}
 	$remote_id = ( new CaptainCore\Domains )->get( $domain_id )->remote_id;
 
-	$domain  = CaptainCore\Remote\Constellix::get( "domains/$remote_id" );
-	$records = CaptainCore\Remote\Constellix::get( "domains/$remote_id/records?perPage=100" );
-	$steps   = ceil( $records->meta->pagination->total / 100 );
-	for ($i = 1; $i < $steps; $i++) {
-		$page = $i + 1;
-		$additional_records = CaptainCore\Remote\Constellix::get( "domains/$remote_id/records?page=$page&perPage=100" );
-		$records->data = array_merge($records->data, $additional_records->data);
+	if ( empty( $remote_id ) ) {
+		return new WP_Error( 'no_zone', 'No DNS zone found for this domain.', [ 'status' => 404 ] );
 	}
 
-	if ( ! $records->errors ) {
+	$domain  = CaptainCore\Remote\Constellix::get( "domains/$remote_id" );
+	$records = CaptainCore\Remote\Constellix::get( "domains/$remote_id/records?perPage=100" );
+
+	// Check for errors from Constellix
+	if ( ! empty( $records->errors ) ) {
+		return new WP_Error( 'constellix_error', 'Error fetching DNS records.', [ 'status' => 500, 'details' => $records->errors ] );
+	}
+
+	// Handle pagination if there are more records
+	if ( ! empty( $records->meta->pagination->total ) ) {
+		$steps = ceil( $records->meta->pagination->total / 100 );
+		for ($i = 1; $i < $steps; $i++) {
+			$page = $i + 1;
+			$additional_records = CaptainCore\Remote\Constellix::get( "domains/$remote_id/records?page=$page&perPage=100" );
+			if ( ! empty( $additional_records->data ) ) {
+				$records->data = array_merge($records->data, $additional_records->data);
+			}
+		}
+	}
+
+	// Sort records if data exists
+	if ( ! empty( $records->data ) && is_array( $records->data ) ) {
 		array_multisort( array_column( $records->data, 'type' ), SORT_ASC, array_column( $records->data, 'name' ), SORT_ASC, $records->data );
 	}
 
 	return [ 
-		"records"     => $records->data, 
-		"nameservers" => $domain->data->nameservers 
+		"records"     => $records->data ?? [], 
+		"nameservers" => $domain->data->nameservers ?? [] 
 	];
 }
 
@@ -1744,7 +1760,7 @@ function captaincore_domain_zone_import_func( $request ) {
 }
 
 /**
- * REST API callback to get Forward Email domain status and optionally trigger verification.
+ * REST API callback to get Mailgun domain status and optionally trigger verification.
  *
  * @param WP_REST_Request $request The request object.
  * @return WP_REST_Response|WP_Error The response object.
@@ -1763,20 +1779,137 @@ function captaincore_domain_email_forwarding_status_func( WP_REST_Request $reque
         return new WP_Error( 'no_domain', 'Domain not found.', [ 'status' => 404 ] );
     }
 
-    // If verify=true, trigger a re-check with Forward Email first
+    $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
+
+    // If verify=true, trigger a re-check with Mailgun
     if ( $verify ) {
-        // This endpoint triggers a check and returns the updated domain object.
-        \CaptainCore\Remote\ForwardEmail::get( "domains/{$domain->name}/verify-records" );
+        // This endpoint triggers a DNS verification check in Mailgun
+        \CaptainCore\Remote\Mailgun::put( "v4/domains/{$domain->name}/verify" );
     }
 
-    // Always return the current domain status from Forward Email
-    $response = \CaptainCore\Remote\ForwardEmail::get( "domains/{$domain->name}" );
+    // Get the domain status from Mailgun
+    $mailgun_response = \CaptainCore\Remote\Mailgun::get( "v4/domains/{$domain->name}" );
     
+    // Check if domain exists in Mailgun
+    $domain_exists = ! empty( $mailgun_response->domain ) || ( empty( $mailgun_response->message ) || $mailgun_response->message !== "Domain not found" );
+    
+    // Check for MX record validity from Mailgun's receiving_dns_records
+    $has_mx_record = false;
+    if ( ! empty( $mailgun_response->receiving_dns_records ) ) {
+        foreach ( $mailgun_response->receiving_dns_records as $record ) {
+            if ( $record->record_type === 'MX' && $record->valid === 'valid' ) {
+                $has_mx_record = true;
+                break;
+            }
+        }
+    }
+
+    // Build response compatible with the frontend
+    $response = (object) [
+        'id'                   => $domain->name,
+        'name'                 => $domain->name,
+        'has_mx_record'        => $has_mx_record,
+        'has_txt_record'       => true, // Mailgun doesn't require TXT for inbound routing
+        'forwarding_active'    => ! empty( $details->mailgun_forwarding_id ),
+        'mailgun_domain'       => $mailgun_response->domain ?? null,
+        'receiving_dns_records'=> $mailgun_response->receiving_dns_records ?? [],
+        'sending_dns_records'  => $mailgun_response->sending_dns_records ?? [],
+        'state'                => $mailgun_response->domain->state ?? 'unknown',
+    ];
+
+    return new WP_REST_Response( $response, 200 );
+}
+
+/**
+ * Fetches email forwarding logs from Mailgun for a domain.
+ * This uses the root domain (e.g., example.com) for inbound/forwarding events.
+ */
+function captaincore_domain_email_forwarding_logs_func( WP_REST_Request $request ) {
+    $domain_id = $request['id'];
+    $params    = $request->get_query_params();
+
+    // Verify user permissions for this domain
+    if ( ! ( new CaptainCore\Domains )->verify( $domain_id ) ) {
+        return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+    }
+
+    $domain = ( new CaptainCore\Domains )->get( $domain_id );
+    if ( empty( $domain->name ) ) {
+        return new WP_Error( 'no_domain', 'Domain not found.', [ 'status' => 404 ] );
+    }
+
+    $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
+
+    if ( empty( $details->mailgun_forwarding_id ) ) {
+        return new WP_Error( 'forwarding_not_configured', 'Email forwarding not configured for this domain.', [ 'status' => 404 ] );
+    }
+
+    // Use the root domain name for fetching forwarding/inbound events
+    $zone = $domain->name;
+
+    // If paging URL is provided, use it directly
+    if ( ! empty( $params['page_url'] ) ) {
+        $response = \CaptainCore\Remote\Mailgun::page( $zone, $params['page_url'] );
+    } else {
+        // Fetch events - for forwarding, we want to see stored, accepted, delivered, failed events
+        $event_filter = $params['event'] ?? 'stored OR accepted OR delivered OR failed';
+        $response = \CaptainCore\Remote\Mailgun::get( "v3/$zone/events", [ 
+            'event' => $event_filter,
+            'limit' => 100 
+        ] );
+    }
+
+    return new WP_REST_Response( $response, 200 );
+}
+
+/**
+ * Delete email forwarding for a domain (admin only).
+ * This deletes the Mailgun domain used for forwarding and all associated routes.
+ */
+function captaincore_domain_email_forwarding_delete_func( WP_REST_Request $request ) {
+    $domain_id = $request['id'];
+
+    // Verify user permissions for this domain
+    if ( ! ( new CaptainCore\Domains )->verify( $domain_id ) ) {
+        return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+    }
+
+    $domain = ( new CaptainCore\Domains )->get( $domain_id );
+    if ( empty( $domain->name ) ) {
+        return new WP_Error( 'no_domain', 'Domain not found.', [ 'status' => 404 ] );
+    }
+
+    $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
+
+    if ( empty( $details->mailgun_forwarding_id ) ) {
+        return new WP_Error( 'forwarding_not_configured', 'Email forwarding not configured for this domain.', [ 'status' => 404 ] );
+    }
+
+    // Delete the Mailgun domain (this also deletes all routes associated with it)
+    $zone = $domain->name;
+    $response = \CaptainCore\Remote\Mailgun::delete( "v3/domains/$zone" );
+
     if ( is_wp_error( $response ) ) {
         return $response;
     }
 
-    return new WP_REST_Response( $response, 200 );
+    // Update local domain details to remove forwarding info
+    unset( $details->mailgun_forwarding_id );
+    
+    // Update the domain in the database
+    ( new CaptainCore\Domains )->update( [ 'details' => json_encode( $details ) ], [ 'domain_id' => $domain_id ] );
+
+    // Get updated domain for response
+    $updated_domain = ( new CaptainCore\Domains )->get( $domain_id );
+
+    return new WP_REST_Response( [
+        'message' => 'Email forwarding deleted successfully.',
+        'domain'  => [
+            'domain_id' => $domain_id,
+            'name'      => $domain->name,
+            'details'   => json_decode( $updated_domain->details ),
+        ],
+    ], 200 );
 }
 
 function captaincore_recipes_func( $request ) {

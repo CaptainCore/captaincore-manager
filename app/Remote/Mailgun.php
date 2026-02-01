@@ -11,6 +11,10 @@ class Mailgun {
 	
     public static function get( $command, $data = [] ) {
 
+        if ( ! defined( 'MAILGUN_API_KEY' ) ) {
+            return (object) [ 'errors' => [ 'MAILGUN_API_KEY constant is not defined.' ] ];
+        }
+
         $args = [
             'timeout' => 120,
             'headers' => [
@@ -24,7 +28,7 @@ class Mailgun {
         $remote = wp_remote_get( "https://api.mailgun.net/$command$query", $args );
 
         if ( is_wp_error( $remote ) ) {
-            return $remote->get_error_message();
+            return (object) [ 'errors' => [ $remote->get_error_message() ] ];
         } else {
             return json_decode( $remote['body'] );
         }
@@ -61,13 +65,26 @@ class Mailgun {
 
     public static function post( $command, $post = [] ) {
 
+        if ( ! defined( 'MAILGUN_API_KEY' ) ) {
+            return (object) [ 'errors' => [ 'MAILGUN_API_KEY constant is not defined.' ] ];
+        }
+
         // Generate a boundary
         $boundary = wp_generate_password(24, false);
         $body = '';
         foreach ($post as $key => $value) {
-            $body .= '--' . $boundary . "\r\n";
-            $body .= 'Content-Disposition: form-data; name="' . $key . "\"\r\n\r\n";
-            $body .= $value . "\r\n";
+            // Handle array values (e.g., action[] for routes)
+            if ( is_array( $value ) ) {
+                foreach ( $value as $array_value ) {
+                    $body .= '--' . $boundary . "\r\n";
+                    $body .= 'Content-Disposition: form-data; name="' . $key . "\"\r\n\r\n";
+                    $body .= $array_value . "\r\n";
+                }
+            } else {
+                $body .= '--' . $boundary . "\r\n";
+                $body .= 'Content-Disposition: form-data; name="' . $key . "\"\r\n\r\n";
+                $body .= $value . "\r\n";
+            }
         }
         $body .= '--' . $boundary . '--';
 
@@ -83,7 +100,7 @@ class Mailgun {
         $remote    = wp_remote_post( "https://api.mailgun.net/$command", $args );
 
         if ( is_wp_error( $remote ) ) {
-            return $remote->get_error_message();
+            return (object) [ 'errors' => [ $remote->get_error_message() ] ];
         } else {
             return json_decode( $remote['body'] );
         }
@@ -92,13 +109,26 @@ class Mailgun {
 
     public static function put( $command, $post = [] ) {
 
+        if ( ! defined( 'MAILGUN_API_KEY' ) ) {
+            return (object) [ 'errors' => [ 'MAILGUN_API_KEY constant is not defined.' ] ];
+        }
+
          // Generate a boundary
          $boundary = wp_generate_password(24, false);
          $body = '';
          foreach ($post as $key => $value) {
-             $body .= '--' . $boundary . "\r\n";
-             $body .= 'Content-Disposition: form-data; name="' . $key . "\"\r\n\r\n";
-             $body .= $value . "\r\n";
+             // Handle array values (e.g., action[] for routes)
+             if ( is_array( $value ) ) {
+                 foreach ( $value as $array_value ) {
+                     $body .= '--' . $boundary . "\r\n";
+                     $body .= 'Content-Disposition: form-data; name="' . $key . "\"\r\n\r\n";
+                     $body .= $array_value . "\r\n";
+                 }
+             } else {
+                 $body .= '--' . $boundary . "\r\n";
+                 $body .= 'Content-Disposition: form-data; name="' . $key . "\"\r\n\r\n";
+                 $body .= $value . "\r\n";
+             }
          }
          $body .= '--' . $boundary . '--';
 
@@ -117,7 +147,7 @@ class Mailgun {
         $remote    = wp_remote_post( "https://api.mailgun.net/$command", $args );
 
         if ( is_wp_error( $remote ) ) {
-            return $remote->get_error_message();
+            return (object) [ 'errors' => [ $remote->get_error_message() ] ];
         } else {
             return json_decode( $remote['body'] );
         }
@@ -125,6 +155,10 @@ class Mailgun {
     }
 
     public static function delete( $command, $data = [] ) {
+
+        if ( ! defined( 'MAILGUN_API_KEY' ) ) {
+            return (object) [ 'errors' => [ 'MAILGUN_API_KEY constant is not defined.' ] ];
+        }
 
         $args = [
             'timeout' => 120,
@@ -140,7 +174,7 @@ class Mailgun {
         $remote = wp_remote_request( "https://api.mailgun.net/$command$query", $args );
 
         if ( is_wp_error( $remote ) ) {
-            return $remote->get_error_message();
+            return (object) [ 'errors' => [ $remote->get_error_message() ] ];
         } else {
             return json_decode( $remote['body'] );
         }

@@ -74,9 +74,11 @@ class Domain {
 
     }
 
-    public function fetch_remote_id() {
+    public function fetch_remote_id( $link_existing = false ) {
 
         $domain = ( new Domains )->get( $this->domain_id );
+        $response = null;
+        $remote_id = null;
         
         // Load domains from transient
 		$constellix_all_domains = get_transient( 'constellix_all_domains' );
@@ -92,11 +94,13 @@ class Domain {
 		}
 
 		// Search API for domain ID
-		foreach ( $constellix_all_domains->data as $item ) {
-			if ( $domain->name == $item->name ) {
-                $remote_id = $item->id;
-                break;
-			}
+        if ( ! empty( $constellix_all_domains->data ) ) {
+            foreach ( $constellix_all_domains->data as $item ) {
+                if ( $domain->name == $item->name ) {
+                    $remote_id = $item->id;
+                    break;
+                }
+            }
         }
         
         // Generate a new domain zone and add the new domain
@@ -118,13 +122,29 @@ class Domain {
                 $remote_id = $response->data->id;
             }
 
+            // Check if domain already exists error and admin wants to link to it
+            if ( ! empty( $response->errors ) && $link_existing ) {
+                foreach ( $response->errors as $error ) {
+                    // Check for "Domain with name X already exists, Domain Id: Y" error
+                    if ( preg_match( '/Domain with name .+ already exists, Domain Id: (\d+)/', $error, $matches ) ) {
+                        $remote_id = intval( $matches[1] );
+                        // Clear the transient so next lookup will find this domain
+                        delete_transient( 'constellix_all_domains' );
+                        break;
+                    }
+                }
+            }
+
         }
 
-        if ( ! empty( $response->errors ) ) {
+        // Only return errors if we still don't have a remote_id
+        if ( $response && ! empty( $response->errors ) && empty( $remote_id ) ) {
             return [ "errors" => $response->errors ];
         }
         
-        ( new Domains )->update( [ "remote_id" => $remote_id ], [ "domain_id" => $this->domain_id ] );
+        if ( ! empty( $remote_id ) ) {
+            ( new Domains )->update( [ "remote_id" => $remote_id ], [ "domain_id" => $this->domain_id ] );
+        }
 
 		return $remote_id;
     }
@@ -244,6 +264,9 @@ class Domain {
 
         if ( $provider->provider == "spaceship" ) {
             $response             = \CaptainCore\Remote\Spaceship::get( "domains/{$domain->name}" );
+            if ( empty( $response ) || empty( $response->contacts ) ) {
+                return [ "errors" => [ "Remote domain details not found." ] ];
+            }
             $owner                = \CaptainCore\Remote\Spaceship::get( "contacts/{$response->contacts->registrant}" );
             $admin                = $response->contacts->registrant == $response->contacts->admin ? $owner : \CaptainCore\Remote\Spaceship::get( "contacts/{$response->contacts->admin}" );
             $billing              = $response->contacts->registrant == $response->contacts->billing ? $owner : \CaptainCore\Remote\Spaceship::get( "contacts/{$response->contacts->billing}" );
@@ -304,39 +327,14 @@ class Domain {
         $domain = ( new Domains )->get( $this->domain_id );
         $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
 
-        if ( ! empty( $details->forward_email_id ) ) {
+        // Check if already active (using mailgun_forwarding_id)
+        if ( ! empty( $details->mailgun_forwarding_id ) ) {
             return new \WP_Error( 'already_active', 'Email forwarding is already active for this domain.' );
         }
 
-        // Check if domain already exists and is verified on Forward Email
-        $existing_domain_response = \CaptainCore\Remote\ForwardEmail::get( "domains/{$domain->name}" );
-
-        if ( !is_wp_error( $existing_domain_response ) && !isset( $existing_domain_response->message ) && isset( $existing_domain_response->id ) ) {
-            // Domain exists on Forward Email.
-            
-            // Check if it's already fully verified.
-            if ( $existing_domain_response->has_mx_record && $existing_domain_response->has_txt_record ) {
-                // Domain exists and is verified. Just link it.
-                $details->forward_email_id = $existing_domain_response->id;
-                ( new Domains )->update( [ "details" => json_encode( $details ) ], [ "domain_id" => $this->domain_id ] );
-                
-                // Return the domain object, just as if we had activated it.
-                return $existing_domain_response; 
-            }
-            
-            // Domain exists but is NOT verified. We need to proceed with DNS setup.
-            // We can skip the "create" step later by using this response object.
-            $response = $existing_domain_response;
-            
-        } else {
-            // Domain does not exist on Forward Email. We will need to create it.
-            $response = null; 
-        }
-
-        // 1. Check for DNS conflicts *before* calling the Forward Email API
+        // 1. Check for DNS conflicts before proceeding
         $constellix_domain = ( new Domains )->get( $this->domain_id );
         $at_mx_records = [];
-        $existing_at_txt_record = null; 
         $has_existing_at_mx = false;
 
         if ( ! empty( $constellix_domain->remote_id ) ) {
@@ -346,10 +344,7 @@ class Domain {
             if ( is_object( $all_records_response ) && isset( $all_records_response->data ) && is_array( $all_records_response->data ) ) {
                 foreach ( $all_records_response->data as $record ) {
                     if ( $record->type === 'MX' && $record->name === "" ) { 
-                     $at_mx_records[] = $record;
-                    }
-                    if ( $record->type === 'TXT' && $record->name === "" ) { 
-                        $existing_at_txt_record = $record; 
+                        $at_mx_records[] = $record;
                     }
                 }
             }
@@ -361,113 +356,101 @@ class Domain {
             }
         }
 
-        // 2. No conflicts (or user approved overwrite), proceed with Forward Email API
-        if ( is_null($response) ) {
-            $response = \CaptainCore\Remote\ForwardEmail::post( "domains", [ "domain" => $domain->name ] );
+        // 2. Check if domain already exists in Mailgun, or create it
+        $mailgun_domain = \CaptainCore\Remote\Mailgun::get( "v4/domains/{$domain->name}" );
 
-            if ( is_wp_error( $response ) || isset( $response->message ) ) {
-                $existing_domain_response_fallback = \CaptainCore\Remote\ForwardEmail::get( "domains/{$domain->name}" );
-                if ( !is_wp_error( $existing_domain_response_fallback ) && !isset( $existing_domain_response_fallback->message ) && isset( $existing_domain_response_fallback->id ) ) {
-                    $response = $existing_domain_response_fallback;
-                } else {
-                    return new \WP_Error( 'api_error', $response->message ?? 'Failed to create or retrieve domain on Forward Email.' );
-                }
-            }
+        if ( ! empty( $mailgun_domain->message ) && $mailgun_domain->message == "Domain not found" ) {
+            // Create domain in Mailgun for receiving
+            $mailgun_domain = \CaptainCore\Remote\Mailgun::post( "v4/domains", [ 'name' => $domain->name ] );
         }
 
-        if ( empty( $response->id ) || empty( $response->verification_record ) ) {
-            return new \WP_Error( 'api_response_invalid', 'Invalid response from Forward Email API.' );
+        if ( empty( $mailgun_domain->domain ) && empty( $mailgun_domain->name ) ) {
+            return new \WP_Error( 'api_error', 'Failed to create or retrieve domain on Mailgun.' );
         }
 
-        $forward_email_id = $response->id;
-        $verification_record = $response->verification_record;
-
-        // 3. Apply DNS changes (if managed)
+        // 3. Apply DNS changes (if managed via Constellix)
         if ( ! empty( $constellix_domain->remote_id ) ) {
             
-            // 3a. Add TXT Verification Record
-            $record_name = ""; // '@' record
-            // *** FIX: Add quotes to the TXT value, as required by Constellix ***
-            $record_value = "\"forward-email-site-verification={$verification_record}\"";
-            
-            // We already found the $existing_at_txt_record in Step 1
-            if ( $existing_at_txt_record ) {
-                // UPDATE existing '@' TXT record
-                $record_id = $existing_at_txt_record->id;
-                $current_values = $existing_at_txt_record->value; 
-                
-                $value_exists = false;
-                foreach ( $current_values as $value_obj ) {
-                    // Check if the *exact* quoted string already exists
-                    if ( $value_obj->value === $record_value ) {
-                        $value_exists = true;
-                        break;
-                    }
-                }
-
-                if ( ! $value_exists ) {
-                    // Value does not exist, append it as an object
-                    $new_value_obj = (object) [ 'value' => $record_value, 'enabled' => true ];
-                    $current_values[] = $new_value_obj;
-                    
-                    // The formatter will now use the raw values (with quotes)
-                    $formatted_data = self::_format_dns_record_for_api( 'txt', $record_name, $current_values, 3600 );
-                    $dns_response = \CaptainCore\Remote\Constellix::put( "domains/{$constellix_domain->remote_id}/records/{$record_id}", $formatted_data );
-                    error_log( json_encode( $dns_response ) );
-                    
-                    if ( ! empty( $dns_response->errors ) ) {
-                        error_log( 'CaptainCore: Failed to UPDATE Forward Email TXT record on Constellix for domain ' . $domain->name . ': ' . json_encode( $dns_response->errors ) );
-                    }
-                }
-
-            } else {
-                // CREATE new '@' TXT record
-                // *** FIX: Add quotes to the TXT value here too ***
-                $record_data_value = [ [ 'value' => $record_value, 'enabled' => true ] ];
-                $formatted_data = self::_format_dns_record_for_api( 'txt', $record_name, $record_data_value, 3600 );
-                $dns_response = \CaptainCore\Remote\Constellix::post( "domains/{$constellix_domain->remote_id}/records", $formatted_data );
-                
-                if ( ! empty( $dns_response->errors ) ) {
-                    error_log( 'CaptainCore: Failed to CREATE Forward Email TXT record on Constellix for domain ' . $domain->name . ': ' . json_encode( $dns_response->errors ) );
-                }
-            }
-
-            // 3b. Handle MX Records
-            // We already have $has_existing_at_mx and $at_mx_records from Step 1
+            // Handle MX Records - delete existing if user confirmed overwrite
             if ( $has_existing_at_mx && $overwrite_mx ) {
-                // User confirmed overwrite, delete existing '@' MX records.
                 foreach ( $at_mx_records as $record ) {
                     \CaptainCore\Remote\Constellix::delete( "domains/{$constellix_domain->remote_id}/records/mx/{$record->id}" );
                 }
             }
 
-            // Add new Forward Email MX records (if none existed, or if we just deleted them)
-            if ( !$has_existing_at_mx || $overwrite_mx ) {
-                $new_mx_records = [
-                    [ 'priority' => 10, 'server' => 'mx1.forwardemail.net.' ],
-                    [ 'priority' => 10, 'server' => 'mx2.forwardemail.net.' ],
-                ];
-                $mx_record_data = [
-                    'name'  => '', // '@' record
-                    'type'  => 'mx',
-                    'ttl'   => 3600,
-                    'value' => $new_mx_records,
-                ];
-                $formatted_mx_data = self::_format_dns_record_for_api( 'mx', '', $mx_record_data['value'], 3600 );
-                $mx_dns_response = \CaptainCore\Remote\Constellix::post( "domains/{$constellix_domain->remote_id}/records", $formatted_mx_data );
+            // Add MX records for receiving (from Mailgun's response)
+            if ( ! $has_existing_at_mx || $overwrite_mx ) {
+                if ( ! empty( $mailgun_domain->receiving_dns_records ) ) {
+                    $mx_records = [];
+                    foreach ( $mailgun_domain->receiving_dns_records as $record ) {
+                        if ( $record->record_type === 'MX' && $record->valid !== 'valid' ) {
+                            $mx_records[] = [
+                                'server'   => $record->value . '.',
+                                'priority' => $record->priority ?? 10,
+                                'enabled'  => true,
+                            ];
+                        }
+                    }
+                    if ( ! empty( $mx_records ) ) {
+                        $formatted_mx_data = self::_format_dns_record_for_api( 'mx', '', $mx_records, 3600 );
+                        $mx_dns_response = \CaptainCore\Remote\Constellix::post( "domains/{$constellix_domain->remote_id}/records", $formatted_mx_data );
+                        if ( ! empty( $mx_dns_response->errors ) ) {
+                            error_log( 'CaptainCore: Failed to add Mailgun MX records for ' . $domain->name . ': ' . json_encode( $mx_dns_response->errors ) );
+                        }
+                    }
+                }
+            }
 
-                if ( ! empty( $mx_dns_response->errors ) ) {
-                    error_log( 'CaptainCore: Failed to add Forward Email MX records to Constellix for domain ' . $domain->name . ': ' . json_encode( $mx_dns_response->errors ) );
+            // Add TXT and CNAME records for sending/verification (from Mailgun's response)
+            if ( ! empty( $mailgun_domain->sending_dns_records ) ) {
+                foreach ( $mailgun_domain->sending_dns_records as $record ) {
+                    $record_name = str_replace( ".{$domain->name}", "", rtrim( $record->name, '.' ) );
+                    // If name equals the domain itself, use empty string for root
+                    if ( $record_name === $domain->name ) {
+                        $record_name = '';
+                    }
+
+                    if ( $record->record_type === 'TXT' && $record->valid !== 'valid' ) {
+                        $txt_data = self::_format_dns_record_for_api( 'txt', $record_name, [
+                            [ 'value' => $record->value, 'enabled' => true ]
+                        ], 3600 );
+                        $response = \CaptainCore\Remote\Constellix::post( "domains/{$constellix_domain->remote_id}/records", $txt_data );
+                        if ( ! empty( $response->errors ) ) {
+                            error_log( 'CaptainCore: Failed to add Mailgun TXT record for ' . $domain->name . ': ' . json_encode( $response->errors ) );
+                        }
+                    }
+
+                    if ( $record->record_type === 'CNAME' && $record->valid !== 'valid' ) {
+                        $cname_data = self::_format_dns_record_for_api( 'cname', $record_name, [
+                            [ 'value' => $record->value . '.', 'enabled' => true ]
+                        ], 3600 );
+                        $response = \CaptainCore\Remote\Constellix::post( "domains/{$constellix_domain->remote_id}/records", $cname_data );
+                        if ( ! empty( $response->errors ) ) {
+                            error_log( 'CaptainCore: Failed to add Mailgun CNAME record for ' . $domain->name . ': ' . json_encode( $response->errors ) );
+                        }
+                    }
                 }
             }
         }
 
-        // 4. Save the Forward Email ID to the domain details (only after success)
-        $details->forward_email_id = $forward_email_id;
-        \CaptainCore\Remote\ForwardEmail::get( "domains/{$forward_email_id}/verify-records" );
+        // 4. Trigger Mailgun domain verification
+        \CaptainCore\Remote\Mailgun::put( "v4/domains/{$domain->name}/verify" );
+
+        // 5. Schedule a follow-up verification in 60 seconds
+        wp_schedule_single_event( time() + 60, 'schedule_mailgun_verify', [ $domain->name ] );
+
+        // 6. Save the Mailgun forwarding ID to domain details
+        $details->mailgun_forwarding_id = $mailgun_domain->domain->id ?? $mailgun_domain->id ?? $domain->name;
         ( new Domains )->update( [ "details" => json_encode( $details ) ], [ "domain_id" => $this->domain_id ] );
 
-        return $response;
+        // Return a response object for the frontend
+        return (object) [
+            'id'                => $details->mailgun_forwarding_id,
+            'name'              => $domain->name,
+            'mailgun_domain'    => $mailgun_domain->domain ?? $mailgun_domain,
+            'has_mx_record'     => true,
+            'forwarding_active' => true,
+        ];
     }
 
     public function get_email_forwards() {
@@ -475,7 +458,34 @@ class Domain {
         if ( empty( $domain->name ) ) {
             return new \WP_Error( 'no_domain', 'Domain not found.' );
         }
-        return \CaptainCore\Remote\ForwardEmail::get( "domains/{$domain->name}/aliases" );
+
+        // Get all routes from Mailgun
+        $routes_response = \CaptainCore\Remote\Mailgun::get( "v3/routes", [ 'limit' => 1000 ] );
+        
+        // Check for errors
+        if ( ! empty( $routes_response->errors ) ) {
+            return new \WP_Error( 'mailgun_error', 'Error fetching routes from Mailgun.', [ 'details' => $routes_response->errors ] );
+        }
+
+        if ( empty( $routes_response->items ) ) {
+            return [];
+        }
+
+        // Filter routes that match this domain and transform to alias format
+        $aliases = [];
+        $domain_pattern = '/@' . preg_quote( $domain->name, '/' ) . '(["\']|\))/i';
+        
+        foreach ( $routes_response->items as $route ) {
+            // Check if this route's expression matches our domain
+            if ( ! empty( $route->expression ) && preg_match( $domain_pattern, $route->expression ) ) {
+                $alias = self::_mailgun_route_to_alias( $route, $domain->name );
+                if ( $alias ) {
+                    $aliases[] = $alias;
+                }
+            }
+        }
+
+        return $aliases;
     }
 
     public function add_email_forward( $alias_input ) {
@@ -483,23 +493,162 @@ class Domain {
         if ( empty( $domain->name ) ) {
             return new \WP_Error( 'no_domain', 'Domain not found.' );
         }
-        return \CaptainCore\Remote\ForwardEmail::post( "domains/{$domain->name}/aliases", $alias_input );
+
+        $alias_input = (object) $alias_input;
+        
+        // Build the Mailgun route expression
+        $alias_name = $alias_input->name ?? '';
+        
+        if ( $alias_name === '*' || $alias_name === '' ) {
+            // Catch-all alias
+            $expression = 'match_recipient(".*@' . $domain->name . '")';
+        } else {
+            // Specific alias
+            $expression = 'match_recipient("' . $alias_name . '@' . $domain->name . '")';
+        }
+
+        // Build the forward actions
+        $actions = [];
+        $recipients = $alias_input->recipients ?? [];
+        if ( is_string( $recipients ) ) {
+            $recipients = array_map( 'trim', explode( ',', $recipients ) );
+        }
+        
+        foreach ( $recipients as $recipient ) {
+            $recipient_email = is_object( $recipient ) ? $recipient->address : $recipient;
+            $actions[] = 'forward("' . $recipient_email . '")';
+        }
+        $actions[] = 'stop()';
+
+        // Determine priority (catch-all should be lower priority = higher number)
+        $priority = ( $alias_name === '*' || $alias_name === '' ) ? 100 : 0;
+
+        // Create the route in Mailgun
+        $route_data = [
+            'priority'    => $priority,
+            'description' => "Email forward: {$alias_name}@{$domain->name}",
+            'expression'  => $expression,
+            'action'      => $actions,
+        ];
+
+        $response = \CaptainCore\Remote\Mailgun::post( "v3/routes", $route_data );
+
+        if ( empty( $response->route ) && empty( $response->id ) ) {
+            return new \WP_Error( 'mailgun_error', 'Failed to create route in Mailgun.', [ 'details' => $response ] );
+        }
+
+        // Transform response to alias format for compatibility
+        return self::_mailgun_route_to_alias( $response->route ?? $response, $domain->name );
     }
 
-    public function update_email_forward( $alias_id, $alias_input ) {
+    public function update_email_forward( $route_id, $alias_input ) {
         $domain = ( new Domains )->get( $this->domain_id );
         if ( empty( $domain->name ) ) {
             return new \WP_Error( 'no_domain', 'Domain not found.' );
         }
-        return \CaptainCore\Remote\ForwardEmail::put( "domains/{$domain->name}/aliases/{$alias_id}", $alias_input );
+
+        $alias_input = (object) $alias_input;
+
+        // Build update data
+        $update_data = [];
+
+        // If name is being updated, rebuild the expression
+        if ( isset( $alias_input->name ) ) {
+            $alias_name = $alias_input->name;
+            if ( $alias_name === '*' || $alias_name === '' ) {
+                $update_data['expression'] = 'match_recipient(".*@' . $domain->name . '")';
+                $update_data['priority'] = 100;
+            } else {
+                $update_data['expression'] = 'match_recipient("' . $alias_name . '@' . $domain->name . '")';
+                $update_data['priority'] = 0;
+            }
+            $update_data['description'] = "Email forward: {$alias_name}@{$domain->name}";
+        }
+
+        // If recipients are being updated, rebuild actions
+        if ( isset( $alias_input->recipients ) ) {
+            $actions = [];
+            $recipients = $alias_input->recipients;
+            if ( is_string( $recipients ) ) {
+                $recipients = array_map( 'trim', explode( ',', $recipients ) );
+            }
+            
+            foreach ( $recipients as $recipient ) {
+                $recipient_email = is_object( $recipient ) ? $recipient->address : $recipient;
+                $actions[] = 'forward("' . $recipient_email . '")';
+            }
+            $actions[] = 'stop()';
+            $update_data['action'] = $actions;
+        }
+
+        if ( empty( $update_data ) ) {
+            return new \WP_Error( 'no_changes', 'No changes provided.' );
+        }
+
+        $response = \CaptainCore\Remote\Mailgun::put( "v3/routes/{$route_id}", $update_data );
+
+        if ( empty( $response->id ) && empty( $response->message ) ) {
+            return new \WP_Error( 'mailgun_error', 'Failed to update route in Mailgun.', [ 'details' => $response ] );
+        }
+
+        return $response;
     }
 
-    public function delete_email_forward( $alias_id ) {
+    public function delete_email_forward( $route_id ) {
         $domain = ( new Domains )->get( $this->domain_id );
         if ( empty( $domain->name ) ) {
             return new \WP_Error( 'no_domain', 'Domain not found.' );
         }
-        return \CaptainCore\Remote\ForwardEmail::delete( "domains/{$domain->name}/aliases/{$alias_id}" );
+
+        $response = \CaptainCore\Remote\Mailgun::delete( "v3/routes/{$route_id}" );
+
+        return $response;
+    }
+
+    /**
+     * Converts a Mailgun route object to the alias format used by the frontend.
+     * This maintains compatibility with the existing UI.
+     *
+     * @param object $route The Mailgun route object.
+     * @param string $domain_name The domain name for context.
+     * @return object|null The alias object or null if not a valid forward route.
+     */
+    private static function _mailgun_route_to_alias( $route, $domain_name ) {
+        if ( empty( $route ) ) {
+            return null;
+        }
+
+        // Extract alias name from expression
+        // Expression format: match_recipient("alias@domain.com") or match_recipient(".*@domain.com")
+        $alias_name = '';
+        if ( preg_match( '/match_recipient\(["\'](.+)@' . preg_quote( $domain_name, '/' ) . '["\']\)/', $route->expression, $matches ) ) {
+            $alias_name = $matches[1];
+            if ( $alias_name === '.*' ) {
+                $alias_name = '*'; // Convert regex catch-all to simple asterisk
+            }
+        }
+
+        // Extract recipients from actions
+        // Action format: ["forward(\"target@email.com\")", "stop()"]
+        $recipients = [];
+        $actions = is_array( $route->actions ) ? $route->actions : [ $route->actions ];
+        foreach ( $actions as $action ) {
+            if ( preg_match( '/forward\(["\'](.+?)["\']\)/', $action, $matches ) ) {
+                $recipients[] = $matches[1]; // Return simple email strings for frontend compatibility
+            }
+        }
+
+        return (object) [
+            'id'          => $route->id,
+            'name'        => $alias_name,
+            'recipients'  => $recipients,
+            'description' => $route->description ?? '',
+            'created_at'  => $route->created_at ?? '',
+            // Additional fields for compatibility
+            'domain'      => $domain_name,
+            'expression'  => $route->expression ?? '',
+            'priority'    => $route->priority ?? 0,
+        ];
     }
 
     /**
