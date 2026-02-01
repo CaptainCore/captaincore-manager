@@ -1242,12 +1242,26 @@ class Report {
 
             foreach ( $data->plugins_added as $plugin ) {
                 $title   = htmlspecialchars( $plugin['title'] ?: $plugin['name'] );
-                $version = htmlspecialchars( $plugin['version'] );
+                $version = htmlspecialchars( $plugin['version'] ?? '' );
+                $status  = $plugin['status'] ?? '';
+                
+                // Add MU label for must-use plugins
+                $mu_label = '';
+                if ( $status === 'must-use' ) {
+                    $mu_label = "<span style='background: #edf2f7; color: #718096; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; text-transform: uppercase; margin-left: 8px;'>MU</span>";
+                }
+                
+                // Only show version badge if version exists
+                $version_html = '';
+                if ( ! empty( $version ) ) {
+                    $version_html = "<span style='background: rgba(72, 187, 120, 0.1); color: #48bb78; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-weight: 600;'>{$version}</span>";
+                }
+                
                 $plugin_rows .= "
                     <tr>
-                        <td style='padding: 14px 12px; border-bottom: 1px solid #edf2f7; font-size: 14px; font-weight: 500; color: #2d3748; text-align: left;'>{$title}</td>
+                        <td style='padding: 14px 12px; border-bottom: 1px solid #edf2f7; font-size: 14px; font-weight: 500; color: #2d3748; text-align: left;'>{$title}{$mu_label}</td>
                         <td style='padding: 14px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #718096; text-align: right; white-space: nowrap;'>
-                            <span style='background: rgba(72, 187, 120, 0.1); color: #48bb78; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-weight: 600;'>{$version}</span>
+                            {$version_html}
                         </td>
                     </tr>";
             }
@@ -1963,7 +1977,8 @@ class Report {
                         $added_plugins[] = [
                             'name'    => $plugin->name,
                             'title'   => $plugin->title,
-                            'version' => $plugin->version,
+                            'version' => $plugin->version ?? '',
+                            'status'  => $plugin->status ?? '',
                         ];
                     } elseif ( version_compare( $plugin->version, $old_version, '>' ) ) {
                         $updated_plugins[] = [
@@ -1978,7 +1993,8 @@ class Report {
                     $added_plugins[] = [
                         'name'    => $plugin->name,
                         'title'   => $plugin->title,
-                        'version' => $plugin->version,
+                        'version' => $plugin->version ?? '',
+                        'status'  => $plugin->status ?? '',
                     ];
                 }
             }
