@@ -335,6 +335,7 @@ class Domain {
         // 1. Check for DNS conflicts before proceeding
         $constellix_domain = ( new Domains )->get( $this->domain_id );
         $at_mx_records = [];
+        $existing_txt_records = [];
         $has_existing_at_mx = false;
 
         if ( ! empty( $constellix_domain->remote_id ) ) {
@@ -345,6 +346,10 @@ class Domain {
                 foreach ( $all_records_response->data as $record ) {
                     if ( $record->type === 'MX' && $record->name === "" ) { 
                         $at_mx_records[] = $record;
+                    }
+                    // Index existing TXT records by name for later lookup
+                    if ( $record->type === 'TXT' ) {
+                        $existing_txt_records[ $record->name ] = $record;
                     }
                 }
             }
@@ -383,7 +388,8 @@ class Domain {
                 if ( ! empty( $mailgun_domain->receiving_dns_records ) ) {
                     $mx_records = [];
                     foreach ( $mailgun_domain->receiving_dns_records as $record ) {
-                        if ( $record->record_type === 'MX' && $record->valid !== 'valid' ) {
+                        // Add all MX records from Mailgun (don't skip based on valid status)
+                        if ( $record->record_type === 'MX' ) {
                             $mx_records[] = [
                                 'server'   => $record->value . '.',
                                 'priority' => $record->priority ?? 10,
@@ -411,12 +417,36 @@ class Domain {
                     }
 
                     if ( $record->record_type === 'TXT' && $record->valid !== 'valid' ) {
-                        $txt_data = self::_format_dns_record_for_api( 'txt', $record_name, [
-                            [ 'value' => $record->value, 'enabled' => true ]
-                        ], 3600 );
-                        $response = \CaptainCore\Remote\Constellix::post( "domains/{$constellix_domain->remote_id}/records", $txt_data );
-                        if ( ! empty( $response->errors ) ) {
-                            error_log( 'CaptainCore: Failed to add Mailgun TXT record for ' . $domain->name . ': ' . json_encode( $response->errors ) );
+                        // Check if a TXT record with this name already exists
+                        if ( isset( $existing_txt_records[ $record_name ] ) ) {
+                            // Append to existing TXT record using PUT
+                            $existing_record = $existing_txt_records[ $record_name ];
+                            $existing_values = $existing_record->value ?? [];
+                            
+                            // Add the new Mailgun value to existing values
+                            $new_values = [];
+                            foreach ( $existing_values as $existing_value ) {
+                                $new_values[] = [
+                                    'value'   => $existing_value->value,
+                                    'enabled' => $existing_value->enabled ?? true,
+                                ];
+                            }
+                            $new_values[] = [ 'value' => $record->value, 'enabled' => true ];
+                            
+                            $txt_data = self::_format_dns_record_for_api( 'txt', $record_name, $new_values, $existing_record->ttl ?? 3600 );
+                            $response = \CaptainCore\Remote\Constellix::put( "domains/{$constellix_domain->remote_id}/records/txt/{$existing_record->id}", $txt_data );
+                            if ( ! empty( $response->errors ) ) {
+                                error_log( 'CaptainCore: Failed to update TXT record for ' . $domain->name . ': ' . json_encode( $response->errors ) );
+                            }
+                        } else {
+                            // Create new TXT record using POST
+                            $txt_data = self::_format_dns_record_for_api( 'txt', $record_name, [
+                                [ 'value' => $record->value, 'enabled' => true ]
+                            ], 3600 );
+                            $response = \CaptainCore\Remote\Constellix::post( "domains/{$constellix_domain->remote_id}/records", $txt_data );
+                            if ( ! empty( $response->errors ) ) {
+                                error_log( 'CaptainCore: Failed to add Mailgun TXT record for ' . $domain->name . ': ' . json_encode( $response->errors ) );
+                            }
                         }
                     }
 
