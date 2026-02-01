@@ -11930,13 +11930,19 @@ const app = createApp({
 		axios.interceptors.response.use(
 			response => response,
 			error => {
-				const { config, response: { status }} = error;
+				// Handle case where error.response might not exist (network error)
+				if ( !error.response ) {
+					return Promise.reject(error);
+				}
+				
+				const { config } = error;
 				const originalRequest = config;
-				if (error.response.status === 403 && error.response.data.code == "rest_cookie_invalid_nonce" ) {
+				
+				if (error.response.status === 403 && error.response.data && error.response.data.code == "rest_cookie_invalid_nonce" ) {
 					if ( this.wp_nonce_retry ) {
 						this.goToPath( '/login' )
 						this.wp_nonce_retry = false
-						return
+						return Promise.reject(error);
 					}
 					// Attempt to retrieve a valid token
 					return axios.get( '/' ).then(response => {
@@ -11949,9 +11955,12 @@ const app = createApp({
 							originalRequest.headers["X-WP-Nonce"] = found[1]
 							return axios(originalRequest);
 						}
+						return Promise.reject(error);
 					})
-					return Promise.reject(error);
 				}
+				
+				// For all other errors, reject the promise so catch blocks work
+				return Promise.reject(error);
 			});
 		window.addEventListener('popstate', () => {
 			path = window.location.pathname.replace( this.configurations.path, "/" )
