@@ -32,6 +32,9 @@ class Report {
         // For top pages - aggregate across all sites by pathname
         $pages_by_path = [];
 
+        // For top referrers - aggregate across all sites by referrer hostname
+        $referrers_by_hostname = [];
+
         // For plugin/theme changes from quicksaves
         $all_plugin_updates  = [];
         $all_theme_updates   = [];
@@ -58,10 +61,9 @@ class Report {
                 continue;
             }
 
-            $sites_list[] = $site_data->name;
-
-            // Get WordPress core version and storage from production environment
+            // Get WordPress core version, storage, and home_url from production environment
             $environments = $site->environments();
+            $site_home_url = '';
             foreach ( $environments as $env ) {
                 if ( strtolower( $env->environment ) === 'production' ) {
                     if ( ! empty( $env->core ) ) {
@@ -71,9 +73,17 @@ class Report {
                         // Storage is in MB, convert to bytes for aggregation
                         $total_storage += (float) $env->storage;
                     }
+                    if ( ! empty( $env->home_url ) ) {
+                        $site_home_url = $env->home_url;
+                    }
                     break;
                 }
             }
+
+            $sites_list[] = [
+                'name'     => $site_data->name,
+                'home_url' => $site_home_url,
+            ];
 
             // Count updates up to end date and find earliest
             $update_logs = $site->update_logs( "production" );
@@ -157,6 +167,24 @@ class Report {
                         $pages_by_path[ $path ]['uniques']   += (int) ( $page->uniques ?? 0 );
                         $pages_by_path[ $path ]['visits']    += (int) ( $page->visits ?? 0 );
                         $pages_by_path[ $path ]['pageviews'] += (int) ( $page->pageviews ?? 0 );
+                    }
+                }
+
+                // Get top referrers for this site
+                $top_referrers = $site->top_referrers( "production", $before, $after, 20 );
+                if ( ! empty( $top_referrers ) && is_array( $top_referrers ) ) {
+                    foreach ( $top_referrers as $referrer ) {
+                        $hostname = $referrer->referrer_hostname ?? '';
+                        // Skip empty referrers (direct traffic)
+                        if ( empty( $hostname ) ) {
+                            continue;
+                        }
+                        if ( ! isset( $referrers_by_hostname[ $hostname ] ) ) {
+                            $referrers_by_hostname[ $hostname ] = [ 'uniques' => 0, 'visits' => 0, 'pageviews' => 0 ];
+                        }
+                        $referrers_by_hostname[ $hostname ]['uniques']   += (int) ( $referrer->uniques ?? 0 );
+                        $referrers_by_hostname[ $hostname ]['visits']    += (int) ( $referrer->visits ?? 0 );
+                        $referrers_by_hostname[ $hostname ]['pageviews'] += (int) ( $referrer->pageviews ?? 0 );
                     }
                 }
             }
@@ -265,6 +293,12 @@ class Report {
         } );
         $top_pages = array_slice( $pages_by_path, 0, 10, true );
 
+        // Sort referrers by visits descending and get top 10
+        uasort( $referrers_by_hostname, function( $a, $b ) {
+            return $b['visits'] - $a['visits'];
+        } );
+        $top_referrers = array_slice( $referrers_by_hostname, 0, 10, true );
+
         // Format WordPress version(s)
         $unique_wp_versions = array_unique( $wordpress_versions );
         usort( $unique_wp_versions, 'version_compare' );
@@ -297,6 +331,7 @@ class Report {
             'chart_visits'    => $chart_visits,
             'chart_pageviews' => $chart_pageviews,
             'top_pages'       => $top_pages,
+            'top_referrers'   => $top_referrers,
             'wordpress'        => $wordpress_version,
             'plugin_updates'   => array_values( $all_plugin_updates ),
             'theme_updates'    => array_values( $all_theme_updates ),
@@ -892,7 +927,21 @@ class Report {
         $logo_url        = $config->logo ?? '';
         $site_name       = get_bloginfo( 'name' );
 
-        $sites_list = implode( ', ', $data->sites );
+        // Build site names with links
+        $sites_html_parts = [];
+        foreach ( $data->sites as $site_info ) {
+            $name = htmlspecialchars( $site_info['name'] );
+            $home_url = $site_info['home_url'] ?? '';
+            
+            if ( ! empty( $home_url ) ) {
+                // Use Unicode north-east arrow (↗) as link indicator - works in all email clients
+                $link_icon = "<span style='font-size: 10px; margin-left: 2px;'>&#8599;</span>";
+                $sites_html_parts[] = "<a href='" . htmlspecialchars( $home_url ) . "' target='_blank' style='color: {$brand_color}; text-decoration: none; font-weight: 500;'>{$name}{$link_icon}</a>";
+            } else {
+                $sites_html_parts[] = $name;
+            }
+        }
+        $sites_list = implode( ', ', $sites_html_parts );
 
         // Format numbers with commas
         $updates_formatted    = number_format( $data->updates );
@@ -1009,6 +1058,47 @@ class Report {
                                     </table>";
         }
 
+        // Build top referrers HTML if we have data
+        $top_referrers_html = '';
+        if ( $has_stats && ! empty( $data->top_referrers ) ) {
+            $top_referrers_rows = '';
+            foreach ( $data->top_referrers as $hostname => $referrer_data ) {
+                // Clean up hostname for display (remove protocol if present)
+                $hostname_display = htmlspecialchars( preg_replace( '#^https?://#', '', $hostname ) );
+                $uniques  = number_format( $referrer_data['uniques'] );
+                $visitors = number_format( $referrer_data['visits'] );
+                $views    = number_format( $referrer_data['pageviews'] );
+                $top_referrers_rows .= "
+                    <tr>
+                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #4a5568; word-break: break-all; text-align: left;'>{$hostname_display}</td>
+                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #718096; text-align: right; white-space: nowrap;'>{$uniques}</td>
+                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #718096; text-align: right; white-space: nowrap;'>{$visitors}</td>
+                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #718096; text-align: right; white-space: nowrap;'>{$views}</td>
+                    </tr>";
+            }
+
+            $top_referrers_html = "
+                                    <!-- Top Referrers -->
+                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 30px;'>
+                                        <tr>
+                                            <td style='padding: 10px;'>
+                                                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;'>
+                                                    <div style='font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; padding: 15px 15px 10px; text-align: center;'>Top Referrers</div>
+                                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%'>
+                                                        <tr style='background-color: #f7fafc;'>
+                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: left;'>Source</td>
+                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: right; width: 70px;'>Uniques</td>
+                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: right; width: 70px;'>Visitors</td>
+                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: right; width: 70px;'>Views</td>
+                                                        </tr>
+                                                        {$top_referrers_rows}
+                                                    </table>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>";
+        }
+
         // Determine which icons are needed based on report data
         $needs_checkmark = ! empty( $data->plugin_updates ) || ! empty( $data->theme_updates );
         $needs_plus      = ! empty( $data->plugins_added ) || ! empty( $data->themes_added );
@@ -1108,6 +1198,40 @@ class Report {
 
         // Combine updates HTML
         $updates_html = $plugin_updates_html . $theme_updates_html;
+
+        // Build "Managed For You" section - communicates value of managed hosting
+        $managed_html = "
+                                    <!-- Managed For You -->
+                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 30px;'>
+                                        <tr>
+                                            <td style='padding: 10px;'>
+                                                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 25px 20px;'>
+                                                    <div style='font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; margin-bottom: 15px; text-align: center;'>Managed For You</div>
+                                                    <p style='font-size: 14px; color: #4a5568; line-height: 1.6; margin: 0 0 20px; text-align: center;'>As part of your managed hosting, we proactively handle the technical details so you don't have to.</p>
+                                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%'>
+                                                        <tr>
+                                                            <td width='33%' style='padding: 10px; text-align: center; vertical-align: top;'>
+                                                                <div style='font-size: 24px; margin-bottom: 8px;'>🔒</div>
+                                                                <div style='font-size: 13px; font-weight: 600; color: #2d3748; margin-bottom: 4px;'>SSL Certificates</div>
+                                                                <div style='font-size: 12px; color: #718096;'>Auto-verified & renewed</div>
+                                                            </td>
+                                                            <td width='33%' style='padding: 10px; text-align: center; vertical-align: top;'>
+                                                                <div style='font-size: 24px; margin-bottom: 8px;'>⚡</div>
+                                                                <div style='font-size: 13px; font-weight: 600; color: #2d3748; margin-bottom: 4px;'>PHP Version</div>
+                                                                <div style='font-size: 12px; color: #718096;'>Current & compatible</div>
+                                                            </td>
+                                                            <td width='33%' style='padding: 10px; text-align: center; vertical-align: top;'>
+                                                                <div style='font-size: 24px; margin-bottom: 8px;'>📡</div>
+                                                                <div style='font-size: 13px; font-weight: 600; color: #2d3748; margin-bottom: 4px;'>Uptime Monitoring</div>
+                                                                <div style='font-size: 12px; color: #718096;'>24/7 with rapid response</div>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                    <p style='font-size: 12px; color: #a0aec0; line-height: 1.5; margin: 20px 0 0; text-align: center; font-style: italic;'>We handle version upgrades, compatibility fixes, and infrastructure issues—so you can focus on your business.</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>";
 
         // Build plugins added HTML
         $plugins_added_html = '';
@@ -1502,6 +1626,8 @@ class Report {
 
                                     {$top_pages_html}
 
+                                    {$top_referrers_html}
+
                                     {$updates_html}
 
                                     {$added_html}
@@ -1511,6 +1637,8 @@ class Report {
                                     {$process_logs_html}
 
                                     {$visual_captures_html}
+
+                                    {$managed_html}
 
                                 </td>
                             </tr>
@@ -1569,7 +1697,7 @@ class Report {
 
         // Include site name(s) for uniqueness (prevents email grouping)
         $site_label = count( $data->sites ) === 1
-            ? $data->sites[0]
+            ? $data->sites[0]['name']
             : count( $data->sites ) . ' sites';
 
         $subject = "Maintenance Report: {$site_label} ({$date_range})";
