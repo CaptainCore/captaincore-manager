@@ -136,6 +136,9 @@ class WebRiskCheck {
 			}
 		}
 
+		// Save results to database
+		self::save_log( count( $sites ), $threats_found, $errors );
+
 		// No threats found
 		if ( empty( $threats_found ) ) {
 			\WP_CLI::success( sprintf( 'All %d sites are clean. No threats detected.', count( $sites ) ) );
@@ -154,6 +157,28 @@ class WebRiskCheck {
 		self::send_summary_email( $threats_found, count( $sites ) );
 
 		\WP_CLI::success( 'Summary email sent to administrator.' );
+	}
+
+	/**
+	 * Save check results to database.
+	 *
+	 * @param int   $total_sites   Total number of sites checked.
+	 * @param array $threats_found Array of threat data.
+	 * @param array $errors        Array of error data.
+	 */
+	private static function save_log( $total_sites, $threats_found, $errors ) {
+		$log_data = [
+			'total_sites'   => $total_sites,
+			'threats_found' => count( $threats_found ),
+			'errors_count'  => count( $errors ),
+			'details'       => json_encode( [
+				'threats' => $threats_found,
+				'errors'  => $errors,
+			] ),
+			'created_at'    => date( 'Y-m-d H:i:s' ),
+		];
+
+		( new WebRiskLogs() )->insert( $log_data );
 	}
 
 	/**
