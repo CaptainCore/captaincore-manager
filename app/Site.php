@@ -1134,6 +1134,54 @@ class Site {
         return $pages;
     }
 
+    public function top_referrers( $environment = "production", $before = "", $after = "", $limit = 10 ) {
+
+        if ( empty( $after ) ) {
+            $after = time();
+        }
+
+        if ( empty( $before ) ) {
+            $before = strtotime( "-30 days" );
+        }
+
+        $before = date( 'Y-m-d H:i:s', $before );
+        $after  = date( 'Y-m-d H:i:s', $after );
+
+        $environments = self::environments();
+        foreach( $environments as $e ) {
+            if ( strtolower( $e->environment ) == strtolower( $environment ) ) {
+                $selected_environment = $e;
+            }
+        }
+        if ( empty( $selected_environment ) ) {
+            return [];
+        }
+        $fathom_ids = array_column( $selected_environment->fathom_analytics, "code" );
+
+        if ( empty( $fathom_ids ) ) {
+            return [];
+        }
+
+        $fathom_id = $fathom_ids[0];
+
+        $url      = "https://api.usefathom.com/v1/aggregations?entity=pageview&entity_id={$fathom_id}&aggregates=visits,uniques,pageviews&field_grouping=referrer_hostname&date_from={$before}&date_to={$after}&sort_by=visits:desc&limit={$limit}";
+        $response = wp_remote_get( $url, [
+            "headers" => [ "Authorization" => "Bearer " . \CaptainCore\Providers\Fathom::credentials("api_key") ],
+        ] );
+
+        if ( is_wp_error( $response ) ) {
+            return [];
+        }
+
+        $referrers = json_decode( $response['body'] );
+
+        if ( ! is_array( $referrers ) ) {
+            return [];
+        }
+
+        return $referrers;
+    }
+
     public function update_logs( $environment = "both" ) {
 
         $command     = "update-log list {$this->site_id}-$environment";
@@ -1215,7 +1263,7 @@ class Site {
         foreach( $quicksaves as $key => $quicksave ) {
             $quicksaves[ $key ]->plugins        = [];
             $quicksaves[ $key ]->themes         = [];
-            $quicksaves[ $key ]->core           = $quicksave->core;
+            $quicksaves[ $key ]->core           = $quicksave->core ?? '';
             $quicksaves[ $key ]->status         = "";
             $quicksaves[ $key ]->view_changes   = false;
             $quicksaves[ $key ]->view_files     = [];
