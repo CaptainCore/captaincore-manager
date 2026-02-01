@@ -3203,8 +3203,12 @@ function captaincore_domain_activate_dns_zone_func( WP_REST_Request $request ) {
         return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
     }
 
+    // Check if user is admin - admins can link to existing DNS zones
+    $current_user = wp_get_current_user();
+    $is_admin = in_array( 'administrator', $current_user->roles );
+
     $domain = new \CaptainCore\Domain( $domain_id );
-    $remote_id = $domain->fetch_remote_id();
+    $remote_id = $domain->fetch_remote_id( $is_admin );
 
     if ( is_array( $remote_id ) && isset( $remote_id["errors"] ) ) {
         return new WP_Error( 'activation_failed', 'Failed to activate DNS zone.', [ 'status' => 500, 'details' => $remote_id["errors"] ] );
@@ -3314,6 +3318,18 @@ function captaincore_quicksaves_func( $request ) {
  */
 function captaincore_permission_check() {
     return is_user_logged_in();
+}
+
+/**
+ * Permission check for admin-only API endpoints.
+ *
+ * @return bool True if the user is logged in and is an admin, false otherwise.
+ */
+function captaincore_admin_permission_check() {
+    if ( ! is_user_logged_in() ) {
+        return false;
+    }
+    return ( new CaptainCore\User )->is_admin();
 }
 
 add_action( 'rest_api_init', 'captaincore_register_rest_endpoints' );
@@ -4311,6 +4327,24 @@ function captaincore_register_rest_endpoints() {
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_domain_email_forwarding_status_func',
 			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/domain/(?P<id>[\d]+)/email-forwarding/logs', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_domain_email_forwarding_logs_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/domain/(?P<id>[\d]+)/email-forwarding', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_domain_email_forwarding_delete_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
 			'show_in_index'       => false,
 		]
 	);
@@ -5575,11 +5609,16 @@ function captaincore_local_action_callback() {
 			$order_data->total = $order_data->total - $item->get_amount();
 		}
 
-		$payment_gateways      = WC()->payment_gateways->payment_gateways();
-		$payment_method        = $order->get_payment_method();
+		$payment_method_title  = $order->get_payment_method_title();
+		if ( empty( $payment_method_title ) ) {
+			// Fallback to gateway title if order doesn't have a custom title
+			$payment_gateways     = WC()->payment_gateways->payment_gateways();
+			$payment_method       = $order->get_payment_method();
+			$payment_method_title = isset( $payment_gateways[ $payment_method ] ) ? $payment_gateways[ $payment_method ]->get_title() : "Check";
+		}
 		$payment_method_string = sprintf(
 			__( 'Payment via %s', 'woocommerce' ),
-			esc_html( isset( $payment_gateways[ $payment_method ] ) ? $payment_gateways[ $payment_method ]->get_title() : "Check" )
+			esc_html( $payment_method_title )
 		);
 
 		if ( $order->get_date_paid() ) {
@@ -6001,7 +6040,9 @@ function captaincore_account_action_callback() {
 
 		// Conditionally execute remote code
 		if ( $create_dns_zone ) {
-			$response = ( new CaptainCore\Domain( $domain_id ) )->fetch_remote_id();
+			// Administrators can link to existing DNS zones, regular users cannot
+			$link_existing = $user->is_admin();
+			$response = ( new CaptainCore\Domain( $domain_id ) )->fetch_remote_id( $link_existing );
 			if ( is_array( $response ) && isset( $response["errors"] ) ) { // Check if $response is an error array
 				foreach ( $response["errors"] as $error ) {
 					$errors[] = $error;
