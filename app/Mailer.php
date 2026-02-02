@@ -1168,7 +1168,7 @@ class Mailer {
             'email'  => $user->user_email,
             'token'  => $token,
             'action' => 'unsubscribe'
-        ], home_url( '/wp-signup.php' ) );
+        ], rest_url( 'captaincore/v1/email/subscription' ) );
     }
 
     /* -------------------------------------------------------------------------

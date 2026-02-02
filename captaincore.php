@@ -165,11 +165,14 @@ function captaincore_send_newsletter_on_publish( $new_status, $old_status, $post
 add_action( 'transition_post_status', 'captaincore_send_newsletter_on_publish', 10, 3 );
 
 /* -------------------------------------------------------------------------
- *  EMAIL SUBSCRIPTION MANAGEMENT
+ *  EMAIL SUBSCRIPTION MANAGEMENT (Legacy wp-signup.php handlers)
+ *  Note: New unsubscribe links use REST API at /wp-json/captaincore/v1/email/subscription
+ *  These handlers remain for backward compatibility with old email links.
  * ------------------------------------------------------------------------- */
 
 /**
  * Manage subscription to email newsletters (subscribe/unsubscribe via token)
+ * Legacy handler - redirects to REST API endpoint
  */
 function captaincore_subscription_management() {
     global $pagenow;
@@ -178,35 +181,16 @@ function captaincore_subscription_management() {
         return;
     }
 
-    $email    = sanitize_email( $_GET['email'] );
-    $home_url = get_home_url();
-    $user     = get_user_by( 'ID', absint( $_GET['id'] ) );
+    // Redirect to REST API endpoint for processing
+    $redirect_url = add_query_arg( [
+        'id'     => absint( $_GET['id'] ),
+        'email'  => sanitize_email( $_GET['email'] ),
+        'token'  => sanitize_text_field( $_GET['token'] ),
+        'action' => sanitize_text_field( $_GET['action'] )
+    ], rest_url( 'captaincore/v1/email/subscription' ) );
 
-    if ( ! $user || $user->user_email !== $email ) {
-        wp_die( "<p style='text-align:center'>Invalid email subscription token.</p>", "Manage subscription" );
-    }
-
-    $user_token = wp_hash( $user->user_registered );
-    if ( $_GET['token'] !== $user_token ) {
-        wp_die( "<p style='text-align:center'>Invalid email subscription token.</p>", "Manage subscription" );
-    }
-
-    $user_id    = $user->ID;
-    $user_email = $user->user_email;
-
-    if ( $_GET['action'] === 'subscribe' ) {
-        $user->add_role( 'email_subscriber' );
-        $html = "<p style='text-align:center'>Your email <strong>{$email}</strong> has been subscribed.<br>
-            <small>Click here to <a href='{$home_url}/wp-signup.php?id={$user_id}&email={$user_email}&token={$user_token}&action=unsubscribe'>unsubscribe</a></small></p>";
-        wp_die( $html, "Subscribe to email newsletters" );
-    }
-
-    if ( $_GET['action'] === 'unsubscribe' ) {
-        $user->remove_role( 'email_subscriber' );
-        $html = "<p style='text-align:center'>Your email <strong>{$email}</strong> has been unsubscribed.<br>
-            <small>Click here to <a href='{$home_url}/wp-signup.php?id={$user_id}&email={$user_email}&token={$user_token}&action=subscribe'>resubscribe</a></small></p>";
-        wp_die( $html, "Unsubscribe from email newsletters" );
-    }
+    wp_redirect( $redirect_url );
+    exit;
 }
 add_action( 'init', 'captaincore_subscription_management' );
 
@@ -237,8 +221,7 @@ function captaincore_subscription_signup() {
         wp_die( "<p style='text-align:center'>Invalid email subscription signup link.</p>", "Manage subscription" );
     }
 
-    $home_url = get_home_url();
-    $user     = get_user_by( 'email', $email );
+    $user = get_user_by( 'email', $email );
 
     // Create user if needed
     if ( ! $user ) {
@@ -253,11 +236,18 @@ function captaincore_subscription_signup() {
     $user_token = wp_hash( $user->user_registered );
     $user_id    = $user->ID;
     $user_email = $user->user_email;
+    $base_url   = rest_url( 'captaincore/v1/email/subscription' );
 
     if ( $_GET['action'] === 'subscribe_confirm' ) {
         $user->add_role( 'email_subscriber' );
+        $unsubscribe_url = add_query_arg( [
+            'id'     => $user_id,
+            'email'  => $user_email,
+            'token'  => $user_token,
+            'action' => 'unsubscribe'
+        ], $base_url );
         $html = "<p style='text-align:center'>Your email <strong>{$email}</strong> has been subscribed.<br>
-            <small>Click here to <a href='{$home_url}/wp-signup.php?id={$user_id}&email={$user_email}&token={$user_token}&action=unsubscribe'>unsubscribe</a></small></p>";
+            <small>Click here to <a href='{$unsubscribe_url}'>unsubscribe</a></small></p>";
         wp_die( $html, "Subscribe to email newsletters" );
     }
 }
@@ -4988,6 +4978,16 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Email subscription management (public endpoint)
+	register_rest_route(
+		'captaincore/v1', '/email/subscription', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_email_subscription_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false,
+		]
+	);
+
 	// ACH Bank Account Payment Methods
 	register_rest_route(
 		'captaincore/v1', '/billing/ach/setup-intent', [
@@ -5381,6 +5381,110 @@ function captaincore_scheduled_reports_delete_func( WP_REST_Request $request ) {
  */
 function captaincore_web_risk_logs_func( WP_REST_Request $request ) {
 	return ( new CaptainCore\WebRiskLogs() )->list();
+}
+
+/**
+ * REST endpoint: Email subscription management (subscribe/unsubscribe)
+ * Returns HTML response data that will be served by the pre_serve filter
+ */
+function captaincore_email_subscription_func( WP_REST_Request $request ) {
+	$user_id = absint( $request->get_param( 'id' ) );
+	$email   = sanitize_email( $request->get_param( 'email' ) );
+	$token   = sanitize_text_field( $request->get_param( 'token' ) );
+	$action  = sanitize_text_field( $request->get_param( 'action' ) );
+
+	if ( ! $user_id || ! $email || ! $token || ! $action ) {
+		return [ 'html' => captaincore_email_subscription_page( 'Invalid email subscription link.', 'Manage subscription' ) ];
+	}
+
+	$user = get_user_by( 'ID', $user_id );
+	if ( ! $user || $user->user_email !== $email ) {
+		return [ 'html' => captaincore_email_subscription_page( 'Invalid email subscription token.', 'Manage subscription' ) ];
+	}
+
+	$user_token = wp_hash( $user->user_registered );
+	if ( $token !== $user_token ) {
+		return [ 'html' => captaincore_email_subscription_page( 'Invalid email subscription token.', 'Manage subscription' ) ];
+	}
+
+	$user_email  = $user->user_email;
+	$base_url    = rest_url( 'captaincore/v1/email/subscription' );
+
+	if ( $action === 'subscribe' ) {
+		$user->add_role( 'email_subscriber' );
+		$unsubscribe_url = add_query_arg( [
+			'id'     => $user_id,
+			'email'  => $user_email,
+			'token'  => $user_token,
+			'action' => 'unsubscribe'
+		], $base_url );
+		$html = "Your email <strong>{$email}</strong> has been subscribed.<br>
+			<small>Click here to <a href='{$unsubscribe_url}'>unsubscribe</a></small>";
+		return [ 'html' => captaincore_email_subscription_page( $html, 'Subscribe to email newsletters' ) ];
+	}
+
+	if ( $action === 'unsubscribe' ) {
+		$user->remove_role( 'email_subscriber' );
+		$subscribe_url = add_query_arg( [
+			'id'     => $user_id,
+			'email'  => $user_email,
+			'token'  => $user_token,
+			'action' => 'subscribe'
+		], $base_url );
+		$html = "Your email <strong>{$email}</strong> has been unsubscribed.<br>
+			<small>Click here to <a href='{$subscribe_url}'>resubscribe</a></small>";
+		return [ 'html' => captaincore_email_subscription_page( $html, 'Unsubscribe from email newsletters' ) ];
+	}
+
+	return [ 'html' => captaincore_email_subscription_page( 'Invalid action.', 'Manage subscription' ) ];
+}
+
+/**
+ * Serve HTML response for email subscription endpoint instead of JSON
+ */
+function captaincore_email_subscription_serve_html( $served, $result, $request, $server ) {
+	if ( $request->get_route() !== '/captaincore/v1/email/subscription' ) {
+		return $served;
+	}
+
+	$data = $result->get_data();
+	if ( ! isset( $data['html'] ) ) {
+		return $served;
+	}
+
+	header( 'Content-Type: text/html; charset=UTF-8' );
+	echo $data['html'];
+	return true;
+}
+add_filter( 'rest_pre_serve_request', 'captaincore_email_subscription_serve_html', 10, 4 );
+
+/**
+ * Generate a simple HTML page for email subscription responses
+ */
+function captaincore_email_subscription_page( $message, $title ) {
+	$site_name = get_bloginfo( 'name' );
+	return "<!DOCTYPE html>
+<html>
+<head>
+	<meta charset='UTF-8'>
+	<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+	<title>{$title} - {$site_name}</title>
+	<style>
+		body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; background: #f5f5f5; margin: 0; padding: 40px 20px; }
+		.container { max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
+		h1 { font-size: 24px; color: #333; margin: 0 0 20px; }
+		p { color: #666; line-height: 1.6; }
+		a { color: #0073aa; }
+		small { color: #999; }
+	</style>
+</head>
+<body>
+	<div class='container'>
+		<h1>{$title}</h1>
+		<p>{$message}</p>
+	</div>
+</body>
+</html>";
 }
 
 function captaincore_login_func( WP_REST_Request $request ) {
