@@ -1054,7 +1054,7 @@ function captaincore_update_log_entry_func( WP_REST_Request $request ) {
 	$process_log        = (object) $request->get_json_params();
 	$site_ids           = array_column( $process_log->websites, 'site_id' );
 	$process_log_update = [
-		'process_id'  => $process_log->process,
+		'process_id'  => $process_log->process_id,
 		'user_id'     => get_current_user_id(),
 		'description' => str_replace( "\'", "'", $process_log->description_raw ),
 		'public'      => $process_log->public,
@@ -3674,7 +3674,16 @@ function captaincore_register_rest_endpoints() {
 					return new WP_Error( 'missing_sites', 'Associated sites are required.', [ 'status' => 400 ] );
 				}
 				$site_ids = array_column( $log_update->websites, 'site_id' );
-				return captaincore_verify_permissions( $site_ids );
+				if ( ! captaincore_verify_permissions( $site_ids ) ) {
+					return false;
+				}
+				// Check if user is admin or owns the log entry
+				$user        = new CaptainCore\User();
+				$existing_log = ( new CaptainCore\ProcessLogs )->get( $request['id'] );
+				if ( ! $user->is_admin() && $existing_log->user_id != get_current_user_id() ) {
+					return new WP_Error( 'permission_denied', 'You can only edit your own log entries.', [ 'status' => 403 ] );
+				}
+				return true;
 			},
 		]
 	);
@@ -6636,8 +6645,6 @@ function captaincore_ajax_action_callback() {
 	// Only proceed if access to command 
 	$admin_commands = [
 		'fetchConfigs',
-		'updateLogEntry',
-		'newLogEntry',
 		'newKey',
 		'updateKey',
 		'deleteKey',
@@ -6667,8 +6674,8 @@ function captaincore_ajax_action_callback() {
 		$value = $_POST['value'];
 	}
 	
-	$fetch          = (new CaptainCore\Site( $post_id ))->get();
-	$site           = $fetch->site;
+	$fetch          = isset( $post_id ) ? (new CaptainCore\Site( $post_id ))->get() : null;
+	$site           = isset( $fetch->site ) ? $fetch->site : null;
 	$environment    = isset( $_POST['environment'] ) ? $_POST['environment'] : '';
 	$remote_command = false;
 
@@ -6932,16 +6939,24 @@ function captaincore_ajax_action_callback() {
 		$process_log = new CaptainCore\ProcessLogs();
 		$process_log_id_new = $process_log->insert( (array) $process_log_new );
 		( new CaptainCore\ProcessLog( $process_log_id_new ) )->assign_sites( $post_ids );
-		$process_logs = ( new CaptainCore\Site( $post_id ) )->process_logs();
 		$timelines = [];
-		foreach ( $post_ids as $post_id ) {
-			$timelines[ $post_id ] = ( new CaptainCore\Site( $post_id ) )->process_logs();
+		foreach ( $post_ids as $site_id ) {
+			$timelines[ $site_id ] = ( new CaptainCore\Site( $site_id ) )->process_logs();
 		}
 		echo json_encode( $timelines ) ;
 	}
 
 	if ( $cmd == 'updateLogEntry' ) {
-		$process_log_update              = (object) $_POST['log'];
+		$process_log_update = (object) $_POST['log'];
+		$existing_log       = ( new CaptainCore\ProcessLogs )->get( $process_log_update->process_log_id );
+		
+		// Only allow editing if user is admin or owns the log entry
+		if ( ! $user->is_admin() && $existing_log->user_id != get_current_user_id() ) {
+			echo "Permission denied";
+			wp_die();
+			return;
+		}
+		
 		$site_ids                        = array_column( $process_log_update->websites, 'site_id' );
 		$process_log_update->user_id     = get_current_user_id();
 		$process_log_update->description = str_replace( "\'", "'", $process_log_update->description_raw );
@@ -6954,6 +6969,37 @@ function captaincore_ajax_action_callback() {
 		unset( $process_log_update->description_raw );
 		( new CaptainCore\ProcessLogs )->update( (array) $process_log_update, [ "process_log_id" => $process_log_update->process_log_id ] );
 		( new CaptainCore\ProcessLog( $process_log_update->process_log_id) )->assign_sites( $site_ids );
+		$timelines = [];
+		foreach ( $site_ids as $site_id ) {
+			$timelines[ $site_id ] = ( new CaptainCore\Site( $site_id ) )->process_logs();
+		}
+		echo json_encode( $timelines );
+	}
+
+	if ( $cmd == 'deleteLogEntry' ) {
+		$process_log_id = intval( $_POST['value'] );
+		$existing_log   = ( new CaptainCore\ProcessLogs )->get( $process_log_id );
+		
+		// Only allow deleting if user is admin or owns the log entry
+		if ( ! $user->is_admin() && $existing_log->user_id != get_current_user_id() ) {
+			echo "Permission denied";
+			wp_die();
+			return;
+		}
+		
+		// Get associated site IDs before deleting
+		$site_ids = array_column( ( new CaptainCore\ProcessLogSite )->where( [ "process_log_id" => $process_log_id ] ), 'site_id' );
+		
+		// Delete associated site relationships
+		$process_log_sites = ( new CaptainCore\ProcessLogSite )->where( [ "process_log_id" => $process_log_id ] );
+		foreach ( $process_log_sites as $record ) {
+			( new CaptainCore\ProcessLogSite )->delete( $record->process_log_site_id );
+		}
+		
+		// Delete the log entry
+		( new CaptainCore\ProcessLogs )->delete( $process_log_id );
+		
+		// Return updated timelines for all affected sites
 		$timelines = [];
 		foreach ( $site_ids as $site_id ) {
 			$timelines[ $site_id ] = ( new CaptainCore\Site( $site_id ) )->process_logs();
