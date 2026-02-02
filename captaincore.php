@@ -109,7 +109,24 @@ add_action( 'woocommerce_order_status_completed', function( $order_id ) {
     }
 }, 20, 1 );
 
-// 2. Newsletter Email (When a post is published)
+// 2. Customer Refund Notification (When a refund is created)
+add_action( 'woocommerce_order_refunded', function( $order_id, $refund_id ) {
+    $order = wc_get_order( $order_id );
+    // Only send for CaptainCore managed orders
+    if ( $order && $order->get_meta( 'captaincore_account_id' ) ) {
+        \CaptainCore\Mailer::send_customer_refund( $order_id, $refund_id );
+    }
+}, 10, 2 );
+
+// Disable WooCommerce refund emails for CaptainCore managed orders
+add_filter( 'woocommerce_email_enabled_customer_refunded_order', function( $enabled, $order ) {
+    if ( $order && $order->get_meta( 'captaincore_account_id' ) ) {
+        return false;
+    }
+    return $enabled;
+}, 10, 2 );
+
+// 3. Newsletter Email (When a post is published)
 function captaincore_send_newsletter_on_publish( $new_status, $old_status, $post ) {
     // Only trigger on new publish, not updates to already published posts
     if ( $new_status !== 'publish' || $old_status === 'publish' ) {

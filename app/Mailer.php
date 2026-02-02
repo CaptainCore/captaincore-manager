@@ -1132,4 +1132,159 @@ class Mailer {
         );
     }
 
+    /* -------------------------------------------------------------------------
+     *  HELPER: Generate Order Summary with Refund HTML
+     * ------------------------------------------------------------------------- */
+    private static function get_order_summary_with_refund_html( $order, $refund, $brand_color ) {
+        $items_html = '';
+        $currency   = $order->get_currency();
+
+        // Get the original order items
+        foreach ( $order->get_items() as $item_id => $item ) {
+            $product_name = $item->get_name();
+            $qty          = $item->get_quantity();
+            $total_price  = wc_price( $item->get_total(), array( 'currency' => $currency ) );
+            
+            // Get item meta (like plan details)
+            $meta_data = $item->get_meta_data();
+            $details   = '';
+            foreach ( $meta_data as $meta ) {
+                if ( $meta->key === 'Details' ) {
+                    $details = '<div style="font-size: 12px; color: #718096; margin-top: 4px;">' . nl2br( esc_html( $meta->value ) ) . '</div>';
+                }
+            }
+
+            $items_html .= "
+            <tr>
+                <td style='padding: 12px 0; border-bottom: 1px solid #edf2f7; text-align: left;'>
+                    <div style='font-weight: 600; color: #2d3748;'>{$product_name}</div>
+                    {$details}
+                </td>
+                <td style='padding: 12px 0; border-bottom: 1px solid #edf2f7; text-align: center; vertical-align: top; color: #718096; width: 60px;'>
+                    x{$qty}
+                </td>
+                <td style='padding: 12px 0; border-bottom: 1px solid #edf2f7; text-align: right; vertical-align: top; color: #2d3748; width: 1%; white-space: nowrap;'>
+                    {$total_price}
+                </td>
+            </tr>";
+        }
+
+        // Calculate totals
+        $subtotal       = wc_price( $order->get_subtotal(), array( 'currency' => $currency ) );
+        $refund_amount  = wc_price( abs( $refund->get_amount() ), array( 'currency' => $currency ) );
+        $refund_reason  = $refund->get_reason();
+        $order_total    = (float) $order->get_total();
+        $total_refunded = (float) $order->get_total_refunded();
+        $new_total      = wc_price( max( 0, $order_total - $total_refunded ), array( 'currency' => $currency ) );
+        $original_total = wc_price( $order_total, array( 'currency' => $currency ) );
+
+        // Refund reason row
+        $reason_html = '';
+        if ( ! empty( $refund_reason ) ) {
+            $reason_html = "<div style='font-size: 12px; color: #718096; margin-top: 2px;'>" . esc_html( $refund_reason ) . "</div>";
+        }
+
+        $order_date = $order->get_date_created()->date( 'F j, Y' );
+
+        return "
+        <h3 style='margin: 0 0 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: left;'>Order Summary</h3>
+        <p style='margin: 0 0 15px; font-size: 14px; color: #718096; text-align: left;'>Order #{$order->get_id()} ({$order_date})</p>
+        <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='font-size: 14px;'>
+            <tr style='border-bottom: 2px solid #edf2f7;'>
+                <td style='padding: 8px 0; font-weight: 600; color: #718096; text-align: left;'>Product</td>
+                <td style='padding: 8px 0; font-weight: 600; color: #718096; text-align: center; width: 60px;'>Qty</td>
+                <td style='padding: 8px 0; font-weight: 600; color: #718096; text-align: right;'>Price</td>
+            </tr>
+            {$items_html}
+            <tr>
+                <td colspan='2' style='padding: 12px 0 8px; color: #718096; text-align: right; border-bottom: 1px solid #edf2f7;'>Subtotal:</td>
+                <td style='padding: 12px 0 8px; color: #2d3748; text-align: right; white-space: nowrap; border-bottom: 1px solid #edf2f7;'>{$subtotal}</td>
+            </tr>
+            <tr>
+                <td colspan='2' style='padding: 8px 0; text-align: right; border-bottom: 1px solid #edf2f7;'>
+                    <span style='color: #718096;'>Refund:</span>
+                    {$reason_html}
+                </td>
+                <td style='padding: 8px 0; color: #e53e3e; text-align: right; white-space: nowrap; border-bottom: 1px solid #edf2f7; vertical-align: top;'>-{$refund_amount}</td>
+            </tr>
+            <tr>
+                <td colspan='2' style='padding: 15px 0 0; font-weight: 700; color: #2d3748; text-align: right;'>Total:</td>
+                <td style='padding: 15px 0 0; text-align: right; white-space: nowrap;'>
+                    <span style='text-decoration: line-through; color: #a0aec0;'>{$original_total}</span>
+                    <span style='font-weight: 700; color: {$brand_color}; margin-left: 8px;'>{$new_total}</span>
+                </td>
+            </tr>
+        </table>";
+    }
+
+    /* -------------------------------------------------------------------------
+     *  CUSTOMER REFUND NOTIFICATION
+     * ------------------------------------------------------------------------- */
+    static public function send_customer_refund( $order_id, $refund_id ) {
+        $order  = wc_get_order( $order_id );
+        $refund = wc_get_order( $refund_id );
+        
+        if ( ! $order || ! $refund ) return;
+
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $site_name   = get_bloginfo( 'name' );
+        $admin_email = get_option( 'admin_email' );
+
+        // Add Admin as BCC
+        $headers = [ "Bcc: $admin_email" ];
+
+        $refund_amount = wc_price( abs( $refund->get_amount() ), array( 'currency' => $order->get_currency() ) );
+        $date          = $refund->get_date_created()->date( 'F j, Y' );
+        $billing       = $order->get_address( 'billing' );
+        $email         = $billing['email'];
+
+        if ( empty( $email ) ) {
+            $user  = get_user_by( 'id', $order->get_customer_id() );
+            $email = $user->user_email;
+        }
+
+        // Add additional emails from account if available
+        $account_id = $order->get_meta( 'captaincore_account_id' );
+        if ( $account_id ) {
+            $account = ( new Accounts )->get( $account_id );
+            if ( $account ) {
+                $plan = json_decode( $account->plan );
+                if ( ! empty( $plan->additional_emails ) ) {
+                    $email .= ", {$plan->additional_emails}";
+                }
+            }
+        }
+
+        $order_summary_html = self::get_order_summary_with_refund_html( $order, $refund, $brand_color );
+        $billing_html       = self::get_billing_address_html( $order );
+
+        // Check if this is a full or partial refund
+        $order_total      = (float) $order->get_total();
+        $total_refunded   = (float) $order->get_total_refunded();
+        $is_full_refund   = ( $total_refunded >= $order_total );
+        $refund_type_text = $is_full_refund ? 'Full Refund' : 'Partial Refund';
+
+        $intro_html = "
+            <div style='text-align: center; margin-bottom: 20px;'>
+                <div style='display: inline-block; background-color: #E9D8FD; color: #553C9A; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                    {$refund_type_text}
+                </div>
+            </div>
+            <div style='text-align: center; margin-bottom: 40px;'>
+                <div style='margin-bottom: 10px; font-size: 36px; font-weight: 700; color: {$brand_color};'>{$refund_amount}</div>
+                <div style='color: #718096; font-size: 14px;'>A refund has been issued to your original payment method.</div>
+            </div>
+        ";
+
+        self::send_email_with_layout( 
+            $email, 
+            "Refund for Order #{$order_id}", 
+            "Refund Issued", 
+            $date, 
+            $intro_html . $order_summary_html . $billing_html,
+            $headers
+        );
+    }
+
 }
