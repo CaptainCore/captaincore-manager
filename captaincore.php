@@ -282,39 +282,351 @@ add_action( 'add_meta_boxes', 'captaincore_newsletter_meta_box' );
  * Display newsletter send history in meta box
  */
 function captaincore_newsletter_meta_box_callback( $post ) {
-    $send_history = get_post_meta( $post->ID, '_captaincore_newsletter_sent', true );
+    $send_history   = get_post_meta( $post->ID, '_captaincore_newsletter_sent', true );
+    $editor_history = get_post_meta( $post->ID, '_captaincore_newsletter_sent_editors', true );
+    $current_user   = wp_get_current_user();
+    
+    // Show subscriber count
+    $subscribers = get_users( [ 'role' => 'email_subscriber' ] );
+    $count = count( $subscribers );
 
     if ( empty( $send_history ) ) {
         echo '<p style="color: #666;">Newsletter has not been sent for this post.</p>';
         
-        // Show subscriber count for context
-        $subscribers = get_users( [ 'role' => 'email_subscriber', 'count_total' => true ] );
-        $count = count( $subscribers );
+        // Show editor review status if sent
+        if ( ! empty( $editor_history ) ) {
+            $editor_data = json_decode( $editor_history, true );
+            if ( is_array( $editor_data ) && isset( $editor_data['sent_at'] ) ) {
+                $formatted_date = date_i18n( 'F j, Y \a\t g:i a', strtotime( $editor_data['sent_at'] ) );
+                echo '<div style="background: #e7f3ff; border: 1px solid #b3d7ff; padding: 8px 10px; border-radius: 4px; margin-bottom: 12px;">';
+                echo '<p style="margin: 0; font-size: 12px; color: #004085;">';
+                echo '<strong>Sent to editors for review</strong><br>';
+                echo '<span style="color: #666;">' . esc_html( $formatted_date ) . '</span>';
+                echo '</p>';
+                echo '</div>';
+            }
+        }
+        
         if ( $count > 0 ) {
             echo '<p style="color: #666; font-size: 12px;">There are currently <strong>' . $count . '</strong> email subscribers.</p>';
         }
-        return;
+    } else {
+        $history = json_decode( $send_history, true );
+
+        if ( is_array( $history ) && isset( $history['sent_at'] ) ) {
+            $sent_at         = $history['sent_at'];
+            $recipient_count = $history['recipient_count'] ?? 0;
+            $formatted_date  = date_i18n( 'F j, Y \a\t g:i a', strtotime( $sent_at ) );
+
+            echo '<div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 10px; border-radius: 4px; margin-bottom: 12px;">';
+            echo '<p style="margin: 0 0 5px; color: #155724;"><strong>Sent successfully</strong></p>';
+            echo '<p style="margin: 0; font-size: 12px; color: #155724;">';
+            echo 'Sent <strong>' . $recipient_count . '</strong> email' . ( $recipient_count !== 1 ? 's' : '' ) . '<br>';
+            echo '<span style="color: #666;">' . esc_html( $formatted_date ) . '</span>';
+            echo '</p>';
+            echo '</div>';
+        } else {
+            // Legacy format (just timestamp string)
+            echo '<p style="color: #155724; margin-bottom: 12px;">Newsletter sent on ' . esc_html( $send_history ) . '</p>';
+        }
     }
 
-    $history = json_decode( $send_history, true );
-
-    if ( is_array( $history ) && isset( $history['sent_at'] ) ) {
-        $sent_at         = $history['sent_at'];
-        $recipient_count = $history['recipient_count'] ?? 0;
-        $formatted_date  = date_i18n( 'F j, Y \a\t g:i a', strtotime( $sent_at ) );
-
-        echo '<div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 10px; border-radius: 4px;">';
-        echo '<p style="margin: 0 0 5px; color: #155724;"><strong>Sent successfully</strong></p>';
-        echo '<p style="margin: 0; font-size: 12px; color: #155724;">';
-        echo 'Sent <strong>' . $recipient_count . '</strong> email' . ( $recipient_count !== 1 ? 's' : '' ) . '<br>';
-        echo '<span style="color: #666;">' . esc_html( $formatted_date ) . '</span>';
-        echo '</p>';
+    // Manual send section (admin only)
+    if ( current_user_can( 'manage_options' ) ) {
+        wp_nonce_field( 'captaincore_newsletter_send', 'captaincore_newsletter_nonce' );
+        
+        // Get editor count
+        $editors = get_users( [ 'role' => 'editor' ] );
+        $editor_count = count( $editors );
+        
+        echo '<div style="border-top: 1px solid #ddd; padding-top: 12px; margin-top: 12px;">';
+        echo '<p style="margin: 0 0 8px; font-weight: 600; font-size: 12px;">Manual Send</p>';
+        
+        // Preview to self
+        echo '<div style="margin-bottom: 10px;">';
+        echo '<button type="button" class="button" id="captaincore-send-preview" data-post-id="' . esc_attr( $post->ID ) . '" style="width: 100%;">Send Preview to Me</button>';
+        echo '<p style="margin: 4px 0 0; font-size: 11px; color: #666;">Sends to: ' . esc_html( $current_user->user_email ) . '</p>';
         echo '</div>';
-    } else {
-        // Legacy format (just timestamp string)
-        echo '<p style="color: #155724;">Newsletter sent on ' . esc_html( $send_history ) . '</p>';
+        
+        // Send to editors for review
+        if ( $editor_count > 0 ) {
+            echo '<div style="margin-bottom: 10px;">';
+            echo '<button type="button" class="button" id="captaincore-send-editors" data-post-id="' . esc_attr( $post->ID ) . '" style="width: 100%;">Send to Editors (' . $editor_count . ')</button>';
+            echo '<p style="margin: 4px 0 0; font-size: 11px; color: #666;">Send preview to editors for review.</p>';
+            echo '</div>';
+        }
+        
+        // Send to all subscribers
+        if ( $count > 0 ) {
+            echo '<div style="margin-bottom: 10px;">';
+            echo '<button type="button" class="button" id="captaincore-send-all" data-post-id="' . esc_attr( $post->ID ) . '" style="width: 100%;">Send to All Subscribers (' . $count . ')</button>';
+            echo '<p style="margin: 4px 0 0; font-size: 11px; color: #666;">This will send immediately to all subscribers.</p>';
+            echo '</div>';
+        }
+        
+        // Send to custom email
+        echo '<div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid #ddd;">';
+        echo '<p style="margin: 0 0 8px; font-weight: 600; font-size: 12px;">Send to Email</p>';
+        echo '<div style="display: flex; gap: 5px;">';
+        echo '<input type="email" id="captaincore-custom-email" placeholder="email@example.com" style="flex: 1; min-width: 0;">';
+        echo '<button type="button" class="button" id="captaincore-send-custom" data-post-id="' . esc_attr( $post->ID ) . '">Send</button>';
+        echo '</div>';
+        echo '</div>';
+        
+        echo '<div id="captaincore-newsletter-status" style="margin-top: 10px;"></div>';
+        echo '</div>';
+        
+        // Inline JavaScript for AJAX
+        ?>
+        <script type="text/javascript">
+        jQuery(document).ready(function($) {
+            $('#captaincore-send-preview').on('click', function() {
+                var button = $(this);
+                var postId = button.data('post-id');
+                var statusDiv = $('#captaincore-newsletter-status');
+                
+                button.prop('disabled', true).text('Sending...');
+                statusDiv.html('');
+                
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'captaincore_send_newsletter_preview',
+                        post_id: postId,
+                        send_to: 'preview',
+                        nonce: $('#captaincore_newsletter_nonce').val()
+                    },
+                    success: function(response) {
+                        button.prop('disabled', false).text('Send Preview to Me');
+                        if (response.success) {
+                            statusDiv.html('<div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 8px; border-radius: 4px; font-size: 12px; color: #155724;">' + response.data.message + '</div>');
+                        } else {
+                            statusDiv.html('<div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 8px; border-radius: 4px; font-size: 12px; color: #721c24;">' + response.data.message + '</div>');
+                        }
+                    },
+                    error: function() {
+                        button.prop('disabled', false).text('Send Preview to Me');
+                        statusDiv.html('<div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 8px; border-radius: 4px; font-size: 12px; color: #721c24;">An error occurred. Please try again.</div>');
+                    }
+                });
+            });
+            
+            $('#captaincore-send-editors').on('click', function() {
+                var button = $(this);
+                var postId = button.data('post-id');
+                var statusDiv = $('#captaincore-newsletter-status');
+                
+                button.prop('disabled', true).text('Sending...');
+                statusDiv.html('');
+                
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'captaincore_send_newsletter_preview',
+                        post_id: postId,
+                        send_to: 'editors',
+                        nonce: $('#captaincore_newsletter_nonce').val()
+                    },
+                    success: function(response) {
+                        button.prop('disabled', false).text('Send to Editors');
+                        if (response.success) {
+                            statusDiv.html('<div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 8px; border-radius: 4px; font-size: 12px; color: #155724;">' + response.data.message + '</div>');
+                        } else {
+                            statusDiv.html('<div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 8px; border-radius: 4px; font-size: 12px; color: #721c24;">' + response.data.message + '</div>');
+                        }
+                    },
+                    error: function() {
+                        button.prop('disabled', false).text('Send to Editors');
+                        statusDiv.html('<div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 8px; border-radius: 4px; font-size: 12px; color: #721c24;">An error occurred. Please try again.</div>');
+                    }
+                });
+            });
+            
+            $('#captaincore-send-all').on('click', function() {
+                var button = $(this);
+                var postId = button.data('post-id');
+                var statusDiv = $('#captaincore-newsletter-status');
+                
+                if (!confirm('Are you sure you want to send this newsletter to all subscribers? This cannot be undone.')) {
+                    return;
+                }
+                
+                button.prop('disabled', true).text('Sending...');
+                statusDiv.html('');
+                
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'captaincore_send_newsletter_preview',
+                        post_id: postId,
+                        send_to: 'all',
+                        nonce: $('#captaincore_newsletter_nonce').val()
+                    },
+                    success: function(response) {
+                        button.prop('disabled', false).text('Send to All Subscribers');
+                        if (response.success) {
+                            statusDiv.html('<div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 8px; border-radius: 4px; font-size: 12px; color: #155724;">' + response.data.message + '</div>');
+                            // Reload the page to show updated send history
+                            setTimeout(function() { location.reload(); }, 2000);
+                        } else {
+                            statusDiv.html('<div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 8px; border-radius: 4px; font-size: 12px; color: #721c24;">' + response.data.message + '</div>');
+                        }
+                    },
+                    error: function() {
+                        button.prop('disabled', false).text('Send to All Subscribers');
+                        statusDiv.html('<div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 8px; border-radius: 4px; font-size: 12px; color: #721c24;">An error occurred. Please try again.</div>');
+                    }
+                });
+            });
+            
+            $('#captaincore-send-custom').on('click', function() {
+                var button = $(this);
+                var postId = button.data('post-id');
+                var statusDiv = $('#captaincore-newsletter-status');
+                var emailInput = $('#captaincore-custom-email');
+                var email = emailInput.val().trim();
+                
+                if (!email) {
+                    statusDiv.html('<div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 8px; border-radius: 4px; font-size: 12px; color: #721c24;">Please enter an email address.</div>');
+                    return;
+                }
+                
+                button.prop('disabled', true).text('Sending...');
+                statusDiv.html('');
+                
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'captaincore_send_newsletter_preview',
+                        post_id: postId,
+                        send_to: 'custom',
+                        email: email,
+                        nonce: $('#captaincore_newsletter_nonce').val()
+                    },
+                    success: function(response) {
+                        button.prop('disabled', false).text('Send');
+                        if (response.success) {
+                            statusDiv.html('<div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 8px; border-radius: 4px; font-size: 12px; color: #155724;">' + response.data.message + '</div>');
+                            emailInput.val('');
+                        } else {
+                            statusDiv.html('<div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 8px; border-radius: 4px; font-size: 12px; color: #721c24;">' + response.data.message + '</div>');
+                        }
+                    },
+                    error: function() {
+                        button.prop('disabled', false).text('Send');
+                        statusDiv.html('<div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 8px; border-radius: 4px; font-size: 12px; color: #721c24;">An error occurred. Please try again.</div>');
+                    }
+                });
+            });
+        });
+        </script>
+        <?php
     }
 }
+
+/**
+ * AJAX handler for sending newsletter preview/manual send
+ */
+function captaincore_send_newsletter_preview_ajax() {
+    // Verify nonce
+    if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( $_POST['nonce'], 'captaincore_newsletter_send' ) ) {
+        wp_send_json_error( [ 'message' => 'Security check failed.' ] );
+    }
+    
+    // Check permissions
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_send_json_error( [ 'message' => 'You do not have permission to perform this action.' ] );
+    }
+    
+    $post_id = isset( $_POST['post_id'] ) ? intval( $_POST['post_id'] ) : 0;
+    $send_to = isset( $_POST['send_to'] ) ? sanitize_text_field( $_POST['send_to'] ) : 'preview';
+    
+    if ( ! $post_id ) {
+        wp_send_json_error( [ 'message' => 'Invalid post ID.' ] );
+    }
+    
+    $post = get_post( $post_id );
+    if ( ! $post || $post->post_type !== 'post' ) {
+        wp_send_json_error( [ 'message' => 'Post not found.' ] );
+    }
+    
+    if ( $send_to === 'preview' ) {
+        // Send only to the current admin user
+        $current_user = wp_get_current_user();
+        \CaptainCore\Mailer::send_new_post_notification( $post_id, $current_user );
+        wp_send_json_success( [ 'message' => 'Preview sent to ' . $current_user->user_email ] );
+        
+    } elseif ( $send_to === 'custom' ) {
+        // Send to a custom email address
+        $email = isset( $_POST['email'] ) ? sanitize_email( $_POST['email'] ) : '';
+        
+        if ( empty( $email ) || ! is_email( $email ) ) {
+            wp_send_json_error( [ 'message' => 'Please enter a valid email address.' ] );
+        }
+        
+        // Create a temporary user object for the mailer
+        $temp_user = (object) [
+            'user_email' => $email,
+            'ID'         => 0,
+        ];
+        
+        \CaptainCore\Mailer::send_new_post_notification( $post_id, $temp_user );
+        wp_send_json_success( [ 'message' => 'Preview sent to ' . $email ] );
+        
+    } elseif ( $send_to === 'editors' ) {
+        // Send to all editors for review
+        $editors = get_users( [ 'role' => 'editor' ] );
+        
+        if ( empty( $editors ) ) {
+            wp_send_json_error( [ 'message' => 'No editors found.' ] );
+        }
+        
+        $emails = [];
+        foreach ( $editors as $user ) {
+            \CaptainCore\Mailer::send_new_post_notification( $post_id, $user, 'review' );
+            $emails[] = $user->user_email;
+        }
+        
+        // Save editor send history
+        $editor_history = [
+            'sent_at'         => current_time( 'mysql' ),
+            'recipient_count' => count( $editors ),
+            'emails'          => $emails,
+        ];
+        update_post_meta( $post_id, '_captaincore_newsletter_sent_editors', wp_json_encode( $editor_history ) );
+        
+        wp_send_json_success( [ 'message' => 'Preview sent to ' . count( $editors ) . ' editor(s): ' . implode( ', ', $emails ) ] );
+        
+    } elseif ( $send_to === 'all' ) {
+        // Send to all subscribers
+        $subscribers = get_users( [ 'role' => 'email_subscriber' ] );
+        
+        if ( empty( $subscribers ) ) {
+            wp_send_json_error( [ 'message' => 'No subscribers found.' ] );
+        }
+        
+        foreach ( $subscribers as $user ) {
+            \CaptainCore\Mailer::send_new_post_notification( $post_id, $user );
+        }
+        
+        // Update send history
+        $send_history = [
+            'sent_at'          => current_time( 'mysql' ),
+            'recipient_count'  => count( $subscribers ),
+            'manual'           => true,
+        ];
+        update_post_meta( $post_id, '_captaincore_newsletter_sent', wp_json_encode( $send_history ) );
+        
+        wp_send_json_success( [ 'message' => 'Newsletter sent to ' . count( $subscribers ) . ' subscriber(s).' ] );
+    } else {
+        wp_send_json_error( [ 'message' => 'Invalid send option.' ] );
+    }
+}
+add_action( 'wp_ajax_captaincore_send_newsletter_preview', 'captaincore_send_newsletter_preview_ajax' );
 
 function captaincore_missive_func( WP_REST_Request $request ) {
 
@@ -4071,6 +4383,26 @@ function captaincore_register_rest_endpoints() {
 			'methods'             => 'GET',
 			'callback'            => function (WP_REST_Request $request) {
 				return ( new CaptainCore\User )->tfa_deactivate();
+			},
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/me/email-subscriber', [
+			'methods'             => 'POST',
+			'callback'            => function (WP_REST_Request $request) {
+				$user    = wp_get_current_user();
+				$enabled = $request->get_param( 'enabled' );
+				
+				if ( $enabled ) {
+					$user->add_role( 'email_subscriber' );
+					return [ 'success' => true, 'message' => 'You will now receive blog post notifications.' ];
+				} else {
+					$user->remove_role( 'email_subscriber' );
+					return [ 'success' => true, 'message' => 'You will no longer receive blog post notifications.' ];
+				}
 			},
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,

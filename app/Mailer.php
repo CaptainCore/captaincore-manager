@@ -1059,6 +1059,83 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
+     *  HELPER: Style Code Blocks for Email
+     * ------------------------------------------------------------------------- */
+    private static function style_code_blocks( $content ) {
+        // Style for <pre> blocks (code blocks) - dark theme
+        $pre_style = 'background-color: #1e293b; color: #e2e8f0; padding: 16px 20px; border-radius: 6px; overflow-x: auto; text-align: left; font-size: 13px; line-height: 1.5; margin: 20px 0;';
+        
+        // Style for <code> inside <pre> - inherit and use monospace
+        $code_in_pre_style = 'background: none; color: inherit; padding: 0; font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; font-size: inherit; white-space: pre-wrap; word-wrap: break-word;';
+        
+        // Style for inline <code> (not in pre) - subtle background
+        $inline_code_style = 'background-color: #f1f5f9; color: #0f172a; padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; font-size: 0.9em;';
+
+        // First, handle <pre><code>...</code></pre> blocks
+        $content = preg_replace_callback(
+            '/<pre([^>]*)>\s*<code([^>]*)>(.*?)<\/code>\s*<\/pre>/is',
+            function( $matches ) use ( $pre_style, $code_in_pre_style ) {
+                $pre_attrs  = $matches[1];
+                $code_attrs = $matches[2];
+                $code_content = $matches[3];
+                return "<pre{$pre_attrs} style=\"{$pre_style}\"><code{$code_attrs} style=\"{$code_in_pre_style}\">{$code_content}</code></pre>";
+            },
+            $content
+        );
+
+        // Handle <pre> blocks without <code> wrapper
+        $content = preg_replace_callback(
+            '/<pre([^>]*)>(?!\s*<code)(.*?)<\/pre>/is',
+            function( $matches ) use ( $pre_style ) {
+                $pre_attrs = $matches[1];
+                $pre_content = $matches[2];
+                // Skip if already styled
+                if ( strpos( $pre_attrs, 'style=' ) !== false ) {
+                    return $matches[0];
+                }
+                return "<pre{$pre_attrs} style=\"{$pre_style}\">{$pre_content}</pre>";
+            },
+            $content
+        );
+
+        // Handle inline <code> tags (not inside <pre>)
+        // Use a marker to protect code blocks we've already processed
+        $content = preg_replace( '/<pre([^>]*)>/i', '<!--PRE_START--><pre$1>', $content );
+        $content = preg_replace( '/<\/pre>/i', '</pre><!--PRE_END-->', $content );
+        
+        // Split by markers and only process code tags outside of pre blocks
+        $parts = preg_split( '/(<!--PRE_START-->.*?<!--PRE_END-->)/is', $content, -1, PREG_SPLIT_DELIM_CAPTURE );
+        
+        foreach ( $parts as &$part ) {
+            // Skip pre blocks
+            if ( strpos( $part, '<!--PRE_START-->' ) === 0 ) {
+                continue;
+            }
+            // Style inline code tags
+            $part = preg_replace_callback(
+                '/<code([^>]*)>(.*?)<\/code>/is',
+                function( $matches ) use ( $inline_code_style ) {
+                    $code_attrs = $matches[1];
+                    $code_content = $matches[2];
+                    // Skip if already styled
+                    if ( strpos( $code_attrs, 'style=' ) !== false ) {
+                        return $matches[0];
+                    }
+                    return "<code{$code_attrs} style=\"{$inline_code_style}\">{$code_content}</code>";
+                },
+                $part
+            );
+        }
+        
+        $content = implode( '', $parts );
+        
+        // Remove markers
+        $content = str_replace( [ '<!--PRE_START-->', '<!--PRE_END-->' ], '', $content );
+
+        return $content;
+    }
+
+    /* -------------------------------------------------------------------------
      *  HELPER: Generate Secure Unsubscribe URL
      * ------------------------------------------------------------------------- */
     public static function generate_unsubscribe_url( $user_id ) {
@@ -1078,8 +1155,9 @@ class Mailer {
 
     /* -------------------------------------------------------------------------
      *  NEW POST NOTIFICATION (Newsletter to Subscribers)
+     *  $context: 'newsletter' (default) or 'review' (for editor review)
      * ------------------------------------------------------------------------- */
-    static public function send_new_post_notification( $post_id, $user ) {
+    static public function send_new_post_notification( $post_id, $user, $context = 'newsletter' ) {
         $post = get_post( $post_id );
         if ( ! $post || ! $user ) {
             return;
@@ -1092,10 +1170,18 @@ class Mailer {
         $post_title   = get_the_title( $post );
         $post_content = apply_filters( 'the_content', $post->post_content );
         $post_content = self::make_images_responsive( $post_content );
+        $post_content = self::style_code_blocks( $post_content );
         $permalink    = get_permalink( $post );
         $author       = get_the_author_meta( 'display_name', $post->post_author );
         $featured_img = get_the_post_thumbnail_url( $post, 'large' );
         $unsubscribe  = self::generate_unsubscribe_url( $user->ID );
+        
+        // Get post date - use published date if available, otherwise modified date
+        $post_date_obj = $post->post_date ? new \DateTime( $post->post_date ) : new \DateTime( $post->post_modified );
+        $post_date     = $post_date_obj->format( 'F j, Y' );
+
+        // Set subject line based on context
+        $subject_prefix = ( $context === 'review' ) ? '[Ready for review]' : '[New post]';
 
         // Build featured image HTML
         $featured_html = '';
@@ -1125,9 +1211,9 @@ class Mailer {
 
         self::send_email_with_layout(
             $user->user_email,
-            "[New post] {$post_title}",
+            "{$subject_prefix} {$post_title}",
             $post_title,
-            "By {$author}",
+            "{$post_date} &bull; By {$author}",
             $content_html
         );
     }

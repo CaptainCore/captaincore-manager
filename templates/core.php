@@ -9218,6 +9218,25 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-col>
 					</v-row>
 					<v-row>
+					<v-col cols="12" class="mt-5">
+						<div class="text-subtitle-2 text-medium-emphasis mb-2">Notifications</div>
+						<v-card flat border="thin" rounded="lg">
+							<v-list density="compact">
+								<v-list-item>
+									<template v-slot:prepend>
+										<v-icon icon="mdi-email-newsletter" class="mr-2"></v-icon>
+									</template>
+									<v-list-item-title>Blog post updates</v-list-item-title>
+									<v-list-item-subtitle>Receive email notifications when new blog posts are published</v-list-item-subtitle>
+									<template v-slot:append>
+										<v-switch v-model="profile.email_subscriber" color="primary" hide-details density="compact" @change="toggleEmailSubscriber()"></v-switch>
+									</template>
+								</v-list-item>
+							</v-list>
+						</v-card>
+					</v-col>
+					</v-row>
+					<v-row>
 					<v-col cols="12" class="mt-3">
 						<v-alert variant="tonal" type="error" v-for="error in profile.errors" class="mt-5">{{ error }}</v-alert>
 						<v-alert variant="tonal" type="success" v-show="profile.success" class="mt-5">{{ profile.success }}</v-alert>
@@ -11543,7 +11562,7 @@ const app = createApp({
 		current_user_registered: "<?php echo $user->registered; ?>",
 		current_user_hash: "<?php echo $user->hash; ?>",
 		current_user_display_name: "<?php echo $user->display_name; ?>",
-		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->email; ?>", login: "<?php echo $user->login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", pinned_environments: [], errors: [], tfa_activate: false, tfa_enabled: <?php echo $user->tfa_enabled; ?>, tfa_uri: "", tfa_token: "" },
+		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->email; ?>", login: "<?php echo $user->login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", pinned_environments: [], errors: [], tfa_activate: false, tfa_enabled: <?php echo $user->tfa_enabled; ?>, tfa_uri: "", tfa_token: "", email_subscriber: <?php echo $user->email_subscriber ? 'true' : 'false'; ?> },
 		stats: { from_at: "<?php echo date("Y-m-d", strtotime( date("Y-m-d" ). " -12 months" ) ); ?>", to_at: "<?php echo date("Y-m-d" ); ?>", from_at_select: false, to_at_select: false, grouping: "Month" },
 		role: "<?php echo $user->role; ?>",
 		dialog_processes: { show: false, processes: [], conn: {}, stream: [], loading: true },
@@ -16244,12 +16263,31 @@ const app = createApp({
 					this.snackbar.show = true
 				})
 		},
-		
 		cancelTFA() {
 			let tfa_qr_code = document.getElementById("tfa_qr_code")
 			tfa_qr_code.innerHTML = ""
 			this.profile.tfa_uri = ""
 			this.profile.tfa_activate = false
+		},
+		toggleEmailSubscriber() {
+			axios.post(
+				`/wp-json/captaincore/v1/me/email-subscriber`, {
+					enabled: this.profile.email_subscriber
+				}, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					if ( response.data.success ) {
+						this.snackbar.message = response.data.message
+						this.snackbar.show = true
+					}
+				})
+				.catch(error => {
+					// Revert the toggle on error
+					this.profile.email_subscriber = !this.profile.email_subscriber
+					this.snackbar.message = "Failed to update notification preferences."
+					this.snackbar.show = true
+				})
 		},
 		updateAccount() {
 			var data = {
