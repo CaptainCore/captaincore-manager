@@ -119,6 +119,9 @@ class ScheduledReports extends DB {
                 $next = new \DateTime( 'first day of next month', $timezone );
         }
 
+        // Set time to 6 AM so reports are sent early morning
+        $next->setTime( 6, 0, 0 );
+
         return $next->format( 'Y-m-d H:i:s' );
     }
 
