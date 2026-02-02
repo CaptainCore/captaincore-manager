@@ -163,6 +163,9 @@ class ScheduledReportsCLI {
 
 		$now = current_time( 'mysql' );
 
+		\WP_CLI::log( sprintf( 'Current time (WordPress): %s', $now ) );
+		\WP_CLI::log( sprintf( 'Timezone: %s', wp_timezone_string() ) );
+		\WP_CLI::log( '' );
 		\WP_CLI::log( sprintf( 'Found %d scheduled report(s):', count( $reports ) ) );
 		\WP_CLI::log( '' );
 
