@@ -374,15 +374,11 @@ class Domain {
             return new \WP_Error( 'api_error', 'Mailgun API error: ' . json_encode( $mailgun_domain->errors ) );
         }
 
-        // Handle different response structures from GET vs POST
-        // GET /v4/domains/{name} returns: { "name": "...", "receiving_dns_records": [...], ... }
-        // POST /v4/domains returns: { "domain": { "name": "..." }, "receiving_dns_records": [...], ... }
+        // Handle Mailgun response - both GET and POST return domain info nested under 'domain' key
+        // GET /v4/domains/{name} returns: { "domain": { "name": "...", "id": "..." }, "receiving_dns_records": [...], ... }
+        // POST /v4/domains returns: { "domain": { "name": "...", "id": "..." }, "receiving_dns_records": [...], ... }
         if ( ! empty( $mailgun_domain->domain ) ) {
-            // POST response - domain info is nested under 'domain' key
             $mailgun_domain_info = $mailgun_domain->domain;
-        } elseif ( ! empty( $mailgun_domain->name ) ) {
-            // GET response - domain info is at root level
-            $mailgun_domain_info = $mailgun_domain;
         } else {
             error_log( 'CaptainCore: Unexpected Mailgun response for ' . $domain->name . ': ' . json_encode( $mailgun_domain ) );
             return new \WP_Error( 'api_error', 'Failed to create or retrieve domain on Mailgun.' );
