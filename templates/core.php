@@ -2019,14 +2019,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								</v-card-text>
 							</v-card>
 							</v-menu>
-							<v-btn variant="text" density="compact" icon="mdi-pencil" @click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)"></v-btn>
+							<v-btn v-if="role == 'administrator' || item.user_id == current_user_id" variant="text" density="compact" icon="mdi-pencil" @click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)"></v-btn>
 						</td>
 						</tr>
 						</template>
 					</v-data-table>
 					</v-card-text>
 				</v-dialog>
-				<v-dialog v-if="role == 'administrator' || role == 'owner'" v-model="dialog_new_log_entry.show" scrollable persistent width="500">
+				<v-dialog v-model="dialog_new_log_entry.show" scrollable persistent width="500">
 				<v-card rounded="0">
 				<v-toolbar elevation="0" color="primary">
 					<v-btn icon="mdi-close" @click="dialog_new_log_entry.show = false"></v-btn>
@@ -2075,7 +2075,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card-text>
 				</v-card>
 				</v-dialog>
-				<v-dialog v-if="role == 'administrator'" v-model="dialog_edit_log_entry.show" scrollable width="500">
+				<v-dialog v-model="dialog_edit_log_entry.show" scrollable width="500">
 				<v-card rounded="0">
 				<v-toolbar color="primary" elevation="0">
 					<v-btn icon="mdi-close" @click="dialog_edit_log_entry.show = false"></v-btn>
@@ -2117,9 +2117,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					>
 					</v-autocomplete>
 					<v-textarea variant="underlined" label="Description" auto-grow v-model="dialog_edit_log_entry.log.description_raw"></v-textarea>
-					<v-col cols="12" class="text-right pa-0">
-						<v-btn color="primary" style="margin:0px;" @click="updateLogEntry()"> Save Log Entry </v-btn>
-					</v-col>
+					<v-row class="pa-0">
+						<v-col cols="6" class="text-left pa-0">
+							<v-btn color="red" variant="text" @click="deleteLogEntry(dialog_edit_log_entry.log.process_log_id)"><v-icon start>mdi-delete</v-icon> Delete</v-btn>
+						</v-col>
+						<v-col cols="6" class="text-right pa-0">
+							<v-btn color="primary" @click="updateLogEntry()"> Save Log Entry </v-btn>
+						</v-col>
+					</v-row>
 					</v-container>
 				</v-card-text>
 				</v-card>
@@ -2889,7 +2894,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								</template>
 								<span>Add plugin</span>
 							</v-tooltip>
-							<v-tooltip location="top" v-if="role == 'administrator'">
+							<v-tooltip location="top">
 								<template v-slot:activator="{ props }">
 								<v-btn icon="mdi-checkbox-marked" @click="showLogEntryBulk()" v-bind="props"></v-btn>
 								</template>
@@ -4378,7 +4383,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<template v-slot:activator="{ props }">
 						<v-btn
 						v-bind="props"
-						v-show="role == 'administrator' || role == 'owner'"
 						variant="text"
 						icon="mdi-note-check-outline"
 						@click="showLogEntry(dialog_site.site.site_id)"
@@ -6124,9 +6128,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<td class="justify-center pt-3" style="vertical-align: top">
 					{{ pretty_timestamp_epoch(item.created_at) }}
 					</td>
-					<td class="pt-1 pr-2" style="vertical-align: top">
+					<td class="pt-1 pr-2" style="vertical-align: top;">
 					<v-btn
-						v-if="role == 'administrator'"
+						v-if="role == 'administrator' || item.user_id == current_user_id"
 						variant="text"
 						icon
 						@click="editLogEntry(dialog_site.site.site_id, item.process_log_id)"
@@ -7655,7 +7659,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-btn size="small" variant="text" @click="scanErrors( site )">Scan <v-icon class="ml-1">mdi-sync</v-icon></v-btn>
 						<v-btn size="small" variant="text" :href="`http://${site.name}`" target="_blank">View <v-icon class="ml-1">mdi-open-in-new</v-icon></v-btn>
 						<v-btn size="small" variant="text" @click="copySSH( site )">SSH <v-icon class="ml-1">mdi-content-copy</v-icon></v-btn>
-						<v-btn size="small" variant="text" @click="showLogEntry( site.site_id )" v-show="role == 'administrator'">Log <v-icon class="ml-1">mdi-check</v-icon></v-btn>
+						<v-btn size="small" variant="text" @click="showLogEntry( site.site_id )">Log <v-icon class="ml-1">mdi-check</v-icon></v-btn>
 						<v-chip class="mt-4 ml-2" label :value="true">{{ site.console_errors.length }} issues</v-chip>
 						</v-toolbar-items>
 					</v-toolbar>
@@ -9910,7 +9914,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 												</v-card-text>
 											</v-card>
 										</v-menu>
-										<v-btn v-if="role === 'administrator'" @click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)" variant="text" icon="mdi-pencil" size="small"></v-btn>
+										<v-btn v-if="role === 'administrator' || item.user_id == current_user_id" @click="dialog_log_history.show = false; editLogEntry(item.websites, item.process_log_id)" variant="text" icon="mdi-pencil" size="small"></v-btn>
 									</td>
 								</tr>
 							</template>
@@ -11557,6 +11561,7 @@ const app = createApp({
 		verify_bank: { show: false, token_id: null, amount1: "", amount2: "", error: "", success: "", loading: false },
 		admin_verify_bank: { show: false, token_id: null, user_id: null, user_name: "", user_email: "", bank_name: "", account_type: "", last4: "", amount1: "", amount2: "", error: "", success: "", loading: false },
 		pending_ach_verifications: [],
+		current_user_id: <?php echo get_current_user_id(); ?>,
 		current_user_email: "<?php echo $user->email; ?>",
 		current_user_login: "<?php echo $user->login; ?>",
 		current_user_registered: "<?php echo $user->registered; ?>",
@@ -11685,7 +11690,7 @@ const app = createApp({
 			{ title: 'Manual Sync Details', icon: 'mdi-sync', method: 'bulkSyncSites' },
 			{ title: 'Add Plugin', icon: 'mdi-plus-box', method: 'addPluginBulk' },
 			{ title: 'Add Theme', icon: 'mdi-plus', method: 'addThemeBulk' },
-			{ title: 'New Log Entry', icon: 'mdi-checkbox-marked', method: 'showLogEntryBulk', adminOnly: true },
+			{ title: 'New Log Entry', icon: 'mdi-checkbox-marked', method: 'showLogEntryBulk' },
 			{ title: 'Launch Site', icon: 'mdi-earth', method: 'launchSiteDialog' },
 			{ title: 'Open in Browser', icon: 'mdi-open-in-new', method: 'bulkactionLaunch' },
 		],
@@ -16039,6 +16044,31 @@ const app = createApp({
 				})
 				.catch( error => console.log( error ) );
 
+		},
+		deleteLogEntry( log_id ) {
+			if ( ! confirm( 'Are you sure you want to delete this log entry?' ) ) {
+				return;
+			}
+
+			var data = {
+				action: 'captaincore_ajax',
+				command: 'deleteLogEntry',
+				post_id: this.dialog_site.site ? this.dialog_site.site.site_id : 0,
+				value: log_id,
+			};
+
+			axios.post( ajaxurl, Qs.stringify( data ) )
+				.then( response => {
+					this.dialog_edit_log_entry.show = false;
+					Object.keys(response.data).forEach( site_id => {
+						if ( this.dialog_site.site && site_id == this.dialog_site.site.site_id ) {
+							this.dialog_site.site.timeline = response.data[site_id];
+						}
+					});
+					this.snackbar.message = "Log entry deleted";
+					this.snackbar.show = true;
+				})
+				.catch( error => console.log( error ) );
 		},
 		viewProcess( process_id ) {
 

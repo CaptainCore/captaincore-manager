@@ -356,7 +356,8 @@ class Account {
         $storage_gbs     = round( $storage / 1024 / 1024 / 1024, 1 );
 		$storage_percent = empty ( $storage_limit ) ? 0 : round( $storage_gbs / $storage_limit * 100, 0 );
 
-		$result_sites = [];
+		$result_sites             = [];
+		$result_maintenance_sites = [];
 
         foreach ( $site_ids as $site_id ) {
             $site                         = ( new Site( $site_id ))->fetch();
