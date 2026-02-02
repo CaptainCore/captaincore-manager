@@ -2090,6 +2090,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						:items="processes"
 						item-title="name"
 						item-value="process_id"
+						v-show="role == 'administrator'"
 					>
 						<template v-slot:item="{ props, item }">
 						<v-list-item v-bind="props" :title="null" :subtitle="null">
