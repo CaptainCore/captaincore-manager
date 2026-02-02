@@ -160,7 +160,7 @@ class Mailer {
     /* -------------------------------------------------------------------------
      *  CORE TEMPLATE WRAPPER
      * ------------------------------------------------------------------------- */
-    private static function send_email_with_layout( $to, $subject, $headline, $subheadline, $main_content_html, $extra_headers = [] ) {
+    private static function send_email_with_layout( $to, $subject, $headline, $subheadline, $main_content_html, $extra_headers = [], $unsubscribe_url = '', $show_support_footer = true ) {
         self::prepare();
 
         $config      = Configurations::get();
@@ -168,6 +168,27 @@ class Mailer {
         $logo_url    = $config->logo ?? '';
         $site_name   = get_bloginfo( 'name' );
         $site_url    = home_url();
+
+        // Build unsubscribe link if provided
+        $unsubscribe_html = '';
+        if ( ! empty( $unsubscribe_url ) ) {
+            $unsubscribe_html = "<p style='margin: 5px 0 0;'><a href='{$unsubscribe_url}' style='color: #a0aec0; text-decoration: underline;'>Unsubscribe</a></p>";
+        }
+
+        // Build support footer if enabled
+        $support_footer_html = '';
+        if ( $show_support_footer ) {
+            $admin_email = get_option('admin_email');
+            $support_footer_html = "
+                            <!-- Internal Footer Area -->
+                            <tr>
+                                <td style='padding: 30px 40px; background-color: #f7fafc; border-top: 1px solid #edf2f7; text-align: center;'>
+                                    <p style='margin: 0; font-size: 14px; color: #718096;'>
+                                        Questions? <a href='mailto:{$admin_email}' style='color: {$brand_color}; text-decoration: none;'>Contact Support</a>
+                                    </p>
+                                </td>
+                            </tr>";
+        }
 
         $message = "
         <!DOCTYPE html>
@@ -202,19 +223,12 @@ class Mailer {
                                     {$main_content_html}
                                 </td>
                             </tr>
-                            
-                            <!-- Internal Footer Area -->
-                            <tr>
-                                <td style='padding: 30px 40px; background-color: #f7fafc; border-top: 1px solid #edf2f7; text-align: center;'>
-                                    <p style='margin: 0; font-size: 14px; color: #718096;'>
-                                        Questions? <a href='mailto:" . get_option('admin_email') . "' style='color: {$brand_color}; text-decoration: none;'>Contact Support</a>
-                                    </p>
-                                </td>
-                            </tr>
+                            {$support_footer_html}
                         </table>
 
                         <div style='margin-top: 30px; font-size: 12px; color: #a0aec0;'>
                              <p style='margin: 0;'><a href='{$site_url}' style='color: #a0aec0; text-decoration: none;'>{$site_name}</a></p>
+                             {$unsubscribe_html}
                         </div>
 
                     </td>
@@ -1047,10 +1061,14 @@ class Mailer {
      *  HELPER: Make Images Responsive for Email
      * ------------------------------------------------------------------------- */
     private static function make_images_responsive( $content ) {
+        // Remove explicit width and height attributes from img tags (they override CSS)
+        $content = preg_replace( '/<img([^>]*)\s+width\s*=\s*["\'][^"\']*["\']([^>]*)>/i', '<img$1$2>', $content );
+        $content = preg_replace( '/<img([^>]*)\s+height\s*=\s*["\'][^"\']*["\']([^>]*)>/i', '<img$1$2>', $content );
+        
         // Add responsive styles to all img tags
         $content = preg_replace(
             '/<img([^>]+)>/i',
-            '<img$1 style="max-width: 100% !important; height: auto !important;">',
+            '<img$1 style="max-width: 100% !important; height: auto !important; display: block;">',
             $content
         );
         // Clean up any duplicate style attributes
@@ -1200,21 +1218,24 @@ class Mailer {
                 {$post_content}
             </div>
             <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #edf2f7; text-align: center;'>
-                <p style='margin: 0 0 15px;'>
+                <p style='margin: 0;'>
                     <a href='{$permalink}' style='color: {$brand_color}; text-decoration: none; font-weight: 600;'>View on website &rarr;</a>
-                </p>
-                <p style='margin: 0; font-size: 12px; color: #a0aec0;'>
-                    <a href='{$unsubscribe}' style='color: #a0aec0; text-decoration: underline;'>Unsubscribe</a>
                 </p>
             </div>
         ";
 
+        // Decode HTML entities in title for subject line (e.g., &#8211; -> –)
+        $subject_title = html_entity_decode( $post_title, ENT_QUOTES, 'UTF-8' );
+
         self::send_email_with_layout(
             $user->user_email,
-            "{$subject_prefix} {$post_title}",
+            "{$subject_prefix} {$subject_title}",
             $post_title,
             "{$post_date} &bull; By {$author}",
-            $content_html
+            $content_html,
+            [],
+            $unsubscribe,
+            false  // Hide support footer for blog posts
         );
     }
 
