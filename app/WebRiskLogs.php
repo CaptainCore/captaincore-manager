@@ -10,8 +10,9 @@ class WebRiskLogs extends DB {
 		$results = [];
 		$logs    = self::all( 'created_at', 'DESC' );
 		foreach ( $logs as $log ) {
-			$log->details = json_decode( $log->details );
-			$results[]    = $log;
+			$log->details    = json_decode( $log->details );
+			$log->created_at = get_date_from_gmt( $log->created_at, 'Y-m-d H:i:s' );
+			$results[]       = $log;
 		}
 		return $results;
 	}
