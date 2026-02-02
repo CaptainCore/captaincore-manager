@@ -1627,6 +1627,9 @@ class User {
             $pinned = [];
         }
 
+        // Check if user has email_subscriber role
+        $is_email_subscriber = in_array( 'email_subscriber', $user->roles );
+
         return (object) [
             "email"               => $user->user_email,
             "login"               => $user->user_login,
@@ -1637,7 +1640,8 @@ class User {
             "last_name"           => $user->last_name,
             "tfa_enabled"         => get_user_meta( $user->ID, 'captaincore_2fa_enabled', true ) ? get_user_meta( $user->ID, 'captaincore_2fa_enabled', true ) : 0,
             "role"                => $role,
-            "pinned_environments" => $pinned
+            "pinned_environments" => $pinned,
+            "email_subscriber"    => $is_email_subscriber
         ];
     }
 
