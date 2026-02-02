@@ -1196,7 +1196,7 @@ class Mailer {
         // Build content HTML
         $content_html = "
             {$featured_html}
-            <div style='font-size: 16px; line-height: 1.6; color: #4a5568;'>
+            <div style='font-size: 16px; line-height: 1.6; color: #4a5568; text-align: left;'>
                 {$post_content}
             </div>
             <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #edf2f7; text-align: center;'>
