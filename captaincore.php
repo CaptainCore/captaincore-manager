@@ -2418,18 +2418,15 @@ function captaincore_check_verification_func( WP_REST_Request $request ) {
 }
 
 function captaincore_provider_new_func( $request ) {
-	if ( ! ( new CaptainCore\User )->is_admin() ){
-		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
-	}
 	$provider = $request->get_param( "provider" );
 	return ( new CaptainCore\Provider )->create( $provider );
 }
 
 function captaincore_provider_update_func( $request ) {
-	if ( ! ( new CaptainCore\User )->is_admin() ){
-		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
+	$provider_id = intval( $request['id'] );
+	if ( ! ( new CaptainCore\Provider( $provider_id ) )->verify_ownership() ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	}
-	$provider_id = $request->get_param( "id" );
 	$provider    = $request->get_param( "provider" );
 	unset( $provider["provider_id"] );
 	unset( $provider["created_at"] );
@@ -2439,26 +2436,24 @@ function captaincore_provider_update_func( $request ) {
 }
 
 function captaincore_provider_delete_func( $request ) {
-	if ( ! ( new CaptainCore\User )->is_admin() ){
-		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
+	$provider_id = intval( $request['id'] );
+	if ( ! ( new CaptainCore\Provider( $provider_id ) )->verify_ownership() ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	}
-	$provider_id = $request->get_param( "id" );
 	return ( new CaptainCore\Providers )->delete( $provider_id );
 }
 
 function captaincore_provider_func( $request ) {
-	if ( ! ( new CaptainCore\User )->is_admin() ){
-		return [];
-	}
 	return ( new CaptainCore\Provider )->all();
 }
 
 function captaincore_provider_verify_func( $request ) {
-	if ( ! ( new CaptainCore\User )->is_admin() ){
-		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
+	$provider_id = intval( $request['id'] );
+	$provider    = new CaptainCore\Provider( $provider_id );
+	if ( ! $provider->verify_ownership() ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	}
-	$provider = $request->get_param( "provider" );
-	return ( new CaptainCore\Provider( $provider ) )->verify();
+	return $provider->verify();
 }
 
 function captaincore_provider_themes_func( $request ) {
@@ -2496,12 +2491,13 @@ function captaincore_provider_plugins_func( $request ) {
 }
 
 function captaincore_provider_connect_func( $request ) {
-	if ( ! ( new CaptainCore\User )->is_admin() ){
-		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
+	$provider_id = intval( $request['id'] );
+	$provider    = new CaptainCore\Provider( $provider_id );
+	if ( ! $provider->verify_ownership() ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	}
-	$provider = $request->get_param( "provider" );
-	$token    = $request['token'];
-	return ( new CaptainCore\Provider( $provider ) )->update_token( $token );
+	$token = $request['token'];
+	return $provider->update_token( $token );
 }
 
 function captaincore_provider_new_site_func( $request ) {
@@ -6148,34 +6144,34 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/providers', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_provider_new_func',
-			'permission_callback' => 'captaincore_admin_permission_check',
+			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
-		'captaincore/v1', '/providers/(?P<id>[a-zA-Z0-9-]+)', [
+		'captaincore/v1', '/providers/(?P<id>[\d]+)', [
 			'methods'             => 'PUT',
 			'callback'            => 'captaincore_provider_update_func',
-			'permission_callback' => 'captaincore_admin_permission_check',
+			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
-		'captaincore/v1', '/providers/(?P<id>[a-zA-Z0-9-]+)', [
+		'captaincore/v1', '/providers/(?P<id>[\d]+)', [
 			'methods'             => 'DELETE',
 			'callback'            => 'captaincore_provider_delete_func',
-			'permission_callback' => 'captaincore_admin_permission_check',
+			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
 		]
 	);
 
 	register_rest_route(
-		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/verify', [
+		'captaincore/v1', '/providers/(?P<id>[\d]+)/verify', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_provider_verify_func',
-			'permission_callback' => 'captaincore_admin_permission_check',
+			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
 		]
 	);
@@ -6214,10 +6210,10 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
-		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/connect', [
+		'captaincore/v1', '/providers/(?P<id>[\d]+)/connect', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_provider_connect_func',
-			'permission_callback' => 'captaincore_admin_permission_check',
+			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
 		]
 	);
