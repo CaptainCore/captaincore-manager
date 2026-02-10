@@ -3281,7 +3281,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-text-field label="Name" v-model="dialog_new_site_kinsta.site.name" variant="underlined"></v-text-field>
 						<v-text-field label="Domain" v-model="dialog_new_site_kinsta.site.domain" variant="underlined"></v-text-field>
 						<v-autocomplete variant="underlined" label="Hosting Provider" v-model="dialog_new_site_kinsta.site.provider_id" item-value="provider_id" :item-title="formatProviderLabel" :items="kinsta_providers" v-show="kinsta_providers.length > 1" @update:model-value="populateCloneSites"></v-autocomplete>
-						<v-autocomplete variant="underlined" label="Datacenter" v-model="dialog_new_site_kinsta.site.datacenter" :items="datacenters" hint="Use 🚀 for the fastest servers" persistent-hint v-show="dialog_new_site_kinsta.site.clone_site_id == ''"></v-autocomplete>
+						<v-autocomplete variant="underlined" label="Datacenter" v-model="dialog_new_site_kinsta.site.datacenter" :items="datacenters" v-show="dialog_new_site_kinsta.site.clone_site_id == ''"></v-autocomplete>
 						<v-autocomplete variant="underlined" label="Clone Existing Site" v-model="dialog_new_site_kinsta.site.clone_site_id" item-value="id" item-title="display_name" hide-no-data hide-selected :items="clone_sites" clearable v-show="kinsta_providers.length > 1"></v-autocomplete>
 						<v-autocomplete
 							v-if="role == 'administrator'"
@@ -11492,16 +11492,44 @@ const app = createApp({
 		],
 		datacenters: [
 			{
-				"title": "Taiwan (TW) 🚀",
-				"value": "asia-east1"
+				"title": "Ashburn (US East)",
+				"value": "us-ashburn-1"
 			},
 			{
-				"title": "Hong Kong (HK)",
-				"value": "asia-east2"
+				"title": "Chicago (US Central)",
+				"value": "us-chicago-1"
 			},
 			{
-				"title": "Tokyo (JP)",
-				"value": "ap-tokyo-1"
+				"title": "Phoenix (US West)",
+				"value": "us-phoenix-1"
+			},
+			{
+				"title": "San Jose (US West)",
+				"value": "us-sanjose-1"
+			},
+			{
+				"title": "Montreal (CA East)",
+				"value": "ca-montreal-1"
+			},
+			{
+				"title": "Toronto (CA East)",
+				"value": "ca-toronto-1"
+			},
+			{
+				"title": "Johannesburg (ZA)",
+				"value": "af-johannesburg-1"
+			},
+			{
+				"title": "Batam (ID)",
+				"value": "ap-batam-1"
+			},
+			{
+				"title": "Melbourne (AU)",
+				"value": "ap-melbourne-1"
+			},
+			{
+				"title": "Mumbai (IN)",
+				"value": "ap-mumbai-1"
 			},
 			{
 				"title": "Osaka (JP)",
@@ -11512,60 +11540,28 @@ const app = createApp({
 				"value": "ap-seoul-1"
 			},
 			{
-				"title": "Mumbai (IN)",
-				"value": "ap-mumbai-1"
+				"title": "Singapore (SG)",
+				"value": "ap-singapore-2"
 			},
 			{
-				"title": "Delhi (IN) 🚀",
-				"value": "asia-south2"
-			},
-			{
-				"title": "Singapore (SG) 🚀",
-				"value": "asia-southeast1"
-			},
-			{
-				"title": "Jakarta (ID)",
-				"value": "ap-singapore-1"
-			},
-			{
-				"title": "Sydney (AU) 🚀",
+				"title": "Sydney (AU)",
 				"value": "ap-sydney-1"
 			},
 			{
-				"title": "Melbourne (AU)",
-				"value": "ap-melbourne-1"
+				"title": "Tokyo (JP)",
+				"value": "ap-tokyo-1"
 			},
 			{
-				"title": "Warsaw (PL)",
-				"value": "europe-central2"
+				"title": "Amsterdam (NL)",
+				"value": "eu-amsterdam-1"
 			},
 			{
-				"title": "Finland (FI)",
-				"value": "europe-north1"
+				"title": "Frankfurt (DE)",
+				"value": "eu-frankfurt-1"
 			},
 			{
 				"title": "Madrid (ES)",
 				"value": "eu-madrid-1"
-			},
-			{
-				"title": "Belgium (BE) 🚀",
-				"value": "europe-west1"
-			},
-			{
-				"title": "London (UK)",
-				"value": "uk-london-1"
-			},
-			{
-				"title": "Frankfurt (DE) 🚀",
-				"value": "eu-frankfurt-1"
-			},
-			{
-				"title": "Eemshaven (NL) 🚀",
-				"value": "europe-west4"
-			},
-			{
-				"title": "Zürich (CH)",
-				"value": "eu-zurich-1"
 			},
 			{
 				"title": "Milan (IT)",
@@ -11576,64 +11572,32 @@ const app = createApp({
 				"value": "eu-paris-1"
 			},
 			{
-				"title": "Tel Aviv (IS)",
-				"value": "me-west1"
+				"title": "Stockholm (SE)",
+				"value": "eu-stockholm-1"
 			},
 			{
-				"title": "Montreal (CA)",
-				"value": "ca-montreal-1"
+				"title": "Zurich (CH)",
+				"value": "eu-zurich-1"
 			},
 			{
-				"title": "Toronto (CA)",
-				"value": "ca-toronto-1"
+				"title": "Jerusalem (IL)",
+				"value": "il-jerusalem-1"
 			},
 			{
-				"title": "São Paulo (BR)",
-				"value": "sa-saopaulo-1"
+				"title": "Riyadh (SA)",
+				"value": "me-riyadh-1"
 			},
 			{
 				"title": "Santiago (CL)",
 				"value": "sa-santiago-1"
 			},
 			{
-				"title": "Iowa (US Central) 🚀",
-				"value": "us-central1"
+				"title": "Sao Paulo (BR)",
+				"value": "sa-saopaulo-1"
 			},
 			{
-				"title": "South Carolina (US East 1) 🚀",
-				"value": "us-east1"
-			},
-			{
-				"title": "Ashburn (US East) 🚀",
-				"value": "us-ashburn-1"
-			},
-			{
-				"title": "Chicago (US Central) 🚀",
-				"value": "us-chicago-1"
-			},
-			{
-				"title": "Columbus (US East 5)",
-				"value": "us-east5"
-			},
-			{
-				"title": "Dallas US (us-south1)",
-				"value": "us-south1"
-			},
-			{
-				"title": "Oregon (US West)",
-				"value": "us-west1"
-			},
-			{
-				"title": "Los Angeles (US West 2)",
-				"value": "us-west2"
-			},
-			{
-				"title": "Salt Lake City (US West 3)",
-				"value": "us-west3"
-			},
-			{
-				"title": "Las Vegas (US West 4) 🚀",
-				"value": "us-west4"
+				"title": "London (GB)",
+				"value": "uk-london-1"
 			}
 		],
 		kinsta_providers: <?php echo json_encode( CaptainCore\Providers\Kinsta::list() ); ?>,
