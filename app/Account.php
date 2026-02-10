@@ -326,10 +326,13 @@ class Account {
         $permissions = ( new AccountUser )->where( [ "account_id" => $this->account_id ] );
         $results = [];
         foreach( $permissions as $permission ) {
-            $user      = get_userdata( $permission->user_id );
+            $user = get_userdata( $permission->user_id );
+            if ( ! $user ) {
+                continue;
+            }
             $results[] = [
                 "user_id" => $user->ID,
-                "name"    => $user->display_name, 
+                "name"    => $user->display_name,
                 "email"   => $user->user_email,
                 "level"   => empty( $permission->level ) ? "" : ucfirst( $permission->level ),
             ];
@@ -341,13 +344,16 @@ class Account {
         $account  = self::get();
         $site_ids = array_column( ( new Sites )->where( [ "account_id" => $this->account_id, "status" => "active" ] ), "site_id" );
 
-        $hosting_plan      = $account->plan->name;
-		$addons            = empty( $account->plan->usage->addons ) ? [] : $account->plan->usage->addons;
-		$storage           = empty( $account->plan->usage->storage ) ? 0 : $account->plan->usage->storage;
-		$visits            = $account->plan->usage->visits;
-		$visits_plan_limit = $account->plan->limits->visits;
-		$storage_limit     = empty( $account->plan->limits->storage ) ? 0 : $account->plan->limits->storage;
-        $sites_limit       = $account->plan->limits->sites;
+        $plan              = empty( $account->plan ) ? (object) [] : ( is_string( $account->plan ) ? json_decode( $account->plan ) : $account->plan );
+        $plan->name        = empty( $plan->name ) ? "" : $plan->name;
+        $plan->limits      = empty( $plan->limits ) ? (object) [ "storage" => 0, "visits" => 0, "sites" => 0 ] : $plan->limits;
+        $hosting_plan      = $plan->name;
+		$addons            = empty( $plan->usage->addons ) ? [] : $plan->usage->addons;
+		$storage           = empty( $plan->usage->storage ) ? 0 : $plan->usage->storage;
+		$visits            = empty( $plan->usage->visits ) ? 0 : $plan->usage->visits;
+		$visits_plan_limit = empty( $plan->limits->visits ) ? 0 : $plan->limits->visits;
+		$storage_limit     = empty( $plan->limits->storage ) ? 0 : $plan->limits->storage;
+        $sites_limit       = empty( $plan->limits->sites ) ? 0 : $plan->limits->sites;
 
         if ( ! empty( $visits ) && ! empty( $visits_plan_limit ) ) {
 			$visits_percent = round( $visits / $visits_plan_limit * 100, 0 );

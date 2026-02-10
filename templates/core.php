@@ -11190,7 +11190,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 </div>
 <?php if ( substr( $_SERVER['SERVER_NAME'], -10) == '.localhost' ) { ?>
 <script src="<?php echo $plugin_url; ?>public/js/vue.js"></script>
-<script src="<?php echo $plugin_url; ?>public/js/qs.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/axios.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/vuetify.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/vue-upload-component.js"></script>
@@ -11198,7 +11197,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <script src="<?php echo $plugin_url; ?>public/js/frappe-charts.min.js"></script>
 <?php } else { ?>
 <script src="https://cdn.jsdelivr.net/npm/vue@3.5.20/dist/vue.global.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qs@6.9.1/dist/qs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios@0.19.0/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vuetify@3.9.6/dist/vuetify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@3.1.17/dist/vue-upload-component.min.js"></script>
@@ -11224,8 +11222,6 @@ wc_states = []
 stripe = ""
 <?php } ?>
 (function(){var w=window;var ic=w.Intercom;if(typeof ic==="function"){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments);};i.q=[];i.c=function(args){i.q.push(args);};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/<?= CaptainCore\Configurations::get()->intercom_embed_id; ?>';var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);};if(document.readyState==='complete'){l();}else if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();			
-ajaxurl = "/wp-admin/admin-ajax.php"
-
 const captainCoreColors = <?php echo json_encode( CaptainCore\Configurations::colors() ); ?>;
 
 const { createApp, ref, computed, reactive } = Vue;
@@ -12090,7 +12086,8 @@ const app = createApp({
 				return Promise.reject(error);
 			});
 		window.addEventListener('popstate', () => {
-			path = window.location.pathname.replace( this.configurations.path, "/" )
+			pathname = window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/'
+			path = pathname.replace( this.configurations.path, "/" )
 			this.updateRoute( path )
 		})
 		 window.addEventListener('keydown', (e) => {
@@ -12133,7 +12130,8 @@ const app = createApp({
 			this.fetchProcesses()
 			this.fetchPendingACHVerifications()
 		}
-		path = window.location.pathname.replace( this.configurations.path, "/" )
+		pathname = window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/'
+		path = pathname.replace( this.configurations.path, "/" )
 		this.updateRoute( path )
 
 		if ( this.route == "" ) {
@@ -13003,16 +13001,16 @@ const app = createApp({
 					'scripts':          { tab: 'scripts' },
 					'visual-captures':  { tab: 'visual-captures' },
 					
-					// Actions with specific API callbacks
-					'stats':            { tab: 'stats', callback: () => this.fetchStats() },
-					'updates':          { tab: 'updates', callback: () => this.viewUpdateLogs(siteId) },
-					'users':            { tab: 'users', callback: () => this.fetchUsers() },
-					
-					// Backups have specific sub-steps
+					// These tabs fetch data after environments load (in fetchSiteEnvironments callback)
+					'stats':            { tab: 'stats' },
+					'updates':          { tab: 'updates' },
+					'users':            { tab: 'users' },
+
+					// Backups sub-steps (data fetched after environments load in fetchSiteEnvironments callback)
 					'backup-overview':  { tab: 'backups', backupStep: 1 },
-					'backups':          { tab: 'backups', backupStep: 2, callback: () => this.viewBackups() },
-					'quicksaves':       { tab: 'backups', backupStep: 3, callback: () => this.viewQuicksaves() },
-					'snapshots':        { tab: 'backups', backupStep: 4, callback: () => this.viewSnapshots() },
+					'backups':          { tab: 'backups', backupStep: 2 },
+					'quicksaves':       { tab: 'backups', backupStep: 3 },
+					'snapshots':        { tab: 'backups', backupStep: 4 },
 				};
 
 				const config = actionMap[action];
@@ -13505,13 +13503,9 @@ const app = createApp({
 		saveGlobalConfigurations() {
 			this.dialog_configure_defaults.loading = true;
 			this.configurations.colors = this.currentThemeColors
-			// Prep AJAX request
-			var data = {
-				'action': 'captaincore_local',
-				'command': "saveGlobalConfigurations",
-				'value': this.configurations
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.put( '/wp-json/captaincore/v1/configurations/global', this.configurations, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.snackbar.message = response.data
 					this.snackbar.show = true
@@ -13523,13 +13517,9 @@ const app = createApp({
 		},
 		saveGlobalDefaults() {
 			this.dialog_configure_defaults.loading = true;
-			// Prep AJAX request
-			var data = {
-				'action': 'captaincore_local',
-				'command': "saveGlobalDefaults",
-				'value': this.defaults
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.put( '/wp-json/captaincore/v1/defaults/global', this.defaults, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.snackbar.message = response.data
 					this.snackbar.show = true
@@ -13541,13 +13531,10 @@ const app = createApp({
 		},
 		saveDefaults() {
 			this.dialog_configure_defaults.loading = true;
-			// Prep AJAX request
-			var data = {
-				'action': 'captaincore_local',
-				'command': "saveDefaults",
-				'value': this.dialog_account.records.account
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			account_id = this.dialog_account.records.account.account_id
+			axios.put( `/wp-json/captaincore/v1/accounts/${account_id}/defaults`, this.dialog_account.records.account, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					console.log( response.data )
 					this.dialog_configure_defaults.show = false;
@@ -13697,39 +13684,26 @@ const app = createApp({
 			const domain = this.verificationDialog.domain;
 			const site_id = this.dialog_domain_mappings.site_id;
 
-			const payload = {
-				action: 'captaincore_ajax_check_verification',
-				site_id: site_id,
-				domain_id: domain.id,
-				nonce: this.captaincore_nonce // Ensure you pass your nonce
-			};
-
-			// Example Axios call
-			axios.post(ajaxurl, new URLSearchParams(payload))
+			axios.post( '/wp-json/captaincore/v1/providers/kinsta/check-verification', { site_id: site_id, domain_id: domain.id }, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 			.then(response => {
 				this.verificationDialog.loading = false;
+				const updatedDomain = response.data;
 
-				if (response.data.success) {
-					const updatedDomain = response.data.data;
+				// Update the domain in the main list
+				const index = this.dialog_domain_mappings.domains.findIndex(d => d.id === updatedDomain.id);
+				if (index !== -1) {
+					this.dialog_domain_mappings.domains[index] = updatedDomain;
+				}
 
-					// Update the domain in the main list
-					const index = this.dialog_domain_mappings.domains.findIndex(d => d.id === updatedDomain.id);
-					if (index !== -1) {
-						// Use Vue.set or splice to ensure reactivity
-						this.dialog_domain_mappings.domains[index] = updatedDomain;
-					}
-
-					if (updatedDomain.is_active) {
-						this.verificationDialog.show = false;
-					} else {
-						alert("Kinsta is still waiting for DNS propagation. Please try again in a minute.");
-					}
+				if (updatedDomain.is_active) {
+					this.verificationDialog.show = false;
 				} else {
-					alert(response.data.data || "Verification check failed.");
+					alert("Kinsta is still waiting for DNS propagation. Please try again in a minute.");
 				}
 			})
 			.catch(error => {
 				this.verificationDialog.loading = false;
+				alert(error.response?.data?.message || "Verification check failed.");
 				console.error(error);
 			});
 		},
@@ -14477,7 +14451,6 @@ const app = createApp({
 
 							// Prep AJAX request
 							var data = {
-								'action': 'captaincore_install',
 								'post_id': site_ids,
 								'command': "manage",
 								'value': "ssh",
@@ -14508,7 +14481,6 @@ const app = createApp({
 
 							// Prep AJAX request
 							var data = {
-								'action': 'captaincore_install',
 								'post_id': site_ids,
 								'command': "manage",
 								'value': "ssh",
@@ -14524,7 +14496,7 @@ const app = createApp({
 						}
 
 						self = this;
-						axios.post( ajaxurl, Qs.stringify( data ) )
+						axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': self.wp_nonce } } )
 							.then( response => {
 								self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
 								self.runCommand( response.data );
@@ -14567,18 +14539,15 @@ const app = createApp({
 			targetObject.environments[1].home_directory = targetObject.environments[0].home_directory;
 		},
 		checkRequestedSites() {
-			var data = {
-				'action': 'captaincore_user',
-				'command': "fetchRequestedSites",
-			}
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.get( '/wp-json/captaincore/v1/requested-sites', { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
 					this.requested_sites = response.data
 					if ( this.requested_sites.length != 0 ) {
-						setTimeout(this.checkRequestedSites, 5000)
+						setTimeout(this.checkRequestedSites, 30000)
+						return
 					}
 					if ( this.requested_sites.length == 0 && this.role == 'administrator' ) {
-						setTimeout(this.checkRequestedSites, 5000)
+						setTimeout(this.checkRequestedSites, 30000)
 					}
 				})
 				.catch( error => console.log( error ) );
@@ -14698,13 +14667,12 @@ const app = createApp({
 			}
 			this.dialog_request_site.request.created_at = Math.round((new Date()).getTime() / 1000)
 			this.dialog_request_site.request.step = 1
-			var data = {
-				'action': 'captaincore_account',
-				'command': "requestSite",
-				'value': this.dialog_request_site.request,
-				'account_id': this.dialog_request_site.request.account_id
-			}
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/site-requests', {
+					request: this.dialog_request_site.request,
+					account_id: this.dialog_request_site.request.account_id
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.requested_sites = response.data
 					if ( this.requested_sites.length == 1 ) {
@@ -14718,36 +14686,33 @@ const app = createApp({
 			this.dialog_request_site = { show: false, request: { name: "", account_id: "", notes: "" } }
 		},
 		backRequestSite( site_request ) {
-			var data = {
-				'action': 'captaincore_account',
-				'command': "backRequestSite",
-				'value': site_request,
-			}
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/site-requests/back', {
+					request: site_request
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.requested_sites = response.data
 				})
 				.catch( error => console.log( error ) )
 		},
 		continueRequestSite( site_request ) {
-			var data = {
-				'action': 'captaincore_account',
-				'command': "continueRequestSite",
-				'value': site_request,
-			}
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/site-requests/continue', {
+					request: site_request
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.requested_sites = response.data
 				})
 				.catch( error => console.log( error ) )
 		},
 		updateRequestSite() {
-			var data = {
-				'action': 'captaincore_account',
-				'command': "updateRequestSite",
-				'value': this.dialog_site_request.request,
-			}
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.put( '/wp-json/captaincore/v1/site-requests/update', {
+					request: this.dialog_site_request.request
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.dialog_site_request.show = false
 					this.requested_sites = response.data
@@ -14760,13 +14725,12 @@ const app = createApp({
 		},
 		finishRequest( index ) {
 			site_request = this.requested_sites[index]
-			var data = {
-				'action': 'captaincore_account',
-				'command': "deleteRequestSite",
-				'value': site_request,
-				'account_id': site_request.account_id
-			}
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/site-requests/delete', {
+					request: site_request,
+					account_id: site_request.account_id
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.requested_sites = response.data
 				})
@@ -14778,13 +14742,12 @@ const app = createApp({
 			if ( ! should_proceed ) {
 				return
 			}
-			var data = {
-				'action': 'captaincore_account',
-				'command': "deleteRequestSite",
-				'value': site_request,
-				'account_id': site_request.account_id
-			}
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/site-requests/delete', {
+					request: site_request,
+					account_id: site_request.account_id
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.requested_sites = response.data
 				})
@@ -14832,11 +14795,10 @@ const app = createApp({
 
 						// Run prep immediately after site added.
 						var data = {
-							'action': 'captaincore_install',
 							'command': "new",
 							'post_id': response.site_id
 						};
-						axios.post( ajaxurl, Qs.stringify( data ) )
+						axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 							.then( r => {
 								this.jobs.filter(job => job.job_id == job_id)[0].job_id = r.data
 								this.runCommand( r.data )
@@ -14850,12 +14812,7 @@ const app = createApp({
 			site_update.shared_with = site_update.shared_with.map( a => a.account_id )
 			site_name = site_update.name
 			site_id   = site_update.site_id
-			var data = {
-				'action': 'captaincore_ajax',
-				'command': "updateSite",
-				'value': site_update
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.put( '/wp-json/captaincore/v1/sites/update', { value: site_update }, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
 					var response = response.data
 
@@ -14879,11 +14836,10 @@ const app = createApp({
 
 						// Run prep immediately after site added.
 						var data = {
-							'action': 'captaincore_install',
 							'command': "update",
 							'post_id': response.site_id
 						};
-						axios.post( ajaxurl, Qs.stringify( data ) )
+						axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 							.then( r => {
 								this.jobs.filter(job => job.job_id == job_id)[0].job_id = r.data
 								this.runCommand( r.data )
@@ -14894,7 +14850,6 @@ const app = createApp({
 		checkSSH( site ) {
 			site.loading = true
 			var data = {
-				action: 'captaincore_install',
 				post_id: site.site_id,
 				command: 'sync-data',
 				environment: this.dialog_site.environment_selected.environment
@@ -14906,7 +14861,7 @@ const app = createApp({
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({ "job_id": job_id, "description": description, "status": "queued", stream: [], "command": "checkSSH", "site_id": site.site_id });
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
 					// Updates job id with responsed background job id
 					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
@@ -15076,11 +15031,6 @@ const app = createApp({
 				if ( this.dialog_site.site.tabs_management == "tab-Updates" ) {
 					this.viewUpdateLogs( this.dialog_site.site.site_id )
 				}
-				if ( this.dialog_site.site.tabs_management == "tab-Backups" ) {
-					this.viewQuicksaves()
-					this.viewSnapshots()
-					this.dialog_site.backup_step = 1
-				}
 				if ( this.dialog_site.site.tabs_management == "tab-Backups" && this.route_path.endsWith( "/backups" ) ) {
 					this.viewBackups()
 					this.dialog_site.backup_step = 2
@@ -15099,12 +15049,7 @@ const app = createApp({
 			});
 		},
 		fetchSiteDetails( site_id ) {
-			var data = {
-				'action': 'captaincore_ajax',
-				'command': "fetch-site-details",
-				'post_id': site_id
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.get( `/wp-json/captaincore/v1/sites/${site_id}/details`, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
 					Object.keys( response.data.site ).forEach( key => {
 						this.dialog_site.site[ key ] = response.data.site[ key ]
@@ -15115,12 +15060,8 @@ const app = createApp({
 				});
 		},
 		fetchSiteInfo( site_id ) {
-			var data = {
-				'action': 'captaincore_ajax',
-				'command': "fetch-site",
-				'post_id': site_id
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			var data = Array.isArray( site_id ) ? { post_ids: site_id } : { post_id: site_id };
+			axios.post( '/wp-json/captaincore/v1/sites/fetch', data, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
 					response.data.forEach( site => {
 						lookup = this.sites.filter(s => s.site_id == site.site_id).length;
@@ -15148,13 +15089,16 @@ const app = createApp({
 				});
 		},
 		fetchMissing() {
-			if ( this.allDomains == 0 && this.modules.dns && this.domains_loading ) {
+			if ( this.allDomains == 0 && this.modules.dns && this.domains_loading && !this._fetchingDomains ) {
+				this._fetchingDomains = true
 				this.fetchDomains()
 			}
-			if ( this.sites_loading ) {
+			if ( this.sites_loading && !this._fetchingSites ) {
+				this._fetchingSites = true
 				this.fetchSites()
 			}
-			if ( this.role == 'administrator' && this.users.length == 0 ) {
+			if ( this.role == 'administrator' && this.users.length == 0 && !this._fetchingUsers ) {
+				this._fetchingUsers = true
 				this.fetchAllUsers()
 			}
 		},
@@ -15175,8 +15119,12 @@ const app = createApp({
 				.then(response => {
 					this.domains = response.data
 					this.domains_loading = false
+					this._fetchingDomains = false
 					this.loading_page = false
 					setTimeout(this.fetchMissing, 4000)
+				})
+				.catch(() => {
+					this._fetchingDomains = false
 				})
 		},
 		fetchAllUsers() {
@@ -15186,7 +15134,11 @@ const app = createApp({
 				})
 				.then(response => {
 					this.users = response.data
+					this._fetchingUsers = false
 					this.loading_page = false
+				})
+				.catch(error => {
+					this._fetchingUsers = false
 				});
 		},
 		fetchRecipes() {
@@ -15210,11 +15162,7 @@ const app = createApp({
 				});
 		},
 		listenProcesses() {
-			var data = {
-				'action': 'captaincore_ajax',
-				'command': 'listenProcesses',
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/listen-processes', {}, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
 					procesess = this.dialog_processes.processes
 					this.dialog_processes.loading = false
@@ -15585,6 +15533,7 @@ const app = createApp({
 				this.sites = incomingSites;
 				
 				this.sites_loading = false;
+				this._fetchingSites = false;
 				this.loading_page = false;
 				if (this.route === "sites") {
 					this.triggerPath();
@@ -15594,6 +15543,7 @@ const app = createApp({
 			.catch(error => {
 				console.error(error);
 				this.sites_loading = false;
+				this._fetchingSites = false;
 			});
 		},
 		fetchEnvironments() {
@@ -15612,20 +15562,19 @@ const app = createApp({
 			if ( this.dialog_site.environment_selected.stats.site.sharing == 'private' && this.dialog_site.environment_selected.stats_password == '' ) {
 				return
 			}
-			var data = {
-				action: 'captaincore_ajax',
-				post_id: this.dialog_site.site.site_id,
-				command: 'shareStats',
+			var payload = {
 				fathom_id: this.dialog_site.environment_selected.stats.site.id,
 				sharing: this.dialog_site.environment_selected.stats.site.sharing
 			}
 
 			if ( this.dialog_site.environment_selected.stats_password != '' ) {
-				data.share_password = this.dialog_site.environment_selected.stats_password
+				payload.share_password = this.dialog_site.environment_selected.stats_password
 			}
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
-				.then( response => { 
+			axios.post( `/wp-json/captaincore/v1/sites/${this.dialog_site.site.site_id}/stats/share`, payload, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
+				.then( response => {
 					this.snackbar.message = "Stats sharing is " + this.dialog_site.environment_selected.stats.site.sharing
 					this.snackbar.show = true
 			})
@@ -15651,10 +15600,7 @@ const app = createApp({
 			environment = this.dialog_site.environment_selected
 			environment.stats = "Loading";
 
-			var data = {
-				action: 'captaincore_ajax',
-				post_id: this.dialog_site.site.site_id,
-				command: 'fetchStats',
+			var params = {
 				from_at: this.stats.from_at,
 				to_at: this.stats.to_at,
 				grouping: this.stats.grouping,
@@ -15662,31 +15608,34 @@ const app = createApp({
 			}
 
 			if ( fathom_id != "" ) {
-				data.fathom_id = fathom_id
+				params.fathom_id = fathom_id
 			}
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.get( `/wp-json/captaincore/v1/sites/${this.dialog_site.site.site_id}/stats`, {
+					params: params,
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 
 					if ( response.data.Error ) {
-						environment.stats = response.data.Error 
+						environment.stats = response.data.Error
 						return;
 					}
 
 					if ( response.data.errors ) {
-						environment.stats = response.data.errors 
+						environment.stats = response.data.errors
 						return;
 					}
 
 					chart_id = "chart_" + this.dialog_site.site.site_id + "_" + this.dialog_site.environment_selected.environment;
-					chart_dom = document.getElementById( chart_id );		
+					chart_dom = document.getElementById( chart_id );
 					chart_dom.innerHTML = ""
 
 					environment.stats = response.data
 					names = environment.stats.items.map( s => s.date )
 					pageviews = environment.stats.items.map( s => s.pageviews )
 					visitors = environment.stats.items.map( s => s.visits )
-					
+
 					// Generate chart
 					environment.chart = new frappe.Chart( "#" + chart_id, {
 						data: {
@@ -15720,13 +15669,8 @@ const app = createApp({
 		},
 		fetchUsers() {
 			site = this.dialog_site.site
-				var data = {
-					'action': 'captaincore_ajax',
-					'post_id': site.site_id,
-					'command': "fetch-users",
-			}
-				axios.post( ajaxurl, Qs.stringify( data ) )
-					.then( response => {
+			axios.get( `/wp-json/captaincore/v1/sites/${site.site_id}/users`, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
+				.then( response => {
 						response = response.data
 						// Loop through environments and assign users
 						Object.keys(response).forEach( key => {
@@ -15801,15 +15745,9 @@ const app = createApp({
 			site = this.dialog_site.site
 			snapshot = this.dialog_site.environment_selected.snapshots.filter( s => s.snapshot_id == snapshot_id )[0];
 
-			var data = {
-				'action': 'captaincore_ajax',
-				'post_id': site_id,
-				'command': 'fetchLink',
-				'environment': this.dialog_site.environment_selected.environment,
-				'value': snapshot_id
-			};
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.get( `/wp-json/captaincore/v1/sites/${site_id}/snapshot-link/${snapshot_id}`, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					snapshot.token = response.data.token;
 					snapshot.expires_at = response.data.expires_at;
@@ -15833,8 +15771,7 @@ const app = createApp({
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			var data = {
-				'action': 'captaincore_install',
-				'post_id': post_id,
+					'post_id': post_id,
 				'command': 'snapshot',
 				'environment': environment,
 				'value': this.dialog_backup_snapshot.email,
@@ -15849,7 +15786,7 @@ const app = createApp({
 			
 			self = this;
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': self.wp_nonce } } )
 				.then( response => {
 					// Updates job id with reponsed background job id
 					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
@@ -15945,8 +15882,7 @@ const app = createApp({
 			var post_id = this.dialog_copy_site.site.site_id;
 
 			var data = {
-				'action': 'captaincore_install',
-				'post_id': post_id,
+					'post_id': post_id,
 				'command': 'copy',
 				'value': this.dialog_copy_site.destination
 			};
@@ -15958,7 +15894,7 @@ const app = createApp({
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': self.wp_nonce } } )
 				.then( response => {
 					// Updates job id with reponsed background job id
 					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
@@ -16045,11 +15981,9 @@ const app = createApp({
 		fetchProcessLogs() {
 			this.dialog_log_history.loading = true
 			this.dialog_log_history.show = true;
-			var data = {
-				action: 'captaincore_ajax',
-				command: 'fetchProcessLogs',
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.get( '/wp-json/captaincore/v1/process-logs', {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.dialog_log_history.logs = response.data
 					this.dialog_log_history.loading = false
@@ -16085,16 +16019,15 @@ const app = createApp({
 		},
 		newLogEntry() {
 			site_ids = this.dialog_new_log_entry.sites.map( s => s.site_id )
-			var data = {
-				action: 'captaincore_ajax',
-				post_id: site_ids,
-				process_id: this.dialog_new_log_entry.process,
-				command: 'newLogEntry',
-				value: this.dialog_new_log_entry.description
-			}
 			this.dialog_new_log_entry.show = false
 			this.dialog_new_log_entry.sites = []
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/process-logs', {
+					site_ids: site_ids,
+					process_id: this.dialog_new_log_entry.process,
+					description: this.dialog_new_log_entry.description
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					Object.keys(response.data).forEach( site_id => {
 						if ( site_id == this.dialog_site.site.site_id ) {
@@ -16179,14 +16112,9 @@ const app = createApp({
 			
 			site = this.dialog_site.site
 
-			var data = {
-				action: 'captaincore_ajax',
-				command: 'fetchProcessLog',
-				post_id: site_id,
-				value: log_id,
-			};
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.get( `/wp-json/captaincore/v1/process-logs/${log_id}`, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.dialog_edit_log_entry.log = response.data;
 					this.dialog_edit_log_entry.show = true;
@@ -16204,14 +16132,9 @@ const app = createApp({
 				return;
 			}
 
-			var data = {
-				action: 'captaincore_ajax',
-				command: 'deleteLogEntry',
-				post_id: this.dialog_site.site ? this.dialog_site.site.site_id : 0,
-				value: log_id,
-			};
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.delete( `/wp-json/captaincore/v1/process-logs/${log_id}`, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.dialog_edit_log_entry.show = false;
 					Object.keys(response.data).forEach( site_id => {
@@ -16231,13 +16154,9 @@ const app = createApp({
 			this.dialog_handbook.process.description = "Loading...";
 			this.dialog_handbook.show = true;
 
-			var data = {
-				action: 'captaincore_ajax',
-				post_id: process_id,
-				command: 'fetchProcess',
-			};
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.get( `/wp-json/captaincore/v1/processes/${process_id}`, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.dialog_handbook.process = response.data
 				})
@@ -16246,12 +16165,9 @@ const app = createApp({
 		},
 		editProcess() {
 			this.dialog_handbook.show = false
-			var data = {
-				action: 'captaincore_ajax',
-				post_id: this.dialog_handbook.process.process_id,
-				command: 'fetchProcessRaw',
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.get( `/wp-json/captaincore/v1/processes/${this.dialog_handbook.process.process_id}/raw`, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.dialog_edit_process.process = response.data;
 					this.dialog_edit_process.show = true;
@@ -16259,13 +16175,9 @@ const app = createApp({
 				.catch( error => console.log( error ) );
 		},
 		saveProcess() {
-			var data = {
-				action: 'captaincore_ajax',
-				command: 'saveProcess',
-				value: this.dialog_edit_process.process
-			};
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.put( `/wp-json/captaincore/v1/processes/${this.dialog_edit_process.process.process_id}`, this.dialog_edit_process.process, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.fetchProcesses()
 					this.dialog_edit_process = { show: false, process: {} }
@@ -16273,12 +16185,9 @@ const app = createApp({
 				.catch( error => console.log( error ) )
 		},
 		addNewProcess() {
-			var data = {
-				action: 'captaincore_ajax',
-				command: 'newProcess',
-				value: this.new_process
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/processes', this.new_process, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.fetchProcesses()
 					this.new_process = { show: false, name: "", time_estimate: "", repeat_interval: "as-needed", repeat_quantity: "", roles: "", description: "" }
@@ -16287,12 +16196,9 @@ const app = createApp({
 
 		},
 		addNewKey() {
-			var data = {
-				action: 'captaincore_ajax',
-				command: 'newKey',
-				value: this.new_key
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/keys', this.new_key, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.keys.unshift( response.data );
 					this.new_key = { show: false, title: "", key: "" };
@@ -16313,13 +16219,9 @@ const app = createApp({
 			if ( ! should_proceed ) {
 				return;
 			}
-			var data = {
-				action: 'captaincore_ajax',
-				command: 'setKeyAsPrimary',
-				value: this.dialog_key.key
-			};
-			key = this.keys.filter( key => key.key_id == this.dialog_key.key.key_id )[0]
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.put( `/wp-json/captaincore/v1/keys/${this.dialog_key.key.key_id}/primary`, {}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.fetchKeys()
 					this.dialog_key = { show: false, key: {} }
@@ -16327,13 +16229,9 @@ const app = createApp({
 				.catch( error => console.log( error ) );
 		},
 		updateKey() {
-			var data = {
-				action: 'captaincore_ajax',
-				command: 'updateKey',
-				value: this.dialog_key.key
-			};
-			key = this.keys.filter( key => key.key_id == this.dialog_key.key.key_id )[0];
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.put( `/wp-json/captaincore/v1/keys/${this.dialog_key.key.key_id}`, this.dialog_key.key, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.keys = this.keys.filter( key => key.key_id != this.dialog_key.key.key_id )
 					this.dialog_key = { show: false, key: {} };
@@ -16348,12 +16246,9 @@ const app = createApp({
 			if ( ! should_proceed ) {
 				return;
 			}
-			var data = {
-				action: 'captaincore_ajax',
-				command: 'deleteKey',
-				value: this.dialog_key.key.key_id
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.delete( `/wp-json/captaincore/v1/keys/${this.dialog_key.key.key_id}`, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.keys = this.keys.filter( key => key.key_id != this.dialog_key.key.key_id )
 					this.dialog_key = { show: false, key: {} };
@@ -16361,24 +16256,19 @@ const app = createApp({
 				.catch( error => console.log( error ) );
 		},
 		fetchInviteInfo(){
-			var data = {
-				action: 'captaincore_local',
-				command: 'fetchInvite',
-				value: this.fetchInvite
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.get( '/wp-json/captaincore/v1/invites', {
+					params: { account: this.fetchInvite.account, token: this.fetchInvite.token },
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.new_invite = response.data
 				})
 				.catch( error => console.log( error ) );
 		},
 		newUser( dialog ) {
-			var data = {
-				'action': 'captaincore_local',
-				'command': 'newUser',
-				'value': this.dialog_new_user,
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/users', this.dialog_new_user, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					if ( response.data.errors ) {
 						this.dialog_new_user.errors = response.data.errors
@@ -16474,12 +16364,9 @@ const app = createApp({
 				})
 		},
 		updateAccount() {
-			var data = {
-				action: 'captaincore_local',
-				command: 'updateAccount',
-				value: this.profile,
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.put( '/wp-json/captaincore/v1/me/profile', this.profile, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					if ( response.data.errors ) {
 						this.profile.errors = response.data.errors
@@ -16517,13 +16404,10 @@ const app = createApp({
 			if ( ! should_proceed ) {
 				return;
 			}
-			var data = {
-				action: 'captaincore_local',
-				command: 'removeAccountAccess',
-				value: user_id,
-				account: this.dialog_account.records.account.account_id
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			account_id = this.dialog_account.records.account.account_id
+			axios.delete( `/wp-json/captaincore/v1/accounts/${account_id}/users/${user_id}`, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.dialog_account.records.users = this.dialog_account.records.users.filter( u => u.user_id != user_id )
 					this.snackbar.message = `Removed access for user ${email}.`
@@ -16548,13 +16432,10 @@ const app = createApp({
 			if ( invite_id == "" ) {
 				return
 			}
-			var data = {
-				action: 'captaincore_account',
-				command: 'deleteInvite',
-				account_id: this.dialog_account.records.account.account_id,
-				value: invite_id
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			account_id = this.dialog_account.records.account.account_id
+			axios.delete( `/wp-json/captaincore/v1/accounts/${account_id}/invites/${invite_id}`, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.dialog_account.records.invites = this.dialog_account.records.invites.filter( i => i.invite_id != invite_id )
 					this.snackbar.message = "Invite deleted."
@@ -16563,12 +16444,9 @@ const app = createApp({
 				.catch( error => console.log( error ) );
 		},
 		acceptInvite() {
-			var data = {
-				action: 'captaincore_local',
-				command: 'acceptInvite',
-				value: this.fetchInvite
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/invites/accept', this.fetchInvite, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					window.history.pushState({}, document.title, window.location.origin + window.location.pathname );
 					this.querystring = ""
@@ -16616,12 +16494,9 @@ const app = createApp({
 			});
 		},
 		editUser( user_id ) {
-			var data = {
-				action: 'captaincore_local',
-				command: 'fetchUser',
-				value: user_id
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.get( `/wp-json/captaincore/v1/users/${user_id}`, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.dialog_user.user = response.data
 					this.dialog_user.show = true;
@@ -16629,12 +16504,9 @@ const app = createApp({
 				.catch( error => console.log( error ) );
 		},
 		saveUser() {
-			var data = {
-				action: 'captaincore_local',
-				command: 'saveUser',
-				value: this.dialog_user.user
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.put( `/wp-json/captaincore/v1/users/${this.dialog_user.user.user_id}`, this.dialog_user.user, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					if ( response.data.errors ) {
 						this.dialog_user.errors = response.data.errors
@@ -16657,12 +16529,9 @@ const app = createApp({
 				return
 			}
 
-			var data = {
-				action: 'captaincore_account',
-				command: 'deletePaymentMethod',
-				value: token
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.delete( `/wp-json/captaincore/v1/billing/payment-methods/${token}`, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					if ( response.data.errors ) {
 						console.log( response.data.errors )
@@ -16673,12 +16542,9 @@ const app = createApp({
 				.catch( error => console.log( error ) );
 		},
 		setAsPrimary( token ) {
-			var data = {
-				action: 'captaincore_account',
-				command: 'setAsPrimary',
-				value: token
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.put( `/wp-json/captaincore/v1/billing/payment-methods/${token}/primary`, {}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					if ( response.data.errors ) {
 						console.log( response.data.errors )
@@ -16709,12 +16575,10 @@ const app = createApp({
 			this.new_payment.card.mount("#new-card-element")
 		},
 		downloadPDF() {
-			var data = {
-				action: 'captaincore_local',
-				command: 'downloadPDF',
-				value: this.dialog_invoice.response.order_id
-			};
-			axios.post( ajaxurl, Qs.stringify( data ), { responseType: 'blob' })
+			axios.get( `/wp-json/captaincore/v1/invoices/${this.dialog_invoice.response.order_id}/pdf`, {
+					headers: { 'X-WP-Nonce': this.wp_nonce },
+					responseType: 'blob'
+				})
 				.then( response => {
 					newBlob = new Blob([response.data], {type: "application/pdf"})
 					this.$refs.download_pdf.download = `invoice-${this.dialog_invoice.response.order_id}.pdf`;
@@ -16728,13 +16592,10 @@ const app = createApp({
 				this.dialog_invoice.error = "";
 			}
 			this.dialog_invoice.loading = true
-			var data = {
-				action: 'captaincore_local',
-				command: 'fetchInvoice',
-				value: order_id
-			};
 			this.dialog_billing.step = 2
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.get( `/wp-json/captaincore/v1/invoices/${order_id}`, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					if ( response.data.errors ) {
 						this.dialog_user.errors = response.data.errors
@@ -16811,14 +16672,12 @@ const app = createApp({
 						return
 					}
 					
-					var data = {
-						action: 'captaincore_account',
-						command: 'payInvoice',
+					axios.post( '/wp-json/captaincore/v1/billing/pay-invoice', {
 						value: invoice_id,
 						source_id: result.source.id,
-					}
-					
-					axios.post( ajaxurl, Qs.stringify( data ) )
+					}, {
+						headers: { 'X-WP-Nonce': self.wp_nonce }
+					})
 						.then( response => {
 							// Handle "Add Payment Method" backend error
 							if ( response.data && response.data.error ) {
@@ -16852,14 +16711,12 @@ const app = createApp({
 			}
 
 			// 4. Handle "Existing Payment Method" Logic
-			var data = {
-				action: 'captaincore_account',
-				command: 'payInvoice',
-				value: invoice_id,
-				payment_id: this.dialog_invoice.payment_method,
-			}
-			
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/billing/pay-invoice', {
+					value: invoice_id,
+					payment_id: this.dialog_invoice.payment_method,
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					// Handle "Payment Failed" backend response
 					if ( response.data && response.data.result === 'fail' ) {
@@ -16909,12 +16766,11 @@ const app = createApp({
 						self.new_payment.loading = false
 						return
 					}
-					var data = {
-						action: 'captaincore_account',
-						command: 'addPaymentMethod',
-						value: result.source.id
-					};
-					axios.post( ajaxurl, Qs.stringify( data ) )
+					axios.post( '/wp-json/captaincore/v1/billing/payment-methods', {
+						source_id: result.source.id
+					}, {
+						headers: { 'X-WP-Nonce': self.wp_nonce }
+					})
 						.then( response => {
 							self.new_payment.loading = false
 							if ( response.data && response.data.error ) {
@@ -17190,12 +17046,9 @@ const app = createApp({
 		showAccount( account_id ) {
 			this.dialog_account.loading = true;
 			account = this.accounts.filter( account => account.account_id == account_id )[0];
-			var data = {
-				action: 'captaincore_local',
-				command: 'fetchAccount',
-				value: account_id
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.get( `/wp-json/captaincore/v1/accounts/${account_id}`, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.dialog_account.records = response.data
 					this.dialog_account.show = true;
@@ -17261,12 +17114,11 @@ const app = createApp({
 				});
 		},
 		updateSiteAccount() {
-			var data = {
-				action: 'captaincore_ajax',
-				command: 'updateSiteAccount',
-				value: this.dialog_edit_account.account
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.put( `/wp-json/captaincore/v1/accounts/${this.dialog_edit_account.account.account_id}`, {
+					account: this.dialog_edit_account.account
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.fetchAccounts()
 					this.dialog_edit_account.show = false
@@ -17275,14 +17127,12 @@ const app = createApp({
 				.catch( error => console.log( error ) );
 		},
 		updateDomainAccount() {
-			var data = {
-				action: 'captaincore_ajax',
-				command: 'updateDomainAccount',
-				value: this.dialog_domain.account_ids,
-				domain_id: this.dialog_domain.domain.domain_id,
-				provider_id: this.dialog_domain.provider_id
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.put( `/wp-json/captaincore/v1/domains/${this.dialog_domain.domain.domain_id}/account`, {
+					account_ids: this.dialog_domain.account_ids,
+					provider_id: this.dialog_domain.provider_id
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					// If error then response
 					if ( response.data.errors ) {
@@ -17312,13 +17162,9 @@ const app = createApp({
 			description = "Deleting account " + account.name;
 			this.dialog_site.step = 1
 
-			var data = {
-				'action': 'captaincore_ajax',
-				'command': 'deleteAccount',
-				'post_id': account.account_id
-			};
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.delete( `/wp-json/captaincore/v1/accounts/${account.account_id}`, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					// Remove item
 					this.accounts = this.accounts.filter( a => a.account_id != account.account_id )
@@ -17328,17 +17174,16 @@ const app = createApp({
 				.catch( error => console.log( error ) );
 		},
 		sendAccountInvite() {
-			var data = {
-				action: 'captaincore_account',
-				command: 'sendAccountInvite',
-				account_id: this.dialog_account.records.account.account_id,
-				invite: this.dialog_account.new_invite_email
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			account_id = this.dialog_account.records.account.account_id
+			axios.post( `/wp-json/captaincore/v1/accounts/${account_id}/invites`, {
+					invite: this.dialog_account.new_invite_email
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.snackbar.message = response.data.message
 					this.snackbar.show = true
-					this.dialog_account.new_invite_email = "" 
+					this.dialog_account.new_invite_email = ""
 					this.dialog_account.new_invite = false
 					this.showAccount( this.dialog_account.records.account.account_id )
 				})
@@ -17368,7 +17213,6 @@ const app = createApp({
 			}
 
 			var data = {
-				action: 'captaincore_install',
 				post_id: site_id,
 				command: 'recipe',
 				environment: this.dialog_site.environment_selected.environment,
@@ -17383,7 +17227,7 @@ const app = createApp({
 
 			self = this;
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': self.wp_nonce } } )
 				.then( response => {
 					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
 					self.runCommand( response.data )
@@ -17409,7 +17253,6 @@ const app = createApp({
 			}
 
 			var data = {
-				action: 'captaincore_install',
 				post_id: site_ids,
 				command: 'recipe',
 				environment: environment,
@@ -17424,7 +17267,7 @@ const app = createApp({
 
 			self = this;
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': self.wp_nonce } } )
 				.then( response => {
 					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
 					self.runCommand( response.data );
@@ -17475,12 +17318,9 @@ const app = createApp({
 				});
 		},
 		updateRecipe() {
-			var data = {
-				action: 'captaincore_ajax',
-				command: 'updateRecipe',
-				value: this.dialog_cookbook.recipe
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.put( `/wp-json/captaincore/v1/recipes/${this.dialog_cookbook.recipe.recipe_id}`, this.dialog_cookbook.recipe, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.dialog_cookbook.show = false;
 					this.recipes = response.data;
@@ -17488,17 +17328,13 @@ const app = createApp({
 				.catch( error => console.log( error ) );
 		},
 		addRecipe() {
-			var data = {
-				action: 'captaincore_ajax',
-				command: 'newRecipe',
-				value: this.new_recipe
-			};
-			self = this;
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/recipes', this.new_recipe, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
-					self.new_recipe = { show: false, title: "", content: "" };
-					self.recipes = response.data;
-					self.new_recipe = { title: "", content: "" };
+					this.new_recipe = { show: false, title: "", content: "" };
+					this.recipes = response.data;
+					this.new_recipe = { title: "", content: "" };
 				})
 				.catch( error => console.log( error ) );
 		},
@@ -18037,7 +17873,6 @@ const app = createApp({
 			}
 
 			var data = {
-				action: 'captaincore_install',
 				environment: this.dialog_site.environment_selected.environment,
 				post_id: site_id,
 				command: 'reset-permissions'
@@ -18046,7 +17881,7 @@ const app = createApp({
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
 					// Updates job id with reponsed background job id
 					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
@@ -18182,7 +18017,6 @@ const app = createApp({
 			site.loading = true
 
 			var data = {
-				action: 'captaincore_install',
 				post_id: site.site_id,
 				command: 'scan-errors',
 			};
@@ -18193,7 +18027,7 @@ const app = createApp({
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({ "job_id": job_id, "description": description, "status": "queued", stream: [], "command": "scanErrors", "site_id": site.site_id });
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
 					// Updates job id with responsed background job id
 					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
@@ -18225,7 +18059,6 @@ const app = createApp({
 			}
 
 			var data = {
-				action: 'captaincore_install',
 				post_id: site_id,
 				command: 'migrate',
 				value: this.dialog_migration.backup_url,
@@ -18240,7 +18073,7 @@ const app = createApp({
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", "command": "migrate", stream: []});
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 			.then( response => {
 				self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
 				self.runCommand( response.data )
@@ -18266,7 +18099,6 @@ const app = createApp({
 			}
 
 			var data = {
-				action: 'captaincore_install',
 				post_id: site_id,
 				command: 'deactivate',
 				environment: environment,
@@ -18284,7 +18116,7 @@ const app = createApp({
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
 					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
 					self.runCommand( response.data )
@@ -18311,7 +18143,6 @@ const app = createApp({
 			}
 
 			var data = {
-				action: 'captaincore_install',
 				post_id: site_id,
 				environment: environment,
 				command: 'activate'
@@ -18324,7 +18155,7 @@ const app = createApp({
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
 					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
 					self.runCommand( response.data )
@@ -18353,7 +18184,6 @@ const app = createApp({
 			}
 
 			var data = {
-				action: 'captaincore_install',
 				environment: this.dialog_site.environment_selected.environment,
 				post_id: site_id,
 				command: 'deploy-defaults'
@@ -18363,7 +18193,7 @@ const app = createApp({
 			job_id = Math.round((new Date()).getTime())
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []})
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
 					// Updates job id with reponsed background job id
 					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data
@@ -18386,7 +18216,6 @@ const app = createApp({
 			}
 
 			var data = {
-				action: 'captaincore_install',
 				environment: this.dialog_bulk_tools.environment_selected,
 				post_id: site_ids,
 				command: 'deploy-defaults'
@@ -18396,7 +18225,7 @@ const app = createApp({
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id ,"site_id": site_ids, "command": "manage", "description": description, "status": "queued", stream: []})
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
 					// Updates job id with reponsed background job id
 					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data
@@ -18492,12 +18321,9 @@ const app = createApp({
 			});
 		},
 		fetchTimeline( site_id ) {
-			var data = {
-				action: 'captaincore_ajax',
-				post_id: site_id,
-				command: 'timeline'
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.get( `/wp-json/captaincore/v1/sites/${site_id}/timeline`, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.dialog_site.site.timeline = response.data
 				})
@@ -18587,21 +18413,21 @@ const app = createApp({
 			this.dialog_new_domain.loading = true;
 			this.dialog_new_domain.errors  = [];
 
-			var data = {
-				action: 'captaincore_account',
-				command: 'addDomain',
-				value: this.dialog_new_domain.domain.name,
+			var payload = {
+				name: this.dialog_new_domain.domain.name,
 				account_id: this.dialog_new_domain.domain.account_id,
 				create_dns_zone: this.dialog_new_domain.domain.create_dns_zone
 			};
 
 			// If user is not admin, send site_id instead
 			if (this.role != 'administrator') {
-				data.site_id = this.dialog_new_domain.domain.site_id;
-				delete data.account_id; // Remove account_id if not admin
+				payload.site_id = this.dialog_new_domain.domain.site_id;
+				delete payload.account_id; // Remove account_id if not admin
 			}
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/domains', payload, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					// If error then response
 					if ( response.data.errors ) {
@@ -19319,13 +19145,9 @@ const app = createApp({
 				return;
 			}
 			this.dialog_domain.loading = true
-			var data = {
-				action: 'captaincore_account',
-				command: 'deleteDomain',
-				value: this.dialog_domain.domain.domain_id,
-				account: this.dialog_domain.domain.account_id
-			}
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.delete( `/wp-json/captaincore/v1/domains/${this.dialog_domain.domain.domain_id}`, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					// Set loading to false
 					this.dialog_domain.loading = false;
@@ -19485,13 +19307,7 @@ const app = createApp({
 				return;
 			}
 
-			var data = {
-				'action': 'captaincore_dns',
-				'domain_key': domain_id,
-				'record_updates': record_updates
-			}
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( `/wp-json/captaincore/v1/dns/${domain_id}/bulk`, { record_updates: record_updates }, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
 					this.dialog_domain.results = response.data
 					this.reflectDNS()
@@ -19641,13 +19457,12 @@ const app = createApp({
 			if ( ! should_proceed ) {
 				return;
 			}
-			var data = {
-				'action': 'captaincore_account',
-				'command': "requestPlanChanges",
-				'value': this.dialog_customer_modify_plan.subscription,
-			};
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/billing/request-plan-changes', {
+					subscription: this.dialog_customer_modify_plan.subscription
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.snackbar.message = description
 					this.snackbar.show = true
@@ -19657,7 +19472,7 @@ const app = createApp({
 					this.snackbar.message = error;
 					this.snackbar.show = true;
 				});
-			
+
 		},
 		cancelPlan() {
 			should_proceed = confirm("Cancel plan '" + this.dialog_customer_modify_plan.subscription.name + "'? All sites will be removed.");
@@ -19666,14 +19481,12 @@ const app = createApp({
 			}
 
 			description = "Requesting to cancel plan production site '" + this.dialog_customer_modify_plan.subscription.name + "'. Will send email notification once request completed.";
-				
-			var data = {
-				'action': 'captaincore_account',
-				'command': "cancelPlan",
-				'value': this.dialog_customer_modify_plan.subscription,
-			};
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/billing/cancel-plan', {
+					subscription: this.dialog_customer_modify_plan.subscription
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.snackbar.message = description
 					this.snackbar.show = true
@@ -19698,15 +19511,11 @@ const app = createApp({
 			this.dialog_account.records.account.plan.price = plan.price
 			this.dialog_modify_plan.show = false;
 			
-			// Prep AJAX request
-			var data = {
-				'action': 'captaincore_ajax',
-				'post_id': account_id,
-				'command': "updatePlan",
-				'value': { "plan": plan },
-			};
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.put( `/wp-json/captaincore/v1/accounts/${account_id}/plan`, {
+					plan: plan
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.dialog_modify_plan = { show: false, site: {}, date_selector: false, hosting_plans: [], selected_plan: "", plan: { limits: {}, addons: [], next_renewal: "" }, customer_name: "", interval: "12" }
 					this.showAccount( account_id )
@@ -19819,7 +19628,6 @@ const app = createApp({
 			}
 
 			var data = {
-				action: 'captaincore_install',
 				post_id: site.site_id,
 				command: 'production-to-staging',
 				value: this.current_user_email
@@ -19831,7 +19639,7 @@ const app = createApp({
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
 					// Updates job id with reponsed background job id
 					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
@@ -19869,7 +19677,6 @@ const app = createApp({
 			}
 
 			var data = {
-				action: 'captaincore_install',
 				post_id: site.site_id,
 				command: 'staging-to-production',
 				value: this.current_user_email
@@ -19881,7 +19688,7 @@ const app = createApp({
 			job_id = Math.round((new Date()).getTime());
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
 					// Updates job id with reponsed background job id
 					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
@@ -20011,15 +19818,14 @@ const app = createApp({
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			var data = {
-				'action': 'captaincore_install',
-				'post_id': site.site_id,
+					'post_id': site.site_id,
 				'environment': this.dialog_site.environment_selected.environment,
 				'hash': hash,
 				'command': 'quicksave_file_restore',
 				'value'	: this.dialog_file_diff.file_name,
 			};
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
 					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data
 					this.runCommand( response.data )
@@ -20105,23 +19911,22 @@ const app = createApp({
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: []});
 
 			var data = {
-				'action': 'captaincore_install',
-				'post_id': site_id,
+					'post_id': site_id,
 				'command': 'quick_backup',
 				'environment': this.dialog_site.environment_selected.environment,
 			};
 
 			self = this;
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
-					
+
 					// Updates job id with reponsed background job id
 					self.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
 					self.runCommand( response.data );
 					self.snackbar.message = "Quicksave in process.";
 					self.snackbar.show = true;
-					
+
 				})
 				.catch( error => console.log( error ) );
 
@@ -20320,8 +20125,7 @@ const app = createApp({
 			this.jobs.push({"job_id": job_id,"description": description, "status": "done", stream: [], "command": "downloadBackup"})
 
 			const data = {
-				'action': 'captaincore_install',
-				'post_id': site_id,
+					'post_id': site_id,
 				'command': "backup_download",
 				'value': {
 					files: JSON.stringify(selectedFilePaths),
@@ -20331,7 +20135,7 @@ const app = createApp({
 				'environment': this.dialog_site.environment_selected.environment,
 			};
 
-			axios.post(ajaxurl, Qs.stringify(data))
+			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then(response => {
 					this.snackbar.message = description; // Or a more specific success message
 					this.snackbar.show = true;
@@ -21300,19 +21104,13 @@ const app = createApp({
 		},
 		fetchPlugins() {
 			this.new_plugin.loading = true;
-			site_id = this.new_plugin.sites[0].site_id
 			search = this.new_plugin.search
-			var data = {
-				'action': 'captaincore_ajax',
-				'post_id': site_id,
-				'command': "fetchPlugins",
-				'page': this.new_plugin.page
-			};
+			params = { page: this.new_plugin.page }
 			if ( search ) {
-				data.value = search;
+				params.value = search;
 			}
 			self = this;
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.get( '/wp-json/captaincore/v1/wp-plugins', { headers: { 'X-WP-Nonce': this.wp_nonce }, params: params } )
 				.then( response => {
 					self.new_plugin.api.items = response.data.plugins
 					self.new_plugin.api.info = response.data.info
@@ -21530,19 +21328,13 @@ const app = createApp({
 		},
 		fetchThemes() {
 			this.new_theme.loading = true;
-			site_id = this.new_theme.sites[0].site_id
 			search = this.new_theme.search
-			var data = {
-				'action': 'captaincore_ajax',
-				'post_id': site_id,
-				'command': "fetchThemes",
-				'page': this.new_theme.page
-			};
+			params = { page: this.new_theme.page }
 			if ( search ) {
-				data.value = search;
+				params.value = search;
 			}
 			self = this;
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.get( '/wp-json/captaincore/v1/wp-themes', { headers: { 'X-WP-Nonce': this.wp_nonce }, params: params } )
 				.then( response => {
 					self.new_theme.api.items = response.data.themes
 					self.new_theme.api.info = response.data.info
@@ -21681,14 +21473,13 @@ const app = createApp({
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: [],"command":"update-wp", site_id: site.site_id});
 
 			var data = {
-				'action': 'captaincore_install',
-				'post_id': site_id,
+					'post_id': site_id,
 				'environment': this.dialog_site.environment_selected.environment,
 				'command': "update-wp",
 				'background': true
 			};
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
 					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
 					this.runCommand( response.data );
@@ -21828,14 +21619,11 @@ const app = createApp({
 			confirm('Are you sure you want to delete this item?') && this.dialog_site.environment_selected.fathom_analytics.splice(index, 1)
 		},
 		saveMailgun() {
-			// Prep AJAX request
-			var data = {
-				'action': 'captaincore_ajax',
-				'post_id': this.dialog_site.site.site_id,
-				'command': "updateMailgun",
-				'value': this.dialog_site.site.mailgun,
-			};
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.put( `/wp-json/captaincore/v1/sites/${this.dialog_site.site.site_id}/mailgun`, {
+					value: this.dialog_site.site.mailgun
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					// close dialog
 					this.dialog_mailgun_config.show = false;
@@ -22117,19 +21905,15 @@ const app = createApp({
 				fathom.code = fathom.code.trim()
 			})
 
-			// Prep AJAX request
-			var data = {
-				'action': 'captaincore_ajax',
-				'post_id': site_id,
-				'command': "updateFathom",
-				'environment': this.dialog_site.environment_selected.environment,
-				'value': {
-					fathom_lite: environment.fathom,
-					fathom: this.dialog_site.environment_selected.fathom_analytics
-				}
-			}
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.put( `/wp-json/captaincore/v1/sites/${site_id}/fathom`, {
+					environment: this.dialog_site.environment_selected.environment,
+					value: {
+						fathom_lite: environment.fathom,
+						fathom: this.dialog_site.environment_selected.fathom_analytics
+					}
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					// close dialog
 					this.dialog_fathom.site = {};
@@ -22154,13 +21938,11 @@ const app = createApp({
         	})
 		},
 		updateBilling() {
-			var data = {
-				'action': 'captaincore_account',
-				'command': "updateBilling",
-				'value': this.billing.address,
-			};
-
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.put( '/wp-json/captaincore/v1/billing/update', {
+					address: this.billing.address
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					this.fetchBilling()
 				});
@@ -22199,23 +21981,19 @@ const app = createApp({
 			description = "Saving update settings for " + site.name + " (" + this.dialog_site.environment_selected.environment + ")";
 			this.jobs.push({"job_id": job_id,"description": description, "status": "queued", stream: [], "command":"saveUpdateSettings"});
 
-			// Prep AJAX request
-			var data = {
-				'action': 'captaincore_ajax',
-				'post_id': site.site_id,
-				'command': "updateSettings",
-				'environment': this.dialog_site.environment_selected.environment,
-				'value': { 
-					"updates_exclude_plugins": this.dialog_update_settings.environment.updates_exclude_plugins, 
-					"updates_exclude_themes": this.dialog_update_settings.environment.updates_exclude_themes, 
-					"updates_enabled": this.dialog_update_settings.environment.updates_enabled
-					}
-			};
-
 			this.dialog_update_settings.show = false;
 			this.dialog_update_settings.loading = false;
 
-			axios.post( ajaxurl, Qs.stringify( data ) )
+			axios.put( `/wp-json/captaincore/v1/sites/${site.site_id}/settings`, {
+					environment: this.dialog_site.environment_selected.environment,
+					value: {
+						"updates_exclude_plugins": this.dialog_update_settings.environment.updates_exclude_plugins,
+						"updates_exclude_themes": this.dialog_update_settings.environment.updates_exclude_themes,
+						"updates_enabled": this.dialog_update_settings.environment.updates_enabled
+					}
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
 				.then( response => {
 					environment = this.dialog_site.environment_selected;
 					environment.updates_exclude_plugins = this.dialog_update_settings.environment.updates_exclude_plugins;
