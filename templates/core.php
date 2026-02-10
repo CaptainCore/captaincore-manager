@@ -14553,7 +14553,7 @@ const app = createApp({
 				.catch( error => console.log( error ) );
 		},
 		verifyKinstaConnection() {
-			axios.get( '/wp-json/captaincore/v1/providers/kinsta/verify', {
+			axios.get( `/wp-json/captaincore/v1/providers/${this.dialog_new_site_kinsta.site.provider_id}/verify`, {
 				headers: { 'X-WP-Nonce':this.wp_nonce }
 			})
 			.then( response => {
@@ -14576,7 +14576,7 @@ const app = createApp({
 		},
 		connectKinsta() {
 			this.dialog_new_site_kinsta.verifing = true
-			axios.post( '/wp-json/captaincore/v1/providers/kinsta/connect', {
+			axios.post( `/wp-json/captaincore/v1/providers/${this.dialog_new_site_kinsta.site.provider_id}/connect`, {
 				token: this.dialog_new_site_kinsta.kinsta_token
 			}, {
 				headers: { 'X-WP-Nonce':this.wp_nonce }

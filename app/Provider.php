@@ -21,6 +21,21 @@ class Provider {
         return ( new Providers )->get( $this->provider_id );
     }
 
+    public function verify_ownership() {
+        $user = new User();
+        if ( $user->is_admin() ) {
+            return true;
+        }
+        $provider = self::get();
+        if ( ! $provider ) {
+            return false;
+        }
+        if ( $provider->user_id == 0 ) {
+            return false;
+        }
+        return $provider->user_id == get_current_user_id();
+    }
+
     public function credentials() {
         $provider = ( new Providers )->get( $this->provider_id );
         if ( ! empty( $provider->credentials ) ) {
@@ -31,7 +46,7 @@ class Provider {
     public function verify() {
         $provider   = self::get();
         $class_name = "CaptainCore\Providers\\" . ucfirst( $provider->provider );
-        return $class_name::verify();
+        return $class_name::verify( $this->provider_id );
     }
 
     public function deploy_to_staging( $site_id ) {
@@ -47,9 +62,9 @@ class Provider {
     }
 
     public function update_token( $token = "" ) {
-        $provider = self::get();
+        $provider   = self::get();
         $class_name = "CaptainCore\Providers\\" . ucfirst( $provider->provider );
-        return $class_name::update_token( $token );
+        return $class_name::update_token( $token, $this->provider_id );
     }
 
     public function new_site( $site = [] ) {
@@ -67,7 +82,12 @@ class Provider {
 	}
 
     public function all() {
-        $providers = ( new Providers )->all();
+        $user = new User();
+        if ( $user->is_admin() ) {
+            $providers = ( new Providers )->all();
+        } else {
+            $providers = Providers::where( [ "user_id" => get_current_user_id() ] );
+        }
         foreach( $providers as $provider ) {
             if ( ! empty( $provider->credentials ) ) {
                 $provider->credentials = json_decode( $provider->credentials );
@@ -109,6 +129,7 @@ class Provider {
         }
         $time_now         = date("Y-m-d H:i:s");
         $new_provider     = ( new Providers )->insert( [
+            "user_id"     => get_current_user_id(),
             "name"        => $provider->name,
             "provider"    => $provider->provider,
             "credentials" => json_encode( $credentials ),

@@ -59,20 +59,24 @@ class Kinsta {
         return $providers_with_sites;
     }
     
-    public static function update_token( $token = "" ) {
-        $provider    = ( new \CaptainCore\Provider( "kinsta" ) )->get();
-        $credentials = self::credentials();
+    public static function update_token( $token = "", $provider_id = "" ) {
+        if ( ! empty( $provider_id ) ) {
+            $provider = \CaptainCore\Providers::get( $provider_id );
+        } else {
+            $provider = ( new \CaptainCore\Provider( "kinsta" ) )->get();
+        }
+        $credentials = self::credentials( "", $provider_id );
         foreach( $credentials as $credential ) {
             if ( $credential->name == "token" ) {
                 $credential->value = $token;
             }
         }
         ( new \CaptainCore\Providers )->update( [ "credentials" => json_encode( $credentials ) ], [ "provider_id" => $provider->provider_id ] );
-        return self::verify();
+        return self::verify( $provider_id );
     }
 
-    public static function verify() {
-        $token = self::credentials("token");
+    public static function verify( $provider_id = "" ) {
+        $token = self::credentials( "token", $provider_id );
         $data = [ 
             'timeout' => 45,
             'headers' => [
