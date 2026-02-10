@@ -92,6 +92,8 @@ class Domains extends DB {
 			( new Domain( $domain_id ) )->renew_off();
 		}
         self::delete( $domain_id );
+        $domain_account_ids = array_column( ( new AccountDomain() )->where( [ "domain_id" => $domain_id ] ), "account_id" );
+        ActivityLog::log( 'deleted', 'domain', $domain_id, $domain->name, "Deleted domain {$domain->name}", [], $domain_account_ids[0] ?? null );
         return [ "domain_id" => $domain_id, "message" => "Deleted domain {$domain->name}" ];
     }
 

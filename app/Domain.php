@@ -151,7 +151,8 @@ class Domain {
 
     public function fetch() {
         $domain = Domains::get( $this->domain_id );
-        $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details ); 
+        $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
+        unset( $details->provider_cache );
         return [
             "provider"        => self::fetch_remote(),
             "accounts"        => self::accounts(),
@@ -159,6 +160,13 @@ class Domain {
             "connected_sites" => self::connected_sites(),
             "details"         => $details,
         ];
+    }
+
+    public function clear_provider_cache() {
+        $domain  = Domains::get( $this->domain_id );
+        $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
+        unset( $details->provider_cache );
+        ( new Domains )->update( [ "details" => json_encode( $details ) ], [ "domain_id" => $this->domain_id ] );
     }
 
     public function connected_sites() {
@@ -240,7 +248,11 @@ class Domain {
             if ( is_wp_error( $response ) ) {
                 return json_decode( $response->get_error_message() );
             } else {
-                $response    = json_decode( $response['body'] )->domain;
+                $decoded = json_decode( $response['body'] );
+                if ( empty( $decoded->domain ) ) {
+                    return [ "errors" => [ "Unable to fetch domain info from Hover.com" ] ];
+                }
+                $response    = $decoded->domain;
                 $nameservers = [];
                 foreach( $response->nameservers as $nameserver ) {
                     $nameservers[] = [ "value" => $nameserver ];
@@ -263,35 +275,45 @@ class Domain {
         }
 
         if ( $provider->provider == "spaceship" ) {
+            // Check for cached provider data (10-minute TTL)
+            $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
+            if ( ! empty( $details->provider_cache ) && ( time() - $details->provider_cache->cached_at ) < 600 ) {
+                return (array) $details->provider_cache->data;
+            }
+
             $response             = \CaptainCore\Remote\Spaceship::get( "domains/{$domain->name}" );
             if ( empty( $response ) || empty( $response->contacts ) ) {
+                // Fall back to stale cache on error
+                if ( ! empty( $details->provider_cache->data ) ) {
+                    return (array) $details->provider_cache->data;
+                }
                 return [ "errors" => [ "Remote domain details not found." ] ];
             }
             $owner                = \CaptainCore\Remote\Spaceship::get( "contacts/{$response->contacts->registrant}" );
             $admin                = $response->contacts->registrant == $response->contacts->admin ? $owner : \CaptainCore\Remote\Spaceship::get( "contacts/{$response->contacts->admin}" );
             $billing              = $response->contacts->registrant == $response->contacts->billing ? $owner : \CaptainCore\Remote\Spaceship::get( "contacts/{$response->contacts->billing}" );
             $tech                 = $response->contacts->registrant == $response->contacts->tech ? $owner : \CaptainCore\Remote\Spaceship::get( "contacts/{$response->contacts->tech}" );
-            $owner->first_name    = $owner->firstName;
-            $owner->last_name     = $owner->lastName;
-            $owner->org_name      = $owner->organization;
-            $owner->state         = $owner->stateProvince;
-            $owner->postal_code   = $owner->postalCode;
-            $admin->first_name    = $admin->firstName;
-            $admin->last_name     = $admin->lastName;
-            $admin->org_name      = $admin->organization;
-            $admin->state         = $admin->stateProvince;
-            $admin->postal_code   = $admin->postalCode;
-            $billing->first_name  = $billing->firstName;
-            $billing->last_name   = $billing->lastName;
-            $billing->org_name    = $billing->organization;
-            $billing->state       = $billing->stateProvince;
-            $billing->postal_code = $billing->postalCode;
-            $tech->first_name     = $tech->firstName;
-            $tech->last_name      = $tech->lastName;
-            $tech->org_name       = $tech->organization;
-            $tech->state          = $tech->stateProvince;
-            $tech->postal_code    = $tech->postalCode;
-            $domain   = [
+            $owner->first_name    = $owner->firstName ?? '';
+            $owner->last_name     = $owner->lastName ?? '';
+            $owner->org_name      = $owner->organization ?? '';
+            $owner->state         = $owner->stateProvince ?? '';
+            $owner->postal_code   = $owner->postalCode ?? '';
+            $admin->first_name    = $admin->firstName ?? '';
+            $admin->last_name     = $admin->lastName ?? '';
+            $admin->org_name      = $admin->organization ?? '';
+            $admin->state         = $admin->stateProvince ?? '';
+            $admin->postal_code   = $admin->postalCode ?? '';
+            $billing->first_name  = $billing->firstName ?? '';
+            $billing->last_name   = $billing->lastName ?? '';
+            $billing->org_name    = $billing->organization ?? '';
+            $billing->state       = $billing->stateProvince ?? '';
+            $billing->postal_code = $billing->postalCode ?? '';
+            $tech->first_name     = $tech->firstName ?? '';
+            $tech->last_name      = $tech->lastName ?? '';
+            $tech->org_name       = $tech->organization ?? '';
+            $tech->state          = $tech->stateProvince ?? '';
+            $tech->postal_code    = $tech->postalCode ?? '';
+            $result   = [
                 "domain"        => empty( $response->name ) ? "" : $response->name,
                 "nameservers"   => empty( $response->nameservers->hosts ) ? [] : array_map(function ($host) { return ["value" => $host]; }, $response->nameservers->hosts),
                 "contacts"      => [
@@ -304,21 +326,26 @@ class Domain {
                 "whois_privacy" => $response->privacyProtection->level == "high" ? "on" : "off",
                 "status"        => $response->lifecycleStatus,
             ];
-            unset( $domain['contacts']["owner"]->firstName );
-            unset( $domain['contacts']["owner"]->lastName );
-            unset( $domain['contacts']["owner"]->organization );
-            unset( $domain['contacts']["owner"]->stateProvince );
-            unset( $domain['contacts']["owner"]->postalCode );
-            unset( $domain['contacts']["admin"]->firstName );
-            unset( $domain['contacts']["admin"]->lastName );
-            unset( $domain['contacts']["admin"]->organization );
-            unset( $domain['contacts']["admin"]->stateProvince );
-            unset( $domain['contacts']["admin"]->postalCode );
-            unset( $domain['contacts']["billing"]->firstName );
-            unset( $domain['contacts']["billing"]->lastName );
-            unset( $domain['contacts']["billing"]->organization );
-            unset( $domain['contacts']["billing"]->stateProvince );
-            return $domain;
+            unset( $result['contacts']["owner"]->firstName );
+            unset( $result['contacts']["owner"]->lastName );
+            unset( $result['contacts']["owner"]->organization );
+            unset( $result['contacts']["owner"]->stateProvince );
+            unset( $result['contacts']["owner"]->postalCode );
+            unset( $result['contacts']["admin"]->firstName );
+            unset( $result['contacts']["admin"]->lastName );
+            unset( $result['contacts']["admin"]->organization );
+            unset( $result['contacts']["admin"]->stateProvince );
+            unset( $result['contacts']["admin"]->postalCode );
+            unset( $result['contacts']["billing"]->firstName );
+            unset( $result['contacts']["billing"]->lastName );
+            unset( $result['contacts']["billing"]->organization );
+            unset( $result['contacts']["billing"]->stateProvince );
+
+            // Cache the result
+            $details->provider_cache = [ "data" => $result, "cached_at" => time() ];
+            ( new Domains )->update( [ "details" => json_encode( $details ) ], [ "domain_id" => $this->domain_id ] );
+
+            return $result;
         }
 
     }
@@ -485,6 +512,8 @@ class Domain {
         // 6. Save the Mailgun forwarding ID to domain details
         $details->mailgun_forwarding_id = $mailgun_domain_info->id ?? $domain->name;
         ( new Domains )->update( [ "details" => json_encode( $details ) ], [ "domain_id" => $this->domain_id ] );
+        $domain_account_ids = array_column( ( new AccountDomain() )->where( [ "domain_id" => $this->domain_id ] ), "account_id" );
+        ActivityLog::log( 'created', 'email_forward', $this->domain_id, $domain->name, "Activated email forwarding for {$domain->name}", [], $domain_account_ids[0] ?? null );
 
         // Return a response object for the frontend
         return (object) [
@@ -760,6 +789,8 @@ class Domain {
             return [ "errors" => [ "No remote domain found." ] ];
         }
         $provider      = Providers::get( $domain->provider_id );
+        $domain_account_ids = array_column( ( new AccountDomain() )->where( [ "domain_id" => $this->domain_id ] ), "account_id" );
+        ActivityLog::log( 'executed', 'domain', $this->domain_id, $domain->name, "Retrieved auth code for {$domain->name}", [], $domain_account_ids[0] ?? null );
         if ( $provider->provider == "hoverdotcom" ) {
             if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
                 ( new Domains )->provider_login();
@@ -792,19 +823,21 @@ class Domain {
             return [ "errors" => [ "No remote domain found." ] ];
         }
         $provider      = Providers::get( $domain->provider_id );
+        $domain_account_ids = array_column( ( new AccountDomain() )->where( [ "domain_id" => $this->domain_id ] ), "account_id" );
+        ActivityLog::log( 'locked', 'domain', $this->domain_id, $domain->name, "Locked domain {$domain->name}", [], $domain_account_ids[0] ?? null );
         if ( $provider->provider == "hoverdotcom" ) {
             if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
                 ( new Domains )->provider_login();
             }
             $auth = get_transient( 'captaincore_hovercom_auth' );
-            $data = [ 
+            $data = [
                 'timeout' => 45,
                 'headers' => [
                     'Content-Type' => 'application/json; charset=utf-8',
                     'Cookie' => 'hoverauth=' . $auth
                 ],
-                'body'        => json_encode( [ 
-                    "field" => "locked", 
+                'body'        => json_encode( [
+                    "field" => "locked",
                     'value' => true
                 ] ), 
                 'method'      => 'PUT', 
@@ -820,7 +853,9 @@ class Domain {
             }
         }
         if ( $provider->provider == "spaceship" ) {
-            return \CaptainCore\Remote\Spaceship::put( "domains/{$domain->name}/transfer/lock", [ "isLocked" => true ] );
+            $result = \CaptainCore\Remote\Spaceship::put( "domains/{$domain->name}/transfer/lock", [ "isLocked" => true ] );
+            $this->clear_provider_cache();
+            return $result;
         }
     }
 
@@ -830,19 +865,21 @@ class Domain {
             return [ "errors" => [ "No remote domain found." ] ];
         }
         $provider      = Providers::get( $domain->provider_id );
+        $domain_account_ids = array_column( ( new AccountDomain() )->where( [ "domain_id" => $this->domain_id ] ), "account_id" );
+        ActivityLog::log( 'unlocked', 'domain', $this->domain_id, $domain->name, "Unlocked domain {$domain->name}", [], $domain_account_ids[0] ?? null );
         if ( $provider->provider == "hoverdotcom" ) {
             if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
                 ( new Domains )->provider_login();
             }
             $auth = get_transient( 'captaincore_hovercom_auth' );
-            $data = [ 
+            $data = [
                 'timeout' => 45,
                 'headers' => [
                     'Content-Type' => 'application/json; charset=utf-8',
                     'Cookie' => 'hoverauth=' . $auth
                 ],
-                'body'        => json_encode( [ 
-                    "field" => "locked", 
+                'body'        => json_encode( [
+                    "field" => "locked",
                     'value' => false
                 ] ), 
                 'method'      => 'PUT', 
@@ -858,7 +895,9 @@ class Domain {
             }
         }
         if ( $provider->provider == "spaceship" ) {
-            return \CaptainCore\Remote\Spaceship::put( "domains/{$domain->name}/transfer/lock", [ "isLocked" => false ] );
+            $result = \CaptainCore\Remote\Spaceship::put( "domains/{$domain->name}/transfer/lock", [ "isLocked" => false ] );
+            $this->clear_provider_cache();
+            return $result;
         }
     }
 
@@ -868,19 +907,21 @@ class Domain {
             return [ "errors" => [ "No remote domain found." ] ];
         }
         $provider      = Providers::get( $domain->provider_id );
+        $domain_account_ids = array_column( ( new AccountDomain() )->where( [ "domain_id" => $this->domain_id ] ), "account_id" );
+        ActivityLog::log( 'enabled', 'domain', $this->domain_id, $domain->name, "Enabled WHOIS privacy for {$domain->name}", [], $domain_account_ids[0] ?? null );
         if ( $provider->provider == "hoverdotcom" ) {
             if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
                 ( new Domains )->provider_login();
             }
             $auth = get_transient( 'captaincore_hovercom_auth' );
-            $data = [ 
+            $data = [
                 'timeout' => 45,
                 'headers' => [
                     'Content-Type' => 'application/json; charset=utf-8',
                     'Cookie' => 'hoverauth=' . $auth
                 ],
-                'body'      => json_encode( [ 
-                    "field" => "whois_privacy", 
+                'body'      => json_encode( [
+                    "field" => "whois_privacy",
                     'value' => true
                 ] ), 
                 'method'      => 'PUT', 
@@ -895,7 +936,9 @@ class Domain {
             return json_decode( $response['body'] );
         }
         if ( $provider->provider == "spaceship" ) {
-            return \CaptainCore\Remote\Spaceship::put( "domains/{$domain->name}/privacy/preference", [ "privacyLevel" => "high", "userConsent" => true ] );
+            $result = \CaptainCore\Remote\Spaceship::put( "domains/{$domain->name}/privacy/preference", [ "privacyLevel" => "high", "userConsent" => true ] );
+            $this->clear_provider_cache();
+            return $result;
         }
     }
 
@@ -905,19 +948,21 @@ class Domain {
             return [ "errors" => [ "No remote domain found." ] ];
         }
         $provider      = Providers::get( $domain->provider_id );
+        $domain_account_ids = array_column( ( new AccountDomain() )->where( [ "domain_id" => $this->domain_id ] ), "account_id" );
+        ActivityLog::log( 'disabled', 'domain', $this->domain_id, $domain->name, "Disabled WHOIS privacy for {$domain->name}", [], $domain_account_ids[0] ?? null );
         if ( $provider->provider == "hoverdotcom" ) {
             if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
                 ( new Domains )->provider_login();
             }
             $auth = get_transient( 'captaincore_hovercom_auth' );
-            $data = [ 
+            $data = [
                 'timeout' => 45,
                 'headers' => [
                     'Content-Type' => 'application/json; charset=utf-8',
                     'Cookie' => 'hoverauth=' . $auth
                 ],
-                'body'        => json_encode( [ 
-                    "field" => "whois_privacy", 
+                'body'        => json_encode( [
+                    "field" => "whois_privacy",
                     'value' => false
                 ] ), 
                 'method'      => 'PUT', 
@@ -933,7 +978,9 @@ class Domain {
             }
         }
         if ( $provider->provider == "spaceship" ) {
-            return \CaptainCore\Remote\Spaceship::put( "domains/{$domain->name}/privacy/preference", [ "privacyLevel" => "public", "userConsent" => true ] );
+            $result = \CaptainCore\Remote\Spaceship::put( "domains/{$domain->name}/privacy/preference", [ "privacyLevel" => "public", "userConsent" => true ] );
+            $this->clear_provider_cache();
+            return $result;
         }
     }
 
@@ -1061,6 +1108,7 @@ class Domain {
             if ( ! empty( $results->data ) ) {
                 return [ "error" => "There was a problem updating the contact info. Check the formatting and try again." . json_encode( $results->data ) ];
             }
+            $this->clear_provider_cache();
             return [ "response" => "Contacts have been updated.". json_encode( $results ) ];
         }
     }
@@ -1071,19 +1119,21 @@ class Domain {
             return [ "errors" => [ "No remote domain found." ] ];
         }
         $provider      = Providers::get( $domain->provider_id );
+        $domain_account_ids = array_column( ( new AccountDomain() )->where( [ "domain_id" => $this->domain_id ] ), "account_id" );
+        ActivityLog::log( 'updated', 'domain', $this->domain_id, $domain->name, "Updated nameservers for {$domain->name}", [ 'nameservers' => $nameservers ], $domain_account_ids[0] ?? null );
         if ( $provider->provider == "hoverdotcom" ) {
             if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
                 ( new Domains )->provider_login();
             }
             $auth = get_transient( 'captaincore_hovercom_auth' );
-            $data = [ 
+            $data = [
                 'timeout' => 45,
                 'headers' => [
                     'Content-Type' => 'application/json; charset=utf-8',
                     'Cookie'       => 'hoverauth=' . $auth
                 ],
-                'body' => json_encode( [ 
-                    "field" => "nameservers", 
+                'body' => json_encode( [
+                    "field" => "nameservers",
                     'value' => $nameservers
                 ] ), 
                 'method'      => 'PUT', 
@@ -1110,6 +1160,7 @@ class Domain {
             if ( empty( $response->hosts ) || ! empty( $response->data ) ) {
                 return [ "error" => "There was a problem updating nameservers. Check formatting and try again." ];
             }
+            $this->clear_provider_cache();
             return [ "response" => "Nameservers have been updated." ];
         }
     }

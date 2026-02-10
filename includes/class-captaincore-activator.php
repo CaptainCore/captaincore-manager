@@ -33,8 +33,8 @@ class Captaincore_Activator {
 		wp_schedule_event( time(), 'hourly', 'captaincore_cron' );
 		CaptainCore\DB::upgrade();
 		// Add the rewrite rules first
-        captaincore_rewrite(); 
-        
+        ( new CaptainCore\Router() )->add_rewrite_rules();
+
         // Then flush them
 		flush_rewrite_rules(); 
 		function captaincore_activation_redirect() {
