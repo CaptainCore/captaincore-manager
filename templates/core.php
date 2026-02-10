@@ -3877,16 +3877,16 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											</a>
 
 											<template v-for="(env, index) in getVisibleEnvironments(item.raw)" :key="env.environment_id">
-												<div class="d-flex flex-wrap flex-sm-nowrap align-center pa-2 px-4 position-relative group">
-													<div class="position-absolute" style="top: 15px; left: 25px; z-index: 2;">
+												<div class="d-flex flex-wrap flex-sm-nowrap align-center pa-2 px-4 position-relative pin-hover-parent">
+													<div class="position-absolute pin-hover-target" :class="{ 'pin-active': isPinned(env.environment_id) }" style="top: 15px; left: 25px; z-index: 2;">
 														<v-tooltip location="top" :text="isPinned(env.environment_id) ? 'Unpin Environment' : 'Pin Environment'">
 															<template v-slot:activator="{ props }">
-																<v-btn 
+																<v-btn
 																	v-bind="props"
-																	icon 
-																	variant="flat" 
-																	density="compact" 
-																	size="x-small" 
+																	icon
+																	variant="flat"
+																	density="compact"
+																	size="x-small"
 																	color="surface"
 																	class="elevation-1"
 																	@click.stop="togglePin(item.raw, env)"
@@ -4093,22 +4093,24 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<div v-else>No sites found.</div>
 						</template>
 						<template v-slot:item.pin="{ item }">
-							<v-tooltip location="right" :text="isPinned(item.current_env.environment_id) ? 'Unpin Environment' : 'Pin Environment'">
-								<template v-slot:activator="{ props }">
-									<v-btn 
-										v-bind="props"
-										icon 
-										variant="text" 
-										density="compact" 
-										size="small" 
-										@click.stop="togglePin(item, item.current_env)"
-									>
-										<v-icon :color="isPinned(item.current_env.environment_id) ? 'primary' : 'medium-emphasis'">
-											{{ isPinned(item.current_env.environment_id) ? 'mdi-pin' : 'mdi-pin-outline' }}
-										</v-icon>
-									</v-btn>
-								</template>
-							</v-tooltip>
+							<div class="pin-hover-target" :class="{ 'pin-active': isPinned(item.current_env.environment_id) }">
+								<v-tooltip location="right" :text="isPinned(item.current_env.environment_id) ? 'Unpin Environment' : 'Pin Environment'">
+									<template v-slot:activator="{ props }">
+										<v-btn
+											v-bind="props"
+											icon
+											variant="text"
+											density="compact"
+											size="small"
+											@click.stop="togglePin(item, item.current_env)"
+										>
+											<v-icon :color="isPinned(item.current_env.environment_id) ? 'primary' : 'medium-emphasis'">
+												{{ isPinned(item.current_env.environment_id) ? 'mdi-pin' : 'mdi-pin-outline' }}
+											</v-icon>
+										</v-btn>
+									</template>
+								</v-tooltip>
+							</div>
 						</template>
 						<template v-slot:item.thumbnail="{ item }">
 							<v-img
@@ -4188,16 +4190,17 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 												cover
 												v-if="item.raw.current_env.screenshot_base"
 												lazy-src="/wp-content/plugins/captaincore-manager/public/dummy.webp"
+												class="pin-hover-parent"
 											>
-												<div style="position: absolute; top: -3px; right: 5px; z-index: 2;">
+												<div class="pin-hover-target" :class="{ 'pin-active': isPinned(item.raw.current_env.environment_id) }" style="position: absolute; top: -3px; right: 5px; z-index: 2;">
 													<v-tooltip location="top" :text="isPinned(item.raw.current_env.environment_id) ? 'Unpin Environment' : 'Pin Environment'">
 														<template v-slot:activator="{ props }">
-															<v-btn 
+															<v-btn
 																v-bind="props"
-																icon 
-																variant="flat" 
-																density="compact" 
-																size="x-small" 
+																icon
+																variant="flat"
+																density="compact"
+																size="x-small"
 																color="surface"
 																class="elevation-1"
 																@click.stop="togglePin(item.raw, item.raw.current_env)"
@@ -4233,9 +4236,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 												v-bind="props" 
 												:aspect-ratio="16/10"
 											>
-												<v-sheet 
-													color="surface-variant" 
-													class="d-flex align-center justify-center fill-height" 
+												<v-sheet
+													color="surface-variant"
+													class="d-flex align-center justify-center fill-height pin-hover-parent"
 													height="100%"
 												>
 													<div class="text-center" style="width: 100%;">
@@ -4245,15 +4248,15 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 															<span class="text-caption text-medium-emphasis">Generating Preview...</span>
 														</div>
 														<div v-else>
-															<div style="position: absolute; top: -3px; right: 5px; z-index: 2;">
+															<div class="pin-hover-target" :class="{ 'pin-active': isPinned(item.raw.current_env.environment_id) }" style="position: absolute; top: -3px; right: 5px; z-index: 2;">
 																<v-tooltip location="top" :text="isPinned(item.raw.current_env.environment_id) ? 'Unpin Environment' : 'Pin Environment'">
 																	<template v-slot:activator="{ props }">
-																		<v-btn 
+																		<v-btn
 																			v-bind="props"
-																			icon 
-																			variant="flat" 
-																			density="compact" 
-																			size="x-small" 
+																			icon
+																			variant="flat"
+																			density="compact"
+																			size="x-small"
 																			color="surface"
 																			class="elevation-1"
 																			@click.stop="togglePin(item.raw, item.raw.current_env)"

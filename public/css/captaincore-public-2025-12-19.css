@@ -2129,3 +2129,19 @@ code.language-log {
 .rotating {
   animation: rotate 1s linear infinite;
 }
+
+/* Pin icons: hidden by default, visible on hover or when active */
+.pin-hover-target {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.pin-hover-target.pin-active {
+  opacity: 1;
+}
+.pin-hover-parent:hover .pin-hover-target {
+  opacity: 1;
+}
+/* Table rows: show pin on row hover */
+tr:hover .pin-hover-target {
+  opacity: 1;
+}
