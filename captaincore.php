@@ -1482,6 +1482,9 @@ function captaincore_site_update_func( $request ) {
 			$user = (object) ( new CaptainCore\User )->fetch();
 			// $value is boolean: true (remove) or false (cancel removal)
 			\CaptainCore\Mailer::send_site_removal_request( $site, $user, $value );
+			$action      = $value ? 'requested_removal' : 'cancelled_removal';
+			$description = $value ? "Requested removal of {$site->name}" : "Cancelled removal request for {$site->name}";
+			CaptainCore\ActivityLog::log( $action, 'site', $site_id, $site->name, $description, [], $site->customer_id ?? null );
 		}
 	}
 
@@ -2416,11 +2419,14 @@ function captaincore_environments_func( WP_REST_Request $request ) {
 	$environments_table = $wpdb->prefix . 'captaincore_environments';
 
 	// Prepare base WHERE clauses safely
+	$source_environment_id = $request->get_param( 'source_environment_id' );
 	$where_clauses = [
 		$wpdb->prepare( "s.provider = %s", "kinsta" ),
 		$wpdb->prepare( "s.status = %s", "active" ),
-		$wpdb->prepare( "e.environment_id != %d", $source_environment_id ),
 	];
+	if ( ! empty( $source_environment_id ) ) {
+		$where_clauses[] = $wpdb->prepare( "e.environment_id != %d", $source_environment_id );
+	}
 
 	// --- Add User Permission Filter ---
 	// Safely create the IN clause for allowed site IDs
@@ -3630,6 +3636,37 @@ function captaincore_quicksaves_func( $request ) {
 	return $results;
 }
 
+function captaincore_activity_logs_func( WP_REST_Request $request ) {
+	$filters  = [];
+	$page     = intval( $request->get_param( 'page' ) ?: 1 );
+	$per_page = intval( $request->get_param( 'per_page' ) ?: 50 );
+
+	foreach ( [ 'action', 'entity_type', 'user_id', 'date_from', 'date_to' ] as $key ) {
+		$val = $request->get_param( $key );
+		if ( ! empty( $val ) ) {
+			$filters[ $key ] = $val;
+		}
+	}
+
+	$account_id = $request->get_param( 'account_id' );
+	if ( ! empty( $account_id ) ) {
+		$filters['account_id'] = intval( $account_id );
+	}
+
+	// Non-admin users can only see activity for their own accounts
+	if ( ! ( new CaptainCore\User )->is_admin() ) {
+		$account_ids = ( new CaptainCore\User )->accounts();
+		if ( ! empty( $account_id ) && ! in_array( intval( $account_id ), $account_ids ) ) {
+			return new WP_Error( 'forbidden', 'Access denied.', [ 'status' => 403 ] );
+		}
+		if ( empty( $account_id ) ) {
+			$filters['account_ids'] = $account_ids;
+		}
+	}
+
+	return CaptainCore\ActivityLog::fetch( $filters, $per_page, $page );
+}
+
 /**
  * Checks if a user is logged in for REST API endpoints.
  *
@@ -3652,7 +3689,16 @@ function captaincore_admin_permission_check() {
 }
 
 add_action( 'rest_api_init', 'captaincore_register_rest_endpoints' );
+
 function captaincore_register_rest_endpoints() {
+
+	register_rest_route( 'captaincore/v1', '/activity-logs', [
+		'methods'             => 'GET',
+		'callback'            => 'captaincore_activity_logs_func',
+		'permission_callback' => function() {
+			return is_user_logged_in();
+		},
+	] );
 
 	// Custom endpoint for CaptainCore API
 	register_rest_route(
@@ -5647,6 +5693,13 @@ function captaincore_dns_action_callback() {
 	$record_updates = $_POST['record_updates'];
 	$responses      = [];
 
+	// Look up CaptainCore domain by Constellix remote_id for activity logging
+	$cc_domain         = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}captaincore_domains WHERE remote_id = %s", $domain_id ) );
+	$cc_domain_id      = $cc_domain->domain_id ?? null;
+	$cc_domain_name    = $cc_domain->name ?? null;
+	$cc_account_ids    = $cc_domain_id ? array_column( ( new CaptainCore\AccountDomain() )->where( [ "domain_id" => $cc_domain_id ] ), "account_id" ) : [];
+	$cc_account_id     = $cc_account_ids[0] ?? null;
+
 	foreach ( $record_updates as $record_update ) {
 
 		$record_id     = $record_update['record_id'];
@@ -5766,6 +5819,10 @@ function captaincore_dns_action_callback() {
 			$response->record_value  = $record_value;
 			$response->type          = $record_type;
 
+			if ( empty( $response->errors ) ) {
+				CaptainCore\ActivityLog::log( 'created', 'dns_record', $cc_domain_id, $cc_domain_name, "Created {$record_type} record '{$record_name}' for {$cc_domain_name}", [ 'type' => $record_type, 'name' => $record_name ], $cc_account_id );
+			}
+
 			$responses[] = $response;
 
 		}
@@ -5878,6 +5935,9 @@ function captaincore_dns_action_callback() {
 			$response->record_id     = $record_id;
 			$response->record_type   = $record_type;
 			$response->record_status = $record_status;
+			if ( empty( $response->errors ) ) {
+				CaptainCore\ActivityLog::log( 'updated', 'dns_record', $cc_domain_id, $cc_domain_name, "Updated {$record_type} record '{$record_name}' for {$cc_domain_name}", [ 'type' => $record_type, 'name' => $record_name ], $cc_account_id );
+			}
 			$responses[]             = $response;
 		}
 
@@ -5887,6 +5947,9 @@ function captaincore_dns_action_callback() {
 			$response->record_id     = $record_id;
 			$response->record_type   = $record_type;
 			$response->record_status = $record_status;
+			if ( empty( $response->errors ) ) {
+				CaptainCore\ActivityLog::log( 'deleted', 'dns_record', $cc_domain_id, $cc_domain_name, "Deleted {$record_type} record '{$record_name}' for {$cc_domain_name}", [ 'type' => $record_type, 'name' => $record_name ], $cc_account_id );
+			}
 			$responses[]             = $response;
 		}
 	}
@@ -6422,7 +6485,7 @@ function captaincore_account_action_callback() {
 		CaptainCore\Mailer::send_plan_change_request( $subscription, $current_user );
 	}
 
-	$account_id = intval( $_POST['account_id'] );
+	$account_id = intval( $_POST['account_id'] ?? 0 );
 
 	// Only proceed if have permission to particular account id.
 	if ( ! $user->is_admin() && isset( $account_id ) && ! captaincore_verify_permissions_account( $account_id ) && ! in_array( $_POST['command'], $everyone_commands ) ) {
@@ -6618,13 +6681,13 @@ function captaincore_ajax_action_callback() {
 		'mailgun'
 	];
 
-	if ( is_array( $_POST['post_id'] ) ) {
+	if ( isset( $_POST['post_id'] ) && is_array( $_POST['post_id'] ) ) {
 		$post_ids       = [];
 		$post_ids_array = $_POST['post_id'];
 		foreach ( $post_ids_array as $id ) {
 			$post_ids[] = intval( $id );
 		}
-	} else {
+	} elseif ( isset( $_POST['post_id'] ) ) {
 		$post_id = intval( $_POST['post_id'] );
 	}
 
@@ -7208,7 +7271,7 @@ function captaincore_ajax_action_callback() {
 	}
 	if ( $cmd == 'fetch-site' ) {
 		$sites = [];
-		if ( is_array( $post_ids ) && count( $post_ids ) > 0 ) {
+		if ( ! empty( $post_ids ) && is_array( $post_ids ) ) {
 			foreach( $post_ids as $id ) {
 				$site    = new CaptainCore\Site( $id );
 				$sites[] = $site->fetch();
@@ -7371,7 +7434,7 @@ function captaincore_install_action_callback() {
 	}
 
 	// If many sites, fetch their names
-	if ( is_array( $post_ids ) && count ( $post_ids ) > 0 ) {
+	if ( ! empty( $post_ids ) && is_array( $post_ids ) ) {
 		$site_names = [];
 		foreach( $post_ids as $id ) {
 

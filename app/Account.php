@@ -419,6 +419,8 @@ class Account {
             
             \CaptainCore\Mailer::send_access_granted_notification( $email, $account_rec->name, $sites, $domains );
 
+            ActivityLog::log( 'invited', 'account', $this->account_id, $account_rec->name ?? '', "Invited user to account" );
+
             return [ "message" => "Account already exists. Access granted and notification sent." ];
         }
 
@@ -440,6 +442,8 @@ class Account {
         $account_name   = ( new Accounts )->get( $this->account_id )->name;
         
         \CaptainCore\Mailer::send_invite_new_user( $email, $account_name, $invite_url );
+
+        ActivityLog::log( 'invited', 'account', $this->account_id, $account_name ?? '', "Invited user to account" );
 
         return [ "message" => "Invite has been sent." ];
     }

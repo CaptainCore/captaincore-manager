@@ -645,11 +645,10 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "37";
+        $required_version = (int) "38";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
-            echo "Not needed `captaincore_db_version` is v{$version} and required v{$required_version}.";
             return;
         }
     
@@ -983,10 +982,30 @@ class DB {
 
         dbDelta($sql);
 
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_activity_logs` (
+            activity_log_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) UNSIGNED NOT NULL,
+            account_id bigint(20) UNSIGNED DEFAULT NULL,
+            action varchar(100) NOT NULL,
+            entity_type varchar(50) NOT NULL,
+            entity_id bigint(20) UNSIGNED DEFAULT NULL,
+            entity_name varchar(255) DEFAULT NULL,
+            description text,
+            context longtext,
+            ip_address varchar(45) DEFAULT NULL,
+            created_at datetime NOT NULL,
+        PRIMARY KEY  (activity_log_id),
+        KEY account_id (account_id),
+        KEY entity_type (entity_type),
+        KEY created_at (created_at)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
         if ( ! empty( $wpdb->last_error ) ) {
             return $wpdb->last_error;
         }
-    
+
         update_site_option( 'captaincore_db_version', $required_version );
         echo "Updated `captaincore_db_version` to v$required_version";
     }

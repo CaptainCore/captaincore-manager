@@ -171,6 +171,9 @@ class ProviderAction {
                 'status'     => "done",
             ];
             ( new ProviderActions )->update( $action, [ "provider_action_id" => $this->provider_action_id ] );
+            $site = ! empty( $current_action->site_id ) ? ( new Sites )->get( $current_action->site_id ) : null;
+            $site_name = $site->name ?? '';
+            ActivityLog::log( 'deployed', 'environment', $current_action->site_id ?? null, $site_name, "Deployed staging to production for {$site_name}", [], $site->customer_id ?? null );
             return self::active();
         }
 
@@ -218,6 +221,9 @@ class ProviderAction {
                     'status'     => "done",
                 ];
                 ( new ProviderActions )->update( $action, [ "provider_action_id" => $this->provider_action_id ] );
+                $site = ! empty( $current_action->site_id ) ? ( new Sites )->get( $current_action->site_id ) : null;
+                $site_name = $site->name ?? '';
+                ActivityLog::log( 'deployed', 'environment', $current_action->site_id ?? null, $site_name, "Deployed production to staging for {$site_name}", [], $site->customer_id ?? null );
                 return self::active();
             }
         }
@@ -300,6 +306,7 @@ class ProviderAction {
                     }
                 }
                 \CaptainCore\ProcessLog::insert( "Created site", $site_id );
+                ActivityLog::log( 'created', 'site', $site_id, $current_action->domain, "Provisioned new site {$current_action->domain}", [], $current_action->account_id );
                 \CaptainCore\Run::CLI("site sync $site_id --update-extras", true);
                 
                 if ($provider->provider == "kinsta") {

@@ -125,6 +125,8 @@ return array(
     'Buzz\\Middleware\\MiddlewareInterface' => $vendorDir . '/kriswallsmith/buzz/lib/Middleware/MiddlewareInterface.php',
     'Buzz\\Middleware\\WsseAuthMiddleware' => $vendorDir . '/kriswallsmith/buzz/lib/Middleware/WsseAuthMiddleware.php',
     'CaptainCore\\Account' => $baseDir . '/app/Account.php',
+    'CaptainCore\\ActivityLog' => $baseDir . '/app/ActivityLog.php',
+    'CaptainCore\\ActivityLogs' => $baseDir . '/app/ActivityLogs.php',
     'CaptainCore\\AccountDomain' => $baseDir . '/app/AccountDomain.php',
     'CaptainCore\\AccountPortal' => $baseDir . '/app/AccountPortal.php',
     'CaptainCore\\AccountPortals' => $baseDir . '/app/AccountPortals.php',

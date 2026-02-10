@@ -176,7 +176,7 @@ class Sites extends DB {
                         "subsites"        => $site->subsites,
                         "storage"         => $site->storage,
                         "visits"          => $site->visits,
-                        "screenshot_base" => $site->screenshot_base,
+                        "screenshot_base" => $site->screenshot_base ?? "",
                     ]
                 ];
             }

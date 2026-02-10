@@ -293,6 +293,8 @@ class Site {
             ( new Sites )->update( [ "customer_id" => $site->customer_id ], [ "site_id" => $site_id ] );
         }
 
+        ActivityLog::log( 'created', 'site', $site_id, $site->name, "Created site {$site->name}", [], $site->customer_id ?? null );
+
         ( new Account( $site->account_id, true ) )->calculate_totals();
         return $response;
     }
@@ -336,6 +338,8 @@ class Site {
             $response['response'] = 'Failed updating site';
             return $response;
         }
+
+        ActivityLog::log( 'updated', 'site', $this->site_id, $site->name, "Updated site {$site->name}", [], $site->customer_id ?? null );
 
         $response['response'] = 'Successfully updated site';
         $response['site_id']  = $this->site_id;
@@ -475,6 +479,7 @@ class Site {
 
     public function assign_accounts( $account_ids = [] ) {
 
+        $site_name   = ( new Sites )->get( $this->site_id )->name ?? '';
         $accountsite = new AccountSite();
 
         // Fetch current records
@@ -486,11 +491,13 @@ class Site {
             foreach ( $records as $record ) {
                 $accountsite->delete( $record->account_site_id );
             }
+            ActivityLog::log( 'unshared', 'site', $this->site_id, $site_name, "Unshared site {$site_name} with account", [], $account_id );
         }
 
         // Add new records
         foreach ( array_diff( $account_ids, $current_account_ids ) as $account_id ) {
             $accountsite->insert( [ "site_id" => $this->site_id, "account_id" => $account_id ] );
+            ActivityLog::log( 'shared', 'site', $this->site_id, $site_name, "Shared site {$site_name} with account", [], $account_id );
         }
 
         // Calculate new totals
@@ -503,6 +510,7 @@ class Site {
 
     public function mark_inactive() {
         $site     = self::get();
+        ActivityLog::log( 'deleted', 'site', $this->site_id, $site->name, "Deleted site {$site->name}", [], $site->customer_id ?? null );
         $time_now = date("Y-m-d H:i:s");
         ( new Sites )->update( [ "status" => "inactive", "updated_at" => $time_now ], [ "site_id" => $this->site_id ] );
         ( new Account( $site->account_id ) )->calculate_usage();

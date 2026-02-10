@@ -215,6 +215,8 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'Buzz\\Middleware\\MiddlewareInterface' => __DIR__ . '/..' . '/kriswallsmith/buzz/lib/Middleware/MiddlewareInterface.php',
         'Buzz\\Middleware\\WsseAuthMiddleware' => __DIR__ . '/..' . '/kriswallsmith/buzz/lib/Middleware/WsseAuthMiddleware.php',
         'CaptainCore\\Account' => __DIR__ . '/../..' . '/app/Account.php',
+        'CaptainCore\\ActivityLog' => __DIR__ . '/../..' . '/app/ActivityLog.php',
+        'CaptainCore\\ActivityLogs' => __DIR__ . '/../..' . '/app/ActivityLogs.php',
         'CaptainCore\\AccountDomain' => __DIR__ . '/../..' . '/app/AccountDomain.php',
         'CaptainCore\\AccountPortal' => __DIR__ . '/../..' . '/app/AccountPortal.php',
         'CaptainCore\\AccountPortals' => __DIR__ . '/../..' . '/app/AccountPortals.php',

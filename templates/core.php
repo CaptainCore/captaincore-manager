@@ -113,6 +113,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-list-item link :href="`${configurations.path}health`" @click.prevent="goToPath('/health')" title="Health" prepend-icon="mdi-ladybug"></v-list-item>
 			
 			<v-list-subheader v-show="role == 'administrator' || role == 'owner'">Administrator</v-list-subheader>
+			<v-list-item link :href="`${configurations.path}activity-logs`" @click.prevent="goToPath('/activity-logs')" title="Activity Logs" v-show="role == 'administrator'" prepend-icon="mdi-history"></v-list-item>
 			<v-list-item link :href="`${configurations.path}archives`" @click.prevent="goToPath('/archives')" title="Archives" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-folder-zip-outline"></v-list-item>
 			<v-list-item link :href="`${configurations.path}configurations`" @click.prevent="goToPath('/configurations')" title="Configurations" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-cogs"></v-list-item>
 			<v-list-item link :href="`${configurations.path}reports`" @click.prevent="goToPath('/reports')" title="Reports" v-show="role == 'administrator'" prepend-icon="mdi-file-chart"></v-list-item>
@@ -122,7 +123,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-list-item link :href="`${configurations.path}keys`" @click.prevent="goToPath('/keys')" title="SSH Keys" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-key"></v-list-item>
 			<v-list-item link :href="`${configurations.path}subscriptions`" @click.prevent="goToPath('/subscriptions')" title="Subscriptions" v-show="role == 'administrator' && configurations.mode == 'hosting'" prepend-icon="mdi-repeat"></v-list-item>
 			<v-list-item link :href="`${configurations.path}users`" @click.prevent="goToPath('/users')" title="Users" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-account-multiple"></v-list-item>
-			
+
 			<v-list-subheader>User</v-list-subheader>
 			<v-list-item link :href="`${configurations.path}profile`" @click.prevent="goToPath('/profile')" title="Profile" prepend-icon="mdi-account-box"></v-list-item>
 			<v-list-item link v-if="footer.switch_to_link" :href="footer.switch_to_link" :title="footer.switch_to_text" prepend-icon="mdi-logout"></v-list-item>
@@ -8228,6 +8229,92 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-actions>
 				</v-card>
 			</v-dialog>
+			<v-card v-if="route == 'activity-logs' && role == 'administrator'" flat border="thin" rounded="xl">
+				<v-toolbar flat color="transparent">
+					<v-toolbar-title>Activity Log</v-toolbar-title>
+				</v-toolbar>
+				<v-row class="px-4 pb-2" no-gutters>
+					<v-col cols="12" sm="3" class="pr-2">
+						<v-select
+							v-model="activity_logs_filters.action"
+							:items="['', 'created', 'updated', 'deleted', 'toggled', 'deployed', 'shared', 'unshared', 'invited', 'locked', 'unlocked', 'transferred', 'requested_removal', 'cancelled_removal']"
+							label="Action"
+							density="compact"
+							variant="underlined"
+							clearable
+							hide-details
+							@update:model-value="activity_logs_options.page = 1; fetchActivityLogs()"
+						></v-select>
+					</v-col>
+					<v-col cols="12" sm="3" class="pr-2">
+						<v-select
+							v-model="activity_logs_filters.entity_type"
+							:items="['', 'site', 'domain', 'dns_record', 'environment', 'account', 'email_forward']"
+							label="Entity Type"
+							density="compact"
+							variant="underlined"
+							clearable
+							hide-details
+							@update:model-value="activity_logs_options.page = 1; fetchActivityLogs()"
+						></v-select>
+					</v-col>
+					<v-col cols="12" sm="3" class="pr-2">
+						<v-text-field
+							v-model="activity_logs_filters.date_from"
+							label="From Date"
+							type="date"
+							density="compact"
+							variant="underlined"
+							clearable
+							hide-details
+							@update:model-value="activity_logs_options.page = 1; fetchActivityLogs()"
+						></v-text-field>
+					</v-col>
+					<v-col cols="12" sm="3">
+						<v-text-field
+							v-model="activity_logs_filters.date_to"
+							label="To Date"
+							type="date"
+							density="compact"
+							variant="underlined"
+							clearable
+							hide-details
+							@update:model-value="activity_logs_options.page = 1; fetchActivityLogs()"
+						></v-text-field>
+					</v-col>
+				</v-row>
+				<v-card-text class="pt-0">
+					<v-data-table-server
+						:loading="activity_logs_loading"
+						:headers="[
+							{ title: 'Date', key: 'created_at', width: '220px' },
+							{ title: 'User', key: 'user_name', width: '150px' },
+							{ title: 'Action', key: 'action', width: '120px' },
+							{ title: 'Type', key: 'entity_type', width: '120px' },
+							{ title: 'Name', key: 'entity_name' },
+							{ title: 'Description', key: 'description' }
+						]"
+						:items="activity_logs.items"
+						:items-length="activity_logs.total"
+						:items-per-page="activity_logs_options.itemsPerPage"
+						:items-per-page-options="[25, 50, 100]"
+						:page="activity_logs_options.page"
+						density="comfortable"
+						hover
+						@update:options="activity_logs_options = $event; fetchActivityLogs()"
+					>
+						<template v-slot:item.created_at="{ item }">
+							{{ pretty_timestamp_epoch( item.created_at ) }}
+						</template>
+						<template v-slot:item.action="{ item }">
+							<v-chip size="small" variant="tonal" :color="{ created: 'success', deleted: 'error', updated: 'info', toggled: 'warning', deployed: 'purple', shared: 'cyan', unshared: 'orange', invited: 'teal', locked: 'grey', unlocked: 'grey', transferred: 'indigo', requested_removal: 'error', cancelled_removal: 'success' }[item.action] || 'default'">{{ item.action }}</v-chip>
+						</template>
+						<template v-slot:item.entity_type="{ item }">
+							{{ item.entity_type.replace('_', ' ') }}
+						</template>
+					</v-data-table-server>
+				</v-card-text>
+			</v-card>
 			<v-card v-if="route == 'billing'" flat border="thin" rounded="xl">
 				<v-toolbar flat v-show="dialog_billing.step == 1" color="transparent">
 					<v-toolbar-title>Billing</v-toolbar-title>
@@ -9747,6 +9834,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-tab v-show="role == 'administrator' || dialog_account.records.owner">
 							Plan <v-icon size="20" class="ml-1">mdi-chart-donut</v-icon>
 						</v-tab>
+						<v-tab>
+							Activity
+							<v-icon size="20" class="ml-1">mdi-history</v-icon>
+						</v-tab>
 					</v-tabs>
 					</v-toolbar>
 					<v-window v-model="account_tab">
@@ -10176,6 +10267,37 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								</v-alert>
 							</div>
 						</v-card>
+					</v-window-item>
+					<v-window-item :transition="false" :reverse-transition="false">
+						<v-data-table-server
+							:loading="account_activity_logs_loading"
+							:headers="[
+								{ title: 'Date', key: 'created_at', width: '220px' },
+								{ title: 'User', key: 'user_name', width: '150px' },
+								{ title: 'Action', key: 'action', width: '120px' },
+								{ title: 'Type', key: 'entity_type', width: '120px' },
+								{ title: 'Name', key: 'entity_name' },
+								{ title: 'Description', key: 'description' }
+							]"
+							:items="account_activity_logs.items"
+							:items-length="account_activity_logs.total"
+							:items-per-page="account_activity_logs_options.itemsPerPage"
+							:items-per-page-options="[25, 50, 100]"
+							:page="account_activity_logs_options.page"
+							density="comfortable"
+							hover
+							@update:options="account_activity_logs_options = $event; fetchAccountActivityLogs()"
+						>
+							<template v-slot:item.created_at="{ item }">
+								{{ pretty_timestamp_epoch( item.created_at ) }}
+							</template>
+							<template v-slot:item.action="{ item }">
+								<v-chip size="small" variant="tonal" :color="{ created: 'success', deleted: 'error', updated: 'info', toggled: 'warning', deployed: 'purple', shared: 'cyan', unshared: 'orange', invited: 'teal', locked: 'grey', unlocked: 'grey', transferred: 'indigo', requested_removal: 'error', cancelled_removal: 'success' }[item.action] || 'default'">{{ item.action }}</v-chip>
+							</template>
+							<template v-slot:item.entity_type="{ item }">
+								{{ item.entity_type.replace('_', ' ') }}
+							</template>
+						</v-data-table-server>
 					</v-window-item>
 
 					</v-window>
@@ -11184,6 +11306,13 @@ const app = createApp({
 		web_risk_logs: [],
 		web_risk_logs_loading: false,
 		web_risk_dialog: { show: false, log: null },
+		activity_logs: { items: [], total: 0, page: 1, pages: 0 },
+		activity_logs_loading: false,
+		activity_logs_options: { page: 1, itemsPerPage: 50 },
+		activity_logs_filters: { action: '', entity_type: '', date_from: '', date_to: '' },
+		account_activity_logs: { items: [], total: 0, page: 1, pages: 0 },
+		account_activity_logs_loading: false,
+		account_activity_logs_options: { page: 1, itemsPerPage: 50 },
 		notifications: false,
 		themeFilterMenu: false,
 		pluginFilterMenu: false,
@@ -11535,6 +11664,7 @@ const app = createApp({
 			'/subscriptions': 'subscriptions',
 			'/subscription': 'subscription',
 			'/users': 'users',
+			'/activity-logs': 'activity-logs',
 		},
 		selected_nav: "",
 		querystring: window.location.search,
@@ -11775,6 +11905,11 @@ const app = createApp({
 		},
 		route_path() {
 			this.triggerPath()
+		},
+		account_tab(val) {
+			if (val === 6) {
+				this.fetchAccountActivityLogs();
+			}
 		},
 		runningJobs() {
 			this.view_console.show = true
@@ -12801,6 +12936,12 @@ const app = createApp({
 				this.selected_nav = "";
 			}
 
+			if (this.route == "activity-logs") {
+				this.selected_nav = "";
+				this.loading_page = false;
+				this.fetchActivityLogs();
+			}
+
 			if (this.fetchInvite.account) {
 				this.fetchInviteInfo();
 				this.route = "invite";
@@ -12829,6 +12970,16 @@ const app = createApp({
 				if (domain) {
 					this.modifyDNS(domain);
 					this.fetchDomain(domain);
+				} else if (this.route_path) {
+					// Domains not loaded yet, retry after fetchDomains completes
+					const unwatch = this.$watch('domains', () => {
+						unwatch();
+						const d = this.domains.find(d => d.domain_id == this.route_path);
+						if (d) {
+							this.modifyDNS(d);
+							this.fetchDomain(d);
+						}
+					});
 				}
 				return;
 			}
@@ -15058,11 +15209,6 @@ const app = createApp({
 					this.domains = response.data
 					this.domains_loading = false
 					this.loading_page = false
-					if ( this.dialog_domain.step == 2 && this.route_path != "" ) {
-						domain = this.domains.filter( d => d.domain_id == this.route_path )[0]
-						this.modifyDNS( domain )
-						this.fetchDomain( domain )
-					}
 					setTimeout(this.fetchMissing, 4000)
 				})
 		},
@@ -15205,6 +15351,44 @@ const app = createApp({
 			})
 			.catch(error => {
 				this.web_risk_logs_loading = false;
+			});
+		},
+		fetchActivityLogs() {
+			this.activity_logs_loading = true;
+			let params = new URLSearchParams();
+			params.append('page', this.activity_logs_options.page);
+			params.append('per_page', this.activity_logs_options.itemsPerPage);
+			if (this.activity_logs_filters.action) params.append('action', this.activity_logs_filters.action);
+			if (this.activity_logs_filters.entity_type) params.append('entity_type', this.activity_logs_filters.entity_type);
+			if (this.activity_logs_filters.date_from) params.append('date_from', this.activity_logs_filters.date_from);
+			if (this.activity_logs_filters.date_to) params.append('date_to', this.activity_logs_filters.date_to);
+			axios.get('/wp-json/captaincore/v1/activity-logs?' + params.toString(), {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.activity_logs = response.data;
+				this.activity_logs_loading = false;
+			})
+			.catch(error => {
+				this.activity_logs_loading = false;
+			});
+		},
+		fetchAccountActivityLogs() {
+			if (!this.dialog_account.records.account) return;
+			this.account_activity_logs_loading = true;
+			let params = new URLSearchParams();
+			params.append('page', this.account_activity_logs_options.page);
+			params.append('per_page', this.account_activity_logs_options.itemsPerPage);
+			params.append('account_id', this.dialog_account.records.account.account_id);
+			axios.get('/wp-json/captaincore/v1/activity-logs?' + params.toString(), {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.account_activity_logs = response.data;
+				this.account_activity_logs_loading = false;
+			})
+			.catch(error => {
+				this.account_activity_logs_loading = false;
 			});
 		},
 		fetchSubscriptions() {
@@ -15435,7 +15619,9 @@ const app = createApp({
 				
 				this.sites_loading = false;
 				this.loading_page = false;
-				this.triggerPath();
+				if (this.route === "sites") {
+					this.triggerPath();
+				}
 				setTimeout(this.fetchMissing, 1000);
 			})
 			.catch(error => {
@@ -17048,6 +17234,9 @@ const app = createApp({
 					this.dialog_account.show = true;
 					this.dialog_account.step = 2;
 					this.dialog_account.loading = false;
+					if (this.account_tab === 6) {
+						this.fetchAccountActivityLogs();
+					}
 				})
 				.catch( error => {
 					console.log( error );
@@ -18618,7 +18807,7 @@ const app = createApp({
 			this.dialog_domain.update_lock = true
 			status = this.dialog_domain.provider.locked
 			axios.get(
-				`/wp-json/captaincore/v1/domain/${domain.domain_id}/lock_${status}`, {
+				`/wp-json/captaincore/v1/domain/${this.dialog_domain.domain.domain_id}/lock_${status}`, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
@@ -18631,7 +18820,7 @@ const app = createApp({
 			this.dialog_domain.update_privacy = true
 			status = this.dialog_domain.provider.whois_privacy
 			axios.get(
-				`/wp-json/captaincore/v1/domain/${domain.domain_id}/privacy_${status}`, {
+				`/wp-json/captaincore/v1/domain/${this.dialog_domain.domain.domain_id}/privacy_${status}`, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
@@ -18643,7 +18832,7 @@ const app = createApp({
 		retrieveAuthCode() {
 			this.dialog_domain.fetch_auth_code = true
 			axios.get(
-				`/wp-json/captaincore/v1/domain/${domain.domain_id}/auth_code`, {
+				`/wp-json/captaincore/v1/domain/${this.dialog_domain.domain.domain_id}/auth_code`, {
 					headers: {'X-WP-Nonce':this.wp_nonce}
 				})
 				.then(response => {
