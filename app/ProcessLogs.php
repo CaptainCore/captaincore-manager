@@ -11,7 +11,10 @@ class ProcessLogs extends DB {
 		$results = [];
 		$process_log_ids = self::select_all( 'process_log_id' );
 		foreach ( $process_log_ids as $process_log_id ) {
-			$results[] = ( new ProcessLog( $process_log_id ) )->get();
+			$result = ( new ProcessLog( $process_log_id ) )->get();
+			if ( $result ) {
+				$results[] = $result;
+			}
 		}
 		return $results;
 
