@@ -342,6 +342,9 @@ class Account {
 
     public function usage_breakdown() {
         $account  = self::get();
+        if ( ! $account ) {
+            return [];
+        }
         $site_ids = array_column( ( new Sites )->where( [ "account_id" => $this->account_id, "status" => "active" ] ), "site_id" );
 
         $plan              = empty( $account->plan ) ? (object) [] : ( is_string( $account->plan ) ? json_decode( $account->plan ) : $account->plan );

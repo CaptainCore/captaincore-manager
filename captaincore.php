@@ -4133,6 +4133,13 @@ function captaincore_invoices_get_func( WP_REST_Request $request ) {
 	if ( ! $order ) {
 		return new WP_Error( 'not_found', 'Invoice not found.', [ 'status' => 404 ] );
 	}
+	$user = new CaptainCore\User();
+	if ( ! $user->is_admin() ) {
+		$account_id = $order->get_meta( 'captaincore_account_id' );
+		if ( ! $account_id || ! $user->verify_accounts( [ $account_id ] ) ) {
+			return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+		}
+	}
 	$order_data       = (object) $order->get_data();
 	$order_items      = $order->get_items( apply_filters( 'woocommerce_purchase_order_item_types', 'line_item' ) );
 	$order_line_items = [];
@@ -4192,6 +4199,13 @@ function captaincore_invoices_pdf_func( WP_REST_Request $request ) {
 	$order = wc_get_order( $value );
 	if ( ! $order ) {
 		return new WP_Error( 'not_found', 'Invoice not found.', [ 'status' => 404 ] );
+	}
+	$user = new CaptainCore\User();
+	if ( ! $user->is_admin() ) {
+		$account_id = $order->get_meta( 'captaincore_account_id' );
+		if ( ! $account_id || ! $user->verify_accounts( [ $account_id ] ) ) {
+			return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+		}
 	}
 	$order_data       = (object) $order->get_data();
 	$order_items      = $order->get_items( apply_filters( 'woocommerce_purchase_order_item_types', 'line_item' ) );
@@ -6134,7 +6148,7 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/providers', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_provider_new_func',
-			'permission_callback' => 'captaincore_permission_check',
+			'permission_callback' => 'captaincore_admin_permission_check',
 			'show_in_index'       => false,
 		]
 	);
@@ -6143,7 +6157,7 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/providers/(?P<id>[a-zA-Z0-9-]+)', [
 			'methods'             => 'PUT',
 			'callback'            => 'captaincore_provider_update_func',
-			'permission_callback' => 'captaincore_permission_check',
+			'permission_callback' => 'captaincore_admin_permission_check',
 			'show_in_index'       => false,
 		]
 	);
@@ -6152,7 +6166,7 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/providers/(?P<id>[a-zA-Z0-9-]+)', [
 			'methods'             => 'DELETE',
 			'callback'            => 'captaincore_provider_delete_func',
-			'permission_callback' => 'captaincore_permission_check',
+			'permission_callback' => 'captaincore_admin_permission_check',
 			'show_in_index'       => false,
 		]
 	);
@@ -6161,7 +6175,7 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/verify', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_provider_verify_func',
-			'permission_callback' => 'captaincore_permission_check',
+			'permission_callback' => 'captaincore_admin_permission_check',
 			'show_in_index'       => false,
 		]
 	);
@@ -6203,7 +6217,7 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/providers/(?P<provider>[a-zA-Z0-9-]+)/connect', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_provider_connect_func',
-			'permission_callback' => 'captaincore_permission_check',
+			'permission_callback' => 'captaincore_admin_permission_check',
 			'show_in_index'       => false,
 		]
 	);
@@ -6934,7 +6948,7 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
-		'captaincore/v1', '/billing/payment-methods/(?P<id>[\d]+)/primary', [
+		'captaincore/v1', '/billing/payment-methods/(?P<id>[a-zA-Z0-9_]+)/primary', [
 			'methods'             => 'PUT',
 			'callback'            => 'captaincore_billing_set_primary_func',
 			'permission_callback' => 'captaincore_permission_check',
@@ -6950,7 +6964,7 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
-		'captaincore/v1', '/billing/payment-methods/(?P<id>[\d]+)', [
+		'captaincore/v1', '/billing/payment-methods/(?P<id>[a-zA-Z0-9_]+)', [
 			'methods'             => 'DELETE',
 			'callback'            => 'captaincore_billing_delete_payment_func',
 			'permission_callback' => 'captaincore_permission_check',
