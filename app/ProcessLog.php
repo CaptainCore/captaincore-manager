@@ -55,7 +55,11 @@ class ProcessLog {
         $Parsedown             = new \Parsedown();
         $process_log           = new ProcessLogs();
         $item                  = $process_log->get( $this->process_log_id );
-        $item->name            = ( new Processes() )->get( $item->process_id )->name;
+        if ( ! $item ) {
+            return null;
+        }
+        $process               = ( new Processes() )->get( $item->process_id );
+        $item->name            = $process ? $process->name : '';
         $item->created_at_raw  = $item->created_at;
         $item->created_at      = strtotime( $item->created_at );
         $item->description_raw = $item->description;

@@ -1070,6 +1070,88 @@ function captaincore_update_log_entry_func( WP_REST_Request $request ) {
 	return new WP_REST_Response( $timelines, 200 );
 }
 
+function captaincore_process_logs_list_func( WP_REST_Request $request ) {
+	$process_logs = ( new CaptainCore\ProcessLogs )->list();
+	return $process_logs;
+}
+
+function captaincore_process_logs_create_func( WP_REST_Request $request ) {
+	$site_ids   = $request->get_param( 'site_ids' );
+	$process_id = $request->get_param( 'process_id' );
+	$description = $request->get_param( 'description' );
+
+	if ( ! empty( $site_ids ) && ! captaincore_verify_permissions( $site_ids ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	if ( empty( $site_ids ) && ! ( new CaptainCore\User )->is_admin() ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+
+	$time_now        = date( 'Y-m-d H:i:s' );
+	$process_log_new = [
+		'process_id'   => $process_id,
+		'user_id'      => get_current_user_id(),
+		'public'       => 1,
+		'description'  => $description,
+		'status'       => 'completed',
+		'created_at'   => $time_now,
+		'updated_at'   => $time_now,
+		'completed_at' => $time_now,
+	];
+	$process_log     = new CaptainCore\ProcessLogs();
+	$process_log_id  = $process_log->insert( $process_log_new );
+	if ( ! empty( $site_ids ) ) {
+		( new CaptainCore\ProcessLog( $process_log_id ) )->assign_sites( $site_ids );
+	}
+	$timelines = [];
+	foreach ( (array) $site_ids as $site_id ) {
+		$timelines[ $site_id ] = ( new CaptainCore\Site( $site_id ) )->process_logs();
+	}
+	return $timelines;
+}
+
+function captaincore_process_logs_get_func( WP_REST_Request $request ) {
+	$process_log_id = intval( $request['id'] );
+	$process_log    = ( new CaptainCore\ProcessLog( $process_log_id ) )->get();
+	if ( ! $process_log ) {
+		return new WP_Error( 'not_found', 'Log entry not found.', [ 'status' => 404 ] );
+	}
+	$user = new CaptainCore\User();
+	if ( ! $user->is_admin() ) {
+		$existing_log = ( new CaptainCore\ProcessLogs )->get( $process_log_id );
+		if ( $existing_log && $existing_log->user_id != get_current_user_id() ) {
+			$site_ids = array_column( ( new CaptainCore\ProcessLogSite )->where( [ "process_log_id" => $process_log_id ] ), 'site_id' );
+			if ( empty( $site_ids ) || ! captaincore_verify_permissions( $site_ids ) ) {
+				return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+			}
+		}
+	}
+	return $process_log;
+}
+
+function captaincore_process_logs_delete_func( WP_REST_Request $request ) {
+	$process_log_id = intval( $request['id'] );
+
+	// Get associated site IDs before deleting
+	$site_ids = array_column( ( new CaptainCore\ProcessLogSite )->where( [ "process_log_id" => $process_log_id ] ), 'site_id' );
+
+	// Delete associated site relationships
+	$process_log_sites = ( new CaptainCore\ProcessLogSite )->where( [ "process_log_id" => $process_log_id ] );
+	foreach ( $process_log_sites as $record ) {
+		( new CaptainCore\ProcessLogSite )->delete( $record->process_log_site_id );
+	}
+
+	// Delete the log entry
+	( new CaptainCore\ProcessLogs )->delete( $process_log_id );
+
+	// Return updated timelines for all affected sites
+	$timelines = [];
+	foreach ( $site_ids as $site_id ) {
+		$timelines[ $site_id ] = ( new CaptainCore\Site( $site_id ) )->process_logs();
+	}
+	return $timelines;
+}
+
 function captaincore_accounts_func( $request ) {
 	return ( new CaptainCore\Accounts )->list();
 }
@@ -1124,6 +1206,1215 @@ function captaincore_upcoming_subscriptions_func( $request ) {
 
 function captaincore_billing_func( $request ) {
 	return ( new CaptainCore\User )->billing();
+}
+
+function captaincore_accounts_get_func( WP_REST_Request $request ) {
+	$account_id = intval( $request['id'] );
+	$user = new CaptainCore\User;
+	if ( ! $user->is_admin() && ! $user->verify_accounts( [ $account_id ] ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	$account = new CaptainCore\Account( $account_id );
+	$account->calculate_usage();
+	$account->calculate_totals();
+	return $account->fetch();
+}
+
+function captaincore_accounts_defaults_func( WP_REST_Request $request ) {
+	$user       = new CaptainCore\User;
+	$account_id = intval( $request['id'] );
+	$record     = (object) $request->get_json_params();
+
+	if ( ! $user->is_admin() && ! $user->verify_accounts( [ $account_id ] ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+
+	if ( ! isset( $record->defaults['users'] ) ) {
+		$record->defaults['users'] = [];
+	}
+	if ( ! isset( $record->defaults['recipes'] ) ) {
+		$record->defaults['recipes'] = [];
+	}
+	( new CaptainCore\Accounts )->update( [ "defaults" => json_encode( $record->defaults ) ], [ "account_id" => $account_id ] );
+	( new CaptainCore\Account( $account_id, true ) )->sync();
+	return "Record updated.";
+}
+
+function captaincore_accounts_invite_func( WP_REST_Request $request ) {
+	$account_id = intval( $request['id'] );
+	$user = new CaptainCore\User;
+	if ( ! $user->is_admin() && ! $user->verify_accounts( [ $account_id ] ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	$account  = new CaptainCore\Account( $account_id );
+	$invite   = $request->get_param( 'invite' );
+	$response = $account->invite( $invite );
+	return $response;
+}
+
+function captaincore_accounts_invite_delete_func( WP_REST_Request $request ) {
+	$account_id = intval( $request['id'] );
+	$invite_id  = intval( $request['invite_id'] );
+	$user = new CaptainCore\User;
+	if ( ! $user->is_admin() && ! $user->verify_accounts( [ $account_id ] ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	$account = new CaptainCore\Account( $account_id );
+	$account->invite_delete( $invite_id );
+	return "Invite deleted.";
+}
+
+function captaincore_domains_create_func( WP_REST_Request $request ) {
+	$user   = new CaptainCore\User;
+	$errors = [];
+	$name   = trim( $request->get_param( 'name' ) );
+	$account_id     = intval( $request->get_param( 'account_id' ) );
+	$create_dns_zone = $request->get_param( 'create_dns_zone' ) !== false;
+
+	if ( empty( $name ) ) {
+		$errors[] = "Domain can't be empty.";
+	}
+
+	if ( ! $user->is_admin() ) {
+		$site_id = intval( $request->get_param( 'site_id' ) );
+		if ( empty( $site_id ) ) {
+			$errors[] = "Website must be selected.";
+		} else {
+			if ( ! captaincore_verify_permissions( $site_id ) ) {
+				$errors[] = "Permission denied for selected site.";
+			} else {
+				$site = CaptainCore\Sites::get( $site_id );
+				if ( $site && ! empty( $site->customer_id ) ) {
+					$account_id = $site->customer_id;
+				} else {
+					$errors[] = "Selected site does not have a valid customer assigned.";
+				}
+			}
+		}
+	}
+
+	$domain_exists = ( new CaptainCore\Domains )->where( [ "name" => $name ] );
+	if ( count( $domain_exists ) > 0 ) {
+		$errors[] = "Domain has already been added.";
+	}
+
+	if ( empty( $account_id ) ) {
+		$errors[] = "Account can't be empty.";
+	}
+
+	if ( count( $errors ) > 0 ) {
+		return [ "errors" => $errors ];
+	}
+
+	$time_now  = date( 'Y-m-d H:i:s' );
+	$domain_id = ( new CaptainCore\Domains )->insert( [
+		"name"       => $name,
+		'updated_at' => $time_now,
+		'created_at' => $time_now,
+	] );
+
+	( new CaptainCore\Domain( $domain_id ) )->insert_accounts( [ $account_id ] );
+
+	$remote_id = null;
+	if ( $create_dns_zone ) {
+		$link_existing = $user->is_admin();
+		$response = ( new CaptainCore\Domain( $domain_id ) )->fetch_remote_id( $link_existing );
+		if ( is_array( $response ) && isset( $response['errors'] ) ) {
+			return [ "errors" => $response['errors'] ];
+		}
+		$remote_id = $response;
+	}
+
+	return [ "name" => $name, "domain_id" => $domain_id, "remote_id" => $remote_id ];
+}
+
+function captaincore_domains_delete_func( WP_REST_Request $request ) {
+	$response = ( new CaptainCore\Domains )->delete_domain( $request['id'] );
+	return $response;
+}
+
+function captaincore_billing_pay_invoice_func( WP_REST_Request $request ) {
+	$user      = new CaptainCore\User;
+	$source_id = $request->get_param( 'source_id' );
+	$value     = $request->get_param( 'value' );
+	$payment_id = $request->get_param( 'payment_id' );
+
+	if ( $source_id ) {
+		$response = $user->add_payment_method( $source_id );
+		if ( isset( $response->error ) ) {
+			return $response;
+		}
+		$payment_tokens = WC_Payment_Tokens::get_customer_tokens( $user->user_id() );
+		foreach ( $payment_tokens as $payment_token ) {
+			if ( $payment_token->get_token() == $source_id ) {
+				$result = $user->pay_invoice( $value, $payment_token->get_id() );
+				$user->set_as_primary( $payment_token->get_id() );
+				return $result;
+			}
+		}
+		return new WP_Error( 'payment_failed', 'Payment method not found.', [ 'status' => 400 ] );
+	}
+
+	$result = $user->pay_invoice( $value, $payment_id );
+	$user->set_as_primary( $payment_id );
+	return $result;
+}
+
+function captaincore_billing_set_primary_func( WP_REST_Request $request ) {
+	$user = new CaptainCore\User;
+	$user->set_as_primary( $request['id'] );
+	return [ 'success' => true ];
+}
+
+function captaincore_billing_add_payment_func( WP_REST_Request $request ) {
+	$user     = new CaptainCore\User;
+	$source_id = $request->get_param( 'source_id' );
+	$response = $user->add_payment_method( $source_id );
+	return $response;
+}
+
+function captaincore_billing_delete_payment_func( WP_REST_Request $request ) {
+	$user = new CaptainCore\User;
+	$user->delete_payment_method( $request['id'] );
+	return [ 'success' => true ];
+}
+
+function captaincore_billing_cancel_plan_func( WP_REST_Request $request ) {
+	$user                 = new CaptainCore\User;
+	$current_subscription = (object) $request->get_param( 'subscription' );
+	$current_user         = $user->fetch();
+	$billing              = $user->billing();
+	if ( empty( $current_subscription->account_id ) || empty( $current_subscription->name ) ) {
+		return new WP_Error( 'missing_data', 'Missing required data.', [ 'status' => 400 ] );
+	}
+	foreach ( $billing->subscriptions as $subscription ) {
+		if ( $subscription->account_id == $current_subscription->account_id && $subscription->name == $current_subscription->name ) {
+			CaptainCore\Mailer::send_cancel_plan_request( $current_subscription, $current_user );
+		}
+	}
+	return [ 'success' => true ];
+}
+
+function captaincore_billing_request_plan_changes_func( WP_REST_Request $request ) {
+	$user         = new CaptainCore\User;
+	$current_user = $user->fetch();
+	$subscription = (object) $request->get_param( 'subscription' );
+	CaptainCore\Mailer::send_plan_change_request( $subscription, $current_user );
+	return [ 'success' => true ];
+}
+
+function captaincore_billing_update_func( WP_REST_Request $request ) {
+	$user     = new CaptainCore\User;
+	$billing  = (object) $request->get_param( 'address' );
+	$customer = new WC_Customer( $user->user_id() );
+	$customer->set_billing_address_1( $billing->address_1 );
+	$customer->set_billing_address_2( $billing->address_2 );
+	$customer->set_billing_city( $billing->city );
+	$customer->set_billing_company( $billing->company );
+	$customer->set_billing_country( $billing->country );
+	$customer->set_billing_email( $billing->email );
+	$customer->set_billing_first_name( $billing->first_name );
+	$customer->set_billing_last_name( $billing->last_name );
+	$customer->set_billing_phone( $billing->phone );
+	$customer->set_billing_postcode( $billing->postcode );
+	$customer->set_billing_state( $billing->state );
+	$customer->save();
+	return [ 'success' => true ];
+}
+
+function captaincore_site_requests_create_func( WP_REST_Request $request ) {
+	$user  = new CaptainCore\User;
+	$value = $request->get_param( 'request' );
+	$user->request_site( $value );
+	return $user->fetch_requested_sites();
+}
+
+function captaincore_site_requests_back_func( WP_REST_Request $request ) {
+	$user    = new CaptainCore\User;
+	$value   = (object) $request->get_param( 'request' );
+	$user->back_request_site( $value );
+	return $user->fetch_requested_sites();
+}
+
+function captaincore_site_requests_continue_func( WP_REST_Request $request ) {
+	$user  = new CaptainCore\User;
+	$value = (object) $request->get_param( 'request' );
+	$user->continue_request_site( $value );
+	return $user->fetch_requested_sites();
+}
+
+function captaincore_site_requests_update_func( WP_REST_Request $request ) {
+	$user  = new CaptainCore\User;
+	$value = (object) $request->get_param( 'request' );
+	$user->update_request_site( $value );
+	return $user->fetch_requested_sites();
+}
+
+function captaincore_site_requests_delete_func( WP_REST_Request $request ) {
+	$user  = new CaptainCore\User;
+	$value = (object) $request->get_param( 'request' );
+	$user->delete_request_site( $value );
+	return $user->fetch_requested_sites();
+}
+
+function captaincore_configurations_save_global_func( WP_REST_Request $request ) {
+	$value = (object) $request->get_json_params();
+	if ( isset( $value->dns_introduction ) ) {
+		$value->dns_introduction = str_replace( "\'", "'", $value->dns_introduction );
+	}
+	update_site_option( 'captaincore_configurations', json_encode( $value ) );
+	( new CaptainCore\Configurations )->sync();
+	return "Global configurations updated.";
+}
+
+function captaincore_defaults_save_global_func( WP_REST_Request $request ) {
+	$value = $request->get_json_params();
+	update_site_option( 'captaincore_defaults', json_encode( $value ) );
+	( new CaptainCore\Defaults )->sync();
+	return "Global defaults updated.";
+}
+
+// Phase 7: Site Detail & Admin callbacks
+
+function captaincore_sites_stats_share_func( WP_REST_Request $request ) {
+	$site_id        = $request['id'];
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	$fathom_id      = $request->get_param( 'fathom_id' );
+	$sharing        = $request->get_param( 'sharing' );
+	$share_password = $request->get_param( 'share_password' );
+	( new CaptainCore\Site( $site_id ) )->stats_sharing( $fathom_id, $sharing, $share_password );
+	return [ 'success' => true ];
+}
+
+function captaincore_sites_stats_func( WP_REST_Request $request ) {
+	$site_id    = $request['id'];
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	$before     = strtotime( $request->get_param( 'from_at' ) );
+	$after      = strtotime( $request->get_param( 'to_at' ) );
+	$grouping   = strtolower( $request->get_param( 'grouping' ) );
+	$fathom_id  = $request->get_param( 'fathom_id' );
+	$environment = $request->get_param( 'environment' );
+	$response   = ( new CaptainCore\Site( $site_id ) )->stats( $environment, $before, $after, $grouping, $fathom_id );
+	if ( is_wp_error( $response ) ) {
+		return new WP_Error( 'stats_error', $response->get_error_message(), [ 'status' => 400 ] );
+	}
+	return $response;
+}
+
+function captaincore_accounts_update_func( WP_REST_Request $request ) {
+	$account_id = $request['id'];
+	$user       = new CaptainCore\User;
+	$account    = (object) $request->get_param( 'account' );
+	if ( ! $user->verify_account_owner( $account_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	( new CaptainCore\Accounts )->update( [ "name" => trim( $account->name ), "billing_user_id" => $account->billing_user_id ], [ "account_id" => $account_id ] );
+	( new CaptainCore\Account( $account_id ) )->sync();
+	return $account;
+}
+
+function captaincore_domains_update_account_func( WP_REST_Request $request ) {
+	$domain_id   = $request['id'];
+	$account_ids = $request->get_param( 'account_ids' );
+	$provider_id = $request->get_param( 'provider_id' );
+	( new CaptainCore\Domain( $domain_id ) )->assign_accounts( $account_ids );
+	CaptainCore\Domains::update( [ "provider_id" => $provider_id ], [ "domain_id" => $domain_id ] );
+	return [ 'success' => true ];
+}
+
+function captaincore_sites_timeline_func( WP_REST_Request $request ) {
+	$site_id = $request['id'];
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	return ( new CaptainCore\Site( $site_id ) )->process_logs();
+}
+
+function captaincore_accounts_delete_func( WP_REST_Request $request ) {
+	$account_id = $request['id'];
+	captaincore_run_background_command( "account delete $account_id" );
+	$account = new CaptainCore\Account( $account_id, true );
+	$account->delete();
+	return [ 'success' => true ];
+}
+
+function captaincore_sites_snapshot_link_func( WP_REST_Request $request ) {
+	$site_id     = $request['id'];
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	$snapshot_id = $request['snapshot_id'];
+	$in_24hrs    = date( "Y-m-d H:i:s", strtotime( date( "Y-m-d H:i:s" ) . "+24 hours" ) );
+	$token       = bin2hex( openssl_random_pseudo_bytes( 16 ) );
+	( new CaptainCore\Snapshots )->update( [
+		"token"      => $token,
+		"expires_at" => $in_24hrs,
+	], [
+		"snapshot_id" => $snapshot_id,
+	] );
+	return [
+		"token"      => $token,
+		"expires_at" => $in_24hrs,
+	];
+}
+
+function captaincore_sites_update_settings_func( WP_REST_Request $request ) {
+	$site_id     = $request['id'];
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	$environment = $request->get_param( 'environment' );
+	$value       = $request->get_param( 'value' );
+	$environment_update = [
+		'updates_enabled'         => $value['updates_enabled'],
+		'updates_exclude_themes'  => implode( ",", $value['updates_exclude_themes'] ?? [] ),
+		'updates_exclude_plugins' => implode( ",", $value['updates_exclude_plugins'] ?? [] ),
+		'updated_at'              => date( "Y-m-d H:i:s" ),
+	];
+	$environment_id = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment );
+	( new CaptainCore\Environments )->update( $environment_update, [ "environment_id" => $environment_id ] );
+	$token = CaptainCore\Run::task( "site sync $site_id" );
+	return $token;
+}
+
+function captaincore_sites_update_fathom_func( WP_REST_Request $request ) {
+	$site_id     = $request['id'];
+	$environment = $request->get_param( 'environment' );
+	$value       = $request->get_param( 'value' );
+	$data        = (object) $value;
+
+	$fetch = ( new CaptainCore\Site( $site_id ) )->get();
+	$site  = $fetch->site;
+
+	// Append environment if needed
+	if ( $environment == "Staging" ) {
+		$site = "{$site}-staging";
+	}
+
+	$time_now       = date( "Y-m-d H:i:s" );
+	$environment_id = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment );
+	$env            = ( new CaptainCore\Environments )->get( $environment_id );
+	( new CaptainCore\Environments )->update( [ 'fathom' => json_encode( $data->fathom_lite ) ], [ "environment_id" => $env->environment_id ] );
+
+	$details         = ( isset( $env->details ) ? json_decode( $env->details ) : (object) [] );
+	$details->fathom = $data->fathom;
+	( new CaptainCore\Environments )->update( [
+		"details"    => json_encode( $details ),
+		"updated_at" => $time_now,
+	], [ "environment_id" => $env->environment_id ] );
+
+	( new CaptainCore\Site( $site_id ) )->sync();
+
+	$token = CaptainCore\Run::task( "stats-deploy $site" );
+	return $token;
+}
+
+function captaincore_sites_update_mailgun_func( WP_REST_Request $request ) {
+	$site_id = $request['id'];
+	$value   = $request->get_param( 'value' );
+	$site    = new CaptainCore\Site( $site_id );
+	$site->update_mailgun( $value );
+	return [ 'success' => true ];
+}
+
+function captaincore_accounts_update_plan_func( WP_REST_Request $request ) {
+	$account_id = $request['id'];
+	$plan       = $request->get_param( 'plan' );
+	( new CaptainCore\Accounts )->update_plan( $plan, $account_id );
+	return [ 'success' => true ];
+}
+
+// Phase 8: Site Install/CLI Operations callbacks
+
+function captaincore_jobs_get_func( WP_REST_Request $request ) {
+	$job_id = $request['id'];
+
+	// Disable https when debug enabled
+	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+		add_filter( 'https_ssl_verify', '__return_false' );
+	}
+
+	$data = [
+		'timeout' => 45,
+		'headers' => [
+			'Content-Type' => 'application/json; charset=utf-8',
+			'token'        => CAPTAINCORE_CLI_TOKEN,
+		],
+		'method' => 'GET',
+	];
+
+	$response = wp_remote_get( CAPTAINCORE_CLI_ADDRESS . "/task/{$job_id}", $data );
+	if ( is_wp_error( $response ) ) {
+		return new WP_Error( 'request_failed', $response->get_error_message(), [ 'status' => 500 ] );
+	}
+	$response = json_decode( $response["body"] );
+
+	if ( $response && $response->Status == "Completed" ) {
+		return [
+			"response" => $response->Response,
+			"status"   => "Completed",
+			"job_id"   => $job_id,
+		];
+	}
+
+	return [ "status" => "running", "job_id" => $job_id ];
+}
+
+function captaincore_sites_cli_func( WP_REST_Request $request ) {
+	global $wpdb;
+
+	$post_id     = $request->get_param( 'post_id' );
+	$cmd         = $request->get_param( 'command' );
+	$value       = $request->get_param( 'value' );
+	$version     = $request->get_param( 'version' );
+	$commit      = $request->get_param( 'commit' );
+	$hash        = $request->get_param( 'hash' );
+	$arguments   = $request->get_param( 'arguments' );
+	$filters     = $request->get_param( 'filters' );
+	$addon_type  = $request->get_param( 'addon_type' );
+	$date        = $request->get_param( 'date' );
+	$name        = $request->get_param( 'name' );
+	$environment = $request->get_param( 'environment' ) ?: '';
+	$backup_id   = $request->get_param( 'backup_id' );
+	$link        = $request->get_param( 'link' );
+	$background  = $request->get_param( 'background' );
+	$notes       = $request->get_param( 'notes' );
+	$subject     = $request->get_param( 'subject' ) ?: '';
+	$status_msg  = $request->get_param( 'status_msg' ) ?: '';
+	$action_text = $request->get_param( 'action_text' ) ?: '';
+
+	// Handle array of post_ids
+	$post_ids = null;
+	if ( is_array( $post_id ) ) {
+		$post_ids = [];
+		foreach ( $post_id as $id ) {
+			if ( ! captaincore_verify_permissions( intval( $id ) ) ) {
+				return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+			}
+			$post_ids[] = intval( $id );
+		}
+		$post_id = $post_ids[0];
+	} else {
+		$post_id = intval( $post_id );
+		if ( ! captaincore_verify_permissions( $post_id ) ) {
+			return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+		}
+	}
+
+	$fetch    = (object) ( new CaptainCore\Site( $post_id ) )->get();
+	$site     = $fetch->site;
+	$provider = $fetch->provider;
+	$domain   = $fetch->name;
+
+	// Append environment if needed
+	if ( $environment == "Staging" ) {
+		$site = "{$site}-staging";
+	}
+
+	// Append provider if exists
+	if ( $provider != '' ) {
+		$site = $site . '@' . $provider;
+	}
+
+	// If many sites, fetch their names
+	if ( ! empty( $post_ids ) && is_array( $post_ids ) ) {
+		$site_names = [];
+		foreach ( $post_ids as $id ) {
+			$fetch_site = ( new CaptainCore\Site( $id ) );
+			$site_name  = $fetch_site->get()->site;
+
+			if ( $environment == "Production" || $environment == "Both" ) {
+				$site_names[] = $site_name;
+			}
+
+			$address_staging = $fetch_site->environments()[1]->address;
+
+			if ( isset( $address_staging ) && $address_staging != "" ) {
+				if ( $environment == "Staging" || $environment == "Both" ) {
+					$site_names[] = "{$site_name}-staging";
+				}
+			}
+		}
+		$site = implode( " ", $site_names );
+	}
+
+	$run_in_background_silent = false;
+	$run_in_background        = false;
+	$command                  = '';
+
+	if ( $background ) {
+		$run_in_background = true;
+	}
+	if ( $cmd == 'new' ) {
+		$command = "site sync $post_id --update-extras";
+		$run_in_background = true;
+	}
+	if ( $cmd == 'deploy-defaults' ) {
+		$command = "site deploy-defaults $site";
+		$run_in_background = true;
+	}
+	if ( $cmd == 'update' ) {
+		$command = "site sync $post_id";
+		$run_in_background = true;
+	}
+	if ( $cmd == 'update-wp' ) {
+		$command = "update $site";
+		$run_in_background = true;
+	}
+	if ( $cmd == 'update-fetch' ) {
+		$command = "update-fetch $site";
+		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+			$command = CAPTAINCORE_DEBUG_MOCK_UPDATES;
+		}
+	}
+	if ( $cmd == 'users-fetch' ) {
+		$command = "ssh $site --command='wp user list --format=json'";
+		$run_in_background = true;
+		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+			$command = CAPTAINCORE_DEBUG_MOCK_USERS;
+		}
+	}
+	if ( $cmd == 'copy' ) {
+		if ( captaincore_verify_permissions( $value ) ) {
+			$current_user = wp_get_current_user();
+			$email        = $current_user->user_email;
+			$run_in_background = true;
+			$site_destination = get_field( 'site', $value );
+			$command = "copy $site $site_destination --email=$email";
+		}
+	}
+	if ( $cmd == 'migrate' ) {
+		$run_in_background = true;
+		$value   = urlencode( $value );
+		$command = "ssh $site --script=migrate -- --url=\"$value\"";
+		if ( $request->get_param( 'update_urls' ) == "true" ) {
+			$command = "$command --update-urls";
+		}
+	}
+	if ( $cmd == 'recipe' ) {
+		$run_in_background = true;
+		$command     = "ssh $site --recipe=$value";
+		$recipe_name = ( new CaptainCore\Recipes )->get( $value )->title;
+		CaptainCore\ProcessLog::insert( $recipe_name, $post_id );
+	}
+	if ( $cmd == 'launch' ) {
+		$run_in_background = true;
+		$command = "ssh $site --script=launch -- --domain=$value";
+	}
+	if ( $cmd == 'reset-permissions' ) {
+		$run_in_background = true;
+		$command = "ssh $site --script=reset-permissions";
+		CaptainCore\ProcessLog::insert( "Reset file permissions", $post_id );
+	}
+	if ( $cmd == 'apply-https' ) {
+		$run_in_background = true;
+		$command = "ssh $site --script=apply-https";
+		CaptainCore\ProcessLog::insert( "Updated internal urls to HTTPS", $post_id );
+	}
+	if ( $cmd == 'apply-https-with-www' ) {
+		$run_in_background = true;
+		$command = "ssh $site --script=apply-https-with-www";
+		CaptainCore\ProcessLog::insert( "Updated internal urls to HTTPS with www", $post_id );
+	}
+	if ( $cmd == 'production-to-staging' ) {
+		$run_in_background = true;
+		$command = $value ? "site copy-to-staging $site --email=$value" : "site copy-to-staging $site";
+	}
+	if ( $cmd == 'staging-to-production' ) {
+		$run_in_background = true;
+		$command = $value ? "site copy-to-production $site --email=$value" : "site copy-to-production $site";
+	}
+	if ( $cmd == 'scan-errors' ) {
+		$run_in_background = true;
+		$command = "scan-errors $site";
+	}
+	if ( $cmd == 'sync-data' ) {
+		$run_in_background = true;
+		$command = "sync-data $site";
+	}
+	if ( $cmd == 'remove' ) {
+		$command = "site delete $site";
+	}
+	if ( $cmd == 'quick_backup' ) {
+		$run_in_background = true;
+		$command = "quicksave generate $site";
+	}
+	if ( $cmd == 'backup' ) {
+		$run_in_background = true;
+		$command = "backup $site";
+	}
+	if ( $cmd == 'snapshot' ) {
+		$run_in_background = true;
+		$user_id = get_current_user_id();
+		if ( $date && $value ) {
+			$command = "snapshot generate $site --email=$value --rollback=\"$date\" --user-id=$user_id --notes=\"$notes\"";
+		} elseif ( $value ) {
+			$command = "snapshot generate $site --email=$value --user-id=$user_id --notes=\"$notes\"";
+		} else {
+			$command = "snapshot generate $site --user-id=$user_id --notes=\"$notes\"";
+		}
+		if ( $filters ) {
+			$filters = implode( ",", $filters );
+			$command = $command . " --filter={$filters}";
+		}
+	}
+	if ( $cmd == 'deactivate' ) {
+		$run_in_background = true;
+		$command = "deactivate $site --name=\"$name\" --link=\"$link\" --subject=\"$subject\" --status=\"$status_msg\" --action=\"$action_text\"";
+		CaptainCore\ProcessLog::insert( "Suspended website", $post_id );
+	}
+	if ( $cmd == 'activate' ) {
+		$run_in_background = true;
+		$command = "activate $site";
+		CaptainCore\ProcessLog::insert( "Restored website", $post_id );
+	}
+	if ( $cmd == 'view_quicksave_changes' ) {
+		$command = "quicksave show-changes $site $value";
+	}
+	if ( $cmd == 'run' ) {
+		$code    = base64_encode( stripslashes_deep( $value ) );
+		$command = "run $site --code=$code";
+	}
+	if ( $cmd == 'backup_download' ) {
+		$run_in_background_silent = true;
+		$value        = (object) $value;
+		$current_user = wp_get_current_user();
+		$email        = $current_user->user_email;
+		$files        = is_string( $value->files ) ? json_decode( $value->files ) : $value->files;
+		$directories  = is_string( $value->directories ) ? json_decode( $value->directories ) : $value->directories;
+		$payload      = [
+			"files"       => $files,
+			"directories" => $directories,
+		];
+		$payload = base64_encode( json_encode( $payload ) );
+		$command = "backup download $site {$value->backup_id} --email=$email --payload='$payload'";
+	}
+	if ( $cmd == 'manage' ) {
+		$run_in_background = true;
+		if ( is_int( $post_id ) ) {
+			$command = "$value $site --" . $arguments['value'] . '="' . stripslashes( $arguments['input'] ) . '"';
+		}
+	}
+	if ( $cmd == 'quicksave_file_diff' ) {
+		$command = "quicksave file-diff $site $commit $value --html";
+	}
+	if ( $cmd == 'rollback' ) {
+		$run_in_background = true;
+		$command = "quicksave rollback $site $commit --version=$version --$addon_type=$value";
+	}
+	if ( $cmd == 'quicksave_rollback' ) {
+		$run_in_background = true;
+		$command = "quicksave rollback $site $commit --version=$version --all";
+	}
+	if ( $cmd == 'quicksave_file_restore' ) {
+		$run_in_background = true;
+		$command = "quicksave rollback $site $hash --version=this --file=$value";
+	}
+
+	if ( empty( $command ) ) {
+		return new WP_Error( 'invalid_command', 'Unknown command.', [ 'status' => 400 ] );
+	}
+
+	// Disable https when debug enabled
+	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+		add_filter( 'https_ssl_verify', '__return_false' );
+	}
+
+	$data = [
+		'timeout' => 45,
+		'headers' => [
+			'Content-Type' => 'application/json; charset=utf-8',
+			'token'        => CAPTAINCORE_CLI_TOKEN,
+		],
+		'body'        => json_encode( [ "command" => $command ] ),
+		'method'      => 'POST',
+		'data_format' => 'body',
+	];
+
+	if ( $run_in_background_silent ) {
+		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run/background", $data );
+		if ( is_wp_error( $response ) ) {
+			return new WP_Error( 'request_failed', $response->get_error_message(), [ 'status' => 500 ] );
+		}
+		$response = json_decode( $response["body"] );
+		if ( $response && $response->token ) {
+			return $response->token;
+		}
+		return '';
+	}
+
+	if ( $run_in_background ) {
+		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/tasks", $data );
+		if ( is_wp_error( $response ) ) {
+			return new WP_Error( 'request_failed', $response->get_error_message(), [ 'status' => 500 ] );
+		}
+		$response = json_decode( $response["body"] );
+		if ( $response && $response->token ) {
+			return $response->token;
+		}
+		return '';
+	}
+
+	// Foreground command
+	$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+	if ( is_wp_error( $response ) ) {
+		return new WP_Error( 'request_failed', $response->get_error_message(), [ 'status' => 500 ] );
+	}
+	return $response["body"];
+}
+
+// Phase 9: Stragglers
+function captaincore_requested_sites_func( WP_REST_Request $request ) {
+	$user = new CaptainCore\User;
+	return $user->fetch_requested_sites();
+}
+
+function captaincore_sites_update_func( WP_REST_Request $request ) {
+	if ( ! ( new CaptainCore\User )->is_admin() ) {
+		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+	}
+	$value    = $request->get_param( 'value' );
+	$site     = new CaptainCore\Site( $value["site_id"] );
+	$response = $site->update( $value );
+	return $response;
+}
+
+function captaincore_sites_details_func( WP_REST_Request $request ) {
+	$post_id     = intval( $request['id'] );
+	if ( ! captaincore_verify_permissions( $post_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+	}
+	$site        = new CaptainCore\Site( $post_id );
+	$account     = $site->account();
+	$domains     = $site->domains();
+	$shared_with = $site->shared_with();
+	$site        = $site->fetch();
+	return [
+		"site"        => $site,
+		"account"     => $account,
+		"domains"     => $domains,
+		"shared_with" => $shared_with,
+	];
+}
+
+function captaincore_sites_fetch_func( WP_REST_Request $request ) {
+	$post_ids = $request->get_param( 'post_ids' );
+	$post_id  = $request->get_param( 'post_id' );
+	$sites    = [];
+	if ( ! empty( $post_ids ) && is_array( $post_ids ) ) {
+		foreach( $post_ids as $id ) {
+			if ( ! captaincore_verify_permissions( intval( $id ) ) ) {
+				continue;
+			}
+			$site    = new CaptainCore\Site( intval( $id ) );
+			$sites[] = $site->fetch();
+		}
+	} elseif ( $post_id ) {
+		$post_id = intval( $post_id );
+		if ( ! captaincore_verify_permissions( $post_id ) ) {
+			return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+		}
+		$site    = new CaptainCore\Site( $post_id );
+		$sites[] = $site->fetch();
+	}
+	return $sites;
+}
+
+function captaincore_listen_processes_func( WP_REST_Request $request ) {
+	if ( ! ( new CaptainCore\User )->is_admin() ) {
+		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+	}
+	$command = "running listen";
+	return CaptainCore\Run::task( $command );
+}
+
+function captaincore_sites_users_func( WP_REST_Request $request ) {
+	$post_id = intval( $request['id'] );
+	if ( ! captaincore_verify_permissions( $post_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+	}
+	return ( new CaptainCore\Site( $post_id ) )->users();
+}
+
+function captaincore_dns_bulk_func( WP_REST_Request $request ) {
+	global $wpdb;
+	$domain_id      = intval( $request['id'] );
+	$record_updates = $request->get_param( 'record_updates' );
+	$responses      = [];
+
+	// Look up CaptainCore domain by Constellix remote_id for activity logging
+	$cc_domain         = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}captaincore_domains WHERE remote_id = %s", $domain_id ) );
+	$cc_domain_id      = $cc_domain->domain_id ?? null;
+	$cc_domain_name    = $cc_domain->name ?? null;
+	$cc_account_ids    = $cc_domain_id ? array_column( ( new CaptainCore\AccountDomain() )->where( [ "domain_id" => $cc_domain_id ] ), "account_id" ) : [];
+	$cc_account_id     = $cc_account_ids[0] ?? null;
+
+	// Verify user has permission to modify this domain
+	if ( $cc_domain_id ) {
+		$verify = ( new CaptainCore\Domains )->verify( $cc_domain_id );
+		if ( ! $verify ) {
+			return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+		}
+	} else {
+		// Domain not found in CaptainCore — only admins can proceed
+		if ( ! ( new CaptainCore\User )->is_admin() ) {
+			return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+		}
+	}
+
+	foreach ( $record_updates as $record_update ) {
+
+		$record_id     = $record_update['record_id'];
+		$record_type   = strtolower($record_update['record_type']);
+		$record_name   = $record_update['record_name'];
+		$record_value  = $record_update['record_value'];
+		$record_ttl    = $record_update['record_ttl'];
+		$record_status = $record_update['record_status'];
+
+		if ( $record_status == 'new-record' ) {
+			if ( $record_type == 'mx' ) {
+				$mx_records = [];
+				foreach ( $record_value as $mx_record ) {
+					$mx_records[] = [
+						'server'   => $mx_record['server'],
+						'priority' => $mx_record['priority'],
+						'enabled'  => true,
+					];
+				}
+				$post = [
+					'name'  => $record_name,
+					'type'  => $record_type,
+					'ttl'   => $record_ttl,
+					'value' => $mx_records,
+				];
+			} elseif ( $record_type == 'txt' or $record_type == 'a' or $record_type == 'aname' or $record_type == 'cname' or $record_type == 'aaaa' or $record_type == 'spf' ) {
+				$records = [];
+				foreach ( $record_value as $record ) {
+					$records[] = [
+						'value'   => stripslashes( $record['value'] ),
+						'enabled' => true,
+					];
+				}
+				$post = [
+					'type'  => $record_type,
+					'name'  => "$record_name",
+					'ttl'   => $record_ttl,
+					'value' => $records,
+				];
+				$record_value = $records;
+			} elseif ( $record_type == 'http' ) {
+				$post = [
+					'name'  => $record_name,
+					'type'  => $record_type,
+					'ttl'   => $record_ttl,
+					'value' => [
+						'hard'         => true,
+						'url'          => $record_value,
+						'redirectType' => '301',
+					],
+				];
+				$record_value = [
+					'hard'         => true,
+					'url'          => $record_value,
+					'redirectType' => '301',
+				];
+			} elseif ( $record_type == 'srv' ) {
+				$srv_records = [];
+				foreach ( $record_value as $srv_record ) {
+					$srv_records[] = [
+						'enabled'  => true,
+						'host'     => $srv_record['host'],
+						'priority' => $srv_record['priority'],
+						'weight'   => $srv_record['weight'],
+						'port'     => $srv_record['port'],
+					];
+				}
+				$post = [
+					'type'  => $record_type,
+					'name'  => $record_name,
+					'ttl'   => $record_ttl,
+					'value' => $srv_records,
+				];
+			} else {
+				$post = [
+					'type'  => $record_type,
+					'name'  => $record_name,
+					'ttl'   => $record_ttl,
+					'value' => $record_value,
+				];
+			}
+			$response = CaptainCore\Remote\Constellix::post( "domains/$domain_id/records", $post );
+			if ( ! empty( $response->errors->general ) ) {
+				$response->errors = $response->errors->general;
+			}
+			if ( ! empty( $response->errors ) && is_object( $response->errors ) ) {
+				$errors = "";
+				foreach( $response->errors as $key => $value ){
+					$value  = implode( " and ", $value );
+					$errors = "{$errors}{$key}: {$value} ";
+				}
+				$response->errors = $errors;
+			}
+			$response->record_status = "new-record";
+			$response->record_id     = $response->data->id;
+			$response->record_name   = $record_name;
+			$response->record_value  = $record_value;
+			$response->type          = $record_type;
+			if ( empty( $response->errors ) ) {
+				CaptainCore\ActivityLog::log( 'created', 'dns_record', $cc_domain_id, $cc_domain_name, "Created {$record_type} record '{$record_name}' for {$cc_domain_name}", [ 'type' => $record_type, 'name' => $record_name ], $cc_account_id );
+			}
+			$responses[] = $response;
+		}
+
+		if ( $record_status == 'edit-record' ) {
+			if ( $record_type == 'mx' ) {
+				$mx_records = [];
+				foreach ( $record_value as $mx_record ) {
+					$mx_records[] = [
+						'server'   => $mx_record['server'],
+						'priority' => $mx_record['priority'],
+						'enabled'  => true,
+					];
+				}
+				$post = [
+					'name'  => $record_name,
+					'type'  => $record_type,
+					'ttl'   => $record_ttl,
+					'value' => $mx_records,
+				];
+			} elseif ( $record_type == 'txt' or $record_type == 'a' or $record_type == 'aname' or $record_type == 'cname' or $record_type == 'aaaa' or $record_type == 'spf' ) {
+				$records = [];
+				foreach ( $record_value as $record ) {
+					$value = is_string( $record['value'] ) ? stripslashes( $record['value'] ) : $record['value'];
+					if ( is_array( $record ) && ! empty( $record["value"] ) ) {
+						$record['value'] = stripslashes($record['value']);
+					}
+					if ( is_array( $record ) && ! empty( $record["enabled"] ) ) {
+						$record["enabled"] = true;
+						$records[] = $record;
+						continue;
+					}
+					if ( $record_type == 'txt' and $value[0] != '"' and $value[-1] != '"' ) {
+						$value = "\"{$value}\"";
+					}
+					$records[] = $value;
+				}
+				$post = [
+					'name'  => "$record_name",
+					'type'  => $record_type,
+					'ttl'   => $record_ttl,
+					'value' => $records,
+				];
+			} elseif ( $record_type == 'http' ) {
+				$post = [
+					'name'  => $record_name,
+					'type'  => $record_type,
+					'ttl'   => $record_ttl,
+					'value' => [
+						'hard'         => true,
+						'url'          => $record_value,
+						'redirectType' => '301',
+					],
+				];
+			} elseif ( $record_type == 'cname' ) {
+				$post = array(
+					'name' => $record_name,
+					'host' => $record_value,
+					'ttl'  => $record_ttl,
+				);
+			} elseif ( $record_type == 'srv' ) {
+				$srv_records = [];
+				foreach ( $record_value as $srv_record ) {
+					$srv_records[] = [
+						'host'     => $srv_record['host'],
+						'priority' => $srv_record['priority'],
+						'weight'   => $srv_record['weight'],
+						'port'     => $srv_record['port'],
+						'enabled'  => true,
+					];
+				}
+				$post = [
+					'type'  => $record_type,
+					'name'  => $record_name,
+					'ttl'   => $record_ttl,
+					'value' => $srv_records,
+				];
+			} else {
+				$post = [
+					'type'  => $record_type,
+					'name'  => $record_name,
+					'ttl'   => $record_ttl,
+					'value' => [
+						[
+							'value'   => stripslashes( $record_value ),
+							'enabled' => true,
+						],
+					],
+				];
+			}
+			$response                = CaptainCore\Remote\Constellix::put( "domains/$domain_id/records/$record_id", $post );
+			$response->domain_id     = $domain_id;
+			$response->record_id     = $record_id;
+			$response->record_type   = $record_type;
+			$response->record_status = $record_status;
+			if ( empty( $response->errors ) ) {
+				CaptainCore\ActivityLog::log( 'updated', 'dns_record', $cc_domain_id, $cc_domain_name, "Updated {$record_type} record '{$record_name}' for {$cc_domain_name}", [ 'type' => $record_type, 'name' => $record_name ], $cc_account_id );
+			}
+			$responses[]             = $response;
+		}
+
+		if ( $record_status == 'remove-record' ) {
+			$response                = CaptainCore\Remote\Constellix::delete( "domains/$domain_id/records/$record_id" );
+			$response->domain_id     = $domain_id;
+			$response->record_id     = $record_id;
+			$response->record_type   = $record_type;
+			$response->record_status = $record_status;
+			if ( empty( $response->errors ) ) {
+				CaptainCore\ActivityLog::log( 'deleted', 'dns_record', $cc_domain_id, $cc_domain_name, "Deleted {$record_type} record '{$record_name}' for {$cc_domain_name}", [ 'type' => $record_type, 'name' => $record_name ], $cc_account_id );
+			}
+			$responses[]             = $response;
+		}
+	}
+
+	return $responses;
+}
+
+function captaincore_fetch_plugins_func( WP_REST_Request $request ) {
+	require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
+	$arguments = array(
+		'per_page' => 9,
+		'page'     => $request->get_param( 'page' ),
+		'browse'   => 'popular',
+		'is_ssl'   => true,
+	);
+	$search = $request->get_param( 'value' );
+	if ( $search ) {
+		$arguments['search'] = $search;
+		unset( $arguments['browse'] );
+	}
+	return plugins_api( 'query_plugins', $arguments );
+}
+
+function captaincore_fetch_themes_func( WP_REST_Request $request ) {
+	require_once ABSPATH . 'wp-admin/includes/theme.php';
+	$arguments = array(
+		'per_page' => 9,
+		'page'     => $request->get_param( 'page' ),
+		'browse'   => 'popular',
+		'is_ssl'   => true,
+	);
+	$search = $request->get_param( 'value' );
+	if ( $search ) {
+		$arguments['search'] = $search;
+		unset( $arguments['browse'] );
+	}
+	return themes_api( 'query_themes', $arguments );
+}
+
+function captaincore_mailgun_events_func( WP_REST_Request $request ) {
+	$post_id = intval( $request['id'] );
+	if ( ! captaincore_verify_permissions( $post_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+	}
+	$fetch    = (new CaptainCore\Site( $post_id ))->get();
+	$mailgun  = $fetch->mailgun;
+	$response             = (object) [];
+	$response->items      = [];
+	$response->pagination = [];
+	$page = $request->get_param( 'page' );
+	if ( $page ) {
+		$domains = CaptainCore\Remote\Mailgun::page( $mailgun, $page );
+	} else {
+		$domains = CaptainCore\Remote\Mailgun::get( "v3/$mailgun/events", [ "event" => "accepted OR rejected OR delivered OR failed OR complained", 'limit' => 300 ] );
+	}
+	foreach ( $domains->items as $item ) {
+		$description = $item->recipient;
+		if ( $item->message->headers->from ) {
+			$from        = $item->message->headers->from;
+			$description = "{$from} -> {$description}";
+		}
+		$response->items[] = [
+			"timestamp"   => $item->timestamp,
+			"event"       => $item->event,
+			"description" => $description,
+			"message"     => $item->message,
+		];
+		$response->pagination["next"]     = $domains->paging->next;
+	}
+	return $response;
+}
+
+function captaincore_fetch_configs_func( WP_REST_Request $request ) {
+	if ( ! ( new CaptainCore\User )->is_admin() ) {
+		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+	}
+	$command  = "configs fetch vars";
+	$response = CaptainCore\Run::CLI( $command );
+	// Store results in wp_options.captaincore_settings
+	$captaincore_settings = json_decode( $response );
+	unset($captaincore_settings->websites);
+	update_option("captaincore_settings", $captaincore_settings );
+	return $captaincore_settings;
+}
+
+function captaincore_create_site_account_func( WP_REST_Request $request ) {
+	if ( ! ( new CaptainCore\User )->is_admin() ) {
+		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+	}
+	$name     = trim( $request->get_param( 'name' ) );
+	$time_now = date("Y-m-d H:i:s");
+	$defaults = [
+		"email"    => "",
+		"timezone" => "",
+		"recipes"  => [],
+		"users"    => [],
+	];
+	$account_id = ( new CaptainCore\Accounts )->insert( [
+		"name"       => $name,
+		"status"     => "active",
+		"created_at" => $time_now,
+		"updated_at" => $time_now,
+		"defaults"   => json_encode( $defaults ),
+	] );
+	( new CaptainCore\Account( $account_id, true ) )->calculate_totals();
+	( new CaptainCore\Account( $account_id, true ) )->sync();
+	return $account_id;
+}
+
+function captaincore_usage_breakdown_func( WP_REST_Request $request ) {
+	$post_id = intval( $request['id'] );
+	if ( ! captaincore_verify_permissions( $post_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+	}
+	$site            = ( new CaptainCore\Site( $post_id ) )->get();
+	$account         = new CaptainCore\Account( $site->account_id, true );
+	return $account->usage_breakdown();
+}
+
+function captaincore_sites_update_logs_func( WP_REST_Request $request ) {
+	$post_id = intval( $request['id'] );
+	if ( ! captaincore_verify_permissions( $post_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+	}
+	return ( new CaptainCore\Site( $post_id ))->update_logs();
+}
+
+function captaincore_check_verification_func( WP_REST_Request $request ) {
+	$site_id   = intval( $request->get_param( 'site_id' ) );
+	$domain_id = $request->get_param( 'domain_id' );
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+	}
+	$kinsta  = new CaptainCore\Providers\Kinsta();
+	$result  = $kinsta->check_verification( $site_id, $domain_id );
+	if ( is_wp_error( $result ) ) {
+		return $result;
+	}
+	return $result;
 }
 
 function captaincore_provider_new_func( $request ) {
@@ -2243,15 +3534,74 @@ function captaincore_recipes_delete_func( $request ) {
 	if ( ! ( new CaptainCore\Recipes )->verify( $recipe_id ) ) {
 		return new WP_Error( 'permission_denied', "You do not have permission to delete this recipe.", [ 'status' => 403 ] );
 	}
-	
+
 	$result = ( new CaptainCore\Recipes )->delete( $recipe_id );
 
 	if ( $result ) {
 		CaptainCore\Run::CLI( "recipe delete {$recipe_id}" );
 		return;
 	}
-	
+
 	return new WP_Error( 'delete_failed', "Failed to delete recipe.", [ 'status' => 500 ] );
+}
+
+function captaincore_recipes_create_func( WP_REST_Request $request ) {
+	$recipe   = (object) $request->get_json_params();
+	$user     = new CaptainCore\User;
+	$time_now = date( 'Y-m-d H:i:s' );
+
+	$new_recipe = [
+		'user_id'    => get_current_user_id(),
+		'title'      => $recipe->title,
+		'updated_at' => $time_now,
+		'created_at' => $time_now,
+		'content'    => $recipe->content,
+		'public'     => 0,
+	];
+
+	if ( $user->is_admin() && isset( $recipe->public ) ) {
+		$new_recipe['public'] = $recipe->public;
+	}
+
+	$db_recipes = new CaptainCore\Recipes();
+	$recipe_id  = $db_recipes->insert( $new_recipe );
+
+	$recipe_data = ( new CaptainCore\Recipes )->get( $recipe_id );
+	$encoded     = base64_encode( json_encode( $recipe_data ) );
+	CaptainCore\Run::CLI( "recipe add $encoded --format=base64" );
+
+	return $db_recipes->list();
+}
+
+function captaincore_recipes_update_func( WP_REST_Request $request ) {
+	$recipe   = (object) $request->get_json_params();
+	$user     = new CaptainCore\User;
+	$time_now = date( 'Y-m-d H:i:s' );
+	$user_id  = get_current_user_id();
+
+	if ( ! $user->is_admin() && isset( $recipe->user_id ) && $recipe->user_id != $user_id ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+
+	$recipe_update = [
+		'title'      => $recipe->title,
+		'updated_at' => $time_now,
+		'content'    => $recipe->content,
+		'public'     => 0,
+	];
+
+	if ( $user->is_admin() && isset( $recipe->public ) ) {
+		$recipe_update['public'] = $recipe->public;
+	}
+
+	$db_recipes = new CaptainCore\Recipes();
+	$db_recipes->update( $recipe_update, [ "recipe_id" => $request['id'] ] );
+
+	$recipe_data = ( new CaptainCore\Recipes )->get( $request['id'] );
+	$encoded     = base64_encode( json_encode( $recipe_data ) );
+	CaptainCore\Run::CLI( "recipe add $encoded --format=base64" );
+
+	return $db_recipes->list();
 }
 
 function captaincore_running_func( $request ) {
@@ -2549,6 +3899,45 @@ function captaincore_processes_func( $request ) {
 	return ( new CaptainCore\Processes )->list();
 }
 
+function captaincore_processes_create_func( WP_REST_Request $request ) {
+	$process             = (object) $request->get_json_params();
+	$timenow             = date( 'Y-m-d H:i:s' );
+	$process->user_id    = get_current_user_id();
+	$process->created_at = $timenow;
+	$process->updated_at = $timenow;
+	unset( $process->show );
+	$process_id       = ( new CaptainCore\Processes )->insert( (array) $process );
+	$process_inserted = ( new CaptainCore\Processes )->get( $process_id );
+	return $process_inserted;
+}
+
+function captaincore_processes_get_func( WP_REST_Request $request ) {
+	$process = ( new CaptainCore\Process( $request['id'] ) )->get();
+	if ( ! $process ) {
+		return new WP_Error( 'not_found', 'Process not found.', [ 'status' => 404 ] );
+	}
+	return $process;
+}
+
+function captaincore_processes_get_raw_func( WP_REST_Request $request ) {
+	$process = ( new CaptainCore\Processes )->get( $request['id'] );
+	if ( ! $process ) {
+		return new WP_Error( 'not_found', 'Process not found.', [ 'status' => 404 ] );
+	}
+	$process->roles = (int) $process->roles;
+	return $process;
+}
+
+function captaincore_processes_update_func( WP_REST_Request $request ) {
+	$process              = (object) $request->get_json_params();
+	$process->name        = str_replace( "\'", "'", $process->name );
+	$process->description = str_replace( "\'", "'", $process->description );
+	$process->updated_at  = date( 'Y-m-d H:i:s' );
+	( new CaptainCore\Processes )->update( (array) $process, [ "process_id" => $request['id'] ] );
+	$process_updated = ( new CaptainCore\Processes )->get( $request['id'] );
+	return $process_updated;
+}
+
 function captaincore_users_func( $request ) {
 	
 	$current_user = wp_get_current_user();
@@ -2562,6 +3951,373 @@ function captaincore_users_func( $request ) {
 
 }
 
+function captaincore_users_create_func( WP_REST_Request $request ) {
+	$account  = (object) $request->get_json_params();
+	$response = (object) [];
+	$errors   = [];
+
+	if ( empty( $account->login ) ) {
+		$errors[] = "Username name can't be empty.";
+	}
+
+	if ( ! empty( $account->login ) && username_exists( $account->login ) ) {
+		$errors[] = "Username is taken.";
+	}
+
+	if ( ! filter_var( $account->email, FILTER_VALIDATE_EMAIL ) ) {
+		$errors[] = "Email address is not valid.";
+	}
+
+	if ( filter_var( $account->email, FILTER_VALIDATE_EMAIL ) && email_exists( $account->email ) ) {
+		$errors[] = "Email address is taken.";
+	}
+
+	if ( count( $errors ) == 0 ) {
+		$result = wp_insert_user( [
+			'first_name' => $account->first_name,
+			'last_name'  => $account->last_name,
+			'user_email' => $account->email,
+			'user_login' => $account->login,
+			'user_pass'  => wp_generate_password( 24 ),
+			'role'       => 'subscriber',
+		] );
+		if ( is_wp_error( $result ) ) {
+			$errors[] = $result->get_error_message();
+		} else {
+			( new CaptainCore\User( $result, true ) )->assign_accounts( $account->account_ids );
+			CaptainCore\Mailer::notify_new_user( $result );
+		}
+	}
+
+	if ( count( $errors ) > 0 ) {
+		$response->errors = $errors;
+	}
+
+	return $response;
+}
+
+function captaincore_users_get_func( WP_REST_Request $request ) {
+	$user = new CaptainCore\User( $request['id'], true );
+	return $user->fetch();
+}
+
+function captaincore_users_update_func( WP_REST_Request $request ) {
+	$value    = $request->get_json_params();
+	$response = ( new CaptainCore\Users )->update( $value );
+	return $response;
+}
+
+function captaincore_me_profile_update_func( WP_REST_Request $request ) {
+	$user_id  = get_current_user_id();
+	$account  = (object) $request->get_json_params();
+	$response = (object) [];
+	$errors   = [];
+
+	if ( empty( $account->display_name ) ) {
+		$errors[] = "Display name can't be empty.";
+	}
+
+	if ( ! filter_var( $account->email, FILTER_VALIDATE_EMAIL ) ) {
+		$errors[] = "Email address is not valid.";
+	}
+
+	if ( ! empty( $account->new_password ) ) {
+		$password = $account->new_password;
+		if ( strlen( $password ) < 8 ) {
+			$errors[] = "Password too short!";
+		}
+		if ( ! preg_match( "#[0-9]+#", $password ) ) {
+			$errors[] = "Password must include at least one number!";
+		}
+		if ( ! preg_match( "#[a-zA-Z]+#", $password ) ) {
+			$errors[] = "Password must include at least one letter!";
+		}
+	}
+
+	if ( count( $errors ) == 0 ) {
+		$result = wp_update_user( [
+			'ID'           => $user_id,
+			'display_name' => $account->display_name,
+			'user_email'   => $account->email,
+		] );
+		if ( is_wp_error( $result ) ) {
+			$errors[] = $result->get_error_message();
+		}
+	}
+
+	if ( count( $errors ) == 0 && ! empty( $account->new_password ) ) {
+		$result = wp_update_user( [
+			'ID'        => $user_id,
+			'user_pass' => $account->new_password,
+		] );
+		if ( is_wp_error( $result ) ) {
+			$errors[] = $result->get_error_message();
+		}
+	}
+
+	if ( count( $errors ) > 0 ) {
+		$response->errors = $errors;
+	}
+
+	$response->profile = $account;
+	unset( $response->profile->new_password );
+	return $response;
+}
+
+function captaincore_invites_get_func( WP_REST_Request $request ) {
+	$invite  = (object) $request->get_params();
+	$invites = new CaptainCore\Invites();
+	$results = $invites->where( [
+		"account_id" => $invite->account,
+		"token"      => $invite->token,
+	] );
+	if ( count( $results ) == "1" ) {
+		$account = new CaptainCore\Account( $invite->account, true );
+		return $account->fetch();
+	}
+	return new WP_Error( 'not_found', 'Invite not found.', [ 'status' => 404 ] );
+}
+
+function captaincore_invites_accept_func( WP_REST_Request $request ) {
+	$invite  = (object) $request->get_json_params();
+	$invites = new CaptainCore\Invites();
+	$results = $invites->where( [
+		"account_id" => $invite->account,
+		"token"      => $invite->token,
+	] );
+
+	if ( count( $results ) == "1" ) {
+		$user       = new CaptainCore\User;
+		$accounts   = $user->accounts();
+		$accounts[] = $invite->account;
+		$user->assign_accounts( array_unique( $accounts ) );
+
+		$account = new CaptainCore\Account( $invite->account );
+		$account->calculate_totals();
+
+		$invite_obj = new CaptainCore\Invite( $results[0]->invite_id );
+		$invite_obj->mark_accepted();
+
+		return [ 'success' => true ];
+	}
+	return new WP_Error( 'not_found', 'Invite not found.', [ 'status' => 404 ] );
+}
+
+function captaincore_accounts_remove_user_func( WP_REST_Request $request ) {
+	$user_id    = intval( $request['user_id'] );
+	$account_id = intval( $request['id'] );
+
+	$user = new CaptainCore\User;
+	if ( ! $user->is_admin() && ! $user->verify_accounts( [ $account_id ] ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+
+	$target_user = new CaptainCore\User( $user_id, true );
+	$account_ids = $target_user->accounts();
+	if ( empty( $account_ids ) ) {
+		$account_ids = [];
+	}
+	if ( ( $key = array_search( $account_id, $account_ids ) ) !== false ) {
+		unset( $account_ids[ $key ] );
+	}
+	( new CaptainCore\User( $user_id, true ) )->assign_accounts( array_unique( $account_ids ) );
+
+	$account = new CaptainCore\Account( $account_id );
+	$account->calculate_totals();
+
+	return [ 'success' => true ];
+}
+
+function captaincore_invoices_get_func( WP_REST_Request $request ) {
+	$order            = wc_get_order( $request['id'] );
+	if ( ! $order ) {
+		return new WP_Error( 'not_found', 'Invoice not found.', [ 'status' => 404 ] );
+	}
+	$order_data       = (object) $order->get_data();
+	$order_items      = $order->get_items( apply_filters( 'woocommerce_purchase_order_item_types', 'line_item' ) );
+	$order_line_items = [];
+	foreach ( $order_items as $item_id => $item ) {
+		$order_line_items[] = [
+			"name"        => $item->get_name(),
+			"quantity"    => $item->get_quantity(),
+			"description" => $item->get_meta_data(),
+			"total"       => $order->get_formatted_line_subtotal( $item ),
+		];
+	}
+
+	$refunds = $order->get_refunds();
+	foreach ( $refunds as $item ) {
+		$order_line_items[] = [
+			"name"        => "Refund",
+			"quantity"    => "1",
+			"description" => $item->get_post_title(),
+			"total"       => "-" . $item->get_formatted_refund_amount(),
+		];
+		$order_data->total = $order_data->total - $item->get_amount();
+	}
+
+	$payment_method_title = $order->get_payment_method_title();
+	if ( empty( $payment_method_title ) ) {
+		$payment_gateways     = WC()->payment_gateways->payment_gateways();
+		$payment_method       = $order->get_payment_method();
+		$payment_method_title = isset( $payment_gateways[ $payment_method ] ) ? $payment_gateways[ $payment_method ]->get_title() : "Check";
+	}
+	$payment_method_string = sprintf(
+		__( 'Payment via %s', 'woocommerce' ),
+		esc_html( $payment_method_title )
+	);
+
+	$paid_on = '';
+	if ( $order->get_date_paid() ) {
+		$paid_on = sprintf(
+			__( 'Paid on %1$s @ %2$s', 'woocommerce' ),
+			wc_format_datetime( $order->get_date_paid() ),
+			wc_format_datetime( $order->get_date_paid(), get_option( 'time_format' ) )
+		);
+	}
+
+	return [
+		"order_id"       => $order_data->id,
+		"created_at"     => $order_data->date_created->getTimestamp(),
+		"status"         => $order_data->status,
+		"line_items"     => $order_line_items,
+		"payment_method" => $payment_method_string,
+		"paid_on"        => $paid_on,
+		"total"          => number_format( (float) $order_data->total, 2, '.', '' ),
+	];
+}
+
+function captaincore_invoices_pdf_func( WP_REST_Request $request ) {
+	$value = $request['id'];
+	$order = wc_get_order( $value );
+	if ( ! $order ) {
+		return new WP_Error( 'not_found', 'Invoice not found.', [ 'status' => 404 ] );
+	}
+	$order_data       = (object) $order->get_data();
+	$order_items      = $order->get_items( apply_filters( 'woocommerce_purchase_order_item_types', 'line_item' ) );
+	$order_line_items = "";
+	foreach ( $order_items as $item_id => $item ) {
+		$subtotal          = str_replace( "<bdi>", "", $order->get_formatted_line_subtotal( $item ) );
+		$subtotal          = str_replace( "</bdi>", "", $subtotal );
+		$details           = $item->get_meta_data()[0]->get_data();
+		if ( $details['key'] == "Details" ) {
+			$description = $details['value'];
+		}
+		$order_line_items .= "<tr><td width=\"536\">{$item->get_quantity()}x {$item->get_name()}<br /><small>{$description}</small></td><td>{$subtotal}</td></tr>";
+	}
+
+	$refunds = $order->get_refunds();
+	foreach ( $refunds as $item ) {
+		$description       = $item->get_post_title();
+		$subtotal          = str_replace( "<bdi>", "", "-" . $item->get_formatted_refund_amount() );
+		$subtotal          = str_replace( "</bdi>", "", $subtotal );
+		$order_line_items .= "<tr><td width=\"536\">1x Refund<br /><small>{$description}</small></td><td>{$subtotal}</td></tr>";
+		$order_data->total = $order_data->total - $item->get_amount();
+	}
+
+	$payment_method_title = $order->get_payment_method_title();
+	if ( empty( $payment_method_title ) ) {
+		$payment_gateways     = WC()->payment_gateways->payment_gateways();
+		$payment_method       = $order->get_payment_method();
+		$payment_method_title = isset( $payment_gateways[ $payment_method ] ) ? $payment_gateways[ $payment_method ]->get_title() : "Check";
+	}
+	$payment_method_string = sprintf(
+		__( 'Payment via %s', 'woocommerce' ),
+		esc_html( $payment_method_title )
+	);
+
+	$paid_on = '';
+	if ( $order->get_date_paid() ) {
+		$paid_on = sprintf(
+			__( 'Paid on %1$s @ %2$s', 'woocommerce' ),
+			wc_format_datetime( $order->get_date_paid() ),
+			wc_format_datetime( $order->get_date_paid(), get_option( 'time_format' ) )
+		);
+	}
+
+	$response = (object) [
+		"order_id"       => $order_data->id,
+		"created_at"     => $order_data->date_created->getTimestamp(),
+		"status"         => $order_data->status,
+		"line_items"     => $order_line_items,
+		"payment_method" => $payment_method_string,
+		"paid_on"        => $paid_on,
+		"total"          => number_format( (float) $order_data->total, 2, '.', '' ),
+	];
+
+	$account_id        = $order->get_meta( 'captaincore_account_id' );
+	$account           = ( new CaptainCore\Accounts )->get( $account_id );
+	$customer_billing  = ( new CaptainCore\Account( $account_id ) )->get_billing();
+	$customer_country  = WC()->countries->countries[ $customer_billing->country ];
+	$store_raw_country = get_option( 'woocommerce_default_country' );
+	$split_country     = explode( ":", $store_raw_country );
+	$store_country     = WC()->countries->countries[ $split_country[0] ];
+	$store_state       = $split_country[1];
+	$store_city        = get_option( 'woocommerce_store_city' );
+	$store_postcode    = get_option( 'woocommerce_store_postcode' );
+	$store_address     = get_option( 'blogname' ) . "<br />" .
+						 get_option( 'woocommerce_store_address' ) . "<br/ >" .
+						 get_option( 'woocommerce_store_address_2' ) . "<br />
+						 $store_city, $store_state $store_postcode<br />
+						 $store_country";
+	$customer_address  = "<strong>{$account->name}</strong><br />";
+	if ( ! empty( $customer_billing->first_name ) || ! empty( $customer_billing->last_name ) ) {
+		$customer_address .= "{$customer_billing->first_name} {$customer_billing->last_name}<br>";
+	}
+	$customer_address .= "{$customer_billing->address_1}<br>";
+	if ( ! empty( $customer_billing->address_2 ) ) {
+		$customer_address .= "{$customer_billing->address_2}<br>";
+	}
+	$customer_address .= "{$customer_billing->city}, {$customer_billing->state} {$customer_billing->postcode}<br>
+						  {$customer_country}";
+	$created_at = $order_data->date_created->date( 'M jS Y' );
+	$html2pdf   = new \Spipu\Html2Pdf\Html2Pdf( 'P', 'A4', 'en' );
+	$html       = <<<HEREDOC
+<style type="text/css">
+p { font-size:16px; }
+table { border-collapse: collapse; font-size:16px; }
+img { margin-bottom: 1em; }
+hr { height:1px;border-width:0;color: #59595b;background-color: #59595b; }
+th, td { padding: 4px 16px; border-bottom: 1px solid #59595b; vertical-align: top; }
+</style>
+<page backtop="20px" backbottom="20px" backleft="20px" backright="20px">
+<p><img width="155" src="https://anchor.host/wp-content/uploads/2015/01/logo.png" alt="Anchor Hosting"></p>
+<hr />
+<h2>Invoice #{$order_data->id}</h2>
+<table cellspacing="0" style="width:100%;">
+<tbody>
+<tr>
+   <td style="width:50%;">
+   		{$store_address}
+   </td>
+   <td style="width:50%;">
+		{$customer_address}
+   </td>
+</tr>
+</tbody>
+</table>
+<p>Order was created on <strong>{$created_at}</strong> and is currently <strong>{$response->status} payment</strong>.</p>
+<br /><br />
+<table cellspacing="0">
+<thead>
+	<tr><th><span>Services</span></th><th><span>Amount</span></th></tr>
+</thead>
+<tbody>
+	$order_line_items
+	<tr><td style="text-align:right;">Total:</td><td>\${$response->total}</td></tr>
+</tbody>
+</table>
+</page>
+HEREDOC;
+	$html2pdf->setTestTdInOnePage( false );
+	$html2pdf->writeHTML( $html );
+
+	header( 'Content-Type: application/pdf' );
+	header( 'Content-Disposition: attachment; filename="invoice-' . $order_data->id . '.pdf"' );
+	echo $html2pdf->output( '', 'S' );
+	exit;
+}
+
 function captaincore_keys_func( $request ) {
 
 	$current_user = wp_get_current_user();
@@ -2570,9 +4326,93 @@ function captaincore_keys_func( $request ) {
 	// Checks for a current user. If admin found pass
 	if ( $current_user && $role_check ) {
 		return ( new CaptainCore\Keys )->all( "title", "ASC" );
-	} 
+	}
 	return [];
 
+}
+
+function captaincore_keys_create_func( WP_REST_Request $request ) {
+	$key      = (object) $request->get_json_params();
+	$time_now = date( 'Y-m-d H:i:s' );
+	$user_id  = get_current_user_id();
+
+	$new_key = [
+		'user_id'    => $user_id,
+		'title'      => $key->title,
+		'updated_at' => $time_now,
+		'created_at' => $time_now,
+		'main'       => 0,
+	];
+
+	$look_for_default = ( new CaptainCore\Keys )->where( [ "user_id" => $user_id, "main" => "1" ] );
+	if ( empty( $look_for_default ) ) {
+		$new_key['main'] = 1;
+	}
+
+	$key_id  = ( new CaptainCore\Keys )->insert( $new_key );
+	$ssh_key = base64_encode( $key->key );
+	$response = CaptainCore\Run::CLI( "key add $ssh_key --id=$key_id" );
+
+	$key_update = [ 'fingerprint' => $response ];
+	( new CaptainCore\Keys )->update( $key_update, [ "key_id" => $key_id ] );
+
+	return ( new CaptainCore\Keys )->get( $key_id );
+}
+
+function captaincore_keys_update_func( WP_REST_Request $request ) {
+	$key      = (object) $request->get_json_params();
+	$key_id   = intval( $request['id'] );
+	$time_now = date( 'Y-m-d H:i:s' );
+	$user_id  = get_current_user_id();
+
+	$key_update = [
+		'title'      => $key->title,
+		'updated_at' => $time_now,
+	];
+
+	$look_for_default = ( new CaptainCore\Keys )->where( [ "user_id" => $user_id, "main" => "1" ] );
+	if ( empty( $look_for_default ) ) {
+		$key_update['main'] = 1;
+	}
+
+	( new CaptainCore\Keys )->update( $key_update, [ "key_id" => $key_id ] );
+
+	if ( ! empty( $key->key ) ) {
+		$ssh_key  = base64_encode( $key->key );
+		$response = CaptainCore\Run::CLI( "key add $ssh_key --id={$key_id}" );
+		( new CaptainCore\Keys )->update( [ 'fingerprint' => $response ], [ "key_id" => $key_id ] );
+	}
+
+	return ( new CaptainCore\Keys )->get( $key_id );
+}
+
+function captaincore_keys_delete_func( WP_REST_Request $request ) {
+	$key_id = intval( $request['id'] );
+	( new CaptainCore\Keys )->delete( $key_id );
+	CaptainCore\Run::CLI( "key delete --id={$key_id}" );
+	return [ 'deleted' => true ];
+}
+
+function captaincore_keys_set_primary_func( WP_REST_Request $request ) {
+	$key_id   = intval( $request['id'] );
+	$time_now = date( 'Y-m-d H:i:s' );
+	$user_id  = get_current_user_id();
+
+	$look_for_default = ( new CaptainCore\Keys )->where( [ "user_id" => $user_id, "main" => "1" ] );
+	if ( ! empty( $look_for_default ) ) {
+		foreach ( $look_for_default as $key_primary ) {
+			( new CaptainCore\Keys )->update( [ 'main' => 0 ], [ "key_id" => $key_primary->key_id ] );
+		}
+	}
+
+	( new CaptainCore\Keys )->update( [ 'main' => 1, 'updated_at' => $time_now ], [ "key_id" => $key_id ] );
+
+	$configurations = ( new CaptainCore\Configurations )->get();
+	$configurations->default_key = $key_id;
+	update_site_option( 'captaincore_configurations', json_encode( $configurations ) );
+	( new CaptainCore\Configurations )->sync();
+
+	return [ 'success' => true ];
 }
 
 function captaincore_defaults_func( $request ) {
@@ -3067,6 +4907,9 @@ function captaincore_site_logs_fetch_func( $request ) {
 
 function captaincore_site_environments_get_func( $request ) {
 	$site_id = $request['id'];
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+	}
 	$site    = new CaptainCore\Site( $site_id );
 	return $site->environments();
 }
@@ -3728,6 +5571,51 @@ function captaincore_register_rest_endpoints() {
 				$existing_log = ( new CaptainCore\ProcessLogs )->get( $request['id'] );
 				if ( ! $user->is_admin() && $existing_log->user_id != get_current_user_id() ) {
 					return new WP_Error( 'permission_denied', 'You can only edit your own log entries.', [ 'status' => 403 ] );
+				}
+				return true;
+			},
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/process-logs', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_process_logs_list_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/process-logs', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_process_logs_create_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/process-logs/(?P<id>[\d]+)', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_process_logs_get_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/process-logs/(?P<id>[\d]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_process_logs_delete_func',
+			'permission_callback' => function ( WP_REST_Request $request ) {
+				if ( ! is_user_logged_in() ) {
+					return false;
+				}
+				$user         = new CaptainCore\User();
+				$existing_log = ( new CaptainCore\ProcessLogs )->get( $request['id'] );
+				if ( ! $existing_log ) {
+					return new WP_Error( 'not_found', 'Log entry not found.', [ 'status' => 404 ] );
+				}
+				if ( ! $user->is_admin() && $existing_log->user_id != get_current_user_id() ) {
+					return new WP_Error( 'permission_denied', 'You can only delete your own log entries.', [ 'status' => 403 ] );
 				}
 				return true;
 			},
@@ -4762,6 +6650,22 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
+		'captaincore/v1', '/recipes', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_recipes_create_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/recipes/(?P<id>[\d]+)', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_recipes_update_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
 		'captaincore/v1', '/running/', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_running_func',
@@ -4777,6 +6681,38 @@ function captaincore_register_rest_endpoints() {
 			'callback'            => 'captaincore_processes_func',
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/processes', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_processes_create_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/processes/(?P<id>[\d]+)', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_processes_get_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/processes/(?P<id>[\d]+)/raw', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_processes_get_raw_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/processes/(?P<id>[\d]+)', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_processes_update_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);
 
@@ -4851,6 +6787,78 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	register_rest_route(
+		'captaincore/v1', '/users', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_users_create_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/users/(?P<id>[\d]+)', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_users_get_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/users/(?P<id>[\d]+)', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_users_update_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/me/profile', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_me_profile_update_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/invites', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_invites_get_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/invites/accept', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_invites_accept_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/accounts/(?P<id>[\d]+)/users/(?P<user_id>[\d]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_accounts_remove_user_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/invoices/(?P<id>[\d]+)', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_invoices_get_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/invoices/(?P<id>[\d]+)/pdf', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_invoices_pdf_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
 	// Custom endpoint for CaptainCore accounts
 	register_rest_route(
 		'captaincore/v1', '/accounts/', [
@@ -4869,6 +6877,272 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	register_rest_route(
+		'captaincore/v1', '/accounts/(?P<id>[\d]+)', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_accounts_get_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/accounts/(?P<id>[\d]+)/defaults', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_accounts_defaults_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/accounts/(?P<id>[\d]+)/invites', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_accounts_invite_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/accounts/(?P<id>[\d]+)/invites/(?P<invite_id>[\d]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_accounts_invite_delete_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/domains', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_domains_create_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/domains/(?P<id>[\d]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_domains_delete_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/billing/pay-invoice', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_billing_pay_invoice_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/billing/payment-methods/(?P<id>[\d]+)/primary', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_billing_set_primary_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/billing/payment-methods', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_billing_add_payment_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/billing/payment-methods/(?P<id>[\d]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_billing_delete_payment_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/billing/cancel-plan', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_billing_cancel_plan_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/billing/request-plan-changes', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_billing_request_plan_changes_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/billing/update', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_billing_update_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/site-requests', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_requests_create_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/site-requests/back', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_requests_back_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/site-requests/continue', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_requests_continue_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/site-requests/update', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_site_requests_update_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/site-requests/delete', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_requests_delete_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/configurations/global', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_configurations_save_global_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/defaults/global', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_defaults_save_global_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	// Phase 7: Site Detail & Admin
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/stats/share', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_sites_stats_share_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/stats', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_sites_stats_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/accounts/(?P<id>[\d]+)', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_accounts_update_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/domains/(?P<id>[\d]+)/account', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_domains_update_account_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/timeline', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_sites_timeline_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/accounts/(?P<id>[\d]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_accounts_delete_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/snapshot-link/(?P<snapshot_id>[\d]+)', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_sites_snapshot_link_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/settings', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_sites_update_settings_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/fathom', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_sites_update_fathom_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/mailgun', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_sites_update_mailgun_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/accounts/(?P<id>[\d]+)/plan', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_accounts_update_plan_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	// Phase 8: Site Install/CLI Operations
+	register_rest_route(
+		'captaincore/v1', '/sites/cli', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_sites_cli_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/jobs/(?P<id>[a-zA-Z0-9-]+)', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_jobs_get_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
 	// Custom endpoint for CaptainCore configurations
 	register_rest_route(
 		'captaincore/v1', '/configurations/', [
@@ -4882,7 +7156,7 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/configurations/', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_configurations_update_func',
-			'permission_callback' => 'captaincore_permission_check',
+			'permission_callback' => 'captaincore_admin_permission_check',
 			'show_in_index'       => false,
 		]
 	);
@@ -4930,6 +7204,38 @@ function captaincore_register_rest_endpoints() {
 			'callback'            => 'captaincore_keys_func',
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/keys', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_keys_create_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/keys/(?P<id>[\d]+)', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_keys_update_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/keys/(?P<id>[\d]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_keys_delete_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/keys/(?P<id>[\d]+)/primary', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_keys_set_primary_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
 		]
 	);
 
@@ -5095,6 +7401,128 @@ function captaincore_register_rest_endpoints() {
 			'permission_callback' => function() {
 				return current_user_can( 'manage_options' );
 			},
+			'show_in_index'       => false,
+		]
+	);
+
+	// Phase 9: Stragglers
+	register_rest_route(
+		'captaincore/v1', '/requested-sites', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_requested_sites_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/update', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_sites_update_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/details', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_sites_details_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/fetch', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_sites_fetch_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/listen-processes', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_listen_processes_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/users', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_sites_users_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/dns/(?P<id>[\d]+)/bulk', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_dns_bulk_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/wp-plugins', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_fetch_plugins_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/wp-themes', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_fetch_themes_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/mailgun-events', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_mailgun_events_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/configs', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_fetch_configs_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/site-accounts', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_create_site_account_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/usage-breakdown', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_usage_breakdown_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/update-logs', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_sites_update_logs_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/providers/kinsta/check-verification', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_check_verification_func',
+			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
 		]
 	);
@@ -5683,2075 +8111,6 @@ function captaincore_verify_permissions_account( $account_id ) {
 	return ( new CaptainCore\User )->verify_accounts( [ $account_id ] );
 }
 
-// Processes install events (new install, remove install, setup configs)
-add_action( 'wp_ajax_captaincore_dns', 'captaincore_dns_action_callback' );
-
-function captaincore_dns_action_callback() {
-	global $wpdb;
-
-	$domain_id      = intval( $_POST['domain_key'] );
-	$record_updates = $_POST['record_updates'];
-	$responses      = [];
-
-	// Look up CaptainCore domain by Constellix remote_id for activity logging
-	$cc_domain         = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}captaincore_domains WHERE remote_id = %s", $domain_id ) );
-	$cc_domain_id      = $cc_domain->domain_id ?? null;
-	$cc_domain_name    = $cc_domain->name ?? null;
-	$cc_account_ids    = $cc_domain_id ? array_column( ( new CaptainCore\AccountDomain() )->where( [ "domain_id" => $cc_domain_id ] ), "account_id" ) : [];
-	$cc_account_id     = $cc_account_ids[0] ?? null;
-
-	foreach ( $record_updates as $record_update ) {
-
-		$record_id     = $record_update['record_id'];
-		$record_type   = strtolower($record_update['record_type']);
-		$record_name   = $record_update['record_name'];
-		$record_value  = $record_update['record_value'];
-		$record_ttl    = $record_update['record_ttl'];
-		$record_status = $record_update['record_status'];
-
-		if ( $record_status == 'new-record' ) {
-			if ( $record_type == 'mx' ) {
-
-				// Formats MX records into array which API can read
-				$mx_records = [];
-				foreach ( $record_value as $mx_record ) {
-					$mx_records[] = [
-						'server'   => $mx_record['server'],
-						'priority' => $mx_record['priority'],
-						'enabled'  => true,
-					];
-				}
-
-				$post = [
-					'name'  => $record_name,
-					'type'  => $record_type,
-					'ttl'   => $record_ttl,
-					'value' => $mx_records,
-				];
-
-			} elseif ( $record_type == 'txt' or $record_type == 'a' or $record_type == 'aname' or $record_type == 'cname' or $record_type == 'aaaa' or $record_type == 'spf' ) {
-
-				// Formats A and TXT records into array which API can read
-				$records = [];
-				foreach ( $record_value as $record ) {
-					$records[] = [
-						'value'   => stripslashes( $record['value'] ),
-						'enabled' => true,
-					];
-				}
-
-				$post = [
-					'type'  => $record_type,
-					'name'  => "$record_name",
-					'ttl'   => $record_ttl,
-					'value' => $records,
-				];
-
-				$record_value = $records;
-
-			} elseif ( $record_type == 'http' ) {
-
-				$post = [
-					'name'  => $record_name,
-					'type'  => $record_type,
-					'ttl'   => $record_ttl,
-					'value' => [
-						'hard'         => true,
-						'url'          => $record_value,
-						'redirectType' => '301',
-					],	
-				];
-
-				$record_value = [
-					'hard'         => true,
-					'url'          => $record_value,
-					'redirectType' => '301',
-				];
-
-			} elseif ( $record_type == 'srv' ) {
-
-				// Formats SRV records into array which API can read
-				$srv_records = [];
-				foreach ( $record_value as $srv_record ) {
-					$srv_records[] = [
-						'enabled'  => true,
-						'host'     => $srv_record['host'],
-						'priority' => $srv_record['priority'],
-						'weight'   => $srv_record['weight'],
-						'port'     => $srv_record['port'],
-					];
-				}
-
-				$post = [
-					'type'  => $record_type,
-					'name'  => $record_name,
-					'ttl'   => $record_ttl,
-					'value' => $srv_records,
-				];
-
-			} else {
-				$post = [
-					'type'  => $record_type,
-					'name'  => $record_name,
-					'ttl'   => $record_ttl,
-					'value' => $record_value,
-				];
-
-			}
-			$response = CaptainCore\Remote\Constellix::post( "domains/$domain_id/records", $post );
-
-			if ( ! empty( $response->errors->general ) ) {
-				$response->errors = $response->errors->general;
-			}
-
-			if ( ! empty( $response->errors ) && is_object( $response->errors ) ) {
-				$errors = "";
-				foreach( $response->errors as $key => $value ){
-					$value  = implode( " and ", $value );
-					$errors = "{$errors}{$key}: {$value} ";
-				}
-				$response->errors = $errors;
-			}
-
-			$response->record_status = "new-record";
-			$response->record_id     = $response->data->id;
-			$response->record_name   = $record_name;
-			$response->record_value  = $record_value;
-			$response->type          = $record_type;
-
-			if ( empty( $response->errors ) ) {
-				CaptainCore\ActivityLog::log( 'created', 'dns_record', $cc_domain_id, $cc_domain_name, "Created {$record_type} record '{$record_name}' for {$cc_domain_name}", [ 'type' => $record_type, 'name' => $record_name ], $cc_account_id );
-			}
-
-			$responses[] = $response;
-
-		}
-
-		if ( $record_status == 'edit-record' ) {
-			if ( $record_type == 'mx' ) {
-
-				// Formats MX records into array which API can read
-				$mx_records = [];
-				foreach ( $record_value as $mx_record ) {
-					$mx_records[] = [
-						'server'   => $mx_record['server'],
-						'priority' => $mx_record['priority'],
-						'enabled'  => true,
-					];
-				}
-
-				$post = [
-					'name'  => $record_name,
-					'type'  => $record_type,
-					'ttl'   => $record_ttl,
-					'value' => $mx_records,
-				];
-
-			} elseif ( $record_type == 'txt' or $record_type == 'a' or $record_type == 'aname' or $record_type == 'cname' or $record_type == 'aaaa' or $record_type == 'spf' ) {
-				// Formats A and TXT records into array which API can read
-				$records = [];
-				foreach ( $record_value as $record ) {
-					$value = is_string( $record['value'] ) ? stripslashes( $record['value'] ) : $record['value'];
-					if ( is_array( $record ) && ! empty( $record["value"] ) ) {
-						$record['value'] = stripslashes($record['value']);
-					}
-					if ( is_array( $record ) && ! empty( $record["enabled"] ) ) {
-						$record["enabled"] = true;
-						$records[] = $record;
-						continue;
-					}
-					// Wrap TXT value in double quotes if not currently
-					if ( $record_type == 'txt' and $value[0] != '"' and $value[-1] != '"' ) {
-						$value = "\"{$value}\"";
-					}
-					$records[] = $value;
-				}
-
-				$post = [
-					'name'  => "$record_name",
-					'type'  => $record_type,
-					'ttl'   => $record_ttl,
-					'value' => $records,
-				];
-
-			} elseif ( $record_type == 'http' ) {
-
-				$post = [
-					'name'  => $record_name,
-					'type'  => $record_type,
-					'ttl'   => $record_ttl,
-					'value' => [
-						'hard'         => true,
-						'url'          => $record_value,
-						'redirectType' => '301',
-					],	
-				];
-
-			} elseif ( $record_type == 'cname' ) {
-
-				$post = array(
-					'name' => $record_name,
-					'host' => $record_value,
-					'ttl'  => $record_ttl,
-				);
-
-			} elseif ( $record_type == 'srv' ) {
-
-				// Formats SRV records into array which API can read
-				$srv_records = [];
-				foreach ( $record_value as $srv_record ) {
-					$srv_records[] = [
-						'host'     => $srv_record['host'],
-						'priority' => $srv_record['priority'],
-						'weight'   => $srv_record['weight'],
-						'port'     => $srv_record['port'],
-						'enabled'  => true,
-					];
-				}
-
-				$post = [
-					'type'  => $record_type,
-					'name'  => $record_name,
-					'ttl'   => $record_ttl,
-					'value' => $srv_records,
-				];
-
-			} else {
-				$post = [
-					'type'  => $record_type,
-					'name'  => $record_name,
-					'ttl'   => $record_ttl,
-					'value' => [
-						[
-							'value'   => stripslashes( $record_value ),
-							'enabled' => true,
-						],
-					],
-				];
-
-			}
-			$response                = CaptainCore\Remote\Constellix::put( "domains/$domain_id/records/$record_id", $post );
-			$response->domain_id     = $domain_id;
-			$response->record_id     = $record_id;
-			$response->record_type   = $record_type;
-			$response->record_status = $record_status;
-			if ( empty( $response->errors ) ) {
-				CaptainCore\ActivityLog::log( 'updated', 'dns_record', $cc_domain_id, $cc_domain_name, "Updated {$record_type} record '{$record_name}' for {$cc_domain_name}", [ 'type' => $record_type, 'name' => $record_name ], $cc_account_id );
-			}
-			$responses[]             = $response;
-		}
-
-		if ( $record_status == 'remove-record' ) {
-			$response                = CaptainCore\Remote\Constellix::delete( "domains/$domain_id/records/$record_id" );
-			$response->domain_id     = $domain_id;
-			$response->record_id     = $record_id;
-			$response->record_type   = $record_type;
-			$response->record_status = $record_status;
-			if ( empty( $response->errors ) ) {
-				CaptainCore\ActivityLog::log( 'deleted', 'dns_record', $cc_domain_id, $cc_domain_name, "Deleted {$record_type} record '{$record_name}' for {$cc_domain_name}", [ 'type' => $record_type, 'name' => $record_name ], $cc_account_id );
-			}
-			$responses[]             = $response;
-		}
-	}
-	//$responses = rtrim( $responses, ',' ) . ']';
-
-	echo json_encode( $responses ) ;
-
-	wp_die(); // this is required to terminate immediately and return a proper response
-}
-
-add_action( 'wp_ajax_captaincore_local', 'captaincore_local_action_callback' );
-function captaincore_local_action_callback() {
-	global $wpdb;
-	$cmd   = $_POST['command'];
-	$value = $_POST['value'];
-	
-	if ( $cmd == "connect" ) { 
-		$connect = (object) $_POST['connect'];
-		// Disable https when debug enabled
-		add_filter( 'https_ssl_verify', '__return_false' );
-		
-		$domain = get_option( "home" );
-		$domain = str_replace( "http://www.", "", $domain );
-		$domain = str_replace( "https://www.", "", $domain );
-		$domain = str_replace( "http://", "", $domain );
-		$domain = str_replace( "https://", "", $domain );
-		$auth   = md5( AUTH_KEY );
-
-		$data = [
-			'timeout' => 45,
-			'headers' => [
-				'Content-Type' => 'application/json; charset=utf-8', 
-				'token'        => $connect->token 
-			], 
-			'body'        => json_encode( [ "command" => "connection add $domain $auth {$connect->token}" ] ), 
-			'method'      => 'POST', 
-			'data_format' => 'body' 
-		];
-
-		// Add command to dispatch server
-		$response = wp_remote_post( "https://{$connect->address}/tasks", $data );
-		if ( is_wp_error( $response ) ) {
-			$error_message = $response->get_error_message();
-			echo "Something went wrong: $error_message";
-		} else {
-			echo $response["body"];
-		}
-		wp_die(); // this is required to terminate immediately and return a proper response
-
-	}
-
-	if ( $cmd == 'newUser' ) {
-		$account  = (object) $value;
-		$response = (object) [];
-		$errors   = [];
-
-		if ( $account->login == "" ) {
-			$errors[] = "Username name can't be empty.";
-		}
-
-		if ( $account->login != "" && username_exists( $account->login ) ) {
-			$errors[] = "Username is taken.";
-		}
-		
-		if ( ! filter_var( $account->email, FILTER_VALIDATE_EMAIL ) ) {
-			$errors[] = "Email address is not valid.";
-		}
-
-		if ( filter_var( $account->email, FILTER_VALIDATE_EMAIL ) && email_exists( $account->email ) ) {
-			$errors[] = "Email address is taken.";
-		}
-
-		if ( count($errors) == 0 ) {
-			$result = wp_insert_user( array(
-				'first_name'   => $account->first_name,
-				'last_name'    => $account->last_name,
-				'user_email'   => $account->email,
-				'user_login'   => $account->login,
-				'role'         => 'subscriber'
-			) );
-			if ( is_wp_error( $result ) ) {
-				$errors[] = $result->get_error_message();
-			} else {
-				( new CaptainCore\User( $result, true ) )->assign_accounts( $account->account_ids );
-				CaptainCore\Mailer::notify_new_user( $result );
-			}
-		}
-
-		if ( count($errors) > 0 ) {
-			$response->errors = $errors;
-		}
-
-		echo json_encode( $response );
-	}
-
-	if ( $cmd == 'updateAccount' ) {
-		$user_id  = get_current_user_id();
-		$account  = (object) $value;
-		$response = (object) [];
-		$errors   = [];
-
-		if ( $account->display_name == "" ) {
-			$errors[] = "Display name can't be empty.";
-		}
-
-		if ( ! filter_var($account->email, FILTER_VALIDATE_EMAIL ) ) {
-			$errors[] = "Email address is not valid.";
-		}
-		
-		// If new password sent then valid it.
-		if ( $account->new_password != "" ) {
-
-			$password = $account->new_password;
-
-			if (strlen($password) < 8) {
-				$errors[] = "Password too short!";
-			}
-		
-			if (!preg_match("#[0-9]+#", $password)) {
-				$errors[] = "Password must include at least one number!";
-			}
-		
-			if (!preg_match("#[a-zA-Z]+#", $password)) {
-				$errors[] = "Password must include at least one letter!";
-			}
-			
-		}
-
-		if ( count($errors) == 0 ) {
-			// Update user submitted info
-			$result = wp_update_user( array( 
-				'ID'           => $user_id, 
-				'display_name' => $account->display_name,
-				'user_email'   => $account->email,
-			) );
-			if ( is_wp_error( $result ) ) {
-				$errors[] = $result->get_error_message();
-			}
-		}
-
-		// Passed checks so update the password.
-		if ( count($errors) == 0 && $account->new_password != "") {
-			$result = wp_update_user( array( 
-				'ID'        => $user_id, 
-				'user_pass' => $account->new_password,
-			) );
-			if ( is_wp_error( $result ) ) {
-				$errors[] = $result->get_error_message();
-			}
-		}
-
-		if ( count($errors) > 0 ) {
-			$response->errors = $errors;
-		}
-
-		$response->profile = $account;
-		unset ( $response->profile->new_password );
-		echo json_encode( $response );
-	}
-
-	if ( $cmd == 'downloadPDF' ) {
-		$order            = wc_get_order( $value );
-		$order_data       = (object) $order->get_data();
-		$order_items      = $order->get_items( apply_filters( 'woocommerce_purchase_order_item_types', 'line_item' ) );
-		$order_line_items = "";
-		foreach ( $order_items as $item_id => $item ) {
-			$subtotal          = str_replace( "<bdi>", "", $order->get_formatted_line_subtotal( $item ) );
-			$subtotal          = str_replace( "</bdi>", "", $subtotal );
-			$details           = $item->get_meta_data()[0]->get_data();
-			if ( $details['key'] == "Details" ) {
-				$description = $details['value'];
-			}
-			$order_line_items .= "<tr><td width=\"536\">{$item->get_quantity()}x {$item->get_name()}<br /><small>{$description}</small></td><td>{$subtotal}</td></tr>";
-		}
-
-		$refunds = $order->get_refunds();
-		foreach ( $refunds as $item ) {
-			$description       = $item->get_post_title();
-			$subtotal          = str_replace( "<bdi>", "", "-".$item->get_formatted_refund_amount() );
-			$subtotal          = str_replace( "</bdi>", "", $subtotal );
-			$order_line_items .= "<tr><td width=\"536\">1x Refund<br /><small>{$description}</small></td><td>{$subtotal}</td></tr>";
-			$order_data->total = $order_data->total - $item->get_amount();
-		}
-
-		$payment_method_title  = $order->get_payment_method_title();
-		if ( empty( $payment_method_title ) ) {
-			// Fallback to gateway title if order doesn't have a custom title
-			$payment_gateways     = WC()->payment_gateways->payment_gateways();
-			$payment_method       = $order->get_payment_method();
-			$payment_method_title = isset( $payment_gateways[ $payment_method ] ) ? $payment_gateways[ $payment_method ]->get_title() : "Check";
-		}
-		$payment_method_string = sprintf(
-			__( 'Payment via %s', 'woocommerce' ),
-			esc_html( $payment_method_title )
-		);
-
-		if ( $order->get_date_paid() ) {
-			$paid_on = sprintf(
-				__( 'Paid on %1$s @ %2$s', 'woocommerce' ),
-				wc_format_datetime( $order->get_date_paid() ),
-				wc_format_datetime( $order->get_date_paid(), get_option( 'time_format' ) )
-			);
-		}
-
-		$response = (object) [
-			"order_id"       => $order_data->id,
-			"created_at"     => $order_data->date_created->getTimestamp(),
-			"status"         => $order_data->status,
-			"line_items"     => $order_line_items,
-			"payment_method" => $payment_method_string,
-			"paid_on"        => $paid_on,
-			"total"          => number_format( (float) $order_data->total, 2, '.', '' ),
-		];
-
-		$account_id        = $order->get_meta( 'captaincore_account_id' );
-		$account           = ( new CaptainCore\Accounts )->get( $account_id );
-		$customer_billing  = ( new CaptainCore\Account( $account_id ) )->get_billing();
-		$customer_country  = WC()->countries->countries[ $customer_billing->country ];
-		$store_raw_country = get_option( 'woocommerce_default_country' );
-		$split_country     = explode( ":", $store_raw_country );
-		$store_country     = WC()->countries->countries[ $split_country[0] ];
-		$store_state       = $split_country[1];
-		$store_city        = get_option( 'woocommerce_store_city' );
-		$store_postcode    = get_option( 'woocommerce_store_postcode' );
-		$store_address     = get_option( 'blogname' ) . "<br />" . 
-							 get_option( 'woocommerce_store_address' ) . "<br/ >" . 
-							 get_option( 'woocommerce_store_address_2' ). "<br /> 
-							 $store_city, $store_state $store_postcode<br />
-							 $store_country";
-		$customer_address  = "<strong>{$account->name}</strong><br />";
-		if ( ! empty( $customer_billing->first_name ) || ! empty( $customer_billing->last_name ) ) {
-			$customer_address .= "{$customer_billing->first_name} {$customer_billing->last_name}<br>";
-		}
-		$customer_address .= "{$customer_billing->address_1}<br>";
-		if ( ! empty( $customer_billing->address_2 ) ) {
-			$customer_address .= "{$customer_billing->address_2}<br>";
-		}
-		$customer_address .= "{$customer_billing->city}, {$customer_billing->state} {$customer_billing->postcode}<br>
-							  {$customer_country}";
-		$created_at = $order_data->date_created->date( 'M jS Y' );
-		$html2pdf   = new \Spipu\Html2Pdf\Html2Pdf('P', 'A4', 'en');
-		$html       = <<<HEREDOC
-<style type="text/css">
-p { font-size:16px; }
-table { border-collapse: collapse; font-size:16px; }
-img { margin-bottom: 1em; }
-hr { height:1px;border-width:0;color: #59595b;background-color: #59595b; }
-th, td { padding: 4px 16px; border-bottom: 1px solid #59595b; vertical-align: top; }
-</style>
-<page backtop="20px" backbottom="20px" backleft="20px" backright="20px">
-<p><img width="155" src="https://anchor.host/wp-content/uploads/2015/01/logo.png" alt="Anchor Hosting"></p>
-<hr />
-<h2>Invoice #{$order_data->id}</h2>
-<table cellspacing="0" style="width:100%;">
-<tbody>
-<tr>
-   <td style="width:50%;">
-   		{$store_address}
-   </td>
-   <td style="width:50%;">
-		{$customer_address}
-   </td>
-</tr>
-</tbody>
-</table>
-<p>Order was created on <strong>{$created_at}</strong> and is currently <strong>{$response->status} payment</strong>.</p>
-<br /><br />
-<table cellspacing="0">
-<thead>
-	<tr><th><span>Services</span></th><th><span>Amount</span></th></tr>
-</thead>
-<tbody>
-	$order_line_items
-	<tr><td style="text-align:right;">Total:</td><td>\${$response->total}</td></tr>
-</tbody>
-</table>
-</page>
-HEREDOC;
-		$html2pdf->setTestTdInOnePage( false );
-		$html2pdf->writeHTML( $html );
-		$html2pdf->output();
-		wp_die();
-	}
-	if ( $cmd == 'fetchInvoice' ) {
-		$order            = wc_get_order( $value );
-		$order_data       = (object) $order->get_data();
-		$order_items      = $order->get_items( apply_filters( 'woocommerce_purchase_order_item_types', 'line_item' ) );
-		$order_line_items = [];
-		foreach ( $order_items as $item_id => $item ) {
-			$order_line_items[] = [
-				"name"        => $item->get_name(),
-				"quantity"    => $item->get_quantity(),
-				"description" => $item->get_meta_data(),
-				"total"       => $order->get_formatted_line_subtotal( $item ),
-			];
-		}
-
-		$refunds = $order->get_refunds();
-		foreach ( $refunds as $item ) {
-			$order_line_items[] = [
-				"name"        => "Refund",
-				"quantity"    => "1",
-				"description" => $item->get_post_title(),
-				"total"       => "-".$item->get_formatted_refund_amount(),
-			];
-			$order_data->total = $order_data->total - $item->get_amount();
-		}
-
-		$payment_method_title  = $order->get_payment_method_title();
-		if ( empty( $payment_method_title ) ) {
-			// Fallback to gateway title if order doesn't have a custom title
-			$payment_gateways     = WC()->payment_gateways->payment_gateways();
-			$payment_method       = $order->get_payment_method();
-			$payment_method_title = isset( $payment_gateways[ $payment_method ] ) ? $payment_gateways[ $payment_method ]->get_title() : "Check";
-		}
-		$payment_method_string = sprintf(
-			__( 'Payment via %s', 'woocommerce' ),
-			esc_html( $payment_method_title )
-		);
-
-		if ( $order->get_date_paid() ) {
-			$paid_on = sprintf(
-				__( 'Paid on %1$s @ %2$s', 'woocommerce' ),
-				wc_format_datetime( $order->get_date_paid() ),
-				wc_format_datetime( $order->get_date_paid(), get_option( 'time_format' ) )
-			);
-		}
-
-		$response = [
-			"order_id"       => $order_data->id,
-			"created_at"     => $order_data->date_created->getTimestamp(),
-			"status"         => $order_data->status,
-			"line_items"     => $order_line_items,
-			"payment_method" => $payment_method_string,
-			"paid_on"        => $paid_on,
-			"total"          => number_format( (float) $order_data->total, 2, '.', '' ),
-		];
-		echo json_encode( $response );
-	}
-	if ( $cmd == 'fetchAccount' ) {
-		$account = new CaptainCore\Account( $value );
-		$account->calculate_usage();
-		$account->calculate_totals();
-		echo json_encode( $account->fetch() );
-	}
-	if ( $cmd == 'fetchUser' ) {
-		$user = new CaptainCore\User( $value, true );
-		echo json_encode( $user->fetch() );
-	}
-	if ( $cmd == 'saveUser' ) {
-		$response = ( new CaptainCore\Users )->update( $value );
-		echo json_encode( $response );
-	}
-	if ( $cmd == 'fetchInvite' ) {
-		$invite = (object) $value;
-		$invites = new CaptainCore\Invites();
-		$results = $invites->where( array( 
-			"account_id" => $invite->account,
-			"token"      => $invite->token,
-		) );
-		if ( count( $results ) == "1" ) {
-			$account = new CaptainCore\Account( $invite->account, true );
-			echo json_encode( $account->fetch() );
-		}
-	}
-	if ( $cmd == 'removeAccountAccess' ) {
-		$user_id     = $value;
-		$user        = ( new CaptainCore\User( $user_id, true ) );
-		$account_id  = $_POST['account'];
-		$account_ids = $user->accounts();
-		if ( empty( $account_ids ) ) {
-			$account_ids = [];
-		}
-		if ( ( $key = array_search( $account_id, $account_ids ) ) !== false ) {
-			unset( $account_ids[$key] );
-		}
-		( new CaptainCore\User( $user_id, true ) )->assign_accounts( array_unique( $account_ids ) );
-
-		$account = new CaptainCore\Account( $account_id );
-		$account->calculate_totals();
-	}
-	if ( $cmd == 'acceptInvite' ) {
-		$invite = (object) $value;
-		$invites = new CaptainCore\Invites();
-		$results = $invites->where( [
-			"account_id" => $invite->account,
-			"token"      => $invite->token,
-		] );
-		
-		if ( count( $results ) == "1" ) {
-			// Add account ID to current user
-			$user       = new CaptainCore\User;
-			$accounts   = $user->accounts();
-			$accounts[] = $invite->account;
-			$user->assign_accounts( array_unique( $accounts ) );
-
-			$account = new CaptainCore\Account( $invite->account );
-			$account->calculate_totals();
-
-			$invite = new CaptainCore\Invite( $results[0]->invite_id );
-			$invite->mark_accepted();
-		}
-	}
-
-	if ( $cmd == 'saveDefaults' ) {
-		$user     = new CaptainCore\User;
-		$accounts = $user->accounts();
-		$record   = (object) $value;
-		if ( ! in_array( $record->account_id, $accounts ) && ! $user->is_admin() ) {
-			echo json_encode( "Permission denied" );
-			wp_die();
-		}
-		
-		if ( ! isset( $record->defaults["users"] ) ) {
-			$record->defaults["users"] = [];
-		}
-		if ( ! isset( $record->defaults["recipes"] ) ) {
-			$record->defaults["recipes"] = [];
-		}
-		$account = new CaptainCore\Accounts();
-		$account->update( [ "defaults" => json_encode( $record->defaults ) ], [ "account_id" => $record->account_id ] );
-		( new CaptainCore\Account( $record->account_id, true ) )->sync();
-		echo json_encode( "Record updated." );
-	}
-
-	if ( $cmd == 'saveGlobalConfigurations' ) {
-		$user = new CaptainCore\User;
-		if ( ! $user->is_admin() ) { 
-			echo json_encode( "Permission denied" );
-			wp_die();
-		}
-		$value = (object) $value;
-		if ( isset( $value->dns_introduction ) ) {
-			$value->dns_introduction = str_replace( "\'", "'", $value->dns_introduction );
-		}
-		update_site_option( 'captaincore_configurations', json_encode( $value ) );
-		( new CaptainCore\Configurations )->sync();
-		echo json_encode( "Global configurations updated." );
-	}
-
-	if ( $cmd == 'saveGlobalDefaults' ) {
-		$user = new CaptainCore\User;
-		if ( ! $user->is_admin() ) { 
-			echo json_encode( "Permission denied" );
-			wp_die();
-		}
-		update_site_option( 'captaincore_defaults', json_encode( $value ) );
-		( new CaptainCore\Defaults )->sync();
-		echo json_encode( "Global defaults updated." );
-	}
-
-	wp_die();
-
-}
-
-add_action( 'wp_ajax_captaincore_user', 'captaincore_user_action_callback' );
-function captaincore_user_action_callback() {
-	global $wpdb;
-	$user = new CaptainCore\User;
-	$cmd  = $_POST['command'];
-	$everyone_commands = [
-		'fetchRequestedSites',
-	];
-
-	if ( ! $user->is_admin() && ! in_array( $cmd, $everyone_commands ) ) {
-		echo "Permission denied";
-		wp_die();
-		return;
-	}
-
-	if ( $cmd == 'fetchRequestedSites' ) {;
-		echo json_encode( $user->fetch_requested_sites() );
-	};
-
-	wp_die();
-
-}
-
-add_action( 'wp_ajax_captaincore_account', 'captaincore_account_action_callback' );
-function captaincore_account_action_callback() {
-	global $wpdb;
-	$user = new CaptainCore\User;
-	$cmd  = $_POST['command'];
-	$everyone_commands = [
-		'addDomain',
-		'deleteDomain',
-		'requestSite',
-		'payInvoice',
-		'setAsPrimary',
-		'addPaymentMethod',
-		'deletePaymentMethod',
-		'deleteRequestSite',
-		'cancelPlan',
-		'updateBilling',
-	];
-
-	if ( $cmd == 'updateBilling' ) {
-		$request  = (object) $_POST['value'];
-		$customer = new WC_Customer(  $user->user_id() );
-		$customer->set_billing_address_1( $request->address_1 );
-		$customer->set_billing_address_2( $request->address_2 );
-		$customer->set_billing_city( $request->city );
-		$customer->set_billing_company( $request->company );
-		$customer->set_billing_country( $request->country );
-		$customer->set_billing_email( $request->email );
-		$customer->set_billing_first_name( $request->first_name );
-		$customer->set_billing_last_name( $request->last_name );
-		$customer->set_billing_phone( $request->phone );
-		$customer->set_billing_postcode( $request->postcode );
-		$customer->set_billing_state( $request->state );
-		$customer->save();
-	};
-
-	if ( $cmd == 'cancelPlan' ) {
-
-		$current_subscription = (object) $_POST['value'];
-		$current_user         = $user->fetch();
-		$billing              = $user->billing();
-		if ( $current_subscription->account_id == "" || $current_subscription->name == "" ) {
-			wp_die();
-		}
-		foreach ( $billing->subscriptions as $subscription ) {
-			if ( $subscription->account_id == $current_subscription->account_id && $subscription->name == $current_subscription->name  ) {
-				CaptainCore\Mailer::send_cancel_plan_request( $current_subscription, $current_user );
-			}
-		}
-
-	}
-
-	if ( $cmd == 'requestPlanChanges' ) {
-		$current_user = $user->fetch();
-		$subscription = (object) $_POST['value'];
-		CaptainCore\Mailer::send_plan_change_request( $subscription, $current_user );
-	}
-
-	$account_id = intval( $_POST['account_id'] ?? 0 );
-
-	// Only proceed if have permission to particular account id.
-	if ( ! $user->is_admin() && isset( $account_id ) && ! captaincore_verify_permissions_account( $account_id ) && ! in_array( $_POST['command'], $everyone_commands ) ) {
-		echo "Permission denied";
-		wp_die();
-		return;
-	}
-
-	if ( $cmd == 'deleteDomain' ) {
-		$response = ( new CaptainCore\Domains )->delete_domain( $_POST['value'] );
-		echo json_encode( $response );
-	};
-
-	if ( $cmd == 'addDomain' ) {
-
-		$errors = [];
-		$name   = trim( $_POST['value'] );
-		// Get the new flag. Default to true if not set.
-        $create_dns_zone = isset( $_POST['create_dns_zone'] ) ? ( $_POST['create_dns_zone'] === 'true' || $_POST['create_dns_zone'] === '1' ) : true;
-
-		// If results still exists then give an error
-		if ( $name == "" ) {
-			$errors[] = "Domain can't be empty.";
-		}
-
-		// If user is not admin, get account_id from the selected site's customer_id
-		if ( ! $user->is_admin() ) {
-			$site_id = intval( $_POST['site_id'] );
-			if ( empty( $site_id ) ) {
-				$errors[] = "Website must be selected.";
-			} else {
-				// Verify user has permission to this site
-				if ( ! captaincore_verify_permissions( $site_id ) ) {
-					$errors[] = "Permission denied for selected site.";
-				} else {
-					$site = CaptainCore\Sites::get( $site_id );
-					if ( $site && ! empty( $site->customer_id ) ) {
-						$account_id = $site->customer_id;
-					} else {
-						$errors[] = "Selected site does not have a valid customer assigned.";
-					}
-				}
-			}
-		}
-
-		// Check for duplicate domain.
-		$domain_exists = ( new CaptainCore\Domains )->where( [ "name" => $name ] );
-
-		// If results still exists then give an error
-		if ( count( $domain_exists ) > 0 ) {
-			$errors[] = "Domain has already been added.";
-		}
-
-		if ( empty( $account_id ) ) { 
-			$errors[] = "Account can't be empty.";
-		}
-
-		// If any errors then bail
-		if ( count( $errors ) > 0 ) {
-			echo json_encode( [ "errors" => $errors ] );
-			wp_die();
-		}
-
-		$time_now = date("Y-m-d H:i:s");
-
-		// Insert domain
-		$domain_id = ( new CaptainCore\Domains )->insert( [
-			"name"       => $name,
-			'updated_at' => $time_now,
-			'created_at' => $time_now,
-		] );
-
-		// Assign domain to account
-		( new CaptainCore\Domain( $domain_id ) )->insert_accounts( [ $account_id ] );
-
-		$remote_id = null;
-
-		// Conditionally execute remote code
-		if ( $create_dns_zone ) {
-			// Administrators can link to existing DNS zones, regular users cannot
-			$link_existing = $user->is_admin();
-			$response = ( new CaptainCore\Domain( $domain_id ) )->fetch_remote_id( $link_existing );
-			if ( is_array( $response ) && isset( $response["errors"] ) ) { // Check if $response is an error array
-				foreach ( $response["errors"] as $error ) {
-					$errors[] = $error;
-				}
-				echo json_encode( [ "errors" => $errors ] );
-				wp_die();
-			}
-			$remote_id = $response; // Store the remote_id if successful
-		}
-
-		echo json_encode( [ "name" => $name, "domain_id" => $domain_id, "remote_id" => $remote_id ] );
-
-	}
-
-	if ( $cmd == 'sendAccountInvite' ) {
-		$account  = new CaptainCore\Account( $account_id );
-		$response = $account->invite( $_POST['invite'] );
-		echo json_encode( $response );
-	}
-
-	if ( $cmd == 'deleteInvite' ) {
-		$account  = new CaptainCore\Account( $account_id );
-		$response = $account->invite_delete( $_POST['value'] );
-		echo "Invite deleted.";
-	}
-
-	if ( $cmd == 'payInvoice' ) {
-		// Pay with new credit card
-		if ( isset( $_POST['source_id'] ) ) {
-			$response       = $user->add_payment_method( $_POST['source_id'] );
-			if ( isset( $response->error ) ) {
-				echo json_encode( $response );
-				wp_die();
-			}
-			$payment_tokens = WC_Payment_Tokens::get_customer_tokens( $user->user_id() );
-			foreach ( $payment_tokens as $payment_token ) { 
-				if( $payment_token->get_token() == $_POST['source_id'] ) {
-                    // Capture response
-					$result = $user->pay_invoice( $_POST['value'], $payment_token->get_id() );
-					$user->set_as_primary( $payment_token->get_id() );
-                    // Echo response
-                    echo json_encode( $result );
-				}
-			}
-			wp_die();
-		}
-		// Pay with existing credit card
-        // Capture response
-		$result = $user->pay_invoice( $_POST['value'], $_POST['payment_id'] );
-		$user->set_as_primary( $_POST['payment_id'] );
-        // Echo response
-        echo json_encode( $result );
-	};
-
-	if ( $cmd == 'setAsPrimary' ) {
-		$user->set_as_primary( $_POST['value'] );
-	};
-
-	if ( $cmd == 'addPaymentMethod' ) {
-		$response = $user->add_payment_method( $_POST['value'] );
-		echo json_encode( $response );
-	};
-
-	if ( $cmd == 'deletePaymentMethod' ) {
-		$user->delete_payment_method( $_POST['value'] );
-	};
-
-	if ( $cmd == 'requestSite' ) {
-		$user->request_site( $_POST['value'] );
-		echo json_encode( $user->fetch_requested_sites() );
-	};
-
-	if ( $cmd == 'backRequestSite' ) {
-		$request = (object) $_POST['value'];
-		$user->back_request_site( $request );
-		echo json_encode( $user->fetch_requested_sites() );
-	};
-
-	if ( $cmd == 'continueRequestSite' ) {
-		$request = (object) $_POST['value'];
-		$user->continue_request_site( $request );
-		echo json_encode( $user->fetch_requested_sites() );
-	};
-	
-	if ( $cmd == 'updateRequestSite' ) {
-		$request = (object) $_POST['value'];
-		$user->update_request_site( $request );
-		echo json_encode( $user->fetch_requested_sites() );
-	};
-
-	if ( $cmd == 'deleteRequestSite' ) {
-		$request = (object) $_POST['value'];
-		$user->delete_request_site( $request );
-		echo json_encode( $user->fetch_requested_sites() );
-	};
-
-	wp_die(); // this is required to terminate immediately and return a proper response
-
-}
-
-add_action( 'wp_ajax_captaincore_ajax', 'captaincore_ajax_action_callback' );
-function captaincore_ajax_action_callback() {
-	global $wpdb;
-	$user = new CaptainCore\User;
-
-	$everyone_commands = [
-		'newRecipe',
-		'updateRecipe',
-		'updateSiteAccount',
-		'requestSite',
-		'mailgun'
-	];
-
-	if ( isset( $_POST['post_id'] ) && is_array( $_POST['post_id'] ) ) {
-		$post_ids       = [];
-		$post_ids_array = $_POST['post_id'];
-		foreach ( $post_ids_array as $id ) {
-			$post_ids[] = intval( $id );
-		}
-	} elseif ( isset( $_POST['post_id'] ) ) {
-		$post_id = intval( $_POST['post_id'] );
-	}
-
-	// Only proceed if have permission to particular site id.
-	if ( ! $user->is_admin() && isset( $post_id ) && ! captaincore_verify_permissions( $post_id ) && ! in_array( $_POST['command'], $everyone_commands ) ) {
-		echo "Permission denied";
-		wp_die();
-		return;
-	}
-
-	// Only proceed if have permission to particular site id.
-	if ( ! $user->is_admin() && isset( $post_ids ) && ! captaincore_verify_permissions( $post_ids ) && ! in_array( $_POST['command'], $everyone_commands ) ) {
-		echo "Permission denied";
-		wp_die();
-		return;
-	}
-
-	// Only proceed if access to command 
-	$admin_commands = [
-		'fetchConfigs',
-		'newKey',
-		'updateKey',
-		'deleteKey',
-		'setKeyAsPrimary',
-		'newProcess',
-		'saveProcess',
-		'fetchProcess',
-		'fetchProcessRaw',
-		'fetchProcessLogs',
-		'listenProcesses',
-		'updateFathom',
-		'updateMailgun',
-		'updatePlan',
-		'updateDomainAccount',
-		'createSiteAccount',
-		'updateSite',
-		'deleteAccount'
-	];
-	if ( ! $user->is_admin() && in_array( $_POST['command'], $admin_commands ) ) {
-		echo "Permission denied";
-		wp_die();
-		return;
-	}
-
-	$cmd       = $_POST['command'];
-	if ( isset($_POST['value']) ){
-		$value = $_POST['value'];
-	}
-	
-	$fetch          = isset( $post_id ) ? (new CaptainCore\Site( $post_id ))->get() : null;
-	$site           = isset( $fetch->site ) ? $fetch->site : null;
-	$environment    = isset( $_POST['environment'] ) ? $_POST['environment'] : '';
-	$remote_command = false;
-
-	if ( $cmd == 'mailgun' ) {
-		$mailgun  = $fetch->mailgun;
-		$response             = (object) [];
-		$response->items      = [];
-		$response->pagination = [];
-		if ( isset( $_POST['page'] ) ) {
-			$domains = CaptainCore\Remote\Mailgun::page( $mailgun, $_POST['page'] );
-
-		} else {
-			$domains = CaptainCore\Remote\Mailgun::get( "v3/$mailgun/events", [ "event" => "accepted OR rejected OR delivered OR failed OR complained", 'limit' => 300 ] );
-		}
-		foreach ( $domains->items as $item ) {
-			$description = $item->recipient;
-			if ( $item->message->headers->from ) {
-				$from        = $item->message->headers->from;
-				$description = "{$from} -> {$description}";
-			}
-			$response->items[] = [
-				"timestamp"   => $item->timestamp,
-				"event"       => $item->event,
-				"description" => $description,
-				"message"     => $item->message,
-			];
-			$response->pagination["next"]     = $domains->paging->next;
-		}
-		echo json_encode( $response );
-	}
-
-	if ( $cmd == 'fetchLink' ) {
-		// Fetch snapshot details
-		$in_24hrs = date("Y-m-d H:i:s", strtotime ( date("Y-m-d H:i:s")."+24 hours" ) );
-
-		// Generate new token
-		$token = bin2hex( openssl_random_pseudo_bytes( 16 ) );
-		( new CaptainCore\Snapshots )->update( [
-			"token"       => $token,
-			"expires_at"  => $in_24hrs 
-		],[ 
-			"snapshot_id" => $value 
-		] );
-		echo json_encode( [ 
-			"token"       => $token,
-			"expires_at"  => $in_24hrs
-		] );
-	}
-
-	if ( $cmd == 'fetchPlugins' ) {
-		require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
-		$arguments = array(
-			'per_page' => 9,
-			'page'     => $_POST['page'],
-			'browse'   => 'popular', 
-			'is_ssl'   => true,
-		);
-		if ( $value ) {
-			$arguments['search'] = $value;
-			unset( $arguments['browse'] );
-		}
-		$response = plugins_api( 'query_plugins', $arguments );
-
-		echo json_encode( $response ); 
-	};
-
-	if ( $cmd == 'fetchThemes' ) {
-		require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
-		$arguments = array(
-			'per_page' => 9,
-			'page'     => $_POST['page'],
-			'browse'   => 'popular', 
-			'is_ssl'   => true,
-		);
-		if ( $value ) {
-			$arguments['search'] = $value;
-			unset( $arguments['browse'] );
-	}
-		$response = themes_api( 'query_themes', $arguments );
-
-		echo json_encode( $response );
-	};
-
-	if ( $cmd == 'shareStats' ) {
-		$sharing        = $_POST['sharing'];
-		$share_password = $_POST['share_password'];
-		$fathom_id      = $_POST['fathom_id'];
-		$response       = ( new CaptainCore\Site( $post_id ) )->stats_sharing( $fathom_id, $sharing, $share_password );
-	}
-
-	if ( $cmd == 'fetchStats' ) {
-		$before    = strtotime( $_POST['from_at'] );
-		$after     = strtotime( $_POST['to_at'] );
-		$grouping  = strtolower( $_POST['grouping'] );
-		$fathom_id = $_POST['fathom_id'];
-		$response  = ( new CaptainCore\Site( $post_id ) )->stats( $environment, $before, $after, $grouping, $fathom_id );
-		if ( is_wp_error( $response ) ) {
-			$error_message = $response->get_error_message();
-			echo json_encode( [ "error" => $error_message ] );
-			wp_die();
-			return;
-		}
-		echo json_encode( $response ); 
-	}
-
-	if ( $cmd == 'fetchConfigs' ) {
-		$remote_command = true;
-		$command = "configs fetch vars";
-	};
-
-	if ( $cmd == 'newKey' ) {
-		$key      = (object) $value;
-		$time_now = date("Y-m-d H:i:s");
-		$user_id  = get_current_user_id();
-
-		$new_key = [
-			'user_id'    => $user_id,
-			'title'      => $key->title,
-			'updated_at' => $time_now,
-			'created_at' => $time_now,
-			'main'       => 0,
-		];
-
-		$look_for_default = ( new CaptainCore\Keys )->where( [ "user_id" => $user_id, "main" => "1" ] );
-		if ( empty( $look_for_default ) ) {
-			$new_key[ "main" ] = 1;
-		}
-
-		$key_id         = ( new CaptainCore\Keys )->insert( $new_key );
-		$remote_command = true;
-		$silence        = true;
-		$ssh_key        = base64_encode( stripslashes_deep( $key->key ) );
-		$command        = "key add $ssh_key --id=$key_id";
-	}
-
-	if ( $cmd == 'setKeyAsPrimary' ) {
-		$key      = (object) $value;
-		$key_id   = $key->key_id;
-		$time_now = date("Y-m-d H:i:s");
-		$user_id  = get_current_user_id();
-
-		$look_for_default = ( new CaptainCore\Keys )->where( [ "user_id" => $user_id, "main" => "1" ] );
-		if ( ! empty( $look_for_default ) ) {
-			foreach( $look_for_default as $key_primary ) {
-				( new CaptainCore\Keys )->update( [ 'main' => 0 ], [ "key_id" => $key_primary->key_id ] );
-			}
-		}
-
-		$key_update = [
-			'main'       => 1,
-			'updated_at' => $time_now,
-		];
-
-		( new CaptainCore\Keys )->update( $key_update, [ "key_id" => $key_id ] );
-
-		$configurations = ( new CaptainCore\Configurations )->get();
-		$configurations->default_key = $key_id;
-		update_site_option( 'captaincore_configurations', json_encode( $configurations ) );
-		( new CaptainCore\Configurations )->sync();
-	}
-
-	if ( $cmd == 'updateKey' ) {
-		$key      = (object) $value;
-		$key_id   = $key->key_id;
-		$time_now = date("Y-m-d H:i:s");
-		$user_id  = get_current_user_id();
-
-		$key_update = [
-			'title'      => $key->title,
-			'updated_at' => $time_now,
-		];
-
-		$look_for_default = ( new CaptainCore\Keys )->where( [ "user_id" => $user_id, "main" => "1" ] );
-		if ( empty( $look_for_default ) ) {
-			$key_update[ "main" ] = 1;
-		}
-
-		( new CaptainCore\Keys )->update( $key_update, [ "key_id" => $key_id ] );
-
-		$remote_command = true;
-		$silence        = true;
-		$ssh_key        = base64_encode( stripslashes_deep( $key->key ) );
-		$command        = "key add $ssh_key --id={$key_id}";
-	}
-
-	if ( $cmd == 'deleteKey' ) {
-		$key_id   = $value;
-		$time_now = date("Y-m-d H:i:s");
-
-		( new CaptainCore\Keys )->delete( $key_id );
-
-		$remote_command = true;
-		$silence        = true;
-		$ssh_key        = base64_encode( stripslashes_deep( $key->key ) );
-		$command        = "key delete --id={$key_id}";
-	}
-
-	if ( $cmd == 'listenProcesses' ) {
-		$run_in_background = true;
-		$remote_command    = true;
-		$command           = "running listen";
-	}
-
-	if ( $cmd == 'newProcess' ) {
-		$timenow             = date( 'Y-m-d H:i:s' );
-		$process             = (object) $value;
-		$process->user_id    = get_current_user_id();
-		$process->created_at = $timenow;
-		$process->updated_at = $timenow;
-		unset( $process->show );
-		$process_id = ( new CaptainCore\Processes )->insert( (array) $process );
-		$process_inserted = ( new CaptainCore\Processes )->get( $process_id );
-		echo json_encode( $process_inserted );
-	}
-
-	if ( $cmd == 'saveProcess' ) {
-		$process              = (object) $value;
-		$process->name        = str_replace( "\'", "'", $process->name );
-		$process->description = str_replace( "\'", "'", $process->description );
-		$process->updated_at  = date( 'Y-m-d H:i:s' );
-		( new CaptainCore\Processes )->update( (array) $process, [ "process_id" => $process->process_id ] );
-		$process_updated = ( new CaptainCore\Processes )->get( $process->process_id );
-		echo json_encode( $process_updated );
-	}
-
-	if ( $cmd == 'fetchProcess' ) {
-		$process = ( new CaptainCore\Process( $post_id ) )->get();
-		echo json_encode( $process );
-	}
-
-	if ( $cmd == 'fetchProcessRaw' ) {
-		$process = ( new CaptainCore\Processes )->get( $post_id );
-		$process->roles = (int) $process->roles;
-		echo json_encode( $process );
-	}
-
-	if ( $cmd == 'fetchProcessLog' ) {
-		$process_log = ( new CaptainCore\ProcessLog( $value ) )->get();
-		echo json_encode( $process_log );
-	}
-
-	if ( $cmd == 'fetchProcessLogs' ) {
-		$process_logs = ( new CaptainCore\ProcessLogs )->list();
-		echo json_encode( $process_logs );
-	}
-
-	if ( $cmd == 'newLogEntry' ) {
-		$process_id = $_POST['process_id'];
-		$time_now   = date( 'Y-m-d H:i:s' );
-		$value      = str_replace( "\'", "'", $value );
-		$process_log_new = (object) [
-			"process_id"   => $_POST['process_id'],
-			'user_id'      => get_current_user_id(),
-			'public'       => 1,
-			'description'  => $value,
-			'status'       => 'completed',
-			'created_at'   => $time_now,
-			'updated_at'   => $time_now,
-			'completed_at' => $time_now
-		];
-		$process_log = new CaptainCore\ProcessLogs();
-		$process_log_id_new = $process_log->insert( (array) $process_log_new );
-		( new CaptainCore\ProcessLog( $process_log_id_new ) )->assign_sites( $post_ids );
-		$timelines = [];
-		foreach ( $post_ids as $site_id ) {
-			$timelines[ $site_id ] = ( new CaptainCore\Site( $site_id ) )->process_logs();
-		}
-		echo json_encode( $timelines ) ;
-	}
-
-	if ( $cmd == 'updateLogEntry' ) {
-		$process_log_update = (object) $_POST['log'];
-		$existing_log       = ( new CaptainCore\ProcessLogs )->get( $process_log_update->process_log_id );
-		
-		// Only allow editing if user is admin or owns the log entry
-		if ( ! $user->is_admin() && $existing_log->user_id != get_current_user_id() ) {
-			echo "Permission denied";
-			wp_die();
-			return;
-		}
-		
-		$site_ids                        = array_column( $process_log_update->websites, 'site_id' );
-		$process_log_update->user_id     = get_current_user_id();
-		$process_log_update->description = str_replace( "\'", "'", $process_log_update->description_raw );
-		$process_log_update->created_at  = $process_log_update->created_at_raw;
-		$process_log_update->updated_at  = date( 'Y-m-d H:i:s' );
-		unset( $process_log_update->created_at_raw );
-		unset( $process_log_update->name );
-		unset( $process_log_update->author );
-		unset( $process_log_update->websites );
-		unset( $process_log_update->description_raw );
-		( new CaptainCore\ProcessLogs )->update( (array) $process_log_update, [ "process_log_id" => $process_log_update->process_log_id ] );
-		( new CaptainCore\ProcessLog( $process_log_update->process_log_id) )->assign_sites( $site_ids );
-		$timelines = [];
-		foreach ( $site_ids as $site_id ) {
-			$timelines[ $site_id ] = ( new CaptainCore\Site( $site_id ) )->process_logs();
-		}
-		echo json_encode( $timelines );
-	}
-
-	if ( $cmd == 'deleteLogEntry' ) {
-		$process_log_id = intval( $_POST['value'] );
-		$existing_log   = ( new CaptainCore\ProcessLogs )->get( $process_log_id );
-		
-		// Only allow deleting if user is admin or owns the log entry
-		if ( ! $user->is_admin() && $existing_log->user_id != get_current_user_id() ) {
-			echo "Permission denied";
-			wp_die();
-			return;
-		}
-		
-		// Get associated site IDs before deleting
-		$site_ids = array_column( ( new CaptainCore\ProcessLogSite )->where( [ "process_log_id" => $process_log_id ] ), 'site_id' );
-		
-		// Delete associated site relationships
-		$process_log_sites = ( new CaptainCore\ProcessLogSite )->where( [ "process_log_id" => $process_log_id ] );
-		foreach ( $process_log_sites as $record ) {
-			( new CaptainCore\ProcessLogSite )->delete( $record->process_log_site_id );
-		}
-		
-		// Delete the log entry
-		( new CaptainCore\ProcessLogs )->delete( $process_log_id );
-		
-		// Return updated timelines for all affected sites
-		$timelines = [];
-		foreach ( $site_ids as $site_id ) {
-			$timelines[ $site_id ] = ( new CaptainCore\Site( $site_id ) )->process_logs();
-		}
-		echo json_encode( $timelines );
-	}
-
-	if ( $cmd == 'timeline' ) {
-		$process_logs = ( new CaptainCore\Site( $post_id ) )->process_logs();
-		echo json_encode( $process_logs ) ;
-	}
-
-	if ( $cmd == 'createSiteAccount' ) {
-		$time_now = date("Y-m-d H:i:s");
-		$defaults = [ 
-			"email"    => "",
-			"timezone" => "",
-			"recipes"  => [],
-			"users"    => [],
-		];
-		$account_id = ( new CaptainCore\Accounts )->insert( [ 
-			"name"       => trim( $value ),
-			"status"     => "active",
-			"created_at" => $time_now,
-			"updated_at" => $time_now,
-			"defaults"   => json_encode( $defaults ),
-		] );
-		( new CaptainCore\Account( $account_id, true ) )->calculate_totals();
-		( new CaptainCore\Account( $account_id, true ) )->sync();
-		echo json_encode( $account_id );
-	}
-
-	if ( $cmd == 'updateSiteAccount' ) {
-		$account = (object) $value;
-		if ( ! $user->verify_account_owner( $account->account_id ) ) {
-			echo "Permission denied";
-			wp_die();
-			return;
-		}
-
-		( new CaptainCore\Accounts )->update( [ "name" => trim( $account->name ), "billing_user_id" => $account->billing_user_id ], [ "account_id" => $account->account_id ] );
-		( new CaptainCore\Account( $account->account_id ) )->sync();
-		echo json_encode( $account ) ;
-	}
-
-	if ( $cmd == 'updateDomainAccount' ) {
-		$domain_id   = $_POST['domain_id'];
-		$provider_id = $_POST['provider_id'];
-		( new CaptainCore\Domain( $domain_id ) )->assign_accounts( $value );
-		CaptainCore\Domains::update( [ "provider_id" => $provider_id ], [ "domain_id" => $domain_id ] );
-	}
-
-	if ( $cmd == 'newRecipe' ) {
-
-		$recipe   = (object) $value;
-		$time_now = date("Y-m-d H:i:s");
-
-		$new_recipe = [
-			'user_id'        => get_current_user_id(),
-			'title'          => $recipe->title,
-			'updated_at'     => $time_now,
-			'created_at'     => $time_now,
-			'content'        => stripslashes_deep( $recipe->content ),
-			'public'         => 0
-		];
-
-		if ( $user->is_admin() ) {
-			$new_recipe["public"] = $recipe->public;
-		}
-
-		$db_recipes = new CaptainCore\Recipes();
-		$recipe_id = $db_recipes->insert( $new_recipe );
-		echo json_encode( $db_recipes->list() );
-
-		$remote_command = true;
-		$silence = true;
-		$recipe = ( new CaptainCore\Recipes )->get( $recipe_id );
-		$recipe = base64_encode( json_encode( $recipe ) );
-		$command = "recipe add $recipe --format=base64";
-
-	}
-
-	if ( $cmd == 'updateRecipe' ) {
-
-		$recipe   = (object) $value;
-		$time_now = date("Y-m-d H:i:s");
-		$user_id  = get_current_user_id();
-
-		if ( ! $user->is_admin() && $recipe->user_id != $user_id ) {
-			echo "Permission denied";
-			wp_die();
-			return;
-		}
-
-		$recipe_update = [
-			'title'      => $recipe->title,
-			'updated_at' => $time_now,
-			'content'    => stripslashes_deep( $recipe->content ),
-			'public'     => 0
-		];
-
-		if ( $user->is_admin() ) {
-			$recipe_update["public"] = $recipe->public;
-		}
-
-		$db_recipes = new CaptainCore\Recipes();
-		$db_recipes->update( $recipe_update, [ "recipe_id" => $recipe->recipe_id ] );
-
-		echo json_encode( $db_recipes->list() );
-
-		$remote_command = true;
-		$silence = true;
-		$recipe  = ( new CaptainCore\Recipes )->get( $recipe->recipe_id );
-		$recipe  = base64_encode( json_encode( $recipe ) );
-		$command = "recipe add $recipe --format=base64";
-
-	}
-
-	if ( $cmd == 'usage-breakdown' ) {
-		$site            = ( new CaptainCore\Site( $post_id ) )->get();
-		$account         = new CaptainCore\Account( $site->account_id, true );
-		$usage_breakdown = $account->usage_breakdown();
-		echo json_encode( $usage_breakdown ) ;
-	}
-
-	if ( $cmd == 'updateMailgun' ) {
-		$site = new CaptainCore\Site( $post_id );
-		$site->update_mailgun( $value );
-	}
-
-	if ( $cmd == 'updateFathom' ) {
-
-		// Append environment if needed
-		if ( $environment == "Staging" ) {
-			$site = "{$site}-staging";
-		}
-
-		$time_now = date("Y-m-d H:i:s");
-		$data     = (object) $value;
-
-		$environment_id = ( new CaptainCore\Site( $post_id ) )->fetch_environment_id( $environment );
-		$environment    = ( new CaptainCore\Environments )->get( $environment_id );
-		( new CaptainCore\Environments )->update( [ 'fathom' => json_encode( $data->fathom_lite ) ], [ "environment_id" => $environment->environment_id ] );
-		
-		$details         = ( isset( $environment->details ) ? json_decode( $environment->details ) : (object) [] );
-		$details->fathom = $data->fathom;
-		( new CaptainCore\Environments )->update( [ 
-			 "details"    => json_encode( $details ),
-			 "updated_at" => $time_now,
-			], [ "environment_id" => $environment->environment_id ] );
-
-		( new CaptainCore\Site( $post_id ) )->sync();
-
-		$run_in_background = true;
-		$remote_command    = true;
-		$command           = "stats-deploy $site";
-	}
-
-	if ( $cmd == 'updatePlan' ) {
-		( new CaptainCore\Accounts )->update_plan( $value["plan"], $post_id );
-	}
-
-	if ( $cmd == 'updateSettings' ) {
-		// Saves update settings for a site
-		$environment_update = [
-			'updates_enabled'         => $value["updates_enabled"],
-			'updates_exclude_themes'  => implode(",", $value["updates_exclude_themes"] ?? []),
-			'updates_exclude_plugins' => implode(",", $value["updates_exclude_plugins"] ?? []),
-			'updated_at'              => date("Y-m-d H:i:s") 
-		];
-		$environment_id = ( new CaptainCore\Site( $post_id ) )->fetch_environment_id( $environment );
-		( new CaptainCore\Environments )->update( $environment_update, [ "environment_id" => $environment_id ] );
-		$command           = "site sync $post_id";
-		$remote_command    = true;
-		$run_in_background = true;
-	}
-
-	if ( $cmd == 'updateSite' ) {
-		// Updates site
-		$site     = new CaptainCore\Site( $value["site_id"] );
-		$response = $site->update( $value );
-		echo json_encode( $response );
-	}
-
-	if ( $cmd == 'deleteAccount' ) {
-		// Delete site on CaptainCore CLI
-		captaincore_run_background_command( "account delete $post_id" );
-
-		// Delete account locally
-		$account = new CaptainCore\Account( $post_id, true );
-		$account->delete();
-	}
-
-	if ( $cmd == 'fetch-site-details' ) {
-		$site        = new CaptainCore\Site( $post_id );
-		$account     = $site->account();
-		$domains     = $site->domains();
-		$shared_with = $site->shared_with();
-		$site        = $site->fetch();
-		echo json_encode( [
-			"site"        => $site,
-			"account"     => $account,
-			"domains"     => $domains,
-			"shared_with" => $shared_with,
-		] );
-	}
-	if ( $cmd == 'fetch-site' ) {
-		$sites = [];
-		if ( ! empty( $post_ids ) && is_array( $post_ids ) ) {
-			foreach( $post_ids as $id ) {
-				$site    = new CaptainCore\Site( $id );
-				$sites[] = $site->fetch();
-			}
-		} else {
-			$site    = new CaptainCore\Site( $post_id );
-			$sites[] = $site->fetch();
-		}
-		echo json_encode( $sites );
-	}
-
-	if ( $cmd == 'fetch-users' ) {
-		$results = ( new CaptainCore\Site( $post_id ))->users();
-		echo json_encode($results);
-	}
-
-	if ( $cmd == 'fetch-update-logs' ) {
-		$results = ( new CaptainCore\Site( $post_id ))->update_logs();
-		echo json_encode($results);
-	}
-
-	if ( $remote_command ) {
-
-		// Disable https when debug enabled
-		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
-			add_filter( 'https_ssl_verify', '__return_false' );
-		}
-
-		$data = [
-			'timeout' => 45,
-			'headers' => array(
-				'Content-Type' => 'application/json; charset=utf-8', 
-				'token'        => CAPTAINCORE_CLI_TOKEN 
-			), 
-			'body'        => json_encode( [ "command" => $command ] ), 
-			'method'      => 'POST', 
-			'data_format' => 'body' 
-		];
-
-		if ( $run_in_background ) {
-
-			// Add command to dispatch server
-			$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/tasks", $data );
-			$response = json_decode( $response["body"] );
-			
-			// Response with task id
-			if ( $response && $response->token ) { 
-				echo $response->token; 
-			}
-
-			wp_die(); // this is required to terminate immediately and return a proper response
-		}
-
-		// Add command to dispatch server
-		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
-		$response = $response["body"];
-
-		// Store results in wp_options.captaincore_settings
-		if ( $cmd == "fetchConfigs" ) {
-			$captaincore_settings = json_decode( $response );
-			unset($captaincore_settings->websites);
-			update_option("captaincore_settings", $captaincore_settings );
-		}
-
-		// Store results in wp_options.captaincore_settings
-		if ( $cmd == "newKey" ||  $cmd == "updateKey" ) {
-			$key_update = [
-				'fingerprint' => $response,
-			];
-	
-			$db = new CaptainCore\Keys();
-			$db->update( $key_update, [ "key_id" => $key_id ] );
-			echo json_encode( $db->get( $key_id ) );
-		}
-
-		if ( $silence ) {
-			wp_die(); // this is required to terminate immediately and return a proper response
-		}
-
-		echo $response;
-		
-		wp_die(); // this is required to terminate immediately and return a proper response
-
-	}
-
-	wp_die(); // this is required to terminate immediately and return a proper response
-}
-
-add_action( 'wp_ajax_captaincore_install', 'captaincore_install_action_callback' );
-function captaincore_install_action_callback() {
-	global $wpdb;
-
-	// Assign post id
-	$post_id = intval( $_POST['post_id'] );
-
-	// Many sites found, check permissions
-	if ( is_array( $_POST['post_id'] ) ) {
-		$post_ids       = [];
-		foreach ( $_POST['post_id'] as $id ) {
-
-			// Checks permissions
-			if ( ! captaincore_verify_permissions( $id ) ) {
-				echo 'Permission denied';
-				wp_die(); // this is required to terminate immediately and return a proper response
-				return;
-			}
-
-			$post_ids[] = intval( $id );
-		}
-
-		// Patch in the first from the post_ids
-		$post_id = $post_ids[0];
-
-	}
-
-	// Checks permissions
-	if ( ! captaincore_verify_permissions( $post_id ) ) {
-		echo 'Permission denied';
-		wp_die(); // this is required to terminate immediately and return a proper response
-		return;
-	}
-
-	$cmd          = $_POST['command'];
-	$value        = $_POST['value'];
-	$version      = $_POST['version'];
-	$commit       = $_POST['commit'];
-	$hash         = $_POST['hash'];
-	$arguments    = $_POST['arguments'];
-	$filters      = $_POST['filters'];
-	$addon_type   = $_POST['addon_type'];
-	$date         = $_POST['date'];
-	$name         = $_POST['name'];
-	$environment  = $_POST['environment'];
-	$backup_id    = $_POST['backup_id'];
-	$link         = $_POST['link'];
-	$background   = $_POST['background'];
-	$job_id       = $_POST['job_id'];
-	$notes        = $_POST['notes'];
-	$subject      = isset($_POST['subject']) ? $_POST['subject'] : '';
-	$status_msg   = isset($_POST['status_msg']) ? $_POST['status_msg'] : '';
-	$action_text  = isset($_POST['action_text']) ? $_POST['action_text'] : '';
-	$fetch        = (object) ( new CaptainCore\Site( $post_id ) )->get();
-	$site         = $fetch->site;
-	$provider     = $fetch->provider;
-	$domain       = $fetch->name;
-
-	$partners = get_field( 'partner', $post_id );
-	if ( $partners && is_string( $partners ) ) {
-		$preloadusers = implode( ',', $partners );
-	}
-
-	// Append environment if needed
-	if ( $environment == "Staging" ) {
-		$site = "{$site}-staging";
-	}
-
-	// Append provider if exists
-	if ( $provider != '' ) {
-		$site = $site . '@' . $provider;
-	}
-
-	// If many sites, fetch their names
-	if ( ! empty( $post_ids ) && is_array( $post_ids ) ) {
-		$site_names = [];
-		foreach( $post_ids as $id ) {
-
-			$fetch     = ( new CaptainCore\Site( $id ) );
-			$site_name = $fetch->get()->site;
-
-			if ( $environment == "Production" or $environment == "Both" ) {
-				$site_names[] = $site_name;
-			}
-
-			$address_staging = $fetch->environments()[1]->address;
-
-			// Add staging if needed
-			if ( isset( $address_staging ) && $address_staging != "" ) {
-				if ( $environment == "Staging" or $environment == "Both" ) {
-					$site_names[] = "{$site_name}-staging";
-				}
-			}
-		}
-		$site = implode( " ", $site_names );
-	}
-
-	$run_in_background_silent = false;
-	$run_in_background        = false;
-
-	if ( $background ) {
-		$run_in_background = true;
-	}
-	if ( $cmd == 'new' ) {
-		$command = "site sync $post_id --update-extras";
-		$run_in_background = true;
-	}
-	if ( $cmd == 'deploy-defaults' ) {
-		$command = "site deploy-defaults $site";
-		$run_in_background = true;
-	}
-	if ( $cmd == 'update' ) {
-		$command = "site sync $post_id";
-		$run_in_background = true;
-	}
-	if ( $cmd == 'update-wp' ) {
-		$command = "update $site";
-		$run_in_background = true;
-	}
-	if ( $cmd == 'update-fetch' ) {
-		$command = "update-fetch $site";
-
-		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
-			// return mock data
-			$command = CAPTAINCORE_DEBUG_MOCK_UPDATES;
-		}
-	}
-	if ( $cmd == 'users-fetch' ) {
-		$command = "ssh $site --command='wp user list --format=json'";
-
-		$run_in_background = true;
-
-		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
-			// return mock data
-			$command = CAPTAINCORE_DEBUG_MOCK_USERS;
-		}
-	}
-	if ( $cmd == 'copy' ) {
-		// Find destination site and verify we have permission to it
-		if ( captaincore_verify_permissions( $value ) ) {
-			$current_user = wp_get_current_user();
-			$email        = $current_user->user_email;
-			$run_in_background = true;
-			$site_destination = get_field( 'site', $value );
-			$command   = "copy $site $site_destination --email=$email";
-		}
-	}
-	if ( $cmd == 'migrate' ) {
-		$run_in_background = true;
-		$value = urlencode( $value );
-		$command = "ssh $site --script=migrate -- --url=\"$value\"";
-		if ( $_POST['update_urls'] == "true" ) {
-			$command = "$command --update-urls";
-		}
-	}
-	if ( $cmd == 'recipe' ) {
-		$run_in_background = true;
-		$command     = "ssh $site --recipe=$value";
-		$recipe_name = ( new CaptainCore\Recipes )->get( $value )->title;
-		CaptainCore\ProcessLog::insert( $recipe_name, $post_id );
-	}
-	if ( $cmd == 'launch' ) {
-		$run_in_background = true;
-		$command = "ssh $site --script=launch -- --domain=$value";
-	}
-	if ( $cmd == 'reset-permissions' ) {
-		$run_in_background = true;
-		$command = "ssh $site --script=reset-permissions";
-		CaptainCore\ProcessLog::insert( "Reset file permissions", $post_id );
-	}
-	if ( $cmd == 'apply-https' ) {
-		$run_in_background = true;
-		$command = "ssh $site --script=apply-https";
-		CaptainCore\ProcessLog::insert( "Updated internal urls to HTTPS", $post_id );
-	}
-	if ( $cmd == 'apply-https-with-www' ) {
-		$run_in_background = true;
-		$command = "ssh $site --script=apply-https-with-www";
-		CaptainCore\ProcessLog::insert( "Updated internal urls to HTTPS with www", $post_id );
-	}
-	if ( $cmd == 'production-to-staging' ) {
-		$run_in_background = true;
-		if ( $value ) {
-			$command = "site copy-to-staging $site --email=$value";
-		} else {
-			$command = "site copy-to-staging $site";
-		}
-	}
-	if ( $cmd == 'staging-to-production' ) {
-		$run_in_background = true;
-		if ( $value ) {
-			$command = "site copy-to-production $site --email=$value";
-		} else {
-			$command = "site copy-to-production $site";
-		}
-	}
-	if ( $cmd == 'scan-errors' ) {
-		$run_in_background = true;
-		$command = "scan-errors $site";
-	}
-	if ( $cmd == 'sync-data' ) {
-		$run_in_background = true;
-		$command = "sync-data $site";
-	}
-	if ( $cmd == 'remove' ) {
-		$command = "site delete $site";
-	}
-	if ( $cmd == 'quick_backup' ) {
-		$run_in_background = true;
-		$command   = "quicksave generate $site";
-	}
-	if ( $cmd == 'backup' ) {
-		$run_in_background = true;
-		$command = "backup $site";
-	}
-	if ( $cmd == 'snapshot' ) {
-		$run_in_background = true;
-		$user_id = get_current_user_id();
-		if ( $date && $value ) {
-			$command = "snapshot generate $site --email=$value --rollback=\"$date\" --user-id=$user_id --notes=\"$notes\"";
-		} elseif ( $value ) {
-			$command = "snapshot generate $site --email=$value --user-id=$user_id --notes=\"$notes\"";
-		} else {
-			$command = "snapshot generate $site --user-id=$user_id --notes=\"$notes\"";
-		}
-		if ( $filters ) {
-			$filters = implode(",", $filters); 
-			$command = $command . " --filter={$filters}";
-		}
-	}
-	if ( $cmd == 'deactivate' ) {
-		$run_in_background = true;
-		
-		$subject     = $subject;
-		$status_msg  = $status_msg;
-		$action_text = $action_text;
-
-		// Construct command with new arguments
-		$command = "deactivate $site --name=\"$name\" --link=\"$link\" --subject=\"$subject\" --status=\"$status_msg\" --action=\"$action_text\"";
-		
-		CaptainCore\ProcessLog::insert( "Suspended website", $post_id );
-	}
-	if ( $cmd == 'activate' ) {
-		$run_in_background = true;
-		$command           = "activate $site";
-		CaptainCore\ProcessLog::insert( "Restored website", $post_id );
-	}
-
-	if ( $cmd == 'view_quicksave_changes' ) {
-		$command = "quicksave show-changes $site $value";
-	}
-
-	if ( $cmd == 'run' ) {
-		$code    = base64_encode( stripslashes_deep( $value ) );
-		$command = "run $site --code=$code";
-	}
-
-	if ( $cmd == 'backup_download' ) {
-		$run_in_background_silent = true;
-		$value             = (object) $value;
-		$current_user      = wp_get_current_user();
-		$email             = $current_user->user_email;
-		$payload           = [
-			"files"       => json_decode( stripslashes_deep( $value->files ) ),
-			"directories" => json_decode ( stripslashes_deep( $value->directories ) ),
-		];
-		$payload           = base64_encode( json_encode( $payload ) );
-		$command =  "backup download $site $value->backup_id --email=$email --payload='$payload'";
-	}
-
-	if ( $cmd == 'manage' ) {
-		$run_in_background = true;
-		if ( is_int($post_id) ) {
-			$command = "$value $site --" . $arguments['value'] . '="' . stripslashes($arguments['input']) . '"';
-		}
-	}
-
-	if ( $cmd == 'quicksave_file_diff' ) {
-		$command = "quicksave file-diff $site $commit $value --html";
-	}
-
-	if ( $cmd == 'rollback' ) {
-		$run_in_background = true;
-		$command           = "quicksave rollback $site $commit --version=$version --$addon_type=$value";
-	}
-
-	if ( $cmd == 'quicksave_rollback' ) {
-		$run_in_background = true;
-		$command           = "quicksave rollback $site $commit --version=$version --all";
-	}
-
-	if ( $cmd == 'quicksave_file_restore' ) {
-		$run_in_background = true;
-		$command           = "quicksave rollback $site $hash --version=this --file=$value";
-	}
-
-	// Disable https when debug enabled
-	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
-		add_filter( 'https_ssl_verify', '__return_false' );
-	}
-
-	$data = [ 
-		'timeout' => 45,
-		'headers' => [
-			'Content-Type' => 'application/json; charset=utf-8',
-			'token'        => CAPTAINCORE_CLI_TOKEN
-		],
-		'body' => json_encode( [
-			"command" => $command
-		] ),
-		'method'      => 'POST',
-		'data_format' => 'body'
-	];
-
-	if ( $cmd == 'job-fetch' ) {
-
-		$data['body'] = "";
-		$data['method'] = "GET";
-
-		// Add command to dispatch server
-		$response = wp_remote_get( CAPTAINCORE_CLI_ADDRESS . "/task/${job_id}", $data );
-		$response = json_decode( $response["body"] );
-		
-		// Response with task id
-		if ( $response && $response->Status == "Completed" ) { 
-			echo json_encode( [
-				"response" => $response->Response,
-				"status"   => "Completed",
-				"job_id"   => $job_id
-			] );
-			wp_die(); // this is required to terminate immediately and return a proper response
-		}
-
-		echo "Job ID $job_id is still running.";
-
-		wp_die(); // this is required to terminate immediately and return a proper response
-	}
-
-	if ( $run_in_background_silent ) {
-
-		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run/background", $data );
-		
-		if ( is_wp_error( $response ) ) {
-			// If the request has failed, show the error message
-			echo $response->get_error_message();
-			wp_die();
-		}
-
-		$response = json_decode( $response["body"] );
-
-		if ( $response && $response->token ) { 
-			echo $response->token;
-		}
-
-		wp_die(); // this is required to terminate immediately and return a proper response
-	}
-		
-
-	if ( $run_in_background ) {
-
-		// Add command to dispatch server
-		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/tasks", $data );
-		
-		if ( is_wp_error( $response ) ) {
-			// If the request has failed, show the error message
-			echo $response->get_error_message();
-			wp_die();
-		}
-
-		$response = json_decode( $response["body"] );
-
-		// Response with token for task
-		if ( $response && $response->token ) { 
-			echo $response->token;
-		}
-
-		wp_die(); // this is required to terminate immediately and return a proper response
-	}
-
-	// Add command to dispatch server
-	$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
-	if ( is_wp_error( $response ) ) {
-		$error_message = $response->get_error_message();
-		$response = "Something went wrong: $error_message";
-	} else {
-		$response = $response["body"];
-	}
-	
-	echo $response;
-	
-	wp_die(); // this is required to terminate immediately and return a proper response
-}
 
 function captaincore_run_background_command( $command ) {
         
