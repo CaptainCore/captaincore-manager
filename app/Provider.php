@@ -172,4 +172,130 @@ class Provider {
         return $this->call_static_method( 'set_primary_domain', [ $site_id, $env_name, $params ] ); // Changed from self::call_static_method()
     }
 
+    public function fetch_remote_sites() {
+        $provider = self::get();
+        if ( empty( $provider ) ) {
+            return [];
+        }
+        $class_name = "CaptainCore\Providers\\" . ucfirst( $provider->provider );
+        if ( method_exists( $class_name, 'fetch_remote_sites' ) ) {
+            return $class_name::fetch_remote_sites( $this->provider_id );
+        }
+        return [];
+    }
+
+    public function import_sites( $sites = [], $account_id = 0 ) {
+        $provider = self::get();
+        $time_now = date("Y-m-d H:i:s");
+        $imported = 0;
+        $skipped  = 0;
+
+        foreach ( $sites as $site ) {
+            $site   = (object) $site;
+            $domain = $site->name;
+
+            // Skip if site already exists with this provider_site_id
+            $existing = Sites::where( [ "provider_site_id" => $site->remote_id ] );
+            if ( ! empty( $existing ) ) {
+                $skipped++;
+                continue;
+            }
+
+            // Generate a safe site slug from the name
+            $site_slug = strtolower( preg_replace( '/[^a-zA-Z0-9]/', '', $domain ) );
+
+            $details = (object) [
+                "key"              => "",
+                "environment_vars" => [],
+                "subsites"         => "",
+                "storage"          => "",
+                "visits"           => "",
+                "mailgun"          => "",
+                "core"             => "",
+                "verify"           => false,
+                "remote_key"       => "",
+                "backup_settings"  => (object) [
+                    "mode"     => "direct",
+                    "interval" => "daily",
+                    "active"   => true
+                ],
+            ];
+
+            $new_site = [
+                'account_id'       => $account_id,
+                'customer_id'      => $account_id,
+                'name'             => $domain,
+                'site'             => $site_slug,
+                'provider'         => $provider->provider,
+                'provider_id'      => $provider->provider_id,
+                'provider_site_id' => $site->remote_id,
+                'created_at'       => $time_now,
+                'updated_at'       => $time_now,
+                'details'          => json_encode( $details ),
+                'screenshot'       => '0',
+                'status'           => 'active',
+            ];
+
+            $site_id = Sites::insert( $new_site );
+
+            if ( ! is_int( $site_id ) || $site_id == 0 ) {
+                continue;
+            }
+
+            // Link site to account
+            ( new Site( $site_id ) )->insert_accounts( [ $account_id ] );
+
+            $new_environment = [
+                'site_id'                 => $site_id,
+                'created_at'              => $time_now,
+                'updated_at'              => $time_now,
+                'environment'             => 'Production',
+                'address'                 => '',
+                'username'                => '',
+                'password'                => '',
+                'protocol'                => 'sftp',
+                'port'                    => '',
+                'home_directory'          => '',
+                'database_username'       => '',
+                'database_password'       => '',
+                'offload_enabled'         => '',
+                'offload_access_key'      => '',
+                'offload_secret_key'      => '',
+                'offload_bucket'          => '',
+                'offload_path'            => '',
+                'monitor_enabled'         => 0,
+                'updates_enabled'         => 1,
+                'updates_exclude_plugins' => '',
+                'updates_exclude_themes'  => '',
+            ];
+            ( new Environments )->insert( $new_environment );
+
+            // Enrich site with provider-specific details (SFTP, etc.)
+            $class_name = "CaptainCore\Providers\\" . ucfirst( $provider->provider );
+            if ( method_exists( $class_name, 'enrich_imported_site' ) ) {
+                $class_name::enrich_imported_site( $site_id, $site, $provider->provider_id );
+            }
+
+            // Update environments cache so site appears in listings
+            Sites::update_environments_cache( $site_id );
+
+            ActivityLog::log( 'created', 'site', $site_id, $domain, "Imported site {$domain} from {$provider->provider}", [], $account_id );
+            $imported++;
+        }
+
+        ( new Account( $account_id, true ) )->calculate_totals();
+
+        $message = "Imported {$imported} site" . ( $imported !== 1 ? 's' : '' ) . " successfully.";
+        if ( $skipped > 0 ) {
+            $message .= " {$skipped} site" . ( $skipped !== 1 ? 's' : '' ) . " skipped (already exist).";
+        }
+
+        return [
+            'success'  => true,
+            'imported' => $imported,
+            'skipped'  => $skipped,
+            'message'  => $message
+        ];
+    }
+
 }

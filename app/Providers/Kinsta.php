@@ -58,7 +58,34 @@ class Kinsta {
         }
         return $providers_with_sites;
     }
-    
+
+    public static function fetch_remote_sites( $provider_id = "" ) {
+        $api_key    = self::credentials( "api", $provider_id );
+        $company_id = self::credentials( "company_id", $provider_id );
+
+        if ( empty( $api_key ) || empty( $company_id ) ) {
+            return [];
+        }
+
+        \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
+        $response = \CaptainCore\Remote\Kinsta::get( "sites?company={$company_id}" );
+
+        if ( empty( $response->company->sites ) ) {
+            return [];
+        }
+
+        $sites = [];
+        foreach ( $response->company->sites as $kinsta_site ) {
+            $sites[] = [
+                'remote_id' => $kinsta_site->id,
+                'name'      => $kinsta_site->display_name,
+                'label'     => $kinsta_site->display_name,
+                'status'    => $kinsta_site->status ?? 'active',
+            ];
+        }
+        return $sites;
+    }
+
     public static function update_token( $token = "", $provider_id = "" ) {
         if ( ! empty( $provider_id ) ) {
             $provider = \CaptainCore\Providers::get( $provider_id );

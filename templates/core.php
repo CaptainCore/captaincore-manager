@@ -1603,6 +1603,204 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-card-text>
 			</v-card>
 		</v-dialog>
+		<v-dialog v-model="dialog_connect.show" scrollable width="960" persistent>
+			<v-card>
+				<v-toolbar color="primary">
+					<v-btn icon="mdi-close" @click="dialog_connect.show = false"></v-btn>
+					<v-toolbar-title>Connect Hosting</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-card-text>
+					<v-window v-model="dialog_connect.step">
+						<v-window-item :value="1">
+							<v-row class="mt-2">
+								<v-col cols="12" md="7">
+									<v-radio-group v-model="dialog_connect.mode" inline>
+										<v-radio label="New Connection" value="new"></v-radio>
+										<v-radio label="Use Existing Connection" value="existing" :disabled="hostingProviders.length === 0"></v-radio>
+									</v-radio-group>
+									<template v-if="dialog_connect.mode === 'existing'">
+										<v-row align="center" no-gutters>
+											<v-col>
+												<v-select
+													v-model="dialog_connect.existing_provider_id"
+													:items="hostingProviders"
+													item-value="provider_id"
+													:item-title="item => item.name + ' (' + item.provider + ')'"
+													label="Select Provider"
+													variant="underlined"
+												></v-select>
+											</v-col>
+											<v-col cols="auto" class="ml-2">
+												<v-btn icon="mdi-pencil" variant="text" size="small" @click="editProviderSettings(providers.find(p => p.provider_id === dialog_connect.existing_provider_id))" v-show="dialog_connect.existing_provider_id"></v-btn>
+											</v-col>
+										</v-row>
+									</template>
+									<template v-if="dialog_connect.mode === 'new'">
+										<v-autocomplete
+											:items="provider_options.filter(p => p.type === 'Hosting')"
+											v-model="dialog_connect.provider.provider"
+											label="Provider Service"
+											variant="underlined"
+											@update:model-value="prepProviderCredentials($event)"
+										></v-autocomplete>
+										<v-text-field
+											v-model="dialog_connect.provider.name"
+											label="Connection Name"
+											variant="underlined"
+											hint="A friendly name for this connection"
+											persistent-hint
+										></v-text-field>
+										<template v-if="selectedProviderMeta && selectedProviderMeta.fields">
+											<div class="mt-3 mb-1 text-subtitle-2">Credentials</div>
+											<v-text-field
+												v-for="(cred, index) in dialog_connect.provider.credentials"
+												:key="index"
+												v-model="cred.value"
+												:label="selectedProviderMeta.fields[index] ? (typeof selectedProviderMeta.fields[index] === 'object' ? selectedProviderMeta.fields[index].name : selectedProviderMeta.fields[index]) : cred.name"
+												variant="underlined"
+											></v-text-field>
+										</template>
+										<v-alert v-if="selectedProviderMeta && selectedProviderMeta.docs_link" variant="tonal" type="info" density="compact" class="mt-3">
+											{{ selectedProviderMeta.description }}
+											<a :href="selectedProviderMeta.docs_link" target="_blank">Learn more</a>
+										</v-alert>
+									</template>
+									<template v-if="dialog_connect.mode === 'edit'">
+										<v-text-field
+											v-model="dialog_connect.provider.name"
+											label="Connection Name"
+											variant="underlined"
+										></v-text-field>
+										<template v-if="dialog_connect.provider.credentials.length > 0">
+											<div class="mt-3 mb-1 text-subtitle-2">Credentials</div>
+											<v-text-field
+												v-for="(cred, index) in dialog_connect.provider.credentials"
+												:key="index"
+												v-model="cred.value"
+												:label="cred.name"
+												variant="underlined"
+											></v-text-field>
+										</template>
+									</template>
+								</v-col>
+								<v-col cols="12" md="5">
+									<v-card variant="tonal" class="pa-4">
+										<div class="text-subtitle-1 font-weight-bold mb-2">About Connections</div>
+										<div class="text-body-2">
+											Provider connections allow CaptainCore to communicate with your hosting provider's API.
+											This enables features like importing sites, managing environments, and syncing site data automatically.
+										</div>
+									</v-card>
+								</v-col>
+							</v-row>
+						</v-window-item>
+						<v-window-item :value="2">
+							<v-row class="mt-2">
+								<v-col cols="12" md="8">
+									<v-text-field
+										v-model="dialog_connect.search"
+										label="Search sites"
+										prepend-inner-icon="mdi-magnify"
+										variant="underlined"
+										clearable
+										hide-details
+										class="mb-2"
+									></v-text-field>
+									<v-data-table
+										v-model="dialog_connect.selected_sites"
+										:headers="[
+											{ title: 'Site Name', key: 'name' },
+											{ title: 'Label', key: 'label' },
+											{ title: 'Status', key: 'status' }
+										]"
+										:items="dialog_connect.remote_sites"
+										:search="dialog_connect.search"
+										show-select
+										return-object
+										item-value="remote_id"
+										items-per-page="10"
+										density="compact"
+									>
+										<template v-slot:header.data-table-select="{ allSelected, selectAll, someSelected }">
+											<v-checkbox-btn
+												:model-value="allSelected"
+												:indeterminate="someSelected && !allSelected"
+												@update:model-value="toggleSelectAllConnectionSites($event)"
+											></v-checkbox-btn>
+										</template>
+										<template v-slot:item.status="{ item }">
+											<v-chip :color="item.status === 'active' ? 'success' : 'grey'" size="small" label>{{ item.status }}</v-chip>
+										</template>
+									</v-data-table>
+									<div class="text-caption px-1 mt-1">Selected: {{ dialog_connect.selected_sites.length }} of {{ dialog_connect.remote_sites.length }}</div>
+								</v-col>
+								<v-col cols="12" md="4">
+									<div class="text-subtitle-1 font-weight-bold mb-2">Import Settings</div>
+									<v-autocomplete
+										v-model="dialog_connect.assign_account_id"
+										:items="accounts"
+										item-value="account_id"
+										item-title="name"
+										label="Assign to Account"
+										variant="outlined"
+										hint="Required for billing and ownership."
+										persistent-hint
+										@update:model-value="calculateImportCost($event)"
+									></v-autocomplete>
+									<div class="text-subtitle-1 font-weight-bold mt-4 mb-2">Estimated Cost</div>
+									<v-card v-if="dialog_connect.billing_preview" variant="outlined" class="pa-3">
+										<div class="d-flex justify-space-between text-body-2">
+											<span>Sites Selected</span>
+											<span class="font-weight-bold">{{ dialog_connect.billing_preview.sites }}</span>
+										</div>
+										<div class="d-flex justify-space-between text-body-2 mt-1">
+											<span>Rate per site</span>
+											<span class="font-weight-bold">${{ dialog_connect.billing_preview.rate }} / mo</span>
+										</div>
+										<v-divider class="my-2"></v-divider>
+										<div class="d-flex justify-space-between text-body-1 font-weight-bold">
+											<span>Monthly Total</span>
+											<span class="text-success">+${{ dialog_connect.billing_preview.monthly }}</span>
+										</div>
+										<div class="text-caption text-medium-emphasis mt-2" v-if="dialog_connect.billing_preview.account_interval > 1">
+											<v-icon size="x-small" class="mr-1">mdi-information-outline</v-icon>
+											<strong>Note:</strong> This account is billed<strong>{{ dialog_connect.billing_preview.interval_label }}</strong>.<br>
+											<span class="ml-5">Actual invoice increase: +${{ dialog_connect.billing_preview.invoice_increase }}</span>
+										</div>
+									</v-card>
+									<v-alert v-if="dialog_connect.assign_account_id && dialog_connect.selected_sites.length > 0" variant="tonal" type="success" density="compact" class="mt-3">
+										Will be added to <strong>{{ getAccountName(dialog_connect.assign_account_id) }}</strong>.
+									</v-alert>
+								</v-col>
+							</v-row>
+						</v-window-item>
+					</v-window>
+					<v-progress-linear indeterminate rounded height="6" class="mt-3" v-show="dialog_connect.loading"></v-progress-linear>
+				</v-card-text>
+				<v-card-actions>
+					<template v-if="dialog_connect.step === 1">
+						<v-spacer></v-spacer>
+						<v-btn v-if="dialog_connect.mode === 'edit'" color="primary" @click="updateProviderSettings()" :disabled="dialog_connect.loading">
+							Save & Return
+						</v-btn>
+						<v-btn v-else-if="dialog_connect.mode === 'existing'" color="primary" @click="processConnectionStep1()" :disabled="!dialog_connect.existing_provider_id || dialog_connect.loading">
+							Fetch Sites
+						</v-btn>
+						<v-btn v-else color="primary" @click="processConnectionStep1()" :disabled="!dialog_connect.provider.provider || !dialog_connect.provider.name || dialog_connect.loading">
+							Connect & Fetch
+						</v-btn>
+					</template>
+					<template v-if="dialog_connect.step === 2">
+						<v-btn variant="text" @click="dialog_connect.step = 1">Back</v-btn>
+						<v-spacer></v-spacer>
+						<v-btn color="primary" @click="importSelectedSites()" :disabled="dialog_connect.selected_sites.length === 0 || !dialog_connect.assign_account_id || dialog_connect.loading">
+							Import {{ dialog_connect.selected_sites.length }} Site{{ dialog_connect.selected_sites.length !== 1 ? 's' : '' }}
+						</v-btn>
+					</template>
+				</v-card-actions>
+			</v-card>
+		</v-dialog>
 		<v-dialog v-model="dialog_configure_defaults.show" scrollable width="980">
 		<v-card>
 			<v-toolbar flat color="primary">
@@ -3254,6 +3452,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-list-item-title>Create new site</v-list-item-title>
 								<template v-slot:append>
 									<v-icon><v-img src="/wp-content/plugins/captaincore-manager/public/img/kinsta-icon.svg" max-width="20px"></v-img></v-icon>
+								</template>
+							</v-list-item>
+							<v-list-item @click="openConnectDialog()" v-show="role == 'administrator'">
+								<v-list-item-title>Connect hosting</v-list-item-title>
+								<template v-slot:append>
+									<v-icon icon="mdi-connection"></v-icon>
 								</template>
 							</v-list-item>
 							<v-list-item @click="goToPath( `/sites/new` )" href v-show="role == 'administrator' || role == 'owner'">
@@ -11400,6 +11604,24 @@ const app = createApp({
 		dialog_new_site_kinsta: { show: false, errors: [], working: false, verifing: true, connection_verified: false, kinsta_token: "", site: { name: "", provider_id: "1", clone_site_id: "", domain: "", datacenter: "us-ashburn-1", shared_with: [], account_id: "", customer_id: "" } },
 		dialog_new_site_rocketdotnet: { show: false, site: { name: "", domain: "", datacenter: "", shared_with: [], account_id: "", customer_id: "" } },
 		dialog_request_site: { show: false, request: { name: "", account_id: "", notes: "" } },
+		dialog_connect: {
+			show: false,
+			step: 1,
+			mode: 'new',
+			search: '',
+			existing_provider_id: null,
+			provider_id: null,
+			provider: {
+				name: "",
+				provider: "",
+				credentials: []
+			},
+			loading: false,
+			remote_sites: [],
+			selected_sites: [],
+			billing_preview: null,
+			assign_account_id: null
+		},
 		report: {
 			loading: false,
 			sending: false,
@@ -11455,19 +11677,33 @@ const app = createApp({
 			{
 				"title": "Hosting - Kinsta",
 				"value": "kinsta",
-				"fields": [ { name: "Token", value: "token" } ]
+				"type": "Hosting",
+				"description": "Connect using your official Kinsta API Key.",
+				"docs_link": "https://kinsta.com/blog/kinsta-api-key/",
+				"fields": [
+					{ "name": "API Key", "value": "api" },
+					{ "name": "Company ID", "value": "company_id" }
+				]
 			},
 			{
 				"title": "Hosting - GridPane",
-				"value": "gridpane"
+				"value": "gridpane",
+				"type": "Hosting",
+				"description": "Connect using your GridPane API token.",
+				"docs_link": "https://gridpane.com/kb/gridpane-api-introduction-and-postman-documentation/",
+				"fields": [
+					{ "name": "API Key", "value": "api_key" }
+				]
 			},
 			{
 				"title": "Hosting - Rocket.net",
-				"value": "rocketdotnet"
+				"value": "rocketdotnet",
+				"type": "Hosting"
 			},
 			{
 				"title": "Hosting - WP Engine",
 				"value": "wpengine",
+				"type": "Hosting",
 				"fields": [ "authorization_basic" ]
 			},
 			{
@@ -11863,6 +12099,12 @@ const app = createApp({
 	  }
 	},
 	watch: {
+		'dialog_connect.selected_sites': {
+			handler() {
+				this.calculateImportCost(this.dialog_connect.assign_account_id);
+			},
+			deep: true
+		},
 		route() {
 			this.triggerRoute()
 		},
@@ -12427,6 +12669,12 @@ const app = createApp({
 				// Fallback for sites with no environments array (shouldn't happen with new logic, but safe)
 				if (!site.environments || site.environments.length === 0) return false;
 
+				// Check if site name matches the search (covers sites with null home_url)
+				const searchLower = this.search ? this.search.toLowerCase() : '';
+				if (searchLower && site.name && site.name.toLowerCase().includes(searchLower)) {
+					return true;
+				}
+
 				// Check if ANY environment matches
 				return site.environments.some(env => this.isEnvironmentMatched(env));
 			});
@@ -12776,6 +13024,16 @@ const app = createApp({
 				return output;
 			}
 			return ""
+		},
+		selectedProviderMeta() {
+			if (!this.dialog_connect.provider.provider) return null;
+			return this.provider_options.find(p => p.value === this.dialog_connect.provider.provider);
+		},
+		hostingProviders() {
+			return this.providers.filter(p => {
+				const meta = this.provider_options.find(opt => opt.value === p.provider);
+				return meta && meta.type === 'Hosting';
+			});
 		},
 	},
 	methods: {
@@ -13803,6 +14061,10 @@ const app = createApp({
 		},
 		getVisibleEnvironments(site) {
 			if (!site.environments) return [];
+			const searchLower = this.search ? this.search.toLowerCase() : '';
+			if (searchLower && site.name && site.name.toLowerCase().includes(searchLower)) {
+				return this.sortEnvironments(site.environments);
+			}
 			const matched = site.environments.filter(env => this.isEnvironmentMatched(env));
 			return this.sortEnvironments(matched);
 		},
@@ -18346,6 +18608,179 @@ const app = createApp({
 		},
 		addGlobalDefaultsUser() {
 			this.defaults.users.push({ email: "", first_name: "", last_name: "", role: "administrator", username: "" })
+		},
+		openConnectDialog() {
+			this.dialog_connect = {
+				show: true,
+				step: 1,
+				mode: 'new',
+				search: '',
+				existing_provider_id: null,
+				provider_id: null,
+				provider: {
+					name: "",
+					provider: "",
+					credentials: []
+				},
+				loading: false,
+				remote_sites: [],
+				selected_sites: [],
+				billing_preview: null,
+				assign_account_id: this.accounts.length > 0 ? this.accounts[0].account_id : null
+			}
+			if (this.providers.length === 0) {
+				this.fetchProviders();
+			}
+		},
+		prepProviderCredentials(providerValue) {
+			const meta = this.provider_options.find(p => p.value === providerValue);
+			if (meta && meta.fields && Array.isArray(meta.fields)) {
+				this.dialog_connect.provider.credentials = meta.fields.map(f => ({
+					name: typeof f === 'object' ? f.value : f,
+					value: ''
+				}));
+			} else {
+				this.dialog_connect.provider.credentials = [];
+			}
+		},
+		processConnectionStep1() {
+			if (this.dialog_connect.mode === 'existing') {
+				this.fetchRemoteSites(this.dialog_connect.existing_provider_id);
+			} else {
+				this.saveAndConnectProvider();
+			}
+		},
+		saveAndConnectProvider() {
+			this.dialog_connect.loading = true;
+			axios.post('/wp-json/captaincore/v1/providers', {
+				provider: this.dialog_connect.provider
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				if (response.data.errors) {
+					this.dialog_connect.loading = false;
+					this.snackbar.message = response.data.errors.join(', ');
+					this.snackbar.show = true;
+					return;
+				}
+				this.fetchProviders();
+				this.dialog_connect.provider_id = response.data;
+				this.fetchRemoteSites(response.data);
+			})
+			.catch(error => {
+				this.dialog_connect.loading = false;
+				console.log(error);
+			});
+		},
+		fetchRemoteSites(providerId) {
+			this.dialog_connect.loading = true;
+			this.dialog_connect.provider_id = providerId;
+			axios.get(`/wp-json/captaincore/v1/providers/${providerId}/remote-sites`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.dialog_connect.loading = false;
+				this.dialog_connect.remote_sites = response.data;
+				this.dialog_connect.selected_sites = [];
+				this.dialog_connect.step = 2;
+			})
+			.catch(error => {
+				this.dialog_connect.loading = false;
+				console.log(error);
+			});
+		},
+		toggleSelectAllConnectionSites(val) {
+			if (val) {
+				this.dialog_connect.selected_sites = this.dialog_connect.remote_sites.map(s => s);
+			} else {
+				this.dialog_connect.selected_sites = [];
+			}
+		},
+		calculateImportCost(account_id) {
+			if (!account_id || this.dialog_connect.selected_sites.length === 0) {
+				this.dialog_connect.billing_preview = null;
+				return;
+			}
+			const account = this.accounts.find(a => a.account_id === account_id);
+			if (!account) return;
+			const plan = account.plan ? (typeof account.plan === 'string' ? JSON.parse(account.plan) : account.plan) : {};
+			const cost = parseFloat(this.configurations.maintenance_pricing?.cost || 0);
+			const pricingInterval = parseInt(this.configurations.maintenance_pricing?.interval || 1);
+			const monthlyRate = pricingInterval > 0 ? (cost / pricingInterval) : cost;
+			const siteCount = this.dialog_connect.selected_sites.length;
+			const totalMonthly = (monthlyRate * siteCount).toFixed(2);
+			const accountInterval = parseInt(plan.interval || 1);
+			const intervalLabel = accountInterval >= 12 ? 'Yearly' : (accountInterval > 1 ? `Every ${accountInterval} Months` : 'Monthly');
+			const invoiceIncrease = (parseFloat(totalMonthly) * accountInterval).toFixed(2);
+			this.dialog_connect.billing_preview = {
+				sites: siteCount,
+				rate: monthlyRate.toFixed(2),
+				monthly: totalMonthly,
+				account_interval: accountInterval,
+				interval_label: intervalLabel,
+				invoice_increase: invoiceIncrease
+			};
+		},
+		getAccountName(account_id) {
+			const account = this.accounts.find(a => a.account_id === account_id);
+			return account ? account.name : '';
+		},
+		importSelectedSites() {
+			this.dialog_connect.loading = true;
+			const providerId = this.dialog_connect.provider_id;
+			axios.post(`/wp-json/captaincore/v1/providers/${providerId}/import`, {
+				sites: this.dialog_connect.selected_sites,
+				account_id: this.dialog_connect.assign_account_id
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.dialog_connect.loading = false;
+				this.dialog_connect.show = false;
+				this.snackbar.message = response.data.message || `Imported ${this.dialog_connect.selected_sites.length} sites successfully.`;
+				this.snackbar.show = true;
+				this.fetchSites();
+			})
+			.catch(error => {
+				this.dialog_connect.loading = false;
+				console.log(error);
+			});
+		},
+		editProviderSettings(providerRaw) {
+			const provider = typeof providerRaw === 'object' ? providerRaw : this.providers.find(p => p.provider_id === providerRaw);
+			if (!provider) return;
+			this.dialog_connect.mode = 'edit';
+			this.dialog_connect.provider_id = provider.provider_id;
+			this.dialog_connect.provider.name = provider.name;
+			this.dialog_connect.provider.provider = provider.provider;
+			this.dialog_connect.provider.credentials = Array.isArray(provider.credentials) ? provider.credentials.map(c => ({ name: c.name, value: c.value })) : [];
+		},
+		updateProviderSettings() {
+			this.dialog_connect.loading = true;
+			const providerId = this.dialog_connect.provider_id;
+			axios.put(`/wp-json/captaincore/v1/providers/${providerId}`, {
+				provider: this.dialog_connect.provider
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.dialog_connect.loading = false;
+				if (response.data.errors) {
+					this.snackbar.message = response.data.errors.join(', ');
+					this.snackbar.show = true;
+					return;
+				}
+				this.snackbar.message = `Provider ${this.dialog_connect.provider.name} has been updated.`;
+				this.snackbar.show = true;
+				this.fetchProviders();
+				this.dialog_connect.mode = 'existing';
+				this.dialog_connect.existing_provider_id = providerId;
+			})
+			.catch(error => {
+				this.dialog_connect.loading = false;
+				console.log(error);
+			});
 		},
 		addProvider() {
 			axios.post( '/wp-json/captaincore/v1/providers', {
