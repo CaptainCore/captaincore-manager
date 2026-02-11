@@ -53,7 +53,7 @@ class Kinsta {
             $api_key = self::credentials("api", $provider['provider_id']);
             \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
             $response = \CaptainCore\Remote\Kinsta::get( "sites?company=". self::credentials("company_id", $provider['provider_id']) );
-            $sites = $response->company->sites;
+            $sites = ! empty( $response->company->sites ) ? $response->company->sites : [];
             $providers_with_sites[$provider['provider_id']] = $sites;
         }
         return $providers_with_sites;

@@ -100,7 +100,9 @@ class Router {
             header( 'X-Frame-Options: SAMEORIGIN' );
 
             // Return path to your Vue app shell
-            $core_template = plugin_dir_path( dirname( __FILE__ ) ) . 'templates/core.php';
+            $ui = isset( $_GET['ui'] ) ? $_GET['ui'] : '';
+            $template_file = ( $ui === 'tailwind' ) ? 'templates/core-tailwind.php' : 'templates/core.php';
+            $core_template = plugin_dir_path( dirname( __FILE__ ) ) . $template_file;
             
             if ( file_exists( $core_template ) ) {
                 return $core_template;
