@@ -2500,6 +2500,26 @@ function captaincore_provider_connect_func( $request ) {
 	return $provider->update_token( $token );
 }
 
+function captaincore_provider_remote_sites_func( $request ) {
+	$provider_id = intval( $request['id'] );
+	$provider    = new CaptainCore\Provider( $provider_id );
+	if ( ! $provider->verify_ownership() ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	return $provider->fetch_remote_sites();
+}
+
+function captaincore_provider_import_func( $request ) {
+	$provider_id = intval( $request['id'] );
+	$provider    = new CaptainCore\Provider( $provider_id );
+	if ( ! $provider->verify_ownership() ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	$account_id = intval( $request['account_id'] );
+	$sites      = $request['sites'];
+	return $provider->import_sites( $sites, $account_id );
+}
+
 function captaincore_provider_new_site_func( $request ) {
 	$user     = (object) ( new CaptainCore\User )->fetch();
 	$provider = $request->get_param( "provider" );
@@ -6213,6 +6233,24 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/providers/(?P<id>[\d]+)/connect', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_provider_connect_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/providers/(?P<id>[\d]+)/remote-sites', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_provider_remote_sites_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/providers/(?P<id>[\d]+)/import', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_provider_import_func',
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
 		]
