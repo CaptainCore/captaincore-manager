@@ -917,6 +917,18 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
 		}
 
+		// Alert admin if default_role is set to administrator (only once, tracked via default_role_alerted flag)
+		$default_role   = isset( $env_details->default_role ) ? $env_details->default_role : null;
+		if ( $default_role === 'administrator' && $is_production && empty( $env_details->default_role_alerted ) ) {
+			$home_url = $post->data->home_url ?? '';
+			CaptainCore\Mailer::send_default_role_alert( $current_site->name, ucfirst( $environment_name ), $home_url, $default_role );
+			$env_details->default_role_alerted = true;
+			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
+		} elseif ( $default_role !== 'administrator' && ! empty( $env_details->default_role_alerted ) ) {
+			unset( $env_details->default_role_alerted );
+			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
+		}
+
 		unset( $details->connection_errors );
 
 		if ( $current_environment->environment == "Production" ) {
