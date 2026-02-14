@@ -17003,6 +17003,7 @@ const app = createApp({
 						return
 					}
 					this.dialog_invoice.response = response.data
+					this.dialog_invoice.customer = !!(this.billing.address && this.billing.address.first_name && this.billing.address.address_1)
 					this.dialog_invoice.payment_method = this.billing.payment_method
 					if ( typeof this.dialog_invoice.payment_method == 'undefined' ) {
 						this.dialog_invoice.payment_method = "new"
@@ -17032,12 +17033,15 @@ const app = createApp({
 				})
 				.catch( error => console.log( error ) );
 		},
-		payInvoice( invoice_id ) {
-			// 1. Validate Form
-			if ( ! this.$refs.billing_form.validate() ) {
-				this.snackbar.message = "Missing billing information"
-				this.snackbar.show = true
-				return
+		async payInvoice( invoice_id ) {
+			// 1. Validate Form (only when billing form is shown, i.e. new/editing customer)
+			if ( this.$refs.billing_form ) {
+				const { valid } = await this.$refs.billing_form.validate()
+				if ( ! valid ) {
+					this.snackbar.message = "Missing billing information"
+					this.snackbar.show = true
+					return
+				}
 			}
 
 			// 2. Prepare UI State
