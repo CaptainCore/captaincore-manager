@@ -1481,4 +1481,59 @@ class Mailer {
         );
     }
 
+    static public function send_default_role_alert( $site_name, $environment_name, $home_url, $default_role ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $admin_email = get_option( 'admin_email' );
+
+        $site_url_html = '';
+        if ( ! empty( $home_url ) ) {
+            $site_url_html = "
+                <tr>
+                    <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
+                    <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
+                        <a href='{$home_url}' style='color: {$brand_color}; text-decoration: none;'>{$home_url}</a>
+                    </td>
+                </tr>";
+        }
+
+        $content_html = "
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+                <div style='text-align: center; margin-bottom: 25px;'>
+                    <div style='display: inline-block; background-color: #FED7D7; color: #9B2C2C; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                        Default Role: Administrator
+                    </div>
+                </div>
+
+                <p style='margin-bottom: 25px;'>The default new user role for this site is set to <strong>Administrator</strong>. This is a serious security risk — anyone who registers will have full admin access.</p>
+
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                    <table width='100%' cellpadding='0' cellspacing='0'>
+                        <tr>
+                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
+                        </tr>
+                        {$site_url_html}
+                        <tr>
+                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Environment</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
+                        </tr>
+                        <tr>
+                            <td style='color: #718096; font-size: 14px;'>Default Role</td>
+                            <td style='color: #9B2C2C; font-weight: 600; text-align: right;'>" . esc_html( ucfirst( $default_role ) ) . "</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        ";
+
+        self::send_email_with_layout(
+            $admin_email,
+            "Security Alert: Default role set to Administrator on {$site_name}",
+            "Default Role Alert",
+            $site_name,
+            $content_html
+        );
+    }
+
 }
