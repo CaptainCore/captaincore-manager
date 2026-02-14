@@ -906,7 +906,8 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$checksum_status = isset( $env_details->core_checksum_details->status ) ? $env_details->core_checksum_details->status : null;
 
 		$has_modified_files = ! empty( $env_details->core_checksum_details->modified );
-		if ( $checksum_status === 'fail' && $has_modified_files && empty( $env_details->checksum_alerted ) ) {
+		$is_production      = $current_environment->environment === 'Production';
+		if ( $checksum_status === 'fail' && $has_modified_files && $is_production && empty( $env_details->checksum_alerted ) ) {
 			$home_url = $post->data->home_url ?? '';
 			CaptainCore\Mailer::send_checksum_alert( $current_site->name, ucfirst( $environment_name ), $home_url, $env_details->core_checksum_details );
 			$env_details->checksum_alerted = true;
