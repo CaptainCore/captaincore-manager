@@ -565,11 +565,17 @@ class Account {
             $plan    = json_decode( $account->plan );
         }
         
-        // 2. Formatting Helpers
+        // 2. Validate billing user before creating order
+        if ( empty( $plan->billing_user_id ) || ! get_user_by( 'ID', $plan->billing_user_id ) ) {
+            Mailer::send_missing_billing_user_alert( $this->account_id, $account->name ?? "Account #{$this->account_id}" );
+            return;
+        }
+
+        // 3. Formatting Helpers
         $units     = [ 1 => "monthly", 3 => "quarterly", 6 => "biannually", 12 => "yearly" ];
         $plan_interval = ! empty( $plan->interval ) ? $units[ $plan->interval ] : '';
-        
-        // 3. Create WooCommerce Order
+
+        // 4. Create WooCommerce Order
         $customer = new \WC_Customer( $plan->billing_user_id );
         $address  = $customer->get_billing();
         $order    = wc_create_order( [ 'customer_id' => $plan->billing_user_id ] );
