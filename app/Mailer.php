@@ -1536,4 +1536,44 @@ class Mailer {
         );
     }
 
+    static public function send_missing_billing_user_alert( $account_id, $account_name ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $admin_email = get_option( 'admin_email' );
+        $admin_url   = admin_url();
+
+        $content_html = "
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+                <div style='text-align: center; margin-bottom: 25px;'>
+                    <div style='display: inline-block; background-color: #FEFCBF; color: #975A16; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                        Renewal Skipped
+                    </div>
+                </div>
+
+                <p style='margin-bottom: 25px;'>A renewal order could not be generated because the account has no valid billing contact. Please assign a billing contact or close the account.</p>
+
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                    <table width='100%' cellpadding='0' cellspacing='0'>
+                        <tr>
+                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Account</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>" . esc_html( $account_name ) . "</td>
+                        </tr>
+                        <tr>
+                            <td style='color: #718096; font-size: 14px;'>Account ID</td>
+                            <td style='color: #2d3748; font-weight: 600; text-align: right;'>{$account_id}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        ";
+
+        self::send_email_with_layout(
+            $admin_email,
+            "Billing Alert: Renewal skipped for {$account_name} — no billing contact",
+            "Billing Alert",
+            $account_name,
+            $content_html
+        );
+    }
+
 }
