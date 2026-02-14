@@ -877,6 +877,15 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			$created_at       = strtotime( $capture->created_at );
 			$git_commit_short = substr( $capture->git_commit, 0, 7 );
 			$details          = isset( $current_environment->details ) ? json_decode( $current_environment->details ) : (object) [];
+			// Merge incoming details from CLI (e.g., core_checksum_details)
+			if ( isset( $post->data->details ) ) {
+				$incoming_details = json_decode( $post->data->details );
+				if ( $incoming_details ) {
+					foreach ( $incoming_details as $key => $value ) {
+						$details->$key = $value;
+					}
+				}
+			}
 			$details->screenshot_base = "{$created_at}_{$git_commit_short}";
 			$post->data->details = json_encode( $details );
 			$post->data->screenshot = true;
@@ -890,6 +899,21 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 		$current_site = CaptainCore\Sites::get( $site_id );
 		$details      = json_decode( $current_site->details );
+
+		// Alert admin on checksum failure (only once per failure, tracked via checksum_alerted flag)
+		$env_after       = ( new CaptainCore\Environments )->get( $post->data->environment_id );
+		$env_details     = isset( $env_after->details ) ? json_decode( $env_after->details ) : (object) [];
+		$checksum_status = isset( $env_details->core_checksum_details->status ) ? $env_details->core_checksum_details->status : null;
+
+		if ( $checksum_status === 'fail' && empty( $env_details->checksum_alerted ) ) {
+			$home_url = $post->data->home_url ?? '';
+			CaptainCore\Mailer::send_checksum_alert( $current_site->name, ucfirst( $environment_name ), $home_url, $env_details->core_checksum_details );
+			$env_details->checksum_alerted = true;
+			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
+		} elseif ( $checksum_status !== 'fail' && ! empty( $env_details->checksum_alerted ) ) {
+			unset( $env_details->checksum_alerted );
+			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
+		}
 
 		unset( $details->connection_errors );
 
