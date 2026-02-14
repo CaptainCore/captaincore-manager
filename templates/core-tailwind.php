@@ -220,6 +220,39 @@ $modules        = [
       .site-row .site-actions { width: 100%; padding-left: 56px; justify-content: flex-start; }
       .site-card-env { flex-direction: column; align-items: flex-start; }
       .site-screenshot, .site-screenshot-placeholder { width: 100%; height: auto; aspect-ratio: 16/10; }
+
+      /* Tab bar: scrollable with touch momentum */
+      .tab-bar { padding: 8px 12px; gap: 0; -webkit-overflow-scrolling: touch; }
+      .tab-item { padding: 6px 12px; font-size: 0.75rem; min-height: 36px; flex-shrink: 0; }
+
+      /* DNS table: stacked on mobile */
+      .data-table th, .data-table td { padding: 8px 10px; font-size: 0.75rem; }
+      .dns-edit-row { flex-direction: column !important; }
+      .dns-edit-row > * { width: 100% !important; min-width: 0 !important; }
+
+      /* Dialog cards: full-width on mobile */
+      .dialog-card { max-width: 100%; border-radius: 8px; }
+      .dialog-overlay { padding: 8px; }
+
+      /* Terminal: taller on mobile, adjusted padding */
+      .terminal-window { max-height: 75vh; }
+      .terminal-header { padding: 6px 10px; flex-wrap: wrap; }
+      .terminal-input-area { padding: 6px 10px; flex-wrap: wrap; }
+      .terminal-output { padding: 8px 10px; font-size: 0.75rem; }
+
+      /* Filter chips: wrap and scroll */
+      .filter-chip { padding: 6px 12px; min-height: 32px; }
+
+      /* Buttons: larger touch targets */
+      .btn-sm { min-height: 36px; padding: 6px 14px; }
+      .icon-btn { min-width: 36px; min-height: 36px; }
+    }
+
+    @media (max-width: 480px) {
+      /* Extra small: stack more aggressively */
+      .detail-header { flex-direction: column; align-items: flex-start !important; }
+      .detail-header .flex-shrink-0 { width: 100%; justify-content: flex-start; }
+      .terminal-window { max-height: 85vh; }
     }
 
     /* Terminal window */
@@ -258,6 +291,12 @@ $modules        = [
     .dropdown-menu-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 4px; font-size: 0.8125rem; cursor: pointer; color: var(--text-primary); }
     .dropdown-menu-item:hover { background: var(--hover-bg); }
 
+    /* Diff viewer */
+    .diff-view { font-family: 'SF Mono', 'Consolas', 'Liberation Mono', 'Menlo', monospace; font-size: 0.75rem; line-height: 1.5; padding: 0; overflow-x: auto; white-space: pre; }
+    .diff-view > div { padding: 1px 16px; }
+    .diff-removed { background: color-mix(in srgb, var(--color-error) 15%, transparent); }
+    .diff-added { background: color-mix(in srgb, var(--color-success) 15%, transparent); }
+
     /* Terminal target button */
     .terminal-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 500; border: 1px solid #45475a; background: transparent; color: #cdd6f4; cursor: pointer; transition: background 0.12s; }
     .terminal-btn:hover { background: #313244; }
@@ -289,6 +328,7 @@ $modules        = [
 <script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.1/dist/frappe-charts.min.umd.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/core.js"></script>
+<script src="<?php echo $plugin_url; ?>public/js/kjua.min.js"></script>
 
 <script>
 // ─── PHP Data Injection ──────────────────────────────────────────────────────
@@ -475,7 +515,17 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   response => { nonceRetrying = false; return response; },
   error => {
-    if (!error.response) return Promise.reject(error);
+    // Network error (connection refused, timeout, offline) — auto-retry with backoff
+    if (!error.response) {
+      const config = error.config;
+      config.__retryCount = config.__retryCount || 0;
+      if (config.__retryCount < 3) {
+        config.__retryCount++;
+        const delay = config.__retryCount * 2000; // 2s, 4s, 6s
+        return new Promise(resolve => setTimeout(resolve, delay)).then(() => axios(config));
+      }
+      return Promise.reject(error);
+    }
     if (error.response.status === 403 && error.response.data && error.response.data.code === 'rest_cookie_invalid_nonce') {
       if (nonceRetrying) {
         nonceRetrying = false;
@@ -492,7 +542,7 @@ api.interceptors.response.use(
           return axios(error.config);
         }
         return Promise.reject(error);
-      });
+      }).catch(() => Promise.reject(error));
     }
     return Promise.reject(error);
   }
@@ -577,17 +627,29 @@ function refreshSites() {
   sites.value = [];
 }
 
+const sitesError = ref('');
+
 function useSites() {
   function fetchSites() {
     if (sitesFetched && sites.value.length > 0) return;
     sitesLoading.value = true;
+    sitesError.value = '';
     api.get('/wp-json/captaincore/v1/sites')
       .then(response => {
         sites.value = response.data;
         sitesFetched = true;
       })
-      .catch(err => console.error('fetchSites error:', err))
+      .catch(err => {
+        console.error('fetchSites error:', err);
+        sitesError.value = err.code === 'ERR_NETWORK' ? 'Network error — connection lost.' : 'Failed to load sites.';
+      })
       .finally(() => { sitesLoading.value = false; });
+  }
+
+  function retrySites() {
+    sitesFetched = false;
+    sites.value = [];
+    fetchSites();
   }
 
   const filteredSites = computed(() => {
@@ -604,7 +666,7 @@ function useSites() {
     return result;
   });
 
-  return { sites, sitesLoading, siteSearch, filteredSites, fetchSites };
+  return { sites, sitesLoading, sitesError, siteSearch, filteredSites, fetchSites, retrySites };
 }
 
 // ─── Composable: useFilters ─────────────────────────────────────────────────
@@ -612,17 +674,60 @@ const appliedThemeFilters = ref([]);
 const appliedPluginFilters = ref([]);
 const appliedCoreFilters = ref([]);
 const filterLogic = ref('and');
+const filterVersionLogic = ref('and');
+const filterStatusLogic = ref('and');
 const backupModeFilter = ref(null);
 const filteredEnvironmentIds = ref([]);
 const sitesFiltering = ref(false);
 
+// Secondary filter data (versions/statuses for selected filters)
+const filterVersions = ref({});   // { 'plugin-slug': [ { name, slug, type, count }, ... ] }
+const filterStatuses = ref({});   // { 'plugin-slug': [ { name, slug, type, count }, ... ] }
+const filterVersionsLoading = ref(false);
+const filterStatusesLoading = ref(false);
+
 function useFilters() {
+  const combinedAppliedFilters = computed(() => [...appliedThemeFilters.value, ...appliedPluginFilters.value]);
+
   const isAnySiteFilterActive = computed(() => {
     return appliedThemeFilters.value.length > 0 ||
            appliedPluginFilters.value.length > 0 ||
            appliedCoreFilters.value.length > 0 ||
            backupModeFilter.value !== null;
   });
+
+  const hasSecondaryFilters = computed(() => {
+    return combinedAppliedFilters.value.some(f =>
+      (f.selected_versions && f.selected_versions.length) ||
+      (f.selected_statuses && f.selected_statuses.length)
+    );
+  });
+
+  function fetchSecondaryFilters() {
+    const names = combinedAppliedFilters.value.map(f => f.name).join(',');
+    if (!names) { filterVersions.value = {}; filterStatuses.value = {}; return; }
+
+    filterVersionsLoading.value = true;
+    filterStatusesLoading.value = true;
+
+    api.get('/wp-json/captaincore/v1/filters/' + encodeURIComponent(names) + '/versions/')
+      .then(r => {
+        const map = {};
+        (r.data || []).forEach(item => { map[item.name] = item.versions || []; });
+        filterVersions.value = map;
+      })
+      .catch(() => {})
+      .finally(() => { filterVersionsLoading.value = false; });
+
+    api.get('/wp-json/captaincore/v1/filters/' + encodeURIComponent(names) + '/statuses/')
+      .then(r => {
+        const map = {};
+        (r.data || []).forEach(item => { map[item.name] = item.statuses || []; });
+        filterStatuses.value = map;
+      })
+      .catch(() => {})
+      .finally(() => { filterStatusesLoading.value = false; });
+  }
 
   function filterSites() {
     if (!isAnySiteFilterActive.value) {
@@ -634,11 +739,19 @@ function useFilters() {
 
     sitesFiltering.value = true;
 
+    // Collect all selected versions/statuses from filters
+    const allVersions = combinedAppliedFilters.value.flatMap(f => f.selected_versions || []);
+    const allStatuses = combinedAppliedFilters.value.flatMap(f => f.selected_statuses || []);
+
     const filters = {
       logic: filterLogic.value,
+      version_logic: filterVersionLogic.value,
+      status_logic: filterStatusLogic.value,
       themes: appliedThemeFilters.value.map(({ name, title, search, type }) => ({ name, title, search, type })),
       plugins: appliedPluginFilters.value.map(({ name, title, search, type }) => ({ name, title, search, type })),
       core: appliedCoreFilters.value.map(c => c.name),
+      versions: allVersions,
+      statuses: allStatuses,
       backup_mode: backupModeFilter.value,
     };
 
@@ -663,21 +776,30 @@ function useFilters() {
     appliedCoreFilters.value = [];
     backupModeFilter.value = null;
     filteredEnvironmentIds.value = [];
+    filterVersions.value = {};
+    filterStatuses.value = {};
     sitesFiltering.value = false;
     sites.value.forEach(s => { s.filtered = true; });
+  }
+
+  function ensureSecondaryArrays(filter) {
+    if (!filter.selected_versions) filter.selected_versions = [];
+    if (!filter.selected_statuses) filter.selected_statuses = [];
   }
 
   function toggleThemeFilter(filter) {
     const idx = appliedThemeFilters.value.findIndex(f => f.name === filter.name);
     if (idx > -1) appliedThemeFilters.value.splice(idx, 1);
-    else appliedThemeFilters.value.push(filter);
+    else { ensureSecondaryArrays(filter); appliedThemeFilters.value.push(filter); }
+    fetchSecondaryFilters();
     filterSites();
   }
 
   function togglePluginFilter(filter) {
     const idx = appliedPluginFilters.value.findIndex(f => f.name === filter.name);
     if (idx > -1) appliedPluginFilters.value.splice(idx, 1);
-    else appliedPluginFilters.value.push(filter);
+    else { ensureSecondaryArrays(filter); appliedPluginFilters.value.push(filter); }
+    fetchSecondaryFilters();
     filterSites();
   }
 
@@ -693,11 +815,31 @@ function useFilters() {
     filterSites();
   }
 
+  function toggleFilterVersion(filter, version) {
+    ensureSecondaryArrays(filter);
+    const idx = filter.selected_versions.findIndex(v => v.name === version.name && v.slug === version.slug);
+    if (idx > -1) filter.selected_versions.splice(idx, 1);
+    else filter.selected_versions.push(version);
+    filterSites();
+  }
+
+  function toggleFilterStatus(filter, status) {
+    ensureSecondaryArrays(filter);
+    const idx = filter.selected_statuses.findIndex(s => s.name === status.name && s.slug === status.slug);
+    if (idx > -1) filter.selected_statuses.splice(idx, 1);
+    else filter.selected_statuses.push(status);
+    filterSites();
+  }
+
   return {
     appliedThemeFilters, appliedPluginFilters, appliedCoreFilters,
-    filterLogic, backupModeFilter, filteredEnvironmentIds, sitesFiltering,
-    isAnySiteFilterActive, filterSites, clearSiteFilters,
+    filterLogic, filterVersionLogic, filterStatusLogic,
+    backupModeFilter, filteredEnvironmentIds, sitesFiltering,
+    isAnySiteFilterActive, hasSecondaryFilters, combinedAppliedFilters,
+    filterSites, clearSiteFilters,
     toggleThemeFilter, togglePluginFilter, toggleCoreFilter, setBackupMode,
+    filterVersions, filterStatuses, filterVersionsLoading, filterStatusesLoading,
+    toggleFilterVersion, toggleFilterStatus,
   };
 }
 
@@ -1230,9 +1372,6 @@ const TopBar = defineComponent({
         <svg-icon name="terminal" :size="18" />
         <span v-if="runningJobs > 0" class="absolute top-1 right-1 w-2 h-2 rounded-full animate-pulse" style="background: var(--color-success);"></span>
       </button>
-      <button @click="toggleTheme" class="btn-ghost p-2 rounded-lg" title="Toggle theme">
-        <svg-icon :name="theme === 'light' ? 'sun' : 'moon'" :size="18" />
-      </button>
       <button class="btn-ghost p-2 rounded-lg relative" title="Notifications">
         <svg-icon name="bell" :size="18" />
       </button>
@@ -1675,8 +1814,8 @@ const TerminalWindow = defineComponent({
         </div>
 
         <!-- Output -->
-        <div ref="terminalOutputRef" class="terminal-output">
-          <div v-if="!jobs.length" class="text-center py-8" style="color: #6c7086;">
+        <div ref="terminalOutputRef" class="terminal-output" :style="!jobs.length ? 'display: flex; align-items: center; justify-content: center;' : ''">
+          <div v-if="!jobs.length" class="text-center" style="color: #6c7086;">
             <svg-icon name="terminal" :size="32" style="opacity: 0.3;" /><br>
             <span class="text-xs mt-2 inline-block">No commands yet. Type a command below or use Ctrl+K to toggle.</span>
           </div>
@@ -1786,9 +1925,12 @@ const TerminalWindow = defineComponent({
             v-model="terminal.code"
             @keydown="handleKeydown"
             placeholder="Enter WP-CLI or code... (Ctrl+Enter to run)"
+            spellcheck="false"
+            autocomplete="off"
+            autocorrect="off"
             rows="1"
             class="flex-1 text-xs resize-none"
-            style="background: transparent; border: none; color: #cdd6f4; outline: none; font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace; line-height: 1.6; min-height: 24px; max-height: 120px;"
+            style="background: transparent; border: none; color: #cdd6f4; outline: none; font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace; line-height: 1.6; min-height: 24px; max-height: 120px; padding-top: 4px;"
           ></textarea>
           <button v-if="terminal.code.trim()" @click="openSaveAsRecipe()" class="terminal-btn" style="flex-shrink: 0;" title="Save as Recipe">
             <svg-icon name="save" :size="12" />
@@ -2016,12 +2158,16 @@ const LoginView = defineComponent({
 // ─── View: SitesView ─────────────────────────────────────────────────────────
 const SitesView = defineComponent({
   setup() {
-    const { filteredSites, sitesLoading, siteSearch, fetchSites } = useSites();
+    const { filteredSites, sitesLoading, sitesError, siteSearch, fetchSites, retrySites } = useSites();
     const {
       appliedThemeFilters, appliedPluginFilters, appliedCoreFilters,
-      filterLogic, backupModeFilter, sitesFiltering,
-      isAnySiteFilterActive, filterSites, clearSiteFilters,
+      filterLogic, filterVersionLogic, filterStatusLogic,
+      backupModeFilter, sitesFiltering,
+      isAnySiteFilterActive, hasSecondaryFilters, combinedAppliedFilters,
+      filterSites, clearSiteFilters,
       toggleThemeFilter, togglePluginFilter, toggleCoreFilter, setBackupMode,
+      filterVersions, filterStatuses, filterVersionsLoading, filterStatusesLoading,
+      toggleFilterVersion, toggleFilterStatus,
     } = useFilters();
     const router = useRouter();
     const role = userRole;
@@ -2081,11 +2227,25 @@ const SitesView = defineComponent({
 
     // New Site dialog state
     const showNewSiteDialog = ref(false);
+    const defaultEnv = () => ({
+      environment: 'Production', site: '', address: '', username: '', password: '',
+      protocol: 'sftp', port: '2222', home_directory: '',
+      updates_enabled: '1',
+      offload_enabled: false, offload_provider: '', offload_access_key: '', offload_secret_key: '', offload_bucket: '', offload_path: '',
+    });
     const newSite = reactive({
-      name: '', domain: '', provider_id: '', account_id: '', errors: '', loading: false,
+      name: '', domain: '', provider_id: '', site: '',
+      shared_with: [], key: null,
+      environments: [defaultEnv()],
+      environment_vars: [],
+      errors: '', loading: false, showAdvanced: false,
     });
     const providers = ref([]);
     const providersLoaded = ref(false);
+    const newSiteAccounts = ref([]);
+    const newSiteAccountsLoaded = ref(false);
+    const newSiteKeys = ref([]);
+    const newSiteKeysLoaded = ref(false);
 
     function openNewSiteDialog() {
       showNewSiteDialog.value = true;
@@ -2094,25 +2254,51 @@ const SitesView = defineComponent({
           .then(r => { providers.value = r.data || []; providersLoaded.value = true; })
           .catch(() => {});
       }
+      if (!newSiteAccountsLoaded.value) {
+        api.get('/wp-json/captaincore/v1/accounts')
+          .then(r => { newSiteAccounts.value = r.data || []; newSiteAccountsLoaded.value = true; })
+          .catch(() => {});
+      }
+      if (!newSiteKeysLoaded.value) {
+        api.get('/wp-json/captaincore/v1/keys')
+          .then(r => { newSiteKeys.value = r.data || []; newSiteKeysLoaded.value = true; })
+          .catch(() => {});
+      }
     }
+
+    function addStagingEnv() {
+      if (newSite.environments.length >= 2) return;
+      newSite.environments.push({ ...defaultEnv(), environment: 'Staging', port: '2222', updates_enabled: '1' });
+    }
+    function removeStagingEnv() {
+      newSite.environments = newSite.environments.filter(e => e.environment !== 'Staging');
+    }
+    function toggleNewSiteAccount(accountId) {
+      const idx = newSite.shared_with.indexOf(accountId);
+      if (idx > -1) newSite.shared_with.splice(idx, 1);
+      else newSite.shared_with.push(accountId);
+    }
+    function addEnvVar() { newSite.environment_vars.push({ key: '', value: '' }); }
+    function removeEnvVar(i) { newSite.environment_vars.splice(i, 1); }
 
     function createSite() {
       newSite.errors = '';
       newSite.loading = true;
-      api.post('/wp-json/captaincore/v1/sites', {
-        name: newSite.name,
-        domain: newSite.domain,
-        provider_id: newSite.provider_id || null,
-        account_id: newSite.account_id || null,
-      })
+      const payload = {
+        site: {
+          name: newSite.name, site: newSite.site || newSite.name,
+          provider: newSite.provider_id || '',
+          shared_with: newSite.shared_with,
+          key: newSite.key,
+          environments: newSite.environments,
+          environment_vars: newSite.environment_vars.filter(v => v.key),
+        },
+      };
+      api.post('/wp-json/captaincore/v1/sites', payload)
         .then(r => {
           showNewSiteDialog.value = false;
           showNotify('Site created successfully!', 'success');
-          newSite.name = '';
-          newSite.domain = '';
-          newSite.provider_id = '';
-          newSite.account_id = '';
-          // Refresh sites list
+          Object.assign(newSite, { name: '', domain: '', provider_id: '', site: '', shared_with: [], key: null, environments: [defaultEnv()], environment_vars: [], errors: '', showAdvanced: false });
           refreshSites();
           fetchSites();
         })
@@ -2140,6 +2326,115 @@ const SitesView = defineComponent({
         .finally(() => { env.isLoggingIn = false; });
     }
 
+    // ── Bulk Selection ──
+    const selectedSites = ref([]);
+    const bulkEnv = ref('Production');
+    const showBulkActions = computed(() => selectedSites.value.length > 0);
+
+    function toggleSiteSelection(site) {
+      const idx = selectedSites.value.findIndex(s => s.site_id === site.site_id);
+      if (idx > -1) {
+        selectedSites.value.splice(idx, 1);
+      } else {
+        selectedSites.value.push(site);
+      }
+    }
+
+    function isSiteSelected(siteId) {
+      return selectedSites.value.some(s => s.site_id === siteId);
+    }
+
+    function selectAllSites() {
+      selectedSites.value = [...filteredSites.value];
+    }
+
+    function clearSelection() {
+      selectedSites.value = [];
+    }
+
+    function getSelectedEnvironmentIds() {
+      const ids = [];
+      selectedSites.value.forEach(site => {
+        const envs = getVisibleEnvironments(site);
+        const target = envs.find(e => e.environment === bulkEnv.value) || envs[0];
+        if (target && target.environment_id) ids.push(target.environment_id);
+      });
+      return ids;
+    }
+
+    // Bulk action: Add selected to terminal
+    function bulkAddToTerminal() {
+      selectedSites.value.forEach(site => {
+        const envs = getVisibleEnvironments(site);
+        const target = envs.find(e => e.environment === bulkEnv.value) || envs[0];
+        if (target && !isConsoleTarget(target.environment_id)) {
+          toggleConsoleTarget({ ...target, site_id: site.site_id, name: site.name });
+        }
+      });
+      terminalState.open = true;
+    }
+
+    // Bulk action: Open in browser
+    function bulkOpenInBrowser() {
+      selectedSites.value.forEach(site => {
+        const envs = getVisibleEnvironments(site);
+        const target = envs.find(e => e.environment === bulkEnv.value) || envs[0];
+        if (target && target.home_url) safeOpen(target.home_url);
+      });
+    }
+
+    // Bulk action: Sync data
+    function bulkSyncSites() {
+      const envIds = getSelectedEnvironmentIds();
+      if (!envIds.length) { showNotify('No environments found for selection.', 'error'); return; }
+      if (!confirm('Sync data for ' + selectedSites.value.length + ' sites?')) return;
+      api.post('/wp-json/captaincore/v1/sites/bulk-tools', {
+        tool: 'sync-data',
+        environments: envIds,
+        params: {},
+      }).then(() => showNotify('Sync started for ' + envIds.length + ' environments.', 'success'))
+        .catch(() => showNotify('Sync failed.', 'error'));
+    }
+
+    // Bulk action: Apply HTTPS
+    const showBulkHttpsDialog = ref(false);
+    function bulkApplyHttps(useWww) {
+      const envIds = getSelectedEnvironmentIds();
+      if (!envIds.length) { showNotify('No environments found.', 'error'); return; }
+      const tool = useWww ? 'apply-https-with-www' : 'apply-https';
+      api.post('/wp-json/captaincore/v1/sites/bulk-tools', {
+        tool: tool,
+        environments: envIds,
+        params: {},
+      }).then(() => { showNotify('HTTPS applied to ' + envIds.length + ' environments.', 'success'); showBulkHttpsDialog.value = false; })
+        .catch(() => showNotify('Apply HTTPS failed.', 'error'));
+    }
+
+    // Bulk action: Deploy defaults
+    function bulkDeployDefaults() {
+      const siteIds = selectedSites.value.map(s => s.site_id);
+      if (!confirm('Deploy defaults on ' + siteIds.length + ' sites?')) return;
+      api.post('/wp-json/captaincore/v1/sites/cli', {
+        post_id: siteIds,
+        command: 'deploy-defaults',
+        environment: bulkEnv.value,
+      }).then(() => showNotify('Deploy defaults started for ' + siteIds.length + ' sites.', 'success'))
+        .catch(() => showNotify('Deploy defaults failed.', 'error'));
+    }
+
+    // Bulk action: Toggle site status
+    const showBulkToggleDialog = ref(false);
+    function bulkToggleStatus(action) {
+      const siteIds = selectedSites.value.map(s => s.site_id);
+      if (!confirm(action + ' ' + siteIds.length + ' sites?')) return;
+      api.post('/wp-json/captaincore/v1/sites/cli', {
+        post_id: siteIds,
+        command: action === 'Activate' ? 'activate' : 'deactivate',
+        environment: bulkEnv.value,
+      }).then(() => { showNotify(action + ' started for ' + siteIds.length + ' sites.', 'success'); showBulkToggleDialog.value = false; })
+        .catch(() => showNotify(action + ' failed.', 'error'));
+    }
+
     // Add filtered sites to terminal targets
     function addFilteredToTerminal() {
       filteredSites.value.forEach(site => {
@@ -2156,20 +2451,107 @@ const SitesView = defineComponent({
       terminalState.open = true;
     }
 
+    // ── Bulk Add Plugin/Theme ──
+    const showBulkAddPluginDialog = ref(false);
+    const showBulkAddThemeDialog = ref(false);
+    const bulkPluginSearch = ref('');
+    const bulkThemeSearch = ref('');
+    const bulkPluginResults = ref([]);
+    const bulkThemeResults = ref([]);
+    const bulkPluginLoading = ref(false);
+    const bulkThemeLoading = ref(false);
+    const bulkInstalling = reactive({});
+
+    function openBulkAddPlugin() {
+      bulkPluginSearch.value = '';
+      bulkPluginResults.value = [];
+      showBulkAddPluginDialog.value = true;
+    }
+    function openBulkAddTheme() {
+      bulkThemeSearch.value = '';
+      bulkThemeResults.value = [];
+      showBulkAddThemeDialog.value = true;
+    }
+    function searchBulkPlugins() {
+      if (!bulkPluginSearch.value) return;
+      bulkPluginLoading.value = true;
+      api.get('/wp-json/captaincore/v1/wp-plugins', { params: { value: bulkPluginSearch.value, page: 1 } })
+        .then(r => { bulkPluginResults.value = (r.data && r.data.plugins) || r.data || []; })
+        .catch(() => showNotify('Plugin search failed', 'error'))
+        .finally(() => { bulkPluginLoading.value = false; });
+    }
+    function searchBulkThemes() {
+      if (!bulkThemeSearch.value) return;
+      bulkThemeLoading.value = true;
+      api.get('/wp-json/captaincore/v1/wp-themes', { params: { value: bulkThemeSearch.value, page: 1 } })
+        .then(r => { bulkThemeResults.value = (r.data && r.data.themes) || r.data || []; })
+        .catch(() => showNotify('Theme search failed', 'error'))
+        .finally(() => { bulkThemeLoading.value = false; });
+    }
+    function bulkInstallPlugin(plugin) {
+      const envIds = getSelectedEnvironmentIds();
+      if (!envIds.length) { showNotify('No environments found', 'error'); return; }
+      const slug = plugin.slug || plugin.name;
+      bulkInstalling[slug] = true;
+      const link = plugin.download_link || slug;
+      api.post('/wp-json/captaincore/v1/run/code', { environments: envIds, code: "wp plugin install --force --skip-plugins --skip-themes '" + link + "'" })
+        .then(() => showNotify('Installing ' + (plugin.name || slug) + ' on ' + selectedSites.value.length + ' sites', 'success'))
+        .catch(() => showNotify('Install failed', 'error'))
+        .finally(() => { bulkInstalling[slug] = false; });
+    }
+    function bulkInstallTheme(theme) {
+      const envIds = getSelectedEnvironmentIds();
+      if (!envIds.length) { showNotify('No environments found', 'error'); return; }
+      const slug = theme.slug || theme.name;
+      bulkInstalling[slug] = true;
+      api.post('/wp-json/captaincore/v1/run/code', { environments: envIds, code: "wp theme install '" + slug + "' --force" })
+        .then(() => showNotify('Installing ' + (theme.name || slug) + ' on ' + selectedSites.value.length + ' sites', 'success'))
+        .catch(() => showNotify('Install failed', 'error'))
+        .finally(() => { bulkInstalling[slug] = false; });
+    }
+
+    // ── Pagination ──
+    const sitePage = ref(1);
+    const sitesPerPage = 100;
+    const totalSitePages = computed(() => Math.ceil(filteredSites.value.length / sitesPerPage));
+    const paginatedSites = computed(() => {
+      const start = (sitePage.value - 1) * sitesPerPage;
+      return filteredSites.value.slice(start, start + sitesPerPage);
+    });
+    // Reset page when search or filters change
+    watch([siteSearch, appliedThemeFilters, appliedPluginFilters, appliedCoreFilters, backupModeFilter], () => { sitePage.value = 1; });
+
     return {
-      filteredSites, sitesLoading, siteSearch, viewMode, goToSite, getPrimaryEnv, getStagingEnvs, magicLogin,
+      filteredSites, sitesLoading, sitesError, retrySites, siteSearch, viewMode, goToSite, getPrimaryEnv, getStagingEnvs, magicLogin,
+      sitePage, totalSitePages, paginatedSites,
       getVisibleEnvironments, getScreenshotUrl, formatLargeNumbers, formatStorage, role,
       // Filters
       appliedThemeFilters, appliedPluginFilters, appliedCoreFilters,
-      filterLogic, backupModeFilter, sitesFiltering, isAnySiteFilterActive, filterSites,
+      filterLogic, filterVersionLogic, filterStatusLogic,
+      backupModeFilter, sitesFiltering, isAnySiteFilterActive, hasSecondaryFilters,
+      combinedAppliedFilters, filterSites,
       clearSiteFilters, toggleThemeFilter, togglePluginFilter, toggleCoreFilter, setBackupMode,
+      filterVersions, filterStatuses, filterVersionsLoading, filterStatusesLoading,
+      toggleFilterVersion, toggleFilterStatus,
       showCoreDropdown, showThemeDropdown, showPluginDropdown,
       filterSearchCore, filterSearchTheme, filterSearchPlugin,
       filteredCoreOptions, filteredThemeOptions, filteredPluginOptions,
       closeFilterDropdowns,
       // New Site
       showNewSiteDialog, newSite, providers, openNewSiteDialog, createSite,
+      newSiteAccounts, newSiteKeys, addStagingEnv, removeStagingEnv, toggleNewSiteAccount, addEnvVar, removeEnvVar,
       addFilteredToTerminal,
+      // Bulk Actions
+      selectedSites, bulkEnv, showBulkActions, toggleSiteSelection, isSiteSelected,
+      selectAllSites, clearSelection, bulkAddToTerminal, bulkOpenInBrowser,
+      bulkSyncSites, bulkDeployDefaults,
+      showBulkHttpsDialog, bulkApplyHttps,
+      showBulkToggleDialog, bulkToggleStatus,
+      showBulkAddPluginDialog, showBulkAddThemeDialog,
+      bulkPluginSearch, bulkThemeSearch, bulkPluginResults, bulkThemeResults,
+      bulkPluginLoading, bulkThemeLoading, bulkInstalling,
+      openBulkAddPlugin, openBulkAddTheme, searchBulkPlugins, searchBulkThemes,
+      bulkInstallPlugin, bulkInstallTheme,
     };
   },
   template: `
@@ -2266,10 +2648,10 @@ const SitesView = defineComponent({
             </div>
           </div>
 
-          <!-- AND/OR toggle -->
+          <!-- AND/OR toggle (primary) -->
           <button v-if="(appliedThemeFilters.length + appliedPluginFilters.length + appliedCoreFilters.length) > 1"
             @click="filterLogic = filterLogic === 'and' ? 'or' : 'and'; filterSites()"
-            class="filter-chip">
+            class="filter-chip" title="Logic between different filter types">
             {{ filterLogic.toUpperCase() }}
           </button>
 
@@ -2283,31 +2665,293 @@ const SitesView = defineComponent({
             <svg-icon name="terminal" :size="12" /> Add to Terminal
           </button>
         </div>
+
+        <!-- Secondary filters: version/status drill-down -->
+        <div v-if="combinedAppliedFilters.length" class="px-4 pb-3">
+          <div v-for="f in combinedAppliedFilters" :key="f.name" class="mb-2 rounded-lg p-3" style="background: var(--hover-bg)">
+            <div class="text-xs font-semibold mb-2" style="color: var(--text-primary)">{{ f.title || f.name }}</div>
+            <div class="flex flex-wrap gap-4">
+              <!-- Versions -->
+              <div v-if="filterVersions[f.name] && filterVersions[f.name].length" class="flex-1" style="min-width: 200px">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-[10px] font-semibold uppercase" style="color: var(--text-secondary)">Version</span>
+                  <button v-if="f.selected_versions && f.selected_versions.length > 1"
+                    @click="filterVersionLogic = filterVersionLogic === 'and' ? 'or' : 'and'; filterSites()"
+                    class="text-[10px] px-1.5 py-0.5 rounded font-semibold" style="background: var(--active-bg); color: var(--color-primary); cursor: pointer; border: none;">
+                    {{ filterVersionLogic.toUpperCase() }}
+                  </button>
+                </div>
+                <div class="flex flex-wrap gap-1">
+                  <button v-for="v in filterVersions[f.name]" :key="v.name"
+                    @click="toggleFilterVersion(f, v)"
+                    :class="['text-[11px] px-2 py-0.5 rounded-full border transition-colors', f.selected_versions && f.selected_versions.some(sv => sv.name === v.name) ? 'font-semibold' : '']"
+                    :style="{
+                      borderColor: f.selected_versions && f.selected_versions.some(sv => sv.name === v.name) ? 'var(--color-primary)' : 'var(--border-color)',
+                      background: f.selected_versions && f.selected_versions.some(sv => sv.name === v.name) ? 'var(--color-primary)' : 'transparent',
+                      color: f.selected_versions && f.selected_versions.some(sv => sv.name === v.name) ? 'white' : 'var(--text-secondary)',
+                    }">
+                    {{ v.name }} <span class="opacity-60">({{ v.count }})</span>
+                  </button>
+                </div>
+              </div>
+              <!-- Statuses -->
+              <div v-if="filterStatuses[f.name] && filterStatuses[f.name].length" class="flex-1" style="min-width: 200px">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-[10px] font-semibold uppercase" style="color: var(--text-secondary)">Status</span>
+                  <button v-if="f.selected_statuses && f.selected_statuses.length > 1"
+                    @click="filterStatusLogic = filterStatusLogic === 'and' ? 'or' : 'and'; filterSites()"
+                    class="text-[10px] px-1.5 py-0.5 rounded font-semibold" style="background: var(--active-bg); color: var(--color-primary); cursor: pointer; border: none;">
+                    {{ filterStatusLogic.toUpperCase() }}
+                  </button>
+                </div>
+                <div class="flex flex-wrap gap-1">
+                  <button v-for="s in filterStatuses[f.name]" :key="s.name"
+                    @click="toggleFilterStatus(f, s)"
+                    :class="['text-[11px] px-2 py-0.5 rounded-full border transition-colors', f.selected_statuses && f.selected_statuses.some(ss => ss.name === s.name) ? 'font-semibold' : '']"
+                    :style="{
+                      borderColor: f.selected_statuses && f.selected_statuses.some(ss => ss.name === s.name) ? 'var(--color-primary)' : 'var(--border-color)',
+                      background: f.selected_statuses && f.selected_statuses.some(ss => ss.name === s.name) ? 'var(--color-primary)' : 'transparent',
+                      color: f.selected_statuses && f.selected_statuses.some(ss => ss.name === s.name) ? 'white' : 'var(--text-secondary)',
+                    }">
+                    {{ s.name }} <span class="opacity-60">({{ s.count }})</span>
+                  </button>
+                </div>
+              </div>
+              <!-- Loading -->
+              <div v-if="filterVersionsLoading || filterStatusesLoading" class="text-xs" style="color: var(--text-secondary)">Loading options...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bulk Actions Bar -->
+      <div v-if="showBulkActions" class="surface rounded-xl mb-4 px-4 py-3" style="border: 1px solid var(--color-primary); position: sticky; top: 0; z-index: 20;">
+        <div class="flex items-center gap-3 flex-wrap">
+          <span class="text-xs font-semibold" style="color: var(--color-primary)">{{ selectedSites.length }} selected</span>
+          <select v-model="bulkEnv" class="select-field" style="width: auto; padding: 4px 24px 4px 8px; font-size: 0.75rem;">
+            <option value="Production">Production</option>
+            <option value="Staging">Staging</option>
+          </select>
+          <div class="flex items-center gap-1 flex-wrap">
+            <button @click="bulkAddToTerminal()" class="btn btn-sm btn-ghost" title="Add to Terminal"><svg-icon name="terminal" :size="14" /> Terminal</button>
+            <button @click="bulkOpenInBrowser()" class="btn btn-sm btn-ghost" title="Open in Browser"><svg-icon name="externalLink" :size="14" /> Open</button>
+            <button @click="bulkSyncSites()" class="btn btn-sm btn-ghost" title="Sync Data"><svg-icon name="sync" :size="14" /> Sync</button>
+            <button @click="showBulkHttpsDialog = true" class="btn btn-sm btn-ghost" title="Apply HTTPS"><svg-icon name="lock" :size="14" /> HTTPS</button>
+            <button v-if="role === 'administrator'" @click="bulkDeployDefaults()" class="btn btn-sm btn-ghost" title="Deploy Defaults"><svg-icon name="rocket" :size="14" /> Defaults</button>
+            <button v-if="role === 'administrator'" @click="showBulkToggleDialog = true" class="btn btn-sm btn-ghost" title="Toggle Status"><svg-icon name="power" :size="14" /> Status</button>
+            <button v-if="role === 'administrator'" @click="openBulkAddPlugin()" class="btn btn-sm btn-ghost" title="Add Plugin"><svg-icon name="puzzle" :size="14" /> + Plugin</button>
+            <button v-if="role === 'administrator'" @click="openBulkAddTheme()" class="btn btn-sm btn-ghost" title="Add Theme"><svg-icon name="palette" :size="14" /> + Theme</button>
+          </div>
+          <div class="ml-auto flex items-center gap-2">
+            <button @click="selectAllSites()" class="btn btn-sm btn-ghost text-xs">Select All ({{ filteredSites.length }})</button>
+            <button @click="clearSelection()" class="btn btn-sm btn-ghost text-xs" style="color: var(--color-error)"><svg-icon name="close" :size="12" /> Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bulk HTTPS Dialog -->
+      <div v-if="showBulkHttpsDialog" class="dialog-overlay" @click.self="showBulkHttpsDialog = false">
+        <div class="dialog-card" style="max-width: 400px;">
+          <div class="dialog-card-header">
+            <h3 class="text-sm font-semibold" style="color: var(--text-primary)">Apply HTTPS - {{ selectedSites.length }} sites</h3>
+            <button @click="showBulkHttpsDialog = false" class="btn-ghost p-1 rounded"><svg-icon name="close" :size="16" /></button>
+          </div>
+          <div class="dialog-card-body space-y-3">
+            <p class="text-xs" style="color: var(--text-secondary)">Apply HTTPS URLs to the selected sites on {{ bulkEnv }} environments.</p>
+            <div class="flex gap-2">
+              <button @click="bulkApplyHttps(false)" class="btn btn-primary flex-1">https://</button>
+              <button @click="bulkApplyHttps(true)" class="btn btn-outline flex-1">https://www.</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bulk Toggle Status Dialog -->
+      <div v-if="showBulkToggleDialog" class="dialog-overlay" @click.self="showBulkToggleDialog = false">
+        <div class="dialog-card" style="max-width: 400px;">
+          <div class="dialog-card-header">
+            <h3 class="text-sm font-semibold" style="color: var(--text-primary)">Toggle Status - {{ selectedSites.length }} sites</h3>
+            <button @click="showBulkToggleDialog = false" class="btn-ghost p-1 rounded"><svg-icon name="close" :size="16" /></button>
+          </div>
+          <div class="dialog-card-body space-y-3">
+            <p class="text-xs" style="color: var(--text-secondary)">Change site status for the selected sites.</p>
+            <div class="flex gap-2">
+              <button @click="bulkToggleStatus('Activate')" class="btn btn-primary flex-1">Activate</button>
+              <button @click="bulkToggleStatus('Deactivate')" class="btn btn-outline flex-1" style="color: var(--color-error); border-color: var(--color-error);">Deactivate</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bulk Add Plugin Dialog -->
+      <div v-if="showBulkAddPluginDialog" class="dialog-overlay" @mousedown.self="showBulkAddPluginDialog = false">
+        <div class="dialog-card" style="width: 600px; max-height: 80vh; display: flex; flex-direction: column">
+          <div class="dialog-header">
+            <h3 class="dialog-title">Add Plugin to {{ selectedSites.length }} sites</h3>
+            <button @click="showBulkAddPluginDialog = false" class="btn btn-sm btn-ghost"><svg-icon name="x" :size="18" /></button>
+          </div>
+          <div class="px-4 py-3" style="border-bottom: 1px solid var(--border-color)">
+            <div class="flex gap-2">
+              <input v-model="bulkPluginSearch" @keyup.enter="searchBulkPlugins()" placeholder="Search WordPress.org plugins..." class="input flex-1" />
+              <button @click="searchBulkPlugins()" :disabled="bulkPluginLoading" class="btn btn-sm btn-primary">Search</button>
+            </div>
+          </div>
+          <div style="flex: 1; overflow-y: auto; padding: 0">
+            <div v-if="bulkPluginLoading" class="flex justify-center py-8"><div class="animate-spin rounded-full h-6 w-6 border-b-2" style="border-color: var(--color-primary)"></div></div>
+            <div v-else-if="!bulkPluginResults.length" class="p-8 text-center text-sm" style="color: var(--text-secondary)">Search for plugins to install.</div>
+            <div v-else>
+              <div v-for="p in bulkPluginResults" :key="p.slug" class="flex items-center justify-between px-4 py-3" style="border-bottom: 1px solid var(--border-color)">
+                <div class="flex-1 min-w-0 mr-3">
+                  <div class="text-sm font-medium" style="color: var(--text-primary)">{{ p.name }}</div>
+                  <div class="text-xs truncate" style="color: var(--text-secondary)">{{ p.short_description || p.slug }}</div>
+                </div>
+                <button @click="bulkInstallPlugin(p)" :disabled="bulkInstalling[p.slug]" class="btn btn-sm btn-outline" style="flex-shrink: 0">
+                  {{ bulkInstalling[p.slug] ? 'Installing...' : 'Install' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bulk Add Theme Dialog -->
+      <div v-if="showBulkAddThemeDialog" class="dialog-overlay" @mousedown.self="showBulkAddThemeDialog = false">
+        <div class="dialog-card" style="width: 600px; max-height: 80vh; display: flex; flex-direction: column">
+          <div class="dialog-header">
+            <h3 class="dialog-title">Add Theme to {{ selectedSites.length }} sites</h3>
+            <button @click="showBulkAddThemeDialog = false" class="btn btn-sm btn-ghost"><svg-icon name="x" :size="18" /></button>
+          </div>
+          <div class="px-4 py-3" style="border-bottom: 1px solid var(--border-color)">
+            <div class="flex gap-2">
+              <input v-model="bulkThemeSearch" @keyup.enter="searchBulkThemes()" placeholder="Search WordPress.org themes..." class="input flex-1" />
+              <button @click="searchBulkThemes()" :disabled="bulkThemeLoading" class="btn btn-sm btn-primary">Search</button>
+            </div>
+          </div>
+          <div style="flex: 1; overflow-y: auto; padding: 0">
+            <div v-if="bulkThemeLoading" class="flex justify-center py-8"><div class="animate-spin rounded-full h-6 w-6 border-b-2" style="border-color: var(--color-primary)"></div></div>
+            <div v-else-if="!bulkThemeResults.length" class="p-8 text-center text-sm" style="color: var(--text-secondary)">Search for themes to install.</div>
+            <div v-else>
+              <div v-for="t in bulkThemeResults" :key="t.slug" class="flex items-center justify-between px-4 py-3" style="border-bottom: 1px solid var(--border-color)">
+                <div class="flex items-center gap-3 flex-1 min-w-0 mr-3">
+                  <img v-if="t.screenshot_url" :src="t.screenshot_url" class="rounded" style="width: 48px; height: 36px; object-fit: cover" />
+                  <div class="min-w-0">
+                    <div class="text-sm font-medium" style="color: var(--text-primary)">{{ t.name }}</div>
+                    <div class="text-xs truncate" style="color: var(--text-secondary)">{{ t.slug }}</div>
+                  </div>
+                </div>
+                <button @click="bulkInstallTheme(t)" :disabled="bulkInstalling[t.slug]" class="btn btn-sm btn-outline" style="flex-shrink: 0">
+                  {{ bulkInstalling[t.slug] ? 'Installing...' : 'Install' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- New Site Dialog -->
       <div v-if="showNewSiteDialog" class="dialog-overlay" @click.self="showNewSiteDialog = false">
-        <div class="dialog-card">
+        <div class="dialog-card" style="max-width: 640px; max-height: 90vh; display: flex; flex-direction: column;">
           <div class="dialog-card-header">
             <h3 class="text-sm font-semibold" style="color: var(--text-primary)">New Site</h3>
             <button @click="showNewSiteDialog = false" class="btn-ghost p-1 rounded"><svg-icon name="close" :size="16" /></button>
           </div>
-          <div class="dialog-card-body space-y-4">
+          <div class="dialog-card-body space-y-4" style="overflow-y: auto; flex: 1;">
+            <!-- Basic fields -->
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs mb-1 font-medium" style="color: var(--text-secondary)">Site Name</label>
+                <input v-model="newSite.name" type="text" class="input-field" placeholder="My New Site" />
+              </div>
+              <div>
+                <label class="block text-xs mb-1 font-medium" style="color: var(--text-secondary)">Domain</label>
+                <input v-model="newSite.domain" type="text" class="input-field" placeholder="example.com" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div v-if="providers.length">
+                <label class="block text-xs mb-1 font-medium" style="color: var(--text-secondary)">Provider</label>
+                <select v-model="newSite.provider_id" class="select-field">
+                  <option value="">None</option>
+                  <option v-for="p in providers" :key="p.provider_id || p.id" :value="p.provider_id || p.id">{{ p.name }}</option>
+                </select>
+              </div>
+              <div v-if="newSiteKeys.length">
+                <label class="block text-xs mb-1 font-medium" style="color: var(--text-secondary)">SSH Key Override</label>
+                <select v-model="newSite.key" class="select-field">
+                  <option :value="null">Default</option>
+                  <option v-for="k in newSiteKeys" :key="k.key_id || k.id" :value="k.key_id || k.id">{{ k.title }}</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Account assignment (admin) -->
+            <div v-if="role === 'administrator' && newSiteAccounts.length">
+              <label class="block text-xs mb-1 font-medium" style="color: var(--text-secondary)">Assign to Accounts</label>
+              <div class="flex flex-wrap gap-1">
+                <button v-for="a in newSiteAccounts" :key="a.account_id || a.id"
+                  @click="toggleNewSiteAccount(a.account_id || a.id)"
+                  :class="['filter-chip', newSite.shared_with.includes(a.account_id || a.id) && 'active']"
+                  style="font-size: 0.6875rem;">
+                  {{ a.name }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Environments -->
+            <div v-for="(env, ei) in newSite.environments" :key="ei" class="rounded-lg p-3" style="border: 1px solid var(--border-color);">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-semibold" style="color: var(--text-primary)">{{ env.environment }} Environment</span>
+                <button v-if="env.environment === 'Staging'" @click="removeStagingEnv()" class="btn btn-sm btn-ghost" style="color: var(--color-error); font-size: 0.6875rem;"><svg-icon name="close" :size="12" /> Remove</button>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs mb-1" style="color: var(--text-secondary)">Address</label>
+                  <input v-model="env.address" class="input-field" placeholder="IP or hostname" />
+                </div>
+                <div>
+                  <label class="block text-xs mb-1" style="color: var(--text-secondary)">Username</label>
+                  <input v-model="env.username" class="input-field" placeholder="SSH/SFTP user" />
+                </div>
+                <div>
+                  <label class="block text-xs mb-1" style="color: var(--text-secondary)">Password</label>
+                  <input v-model="env.password" type="password" class="input-field" placeholder="Optional" />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs mb-1" style="color: var(--text-secondary)">Protocol</label>
+                    <select v-model="env.protocol" class="select-field">
+                      <option value="sftp">SFTP</option>
+                      <option value="ssh">SSH</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs mb-1" style="color: var(--text-secondary)">Port</label>
+                    <input v-model="env.port" type="text" class="input-field" placeholder="2222" />
+                  </div>
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-xs mb-1" style="color: var(--text-secondary)">Home Directory</label>
+                  <input v-model="env.home_directory" class="input-field" placeholder="/home/user/public" />
+                </div>
+              </div>
+            </div>
+            <button v-if="newSite.environments.length < 2" @click="addStagingEnv()" class="btn btn-sm btn-ghost"><svg-icon name="plus" :size="14" /> Add Staging Environment</button>
+
+            <!-- Environment Variables (collapsible) -->
             <div>
-              <label class="block text-xs mb-1 font-medium" style="color: var(--text-secondary)">Site Name</label>
-              <input v-model="newSite.name" type="text" class="input-field" placeholder="My New Site" />
+              <button @click="newSite.showAdvanced = !newSite.showAdvanced" class="btn btn-sm btn-ghost text-xs">
+                <svg-icon :name="newSite.showAdvanced ? 'chevronUp' : 'chevronDown'" :size="12" /> Environment Variables
+              </button>
+              <div v-if="newSite.showAdvanced" class="mt-2 space-y-2">
+                <div v-for="(v, vi) in newSite.environment_vars" :key="vi" class="flex items-center gap-2">
+                  <input v-model="v.key" class="input-field flex-1" placeholder="Key" style="font-size: 0.75rem;" />
+                  <input v-model="v.value" class="input-field flex-1" placeholder="Value" style="font-size: 0.75rem;" />
+                  <button @click="removeEnvVar(vi)" class="btn-ghost p-1"><svg-icon name="close" :size="14" style="color: var(--color-error);" /></button>
+                </div>
+                <button @click="addEnvVar()" class="btn btn-sm btn-ghost text-xs"><svg-icon name="plus" :size="12" /> Add Variable</button>
+              </div>
             </div>
-            <div>
-              <label class="block text-xs mb-1 font-medium" style="color: var(--text-secondary)">Domain</label>
-              <input v-model="newSite.domain" type="text" class="input-field" placeholder="example.com" />
-            </div>
-            <div v-if="providers.length">
-              <label class="block text-xs mb-1 font-medium" style="color: var(--text-secondary)">Provider</label>
-              <select v-model="newSite.provider_id" class="select-field">
-                <option value="">None</option>
-                <option v-for="p in providers" :key="p.provider_id || p.id" :value="p.provider_id || p.id">{{ p.name }}</option>
-              </select>
-            </div>
+
             <div v-if="newSite.errors" class="rounded-lg p-3 text-sm" style="background: color-mix(in srgb, var(--color-error) 15%, transparent); color: var(--color-error);">{{ newSite.errors }}</div>
           </div>
           <div class="dialog-card-footer">
@@ -2317,15 +2961,22 @@ const SitesView = defineComponent({
         </div>
       </div>
 
+      <!-- Error state -->
+      <div v-if="sitesError" class="surface rounded-xl p-8 text-center">
+        <p class="text-sm mb-3" style="color: var(--color-error)">{{ sitesError }}</p>
+        <button @click="retrySites()" class="btn btn-sm btn-primary">Retry</button>
+      </div>
+
       <!-- Loading -->
-      <div v-if="sitesLoading" class="flex justify-center py-16"><div class="animate-spin rounded-full h-8 w-8 border-b-2" style="border-color: var(--color-primary)"></div></div>
+      <div v-else-if="sitesLoading" class="flex justify-center py-16"><div class="animate-spin rounded-full h-8 w-8 border-b-2" style="border-color: var(--color-primary)"></div></div>
 
       <!-- Cards View (all environments per site) -->
       <div v-else-if="viewMode === 'cards'" class="space-y-3">
         <div v-if="!filteredSites.length" class="surface rounded-xl p-8 text-center text-sm" style="color: var(--text-secondary)">No sites found.</div>
-        <div v-for="site in filteredSites" :key="site.site_id" class="site-card">
+        <div v-for="site in paginatedSites" :key="site.site_id" class="site-card">
           <!-- Site header -->
           <div class="site-card-header">
+            <input type="checkbox" :checked="isSiteSelected(site.site_id)" @click.stop="toggleSiteSelection(site)" style="accent-color: var(--color-primary); cursor: pointer;" />
             <svg-icon name="sites" :size="16" style="opacity: 0.5" />
             <router-link :to="'/sites/' + site.site_id">{{ site.name }}</router-link>
           </div>
@@ -2377,7 +3028,9 @@ const SitesView = defineComponent({
       <!-- Table View (compact rows, production env) -->
       <div v-else-if="viewMode === 'table'" class="surface rounded-xl">
         <div v-if="!filteredSites.length" class="p-8 text-center text-sm" style="color: var(--text-secondary)">No sites found.</div>
-        <div v-for="site in filteredSites" :key="site.site_id" class="site-row" @click="goToSite(site.site_id)">
+        <div v-for="site in paginatedSites" :key="site.site_id" class="site-row" @click="goToSite(site.site_id)">
+          <!-- Selection checkbox -->
+          <input type="checkbox" :checked="isSiteSelected(site.site_id)" @click.stop="toggleSiteSelection(site)" style="accent-color: var(--color-primary); cursor: pointer; flex-shrink: 0;" />
           <!-- Status dot -->
           <div class="status-dot online" title="Online"></div>
           <!-- Thumbnail -->
@@ -2425,7 +3078,8 @@ const SitesView = defineComponent({
       <div v-else-if="viewMode === 'grid'">
         <div v-if="!filteredSites.length" class="surface rounded-xl p-8 text-center text-sm" style="color: var(--text-secondary)">No sites found.</div>
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          <div v-for="site in filteredSites" :key="site.site_id" class="grid-card" @click="goToSite(site.site_id)">
+          <div v-for="site in paginatedSites" :key="site.site_id" class="grid-card" @click="goToSite(site.site_id)" style="position: relative;">
+            <input type="checkbox" :checked="isSiteSelected(site.site_id)" @click.stop="toggleSiteSelection(site)" style="accent-color: var(--color-primary); cursor: pointer; position: absolute; top: 8px; left: 8px; z-index: 2;" />
             <img v-if="getVisibleEnvironments(site)[0] && getVisibleEnvironments(site)[0].screenshot_base" :src="getScreenshotUrl(site, getVisibleEnvironments(site)[0], 800)" loading="lazy" @error="$event.target.style.display='none'; $event.target.nextElementSibling && ($event.target.nextElementSibling.style.display='flex')" />
             <div class="grid-card-placeholder" v-if="!getVisibleEnvironments(site)[0] || !getVisibleEnvironments(site)[0].screenshot_base"><svg-icon name="monitor" :size="32" style="color: var(--text-secondary); opacity: 0.3" /></div>
             <div class="grid-card-overlay">
@@ -2434,6 +3088,13 @@ const SitesView = defineComponent({
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Pagination -->
+      <div v-if="totalSitePages > 1" class="flex items-center justify-center gap-3 py-4">
+        <button @click="sitePage--" :disabled="sitePage <= 1" class="btn btn-sm btn-outline">Previous</button>
+        <span class="text-sm" style="color: var(--text-secondary)">Page {{ sitePage }} of {{ totalSitePages }} <span class="text-xs">({{ filteredSites.length }} sites)</span></span>
+        <button @click="sitePage++" :disabled="sitePage >= totalSitePages" class="btn btn-sm btn-outline">Next</button>
       </div>
     </div>
   `,
@@ -2654,7 +3315,87 @@ const ProfileView = defineComponent({
         });
     }
 
-    return { profile, gravatar, updateProfile };
+    const { theme } = useTheme();
+    function setTheme(val) {
+      theme.value = val;
+      applyTheme(val);
+      localStorage.setItem('captaincore-theme', val);
+    }
+
+    // 2FA state
+    const tfaActivating = ref(false);
+    const tfaUri = ref('');
+    const tfaToken = ref('');
+    const tfaCode = ref('');
+    const tfaLoading = ref(false);
+
+    function enableTFA() {
+      tfaLoading.value = true;
+      api.get('/wp-json/captaincore/v1/me/tfa_activate')
+        .then(r => {
+          tfaUri.value = r.data;
+          tfaToken.value = typeof r.data === 'string' ? r.data.split('=').pop() : '';
+          tfaActivating.value = true;
+          nextTick(() => {
+            const el = document.getElementById('tfa_qr_code');
+            if (el && typeof kjua !== 'undefined') {
+              el.innerHTML = '';
+              el.appendChild(kjua({ crisp: false, render: 'canvas', text: r.data, size: 150 }));
+            }
+          });
+        })
+        .catch(() => showNotify('Failed to start 2FA setup', 'error'))
+        .finally(() => { tfaLoading.value = false; });
+    }
+
+    function activateTFA() {
+      tfaLoading.value = true;
+      api.post('/wp-json/captaincore/v1/me/tfa_validate', { token: tfaCode.value })
+        .then(r => {
+          if (r.data) {
+            tfaActivating.value = false;
+            profile.tfa_enabled = true;
+            currentUser.tfa_enabled = 1;
+            tfaCode.value = '';
+            showNotify('Two-Factor Authentication enabled.', 'success');
+          } else {
+            showNotify('Invalid code. Please try again.', 'error');
+          }
+        })
+        .catch(() => showNotify('Verification failed.', 'error'))
+        .finally(() => { tfaLoading.value = false; });
+    }
+
+    function disableTFA() {
+      if (!confirm('Disable Two-Factor Authentication?')) return;
+      tfaLoading.value = true;
+      api.get('/wp-json/captaincore/v1/me/tfa_deactivate')
+        .then(r => {
+          if (r.data) {
+            profile.tfa_enabled = false;
+            currentUser.tfa_enabled = 0;
+            tfaActivating.value = false;
+            showNotify('Two-Factor Authentication disabled.', 'success');
+          }
+        })
+        .catch(() => showNotify('Failed to disable 2FA.', 'error'))
+        .finally(() => { tfaLoading.value = false; });
+    }
+
+    function cancelTFA() {
+      tfaActivating.value = false;
+      tfaUri.value = '';
+      tfaToken.value = '';
+      tfaCode.value = '';
+      const el = document.getElementById('tfa_qr_code');
+      if (el) el.innerHTML = '';
+    }
+
+    function copyTfaToken() {
+      navigator.clipboard.writeText(tfaToken.value).then(() => showNotify('Token copied', 'success'));
+    }
+
+    return { profile, gravatar, updateProfile, theme, setTheme, tfaActivating, tfaUri, tfaToken, tfaCode, tfaLoading, enableTFA, activateTFA, disableTFA, cancelTFA, copyTfaToken };
   },
   template: `
     <div class="surface rounded-xl mx-auto" style="max-width: 700px;">
@@ -2683,6 +3424,13 @@ const ProfileView = defineComponent({
             <label class="block text-xs mb-1 font-medium" style="color: var(--text-secondary)">New Password</label>
             <input v-model="profile.new_password" type="password" class="input-field" placeholder="Leave empty to keep current password" />
           </div>
+          <div>
+            <label class="block text-xs mb-1 font-medium" style="color: var(--text-secondary)">Theme</label>
+            <select :value="theme" @change="setTheme($event.target.value)" class="select-field">
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
         </div>
 
         <div v-for="error in profile.errors" class="rounded-lg p-3 mt-4 text-sm" style="background: color-mix(in srgb, var(--color-error) 15%, transparent); color: var(--color-error);">{{ error }}</div>
@@ -2690,6 +3438,52 @@ const ProfileView = defineComponent({
 
         <div class="mt-6">
           <button @click="updateProfile" class="btn btn-primary">Save Account</button>
+        </div>
+
+        <!-- Two-Factor Authentication -->
+        <div class="mt-8 pt-6" style="border-top: 1px solid var(--border-color);">
+          <h3 class="text-sm font-semibold mb-4" style="color: var(--text-primary)">Two-Factor Authentication</h3>
+
+          <div v-if="profile.tfa_enabled && !tfaActivating">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="badge badge-success">Enabled</span>
+              <span class="text-xs" style="color: var(--text-secondary)">Two-factor authentication is active on your account.</span>
+            </div>
+            <button @click="disableTFA()" :disabled="tfaLoading" class="btn btn-sm btn-outline" style="color: var(--color-error); border-color: var(--color-error);">
+              {{ tfaLoading ? 'Disabling...' : 'Disable 2FA' }}
+            </button>
+          </div>
+
+          <div v-else-if="!tfaActivating">
+            <p class="text-xs mb-3" style="color: var(--text-secondary)">Add an extra layer of security to your account by enabling two-factor authentication.</p>
+            <button @click="enableTFA()" :disabled="tfaLoading" class="btn btn-sm btn-primary">
+              {{ tfaLoading ? 'Setting up...' : 'Enable 2FA' }}
+            </button>
+          </div>
+
+          <!-- 2FA Setup -->
+          <div v-if="tfaActivating" class="rounded-lg p-4 mt-3" style="border: 1px solid var(--border-color);">
+            <div class="flex gap-4 items-start flex-wrap">
+              <div class="flex-1" style="min-width: 200px;">
+                <p class="text-xs mb-3" style="color: var(--text-secondary)">
+                  Scan the QR code with your authenticator app and enter the 6-digit code to verify.
+                </p>
+                <p class="text-xs mb-3" style="color: var(--text-secondary)">
+                  Or use this <a :href="tfaUri" target="_blank" class="underline" style="color: var(--color-primary);">setup link</a> or
+                  <a href="#" @click.prevent="copyTfaToken()" class="underline" style="color: var(--color-primary);">copy token</a>.
+                </p>
+                <div>
+                  <label class="block text-xs mb-1 font-medium" style="color: var(--text-secondary)">Verification Code</label>
+                  <input v-model="tfaCode" type="text" maxlength="6" placeholder="000000" class="input-field" style="max-width: 160px; letter-spacing: 4px; font-size: 1rem;" />
+                </div>
+                <div class="flex gap-2 mt-3">
+                  <button @click="activateTFA()" :disabled="tfaLoading || tfaCode.length < 6" class="btn btn-sm btn-primary">{{ tfaLoading ? 'Verifying...' : 'Activate' }}</button>
+                  <button @click="cancelTFA()" class="btn btn-sm btn-ghost">Cancel</button>
+                </div>
+              </div>
+              <div id="tfa_qr_code" class="flex-shrink-0" style="min-width: 150px; min-height: 150px; display: flex; align-items: center; justify-content: center;"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -2748,8 +3542,18 @@ const SiteDetailView = defineComponent({
 
     // Edit site state
     const showEditSiteDialog = ref(false);
-    const editSiteData = reactive({ name: '', site: '' });
+    const editSiteData = reactive({
+      site_id: '', name: '', site: '', provider: '',
+      shared_with: [], key: null,
+      environments: [],
+      environment_vars: [],
+      showAdvanced: false,
+    });
     const editSiteSaving = ref(false);
+    const editAccounts = ref([]);
+    const editAccountsLoaded = ref(false);
+    const editKeys = ref([]);
+    const editKeysLoaded = ref(false);
 
     // PHPMyAdmin state
     const fetchingPhpmyadmin = ref(false);
@@ -2773,6 +3577,13 @@ const SiteDetailView = defineComponent({
     const quicksavesLoading = ref(false);
     const quicksavesLoaded = ref(false);
     const quicksaveSearch = ref('');
+    const expandedQuicksave = ref(null);
+    const quicksaveFiles = ref([]);
+    const quicksaveFilesFiltered = ref([]);
+    const quicksaveFilesLoading = ref(false);
+    const quicksaveFileSearch = ref('');
+    const showFileDiffDialog = ref(false);
+    const fileDiff = reactive({ fileName: '', response: '', loading: false, quicksave: null });
     const snapshots = ref([]);
     const snapshotsLoading = ref(false);
     const snapshotsLoaded = ref(false);
@@ -3024,6 +3835,13 @@ const SiteDetailView = defineComponent({
     const updateLogs = ref([]);
     const updateLogsLoading = ref(false);
     const updateLogsLoaded = ref(false);
+    const expandedUpdateLog = ref(null);
+    const updateLogDetail = reactive({ plugins: [], themes: [], plugins_deleted: [], themes_deleted: [], core: '', core_previous: '', loading: false });
+    const showUpdateFileDiffDialog = ref(false);
+    const updateFileDiff = reactive({ fileName: '', response: '', loading: false, hash: '' });
+    const updateLogFiles = ref([]);
+    const updateLogFilesLoading = ref(false);
+
     function fetchUpdateLogs() {
       if (updateLogsLoaded.value || !selectedEnv.value) return;
       updateLogsLoading.value = true;
@@ -3035,17 +3853,128 @@ const SiteDetailView = defineComponent({
         .finally(() => { updateLogsLoading.value = false; });
     }
 
+    function toggleUpdateLog(log) {
+      if (expandedUpdateLog.value === log) { expandedUpdateLog.value = null; return; }
+      expandedUpdateLog.value = log;
+      updateLogDetail.loading = true;
+      updateLogDetail.plugins = []; updateLogDetail.themes = [];
+      updateLogDetail.plugins_deleted = []; updateLogDetail.themes_deleted = [];
+      updateLogFiles.value = [];
+      const id = route.params.id;
+      const envName = (selectedEnv.value.environment || 'production').toLowerCase();
+      api.get('/wp-json/captaincore/v1/update-logs/' + log.hash_before + '_' + log.hash_after, { params: { site_id: id, environment: envName } })
+        .then(r => {
+          const d = r.data || {};
+          updateLogDetail.plugins = d.plugins || [];
+          updateLogDetail.themes = d.themes || [];
+          updateLogDetail.plugins_deleted = d.plugins_deleted || [];
+          updateLogDetail.themes_deleted = d.themes_deleted || [];
+          updateLogDetail.core = d.core || '';
+          updateLogDetail.core_previous = d.core_previous || '';
+        })
+        .catch(() => showNotify('Failed to load update details', 'error'))
+        .finally(() => { updateLogDetail.loading = false; });
+    }
+
+    function viewUpdateLogFiles(log) {
+      updateLogFilesLoading.value = true;
+      const id = route.params.id;
+      const envName = (selectedEnv.value.environment || 'production').toLowerCase();
+      api.get('/wp-json/captaincore/v1/quicksaves/' + log.hash_after + '/changed', { params: { site_id: id, environment: envName } })
+        .then(r => { updateLogFiles.value = r.data || []; })
+        .catch(() => showNotify('Failed to load changed files', 'error'))
+        .finally(() => { updateLogFilesLoading.value = false; });
+    }
+
+    function viewUpdateFileDiff(hash, fileName) {
+      showUpdateFileDiffDialog.value = true;
+      updateFileDiff.loading = true;
+      updateFileDiff.fileName = fileName;
+      updateFileDiff.response = '';
+      updateFileDiff.hash = hash;
+      const id = route.params.id;
+      const envName = (selectedEnv.value.environment || 'production').toLowerCase();
+      const cleanName = fileName.replace(/^[MADR]\t/, '');
+      api.get('/wp-json/captaincore/v1/quicksaves/' + hash + '/filediff', { params: { site_id: id, environment: envName, file: cleanName } })
+        .then(r => {
+          const raw = typeof r.data === 'string' ? r.data : JSON.stringify(r.data);
+          updateFileDiff.response = raw.split('\n').map(line => {
+            const escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            if (line.startsWith('-')) return '<div class="diff-removed">' + escaped + '</div>';
+            if (line.startsWith('+')) return '<div class="diff-added">' + escaped + '</div>';
+            return '<div>' + escaped + '</div>';
+          }).join('');
+        })
+        .catch(() => { updateFileDiff.response = '<div>Failed to load diff.</div>'; })
+        .finally(() => { updateFileDiff.loading = false; });
+    }
+
     function editSite() {
       if (!site.value) return;
-      editSiteData.name = site.value.name || '';
-      editSiteData.site = site.value.site || '';
+      const s = JSON.parse(JSON.stringify(site.value));
+      editSiteData.site_id = s.site_id;
+      editSiteData.name = s.name || '';
+      editSiteData.site = s.site || '';
+      editSiteData.provider = s.provider || '';
+      editSiteData.key = s.key || null;
+      editSiteData.shared_with = (details.value.shared_with || []).map(a => a.account_id || a.id);
+      editSiteData.environment_vars = Array.isArray(s.environment_vars) ? JSON.parse(JSON.stringify(s.environment_vars)) : [];
+      editSiteData.showAdvanced = false;
+      // Deep copy environments
+      editSiteData.environments = (environments.value || []).map(e => ({
+        environment_id: e.environment_id, environment: e.environment,
+        site: e.site || '', address: e.address || '', username: e.username || '', password: e.password || '',
+        protocol: e.protocol || 'sftp', port: e.port || '2222', home_directory: e.home_directory || '',
+        database_username: e.database_username || '', database_password: e.database_password || '',
+        updates_enabled: e.updates_enabled || '1',
+        updates_exclude_plugins: e.updates_exclude_plugins || '', updates_exclude_themes: e.updates_exclude_themes || '',
+        offload_enabled: !!e.offload_enabled, offload_provider: e.offload_provider || '',
+        offload_access_key: e.offload_access_key || '', offload_secret_key: e.offload_secret_key || '',
+        offload_bucket: e.offload_bucket || '', offload_path: e.offload_path || '',
+      }));
       showEditSiteDialog.value = true;
+      if (!editAccountsLoaded.value) {
+        api.get('/wp-json/captaincore/v1/accounts')
+          .then(r => { editAccounts.value = r.data || []; editAccountsLoaded.value = true; })
+          .catch(() => {});
+      }
+      if (!editKeysLoaded.value) {
+        api.get('/wp-json/captaincore/v1/keys')
+          .then(r => { editKeys.value = r.data || []; editKeysLoaded.value = true; })
+          .catch(() => {});
+      }
     }
+    function toggleEditAccount(accountId) {
+      const idx = editSiteData.shared_with.indexOf(accountId);
+      if (idx > -1) editSiteData.shared_with.splice(idx, 1);
+      else editSiteData.shared_with.push(accountId);
+    }
+    function addEditStagingEnv() {
+      if (editSiteData.environments.some(e => e.environment === 'Staging')) return;
+      editSiteData.environments.push({
+        environment_id: '', environment: 'Staging', site: '', address: '', username: '', password: '',
+        protocol: 'sftp', port: '2222', home_directory: '', database_username: '', database_password: '',
+        updates_enabled: '1', updates_exclude_plugins: '', updates_exclude_themes: '',
+        offload_enabled: false, offload_provider: '', offload_access_key: '', offload_secret_key: '', offload_bucket: '', offload_path: '',
+      });
+    }
+    function removeEditStagingEnv() {
+      editSiteData.environments = editSiteData.environments.filter(e => e.environment !== 'Staging');
+    }
+    function addEditEnvVar() { editSiteData.environment_vars.push({ key: '', value: '' }); }
+    function removeEditEnvVar(i) { editSiteData.environment_vars.splice(i, 1); }
     function updateSite() {
       editSiteSaving.value = true;
-      const id = route.params.id;
-      api.put('/wp-json/captaincore/v1/sites/update', { value: { site_id: id, name: editSiteData.name, site: editSiteData.site } })
-        .then(() => { site.value.name = editSiteData.name; showEditSiteDialog.value = false; showNotify('Site updated', 'success'); refreshSites(); })
+      const payload = JSON.parse(JSON.stringify(editSiteData));
+      payload.shared_with = payload.shared_with; // already array of IDs
+      api.put('/wp-json/captaincore/v1/sites/update', { value: payload })
+        .then(() => {
+          site.value.name = editSiteData.name;
+          site.value.provider = editSiteData.provider;
+          showEditSiteDialog.value = false;
+          showNotify('Site updated', 'success');
+          refreshSites();
+        })
         .catch(() => showNotify('Failed to update site', 'error'))
         .finally(() => { editSiteSaving.value = false; });
     }
@@ -3157,6 +4086,114 @@ const SiteDetailView = defineComponent({
         })
         .catch(() => showNotify('Rollback failed', 'error'));
     }
+    function toggleQuicksaveExpand(qs) {
+      const hash = qs.git_hash || qs.hash;
+      if (expandedQuicksave.value === hash) {
+        expandedQuicksave.value = null;
+        quicksaveFiles.value = [];
+        quicksaveFilesFiltered.value = [];
+        quicksaveFileSearch.value = '';
+        return;
+      }
+      expandedQuicksave.value = hash;
+      quicksaveFiles.value = [];
+      quicksaveFilesFiltered.value = [];
+      quicksaveFileSearch.value = '';
+      quicksaveFilesLoading.value = true;
+      const id = route.params.id;
+      const envName = (selectedEnv.value.environment || 'production').toLowerCase();
+      api.get('/wp-json/captaincore/v1/quicksaves/' + hash + '/changed', { params: { site_id: id, environment: envName } })
+        .then(r => {
+          const files = (typeof r.data === 'string' ? r.data.trim().split('\n') : r.data) || [];
+          quicksaveFiles.value = files.filter(f => f);
+          quicksaveFilesFiltered.value = [...quicksaveFiles.value];
+        })
+        .catch(() => { quicksaveFiles.value = []; quicksaveFilesFiltered.value = []; })
+        .finally(() => { quicksaveFilesLoading.value = false; });
+    }
+
+    function filterQuicksaveFiles() {
+      if (!quicksaveFileSearch.value) {
+        quicksaveFilesFiltered.value = [...quicksaveFiles.value];
+        return;
+      }
+      const q = quicksaveFileSearch.value.toLowerCase();
+      quicksaveFilesFiltered.value = quicksaveFiles.value.filter(f => f.toLowerCase().includes(q));
+    }
+
+    function quicksaveFileDiff(hash, fileName) {
+      // File names from git status have format like "M\tpath/to/file" - extract the path
+      const cleanName = fileName.includes('\t') ? fileName.split('\t').pop() : fileName;
+      fileDiff.fileName = cleanName;
+      fileDiff.response = '';
+      fileDiff.loading = true;
+      fileDiff.quicksave = quicksaves.value.find(q => (q.git_hash || q.hash) === hash) || null;
+      showFileDiffDialog.value = true;
+      const id = route.params.id;
+      const envName = (selectedEnv.value.environment || 'production').toLowerCase();
+      api.get('/wp-json/captaincore/v1/quicksaves/' + hash + '/filediff', { params: { site_id: id, environment: envName, file: cleanName } })
+        .then(r => {
+          const raw = typeof r.data === 'string' ? r.data : JSON.stringify(r.data);
+          const lines = raw.split('\n').map(line => {
+            let cls = '';
+            if (line[0] === '-') cls = ' class="diff-removed"';
+            else if (line[0] === '+') cls = ' class="diff-added"';
+            return '<div' + cls + '>' + line.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
+          });
+          fileDiff.response = lines.join('');
+          fileDiff.loading = false;
+        })
+        .catch(() => { fileDiff.response = '<div style="color: var(--color-error);">Failed to load diff.</div>'; fileDiff.loading = false; });
+    }
+
+    function quicksaveFileRestore() {
+      if (!fileDiff.quicksave || !fileDiff.fileName) return;
+      const date = prettyTimestampEpoch(fileDiff.quicksave.created_at);
+      if (!confirm('Restore file "' + fileDiff.fileName + '" as of ' + date + '?')) return;
+      const hash = fileDiff.quicksave.git_hash || fileDiff.quicksave.hash || fileDiff.quicksave.hash_after;
+      const id = route.params.id;
+      const envName = selectedEnv.value.environment || 'Production';
+      api.post('/wp-json/captaincore/v1/sites/cli', {
+        post_id: id,
+        environment: envName,
+        hash: hash,
+        command: 'quicksave_file_restore',
+        value: fileDiff.fileName,
+      }).then(r => {
+        if (r.data) {
+          const jobId = createJob({ description: 'Restoring file ' + fileDiff.fileName });
+          const job = jobs.value.find(j => j.job_id === jobId);
+          if (job) { job.job_id = r.data; runCommand(r.data); }
+          terminalState.open = true;
+        }
+        showFileDiffDialog.value = false;
+        showNotify('File restore started', 'success');
+      }).catch(() => showNotify('File restore failed', 'error'));
+    }
+
+    function getFileStatus(fileName) {
+      if (!fileName) return '';
+      const prefix = fileName.split('\t')[0].trim();
+      if (prefix === 'M') return 'Modified';
+      if (prefix === 'A') return 'Added';
+      if (prefix === 'D') return 'Deleted';
+      if (prefix === 'R') return 'Renamed';
+      return '';
+    }
+
+    function getFileStatusColor(fileName) {
+      if (!fileName) return '';
+      const prefix = fileName.split('\t')[0].trim();
+      if (prefix === 'M') return 'var(--color-warning)';
+      if (prefix === 'A') return 'var(--color-success)';
+      if (prefix === 'D') return 'var(--color-error)';
+      return 'var(--text-secondary)';
+    }
+
+    function getCleanFileName(fileName) {
+      return fileName.includes('\t') ? fileName.split('\t').pop() : fileName;
+    }
+
     function downloadBackup(b) {
       if (!selectedEnv.value) return;
       const id = route.params.id;
@@ -3425,7 +4462,7 @@ const SiteDetailView = defineComponent({
         .catch(() => showNotify('Failed to save', 'error'));
     }
 
-    return { site, environments, envIndex, selectedEnv, details, loading, activeTab, tabs, plugins, themes, sharedWith, linkedDomains, goBack, copy, formatStorage, formatLargeNumbers, prettyTimestamp, prettyTimestampEpoch, logFile, logContent, logLoading, fetchLog, recipes, selectedRecipe, scriptCode, scriptOutput, scriptLoading, runScript, fathomStats, fathomLoading, fathomError, fathomGrouping, fathomFromAt, fathomToAt, fathomId, fathomTrackers, fetchFathomStats, formatTime, formatPercent, fathomChartEl, role, syncing, deleting, showDeleteConfirm, syncSite, magicLogin, deleteSite, addToTerminal, timelineLogs, timelineLoading, updateLogs, updateLogsLoading, showEditSiteDialog, editSiteData, editSiteSaving, editSite, updateSite, fetchPhpmyadmin, fetchingPhpmyadmin, copySshCommand, copySftpCommand, copyDbInfo, toggleSiteStatus, showAddPluginDialog, showAddThemeDialog, pluginSearch, themeSearch, pluginSearchResults, themeSearchResults, pluginSearchLoading, themeSearchLoading, addonActionLoading, installPlugin, installTheme, togglePlugin, deletePlugin, activateTheme, deleteTheme, backups, backupsLoading, quicksaves, quicksavesLoading, quicksaveSearch, filteredQuicksaves, snapshots, snapshotsLoading, backupSubTab, rollbackQuicksave, downloadBackup, restoreBackup, createSnapshot, showLaunchDialog, launchData, launching, launchSite, showCopyDialog, copyData, copying, copySite, showMigrateDialog, migrateData, migrating, migrateSite, pushing, pushToOther, showDomainMappingsDialog, domainMappings, domainMappingsLoading, newDomainMapping, fetchDomainMappings, addDomainMapping, deleteDomainMapping, setPrimaryDomainMapping, showCapturesDialog, captures, capturesLoading, capturePages, showCaptures, captureCheck, saveCaptureConfig, sites };
+    return { site, environments, envIndex, selectedEnv, details, loading, activeTab, tabs, plugins, themes, sharedWith, linkedDomains, goBack, copy, formatStorage, formatLargeNumbers, prettyTimestamp, prettyTimestampEpoch, logFile, logContent, logLoading, fetchLog, recipes, selectedRecipe, scriptCode, scriptOutput, scriptLoading, runScript, fathomStats, fathomLoading, fathomError, fathomGrouping, fathomFromAt, fathomToAt, fathomId, fathomTrackers, fetchFathomStats, formatTime, formatPercent, fathomChartEl, role, syncing, deleting, showDeleteConfirm, syncSite, magicLogin, deleteSite, addToTerminal, timelineLogs, timelineLoading, updateLogs, updateLogsLoading, expandedUpdateLog, updateLogDetail, toggleUpdateLog, viewUpdateLogFiles, updateLogFiles, updateLogFilesLoading, showUpdateFileDiffDialog, updateFileDiff, viewUpdateFileDiff, showEditSiteDialog, editSiteData, editSiteSaving, editSite, updateSite, editAccounts, editKeys, toggleEditAccount, addEditStagingEnv, removeEditStagingEnv, addEditEnvVar, removeEditEnvVar, fetchPhpmyadmin, fetchingPhpmyadmin, copySshCommand, copySftpCommand, copyDbInfo, toggleSiteStatus, showAddPluginDialog, showAddThemeDialog, pluginSearch, themeSearch, pluginSearchResults, themeSearchResults, pluginSearchLoading, themeSearchLoading, addonActionLoading, installPlugin, installTheme, togglePlugin, deletePlugin, activateTheme, deleteTheme, backups, backupsLoading, quicksaves, quicksavesLoading, quicksaveSearch, filteredQuicksaves, expandedQuicksave, quicksaveFiles, quicksaveFilesFiltered, quicksaveFilesLoading, quicksaveFileSearch, toggleQuicksaveExpand, filterQuicksaveFiles, quicksaveFileDiff, quicksaveFileRestore, showFileDiffDialog, fileDiff, getFileStatus, getFileStatusColor, getCleanFileName, snapshots, snapshotsLoading, backupSubTab, rollbackQuicksave, downloadBackup, restoreBackup, createSnapshot, showLaunchDialog, launchData, launching, launchSite, showCopyDialog, copyData, copying, copySite, showMigrateDialog, migrateData, migrating, migrateSite, pushing, pushToOther, showDomainMappingsDialog, domainMappings, domainMappingsLoading, newDomainMapping, fetchDomainMappings, addDomainMapping, deleteDomainMapping, setPrimaryDomainMapping, showCapturesDialog, captures, capturesLoading, capturePages, showCaptures, captureCheck, saveCaptureConfig, sites };
   },
   template: `
     <div v-if="loading" class="flex justify-center py-16"><div class="animate-spin rounded-full h-8 w-8 border-b-2" style="border-color: var(--color-primary)"></div></div>
@@ -3479,15 +4516,103 @@ const SiteDetailView = defineComponent({
       </div>
       <!-- Edit site dialog -->
       <div v-if="showEditSiteDialog" class="dialog-overlay" @click.self="showEditSiteDialog = false">
-        <div class="dialog-card" style="max-width: 480px;">
+        <div class="dialog-card" style="max-width: 640px; max-height: 90vh; display: flex; flex-direction: column;">
           <div class="dialog-card-header">
             <h3 class="text-sm font-semibold" style="color: var(--text-primary)">Edit Site</h3>
             <button @click="showEditSiteDialog = false" class="btn btn-sm btn-ghost"><svg-icon name="close" :size="16" /></button>
           </div>
-          <div class="dialog-card-body space-y-4">
+          <div class="dialog-card-body space-y-4" style="overflow-y: auto; flex: 1;">
+            <!-- Basic fields -->
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs mb-1 font-medium" style="color: var(--text-secondary)">Site Name</label>
+                <input v-model="editSiteData.name" class="input-field" />
+              </div>
+              <div>
+                <label class="block text-xs mb-1 font-medium" style="color: var(--text-secondary)">Provider</label>
+                <select v-model="editSiteData.provider" class="select-field">
+                  <option value="">None</option>
+                  <option value="kinsta">Kinsta</option>
+                  <option value="gridpane">GridPane</option>
+                  <option value="rocketdotnet">Rocket.net</option>
+                  <option value="wpengine">WP Engine</option>
+                </select>
+              </div>
+            </div>
+            <div v-if="editKeys.length">
+              <label class="block text-xs mb-1 font-medium" style="color: var(--text-secondary)">SSH Key Override</label>
+              <select v-model="editSiteData.key" class="select-field">
+                <option :value="null">Default</option>
+                <option v-for="k in editKeys" :key="k.key_id || k.id" :value="k.key_id || k.id">{{ k.title }}</option>
+              </select>
+            </div>
+
+            <!-- Account assignment (admin) -->
+            <div v-if="role === 'administrator' && editAccounts.length">
+              <label class="block text-xs mb-1 font-medium" style="color: var(--text-secondary)">Assigned Accounts</label>
+              <div class="flex flex-wrap gap-1">
+                <button v-for="a in editAccounts" :key="a.account_id || a.id"
+                  @click="toggleEditAccount(a.account_id || a.id)"
+                  :class="['filter-chip', editSiteData.shared_with.includes(a.account_id || a.id) && 'active']"
+                  style="font-size: 0.6875rem;">
+                  {{ a.name }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Environments -->
+            <div v-for="(env, ei) in editSiteData.environments" :key="ei" class="rounded-lg p-3" style="border: 1px solid var(--border-color);">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-semibold" style="color: var(--text-primary)">{{ env.environment }} Environment</span>
+                <button v-if="env.environment === 'Staging'" @click="removeEditStagingEnv()" class="btn btn-sm btn-ghost" style="color: var(--color-error); font-size: 0.6875rem;"><svg-icon name="close" :size="12" /> Remove</button>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs mb-1" style="color: var(--text-secondary)">Address</label>
+                  <input v-model="env.address" class="input-field" placeholder="IP or hostname" />
+                </div>
+                <div>
+                  <label class="block text-xs mb-1" style="color: var(--text-secondary)">Username</label>
+                  <input v-model="env.username" class="input-field" />
+                </div>
+                <div>
+                  <label class="block text-xs mb-1" style="color: var(--text-secondary)">Password</label>
+                  <input v-model="env.password" type="password" class="input-field" />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs mb-1" style="color: var(--text-secondary)">Protocol</label>
+                    <select v-model="env.protocol" class="select-field">
+                      <option value="sftp">SFTP</option>
+                      <option value="ssh">SSH</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs mb-1" style="color: var(--text-secondary)">Port</label>
+                    <input v-model="env.port" type="text" class="input-field" />
+                  </div>
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-xs mb-1" style="color: var(--text-secondary)">Home Directory</label>
+                  <input v-model="env.home_directory" class="input-field" />
+                </div>
+              </div>
+            </div>
+            <button v-if="!editSiteData.environments.some(e => e.environment === 'Staging')" @click="addEditStagingEnv()" class="btn btn-sm btn-ghost"><svg-icon name="plus" :size="14" /> Add Staging Environment</button>
+
+            <!-- Environment Variables -->
             <div>
-              <label class="block text-xs mb-1 font-medium" style="color: var(--text-secondary)">Site Name</label>
-              <input v-model="editSiteData.name" class="input-field" />
+              <button @click="editSiteData.showAdvanced = !editSiteData.showAdvanced" class="btn btn-sm btn-ghost text-xs">
+                <svg-icon :name="editSiteData.showAdvanced ? 'chevronUp' : 'chevronDown'" :size="12" /> Environment Variables
+              </button>
+              <div v-if="editSiteData.showAdvanced" class="mt-2 space-y-2">
+                <div v-for="(v, vi) in editSiteData.environment_vars" :key="vi" class="flex items-center gap-2">
+                  <input v-model="v.key" class="input-field flex-1" placeholder="Key" style="font-size: 0.75rem;" />
+                  <input v-model="v.value" class="input-field flex-1" placeholder="Value" style="font-size: 0.75rem;" />
+                  <button @click="removeEditEnvVar(vi)" class="btn-ghost p-1"><svg-icon name="close" :size="14" style="color: var(--color-error);" /></button>
+                </div>
+                <button @click="addEditEnvVar()" class="btn btn-sm btn-ghost text-xs"><svg-icon name="plus" :size="12" /> Add Variable</button>
+              </div>
             </div>
           </div>
           <div class="dialog-card-footer">
@@ -3785,18 +4910,106 @@ const SiteDetailView = defineComponent({
           <div v-if="updateLogsLoading" class="flex justify-center py-8"><div class="animate-spin rounded-full h-6 w-6 border-b-2" style="border-color: var(--color-primary)"></div></div>
           <div v-else-if="!updateLogs.length" class="text-sm py-4" style="color: var(--text-secondary)">No update logs.</div>
           <div v-else class="space-y-2">
-            <div v-for="log in updateLogs" :key="log.hash_before || log.update_log_id" class="rounded-lg p-3" style="background: var(--hover-bg)">
-              <div class="flex items-center justify-between">
-                <div class="text-sm font-medium" style="color: var(--text-primary)">
-                  <span v-if="log.core !== log.core_previous">Core {{ log.core_previous }} &rarr; {{ log.core }}</span>
-                  <span v-else>WordPress {{ log.core }}</span>
-                  <span v-if="log.plugins_changed" class="ml-2 text-xs" style="color: var(--text-secondary)">({{ log.plugins_changed }} plugin{{ log.plugins_changed > 1 ? 's' : '' }} changed)</span>
+            <div v-for="log in updateLogs" :key="log.hash_before || log.update_log_id" class="rounded-lg" style="background: var(--hover-bg)">
+              <div class="p-3 cursor-pointer" @click="toggleUpdateLog(log)">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <svg-icon :name="expandedUpdateLog === log ? 'chevronDown' : 'chevronRight'" :size="14" style="color: var(--text-secondary)" />
+                    <div class="text-sm font-medium" style="color: var(--text-primary)">
+                      <span v-if="log.core !== log.core_previous">Core {{ log.core_previous }} &rarr; {{ log.core }}</span>
+                      <span v-else>WordPress {{ log.core }}</span>
+                    </div>
+                    <span v-if="log.status" :class="'badge badge-' + (log.status === 'success' ? 'success' : 'error')">{{ log.status }}</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <span v-if="log.plugins_changed" class="text-xs" style="color: var(--text-secondary)">{{ log.plugins_changed }} plugin{{ log.plugins_changed > 1 ? 's' : '' }}</span>
+                    <span v-if="log.themes_changed" class="text-xs" style="color: var(--text-secondary)">{{ log.themes_changed }} theme{{ log.themes_changed > 1 ? 's' : '' }}</span>
+                    <span v-if="log.created_at" class="text-xs" style="color: var(--text-secondary)">{{ prettyTimestampEpoch(log.created_at) }}</span>
+                  </div>
                 </div>
-                <div v-if="log.created_at" class="text-xs" style="color: var(--text-secondary)">{{ prettyTimestampEpoch(log.created_at) }}</div>
               </div>
-              <div class="flex flex-wrap gap-2 mt-1 text-xs" style="color: var(--text-secondary)">
-                <span>{{ log.plugin_count }} plugins</span>
-                <span v-if="log.theme_count">{{ log.theme_count }} themes</span>
+              <!-- Expanded detail -->
+              <div v-if="expandedUpdateLog === log" class="px-3 pb-3" style="border-top: 1px solid var(--border-color)">
+                <div v-if="updateLogDetail.loading" class="flex justify-center py-4"><div class="animate-spin rounded-full h-5 w-5 border-b-2" style="border-color: var(--color-primary)"></div></div>
+                <div v-else>
+                  <!-- Core change -->
+                  <div v-if="updateLogDetail.core_previous && updateLogDetail.core && updateLogDetail.core !== updateLogDetail.core_previous" class="py-2 text-sm" style="border-bottom: 1px solid var(--border-color)">
+                    <span class="font-medium">WordPress Core:</span> {{ updateLogDetail.core_previous }} &rarr; {{ updateLogDetail.core }}
+                  </div>
+                  <!-- Plugins -->
+                  <div v-if="updateLogDetail.plugins.length" class="py-2">
+                    <div class="text-xs font-semibold mb-2" style="color: var(--text-secondary); text-transform: uppercase">Plugins</div>
+                    <table class="w-full text-sm">
+                      <thead><tr style="border-bottom: 1px solid var(--border-color)"><th class="text-left py-1 font-medium text-xs" style="color: var(--text-secondary)">Name</th><th class="text-left py-1 font-medium text-xs" style="color: var(--text-secondary)">Version</th><th class="text-left py-1 font-medium text-xs" style="color: var(--text-secondary)">Status</th></tr></thead>
+                      <tbody>
+                        <tr v-for="p in updateLogDetail.plugins" :key="p.name" style="border-bottom: 1px solid var(--border-color)">
+                          <td class="py-1.5">{{ p.title || p.name }}</td>
+                          <td class="py-1.5">
+                            <span v-if="p.changed_version && p.changed_version !== p.version"><span style="color: var(--text-secondary)">{{ p.changed_version }}</span> &rarr; </span>{{ p.version }}
+                          </td>
+                          <td class="py-1.5">
+                            <span v-if="p.changed" class="badge badge-warning">updated</span>
+                            <span v-else class="badge badge-default">{{ p.status }}</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <!-- Deleted plugins -->
+                  <div v-if="updateLogDetail.plugins_deleted.length" class="py-2">
+                    <div class="text-xs font-semibold mb-2" style="color: var(--color-error); text-transform: uppercase">Plugins Removed</div>
+                    <div v-for="p in updateLogDetail.plugins_deleted" :key="p.name" class="text-sm py-1">{{ p.title || p.name }} <span class="badge badge-error">deleted</span></div>
+                  </div>
+                  <!-- Themes -->
+                  <div v-if="updateLogDetail.themes.length" class="py-2">
+                    <div class="text-xs font-semibold mb-2" style="color: var(--text-secondary); text-transform: uppercase">Themes</div>
+                    <table class="w-full text-sm">
+                      <thead><tr style="border-bottom: 1px solid var(--border-color)"><th class="text-left py-1 font-medium text-xs" style="color: var(--text-secondary)">Name</th><th class="text-left py-1 font-medium text-xs" style="color: var(--text-secondary)">Version</th><th class="text-left py-1 font-medium text-xs" style="color: var(--text-secondary)">Status</th></tr></thead>
+                      <tbody>
+                        <tr v-for="t in updateLogDetail.themes" :key="t.name" style="border-bottom: 1px solid var(--border-color)">
+                          <td class="py-1.5">{{ t.title || t.name }}</td>
+                          <td class="py-1.5">
+                            <span v-if="t.changed_version && t.changed_version !== t.version"><span style="color: var(--text-secondary)">{{ t.changed_version }}</span> &rarr; </span>{{ t.version }}
+                          </td>
+                          <td class="py-1.5">
+                            <span v-if="t.changed" class="badge badge-warning">updated</span>
+                            <span v-else class="badge badge-default">{{ t.status }}</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <!-- Deleted themes -->
+                  <div v-if="updateLogDetail.themes_deleted.length" class="py-2">
+                    <div class="text-xs font-semibold mb-2" style="color: var(--color-error); text-transform: uppercase">Themes Removed</div>
+                    <div v-for="t in updateLogDetail.themes_deleted" :key="t.name" class="text-sm py-1">{{ t.title || t.name }} <span class="badge badge-error">deleted</span></div>
+                  </div>
+                  <!-- View Changed Files -->
+                  <div class="pt-2">
+                    <button @click="viewUpdateLogFiles(log)" class="btn btn-sm btn-outline" :disabled="updateLogFilesLoading">
+                      {{ updateLogFilesLoading ? 'Loading...' : 'View Changed Files' }}
+                    </button>
+                    <div v-if="updateLogFiles.length" class="mt-2" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px">
+                      <div v-for="f in updateLogFiles" :key="f" @click="viewUpdateFileDiff(log.hash_after, f)" class="px-3 py-1.5 text-xs cursor-pointer flex items-center gap-2" style="border-bottom: 1px solid var(--border-color); font-family: monospace" :style="{ background: 'transparent' }" @mouseenter="$event.target.style.background='var(--active-bg)'" @mouseleave="$event.target.style.background='transparent'">
+                        <span :style="{ color: f.startsWith('M') ? 'var(--color-warning)' : f.startsWith('A') ? 'var(--color-success)' : f.startsWith('D') ? 'var(--color-error)' : 'var(--text-secondary)' }">{{ f.startsWith('M') ? 'Modified' : f.startsWith('A') ? 'Added' : f.startsWith('D') ? 'Deleted' : 'Changed' }}</span>
+                        <span>{{ f.replace(/^[MADR]\t/, '') }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Update File Diff Dialog -->
+          <div v-if="showUpdateFileDiffDialog" class="dialog-overlay" @mousedown.self="showUpdateFileDiffDialog = false">
+            <div class="dialog-card" style="width: 800px">
+              <div class="dialog-header">
+                <h3 class="dialog-title text-xs" style="font-family: monospace">{{ updateFileDiff.fileName.replace(/^[MADR]\t/, '') }}</h3>
+                <button @click="showUpdateFileDiffDialog = false" class="btn btn-sm btn-ghost"><svg-icon name="x" :size="18" /></button>
+              </div>
+              <div class="dialog-body" style="max-height: 70vh; overflow: auto; padding: 0">
+                <div v-if="updateFileDiff.loading" class="flex justify-center py-8"><div class="animate-spin rounded-full h-6 w-6 border-b-2" style="border-color: var(--color-primary)"></div></div>
+                <div v-else class="diff-view" v-html="updateFileDiff.response"></div>
               </div>
             </div>
           </div>
@@ -3832,13 +5045,65 @@ const SiteDetailView = defineComponent({
             <div v-if="quicksavesLoading" class="flex justify-center py-8"><div class="animate-spin rounded-full h-6 w-6 border-b-2" style="border-color: var(--color-primary)"></div></div>
             <div v-else-if="!filteredQuicksaves.length" class="text-sm py-4" style="color: var(--text-secondary)">No quicksaves found.</div>
             <div v-else>
-              <div v-for="qs in filteredQuicksaves" :key="qs.git_hash || qs.hash" class="p-3 mb-2 rounded-lg" style="background: var(--hover-bg)">
-                <div class="flex items-center justify-between mb-2">
-                  <div class="text-xs" style="color: var(--text-secondary)">{{ prettyTimestampEpoch(qs.created_at) }}</div>
-                  <button v-if="role === 'administrator'" @click="rollbackQuicksave(qs)" class="btn btn-sm btn-outline"><svg-icon name="refresh" :size="14" /> Rollback</button>
+              <div v-for="qs in filteredQuicksaves" :key="qs.git_hash || qs.hash" class="mb-2 rounded-lg" style="background: var(--hover-bg)">
+                <div class="p-3">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-3">
+                      <div class="text-xs" style="color: var(--text-secondary)">{{ prettyTimestampEpoch(qs.created_at) }}</div>
+                      <span v-if="qs.core" class="badge badge-default" style="font-size: 0.625rem;">WP {{ qs.core }}</span>
+                      <span v-if="qs.plugin_count" class="text-xs" style="color: var(--text-secondary)">{{ qs.plugin_count }} plugins</span>
+                      <span v-if="qs.theme_count" class="text-xs" style="color: var(--text-secondary)">{{ qs.theme_count }} themes</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <button @click.stop="toggleQuicksaveExpand(qs)" class="btn btn-sm btn-ghost" :style="expandedQuicksave === (qs.git_hash || qs.hash) ? 'color: var(--color-primary)' : ''">
+                        <svg-icon name="funnel" :size="14" /> Files
+                      </button>
+                      <button v-if="role === 'administrator'" @click="rollbackQuicksave(qs)" class="btn btn-sm btn-outline"><svg-icon name="refresh" :size="14" /> Rollback</button>
+                    </div>
+                  </div>
+                  <div v-if="qs.changes" class="text-xs" style="color: var(--text-primary); white-space: pre-wrap; font-family: monospace;">{{ typeof qs.changes === 'string' ? qs.changes : JSON.stringify(qs.changes, null, 2) }}</div>
+                  <div v-else-if="qs.git_status" class="text-xs" style="color: var(--text-primary); white-space: pre-wrap; font-family: monospace;">{{ typeof qs.git_status === 'string' ? qs.git_status : JSON.stringify(qs.git_status, null, 2) }}</div>
                 </div>
-                <div v-if="qs.changes" class="text-xs" style="color: var(--text-primary); white-space: pre-wrap; font-family: monospace;">{{ typeof qs.changes === 'string' ? qs.changes : JSON.stringify(qs.changes, null, 2) }}</div>
-                <div v-else-if="qs.git_status" class="text-xs" style="color: var(--text-primary); white-space: pre-wrap; font-family: monospace;">{{ typeof qs.git_status === 'string' ? qs.git_status : JSON.stringify(qs.git_status, null, 2) }}</div>
+                <!-- Expanded file list -->
+                <div v-if="expandedQuicksave === (qs.git_hash || qs.hash)" style="border-top: 1px solid var(--border-color);">
+                  <div class="px-3 pt-3 pb-2 flex items-center gap-3">
+                    <div class="search-wrapper flex-1"><svg-icon name="search" :size="14" class="search-icon" /><input v-model="quicksaveFileSearch" @input="filterQuicksaveFiles()" type="text" placeholder="Filter files..." class="input-field" style="width: 100%; font-size: 0.75rem; padding: 4px 8px 4px 28px;" /></div>
+                    <span class="text-xs flex-shrink-0" style="color: var(--text-secondary)">{{ quicksaveFilesFiltered.length }} files</span>
+                  </div>
+                  <div v-if="quicksaveFilesLoading" class="flex justify-center py-4"><div class="animate-spin rounded-full h-5 w-5 border-b-2" style="border-color: var(--color-primary)"></div></div>
+                  <div v-else-if="!quicksaveFilesFiltered.length" class="px-3 pb-3 text-xs" style="color: var(--text-secondary)">No changed files found.</div>
+                  <div v-else style="max-height: 400px; overflow-y: auto;">
+                    <div v-for="(file, fi) in quicksaveFilesFiltered" :key="fi"
+                      @click="quicksaveFileDiff(qs.git_hash || qs.hash, file)"
+                      class="flex items-center gap-2 px-3 py-1.5 cursor-pointer text-xs"
+                      style="font-family: monospace;"
+                      @mouseenter="$event.target.style.background='var(--hover-bg)'"
+                      @mouseleave="$event.target.style.background='transparent'">
+                      <span class="flex-shrink-0 font-semibold" :style="'color:' + getFileStatusColor(file)" style="width: 60px;">{{ getFileStatus(file) }}</span>
+                      <span class="truncate" style="color: var(--text-primary)">{{ getCleanFileName(file) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- File Diff Dialog -->
+          <div v-if="showFileDiffDialog" class="dialog-overlay" @click.self="showFileDiffDialog = false" style="z-index: 100;">
+            <div class="dialog-card" style="max-width: 900px; width: 95vw; max-height: 90vh; display: flex; flex-direction: column;">
+              <div class="dialog-card-header">
+                <div class="flex-1 min-w-0">
+                  <h3 class="text-sm font-semibold truncate" style="color: var(--text-primary); font-family: monospace;">{{ fileDiff.fileName }}</h3>
+                  <div v-if="fileDiff.quicksave" class="text-xs mt-1" style="color: var(--text-secondary)">{{ prettyTimestampEpoch(fileDiff.quicksave.created_at) }}</div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button v-if="role === 'administrator'" @click="quicksaveFileRestore()" class="btn btn-sm btn-outline">Restore this file</button>
+                  <button @click="showFileDiffDialog = false" class="btn-ghost p-1 rounded"><svg-icon name="close" :size="16" /></button>
+                </div>
+              </div>
+              <div style="flex: 1; overflow-y: auto; padding: 0;">
+                <div v-if="fileDiff.loading" class="flex justify-center py-8"><div class="animate-spin rounded-full h-6 w-6 border-b-2" style="border-color: var(--color-primary)"></div></div>
+                <div v-else class="diff-view" v-html="fileDiff.response"></div>
               </div>
             </div>
           </div>
@@ -4130,6 +5395,7 @@ const DomainDetailView = defineComponent({
       const t = [{ key: 'dns', label: 'DNS Records' }];
       if (domain.value && domain.value.provider_id) t.push({ key: 'management', label: 'Domain Management' });
       if (domainDetails.value && domainDetails.value.mailgun_forwarding_id) t.push({ key: 'email', label: 'Email Forwarding' });
+      if (domainDetails.value && domainDetails.value.mailgun_id) t.push({ key: 'mailgun', label: 'Mailgun' });
       return t;
     });
     const contactTabs = [
@@ -4174,7 +5440,96 @@ const DomainDetailView = defineComponent({
     }
     onMounted(fetchData);
     watch(() => route.params.id, v => { if (v) fetchData(); });
-    watch(activeTab, t => { if (t === 'email' && !forwards.value.length) fetchEmailForwards(); });
+    watch(activeTab, t => {
+      if (t === 'email' && !forwards.value.length) fetchEmailForwards();
+      if (t === 'mailgun' && !mailgunData.value) fetchMailgunDetails();
+    });
+
+    // Mailgun state
+    const mailgunData = ref(null);
+    const mailgunLoading = ref(false);
+    const mailgunVerifying = ref(false);
+    const mailgunEvents = ref([]);
+    const mailgunEventsLoading = ref(false);
+    const showMailgunEventsDialog = ref(false);
+    const mailgunSetupDialog = ref(false);
+    const mailgunSubdomain = ref('mg');
+    const mailgunSettingUp = ref(false);
+    const mailgunDeployDialog = ref(false);
+    const mailgunDeployName = ref('');
+    const mailgunDeploying = ref(false);
+    const mailgunDeploySiteId = ref('');
+
+    function fetchMailgunDetails() {
+      mailgunLoading.value = true;
+      api.get('/wp-json/captaincore/v1/domain/' + route.params.id + '/mailgun')
+        .then(r => { mailgunData.value = r.data || null; })
+        .catch(() => showNotify('Failed to load Mailgun details', 'error'))
+        .finally(() => { mailgunLoading.value = false; });
+    }
+
+    function verifyMailgunDomain() {
+      mailgunVerifying.value = true;
+      api.post('/wp-json/captaincore/v1/domain/' + route.params.id + '/mailgun/verify')
+        .then(r => {
+          if (r.data) mailgunData.value = r.data;
+          showNotify('DNS verification complete', 'success');
+        })
+        .catch(() => showNotify('Verification failed', 'error'))
+        .finally(() => { mailgunVerifying.value = false; });
+    }
+
+    function fetchMailgunEvents() {
+      mailgunEventsLoading.value = true;
+      showMailgunEventsDialog.value = true;
+      api.get('/wp-json/captaincore/v1/domain/' + route.params.id + '/mailgun/events')
+        .then(r => { mailgunEvents.value = r.data || []; })
+        .catch(() => showNotify('Failed to load events', 'error'))
+        .finally(() => { mailgunEventsLoading.value = false; });
+    }
+
+    function setupMailgun() {
+      mailgunSettingUp.value = true;
+      api.post('/wp-json/captaincore/v1/domain/' + route.params.id + '/mailgun/setup', { subdomain: mailgunSubdomain.value })
+        .then(r => {
+          showNotify('Mailgun zone created', 'success');
+          mailgunSetupDialog.value = false;
+          if (r.data && r.data.details) domainDetails.value = r.data.details;
+          fetchMailgunDetails();
+          activeTab.value = 'mailgun';
+        })
+        .catch(() => showNotify('Setup failed', 'error'))
+        .finally(() => { mailgunSettingUp.value = false; });
+    }
+
+    function deployMailgun() {
+      if (!mailgunDeploySiteId.value) { showNotify('Select a site', 'error'); return; }
+      mailgunDeploying.value = true;
+      api.post('/wp-json/captaincore/v1/domain/' + route.params.id + '/mailgun/deploy', { site_id: mailgunDeploySiteId.value, from_name: mailgunDeployName.value })
+        .then(() => { showNotify('Mailgun deployed', 'success'); mailgunDeployDialog.value = false; })
+        .catch(() => showNotify('Deploy failed', 'error'))
+        .finally(() => { mailgunDeploying.value = false; });
+    }
+
+    function deleteMailgunZone() {
+      if (!confirm('Delete the Mailgun zone for this domain?')) return;
+      api.delete('/wp-json/captaincore/v1/domain/' + route.params.id + '/mailgun')
+        .then(() => {
+          showNotify('Mailgun zone deleted', 'success');
+          mailgunData.value = null;
+          domainDetails.value.mailgun_id = '';
+          domainDetails.value.mailgun_zone = '';
+          domainDetails.value.mailgun_smtp_password = '';
+          activeTab.value = 'dns';
+        })
+        .catch(() => showNotify('Delete failed', 'error'));
+    }
+
+    function dnsValidClass(valid) {
+      if (valid === 'valid') return 'badge-success';
+      if (valid === 'invalid') return 'badge-error';
+      return 'badge-default';
+    }
 
     const role = userRole;
     const deletingDomain = ref(false);
@@ -4237,6 +5592,54 @@ const DomainDetailView = defineComponent({
       r.update = { record_id: r.id, record_type: r.type, record_name: r.name || '', record_value: JSON.parse(JSON.stringify(r.value || [])), record_ttl: r.ttl || 3600 };
     }
     function deleteRecord(i) { records.value[i].deleted = true; }
+    function undeleteRecord(i) { records.value[i].deleted = false; }
+
+    function addRecordValue(i) {
+      const type = records.value[i].update.record_type;
+      if (type === 'MX') records.value[i].update.record_value.push({ priority: '', server: '', enabled: true });
+      else if (type === 'SRV') records.value[i].update.record_value.push({ priority: 100, weight: 1, port: 443, host: '', enabled: true });
+      else records.value[i].update.record_value.push({ value: '', enabled: true });
+    }
+    function removeRecordValue(i, vi) {
+      if (records.value[i].update.record_value.length > 1) records.value[i].update.record_value.splice(vi, 1);
+    }
+    function changeRecordType(i) {
+      const type = records.value[i].update.record_type;
+      if (type === 'MX') records.value[i].update.record_value = [{ priority: '', server: '', enabled: true }];
+      else if (type === 'SRV') records.value[i].update.record_value = [{ priority: 100, weight: 1, port: 443, host: '', enabled: true }];
+      else if (type === 'HTTP') records.value[i].update.record_value = [{ value: '', enabled: true }];
+      else records.value[i].update.record_value = [{ value: '', enabled: true }];
+    }
+
+    // Import zone file
+    const showImportDialog = ref(false);
+    const importZoneText = ref('');
+    function importZoneFile() {
+      if (!importZoneText.value.trim()) return;
+      saving.value = true;
+      api.post('/wp-json/captaincore/v1/domains/import', { domain: domain.value.name, zone: importZoneText.value })
+        .then(r => {
+          const imported = r.data || [];
+          if (Array.isArray(imported)) {
+            imported.forEach(rec => {
+              if (['SOA', 'NS'].includes(rec.type)) return;
+              const vals = Array.isArray(rec.value) ? rec.value : [{ value: String(rec.value || ''), enabled: true }];
+              records.value.push({
+                id: 'new-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+                type: rec.type, name: rec.name || '', value: vals, ttl: rec.ttl || 3600,
+                edit: false, deleted: false, isNew: true,
+                update: { record_id: null, record_type: rec.type, record_name: rec.name || '', record_value: JSON.parse(JSON.stringify(vals)), record_ttl: rec.ttl || 3600 },
+              });
+            });
+          }
+          showImportDialog.value = false;
+          importZoneText.value = '';
+          showNotify(imported.length + ' records imported', 'success');
+        })
+        .catch(() => showNotify('Failed to import zone file', 'error'))
+        .finally(() => { saving.value = false; });
+    }
+
     function getDisplayValue(r) {
       if (!r.value) return '';
       if (Array.isArray(r.value)) return r.value.map(v => v.server ? v.priority + ' ' + v.server : v.host ? v.priority + ' ' + v.weight + ' ' + v.port + ' ' + v.host : v.value || '').join(', ');
@@ -4289,7 +5692,7 @@ const DomainDetailView = defineComponent({
         .finally(() => { updatingPrivacy.value = false; });
     }
 
-    return { domain, records, provider, domainDetails, loading, saving, activeTab, tabs, contactTab, contactTabs, activeContact, goBack, addRecord, editRecord, cancelEdit, deleteRecord, getDisplayValue, saveDNS, updateContacts, updateNameservers, toggleLock, togglePrivacy, updatingContacts, updatingNameservers, updatingLock, updatingPrivacy, forwards, forwardsLoading, forwardsDomainStatus, forwardsDomainLoading, forwardDialog, forwardEditIndex, forwardEditItem, fetchEmailForwards, addForward, editForward, saveForward, deleteForward, verifyDomainDns, role, deletingDomain, showDeleteDomainConfirm, deleteDomain, activatingZone, deletingZone, activateDnsZone, deleteDnsZone, exportZone, retrieveAuthCode };
+    return { domain, records, provider, domainDetails, loading, saving, activeTab, tabs, contactTab, contactTabs, activeContact, goBack, addRecord, editRecord, cancelEdit, deleteRecord, undeleteRecord, addRecordValue, removeRecordValue, changeRecordType, showImportDialog, importZoneText, importZoneFile, getDisplayValue, saveDNS, updateContacts, updateNameservers, toggleLock, togglePrivacy, updatingContacts, updatingNameservers, updatingLock, updatingPrivacy, forwards, forwardsLoading, forwardsDomainStatus, forwardsDomainLoading, forwardDialog, forwardEditIndex, forwardEditItem, fetchEmailForwards, addForward, editForward, saveForward, deleteForward, verifyDomainDns, role, deletingDomain, showDeleteDomainConfirm, deleteDomain, activatingZone, deletingZone, activateDnsZone, deleteDnsZone, exportZone, retrieveAuthCode, mailgunData, mailgunLoading, mailgunVerifying, fetchMailgunDetails, verifyMailgunDomain, fetchMailgunEvents, mailgunEvents, mailgunEventsLoading, showMailgunEventsDialog, mailgunSetupDialog, mailgunSubdomain, mailgunSettingUp, setupMailgun, mailgunDeployDialog, mailgunDeployName, mailgunDeploying, mailgunDeploySiteId, deployMailgun, deleteMailgunZone, dnsValidClass };
   },
   template: `
     <div v-if="loading" class="flex justify-center py-16"><div class="animate-spin rounded-full h-8 w-8 border-b-2" style="border-color: var(--color-primary)"></div></div>
@@ -4320,41 +5723,79 @@ const DomainDetailView = defineComponent({
           <div class="flex items-center justify-between mb-4">
             <span class="text-sm" style="color: var(--text-secondary)">{{ records.filter(r => !r.deleted).length }} records</span>
             <div class="flex gap-2">
+              <button @click="showImportDialog = true" class="btn btn-sm btn-ghost"><svg-icon name="upload" :size="14" /> Import</button>
               <button @click="addRecord" class="btn btn-sm btn-outline"><svg-icon name="plus" :size="14" /> Add Record</button>
               <button @click="saveDNS" :disabled="saving" class="btn btn-sm btn-primary"><svg-icon name="check" :size="14" /> {{ saving ? 'Saving...' : 'Save Changes' }}</button>
+            </div>
+          </div>
+          <!-- Import Zone Dialog -->
+          <div v-if="showImportDialog" class="dialog-overlay" @click.self="showImportDialog = false">
+            <div class="dialog-card" style="max-width: 560px;">
+              <div class="dialog-card-header"><h3 class="text-sm font-semibold" style="color: var(--text-primary)">Import DNS Zone File</h3></div>
+              <div class="dialog-card-body">
+                <p class="text-xs mb-3" style="color: var(--text-secondary)">Paste a DNS zone file below. SOA and NS records will be skipped.</p>
+                <textarea v-model="importZoneText" class="textarea-field" rows="10" placeholder="Paste zone file contents..." style="font-family: ui-monospace, SFMono-Regular, monospace; font-size: 0.75rem;"></textarea>
+              </div>
+              <div class="dialog-card-footer"><button @click="showImportDialog = false" class="btn btn-ghost">Cancel</button><button @click="importZoneFile" :disabled="saving || !importZoneText.trim()" class="btn btn-primary">{{ saving ? 'Importing...' : 'Import Records' }}</button></div>
             </div>
           </div>
           <table class="data-table">
             <thead><tr><th style="width:80px">Type</th><th style="width:180px">Name</th><th>Value</th><th style="width:70px">TTL</th><th style="width:80px">Actions</th></tr></thead>
             <tbody>
               <template v-for="(r, i) in records" :key="r.id">
-                <tr v-if="!r.deleted" :style="r.isNew ? 'background: color-mix(in srgb, var(--color-success) 5%, transparent)' : ''">
-                  <td v-if="!r.edit" class="text-sm"><span class="badge badge-info">{{ r.type }}</span></td>
-                  <td v-if="!r.edit" class="text-sm">{{ r.name }}</td>
-                  <td v-if="!r.edit" class="text-sm" style="word-break: break-all">{{ getDisplayValue(r) }}</td>
-                  <td v-if="!r.edit" class="text-sm" style="color: var(--text-secondary)">{{ r.ttl }}</td>
-                  <td v-if="!r.edit">
+                <!-- Deleted row (with undo) -->
+                <tr v-if="r.deleted" style="opacity: 0.4; text-decoration: line-through;">
+                  <td class="text-sm"><span class="badge badge-default">{{ r.type }}</span></td>
+                  <td class="text-sm">{{ r.name }}</td>
+                  <td class="text-sm">{{ getDisplayValue(r) }}</td>
+                  <td class="text-sm">{{ r.ttl }}</td>
+                  <td><button @click="undeleteRecord(i)" class="btn btn-sm btn-ghost" title="Undo delete"><svg-icon name="refresh" :size="14" /></button></td>
+                </tr>
+                <!-- Display mode -->
+                <tr v-else-if="!r.edit" :style="r.isNew ? 'background: color-mix(in srgb, var(--color-success) 5%, transparent)' : ''">
+                  <td class="text-sm"><span class="badge badge-info">{{ r.type }}</span></td>
+                  <td class="text-sm">{{ r.name }}</td>
+                  <td class="text-sm" style="word-break: break-all">{{ getDisplayValue(r) }}</td>
+                  <td class="text-sm" style="color: var(--text-secondary)">{{ r.ttl }}</td>
+                  <td>
                     <div class="flex gap-1">
                       <button @click="editRecord(i)" class="btn btn-sm btn-ghost" title="Edit"><svg-icon name="pencil" :size="14" /></button>
                       <button @click="deleteRecord(i)" class="btn btn-sm btn-ghost" title="Delete" style="color: var(--color-error)"><svg-icon name="trash" :size="14" /></button>
                     </div>
                   </td>
-                  <!-- Edit mode -->
-                  <td v-if="r.edit">
-                    <select v-model="r.update.record_type" class="select-field" style="width: 70px; padding: 4px 6px; font-size: 0.75rem;">
+                </tr>
+                <!-- Edit mode -->
+                <tr v-else :style="r.isNew ? 'background: color-mix(in srgb, var(--color-success) 5%, transparent)' : 'background: color-mix(in srgb, var(--color-primary) 5%, transparent)'">
+                  <td>
+                    <select v-model="r.update.record_type" @change="changeRecordType(i)" class="select-field" style="width: 70px; padding: 4px 6px; font-size: 0.75rem;">
                       <option v-for="t in ['A','AAAA','ANAME','CNAME','MX','SRV','TXT','SPF','HTTP']" :key="t">{{ t }}</option>
                     </select>
                   </td>
-                  <td v-if="r.edit"><input v-model="r.update.record_name" class="input-field" style="padding: 4px 8px; font-size: 0.8rem;" placeholder="Name" /></td>
-                  <td v-if="r.edit">
-                    <div v-for="(v, vi) in r.update.record_value" :key="vi" class="flex gap-1 mb-1">
-                      <input v-if="r.update.record_type === 'MX'" v-model.number="v.priority" class="input-field" style="width:60px; padding:4px 6px; font-size:0.8rem;" placeholder="Pri" />
-                      <input v-if="r.update.record_type === 'MX'" v-model="v.server" class="input-field flex-1" style="padding:4px 8px; font-size:0.8rem;" placeholder="Server" />
-                      <input v-else v-model="v.value" class="input-field flex-1" style="padding:4px 8px; font-size:0.8rem;" placeholder="Value" />
+                  <td><input v-model="r.update.record_name" class="input-field" style="padding: 4px 8px; font-size: 0.8rem;" placeholder="@ or subdomain" /></td>
+                  <td>
+                    <div v-for="(v, vi) in r.update.record_value" :key="vi" class="flex gap-1 mb-1 items-center">
+                      <!-- MX fields -->
+                      <template v-if="r.update.record_type === 'MX'">
+                        <input v-model.number="v.priority" class="input-field" style="width:55px; padding:4px 6px; font-size:0.8rem;" placeholder="Pri" />
+                        <input v-model="v.server" class="input-field flex-1" style="padding:4px 8px; font-size:0.8rem;" placeholder="mail.example.com." />
+                      </template>
+                      <!-- SRV fields -->
+                      <template v-else-if="r.update.record_type === 'SRV'">
+                        <input v-model.number="v.priority" class="input-field" style="width:50px; padding:4px 6px; font-size:0.8rem;" placeholder="Pri" />
+                        <input v-model.number="v.weight" class="input-field" style="width:50px; padding:4px 6px; font-size:0.8rem;" placeholder="Wgt" />
+                        <input v-model.number="v.port" class="input-field" style="width:55px; padding:4px 6px; font-size:0.8rem;" placeholder="Port" />
+                        <input v-model="v.host" class="input-field flex-1" style="padding:4px 8px; font-size:0.8rem;" placeholder="host.example.com." />
+                      </template>
+                      <!-- All other types -->
+                      <template v-else>
+                        <input v-model="v.value" class="input-field flex-1" style="padding:4px 8px; font-size:0.8rem;" :placeholder="r.update.record_type === 'HTTP' ? 'https://example.com' : 'Value'" />
+                      </template>
+                      <button v-if="r.update.record_value.length > 1" @click="removeRecordValue(i, vi)" class="btn btn-sm btn-ghost" style="color: var(--color-error); padding: 2px;" title="Remove value"><svg-icon name="close" :size="12" /></button>
                     </div>
+                    <button v-if="r.update.record_type !== 'CNAME' && r.update.record_type !== 'HTTP'" @click="addRecordValue(i)" class="text-xs mt-1" style="color: var(--color-primary); background: none; border: none; cursor: pointer;">+ Add value</button>
                   </td>
-                  <td v-if="r.edit"><input v-model.number="r.update.record_ttl" class="input-field" style="width:60px; padding:4px 6px; font-size:0.8rem;" /></td>
-                  <td v-if="r.edit">
+                  <td><input v-model.number="r.update.record_ttl" class="input-field" style="width:60px; padding:4px 6px; font-size:0.8rem;" /></td>
+                  <td>
                     <button @click="cancelEdit(i)" class="btn btn-sm btn-ghost" title="Cancel"><svg-icon name="close" :size="14" /></button>
                   </td>
                 </tr>
@@ -4469,6 +5910,112 @@ const DomainDetailView = defineComponent({
               <div class="flex gap-2">
                 <button @click="saveForward" :disabled="forwardsLoading || !forwardEditItem.name" class="btn btn-sm btn-primary">{{ forwardsLoading ? 'Saving...' : 'Save' }}</button>
                 <button @click="forwardDialog = false" class="btn btn-sm btn-ghost">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mailgun Tab -->
+        <div v-if="activeTab === 'mailgun'">
+          <div v-if="mailgunLoading" class="flex justify-center py-8"><div class="animate-spin rounded-full h-6 w-6 border-b-2" style="border-color: var(--color-primary)"></div></div>
+          <div v-else-if="!mailgunData" class="text-sm py-4" style="color: var(--text-secondary)">No Mailgun data available.</div>
+          <div v-else>
+            <!-- Domain status -->
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-medium" style="color: var(--text-primary)">{{ mailgunData.domain ? mailgunData.domain.name : domainDetails.mailgun_zone }}</span>
+                <span v-if="mailgunData.domain" :class="'badge ' + (mailgunData.domain.state === 'active' ? 'badge-success' : 'badge-warning')">{{ mailgunData.domain.state }}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button @click="verifyMailgunDomain" :disabled="mailgunVerifying" class="btn btn-sm btn-outline">
+                  <svg-icon name="sync" :size="14" /> {{ mailgunVerifying ? 'Verifying...' : 'Verify DNS' }}
+                </button>
+                <button @click="fetchMailgunEvents" class="btn btn-sm btn-outline">Events</button>
+                <button @click="mailgunDeployDialog = true" class="btn btn-sm btn-primary">Deploy</button>
+                <button @click="deleteMailgunZone" class="btn btn-sm btn-ghost" style="color: var(--color-error)"><svg-icon name="trash" :size="14" /></button>
+              </div>
+            </div>
+
+            <!-- Sending DNS Records -->
+            <div v-if="mailgunData.sending_dns_records && mailgunData.sending_dns_records.length" class="mb-4">
+              <h4 class="text-xs font-semibold uppercase tracking-wider mb-2" style="color: var(--text-secondary)">Sending DNS Records</h4>
+              <div v-for="rec in mailgunData.sending_dns_records" :key="rec.name" class="text-xs p-2 mb-1 rounded flex items-center gap-2" style="background: var(--hover-bg); font-family: monospace;">
+                <span class="font-semibold" style="min-width: 40px">{{ rec.record_type }}</span>
+                <span class="truncate flex-1" style="color: var(--text-secondary)">{{ rec.name }}</span>
+                <span class="truncate flex-1">{{ rec.value }}</span>
+                <span :class="'badge ' + dnsValidClass(rec.valid)">{{ rec.valid }}</span>
+              </div>
+            </div>
+
+            <!-- Receiving DNS Records -->
+            <div v-if="mailgunData.receiving_dns_records && mailgunData.receiving_dns_records.length" class="mb-4">
+              <h4 class="text-xs font-semibold uppercase tracking-wider mb-2" style="color: var(--text-secondary)">Receiving DNS Records</h4>
+              <div v-for="rec in mailgunData.receiving_dns_records" :key="rec.value" class="text-xs p-2 mb-1 rounded flex items-center gap-2" style="background: var(--hover-bg); font-family: monospace;">
+                <span class="font-semibold" style="min-width: 40px">{{ rec.record_type }}</span>
+                <span v-if="rec.priority" style="min-width: 20px">{{ rec.priority }}</span>
+                <span class="truncate flex-1">{{ rec.value }}</span>
+                <span :class="'badge ' + dnsValidClass(rec.valid)">{{ rec.valid }}</span>
+              </div>
+            </div>
+
+            <!-- SMTP Info -->
+            <div v-if="domainDetails.mailgun_smtp_password" class="rounded-lg p-3" style="background: var(--hover-bg)">
+              <h4 class="text-xs font-semibold uppercase tracking-wider mb-2" style="color: var(--text-secondary)">SMTP Credentials</h4>
+              <div class="text-xs" style="font-family: monospace; color: var(--text-secondary)">
+                <div>Host: <span style="color: var(--text-primary)">smtp.mailgun.org</span></div>
+                <div>Port: <span style="color: var(--text-primary)">587</span></div>
+                <div>Username: <span style="color: var(--text-primary)">postmaster@{{ domainDetails.mailgun_zone }}</span></div>
+                <div>Password: <span style="color: var(--text-primary)">{{ domainDetails.mailgun_smtp_password }}</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Deploy Dialog -->
+          <div v-if="mailgunDeployDialog" class="dialog-overlay" @mousedown.self="mailgunDeployDialog = false">
+            <div class="dialog-card" style="width: 400px">
+              <div class="dialog-header">
+                <h3 class="dialog-title">Deploy Mailgun</h3>
+                <button @click="mailgunDeployDialog = false" class="btn btn-sm btn-ghost"><svg-icon name="x" :size="18" /></button>
+              </div>
+              <div class="dialog-body space-y-3">
+                <div>
+                  <label class="block text-xs font-medium mb-1" style="color: var(--text-secondary)">Site ID</label>
+                  <input v-model="mailgunDeploySiteId" class="input w-full" placeholder="Enter site ID" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium mb-1" style="color: var(--text-secondary)">From Name</label>
+                  <input v-model="mailgunDeployName" class="input w-full" placeholder="e.g. My Website" />
+                </div>
+              </div>
+              <div class="dialog-footer">
+                <button @click="mailgunDeployDialog = false" class="btn btn-outline">Cancel</button>
+                <button @click="deployMailgun" :disabled="mailgunDeploying" class="btn btn-primary">{{ mailgunDeploying ? 'Deploying...' : 'Deploy' }}</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Events Dialog -->
+          <div v-if="showMailgunEventsDialog" class="dialog-overlay" @mousedown.self="showMailgunEventsDialog = false">
+            <div class="dialog-card" style="width: 800px">
+              <div class="dialog-header">
+                <h3 class="dialog-title">Mailgun Events</h3>
+                <button @click="showMailgunEventsDialog = false" class="btn btn-sm btn-ghost"><svg-icon name="x" :size="18" /></button>
+              </div>
+              <div class="dialog-body" style="max-height: 70vh; overflow-y: auto; padding: 0">
+                <div v-if="mailgunEventsLoading" class="flex justify-center py-8"><div class="animate-spin rounded-full h-6 w-6 border-b-2" style="border-color: var(--color-primary)"></div></div>
+                <div v-else-if="!mailgunEvents.length" class="p-8 text-center text-sm" style="color: var(--text-secondary)">No events found.</div>
+                <table v-else class="data-table">
+                  <thead><tr><th style="width:140px">Time</th><th style="width:80px">Event</th><th>From</th><th>To</th><th>Subject</th></tr></thead>
+                  <tbody>
+                    <tr v-for="ev in mailgunEvents" :key="ev.id || ev.timestamp">
+                      <td class="text-xs" style="color: var(--text-secondary)">{{ ev.timestamp ? new Date(ev.timestamp * 1000).toLocaleString() : '' }}</td>
+                      <td><span :class="'badge ' + (ev.event === 'delivered' ? 'badge-success' : ev.event === 'failed' || ev.event === 'rejected' ? 'badge-error' : 'badge-default')">{{ ev.event }}</span></td>
+                      <td class="text-xs truncate" style="max-width: 150px">{{ ev.message && ev.message.headers ? ev.message.headers.from : '' }}</td>
+                      <td class="text-xs truncate" style="max-width: 150px">{{ ev.message && ev.message.headers ? ev.message.headers.to : '' }}</td>
+                      <td class="text-xs truncate" style="max-width: 200px">{{ ev.message && ev.message.headers ? ev.message.headers.subject : '' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -4846,36 +6393,209 @@ const AccountDetailView = defineComponent({
 const ActivityLogsView = defineComponent({
   setup() {
     const { showNotify } = useNotify();
+    const { filteredSites, fetchSites } = useSites();
+    const role = userRole.value;
     const logs = ref([]);
     const total = ref(0);
     const page = ref(1);
     const loading = ref(true);
+    const filters = reactive({ action: '', entity_type: '', date_from: '', date_to: '' });
+    const actionOptions = ['', 'created', 'updated', 'deleted', 'toggled', 'deployed', 'shared', 'unshared', 'invited', 'locked', 'unlocked', 'transferred', 'requested_removal', 'cancelled_removal'];
+    const entityOptions = ['', 'site', 'domain', 'dns_record', 'environment', 'account', 'email_forward'];
+
+    // Manual log entry
+    const showLogEntryDialog = ref(false);
+    const logEntry = reactive({ sites: [], siteSearch: '', process: '', description: '' });
+    const processes = ref([]);
+    const processesLoaded = ref(false);
+
     function fetchLogs() {
       loading.value = true;
-      api.get('/wp-json/captaincore/v1/activity-logs?page=' + page.value + '&per_page=50')
+      const params = new URLSearchParams();
+      params.append('page', page.value);
+      params.append('per_page', 50);
+      if (filters.action) params.append('action', filters.action);
+      if (filters.entity_type) params.append('entity_type', filters.entity_type);
+      if (filters.date_from) params.append('date_from', filters.date_from);
+      if (filters.date_to) params.append('date_to', filters.date_to);
+      api.get('/wp-json/captaincore/v1/activity-logs?' + params.toString())
         .then(r => { logs.value = r.data.items || []; total.value = r.data.total || 0; })
         .catch(() => showNotify('Failed to load logs', 'error'))
         .finally(() => { loading.value = false; });
     }
+
+    function applyFilter() { page.value = 1; fetchLogs(); }
+    function clearFilters() { filters.action = ''; filters.entity_type = ''; filters.date_from = ''; filters.date_to = ''; applyFilter(); }
+    const hasFilters = computed(() => filters.action || filters.entity_type || filters.date_from || filters.date_to);
+
+    function actionColor(action) {
+      const colors = { created: 'success', updated: 'info', deleted: 'error', toggled: 'warning', deployed: 'info', locked: 'warning', unlocked: 'success' };
+      return colors[action] || 'default';
+    }
+
+    function openLogEntry() {
+      logEntry.sites = [];
+      logEntry.siteSearch = '';
+      logEntry.process = '';
+      logEntry.description = '';
+      showLogEntryDialog.value = true;
+      fetchSites();
+      if (!processesLoaded.value) {
+        api.get('/wp-json/captaincore/v1/processes')
+          .then(r => { processes.value = r.data || []; processesLoaded.value = true; })
+          .catch(() => {});
+      }
+    }
+
+    const filteredLogSites = computed(() => {
+      if (!logEntry.siteSearch) return filteredSites.value.slice(0, 20);
+      const q = logEntry.siteSearch.toLowerCase();
+      return filteredSites.value.filter(s => s.name && s.name.toLowerCase().includes(q)).slice(0, 20);
+    });
+
+    function toggleLogSite(site) {
+      const idx = logEntry.sites.findIndex(s => s.site_id === site.site_id);
+      if (idx >= 0) logEntry.sites.splice(idx, 1);
+      else logEntry.sites.push(site);
+    }
+
+    function submitLogEntry() {
+      if (!logEntry.description) { showNotify('Description is required', 'error'); return; }
+      api.post('/wp-json/captaincore/v1/process-logs', {
+        site_ids: logEntry.sites.map(s => s.site_id),
+        process_id: logEntry.process,
+        description: logEntry.description,
+      })
+        .then(() => { showNotify('Log entry added', 'success'); showLogEntryDialog.value = false; fetchLogs(); })
+        .catch(() => showNotify('Failed to add log entry', 'error'));
+    }
+
+    function exportLogs() {
+      const rows = [['Date', 'User', 'Action', 'Type', 'Entity', 'Description']];
+      logs.value.forEach(l => {
+        rows.push([
+          l.created_at ? new Date(l.created_at * 1000).toISOString() : '',
+          l.user_name || '', l.action || '',
+          (l.entity_type || '').replace(/_/g, ' '),
+          l.entity_name || '',
+          (l.description || '').replace(/"/g, '""'),
+        ]);
+      });
+      const csv = rows.map(r => r.map(c => '"' + c + '"').join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'activity-logs.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
     onMounted(fetchLogs);
     watch(page, fetchLogs);
-    return { logs, total, page, loading, prettyTimestampEpoch };
+    return { logs, total, page, loading, filters, actionOptions, entityOptions, applyFilter, clearFilters, hasFilters, actionColor, prettyTimestampEpoch, role, showLogEntryDialog, logEntry, processes, filteredLogSites, toggleLogSite, openLogEntry, submitLogEntry, exportLogs };
   },
   template: `
     <div class="surface rounded-xl">
-      <div class="px-4 py-3" style="border-bottom: 1px solid var(--border-color)">
+      <div class="px-4 py-3 flex items-center justify-between" style="border-bottom: 1px solid var(--border-color)">
         <h2 class="text-sm font-semibold" style="color: var(--text-primary)">Activity Logs</h2>
+        <div class="flex items-center gap-2">
+          <button @click="exportLogs" :disabled="!logs.length" class="btn btn-sm btn-outline">Export CSV</button>
+          <button @click="openLogEntry" class="btn btn-sm btn-primary">Add Log Entry</button>
+        </div>
       </div>
+
+      <!-- Filters -->
+      <div class="px-4 py-3 flex flex-wrap items-end gap-3" style="border-bottom: 1px solid var(--border-color)">
+        <div>
+          <label class="block text-xs mb-1" style="color: var(--text-secondary)">Action</label>
+          <select v-model="filters.action" @change="applyFilter" class="input text-sm" style="min-width: 140px">
+            <option value="">All actions</option>
+            <option v-for="a in actionOptions.slice(1)" :key="a" :value="a">{{ a }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs mb-1" style="color: var(--text-secondary)">Entity Type</label>
+          <select v-model="filters.entity_type" @change="applyFilter" class="input text-sm" style="min-width: 140px">
+            <option value="">All types</option>
+            <option v-for="e in entityOptions.slice(1)" :key="e" :value="e">{{ e.replace(/_/g, ' ') }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs mb-1" style="color: var(--text-secondary)">From</label>
+          <input type="date" v-model="filters.date_from" @change="applyFilter" class="input text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs mb-1" style="color: var(--text-secondary)">To</label>
+          <input type="date" v-model="filters.date_to" @change="applyFilter" class="input text-sm" />
+        </div>
+        <button v-if="hasFilters" @click="clearFilters" class="btn btn-sm btn-outline">Clear</button>
+      </div>
+
       <div v-if="loading" class="flex justify-center py-16"><div class="animate-spin rounded-full h-8 w-8 border-b-2" style="border-color: var(--color-primary)"></div></div>
       <div v-else>
         <table class="data-table">
           <thead><tr><th style="width:140px">Date</th><th>User</th><th style="width:100px">Action</th><th>Type</th><th>Entity</th><th>Description</th></tr></thead>
-          <tbody><tr v-for="log in logs" :key="log.created_at + log.action + log.entity_name"><td class="text-sm" style="color: var(--text-secondary)">{{ prettyTimestampEpoch(log.created_at) }}</td><td class="text-sm">{{ log.user_name }}</td><td><span class="badge badge-default">{{ log.action }}</span></td><td class="text-sm">{{ log.entity_type }}</td><td class="text-sm">{{ log.entity_name }}</td><td class="text-sm" style="color: var(--text-secondary)">{{ log.description }}</td></tr></tbody>
+          <tbody><tr v-for="log in logs" :key="log.created_at + log.action + log.entity_name">
+            <td class="text-sm" style="color: var(--text-secondary)">{{ prettyTimestampEpoch(log.created_at) }}</td>
+            <td class="text-sm">{{ log.user_name }}</td>
+            <td><span :class="'badge badge-' + actionColor(log.action)">{{ log.action }}</span></td>
+            <td class="text-sm">{{ log.entity_type ? log.entity_type.replace(/_/g, ' ') : '' }}</td>
+            <td class="text-sm">{{ log.entity_name }}</td>
+            <td class="text-sm" style="color: var(--text-secondary)">{{ log.description }}</td>
+          </tr></tbody>
         </table>
         <div v-if="total > 50" class="flex justify-center gap-2 p-4">
           <button @click="page--" :disabled="page <= 1" class="btn btn-sm btn-outline">Previous</button>
           <span class="text-sm py-1" style="color: var(--text-secondary)">Page {{ page }} of {{ Math.ceil(total / 50) }}</span>
           <button @click="page++" :disabled="page >= Math.ceil(total / 50)" class="btn btn-sm btn-outline">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Log Entry Dialog -->
+    <div v-if="showLogEntryDialog" class="dialog-overlay" @mousedown.self="showLogEntryDialog = false">
+      <div class="dialog-card" style="width: 500px">
+        <div class="dialog-header">
+          <h3 class="dialog-title">Add Log Entry</h3>
+          <button @click="showLogEntryDialog = false" class="btn btn-sm btn-ghost"><svg-icon name="x" :size="18" /></button>
+        </div>
+        <div class="dialog-body" style="max-height: 60vh; overflow-y: auto">
+          <!-- Process selector (admin) -->
+          <div v-if="role === 'administrator'" class="mb-4">
+            <label class="block text-xs font-medium mb-1" style="color: var(--text-secondary)">Process</label>
+            <select v-model="logEntry.process" class="input w-full">
+              <option value="">None</option>
+              <option v-for="p in processes" :key="p.process_id || p.id" :value="p.process_id || p.id">{{ p.name || p.title }}</option>
+            </select>
+          </div>
+          <!-- Sites multi-select -->
+          <div class="mb-4">
+            <label class="block text-xs font-medium mb-1" style="color: var(--text-secondary)">Sites</label>
+            <div v-if="logEntry.sites.length" class="flex flex-wrap gap-1 mb-2">
+              <span v-for="s in logEntry.sites" :key="s.site_id" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style="background: var(--color-primary); color: white">
+                {{ s.name }}
+                <button @click="toggleLogSite(s)" class="hover:opacity-70">&times;</button>
+              </span>
+            </div>
+            <input v-model="logEntry.siteSearch" placeholder="Search sites..." class="input w-full mb-1" />
+            <div style="max-height: 150px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px">
+              <div v-for="s in filteredLogSites" :key="s.site_id" @click="toggleLogSite(s)" class="flex items-center gap-2 px-3 py-1.5 cursor-pointer text-sm" style="border-bottom: 1px solid var(--border-color)" :style="{ background: logEntry.sites.some(x => x.site_id === s.site_id) ? 'var(--active-bg)' : 'transparent' }">
+                <span class="w-4 h-4 rounded border flex items-center justify-center" :style="{ borderColor: logEntry.sites.some(x => x.site_id === s.site_id) ? 'var(--color-primary)' : 'var(--border-color)', background: logEntry.sites.some(x => x.site_id === s.site_id) ? 'var(--color-primary)' : 'transparent' }">
+                  <svg v-if="logEntry.sites.some(x => x.site_id === s.site_id)" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>
+                </span>
+                {{ s.name }}
+              </div>
+            </div>
+          </div>
+          <!-- Description -->
+          <div class="mb-4">
+            <label class="block text-xs font-medium mb-1" style="color: var(--text-secondary)">Description</label>
+            <textarea v-model="logEntry.description" rows="4" class="input w-full" placeholder="Describe the action taken..."></textarea>
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button @click="showLogEntryDialog = false" class="btn btn-outline">Cancel</button>
+          <button @click="submitLogEntry" class="btn btn-primary">Add Log Entry</button>
         </div>
       </div>
     </div>
@@ -5079,24 +6799,61 @@ const CookbookView = defineComponent({
 // ─── View: HealthView ────────────────────────────────────────────────────────
 const HealthView = defineComponent({
   setup() {
-    const issues = ref([]);
-    const loading = ref(true);
-    onMounted(() => {
-      api.get('/wp-json/captaincore/v1/health')
-        .then(r => { issues.value = r.data || []; })
-        .finally(() => { loading.value = false; });
+    const { filteredSites, fetchSites } = useSites();
+    const { showNotify } = useNotify();
+    const router = useRouter();
+    const scanning = reactive({});
+    const expandedSite = ref(null);
+
+    onMounted(fetchSites);
+
+    const sitesWithErrors = computed(() => {
+      return filteredSites.value.filter(s => s.console_errors && s.console_errors !== '' && (Array.isArray(s.console_errors) ? s.console_errors.length > 0 : true));
     });
-    return { issues, loading };
+
+    function scanErrors(site) {
+      scanning[site.site_id] = true;
+      api.post('/wp-json/captaincore/v1/sites/cli', { post_id: site.site_id, command: 'scan-errors' })
+        .then(() => showNotify('Scan started for ' + site.name, 'success'))
+        .catch(() => showNotify('Failed to start scan', 'error'))
+        .finally(() => { scanning[site.site_id] = false; });
+    }
+
+    function toggleExpand(siteId) {
+      expandedSite.value = expandedSite.value === siteId ? null : siteId;
+    }
+
+    function goToSite(id) { router.push('/sites/' + id); }
+
+    return { sitesWithErrors, scanning, scanErrors, expandedSite, toggleExpand, goToSite };
   },
   template: `
     <div class="surface rounded-xl">
-      <div class="px-4 py-3" style="border-bottom: 1px solid var(--border-color)"><h2 class="text-sm font-semibold" style="color: var(--text-primary)">Health</h2></div>
-      <div v-if="loading" class="flex justify-center py-16"><div class="animate-spin rounded-full h-8 w-8 border-b-2" style="border-color: var(--color-primary)"></div></div>
-      <div v-else-if="!issues.length" class="p-8 text-center text-sm" style="color: var(--text-secondary)">No health issues found.</div>
-      <div v-else class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div v-for="issue in issues" :key="issue.site_id || issue.name" class="rounded-lg p-4" style="background: var(--hover-bg)">
-          <div class="text-sm font-medium mb-1" style="color: var(--text-primary)">{{ issue.name || issue.site_name }}</div>
-          <div v-if="issue.description" class="text-xs" style="color: var(--text-secondary)">{{ issue.description }}</div>
+      <div class="px-4 py-3" style="border-bottom: 1px solid var(--border-color)">
+        <h2 class="text-sm font-semibold" style="color: var(--text-primary)">Health</h2>
+        <p class="text-xs mt-1" style="color: var(--text-secondary)">Results from daily scans of home pages. Web console errors are extracted from Google Chrome via Lighthouse CLI.</p>
+      </div>
+      <div v-if="!sitesWithErrors.length" class="p-8 text-center text-sm" style="color: var(--text-secondary)">No sites with issues found.</div>
+      <div v-else>
+        <div class="px-4 py-2 text-xs" style="color: var(--text-secondary); border-bottom: 1px solid var(--border-color)">{{ sitesWithErrors.length }} site{{ sitesWithErrors.length !== 1 ? 's' : '' }} with issues</div>
+        <div v-for="site in sitesWithErrors" :key="site.site_id" style="border-bottom: 1px solid var(--border-color)">
+          <div class="flex items-center justify-between px-4 py-3 cursor-pointer" @click="toggleExpand(site.site_id)" :style="{ background: expandedSite === site.site_id ? 'var(--active-bg)' : 'transparent' }">
+            <div class="flex items-center gap-2">
+              <svg-icon :name="expandedSite === site.site_id ? 'chevronDown' : 'chevronRight'" :size="14" style="color: var(--text-secondary)" />
+              <span class="text-sm font-medium cursor-pointer" style="color: var(--color-primary)" @click.stop="goToSite(site.site_id)">{{ site.name }}</span>
+              <span class="badge badge-error">{{ Array.isArray(site.console_errors) ? site.console_errors.length : '!' }} error{{ Array.isArray(site.console_errors) && site.console_errors.length !== 1 ? 's' : '' }}</span>
+            </div>
+            <button @click.stop="scanErrors(site)" :disabled="scanning[site.site_id]" class="btn btn-sm btn-outline">
+              <svg-icon name="sync" :size="14" /> {{ scanning[site.site_id] ? 'Scanning...' : 'Scan' }}
+            </button>
+          </div>
+          <div v-if="expandedSite === site.site_id && Array.isArray(site.console_errors)" class="px-4 pb-3 space-y-2">
+            <div v-for="(error, i) in site.console_errors" :key="i" class="rounded-lg p-3" style="background: var(--hover-bg)">
+              <div class="text-xs font-semibold mb-1" style="color: var(--text-primary)">{{ error.source }}</div>
+              <a v-if="error.url" :href="error.url" target="_blank" class="text-xs block mb-1" style="color: var(--color-primary)">{{ error.url }}</a>
+              <pre v-if="error.description" class="text-xs mt-1 whitespace-pre-wrap" style="color: var(--text-secondary); font-family: monospace; margin: 0">{{ error.description }}</pre>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -5107,6 +6864,7 @@ const HealthView = defineComponent({
 const ArchivesView = defineComponent({
   components: { DataTable },
   setup() {
+    const { showNotify } = useNotify();
     const archives = ref([]);
     const loading = ref(true);
     const search = ref('');
@@ -5114,13 +6872,34 @@ const ArchivesView = defineComponent({
       { title: 'Name', value: 'name' },
       { title: 'Size', value: 'size', width: '100px' },
       { title: 'Modified', value: 'modified', width: '140px' },
+      { title: '', value: '_actions', width: '80px', sortable: false },
     ];
+    const showShareDialog = ref(false);
+    const shareUrl = ref('');
+    const shareLoading = ref(false);
+
     onMounted(() => {
       api.get('/wp-json/captaincore/v1/archives')
         .then(r => { archives.value = r.data || []; })
         .finally(() => { loading.value = false; });
     });
-    return { archives, loading, search, headers };
+
+    function generateShareLink(item) {
+      shareLoading.value = true;
+      shareUrl.value = '';
+      showShareDialog.value = true;
+      api.post('/wp-json/captaincore/v1/archive/share', { file: item.path || item.name })
+        .then(r => { shareUrl.value = typeof r.data === 'string' ? r.data : r.data.url || ''; })
+        .catch(() => showNotify('Failed to generate link', 'error'))
+        .finally(() => { shareLoading.value = false; });
+    }
+
+    function copyShareUrl() {
+      navigator.clipboard.writeText(shareUrl.value);
+      showNotify('Link copied to clipboard', 'success');
+    }
+
+    return { archives, loading, search, headers, showShareDialog, shareUrl, shareLoading, generateShareLink, copyShareUrl };
   },
   template: `
     <div class="surface rounded-xl">
@@ -5128,7 +6907,33 @@ const ArchivesView = defineComponent({
         <h2 class="text-sm font-semibold" style="color: var(--text-primary)">Archives</h2>
         <div class="search-wrapper"><svg-icon name="search" :size="16" class="search-icon" /><input v-model="search" type="text" placeholder="Search archives..." class="input-field" style="width: 220px" /></div>
       </div>
-      <data-table :headers="headers" :items="archives" :search="search" :loading="loading" />
+      <data-table :headers="headers" :items="archives" :search="search" :loading="loading">
+        <template #item._actions="{ item }">
+          <button @click.stop="generateShareLink(item)" class="btn btn-sm btn-outline" title="Get shareable link">
+            <svg-icon name="link" :size="14" />
+          </button>
+        </template>
+      </data-table>
+    </div>
+    <!-- Share Link Dialog -->
+    <div v-if="showShareDialog" class="dialog-overlay" @mousedown.self="showShareDialog = false">
+      <div class="dialog-card" style="width: 500px">
+        <div class="dialog-header">
+          <h3 class="dialog-title">Download Link</h3>
+          <button @click="showShareDialog = false" class="btn btn-sm btn-ghost"><svg-icon name="x" :size="18" /></button>
+        </div>
+        <div class="dialog-body">
+          <div v-if="shareLoading" class="flex justify-center py-4"><div class="animate-spin rounded-full h-6 w-6 border-b-2" style="border-color: var(--color-primary)"></div></div>
+          <div v-else-if="shareUrl">
+            <p class="text-xs mb-2" style="color: var(--text-secondary)">Public download link (valid for 7 days)</p>
+            <div class="flex gap-2">
+              <input :value="shareUrl" readonly class="input w-full text-sm" style="font-family: monospace" />
+              <button @click="copyShareUrl" class="btn btn-sm btn-primary" style="flex-shrink: 0">Copy</button>
+            </div>
+          </div>
+          <div v-else class="text-sm" style="color: var(--text-secondary)">Failed to generate link.</div>
+        </div>
+      </div>
     </div>
   `,
 });
@@ -5138,12 +6943,27 @@ const WebRiskView = defineComponent({
   setup() {
     const logs = ref([]);
     const loading = ref(true);
+    const selectedLog = ref(null);
+
     onMounted(() => {
       api.get('/wp-json/captaincore/v1/web-risk/logs')
         .then(r => { logs.value = r.data || []; })
         .finally(() => { loading.value = false; });
     });
-    return { logs, loading, prettyTimestamp };
+
+    function getDetails(log) {
+      if (!log.details) return { threats: [], errors: [] };
+      const d = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
+      return { threats: d.threats || [], errors: d.errors || [] };
+    }
+
+    function threatColor(type) {
+      if (type === 'MALWARE') return 'error';
+      if (type === 'SOCIAL_ENGINEERING' || type === 'UNWANTED_SOFTWARE') return 'warning';
+      return 'default';
+    }
+
+    return { logs, loading, prettyTimestamp, selectedLog, getDetails, threatColor };
   },
   template: `
     <div class="surface rounded-xl">
@@ -5151,9 +6971,75 @@ const WebRiskView = defineComponent({
       <div v-if="loading" class="flex justify-center py-16"><div class="animate-spin rounded-full h-8 w-8 border-b-2" style="border-color: var(--color-primary)"></div></div>
       <div v-else-if="!logs.length" class="p-8 text-center text-sm" style="color: var(--text-secondary)">No web risk logs.</div>
       <table v-else class="data-table">
-        <thead><tr><th>Date</th><th style="width:120px">Sites Checked</th><th style="width:100px">Threats</th><th style="width:100px">Errors</th></tr></thead>
-        <tbody><tr v-for="log in logs" :key="log.web_risk_log_id"><td class="text-sm">{{ prettyTimestamp(log.created_at) }}</td><td class="text-sm text-center">{{ log.sites_checked }}</td><td class="text-sm text-center"><span v-if="log.threats > 0" class="badge badge-error">{{ log.threats }}</span><span v-else>0</span></td><td class="text-sm text-center">{{ log.errors || 0 }}</td></tr></tbody>
+        <thead><tr><th>Date</th><th style="width:120px">Sites Checked</th><th style="width:100px">Threats</th><th style="width:100px">Errors</th><th style="width:60px"></th></tr></thead>
+        <tbody>
+          <tr v-for="log in logs" :key="log.web_risk_log_id" class="cursor-pointer" @click="selectedLog = log">
+            <td class="text-sm">{{ prettyTimestamp(log.created_at) }}</td>
+            <td class="text-sm text-center">{{ log.total_sites || log.sites_checked || 0 }}</td>
+            <td class="text-sm text-center"><span v-if="(log.threats_found || log.threats || 0) > 0" class="badge badge-error">{{ log.threats_found || log.threats }}</span><span v-else class="badge badge-success">0</span></td>
+            <td class="text-sm text-center"><span v-if="(log.errors_count || log.errors || 0) > 0" class="badge badge-warning">{{ log.errors_count || log.errors }}</span><span v-else>0</span></td>
+            <td><svg-icon name="chevronRight" :size="14" style="color: var(--text-secondary)" /></td>
+          </tr>
+        </tbody>
       </table>
+    </div>
+    <!-- Detail Dialog -->
+    <div v-if="selectedLog" class="dialog-overlay" @mousedown.self="selectedLog = null">
+      <div class="dialog-card" style="width: 700px">
+        <div class="dialog-header">
+          <h3 class="dialog-title">Web Risk Check Details</h3>
+          <button @click="selectedLog = null" class="btn btn-sm btn-ghost"><svg-icon name="x" :size="18" /></button>
+        </div>
+        <div class="dialog-body" style="max-height: 70vh; overflow-y: auto">
+          <!-- Summary -->
+          <div class="grid grid-cols-4 gap-4 mb-4">
+            <div class="rounded-lg p-3 text-center" style="background: var(--hover-bg)">
+              <div class="text-lg font-bold" style="color: var(--text-primary)">{{ (selectedLog.total_sites || selectedLog.sites_checked || 0).toLocaleString() }}</div>
+              <div class="text-xs" style="color: var(--text-secondary)">Sites Checked</div>
+            </div>
+            <div class="rounded-lg p-3 text-center" style="background: var(--hover-bg)">
+              <div class="text-lg font-bold" :style="{ color: (selectedLog.threats_found || selectedLog.threats || 0) > 0 ? 'var(--color-error)' : 'var(--color-success)' }">{{ (selectedLog.threats_found || selectedLog.threats || 0) }}</div>
+              <div class="text-xs" style="color: var(--text-secondary)">Threats Found</div>
+            </div>
+            <div class="rounded-lg p-3 text-center" style="background: var(--hover-bg)">
+              <div class="text-lg font-bold" :style="{ color: (selectedLog.errors_count || selectedLog.errors || 0) > 0 ? 'var(--color-warning)' : 'var(--text-primary)' }">{{ (selectedLog.errors_count || selectedLog.errors || 0) }}</div>
+              <div class="text-xs" style="color: var(--text-secondary)">API Errors</div>
+            </div>
+            <div class="rounded-lg p-3 text-center" style="background: var(--hover-bg)">
+              <div class="text-sm font-medium" style="color: var(--text-primary)">{{ prettyTimestamp(selectedLog.created_at) }}</div>
+              <div class="text-xs" style="color: var(--text-secondary)">Check Date</div>
+            </div>
+          </div>
+          <!-- Threats -->
+          <div v-if="getDetails(selectedLog).threats.length" class="mb-4">
+            <h4 class="text-xs font-semibold mb-2" style="color: var(--color-error); text-transform: uppercase">Threats Detected</h4>
+            <div v-for="(t, i) in getDetails(selectedLog).threats" :key="i" class="flex items-center justify-between p-3 mb-2 rounded-lg" style="background: var(--hover-bg)">
+              <div>
+                <a v-if="t.home_url" :href="t.home_url" target="_blank" class="text-sm font-medium" style="color: var(--color-primary)">{{ t.site_name }}</a>
+                <span v-else class="text-sm font-medium" style="color: var(--text-primary)">{{ t.site_name }}</span>
+              </div>
+              <div class="flex gap-1">
+                <span v-for="tt in (t.threat_types || [])" :key="tt" :class="'badge badge-' + threatColor(tt)">{{ tt.replace(/_/g, ' ').toLowerCase() }}</span>
+              </div>
+            </div>
+          </div>
+          <!-- All Clear -->
+          <div v-else-if="(selectedLog.threats_found || selectedLog.threats || 0) === 0" class="text-center py-6 mb-4">
+            <div class="text-2xl mb-2" style="color: var(--color-success)">&#10003;</div>
+            <div class="text-sm font-semibold" style="color: var(--text-primary)">All Clear</div>
+            <div class="text-xs" style="color: var(--text-secondary)">No threats were detected during this check.</div>
+          </div>
+          <!-- Errors -->
+          <div v-if="getDetails(selectedLog).errors.length">
+            <h4 class="text-xs font-semibold mb-2" style="color: var(--color-warning); text-transform: uppercase">API Errors</h4>
+            <div v-for="(e, i) in getDetails(selectedLog).errors" :key="i" class="flex items-center gap-2 p-2 text-sm" style="border-bottom: 1px solid var(--border-color)">
+              <svg-icon name="alertTriangle" :size="14" style="color: var(--color-warning); flex-shrink: 0" />
+              <span class="font-medium">{{ e.name }}</span>
+              <span style="color: var(--text-secondary)">{{ e.error }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `,
 });
@@ -6325,6 +8211,17 @@ const app = createApp({
 app.component('svg-icon', SvgIcon);
 app.use(router);
 app.mount('#app');
+
+// ─── Intercom Widget Boot ────────────────────────────────────────────────────
+if (CC.user.role !== 'administrator' && CC.configurations.intercom_embed_id && CC.user.email && CC.user.login && CC.user.registered) {
+  window.Intercom && window.Intercom('boot', {
+    app_id: CC.configurations.intercom_embed_id,
+    name: CC.user.display_name,
+    email: CC.user.email,
+    created_at: CC.user.registered,
+    user_hash: CC.user.hash,
+  });
+}
 </script>
 </body>
 </html>
