@@ -118,6 +118,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-list-item link :href="`${configurations.path}configurations`" @click.prevent="goToPath('/configurations')" title="Configurations" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-cogs"></v-list-item>
 			<v-list-item link :href="`${configurations.path}reports`" @click.prevent="goToPath('/reports')" title="Reports" v-show="role == 'administrator'" prepend-icon="mdi-file-chart"></v-list-item>
 			<v-list-item link :href="`${configurations.path}web-risk`" @click.prevent="goToPath('/web-risk')" title="Web Risk" v-show="role == 'administrator'" prepend-icon="mdi-shield-alert"></v-list-item>
+			<v-list-item link :href="`${configurations.path}checksum-failures`" @click.prevent="goToPath('/checksum-failures')" title="Checksum Failures" v-show="role == 'administrator'" prepend-icon="mdi-file-check-outline"></v-list-item>
 			<v-list-item link :href="`${configurations.path}handbook`" @click.prevent="goToPath('/handbook')" title="Handbook" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-map"></v-list-item>
 			<v-list-item link :href="`${configurations.path}defaults`" @click.prevent="goToPath('/defaults')" title="Site Defaults" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-application"></v-list-item>
 			<v-list-item link :href="`${configurations.path}keys`" @click.prevent="goToPath('/keys')" title="SSH Keys" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-key"></v-list-item>
