@@ -8436,6 +8436,120 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-actions>
 				</v-card>
 			</v-dialog>
+			<v-card v-if="route == 'checksum-failures' && role == 'administrator'" flat border="thin" rounded="xl">
+				<v-toolbar flat color="transparent">
+					<v-toolbar-title>Checksum Failures</v-toolbar-title>
+					<v-spacer></v-spacer>
+				</v-toolbar>
+				<v-card-text class="pt-0">
+					<v-alert v-if="checksum_failures.length === 0 && !checksum_failures_loading" type="info" variant="tonal">
+						No checksum failures found. All active environments have passing core checksums.
+					</v-alert>
+					<v-data-table
+						v-if="checksum_failures.length > 0 || checksum_failures_loading"
+						:loading="checksum_failures_loading"
+						:headers="[
+							{ title: 'Site Name', key: 'site_name' },
+							{ title: 'Environment', key: 'environment' },
+							{ title: 'Home URL', key: 'home_url' },
+							{ title: 'Modified', key: 'modified_count', align: 'center' },
+							{ title: 'Extra', key: 'extra_count', align: 'center' },
+							{ title: 'Missing', key: 'missing_count', align: 'center' },
+							{ title: '', key: 'actions', width: '100px', sortable: false }
+						]"
+						:items="checksum_failures.map(f => ({
+							...f,
+							modified_count: (f.core_checksum_details.modified || []).length,
+							extra_count: (f.core_checksum_details.extra || []).length,
+							missing_count: (f.core_checksum_details.missing || []).length
+						}))"
+						:items-per-page="25"
+						density="comfortable"
+						hover
+					>
+						<template v-slot:item.home_url="{ item }">
+							<a :href="item.home_url" target="_blank" class="text-decoration-none">{{ item.home_url }}</a>
+						</template>
+						<template v-slot:item.modified_count="{ item }">
+							<v-chip v-if="item.modified_count > 0" color="warning" size="small" variant="flat">{{ item.modified_count }}</v-chip>
+							<span v-else class="text-medium-emphasis">0</span>
+						</template>
+						<template v-slot:item.extra_count="{ item }">
+							<v-chip v-if="item.extra_count > 0" color="info" size="small" variant="flat">{{ item.extra_count }}</v-chip>
+							<span v-else class="text-medium-emphasis">0</span>
+						</template>
+						<template v-slot:item.missing_count="{ item }">
+							<v-chip v-if="item.missing_count > 0" color="error" size="small" variant="flat">{{ item.missing_count }}</v-chip>
+							<span v-else class="text-medium-emphasis">0</span>
+						</template>
+						<template v-slot:item.actions="{ item }">
+							<v-btn
+								icon="mdi-chevron-right"
+								variant="text"
+								size="small"
+								@click="checksum_dialog.item = checksum_failures.find(f => f.environment_id === item.environment_id); checksum_dialog.show = true"
+							></v-btn>
+						</template>
+					</v-data-table>
+				</v-card-text>
+			</v-card>
+			<v-dialog v-model="checksum_dialog.show" max-width="700px" scrollable>
+				<v-card v-if="checksum_dialog.item">
+					<v-toolbar color="primary" flat>
+						<v-toolbar-title>{{ checksum_dialog.item.site_name }} ({{ checksum_dialog.item.environment }})</v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-btn icon="mdi-close" @click="checksum_dialog.show = false"></v-btn>
+					</v-toolbar>
+					<v-card-text>
+						<div v-if="checksum_dialog.item.core_checksum_details.modified && checksum_dialog.item.core_checksum_details.modified.length > 0" class="mb-4">
+							<h4 class="text-subtitle-1 mb-2">Modified Files</h4>
+							<v-list density="compact">
+								<v-list-item
+									v-for="(file, index) in checksum_dialog.item.core_checksum_details.modified"
+									:key="'modified-' + index"
+								>
+									<template v-slot:prepend>
+										<v-icon color="warning" size="small">mdi-alert</v-icon>
+									</template>
+									<v-list-item-title class="text-body-2" style="font-family: monospace;">{{ file }}</v-list-item-title>
+								</v-list-item>
+							</v-list>
+						</div>
+						<div v-if="checksum_dialog.item.core_checksum_details.extra && checksum_dialog.item.core_checksum_details.extra.length > 0" class="mb-4">
+							<h4 class="text-subtitle-1 mb-2">Extra Files</h4>
+							<v-list density="compact">
+								<v-list-item
+									v-for="(file, index) in checksum_dialog.item.core_checksum_details.extra"
+									:key="'extra-' + index"
+								>
+									<template v-slot:prepend>
+										<v-icon color="info" size="small">mdi-information</v-icon>
+									</template>
+									<v-list-item-title class="text-body-2" style="font-family: monospace;">{{ file }}</v-list-item-title>
+								</v-list-item>
+							</v-list>
+						</div>
+						<div v-if="checksum_dialog.item.core_checksum_details.missing && checksum_dialog.item.core_checksum_details.missing.length > 0">
+							<h4 class="text-subtitle-1 mb-2">Missing Files</h4>
+							<v-list density="compact">
+								<v-list-item
+									v-for="(file, index) in checksum_dialog.item.core_checksum_details.missing"
+									:key="'missing-' + index"
+								>
+									<template v-slot:prepend>
+										<v-icon color="error" size="small">mdi-alert-circle</v-icon>
+									</template>
+									<v-list-item-title class="text-body-2" style="font-family: monospace;">{{ file }}</v-list-item-title>
+								</v-list-item>
+							</v-list>
+						</div>
+					</v-card-text>
+					<v-card-actions>
+						<v-spacer></v-spacer>
+						<v-btn variant="text" @click="checksum_dialog.show = false">Close</v-btn>
+					</v-card-actions>
+				</v-card>
+			</v-dialog>
 			<v-card v-if="route == 'activity-logs' && role == 'administrator'" flat border="thin" rounded="xl">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Activity Log</v-toolbar-title>
@@ -11509,6 +11623,9 @@ const app = createApp({
 		web_risk_logs: [],
 		web_risk_logs_loading: false,
 		web_risk_dialog: { show: false, log: null },
+		checksum_failures: [],
+		checksum_failures_loading: false,
+		checksum_dialog: { show: false, item: null },
 		activity_logs: { items: [], total: 0, page: 1, pages: 0 },
 		activity_logs_loading: false,
 		activity_logs_options: { page: 1, itemsPerPage: 50 },
@@ -11855,6 +11972,7 @@ const app = createApp({
 			'/handbook': 'handbook',
 			'/health': 'health',
 			'/web-risk': 'web-risk',
+			'/checksum-failures': 'checksum-failures',
 			'/keys': 'keys',
 			'/login': 'login',
 			'/profile' : 'profile',
@@ -13155,6 +13273,12 @@ const app = createApp({
 
 			if (this.route == "web-risk") {
 				this.fetchWebRiskLogs();
+				this.loading_page = false;
+				this.selected_nav = "";
+			}
+
+			if (this.route == "checksum-failures") {
+				this.fetchChecksumFailures();
 				this.loading_page = false;
 				this.selected_nav = "";
 			}
@@ -15528,6 +15652,20 @@ const app = createApp({
 			})
 			.catch(error => {
 				this.web_risk_logs_loading = false;
+			});
+		},
+		fetchChecksumFailures() {
+			this.checksum_failures_loading = true;
+			axios.get(
+			'/wp-json/captaincore/v1/checksum-failures', {
+				headers: {'X-WP-Nonce':this.wp_nonce}
+			})
+			.then(response => {
+				this.checksum_failures = response.data;
+				this.checksum_failures_loading = false;
+			})
+			.catch(error => {
+				this.checksum_failures_loading = false;
 			});
 		},
 		fetchActivityLogs() {
