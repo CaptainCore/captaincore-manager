@@ -7413,6 +7413,18 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Checksum Failures endpoint (admin only)
+	register_rest_route(
+		'captaincore/v1', '/checksum-failures', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_checksum_failures_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
 	// Email subscription management (public endpoint)
 	register_rest_route(
 		'captaincore/v1', '/email/subscription', [
@@ -7938,6 +7950,44 @@ function captaincore_scheduled_reports_delete_func( WP_REST_Request $request ) {
  */
 function captaincore_web_risk_logs_func( WP_REST_Request $request ) {
 	return ( new CaptainCore\WebRiskLogs() )->list();
+}
+
+/**
+ * REST endpoint: List environments with failed core checksums
+ */
+function captaincore_checksum_failures_func( WP_REST_Request $request ) {
+	global $wpdb;
+
+	$sites_table        = $wpdb->prefix . 'captaincore_sites';
+	$environments_table = $wpdb->prefix . 'captaincore_environments';
+
+	$results = $wpdb->get_results(
+		"SELECT e.environment_id, e.environment, e.details, s.name as site_name, s.site_id
+		 FROM {$environments_table} e
+		 JOIN {$sites_table} s ON e.site_id = s.site_id
+		 WHERE s.status = 'active'
+		   AND e.details IS NOT NULL
+		   AND e.details != ''"
+	);
+
+	$failures = [];
+	foreach ( $results as $row ) {
+		$details = json_decode( $row->details, true );
+		if ( empty( $details['core_checksum_details']['status'] ) || $details['core_checksum_details']['status'] !== 'fail' ) {
+			continue;
+		}
+		$checksum = $details['core_checksum_details'];
+		$failures[] = [
+			'site_name'              => $row->site_name,
+			'site_id'                => (int) $row->site_id,
+			'environment'            => $row->environment,
+			'environment_id'         => (int) $row->environment_id,
+			'home_url'               => $details['home_url'] ?? '',
+			'core_checksum_details'  => $checksum,
+		];
+	}
+
+	return $failures;
 }
 
 /**
