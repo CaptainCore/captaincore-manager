@@ -1749,6 +1749,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										persistent-hint
 										@update:model-value="calculateImportCost($event)"
 									></v-autocomplete>
+									<template v-if="dialog_connect.provider_id != 1">
 									<div class="text-subtitle-1 font-weight-bold mt-4 mb-2">Estimated Cost</div>
 									<v-card v-if="dialog_connect.billing_preview" variant="outlined" class="pa-3">
 										<div class="d-flex justify-space-between text-body-2">
@@ -1770,6 +1771,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											<span class="ml-5">Actual invoice increase: +${{ dialog_connect.billing_preview.invoice_increase }}</span>
 										</div>
 									</v-card>
+									</template>
 									<v-alert v-if="dialog_connect.assign_account_id && dialog_connect.selected_sites.length > 0" variant="tonal" type="success" density="compact" class="mt-3">
 										Will be added to <strong>{{ getAccountName(dialog_connect.assign_account_id) }}</strong>.
 									</v-alert>
@@ -8468,6 +8470,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						density="comfortable"
 						hover
 					>
+						<template v-slot:item.site_name="{ item }">
+							<a :href="`${configurations.path}sites/${item.site_id}`" @click.prevent="goToPath(`/sites/${item.site_id}`)" class="text-decoration-none">{{ item.site_name }}</a>
+						</template>
 						<template v-slot:item.home_url="{ item }">
 							<a :href="item.home_url" target="_blank" class="text-decoration-none">{{ item.home_url }}</a>
 						</template>
@@ -8484,12 +8489,25 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<span v-else class="text-medium-emphasis">0</span>
 						</template>
 						<template v-slot:item.actions="{ item }">
-							<v-btn
-								icon="mdi-chevron-right"
-								variant="text"
-								size="small"
-								@click="checksum_dialog.item = checksum_failures.find(f => f.environment_id === item.environment_id); checksum_dialog.show = true"
-							></v-btn>
+							<div class="d-flex align-center">
+								<v-tooltip text="Copy SSH command" location="top">
+									<template v-slot:activator="{ props }">
+										<v-btn
+											v-bind="props"
+											icon="mdi-console"
+											variant="text"
+											size="small"
+											@click="copyText(`ssh ${item.username}@${item.address} -p ${item.port}`)"
+										></v-btn>
+									</template>
+								</v-tooltip>
+								<v-btn
+									icon="mdi-chevron-right"
+									variant="text"
+									size="small"
+									@click="checksum_dialog.item = checksum_failures.find(f => f.environment_id === item.environment_id); checksum_dialog.show = true"
+								></v-btn>
+							</div>
 						</template>
 					</v-data-table>
 				</v-card-text>
@@ -11950,8 +11968,8 @@ const app = createApp({
 				"value": "uk-london-1"
 			}
 		],
-		kinsta_providers: <?php echo json_encode( CaptainCore\Providers\Kinsta::list() ); ?>,
-		kinsta_provider_sites: [<?php echo json_encode( CaptainCore\Providers\Kinsta::list_sites() ); ?>],
+		kinsta_providers: <?php echo ( new CaptainCore\User )->is_admin() ? json_encode( CaptainCore\Providers\Kinsta::list() ) : '[]'; ?>,
+		kinsta_provider_sites: [<?php echo ( new CaptainCore\User )->is_admin() ? json_encode( CaptainCore\Providers\Kinsta::list_sites() ) : ''; ?>],
 		pinned_environments: [],
 		clone_sites: [],
 		requested_sites: <?php echo json_encode( ( new CaptainCore\User )->fetch_requested_sites() ); ?>,

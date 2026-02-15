@@ -7974,7 +7974,7 @@ function captaincore_checksum_failures_func( WP_REST_Request $request ) {
 	$environments_table = $wpdb->prefix . 'captaincore_environments';
 
 	$results = $wpdb->get_results(
-		"SELECT e.environment_id, e.environment, e.details, s.name as site_name, s.site_id
+		"SELECT e.environment_id, e.environment, e.details, e.address, e.username, e.port, s.name as site_name, s.site_id
 		 FROM {$environments_table} e
 		 JOIN {$sites_table} s ON e.site_id = s.site_id
 		 WHERE s.status = 'active'
@@ -7995,6 +7995,9 @@ function captaincore_checksum_failures_func( WP_REST_Request $request ) {
 			'environment'            => $row->environment,
 			'environment_id'         => (int) $row->environment_id,
 			'home_url'               => $details['home_url'] ?? '',
+			'address'                => $row->address ?? '',
+			'username'               => $row->username ?? '',
+			'port'                   => $row->port ?? '',
 			'core_checksum_details'  => $checksum,
 		];
 	}
