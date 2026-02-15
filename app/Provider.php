@@ -189,6 +189,7 @@ class Provider {
         $time_now = date("Y-m-d H:i:s");
         $imported = 0;
         $skipped  = 0;
+        $imported_site_ids = [];
 
         foreach ( $sites as $site ) {
             $site   = (object) $site;
@@ -280,10 +281,16 @@ class Provider {
             Sites::update_environments_cache( $site_id );
 
             ActivityLog::log( 'created', 'site', $site_id, $domain, "Imported site {$domain} from {$provider->provider}", [], $account_id );
+            $imported_site_ids[] = $site_id;
             $imported++;
         }
 
         ( new Account( $account_id, true ) )->calculate_totals();
+
+        if ( ! empty( $imported_site_ids ) ) {
+            $ids_string = implode( ' ', $imported_site_ids );
+            Run::CLI( "site sync-batch {$ids_string} --update-extras", true );
+        }
 
         $message = "Imported {$imported} site" . ( $imported !== 1 ? 's' : '' ) . " successfully.";
         if ( $skipped > 0 ) {

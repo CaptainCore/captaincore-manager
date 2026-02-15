@@ -241,7 +241,8 @@ class ProviderAction {
                 $site        = \CaptainCore\Remote\Kinsta::get( "sites/{$result->idSite}" )->site;
                 $environment = \CaptainCore\Remote\Kinsta::get( "sites/{$result->idSite}/environments" )->site->environments[0];
                 $live_environment_id = $environment->id; // Get the environment ID
-                $password    = $verify ? \CaptainCore\Providers\Kinsta::fetch_sftp_password( $result->idSite ) : "";
+                $password_response = \CaptainCore\Remote\Kinsta::get( "sites/environments/{$live_environment_id}/ssh/password" );
+                $password          = $password_response->environment->sftp_password ?? '';
 
                 // Check for CaptainCore site name conflicts and loop until a unique name is found
                 $original_kinsta_name = $site->name;

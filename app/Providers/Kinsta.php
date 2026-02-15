@@ -86,6 +86,63 @@ class Kinsta {
         return $sites;
     }
 
+    public static function enrich_imported_site( $site_id, $remote_site, $provider_id = "" ) {
+        $remote_site = (object) $remote_site;
+
+        $api_key = self::credentials( "api", $provider_id );
+
+        \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
+
+        $site_response = \CaptainCore\Remote\Kinsta::get( "sites/{$remote_site->remote_id}" );
+        $username      = $site_response->site->name ?? '';
+
+        $response = \CaptainCore\Remote\Kinsta::get( "sites/{$remote_site->remote_id}/environments" );
+
+        if ( empty( $response->site->environments ) ) {
+            return;
+        }
+
+        $company_id = self::credentials( "company_id", $provider_id );
+
+        foreach ( $response->site->environments as $kinsta_environment ) {
+            if ( $kinsta_environment->name == "live" ) {
+                $address        = $kinsta_environment->ssh_connection->ssh_ip->external_ip ?? '';
+                $port           = $kinsta_environment->ssh_connection->ssh_port ?? '';
+                $home_url       = $kinsta_environment->primaryDomain->name ?? '';
+                $home_directory = $kinsta_environment->web_root ?? '';
+                $core           = $kinsta_environment->wordpress_version ?? '';
+
+                $password_response = \CaptainCore\Remote\Kinsta::get( "sites/environments/{$kinsta_environment->id}/ssh/password" );
+                $password          = $password_response->environment->sftp_password ?? '';
+
+                $visits         = '';
+                $timeframe_end   = gmdate( 'Y-m-d' ) . 'T23:59:59.999Z';
+                $timeframe_start = gmdate( 'Y-m-d', strtotime( '-30 days' ) ) . 'T00:00:00.000Z';
+                $visits_response = \CaptainCore\Remote\Kinsta::get( "sites/environments/{$kinsta_environment->id}/analytics/visits?company_id={$company_id}&timeframe_start={$timeframe_start}&timeframe_end={$timeframe_end}" );
+                if ( ! empty( $visits_response->analytics->analytics_response->data[0]->total ) ) {
+                    $visits = $visits_response->analytics->analytics_response->data[0]->total;
+                }
+
+                $environments = ( new \CaptainCore\Environments )->where( [ "site_id" => $site_id ] );
+                foreach ( $environments as $env ) {
+                    if ( $env->environment === 'Production' ) {
+                        ( new \CaptainCore\Environments )->update( [
+                            'address'        => $address,
+                            'username'       => $username,
+                            'password'       => $password,
+                            'port'           => $port,
+                            'home_url'       => $home_url,
+                            'home_directory' => $home_directory,
+                            'core'           => $core,
+                            'visits'         => $visits,
+                        ], [ 'environment_id' => $env->environment_id ] );
+                    }
+                }
+                break;
+            }
+        }
+    }
+
     public static function update_token( $token = "", $provider_id = "" ) {
         if ( ! empty( $provider_id ) ) {
             $provider = \CaptainCore\Providers::get( $provider_id );
@@ -567,105 +624,24 @@ class Kinsta {
 
     }
 
-    public static function fetch_sftp_password( $site_key = 0 ) {
-        $password = self::credentials("password");
-        $token    = self::credentials("token");
-        $data     = [ 
-            'timeout' => 45,
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'X-Token'      => "$token",
-            ],
-            'body'        => json_encode( [
-                "variables" => [ 
-                    "idSite"        => $site_key,
-                ],
-                "operationName" => "getHeaderSite",
-                "query"         => 'fragment HeaderEnvironment on Environment {
-                    id
-                    name
-                    displayName
-                    isPremium
-                    isBlocked
-                    __typename
-                  }
-                  
-                  query getHeaderSite($idSite: String!) {
-                    site(id: $idSite) {
-                      id
-                      displayName
-                      environments {
-                        ...HeaderEnvironment
-                        __typename
-                      }
-                      environments_liveKeys
-                      __typename
-                    }
-                  }'                  
-            ] )
-        ];
+    public static function fetch_sftp_password( $site_key = 0, $provider_id = "" ) {
+        $api_key = self::credentials( "api", $provider_id );
+        \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
 
-        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
-        $response = json_decode( $response['body'] );
+        $response = \CaptainCore\Remote\Kinsta::get( "sites/{$site_key}/environments" );
 
-        foreach( $response->data->site->environments as $env ) {
+        if ( empty( $response->site->environments ) ) {
+            return '';
+        }
+
+        foreach ( $response->site->environments as $env ) {
             if ( $env->name == "live" ) {
-                $environment = $env;
+                $password_response = \CaptainCore\Remote\Kinsta::get( "sites/environments/{$env->id}/ssh/password" );
+                return $password_response->environment->sftp_password ?? '';
             }
         }
 
-        $data  = [ 
-            'timeout' => 45,
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'X-Token'      => "$token",
-            ],
-            'body'        => json_encode( [
-                "variables" => [ 
-                    "password"  => $password
-                ],
-                "operationName" => "PasswordToken",
-                "query"         => 'query PasswordToken($password: String!) {
-                    passwordToken(password: $password)
-                  }'
-            ] )
-        ];
-
-        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
-        $response = json_decode( $response['body'] );
-
-        $data  = [ 
-            'timeout' => 45,
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'X-Token'      => "$token",
-            ],
-            'body'        => json_encode( [
-                "variables" => [ 
-                    "idSite"        => $site_key,
-                    "idEnv"         => $environment->id,
-                    "passwordToken" => $response->data->passwordToken
-                ],
-                "operationName" => "SftpPassword",
-                "query"         => 'query SftpPassword($idSite: String!, $idEnv: String!, $passwordToken: String) {
-                    site(id: $idSite) {
-                      id
-                      environment(id: $idEnv) {
-                        id
-                        sftpPassword(passwordToken: $passwordToken)
-                        __typename
-                      }
-                      __typename
-                    }
-                  }'                  
-            ] )
-        ];
-
-        $response = wp_remote_post( "https://graphql-router.kinsta.com", $data );
-        $response = json_decode( $response['body'] );
-
-        return $response->data->site->environment->sftpPassword;
-
+        return '';
     }
 
     public static function fetch_site_details( $site_key = 0 ) {
