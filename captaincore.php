@@ -681,7 +681,13 @@ function captaincore_missive_func( WP_REST_Request $request ) {
 
 function captaincore_api_func( WP_REST_Request $request ) {
 
-	$post          = json_decode( file_get_contents( 'php://input' ) );
+	$post = json_decode( file_get_contents( 'php://input' ) );
+
+	// Validate token before processing any data
+	if ( empty( $post ) || ! isset( $post->token ) || $post->token != CAPTAINCORE_CLI_TOKEN ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 404 ] );
+	}
+
 	$archive       = empty( $post->archive ) ? "" : $post->archive;
 	$command       = empty( $post->command ) ? "" : $post->command;
 	$environment   = empty( $post->environment ) ? "" : $post->environment;
@@ -704,15 +710,9 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	$notes         = empty( $post->notes ) ? "" : $post->notes;
 	$response      = "";
 
-	// Error if token not valid
-	if ( $post->token != CAPTAINCORE_CLI_TOKEN ) {
-		// Create the response object
-		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 404 ] );
-	}
-
 	// Error if site not valid
 	$current_site = CaptainCore\Sites::get( $site_id );
-	if ( empty( $current_site ) && $site_id != "" && $command != "default-get" && $command != "configuration-get" ) {
+	if ( empty( $current_site ) && $site_id != "" && $command != "default-get" && $command != "configuration-get" && $command != "providers-list-raw" ) {
 		return new WP_Error( 'command_invalid', "Invalid Command for $site_id", [ 'status' => 404 ] );
 	}
 
@@ -798,6 +798,29 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	}
 
+	// Send backup download notification email
+	if ( $command == 'backup-download-notify' ) {
+		\CaptainCore\Mailer::send_backup_download_ready(
+			$post->data->email,
+			$domain_name,
+			$post->data->environment,
+			$post->data->file_count,
+			$post->data->timestamp,
+			$post->data->download_url
+		);
+		$response = [ "response" => "Backup download notification sent" ];
+	}
+
+	// Send monitor alert notification email
+	if ( $command == 'monitor-notify' ) {
+		\CaptainCore\Mailer::send_monitor_alert(
+			$post->data->email,
+			$post->data->subject,
+			$post->data->content
+		);
+		$response = [ "response" => "Monitor notification sent" ];
+	}
+
 	// Load Token Key
 	if ( $command == 'token' and isset( $token_key ) ) {
 		( new CaptainCore\Sites )->update( [ "token" => $token_key ], [ "site_id" => $site_id ] );
@@ -836,21 +859,30 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 
 	if ( $command == 'update-environment' and ! empty( $post->data ) ) {
-		
+
 		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
+
+		// Merge incoming details with existing to preserve server-side flags (e.g., default_role_alerted, checksum_alerted)
+		$details = isset( $current_environment->details ) ? json_decode( $current_environment->details ) : (object) [];
+		if ( isset( $post->data->details ) ) {
+			$incoming_details = json_decode( $post->data->details );
+			if ( $incoming_details ) {
+				foreach ( $incoming_details as $key => $value ) {
+					$details->$key = $value;
+				}
+			}
+		}
 
 		// Ensure screenshot_base is up to date with latest capture
 		$capture = CaptainCore\Captures::latest_capture( [ "site_id" => $site_id, "environment_id" => $post->data->environment_id ] );
 		if ( ! empty( $capture ) ) {
 			$created_at       = strtotime( $capture->created_at );
 			$git_commit_short = substr( $capture->git_commit, 0, 7 );
-			// Use incoming details if present, otherwise fallback to DB details
-			$details_json = ! empty( $post->data->details ) ? $post->data->details : ( $current_environment->details ?? '{}' );
-			$details = json_decode( $details_json );
 			$details->screenshot_base = "{$created_at}_{$git_commit_short}";
-			$post->data->details = json_encode( $details );
 			$post->data->screenshot = true;
 		}
+
+		$post->data->details = json_encode( $details );
 
 		( new CaptainCore\Environments )->update( (array) $post->data, [ "environment_id" => $post->data->environment_id ] );
 
@@ -872,24 +904,27 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		
 		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
 		$environment_name    = strtolower( $current_environment->environment );
-		$capture             = CaptainCore\Captures::latest_capture( [ "site_id" => $site_id, "environment_id" => $post->data->environment_id ] );
+
+		// Merge incoming details with existing to preserve server-side flags (e.g., default_role_alerted, checksum_alerted)
+		$details = isset( $current_environment->details ) ? json_decode( $current_environment->details ) : (object) [];
+		if ( isset( $post->data->details ) ) {
+			$incoming_details = json_decode( $post->data->details );
+			if ( $incoming_details ) {
+				foreach ( $incoming_details as $key => $value ) {
+					$details->$key = $value;
+				}
+			}
+		}
+
+		$capture = CaptainCore\Captures::latest_capture( [ "site_id" => $site_id, "environment_id" => $post->data->environment_id ] );
 		if ( ! empty( $capture ) ) {
 			$created_at       = strtotime( $capture->created_at );
 			$git_commit_short = substr( $capture->git_commit, 0, 7 );
-			$details          = isset( $current_environment->details ) ? json_decode( $current_environment->details ) : (object) [];
-			// Merge incoming details from CLI (e.g., core_checksum_details)
-			if ( isset( $post->data->details ) ) {
-				$incoming_details = json_decode( $post->data->details );
-				if ( $incoming_details ) {
-					foreach ( $incoming_details as $key => $value ) {
-						$details->$key = $value;
-					}
-				}
-			}
 			$details->screenshot_base = "{$created_at}_{$git_commit_short}";
-			$post->data->details = json_encode( $details );
 			$post->data->screenshot = true;
 		}
+
+		$post->data->details = json_encode( $details );
 
 		// Update the specific environment record
 		( new CaptainCore\Environments )->update( (array) $post->data, [ "environment_id" => $post->data->environment_id ] );
@@ -1060,6 +1095,14 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$response = [
 			"response" => "Fetching global defaults",
 			"defaults" => $defaults,
+		];
+	}
+
+	if ( $command == 'providers-list-raw' ) {
+		$providers = ( new CaptainCore\Providers )->all();
+		$response  = [
+			"response"  => "Fetching providers",
+			"providers" => $providers,
 		];
 	}
 
@@ -1802,12 +1845,6 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 	if ( $cmd == 'update-wp' ) {
 		$command = "update $site";
 		$run_in_background = true;
-	}
-	if ( $cmd == 'update-fetch' ) {
-		$command = "update-fetch $site";
-		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
-			$command = CAPTAINCORE_DEBUG_MOCK_UPDATES;
-		}
 	}
 	if ( $cmd == 'users-fetch' ) {
 		$command = "ssh $site --command='wp user list --format=json'";

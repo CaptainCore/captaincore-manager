@@ -776,6 +776,44 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
+     *  BACKUP DOWNLOAD READY
+     * ------------------------------------------------------------------------- */
+    static public function send_backup_download_ready( $to_email, $site_name, $environment, $file_count, $timestamp, $download_url ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+
+        $intro_text = "<p style='margin-bottom: 25px; line-height: 1.6;'>Contains <strong>{$file_count}</strong> files from <strong>{$site_name}</strong> {$environment} environment as of {$timestamp}.</p>";
+        $intro_text .= "<div style='background-color: #f7fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 25px; text-align: center;'><small style='color: #718096;'>Link expires in 7 days.</small></div>";
+
+        $action_button = "
+            <div style='text-align: center; margin: 35px 0;'>
+                <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 0 auto;'>
+                    <tr>
+                        <td style='border-radius: 4px; background-color: {$brand_color};'>
+                            <a href='{$download_url}' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 4px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Download Backup &rarr;</a>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        ";
+
+        self::send_email_with_layout(
+            $to_email,
+            "Backup Download Ready: {$site_name}",
+            "Backup Download Ready",
+            $site_name,
+            $intro_text . $action_button
+        );
+    }
+
+    /* -------------------------------------------------------------------------
+     *  MONITOR ALERT
+     * ------------------------------------------------------------------------- */
+    static public function send_monitor_alert( $to_email, $subject, $content_html ) {
+        self::send_email_with_layout( $to_email, $subject, "Monitor Alert", $subject, $content_html );
+    }
+
+    /* -------------------------------------------------------------------------
      *  GENERIC PROCESS NOTIFICATION (Copy/Deploy)
      * ------------------------------------------------------------------------- */
     static public function send_process_completed( $to_email, $subject, $headline, $subheadline, $message, $link_url = '' ) {
