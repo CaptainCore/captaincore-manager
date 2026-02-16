@@ -716,9 +716,9 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		return new WP_Error( 'command_invalid', "Invalid Command for $site_id", [ 'status' => 404 ] );
 	}
 
-	$site_name      = $current_site->site;
-	$domain_name    = $current_site->name;
-	$environment_id = ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment );
+	$site_name      = ! empty( $current_site ) ? $current_site->site : "";
+	$domain_name    = ! empty( $current_site ) ? $current_site->name : "";
+	$environment_id = ! empty( $site_id ) ? ( new CaptainCore\Site( $site_id ) )->fetch_environment_id( $environment ) : "";
 
 	// Copy site
 	if ( $command == 'copy' and $email ) {
