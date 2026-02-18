@@ -22209,7 +22209,7 @@ const app = createApp({
 					const syncJobId = Math.round((new Date()).getTime());
 					self.jobs.push({ "job_id": syncJobId, "description": syncDescription, "status": "queued", stream: [], "command": "syncSite", "site_id": job.site_id });
 					axios.get(
-						`/wp-json/captaincore/v1/sites/${job.site_id}/${environment}/sync/data`, {
+						`/wp-json/captaincore/v1/sites/${job.site_id}/${environment.toLowerCase()}/sync/data`, {
 							headers: {'X-WP-Nonce': self.wp_nonce}
 						})
 						.then(response => {
