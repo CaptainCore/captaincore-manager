@@ -12664,12 +12664,11 @@ const app = createApp({
 		},
 		currentSiteThumbnail() {
 			const site = this.dialog_site.site;
-			// Check if required data exists
-			if (!site || !site.site_id || !site.screenshot_base) {
+			const env = this.dialog_site.environment_selected;
+			if (!site || !site.site_id || !env || !env.screenshot_base) {
 				return null;
 			}
-			// Build URL
-			return `${this.remote_upload_uri}${site.site}_${site.site_id}/production/screenshots/${site.screenshot_base}_thumb-100.jpg`;
+			return `${this.remote_upload_uri}${site.site}_${site.site_id}/${env.environment.toLowerCase()}/screenshots/${env.screenshot_base}_thumb-100.jpg`;
 		},
 		currentEnvironmentAction() {
 			// Returns the active provider action (job) if it targets the currently selected environment
