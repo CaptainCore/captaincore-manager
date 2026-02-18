@@ -2736,6 +2736,35 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-card-text>
 					</v-card>
 				</v-dialog>
+				<v-dialog v-model="dialog_new_site_user.show" scrollable width="500px">
+					<v-card rounded="0">
+						<v-toolbar color="primary">
+							<v-btn icon="mdi-close" @click="dialog_new_site_user.show = false"></v-btn>
+							<v-toolbar-title>Add New User</v-toolbar-title>
+							<v-spacer></v-spacer>
+						</v-toolbar>
+						<v-card-text>
+						<v-container>
+							<v-row>
+								<v-col cols="12" class="pa-2">
+									<v-text-field v-model="dialog_new_site_user.username" label="Username" variant="underlined" hide-details class="mb-2" required></v-text-field>
+									<v-text-field v-model="dialog_new_site_user.email" label="Email" variant="underlined" hide-details class="mb-2" required></v-text-field>
+									<v-text-field v-model="dialog_new_site_user.first_name" label="First Name" variant="underlined" hide-details class="mb-2"></v-text-field>
+									<v-text-field v-model="dialog_new_site_user.last_name" label="Last Name" variant="underlined" hide-details class="mb-2"></v-text-field>
+									<v-text-field v-model="dialog_new_site_user.password" label="Password" variant="underlined" hide-details class="mb-2">
+										<template v-slot:append-inner>
+											<v-btn variant="text" size="small" @click="generatePassword()">Generate</v-btn>
+										</template>
+									</v-text-field>
+									<v-select v-model="dialog_new_site_user.role" :items="['administrator','editor','author','contributor','subscriber']" label="Role" variant="underlined" hide-details class="mb-2"></v-select>
+									<v-checkbox v-model="dialog_new_site_user.send_notification" label="Send user notification email" hide-details class="mb-4"></v-checkbox>
+									<v-btn @click="createSiteUser()" color="primary">Add User</v-btn>
+								</v-col>
+							</v-row>
+						</v-container>
+						</v-card-text>
+					</v-card>
+				</v-dialog>
 				<v-dialog v-model="dialog_share.show" max-width="600">
 					<v-card rounded="xl">
 						<v-toolbar color="primary" flat>
@@ -5186,6 +5215,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							class="me-2"
 							style="max-width: 350px;"
 						></v-text-field>
+						<v-btn variant="tonal" @click="dialog_new_site_user.show = true" prepend-icon="mdi-account-plus" class="me-2">Add User</v-btn>
 						<v-btn variant="text" @click="bulkEdit(dialog_site.site.site_id,'users')" v-if="dialog_site.environment_selected.users_selected.length != 0">
 							Bulk Edit {{ dialog_site.environment_selected.users_selected.length }} users
 						</v-btn>
@@ -11683,6 +11713,7 @@ const app = createApp({
 		dialog_breakdown: false,
 		dialog_captures: { site: {}, auth: { username: "", password: ""}, pages: [{ page: ""}], capture: { pages: [] }, image_path:"", selected_page: "", captures: [], mode: "screenshot", loading: true, image_loading: false, show: false, show_configure: false },
 		dialog_delete_user: { show: false, site: {}, users: [], username: "", reassign: null },
+		dialog_new_site_user: { show: false, username: "", email: "", first_name: "", last_name: "", password: "", role: "subscriber", send_notification: true },
 		dialog_apply_https_urls: { show: false, site_id: "", site_name: "", sites: [] },
 		dialog_copy_site: { show: false, site: {}, options: [], destination: null },
 		dialog_edit_site: { show: false, show_vars: false, loading: false, site: {
@@ -15485,7 +15516,15 @@ const app = createApp({
 							// Add new site info
 							this.sites.push( site )
 						}
-						if ( this.dialog_site.site.site_id == site.site_id ) {
+						if ( this.dialog_site.site.site_id == site.site_id && this.dialog_site.step == 2 ) {
+							// Update dialog site data in place without resetting tabs
+							Object.keys(site).forEach( key => {
+								if ( key == "tabs" || key == "tabs_management" ) return;
+								this.dialog_site.site[key] = site[key];
+							});
+							this.fetchSiteEnvironments( site.site_id );
+							this.fetchSiteDetails( site.site_id );
+						} else if ( this.dialog_site.site.site_id == site.site_id ) {
 							site_update = this.sites.filter( s => s.site_id == site.site_id )[0]
 							this.showSite( site_update )
 						}
@@ -22164,6 +22203,21 @@ const app = createApp({
 					}
 				}
 
+				if ( job.command == "deleteUser" ) {
+					const environment = job.environment || "Production";
+					const syncDescription = "Syncing " + environment.toLowerCase() + " info";
+					const syncJobId = Math.round((new Date()).getTime());
+					self.jobs.push({ "job_id": syncJobId, "description": syncDescription, "status": "queued", stream: [], "command": "syncSite", "site_id": job.site_id });
+					axios.get(
+						`/wp-json/captaincore/v1/sites/${job.site_id}/${environment}/sync/data`, {
+							headers: {'X-WP-Nonce': self.wp_nonce}
+						})
+						.then(response => {
+							self.jobs.filter(j => j.job_id == syncJobId)[0].job_id = response.data
+							self.runCommand( response.data )
+						})
+				}
+
 				if ( job.command == "manage" && job.environment ) {
 					self.syncSiteEnvironment( job.site_id, job.environment );
 				}
@@ -22629,13 +22683,16 @@ const app = createApp({
 			
 			this.jobs.push({
 				"job_id": jobId,
-				"description": description, 
-				"status": "queued", 
-				"stream": []
+				"description": description,
+				"status": "queued",
+				"stream": [],
+				"command": "deleteUser",
+				"site_id": site.site_id,
+				"environment": env.environment
 			});
 
-			// WP ClI command to send
-			const wpcli = `wp user delete ${username} --reassign=${this.dialog_delete_user.reassign.ID} --skip-themes --skip-plugins`;
+			// WP CLI command to send
+			const wpcli = `wp user delete '${username}' --reassign=${this.dialog_delete_user.reassign.ID} --skip-themes --skip-plugins`;
 
 			axios.post(`/wp-json/captaincore/v1/run/code`, {
 				environments: [env.environment_id],
@@ -22644,19 +22701,86 @@ const app = createApp({
 				headers: { 'X-WP-Nonce': this.wp_nonce }
 			})
 			.then( response => {
-				env.users = env.users.filter(user => user.username != username);
-				
 				const job = this.jobs.find(j => j.job_id == jobId);
 				if (job) {
 					job.job_id = response.data;
 					this.runCommand( response.data );
 				}
-				
+
 				this.dialog_delete_user.show = false;
 				this.dialog_delete_user.site = {};
 				this.dialog_delete_user.reassign = {};
 				this.dialog_delete_user.username = "";
 				this.dialog_delete_user.users = [];
+			});
+		},
+		generatePassword() {
+			const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+';
+			let password = '';
+			for (let i = 0; i < 24; i++) {
+				password += chars.charAt(Math.floor(Math.random() * chars.length));
+			}
+			this.dialog_new_site_user.password = password;
+		},
+		createSiteUser() {
+			if (!this.dialog_new_site_user.username || !this.dialog_new_site_user.email) {
+				this.snackbar.message = "Username and email are required.";
+				this.snackbar.show = true;
+				return;
+			}
+
+			const site = this.dialog_site.site;
+			const env = this.dialog_site.environment_selected;
+			const d = this.dialog_new_site_user;
+			const site_name = site.name;
+			const description = "Create user '" + d.username + "' on " + site_name + " (" + env.environment + ")";
+			const jobId = Math.round((new Date()).getTime());
+
+			this.jobs.push({
+				"job_id": jobId,
+				"description": description,
+				"status": "queued",
+				"stream": [],
+				"command": "deleteUser",
+				"site_id": site.site_id,
+				"environment": env.environment
+			});
+
+			let wpcli = `wp user create '${d.username}' '${d.email}' --role=${d.role} --skip-themes --skip-plugins`;
+			if (d.password) {
+				wpcli += ` --user_pass='${d.password}'`;
+			}
+			if (d.first_name) {
+				wpcli += ` --first_name='${d.first_name}'`;
+			}
+			if (d.last_name) {
+				wpcli += ` --last_name='${d.last_name}'`;
+			}
+			if (d.send_notification) {
+				wpcli += ` --send-email`;
+			}
+
+			axios.post(`/wp-json/captaincore/v1/run/code`, {
+				environments: [env.environment_id],
+				code: wpcli
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then( response => {
+				const job = this.jobs.find(j => j.job_id == jobId);
+				if (job) {
+					job.job_id = response.data;
+					this.runCommand( response.data );
+				}
+
+				this.dialog_new_site_user.show = false;
+				this.dialog_new_site_user.username = "";
+				this.dialog_new_site_user.email = "";
+				this.dialog_new_site_user.first_name = "";
+				this.dialog_new_site_user.last_name = "";
+				this.dialog_new_site_user.password = "";
+				this.dialog_new_site_user.role = "subscriber";
+				this.dialog_new_site_user.send_notification = true;
 			});
 		},
 		bulkactionLaunch() {
