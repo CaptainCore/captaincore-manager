@@ -19140,7 +19140,7 @@ const app = createApp({
 		},
 		updateDomainContacts() {
 			this.dialog_domain.updating_contacts = true
-			axios.post( `/wp-json/captaincore/v1/domain/${domain.domain_id}/contacts`, {
+			axios.post( `/wp-json/captaincore/v1/domain/${this.dialog_domain.domain.domain_id}/contacts`, {
 					'contacts': this.dialog_domain.provider.contacts
 				},{
 					headers: {'X-WP-Nonce':this.wp_nonce}
@@ -19167,7 +19167,7 @@ const app = createApp({
 		},
 		updateDomainNameservers() {
 			this.dialog_domain.updating_nameservers = true
-			axios.post( `/wp-json/captaincore/v1/domain/${domain.domain_id}/nameservers`, {
+			axios.post( `/wp-json/captaincore/v1/domain/${this.dialog_domain.domain.domain_id}/nameservers`, {
 					'nameservers': this.dialog_domain.provider.nameservers.map( ns => ns.value )
 				},{
 					headers: {'X-WP-Nonce':this.wp_nonce}
