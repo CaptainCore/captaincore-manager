@@ -5215,7 +5215,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							class="me-2"
 							style="max-width: 350px;"
 						></v-text-field>
-						<v-btn variant="tonal" @click="dialog_new_site_user.show = true" prepend-icon="mdi-account-plus" class="me-2">Add User</v-btn>
+						<v-btn variant="tonal" @click="dialog_new_site_user.show = true; generatePassword()" prepend-icon="mdi-account-plus" class="me-2">Add User</v-btn>
 						<v-btn variant="text" @click="bulkEdit(dialog_site.site.site_id,'users')" v-if="dialog_site.environment_selected.users_selected.length != 0">
 							Bulk Edit {{ dialog_site.environment_selected.users_selected.length }} users
 						</v-btn>
@@ -22709,7 +22709,7 @@ const app = createApp({
 
 				this.dialog_delete_user.show = false;
 				this.dialog_delete_user.site = {};
-				this.dialog_delete_user.reassign = {};
+				this.dialog_delete_user.reassign = null;
 				this.dialog_delete_user.username = "";
 				this.dialog_delete_user.users = [];
 			});
