@@ -324,6 +324,39 @@ class Environments extends DB {
 
     }
 
+    public static function top_plugins( $limit = 100 ) {
+        $filters = self::fetch_filters_for_admins( "Production" );
+        $counts  = [];
+
+        foreach ( $filters as $row ) {
+            if ( empty( $row->plugins ) ) {
+                continue;
+            }
+            $plugins = json_decode( $row->plugins );
+            if ( ! is_array( $plugins ) ) {
+                continue;
+            }
+            $seen = [];
+            foreach ( $plugins as $plugin ) {
+                if ( $plugin->status !== "active" || isset( $seen[ $plugin->name ] ) ) {
+                    continue;
+                }
+                $seen[ $plugin->name ] = true;
+                if ( ! isset( $counts[ $plugin->name ] ) ) {
+                    $counts[ $plugin->name ] = [
+                        "name"       => $plugin->name,
+                        "title"      => html_entity_decode( $plugin->title ),
+                        "site_count" => 0,
+                    ];
+                }
+                $counts[ $plugin->name ]["site_count"]++;
+            }
+        }
+
+        usort( $counts, fn( $a, $b ) => $b["site_count"] - $a["site_count"] );
+        return array_slice( $counts, 0, $limit );
+    }
+
     public function filters_sites( $versions, $status ) {
 
     }
