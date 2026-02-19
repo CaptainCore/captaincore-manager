@@ -613,7 +613,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 		<v-card>
 			<v-card-title class="headline d-flex justify-space-between">
 			<span>Domain Mappings</span>
-			<v-btn icon variant="text" @click="fetchDomains(dialog_domain_mappings.site_id)">
+			<v-btn icon variant="text" @click="fetchDomainMappings()">
 				<v-icon>mdi-refresh</v-icon>
 			</v-btn>
 			</v-card-title>
@@ -713,7 +713,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-btn color="primary" text @click="dialog_domain_mappings.show = false">Close</v-btn>
 			</v-card-actions>
 		</v-card>
-			<v-dialog v-model="verificationDialog.show" max-width="600px">
+			<v-dialog v-model="verificationDialog.show" max-width="800px">
 				<v-card v-if="verificationDialog.domain">
 					<v-toolbar color="primary" density="compact" flat>
 						<v-toolbar-title class="text-white">
@@ -722,44 +722,36 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-spacer></v-spacer>
 						<v-btn icon="mdi-close" variant="text" color="white" @click="verificationDialog.show = false"></v-btn>
 					</v-toolbar>
-					
+
 					<v-card-text class="pt-4">
 						<p class="mb-4">Please add the following DNS records to your domain provider (Cloudflare, GoDaddy, Namecheap, etc.) to prove ownership.</p>
-						
-						<v-table 
-							density="compact" 
-							class="elevation-1 mb-4" 
-							v-if="verificationDialog.domain && verificationDialog.domain.verification_records && verificationDialog.domain.verification_records.length > 0"
-						>
-							<thead>
-								<tr>
-									<th>Type</th>
-									<th>Name / Host</th>
-									<th class="text-right">Value</th>
-								</tr>
-							</thead>
-							<tbody>
-								<template v-for="(record, i) in verificationDialog.domain.verification_records" :key="i">
-									<tr v-if="record">
-										<td><strong>{{ record.type }}</strong></td>
-										<td>
-											{{ record.name }}
-											<v-btn icon size="x-small" variant="text" @click="copyText(record.name)">
-												<v-icon size="small">mdi-content-copy</v-icon>
-											</v-btn>
-										</td>
-										<td class="text-right">
-											<span style="max-width: 200px; display: inline-block; overflow: hidden; text-overflow: ellipsis; vertical-align: middle;">
-												{{ record.value }}
-											</span>
-											<v-btn icon size="x-small" variant="text" @click="copyText(record.value)">
-												<v-icon size="small">mdi-content-copy</v-icon>
-											</v-btn>
-										</td>
-									</tr>
-								</template>
-							</tbody>
-						</v-table>
+
+						<div v-if="verificationDialog.domain && verificationDialog.domain.verification_records && verificationDialog.domain.verification_records.length > 0" class="mb-4">
+							<template v-for="(record, i) in verificationDialog.domain.verification_records" :key="i">
+							<v-card v-if="record" variant="outlined" class="mb-3 pa-3">
+								<div class="d-flex align-center justify-space-between mb-2">
+									<v-chip size="small" color="primary" variant="tonal">{{ record.type }}</v-chip>
+									<v-btn size="x-small" variant="tonal" @click="copyText(record.type + ' ' + (record.name ? record.name.replace('.' + verificationDialog.domain.name, '') : record.name) + ' ' + record.value)">
+										Copy Record
+									</v-btn>
+								</div>
+								<div class="text-caption text-medium-emphasis">Name / Host</div>
+								<div class="d-flex align-center mb-2">
+									<code class="text-body-2">{{ record.name ? record.name.replace('.' + verificationDialog.domain.name, '') : record.name }}</code>
+									<v-btn icon size="x-small" variant="text" @click="copyText(record.name ? record.name.replace('.' + verificationDialog.domain.name, '') : record.name)" class="ml-1">
+										<v-icon size="small">mdi-content-copy</v-icon>
+									</v-btn>
+								</div>
+								<div class="text-caption text-medium-emphasis">Value</div>
+								<div class="d-flex align-center">
+									<code class="text-body-2" style="word-break: break-all;">{{ record.value }}</code>
+									<v-btn icon size="x-small" variant="text" @click="copyText(record.value)" class="ml-1">
+										<v-icon size="small">mdi-content-copy</v-icon>
+									</v-btn>
+								</div>
+							</v-card>
+							</template>
+						</div>
 						<v-alert type="info" density="compact" variant="tonal" icon="mdi-clock-outline">
 							DNS changes may take a few minutes to propagate.
 						</v-alert>
@@ -4920,6 +4912,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<div v-show="dialog_site.environment_selected.token != 'basic'">
 					<v-card color="transparent" density="compact" flat subtitle="Site Options">
 						<template v-slot:actions>
+						<v-btn size="small" variant="tonal" @click="showDomainMappings()" prepend-icon="mdi-dns" v-show="dialog_site.site.provider == 'kinsta' || dialog_site.site.provider == 'rocketdotnet'">
+							Configure Domains
+						</v-btn>
 						<v-btn size="small" variant="tonal" @click="PushProductionToStaging( dialog_site.site.site_id )" prepend-icon="mdi-truck" v-show="dialog_site.site && dialog_site.site.provider && dialog_site.site.provider == 'kinsta'">
 							Push Production to Staging
 						</v-btn>
@@ -10828,9 +10823,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-container v-if="route == 'sites' && role == 'administrator' && ! loading_page && dialog_site.step == 2" class="mt-5">
 				<v-card color="transparent" density="compact" flat subtitle="Administrator Options">
 					<template v-slot:actions>
-						<v-btn size="small" variant="outlined" @click="showDomainMappings()" prepend-icon="mdi-dns" v-if="dialog_site.site.provider == 'kinsta' || dialog_site.site.provider == 'rocketdotnet'">
-							Configure Domains
-						</v-btn>
 						<v-btn size="small" variant="outlined" @click="copySite(dialog_site.site.site_id)" prepend-icon="mdi-content-duplicate">
 							Copy Site
 						</v-btn>

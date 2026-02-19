@@ -80,4 +80,25 @@ class Kinsta {
         return $response;
     }
 
+    public static function delete( $endpoint, $parameters = [] ) {
+        $api_key = self::getApiKey();
+        $data    = [
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type'  => 'application/json',
+                'Authorization' => "Bearer $api_key",
+            ],
+            'method'  => 'DELETE',
+        ];
+        if ( ! empty( $parameters ) ) {
+            $data['body'] = json_encode( $parameters );
+        }
+        $response = wp_remote_request( "https://api.kinsta.com/v2/$endpoint", $data );
+        if ( is_wp_error( $response ) ) {
+            return false;
+        }
+        $response = json_decode( $response['body'] );
+        return $response;
+    }
+
 }

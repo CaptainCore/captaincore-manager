@@ -1293,9 +1293,113 @@ class Kinsta {
 
             $domains[$key]->is_active = $is_active;
             $domains[$key]->verification_records = $verification_records;
+
+            // Auto-provision DNS records if zone exists in Constellix
+            if ( ! empty( $verification_records ) ) {
+                self::auto_provision_dns( $domain->name, $verification_records );
+            }
         }
 
         return array_values( $domains );
+    }
+
+    /**
+     * Auto-provision verification DNS records to Constellix zone if managed.
+     */
+    private static function auto_provision_dns( $domain_name, $verification_records ) {
+        if ( ! defined( 'CONSTELLIX_API_KEY' ) || ! defined( 'CONSTELLIX_SECRET_KEY' ) ) {
+            return;
+        }
+
+        // Skip if already provisioned (cached for 1 day, keyed by domain + records hash)
+        $transient_key = 'captaincore_dns_prov_' . md5( $domain_name . json_encode( $verification_records ) );
+        if ( get_transient( $transient_key ) ) {
+            return;
+        }
+
+        // Get the apex domain
+        $apex_domain = ( new \CaptainCore\Domains )->get_domain( $domain_name );
+
+        // Look up Constellix zone
+        $constellix_domains = \CaptainCore\Remote\Constellix::all( 'domains' );
+        if ( empty( $constellix_domains ) ) {
+            return;
+        }
+
+        $zone_id = null;
+        foreach ( $constellix_domains as $item ) {
+            if ( $item->name === $apex_domain ) {
+                $zone_id = $item->id;
+                break;
+            }
+        }
+
+        if ( ! $zone_id ) {
+            return;
+        }
+
+        // Fetch existing records for duplicate checking
+        $existing_records = \CaptainCore\Remote\Constellix::get( "domains/{$zone_id}/records", [ 'perPage' => 100 ] );
+        $existing_data    = $existing_records->data ?? [];
+
+        foreach ( $verification_records as $record ) {
+            if ( empty( $record->type ) || empty( $record->name ) || empty( $record->value ) ) {
+                continue;
+            }
+
+            $record_type = strtolower( $record->type );
+            $record_name = str_replace( '.' . $apex_domain, '', $record->name );
+
+            // Check for duplicates
+            $exists = false;
+            foreach ( $existing_data as $existing ) {
+                if ( strtolower( $existing->type ) === $record_type && $existing->name === $record_name ) {
+                    if ( $record_type === 'txt' && ! empty( $existing->value ) ) {
+                        // Check if this specific value already exists
+                        foreach ( $existing->value as $val ) {
+                            $clean_val = trim( str_replace( '"', '', $val->value ?? '' ) );
+                            if ( $clean_val === $record->value ) {
+                                $exists = true;
+                                break;
+                            }
+                        }
+                        // TXT record with same name exists but missing this value — append it
+                        if ( ! $exists ) {
+                            $updated_values   = $existing->value;
+                            $updated_values[] = (object) [ 'value' => $record->value, 'enabled' => true ];
+                            $post = [
+                                'type'  => $record_type,
+                                'name'  => $record_name,
+                                'ttl'   => $existing->ttl ?? 3600,
+                                'value' => $updated_values,
+                            ];
+                            \CaptainCore\Remote\Constellix::put( "domains/{$zone_id}/records/{$existing->id}", $post );
+                            $exists = true;
+                        }
+                    } else {
+                        // CNAME or other type with same name already exists
+                        $exists = true;
+                    }
+                    break;
+                }
+            }
+
+            if ( $exists ) {
+                continue;
+            }
+
+            // Create new record
+            $post = [
+                'type'  => $record_type,
+                'name'  => $record_name,
+                'ttl'   => 3600,
+                'value' => [[ 'value' => $record->value, 'enabled' => true ]],
+            ];
+            \CaptainCore\Remote\Constellix::post( "domains/{$zone_id}/records", $post );
+        }
+
+        // Mark as provisioned
+        set_transient( $transient_key, true, DAY_IN_SECONDS );
     }
 
     /**
