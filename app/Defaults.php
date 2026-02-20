@@ -53,10 +53,10 @@ class Defaults {
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8', 
-                'token'        => CAPTAINCORE_CLI_TOKEN 
+                'token'        => captaincore_get_cli_token()
             ],
-            'body'        => json_encode( [ "command" => $command ]), 
-            'method'      => 'POST', 
+            'body'        => json_encode( [ "command" => $command ]),
+            'method'      => 'POST',
             'data_format' => 'body'
         ];
 
