@@ -1308,9 +1308,11 @@ html body {
 	background: none;
 }
 
-.table_users tbody tr td:nth-child(6) {
-	 max-width:200px;
-	 display:block;
+.table_users tbody tr td:nth-child(2) {
+	max-width: 250px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .strikethrough {
