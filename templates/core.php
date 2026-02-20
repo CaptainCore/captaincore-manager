@@ -5239,8 +5239,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								{{ item.roles.split(",").join(" ") }}
 							</template>
 							<template v-slot:item.actions="{ item }">
-								<v-btn variant="tonal" size="small" rounded @click="magicLoginSite(dialog_site.site.site_id, item, dialog_site.environment_selected)" :loading="item.isLoggingIn" class="my-2">Login as</v-btn>
-								<v-btn variant="text" class="my-2" @click="deleteUserDialog(item.user_login, dialog_site.site.site_id)" icon="mdi-delete" color="red"></v-btn>
+								<div class="d-flex align-center flex-nowrap">
+									<v-btn variant="tonal" size="small" rounded @click="magicLoginSite(dialog_site.site.site_id, item, dialog_site.environment_selected)" :loading="item.isLoggingIn">Login as</v-btn>
+									<v-btn variant="text" @click="deleteUserDialog(item.user_login, dialog_site.site.site_id)" icon="mdi-delete" color="red" size="small"></v-btn>
+								</div>
 							</template>
 						</v-data-table>
 					</div>
@@ -12224,7 +12226,7 @@ const app = createApp({
 			{ title: 'Display Name', key: 'display_name' },
 			{ title: 'Email', key: 'user_email' },
 			{ title: 'Role(s)', key: 'roles' },
-			{ title: '', key: 'actions', sortable: false, align: 'end' }
+			{ title: '', key: 'actions', sortable: false, align: 'end', width: '170px' }
 		],
 		backupModeFilter: null,
 		planFilterMenu: false,
