@@ -680,12 +680,28 @@ function captaincore_missive_func( WP_REST_Request $request ) {
 	}
 }
 
+/**
+ * Returns the CLI token, auto-generating and storing one in wp_options if needed.
+ * Backward compatible: if CAPTAINCORE_CLI_TOKEN is defined, that value is used.
+ */
+function captaincore_get_cli_token() {
+	if ( defined( 'CAPTAINCORE_CLI_TOKEN' ) ) {
+		return CAPTAINCORE_CLI_TOKEN;
+	}
+	$token = get_option( 'captaincore_cli_token' );
+	if ( ! $token ) {
+		$token = wp_generate_password( 64, false );
+		update_option( 'captaincore_cli_token', $token, false );
+	}
+	return $token;
+}
+
 function captaincore_api_func( WP_REST_Request $request ) {
 
 	$post = json_decode( file_get_contents( 'php://input' ) );
 
 	// Validate token before processing any data
-	if ( empty( $post ) || ! isset( $post->token ) || $post->token != CAPTAINCORE_CLI_TOKEN ) {
+	if ( empty( $post ) || ! isset( $post->token ) || $post->token != captaincore_get_cli_token() ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 404 ] );
 	}
 
@@ -1724,7 +1740,7 @@ function captaincore_jobs_get_func( WP_REST_Request $request ) {
 		'timeout' => 45,
 		'headers' => [
 			'Content-Type' => 'application/json; charset=utf-8',
-			'token'        => CAPTAINCORE_CLI_TOKEN,
+			'token'        => captaincore_get_cli_token(),
 		],
 		'method' => 'GET',
 	];
@@ -2004,7 +2020,7 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 		'timeout' => 45,
 		'headers' => [
 			'Content-Type' => 'application/json; charset=utf-8',
-			'token'        => CAPTAINCORE_CLI_TOKEN,
+			'token'        => captaincore_get_cli_token(),
 		],
 		'body'        => json_encode( [ "command" => $command ] ),
 		'method'      => 'POST',
@@ -3712,7 +3728,7 @@ function captaincore_running_func( $request ) {
 			'timeout' => 45,
 			'headers' => [
 				'Content-Type' => 'application/json; charset=utf-8', 
-				'token'        => CAPTAINCORE_CLI_TOKEN 
+				'token'        => captaincore_get_cli_token()
 			],
 			'body'        => json_encode( [ "command" => "running list" ] ), 
 			'method'      => 'POST', 
@@ -5626,6 +5642,34 @@ function captaincore_permission_check() {
 }
 
 /**
+ * CLI connect endpoint callback — returns everything the CLI needs in one response.
+ * Requires admin authentication (WP Application Passwords via Basic Auth).
+ */
+function captaincore_cli_connect_func( WP_REST_Request $request ) {
+	global $wpdb;
+
+	$response = [
+		'token'          => captaincore_get_cli_token(),
+		'api_url'        => rest_url( 'captaincore/v1/api' ),
+		'gui_url'        => home_url(),
+		'configurations' => CaptainCore\Configurations::get(),
+		'defaults'       => ( new CaptainCore\Defaults )->get(),
+	];
+
+	// Bulk-fetch records via direct SQL — select only columns the CLI needs to avoid memory issues
+	$response['sites']           = $wpdb->get_results( "SELECT site_id, account_id, customer_id, name, site, provider_id, provider_site_id, provider, token, status, details, screenshot, created_at, updated_at FROM {$wpdb->prefix}captaincore_sites ORDER BY created_at DESC" );
+	$response['environments']    = $wpdb->get_results( "SELECT environment_id, site_id, created_at, updated_at, environment, address, username, password, protocol, port, home_directory, database_name, database_username, database_password, offload_enabled, offload_provider, offload_access_key, offload_secret_key, offload_bucket, offload_path, token, php_memory, storage, visits, core, core_verify_checksums, subsite_count, home_url, capture_pages, screenshot, monitor_enabled, updates_enabled, updates_exclude_themes, updates_exclude_plugins FROM {$wpdb->prefix}captaincore_environments ORDER BY created_at DESC" );
+	$response['accounts']        = $wpdb->get_results( "SELECT account_id, billing_user_id, name, defaults, plan, metrics, status, created_at, updated_at FROM {$wpdb->prefix}captaincore_accounts ORDER BY created_at DESC" );
+	$response['providers']       = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}captaincore_providers ORDER BY created_at DESC" );
+	$response['domains']         = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}captaincore_domains ORDER BY created_at DESC" );
+	$response['account_site']    = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}captaincore_account_site ORDER BY created_at DESC" );
+	$response['account_domain']  = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}captaincore_account_domain ORDER BY created_at DESC" );
+	$response['account_user']    = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}captaincore_account_user ORDER BY created_at DESC" );
+
+	return $response;
+}
+
+/**
  * Permission check for admin-only API endpoints.
  *
  * @return bool True if the user is logged in and is an admin, false otherwise.
@@ -5658,6 +5702,26 @@ function captaincore_register_rest_endpoints() {
 			'show_in_index'       => false,
 		]
 	);
+
+	// CLI connect endpoint — bootstraps the CLI with all data in one call
+	// Accepts either: WordPress admin login (Basic Auth) OR CLI token in JSON body
+	register_rest_route( 'captaincore/v1', '/cli/connect', [
+		'methods'             => 'POST',
+		'callback'            => 'captaincore_cli_connect_func',
+		'permission_callback' => function ( WP_REST_Request $request ) {
+			// Allow admin login (initial connect via Application Passwords)
+			if ( captaincore_admin_permission_check() ) {
+				return true;
+			}
+			// Allow CLI token auth (resync via --sync flag)
+			$params = $request->get_json_params();
+			if ( ! empty( $params['token'] ) && $params['token'] === captaincore_get_cli_token() ) {
+				return true;
+			}
+			return false;
+		},
+		'show_in_index'       => false,
+	] );
 
 	register_rest_route(
 		'captaincore/v1', '/process-logs/(?P<id>[\d]+)', [
@@ -8290,7 +8354,7 @@ function captaincore_verify_permissions_account( $account_id ) {
 
 
 function captaincore_run_background_command( $command ) {
-        
+
 	// Disable https when debug enabled
 	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
 		add_filter( 'https_ssl_verify', '__return_false' );
@@ -8299,8 +8363,8 @@ function captaincore_run_background_command( $command ) {
 	$data = [
 		'timeout' => 45,
 		'headers' => [
-			'Content-Type' => 'application/json; charset=utf-8', 
-			'token'        => CAPTAINCORE_CLI_TOKEN 
+			'Content-Type' => 'application/json; charset=utf-8',
+			'token'        => captaincore_get_cli_token()
 		],
 		'body'        => json_encode( [ "command" => $command ]), 
 		'method'      => 'POST', 
@@ -8340,11 +8404,11 @@ function captaincore_snapshot_download_link( $snapshot_id ) {
 		add_filter( 'https_ssl_verify', '__return_false' );
 	}
 
-	$data = [ 
+	$data = [
 		'timeout' => 45,
 		'headers' => [
-			'Content-Type' => 'application/json; charset=utf-8', 
-			'token'        => CAPTAINCORE_CLI_TOKEN 
+			'Content-Type' => 'application/json; charset=utf-8',
+			'token'        => captaincore_get_cli_token()
 		],
 		'body'        => json_encode( [ "command" => $command ] ), 
 		'method'      => 'POST', 

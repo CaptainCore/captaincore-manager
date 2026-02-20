@@ -21,7 +21,7 @@ class Run {
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8', 
-                'token'        => CAPTAINCORE_CLI_TOKEN 
+                'token'        => captaincore_get_cli_token()
             ],
             'body'        => json_encode( [ "command" => $command ]),
             'method'      => 'POST',
@@ -55,7 +55,7 @@ class Run {
         $payload = json_encode([ "command" => $command ]);
         $headers = [
             'Content-Type: application/json; charset=utf-8',
-            'token: ' . CAPTAINCORE_CLI_TOKEN,
+            'token: ' . captaincore_get_cli_token(),
             'Content-Length: ' . strlen( $payload )
         ];
 
@@ -95,13 +95,13 @@ class Run {
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8', 
-                'token'        => CAPTAINCORE_CLI_TOKEN 
+                'token'        => captaincore_get_cli_token()
             ],
-            'body'        => json_encode( [ "command" => $command ]), 
-            'method'      => 'POST', 
+            'body'        => json_encode( [ "command" => $command ]),
+            'method'      => 'POST',
             'data_format' => 'body'
         ];
-    
+
         // Add command to dispatch server
         $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run/background", $data );
         if ( is_wp_error( $response ) ) {
@@ -123,13 +123,13 @@ class Run {
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8', 
-                'token'        => CAPTAINCORE_CLI_TOKEN 
+                'token'        => captaincore_get_cli_token()
             ],
-            'body'        => json_encode( [ "command" => $command ]), 
-            'method'      => 'POST', 
+            'body'        => json_encode( [ "command" => $command ]),
+            'method'      => 'POST',
             'data_format' => 'body'
         ];
-    
+
         // Add command to dispatch server
         $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/tasks", $data );
         if ( is_wp_error( $response ) ) {

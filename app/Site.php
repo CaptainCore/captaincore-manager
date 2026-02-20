@@ -436,20 +436,20 @@ class Site {
     public function sync() {
 
         $command = "site sync {$this->site_id}";
-        
+
         // Disable https when debug enabled
         if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
             add_filter( 'https_ssl_verify', '__return_false' );
         }
 
-        $data = [ 
+        $data = [
             'timeout' => 45,
             'headers' => [
-                'Content-Type' => 'application/json; charset=utf-8', 
-                'token'        => CAPTAINCORE_CLI_TOKEN 
+                'Content-Type' => 'application/json; charset=utf-8',
+                'token'        => captaincore_get_cli_token()
             ],
-            'body'        => json_encode( [ "command" => $command ]), 
-            'method'      => 'POST', 
+            'body'        => json_encode( [ "command" => $command ]),
+            'method'      => 'POST',
             'data_format' => 'body'
         ];
 
@@ -541,17 +541,17 @@ class Site {
     public function quicksave_get( $hash, $environment = "production" ) {
 
         $command = "quicksave get {$this->site_id}-$environment $hash";
-        
+
         // Disable https when debug enabled
         if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
             add_filter( 'https_ssl_verify', '__return_false' );
         }
 
-        $data = [ 
+        $data = [
             'timeout' => 45,
             'headers' => [
-                'Content-Type' => 'application/json; charset=utf-8', 
-                'token'        => CAPTAINCORE_CLI_TOKEN 
+                'Content-Type' => 'application/json; charset=utf-8',
+                'token'        => captaincore_get_cli_token()
             ],
             'body'        => json_encode( [ "command" => $command ]),
             'method'      => 'POST',
@@ -591,17 +591,17 @@ class Site {
     public function backup_get( $backup_id, $environment = "production" ) {
 
         $command = "backup get {$this->site_id}-$environment $backup_id";
-        
+
         // Disable https when debug enabled
         if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
             add_filter( 'https_ssl_verify', '__return_false' );
         }
 
-        $data = [ 
+        $data = [
             'timeout' => 45,
             'headers' => [
-                'Content-Type' => 'application/json; charset=utf-8', 
-                'token'        => CAPTAINCORE_CLI_TOKEN 
+                'Content-Type' => 'application/json; charset=utf-8',
+                'token'        => captaincore_get_cli_token()
             ],
             'body'        => json_encode( [ "command" => $command ]),
             'method'      => 'POST',
@@ -621,20 +621,20 @@ class Site {
     public function backups( $environment = "production" ) {
 
         $command = "backup list {$this->site_id}-$environment";
-        
+
         // Disable https when debug enabled
         if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
             add_filter( 'https_ssl_verify', '__return_false' );
         }
 
-        $data = [ 
+        $data = [
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json; charset=utf-8',
-                'token'        => CAPTAINCORE_CLI_TOKEN
+                'token'        => captaincore_get_cli_token()
             ],
-            'body'        => json_encode( [ "command" => $command ]), 
-            'method'      => 'POST', 
+            'body'        => json_encode( [ "command" => $command ]),
+            'method'      => 'POST',
             'data_format' => 'body'
         ];
 
