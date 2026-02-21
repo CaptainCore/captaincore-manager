@@ -1519,6 +1519,92 @@ class Mailer {
         );
     }
 
+    /* -------------------------------------------------------------------------
+     *  MALWARE DETECTION ALERT (Admin Notify)
+     * ------------------------------------------------------------------------- */
+    static public function send_malware_alert( $site_name, $environment_name, $home_url, $findings ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $admin_email = get_option( 'admin_email' );
+
+        // Build findings table rows
+        $finding_rows = '';
+        foreach ( $findings as $f ) {
+            $filename  = esc_html( basename( $f->filename ?? '' ) );
+            $rel_path  = esc_html( $f->filename ?? '' );
+            $sig_name  = esc_html( $f->signature_name ?? '' );
+            $sig_desc  = esc_html( $f->signature_description ?? '' );
+
+            $finding_rows .= "
+                <tr>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; color: #2d3748; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;' title='{$rel_path}'>{$filename}</td>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; text-align: center;'>
+                        <span style='display: inline-block; background-color: #FED7D7; color: #9B2C2C; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px;'>{$sig_name}</span>
+                    </td>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; color: #4a5568; font-size: 13px;'>{$sig_desc}</td>
+                </tr>";
+        }
+
+        $site_url_html = '';
+        if ( ! empty( $home_url ) ) {
+            $site_url_html = "
+                <tr>
+                    <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
+                    <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
+                        <a href='{$home_url}' style='color: {$brand_color}; text-decoration: none;'>{$home_url}</a>
+                    </td>
+                </tr>";
+        }
+
+        $content_html = "
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+                <div style='text-align: center; margin-bottom: 25px;'>
+                    <div style='display: inline-block; background-color: #FED7D7; color: #9B2C2C; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                        Malware Detected
+                    </div>
+                </div>
+
+                <p style='margin-bottom: 25px;'>A malware scan has detected suspicious files during the latest quicksave. Immediate investigation is recommended.</p>
+
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                    <table width='100%' cellpadding='0' cellspacing='0'>
+                        <tr>
+                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
+                        </tr>
+                        {$site_url_html}
+                        <tr>
+                            <td style='color: #718096; font-size: 14px;'>Environment</td>
+                            <td style='color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-bottom: 25px;'>
+                    <div style='padding: 12px 12px 8px; border-bottom: 2px solid #edf2f7;'>
+                        <strong style='font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Findings</strong>
+                    </div>
+                    <table width='100%' cellpadding='0' cellspacing='0'>
+                        <tr>
+                            <th style='padding: 8px 12px; border-bottom: 2px solid #edf2f7; text-align: left; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>File</th>
+                            <th style='padding: 8px 12px; border-bottom: 2px solid #edf2f7; text-align: center; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Signature</th>
+                            <th style='padding: 8px 12px; border-bottom: 2px solid #edf2f7; text-align: left; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Description</th>
+                        </tr>
+                        {$finding_rows}
+                    </table>
+                </div>
+            </div>
+        ";
+
+        self::send_email_with_layout(
+            $admin_email,
+            "Security Alert: Malware detected on {$site_name}",
+            "Malware Alert",
+            $site_name,
+            $content_html
+        );
+    }
+
     static public function send_default_role_alert( $site_name, $environment_name, $home_url, $default_role ) {
         $config      = Configurations::get();
         $brand_color = $config->colors->primary ?? '#0D47A1';

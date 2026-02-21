@@ -838,6 +838,18 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$response = [ "response" => "Monitor notification sent" ];
 	}
 
+	// Send malware alert notification email
+	if ( $command == 'malware-alert' ) {
+		$site_name = $current_site->name ?? ( $post->data->site_name ?? 'Unknown' );
+		\CaptainCore\Mailer::send_malware_alert(
+			$site_name,
+			$post->data->environment ?? 'Production',
+			$post->data->home_url ?? '',
+			$post->data->findings ?? []
+		);
+		$response = [ "response" => "Malware alert sent" ];
+	}
+
 	// Load Token Key
 	if ( $command == 'token' and isset( $token_key ) ) {
 		( new CaptainCore\Sites )->update( [ "token" => $token_key ], [ "site_id" => $site_id ] );
