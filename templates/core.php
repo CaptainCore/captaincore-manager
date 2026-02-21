@@ -3067,7 +3067,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-toolbar-title>File diff {{ dialog_file_diff.file_name }}</v-toolbar-title>
 							<v-spacer></v-spacer>
 							
-							<v-btn variant="text" @click="QuicksaveFileRestore()" class="d-none d-md-flex">
+							<v-btn variant="text" @click="QuicksaveFileRestore()" class="d-none d-md-flex" v-if="dialog_file_diff.quicksave">
 								Restore this file
 							</v-btn>
 
@@ -5879,11 +5879,11 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-toolbar>
 					<div v-show="quicksave_search_results.loading" class="text-body-2 mx-5"><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular> searching quicksaves</div>
 					<v-card v-if="quicksave_search_results.items.length > 0" class="ma-4">
-					<v-app-bar elevation="0" density="compact">
-						<v-card-title> {{ quicksave_search_results.items.length }} search results </v-card-title>
+					<v-toolbar elevation="0" density="compact">
+						<v-toolbar-title> {{ quicksave_search_results.items.length }} search results </v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-btn icon="mdi-close" @click='quicksave_search_results = { loading: false, search: "", search_type: "", search_field: "", items: [] }'></v-btn>
-					</v-app-bar>
+					</v-toolbar>
 					<v-card-text>
 						<v-data-table
 						:headers="[{title:'Created At',key:'created_at'},{title:'Item',key:'item'},{title:'',key:'actions'}]"
@@ -5911,7 +5911,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-card>
 								<v-toolbar color="primary">
 									<v-btn icon="mdi-close" @click="isActive.value = false"></v-btn>
-									Rollback '{{ item.item.title }}' {{ quicksave_search_results.search_type }}?									
+									Rollback '{{ item.item.title }}' {{ quicksave_search_results.search_type }}?
 								</v-toolbar>
 								<v-list>
 									<v-list-item lines="two" @click="RollbackQuicksave(item.hash, quicksave_search_results.search_type, item.item.name, 'this', dialog)">
@@ -5919,6 +5919,37 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									<v-list-item-subtitle>{{ pretty_timestamp_epoch(item.created_at) }}</v-list-item-subtitle>
 									</v-list-item>
 								</v-list>
+								</v-card>
+							</template>
+							</v-dialog>
+							<v-dialog max-width="600">
+							<template v-slot:activator="{ props }">
+								<v-btn variant="tonal" size="small" class="ml-2" v-bind="props" v-if="item.item != ''" @click="viewQuicksavesChangesItem( item, `${quicksave_search_results.search_type}s/${item.item.name}/` )">View Changes</v-btn>
+							</template>
+							<template v-slot:default="{ isActive }">
+								<v-card>
+								<v-toolbar color="primary">
+									<v-btn icon="mdi-close" @click="isActive.value = false"></v-btn>
+									Changes for '{{ item.item.name }}' {{ quicksave_search_results.search_type }}
+									<v-spacer></v-spacer>
+								</v-toolbar>
+								<v-card-text>
+									<v-data-table
+										:headers='[{"title":"File","key":"file"}]'
+										:items="item.response"
+										:items-per-page-options="[50,100,250,{'title':'All','value':-1}]"
+										v-show="item.response && item.response.length > 0"
+									>
+										<template v-slot:body="{ items }">
+											<tr v-for="i in items" :key="i">
+											<td>
+												<a class="v-menu__activator" @click="QuicksaveFileDiff(item.hash, i)" style="cursor: pointer">{{ i }}</a>
+											</td>
+											</tr>
+										</template>
+									</v-data-table>
+									<v-progress-linear indeterminate rounded height="6" v-show="!item.response || item.response.length == 0" class="mt-7 mb-4"></v-progress-linear>
+								</v-card-text>
 								</v-card>
 							</template>
 							</v-dialog>
