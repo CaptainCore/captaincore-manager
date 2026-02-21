@@ -1499,6 +1499,18 @@ html body {
 .timeline .theme--light.v-table h6 {
 	margin: 0px;
 }
+.timeline code {
+	background-color: #f5f5f5;
+	border: 1px solid #e0e0e0;
+	border-radius: 3px;
+	padding: 2px 5px;
+	font-size: 0.875em;
+	line-height: 1.7;
+}
+.v-theme--dark .timeline code {
+	background-color: #2c2c2c;
+	border-color: #444;
+}
 
 .timeline table.theme--light.v-table tbody td {
 	vertical-align: top;
