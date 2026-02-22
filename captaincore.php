@@ -1356,9 +1356,20 @@ function captaincore_accounts_invite_func( WP_REST_Request $request ) {
 	if ( ! $user->is_admin() && ! $user->verify_accounts( [ $account_id ] ) ) {
 		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	}
+	if ( ! $user->is_admin() ) {
+		$level = $user->account_level( $account_id );
+		if ( ! in_array( $level, [ 'full-billing', 'full' ] ) ) {
+			return new WP_Error( 'permission_denied', 'Your access level does not allow sending invites.', [ 'status' => 403 ] );
+		}
+	}
+	$invite_level = $request->get_param( 'level' );
+	$valid_levels = [ 'full', 'sites-only', 'domains-only' ];
+	if ( empty( $invite_level ) || ! in_array( $invite_level, $valid_levels ) ) {
+		$invite_level = 'full';
+	}
 	$account  = new CaptainCore\Account( $account_id );
 	$invite   = $request->get_param( 'invite' );
-	$response = $account->invite( $invite );
+	$response = $account->invite( $invite, $invite_level );
 	return $response;
 }
 
@@ -1368,6 +1379,9 @@ function captaincore_accounts_invite_delete_func( WP_REST_Request $request ) {
 	$user = new CaptainCore\User;
 	if ( ! $user->is_admin() && ! $user->verify_accounts( [ $account_id ] ) ) {
 		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	if ( ! $user->is_admin() && $user->account_level( $account_id ) !== 'full-billing' ) {
+		return new WP_Error( 'permission_denied', 'Only billing owners can delete invites.', [ 'status' => 403 ] );
 	}
 	$account = new CaptainCore\Account( $account_id );
 	$account->invite_delete( $invite_id );
@@ -4212,6 +4226,14 @@ function captaincore_invites_accept_func( WP_REST_Request $request ) {
 		$accounts[] = $invite->account;
 		$user->assign_accounts( array_unique( $accounts ) );
 
+		// Set level from invite record
+		$invite_level = ! empty( $results[0]->level ) ? $results[0]->level : 'full';
+		$accountuser  = new CaptainCore\AccountUser();
+		$au_records   = $accountuser->where( [ "user_id" => $user->user_id(), "account_id" => $invite->account ] );
+		if ( ! empty( $au_records ) ) {
+			$accountuser->update( [ "level" => $invite_level ], [ "account_user_id" => $au_records[0]->account_user_id ] );
+		}
+
 		$account = new CaptainCore\Account( $invite->account );
 		$account->calculate_totals();
 
@@ -4231,6 +4253,17 @@ function captaincore_accounts_remove_user_func( WP_REST_Request $request ) {
 	if ( ! $user->is_admin() && ! $user->verify_accounts( [ $account_id ] ) ) {
 		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	}
+	if ( ! $user->is_admin() && $user->account_level( $account_id ) !== 'full-billing' ) {
+		return new WP_Error( 'permission_denied', 'Only billing owners can remove users.', [ 'status' => 403 ] );
+	}
+
+	// Prevent removing the billing owner
+	$account_record  = ( new CaptainCore\Accounts )->get( $account_id );
+	$plan            = empty( $account_record->plan ) ? (object) [] : json_decode( $account_record->plan );
+	$billing_user_id = ! empty( $plan->billing_user_id ) ? (int) $plan->billing_user_id : 0;
+	if ( $user_id === $billing_user_id ) {
+		return new WP_Error( 'permission_denied', 'Cannot remove the billing owner. Transfer ownership first.', [ 'status' => 403 ] );
+	}
 
 	$target_user = new CaptainCore\User( $user_id, true );
 	$account_ids = $target_user->accounts();
@@ -4246,6 +4279,61 @@ function captaincore_accounts_remove_user_func( WP_REST_Request $request ) {
 	$account->calculate_totals();
 
 	return [ 'success' => true ];
+}
+
+function captaincore_accounts_update_user_level_func( WP_REST_Request $request ) {
+	$account_id     = intval( $request['id'] );
+	$target_user_id = intval( $request['user_id'] );
+	$new_level      = $request->get_param( 'level' );
+
+	$user = new CaptainCore\User;
+	if ( ! $user->is_admin() && ! $user->verify_accounts( [ $account_id ] ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+	if ( ! $user->is_admin() && $user->account_level( $account_id ) !== 'full-billing' ) {
+		return new WP_Error( 'permission_denied', 'Only billing owners can change user levels.', [ 'status' => 403 ] );
+	}
+
+	$valid_levels = [ 'full-billing', 'full', 'sites-only', 'domains-only' ];
+	if ( ! in_array( $new_level, $valid_levels ) ) {
+		return new WP_Error( 'invalid_level', 'Invalid access level.', [ 'status' => 400 ] );
+	}
+
+	if ( ! $user->is_admin() && $user->user_id() == $target_user_id ) {
+		return new WP_Error( 'permission_denied', 'You cannot change your own access level.', [ 'status' => 403 ] );
+	}
+
+	// Prevent changing the billing owner's level directly
+	$account  = ( new CaptainCore\Accounts )->get( $account_id );
+	$plan     = empty( $account->plan ) ? (object) [] : json_decode( $account->plan );
+	$billing_user_id = ! empty( $plan->billing_user_id ) ? (int) $plan->billing_user_id : 0;
+
+	if ( $target_user_id === $billing_user_id ) {
+		return new WP_Error( 'permission_denied', 'Cannot change the billing owner\'s level. Transfer ownership to another user instead.', [ 'status' => 403 ] );
+	}
+
+	$accountuser = new CaptainCore\AccountUser();
+	$records     = $accountuser->where( [ "user_id" => $target_user_id, "account_id" => $account_id ] );
+	if ( empty( $records ) ) {
+		return new WP_Error( 'not_found', 'User not found in this account.', [ 'status' => 404 ] );
+	}
+
+	// If promoting to full-billing, transfer ownership from current billing user
+	if ( $new_level === 'full-billing' ) {
+		$plan->billing_user_id = $target_user_id;
+		( new CaptainCore\Accounts )->update( [ "plan" => json_encode( $plan ) ], [ "account_id" => $account_id ] );
+		// Downgrade previous billing owner to full
+		if ( $billing_user_id > 0 ) {
+			$old_owner = $accountuser->where( [ "user_id" => $billing_user_id, "account_id" => $account_id ] );
+			if ( ! empty( $old_owner ) ) {
+				$accountuser->update( [ "level" => "full" ], [ "account_user_id" => $old_owner[0]->account_user_id ] );
+			}
+		}
+	}
+
+	$accountuser->update( [ "level" => $new_level ], [ "account_user_id" => $records[0]->account_user_id ] );
+
+	return [ 'success' => true, 'level' => $new_level ];
 }
 
 function captaincore_invoices_get_func( WP_REST_Request $request ) {
@@ -7039,6 +7127,14 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/accounts/(?P<id>[\d]+)/users/(?P<user_id>[\d]+)', [
 			'methods'             => 'DELETE',
 			'callback'            => 'captaincore_accounts_remove_user_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/accounts/(?P<id>[\d]+)/users/(?P<user_id>[\d]+)/level', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_accounts_update_user_level_func',
 			'permission_callback' => 'captaincore_permission_check',
 		]
 	);

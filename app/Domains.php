@@ -9,6 +9,7 @@ class Domains extends DB {
     protected $domains = [];
 
     public function __construct( $domains = [] ) {
+        global $wpdb;
         $user        = new User;
         $account_ids = $user->accounts();
 
@@ -31,11 +32,30 @@ class Domains extends DB {
             return;
         }
 
-        // Loop through each account for current user and fetch SiteIDs
+        // Filter to accounts where user has domain access
+        $allowed_account_ids = [];
         foreach ( $account_ids as $account_id ) {
-             // Fetch sites assigned as shared access
-             $domain_ids = ( new Account( $account_id, true ) )->domains();
-             foreach ( $domain_ids as $domain ) {
+             $level = $user->account_level( $account_id );
+             $perms = User::tier_permissions( $level );
+             if ( $perms['domains'] ) {
+                 $allowed_account_ids[] = $account_id;
+             }
+        }
+
+        if ( ! empty( $allowed_account_ids ) ) {
+            // Include shared accounts (via customer_id on sites) using a single query
+            $all_account_ids = $allowed_account_ids;
+            $ids_str = implode( ',', array_map( 'intval', $allowed_account_ids ) );
+            $shared  = $wpdb->get_col( "
+                SELECT DISTINCT customer_id FROM {$wpdb->prefix}captaincore_sites
+                WHERE ( account_id IN ($ids_str) OR site_id IN (
+                    SELECT site_id FROM {$wpdb->prefix}captaincore_account_site WHERE account_id IN ($ids_str)
+                ) ) AND status = 'active' AND customer_id > 0
+            " );
+            $all_account_ids = array_unique( array_merge( $all_account_ids, $shared ) );
+
+            $results = ( new AccountDomain )->fetch_domains( [ "account_id" => $all_account_ids ] );
+            foreach ( $results as $domain ) {
                 $this->domains[] = $domain->domain_id;
             }
         }

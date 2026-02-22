@@ -27,6 +27,53 @@ class User {
         return $accounts;
     }
 
+    public function account_level( $account_id ) {
+        if ( self::is_admin() ) {
+            return 'full-billing';
+        }
+        $accountuser = new AccountUser();
+        $records     = $accountuser->where( [ "user_id" => $this->user_id, "account_id" => $account_id ] );
+        if ( empty( $records ) ) {
+            return false;
+        }
+        $level = $records[0]->level;
+        if ( empty( $level ) ) {
+            $account = ( new Accounts )->get( $account_id );
+            $plan    = empty( $account->plan ) ? (object) [] : json_decode( $account->plan );
+            if ( ! empty( $plan->billing_user_id ) && $plan->billing_user_id == $this->user_id ) {
+                return 'full-billing';
+            }
+            return 'full';
+        }
+        return $level;
+    }
+
+    public static function tier_permissions( $level ) {
+        $tiers = [
+            'full-billing' => [
+                'sites' => true, 'domains' => true, 'timeline' => true,
+                'activity' => true, 'users' => 'manage', 'invites' => 'manage',
+                'invoices' => true, 'plan' => true,
+            ],
+            'full' => [
+                'sites' => true, 'domains' => true, 'timeline' => true,
+                'activity' => true, 'users' => 'view', 'invites' => 'send',
+                'invoices' => false, 'plan' => false,
+            ],
+            'sites-only' => [
+                'sites' => true, 'domains' => false, 'timeline' => false,
+                'activity' => false, 'users' => false, 'invites' => false,
+                'invoices' => false, 'plan' => false,
+            ],
+            'domains-only' => [
+                'sites' => false, 'domains' => true, 'timeline' => false,
+                'activity' => false, 'users' => false, 'invites' => false,
+                'invoices' => false, 'plan' => false,
+            ],
+        ];
+        return isset( $tiers[ $level ] ) ? $tiers[ $level ] : $tiers['full'];
+    }
+
     public function set_as_primary( $token_id ) {
         // Check if this is an ACH token (stored in user meta)
         if ( is_string( $token_id ) && strpos( $token_id, 'ach_' ) === 0 ) {
@@ -249,14 +296,7 @@ class User {
             return true;
         }
 
-        $users = ( new Account( $account_id, true ) )->users();
-
-        foreach ($users as $user) {
-            if ( $user['user_id'] === $this->user_id && $user['level'] == "Owner" ) {
-                return true;
-            }
-        }
-        return false;
+        return self::account_level( $account_id ) === 'full-billing';
     }
 
     private function prepare_plan_for_display( $account_id, $account_data ) {
@@ -1368,7 +1408,7 @@ class User {
 
             // Add new record
             if ( count($lookup) == 0 ) {
-                $accountuser->insert( [ "user_id" => $this->user_id, "account_id" => $account_id ] );
+                $accountuser->insert( [ "user_id" => $this->user_id, "account_id" => $account_id, "level" => "full" ] );
             }
 
         }
@@ -1392,7 +1432,7 @@ class User {
 
         // Add new records
         foreach ( array_diff( $account_ids, $current_account_ids ) as $account_id ) {
-            $accountuser->insert( [ "user_id" => $this->user_id, "account_id" => $account_id ] );
+            $accountuser->insert( [ "user_id" => $this->user_id, "account_id" => $account_id, "level" => "full" ] );
         }
 
     }

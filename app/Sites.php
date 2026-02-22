@@ -35,6 +35,12 @@ class Sites extends DB {
 
         // Loop through each account for current user and fetch SiteIDs
         foreach ( $account_ids as $account_id ) {
+            // Skip accounts where user only has domains-only access
+            $level = $user->account_level( $account_id );
+            $perms = User::tier_permissions( $level );
+            if ( ! $perms['sites'] ) {
+                continue;
+            }
             // Fetch sites assigned as owners
 			$site_ids = array_column( self::where( [ "account_id" => $account_id, "status" => "active" ] ), "site_id" );
 			foreach ( $site_ids as $site_id ) {
