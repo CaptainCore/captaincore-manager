@@ -120,27 +120,26 @@ class Account {
         if ( $this->account_id == "" ) {
             return [];
         }
-        $user_id = get_current_user_id();
+        $user    = new User;
+        $level   = $user->account_level( $this->account_id );
+        $perms   = User::tier_permissions( $level );
         $account = $this->account();
         $record  = [
-            "timeline"        => $this->process_logs(),
             "account"         => $account,
-            "invites"         => $this->invites(),
-            "users"           => $this->users(),
-            "domains"         => $this->domains(),
-            "sites"           => $this->sites(),
-            "usage_breakdown" => $this->usage_breakdown(),
-            "owner"           => false,
+            "level"           => $level,
+            "owner"           => ( $level === 'full-billing' ),
+            "timeline"        => $perms['timeline'] ? $this->process_logs() : [],
+            "users"           => $perms['users'] ? $this->users() : [],
+            "invites"         => $perms['invites'] ? $this->invites() : [],
+            "domains"         => $perms['domains'] ? $this->domains() : [],
+            "sites"           => $perms['sites'] ? $this->sites() : [],
+            "usage_breakdown" => $perms['sites'] ? $this->usage_breakdown() : [],
         ];
 
-        if ( $user_id == $account["plan"]->billing_user_id ) {
-            $record["owner"] = true;
-        }
-
-        if ( ( new User )->is_admin() ) {
+        if ( $user->is_admin() || $perms['invoices'] ) {
             $record["invoices"] = $this->invoices();
         }
-        
+
         return $record;
     }
 
@@ -235,34 +234,35 @@ class Account {
         if ( $this->account_id == "" ) {
             return [];
         }
-        // Fetch sites assigned as owners
-        $all_site_ids = [];
-        $site_ids = array_column( ( new Sites )->where( [ "account_id" => $this->account_id, "status" => "active" ] ), "site_id" );
-        foreach ( $site_ids as $site_id ) {
-            $all_site_ids[] = $site_id;
-        }
-        // Fetch customer sites
-        $site_ids = array_column( ( new Sites )->where( [ "customer_id" => $this->account_id, "status" => "active" ] ), "site_id" );
-        foreach ( $site_ids as $site_id ) {
-            $all_site_ids[] = $site_id;
-        }
-        // Fetch sites assigned as shared access
-        $site_ids = ( new AccountSite )->select_active_sites( 'site_id', [ "account_id" => $this->account_id ] );
-        foreach ( $site_ids as $site_id ) {
-            $all_site_ids[] = $site_id;
+        global $wpdb;
+        $aid = intval( $this->account_id );
+
+        // Fetch all site IDs in a single query: owned, customer, and shared access
+        $all_site_ids = $wpdb->get_col( "
+            SELECT DISTINCT s.site_id FROM {$wpdb->prefix}captaincore_sites s
+            WHERE s.status = 'active' AND ( s.account_id = {$aid} OR s.customer_id = {$aid} )
+            UNION
+            SELECT DISTINCT acs.site_id FROM {$wpdb->prefix}captaincore_account_site acs
+            INNER JOIN {$wpdb->prefix}captaincore_sites s ON acs.site_id = s.site_id
+            WHERE acs.account_id = {$aid} AND s.status = 'active'
+        " );
+
+        if ( empty( $all_site_ids ) ) {
+            return [];
         }
 
-        $results  = [];
-        $all_site_ids = array_unique( $all_site_ids );
+        // Fetch all site data in a single query
+        $ids_str = implode( ',', array_map( 'intval', $all_site_ids ) );
+        $sites   = $wpdb->get_results( "SELECT site_id, name, details FROM {$wpdb->prefix}captaincore_sites WHERE site_id IN ($ids_str)" );
 
-        foreach ($all_site_ids as $site_id) {
-            $site      = ( new Sites )->get( $site_id );
+        $results = [];
+        foreach ( $sites as $site ) {
             $details   = json_decode( $site->details );
             $results[] = [
-                "site_id" => $site_id,
+                "site_id" => $site->site_id,
                 "name"    => $site->name,
-                "visits"  => $details->visits,
-                "storage" => $details->storage,
+                "visits"  => isset( $details->visits ) ? $details->visits : 0,
+                "storage" => isset( $details->storage ) ? $details->storage : 0,
             ];
         }
         usort( $results, "sort_by_name" );
@@ -270,56 +270,93 @@ class Account {
     }
 
     public function process_logs() {
+        global $wpdb;
         $Parsedown          = new \Parsedown();
         $site_ids           = array_column( self::sites(), "site_id" );
         $fetch_process_logs = ( new ProcessLogSite )->fetch_process_logs( [ "site_id" => $site_ids ] );
-        $process_logs       = [];
+
+        if ( empty( $fetch_process_logs ) ) {
+            return [];
+        }
+
+        $process_log_ids = array_column( $fetch_process_logs, 'process_log_id' );
+        $ids_str         = implode( ',', array_map( 'intval', $process_log_ids ) );
+
+        // Batch fetch all process log details
+        $logs_raw = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}captaincore_process_logs WHERE process_log_id IN ($ids_str)" );
+        $logs_map = [];
+        foreach ( $logs_raw as $log ) {
+            $logs_map[ $log->process_log_id ] = $log;
+        }
+
+        // Batch fetch all sites-per-process-log
+        $sites_raw = $wpdb->get_results( "
+            SELECT pls.process_log_id, pls.site_id, s.name
+            FROM {$wpdb->prefix}captaincore_process_log_site pls
+            INNER JOIN {$wpdb->prefix}captaincore_sites s ON pls.site_id = s.site_id
+            WHERE pls.process_log_id IN ($ids_str)
+            ORDER BY s.name ASC
+        " );
+        $sites_map = [];
+        foreach ( $sites_raw as $row ) {
+            $sites_map[ $row->process_log_id ][] = $row;
+        }
+
+        // Cache author display names and avatars
+        $author_cache = [];
+
+        $process_logs = [];
         foreach ( $fetch_process_logs as $result ) {
-            $sites_for_process     = ( new ProcessLogSite )->fetch_sites_for_process_log( [ "process_log_id" => $result->process_log_id ] );
-            // Filter out sites which account doesn't have access to.
-            foreach ($sites_for_process as $key => $site) {
-                if ( in_array( $site->site_id, $site_ids ) ) {
-                    continue;
+            $plid = $result->process_log_id;
+            if ( ! isset( $logs_map[ $plid ] ) ) {
+                continue;
+            }
+
+            // Filter sites to only those the account has access to
+            $websites = [];
+            if ( isset( $sites_map[ $plid ] ) ) {
+                foreach ( $sites_map[ $plid ] as $site ) {
+                    if ( in_array( $site->site_id, $site_ids ) ) {
+                        $websites[] = $site;
+                    }
                 }
-                unset( $sites_for_process[$key] );
             }
-            $websites              = [];
-            foreach ($sites_for_process as $site_for_process) {
-                $websites[]        = $site_for_process;
-            }
-            $item                  = ( new ProcessLogs )->get( $result->process_log_id );
+
+            $item                  = $logs_map[ $plid ];
             $item->created_at      = strtotime( $item->created_at );
             $item->name            = $result->name;
             $item->description_raw = $item->description;
             $item->description     = $Parsedown->text( $item->description );
-            $item->author          = get_the_author_meta( 'display_name', $item->user_id );
-            $item->author_avatar   = "https://www.gravatar.com/avatar/" . md5( get_the_author_meta( 'email', $item->user_id ) ) . "?s=80&d=mp";
-            $item->websites        = $websites;
-            $process_logs[]        = $item;
+
+            if ( ! isset( $author_cache[ $item->user_id ] ) ) {
+                $author_cache[ $item->user_id ] = [
+                    'name'   => get_the_author_meta( 'display_name', $item->user_id ),
+                    'avatar' => "https://www.gravatar.com/avatar/" . md5( get_the_author_meta( 'email', $item->user_id ) ) . "?s=80&d=mp",
+                ];
+            }
+            $item->author        = $author_cache[ $item->user_id ]['name'];
+            $item->author_avatar = $author_cache[ $item->user_id ]['avatar'];
+            $item->websites      = $websites;
+            $process_logs[]      = $item;
         }
         return $process_logs;
     }
 
     public function shared_with() {
-        // Fetch sites assigned as owners
-        $all_site_ids = [];
-        $site_ids = array_column( ( new Sites )->where( [ "account_id" => $this->account_id, "status" => "active" ] ), "site_id" );
-        foreach ( $site_ids as $site_id ) {
-            $all_site_ids[] = $site_id;
+        // Return cached result if already computed
+        if ( isset( $this->_shared_with ) ) {
+            return $this->_shared_with;
         }
-        // Fetch sites assigned as shared access
-        $site_ids = ( new AccountSite )->select_active_sites( 'site_id', [ "account_id" => $this->account_id ] );
-        foreach ( $site_ids as $site_id ) {
-            $all_site_ids[] = $site_id;
-        }
-
-        $all_site_ids = array_unique( $all_site_ids );
-        $account_ids  = [];
-
-        foreach ($all_site_ids as $site_id) {
-            $account_ids[] = ( new Sites )->get( $site_id )->customer_id;
-        }
-        return array_unique( $account_ids );
+        global $wpdb;
+        $aid = intval( $this->account_id );
+        $account_ids = $wpdb->get_col( "
+            SELECT DISTINCT customer_id FROM {$wpdb->prefix}captaincore_sites
+            WHERE ( account_id = {$aid} OR site_id IN (
+                SELECT site_id FROM {$wpdb->prefix}captaincore_account_site WHERE account_id = {$aid}
+            ) ) AND status = 'active' AND customer_id > 0
+        " );
+        $this->_shared_with = array_unique( $account_ids );
+        return $this->_shared_with;
     }
 
     public function users() {
@@ -334,7 +371,7 @@ class Account {
                 "user_id" => $user->ID,
                 "name"    => $user->display_name,
                 "email"   => $user->user_email,
-                "level"   => empty( $permission->level ) ? "" : ucfirst( $permission->level ),
+                "level"   => empty( $permission->level ) ? "full" : $permission->level,
             ];
         }
         return $results;
@@ -368,25 +405,30 @@ class Account {
 		$result_sites             = [];
 		$result_maintenance_sites = [];
 
-        foreach ( $site_ids as $site_id ) {
-            $site                         = ( new Site( $site_id ))->fetch();
-            $website_for_customer_storage = empty( $site->storage ) ? 0 : $site->storage;
-            $website_for_customer_visits  = empty( $site->visits ) ? 0 : $site->visits;
-            if ( empty( $site->provider_id ) || $site->provider_id == "1" ) {
-                $result_sites[] = [
+        if ( ! empty( $site_ids ) ) {
+            global $wpdb;
+            $ids_str = implode( ',', array_map( 'intval', $site_ids ) );
+            $sites   = $wpdb->get_results( "SELECT site_id, name, provider_id, details FROM {$wpdb->prefix}captaincore_sites WHERE site_id IN ($ids_str)" );
+            foreach ( $sites as $site ) {
+                $details = json_decode( $site->details );
+                $website_for_customer_storage = empty( $details->storage ) ? 0 : $details->storage;
+                $website_for_customer_visits  = empty( $details->visits ) ? 0 : $details->visits;
+                if ( empty( $site->provider_id ) || $site->provider_id == "1" ) {
+                    $result_sites[] = [
+                        'site_id' => $site->site_id,
+                        'name'    => $site->name,
+                        'storage' => $website_for_customer_storage,
+                        'visits'  => $website_for_customer_visits
+                    ];
+                    continue;
+                }
+                $result_maintenance_sites[] = [
                     'site_id' => $site->site_id,
                     'name'    => $site->name,
                     'storage' => $website_for_customer_storage,
                     'visits'  => $website_for_customer_visits
                 ];
-                continue;
             }
-            $result_maintenance_sites[] = [
-                'site_id' => $site->site_id,
-                'name'    => $site->name,
-                'storage' => $website_for_customer_storage,
-                'visits'  => $website_for_customer_visits
-            ];
         }
 
         if ( empty( $visits_percent ) ) {
@@ -411,7 +453,7 @@ class Account {
         }
     }
 
-    public function invite( $email ) {
+    public function invite( $email, $level = 'full' ) {
 
         // Add account ID to current user
         if ( email_exists( $email ) ) {
@@ -419,6 +461,12 @@ class Account {
             $accounts    = array_column( ( new AccountUser )->where( [ "user_id" => $user->ID ] ), "account_id" );
             $accounts[]  = $this->account_id;
             ( new User( $user->ID, true ) )->assign_accounts( array_unique( $accounts ) );
+            // Set the level on the account_user record
+            $accountuser = new AccountUser();
+            $records     = $accountuser->where( [ "user_id" => $user->ID, "account_id" => $this->account_id ] );
+            if ( ! empty( $records ) ) {
+                $accountuser->update( [ "level" => $level ], [ "account_user_id" => $records[0]->account_user_id ] );
+            }
             $this->calculate_totals();
 
             // --- Send Access Notification to Existing User ---
@@ -440,7 +488,8 @@ class Account {
             'account_id'     => $this->account_id,
             'created_at'     => $time_now,
             'updated_at'     => $time_now,
-            'token'          => $token
+            'token'          => $token,
+            'level'          => $level,
         ];
         $invite    = new Invites();
         $invite_id = $invite->insert( $new_invite );

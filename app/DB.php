@@ -645,7 +645,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "38";
+        $required_version = (int) "39";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -817,6 +817,7 @@ class DB {
             account_id bigint(20) UNSIGNED NOT NULL,
             email varchar(255),
             token varchar(255),
+            level varchar(255),
             created_at datetime NOT NULL,
             updated_at datetime NOT NULL,
             accepted_at datetime NOT NULL,
@@ -1004,6 +1005,21 @@ class DB {
 
         if ( ! empty( $wpdb->last_error ) ) {
             return $wpdb->last_error;
+        }
+
+        // Backfill account_user levels for v39
+        if ( $version < 39 ) {
+            $accounts = $wpdb->get_results( "SELECT account_id, plan FROM {$wpdb->base_prefix}captaincore_accounts" );
+            foreach ( $accounts as $account ) {
+                $plan = json_decode( $account->plan );
+                if ( ! empty( $plan->billing_user_id ) ) {
+                    $wpdb->query( $wpdb->prepare(
+                        "UPDATE {$wpdb->base_prefix}captaincore_account_user SET level = 'full-billing' WHERE account_id = %d AND user_id = %d",
+                        $account->account_id, $plan->billing_user_id
+                    ) );
+                }
+            }
+            $wpdb->query( "UPDATE {$wpdb->base_prefix}captaincore_account_user SET level = 'full' WHERE level IS NULL OR level = ''" );
         }
 
         update_site_option( 'captaincore_db_version', $required_version );

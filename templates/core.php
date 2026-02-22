@@ -10210,29 +10210,29 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-container class="pt-0">
 					<v-toolbar color="primary" dark flat density="compact" rounded="lg">
 					<v-tabs v-model="account_tab" density="compact" left hide-slider>
-						<v-tab>
+						<v-tab v-show="role == 'administrator' || ['full-billing','full'].includes(dialog_account.records.level)">
 							{{ dialog_account.records.users.length }} Users
 							<v-icon size="20" class="ml-1">mdi-account</v-icon>
 						</v-tab>
-						<v-tab>
+						<v-tab v-show="role == 'administrator' || ['full-billing','full','sites-only'].includes(dialog_account.records.level)">
 							{{ dialog_account.records.sites.length }} Sites
 							<v-icon size="20" class="ml-1">mdi-folder-multiple</v-icon>
 						</v-tab>
-						<v-tab>
+						<v-tab v-show="role == 'administrator' || ['full-billing','full','domains-only'].includes(dialog_account.records.level)">
 							{{ dialog_account.records.domains.length }} Domains
 							<v-icon size="20" class="ml-1">mdi-text-box-multiple</v-icon>
 						</v-tab>
-						<v-tab>
+						<v-tab v-show="role == 'administrator' || ['full-billing','full'].includes(dialog_account.records.level)">
 							Timeline
 							<v-icon size="20" class="ml-1">mdi-timeline-text-outline</v-icon>
 						</v-tab>
-						<v-tab v-show="role == 'administrator'">
+						<v-tab v-show="role == 'administrator' || dialog_account.records.level == 'full-billing'">
 							Invoices <v-icon size="20" class="ml-1">mdi-receipt-text</v-icon>
 						</v-tab>
-						<v-tab v-show="role == 'administrator' || dialog_account.records.owner">
+						<v-tab v-show="role == 'administrator' || dialog_account.records.level == 'full-billing'">
 							Plan <v-icon size="20" class="ml-1">mdi-chart-donut</v-icon>
 						</v-tab>
-						<v-tab>
+						<v-tab v-show="role == 'administrator' || ['full-billing','full'].includes(dialog_account.records.level)">
 							Activity
 							<v-icon size="20" class="ml-1">mdi-history</v-icon>
 						</v-tab>
@@ -10245,7 +10245,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-toolbar-items>
 							<v-dialog v-model="dialog_account.new_invite" max-width="500px">
 							<template v-slot:activator="{ props }">
-								<v-btn variant="text" @click="dialog_account.new_invite = true" v-bind="props">New Invite <v-icon dark>mdi-plus</v-icon></v-btn>
+								<v-btn variant="text" @click="dialog_account.new_invite = true" v-bind="props" v-if="role == 'administrator' || ['full-billing','full'].includes(dialog_account.records.level)">New Invite <v-icon dark>mdi-plus</v-icon></v-btn>
 							</template>
 							<v-card>
 								<v-toolbar flat density="compact" dark color="primary" id="new_invite" class="mb-2">
@@ -10261,6 +10261,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										<v-text-field variant="underlined" label="Email" :model-value="dialog_account.new_invite_email" @update:model-value="dialog_account.new_invite_email = $event"></v-text-field>
 									</v-col>
 									<v-col cols="12">
+										<v-select variant="underlined" label="Access Level" v-model="dialog_account.new_invite_level" :items="inviteLevelOptions" item-title="title" item-value="value"></v-select>
+									</v-col>
+									<v-col cols="12">
 										<v-btn color="primary" dark @click="sendAccountInvite()">
 											Send Invite
 										</v-btn>
@@ -10273,15 +10276,23 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-toolbar>
 							<v-data-table
 								v-show="typeof dialog_account.records.users == 'object' && dialog_account.records.users.length > 0"
-								:headers='[{"title":"Name","value":"name"},{"title":"Email","value":"email"},{"title":"","value":"level"},{"title":"","value":"actions"}]'
+								:headers='[{"title":"Name","value":"name"},{"title":"Email","value":"email"},{"title":"Level","value":"level"},{"title":"","value":"actions"}]'
 								:items="dialog_account.records.users"
 								:sort-by='["level","name"]'
 								sort-desc
 								:items-per-page="-1"
 								hide-default-footer
 							>
+							<template v-slot:item.level="{ item }">
+							<span v-if="item.user_id == dialog_account.records.account.plan.billing_user_id">Owner</span>
+							<v-select v-else-if="role == 'administrator' || dialog_account.records.level == 'full-billing'" variant="underlined" density="compact" hide-details :items="allLevelOptions" item-title="title" item-value="value" :model-value="item.level" @update:model-value="updateUserLevel( item.user_id, $event )" style="min-width:140px"></v-select>
+							<span v-else>{{ levelLabel( item.level ) }}</span>
+							</template>
 							<template v-slot:item.actions="{ item }">
-							<v-btn variant="text" icon color="pink" @click="removeAccountAccess( item.user_id )" v-if="role == 'administrator' || dialog_account.records.owner && item.level != 'Owner'">
+							<v-btn v-if="item.user_id != dialog_account.records.account.plan.billing_user_id && item.level == 'full' && (role == 'administrator' || dialog_account.records.level == 'full-billing')" variant="text" size="small" @click="transferOwnership( item.user_id )" title="Transfer Ownership">
+								<v-icon start>mdi-swap-horizontal</v-icon>Make Owner
+							</v-btn>
+							<v-btn variant="text" icon color="pink" @click="removeAccountAccess( item.user_id )" v-if="item.user_id != dialog_account.records.account.plan.billing_user_id && (role == 'administrator' || dialog_account.records.level == 'full-billing')">
 								<v-icon>mdi-delete</v-icon>
 							</v-btn>
 							</template>
@@ -10311,7 +10322,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									<v-btn variant="text" icon v-bind="props" @click="copyInviteLink( item.account_id, item.token )"><v-icon dark>mdi-link-variant</v-icon></v-btn>
 								</template><span>Copy Invite Link</span>
 							</v-tooltip>
-							<v-tooltip location="top">
+							<v-tooltip location="top" v-if="role == 'administrator' || dialog_account.records.level == 'full-billing'">
 								<template v-slot:activator="{ props }">
 									<v-btn variant="text" icon color="pink" @click="deleteInvite( item.invite_id )" v-bind="props"><v-icon dark>mdi-delete</v-icon></v-btn>
 								</template><span>Delete Invite</span>
@@ -11786,7 +11797,7 @@ const app = createApp({
 		dialog_update_settings: { show: false, environment: { updates_enabled: 1 }, themes: [], plugins: [], loading: false },
 		dialog_fathom: { show: false, site: {}, environment: {}, loading: false, editItem: false, editedItem: {}, editedIndex: -1 },
 		dialog_mailgun_config: { show: false, loading: false },
-		dialog_account: { show: false, loading: false, records: { account: { defaults: { recipes: [] } } }, new_invite: false, new_invite_email: "", step: 1 },
+		dialog_account: { show: false, loading: false, records: { account: { defaults: { recipes: [] } } }, new_invite: false, new_invite_email: "", new_invite_level: "full", step: 1 },
 		dialog_invoice: { show: false, loading: false, paying: false, customer: false, response: "", payment_method: "", card: {}, error: "" },
 		dialog_domain_mappings: { show: false, loading: true, domains: [], new_domain: "", errors: [], site_id: null, env_name: "" },
 		verificationDialog: { show: false, domain: {}, loading: false },
@@ -12585,6 +12596,16 @@ const app = createApp({
 		}
 	},
 	computed: {
+		allLevelOptions() {
+			return [
+				{ title: "Full", value: "full" },
+				{ title: "Sites Only", value: "sites-only" },
+				{ title: "Domains Only", value: "domains-only" },
+			]
+		},
+		inviteLevelOptions() {
+			return this.allLevelOptions
+		},
 		verifiedPaymentMethods() {
 			// Filter to only show verified payment methods (cards are always verified, ACH must be verified)
 			if ( !this.billing.payment_methods ) return []
@@ -17540,6 +17561,15 @@ const app = createApp({
 					this.dialog_account.show = true;
 					this.dialog_account.step = 2;
 					this.dialog_account.loading = false;
+					if ( this.role != 'administrator' ) {
+						if ( response.data.level == 'sites-only' ) {
+							this.account_tab = 1
+						} else if ( response.data.level == 'domains-only' ) {
+							this.account_tab = 2
+						} else {
+							this.account_tab = 0
+						}
+					}
 					if (this.account_tab === 6) {
 						this.fetchAccountActivityLogs();
 					}
@@ -17662,7 +17692,8 @@ const app = createApp({
 		sendAccountInvite() {
 			account_id = this.dialog_account.records.account.account_id
 			axios.post( `/wp-json/captaincore/v1/accounts/${account_id}/invites`, {
-					invite: this.dialog_account.new_invite_email
+					invite: this.dialog_account.new_invite_email,
+					level: this.dialog_account.new_invite_level
 				}, {
 					headers: { 'X-WP-Nonce': this.wp_nonce }
 				})
@@ -17670,10 +17701,59 @@ const app = createApp({
 					this.snackbar.message = response.data.message
 					this.snackbar.show = true
 					this.dialog_account.new_invite_email = ""
+					this.dialog_account.new_invite_level = "full"
 					this.dialog_account.new_invite = false
 					this.showAccount( this.dialog_account.records.account.account_id )
 				})
 
+		},
+		updateUserLevel( user_id, new_level ) {
+			account_id = this.dialog_account.records.account.account_id
+			axios.put( `/wp-json/captaincore/v1/accounts/${account_id}/users/${user_id}/level`, {
+					level: new_level
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
+				.then( response => {
+					user = this.dialog_account.records.users.find( u => u.user_id == user_id )
+					if ( user ) { user.level = new_level }
+					this.snackbar.message = "User access level updated."
+					this.snackbar.show = true
+				})
+				.catch( error => {
+					this.snackbar.message = error.response && error.response.data && error.response.data.message ? error.response.data.message : "Failed to update level."
+					this.snackbar.show = true
+				})
+		},
+		transferOwnership( user_id ) {
+			user = this.dialog_account.records.users.find( u => u.user_id == user_id )
+			if ( ! user ) { return }
+			should_proceed = confirm(`Transfer ownership to ${user.name} (${user.email})? You will be demoted to Full access.`)
+			if ( ! should_proceed ) { return }
+			account_id = this.dialog_account.records.account.account_id
+			axios.put( `/wp-json/captaincore/v1/accounts/${account_id}/users/${user_id}/level`, {
+					level: 'full-billing'
+				}, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				})
+				.then( response => {
+					old_owner_id = this.dialog_account.records.account.plan.billing_user_id
+					old_owner = this.dialog_account.records.users.find( u => u.user_id == old_owner_id )
+					if ( old_owner ) { old_owner.level = 'full' }
+					user.level = 'full-billing'
+					this.dialog_account.records.account.plan.billing_user_id = user_id
+					this.dialog_account.records.level = this.dialog_account.records.level == 'full-billing' ? 'full' : this.dialog_account.records.level
+					this.snackbar.message = `Ownership transferred to ${user.name}.`
+					this.snackbar.show = true
+				})
+				.catch( error => {
+					this.snackbar.message = error.response && error.response.data && error.response.data.message ? error.response.data.message : "Failed to transfer ownership."
+					this.snackbar.show = true
+				})
+		},
+		levelLabel( level ) {
+			labels = { 'full-billing': 'Owner', 'full': 'Full', 'sites-only': 'Sites Only', 'domains-only': 'Domains Only' }
+			return labels[ level ] || level
 		},
 		editRecipe( recipe_id ) {
 			recipe = this.recipes.filter( recipe => recipe.recipe_id == recipe_id )[0];
