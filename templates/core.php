@@ -9727,6 +9727,74 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-col>
 					</v-row>
 					<v-row>
+					<v-col cols="12" class="mt-5">
+						<div class="text-subtitle-2 text-medium-emphasis mb-2">API Access</div>
+						<v-card flat border="thin" rounded="lg">
+							<v-list density="compact">
+								<v-list-item>
+									<template v-slot:prepend>
+										<v-icon icon="mdi-key" class="mr-2"></v-icon>
+									</template>
+									<v-list-item-title>Application Password</v-list-item-title>
+									<v-list-item-subtitle v-if="profile.application_password">
+										Created {{ pretty_timestamp_epoch( profile.application_password.created ) }}
+									</v-list-item-subtitle>
+									<v-list-item-subtitle v-else>Not yet created</v-list-item-subtitle>
+									<template v-slot:append>
+										<v-btn v-if="profile.application_password" icon="mdi-refresh"
+											variant="text" size="small" @click="rotateApplicationPassword()"
+											:loading="profile.application_password_loading"></v-btn>
+										<v-btn v-if="profile.application_password" icon="mdi-delete-outline"
+											variant="text" size="small" @click="deleteApplicationPassword()"
+											:loading="profile.application_password_loading"></v-btn>
+										<v-btn v-else variant="tonal" size="small" color="primary"
+											@click="generateApplicationPassword()"
+											:loading="profile.application_password_loading">Generate</v-btn>
+									</template>
+								</v-list-item>
+							</v-list>
+							<v-list density="compact">
+								<v-list-item>
+									<template v-slot:prepend>
+										<v-icon icon="mdi-file-document-outline" class="mr-2"></v-icon>
+									</template>
+									<v-list-item-title>API Documentation</v-list-item-title>
+									<v-list-item-subtitle>Markdown reference for use with coding agents</v-list-item-subtitle>
+									<template v-slot:append>
+										<v-btn variant="text" size="small" @click="viewApiDocs()">View</v-btn>
+										<v-btn variant="tonal" size="small" prepend-icon="mdi-download"
+											@click="downloadApiDocs()">Download</v-btn>
+									</template>
+								</v-list-item>
+							</v-list>
+							<v-alert v-if="profile.application_password_new" type="info" variant="tonal"
+								class="mx-4 mb-4">
+								<div class="font-weight-bold mb-1">New application password:</div>
+								<code>{{ profile.application_password_new }}</code>
+								<v-btn icon="mdi-content-copy" size="x-small" variant="text"
+									@click="copyText( profile.application_password_new )" class="ml-2"></v-btn>
+								<div class="text-caption mt-1">Save this password — it won't be shown again.</div>
+							</v-alert>
+						</v-card>
+						<v-dialog v-model="profile.api_docs_dialog" max-width="900px" scrollable>
+							<v-card>
+								<v-toolbar flat color="transparent">
+									<v-toolbar-title>API Documentation</v-toolbar-title>
+									<v-spacer></v-spacer>
+									<v-btn icon="mdi-download" @click="downloadApiDocs()" variant="text"></v-btn>
+									<v-btn icon="mdi-close" @click="profile.api_docs_dialog = false" variant="text"></v-btn>
+								</v-toolbar>
+								<v-card-text>
+									<div v-if="profile.api_docs_loading" class="text-center my-4">
+										<v-progress-circular indeterminate></v-progress-circular>
+									</div>
+									<div v-else v-html="profile.api_docs_html" class="api-docs-content"></div>
+								</v-card-text>
+							</v-card>
+						</v-dialog>
+					</v-col>
+					</v-row>
+					<v-row>
 					<v-col cols="12" class="mt-3">
 						<v-alert variant="tonal" type="error" v-for="error in profile.errors" class="mt-5">{{ error }}</v-alert>
 						<v-alert variant="tonal" type="success" v-show="profile.success" class="mt-5">{{ profile.success }}</v-alert>
@@ -12101,7 +12169,7 @@ const app = createApp({
 		current_user_registered: "<?php echo $user->registered; ?>",
 		current_user_hash: "<?php echo $user->hash; ?>",
 		current_user_display_name: "<?php echo $user->display_name; ?>",
-		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->email; ?>", login: "<?php echo $user->login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", pinned_environments: [], errors: [], tfa_activate: false, tfa_enabled: <?php echo $user->tfa_enabled; ?>, tfa_uri: "", tfa_token: "", email_subscriber: <?php echo $user->email_subscriber ? 'true' : 'false'; ?> },
+		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->email; ?>", login: "<?php echo $user->login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", pinned_environments: [], errors: [], tfa_activate: false, tfa_enabled: <?php echo $user->tfa_enabled; ?>, tfa_uri: "", tfa_token: "", email_subscriber: <?php echo $user->email_subscriber ? 'true' : 'false'; ?>, application_password: <?php echo json_encode( ( new CaptainCore\User )->get_application_password() ); ?>, application_password_new: "", application_password_loading: false, api_docs_dialog: false, api_docs_html: "", api_docs_loading: false },
 		stats: { from_at: "<?php echo date("Y-m-d", strtotime( date("Y-m-d" ). " -12 months" ) ); ?>", to_at: "<?php echo date("Y-m-d" ); ?>", from_at_select: false, to_at_select: false, grouping: "Month" },
 		role: "<?php echo $user->role; ?>",
 		dialog_processes: { show: false, processes: [], conn: {}, stream: [], loading: true },
@@ -16863,6 +16931,100 @@ const app = createApp({
 					// Revert the toggle on error
 					this.profile.email_subscriber = !this.profile.email_subscriber
 					this.snackbar.message = "Failed to update notification preferences."
+					this.snackbar.show = true
+				})
+		},
+		generateApplicationPassword() {
+			this.profile.application_password_loading = true
+			axios.post(
+				`/wp-json/captaincore/v1/me/application-password`, {}, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					this.profile.application_password_new = response.data.password
+					this.profile.application_password = { created: response.data.created }
+					this.profile.application_password_loading = false
+					this.snackbar.message = "Application password generated."
+					this.snackbar.show = true
+				})
+				.catch(error => {
+					this.profile.application_password_loading = false
+					this.snackbar.message = "Failed to generate application password."
+					this.snackbar.show = true
+				})
+		},
+		rotateApplicationPassword() {
+			this.profile.application_password_loading = true
+			axios.post(
+				`/wp-json/captaincore/v1/me/application-password/rotate`, {}, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					this.profile.application_password_new = response.data.password
+					this.profile.application_password = { created: response.data.created }
+					this.profile.application_password_loading = false
+					this.snackbar.message = "Application password rotated."
+					this.snackbar.show = true
+				})
+				.catch(error => {
+					this.profile.application_password_loading = false
+					this.snackbar.message = "Failed to rotate application password."
+					this.snackbar.show = true
+				})
+		},
+		deleteApplicationPassword() {
+			this.profile.application_password_loading = true
+			axios.delete(
+				`/wp-json/captaincore/v1/me/application-password`, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					this.profile.application_password = null
+					this.profile.application_password_new = ""
+					this.profile.application_password_loading = false
+					this.snackbar.message = "Application password deleted."
+					this.snackbar.show = true
+				})
+				.catch(error => {
+					this.profile.application_password_loading = false
+					this.snackbar.message = "Failed to delete application password."
+					this.snackbar.show = true
+				})
+		},
+		viewApiDocs() {
+			this.profile.api_docs_dialog = true
+			this.profile.api_docs_loading = true
+			axios.get(
+				`/wp-json/captaincore/v1/me/api-docs`, {
+					headers: {'X-WP-Nonce':this.wp_nonce},
+					params: { format: 'html' }
+				})
+				.then(response => {
+					this.profile.api_docs_html = response.data.html
+					this.profile.api_docs_loading = false
+				})
+				.catch(error => {
+					this.profile.api_docs_loading = false
+					this.snackbar.message = "Failed to load API docs."
+					this.snackbar.show = true
+				})
+		},
+		downloadApiDocs() {
+			axios.get(
+				`/wp-json/captaincore/v1/me/api-docs`, {
+					headers: {'X-WP-Nonce':this.wp_nonce},
+					responseType: 'blob'
+				})
+				.then(response => {
+					const url = window.URL.createObjectURL(response.data)
+					const a = document.createElement('a')
+					a.href = url
+					a.download = 'captaincore-api-docs.md'
+					a.click()
+					window.URL.revokeObjectURL(url)
+				})
+				.catch(error => {
+					this.snackbar.message = "Failed to download API docs."
 					this.snackbar.show = true
 				})
 		},

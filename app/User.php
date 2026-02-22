@@ -1685,4 +1685,46 @@ class User {
         ];
     }
 
+    public function get_application_password() {
+        $user_id  = get_current_user_id();
+        $name     = get_bloginfo( 'name' ) . ' API';
+        $passwords = \WP_Application_Passwords::get_user_application_passwords( $user_id );
+        foreach ( $passwords as $password ) {
+            if ( $password['name'] === $name ) {
+                return [ 'created' => $password['created'], 'uuid' => $password['uuid'] ];
+            }
+        }
+        return null;
+    }
+
+    public function create_application_password() {
+        $user_id = get_current_user_id();
+        $name    = get_bloginfo( 'name' ) . ' API';
+        $result  = \WP_Application_Passwords::create_new_application_password( $user_id, [ 'name' => $name ] );
+        if ( is_wp_error( $result ) ) {
+            return $result;
+        }
+        return [ 'password' => $result[0], 'created' => time() ];
+    }
+
+    public function rotate_application_password() {
+        $user_id  = get_current_user_id();
+        $existing = $this->get_application_password();
+        if ( ! $existing ) {
+            return new \WP_Error( 'no_password', 'No application password exists to rotate.' );
+        }
+        \WP_Application_Passwords::delete_application_password( $user_id, $existing['uuid'] );
+        return $this->create_application_password();
+    }
+
+    public function delete_application_password() {
+        $user_id  = get_current_user_id();
+        $existing = $this->get_application_password();
+        if ( ! $existing ) {
+            return new \WP_Error( 'no_password', 'No application password exists to delete.' );
+        }
+        \WP_Application_Passwords::delete_application_password( $user_id, $existing['uuid'] );
+        return [ 'success' => true ];
+    }
+
 }

@@ -3765,8 +3765,12 @@ function captaincore_running_func( $request ) {
 		$response  = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
 		$processes = json_decode( $response["body"]);
 
-		usort( $processes, function($a, $b) { return strcmp($b->created_at, $a->created_at); });
-		
+		if ( is_array( $processes ) ) {
+			usort( $processes, function($a, $b) { return strcmp($b->created_at, $a->created_at); });
+		} else {
+			$processes = [];
+		}
+
 		return $processes;
 
 	} 
@@ -4200,6 +4204,11 @@ function captaincore_me_profile_update_func( WP_REST_Request $request ) {
 
 function captaincore_invites_get_func( WP_REST_Request $request ) {
 	$invite  = (object) $request->get_params();
+
+	if ( empty( $invite->account ) || empty( $invite->token ) ) {
+		return new WP_Error( 'missing_params', 'Both account and token parameters are required.', [ 'status' => 400 ] );
+	}
+
 	$invites = new CaptainCore\Invites();
 	$results = $invites->where( [
 		"account_id" => $invite->account,
@@ -6624,6 +6633,72 @@ function captaincore_register_rest_endpoints() {
 					$user->remove_role( 'email_subscriber' );
 					return [ 'success' => true, 'message' => 'You will no longer receive blog post notifications.' ];
 				}
+			},
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/me/application-password', [
+			'methods'             => 'POST',
+			'callback'            => function ( WP_REST_Request $request ) {
+				return ( new CaptainCore\User )->create_application_password();
+			},
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/me/application-password', [
+			'methods'             => 'DELETE',
+			'callback'            => function ( WP_REST_Request $request ) {
+				$result = ( new CaptainCore\User )->delete_application_password();
+				if ( is_wp_error( $result ) ) {
+					return new WP_REST_Response( [ 'error' => $result->get_error_message() ], 400 );
+				}
+				return $result;
+			},
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/me/api-docs', [
+			'methods'             => 'GET',
+			'callback'            => function ( WP_REST_Request $request ) {
+				$file = plugin_dir_path( __FILE__ ) . 'api-docs.md';
+				if ( ! file_exists( $file ) ) {
+					return new WP_Error( 'not_found', 'API docs not found.', [ 'status' => 404 ] );
+				}
+				$markdown = file_get_contents( $file );
+				$markdown = str_replace( '{your-site}', wp_parse_url( home_url(), PHP_URL_HOST ), $markdown );
+				$format   = $request->get_param( 'format' );
+				if ( $format === 'html' ) {
+					return [ 'html' => ( new \Parsedown() )->text( $markdown ) ];
+				}
+				// Raw markdown download
+				header( 'Content-Type: text/markdown; charset=UTF-8' );
+				header( 'Content-Disposition: attachment; filename="captaincore-api-docs.md"' );
+				echo $markdown;
+				exit;
+			},
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/me/application-password/rotate', [
+			'methods'             => 'POST',
+			'callback'            => function ( WP_REST_Request $request ) {
+				$result = ( new CaptainCore\User )->rotate_application_password();
+				if ( is_wp_error( $result ) ) {
+					return new WP_REST_Response( [ 'error' => $result->get_error_message() ], 400 );
+				}
+				return $result;
 			},
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
