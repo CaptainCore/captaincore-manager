@@ -1164,13 +1164,17 @@ function captaincore_update_log_entry_func( WP_REST_Request $request ) {
 	$process_log        = (object) $request->get_json_params();
 	$site_ids           = array_column( $process_log->websites, 'site_id' );
 	$process_log_update = [
-		'process_id'  => $process_log->process_id,
-		'user_id'     => get_current_user_id(),
-		'description' => str_replace( "\'", "'", $process_log->description_raw ),
-		'public'      => $process_log->public,
-		'status'      => $process_log->status,
-		'updated_at'  => date( 'Y-m-d H:i:s' ),
+		'process_id'   => $process_log->process_id,
+		'user_id'      => get_current_user_id(),
+		'description'  => str_replace( "\'", "'", $process_log->description_raw ),
+		'public'       => $process_log->public,
+		'status'       => $process_log->status,
+		'updated_at'   => date( 'Y-m-d H:i:s' ),
 	];
+	if ( ! empty( $process_log->created_at_raw ) ) {
+		$process_log_update['created_at']   = $process_log->created_at_raw;
+		$process_log_update['completed_at'] = $process_log->created_at_raw;
+	}
 	( new CaptainCore\ProcessLogs )->update( (array) $process_log_update, [ "process_log_id" => $process_log->process_log_id ] );
 	( new CaptainCore\ProcessLog( $process_log->process_log_id) )->assign_sites( $site_ids );
 	$timelines = [];
