@@ -142,6 +142,7 @@ return array(
     'CaptainCore\\Environments' => $baseDir . '/app/Environments.php',
     'CaptainCore\\Invite' => $baseDir . '/app/Invite.php',
     'CaptainCore\\Invites' => $baseDir . '/app/Invites.php',
+    'CaptainCore\\JobTokens' => $baseDir . '/app/JobTokens.php',
     'CaptainCore\\Keys' => $baseDir . '/app/Keys.php',
     'CaptainCore\\Mailer' => $baseDir . '/app/Mailer.php',
     'CaptainCore\\Process' => $baseDir . '/app/Process.php',
