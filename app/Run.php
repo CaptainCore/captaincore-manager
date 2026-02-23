@@ -112,6 +112,71 @@ class Run {
         return $response["body"];
     }
 
+    public static function execute( $command = "" ) {
+
+        // Disable https when debug enabled
+        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+            add_filter( 'https_ssl_verify', '__return_false' );
+        }
+
+        $data = [
+            'timeout' => 300,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8',
+                'token'        => captaincore_get_cli_token()
+            ],
+            'body'        => json_encode( [ "command" => $command ] ),
+            'method'      => 'POST',
+            'data_format' => 'body'
+        ];
+
+        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+        if ( is_wp_error( $response ) ) {
+            return new \WP_Error( 'request_failed', $response->get_error_message(), [ 'status' => 500 ] );
+        }
+
+        return [ "status" => "completed", "response" => $response["body"] ];
+    }
+
+    public static function background_task( $command = "" ) {
+
+        // Disable https when debug enabled
+        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+            add_filter( 'https_ssl_verify', '__return_false' );
+        }
+
+        $data = [
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8',
+                'token'        => captaincore_get_cli_token()
+            ],
+            'body'        => json_encode( [ "command" => $command ] ),
+            'method'      => 'POST',
+            'data_format' => 'body'
+        ];
+
+        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run/background", $data );
+        if ( is_wp_error( $response ) ) {
+            return new \WP_Error( 'request_failed', $response->get_error_message(), [ 'status' => 500 ] );
+        }
+
+        $response = json_decode( $response["body"] );
+
+        if ( $response && $response->token ) {
+            ( new JobTokens )->insert( [
+                'token'      => $response->token,
+                'task_id'    => $response->task_id,
+                'user_id'    => get_current_user_id(),
+                'command'    => $command,
+                'created_at' => current_time( 'mysql' ),
+            ] );
+            return [ "status" => "queued", "token" => $response->token ];
+        }
+
+        return new \WP_Error( 'request_failed', 'No token returned from CLI server.', [ 'status' => 500 ] );
+    }
+
     public static function task( $command = "" ) {
         
         // Disable https when debug enabled
@@ -140,8 +205,15 @@ class Run {
         $response = json_decode( $response["body"] );
         
         // Response with task id
-        if ( $response && $response->token ) { 
-            return $response->token; 
+        if ( $response && $response->token ) {
+            ( new JobTokens )->insert( [
+                'token'      => $response->token,
+                'task_id'    => $response->task_id,
+                'user_id'    => get_current_user_id(),
+                'command'    => $command,
+                'created_at' => current_time( 'mysql' ),
+            ] );
+            return $response->token;
         }
     
         return $response["body"];

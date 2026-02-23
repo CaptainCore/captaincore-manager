@@ -1780,12 +1780,13 @@ function captaincore_jobs_get_func( WP_REST_Request $request ) {
 	if ( $response && $response->Status == "Completed" ) {
 		return [
 			"response" => $response->Response,
-			"status"   => "Completed",
+			"status"   => "completed",
 			"job_id"   => $job_id,
 		];
 	}
 
-	return [ "status" => "running", "job_id" => $job_id ];
+	$status = ( $response && isset( $response->Status ) ) ? strtolower( $response->Status ) : 'unknown';
+	return [ "status" => $status, "job_id" => $job_id ];
 }
 
 function captaincore_sites_cli_func( WP_REST_Request $request ) {
@@ -2066,12 +2067,50 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 	}
 
 	if ( $run_in_background ) {
+		if ( captaincore_is_api_request( $request ) ) {
+			$async = ! empty( $request->get_json_params()['async'] );
+			if ( $async ) {
+				$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run/background", $data );
+				if ( is_wp_error( $response ) ) {
+					return new WP_Error( 'request_failed', $response->get_error_message(), [ 'status' => 500 ] );
+				}
+				$response = json_decode( $response["body"] );
+				if ( $response && $response->token ) {
+					( new CaptainCore\JobTokens )->insert( [
+						'token'      => $response->token,
+						'task_id'    => $response->task_id,
+						'user_id'    => get_current_user_id(),
+						'site_id'    => $post_id,
+						'command'    => $cmd,
+						'created_at' => current_time( 'mysql' ),
+					] );
+					return [ "status" => "queued", "token" => $response->token ];
+				}
+				return new WP_Error( 'request_failed', 'No token returned.', [ 'status' => 500 ] );
+			}
+
+			$data['timeout'] = 300;
+			$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+			if ( is_wp_error( $response ) ) {
+				return new WP_Error( 'request_failed', $response->get_error_message(), [ 'status' => 500 ] );
+			}
+			return [ "status" => "completed", "response" => $response["body"] ];
+		}
+
 		$response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/tasks", $data );
 		if ( is_wp_error( $response ) ) {
 			return new WP_Error( 'request_failed', $response->get_error_message(), [ 'status' => 500 ] );
 		}
 		$response = json_decode( $response["body"] );
 		if ( $response && $response->token ) {
+			( new CaptainCore\JobTokens )->insert( [
+				'token'      => $response->token,
+				'task_id'    => $response->task_id,
+				'user_id'    => get_current_user_id(),
+				'site_id'    => $post_id,
+				'command'    => $cmd,
+				'created_at' => current_time( 'mysql' ),
+			] );
 			return $response->token;
 		}
 		return '';
@@ -3079,6 +3118,14 @@ function captaincore_bulk_tools_func( WP_REST_Request $request ) {
             return new WP_Error( 'invalid_tool', 'The requested tool is not supported.', [ 'status' => 400 ] );
     }
 
+    if ( captaincore_is_api_request( $request ) ) {
+        $async = ! empty( $request->get_json_params()['async'] );
+        if ( $async ) {
+            return CaptainCore\Run::background_task( $command );
+        }
+        return CaptainCore\Run::execute( $command );
+    }
+
     return CaptainCore\Run::task( $command );
 }
 
@@ -3153,6 +3200,14 @@ function captaincore_run_code_func( WP_REST_Request $request ) {
     
     // Dispatch to CLI
     $command = "run $target_string --code=$encoded_code";
+
+    if ( captaincore_is_api_request( $request ) ) {
+        $async = ! empty( $request->get_json_params()['async'] );
+        if ( $async ) {
+            return CaptainCore\Run::background_task( $command );
+        }
+        return CaptainCore\Run::execute( $command );
+    }
 
     return CaptainCore\Run::task( $command );
 }
@@ -5742,6 +5797,17 @@ function captaincore_activity_logs_func( WP_REST_Request $request ) {
 }
 
 /**
+ * Detects whether a REST request comes from an external API consumer
+ * (application passwords) vs the Vue frontend (which sends X-WP-Nonce).
+ */
+function captaincore_is_api_request( $request = null ) {
+    if ( $request instanceof WP_REST_Request ) {
+        return empty( $request->get_header( 'X-WP-Nonce' ) );
+    }
+    return empty( $_SERVER['HTTP_X_WP_NONCE'] );
+}
+
+/**
  * Checks if a user is logged in for REST API endpoints.
  *
  * @return bool True if the user is logged in, false otherwise.
@@ -7511,6 +7577,58 @@ function captaincore_register_rest_endpoints() {
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_jobs_get_func',
 			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/my-jobs/(?P<token>[a-zA-Z0-9]+)', [
+			'methods'             => 'GET',
+			'callback'            => function ( WP_REST_Request $request ) {
+				$token   = $request['token'];
+				$user_id = get_current_user_id();
+
+				$job_tokens = new CaptainCore\JobTokens();
+				$results    = $job_tokens->where( [ 'token' => $token, 'user_id' => $user_id ] );
+
+				if ( empty( $results ) ) {
+					return new WP_Error( 'not_found', 'Job not found.', [ 'status' => 404 ] );
+				}
+
+				$job     = $results[0];
+				$task_id = $job->task_id;
+
+				if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+					add_filter( 'https_ssl_verify', '__return_false' );
+				}
+
+				$data = [
+					'timeout' => 45,
+					'headers' => [
+						'Content-Type' => 'application/json; charset=utf-8',
+						'token'        => captaincore_get_cli_token(),
+					],
+					'method' => 'GET',
+				];
+
+				$response = wp_remote_get( CAPTAINCORE_CLI_ADDRESS . "/task/{$task_id}", $data );
+				if ( is_wp_error( $response ) ) {
+					return new WP_Error( 'request_failed', $response->get_error_message(), [ 'status' => 500 ] );
+				}
+				$response = json_decode( $response["body"] );
+
+				if ( $response && $response->Status == "Completed" ) {
+					return [
+						"response" => $response->Response,
+						"status"   => "completed",
+						"token"    => $token,
+					];
+				}
+
+				$status = ( $response && isset( $response->Status ) ) ? strtolower( $response->Status ) : 'unknown';
+				return [ "status" => $status, "token" => $token ];
+			},
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 

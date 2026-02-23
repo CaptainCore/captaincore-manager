@@ -232,6 +232,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\Environments' => __DIR__ . '/../..' . '/app/Environments.php',
         'CaptainCore\\Invite' => __DIR__ . '/../..' . '/app/Invite.php',
         'CaptainCore\\Invites' => __DIR__ . '/../..' . '/app/Invites.php',
+        'CaptainCore\\JobTokens' => __DIR__ . '/../..' . '/app/JobTokens.php',
         'CaptainCore\\Keys' => __DIR__ . '/../..' . '/app/Keys.php',
         'CaptainCore\\Mailer' => __DIR__ . '/../..' . '/app/Mailer.php',
         'CaptainCore\\Process' => __DIR__ . '/../..' . '/app/Process.php',
