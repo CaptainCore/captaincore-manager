@@ -9776,20 +9776,31 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<div class="text-caption mt-1">Save this password — it won't be shown again.</div>
 							</v-alert>
 						</v-card>
-						<v-dialog v-model="profile.api_docs_dialog" max-width="900px" scrollable>
-							<v-card>
-								<v-toolbar flat color="transparent">
+						<v-dialog v-model="profile.api_docs_dialog" fullscreen>
+							<v-card class="d-flex flex-column" style="height:100vh">
+								<v-toolbar flat color="transparent" class="flex-grow-0">
 									<v-toolbar-title>API Documentation</v-toolbar-title>
 									<v-spacer></v-spacer>
 									<v-btn icon="mdi-download" @click="downloadApiDocs()" variant="text"></v-btn>
 									<v-btn icon="mdi-close" @click="profile.api_docs_dialog = false" variant="text"></v-btn>
 								</v-toolbar>
-								<v-card-text>
-									<div v-if="profile.api_docs_loading" class="text-center my-4">
-										<v-progress-circular indeterminate></v-progress-circular>
+								<v-divider></v-divider>
+								<div v-if="profile.api_docs_loading" class="text-center my-4 flex-grow-1">
+									<v-progress-circular indeterminate></v-progress-circular>
+								</div>
+								<div v-else class="d-flex flex-grow-1" style="min-height:0">
+									<nav class="api-docs-toc" style="width:280px;min-width:280px;overflow-y:auto;border-right:1px solid rgba(var(--v-border-color), var(--v-border-opacity));padding:16px 0">
+										<div v-for="item in profile.api_docs_toc" :key="item.id"
+											:class="['api-docs-toc-item', item.level === 2 ? 'toc-h2' : 'toc-h3']"
+											@click="scrollToSection(item.id)"
+											:style="{ fontWeight: item.level === 2 ? 600 : 400, padding: item.level === 2 ? '6px 16px' : '4px 16px 4px 32px', cursor: 'pointer', fontSize: item.level === 2 ? '0.875rem' : '0.8125rem', color: 'rgb(var(--v-theme-on-surface))' }">
+											{{ item.text }}
+										</div>
+									</nav>
+									<div ref="apiDocsScroll" class="flex-grow-1" style="overflow-y:auto;padding:16px 24px">
+										<div v-html="profile.api_docs_html" class="api-docs-content"></div>
 									</div>
-									<div v-else v-html="profile.api_docs_html" class="api-docs-content"></div>
-								</v-card-text>
+								</div>
 							</v-card>
 						</v-dialog>
 					</v-col>
@@ -12169,7 +12180,7 @@ const app = createApp({
 		current_user_registered: "<?php echo $user->registered; ?>",
 		current_user_hash: "<?php echo $user->hash; ?>",
 		current_user_display_name: "<?php echo $user->display_name; ?>",
-		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->email; ?>", login: "<?php echo $user->login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", pinned_environments: [], errors: [], tfa_activate: false, tfa_enabled: <?php echo $user->tfa_enabled; ?>, tfa_uri: "", tfa_token: "", email_subscriber: <?php echo $user->email_subscriber ? 'true' : 'false'; ?>, application_password: <?php echo json_encode( ( new CaptainCore\User )->get_application_password() ); ?>, application_password_new: "", application_password_loading: false, api_docs_dialog: false, api_docs_html: "", api_docs_loading: false },
+		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->email; ?>", login: "<?php echo $user->login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", pinned_environments: [], errors: [], tfa_activate: false, tfa_enabled: <?php echo $user->tfa_enabled; ?>, tfa_uri: "", tfa_token: "", email_subscriber: <?php echo $user->email_subscriber ? 'true' : 'false'; ?>, application_password: <?php echo json_encode( ( new CaptainCore\User )->get_application_password() ); ?>, application_password_new: "", application_password_loading: false, api_docs_dialog: false, api_docs_html: "", api_docs_toc: [], api_docs_loading: false },
 		stats: { from_at: "<?php echo date("Y-m-d", strtotime( date("Y-m-d" ). " -12 months" ) ); ?>", to_at: "<?php echo date("Y-m-d" ); ?>", from_at_select: false, to_at_select: false, grouping: "Month" },
 		role: "<?php echo $user->role; ?>",
 		dialog_processes: { show: false, processes: [], conn: {}, stream: [], loading: true },
@@ -17000,7 +17011,26 @@ const app = createApp({
 					params: { format: 'html' }
 				})
 				.then(response => {
-					this.profile.api_docs_html = response.data.html
+					// Parse HTML and add IDs to headings for TOC linking
+					const parser = new DOMParser()
+					const doc = parser.parseFromString(response.data.html, 'text/html')
+					const headings = doc.querySelectorAll('h2, h3')
+					const toc = []
+					const usedIds = {}
+					headings.forEach(h => {
+						let id = h.textContent.trim().toLowerCase()
+							.replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+						if (usedIds[id]) {
+							usedIds[id]++
+							id = id + '-' + usedIds[id]
+						} else {
+							usedIds[id] = 1
+						}
+						h.setAttribute('id', id)
+						toc.push({ id, text: h.textContent.trim(), level: parseInt(h.tagName[1]) })
+					})
+					this.profile.api_docs_toc = toc
+					this.profile.api_docs_html = doc.body.innerHTML
 					this.profile.api_docs_loading = false
 				})
 				.catch(error => {
@@ -17008,6 +17038,12 @@ const app = createApp({
 					this.snackbar.message = "Failed to load API docs."
 					this.snackbar.show = true
 				})
+		},
+		scrollToSection(id) {
+			const container = this.$refs.apiDocsScroll
+			if (!container) return
+			const el = container.querySelector('#' + CSS.escape(id))
+			if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
 		},
 		downloadApiDocs() {
 			axios.get(

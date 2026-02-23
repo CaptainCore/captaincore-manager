@@ -525,6 +525,9 @@ class Site {
         $environment_id = self::fetch_environment_id( $environment );
         $captures       = new Captures();
         $results        = $captures->where( [ "site_id" => $this->site_id, "environment_id" => $environment_id ] );
+        $upload_uri     = get_option( 'options_remote_upload_uri' );
+        $site           = ( new Sites )->get( $this->site_id );
+        $image_base_url = $upload_uri . $site->site . '_' . $this->site_id . '/' . strtolower( $environment ) . '/captures/';
 
         foreach ( $results as $result ) {
             $created_at_friendly = new \DateTime( $result->created_at );
@@ -532,6 +535,10 @@ class Site {
             $created_at_friendly = date_format( $created_at_friendly, 'D, M jS Y g:i a');
             $result->created_at_friendly =  $created_at_friendly;
             $result->pages = json_decode( $result->pages );
+            $result->image_base_url = $image_base_url;
+            foreach ( $result->pages as $page ) {
+                $page->image_url = $image_base_url . str_replace( '#', '%23', $page->image );
+            }
         }
 
         return $results;
