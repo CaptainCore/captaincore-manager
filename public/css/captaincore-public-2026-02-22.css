@@ -2172,3 +2172,6 @@ tr:hover .pin-hover-target {
 .api-docs-content th, .api-docs-content td { border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); padding: 0.35rem 0.6rem; text-align: left; }
 .api-docs-content th { background: rgba(var(--v-theme-on-surface), 0.04); font-weight: 600; }
 .api-docs-content hr { border: none; border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); margin: 1.5rem 0; }
+.api-docs-toc-item:hover { background: rgba(var(--v-theme-on-surface), 0.06); }
+.api-docs-toc .toc-h2 { margin-top: 2px; }
+.api-docs-toc .toc-h2:first-child { margin-top: 0; }
