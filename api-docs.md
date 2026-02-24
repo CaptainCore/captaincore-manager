@@ -1263,9 +1263,97 @@ GET /invoices/{invoice_id}/pdf
 
 ## Filters
 
-### Filter sites
+### Filter sites by plugin or theme
 ```
 POST /filters/sites
+```
+
+Returns site/environment ID pairs matching the given plugin and/or theme filters. Useful for finding all environments that have a specific plugin or theme installed.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `plugins` | array | Array of plugin objects to filter by |
+| `themes` | array | Array of theme objects to filter by |
+| `versions` | array | Array of version filter objects |
+| `statuses` | array | Array of status filter objects |
+| `core` | array | Array of WordPress core versions to filter by |
+| `logic` | string | `AND` (default) or `OR` — how plugin/theme filters combine |
+| `version_logic` | string | `AND` (default) or `OR` — how version filters combine |
+| `status_logic` | string | `AND` (default) or `OR` — how status filters combine |
+| `version_mode` | string | `include` (default) or `exclude` — match or exclude versions |
+| `status_mode` | string | `include` (default) or `exclude` — match or exclude statuses |
+
+**Find all environments with a specific plugin:**
+```bash
+curl -X POST -u user:pass \
+  -H "Content-Type: application/json" \
+  -d '{"plugins":[{"name":"search-everything"}]}' \
+  https://anchor.host/wp-json/captaincore/v1/filters/sites
+```
+
+Response:
+```json
+{
+  "results": [
+    {"site_id": "395", "environment_id": "467"},
+    {"site_id": "395", "environment_id": "468"},
+    {"site_id": "1129", "environment_id": "1365"}
+  ]
+}
+```
+
+**Find all environments with a specific theme:**
+```bash
+curl -X POST -u user:pass \
+  -H "Content-Type: application/json" \
+  -d '{"themes":[{"name":"flavstarter"}]}' \
+  https://anchor.host/wp-json/captaincore/v1/filters/sites
+```
+
+**Find environments matching multiple plugins (AND logic):**
+```bash
+curl -X POST -u user:pass \
+  -H "Content-Type: application/json" \
+  -d '{"plugins":[{"name":"woocommerce"},{"name":"gravityforms"}]}' \
+  https://anchor.host/wp-json/captaincore/v1/filters/sites
+```
+
+**Find environments matching either plugin (OR logic):**
+```bash
+curl -X POST -u user:pass \
+  -H "Content-Type: application/json" \
+  -d '{"plugins":[{"name":"woocommerce"},{"name":"gravityforms"}],"logic":"OR"}' \
+  https://anchor.host/wp-json/captaincore/v1/filters/sites
+```
+
+**Filter by plugin version:**
+```bash
+curl -X POST -u user:pass \
+  -H "Content-Type: application/json" \
+  -d '{"plugins":[{"name":"wordpress-seo"}],"versions":[{"slug":"wordpress-seo","name":"26.9","type":"plugins"}]}' \
+  https://anchor.host/wp-json/captaincore/v1/filters/sites
+```
+
+**Exclude a specific plugin version (NOT filter):**
+```bash
+curl -X POST -u user:pass \
+  -H "Content-Type: application/json" \
+  -d '{"plugins":[{"name":"woocommerce-follow-up-emails"}],"versions":[{"slug":"woocommerce-follow-up-emails","name":"4.9.51","type":"plugins"}],"version_mode":"exclude"}' \
+  https://anchor.host/wp-json/captaincore/v1/filters/sites
+```
+
+Returns environments that have the plugin installed but are **not** running version 4.9.51. Use `"status_mode":"exclude"` similarly to find environments where a plugin is not in a specific status.
+
+**Filter by WordPress core version:**
+```bash
+curl -X POST -u user:pass \
+  -H "Content-Type: application/json" \
+  -d '{"core":["6.8.3","6.7.4"]}' \
+  https://anchor.host/wp-json/captaincore/v1/filters/sites
+```
+
+### Filter sites (general)
+```
 POST /filters
 ```
 
@@ -1273,6 +1361,41 @@ POST /filters
 ```
 GET /filters/{name}/versions
 GET /filters/{name}/statuses
+```
+
+Returns available versions or statuses for a given plugin or theme. Useful for discovering what versions exist across your sites before filtering.
+
+```bash
+curl -u user:pass https://anchor.host/wp-json/captaincore/v1/filters/search-everything/versions
+```
+
+Response:
+```json
+[
+  {
+    "name": "search-everything",
+    "versions": [
+      {"name": "8.1.9", "slug": "search-everything", "type": "plugins", "count": 2},
+      {"name": "8.2", "slug": "search-everything", "type": "plugins", "count": 12}
+    ]
+  }
+]
+```
+
+```bash
+curl -u user:pass https://anchor.host/wp-json/captaincore/v1/filters/search-everything/statuses
+```
+
+Response:
+```json
+[
+  {
+    "name": "search-everything",
+    "statuses": [
+      {"name": "active", "slug": "search-everything", "type": "plugins", "count": 14}
+    ]
+  }
+]
 ```
 
 ---

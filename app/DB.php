@@ -445,6 +445,8 @@ class DB {
         $primary_logic   = ( ! empty( $filters->logic ) && strtolower( $filters->logic ) === 'or' ) ? 'OR' : 'AND';
         $version_logic   = ( ! empty( $filters->version_logic ) && strtolower( $filters->version_logic ) === 'or' ) ? 'OR' : 'AND';
         $status_logic    = ( ! empty( $filters->status_logic ) && strtolower( $filters->status_logic ) === 'or' ) ? 'OR' : 'AND';
+        $version_mode    = ( ! empty( $filters->version_mode ) && $filters->version_mode === 'exclude' ) ? 'NOT REGEXP' : 'REGEXP';
+        $status_mode     = ( ! empty( $filters->status_mode ) && $filters->status_mode === 'exclude' ) ? 'NOT REGEXP' : 'REGEXP';
 
         // Filters
         $theme_filters   = $filters->themes ?? [];
@@ -481,7 +483,7 @@ class DB {
             foreach ( $version_filters as $version ) {
                 if ( empty( $version['slug'] ) ) { continue; }
                 $pattern = $create_pattern( $version['slug'], $version['name'] );
-                $version_sub_clauses[] = "{$environments_table}.{$version['type']} REGEXP '{$pattern}'";
+                $version_sub_clauses[] = "{$environments_table}.{$version['type']} {$version_mode} '{$pattern}'";
             }
             if ( ! empty( $version_sub_clauses ) ) {
                 $secondary_clauses[] = "( " . implode( " {$version_logic} ", $version_sub_clauses ) . " )";
@@ -492,7 +494,7 @@ class DB {
             foreach ( $status_filters as $status ) {
                 if ( empty( $status['slug'] ) ) { continue; }
                 $pattern = $create_pattern( $status['slug'], '[^"]*', $status['name'] );
-                $status_sub_clauses[] = "{$environments_table}.{$status['type']} REGEXP '{$pattern}'";
+                $status_sub_clauses[] = "{$environments_table}.{$status['type']} {$status_mode} '{$pattern}'";
             }
             if ( ! empty( $status_sub_clauses ) ) {
                 $secondary_clauses[] = "( " . implode( " {$status_logic} ", $status_sub_clauses ) . " )";
