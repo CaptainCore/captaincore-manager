@@ -3923,6 +3923,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									density="compact"
 									variant="outlined"
 								>
+									<template v-slot:append-inner v-if="primaryFilter.selected_versions?.length > 0">
+										<v-btn-toggle v-model="filter_version_mode" mandatory density="compact" variant="text" divided>
+											<v-btn value="include" size="x-small">is</v-btn>
+											<v-btn value="exclude" size="x-small">is not</v-btn>
+										</v-btn-toggle>
+									</template>
 									 <template v-slot:item="{ item, props }">
 										<v-list-item v-bind="props" :title="item.raw.name">
 											<template v-slot:append>
@@ -3930,7 +3936,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											</template>
 										</v-list-item>
 									</template>
-									<template v-slot:append v-if="primaryFilter.selected_versions?.length > 1">
+									<template v-slot:append v-if="primaryFilter.selected_versions?.length > 1 && filter_version_mode === 'include'">
 										<v-btn-toggle
 											v-model="filter_version_logic"
 											mandatory
@@ -3966,6 +3972,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									density="compact"
 									variant="outlined"
 								>
+									<template v-slot:append-inner v-if="primaryFilter.selected_statuses?.length > 0">
+										<v-btn-toggle v-model="filter_status_mode" mandatory density="compact" variant="text" divided>
+											<v-btn value="include" size="x-small">is</v-btn>
+											<v-btn value="exclude" size="x-small">is not</v-btn>
+										</v-btn-toggle>
+									</template>
 									<template v-slot:item="{ item, props }">
 										<v-list-item v-bind="props" :title="item.raw.name">
 											<template v-slot:append>
@@ -3973,7 +3985,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											</template>
 										</v-list-item>
 									</template>
-									<template v-slot:append v-if="primaryFilter.selected_statuses?.length > 1">
+									<template v-slot:append v-if="primaryFilter.selected_statuses?.length > 1 && filter_status_mode === 'include'">
 										<v-btn-toggle
 											v-model="filter_status_logic"
 											mandatory
@@ -12313,6 +12325,8 @@ const app = createApp({
 		filter_logic: "and",
 		filter_version_logic: "and",
 		filter_status_logic: "and",
+		filter_version_mode: "include",
+		filter_status_mode: "include",
 		site_filters: <?php echo json_encode( ( new CaptainCore\Environments )->filters() ); ?>,
 		site_filters_core: <?php echo json_encode( ( new CaptainCore\Environments )->filters_for_core() ); ?>,
 		site_filter_version: null,
@@ -12472,6 +12486,12 @@ const app = createApp({
 			this.filterSites();
 		},
 		'filter_status_logic': function() {
+			this.filterSites();
+		},
+		'filter_version_mode': function() {
+			this.filterSites();
+		},
+		'filter_status_mode': function() {
 			this.filterSites();
 		},
 		'new_payment.show'(isOpening) {
@@ -23412,6 +23432,8 @@ const app = createApp({
 				logic: this.filter_logic,
 				version_logic: this.filter_version_logic,
 				status_logic: this.filter_status_logic,
+				version_mode: this.filter_version_mode,
+				status_mode: this.filter_status_mode,
 				themes: this.applied_theme_filters.map( ({ name, title, search, type }) => ({ name, title, search, type }) ),
 				plugins: this.applied_plugin_filters.map( ({ name, title, search, type }) => ({ name, title, search, type }) ),
 				core: this.applied_core_filters.map( ({ name }) => name ),
