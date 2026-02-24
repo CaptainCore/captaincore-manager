@@ -185,13 +185,20 @@ class ScheduledReportsCLI {
 	 * @param object $report The report object.
 	 */
 	private static function display_report_info( $report ) {
-		$site_ids = json_decode( $report->site_ids, true );
-		$site_count = is_array( $site_ids ) ? count( $site_ids ) : 0;
 		$date_range = ScheduledReports::get_date_range( $report->interval );
 
-		\WP_CLI::log( sprintf( '  [#%d] %s report', $report->scheduled_report_id, ucfirst( $report->interval ) ) );
+		if ( ! empty( $report->account_id ) ) {
+			$account = ( new Account( $report->account_id, true ) )->get();
+			$account_name = $account->name ?? 'Unknown';
+			\WP_CLI::log( sprintf( '  [#%d] %s account report', $report->scheduled_report_id, ucfirst( $report->interval ) ) );
+			\WP_CLI::log( sprintf( '       Account: %s (#%d)', $account_name, $report->account_id ) );
+		} else {
+			$site_ids = json_decode( $report->site_ids, true );
+			$site_count = is_array( $site_ids ) ? count( $site_ids ) : 0;
+			\WP_CLI::log( sprintf( '  [#%d] %s report', $report->scheduled_report_id, ucfirst( $report->interval ) ) );
+			\WP_CLI::log( sprintf( '       Sites: %d', $site_count ) );
+		}
 		\WP_CLI::log( sprintf( '       Recipient: %s', $report->recipient ) );
-		\WP_CLI::log( sprintf( '       Sites: %d', $site_count ) );
 		\WP_CLI::log( sprintf( '       Date range: %s to %s', $date_range['start'], $date_range['end'] ) );
 		\WP_CLI::log( sprintf( '       Next run: %s', $report->next_run ) );
 		\WP_CLI::log( sprintf( '       Last run: %s', $report->last_run ?: 'Never' ) );

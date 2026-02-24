@@ -647,7 +647,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "40";
+        $required_version = (int) "41";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -961,6 +961,7 @@ class DB {
         $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_scheduled_reports` (
             scheduled_report_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             site_ids longtext NOT NULL,
+            account_id bigint(20) UNSIGNED DEFAULT NULL,
             `interval` varchar(20) NOT NULL,
             recipient varchar(255) NOT NULL,
             user_id bigint(20) UNSIGNED NOT NULL,
