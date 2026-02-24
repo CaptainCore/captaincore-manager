@@ -375,29 +375,9 @@ GET /sites/{site_id}/{environment}/logs
 POST /sites/{site_id}/{environment}/logs/fetch
 ```
 
-### Update logs (per site)
-```
-GET /sites/{site_id}/update-logs
-```
+### Update logs
 
-Returns update logs stored on the site record.
-
-### Update logs (with quicksave data)
-```
-GET /update-logs
-```
-
-Returns update logs with quicksave diff support. Requires query parameters:
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `site_id` | integer | Yes | Site ID |
-| `environment` | string | Yes | `production` or `staging` |
-
-```bash
-curl -u user:pass \
-  "https://{your-site}/wp-json/captaincore/v1/update-logs?site_id=135&environment=production"
-```
+See the [Update Logs](#update-logs) section for the primary update log endpoints (`GET /update-logs` and `GET /update-logs/{hash_before}_{hash_after}`).
 
 ---
 
@@ -893,25 +873,14 @@ POST /quicksaves/{hash}/rollback
 
 ## Update Logs
 
+Update logs track plugin and theme updates applied to a site over time. Each log entry records the quicksave hashes before and after the update, a summary of files changed, and counts of plugins/themes that were updated.
+
 ### List update logs
 ```
 GET /update-logs
 ```
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `site_id` | integer | Yes | Site ID |
-| `environment` | string | Yes | `production` or `staging` |
-
-```bash
-curl -u user:pass \
-  "https://{your-site}/wp-json/captaincore/v1/update-logs?site_id=135&environment=production"
-```
-
-### Get update log diff
-```
-GET /update-logs/{hash_before}_{hash_after}
-```
+Returns update logs for a site environment with quicksave diff support. Both query parameters are required.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -920,7 +889,59 @@ GET /update-logs/{hash_before}_{hash_after}
 
 ```bash
 curl -u user:pass \
-  "https://{your-site}/wp-json/captaincore/v1/update-logs/abc123_def456?site_id=135&environment=production"
+  "https://{your-site}/wp-json/captaincore/v1/update-logs?site_id=135&environment=production"
+```
+
+**Response:**
+```json
+[
+  {
+    "hash_before": "058d6264b1f845b4371bf109404e1269d19c65ca",
+    "hash_after": "997b53b4097e04f482fe01da18c97c3e9918602d",
+    "created_at": "1771427726",
+    "started_at": "1771401498",
+    "status": "275 files changed, 4757 insertions(+), 6959 deletions(-)",
+    "core": "6.9.1",
+    "theme_count": 2,
+    "plugin_count": 39,
+    "core_previous": "6.9.1",
+    "themes_changed": 0,
+    "plugins_changed": 6,
+    "plugins": [],
+    "themes": []
+  }
+]
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `hash_before` | string | Quicksave hash before the update |
+| `hash_after` | string | Quicksave hash after the update |
+| `created_at` | string | Unix timestamp when the log was recorded |
+| `started_at` | string | Unix timestamp when the update started |
+| `status` | string | Summary of file changes (git diff stat format) |
+| `core` | string | WordPress core version after the update |
+| `core_previous` | string | WordPress core version before the update |
+| `plugin_count` | integer | Total number of plugins installed |
+| `theme_count` | integer | Total number of themes installed |
+| `plugins_changed` | integer | Number of plugins updated |
+| `themes_changed` | integer | Number of themes updated |
+
+### Get update log diff
+```
+GET /update-logs/{hash_before}_{hash_after}
+```
+
+Returns the detailed diff between two quicksave snapshots from an update log entry. Use the `hash_before` and `hash_after` values from the list endpoint.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `site_id` | integer | Yes | Site ID (query param) |
+| `environment` | string | Yes | `production` or `staging` (query param) |
+
+```bash
+curl -u user:pass \
+  "https://{your-site}/wp-json/captaincore/v1/update-logs/058d6264b1..._{997b53b409...}?site_id=135&environment=production"
 ```
 
 ---
