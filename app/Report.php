@@ -2074,4 +2074,452 @@ class Report {
         ];
     }
 
+    /**
+     * Generate account-wide report data for all active sites in an account
+     *
+     * @param int    $account_id Account ID
+     * @param string $start_date Start date (Y-m-d format)
+     * @param string $end_date   End date (Y-m-d format)
+     * @return object Report data
+     */
+    public static function generate_account( $account_id, $start_date = "", $end_date = "" ) {
+        global $wpdb;
+
+        $account      = new Account( $account_id, true );
+        $account_data = $account->get();
+        $account_name = $account_data->name ?? 'Unknown Account';
+        $account_sites = $account->sites();
+
+        $before    = ! empty( $start_date ) ? strtotime( $start_date ) : strtotime( "-30 days" );
+        $after     = ! empty( $end_date ) ? strtotime( $end_date ) : time();
+        $before_dt = date( 'Y-m-d H:i:s', $before );
+        $after_dt  = date( 'Y-m-d H:i:s', $after );
+
+        if ( empty( $account_sites ) ) {
+            return (object) [
+                'account_name'   => $account_name,
+                'sites'          => [],
+                'process_logs'   => [],
+                'total_activity' => 0,
+                'total_storage'  => 0,
+                'start_date'     => date( 'F j, Y', $before ),
+                'end_date'       => date( 'F j, Y', $after ),
+            ];
+        }
+
+        $site_ids = array_map( function( $s ) { return (int) $s['site_id']; }, $account_sites );
+        $ids_str  = implode( ',', $site_ids );
+
+        // Build site name lookup
+        $site_names = [];
+        foreach ( $account_sites as $s ) {
+            $site_names[ (int) $s['site_id'] ] = $s['name'];
+        }
+
+        // Batch query: get storage and home_url from production environments for all sites
+        $env_table = $wpdb->prefix . 'captaincore_environments';
+        $env_rows  = $wpdb->get_results(
+            "SELECT site_id, storage, home_url FROM {$env_table}
+             WHERE site_id IN ({$ids_str}) AND environment = 'Production'"
+        );
+
+        $env_by_site = [];
+        foreach ( $env_rows as $row ) {
+            $env_by_site[ (int) $row->site_id ] = $row;
+        }
+
+        // Batch query: count process log entries per site in date range
+        $pls_table = $wpdb->prefix . 'captaincore_process_log_site';
+        $pl_table  = $wpdb->prefix . 'captaincore_process_logs';
+        $activity_counts = $wpdb->get_results( $wpdb->prepare(
+            "SELECT pls.site_id, COUNT(*) as cnt
+             FROM {$pls_table} pls
+             INNER JOIN {$pl_table} pl ON pls.process_log_id = pl.process_log_id
+             WHERE pls.site_id IN ({$ids_str})
+               AND pl.created_at >= %s AND pl.created_at <= %s
+             GROUP BY pls.site_id",
+            $before_dt, $after_dt
+        ) );
+
+        $activity_by_site = [];
+        foreach ( $activity_counts as $row ) {
+            $activity_by_site[ (int) $row->site_id ] = (int) $row->cnt;
+        }
+
+        // Build sites overview from batch data
+        $sites_overview   = [];
+        $total_activity   = 0;
+        $total_storage    = 0;
+
+        foreach ( $site_ids as $site_id ) {
+            $env      = $env_by_site[ $site_id ] ?? null;
+            $storage  = $env ? (float) $env->storage : 0;
+            $home_url = $env->home_url ?? '';
+            $activity = $activity_by_site[ $site_id ] ?? 0;
+
+            $sites_overview[] = [
+                'name'     => $site_names[ $site_id ] ?? '',
+                'home_url' => $home_url,
+                'activity' => $activity,
+                'storage'  => $storage,
+            ];
+
+            $total_activity += $activity;
+            $total_storage  += $storage;
+        }
+
+        // Batch query: get process logs with site names for date range (cap at 100)
+        $proc_table = $wpdb->prefix . 'captaincore_processes';
+        $logs = $wpdb->get_results( $wpdb->prepare(
+            "SELECT pl.process_log_id, pl.description, pl.user_id, pl.created_at,
+                    pls.site_id, p.name as process_name
+             FROM {$pl_table} pl
+             INNER JOIN {$pls_table} pls ON pl.process_log_id = pls.process_log_id
+             LEFT JOIN {$proc_table} p ON pl.process_id = p.process_id
+             WHERE pls.site_id IN ({$ids_str})
+               AND pl.created_at >= %s AND pl.created_at <= %s
+             ORDER BY pl.created_at DESC
+             LIMIT 100",
+            $before_dt, $after_dt
+        ) );
+
+        // Build author cache to avoid repeated get_the_author_meta calls
+        $author_cache = [];
+        $all_process_logs = [];
+
+        foreach ( $logs as $log ) {
+            $uid = (int) $log->user_id;
+            if ( ! isset( $author_cache[ $uid ] ) ) {
+                $author_cache[ $uid ] = get_the_author_meta( 'display_name', $uid );
+            }
+
+            $description = trim( strip_tags( $log->description ) );
+            if ( empty( $description ) && ! empty( $log->process_name ) ) {
+                $description = $log->process_name;
+            }
+
+            $all_process_logs[] = [
+                'date'        => strtotime( $log->created_at ),
+                'site'        => $site_names[ (int) $log->site_id ] ?? '',
+                'author'      => $author_cache[ $uid ],
+                'description' => $description,
+            ];
+        }
+
+        return (object) [
+            'account_name'   => $account_name,
+            'sites'          => $sites_overview,
+            'process_logs'   => $all_process_logs,
+            'total_activity' => $total_activity,
+            'total_storage'  => $total_storage,
+            'start_date'     => date( 'F j, Y', $before ),
+            'end_date'       => date( 'F j, Y', $after ),
+        ];
+    }
+
+    /**
+     * Render account-wide report as HTML email
+     *
+     * @param object $data Report data from generate_account()
+     * @return object Object with 'html' key
+     */
+    public static function render_account( $data ) {
+
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $logo_url    = $config->logo ?? '';
+        $site_name   = get_bloginfo( 'name' );
+
+        // Build sites overview table rows
+        $sites_rows = '';
+        foreach ( $data->sites as $site ) {
+            $name     = htmlspecialchars( $site['name'] );
+            $home_url = $site['home_url'] ?? '';
+            $activity = number_format( $site['activity'] );
+            $storage  = self::format_storage_plain( $site['storage'] );
+
+            if ( ! empty( $home_url ) ) {
+                $link_icon = "<span style='font-size: 10px; margin-left: 2px;'>&#8599;</span>";
+                $name_html = "<a href='" . htmlspecialchars( $home_url ) . "' target='_blank' style='color: {$brand_color}; text-decoration: none; font-weight: 500;'>{$name}{$link_icon}</a>";
+            } else {
+                $name_html = $name;
+            }
+
+            $sites_rows .= "
+                <tr>
+                    <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #4a5568; text-align: left;'>{$name_html}</td>
+                    <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #718096; text-align: right;'>{$activity}</td>
+                    <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #718096; text-align: right; white-space: nowrap;'>{$storage}</td>
+                </tr>";
+        }
+
+        // Totals row
+        $total_activity_fmt = number_format( $data->total_activity );
+        $total_storage_fmt  = self::format_storage_plain( $data->total_storage );
+        $site_count         = count( $data->sites );
+
+        $sites_table_html = "
+                                    <!-- Sites Overview -->
+                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-bottom: 20px;'>
+                                        <tr>
+                                            <td style='padding: 10px;'>
+                                                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;'>
+                                                    <div style='font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; padding: 15px 15px 10px; text-align: center;'>Sites Overview ({$site_count})</div>
+                                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%'>
+                                                        <tr style='background-color: #f7fafc;'>
+                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: left;'>Site</td>
+                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: right; width: 70px;'>Activity</td>
+                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: right; width: 80px;'>Storage</td>
+                                                        </tr>
+                                                        {$sites_rows}
+                                                        <tr style='background-color: #f7fafc;'>
+                                                            <td style='padding: 10px 12px; font-size: 13px; font-weight: 600; color: #2d3748; text-align: left;'>Totals</td>
+                                                            <td style='padding: 10px 12px; font-size: 13px; font-weight: 600; color: #2d3748; text-align: right;'>{$total_activity_fmt}</td>
+                                                            <td style='padding: 10px 12px; font-size: 13px; font-weight: 600; color: #2d3748; text-align: right; white-space: nowrap;'>{$total_storage_fmt}</td>
+                                                        </tr>
+                                                    </table>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>";
+
+        // Build process logs HTML
+        $process_logs_html = '';
+        if ( ! empty( $data->process_logs ) ) {
+            $logs_rows = '';
+            foreach ( $data->process_logs as $log ) {
+                $date        = date( 'M j', $log['date'] );
+                $site_label  = htmlspecialchars( $log['site'] );
+                $author      = htmlspecialchars( $log['author'] );
+                $description = htmlspecialchars( $log['description'] );
+                $logs_rows .= "
+                    <tr>
+                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 12px; color: #a0aec0; white-space: nowrap; vertical-align: top;'>{$date}</td>
+                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 12px; color: {$brand_color}; white-space: nowrap; vertical-align: top;'>{$site_label}</td>
+                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 13px; color: #4a5568; text-align: left;'>{$description}</td>
+                        <td style='padding: 10px 12px; border-bottom: 1px solid #edf2f7; font-size: 12px; color: #718096; text-align: right; white-space: nowrap; vertical-align: top;'>{$author}</td>
+                    </tr>";
+            }
+
+            $total_logs = count( $data->process_logs );
+            $process_logs_html = "
+                                    <!-- Process Logs -->
+                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 30px;'>
+                                        <tr>
+                                            <td style='padding: 10px;'>
+                                                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;'>
+                                                    <div style='font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; padding: 15px 15px 10px; text-align: center;'>Work Performed ({$total_logs})</div>
+                                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%'>
+                                                        <tr style='background-color: #f7fafc;'>
+                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; width: 60px;'>Date</td>
+                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; width: 100px;'>Site</td>
+                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: left;'>Description</td>
+                                                            <td style='padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; text-align: right; width: 100px;'>By</td>
+                                                        </tr>
+                                                        {$logs_rows}
+                                                    </table>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>";
+        }
+
+        // Managed For You section (reused from render())
+        $managed_html = "
+                                    <!-- Managed For You -->
+                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 30px;'>
+                                        <tr>
+                                            <td style='padding: 10px;'>
+                                                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 25px 20px;'>
+                                                    <div style='font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; margin-bottom: 15px; text-align: center;'>Managed For You</div>
+                                                    <p style='font-size: 14px; color: #4a5568; line-height: 1.6; margin: 0 0 20px; text-align: center;'>As part of your managed hosting, we proactively handle the technical details so you don't have to.</p>
+                                                    <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%'>
+                                                        <tr>
+                                                            <td width='33%' style='padding: 10px; text-align: center; vertical-align: top;'>
+                                                                <div style='font-size: 24px; margin-bottom: 8px;'>🔒</div>
+                                                                <div style='font-size: 13px; font-weight: 600; color: #2d3748; margin-bottom: 4px;'>SSL Certificates</div>
+                                                                <div style='font-size: 12px; color: #718096;'>Auto-verified & renewed</div>
+                                                            </td>
+                                                            <td width='33%' style='padding: 10px; text-align: center; vertical-align: top;'>
+                                                                <div style='font-size: 24px; margin-bottom: 8px;'>⚡</div>
+                                                                <div style='font-size: 13px; font-weight: 600; color: #2d3748; margin-bottom: 4px;'>PHP Version</div>
+                                                                <div style='font-size: 12px; color: #718096;'>Current & compatible</div>
+                                                            </td>
+                                                            <td width='33%' style='padding: 10px; text-align: center; vertical-align: top;'>
+                                                                <div style='font-size: 24px; margin-bottom: 8px;'>📡</div>
+                                                                <div style='font-size: 13px; font-weight: 600; color: #2d3748; margin-bottom: 4px;'>Uptime Monitoring</div>
+                                                                <div style='font-size: 12px; color: #718096;'>24/7 with rapid response</div>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                    <p style='font-size: 12px; color: #a0aec0; line-height: 1.5; margin: 20px 0 0; text-align: center; font-style: italic;'>We handle version upgrades, compatibility fixes, and infrastructure issues—so you can focus on your business.</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>";
+
+        $account_name_html = htmlspecialchars( $data->account_name );
+
+        $message = "
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+            <title>Account Maintenance Report</title>
+        </head>
+        <body style='margin: 0; padding: 0; background-color: #f7fafc; font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif; color: #4a5568;'>
+            <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%'>
+                <tr>
+                    <td style='padding: 40px 20px; text-align: center;'>
+
+                        <div style='margin-bottom: 30px;'>
+                            <img src='{$logo_url}' alt='{$site_name}' style='max-height: 50px; width: auto;'>
+                        </div>
+
+                        <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); overflow: hidden;'>
+
+                            <!-- Header Area -->
+                            <tr>
+                                <td style='padding: 40px; text-align: center; background-color: #ffffff; border-bottom: 1px solid #edf2f7;'>
+                                    <h1 style='margin: 0 0 10px; font-size: 24px; font-weight: 800; color: #2d3748;'>Account Maintenance Report</h1>
+                                    <p style='margin: 0; font-size: 14px; color: #718096;'>{$account_name_html}</p>
+                                    <p style='margin: 10px 0 0; font-size: 12px; color: #a0aec0;'>{$data->start_date} - {$data->end_date}</p>
+                                </td>
+                            </tr>
+
+                            <!-- Main Content Area -->
+                            <tr>
+                                <td style='padding: 40px;'>
+
+                                    {$sites_table_html}
+
+                                    {$process_logs_html}
+
+                                    {$managed_html}
+
+                                </td>
+                            </tr>
+
+                            <!-- Internal Footer Area -->
+                            <tr>
+                                <td style='padding: 30px 40px; background-color: #f7fafc; border-top: 1px solid #edf2f7; text-align: center;'>
+                                    <p style='margin: 0; font-size: 14px; color: #718096;'>
+                                        Questions? <a href='mailto:" . get_option('admin_email') . "' style='color: {$brand_color}; text-decoration: none;'>Contact Support</a>
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <div style='margin-top: 30px; font-size: 12px; color: #a0aec0;'>
+                             <p style='margin: 0;'><a href='" . home_url() . "' style='color: #a0aec0; text-decoration: none;'>{$site_name}</a></p>
+                        </div>
+
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        ";
+
+        return (object) [
+            'html' => $message,
+        ];
+    }
+
+    /**
+     * Format storage size to plain text (no HTML spans)
+     *
+     * @param float $bytes Storage in bytes
+     * @return string Formatted storage
+     */
+    private static function format_storage_plain( $bytes ) {
+        $kb = $bytes / 1024;
+        $mb = $kb / 1024;
+        $gb = $mb / 1024;
+
+        if ( $gb >= 1 ) {
+            return round( $gb, 2 ) . " GB";
+        }
+        if ( $mb >= 1 ) {
+            return round( $mb, 0 ) . " MB";
+        }
+        return round( $kb, 0 ) . " KB";
+    }
+
+    /**
+     * Send account-wide report email
+     *
+     * @param int    $account_id Account ID
+     * @param string $start_date Start date
+     * @param string $end_date   End date
+     * @param string $recipient  Email address
+     * @return bool Success
+     */
+    public static function send_account( $account_id, $start_date = "", $end_date = "", $recipient = "" ) {
+
+        if ( empty( $account_id ) || empty( $recipient ) ) {
+            return false;
+        }
+
+        $data   = self::generate_account( $account_id, $start_date, $end_date );
+        $result = self::render_account( $data );
+        $html   = $result->html;
+
+        $before_ts  = ! empty( $start_date ) ? strtotime( $start_date ) : strtotime( "-30 days" );
+        $after_ts   = ! empty( $end_date ) ? strtotime( $end_date ) : time();
+        $date_range = date( 'M j', $before_ts ) . ' - ' . date( 'M j, Y', $after_ts );
+
+        $subject = "Account Maintenance Report: {$data->account_name} ({$date_range})";
+
+        // Prepare Mailer settings (for SMTP config)
+        Mailer::prepare();
+
+        $headers = [ 'Content-Type: text/html; charset=UTF-8' ];
+        wp_mail( $recipient, $subject, $html, $headers );
+
+        return true;
+    }
+
+    /**
+     * Preview account-wide report HTML
+     *
+     * @param int    $account_id Account ID
+     * @param string $start_date Start date
+     * @param string $end_date   End date
+     * @return string HTML content
+     */
+    public static function preview_account( $account_id, $start_date = "", $end_date = "" ) {
+        $data   = self::generate_account( $account_id, $start_date, $end_date );
+        $result = self::render_account( $data );
+        return $result->html;
+    }
+
+    /**
+     * Get default recipient email for an account
+     *
+     * @param int $account_id Account ID
+     * @return string Email address
+     */
+    public static function get_default_recipient_for_account( $account_id ) {
+
+        if ( empty( $account_id ) ) {
+            return "";
+        }
+
+        $account = ( new Account( $account_id, true ) )->get();
+
+        if ( empty( $account ) || empty( $account->plan->billing_user_id ) ) {
+            return "";
+        }
+
+        $user = get_user_by( 'id', $account->plan->billing_user_id );
+
+        if ( empty( $user ) ) {
+            return "";
+        }
+
+        return $user->user_email;
+    }
+
 }

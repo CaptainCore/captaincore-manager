@@ -38,15 +38,21 @@ class ScheduledReports extends DB {
         global $wpdb;
         $table = self::table_name();
 
-        $wpdb->insert( $table, [
-            'site_ids'   => json_encode( $data['site_ids'] ),
+        $insert_data = [
+            'site_ids'   => json_encode( $data['site_ids'] ?? [] ),
             'interval'   => $data['interval'],
             'recipient'  => $data['recipient'],
             'created_at' => current_time( 'mysql' ),
             'updated_at' => current_time( 'mysql' ),
             'next_run'   => self::calculate_next_run( $data['interval'] ),
             'user_id'    => get_current_user_id(),
-        ] );
+        ];
+
+        if ( ! empty( $data['account_id'] ) ) {
+            $insert_data['account_id'] = (int) $data['account_id'];
+        }
+
+        $wpdb->insert( $table, $insert_data );
 
         return $wpdb->insert_id;
     }
@@ -71,6 +77,9 @@ class ScheduledReports extends DB {
         }
         if ( isset( $data['recipient'] ) ) {
             $update_data['recipient'] = $data['recipient'];
+        }
+        if ( array_key_exists( 'account_id', $data ) ) {
+            $update_data['account_id'] = ! empty( $data['account_id'] ) ? (int) $data['account_id'] : null;
         }
 
         $wpdb->update( $table, $update_data, [ 'scheduled_report_id' => $id ] );
@@ -188,10 +197,14 @@ class ScheduledReports extends DB {
      * Send a scheduled report
      */
     public static function send_scheduled_report( $report ) {
-        $site_ids = json_decode( $report->site_ids, true );
         $date_range = self::get_date_range( $report->interval );
 
-        Report::send( $site_ids, $date_range['start'], $date_range['end'], $report->recipient );
+        if ( ! empty( $report->account_id ) ) {
+            Report::send_account( $report->account_id, $date_range['start'], $date_range['end'], $report->recipient );
+        } else {
+            $site_ids = json_decode( $report->site_ids, true );
+            Report::send( $site_ids, $date_range['start'], $date_range['end'], $report->recipient );
+        }
 
         // Update next run time
         global $wpdb;
@@ -214,6 +227,7 @@ class ScheduledReports extends DB {
         $sql = "CREATE TABLE IF NOT EXISTS {$table} (
             scheduled_report_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             site_ids longtext NOT NULL,
+            account_id bigint(20) unsigned DEFAULT NULL,
             `interval` varchar(20) NOT NULL,
             recipient varchar(255) NOT NULL,
             user_id bigint(20) unsigned NOT NULL,
