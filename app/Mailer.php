@@ -1660,6 +1660,65 @@ class Mailer {
         );
     }
 
+    static public function send_registration_role_alert( $site_name, $environment_name, $home_url, $default_role ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $admin_email = get_option( 'admin_email' );
+
+        $site_url_html = '';
+        if ( ! empty( $home_url ) ) {
+            $site_url_html = "
+                <tr>
+                    <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
+                    <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
+                        <a href='{$home_url}' style='color: {$brand_color}; text-decoration: none;'>{$home_url}</a>
+                    </td>
+                </tr>";
+        }
+
+        $content_html = "
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+                <div style='text-align: center; margin-bottom: 25px;'>
+                    <div style='display: inline-block; background-color: #FEFCBF; color: #975A16; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                        Open Registration + Elevated Role
+                    </div>
+                </div>
+
+                <p style='margin-bottom: 25px;'>This site has open registration enabled with the default new user role set to <strong>" . esc_html( ucfirst( $default_role ) ) . "</strong>. Anyone can register and receive elevated privileges.</p>
+
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                    <table width='100%' cellpadding='0' cellspacing='0'>
+                        <tr>
+                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
+                        </tr>
+                        {$site_url_html}
+                        <tr>
+                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Environment</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
+                        </tr>
+                        <tr>
+                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Registration</td>
+                            <td style='padding-bottom: 10px; color: #C05621; font-weight: 600; text-align: right;'>Open</td>
+                        </tr>
+                        <tr>
+                            <td style='color: #718096; font-size: 14px;'>Default Role</td>
+                            <td style='color: #C05621; font-weight: 600; text-align: right;'>" . esc_html( ucfirst( $default_role ) ) . "</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        ";
+
+        self::send_email_with_layout(
+            $admin_email,
+            "Security Alert: Open registration with elevated role on {$site_name}",
+            "Registration Role Alert",
+            $site_name,
+            $content_html
+        );
+    }
+
     static public function send_missing_billing_user_alert( $account_id, $account_name ) {
         $config      = Configurations::get();
         $brand_color = $config->colors->primary ?? '#0D47A1';

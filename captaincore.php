@@ -994,6 +994,18 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
 		}
 
+		// Alert admin if registration is open and default role is not subscriber (only once, tracked via registration_role_alerted flag)
+		$registration = isset( $env_details->registration ) ? $env_details->registration : '0';
+		if ( $registration === '1' && $default_role !== 'subscriber' && $is_production && empty( $env_details->registration_role_alerted ) ) {
+			$home_url = $post->data->home_url ?? '';
+			CaptainCore\Mailer::send_registration_role_alert( $current_site->name, ucfirst( $environment_name ), $home_url, $default_role );
+			$env_details->registration_role_alerted = true;
+			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
+		} elseif ( ( $registration !== '1' || $default_role === 'subscriber' ) && ! empty( $env_details->registration_role_alerted ) ) {
+			unset( $env_details->registration_role_alerted );
+			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
+		}
+
 		unset( $details->connection_errors );
 
 		if ( $current_environment->environment == "Production" ) {
