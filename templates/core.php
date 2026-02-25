@@ -110,19 +110,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-divider></v-divider>
 			<v-list-subheader>Developers</v-list-subheader>
 			<v-list-item link :href="`${configurations.path}cookbook`" @click.prevent="goToPath('/cookbook')" title="Cookbook" prepend-icon="mdi-code-tags"></v-list-item>
-			<v-list-item link :href="`${configurations.path}health`" @click.prevent="goToPath('/health')" title="Health" prepend-icon="mdi-ladybug"></v-list-item>
-			
+			<v-list-item link :href="`${configurations.path}reports`" @click.prevent="goToPath('/reports')" title="Maintenance Reports" prepend-icon="mdi-file-chart"></v-list-item>
 			<v-list-subheader v-show="role == 'administrator' || role == 'owner'">Administrator</v-list-subheader>
 			<v-list-item link :href="`${configurations.path}activity-logs`" @click.prevent="goToPath('/activity-logs')" title="Activity Logs" v-show="role == 'administrator'" prepend-icon="mdi-history"></v-list-item>
 			<v-list-item link :href="`${configurations.path}archives`" @click.prevent="goToPath('/archives')" title="Archives" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-folder-zip-outline"></v-list-item>
 			<v-list-item link :href="`${configurations.path}configurations`" @click.prevent="goToPath('/configurations')" title="Configurations" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-cogs"></v-list-item>
-			<v-list-item link :href="`${configurations.path}reports`" @click.prevent="goToPath('/reports')" title="Reports" v-show="role == 'administrator'" prepend-icon="mdi-file-chart"></v-list-item>
-			<v-list-item link :href="`${configurations.path}web-risk`" @click.prevent="goToPath('/web-risk')" title="Web Risk" v-show="role == 'administrator'" prepend-icon="mdi-shield-alert"></v-list-item>
-			<v-list-item link :href="`${configurations.path}checksum-failures`" @click.prevent="goToPath('/checksum-failures')" title="Checksum Failures" v-show="role == 'administrator'" prepend-icon="mdi-file-check-outline"></v-list-item>
+			<v-list-item link :href="`${configurations.path}security`" @click.prevent="goToPath('/security')" title="Security" v-show="role == 'administrator'" prepend-icon="mdi-shield-alert"></v-list-item>
 			<v-list-item link :href="`${configurations.path}handbook`" @click.prevent="goToPath('/handbook')" title="Handbook" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-map"></v-list-item>
-			<v-list-item link :href="`${configurations.path}defaults`" @click.prevent="goToPath('/defaults')" title="Site Defaults" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-application"></v-list-item>
 			<v-list-item link :href="`${configurations.path}keys`" @click.prevent="goToPath('/keys')" title="SSH Keys" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-key"></v-list-item>
-			<v-list-item link :href="`${configurations.path}subscriptions`" @click.prevent="goToPath('/subscriptions')" title="Subscriptions" v-show="role == 'administrator' && configurations.mode == 'hosting'" prepend-icon="mdi-repeat"></v-list-item>
 			<v-list-item link :href="`${configurations.path}users`" @click.prevent="goToPath('/users')" title="Users" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-account-multiple"></v-list-item>
 
 			<v-list-subheader>User</v-list-subheader>
@@ -7922,45 +7917,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-sheet>
 			</v-card>
-			<v-card v-if="route == 'health'" flat border="thin" rounded="xl">
-				<v-toolbar flat color="transparent">
-					<v-toolbar-title>Listing {{ filterSitesWithErrors.length }} sites with issues</v-toolbar-title>
-					<v-spacer></v-spacer>
-					<v-toolbar-items></v-toolbar-items>
-				</v-toolbar>
-				<v-card-text>
-					<v-alert type="info" variant="text">
-						Results from daily scans of home pages. Web console errors are extracted from Google Chrome via Lighthouse CLI. Helpful for tracking down wide range of issues.
-					</v-alert>
-					<v-card v-for="site in filterSitesWithErrors" flat class="mb-2" :key="site.site_id">
-					<v-toolbar flat class="px-4">
-						<v-img :src="`${remote_upload_uri}${site.site}_${site.site_id}/production/screenshots/${site.screenshot_base}_thumb-100.jpg`" class="elevation-1 mr-3" max-width="50" v-show="site.screenshot_base"></v-img>
-						<v-toolbar-title>{{ site.name }}</v-toolbar-title>
-						<v-spacer></v-spacer>
-						<v-toolbar-items>
-						<v-btn size="small" variant="text" @click="scanErrors( site )">Scan <v-icon class="ml-1">mdi-sync</v-icon></v-btn>
-						<v-btn size="small" variant="text" :href="`http://${site.name}`" target="_blank">View <v-icon class="ml-1">mdi-open-in-new</v-icon></v-btn>
-						<v-btn size="small" variant="text" @click="copySSH( site )">SSH <v-icon class="ml-1">mdi-content-copy</v-icon></v-btn>
-						<v-btn size="small" variant="text" @click="showLogEntry( site.site_id )">Log <v-icon class="ml-1">mdi-check</v-icon></v-btn>
-						<v-chip class="mt-4 ml-2" label :value="true">{{ site.console_errors.length }} issues</v-chip>
-						</v-toolbar-items>
-					</v-toolbar>
-					<v-card class="elevation-0 mx-auto" v-for="error in site.console_errors" :key="error.source">
-						<v-card-item>
-						<v-card-title>{{ error.source }}</v-card-title>
-						<v-card-subtitle><a :href="error.url">{{ error.url }}</a></v-card-subtitle>
-						</v-card-item>
-						<v-card-text>
-						<pre><code>{{ error.description }}</code></pre>
-						</v-card-text>
-					</v-card>
-					<v-overlay absolute :model-value="site.loading">
-						<v-progress-circular indeterminate size="64" width="4"></v-progress-circular>
-					</v-overlay>
-					</v-card>
-				</v-card-text>
-			</v-card>
-			<v-card v-if="route == 'cookbook'" flat border="thin" rounded="xl">
+				<v-card v-if="route == 'cookbook'" flat border="thin" rounded="xl">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Listing {{ filteredRecipes.length }} recipes</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -8041,6 +7998,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-tab value="tasks" v-show="role == 'administrator'">Scheduled Tasks</v-tab>
 					<v-tab value="providers">Providers</v-tab>
 					<v-tab value="billing" v-show="role == 'administrator'">Billing</v-tab>
+					<v-tab value="site-defaults" v-show="role == 'administrator'">Site Defaults</v-tab>
 				</v-tabs>
 				<v-window v-model="configurations_step">
 					<v-window-item value="branding" :transition="false" :reverse-transition="false">
@@ -8351,6 +8309,61 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-card-text>
 						</v-card>
 					</v-window-item>
+					<v-window-item value="site-defaults" :transition="false" :reverse-transition="false">
+						<v-card flat>
+							<v-card-text>
+							<v-alert variant="tonal" type="info" class="mb-4 mt-4">Configure default settings which can be applied by running the <strong>Deploy Defaults</strong> script.</v-alert>
+							<v-row wrap>
+								<v-col cols="6" pr-2>
+								<v-text-field :model-value="defaults.email" @update:model-value="defaults.email = $event" label="Default Email" required></v-text-field>
+								</v-col>
+								<v-col cols="6" pl-2>
+								<v-autocomplete :items="timezones" label="Default Timezone" v-model="defaults.timezone"></v-autocomplete>
+								</v-col>
+							</v-row>
+							<v-row wrap>
+								<v-col>
+								<v-autocomplete label="Default Recipes" v-model="defaults.recipes" ref="default_recipes" :items="recipes" item-title="title" item-value="recipe_id" multiple chips closable-chips></v-autocomplete>
+								</v-col>
+							</v-row>
+							<span class="body-2">Default Users</span>
+							<v-data-table :items="defaults.users" hide-default-header hide-default-footer v-if="typeof defaults.users == 'object'">
+							<template v-slot:body="{ items }">
+								<tr v-for="(item, index) in items" style="border-top: 0px;">
+									<td class="pa-1">
+									<v-text-field variant="underlined" :model-value="item.username" @update:model-value="defaults.users[index].username = $event" label="Username"></v-text-field>
+									</td>
+									<td class="pa-1">
+									<v-text-field variant="underlined" :model-value="item.email" @update:model-value="defaults.users[index].email = $event" label="Email"></v-text-field>
+									</td>
+									<td class="pa-1">
+									<v-text-field variant="underlined" :model-value="item.first_name" @update:model-value="defaults.users[index].first_name = $event" label="First Name"></v-text-field>
+									</td>
+									<td class="pa-1">
+									<v-text-field variant="underlined" :model-value="item.last_name" @update:model-value="defaults.users[index].last_name = $event" label="Last Name"></v-text-field>
+									</td>
+									<td class="pa-1" style="width:145px;">
+									<v-select variant="underlined" :model-value="item.role" v-model="defaults.users[index].role" :items="roles" label="Role" item-title="name"></v-select>
+									</td>
+									<td class="pa-1" style="width: 60px;">
+										<v-btn variant="text" icon="mdi-delete" color="primary" @click="deleteGlobalUserValue( index )"></v-btn>
+									</td>
+								</tr>
+							</template>
+							</v-data-table>
+							<v-row>
+							<v-col cols="12">
+								<v-btn variant="tonal" size="small" @click="addGlobalDefaultsUser()" class="mt-3">Add Additional User</v-btn>
+							</v-col>
+							<v-col cols="12">
+								<v-btn color="primary" @click="saveGlobalDefaults()">
+								Save Changes
+								</v-btn>
+							</v-col>
+							</v-row>
+							</v-card-text>
+						</v-card>
+					</v-window-item>
 				</v-window>
 				<v-row>
 					<v-col>
@@ -8362,66 +8375,214 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-col>
 				</v-row>
 			</v-card>
-			<v-card v-if="route == 'web-risk' && role == 'administrator'" flat border="thin" rounded="xl">
+			<v-card v-if="route == 'security' && role == 'administrator'" flat border="thin" rounded="xl">
 				<v-toolbar flat color="transparent">
-					<v-toolbar-title>Web Risk Logs</v-toolbar-title>
+					<v-toolbar-title>Security</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
-				<v-card-text class="pt-0">
-					<v-alert v-if="web_risk_logs.length === 0 && !web_risk_logs_loading" type="info" variant="tonal">
-						No Web Risk check logs found. Logs are recorded each time the Web Risk check runs.
-					</v-alert>
-					<v-data-table
-						v-if="web_risk_logs.length > 0 || web_risk_logs_loading"
-						:loading="web_risk_logs_loading"
-						:headers="[
-							{ title: 'Date/Time', key: 'created_at' },
-							{ title: 'Sites Checked', key: 'total_sites', align: 'center' },
-							{ title: 'Threats', key: 'threats_found', align: 'center' },
-							{ title: 'Errors', key: 'errors_count', align: 'center' },
-							{ title: '', key: 'actions', width: '100px', sortable: false }
-						]"
-						:items="web_risk_logs"
-						:items-per-page="25"
-						density="comfortable"
-						hover
-					>
-						<template v-slot:item.created_at="{ item }">
-							{{ pretty_timestamp( item.created_at ) }}
-						</template>
-						<template v-slot:item.total_sites="{ item }">
-							{{ item.total_sites.toLocaleString() }}
-						</template>
-						<template v-slot:item.threats_found="{ item }">
-							<v-chip
-								:color="item.threats_found > 0 ? 'error' : 'success'"
-								size="small"
-								variant="flat"
+				<v-tabs bg-color="primary" v-model="security_tab">
+					<v-tab value="vulnerabilities">Vulnerabilities</v-tab>
+					<v-tab value="web-risk">Web Risk</v-tab>
+					<v-tab value="checksum-failures">Checksum Failures</v-tab>
+				</v-tabs>
+				<v-window v-model="security_tab">
+					<v-window-item value="vulnerabilities" :transition="false" :reverse-transition="false">
+						<v-card-text class="pt-0">
+							<div v-if="security_threats.length > 0" class="d-flex ga-2 mt-4 mb-2">
+								<v-chip v-if="security_threats.filter(t => t.severity === 'critical').length > 0" color="error" variant="flat" size="small">
+									{{ security_threats.filter(t => t.severity === 'critical').length }} Critical
+								</v-chip>
+								<v-chip v-if="security_threats.filter(t => t.severity === 'high').length > 0" color="warning" variant="flat" size="small">
+									{{ security_threats.filter(t => t.severity === 'high').length }} High
+								</v-chip>
+							</div>
+							<v-alert v-if="security_threats.length === 0 && !security_threats_loading" type="success" variant="tonal" class="mt-4">
+								No critical or high severity threats detected across the fleet.
+							</v-alert>
+							<v-data-table
+								v-if="security_threats.length > 0 || security_threats_loading"
+								:loading="security_threats_loading"
+								:headers="[
+									{ title: 'Severity', key: 'severity', width: '110px' },
+									{ title: 'Component', key: 'title' },
+									{ title: 'Version', key: 'version', width: '100px' },
+									{ title: 'Type', key: 'type', width: '90px' },
+									{ title: 'Key Issue', key: 'key_issue', sortable: false },
+									{ title: 'Sites', key: 'affected_count', width: '80px', align: 'center' },
+									{ title: 'Status', key: 'tracking.status', width: '160px' },
+									{ title: '', key: 'actions', width: '60px', sortable: false }
+								]"
+								:items="security_threats"
+								:items-per-page="25"
+								:sort-by="[{key: 'severity', order: 'asc'}, {key: 'affected_count', order: 'desc'}]"
+								:custom-key-sort="{ severity: (a, b) => { const order = { critical: 0, high: 1 }; return (order[a] ?? 2) - (order[b] ?? 2); } }"
+								density="comfortable"
 							>
-								{{ item.threats_found }}
-							</v-chip>
-						</template>
-						<template v-slot:item.errors_count="{ item }">
-							<v-chip
-								v-if="item.errors_count > 0"
-								color="warning"
-								size="small"
-								variant="flat"
+								<template v-slot:item.severity="{ item }">
+									<v-chip
+										:color="item.severity === 'critical' ? 'error' : 'warning'"
+										variant="flat"
+										size="small"
+									>{{ item.severity }}</v-chip>
+								</template>
+								<template v-slot:item.title="{ item }">
+									<strong>{{ item.title || item.slug }}</strong>
+								</template>
+								<template v-slot:item.type="{ item }">
+									<span class="text-capitalize">{{ item.type }}</span>
+								</template>
+								<template v-slot:item.key_issue="{ item }">
+									<span class="text-body-2">{{ (item.findings && item.findings[0]) ? item.findings[0].title : '' }}</span>
+								</template>
+								<template v-slot:item.tracking.status="{ item }">
+									<v-select
+										:model-value="item.tracking.status"
+										:items="['new', 'investigating', 'reported', 'resolved']"
+										density="compact"
+										variant="outlined"
+										hide-details
+										@update:model-value="updateThreatStatus(item, $event)"
+										style="min-width: 140px;"
+									></v-select>
+								</template>
+								<template v-slot:item.actions="{ item }">
+									<v-btn
+										icon="mdi-chevron-right"
+										variant="text"
+										size="small"
+										@click="security_threat_dialog.threat = item; security_threat_dialog.show = true"
+									></v-btn>
+								</template>
+							</v-data-table>
+						</v-card-text>
+					</v-window-item>
+					<v-window-item value="web-risk" :transition="false" :reverse-transition="false">
+						<v-card-text class="pt-0">
+							<v-alert v-if="web_risk_logs.length === 0 && !web_risk_logs_loading" type="info" variant="tonal" class="mt-4">
+								No Web Risk check logs found. Logs are recorded each time the Web Risk check runs.
+							</v-alert>
+							<v-data-table
+								v-if="web_risk_logs.length > 0 || web_risk_logs_loading"
+								:loading="web_risk_logs_loading"
+								:headers="[
+									{ title: 'Date/Time', key: 'created_at' },
+									{ title: 'Sites Checked', key: 'total_sites', align: 'center' },
+									{ title: 'Threats', key: 'threats_found', align: 'center' },
+									{ title: 'Errors', key: 'errors_count', align: 'center' },
+									{ title: '', key: 'actions', width: '100px', sortable: false }
+								]"
+								:items="web_risk_logs"
+								:items-per-page="25"
+								density="comfortable"
+								hover
 							>
-								{{ item.errors_count }}
-							</v-chip>
-							<span v-else class="text-medium-emphasis">0</span>
-						</template>
-						<template v-slot:item.actions="{ item }">
-							<v-btn
-								icon="mdi-chevron-right"
-								variant="text"
-								size="small"
-								@click="web_risk_dialog.log = item; web_risk_dialog.show = true"
-							></v-btn>
-						</template>
-					</v-data-table>
-				</v-card-text>
+								<template v-slot:item.created_at="{ item }">
+									{{ pretty_timestamp( item.created_at ) }}
+								</template>
+								<template v-slot:item.total_sites="{ item }">
+									{{ item.total_sites.toLocaleString() }}
+								</template>
+								<template v-slot:item.threats_found="{ item }">
+									<v-chip
+										:color="item.threats_found > 0 ? 'error' : 'success'"
+										size="small"
+										variant="flat"
+									>
+										{{ item.threats_found }}
+									</v-chip>
+								</template>
+								<template v-slot:item.errors_count="{ item }">
+									<v-chip
+										v-if="item.errors_count > 0"
+										color="warning"
+										size="small"
+										variant="flat"
+									>
+										{{ item.errors_count }}
+									</v-chip>
+									<span v-else class="text-medium-emphasis">0</span>
+								</template>
+								<template v-slot:item.actions="{ item }">
+									<v-btn
+										icon="mdi-chevron-right"
+										variant="text"
+										size="small"
+										@click="web_risk_dialog.log = item; web_risk_dialog.show = true"
+									></v-btn>
+								</template>
+							</v-data-table>
+						</v-card-text>
+					</v-window-item>
+					<v-window-item value="checksum-failures" :transition="false" :reverse-transition="false">
+						<v-card-text class="pt-0">
+							<v-alert v-if="checksum_failures.length === 0 && !checksum_failures_loading" type="info" variant="tonal" class="mt-4">
+								No checksum failures found. All active environments have passing core checksums.
+							</v-alert>
+							<v-data-table
+								v-if="checksum_failures.length > 0 || checksum_failures_loading"
+								:loading="checksum_failures_loading"
+								:headers="[
+									{ title: 'Site Name', key: 'site_name' },
+									{ title: 'Environment', key: 'environment' },
+									{ title: 'Home URL', key: 'home_url' },
+									{ title: 'Modified', key: 'modified_count', align: 'center' },
+									{ title: 'Extra', key: 'extra_count', align: 'center' },
+									{ title: 'Missing', key: 'missing_count', align: 'center' },
+									{ title: '', key: 'actions', width: '100px', sortable: false }
+								]"
+								:items="checksum_failures.map(f => ({
+									...f,
+									modified_count: (f.core_checksum_details.modified || []).length,
+									extra_count: (f.core_checksum_details.extra || []).length,
+									missing_count: (f.core_checksum_details.missing || []).length
+								}))"
+								:items-per-page="25"
+								density="comfortable"
+								hover
+							>
+								<template v-slot:item.site_name="{ item }">
+									<a :href="`${configurations.path}sites/${item.site_id}`" @click.prevent="goToPath(`/sites/${item.site_id}`)" class="text-decoration-none">{{ item.site_name }}</a>
+								</template>
+								<template v-slot:item.home_url="{ item }">
+									<a :href="item.home_url" target="_blank" class="text-decoration-none">{{ item.home_url }}</a>
+								</template>
+								<template v-slot:item.modified_count="{ item }">
+									<v-chip v-if="item.modified_count > 0" color="warning" size="small" variant="flat">{{ item.modified_count }}</v-chip>
+									<span v-else class="text-medium-emphasis">0</span>
+								</template>
+								<template v-slot:item.extra_count="{ item }">
+									<v-chip v-if="item.extra_count > 0" color="info" size="small" variant="flat">{{ item.extra_count }}</v-chip>
+									<span v-else class="text-medium-emphasis">0</span>
+								</template>
+								<template v-slot:item.missing_count="{ item }">
+									<v-chip v-if="item.missing_count > 0" color="error" size="small" variant="flat">{{ item.missing_count }}</v-chip>
+									<span v-else class="text-medium-emphasis">0</span>
+								</template>
+								<template v-slot:item.actions="{ item }">
+									<div class="d-flex align-center">
+										<v-tooltip text="Copy SSH command" location="top">
+											<template v-slot:activator="{ props }">
+												<v-btn
+													v-bind="props"
+													icon="mdi-console"
+													variant="text"
+													size="small"
+													@click="copyText(`ssh ${item.username}@${item.address} -p ${item.port}`)"
+												></v-btn>
+											</template>
+										</v-tooltip>
+										<v-btn
+											icon="mdi-chevron-right"
+											variant="text"
+											size="small"
+											@click="checksum_dialog.item = checksum_failures.find(f => f.environment_id === item.environment_id); checksum_dialog.show = true"
+										></v-btn>
+									</div>
+								</template>
+							</v-data-table>
+						</v-card-text>
+					</v-window-item>
+				</v-window>
 			</v-card>
 			<v-dialog v-model="web_risk_dialog.show" max-width="700px" scrollable>
 				<v-card v-if="web_risk_dialog.log">
@@ -8509,79 +8670,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-actions>
 				</v-card>
 			</v-dialog>
-			<v-card v-if="route == 'checksum-failures' && role == 'administrator'" flat border="thin" rounded="xl">
-				<v-toolbar flat color="transparent">
-					<v-toolbar-title>Checksum Failures</v-toolbar-title>
-					<v-spacer></v-spacer>
-				</v-toolbar>
-				<v-card-text class="pt-0">
-					<v-alert v-if="checksum_failures.length === 0 && !checksum_failures_loading" type="info" variant="tonal">
-						No checksum failures found. All active environments have passing core checksums.
-					</v-alert>
-					<v-data-table
-						v-if="checksum_failures.length > 0 || checksum_failures_loading"
-						:loading="checksum_failures_loading"
-						:headers="[
-							{ title: 'Site Name', key: 'site_name' },
-							{ title: 'Environment', key: 'environment' },
-							{ title: 'Home URL', key: 'home_url' },
-							{ title: 'Modified', key: 'modified_count', align: 'center' },
-							{ title: 'Extra', key: 'extra_count', align: 'center' },
-							{ title: 'Missing', key: 'missing_count', align: 'center' },
-							{ title: '', key: 'actions', width: '100px', sortable: false }
-						]"
-						:items="checksum_failures.map(f => ({
-							...f,
-							modified_count: (f.core_checksum_details.modified || []).length,
-							extra_count: (f.core_checksum_details.extra || []).length,
-							missing_count: (f.core_checksum_details.missing || []).length
-						}))"
-						:items-per-page="25"
-						density="comfortable"
-						hover
-					>
-						<template v-slot:item.site_name="{ item }">
-							<a :href="`${configurations.path}sites/${item.site_id}`" @click.prevent="goToPath(`/sites/${item.site_id}`)" class="text-decoration-none">{{ item.site_name }}</a>
-						</template>
-						<template v-slot:item.home_url="{ item }">
-							<a :href="item.home_url" target="_blank" class="text-decoration-none">{{ item.home_url }}</a>
-						</template>
-						<template v-slot:item.modified_count="{ item }">
-							<v-chip v-if="item.modified_count > 0" color="warning" size="small" variant="flat">{{ item.modified_count }}</v-chip>
-							<span v-else class="text-medium-emphasis">0</span>
-						</template>
-						<template v-slot:item.extra_count="{ item }">
-							<v-chip v-if="item.extra_count > 0" color="info" size="small" variant="flat">{{ item.extra_count }}</v-chip>
-							<span v-else class="text-medium-emphasis">0</span>
-						</template>
-						<template v-slot:item.missing_count="{ item }">
-							<v-chip v-if="item.missing_count > 0" color="error" size="small" variant="flat">{{ item.missing_count }}</v-chip>
-							<span v-else class="text-medium-emphasis">0</span>
-						</template>
-						<template v-slot:item.actions="{ item }">
-							<div class="d-flex align-center">
-								<v-tooltip text="Copy SSH command" location="top">
-									<template v-slot:activator="{ props }">
-										<v-btn
-											v-bind="props"
-											icon="mdi-console"
-											variant="text"
-											size="small"
-											@click="copyText(`ssh ${item.username}@${item.address} -p ${item.port}`)"
-										></v-btn>
-									</template>
-								</v-tooltip>
-								<v-btn
-									icon="mdi-chevron-right"
-									variant="text"
-									size="small"
-									@click="checksum_dialog.item = checksum_failures.find(f => f.environment_id === item.environment_id); checksum_dialog.show = true"
-								></v-btn>
-							</div>
-						</template>
-					</v-data-table>
-				</v-card-text>
-			</v-card>
 			<v-dialog v-model="checksum_dialog.show" max-width="700px" scrollable>
 				<v-card v-if="checksum_dialog.item">
 					<v-toolbar color="primary" flat>
@@ -8636,6 +8724,135 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-card-actions>
 						<v-spacer></v-spacer>
 						<v-btn variant="text" @click="checksum_dialog.show = false">Close</v-btn>
+					</v-card-actions>
+				</v-card>
+			</v-dialog>
+			<v-dialog v-model="security_threat_dialog.show" max-width="800px" scrollable>
+				<v-card v-if="security_threat_dialog.threat">
+					<v-toolbar color="primary" flat>
+						<v-toolbar-title>
+							{{ security_threat_dialog.threat.title || security_threat_dialog.threat.slug }} v{{ security_threat_dialog.threat.version }}
+							<v-chip
+								:color="security_threat_dialog.threat.severity === 'critical' ? 'error' : 'warning'"
+								variant="flat"
+								size="small"
+								class="ml-2"
+							>{{ security_threat_dialog.threat.severity }}</v-chip>
+						</v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-btn icon="mdi-close" @click="security_threat_dialog.show = false"></v-btn>
+					</v-toolbar>
+					<v-card-text>
+						<div class="mb-4">
+							<span class="text-capitalize font-weight-medium">{{ security_threat_dialog.threat.type }}</span>
+							<span class="text-medium-emphasis"> &middot; {{ security_threat_dialog.threat.slug }} &middot; v{{ security_threat_dialog.threat.version }}</span>
+							<span class="text-medium-emphasis"> &middot; {{ security_threat_dialog.threat.affected_count }} affected site{{ security_threat_dialog.threat.affected_count !== 1 ? 's' : '' }}</span>
+						</div>
+						<div v-if="security_threat_dialog.threat.audit_id" class="mb-4">
+							<a :href="'https://anchor.host/security-finder/audits/' + security_threat_dialog.threat.audit_id" target="_blank" class="text-decoration-none">
+								View full audit in Security Finder <v-icon size="small">mdi-open-in-new</v-icon>
+							</a>
+						</div>
+						<v-divider class="mb-4"></v-divider>
+						<div v-if="security_threat_dialog.threat.findings && security_threat_dialog.threat.findings.length > 0" class="mb-4">
+							<h4 class="text-subtitle-1 mb-2">Findings</h4>
+							<v-list density="compact">
+								<v-list-item
+									v-for="(finding, index) in security_threat_dialog.threat.findings"
+									:key="'finding-' + index"
+								>
+									<template v-slot:prepend>
+										<v-chip
+											:color="finding.severity === 'critical' ? 'error' : (finding.severity === 'high' ? 'warning' : (finding.severity === 'medium' ? 'orange' : 'grey'))"
+											variant="flat"
+											size="x-small"
+											class="mr-2"
+										>{{ finding.severity }}</v-chip>
+									</template>
+									<v-list-item-title>{{ finding.title }}</v-list-item-title>
+									<v-list-item-subtitle v-if="finding.vuln_type">{{ finding.vuln_type.replace(/_/g, ' ') }}</v-list-item-subtitle>
+								</v-list-item>
+							</v-list>
+						</div>
+						<div v-if="security_threat_dialog.threat.affected_sites && security_threat_dialog.threat.affected_sites.length > 0" class="mb-4">
+							<h4 class="text-subtitle-1 mb-2">Affected Sites ({{ security_threat_dialog.threat.affected_sites.length }})</h4>
+							<v-list density="compact">
+								<v-list-item
+									v-for="site in security_threat_dialog.threat.affected_sites"
+									:key="'site-' + site.site_id"
+								>
+									<template v-slot:prepend>
+										<v-icon size="small" color="primary">mdi-web</v-icon>
+									</template>
+									<v-list-item-title>
+										<a :href="'/account/sites/' + site.site_id" class="text-decoration-none">{{ site.name }}</a>
+									</v-list-item-title>
+									<v-list-item-subtitle>{{ site.home_url }}</v-list-item-subtitle>
+								</v-list-item>
+							</v-list>
+						</div>
+						<v-divider class="mb-4"></v-divider>
+						<h4 class="text-subtitle-1 mb-2">Notes</h4>
+						<v-list v-if="security_threat_dialog.threat.tracking.notes && security_threat_dialog.threat.tracking.notes.length > 0" density="compact" class="mb-2">
+							<v-list-item
+								v-for="(note, index) in security_threat_dialog.threat.tracking.notes"
+								:key="'note-' + index"
+							>
+								<v-list-item-title class="text-body-2">{{ note.note }}</v-list-item-title>
+								<v-list-item-subtitle>{{ pretty_timestamp( note.date ) }}</v-list-item-subtitle>
+							</v-list-item>
+						</v-list>
+						<div v-else class="text-medium-emphasis text-body-2 mb-2">No notes yet.</div>
+						<v-textarea
+							v-model="security_threat_note_text"
+							label="Add a note"
+							rows="2"
+							variant="outlined"
+							density="compact"
+							hide-details
+							class="mb-2"
+						></v-textarea>
+						<v-btn
+							color="primary"
+							size="small"
+							variant="flat"
+							:disabled="!security_threat_note_text.trim()"
+							@click="addThreatNote(security_threat_dialog.threat)"
+						>Add Note</v-btn>
+					</v-card-text>
+					<v-divider></v-divider>
+					<v-card-actions>
+						<v-btn
+							v-if="security_threat_dialog.threat.tracking.status !== 'resolved'"
+							color="success"
+							variant="flat"
+							@click="security_threat_resolve_confirm = true"
+						>Mark Resolved</v-btn>
+						<v-spacer></v-spacer>
+						<v-btn variant="text" @click="security_threat_dialog.show = false">Close</v-btn>
+					</v-card-actions>
+				</v-card>
+			</v-dialog>
+			<v-dialog v-model="security_threat_resolve_confirm" max-width="500px">
+				<v-card>
+					<v-toolbar color="success" flat>
+						<v-toolbar-title>Resolve Threat</v-toolbar-title>
+					</v-toolbar>
+					<v-card-text>
+						<p class="mb-4">This will mark the threat as resolved and create a process log entry on each affected site's timeline.</p>
+						<v-textarea
+							v-model="security_threat_resolve_note"
+							label="Resolution note (optional)"
+							rows="2"
+							variant="outlined"
+							density="compact"
+							hide-details
+						></v-textarea>
+					</v-card-text>
+					<v-card-actions>
+						<v-spacer></v-spacer>
+						<v-btn variant="text" @click="security_threat_resolve_confirm = false">Cancel</v-btn>
+						<v-btn color="success" variant="flat" @click="resolveThreat(security_threat_dialog.threat)">Confirm Resolve</v-btn>
 					</v-card-actions>
 				</v-card>
 			</v-dialog>
@@ -8748,6 +8965,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-tab>
 						<v-tab :key="5" value="tab-Billing-Pending-ACH" v-if="role == 'administrator' && pending_ach_verifications.length > 0">
 							Pending ACH <v-chip size="x-small" color="warning" class="ml-1">{{ pending_ach_verifications.length }}</v-chip>
+						</v-tab>
+						<v-tab :key="6" value="tab-Billing-Subscriptions" v-if="role == 'administrator' && configurations.mode == 'hosting'">
+							Subscriptions <v-icon size="24" class="ml-1">mdi-repeat</v-icon>
 						</v-tab>
 					</v-tabs>
 					</v-toolbar>
@@ -9059,6 +9279,69 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								</v-card>
 							</v-dialog>
 						</v-window-item>
+						<!-- Admin: Subscriptions -->
+						<v-window-item value="tab-Billing-Subscriptions" :transition="false" :reverse-transition="false" v-if="role == 'administrator'">
+							<v-toolbar flat color="transparent">
+								<v-toolbar-title>Listing {{ subscriptions.length }} subscriptions</v-toolbar-title>
+								<v-spacer></v-spacer>
+								<v-tooltip location="top">
+									<template v-slot:activator="{ props }">
+										<v-btn icon="mdi-poll" @click="toggle_plan = !toggle_plan" v-bind="props" variant="text"></v-btn>
+									</template>
+									<span>View reports</span>
+								</v-tooltip>
+							</v-toolbar>
+							<v-data-table
+								:loading="subscriptions_loading"
+								:headers="[
+									{ title: 'Name', key: 'name' },
+									{ title: 'Type', key: 'billing_mode' },
+									{ title: 'Interval', key: 'interval' },
+									{ title: 'Next Renewal', key: 'next_renewal' },
+									{ title: 'Price', key: 'total', width: '100px', align: 'end' }]"
+								:items="subscriptions"
+								:search="subscription_search"
+								:items-per-page="100"
+								:items-per-page-options="[100,250,500,{'title':'All','value':-1}]"
+								v-show="toggle_plan == true"
+								hover
+								density="comfortable"
+								@click:row="(event, { item }) => goToPath(`/subscription/${item.account_id}`)"
+								style="cursor:pointer;"
+							>
+								<template v-slot:top>
+									<v-card-text>
+										<v-row>
+											<v-col></v-col>
+											<v-col cols="12" md="4">
+												<v-text-field
+													class="mx-4"
+													v-model="subscription_search"
+													append-inner-icon="mdi-magnify"
+													label="Search"
+													single-line
+													clearable
+													hide-details
+													variant="underlined"
+												></v-text-field>
+											</v-col>
+										</v-row>
+									</v-card-text>
+								</template>
+								<template v-slot:item.billing_mode="{ item }">
+									<v-chip size="x-small" label class="text-uppercase">{{ item.billing_mode || 'Standard' }}</v-chip>
+								</template>
+								<template v-slot:item.interval="{ item }">
+									{{ intervalLabel( item.interval ) }}
+								</template>
+								<template v-slot:item.total="{ item }">
+									${{ item.total }}
+								</template>
+							</v-data-table>
+							<div id="plan_chart"></div>
+							<v-list-subheader>{{ revenue_estimated_total() }}</v-list-subheader>
+							<div id="plan_chart_transactions"></div>
+						</v-window-item>
 					</v-window>
 				</div>
 				<div v-show="dialog_billing.step == 2">
@@ -9242,64 +9525,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</div>
 				</v-container>
 			</v-card>
-			<v-card v-if="route == 'defaults' && role == 'administrator'" flat border="thin" rounded="xl">
-				<v-toolbar flat color="transparent">
-					<v-toolbar-title>Site Defaults</v-toolbar-title>
-					<v-spacer></v-spacer>
-				</v-toolbar>
-				<v-card-text>
-				<v-alert variant="tonal" type="info" class="mb-4 mt-4">Configure default settings will can be applied by running the <strong>Deploy Defaults</strong> script.</v-alert>
-				<v-row wrap>
-					<v-col cols="6" pr-2>
-					<v-text-field :model-value="defaults.email" @update:model-value="defaults.email = $event" label="Default Email" required></v-text-field>
-					</v-col>
-					<v-col cols="6" pl-2>
-					<v-autocomplete :items="timezones" label="Default Timezone" v-model="defaults.timezone"></v-autocomplete>
-					</v-col>
-				</v-row>
-				<v-row wrap>
-					<v-col>
-					<v-autocomplete label="Default Recipes" v-model="defaults.recipes" ref="default_recipes" :items="recipes" item-title="title" item-value="recipe_id" multiple chips closable-chips></v-autocomplete>
-					</v-col>
-				</v-row>
-				<span class="body-2">Default Users</span>
-				<v-data-table :items="defaults.users" hide-default-header hide-default-footer v-if="typeof defaults.users == 'object'">
-				<template v-slot:body="{ items }">
-					<tr v-for="(item, index) in items" style="border-top: 0px;">
-						<td class="pa-1">
-						<v-text-field variant="underlined" :model-value="item.username" @update:model-value="defaults.users[index].username = $event" label="Username"></v-text-field>
-						</td>
-						<td class="pa-1">
-						<v-text-field variant="underlined" :model-value="item.email" @update:model-value="defaults.users[index].email = $event" label="Email"></v-text-field>
-						</td>
-						<td class="pa-1">
-						<v-text-field variant="underlined" :model-value="item.first_name" @update:model-value="defaults.users[index].first_name = $event" label="First Name"></v-text-field>
-						</td>
-						<td class="pa-1">
-						<v-text-field variant="underlined" :model-value="item.last_name" @update:model-value="defaults.users[index].last_name = $event" label="Last Name"></v-text-field>
-						</td>
-						<td class="pa-1" style="width:145px;">
-						<v-select variant="underlined" :model-value="item.role" v-model="defaults.users[index].role" :items="roles" label="Role" item-title="name"></v-select>
-						</td>
-						<td class="pa-1" style="width: 60px;">
-							<v-btn variant="text" icon="mdi-delete" color="primary" @click="deleteGlobalUserValue( index )"></v-btn>
-						</td>
-					</tr>
-				</template>
-				</v-data-table>
-
-				<v-row>
-				<v-col cols="12">
-					<v-btn variant="tonal" size="small" @click="addGlobalDefaultsUser()" class="mt-3">Add Additional User</v-btn>
-				</v-col>
-				<v-col cols="12">
-					<v-btn color="primary" @click="saveGlobalDefaults()">
-					Save Changes
-					</v-btn>
-				</v-col>
-				</v-card-text>
-
-			</v-card>
 			<v-card v-if="route == 'keys'" flat border="thin" rounded="xl">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Your SSH keys</v-toolbar-title>
@@ -9431,16 +9656,23 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card>
 				</v-dialog>
 			</v-card>
-			<v-card v-if="route == 'reports' && role == 'administrator'" flat border="thin" rounded="xl" class="mx-auto" max-width="900">
+			<v-card v-if="route == 'reports'" flat border="thin" rounded="xl" class="mx-auto" max-width="900">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Maintenance Reports</v-toolbar-title>
 					<v-spacer></v-spacer>
 				</v-toolbar>
 				<v-card-text>
-					<v-alert type="info" variant="tonal" class="mb-6">
+					<v-btn-toggle v-model="report.mode" mandatory class="mb-6" density="comfortable" color="primary" variant="outlined">
+						<v-btn value="site" prepend-icon="mdi-web">Site Report</v-btn>
+						<v-btn value="account" prepend-icon="mdi-domain" v-if="role == 'administrator'">Account Report</v-btn>
+					</v-btn-toggle>
+					<v-alert type="info" variant="tonal" class="mb-6" v-if="report.mode == 'site'">
 						Generate maintenance reports for your clients. Select one or more sites, choose a date range for stats, and send a summary email.
 					</v-alert>
-					<v-row>
+					<v-alert type="info" variant="tonal" class="mb-6" v-if="report.mode == 'account'">
+						Generate an account-wide maintenance summary. Shows a sites overview table and unified work log across all active sites.
+					</v-alert>
+					<v-row v-if="report.mode == 'site'">
 						<v-col cols="12">
 							<v-autocomplete
 								v-model="report.site_ids"
@@ -9460,6 +9692,21 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									<v-chip v-bind="props" :text="item.raw.name" size="small"></v-chip>
 								</template>
 							</v-autocomplete>
+						</v-col>
+					</v-row>
+					<v-row v-if="report.mode == 'account'">
+						<v-col cols="12">
+							<v-autocomplete
+								v-model="report.account_id"
+								:items="accounts"
+								item-title="name"
+								item-value="account_id"
+								label="Select Account"
+								variant="outlined"
+								density="comfortable"
+								prepend-inner-icon="mdi-domain"
+								@update:model-value="fetchAccountReportDefaultRecipient"
+							></v-autocomplete>
 						</v-col>
 					</v-row>
 					<v-row>
@@ -9506,7 +9753,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								variant="outlined"
 								prepend-icon="mdi-eye"
 								:loading="report.loading"
-								:disabled="report.site_ids.length === 0"
+								:disabled="report.mode == 'site' ? report.site_ids.length === 0 : !report.account_id"
 								@click="previewReport"
 							>
 								Preview Report
@@ -9518,7 +9765,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										color="primary"
 										variant="tonal"
 										prepend-icon="mdi-calendar-clock"
-										:disabled="report.site_ids.length === 0 || !report.recipient"
+										:disabled="(report.mode == 'site' ? report.site_ids.length === 0 : !report.account_id) || !report.recipient"
 										v-bind="props"
 									>
 										Schedule
@@ -9602,7 +9849,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					{{ report.snackbar_message }}
 				</v-snackbar>
 			</v-card>
-			<v-card v-if="route == 'reports' && role == 'administrator' && report.scheduled_reports.length > 0" flat border="thin" rounded="xl" class="mx-auto mt-6" max-width="900">
+			<v-card v-if="route == 'reports' && report.scheduled_reports.length > 0" flat border="thin" rounded="xl" class="mx-auto mt-6" max-width="900">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Scheduled Reports</v-toolbar-title>
 					<v-spacer></v-spacer>
@@ -9616,7 +9863,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-icon icon="mdi-calendar-clock" color="primary"></v-icon>
 						</template>
 						<v-list-item-title>
-							{{ scheduled.site_names.join(', ') }}
+							<v-chip size="x-small" class="mr-2" :color="scheduled.account_id ? 'secondary' : 'primary'" variant="tonal">{{ scheduled.account_id ? 'Account' : 'Site' }}</v-chip>
+							{{ scheduled.account_id ? scheduled.account_name : scheduled.site_names.join(', ') }}
 						</v-list-item-title>
 						<v-list-item-subtitle>
 							{{ scheduled.interval.charAt(0).toUpperCase() + scheduled.interval.slice(1) }} to {{ scheduled.recipient }}
@@ -9638,6 +9886,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-toolbar>
 					<v-card-text v-if="report.editing_report">
 						<v-autocomplete
+							v-if="!report.editing_report.account_id"
 							v-model="report.editing_report.site_ids"
 							:items="sites"
 							item-title="name"
@@ -9646,6 +9895,17 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							multiple
 							chips
 							closable-chips
+							variant="outlined"
+							density="comfortable"
+							class="mb-4"
+						></v-autocomplete>
+						<v-autocomplete
+							v-if="report.editing_report.account_id"
+							v-model="report.editing_report.account_id"
+							:items="accounts"
+							item-title="name"
+							item-value="account_id"
+							label="Select Account"
 							variant="outlined"
 							density="comfortable"
 							class="mb-4"
@@ -9826,76 +10086,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-row>
 				</v-card-text>
 			</v-card>
-			<v-card v-show="role == 'administrator' && route == 'subscriptions'" flat border="thin" rounded="xl">
-				<v-toolbar flat color="transparent">
-					<v-toolbar-title>Listing {{ subscriptions.length }} subscriptions</v-toolbar-title>
-					<v-spacer></v-spacer>
-					<v-tooltip location="top">
-						<template v-slot:activator="{ props }">
-							<v-btn icon="mdi-poll" @click="toggle_plan = !toggle_plan" v-bind="props" variant="text"></v-btn>
-						</template>
-						<span>View reports</span>
-					</v-tooltip>
-				</v-toolbar>
-				
-				<v-data-table
-					:headers="[
-						{ title: 'Name', key: 'name' },
-						{ title: 'Type', key: 'billing_mode' },
-						{ title: 'Interval', key: 'interval' },
-						{ title: 'Next Renewal', key: 'next_renewal' },
-						{ title: 'Price', key: 'total', width: '100px', align: 'end' }]"
-					:items="subscriptions"
-					:search="subscription_search"
-					:items-per-page="100"
-					:items-per-page-options="[100,250,500,{'title':'All','value':-1}]"
-					v-show="toggle_plan == true"
-					hover
-                    density="comfortable"
-					@click:row="(event, { item }) => goToPath(`/subscription/${item.account_id}`)"
-					style="cursor:pointer;"
-				>
-					<template v-slot:top>
-						<v-card-text>
-							<v-row>
-								<v-col></v-col>
-								<v-col cols="12" md="4">
-									<v-text-field 
-										class="mx-4" 
-										v-model="subscription_search" 
-										autofocus 
-										append-inner-icon="mdi-magnify" 
-										label="Search" 
-										single-line 
-										clearable 
-										hide-details
-										variant="underlined"
-									></v-text-field>
-								</v-col>
-							</v-row>
-						</v-card-text>
-					</template>
-
-                    <template v-slot:item.billing_mode="{ item }">
-                        <v-chip size="x-small" label class="text-uppercase">{{ item.billing_mode || 'Standard' }}</v-chip>
-					</template>
-
-					<template v-slot:item.interval="{ item }">
-						{{ intervalLabel( item.interval ) }}
-					</template>
-
-					<template v-slot:item.total="{ item }">
-						${{ item.total }}
-					</template>
-				</v-data-table>
-
-				<div id="plan_chart"></div>
-				<v-list-subheader>{{ revenue_estimated_total() }}</v-list-subheader>
-				<div id="plan_chart_transactions"></div>
-			</v-card>
             <v-card v-if="role == 'administrator' && route == 'subscription'" flat border="thin" rounded="xl">
                 <v-toolbar flat color="transparent">
-                    <v-btn icon="mdi-arrow-left" @click="goToPath('/subscriptions')" variant="text"></v-btn>
+                    <v-btn icon="mdi-arrow-left" @click="goToPath('/billing')" variant="text"></v-btn>
                     <v-toolbar-title v-if="view_subscription.loading">Loading...</v-toolbar-title>
                     <v-toolbar-title v-else>
                         {{ view_subscription.data.account.name }} 
@@ -10137,7 +10330,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
                                     </v-list-item>
                                 </v-list>
                                 <v-card-actions>
-                                    <v-btn block variant="tonal" @click="goToPath(`/accounts/${view_subscription.data.account.id}`)">View Account</v-btn>
+                                    <v-btn block variant="tonal" :href="`${configurations.path}accounts/${view_subscription.data.account.id}`" @click.prevent="goToPath(`/accounts/${view_subscription.data.account.id}`)">View Account</v-btn>
                                 </v-card-actions>
                             </v-card>
                         </v-col>
@@ -10891,6 +11084,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								</v-card-text>
 							</v-card>
 						</v-menu>
+						<v-btn v-if="item.switch_to_url" variant="text" size="small" :href="item.switch_to_url" icon="mdi-account-switch"></v-btn>
 						<v-btn variant="text" color="primary" @click="editUser( item.user_id )" icon="mdi-pencil" size="small"></v-btn>
 					</template>
 				</v-data-table>
@@ -11796,12 +11990,19 @@ const app = createApp({
 		configurations: <?php echo json_encode( ( new CaptainCore\Configurations )->get() ); ?>,
 		configurations_step: 0,
 		configurations_loading: true,
+		security_tab: "vulnerabilities",
 		web_risk_logs: [],
 		web_risk_logs_loading: false,
 		web_risk_dialog: { show: false, log: null },
 		checksum_failures: [],
 		checksum_failures_loading: false,
 		checksum_dialog: { show: false, item: null },
+		security_threats: [],
+		security_threats_loading: false,
+		security_threat_dialog: { show: false, threat: null },
+		security_threat_note_text: "",
+		security_threat_resolve_confirm: false,
+		security_threat_resolve_note: "",
 		activity_logs: { items: [], total: 0, page: 1, pages: 0 },
 		activity_logs_loading: false,
 		activity_logs_options: { page: 1, itemsPerPage: 50 },
@@ -11917,9 +12118,11 @@ const app = createApp({
 			assign_account_id: null
 		},
 		report: {
+			mode: "site",
 			loading: false,
 			sending: false,
 			site_ids: [],
+			account_id: null,
 			start_date: (() => {
 				const now = new Date();
 				const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -12144,18 +12347,14 @@ const app = createApp({
 			'/cookbook': 'cookbook',
 			'/configurations': 'configurations',
 			'/connect': 'connect',
-			'/defaults': 'defaults',
 			'/domains': 'domains',
 			'/handbook': 'handbook',
-			'/health': 'health',
-			'/web-risk': 'web-risk',
-			'/checksum-failures': 'checksum-failures',
+			'/security': 'security',
 			'/keys': 'keys',
 			'/login': 'login',
 			'/profile' : 'profile',
 			'/reports': 'reports',
 			'/sites': 'sites',
-			'/subscriptions': 'subscriptions',
 			'/subscription': 'subscription',
 			'/users': 'users',
 			'/activity-logs': 'activity-logs',
@@ -12258,6 +12457,8 @@ const app = createApp({
 		quicksave_search_field: "name",
 		account_search: "",
 		subscription_search: "",
+		subscription_transactions: null,
+		subscriptions_loading: false,
 		revenue_estimated: [],
 		mailgun: {
             subdomainDialog: false,
@@ -12478,6 +12679,11 @@ const app = createApp({
 		},
 		backupModeFilter() {
 			this.filterSites();
+		},
+		billing_tabs(val) {
+			if (val === 'tab-Billing-Subscriptions') {
+				this.renderSubscriptionCharts();
+			}
 		},
 		filter_logic() {
 			this.filterSites();
@@ -13087,9 +13293,6 @@ const app = createApp({
 			
 			return billing_address
 		},
-		filterSitesWithErrors() {
-			return this.sites.filter( s => s.console_errors != "" )
-		},
 		filterSitesWithConnectionErrors() {
 			return this.sites.filter( s => s.connection_errors != "" )
 		},
@@ -13423,12 +13626,6 @@ const app = createApp({
 				this.fetchKeys();
 			}
 
-			if (this.route == "defaults") {
-				this.selected_nav = "";
-				this.loading_page = false;
-				this.fetchDefaults();
-			}
-
 			if (this.route == "accounts") {
 				this.selected_nav = "accounts";
 				this.loading_page = false;
@@ -13436,19 +13633,17 @@ const app = createApp({
 
 			if (this.route == "billing") {
 				this.fetchBilling();
+				if (this.role == "administrator") {
+					this.fetchSubscriptions();
+				}
 				this.selected_nav = "billing";
-				this.loading_page = false;
-			}
-
-			if (this.route == "subscriptions") {
-				this.fetchSubscriptions();
-				this.selected_nav = "";
 				this.loading_page = false;
 			}
 
 			if (this.route == "configurations") {
 				this.fetchConfigurations();
 				this.fetchProviders();
+				this.fetchDefaults();
 				this.loading_page = false;
 				this.selected_nav = "";
 			}
@@ -13459,20 +13654,10 @@ const app = createApp({
 				this.fetchSites();
 			}
 
-			if (this.route == "health") {
-				if (this.sites.length == 0) this.loading_page = true;
-				this.selected_nav = "";
-				this.fetchSites();
-			}
-
-			if (this.route == "web-risk") {
+			if (this.route == "security") {
 				this.fetchWebRiskLogs();
-				this.loading_page = false;
-				this.selected_nav = "";
-			}
-
-			if (this.route == "checksum-failures") {
 				this.fetchChecksumFailures();
+				this.fetchSecurityThreats();
 				this.loading_page = false;
 				this.selected_nav = "";
 			}
@@ -13539,11 +13724,6 @@ const app = createApp({
 				this.showInvoice(this.route_path);
 				return;
 			}
-
-			if (this.route === "subscriptions") {
-                this.fetchSubscriptions();
-                return;
-            }
 
             if (this.route === "subscription") {
                 const accountId = this.route_path;
@@ -13731,15 +13911,40 @@ const app = createApp({
 				console.error("Error fetching default recipient:", error);
 			});
 		},
+		fetchAccountReportDefaultRecipient() {
+			if (!this.report.account_id) {
+				this.report.recipient = "";
+				return;
+			}
+			axios.post('/wp-json/captaincore/v1/account-report/default-recipient', {
+				account_id: this.report.account_id
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				if (response.data.email) {
+					this.report.recipient = response.data.email;
+				}
+			})
+			.catch(error => {
+				console.error("Error fetching default recipient:", error);
+			});
+		},
 		previewReport() {
-			if (this.report.site_ids.length === 0) return;
+			if (this.report.mode === 'site' && this.report.site_ids.length === 0) return;
+			if (this.report.mode === 'account' && !this.report.account_id) return;
 
 			this.report.loading = true;
-			axios.post('/wp-json/captaincore/v1/report/preview', {
-				site_ids: this.report.site_ids,
-				start_date: this.report.start_date,
-				end_date: this.report.end_date
-			}, {
+
+			const endpoint = this.report.mode === 'account'
+				? '/wp-json/captaincore/v1/account-report/preview'
+				: '/wp-json/captaincore/v1/report/preview';
+
+			const payload = this.report.mode === 'account'
+				? { account_id: this.report.account_id, start_date: this.report.start_date, end_date: this.report.end_date }
+				: { site_ids: this.report.site_ids, start_date: this.report.start_date, end_date: this.report.end_date };
+
+			axios.post(endpoint, payload, {
 				headers: { 'X-WP-Nonce': this.wp_nonce }
 			})
 			.then(response => {
@@ -13755,15 +13960,19 @@ const app = createApp({
 			});
 		},
 		sendReport() {
-			if (this.report.site_ids.length === 0 || !this.report.recipient) return;
+			if (!this.report.recipient) return;
 
 			this.report.sending = true;
-			axios.post('/wp-json/captaincore/v1/report/send', {
-				site_ids: this.report.site_ids,
-				start_date: this.report.start_date,
-				end_date: this.report.end_date,
-				recipient: this.report.recipient
-			}, {
+
+			const endpoint = this.report.mode === 'account'
+				? '/wp-json/captaincore/v1/account-report/send'
+				: '/wp-json/captaincore/v1/report/send';
+
+			const payload = this.report.mode === 'account'
+				? { account_id: this.report.account_id, start_date: this.report.start_date, end_date: this.report.end_date, recipient: this.report.recipient }
+				: { site_ids: this.report.site_ids, start_date: this.report.start_date, end_date: this.report.end_date, recipient: this.report.recipient };
+
+			axios.post(endpoint, payload, {
 				headers: { 'X-WP-Nonce': this.wp_nonce }
 			})
 			.then(response => {
@@ -13802,11 +14011,19 @@ const app = createApp({
 			});
 		},
 		scheduleReport() {
-			axios.post('/wp-json/captaincore/v1/scheduled-reports', {
-				site_ids: this.report.site_ids,
+			const payload = {
 				interval: this.report.schedule_interval,
 				recipient: this.report.recipient
-			}, {
+			};
+
+			if (this.report.mode === 'account') {
+				payload.account_id = this.report.account_id;
+				payload.site_ids = [];
+			} else {
+				payload.site_ids = this.report.site_ids;
+			}
+
+			axios.post('/wp-json/captaincore/v1/scheduled-reports', payload, {
 				headers: { 'X-WP-Nonce': this.wp_nonce }
 			})
 			.then(response => {
@@ -13825,11 +14042,18 @@ const app = createApp({
 		},
 		updateScheduledReport() {
 			const id = this.report.editing_report.scheduled_report_id;
-			axios.put(`/wp-json/captaincore/v1/scheduled-reports/${id}`, {
-				site_ids: this.report.editing_report.site_ids,
+			const payload = {
 				interval: this.report.editing_report.interval,
 				recipient: this.report.editing_report.recipient
-			}, {
+			};
+
+			if (this.report.editing_report.account_id) {
+				payload.account_id = this.report.editing_report.account_id;
+			} else {
+				payload.site_ids = this.report.editing_report.site_ids;
+			}
+
+			axios.put(`/wp-json/captaincore/v1/scheduled-reports/${id}`, payload, {
 				headers: { 'X-WP-Nonce': this.wp_nonce }
 			})
 			.then(response => {
@@ -15870,6 +16094,75 @@ const app = createApp({
 				this.checksum_failures_loading = false;
 			});
 		},
+		fetchSecurityThreats() {
+			this.security_threats_loading = true;
+			axios.get(
+			'/wp-json/captaincore/v1/security-threats', {
+				headers: {'X-WP-Nonce':this.wp_nonce}
+			})
+			.then(response => {
+				this.security_threats = response.data.threats || [];
+				this.security_threats_loading = false;
+			})
+			.catch(error => {
+				this.security_threats_loading = false;
+			});
+		},
+		updateThreatStatus(threat, status) {
+			if (status === 'resolved') {
+				this.security_threat_dialog.threat = threat;
+				this.security_threat_dialog.show = true;
+				this.security_threat_resolve_confirm = true;
+				return;
+			}
+			axios.post(
+			'/wp-json/captaincore/v1/security-threats/track', {
+				slug: threat.slug,
+				version: threat.version,
+				type: threat.type,
+				status: status
+			}, {
+				headers: {'X-WP-Nonce':this.wp_nonce}
+			})
+			.then(response => {
+				threat.tracking.status = status;
+			});
+		},
+		addThreatNote(threat) {
+			let note = this.security_threat_note_text.trim();
+			if (!note) return;
+			axios.post(
+			'/wp-json/captaincore/v1/security-threats/note', {
+				slug: threat.slug,
+				version: threat.version,
+				type: threat.type,
+				note: note
+			}, {
+				headers: {'X-WP-Nonce':this.wp_nonce}
+			})
+			.then(response => {
+				threat.tracking.notes = JSON.parse(response.data.notes || '[]');
+				this.security_threat_note_text = "";
+			});
+		},
+		resolveThreat(threat) {
+			let note = this.security_threat_resolve_note.trim();
+			axios.post(
+			'/wp-json/captaincore/v1/security-threats/resolve', {
+				slug: threat.slug,
+				version: threat.version,
+				type: threat.type,
+				note: note
+			}, {
+				headers: {'X-WP-Nonce':this.wp_nonce}
+			})
+			.then(response => {
+				this.security_threat_resolve_confirm = false;
+				this.security_threat_resolve_note = "";
+				this.security_threat_dialog.show = false;
+				this.fetchSecurityThreats();
+			});
+		},
 		fetchActivityLogs() {
 			this.activity_logs_loading = true;
 			let params = new URLSearchParams();
@@ -15909,70 +16202,16 @@ const app = createApp({
 			});
 		},
 		fetchSubscriptions() {
+			if (this.subscriptions.length === 0) this.subscriptions_loading = true
 			axios.get(
 			'/wp-json/captaincore/v1/upcoming_subscriptions', {
 				headers: {'X-WP-Nonce':this.wp_nonce}
 			}).then(response => {
-				revenue      = response.data.revenue
-				transactions = response.data.transactions
-
-				this.revenue_estimated = revenue
-				
-				new frappe.Chart( "#plan_chart", {
-					data: {
-						labels: Object.keys( revenue ),
-						datasets: [
-							{
-								name: "Revenue",
-								values: Object.values( revenue ),
-							},
-						],
-						yRegions: [
-							{ label: "", start: 0, end: 50, options: { labelPos: "right" } }
-						],
-					},
-					tooltipOptions: {
-						formatTooltipY: d => '$' + d,
-					},
-					type: "bar",
-					height: 270,
-					colors: [ this.configurations.colors.primary, this.configurations.colors.success ],
-					barOptions: {
-						spaceRatio: 0.1,
-					},
-					axisOptions: {
-						xAxisMode: "tick",
-						xIsSeries: true
-					},
-					lineOptions: {
-						regionFill: 1 // default: 0
-					},
-				})
-				new frappe.Chart( "#plan_chart_transactions", {
-					data: {
-						labels: Object.keys( revenue ),
-						datasets: [
-							{
-								name: "Transactions",
-								values: Object.values( transactions ),
-							},
-						],
-					},
-					type: "bar",
-					height: 270,
-					colors: [ this.configurations.colors.primary, this.configurations.colors.success ],
-					barOptions: {
-						spaceRatio: 0.1,
-					},
-					axisOptions: {
-						xAxisMode: "tick",
-						xIsSeries: true
-					},
-					lineOptions: {
-						regionFill: 1 // default: 0
-					},
-				})
-
+				this.revenue_estimated = response.data.revenue
+				this.subscription_transactions = response.data.transactions
+				if (this.billing_tabs === 'tab-Billing-Subscriptions') {
+					this.renderSubscriptionCharts()
+				}
 			})
 
 			axios.get(
@@ -15981,6 +16220,44 @@ const app = createApp({
 			})
 			.then(response => {
 				this.subscriptions = response.data
+				this.subscriptions_loading = false
+			})
+		},
+		renderSubscriptionCharts() {
+			if (!this.revenue_estimated) return
+			this.$nextTick(() => {
+				const el = document.getElementById('plan_chart')
+				if (!el) return
+				el.innerHTML = ''
+				document.getElementById('plan_chart_transactions').innerHTML = ''
+				const revenue = this.revenue_estimated
+				const transactions = this.subscription_transactions
+				new frappe.Chart( "#plan_chart", {
+					data: {
+						labels: Object.keys( revenue ),
+						datasets: [{ name: "Revenue", values: Object.values( revenue ) }],
+						yRegions: [{ label: "", start: 0, end: 50, options: { labelPos: "right" } }],
+					},
+					tooltipOptions: { formatTooltipY: d => '$' + d },
+					type: "bar",
+					height: 270,
+					colors: [ this.configurations.colors.primary, this.configurations.colors.success ],
+					barOptions: { spaceRatio: 0.1 },
+					axisOptions: { xAxisMode: "tick", xIsSeries: true },
+					lineOptions: { regionFill: 1 },
+				})
+				new frappe.Chart( "#plan_chart_transactions", {
+					data: {
+						labels: Object.keys( revenue ),
+						datasets: [{ name: "Transactions", values: Object.values( transactions ) }],
+					},
+					type: "bar",
+					height: 270,
+					colors: [ this.configurations.colors.primary, this.configurations.colors.success ],
+					barOptions: { spaceRatio: 0.1 },
+					axisOptions: { xAxisMode: "tick", xIsSeries: true },
+					lineOptions: { regionFill: 1 },
+				})
 			})
 		},
 		fetchBilling() {
@@ -18796,28 +19073,6 @@ const app = createApp({
 				.then(response => {
 					window.open( response.data )
 				});
-		},
-		scanErrors( site ) {
-			site.loading = true
-
-			var data = {
-				post_id: site.site_id,
-				command: 'scan-errors',
-			};
-
-			description = "Scanning " + site.name + " for errors";
-
-			// Start job
-			job_id = Math.round((new Date()).getTime());
-			this.jobs.push({ "job_id": job_id, "description": description, "status": "queued", stream: [], "command": "scanErrors", "site_id": site.site_id });
-
-			axios.post( '/wp-json/captaincore/v1/sites/cli', data, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
-				.then( response => {
-					// Updates job id with responsed background job id
-					this.jobs.filter(job => job.job_id == job_id)[0].job_id = response.data;
-					this.runCommand( response.data );
-				})
-				.catch( error => console.log( error ) );
 		},
 		showSiteMigration( site_id ){
 			site = this.dialog_site.site
@@ -22519,13 +22774,6 @@ const app = createApp({
 					self.dialog_site.syncing = false;
 				}
 
-				if ( job.command == "scanErrors" ) {
-					self.fetchSiteInfo( job.site_id )
-					if (self.sites.filter( s => s.site_id == job.site_id )[0]) {
-						self.sites.filter( s => s.site_id == job.site_id )[0].loading = false
-					}
-				}
-
 				if ( job.command == "deleteUser" ) {
 					const environment = job.environment || "Production";
 					const syncDescription = "Syncing " + environment.toLowerCase() + " info";
@@ -23317,6 +23565,8 @@ const app = createApp({
 			this.applied_theme_filters = [];
 			this.applied_plugin_filters = [];
 			this.applied_core_filters = [];
+			this.filter_version_mode = "include";
+			this.filter_status_mode = "include";
 			this.filtered_environment_ids = []; // Clear server results
 			
 			// Manually reset all sites to be visible.
