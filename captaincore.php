@@ -1225,6 +1225,50 @@ function captaincore_process_logs_create_func( WP_REST_Request $request ) {
 	return $timelines;
 }
 
+function captaincore_site_lookup_func( WP_REST_Request $request ) {
+	$domain = $request->get_param( 'domain' );
+	if ( empty( $domain ) ) {
+		return new WP_Error( 'missing_domain', 'A domain parameter is required.', [ 'status' => 400 ] );
+	}
+
+	// Strip protocol and trailing slash for flexible matching
+	$domain = preg_replace( '#^https?://#', '', rtrim( $domain, '/' ) );
+
+	// Search environments by home_url (try https, http, with/without www)
+	$variants = [
+		"https://{$domain}",
+		"http://{$domain}",
+		"https://www.{$domain}",
+		"http://www.{$domain}",
+	];
+
+	// Also handle if domain already has www
+	if ( str_starts_with( $domain, 'www.' ) ) {
+		$bare = substr( $domain, 4 );
+		$variants = array_merge( $variants, [
+			"https://{$bare}",
+			"http://{$bare}",
+		]);
+	}
+
+	foreach ( $variants as $url ) {
+		$results = ( new CaptainCore\Environments )->where( [ "home_url" => $url ] );
+		if ( ! empty( $results ) ) {
+			$env  = $results[0];
+			$site = CaptainCore\Sites::get( $env->site_id );
+			return [
+				'site_id'        => (int) $env->site_id,
+				'environment_id' => (int) $env->environment_id,
+				'environment'    => $env->environment,
+				'name'           => $site->name ?? $domain,
+				'home_url'       => $env->home_url,
+			];
+		}
+	}
+
+	return new WP_Error( 'not_found', "No site found for domain: {$domain}", [ 'status' => 404 ] );
+}
+
 function captaincore_process_logs_get_func( WP_REST_Request $request ) {
 	$process_log_id = intval( $request['id'] );
 	$process_log    = ( new CaptainCore\ProcessLog( $process_log_id ) )->get();
@@ -5936,6 +5980,14 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
+		'captaincore/v1', '/site-lookup', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_lookup_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+		]
+	);
+
+	register_rest_route(
 		'captaincore/v1', '/process-logs', [
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_process_logs_create_func',
@@ -7946,6 +7998,49 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Security Patches endpoints
+	register_rest_route(
+		'captaincore/v1', '/security-patches', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_security_patches_register_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/security-patches', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_security_patches_list_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/security-patches/(?P<id>[\d]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_security_patches_delete_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/security-patches/check', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_security_patches_check_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false,
+		]
+	);
+
 	// Checksum Failures endpoint (admin only)
 	register_rest_route(
 		'captaincore/v1', '/checksum-failures', [
@@ -8700,6 +8795,58 @@ function captaincore_security_threats_resolve_func( WP_REST_Request $request ) {
 	$note    = sanitize_textarea_field( $request->get_param( 'note' ) ?? '' );
 
 	return CaptainCore\SecurityThreats::resolve( $slug, $version, $type, $note );
+}
+
+/**
+ * REST endpoint: Register or update a security patch.
+ */
+function captaincore_security_patches_register_func( WP_REST_Request $request ) {
+	$data = [
+		'slug'            => sanitize_text_field( $request->get_param( 'slug' ) ),
+		'version'         => sanitize_text_field( $request->get_param( 'version' ) ),
+		'type'            => sanitize_text_field( $request->get_param( 'type' ) ?: 'plugin' ),
+		'title'           => sanitize_text_field( $request->get_param( 'title' ) ),
+		'patched_version' => sanitize_text_field( $request->get_param( 'patched_version' ) ),
+		'download_url'    => esc_url_raw( $request->get_param( 'download_url' ) ),
+		'description'     => sanitize_textarea_field( $request->get_param( 'description' ) ?? '' ),
+		'severity'        => sanitize_text_field( $request->get_param( 'severity' ) ?? '' ),
+	];
+
+	if ( empty( $data['slug'] ) || empty( $data['version'] ) || empty( $data['patched_version'] ) || empty( $data['download_url'] ) ) {
+		return new WP_Error( 'missing_fields', 'slug, version, patched_version, and download_url are required.', [ 'status' => 400 ] );
+	}
+
+	return CaptainCore\SecurityPatches::register( $data );
+}
+
+/**
+ * REST endpoint: List all registered security patches.
+ */
+function captaincore_security_patches_list_func( WP_REST_Request $request ) {
+	return CaptainCore\SecurityPatches::all();
+}
+
+/**
+ * REST endpoint: Delete a security patch by ID.
+ */
+function captaincore_security_patches_delete_func( WP_REST_Request $request ) {
+	$id = absint( $request->get_param( 'id' ) );
+	CaptainCore\SecurityPatches::remove( $id );
+	return [ 'deleted' => true, 'id' => $id ];
+}
+
+/**
+ * REST endpoint: Check components for available security patches (public).
+ */
+function captaincore_security_patches_check_func( WP_REST_Request $request ) {
+	$body = $request->get_json_params();
+	$components = $body['components'] ?? [];
+
+	if ( empty( $components ) || ! is_array( $components ) ) {
+		return new WP_Error( 'missing_components', 'A components array is required.', [ 'status' => 400 ] );
+	}
+
+	return CaptainCore\SecurityPatches::check( $components );
 }
 
 /**
