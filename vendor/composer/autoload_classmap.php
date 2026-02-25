@@ -182,6 +182,8 @@ return array(
     'CaptainCore\\ScheduledReports' => $baseDir . '/app/ScheduledReports.php',
     'CaptainCore\\ScheduledReportsCLI' => $baseDir . '/app/ScheduledReportsCLI.php',
     'CaptainCore\\Scripts' => $baseDir . '/app/Scripts.php',
+    'CaptainCore\\SecurityPatch' => $baseDir . '/app/SecurityPatch.php',
+    'CaptainCore\\SecurityPatches' => $baseDir . '/app/SecurityPatches.php',
     'CaptainCore\\SecurityThreatTracking' => $baseDir . '/app/SecurityThreatTracking.php',
     'CaptainCore\\SecurityThreats' => $baseDir . '/app/SecurityThreats.php',
     'CaptainCore\\Site' => $baseDir . '/app/Site.php',

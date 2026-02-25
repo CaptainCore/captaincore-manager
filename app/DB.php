@@ -647,7 +647,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "42";
+        $required_version = (int) "43";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -1034,6 +1034,25 @@ class DB {
         KEY account_id (account_id),
         KEY entity_type (entity_type),
         KEY created_at (created_at)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_security_patch` (
+            security_patch_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            slug varchar(255) NOT NULL,
+            version varchar(50) NOT NULL,
+            type varchar(20) NOT NULL DEFAULT 'plugin',
+            title varchar(255) NOT NULL DEFAULT '',
+            patched_version varchar(50) NOT NULL,
+            download_url varchar(500) NOT NULL,
+            description longtext,
+            severity varchar(20) NOT NULL DEFAULT '',
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+        PRIMARY KEY  (security_patch_id),
+        UNIQUE KEY slug_version_type (slug, version, type),
+        KEY type (type)
         ) $charset_collate;";
 
         dbDelta($sql);

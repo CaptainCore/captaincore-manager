@@ -455,6 +455,14 @@ class SecurityThreats {
 		}
 		unset( $threat );
 
+		// Merge patch data
+		$patch_lookup = SecurityPatches::get_lookup();
+		foreach ( $result['threats'] as &$threat ) {
+			$key = "{$threat['type']}|{$threat['slug']}|{$threat['version']}";
+			$threat['patch'] = $patch_lookup[ $key ] ?? null;
+		}
+		unset( $threat );
+
 		// Recount severity summary for filtered results
 		$severity_summary = [ 'critical' => 0, 'high' => 0 ];
 		foreach ( $result['threats'] as $threat ) {

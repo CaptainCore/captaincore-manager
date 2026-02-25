@@ -8382,6 +8382,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</v-toolbar>
 				<v-tabs bg-color="primary" v-model="security_tab">
 					<v-tab value="vulnerabilities">Vulnerabilities</v-tab>
+					<v-tab value="patches">Patches</v-tab>
 					<v-tab value="web-risk">Web Risk</v-tab>
 					<v-tab value="checksum-failures">Checksum Failures</v-tab>
 				</v-tabs>
@@ -8427,6 +8428,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								</template>
 								<template v-slot:item.title="{ item }">
 									<strong>{{ item.title || item.slug }}</strong>
+									<v-chip v-if="item.patch" color="success" variant="flat" size="x-small" class="ml-1">Patch Available</v-chip>
 								</template>
 								<template v-slot:item.type="{ item }">
 									<span class="text-capitalize">{{ item.type }}</span>
@@ -8452,6 +8454,52 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										size="small"
 										@click="security_threat_dialog.threat = item; security_threat_dialog.show = true"
 									></v-btn>
+								</template>
+							</v-data-table>
+						</v-card-text>
+					</v-window-item>
+					<v-window-item value="patches" :transition="false" :reverse-transition="false">
+						<v-card-text class="pt-0">
+							<v-alert v-if="security_patches.length === 0 && !security_patches_loading" type="info" variant="tonal" class="mt-4">
+								No security patches registered yet.
+							</v-alert>
+							<v-data-table
+								v-if="security_patches.length > 0 || security_patches_loading"
+								:loading="security_patches_loading"
+								:headers="[
+									{ title: 'Severity', key: 'severity', width: '110px' },
+									{ title: 'Component', key: 'title' },
+									{ title: 'Type', key: 'type', width: '90px' },
+									{ title: 'Vulnerable Version', key: 'version', width: '160px' },
+									{ title: 'Patched Version', key: 'patched_version', width: '160px' },
+									{ title: 'Download', key: 'download_url', sortable: false },
+									{ title: 'Registered', key: 'created_at', width: '160px' }
+								]"
+								:items="security_patches"
+								:items-per-page="25"
+								density="comfortable"
+							>
+								<template v-slot:item.severity="{ item }">
+									<v-chip
+										:color="item.severity === 'critical' ? 'error' : (item.severity === 'high' ? 'warning' : 'grey')"
+										variant="flat"
+										size="small"
+									>{{ item.severity || 'n/a' }}</v-chip>
+								</template>
+								<template v-slot:item.title="{ item }">
+									<strong>{{ item.title || item.slug }}</strong>
+									<div class="text-caption text-medium-emphasis">{{ item.slug }}</div>
+								</template>
+								<template v-slot:item.type="{ item }">
+									<span class="text-capitalize">{{ item.type }}</span>
+								</template>
+								<template v-slot:item.download_url="{ item }">
+									<a :href="item.download_url" target="_blank" class="text-decoration-none">
+										<v-icon size="small" class="mr-1">mdi-download</v-icon>Download
+									</a>
+								</template>
+								<template v-slot:item.created_at="{ item }">
+									{{ pretty_timestamp( item.created_at ) }}
 								</template>
 							</v-data-table>
 						</v-card-text>
@@ -8753,6 +8801,15 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								View full audit in Security Finder <v-icon size="small">mdi-open-in-new</v-icon>
 							</a>
 						</div>
+						<v-alert v-if="security_threat_dialog.threat.patch" type="success" variant="tonal" class="mb-4">
+							<div class="font-weight-medium">Patch Available: v{{ security_threat_dialog.threat.patch.patched_version }}</div>
+							<div v-if="security_threat_dialog.threat.patch.description" class="text-body-2 mt-1">{{ security_threat_dialog.threat.patch.description }}</div>
+							<div class="mt-2">
+								<a :href="security_threat_dialog.threat.patch.download_url" target="_blank" class="text-decoration-none">
+									<v-icon size="small" class="mr-1">mdi-download</v-icon>Download patched version
+								</a>
+							</div>
+						</v-alert>
 						<v-divider class="mb-4"></v-divider>
 						<div v-if="security_threat_dialog.threat.findings && security_threat_dialog.threat.findings.length > 0" class="mb-4">
 							<h4 class="text-subtitle-1 mb-2">Findings</h4>
@@ -12008,6 +12065,8 @@ const app = createApp({
 		checksum_failures: [],
 		checksum_failures_loading: false,
 		checksum_dialog: { show: false, item: null },
+		security_patches: [],
+		security_patches_loading: false,
 		security_threats: [],
 		security_threats_loading: false,
 		security_threat_dialog: { show: false, threat: null },
@@ -13669,6 +13728,7 @@ const app = createApp({
 				this.fetchWebRiskLogs();
 				this.fetchChecksumFailures();
 				this.fetchSecurityThreats();
+				this.fetchSecurityPatches();
 				this.loading_page = false;
 				this.selected_nav = "";
 			}
@@ -16103,6 +16163,20 @@ const app = createApp({
 			})
 			.catch(error => {
 				this.checksum_failures_loading = false;
+			});
+		},
+		fetchSecurityPatches() {
+			this.security_patches_loading = true;
+			axios.get(
+			'/wp-json/captaincore/v1/security-patches', {
+				headers: {'X-WP-Nonce':this.wp_nonce}
+			})
+			.then(response => {
+				this.security_patches = response.data || [];
+				this.security_patches_loading = false;
+			})
+			.catch(error => {
+				this.security_patches_loading = false;
 			});
 		},
 		fetchSecurityThreats() {
