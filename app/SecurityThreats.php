@@ -105,7 +105,8 @@ class SecurityThreats {
 	 */
 	private static function has_local_tables() {
 		global $wpdb;
-		$result = $wpdb->get_var( "SHOW TABLES LIKE 'audits'" );
+		$table  = "{$wpdb->prefix}captaincore_sf_audits";
+		$result = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
 		return ! empty( $result );
 	}
 
@@ -118,6 +119,9 @@ class SecurityThreats {
 	private static function check_local( $inventory ) {
 		global $wpdb;
 
+		$components_t  = "{$wpdb->prefix}captaincore_sf_components";
+		$audits_t      = "{$wpdb->prefix}captaincore_sf_audits";
+		$findings_t    = "{$wpdb->prefix}captaincore_sf_findings";
 		$severity_rank = [ 'critical' => 4, 'high' => 3, 'medium' => 2, 'low' => 1, 'clean' => 0 ];
 		$threats       = [];
 
@@ -134,8 +138,8 @@ class SecurityThreats {
 			if ( $type === 'mu-plugin' && ( $version === '' || $version === null ) ) {
 				$component = $wpdb->get_row( $wpdb->prepare(
 					"SELECT c.*, a.audit_date, a.id AS audit_id
-					 FROM components c
-					 JOIN audits a ON c.audit_id = a.id
+					 FROM {$components_t} c
+					 JOIN {$audits_t} a ON c.audit_id = a.id
 					 WHERE c.slug = %s AND c.component_type = %s
 					 ORDER BY a.audit_date DESC LIMIT 1",
 					$slug, $type
@@ -144,8 +148,8 @@ class SecurityThreats {
 				if ( $type ) {
 					$component = $wpdb->get_row( $wpdb->prepare(
 						"SELECT c.*, a.audit_date, a.id AS audit_id
-						 FROM components c
-						 JOIN audits a ON c.audit_id = a.id
+						 FROM {$components_t} c
+						 JOIN {$audits_t} a ON c.audit_id = a.id
 						 WHERE c.slug = %s AND c.version = %s AND c.component_type = %s
 						 ORDER BY a.audit_date DESC LIMIT 1",
 						$slug, $version, $type
@@ -153,8 +157,8 @@ class SecurityThreats {
 				} else {
 					$component = $wpdb->get_row( $wpdb->prepare(
 						"SELECT c.*, a.audit_date, a.id AS audit_id
-						 FROM components c
-						 JOIN audits a ON c.audit_id = a.id
+						 FROM {$components_t} c
+						 JOIN {$audits_t} a ON c.audit_id = a.id
 						 WHERE c.slug = %s AND c.version = %s
 						 ORDER BY a.audit_date DESC LIMIT 1",
 						$slug, $version
@@ -171,7 +175,7 @@ class SecurityThreats {
 				"SELECT f.finding_code, f.severity, f.title, f.description,
 				        f.vuln_type, f.cve, f.cvss_score, f.recommendation,
 				        f.source, f.wordfence_link
-				 FROM findings f
+				 FROM {$findings_t} f
 				 WHERE f.component_id = %d
 				 ORDER BY FIELD(f.severity, 'critical', 'high', 'medium', 'low'),
 				          f.finding_code",
