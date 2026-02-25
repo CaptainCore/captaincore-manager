@@ -36,12 +36,6 @@ class ScanQueueCLI {
 		$format   = $assoc_args['format'] ?? 'table';
 		$show_all = isset( $assoc_args['all'] );
 
-		$api_url = self::api_url();
-		if ( ! $api_url ) {
-			\WP_CLI::error( 'SECURITY_FINDER_API_URL is not configured. Add it to wp-config.php.' );
-			return;
-		}
-
 		$quiet = $format !== 'table';
 		$log   = function( $msg ) use ( $quiet ) {
 			if ( ! $quiet ) { \WP_CLI::log( $msg ); }
@@ -52,7 +46,7 @@ class ScanQueueCLI {
 		$sites_data = self::gather_sites();
 		$log( sprintf( 'Found %d active production sites.', count( $sites_data ) ) );
 
-		// Step 2: Build payload for scan-queue API
+		// Step 2: Build site component lists and SSH map
 		$payload = [];
 		$ssh_map = []; // site_slug => ssh connection string
 		foreach ( $sites_data as $site ) {
@@ -119,37 +113,47 @@ class ScanQueueCLI {
 			}
 		}
 
-		// Step 3: Call Security Finder scan-queue API
+		// Step 3: Check audit coverage — try local MySQL tables, fall back to HTTP API
 		$log( 'Checking audit coverage via Security Finder...' );
+		$local_result = self::scan_queue_local( $payload, $log );
+		$all_queue    = $local_result !== false ? $local_result : null;
 
-		// Batch into chunks of 200 sites to avoid massive payloads
-		$all_queue = [];
-		$chunks    = array_chunk( $payload, 200 );
-		$progress  = $quiet ? null : \WP_CLI\Utils\make_progress_bar( 'Processing', count( $chunks ) );
+		if ( $all_queue === null ) {
+			// Fall back to HTTP API
+			$api_url = self::api_url();
+			if ( ! $api_url ) {
+				\WP_CLI::error( 'Security Finder tables not found and SECURITY_FINDER_API_URL is not configured.' );
+				return;
+			}
 
-		foreach ( $chunks as $chunk ) {
-			$response = wp_remote_post( $api_url . '/api.php?action=scan-queue', [
-				'headers'   => [ 'Content-Type' => 'application/json' ],
-				'body'      => wp_json_encode( $chunk ),
-				'timeout'   => 60,
-				'sslverify' => false,
-			] );
+			$all_queue = [];
+			$chunks    = array_chunk( $payload, 200 );
+			$progress  = $quiet ? null : \WP_CLI\Utils\make_progress_bar( 'Processing', count( $chunks ) );
 
-			if ( is_wp_error( $response ) ) {
-				\WP_CLI::warning( 'API error: ' . $response->get_error_message() );
+			foreach ( $chunks as $chunk ) {
+				$response = wp_remote_post( $api_url . '/api.php?action=scan-queue', [
+					'headers'   => [ 'Content-Type' => 'application/json' ],
+					'body'      => wp_json_encode( $chunk ),
+					'timeout'   => 60,
+					'sslverify' => false,
+				] );
+
+				if ( is_wp_error( $response ) ) {
+					\WP_CLI::warning( 'API error: ' . $response->get_error_message() );
+					if ( $progress ) { $progress->tick(); }
+					continue;
+				}
+
+				$body = json_decode( wp_remote_retrieve_body( $response ), true );
+				if ( ! empty( $body['queue'] ) ) {
+					$all_queue = array_merge( $all_queue, $body['queue'] );
+				}
+
 				if ( $progress ) { $progress->tick(); }
-				continue;
 			}
 
-			$body = json_decode( wp_remote_retrieve_body( $response ), true );
-			if ( ! empty( $body['queue'] ) ) {
-				$all_queue = array_merge( $all_queue, $body['queue'] );
-			}
-
-			if ( $progress ) { $progress->tick(); }
+			if ( $progress ) { $progress->finish(); }
 		}
-
-		if ( $progress ) { $progress->finish(); }
 
 		if ( empty( $all_queue ) ) {
 			\WP_CLI::success( 'All sites are fully covered! No audits needed.' );
@@ -226,6 +230,98 @@ class ScanQueueCLI {
 			  AND e.plugins IS NOT NULL
 			ORDER BY s.name ASC
 		" );
+	}
+
+	/**
+	 * Check audit coverage directly via local MySQL tables.
+	 * Returns array of queue items, or false if tables don't exist.
+	 */
+	private static function scan_queue_local( array $sites, callable $log ) {
+		global $wpdb;
+
+		$table_exists = $wpdb->get_var( "SHOW TABLES LIKE 'audits'" );
+		if ( empty( $table_exists ) ) {
+			return false;
+		}
+
+		$log( 'Using local MySQL tables for audit coverage check.' );
+
+		$results = [];
+		foreach ( $sites as $site ) {
+			$site_slug  = $site['site_slug'] ?? '';
+			$components = $site['components'] ?? [];
+
+			if ( ! $site_slug || empty( $components ) ) {
+				continue;
+			}
+
+			$total         = count( $components );
+			$audited       = 0;
+			$stale         = 0;
+			$unaudited     = 0;
+			$unaudited_list = [];
+
+			foreach ( $components as $comp ) {
+				$slug    = $comp['slug'] ?? '';
+				$version = $comp['version'] ?? '';
+				$type    = $comp['type'] ?? '';
+
+				if ( ! $slug ) {
+					continue;
+				}
+
+				if ( $type === 'mu-plugin' && ( $version === '' || $version === null ) ) {
+					$row = $wpdb->get_row( $wpdb->prepare(
+						"SELECT c.id, a.audit_date FROM components c JOIN audits a ON c.audit_id = a.id WHERE c.slug = %s AND c.component_type = %s ORDER BY a.audit_date DESC LIMIT 1",
+						$slug, $type
+					) );
+				} else {
+					if ( $type ) {
+						$row = $wpdb->get_row( $wpdb->prepare(
+							"SELECT c.id, a.audit_date FROM components c JOIN audits a ON c.audit_id = a.id WHERE c.slug = %s AND c.version = %s AND c.component_type = %s ORDER BY a.audit_date DESC LIMIT 1",
+							$slug, $version, $type
+						) );
+					} else {
+						$row = $wpdb->get_row( $wpdb->prepare(
+							"SELECT c.id, a.audit_date FROM components c JOIN audits a ON c.audit_id = a.id WHERE c.slug = %s AND c.version = %s ORDER BY a.audit_date DESC LIMIT 1",
+							$slug, $version
+						) );
+					}
+				}
+
+				if ( ! $row ) {
+					$unaudited++;
+					$unaudited_list[] = $slug;
+				} else {
+					$days_ago = (int) ( ( time() - strtotime( $row->audit_date ) ) / 86400 );
+					if ( $days_ago > 90 ) {
+						$stale++;
+						$unaudited_list[] = $slug;
+					} else {
+						$audited++;
+					}
+				}
+			}
+
+			$needs_audit = $unaudited + $stale;
+			if ( $needs_audit === 0 ) {
+				continue;
+			}
+
+			$results[] = [
+				'site_slug'        => $site_slug,
+				'domain'           => $site['domain'] ?? $site_slug,
+				'total_components' => $total,
+				'audited'          => $audited,
+				'stale'            => $stale,
+				'unaudited'        => $unaudited,
+				'needs_audit'      => $needs_audit,
+				'coverage_pct'     => $total > 0 ? round( ( $audited / $total ) * 100 ) : 0,
+				'unaudited_slugs'  => $unaudited_list,
+			];
+		}
+
+		return $results;
 	}
 
 	/**

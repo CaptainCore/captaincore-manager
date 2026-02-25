@@ -11,7 +11,7 @@ class SecurityThreats {
 	 * every distinct component+version across the fleet.
 	 */
 	public static function inventory() {
-		$filters = Environments::fetch_filters_for_admins( "Production" );
+		$filters = Environments::fetch_filters_for_admins();
 		$counts  = [];
 
 		foreach ( $filters as $row ) {
@@ -241,13 +241,13 @@ class SecurityThreats {
 		$pattern = '[{]"name":"' . esc_sql( $slug ) . '","title":"[^"]*","status":"[^"]*","version":"' . esc_sql( $version ) . '"[}]';
 
 		$sql = $wpdb->prepare(
-			"SELECT s.site_id, s.name, e.environment_id, e.home_url
+			"SELECT s.site_id, s.name, e.environment_id, e.environment, e.home_url,
+			        e.address, e.username, e.port
 			 FROM {$sites_table} s
 			 INNER JOIN {$env_table} e ON s.site_id = e.site_id
 			 WHERE s.status = 'active'
-			   AND e.environment = 'Production'
 			   AND e.{$column} REGEXP %s
-			 ORDER BY s.name ASC",
+			 ORDER BY s.name ASC, e.environment ASC",
 			$pattern
 		);
 
@@ -424,12 +424,17 @@ class SecurityThreats {
 		foreach ( $result['threats'] as &$threat ) {
 			$sites = self::affected_sites( $threat['slug'], $threat['version'], $threat['type'] );
 			$threat['affected_sites'] = array_map( function( $site ) {
-				return [
+				$entry = [
 					'site_id'        => (int) $site->site_id,
 					'name'           => $site->name,
 					'environment_id' => (int) $site->environment_id,
+					'environment'    => $site->environment,
 					'home_url'       => $site->home_url,
 				];
+				if ( ! empty( $site->address ) ) {
+					$entry['ssh'] = "{$site->username}@{$site->address} -p {$site->port}";
+				}
+				return $entry;
 			}, $sites );
 			$threat['affected_count'] = count( $sites );
 

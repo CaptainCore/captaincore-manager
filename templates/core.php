@@ -8775,17 +8775,28 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-list>
 						</div>
 						<div v-if="security_threat_dialog.threat.affected_sites && security_threat_dialog.threat.affected_sites.length > 0" class="mb-4">
-							<h4 class="text-subtitle-1 mb-2">Affected Sites ({{ security_threat_dialog.threat.affected_sites.length }})</h4>
+							<div class="d-flex align-center mb-2">
+								<h4 class="text-subtitle-1">Affected Sites ({{ security_threat_dialog.threat.affected_sites.length }})</h4>
+								<v-spacer></v-spacer>
+								<v-btn
+									size="small"
+									variant="tonal"
+									color="primary"
+									prepend-icon="mdi-console"
+									@click="openTerminalForThreat(security_threat_dialog.threat)"
+								>Open in Terminal</v-btn>
+							</div>
 							<v-list density="compact">
 								<v-list-item
 									v-for="site in security_threat_dialog.threat.affected_sites"
-									:key="'site-' + site.site_id"
+									:key="'site-' + site.environment_id"
 								>
 									<template v-slot:prepend>
 										<v-icon size="small" color="primary">mdi-web</v-icon>
 									</template>
 									<v-list-item-title>
 										<a :href="'/account/sites/' + site.site_id" class="text-decoration-none">{{ site.name }}</a>
+										<v-chip v-if="site.environment === 'Staging'" size="x-small" color="orange" variant="flat" class="ml-1">Staging</v-chip>
 									</v-list-item-title>
 									<v-list-item-subtitle>{{ site.home_url }}</v-list-item-subtitle>
 								</v-list-item>
@@ -16161,6 +16172,24 @@ const app = createApp({
 				this.security_threat_resolve_note = "";
 				this.security_threat_dialog.show = false;
 				this.fetchSecurityThreats();
+			});
+		},
+		openTerminalForThreat(threat) {
+			const targets = (threat.affected_sites || []).map(site => ({
+				site_id: site.site_id,
+				name: site.name,
+				environment_id: site.environment_id,
+				environment: site.environment,
+				home_url: site.home_url
+			}));
+			this.view_console.selected_targets = targets;
+			this.view_console.terminal_open = true;
+			this.view_console.show = true;
+			this.security_threat_dialog.show = false;
+			this.$nextTick(() => {
+				if (this.$refs.terminalInput) {
+					this.$refs.terminalInput.focus();
+				}
 			});
 		},
 		fetchActivityLogs() {
