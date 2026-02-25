@@ -242,7 +242,7 @@ class SecurityThreats {
 
 		$sql = $wpdb->prepare(
 			"SELECT s.site_id, s.name, e.environment_id, e.environment, e.home_url,
-			        e.address, e.username, e.port
+			        e.address, e.username, e.port, e.home_directory
 			 FROM {$sites_table} s
 			 INNER JOIN {$env_table} e ON s.site_id = e.site_id
 			 WHERE s.status = 'active'
@@ -432,7 +432,8 @@ class SecurityThreats {
 					'home_url'       => $site->home_url,
 				];
 				if ( ! empty( $site->address ) ) {
-					$entry['ssh'] = "{$site->username}@{$site->address} -p {$site->port}";
+					$entry['ssh']            = "{$site->username}@{$site->address} -p {$site->port}";
+					$entry['home_directory'] = $site->home_directory ?: '';
 				}
 				return $entry;
 			}, $sites );
