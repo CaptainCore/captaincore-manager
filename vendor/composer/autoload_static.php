@@ -272,6 +272,8 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\ScheduledReports' => __DIR__ . '/../..' . '/app/ScheduledReports.php',
         'CaptainCore\\ScheduledReportsCLI' => __DIR__ . '/../..' . '/app/ScheduledReportsCLI.php',
         'CaptainCore\\Scripts' => __DIR__ . '/../..' . '/app/Scripts.php',
+        'CaptainCore\\SecurityPatch' => __DIR__ . '/../..' . '/app/SecurityPatch.php',
+        'CaptainCore\\SecurityPatches' => __DIR__ . '/../..' . '/app/SecurityPatches.php',
         'CaptainCore\\SecurityThreatTracking' => __DIR__ . '/../..' . '/app/SecurityThreatTracking.php',
         'CaptainCore\\SecurityThreats' => __DIR__ . '/../..' . '/app/SecurityThreats.php',
         'CaptainCore\\Site' => __DIR__ . '/../..' . '/app/Site.php',
