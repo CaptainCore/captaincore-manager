@@ -239,7 +239,9 @@ class ScanQueueCLI {
 	private static function scan_queue_local( array $sites, callable $log ) {
 		global $wpdb;
 
-		$table_exists = $wpdb->get_var( "SHOW TABLES LIKE 'audits'" );
+		$audits_t     = "{$wpdb->prefix}captaincore_sf_audits";
+		$components_t = "{$wpdb->prefix}captaincore_sf_components";
+		$table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $audits_t ) );
 		if ( empty( $table_exists ) ) {
 			return false;
 		}
@@ -272,18 +274,18 @@ class ScanQueueCLI {
 
 				if ( $type === 'mu-plugin' && ( $version === '' || $version === null ) ) {
 					$row = $wpdb->get_row( $wpdb->prepare(
-						"SELECT c.id, a.audit_date FROM components c JOIN audits a ON c.audit_id = a.id WHERE c.slug = %s AND c.component_type = %s ORDER BY a.audit_date DESC LIMIT 1",
+						"SELECT c.id, a.audit_date FROM {$components_t} c JOIN {$audits_t} a ON c.audit_id = a.id WHERE c.slug = %s AND c.component_type = %s ORDER BY a.audit_date DESC LIMIT 1",
 						$slug, $type
 					) );
 				} else {
 					if ( $type ) {
 						$row = $wpdb->get_row( $wpdb->prepare(
-							"SELECT c.id, a.audit_date FROM components c JOIN audits a ON c.audit_id = a.id WHERE c.slug = %s AND c.version = %s AND c.component_type = %s ORDER BY a.audit_date DESC LIMIT 1",
+							"SELECT c.id, a.audit_date FROM {$components_t} c JOIN {$audits_t} a ON c.audit_id = a.id WHERE c.slug = %s AND c.version = %s AND c.component_type = %s ORDER BY a.audit_date DESC LIMIT 1",
 							$slug, $version, $type
 						) );
 					} else {
 						$row = $wpdb->get_row( $wpdb->prepare(
-							"SELECT c.id, a.audit_date FROM components c JOIN audits a ON c.audit_id = a.id WHERE c.slug = %s AND c.version = %s ORDER BY a.audit_date DESC LIMIT 1",
+							"SELECT c.id, a.audit_date FROM {$components_t} c JOIN {$audits_t} a ON c.audit_id = a.id WHERE c.slug = %s AND c.version = %s ORDER BY a.audit_date DESC LIMIT 1",
 							$slug, $version
 						) );
 					}
