@@ -647,7 +647,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "41";
+        $required_version = (int) "42";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -997,6 +997,23 @@ class DB {
         PRIMARY KEY  (job_token_id),
         UNIQUE KEY token (token),
         KEY user_id (user_id)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_security_threat_tracking` (
+            security_threat_tracking_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            slug varchar(255) NOT NULL,
+            version varchar(50) NOT NULL,
+            type varchar(20) NOT NULL,
+            status varchar(20) NOT NULL DEFAULT 'new',
+            notes longtext,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+            resolved_at datetime DEFAULT NULL,
+        PRIMARY KEY  (security_threat_tracking_id),
+        UNIQUE KEY slug_version_type (slug, version, type),
+        KEY status (status)
         ) $charset_collate;";
 
         dbDelta($sql);
