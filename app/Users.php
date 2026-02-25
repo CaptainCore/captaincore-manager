@@ -18,12 +18,20 @@ class Users {
         $users       = [];
         $fetch_users = get_users();
         foreach( $fetch_users as $user ) {
-            $users[] = [
+            $record = [
                 "user_id"  => $user->ID,
                 "name"     => $user->display_name,
                 "email"    => $user->user_email,
                 "username" => $user->user_login,
             ];
+            if ( class_exists( 'user_switching' ) ) {
+                $wp_user = new \WP_User( $user->ID );
+                $url     = \user_switching::maybe_switch_url( $wp_user );
+                if ( $url ) {
+                    $record["switch_to_url"] = html_entity_decode( $url );
+                }
+            }
+            $users[] = $record;
         }
         return $users;
     }
