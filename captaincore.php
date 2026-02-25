@@ -83,6 +83,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command( 'captaincore web-risk-check', [ 'CaptainCore\WebRiskCheck', 'run' ] );
 	WP_CLI::add_command( 'captaincore scheduled-reports', 'CaptainCore\ScheduledReportsCLI' );
 	WP_CLI::add_command( 'captaincore top-plugins', 'CaptainCore\TopPluginsCLI' );
+	WP_CLI::add_command( 'captaincore scan-queue', 'CaptainCore\ScanQueueCLI' );
 }
 
 /* -------------------------------------------------------------------------
@@ -7748,7 +7749,7 @@ function captaincore_register_rest_endpoints() {
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_report_send_func',
 			'permission_callback' => function() {
-				return current_user_can( 'manage_options' );
+				return is_user_logged_in();
 			},
 			'show_in_index'       => false,
 		]
@@ -7759,7 +7760,7 @@ function captaincore_register_rest_endpoints() {
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_report_preview_func',
 			'permission_callback' => function() {
-				return current_user_can( 'manage_options' );
+				return is_user_logged_in();
 			},
 			'show_in_index'       => false,
 		]
@@ -7770,7 +7771,7 @@ function captaincore_register_rest_endpoints() {
 			'methods'             => 'POST',
 			'callback'            => 'captaincore_report_default_recipient_func',
 			'permission_callback' => function() {
-				return current_user_can( 'manage_options' );
+				return is_user_logged_in();
 			},
 			'show_in_index'       => false,
 		]
@@ -7820,6 +7821,40 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Account Report endpoints (admin only)
+	register_rest_route(
+		'captaincore/v1', '/account-report/send', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_account_report_send_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/account-report/preview', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_account_report_preview_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/account-report/default-recipient', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_account_report_default_recipient_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
 	// Web Risk Logs endpoint (admin only)
 	register_rest_route(
 		'captaincore/v1', '/web-risk-logs', [
@@ -7828,6 +7863,85 @@ function captaincore_register_rest_endpoints() {
 			'permission_callback' => function() {
 				return current_user_can( 'manage_options' );
 			},
+			'show_in_index'       => false,
+		]
+	);
+
+	// Security Threats endpoint (admin only) — queries Security Finder vulnerability database
+	register_rest_route(
+		'captaincore/v1', '/security-threats', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_security_threats_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/security-threats/affected-sites', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_security_threats_affected_sites_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'args'                => [
+				'slug'    => [ 'required' => true, 'type' => 'string' ],
+				'version' => [ 'required' => true, 'type' => 'string' ],
+				'type'    => [ 'required' => true, 'type' => 'string' ],
+			],
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/security-threats/track', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_security_threats_track_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'args'                => [
+				'slug'    => [ 'required' => true, 'type' => 'string' ],
+				'version' => [ 'required' => true, 'type' => 'string' ],
+				'type'    => [ 'required' => true, 'type' => 'string' ],
+				'status'  => [ 'required' => true, 'type' => 'string' ],
+			],
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/security-threats/note', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_security_threats_note_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'args'                => [
+				'slug'    => [ 'required' => true, 'type' => 'string' ],
+				'version' => [ 'required' => true, 'type' => 'string' ],
+				'type'    => [ 'required' => true, 'type' => 'string' ],
+				'note'    => [ 'required' => true, 'type' => 'string' ],
+			],
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/security-threats/resolve', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_security_threats_resolve_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'args'                => [
+				'slug'    => [ 'required' => true, 'type' => 'string' ],
+				'version' => [ 'required' => true, 'type' => 'string' ],
+				'type'    => [ 'required' => true, 'type' => 'string' ],
+				'note'    => [ 'required' => false, 'type' => 'string' ],
+			],
 			'show_in_index'       => false,
 		]
 	);
@@ -8181,6 +8295,15 @@ function captaincore_report_send_func( WP_REST_Request $request ) {
 		return new WP_Error( 'missing_recipient', 'Recipient email is required.', [ 'status' => 400 ] );
 	}
 
+	if ( ! current_user_can( 'manage_options' ) ) {
+		$allowed_site_ids = ( new CaptainCore\Sites() )->site_ids();
+		foreach ( $site_ids as $site_id ) {
+			if ( ! in_array( (int) $site_id, $allowed_site_ids ) ) {
+				return new WP_Error( 'unauthorized_site', 'You do not have access to one or more of the selected sites.', [ 'status' => 403 ] );
+			}
+		}
+	}
+
 	$result = CaptainCore\Report::send( $site_ids, $start_date, $end_date, $recipient );
 
 	if ( $result ) {
@@ -8203,6 +8326,15 @@ function captaincore_report_preview_func( WP_REST_Request $request ) {
 		return new WP_Error( 'missing_sites', 'At least one site is required.', [ 'status' => 400 ] );
 	}
 
+	if ( ! current_user_can( 'manage_options' ) ) {
+		$allowed_site_ids = ( new CaptainCore\Sites() )->site_ids();
+		foreach ( $site_ids as $site_id ) {
+			if ( ! in_array( (int) $site_id, $allowed_site_ids ) ) {
+				return new WP_Error( 'unauthorized_site', 'You do not have access to one or more of the selected sites.', [ 'status' => 403 ] );
+			}
+		}
+	}
+
 	$html = CaptainCore\Report::preview( $site_ids, $start_date, $end_date );
 
 	return [ 'html' => $html ];
@@ -8219,7 +8351,77 @@ function captaincore_report_default_recipient_func( WP_REST_Request $request ) {
 		return new WP_Error( 'missing_sites', 'At least one site is required.', [ 'status' => 400 ] );
 	}
 
+	if ( ! current_user_can( 'manage_options' ) ) {
+		$allowed_site_ids = ( new CaptainCore\Sites() )->site_ids();
+		foreach ( $site_ids as $site_id ) {
+			if ( ! in_array( (int) $site_id, $allowed_site_ids ) ) {
+				return new WP_Error( 'unauthorized_site', 'You do not have access to one or more of the selected sites.', [ 'status' => 403 ] );
+			}
+		}
+	}
+
 	$email = CaptainCore\Report::get_default_recipient( $site_ids );
+
+	return [ 'email' => $email ];
+}
+
+/**
+ * REST endpoint: Send account-wide maintenance report
+ */
+function captaincore_account_report_send_func( WP_REST_Request $request ) {
+	$params     = $request->get_json_params();
+	$account_id = $params['account_id'] ?? '';
+	$start_date = $params['start_date'] ?? '';
+	$end_date   = $params['end_date'] ?? '';
+	$recipient  = $params['recipient'] ?? '';
+
+	if ( empty( $account_id ) ) {
+		return new WP_Error( 'missing_account', 'Account ID is required.', [ 'status' => 400 ] );
+	}
+
+	if ( empty( $recipient ) ) {
+		return new WP_Error( 'missing_recipient', 'Recipient email is required.', [ 'status' => 400 ] );
+	}
+
+	$result = CaptainCore\Report::send_account( $account_id, $start_date, $end_date, $recipient );
+
+	if ( $result ) {
+		return [ 'success' => true, 'message' => "Account report sent to {$recipient}" ];
+	}
+
+	return new WP_Error( 'send_failed', 'Failed to send account report.', [ 'status' => 500 ] );
+}
+
+/**
+ * REST endpoint: Preview account-wide maintenance report HTML
+ */
+function captaincore_account_report_preview_func( WP_REST_Request $request ) {
+	$params     = $request->get_json_params();
+	$account_id = $params['account_id'] ?? '';
+	$start_date = $params['start_date'] ?? '';
+	$end_date   = $params['end_date'] ?? '';
+
+	if ( empty( $account_id ) ) {
+		return new WP_Error( 'missing_account', 'Account ID is required.', [ 'status' => 400 ] );
+	}
+
+	$html = CaptainCore\Report::preview_account( $account_id, $start_date, $end_date );
+
+	return [ 'html' => $html ];
+}
+
+/**
+ * REST endpoint: Get default recipient email for an account
+ */
+function captaincore_account_report_default_recipient_func( WP_REST_Request $request ) {
+	$params     = $request->get_json_params();
+	$account_id = $params['account_id'] ?? '';
+
+	if ( empty( $account_id ) ) {
+		return new WP_Error( 'missing_account', 'Account ID is required.', [ 'status' => 400 ] );
+	}
+
+	$email = CaptainCore\Report::get_default_recipient_for_account( $account_id );
 
 	return [ 'email' => $email ];
 }
@@ -8242,10 +8444,17 @@ function captaincore_scheduled_reports_list_func( WP_REST_Request $request ) {
 
 		$report->site_ids = json_decode( $report->site_ids, true );
 		$report->site_names = [];
-		foreach ( $report->site_ids as $site_id ) {
-			$site = new CaptainCore\Site( $site_id );
-			if ( $site->get() ) {
-				$report->site_names[] = $site->get()->name;
+		$report->account_name = '';
+
+		if ( ! empty( $report->account_id ) ) {
+			$account = ( new CaptainCore\Account( $report->account_id, true ) )->get();
+			$report->account_name = $account->name ?? '';
+		} else {
+			foreach ( $report->site_ids as $site_id ) {
+				$site = new CaptainCore\Site( $site_id );
+				if ( $site->get() ) {
+					$report->site_names[] = $site->get()->name;
+				}
 			}
 		}
 		$result[] = $report;
@@ -8260,20 +8469,21 @@ function captaincore_scheduled_reports_list_func( WP_REST_Request $request ) {
 function captaincore_scheduled_reports_create_func( WP_REST_Request $request ) {
 	$params = $request->get_json_params();
 
-	$site_ids  = $params['site_ids'] ?? [];
-	$interval  = $params['interval'] ?? 'monthly';
-	$recipient = $params['recipient'] ?? '';
+	$site_ids   = $params['site_ids'] ?? [];
+	$account_id = $params['account_id'] ?? '';
+	$interval   = $params['interval'] ?? 'monthly';
+	$recipient  = $params['recipient'] ?? '';
 
-	if ( empty( $site_ids ) ) {
-		return new WP_Error( 'missing_sites', 'At least one site is required.', [ 'status' => 400 ] );
+	if ( empty( $site_ids ) && empty( $account_id ) ) {
+		return new WP_Error( 'missing_sites', 'At least one site or an account is required.', [ 'status' => 400 ] );
 	}
 
 	if ( empty( $recipient ) ) {
 		return new WP_Error( 'missing_recipient', 'Recipient email is required.', [ 'status' => 400 ] );
 	}
 
-	// Verify user has access to all requested sites (unless admin)
-	if ( ! current_user_can( 'manage_options' ) ) {
+	// Verify user has access to all requested sites (unless admin or account-based)
+	if ( empty( $account_id ) && ! current_user_can( 'manage_options' ) ) {
 		$user_sites       = new CaptainCore\Sites();
 		$allowed_site_ids = $user_sites->site_ids();
 
@@ -8284,11 +8494,17 @@ function captaincore_scheduled_reports_create_func( WP_REST_Request $request ) {
 		}
 	}
 
-	$id = CaptainCore\ScheduledReports::create( [
+	$create_data = [
 		'site_ids'  => $site_ids,
 		'interval'  => $interval,
 		'recipient' => $recipient,
-	] );
+	];
+
+	if ( ! empty( $account_id ) ) {
+		$create_data['account_id'] = $account_id;
+	}
+
+	$id = CaptainCore\ScheduledReports::create( $create_data );
 
 	return [ 'success' => true, 'id' => $id ];
 }
@@ -8333,6 +8549,9 @@ function captaincore_scheduled_reports_update_func( WP_REST_Request $request ) {
 	}
 	if ( isset( $params['recipient'] ) ) {
 		$update_data['recipient'] = $params['recipient'];
+	}
+	if ( array_key_exists( 'account_id', $params ) ) {
+		$update_data['account_id'] = $params['account_id'];
 	}
 
 	CaptainCore\ScheduledReports::update_report( $id, $update_data );
@@ -8410,6 +8629,77 @@ function captaincore_checksum_failures_func( WP_REST_Request $request ) {
 	}
 
 	return $failures;
+}
+
+/**
+ * REST endpoint: Security threats summary from Security Finder vulnerability database.
+ */
+function captaincore_security_threats_func( WP_REST_Request $request ) {
+	return CaptainCore\SecurityThreats::summary();
+}
+
+/**
+ * REST endpoint: Find sites affected by a specific vulnerable component.
+ */
+function captaincore_security_threats_affected_sites_func( WP_REST_Request $request ) {
+	$slug    = sanitize_text_field( $request->get_param( 'slug' ) );
+	$version = sanitize_text_field( $request->get_param( 'version' ) );
+	$type    = sanitize_text_field( $request->get_param( 'type' ) );
+
+	$sites = CaptainCore\SecurityThreats::affected_sites( $slug, $version, $type );
+	return array_map( function( $site ) {
+		return [
+			'site_id'        => (int) $site->site_id,
+			'name'           => $site->name,
+			'environment_id' => (int) $site->environment_id,
+			'home_url'       => $site->home_url,
+		];
+	}, $sites );
+}
+
+/**
+ * REST endpoint: Update tracking status for a security threat.
+ */
+function captaincore_security_threats_track_func( WP_REST_Request $request ) {
+	$slug    = sanitize_text_field( $request->get_param( 'slug' ) );
+	$version = sanitize_text_field( $request->get_param( 'version' ) );
+	$type    = sanitize_text_field( $request->get_param( 'type' ) );
+	$status  = sanitize_text_field( $request->get_param( 'status' ) );
+
+	$valid_statuses = [ 'new', 'investigating', 'reported', 'resolved' ];
+	if ( ! in_array( $status, $valid_statuses, true ) ) {
+		return new WP_Error( 'invalid_status', 'Status must be one of: ' . implode( ', ', $valid_statuses ), [ 'status' => 400 ] );
+	}
+
+	return CaptainCore\SecurityThreats::track( $slug, $version, $type, $status );
+}
+
+/**
+ * REST endpoint: Add a note to a tracked security threat.
+ */
+function captaincore_security_threats_note_func( WP_REST_Request $request ) {
+	$slug    = sanitize_text_field( $request->get_param( 'slug' ) );
+	$version = sanitize_text_field( $request->get_param( 'version' ) );
+	$type    = sanitize_text_field( $request->get_param( 'type' ) );
+	$note    = sanitize_textarea_field( $request->get_param( 'note' ) );
+
+	if ( empty( $note ) ) {
+		return new WP_Error( 'empty_note', 'Note cannot be empty.', [ 'status' => 400 ] );
+	}
+
+	return CaptainCore\SecurityThreats::add_note( $slug, $version, $type, $note );
+}
+
+/**
+ * REST endpoint: Resolve a security threat and create process logs on affected sites.
+ */
+function captaincore_security_threats_resolve_func( WP_REST_Request $request ) {
+	$slug    = sanitize_text_field( $request->get_param( 'slug' ) );
+	$version = sanitize_text_field( $request->get_param( 'version' ) );
+	$type    = sanitize_text_field( $request->get_param( 'type' ) );
+	$note    = sanitize_textarea_field( $request->get_param( 'note' ) ?? '' );
+
+	return CaptainCore\SecurityThreats::resolve( $slug, $version, $type, $note );
 }
 
 /**
