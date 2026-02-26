@@ -177,6 +177,7 @@ class SecurityThreats {
 				        f.source, f.wordfence_link
 				 FROM {$findings_t} f
 				 WHERE f.component_id = %d
+				   AND (f.elevated IS NULL OR f.elevated = 1)
 				 ORDER BY FIELD(f.severity, 'critical', 'high', 'medium', 'low'),
 				          f.finding_code",
 				$component['id']
