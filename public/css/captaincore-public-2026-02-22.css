@@ -2175,3 +2175,16 @@ tr:hover .pin-hover-target {
 .api-docs-toc-item:hover { background: rgba(var(--v-theme-on-surface), 0.06); }
 .api-docs-toc .toc-h2 { margin-top: 2px; }
 .api-docs-toc .toc-h2:first-child { margin-top: 0; }
+
+/* Chart hover effects */
+#plan_chart .dataset-units rect,
+#plan_chart_transactions .dataset-units circle,
+#plan_chart_transactions .dataset-units path {
+    transition: filter 0.15s ease;
+    cursor: pointer;
+}
+#plan_chart .dataset-units rect:hover,
+#plan_chart_transactions .dataset-units circle:hover,
+#plan_chart_transactions .dataset-units path:hover {
+    filter: brightness(1.4);
+}
