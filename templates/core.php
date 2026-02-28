@@ -9349,66 +9349,78 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-window-item>
 						<!-- Admin: Subscriptions -->
 						<v-window-item value="tab-Billing-Subscriptions" :transition="false" :reverse-transition="false" v-if="role == 'administrator'">
-							<v-toolbar flat color="transparent">
-								<v-toolbar-title>Listing {{ subscriptions.length }} subscriptions</v-toolbar-title>
-								<v-spacer></v-spacer>
-								<v-tooltip location="top">
-									<template v-slot:activator="{ props }">
-										<v-btn icon="mdi-poll" @click="toggle_plan = !toggle_plan" v-bind="props" variant="text"></v-btn>
-									</template>
-									<span>View reports</span>
-								</v-tooltip>
-							</v-toolbar>
-							<v-data-table
-								:loading="subscriptions_loading"
-								:headers="[
-									{ title: 'Name', key: 'name' },
-									{ title: 'Type', key: 'billing_mode' },
-									{ title: 'Interval', key: 'interval' },
-									{ title: 'Next Renewal', key: 'next_renewal' },
-									{ title: 'Price', key: 'total', width: '100px', align: 'end' }]"
-								:items="subscriptions"
-								:search="subscription_search"
-								:items-per-page="100"
-								:items-per-page-options="[100,250,500,{'title':'All','value':-1}]"
-								v-show="toggle_plan == true"
-								hover
-								density="comfortable"
-								@click:row="(event, { item }) => goToPath(`/subscription/${item.account_id}`)"
-								style="cursor:pointer;"
-							>
-								<template v-slot:top>
-									<v-card-text>
-										<v-row>
-											<v-col></v-col>
-											<v-col cols="12" md="4">
-												<v-text-field
-													class="mx-4"
-													v-model="subscription_search"
-													append-inner-icon="mdi-magnify"
-													label="Search"
-													single-line
-													clearable
-													hide-details
-													variant="underlined"
-												></v-text-field>
-											</v-col>
-										</v-row>
-									</v-card-text>
-								</template>
-								<template v-slot:item.billing_mode="{ item }">
-									<v-chip size="x-small" label class="text-uppercase">{{ item.billing_mode || 'Standard' }}</v-chip>
-								</template>
-								<template v-slot:item.interval="{ item }">
-									{{ intervalLabel( item.interval ) }}
-								</template>
-								<template v-slot:item.total="{ item }">
-									${{ item.total }}
-								</template>
-							</v-data-table>
-							<div id="plan_chart"></div>
-							<v-list-subheader>{{ revenue_estimated_total() }}</v-list-subheader>
-							<div id="plan_chart_transactions"></div>
+							<v-tabs v-model="subscription_subtab" density="compact" align-tabs="start" class="mb-2">
+								<v-tab value="listing">Listing</v-tab>
+								<v-tab value="by-month">By the Month</v-tab>
+							</v-tabs>
+							<v-window v-model="subscription_subtab" style="overflow: visible">
+								<v-window-item value="listing" :transition="false" :reverse-transition="false">
+									<v-toolbar flat color="transparent">
+										<v-toolbar-title>{{ subscriptions.length }} subscriptions</v-toolbar-title>
+										<v-spacer></v-spacer>
+										<v-text-field
+											style="max-width:300px"
+											v-model="subscription_search"
+											append-inner-icon="mdi-magnify"
+											label="Search"
+											single-line
+											clearable
+											hide-details
+											variant="underlined"
+											density="compact"
+										></v-text-field>
+									</v-toolbar>
+									<v-data-table
+										:loading="subscriptions_loading"
+										:headers="[
+											{ title: 'Name', key: 'name' },
+											{ title: 'Type', key: 'billing_mode' },
+											{ title: 'Interval', key: 'interval' },
+											{ title: 'Next Renewal', key: 'next_renewal' },
+											{ title: 'Price', key: 'total', width: '100px', align: 'end' }]"
+										:items="subscriptions"
+										:search="subscription_search"
+										:items-per-page="100"
+										:items-per-page-options="[100,250,500,{'title':'All','value':-1}]"
+										hover
+										density="comfortable"
+										@click:row="(event, { item }) => goToPath(`/subscription/${item.account_id}`)"
+										style="cursor:pointer;"
+									>
+										<template v-slot:item.billing_mode="{ item }">
+											<v-chip size="x-small" label class="text-uppercase">{{ item.billing_mode || 'Standard' }}</v-chip>
+										</template>
+										<template v-slot:item.interval="{ item }">
+											{{ intervalLabel( item.interval ) }}
+										</template>
+										<template v-slot:item.total="{ item }">
+											${{ item.total }}
+										</template>
+									</v-data-table>
+								</v-window-item>
+								<v-window-item value="by-month" :transition="false" :reverse-transition="false" style="overflow: visible">
+									<div id="plan_chart" style="overflow: visible"></div>
+									<v-list-subheader>{{ revenue_estimated_total() }}</v-list-subheader>
+									<div id="plan_chart_transactions" style="overflow: visible"></div>
+									<v-dialog v-model="dialog_month_renewals.show" max-width="700">
+										<v-card>
+											<v-card-title>{{ dialog_month_renewals.month }} Renewals</v-card-title>
+											<v-card-subtitle>{{ dialog_month_renewals.transactions }} transactions &mdash; ${{ formatMoney(dialog_month_renewals.revenue) }} revenue</v-card-subtitle>
+											<v-data-table
+												:items="dialog_month_renewals.items"
+												:headers="[{ title: 'Name', key: 'name' }, { title: 'Interval', key: 'interval' }, { title: 'Amount', key: 'total', align: 'end' }]"
+												:items-per-page="-1"
+												density="compact"
+												@click:row="(event, { item }) => { dialog_month_renewals.show = false; goToPath(`/subscription/${item.account_id}`) }"
+											>
+												<template v-slot:item.interval="{ item }">{{ intervalLabel(item.interval) }}</template>
+												<template v-slot:item.total="{ item }">${{ item.total }}</template>
+												<template v-slot:bottom></template>
+											</v-data-table>
+										</v-card>
+									</v-dialog>
+								</v-window-item>
+							</v-window>
 						</v-window-item>
 					</v-window>
 				</div>
@@ -12530,6 +12542,8 @@ const app = createApp({
 		subscription_transactions: null,
 		subscriptions_loading: false,
 		revenue_estimated: [],
+		subscription_renewals: {},
+		dialog_month_renewals: { show: false, month: "", items: [], revenue: 0, transactions: 0 },
 		mailgun: {
             subdomainDialog: false,
             deployDialog: false,
@@ -12603,7 +12617,7 @@ const app = createApp({
 		site_filter_version: null,
 		site_filter_status: null,
 		toggle_site: 'cards',
-		toggle_plan: true,
+		subscription_subtab: 'listing',
 		countries: wc_countries,
 		states: wc_states,
 		states_selected: [],
@@ -12751,7 +12765,12 @@ const app = createApp({
 			this.filterSites();
 		},
 		billing_tabs(val) {
-			if (val === 'tab-Billing-Subscriptions') {
+			if (val === 'tab-Billing-Subscriptions' && this.subscription_subtab === 'by-month') {
+				this.renderSubscriptionCharts();
+			}
+		},
+		subscription_subtab(val) {
+			if (val === 'by-month') {
 				this.renderSubscriptionCharts();
 			}
 		},
@@ -16312,7 +16331,8 @@ const app = createApp({
 			}).then(response => {
 				this.revenue_estimated = response.data.revenue
 				this.subscription_transactions = response.data.transactions
-				if (this.billing_tabs === 'tab-Billing-Subscriptions') {
+				this.subscription_renewals = response.data.renewals || {}
+				if (this.billing_tabs === 'tab-Billing-Subscriptions' && this.subscription_subtab === 'by-month') {
 					this.renderSubscriptionCharts()
 				}
 			})
@@ -16335,9 +16355,10 @@ const app = createApp({
 				document.getElementById('plan_chart_transactions').innerHTML = ''
 				const revenue = this.revenue_estimated
 				const transactions = this.subscription_transactions
+				const labels = Object.keys( revenue )
 				new frappe.Chart( "#plan_chart", {
 					data: {
-						labels: Object.keys( revenue ),
+						labels: labels,
 						datasets: [{ name: "Revenue", values: Object.values( revenue ) }],
 						yRegions: [{ label: "", start: 0, end: 50, options: { labelPos: "right" } }],
 					},
@@ -16349,19 +16370,44 @@ const app = createApp({
 					axisOptions: { xAxisMode: "tick", xIsSeries: true },
 					lineOptions: { regionFill: 1 },
 				})
+				// Delegate click on revenue bars using data-point-index
+				el.addEventListener('click', (e) => {
+					const bar = e.target.closest('rect[data-point-index]')
+					if (bar) {
+						const index = parseInt(bar.getAttribute('data-point-index'))
+						if (labels[index]) this.showMonthRenewals(labels[index])
+					}
+				})
+				const transactionsEl = document.getElementById('plan_chart_transactions')
 				new frappe.Chart( "#plan_chart_transactions", {
 					data: {
-						labels: Object.keys( revenue ),
+						labels: labels,
 						datasets: [{ name: "Transactions", values: Object.values( transactions ) }],
 					},
-					type: "bar",
+					type: "line",
 					height: 270,
-					colors: [ this.configurations.colors.primary, this.configurations.colors.success ],
-					barOptions: { spaceRatio: 0.1 },
+					colors: [ this.configurations.colors.success ],
 					axisOptions: { xAxisMode: "tick", xIsSeries: true },
-					lineOptions: { regionFill: 1 },
+					lineOptions: { regionFill: 1, dotSize: 5 },
+				})
+				// Delegate click on transaction dots using data-point-index
+				transactionsEl.addEventListener('click', (e) => {
+					const dot = e.target.closest('circle[data-point-index]')
+					if (dot) {
+						const index = parseInt(dot.getAttribute('data-point-index'))
+						if (labels[index]) this.showMonthRenewals(labels[index])
+					}
 				})
 			})
+		},
+		showMonthRenewals(month) {
+			this.dialog_month_renewals = {
+				show: true,
+				month: month,
+				items: this.subscription_renewals[month] || [],
+				revenue: this.revenue_estimated[month] || 0,
+				transactions: this.subscription_transactions[month] || 0,
+			}
 		},
 		fetchBilling() {
 			axios.get(
