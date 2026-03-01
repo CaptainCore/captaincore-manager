@@ -364,10 +364,10 @@ class DB {
             $field_selection = "";
             foreach ( $fields as $field ) {
                 if ( in_array( $field, $environment_columns ) ) {
-                    $field_selection = "${field_selection}, {$wpdb->prefix}captaincore_environments.{$field}";
+                    $field_selection = "{$field_selection}, {$wpdb->prefix}captaincore_environments.{$field}";
                     continue;
                 }
-                $field_selection = "${field_selection}, {$table}.{$field}";
+                $field_selection = "{$field_selection}, {$table}.{$field}";
             }
         }
 

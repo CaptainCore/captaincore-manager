@@ -1452,7 +1452,7 @@ function captaincore_accounts_invite_delete_func( WP_REST_Request $request ) {
 function captaincore_domains_create_func( WP_REST_Request $request ) {
 	$user   = new CaptainCore\User;
 	$errors = [];
-	$name   = trim( $request->get_param( 'name' ) );
+	$name   = trim( $request->get_param( 'name' ) ?? '' );
 	$account_id     = intval( $request->get_param( 'account_id' ) );
 	$create_dns_zone = $request->get_param( 'create_dns_zone' ) !== false;
 
@@ -1678,9 +1678,9 @@ function captaincore_sites_stats_func( WP_REST_Request $request ) {
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	}
-	$before     = strtotime( $request->get_param( 'from_at' ) );
-	$after      = strtotime( $request->get_param( 'to_at' ) );
-	$grouping   = strtolower( $request->get_param( 'grouping' ) );
+	$before     = strtotime( $request->get_param( 'from_at' ) ?? '' );
+	$after      = strtotime( $request->get_param( 'to_at' ) ?? '' );
+	$grouping   = strtolower( $request->get_param( 'grouping' ) ?? '' );
 	$fathom_id  = $request->get_param( 'fathom_id' );
 	$environment = $request->get_param( 'environment' );
 	$response   = ( new CaptainCore\Site( $site_id ) )->stats( $environment, $before, $after, $grouping, $fathom_id );
@@ -2583,7 +2583,7 @@ function captaincore_create_site_account_func( WP_REST_Request $request ) {
 	if ( ! ( new CaptainCore\User )->is_admin() ) {
 		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
 	}
-	$name     = trim( $request->get_param( 'name' ) );
+	$name     = trim( $request->get_param( 'name' ) ?? '' );
 	$time_now = date("Y-m-d H:i:s");
 	$defaults = [
 		"email"    => "",
@@ -2678,7 +2678,7 @@ function captaincore_provider_themes_func( $request ) {
 	if ( ! ( new CaptainCore\User )->role_check() ){
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
-	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) );
+	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) ?? '' );
 	return $provider::themes();
 }
 
@@ -2687,7 +2687,7 @@ function captaincore_provider_theme_download_func( $request ) {
 	if ( ! ( new CaptainCore\User )->role_check() ){
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
-	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) );
+	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) ?? '' );
 	return $provider::download_theme( $theme_id );
 }
 
@@ -2696,7 +2696,7 @@ function captaincore_provider_plugin_download_func( $request ) {
 	if ( ! ( new CaptainCore\User )->role_check() ){
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
-	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) );
+	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) ?? '' );
 	return $provider::download_plugin( $plugin_id );
 }
 
@@ -2704,7 +2704,7 @@ function captaincore_provider_plugins_func( $request ) {
 	if ( ! ( new CaptainCore\User )->role_check() ){
 		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
 	}
-	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) );
+	$provider = "CaptainCore\Providers\\" . ucfirst( $request->get_param( "provider" ) ?? '' );
 	return $provider::plugins();
 }
 
@@ -3275,9 +3275,9 @@ function captaincore_run_code_func( WP_REST_Request $request ) {
 
 function captaincore_site_analytics_func( $request ) {
 	$site_id     = $request['id'];
-	$before      = strtotime( $request['from_at'] );
-	$after       = strtotime( $request['to_at'] );
-	$grouping    = strtolower( $request['grouping'] );
+	$before      = strtotime( $request['from_at'] ?? '' );
+	$after       = strtotime( $request['to_at'] ?? '' );
+	$grouping    = strtolower( $request['grouping'] ?? '' );
 	$environment = $request['environment'];
 	$fathom_id   = $request['fathom_id'];
 	return ( new CaptainCore\Site( $site_id ) )->stats( $environment, $before, $after, $grouping, $fathom_id );
@@ -4101,10 +4101,12 @@ function captaincore_site_magiclogin_func( $request ) {
 	}
 
 	if ( empty( $login ) ) {
-		$current_user_domain = array_pop(explode('@', $current_email));
+		$parts = explode('@', $current_email);
+		$current_user_domain = array_pop($parts);
 		// Attempt to match current user to a similar WordPress user
 		foreach ( $users as $user ) {
-			$user_domain = array_pop(explode('@', $user->user_email));
+			$parts = explode('@', $user->user_email);
+			$user_domain = array_pop($parts);
 			if ( strpos( $user->roles, 'administrator') !== false && $user_domain == $current_user_domain ) {
 				$login = $user->user_login;
 				break;
@@ -4113,9 +4115,11 @@ function captaincore_site_magiclogin_func( $request ) {
 
 		// Select random WordPress admin with same first name
 		if ( empty( $login ) ) {
-			$current_email_name = array_shift(explode('@', $current_email));
+			$parts = explode('@', $current_email);
+			$current_email_name = array_shift($parts);
 			foreach ( $users as $user ) {
-				$user_email_name = array_shift(explode('@', $user->user_email));
+				$parts = explode('@', $user->user_email);
+				$user_email_name = array_shift($parts);
 				if ( strpos( $user->roles, 'administrator' ) !== false && $user_email_name == $current_email_name ) {
 					$login = $user->user_login;
 					break;
@@ -4797,14 +4801,14 @@ function captaincore_filters_sites_func( WP_REST_Request $request ) {
 }
 
 function captaincore_filter_versions_func( $request ) {
-	$name     = str_replace( "%20", " ", $request['name'] );
+	$name     = str_replace( "%20", " ", $request['name'] ?? '' );
 	$filters  = explode( ",", $name );
 	$response = ( new CaptainCore\Environments )->filters_for_versions( $filters );
 	return $response;
 }
 
 function captaincore_filter_statuses_func( $request ) {
-	$name     = str_replace( "%20", " ", $request['name'] );
+	$name     = str_replace( "%20", " ", $request['name'] ?? '' );
 	$filters  = explode( ",", $name );
 	$response = ( new CaptainCore\Environments )->filters_for_statuses( $filters );
 	return $response;
@@ -4836,10 +4840,10 @@ function captaincore_filters_func( $request ) {
 }
 
 function captaincore_filter_sites_func( $request ) {
-	$name     = str_replace( "%20", " ", $request['name'] );
-	$statuses = $request['statuses'];
+	$name     = str_replace( "%20", " ", $request['name'] ?? '' );
+	$statuses = $request['statuses'] ?? '';
 	$statuses = explode( ",", $statuses );
-	$versions = $request['versions'];
+	$versions = $request['versions'] ?? '';
 	$versions = explode( ",", $versions );
 	foreach ($statuses as $key => $value) {
 		$value = explode( "+", $value );
@@ -4876,9 +4880,9 @@ function captaincore_site_captures_new_func( $request ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
-	$environment = strtolower( $request['environment'] );
+	$environment = strtolower( $request['environment'] ?? '' );
 	$site        = new CaptainCore\Site( $site_id );
-	
+
 	// Remote Sync
 	captaincore_run_background_command( "capture $site_id-$environment" );
 	return $site_id;
@@ -5085,7 +5089,7 @@ function captaincore_quicksaves_filediff_func( $request ) {
 
 function captaincore_quicksaves_rollback_func( $request ) {
 	$site_id     = $request->get_param( 'site_id' );
-	$environment = strtolower( $request->get_param( 'environment' ) );
+	$environment = strtolower( $request->get_param( 'environment' ) ?? '' );
 	$type        = $request->get_param( 'type' );
 	$value       = empty( $request->get_param( 'value' ) ) ? "" : $request->get_param( 'value' );
 	$version     = $request->get_param( 'version' );
@@ -6084,7 +6088,7 @@ function captaincore_register_rest_endpoints() {
 				
 				// Returns the raw URL string from b2 command
 				$response = \CaptainCore\Run::CLI( "archive share $file" );
-				return [ 'link' => trim($response) ];
+				return [ 'link' => trim($response ?? '') ];
 			},
 			'permission_callback' => 'captaincore_permission_check',
 		]
