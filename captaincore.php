@@ -4134,12 +4134,15 @@ function captaincore_site_magiclogin_func( $request ) {
 		}
 	}
 
-	$args     = [
+	$timestamp = time();
+	$token     = hash_hmac( 'sha256', (string) $timestamp, $environment->token );
+	$args      = [
 		"timeout" => 45,
 		"body"    => json_encode( [
 				"command"    => "login",
 				"user_login" => $login,
-				"token"      => $environment->token,
+				"token"      => $token,
+				"timestamp"  => $timestamp,
 			] ),
 		"method"    => 'POST',
 		"sslverify" => false,
