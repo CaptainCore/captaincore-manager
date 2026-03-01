@@ -106,8 +106,8 @@ class Site {
             $screenshot_url_base       = "{$upload_uri}/{$site->site}_{$site->site_id}/production/screenshots/{$screenshot_base}";
             $site_details->screenshot  = true;
             $site_details->screenshots  = [
-                'small' => "${screenshot_url_base}_thumb-100.jpg",
-                'large' => "${screenshot_url_base}_thumb-800.jpg"
+                'small' => "{$screenshot_url_base}_thumb-100.jpg",
+                'large' => "{$screenshot_url_base}_thumb-800.jpg"
             ];
         }
 
