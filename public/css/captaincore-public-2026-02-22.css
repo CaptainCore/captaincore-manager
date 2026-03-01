@@ -1893,6 +1893,12 @@ code.language-log {
   padding: 0px;
 }
 
+pre.server-log-wrap,
+pre.server-log-wrap code {
+  white-space: pre-wrap !important;
+  word-break: break-all;
+}
+
 .language-css .token.string, .style .token.string, .token.entity, .token.operator, .token.url, 
 .v-application .token.error, .v-application .token.info {
   background: transparent !important;

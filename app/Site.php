@@ -933,6 +933,8 @@ class Site {
             $environment->server_log_limit = "1000";
             $environment->server_log_selected = "";
             $environment->server_log_response = "";
+            $environment->server_log_lines = [];
+            $environment->server_log_search = "";
             $environment->quicksave_panel  = [];
             $environment->quicksave_search = '';
             $environment->capture_pages    = json_decode ( $environment->capture_pages );
@@ -1031,8 +1033,12 @@ class Site {
             $before = date('Y-m-d H:i:s', $date);
         }
 
-        $before = date( 'Y-m-d H:i:s', $before );
-        $after  = date( 'Y-m-d H:i:s', $after );
+        if ( is_numeric( $before ) ) {
+            $before = date( 'Y-m-d H:i:s', $before );
+        }
+        if ( is_numeric( $after ) ) {
+            $after = date( 'Y-m-d H:i:s', $after );
+        }
 
         $environments     = self::environments();
         foreach( $environments as $e ) {
