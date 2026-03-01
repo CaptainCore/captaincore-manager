@@ -1678,8 +1678,10 @@ function captaincore_sites_stats_func( WP_REST_Request $request ) {
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	}
-	$before     = strtotime( $request->get_param( 'from_at' ) ?? '' );
-	$after      = strtotime( $request->get_param( 'to_at' ) ?? '' );
+	$from_at    = $request->get_param( 'from_at' );
+	$to_at      = $request->get_param( 'to_at' );
+	$before     = ! empty( $from_at ) ? strtotime( $from_at ) : '';
+	$after      = ! empty( $to_at ) ? strtotime( $to_at ) : '';
 	$grouping   = strtolower( $request->get_param( 'grouping' ) ?? '' );
 	$fathom_id  = $request->get_param( 'fathom_id' );
 	$environment = $request->get_param( 'environment' );

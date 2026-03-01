@@ -4701,37 +4701,53 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							
 							<v-row v-if="typeof dialog_site.environment_selected.server_logs != 'undefined' && dialog_site.environment_selected.server_logs.files != ''" >
 								<v-col>
-									<v-autocomplete 
-										v-model="dialog_site.environment_selected.server_log_selected" 
-										:items="dialog_site.environment_selected.server_logs.files" 
-										item-title="name" 
-										item-value="path" 
-										variant="underlined" 
-										label="Select log" 
-										@update:model-value="fetchLogs()" 
+									<v-autocomplete
+										v-model="dialog_site.environment_selected.server_log_selected"
+										:items="dialog_site.environment_selected.server_logs.files"
+										item-title="name"
+										item-value="path"
+										variant="underlined"
+										label="Select log"
+										@update:model-value="fetchLogs()"
 										spellcheck="false">
 									</v-autocomplete>
 								</v-col>
 								<v-col class="shrink" style="min-width:200px;max-width:200px">
-									<v-select 
-										v-model="dialog_site.environment_selected.server_log_limit" 
-										:items="['100','1000','5000','10000']" 
-										variant="underlined" 
-										label="Log limit" 
+									<v-select
+										v-model="dialog_site.environment_selected.server_log_limit"
+										:items="['100','1000','5000','10000']"
+										variant="underlined"
+										label="Log limit"
 										@update:model-value="fetchLogs()">
 									</v-select>
 								</v-col>
 							</v-row>
 
-							<v-progress-circular 
-								indeterminate 
-								color="primary" 
-								class="mt-2" 
-								size="24" 
+							<v-row v-if="dialog_site.environment_selected.server_log_response != ''" align="center" class="mt-0">
+								<v-col>
+									<v-text-field
+										v-model="dialog_site.environment_selected.server_log_search"
+										prepend-inner-icon="mdi-magnify"
+										label="Filter logs"
+										variant="underlined"
+										density="compact"
+										clearable
+										hide-details
+										spellcheck="false">
+									</v-text-field>
+								</v-col>
+							</v-row>
+
+							<v-progress-circular
+								indeterminate
+								color="primary"
+								class="mt-2"
+								size="24"
 								v-show="dialog_site.environment_selected.loading_server_logs">
 							</v-progress-circular>
-							
-							<pre style="font-size: 13px;" class="overflow-auto" v-show="dialog_site.environment_selected.server_log_response != ''"><code class="language-log" v-html="dialog_site.environment_selected.server_log_response"></code></pre>
+
+							<div v-show="dialog_site.environment_selected.server_log_response != ''" class="server-log-match-count mb-1 text-caption text-medium-emphasis" v-if="dialog_site.environment_selected.server_log_search">{{ filteredServerLogLines.length }} of {{ dialog_site.environment_selected.server_log_lines.length }} lines</div>
+							<pre style="font-size: 13px;" class="overflow-auto server-log-wrap" v-show="dialog_site.environment_selected.server_log_response != ''"><code class="language-log" v-html="filteredServerLogResponse"></code></pre>
 						</v-card-text>
 					</v-card>
 				</v-dialog>
@@ -12572,7 +12588,7 @@ const app = createApp({
 		backup_set_files: [],
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_billing: { step: 1 },
-		dialog_site: { loading: true, syncing: false, step: 1, backup_step: 1, grant_access: [], grant_access_menu: false, desired_environment_id: null, environment_selected: { environment_id: "0", expanded_backups: [], quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], key: null, tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
+		dialog_site: { loading: true, syncing: false, step: 1, backup_step: 1, grant_access: [], grant_access_menu: false, desired_environment_id: null, environment_selected: { environment_id: "0", expanded_backups: [], quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false, server_logs: { files: [] }, view_server_logs: false, loading_server_logs: false, server_log_limit: "1000", server_log_selected: "", server_log_response: "", server_log_lines: [], server_log_search: "" }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], key: null, tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
 		dialog_site_request: { show: false, request: {} },
 		dialog_edit_account: { show: false, account: {} },
 		dialog_account_portal: { show: false, portal: { domain: "", configuration: {}, email: { host: "", port: "", encryption_type: "tls", username: "", password: "" }, colors: { primary: "#0D47A1", secondary: "#424242", accent: "#82B1FF", error: "#FF5252", info: "#0D47A1", success: "#4CAF50", warning: "#FFC107" } }, colors: { primary: false, secondary: false, accent: false, error: false, info: false, success: false, warning: false } },
@@ -12990,6 +13006,16 @@ const app = createApp({
 		}
 	},
 	computed: {
+		filteredServerLogLines() {
+			const env = this.dialog_site.environment_selected
+			if ( !env || !env.server_log_lines || !env.server_log_lines.length ) return []
+			const search = ( env.server_log_search || "" ).toLowerCase()
+			if ( !search ) return env.server_log_lines
+			return env.server_log_lines.filter( line => line.raw.toLowerCase().includes( search ) )
+		},
+		filteredServerLogResponse() {
+			return this.filteredServerLogLines.map( line => line.highlighted ).join("\n")
+		},
 		allLevelOptions() {
 			return [
 				{ title: "Full", value: "full" },
@@ -18957,8 +18983,10 @@ const app = createApp({
 			site = this.dialog_site.site
 			environment = this.dialog_site.environment_selected
 			environment.server_log_response = ""
+			environment.server_log_lines = []
+			environment.server_log_search = ""
 			environment.loading_server_logs = true
-			
+
 			// Data to be sent in the POST body
 			const postData = {
 				file: environment.server_log_selected,
@@ -18966,7 +18994,7 @@ const app = createApp({
 			};
 
 			axios.post(
-				`/wp-json/captaincore/v1/sites/${site.site_id}/${environment.environment.toLowerCase()}/logs/fetch`, 
+				`/wp-json/captaincore/v1/sites/${site.site_id}/${environment.environment.toLowerCase()}/logs/fetch`,
 				postData, // POST data
 				{
 					headers: {'X-WP-Nonce':this.wp_nonce}
@@ -18976,8 +19004,12 @@ const app = createApp({
 				environment.loading_server_logs = false
 				window.Prism = window.Prism || {};
 				window.Prism.manual = true;
-				environment.server_log_response = Prism.highlight( response.data, Prism.languages.log, 'log')
-				Prism.highlightAll()
+				const rawLines = response.data.split("\n")
+				environment.server_log_lines = rawLines.map( line => ({
+					raw: line,
+					highlighted: Prism.highlight( line, Prism.languages.log, 'log' )
+				}))
+				environment.server_log_response = environment.server_log_lines.map( l => l.highlighted ).join("\n")
 			});
 		},
 		showCaptures( site_id ) {
