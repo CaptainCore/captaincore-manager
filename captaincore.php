@@ -2200,6 +2200,7 @@ function captaincore_sites_update_func( WP_REST_Request $request ) {
 	$value    = $request->get_param( 'value' );
 	$site     = new CaptainCore\Site( $value["site_id"] );
 	$response = $site->update( $value );
+	$site->sync();
 	return $response;
 }
 
