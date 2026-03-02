@@ -1338,8 +1338,9 @@ class Site {
         $details->visits   = $total_visits;
         $details->storage  = $total_storage;
         $details->username = $environments[0]->username;
-        
+
         Sites::update( [ "details" => json_encode( $details ) ], [ "site_id" => $site->site_id ] );
+        Sites::update_environments_cache( $this->site_id );
     }
 
 }
