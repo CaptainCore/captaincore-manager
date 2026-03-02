@@ -1152,11 +1152,18 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	if ( $command == 'usage-update' ) {
 
 		$current_environment = ( new CaptainCore\Environments )->get( $post->data->environment_id );
-		( new CaptainCore\Environments )->update( (array) $post->data, [ "environment_id" => $post->data->environment_id ] );
+
+		// If visits is 0, keep the current value to avoid overwriting with failed API data
+		$update_data = (array) $post->data;
+		if ( empty( $update_data['visits'] ) || $update_data['visits'] === '0' ) {
+			$update_data['visits'] = $current_environment->visits;
+		}
+
+		( new CaptainCore\Environments )->update( $update_data, [ "environment_id" => $post->data->environment_id ] );
 
 		$response = [
 			"response"    => "Completed usage-update for $site_id",
-			"environment" => $post->data,
+			"environment" => (object) $update_data,
 		];
 
 		( new CaptainCore\Site( $current_environment->site_id ) )->update_details();
