@@ -11912,6 +11912,118 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</div>
 			</v-card>
 		</v-slide-y-reverse-transition>
+		<div v-if="role == 'administrator' && bulk_progress.length > 0" style="position: fixed; bottom: 16px; right: 16px; z-index: 100; display: flex; flex-direction: column; gap: 8px; max-width: 280px;">
+			<div v-if="bulk_progress.filter(p => !p.running).length > 1" class="d-flex justify-end mb-1">
+				<v-btn size="x-small" variant="text" color="warning" @click="clearAllStaleBulkProgress">Clear all stale</v-btn>
+			</div>
+			<v-slide-x-reverse-transition group>
+				<v-card v-for="(op, i) in bulk_progress" :key="i" elevation="4" rounded="lg" border :class="{ 'opacity-50': !op.running }" style="cursor: pointer;" @click="openBulkProgressDetail(op)">
+					<v-card-text class="pa-3">
+						<div class="d-flex align-center justify-space-between mb-1">
+							<span class="text-caption font-weight-bold text-truncate mr-2">
+								{{ op.command }}
+								<span v-if="!op.running" class="text-warning">(stale)</span>
+							</span>
+							<div class="d-flex align-center">
+								<span class="text-caption text-no-wrap mr-1">{{ op.completed }}/{{ op.total }}</span>
+								<v-btn v-if="!op.running" icon size="x-small" variant="text" density="compact" @click.stop="dismissBulkProgress(op.pid)"><v-icon size="14">mdi-close</v-icon></v-btn>
+							</div>
+						</div>
+						<v-progress-linear :model-value="op.percent" :color="op.failed > 0 ? 'warning' : 'primary'" rounded height="6" class="mb-1"></v-progress-linear>
+						<div class="d-flex align-center justify-space-between">
+							<span class="text-caption text-medium-emphasis">{{ op.elapsed }}</span>
+							<span class="text-caption text-medium-emphasis">{{ op.percent }}%</span>
+							<span v-if="op.eta && op.running" class="text-caption text-medium-emphasis">ETA: {{ op.eta }}</span>
+							<span v-if="op.failed > 0" class="text-caption text-warning">{{ op.failed }} failed</span>
+						</div>
+					</v-card-text>
+				</v-card>
+			</v-slide-x-reverse-transition>
+		</div>
+		<v-dialog v-model="bulk_progress_dialog.show" max-width="440" v-if="bulk_progress_dialog.item">
+			<v-card>
+				<v-card-title class="d-flex align-center pt-4">
+					<v-icon class="mr-2" :color="bulk_progress_dialog.item.running ? 'primary' : 'warning'">{{ bulk_progress_dialog.item.running ? 'mdi-progress-clock' : 'mdi-alert-circle-outline' }}</v-icon>
+					{{ bulk_progress_dialog.item.command }}
+					<v-chip v-if="!bulk_progress_dialog.item.running" color="warning" size="small" class="ml-2">Stale</v-chip>
+				</v-card-title>
+				<v-card-text class="pt-4">
+					<div class="d-flex align-center justify-space-between mb-1">
+						<span class="text-body-2 font-weight-medium">{{ bulk_progress_dialog.item.completed }} / {{ bulk_progress_dialog.item.total }}</span>
+						<span class="text-body-2 font-weight-medium">{{ bulk_progress_dialog.item.percent }}%</span>
+					</div>
+					<v-progress-linear :model-value="bulk_progress_dialog.item.percent" :color="bulk_progress_dialog.item.failed > 0 ? 'warning' : 'primary'" rounded height="8" class="mb-5"></v-progress-linear>
+					<v-row dense>
+						<v-col cols="6">
+							<div class="text-caption text-medium-emphasis">Elapsed</div>
+							<div class="text-body-2">{{ bulk_progress_dialog.item.elapsed }}</div>
+						</v-col>
+						<v-col cols="6">
+							<div class="text-caption text-medium-emphasis">ETA</div>
+							<div class="text-body-2">{{ bulk_progress_dialog.item.eta && bulk_progress_dialog.item.running ? bulk_progress_dialog.item.eta : '—' }}</div>
+						</v-col>
+						<v-col cols="6" class="mt-2">
+							<div class="text-caption text-medium-emphasis">Parallel</div>
+							<div class="text-body-2">{{ bulk_progress_dialog.item.parallel }}</div>
+						</v-col>
+						<v-col cols="6" class="mt-2">
+							<div class="text-caption text-medium-emphasis">Failed</div>
+							<div class="text-body-2" :class="{ 'text-warning': bulk_progress_dialog.item.failed > 0 }">{{ bulk_progress_dialog.item.failed }}</div>
+						</v-col>
+						<v-col cols="6" class="mt-2">
+							<div class="text-caption text-medium-emphasis">PID</div>
+							<div class="text-body-2"><code>{{ bulk_progress_dialog.item.pid }}</code></div>
+						</v-col>
+						<v-col cols="6" class="mt-2" v-if="bulk_progress_dialog.item.target">
+							<div class="text-caption text-medium-emphasis">Target</div>
+							<div class="text-body-2">{{ bulk_progress_dialog.item.target.split(' ').filter(s => s).length }} sites</div>
+						</v-col>
+						<v-col cols="12" class="mt-2" v-if="bulk_progress_dialog.item.args">
+							<div class="text-caption text-medium-emphasis">Arguments</div>
+							<div class="text-body-2"><code>{{ bulk_progress_dialog.item.args }}</code></div>
+						</v-col>
+					</v-row>
+					<v-progress-linear v-if="bulk_progress_dialog.loading_detail" indeterminate rounded height="4" class="mt-4"></v-progress-linear>
+					<template v-if="bulk_progress_dialog.detail">
+						<v-divider class="my-4"></v-divider>
+						<v-tabs v-model="bulk_progress_dialog.tab" density="compact" class="mb-2">
+							<v-tab value="pending">Pending ({{ bulk_progress_dialog.detail.pending_sites ? bulk_progress_dialog.detail.pending_sites.length : 0 }})</v-tab>
+							<v-tab value="completed">Completed ({{ bulk_progress_dialog.detail.completed_sites ? bulk_progress_dialog.detail.completed_sites.filter(s => s.exit_code === 0).length : 0 }})</v-tab>
+							<v-tab value="failed" v-if="bulk_progress_dialog.item.failed > 0">Failed ({{ bulk_progress_dialog.item.failed }})</v-tab>
+						</v-tabs>
+						<v-window v-model="bulk_progress_dialog.tab">
+							<v-window-item value="pending">
+								<div style="max-height: 200px; overflow-y: auto;" class="pa-1">
+									<v-chip v-for="site in (bulk_progress_dialog.detail.pending_sites || [])" :key="site" size="small" class="ma-1" variant="tonal">{{ site }}</v-chip>
+									<div v-if="!bulk_progress_dialog.detail.pending_sites || bulk_progress_dialog.detail.pending_sites.length === 0" class="text-caption text-medium-emphasis pa-2">All sites completed.</div>
+								</div>
+							</v-window-item>
+							<v-window-item value="completed">
+								<div style="max-height: 200px; overflow-y: auto;" class="pa-1">
+									<v-chip v-for="entry in (bulk_progress_dialog.detail.completed_sites || []).filter(s => s.exit_code === 0)" :key="entry.site" size="small" class="ma-1" variant="tonal" color="success">{{ entry.site }}</v-chip>
+									<div v-if="(bulk_progress_dialog.detail.completed_sites || []).filter(s => s.exit_code === 0).length === 0" class="text-caption text-medium-emphasis pa-2">No sites completed yet.</div>
+								</div>
+							</v-window-item>
+							<v-window-item value="failed" v-if="bulk_progress_dialog.item.failed > 0">
+								<div style="max-height: 200px; overflow-y: auto;" class="pa-1">
+									<v-chip v-for="entry in (bulk_progress_dialog.detail.completed_sites || []).filter(s => s.exit_code !== 0)" :key="entry.site" size="small" class="ma-1" variant="tonal" color="error">{{ entry.site }}</v-chip>
+								</div>
+							</v-window-item>
+						</v-window>
+					</template>
+				</v-card-text>
+				<v-card-actions>
+					<v-spacer></v-spacer>
+					<v-btn variant="text" @click="bulk_progress_dialog.show = false">Close</v-btn>
+					<v-btn v-if="bulk_progress_dialog.item.running" color="error" variant="tonal" :loading="bulk_progress_dialog.killing" @click="killBulkProgress(bulk_progress_dialog.item.pid)">
+						<v-icon start>mdi-stop-circle-outline</v-icon> Kill Process
+					</v-btn>
+					<v-btn v-if="!bulk_progress_dialog.item.running" color="warning" variant="tonal" @click="dismissBulkProgress(bulk_progress_dialog.item.pid); bulk_progress_dialog.show = false">
+						<v-icon start>mdi-delete-outline</v-icon> Dismiss
+					</v-btn>
+				</v-card-actions>
+			</v-card>
+		</v-dialog>
 		<div class="activity-island-container">
 			<v-fade-transition>
 				<div v-if="(runningJobs > 0 || view_console.show) && !view_console.fullscreen" class="d-flex flex-column align-center">
@@ -12599,6 +12711,9 @@ const app = createApp({
 		upload: [],
 		selected_site: {},
 		active_console: 0,
+		bulk_progress: [],
+		bulk_progress_interval: null,
+		bulk_progress_dialog: { show: false, item: null, killing: false, detail: null, loading_detail: false, tab: 'pending' },
 		view_console: { show: false, terminal_open: false, fullscreen: false, selected_targets: [], search: '', target_search: '', target_menu: false, target_limit: 100, recipe_menu: false, recipe_menu_search: '', recipe_menu_tab: 'system' },
 			terminal_schedule: {
 			show: false,
@@ -12986,6 +13101,10 @@ const app = createApp({
 			this.fetchProcesses()
 			this.fetchPendingACHVerifications()
 		}
+		if ( this.role == 'administrator' ) {
+			this.fetchBulkProgress()
+			this.bulk_progress_interval = setInterval( () => this.fetchBulkProgress(), 15000 )
+		}
 		pathname = window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/'
 		path = pathname.replace( this.configurations.path, "/" )
 		this.updateRoute( path )
@@ -13003,6 +13122,11 @@ const app = createApp({
 				created_at: this.current_user_registered,
 				user_hash: this.current_user_hash
 			});
+		}
+	},
+	unmounted() {
+		if ( this.bulk_progress_interval ) {
+			clearInterval( this.bulk_progress_interval );
 		}
 	},
 	computed: {
@@ -13462,6 +13586,9 @@ const app = createApp({
 			}
 			return '';
 		},
+		activeBulkProgress() {
+			return this.bulk_progress.filter(p => p.running);
+		},
 		filteredConsoleTargets() {
 			const search = this.view_console.target_search ? this.view_console.target_search.toLowerCase() : '';
 			
@@ -13667,6 +13794,50 @@ const app = createApp({
 		},
 	},
 	methods: {
+		fetchBulkProgress() {
+			if ( this.role !== 'administrator' ) return;
+			axios.get( '/wp-json/captaincore/v1/progress', { headers: { 'X-WP-Nonce': this.wp_nonce } })
+				.then( response => {
+					this.bulk_progress = response.data || [];
+					if ( this.bulk_progress_dialog.show && this.bulk_progress_dialog.item ) {
+						const updated = this.bulk_progress.find( p => p.pid === this.bulk_progress_dialog.item.pid );
+						if ( updated ) this.bulk_progress_dialog.item = updated;
+						axios.get( '/wp-json/captaincore/v1/progress/' + this.bulk_progress_dialog.item.pid, { headers: { 'X-WP-Nonce': this.wp_nonce } })
+							.then( r => { this.bulk_progress_dialog.detail = r.data; })
+							.catch( () => {} );
+					}
+				})
+				.catch( () => {} );
+		},
+		openBulkProgressDetail( op ) {
+			this.bulk_progress_dialog = { show: true, item: op, killing: false, detail: null, loading_detail: true, tab: 'pending' };
+			axios.get( '/wp-json/captaincore/v1/progress/' + op.pid, { headers: { 'X-WP-Nonce': this.wp_nonce } })
+				.then( response => {
+					this.bulk_progress_dialog.detail = response.data;
+					this.bulk_progress_dialog.loading_detail = false;
+				})
+				.catch( () => { this.bulk_progress_dialog.loading_detail = false; });
+		},
+		killBulkProgress( pid ) {
+			this.bulk_progress_dialog.killing = true;
+			axios.delete( '/wp-json/captaincore/v1/progress/' + pid, { headers: { 'X-WP-Nonce': this.wp_nonce } })
+				.then( () => {
+					this.bulk_progress_dialog.killing = false;
+					this.bulk_progress_dialog.show = false;
+					this.fetchBulkProgress();
+				})
+				.catch( () => { this.bulk_progress_dialog.killing = false; });
+		},
+		dismissBulkProgress( pid ) {
+			axios.delete( '/wp-json/captaincore/v1/progress/' + pid, { headers: { 'X-WP-Nonce': this.wp_nonce } })
+				.then( () => { this.fetchBulkProgress(); })
+				.catch( () => {} );
+		},
+		clearAllStaleBulkProgress() {
+			const stale = this.bulk_progress.filter( p => !p.running );
+			Promise.all( stale.map( p => axios.delete( '/wp-json/captaincore/v1/progress/' + p.pid, { headers: { 'X-WP-Nonce': this.wp_nonce } }) ) )
+				.then( () => { this.fetchBulkProgress(); });
+		},
 		toggleTheme() {
 			this.theme = this.theme === 'light' ? 'dark' : 'light';
 			this.$vuetify.theme.global.name.value = this.theme;
