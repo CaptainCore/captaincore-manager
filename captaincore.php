@@ -3904,6 +3904,74 @@ function captaincore_running_func( $request ) {
 	return [];
 }
 
+function captaincore_progress_func( $request ) {
+	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+		add_filter( 'https_ssl_verify', '__return_false' );
+	}
+
+	$response = wp_remote_get( CAPTAINCORE_CLI_ADDRESS . "/progress", [
+		'timeout' => 15,
+		'headers' => [
+			'token' => captaincore_get_cli_token(),
+		],
+	]);
+
+	if ( is_wp_error( $response ) ) {
+		return [];
+	}
+
+	$body = json_decode( $response['body'] );
+
+	if ( is_array( $body ) ) {
+		return $body;
+	}
+
+	return [];
+}
+
+function captaincore_progress_kill_func( $request ) {
+	$pid = $request['pid'];
+
+	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+		add_filter( 'https_ssl_verify', '__return_false' );
+	}
+
+	$response = wp_remote_request( CAPTAINCORE_CLI_ADDRESS . "/progress/{$pid}", [
+		'timeout' => 15,
+		'method'  => 'DELETE',
+		'headers' => [
+			'token' => captaincore_get_cli_token(),
+		],
+	]);
+
+	if ( is_wp_error( $response ) ) {
+		return new WP_Error( 'kill_failed', 'Failed to kill process', [ 'status' => 500 ] );
+	}
+
+	return json_decode( $response['body'] );
+}
+
+function captaincore_progress_detail_func( $request ) {
+	$pid = $request['pid'];
+
+	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+		add_filter( 'https_ssl_verify', '__return_false' );
+	}
+
+	$response = wp_remote_get( CAPTAINCORE_CLI_ADDRESS . "/progress/{$pid}", [
+		'timeout' => 15,
+		'headers' => [
+			'token' => captaincore_get_cli_token(),
+		],
+	]);
+
+	if ( is_wp_error( $response ) ) {
+		return new WP_Error( 'detail_failed', 'Failed to fetch progress detail', [ 'status' => 500 ] );
+	}
+
+	return json_decode( $response['body'] );
+}
+
 function captaincore_site_phpmyadmin_func( $request ) {
 	$site_id     = $request['id'];
 
@@ -7185,6 +7253,33 @@ function captaincore_register_rest_endpoints() {
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_running_func',
 			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/progress/', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_progress_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/progress/(?P<pid>[\d]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_progress_kill_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/progress/(?P<pid>[\d]+)', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_progress_detail_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
 			'show_in_index'       => false,
 		]
 	);

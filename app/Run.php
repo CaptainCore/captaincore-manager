@@ -202,10 +202,11 @@ class Run {
             return "Something went wrong: $error_message";
         }
 
-        $response = json_decode( $response["body"] );
-        
+        $raw_body = $response["body"];
+        $response = json_decode( $raw_body );
+
         // Response with task id
-        if ( $response && $response->token ) {
+        if ( $response && isset( $response->token ) ) {
             ( new JobTokens )->insert( [
                 'token'      => $response->token,
                 'task_id'    => $response->task_id,
@@ -215,8 +216,8 @@ class Run {
             ] );
             return $response->token;
         }
-    
-        return $response["body"];
+
+        return $raw_body;
     }
 
 }
