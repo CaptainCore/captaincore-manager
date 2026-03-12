@@ -627,7 +627,7 @@ class Site {
 
     public function backups( $environment = "production" ) {
 
-        $command = "backup list {$this->site_id}-$environment";
+        $command = "backup list {$this->site_id}-$environment --format=json";
 
         // Disable https when debug enabled
         if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
