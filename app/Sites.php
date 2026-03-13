@@ -137,6 +137,7 @@ class Sites extends DB {
                     "port"            => $env->port,
                     "screenshot"      => (bool) $env->screenshot,
                     "screenshot_base" => empty( $env_details->screenshot_base ) ? "" : $env_details->screenshot_base,
+                    "restic_cache"    => isset( $env_details->restic_cache ) ? (int) $env_details->restic_cache : 0,
                 ];
             }
 
@@ -165,6 +166,7 @@ class Sites extends DB {
             $site->home_url          = isset( $details->home_url ) ? $details->home_url : "";
             $site->console_errors    = isset( $details->console_errors ) ? $details->console_errors : "";
             $site->connection_errors = isset( $details->connection_errors ) ? $details->connection_errors : "";
+            $site->removed           = isset( $details->removed ) ? $details->removed : false;
             $site->subsites          = $details->subsites;
             $site->storage           = $details->storage;
             $site->visits            = $details->visits;
