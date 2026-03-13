@@ -6170,6 +6170,30 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
+		'captaincore/v1', '/archive/store', [
+			'methods'             => 'POST',
+			'callback'            => function( $request ) {
+				if ( ! current_user_can( 'manage_options' ) ) {
+					return new WP_Error( 'rest_forbidden', 'Forbidden', [ 'status' => 403 ] );
+				}
+
+				$url = trim( $request->get_param( 'url' ) ?? '' );
+
+				if ( empty( $url ) ) {
+					return new WP_Error( 'missing_url', 'A URL is required.', [ 'status' => 400 ] );
+				}
+
+				if ( ! filter_var( $url, FILTER_VALIDATE_URL ) || ! preg_match( '/\.zip$/i', parse_url( $url, PHP_URL_PATH ) ) ) {
+					return new WP_Error( 'invalid_url', 'URL must be a valid .zip file URL.', [ 'status' => 400 ] );
+				}
+
+				return \CaptainCore\Run::background_task( "store-snapshot {$url}" );
+			},
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
 		'captaincore/v1', '/archive/share', [
 			'methods'             => 'POST',
 			'callback'            => function( $request ) {
@@ -7806,13 +7830,24 @@ function captaincore_register_rest_endpoints() {
 					'method' => 'GET',
 				];
 
-				$response = wp_remote_get( CAPTAINCORE_CLI_ADDRESS . "/task/{$task_id}", $data );
-				if ( is_wp_error( $response ) ) {
-					return new WP_Error( 'request_failed', $response->get_error_message(), [ 'status' => 500 ] );
+				$raw_response = wp_remote_get( CAPTAINCORE_CLI_ADDRESS . "/task/{$task_id}", $data );
+				if ( is_wp_error( $raw_response ) ) {
+					return new WP_Error( 'request_failed', $raw_response->get_error_message(), [ 'status' => 500 ] );
 				}
-				$response = json_decode( $response["body"] );
 
-				if ( $response && $response->Status == "Completed" ) {
+				$http_code = wp_remote_retrieve_response_code( $raw_response );
+				$body      = wp_remote_retrieve_body( $raw_response );
+
+				if ( $http_code !== 200 ) {
+					return new WP_Error( 'cli_error', "CLI server returned HTTP {$http_code}: {$body}", [ 'status' => 502 ] );
+				}
+
+				$response = json_decode( $body );
+				if ( ! $response ) {
+					return new WP_Error( 'parse_error', "Failed to parse CLI response: {$body}", [ 'status' => 502 ] );
+				}
+
+				if ( $response->Status == "Completed" ) {
 					return [
 						"response" => $response->Response,
 						"status"   => "completed",
@@ -7820,8 +7855,101 @@ function captaincore_register_rest_endpoints() {
 					];
 				}
 
-				$status = ( $response && isset( $response->Status ) ) ? strtolower( $response->Status ) : 'unknown';
-				return [ "status" => $status, "token" => $token ];
+				$status = isset( $response->Status ) ? strtolower( $response->Status ) : 'unknown';
+				$result = [ "status" => $status, "token" => $token ];
+				if ( isset( $response->progress ) ) {
+					$result["progress"] = $response->progress;
+				}
+				return $result;
+			},
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/my-jobs/(?P<token>[a-zA-Z0-9]+)/stream', [
+			'methods'             => 'GET',
+			'callback'            => function ( WP_REST_Request $request ) {
+				$token   = $request['token'];
+				$user_id = get_current_user_id();
+
+				$job_tokens = new CaptainCore\JobTokens();
+				$results    = $job_tokens->where( [ 'token' => $token, 'user_id' => $user_id ] );
+
+				if ( empty( $results ) ) {
+					return new WP_Error( 'not_found', 'Job not found.', [ 'status' => 404 ] );
+				}
+
+				$task_id = $results[0]->task_id;
+
+				header( 'Content-Type: text/event-stream' );
+				header( 'Cache-Control: no-cache' );
+				header( 'Connection: keep-alive' );
+				header( 'X-Accel-Buffering: no' );
+
+				while ( ob_get_level() ) {
+					ob_end_clean();
+				}
+
+				$url = CAPTAINCORE_CLI_ADDRESS . "/task/{$task_id}/stream";
+				$ch  = curl_init( $url );
+				curl_setopt( $ch, CURLOPT_HTTPHEADER, [
+					'Content-Type: application/json; charset=utf-8',
+					'token: ' . captaincore_get_cli_token(),
+				] );
+				curl_setopt( $ch, CURLOPT_WRITEFUNCTION, function ( $ch, $data ) {
+					echo $data;
+					flush();
+					return strlen( $data );
+				} );
+
+				if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+					curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
+				}
+
+				curl_exec( $ch );
+				curl_close( $ch );
+				exit;
+			},
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/my-jobs/(?P<token>[a-zA-Z0-9]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => function ( WP_REST_Request $request ) {
+				$token   = $request['token'];
+				$user_id = get_current_user_id();
+
+				$job_tokens = new CaptainCore\JobTokens();
+				$results    = $job_tokens->where( [ 'token' => $token, 'user_id' => $user_id ] );
+
+				if ( empty( $results ) ) {
+					return new WP_Error( 'not_found', 'Job not found.', [ 'status' => 404 ] );
+				}
+
+				$job     = $results[0];
+				$task_id = $job->task_id;
+
+				if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+					add_filter( 'https_ssl_verify', '__return_false' );
+				}
+
+				$data = [
+					'timeout' => 45,
+					'headers' => [
+						'Content-Type' => 'application/json; charset=utf-8',
+						'token'        => captaincore_get_cli_token(),
+					],
+					'method' => 'DELETE',
+				];
+
+				wp_remote_request( CAPTAINCORE_CLI_ADDRESS . "/task/{$task_id}", $data );
+
+				return [ "status" => "cancelled" ];
 			},
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
@@ -9126,9 +9254,9 @@ function captaincore_login_func( WP_REST_Request $request ) {
 			"remember"      => true,
 		];
 
-		$current_user = wp_authenticate( $post->login->user_login, $post->login->user_password ); 
+		$current_user = wp_authenticate( $post->login->user_login, $post->login->user_password );
 
-		if ( $current_user->ID === null ) {
+		if ( is_wp_error( $current_user ) ) {
 			return [ "errors" => "Login failed." ];
 		}
 
