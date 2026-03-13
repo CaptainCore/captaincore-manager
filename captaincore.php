@@ -84,6 +84,8 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command( 'captaincore scheduled-reports', 'CaptainCore\ScheduledReportsCLI' );
 	WP_CLI::add_command( 'captaincore top-plugins', 'CaptainCore\TopPluginsCLI' );
 	WP_CLI::add_command( 'captaincore scan-queue', 'CaptainCore\ScanQueueCLI' );
+	WP_CLI::add_command( 'captaincore restic-cache', 'CaptainCore\ResticCacheCLI' );
+	WP_CLI::add_command( 'captaincore security-log-sizes', 'CaptainCore\SecurityLogCLI' );
 }
 
 /* -------------------------------------------------------------------------
