@@ -46,9 +46,9 @@ class ScanQueueCLI {
 		$sites_data = self::gather_sites();
 		$log( sprintf( 'Found %d active production sites.', count( $sites_data ) ) );
 
-		// Step 2: Build site component lists and SSH map
+		// Step 2: Build site component lists and SSH map (keyed by site_id for uniqueness)
 		$payload = [];
-		$ssh_map = []; // site_slug => ssh connection string
+		$ssh_map = [];
 		foreach ( $sites_data as $site ) {
 			$components = [];
 
@@ -86,26 +86,29 @@ class ScanQueueCLI {
 				continue;
 			}
 
-			// Build site slug from domain (strip TLD-like suffixes)
+			// Build site slug from full domain (strip protocol, www, trailing slashes, and path)
 			$domain    = $site->home_url ? preg_replace( '#^https?://(www\.)?#', '', $site->home_url ) : $site->name;
-			$site_slug = preg_replace( '/[^a-z0-9]/', '', explode( '.', $domain )[0] );
+			$domain    = preg_replace( '#/.*$#', '', $domain ); // strip path
+			$site_slug = preg_replace( '/[^a-z0-9]/', '', $domain );
+			$site_id   = (int) $site->site_id;
 
 			$payload[] = [
+				'site_id'    => $site_id,
 				'site_slug'  => $site_slug,
 				'domain'     => $domain,
 				'components' => $components,
 			];
 
-			// Store SSH connection info
+			// Store SSH connection info keyed by site_id (guaranteed unique)
 			if ( ! empty( $site->address ) && ! empty( $site->username ) ) {
 				$ssh = "{$site->username}@{$site->address}";
 				if ( ! empty( $site->port ) && $site->port !== '22' ) {
 					$ssh .= " -p {$site->port}";
 				}
-				$ssh_map[ $site_slug ] = [
+				$ssh_map[ $site_id ] = [
 					'ssh'            => $ssh,
 					'domain'         => $domain,
-					'site_id'        => $site->site_id,
+					'site_id'        => $site_id,
 					'name'           => $site->name,
 					'provider'       => $site->provider,
 					'home_directory' => $site->home_directory,
@@ -172,10 +175,10 @@ class ScanQueueCLI {
 			$all_queue = array_slice( $all_queue, 0, $limit );
 		}
 
-		// Step 4: Enrich with SSH connection strings
+		// Step 4: Enrich with SSH connection strings (keyed by site_id)
 		$output = [];
 		foreach ( $all_queue as $item ) {
-			$ssh_info = $ssh_map[ $item['site_slug'] ] ?? null;
+			$ssh_info = $ssh_map[ $item['site_id'] ] ?? null;
 			$row = [
 				'site_slug'      => $item['site_slug'],
 				'domain'         => $item['domain'],
@@ -194,10 +197,10 @@ class ScanQueueCLI {
 			// For JSON, include full details including unaudited_slugs and SSH
 			$json_output = [];
 			foreach ( $all_queue as $item ) {
-				$ssh_info = $ssh_map[ $item['site_slug'] ] ?? null;
+				$ssh_info = $ssh_map[ $item['site_id'] ] ?? null;
 				$json_output[] = array_merge( $item, [
 					'ssh'            => $ssh_info ? $ssh_info['ssh'] : null,
-					'site_id'        => $ssh_info ? $ssh_info['site_id'] : null,
+					'site_id'        => $ssh_info ? $ssh_info['site_id'] : $item['site_id'],
 					'name'           => $ssh_info ? $ssh_info['name'] : null,
 					'provider'       => $ssh_info ? $ssh_info['provider'] : null,
 					'home_directory' => $ssh_info ? $ssh_info['home_directory'] : null,
@@ -250,6 +253,7 @@ class ScanQueueCLI {
 
 		$results = [];
 		foreach ( $sites as $site ) {
+			$site_id    = $site['site_id'] ?? 0;
 			$site_slug  = $site['site_slug'] ?? '';
 			$components = $site['components'] ?? [];
 
@@ -311,6 +315,7 @@ class ScanQueueCLI {
 			}
 
 			$results[] = [
+				'site_id'          => $site_id,
 				'site_slug'        => $site_slug,
 				'domain'           => $site['domain'] ?? $site_slug,
 				'total_components' => $total,
