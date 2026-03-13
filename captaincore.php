@@ -880,13 +880,26 @@ function captaincore_api_func( WP_REST_Request $request ) {
 	if ( $command == 'update-site' and ! empty( $post->data ) ) {
 
 		$current_site = ( new CaptainCore\Sites )->get( $post->data->site_id );
+
+		// Merge incoming details with existing to preserve server-side flags (e.g., removed)
+		if ( isset( $post->data->details ) ) {
+			$existing_details = isset( $current_site->details ) ? json_decode( $current_site->details ) : (object) [];
+			$incoming_details = json_decode( $post->data->details );
+			if ( $incoming_details ) {
+				foreach ( $incoming_details as $key => $value ) {
+					$existing_details->$key = $value;
+				}
+			}
+			$post->data->details = json_encode( $existing_details );
+		}
+
 		( new CaptainCore\Sites )->update( (array) $post->data, [ "site_id" => $post->data->site_id ] );
 
 		$response = [
 			"response" => "Completed update-site for $site_id",
 			"site"     => $post->data,
 		];
-		
+
 	}
 
 
