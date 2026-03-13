@@ -9667,17 +9667,19 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</small>
 					</v-toolbar-title>
 					<v-spacer></v-spacer>
-					<v-text-field 
-						v-model="archive_search" 
-						append-inner-icon="mdi-magnify" 
-						label="Search" 
-						density="compact" 
-						variant="outlined" 
-						clearable 
-						hide-details 
-						flat 
-						style="max-width:300px;">
+					<v-text-field
+						v-model="archive_search"
+						append-inner-icon="mdi-magnify"
+						label="Search"
+						density="compact"
+						variant="outlined"
+						clearable
+						hide-details
+						flat
+						style="max-width:300px;"
+						class="mr-2">
 					</v-text-field>
+					<v-btn color="primary" variant="flat" prepend-icon="mdi-plus" @click="dialog_store_archive.show = true">Store Archive</v-btn>
 				</v-toolbar>
 				<v-card-text>
 					<v-data-table
@@ -9748,6 +9750,70 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<v-card-actions>
 							<v-spacer></v-spacer>
 							<v-btn variant="text" @click="dialog_archive_link.show = false">Close</v-btn>
+						</v-card-actions>
+					</v-card>
+				</v-dialog>
+				<v-dialog v-model="dialog_store_archive.show" max-width="600px" persistent>
+					<v-card>
+						<v-toolbar color="primary" flat>
+							<v-toolbar-title>Store Archive</v-toolbar-title>
+							<v-spacer></v-spacer>
+							<v-btn icon="mdi-close" @click="closeStoreArchive"></v-btn>
+						</v-toolbar>
+						<v-card-text class="pt-4">
+							<template v-if="!dialog_store_archive.uploading">
+								<p class="mb-3">Enter a URL to a .zip file to download and store in the archive.</p>
+								<v-text-field
+									v-model="dialog_store_archive.url"
+									label="ZIP file URL"
+									variant="outlined"
+									placeholder="https://example.com/backup.zip"
+									:error-messages="dialog_store_archive.error"
+									@keyup.enter="submitStoreArchive"
+								></v-text-field>
+							</template>
+							<template v-else>
+								<div class="my-4">
+									<p class="text-subtitle-1 font-weight-medium mb-1" v-if="dialog_store_archive.progress.phase == 'downloading'">Downloading...</p>
+									<p class="text-subtitle-1 font-weight-medium mb-1" v-else-if="dialog_store_archive.progress.phase == 'uploading'">Uploading to archive...</p>
+									<p class="text-subtitle-1 font-weight-medium mb-1" v-else-if="dialog_store_archive.progress.phase == 'complete'">Complete</p>
+									<p class="text-subtitle-1 font-weight-medium mb-1" v-else-if="dialog_store_archive.progress.phase == 'error'">Error</p>
+									<p class="text-subtitle-1 font-weight-medium mb-1" v-else>Starting...</p>
+									<v-progress-linear
+										:model-value="dialog_store_archive.progress.percent"
+										:indeterminate="dialog_store_archive.progress.percent === 0 && dialog_store_archive.progress.phase !== 'error'"
+										color="primary"
+										height="20"
+										rounded
+									>
+										<template v-slot:default="{ value }">
+											<span v-if="!dialog_store_archive.progress.indeterminate" class="text-caption font-weight-bold">{{ Math.round(value) }}%</span>
+										</template>
+									</v-progress-linear>
+									<p class="text-caption text-grey mt-1" v-if="dialog_store_archive.progress.total > 0">
+										{{ formatSize(dialog_store_archive.progress.current || 0) }} / {{ formatSize(dialog_store_archive.progress.total) }}
+									</p>
+									<v-alert v-if="dialog_store_archive.progress.phase == 'error'" type="error" class="mt-3" density="compact">
+										{{ dialog_store_archive.progress.detail || 'An error occurred.' }}
+									</v-alert>
+									<v-alert v-if="dialog_store_archive.progress.phase == 'complete'" type="success" class="mt-3" density="compact">
+										Archive stored successfully.
+									</v-alert>
+								</div>
+							</template>
+						</v-card-text>
+						<v-card-actions>
+							<v-spacer></v-spacer>
+							<v-btn variant="text" @click="closeStoreArchive">
+								{{ dialog_store_archive.progress.phase == 'complete' ? 'Done' : 'Cancel' }}
+							</v-btn>
+							<v-btn
+								v-if="!dialog_store_archive.uploading"
+								color="primary"
+								variant="flat"
+								@click="submitStoreArchive"
+								:loading="dialog_store_archive.submitting"
+							>Store</v-btn>
 						</v-card-actions>
 					</v-card>
 				</v-dialog>
@@ -11912,10 +11978,11 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				</div>
 			</v-card>
 		</v-slide-y-reverse-transition>
-		<div v-if="role == 'administrator' && bulk_progress.length > 0" style="position: fixed; bottom: 16px; right: 16px; z-index: 100; display: flex; flex-direction: column; gap: 8px; max-width: 280px;">
-			<div v-if="bulk_progress.filter(p => !p.running).length > 1" class="d-flex justify-end mb-1">
+		<div v-if="role == 'administrator' && bulk_progress.length > 0" style="position: fixed; bottom: 16px; right: 16px; z-index: 100; display: flex; flex-direction: column; max-width: 280px; max-height: calc(100vh - 80px);">
+			<div v-if="bulk_progress.filter(p => !p.running).length > 1" class="d-flex justify-end mb-1" style="flex-shrink: 0;">
 				<v-btn size="x-small" variant="text" color="warning" @click="clearAllStaleBulkProgress">Clear all stale</v-btn>
 			</div>
+			<div style="overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
 			<v-slide-x-reverse-transition group>
 				<v-card v-for="(op, i) in bulk_progress" :key="i" elevation="4" rounded="lg" border :class="{ 'opacity-50': !op.running }" style="cursor: pointer;" @click="openBulkProgressDetail(op)">
 					<v-card-text class="pa-3">
@@ -11939,6 +12006,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-text>
 				</v-card>
 			</v-slide-x-reverse-transition>
+			</div>
 		</div>
 		<v-dialog v-model="bulk_progress_dialog.show" max-width="440" v-if="bulk_progress_dialog.item">
 			<v-card>
@@ -12195,6 +12263,7 @@ const app = createApp({
 		archives_loading: false,
 		archive_search: "",
 		dialog_archive_link: { show: false, url: "", loading: false },
+		dialog_store_archive: { show: false, url: "", error: "", submitting: false, uploading: false, token: null, eventSource: null, progress: { phase: "", percent: 0, current: 0, total: 0, detail: "" } },
 		configurations: <?php echo json_encode( ( new CaptainCore\Configurations )->get() ); ?>,
 		configurations_step: 0,
 		configurations_loading: true,
@@ -14178,6 +14247,80 @@ const app = createApp({
 				this.snackbar.show = true;
 				this.dialog_archive_link.show = false;
 			});
+		},
+		submitStoreArchive() {
+			if ( this.dialog_store_archive.submitting || this.dialog_store_archive.uploading ) return;
+			this.dialog_store_archive.error = "";
+
+			if ( ! this.dialog_store_archive.url || ! this.dialog_store_archive.url.match(/\.zip$/i) ) {
+				this.dialog_store_archive.error = "Please enter a valid .zip file URL.";
+				return;
+			}
+
+			this.dialog_store_archive.submitting = true;
+
+			axios.post('/wp-json/captaincore/v1/archive/store', {
+				url: this.dialog_store_archive.url
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(response => {
+				this.dialog_store_archive.submitting = false;
+				this.dialog_store_archive.uploading = true;
+				this.dialog_store_archive.token = response.data.token;
+				this.dialog_store_archive.progress = { phase: "", percent: 0, current: 0, total: 0, detail: "" };
+				this.streamStoreArchive();
+			})
+			.catch(error => {
+				this.dialog_store_archive.submitting = false;
+				this.dialog_store_archive.error = error.response?.data?.message || "Failed to start archive storage.";
+			});
+		},
+		streamStoreArchive() {
+			if ( ! this.dialog_store_archive.token ) return;
+
+			const url = '/wp-json/captaincore/v1/my-jobs/' + this.dialog_store_archive.token + '/stream?_wpnonce=' + this.wp_nonce;
+			const eventSource = new EventSource( url );
+			this.dialog_store_archive.eventSource = eventSource;
+
+			eventSource.onmessage = (event) => {
+				const data = JSON.parse( event.data );
+				if ( data.progress ) {
+					this.dialog_store_archive.progress = data.progress;
+				}
+				if ( data.status === 'completed' || data.progress?.phase === 'complete' ) {
+					this.dialog_store_archive.progress.phase = 'complete';
+					this.dialog_store_archive.progress.percent = 100;
+					this.fetchArchives();
+					eventSource.close();
+					return;
+				}
+				if ( data.status === 'cancelled' || data.progress?.phase === 'error' ) {
+					eventSource.close();
+				}
+			};
+
+			eventSource.onerror = () => {
+				eventSource.close();
+			};
+		},
+		closeStoreArchive() {
+			if ( this.dialog_store_archive.eventSource ) {
+				this.dialog_store_archive.eventSource.close();
+			}
+			if ( this.dialog_store_archive.uploading && this.dialog_store_archive.token && this.dialog_store_archive.progress.phase !== 'complete' ) {
+				axios.delete('/wp-json/captaincore/v1/my-jobs/' + this.dialog_store_archive.token, {
+					headers: { 'X-WP-Nonce': this.wp_nonce }
+				}).catch(() => {});
+			}
+			this.dialog_store_archive.show = false;
+			this.dialog_store_archive.url = "";
+			this.dialog_store_archive.error = "";
+			this.dialog_store_archive.submitting = false;
+			this.dialog_store_archive.uploading = false;
+			this.dialog_store_archive.token = null;
+			this.dialog_store_archive.eventSource = null;
+			this.dialog_store_archive.progress = { phase: "", percent: 0, current: 0, total: 0, detail: "" };
 		},
 		fetchReportDefaultRecipient() {
 			if (this.report.site_ids.length === 0) {
