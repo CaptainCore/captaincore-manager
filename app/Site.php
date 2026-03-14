@@ -1289,7 +1289,8 @@ class Site {
             $quicksaves[ $key ]->view_changes   = false;
             $quicksaves[ $key ]->view_files     = [];
             $quicksaves[ $key ]->filtered_files = [];
-            $quicksaves[ $key ]->loading        = true;
+            $quicksaves[ $key ]->loading         = true;
+            $quicksaves[ $key ]->sandbox_loading = false;
             $quicksaves[ $key ]->search         = "";
         }
 

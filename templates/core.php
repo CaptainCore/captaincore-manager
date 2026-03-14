@@ -6017,6 +6017,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-btn variant="text" size="small" @click="QuicksavesRollback( dialog_site.site.site_id, item, 'previous' )" v-show="item.previous_created_at">Revert changes <v-icon>mdi-restore</v-icon></v-btn>
 							<v-btn variant="text" size="small" @click="QuicksavesRollback( dialog_site.site.site_id, item, 'this' )">Reapply changes <v-icon>mdi-redo</v-icon></v-btn>
 							<v-btn variant="text" size="small" @click="viewQuicksavesChanges( dialog_site.site.site_id, item)">View Changes <v-icon>mdi-file-compare</v-icon></v-btn>
+							<v-btn variant="text" size="small" @click="previewInSandbox( dialog_site.site.site_id, item )" :loading="item.sandbox_loading" v-show="role == 'administrator'">Preview in Sandbox <v-icon end>mdi-play-box-outline</v-icon></v-btn>
 						</v-toolbar>
 						<v-dialog fullscreen scrim="false" v-model="item.view_changes">
 							<v-card rounded="0">
@@ -21712,6 +21713,23 @@ const app = createApp({
 					this.snackbar.show = true;
 				})
 
+		},
+		previewInSandbox( site_id, quicksave ) {
+			quicksave.sandbox_loading = true
+			const environment = this.dialog_site.environment_selected.environment.toLowerCase()
+			axios.post(
+				`/wp-json/captaincore/v1/quicksaves/${quicksave.hash}/sandbox-token`,
+				{ site_id: site_id, environment: environment },
+				{ headers: { 'X-WP-Nonce': this.wp_nonce } }
+			).then( response => {
+				quicksave.sandbox_loading = false
+				const playgroundUrl = `https://playground.wordpress.net/?blueprint-url=${encodeURIComponent(response.data.blueprint_url)}`
+				window.open( playgroundUrl, '_blank' )
+			}).catch( error => {
+				quicksave.sandbox_loading = false
+				this.snackbar.message = "Failed to generate sandbox preview."
+				this.snackbar.show = true
+			})
 		},
 		viewQuicksavesChanges( site_id, quicksave ) {
 			site = this.dialog_site.site
