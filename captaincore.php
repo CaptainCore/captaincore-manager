@@ -5194,6 +5194,89 @@ function captaincore_quicksaves_rollback_func( $request ) {
 	return ( new CaptainCore\Quicksave( $site_id ) )->rollback( $hash, $environment, $version, $type, $value );
 }
 
+function captaincore_quicksaves_sandbox_token_func( $request ) {
+	$site_id     = $request->get_param( 'site_id' );
+	$environment = strtolower( $request->get_param( 'environment' ) ?? 'production' );
+	$hash        = $request['hash'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$token = wp_generate_password( 64, false );
+	set_transient( "sandbox_{$token}", json_encode( [
+		'site_id'     => $site_id,
+		'hash'        => $hash,
+		'environment' => $environment,
+	] ), 30 * MINUTE_IN_SECONDS );
+
+	$blueprint_url = home_url( "/wp-json/captaincore/v1/quicksaves/{$hash}/blueprint?token={$token}" );
+
+	return [ 'token' => $token, 'blueprint_url' => $blueprint_url ];
+}
+
+function captaincore_quicksaves_blueprint_func( $request ) {
+	$hash  = $request['hash'];
+	$token = $request->get_param( 'token' );
+
+	if ( empty( $token ) ) {
+		return new WP_Error( 'missing_token', 'Token is required.', [ 'status' => 403 ] );
+	}
+
+	$transient = get_transient( "sandbox_{$token}" );
+	if ( ! $transient ) {
+		return new WP_Error( 'invalid_token', 'Token is invalid or expired.', [ 'status' => 403 ] );
+	}
+
+	$data = json_decode( $transient, true );
+	if ( $data['hash'] !== $hash ) {
+		return new WP_Error( 'hash_mismatch', 'Token does not match this quicksave.', [ 'status' => 403 ] );
+	}
+
+	$blueprint = ( new CaptainCore\Quicksave( $data['site_id'] ) )->blueprint( $hash, $data['environment'], $token );
+	$response  = new \WP_REST_Response( $blueprint, 200 );
+	$response->header( 'Access-Control-Allow-Origin', '*' );
+	return $response;
+}
+
+function captaincore_quicksaves_artifact_func( $request ) {
+	$hash  = $request['hash'];
+	$token = $request->get_param( 'token' );
+	$type  = $request->get_param( 'type' );
+	$name  = $request->get_param( 'name' );
+
+	if ( empty( $token ) ) {
+		return new WP_Error( 'missing_token', 'Token is required.', [ 'status' => 403 ] );
+	}
+
+	$transient = get_transient( "sandbox_{$token}" );
+	if ( ! $transient ) {
+		return new WP_Error( 'invalid_token', 'Token is invalid or expired.', [ 'status' => 403 ] );
+	}
+
+	$data = json_decode( $transient, true );
+	if ( $data['hash'] !== $hash ) {
+		return new WP_Error( 'hash_mismatch', 'Token does not match this quicksave.', [ 'status' => 403 ] );
+	}
+
+	if ( ! in_array( $type, [ 'plugin', 'theme' ], true ) ) {
+		return new WP_Error( 'invalid_type', 'Type must be "plugin" or "theme".', [ 'status' => 400 ] );
+	}
+
+	if ( ! preg_match( '/^[a-zA-Z0-9_-]+$/', $name ) ) {
+		return new WP_Error( 'invalid_name', 'Invalid name.', [ 'status' => 400 ] );
+	}
+
+	$site_id     = $data['site_id'];
+	$environment = $data['environment'];
+
+	header( 'Access-Control-Allow-Origin: *' );
+	header( 'Content-Type: application/zip' );
+	header( 'Content-Disposition: attachment; filename="' . $name . '.zip"' );
+	CaptainCore\Run::CLI_Stream( "quicksave archive {$site_id}-{$environment} {$hash} --{$type}={$name}" );
+	exit;
+}
+
 function captaincore_site_backups_func( $request ) {
 	$site_id     = $request['id'];
 
@@ -6282,7 +6365,34 @@ function captaincore_register_rest_endpoints() {
 			'show_in_index'       => false,
 		]
 	);
-	
+
+	register_rest_route(
+		'captaincore/v1', '/quicksaves/(?P<hash>[a-zA-Z0-9-]+)/sandbox-token', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_quicksaves_sandbox_token_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/quicksaves/(?P<hash>[a-zA-Z0-9-]+)/blueprint', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_quicksaves_blueprint_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/quicksaves/(?P<hash>[a-zA-Z0-9-]+)/artifact', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_quicksaves_artifact_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false,
+		]
+	);
+
 	register_rest_route(
 		'captaincore/v1', '/run/code', [
 			'methods'             => 'POST',
