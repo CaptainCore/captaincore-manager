@@ -6014,10 +6014,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						<td :colspan="columns.length" class="pa-5" style="position: relative;" v-else>
 						<v-toolbar color="primary" density="compact" class="elevation-1" style="border-radius: 4px 4px 0 0;">
 							<v-toolbar-title class="text-body-2">{{ item.status }}</v-toolbar-title>
-							<v-btn variant="text" size="small" @click="QuicksavesRollback( dialog_site.site.site_id, item, 'previous' )" v-show="item.previous_created_at">Revert changes <v-icon>mdi-restore</v-icon></v-btn>
-							<v-btn variant="text" size="small" @click="QuicksavesRollback( dialog_site.site.site_id, item, 'this' )">Reapply changes <v-icon>mdi-redo</v-icon></v-btn>
-							<v-btn variant="text" size="small" @click="viewQuicksavesChanges( dialog_site.site.site_id, item)">View Changes <v-icon>mdi-file-compare</v-icon></v-btn>
-							<v-btn variant="text" size="small" @click="previewInSandbox( dialog_site.site.site_id, item )" :loading="item.sandbox_loading" v-show="role == 'administrator'">Preview in Sandbox <v-icon end>mdi-play-box-outline</v-icon></v-btn>
+							<v-tooltip text="Revert changes" location="bottom"><template v-slot:activator="{ props }"><v-btn v-bind="props" icon="mdi-restore" size="small" variant="text" @click="QuicksavesRollback( dialog_site.site.site_id, item, 'previous' )" v-show="item.previous_created_at"></v-btn></template></v-tooltip>
+							<v-tooltip text="Reapply changes" location="bottom"><template v-slot:activator="{ props }"><v-btn v-bind="props" icon="mdi-redo" size="small" variant="text" @click="QuicksavesRollback( dialog_site.site.site_id, item, 'this' )"></v-btn></template></v-tooltip>
+							<v-tooltip text="View changes" location="bottom"><template v-slot:activator="{ props }"><v-btn v-bind="props" icon="mdi-file-compare" size="small" variant="text" @click="viewQuicksavesChanges( dialog_site.site.site_id, item)"></v-btn></template></v-tooltip>
+							<v-tooltip text="Preview in Sandbox" location="bottom"><template v-slot:activator="{ props }"><v-btn v-bind="props" icon="mdi-play-box-outline" size="small" variant="text" @click="previewInSandbox( dialog_site.site.site_id, item )" :loading="item.sandbox_loading" v-show="role == 'administrator'"></v-btn></template></v-tooltip>
 						</v-toolbar>
 						<v-dialog fullscreen scrim="false" v-model="item.view_changes">
 							<v-card rounded="0">
@@ -21719,7 +21719,7 @@ const app = createApp({
 			const environment = this.dialog_site.environment_selected.environment.toLowerCase()
 			axios.post(
 				`/wp-json/captaincore/v1/quicksaves/${quicksave.hash}/sandbox-token`,
-				{ site_id: site_id, environment: environment },
+				{ site_id: site_id, environment: environment, include_database: true },
 				{ headers: { 'X-WP-Nonce': this.wp_nonce } }
 			).then( response => {
 				quicksave.sandbox_loading = false

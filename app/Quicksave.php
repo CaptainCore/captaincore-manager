@@ -53,7 +53,7 @@ class Quicksave {
         return $response;
     }
 
-    public function blueprint( $hash, $environment = "production", $token = "" ) {
+    public function blueprint( $hash, $environment = "production", $token = "", $include_database = false ) {
         $quicksave = $this->get( $hash, $environment );
         if ( empty( $quicksave ) ) {
             return [];
@@ -61,6 +61,15 @@ class Quicksave {
 
         $base_url = home_url( "/wp-json/captaincore/v1/quicksaves/{$hash}/artifact" );
         $steps    = [];
+
+        // Import database SQL before login when opted in
+        if ( $include_database ) {
+            $database_url = "{$base_url}?token={$token}&type=database&name=database";
+            $steps[] = [
+                'step' => 'runSql',
+                'sql'  => [ 'resource' => 'url', 'url' => $database_url ],
+            ];
+        }
 
         // Login step
         $steps[] = [ 'step' => 'login', 'username' => 'admin', 'password' => 'password' ];
@@ -108,10 +117,18 @@ class Quicksave {
         ];
 
         // Set preferred WP version from core data
+        // Use zip URL to load the exact version via Playground's proxy
         if ( ! empty( $quicksave->core ) ) {
-            $core = is_string( $quicksave->core ) ? json_decode( $quicksave->core ) : $quicksave->core;
-            if ( ! empty( $core->version ) ) {
-                $blueprint['preferredVersions'] = [ 'wp' => $core->version ];
+            $core = $quicksave->core;
+            if ( is_string( $core ) ) {
+                $decoded = json_decode( $core );
+                $version = is_object( $decoded ) && ! empty( $decoded->version ) ? $decoded->version : $core;
+            } else {
+                $version = ! empty( $core->version ) ? $core->version : '';
+            }
+            if ( ! empty( $version ) ) {
+                $wp_zip = "https://playground.wordpress.net/plugin-proxy.php?url=https://wordpress.org/wordpress-{$version}.zip";
+                $blueprint['preferredVersions'] = [ 'wp' => $wp_zip ];
             }
         }
 
