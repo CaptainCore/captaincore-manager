@@ -5195,9 +5195,10 @@ function captaincore_quicksaves_rollback_func( $request ) {
 }
 
 function captaincore_quicksaves_sandbox_token_func( $request ) {
-	$site_id     = $request->get_param( 'site_id' );
-	$environment = strtolower( $request->get_param( 'environment' ) ?? 'production' );
-	$hash        = $request['hash'];
+	$site_id          = $request->get_param( 'site_id' );
+	$environment      = strtolower( $request->get_param( 'environment' ) ?? 'production' );
+	$hash             = $request['hash'];
+	$include_database = (bool) $request->get_param( 'include_database' );
 
 	if ( ! captaincore_verify_permissions( $site_id ) ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
@@ -5205,9 +5206,10 @@ function captaincore_quicksaves_sandbox_token_func( $request ) {
 
 	$token = wp_generate_password( 64, false );
 	set_transient( "sandbox_{$token}", json_encode( [
-		'site_id'     => $site_id,
-		'hash'        => $hash,
-		'environment' => $environment,
+		'site_id'          => $site_id,
+		'hash'             => $hash,
+		'environment'      => $environment,
+		'include_database' => $include_database,
 	] ), 30 * MINUTE_IN_SECONDS );
 
 	$blueprint_url = home_url( "/wp-json/captaincore/v1/quicksaves/{$hash}/blueprint?token={$token}" );
@@ -5233,7 +5235,8 @@ function captaincore_quicksaves_blueprint_func( $request ) {
 		return new WP_Error( 'hash_mismatch', 'Token does not match this quicksave.', [ 'status' => 403 ] );
 	}
 
-	$blueprint = ( new CaptainCore\Quicksave( $data['site_id'] ) )->blueprint( $hash, $data['environment'], $token );
+	$include_database = ! empty( $data['include_database'] );
+	$blueprint = ( new CaptainCore\Quicksave( $data['site_id'] ) )->blueprint( $hash, $data['environment'], $token, $include_database );
 	$response  = new \WP_REST_Response( $blueprint, 200 );
 	$response->header( 'Access-Control-Allow-Origin', '*' );
 	return $response;
@@ -5259,16 +5262,24 @@ function captaincore_quicksaves_artifact_func( $request ) {
 		return new WP_Error( 'hash_mismatch', 'Token does not match this quicksave.', [ 'status' => 403 ] );
 	}
 
-	if ( ! in_array( $type, [ 'plugin', 'theme' ], true ) ) {
-		return new WP_Error( 'invalid_type', 'Type must be "plugin" or "theme".', [ 'status' => 400 ] );
+	if ( ! in_array( $type, [ 'plugin', 'theme', 'database' ], true ) ) {
+		return new WP_Error( 'invalid_type', 'Type must be "plugin", "theme", or "database".', [ 'status' => 400 ] );
+	}
+
+	$site_id     = $data['site_id'];
+	$environment = $data['environment'];
+
+	if ( $type === 'database' ) {
+		header( 'Access-Control-Allow-Origin: *' );
+		header( 'Content-Type: application/sql' );
+		header( 'Content-Disposition: attachment; filename="database.sql"' );
+		CaptainCore\Run::CLI_Stream( "quicksave database {$site_id}-{$environment} {$hash}" );
+		exit;
 	}
 
 	if ( ! preg_match( '/^[a-zA-Z0-9_-]+$/', $name ) ) {
 		return new WP_Error( 'invalid_name', 'Invalid name.', [ 'status' => 400 ] );
 	}
-
-	$site_id     = $data['site_id'];
-	$environment = $data['environment'];
 
 	header( 'Access-Control-Allow-Origin: *' );
 	header( 'Content-Type: application/zip' );
