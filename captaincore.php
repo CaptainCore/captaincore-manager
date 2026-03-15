@@ -8386,6 +8386,25 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Malware alert endpoint (admin only) — sends malware alert email via Mailer
+	register_rest_route(
+		'captaincore/v1', '/malware-alert', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_malware_alert_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'args'                => [
+				'site_name'   => [ 'required' => true, 'type' => 'string' ],
+				'environment' => [ 'required' => false, 'type' => 'string' ],
+				'home_url'    => [ 'required' => false, 'type' => 'string' ],
+				'domain'      => [ 'required' => false, 'type' => 'string' ],
+				'findings'    => [ 'required' => true, 'type' => 'array' ],
+			],
+			'show_in_index'       => false,
+		]
+	);
+
 	// Security Patches endpoints
 	register_rest_route(
 		'captaincore/v1', '/security-patches', [
@@ -9183,6 +9202,39 @@ function captaincore_security_threats_resolve_func( WP_REST_Request $request ) {
 	$note    = sanitize_textarea_field( $request->get_param( 'note' ) ?? '' );
 
 	return CaptainCore\SecurityThreats::resolve( $slug, $version, $type, $note );
+}
+
+/**
+ * REST endpoint: Send malware alert email.
+ */
+function captaincore_malware_alert_func( WP_REST_Request $request ) {
+	$site_name   = sanitize_text_field( $request->get_param( 'site_name' ) );
+	$environment = sanitize_text_field( $request->get_param( 'environment' ) ?: 'Production' );
+	$home_url    = esc_url_raw( $request->get_param( 'home_url' ) ?: '' );
+	$domain      = sanitize_text_field( $request->get_param( 'domain' ) ?: '' );
+	$findings    = $request->get_param( 'findings' );
+
+	if ( empty( $findings ) || ! is_array( $findings ) ) {
+		return new WP_Error( 'missing_findings', 'At least one finding is required.', [ 'status' => 400 ] );
+	}
+
+	// Sanitize findings
+	$sanitized_findings = [];
+	foreach ( $findings as $f ) {
+		$sanitized_findings[] = (object) [
+			'filename'              => sanitize_text_field( $f['filename'] ?? '' ),
+			'signature_name'        => sanitize_text_field( $f['signature_name'] ?? 'Malware' ),
+			'signature_description' => sanitize_text_field( $f['signature_description'] ?? '' ),
+		];
+	}
+
+	CaptainCore\Mailer::send_malware_alert( $site_name, $environment, $home_url, $sanitized_findings );
+
+	return [
+		'success' => true,
+		'message' => "Malware alert sent for {$site_name}",
+		'domain'  => $domain,
+	];
 }
 
 /**
