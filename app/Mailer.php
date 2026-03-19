@@ -1605,6 +1605,102 @@ class Mailer {
         );
     }
 
+    static public function send_capture_alert( $site_name, $environment_name, $home_url, $findings ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $admin_email = get_option( 'admin_email' );
+
+        // Build findings table rows
+        $finding_rows = '';
+        foreach ( $findings as $f ) {
+            $page     = esc_html( $f->page ?? '/' );
+            $label    = esc_html( $f->label ?? '' );
+            $severity = $f->severity ?? 'warning';
+            $sig_name = esc_html( $f->sig_name ?? '' );
+
+            // Severity badge colors
+            if ( $severity === 'critical' || $severity === 'high' ) {
+                $badge_bg    = '#FED7D7';
+                $badge_color = '#9B2C2C';
+            } else {
+                $badge_bg    = '#FEFCBF';
+                $badge_color = '#975A16';
+            }
+
+            $severity_html = esc_html( $severity );
+            $sig_html      = ! empty( $sig_name ) ? "<br><span style='font-size: 11px; color: #718096;'>{$sig_name}</span>" : '';
+
+            $finding_rows .= "
+                <tr>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; color: #2d3748; font-size: 13px;'>{$page}</td>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; text-align: center;'>
+                        <span style='display: inline-block; background-color: {$badge_bg}; color: {$badge_color}; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px;'>{$severity_html}</span>
+                    </td>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; color: #4a5568; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;'>{$label}{$sig_html}</td>
+                </tr>";
+        }
+
+        $site_url_html = '';
+        if ( ! empty( $home_url ) ) {
+            $site_url_html = "
+                <tr>
+                    <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
+                    <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
+                        <a href='{$home_url}' style='color: {$brand_color}; text-decoration: none;'>{$home_url}</a>
+                    </td>
+                </tr>";
+        }
+
+        $finding_count = count( $findings );
+        $content_html = "
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+                <div style='text-align: center; margin-bottom: 25px;'>
+                    <div style='display: inline-block; background-color: #FEFCBF; color: #975A16; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                        Injection Detected
+                    </div>
+                </div>
+
+                <p style='margin-bottom: 25px;'>A capture check detected {$finding_count} new script(s) or stylesheet(s) injected since the last capture. Investigation is recommended.</p>
+
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                    <table width='100%' cellpadding='0' cellspacing='0'>
+                        <tr>
+                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
+                        </tr>
+                        {$site_url_html}
+                        <tr>
+                            <td style='color: #718096; font-size: 14px;'>Environment</td>
+                            <td style='color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-bottom: 25px;'>
+                    <div style='padding: 12px 12px 8px; border-bottom: 2px solid #edf2f7;'>
+                        <strong style='font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Findings</strong>
+                    </div>
+                    <table width='100%' cellpadding='0' cellspacing='0'>
+                        <tr>
+                            <th style='padding: 8px 12px; border-bottom: 2px solid #edf2f7; text-align: left; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Page</th>
+                            <th style='padding: 8px 12px; border-bottom: 2px solid #edf2f7; text-align: center; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Severity</th>
+                            <th style='padding: 8px 12px; border-bottom: 2px solid #edf2f7; text-align: left; font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Element</th>
+                        </tr>
+                        {$finding_rows}
+                    </table>
+                </div>
+            </div>
+        ";
+
+        self::send_email_with_layout(
+            $admin_email,
+            "Security Alert: Injection detected on {$site_name}",
+            "Capture Alert",
+            $site_name,
+            $content_html
+        );
+    }
+
     static public function send_default_role_alert( $site_name, $environment_name, $home_url, $default_role ) {
         $config      = Configurations::get();
         $brand_color = $config->colors->primary ?? '#0D47A1';
