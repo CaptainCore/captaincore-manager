@@ -853,6 +853,18 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		$response = [ "response" => "Malware alert sent" ];
 	}
 
+	// Send capture injection alert notification email
+	if ( $command == 'capture-alert' ) {
+		$site_name = $current_site->name ?? ( $post->data->site_name ?? 'Unknown' );
+		\CaptainCore\Mailer::send_capture_alert(
+			$site_name,
+			$post->data->environment ?? 'Production',
+			$post->data->home_url ?? '',
+			$post->data->findings ?? []
+		);
+		$response = [ "response" => "Capture alert sent" ];
+	}
+
 	// Load Token Key
 	if ( $command == 'token' and isset( $token_key ) ) {
 		( new CaptainCore\Sites )->update( [ "token" => $token_key ], [ "site_id" => $site_id ] );
@@ -1296,6 +1308,7 @@ function captaincore_site_lookup_func( WP_REST_Request $request ) {
 				'environment'    => $env->environment,
 				'name'           => $site->name ?? $domain,
 				'home_url'       => $env->home_url,
+				'ssh_connection' => "ssh {$env->username}@{$env->address} -p {$env->port}",
 			];
 		}
 	}
