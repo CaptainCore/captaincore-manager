@@ -1468,7 +1468,7 @@ class Mailer {
         if ( ! empty( $home_url ) ) {
             $site_url_html = "
                 <tr>
-                    <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
+                    <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
                     <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
                         <a href='{$home_url}' style='color: {$brand_color}; text-decoration: none;'>{$home_url}</a>
                     </td>
@@ -1488,12 +1488,12 @@ class Mailer {
                 <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
+                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
                             <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
                         </tr>
                         {$site_url_html}
                         <tr>
-                            <td style='color: #718096; font-size: 14px;'>Environment</td>
+                            <td width='120' style='color: #718096; font-size: 14px;'>Environment</td>
                             <td style='color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
                         </tr>
                     </table>
@@ -1549,7 +1549,7 @@ class Mailer {
         if ( ! empty( $home_url ) ) {
             $site_url_html = "
                 <tr>
-                    <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
+                    <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
                     <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
                         <a href='{$home_url}' style='color: {$brand_color}; text-decoration: none;'>{$home_url}</a>
                     </td>
@@ -1569,12 +1569,12 @@ class Mailer {
                 <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
+                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
                             <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
                         </tr>
                         {$site_url_html}
                         <tr>
-                            <td style='color: #718096; font-size: 14px;'>Environment</td>
+                            <td width='120' style='color: #718096; font-size: 14px;'>Environment</td>
                             <td style='color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
                         </tr>
                     </table>
@@ -1644,7 +1644,7 @@ class Mailer {
         if ( ! empty( $home_url ) ) {
             $site_url_html = "
                 <tr>
-                    <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
+                    <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
                     <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
                         <a href='{$home_url}' style='color: {$brand_color}; text-decoration: none;'>{$home_url}</a>
                     </td>
@@ -1665,12 +1665,12 @@ class Mailer {
                 <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
+                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
                             <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
                         </tr>
                         {$site_url_html}
                         <tr>
-                            <td style='color: #718096; font-size: 14px;'>Environment</td>
+                            <td width='120' style='color: #718096; font-size: 14px;'>Environment</td>
                             <td style='color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
                         </tr>
                     </table>
@@ -1710,7 +1710,7 @@ class Mailer {
         if ( ! empty( $home_url ) ) {
             $site_url_html = "
                 <tr>
-                    <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
+                    <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
                     <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
                         <a href='{$home_url}' style='color: {$brand_color}; text-decoration: none;'>{$home_url}</a>
                     </td>
@@ -1730,16 +1730,16 @@ class Mailer {
                 <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
+                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
                             <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
                         </tr>
                         {$site_url_html}
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Environment</td>
+                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Environment</td>
                             <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
                         </tr>
                         <tr>
-                            <td style='color: #718096; font-size: 14px;'>Default Role</td>
+                            <td width='120' style='color: #718096; font-size: 14px;'>Default Role</td>
                             <td style='color: #9B2C2C; font-weight: 600; text-align: right;'>" . esc_html( ucfirst( $default_role ) ) . "</td>
                         </tr>
                     </table>
@@ -1765,7 +1765,7 @@ class Mailer {
         if ( ! empty( $home_url ) ) {
             $site_url_html = "
                 <tr>
-                    <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
+                    <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
                     <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
                         <a href='{$home_url}' style='color: {$brand_color}; text-decoration: none;'>{$home_url}</a>
                     </td>
@@ -1785,20 +1785,20 @@ class Mailer {
                 <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
                     <table width='100%' cellpadding='0' cellspacing='0'>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
+                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
                             <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
                         </tr>
                         {$site_url_html}
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Environment</td>
+                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Environment</td>
                             <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
                         </tr>
                         <tr>
-                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Registration</td>
+                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Registration</td>
                             <td style='padding-bottom: 10px; color: #C05621; font-weight: 600; text-align: right;'>Open</td>
                         </tr>
                         <tr>
-                            <td style='color: #718096; font-size: 14px;'>Default Role</td>
+                            <td width='120' style='color: #718096; font-size: 14px;'>Default Role</td>
                             <td style='color: #C05621; font-weight: 600; text-align: right;'>" . esc_html( ucfirst( $default_role ) ) . "</td>
                         </tr>
                     </table>
