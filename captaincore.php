@@ -86,6 +86,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command( 'captaincore scan-queue', 'CaptainCore\ScanQueueCLI' );
 	WP_CLI::add_command( 'captaincore restic-cache', 'CaptainCore\ResticCacheCLI' );
 	WP_CLI::add_command( 'captaincore security-log-sizes', 'CaptainCore\SecurityLogCLI' );
+	WP_CLI::add_command( 'captaincore error-log-sizes', 'CaptainCore\ErrorLogCLI' );
 }
 
 /* -------------------------------------------------------------------------
