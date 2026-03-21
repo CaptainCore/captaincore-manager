@@ -367,58 +367,32 @@ class Domains extends DB {
 
     }
 
-    public function provider_login() {
-
-        $data = [ 
-            'timeout' => 45,
-            'headers' => [
-                'Content-Type' => 'application/json; charset=utf-8'
-            ],
-            'body'        => json_encode( [ 
-                "username" => \CaptainCore\Providers\Hoverdotcom::credentials("username"), 
-                'password' => \CaptainCore\Providers\Hoverdotcom::credentials("password")
-            ] ), 
-            'method'      => 'POST', 
-            'data_format' => 'body'
-        ];
-        
-        $response    = wp_remote_post( "https://www.hover.com/api/login", $data );
-        
-        // Save Hover.com cookies as transient login 
-        $cookie_data = json_encode( $response["cookies"] );
-        set_transient( 'captaincore_hovercom_auth', $cookie_data, HOUR_IN_SECONDS * 48 );
-        
+    public static function domain_providers() {
+        return [ 'hoverdotcom', 'spaceship' ];
     }
 
     public function provider_sync() {
 
-        if ( empty( get_transient( 'captaincore_hovercom_auth' ) ) ) {
-            self::provider_login();
-        }
-        $auth = get_transient( 'captaincore_hovercom_auth' );
-        $args = [
-            'timeout' => 45,
-            'headers' => [
-                'Cookie' => 'hoverauth=' . $auth
-            ]
-        ];
-
-        $response = wp_remote_get( "https://www.hover.com/api/control_panel/domains", $args );
-        if ( is_wp_error( $response ) ) {
-            return json_decode( $response->get_error_message() );
-        }
-
-        $domains = json_decode( $response['body'] )->domains;
-        foreach ( $domains as $domain ) {
-            $lookup = self::where( ["name" => $domain->name ] );
-            if ( count( $lookup ) == 1 ) {
-                self::update( [
-                    "status"      => $domain->status,
-                    "provider_id" => $domain->id,
-                ], [ "domain_id"  => $lookup[0]->domain_id ] );
+        foreach ( self::domain_providers() as $provider_type ) {
+            $providers = Providers::where( [ "provider" => $provider_type ] );
+            foreach ( $providers as $provider ) {
+                $class_name = "CaptainCore\Providers\\" . ucfirst( $provider_type );
+                if ( ! method_exists( $class_name, 'fetch_domains' ) ) {
+                    continue;
+                }
+                $domains = $class_name::fetch_domains();
+                foreach ( $domains as $domain ) {
+                    $lookup = self::where( [ "name" => $domain->name ] );
+                    if ( count( $lookup ) == 1 ) {
+                        self::update( [
+                            "status"      => $domain->status,
+                            "provider_id" => $provider->provider_id,
+                        ], [ "domain_id" => $lookup[0]->domain_id ] );
+                    }
+                }
             }
         }
-        
+
     }
 
     public static function records( $domain, $zone ) {
