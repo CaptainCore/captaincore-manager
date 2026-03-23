@@ -229,7 +229,9 @@ class ScanQueueCLI {
 			FROM {$env_table} e
 			JOIN {$sites_table} s ON e.site_id = s.site_id
 			WHERE s.status = 'active'
+			  AND s.provider IS NOT NULL
 			  AND e.environment = 'Production'
+			  AND e.home_url IS NOT NULL AND e.home_url != ''
 			  AND e.plugins IS NOT NULL
 			ORDER BY s.name ASC
 		" );
