@@ -8400,6 +8400,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-tabs bg-color="primary" v-model="security_tab">
 					<v-tab value="vulnerabilities">Vulnerabilities</v-tab>
 					<v-tab value="patches">Patches</v-tab>
+					<v-tab value="coverage">Coverage</v-tab>
 					<v-tab value="web-risk">Web Risk</v-tab>
 					<v-tab value="checksum-failures">Checksum Failures</v-tab>
 				</v-tabs>
@@ -8576,6 +8577,54 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									></v-btn>
 								</template>
 							</v-data-table>
+						</v-card-text>
+					</v-window-item>
+					<v-window-item value="coverage" :transition="false" :reverse-transition="false">
+						<v-card-text>
+							<v-progress-linear v-if="security_coverage_loading" indeterminate color="primary" class="mt-4"></v-progress-linear>
+							<div v-else-if="security_coverage">
+								<v-row class="mt-2 mb-4">
+									<v-col cols="12" md="4" class="text-center">
+										<div class="text-h2 font-weight-bold" :class="security_coverage.coverage_pct >= 80 ? 'text-success' : security_coverage.coverage_pct >= 50 ? 'text-warning' : 'text-error'">
+											{{ security_coverage.coverage_pct }}%
+										</div>
+										<div class="text-caption text-medium-emphasis">Fleet Audit Coverage</div>
+										<div class="text-body-2 mt-1">
+											{{ security_coverage.audited_hashes.toLocaleString() }} of {{ security_coverage.total_unique_hashes.toLocaleString() }} unique builds audited
+										</div>
+										<div class="text-caption text-medium-emphasis mt-1">
+											{{ security_coverage.total_sites.toLocaleString() }} production sites
+										</div>
+									</v-col>
+									<v-col cols="12" md="8">
+										<v-row>
+											<v-col v-for="(data, label) in {'Plugins': security_coverage.by_type.plugins, 'Themes': security_coverage.by_type.themes, 'MU-Plugins': security_coverage.by_type.mu_plugins}" :key="label" cols="4" class="text-center">
+												<div class="text-h5 font-weight-bold">{{ data.audited }}<span class="text-body-2 text-medium-emphasis">/{{ data.unique_hashes }}</span></div>
+												<div class="text-caption text-medium-emphasis">{{ label }}</div>
+												<v-progress-linear
+													:model-value="data.unique_hashes > 0 ? (data.audited / data.unique_hashes * 100) : 0"
+													:color="(data.unique_hashes > 0 && data.audited / data.unique_hashes >= 0.8) ? 'success' : (data.unique_hashes > 0 && data.audited / data.unique_hashes >= 0.5) ? 'warning' : 'error'"
+													rounded height="6" class="mt-1"
+												></v-progress-linear>
+											</v-col>
+										</v-row>
+									</v-col>
+								</v-row>
+								<v-alert v-if="security_coverage.unaudited_hashes > 0" type="info" variant="tonal" class="mb-4">
+									{{ security_coverage.unaudited_hashes.toLocaleString() }} unique component build{{ security_coverage.unaudited_hashes !== 1 ? 's' : '' }} across the fleet have not been audited yet.
+								</v-alert>
+								<v-alert v-else type="success" variant="tonal" class="mb-4">
+									All unique component builds across the fleet have been audited.
+								</v-alert>
+								<div v-if="security_coverage.without_hashes && (security_coverage.without_hashes.plugin + security_coverage.without_hashes.theme) > 0" class="text-caption text-medium-emphasis mb-4">
+									{{ (security_coverage.without_hashes.plugin + security_coverage.without_hashes.theme).toLocaleString() }} component instances still lack content hashes. Run <code>captaincore sync-data @production</code> to populate.
+								</div>
+								<div class="text-body-2">
+									<a href="/security-finder/coverage" target="_blank" class="text-decoration-none">
+										View full details in Security Finder <v-icon size="small">mdi-open-in-new</v-icon>
+									</a>
+								</div>
+							</div>
 						</v-card-text>
 					</v-window-item>
 					<v-window-item value="checksum-failures" :transition="false" :reverse-transition="false">
@@ -12279,6 +12328,8 @@ const app = createApp({
 		security_patches_loading: false,
 		security_threats: [],
 		security_threats_loading: false,
+		security_coverage: null,
+		security_coverage_loading: false,
 		security_threat_dialog: { show: false, threat: null },
 		security_threat_note_text: "",
 		security_threat_resolve_confirm: false,
@@ -14015,6 +14066,7 @@ const app = createApp({
 				this.fetchChecksumFailures();
 				this.fetchSecurityThreats();
 				this.fetchSecurityPatches();
+				this.fetchSecurityCoverage();
 				this.loading_page = false;
 				this.selected_nav = "";
 			}
@@ -16551,6 +16603,20 @@ const app = createApp({
 			})
 			.catch(error => {
 				this.security_threats_loading = false;
+			});
+		},
+		fetchSecurityCoverage() {
+			this.security_coverage_loading = true;
+			axios.get(
+			'/wp-json/captaincore/v1/security-coverage', {
+				headers: {'X-WP-Nonce':this.wp_nonce}
+			})
+			.then(response => {
+				this.security_coverage = response.data;
+				this.security_coverage_loading = false;
+			})
+			.catch(error => {
+				this.security_coverage_loading = false;
 			});
 		},
 		updateThreatStatus(threat, status) {

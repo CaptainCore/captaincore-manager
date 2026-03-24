@@ -84,6 +84,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command( 'captaincore scheduled-reports', 'CaptainCore\ScheduledReportsCLI' );
 	WP_CLI::add_command( 'captaincore top-plugins', 'CaptainCore\TopPluginsCLI' );
 	WP_CLI::add_command( 'captaincore scan-queue', 'CaptainCore\ScanQueueCLI' );
+	WP_CLI::add_command( 'captaincore component-queue', 'CaptainCore\ComponentQueueCLI' );
 	WP_CLI::add_command( 'captaincore restic-cache', 'CaptainCore\ResticCacheCLI' );
 	WP_CLI::add_command( 'captaincore security-log-sizes', 'CaptainCore\SecurityLogCLI' );
 	WP_CLI::add_command( 'captaincore error-log-sizes', 'CaptainCore\ErrorLogCLI' );
@@ -8400,6 +8401,30 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Security coverage endpoint (admin only) — hash-based fleet audit coverage metrics
+	register_rest_route(
+		'captaincore/v1', '/security-coverage', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_security_coverage_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	// Component queue endpoint (admin only) — un-audited component hashes across the fleet
+	register_rest_route(
+		'captaincore/v1', '/component-queue', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_component_queue_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
 	// Malware alert endpoint (admin only) — sends malware alert email via Mailer
 	register_rest_route(
 		'captaincore/v1', '/malware-alert', [
@@ -9216,6 +9241,153 @@ function captaincore_security_threats_resolve_func( WP_REST_Request $request ) {
 	$note    = sanitize_textarea_field( $request->get_param( 'note' ) ?? '' );
 
 	return CaptainCore\SecurityThreats::resolve( $slug, $version, $type, $note );
+}
+
+/**
+ * REST endpoint: Fleet security coverage metrics based on content hashes.
+ */
+function captaincore_security_coverage_func( WP_REST_Request $request ) {
+	global $wpdb;
+
+	$components_t = "{$wpdb->prefix}captaincore_sf_components";
+	$audits_t     = "{$wpdb->prefix}captaincore_sf_audits";
+	$env_table    = "{$wpdb->prefix}captaincore_environments";
+	$sites_table  = "{$wpdb->prefix}captaincore_sites";
+
+	// Gather all active production environments
+	$environments = $wpdb->get_results( "
+		SELECT e.plugins, e.themes, e.details
+		FROM {$env_table} e
+		JOIN {$sites_table} s ON e.site_id = s.site_id
+		WHERE s.status = 'active'
+		  AND s.provider IS NOT NULL
+		  AND e.environment = 'Production'
+		  AND e.plugins IS NOT NULL
+	" );
+
+	$hashes     = [ 'plugin' => [], 'theme' => [], 'mu_plugin' => [] ];
+	$no_hash    = [ 'plugin' => 0, 'theme' => 0 ];
+	$total_sites = count( $environments );
+
+	foreach ( $environments as $env ) {
+		// Plugins
+		$plugins = json_decode( $env->plugins );
+		if ( is_array( $plugins ) ) {
+			foreach ( $plugins as $p ) {
+				if ( $p->status !== 'active' ) continue;
+				$hash = $p->hash ?? '';
+				if ( $hash ) {
+					$hashes['plugin'][ $hash ] = true;
+				} else {
+					$no_hash['plugin']++;
+				}
+			}
+		}
+
+		// Themes
+		$themes = json_decode( $env->themes );
+		if ( is_array( $themes ) ) {
+			foreach ( $themes as $t ) {
+				if ( $t->status !== 'active' ) continue;
+				$hash = $t->hash ?? '';
+				if ( $hash ) {
+					$hashes['theme'][ $hash ] = true;
+				} else {
+					$no_hash['theme']++;
+				}
+			}
+		}
+
+		// MU-plugins directory hash
+		$details = json_decode( $env->details );
+		if ( ! empty( $details->mu_plugins_hash ) ) {
+			$hashes['mu_plugin'][ $details->mu_plugins_hash ] = true;
+		}
+	}
+
+	// Check which hashes have been audited (single batch query)
+	$audited = [ 'plugin' => 0, 'theme' => 0, 'mu_plugin' => 0 ];
+	$total   = [ 'plugin' => count( $hashes['plugin'] ), 'theme' => count( $hashes['theme'] ), 'mu_plugin' => count( $hashes['mu_plugin'] ) ];
+
+	$all_hashes = array_merge(
+		array_keys( $hashes['plugin'] ),
+		array_keys( $hashes['theme'] ),
+		array_keys( $hashes['mu_plugin'] )
+	);
+
+	$audited_set = [];
+	if ( ! empty( $all_hashes ) ) {
+		$placeholders = implode( ',', array_fill( 0, count( $all_hashes ), '%s' ) );
+		$audited_rows = $wpdb->get_col( $wpdb->prepare(
+			"SELECT DISTINCT content_hash FROM {$components_t} WHERE content_hash IN ({$placeholders})",
+			...$all_hashes
+		) );
+		$audited_set = array_flip( $audited_rows );
+	}
+
+	foreach ( [ 'plugin', 'theme', 'mu_plugin' ] as $type ) {
+		foreach ( array_keys( $hashes[ $type ] ) as $hash ) {
+			if ( isset( $audited_set[ $hash ] ) ) {
+				$audited[ $type ]++;
+			}
+		}
+	}
+
+	$total_unique  = $total['plugin'] + $total['theme'] + $total['mu_plugin'];
+	$total_audited = $audited['plugin'] + $audited['theme'] + $audited['mu_plugin'];
+
+	return [
+		'total_sites'         => $total_sites,
+		'total_unique_hashes' => $total_unique,
+		'audited_hashes'      => $total_audited,
+		'unaudited_hashes'    => $total_unique - $total_audited,
+		'coverage_pct'        => $total_unique > 0 ? round( ( $total_audited / $total_unique ) * 100, 1 ) : 0,
+		'without_hashes'      => $no_hash,
+		'by_type' => [
+			'plugins'    => [ 'unique_hashes' => $total['plugin'],    'audited' => $audited['plugin'] ],
+			'themes'     => [ 'unique_hashes' => $total['theme'],     'audited' => $audited['theme'] ],
+			'mu_plugins' => [ 'unique_hashes' => $total['mu_plugin'], 'audited' => $audited['mu_plugin'] ],
+		],
+	];
+}
+
+/**
+ * REST endpoint: Un-audited component hashes across the fleet.
+ */
+function captaincore_component_queue_func( WP_REST_Request $request ) {
+	$limit      = (int) ( $request->get_param( 'limit' ) ?: 30 );
+	$sites_data = CaptainCore\ComponentQueueCLI::gather_sites();
+
+	$hash_map = [];
+	$no_hash  = [];
+
+	foreach ( $sites_data as $site ) {
+		$components = CaptainCore\ComponentQueueCLI::extract_components( $site );
+		foreach ( $components as $comp ) {
+			$hash = $comp['hash'] ?? '';
+			if ( $hash ) {
+				if ( ! isset( $hash_map[ $hash ] ) ) {
+					$hash_map[ $hash ] = array_merge( $comp, [ 'sites' => 0 ] );
+				}
+				$hash_map[ $hash ]['sites']++;
+			} else {
+				$key = "{$comp['type']}|{$comp['slug']}|{$comp['version']}";
+				if ( ! isset( $no_hash[ $key ] ) ) {
+					$no_hash[ $key ] = array_merge( $comp, [ 'sites' => 0 ] );
+				}
+				$no_hash[ $key ]['sites']++;
+			}
+		}
+	}
+
+	$all = array_merge( array_values( $hash_map ), array_values( $no_hash ) );
+	$unaudited = CaptainCore\ComponentQueueCLI::filter_unaudited( $all );
+
+	usort( $unaudited, function ( $a, $b ) {
+		return $b['sites'] - $a['sites'];
+	} );
+
+	return array_slice( $unaudited, 0, $limit );
 }
 
 /**
