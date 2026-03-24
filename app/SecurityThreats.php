@@ -20,12 +20,14 @@ class SecurityThreats {
 				$plugins = json_decode( $row->plugins );
 				if ( is_array( $plugins ) ) {
 					foreach ( $plugins as $plugin ) {
-						$key = "plugin|{$plugin->name}|{$plugin->version}";
+						$hash = $plugin->hash ?? '';
+						$key  = $hash ? "plugin|{$plugin->name}|{$plugin->version}|{$hash}" : "plugin|{$plugin->name}|{$plugin->version}";
 						if ( ! isset( $counts[ $key ] ) ) {
 							$counts[ $key ] = [
 								'slug'       => $plugin->name,
 								'version'    => $plugin->version,
 								'type'       => 'plugin',
+								'hash'       => $hash,
 								'title'      => html_entity_decode( $plugin->title ),
 								'site_count' => 0,
 							];
@@ -40,12 +42,14 @@ class SecurityThreats {
 				$themes = json_decode( $row->themes );
 				if ( is_array( $themes ) ) {
 					foreach ( $themes as $theme ) {
-						$key = "theme|{$theme->name}|{$theme->version}";
+						$hash = $theme->hash ?? '';
+						$key  = $hash ? "theme|{$theme->name}|{$theme->version}|{$hash}" : "theme|{$theme->name}|{$theme->version}";
 						if ( ! isset( $counts[ $key ] ) ) {
 							$counts[ $key ] = [
 								'slug'       => $theme->name,
 								'version'    => $theme->version,
 								'type'       => 'theme',
+								'hash'       => $hash,
 								'title'      => html_entity_decode( $theme->title ),
 								'site_count' => 0,
 							];
@@ -129,23 +133,38 @@ class SecurityThreats {
 			$slug    = $item['slug'] ?? '';
 			$version = $item['version'] ?? '';
 			$type    = $item['type'] ?? '';
+			$hash    = $item['hash'] ?? '';
 
 			if ( ! $slug ) {
 				continue;
 			}
 
-			// Find component record matching slug+version (most recent audit first)
-			if ( $type === 'mu-plugin' && ( $version === '' || $version === null ) ) {
+			$component = null;
+
+			// Hash-first lookup (most precise — exact code match)
+			if ( $hash ) {
 				$component = $wpdb->get_row( $wpdb->prepare(
 					"SELECT c.*, a.audit_date, a.id AS audit_id
 					 FROM {$components_t} c
 					 JOIN {$audits_t} a ON c.audit_id = a.id
-					 WHERE c.slug = %s AND c.component_type = %s
+					 WHERE c.content_hash = %s
 					 ORDER BY a.audit_date DESC LIMIT 1",
-					$slug, $type
+					$hash
 				), ARRAY_A );
-			} else {
-				if ( $type ) {
+			}
+
+			// Fall back to slug+version lookup
+			if ( ! $component ) {
+				if ( $type === 'mu-plugin' && ( $version === '' || $version === null ) ) {
+					$component = $wpdb->get_row( $wpdb->prepare(
+						"SELECT c.*, a.audit_date, a.id AS audit_id
+						 FROM {$components_t} c
+						 JOIN {$audits_t} a ON c.audit_id = a.id
+						 WHERE c.slug = %s AND c.component_type = %s
+						 ORDER BY a.audit_date DESC LIMIT 1",
+						$slug, $type
+					), ARRAY_A );
+				} elseif ( $type ) {
 					$component = $wpdb->get_row( $wpdb->prepare(
 						"SELECT c.*, a.audit_date, a.id AS audit_id
 						 FROM {$components_t} c
@@ -192,6 +211,7 @@ class SecurityThreats {
 				'version'             => $version,
 				'type'                => $type ?: $component['component_type'],
 				'display_name'        => $component['display_name'],
+				'content_hash'        => $component['content_hash'] ?? null,
 				'status'              => $component['status'],
 				'key_issue'           => $component['key_issue'],
 				'flagged_for_removal' => (bool) $component['flagged_for_removal'],
