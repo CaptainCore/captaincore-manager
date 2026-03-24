@@ -88,6 +88,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command( 'captaincore restic-cache', 'CaptainCore\ResticCacheCLI' );
 	WP_CLI::add_command( 'captaincore security-log-sizes', 'CaptainCore\SecurityLogCLI' );
 	WP_CLI::add_command( 'captaincore error-log-sizes', 'CaptainCore\ErrorLogCLI' );
+	WP_CLI::add_command( 'captaincore mu-manifest-generate', 'CaptainCore\MuManifestCLI' );
 }
 
 /* -------------------------------------------------------------------------
