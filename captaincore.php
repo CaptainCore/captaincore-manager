@@ -9362,18 +9362,38 @@ function captaincore_component_queue_func( WP_REST_Request $request ) {
 	$no_hash  = [];
 
 	foreach ( $sites_data as $site ) {
+		$ssh = '';
+		if ( ! empty( $site->address ) && ! empty( $site->username ) ) {
+			$ssh = "{$site->username}@{$site->address}";
+			if ( ! empty( $site->port ) && $site->port !== '22' ) {
+				$ssh .= " -p {$site->port}";
+			}
+		}
+		$home_directory = '';
+		if ( ! empty( $site->home_directory ) ) {
+			$home_directory = $site->home_directory;
+		}
+
 		$components = CaptainCore\ComponentQueueCLI::extract_components( $site );
 		foreach ( $components as $comp ) {
 			$hash = $comp['hash'] ?? '';
 			if ( $hash ) {
 				if ( ! isset( $hash_map[ $hash ] ) ) {
-					$hash_map[ $hash ] = array_merge( $comp, [ 'sites' => 0 ] );
+					$hash_map[ $hash ] = array_merge( $comp, [
+						'sites'          => 0,
+						'source_ssh'     => $ssh,
+						'home_directory' => $home_directory,
+					] );
 				}
 				$hash_map[ $hash ]['sites']++;
 			} else {
 				$key = "{$comp['type']}|{$comp['slug']}|{$comp['version']}";
 				if ( ! isset( $no_hash[ $key ] ) ) {
-					$no_hash[ $key ] = array_merge( $comp, [ 'sites' => 0 ] );
+					$no_hash[ $key ] = array_merge( $comp, [
+						'sites'          => 0,
+						'source_ssh'     => $ssh,
+						'home_directory' => $home_directory,
+					] );
 				}
 				$no_hash[ $key ]['sites']++;
 			}
