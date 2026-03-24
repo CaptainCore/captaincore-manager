@@ -8425,6 +8425,18 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Component hashes endpoint — all distinct hashes for a slug+version across the fleet
+	register_rest_route(
+		'captaincore/v1', '/component-hashes', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_component_hashes_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
 	// Malware alert endpoint (admin only) — sends malware alert email via Mailer
 	register_rest_route(
 		'captaincore/v1', '/malware-alert', [
@@ -9356,6 +9368,7 @@ function captaincore_security_coverage_func( WP_REST_Request $request ) {
  */
 function captaincore_component_queue_func( WP_REST_Request $request ) {
 	$limit      = (int) ( $request->get_param( 'limit' ) ?: 30 );
+	$group_by   = $request->get_param( 'group_by' ) ?: '';
 	$sites_data = CaptainCore\ComponentQueueCLI::gather_sites();
 
 	$hash_map = [];
@@ -9403,11 +9416,51 @@ function captaincore_component_queue_func( WP_REST_Request $request ) {
 	$all = array_merge( array_values( $hash_map ), array_values( $no_hash ) );
 	$unaudited = CaptainCore\ComponentQueueCLI::filter_unaudited( $all );
 
+	// Version grouping: aggregate by slug+version, sum sites, count distinct hashes
+	if ( $group_by === 'version' ) {
+		$unaudited_by_hash = [];
+		foreach ( $unaudited as $item ) {
+			if ( ! empty( $item['hash'] ) ) {
+				$unaudited_by_hash[ $item['hash'] ] = $item;
+			}
+		}
+		$version_queue = CaptainCore\ComponentQueueCLI::build_version_queue( $unaudited_by_hash );
+
+		usort( $version_queue, function ( $a, $b ) {
+			return $b['sites'] - $a['sites'];
+		} );
+
+		return array_slice( $version_queue, 0, $limit );
+	}
+
 	usort( $unaudited, function ( $a, $b ) {
 		return $b['sites'] - $a['sites'];
 	} );
 
 	return array_slice( $unaudited, 0, $limit );
+}
+
+/**
+ * REST endpoint: All distinct hashes for a slug+version across the fleet.
+ */
+function captaincore_component_hashes_func( WP_REST_Request $request ) {
+	$slug    = sanitize_text_field( $request->get_param( 'slug' ) ?: '' );
+	$version = sanitize_text_field( $request->get_param( 'version' ) ?: '' );
+	$type    = sanitize_text_field( $request->get_param( 'type' ) ?: 'plugin' );
+
+	if ( empty( $slug ) ) {
+		return new WP_Error( 'missing_slug', 'slug parameter is required.', [ 'status' => 400 ] );
+	}
+
+	$hashes = CaptainCore\ComponentQueueCLI::get_hashes_for_version( $slug, $version, $type );
+
+	return [
+		'slug'    => $slug,
+		'version' => $version,
+		'type'    => $type,
+		'hashes'  => $hashes,
+		'count'   => count( $hashes ),
+	];
 }
 
 /**
