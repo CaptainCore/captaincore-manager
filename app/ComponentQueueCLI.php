@@ -257,6 +257,98 @@ class ComponentQueueCLI {
 	}
 
 	/**
+	 * Get all distinct hashes for a given slug+version+type across the fleet,
+	 * with source SSH info and site count per hash.
+	 */
+	public static function get_hashes_for_version( string $slug, string $version, string $type = 'plugin' ): array {
+		$sites_data = self::gather_sites();
+		$hashes     = []; // hash → { hash, sites, source_ssh, home_directory }
+
+		foreach ( $sites_data as $site ) {
+			$ssh = '';
+			if ( ! empty( $site->address ) && ! empty( $site->username ) ) {
+				$ssh = "{$site->username}@{$site->address}";
+				if ( ! empty( $site->port ) && $site->port !== '22' ) {
+					$ssh .= " -p {$site->port}";
+				}
+			}
+			$home_directory = $site->home_directory ?? '';
+
+			$components = self::extract_components( $site );
+
+			foreach ( $components as $comp ) {
+				$h = $comp['hash'] ?? '';
+				if ( ! $h ) {
+					continue;
+				}
+				if ( $comp['slug'] !== $slug || $comp['version'] !== $version || $comp['type'] !== $type ) {
+					continue;
+				}
+				if ( ! isset( $hashes[ $h ] ) ) {
+					$hashes[ $h ] = [
+						'hash'           => $h,
+						'sites'          => 0,
+						'source_ssh'     => $ssh,
+						'home_directory' => $home_directory,
+					];
+				}
+				$hashes[ $h ]['sites']++;
+			}
+		}
+
+		// Sort by site count descending
+		usort( $hashes, function ( $a, $b ) {
+			return $b['sites'] - $a['sites'];
+		} );
+
+		return array_values( $hashes );
+	}
+
+	/**
+	 * Build a version-grouped queue: aggregate by slug+version instead of individual hash.
+	 * Each entry includes total sites, number of distinct hashes, and the most common hash with source_ssh.
+	 */
+	public static function build_version_queue( array $hash_map ): array {
+		$version_map = []; // "type|slug|version" → aggregated data
+
+		foreach ( $hash_map as $hash => $comp ) {
+			$key = "{$comp['type']}|{$comp['slug']}|{$comp['version']}";
+			if ( ! isset( $version_map[ $key ] ) ) {
+				$version_map[ $key ] = [
+					'slug'           => $comp['slug'],
+					'version'        => $comp['version'],
+					'type'           => $comp['type'],
+					'title'          => $comp['title'] ?? $comp['slug'],
+					'sites'          => 0,
+					'hashes_count'   => 0,
+					'hash'           => $comp['hash'],           // most-common hash (updated below)
+					'source_ssh'     => $comp['source_ssh'] ?? '',
+					'home_directory' => $comp['home_directory'] ?? '',
+					'_max_sites'     => 0,                       // track which hash has the most sites
+				];
+			}
+			$version_map[ $key ]['sites'] += $comp['sites'];
+			$version_map[ $key ]['hashes_count']++;
+
+			// Keep the hash with the most sites as the primary
+			if ( $comp['sites'] > $version_map[ $key ]['_max_sites'] ) {
+				$version_map[ $key ]['_max_sites']     = $comp['sites'];
+				$version_map[ $key ]['hash']            = $comp['hash'];
+				$version_map[ $key ]['source_ssh']      = $comp['source_ssh'] ?? '';
+				$version_map[ $key ]['home_directory']   = $comp['home_directory'] ?? '';
+			}
+		}
+
+		// Remove internal tracking field
+		$result = array_values( $version_map );
+		foreach ( $result as &$item ) {
+			unset( $item['_max_sites'] );
+		}
+
+		return $result;
+	}
+
+	/**
 	 * Gather all production environments with SSH + plugin/theme data + details.
 	 */
 	public static function gather_sites() {
