@@ -153,7 +153,7 @@ class ComponentQueueCLI {
 							'version' => $p->version,
 							'type'    => $p->status === 'must-use' ? 'mu-plugin' : 'plugin',
 							'hash'    => $p->hash ?? '',
-							'title'   => $p->title ?? $p->name,
+							'title'   => html_entity_decode( $p->title ?? $p->name ),
 						];
 					}
 				}
@@ -170,7 +170,7 @@ class ComponentQueueCLI {
 							'version' => $t->version,
 							'type'    => 'theme',
 							'hash'    => $t->hash ?? '',
-							'title'   => $t->title ?? $t->name,
+							'title'   => html_entity_decode( $t->title ?? $t->name ),
 						];
 					}
 				}
@@ -225,9 +225,12 @@ class ComponentQueueCLI {
 				if ( $row ) {
 					continue; // Hash matched = definitively audited, never stale
 				}
+				// Has hash but no hash match — needs auditing regardless of slug+version matches
+				$unaudited[] = $comp;
+				continue;
 			}
 
-			// Fall back to slug+version+type
+			// No hash — fall back to slug+version+type (legacy components without hashes)
 			if ( $type === 'mu-plugin' && ( $version === '' || $version === null ) ) {
 				$row = $wpdb->get_row( $wpdb->prepare(
 					"SELECT c.id, a.audit_date FROM {$components_t} c JOIN {$audits_t} a ON c.audit_id = a.id WHERE c.slug = %s AND c.component_type = %s ORDER BY a.audit_date DESC LIMIT 1",
