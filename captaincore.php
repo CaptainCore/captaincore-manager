@@ -9346,8 +9346,10 @@ function captaincore_security_coverage_func( WP_REST_Request $request ) {
 		}
 	}
 
-	$total_unique  = $total['plugin'] + $total['theme'] + $total['mu_plugin'];
-	$total_audited = $audited['plugin'] + $audited['theme'] + $audited['mu_plugin'];
+	// Exclude mu_plugin directory hashes from overall totals — mu-plugins are now
+	// tracked via the manifest-based approach, not whole-directory hashes.
+	$total_unique  = $total['plugin'] + $total['theme'];
+	$total_audited = $audited['plugin'] + $audited['theme'];
 
 	return [
 		'total_sites'         => $total_sites,
