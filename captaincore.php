@@ -8438,6 +8438,30 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Component sites endpoint (admin only) — live environments matching a component
+	register_rest_route(
+		'captaincore/v1', '/component-sites', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_component_sites_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	// Fleet site counts endpoint (admin only) — slug|type → site_count map
+	register_rest_route(
+		'captaincore/v1', '/fleet-site-counts', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_fleet_site_counts_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
 	// Malware alert endpoint (admin only) — sends malware alert email via Mailer
 	register_rest_route(
 		'captaincore/v1', '/malware-alert', [
@@ -9464,6 +9488,91 @@ function captaincore_component_hashes_func( WP_REST_Request $request ) {
 		'hashes'  => $hashes,
 		'count'   => count( $hashes ),
 	];
+}
+
+/**
+ * REST endpoint: Live environments matching a component by slug (and optionally hash).
+ *
+ * Returns array of sites currently running the specified component,
+ * queried from live captaincore_environments data.
+ */
+function captaincore_component_sites_func( WP_REST_Request $request ) {
+	$slug = sanitize_text_field( $request->get_param( 'slug' ) ?: '' );
+	$type = sanitize_text_field( $request->get_param( 'type' ) ?: '' );
+	$hash = sanitize_text_field( $request->get_param( 'hash' ) ?: '' );
+
+	if ( empty( $slug ) ) {
+		return new WP_Error( 'missing_slug', 'slug parameter is required.', [ 'status' => 400 ] );
+	}
+
+	$sites_data = CaptainCore\ComponentQueueCLI::gather_sites();
+	$results    = [];
+
+	foreach ( $sites_data as $site ) {
+		$columns = [];
+		if ( $type === 'theme' ) {
+			$columns = [ 'themes' ];
+		} elseif ( $type === 'plugin' || $type === 'mu-plugin' ) {
+			$columns = [ 'plugins' ];
+		} else {
+			$columns = [ 'plugins', 'themes' ];
+		}
+
+		foreach ( $columns as $column ) {
+			$items = json_decode( $site->$column ?? '' );
+			if ( ! is_array( $items ) ) {
+				continue;
+			}
+
+			foreach ( $items as $item ) {
+				if ( ( $item->name ?? '' ) !== $slug ) {
+					continue;
+				}
+
+				// If hash provided, match by hash; otherwise match by slug alone
+				if ( $hash && ( $item->hash ?? '' ) !== $hash ) {
+					continue;
+				}
+
+				$results[] = [
+					'site_id'     => $site->site_id,
+					'name'        => $site->name,
+					'environment' => 'Production',
+					'home_url'    => $site->home_url ?? '',
+					'version'     => $item->version ?? '',
+					'hash'        => $item->hash ?? '',
+					'status'      => $item->status ?? '',
+				];
+			}
+		}
+	}
+
+	usort( $results, function ( $a, $b ) {
+		return strcmp( $a['name'], $b['name'] );
+	} );
+
+	return $results;
+}
+
+/**
+ * REST endpoint: Fleet site counts — slug|type → site_count map.
+ *
+ * Uses SecurityThreats::inventory() to get deduplicated component list,
+ * then aggregates by slug|type for a quick lookup map.
+ */
+function captaincore_fleet_site_counts_func( WP_REST_Request $request ) {
+	$inventory = CaptainCore\SecurityThreats::inventory();
+	$counts    = [];
+
+	foreach ( $inventory as $item ) {
+		$key = $item['type'] . '|' . $item['slug'];
+		if ( ! isset( $counts[ $key ] ) ) {
+			$counts[ $key ] = 0;
+		}
+		$counts[ $key ] += $item['site_count'];
+	}
+
+	return $counts;
 }
 
 /**
