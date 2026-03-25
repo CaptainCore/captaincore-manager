@@ -8530,6 +8530,17 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	register_rest_route(
+		'captaincore/v1', '/security-patches/manifest', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_security_patches_manifest_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
 	// Checksum Failures endpoint (admin only)
 	register_rest_route(
 		'captaincore/v1', '/checksum-failures', [
@@ -9664,6 +9675,34 @@ function captaincore_security_patches_check_func( WP_REST_Request $request ) {
 	}
 
 	return CaptainCore\SecurityPatches::check( $components );
+}
+
+/**
+ * REST endpoint: Full patch manifest for the Cloudflare Worker to cache.
+ * Returns patches keyed by plugin file path for WordPress update API compatibility.
+ */
+function captaincore_security_patches_manifest_func( WP_REST_Request $request ) {
+	$patches  = CaptainCore\SecurityPatches::all();
+	$manifest = [
+		'patches'    => [],
+		'generated'  => gmdate( 'Y-m-d\TH:i:s\Z' ),
+	];
+
+	foreach ( $patches as $patch ) {
+		$key = "{$patch->type}|{$patch->slug}|{$patch->version}";
+		$manifest['patches'][ $key ] = [
+			'slug'            => $patch->slug,
+			'version'         => $patch->version,
+			'type'            => $patch->type,
+			'title'           => $patch->title,
+			'patched_version' => $patch->patched_version,
+			'download_url'    => $patch->download_url,
+			'description'     => $patch->description,
+			'severity'        => $patch->severity,
+		];
+	}
+
+	return $manifest;
 }
 
 /**
