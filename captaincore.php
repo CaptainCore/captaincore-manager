@@ -8468,6 +8468,18 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Fleet severity counts endpoint (admin only) — fleet-active component severity summary
+	register_rest_route(
+		'captaincore/v1', '/fleet-severity-counts', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_fleet_severity_counts_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
 	// Malware alert endpoint (admin only) — sends malware alert email via Mailer
 	register_rest_route(
 		'captaincore/v1', '/malware-alert', [
@@ -9590,6 +9602,157 @@ function captaincore_fleet_site_counts_func( WP_REST_Request $request ) {
 	}
 
 	return $counts;
+}
+
+/**
+ * Fleet severity counts — fleet-active components grouped by worst finding severity.
+ *
+ * Extracts all content hashes from active Production environments, matches them
+ * against Security Finder components+findings, and returns unique component slugs
+ * grouped by their worst severity level.
+ *
+ * @param bool $show_all  When true, include all findings; when false, respect elevated filter.
+ * @return array|null      Null if SF tables don't exist.
+ */
+function captaincore_fleet_severity_counts_func( $show_all_or_request = false ) {
+	$show_all = $show_all_or_request instanceof WP_REST_Request
+		? ! empty( $show_all_or_request->get_param( 'show_all' ) )
+		: (bool) $show_all_or_request;
+	global $wpdb;
+
+	$components_t = "{$wpdb->prefix}captaincore_sf_components";
+	$findings_t   = "{$wpdb->prefix}captaincore_sf_findings";
+	$env_table    = "{$wpdb->prefix}captaincore_environments";
+	$sites_table  = "{$wpdb->prefix}captaincore_sites";
+
+	// Gather all active production environments
+	$environments = $wpdb->get_results( "
+		SELECT e.plugins, e.themes
+		FROM {$env_table} e
+		JOIN {$sites_table} s ON e.site_id = s.site_id
+		WHERE s.status = 'active'
+		  AND s.provider IS NOT NULL
+		  AND e.environment = 'Production'
+		  AND e.plugins IS NOT NULL
+	" );
+
+	// Build hash → slug|type mapping and track fleet site counts per slug
+	$hash_map    = []; // hash => ['slug' => ..., 'type' => ...]
+	$fleet_sites = []; // slug|type => site_count
+
+	foreach ( $environments as $env ) {
+		$seen_in_env = []; // track slug|type per env to count sites correctly
+
+		$plugins = json_decode( $env->plugins );
+		if ( is_array( $plugins ) ) {
+			foreach ( $plugins as $p ) {
+				if ( $p->status !== 'active' ) continue;
+				$hash = $p->hash ?? '';
+				$slug = $p->name ?? '';
+				if ( ! $hash || ! $slug ) continue;
+				$hash_map[ $hash ] = [ 'slug' => $slug, 'type' => 'plugin' ];
+				$key = "plugin|{$slug}";
+				if ( ! isset( $seen_in_env[ $key ] ) ) {
+					$fleet_sites[ $key ] = ( $fleet_sites[ $key ] ?? 0 ) + 1;
+					$seen_in_env[ $key ] = true;
+				}
+			}
+		}
+
+		$themes = json_decode( $env->themes );
+		if ( is_array( $themes ) ) {
+			foreach ( $themes as $t ) {
+				if ( $t->status !== 'active' ) continue;
+				$hash = $t->hash ?? '';
+				$slug = $t->name ?? '';
+				if ( ! $hash || ! $slug ) continue;
+				$hash_map[ $hash ] = [ 'slug' => $slug, 'type' => 'theme' ];
+				$key = "theme|{$slug}";
+				if ( ! isset( $seen_in_env[ $key ] ) ) {
+					$fleet_sites[ $key ] = ( $fleet_sites[ $key ] ?? 0 ) + 1;
+					$seen_in_env[ $key ] = true;
+				}
+			}
+		}
+	}
+
+	$all_hashes = array_keys( $hash_map );
+	if ( empty( $all_hashes ) ) {
+		return [
+			'counts'       => [ 'critical' => 0, 'high' => 0, 'medium' => 0, 'low' => 0 ],
+			'by_severity'  => [ 'critical' => [], 'high' => [], 'medium' => [], 'low' => [] ],
+			'fleet_hashes' => [],
+		];
+	}
+
+	// Elevated filter
+	$ef = $show_all ? '' : ' AND (f.elevated IS NULL OR f.elevated = 1)';
+
+	// Batch query: worst severity per fleet hash
+	$placeholders = implode( ',', array_fill( 0, count( $all_hashes ), '%s' ) );
+	$rows = $wpdb->get_results( $wpdb->prepare(
+		"SELECT c.content_hash, c.slug, c.component_type,
+		        MAX(c.display_name) AS display_name,
+		        MAX(CASE f.severity
+		            WHEN 'critical' THEN 4
+		            WHEN 'high' THEN 3
+		            WHEN 'medium' THEN 2
+		            WHEN 'low' THEN 1
+		            ELSE 0
+		        END) AS worst_sev_num,
+		        COUNT(DISTINCT f.id) AS finding_count
+		 FROM {$components_t} c
+		 JOIN {$findings_t} f ON f.component_id = c.id{$ef}
+		 WHERE c.content_hash IN ({$placeholders})
+		 GROUP BY c.content_hash",
+		...$all_hashes
+	), ARRAY_A );
+
+	// Deduplicate by slug|type — take worst severity across all fleet hashes
+	$components = []; // slug|type => best data
+	foreach ( $rows as $row ) {
+		$key = $row['component_type'] . '|' . $row['slug'];
+		if ( ! isset( $components[ $key ] ) || $row['worst_sev_num'] > $components[ $key ]['worst_sev_num'] ) {
+			$components[ $key ] = [
+				'slug'          => $row['slug'],
+				'type'          => $row['component_type'],
+				'display_name'  => $row['display_name'] ?: $row['slug'],
+				'finding_count' => (int) $row['finding_count'],
+				'worst_sev_num' => (int) $row['worst_sev_num'],
+				'fleet_sites'   => $fleet_sites[ $key ] ?? 0,
+			];
+		} else {
+			// Accumulate finding count from other hashes of same component
+			$components[ $key ]['finding_count'] += (int) $row['finding_count'];
+		}
+	}
+
+	// Group by worst severity
+	$sev_labels = [ 4 => 'critical', 3 => 'high', 2 => 'medium', 1 => 'low' ];
+	$by_severity = [ 'critical' => [], 'high' => [], 'medium' => [], 'low' => [] ];
+	$counts      = [ 'critical' => 0, 'high' => 0, 'medium' => 0, 'low' => 0 ];
+
+	foreach ( $components as $comp ) {
+		$sev = $sev_labels[ $comp['worst_sev_num'] ] ?? null;
+		if ( $sev ) {
+			$by_severity[ $sev ][] = $comp;
+			$counts[ $sev ]++;
+		}
+	}
+
+	// Sort each severity bucket by fleet_sites descending
+	foreach ( $by_severity as &$bucket ) {
+		usort( $bucket, function( $a, $b ) {
+			return $b['fleet_sites'] - $a['fleet_sites'];
+		} );
+	}
+	unset( $bucket );
+
+	return [
+		'counts'       => $counts,
+		'by_severity'  => $by_severity,
+		'fleet_hashes' => array_flip( array_column( $rows, 'content_hash' ) ),
+	];
 }
 
 /**
