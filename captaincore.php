@@ -1305,6 +1305,11 @@ function captaincore_site_lookup_func( WP_REST_Request $request ) {
 		if ( ! empty( $results ) ) {
 			$env  = $results[0];
 			$site = CaptainCore\Sites::get( $env->site_id );
+			$details        = json_decode( $env->details );
+			$home_directory = $env->home_directory;
+			if ( empty( $home_directory ) && ! empty( $details->home_directory ) ) {
+				$home_directory = $details->home_directory;
+			}
 			return [
 				'site_id'        => (int) $env->site_id,
 				'environment_id' => (int) $env->environment_id,
@@ -1312,6 +1317,7 @@ function captaincore_site_lookup_func( WP_REST_Request $request ) {
 				'name'           => $site->name ?? $domain,
 				'home_url'       => $env->home_url,
 				'ssh_connection' => "ssh {$env->username}@{$env->address} -p {$env->port}",
+				'home_directory' => $home_directory ?: '',
 			];
 		}
 	}
