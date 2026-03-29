@@ -66,10 +66,10 @@ class Accounts extends DB {
         $account        = self::get( $account_id );
         $plan           = empty( $account->plan ) ? (object) [] : json_decode( $account->plan );
         $new_plan       = (object) $new_plan;
-        $total          = is_array( $plan->price ) ? 0 : (float) $plan->price;
+        $total          = empty( $plan->price ) || is_array( $plan->price ) ? 0 : (float) $plan->price;
         $configurations = ( new Configurations )->get();
 
-        if ( is_array( $plan->addons ) && count( $plan->addons ) > 0 ) {
+        if ( ! empty( $plan->addons ) && is_array( $plan->addons ) && count( $plan->addons ) > 0 ) {
             foreach( $plan->addons as $addon ) {
                 $total = $total + (float) $addon->price;
             }
@@ -96,7 +96,7 @@ class Accounts extends DB {
         }
         
         // If the plan name is the same but the interval changed, recalculate the price.
-        if ( $plan->name == $new_plan->name && $plan->interval != $new_plan->interval ) {
+        if ( ! empty( $plan->name ) && $plan->name == $new_plan->name && ! empty( $plan->interval ) && $plan->interval != $new_plan->interval ) {
             // Find the original plan from configurations to get its base price and interval
             $original_plan = null;
             foreach ( $configurations->hosting_plans as $hosting_plan ) {
@@ -130,7 +130,7 @@ class Accounts extends DB {
         $plan->auto_switch       = empty( $new_plan->auto_switch ) ? "" : $new_plan->auto_switch;
         $plan->interval          = empty( $new_plan->interval ) ? "" : $new_plan->interval;
         $plan->next_renewal      = empty( $new_plan->next_renewal ) ? "" : $new_plan->next_renewal;
-        $plan->billing_user_id   = empty( $new_plan->billing_user_id ) ? "" : $new_plan->billing_user_id;
+        $plan->billing_user_id   = empty( $new_plan->billing_user_id ) ? "" : (string) $new_plan->billing_user_id;
         $plan->additional_emails = empty( $new_plan->additional_emails ) ? "" : $new_plan->additional_emails;
 
         self::update( [ "plan" => json_encode( $plan ) ], [ "account_id" => $account_id ] );
