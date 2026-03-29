@@ -9513,7 +9513,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-progress-circular indeterminate size="64"></v-progress-circular>
 						</v-overlay>
 						<v-col style="max-width:360px" v-show="dialog_invoice.response.status == 'pending' || dialog_invoice.response.status == 'failed'">
-						<v-card class="mb-7" variant="outlined" v-if="typeof billing.address == 'object' && dialog_invoice.customer">
+						<v-card class="mb-7" flat border="thin" rounded="xl" v-if="typeof billing.address == 'object' && dialog_invoice.customer">
 							<v-list-item class="pa-4">
 								<div class="text-overline mb-4">
 								Billing Details
@@ -9547,8 +9547,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 										<v-text-field density="compact" label="Street Address" persistent-hint hint="House number and street name" v-model="billing.address.address_1" :rules="billing.rules.address_1" variant="underlined"></v-text-field>
 										<v-text-field density="compact" label="" persistent-hint hint="Apartment, suite, unit, etc. (optional)" v-model="billing.address.address_2" variant="underlined"></v-text-field>
 										<v-text-field label="Town" v-model="billing.address.city" :rules="billing.rules.city" variant="underlined"></v-text-field>
-										<v-autocomplete label="State" v-model="billing.address.state" :items="states_selected" v-if="states_selected.length > 0" variant="underlined"></v-autocomplete>
-										<v-text-field label="State" v-model="billing.address.state" v-else variant="underlined"></v-text-field>
+										<v-autocomplete label="State" v-model="billing.address.state" :items="states_selected" v-if="states_selected.length > 0" :rules="billing.rules.state" variant="underlined"></v-autocomplete>
+										<v-text-field label="State" v-model="billing.address.state" v-else :rules="billing.rules.state" variant="underlined"></v-text-field>
 										<v-text-field density="compact" label="Zip" v-model="billing.address.postcode" :rules="billing.rules.zip" variant="underlined"></v-text-field>
 										<v-autocomplete density="compact" label="Country" v-model="billing.address.country" :items="countries" @update:model-value="populateStates()" :rules="billing.rules.country" variant="underlined"></v-autocomplete>
 										<v-text-field density="compact" label="Phone" v-model="billing.address.phone" variant="underlined"></v-text-field>
@@ -9635,9 +9635,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-card max-width="450px" variant="outlined" v-show="dialog_invoice.payment_method == 'new'" class="mb-4">
 								<v-card-text>
 								<div id="card-element"></div>
-								<v-alert variant="text" density="compact" border="start" type="error" v-show="dialog_invoice.error != ''" class="mt-4">
-									{{ dialog_invoice.error }}
-								</v-alert>
 								</v-card-text>
 							</v-card>
 							<v-card class="d-flex flex-nowrap py-3" flat>

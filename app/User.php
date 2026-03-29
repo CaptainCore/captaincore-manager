@@ -36,16 +36,13 @@ class User {
         if ( empty( $records ) ) {
             return false;
         }
-        $level = $records[0]->level;
-        if ( empty( $level ) ) {
-            $account = ( new Accounts )->get( $account_id );
-            $plan    = empty( $account->plan ) ? (object) [] : json_decode( $account->plan );
-            if ( ! empty( $plan->billing_user_id ) && $plan->billing_user_id == $this->user_id ) {
-                return 'full-billing';
-            }
-            return 'full';
+        $account = ( new Accounts )->get( $account_id );
+        $plan    = empty( $account->plan ) ? (object) [] : json_decode( $account->plan );
+        if ( ! empty( $plan->billing_user_id ) && $plan->billing_user_id == $this->user_id ) {
+            return 'full-billing';
         }
-        return $level;
+        $level = $records[0]->level;
+        return ! empty( $level ) ? $level : 'full';
     }
 
     public static function tier_permissions( $level ) {
@@ -98,7 +95,7 @@ class User {
         $billing = self::billing();
         foreach ( $billing->subscriptions as $item ) {
             $subscription = (object) $item;
-            if ( $subscription->type == "woocommerce" ) {
+            if ( ! empty( $subscription->type ) && $subscription->type == "woocommerce" ) {
                 // Note: For ACH tokens, we store the token_id string
                 // The update_payment_method may need adjustment for ACH
                 if ( is_string( $token_id ) && strpos( $token_id, 'ach_' ) === 0 ) {
@@ -1141,11 +1138,20 @@ class User {
     }
 
     public function pay_invoice( $invoice_id, $payment_id ) {
+        // Sync billing address from customer profile onto the order
+        $order    = wc_get_order( $invoice_id );
+        $customer = new \WC_Customer( $order->get_customer_id() );
+        $address  = $customer->get_billing();
+        if ( ! empty( $address['first_name'] ) ) {
+            $order->set_address( $address, 'billing' );
+            $order->save();
+        }
+
         // Check if this is an ACH token (string starting with 'ach_')
         if ( is_string( $payment_id ) && strpos( $payment_id, 'ach_' ) === 0 ) {
             return $this->pay_invoice_with_ach( $invoice_id, $payment_id );
         }
-        
+
         // Otherwise, process as a card payment (existing logic)
         return $this->pay_invoice_with_card( $invoice_id, $payment_id );
     }
