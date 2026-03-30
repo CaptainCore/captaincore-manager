@@ -205,9 +205,11 @@ add_action( 'init', 'captaincore_subscription_management' );
  * Manage subscription signup via Gravity Forms confirmation
  */
 function captaincore_subscription_signup() {
-    global $pagenow;
+    if ( ! isset( $_GET['entry_email'], $_GET['entry_id'], $_GET['action'] ) ) {
+        return;
+    }
 
-    if ( 'wp-signup.php' !== $pagenow || ! isset( $_GET['entry_email'], $_GET['entry_id'], $_GET['action'] ) ) {
+    if ( ! in_array( $_GET['action'], [ 'subscribe_confirm', 'unsubscribe' ], true ) ) {
         return;
     }
 
@@ -259,6 +261,14 @@ function captaincore_subscription_signup() {
     }
 }
 add_action( 'init', 'captaincore_subscription_signup' );
+
+// Allow wp-signup.php through Perfmatters login URL hiding for subscription confirmations
+add_filter( 'perfmatters_login_url', function( $enabled ) {
+    if ( isset( $_GET['entry_email'], $_GET['entry_id'], $_GET['action'] ) && in_array( $_GET['action'], [ 'subscribe_confirm', 'unsubscribe' ], true ) ) {
+        return false;
+    }
+    return $enabled;
+} );
 
 /**
  * Register meta box for newsletter send history on post edit screen
