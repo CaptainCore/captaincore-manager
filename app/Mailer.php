@@ -207,7 +207,7 @@ class Mailer {
                             <img src='{$logo_url}' alt='{$site_name}' style='max-height: 50px; width: auto;'>
                         </div>
 
-                        <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); overflow: hidden;'>
+                        <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 700px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); overflow: hidden;'>
                             
                             <!-- Header Area -->
                             <tr>
