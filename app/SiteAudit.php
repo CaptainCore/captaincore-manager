@@ -2,16 +2,16 @@
 
 namespace CaptainCore;
 
-class SecurityAudit {
+class SiteAudit {
 
-    protected $security_audit_id = "";
+    protected $site_audit_id = "";
 
-    public function __construct( $security_audit_id = "" ) {
-        $this->security_audit_id = $security_audit_id;
+    public function __construct( $site_audit_id = "" ) {
+        $this->site_audit_id = $site_audit_id;
     }
 
     public function get() {
-        $audit = ( new SecurityAudits )->get( $this->security_audit_id );
+        $audit = ( new SiteAudits )->get( $this->site_audit_id );
         if ( ! $audit ) {
             return null;
         }
@@ -19,38 +19,42 @@ class SecurityAudit {
         $site        = ( new Sites )->get( $audit->site_id );
         $environment = ( new Environments )->get( $audit->environment_id );
 
-        $audit->site_name   = $site ? $site->name : '';
         $audit->home_url    = $environment ? $environment->home_url : '';
         $audit->environment = $environment ? $environment->environment : '';
+        $audit->site_name   = $site ? $site->name : '';
+        if ( empty( $audit->site_name ) && ! empty( $audit->home_url ) ) {
+            $audit->site_name = preg_replace( '/^www\./', '', parse_url( $audit->home_url, PHP_URL_HOST ) ?: '' );
+        }
         $audit->findings    = $this->findings();
 
         // Decode JSON fields
-        $audit->scan_checks     = json_decode( $audit->scan_checks ) ?: [];
-        $audit->site_config     = json_decode( $audit->site_config ) ?: [];
-        $audit->admin_accounts  = json_decode( $audit->admin_accounts ) ?: [];
-        $audit->timeline_events = json_decode( $audit->timeline_events ) ?: [];
+        $audit->scan_checks       = json_decode( $audit->scan_checks ) ?: [];
+        $audit->site_config       = json_decode( $audit->site_config ) ?: [];
+        $audit->admin_accounts    = json_decode( $audit->admin_accounts ) ?: [];
+        $audit->timeline_events   = json_decode( $audit->timeline_events ) ?: [];
+        $audit->dashboard_metrics = json_decode( $audit->dashboard_metrics ?? 'null' ) ?: null;
 
         return $audit;
     }
 
     public function findings() {
-        return ( new SecurityAuditFindings )->where( [ 'security_audit_id' => $this->security_audit_id ] );
+        return ( new SiteAuditFindings )->where( [ 'site_audit_id' => $this->site_audit_id ] );
     }
 
     public function add_finding( $data = [] ) {
         $time_now = date( 'Y-m-d H:i:s' );
         $data     = array_merge( $data, [
-            'security_audit_id' => $this->security_audit_id,
+            'site_audit_id' => $this->site_audit_id,
             'created_at'        => $time_now,
             'updated_at'        => $time_now,
         ] );
-        $finding_id = ( new SecurityAuditFindings )->insert( $data );
+        $finding_id = ( new SiteAuditFindings )->insert( $data );
 
         // Update issues count on audit
         $findings = $this->findings();
-        ( new SecurityAudits )->update(
+        ( new SiteAudits )->update(
             [ 'issues_count' => count( $findings ), 'updated_at' => $time_now ],
-            [ 'security_audit_id' => $this->security_audit_id ]
+            [ 'site_audit_id' => $this->site_audit_id ]
         );
 
         return $finding_id;
@@ -58,38 +62,38 @@ class SecurityAudit {
 
     public function resolve_finding( $finding_id, $resolution = '' ) {
         $time_now = date( 'Y-m-d H:i:s' );
-        ( new SecurityAuditFindings )->update(
+        ( new SiteAuditFindings )->update(
             [
                 'status'      => 'resolved',
                 'resolution'  => $resolution,
                 'resolved_at' => $time_now,
                 'updated_at'  => $time_now,
             ],
-            [ 'security_audit_finding_id' => $finding_id ]
+            [ 'site_audit_finding_id' => $finding_id ]
         );
 
         // Check if all findings are resolved, update audit status
-        $open_findings = ( new SecurityAuditFindings )->where( [
-            'security_audit_id' => $this->security_audit_id,
+        $open_findings = ( new SiteAuditFindings )->where( [
+            'site_audit_id' => $this->site_audit_id,
             'status'            => 'open',
         ] );
         if ( count( $open_findings ) === 0 ) {
-            ( new SecurityAudits )->update(
+            ( new SiteAudits )->update(
                 [ 'status' => 'remediated', 'updated_at' => $time_now ],
-                [ 'security_audit_id' => $this->security_audit_id ]
+                [ 'site_audit_id' => $this->site_audit_id ]
             );
         }
     }
 
     public function complete( $status = 'clean' ) {
         $time_now = date( 'Y-m-d H:i:s' );
-        ( new SecurityAudits )->update(
+        ( new SiteAudits )->update(
             [
                 'status'       => $status,
                 'updated_at'   => $time_now,
                 'completed_at' => $time_now,
             ],
-            [ 'security_audit_id' => $this->security_audit_id ]
+            [ 'site_audit_id' => $this->site_audit_id ]
         );
     }
 
@@ -109,16 +113,16 @@ class SecurityAudit {
         file_put_contents( $file_path, $html );
 
         $time_now = date( 'Y-m-d H:i:s' );
-        ( new SecurityAudits )->update(
+        ( new SiteAudits )->update(
             [ 'report_path' => $filename, 'updated_at' => $time_now ],
-            [ 'security_audit_id' => $this->security_audit_id ]
+            [ 'site_audit_id' => $this->site_audit_id ]
         );
 
         return $filename;
     }
 
     public function unpublish() {
-        $audit = ( new SecurityAudits )->get( $this->security_audit_id );
+        $audit = ( new SiteAudits )->get( $this->site_audit_id );
         if ( ! $audit || ! $audit->report_path ) {
             return false;
         }
@@ -129,9 +133,9 @@ class SecurityAudit {
         }
 
         $time_now = date( 'Y-m-d H:i:s' );
-        ( new SecurityAudits )->update(
+        ( new SiteAudits )->update(
             [ 'report_path' => null, 'updated_at' => $time_now ],
-            [ 'security_audit_id' => $this->security_audit_id ]
+            [ 'site_audit_id' => $this->site_audit_id ]
         );
 
         return true;
@@ -162,35 +166,64 @@ class SecurityAudit {
         $date      = date( 'F j, Y', strtotime( $audit->created_at ) );
         $css       = self::report_css();
 
-        // Dashboard values
-        $fs_class  = $audit->filesystem_status === 'clean' ? 'clean' : ( $audit->filesystem_status === 'critical' ? 'critical' : 'warn' );
-        $fs_label  = strtoupper( esc_html( $audit->filesystem_status ?: 'N/A' ) );
-        $wp_ver    = esc_html( $audit->wp_version ?: 'N/A' );
-        $issues    = (int) $audit->issues_count;
-        $issues_cl = $issues === 0 ? 'clean' : 'warn';
-        $plugins   = (int) $audit->plugins_count;
+        // Report type title
+        $report_type = $audit->report_type ?? 'security_audit';
+        $title_map   = [
+            'security_audit'  => 'Security Audit Report',
+            'malware_incident' => 'Malware Incident Report',
+            'performance_review' => 'Performance Review',
+            'debug_report'    => 'Debug Report',
+            'incident_report' => 'Incident Report',
+        ];
+        $report_title = $title_map[ $report_type ] ?? ucwords( str_replace( '_', ' ', $report_type ) );
 
         $html = "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n";
         $html .= "<meta charset=\"UTF-8\">\n";
         $html .= "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n";
-        $html .= "<title>Security Audit Report &mdash; {$site_name}</title>\n";
+        $html .= "<title>{$report_title} &mdash; {$site_name}</title>\n";
         $html .= "<style>\n{$css}\n</style>\n</head>\n<body>\n\n";
 
         // Hero
         $html .= "<div class=\"hero\">\n";
-        $html .= "  <h1>Security Audit Report</h1>\n";
+        $html .= "  <h1>{$report_title}</h1>\n";
         $html .= "  <p>{$site_name} &mdash; {$date}</p>\n";
         $html .= "</div>\n\n";
 
         $html .= "<div class=\"container\">\n\n";
 
         // Dashboard
-        $html .= "<div class=\"dashboard\">\n  <div class=\"dashboard-grid\">\n";
-        $html .= "    <div class=\"dash-card\">\n      <div class=\"dash-value {$fs_class}\">{$fs_label}</div>\n      <div class=\"dash-label\">Filesystem</div>\n    </div>\n";
-        $html .= "    <div class=\"dash-card\">\n      <div class=\"dash-value\">{$wp_ver}</div>\n      <div class=\"dash-label\">WP Version</div>\n    </div>\n";
-        $html .= "    <div class=\"dash-card\">\n      <div class=\"dash-value {$issues_cl}\">{$issues}</div>\n      <div class=\"dash-label\">Issues Found</div>\n    </div>\n";
-        $html .= "    <div class=\"dash-card\">\n      <div class=\"dash-value\">{$plugins}</div>\n      <div class=\"dash-label\">Plugins</div>\n    </div>\n";
-        $html .= "  </div>\n</div>\n\n";
+        if ( ! empty( $audit->dashboard_metrics ) && is_array( $audit->dashboard_metrics ) ) {
+            // Custom dashboard metrics
+            $html .= "<div class=\"dashboard\">\n  <div class=\"dashboard-grid\">\n";
+            foreach ( $audit->dashboard_metrics as $metric ) {
+                $val   = esc_html( $metric->value ?? '' );
+                $label = esc_html( $metric->label ?? '' );
+                $class = esc_attr( $metric->class ?? '' );
+                $cls   = $class ? " {$class}" : '';
+                $html .= "    <div class=\"dash-card\">\n      <div class=\"dash-value{$cls}\">{$val}</div>\n      <div class=\"dash-label\">{$label}</div>\n    </div>\n";
+            }
+            $html .= "  </div>\n</div>\n\n";
+        } else {
+            // Default dashboard
+            $fs_class  = $audit->filesystem_status === 'clean' ? 'clean' : ( $audit->filesystem_status === 'critical' ? 'critical' : 'warn' );
+            $fs_label  = strtoupper( esc_html( $audit->filesystem_status ?: 'N/A' ) );
+            $wp_ver    = esc_html( $audit->wp_version ?: 'N/A' );
+            $issues    = (int) $audit->issues_count;
+            $issues_cl = $issues === 0 ? 'clean' : 'warn';
+            $plugins   = (int) $audit->plugins_count;
+
+            $html .= "<div class=\"dashboard\">\n  <div class=\"dashboard-grid\">\n";
+            $html .= "    <div class=\"dash-card\">\n      <div class=\"dash-value {$fs_class}\">{$fs_label}</div>\n      <div class=\"dash-label\">Filesystem</div>\n    </div>\n";
+            $html .= "    <div class=\"dash-card\">\n      <div class=\"dash-value\">{$wp_ver}</div>\n      <div class=\"dash-label\">WP Version</div>\n    </div>\n";
+            $html .= "    <div class=\"dash-card\">\n      <div class=\"dash-value {$issues_cl}\">{$issues}</div>\n      <div class=\"dash-label\">Issues Found</div>\n    </div>\n";
+            $html .= "    <div class=\"dash-card\">\n      <div class=\"dash-value\">{$plugins}</div>\n      <div class=\"dash-label\">Plugins</div>\n    </div>\n";
+            $html .= "  </div>\n</div>\n\n";
+        }
+
+        // Summary callout
+        if ( ! empty( $audit->summary ) ) {
+            $html .= "<div class=\"callout green\">" . esc_html( $audit->summary ) . "</div>\n\n";
+        }
 
         // Section 1: Scan Results
         if ( ! empty( $audit->scan_checks ) ) {
@@ -391,6 +424,45 @@ class SecurityAudit {
                         $html .= "    </div>\n";
                         break;
 
+                    case 'ioc-list':
+                        $label   = esc_html( $ev->label ?? '' );
+                        $columns = intval( $ev->columns ?? 3 );
+                        if ( $label ) {
+                            $html .= "    <div class=\"evidence-label\">{$label}</div>\n";
+                        }
+                        $html .= "    <div class=\"ioc-grid\" style=\"column-count:{$columns}\">\n";
+                        $items = $ev->items ?? [];
+                        foreach ( $items as $item ) {
+                            $html .= "      <span>" . esc_html( $item ) . "</span>\n";
+                        }
+                        $html .= "    </div>\n";
+                        break;
+
+                    case 'table':
+                        $label   = esc_html( $ev->label ?? '' );
+                        if ( $label ) {
+                            $html .= "    <div class=\"evidence-label\">{$label}</div>\n";
+                        }
+                        $html .= "    <table>\n";
+                        $headers = $ev->headers ?? [];
+                        if ( ! empty( $headers ) ) {
+                            $html .= "      <tr>";
+                            foreach ( $headers as $h ) {
+                                $html .= "<th>" . esc_html( $h ) . "</th>";
+                            }
+                            $html .= "</tr>\n";
+                        }
+                        $rows = $ev->rows ?? [];
+                        foreach ( $rows as $row ) {
+                            $html .= "      <tr>";
+                            foreach ( $row as $cell ) {
+                                $html .= "<td>" . esc_html( $cell ) . "</td>";
+                            }
+                            $html .= "</tr>\n";
+                        }
+                        $html .= "    </table>\n";
+                        break;
+
                     default: // 'evidence'
                         $label   = esc_html( $ev->label ?? '' );
                         $content = esc_html( $ev->content ?? '' );
@@ -579,6 +651,8 @@ class SecurityAudit {
   .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   .legend-count { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); margin-left: auto; padding-left: 1rem; }
   .highlight-row { background: #f0fdf4; }
+  .ioc-grid { column-gap: 1rem; font-family: var(--mono); font-size: 0.68rem; line-height: 1.7; }
+  .ioc-grid span { display: block; padding: 0.1rem 0; color: #3d5166; }
   .footer { margin-top: 3rem; text-align: center; color: var(--muted); font-size: 0.82rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
   .footer a { color: var(--c1); text-decoration: none; }
   .footer a:hover { text-decoration: underline; }

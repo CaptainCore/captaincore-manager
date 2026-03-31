@@ -111,12 +111,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-list-subheader>Developers</v-list-subheader>
 			<v-list-item link :href="`${configurations.path}cookbook`" @click.prevent="goToPath('/cookbook')" title="Cookbook" prepend-icon="mdi-code-tags"></v-list-item>
 			<v-list-item link :href="`${configurations.path}reports`" @click.prevent="goToPath('/reports')" title="Maintenance Reports" prepend-icon="mdi-file-chart"></v-list-item>
+			<v-list-item link :href="`${configurations.path}site-audits`" @click.prevent="goToPath('/site-audits')" title="Site Audits" prepend-icon="mdi-shield-search"></v-list-item>
 			<v-list-subheader v-show="role == 'administrator' || role == 'owner'">Administrator</v-list-subheader>
 			<v-list-item link :href="`${configurations.path}activity-logs`" @click.prevent="goToPath('/activity-logs')" title="Activity Logs" v-show="role == 'administrator'" prepend-icon="mdi-history"></v-list-item>
 			<v-list-item link :href="`${configurations.path}archives`" @click.prevent="goToPath('/archives')" title="Archives" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-folder-zip-outline"></v-list-item>
 			<v-list-item link :href="`${configurations.path}configurations`" @click.prevent="goToPath('/configurations')" title="Configurations" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-cogs"></v-list-item>
 			<v-list-item link :href="`${configurations.path}security`" @click.prevent="goToPath('/security')" title="Security" v-show="role == 'administrator'" prepend-icon="mdi-shield-alert"></v-list-item>
-			<v-list-item link :href="`${configurations.path}security-audits`" @click.prevent="goToPath('/security-audits')" title="Security Audits" prepend-icon="mdi-shield-search"></v-list-item>
 			<v-list-item link :href="`${configurations.path}handbook`" @click.prevent="goToPath('/handbook')" title="Handbook" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-map"></v-list-item>
 			<v-list-item link :href="`${configurations.path}keys`" @click.prevent="goToPath('/keys')" title="SSH Keys" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-key"></v-list-item>
 			<v-list-item link :href="`${configurations.path}users`" @click.prevent="goToPath('/users')" title="Users" v-show="role == 'administrator' || role == 'owner'" prepend-icon="mdi-account-multiple"></v-list-item>
@@ -5140,9 +5140,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-col>
 				</v-row>
 				</v-card>
-				<v-card flat class="mt-2" v-if="dialog_site.site.security_audits && dialog_site.site.security_audits.length > 0">
+				<v-card flat class="mt-2" v-if="dialog_site.site.site_audits && dialog_site.site.site_audits.length > 0">
 					<v-toolbar density="compact" color="transparent" flat>
-						<v-toolbar-title>Security Audits</v-toolbar-title>
+						<v-toolbar-title>Site Audits</v-toolbar-title>
 					</v-toolbar>
 					<v-data-table
 						:headers="[
@@ -5152,8 +5152,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							{ title: 'Issues', key: 'issues_count', width: '180px' },
 							{ title: '', key: 'actions', width: '220px', sortable: false }
 						]"
-						:items="dialog_site.site.security_audits"
-						item-value="security_audit_id"
+						:items="dialog_site.site.site_audits"
+						item-value="site_audit_id"
 						density="comfortable"
 						hover
 						:items-per-page="-1"
@@ -5178,19 +5178,19 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<span v-else>{{ item.issues_count }}</span>
 						</template>
 						<template v-slot:item.actions="{ item }">
-							<v-btn size="small" variant="text" icon @click="openSecurityAuditReport(item.security_audit_id)">
+							<v-btn size="small" variant="text" icon @click="openSiteAuditReport(item.site_audit_id)">
 								<v-icon>mdi-file-document-outline</v-icon>
 								<v-tooltip activator="parent" location="top">View Report</v-tooltip>
 							</v-btn>
-							<v-btn v-if="role == 'administrator'" size="small" variant="text" icon @click="publishSecurityAuditReport(item)">
+							<v-btn size="small" variant="text" icon @click="publishSiteAuditReport(item)">
 								<v-icon>mdi-earth</v-icon>
 								<v-tooltip activator="parent" location="top">{{ item.report_path ? 'Regenerate Public Link' : 'Publish Public Link' }}</v-tooltip>
 							</v-btn>
-							<v-btn v-if="role == 'administrator' && item.report_path" size="small" variant="text" icon @click="copySecurityAuditLink(item)">
+							<v-btn v-if="item.report_path" size="small" variant="text" icon @click="copySiteAuditLink(item)">
 								<v-icon>mdi-content-copy</v-icon>
 								<v-tooltip activator="parent" location="top">Copy Public Link</v-tooltip>
 							</v-btn>
-							<v-btn v-if="role == 'administrator' && item.report_path" size="small" variant="text" icon @click="unpublishSecurityAuditReport(item)">
+							<v-btn v-if="item.report_path" size="small" variant="text" icon @click="unpublishSiteAuditReport(item)">
 								<v-icon>mdi-earth-off</v-icon>
 								<v-tooltip activator="parent" location="top">Unpublish</v-tooltip>
 							</v-btn>
@@ -9048,35 +9048,35 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-actions>
 				</v-card>
 			</v-dialog>
-			<v-card v-if="route == 'security-audits'" flat border="thin" rounded="xl">
+			<v-card v-if="route == 'site-audits'" flat border="thin" rounded="xl">
 				<v-toolbar flat color="transparent">
-					<v-toolbar-title>Security Audits</v-toolbar-title>
+					<v-toolbar-title>Site Audits</v-toolbar-title>
 				</v-toolbar>
 				<v-card-text class="pt-0">
 					<v-data-table
-						:loading="security_audits_loading"
+						:loading="site_audits_loading"
 						:headers="[
 							{ title: 'Site', key: 'site_name' },
 							{ title: 'Date', key: 'created_at', width: '180px' },
 							{ title: 'Status', key: 'status', width: '140px' },
-							{ title: 'Filesystem', key: 'filesystem_status', width: '120px' },
 							{ title: 'Issues', key: 'issues_count', width: '100px' },
 							{ title: 'Actions', key: 'actions', width: '220px', sortable: false }
 						]"
-						:items="security_audits"
-						item-value="security_audit_id"
+						:items="site_audits"
+						item-value="site_audit_id"
 						density="comfortable"
 						hover
 						:sort-by="[{key: 'created_at', order: 'desc'}]"
 					>
+						<template v-slot:item.site_name="{ item }">
+							{{ item.site_name }}<br>
+							<small style="opacity:0.6">{{ (item.report_type || 'security_audit').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) }}</small>
+						</template>
 						<template v-slot:item.created_at="{ item }">
 							{{ new Date(item.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }}
 						</template>
 						<template v-slot:item.status="{ item }">
 							<v-chip size="small" variant="tonal" :color="{ clean: 'success', remediated: 'success', in_progress: 'info', issues_found: 'warning', compromised: 'error' }[item.status] || 'default'">{{ item.status.replace('_', ' ') }}</v-chip>
-						</template>
-						<template v-slot:item.filesystem_status="{ item }">
-							<v-chip v-if="item.filesystem_status" size="small" variant="tonal" :color="{ clean: 'success', warn: 'warning', critical: 'error' }[item.filesystem_status] || 'default'">{{ item.filesystem_status }}</v-chip>
 						</template>
 						<template v-slot:item.issues_count="{ item }">
 							<span v-if="item.finding_counts">
@@ -9087,19 +9087,19 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<span v-else>{{ item.issues_count }}</span>
 						</template>
 						<template v-slot:item.actions="{ item }">
-							<v-btn size="small" variant="text" icon @click="openSecurityAuditReport(item.security_audit_id)">
+							<v-btn size="small" variant="text" icon @click="openSiteAuditReport(item.site_audit_id)">
 								<v-icon>mdi-file-document-outline</v-icon>
 								<v-tooltip activator="parent" location="top">View Report</v-tooltip>
 							</v-btn>
-							<v-btn v-if="role == 'administrator'" size="small" variant="text" icon @click="publishSecurityAuditReport(item)">
+							<v-btn size="small" variant="text" icon @click="publishSiteAuditReport(item)">
 								<v-icon>mdi-earth</v-icon>
 								<v-tooltip activator="parent" location="top">{{ item.report_path ? 'Regenerate Public Link' : 'Publish Public Link' }}</v-tooltip>
 							</v-btn>
-							<v-btn v-if="role == 'administrator' && item.report_path" size="small" variant="text" icon @click="copySecurityAuditLink(item)">
+							<v-btn v-if="item.report_path" size="small" variant="text" icon @click="copySiteAuditLink(item)">
 								<v-icon>mdi-content-copy</v-icon>
 								<v-tooltip activator="parent" location="top">Copy Public Link</v-tooltip>
 							</v-btn>
-							<v-btn v-if="role == 'administrator' && item.report_path" size="small" variant="text" icon @click="unpublishSecurityAuditReport(item)">
+							<v-btn v-if="item.report_path" size="small" variant="text" icon @click="unpublishSiteAuditReport(item)">
 								<v-icon>mdi-earth-off</v-icon>
 								<v-tooltip activator="parent" location="top">Unpublish</v-tooltip>
 							</v-btn>
@@ -12440,8 +12440,8 @@ const app = createApp({
 		checksum_dialog: { show: false, item: null },
 		security_patches: [],
 		security_patches_loading: false,
-		security_audits: [],
-		security_audits_loading: false,
+		site_audits: [],
+		site_audits_loading: false,
 		security_threats: [],
 		security_threats_loading: false,
 		security_coverage: null,
@@ -12805,7 +12805,7 @@ const app = createApp({
 			'/subscription': 'subscription',
 			'/users': 'users',
 			'/activity-logs': 'activity-logs',
-			'/security-audits': 'security-audits',
+			'/site-audits': 'site-audits',
 		},
 		selected_nav: "",
 		querystring: window.location.search,
@@ -14194,10 +14194,10 @@ const app = createApp({
 				this.fetchActivityLogs();
 			}
 
-			if (this.route == "security-audits") {
+			if (this.route == "site-audits") {
 				this.selected_nav = "";
 				this.loading_page = false;
-				this.fetchSecurityAudits();
+				this.fetchSiteAudits();
 			}
 
 			if (this.fetchInvite.account) {
@@ -14321,9 +14321,9 @@ const app = createApp({
 				}
 			}
 
-			if (this.route === "security-audits" && this.route_path) {
+			if (this.route === "site-audits" && this.route_path) {
 				const auditId = this.route_path;
-				window.open( `/wp-json/captaincore/v1/security-audits/${auditId}/html?_wpnonce=${this.wp_nonce}`, '_blank' );
+				window.open( `/wp-json/captaincore/v1/site-audits/${auditId}/html?_wpnonce=${this.wp_nonce}`, '_blank' );
 			}
 		},
 		goToPath( href ) {
@@ -16473,9 +16473,9 @@ const app = createApp({
 					this.dialog_site.site.domains = response.data.domains
 					this.dialog_site.site.shared_with = response.data.shared_with
 				});
-			axios.get( `/wp-json/captaincore/v1/sites/${site_id}/security-audits`, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
+			axios.get( `/wp-json/captaincore/v1/sites/${site_id}/site-audits`, { headers: { 'X-WP-Nonce': this.wp_nonce } } )
 				.then( response => {
-					this.dialog_site.site.security_audits = response.data;
+					this.dialog_site.site.site_audits = response.data;
 				})
 				.catch( () => {} );
 		},
@@ -16724,12 +16724,12 @@ const app = createApp({
 				this.security_patches_loading = false;
 			});
 		},
-		openSecurityAuditReport(auditId) {
-			window.open('/wp-json/captaincore/v1/security-audits/' + auditId + '/html?_wpnonce=' + this.wp_nonce, '_blank');
+		openSiteAuditReport(auditId) {
+			window.open('/wp-json/captaincore/v1/site-audits/' + auditId + '/html?_wpnonce=' + this.wp_nonce, '_blank');
 		},
-		publishSecurityAuditReport(item) {
+		publishSiteAuditReport(item) {
 			axios.post(
-				'/wp-json/captaincore/v1/security-audits/' + item.security_audit_id + '/publish',
+				'/wp-json/captaincore/v1/site-audits/' + item.site_audit_id + '/publish',
 				{},
 				{ headers: {'X-WP-Nonce': this.wp_nonce} }
 			)
@@ -16743,9 +16743,9 @@ const app = createApp({
 				this.snackbar.show = true;
 			});
 		},
-		unpublishSecurityAuditReport(item) {
+		unpublishSiteAuditReport(item) {
 			axios.delete(
-				'/wp-json/captaincore/v1/security-audits/' + item.security_audit_id + '/publish',
+				'/wp-json/captaincore/v1/site-audits/' + item.site_audit_id + '/publish',
 				{ headers: {'X-WP-Nonce': this.wp_nonce} }
 			)
 			.then(response => {
@@ -16758,26 +16758,26 @@ const app = createApp({
 				this.snackbar.show = true;
 			});
 		},
-		copySecurityAuditLink(item) {
+		copySiteAuditLink(item) {
 			var url = window.location.origin + '/reports/' + item.report_path;
 			navigator.clipboard.writeText(url).then(() => {
 				this.snackbar.message = 'Link copied to clipboard.';
 				this.snackbar.show = true;
 			});
 		},
-		fetchSecurityAudits() {
-			this.security_audits_loading = true;
+		fetchSiteAudits() {
+			this.site_audits_loading = true;
 			axios.get(
-			'/wp-json/captaincore/v1/security-audits', {
+			'/wp-json/captaincore/v1/site-audits', {
 				headers: {'X-WP-Nonce':this.wp_nonce}
 			})
 			.then(response => {
-				this.security_audits = response.data;
-				this.security_audits_loading = false;
+				this.site_audits = response.data;
+				this.site_audits_loading = false;
 				this.loading_page = false;
 			})
 			.catch(error => {
-				this.security_audits_loading = false;
+				this.site_audits_loading = false;
 				this.loading_page = false;
 			});
 		},
@@ -19756,7 +19756,7 @@ const app = createApp({
             show_site.users = []
             show_site.update_logs = []
             show_site.timeline = []
-            show_site.security_audits = []
+            show_site.site_audits = []
 			show_site.shared_with = []
             show_site.loading = false
 			show_site.tabs = this.dialog_site.site.tabs
