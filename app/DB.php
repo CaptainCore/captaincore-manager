@@ -1057,8 +1057,8 @@ class DB {
 
         dbDelta($sql);
 
-        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_security_audits` (
-            security_audit_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_site_audits` (
+            site_audit_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             site_id bigint(20) UNSIGNED NOT NULL,
             environment_id bigint(20) UNSIGNED NOT NULL,
             status varchar(20) NOT NULL DEFAULT 'in_progress',
@@ -1077,7 +1077,10 @@ class DB {
             updated_at datetime NOT NULL,
             completed_at datetime DEFAULT NULL,
             report_path varchar(255) DEFAULT NULL,
-        PRIMARY KEY  (security_audit_id),
+            report_type varchar(50) NOT NULL DEFAULT 'security_audit',
+            dashboard_metrics longtext,
+            summary longtext,
+        PRIMARY KEY  (site_audit_id),
         KEY site_id (site_id),
         KEY environment_id (environment_id),
         KEY status (status),
@@ -1086,9 +1089,9 @@ class DB {
 
         dbDelta($sql);
 
-        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_security_audit_findings` (
-            security_audit_finding_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-            security_audit_id bigint(20) UNSIGNED NOT NULL,
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_site_audit_findings` (
+            site_audit_finding_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            site_audit_id bigint(20) UNSIGNED NOT NULL,
             severity varchar(20) NOT NULL,
             status varchar(20) NOT NULL DEFAULT 'open',
             title varchar(255) NOT NULL,
@@ -1099,8 +1102,8 @@ class DB {
             resolved_at datetime DEFAULT NULL,
             created_at datetime NOT NULL,
             updated_at datetime NOT NULL,
-        PRIMARY KEY  (security_audit_finding_id),
-        KEY security_audit_id (security_audit_id),
+        PRIMARY KEY  (site_audit_finding_id),
+        KEY site_audit_id (site_audit_id),
         KEY severity (severity),
         KEY status (status)
         ) $charset_collate;";

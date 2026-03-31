@@ -30,7 +30,7 @@ class Router {
         if ( empty( $path ) ) {
             // Scenario: App is running on root (e.g. /sites, /billing)
             // We must be specific to avoid breaking normal WP pages
-            $pages = ['accounts', 'billing', 'cookbook', 'configurations', 'connect', 'defaults', 'domains', 'handbook', 'health', 'keys', 'login', 'welcome', 'profile', 'security-audits', 'sites', 'subscriptions', 'users'];
+            $pages = ['accounts', 'billing', 'cookbook', 'configurations', 'connect', 'defaults', 'domains', 'handbook', 'health', 'keys', 'login', 'welcome', 'profile', 'site-audits', 'sites', 'subscriptions', 'users'];
             $regex = '^(' . implode( '|', $pages ) . ')(/.*)?$';
             
             add_rewrite_rule( 
