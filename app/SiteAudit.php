@@ -237,7 +237,12 @@ class SiteAudit {
             $section_renderers['scan-results'] = function() use ( $audit, &$section_num ) {
                 $out = $this->render_section( ++$section_num, 'Scan Results', 'Filesystem integrity, malware signatures, frontend analysis, database scan, logs, and user accounts.', 'c1' );
                 $out .= "  <div class=\"card\">\n    <ul class=\"check-list\">\n";
-                foreach ( $audit->scan_checks as $check ) {
+                $icon_order  = [ 'pass' => 0, 'warn' => 1, 'fail' => 2 ];
+                $sorted_checks = (array) $audit->scan_checks;
+                usort( $sorted_checks, function( $a, $b ) use ( $icon_order ) {
+                    return ( $icon_order[ $a->icon ?? 'pass' ] ?? 3 ) - ( $icon_order[ $b->icon ?? 'pass' ] ?? 3 );
+                } );
+                foreach ( $sorted_checks as $check ) {
                     $icon_class = esc_attr( $check->icon ?? 'pass' );
                     $icon_char  = $icon_class === 'pass' ? '&#10003;' : ( $icon_class === 'fail' ? '&#10007;' : '&#9888;' );
                     $label      = $check->label ?? '';
