@@ -647,7 +647,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "43";
+        $required_version = (int) "44";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -1053,6 +1053,56 @@ class DB {
         PRIMARY KEY  (security_patch_id),
         UNIQUE KEY slug_version_type (slug, version, type),
         KEY type (type)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_security_audits` (
+            security_audit_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            site_id bigint(20) UNSIGNED NOT NULL,
+            environment_id bigint(20) UNSIGNED NOT NULL,
+            status varchar(20) NOT NULL DEFAULT 'in_progress',
+            filesystem_status varchar(20) DEFAULT NULL,
+            wp_version varchar(20) DEFAULT NULL,
+            php_version varchar(20) DEFAULT NULL,
+            issues_count int(11) DEFAULT 0,
+            plugins_count int(11) DEFAULT 0,
+            scan_checks longtext,
+            site_config longtext,
+            admin_accounts longtext,
+            timeline_events longtext,
+            user_id bigint(20) UNSIGNED DEFAULT NULL,
+            notes longtext,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+            completed_at datetime DEFAULT NULL,
+            report_path varchar(255) DEFAULT NULL,
+        PRIMARY KEY  (security_audit_id),
+        KEY site_id (site_id),
+        KEY environment_id (environment_id),
+        KEY status (status),
+        KEY created_at (created_at)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_security_audit_findings` (
+            security_audit_finding_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            security_audit_id bigint(20) UNSIGNED NOT NULL,
+            severity varchar(20) NOT NULL,
+            status varchar(20) NOT NULL DEFAULT 'open',
+            title varchar(255) NOT NULL,
+            description longtext,
+            evidence longtext,
+            recommendation longtext,
+            resolution varchar(512) DEFAULT NULL,
+            resolved_at datetime DEFAULT NULL,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+        PRIMARY KEY  (security_audit_finding_id),
+        KEY security_audit_id (security_audit_id),
+        KEY severity (severity),
+        KEY status (status)
         ) $charset_collate;";
 
         dbDelta($sql);
