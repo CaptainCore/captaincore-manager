@@ -1080,6 +1080,7 @@ class DB {
             report_type varchar(50) NOT NULL DEFAULT 'security_audit',
             dashboard_metrics longtext,
             summary longtext,
+            sections longtext,
         PRIMARY KEY  (site_audit_id),
         KEY site_id (site_id),
         KEY environment_id (environment_id),

@@ -33,6 +33,7 @@ class SiteAudit {
         $audit->admin_accounts    = json_decode( $audit->admin_accounts ) ?: [];
         $audit->timeline_events   = json_decode( $audit->timeline_events ) ?: [];
         $audit->dashboard_metrics = json_decode( $audit->dashboard_metrics ?? 'null' ) ?: null;
+        $audit->sections          = json_decode( $audit->sections ?? 'null' ) ?: [];
 
         return $audit;
     }
@@ -225,9 +226,11 @@ class SiteAudit {
             $html .= "<div class=\"callout green\">" . esc_html( $audit->summary ) . "</div>\n\n";
         }
 
-        // Section 1: Scan Results
+        $section_num = 0;
+
+        // Section: Scan Results
         if ( ! empty( $audit->scan_checks ) ) {
-            $html .= $this->render_section( 1, 'Scan Results', 'Filesystem integrity, malware signatures, frontend analysis, database scan, logs, and user accounts.', 'c1' );
+            $html .= $this->render_section( ++$section_num, 'Scan Results', 'Filesystem integrity, malware signatures, frontend analysis, database scan, logs, and user accounts.', 'c1' );
             $html .= "  <div class=\"card\">\n    <ul class=\"check-list\">\n";
             foreach ( $audit->scan_checks as $check ) {
                 $icon_class = esc_attr( $check->icon ?? 'pass' );
@@ -238,19 +241,19 @@ class SiteAudit {
             $html .= "    </ul>\n  </div>\n</div>\n\n";
         }
 
-        // Section 2: Issues Found
+        // Section: Issues Found
         if ( ! empty( $audit->findings ) ) {
             $sorted_findings = $this->sort_findings( (array) $audit->findings );
-            $html .= $this->render_section( 2, 'Issues Found', 'Individual findings with severity ratings and evidence.', 'c3' );
+            $html .= $this->render_section( ++$section_num, 'Issues Found', 'Individual findings with severity ratings and evidence.', 'c3' );
             foreach ( $sorted_findings as $finding ) {
                 $html .= $this->render_finding_card( $finding );
             }
             $html .= "</div>\n\n";
         }
 
-        // Section 3: Administrator Accounts
+        // Section: Administrator Accounts
         if ( ! empty( $audit->admin_accounts ) ) {
-            $html .= $this->render_section( 3, 'Administrator Accounts', count( $audit->admin_accounts ) . ' administrator accounts.', 'c4' );
+            $html .= $this->render_section( ++$section_num, 'Administrator Accounts', count( $audit->admin_accounts ) . ' administrator accounts.', 'c4' );
             $html .= "  <div class=\"card\">\n    <table>\n";
             $html .= "      <tr><th>ID</th><th>Username</th><th>Email</th><th>Registered</th></tr>\n";
             foreach ( $audit->admin_accounts as $account ) {
@@ -263,9 +266,9 @@ class SiteAudit {
             $html .= "    </table>\n  </div>\n</div>\n\n";
         }
 
-        // Section 4: Site Configuration
+        // Section: Site Configuration
         if ( ! empty( $audit->site_config ) ) {
-            $html .= $this->render_section( 4, 'Site Configuration', 'Current WordPress configuration and security settings.', 'c5' );
+            $html .= $this->render_section( ++$section_num, 'Site Configuration', 'Current WordPress configuration and security settings.', 'c5' );
             $html .= "  <div class=\"card\">\n    <table>\n";
             foreach ( $audit->site_config as $config ) {
                 $key    = esc_html( $config->key ?? '' );
@@ -277,9 +280,9 @@ class SiteAudit {
             $html .= "    </table>\n  </div>\n</div>\n\n";
         }
 
-        // Section 5: Attack Timeline
+        // Section: Attack Timeline
         if ( ! empty( $audit->timeline_events ) ) {
-            $html .= $this->render_section( 5, 'Attack Timeline', 'Reconstructed attacker activity based on logs, file timestamps, and user events.', 'c8' );
+            $html .= $this->render_section( ++$section_num, 'Attack Timeline', 'Reconstructed attacker activity based on logs, file timestamps, and user events.', 'c8' );
             $html .= "  <div class=\"card\">\n    <ul class=\"timeline\">\n";
             foreach ( $audit->timeline_events as $event ) {
                 $type_class = esc_attr( $event->type ?? '' );
@@ -293,19 +296,26 @@ class SiteAudit {
             $html .= "    </ul>\n  </div>\n</div>\n\n";
         }
 
+        // Custom sections
+        if ( ! empty( $audit->sections ) && is_array( $audit->sections ) ) {
+            $colors = [ 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8' ];
+            foreach ( $audit->sections as $i => $section ) {
+                $title = esc_html( $section->title ?? 'Additional Information' );
+                $desc  = esc_html( $section->description ?? '' );
+                $color = $colors[ $i % 8 ];
+                $html .= $this->render_section( ++$section_num, $title, $desc, $color );
+                $html .= $this->render_section_content( $section->content ?? [] );
+            }
+        }
+
         // Section: Recommendations (derived from findings)
         $actionable = array_filter( (array) $audit->findings, function( $f ) {
             return ! empty( $f->recommendation ) || $f->status === 'open';
         } );
         if ( ! empty( $actionable ) ) {
-            $section_num = 3; // start after scan results + issues
-            if ( ! empty( $audit->admin_accounts ) ) $section_num++;
-            if ( ! empty( $audit->site_config ) )    $section_num++;
-            if ( ! empty( $audit->timeline_events ) ) $section_num++;
-            $section_num++;
 
             $actionable = $this->sort_findings( $actionable );
-            $html .= $this->render_section( $section_num, 'Recommended Next Steps', 'Prioritized actions to address findings from this audit.', 'c7' );
+            $html .= $this->render_section( ++$section_num, 'Recommended Next Steps', 'Prioritized actions to address findings from this audit.', 'c7' );
             foreach ( $actionable as $finding ) {
                 $html .= "  <div class=\"card\">\n    <div class=\"card-header\">\n";
                 $severity = esc_attr( $finding->severity ?? 'low' );
@@ -483,6 +493,101 @@ class SiteAudit {
         }
 
         $html .= "  </div>\n\n";
+        return $html;
+    }
+
+    private function render_section_content( $blocks ) {
+        $html = "  <div class=\"card\">\n";
+        foreach ( $blocks as $block ) {
+            $type = $block->type ?? 'prose';
+            switch ( $type ) {
+                case 'prose':
+                    $html .= "    " . ( $block->html ?? '' ) . "\n";
+                    break;
+
+                case 'table':
+                    $label = esc_html( $block->label ?? '' );
+                    if ( $label ) {
+                        $html .= "    <div class=\"evidence-label\">{$label}</div>\n";
+                    }
+                    $html .= "    <table>\n";
+                    $headers = $block->headers ?? [];
+                    if ( ! empty( $headers ) ) {
+                        $html .= "      <tr>";
+                        foreach ( $headers as $h ) {
+                            $html .= "<th>" . esc_html( $h ) . "</th>";
+                        }
+                        $html .= "</tr>\n";
+                    }
+                    $rows = $block->rows ?? [];
+                    foreach ( $rows as $row ) {
+                        $html .= "      <tr>";
+                        foreach ( $row as $cell ) {
+                            $html .= "<td>" . esc_html( $cell ) . "</td>";
+                        }
+                        $html .= "</tr>\n";
+                    }
+                    $html .= "    </table>\n";
+                    break;
+
+                case 'callout':
+                    $variant = esc_attr( $block->variant ?? 'blue' );
+                    $html .= "    <div class=\"callout {$variant}\">" . ( $block->content ?? '' ) . "</div>\n";
+                    break;
+
+                case 'code':
+                    $label = esc_html( $block->label ?? '' );
+                    if ( $label ) {
+                        $html .= "    <div class=\"evidence-label\">{$label}</div>\n";
+                    }
+                    $html .= "    <pre><code>" . esc_html( $block->content ?? '' ) . "</code></pre>\n";
+                    break;
+
+                case 'check-list':
+                    $html .= "    <ul class=\"check-list\">\n";
+                    $items = $block->items ?? [];
+                    foreach ( $items as $item ) {
+                        $icon_class = esc_attr( $item->icon ?? 'pass' );
+                        $icon_char  = $icon_class === 'pass' ? '&#10003;' : ( $icon_class === 'fail' ? '&#10007;' : '&#9888;' );
+                        $label      = $item->label ?? '';
+                        $html .= "      <li><span class=\"icon {$icon_class}\">{$icon_char}</span> {$label}</li>\n";
+                    }
+                    $html .= "    </ul>\n";
+                    break;
+
+                case 'timeline':
+                    $html .= "    <ul class=\"timeline\">\n";
+                    $events = $block->events ?? [];
+                    foreach ( $events as $event ) {
+                        $type_class = esc_attr( $event->type ?? '' );
+                        $timestamp  = esc_html( $event->timestamp ?? '' );
+                        $desc       = esc_html( $event->description ?? '' );
+                        $html .= "      <li class=\"{$type_class}\">\n";
+                        $html .= "        <div class=\"time\">{$timestamp}</div>\n";
+                        $html .= "        <div class=\"desc\">{$desc}</div>\n";
+                        $html .= "      </li>\n";
+                    }
+                    $html .= "    </ul>\n";
+                    break;
+
+                case 'stats':
+                    $html .= "    <div class=\"stat-row\">\n";
+                    $items = $block->items ?? [];
+                    foreach ( $items as $item ) {
+                        $val     = esc_html( $item->value ?? '' );
+                        $lbl     = esc_html( $item->label ?? '' );
+                        $variant = esc_attr( $item->variant ?? '' );
+                        $var_cls = $variant ? " {$variant}" : '';
+                        $html .= "      <div class=\"stat-card\">\n";
+                        $html .= "        <div class=\"stat-value{$var_cls}\">{$val}</div>\n";
+                        $html .= "        <div class=\"stat-label\">{$lbl}</div>\n";
+                        $html .= "      </div>\n";
+                    }
+                    $html .= "    </div>\n";
+                    break;
+            }
+        }
+        $html .= "  </div>\n</div>\n\n";
         return $html;
     }
 
