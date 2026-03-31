@@ -647,7 +647,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "44";
+        $required_version = (int) "45";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -1081,6 +1081,8 @@ class DB {
             dashboard_metrics longtext,
             summary longtext,
             sections longtext,
+            report_title varchar(255) DEFAULT NULL,
+            section_order longtext,
         PRIMARY KEY  (site_audit_id),
         KEY site_id (site_id),
         KEY environment_id (environment_id),

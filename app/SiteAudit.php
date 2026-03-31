@@ -34,6 +34,7 @@ class SiteAudit {
         $audit->timeline_events   = json_decode( $audit->timeline_events ) ?: [];
         $audit->dashboard_metrics = json_decode( $audit->dashboard_metrics ?? 'null' ) ?: null;
         $audit->sections          = json_decode( $audit->sections ?? 'null' ) ?: [];
+        $audit->section_order     = json_decode( $audit->section_order ?? 'null' ) ?: [];
 
         return $audit;
     }
@@ -176,7 +177,7 @@ class SiteAudit {
             'debug_report'    => 'Debug Report',
             'incident_report' => 'Incident Report',
         ];
-        $report_title = $title_map[ $report_type ] ?? ucwords( str_replace( '_', ' ', $report_type ) );
+        $report_title = ! empty( $audit->report_title ) ? esc_html( $audit->report_title ) : ( $title_map[ $report_type ] ?? ucwords( str_replace( '_', ' ', $report_type ) ) );
 
         $html = "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n";
         $html .= "<meta charset=\"UTF-8\">\n";
@@ -227,114 +228,113 @@ class SiteAudit {
         }
 
         $section_num = 0;
+        $colors      = [ 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8' ];
 
-        // Section: Scan Results
+        // Build renderable section map
+        $section_renderers = [];
+
         if ( ! empty( $audit->scan_checks ) ) {
-            $html .= $this->render_section( ++$section_num, 'Scan Results', 'Filesystem integrity, malware signatures, frontend analysis, database scan, logs, and user accounts.', 'c1' );
-            $html .= "  <div class=\"card\">\n    <ul class=\"check-list\">\n";
-            foreach ( $audit->scan_checks as $check ) {
-                $icon_class = esc_attr( $check->icon ?? 'pass' );
-                $icon_char  = $icon_class === 'pass' ? '&#10003;' : ( $icon_class === 'fail' ? '&#10007;' : '&#9888;' );
-                $label      = $check->label ?? '';
-                $html .= "      <li><span class=\"icon {$icon_class}\">{$icon_char}</span> {$label}</li>\n";
-            }
-            $html .= "    </ul>\n  </div>\n</div>\n\n";
+            $section_renderers['scan-results'] = function() use ( $audit, &$section_num ) {
+                $out = $this->render_section( ++$section_num, 'Scan Results', 'Filesystem integrity, malware signatures, frontend analysis, database scan, logs, and user accounts.', 'c1' );
+                $out .= "  <div class=\"card\">\n    <ul class=\"check-list\">\n";
+                foreach ( $audit->scan_checks as $check ) {
+                    $icon_class = esc_attr( $check->icon ?? 'pass' );
+                    $icon_char  = $icon_class === 'pass' ? '&#10003;' : ( $icon_class === 'fail' ? '&#10007;' : '&#9888;' );
+                    $label      = $check->label ?? '';
+                    $out .= "      <li><span class=\"icon {$icon_class}\">{$icon_char}</span> {$label}</li>\n";
+                }
+                $out .= "    </ul>\n  </div>\n</div>\n\n";
+                return $out;
+            };
         }
 
-        // Section: Issues Found
         if ( ! empty( $audit->findings ) ) {
-            $sorted_findings = $this->sort_findings( (array) $audit->findings );
-            $html .= $this->render_section( ++$section_num, 'Issues Found', 'Individual findings with severity ratings and evidence.', 'c3' );
-            foreach ( $sorted_findings as $finding ) {
-                $html .= $this->render_finding_card( $finding );
-            }
-            $html .= "</div>\n\n";
+            $section_renderers['findings'] = function() use ( $audit, &$section_num ) {
+                $sorted = $this->sort_findings( (array) $audit->findings );
+                $out = $this->render_section( ++$section_num, 'Issues Found', 'Individual findings with severity ratings and evidence.', 'c3' );
+                foreach ( $sorted as $finding ) {
+                    $out .= $this->render_finding_card( $finding );
+                }
+                $out .= "</div>\n\n";
+                return $out;
+            };
         }
 
-        // Section: Administrator Accounts
         if ( ! empty( $audit->admin_accounts ) ) {
-            $html .= $this->render_section( ++$section_num, 'Administrator Accounts', count( $audit->admin_accounts ) . ' administrator accounts.', 'c4' );
-            $html .= "  <div class=\"card\">\n    <table>\n";
-            $html .= "      <tr><th>ID</th><th>Username</th><th>Email</th><th>Registered</th></tr>\n";
-            foreach ( $audit->admin_accounts as $account ) {
-                $uid   = esc_html( $account->user_id ?? '' );
-                $uname = esc_html( $account->username ?? '' );
-                $email = esc_html( $account->email ?? '' );
-                $reg   = esc_html( $account->registered ?? '' );
-                $html .= "      <tr><td>{$uid}</td><td>{$uname}</td><td>{$email}</td><td>{$reg}</td></tr>\n";
-            }
-            $html .= "    </table>\n  </div>\n</div>\n\n";
+            $section_renderers['admin-accounts'] = function() use ( $audit, &$section_num ) {
+                $out = $this->render_section( ++$section_num, 'Administrator Accounts', count( $audit->admin_accounts ) . ' administrator accounts.', 'c4' );
+                $out .= "  <div class=\"card\">\n    <table>\n";
+                $out .= "      <tr><th>ID</th><th>Username</th><th>Email</th><th>Registered</th></tr>\n";
+                foreach ( $audit->admin_accounts as $account ) {
+                    $uid   = esc_html( $account->user_id ?? '' );
+                    $uname = esc_html( $account->username ?? '' );
+                    $email = esc_html( $account->email ?? '' );
+                    $reg   = esc_html( $account->registered ?? '' );
+                    $out .= "      <tr><td>{$uid}</td><td>{$uname}</td><td>{$email}</td><td>{$reg}</td></tr>\n";
+                }
+                $out .= "    </table>\n  </div>\n</div>\n\n";
+                return $out;
+            };
         }
 
-        // Section: Site Configuration
         if ( ! empty( $audit->site_config ) ) {
-            $html .= $this->render_section( ++$section_num, 'Site Configuration', 'Current WordPress configuration and security settings.', 'c5' );
-            $html .= "  <div class=\"card\">\n    <table>\n";
-            foreach ( $audit->site_config as $config ) {
-                $key    = esc_html( $config->key ?? '' );
-                $value  = esc_html( $config->value ?? '' );
-                $status = $config->status ?? null;
-                $class  = $status ? " class=\"{$status}\"" : '';
-                $html .= "      <tr><td><strong>{$key}</strong></td><td{$class}>{$value}</td></tr>\n";
-            }
-            $html .= "    </table>\n  </div>\n</div>\n\n";
+            $section_renderers['site-config'] = function() use ( $audit, &$section_num ) {
+                $out = $this->render_section( ++$section_num, 'Site Configuration', 'Current WordPress configuration and security settings.', 'c5' );
+                $out .= "  <div class=\"card\">\n    <table>\n";
+                foreach ( $audit->site_config as $config ) {
+                    $key    = esc_html( $config->key ?? '' );
+                    $value  = esc_html( $config->value ?? '' );
+                    $status = $config->status ?? null;
+                    $class  = $status ? " class=\"{$status}\"" : '';
+                    $out .= "      <tr><td><strong>{$key}</strong></td><td{$class}>{$value}</td></tr>\n";
+                }
+                $out .= "    </table>\n  </div>\n</div>\n\n";
+                return $out;
+            };
         }
 
-        // Section: Attack Timeline
         if ( ! empty( $audit->timeline_events ) ) {
-            $html .= $this->render_section( ++$section_num, 'Attack Timeline', 'Reconstructed attacker activity based on logs, file timestamps, and user events.', 'c8' );
-            $html .= "  <div class=\"card\">\n    <ul class=\"timeline\">\n";
-            foreach ( $audit->timeline_events as $event ) {
-                $type_class = esc_attr( $event->type ?? '' );
-                $timestamp  = esc_html( $event->timestamp ?? '' );
-                $desc       = esc_html( $event->description ?? '' );
-                $html .= "      <li class=\"{$type_class}\">\n";
-                $html .= "        <div class=\"time\">{$timestamp}</div>\n";
-                $html .= "        <div class=\"desc\">{$desc}</div>\n";
-                $html .= "      </li>\n";
-            }
-            $html .= "    </ul>\n  </div>\n</div>\n\n";
+            $section_renderers['timeline'] = function() use ( $audit, &$section_num ) {
+                $out = $this->render_section( ++$section_num, 'Attack Timeline', 'Reconstructed attacker activity based on logs, file timestamps, and user events.', 'c8' );
+                $out .= "  <div class=\"card\">\n    <ul class=\"timeline\">\n";
+                foreach ( $audit->timeline_events as $event ) {
+                    $type_class = esc_attr( $event->type ?? '' );
+                    $timestamp  = esc_html( $event->timestamp ?? '' );
+                    $desc       = esc_html( $event->description ?? '' );
+                    $out .= "      <li class=\"{$type_class}\">\n";
+                    $out .= "        <div class=\"time\">{$timestamp}</div>\n";
+                    $out .= "        <div class=\"desc\">{$desc}</div>\n";
+                    $out .= "      </li>\n";
+                }
+                $out .= "    </ul>\n  </div>\n</div>\n\n";
+                return $out;
+            };
         }
 
-        // Custom sections
+        // Custom sections keyed by slugified title
         if ( ! empty( $audit->sections ) && is_array( $audit->sections ) ) {
-            $colors = [ 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8' ];
             foreach ( $audit->sections as $i => $section ) {
-                $title = esc_html( $section->title ?? 'Additional Information' );
-                $desc  = esc_html( $section->description ?? '' );
-                $color = $colors[ $i % 8 ];
-                $html .= $this->render_section( ++$section_num, $title, $desc, $color );
-                $html .= $this->render_section_content( $section->content ?? [] );
+                $key = sanitize_title( $section->title ?? "section-{$i}" );
+                $section_renderers[ $key ] = function() use ( $section, $i, $colors, &$section_num ) {
+                    $title = esc_html( $section->title ?? 'Additional Information' );
+                    $desc  = esc_html( $section->description ?? '' );
+                    $color = $colors[ $i % 8 ];
+                    $out   = $this->render_section( ++$section_num, $title, $desc, $color );
+                    $out  .= $this->render_section_content( $section->content ?? [] );
+                    return $out;
+                };
             }
         }
 
-        // Section: Recommendations (derived from findings)
-        $actionable = array_filter( (array) $audit->findings, function( $f ) {
-            return ! empty( $f->recommendation ) || $f->status === 'open';
-        } );
-        if ( ! empty( $actionable ) ) {
+        // Render sections in specified order, or default order
+        $order = ! empty( $audit->section_order ) && is_array( $audit->section_order )
+            ? $audit->section_order
+            : array_keys( $section_renderers );
 
-            $actionable = $this->sort_findings( $actionable );
-            $html .= $this->render_section( ++$section_num, 'Recommended Next Steps', 'Prioritized actions to address findings from this audit.', 'c7' );
-            foreach ( $actionable as $finding ) {
-                $html .= "  <div class=\"card\">\n    <div class=\"card-header\">\n";
-                $severity = esc_attr( $finding->severity ?? 'low' );
-                $html .= "      <span class=\"card-tag {$severity}\">" . ucfirst( $severity ) . "</span>\n";
-                if ( $finding->status === 'resolved' ) {
-                    $html .= "      <span class=\"card-tag resolved\">Resolved</span>\n";
-                }
-                $title = esc_html( $finding->recommendation ?: $finding->title );
-                $html .= "      <div class=\"card-title\">{$title}</div>\n";
-                $html .= "    </div>\n";
-                if ( $finding->status !== 'resolved' && ! empty( $finding->description ) ) {
-                    $html .= "    <p>" . $finding->description . "</p>\n";
-                }
-                if ( $finding->status === 'resolved' && $finding->resolution ) {
-                    $html .= "    <div class=\"resolution\">" . esc_html( $finding->resolution ) . "</div>\n";
-                }
-                $html .= "  </div>\n\n";
+        foreach ( $order as $key ) {
+            if ( isset( $section_renderers[ $key ] ) ) {
+                $html .= $section_renderers[ $key ]();
             }
-            $html .= "</div>\n\n";
         }
 
         // Footer
@@ -372,7 +372,7 @@ class SiteAudit {
         $html .= "    </div>\n";
 
         if ( $desc ) {
-            $html .= "    <p>{$desc}</p>\n";
+            $html .= "    {$desc}\n";
         }
 
         // Render evidence blocks
@@ -466,7 +466,14 @@ class SiteAudit {
                         foreach ( $rows as $row ) {
                             $html .= "      <tr>";
                             foreach ( $row as $cell ) {
-                                $html .= "<td>" . esc_html( $cell ) . "</td>";
+                                if ( is_object( $cell ) || is_array( $cell ) ) {
+                                    $cell = (object) $cell;
+                                    $val  = esc_html( $cell->value ?? '' );
+                                    $cls  = esc_attr( $cell->class ?? '' );
+                                    $html .= "<td" . ( $cls ? " class=\"{$cls}\"" : '' ) . ">{$val}</td>";
+                                } else {
+                                    $html .= "<td>" . esc_html( $cell ) . "</td>";
+                                }
                             }
                             $html .= "</tr>\n";
                         }
@@ -492,14 +499,47 @@ class SiteAudit {
             $html .= "    <div class=\"resolution\">" . esc_html( $finding->resolution ) . "</div>\n";
         }
 
+        // Inline recommendation
+        if ( ! empty( $finding->recommendation ) && $finding->recommendation !== ( $finding->title ?? '' ) ) {
+            $html .= "    <div class=\"callout blue\"><strong>Recommendation</strong> " . esc_html( $finding->recommendation ) . "</div>\n";
+        }
+
         $html .= "  </div>\n\n";
         return $html;
     }
 
     private function render_section_content( $blocks ) {
-        $html = "  <div class=\"card\">\n";
+        $html    = '';
+        $in_card = false;
         foreach ( $blocks as $block ) {
             $type = $block->type ?? 'prose';
+
+            // Bar charts render outside the card wrapper
+            if ( $type === 'bar-chart' ) {
+                if ( $in_card ) { $html .= "  </div>\n"; $in_card = false; }
+                $chart_title = esc_html( $block->title ?? '' );
+                $html .= "  <div class=\"chart-container\">\n";
+                if ( $chart_title ) {
+                    $html .= "    <div class=\"chart-title\">{$chart_title}</div>\n";
+                }
+                $html .= "    <div class=\"bar-chart\">\n";
+                foreach ( ( $block->bars ?? [] ) as $bar ) {
+                    $label = esc_html( $bar->label ?? '' );
+                    $value = esc_html( $bar->value ?? '' );
+                    $width = esc_attr( $bar->width ?? '0%' );
+                    $color = esc_attr( $bar->color ?? 'var(--c1)' );
+                    $html .= "      <div class=\"bar-row\">\n";
+                    $html .= "        <div class=\"bar-label\">{$label}</div>\n";
+                    $html .= "        <div class=\"bar-track\"><div class=\"bar-fill\" style=\"width:{$width};background:{$color}\">{$value}</div></div>\n";
+                    $html .= "      </div>\n";
+                }
+                $html .= "    </div>\n  </div>\n";
+                continue;
+            }
+
+            // All other blocks render inside a card
+            if ( ! $in_card ) { $html .= "  <div class=\"card\">\n"; $in_card = true; }
+
             switch ( $type ) {
                 case 'prose':
                     $html .= "    " . ( $block->html ?? '' ) . "\n";
@@ -523,7 +563,14 @@ class SiteAudit {
                     foreach ( $rows as $row ) {
                         $html .= "      <tr>";
                         foreach ( $row as $cell ) {
-                            $html .= "<td>" . esc_html( $cell ) . "</td>";
+                            if ( is_object( $cell ) || is_array( $cell ) ) {
+                                $cell = (object) $cell;
+                                $val  = esc_html( $cell->value ?? '' );
+                                $cls  = esc_attr( $cell->class ?? '' );
+                                $html .= "<td" . ( $cls ? " class=\"{$cls}\"" : '' ) . ">{$val}</td>";
+                            } else {
+                                $html .= "<td>" . esc_html( $cell ) . "</td>";
+                            }
                         }
                         $html .= "</tr>\n";
                     }
@@ -587,7 +634,8 @@ class SiteAudit {
                     break;
             }
         }
-        $html .= "  </div>\n</div>\n\n";
+        if ( $in_card ) { $html .= "  </div>\n"; }
+        $html .= "</div>\n\n";
         return $html;
     }
 
