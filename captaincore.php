@@ -8763,6 +8763,99 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Security Audits — malware investigation reports linked to sites
+	register_rest_route(
+		'captaincore/v1', '/security-audits', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_security_audits_list_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/security-audits', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_security_audits_create_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/security-audits/(?P<id>[\d]+)', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_security_audits_get_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/security-audits/(?P<id>[\d]+)', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_security_audits_update_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/security-audits/(?P<id>[\d]+)/html', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_security_audits_html_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/security-audits/(?P<id>[\d]+)/findings', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_security_audits_add_finding_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/security-audits/(?P<id>[\d]+)/findings/(?P<finding_id>[\d]+)', [
+			'methods'             => 'PUT',
+			'callback'            => 'captaincore_security_audits_update_finding_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/security-audits', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_sites_security_audits_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/security-audits/(?P<id>[\d]+)/publish', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_security_audits_publish_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/security-audits/(?P<id>[\d]+)/publish', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_security_audits_unpublish_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+		]
+	);
+
 };
 
 /**
@@ -9317,6 +9410,271 @@ function captaincore_security_threats_resolve_func( WP_REST_Request $request ) {
 	$note    = sanitize_textarea_field( $request->get_param( 'note' ) ?? '' );
 
 	return CaptainCore\SecurityThreats::resolve( $slug, $version, $type, $note );
+}
+
+/**
+ * REST endpoint: List all security audits. Admins see all; customers see their sites only.
+ */
+function captaincore_security_audits_list_func( WP_REST_Request $request ) {
+	$all_audits = ( new CaptainCore\SecurityAudits )->all( 'created_at', 'DESC' );
+	$audits     = [];
+
+	foreach ( $all_audits as $audit ) {
+		if ( ! current_user_can( 'manage_options' ) && ! captaincore_verify_permissions( $audit->site_id ) ) {
+			continue;
+		}
+		$site                = ( new CaptainCore\Sites )->get( $audit->site_id );
+		$audit->site_name    = $site ? $site->name : '';
+		$audit->finding_counts = captaincore_security_audit_finding_counts( $audit->security_audit_id );
+		$audits[] = $audit;
+	}
+
+	return $audits;
+}
+
+/**
+ * REST endpoint: Create a new security audit.
+ */
+function captaincore_security_audits_create_func( WP_REST_Request $request ) {
+	$params   = $request->get_json_params();
+	$time_now = date( 'Y-m-d H:i:s' );
+
+	$data = [
+		'site_id'           => intval( $params['site_id'] ?? 0 ),
+		'environment_id'    => intval( $params['environment_id'] ?? 0 ),
+		'status'            => sanitize_text_field( $params['status'] ?? 'in_progress' ),
+		'filesystem_status' => sanitize_text_field( $params['filesystem_status'] ?? '' ),
+		'wp_version'        => sanitize_text_field( $params['wp_version'] ?? '' ),
+		'php_version'       => sanitize_text_field( $params['php_version'] ?? '' ),
+		'issues_count'      => intval( $params['issues_count'] ?? 0 ),
+		'plugins_count'     => intval( $params['plugins_count'] ?? 0 ),
+		'scan_checks'       => wp_json_encode( $params['scan_checks'] ?? [] ),
+		'site_config'       => wp_json_encode( $params['site_config'] ?? [] ),
+		'admin_accounts'    => wp_json_encode( $params['admin_accounts'] ?? [] ),
+		'timeline_events'   => wp_json_encode( $params['timeline_events'] ?? [] ),
+		'user_id'           => get_current_user_id(),
+		'notes'             => sanitize_textarea_field( $params['notes'] ?? '' ),
+		'created_at'        => $time_now,
+		'updated_at'        => $time_now,
+	];
+
+	$audit_id = ( new CaptainCore\SecurityAudits )->insert( $data );
+	return [ 'security_audit_id' => $audit_id ];
+}
+
+/**
+ * REST endpoint: Get a single security audit with findings.
+ */
+function captaincore_security_audits_get_func( WP_REST_Request $request ) {
+	$audit_id = intval( $request['id'] );
+	$audit    = ( new CaptainCore\SecurityAudit( $audit_id ) )->get();
+
+	if ( ! $audit ) {
+		return new WP_Error( 'not_found', 'Audit not found.', [ 'status' => 404 ] );
+	}
+
+	if ( ! current_user_can( 'manage_options' ) && ! captaincore_verify_permissions( $audit->site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+
+	return $audit;
+}
+
+/**
+ * REST endpoint: Update a security audit (checks, config, metrics, status, etc).
+ */
+function captaincore_security_audits_update_func( WP_REST_Request $request ) {
+	$audit_id = intval( $request['id'] );
+	$params   = $request->get_json_params();
+	$time_now = date( 'Y-m-d H:i:s' );
+
+	$allowed = [ 'status', 'filesystem_status', 'wp_version', 'php_version', 'issues_count', 'plugins_count', 'notes' ];
+	$json_fields = [ 'scan_checks', 'site_config', 'admin_accounts', 'timeline_events' ];
+
+	$data = [ 'updated_at' => $time_now ];
+
+	foreach ( $allowed as $field ) {
+		if ( isset( $params[ $field ] ) ) {
+			$data[ $field ] = is_int( $params[ $field ] ) ? intval( $params[ $field ] ) : sanitize_text_field( $params[ $field ] );
+		}
+	}
+
+	foreach ( $json_fields as $field ) {
+		if ( isset( $params[ $field ] ) ) {
+			$data[ $field ] = wp_json_encode( $params[ $field ] );
+		}
+	}
+
+	if ( isset( $params['status'] ) && in_array( $params['status'], [ 'clean', 'issues_found', 'compromised', 'remediated' ] ) ) {
+		$data['completed_at'] = $time_now;
+	}
+
+	( new CaptainCore\SecurityAudits )->update( $data, [ 'security_audit_id' => $audit_id ] );
+
+	return ( new CaptainCore\SecurityAudit( $audit_id ) )->get();
+}
+
+/**
+ * REST endpoint: Render security audit as standalone HTML report.
+ * Outputs raw HTML and exits — bypasses JSON encoding.
+ */
+function captaincore_security_audits_html_func( WP_REST_Request $request ) {
+	$audit_id = intval( $request['id'] );
+	$audit    = ( new CaptainCore\SecurityAudits )->get( $audit_id );
+
+	if ( ! $audit ) {
+		return new WP_Error( 'not_found', 'Audit not found.', [ 'status' => 404 ] );
+	}
+
+	if ( ! current_user_can( 'manage_options' ) && ! captaincore_verify_permissions( $audit->site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+
+	$html = ( new CaptainCore\SecurityAudit( $audit_id ) )->render_html();
+
+	header( 'Content-Type: text/html; charset=UTF-8' );
+	echo $html;
+	exit;
+}
+
+/**
+ * REST endpoint: Publish security audit as static HTML report.
+ */
+function captaincore_security_audits_publish_func( WP_REST_Request $request ) {
+	$audit_id = intval( $request['id'] );
+	$audit    = ( new CaptainCore\SecurityAudits )->get( $audit_id );
+
+	if ( ! $audit ) {
+		return new WP_Error( 'not_found', 'Audit not found.', [ 'status' => 404 ] );
+	}
+
+	$filename = ( new CaptainCore\SecurityAudit( $audit_id ) )->publish();
+
+	if ( ! $filename ) {
+		return new WP_Error( 'publish_failed', 'Failed to publish report.', [ 'status' => 500 ] );
+	}
+
+	return [
+		'report_path' => $filename,
+		'report_url'  => home_url( '/reports/' . $filename ),
+	];
+}
+
+/**
+ * REST endpoint: Unpublish security audit (delete static HTML report).
+ */
+function captaincore_security_audits_unpublish_func( WP_REST_Request $request ) {
+	$audit_id = intval( $request['id'] );
+	$result   = ( new CaptainCore\SecurityAudit( $audit_id ) )->unpublish();
+
+	if ( ! $result ) {
+		return new WP_Error( 'not_found', 'No published report found.', [ 'status' => 404 ] );
+	}
+
+	return [ 'unpublished' => true ];
+}
+
+/**
+ * REST endpoint: Add a finding to a security audit.
+ */
+function captaincore_security_audits_add_finding_func( WP_REST_Request $request ) {
+	$audit_id = intval( $request['id'] );
+	$params   = $request->get_json_params();
+
+	$data = [
+		'severity'       => sanitize_text_field( $params['severity'] ?? 'low' ),
+		'status'         => sanitize_text_field( $params['status'] ?? 'open' ),
+		'title'          => sanitize_text_field( $params['title'] ?? '' ),
+		'description'    => wp_kses_post( $params['description'] ?? '' ),
+		'evidence'       => wp_json_encode( $params['evidence'] ?? [] ),
+		'recommendation' => sanitize_text_field( $params['recommendation'] ?? '' ),
+		'resolution'     => sanitize_text_field( $params['resolution'] ?? '' ),
+	];
+
+	if ( ! empty( $params['status'] ) && $params['status'] === 'resolved' ) {
+		$data['resolved_at'] = date( 'Y-m-d H:i:s' );
+	}
+
+	$finding_id = ( new CaptainCore\SecurityAudit( $audit_id ) )->add_finding( $data );
+	return [ 'security_audit_finding_id' => $finding_id ];
+}
+
+/**
+ * REST endpoint: Update or resolve a finding.
+ */
+function captaincore_security_audits_update_finding_func( WP_REST_Request $request ) {
+	$audit_id   = intval( $request['id'] );
+	$finding_id = intval( $request['finding_id'] );
+	$params     = $request->get_json_params();
+	$time_now   = date( 'Y-m-d H:i:s' );
+
+	// If resolving, use the dedicated method
+	if ( ! empty( $params['status'] ) && $params['status'] === 'resolved' ) {
+		$resolution = sanitize_text_field( $params['resolution'] ?? '' );
+		( new CaptainCore\SecurityAudit( $audit_id ) )->resolve_finding( $finding_id, $resolution );
+		$finding = ( new CaptainCore\SecurityAuditFindings )->get( $finding_id );
+		return $finding;
+	}
+
+	// General update
+	$allowed = [ 'severity', 'status', 'title', 'description', 'recommendation', 'resolution' ];
+	$data    = [ 'updated_at' => $time_now ];
+
+	foreach ( $allowed as $field ) {
+		if ( isset( $params[ $field ] ) ) {
+			if ( $field === 'description' ) {
+				$data[ $field ] = wp_kses_post( $params[ $field ] );
+			} elseif ( $field === 'evidence' ) {
+				$data[ $field ] = wp_json_encode( $params[ $field ] );
+			} else {
+				$data[ $field ] = sanitize_text_field( $params[ $field ] );
+			}
+		}
+	}
+
+	if ( isset( $params['evidence'] ) ) {
+		$data['evidence'] = wp_json_encode( $params['evidence'] );
+	}
+
+	( new CaptainCore\SecurityAuditFindings )->update( $data, [ 'security_audit_finding_id' => $finding_id ] );
+	return ( new CaptainCore\SecurityAuditFindings )->get( $finding_id );
+}
+
+/**
+ * REST endpoint: List security audits for a specific site.
+ */
+function captaincore_sites_security_audits_func( WP_REST_Request $request ) {
+	$site_id = intval( $request['id'] );
+
+	if ( ! current_user_can( 'manage_options' ) && ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+
+	$audits = ( new CaptainCore\SecurityAudits )->where( [ 'site_id' => $site_id ] );
+	foreach ( $audits as &$audit ) {
+		$audit->finding_counts = captaincore_security_audit_finding_counts( $audit->security_audit_id );
+	}
+
+	return $audits;
+}
+
+/**
+ * Helper: Get finding severity counts for an audit.
+ */
+function captaincore_security_audit_finding_counts( $audit_id ) {
+	$findings = ( new CaptainCore\SecurityAuditFindings )->where( [ 'security_audit_id' => $audit_id ] );
+	$counts   = [ 'critical' => 0, 'high' => 0, 'medium' => 0, 'low' => 0, 'open' => 0, 'resolved' => 0, 'total' => count( $findings ) ];
+	foreach ( $findings as $f ) {
+		if ( isset( $counts[ $f->severity ] ) ) {
+			$counts[ $f->severity ]++;
+		}
+		if ( $f->status === 'open' ) {
+			$counts['open']++;
+		} elseif ( $f->status === 'resolved' ) {
+			$counts['resolved']++;
+		}
+	}
+	return $counts;
 }
 
 /**
