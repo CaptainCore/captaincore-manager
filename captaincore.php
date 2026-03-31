@@ -9458,6 +9458,7 @@ function captaincore_site_audits_create_func( WP_REST_Request $request ) {
 		'report_type'       => sanitize_text_field( $params['report_type'] ?? 'security_audit' ),
 		'dashboard_metrics' => wp_json_encode( $params['dashboard_metrics'] ?? null ),
 		'summary'           => sanitize_textarea_field( $params['summary'] ?? '' ),
+		'sections'          => wp_json_encode( $params['sections'] ?? null ),
 		'created_at'        => $time_now,
 		'updated_at'        => $time_now,
 	];
@@ -9493,7 +9494,7 @@ function captaincore_site_audits_update_func( WP_REST_Request $request ) {
 	$time_now = date( 'Y-m-d H:i:s' );
 
 	$allowed = [ 'status', 'filesystem_status', 'wp_version', 'php_version', 'issues_count', 'plugins_count', 'notes', 'report_type', 'summary' ];
-	$json_fields = [ 'scan_checks', 'site_config', 'admin_accounts', 'timeline_events', 'dashboard_metrics' ];
+	$json_fields = [ 'scan_checks', 'site_config', 'admin_accounts', 'timeline_events', 'dashboard_metrics', 'sections' ];
 
 	$data = [ 'updated_at' => $time_now ];
 
