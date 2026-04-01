@@ -914,6 +914,11 @@ class Account {
         $plan           = json_decode( $account->plan );
         $estimates      = [];
 
+        // Always refresh usage before evaluating plans to prevent stale data
+        self::calculate_usage();
+        $account = ( new Accounts )->get( $this->account_id );
+        $plan    = json_decode( $account->plan );
+
         foreach( $configurations->hosting_plans as $hosting_plan ) {
 
             $total = $hosting_plan->price;
@@ -923,17 +928,11 @@ class Account {
                 $hosting_plan->interval = $plan->interval;
                 $hosting_plan->price    = $total;
             }
-            
+
             if ( ! empty( $plan->addons ) && count( $plan->addons ) > 0 ) {
                 foreach ( $plan->addons as $addon ) {
                     $total += (float) $addon->quantity * (float) $addon->price;
                 }
-            }
-    
-            if ( empty( $plan->usage ) ) {
-                self::calculate_usage();
-                $account = ( new Accounts )->get( $this->account_id );
-                $plan    = json_decode( $account->plan );
             }
             if ( $plan->usage->sites > $hosting_plan->limits->sites ) {
                 $price    = $configurations->usage_pricing->sites->cost;
