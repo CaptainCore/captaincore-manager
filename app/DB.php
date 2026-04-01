@@ -618,7 +618,7 @@ class DB {
         $where_statements = implode( " AND ", $where_statements );
         $sql = 'SELECT * FROM ' . self::_table() . " WHERE $where_statements order by `created_at` DESC limit 1";
         $results = $wpdb->get_results( $sql );
-        if ( is_array( $results ) ) {
+        if ( is_array( $results ) && ! empty( $results ) ) {
             $results = $results[0];
         }
         return $results;
