@@ -201,7 +201,8 @@ class Domains extends DB {
 
         $idSite        = null;
         $idEnvironment = null;
-        foreach ( $response->data->company->sites as $key => $site ) {
+        $sites         = $response->data->company->sites ?? [];
+        foreach ( $sites as $key => $site ) {
             foreach ( $site->environment->domains as $check ) {
                 if ( $check->name == $domain ) {
                     $idSite        = $response->data->company->sites[$key]->id;

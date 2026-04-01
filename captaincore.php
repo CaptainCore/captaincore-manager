@@ -1050,8 +1050,8 @@ function captaincore_api_func( WP_REST_Request $request ) {
 		unset( $details->connection_errors );
 
 		if ( $current_environment->environment == "Production" ) {
-			$details->core     = $post->data->core;
-			$details->subsites = $post->data->subsite_count;
+			$details->core     = $post->data->core ?? '';
+			$details->subsites = $post->data->subsite_count ?? '';
 		}
 
 		if ( ! empty( $post->data->home_url ) && $current_environment->environment == "Production" ) {

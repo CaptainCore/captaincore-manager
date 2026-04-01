@@ -58,9 +58,9 @@ class ProviderAction {
                 }
                 $response         = \CaptainCore\Remote\Kinsta::get( "operations/{$provider_action->provider_key}" );
                 $action->response = $response;
-                $status           = $response->status;
+                $status           = $response->status ?? '';
             }
-            if ( empty( $status ) ) {
+            if ( empty( $status ) && ! empty( $action->provider_action_id ) ) {
                 $status = $class_name::action_check( $action->provider_action_id );
             }
             if ( $status == "200" ) {
@@ -233,7 +233,7 @@ class ProviderAction {
                 $api_key = \CaptainCore\Providers\Kinsta::credentials("api", $current_action->provider_id);
                 \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
             }
-            $result      = empty( $current_action->result ) ? \CaptainCore\Remote\Kinsta::get( "operations/{$provider_action->provider_key}" )->data : $current_action->result;
+            $result      = empty( $current_action->result ) ? ( \CaptainCore\Remote\Kinsta::get( "operations/{$provider_action->provider_key}" )->data ?? null ) : $current_action->result;
             $verify      = \CaptainCore\Providers\Kinsta::verify();
             $current_action->result = $result;
             $site_name   = $current_action->name;
