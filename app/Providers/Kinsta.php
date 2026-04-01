@@ -572,17 +572,20 @@ class Kinsta {
 
     public static function action_check( $provider_action_id = 0, $return_response = false ) {
         $provider_action = ( new \CaptainCore\ProviderActions )->get( $provider_action_id );
+        if ( empty( $provider_action ) ) {
+            return "";
+        }
         $action          = json_decode( $provider_action->action );
         $token           = self::credentials("token");
-        $data            = [ 
+        $data            = [
             'timeout' => 45,
             'headers' => [
                 'Content-Type' => 'application/json',
                 'X-Token'      => "$token",
             ],
             'body'        => json_encode( [
-                "variables" => [ 
-                    "idAction" => (int) $provider_action->provider_key
+                "variables" => [
+                    "idAction" => (int) ( $provider_action->provider_key ?? 0 )
                 ],
                 "operationName" => "Action",
                 "query"         => 'query Action($idAction: Int!) {

@@ -265,7 +265,7 @@ class SiteAudit {
             };
         }
 
-        if ( ! empty( $audit->admin_accounts ) ) {
+        if ( ! empty( $audit->admin_accounts ) && is_array( $audit->admin_accounts ) ) {
             $section_renderers['admin-accounts'] = function() use ( $audit, &$section_num ) {
                 $out = $this->render_section( ++$section_num, 'Administrator Accounts', count( $audit->admin_accounts ) . ' administrator accounts.', 'c4' );
                 $out .= "  <div class=\"card\">\n    <table>\n";
