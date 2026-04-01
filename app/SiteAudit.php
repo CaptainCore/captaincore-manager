@@ -597,7 +597,11 @@ class SiteAudit {
 
                 case 'check-list':
                     $html .= "    <ul class=\"check-list\">\n";
-                    $items = $block->items ?? [];
+                    $items      = (array) ( $block->items ?? [] );
+                    $icon_order = [ 'pass' => 0, 'warn' => 1, 'fail' => 2 ];
+                    usort( $items, function( $a, $b ) use ( $icon_order ) {
+                        return ( $icon_order[ $a->icon ?? 'pass' ] ?? 3 ) - ( $icon_order[ $b->icon ?? 'pass' ] ?? 3 );
+                    } );
                     foreach ( $items as $item ) {
                         $icon_class = esc_attr( $item->icon ?? 'pass' );
                         $icon_char  = $icon_class === 'pass' ? '&#10003;' : ( $icon_class === 'fail' ? '&#10007;' : '&#9888;' );
