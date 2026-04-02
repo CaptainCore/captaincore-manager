@@ -5116,6 +5116,49 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								</v-col>
 							</v-row>
 						</div>
+						<div v-if="dialog_site.environment_selected && dialog_site.environment_selected.performance_monitor_enabled">
+							<v-divider class="mt-6"></v-divider>
+							<v-toolbar density="compact" color="transparent" flat class="mt-2">
+								<v-toolbar-title>Performance Monitor</v-toolbar-title>
+								<v-spacer></v-spacer>
+								<v-toolbar-items>
+									<v-btn variant="text" @click="fetchPerformanceData()" :loading="dialog_site.performance_loading">
+										<v-icon start>mdi-refresh</v-icon> Refresh
+									</v-btn>
+								</v-toolbar-items>
+							</v-toolbar>
+							<v-card-text v-if="dialog_site.performance_loading">
+								<v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular>
+							</v-card-text>
+							<div v-if="dialog_site.performance_summary">
+								<v-card-title class="text-center pa-0 mb-4">
+								<v-row>
+									<v-col cols="6" sm="3">
+										<span class="text-uppercase text-caption">Samples</span><br />
+										<span class="text-h4 font-weight-thin">{{ dialog_site.performance_summary.total_samples.toLocaleString() }}</span><br />
+										<span class="text-caption text-grey">{{ dialog_site.performance_summary.total_days }} days &bull; {{ dialog_site.performance_summary.bucket_label }}</span>
+									</v-col>
+									<v-col cols="6" sm="3">
+										<span class="text-uppercase text-caption">Peak DB Conns</span><br />
+										<span class="text-h4 font-weight-thin">{{ dialog_site.performance_summary.peak_db }}</span>
+									</v-col>
+									<v-col cols="6" sm="3">
+										<span class="text-uppercase text-caption">Peak Load</span><br />
+										<span class="text-h4 font-weight-thin">{{ dialog_site.performance_summary.peak_load }}</span>
+									</v-col>
+									<v-col cols="6" sm="3">
+										<span class="text-uppercase text-caption">Avg Response</span><br />
+										<span class="text-h4 font-weight-thin">{{ dialog_site.performance_summary.avg_response }}s</span>
+									</v-col>
+								</v-row>
+								</v-card-title>
+							</div>
+							<div v-for="e in dialog_site.site.environments" v-show="e.environment == dialog_site.environment_selected.environment">
+								<div :id="`perf_chart_db_` + dialog_site.site.site_id + `_` + e.environment" class="stat-chart"></div>
+								<div :id="`perf_chart_load_` + dialog_site.site.site_id + `_` + e.environment" class="stat-chart"></div>
+								<div :id="`perf_chart_response_` + dialog_site.site.site_id + `_` + e.environment" class="stat-chart"></div>
+							</div>
+						</div>
 					</v-card>
 				</v-window-item>
 				<v-window-item :key="104" value="tab-Logs" :transition="false" :reverse-transition="false">
@@ -6381,6 +6424,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				{{ environment.environment }}
 				<v-row class="ma-2">
 					<v-col cols="6" md="3"><v-switch v-model="environment.monitor_enabled" label="Up-time Monitor" inset hide-details :false-value="0" :true-value="1" @change="toggleMonitor( environment )"></v-switch></v-col>
+					<v-col cols="6" md="3"><v-switch v-model="environment.performance_monitor_enabled" label="Performance Monitor" inset hide-details :false-value="false" :true-value="true" @change="togglePerformanceMonitor( environment )"></v-switch></v-col>
 					<v-col cols="6" md="3">
 						<v-switch v-model="environment.updates_enabled" label="Managed Updates" inset hide-details :false-value="0" :true-value="1" @change="toggleUpdates( environment )"></v-switch>
 						<v-dialog max-width="600">
@@ -12938,7 +12982,7 @@ const app = createApp({
 		backup_set_files: [],
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_billing: { step: 1 },
-		dialog_site: { loading: true, syncing: false, step: 1, backup_step: 1, grant_access: [], grant_access_menu: false, desired_environment_id: null, environment_selected: { environment_id: "0", expanded_backups: [], quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false, server_logs: { files: [] }, view_server_logs: false, loading_server_logs: false, server_log_limit: "1000", server_log_selected: "", server_log_response: "", server_log_lines: [], server_log_search: "" }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], key: null, tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
+		dialog_site: { loading: true, syncing: false, step: 1, backup_step: 1, grant_access: [], grant_access_menu: false, desired_environment_id: null, performance_loading: false, performance_summary: null, environment_selected: { environment_id: "0", expanded_backups: [], quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false, server_logs: { files: [] }, view_server_logs: false, loading_server_logs: false, server_log_limit: "1000", server_log_selected: "", server_log_response: "", server_log_lines: [], server_log_search: "" }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], key: null, tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
 		dialog_site_request: { show: false, request: {} },
 		dialog_edit_account: { show: false, account: {} },
 		dialog_account_portal: { show: false, portal: { domain: "", configuration: {}, email: { host: "", port: "", encryption_type: "tls", username: "", password: "" }, colors: { primary: "#0D47A1", secondary: "#424242", accent: "#82B1FF", error: "#FF5252", info: "#0D47A1", success: "#4CAF50", warning: "#FFC107" } }, colors: { primary: false, secondary: false, accent: false, error: false, info: false, success: false, warning: false } },
@@ -14774,6 +14818,9 @@ const app = createApp({
 		triggerEnvironmentUpdate(){
 			if ( this.dialog_site.site.tabs == "tab-Site-Management" && this.dialog_site.site.tabs_management == "tab-Stats" ) {
 				this.fetchStats()
+				if ( this.dialog_site.environment_selected.performance_monitor_enabled ) {
+					this.fetchPerformanceData()
+				}
 			}
 			if ( this.dialog_site.site.tabs == "tab-Site-Management" && this.dialog_site.site.tabs_management == "tab-Updates" ) {
 				this.viewUpdateLogs()
@@ -16412,6 +16459,14 @@ const app = createApp({
 				this.dialog_site.site.environments = response.data
 				this.dialog_site.site.environments.forEach( e => {
 					e.environment_label = e.environment + " Environment"
+					try {
+						if ( e.details ) {
+							const details = typeof e.details === 'string' ? JSON.parse( e.details ) : e.details
+							e.performance_monitor_enabled = details.performance_monitor_enabled || false
+						}
+					} catch(err) {
+						e.performance_monitor_enabled = false
+					}
 				})
 
 				// Check if we requested a specific environment via the UI
@@ -16442,6 +16497,9 @@ const app = createApp({
 				}
 				if ( this.dialog_site.site.tabs_management == "tab-Stats" ) {
 					this.fetchStats()
+					if ( this.dialog_site.environment_selected.performance_monitor_enabled ) {
+						this.fetchPerformanceData()
+					}
 				}
 				if ( this.dialog_site.site.tabs_management == "tab-Updates" ) {
 					this.viewUpdateLogs( this.dialog_site.site.site_id )
@@ -23962,6 +24020,110 @@ const app = createApp({
 				this.snackbar.show = true
 			})
 		},
+		togglePerformanceMonitor( environment ) {
+			const enabled = environment.performance_monitor_enabled
+			const status = enabled ? "ON" : "OFF"
+			axios.post( `/wp-json/captaincore/v1/sites/${environment.site_id}/${environment.environment.toLowerCase()}/performance-monitor`, {
+				enabled: enabled
+			}, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then( response => {
+				this.snackbar.message = `Performance Monitor ${status} for ${environment.home_url}`
+				this.snackbar.show = true
+			})
+		},
+		fetchPerformanceData() {
+			this.dialog_site.performance_loading = true
+			const site_id = this.dialog_site.site.site_id
+			const env = this.dialog_site.environment_selected.environment.toLowerCase()
+
+			axios.get( `/wp-json/captaincore/v1/sites/${site_id}/${env}/performance-monitor`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then( response => {
+				this.dialog_site.performance_loading = false
+				const data = response.data
+
+				if ( ! data || ! data.labels || data.labels.length === 0 ) {
+					this.dialog_site.performance_summary = null
+					return
+				}
+
+				this.dialog_site.performance_summary = {
+					total_samples: data.total_samples || 0,
+					total_days: data.total_days || 0,
+					bucket_label: data.bucket_label || "",
+					total_timeouts: data.total_timeouts || 0,
+					peak_db: data.peak_db || 0,
+					peak_load: data.peak_load || 0,
+					avg_response: data.avg_response || 0
+				}
+
+				// Need at least 2 data points for Frappe Charts to render properly
+				if ( data.labels.length < 2 ) {
+					return
+				}
+
+				this.$nextTick(() => {
+					const envKey = this.dialog_site.environment_selected.environment
+					const chartConfigs = [
+						{
+							id: `perf_chart_db_${site_id}_${envKey}`,
+							title: "DB Connections",
+							datasets: [
+								{ name: "Avg DB Conns", values: data.db_avg },
+								{ name: "Peak DB Conns", values: data.db_max }
+							],
+							colors: [ '#ff9500', '#ff3b30' ]
+						},
+						{
+							id: `perf_chart_load_${site_id}_${envKey}`,
+							title: "Server Load",
+							datasets: [
+								{ name: "Avg Load", values: data.load_avg },
+								{ name: "Peak Load", values: data.load_max }
+							],
+							colors: [ '#af52de', '#5856d6' ]
+						},
+						{
+							id: `perf_chart_response_${site_id}_${envKey}`,
+							title: "Response Time (seconds)",
+							datasets: [
+								{ name: "Avg Response", values: data.response_avg },
+								{ name: "Peak Response", values: data.response_max }
+							],
+							colors: [ '#007aff', '#ff3b30' ]
+						}
+					]
+
+					chartConfigs.forEach( config => {
+						const el = document.getElementById( config.id )
+						if ( ! el ) return
+						el.innerHTML = ''
+						try {
+							new frappe.Chart( `#${config.id}`, {
+								data: {
+									labels: data.labels,
+									datasets: config.datasets
+								},
+								title: config.title,
+								type: "line", height: 220,
+								colors: config.colors,
+								lineOptions: { regionFill: 1, hideDots: 1 },
+								axisOptions: { xAxisMode: "tick", xIsSeries: true }
+							})
+						} catch(e) {
+							console.warn(`Chart ${config.title} render error:`, e)
+						}
+					})
+				})
+			})
+			.catch( error => {
+				this.dialog_site.performance_loading = false
+				console.log( error )
+			})
+		},
 		saveUpdateSettings() {
 			this.dialog_update_settings.loading = true;
 			site = this.dialog_site.site
@@ -24498,6 +24660,9 @@ app.mount('#app');
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 <script type='text/javascript' src='/wp-content/plugins/arve-pro/build/main.js'></script>
 <script type='text/javascript' src='/wp-content/plugins/advanced-responsive-video-embedder/build/main.js'></script>
+<?php } ?>
+<?php if ( current_user_can( 'administrator' ) && isset( $_GET['faker'] ) ) { ?>
+<script src="<?php echo plugin_dir_url( __DIR__ ); ?>public/faker.js"></script>
 <?php } ?>
 </body>
 </html>
