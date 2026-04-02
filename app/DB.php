@@ -457,23 +457,44 @@ class DB {
         
         $all_filter_clauses = [];
 
-        // Helper function to create REGEXP pattern
-        $create_pattern = function( $name, $version = '[^"]*', $status = '[^"]*' ) {
-            $pattern = '{"name":"' . $name . '","title":"[^"]*","status":"' . $status . '","version":"' . $version . '"}';
-            $pattern = str_replace( "{", "[{]", $pattern );
-            $pattern = str_replace( "}", "[}]", $pattern );
-            return $pattern;
+        // Helper: build a REGEXP that matches a JSON object containing the given key-value pairs (order-agnostic)
+        $create_pattern = function( $name, $version = null, $status = null ) {
+            // Always match by name
+            $conditions = [ '"name":"' . $name . '"' ];
+            if ( $version !== null ) {
+                $conditions[] = '"version":"' . $version . '"';
+            }
+            if ( $status !== null ) {
+                $conditions[] = '"status":"' . $status . '"';
+            }
+            // Match a single JSON object containing all specified key-value pairs in any order
+            // Each condition checks that within a {...} block the key-value pair exists
+            $parts = [];
+            foreach ( $conditions as $cond ) {
+                $escaped = str_replace( "{", "[{]", $cond );
+                $escaped = str_replace( "}", "[}]", $escaped );
+                $parts[] = '[{][^}]*' . $escaped . '[^}]*[}]';
+            }
+            return $parts;
         };
 
         // Themes/Plugins
         $primary_clauses = [];
         foreach ( $theme_filters as $theme ) {
-            $pattern = $create_pattern( $theme['name'] );
-            $primary_clauses[] = "{$environments_table}.themes REGEXP '{$pattern}'";
+            $parts = $create_pattern( $theme['name'] );
+            $sub = [];
+            foreach ( $parts as $p ) {
+                $sub[] = "{$environments_table}.themes REGEXP '{$p}'";
+            }
+            $primary_clauses[] = "( " . implode( " AND ", $sub ) . " )";
         }
         foreach ( $plugin_filters as $plugin ) {
-            $pattern = $create_pattern( $plugin['name'] );
-            $primary_clauses[] = "{$environments_table}.plugins REGEXP '{$pattern}'";
+            $parts = $create_pattern( $plugin['name'] );
+            $sub = [];
+            foreach ( $parts as $p ) {
+                $sub[] = "{$environments_table}.plugins REGEXP '{$p}'";
+            }
+            $primary_clauses[] = "( " . implode( " AND ", $sub ) . " )";
         }
 
         // Versions/Statuses
@@ -482,8 +503,11 @@ class DB {
             $version_sub_clauses = [];
             foreach ( $version_filters as $version ) {
                 if ( empty( $version['slug'] ) ) { continue; }
-                $pattern = $create_pattern( $version['slug'], $version['name'] );
-                $version_sub_clauses[] = "{$environments_table}.{$version['type']} {$version_mode} '{$pattern}'";
+                $parts = $create_pattern( $version['slug'], $version['name'] );
+                $sub = [];
+                foreach ( $parts as $p ) {
+                    $version_sub_clauses[] = "{$environments_table}.{$version['type']} {$version_mode} '{$p}'";
+                }
             }
             if ( ! empty( $version_sub_clauses ) ) {
                 $secondary_clauses[] = "( " . implode( " {$version_logic} ", $version_sub_clauses ) . " )";
@@ -493,8 +517,11 @@ class DB {
             $status_sub_clauses = [];
             foreach ( $status_filters as $status ) {
                 if ( empty( $status['slug'] ) ) { continue; }
-                $pattern = $create_pattern( $status['slug'], '[^"]*', $status['name'] );
-                $status_sub_clauses[] = "{$environments_table}.{$status['type']} {$status_mode} '{$pattern}'";
+                $parts = $create_pattern( $status['slug'], null, $status['name'] );
+                $sub = [];
+                foreach ( $parts as $p ) {
+                    $status_sub_clauses[] = "{$environments_table}.{$status['type']} {$status_mode} '{$p}'";
+                }
             }
             if ( ! empty( $status_sub_clauses ) ) {
                 $secondary_clauses[] = "( " . implode( " {$status_logic} ", $status_sub_clauses ) . " )";
