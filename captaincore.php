@@ -5061,6 +5061,46 @@ function captaincore_site_environment_monitor_update_func( $request ) {
 
 }
 
+function captaincore_site_environment_performance_monitor_toggle_func( $request ) {
+	$site_id     = $request['id'];
+	$environment = $request['environment'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$params  = $request->get_json_params();
+	$enabled = ! empty( $params['enabled'] );
+	$action  = $enabled ? 'activate' : 'deactivate';
+
+	captaincore_run_background_command( "performance-monitor $action $site_id-$environment" );
+
+	return [ 'status' => 'success', 'action' => $action ];
+}
+
+function captaincore_site_environment_performance_monitor_fetch_func( $request ) {
+	$site_id     = $request['id'];
+	$environment = $request['environment'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$response = CaptainCore\Run::CLI( "performance-monitor fetch $site_id-$environment" );
+
+	if ( empty( $response ) ) {
+		return new WP_Error( 'no_data', 'No performance monitor data available.', [ 'status' => 404 ] );
+	}
+
+	$data = json_decode( $response, true );
+
+	if ( json_last_error() !== JSON_ERROR_NONE ) {
+		return new WP_Error( 'parse_error', 'Failed to parse monitor data.', [ 'status' => 500 ] );
+	}
+
+	return $data;
+}
+
 function captaincore_site_captures_update_func( $request ) {
 	$site_id     = $request['id'];
 	$auth        = empty( $request['auth'] ) ? "" : $request['auth'];
@@ -6631,6 +6671,22 @@ function captaincore_register_rest_endpoints() {
 			'callback'            => 'captaincore_site_environment_monitor_update_func',
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/performance-monitor', [
+			[
+				'methods'             => 'POST',
+				'callback'            => 'captaincore_site_environment_performance_monitor_toggle_func',
+				'permission_callback' => 'captaincore_permission_check',
+				'show_in_index'       => false,
+			],
+			[
+				'methods'             => 'GET',
+				'callback'            => 'captaincore_site_environment_performance_monitor_fetch_func',
+				'permission_callback' => 'captaincore_permission_check',
+				'show_in_index'       => false,
+			],
 		]
 	);
 	register_rest_route(
