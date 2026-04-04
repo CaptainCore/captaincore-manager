@@ -4640,7 +4640,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-tab value="tab-Site-Management" :href="`${configurations.path}sites/${dialog_site.site.site_id}`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}`)">
 						Site Management <v-icon icon="mdi-cog" class="ml-1"></v-icon>
 					</v-tab>
-					<v-tab value="tab-Modules" :href="`${configurations.path}sites/${dialog_site.site.site_id}`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}`)" v-show="role == 'administrator'">
+					<v-tab value="tab-Modules" :href="`${configurations.path}sites/${dialog_site.site.site_id}`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}`)" v-if="role == 'administrator'">
 						Modules <v-icon size="24" icon="mdi-toggle-switch-outline" class="ml-1"></v-icon>
 					</v-tab>
 					<v-tab value="tab-Timeline" :href="`${configurations.path}sites/${dialog_site.site.site_id}`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}`)" ripple @click="fetchTimeline( dialog_site.site.site_id )">
@@ -4702,14 +4702,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</div>
 						<v-col>
 								<v-tabs v-model="dialog_site.site.tabs_management" align-tabs="end" show-arrows class="pr-3" density="compact" color="primary" stacked>
-									<v-tab value="tab-Info" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}`)"><v-icon>mdi-text-box-multiple</v-icon> Info</v-tab>
-									<v-tab value="tab-Stats" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/stats`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/stats`)"><v-icon start>mdi-chart-bar</v-icon> Stats</v-tab>
-									<v-tab value="tab-Logs" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/logs`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/logs`)"><v-icon start>mdi-file-document-multiple</v-icon> Logs</v-tab>
-									<v-tab value="tab-Addons" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/addons`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/addons`)" v-if="dialog_site.environment_selected.token !== 'basic'"><v-icon start>mdi-power-plug</v-icon> Addons</v-tab>
-									<v-tab value="tab-Users" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/users`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/users`)" v-if="dialog_site.environment_selected.token !== 'basic'"><v-icon start>mdi-account-multiple</v-icon> Users</v-tab>
-									<v-tab value="tab-Updates" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/updates`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/updates`)" v-if="dialog_site.environment_selected.token !== 'basic'"><v-icon start>mdi-book-open</v-icon> Updates</v-tab>
-									<v-tab value="tab-Scripts" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/scripts`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/scripts`)"><v-icon start>mdi-code-tags</v-icon> Scripts</v-tab>
-									<v-tab value="tab-Backups" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/backup-overview`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/backup-overview`)"><v-icon start>mdi-update</v-icon> Backups</v-tab>
+									<v-tab value="tab-Info" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}`)" prepend-icon="mdi-text-box-multiple">Info</v-tab>
+									<v-tab value="tab-Stats" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/stats`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/stats`)" prepend-icon="mdi-chart-bar">Stats</v-tab>
+									<v-tab value="tab-Logs" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/logs`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/logs`)" prepend-icon="mdi-file-document-multiple">Logs</v-tab>
+									<v-tab value="tab-Addons" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/addons`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/addons`)" v-if="dialog_site.environment_selected.token !== 'basic'" prepend-icon="mdi-power-plug">Addons</v-tab>
+									<v-tab value="tab-Users" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/users`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/users`)" v-if="dialog_site.environment_selected.token !== 'basic'" prepend-icon="mdi-account-multiple">Users</v-tab>
+									<v-tab value="tab-Updates" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/updates`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/updates`)" v-if="dialog_site.environment_selected.token !== 'basic'" prepend-icon="mdi-book-open">Updates</v-tab>
+									<v-tab value="tab-Scripts" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/scripts`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/scripts`)" prepend-icon="mdi-code-tags">Scripts</v-tab>
+									<v-tab value="tab-Backups" style="min-width: 50px;padding: 0px 10px;" :href="`${configurations.path}sites/${dialog_site.site.site_id}/backup-overview`" @click.prevent="goToPath(`/sites/${dialog_site.site.site_id}/backup-overview`)" prepend-icon="mdi-update">Backups</v-tab>
 								</v-tabs>
 							</v-col>
 							</v-row>
@@ -5019,7 +5019,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-window-item :key="100" value="tab-Stats" :transition="false" :reverse-transition="false">
 					<v-card flat>
 					<v-toolbar flat density="compact" color="transparent" class="mb-2">
-						<v-toolbar-title>Stats</v-toolbar-title>
+						<v-toolbar-title>Stats <v-progress-circular v-show="dialog_site.environment_selected.stats_loading" indeterminate color="primary" size="18" width="2" class="ml-2"></v-progress-circular></v-toolbar-title>
 						<v-spacer></v-spacer>
 						<v-toolbar-items v-if="typeof dialog_new_site == 'object'" style="margin-right:-16px;" class="mt-2">
 							<div class="px-1" v-show="dialog_site.environment_selected.fathom_analytics.length > 1">
@@ -5046,12 +5046,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								min-width="auto"
 							>
 								<template v-slot:activator="{ props }">
-								<v-text-field v-model="stats.from_at" label="From" append-icon="mdi-calendar" v-bind="props" density="compact" variant="outlined"></v-text-field>
+								<v-text-field v-model="stats.from_at" label="From" append-inner-icon="mdi-calendar" v-bind="props" density="compact" variant="outlined"></v-text-field>
 								</template>
 								<v-date-picker :model-value="new Date(stats.from_at)" @update:model-value="handleDateChange($event, 'from_at')"></v-date-picker>
 							</v-menu>
 							</div>
-							<div class="px-1" style="width:162px;">
+							<div class="px-1 mr-3" style="width:162px;">
 							<v-menu
 								v-model="stats.to_at_select"
 								:close-on-content-click="false"
@@ -5065,7 +5065,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-text-field
 									v-model="stats.to_at"
 									label="To"
-									append-icon="mdi-calendar"
+									append-inner-icon="mdi-calendar"
 									v-bind="props"
 									density="compact"
 									variant="outlined"
@@ -5077,14 +5077,11 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
                     		<v-btn variant="text" @click="configureFathom( dialog_site.site.site_id )" v-show="role == 'administrator'"><v-icon dark small>mdi-pencil</v-icon> Edit</v-btn>
 						</v-toolbar-items>
 					</v-toolbar>
-						<div class="pa-3" v-if="typeof dialog_site.environment_selected.stats == 'string' && dialog_site.environment_selected.stats != 'Loading'">
+						<div class="pa-3" v-if="typeof dialog_site.environment_selected.stats == 'string' && dialog_site.environment_selected.stats !== 'Loading'">
 							{{ dialog_site.environment_selected.stats }}
 						</div>
 						<v-row>
 						<v-col>
-						<v-card-text v-show="dialog_site.environment_selected.stats == 'Loading'">
-							<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
-						</v-card-text>
 						<div v-for="e in dialog_site.site.environments" v-show="e.environment == dialog_site.environment_selected.environment">
 							<div style="position: relative; height: 270px;"><canvas :id="`chart_` + dialog_site.site.site_id + `_` + e.environment"></canvas></div>
 							<v-card flat v-if="dialog_site.environment_selected.stats && dialog_site.environment_selected.stats.summary">
@@ -5145,9 +5142,10 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								</v-col>
 							</v-row>
 						</div>
-						<div v-if="dialog_site.environment_selected && dialog_site.environment_selected.performance_monitor_enabled" class="text-center pa-4">
+						<div class="pa-4">
 							<v-divider class="mb-4"></v-divider>
-							<v-btn variant="outlined" @click="openPerformanceMonitor()">
+							<v-switch v-model="dialog_site.environment_selected.performance_monitor_enabled" label="Performance Monitor" inset hide-details :false-value="false" :true-value="true" @change="togglePerformanceMonitor( dialog_site.environment_selected )"></v-switch>
+							<v-btn v-if="dialog_site.environment_selected.performance_monitor_enabled" variant="outlined" @click="openPerformanceMonitor()" class="mt-4">
 								<v-icon start>mdi-chart-line</v-icon> View Performance Monitor
 							</v-btn>
 						</div>
@@ -17316,9 +17314,9 @@ const app = createApp({
 		},
 		fetchStats() {
 
-			fathom_id = this.dialog_site.environment_selected.stats.fathom_id
 			environment = this.dialog_site.environment_selected
-			environment.stats = "Loading";
+			fathom_id = environment.stats && environment.stats.fathom_id ? environment.stats.fathom_id : ""
+			environment.stats_loading = true;
 
 			var params = {
 				from_at: this.stats.from_at,
@@ -17336,6 +17334,7 @@ const app = createApp({
 					headers: { 'X-WP-Nonce': this.wp_nonce }
 				})
 				.then( response => {
+					environment.stats_loading = false
 
 					if ( response.data.Error ) {
 						environment.stats = response.data.Error
