@@ -2194,3 +2194,24 @@ tr:hover .pin-hover-target {
 #plan_chart_transactions .dataset-units path:hover {
     filter: brightness(1.4);
 }
+
+/* Performance monitor — theme-aware via CSS custom properties */
+.perf-monitor-dialog { --pm-bg: #f5f5f7; --pm-card: #ffffff; --pm-border: #e0e0e0; --pm-text: #1d1d1f; --pm-dim: #86868b; --pm-accent: #0066cc; --pm-grid: rgba(0,0,0,0.06); --pm-tooltip-bg: #ffffffee; --pm-tooltip-border: #e0e0e0; --pm-tooltip-text: #1d1d1f; }
+.v-theme--dark .perf-monitor-dialog { --pm-bg: #1a1a2e; --pm-card: #16213e; --pm-border: #0f3460; --pm-text: #e0e0e0; --pm-dim: #8892a0; --pm-accent: #00d4ff; --pm-grid: rgba(255,255,255,0.06); --pm-tooltip-bg: #16213eee; --pm-tooltip-border: #0f3460; --pm-tooltip-text: #e0e0e0; }
+.perf-monitor-dialog { background: var(--pm-bg) !important; color: var(--pm-text) !important; }
+.perf-monitor-toolbar { background: var(--pm-card) !important; }
+.perf-monitor-title { font-family: 'SF Mono', 'Fira Code', monospace !important; font-size: 14px !important; color: var(--pm-accent) !important; }
+.perf-monitor-range .v-btn { background: var(--pm-card) !important; color: var(--pm-dim) !important; border-color: var(--pm-border) !important; font-size: 11px !important; }
+.perf-monitor-range .v-btn--active { background: var(--pm-border) !important; color: var(--pm-accent) !important; border-color: var(--pm-accent) !important; }
+.perf-monitor-body { background: var(--pm-bg) !important; padding: 16px !important; }
+.perf-subtitle { text-align: center; color: var(--pm-dim); font-family: monospace; font-size: 12px; margin-bottom: 16px; }
+.perf-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 16px; }
+.perf-summary-card { background: var(--pm-card); border: 1px solid var(--pm-border); border-radius: 6px; padding: 10px 12px; font-family: monospace; }
+.perf-summary-card .perf-label { color: var(--pm-dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.perf-summary-card .perf-value { font-size: 18px; font-weight: 700; }
+.perf-summary-card .perf-details { font-size: 10px; color: var(--pm-dim); margin-top: 2px; }
+.perf-chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 12px; }
+.perf-chart-card { background: var(--pm-card); border: 1px solid var(--pm-border); border-radius: 6px; padding: 12px; }
+.perf-chart-card h3 { font-size: 13px; font-weight: 600; color: var(--pm-dim); margin-bottom: 8px; font-family: monospace; }
+.perf-chart-wrap { position: relative; height: 250px; }
+@media (max-width: 600px) { .perf-chart-grid { grid-template-columns: 1fr; } .perf-chart-wrap { height: 180px; } }

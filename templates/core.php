@@ -27,13 +27,11 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <?php if ( substr( $_SERVER['SERVER_NAME'], -10) == '.localhost' ) { ?>
 <link href="<?php echo $plugin_url; ?>public/css/vuetify.min.css" rel="stylesheet">
 <link href="<?php echo $plugin_url; ?>public/css/materialdesignicons.min.css" rel="stylesheet">
-<link href="<?php echo $plugin_url; ?>public/css/frappe-charts.min.css" rel="stylesheet">
 <?php } else { ?>
 <link href="https://cdn.jsdelivr.net/npm/vuetify@3.9.0/dist/vuetify.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.1/dist/frappe-charts.min.css" rel="stylesheet">
 <?php } ?>
-<link href="<?php echo $plugin_url; ?>public/css/captaincore-public-2026-02-22.css" rel="stylesheet">
+<link href="<?php echo $plugin_url; ?>public/css/captaincore-public-2026-04-04.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism.min.css" rel="stylesheet" />
 <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism-twilight.min.css" rel="stylesheet" />
 </head>
@@ -2862,6 +2860,37 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</v-card-text>
 					</v-card>
 				</v-dialog>
+				<v-dialog v-model="dialog_performance_monitor.show" fullscreen scrollable>
+					<v-card rounded="0" class="perf-monitor-dialog">
+						<v-toolbar flat class="perf-monitor-toolbar">
+							<v-btn icon="mdi-close" @click="closePerformanceMonitor()"></v-btn>
+							<v-toolbar-title class="perf-monitor-title">
+								Performance Monitor — {{ dialog_site.environment_selected.home_url }}
+							</v-toolbar-title>
+							<v-spacer></v-spacer>
+							<v-btn-toggle v-model="dialog_performance_monitor.hours" mandatory density="compact" class="perf-monitor-range mr-2" @update:model-value="fetchPerformanceMonitorData()">
+								<v-btn :value="1" size="small">1H</v-btn>
+								<v-btn :value="24" size="small">24H</v-btn>
+								<v-btn :value="72" size="small">3D</v-btn>
+								<v-btn :value="168" size="small">7D</v-btn>
+								<v-btn :value="336" size="small">14D</v-btn>
+								<v-btn :value="0" size="small">ALL</v-btn>
+							</v-btn-toggle>
+							<v-btn icon="mdi-backup-restore" @click="resetPerformanceZoom()" title="Reset Zoom" class="mr-1"></v-btn>
+							<v-btn icon="mdi-refresh" @click="fetchPerformanceMonitorData()" :loading="dialog_performance_monitor.loading"></v-btn>
+						</v-toolbar>
+						<v-card-text class="perf-monitor-body">
+							<div class="perf-subtitle" id="perfTimeRange"></div>
+							<div class="perf-summary-grid" id="perfSummaryGrid"></div>
+							<div class="perf-chart-grid">
+								<div class="perf-chart-card"><h3>DB Connections</h3><div class="perf-chart-wrap"><canvas id="perfChartDb"></canvas></div></div>
+								<div class="perf-chart-card"><h3>Server Load</h3><div class="perf-chart-wrap"><canvas id="perfChartLoad"></canvas></div></div>
+								<div class="perf-chart-card"><h3>Response Time (seconds)</h3><div class="perf-chart-wrap"><canvas id="perfChartResp"></canvas></div></div>
+								<div class="perf-chart-card"><h3>PHP Workers</h3><div class="perf-chart-wrap"><canvas id="perfChartWorkers"></canvas></div></div>
+							</div>
+						</v-card-text>
+					</v-card>
+				</v-dialog>
 				<v-dialog :model-value="dialog_captures.show" @update:model-value="val => !val && closeCaptures()" fullscreen scrollable>
 				<v-card tile>
 					<v-toolbar flat dark color="primary" class="shrink">
@@ -5004,7 +5033,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								></v-autocomplete>
 							</div>
 							<div class="px-1" style="width:150px;">
-								<v-select density="compact" variant="outlined" :items="['Hour', 'Day', 'Month', 'Year']" label="Date Grouping" v-model="stats.grouping" @update:model-value="fetchStats()"></v-select>
+								<v-select density="compact" variant="outlined" :items="['Hour', 'Day', 'Month', 'Year']" label="Date Grouping" v-model="stats.grouping" @update:model-value="adjustStatsRange()"></v-select>
 							</div>
 							<div class="px-1" style="width:162px;">
 							<v-menu
@@ -5057,7 +5086,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<span><v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular></span>
 						</v-card-text>
 						<div v-for="e in dialog_site.site.environments" v-show="e.environment == dialog_site.environment_selected.environment">
-							<div :id="`chart_` + dialog_site.site.site_id + `_` + e.environment" class="stat-chart"></div>
+							<div style="position: relative; height: 270px;"><canvas :id="`chart_` + dialog_site.site.site_id + `_` + e.environment"></canvas></div>
 							<v-card flat v-if="dialog_site.environment_selected.stats && dialog_site.environment_selected.stats.summary">
 							<v-card-title class="text-center pa-0 mb-10">
 							<v-row>
@@ -5116,48 +5145,11 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								</v-col>
 							</v-row>
 						</div>
-						<div v-if="dialog_site.environment_selected && dialog_site.environment_selected.performance_monitor_enabled">
-							<v-divider class="mt-6"></v-divider>
-							<v-toolbar density="compact" color="transparent" flat class="mt-2">
-								<v-toolbar-title>Performance Monitor</v-toolbar-title>
-								<v-spacer></v-spacer>
-								<v-toolbar-items>
-									<v-btn variant="text" @click="fetchPerformanceData()" :loading="dialog_site.performance_loading">
-										<v-icon start>mdi-refresh</v-icon> Refresh
-									</v-btn>
-								</v-toolbar-items>
-							</v-toolbar>
-							<v-card-text v-if="dialog_site.performance_loading">
-								<v-progress-circular indeterminate color="primary" class="ma-2" size="24"></v-progress-circular>
-							</v-card-text>
-							<div v-if="dialog_site.performance_summary">
-								<v-card-title class="text-center pa-0 mb-4">
-								<v-row>
-									<v-col cols="6" sm="3">
-										<span class="text-uppercase text-caption">Samples</span><br />
-										<span class="text-h4 font-weight-thin">{{ dialog_site.performance_summary.total_samples.toLocaleString() }}</span><br />
-										<span class="text-caption text-grey">{{ dialog_site.performance_summary.total_days }} days &bull; {{ dialog_site.performance_summary.bucket_label }}</span>
-									</v-col>
-									<v-col cols="6" sm="3">
-										<span class="text-uppercase text-caption">Peak DB Conns</span><br />
-										<span class="text-h4 font-weight-thin">{{ dialog_site.performance_summary.peak_db }}</span>
-									</v-col>
-									<v-col cols="6" sm="3">
-										<span class="text-uppercase text-caption">Peak Load</span><br />
-										<span class="text-h4 font-weight-thin">{{ dialog_site.performance_summary.peak_load }}</span>
-									</v-col>
-									<v-col cols="6" sm="3">
-										<span class="text-uppercase text-caption">Avg Response</span><br />
-										<span class="text-h4 font-weight-thin">{{ dialog_site.performance_summary.avg_response }}s</span>
-									</v-col>
-								</v-row>
-								</v-card-title>
-							</div>
-							<div v-for="e in dialog_site.site.environments" v-show="e.environment == dialog_site.environment_selected.environment">
-								<div :id="`perf_chart_db_` + dialog_site.site.site_id + `_` + e.environment" class="stat-chart"></div>
-								<div :id="`perf_chart_load_` + dialog_site.site.site_id + `_` + e.environment" class="stat-chart"></div>
-								<div :id="`perf_chart_response_` + dialog_site.site.site_id + `_` + e.environment" class="stat-chart"></div>
-							</div>
+						<div v-if="dialog_site.environment_selected && dialog_site.environment_selected.performance_monitor_enabled" class="text-center pa-4">
+							<v-divider class="mb-4"></v-divider>
+							<v-btn variant="outlined" @click="openPerformanceMonitor()">
+								<v-icon start>mdi-chart-line</v-icon> View Performance Monitor
+							</v-btn>
 						</div>
 					</v-card>
 				</v-window-item>
@@ -9626,9 +9618,9 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</v-data-table>
 								</v-window-item>
 								<v-window-item value="by-month" :transition="false" :reverse-transition="false" style="overflow: visible">
-									<div id="plan_chart" style="overflow: visible"></div>
+									<div style="position: relative; height: 270px;"><canvas id="plan_chart"></canvas></div>
 									<v-list-subheader>{{ revenue_estimated_total() }}</v-list-subheader>
-									<div id="plan_chart_transactions" style="overflow: visible"></div>
+									<div style="position: relative; height: 270px;"><canvas id="plan_chart_transactions"></canvas></div>
 									<v-dialog v-model="dialog_month_renewals.show" max-width="700">
 										<v-card>
 											<v-card-title>{{ dialog_month_renewals.month }} Renewals</v-card-title>
@@ -12366,15 +12358,16 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <script src="<?php echo $plugin_url; ?>public/js/vuetify.min.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/vue-upload-component.js"></script>
 <script src="<?php echo $plugin_url; ?>public/js/numeral.min.js"></script>
-<script src="<?php echo $plugin_url; ?>public/js/frappe-charts.min.js"></script>
 <?php } else { ?>
 <script src="https://cdn.jsdelivr.net/npm/vue@3.5.20/dist/vue.global.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios@0.19.0/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vuetify@3.9.6/dist/vuetify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue-upload-component@3.1.17/dist/vue-upload-component.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/numeral@2.0.6/numeral.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.6.1/dist/frappe-charts.min.umd.js"></script>
 <?php } ?>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/dayjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/prism.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-log.min.js"></script>
@@ -12427,6 +12420,10 @@ const vuetify = createVuetify({
 		}
 	}
 });
+
+// Chart.js instances stored outside Vue reactivity to avoid Proxy conflicts
+const perfMonitorCharts = [];
+const statsCharts = {}; // keyed by chart_id
 
 const app = createApp({
 	setup() {
@@ -12972,6 +12969,7 @@ const app = createApp({
             data: null,
             loading: false,
         },
+		dialog_performance_monitor: { show: false, hours: 0, loading: false },
 		dialog_mailgun_deploy: {
             show: false,
             search: '',
@@ -12982,7 +12980,7 @@ const app = createApp({
 		backup_set_files: [],
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_billing: { step: 1 },
-		dialog_site: { loading: true, syncing: false, step: 1, backup_step: 1, grant_access: [], grant_access_menu: false, desired_environment_id: null, performance_loading: false, performance_summary: null, environment_selected: { environment_id: "0", expanded_backups: [], quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false, server_logs: { files: [] }, view_server_logs: false, loading_server_logs: false, server_log_limit: "1000", server_log_selected: "", server_log_response: "", server_log_lines: [], server_log_search: "" }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], key: null, tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
+		dialog_site: { loading: true, syncing: false, step: 1, backup_step: 1, grant_access: [], grant_access_menu: false, desired_environment_id: null, environment_selected: { environment_id: "0", expanded_backups: [], quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false, server_logs: { files: [] }, view_server_logs: false, loading_server_logs: false, server_log_limit: "1000", server_log_selected: "", server_log_response: "", server_log_lines: [], server_log_search: "" }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], key: null, tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
 		dialog_site_request: { show: false, request: {} },
 		dialog_edit_account: { show: false, account: {} },
 		dialog_account_portal: { show: false, portal: { domain: "", configuration: {}, email: { host: "", port: "", encryption_type: "tls", username: "", password: "" }, colors: { primary: "#0D47A1", secondary: "#424242", accent: "#82B1FF", error: "#FF5252", info: "#0D47A1", success: "#4CAF50", warning: "#FFC107" } }, colors: { primary: false, secondary: false, accent: false, error: false, info: false, success: false, warning: false } },
@@ -14818,9 +14816,6 @@ const app = createApp({
 		triggerEnvironmentUpdate(){
 			if ( this.dialog_site.site.tabs == "tab-Site-Management" && this.dialog_site.site.tabs_management == "tab-Stats" ) {
 				this.fetchStats()
-				if ( this.dialog_site.environment_selected.performance_monitor_enabled ) {
-					this.fetchPerformanceData()
-				}
 			}
 			if ( this.dialog_site.site.tabs == "tab-Site-Management" && this.dialog_site.site.tabs_management == "tab-Updates" ) {
 				this.viewUpdateLogs()
@@ -16497,9 +16492,6 @@ const app = createApp({
 				}
 				if ( this.dialog_site.site.tabs_management == "tab-Stats" ) {
 					this.fetchStats()
-					if ( this.dialog_site.environment_selected.performance_monitor_enabled ) {
-						this.fetchPerformanceData()
-					}
 				}
 				if ( this.dialog_site.site.tabs_management == "tab-Updates" ) {
 					this.viewUpdateLogs( this.dialog_site.site.site_id )
@@ -17006,51 +16998,78 @@ const app = createApp({
 			this.$nextTick(() => {
 				const el = document.getElementById('plan_chart')
 				if (!el) return
-				el.innerHTML = ''
-				document.getElementById('plan_chart_transactions').innerHTML = ''
 				const revenue = this.revenue_estimated
 				const transactions = this.subscription_transactions
 				const labels = Object.keys( revenue )
-				new frappe.Chart( "#plan_chart", {
+				const self = this
+
+				// Destroy previous instances
+				if ( statsCharts['plan_chart'] ) { statsCharts['plan_chart'].destroy() }
+				if ( statsCharts['plan_chart_transactions'] ) { statsCharts['plan_chart_transactions'].destroy() }
+
+				statsCharts['plan_chart'] = new Chart( el, {
+					type: 'bar',
 					data: {
 						labels: labels,
-						datasets: [{ name: "Revenue", values: Object.values( revenue ) }],
-						yRegions: [{ label: "", start: 0, end: 50, options: { labelPos: "right" } }],
+						datasets: [{
+							label: 'Revenue',
+							data: Object.values( revenue ),
+							backgroundColor: this.configurations.colors.primary + '99',
+							borderColor: this.configurations.colors.primary,
+							borderWidth: 1
+						}]
 					},
-					tooltipOptions: { formatTooltipY: d => '$' + d },
-					type: "bar",
-					height: 270,
-					colors: [ this.configurations.colors.primary, this.configurations.colors.success ],
-					barOptions: { spaceRatio: 0.1 },
-					axisOptions: { xAxisMode: "tick", xIsSeries: true },
-					lineOptions: { regionFill: 1 },
-				})
-				// Delegate click on revenue bars using data-point-index
-				el.addEventListener('click', (e) => {
-					const bar = e.target.closest('rect[data-point-index]')
-					if (bar) {
-						const index = parseInt(bar.getAttribute('data-point-index'))
-						if (labels[index]) this.showMonthRenewals(labels[index])
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						onClick(evt, elements) {
+							if (elements.length > 0) {
+								const index = elements[0].index
+								if (labels[index]) self.showMonthRenewals(labels[index])
+							}
+						},
+						plugins: {
+							tooltip: { callbacks: { label: (ctx) => '$' + ctx.parsed.y } },
+							legend: { display: false }
+						},
+						scales: {
+							x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+							y: { beginAtZero: true, ticks: { font: { size: 10 } } }
+						}
 					}
 				})
+
 				const transactionsEl = document.getElementById('plan_chart_transactions')
-				new frappe.Chart( "#plan_chart_transactions", {
+				statsCharts['plan_chart_transactions'] = new Chart( transactionsEl, {
+					type: 'line',
 					data: {
 						labels: labels,
-						datasets: [{ name: "Transactions", values: Object.values( transactions ) }],
+						datasets: [{
+							label: 'Transactions',
+							data: Object.values( transactions ),
+							borderColor: this.configurations.colors.success,
+							backgroundColor: this.configurations.colors.success + '20',
+							borderWidth: 1.5,
+							pointRadius: 3,
+							pointHoverRadius: 5,
+							tension: 0.3,
+							fill: true
+						}]
 					},
-					type: "line",
-					height: 270,
-					colors: [ this.configurations.colors.success ],
-					axisOptions: { xAxisMode: "tick", xIsSeries: true },
-					lineOptions: { regionFill: 1, dotSize: 5 },
-				})
-				// Delegate click on transaction dots using data-point-index
-				transactionsEl.addEventListener('click', (e) => {
-					const dot = e.target.closest('circle[data-point-index]')
-					if (dot) {
-						const index = parseInt(dot.getAttribute('data-point-index'))
-						if (labels[index]) this.showMonthRenewals(labels[index])
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						onClick(evt, elements) {
+							if (elements.length > 0) {
+								const index = elements[0].index
+								if (labels[index]) self.showMonthRenewals(labels[index])
+							}
+						},
+						plugins: { legend: { display: false } },
+						scales: {
+							x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+							y: { beginAtZero: true, ticks: { font: { size: 10 } } }
+						}
 					}
 				})
 			})
@@ -17277,6 +17296,24 @@ const app = createApp({
 			// Now that the data is correctly formatted, fetch the stats
 			this.fetchStats();
 		},
+		adjustStatsRange() {
+			const toDate = new Date(this.stats.to_at)
+			const grouping = this.stats.grouping
+			let fromDate = new Date(toDate)
+
+			if (grouping === 'Hour') {
+				fromDate.setDate(fromDate.getDate() - 7)
+			} else if (grouping === 'Day') {
+				fromDate.setMonth(fromDate.getMonth() - 1)
+			} else if (grouping === 'Month') {
+				fromDate.setFullYear(fromDate.getFullYear() - 1)
+			} else if (grouping === 'Year') {
+				fromDate.setFullYear(fromDate.getFullYear() - 5)
+			}
+
+			this.stats.from_at = fromDate.toISOString().split('T')[0]
+			this.fetchStats()
+		},
 		fetchStats() {
 
 			fathom_id = this.dialog_site.environment_selected.stats.fathom_id
@@ -17311,40 +17348,68 @@ const app = createApp({
 					}
 
 					chart_id = "chart_" + this.dialog_site.site.site_id + "_" + this.dialog_site.environment_selected.environment;
-					chart_dom = document.getElementById( chart_id );
-					chart_dom.innerHTML = ""
+					const canvas = document.getElementById( chart_id );
 
 					environment.stats = response.data
-					names = environment.stats.items.map( s => s.date )
-					pageviews = environment.stats.items.map( s => s.pageviews )
-					visitors = environment.stats.items.map( s => s.visits )
+					const names = environment.stats.items.map( s => s.date )
+					const pageviews = environment.stats.items.map( s => s.pageviews )
+					const visitors = environment.stats.items.map( s => s.visits )
 
-					// Generate chart
-					environment.chart = new frappe.Chart( "#" + chart_id, {
+					// Destroy previous chart instance if exists
+					if ( statsCharts[chart_id] ) {
+						statsCharts[chart_id].destroy()
+						delete statsCharts[chart_id]
+					}
+
+					// Generate Chart.js chart
+					const isDark = this.theme === 'dark'
+					const fillAlpha = isDark ? '60' : '20'
+					const lineWidth = isDark ? 2.5 : 1.5
+					const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.12)'
+					const tickColor = isDark ? '#aaa' : '#666'
+
+					statsCharts[chart_id] = new Chart( canvas, {
+						type: 'line',
 						data: {
 							labels: names,
 							datasets: [
 								{
-									name: "Pageviews",
-									values: pageviews,
+									label: 'Pageviews',
+									data: pageviews,
+									borderColor: this.configurations.colors.secondary,
+									backgroundColor: this.configurations.colors.secondary + fillAlpha,
+									borderWidth: lineWidth,
+									pointRadius: 0,
+									pointHoverRadius: 4,
+									tension: 0.3,
+									fill: true
 								},
 								{
-									name: "Visitors",
-									values: visitors,
-								},
-							],
+									label: 'Visitors',
+									data: visitors,
+									borderColor: this.configurations.colors.primary,
+									backgroundColor: this.configurations.colors.primary + fillAlpha,
+									borderWidth: lineWidth,
+									pointRadius: 0,
+									pointHoverRadius: 4,
+									tension: 0.3,
+									fill: true
+								}
+							]
 						},
-						type: "line",
-						height: 270,
-						colors: [ this.configurations.colors.secondary, this.configurations.colors.primary ],
-						axisOptions: {
-							xAxisMode: "tick",
-							xIsSeries: true
-						},
-						lineOptions: {
-							regionFill: 1,
-							hideDots: 1
-						},
+						options: {
+							responsive: true,
+							maintainAspectRatio: false,
+							interaction: { mode: 'index', intersect: false },
+							plugins: {
+								tooltip: { mode: 'index', intersect: false },
+								legend: { labels: { boxWidth: 12, padding: 12, font: { size: 11 } } }
+							},
+							scales: {
+								x: { grid: { display: false }, ticks: { color: tickColor, maxRotation: 45, autoSkip: true, maxTicksLimit: 12, font: { size: 10 } } },
+								y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 10 } } }
+							}
+						}
 					})
 				})
 				.catch( error => console.log( error ) );
@@ -24033,95 +24098,270 @@ const app = createApp({
 				this.snackbar.show = true
 			})
 		},
-		fetchPerformanceData() {
-			this.dialog_site.performance_loading = true
+		openPerformanceMonitor() {
+			this.dialog_performance_monitor.show = true
+			this.$nextTick(() => this.fetchPerformanceMonitorData())
+		},
+		closePerformanceMonitor() {
+			perfMonitorCharts.forEach(c => c.destroy())
+			perfMonitorCharts.length = 0
+			this.dialog_performance_monitor.show = false
+		},
+		resetPerformanceZoom() {
+			perfMonitorCharts.forEach(c => {
+				delete c.options.scales.x.min
+				delete c.options.scales.x.max
+				c.resetZoom()
+			})
+		},
+		fetchPerformanceMonitorData() {
+			this.dialog_performance_monitor.loading = true
 			const site_id = this.dialog_site.site.site_id
 			const env = this.dialog_site.environment_selected.environment.toLowerCase()
+			const hours = this.dialog_performance_monitor.hours || 0
+			const params = { format: 'raw' }
+			if ( hours > 0 ) params.hours = hours
 
 			axios.get( `/wp-json/captaincore/v1/sites/${site_id}/${env}/performance-monitor`, {
-				headers: { 'X-WP-Nonce': this.wp_nonce }
+				headers: { 'X-WP-Nonce': this.wp_nonce },
+				params
 			})
 			.then( response => {
-				this.dialog_site.performance_loading = false
-				const data = response.data
+				this.dialog_performance_monitor.loading = false
+				const raw = response.data
+				if ( ! raw || ! raw.samples || raw.samples.length === 0 ) return
 
-				if ( ! data || ! data.labels || data.labels.length === 0 ) {
-					this.dialog_site.performance_summary = null
-					return
-				}
-
-				this.dialog_site.performance_summary = {
-					total_samples: data.total_samples || 0,
-					total_days: data.total_days || 0,
-					bucket_label: data.bucket_label || "",
-					total_timeouts: data.total_timeouts || 0,
-					peak_db: data.peak_db || 0,
-					peak_load: data.peak_load || 0,
-					avg_response: data.avg_response || 0
-				}
-
-				// Need at least 2 data points for Frappe Charts to render properly
-				if ( data.labels.length < 2 ) {
-					return
-				}
+				const samples = raw.samples.map(s => ({
+					time: new Date(s.time),
+					db: s.db,
+					load: s.load,
+					code: s.code,
+					resp: s.resp,
+					workers: s.workers,
+					maxWorkers: s.max_workers
+				}))
 
 				this.$nextTick(() => {
-					const envKey = this.dialog_site.environment_selected.environment
-					const chartConfigs = [
-						{
-							id: `perf_chart_db_${site_id}_${envKey}`,
-							title: "DB Connections",
-							datasets: [
-								{ name: "Avg DB Conns", values: data.db_avg },
-								{ name: "Peak DB Conns", values: data.db_max }
-							],
-							colors: [ '#ff9500', '#ff3b30' ]
-						},
-						{
-							id: `perf_chart_load_${site_id}_${envKey}`,
-							title: "Server Load",
-							datasets: [
-								{ name: "Avg Load", values: data.load_avg },
-								{ name: "Peak Load", values: data.load_max }
-							],
-							colors: [ '#af52de', '#5856d6' ]
-						},
-						{
-							id: `perf_chart_response_${site_id}_${envKey}`,
-							title: "Response Time (seconds)",
-							datasets: [
-								{ name: "Avg Response", values: data.response_avg },
-								{ name: "Peak Response", values: data.response_max }
-							],
-							colors: [ '#007aff', '#ff3b30' ]
-						}
-					]
+					this.buildPerformanceSummary(samples, raw.max_workers)
+					this.buildPerformanceCharts(samples, raw.max_workers)
 
-					chartConfigs.forEach( config => {
-						const el = document.getElementById( config.id )
-						if ( ! el ) return
-						el.innerHTML = ''
-						try {
-							new frappe.Chart( `#${config.id}`, {
-								data: {
-									labels: data.labels,
-									datasets: config.datasets
-								},
-								title: config.title,
-								type: "line", height: 220,
-								colors: config.colors,
-								lineOptions: { regionFill: 1, hideDots: 1 },
-								axisOptions: { xAxisMode: "tick", xIsSeries: true }
-							})
-						} catch(e) {
-							console.warn(`Chart ${config.title} render error:`, e)
-						}
-					})
+					const first = samples[0].time.toLocaleString()
+					const last = samples[samples.length - 1].time.toLocaleString()
+					const el = document.getElementById('perfTimeRange')
+					if (el) el.textContent = `${samples.length.toLocaleString()} samples | ${first} — ${last}`
 				})
 			})
 			.catch( error => {
-				this.dialog_site.performance_loading = false
+				this.dialog_performance_monitor.loading = false
 				console.log( error )
+			})
+		},
+		buildPerformanceSummary(samples, maxWorkers) {
+			const grid = document.getElementById('perfSummaryGrid')
+			if (!grid) return
+			grid.innerHTML = ''
+
+			const vals = (key) => samples.map(s => s[key]).filter(v => v != null)
+			const avg = (arr) => arr.length ? arr.reduce((a,b) => a+b, 0) / arr.length : 0
+			const peak = (arr) => arr.length ? Math.max(...arr) : 0
+
+			const summaries = [
+				{ label: 'Avg DB Conns', value: avg(vals('db')).toFixed(1), color: '#00e676' },
+				{ label: 'Peak DB Conns', value: peak(vals('db')), color: '#ff5252' },
+				{ label: 'Avg Load', value: avg(vals('load')).toFixed(2), color: '#00d4ff' },
+				{ label: 'Peak Load', value: peak(vals('load')).toFixed(2), color: '#ff5252' },
+				{ label: 'Avg Response', value: avg(vals('resp')).toFixed(4) + 's', color: '#b388ff' },
+				{ label: 'Peak Response', value: peak(vals('resp')).toFixed(3) + 's', color: '#ff5252' },
+			]
+			if (maxWorkers > 0) {
+				summaries.push({ label: 'Peak Workers', value: peak(vals('workers')) + '/' + maxWorkers, color: '#ff9100' })
+			}
+
+			summaries.forEach(s => {
+				const card = document.createElement('div')
+				card.className = 'perf-summary-card'
+				card.innerHTML = `<div class="perf-label">${s.label}</div><div class="perf-value" style="color:${s.color}">${s.value}</div>`
+				grid.appendChild(card)
+			})
+		},
+		buildPerformanceCharts(samples, maxWorkers) {
+			// Destroy previous charts
+			perfMonitorCharts.forEach(c => c.destroy())
+			perfMonitorCharts.length = 0
+
+			// Crosshair plugin for synced hover
+			const allCharts = perfMonitorCharts
+			const crosshairPlugin = {
+				id: 'perfCrosshair',
+				afterEvent(chart, args) {
+					if (args.event.type === 'mousemove' && !args.replay) {
+						const xScale = chart.scales.x
+						if (!xScale) return
+						const xValue = xScale.getValueForPixel(args.event.x)
+						if (xValue == null) return
+						allCharts.forEach(c => {
+							if (c === chart || !c.scales || !c.scales.x) return
+							const scale = c.scales.x
+							const pixel = scale.getPixelForValue(xValue)
+							if (pixel < scale.left || pixel > scale.right) return
+							const elements = []
+							c.data.datasets.forEach((ds, dsIndex) => {
+								let closest = -1, minDist = Infinity
+								ds.data.forEach((pt, i) => {
+									const d = Math.abs(pt.x - xValue)
+									if (d < minDist) { minDist = d; closest = i }
+								})
+								if (closest >= 0) elements.push({ datasetIndex: dsIndex, index: closest })
+							})
+							c.setActiveElements(elements)
+							if (elements.length > 0) {
+								// Use the first real dataset (index 0) for positioning, not annotation lines
+								const primary = elements.find(e => e.datasetIndex === 0) || elements[0]
+								const meta = c.getDatasetMeta(primary.datasetIndex)
+								const point = meta.data[primary.index]
+								c.tooltip.setActiveElements(elements, { x: pixel, y: point ? point.y : 0 })
+							}
+							c.update('none')
+						})
+					}
+					if (args.event.type === 'mouseout') {
+						allCharts.forEach(c => {
+							c.setActiveElements([])
+							c.tooltip.setActiveElements([], { x: 0, y: 0 })
+							c.update('none')
+						})
+					}
+				}
+			}
+
+			const chartDefs = [
+				{
+					canvasId: 'perfChartDb',
+					yLabel: 'Connections',
+					datasets: [
+						{ key: 'db', label: 'DB Connections', color: '#00e676' }
+					]
+				},
+				{
+					canvasId: 'perfChartLoad',
+					yLabel: 'Load',
+					datasets: [
+						{ key: 'load', label: 'Load Avg', color: '#00d4ff' }
+					]
+				},
+				{
+					canvasId: 'perfChartResp',
+					yLabel: 'Seconds',
+					datasets: [
+						{ key: 'resp', label: 'Response Time', color: '#b388ff' }
+					]
+				},
+				{
+					canvasId: 'perfChartWorkers',
+					yLabel: 'Workers',
+					datasets: [
+						{ key: 'workers', label: 'Active Workers', color: '#ff9100' }
+					],
+					annotations: maxWorkers > 0 ? [{ value: maxWorkers, label: maxWorkers + ' max', color: '#ff525280' }] : []
+				}
+			]
+
+			// Read theme colors from CSS custom properties
+			const pmDialog = document.querySelector('.perf-monitor-dialog')
+			const pmStyles = pmDialog ? getComputedStyle(pmDialog) : null
+			const pmGrid = pmStyles ? pmStyles.getPropertyValue('--pm-grid').trim() : 'rgba(0,0,0,0.06)'
+			const pmDim = pmStyles ? pmStyles.getPropertyValue('--pm-dim').trim() : '#86868b'
+			const pmTooltipBg = pmStyles ? pmStyles.getPropertyValue('--pm-tooltip-bg').trim() : '#ffffffee'
+			const pmTooltipBorder = pmStyles ? pmStyles.getPropertyValue('--pm-tooltip-border').trim() : '#e0e0e0'
+			const pmTooltipText = pmStyles ? pmStyles.getPropertyValue('--pm-tooltip-text').trim() : '#1d1d1f'
+
+			const chartOpts = (yLabel) => ({
+				responsive: true,
+				maintainAspectRatio: false,
+				animation: false,
+				interaction: { mode: 'index', intersect: false },
+				scales: {
+					x: {
+						type: 'time',
+						time: { displayFormats: { minute: 'HH:mm', hour: 'HH:mm', day: 'MMM d HH:mm' }, tooltipFormat: 'MMM d, yyyy HH:mm:ss' },
+						grid: { color: pmGrid },
+						ticks: { color: pmDim, font: { size: 10 }, maxTicksLimit: 12 }
+					},
+					y: {
+						beginAtZero: true,
+						title: { display: true, text: yLabel, color: pmDim, font: { size: 10 } },
+						grid: { color: pmGrid },
+						ticks: { color: pmDim, font: { size: 10 } }
+					}
+				},
+				plugins: {
+					legend: { display: false },
+					tooltip: {
+						mode: 'index', intersect: false,
+						backgroundColor: pmTooltipBg, borderColor: pmTooltipBorder, borderWidth: 1,
+						titleColor: pmTooltipText, bodyColor: pmTooltipText,
+						titleFont: { size: 11 }, bodyFont: { size: 11, family: 'monospace' },
+						padding: 8, displayColors: true
+					},
+					zoom: {
+						zoom: {
+							drag: { enabled: true, backgroundColor: 'rgba(0,150,255,0.1)', borderColor: 'rgba(0,150,255,0.4)', borderWidth: 1 },
+							pinch: { enabled: true },
+							mode: 'x',
+							onZoomComplete: ({chart}) => {
+								const {min, max} = chart.scales.x
+								allCharts.forEach(c => {
+									if (c === chart) return
+									c.options.scales.x.min = min
+									c.options.scales.x.max = max
+									c.update('none')
+								})
+							}
+						}
+					}
+				}
+			})
+
+			chartDefs.forEach(def => {
+				const canvas = document.getElementById(def.canvasId)
+				if (!canvas) return
+
+				const datasets = def.datasets.map(ds => ({
+					label: ds.label,
+					data: samples.map(s => ({ x: s.time.getTime(), y: s[ds.key] })),
+					borderColor: ds.color,
+					backgroundColor: ds.color + '20',
+					borderWidth: 1.5,
+					pointRadius: 0,
+					pointHoverRadius: 4,
+					pointHoverBackgroundColor: ds.color,
+					tension: 0.3,
+					fill: true
+				}))
+
+				if (def.annotations) {
+					def.annotations.forEach(ann => {
+						datasets.push({
+							label: ann.label,
+							data: samples.map(s => ({ x: s.time.getTime(), y: ann.value })),
+							borderColor: ann.color,
+							borderWidth: 1.5,
+							borderDash: [6, 3],
+							pointRadius: 0,
+							pointHoverRadius: 0,
+							fill: false
+						})
+					})
+				}
+
+				const chart = new Chart(canvas, {
+					type: 'line',
+					data: { datasets },
+					plugins: [crosshairPlugin],
+					options: chartOpts(def.yLabel)
+				})
+
+				allCharts.push(chart)
 			})
 		},
 		saveUpdateSettings() {

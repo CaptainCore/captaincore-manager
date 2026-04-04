@@ -5086,7 +5086,22 @@ function captaincore_site_environment_performance_monitor_fetch_func( $request )
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
-	$response = CaptainCore\Run::CLI( "performance-monitor fetch $site_id-$environment" );
+	$hours   = ! empty( $request['hours'] ) ? intval( $request['hours'] ) : 0;
+	$format  = ! empty( $request['format'] ) ? sanitize_text_field( $request['format'] ) : '';
+	$command = "performance-monitor fetch $site_id-$environment";
+	if ( $hours > 0 ) {
+		$command .= " --hours=$hours";
+	}
+	if ( $format === 'raw' ) {
+		$command .= " --format=raw";
+	}
+	$result = CaptainCore\Run::execute( $command );
+
+	if ( is_wp_error( $result ) ) {
+		return $result;
+	}
+
+	$response = $result['response'] ?? '';
 
 	if ( empty( $response ) ) {
 		return new WP_Error( 'no_data', 'No performance monitor data available.', [ 'status' => 404 ] );
