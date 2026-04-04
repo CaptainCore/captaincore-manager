@@ -17355,11 +17355,11 @@ const app = createApp({
 					const pageviews = environment.stats.items.map( s => s.pageviews )
 					const visitors = environment.stats.items.map( s => s.visits )
 
-					// Destroy previous chart instance if exists
-					if ( statsCharts[chart_id] ) {
-						statsCharts[chart_id].destroy()
-						delete statsCharts[chart_id]
-					}
+					// Destroy all previous stats chart instances
+					Object.keys(statsCharts).forEach(key => {
+						statsCharts[key].destroy()
+						delete statsCharts[key]
+					})
 
 					// Generate Chart.js chart
 					const isDark = this.theme === 'dark'
