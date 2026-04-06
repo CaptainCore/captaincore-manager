@@ -10081,6 +10081,38 @@ function captaincore_component_sites_func( WP_REST_Request $request ) {
 	$results    = [];
 
 	foreach ( $sites_data as $site ) {
+		// File-type components: search details JSON for matching path+hash
+		if ( $type === 'file' ) {
+			$details = json_decode( $site->details ?? '' );
+			if ( ! $details ) {
+				continue;
+			}
+			$hash_keys = [ 'core_file_hashes', 'loose_file_hashes' ];
+			foreach ( $hash_keys as $hash_key ) {
+				if ( empty( $details->$hash_key ) ) {
+					continue;
+				}
+				foreach ( $details->$hash_key as $path => $file_hash ) {
+					if ( $path !== $slug ) {
+						continue;
+					}
+					if ( $hash && $file_hash !== $hash ) {
+						continue;
+					}
+					$results[] = [
+						'site_id'     => $site->site_id,
+						'name'        => $site->name,
+						'environment' => 'Production',
+						'home_url'    => $site->home_url ?? '',
+						'version'     => '',
+						'hash'        => $file_hash,
+						'status'      => '',
+					];
+				}
+			}
+			continue;
+		}
+
 		$columns = [];
 		if ( $type === 'theme' ) {
 			$columns = [ 'themes' ];
