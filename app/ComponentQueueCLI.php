@@ -189,6 +189,32 @@ class ComponentQueueCLI {
 					'title'   => 'MU-Plugins Directory',
 				];
 			}
+
+			// Core extra/modified file hashes
+			if ( ! empty( $details->core_file_hashes ) ) {
+				foreach ( $details->core_file_hashes as $path => $hash ) {
+					$components[] = [
+						'slug'    => $path,
+						'version' => '',
+						'type'    => 'file',
+						'hash'    => $hash,
+						'title'   => "core: $path",
+					];
+				}
+			}
+
+			// Loose wp-content PHP file hashes
+			if ( ! empty( $details->loose_file_hashes ) ) {
+				foreach ( $details->loose_file_hashes as $path => $hash ) {
+					$components[] = [
+						'slug'    => $path,
+						'version' => '',
+						'type'    => 'file',
+						'hash'    => $hash,
+						'title'   => "wp-content: $path",
+					];
+				}
+			}
 		}
 
 		return $components;
