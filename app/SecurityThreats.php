@@ -58,6 +58,32 @@ class SecurityThreats {
 					}
 				}
 			}
+
+			// Process loose files (core extra/modified + wp-content PHP files)
+			if ( ! empty( $row->details ) ) {
+				$details = json_decode( $row->details );
+
+				$file_hash_keys = [ 'core_file_hashes', 'loose_file_hashes' ];
+				foreach ( $file_hash_keys as $hash_key ) {
+					if ( empty( $details->$hash_key ) ) {
+						continue;
+					}
+					foreach ( $details->$hash_key as $path => $hash ) {
+						$key = "file|{$path}||{$hash}";
+						if ( ! isset( $counts[ $key ] ) ) {
+							$counts[ $key ] = [
+								'slug'       => $path,
+								'version'    => '',
+								'type'       => 'file',
+								'hash'       => $hash,
+								'title'      => $path,
+								'site_count' => 0,
+							];
+						}
+						$counts[ $key ]['site_count']++;
+					}
+				}
+			}
 		}
 
 		return array_values( $counts );

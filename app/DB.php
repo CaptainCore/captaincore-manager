@@ -238,7 +238,7 @@ class DB {
         if ( $environment != "all" ) {
             $environment_conditions = "AND {$table}.`environment` = '$environment'";
         }
-        $sql = "SELECT {$table}.themes, {$table}.plugins, {$table}.core
+        $sql = "SELECT {$table}.themes, {$table}.plugins, {$table}.core, {$table}.details
                 FROM {$table}
                 INNER JOIN {$wpdb->prefix}captaincore_sites ON {$table}.site_id = {$wpdb->prefix}captaincore_sites.site_id
                 WHERE {$wpdb->prefix}captaincore_sites.`status` = 'active' $environment_conditions";

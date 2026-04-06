@@ -8924,6 +8924,16 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	register_rest_route(
+		'captaincore/v1', '/site-audits/(?P<id>[\d]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_site_audits_delete_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+		]
+	);
+
 };
 
 /**
@@ -9667,6 +9677,32 @@ function captaincore_site_audits_unpublish_func( WP_REST_Request $request ) {
 }
 
 /**
+ * REST endpoint: Delete a security audit and its findings.
+ */
+function captaincore_site_audits_delete_func( WP_REST_Request $request ) {
+	$audit_id = intval( $request['id'] );
+	$audit    = ( new CaptainCore\SiteAudits )->get( $audit_id );
+
+	if ( ! $audit ) {
+		return new WP_Error( 'not_found', 'Audit not found.', [ 'status' => 404 ] );
+	}
+
+	// Unpublish the report file if it exists.
+	( new CaptainCore\SiteAudit( $audit_id ) )->unpublish();
+
+	// Delete all findings for this audit.
+	$findings = ( new CaptainCore\SiteAuditFindings )->where( [ 'site_audit_id' => $audit_id ] );
+	foreach ( $findings as $finding ) {
+		( new CaptainCore\SiteAuditFindings )->delete( $finding->site_audit_finding_id );
+	}
+
+	// Delete the audit record.
+	( new CaptainCore\SiteAudits )->delete( $audit_id );
+
+	return [ 'deleted' => true, 'site_audit_id' => $audit_id, 'findings_deleted' => count( $findings ) ];
+}
+
+/**
  * REST endpoint: Add a finding to a security audit.
  */
 function captaincore_site_audits_add_finding_func( WP_REST_Request $request ) {
@@ -9791,7 +9827,7 @@ function captaincore_security_coverage_func( WP_REST_Request $request ) {
 		  AND e.plugins IS NOT NULL
 	" );
 
-	$hashes     = [ 'plugin' => [], 'theme' => [], 'mu_plugin' => [] ];
+	$hashes     = [ 'plugin' => [], 'theme' => [], 'mu_plugin' => [], 'file' => [] ];
 	$no_hash    = [ 'plugin' => 0, 'theme' => 0 ];
 	$total_sites = count( $environments );
 
@@ -9829,16 +9865,26 @@ function captaincore_security_coverage_func( WP_REST_Request $request ) {
 		if ( ! empty( $details->mu_plugins_hash ) ) {
 			$hashes['mu_plugin'][ $details->mu_plugins_hash ] = true;
 		}
+
+		// Loose file hashes (core extra/modified + wp-content PHP files)
+		foreach ( [ 'core_file_hashes', 'loose_file_hashes' ] as $hash_key ) {
+			if ( ! empty( $details->$hash_key ) ) {
+				foreach ( $details->$hash_key as $path => $hash ) {
+					$hashes['file'][ $hash ] = true;
+				}
+			}
+		}
 	}
 
 	// Check which hashes have been audited (single batch query)
-	$audited = [ 'plugin' => 0, 'theme' => 0, 'mu_plugin' => 0 ];
-	$total   = [ 'plugin' => count( $hashes['plugin'] ), 'theme' => count( $hashes['theme'] ), 'mu_plugin' => count( $hashes['mu_plugin'] ) ];
+	$audited = [ 'plugin' => 0, 'theme' => 0, 'mu_plugin' => 0, 'file' => 0 ];
+	$total   = [ 'plugin' => count( $hashes['plugin'] ), 'theme' => count( $hashes['theme'] ), 'mu_plugin' => count( $hashes['mu_plugin'] ), 'file' => count( $hashes['file'] ) ];
 
 	$all_hashes = array_merge(
 		array_keys( $hashes['plugin'] ),
 		array_keys( $hashes['theme'] ),
-		array_keys( $hashes['mu_plugin'] )
+		array_keys( $hashes['mu_plugin'] ),
+		array_keys( $hashes['file'] )
 	);
 
 	$audited_set = [];
@@ -9851,7 +9897,7 @@ function captaincore_security_coverage_func( WP_REST_Request $request ) {
 		$audited_set = array_flip( $audited_rows );
 	}
 
-	foreach ( [ 'plugin', 'theme', 'mu_plugin' ] as $type ) {
+	foreach ( [ 'plugin', 'theme', 'mu_plugin', 'file' ] as $type ) {
 		foreach ( array_keys( $hashes[ $type ] ) as $hash ) {
 			if ( isset( $audited_set[ $hash ] ) ) {
 				$audited[ $type ]++;
@@ -9861,8 +9907,8 @@ function captaincore_security_coverage_func( WP_REST_Request $request ) {
 
 	// Exclude mu_plugin directory hashes from overall totals — mu-plugins are now
 	// tracked via the manifest-based approach, not whole-directory hashes.
-	$total_unique  = $total['plugin'] + $total['theme'];
-	$total_audited = $audited['plugin'] + $audited['theme'];
+	$total_unique  = $total['plugin'] + $total['theme'] + $total['file'];
+	$total_audited = $audited['plugin'] + $audited['theme'] + $audited['file'];
 
 	return [
 		'total_sites'         => $total_sites,
@@ -9875,6 +9921,7 @@ function captaincore_security_coverage_func( WP_REST_Request $request ) {
 			'plugins'    => [ 'unique_hashes' => $total['plugin'],    'audited' => $audited['plugin'] ],
 			'themes'     => [ 'unique_hashes' => $total['theme'],     'audited' => $audited['theme'] ],
 			'mu_plugins' => [ 'unique_hashes' => $total['mu_plugin'], 'audited' => $audited['mu_plugin'] ],
+			'files'      => [ 'unique_hashes' => $total['file'],      'audited' => $audited['file'] ],
 		],
 	];
 }
