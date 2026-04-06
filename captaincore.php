@@ -9860,10 +9860,14 @@ function captaincore_security_coverage_func( WP_REST_Request $request ) {
 			}
 		}
 
-		// MU-plugins directory hash
+		// Per-component mu-plugin hashes
 		$details = json_decode( $env->details );
-		if ( ! empty( $details->mu_plugins_hash ) ) {
-			$hashes['mu_plugin'][ $details->mu_plugins_hash ] = true;
+		if ( ! empty( $details->mu_plugins ) && is_array( $details->mu_plugins ) ) {
+			foreach ( $details->mu_plugins as $mu ) {
+				if ( ! empty( $mu->hash ) ) {
+					$hashes['mu_plugin'][ $mu->hash ] = true;
+				}
+			}
 		}
 
 		// Loose file hashes (core extra/modified + wp-content PHP files)
@@ -9905,10 +9909,8 @@ function captaincore_security_coverage_func( WP_REST_Request $request ) {
 		}
 	}
 
-	// Exclude mu_plugin directory hashes from overall totals — mu-plugins are now
-	// tracked via the manifest-based approach, not whole-directory hashes.
-	$total_unique  = $total['plugin'] + $total['theme'] + $total['file'];
-	$total_audited = $audited['plugin'] + $audited['theme'] + $audited['file'];
+	$total_unique  = $total['plugin'] + $total['theme'] + $total['mu_plugin'] + $total['file'];
+	$total_audited = $audited['plugin'] + $audited['theme'] + $audited['mu_plugin'] + $audited['file'];
 
 	return [
 		'total_sites'         => $total_sites,
