@@ -10035,6 +10035,34 @@ function captaincore_component_hashes_func( WP_REST_Request $request ) {
 }
 
 /**
+ * Get unique must-use plugin slugs across the fleet (internal helper, not a REST endpoint).
+ */
+function captaincore_fleet_mu_slugs_func(): array {
+	global $wpdb;
+	$env_table   = "{$wpdb->prefix}captaincore_environments";
+	$sites_table = "{$wpdb->prefix}captaincore_sites";
+
+	$rows = $wpdb->get_col( "
+		SELECT DISTINCT plugins FROM {$env_table} e
+		JOIN {$sites_table} s ON e.site_id = s.site_id
+		WHERE s.status = 'active' AND e.environment = 'Production' AND e.plugins IS NOT NULL
+	" );
+
+	$slugs = [];
+	foreach ( $rows as $json ) {
+		$plugins = json_decode( $json );
+		if ( ! is_array( $plugins ) ) continue;
+		foreach ( $plugins as $p ) {
+			if ( $p->status === 'must-use' && ! empty( $p->name ) ) {
+				$slugs[ $p->name ] = true;
+			}
+		}
+	}
+
+	return array_keys( $slugs );
+}
+
+/**
  * REST endpoint: Live environments matching a component by slug (and optionally hash).
  *
  * Returns array of sites currently running the specified component,
