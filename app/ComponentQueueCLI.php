@@ -177,18 +177,13 @@ class ComponentQueueCLI {
 			}
 		}
 
-		// MU-plugins directory hash from environment details
+		// Loose files and mu-plugin metadata from environment details
 		if ( ! empty( $site->details ) ) {
 			$details = json_decode( $site->details );
-			if ( ! empty( $details->mu_plugins_hash ) ) {
-				$components[] = [
-					'slug'    => '_mu_plugins',
-					'version' => '',
-					'type'    => 'mu-plugin',
-					'hash'    => $details->mu_plugins_hash,
-					'title'   => 'MU-Plugins Directory',
-				];
-			}
+
+			// Note: _mu_plugins directory hash is intentionally excluded from the queue.
+			// MU-plugins are tracked via the manifest-based approach (individual slugs),
+			// not whole-directory hashes. The hash is still stored for drift detection.
 
 			// Core extra/modified file hashes
 			if ( ! empty( $details->core_file_hashes ) ) {
