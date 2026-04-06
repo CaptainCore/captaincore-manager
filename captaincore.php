@@ -9979,6 +9979,14 @@ function captaincore_component_queue_func( WP_REST_Request $request ) {
 	$all = array_merge( array_values( $hash_map ), array_values( $no_hash ) );
 	$unaudited = CaptainCore\ComponentQueueCLI::filter_unaudited( $all );
 
+	// Filter by component type if specified
+	$filter_type = sanitize_text_field( $request->get_param( 'type' ) ?: '' );
+	if ( $filter_type ) {
+		$unaudited = array_values( array_filter( $unaudited, function ( $item ) use ( $filter_type ) {
+			return ( $item['type'] ?? '' ) === $filter_type;
+		} ) );
+	}
+
 	// Version grouping: aggregate by slug+version, sum sites, count distinct hashes
 	if ( $group_by === 'version' ) {
 		$unaudited_by_hash = [];
