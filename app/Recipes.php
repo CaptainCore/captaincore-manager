@@ -18,9 +18,11 @@ class Recipes extends DB {
         }
 
         foreach( $all_recipes as $recipe ) {
-			// Remove details if not and admin and record not owned by them
+			// Remove details if not admin and record not owned by them (keep content for public recipes)
 			if ( ! $user->is_admin() && $recipe->user_id != $user_id ) {
-				$recipe->content = "";
+				if ( empty( $recipe->public ) ) {
+					$recipe->content = "";
+				}
 				$recipe->user_id = "system";
 			}
             
