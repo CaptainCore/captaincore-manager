@@ -22,7 +22,7 @@ class SiteAudit {
         $audit->home_url    = $environment ? $environment->home_url : '';
         $audit->environment = $environment ? $environment->environment : '';
         $audit->site_name   = $site ? $site->name : '';
-        if ( empty( $audit->site_name ) && ! empty( $audit->home_url ) ) {
+        if ( ( empty( $audit->site_name ) || $audit->environment === 'Staging' ) && ! empty( $audit->home_url ) ) {
             $audit->site_name = preg_replace( '/^www\./', '', parse_url( $audit->home_url, PHP_URL_HOST ) ?: '' );
         }
         $audit->findings    = $this->findings();
