@@ -13823,7 +13823,7 @@ const app = createApp({
 			return this.jobs.filter(job => job.status == 'done' || job.status == 'error' ).length;
 		},
 		filteredRecipes() {
-			return this.recipes.filter( recipe => recipe.user_id != 'system' );
+			return this.recipes.filter( recipe => recipe.user_id != 'system' || recipe.public == 1 );
 		},
 		totalEnvironmentsCount() {
 			return this.sites.reduce((acc, site) => acc + (site.environments ? site.environments.length : 0), 0);
