@@ -1158,7 +1158,9 @@ class Domain {
         if ( $provider->provider == "spaceship" ) {
             $response = \CaptainCore\Remote\Spaceship::put( "domains/{$domain->name}/nameservers", [ "provider" => "custom", "hosts" => $nameservers ] );
             if ( empty( $response->hosts ) || ! empty( $response->data ) ) {
-                return [ "error" => "There was a problem updating nameservers. Check formatting and try again." ];
+                $detail = $response->detail ?? '';
+                $data   = ! empty( $response->data ) ? json_encode( $response->data ) : '';
+                return [ "error" => "There was a problem updating nameservers. {$detail} {$data}" ];
             }
             $this->clear_provider_cache();
             return [ "response" => "Nameservers have been updated." ];
