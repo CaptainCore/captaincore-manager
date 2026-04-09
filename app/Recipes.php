@@ -18,6 +18,7 @@ class Recipes extends DB {
         }
 
         foreach( $all_recipes as $recipe ) {
+			$recipe->public = (int) $recipe->public;
 			// Remove details if not admin and record not owned by them (keep content for public recipes)
 			if ( ! $user->is_admin() && $recipe->user_id != $user_id ) {
 				if ( empty( $recipe->public ) ) {
@@ -25,7 +26,7 @@ class Recipes extends DB {
 				}
 				$recipe->user_id = "system";
 			}
-            
+
             unset( $recipe->updated_at );
             unset( $recipe->created_at );
             $recipes[] = $recipe;

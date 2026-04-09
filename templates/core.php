@@ -19261,9 +19261,8 @@ const app = createApp({
 					headers: { 'X-WP-Nonce': this.wp_nonce }
 				})
 				.then( response => {
-					this.new_recipe = { show: false, title: "", content: "" };
+					this.new_recipe = { show: false, title: "", content: "", public: 1 };
 					this.recipes = response.data;
-					this.new_recipe = { title: "", content: "" };
 				})
 				.catch( error => console.log( error ) );
 		},
