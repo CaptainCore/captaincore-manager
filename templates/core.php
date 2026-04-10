@@ -4875,6 +4875,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<v-col cols="12" md="6" class="keys py-2">
 							<v-list density="compact" class="mx-auto" style="max-width: 350px; background: transparent; padding: 0px;">
 								<v-list-item @click="copySFTP(dialog_site.environment_selected)" density="compact" title="SFTP Info" append-icon="mdi-content-copy"></v-list-item>
+								<v-list-item v-if="role == 'administrator' && dialog_site.site.provider === 'kinsta'" @click="remoteSyncSite()" :disabled="dialog_site.remote_sync_loading" density="compact" title="Remote Sync" subtitle="Pull credentials from Kinsta" :append-icon="dialog_site.remote_sync_loading ? 'mdi-loading mdi-spin' : 'mdi-cloud-sync'"></v-list-item>
 								<v-list-item v-if="dialog_site.environment_selected.database" @click="copyDatabase(dialog_site.environment_selected)" density="compact" title="Database Info" append-icon="mdi-content-copy"></v-list-item>
 								<v-list-item @click="copyText(dialog_site.environment_selected.address)" density="compact" title="Address" :subtitle="dialog_site.environment_selected.address" append-icon="mdi-content-copy"></v-list-item>
 								<v-list-item @click="copyText(dialog_site.environment_selected.username)" density="compact" title="Username" :subtitle="dialog_site.environment_selected.username" append-icon="mdi-content-copy"></v-list-item>
@@ -12978,7 +12979,7 @@ const app = createApp({
 		backup_set_files: [],
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_billing: { step: 1 },
-		dialog_site: { loading: true, syncing: false, step: 1, backup_step: 1, grant_access: [], grant_access_menu: false, desired_environment_id: null, environment_selected: { environment_id: "0", expanded_backups: [], quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false, server_logs: { files: [] }, view_server_logs: false, loading_server_logs: false, server_log_limit: "1000", server_log_selected: "", server_log_response: "", server_log_lines: [], server_log_search: "" }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], key: null, tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
+		dialog_site: { loading: true, syncing: false, remote_sync_loading: false, step: 1, backup_step: 1, grant_access: [], grant_access_menu: false, desired_environment_id: null, environment_selected: { environment_id: "0", expanded_backups: [], quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false, server_logs: { files: [] }, view_server_logs: false, loading_server_logs: false, server_log_limit: "1000", server_log_selected: "", server_log_response: "", server_log_lines: [], server_log_search: "" }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], key: null, tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
 		dialog_site_request: { show: false, request: {} },
 		dialog_edit_account: { show: false, account: {} },
 		dialog_account_portal: { show: false, portal: { domain: "", configuration: {}, email: { host: "", port: "", encryption_type: "tls", username: "", password: "" }, colors: { primary: "#0D47A1", secondary: "#424242", accent: "#82B1FF", error: "#FF5252", info: "#0D47A1", success: "#4CAF50", warning: "#FFC107" } }, colors: { primary: false, secondary: false, accent: false, error: false, info: false, success: false, warning: false } },
@@ -19947,6 +19948,43 @@ const app = createApp({
 				.then(response => {
 					window.open( response.data )
 				});
+		},
+		remoteSyncSite(){
+			const site_id = this.dialog_site.site.site_id
+			this.dialog_site.remote_sync_loading = true
+			this.snackbar.message = "Pulling credentials from Kinsta…"
+			this.snackbar.show = true
+			axios.post(
+				`/wp-json/captaincore/v1/sites/${site_id}/remote-sync`, {}, {
+					headers: {'X-WP-Nonce':this.wp_nonce}
+				})
+				.then(response => {
+					const data = response.data || {}
+					const changes = data.changes || []
+					const warnings = data.warnings || []
+					let message = data.message || "Remote sync complete"
+					if (data.status === 'error') {
+						message = "Remote sync failed: " + (data.message || 'Unknown error')
+					} else if (changes.length > 0) {
+						const summary = changes.map(c => `${c.environment}.${c.field}`).join(', ')
+						message = `Updated ${summary} from Kinsta`
+					}
+					if (warnings.length > 0) {
+						message += " — " + warnings.join('; ')
+					}
+					this.snackbar.message = message
+					this.snackbar.show = true
+					if (data.status === 'updated') {
+						this.fetchSiteEnvironments(site_id)
+					}
+				})
+				.catch(error => {
+					this.snackbar.message = "Remote sync failed: " + (error?.response?.data?.message || error.message)
+					this.snackbar.show = true
+				})
+				.then(() => {
+					this.dialog_site.remote_sync_loading = false
+				})
 		},
 		showSiteMigration( site_id ){
 			site = this.dialog_site.site

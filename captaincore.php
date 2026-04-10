@@ -90,6 +90,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command( 'captaincore error-log-sizes', 'CaptainCore\ErrorLogCLI' );
 	WP_CLI::add_command( 'captaincore mu-manifest-generate', 'CaptainCore\MuManifestCLI' );
 	WP_CLI::add_command( 'captaincore dns', 'CaptainCore\DnsCLI' );
+	WP_CLI::add_command( 'captaincore provider-sync', 'CaptainCore\ProviderSyncCLI' );
 }
 
 /* -------------------------------------------------------------------------
@@ -5040,6 +5041,17 @@ function captaincore_site_grant_access_func( $request ) {
 	return $site_id;
 }
 
+function captaincore_site_remote_sync_func( $request ) {
+	$site_id = intval( $request['id'] );
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+	}
+
+	$result = ( new CaptainCore\Site( $site_id ) )->remote_sync();
+	return rest_ensure_response( $result );
+}
+
 function captaincore_site_environment_monitor_update_func( $request ) {
 	$site_id = $request['id'];
 
@@ -6733,6 +6745,14 @@ function captaincore_register_rest_endpoints() {
 			'methods'             => 'DELETE',
 			'callback'            => 'captaincore_site_delete_func',
 			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/remote-sync', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_remote_sync_func',
+			'permission_callback' => 'captaincore_admin_permission_check',
+			'show_in_index'       => false,
 		]
 	);
 	register_rest_route(
@@ -9716,7 +9736,7 @@ function captaincore_site_audits_add_finding_func( WP_REST_Request $request ) {
 		'description'    => wp_kses_post( $params['description'] ?? '' ),
 		'evidence'       => wp_json_encode( $params['evidence'] ?? [] ),
 		'recommendation' => sanitize_text_field( $params['recommendation'] ?? '' ),
-		'resolution'     => sanitize_text_field( $params['resolution'] ?? '' ),
+		'resolution'     => wp_kses_post( $params['resolution'] ?? '' ),
 	];
 
 	if ( ! empty( $params['status'] ) && $params['status'] === 'resolved' ) {
@@ -9738,7 +9758,7 @@ function captaincore_site_audits_update_finding_func( WP_REST_Request $request )
 
 	// If resolving, use the dedicated method
 	if ( ! empty( $params['status'] ) && $params['status'] === 'resolved' ) {
-		$resolution = sanitize_text_field( $params['resolution'] ?? '' );
+		$resolution = wp_kses_post( $params['resolution'] ?? '' );
 		( new CaptainCore\SiteAudit( $audit_id ) )->resolve_finding( $finding_id, $resolution );
 		$finding = ( new CaptainCore\SiteAuditFindings )->get( $finding_id );
 		return $finding;
@@ -9750,7 +9770,7 @@ function captaincore_site_audits_update_finding_func( WP_REST_Request $request )
 
 	foreach ( $allowed as $field ) {
 		if ( isset( $params[ $field ] ) ) {
-			if ( $field === 'description' ) {
+			if ( $field === 'description' || $field === 'resolution' ) {
 				$data[ $field ] = wp_kses_post( $params[ $field ] );
 			} elseif ( $field === 'evidence' ) {
 				$data[ $field ] = wp_json_encode( $params[ $field ] );

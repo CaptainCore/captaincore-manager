@@ -80,10 +80,68 @@ class Kinsta {
                 'remote_id' => $kinsta_site->id,
                 'name'      => $kinsta_site->display_name,
                 'label'     => $kinsta_site->display_name,
+                'slug'      => $kinsta_site->name ?? '',
                 'status'    => $kinsta_site->status ?? 'active',
             ];
         }
         return $sites;
+    }
+
+    /**
+     * Fetch all environments for a remote Kinsta site, normalized for local use.
+     *
+     * Returns one entry per environment with the same field names used in
+     * wp_captaincore_environments (Production/Staging label, address, port,
+     * username, password, home_directory) so callers can diff against local rows
+     * directly.
+     *
+     * @param string $remote_site_id Kinsta site UUID
+     * @param string $provider_id    CaptainCore provider id (defaults to primary Kinsta)
+     * @return array|\WP_Error
+     */
+    public static function fetch_remote_environments( $remote_site_id = "", $provider_id = "" ) {
+        if ( empty( $remote_site_id ) ) {
+            return new \WP_Error( 'kinsta_missing_remote_id', 'Remote Kinsta site id is required' );
+        }
+
+        $api_key = self::credentials( "api", $provider_id );
+        if ( empty( $api_key ) ) {
+            return new \WP_Error( 'kinsta_missing_api_key', 'Kinsta API key not configured for this provider' );
+        }
+
+        \CaptainCore\Remote\Kinsta::setApiKey( $api_key );
+
+        $site_response = \CaptainCore\Remote\Kinsta::get( "sites/{$remote_site_id}" );
+        if ( empty( $site_response->site ) ) {
+            $message = $site_response->message ?? 'Kinsta site not found';
+            return new \WP_Error( 'kinsta_site_not_found', "Kinsta site lookup failed: {$message}" );
+        }
+        $username = $site_response->site->name ?? '';
+
+        $environments_response = \CaptainCore\Remote\Kinsta::get( "sites/{$remote_site_id}/environments" );
+        if ( empty( $environments_response->site->environments ) ) {
+            return new \WP_Error( 'kinsta_no_environments', 'No environments returned from Kinsta' );
+        }
+
+        $environments = [];
+        foreach ( $environments_response->site->environments as $env ) {
+            $label  = ( $env->name === 'live' ) ? 'Production' : 'Staging';
+            $remote = [
+                'remote_id'      => $env->id,
+                'environment'    => $label,
+                'address'        => $env->ssh_connection->ssh_ip->external_ip ?? '',
+                'port'           => (string) ( $env->ssh_connection->ssh_port ?? '' ),
+                'username'       => $username,
+                'password'       => '',
+                'home_directory' => $env->web_root ?? '',
+            ];
+
+            $password_response = \CaptainCore\Remote\Kinsta::get( "sites/environments/{$env->id}/ssh/password" );
+            $remote['password'] = $password_response->environment->sftp_password ?? '';
+
+            $environments[] = $remote;
+        }
+        return $environments;
     }
 
     public static function enrich_imported_site( $site_id, $remote_site, $provider_id = "" ) {
