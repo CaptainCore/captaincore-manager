@@ -158,6 +158,88 @@ class SiteAudit {
         return $findings;
     }
 
+    /**
+     * Normalize a bar-chart bar's width into a valid CSS length string.
+     *
+     * Accepts:
+     *   - already-formatted CSS strings ("100%", "240px") — passed through
+     *   - bare numbers (100 or "100") — appended with "%"
+     *   - null / empty — auto-computed from $value/$max_numeric, falling back to "0%"
+     *
+     * @param mixed $width            Raw width value from the bar payload.
+     * @param mixed $value            The bar's numeric value (for auto-compute).
+     * @param float $max_numeric      Largest numeric value across all bars in the chart.
+     * @param bool  $any_explicit     Whether any bar in the chart had an explicit width.
+     * @return string                 An esc_attr-safe CSS length string.
+     */
+    private function normalize_bar_width( $width, $value, $max_numeric, $any_explicit ) {
+        // Auto-compute when no explicit width was supplied anywhere in the chart
+        if ( ( $width === null || $width === '' ) && ! $any_explicit ) {
+            if ( is_numeric( $value ) && $max_numeric > 0 ) {
+                $pct = max( 0.0, min( 100.0, ( (float) $value / $max_numeric ) * 100 ) );
+                return esc_attr( round( $pct, 1 ) . '%' );
+            }
+            return '0%';
+        }
+
+        if ( $width === null || $width === '' ) {
+            return '0%';
+        }
+
+        // Bare number (int, float, or numeric string) → treat as percent
+        if ( is_numeric( $width ) ) {
+            return esc_attr( $width . '%' );
+        }
+
+        // String that ends in a digit (no unit) → append %
+        $width_str = (string) $width;
+        if ( preg_match( '/[0-9]$/', $width_str ) ) {
+            return esc_attr( $width_str . '%' );
+        }
+
+        return esc_attr( $width_str );
+    }
+
+    /**
+     * Normalize a bar-chart bar's color into a valid CSS color value.
+     *
+     * Accepts the same severity vocabulary used by stats / table cells
+     * (info / clean / good / warn / critical / poor) and maps to the
+     * report's CSS variables. Already-valid CSS values pass through.
+     *
+     * @param mixed $color  Raw color value from the bar payload.
+     * @return string       An esc_attr-safe CSS color value.
+     */
+    private function normalize_bar_color( $color ) {
+        if ( $color === null || $color === '' ) {
+            return 'var(--c1)';
+        }
+
+        $map = [
+            'info'     => 'var(--c1)',
+            'clean'    => 'var(--c2)',
+            'good'     => 'var(--c2)',
+            'warn'     => '#d97706',
+            'warn-cell'=> '#d97706',
+            'critical' => 'var(--c3)',
+            'poor'     => 'var(--c3)',
+            'high'     => 'var(--c3)',
+            'medium'   => '#d97706',
+            'low'      => 'var(--c1)',
+            // Convenience aliases for the chart palette itself
+            'c1'       => 'var(--c1)',
+            'c2'       => 'var(--c2)',
+            'c3'       => 'var(--c3)',
+        ];
+
+        $key = strtolower( trim( (string) $color ) );
+        if ( isset( $map[ $key ] ) ) {
+            return $map[ $key ];
+        }
+
+        return esc_attr( $color );
+    }
+
     public function render_html() {
         $audit = $this->get();
         if ( ! $audit ) {
@@ -574,9 +656,9 @@ class SiteAudit {
             }
         }
 
-        // Resolution
+        // Resolution — stored via wp_kses_post like description, render raw
         if ( $status === 'resolved' && ! empty( $finding->resolution ) ) {
-            $html .= "    <div class=\"resolution\">" . esc_html( $finding->resolution ) . "</div>\n";
+            $html .= "    <div class=\"resolution\">" . $finding->resolution . "</div>\n";
         }
 
         // Inline recommendation
@@ -603,11 +685,26 @@ class SiteAudit {
                     $html .= "    <div class=\"chart-title\">{$chart_title}</div>\n";
                 }
                 $html .= "    <div class=\"bar-chart\">\n";
-                foreach ( ( $block->bars ?? [] ) as $bar ) {
+
+                $bars = $block->bars ?? [];
+
+                // If no explicit width on any bar, auto-compute from numeric value relative to max.
+                $any_explicit_width = false;
+                $max_numeric = 0.0;
+                foreach ( $bars as $b ) {
+                    if ( isset( $b->width ) && $b->width !== '' ) {
+                        $any_explicit_width = true;
+                    }
+                    if ( isset( $b->value ) && is_numeric( $b->value ) ) {
+                        $max_numeric = max( $max_numeric, (float) $b->value );
+                    }
+                }
+
+                foreach ( $bars as $bar ) {
                     $label = esc_html( $bar->label ?? '' );
                     $value = esc_html( $bar->value ?? '' );
-                    $width = esc_attr( $bar->width ?? '0%' );
-                    $color = esc_attr( $bar->color ?? 'var(--c1)' );
+                    $width = $this->normalize_bar_width( $bar->width ?? null, $bar->value ?? null, $max_numeric, $any_explicit_width );
+                    $color = $this->normalize_bar_color( $bar->color ?? null );
                     $html .= "      <div class=\"bar-row\">\n";
                     $html .= "        <div class=\"bar-label\">{$label}</div>\n";
                     $html .= "        <div class=\"bar-track\"><div class=\"bar-fill\" style=\"width:{$width};background:{$color}\">{$value}</div></div>\n";
@@ -827,8 +924,14 @@ class SiteAudit {
   .severity.medium { background: #fffbeb; color: #d97706; }
   .severity.low { background: #eff6ff; color: #2563eb; }
   .severity.clean { background: #f0fdf4; color: #16a34a; }
-  .resolution { margin-top: 0.5rem; font-size: 0.84rem; font-weight: 500; display: flex; align-items: center; gap: 0.5rem; color: #166534; }
-  .resolution::before { content: \'\\2713\'; display: inline-flex; align-items: center; justify-content: center; width: 1.15rem; height: 1.15rem; background: #16a34a; color: #fff; border-radius: 50%; font-size: 0.65rem; font-weight: 700; flex-shrink: 0; }
+  .resolution { margin-top: 0.75rem; padding: 0.75rem 0.85rem 0.75rem 2.4rem; font-size: 0.84rem; line-height: 1.5; color: #166534; background: #f0fdf4; border-left: 3px solid #16a34a; border-radius: 4px; position: relative; }
+  .resolution::before { content: \'\\2713\'; position: absolute; left: 0.75rem; top: 0.85rem; display: inline-flex; align-items: center; justify-content: center; width: 1.15rem; height: 1.15rem; background: #16a34a; color: #fff; border-radius: 50%; font-size: 0.65rem; font-weight: 700; }
+  .resolution p { margin: 0 0 0.5rem 0; color: #166534; font-size: 0.84rem; }
+  .resolution p:last-child { margin-bottom: 0; }
+  .resolution ul { margin: 0.25rem 0 0.5rem 0; padding-left: 1.25rem; }
+  .resolution li { font-size: 0.82rem; color: #166534; margin-bottom: 0.2rem; }
+  .resolution code { font-family: var(--mono); font-size: 0.78em; background: #dcfce7; padding: 1px 5px; border-radius: 3px; color: #14532d; }
+  .resolution strong { color: #14532d; font-weight: 650; }
   table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
   th, td { text-align: left; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--border); }
   th { font-weight: 600; color: var(--muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; background: var(--bg); }
