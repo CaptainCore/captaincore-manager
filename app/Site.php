@@ -463,6 +463,278 @@ class Site {
         return $response["body"];
     }
 
+    /**
+     * Pull live SFTP/SSH connection details from the site's hosting provider
+     * and reconcile them with the locally stored environment rows.
+     *
+     * Dispatches to the provider class named after $site->provider (e.g.
+     * CaptainCore\Providers\Kinsta). A provider is considered to support
+     * remote sync when its class exposes a static fetch_remote_environments()
+     * method; sites whose provider doesn't yet implement it return a
+     * "skipped" status rather than an error so fleet-wide sweeps can
+     * progress past them cleanly.
+     *
+     * Returns:
+     *   [
+     *     'status'   => 'in-sync' | 'updated' | 'skipped' | 'error',
+     *     'message'  => string,
+     *     'changes'  => [ [ 'environment', 'field', 'before', 'after' ], ... ],
+     *     'warnings' => string[],
+     *   ]
+     *
+     * @param bool $dry_run When true, diffs are computed but no writes occur.
+     */
+    public function remote_sync( $dry_run = false ) {
+        $result = [
+            'status'   => 'in-sync',
+            'message'  => '',
+            'changes'  => [],
+            'warnings' => [],
+        ];
+
+        $site = ( new Sites )->get( $this->site_id );
+        if ( empty( $site ) || empty( $site->site_id ) ) {
+            $result['status']  = 'error';
+            $result['message'] = "Site #{$this->site_id} not found";
+            return $result;
+        }
+
+        // Resolve the provider class and verify it implements the fetch convention.
+        if ( empty( $site->provider ) ) {
+            $result['status']  = 'skipped';
+            $result['message'] = 'Site has no provider configured';
+            return $result;
+        }
+        $provider_class = 'CaptainCore\\Providers\\' . ucfirst( $site->provider );
+        if ( ! class_exists( $provider_class ) || ! method_exists( $provider_class, 'fetch_remote_environments' ) ) {
+            $result['status']  = 'skipped';
+            $result['message'] = "Provider '{$site->provider}' does not implement remote sync yet";
+            return $result;
+        }
+
+        // Resolve provider_site_id, auto-discovering if missing.
+        $provider_site_id = $site->provider_site_id;
+        if ( empty( $provider_site_id ) ) {
+            $resolved = $this->resolve_provider_site_id( $site, $provider_class );
+            if ( is_wp_error( $resolved ) ) {
+                $result['status']  = 'error';
+                $result['message'] = $resolved->get_error_message();
+                $candidates = $resolved->get_error_data( 'candidates' );
+                if ( ! empty( $candidates ) ) {
+                    $result['warnings'][] = 'Multiple matches: ' . wp_json_encode( $candidates );
+                }
+                return $result;
+            }
+            $provider_site_id = $resolved;
+            if ( ! $dry_run ) {
+                ( new Sites )->update(
+                    [ 'provider_site_id' => $provider_site_id, 'updated_at' => date( 'Y-m-d H:i:s' ) ],
+                    [ 'site_id' => $this->site_id ]
+                );
+                ActivityLog::log( 'updated', 'site', $this->site_id, $site->name, "Auto-resolved {$site->provider} provider_site_id to {$provider_site_id}" );
+            }
+            $result['warnings'][] = "Auto-resolved missing provider_site_id to {$provider_site_id}";
+            $site->provider_site_id = $provider_site_id;
+        }
+
+        // Fetch normalized envs from the provider.
+        $remote_envs = $provider_class::fetch_remote_environments( $provider_site_id, $site->provider_id );
+        if ( is_wp_error( $remote_envs ) ) {
+            $result['status']  = 'error';
+            $result['message'] = $remote_envs->get_error_message();
+            return $result;
+        }
+
+        $remote_by_label = [];
+        foreach ( $remote_envs as $remote_env ) {
+            $remote_by_label[ $remote_env['environment'] ] = $remote_env;
+        }
+
+        $local_envs   = ( new Environments )->where( [ 'site_id' => $this->site_id ] );
+        $fields       = [ 'address', 'port', 'username', 'password', 'home_directory' ];
+        $local_labels = [];
+
+        foreach ( $local_envs as $local_env ) {
+            $local_labels[] = $local_env->environment;
+            if ( ! isset( $remote_by_label[ $local_env->environment ] ) ) {
+                $result['warnings'][] = "Local '{$local_env->environment}' environment has no match on {$site->provider}";
+                continue;
+            }
+            $remote_env = $remote_by_label[ $local_env->environment ];
+            $update     = [];
+            foreach ( $fields as $field ) {
+                $local_value  = (string) ( $local_env->$field ?? '' );
+                $remote_value = (string) ( $remote_env[ $field ] ?? '' );
+                if ( $remote_value === '' ) {
+                    // Don't blow away local values with an empty remote response.
+                    continue;
+                }
+                if ( $local_value !== $remote_value ) {
+                    $update[ $field ]    = $remote_value;
+                    $result['changes'][] = [
+                        'environment' => $local_env->environment,
+                        'field'       => $field,
+                        'before'      => self::mask_value( $field, $local_value ),
+                        'after'       => self::mask_value( $field, $remote_value ),
+                    ];
+                }
+            }
+            if ( ! empty( $update ) && ! $dry_run ) {
+                $update['updated_at'] = date( 'Y-m-d H:i:s' );
+                ( new Environments )->update( $update, [ 'environment_id' => $local_env->environment_id ] );
+            }
+        }
+
+        // Surface remote envs the local DB doesn't track.
+        foreach ( $remote_by_label as $label => $remote_env ) {
+            if ( ! in_array( $label, $local_labels, true ) ) {
+                $result['warnings'][] = "{$site->provider} has '{$label}' environment but it isn't tracked locally";
+            }
+        }
+
+        if ( ! empty( $result['changes'] ) ) {
+            $result['status']  = 'updated';
+            $result['message'] = count( $result['changes'] ) . " field(s) updated from {$site->provider}";
+
+            if ( ! $dry_run ) {
+                $summary = [];
+                foreach ( $result['changes'] as $change ) {
+                    $summary[] = "{$change['environment']}.{$change['field']}";
+                }
+                ActivityLog::log( 'updated', 'site', $this->site_id, $site->name, 'Remote sync updated: ' . implode( ', ', $summary ) );
+
+                // Push corrected credentials down to the CLI worker.
+                Run::task( "site sync {$this->site_id}" );
+            }
+        } else {
+            $result['message'] = "All environments already in sync with {$site->provider}";
+        }
+
+        // Stamp the sync attempt in details.last_remote_sync_at so fleet-wide
+        // sweeps can order by staleness. Write for updated / in-sync outcomes;
+        // errors are left alone so they're retried on the next pass.
+        if ( ! $dry_run ) {
+            $this->record_remote_sync_timestamp( $site, $result['status'] );
+        }
+
+        return $result;
+    }
+
+    /**
+     * Persist a last_remote_sync_at stamp into wp_captaincore_sites.details.
+     * Only writes for successful outcomes so errors get retried next run.
+     */
+    protected function record_remote_sync_timestamp( $site, $status ) {
+        if ( ! in_array( $status, [ 'in-sync', 'updated' ], true ) ) {
+            return;
+        }
+        $details = [];
+        if ( ! empty( $site->details ) ) {
+            $decoded = json_decode( $site->details, true );
+            if ( is_array( $decoded ) ) {
+                $details = $decoded;
+            }
+        }
+        $details['last_remote_sync_at'] = gmdate( 'Y-m-d H:i:s' );
+        ( new Sites )->update(
+            [ 'details' => wp_json_encode( $details ) ],
+            [ 'site_id' => $this->site_id ]
+        );
+    }
+
+    /**
+     * Find the matching remote site id for a local site when the
+     * provider_site_id is missing. Uses the provider class's fetch_remote_sites()
+     * method and matches its slug/name against the local site name and tracked
+     * domains. Returns the remote id, or a WP_Error with 'candidates' data when
+     * 0 or >1 sites match.
+     */
+    protected function resolve_provider_site_id( $site, $provider_class ) {
+        if ( ! method_exists( $provider_class, 'fetch_remote_sites' ) ) {
+            return new \WP_Error( 'provider_no_site_list', "Provider '{$site->provider}' does not expose a site list for auto-resolution" );
+        }
+        $remote_sites = $provider_class::fetch_remote_sites( $site->provider_id );
+        if ( empty( $remote_sites ) ) {
+            return new \WP_Error( 'provider_no_remote_sites', "Could not fetch site list from {$site->provider}" );
+        }
+
+        // Build the set of local strings to match against:
+        //   - the site's `name` (often a domain like example.com)
+        //   - the bare hostname label of that name (e.g. austinginder from austinginder.kinsta.cloud)
+        //   - all tracked domains for this site, plus their bare hostnames
+        $needles = [];
+        $add_needle = function ( $value ) use ( &$needles ) {
+            $value = strtolower( trim( (string) $value ) );
+            if ( $value === '' ) {
+                return;
+            }
+            $needles[ $value ] = true;
+            // Strip leading "www."
+            if ( strpos( $value, 'www.' ) === 0 ) {
+                $needles[ substr( $value, 4 ) ] = true;
+            }
+            // First DNS label (e.g. "austinginder" from "austinginder.kinsta.cloud")
+            $first_label = strtok( $value, '.' );
+            if ( $first_label && $first_label !== $value ) {
+                $needles[ $first_label ] = true;
+            }
+        };
+
+        $add_needle( $site->name );
+        foreach ( $this->domains() as $domain ) {
+            $add_needle( $domain->name );
+        }
+
+        $matches = [];
+        foreach ( $remote_sites as $remote ) {
+            $candidates = [
+                strtolower( (string) ( $remote['slug'] ?? '' ) ),
+                strtolower( (string) ( $remote['name'] ?? '' ) ),
+            ];
+            foreach ( $candidates as $candidate ) {
+                if ( $candidate !== '' && isset( $needles[ $candidate ] ) ) {
+                    $matches[ $remote['remote_id'] ] = $remote;
+                    break;
+                }
+            }
+        }
+        $matches = array_values( $matches );
+
+        if ( count( $matches ) === 1 ) {
+            return $matches[0]['remote_id'];
+        }
+        if ( count( $matches ) > 1 ) {
+            return new \WP_Error(
+                'provider_multiple_matches',
+                "Multiple {$site->provider} sites match '{$site->name}'. Set provider_site_id manually.",
+                [ 'candidates' => $matches ]
+            );
+        }
+        return new \WP_Error(
+            'provider_no_match',
+            "No {$site->provider} site matches '{$site->name}'. Set provider_site_id manually."
+        );
+    }
+
+    /**
+     * Mask sensitive values for response payloads. Only the password field is
+     * masked; everything else is returned verbatim so admins can see what
+     * changed without exposing the actual secret in logs / browser history.
+     */
+    protected static function mask_value( $field, $value ) {
+        if ( $field !== 'password' ) {
+            return (string) $value;
+        }
+        $value = (string) $value;
+        if ( $value === '' ) {
+            return '';
+        }
+        if ( strlen( $value ) <= 4 ) {
+            return '****';
+        }
+        return '****' . substr( $value, -4 );
+    }
+
     public function insert_accounts( $account_ids = [] ) {
         $accountsite = new AccountSite();
         foreach( $account_ids as $account_id ) {
