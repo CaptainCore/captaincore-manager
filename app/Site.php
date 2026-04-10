@@ -512,6 +512,21 @@ class Site {
             return $result;
         }
 
+        // Skip multi-tenant "stacked" sites. They share a Kinsta environment
+        // with a host site and are distinguished by custom environment vars
+        // (e.g. STACKED_SITE_ID); the provider API can't see them, so pulling
+        // credentials would overwrite the tenant's values with the host's.
+        $details = $this->decode_details( $site );
+        $env_vars = $details['environment_vars'] ?? null;
+        if ( is_array( $env_vars ) && ! empty( $env_vars ) ) {
+            $result['status']  = 'skipped';
+            $result['message'] = 'Site has custom environment vars (multi-tenant setup)';
+            if ( ! $dry_run ) {
+                $this->record_remote_sync_timestamp( $site, $result['status'] );
+            }
+            return $result;
+        }
+
         // Resolve provider_site_id, auto-discovering if missing.
         $provider_site_id = $site->provider_site_id;
         if ( empty( $provider_site_id ) ) {
@@ -603,8 +618,15 @@ class Site {
                 }
                 ActivityLog::log( 'updated', 'site', $this->site_id, $site->name, 'Remote sync updated: ' . implode( ', ', $summary ) );
 
-                // Push corrected credentials down to the CLI worker.
-                Run::task( "site sync {$this->site_id}" );
+                // Push corrected credentials down to the CLI worker synchronously
+                // via /run. This mirrors the API path used by the site dialog's
+                // "update" action and makes sure the rclone configs are actually
+                // regenerated before we move on to the next site. Queued /tasks
+                // dispatch was unreliable in the WP-CLI context.
+                $sync_response = Run::execute( "site sync {$this->site_id}" );
+                if ( is_wp_error( $sync_response ) ) {
+                    $result['warnings'][] = 'Site sync dispatch failed: ' . $sync_response->get_error_message();
+                }
             }
         } else {
             $result['message'] = "All environments already in sync with {$site->provider}";
@@ -622,24 +644,32 @@ class Site {
 
     /**
      * Persist a last_remote_sync_at stamp into wp_captaincore_sites.details.
-     * Only writes for successful outcomes so errors get retried next run.
+     * Writes for successful and skipped outcomes so fleet-wide --stale
+     * filters work uniformly. Errors are left alone so they're retried on
+     * the next pass.
      */
     protected function record_remote_sync_timestamp( $site, $status ) {
-        if ( ! in_array( $status, [ 'in-sync', 'updated' ], true ) ) {
+        if ( ! in_array( $status, [ 'in-sync', 'updated', 'skipped' ], true ) ) {
             return;
         }
-        $details = [];
-        if ( ! empty( $site->details ) ) {
-            $decoded = json_decode( $site->details, true );
-            if ( is_array( $decoded ) ) {
-                $details = $decoded;
-            }
-        }
+        $details = $this->decode_details( $site );
         $details['last_remote_sync_at'] = gmdate( 'Y-m-d H:i:s' );
         ( new Sites )->update(
             [ 'details' => wp_json_encode( $details ) ],
             [ 'site_id' => $this->site_id ]
         );
+    }
+
+    /**
+     * Decode the site's details JSON blob into an associative array.
+     * Returns an empty array for empty / invalid values.
+     */
+    protected function decode_details( $site ) {
+        if ( empty( $site->details ) ) {
+            return [];
+        }
+        $decoded = json_decode( $site->details, true );
+        return is_array( $decoded ) ? $decoded : [];
     }
 
     /**
