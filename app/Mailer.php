@@ -1520,6 +1520,123 @@ class Mailer {
     }
 
     /* -------------------------------------------------------------------------
+     *  PLUGIN CHECKSUM FAILURE ALERT (Admin Notify)
+     * ------------------------------------------------------------------------- */
+    static public function send_plugin_checksum_alert( $site_name, $environment_name, $home_url, $plugin_checksum_details ) {
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $admin_email = get_option( 'admin_email' );
+
+        $modified      = $plugin_checksum_details->modified ?? [];
+        $skipped_count = (int) ( $plugin_checksum_details->skipped_count ?? 0 );
+
+        // Build file list rows — each row shows plugin slug/file and a colored
+        // badge for the specific failure message ("File content has changed",
+        // "File was added", "File was deleted", or a generic "Mismatch" fallback).
+        $file_rows = '';
+        foreach ( $modified as $entry ) {
+            $slug    = esc_html( $entry->slug ?? '' );
+            $file    = esc_html( $entry->file ?? '' );
+            $message = $entry->message ?? '';
+
+            switch ( $message ) {
+                case 'File was added':
+                    $badge_bg    = '#FEFCBF';
+                    $badge_color = '#975A16';
+                    $badge_text  = 'Added';
+                    break;
+                case 'File was deleted':
+                    $badge_bg    = '#E9D8FD';
+                    $badge_color = '#553C9A';
+                    $badge_text  = 'Deleted';
+                    break;
+                case 'File content has changed':
+                case 'Checksum does not match':
+                    $badge_bg    = '#FED7D7';
+                    $badge_color = '#9B2C2C';
+                    $badge_text  = 'Modified';
+                    break;
+                default:
+                    $badge_bg    = '#FED7D7';
+                    $badge_color = '#9B2C2C';
+                    $badge_text  = esc_html( $message ?: 'Mismatch' );
+                    break;
+            }
+
+            $file_rows .= "
+                <tr>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; color: #2d3748; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;'>{$slug}/{$file}</td>
+                    <td style='padding: 8px 12px; border-bottom: 1px solid #edf2f7; text-align: right;'>
+                        <span style='display: inline-block; background-color: {$badge_bg}; color: {$badge_color}; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; text-transform: uppercase;'>{$badge_text}</span>
+                    </td>
+                </tr>";
+        }
+
+        $site_url_html = '';
+        if ( ! empty( $home_url ) ) {
+            $site_url_html = "
+                <tr>
+                    <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>URL</td>
+                    <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>
+                        <a href='{$home_url}' style='color: {$brand_color}; text-decoration: none;'>{$home_url}</a>
+                    </td>
+                </tr>";
+        }
+
+        $skipped_note = '';
+        if ( $skipped_count > 0 ) {
+            $skipped_note = "
+                <p style='margin: 0 0 25px; color: #718096; font-size: 13px; text-align: center;'>
+                    {$skipped_count} premium plugin" . ( $skipped_count === 1 ? '' : 's' ) . " without published wordpress.org checksums were skipped.
+                </p>";
+        }
+
+        $content_html = "
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+                <div style='text-align: center; margin-bottom: 25px;'>
+                    <div style='display: inline-block; background-color: #FED7D7; color: #9B2C2C; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                        Plugin Checksum Failed
+                    </div>
+                </div>
+
+                <p style='margin-bottom: 25px;'>One or more plugin files differ from the checksums published by wordpress.org for the installed plugin version. This could indicate a compromised plugin or a tampered install.</p>
+
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                    <table width='100%' cellpadding='0' cellspacing='0'>
+                        <tr>
+                            <td width='120' style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site_name}</td>
+                        </tr>
+                        {$site_url_html}
+                        <tr>
+                            <td width='120' style='color: #718096; font-size: 14px;'>Environment</td>
+                            <td style='color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-bottom: 25px;'>
+                    <div style='padding: 12px 12px 8px; border-bottom: 2px solid #edf2f7;'>
+                        <strong style='font-size: 11px; text-transform: uppercase; color: #a0aec0; letter-spacing: 0.05em;'>Affected Files</strong>
+                    </div>
+                    <table width='100%' cellpadding='0' cellspacing='0'>
+                        {$file_rows}
+                    </table>
+                </div>
+                {$skipped_note}
+            </div>
+        ";
+
+        self::send_email_with_layout(
+            $admin_email,
+            "Security Alert: Plugin checksum failed on {$site_name}",
+            "Plugin Integrity Alert",
+            $site_name,
+            $content_html
+        );
+    }
+
+    /* -------------------------------------------------------------------------
      *  MALWARE DETECTION ALERT (Admin Notify)
      * ------------------------------------------------------------------------- */
     static public function send_malware_alert( $site_name, $environment_name, $home_url, $findings ) {

@@ -1024,6 +1024,19 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
 		}
 
+		// Alert admin on plugin checksum failure (only once per failure, tracked via plugin_checksum_alerted flag)
+		$plugin_checksum_status  = isset( $env_details->plugin_checksum_details->status ) ? $env_details->plugin_checksum_details->status : null;
+		$has_plugin_mismatches   = ! empty( $env_details->plugin_checksum_details->modified );
+		if ( $plugin_checksum_status === 'fail' && $has_plugin_mismatches && $is_production && empty( $env_details->plugin_checksum_alerted ) ) {
+			$home_url = $post->data->home_url ?? '';
+			CaptainCore\Mailer::send_plugin_checksum_alert( $current_site->name, ucfirst( $environment_name ), $home_url, $env_details->plugin_checksum_details );
+			$env_details->plugin_checksum_alerted = true;
+			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
+		} elseif ( $plugin_checksum_status !== 'fail' && ! empty( $env_details->plugin_checksum_alerted ) ) {
+			unset( $env_details->plugin_checksum_alerted );
+			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
+		}
+
 		// Alert admin if default_role is set to administrator (only once, tracked via default_role_alerted flag)
 		$default_role   = isset( $env_details->default_role ) ? $env_details->default_role : null;
 		if ( $default_role === 'administrator' && $is_production && empty( $env_details->default_role_alerted ) ) {
