@@ -9584,6 +9584,7 @@ function captaincore_plugin_checksum_failures_func( WP_REST_Request $request ) {
 function captaincore_plugin_diff_preview_func( WP_REST_Request $request ) {
 	$site_slug   = sanitize_text_field( $request->get_param( 'site_slug' ) );
 	$plugin_slug = sanitize_text_field( $request->get_param( 'plugin_slug' ) );
+	$environment = strtolower( sanitize_text_field( $request->get_param( 'environment' ) ) );
 
 	if ( empty( $site_slug ) || empty( $plugin_slug ) ) {
 		return new WP_Error( 'missing_params', 'site_slug and plugin_slug are required', [ 'status' => 400 ] );
@@ -9592,7 +9593,14 @@ function captaincore_plugin_diff_preview_func( WP_REST_Request $request ) {
 		return new WP_Error( 'invalid_params', 'site_slug and plugin_slug may only contain letters, numbers, dots, dashes, underscores', [ 'status' => 400 ] );
 	}
 
-	$command = "ssh {$site_slug} --script=plugin-diff --plugin={$plugin_slug}";
+	// Target staging explicitly when the failures row is for a staging
+	// environment; captaincore ssh defaults to production otherwise.
+	$target = $site_slug;
+	if ( $environment === 'staging' ) {
+		$target = "{$site_slug}-staging";
+	}
+
+	$command = "ssh {$target} --script=plugin-diff --plugin={$plugin_slug}";
 
 	// Call the CaptainCore CLI server directly so we can surface HTTP errors
 	// (e.g. 502 when the CLI server is down) instead of silently returning an
