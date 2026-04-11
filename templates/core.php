@@ -8496,6 +8496,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-tab value="coverage">Coverage</v-tab>
 					<v-tab value="web-risk">Web Risk</v-tab>
 					<v-tab value="checksum-failures">Checksum Failures</v-tab>
+					<v-tab value="plugin-checksums">Plugin Checksums</v-tab>
 				</v-tabs>
 				<v-window v-model="security_tab">
 					<v-window-item value="vulnerabilities" :transition="false" :reverse-transition="false">
@@ -8789,6 +8790,80 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-data-table>
 						</v-card-text>
 					</v-window-item>
+					<v-window-item value="plugin-checksums" :transition="false" :reverse-transition="false">
+						<v-card-text class="pt-0">
+							<v-alert v-if="plugin_checksum_failures.failures.length === 0 && !plugin_checksum_failures_loading" type="info" variant="tonal" class="mt-4">
+								No plugin checksum failures found. All active environments have passing plugin checksums.
+							</v-alert>
+							<v-data-table
+								v-if="plugin_checksum_failures.failures.length > 0 || plugin_checksum_failures_loading"
+								:loading="plugin_checksum_failures_loading"
+								:headers="[
+									{ title: 'Site Name', key: 'site_name' },
+									{ title: 'Environment', key: 'environment' },
+									{ title: 'Home URL', key: 'home_url' },
+									{ title: 'Plugins', key: 'slugs_affected', sortable: false },
+									{ title: 'Files', key: 'modified_count', align: 'center' },
+									{ title: '', key: 'actions', width: '100px', sortable: false }
+								]"
+								:items="plugin_checksum_failures.failures"
+								:items-per-page="25"
+								:sort-by="[{ key: 'modified_count', order: 'desc' }]"
+								density="comfortable"
+								hover
+							>
+								<template v-slot:item.site_name="{ item }">
+									<a :href="`${configurations.path}sites/${item.site_id}`" @click.prevent="goToPath(`/sites/${item.site_id}`)" class="text-decoration-none">{{ item.site_name }}</a>
+								</template>
+								<template v-slot:item.home_url="{ item }">
+									<a :href="item.home_url" target="_blank" class="text-decoration-none">{{ item.home_url }}</a>
+								</template>
+								<template v-slot:item.slugs_affected="{ item }">
+									<div class="d-flex flex-wrap ga-1">
+										<v-tooltip v-for="slug in item.slugs_affected" :key="slug" text="Preview diff" location="top">
+											<template v-slot:activator="{ props }">
+												<v-chip
+													v-bind="props"
+													size="x-small"
+													variant="tonal"
+													color="warning"
+													style="cursor: pointer;"
+													@click="previewPluginDiff(item, slug)"
+												>
+													<span style="font-family: monospace;">{{ slug }}</span>
+													<v-icon end size="x-small">mdi-file-compare</v-icon>
+												</v-chip>
+											</template>
+										</v-tooltip>
+									</div>
+								</template>
+								<template v-slot:item.modified_count="{ item }">
+									<v-chip color="warning" size="small" variant="flat">{{ item.modified_count }}</v-chip>
+								</template>
+								<template v-slot:item.actions="{ item }">
+									<div class="d-flex align-center">
+										<v-tooltip text="Copy SSH command" location="top">
+											<template v-slot:activator="{ props }">
+												<v-btn
+													v-bind="props"
+													icon="mdi-console"
+													variant="text"
+													size="small"
+													@click="copyText(`ssh ${item.username}@${item.address} -p ${item.port}`)"
+												></v-btn>
+											</template>
+										</v-tooltip>
+										<v-btn
+											icon="mdi-chevron-right"
+											variant="text"
+											size="small"
+											@click="plugin_checksum_dialog.item = plugin_checksum_failures.failures.find(f => f.environment_id === item.environment_id); plugin_checksum_dialog.show = true"
+										></v-btn>
+									</div>
+								</template>
+							</v-data-table>
+						</v-card-text>
+					</v-window-item>
 				</v-window>
 			</v-card>
 			<v-dialog v-model="web_risk_dialog.show" max-width="700px" scrollable>
@@ -8931,6 +9006,67 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-card-actions>
 						<v-spacer></v-spacer>
 						<v-btn variant="text" @click="checksum_dialog.show = false">Close</v-btn>
+					</v-card-actions>
+				</v-card>
+			</v-dialog>
+			<v-dialog v-model="plugin_checksum_dialog.show" max-width="800px" scrollable>
+				<v-card v-if="plugin_checksum_dialog.item">
+					<v-toolbar color="primary" flat>
+						<v-toolbar-title>{{ plugin_checksum_dialog.item.site_name }} ({{ plugin_checksum_dialog.item.environment }})</v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-btn icon="mdi-close" @click="plugin_checksum_dialog.show = false"></v-btn>
+					</v-toolbar>
+					<v-card-text>
+						<div class="mb-3">
+							<span class="text-medium-emphasis text-body-2">
+								{{ plugin_checksum_dialog.item.modified_count }} file{{ plugin_checksum_dialog.item.modified_count === 1 ? '' : 's' }} differ from wordpress.org checksums
+								<span v-if="plugin_checksum_dialog.item.plugin_checksum_details.skipped_count">
+									&middot; {{ plugin_checksum_dialog.item.plugin_checksum_details.skipped_count }} premium plugin{{ plugin_checksum_dialog.item.plugin_checksum_details.skipped_count === 1 ? '' : 's' }} skipped
+								</span>
+							</span>
+						</div>
+						<v-list density="compact">
+							<v-list-item
+								v-for="(entry, index) in plugin_checksum_dialog.item.plugin_checksum_details.modified"
+								:key="'plugin-' + index"
+							>
+								<template v-slot:prepend>
+									<v-icon
+										:color="entry.message === 'File was added' ? 'info' : (entry.message === 'File was deleted' ? 'error' : 'warning')"
+										size="small"
+									>{{ entry.message === 'File was added' ? 'mdi-plus-circle' : (entry.message === 'File was deleted' ? 'mdi-minus-circle' : 'mdi-alert') }}</v-icon>
+								</template>
+								<v-list-item-title class="text-body-2" style="font-family: monospace;">{{ entry.slug }}/{{ entry.file }}</v-list-item-title>
+								<v-list-item-subtitle>{{ entry.message }}</v-list-item-subtitle>
+							</v-list-item>
+						</v-list>
+					</v-card-text>
+					<v-card-actions>
+						<v-spacer></v-spacer>
+						<v-btn variant="text" @click="plugin_checksum_dialog.show = false">Close</v-btn>
+					</v-card-actions>
+				</v-card>
+			</v-dialog>
+			<v-dialog v-model="plugin_diff_dialog.show" max-width="1200px" scrollable>
+				<v-card>
+					<v-toolbar color="primary" flat>
+						<v-toolbar-title>
+							<span style="font-family: monospace;">{{ plugin_diff_dialog.plugin_slug }}</span>
+							<span class="text-subtitle-2 ml-3">{{ plugin_diff_dialog.site_name }} ({{ plugin_diff_dialog.environment }})</span>
+						</v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-btn icon="mdi-close" @click="plugin_diff_dialog.show = false"></v-btn>
+					</v-toolbar>
+					<v-card-text>
+						<div v-if="plugin_diff_dialog.loading" class="text-center py-10">
+							<v-progress-circular indeterminate color="primary"></v-progress-circular>
+							<div class="text-medium-emphasis mt-3">Fetching diff from wordpress.org…</div>
+						</div>
+						<pre v-else style="font-family: 'SFMono-Regular', Menlo, Monaco, Consolas, monospace; font-size: 12px; line-height: 1.5; white-space: pre; overflow: auto; background-color: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 4px; max-height: 70vh; margin: 0;"><span v-for="(line, i) in formatDiffLines(plugin_diff_dialog.diff)" :key="i" :style="line.style" style="display: block;">{{ line.text || ' ' }}</span></pre>
+					</v-card-text>
+					<v-card-actions>
+						<v-spacer></v-spacer>
+						<v-btn variant="text" @click="plugin_diff_dialog.show = false">Close</v-btn>
 					</v-card-actions>
 				</v-card>
 			</v-dialog>
@@ -12478,6 +12614,10 @@ const app = createApp({
 		checksum_failures: [],
 		checksum_failures_loading: false,
 		checksum_dialog: { show: false, item: null },
+		plugin_checksum_failures: { failures: [], plugin_totals: [] },
+		plugin_checksum_failures_loading: false,
+		plugin_checksum_dialog: { show: false, item: null },
+		plugin_diff_dialog: { show: false, site_name: '', environment: '', plugin_slug: '', diff: '', loading: false },
 		security_patches: [],
 		security_patches_loading: false,
 		site_audits: [],
@@ -14222,6 +14362,7 @@ const app = createApp({
 			if (this.route == "security") {
 				this.fetchWebRiskLogs();
 				this.fetchChecksumFailures();
+				this.fetchPluginChecksumFailures();
 				this.fetchSecurityThreats();
 				this.fetchSecurityPatches();
 				this.fetchSecurityCoverage();
@@ -16757,6 +16898,69 @@ const app = createApp({
 			})
 			.catch(error => {
 				this.checksum_failures_loading = false;
+			});
+		},
+		fetchPluginChecksumFailures() {
+			this.plugin_checksum_failures_loading = true;
+			axios.get(
+			'/wp-json/captaincore/v1/plugin-checksum-failures', {
+				headers: {'X-WP-Nonce':this.wp_nonce}
+			})
+			.then(response => {
+				this.plugin_checksum_failures = response.data;
+				this.plugin_checksum_failures_loading = false;
+			})
+			.catch(error => {
+				this.plugin_checksum_failures_loading = false;
+			});
+		},
+		formatDiffLines(diff) {
+			if (!diff) return [];
+			// Strip the long "a/www/<home>/private/plugin-diff/<slug>-<ver>/clean/"
+			// prefix from git --no-index paths so the file headers are readable.
+			const clean = diff.replace(/([ab]\/)www\/[^\/]+\/private\/plugin-diff\/[^\/]+\/clean\//g, '$1');
+			return clean.split('\n').map(text => {
+				let style = {};
+				if (text.startsWith('## ')) {
+					style = { color: '#c586c0', fontWeight: 'bold' };
+				} else if (text.startsWith('diff --git') || text.startsWith('index ')) {
+					style = { color: '#858585', fontWeight: 'bold' };
+				} else if (text.startsWith('--- ') || text.startsWith('+++ ')) {
+					style = { color: '#9cdcfe', fontWeight: 'bold' };
+				} else if (text.startsWith('@@')) {
+					style = { color: '#4ec9b0' };
+				} else if (text.startsWith('+')) {
+					style = { color: '#6a9955', backgroundColor: 'rgba(106, 153, 85, 0.1)' };
+				} else if (text.startsWith('-')) {
+					style = { color: '#f48771', backgroundColor: 'rgba(244, 135, 113, 0.1)' };
+				} else if (text.startsWith('\\ No newline')) {
+					style = { color: '#858585', fontStyle: 'italic' };
+				}
+				return { text, style };
+			});
+		},
+		previewPluginDiff(item, plugin_slug) {
+			this.plugin_diff_dialog = {
+				show: true,
+				site_name: item.site_name,
+				environment: item.environment,
+				plugin_slug: plugin_slug,
+				diff: '',
+				loading: true
+			};
+			axios.post(
+				'/wp-json/captaincore/v1/plugin-diff-preview',
+				{ site_slug: item.site_slug, plugin_slug: plugin_slug },
+				{ headers: {'X-WP-Nonce': this.wp_nonce} }
+			)
+			.then(response => {
+				this.plugin_diff_dialog.diff = response.data.diff && response.data.diff.length > 0 ? response.data.diff : '(no output)';
+				this.plugin_diff_dialog.loading = false;
+			})
+			.catch(error => {
+				const msg = error.response && error.response.data && error.response.data.message ? error.response.data.message : error.message;
+				this.plugin_diff_dialog.diff = 'Error fetching diff: ' + msg;
+				this.plugin_diff_dialog.loading = false;
 			});
 		},
 		fetchSecurityPatches() {
