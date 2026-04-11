@@ -1024,18 +1024,14 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
 		}
 
-		// Alert admin on plugin checksum failure (only once per failure, tracked via plugin_checksum_alerted flag)
-		$plugin_checksum_status  = isset( $env_details->plugin_checksum_details->status ) ? $env_details->plugin_checksum_details->status : null;
-		$has_plugin_mismatches   = ! empty( $env_details->plugin_checksum_details->modified );
-		if ( $plugin_checksum_status === 'fail' && $has_plugin_mismatches && $is_production && empty( $env_details->plugin_checksum_alerted ) ) {
-			$home_url = $post->data->home_url ?? '';
-			CaptainCore\Mailer::send_plugin_checksum_alert( $current_site->name, ucfirst( $environment_name ), $home_url, $env_details->plugin_checksum_details );
-			$env_details->plugin_checksum_alerted = true;
-			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
-		} elseif ( $plugin_checksum_status !== 'fail' && ! empty( $env_details->plugin_checksum_alerted ) ) {
-			unset( $env_details->plugin_checksum_alerted );
-			( new CaptainCore\Environments )->update( [ 'details' => json_encode( $env_details ) ], [ 'environment_id' => $post->data->environment_id ] );
-		}
+		// Plugin checksum data is persisted above via the jsonDetailKeys merge.
+		// Email alerts are intentionally disabled during dry-run: the fleet is first
+		// reviewed via the Security > Plugin Checksums UI tab and the
+		// /plugin-checksum-failures REST endpoint. Once operator-customized plugins
+		// (PHP 8 compat patches on abandoned plugins etc) are allowlisted or forked,
+		// the alert call below can be re-enabled to mirror the core checksum flow.
+		//
+		// CaptainCore\Mailer::send_plugin_checksum_alert( $current_site->name, ucfirst( $environment_name ), $home_url, $env_details->plugin_checksum_details );
 
 		// Alert admin if default_role is set to administrator (only once, tracked via default_role_alerted flag)
 		$default_role   = isset( $env_details->default_role ) ? $env_details->default_role : null;
@@ -8680,6 +8676,34 @@ function captaincore_register_rest_endpoints() {
 		]
 	);
 
+	// Plugin Checksum Failures endpoint (admin only) — fleet-wide plugin
+	// file mismatches against wordpress.org published checksums. Ordered by
+	// number of mismatched files descending to surface worst offenders first.
+	register_rest_route(
+		'captaincore/v1', '/plugin-checksum-failures', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_plugin_checksum_failures_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
+	// Plugin diff preview — runs `captaincore ssh <site> --script=plugin-diff
+	// --plugin=<slug>` on demand and returns the unified diff between the
+	// installed plugin and a clean copy from wordpress.org.
+	register_rest_route(
+		'captaincore/v1', '/plugin-diff-preview', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_plugin_diff_preview_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+			'show_in_index'       => false,
+		]
+	);
+
 	// Email subscription management (public endpoint)
 	register_rest_route(
 		'captaincore/v1', '/email/subscription', [
@@ -9450,6 +9474,169 @@ function captaincore_checksum_failures_func( WP_REST_Request $request ) {
 	}
 
 	return $failures;
+}
+
+/**
+ * REST endpoint: List environments with plugin checksum mismatches.
+ *
+ * Returns an array of sites/environments where `wp plugin verify-checksums`
+ * reported file mismatches against the wordpress.org published checksums,
+ * ordered by error count descending. Used to drive the Security > Plugin
+ * Checksums tab and to feed the "fork abandoned plugins" remediation workflow:
+ * the `plugin_totals` key summarizes the fleet-wide count of mismatches per
+ * plugin slug so operators can prioritize which plugins to fork/patch first.
+ */
+function captaincore_plugin_checksum_failures_func( WP_REST_Request $request ) {
+	global $wpdb;
+
+	$sites_table        = $wpdb->prefix . 'captaincore_sites';
+	$environments_table = $wpdb->prefix . 'captaincore_environments';
+
+	$results = $wpdb->get_results(
+		"SELECT e.environment_id, e.environment, e.details, e.address, e.username, e.port, s.name as site_name, s.site as site_slug, s.site_id
+		 FROM {$environments_table} e
+		 JOIN {$sites_table} s ON e.site_id = s.site_id
+		 WHERE s.status = 'active'
+		   AND e.details IS NOT NULL
+		   AND e.details != ''"
+	);
+
+	$failures      = [];
+	$plugin_totals = [];
+
+	foreach ( $results as $row ) {
+		$details = json_decode( $row->details, true );
+		if ( empty( $details['plugin_checksum_details']['status'] ) || $details['plugin_checksum_details']['status'] !== 'fail' ) {
+			continue;
+		}
+		$plugin_checksum = $details['plugin_checksum_details'];
+		$modified        = $plugin_checksum['modified'] ?? [];
+		if ( empty( $modified ) ) {
+			continue;
+		}
+
+		// Collect per-slug counts on this environment for the row summary.
+		$slugs_on_env = [];
+		foreach ( $modified as $entry ) {
+			$slug = $entry['slug'] ?? '';
+			if ( $slug === '' ) {
+				continue;
+			}
+			$slugs_on_env[ $slug ] = ( $slugs_on_env[ $slug ] ?? 0 ) + 1;
+
+			// Fleet-wide rollup: count sites affected AND total mismatched files.
+			if ( ! isset( $plugin_totals[ $slug ] ) ) {
+				$plugin_totals[ $slug ] = [
+					'slug'          => $slug,
+					'sites_count'   => 0,
+					'files_count'   => 0,
+					'site_ids'      => [],
+				];
+			}
+			$plugin_totals[ $slug ]['files_count']++;
+			if ( ! in_array( (int) $row->site_id, $plugin_totals[ $slug ]['site_ids'], true ) ) {
+				$plugin_totals[ $slug ]['site_ids'][] = (int) $row->site_id;
+				$plugin_totals[ $slug ]['sites_count']++;
+			}
+		}
+
+		$failures[] = [
+			'site_name'                => $row->site_name,
+			'site_slug'                => $row->site_slug ?? '',
+			'site_id'                  => (int) $row->site_id,
+			'environment'              => $row->environment,
+			'environment_id'           => (int) $row->environment_id,
+			'home_url'                 => $details['home_url'] ?? '',
+			'address'                  => $row->address ?? '',
+			'username'                 => $row->username ?? '',
+			'port'                     => $row->port ?? '',
+			'modified_count'           => count( $modified ),
+			'slugs_affected'           => array_keys( $slugs_on_env ),
+			'plugin_checksum_details'  => $plugin_checksum,
+		];
+	}
+
+	// Sort environments by mismatch count descending (worst offenders first).
+	usort( $failures, function( $a, $b ) {
+		return $b['modified_count'] <=> $a['modified_count'];
+	} );
+
+	// Sort plugin_totals by files_count descending and strip the temporary site_ids array.
+	$plugin_totals = array_values( $plugin_totals );
+	usort( $plugin_totals, function( $a, $b ) {
+		return $b['files_count'] <=> $a['files_count'];
+	} );
+	foreach ( $plugin_totals as &$pt ) {
+		unset( $pt['site_ids'] );
+	}
+	unset( $pt );
+
+	return [
+		'failures'      => $failures,
+		'plugin_totals' => $plugin_totals,
+	];
+}
+
+/**
+ * REST endpoint: Run plugin-diff over SSH and return the unified diff.
+ * Body params: site_slug, plugin_slug.
+ */
+function captaincore_plugin_diff_preview_func( WP_REST_Request $request ) {
+	$site_slug   = sanitize_text_field( $request->get_param( 'site_slug' ) );
+	$plugin_slug = sanitize_text_field( $request->get_param( 'plugin_slug' ) );
+
+	if ( empty( $site_slug ) || empty( $plugin_slug ) ) {
+		return new WP_Error( 'missing_params', 'site_slug and plugin_slug are required', [ 'status' => 400 ] );
+	}
+	if ( ! preg_match( '/^[a-zA-Z0-9._-]+$/', $site_slug ) || ! preg_match( '/^[a-zA-Z0-9._-]+$/', $plugin_slug ) ) {
+		return new WP_Error( 'invalid_params', 'site_slug and plugin_slug may only contain letters, numbers, dots, dashes, underscores', [ 'status' => 400 ] );
+	}
+
+	$command = "ssh {$site_slug} --script=plugin-diff --plugin={$plugin_slug}";
+
+	// Call the CaptainCore CLI server directly so we can surface HTTP errors
+	// (e.g. 502 when the CLI server is down) instead of silently returning an
+	// empty diff body.
+	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+		add_filter( 'https_ssl_verify', '__return_false' );
+	}
+
+	$url      = CAPTAINCORE_CLI_ADDRESS . '/run';
+	$response = wp_remote_post(
+		$url,
+		[
+			'timeout' => 300,
+			'headers' => [
+				'Content-Type' => 'application/json; charset=utf-8',
+				'token'        => captaincore_get_cli_token(),
+			],
+			'body'        => json_encode( [ 'command' => $command ] ),
+			'method'      => 'POST',
+			'data_format' => 'body',
+		]
+	);
+
+	if ( is_wp_error( $response ) ) {
+		return new WP_Error( 'cli_unreachable', 'CaptainCore CLI server unreachable: ' . $response->get_error_message(), [ 'status' => 502 ] );
+	}
+
+	$http_code = wp_remote_retrieve_response_code( $response );
+	$body      = wp_remote_retrieve_response_message( $response );
+	$diff      = wp_remote_retrieve_body( $response );
+
+	if ( $http_code >= 400 ) {
+		return new WP_Error(
+			'cli_error',
+			sprintf( 'CaptainCore CLI server returned HTTP %d %s', $http_code, $body ),
+			[ 'status' => 502 ]
+		);
+	}
+
+	return [
+		'site_slug'   => $site_slug,
+		'plugin_slug' => $plugin_slug,
+		'diff'        => $diff,
+	];
 }
 
 /**
