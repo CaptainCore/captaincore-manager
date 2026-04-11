@@ -16950,7 +16950,7 @@ const app = createApp({
 			};
 			axios.post(
 				'/wp-json/captaincore/v1/plugin-diff-preview',
-				{ site_slug: item.site_slug, plugin_slug: plugin_slug },
+				{ site_slug: item.site_slug, plugin_slug: plugin_slug, environment: item.environment },
 				{ headers: {'X-WP-Nonce': this.wp_nonce} }
 			)
 			.then(response => {
