@@ -974,6 +974,68 @@ class Site {
 
     }
 
+    public function logs_archive_list( $environment = "production" ) {
+
+        $command = "logs archive-list {$this->site_id}-$environment";
+
+        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+            add_filter( 'https_ssl_verify', '__return_false' );
+        }
+
+        $data = [
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8',
+                'token'        => captaincore_get_cli_token()
+            ],
+            'body'        => json_encode( [ "command" => $command ]),
+            'method'      => 'POST',
+            'data_format' => 'body'
+        ];
+
+        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+        if ( is_wp_error( $response ) ) {
+            return [];
+        }
+
+        $result = json_decode( $response["body"] );
+        if ( json_last_error() != JSON_ERROR_NONE ) {
+            return [];
+        }
+        return $result;
+    }
+
+    public function logs_archive_get( $file, $environment = "production" ) {
+
+        $command = "logs archive-get {$this->site_id}-$environment $file";
+
+        if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+            add_filter( 'https_ssl_verify', '__return_false' );
+        }
+
+        $data = [
+            'timeout' => 45,
+            'headers' => [
+                'Content-Type' => 'application/json; charset=utf-8',
+                'token'        => captaincore_get_cli_token()
+            ],
+            'body'        => json_encode( [ "command" => $command ]),
+            'method'      => 'POST',
+            'data_format' => 'body'
+        ];
+
+        $response = wp_remote_post( CAPTAINCORE_CLI_ADDRESS . "/run", $data );
+        if ( is_wp_error( $response ) ) {
+            return new \WP_Error( 'cli_error', $response->get_error_message(), [ 'status' => 500 ] );
+        }
+
+        $result = json_decode( $response["body"] );
+        if ( json_last_error() != JSON_ERROR_NONE ) {
+            return new \WP_Error( 'cli_parse_error', 'Invalid response from CLI', [ 'status' => 500 ] );
+        }
+        return $result;
+    }
+
     public function generate_screenshot() {
         $site         = Sites::get( $this->site_id );
         $environments = self::environments();

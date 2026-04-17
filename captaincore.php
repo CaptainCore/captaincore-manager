@@ -5450,6 +5450,39 @@ function captaincore_site_backups_get_func( $request ) {
 	return $site->backup_get( $backup_id, $environment );
 }
 
+function captaincore_site_logs_archive_list_func( $request ) {
+	$site_id     = $request['id'];
+	$environment = $request['environment'];
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	$site = new CaptainCore\Site( $site_id );
+	return $site->logs_archive_list( $environment );
+}
+
+function captaincore_site_logs_archive_get_func( $request ) {
+	$site_id     = $request['id'];
+	$environment = $request['environment'];
+	$file        = $request->get_param( 'file' );
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
+	}
+
+	if ( empty( $file ) ) {
+		return new WP_Error( 'missing_file', 'Missing file parameter', [ 'status' => 400 ] );
+	}
+
+	if ( ! preg_match( '/^(access|error)\.log-\d{4}-\d{2}-\d{2}-\d+(\.gz)?$/', $file ) ) {
+		return new WP_Error( 'invalid_file', 'Invalid file name', [ 'status' => 400 ] );
+	}
+
+	$site = new CaptainCore\Site( $site_id );
+	return $site->logs_archive_get( $file, $environment );
+}
+
 function captaincore_site_invite_preview_func( $request ) {
     $site_id = $request['id'];
     
@@ -6571,6 +6604,24 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/backups/(?P<backup_id>[a-zA-Z0-9-]+)', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_site_backups_get_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/logs-archive', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_logs_archive_list_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/site/(?P<id>[\d]+)/(?P<environment>[a-zA-Z0-9-]+)/logs-archive/download', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_logs_archive_get_func',
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
 		]
