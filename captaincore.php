@@ -8958,6 +8958,16 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
+		'captaincore/v1', '/site-audits/(?P<id>[\d]+)/findings/(?P<finding_id>[\d]+)', [
+			'methods'             => 'DELETE',
+			'callback'            => 'captaincore_site_audits_delete_finding_func',
+			'permission_callback' => function() {
+				return current_user_can( 'manage_options' );
+			},
+		]
+	);
+
+	register_rest_route(
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/site-audits', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_sites_site_audits_func',
@@ -9964,15 +9974,10 @@ function captaincore_site_audits_update_finding_func( WP_REST_Request $request )
 	$params     = $request->get_json_params();
 	$time_now   = date( 'Y-m-d H:i:s' );
 
-	// If resolving, use the dedicated method
-	if ( ! empty( $params['status'] ) && $params['status'] === 'resolved' ) {
-		$resolution = wp_kses_post( $params['resolution'] ?? '' );
-		( new CaptainCore\SiteAudit( $audit_id ) )->resolve_finding( $finding_id, $resolution );
-		$finding = ( new CaptainCore\SiteAuditFindings )->get( $finding_id );
-		return $finding;
-	}
+	$resolving = ! empty( $params['status'] ) && $params['status'] === 'resolved';
 
-	// General update
+	// Apply general field updates first so title/description/severity/etc. are
+	// persisted whether or not the caller is also flipping status to resolved.
 	$allowed = [ 'severity', 'status', 'title', 'description', 'recommendation', 'resolution' ];
 	$data    = [ 'updated_at' => $time_now ];
 
@@ -9980,8 +9985,6 @@ function captaincore_site_audits_update_finding_func( WP_REST_Request $request )
 		if ( isset( $params[ $field ] ) ) {
 			if ( $field === 'description' || $field === 'resolution' ) {
 				$data[ $field ] = wp_kses_post( $params[ $field ] );
-			} elseif ( $field === 'evidence' ) {
-				$data[ $field ] = wp_json_encode( $params[ $field ] );
 			} else {
 				$data[ $field ] = sanitize_text_field( $params[ $field ] );
 			}
@@ -9992,8 +9995,35 @@ function captaincore_site_audits_update_finding_func( WP_REST_Request $request )
 		$data['evidence'] = wp_json_encode( $params['evidence'] );
 	}
 
-	( new CaptainCore\SiteAuditFindings )->update( $data, [ 'site_audit_finding_id' => $finding_id ] );
+	if ( count( $data ) > 1 ) {
+		( new CaptainCore\SiteAuditFindings )->update( $data, [ 'site_audit_finding_id' => $finding_id ] );
+	}
+
+	// If the caller is resolving, also stamp resolved_at and trigger the
+	// audit-level remediation check.
+	if ( $resolving ) {
+		$resolution = wp_kses_post( $params['resolution'] ?? '' );
+		( new CaptainCore\SiteAudit( $audit_id ) )->resolve_finding( $finding_id, $resolution );
+	}
+
 	return ( new CaptainCore\SiteAuditFindings )->get( $finding_id );
+}
+
+/**
+ * REST endpoint: Delete a finding from a site audit.
+ */
+function captaincore_site_audits_delete_finding_func( WP_REST_Request $request ) {
+	$audit_id   = intval( $request['id'] );
+	$finding_id = intval( $request['finding_id'] );
+
+	$finding = ( new CaptainCore\SiteAuditFindings )->get( $finding_id );
+	if ( empty( $finding ) || intval( $finding->site_audit_id ) !== $audit_id ) {
+		return new WP_Error( 'not_found', 'Finding not found for this audit.', [ 'status' => 404 ] );
+	}
+
+	CaptainCore\SiteAuditFindings::delete( $finding_id );
+
+	return [ 'deleted' => true, 'site_audit_finding_id' => $finding_id ];
 }
 
 /**
