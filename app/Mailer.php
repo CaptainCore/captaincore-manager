@@ -901,11 +901,109 @@ class Mailer {
         $reply_to = ! empty( $user->name ) ? "{$user->name} <{$user->email}>" : $user->email;
         $headers = [ "Reply-To: $reply_to" ];
 
-        self::send_email_with_layout( 
-            $admin_email, 
-            $subject, 
-            $headline, 
-            $subheadline, 
+        self::send_email_with_layout(
+            $admin_email,
+            $subject,
+            $headline,
+            $subheadline,
+            $content_html,
+            $headers
+        );
+    }
+
+    /* -------------------------------------------------------------------------
+     *  SITE AUDIT REQUEST (Admin Notify)
+     * ------------------------------------------------------------------------- */
+    static public function send_site_audit_request( $site, $environment, $user, $report_type, $notes, $is_request ) {
+        $site_name   = get_bloginfo( 'name' );
+        $admin_email = get_option( 'admin_email' );
+
+        $report_type_map = [
+            'security_audit'     => 'Security Audit',
+            'malware_incident'   => 'Malware Incident Report',
+            'performance_review' => 'Performance Review',
+            'debug_report'       => 'Debug Report',
+            'incident_report'    => 'Incident Report',
+        ];
+        $report_type_label = $report_type_map[ $report_type ] ?? ucwords( str_replace( '_', ' ', $report_type ) );
+        $environment_name  = $environment->environment ?? '';
+
+        if ( $is_request ) {
+            $subject      = "{$site_name} - Site Audit Request";
+            $headline     = "Audit Requested";
+            $subheadline  = $site->name;
+            $intro_text   = "A request has been submitted for a site audit.";
+            $status_color = "#d97706"; // Orange
+            $status_text  = "Audit Pending";
+        } else {
+            $subject      = "{$site_name} - Cancel Site Audit Request";
+            $headline     = "Audit Cancelled";
+            $subheadline  = $site->name;
+            $intro_text   = "The audit request has been cancelled. Please disregard the previous request.";
+            $status_color = "#38a169"; // Green
+            $status_text  = "Cancelled";
+        }
+
+        $notes_html = '';
+        if ( ! empty( $notes ) ) {
+            $notes_escaped = nl2br( esc_html( $notes ) );
+            $notes_html = "
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                    <div style='color: #718096; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;'>Notes from Customer</div>
+                    <div style='color: #2d3748; font-size: 14px; line-height: 1.6;'>{$notes_escaped}</div>
+                </div>
+            ";
+        }
+
+        $content_html = "
+            <div style='text-align: left; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+                <p style='margin-bottom: 25px;'>{$intro_text}</p>
+
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;'>
+                    <table width='100%' cellpadding='0' cellspacing='0'>
+                        <tr>
+                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site Name</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$site->name}</td>
+                        </tr>
+                        <tr>
+                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Site ID</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>#{$site->site_id}</td>
+                        </tr>
+                        <tr>
+                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Environment</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$environment_name}</td>
+                        </tr>
+                        <tr>
+                            <td style='padding-bottom: 10px; color: #718096; font-size: 14px;'>Report Type</td>
+                            <td style='padding-bottom: 10px; color: #2d3748; font-weight: 600; text-align: right;'>{$report_type_label}</td>
+                        </tr>
+                        <tr>
+                            <td style='padding-top: 10px; border-top: 1px solid #edf2f7; color: #718096; font-size: 14px;'>Requested By</td>
+                            <td style='padding-top: 10px; border-top: 1px solid #edf2f7; color: #2d3748; font-weight: 600; text-align: right;'>
+                                {$user->name} <span style='color: #a0aec0; font-weight: 400;'>(#{$user->user_id})</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                {$notes_html}
+
+                <div style='text-align: center;'>
+                    <div style='display: inline-block; background-color: {$status_color}; color: #ffffff; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em;'>
+                        {$status_text}
+                    </div>
+                </div>
+            </div>
+        ";
+
+        $reply_to = ! empty( $user->name ) ? "{$user->name} <{$user->email}>" : $user->email;
+        $headers  = [ "Reply-To: $reply_to" ];
+
+        self::send_email_with_layout(
+            $admin_email,
+            $subject,
+            $headline,
+            $subheadline,
             $content_html,
             $headers
         );

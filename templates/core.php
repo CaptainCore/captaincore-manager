@@ -9222,6 +9222,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 			<v-card v-if="route == 'site-audits'" flat border="thin" rounded="xl">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Site Audits</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-btn color="primary" variant="tonal" prepend-icon="mdi-plus" class="mr-3" @click="openRequestAuditDialog()">Request Audit</v-btn>
 				</v-toolbar>
 				<v-card-text class="pt-0">
 					<v-data-table
@@ -9247,10 +9249,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							{{ new Date(item.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }}
 						</template>
 						<template v-slot:item.status="{ item }">
-							<v-chip size="small" variant="tonal" :color="{ clean: 'success', remediated: 'success', in_progress: 'info', issues_found: 'warning', compromised: 'error' }[item.status] || 'default'">{{ item.status.replace('_', ' ') }}</v-chip>
+							<v-chip v-if="item.status === 'requested'" size="small" variant="tonal" color="default">Queued</v-chip>
+							<v-chip v-else size="small" variant="tonal" :color="{ clean: 'success', remediated: 'success', in_progress: 'info', issues_found: 'warning', compromised: 'error' }[item.status] || 'default'">{{ item.status.replace('_', ' ') }}</v-chip>
 						</template>
 						<template v-slot:item.issues_count="{ item }">
-							<span v-if="item.finding_counts">
+							<span v-if="item.status === 'requested'" style="opacity:0.5">&mdash;</span>
+							<span v-else-if="item.finding_counts">
 								<v-chip v-if="item.finding_counts.open > 0" size="small" variant="tonal" color="warning" class="mr-1">{{ item.finding_counts.open }} open</v-chip>
 								<v-chip v-if="item.finding_counts.resolved > 0" size="small" variant="tonal" color="success">{{ item.finding_counts.resolved }} resolved</v-chip>
 								<span v-if="item.finding_counts.total === 0">0</span>
@@ -9258,26 +9262,103 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<span v-else>{{ item.issues_count }}</span>
 						</template>
 						<template v-slot:item.actions="{ item }">
-							<v-btn size="small" variant="text" icon @click="openSiteAuditReport(item.site_audit_id)">
-								<v-icon>mdi-file-document-outline</v-icon>
-								<v-tooltip activator="parent" location="top">View Report</v-tooltip>
+							<v-btn v-if="item.status === 'requested'" size="small" variant="text" icon @click="cancelAuditRequest(item)">
+								<v-icon>mdi-close-circle-outline</v-icon>
+								<v-tooltip activator="parent" location="top">Cancel Request</v-tooltip>
 							</v-btn>
-							<v-btn size="small" variant="text" icon @click="publishSiteAuditReport(item)">
-								<v-icon>mdi-earth</v-icon>
-								<v-tooltip activator="parent" location="top">{{ item.report_path ? 'Regenerate Public Link' : 'Publish Public Link' }}</v-tooltip>
-							</v-btn>
-							<v-btn v-if="item.report_path" size="small" variant="text" icon @click="copySiteAuditLink(item)">
-								<v-icon>mdi-content-copy</v-icon>
-								<v-tooltip activator="parent" location="top">Copy Public Link</v-tooltip>
-							</v-btn>
-							<v-btn v-if="item.report_path" size="small" variant="text" icon @click="unpublishSiteAuditReport(item)">
-								<v-icon>mdi-earth-off</v-icon>
-								<v-tooltip activator="parent" location="top">Unpublish</v-tooltip>
-							</v-btn>
+							<template v-else>
+								<v-btn size="small" variant="text" icon @click="openSiteAuditReport(item.site_audit_id)">
+									<v-icon>mdi-file-document-outline</v-icon>
+									<v-tooltip activator="parent" location="top">View Report</v-tooltip>
+								</v-btn>
+								<v-btn size="small" variant="text" icon @click="publishSiteAuditReport(item)">
+									<v-icon>mdi-earth</v-icon>
+									<v-tooltip activator="parent" location="top">{{ item.report_path ? 'Regenerate Public Link' : 'Publish Public Link' }}</v-tooltip>
+								</v-btn>
+								<v-btn v-if="item.report_path" size="small" variant="text" icon @click="copySiteAuditLink(item)">
+									<v-icon>mdi-content-copy</v-icon>
+									<v-tooltip activator="parent" location="top">Copy Public Link</v-tooltip>
+								</v-btn>
+								<v-btn v-if="item.report_path" size="small" variant="text" icon @click="unpublishSiteAuditReport(item)">
+									<v-icon>mdi-earth-off</v-icon>
+									<v-tooltip activator="parent" location="top">Unpublish</v-tooltip>
+								</v-btn>
+							</template>
 						</template>
 					</v-data-table>
 				</v-card-text>
 			</v-card>
+			<v-dialog v-model="dialog_request_audit.show" scrollable persistent width="520">
+				<v-card rounded="0">
+					<v-toolbar elevation="0" color="primary">
+						<v-btn icon="mdi-close" @click="dialog_request_audit.show = false"></v-btn>
+						<v-toolbar-title>Request Site Audit</v-toolbar-title>
+					</v-toolbar>
+					<v-card-text>
+						<v-container>
+							<p class="mb-4 text-medium-emphasis" style="font-size: 0.9rem;">Queue an audit for one of your sites. Our team will run it and share the report when it's ready.</p>
+							<v-autocomplete
+								v-model="dialog_request_audit.site"
+								:items="sites"
+								item-title="name"
+								return-object
+								label="Site"
+								variant="underlined"
+								@update:model-value="onRequestAuditSiteChange"
+							></v-autocomplete>
+							<v-select
+								v-model="dialog_request_audit.environment"
+								:items="dialog_request_audit.environments"
+								item-title="environment_label"
+								return-object
+								label="Environment"
+								variant="underlined"
+								:disabled="!dialog_request_audit.site || dialog_request_audit.environments_loading"
+								:loading="dialog_request_audit.environments_loading"
+							></v-select>
+							<v-select
+								v-model="dialog_request_audit.report_type"
+								:items="[
+									{ title: 'Security Audit', value: 'security_audit' },
+									{ title: 'Malware Incident Report', value: 'malware_incident' },
+									{ title: 'Performance Review', value: 'performance_review' },
+									{ title: 'Debug Report', value: 'debug_report' },
+									{ title: 'Incident Report', value: 'incident_report' }
+								]"
+								label="Report Type"
+								variant="underlined"
+							></v-select>
+							<v-textarea
+								v-model="dialog_request_audit.notes"
+								label="Notes (optional)"
+								variant="underlined"
+								auto-grow
+								rows="3"
+								placeholder="Anything specific we should look at?"
+							></v-textarea>
+							<v-col cols="12" class="text-right pa-0">
+								<v-btn
+									color="primary"
+									:disabled="!dialog_request_audit.site || !dialog_request_audit.environment || dialog_request_audit.submitting"
+									:loading="dialog_request_audit.submitting"
+									@click="submitAuditRequest()"
+								>Submit Request</v-btn>
+							</v-col>
+						</v-container>
+					</v-card-text>
+				</v-card>
+			</v-dialog>
+			<v-dialog v-model="dialog_cancel_audit.show" width="420">
+				<v-card>
+					<v-card-title>Cancel audit request?</v-card-title>
+					<v-card-text>Cancel the queued audit for <strong>{{ dialog_cancel_audit.site_name }}</strong>?</v-card-text>
+					<v-card-actions>
+						<v-spacer></v-spacer>
+						<v-btn variant="text" @click="dialog_cancel_audit.show = false">Keep Request</v-btn>
+						<v-btn color="error" variant="flat" :loading="dialog_cancel_audit.submitting" @click="confirmCancelAuditRequest()">Cancel Request</v-btn>
+					</v-card-actions>
+				</v-card>
+			</v-dialog>
 			<v-card v-if="route == 'activity-logs' && role == 'administrator'" flat border="thin" rounded="xl">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Activity Log</v-toolbar-title>
@@ -9286,7 +9367,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-col cols="12" sm="3" class="pr-2">
 						<v-select
 							v-model="activity_logs_filters.action"
-							:items="['', 'created', 'updated', 'deleted', 'toggled', 'deployed', 'shared', 'unshared', 'invited', 'locked', 'unlocked', 'transferred', 'requested_removal', 'cancelled_removal']"
+							:items="['', 'created', 'updated', 'deleted', 'toggled', 'deployed', 'shared', 'unshared', 'invited', 'locked', 'unlocked', 'transferred', 'requested_removal', 'cancelled_removal', 'requested_audit', 'cancelled_audit']"
 							label="Action"
 							density="compact"
 							variant="underlined"
@@ -9356,7 +9437,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							{{ pretty_timestamp_epoch( item.created_at ) }}
 						</template>
 						<template v-slot:item.action="{ item }">
-							<v-chip size="small" variant="tonal" :color="{ created: 'success', deleted: 'error', updated: 'info', toggled: 'warning', deployed: 'purple', shared: 'cyan', unshared: 'orange', invited: 'teal', locked: 'grey', unlocked: 'grey', transferred: 'indigo', requested_removal: 'error', cancelled_removal: 'success' }[item.action] || 'default'">{{ item.action }}</v-chip>
+							<v-chip size="small" variant="tonal" :color="{ created: 'success', deleted: 'error', updated: 'info', toggled: 'warning', deployed: 'purple', shared: 'cyan', unshared: 'orange', invited: 'teal', locked: 'grey', unlocked: 'grey', transferred: 'indigo', requested_removal: 'error', cancelled_removal: 'success', requested_audit: 'warning', cancelled_audit: 'success' }[item.action] || 'default'">{{ item.action }}</v-chip>
 						</template>
 						<template v-slot:item.entity_type="{ item }">
 							{{ item.entity_type.replace('_', ' ') }}
@@ -11482,7 +11563,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								{{ pretty_timestamp_epoch( item.created_at ) }}
 							</template>
 							<template v-slot:item.action="{ item }">
-								<v-chip size="small" variant="tonal" :color="{ created: 'success', deleted: 'error', updated: 'info', toggled: 'warning', deployed: 'purple', shared: 'cyan', unshared: 'orange', invited: 'teal', locked: 'grey', unlocked: 'grey', transferred: 'indigo', requested_removal: 'error', cancelled_removal: 'success' }[item.action] || 'default'">{{ item.action }}</v-chip>
+								<v-chip size="small" variant="tonal" :color="{ created: 'success', deleted: 'error', updated: 'info', toggled: 'warning', deployed: 'purple', shared: 'cyan', unshared: 'orange', invited: 'teal', locked: 'grey', unlocked: 'grey', transferred: 'indigo', requested_removal: 'error', cancelled_removal: 'success', requested_audit: 'warning', cancelled_audit: 'success' }[item.action] || 'default'">{{ item.action }}</v-chip>
 							</template>
 							<template v-slot:item.entity_type="{ item }">
 								{{ item.entity_type.replace('_', ' ') }}
@@ -12622,6 +12703,8 @@ const app = createApp({
 		security_patches_loading: false,
 		site_audits: [],
 		site_audits_loading: false,
+		dialog_request_audit: { show: false, site: null, environment: null, environments: [], environments_loading: false, report_type: 'security_audit', notes: '', submitting: false },
+		dialog_cancel_audit: { show: false, site_audit_id: null, site_name: '', submitting: false },
 		security_threats: [],
 		security_threats_loading: false,
 		security_coverage: null,
@@ -17032,6 +17115,97 @@ const app = createApp({
 			.catch(error => {
 				this.site_audits_loading = false;
 				this.loading_page = false;
+			});
+		},
+		openRequestAuditDialog() {
+			this.dialog_request_audit = { show: true, site: null, environment: null, environments: [], environments_loading: false, report_type: 'security_audit', notes: '', submitting: false };
+		},
+		onRequestAuditSiteChange( site ) {
+			this.dialog_request_audit.environment = null;
+			this.dialog_request_audit.environments = [];
+			if ( ! site || ! site.site_id ) {
+				return;
+			}
+			this.dialog_request_audit.environments_loading = true;
+			axios.get( `/wp-json/captaincore/v1/sites/${site.site_id}/environments`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then( response => {
+				const envs = ( response.data || [] ).map( e => {
+					e.environment_label = e.environment + ' Environment';
+					return e;
+				});
+				this.dialog_request_audit.environments = envs;
+				this.dialog_request_audit.environment = envs[0] || null;
+				this.dialog_request_audit.environments_loading = false;
+			})
+			.catch( () => {
+				this.dialog_request_audit.environments_loading = false;
+				this.snackbar.message = 'Failed to load environments.';
+				this.snackbar.show = true;
+			});
+		},
+		submitAuditRequest() {
+			const d = this.dialog_request_audit;
+			if ( ! d.site || ! d.environment ) return;
+			d.submitting = true;
+			axios.post(
+				'/wp-json/captaincore/v1/site-audits/request',
+				{
+					site_id: d.site.site_id,
+					environment_id: d.environment.environment_id,
+					report_type: d.report_type,
+					notes: d.notes
+				},
+				{ headers: { 'X-WP-Nonce': this.wp_nonce } }
+			)
+			.then( () => {
+				d.submitting = false;
+				d.show = false;
+				this.snackbar.message = 'Audit request submitted. Our team will be in touch.';
+				this.snackbar.show = true;
+				this.fetchSiteAudits();
+			})
+			.catch( error => {
+				d.submitting = false;
+				const msg = error.response && error.response.data && error.response.data.message
+					? error.response.data.message
+					: 'Failed to submit audit request.';
+				this.snackbar.message = msg;
+				this.snackbar.show = true;
+			});
+		},
+		cancelAuditRequest( item ) {
+			this.dialog_cancel_audit = {
+				show: true,
+				site_audit_id: item.site_audit_id,
+				site_name: item.site_name,
+				submitting: false
+			};
+		},
+		confirmCancelAuditRequest() {
+			const d = this.dialog_cancel_audit;
+			if ( ! d.site_audit_id ) return;
+			d.submitting = true;
+			axios.post(
+				`/wp-json/captaincore/v1/site-audits/${d.site_audit_id}/cancel`,
+				{},
+				{ headers: { 'X-WP-Nonce': this.wp_nonce } }
+			)
+			.then( () => {
+				d.submitting = false;
+				d.show = false;
+				this.snackbar.message = 'Audit request cancelled.';
+				this.snackbar.show = true;
+				this.fetchSiteAudits();
+			})
+			.catch( error => {
+				d.submitting = false;
+				const msg = error.response && error.response.data && error.response.data.message
+					? error.response.data.message
+					: 'Failed to cancel audit request.';
+				this.snackbar.message = msg;
+				this.snackbar.show = true;
 			});
 		},
 		fetchSecurityThreats() {
