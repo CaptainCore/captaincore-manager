@@ -1327,18 +1327,33 @@ function captaincore_site_lookup_func( WP_REST_Request $request ) {
 			$env  = $results[0];
 			$site = CaptainCore\Sites::get( $env->site_id );
 			$details        = json_decode( $env->details );
+			$site_details   = ! empty( $site->details ) ? json_decode( $site->details ) : null;
 			$home_directory = $env->home_directory;
 			if ( empty( $home_directory ) && ! empty( $details->home_directory ) ) {
 				$home_directory = $details->home_directory;
 			}
+
+			$environment_vars = [];
+			if ( ! empty( $site_details->environment_vars ) && is_array( $site_details->environment_vars ) ) {
+				foreach ( $site_details->environment_vars as $var ) {
+					if ( ! empty( $var->key ) ) {
+						$environment_vars[] = [
+							'key'   => $var->key,
+							'value' => $var->value ?? '',
+						];
+					}
+				}
+			}
+
 			return [
-				'site_id'        => (int) $env->site_id,
-				'environment_id' => (int) $env->environment_id,
-				'environment'    => $env->environment,
-				'name'           => $site->name ?? $domain,
-				'home_url'       => $env->home_url,
-				'ssh_connection' => "ssh {$env->username}@{$env->address} -p {$env->port}",
-				'home_directory' => $home_directory ?: '',
+				'site_id'          => (int) $env->site_id,
+				'environment_id'   => (int) $env->environment_id,
+				'environment'      => $env->environment,
+				'name'             => $site->name ?? $domain,
+				'home_url'         => $env->home_url,
+				'ssh_connection'   => "ssh {$env->username}@{$env->address} -p {$env->port}",
+				'home_directory'   => $home_directory ?: '',
+				'environment_vars' => $environment_vars,
 			];
 		}
 	}
