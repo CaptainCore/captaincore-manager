@@ -9043,6 +9043,22 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
+		'captaincore/v1', '/site-audits/request', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_audits_request_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/site-audits/(?P<id>[\d]+)/cancel', [
+			'methods'             => 'POST',
+			'callback'            => 'captaincore_site_audits_cancel_func',
+			'permission_callback' => 'captaincore_permission_check',
+		]
+	);
+
+	register_rest_route(
 		'captaincore/v1', '/site-audits/(?P<id>[\d]+)', [
 			'methods'             => 'DELETE',
 			'callback'            => 'captaincore_site_audits_delete_func',
@@ -9963,6 +9979,108 @@ function captaincore_site_audits_unpublish_func( WP_REST_Request $request ) {
 	}
 
 	return [ 'unpublished' => true ];
+}
+
+/**
+ * REST endpoint: Customer-initiated audit request.
+ * Creates a site_audits row with status='requested' and emails the admin.
+ */
+function captaincore_site_audits_request_func( WP_REST_Request $request ) {
+	$params         = $request->get_json_params();
+	$site_id        = intval( $params['site_id'] ?? 0 );
+	$environment_id = intval( $params['environment_id'] ?? 0 );
+	$report_type    = sanitize_text_field( $params['report_type'] ?? 'security_audit' );
+	$notes          = sanitize_textarea_field( $params['notes'] ?? '' );
+
+	$allowed_report_types = [ 'security_audit', 'malware_incident', 'performance_review', 'debug_report', 'incident_report' ];
+	if ( ! in_array( $report_type, $allowed_report_types, true ) ) {
+		return new WP_Error( 'invalid_report_type', 'Invalid report type.', [ 'status' => 400 ] );
+	}
+
+	if ( ! $site_id || ! $environment_id ) {
+		return new WP_Error( 'missing_params', 'site_id and environment_id are required.', [ 'status' => 400 ] );
+	}
+
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+
+	$site = ( new CaptainCore\Sites )->get( $site_id );
+	if ( ! $site ) {
+		return new WP_Error( 'not_found', 'Site not found.', [ 'status' => 404 ] );
+	}
+
+	$environment = ( new CaptainCore\Environments )->get( $environment_id );
+	if ( ! $environment || intval( $environment->site_id ) !== $site_id ) {
+		return new WP_Error( 'invalid_environment', 'Environment does not belong to this site.', [ 'status' => 400 ] );
+	}
+
+	$existing = ( new CaptainCore\SiteAudits )->where( [
+		'site_id'        => $site_id,
+		'environment_id' => $environment_id,
+		'status'         => 'requested',
+	] );
+	if ( ! empty( $existing ) ) {
+		return new WP_Error( 'already_requested', 'An audit has already been requested for this environment.', [ 'status' => 400 ] );
+	}
+
+	$time_now = date( 'Y-m-d H:i:s' );
+	$audit_id = ( new CaptainCore\SiteAudits )->insert( [
+		'site_id'        => $site_id,
+		'environment_id' => $environment_id,
+		'status'         => 'requested',
+		'report_type'    => $report_type,
+		'notes'          => $notes,
+		'user_id'        => get_current_user_id(),
+		'created_at'     => $time_now,
+		'updated_at'     => $time_now,
+	] );
+
+	$user = (object) ( new CaptainCore\User )->fetch();
+	\CaptainCore\Mailer::send_site_audit_request( $site, $environment, $user, $report_type, $notes, true );
+
+	$description = "Requested audit for {$site->name} ({$environment->environment})";
+	CaptainCore\ActivityLog::log( 'requested_audit', 'site', $site_id, $site->name, $description, [], $site->customer_id ?? null );
+
+	return [ 'site_audit_id' => $audit_id ];
+}
+
+/**
+ * REST endpoint: Cancel a queued audit request.
+ * Only the requesting user or an admin can cancel, and only while status='requested'.
+ */
+function captaincore_site_audits_cancel_func( WP_REST_Request $request ) {
+	$audit_id = intval( $request['id'] );
+	$audit    = ( new CaptainCore\SiteAudits )->get( $audit_id );
+
+	if ( ! $audit ) {
+		return new WP_Error( 'not_found', 'Audit not found.', [ 'status' => 404 ] );
+	}
+
+	if ( $audit->status !== 'requested' ) {
+		return new WP_Error( 'not_cancellable', 'Only queued requests can be cancelled.', [ 'status' => 400 ] );
+	}
+
+	$is_admin     = current_user_can( 'manage_options' );
+	$is_requester = intval( $audit->user_id ) === get_current_user_id();
+	if ( ! $is_admin && ! $is_requester ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+
+	$site        = ( new CaptainCore\Sites )->get( $audit->site_id );
+	$environment = ( new CaptainCore\Environments )->get( $audit->environment_id );
+
+	( new CaptainCore\SiteAudits )->delete( $audit_id );
+
+	if ( $site && $environment ) {
+		$user = (object) ( new CaptainCore\User )->fetch();
+		\CaptainCore\Mailer::send_site_audit_request( $site, $environment, $user, $audit->report_type, $audit->notes, false );
+
+		$description = "Cancelled audit request for {$site->name} ({$environment->environment})";
+		CaptainCore\ActivityLog::log( 'cancelled_audit', 'site', $audit->site_id, $site->name, $description, [], $site->customer_id ?? null );
+	}
+
+	return [ 'cancelled' => true, 'site_audit_id' => $audit_id ];
 }
 
 /**
