@@ -1676,6 +1676,7 @@ class Site {
             $item->description     = $Parsedown->text( $item->description );
             $item->author          = get_the_author_meta( 'display_name', $item->user_id );
             $item->author_avatar   = "https://www.gravatar.com/avatar/" . md5( get_the_author_meta( 'email', $item->user_id ) ) . "?s=80&d=mp";
+            $item->files           = ( new ProcessLog( $item->process_log_id ) )->files();
             $process_logs[]        = $item;
         }
         return $process_logs;
