@@ -2182,6 +2182,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 						</td>
 						<td class="justify-center py-4" style="vertical-align: top;">
 							<div v-html="item.description" v-show="item.description"></div>
+							<div v-if="item.files && item.files.length" class="process-log-files">
+								<v-chip v-for="(file, fidx) in item.files" :key="file.process_log_file_id" size="small" variant="tonal" class="process-log-file-chip" @click="openLogFiles(item, fidx)">
+									<v-icon start size="x-small" icon="mdi-file-document-edit-outline"></v-icon>
+									{{ processLogFileName(file) }}
+									<span class="plf-added" v-if="file.lines_added">+{{ file.lines_added }}</span>
+									<span class="plf-removed" v-if="file.lines_removed">−{{ file.lines_removed }}</span>
+								</v-chip>
+							</div>
 						</td>
 						<td class="justify-center pt-2" style="vertical-align:top; width:180px;">
 							<v-row align="center" no-gutters>
@@ -2317,6 +2325,72 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-container>
 				</v-card-text>
 				</v-card>
+				</v-dialog>
+				<v-dialog v-model="dialog_process_log_files.show" max-width="960" scrollable class="process-log-diff-dialog">
+					<v-card v-if="dialog_process_log_files.log" rounded="0" class="pld-card" flat>
+						<div class="pld-header">
+							<div class="pld-traffic">
+								<span class="pld-dot pld-dot-red" @click="dialog_process_log_files.show = false" title="Close"></span>
+								<span class="pld-dot pld-dot-yellow"></span>
+								<span class="pld-dot pld-dot-green"></span>
+							</div>
+							<div class="pld-title">code-diff — {{ currentProcessLogFile ? processLogFileName(currentProcessLogFile) : 'Files changed' }}</div>
+							<div class="pld-title-meta">{{ (dialog_process_log_files.log.files || []).length }} file{{ (dialog_process_log_files.log.files || []).length === 1 ? '' : 's' }}</div>
+						</div>
+						<v-row no-gutters class="process-log-diff-wrap">
+							<v-col cols="12" md="4" class="process-log-diff-filelist">
+								<div
+									v-for="(file, fidx) in (dialog_process_log_files.log.files || [])"
+									:key="file.process_log_file_id"
+									class="pld-file-item"
+									:class="{ 'pld-file-item-active': fidx === dialog_process_log_files.selected_index }"
+									@click="dialog_process_log_files.selected_index = fidx"
+								>
+									<div class="pld-file-name">{{ processLogFileName(file) }}</div>
+									<div class="pld-file-dir" v-if="processLogFileDir(file)">{{ processLogFileDir(file) }}</div>
+									<div class="pld-file-stats">
+										<span class="plf-added" v-if="file.lines_added">+{{ file.lines_added }}</span>
+										<span class="plf-removed" v-if="file.lines_removed">−{{ file.lines_removed }}</span>
+										<span v-if="file.change_type && file.change_type !== 'modified'" class="pld-change-type">{{ file.change_type }}</span>
+									</div>
+								</div>
+							</v-col>
+							<v-col cols="12" md="8" class="pld-diff-pane">
+								<template v-if="currentProcessLogFile">
+									<div class="pld-file-info">
+										<div class="pld-meta">File: {{ currentProcessLogFile.file_path }}</div>
+										<div class="pld-patch-meta">--- {{ processLogFileName(currentProcessLogFile) }} (original)</div>
+										<div class="pld-patch-meta">+++ {{ processLogFileName(currentProcessLogFile) }} (patched)</div>
+									</div>
+									<div class="process-log-diff-body">
+										<div
+											v-for="(hunk, hidx) in (currentProcessLogFile.hunks || [])"
+											:key="hidx"
+											class="process-log-hunk"
+										>
+											<div
+												v-for="(row, ridx) in processLogHunkRows(hunk)"
+												:key="hidx + '-' + ridx"
+												class="process-log-diff-line"
+												:class="'plf-' + row.type"
+											>
+												<span class="plf-lineno">{{ row.lineno }}</span>
+												<span class="plf-marker">{{ row.marker }}</span>
+												<span class="plf-content">{{ row.content }}</span>
+											</div>
+										</div>
+										<div v-if="!(currentProcessLogFile.hunks || []).length" class="pld-empty">
+											<em>No hunks recorded for this file.</em>
+										</div>
+									</div>
+									<div class="pld-stats" v-if="currentProcessLogFile.lines_added || currentProcessLogFile.lines_removed">
+										<span class="stat-removed" v-if="currentProcessLogFile.lines_removed">− {{ currentProcessLogFile.lines_removed }} line{{ currentProcessLogFile.lines_removed === 1 ? '' : 's' }} removed</span>
+										<span class="stat-added" v-if="currentProcessLogFile.lines_added">+ {{ currentProcessLogFile.lines_added }} line{{ currentProcessLogFile.lines_added === 1 ? '' : 's' }} added</span>
+									</div>
+								</template>
+							</v-col>
+						</v-row>
+					</v-card>
 				</v-dialog>
 				<v-dialog v-model="dialog_edit_script.show" scrollable max-width="750">
 				<v-card rounded="0">
@@ -6501,6 +6575,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</td>
 					<td class="justify-center py-4" style="vertical-align: top">
 					<div v-if="item.description" v-html="item.description"></div>
+					<div v-if="item.files && item.files.length" class="process-log-files">
+						<v-chip v-for="(file, fidx) in item.files" :key="file.process_log_file_id" size="small" variant="tonal" class="process-log-file-chip" @click="openLogFiles(item, fidx)">
+							<v-icon start size="x-small" icon="mdi-file-document-edit-outline"></v-icon>
+							{{ processLogFileName(file) }}
+							<span class="plf-added" v-if="file.lines_added">+{{ file.lines_added }}</span>
+							<span class="plf-removed" v-if="file.lines_removed">−{{ file.lines_removed }}</span>
+						</v-chip>
+					</div>
 					</td>
 					<td class="pt-2" style="vertical-align: top;">
 					<v-row align="center" no-gutters>
@@ -11252,6 +11334,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									</td>
 									<td class="py-4" style="vertical-align: top;">
 										<div v-if="item.description" v-html="item.description"></div>
+										<div v-if="item.files && item.files.length" class="process-log-files">
+											<v-chip v-for="(file, fidx) in item.files" :key="file.process_log_file_id" size="small" variant="tonal" class="process-log-file-chip" @click="openLogFiles(item, fidx)">
+												<v-icon start size="x-small" icon="mdi-file-document-edit-outline"></v-icon>
+												{{ processLogFileName(file) }}
+												<span class="plf-added" v-if="file.lines_added">+{{ file.lines_added }}</span>
+												<span class="plf-removed" v-if="file.lines_removed">−{{ file.lines_removed }}</span>
+											</v-chip>
+										</div>
 									</td>
 									<td class="pt-2" style="vertical-align: top; width: 180px;">
 										<v-row align="center" no-gutters>
@@ -13202,6 +13292,7 @@ const app = createApp({
 		backup_set_files: [],
 		dialog_cookbook: { show: false, recipe: {}, content: "" },
 		dialog_billing: { step: 1 },
+		dialog_process_log_files: { show: false, log: null, selected_index: 0 },
 		dialog_site: { loading: true, syncing: false, remote_sync_loading: false, step: 1, backup_step: 1, grant_access: [], grant_access_menu: false, desired_environment_id: null, environment_selected: { environment_id: "0", expanded_backups: [], quicksave_panel: [], plugins:[], themes: [], core: "", screenshots: [], users_selected: [], users: "Loading", address: "", capture_pages: [], environment: "Production", environment_label: "Production Environment", stats: "Loading", plugins_selected: [], themes_selected: [], loading_plugins: false, loading_themes: false, server_logs: { files: [] }, view_server_logs: false, loading_server_logs: false, server_log_limit: "1000", server_log_selected: "", server_log_response: "", server_log_lines: [], server_log_search: "" }, site: { name: "", site: "", screenshots: {}, timeline: [], environments: [], users: [], timeline: [], update_log: [], key: null, tabs: "tab-Site-Management", tabs_management: "tab-Info", account: { plan: "Loading" }  } },
 		dialog_site_request: { show: false, request: {} },
 		dialog_edit_account: { show: false, account: {} },
@@ -13632,6 +13723,11 @@ const app = createApp({
 		}
 	},
 	computed: {
+		currentProcessLogFile() {
+			const log = this.dialog_process_log_files.log
+			if ( ! log || ! Array.isArray( log.files ) || ! log.files.length ) return null
+			return log.files[ this.dialog_process_log_files.selected_index ] || null
+		},
 		filteredServerLogLines() {
 			const env = this.dialog_site.environment_selected
 			if ( !env || !env.server_log_lines || !env.server_log_lines.length ) return []
@@ -18225,6 +18321,49 @@ const app = createApp({
 					this.fetchSiteEnvironments( this.dialog_site.site.site_id )
 				});
 		},
+		openLogFiles( log, index ) {
+			this.dialog_process_log_files.log = log;
+			this.dialog_process_log_files.selected_index = index || 0;
+			this.dialog_process_log_files.show = true;
+		},
+		processLogFileName( file ) {
+			if ( ! file || ! file.file_path ) { return ""; }
+			const parts = file.file_path.split( '/' );
+			return parts[ parts.length - 1 ];
+		},
+		processLogFileDir( file ) {
+			if ( ! file || ! file.file_path ) { return ""; }
+			const parts = file.file_path.split( '/' );
+			parts.pop();
+			return parts.join( '/' );
+		},
+		processLogHunkRows( hunk ) {
+			if ( ! hunk ) { return []; }
+			const rows = [];
+			const ctxBefore = hunk.context_before || [];
+			const removed   = hunk.removed || [];
+			const added     = hunk.added || [];
+			const ctxAfter  = hunk.context_after || [];
+			let oldLine     = hunk.line_start || 1;
+			let newLine     = hunk.line_start || 1;
+			ctxBefore.forEach( line => {
+				rows.push( { type: 'ctx', marker: ' ', lineno: oldLine, content: line } );
+				oldLine++; newLine++;
+			});
+			removed.forEach( line => {
+				rows.push( { type: 'removed', marker: '-', lineno: oldLine, content: line } );
+				oldLine++;
+			});
+			added.forEach( line => {
+				rows.push( { type: 'added', marker: '+', lineno: newLine, content: line } );
+				newLine++;
+			});
+			ctxAfter.forEach( line => {
+				rows.push( { type: 'ctx', marker: ' ', lineno: oldLine, content: line } );
+				oldLine++; newLine++;
+			});
+			return rows;
+		},
 		editLogEntry( site_id, log_id ) {
 
 			// If not assigned that's fine but at least assign as string.
@@ -20175,7 +20314,7 @@ const app = createApp({
 		},
 		resetPermissions( site_id ) {
 			site = this.dialog_site.site
-			site_name =  this.dialog_site.environment_selected.home_url
+			site_name = this.dialog_site.environment_selected.home_url || this.dialog_site.site.name || ""
 			site_name = site_name.replace( "https://www.", "" ).replace( "https://", "" ).replace( "http://www.", "" ).replace( "http://", "" )
 			
 			should_proceed = confirm( `Reset file permissions to defaults on ${site_name}?` )
@@ -20502,7 +20641,7 @@ const app = createApp({
 		siteDeploy( site_id ) {
 
 			site = this.dialog_site.site
-			site_name =  this.dialog_site.environment_selected.home_url
+			site_name = this.dialog_site.environment_selected.home_url || this.dialog_site.site.name || ""
 			site_name = site_name.replace( "https://www.", "" ).replace( "https://", "" ).replace( "http://www.", "" ).replace( "http://", "" )
 			
 			should_proceed = confirm( `Deploy defaults on ${site_name}?` )

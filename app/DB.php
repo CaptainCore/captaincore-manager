@@ -674,7 +674,7 @@ class DB {
 
      // Perform CaptainCore database upgrades by running `CaptainCore\DB::upgrade();`
      public static function upgrade( $force = false ) {
-        $required_version = (int) "45";
+        $required_version = (int) "46";
         $version          = (int) get_site_option( 'captaincore_db_version' );
     
         if ( $version >= $required_version and $force != true ) {
@@ -798,9 +798,25 @@ class DB {
             updated_at datetime NOT NULL,
         PRIMARY KEY  (process_log_site_id)
         ) $charset_collate;";
-        
+
         dbDelta($sql);
-    
+
+        $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_process_log_file` (
+            process_log_file_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            process_log_id bigint(20) UNSIGNED NOT NULL,
+            site_id bigint(20) UNSIGNED,
+            file_path varchar(512) NOT NULL,
+            change_type varchar(20) NOT NULL,
+            hunks longtext,
+            lines_added int UNSIGNED NOT NULL DEFAULT 0,
+            lines_removed int UNSIGNED NOT NULL DEFAULT 0,
+            created_at datetime NOT NULL,
+        PRIMARY KEY  (process_log_file_id),
+        KEY process_log_id (process_log_id)
+        ) $charset_collate;";
+
+        dbDelta($sql);
+
         $sql = "CREATE TABLE `{$wpdb->base_prefix}captaincore_recipes` (
             recipe_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             user_id bigint(20) UNSIGNED NOT NULL,

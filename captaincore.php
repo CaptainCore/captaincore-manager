@@ -1248,6 +1248,10 @@ function captaincore_update_log_entry_func( WP_REST_Request $request ) {
 	}
 	( new CaptainCore\ProcessLogs )->update( (array) $process_log_update, [ "process_log_id" => $process_log->process_log_id ] );
 	( new CaptainCore\ProcessLog( $process_log->process_log_id) )->assign_sites( $site_ids );
+	if ( isset( $process_log->files ) && is_array( $process_log->files ) ) {
+		$default_site_id = ! empty( $site_ids ) ? (int) $site_ids[0] : null;
+		( new CaptainCore\ProcessLog( $process_log->process_log_id ) )->assign_files( $process_log->files, $default_site_id );
+	}
 	$timelines = [];
 	foreach ( $site_ids as $site_id ) {
 		$timelines[ $site_id ] = ( new CaptainCore\Site( $site_id ) )->process_logs();
@@ -1264,6 +1268,7 @@ function captaincore_process_logs_create_func( WP_REST_Request $request ) {
 	$site_ids   = $request->get_param( 'site_ids' );
 	$process_id = $request->get_param( 'process_id' );
 	$description = $request->get_param( 'description' );
+	$files      = $request->get_param( 'files' );
 
 	if ( ! empty( $site_ids ) && ! captaincore_verify_permissions( $site_ids ) ) {
 		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
@@ -1287,6 +1292,10 @@ function captaincore_process_logs_create_func( WP_REST_Request $request ) {
 	$process_log_id  = $process_log->insert( $process_log_new );
 	if ( ! empty( $site_ids ) ) {
 		( new CaptainCore\ProcessLog( $process_log_id ) )->assign_sites( $site_ids );
+	}
+	if ( ! empty( $files ) && is_array( $files ) ) {
+		$default_site_id = ! empty( $site_ids ) ? (int) $site_ids[0] : null;
+		( new CaptainCore\ProcessLog( $process_log_id ) )->assign_files( $files, $default_site_id );
 	}
 	$timelines = [];
 	foreach ( (array) $site_ids as $site_id ) {
