@@ -1479,17 +1479,27 @@ html body {
 	color: #1976d2;
 }
 
-.timeline .theme--light.v-table p {
-	margin-bottom: 0px;
-	padding-bottom: 0px;
-	line-height: initial;
+.timeline td p {
+	margin: 0 0 0.6em;
+	padding: 0;
+	line-height: 1.55;
 }
-.timeline .theme--light.v-table ul {
-	margin: 5px 0px;
+.timeline td p:last-child {
+	margin-bottom: 0;
 }
-.timeline .theme--light.v-table li {
-    list-style: disc;
-    margin-left: 1.5em;
+.timeline td ul {
+	margin: 0.4em 0 0.6em;
+	padding-left: 1.5em;
+	list-style: disc;
+}
+.timeline td li {
+	list-style: disc;
+	margin: 0 0 0.25em;
+	padding: 0;
+	line-height: 1.55;
+}
+.timeline td li:last-child {
+	margin-bottom: 0;
 }
 .timeline .theme--light.v-table h1,
 .timeline .theme--light.v-table h2,
