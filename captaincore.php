@@ -6415,6 +6415,32 @@ function captaincore_register_rest_endpoints() {
 	);
 
 	register_rest_route(
+		'captaincore/v1', '/verify-login', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_verify_login_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sessions', [
+			[
+				'methods'             => 'GET',
+				'callback'            => 'captaincore_sessions_list_func',
+				'permission_callback' => 'is_user_logged_in',
+				'show_in_index'       => false,
+			],
+			[
+				'methods'             => 'DELETE',
+				'callback'            => 'captaincore_sessions_destroy_func',
+				'permission_callback' => 'is_user_logged_in',
+				'show_in_index'       => false,
+			],
+		]
+	);
+
+	register_rest_route(
 		'captaincore/v1', '/archive', [
 			'methods'             => 'GET',
 			'callback'            => function( $request ) {
@@ -11050,15 +11076,50 @@ function captaincore_login_func( WP_REST_Request $request ) {
 				return [ "errors" =>  "One time password is invalid." ];
 			}
 		}
+
+		// When 2FA is not enabled, require that the login originate from a trusted
+		// location. An unknown location triggers an email-verify step and halts
+		// the sign-in until the user clicks the emailed link.
+		if ( ! $tfa_enabled ) {
+			$fingerprint = CaptainCore\GeoIP::fingerprint( CaptainCore\GeoIP::client_ip() );
+
+			// If GeoIP can't resolve (DB missing, garbage IP, private range returned null),
+			// allow the login but don't add to trust. Hard-failing here would lock users out
+			// when databases are stale or the network sends odd headers.
+			if ( $fingerprint !== null && empty( $fingerprint['is_local'] ) && ! empty( $fingerprint['lookup_ok'] ) ) {
+				if ( CaptainCore\TrustedLogins::is_trusted( $current_user->ID, $fingerprint ) ) {
+					CaptainCore\TrustedLogins::touch( $current_user->ID, $fingerprint );
+				} else {
+					$token      = CaptainCore\PendingVerification::create( $current_user->ID, $fingerprint );
+					$verify_url = CaptainCore\PendingVerification::verify_url( $current_user->ID, $token );
+					CaptainCore\Mailer::send_login_verification( $current_user, $verify_url, $fingerprint );
+					return [ "info" => "We sent a verification email to finish signing in." ];
+				}
+			}
+		}
+
 		if ( function_exists( "wpgraphql_cors_signon" ) ) {
 			wpgraphql_cors_signon( $credentials, true );
 		} else {
 			wp_signon( $credentials );
-		} 
+		}
 		return [ "message" =>  "Logged in." ];
 	}
 
 	if ( $post->command == "signOut" ) {
+		// REST + cookie without a nonce: determine_current_user resolves to 0
+		// as CSRF protection, so wp_logout()'s internal session destroy is a
+		// no-op and leaves the row in session_tokens usermeta. Parse the
+		// cookie directly to kill the exact session before calling wp_logout.
+		if ( function_exists( 'wp_parse_auth_cookie' ) ) {
+			$cookie = wp_parse_auth_cookie( '', 'logged_in' );
+			if ( is_array( $cookie ) && ! empty( $cookie['username'] ) && ! empty( $cookie['token'] ) ) {
+				$cookie_user = get_user_by( 'login', $cookie['username'] );
+				if ( $cookie_user ) {
+					WP_Session_Tokens::get_instance( $cookie_user->ID )->destroy( $cookie['token'] );
+				}
+			}
+		}
 		wp_logout();
 	}
 
@@ -11115,8 +11176,17 @@ function captaincore_login_func( WP_REST_Request $request ) {
 				"user_password" => $password,
 				"remember"      => true,
 			];
-	
+
 			$current_user = wp_signon( $credentials );
+
+			// Clicking the invite link proves email possession, so the current
+			// location is trusted without a second email round-trip.
+			if ( $user_id ) {
+				$fingerprint = CaptainCore\GeoIP::fingerprint( CaptainCore\GeoIP::client_ip() );
+				if ( $fingerprint !== null ) {
+					CaptainCore\TrustedLogins::add( (int) $user_id, $fingerprint, 'invite' );
+				}
+			}
 
 			return [ "message" => "New account created." ];
 		}
@@ -11124,6 +11194,103 @@ function captaincore_login_func( WP_REST_Request $request ) {
 	}
 
 }
+
+/**
+ * Email-link handler for new-location sign-in verification.
+ *
+ * Invoked by the link in the Mailer::send_login_verification email. Validates
+ * the single-use token, persists the fingerprint as trusted, and issues a
+ * standard WP auth cookie before redirecting to /account/.
+ */
+function captaincore_verify_login_func( WP_REST_Request $request ) {
+	$user_id   = (int) $request->get_param( 'user' );
+	$token     = (string) $request->get_param( 'token' );
+	$login_url = home_url( '/account/login' );
+	$home_url  = home_url( '/account/' );
+
+	if ( $user_id <= 0 || $token === '' ) {
+		wp_redirect( add_query_arg( 'verify', 'invalid', $login_url ) );
+		exit;
+	}
+
+	$user = get_user_by( 'id', $user_id );
+	if ( ! $user ) {
+		wp_redirect( add_query_arg( 'verify', 'invalid', $login_url ) );
+		exit;
+	}
+
+	$fingerprint = CaptainCore\PendingVerification::consume( $user_id, $token );
+	if ( $fingerprint === null ) {
+		wp_redirect( add_query_arg( 'verify', 'expired', $login_url ) );
+		exit;
+	}
+
+	// Trust this location for future logins.
+	CaptainCore\TrustedLogins::add( $user_id, $fingerprint, 'email_verify' );
+
+	// Issue a standard WP auth cookie without re-entering a password — the
+	// email click is the second factor here.
+	wp_set_current_user( $user_id );
+	wp_set_auth_cookie( $user_id, true );
+
+	wp_redirect( $home_url );
+	exit;
+}
+
+/**
+ * GET /captaincore/v1/sessions — active sessions for the current user.
+ */
+function captaincore_sessions_list_func( WP_REST_Request $request ) {
+	return [ 'sessions' => CaptainCore\Sessions::list_for_user( get_current_user_id() ) ];
+}
+
+/**
+ * DELETE /captaincore/v1/sessions — kill a specific session by hash, or all
+ * sessions other than the current one when `all_others=1` is passed.
+ * Never destroys the current session — use sign-out for that.
+ */
+function captaincore_sessions_destroy_func( WP_REST_Request $request ) {
+	$user_id = get_current_user_id();
+	$params  = $request->get_json_params();
+	if ( ! is_array( $params ) ) {
+		$params = [];
+	}
+
+	if ( ! empty( $params['all_others'] ) ) {
+		$count = CaptainCore\Sessions::destroy_others( $user_id );
+		return [ 'destroyed' => (int) $count, 'sessions' => CaptainCore\Sessions::list_for_user( $user_id ) ];
+	}
+
+	$hash = isset( $params['hash'] ) ? (string) $params['hash'] : '';
+	if ( $hash === '' || ! preg_match( '/^[a-f0-9]{64}$/', $hash ) ) {
+		return new WP_Error( 'invalid_hash', 'Valid session hash required.', [ 'status' => 400 ] );
+	}
+
+	$ok = CaptainCore\Sessions::destroy_by_hash( $user_id, $hash );
+	if ( ! $ok ) {
+		return new WP_Error( 'not_destroyed', 'Session could not be destroyed (not found or is current).', [ 'status' => 400 ] );
+	}
+	return [ 'destroyed' => 1, 'sessions' => CaptainCore\Sessions::list_for_user( $user_id ) ];
+}
+
+/**
+ * Auto-trust the current request's fingerprint after a WP password reset.
+ *
+ * Clicking the "reset your password" email link proves mailbox possession, so
+ * we treat the location where the reset completes as trusted — otherwise the
+ * user would have to email-verify again the next time they sign in.
+ */
+add_action( 'password_reset', function ( $user, $new_pass ) {
+	if ( ! $user || ! isset( $user->ID ) ) {
+		return;
+	}
+	$fingerprint = CaptainCore\GeoIP::fingerprint( CaptainCore\GeoIP::client_ip() );
+	if ( $fingerprint === null ) {
+		return;
+	}
+	CaptainCore\TrustedLogins::add( (int) $user->ID, $fingerprint, 'password_reset' );
+	CaptainCore\PendingVerification::clear( (int) $user->ID );
+}, 10, 2 );
 
 function human_filesize( $bytes, $decimals = 2 ) {
 	$size   = [ 'B', 'kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB' ];

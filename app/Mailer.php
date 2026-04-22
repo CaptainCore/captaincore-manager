@@ -642,12 +642,68 @@ class Mailer {
         ";
 
         // 4. Send email
-        self::send_email_with_layout( 
-            $user->user_email, 
-            "Password Reset Request", 
-            "Reset Password", 
-            $site_name, 
-            $content_html 
+        self::send_email_with_layout(
+            $user->user_email,
+            "Password Reset Request",
+            "Reset Password",
+            $site_name,
+            $content_html
+        );
+    }
+
+    /* -------------------------------------------------------------------------
+     *  NEW LOCATION LOGIN VERIFICATION
+     * ------------------------------------------------------------------------- */
+    static public function send_login_verification( $user, $verify_url, $fingerprint ) {
+        if ( ! $user ) return;
+
+        $config      = Configurations::get();
+        $brand_color = $config->colors->primary ?? '#0D47A1';
+        $site_name   = get_bloginfo( 'name' );
+        $login       = $user->user_login;
+
+        $country = ! empty( $fingerprint['country'] ) ? $fingerprint['country'] : 'Unknown location';
+        $ip      = ! empty( $fingerprint['ip'] )      ? $fingerprint['ip']      : 'Unknown IP';
+        $asn     = ! empty( $fingerprint['asn'] )     ? 'AS' . (int) $fingerprint['asn']  : '';
+        $ua_raw  = (string) ( $_SERVER['HTTP_USER_AGENT'] ?? '' );
+        $ua      = esc_html( mb_strimwidth( $ua_raw, 0, 140, '…' ) );
+
+        $location_line = esc_html( $country );
+        if ( $asn ) {
+            $location_line .= ' · ' . esc_html( $asn );
+        }
+
+        $content_html = "
+            <div style='text-align: center; font-size: 16px; line-height: 1.6; color: #4a5568;'>
+                <p>A sign-in from a new location was just attempted for your account:</p>
+
+                <div style='background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin: 20px 0; display: inline-block; text-align: left; min-width: 280px;'>
+                    <div style='margin-bottom: 10px;'><strong style='color: #2d3748;'>" . esc_html( $login ) . "</strong></div>
+                    <div style='font-size: 13px; color: #718096;'>Location: <strong style='color: #4a5568;'>{$location_line}</strong></div>
+                    <div style='font-size: 13px; color: #718096;'>IP: <strong style='color: #4a5568;'>" . esc_html( $ip ) . "</strong></div>
+                    <div style='font-size: 12px; color: #a0aec0; margin-top: 8px;'>{$ua}</div>
+                </div>
+
+                <p>If this was you, click the button below to finish signing in. The link expires in 30&nbsp;minutes.</p>
+
+                <table role='presentation' border='0' cellpadding='0' cellspacing='0' style='margin: 30px auto;'>
+                    <tr>
+                        <td style='border-radius: 4px; background-color: {$brand_color};'>
+                            <a href='" . esc_url( $verify_url ) . "' target='_blank' style='border: 1px solid {$brand_color}; border-radius: 4px; color: #ffffff; display: inline-block; font-size: 16px; font-weight: 600; padding: 12px 30px; text-decoration: none;'>Confirm sign-in &rarr;</a>
+                        </td>
+                    </tr>
+                </table>
+
+                <p style='font-size: 13px; color: #718096;'>If this was not you, ignore this email and change your password — someone may have your credentials.</p>
+            </div>
+        ";
+
+        self::send_email_with_layout(
+            $user->user_email,
+            "Confirm new sign-in to {$site_name}",
+            "New location sign-in",
+            $site_name,
+            $content_html
         );
     }
 
