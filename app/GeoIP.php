@@ -24,12 +24,27 @@ class GeoIP {
     /**
      * Absolute path to the directory holding GeoLite2-City.mmdb and
      * GeoLite2-ASN.mmdb. Override with `define('CAPTAINCORE_GEOIP_PATH', ...)`.
+     *
+     * Default is `<abspath>/wp-content/uploads/geoip` — always inside
+     * PHP's open_basedir and writable from the refresh script. Falls back
+     * to a sibling `private/geoip` layout if that exists (dev environments).
      */
     public static function db_path(): string {
         if ( defined( 'CAPTAINCORE_GEOIP_PATH' ) ) {
             return CAPTAINCORE_GEOIP_PATH;
         }
-        return dirname( rtrim( ABSPATH, '/\\' ) ) . '/private/geoip';
+        $candidates = [
+            rtrim( ABSPATH, '/\\' ) . '/wp-content/uploads/geoip',
+            dirname( rtrim( ABSPATH, '/\\' ) ) . '/private/geoip',
+        ];
+        foreach ( $candidates as $path ) {
+            // Suppress open_basedir warnings — is_dir returns false cleanly
+            // and we continue probing.
+            if ( @is_dir( $path ) ) {
+                return $path;
+            }
+        }
+        return $candidates[0];
     }
 
     private static function city_reader(): ?Reader {
