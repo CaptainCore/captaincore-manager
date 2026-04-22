@@ -3447,7 +3447,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 											hide-details="auto"
 										></v-text-field>
 
-										<div v-show="login.info || login.errors == 'One time password is invalid.'" class="mb-4">
+										<div v-show="login.info == 'Enter one time password.' || login.errors == 'One time password is invalid.'" class="mb-4">
 											<div class="text-caption text-medium-emphasis mb-1">One Time Password</div>
 											<v-otp-input 
 												length="6" 
@@ -3510,7 +3510,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<div class="text-caption text-medium-emphasis mb-1">Password</div>
 								<v-text-field v-model="login.user_password" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']" variant="outlined" density="compact" hide-details="auto" class="mb-4"></v-text-field>
 							</v-col>
-							<v-col cols="12" v-show="login.info || login.errors == 'One time password is invalid.'" class="py-0">
+							<v-col cols="12" v-show="login.info == 'Enter one time password.' || login.errors == 'One time password is invalid.'" class="py-0">
 								<div class="text-caption text-medium-emphasis mb-1">One Time Password</div>
 								<div class="d-flex justify-start mb-4">
 									<v-otp-input length="6" type="number" v-model="login.tfa_code" required :disabled="login.loading" variant="outlined" density="compact" min-height="40"></v-otp-input>
