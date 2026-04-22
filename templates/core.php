@@ -10746,6 +10746,74 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-row>
 				</v-card-text>
 			</v-card>
+			<v-card v-if="route == 'profile'" flat border="thin" rounded="xl" class="mx-auto mt-5" max-width="700">
+				<v-toolbar flat color="transparent">
+					<v-toolbar-title>Active sessions</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-btn
+						v-if="profile.sessions && profile.sessions.length > 1"
+						size="small"
+						variant="text"
+						color="error"
+						:loading="profile.sessions_loading"
+						@click="destroyOtherSessions()"
+					>Sign out everywhere else</v-btn>
+				</v-toolbar>
+				<v-card-text class="pa-0">
+					<v-list lines="two" class="py-0">
+						<template v-for="(session, idx) in profile.sessions" :key="session.hash">
+							<v-divider v-if="idx > 0"></v-divider>
+							<v-list-item class="py-3">
+								<div class="d-flex align-center ga-3">
+									<v-icon size="32" :color="session.is_current ? 'primary' : 'medium-emphasis'">{{ sessionIcon(session) }}</v-icon>
+									<div class="flex-grow-1 min-width-0">
+										<div class="d-flex align-center flex-wrap ga-2">
+											<span>{{ session.ua_browser }} on {{ session.ua_os }}</span>
+											<v-chip v-if="session.is_current" size="x-small" color="primary" variant="tonal">This device</v-chip>
+										</div>
+										<div class="text-caption">
+											<span v-if="session.is_local">Local / private network</span>
+											<span v-else-if="session.country_name">
+												{{ session.country_name }}<span v-if="session.asn_org"> &middot; {{ session.asn_org }}</span>
+											</span>
+											<span v-else-if="session.ip">{{ session.ip }}</span>
+											<span v-else>Unknown location</span>
+										</div>
+										<div class="text-caption text-medium-emphasis">
+											Signed in {{ pretty_timestamp_epoch( session.login_at ) }}<span v-if="session.ip && !session.is_local"> &middot; {{ session.ip }}</span>
+										</div>
+									</div>
+									<v-btn
+										v-if="session.is_current"
+										icon="mdi-close"
+										size="small"
+										variant="text"
+										color="error"
+										@click="signOut()"
+										title="Sign out of this device"
+									></v-btn>
+									<v-btn
+										v-else
+										icon="mdi-close"
+										size="small"
+										variant="text"
+										color="error"
+										:loading="profile.sessions_loading"
+										@click="destroySession(session.hash)"
+										title="Sign out this session"
+									></v-btn>
+								</div>
+							</v-list-item>
+						</template>
+					</v-list>
+					<v-alert
+						v-if="!profile.sessions || profile.sessions.length === 0"
+						type="info"
+						variant="tonal"
+						class="ma-4"
+					>No active sessions found.</v-alert>
+				</v-card-text>
+			</v-card>
             <v-card v-if="role == 'administrator' && route == 'subscription'" flat border="thin" rounded="xl">
                 <v-toolbar flat color="transparent">
                     <v-btn icon="mdi-arrow-left" @click="goToPath('/billing')" variant="text"></v-btn>
@@ -13192,7 +13260,7 @@ const app = createApp({
 		current_user_registered: "<?php echo $user->registered; ?>",
 		current_user_hash: "<?php echo $user->hash; ?>",
 		current_user_display_name: "<?php echo $user->display_name; ?>",
-		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->email; ?>", login: "<?php echo $user->login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", pinned_environments: [], errors: [], tfa_activate: false, tfa_enabled: <?php echo $user->tfa_enabled; ?>, tfa_uri: "", tfa_token: "", email_subscriber: <?php echo $user->email_subscriber ? 'true' : 'false'; ?>, application_password: <?php echo json_encode( ( new CaptainCore\User )->get_application_password() ); ?>, application_password_new: "", application_password_loading: false, api_docs_dialog: false, api_docs_html: "", api_docs_toc: [], api_docs_loading: false },
+		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->email; ?>", login: "<?php echo $user->login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", pinned_environments: [], errors: [], tfa_activate: false, tfa_enabled: <?php echo $user->tfa_enabled; ?>, tfa_uri: "", tfa_token: "", email_subscriber: <?php echo $user->email_subscriber ? 'true' : 'false'; ?>, application_password: <?php echo json_encode( ( new CaptainCore\User )->get_application_password() ); ?>, application_password_new: "", application_password_loading: false, api_docs_dialog: false, api_docs_html: "", api_docs_toc: [], api_docs_loading: false, sessions: <?php echo json_encode( CaptainCore\Sessions::list_for_user( get_current_user_id() ) ); ?>, sessions_loading: false },
 		stats: { from_at: "<?php echo date("Y-m-d", strtotime( date("Y-m-d" ). " -12 months" ) ); ?>", to_at: "<?php echo date("Y-m-d" ); ?>", from_at_select: false, to_at_select: false, grouping: "Month" },
 		role: "<?php echo $user->role; ?>",
 		dialog_processes: { show: false, processes: [], conn: {}, stream: [], loading: true },
@@ -18391,6 +18459,57 @@ const app = createApp({
 				})
 				.catch( error => console.log( error ) );
 
+		},
+		sessionIcon( session ) {
+			const os = ( session.ua_os || '' ).toLowerCase();
+			if ( os.includes( 'ios' ) )          return 'mdi-apple';
+			if ( os.includes( 'android' ) )      return 'mdi-android';
+			if ( os.includes( 'mac' ) )          return 'mdi-apple';
+			if ( os.includes( 'windows' ) )      return 'mdi-microsoft-windows';
+			if ( os.includes( 'linux' ) )        return 'mdi-linux';
+			if ( os.includes( 'chrome os' ) )    return 'mdi-google-chrome';
+			return 'mdi-laptop';
+		},
+		destroySession( hash ) {
+			if ( ! hash ) return;
+			if ( ! confirm( 'Sign out this session? The device will need to log in again.' ) ) {
+				return;
+			}
+			this.profile.sessions_loading = true;
+			axios.delete( '/wp-json/captaincore/v1/sessions', {
+					headers: { 'X-WP-Nonce': this.wp_nonce },
+					data:    { hash: hash }
+				})
+				.then( response => {
+					this.profile.sessions = response.data.sessions || [];
+					this.snackbar.message = "Session signed out";
+					this.snackbar.show = true;
+				})
+				.catch( error => {
+					this.snackbar.message = error.response?.data?.message || "Could not sign out session";
+					this.snackbar.show = true;
+				})
+				.finally( () => { this.profile.sessions_loading = false; } );
+		},
+		destroyOtherSessions() {
+			if ( ! confirm( 'Sign out every other device except this one?' ) ) {
+				return;
+			}
+			this.profile.sessions_loading = true;
+			axios.delete( '/wp-json/captaincore/v1/sessions', {
+					headers: { 'X-WP-Nonce': this.wp_nonce },
+					data:    { all_others: true }
+				})
+				.then( response => {
+					this.profile.sessions = response.data.sessions || [];
+					this.snackbar.message = `Signed out ${response.data.destroyed} other session(s)`;
+					this.snackbar.show = true;
+				})
+				.catch( error => {
+					this.snackbar.message = error.response?.data?.message || "Could not sign out sessions";
+					this.snackbar.show = true;
+				})
+				.finally( () => { this.profile.sessions_loading = false; } );
 		},
 		deleteLogEntry( log_id ) {
 			if ( ! confirm( 'Are you sure you want to delete this log entry?' ) ) {

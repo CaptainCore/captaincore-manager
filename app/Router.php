@@ -136,7 +136,12 @@ class Router {
                                 // Login User
                                 wp_set_current_user( $user->ID, $user->user_login );
                                 wp_set_auth_cookie( $user->ID );
-                                
+
+                                // The invoice link is emailed to the order's customer;
+                                // clicking it proves mailbox possession, so trust the
+                                // current location without a separate email verify.
+                                TrustedLogins::trust_current_request( (int) $user->ID, 'invoice_magic' );
+
                                 // Fetch configurations to get the correct billing path
                                 $config = Configurations::fetch();
                                 $path   = isset( $config->path ) ? '/' . trim( $config->path, '/' ) . '/' : '/account/';
