@@ -22,11 +22,16 @@ class ComponentQueueCLI {
 	 * [--all]
 	 * : Show all un-audited hashes, not just the top N.
 	 *
+	 * [--model=<id>]
+	 * : Canonical auditor ID (e.g. claude-opus-4-7). When set, hashes audited only by
+	 * other models are still returned — supports layered multi-model audits.
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     wp captaincore component-queue
 	 *     wp captaincore component-queue --limit=50
 	 *     wp captaincore component-queue --format=json
+	 *     wp captaincore component-queue --model=claude-opus-4-7
 	 *
 	 * @when after_wp_load
 	 */
@@ -34,6 +39,7 @@ class ComponentQueueCLI {
 		$limit    = isset( $assoc_args['limit'] ) ? (int) $assoc_args['limit'] : 20;
 		$format   = $assoc_args['format'] ?? 'table';
 		$show_all = isset( $assoc_args['all'] );
+		$model    = isset( $assoc_args['model'] ) ? (string) $assoc_args['model'] : '';
 
 		$quiet = $format !== 'table';
 		$log   = function( $msg ) use ( $quiet ) {
@@ -98,7 +104,7 @@ class ComponentQueueCLI {
 
 		// Check which hashes/components have been audited
 		$log( 'Checking audit coverage...' );
-		$unaudited = self::filter_unaudited( $all_components );
+		$unaudited = self::filter_unaudited( $all_components, $model );
 
 		if ( empty( $unaudited ) ) {
 			\WP_CLI::success( 'All component builds are audited! 100% coverage.' );
@@ -217,8 +223,12 @@ class ComponentQueueCLI {
 
 	/**
 	 * Filter components to only those that haven't been audited.
+	 *
+	 * When $model is non-empty, "audited" is scoped to that specific auditor — a hash
+	 * audited only by a different model is still considered unaudited, so the queue
+	 * can drive layered multi-model audits.
 	 */
-	public static function filter_unaudited( array $components ) {
+	public static function filter_unaudited( array $components, string $model = '' ) {
 		global $wpdb;
 
 		$components_t = "{$wpdb->prefix}captaincore_sf_components";
@@ -228,7 +238,8 @@ class ComponentQueueCLI {
 			return $components; // No audit tables = everything is unaudited
 		}
 
-		$unaudited = [];
+		$model_clause = $model ? ' AND a.auditor = %s' : '';
+		$unaudited    = [];
 
 		foreach ( $components as $comp ) {
 			$hash    = $comp['hash'] ?? '';
@@ -239,12 +250,11 @@ class ComponentQueueCLI {
 
 			// Hash-first lookup
 			if ( $hash ) {
-				$row = $wpdb->get_row( $wpdb->prepare(
-					"SELECT c.id, a.audit_date FROM {$components_t} c JOIN {$audits_t} a ON c.audit_id = a.id WHERE c.content_hash = %s ORDER BY a.audit_date DESC LIMIT 1",
-					$hash
-				) );
+				$sql  = "SELECT c.id, a.audit_date FROM {$components_t} c JOIN {$audits_t} a ON c.audit_id = a.id WHERE c.content_hash = %s{$model_clause} ORDER BY a.audit_date DESC LIMIT 1";
+				$args = $model ? [ $hash, $model ] : [ $hash ];
+				$row  = $wpdb->get_row( $wpdb->prepare( $sql, ...$args ) );
 				if ( $row ) {
-					continue; // Hash matched = definitively audited, never stale
+					continue; // Hash matched = definitively audited (by this model, if scoped), never stale
 				}
 				// Has hash but no hash match — needs auditing regardless of slug+version matches
 				$unaudited[] = $comp;
@@ -253,15 +263,13 @@ class ComponentQueueCLI {
 
 			// No hash — fall back to slug+version+type (legacy components without hashes)
 			if ( $type === 'mu-plugin' && ( $version === '' || $version === null ) ) {
-				$row = $wpdb->get_row( $wpdb->prepare(
-					"SELECT c.id, a.audit_date FROM {$components_t} c JOIN {$audits_t} a ON c.audit_id = a.id WHERE c.slug = %s AND c.component_type = %s ORDER BY a.audit_date DESC LIMIT 1",
-					$slug, $type
-				) );
+				$sql  = "SELECT c.id, a.audit_date FROM {$components_t} c JOIN {$audits_t} a ON c.audit_id = a.id WHERE c.slug = %s AND c.component_type = %s{$model_clause} ORDER BY a.audit_date DESC LIMIT 1";
+				$args = $model ? [ $slug, $type, $model ] : [ $slug, $type ];
+				$row  = $wpdb->get_row( $wpdb->prepare( $sql, ...$args ) );
 			} elseif ( $type ) {
-				$row = $wpdb->get_row( $wpdb->prepare(
-					"SELECT c.id, a.audit_date FROM {$components_t} c JOIN {$audits_t} a ON c.audit_id = a.id WHERE c.slug = %s AND c.version = %s AND c.component_type = %s ORDER BY a.audit_date DESC LIMIT 1",
-					$slug, $version, $type
-				) );
+				$sql  = "SELECT c.id, a.audit_date FROM {$components_t} c JOIN {$audits_t} a ON c.audit_id = a.id WHERE c.slug = %s AND c.version = %s AND c.component_type = %s{$model_clause} ORDER BY a.audit_date DESC LIMIT 1";
+				$args = $model ? [ $slug, $version, $type, $model ] : [ $slug, $version, $type ];
+				$row  = $wpdb->get_row( $wpdb->prepare( $sql, ...$args ) );
 			}
 
 			if ( ! $row ) {

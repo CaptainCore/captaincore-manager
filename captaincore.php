@@ -10409,9 +10409,10 @@ function captaincore_security_coverage_func( WP_REST_Request $request ) {
  * REST endpoint: Un-audited component hashes across the fleet.
  */
 function captaincore_component_queue_func( WP_REST_Request $request ) {
-	$limit      = (int) ( $request->get_param( 'limit' ) ?: 30 );
-	$group_by   = $request->get_param( 'group_by' ) ?: '';
-	$sites_data = CaptainCore\ComponentQueueCLI::gather_sites();
+	$limit        = (int) ( $request->get_param( 'limit' ) ?: 30 );
+	$group_by     = $request->get_param( 'group_by' ) ?: '';
+	$filter_model = sanitize_text_field( $request->get_param( 'model' ) ?: '' );
+	$sites_data   = CaptainCore\ComponentQueueCLI::gather_sites();
 
 	$hash_map = [];
 	$no_hash  = [];
@@ -10456,7 +10457,7 @@ function captaincore_component_queue_func( WP_REST_Request $request ) {
 	}
 
 	$all = array_merge( array_values( $hash_map ), array_values( $no_hash ) );
-	$unaudited = CaptainCore\ComponentQueueCLI::filter_unaudited( $all );
+	$unaudited = CaptainCore\ComponentQueueCLI::filter_unaudited( $all, $filter_model );
 
 	// Filter by component type if specified
 	$filter_type = sanitize_text_field( $request->get_param( 'type' ) ?: '' );
