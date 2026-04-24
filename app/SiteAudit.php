@@ -719,7 +719,7 @@ class SiteAudit {
 
             switch ( $type ) {
                 case 'prose':
-                    $html .= "    " . ( $block->html ?? '' ) . "\n";
+                    $html .= "    " . ( $block->content ?? $block->html ?? '' ) . "\n";
                     break;
 
                 case 'table':
