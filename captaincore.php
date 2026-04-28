@@ -9931,7 +9931,7 @@ function captaincore_site_audits_update_func( WP_REST_Request $request ) {
 	$params   = $request->get_json_params();
 	$time_now = date( 'Y-m-d H:i:s' );
 
-	$allowed = [ 'status', 'filesystem_status', 'wp_version', 'php_version', 'issues_count', 'plugins_count', 'notes', 'report_type', 'summary', 'report_title' ];
+	$allowed = [ 'site_id', 'environment_id', 'status', 'filesystem_status', 'wp_version', 'php_version', 'issues_count', 'plugins_count', 'notes', 'report_type', 'summary', 'report_title' ];
 	$json_fields = [ 'scan_checks', 'site_config', 'admin_accounts', 'timeline_events', 'dashboard_metrics', 'sections', 'section_order' ];
 
 	$data = [ 'updated_at' => $time_now ];
