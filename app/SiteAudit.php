@@ -961,11 +961,11 @@ class SiteAudit {
   details.collapsible .collapsible-body { padding: 0 1.35rem 1.25rem; border-top: 1px solid var(--border); margin-top: -1px; padding-top: 1rem; }
   .timeline { list-style: none; position: relative; padding-left: calc(1.25rem - 0.5px); }
   .timeline::before { content: \'\'; position: absolute; left: calc(0.35rem - 0.5px); top: 0.5rem; bottom: 0.5rem; width: 2px; background: var(--border); }
-  .timeline li { position: relative; margin-bottom: 1rem; }
-  .timeline li::before { content: \'\'; position: absolute; left: calc(-0.9rem + 0.5px); top: 0.5rem; width: 10px; height: 10px; border-radius: 50%; background: #dc2626; border: 2px solid #fff; transform: translateX(-50%); }
-  .timeline li.success::before { background: #16a34a; }
-  .timeline li.info::before { background: #2563eb; }
-  .timeline li.warning::before { background: #ea580c; }
+  .timeline > li { position: relative; margin-bottom: 1rem; }
+  .timeline > li::before { content: \'\'; position: absolute; left: calc(-0.9rem + 0.5px); top: 0.5rem; width: 10px; height: 10px; border-radius: 50%; background: #dc2626; border: 2px solid #fff; transform: translateX(-50%); }
+  .timeline > li.success::before { background: #16a34a; }
+  .timeline > li.info::before { background: #2563eb; }
+  .timeline > li.warning::before { background: #ea580c; }
   .timeline .time { font-weight: 600; font-size: 0.82rem; color: var(--muted); }
   .timeline .desc { font-size: 0.86rem; margin-top: 0.15rem; color: #3d5166; }
   .callout { border-radius: 0.5rem; padding: 1rem; margin: 0.75rem 0; font-size: 0.86rem; }
