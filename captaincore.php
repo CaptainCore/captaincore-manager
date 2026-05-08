@@ -996,6 +996,14 @@ function captaincore_api_func( WP_REST_Request $request ) {
 			$post->data->screenshot = true;
 		}
 
+		// Cache audit coverage summary so the Info tab can display it without an extra round trip.
+		// Hashes only change during sync-data, so this is the right moment to recompute.
+		$details->audit_summary = CaptainCore\SiteAuditCoverage::summarize(
+			$post->data->plugins ?? null,
+			$post->data->themes  ?? null,
+			$details
+		);
+
 		$post->data->details = json_encode( $details );
 
 		// Update the specific environment record
@@ -5621,6 +5629,77 @@ function captaincore_site_environments_get_func( $request ) {
 	return $site->environments();
 }
 
+function captaincore_site_audit_coverage_func( $request ) {
+	$site_id        = (int) $request['id'];
+	$environment_id = (int) $request['environment_id'];
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+	}
+
+	$environment = ( new CaptainCore\Environments )->get( $environment_id );
+	if ( ! $environment || (int) $environment->site_id !== $site_id ) {
+		return new WP_Error( 'not_found', 'Environment not found for this site.', [ 'status' => 404 ] );
+	}
+
+	$components = CaptainCore\SiteAuditCoverage::components_for_environment( $environment );
+
+	$details = isset( $environment->details ) ? json_decode( $environment->details ) : null;
+	$summary = isset( $details->audit_summary ) ? $details->audit_summary : CaptainCore\SiteAuditCoverage::summarize(
+		$environment->plugins ?? null,
+		$environment->themes  ?? null,
+		$details
+	);
+
+	return [
+		'site_id'        => $site_id,
+		'environment_id' => $environment_id,
+		'environment'    => $environment->environment ?? '',
+		'summary'        => $summary,
+		'components'     => $components,
+	];
+}
+
+function captaincore_site_audit_coverage_findings_func( $request ) {
+	$site_id        = (int) $request['id'];
+	$environment_id = (int) $request['environment_id'];
+	$hash           = strtolower( (string) $request['hash'] );
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+	}
+
+	$environment = ( new CaptainCore\Environments )->get( $environment_id );
+	if ( ! $environment || (int) $environment->site_id !== $site_id ) {
+		return new WP_Error( 'not_found', 'Environment not found for this site.', [ 'status' => 404 ] );
+	}
+
+	// Confirm the hash is actually present on this environment so customers can only inspect their own components.
+	$components = CaptainCore\SiteAuditCoverage::components_for_environment( $environment );
+	$matched    = null;
+	foreach ( $components as $c ) {
+		if ( $c['hash'] === $hash ) {
+			$matched = $c;
+			break;
+		}
+	}
+	if ( ! $matched ) {
+		return new WP_Error( 'not_found', 'That hash is not present on this environment.', [ 'status' => 404 ] );
+	}
+
+	$detail = CaptainCore\SiteAuditCoverage::findings_by_hash( $hash );
+	if ( ! $detail ) {
+		return [
+			'hash'         => $hash,
+			'slug'         => $matched['slug'],
+			'display_name' => $matched['name'],
+			'version'      => $matched['version'],
+			'status'       => 'unaudited',
+			'findings'     => [],
+		];
+	}
+
+	return $detail;
+}
+
 /**
  * Handles Mailgun setup request.
  */
@@ -6721,6 +6800,24 @@ function captaincore_register_rest_endpoints() {
 		'captaincore/v1', '/sites/(?P<id>[\d]+)/environments', [
 			'methods'             => 'GET',
 			'callback'            => 'captaincore_site_environments_get_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/environments/(?P<environment_id>[\d]+)/audit-coverage', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_audit_coverage_func',
+			'permission_callback' => 'captaincore_permission_check',
+			'show_in_index'       => false,
+		]
+	);
+
+	register_rest_route(
+		'captaincore/v1', '/sites/(?P<id>[\d]+)/environments/(?P<environment_id>[\d]+)/audit-coverage/(?P<hash>[a-fA-F0-9]{40,64})', [
+			'methods'             => 'GET',
+			'callback'            => 'captaincore_site_audit_coverage_findings_func',
 			'permission_callback' => 'captaincore_permission_check',
 			'show_in_index'       => false,
 		]
