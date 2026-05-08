@@ -4942,6 +4942,12 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								<v-list-item @click="copyText(formatSize(dialog_site.environment_selected.storage))" density="compact" title="Storage" :subtitle="formatSize(dialog_site.environment_selected.storage)" append-icon="mdi-content-copy"></v-list-item>
 								<v-list-item @click="copyText(dialog_site.environment_selected.php_memory)" density="compact" title="Memory Limit" :subtitle="dialog_site.environment_selected.php_memory" append-icon="mdi-content-copy" v-show="dialog_site.environment_selected.php_memory"></v-list-item>
 								<v-list-item @click="showCaptures(dialog_site.site.site_id)" density="compact" title="Visual Captures" :subtitle="dialog_site.environment_selected.captures?.toString()" append-icon="mdi-image"></v-list-item>
+								<v-list-item v-if="dialog_site.environment_selected.audit_summary" @click="showAuditCoverage()" density="compact" title="Audit Coverage" :subtitle="auditCoverageLabel" append-icon="mdi-shield-search">
+									<template v-slot:append>
+										<v-chip v-if="auditCoverageWorstSeverity" :color="auditCoverageChipColor" size="x-small" variant="tonal" class="mr-2">{{ auditCoverageWorstSeverity }}</v-chip>
+										<v-icon size="small">mdi-shield-search</v-icon>
+									</template>
+								</v-list-item>
 								<v-list-item v-if="dialog_site.environment_selected.subsite_count" @click="copyText(`${dialog_site.environment_selected.subsite_count} subsites`)" density="compact" title="Multisite" :subtitle="`${dialog_site.environment_selected.subsite_count} subsites`" append-icon="mdi-content-copy"></v-list-item>
 							</v-list>
 							</v-col>
@@ -9301,6 +9307,163 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-actions>
 				</v-card>
 			</v-dialog>
+			<v-dialog v-model="audit_coverage_dialog.show" max-width="1100px" scrollable>
+				<v-card>
+					<v-toolbar color="primary" flat>
+						<v-toolbar-title>
+							<v-icon class="mr-2">mdi-shield-search</v-icon>
+							Audit Coverage
+							<span class="text-body-2 ml-2" style="opacity: 0.85;">{{ audit_coverage_dialog.environment_name }} &middot; {{ dialog_site.site.name }}</span>
+						</v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-btn icon="mdi-close" @click="audit_coverage_dialog.show = false"></v-btn>
+					</v-toolbar>
+					<v-card-text v-if="audit_coverage_dialog.loading" class="text-center py-8">
+						<v-progress-circular indeterminate color="primary"></v-progress-circular>
+						<div class="mt-4 text-medium-emphasis">Loading components…</div>
+					</v-card-text>
+					<v-card-text v-else>
+						<div v-if="audit_coverage_dialog.summary" class="mb-4">
+							<v-chip-group>
+								<v-chip color="default" variant="flat" size="small"><strong class="mr-1">{{ audit_coverage_dialog.summary.total }}</strong> total</v-chip>
+								<v-chip v-if="audit_coverage_dialog.summary.malware > 0" color="error" variant="flat" size="small"><strong class="mr-1">{{ audit_coverage_dialog.summary.malware }}</strong> malware</v-chip>
+								<v-chip v-if="audit_coverage_dialog.summary.critical > 0" color="error" variant="tonal" size="small"><strong class="mr-1">{{ audit_coverage_dialog.summary.critical }}</strong> critical</v-chip>
+								<v-chip v-if="audit_coverage_dialog.summary.high > 0" color="warning" variant="tonal" size="small"><strong class="mr-1">{{ audit_coverage_dialog.summary.high }}</strong> high</v-chip>
+								<v-chip v-if="audit_coverage_dialog.summary.medium > 0" color="orange" variant="tonal" size="small"><strong class="mr-1">{{ audit_coverage_dialog.summary.medium }}</strong> medium</v-chip>
+								<v-chip v-if="audit_coverage_dialog.summary.low > 0" color="amber" variant="tonal" size="small"><strong class="mr-1">{{ audit_coverage_dialog.summary.low }}</strong> low</v-chip>
+								<v-chip v-if="audit_coverage_dialog.summary.clean > 0" color="success" variant="tonal" size="small"><strong class="mr-1">{{ audit_coverage_dialog.summary.clean }}</strong> clean</v-chip>
+								<v-chip v-if="audit_coverage_dialog.summary.unaudited > 0" color="grey" variant="tonal" size="small"><strong class="mr-1">{{ audit_coverage_dialog.summary.unaudited }}</strong> unaudited</v-chip>
+							</v-chip-group>
+							<div class="mt-2 text-body-2 text-medium-emphasis">
+								Coverage: {{ audit_coverage_dialog.summary.audited }} / {{ audit_coverage_dialog.summary.total }} components audited ({{ audit_coverage_dialog.summary.coverage_pct }}%)
+							</div>
+							<v-progress-linear :model-value="audit_coverage_dialog.summary.coverage_pct" color="success" height="4" rounded class="mt-1"></v-progress-linear>
+						</div>
+						<template v-for="kind in ['plugin','theme','mu-plugin','file']" :key="kind">
+							<div v-if="audit_coverage_dialog.grouped[kind] && audit_coverage_dialog.grouped[kind].length > 0" class="mt-4">
+								<h3 class="text-subtitle-1 mb-2 text-capitalize">{{ kind === 'file' ? 'Loose Files' : (kind + 's') }} <span class="text-medium-emphasis text-body-2 font-weight-regular">({{ audit_coverage_dialog.grouped[kind].length }})</span></h3>
+								<v-list density="compact" class="pa-0">
+									<v-list-item
+										v-for="row in audit_coverage_dialog.grouped[kind]"
+										:key="row.kind + '-' + row.hash"
+										:class="['audit-row', 'audit-row-' + (row.malware ? 'malware' : row.status)]"
+										@click="row.status !== 'unaudited' ? showAuditFindings(row) : null"
+										:style="row.status === 'unaudited' ? 'cursor: default;' : ''"
+									>
+										<template v-slot:prepend>
+											<v-chip :color="auditChipColor(row)" variant="flat" size="x-small" class="mr-2 audit-chip">{{ row.malware ? 'malware' : row.status }}</v-chip>
+										</template>
+										<v-list-item-title>
+											<span class="font-weight-medium">{{ row.name }}</span>
+											<span v-if="row.version" class="text-medium-emphasis ml-1">v{{ row.version }}</span>
+											<code class="ml-2 text-caption text-medium-emphasis">{{ row.short_hash }}</code>
+										</v-list-item-title>
+										<v-list-item-subtitle v-if="row.key_issue" class="text-body-2">{{ row.key_issue }}</v-list-item-subtitle>
+										<template v-slot:append>
+											<v-icon v-if="row.status !== 'unaudited' && row.findings_count" size="small" class="text-medium-emphasis">mdi-chevron-right</v-icon>
+										</template>
+									</v-list-item>
+								</v-list>
+							</div>
+						</template>
+						<div v-if="!audit_coverage_dialog.loading && audit_coverage_dialog.components.length === 0" class="text-center text-medium-emphasis py-8">
+							No components found. Run sync-data on this environment to populate hash data.
+						</div>
+					</v-card-text>
+					<v-divider></v-divider>
+					<v-card-actions>
+						<div class="text-caption text-medium-emphasis ml-2" v-if="audit_coverage_dialog.summary && audit_coverage_dialog.summary.generated_at">
+							Snapshot: {{ pretty_timestamp(audit_coverage_dialog.summary.generated_at) }}
+						</div>
+						<v-spacer></v-spacer>
+						<v-btn variant="text" @click="audit_coverage_dialog.show = false">Close</v-btn>
+					</v-card-actions>
+				</v-card>
+			</v-dialog>
+			<v-dialog v-model="audit_findings_dialog.show" max-width="900px" scrollable>
+				<v-card v-if="audit_findings_dialog.detail">
+					<v-toolbar :color="auditChipColor(audit_findings_dialog.detail)" flat>
+						<v-toolbar-title>
+							{{ audit_findings_dialog.detail.display_name || audit_findings_dialog.detail.slug }}
+							<span v-if="audit_findings_dialog.detail.version" class="text-body-2">v{{ audit_findings_dialog.detail.version }}</span>
+							<v-chip color="white" variant="flat" size="small" class="ml-2">{{ audit_findings_dialog.detail.malware ? 'malware' : audit_findings_dialog.detail.status }}</v-chip>
+						</v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-btn icon="mdi-close" @click="audit_findings_dialog.show = false"></v-btn>
+					</v-toolbar>
+					<v-card-text v-if="audit_findings_dialog.loading" class="text-center py-8">
+						<v-progress-circular indeterminate color="primary"></v-progress-circular>
+					</v-card-text>
+					<v-card-text v-else>
+						<div class="mb-3">
+							<span class="text-capitalize font-weight-medium">{{ audit_findings_dialog.detail.component_type }}</span>
+							<span class="text-medium-emphasis"> &middot; {{ audit_findings_dialog.detail.slug }}</span>
+							<code class="ml-2 text-caption">{{ audit_findings_dialog.detail.hash }}</code>
+						</div>
+						<v-alert v-if="audit_findings_dialog.detail.key_issue" :type="audit_findings_dialog.detail.malware || audit_findings_dialog.detail.status === 'critical' ? 'error' : 'warning'" variant="tonal" class="mb-4">
+							{{ audit_findings_dialog.detail.key_issue }}
+						</v-alert>
+						<div v-if="audit_findings_dialog.detail.audit" class="mb-4 text-body-2 text-medium-emphasis">
+							Audited by <strong>{{ audit_findings_dialog.detail.audit.auditor }}</strong> on {{ audit_findings_dialog.detail.audit.date }}
+						</div>
+						<v-divider class="mb-4" v-if="audit_findings_dialog.detail.findings && audit_findings_dialog.detail.findings.length > 0"></v-divider>
+						<h4 v-if="audit_findings_dialog.detail.findings && audit_findings_dialog.detail.findings.length > 0" class="text-subtitle-1 mb-3">Findings ({{ audit_findings_dialog.detail.findings.length }})</h4>
+						<v-expansion-panels v-if="audit_findings_dialog.detail.findings && audit_findings_dialog.detail.findings.length > 0" variant="accordion">
+							<v-expansion-panel
+								v-for="(finding, index) in audit_findings_dialog.detail.findings"
+								:key="'finding-' + index"
+							>
+								<v-expansion-panel-title>
+									<template v-slot:default="{ expanded }">
+										<v-row no-gutters>
+											<v-col cols="auto" class="d-flex align-center">
+												<v-chip :color="auditFindingChipColor(finding)" variant="flat" size="x-small" class="mr-3">{{ finding.severity }}</v-chip>
+											</v-col>
+											<v-col class="d-flex align-center">
+												<span class="font-weight-medium">{{ finding.title }}</span>
+												<span v-if="finding.vuln_type" class="text-medium-emphasis ml-2 text-body-2">{{ finding.vuln_type.replace(/_/g, ' ') }}</span>
+											</v-col>
+										</v-row>
+									</template>
+								</v-expansion-panel-title>
+								<v-expansion-panel-text>
+									<div v-if="finding.description" class="mb-3">{{ finding.description }}</div>
+									<div v-if="finding.location_path" class="mb-2 text-body-2">
+										<strong>Location:</strong> <code>{{ finding.location_path }}<span v-if="finding.location_lines">:{{ finding.location_lines }}</span></code>
+									</div>
+									<div v-if="finding.cve" class="mb-2 text-body-2"><strong>CVE:</strong> {{ finding.cve }}<span v-if="finding.cvss_score"> (CVSS {{ finding.cvss_score }})</span></div>
+									<div v-if="finding.code_snippet" class="mb-3">
+										<div class="text-caption text-medium-emphasis mb-1">Code:</div>
+										<pre class="audit-code"><code>{{ finding.code_snippet }}</code></pre>
+									</div>
+									<div v-if="finding.recommendation" class="mt-3">
+										<strong class="text-body-2">Recommendation:</strong>
+										<div class="text-body-2 mt-1">{{ finding.recommendation }}</div>
+									</div>
+								</v-expansion-panel-text>
+							</v-expansion-panel>
+						</v-expansion-panels>
+						<div v-else-if="audit_findings_dialog.detail.findings" class="text-medium-emphasis text-body-2">No findings recorded for this component.</div>
+					</v-card-text>
+					<v-divider></v-divider>
+					<v-card-actions>
+						<v-spacer></v-spacer>
+						<v-btn variant="text" @click="audit_findings_dialog.show = false">Close</v-btn>
+					</v-card-actions>
+				</v-card>
+			</v-dialog>
+			<style>
+				.audit-row { border-left: 3px solid transparent; }
+				.audit-row-malware  { border-left-color: rgb(var(--v-theme-error)); }
+				.audit-row-critical { border-left-color: rgb(var(--v-theme-error)); }
+				.audit-row-high     { border-left-color: rgb(var(--v-theme-warning)); }
+				.audit-row-medium   { border-left-color: #fb8c00; }
+				.audit-row-low      { border-left-color: #fbc02d; }
+				.audit-row-clean    { border-left-color: rgb(var(--v-theme-success)); }
+				.audit-row-unaudited { border-left-color: rgba(120,120,120,0.4); }
+				.audit-chip { text-transform: uppercase; font-weight: 600; }
+				.audit-code { background: rgba(0,0,0,0.04); padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+			</style>
 			<v-card v-if="route == 'site-audits'" flat border="thin" rounded="xl">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Site Audits</v-toolbar-title>
@@ -12868,6 +13031,8 @@ const app = createApp({
 		security_coverage: null,
 		security_coverage_loading: false,
 		security_threat_dialog: { show: false, threat: null },
+		audit_coverage_dialog: { show: false, loading: false, environment_id: null, environment_name: "", components: [], grouped: {}, summary: null },
+		audit_findings_dialog: { show: false, loading: false, hash: "", detail: null },
 		security_threat_note_text: "",
 		security_threat_resolve_confirm: false,
 		security_threat_resolve_note: "",
@@ -13791,6 +13956,30 @@ const app = createApp({
 		}
 	},
 	computed: {
+		auditCoverageLabel() {
+			const s = this.dialog_site.environment_selected && this.dialog_site.environment_selected.audit_summary
+			if ( !s || !s.total ) return ""
+			let parts = [ `${s.audited} / ${s.total} audited` ]
+			if ( s.coverage_pct !== undefined ) parts.push( `(${s.coverage_pct}%)` )
+			return parts.join( " " )
+		},
+		auditCoverageWorstSeverity() {
+			const s = this.dialog_site.environment_selected && this.dialog_site.environment_selected.audit_summary
+			if ( !s ) return ""
+			if ( s.malware > 0 ) return "malware"
+			for ( const sev of [ "critical", "high", "medium", "low" ] ) {
+				if ( s[ sev ] > 0 ) return sev
+			}
+			return ""
+		},
+		auditCoverageChipColor() {
+			const sev = this.auditCoverageWorstSeverity
+			if ( sev === "malware" || sev === "critical" ) return "error"
+			if ( sev === "high" ) return "warning"
+			if ( sev === "medium" ) return "orange"
+			if ( sev === "low" ) return "amber"
+			return "success"
+		},
 		currentProcessLogFile() {
 			const log = this.dialog_process_log_files.log
 			if ( ! log || ! Array.isArray( log.files ) || ! log.files.length ) return null
@@ -16845,9 +17034,11 @@ const app = createApp({
 						if ( e.details ) {
 							const details = typeof e.details === 'string' ? JSON.parse( e.details ) : e.details
 							e.performance_monitor_enabled = details.performance_monitor_enabled || false
+							e.audit_summary = details.audit_summary || null
 						}
 					} catch(err) {
 						e.performance_monitor_enabled = false
+						e.audit_summary = null
 					}
 				})
 
@@ -17385,6 +17576,87 @@ const app = createApp({
 			.catch(error => {
 				this.security_threats_loading = false;
 			});
+		},
+		showAuditCoverage() {
+			const env = this.dialog_site.environment_selected;
+			if ( ! env || ! env.environment_id ) return;
+			const site_id = this.dialog_site.site.site_id;
+			this.audit_coverage_dialog.environment_id = env.environment_id;
+			this.audit_coverage_dialog.environment_name = env.environment;
+			this.audit_coverage_dialog.summary = env.audit_summary || null;
+			this.audit_coverage_dialog.components = [];
+			this.audit_coverage_dialog.grouped = {};
+			this.audit_coverage_dialog.show = true;
+			this.audit_coverage_dialog.loading = true;
+			axios.get(
+				`/wp-json/captaincore/v1/sites/${site_id}/environments/${env.environment_id}/audit-coverage`,
+				{ headers: { 'X-WP-Nonce': this.wp_nonce } }
+			)
+			.then( response => {
+				this.audit_coverage_dialog.summary = response.data.summary;
+				this.audit_coverage_dialog.components = response.data.components || [];
+				const grouped = { 'plugin': [], 'theme': [], 'mu-plugin': [], 'file': [] };
+				for ( const row of this.audit_coverage_dialog.components ) {
+					if ( ! grouped[ row.kind ] ) grouped[ row.kind ] = [];
+					grouped[ row.kind ].push( row );
+				}
+				this.audit_coverage_dialog.grouped = grouped;
+				this.audit_coverage_dialog.loading = false;
+			})
+			.catch( error => {
+				this.audit_coverage_dialog.loading = false;
+				const msg = error.response && error.response.data && error.response.data.message
+					? error.response.data.message
+					: 'Failed to load audit coverage.';
+				this.snackbar.message = msg;
+				this.snackbar.show = true;
+			});
+		},
+		showAuditFindings(row) {
+			const env = this.dialog_site.environment_selected;
+			if ( ! env || ! env.environment_id ) return;
+			const site_id = this.dialog_site.site.site_id;
+			this.audit_findings_dialog.hash = row.hash;
+			this.audit_findings_dialog.detail = { display_name: row.name, slug: row.slug, version: row.version, status: row.status, malware: row.malware, hash: row.hash, key_issue: row.key_issue, component_type: row.kind, findings: null };
+			this.audit_findings_dialog.show = true;
+			this.audit_findings_dialog.loading = true;
+			axios.get(
+				`/wp-json/captaincore/v1/sites/${site_id}/environments/${env.environment_id}/audit-coverage/${row.hash}`,
+				{ headers: { 'X-WP-Nonce': this.wp_nonce } }
+			)
+			.then( response => {
+				this.audit_findings_dialog.detail = response.data;
+				this.audit_findings_dialog.loading = false;
+			})
+			.catch( error => {
+				this.audit_findings_dialog.loading = false;
+				const msg = error.response && error.response.data && error.response.data.message
+					? error.response.data.message
+					: 'Failed to load findings.';
+				this.snackbar.message = msg;
+				this.snackbar.show = true;
+			});
+		},
+		auditChipColor(row) {
+			if ( row.malware ) return "error";
+			switch ( row.status ) {
+				case "critical": return "error";
+				case "high":     return "warning";
+				case "medium":   return "orange";
+				case "low":      return "amber";
+				case "clean":    return "success";
+				case "unaudited":
+				default:         return "grey";
+			}
+		},
+		auditFindingChipColor(finding) {
+			switch ( finding.severity ) {
+				case "critical": return "error";
+				case "high":     return "warning";
+				case "medium":   return "orange";
+				case "low":      return "amber";
+				default:         return "grey";
+			}
 		},
 		fetchSecurityCoverage() {
 			this.security_coverage_loading = true;
