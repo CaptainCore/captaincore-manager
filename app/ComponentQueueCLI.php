@@ -222,67 +222,89 @@ class ComponentQueueCLI {
 	}
 
 	/**
-	 * Filter components to only those that haven't been audited.
+	 * Filter components to only those that haven't been audited (by the given
+	 * model, if scoped) and tag each with an audit-state tier the caller can
+	 * use for ordering. Reads from the WP Registry plugin's manifest via
+	 * RegistryClient (direct REST, app-password auth, transient-cached).
 	 *
-	 * When $model is non-empty, "audited" is scoped to that specific auditor — a hash
-	 * audited only by a different model is still considered unaudited, so the queue
-	 * can drive layered multi-model audits.
+	 * Returned items are annotated with a `_audit_tier` key:
+	 *   0 = NEVER audited by anyone (highest priority — completely fresh)
+	 *   1 = audited by another model, NOT by $model (older audit, layered re-audit eligible)
+	 *
+	 * When $model is empty, every kept item is tier 0 (any-model-unaudited).
+	 *
+	 * Fail-open: if the registry isn't configured or the fetch fails, every
+	 * component is treated as tier-0 unaudited. That's strictly more work but
+	 * never silently skips a real vulnerability.
 	 */
 	public static function filter_unaudited( array $components, string $model = '' ) {
-		global $wpdb;
-
-		$components_t = "{$wpdb->prefix}captaincore_sf_components";
-		$audits_t     = "{$wpdb->prefix}captaincore_sf_audits";
-		$table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $audits_t ) );
-		if ( empty( $table_exists ) ) {
-			return $components; // No audit tables = everything is unaudited
+		if ( ! RegistryClient::ready() ) {
+			foreach ( $components as &$c ) {
+				$c['_audit_tier'] = 0;
+			}
+			return $components;
 		}
 
-		$model_clause = $model ? ' AND a.auditor = %s' : '';
-		$unaudited    = [];
+		$type_to_endpoint = [
+			'plugin'    => 'plugins',
+			'theme'     => 'themes',
+			'mu-plugin' => 'mu-plugins',
+			'file'      => 'files',
+		];
 
+		// Per type, pull two manifests:
+		//   any[$type]  — every audited hash regardless of auditor
+		//   mine[$type] — only hashes audited by $model (empty array if no $model)
+		$any  = [];
+		$mine = [];
+		$needed_types = [];
+		foreach ( $components as $c ) {
+			$t = $c['type'] ?? '';
+			if ( isset( $type_to_endpoint[ $t ] ) ) {
+				$needed_types[ $t ] = true;
+			}
+		}
+		foreach ( array_keys( $needed_types ) as $t ) {
+			$endpoint = $type_to_endpoint[ $t ];
+			$any[ $t ]  = RegistryClient::manifest( $endpoint, '' );
+			$mine[ $t ] = $model !== '' ? RegistryClient::manifest( $endpoint, $model ) : [];
+		}
+
+		$out = [];
 		foreach ( $components as $comp ) {
-			$hash    = $comp['hash'] ?? '';
-			$slug    = $comp['slug'] ?? '';
-			$version = $comp['version'] ?? '';
-			$type    = $comp['type'] ?? '';
-			$row     = null;
+			$hash = $comp['hash'] ?? '';
+			$type = $comp['type'] ?? '';
 
-			// Hash-first lookup
-			if ( $hash ) {
-				$sql  = "SELECT c.id, a.audit_date FROM {$components_t} c JOIN {$audits_t} a ON c.audit_id = a.id WHERE c.content_hash = %s{$model_clause} ORDER BY a.audit_date DESC LIMIT 1";
-				$args = $model ? [ $hash, $model ] : [ $hash ];
-				$row  = $wpdb->get_row( $wpdb->prepare( $sql, ...$args ) );
-				if ( $row ) {
-					continue; // Hash matched = definitively audited (by this model, if scoped), never stale
-				}
-				// Has hash but no hash match — needs auditing regardless of slug+version matches
-				$unaudited[] = $comp;
+			$any_manifest  = $any[ $type ]  ?? null;
+			$mine_manifest = $mine[ $type ] ?? [];
+
+			if ( ! is_array( $any_manifest ) ) {
+				// Type not supported by registry — pass through as fresh.
+				$comp['_audit_tier'] = 0;
+				$out[] = $comp;
 				continue;
 			}
 
-			// No hash — fall back to slug+version+type (legacy components without hashes)
-			if ( $type === 'mu-plugin' && ( $version === '' || $version === null ) ) {
-				$sql  = "SELECT c.id, a.audit_date FROM {$components_t} c JOIN {$audits_t} a ON c.audit_id = a.id WHERE c.slug = %s AND c.component_type = %s{$model_clause} ORDER BY a.audit_date DESC LIMIT 1";
-				$args = $model ? [ $slug, $type, $model ] : [ $slug, $type ];
-				$row  = $wpdb->get_row( $wpdb->prepare( $sql, ...$args ) );
-			} elseif ( $type ) {
-				$sql  = "SELECT c.id, a.audit_date FROM {$components_t} c JOIN {$audits_t} a ON c.audit_id = a.id WHERE c.slug = %s AND c.version = %s AND c.component_type = %s{$model_clause} ORDER BY a.audit_date DESC LIMIT 1";
-				$args = $model ? [ $slug, $version, $type, $model ] : [ $slug, $version, $type ];
-				$row  = $wpdb->get_row( $wpdb->prepare( $sql, ...$args ) );
+			if ( $hash === '' ) {
+				// Legacy: no hash. Manifest is hash-keyed so we can't lookup;
+				// treat as never-audited (tier 0) so it surfaces.
+				$comp['_audit_tier'] = 0;
+				$out[] = $comp;
+				continue;
 			}
 
-			if ( ! $row ) {
-				$unaudited[] = $comp;
-			} else {
-				$days_ago = (int) ( ( time() - strtotime( $row->audit_date ) ) / 86400 );
-				if ( $days_ago > 90 ) {
-					$unaudited[] = $comp;
-				}
+			$audited_by_anyone = isset( $any_manifest[ $hash ] );
+			$audited_by_me     = isset( $mine_manifest[ $hash ] );
+
+			if ( $audited_by_me ) {
+				continue; // covered by this model — skip entirely
 			}
+
+			$comp['_audit_tier'] = $audited_by_anyone ? 1 : 0;
+			$out[] = $comp;
 		}
 
-		return $unaudited;
+		return $out;
 	}
 
 	/**
@@ -353,11 +375,19 @@ class ComponentQueueCLI {
 					'hash'           => $comp['hash'],           // most-common hash (updated below)
 					'source_ssh'     => $comp['source_ssh'] ?? '',
 					'home_directory' => $comp['home_directory'] ?? '',
+					'audit_tier'     => $comp['_audit_tier'] ?? 0,
 					'_max_sites'     => 0,                       // track which hash has the most sites
 				];
 			}
 			$version_map[ $key ]['sites'] += $comp['sites'];
 			$version_map[ $key ]['hashes_count']++;
+
+			// Worst-case tier wins: if any hash for this slug+version is fully
+			// unaudited (tier 0), the version-group is treated as unaudited.
+			$tier = $comp['_audit_tier'] ?? 0;
+			if ( $tier < $version_map[ $key ]['audit_tier'] ) {
+				$version_map[ $key ]['audit_tier'] = $tier;
+			}
 
 			// Keep the hash with the most sites as the primary
 			if ( $comp['sites'] > $version_map[ $key ]['_max_sites'] ) {

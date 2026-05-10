@@ -8581,6 +8581,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 				<v-tabs bg-color="primary" v-model="security_tab">
 					<v-tab value="vulnerabilities">Vulnerabilities</v-tab>
 					<v-tab value="patches">Patches</v-tab>
+					<v-tab value="audit-queue">Audit Queue</v-tab>
 					<v-tab value="coverage">Coverage</v-tab>
 					<v-tab value="web-risk">Web Risk</v-tab>
 					<v-tab value="checksum-failures">Checksum Failures</v-tab>
@@ -8704,6 +8705,89 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							</v-data-table>
 						</v-card-text>
 					</v-window-item>
+					<v-window-item value="audit-queue" :transition="false" :reverse-transition="false">
+						<v-card-text class="pt-0">
+							<div class="d-flex align-center ga-3 mt-2 mb-3">
+								<v-text-field
+									v-model="audit_queue_model"
+									label="Auditor model (optional)"
+									placeholder="e.g. Claude Opus 4.7"
+									density="compact"
+									variant="outlined"
+									hide-details
+									style="max-width: 280px"
+									@change="fetchAuditQueue()"
+								></v-text-field>
+								<v-select
+									v-model="audit_queue_type"
+									label="Type"
+									:items="['plugin','theme','mu-plugin','file']"
+									density="compact"
+									variant="outlined"
+									hide-details
+									style="max-width: 180px"
+									@update:modelValue="fetchAuditQueue()"
+								></v-select>
+								<v-btn
+									prepend-icon="mdi-refresh"
+									variant="text"
+									size="small"
+									:loading="audit_queue_loading"
+									@click="fetchAuditQueue()"
+								>Refresh</v-btn>
+								<v-spacer></v-spacer>
+								<v-chip color="success" variant="flat" size="small" v-if="audit_queue.length > 0">
+									{{ audit_queue.filter(i => i.audit_tier === 0).length }} unaudited
+								</v-chip>
+								<v-chip color="warning" variant="flat" size="small" v-if="audit_queue.filter(i => i.audit_tier === 1).length > 0">
+									{{ audit_queue.filter(i => i.audit_tier === 1).length }} re-audit
+								</v-chip>
+							</div>
+							<v-alert v-if="audit_queue.length === 0 && !audit_queue_loading" type="success" variant="tonal" class="mt-2">
+								Queue is empty — every {{ audit_queue_type }} hash in the fleet has been audited<span v-if="audit_queue_model"> by {{ audit_queue_model }}</span>.
+							</v-alert>
+							<v-data-table
+								v-if="audit_queue.length > 0 || audit_queue_loading"
+								:loading="audit_queue_loading"
+								:headers="[
+									{ title: 'Tier', key: 'audit_tier', width: '110px', sortable: false },
+									{ title: 'Component', key: 'title' },
+									{ title: 'Type', key: 'type', width: '100px' },
+									{ title: 'Version', key: 'version', width: '120px' },
+									{ title: 'Hashes', key: 'hashes_count', align: 'center', width: '90px' },
+									{ title: 'Sites', key: 'sites', align: 'end', width: '90px' },
+									{ title: 'Primary hash', key: 'hash', sortable: false }
+								]"
+								:items="audit_queue"
+								:items-per-page="25"
+								density="comfortable"
+							>
+								<template v-slot:item.audit_tier="{ item }">
+									<v-chip
+										:color="item.audit_tier === 0 ? 'success' : 'warning'"
+										variant="flat"
+										size="small"
+									>
+										<v-icon size="14" start>{{ item.audit_tier === 0 ? 'mdi-flag' : 'mdi-history' }}</v-icon>
+										{{ item.audit_tier === 0 ? 'Unaudited' : 'Re-audit' }}
+									</v-chip>
+								</template>
+								<template v-slot:item.title="{ item }">
+									<strong>{{ item.title || item.slug }}</strong>
+									<div class="text-caption text-medium-emphasis">{{ item.slug }}</div>
+								</template>
+								<template v-slot:item.type="{ item }">
+									<span class="text-capitalize">{{ item.type }}</span>
+								</template>
+								<template v-slot:item.sites="{ item }">
+									{{ Number(item.sites).toLocaleString() }}
+								</template>
+								<template v-slot:item.hash="{ item }">
+									<code class="text-caption">{{ (item.hash || '').slice(0, 12) }}<span v-if="item.hash">…</span></code>
+								</template>
+							</v-data-table>
+						</v-card-text>
+					</v-window-item>
 					<v-window-item value="web-risk" :transition="false" :reverse-transition="false">
 						<v-card-text class="pt-0">
 							<v-alert v-if="web_risk_logs.length === 0 && !web_risk_logs_loading" type="info" variant="tonal" class="mt-4">
@@ -8802,8 +8886,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									{{ (security_coverage.without_hashes.plugin + security_coverage.without_hashes.theme).toLocaleString() }} component instances still lack content hashes. Run <code>captaincore sync-data @production</code> to populate.
 								</div>
 								<div class="text-body-2">
-									<a href="/security-finder/coverage" target="_blank" class="text-decoration-none">
-										View full details in Security Finder <v-icon size="small">mdi-open-in-new</v-icon>
+									<a href="https://crew.wpregistry.io/" target="_blank" class="text-decoration-none">
+										View full details in WP Registry <v-icon size="small">mdi-open-in-new</v-icon>
 									</a>
 								</div>
 							</div>
@@ -9180,8 +9264,8 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<span class="text-medium-emphasis"> &middot; {{ security_threat_dialog.threat.affected_count }} affected site{{ security_threat_dialog.threat.affected_count !== 1 ? 's' : '' }}</span>
 						</div>
 						<div v-if="security_threat_dialog.threat.audit_id" class="mb-4">
-							<a :href="'https://anchor.host/security-finder/audits/' + security_threat_dialog.threat.audit_id" target="_blank" class="text-decoration-none">
-								View full audit in Security Finder <v-icon size="small">mdi-open-in-new</v-icon>
+							<a :href="'https://crew.wpregistry.io/audits/' + security_threat_dialog.threat.audit_id" target="_blank" class="text-decoration-none">
+								View full audit in WP Registry <v-icon size="small">mdi-open-in-new</v-icon>
 							</a>
 						</div>
 						<v-alert v-if="security_threat_dialog.threat.patch" type="success" variant="tonal" class="mb-4">
@@ -13022,6 +13106,10 @@ const app = createApp({
 		plugin_diff_dialog: { show: false, site_name: '', environment: '', plugin_slug: '', diff: '', loading: false },
 		security_patches: [],
 		security_patches_loading: false,
+		audit_queue: [],
+		audit_queue_loading: false,
+		audit_queue_model: 'Claude Opus 4.7',
+		audit_queue_type: 'plugin',
 		site_audits: [],
 		site_audits_loading: false,
 		dialog_request_audit: { show: false, site: null, environment: null, environments: [], environments_loading: false, report_type: 'security_audit', notes: '', submitting: false },
@@ -14802,6 +14890,7 @@ const app = createApp({
 				this.fetchSecurityThreats();
 				this.fetchSecurityPatches();
 				this.fetchSecurityCoverage();
+				this.fetchAuditQueue();
 				this.loading_page = false;
 				this.selected_nav = "";
 			}
@@ -17413,6 +17502,26 @@ const app = createApp({
 			})
 			.catch(error => {
 				this.security_patches_loading = false;
+			});
+		},
+		fetchAuditQueue() {
+			this.audit_queue_loading = true;
+			const params = new URLSearchParams({
+				limit: 50,
+				group_by: 'version',
+				type: this.audit_queue_type || 'plugin'
+			});
+			if (this.audit_queue_model) params.set('model', this.audit_queue_model);
+			axios.get('/wp-json/captaincore/v1/component-queue?' + params.toString(), {
+				headers: {'X-WP-Nonce': this.wp_nonce}
+			})
+			.then(response => {
+				this.audit_queue = Array.isArray(response.data) ? response.data : (response.data && response.data.queue ? response.data.queue : []);
+				this.audit_queue_loading = false;
+			})
+			.catch(() => {
+				this.audit_queue = [];
+				this.audit_queue_loading = false;
 			});
 		},
 		openSiteAuditReport(auditId) {
