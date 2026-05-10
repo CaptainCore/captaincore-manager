@@ -10564,6 +10564,17 @@ function captaincore_component_queue_func( WP_REST_Request $request ) {
 		} ) );
 	}
 
+	// Two-key sort: tier ASC (0 = never audited surfaces first, 1 = audited by
+	// another model loops back), then sites DESC within each tier.
+	$tier_then_sites = function ( $a, $b ) {
+		$at = (int) ( $a['audit_tier'] ?? $a['_audit_tier'] ?? 0 );
+		$bt = (int) ( $b['audit_tier'] ?? $b['_audit_tier'] ?? 0 );
+		if ( $at !== $bt ) {
+			return $at - $bt;
+		}
+		return ( $b['sites'] ?? 0 ) - ( $a['sites'] ?? 0 );
+	};
+
 	// Version grouping: aggregate by slug+version, sum sites, count distinct hashes
 	if ( $group_by === 'version' ) {
 		$unaudited_by_hash = [];
@@ -10573,18 +10584,11 @@ function captaincore_component_queue_func( WP_REST_Request $request ) {
 			}
 		}
 		$version_queue = CaptainCore\ComponentQueueCLI::build_version_queue( $unaudited_by_hash );
-
-		usort( $version_queue, function ( $a, $b ) {
-			return $b['sites'] - $a['sites'];
-		} );
-
+		usort( $version_queue, $tier_then_sites );
 		return array_slice( $version_queue, 0, $limit );
 	}
 
-	usort( $unaudited, function ( $a, $b ) {
-		return $b['sites'] - $a['sites'];
-	} );
-
+	usort( $unaudited, $tier_then_sites );
 	return array_slice( $unaudited, 0, $limit );
 }
 
