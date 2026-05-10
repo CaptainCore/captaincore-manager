@@ -372,11 +372,12 @@ class ComponentQueueCLI {
 					'title'          => $comp['title'] ?? $comp['slug'],
 					'sites'          => 0,
 					'hashes_count'   => 0,
-					'hash'           => $comp['hash'],           // most-common hash (updated below)
-					'source_ssh'     => $comp['source_ssh'] ?? '',
-					'home_directory' => $comp['home_directory'] ?? '',
+					'hash'           => '',
+					'source_ssh'     => '',
+					'home_directory' => '',
 					'audit_tier'     => $comp['_audit_tier'] ?? 0,
-					'_max_sites'     => 0,                       // track which hash has the most sites
+					'_max_sites'     => -1,
+					'_primary_tier'  => PHP_INT_MAX, // tier of the currently-selected primary hash
 				];
 			}
 			$version_map[ $key ]['sites'] += $comp['sites'];
@@ -384,24 +385,34 @@ class ComponentQueueCLI {
 
 			// Worst-case tier wins: if any hash for this slug+version is fully
 			// unaudited (tier 0), the version-group is treated as unaudited.
-			$tier = $comp['_audit_tier'] ?? 0;
+			$tier = (int) ( $comp['_audit_tier'] ?? 0 );
 			if ( $tier < $version_map[ $key ]['audit_tier'] ) {
 				$version_map[ $key ]['audit_tier'] = $tier;
 			}
 
-			// Keep the hash with the most sites as the primary
-			if ( $comp['sites'] > $version_map[ $key ]['_max_sites'] ) {
+			// Pick the primary hash to surface to clients. Prefer a hash whose
+			// audit_tier is lowest (i.e. genuinely needs work), then within that
+			// tier prefer the most common hash. Otherwise the queue would point
+			// crews at an already-audited hash even though other variants for
+			// the same slug+version are still unaudited.
+			$current_tier = (int) $version_map[ $key ]['_primary_tier'];
+			$current_max  = (int) $version_map[ $key ]['_max_sites'];
+			$is_better    = $tier < $current_tier
+				|| ( $tier === $current_tier && $comp['sites'] > $current_max );
+
+			if ( $is_better ) {
+				$version_map[ $key ]['_primary_tier']  = $tier;
 				$version_map[ $key ]['_max_sites']     = $comp['sites'];
-				$version_map[ $key ]['hash']            = $comp['hash'];
-				$version_map[ $key ]['source_ssh']      = $comp['source_ssh'] ?? '';
-				$version_map[ $key ]['home_directory']   = $comp['home_directory'] ?? '';
+				$version_map[ $key ]['hash']           = $comp['hash'];
+				$version_map[ $key ]['source_ssh']     = $comp['source_ssh'] ?? '';
+				$version_map[ $key ]['home_directory'] = $comp['home_directory'] ?? '';
 			}
 		}
 
-		// Remove internal tracking field
+		// Remove internal tracking fields
 		$result = array_values( $version_map );
 		foreach ( $result as &$item ) {
-			unset( $item['_max_sites'] );
+			unset( $item['_max_sites'], $item['_primary_tier'] );
 		}
 
 		return $result;
