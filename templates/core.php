@@ -8708,16 +8708,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<v-window-item value="audit-queue" :transition="false" :reverse-transition="false">
 						<v-card-text class="pt-0">
 							<div class="d-flex align-center ga-3 mt-2 mb-3">
-								<v-text-field
-									v-model="audit_queue_model"
-									label="Auditor model (optional)"
-									placeholder="e.g. Claude Opus 4.7"
-									density="compact"
-									variant="outlined"
-									hide-details
-									style="max-width: 280px"
-									@change="fetchAuditQueue()"
-								></v-text-field>
 								<v-select
 									v-model="audit_queue_type"
 									label="Type"
@@ -8737,20 +8727,16 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								>Refresh</v-btn>
 								<v-spacer></v-spacer>
 								<v-chip color="success" variant="flat" size="small" v-if="audit_queue.length > 0">
-									{{ audit_queue.filter(i => i.audit_tier === 0).length }} unaudited
-								</v-chip>
-								<v-chip color="warning" variant="flat" size="small" v-if="audit_queue.filter(i => i.audit_tier === 1).length > 0">
-									{{ audit_queue.filter(i => i.audit_tier === 1).length }} re-audit
+									{{ audit_queue.length }} unaudited
 								</v-chip>
 							</div>
 							<v-alert v-if="audit_queue.length === 0 && !audit_queue_loading" type="success" variant="tonal" class="mt-2">
-								Queue is empty — every {{ audit_queue_type }} hash in the fleet has been audited<span v-if="audit_queue_model"> by {{ audit_queue_model }}</span>.
+								Queue is empty — every {{ audit_queue_type }} hash in the fleet has been audited.
 							</v-alert>
 							<v-data-table
 								v-if="audit_queue.length > 0 || audit_queue_loading"
 								:loading="audit_queue_loading"
 								:headers="[
-									{ title: 'Tier', key: 'audit_tier', width: '110px', sortable: false },
 									{ title: 'Component', key: 'title' },
 									{ title: 'Type', key: 'type', width: '100px' },
 									{ title: 'Version', key: 'version', width: '120px' },
@@ -8762,16 +8748,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 								:items-per-page="25"
 								density="comfortable"
 							>
-								<template v-slot:item.audit_tier="{ item }">
-									<v-chip
-										:color="item.audit_tier === 0 ? 'success' : 'warning'"
-										variant="flat"
-										size="small"
-									>
-										<v-icon size="14" start>{{ item.audit_tier === 0 ? 'mdi-flag' : 'mdi-history' }}</v-icon>
-										{{ item.audit_tier === 0 ? 'Unaudited' : 'Re-audit' }}
-									</v-chip>
-								</template>
 								<template v-slot:item.title="{ item }">
 									<strong>{{ item.title || item.slug }}</strong>
 									<div class="text-caption text-medium-emphasis">{{ item.slug }}</div>
@@ -13108,7 +13084,6 @@ const app = createApp({
 		security_patches_loading: false,
 		audit_queue: [],
 		audit_queue_loading: false,
-		audit_queue_model: 'Claude Opus 4.7',
 		audit_queue_type: 'plugin',
 		site_audits: [],
 		site_audits_loading: false,
@@ -17511,7 +17486,6 @@ const app = createApp({
 				group_by: 'version',
 				type: this.audit_queue_type || 'plugin'
 			});
-			if (this.audit_queue_model) params.set('model', this.audit_queue_model);
 			axios.get('/wp-json/captaincore/v1/component-queue?' + params.toString(), {
 				headers: {'X-WP-Nonce': this.wp_nonce}
 			})
