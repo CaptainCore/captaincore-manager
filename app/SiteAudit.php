@@ -775,7 +775,7 @@ class SiteAudit {
 
                 case 'callout':
                     $variant = esc_attr( $block->variant ?? 'blue' );
-                    $html .= "    <div class=\"callout {$variant}\">" . ( $block->content ?? '' ) . "</div>\n";
+                    $html .= "    <div class=\"callout {$variant}\">" . ( new \Parsedown() )->text( $block->content ?? '' ) . "</div>\n";
                     break;
 
                 case 'code':
