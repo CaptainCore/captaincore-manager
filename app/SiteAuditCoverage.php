@@ -94,54 +94,37 @@ class SiteAuditCoverage {
 	}
 
 	public static function findings_by_hash( $hash ) {
-		global $wpdb;
-
-		$components_t = $wpdb->prefix . 'captaincore_sf_components';
-		$findings_t   = $wpdb->prefix . 'captaincore_sf_findings';
-		$audits_t     = $wpdb->prefix . 'captaincore_sf_audits';
-
-		$component = $wpdb->get_row( $wpdb->prepare(
-			"SELECT c.id, c.slug, c.display_name, c.version, c.component_type, c.status,
-			        c.key_issue, c.malware,
-			        a.id AS audit_id, a.audit_date, a.auditor, a.scope
-			 FROM {$components_t} c
-			 JOIN {$audits_t} a ON c.audit_id = a.id
-			 WHERE c.content_hash = %s
-			 ORDER BY c.id DESC
-			 LIMIT 1",
-			$hash
-		), ARRAY_A );
-
-		if ( ! $component ) {
+		if ( ! RegistryClient::ready() ) {
 			return null;
 		}
 
-		$findings = $wpdb->get_results( $wpdb->prepare(
-			"SELECT severity, title, description, location_path, location_lines,
-			        vuln_type, code_snippet, recommendation, cve, cvss_score,
-			        elevated, source
-			 FROM {$findings_t}
-			 WHERE component_id = %d
-			 ORDER BY FIELD(severity, 'critical', 'high', 'medium', 'low'), id ASC",
-			$component['id']
-		), ARRAY_A );
+		$detail = RegistryClient::findings_by_hash( $hash );
+		if ( ! is_array( $detail ) || empty( $detail['audited'] ) ) {
+			return null;
+		}
+
+		// The registry returns an `audits` array (newest first). Project the
+		// newest entry as the legacy singular `audit` so the findings dialog
+		// renders unchanged.
+		$audits = isset( $detail['audits'] ) && is_array( $detail['audits'] ) ? $detail['audits'] : [];
+		$first  = $audits[0] ?? null;
 
 		return [
-			'hash'           => $hash,
-			'slug'           => $component['slug'],
-			'display_name'   => $component['display_name'] ?: $component['slug'],
-			'version'        => $component['version'],
-			'component_type' => $component['component_type'],
-			'status'         => $component['status'],
-			'malware'        => (bool) $component['malware'],
-			'key_issue'      => $component['key_issue'],
-			'audit'          => [
-				'id'      => (int) $component['audit_id'],
-				'date'    => $component['audit_date'],
-				'auditor' => $component['auditor'],
-				'scope'   => $component['scope'],
-			],
-			'findings'       => $findings,
+			'hash'           => $detail['hash'] ?? $hash,
+			'slug'           => $detail['slug'] ?? '',
+			'display_name'   => $detail['display_name'] ?: ( $detail['slug'] ?? '' ),
+			'version'        => $detail['version'] ?? '',
+			'component_type' => $detail['component_type'] ?? '',
+			'status'         => $detail['status'] ?? 'clean',
+			'malware'        => ! empty( $detail['malware'] ),
+			'key_issue'      => $detail['key_issue'] ?? '',
+			'audit'          => $first ? [
+				'id'      => (int) ( $first['audit_id'] ?? 0 ),
+				'date'    => $first['audit_date'] ?? '',
+				'auditor' => $first['auditor'] ?? '',
+				'scope'   => $first['scope'] ?? '',
+			] : null,
+			'findings'       => isset( $detail['findings'] ) && is_array( $detail['findings'] ) ? $detail['findings'] : [],
 		];
 	}
 
@@ -208,48 +191,33 @@ class SiteAuditCoverage {
 	}
 
 	protected static function lookup_hashes( $components ) {
-		global $wpdb;
-
-		$hashes = [];
-		foreach ( $components as $c ) {
-			if ( ! empty( $c['hash'] ) ) {
-				$hashes[ $c['hash'] ] = true;
-			}
-		}
-		$hashes = array_keys( $hashes );
-		if ( empty( $hashes ) ) {
+		if ( empty( $components ) || ! RegistryClient::ready() ) {
 			return [];
 		}
 
-		$components_t = $wpdb->prefix . 'captaincore_sf_components';
-		$findings_t   = $wpdb->prefix . 'captaincore_sf_findings';
+		$needed = [];
+		foreach ( $components as $c ) {
+			if ( ! empty( $c['hash'] ) ) {
+				$needed[ $c['hash'] ] = true;
+			}
+		}
+		if ( empty( $needed ) ) {
+			return [];
+		}
 
-		$placeholders = implode( ',', array_fill( 0, count( $hashes ), '%s' ) );
-
-		$rows = $wpdb->get_results( $wpdb->prepare(
-			"SELECT c.content_hash, c.slug, c.version, c.status, c.malware, c.key_issue,
-			        (SELECT COUNT(*) FROM {$findings_t} f WHERE f.component_id = c.id) AS findings_count
-			 FROM {$components_t} c
-			 WHERE c.content_hash IN ({$placeholders})
-			   AND c.content_hash IS NOT NULL
-			   AND c.content_hash != ''
-			 ORDER BY c.id DESC",
-			...$hashes
-		), ARRAY_A );
-
+		// Source of truth is findings.wpregistry.io. The registry partitions audits
+		// by component_type, but a hash recorded on anchor.host as a "plugin"
+		// can be audited on the registry as a "mu-plugin" (WP-CLI surfaces
+		// mu-plugins inside the plugins array). Look across all four manifests
+		// so cross-type matches don't appear as false-negative unaudited rows.
 		$map = [];
-		foreach ( $rows as $row ) {
-			$h = $row['content_hash'];
-			if ( isset( $map[ $h ] ) ) continue; // first (newest) wins
-			$entry = [
-				'slug'   => $row['slug'],
-				'status' => $row['status'],
-			];
-			if ( $row['version'] ) $entry['version'] = $row['version'];
-			if ( (bool) $row['malware'] ) $entry['malware'] = true;
-			if ( $row['key_issue'] ) $entry['key_issue'] = $row['key_issue'];
-			if ( (int) $row['findings_count'] > 0 ) $entry['findings'] = (int) $row['findings_count'];
-			$map[ $h ] = $entry;
+		foreach ( [ 'plugins', 'themes', 'mu-plugins', 'files' ] as $endpoint ) {
+			$manifest = RegistryClient::manifest( $endpoint );
+			foreach ( $manifest as $hash => $entry ) {
+				if ( isset( $needed[ $hash ] ) && ! isset( $map[ $hash ] ) ) {
+					$map[ $hash ] = (array) $entry;
+				}
+			}
 		}
 
 		return $map;

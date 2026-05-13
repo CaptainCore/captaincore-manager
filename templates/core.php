@@ -8862,7 +8862,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									{{ (security_coverage.without_hashes.plugin + security_coverage.without_hashes.theme).toLocaleString() }} component instances still lack content hashes. Run <code>captaincore sync-data @production</code> to populate.
 								</div>
 								<div class="text-body-2">
-									<a href="https://crew.wpregistry.io/" target="_blank" class="text-decoration-none">
+									<a href="https://findings.wpregistry.io/" target="_blank" class="text-decoration-none">
 										View full details in WP Registry <v-icon size="small">mdi-open-in-new</v-icon>
 									</a>
 								</div>
@@ -9240,7 +9240,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 							<span class="text-medium-emphasis"> &middot; {{ security_threat_dialog.threat.affected_count }} affected site{{ security_threat_dialog.threat.affected_count !== 1 ? 's' : '' }}</span>
 						</div>
 						<div v-if="security_threat_dialog.threat.audit_id" class="mb-4">
-							<a :href="'https://crew.wpregistry.io/audits/' + security_threat_dialog.threat.audit_id" target="_blank" class="text-decoration-none">
+							<a :href="'https://findings.wpregistry.io/audits/' + security_threat_dialog.threat.audit_id" target="_blank" class="text-decoration-none">
 								View full audit in WP Registry <v-icon size="small">mdi-open-in-new</v-icon>
 							</a>
 						</div>

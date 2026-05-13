@@ -6,11 +6,11 @@ namespace CaptainCore;
  * Direct HTTP client for the WP Registry plugin's REST API.
  *
  * Skips the public Cloudflare worker (which has long edge cache TTLs) and talks
- * straight to crew.wpregistry.io with an application password, so anchor.host
+ * straight to findings.wpregistry.io with an application password, so anchor.host
  * sees fresh audit + patch data without waiting for the worker cache to expire.
  *
  * Configuration (stored in wp_options so you can rotate without code edits):
- *   captaincore_registry_url   — e.g. https://crew.wpregistry.io  (no trailing slash)
+ *   captaincore_registry_url   — e.g. https://findings.wpregistry.io  (no trailing slash)
  *   captaincore_registry_user  — WP user_login on the registry
  *   captaincore_registry_pass  — application password for that user
  *

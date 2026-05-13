@@ -453,9 +453,27 @@ class SiteAudit {
         }
 
         // Render sections into the already-open main-content
+        $rendered_keys = [];
         foreach ( $order as $key ) {
             if ( isset( $section_renderers[ $key ] ) ) {
                 $html .= $section_renderers[ $key ]();
+                $rendered_keys[] = $key;
+            }
+        }
+
+        // Render any remaining sections not in the order (e.g., title was renamed and
+        // the slug key no longer matches the original section_order entry)
+        foreach ( $section_renderers as $key => $renderer ) {
+            if ( ! in_array( $key, $rendered_keys, true ) ) {
+                $html .= $renderer();
+                if ( isset( $section_title_map[ $key ] ) ) {
+                    $nav_num++;
+                    $nav_items[] = [
+                        'id'    => sanitize_title( $section_title_map[ $key ] ),
+                        'title' => esc_html( $section_title_map[ $key ] ),
+                        'num'   => $nav_num,
+                    ];
+                }
             }
         }
         $html .= "</div>\n"; // .main-content
