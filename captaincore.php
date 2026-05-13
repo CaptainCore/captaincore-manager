@@ -10385,8 +10385,6 @@ function captaincore_site_audit_finding_counts( $audit_id ) {
 function captaincore_security_coverage_func( WP_REST_Request $request ) {
 	global $wpdb;
 
-	$components_t = "{$wpdb->prefix}captaincore_sf_components";
-	$audits_t     = "{$wpdb->prefix}captaincore_sf_audits";
 	$env_table    = "{$wpdb->prefix}captaincore_environments";
 	$sites_table  = "{$wpdb->prefix}captaincore_sites";
 
@@ -10465,14 +10463,21 @@ function captaincore_security_coverage_func( WP_REST_Request $request ) {
 		array_keys( $hashes['file'] )
 	);
 
+	// Audited-hash lookup comes from crew.wpregistry.io via RegistryClient
+	// (5-min transient cache, keyed per path). Union all four type manifests
+	// so a hash audited under a different component_type than the fleet's
+	// classification still counts as covered.
 	$audited_set = [];
-	if ( ! empty( $all_hashes ) ) {
-		$placeholders = implode( ',', array_fill( 0, count( $all_hashes ), '%s' ) );
-		$audited_rows = $wpdb->get_col( $wpdb->prepare(
-			"SELECT DISTINCT content_hash FROM {$components_t} WHERE content_hash IN ({$placeholders})",
-			...$all_hashes
-		) );
-		$audited_set = array_flip( $audited_rows );
+	if ( ! empty( $all_hashes ) && CaptainCore\RegistryClient::ready() ) {
+		$needed = array_flip( $all_hashes );
+		foreach ( [ 'plugins', 'themes', 'mu-plugins', 'files' ] as $endpoint ) {
+			$manifest = CaptainCore\RegistryClient::manifest( $endpoint );
+			foreach ( array_keys( $manifest ) as $hash ) {
+				if ( isset( $needed[ $hash ] ) ) {
+					$audited_set[ $hash ] = true;
+				}
+			}
+		}
 	}
 
 	foreach ( [ 'plugin', 'theme', 'mu_plugin', 'file' ] as $type ) {
