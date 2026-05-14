@@ -10463,7 +10463,7 @@ function captaincore_security_coverage_func( WP_REST_Request $request ) {
 		array_keys( $hashes['file'] )
 	);
 
-	// Audited-hash lookup comes from crew.wpregistry.io via RegistryClient
+	// Audited-hash lookup comes from findings.wpregistry.io via RegistryClient
 	// (5-min transient cache, keyed per path). Union all four type manifests
 	// so a hash audited under a different component_type than the fleet's
 	// classification still counts as covered.
