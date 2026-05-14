@@ -832,6 +832,20 @@ class SiteAudit {
                     }
                     $html .= "    </div>\n";
                     break;
+
+                case 'ioc-list':
+                    $label   = esc_html( $block->label ?? '' );
+                    $columns = intval( $block->columns ?? 3 );
+                    if ( $label ) {
+                        $html .= "    <div class=\"evidence-label\">{$label}</div>\n";
+                    }
+                    $html .= "    <div class=\"ioc-grid\" style=\"column-count:{$columns}\">\n";
+                    $items = $block->items ?? [];
+                    foreach ( $items as $item ) {
+                        $html .= "      <span>" . esc_html( $item ) . "</span>\n";
+                    }
+                    $html .= "    </div>\n";
+                    break;
             }
         }
         if ( $in_card ) { $html .= "  </div>\n"; }
