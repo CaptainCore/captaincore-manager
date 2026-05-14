@@ -300,7 +300,14 @@ class ComponentQueueCLI {
 				continue; // covered by this model — skip entirely
 			}
 
-			$comp['_audit_tier'] = $audited_by_anyone ? 1 : 0;
+			if ( $audited_by_anyone ) {
+				if ( $model === '' ) {
+					continue; // default queue: hide everything anyone has audited
+				}
+				$comp['_audit_tier'] = 1; // model mode: keep, marked for layered re-audit
+			} else {
+				$comp['_audit_tier'] = 0;
+			}
 			$out[] = $comp;
 		}
 
