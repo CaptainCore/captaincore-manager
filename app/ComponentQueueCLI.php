@@ -426,6 +426,124 @@ class ComponentQueueCLI {
 	}
 
 	/**
+	 * Per-slug aggregation for customer-safety prioritization.
+	 *
+	 * For each slug returns ONE row representing the latest-in-fleet version,
+	 * with total fleet site count summed across ALL versions of that slug.
+	 * Used by /wp-registry-scan default mode (added 2026-05-16) where the
+	 * user's primary goal is to keep the fleet safe by auditing the version
+	 * customers actually run — not the wp.org-latest version that may not
+	 * be deployed anywhere.
+	 *
+	 * Sort key downstream is `sites` (total fleet exposure for the slug).
+	 *
+	 * Row shape:
+	 *   slug                  — plugin/theme slug
+	 *   latest_version        — newest version present in the fleet (PHP version_compare)
+	 *   sites                 — total fleet sites running ANY version of this slug
+	 *   versions_in_fleet     — distinct version count
+	 *   hash                  — content hash of the latest-version primary variant
+	 *   source_ssh, home_directory — for downloading the latest variant
+	 *   audit_tier            — tier of the latest-version primary variant (NOT of any older version)
+	 *   type, title           — passthroughs
+	 *
+	 * Older-version backlog is NOT in this queue. A separate call with
+	 * group_by=version covers historical-version audits when the user wants
+	 * to backfill (Patchstack mode) — but customer-safety treats the
+	 * latest-in-fleet as the highest-priority audit target.
+	 */
+	public static function build_slug_latest_queue( array $hash_map ): array {
+		// First pass — group all (slug, version) entries by slug.
+		// Each entry in $slug_map holds the per-version data so we can pick
+		// the latest in pass two and sum sites across all of them.
+		$slug_map = []; // "type|slug" → [ versions => [ version => combined ], total_sites ]
+
+		foreach ( $hash_map as $hash => $comp ) {
+			$key = "{$comp['type']}|{$comp['slug']}";
+			$ver = $comp['version'] ?? '';
+			if ( ! isset( $slug_map[ $key ] ) ) {
+				$slug_map[ $key ] = [
+					'slug'        => $comp['slug'],
+					'type'        => $comp['type'],
+					'title'       => $comp['title'] ?? $comp['slug'],
+					'total_sites' => 0,
+					'versions'    => [],
+				];
+			}
+
+			if ( ! isset( $slug_map[ $key ]['versions'][ $ver ] ) ) {
+				$slug_map[ $key ]['versions'][ $ver ] = [
+					'version'        => $ver,
+					'sites'          => 0,
+					'hashes_count'   => 0,
+					'hash'           => '',
+					'source_ssh'     => '',
+					'home_directory' => '',
+					'audit_tier'     => PHP_INT_MAX,
+					'_max_sites'     => -1,
+					'_primary_tier'  => PHP_INT_MAX,
+				];
+			}
+
+			$slug_map[ $key ]['total_sites']                 += $comp['sites'];
+			$slug_map[ $key ]['versions'][ $ver ]['sites']   += $comp['sites'];
+			$slug_map[ $key ]['versions'][ $ver ]['hashes_count']++;
+
+			$tier = (int) ( $comp['_audit_tier'] ?? 0 );
+			if ( $tier < $slug_map[ $key ]['versions'][ $ver ]['audit_tier'] ) {
+				$slug_map[ $key ]['versions'][ $ver ]['audit_tier'] = $tier;
+			}
+
+			// Same primary-hash selection logic as build_version_queue.
+			$current_tier = (int) $slug_map[ $key ]['versions'][ $ver ]['_primary_tier'];
+			$current_max  = (int) $slug_map[ $key ]['versions'][ $ver ]['_max_sites'];
+			$is_better    = $tier < $current_tier
+				|| ( $tier === $current_tier && $comp['sites'] > $current_max );
+			if ( $is_better ) {
+				$slug_map[ $key ]['versions'][ $ver ]['_primary_tier']  = $tier;
+				$slug_map[ $key ]['versions'][ $ver ]['_max_sites']     = $comp['sites'];
+				$slug_map[ $key ]['versions'][ $ver ]['hash']           = $comp['hash'];
+				$slug_map[ $key ]['versions'][ $ver ]['source_ssh']     = $comp['source_ssh'] ?? '';
+				$slug_map[ $key ]['versions'][ $ver ]['home_directory'] = $comp['home_directory'] ?? '';
+			}
+		}
+
+		// Second pass — for each slug, pick the latest version via version_compare.
+		$result = [];
+		foreach ( $slug_map as $key => $bucket ) {
+			if ( empty( $bucket['versions'] ) ) {
+				continue;
+			}
+
+			$versions = array_keys( $bucket['versions'] );
+			// version_compare handles WP-style versions (e.g. "2.10.2", "1.0.0-beta1").
+			// Empty-string versions sort last by default — fine because they're rare.
+			usort( $versions, 'version_compare' );
+			$latest_ver  = end( $versions );
+			$latest_data = $bucket['versions'][ $latest_ver ];
+
+			$result[] = [
+				'slug'              => $bucket['slug'],
+				'latest_version'    => $latest_ver,
+				'sites'             => $bucket['total_sites'], // total across all versions of this slug
+				'versions_in_fleet' => count( $bucket['versions'] ),
+				'type'              => $bucket['type'],
+				'title'             => $bucket['title'],
+				'hash'              => $latest_data['hash'],
+				'hashes_count'      => $latest_data['hashes_count'],
+				'source_ssh'        => $latest_data['source_ssh'],
+				'home_directory'    => $latest_data['home_directory'],
+				'audit_tier'        => $latest_data['audit_tier'] === PHP_INT_MAX ? 0 : $latest_data['audit_tier'],
+				// Also expose the per-version site count for the latest, in case
+				// the caller wants to surface "X of Y fleet sites are on latest".
+				'sites_on_latest'   => $latest_data['sites'],
+			];
+		}
+
+		return $result;
+	}
+
+	/**
 	 * Gather all production environments with SSH + plugin/theme data + details.
 	 */
 	public static function gather_sites() {
