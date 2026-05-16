@@ -10593,6 +10593,24 @@ function captaincore_component_queue_func( WP_REST_Request $request ) {
 		return array_slice( $version_queue, 0, $limit );
 	}
 
+	// Slug-latest grouping (customer-safety mode, added 2026-05-16): one row
+	// per slug representing the latest-in-fleet version, sorted by total fleet
+	// exposure across all versions. Used by /wp-registry-scan default mode where
+	// the goal is "audit the version customers run." Older versions of the same
+	// slug are NOT in this response — call with group_by=version to backfill
+	// historical-version audits.
+	if ( $group_by === 'slug-latest' ) {
+		$unaudited_by_hash = [];
+		foreach ( $unaudited as $item ) {
+			if ( ! empty( $item['hash'] ) ) {
+				$unaudited_by_hash[ $item['hash'] ] = $item;
+			}
+		}
+		$slug_queue = CaptainCore\ComponentQueueCLI::build_slug_latest_queue( $unaudited_by_hash );
+		usort( $slug_queue, $tier_then_sites );
+		return array_slice( $slug_queue, 0, $limit );
+	}
+
 	usort( $unaudited, $tier_then_sites );
 	return array_slice( $unaudited, 0, $limit );
 }
