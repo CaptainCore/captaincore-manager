@@ -5714,9 +5714,20 @@ function captaincore_mailgun_setup( WP_REST_Request $request ) {
 
     // 1. Run the setup (this remains the same)
     $setup_result = CaptainCore\Providers\Mailgun::setup( $full_domain );
-    
+
+    // Bail if setup returned a structured error (e.g. account has disabled domains in Mailgun)
+    if ( is_object( $setup_result ) && ! empty( $setup_result->error ) ) {
+        return new WP_Error( 'mailgun_setup_failed', $setup_result->message, [ 'status' => 400 ] );
+    }
+
     // 2. Fetch the newly created zone using the correct method
     $zone_details = CaptainCore\Remote\Mailgun::get( "v4/domains/$full_domain" );
+
+    // Bail if Mailgun didn't return a domain object (zone wasn't created or fetch failed)
+    if ( empty( $zone_details->domain ) ) {
+        $error_message = $zone_details->message ?? 'Mailgun zone not available';
+        return new WP_Error( 'mailgun_zone_missing', "Mailgun zone for $full_domain: $error_message", [ 'status' => 400 ] );
+    }
 
     // 3. Add details to the domain
     $domain = ( new \CaptainCore\Domains )->get( $domain_id );
@@ -10559,12 +10570,12 @@ function captaincore_component_queue_func( WP_REST_Request $request ) {
 	}
 
 	$all = array_merge( array_values( $hash_map ), array_values( $no_hash ) );
-	$unaudited = CaptainCore\ComponentQueueCLI::filter_unaudited( $all, $filter_model );
 
-	// Filter by component type if specified
+	// Filter by component type if specified — applied before annotation so the
+	// manifest fetch doesn't have to walk every type.
 	$filter_type = sanitize_text_field( $request->get_param( 'type' ) ?: '' );
 	if ( $filter_type ) {
-		$unaudited = array_values( array_filter( $unaudited, function ( $item ) use ( $filter_type ) {
+		$all = array_values( array_filter( $all, function ( $item ) use ( $filter_type ) {
 			return ( $item['type'] ?? '' ) === $filter_type;
 		} ) );
 	}
@@ -10580,6 +10591,20 @@ function captaincore_component_queue_func( WP_REST_Request $request ) {
 		return ( $b['sites'] ?? 0 ) - ( $a['sites'] ?? 0 );
 	};
 
+	// Slug-latest grouping (customer-safety mode): one row per slug representing
+	// the LATEST version in the fleet, only when that latest version still has
+	// surfaceable work under the policy. Operates on the full annotated fleet so
+	// it picks each slug's real latest — never loops back to an older version
+	// just because the newer one is already audited.
+	if ( $group_by === 'slug-latest' ) {
+		$annotated  = CaptainCore\ComponentQueueCLI::annotate_tiers( $all, $filter_model );
+		$slug_queue = CaptainCore\ComponentQueueCLI::build_slug_latest_queue( $annotated, $filter_model );
+		usort( $slug_queue, $tier_then_sites );
+		return array_slice( $slug_queue, 0, $limit );
+	}
+
+	$unaudited = CaptainCore\ComponentQueueCLI::filter_unaudited( $all, $filter_model );
+
 	// Version grouping: aggregate by slug+version, sum sites, count distinct hashes
 	if ( $group_by === 'version' ) {
 		$unaudited_by_hash = [];
@@ -10591,24 +10616,6 @@ function captaincore_component_queue_func( WP_REST_Request $request ) {
 		$version_queue = CaptainCore\ComponentQueueCLI::build_version_queue( $unaudited_by_hash );
 		usort( $version_queue, $tier_then_sites );
 		return array_slice( $version_queue, 0, $limit );
-	}
-
-	// Slug-latest grouping (customer-safety mode, added 2026-05-16): one row
-	// per slug representing the latest-in-fleet version, sorted by total fleet
-	// exposure across all versions. Used by /wp-registry-scan default mode where
-	// the goal is "audit the version customers run." Older versions of the same
-	// slug are NOT in this response — call with group_by=version to backfill
-	// historical-version audits.
-	if ( $group_by === 'slug-latest' ) {
-		$unaudited_by_hash = [];
-		foreach ( $unaudited as $item ) {
-			if ( ! empty( $item['hash'] ) ) {
-				$unaudited_by_hash[ $item['hash'] ] = $item;
-			}
-		}
-		$slug_queue = CaptainCore\ComponentQueueCLI::build_slug_latest_queue( $unaudited_by_hash );
-		usort( $slug_queue, $tier_then_sites );
-		return array_slice( $slug_queue, 0, $limit );
 	}
 
 	usort( $unaudited, $tier_then_sites );
