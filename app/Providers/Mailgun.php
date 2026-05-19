@@ -28,6 +28,16 @@ class Mailgun {
             $mailgun_domain = \CaptainCore\Remote\Mailgun::post( "v4/domains", [ 'name' => $mailgun_subdomain ] );
         }
 
+        // Bail if Mailgun didn't return a usable response (e.g. account has disabled domains, rate-limited, auth failure)
+        if ( empty( $mailgun_domain->sending_dns_records ) || ! is_array( $mailgun_domain->sending_dns_records ) ) {
+            $error_message = $mailgun_domain->message ?? 'unexpected response';
+            error_log( "CaptainCore: Mailgun setup failed for $mailgun_subdomain — $error_message. Response: " . json_encode( $mailgun_domain ) );
+            return (object) [
+                'error'   => true,
+                'message' => "Mailgun setup failed for $mailgun_subdomain: $error_message",
+            ];
+        }
+
         // If Mailgun domain already exists then exit
         $valid_records = array_column( $mailgun_domain->sending_dns_records, "valid" );
         if ( ! in_array( "unknown", $valid_records ) ) {
