@@ -222,6 +222,77 @@ class ComponentQueueCLI {
 	}
 
 	/**
+	 * Annotate each component with audit-state flags WITHOUT dropping anything.
+	 * Used by slug-latest mode so it can see the full fleet (including audited
+	 * versions) when picking each slug's actual latest version — then decide
+	 * surfaceability per-slug instead of per-hash.
+	 *
+	 * Annotated keys:
+	 *   _audited_by_anyone  — bool, hash exists in any-model manifest
+	 *   _audited_by_me      — bool, hash exists in $model's manifest (false when $model is '')
+	 *   _audit_tier         — 0 if not audited by anyone OR audited only by me;
+	 *                         1 if audited by someone else but not by $model
+	 *                         (the existing tier semantics callers already use)
+	 *
+	 * Fail-open: if the registry isn't configured or the fetch fails, every
+	 * component is annotated as tier-0 / un-audited so the queue still works.
+	 */
+	public static function annotate_tiers( array $components, string $model = '' ): array {
+		if ( ! RegistryClient::ready() ) {
+			foreach ( $components as &$c ) {
+				$c['_audit_tier']         = 0;
+				$c['_audited_by_anyone']  = false;
+				$c['_audited_by_me']      = false;
+			}
+			return $components;
+		}
+
+		$type_to_endpoint = [
+			'plugin'    => 'plugins',
+			'theme'     => 'themes',
+			'mu-plugin' => 'mu-plugins',
+			'file'      => 'files',
+		];
+
+		$any  = [];
+		$mine = [];
+		$needed_types = [];
+		foreach ( $components as $c ) {
+			$t = $c['type'] ?? '';
+			if ( isset( $type_to_endpoint[ $t ] ) ) {
+				$needed_types[ $t ] = true;
+			}
+		}
+		foreach ( array_keys( $needed_types ) as $t ) {
+			$endpoint = $type_to_endpoint[ $t ];
+			$any[ $t ]  = RegistryClient::manifest( $endpoint, '' );
+			$mine[ $t ] = $model !== '' ? RegistryClient::manifest( $endpoint, $model ) : [];
+		}
+
+		foreach ( $components as &$comp ) {
+			$hash = $comp['hash'] ?? '';
+			$type = $comp['type'] ?? '';
+
+			$any_manifest  = $any[ $type ]  ?? null;
+			$mine_manifest = $mine[ $type ] ?? [];
+
+			if ( $hash === '' || ! is_array( $any_manifest ) ) {
+				$comp['_audited_by_anyone'] = false;
+				$comp['_audited_by_me']     = false;
+				$comp['_audit_tier']        = 0;
+				continue;
+			}
+
+			$by_anyone = isset( $any_manifest[ $hash ] );
+			$by_me     = $model !== '' && isset( $mine_manifest[ $hash ] );
+			$comp['_audited_by_anyone'] = $by_anyone;
+			$comp['_audited_by_me']     = $by_me;
+			$comp['_audit_tier']        = ( $by_anyone && ! $by_me ) ? 1 : 0;
+		}
+		return $components;
+	}
+
+	/**
 	 * Filter components to only those that haven't been audited (by the given
 	 * model, if scoped) and tag each with an audit-state tier the caller can
 	 * use for ordering. Reads from the WP Registry plugin's manifest via
@@ -238,79 +309,18 @@ class ComponentQueueCLI {
 	 * never silently skips a real vulnerability.
 	 */
 	public static function filter_unaudited( array $components, string $model = '' ) {
-		if ( ! RegistryClient::ready() ) {
-			foreach ( $components as &$c ) {
-				$c['_audit_tier'] = 0;
-			}
-			return $components;
-		}
-
-		$type_to_endpoint = [
-			'plugin'    => 'plugins',
-			'theme'     => 'themes',
-			'mu-plugin' => 'mu-plugins',
-			'file'      => 'files',
-		];
-
-		// Per type, pull two manifests:
-		//   any[$type]  — every audited hash regardless of auditor
-		//   mine[$type] — only hashes audited by $model (empty array if no $model)
-		$any  = [];
-		$mine = [];
-		$needed_types = [];
-		foreach ( $components as $c ) {
-			$t = $c['type'] ?? '';
-			if ( isset( $type_to_endpoint[ $t ] ) ) {
-				$needed_types[ $t ] = true;
-			}
-		}
-		foreach ( array_keys( $needed_types ) as $t ) {
-			$endpoint = $type_to_endpoint[ $t ];
-			$any[ $t ]  = RegistryClient::manifest( $endpoint, '' );
-			$mine[ $t ] = $model !== '' ? RegistryClient::manifest( $endpoint, $model ) : [];
-		}
+		$annotated = self::annotate_tiers( $components, $model );
 
 		$out = [];
-		foreach ( $components as $comp ) {
-			$hash = $comp['hash'] ?? '';
-			$type = $comp['type'] ?? '';
-
-			$any_manifest  = $any[ $type ]  ?? null;
-			$mine_manifest = $mine[ $type ] ?? [];
-
-			if ( ! is_array( $any_manifest ) ) {
-				// Type not supported by registry — pass through as fresh.
-				$comp['_audit_tier'] = 0;
-				$out[] = $comp;
-				continue;
-			}
-
-			if ( $hash === '' ) {
-				// Legacy: no hash. Manifest is hash-keyed so we can't lookup;
-				// treat as never-audited (tier 0) so it surfaces.
-				$comp['_audit_tier'] = 0;
-				$out[] = $comp;
-				continue;
-			}
-
-			$audited_by_anyone = isset( $any_manifest[ $hash ] );
-			$audited_by_me     = isset( $mine_manifest[ $hash ] );
-
-			if ( $audited_by_me ) {
+		foreach ( $annotated as $comp ) {
+			if ( ! empty( $comp['_audited_by_me'] ) ) {
 				continue; // covered by this model — skip entirely
 			}
-
-			if ( $audited_by_anyone ) {
-				if ( $model === '' ) {
-					continue; // default queue: hide everything anyone has audited
-				}
-				$comp['_audit_tier'] = 1; // model mode: keep, marked for layered re-audit
-			} else {
-				$comp['_audit_tier'] = 0;
+			if ( ! empty( $comp['_audited_by_anyone'] ) && $model === '' ) {
+				continue; // default queue: hide everything anyone has audited
 			}
 			$out[] = $comp;
 		}
-
 		return $out;
 	}
 
@@ -428,37 +438,47 @@ class ComponentQueueCLI {
 	/**
 	 * Per-slug aggregation for customer-safety prioritization.
 	 *
-	 * For each slug returns ONE row representing the latest-in-fleet version,
-	 * with total fleet site count summed across ALL versions of that slug.
-	 * Used by /wp-registry-scan default mode (added 2026-05-16) where the
-	 * user's primary goal is to keep the fleet safe by auditing the version
-	 * customers actually run — not the wp.org-latest version that may not
-	 * be deployed anywhere.
+	 * Takes the FULL annotated fleet view (output of annotate_tiers — every
+	 * component, audited or not) and:
+	 *   1. Groups by slug and walks every known version.
+	 *   2. Picks the slug's real latest version via PHP version_compare across
+	 *      ALL versions in the fleet, including ones already audited.
+	 *   3. Surfaces ONE row per slug ONLY when that latest version still has
+	 *      at least one hash that's surfaceable under the policy:
+	 *        - default ($model === ''): drop hashes audited by anyone
+	 *        - model mode: drop hashes audited by $model itself
 	 *
-	 * Sort key downstream is `sites` (total fleet exposure for the slug).
+	 * That last gate is the customer-safety policy fix: when every hash on a
+	 * slug's latest version is already covered we DO NOT loop back to older
+	 * versions of the same slug — we wait until other slugs' latest versions
+	 * have been audited. Use group_by=version explicitly to backfill older
+	 * versions of a slug whose latest is already covered.
 	 *
 	 * Row shape:
 	 *   slug                  — plugin/theme slug
-	 *   latest_version        — newest version present in the fleet (PHP version_compare)
+	 *   latest_version        — newest version present in the fleet
 	 *   sites                 — total fleet sites running ANY version of this slug
 	 *   versions_in_fleet     — distinct version count
 	 *   hash                  — content hash of the latest-version primary variant
+	 *                           (lowest-tier most-popular surfaceable hash for that version)
 	 *   source_ssh, home_directory — for downloading the latest variant
-	 *   audit_tier            — tier of the latest-version primary variant (NOT of any older version)
+	 *   audit_tier            — tier of the surfaced primary hash (0 = fresh,
+	 *                           1 = audited by another model, surfaced under
+	 *                           model-mode for layered re-audit)
 	 *   type, title           — passthroughs
-	 *
-	 * Older-version backlog is NOT in this queue. A separate call with
-	 * group_by=version covers historical-version audits when the user wants
-	 * to backfill (Patchstack mode) — but customer-safety treats the
-	 * latest-in-fleet as the highest-priority audit target.
+	 *   sites_on_latest       — fleet sites running the latest version
 	 */
-	public static function build_slug_latest_queue( array $hash_map ): array {
-		// First pass — group all (slug, version) entries by slug.
-		// Each entry in $slug_map holds the per-version data so we can pick
-		// the latest in pass two and sum sites across all of them.
-		$slug_map = []; // "type|slug" → [ versions => [ version => combined ], total_sites ]
+	public static function build_slug_latest_queue( array $annotated_components, string $model = '' ): array {
+		$slug_map = []; // "type|slug" → bucket
 
-		foreach ( $hash_map as $hash => $comp ) {
+		foreach ( $annotated_components as $comp ) {
+			$hash = $comp['hash'] ?? '';
+			if ( $hash === '' ) {
+				// Hash-less components don't make sense in a slug-latest view —
+				// surface them via the default or version-grouped queues.
+				continue;
+			}
+
 			$key = "{$comp['type']}|{$comp['slug']}";
 			$ver = $comp['version'] ?? '';
 			if ( ! isset( $slug_map[ $key ] ) ) {
@@ -473,69 +493,70 @@ class ComponentQueueCLI {
 
 			if ( ! isset( $slug_map[ $key ]['versions'][ $ver ] ) ) {
 				$slug_map[ $key ]['versions'][ $ver ] = [
-					'version'        => $ver,
-					'sites'          => 0,
-					'hashes_count'   => 0,
-					'hash'           => '',
-					'source_ssh'     => '',
-					'home_directory' => '',
-					'audit_tier'     => PHP_INT_MAX,
-					'_max_sites'     => -1,
-					'_primary_tier'  => PHP_INT_MAX,
+					'version'      => $ver,
+					'sites'        => 0,
+					'hashes'       => [], // every annotated component for this slug+version
 				];
 			}
 
-			$slug_map[ $key ]['total_sites']                 += $comp['sites'];
-			$slug_map[ $key ]['versions'][ $ver ]['sites']   += $comp['sites'];
-			$slug_map[ $key ]['versions'][ $ver ]['hashes_count']++;
-
-			$tier = (int) ( $comp['_audit_tier'] ?? 0 );
-			if ( $tier < $slug_map[ $key ]['versions'][ $ver ]['audit_tier'] ) {
-				$slug_map[ $key ]['versions'][ $ver ]['audit_tier'] = $tier;
-			}
-
-			// Same primary-hash selection logic as build_version_queue.
-			$current_tier = (int) $slug_map[ $key ]['versions'][ $ver ]['_primary_tier'];
-			$current_max  = (int) $slug_map[ $key ]['versions'][ $ver ]['_max_sites'];
-			$is_better    = $tier < $current_tier
-				|| ( $tier === $current_tier && $comp['sites'] > $current_max );
-			if ( $is_better ) {
-				$slug_map[ $key ]['versions'][ $ver ]['_primary_tier']  = $tier;
-				$slug_map[ $key ]['versions'][ $ver ]['_max_sites']     = $comp['sites'];
-				$slug_map[ $key ]['versions'][ $ver ]['hash']           = $comp['hash'];
-				$slug_map[ $key ]['versions'][ $ver ]['source_ssh']     = $comp['source_ssh'] ?? '';
-				$slug_map[ $key ]['versions'][ $ver ]['home_directory'] = $comp['home_directory'] ?? '';
-			}
+			$slug_map[ $key ]['total_sites']               += $comp['sites'];
+			$slug_map[ $key ]['versions'][ $ver ]['sites'] += $comp['sites'];
+			$slug_map[ $key ]['versions'][ $ver ]['hashes'][] = $comp;
 		}
 
-		// Second pass — for each slug, pick the latest version via version_compare.
 		$result = [];
-		foreach ( $slug_map as $key => $bucket ) {
+		foreach ( $slug_map as $bucket ) {
 			if ( empty( $bucket['versions'] ) ) {
 				continue;
 			}
 
 			$versions = array_keys( $bucket['versions'] );
-			// version_compare handles WP-style versions (e.g. "2.10.2", "1.0.0-beta1").
-			// Empty-string versions sort last by default — fine because they're rare.
 			usort( $versions, 'version_compare' );
 			$latest_ver  = end( $versions );
 			$latest_data = $bucket['versions'][ $latest_ver ];
 
+			// Surfaceability: pick the hashes on the latest version that the
+			// caller's policy still wants to see. If every hash on the latest
+			// version is already covered, skip this slug — do NOT loop back
+			// to an older version (that's group_by=version's job).
+			$surfaceable = [];
+			foreach ( $latest_data['hashes'] as $h ) {
+				if ( ! empty( $h['_audited_by_me'] ) ) {
+					continue;
+				}
+				if ( $model === '' && ! empty( $h['_audited_by_anyone'] ) ) {
+					continue;
+				}
+				$surfaceable[] = $h;
+			}
+			if ( empty( $surfaceable ) ) {
+				continue;
+			}
+
+			// Primary: lowest audit tier first (0 beats 1), then most sites on
+			// that hash. Mirrors the per-version logic in build_version_queue.
+			usort( $surfaceable, function ( $a, $b ) {
+				$at = (int) ( $a['_audit_tier'] ?? 0 );
+				$bt = (int) ( $b['_audit_tier'] ?? 0 );
+				if ( $at !== $bt ) {
+					return $at - $bt;
+				}
+				return ( $b['sites'] ?? 0 ) - ( $a['sites'] ?? 0 );
+			} );
+			$primary = $surfaceable[0];
+
 			$result[] = [
 				'slug'              => $bucket['slug'],
 				'latest_version'    => $latest_ver,
-				'sites'             => $bucket['total_sites'], // total across all versions of this slug
+				'sites'             => $bucket['total_sites'],
 				'versions_in_fleet' => count( $bucket['versions'] ),
 				'type'              => $bucket['type'],
 				'title'             => $bucket['title'],
-				'hash'              => $latest_data['hash'],
-				'hashes_count'      => $latest_data['hashes_count'],
-				'source_ssh'        => $latest_data['source_ssh'],
-				'home_directory'    => $latest_data['home_directory'],
-				'audit_tier'        => $latest_data['audit_tier'] === PHP_INT_MAX ? 0 : $latest_data['audit_tier'],
-				// Also expose the per-version site count for the latest, in case
-				// the caller wants to surface "X of Y fleet sites are on latest".
+				'hash'              => $primary['hash'],
+				'hashes_count'      => count( $latest_data['hashes'] ),
+				'source_ssh'        => $primary['source_ssh'] ?? '',
+				'home_directory'    => $primary['home_directory'] ?? '',
+				'audit_tier'        => (int) ( $primary['_audit_tier'] ?? 0 ),
 				'sites_on_latest'   => $latest_data['sites'],
 			];
 		}
