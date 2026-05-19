@@ -440,33 +440,42 @@ class ComponentQueueCLI {
 	 *
 	 * Takes the FULL annotated fleet view (output of annotate_tiers — every
 	 * component, audited or not) and:
-	 *   1. Groups by slug and walks every known version.
-	 *   2. Picks the slug's real latest version via PHP version_compare across
-	 *      ALL versions in the fleet, including ones already audited.
-	 *   3. Surfaces ONE row per slug ONLY when that latest version still has
-	 *      at least one hash that's surfaceable under the policy:
-	 *        - default ($model === ''): drop hashes audited by anyone
-	 *        - model mode: drop hashes audited by $model itself
+	 *   1. Groups by slug, walking every known fleet version.
+	 *   2. Computes the slug's "auditable set" — the set of versions worth
+	 *      auditing for this slug:
+	 *        - wp.org plugins/themes: every fleet version whose version_compare
+	 *          is >= the version published on api.wordpress.org. Bogus stamps
+	 *          higher than wp.org-latest are in the set; stale older versions
+	 *          are excluded.
+	 *        - Premium components (api.wordpress.org returns no data): the
+	 *          fleet-effective-latest (highest version with at least
+	 *          max(2, ceil(1% × total slug sites)) sites running it, with a
+	 *          fallback to the absolute highest version when no version meets
+	 *          the bar) plus every version higher than it.
+	 *   3. Surfaces ONE row per slug for the lowest-priority item still in the
+	 *      auditable set — bogus-first ordering, meaning highest-version first
+	 *      so customer-pinned/malware-suspect stamps get the first audit pass.
+	 *      The slug only drops out of the queue when EVERY hash in the
+	 *      auditable set has been audited under the policy.
 	 *
-	 * That last gate is the customer-safety policy fix: when every hash on a
-	 * slug's latest version is already covered we DO NOT loop back to older
-	 * versions of the same slug — we wait until other slugs' latest versions
-	 * have been audited. Use group_by=version explicitly to backfill older
-	 * versions of a slug whose latest is already covered.
+	 * That keeps audit coverage anchored to a vendor-relevant version
+	 * boundary instead of just "the highest fleet version" — a single
+	 * customer-pinned 9999 stamp won't satisfy the slug's coverage when the
+	 * real wp.org-latest is still un-audited.
 	 *
 	 * Row shape:
 	 *   slug                  — plugin/theme slug
-	 *   latest_version        — newest version present in the fleet
+	 *   latest_version        — version this row points at for audit (newest
+	 *                           still-surfaceable version in the auditable set)
 	 *   sites                 — total fleet sites running ANY version of this slug
 	 *   versions_in_fleet     — distinct version count
-	 *   hash                  — content hash of the latest-version primary variant
-	 *                           (lowest-tier most-popular surfaceable hash for that version)
-	 *   source_ssh, home_directory — for downloading the latest variant
+	 *   hash                  — content hash for the audit target on that version
+	 *   source_ssh, home_directory — for downloading the audit target
 	 *   audit_tier            — tier of the surfaced primary hash (0 = fresh,
 	 *                           1 = audited by another model, surfaced under
 	 *                           model-mode for layered re-audit)
 	 *   type, title           — passthroughs
-	 *   sites_on_latest       — fleet sites running the latest version
+	 *   sites_on_latest       — fleet sites running the surfaced version
 	 */
 	public static function build_slug_latest_queue( array $annotated_components, string $model = '' ): array {
 		$slug_map = []; // "type|slug" → bucket
@@ -493,15 +502,15 @@ class ComponentQueueCLI {
 
 			if ( ! isset( $slug_map[ $key ]['versions'][ $ver ] ) ) {
 				$slug_map[ $key ]['versions'][ $ver ] = [
-					'version'      => $ver,
-					'sites'        => 0,
-					'hashes'       => [], // every annotated component for this slug+version
+					'version' => $ver,
+					'sites'   => 0,
+					'hashes'  => [], // every annotated component for this slug+version
 				];
 			}
 
-			$slug_map[ $key ]['total_sites']               += $comp['sites'];
-			$slug_map[ $key ]['versions'][ $ver ]['sites'] += $comp['sites'];
-			$slug_map[ $key ]['versions'][ $ver ]['hashes'][] = $comp;
+			$slug_map[ $key ]['total_sites']                  += $comp['sites'];
+			$slug_map[ $key ]['versions'][ $ver ]['sites']    += $comp['sites'];
+			$slug_map[ $key ]['versions'][ $ver ]['hashes'][]  = $comp;
 		}
 
 		$result = [];
@@ -510,32 +519,68 @@ class ComponentQueueCLI {
 				continue;
 			}
 
-			$versions = array_keys( $bucket['versions'] );
-			usort( $versions, 'version_compare' );
-			$latest_ver  = end( $versions );
-			$latest_data = $bucket['versions'][ $latest_ver ];
-
-			// Surfaceability: pick the hashes on the latest version that the
-			// caller's policy still wants to see. If every hash on the latest
-			// version is already covered, skip this slug — do NOT loop back
-			// to an older version (that's group_by=version's job).
-			$surfaceable = [];
-			foreach ( $latest_data['hashes'] as $h ) {
-				if ( ! empty( $h['_audited_by_me'] ) ) {
-					continue;
+			// Performance gate — skip wp.org calls for slugs where the caller's
+			// policy would drop every hash anyway. Common case: every fleet
+			// hash for this slug is already audited under model+policy.
+			$any_surfaceable = false;
+			foreach ( $bucket['versions'] as $vdata ) {
+				foreach ( $vdata['hashes'] as $h ) {
+					if ( ! empty( $h['_audited_by_me'] ) ) {
+						continue;
+					}
+					if ( $model === '' && ! empty( $h['_audited_by_anyone'] ) ) {
+						continue;
+					}
+					$any_surfaceable = true;
+					break 2;
 				}
-				if ( $model === '' && ! empty( $h['_audited_by_anyone'] ) ) {
-					continue;
-				}
-				$surfaceable[] = $h;
 			}
-			if ( empty( $surfaceable ) ) {
+			if ( ! $any_surfaceable ) {
 				continue;
 			}
 
-			// Primary: lowest audit tier first (0 beats 1), then most sites on
-			// that hash. Mirrors the per-version logic in build_version_queue.
-			usort( $surfaceable, function ( $a, $b ) {
+			$auditable = self::compute_auditable_versions( $bucket );
+			if ( empty( $auditable ) ) {
+				continue;
+			}
+
+			// Bogus-first: walk versions DESC. A customer-pinned "9999" stamp
+			// (above wp.org-latest) gets audited before the real wp.org-latest
+			// underneath it. After both are covered, the slug drops out.
+			usort( $auditable, function ( $a, $b ) { return version_compare( $b, $a ); } );
+
+			$picked_ver    = null;
+			$picked_data   = null;
+			$picked_hashes = null;
+			foreach ( $auditable as $v ) {
+				if ( ! isset( $bucket['versions'][ $v ] ) ) {
+					continue;
+				}
+				$vdata       = $bucket['versions'][ $v ];
+				$surfaceable = [];
+				foreach ( $vdata['hashes'] as $h ) {
+					if ( ! empty( $h['_audited_by_me'] ) ) {
+						continue;
+					}
+					if ( $model === '' && ! empty( $h['_audited_by_anyone'] ) ) {
+						continue;
+					}
+					$surfaceable[] = $h;
+				}
+				if ( ! empty( $surfaceable ) ) {
+					$picked_ver    = $v;
+					$picked_data   = $vdata;
+					$picked_hashes = $surfaceable;
+					break;
+				}
+			}
+			if ( $picked_ver === null ) {
+				continue;
+			}
+
+			// Primary within the chosen version: lowest tier first (0 beats 1),
+			// then most sites. Mirrors build_version_queue.
+			usort( $picked_hashes, function ( $a, $b ) {
 				$at = (int) ( $a['_audit_tier'] ?? 0 );
 				$bt = (int) ( $b['_audit_tier'] ?? 0 );
 				if ( $at !== $bt ) {
@@ -543,25 +588,133 @@ class ComponentQueueCLI {
 				}
 				return ( $b['sites'] ?? 0 ) - ( $a['sites'] ?? 0 );
 			} );
-			$primary = $surfaceable[0];
+			$primary = $picked_hashes[0];
 
 			$result[] = [
 				'slug'              => $bucket['slug'],
-				'latest_version'    => $latest_ver,
+				'latest_version'    => $picked_ver,
 				'sites'             => $bucket['total_sites'],
 				'versions_in_fleet' => count( $bucket['versions'] ),
 				'type'              => $bucket['type'],
 				'title'             => $bucket['title'],
 				'hash'              => $primary['hash'],
-				'hashes_count'      => count( $latest_data['hashes'] ),
+				'hashes_count'      => count( $picked_data['hashes'] ),
 				'source_ssh'        => $primary['source_ssh'] ?? '',
 				'home_directory'    => $primary['home_directory'] ?? '',
 				'audit_tier'        => (int) ( $primary['_audit_tier'] ?? 0 ),
-				'sites_on_latest'   => $latest_data['sites'],
+				'sites_on_latest'   => $picked_data['sites'],
 			];
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Compute the slug's auditable version set. For wp.org plugins/themes we
+	 * use api.wordpress.org as the authority — anything in the fleet >= the
+	 * published version is in scope. For premium (or wp.org-unknown) slugs we
+	 * fall back to fleet shape: the highest version meeting a deployment
+	 * threshold plus every fleet version higher than it.
+	 *
+	 * Threshold for "real" premium version = max(2, ceil(1% × total slug sites)).
+	 * A version with fewer sites than the threshold is either a one-off
+	 * customer pin or a fresh release that hasn't propagated yet — either way
+	 * it stays surfaced as an audit target (versions higher than effective
+	 * latest), but doesn't get to ANCHOR the auditable set.
+	 */
+	private static function compute_auditable_versions( array $bucket ): array {
+		$versions = array_keys( $bucket['versions'] );
+		$versions = array_values( array_filter( $versions, function ( $v ) { return $v !== ''; } ) );
+		if ( empty( $versions ) ) {
+			return [];
+		}
+
+		$type         = $bucket['type'] ?? 'plugin';
+		$wporg_latest = null;
+		if ( $type === 'plugin' || $type === 'theme' ) {
+			$wporg_latest = self::wporg_latest_version( $bucket['slug'], $type );
+		}
+
+		if ( $wporg_latest !== null ) {
+			return array_values( array_filter( $versions, function ( $v ) use ( $wporg_latest ) {
+				return version_compare( $v, $wporg_latest, '>=' );
+			} ) );
+		}
+
+		// Premium / wp.org-unknown: fleet-shape rule.
+		$total     = (int) ( $bucket['total_sites'] ?? 0 );
+		$threshold = max( 2, (int) ceil( 0.01 * $total ) );
+
+		$sorted_desc = $versions;
+		usort( $sorted_desc, function ( $a, $b ) { return version_compare( $b, $a ); } );
+
+		$effective_latest = null;
+		foreach ( $sorted_desc as $v ) {
+			$sites = (int) ( $bucket['versions'][ $v ]['sites'] ?? 0 );
+			if ( $sites >= $threshold ) {
+				$effective_latest = $v;
+				break;
+			}
+		}
+		if ( $effective_latest === null ) {
+			// No version meets the threshold — typical for very small slugs
+			// where 1% rounds to 1 and every version has a single site. Fall
+			// back to the absolute highest version so we still pick something.
+			$effective_latest = $sorted_desc[0];
+		}
+
+		return array_values( array_filter( $versions, function ( $v ) use ( $effective_latest ) {
+			return version_compare( $v, $effective_latest, '>=' );
+		} ) );
+	}
+
+	/**
+	 * Authoritative latest version for a wp.org-hosted plugin/theme via
+	 * api.wordpress.org. Returns null for premium / non-listed components
+	 * (api.wordpress.org returns an error), or when the lookup fails.
+	 *
+	 * Transient-cached for 1 hour to keep queue endpoint latency bounded.
+	 * First call on a cold cache for a 4k-slug queue makes ~hundreds of
+	 * wp.org HTTP calls (gated by the surfaceability short-circuit in
+	 * build_slug_latest_queue, so only slugs with unaudited hashes pay the
+	 * cost). Subsequent calls within the cache window are instant.
+	 *
+	 * Fail-open: every failure path caches '__none__' so we don't hammer
+	 * wp.org on the same slug repeatedly. Net effect = treat that slug as
+	 * premium for the cache window, which is the safe degradation.
+	 */
+	public static function wporg_latest_version( string $slug, string $type = 'plugin' ): ?string {
+		if ( $slug === '' ) {
+			return null;
+		}
+		if ( $type !== 'plugin' && $type !== 'theme' ) {
+			return null;
+		}
+
+		$cache_key = 'cc_wporg_latest_' . $type . '_' . md5( $slug );
+		$cached    = get_transient( $cache_key );
+		if ( $cached !== false ) {
+			return $cached === '__none__' ? null : (string) $cached;
+		}
+
+		$endpoint = $type === 'theme' ? 'themes/info/1.2' : 'plugins/info/1.2';
+		$action   = $type === 'theme' ? 'theme_information'  : 'plugin_information';
+		$url      = "https://api.wordpress.org/{$endpoint}/?action={$action}&request[slug]=" . rawurlencode( $slug );
+
+		$response = wp_remote_get( $url, [ 'timeout' => 3 ] );
+		if ( is_wp_error( $response ) || (int) wp_remote_retrieve_response_code( $response ) !== 200 ) {
+			set_transient( $cache_key, '__none__', HOUR_IN_SECONDS );
+			return null;
+		}
+
+		$data = json_decode( wp_remote_retrieve_body( $response ), true );
+		if ( ! is_array( $data ) || isset( $data['error'] ) || empty( $data['version'] ) ) {
+			set_transient( $cache_key, '__none__', HOUR_IN_SECONDS );
+			return null;
+		}
+
+		set_transient( $cache_key, $data['version'], HOUR_IN_SECONDS );
+		return $data['version'];
 	}
 
 	/**
