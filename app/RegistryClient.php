@@ -129,6 +129,15 @@ class RegistryClient {
 	}
 
 	/**
+	 * List findings with optional filters.
+	 */
+	public static function findings( array $args = [] ): ?array {
+		$query = build_query( $args );
+		$path  = 'findings' . ( $query ? '?' . $query : '' );
+		return self::get( $path );
+	}
+
+	/**
 	 * Bust every transient this client wrote.
 	 */
 	public static function flush_cache(): void {

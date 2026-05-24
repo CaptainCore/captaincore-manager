@@ -431,65 +431,200 @@ class SecurityThreats {
 	}
 
 	/**
-	 * Full security threats summary: fleet check + affected sites per threat.
-	 * Merges tracking data and filters to critical+high only.
+	 * Fetch the latest critical and high severity findings directly from the
+	 * Security Finder tables, without needing a fleet inventory.
 	 *
-	 * @return array Complete threat report with affected site details.
+	 * @param int $limit Number of latest threats to fetch.
+	 * @return array Array of threats with findings.
 	 */
-	public static function summary() {
-		$inventory = self::inventory();
-		$result    = self::check( $inventory );
+	public static function fetch_latest_threats( $limit = 100 ) {
+		// latest_only=1 scopes the registry to the highest audited version
+		// per (slug, component_type) so superseded versions are not surfaced
+		// here. Older builds are still indexed by the registry but the fleet
+		// security view treats the current build as the source of truth.
+		$response = RegistryClient::findings( [
+			'severity'    => 'critical,high',
+			'latest_only' => 1,
+			'per_page'    => $limit,
+		] );
 
-		if ( is_wp_error( $result ) ) {
-			return [ 'error' => $result->get_error_message() ];
+		if ( ! is_array( $response ) || ! isset( $response['findings'] ) ) {
+			return [];
 		}
 
-		if ( empty( $result['threats'] ) ) {
+		$grouped = [];
+		foreach ( $response['findings'] as $f ) {
+			$key = "{$f['component_type']}|{$f['slug']}|{$f['version']}";
+			if ( ! isset( $grouped[ $key ] ) ) {
+				$grouped[ $key ] = [
+					'slug'                => $f['slug'],
+					'version'             => $f['version'],
+					'type'                => $f['component_type'],
+					'title'               => $f['display_name'],
+					'severity'            => $f['severity'],
+					'audit_date'          => $f['discovered_at'] ? date( 'Y-m-d', strtotime( $f['discovered_at'] ) ) : ( $f['poc_scaffolded_at'] ? date( 'Y-m-d', strtotime( $f['poc_scaffolded_at'] ) ) : '' ),
+					'findings'            => [],
+				];
+			}
+			$grouped[ $key ]['findings'][] = [
+				'finding_code'    => $f['finding_code'] ?? '',
+				'severity'        => $f['severity'] ?? '',
+				'title'           => $f['title'] ?? '',
+				'description'     => $f['description'] ?? '',
+				'vuln_type'       => $f['vuln_type'] ?? '',
+				'cve'             => $f['cve'] ?? '',
+				'cvss_score'      => $f['cvss_score'] ?? '',
+				'recommendation'  => $f['recommendation'] ?? '',
+				'source'          => $f['source'] ?? '',
+				'wordfence_link'  => $f['wordfence_link'] ?? null,
+			];
+		}
+
+		return array_values( $grouped );
+	}
+
+	/**
+	 * Detect presence of a batch of threats across the fleet.
+	 *
+	 * @param array $threats Array of threat objects.
+	 */
+	public static function detect_in_fleet( &$threats ) {
+		global $wpdb;
+
+		if ( empty( $threats ) ) {
+			return;
+		}
+
+		$sites_table = "{$wpdb->prefix}captaincore_sites";
+		$env_table   = "{$wpdb->prefix}captaincore_environments";
+
+		$plugin_slugs = [];
+		$theme_slugs  = [];
+		foreach ( $threats as $threat ) {
+			if ( $threat['type'] === 'theme' ) {
+				$theme_slugs[] = preg_quote( $threat['slug'] );
+			} else {
+				$plugin_slugs[] = preg_quote( $threat['slug'] );
+			}
+		}
+
+		$clauses = [];
+		if ( ! empty( $plugin_slugs ) ) {
+			$clauses[] = "e.plugins REGEXP '" . implode( '|', array_unique( $plugin_slugs ) ) . "'";
+		}
+		if ( ! empty( $theme_slugs ) ) {
+			$clauses[] = "e.themes REGEXP '" . implode( '|', array_unique( $theme_slugs ) ) . "'";
+		}
+
+		if ( empty( $clauses ) ) {
+			return;
+		}
+
+		$sql = "SELECT s.site_id, s.name, e.environment_id, e.environment, e.home_url,
+				        e.address, e.username, e.port, e.home_directory, e.plugins, e.themes
+				 FROM {$sites_table} s
+				 INNER JOIN {$env_table} e ON s.site_id = e.site_id
+				 WHERE s.status = 'active'
+				   AND (" . implode( ' OR ', $clauses ) . ")
+				 ORDER BY s.name ASC, e.environment ASC";
+
+		$rows = $wpdb->get_results( $sql );
+
+		// Now match each row to the threats in PHP.
+		//
+		// Matching rule: same slug AND installed_version <= flagged_version
+		// (per version_compare). Older-but-vulnerable installs were being
+		// missed by the prior exact-version match — e.g. the registry flags
+		// revslider v7.0.14 critical but the fleet runs v6.7.41 and older,
+		// so every site would have read as 0 affected. Newer-than-flagged
+		// versions stay clear (already on a patched build).
+		foreach ( $threats as &$threat ) {
+			$threat['affected_sites'] = [];
+			$slug    = $threat['slug'];
+			$version = $threat['version'];
+			$type    = $threat['type'];
+
+			foreach ( $rows as $row ) {
+				$json = $type === 'theme' ? $row->themes : $row->plugins;
+				if ( empty( $json ) ) {
+					continue;
+				}
+				// Cheap substring prefilter on slug — version may be older so we can't gate on it here.
+				if ( strpos( $json, $slug ) === false ) {
+					continue;
+				}
+
+				$components = json_decode( $json );
+				if ( ! is_array( $components ) ) {
+					continue;
+				}
+
+				foreach ( $components as $c ) {
+					if ( $c->name !== $slug ) {
+						continue;
+					}
+					$installed = (string) ( $c->version ?? '' );
+					if ( $version !== '' ) {
+						if ( $installed === '' || ! version_compare( $installed, $version, '<=' ) ) {
+							continue;
+						}
+					}
+					$entry = [
+						'site_id'           => (int) $row->site_id,
+						'name'              => $row->name,
+						'environment_id'    => (int) $row->environment_id,
+						'environment'       => $row->environment,
+						'home_url'          => $row->home_url,
+						'installed_version' => $installed,
+					];
+					if ( ! empty( $row->address ) ) {
+						$entry['ssh']            = "{$row->username}@{$row->address} -p {$row->port}";
+						$entry['home_directory'] = $row->home_directory ?: '';
+					}
+					$threat['affected_sites'][] = $entry;
+					break;
+				}
+			}
+			$threat['affected_count'] = count( $threat['affected_sites'] );
+		}
+	}
+
+	public static function summary() {
+		// New approach: Fetch latest threats first. Much faster than building inventory.
+		$threats = self::fetch_latest_threats( 100 );
+
+		if ( empty( $threats ) ) {
 			return [
 				'threats'          => [],
 				'total_threats'    => 0,
-				'severity_summary' => [ 'critical' => 0, 'high' => 0, 'medium' => 0, 'low' => 0 ],
-				'fleet_size'       => count( $inventory ),
+				'severity_summary' => [ 'critical' => 0, 'high' => 0 ],
+				'fleet_size'       => 0,
+			];
+		}
+
+		// Detect presence in fleet, then drop threats with no fleet exposure
+		// (plugin/theme isn't installed on any active environment). Keeps the
+		// vulnerabilities tab focused on actionable rows rather than registry
+		// noise about components we don't run.
+		self::detect_in_fleet( $threats );
+		$threats = array_values( array_filter( $threats, function ( $t ) {
+			return ! empty( $t['affected_sites'] );
+		} ) );
+
+		if ( empty( $threats ) ) {
+			return [
+				'threats'          => [],
+				'total_threats'    => 0,
+				'severity_summary' => [ 'critical' => 0, 'high' => 0 ],
+				'fleet_size'       => 0,
 			];
 		}
 
 		$tracking_lookup = self::get_tracking();
+		$patch_lookup    = SecurityPatches::get_lookup();
 
-		// Normalize API field names: status→severity, display_name→title
-		foreach ( $result['threats'] as &$threat ) {
-			if ( isset( $threat['status'] ) && ! isset( $threat['severity'] ) ) {
-				$threat['severity'] = $threat['status'];
-			}
-			if ( isset( $threat['display_name'] ) && ! isset( $threat['title'] ) ) {
-				$threat['title'] = $threat['display_name'];
-			}
-		}
-		unset( $threat );
-
-		// Filter to critical and high severity only
-		$result['threats'] = array_values( array_filter( $result['threats'], function( $threat ) {
-			return in_array( $threat['severity'] ?? '', [ 'critical', 'high' ] );
-		} ) );
-
-		// Enrich each threat with the specific affected sites and tracking data
-		foreach ( $result['threats'] as &$threat ) {
-			$sites = self::affected_sites( $threat['slug'], $threat['version'], $threat['type'] );
-			$threat['affected_sites'] = array_map( function( $site ) {
-				$entry = [
-					'site_id'        => (int) $site->site_id,
-					'name'           => $site->name,
-					'environment_id' => (int) $site->environment_id,
-					'environment'    => $site->environment,
-					'home_url'       => $site->home_url,
-				];
-				if ( ! empty( $site->address ) ) {
-					$entry['ssh']            = "{$site->username}@{$site->address} -p {$site->port}";
-					$entry['home_directory'] = $site->home_directory ?: '';
-				}
-				return $entry;
-			}, $sites );
-			$threat['affected_count'] = count( $sites );
-
+		// Enrich each threat with tracking and patch data
+		foreach ( $threats as &$threat ) {
 			// Merge tracking data
 			$key = "{$threat['type']}|{$threat['slug']}|{$threat['version']}";
 			if ( isset( $tracking_lookup[ $key ] ) ) {
@@ -503,30 +638,27 @@ class SecurityThreats {
 					'resolved_at' => null,
 				];
 			}
-		}
-		unset( $threat );
 
-		// Merge patch data
-		$patch_lookup = SecurityPatches::get_lookup();
-		foreach ( $result['threats'] as &$threat ) {
-			$key = "{$threat['type']}|{$threat['slug']}|{$threat['version']}";
+			// Merge patch data
 			$threat['patch'] = $patch_lookup[ $key ] ?? null;
 		}
 		unset( $threat );
 
-		// Recount severity summary for filtered results
+		// Build severity summary
 		$severity_summary = [ 'critical' => 0, 'high' => 0 ];
-		foreach ( $result['threats'] as $threat ) {
+		foreach ( $threats as $threat ) {
 			$sev = $threat['severity'] ?? '';
 			if ( isset( $severity_summary[ $sev ] ) ) {
 				$severity_summary[ $sev ]++;
 			}
 		}
-		$result['severity_summary'] = $severity_summary;
-		$result['total_threats']    = count( $result['threats'] );
-		$result['fleet_size']       = count( $inventory );
 
-		return $result;
+		return [
+			'threats'          => $threats,
+			'total_threats'    => count( $threats ),
+			'severity_summary' => $severity_summary,
+			'fleet_size'       => 0, // Set to 0 since we skipped full inventory
+		];
 	}
 
 	/**

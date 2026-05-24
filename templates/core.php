@@ -8610,13 +8610,14 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 									{ title: 'Version', key: 'version', width: '100px' },
 									{ title: 'Type', key: 'type', width: '90px' },
 									{ title: 'Key Issue', key: 'key_issue', sortable: false },
+									{ title: 'Audited', key: 'audit_date', width: '120px' },
 									{ title: 'Sites', key: 'affected_count', width: '80px', align: 'center' },
 									{ title: 'Status', key: 'tracking.status', width: '160px' },
 									{ title: '', key: 'actions', width: '60px', sortable: false }
 								]"
 								:items="security_threats"
 								:items-per-page="25"
-								:sort-by="[{key: 'severity', order: 'asc'}, {key: 'affected_count', order: 'desc'}]"
+								:sort-by="[{key: 'audit_date', order: 'desc'}]"
 								:custom-key-sort="{ severity: (a, b) => { const order = { critical: 0, high: 1 }; return (order[a] ?? 2) - (order[b] ?? 2); } }"
 								density="comfortable"
 							>
