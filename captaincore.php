@@ -90,6 +90,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command( 'captaincore error-log-sizes', 'CaptainCore\ErrorLogCLI' );
 	WP_CLI::add_command( 'captaincore mu-manifest-generate', 'CaptainCore\MuManifestCLI' );
 	WP_CLI::add_command( 'captaincore dns', 'CaptainCore\DnsCLI' );
+	WP_CLI::add_command( 'captaincore mailgun', 'CaptainCore\MailgunCLI' );
 	WP_CLI::add_command( 'captaincore provider-sync', 'CaptainCore\ProviderSyncCLI' );
 }
 
@@ -5953,45 +5954,12 @@ function captaincore_mailgun_deploy( WP_REST_Request $request ) {
 		$site_slug = "{$site_slug}-" . strtolower( $environment_name );
 	}
 
-	$domain = ( new CaptainCore\Domains )->get( $domain_id );
-    $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
+    // Ensure SMTP password exists, fetch credentials, and run the deploy-mailgun script.
+    $result = CaptainCore\Providers\Mailgun::deploy( $domain_id, $site_slug, $from_name );
 
-	if ( empty( $details->mailgun_smtp_password ) ) {
-		// 1. Generate random password via Mailgun API
-		$password = wp_generate_password(32, false);
-		$response = \CaptainCore\Remote\Mailgun::put( "v4/domains/$details->mailgun_zone", [ "smtp_password" => $password ] );
-
-		// 2. Store password to the domain details (optional but recommended)
-		$details->mailgun_smtp_password = $password;
-		( new CaptainCore\Domains )->update( [ "details" => json_encode( $details ) ], [ "domain_id" => $domain_id ] );
-	}
-
-    // 3. Fetch GravitySMTP credentials
-    $credentials  = ( new \CaptainCore\Provider( "gravitysmtp" ) )->credentials();
-    $license      = '';
-    $download_url = '';
-
-    foreach ( $credentials as $credential ) {
-        if ( $credential->name == "license" ) {
-            $license = $credential->value;
-        }
-        if ( $credential->name == "download_url" ) {
-            $download_url = $credential->value;
-        }
+    if ( is_object( $result ) && ! empty( $result->error ) ) {
+        return new WP_Error( 'mailgun_deploy_failed', $result->message, [ 'status' => 400 ] );
     }
-
-    // 4. Run the deploy command (this remains the same)
-    $command = sprintf(
-        "ssh %s --script=deploy-mailgun -- --key=%s --name=%s --domain=%s --password=%s --gravitysmtp_zip=%s",
-        $site_slug,
-        json_encode( $license ),
-        json_encode( $from_name ),
-        json_encode( $details->mailgun_zone ),
-        json_encode( $details->mailgun_smtp_password ),
-        json_encode( $download_url )
-    );
-
-    $result = CaptainCore\Run::CLI( $command );
 
     return new WP_REST_Response( [ 'success' => true, 'output' => $result ], 200 );
 }

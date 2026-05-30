@@ -174,4 +174,103 @@ class Mailgun {
         return $response->domain->state;
     }
 
+    /**
+     * Rotate (regenerate) the SMTP sending password for a domain's Mailgun zone.
+     *
+     * Generates a fresh 32-character password, sets it at Mailgun via
+     * PUT v4/domains/{zone}, and persists it to the domain's details JSON.
+     *
+     * @param int $domain_id CaptainCore domain ID.
+     * @return object On success { error: false, password: <string> }.
+     *                On failure { error: true, message: <string> }.
+     */
+    public static function rotate_smtp_password( $domain_id ) {
+        $domain = ( new \CaptainCore\Domains )->get( $domain_id );
+        if ( ! $domain ) {
+            return (object) [ 'error' => true, 'message' => 'Domain not found in CaptainCore.' ];
+        }
+
+        $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
+
+        if ( empty( $details->mailgun_zone ) ) {
+            return (object) [ 'error' => true, 'message' => 'No Mailgun zone configured for this domain.' ];
+        }
+
+        $password = wp_generate_password( 32, false );
+        $response = \CaptainCore\Remote\Mailgun::put( "v4/domains/{$details->mailgun_zone}", [ "smtp_password" => $password ] );
+
+        if ( ! empty( $response->errors ) ) {
+            return (object) [ 'error' => true, 'message' => implode( '; ', $response->errors ) ];
+        }
+        if ( isset( $response->message ) && stripos( $response->message, 'not found' ) !== false ) {
+            return (object) [ 'error' => true, 'message' => $response->message ];
+        }
+
+        $details->mailgun_smtp_password = $password;
+        ( new \CaptainCore\Domains )->update(
+            [ "details" => json_encode( $details ) ],
+            [ "domain_id" => $domain_id ]
+        );
+
+        return (object) [ 'error' => false, 'password' => $password ];
+    }
+
+    /**
+     * Deploy Mailgun SMTP configuration to a site via the remote deploy-mailgun script.
+     *
+     * Ensures an SMTP password exists (minting one if absent), fetches GravitySMTP
+     * credentials, and runs the deploy-mailgun SSH script against the given site slug.
+     *
+     * @param int    $domain_id  CaptainCore domain ID (must have mailgun_zone configured).
+     * @param string $site_slug  Final remote site slug (caller applies any environment suffix).
+     * @param string $from_name  "Send From" display name passed to the deploy script.
+     * @return string|object Run::CLI output string, or { error: true, message: <string> } on failure.
+     */
+    public static function deploy( $domain_id, $site_slug, $from_name ) {
+        $domain = ( new \CaptainCore\Domains )->get( $domain_id );
+        if ( ! $domain ) {
+            return (object) [ 'error' => true, 'message' => 'Domain not found in CaptainCore.' ];
+        }
+
+        $details = empty( $domain->details ) ? (object) [] : json_decode( $domain->details );
+
+        if ( empty( $details->mailgun_zone ) ) {
+            return (object) [ 'error' => true, 'message' => 'No Mailgun zone configured for this domain.' ];
+        }
+
+        // Ensure an SMTP password exists; mint one if this zone has never been deployed.
+        if ( empty( $details->mailgun_smtp_password ) ) {
+            $rotate = self::rotate_smtp_password( $domain_id );
+            if ( is_object( $rotate ) && ! empty( $rotate->error ) ) {
+                return $rotate;
+            }
+            $details->mailgun_smtp_password = $rotate->password;
+        }
+
+        // Fetch GravitySMTP credentials.
+        $credentials  = ( new \CaptainCore\Provider( "gravitysmtp" ) )->credentials();
+        $license      = '';
+        $download_url = '';
+        foreach ( (array) $credentials as $credential ) {
+            if ( $credential->name == "license" ) {
+                $license = $credential->value;
+            }
+            if ( $credential->name == "download_url" ) {
+                $download_url = $credential->value;
+            }
+        }
+
+        $command = sprintf(
+            "ssh %s --script=deploy-mailgun -- --key=%s --name=%s --domain=%s --password=%s --gravitysmtp_zip=%s",
+            $site_slug,
+            json_encode( $license ),
+            json_encode( $from_name ),
+            json_encode( $details->mailgun_zone ),
+            json_encode( $details->mailgun_smtp_password ),
+            json_encode( $download_url )
+        );
+
+        return \CaptainCore\Run::CLI( $command );
+    }
+
 }
