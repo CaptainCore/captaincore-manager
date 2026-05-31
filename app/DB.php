@@ -94,9 +94,15 @@ class DB {
 
     static function where_compare( $conditions ) {
         global $wpdb;
+        $allowed_compare  = [ '=', '!=', '<>', '<', '<=', '>', '>=', 'LIKE', 'NOT LIKE' ];
         $where_statements = [];
         foreach ( $conditions as $condition ) {
-            $where_statements[] =  "`{$condition["key"]}` {$condition["compare"]} '{$condition["value"]}'";
+            // Defense-in-depth: column identifier, operator, and value are all
+            // hardened in case a caller ever forwards request input here.
+            $key     = str_replace( '`', '', $condition["key"] );
+            $compare = in_array( strtoupper( $condition["compare"] ), $allowed_compare, true ) ? strtoupper( $condition["compare"] ) : '=';
+            $value   = esc_sql( $condition["value"] );
+            $where_statements[] = "`{$key}` {$compare} '{$value}'";
         }
         $where_statements = implode( " AND ", $where_statements );
         $sql = 'SELECT * FROM ' . self::_table() . " WHERE $where_statements order by `created_at` DESC";
@@ -133,6 +139,7 @@ class DB {
 
     static function select( $field = "site_id", $where = "status", $value = "active", $sort = "created_at", $sort_order = "DESC" ) {
         global $wpdb;
+        $value = esc_sql( $value );
         $sql = "SELECT $field FROM " . self::_table() . " WHERE $where = '{$value}' order by `{$sort}` {$sort_order}";
         $results = array_column( $wpdb->get_results( $sql ), $field );
         return $results;
@@ -143,7 +150,7 @@ class DB {
         $table = self::_table();
         $where_statements = [];
         foreach ( $conditions as $row => $value ) {
-            $where_statements[] =  "{$table}.{$row} = '{$value}'";
+            $where_statements[] =  "{$table}.{$row} = '" . esc_sql( $value ) . "'";
         }
         $where_statements = implode( " AND ", $where_statements );
         $sql = "SELECT {$table}.{$field} FROM {$table} WHERE $where_statements";
@@ -314,6 +321,21 @@ class DB {
         return $results;
     }
 
+    /**
+     * Whitelist a component-type value before it is interpolated into SQL as a
+     * column identifier. Filter "type" values arrive from request input and are
+     * used directly as column names (e.g. environments.themes), which cannot be
+     * bound via $wpdb->prepare(). Returning an empty string signals the caller to
+     * skip the clause rather than emit attacker-controlled SQL.
+     *
+     * @param string $type
+     * @return string A safe column name, or "" if not allowed.
+     */
+    static function sanitize_component_column( $type ) {
+        $allowed = [ 'themes', 'plugins', 'core' ];
+        return in_array( $type, $allowed, true ) ? $type : '';
+    }
+
     static function fetch_sites_matching( $arguments = [] ) {
         global $wpdb;
         $arguments = (object) $arguments;
@@ -324,11 +346,17 @@ class DB {
         $target_conditions      = [];
         $field_selection        = "";
         $environment_columns    = [ "address", "username", "password", "protocol", "port", "home_directory", "database_username", "database_password", "storage", "visits", "core", "fathom", "home_url", "themes", "plugins", "updates_enabled", "updates_exclude_themes", "updates_exclude_plugins", "screenshot", "capture_pages" ];
+        // $field is interpolated as a column identifier (can't be bound) —
+        // strip everything but identifier-safe characters; values are esc_sql'd.
+        if ( ! empty( $arguments->field ) ) {
+            $arguments->field = preg_replace( '/[^a-zA-Z0-9_,]/', '', $arguments->field );
+        }
+
         if ( ! empty( $arguments->provider ) ) {
-            $provider_conditions = "AND {$table}.provider = '{$arguments->provider}'";
+            $provider_conditions = "AND {$table}.provider = '" . esc_sql( $arguments->provider ) . "'";
         }
         if ( $arguments->environment != "all" ) {
-            $environment_conditions = "AND {$wpdb->prefix}captaincore_environments.environment = '{$arguments->environment}'";
+            $environment_conditions = "AND {$wpdb->prefix}captaincore_environments.environment = '" . esc_sql( $arguments->environment ) . "'";
         }
 
         if ( ! empty( $arguments->field ) ) {
@@ -382,10 +410,11 @@ class DB {
         }
 
         if ( $filter->type == "core" ) {
+            $core_version = esc_sql( $filter->version );
             $sql = "SELECT {$table}.site, {$wpdb->prefix}captaincore_environments.environment $field_selection
                     FROM {$table}
                     INNER JOIN {$wpdb->prefix}captaincore_environments ON {$table}.site_id = {$wpdb->prefix}captaincore_environments.site_id
-                    WHERE {$wpdb->prefix}captaincore_environments.core = '{$filter->version}' $provider_conditions $environment_conditions $target_conditions
+                    WHERE {$wpdb->prefix}captaincore_environments.core = '{$core_version}' $provider_conditions $environment_conditions $target_conditions
                     AND {$table}.status = 'active'
                     order by {$wpdb->prefix}captaincore_sites.`name` ASC";
             $results = $wpdb->get_results( $sql );
@@ -402,15 +431,22 @@ class DB {
             $filter->version = '[^"]*';
         }
 
+        // "type" is interpolated as a column identifier and cannot be bound; whitelist it.
+        $type_column = self::sanitize_component_column( $filter->type );
+        if ( empty( $type_column ) ) {
+            return [];
+        }
+
         // WordPress thinks {} in SQL is a syntax error. To workaround we can wrap them in brackets likes so [{] and [}].
-        $pattern = '{"name":"'.$filter->name.'","title":"[^"]*","status":"'.$filter->status.'","version":"'.$filter->version.'"}';
+        // esc_sql() each request-supplied value so it cannot break out of the REGEXP string literal.
+        $pattern = '{"name":"'.esc_sql( $filter->name ).'","title":"[^"]*","status":"'.esc_sql( $filter->status ).'","version":"'.esc_sql( $filter->version ).'"}';
         $pattern = str_replace ( "{", "[{]", $pattern );
         $pattern = str_replace ( "}", "[}]", $pattern );
 
         $sql = "SELECT {$table}.site, {$wpdb->prefix}captaincore_environments.environment $field_selection
                 FROM {$table}
                 INNER JOIN {$wpdb->prefix}captaincore_environments ON {$table}.site_id = {$wpdb->prefix}captaincore_environments.site_id
-                WHERE {$wpdb->prefix}captaincore_environments.{$filter->type} REGEXP '{$pattern}' $provider_conditions $environment_conditions $target_conditions
+                WHERE {$wpdb->prefix}captaincore_environments.{$type_column} REGEXP '{$pattern}' $provider_conditions $environment_conditions $target_conditions
                 AND {$table}.status = 'active'
                 order by {$wpdb->prefix}captaincore_sites.`name` ASC";
         $results = $wpdb->get_results( $sql );
@@ -459,13 +495,14 @@ class DB {
 
         // Helper: build a REGEXP that matches a JSON object containing the given key-value pairs (order-agnostic)
         $create_pattern = function( $name, $version = null, $status = null ) {
+            // esc_sql() each request-supplied value so it cannot break out of the REGEXP string literal.
             // Always match by name
-            $conditions = [ '"name":"' . $name . '"' ];
+            $conditions = [ '"name":"' . esc_sql( $name ) . '"' ];
             if ( $version !== null ) {
-                $conditions[] = '"version":"' . $version . '"';
+                $conditions[] = '"version":"' . esc_sql( $version ) . '"';
             }
             if ( $status !== null ) {
-                $conditions[] = '"status":"' . $status . '"';
+                $conditions[] = '"status":"' . esc_sql( $status ) . '"';
             }
             // Match a single JSON object containing all specified key-value pairs in any order
             // Each condition checks that within a {...} block the key-value pair exists
@@ -503,10 +540,11 @@ class DB {
             $version_sub_clauses = [];
             foreach ( $version_filters as $version ) {
                 if ( empty( $version['slug'] ) ) { continue; }
+                $type_column = self::sanitize_component_column( $version['type'] ?? '' );
+                if ( empty( $type_column ) ) { continue; }
                 $parts = $create_pattern( $version['slug'], $version['name'] );
-                $sub = [];
                 foreach ( $parts as $p ) {
-                    $version_sub_clauses[] = "{$environments_table}.{$version['type']} {$version_mode} '{$p}'";
+                    $version_sub_clauses[] = "{$environments_table}.{$type_column} {$version_mode} '{$p}'";
                 }
             }
             if ( ! empty( $version_sub_clauses ) ) {
@@ -517,10 +555,11 @@ class DB {
             $status_sub_clauses = [];
             foreach ( $status_filters as $status ) {
                 if ( empty( $status['slug'] ) ) { continue; }
+                $type_column = self::sanitize_component_column( $status['type'] ?? '' );
+                if ( empty( $type_column ) ) { continue; }
                 $parts = $create_pattern( $status['slug'], null, $status['name'] );
-                $sub = [];
                 foreach ( $parts as $p ) {
-                    $status_sub_clauses[] = "{$environments_table}.{$status['type']} {$status_mode} '{$p}'";
+                    $status_sub_clauses[] = "{$environments_table}.{$type_column} {$status_mode} '{$p}'";
                 }
             }
             if ( ! empty( $status_sub_clauses ) ) {
@@ -555,19 +594,29 @@ class DB {
         return $wpdb->get_results( $sql );
     }
 
-    static function fetch_sites_matching_versions_statuses( $arguments = [] ) {
+    static function query_sites_matching_versions_statuses( $arguments = [], $allowed_site_ids = [] ) {
         global $wpdb;
         $arguments  = (object) $arguments;
         $table      = self::_table();
         $patterns   = [];
         $conditions = "{$wpdb->prefix}captaincore_environments.environment = 'production'";
+
+        // Scope results to the sites the caller is permitted to see.
+        if ( ! empty( $allowed_site_ids ) ) {
+            $allowed_ids_str = implode( ',', array_map( 'intval', $allowed_site_ids ) );
+            $conditions      = "$conditions AND {$table}.site_id IN ($allowed_ids_str)";
+        }
+
         if ( $arguments->filter ) {
             $arguments->filter = explode( "+", $arguments->filter );
-            // WordPress thinks {} in SQL is a syntax error. To workaround we can wrap them in brackets likes so [{] and [}].
-            $pattern = '{"name":"'.$arguments->filter[0].'","title":"[^"]*","status":"[^"]*","version":"[^"]*"}';
-            $pattern = str_replace ( "{", "[{]", $pattern );
-            $pattern = str_replace ( "}", "[}]", $pattern );
-            $conditions = "$conditions AND {$wpdb->prefix}captaincore_environments.{$arguments->filter[1]} REGEXP '{$pattern}'";
+            $filter_column = self::sanitize_component_column( $arguments->filter[1] ?? '' );
+            if ( ! empty( $filter_column ) ) {
+                // WordPress thinks {} in SQL is a syntax error. To workaround we can wrap them in brackets likes so [{] and [}].
+                $pattern = '{"name":"'.esc_sql( $arguments->filter[0] ).'","title":"[^"]*","status":"[^"]*","version":"[^"]*"}';
+                $pattern = str_replace ( "{", "[{]", $pattern );
+                $pattern = str_replace ( "}", "[}]", $pattern );
+                $conditions = "$conditions AND {$wpdb->prefix}captaincore_environments.{$filter_column} REGEXP '{$pattern}'";
+            }
         }
 
         foreach( $arguments->versions as $version ) {
@@ -575,14 +624,18 @@ class DB {
             if ( empty( $version->slug ) ) {
                 continue;
             }
+            $type_column = self::sanitize_component_column( $version->type ?? '' );
+            if ( empty( $type_column ) ) {
+                continue;
+            }
             // WordPress thinks {} in SQL is a syntax error. To workaround we can wrap them in brackets likes so [{] and [}].
-            $pattern = '{"name":"'.$version->slug.'","title":"[^"]*","status":"[^"]*","version":"'.$version->name.'"}';
+            $pattern = '{"name":"'.esc_sql( $version->slug ).'","title":"[^"]*","status":"[^"]*","version":"'.esc_sql( $version->name ).'"}';
             $pattern = str_replace ( "{", "[{]", $pattern );
             $pattern = str_replace ( "}", "[}]", $pattern );
             if ( empty( $version_conditions ) ) {
-                $version_conditions = "{$wpdb->prefix}captaincore_environments.{$version->type} REGEXP '{$pattern}'";
+                $version_conditions = "{$wpdb->prefix}captaincore_environments.{$type_column} REGEXP '{$pattern}'";
             } else {
-                $version_conditions = "$version_conditions OR {$wpdb->prefix}captaincore_environments.{$version->type} REGEXP '{$pattern}'";
+                $version_conditions = "$version_conditions OR {$wpdb->prefix}captaincore_environments.{$type_column} REGEXP '{$pattern}'";
             }
         }
         if ( ! empty( $version_conditions ) ) {
@@ -594,11 +647,15 @@ class DB {
             if ( empty( $status->slug ) ) {
                 continue;
             }
+            $type_column = self::sanitize_component_column( $status->type ?? '' );
+            if ( empty( $type_column ) ) {
+                continue;
+            }
             // WordPress thinks {} in SQL is a syntax error. To workaround we can wrap them in brackets likes so [{] and [}].
-            $pattern = '{"name":"'.$status->slug.'","title":"[^"]*","status":"'.$status->name.'","version":"[^"]*"}';
+            $pattern = '{"name":"'.esc_sql( $status->slug ).'","title":"[^"]*","status":"'.esc_sql( $status->name ).'","version":"[^"]*"}';
             $pattern = str_replace ( "{", "[{]", $pattern );
             $pattern = str_replace ( "}", "[}]", $pattern );
-            $conditions = "$conditions AND {$wpdb->prefix}captaincore_environments.{$status->type} REGEXP '{$pattern}'";
+            $conditions = "$conditions AND {$wpdb->prefix}captaincore_environments.{$type_column} REGEXP '{$pattern}'";
         }
 
         $sql = "SELECT {$table}.site

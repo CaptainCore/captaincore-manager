@@ -214,6 +214,16 @@ class Sites extends DB {
         return self::fetch_sites_filtered( (array) $filters, $allowed_site_ids );
     }
 
+    public function fetch_sites_matching_versions_statuses( $arguments = [] ) {
+        $allowed_site_ids = $this->sites;
+        if ( empty( $allowed_site_ids ) ) {
+            return [];
+        }
+        // $this->sites is every site for administrators and only the caller's
+        // own sites otherwise (see __construct), so this scopes the query.
+        return self::query_sites_matching_versions_statuses( (array) $arguments, $allowed_site_ids );
+    }
+
     public function fathom_sites( $force = false ) {
         $fathom_sites = get_transient( 'fathom_sites' );
 

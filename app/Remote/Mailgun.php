@@ -37,7 +37,10 @@ class Mailgun {
 
     public static function page( $domain, $page ) {
 
-        if ( ! str_contains( $page, "https://api.mailgun.net" ) ) {
+        // Validate the host strictly — str_contains would accept an attacker
+        // URL like https://evil.tld/?x=https://api.mailgun.net.
+        $parts = wp_parse_url( $page );
+        if ( empty( $parts['scheme'] ) || $parts['scheme'] !== 'https' || empty( $parts['host'] ) || $parts['host'] !== 'api.mailgun.net' ) {
             return;
         }
 

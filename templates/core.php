@@ -187,7 +187,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<h3>Drop files to upload</h3>
 					</div>
 					<div class="upload-drag-btn">
-					<file-upload class="btn btn-primary" @input-file="inputFile" post-action="<?php echo $plugin_url; ?>upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
+					<file-upload class="btn btn-primary" @input-file="inputFile" post-action="<?php echo $plugin_url; ?>upload.php" :headers="{ 'X-WP-Nonce': wp_nonce }" :drop="true" v-model="upload" ref="upload"></file-upload>
 					</div>
 				</div>
 				</div>
@@ -341,7 +341,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					<h3>Drop files to upload</h3>
 					</div>
 					<div class="upload-drag-btn">
-					<file-upload class="btn btn-primary" @input-file="inputFile" post-action="<?php echo $plugin_url; ?>upload.php" :drop="true" v-model="upload" ref="upload"></file-upload>
+					<file-upload class="btn btn-primary" @input-file="inputFile" post-action="<?php echo $plugin_url; ?>upload.php" :headers="{ 'X-WP-Nonce': wp_nonce }" :drop="true" v-model="upload" ref="upload"></file-upload>
 					</div>
 				</div>
 				</div>
