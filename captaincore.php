@@ -663,15 +663,25 @@ function captaincore_missive_func( WP_REST_Request $request ) {
 		$site       = $message[0];
 		$site_id    = is_string( $site ) ? explode( "-", $site )[0] : "";
 		$token      = $message[1];
-		$site_check = CaptainCore\Sites::get( $site_id );
-	
-		if ( ! $site_check ) { 
+
+		// $site is interpolated into the CLI command — restrict to the expected
+		// "<site_id>-<environment>" charset before use.
+		if ( ! is_string( $site ) || ! preg_match( '/^[A-Za-z0-9_-]+$/', $site ) ) {
 			return;
 		}
 
-		if ( ! is_numeric( $token ) || ! (int) $token == $token ) {
+		$site_check = CaptainCore\Sites::get( $site_id );
+
+		if ( ! $site_check ) {
 			return;
 		}
+
+		// Token must be a plain integer. (Previously `! (int) $token == $token`
+		// mis-parsed as `(! (int) $token) == $token` and never guarded.)
+		if ( ! is_numeric( $token ) || (string) (int) $token !== (string) $token ) {
+			return;
+		}
+		$token = (int) $token;
 
 		CaptainCore\Run::CLI( "email-health response $site $token received" );
 
@@ -3105,6 +3115,14 @@ function captaincore_site_domain_primary_func( WP_REST_Request $request ) {
 function captaincore_schedule_script_func( $request ) {
 	$environment_id = $request['environment_id'];
 	$code           = $request['code'];
+
+	// Verify the caller owns the site this environment belongs to before
+	// scheduling code to run on it. Mirrors the update/delete handlers.
+	$environment = CaptainCore\Environments::get( $environment_id );
+	if ( empty( $environment ) || ! captaincore_verify_permissions( $environment->site_id ) ) {
+		return new WP_Error( 'token_invalid', "Invalid Token", [ 'status' => 403 ] );
+	}
+
 	$run_at         = (object) $request['run_at'];
 	$timestamp      = new DateTime("$run_at->date $run_at->time", new DateTimeZone($run_at->timezone));
 	$timestamp->setTimezone(new DateTimeZone('UTC'));
@@ -3998,7 +4016,9 @@ function captaincore_recipes_update_func( WP_REST_Request $request ) {
 	$time_now = date( 'Y-m-d H:i:s' );
 	$user_id  = get_current_user_id();
 
-	if ( ! $user->is_admin() && isset( $recipe->user_id ) && $recipe->user_id != $user_id ) {
+	// Authorize against the STORED recipe owner (route id), not a client-supplied
+	// user_id in the request body. Recipes::verify() admin-bypasses internally.
+	if ( ! ( new CaptainCore\Recipes )->verify( $request['id'] ) ) {
 		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	}
 
@@ -4562,6 +4582,29 @@ function captaincore_me_profile_update_func( WP_REST_Request $request ) {
 	return $response;
 }
 
+/**
+ * True if an invite row is still usable: not already accepted and created within
+ * the validity window (default 14 days; override with CAPTAINCORE_INVITE_TTL_DAYS,
+ * 0 disables expiry). Invite tokens are single-use capabilities — without this an
+ * accepted/leaked link stays valid forever.
+ */
+function captaincore_invite_is_valid( $invite ) {
+	if ( empty( $invite ) ) {
+		return false;
+	}
+	if ( ! empty( $invite->accepted_at ) && $invite->accepted_at !== '0000-00-00 00:00:00' ) {
+		return false;
+	}
+	$ttl_days = defined( 'CAPTAINCORE_INVITE_TTL_DAYS' ) ? (int) CAPTAINCORE_INVITE_TTL_DAYS : 14;
+	if ( $ttl_days > 0 && ! empty( $invite->created_at ) ) {
+		$created = strtotime( $invite->created_at );
+		if ( $created && ( time() - $created ) > ( $ttl_days * DAY_IN_SECONDS ) ) {
+			return false;
+		}
+	}
+	return true;
+}
+
 function captaincore_invites_get_func( WP_REST_Request $request ) {
 	$invite  = (object) $request->get_params();
 
@@ -4574,11 +4617,11 @@ function captaincore_invites_get_func( WP_REST_Request $request ) {
 		"account_id" => $invite->account,
 		"token"      => $invite->token,
 	] );
-	if ( count( $results ) == "1" ) {
+	if ( count( $results ) == "1" && captaincore_invite_is_valid( $results[0] ) ) {
 		$account = new CaptainCore\Account( $invite->account, true );
 		return $account->fetch();
 	}
-	return new WP_Error( 'not_found', 'Invite not found.', [ 'status' => 404 ] );
+	return new WP_Error( 'not_found', 'Invite not found or expired.', [ 'status' => 404 ] );
 }
 
 function captaincore_invites_accept_func( WP_REST_Request $request ) {
@@ -4589,7 +4632,7 @@ function captaincore_invites_accept_func( WP_REST_Request $request ) {
 		"token"      => $invite->token,
 	] );
 
-	if ( count( $results ) == "1" ) {
+	if ( count( $results ) == "1" && captaincore_invite_is_valid( $results[0] ) ) {
 		$user       = new CaptainCore\User;
 		$accounts   = $user->accounts();
 		$accounts[] = $invite->account;
@@ -5673,7 +5716,10 @@ function captaincore_site_logs_list_func( $request ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
-	$environment = $request['environment'];
+	$environment = strtolower( (string) $request['environment'] );
+	if ( ! in_array( $environment, [ 'production', 'staging' ], true ) ) {
+		return new WP_Error( 'invalid_environment', 'Invalid environment.', [ 'status' => 400 ] );
+	}
 	$site        = ( new CaptainCore\Sites )->get( $site_id );
 	$response    = CaptainCore\Run::CLI( "logs list {$site->site}-$environment" );
 	return json_decode( $response );
@@ -5691,7 +5737,18 @@ function captaincore_site_logs_fetch_func( $request ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
-	$environment = $request['environment'];
+	$environment = strtolower( (string) $request['environment'] );
+	if ( ! in_array( $environment, [ 'production', 'staging' ], true ) ) {
+		return new WP_Error( 'invalid_environment', 'Invalid environment.', [ 'status' => 400 ] );
+	}
+
+	// $file and $limit are interpolated into the CLI command string — constrain
+	// them so they can't inject additional arguments/quotes.
+	$limit = (int) $limit;
+	if ( $file !== '' && ! preg_match( '#^[A-Za-z0-9._/-]+$#', $file ) ) {
+		return new WP_Error( 'invalid_file', 'Invalid file name.', [ 'status' => 400 ] );
+	}
+
 	$site        = ( new CaptainCore\Sites )->get( $site_id );
 	return CaptainCore\Run::CLI( "logs get {$site->site}-$environment --file=\"$file\" --limit=$limit" );
 }
@@ -6620,8 +6677,14 @@ function captaincore_register_rest_endpoints() {
 					return new WP_Error( 'rest_forbidden', 'Forbidden', [ 'status' => 403 ] );
 				}
 				
-				$file = $request->get_param( 'file' );
-				
+				$file = (string) $request->get_param( 'file' );
+
+				// $file is interpolated into the CLI command string — constrain
+				// it to an archive-path charset so it can't inject extra args.
+				if ( $file === '' || ! preg_match( '#^[A-Za-z0-9._/-]+$#', $file ) ) {
+					return new WP_Error( 'invalid_file', 'Invalid file name.', [ 'status' => 400 ] );
+				}
+
 				// Returns the raw URL string from b2 command
 				$response = \CaptainCore\Run::CLI( "archive share $file" );
 				return [ 'link' => trim($response ?? '') ];
@@ -10032,11 +10095,32 @@ function captaincore_site_audits_list_func( WP_REST_Request $request ) {
 }
 
 /**
+ * Authorization helper for site-audit endpoints. Admins pass; otherwise the
+ * caller must have permissions on the audit's underlying site. Returns bool.
+ */
+function captaincore_verify_audit_permissions( $audit_id ) {
+	if ( current_user_can( 'manage_options' ) ) {
+		return true;
+	}
+	$audit = ( new CaptainCore\SiteAudits )->get( intval( $audit_id ) );
+	if ( empty( $audit ) ) {
+		return false;
+	}
+	return captaincore_verify_permissions( $audit->site_id );
+}
+
+/**
  * REST endpoint: Create a new security audit.
  */
 function captaincore_site_audits_create_func( WP_REST_Request $request ) {
 	$params   = $request->get_json_params();
 	$time_now = date( 'Y-m-d H:i:s' );
+
+	// Only admins or users with permissions on the target site may create an audit for it.
+	$site_id = intval( $params['site_id'] ?? 0 );
+	if ( ! current_user_can( 'manage_options' ) && ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
 
 	$data = [
 		'site_id'           => intval( $params['site_id'] ?? 0 ),
@@ -10093,8 +10177,17 @@ function captaincore_site_audits_update_func( WP_REST_Request $request ) {
 	$params   = $request->get_json_params();
 	$time_now = date( 'Y-m-d H:i:s' );
 
+	if ( ! captaincore_verify_audit_permissions( $audit_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+
 	$allowed = [ 'site_id', 'environment_id', 'status', 'filesystem_status', 'wp_version', 'php_version', 'issues_count', 'plugins_count', 'notes', 'report_type', 'summary', 'report_title' ];
 	$json_fields = [ 'scan_checks', 'site_config', 'admin_accounts', 'timeline_events', 'dashboard_metrics', 'sections', 'section_order' ];
+
+	// Only admins may re-point an audit at a different site/environment.
+	if ( ! current_user_can( 'manage_options' ) ) {
+		$allowed = array_values( array_diff( $allowed, [ 'site_id', 'environment_id' ] ) );
+	}
 
 	$data = [ 'updated_at' => $time_now ];
 
@@ -10328,6 +10421,10 @@ function captaincore_site_audits_add_finding_func( WP_REST_Request $request ) {
 	$audit_id = intval( $request['id'] );
 	$params   = $request->get_json_params();
 
+	if ( ! captaincore_verify_audit_permissions( $audit_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
+
 	$data = [
 		'severity'       => sanitize_text_field( $params['severity'] ?? 'low' ),
 		'status'         => sanitize_text_field( $params['status'] ?? 'open' ),
@@ -10354,6 +10451,10 @@ function captaincore_site_audits_update_finding_func( WP_REST_Request $request )
 	$finding_id = intval( $request['finding_id'] );
 	$params     = $request->get_json_params();
 	$time_now   = date( 'Y-m-d H:i:s' );
+
+	if ( ! captaincore_verify_audit_permissions( $audit_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
 
 	$resolving = ! empty( $params['status'] ) && $params['status'] === 'resolved';
 
@@ -10396,6 +10497,10 @@ function captaincore_site_audits_update_finding_func( WP_REST_Request $request )
 function captaincore_site_audits_delete_finding_func( WP_REST_Request $request ) {
 	$audit_id   = intval( $request['id'] );
 	$finding_id = intval( $request['finding_id'] );
+
+	if ( ! captaincore_verify_audit_permissions( $audit_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+	}
 
 	$finding = ( new CaptainCore\SiteAuditFindings )->get( $finding_id );
 	if ( empty( $finding ) || intval( $finding->site_audit_id ) !== $audit_id ) {
@@ -11324,7 +11429,7 @@ function captaincore_login_func( WP_REST_Request $request ) {
 			"account_id" => $post->invite->account,
 			"token"      => $post->invite->token,
 		 ] );
-		if ( count( $results ) == "1" ) {
+		if ( count( $results ) == "1" && captaincore_invite_is_valid( $results[0] ) ) {
 			$record = $results[0];
 
 			if (strlen($password) < 8) {

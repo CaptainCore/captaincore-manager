@@ -6010,7 +6010,7 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 													</div>
 													<p v-else-if="item.preview == 'too-large'">File too large to preview.</p>
 													<v-card v-else-if="item.active_node.ext === 'svg'" class="text-center overflow-auto" flat style="max-width: 950px;font-size: 10px;zoom: 0.8; margin-left: 20px;">
-														<div v-html="item.preview" style="max-width:400px; height: auto; overflow: auto; margin:auto;"></div>
+														<img :src="item.preview" style="max-width:400px; height: auto; overflow: auto; margin:auto;">
 													</v-card>
 													<v-card v-else-if="item.isPreviewImage" class="text-center overflow-auto" flat style="max-width: 950px;font-size: 10px;zoom: 0.8; margin-left: 20px;">
 														<img :src="item.preview" style="max-width:100%;">
@@ -13124,8 +13124,8 @@ const app = createApp({
 		drawer: null,
 		billing_loading: true,
 		billing_tabs: 1,
-		home_link: "<?php echo home_url(); ?>",
-		remote_upload_uri: "<?php echo get_option( 'options_remote_upload_uri' ); ?>",
+		home_link: <?php echo json_encode( home_url() ); ?>,
+		remote_upload_uri: <?php echo json_encode( (string) get_option( 'options_remote_upload_uri' ) ); ?>,
 		loading_page: true,
 		expanded: [],
 		accounts: [],
@@ -13154,7 +13154,7 @@ const app = createApp({
 		dialog_edit_provider: { show: false, provider: { name: "", provider: "", credentials: [ { "name": "", "value": "" } ] }, loading: false, errors: [] },
 		dialog_configure_defaults: { show: false, loading: false },
 		dialog_domain: { show: false, account: {}, accounts: [], updating_contacts: false, updating_nameservers: false, ignore_warnings: false, auth_code: "", fetch_auth_code: false, update_privacy: false, update_lock: false, provider_id: "", provider: { contacts: {} }, contact_tabs: "", tabs: "dns", show_import: false, import_json: "", domain: {}, records: [], nameservers: [], results: [], errors: [], info: [], loading: true, saving: false, step: 1, details: {}, activating_forwarding: false, deleting_forwarding: false, confirm_mx_overwrite: false, forwards_domain: { loading: false, data: null }, forwards: { loading: false, items: [], show_dialog: false, edited_item: { name: '', recipients: '' }, edited_index: -1 }, forwarding_logs: { loading: false, loadingMore: false, items: [], paging: null }, update_account: { show: false, site: null } },
-		dialog_backup_snapshot: { show: false, site: {}, email: "<?php echo $user->email; ?>", current_user_email: "<?php echo $user->email; ?>", filter_toggle: true, filter_options: [] },
+		dialog_backup_snapshot: { show: false, site: {}, email: <?php echo json_encode( $user->email ); ?>, current_user_email: <?php echo json_encode( $user->email ); ?>, filter_toggle: true, filter_options: [] },
 		dialog_backup_configurations: { show: false, settings: { mode: "", interval: "", active: true } },
 		dialog_file_diff: { show: false, response: "", loading: false, file_name: "" },
 		dialog_launch: { show: false, site: {}, domain: "" },
@@ -13484,14 +13484,14 @@ const app = createApp({
 		admin_verify_bank: { show: false, token_id: null, user_id: null, user_name: "", user_email: "", bank_name: "", account_type: "", last4: "", amount1: "", amount2: "", error: "", success: "", loading: false },
 		pending_ach_verifications: [],
 		current_user_id: <?php echo get_current_user_id(); ?>,
-		current_user_email: "<?php echo $user->email; ?>",
-		current_user_login: "<?php echo $user->login; ?>",
-		current_user_registered: "<?php echo $user->registered; ?>",
-		current_user_hash: "<?php echo $user->hash; ?>",
-		current_user_display_name: "<?php echo $user->display_name; ?>",
-		profile: { first_name: "<?php echo $user->first_name; ?>", last_name: "<?php echo $user->last_name; ?>", email: "<?php echo $user->email; ?>", login: "<?php echo $user->login; ?>", display_name: "<?php echo $user->display_name; ?>", new_password: "", pinned_environments: [], errors: [], tfa_activate: false, tfa_enabled: <?php echo $user->tfa_enabled; ?>, tfa_uri: "", tfa_token: "", email_subscriber: <?php echo $user->email_subscriber ? 'true' : 'false'; ?>, application_password: <?php echo json_encode( ( new CaptainCore\User )->get_application_password() ); ?>, application_password_new: "", application_password_loading: false, api_docs_dialog: false, api_docs_html: "", api_docs_toc: [], api_docs_loading: false, sessions: <?php echo json_encode( CaptainCore\Sessions::list_for_user( get_current_user_id() ) ); ?>, sessions_loading: false },
+		current_user_email: <?php echo json_encode( $user->email ); ?>,
+		current_user_login: <?php echo json_encode( $user->login ); ?>,
+		current_user_registered: <?php echo json_encode( $user->registered ); ?>,
+		current_user_hash: <?php echo json_encode( $user->hash ); ?>,
+		current_user_display_name: <?php echo json_encode( $user->display_name ); ?>,
+		profile: { first_name: <?php echo json_encode( $user->first_name ); ?>, last_name: <?php echo json_encode( $user->last_name ); ?>, email: <?php echo json_encode( $user->email ); ?>, login: <?php echo json_encode( $user->login ); ?>, display_name: <?php echo json_encode( $user->display_name ); ?>, new_password: "", pinned_environments: [], errors: [], tfa_activate: false, tfa_enabled: <?php echo $user->tfa_enabled; ?>, tfa_uri: "", tfa_token: "", email_subscriber: <?php echo $user->email_subscriber ? 'true' : 'false'; ?>, application_password: <?php echo json_encode( ( new CaptainCore\User )->get_application_password() ); ?>, application_password_new: "", application_password_loading: false, api_docs_dialog: false, api_docs_html: "", api_docs_toc: [], api_docs_loading: false, sessions: <?php echo json_encode( CaptainCore\Sessions::list_for_user( get_current_user_id() ) ); ?>, sessions_loading: false },
 		stats: { from_at: "<?php echo date("Y-m-d", strtotime( date("Y-m-d" ). " -12 months" ) ); ?>", to_at: "<?php echo date("Y-m-d" ); ?>", from_at_select: false, to_at_select: false, grouping: "Month" },
-		role: "<?php echo $user->role; ?>",
+		role: <?php echo json_encode( $user->role ); ?>,
 		dialog_processes: { show: false, processes: [], conn: {}, stream: [], loading: true },
 		dialog_push_to_other: {
 			show: false,
@@ -22980,7 +22980,10 @@ const app = createApp({
 						if ( line[0] == "+" ) {
 							applied_css=" class='change-added'";
 						}
-						html.push("<div"+applied_css+">" + line + "</div>");
+						// Escape the diff line (managed-site file content) before it
+						// lands in the v-html sink, so it renders as text, not markup.
+						const escaped_line = line.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+						html.push("<div"+applied_css+">" + escaped_line + "</div>");
 					});
 					this.dialog_file_diff.response = html.join('\n')
 					this.dialog_file_diff.loading = false
@@ -23011,7 +23014,10 @@ const app = createApp({
 						if ( line[0] == "+" ) {
 							applied_css=" class='change-added'";
 						}
-						html.push("<div"+applied_css+">" + line + "</div>");
+						// Escape the diff line (managed-site file content) before it
+						// lands in the v-html sink, so it renders as text, not markup.
+						const escaped_line = line.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+						html.push("<div"+applied_css+">" + escaped_line + "</div>");
 					});
 					this.dialog_file_diff.response = html.join('\n')
 					this.dialog_file_diff.loading = false
@@ -23480,10 +23486,16 @@ const app = createApp({
 								headers: { 'X-WP-Nonce': this.wp_nonce }
 							})
 							.then(response => {
-								item.preview = response.data; // Raw SVG XML string for v-html
+								// Render as a non-scriptable data-URI image rather than
+								// injecting raw SVG via v-html. SVG loaded through <img>
+								// cannot execute <script> or on* handlers, neutralizing
+								// stored XSS from a backup file on a managed site.
+								item.isPreviewImage = true;
+								item.preview = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(response.data);
 							})
 							.catch(error => {
 								console.error("Error fetching SVG preview:", error);
+								item.isPreviewImage = false;
 								item.preview = "Error loading SVG.";
 							});
 							return;
