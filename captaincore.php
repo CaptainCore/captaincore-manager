@@ -5478,6 +5478,13 @@ function captaincore_site_backups_get_func( $request ) {
 	$environment = $request['environment'];
 	$site        = new CaptainCore\Site( $site_id );
 	if ( ! empty( $file ) ) {
+		// Accept a base64url-encoded path so literal filenames (e.g. wp-config.php)
+		// never appear in the URL where Cloudflare's WAF would block them. Plain-text
+		// paths still work as a fallback since non-base64 input is left untouched.
+		$decoded = base64_decode( strtr( $file, '-_', '+/' ), true );
+		if ( false !== $decoded && '' !== $decoded ) {
+			$file = $decoded;
+		}
 		return $site->backup_show_file( $backup_id, $file, $environment );
 	}
 	return $site->backup_get( $backup_id, $environment );
@@ -11783,6 +11790,13 @@ function captaincore_header_content_extracted() {
 		foreach( $results[0] as $match ) {
 			$output = $output . $match . "\n";
 		}
+	}
+	if ( ( ! isset( $results ) || ! $results[0] ) && is_user_logged_in() ) {
+		$wpApiSettings = json_encode( [
+			'root'  => esc_url_raw( rest_url() ),
+			'nonce' => wp_create_nonce( 'wp_rest' )
+		] );
+		$output = $output . "var wpApiSettings = {$wpApiSettings};\n";
 	}
 	$output = $output . "</script>\n";
 	preg_match_all('/(<link rel="(icon|apple-touch-icon).+)/', $head, $results );

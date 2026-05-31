@@ -13118,7 +13118,7 @@ const app = createApp({
 		hosting_intervals: [{ title: 'Yearly', value: '12' },{ title: 'Monthly', value: '1' },{ title: 'Quarterly', value: '3' },{ title: 'Biannual', value: '6' }],
 		footer_height: "28px",
 		login: { user_login: "", user_password: "", errors: "", info: "", loading: false, lost_password: false, message: "", tfa_code: "" },
-		wp_nonce: "",
+		wp_nonce: "<?php echo is_user_logged_in() ? esc_js( wp_create_nonce( 'wp_rest' ) ) : ''; ?>",
 		wp_nonce_retry: false,
 		footer: <?php echo captaincore_footer_content_extracted(); ?>,
 		drawer: null,
@@ -13968,12 +13968,17 @@ const app = createApp({
 				this.view_console.show = false;
 			}
 		});
-		if ( typeof wpApiSettings == "undefined" ) {
+		// Prefer the freshly-enqueued REST nonce when present, but the
+		// server-rendered wp_nonce (set from PHP above) is authoritative for
+		// login state — a missing wpApiSettings global must NOT bounce a
+		// logged-in user to /login.
+		if ( typeof wpApiSettings !== "undefined" && wpApiSettings.nonce ) {
+			this.wp_nonce = wpApiSettings.nonce
+		}
+		if ( this.wp_nonce == "" ) {
 			window.history.pushState( {}, 'login', window.location.origin + this.configurations.path + 'login' )
 			this.route = "login"
 			return
-		} else {
-			this.wp_nonce = wpApiSettings.nonce
 		}
 		if ( this.socket == "/ws" ) {
 			console.log("Socket not defined")
@@ -23471,7 +23476,7 @@ const app = createApp({
 						// Handle SVG as text (XML) for inline rendering
 						if (extension === 'svg') {
 							item.isPreviewImage = false; // Not treated as img
-							axios.get(`/wp-json/captaincore/v1/sites/${site_id}/${environment}/backups/${item.id}?file=${filePath}`, {
+							axios.get(`/wp-json/captaincore/v1/sites/${site_id}/${environment}/backups/${item.id}?file=${this.encodeBackupFilePath(filePath)}`, {
 								headers: { 'X-WP-Nonce': this.wp_nonce }
 							})
 							.then(response => {
@@ -23487,7 +23492,7 @@ const app = createApp({
 						// Handle raster images as before (blob -> data URL)
 						if (imageExtensions.includes(extension)) {
 							item.isPreviewImage = true;
-							axios.get(`/wp-json/captaincore/v1/sites/${site_id}/${environment}/backups/${item.id}?file=${filePath}`, {
+							axios.get(`/wp-json/captaincore/v1/sites/${site_id}/${environment}/backups/${item.id}?file=${this.encodeBackupFilePath(filePath)}`, {
 								headers: { 'X-WP-Nonce': this.wp_nonce },
 								responseType: 'blob'
 							})
@@ -23514,7 +23519,7 @@ const app = createApp({
 						item.isPreviewImage = false;
 
 						axios.get(
-							`/wp-json/captaincore/v1/sites/${site_id}/${environment}/backups/${item.id}?file=${filePath}`, {
+							`/wp-json/captaincore/v1/sites/${site_id}/${environment}/backups/${item.id}?file=${this.encodeBackupFilePath(filePath)}`, {
 								headers: { 'X-WP-Nonce': this.wp_nonce }
 							})
 							.then(response => {
@@ -23606,6 +23611,12 @@ const app = createApp({
 			} else {
 				this.dialog_site.environment_selected.expanded_backups = [itemId];
 			}
+		},
+		encodeBackupFilePath(path) {
+			// base64url-encode the path so literal filenames (e.g. wp-config.php) never
+			// appear in the request URL where Cloudflare's WAF would block them. UTF-8 safe.
+			const utf8 = unescape(encodeURIComponent(path));
+			return btoa(utf8).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 		},
 		findNodeByPath(nodes, path) {
 			for (const node of nodes) {
