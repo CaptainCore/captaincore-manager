@@ -10,9 +10,14 @@ class Quicksave {
         $this->site_id = $site_id;
     }
 
+    // Constrain the environment segment to the known values; site_id is an int.
+    private function safe_environment( $environment ) {
+        return strtolower( (string) $environment ) === "staging" ? "staging" : "production";
+    }
+
     public function get( $hash, $environment = "production" ) {
-        $command  = "quicksave get {$this->site_id}-$environment $hash";
-        $response = Run::CLI( $command );
+        $environment = $this->safe_environment( $environment );
+        $response = Run::CLI( [ 'quicksave', 'get', "{$this->site_id}-{$environment}", $hash ] );
         $json     = json_decode( $response );
         if ( json_last_error() != JSON_ERROR_NONE ) {
             return [];
@@ -21,8 +26,8 @@ class Quicksave {
     }
 
     public function search( $search, $environment = "production" ) {
-        $command  = "quicksave search {$this->site_id}-$environment ". base64_encode($search);
-        $response = Run::CLI( $command );
+        $environment = $this->safe_environment( $environment );
+        $response = Run::CLI( [ 'quicksave', 'search', "{$this->site_id}-{$environment}", base64_encode( $search ) ] );
         $json     = json_decode( $response );
         if ( json_last_error() != JSON_ERROR_NONE ) {
             return [];
@@ -31,26 +36,23 @@ class Quicksave {
     }
 
     public function changed( $hash, $environment = "production", $match = "" ) {
-        $command  = "quicksave show-changes {$this->site_id}-$environment $hash $match";
-        $response = Run::CLI( $command );
-        return $response;
+        $environment = $this->safe_environment( $environment );
+        return Run::CLI( [ 'quicksave', 'show-changes', "{$this->site_id}-{$environment}", $hash, $match ] );
     }
 
     public function filediff( $hash, $environment = "production", $file ) {
-        $command  = "quicksave file-diff {$this->site_id}-{$environment} $hash $file --html";
-        $response = Run::CLI( $command );
-        return $response;
+        $environment = $this->safe_environment( $environment );
+        return Run::CLI( [ 'quicksave', 'file-diff', "{$this->site_id}-{$environment}", $hash, $file, '--html' ] );
     }
 
     public function rollback( $hash, $environment = "production", $version, $type, $value = "" ) {
-        if ( $type == "all") {
-            $command  = "quicksave rollback {$this->site_id}-{$environment} $hash --version=$version --all";
-            $response = Run::task( $command );
-            return $response;
+        $environment = $this->safe_environment( $environment );
+        if ( $type == "all" ) {
+            return Run::task( [ 'quicksave', 'rollback', "{$this->site_id}-{$environment}", $hash, '--version=' . $version, '--all' ] );
         }
-        $command  = "quicksave rollback {$this->site_id}-{$environment} $hash --version=$version --$type=$value";
-        $response = Run::task( $command );
-        return $response;
+        // $type is a flag name (plugin/theme) — restrict to a safe charset.
+        $type_flag = preg_replace( '/[^a-z0-9_-]/i', '', (string) $type );
+        return Run::task( [ 'quicksave', 'rollback', "{$this->site_id}-{$environment}", $hash, '--version=' . $version, '--' . $type_flag . '=' . $value ] );
     }
 
     public function blueprint( $hash, $environment = "production", $token = "", $include_database = false ) {

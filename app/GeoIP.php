@@ -129,7 +129,8 @@ class GeoIP {
         ];
 
         // Private / loopback ranges are treated as trusted-local.
-        if ( ! filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+        $host = isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '';
+        if ( $host === 'localhost' || preg_match( '/(^|[\.])(localhost|test|local)(:\d+)?$/', $host ) || ! filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
             $base['is_local']  = true;
             $base['lookup_ok'] = true;
             return $base;

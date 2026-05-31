@@ -719,8 +719,10 @@ function captaincore_api_func( WP_REST_Request $request ) {
 
 	$post = json_decode( file_get_contents( 'php://input' ) );
 
-	// Validate token before processing any data
-	if ( empty( $post ) || ! isset( $post->token ) || $post->token != captaincore_get_cli_token() ) {
+	// Validate token before processing any data. Use a strict, constant-time
+	// comparison and require a string — a loose `!=` lets a JSON `true` value
+	// type-juggle past the gate (true != "<token>" === false on PHP 7/8).
+	if ( empty( $post ) || empty( $post->token ) || ! is_string( $post->token ) || ! hash_equals( (string) captaincore_get_cli_token(), $post->token ) ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 404 ] );
 	}
 
@@ -1445,6 +1447,12 @@ function captaincore_accounts_create_func( $request ) {
 		$new_account["account_portal_id"] = $account_portal->account_portal_id;
 	}
 	$account_id = ( new CaptainCore\Accounts )->insert( $new_account );
+	// Attach the creator to the account so a non-admin can't create an account
+	// they have no access to (admins manage every account, so skip them).
+	$user = new CaptainCore\User;
+	if ( ! $user->is_admin() ) {
+		$user->insert_accounts( [ $account_id ] );
+	}
 	( new CaptainCore\Account( $account_id, true ) )->calculate_totals();
 	( new CaptainCore\Account( $account_id, true ) )->sync();
 	return $account_id;
@@ -1452,7 +1460,15 @@ function captaincore_accounts_create_func( $request ) {
 
 
 function captaincore_configurations_func( $request ) {
-	return ( new CaptainCore\Configurations )->get();
+	$configurations = ( new CaptainCore\Configurations )->get();
+	// Server-only secrets must not reach non-admins. intercom_secret_key is the
+	// HMAC key for Intercom identity verification (used only server-side in
+	// User->intercom_hash); leaking it lets any user forge a verification hash
+	// for any email. The frontend only needs intercom_embed_id.
+	if ( ! ( new CaptainCore\User )->is_admin() && isset( $configurations->intercom_secret_key ) ) {
+		unset( $configurations->intercom_secret_key );
+	}
+	return $configurations;
 }
 
 function captaincore_configurations_update_func( $request ) {
@@ -1621,6 +1637,20 @@ function captaincore_billing_pay_invoice_func( WP_REST_Request $request ) {
 	$source_id = $request->get_param( 'source_id' );
 	$value     = $request->get_param( 'value' );
 	$payment_id = $request->get_param( 'payment_id' );
+
+	// Verify the caller owns the invoice (WooCommerce order) before paying or
+	// mutating it — mirrors captaincore_invoices_get_func. Without this any
+	// logged-in user can target another account's order by id.
+	$order = wc_get_order( $value );
+	if ( ! $order ) {
+		return new WP_Error( 'not_found', 'Invoice not found.', [ 'status' => 404 ] );
+	}
+	if ( ! $user->is_admin() ) {
+		$account_id = $order->get_meta( 'captaincore_account_id' );
+		if ( ! $account_id || ! $user->verify_accounts( [ $account_id ] ) ) {
+			return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
+		}
+	}
 
 	if ( $source_id ) {
 		$response = $user->add_payment_method( $source_id );
@@ -1833,6 +1863,14 @@ function captaincore_sites_snapshot_link_func( WP_REST_Request $request ) {
 		return new WP_Error( 'permission_denied', 'Permission denied.', [ 'status' => 403 ] );
 	}
 	$snapshot_id = $request['snapshot_id'];
+
+	// Confirm the snapshot belongs to this site — verifying only the site_id
+	// would otherwise let a caller mint a download token for any tenant's backup.
+	$snapshot = ( new CaptainCore\Snapshots )->get( $snapshot_id );
+	if ( ! $snapshot || (int) $snapshot->site_id !== (int) $site_id ) {
+		return new WP_Error( 'not_found', 'Snapshot not found for this site.', [ 'status' => 404 ] );
+	}
+
 	$in_24hrs    = date( "Y-m-d H:i:s", strtotime( date( "Y-m-d H:i:s" ) . "+24 hours" ) );
 	$token       = bin2hex( openssl_random_pseudo_bytes( 16 ) );
 	( new CaptainCore\Snapshots )->update( [
@@ -2006,6 +2044,10 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 		$site = $site . '@' . $provider;
 	}
 
+	// $sites is the list of site identifiers as discrete argv elements (a single
+	// site by default, multiple for bulk operations).
+	$sites = [ $site ];
+
 	// If many sites, fetch their names
 	if ( ! empty( $post_ids ) && is_array( $post_ids ) ) {
 		$site_names = [];
@@ -2025,36 +2067,40 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 				}
 			}
 		}
-		$site = implode( " ", $site_names );
+		$site  = implode( " ", $site_names );
+		$sites = $site_names;
 	}
 
 	$run_in_background_silent = false;
 	$run_in_background        = false;
-	$command                  = '';
+	$command                  = '';   // legacy string fallback (debug only)
+	$args                     = null; // new argv protocol — discrete elements, no escaping needed
+	$payload                  = '';   // structured payload blob (replaces inline --payload=)
 
 	if ( $background ) {
 		$run_in_background = true;
 	}
 	if ( $cmd == 'new' ) {
-		$command = "site sync $post_id --update-extras";
+		$args = [ 'site', 'sync', (string) $post_id, '--update-extras' ];
 		$run_in_background = true;
 	}
 	if ( $cmd == 'deploy-defaults' ) {
-		$command = "site deploy-defaults $site";
+		$args = array_merge( [ 'site', 'deploy-defaults' ], $sites );
 		$run_in_background = true;
 	}
 	if ( $cmd == 'update' ) {
-		$command = "site sync $post_id";
+		$args = [ 'site', 'sync', (string) $post_id ];
 		$run_in_background = true;
 	}
 	if ( $cmd == 'update-wp' ) {
-		$command = "update $site";
+		$args = array_merge( [ 'update' ], $sites );
 		$run_in_background = true;
 	}
 	if ( $cmd == 'users-fetch' ) {
-		$command = "ssh $site --command='wp user list --format=json'";
+		$args = array_merge( [ 'ssh' ], $sites, [ '--command=wp user list --format=json' ] );
 		$run_in_background = true;
 		if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
+			$args    = null;
 			$command = CAPTAINCORE_DEBUG_MOCK_USERS;
 		}
 	}
@@ -2064,100 +2110,103 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 			$email        = $current_user->user_email;
 			$run_in_background = true;
 			$site_destination = get_field( 'site', $value );
-			$command = "copy $site $site_destination --email=$email";
+			$args = array_merge( [ 'copy' ], $sites, [ $site_destination, '--email=' . $email ] );
 		}
 	}
 	if ( $cmd == 'migrate' ) {
 		$run_in_background = true;
-		$value   = urlencode( $value );
-		$command = "ssh $site --script=migrate -- --url=\"$value\"";
+		// Keep urlencode so the migrate script receives the same value it always has.
+		$args = array_merge( [ 'ssh' ], $sites, [ '--script=migrate', '--', '--url=' . urlencode( $value ) ] );
 		if ( $request->get_param( 'update_urls' ) == "true" ) {
-			$command = "$command --update-urls";
+			$args[] = '--update-urls';
 		}
 	}
 	if ( $cmd == 'recipe' ) {
 		$run_in_background = true;
-		$command     = "ssh $site --recipe=$value";
+		$args        = array_merge( [ 'ssh' ], $sites, [ '--recipe=' . $value ] );
 		$recipe_name = ( new CaptainCore\Recipes )->get( $value )->title;
 		CaptainCore\ProcessLog::insert( $recipe_name, $post_id );
 	}
 	if ( $cmd == 'launch' ) {
 		$run_in_background = true;
-		$command = "ssh $site --script=launch -- --domain=$value";
+		$args = array_merge( [ 'ssh' ], $sites, [ '--script=launch', '--', '--domain=' . $value ] );
 	}
 	if ( $cmd == 'reset-permissions' ) {
 		$run_in_background = true;
-		$command = "ssh $site --script=reset-permissions";
+		$args = array_merge( [ 'ssh' ], $sites, [ '--script=reset-permissions' ] );
 		CaptainCore\ProcessLog::insert( "Reset file permissions", $post_id );
 	}
 	if ( $cmd == 'apply-https' ) {
 		$run_in_background = true;
-		$command = "ssh $site --script=apply-https";
+		$args = array_merge( [ 'ssh' ], $sites, [ '--script=apply-https' ] );
 		CaptainCore\ProcessLog::insert( "Updated internal urls to HTTPS", $post_id );
 	}
 	if ( $cmd == 'apply-https-with-www' ) {
 		$run_in_background = true;
-		$command = "ssh $site --script=apply-https-with-www";
+		$args = array_merge( [ 'ssh' ], $sites, [ '--script=apply-https-with-www' ] );
 		CaptainCore\ProcessLog::insert( "Updated internal urls to HTTPS with www", $post_id );
 	}
 	if ( $cmd == 'production-to-staging' ) {
 		$run_in_background = true;
-		$command = $value ? "site copy-to-staging $site --email=$value" : "site copy-to-staging $site";
+		$args = array_merge( [ 'site', 'copy-to-staging' ], $sites );
+		if ( $value ) { $args[] = '--email=' . $value; }
 	}
 	if ( $cmd == 'staging-to-production' ) {
 		$run_in_background = true;
-		$command = $value ? "site copy-to-production $site --email=$value" : "site copy-to-production $site";
+		$args = array_merge( [ 'site', 'copy-to-production' ], $sites );
+		if ( $value ) { $args[] = '--email=' . $value; }
 	}
 	if ( $cmd == 'scan-errors' ) {
 		$run_in_background = true;
-		$command = "scan-errors $site";
+		$args = array_merge( [ 'scan-errors' ], $sites );
 	}
 	if ( $cmd == 'sync-data' ) {
 		$run_in_background = true;
-		$command = "sync-data $site";
+		$args = array_merge( [ 'sync-data' ], $sites );
 	}
 	if ( $cmd == 'remove' ) {
-		$command = "site delete $site";
+		$args = array_merge( [ 'site', 'delete' ], $sites );
 	}
 	if ( $cmd == 'quick_backup' ) {
 		$run_in_background = true;
-		$command = "quicksave generate $site";
+		$args = array_merge( [ 'quicksave', 'generate' ], $sites );
 	}
 	if ( $cmd == 'backup' ) {
 		$run_in_background = true;
-		$command = "backup $site";
+		$args = array_merge( [ 'backup' ], $sites );
 	}
 	if ( $cmd == 'snapshot' ) {
 		$run_in_background = true;
 		$user_id = get_current_user_id();
-		if ( $date && $value ) {
-			$command = "snapshot generate $site --email=$value --rollback=\"$date\" --user-id=$user_id --notes=\"$notes\"";
-		} elseif ( $value ) {
-			$command = "snapshot generate $site --email=$value --user-id=$user_id --notes=\"$notes\"";
-		} else {
-			$command = "snapshot generate $site --user-id=$user_id --notes=\"$notes\"";
-		}
-		if ( $filters ) {
-			$filters = implode( ",", $filters );
-			$command = $command . " --filter={$filters}";
-		}
+		$args    = array_merge( [ 'snapshot', 'generate' ], $sites );
+		if ( $value ) { $args[] = '--email=' . $value; }
+		if ( $date && $value ) { $args[] = '--rollback=' . $date; }
+		$args[] = '--user-id=' . $user_id;
+		$args[] = '--notes=' . $notes;
+		if ( $filters ) { $args[] = '--filter=' . implode( ",", $filters ); }
 	}
 	if ( $cmd == 'deactivate' ) {
 		$run_in_background = true;
-		$command = "deactivate $site --name=\"$name\" --link=\"$link\" --subject=\"$subject\" --status=\"$status_msg\" --action=\"$action_text\"";
+		$args = array_merge( [ 'deactivate' ], $sites, [
+			'--name=' . $name,
+			'--link=' . $link,
+			'--subject=' . $subject,
+			'--status=' . $status_msg,
+			'--action=' . $action_text,
+		] );
 		CaptainCore\ProcessLog::insert( "Suspended website", $post_id );
 	}
 	if ( $cmd == 'activate' ) {
 		$run_in_background = true;
-		$command = "activate $site";
+		$args = array_merge( [ 'activate' ], $sites );
 		CaptainCore\ProcessLog::insert( "Restored website", $post_id );
 	}
 	if ( $cmd == 'view_quicksave_changes' ) {
-		$command = "quicksave show-changes $site $value";
+		$args = array_merge( [ 'quicksave', 'show-changes' ], $sites, [ $value ] );
 	}
 	if ( $cmd == 'run' ) {
-		$code    = base64_encode( stripslashes_deep( $value ) );
-		$command = "run $site --code=$code";
+		$code = base64_encode( stripslashes_deep( $value ) );
+		$args = array_merge( [ 'run' ], $sites, [ '--code=' . $code ] );
 	}
 	if ( $cmd == 'backup_download' ) {
 		$run_in_background_silent = true;
@@ -2166,42 +2215,64 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 		$email        = $current_user->user_email;
 		$files        = is_string( $value->files ) ? json_decode( $value->files ) : $value->files;
 		$directories  = is_string( $value->directories ) ? json_decode( $value->directories ) : $value->directories;
-		$payload      = [
+		// The blob travels in the structured "payload" field; the server writes
+		// it to a file and appends --payload=<token> to the argv.
+		$payload = base64_encode( json_encode( [
 			"files"       => $files,
 			"directories" => $directories,
-		];
-		$payload = base64_encode( json_encode( $payload ) );
-		$command = "backup download $site {$value->backup_id} --email=$email --payload='$payload'";
+		] ) );
+		$args = array_merge( [ 'backup', 'download' ], $sites, [ (string) $value->backup_id, '--email=' . $email ] );
 	}
 	if ( $cmd == 'manage' ) {
 		$run_in_background = true;
 		if ( is_int( $post_id ) ) {
-			$command = "$value $site --" . $arguments['value'] . '="' . stripslashes( $arguments['input'] ) . '"';
+			// $value is a WP-CLI subcommand that may contain spaces → split into
+			// discrete argv tokens. Flag name kept to a safe charset for hygiene;
+			// the input value passes raw (argv elements are never re-parsed).
+			$sub_tokens = preg_split( '/\s+/', trim( (string) $value ) );
+			$flag       = preg_replace( '/[^a-z0-9_-]/i', '', (string) $arguments['value'] );
+			$args       = array_merge( $sub_tokens, $sites, [ '--' . $flag . '=' . stripslashes( $arguments['input'] ) ] );
 		}
 	}
 	if ( $cmd == 'quicksave_file_diff' ) {
-		$command = "quicksave file-diff $site $commit $value --html";
+		$args = array_merge( [ 'quicksave', 'file-diff' ], $sites, [ $commit, $value, '--html' ] );
 	}
 	if ( $cmd == 'rollback' ) {
 		$run_in_background = true;
-		$command = "quicksave rollback $site $commit --version=$version --$addon_type=$value";
+		// $addon_type is a flag name (plugin/theme) — restrict to a safe charset.
+		$addon_flag = preg_replace( '/[^a-z0-9_-]/i', '', (string) $addon_type );
+		$args = array_merge( [ 'quicksave', 'rollback' ], $sites, [ $commit, '--version=' . $version, '--' . $addon_flag . '=' . $value ] );
 	}
 	if ( $cmd == 'quicksave_rollback' ) {
 		$run_in_background = true;
-		$command = "quicksave rollback $site $commit --version=$version --all";
+		$args = array_merge( [ 'quicksave', 'rollback' ], $sites, [ $commit, '--version=' . $version, '--all' ] );
 	}
 	if ( $cmd == 'quicksave_file_restore' ) {
 		$run_in_background = true;
-		$command = "quicksave rollback $site $hash --version=this --file=$value";
+		$args = array_merge( [ 'quicksave', 'rollback' ], $sites, [ $hash, '--version=this', '--file=' . $value ] );
 	}
 
-	if ( empty( $command ) ) {
+	if ( $args === null && empty( $command ) ) {
 		return new WP_Error( 'invalid_command', 'Unknown command.', [ 'status' => 400 ] );
 	}
+
+	// The request body uses the new argv array when available, else the legacy
+	// command string. Run::build_body() picks the right shape.
+	$request_command = $args !== null ? $args : $command;
 
 	// Disable https when debug enabled
 	if ( defined( 'CAPTAINCORE_DEBUG' ) ) {
 		add_filter( 'https_ssl_verify', '__return_false' );
+	}
+
+	// Build the request body: new argv array when available, else legacy string.
+	if ( is_array( $request_command ) ) {
+		$body = [ "args" => array_values( $request_command ) ];
+		if ( $payload !== '' ) {
+			$body["payload"] = $payload;
+		}
+	} else {
+		$body = [ "command" => $request_command ];
 	}
 
 	$data = [
@@ -2210,7 +2281,7 @@ function captaincore_sites_cli_func( WP_REST_Request $request ) {
 			'Content-Type' => 'application/json; charset=utf-8',
 			'token'        => captaincore_get_cli_token(),
 		],
-		'body'        => json_encode( [ "command" => $command ] ),
+		'body'        => wp_json_encode( $body ),
 		'method'      => 'POST',
 		'data_format' => 'body',
 	];
@@ -3236,27 +3307,30 @@ function captaincore_bulk_tools_func( WP_REST_Request $request ) {
         return new WP_Error( 'invalid_targets', 'No valid targets found or permission denied.', [ 'status' => 403 ] );
     }
 
-    $target_string = implode( " ", array_unique( $targets ) );
+    // Site identifiers as discrete argv elements (new array protocol — values
+    // pass raw, the server execs them without a shell so nothing is re-parsed).
+    $target_list = array_values( array_unique( $targets ) );
 
-    // Map the tool name to the CLI command
+    // Map the tool name to the CLI argv
     switch ( $tool ) {
         case 'sync-data':
-            $command = "sync-data $target_string";
+            $args = array_merge( [ 'sync-data' ], $target_list );
             break;
         case 'deploy-defaults':
-            $command = "site deploy-defaults $target_string";
+            $args = array_merge( [ 'site', 'deploy-defaults' ], $target_list );
             break;
         case 'activate':
-            $command = "activate $target_string";
+            $args = array_merge( [ 'activate' ], $target_list );
             break;
         case 'deactivate':
-            $name    = escapeshellarg( $extra_params['business_name'] ?? '' );
-            $link    = escapeshellarg( $extra_params['business_link'] ?? '' );
-            $command = "deactivate $target_string --name=$name --link=$link";
+            $args = array_merge( [ 'deactivate' ], $target_list, [
+                '--name=' . ( $extra_params['business_name'] ?? '' ),
+                '--link=' . ( $extra_params['business_link'] ?? '' ),
+            ] );
             break;
         case 'apply-https':
-            $script  = ( ! empty( $extra_params['www'] ) ) ? 'apply-https-with-www' : 'apply-https';
-            $command = "ssh $target_string --script=$script";
+            $script = ( ! empty( $extra_params['www'] ) ) ? 'apply-https-with-www' : 'apply-https';
+            $args   = array_merge( [ 'ssh' ], $target_list, [ '--script=' . $script ] );
             break;
 		case 'launch':
 			$domain_raw = $extra_params['domain'] ?? '';
@@ -3265,16 +3339,16 @@ function captaincore_bulk_tools_func( WP_REST_Request $request ) {
 			if ( ! preg_match( '/^[a-z0-9\-\.]+$/i', $domain ) ) {
 				return new WP_Error( 'invalid_domain', 'Invalid domain name format.', [ 'status' => 400 ] );
 			}
-			$command = "ssh $target_string --script=launch -- --domain=$domain";
+			$args = array_merge( [ 'ssh' ], $target_list, [ '--script=launch', '--', '--domain=' . $domain ] );
 			break;
         case 'scan-errors':
-            $command = "scan-errors $target_string";
+            $args = array_merge( [ 'scan-errors' ], $target_list );
             break;
         case 'backup':
-            $command = "backup $target_string";
+            $args = array_merge( [ 'backup' ], $target_list );
             break;
         case 'snapshot':
-            $command = "snapshot generate $target_string";
+            $args = array_merge( [ 'snapshot', 'generate' ], $target_list );
             break;
         default:
             return new WP_Error( 'invalid_tool', 'The requested tool is not supported.', [ 'status' => 400 ] );
@@ -3283,12 +3357,12 @@ function captaincore_bulk_tools_func( WP_REST_Request $request ) {
     if ( captaincore_is_api_request( $request ) ) {
         $async = ! empty( $request->get_json_params()['async'] );
         if ( $async ) {
-            return CaptainCore\Run::background_task( $command );
+            return CaptainCore\Run::background_task( $args );
         }
-        return CaptainCore\Run::execute( $command );
+        return CaptainCore\Run::execute( $args );
     }
 
-    return CaptainCore\Run::task( $command );
+    return CaptainCore\Run::task( $args );
 }
 
 function captaincore_run_code_func( WP_REST_Request $request ) {
@@ -3375,25 +3449,19 @@ function captaincore_run_code_func( WP_REST_Request $request ) {
 }
 
 function captaincore_site_analytics_func( $request ) {
-	$site_id     = $request['id'];
+	$site_id = $request['id'];
+
+	// Verify the caller owns this site before returning its analytics.
+	if ( ! captaincore_verify_permissions( $site_id ) ) {
+		return new WP_Error( 'permission_denied', 'Permission denied', [ 'status' => 403 ] );
+	}
+
 	$before      = strtotime( $request['from_at'] ?? '' );
 	$after       = strtotime( $request['to_at'] ?? '' );
 	$grouping    = strtolower( $request['grouping'] ?? '' );
 	$environment = $request['environment'];
 	$fathom_id   = $request['fathom_id'];
 	return ( new CaptainCore\Site( $site_id ) )->stats( $environment, $before, $after, $grouping, $fathom_id );
-	//return "( new CaptainCore\Site( $site_id ) )->stats( $environment, $before, $after, $grouping, $fathom_id )";
-	if ( ! $verify ) {
-		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
-	}
-    return ( new CaptainCore\Domain( $domain_id ) )->set_contacts( $request['contacts'] );
-	if ( is_wp_error( $response ) ) {
-		$error_message = $response->get_error_message();
-		echo json_encode( [ "error" => $error_message ] );
-		wp_die();
-		return;
-	}
-	echo json_encode( $response ); 
 }
 
 function captaincore_domain_check_func( $request ) {
@@ -5255,11 +5323,11 @@ function captaincore_site_snapshot_download_func( $request ) {
 	$snapshot_id   = $request['snapshot_id'];
 	$snapshot_name = $request['snapshot_name'] . ".zip";
 
-	// Verify Snapshot link is valid
+	// Verify Snapshot link is valid (constant-time token comparison).
 	$db = new CaptainCore\Snapshots();
 	$snapshot = $db->get( $snapshot_id );
 
-	if ( $snapshot->snapshot_name != $snapshot_name || $snapshot->site_id != $site_id || $snapshot->token != $token ) {
+	if ( ! $snapshot || $snapshot->snapshot_name !== $snapshot_name || (int) $snapshot->site_id !== (int) $site_id || empty( $snapshot->token ) || ! hash_equals( (string) $snapshot->token, (string) $token ) ) {
 		return new WP_Error( 'token_invalid', 'Invalid Token', [ 'status' => 403 ] );
 	}
 
@@ -9537,8 +9605,15 @@ function captaincore_scheduled_reports_create_func( WP_REST_Request $request ) {
 		return new WP_Error( 'missing_recipient', 'Recipient email is required.', [ 'status' => 400 ] );
 	}
 
-	// Verify user has access to all requested sites (unless admin or account-based)
-	if ( empty( $account_id ) && ! current_user_can( 'manage_options' ) ) {
+	// Verify access to the requested account (unless admin). Without this a
+	// non-admin could schedule an account-wide report for any account_id and
+	// have its fleet data mailed to a recipient they control.
+	if ( ! empty( $account_id ) && ! current_user_can( 'manage_options' ) && ! captaincore_verify_permissions_account( (int) $account_id ) ) {
+		return new WP_Error( 'unauthorized_account', 'You do not have access to the selected account.', [ 'status' => 403 ] );
+	}
+
+	// Verify user has access to all requested sites (unless admin)
+	if ( ! empty( $site_ids ) && ! current_user_can( 'manage_options' ) ) {
 		$user_sites       = new CaptainCore\Sites();
 		$allowed_site_ids = $user_sites->site_ids();
 
@@ -9606,6 +9681,10 @@ function captaincore_scheduled_reports_update_func( WP_REST_Request $request ) {
 		$update_data['recipient'] = $params['recipient'];
 	}
 	if ( array_key_exists( 'account_id', $params ) ) {
+		// Verify access to the account being assigned (unless admin).
+		if ( ! $is_admin && ! empty( $params['account_id'] ) && ! captaincore_verify_permissions_account( (int) $params['account_id'] ) ) {
+			return new WP_Error( 'unauthorized_account', 'You do not have access to the selected account.', [ 'status' => 403 ] );
+		}
 		$update_data['account_id'] = $params['account_id'];
 	}
 
@@ -11135,6 +11214,12 @@ function captaincore_email_subscription_page( $message, $title ) {
 
 function captaincore_login_func( WP_REST_Request $request ) {
 
+	// Mark that authentication is happening inside the CaptainCore secure login
+	// flow. This endpoint enforces 2FA itself (TOTP check below), so the
+	// `wp_authenticate_user` guard that blocks 2FA users on standard wp-login.php
+	// must let the wp_authenticate()/wp_signon() calls here pass through.
+	$GLOBALS['captaincore_login_in_progress'] = true;
+
 	$post = json_decode( file_get_contents( 'php://input' ) );
 
 	if ( $post->command == "reset" ) {
@@ -11628,6 +11713,61 @@ function captaincore_fetch_socket_address() {
 		$socket_address = "wss://" . CAPTAINCORE_CLI_SOCKET_ADDRESS;
 	}
 	return $socket_address;
+}
+
+/* -------------------------------------------------------------------------
+ *  ENFORCE 2FA ON STANDARD WP LOGIN
+ * ------------------------------------------------------------------------- */
+
+add_filter( 'wp_authenticate_user', 'captaincore_enforce_2fa_on_wp_login', 10, 2 );
+
+/**
+ * Block password-only logins for users who enabled two-factor in CaptainCore.
+ *
+ * 2FA is only collected on the CaptainCore secure login page. The native
+ * wp-login.php form (and XML-RPC) have no field for the one-time password, so
+ * a 2FA user could otherwise sign in there with just a username and password —
+ * bypassing their second factor. This guard fires on username/password auth
+ * (not application passwords or cookies), so API integrations keep working.
+ *
+ * @param WP_User|WP_Error $user     Authenticated user, or error from an earlier filter.
+ * @param string           $password Plaintext password submitted (unused).
+ * @return WP_User|WP_Error
+ */
+function captaincore_enforce_2fa_on_wp_login( $user, $password ) {
+
+	// Leave WP-CLI alone.
+	if ( defined( 'WP_CLI' ) && WP_CLI ) {
+		return $user;
+	}
+
+	// The CaptainCore secure login endpoint enforces TOTP itself — let it through.
+	if ( ! empty( $GLOBALS['captaincore_login_in_progress'] ) ) {
+		return $user;
+	}
+
+	// Only act once credentials have resolved to a real user.
+	if ( ! ( $user instanceof WP_User ) ) {
+		return $user;
+	}
+
+	$tfa_enabled = (bool) get_user_meta( $user->ID, 'captaincore_2fa_enabled', true );
+	if ( ! $tfa_enabled ) {
+		return $user;
+	}
+
+	// Point the user at the secure login page that can collect their one-time password.
+	$configurations = \CaptainCore\Configurations::get();
+	$path           = isset( $configurations->path ) ? $configurations->path : '/account/';
+	$login_url      = home_url( untrailingslashit( $path ) . '/login' );
+
+	return new WP_Error(
+		'captaincore_2fa_required',
+		sprintf(
+			'<strong>Error:</strong> Two-factor authentication is required for this account. Please sign in through the <a href="%s">secure login page</a>.',
+			esc_url( $login_url )
+		)
+	);
 }
 
 /* -------------------------------------------------------------------------

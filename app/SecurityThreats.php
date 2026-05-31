@@ -508,12 +508,15 @@ class SecurityThreats {
 			}
 		}
 
+		// esc_sql() the assembled REGEXP literal — preg_quote escapes regex
+		// metacharacters but not the SQL single-quote, so a slug containing a
+		// quote could otherwise break out of the string literal.
 		$clauses = [];
 		if ( ! empty( $plugin_slugs ) ) {
-			$clauses[] = "e.plugins REGEXP '" . implode( '|', array_unique( $plugin_slugs ) ) . "'";
+			$clauses[] = "e.plugins REGEXP '" . esc_sql( implode( '|', array_unique( $plugin_slugs ) ) ) . "'";
 		}
 		if ( ! empty( $theme_slugs ) ) {
-			$clauses[] = "e.themes REGEXP '" . implode( '|', array_unique( $theme_slugs ) ) . "'";
+			$clauses[] = "e.themes REGEXP '" . esc_sql( implode( '|', array_unique( $theme_slugs ) ) ) . "'";
 		}
 
 		if ( empty( $clauses ) ) {
