@@ -80,21 +80,99 @@ class GeoIP {
     }
 
     /**
-     * Returns the visitor's best-guess public IP from common proxy headers,
-     * falling back to REMOTE_ADDR. Kinsta-fronted sites already put the real
-     * client IP in REMOTE_ADDR, so this mostly matters in dev.
+     * Cloudflare's published edge IP ranges (https://www.cloudflare.com/ips/).
+     * Proxy headers (CF-Connecting-IP / X-Forwarded-For) are only trusted when
+     * the connecting peer (REMOTE_ADDR) falls inside one of these — otherwise a
+     * direct attacker could spoof their apparent IP (and thus the login
+     * step-up's geo/ASN fingerprint). Kinsta-fronted sites already put the real
+     * client IP in REMOTE_ADDR, so those resolve correctly via the fallback.
      */
-    public static function client_ip(): string {
-        if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
-            return (string) $_SERVER['HTTP_CF_CONNECTING_IP'];
+    private static array $cloudflare_ranges = [
+        '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22',
+        '141.101.64.0/18', '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20',
+        '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13',
+        '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
+        '2400:cb00::/32', '2606:4700::/32', '2803:f800::/32', '2405:b500::/32',
+        '2405:8100::/32', '2a06:98c0::/29', '2c0f:f248::/32',
+    ];
+
+    /**
+     * True when REMOTE_ADDR is a trusted reverse proxy whose forwarding headers
+     * may be believed. Trusts Cloudflare's ranges by default; a site can supply
+     * its own list via the CAPTAINCORE_TRUSTED_PROXIES constant (array or
+     * comma-separated string of CIDRs), or force-trust with CAPTAINCORE_TRUST_PROXY
+     * (e.g. behind a different known load balancer).
+     */
+    private static function remote_addr_is_trusted_proxy(): bool {
+        if ( defined( 'CAPTAINCORE_TRUST_PROXY' ) && CAPTAINCORE_TRUST_PROXY ) {
+            return true;
         }
-        if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
-            $first = trim( explode( ',', (string) $_SERVER['HTTP_X_FORWARDED_FOR'] )[0] );
-            if ( $first !== '' ) {
-                return $first;
+        $remote = (string) ( $_SERVER['REMOTE_ADDR'] ?? '' );
+        if ( $remote === '' ) {
+            return false;
+        }
+        $ranges = self::$cloudflare_ranges;
+        if ( defined( 'CAPTAINCORE_TRUSTED_PROXIES' ) ) {
+            $extra  = is_array( CAPTAINCORE_TRUSTED_PROXIES )
+                ? CAPTAINCORE_TRUSTED_PROXIES
+                : explode( ',', (string) CAPTAINCORE_TRUSTED_PROXIES );
+            $ranges = array_merge( $ranges, array_map( 'trim', $extra ) );
+        }
+        foreach ( $ranges as $cidr ) {
+            if ( self::ip_in_cidr( $remote, $cidr ) ) {
+                return true;
             }
         }
-        return (string) ( $_SERVER['REMOTE_ADDR'] ?? '' );
+        return false;
+    }
+
+    /** Bitwise CIDR membership test supporting both IPv4 and IPv6. */
+    private static function ip_in_cidr( string $ip, string $cidr ): bool {
+        if ( strpos( $cidr, '/' ) === false ) {
+            return false;
+        }
+        list( $subnet, $bits ) = explode( '/', $cidr, 2 );
+        $ip_bin     = @inet_pton( $ip );
+        $subnet_bin = @inet_pton( $subnet );
+        if ( $ip_bin === false || $subnet_bin === false || strlen( $ip_bin ) !== strlen( $subnet_bin ) ) {
+            return false; // address family mismatch or malformed
+        }
+        $bits      = (int) $bits;
+        $full      = intdiv( $bits, 8 );
+        $remainder = $bits % 8;
+        if ( $full > 0 && strncmp( $ip_bin, $subnet_bin, $full ) !== 0 ) {
+            return false;
+        }
+        if ( $remainder === 0 ) {
+            return true;
+        }
+        $mask = chr( 0xff << ( 8 - $remainder ) & 0xff );
+        return ( $ip_bin[ $full ] & $mask ) === ( $subnet_bin[ $full ] & $mask );
+    }
+
+    /**
+     * Returns the visitor's best-guess public IP. Proxy headers are only honored
+     * when REMOTE_ADDR is a trusted proxy (see remote_addr_is_trusted_proxy);
+     * otherwise REMOTE_ADDR itself is authoritative. This prevents header
+     * spoofing from defeating the login geo/ASN step-up check.
+     */
+    public static function client_ip(): string {
+        $remote = (string) ( $_SERVER['REMOTE_ADDR'] ?? '' );
+
+        if ( self::remote_addr_is_trusted_proxy() ) {
+            if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] )
+                && filter_var( $_SERVER['HTTP_CF_CONNECTING_IP'], FILTER_VALIDATE_IP ) ) {
+                return (string) $_SERVER['HTTP_CF_CONNECTING_IP'];
+            }
+            if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+                $first = trim( explode( ',', (string) $_SERVER['HTTP_X_FORWARDED_FOR'] )[0] );
+                if ( $first !== '' && filter_var( $first, FILTER_VALIDATE_IP ) ) {
+                    return $first;
+                }
+            }
+        }
+
+        return $remote;
     }
 
     /**
