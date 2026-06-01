@@ -34,6 +34,18 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 <link href="<?php echo $plugin_url; ?>public/css/captaincore-public-2026-04-20.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism.min.css" rel="stylesheet" />
 <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism-twilight.min.css" rel="stylesheet" />
+<style>
+	.audit-row { border-left: 3px solid transparent; }
+	.audit-row-malware  { border-left-color: rgb(var(--v-theme-error)); }
+	.audit-row-critical { border-left-color: rgb(var(--v-theme-error)); }
+	.audit-row-high     { border-left-color: rgb(var(--v-theme-warning)); }
+	.audit-row-medium   { border-left-color: #fb8c00; }
+	.audit-row-low      { border-left-color: #fbc02d; }
+	.audit-row-clean    { border-left-color: rgb(var(--v-theme-success)); }
+	.audit-row-unaudited { border-left-color: rgba(120,120,120,0.4); }
+	.audit-chip { text-transform: uppercase; font-weight: 600; }
+	.audit-code { background: rgba(0,0,0,0.04); padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+</style>
 </head>
 <body>
 <div id="app" v-cloak>
@@ -9513,18 +9525,6 @@ if ( is_plugin_active( 'arve-pro/arve-pro.php' ) ) { ?>
 					</v-card-actions>
 				</v-card>
 			</v-dialog>
-			<style>
-				.audit-row { border-left: 3px solid transparent; }
-				.audit-row-malware  { border-left-color: rgb(var(--v-theme-error)); }
-				.audit-row-critical { border-left-color: rgb(var(--v-theme-error)); }
-				.audit-row-high     { border-left-color: rgb(var(--v-theme-warning)); }
-				.audit-row-medium   { border-left-color: #fb8c00; }
-				.audit-row-low      { border-left-color: #fbc02d; }
-				.audit-row-clean    { border-left-color: rgb(var(--v-theme-success)); }
-				.audit-row-unaudited { border-left-color: rgba(120,120,120,0.4); }
-				.audit-chip { text-transform: uppercase; font-weight: 600; }
-				.audit-code { background: rgba(0,0,0,0.04); padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-			</style>
 			<v-card v-if="route == 'site-audits'" flat border="thin" rounded="xl">
 				<v-toolbar flat color="transparent">
 					<v-toolbar-title>Site Audits</v-toolbar-title>
@@ -14419,7 +14419,8 @@ const app = createApp({
 			return keys
 		},
 		gravatar() {
-			return 'https://www.gravatar.com/avatar/' + md5( this.current_user_email.trim().toLowerCase() ) + '?s=80&d=mp'
+			var email = ( this.current_user_email || '' ).toString().trim().toLowerCase()
+			return 'https://www.gravatar.com/avatar/' + md5( email ) + '?s=80&d=mp'
 		},
 		fetchInvite() {
 			var urlParams = new URLSearchParams( this.querystring )
