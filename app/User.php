@@ -1137,6 +1137,26 @@ class User {
 		}
     }
 
+    /**
+     * Version-safe wrapper around the Stripe gateway logger.
+     *
+     * WooCommerce Stripe 9.x removed the static `WC_Stripe_Logger::log()` method
+     * in favor of PSR-3 level methods ( error(), debug(), … ). Calling the old
+     * method throws an uncaught Error, which previously escaped the payment
+     * try/catch and aborted the renewal cron mid-loop, leaving next_renewal
+     * unadvanced and re-billing the account every hour. Always log defensively.
+     */
+    private static function stripe_log( $message ) {
+        if ( ! class_exists( '\WC_Stripe_Logger' ) ) {
+            return;
+        }
+        if ( method_exists( '\WC_Stripe_Logger', 'error' ) ) {
+            \WC_Stripe_Logger::error( $message );
+        } elseif ( method_exists( '\WC_Stripe_Logger', 'log' ) ) {
+            \WC_Stripe_Logger::log( $message );
+        }
+    }
+
     public function pay_invoice( $invoice_id, $payment_id ) {
         // Sync billing address from customer profile onto the order
         $order    = wc_get_order( $invoice_id );
@@ -1224,7 +1244,7 @@ class User {
             $intent = \WC_Stripe_API::request( $intent_data, 'payment_intents' );
             
             if ( ! empty( $intent->error ) ) {
-                \WC_Stripe_Logger::log( 'ACH PaymentIntent Error: ' . print_r( $intent->error, true ) );
+                self::stripe_log( 'ACH PaymentIntent Error: ' . print_r( $intent->error, true ) );
                 
                 $order->update_status( 'failed', sprintf( 'ACH payment failed: %s', $intent->error->message ) );
                 
@@ -1270,7 +1290,7 @@ class User {
             ];
             
         } catch ( \Exception $e ) {
-            \WC_Stripe_Logger::log( 'ACH Payment Error: ' . $e->getMessage() );
+            self::stripe_log( 'ACH Payment Error: ' . $e->getMessage() );
             
             if ( isset( $order ) && $order ) {
                 $order->update_status( 'failed', $e->getMessage() );
@@ -1375,7 +1395,7 @@ class User {
             );
 
         } catch ( \WC_Stripe_Exception $e ) {
-            \WC_Stripe_Logger::log( 'Error: ' . $e->getMessage() );
+            self::stripe_log( 'Error: ' . $e->getMessage() );
 
             do_action( 'wc_gateway_stripe_process_payment_error', $e, $order );
 
