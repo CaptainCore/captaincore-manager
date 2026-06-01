@@ -168,23 +168,41 @@ class Accounts extends DB {
             $next_renewal = strtotime ( $plan->next_renewal );
             if ( ! empty( $next_renewal ) && $next_renewal < $now ) {
                 echo "Processing renewal for {$account->name} as it's past {$plan->next_renewal}\n";
-                ( new Account( $account->account_id, true ) )->generate_order();
-                $plan = json_decode( ( new Accounts )->get( $account->account_id )->plan );
-                $plan->next_renewal = date("Y-m-d H:i:s", strtotime( "+{$plan->interval} month", $next_renewal ) );
-                unset( $plan->charges );
-                unset( $plan->credits );
-                if ( ! empty( $plan->over_payment ) ) {
-                    $plan->credits = [ 
-                        (object) [
-                            "name"     => "Previous credits",
-                            "quantity" => "1",
-                            "price"    => $plan->over_payment
-                        ]
-                    ];
-                    unset( $plan->over_payment );
+
+                // Generate the renewal order (and attempt auto-pay). Any exception here
+                // must NOT prevent next_renewal from advancing — otherwise the hourly cron
+                // re-generates a fresh order and re-attempts payment every hour, billing
+                // the customer repeatedly. Isolate failures per-account so one bad account
+                // can't abort renewals for everyone else in the batch.
+                try {
+                    ( new Account( $account->account_id, true ) )->generate_order();
+                } catch ( \Throwable $e ) {
+                    error_log( "CaptainCore renewal: generate_order() failed for account {$account->account_id} ({$account->name}): " . $e->getMessage() );
                 }
-                echo "Next renewal in {$plan->interval} months will be {$plan->next_renewal}\n";
-                self::update( [ "plan" => json_encode( $plan ) ], [ "account_id" => $account->account_id ] );
+
+                // Advance next_renewal regardless of payment outcome. A declined card
+                // leaves the order as failed/pending for the customer to pay manually;
+                // it should not trigger another renewal cycle next hour.
+                try {
+                    $plan = json_decode( ( new Accounts )->get( $account->account_id )->plan );
+                    $plan->next_renewal = date("Y-m-d H:i:s", strtotime( "+{$plan->interval} month", $next_renewal ) );
+                    unset( $plan->charges );
+                    unset( $plan->credits );
+                    if ( ! empty( $plan->over_payment ) ) {
+                        $plan->credits = [
+                            (object) [
+                                "name"     => "Previous credits",
+                                "quantity" => "1",
+                                "price"    => $plan->over_payment
+                            ]
+                        ];
+                        unset( $plan->over_payment );
+                    }
+                    echo "Next renewal in {$plan->interval} months will be {$plan->next_renewal}\n";
+                    self::update( [ "plan" => json_encode( $plan ) ], [ "account_id" => $account->account_id ] );
+                } catch ( \Throwable $e ) {
+                    error_log( "CaptainCore renewal: failed to advance next_renewal for account {$account->account_id} ({$account->name}): " . $e->getMessage() );
+                }
             }
         }
     }
