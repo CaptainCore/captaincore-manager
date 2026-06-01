@@ -101,7 +101,13 @@ class Router {
 
             // Return path to your Vue app shell
             $ui = isset( $_GET['ui'] ) ? $_GET['ui'] : '';
-            $template_file = ( $ui === 'tailwind' ) ? 'templates/core-tailwind.php' : 'templates/core.php';
+            if ( $ui === 'v2' ) {
+                $template_file = 'templates/core-v2.php';
+            } elseif ( $ui === 'tailwind' ) {
+                $template_file = 'templates/core-tailwind.php';
+            } else {
+                $template_file = 'templates/core.php';
+            }
             $core_template = plugin_dir_path( dirname( __FILE__ ) ) . $template_file;
             
             if ( file_exists( $core_template ) ) {
