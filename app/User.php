@@ -1485,8 +1485,12 @@ class User {
             "user_id"     => $this->user_id,
             "account_ids" => $this->accounts(),
             "username"    => $user->user_login,
+            "first_name"  => $user->first_name,
+            "last_name"   => $user->last_name,
             "email"       => $user->user_email,
             "name"        => $user->display_name,
+            "roles"       => $user->roles,
+            "created_at"  => $user->user_registered,
         ];
         return $record;
     }

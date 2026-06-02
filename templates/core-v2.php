@@ -143,8 +143,10 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
 		.app-nav {
 			display: flex;
 			align-items: center;
+			flex: 1;
 			gap: 4px;
 			margin-left: 8px;
+			overflow-x: auto;
 		}
 		.app-nav a {
 			border-radius: var(--radius-sm);
@@ -166,7 +168,7 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
 			display: flex;
 			align-items: center;
 			gap: 8px;
-			margin-left: auto;
+			margin-left: 0;
 		}
 		.icon-btn,
 		.segmented button,
@@ -194,11 +196,18 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
 			border: 1px solid var(--rule);
 			border-radius: 999px;
 			background: var(--paper);
+			color: var(--ink);
+			cursor: pointer;
 			display: inline-flex;
 			align-items: center;
 			gap: 8px;
 			min-width: 0;
 			padding: 4px 10px 4px 4px;
+		}
+		.user-chip:hover,
+		.user-chip.active {
+			background: var(--paper-2);
+			border-color: color-mix(in oklab, var(--ink) 24%, var(--rule));
 		}
 		.avatar {
 			width: 26px;
@@ -217,6 +226,64 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
 			overflow: hidden;
 			text-overflow: ellipsis;
 			white-space: nowrap;
+		}
+		.account-menu {
+			position: relative;
+		}
+		.account-dropdown {
+			background: var(--paper);
+			border: 1px solid var(--rule);
+			border-radius: var(--radius);
+			box-shadow: var(--shadow);
+			display: none;
+			min-width: 236px;
+			padding: 8px;
+			position: absolute;
+			right: 0;
+			top: calc(100% + 8px);
+			z-index: 80;
+		}
+		.account-dropdown.open {
+			display: grid;
+			gap: 6px;
+		}
+		.account-dropdown__section {
+			display: grid;
+			gap: 2px;
+		}
+		.account-dropdown__section + .account-dropdown__section {
+			border-top: 1px solid var(--rule);
+			padding-top: 6px;
+		}
+		.account-dropdown__label {
+			color: var(--ink-3);
+			font-family: var(--mono);
+			font-size: 10px;
+			letter-spacing: 0;
+			padding: 5px 8px 2px;
+			text-transform: uppercase;
+		}
+		.account-dropdown a,
+		.account-dropdown button {
+			align-items: center;
+			background: transparent;
+			border: 0;
+			border-radius: var(--radius-sm);
+			color: var(--ink-2);
+			cursor: pointer;
+			display: flex;
+			font: inherit;
+			justify-content: space-between;
+			min-height: 32px;
+			padding: 7px 8px;
+			text-align: left;
+			width: 100%;
+		}
+		.account-dropdown a:hover,
+		.account-dropdown button:hover,
+		.account-dropdown a.active {
+			background: var(--paper-2);
+			color: var(--ink);
 		}
 		.app-shell {
 			max-width: var(--app-maxw);
@@ -450,6 +517,110 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
 			white-space: nowrap;
 		}
 		.filter-option .muted { color: var(--ink-3); font-family: var(--mono); font-size: 11px; }
+		.filter-logic-bar,
+		.filter-secondary {
+			align-items: flex-start;
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+			margin: -8px 0 16px;
+		}
+		.filter-secondary {
+			align-items: stretch;
+			margin-top: -10px;
+		}
+		.filter-control {
+			align-items: center;
+			background: var(--paper);
+			border: 1px solid var(--rule);
+			border-radius: var(--radius);
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+			padding: 8px;
+		}
+		.filter-control__label {
+			color: var(--ink-3);
+			font-family: var(--mono);
+			font-size: 10px;
+			text-transform: uppercase;
+		}
+		.filter-toggle {
+			background: var(--paper-2);
+			border: 1px solid var(--rule);
+			border-radius: 999px;
+			display: inline-flex;
+			gap: 2px;
+			padding: 2px;
+		}
+		.filter-toggle button {
+			background: transparent;
+			border: 0;
+			border-radius: 999px;
+			color: var(--ink-2);
+			font-family: var(--mono);
+			font-size: 10px;
+			padding: 4px 8px;
+			text-transform: uppercase;
+		}
+		.filter-toggle button.active {
+			background: var(--ink);
+			color: var(--paper);
+		}
+		.filter-drill {
+			background: var(--paper);
+			border: 1px solid var(--rule);
+			border-radius: var(--radius);
+			display: grid;
+			gap: 8px;
+			min-width: min(100%, 300px);
+			padding: 10px;
+		}
+		.filter-drill__head {
+			align-items: center;
+			display: flex;
+			gap: 8px;
+			justify-content: space-between;
+			min-width: 0;
+		}
+		.filter-drill__title {
+			min-width: 0;
+		}
+		.filter-drill__title strong {
+			display: block;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+		.filter-drill__title span {
+			color: var(--ink-3);
+			font-family: var(--mono);
+			font-size: 10px;
+			text-transform: uppercase;
+		}
+		.filter-drill__group {
+			display: grid;
+			gap: 6px;
+		}
+		.filter-drill__options {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 5px;
+		}
+		.filter-mini {
+			background: var(--paper-2);
+			border: 1px solid var(--rule);
+			border-radius: 999px;
+			color: var(--ink-2);
+			font-family: var(--mono);
+			font-size: 10px;
+			padding: 4px 8px;
+		}
+		.filter-mini.active {
+			background: var(--ink);
+			border-color: var(--ink);
+			color: var(--paper);
+		}
 		.sites {
 			background: var(--paper);
 			border: 1px solid var(--rule);
@@ -459,7 +630,7 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
 		.sites__head,
 		.site-row {
 			display: grid;
-			grid-template-columns: 32px minmax(260px, 1.7fr) 110px 110px 110px 116px 116px 74px;
+			grid-template-columns: 32px minmax(260px, 1.7fr) 110px 110px 110px 116px 116px 112px;
 			gap: 12px;
 			align-items: center;
 		}
@@ -472,6 +643,36 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
 			letter-spacing: 0;
 			padding: 11px 14px;
 			text-transform: uppercase;
+		}
+		.sort-button {
+			align-items: center;
+			background: transparent;
+			border: 0;
+			color: inherit;
+			cursor: pointer;
+			display: inline-flex;
+			font: inherit;
+			gap: 5px;
+			letter-spacing: inherit;
+			min-height: 20px;
+			padding: 0;
+			text-align: left;
+			text-transform: inherit;
+		}
+		.sort-button:hover,
+		.sort-button.active {
+			color: var(--ink);
+		}
+		.sort-button__icon {
+			color: var(--ink-3);
+			font-size: 10px;
+			line-height: 1;
+			opacity: .7;
+			width: 10px;
+		}
+		.sort-button.active .sort-button__icon {
+			color: var(--brand-ink);
+			opacity: 1;
 		}
 		.site-group + .site-group { border-top: 1px solid var(--rule); }
 		.site-group__bar {
@@ -486,7 +687,9 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
 		.site-group__bar .domain {
 			color: var(--ink);
 			font-weight: 650;
+			text-decoration: none;
 		}
+		.site-group__bar .domain:hover { color: var(--brand); }
 		.site-group__bar .meta {
 			color: var(--ink-3);
 			font-size: 13px;
@@ -604,6 +807,7 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
 			width: 30px;
 			height: 30px;
 			background: transparent;
+			text-decoration: none;
 		}
 		.sites__foot {
 			background: var(--paper-2);
@@ -860,6 +1064,14 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
 			background: var(--paper-3);
 			object-fit: cover;
 		}
+		.user-drawer__avatar {
+			align-items: center;
+			color: var(--ink);
+			display: grid;
+			font-size: 22px;
+			font-weight: 700;
+			justify-items: center;
+		}
 		.drawer h2 {
 			font-size: 20px;
 			line-height: 1.15;
@@ -890,6 +1102,14 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
 			flex: 1;
 			overflow-y: auto;
 			padding: 16px;
+		}
+		.drawer__body .logs-grid,
+		.drawer__body .stack-row {
+			grid-template-columns: 1fr;
+		}
+		.drawer__body .feature-bar {
+			align-items: flex-start;
+			flex-direction: column;
 		}
 		.kv-grid {
 			display: grid;
@@ -1709,6 +1929,9 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
 				border-radius: var(--radius);
 				padding: 16px 18px;
 			}
+			.site-secret-section + .site-secret-section {
+				margin-top: 14px;
+			}
 			.site-secret-section__head {
 				align-items: center;
 				display: flex;
@@ -2161,6 +2384,61 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
 			min-height: 28px;
 			padding: 5px 8px;
 		}
+		.row-button-group select {
+			border: 1px solid var(--rule);
+			border-radius: var(--radius-sm);
+			background: var(--paper-2);
+			color: var(--ink);
+			min-height: 28px;
+			padding: 4px 8px;
+		}
+		.admin-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+			gap: 12px;
+			margin-bottom: 16px;
+		}
+		.admin-section {
+			background: var(--paper);
+			border: 1px solid var(--rule);
+			border-radius: var(--radius);
+			box-shadow: var(--shadow);
+			padding: 16px;
+		}
+		.admin-section + .admin-section { margin-top: 16px; }
+		.admin-section__head {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+			margin-bottom: 12px;
+		}
+		.admin-section__head h2 {
+			font-size: 15px;
+			margin: 0;
+		}
+		.admin-form {
+			display: grid;
+			gap: 14px;
+		}
+		.admin-form-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+			gap: 14px;
+		}
+		.checkbox-line {
+			align-items: center;
+			display: flex;
+			gap: 8px;
+		}
+		.inline-code {
+			background: var(--paper-2);
+			border: 1px solid var(--rule);
+			border-radius: var(--radius-sm);
+			font-family: var(--mono);
+			font-size: 11px;
+			padding: 2px 5px;
+		}
 		.changed-files {
 			border: 1px solid var(--rule);
 			border-radius: var(--radius);
@@ -2185,6 +2463,71 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
 			font-family: var(--mono);
 			font-size: 12px;
 			overflow-wrap: anywhere;
+		}
+		.change-detail {
+			border: 1px solid var(--rule);
+			border-radius: var(--radius);
+			background: var(--paper-2);
+			display: grid;
+			gap: 12px;
+			margin: -3px 0 8px;
+			padding: 12px;
+		}
+		.change-summary {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+			gap: 8px;
+		}
+		.change-summary__item {
+			background: var(--paper);
+			border: 1px solid var(--rule);
+			border-radius: var(--radius-sm);
+			padding: 10px;
+		}
+		.change-summary__item span {
+			color: var(--ink-3);
+			display: block;
+			font-family: var(--mono);
+			font-size: 10px;
+			text-transform: uppercase;
+		}
+		.change-summary__item strong {
+			color: var(--ink);
+			display: block;
+			font-size: 20px;
+			line-height: 1.2;
+			margin-top: 2px;
+		}
+		.change-component-list {
+			display: grid;
+			gap: 8px;
+		}
+		.change-component {
+			background: var(--paper);
+			border: 1px solid var(--rule);
+			border-radius: var(--radius-sm);
+			display: grid;
+			gap: 8px;
+			padding: 10px;
+		}
+		.change-component__head {
+			align-items: center;
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto;
+			gap: 10px;
+		}
+		.change-component__title {
+			color: var(--ink);
+			font-weight: 700;
+			overflow-wrap: anywhere;
+		}
+		.change-component__meta {
+			color: var(--ink-3);
+			display: flex;
+			flex-wrap: wrap;
+			font-size: 12px;
+			gap: 7px;
+			margin-top: 3px;
 		}
 		.site-users-toolbar,
 		.site-logs-toolbar {
@@ -2380,6 +2723,9 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
 			font-family: var(--mono);
 			font-size: 11px;
 			text-transform: uppercase;
+		}
+		.detail-table th .sort-button {
+			width: 100%;
 		}
 		.detail-table tr:last-child td { border-bottom: 0; }
 		.detail-table td {
@@ -2818,7 +3164,7 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
 			@media (max-width: 1100px) {
 				.sites__head,
 				.site-row {
-					grid-template-columns: 32px minmax(220px, 1.7fr) 90px 90px 90px 74px;
+					grid-template-columns: 32px minmax(220px, 1.7fr) 90px 90px 90px 112px;
 				}
 				.col-storage,
 				.col-backup { display: none; }
@@ -2869,7 +3215,7 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
 			.sites__head { display: none; }
 			.site-group__bar { padding-left: 14px; }
 			.site-row {
-				grid-template-columns: 28px minmax(0, 1fr) 72px;
+				grid-template-columns: 28px minmax(0, 1fr) 112px;
 				gap: 10px;
 			}
 			.col-wp,
@@ -3008,12 +3354,12 @@ $json_options = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP;
 				<button class="icon-btn" type="button" data-action="toggle-theme" title="Theme" aria-label="Theme">
 					<svg data-theme-icon="sun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
 				</button>
-				<button class="icon-btn" type="button" data-action="sign-out" title="Log out" aria-label="Log out">
-					<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
-				</button>
-				<div class="user-chip">
-					<div class="avatar" data-user-avatar></div>
-					<span data-user-name></span>
+				<div class="account-menu chip-wrap">
+					<button class="user-chip" type="button" data-action="toggle-popover" data-popover="account-menu" aria-haspopup="menu" aria-expanded="false">
+						<div class="avatar" data-user-avatar></div>
+						<span data-user-name></span>
+					</button>
+					<div class="account-dropdown" data-region="account-menu" role="menu"></div>
 				</div>
 			</div>
 		</div>
@@ -3062,6 +3408,7 @@ window.__CAPTAINCORE_V2__ = {
 	const app = document.getElementById('cc-v2-app');
 	const main = document.getElementById('cc-v2-main');
 	const navRegion = document.querySelector('[data-region="nav"]');
+	const accountMenuRegion = document.querySelector('[data-region="account-menu"]');
 	const bulkRegion = document.querySelector('[data-region="bulk"]');
 	const drawerRegion = document.querySelector('[data-region="drawer"]');
 	const modalRegion = document.querySelector('[data-region="modal"]');
@@ -3115,17 +3462,41 @@ window.__CAPTAINCORE_V2__ = {
 		selectedCore: [],
 		selectedThemes: [],
 		selectedPlugins: [],
+		filterLogic: 'and',
+		filterVersionLogic: 'and',
+		filterStatusLogic: 'and',
+		filterVersionMode: 'include',
+		filterStatusMode: 'include',
+		siteFilterVersions: [],
+		siteFilterStatuses: [],
+		filterOptionsLoading: false,
+		filterOptionsError: '',
+		filterRequestId: 0,
 		filteredSiteIds: null,
 		filteredEnvIds: null,
 		sites: [],
 		domains: [],
 		accounts: [],
 		subscriptions: [],
+		providers: [],
+		keys: [],
+		users: [],
+		processes: [],
+		archives: [],
+		scheduledReports: [],
+		siteAudits: [],
 		siteDetails: {},
 		domainDetails: {},
 		accountDetails: {},
+		userDetails: {},
+		billingDetails: null,
+		defaults: null,
+		configurationDetails: null,
+		activityLogs: { items: [], total: 0, page: 1, perPage: 50, filters: { action: '', entity_type: '', date_from: '', date_to: '' } },
+		security: { tab: 'vulnerabilities', threats: [], patches: [], coverage: null, webRiskLogs: [], checksumFailures: [], pluginChecksumFailures: [] },
+		invite: { account: '', token: '', details: null, password: '', loading: false, error: '', accepting: false },
 		siteFeatures: {},
-		detailTabs: { site: 'overview', domain: 'dns', account: 'overview' },
+		detailTabs: { site: 'overview', domain: 'dns', account: 'overview', configurations: 'branding' },
 		detailEnvironments: {},
 		siteStats: { from_at: dateOffsetIso(-365), to_at: dateOffsetIso(0), grouping: 'Month', fathom_id: '', timeframe: '12m', sharePassword: '', shareSaving: false, shareError: '' },
 		userSearch: '',
@@ -3135,6 +3506,7 @@ window.__CAPTAINCORE_V2__ = {
 		loading: {},
 		error: {},
 		fetched: {},
+		sorts: {},
 		selection: new Set(),
 		drawer: null,
 		drawerTab: 'overview',
@@ -3184,6 +3556,22 @@ window.__CAPTAINCORE_V2__ = {
 		],
 		login: { user_login: '', user_password: '', tfa_code: '', lost: false, errors: '', info: '', loading: false },
 		newSite: { name: '', domain: '', site: '', address: '', username: '', password: '', loading: false, errors: '' },
+		newDomain: { name: '', account_id: '', site_id: '', create_dns_zone: true, loading: false, errors: [] },
+		newAccount: { name: '', loading: false, error: '' },
+		recipeForm: { mode: 'create', recipeId: '', title: '', content: '', public: true, loading: false, error: '' },
+		providerForm: { mode: 'create', providerId: '', name: '', provider: '', credentials: '', loading: false, error: '' },
+		providerImport: { providerId: '', accountId: '', remoteSites: [], selected: new Set(), loading: false, importing: false, error: '' },
+		keyForm: { mode: 'create', keyId: '', title: '', key: '', loading: false, error: '' },
+		userForm: { mode: 'create', userId: '', first_name: '', last_name: '', email: '', login: '', account_ids: [], loading: false, errors: [] },
+		processForm: { mode: 'create', processId: '', name: '', time_estimate: '', repeat_interval: 'as-needed', repeat_quantity: '', roles: '', description: '', loading: false, error: '' },
+		processView: { processId: '', process: null, loading: false, error: '' },
+		archiveStoreForm: { url: '', loading: false, error: '' },
+		reportForm: { mode: 'create', reportId: '', recipient: '', interval: 'monthly', account_id: '', site_ids: '', loading: false, error: '' },
+		siteAuditRequest: { site_id: '', environment_id: '', report_type: 'security_audit', notes: '', environments: [], loading: false, submitting: false, error: '' },
+		profileForm: { display_name: CC.user?.display_name || '', email: CC.user?.email || '', new_password: '', loading: false, errors: [], success: '', sessions: [], sessionsLoading: false },
+		domainRecordForm: { mode: 'create', domainId: '', recordId: '', type: 'A', name: '', value: '', ttl: '3600', loading: false, error: '' },
+		accountForm: { accountId: '', name: '', billing_user_id: '', loading: false, error: '' },
+		accountInviteForm: { accountId: '', email: '', level: 'full', loading: false, error: '' },
 		page: 1,
 		pages: {},
 		perPage: 100,
@@ -3201,6 +3589,8 @@ window.__CAPTAINCORE_V2__ = {
 	function routeFromLocation() {
 		const base = basePath();
 		const baseRoot = base.replace(/\/+$/, '');
+		const params = new URLSearchParams(window.location.search);
+		if (params.get('account') && params.get('token')) return '/invite';
 		let path = window.location.pathname;
 		if (base !== '/' && (path === baseRoot || path === base)) {
 			path = '';
@@ -3389,6 +3779,10 @@ window.__CAPTAINCORE_V2__ = {
 		if (/^https?:\/\//i.test(trimmed)) window.open(trimmed, '_blank', 'noopener');
 	}
 
+	function cleanAssetUrl(url) {
+		return String(url || '').replace(/([^:]\/)\/+/g, '$1');
+	}
+
 	function dateOffsetIso(days) {
 		const date = new Date();
 		date.setDate(date.getDate() + Number(days || 0));
@@ -3468,7 +3862,7 @@ window.__CAPTAINCORE_V2__ = {
 	}
 
 	function recordValue(record) {
-		const value = record?.value;
+		const value = firstDefined(record?.value, record?.record_value, record?.content, record?.data);
 		if (Array.isArray(value)) {
 			return value.map(item => {
 				if (item == null) return '';
@@ -3482,6 +3876,159 @@ window.__CAPTAINCORE_V2__ = {
 		return String(value == null ? '' : value);
 	}
 
+	function dnsRecordId(record) {
+		return firstDefined(record?.id, record?.record_id, record?.recordId, '');
+	}
+
+	function dnsRecordType(record) {
+		return String(firstDefined(record?.type, record?.record_type, 'A')).toUpperCase();
+	}
+
+	function dnsRecordName(record) {
+		return firstDefined(record?.name, record?.record_name, '');
+	}
+
+	function dnsRecordTtl(record) {
+		return firstDefined(record?.ttl, record?.record_ttl, 3600);
+	}
+
+	function dnsValueToLines(type, value) {
+		const normalized = String(type || '').toLowerCase();
+		if (Array.isArray(value)) {
+			return value.map(item => {
+				if (typeof item !== 'object' || !item) return String(item || '');
+				if (normalized === 'mx') return [item.priority, item.server].filter(Boolean).join(' ');
+				if (normalized === 'srv') return [item.priority, item.weight, item.port, item.host].filter(Boolean).join(' ');
+				return firstDefined(item.value, item.server, item.host, JSON.stringify(item));
+			}).filter(Boolean).join('\n');
+		}
+		if (value && typeof value === 'object') {
+			if (normalized === 'http') return value.url || '';
+			return JSON.stringify(value);
+		}
+		return String(value == null ? '' : value);
+	}
+
+	function dnsRecordFormValue(record) {
+		const type = dnsRecordType(record);
+		const value = firstDefined(record?.value, record?.record_value, record?.content, record?.data, '');
+		return dnsValueToLines(type, value);
+	}
+
+	function dnsValueHelp(type) {
+		const normalized = String(type || '').toLowerCase();
+		if (normalized === 'mx') return 'One record per line: priority server, for example "10 mail.example.com."';
+		if (normalized === 'srv') return 'One record per line: priority weight port host.';
+		if (normalized === 'http') return 'Enter the redirect URL.';
+		return 'One value per line.';
+	}
+
+	function parseDnsRecordValue(type, value) {
+		const normalized = String(type || '').toLowerCase();
+		const lines = String(value || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+		if (normalized === 'mx') {
+			return lines.map(line => {
+				const parts = line.split(/\s+/);
+				const priority = parts.shift() || '10';
+				return { priority, server: parts.join(' '), enabled: true };
+			});
+		}
+		if (normalized === 'srv') {
+			return lines.map(line => {
+				const parts = line.split(/\s+/);
+				return { priority: parts[0] || '10', weight: parts[1] || '10', port: parts[2] || '443', host: parts.slice(3).join(' '), enabled: true };
+			});
+		}
+		if (normalized === 'http') return String(value || '').trim();
+		return lines.map(line => ({ value: line, enabled: true }));
+	}
+
+	function normalizeErrors(value) {
+		if (!value) return [];
+		if (Array.isArray(value)) return value.map(item => String(item || '')).filter(Boolean);
+		if (value.errors) return normalizeErrors(value.errors);
+		if (value.message) return [String(value.message)];
+		if (typeof value === 'object') return Object.values(value).flatMap(normalizeErrors);
+		return [String(value)];
+	}
+
+	function renderErrorList(value) {
+		const errors = normalizeErrors(value);
+		return errors.map(error => '<div class="alert error">' + esc(error) + '</div>').join('');
+	}
+
+	function isAdministrator() {
+		return CC.user?.role === 'administrator';
+	}
+
+	function accountAccessLevel(data) {
+		return firstDefined(data?.level, data?.account?.level, '');
+	}
+
+	function accountCanInvite(data) {
+		return isAdministrator() || ['full-billing', 'full'].includes(accountAccessLevel(data));
+	}
+
+	function accountCanManageUsers(data) {
+		return isAdministrator() || accountAccessLevel(data) === 'full-billing';
+	}
+
+	function accountCanEditSettings(data) {
+		return isAdministrator() || accountAccessLevel(data) === 'full-billing';
+	}
+
+	function accountUserId(user) {
+		return firstDefined(user?.user_id, user?.id, user?.ID, '');
+	}
+
+	function accountBillingUserId(account) {
+		return firstDefined(account?.billing_user_id, account?.plan?.billing_user_id, account?.plan?.billing_user?.user_id, account?.plan?.billing_user?.id, '');
+	}
+
+	function levelLabel(level) {
+		return ({
+			'full-billing': 'Owner',
+			full: 'Full',
+			'sites-only': 'Sites Only',
+			'domains-only': 'Domains Only',
+		})[level] || level || '-';
+	}
+
+	function accessLevelOptions(selected) {
+		return [
+			['full', 'Full'],
+			['sites-only', 'Sites Only'],
+			['domains-only', 'Domains Only'],
+		].map(([value, label]) => '<option value="' + attr(value) + '"' + (String(selected || '') === value ? ' selected' : '') + '>' + esc(label) + '</option>').join('');
+	}
+
+	function hasOwnerAccess() {
+		return isAdministrator() || CC.user?.role === 'owner';
+	}
+
+	function adminNavItems() {
+		return [
+			['/cookbook', 'Cookbook', true],
+			['/reports', 'Reports', true],
+			['/site-audits', 'Site Audits', true],
+			['/activity-logs', 'Activity Logs', isAdministrator()],
+			['/archives', 'Archives', hasOwnerAccess()],
+			['/configurations', 'Configurations', hasOwnerAccess()],
+			['/providers', 'Providers', hasOwnerAccess()],
+			['/defaults', 'Defaults', hasOwnerAccess()],
+			['/security', 'Security', isAdministrator()],
+			['/handbook', 'Handbook', hasOwnerAccess()],
+			['/keys', 'Keys', hasOwnerAccess()],
+			['/users', 'Users', hasOwnerAccess()],
+		].filter(item => item[2]);
+	}
+
+	function accountNavItems() {
+		return [
+			['/profile', 'Profile', true],
+		].filter(item => item[2]);
+	}
+
 	function renderDetailTabs(type, tabs) {
 		if (!tabs.length) return '';
 		const active = tabs.some(tab => tab.key === state.detailTabs[type]) ? state.detailTabs[type] : tabs[0].key;
@@ -3491,6 +4038,105 @@ window.__CAPTAINCORE_V2__ = {
 				${tabs.map(tab => '<button type="button" class="' + (tab.key === active ? 'active' : '') + '" data-action="detail-tab" data-detail-type="' + attr(type) + '" data-tab="' + attr(tab.key) + '">' + esc(tab.label) + '</button>').join('')}
 			</nav>
 		`;
+	}
+
+	const sortCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+	const sortScratch = document.createElement('div');
+
+	function sortText(value) {
+		if (value == null) return '';
+		sortScratch.innerHTML = String(value);
+		return (sortScratch.textContent || sortScratch.innerText || '').replace(/\s+/g, ' ').trim();
+	}
+
+	function parseSortNumber(value) {
+		const text = sortText(value).replace(/,/g, '').replace(/[$%]/g, '').trim();
+		if (!/^[-+]?(?:\d+|\d*\.\d+)$/.test(text)) return null;
+		const number = Number(text);
+		return Number.isFinite(number) ? number : null;
+	}
+
+	function parseSortStorage(value) {
+		const match = sortText(value).match(/^([-+]?[\d,.]+)\s*(B|KB|MB|GB|TB)$/i);
+		if (!match) return null;
+		const number = Number(match[1].replace(/,/g, ''));
+		if (!Number.isFinite(number)) return null;
+		const units = { B: 1, KB: 1024, MB: 1048576, GB: 1073741824, TB: 1099511627776 };
+		return number * units[match[2].toUpperCase()];
+	}
+
+	function parseSortDate(value) {
+		const text = sortText(value);
+		if (!/\d{4}-\d{1,2}-\d{1,2}|[a-z]{3,}/i.test(text)) return null;
+		const time = Date.parse(text);
+		return Number.isFinite(time) ? time : null;
+	}
+
+	function compareSortValues(a, b, type = 'auto') {
+		const aText = sortText(a);
+		const bText = sortText(b);
+		const aEmpty = !aText || aText === '-';
+		const bEmpty = !bText || bText === '-';
+		if (aEmpty && bEmpty) return 0;
+		if (aEmpty) return 1;
+		if (bEmpty) return -1;
+
+		const strategies = type === 'auto' ? ['storage', 'number', 'date', 'text'] : [type, 'text'];
+		for (const strategy of strategies) {
+			let aValue = aText;
+			let bValue = bText;
+			if (strategy === 'number') {
+				aValue = parseSortNumber(aText);
+				bValue = parseSortNumber(bText);
+			} else if (strategy === 'storage') {
+				aValue = parseSortStorage(aText);
+				bValue = parseSortStorage(bText);
+			} else if (strategy === 'date') {
+				aValue = parseSortDate(aText);
+				bValue = parseSortDate(bText);
+			}
+			if (strategy !== 'text' && strategy !== 'version' && aValue !== null && bValue !== null) {
+				return aValue === bValue ? 0 : (aValue > bValue ? 1 : -1);
+			}
+			if (strategy === 'text' || strategy === 'version') {
+				return sortCollator.compare(aText, bText);
+			}
+		}
+		return sortCollator.compare(aText, bText);
+	}
+
+	function currentSort(pageKey) {
+		return pageKey ? state.sorts[pageKey] : null;
+	}
+
+	function renderSortButton(pageKey, sortKey, label, initialDir = 'asc') {
+		const activeSort = currentSort(pageKey);
+		const active = activeSort && activeSort.key === sortKey;
+		const direction = active ? activeSort.dir : initialDir;
+		const icon = active ? (direction === 'asc' ? '^' : 'v') : '-';
+		const aria = active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none';
+		return '<button class="sort-button ' + (active ? 'active' : '') + '" type="button" data-action="set-sort" data-page-key="' + attr(pageKey) + '" data-sort-key="' + attr(sortKey) + '" data-sort-initial-dir="' + attr(initialDir) + '" aria-sort="' + aria + '">' + esc(label) + '<span class="sort-button__icon" aria-hidden="true">' + icon + '</span></button>';
+	}
+
+	function setSort(pageKey, sortKey, initialDir = 'asc') {
+		if (!pageKey || !sortKey) return;
+		const current = currentSort(pageKey);
+		const nextDir = current && current.key === sortKey ? (current.dir === 'asc' ? 'desc' : 'asc') : initialDir;
+		state.sorts[pageKey] = { key: sortKey, dir: nextDir };
+		if (pageKey === 'sites') state.page = 1;
+		else state.pages[pageKey] = 1;
+		render();
+	}
+
+	function sortRows(pageKey, rows, sorters) {
+		const activeSort = currentSort(pageKey);
+		if (!activeSort || !sorters || !sorters[activeSort.key]) return rows;
+		const sorter = sorters[activeSort.key];
+		const direction = activeSort.dir === 'desc' ? -1 : 1;
+		return rows.slice().map((row, index) => ({ row, index })).sort((a, b) => {
+			const result = compareSortValues(sorter.get(a.row), sorter.get(b.row), sorter.type || 'auto');
+			return result ? result * direction : a.index - b.index;
+		}).map(item => item.row);
 	}
 
 	function paginateRows(pageKey, rows, perPage) {
@@ -3523,12 +4169,37 @@ window.__CAPTAINCORE_V2__ = {
 		if (!rows || !rows.length) return renderEmpty(emptyLabel || 'No data available.');
 		const perPage = options.perPage || 25;
 		const pageKey = options.pageKey || '';
-		const pageInfo = pageKey ? paginateRows(pageKey, rows, perPage) : null;
+		const headerConfigs = headers.map((header, index) => {
+			const config = typeof header === 'object' ? header : { label: header };
+			return Object.assign({ index, key: String(index), sortable: !!config.label, type: 'auto', initialDir: 'asc' }, config);
+		});
+		const sorters = {};
+		headerConfigs.forEach(header => {
+			if (!pageKey || !header.sortable || !header.label) return;
+			let override = {};
+			if (options.sorters && Object.prototype.hasOwnProperty.call(options.sorters, header.key)) {
+				override = options.sorters[header.key];
+			} else if (options.sorters && Object.prototype.hasOwnProperty.call(options.sorters, header.index)) {
+				override = options.sorters[header.index];
+			}
+			if (override === false) return;
+			sorters[header.key] = Object.assign({
+				type: header.type,
+				initialDir: header.initialDir,
+				get: row => row[header.index],
+			}, override);
+		});
+		const sortedRows = sortRows(pageKey, rows, sorters);
+		const pageInfo = pageKey ? paginateRows(pageKey, sortedRows, perPage) : null;
 		const visibleRows = pageInfo ? pageInfo.rows : rows;
 		return `
 			<div style="overflow:auto">
 				<table class="detail-table">
-					<thead><tr>${headers.map(header => '<th>' + esc(header) + '</th>').join('')}</tr></thead>
+					<thead><tr>${headerConfigs.map(header => {
+						const sorter = sorters[header.key];
+						const label = header.label || '';
+						return '<th>' + (sorter ? renderSortButton(pageKey, header.key, label, sorter.initialDir || header.initialDir || 'asc') : esc(label)) + '</th>';
+					}).join('')}</tr></thead>
 					<tbody>
 						${visibleRows.map(row => '<tr>' + row.map(cell => '<td>' + cell + '</td>').join('') + '</tr>').join('')}
 					</tbody>
@@ -3595,10 +4266,24 @@ window.__CAPTAINCORE_V2__ = {
 		if (siteId) return loadSiteDetail(siteId);
 		if (domainId) return loadDomainDetail(domainId);
 		if (accountId) return loadAccountDetail(accountId);
+		if (state.route.startsWith('/cookbook')) return loadCollection('recipes', '/wp-json/captaincore/v1/recipes');
+		if (state.route.startsWith('/configurations')) return loadConfigurationsScreen();
+		if (state.route.startsWith('/providers') || state.route.startsWith('/connect')) return loadProvidersScreen();
+		if (state.route.startsWith('/defaults')) return loadDefaultsScreen();
+		if (state.route.startsWith('/users')) return loadUsersScreen();
+		if (state.route.startsWith('/keys')) return loadCollection('keys', '/wp-json/captaincore/v1/keys');
+		if (state.route.startsWith('/handbook')) return loadCollection('processes', '/wp-json/captaincore/v1/processes');
+		if (state.route.startsWith('/reports')) return loadReportsScreen();
+		if (state.route.startsWith('/archives')) return loadCollection('archives', '/wp-json/captaincore/v1/archive');
+		if (state.route.startsWith('/activity-logs')) return loadActivityLogs();
+		if (state.route.startsWith('/site-audits')) return loadSiteAuditsScreen();
+		if (state.route.startsWith('/security')) return loadSecurityScreen();
+		if (state.route.startsWith('/profile')) return loadProfileScreen();
+		if (state.route.startsWith('/invite')) return loadInviteScreen();
 		if (state.route.startsWith('/sites')) return loadCollection('sites', '/wp-json/captaincore/v1/sites');
 		if (state.route.startsWith('/domains')) return loadCollection('domains', '/wp-json/captaincore/v1/domains/');
 		if (state.route.startsWith('/accounts')) return loadCollection('accounts', '/wp-json/captaincore/v1/accounts/');
-		if (state.route.startsWith('/billing') || state.route.startsWith('/subscriptions')) return loadCollection('subscriptions', '/wp-json/captaincore/v1/subscriptions/');
+		if (state.route.startsWith('/billing') || state.route.startsWith('/subscriptions')) return loadBillingScreen();
 	}
 
 	async function loadCollection(key, endpoint, force = false) {
@@ -3614,6 +4299,145 @@ window.__CAPTAINCORE_V2__ = {
 			state.error[key] = error.message || 'Unable to load data.';
 		} finally {
 			state.loading[key] = false;
+			render();
+		}
+	}
+
+	async function loadResource(key, endpoint, force = false, mapper = value => value) {
+		if (state.loading[key] || (state.fetched[key] && !force)) return;
+		state.loading[key] = true;
+		state.error[key] = '';
+		render();
+		try {
+			state[key] = mapper(await apiFetch(endpoint));
+			state.fetched[key] = true;
+		} catch (error) {
+			state.error[key] = error.message || 'Unable to load data.';
+		} finally {
+			state.loading[key] = false;
+			render();
+		}
+	}
+
+	async function loadMany(loaders) {
+		await Promise.all(loaders.map(loader => loader()));
+	}
+
+	async function loadProvidersScreen() {
+		return loadMany([
+			() => loadCollection('providers', '/wp-json/captaincore/v1/providers'),
+			() => loadCollection('accounts', '/wp-json/captaincore/v1/accounts/'),
+		]);
+	}
+
+	async function loadDefaultsScreen() {
+		return loadMany([
+			() => loadResource('defaults', '/wp-json/captaincore/v1/defaults', false, value => value || {}),
+			() => loadCollection('recipes', '/wp-json/captaincore/v1/recipes'),
+		]);
+	}
+
+	async function loadConfigurationsScreen() {
+		return loadMany([
+			() => loadResource('configurationDetails', '/wp-json/captaincore/v1/configurations', false, value => value || {}),
+			() => loadProvidersScreen(),
+			() => loadDefaultsScreen(),
+		]);
+	}
+
+	async function loadUsersScreen() {
+		return loadMany([
+			() => loadCollection('users', '/wp-json/captaincore/v1/users'),
+			() => loadCollection('accounts', '/wp-json/captaincore/v1/accounts/'),
+		]);
+	}
+
+	async function loadReportsScreen() {
+		return loadMany([
+			() => loadCollection('scheduledReports', '/wp-json/captaincore/v1/scheduled-reports'),
+			() => loadCollection('sites', '/wp-json/captaincore/v1/sites'),
+			() => loadCollection('accounts', '/wp-json/captaincore/v1/accounts/'),
+		]);
+	}
+
+	async function loadActivityLogs(force = false) {
+		const key = 'activityLogs';
+		if (state.loading[key] || (state.fetched[key] && !force)) return;
+		state.loading[key] = true;
+		state.error[key] = '';
+		render();
+		try {
+			const params = new URLSearchParams({
+				page: state.activityLogs.page,
+				per_page: state.activityLogs.perPage,
+			});
+			Object.entries(state.activityLogs.filters).forEach(([filter, value]) => {
+				if (value) params.set(filter, value);
+			});
+			const payload = await apiFetch('/wp-json/captaincore/v1/activity-logs?' + params.toString());
+			state.activityLogs.items = Array.isArray(payload) ? payload : asArray(payload?.items || payload?.data);
+			state.activityLogs.total = Number(payload?.total || state.activityLogs.items.length || 0);
+			state.fetched[key] = true;
+		} catch (error) {
+			state.error[key] = error.message || 'Unable to load activity logs.';
+		} finally {
+			state.loading[key] = false;
+			render();
+		}
+	}
+
+	async function loadSiteAuditsScreen() {
+		return loadMany([
+			() => loadCollection('siteAudits', '/wp-json/captaincore/v1/site-audits'),
+			() => loadCollection('sites', '/wp-json/captaincore/v1/sites'),
+		]);
+	}
+
+	async function loadSecurityScreen() {
+		return loadMany([
+			() => loadResource('securityThreatsPayload', '/wp-json/captaincore/v1/security-threats', false, payload => {
+				state.security.threats = asArray(payload?.threats || payload);
+				return payload || {};
+			}),
+			() => loadResource('securityPatchesPayload', '/wp-json/captaincore/v1/security-patches', false, payload => {
+				state.security.patches = asArray(payload);
+				return payload || [];
+			}),
+			() => loadResource('securityCoveragePayload', '/wp-json/captaincore/v1/security-coverage', false, payload => {
+				state.security.coverage = payload || null;
+				return payload || {};
+			}),
+		]);
+	}
+
+	async function loadBillingScreen() {
+		return loadMany([
+			() => loadCollection('subscriptions', '/wp-json/captaincore/v1/subscriptions/'),
+			() => loadResource('billingDetails', '/wp-json/captaincore/v1/billing', false, value => value || {}),
+		]);
+	}
+
+	async function loadProfileScreen() {
+		return loadResource('profileSessionsPayload', '/wp-json/captaincore/v1/sessions', false, payload => {
+			state.profileForm.sessions = asArray(payload?.sessions || payload);
+			return payload || {};
+		});
+	}
+
+	async function loadInviteScreen() {
+		const params = new URLSearchParams(window.location.search);
+		state.invite.account = params.get('account') || state.invite.account;
+		state.invite.token = params.get('token') || state.invite.token;
+		if (!state.invite.account || !state.invite.token || state.invite.loading || state.invite.details) return;
+		state.invite.loading = true;
+		state.invite.error = '';
+		render();
+		try {
+			state.invite.details = await apiFetch('/wp-json/captaincore/v1/invites?account=' + encodeURIComponent(state.invite.account) + '&token=' + encodeURIComponent(state.invite.token));
+		} catch (error) {
+			state.invite.error = error.message || 'Unable to load invite.';
+		} finally {
+			state.invite.loading = false;
 			render();
 		}
 	}
@@ -3655,9 +4479,15 @@ window.__CAPTAINCORE_V2__ = {
 		state.error[key] = '';
 		render();
 		try {
-			const listDomain = state.domains.find(item => String(item.domain_id) === String(id));
+			let listDomain = state.domains.find(item => String(item.domain_id) === String(id));
+			if (!listDomain && !state.fetched.domains) {
+				const domains = await apiFetch('/wp-json/captaincore/v1/domains/');
+				state.domains = Array.isArray(domains) ? domains : [];
+				state.fetched.domains = true;
+				listDomain = state.domains.find(item => String(item.domain_id) === String(id));
+			}
 			const domainPayload = await apiFetch('/wp-json/captaincore/v1/domain/' + encodeURIComponent(id));
-			const domain = Object.assign({}, listDomain || {}, domainPayload || {});
+			const domain = Object.assign({}, listDomain || {}, domainPayload?.domain || {}, domainPayload || {});
 			let records = [];
 			if (domain.remote_id || listDomain?.remote_id) {
 				try {
@@ -3722,9 +4552,23 @@ window.__CAPTAINCORE_V2__ = {
 				quicksavesLoading: false,
 				quicksavesError: '',
 				expandedQuicksave: '',
+				expandedQuicksaveFiles: '',
 				quicksaveFiles: {},
 				quicksaveFilesLoading: {},
 				quicksaveFilesError: {},
+				quicksaveDetails: {},
+				quicksaveDetailsLoading: {},
+				quicksaveDetailsError: {},
+				expandedComponents: {},
+				expandedFileGroups: {},
+				componentFiles: {},
+				componentFilesLoading: {},
+				componentFilesError: {},
+				updates: [],
+				updatesLoaded: false,
+				updatesLoading: false,
+				updatesError: '',
+				expandedUpdate: '',
 				timeline: [],
 				timelineLoaded: false,
 				timelineLoading: false,
@@ -3749,7 +4593,7 @@ window.__CAPTAINCORE_V2__ = {
 	}
 
 	function isSiteFeatureTab(tab) {
-		return ['stats', 'backups', 'quicksaves', 'timeline', 'users', 'logs'].includes(tab);
+		return ['stats', 'backups', 'quicksaves', 'updates', 'timeline', 'users', 'logs'].includes(tab);
 	}
 
 	function extractItems(payload, siteId) {
@@ -3828,6 +4672,21 @@ window.__CAPTAINCORE_V2__ = {
 		return firstDefined(quicksave?.git_hash, quicksave?.hash, quicksave?.hash_after, quicksave?.id);
 	}
 
+	function quicksaveDetailKey(hash) {
+		return 'quicksave:' + String(hash || '');
+	}
+
+	function updateLogHashes(item) {
+		return {
+			hashBefore: firstDefined(item?.hash_before, item?.before_hash, item?.hash_from, item?.from, item?.previous_hash),
+			hashAfter: firstDefined(item?.hash_after, item?.after_hash, item?.hash_to, item?.to, item?.hash, item?.git_hash),
+		};
+	}
+
+	function updateLogDetailKey(hashBefore, hashAfter) {
+		return 'update:' + String(hashBefore || '') + ':' + String(hashAfter || '');
+	}
+
 	function cleanFileName(fileName) {
 		const value = String(fileName || '');
 		return value.includes('\t') ? value.split('\t').pop() : value;
@@ -3836,6 +4695,107 @@ window.__CAPTAINCORE_V2__ = {
 	function parseChangedFiles(payload) {
 		const files = Array.isArray(payload) ? payload : String(payload || '').trim().split('\n');
 		return files.map(file => String(file || '').trim()).filter(Boolean);
+	}
+
+	function componentSlug(component) {
+		if (typeof component === 'string') return component;
+		return String(firstDefined(component?.name, component?.slug, component?.plugin, component?.theme, component?.path, component?.file, ''));
+	}
+
+	function componentTitle(component, fallback = 'Item') {
+		if (typeof component === 'string') return component;
+		return firstDefined(component?.title, component?.label, component?.name, component?.slug, fallback);
+	}
+
+	function componentState(component, deleted = false) {
+		if (deleted || component?.deleted) return 'Deleted';
+		if (component?.new || component?.added || component?.installed) return 'New';
+		if (component?.changed || component?.changed_version || component?.changed_status || component?.version_before || component?.status_before) return 'Changed';
+		return 'Tracked';
+	}
+
+	function componentVersionMeta(component, deleted = false) {
+		const item = typeof component === 'string' ? {} : asObject(component);
+		const beforeVersion = firstDefined(item.changed_version, item.previous_version, item.version_before, item.old_version);
+		const afterVersion = firstDefined(item.version, item.current_version, item.version_after, item.new_version, item.update_version);
+		const beforeStatus = firstDefined(item.changed_status, item.previous_status, item.status_before);
+		const afterStatus = firstDefined(item.status, item.current_status, item.status_after);
+		const pieces = [];
+		if (deleted) pieces.push('Removed' + (afterVersion ? ' at ' + afterVersion : ''));
+		else if (beforeVersion && afterVersion && String(beforeVersion) !== String(afterVersion)) pieces.push(beforeVersion + ' -> ' + afterVersion);
+		else if (afterVersion) pieces.push('Version ' + afterVersion);
+		if (beforeStatus && afterStatus && String(beforeStatus) !== String(afterStatus)) pieces.push(beforeStatus + ' -> ' + afterStatus);
+		else if (afterStatus) pieces.push(afterStatus);
+		return pieces;
+	}
+
+	function componentMatchPath(type, component) {
+		const slug = componentSlug(component).replace(/^\/+|\/+$/g, '');
+		if (!slug || (type !== 'plugins' && type !== 'themes')) return '';
+		return type + '/' + slug + '/';
+	}
+
+	function collectChangeComponents(detail) {
+		const data = asObject(detail);
+		const items = [];
+		const add = (type, component, deleted = false) => {
+			const stateLabel = componentState(component, deleted);
+			const changed = ['Changed', 'New', 'Deleted'].includes(stateLabel);
+			items.push({ type, component, deleted, stateLabel, changed });
+		};
+		asArray(data.plugins).forEach(component => add('plugins', component));
+		asArray(data.plugins_deleted).forEach(component => add('plugins', component, true));
+		asArray(data.themes).forEach(component => add('themes', component));
+		asArray(data.themes_deleted).forEach(component => add('themes', component, true));
+		return items.filter(item => item.changed);
+	}
+
+	function changeDetailCounts(detail) {
+		const data = asObject(detail);
+		const components = collectChangeComponents(data);
+		return {
+			plugins: components.filter(item => item.type === 'plugins').length,
+			themes: components.filter(item => item.type === 'themes').length,
+			deleted: asArray(data.plugins_deleted).length + asArray(data.themes_deleted).length,
+		};
+	}
+
+	function changedFileGroup(file) {
+		const path = cleanFileName(file).replace(/^\/+/, '');
+		const plugin = path.match(/(?:^|\/)(?:wp-content\/)?plugins\/([^/]+)/);
+		if (plugin) return { key: 'plugins:' + plugin[1], label: plugin[1], type: 'Plugin', priority: 1 };
+		const theme = path.match(/(?:^|\/)(?:wp-content\/)?themes\/([^/]+)/);
+		if (theme) return { key: 'themes:' + theme[1], label: theme[1], type: 'Theme', priority: 2 };
+		if (/^(wp-admin|wp-includes)\//.test(path) || /^wp-[^/]+\.php$/.test(path) || path === 'index.php') {
+			return { key: 'core', label: 'WordPress core', type: 'Core', priority: 3 };
+		}
+		if (/(?:^|\/)wp-content\/uploads\//.test(path) || /(?:^|\/)uploads\//.test(path)) {
+			return { key: 'uploads', label: 'Uploads', type: 'Media', priority: 4 };
+		}
+		return { key: 'other', label: 'Other files', type: 'Files', priority: 5 };
+	}
+
+	function groupChangedFiles(files) {
+		const groups = new Map();
+		files.forEach(file => {
+			const group = changedFileGroup(file);
+			if (!groups.has(group.key)) groups.set(group.key, Object.assign({ files: [] }, group));
+			groups.get(group.key).files.push(file);
+		});
+		return Array.from(groups.values()).sort((a, b) => a.priority - b.priority || a.label.localeCompare(b.label));
+	}
+
+	function updateLogSummary(item) {
+		const pluginCount = Number(firstDefined(item?.plugin_count, item?.plugins_count, item?.plugins));
+		const pluginChanged = Number(firstDefined(item?.plugins_changed, item?.plugin_changed_count, item?.plugin_changed));
+		const themeCount = Number(firstDefined(item?.theme_count, item?.themes_count, item?.themes));
+		const themeChanged = Number(firstDefined(item?.themes_changed, item?.theme_changed_count, item?.theme_changed));
+		return {
+			pluginCount: Number.isFinite(pluginCount) ? pluginCount : 0,
+			pluginChanged: Number.isFinite(pluginChanged) ? pluginChanged : 0,
+			themeCount: Number.isFinite(themeCount) ? themeCount : 0,
+			themeChanged: Number.isFinite(themeChanged) ? themeChanged : 0,
+		};
 	}
 
 	function renderDiffContent(content) {
@@ -3848,6 +4808,10 @@ window.__CAPTAINCORE_V2__ = {
 
 	function currentSiteContext() {
 		const id = routeId('sites');
+		if (!id && state.drawer?.siteId) {
+			const { site, env } = findSiteAndEnv(state.drawer.siteId, state.drawer.envId);
+			return { id: state.drawer.siteId, site, env };
+		}
 		const data = state.siteDetails[id];
 		if (!id || !data) return {};
 		const site = Object.assign({}, state.sites.find(item => String(item.site_id) === String(id)) || {}, data.site || {});
@@ -3866,7 +4830,7 @@ window.__CAPTAINCORE_V2__ = {
 			logs: 'logs',
 			addons: 'addons',
 			users: 'users',
-			updates: 'addons',
+			updates: 'updates',
 			scripts: 'scripts',
 			backups: 'backups',
 			'backup-overview': 'backups',
@@ -4199,6 +5163,12 @@ window.__CAPTAINCORE_V2__ = {
 				bucket.quicksaves = extractItems(payload, siteId);
 				bucket.quicksavesLoaded = true;
 			}
+			if (feature === 'updates') {
+				const params = new URLSearchParams({ site_id: siteId, environment: environmentSlug(env) });
+				const payload = await apiFetch('/wp-json/captaincore/v1/update-logs?' + params.toString());
+				bucket.updates = extractItems(payload, siteId);
+				bucket.updatesLoaded = true;
+			}
 			if (feature === 'timeline') {
 				let payload;
 				try {
@@ -4271,7 +5241,8 @@ window.__CAPTAINCORE_V2__ = {
 		const slug = firstDefined(site.site, site.slug, site.name);
 		const id = site.site_id || site.id;
 		if (!slug || !id) return '';
-		return CC.remote_upload_uri + slug + '_' + id + '/' + environmentSlug(env) + '/captures/';
+		const base = String(CC.remote_upload_uri || '').replace(/\/+$/, '');
+		return cleanAssetUrl(base + '/' + slug + '_' + id + '/' + environmentSlug(env) + '/captures/');
 	}
 
 	function captureConfigPages(env) {
@@ -4490,20 +5461,89 @@ window.__CAPTAINCORE_V2__ = {
 		}
 	}
 
-	async function toggleQuicksaveFiles(hash) {
+	async function loadQuicksaveDetail(hash) {
+		const { id, env } = currentSiteContext();
+		if (!id || !env || !hash) return;
+		const bucket = siteFeature(id, env);
+		const key = quicksaveDetailKey(hash);
+		if (bucket.quicksaveDetails[key] || bucket.quicksaveDetailsLoading[key]) return;
+		bucket.quicksaveDetailsLoading[key] = true;
+		bucket.quicksaveDetailsError[key] = '';
+		render();
+		try {
+			const params = new URLSearchParams({ site_id: id, environment: environmentSlug(env) });
+			bucket.quicksaveDetails[key] = await apiFetch('/wp-json/captaincore/v1/quicksaves/' + encodeURIComponent(hash) + '?' + params.toString()) || {};
+		} catch (error) {
+			bucket.quicksaveDetailsError[key] = error.message || 'Unable to load quicksave details.';
+			bucket.quicksaveDetails[key] = null;
+		} finally {
+			bucket.quicksaveDetailsLoading[key] = false;
+			render();
+		}
+	}
+
+	async function toggleQuicksaveDetail(hash) {
 		const { id, env } = currentSiteContext();
 		if (!id || !env || !hash) return;
 		const bucket = siteFeature(id, env);
 		if (bucket.expandedQuicksave === hash) {
 			bucket.expandedQuicksave = '';
+			bucket.expandedQuicksaveFiles = '';
 			render();
 			return;
 		}
 		bucket.expandedQuicksave = hash;
-		if (bucket.quicksaveFiles[hash]) {
+		loadQuicksaveDetail(hash);
+		loadQuicksaveFiles(hash);
+		render();
+	}
+
+	async function loadUpdateLogDetail(hashBefore, hashAfter) {
+		const { id, env } = currentSiteContext();
+		if (!id || !env || !hashBefore || !hashAfter) return;
+		const bucket = siteFeature(id, env);
+		const key = updateLogDetailKey(hashBefore, hashAfter);
+		if (bucket.quicksaveDetails[key] || bucket.quicksaveDetailsLoading[key]) return;
+		bucket.quicksaveDetailsLoading[key] = true;
+		bucket.quicksaveDetailsError[key] = '';
+		render();
+		try {
+			const params = new URLSearchParams({ site_id: id, environment: environmentSlug(env) });
+			bucket.quicksaveDetails[key] = await apiFetch('/wp-json/captaincore/v1/update-logs/' + encodeURIComponent(hashBefore + '_' + hashAfter) + '?' + params.toString()) || {};
+		} catch (error) {
+			bucket.quicksaveDetailsError[key] = error.message || 'Unable to load update details.';
+			bucket.quicksaveDetails[key] = null;
+		} finally {
+			bucket.quicksaveDetailsLoading[key] = false;
+			render();
+		}
+	}
+
+	async function toggleUpdateLog(hashBefore, hashAfter) {
+		if (!hashBefore || !hashAfter) {
+			showToast('Update log hashes are missing.');
+			return;
+		}
+		const { id, env } = currentSiteContext();
+		if (!id || !env) return;
+		const bucket = siteFeature(id, env);
+		const key = updateLogDetailKey(hashBefore, hashAfter);
+		if (bucket.expandedUpdate === key) {
+			bucket.expandedUpdate = '';
 			render();
 			return;
 		}
+		bucket.expandedUpdate = key;
+		loadUpdateLogDetail(hashBefore, hashAfter);
+		loadQuicksaveFiles(hashAfter);
+		render();
+	}
+
+	async function loadQuicksaveFiles(hash, force = false) {
+		const { id, env } = currentSiteContext();
+		if (!id || !env || !hash) return;
+		const bucket = siteFeature(id, env);
+		if (bucket.quicksaveFilesLoading[hash] || (bucket.quicksaveFiles[hash] && !force)) return;
 		bucket.quicksaveFilesLoading[hash] = true;
 		bucket.quicksaveFilesError[hash] = '';
 		render();
@@ -4518,6 +5558,69 @@ window.__CAPTAINCORE_V2__ = {
 			bucket.quicksaveFilesLoading[hash] = false;
 			render();
 		}
+	}
+
+	async function toggleQuicksaveFiles(hash) {
+		const { id, env } = currentSiteContext();
+		if (!id || !env || !hash) return;
+		const bucket = siteFeature(id, env);
+		if (bucket.expandedQuicksaveFiles === hash) {
+			bucket.expandedQuicksaveFiles = '';
+			render();
+			return;
+		}
+		bucket.expandedQuicksaveFiles = hash;
+		bucket.expandedQuicksave = hash;
+		loadQuicksaveDetail(hash);
+		loadQuicksaveFiles(hash);
+		render();
+	}
+
+	async function loadComponentFiles(hash, match, detailKey, force = false) {
+		const { id, env } = currentSiteContext();
+		if (!id || !env || !hash || !match || !detailKey) return;
+		const bucket = siteFeature(id, env);
+		const key = detailKey + ':' + match;
+		if (bucket.componentFilesLoading[key] || (bucket.componentFiles[key] && !force)) return;
+		bucket.componentFilesLoading[key] = true;
+		bucket.componentFilesError[key] = '';
+		render();
+		try {
+			const params = new URLSearchParams({ site_id: id, environment: environmentSlug(env), match });
+			const payload = await apiFetch('/wp-json/captaincore/v1/quicksaves/' + encodeURIComponent(hash) + '/changed?' + params.toString());
+			bucket.componentFiles[key] = parseChangedFiles(payload);
+		} catch (error) {
+			bucket.componentFilesError[key] = error.message || 'Unable to load component files.';
+			bucket.componentFiles[key] = [];
+		} finally {
+			bucket.componentFilesLoading[key] = false;
+			render();
+		}
+	}
+
+	async function toggleComponentFiles(hash, match, detailKey) {
+		const { id, env } = currentSiteContext();
+		if (!id || !env || !hash || !match || !detailKey) return;
+		const bucket = siteFeature(id, env);
+		const key = detailKey + ':' + match;
+		if (bucket.expandedComponents[key]) {
+			delete bucket.expandedComponents[key];
+			render();
+			return;
+		}
+		bucket.expandedComponents[key] = true;
+		loadComponentFiles(hash, match, detailKey);
+		render();
+	}
+
+	function toggleFileGroup(hash, groupKey) {
+		const { id, env } = currentSiteContext();
+		if (!id || !env || !hash || !groupKey) return;
+		const bucket = siteFeature(id, env);
+		const key = hash + ':' + groupKey;
+		if (bucket.expandedFileGroups[key]) delete bucket.expandedFileGroups[key];
+		else bucket.expandedFileGroups[key] = true;
+		render();
 	}
 
 	async function openQuicksaveDiff(hash, fileName) {
@@ -4558,11 +5661,12 @@ window.__CAPTAINCORE_V2__ = {
 	}
 
 		function screenshotUrl(site, env, size = 100) {
-			if (size >= 800 && env?.screenshots?.large) return env.screenshots.large;
-			if (size <= 100 && env?.screenshots?.small) return env.screenshots.small;
+			if (size >= 800 && env?.screenshots?.large) return cleanAssetUrl(env.screenshots.large);
+			if (size <= 100 && env?.screenshots?.small) return cleanAssetUrl(env.screenshots.small);
 			if (!site || !env || !env.screenshot_base || !CC.remote_upload_uri) return '';
 			const envName = String(env.environment || 'production').toLowerCase();
-			return CC.remote_upload_uri + site.site + '_' + site.site_id + '/' + envName + '/screenshots/' + env.screenshot_base + '_thumb-' + size + '.jpg';
+			const base = String(CC.remote_upload_uri || '').replace(/\/+$/, '');
+			return cleanAssetUrl(base + '/' + site.site + '_' + site.site_id + '/' + envName + '/screenshots/' + env.screenshot_base + '_thumb-' + size + '.jpg');
 		}
 
 	function activeFilters() {
@@ -4577,6 +5681,41 @@ window.__CAPTAINCORE_V2__ = {
 			envs = envs.filter(env => state.filteredEnvIds.has(Number(env.environment_id)) || state.filteredEnvIds.has(String(env.environment_id)));
 		}
 		return envs;
+	}
+
+	function siteSortEnvironment(site) {
+		const envs = visibleEnvironments(site);
+		return envs.find(env => env.environment === 'Production') || envs[0] || {};
+	}
+
+	function sortVisibleSites(sites) {
+		const sorters = {
+			site: {
+				type: 'text',
+				get: site => site.name || site.site || '',
+			},
+			core: {
+				type: 'version',
+				get: site => siteSortEnvironment(site).core || '',
+			},
+			visits: {
+				type: 'number',
+				get: site => Number(siteSortEnvironment(site).visits) || 0,
+			},
+			storage: {
+				type: 'number',
+				get: site => Number(siteSortEnvironment(site).storage) || 0,
+			},
+			subsites: {
+				type: 'number',
+				get: site => Number(siteSortEnvironment(site).subsite_count) || 0,
+			},
+			status: {
+				type: 'text',
+				get: site => environmentStatus(siteSortEnvironment(site)).label,
+			},
+		};
+		return sortRows('sites', sites, sorters);
 	}
 
 	function visibleSites() {
@@ -4595,7 +5734,7 @@ window.__CAPTAINCORE_V2__ = {
 			});
 		}
 		result = result.filter(site => visibleEnvironments(site).length > 0);
-		return result;
+		return sortVisibleSites(result);
 	}
 
 	function summaryStats() {
@@ -4627,6 +5766,12 @@ window.__CAPTAINCORE_V2__ = {
 		nameEl.textContent = name;
 		document.querySelector('[data-user-avatar]').textContent = initials(CC.user?.display_name || CC.user?.login);
 		document.querySelector('[data-user-name]').textContent = CC.user?.display_name || CC.user?.login || '';
+		const accountMenuButton = document.querySelector('.user-chip[data-popover="account-menu"]');
+		if (accountMenuButton) {
+			const isOpen = state.popover === 'account-menu';
+			accountMenuButton.classList.toggle('active', isOpen);
+			accountMenuButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+		}
 
 		const links = [
 			['/sites', 'Sites', true],
@@ -4638,6 +5783,25 @@ window.__CAPTAINCORE_V2__ = {
 			const active = state.route === route || state.route.startsWith(route + '/');
 			return '<a href="' + attr(routeUrl(route)) + '" data-route="' + attr(route) + '" class="' + (active ? 'active' : '') + '">' + esc(label) + '</a>';
 		}).join('');
+		const menuLink = ([route, label]) => {
+			const active = state.route === route || state.route.startsWith(route + '/');
+			return '<a href="' + attr(routeUrl(route)) + '" data-route="' + attr(route) + '" role="menuitem" class="' + (active ? 'active' : '') + '">' + esc(label) + '</a>';
+		};
+		const adminLinks = adminNavItems();
+		accountMenuRegion.classList.toggle('open', state.popover === 'account-menu');
+		accountMenuRegion.innerHTML = `
+			<div class="account-dropdown__section">
+				<div class="account-dropdown__label">Account</div>
+				${accountNavItems().map(menuLink).join('')}
+				<button type="button" data-action="sign-out" role="menuitem">Logout</button>
+			</div>
+			${adminLinks.length ? `
+				<div class="account-dropdown__section">
+					<div class="account-dropdown__label">Admin</div>
+					${adminLinks.map(menuLink).join('')}
+				</div>
+			` : ''}
+		`;
 	}
 
 	function render() {
@@ -4655,7 +5819,21 @@ window.__CAPTAINCORE_V2__ = {
 			else if (state.route.startsWith('/domains')) main.innerHTML = renderDirectory('Domains', 'domains');
 			else if (state.route.startsWith('/accounts/')) main.innerHTML = renderAccountDetail();
 			else if (state.route.startsWith('/accounts')) main.innerHTML = renderDirectory('Accounts', 'accounts');
-			else if (state.route.startsWith('/billing')) main.innerHTML = renderDirectory('Billing', 'subscriptions');
+			else if (state.route.startsWith('/cookbook')) main.innerHTML = renderCookbook();
+			else if (state.route.startsWith('/configurations')) main.innerHTML = renderConfigurations();
+			else if (state.route.startsWith('/providers') || state.route.startsWith('/connect')) main.innerHTML = renderProvidersConnect();
+			else if (state.route.startsWith('/defaults')) main.innerHTML = renderDefaults();
+			else if (state.route.startsWith('/users')) main.innerHTML = renderUsers();
+			else if (state.route.startsWith('/keys')) main.innerHTML = renderKeys();
+			else if (state.route.startsWith('/handbook')) main.innerHTML = renderHandbook();
+			else if (state.route.startsWith('/reports')) main.innerHTML = renderReports();
+			else if (state.route.startsWith('/archives')) main.innerHTML = renderArchives();
+			else if (state.route.startsWith('/activity-logs')) main.innerHTML = renderActivityLogs();
+			else if (state.route.startsWith('/site-audits')) main.innerHTML = renderSiteAudits();
+			else if (state.route.startsWith('/security')) main.innerHTML = renderSecurity();
+			else if (state.route.startsWith('/profile')) main.innerHTML = renderProfile();
+			else if (state.route.startsWith('/invite')) main.innerHTML = renderInviteAcceptance();
+			else if (state.route.startsWith('/billing') || state.route.startsWith('/subscriptions')) main.innerHTML = renderBilling();
 			else main.innerHTML = renderSites();
 		}
 		renderBulkBar();
@@ -4808,7 +5986,7 @@ window.__CAPTAINCORE_V2__ = {
 		`;
 		return `
 			${renderPageHeader('Sites', `${formatNumber(stats.sites)} sites - ${formatNumber(stats.environments)} environments`, pills)}
-			${renderToolbar('Search sites, URLs, accounts...', true)}
+			${renderToolbar('Search sites, URLs, accounts...', { action: 'open-new-site', label: 'New Site', adminOnly: true })}
 			${renderFilters()}
 			${state.error.sites ? renderError(state.error.sites, 'refresh-sites') : ''}
 			${state.loading.sites ? renderLoading('Loading sites') : ''}
@@ -4816,7 +5994,9 @@ window.__CAPTAINCORE_V2__ = {
 		`;
 	}
 
-	function renderToolbar(placeholder, allowAdd) {
+	function renderToolbar(placeholder, addButton) {
+		const add = addButton || null;
+		const showAdd = add && (!add.adminOnly || isAdministrator());
 		return `
 			<div class="toolbar">
 				<div class="search-input">
@@ -4828,7 +6008,7 @@ window.__CAPTAINCORE_V2__ = {
 					<button type="button" class="${state.viewMode === 'list' ? 'active' : ''}" data-action="set-view" data-view="list" title="List" aria-label="List">${icons.list}</button>
 					<button type="button" class="${state.viewMode === 'grid' ? 'active' : ''}" data-action="set-view" data-view="grid" title="Grid" aria-label="Grid">${icons.grid}</button>
 				</div>
-				${allowAdd && CC.user?.role === 'administrator' ? '<button class="primary-btn" type="button" data-action="open-new-site">' + icons.plus + ' New Site</button>' : ''}
+				${showAdd ? '<button class="primary-btn" type="button" data-action="' + attr(add.action) + '">' + icons.plus + ' ' + esc(add.label) + '</button>' : ''}
 			</div>
 		`;
 	}
@@ -4844,6 +6024,8 @@ window.__CAPTAINCORE_V2__ = {
 				${renderFilterPopover('plugins', 'Plugin', state.selectedPlugins, (CC.site_filters || []).filter(f => f.type === 'plugins'))}
 				${activeFilters() ? '<button class="chip-filter" type="button" data-action="clear-filters">Clear</button>' : ''}
 			</div>
+			${renderFilterLogicControls()}
+			${renderSecondaryFilters()}
 		`;
 	}
 
@@ -4874,18 +6056,127 @@ window.__CAPTAINCORE_V2__ = {
 		`;
 	}
 
+	function renderFilterToggle(action, active, values) {
+		return '<div class="filter-toggle">' + values.map(item => '<button type="button" class="' + (active === item.value ? 'active' : '') + '" data-action="' + attr(action) + '" data-value="' + attr(item.value) + '">' + esc(item.label) + '</button>').join('') + '</div>';
+	}
+
+	function selectedComponentFilters() {
+		return state.selectedThemes.concat(state.selectedPlugins);
+	}
+
+	function totalAdvancedFilters() {
+		return state.selectedCore.length + selectedComponentFilters().length;
+	}
+
+	function selectedSecondaryFilters(kind) {
+		const key = kind === 'status' ? 'selected_statuses' : 'selected_versions';
+		return selectedComponentFilters().flatMap(filter => asArray(filter[key]));
+	}
+
+	function renderFilterLogicControls() {
+		const controls = [];
+		if (totalAdvancedFilters() > 1) {
+			controls.push(`
+				<div class="filter-control">
+					<span class="filter-control__label">Primary</span>
+					${renderFilterToggle('filter-logic', state.filterLogic, [{ value: 'and', label: 'AND' }, { value: 'or', label: 'OR' }])}
+				</div>
+			`);
+		}
+		if (selectedSecondaryFilters('version').length) {
+			controls.push(`
+				<div class="filter-control">
+					<span class="filter-control__label">Version</span>
+					${renderFilterToggle('filter-version-mode', state.filterVersionMode, [{ value: 'include', label: 'is' }, { value: 'exclude', label: 'is not' }])}
+					${selectedSecondaryFilters('version').length > 1 && state.filterVersionMode === 'include' ? renderFilterToggle('filter-version-logic', state.filterVersionLogic, [{ value: 'and', label: 'AND' }, { value: 'or', label: 'OR' }]) : ''}
+				</div>
+			`);
+		}
+		if (selectedSecondaryFilters('status').length) {
+			controls.push(`
+				<div class="filter-control">
+					<span class="filter-control__label">Status</span>
+					${renderFilterToggle('filter-status-mode', state.filterStatusMode, [{ value: 'include', label: 'is' }, { value: 'exclude', label: 'is not' }])}
+					${selectedSecondaryFilters('status').length > 1 && state.filterStatusMode === 'include' ? renderFilterToggle('filter-status-logic', state.filterStatusLogic, [{ value: 'and', label: 'AND' }, { value: 'or', label: 'OR' }]) : ''}
+				</div>
+			`);
+		}
+		return controls.length ? '<div class="filter-logic-bar">' + controls.join('') + '</div>' : '';
+	}
+
+	function getVersionsForFilter(name) {
+		const match = state.siteFilterVersions.find(item => item && item.name === name);
+		return asArray(match?.versions);
+	}
+
+	function getStatusesForFilter(name) {
+		const match = state.siteFilterStatuses.find(item => item && item.name === name);
+		return asArray(match?.statuses);
+	}
+
+	function isSecondarySelected(filter, kind, option) {
+		const key = kind === 'status' ? 'selected_statuses' : 'selected_versions';
+		return asArray(filter[key]).some(item => item.name === option.name && item.slug === option.slug && item.type === option.type);
+	}
+
+	function renderSecondaryOption(filter, kind, option, index) {
+		const selected = isSecondarySelected(filter, kind, option);
+		const action = kind === 'status' ? 'toggle-filter-status' : 'toggle-filter-version';
+		return '<button type="button" class="filter-mini ' + (selected ? 'active' : '') + '" data-action="' + action + '" data-filter-type="' + attr(filter.type) + '" data-filter-name="' + attr(filter.name) + '" data-index="' + index + '">' + esc(option.name) + (option.count ? ' ' + formatNumber(option.count) : '') + '</button>';
+	}
+
+	function renderSecondaryFilters() {
+		const filters = selectedComponentFilters();
+		if (!filters.length) return '';
+		if (state.filterOptionsLoading && !state.siteFilterVersions.length && !state.siteFilterStatuses.length) {
+			return '<div class="filter-secondary"><div class="filter-drill"><div class="empty-mini">Loading version and status filters...</div></div></div>';
+		}
+		return `
+			<div class="filter-secondary">
+				${filters.map(filter => {
+					const versions = getVersionsForFilter(filter.name);
+					const statuses = getStatusesForFilter(filter.name);
+					return `
+						<div class="filter-drill">
+							<div class="filter-drill__head">
+								<div class="filter-drill__title">
+									<strong>${esc(filter.title || filter.name)}</strong>
+									<span>${filter.type === 'themes' ? 'Theme' : 'Plugin'} ${esc(filter.name)}</span>
+								</div>
+								${statusBadge(filter.type === 'themes' ? 'Theme' : 'Plugin')}
+							</div>
+							${versions.length ? `
+								<div class="filter-drill__group">
+									<div class="filter-control__label">Versions</div>
+									<div class="filter-drill__options">${versions.map((option, index) => renderSecondaryOption(filter, 'version', option, index)).join('')}</div>
+								</div>
+							` : ''}
+							${statuses.length ? `
+								<div class="filter-drill__group">
+									<div class="filter-control__label">Statuses</div>
+									<div class="filter-drill__options">${statuses.map((option, index) => renderSecondaryOption(filter, 'status', option, index)).join('')}</div>
+								</div>
+							` : ''}
+							${!versions.length && !statuses.length ? '<div class="empty-mini">' + (state.filterOptionsError ? esc(state.filterOptionsError) : 'No version or status choices.') + '</div>' : ''}
+						</div>
+					`;
+				}).join('')}
+			</div>
+		`;
+	}
+
 	function renderSiteList(sites, total, pages) {
 		if (!sites.length) return renderEmpty('No sites match the current view.');
 		return `
 			<div class="sites">
 				<div class="sites__head">
 					<div><input type="checkbox" aria-label="Select all" data-action="select-all" ${allVisibleSelected(sites) ? 'checked' : ''}></div>
-					<div>Site</div>
-					<div class="col-wp">WP / PHP</div>
-					<div class="col-visits">Visits</div>
-					<div class="col-storage">Storage</div>
-					<div class="col-backup">Subsites</div>
-					<div>Status</div>
+					<div>${renderSortButton('sites', 'site', 'Site')}</div>
+					<div class="col-wp">${renderSortButton('sites', 'core', 'WP / PHP')}</div>
+					<div class="col-visits">${renderSortButton('sites', 'visits', 'Visits', 'desc')}</div>
+					<div class="col-storage">${renderSortButton('sites', 'storage', 'Storage', 'desc')}</div>
+					<div class="col-backup">${renderSortButton('sites', 'subsites', 'Subsites', 'desc')}</div>
+					<div>${renderSortButton('sites', 'status', 'Status')}</div>
 					<div></div>
 				</div>
 				${sites.map(renderSiteGroup).join('')}
@@ -4904,10 +6195,12 @@ window.__CAPTAINCORE_V2__ = {
 	function renderSiteGroup(site) {
 		const envs = visibleEnvironments(site);
 		const account = site.customer_name || site.account || site.customer || '';
+		const siteId = site.site_id || site.id || '';
+		const title = site.name || site.site || 'Untitled site';
 		return `
 			<div class="site-group">
 				<div class="site-group__bar">
-					<span class="domain">${esc(site.name || site.site || 'Untitled site')}</span>
+					${siteId ? '<a class="domain" href="' + attr(routeUrl('/sites/' + siteId)) + '" data-route="/sites/' + attr(siteId) + '">' + esc(title) + '</a>' : '<span class="domain">' + esc(title) + '</span>'}
 					<span class="meta">${envs.length} environment${envs.length === 1 ? '' : 's'}${account ? ' - ' + esc(account) : ''}</span>
 				</div>
 				${envs.map(env => renderEnvironmentRow(site, env)).join('')}
@@ -4916,6 +6209,7 @@ window.__CAPTAINCORE_V2__ = {
 	}
 
 	function renderEnvironmentRow(site, env) {
+		const siteId = site.site_id || site.id || '';
 		const key = envKey(site, env);
 		const selected = state.selection.has(key);
 		const screenshot = screenshotUrl(site, env, 100);
@@ -4942,6 +6236,7 @@ window.__CAPTAINCORE_V2__ = {
 				<div class="metric col-backup"><span class="label">Subsites</span><span class="val">${formatNumber(env.subsite_count || 0)}</span></div>
 				<div class="status-cell"><span class="dot ${status.dot}"></span>${esc(status.label)}</div>
 				<div class="row-actions">
+					${siteId ? '<a class="row-action" href="' + attr(routeUrl('/sites/' + siteId)) + '" title="Manage" aria-label="Manage site" data-route="/sites/' + attr(siteId) + '">' + icons.settings + '</a>' : ''}
 					<button type="button" class="row-action" title="WP Admin" aria-label="WP Admin" data-action="magic-login" data-site-id="${attr(site.site_id)}" data-env-id="${attr(env.environment_id || envName)}">${icons.login}</button>
 					${env.home_url ? '<button type="button" class="row-action" title="Open" aria-label="Open" data-action="open-url" data-url="' + attr(env.home_url) + '">' + icons.external + '</button>' : ''}
 				</div>
@@ -5015,11 +6310,13 @@ window.__CAPTAINCORE_V2__ = {
 			const consoleErrorCount = visibleConsoleErrorsForEnvironment(env).length;
 			const backupCount = Number(envDetails.backup_count || 0);
 			const quicksaveCount = Number(envDetails.quicksave_count || envDetails.quicksave_usage?.count || 0);
+			const updateLogCount = featureBucket.updatesLoaded ? featureBucket.updates.length : Number(envDetails.update_log_count || envDetails.update_logs_count || 0);
 			const tabs = [
 				{ key: 'overview', label: 'Info', icon: icons.info },
 				{ key: 'stats', label: 'Stats', icon: icons.chart },
 				{ key: 'logs', label: 'Logs', icon: icons.file, count: tabCount(consoleErrorCount) },
 				{ key: 'addons', label: 'Addons', icon: icons.plug, count: tabCount(addonCount) },
+				{ key: 'updates', label: 'Updates', icon: icons.refresh, count: tabCount(updateLogCount) },
 				{ key: 'users', label: 'Users', icon: icons.users, count: tabCount(userCount) },
 				{ key: 'scripts', label: 'Scripts', icon: icons.terminal },
 				{ key: 'backups', label: 'Backups', icon: icons.refresh, count: tabCount(backupCount) },
@@ -5037,6 +6334,7 @@ window.__CAPTAINCORE_V2__ = {
 			stats: renderSiteStats(site, env),
 			backups: renderSiteBackups(site, env),
 			quicksaves: renderSiteQuicksaves(site, env),
+			updates: renderSiteUpdates(site, env),
 			timeline: renderSiteTimeline(site, env),
 			addons: renderSiteAddons(env),
 			domains: renderSiteDomains(details, env),
@@ -5638,6 +6936,235 @@ window.__CAPTAINCORE_V2__ = {
 		`;
 	}
 
+	function renderChangeSummaryItem(label, value) {
+		return '<div class="change-summary__item"><span>' + esc(label) + '</span><strong>' + esc(value) + '</strong></div>';
+	}
+
+	function renderComponentFiles(hash, match, detailKey, bucket) {
+		const key = detailKey + ':' + match;
+		const files = bucket.componentFiles[key] || [];
+		const filesLoading = bucket.componentFilesLoading[key];
+		const filesError = bucket.componentFilesError[key];
+		return `
+			<div class="changed-files">
+				${filesLoading ? renderLoading('Loading files') : ''}
+				${filesError ? '<div class="error-state"><div>' + esc(filesError) + '</div><button class="secondary-btn" type="button" data-action="load-component-files" data-hash="' + attr(hash) + '" data-match="' + attr(match) + '" data-detail-key="' + attr(detailKey) + '">Retry</button></div>' : ''}
+				${!filesLoading && !filesError && !files.length ? '<div class="empty-mini">No changed files found.</div>' : ''}
+				${!filesLoading && !filesError ? files.slice(0, 100).map(file => `
+					<div class="changed-file">
+						<code>${esc(cleanFileName(file))}</code>
+						<button type="button" class="secondary-btn" data-action="quicksave-diff" data-hash="${attr(hash)}" data-file="${attr(file)}">Diff</button>
+					</div>
+				`).join('') : ''}
+			</div>
+		`;
+	}
+
+	function renderChangeComponent(item, hash, detailKey, bucket) {
+		const typeLabel = item.type === 'themes' ? 'Theme' : 'Plugin';
+		const title = componentTitle(item.component, typeLabel);
+		const slug = componentSlug(item.component);
+		const match = componentMatchPath(item.type, item.component);
+		const key = detailKey + ':' + match;
+		const expanded = !!bucket.expandedComponents[key];
+		const meta = [typeLabel, slug].concat(componentVersionMeta(item.component, item.deleted)).filter(Boolean);
+		return `
+			<div class="change-component">
+				<div class="change-component__head">
+					<div>
+						<div class="change-component__title">${esc(title)}</div>
+						<div class="change-component__meta">${meta.map(piece => '<span>' + esc(piece) + '</span>').join('')}</div>
+					</div>
+					<div class="row-button-group">
+						${statusBadge(item.stateLabel)}
+						${match ? '<button type="button" class="secondary-btn" data-action="toggle-component-files" data-hash="' + attr(hash) + '" data-match="' + attr(match) + '" data-detail-key="' + attr(detailKey) + '">' + (expanded ? 'Hide Files' : 'Files') + '</button>' : ''}
+					</div>
+				</div>
+				${expanded ? renderComponentFiles(hash, match, detailKey, bucket) : ''}
+			</div>
+		`;
+	}
+
+	function renderFileChangeOverview(hash, bucket) {
+		const files = bucket.quicksaveFiles[hash] || [];
+		const loading = bucket.quicksaveFilesLoading[hash];
+		const error = bucket.quicksaveFilesError[hash];
+		if (loading) return '<div class="change-component"><div class="empty-mini">Loading changed file overview...</div></div>';
+		if (error) return '<div class="error-state"><div>' + esc(error) + '</div><button class="secondary-btn" type="button" data-action="load-quicksave-files" data-hash="' + attr(hash) + '">Retry</button></div>';
+		if (!files.length) return '';
+		const groups = groupChangedFiles(files);
+		return `
+			<div>
+				<div class="section-title">Changed files by location</div>
+				<div class="change-component-list">
+					${groups.map(group => {
+						const samples = group.files.slice(0, 3).map(file => cleanFileName(file));
+						const groupKey = hash + ':' + group.key;
+						const expanded = !!bucket.expandedFileGroups[groupKey];
+						return `
+							<div class="change-component">
+								<div class="change-component__head">
+									<div>
+										<div class="change-component__title">${esc(group.label)}</div>
+										<div class="change-component__meta">
+											<span>${esc(group.type)}</span>
+											${samples.map(file => '<span>' + esc(file) + '</span>').join('')}
+										</div>
+									</div>
+									<div class="row-button-group">
+										${statusBadge(formatNumber(group.files.length) + ' files')}
+										<button type="button" class="secondary-btn" data-action="toggle-file-group" data-hash="${attr(hash)}" data-group-key="${attr(group.key)}">${expanded ? 'Hide Files' : 'Files'}</button>
+									</div>
+								</div>
+								${expanded ? `
+									<div class="changed-files">
+										${group.files.map(file => `
+											<div class="changed-file">
+												<code>${esc(cleanFileName(file))}</code>
+												<button type="button" class="secondary-btn" data-action="quicksave-diff" data-hash="${attr(hash)}" data-file="${attr(file)}">Diff</button>
+											</div>
+										`).join('')}
+									</div>
+								` : ''}
+							</div>
+						`;
+					}).join('')}
+				</div>
+			</div>
+		`;
+	}
+
+	function renderQuicksaveFullFiles(hash, bucket) {
+		const expanded = bucket.expandedQuicksaveFiles === hash;
+		const files = bucket.quicksaveFiles[hash] || [];
+		const filesLoading = bucket.quicksaveFilesLoading[hash];
+		const filesError = bucket.quicksaveFilesError[hash];
+		return `
+			<div class="row-button-group">
+				<button type="button" class="secondary-btn" data-action="toggle-quicksave-files" data-hash="${attr(hash)}">${expanded ? 'Hide All Files' : 'All Changed Files'}</button>
+			</div>
+			${expanded ? `
+				<div class="changed-files">
+					${filesLoading ? renderLoading('Loading changed files') : ''}
+					${filesError ? '<div class="error-state"><div>' + esc(filesError) + '</div><button class="secondary-btn" type="button" data-action="load-quicksave-files" data-hash="' + attr(hash) + '">Retry</button></div>' : ''}
+					${!filesLoading && !filesError && !files.length ? '<div class="empty-mini">No changed files found.</div>' : ''}
+					${!filesLoading && !filesError ? files.slice(0, 150).map(file => `
+						<div class="changed-file">
+							<code>${esc(cleanFileName(file))}</code>
+							<button type="button" class="secondary-btn" data-action="quicksave-diff" data-hash="${attr(hash)}" data-file="${attr(file)}">Diff</button>
+						</div>
+					`).join('') : ''}
+				</div>
+			` : ''}
+		`;
+	}
+
+	function renderChangeDetail(detail, hash, detailKey, bucket, options = {}) {
+		const data = asObject(detail);
+		const components = collectChangeComponents(data);
+		const counts = changeDetailCounts(data);
+		const fileGroups = groupChangedFiles(bucket.quicksaveFiles[hash] || []);
+		const pluginFileGroups = fileGroups.filter(group => group.type === 'Plugin').length;
+		const themeFileGroups = fileGroups.filter(group => group.type === 'Theme').length;
+		const hasCoreFiles = fileGroups.some(group => group.key === 'core');
+		const core = asObject(data.core);
+		const coreMeta = componentVersionMeta(core);
+		const coreValue = firstDefined(core.version, core.current_version, core.version_after, data.core_version, data.status?.core, hasCoreFiles ? 'Files' : '-');
+		const previous = firstDefined(data.previous_created_at, data.before_created_at);
+		const current = firstDefined(data.created_at, data.after_created_at);
+		return `
+			<div class="change-detail">
+				<div class="change-summary">
+					${renderChangeSummaryItem('Plugins', counts.plugins || pluginFileGroups)}
+					${renderChangeSummaryItem('Themes', counts.themes || themeFileGroups)}
+					${renderChangeSummaryItem('Deleted', counts.deleted)}
+					${renderChangeSummaryItem('Core', coreValue)}
+				</div>
+				${previous || current ? '<div class="summary__sub">' + esc([previous ? 'Previous ' + formatDate(previous) : '', current ? 'Current ' + formatDate(current) : ''].filter(Boolean).join(' - ')) + '</div>' : ''}
+				${coreMeta.length ? `
+					<div class="change-component">
+						<div class="change-component__head">
+							<div>
+								<div class="change-component__title">WordPress Core</div>
+								<div class="change-component__meta">${coreMeta.map(piece => '<span>' + esc(piece) + '</span>').join('')}</div>
+							</div>
+							${statusBadge('Core')}
+						</div>
+					</div>
+				` : ''}
+				${options.showFileOverview ? renderFileChangeOverview(hash, bucket) : ''}
+				${components.length ? '<div class="change-component-list">' + components.map(item => renderChangeComponent(item, hash, detailKey, bucket)).join('') + '</div>' : '<div class="empty-mini">' + esc(options.emptyLabel || 'No plugin or theme changes were reported.') + '</div>'}
+				${options.showAllFiles ? renderQuicksaveFullFiles(hash, bucket) : ''}
+			</div>
+		`;
+	}
+
+	function renderSiteUpdates(site, env) {
+		if (!env) return renderEmpty('No environment data available.');
+		const siteId = site.site_id || routeId('sites');
+		const bucket = siteFeature(siteId, env);
+		const pageKey = 'site-updates-' + siteFeatureKey(siteId, env);
+		const pageInfo = paginateRows(pageKey, bucket.updates, 25);
+		return `
+			<div class="feature-bar">
+				<div class="summary__sub">${formatNumber(bucket.updates.length)} update logs for ${esc(env.environment || 'environment')}</div>
+				<button class="secondary-btn" type="button" data-action="refresh-site-feature" data-feature="updates">${bucket.updatesLoaded ? 'Refresh' : 'Load'} Updates</button>
+			</div>
+			${bucket.updatesLoading ? renderLoading('Loading updates') : ''}
+			${bucket.updatesError ? '<div class="error-state"><div>' + esc(bucket.updatesError) + '</div><button class="secondary-btn" type="button" data-action="refresh-site-feature" data-feature="updates">Retry</button></div>' : ''}
+			${!bucket.updatesLoading && !bucket.updatesError ? renderUpdateRows(siteId, env, bucket, pageInfo) : ''}
+		`;
+	}
+
+	function renderUpdateRows(siteId, env, bucket, pageInfo) {
+		if (!bucket.updatesLoaded && !bucket.updates.length) return renderEmpty('Updates have not been loaded yet.');
+		if (!pageInfo.total) return renderEmpty('No update logs found for this environment.');
+		return `
+			<div class="stack-list">
+				${pageInfo.rows.map(item => {
+					const hashes = updateLogHashes(item);
+					const detailKey = updateLogDetailKey(hashes.hashBefore, hashes.hashAfter);
+					const expanded = bucket.expandedUpdate === detailKey;
+					const summary = updateLogSummary(item);
+					const created = firstDefined(item.created_at, item.date, item.time, item.timestamp);
+					const metaParts = [
+						formatDate(created),
+						summary.pluginChanged || summary.pluginCount ? formatNumber(summary.pluginChanged || summary.pluginCount) + ' plugin changes' : '',
+						summary.themeChanged || summary.themeCount ? formatNumber(summary.themeChanged || summary.themeCount) + ' theme changes' : '',
+						item.email || item.author || item.user || '',
+					].filter(Boolean);
+					const hasHashes = hashes.hashBefore && hashes.hashAfter;
+					return `
+						<div class="stack-row ${hasHashes ? 'clickable' : ''} ${expanded ? 'expanded' : ''}"${hasHashes ? ' role="button" tabindex="0" data-action="toggle-update-log"' + renderDataAttrs({ 'hash-before': hashes.hashBefore, 'hash-after': hashes.hashAfter }) + ' aria-label="' + attr((expanded ? 'Hide update details for ' : 'Show update details for ') + (formatDate(created) || 'update')) + '"' : ''}>
+							<div class="stack-row__primary">
+								<div class="stack-row__title"><strong>${esc(firstDefined(item.title, item.name, 'Update log'))}</strong></div>
+								<small>${esc(metaParts.join(' - ') || 'Update log')}</small>
+								${hasHashes ? '<div class="stack-row__hint">' + (expanded ? 'Click card to hide component changes' : 'Click card to view component changes') + '</div>' : ''}
+							</div>
+							<div class="row-button-group">
+								${statusBadge(item.status || 'Update')}
+								${hasHashes ? '<button type="button" class="secondary-btn" data-action="toggle-update-log" data-hash-before="' + attr(hashes.hashBefore) + '" data-hash-after="' + attr(hashes.hashAfter) + '">' + (expanded ? 'Hide' : 'Details') + '</button>' : ''}
+							</div>
+						</div>
+						${expanded ? renderUpdateDetailPanel(hashes.hashBefore, hashes.hashAfter, bucket) : ''}
+					`;
+				}).join('')}
+			</div>
+			${renderPagination('site-updates-' + siteFeatureKey(siteId, env), pageInfo, 'updates')}
+		`;
+	}
+
+	function renderUpdateDetailPanel(hashBefore, hashAfter, bucket) {
+		const detailKey = updateLogDetailKey(hashBefore, hashAfter);
+		const detail = bucket.quicksaveDetails[detailKey];
+		const loading = bucket.quicksaveDetailsLoading[detailKey];
+		const error = bucket.quicksaveDetailsError[detailKey];
+		if (loading) return '<div class="change-detail">' + renderLoading('Loading update details') + '</div>';
+		if (error) return '<div class="change-detail"><div class="error-state"><div>' + esc(error) + '</div><button class="secondary-btn" type="button" data-action="load-update-log-detail" data-hash-before="' + attr(hashBefore) + '" data-hash-after="' + attr(hashAfter) + '">Retry</button></div></div>';
+		if (!detail) return '<div class="change-detail"><div class="empty-mini">Update details have not been loaded yet.</div></div>';
+		return renderChangeDetail(detail, hashAfter, detailKey, bucket, { showFileOverview: true, showAllFiles: true, emptyLabel: 'No plugin or theme changes were reported for this update.' });
+	}
+
 	function renderSiteQuicksaves(site, env) {
 		if (!env) return renderEmpty('No environment data available.');
 		const siteId = site.site_id || routeId('sites');
@@ -5672,42 +7199,40 @@ window.__CAPTAINCORE_V2__ = {
 					const created = firstDefined(item.created_at, item.date, item.time, item.timestamp);
 					const changes = firstDefined(item.changes, item.git_status, item.summary, item.message);
 					const meta = [formatDate(created), item.email || item.author || '', changes && typeof changes !== 'object' ? changes : ''].filter(Boolean).join(' - ');
-					const files = bucket.quicksaveFiles[hash] || [];
-					const filesLoading = bucket.quicksaveFilesLoading[hash];
-					const filesError = bucket.quicksaveFilesError[hash];
 					const rollbackLoading = state.actionLoading['quicksave-rollback:' + hash];
 					const expanded = bucket.expandedQuicksave === hash;
+					const filesExpanded = bucket.expandedQuicksaveFiles === hash;
 					return `
-						<div class="stack-row ${hash ? 'clickable' : ''} ${expanded ? 'expanded' : ''}"${hash ? ' role="button" tabindex="0" data-action="toggle-quicksave-files"' + renderDataAttrs({ hash }) + ' aria-label="' + attr((expanded ? 'Hide changed files for ' : 'Show changed files for ') + hash) + '"' : ''}>
+						<div class="stack-row ${hash ? 'clickable' : ''} ${expanded ? 'expanded' : ''}"${hash ? ' role="button" tabindex="0" data-action="toggle-quicksave-detail"' + renderDataAttrs({ hash }) + ' aria-label="' + attr((expanded ? 'Hide quicksave details for ' : 'Show quicksave details for ') + hash) + '"' : ''}>
 							<div class="stack-row__primary">
 								<div class="stack-row__title"><strong>${esc(hash || 'Quicksave')}</strong></div>
 								${meta ? '<small>' + esc(meta) + '</small>' : ''}
-								${hash ? '<div class="stack-row__hint">' + (expanded ? 'Click card to hide changed files' : 'Click card to view changed files') + '</div>' : ''}
+								${hash ? '<div class="stack-row__hint">' + (expanded ? 'Click card to hide change summary' : 'Click card to view change summary') + '</div>' : ''}
 							</div>
 							<div class="row-button-group">
 								${statusBadge(item.status || 'Quicksave')}
-								${hash ? '<button type="button" class="secondary-btn" data-action="toggle-quicksave-files" data-hash="' + attr(hash) + '">' + (expanded ? 'Hide Files' : 'Files') + '</button>' : ''}
+								${hash ? '<button type="button" class="secondary-btn" data-action="toggle-quicksave-detail" data-hash="' + attr(hash) + '">' + (expanded ? 'Hide' : 'Details') + '</button>' : ''}
+								${hash ? '<button type="button" class="secondary-btn" data-action="toggle-quicksave-files" data-hash="' + attr(hash) + '">' + (filesExpanded ? 'Hide Files' : 'Files') + '</button>' : ''}
 								${hash ? '<button type="button" class="danger-btn" data-action="quicksave-rollback" data-hash="' + attr(hash) + '">' + (rollbackLoading ? 'Starting' : 'Rollback') + '</button>' : ''}
 							</div>
 						</div>
-						${expanded ? `
-							<div class="changed-files">
-								${filesLoading ? renderLoading('Loading changed files') : ''}
-								${filesError ? '<div class="error-state"><div>' + esc(filesError) + '</div><button class="secondary-btn" type="button" data-action="toggle-quicksave-files" data-hash="' + attr(hash) + '">Retry</button></div>' : ''}
-								${!filesLoading && !filesError && !files.length ? '<div class="empty-mini">No changed files found.</div>' : ''}
-								${!filesLoading && !filesError ? files.slice(0, 100).map(file => `
-									<div class="changed-file">
-										<code>${esc(file)}</code>
-										<button type="button" class="secondary-btn" data-action="quicksave-diff" data-hash="${attr(hash)}" data-file="${attr(file)}">Diff</button>
-									</div>
-								`).join('') : ''}
-							</div>
-						` : ''}
+						${expanded ? renderQuicksaveDetailPanel(hash, bucket) : ''}
 					`;
 				}).join('')}
 			</div>
 			${renderPagination('site-quicksaves-' + siteFeatureKey(siteId, env), pageInfo, 'quicksaves')}
 		`;
+	}
+
+	function renderQuicksaveDetailPanel(hash, bucket) {
+		const detailKey = quicksaveDetailKey(hash);
+		const detail = bucket.quicksaveDetails[detailKey];
+		const loading = bucket.quicksaveDetailsLoading[detailKey];
+		const error = bucket.quicksaveDetailsError[detailKey];
+		if (loading) return '<div class="change-detail">' + renderLoading('Loading quicksave details') + '</div>';
+		if (error) return '<div class="change-detail"><div class="error-state"><div>' + esc(error) + '</div><button class="secondary-btn" type="button" data-action="load-quicksave-detail" data-hash="' + attr(hash) + '">Retry</button></div></div>';
+		if (!detail) return '<div class="change-detail"><div class="empty-mini">Quicksave details have not been loaded yet.</div></div>';
+		return renderChangeDetail(detail, hash, detailKey, bucket, { showFileOverview: true, showAllFiles: true, emptyLabel: 'No plugin or theme version/status changes were reported for this quicksave.' });
 	}
 
 	function renderSiteTimeline(site, env) {
@@ -5735,9 +7260,9 @@ window.__CAPTAINCORE_V2__ = {
 		`;
 	}
 
-	function renderSiteLogs(details, env) {
+	function renderSiteLogs(details, env, site = null) {
 		if (!env) return renderEmpty('No environment data available.');
-		const siteId = routeId('sites');
+		const siteId = site?.site_id || routeId('sites') || state.drawer?.siteId || '';
 		const bucket = siteFeature(siteId, env);
 		const consoleErrors = visibleConsoleErrorsForEnvironment(env);
 		const audits = extractItems(details?.site_audits || details?.audits || details?.site?.site_audits);
@@ -5900,23 +7425,45 @@ window.__CAPTAINCORE_V2__ = {
 	}
 
 	function renderDomainDns(domain, records) {
-		const rows = records.map(record => [
-			statusBadge(record.type || record.record_type || '-'),
-			esc(record.name || record.record_name || '@'),
-			esc(recordValue(record)),
-			esc(record.ttl || record.record_ttl || '-'),
-		]);
+		const domainId = domain.domain_id || routeId('domains');
+		const rows = records.map(record => {
+			const id = dnsRecordId(record);
+			const type = dnsRecordType(record);
+			const name = dnsRecordName(record) || '@';
+			const ttl = dnsRecordTtl(record);
+			const value = recordValue(record) || '-';
+			return {
+				title: statusBadge(type) + ' <strong>' + esc(name) + '</strong>',
+				html: '<div class="stack-row__title">' + statusBadge(type) + '<strong>' + esc(name) + '</strong></div>',
+				meta: esc(value),
+				hint: 'TTL ' + esc(ttl),
+				action: id ? 'edit-dns-record' : '',
+				dataset: id ? { 'record-id': id } : {},
+				aside: id ? '<div class="row-button-group"><button type="button" class="secondary-btn" data-action="edit-dns-record" data-record-id="' + attr(id) + '">Edit</button><button type="button" class="danger-btn" data-action="delete-dns-record" data-record-id="' + attr(id) + '">Delete</button></div>' : '',
+				ariaLabel: 'Edit DNS record ' + type + ' ' + name,
+			};
+		});
 		return `
 			<div class="detail-grid">
 				<div class="detail-card"><div class="k">Zone</div><div class="v">${domain.remote_id ? 'Active' : 'Inactive'}</div><div class="sub">${esc(domain.remote_id || 'No remote zone')}</div></div>
 				<div class="detail-card"><div class="k">Records</div><div class="v">${formatNumber(records.length)}</div><div class="sub">DNS entries</div></div>
 			</div>
-			<div class="section-title">DNS Records</div>
-			${renderDetailTable(['Type', 'Name', 'Value', 'TTL'], rows, domain.remote_id ? 'No DNS records found.' : 'Activate DNS to manage records for this domain.', { pageKey: 'domain-dns-' + (domain.domain_id || routeId('domains')), label: 'records', perPage: 50 })}
+			<div class="site-section__head" style="margin-top:18px">
+				<div>
+					<div class="section-title" style="margin:0 0 4px">DNS Records</div>
+					<div class="site-section__sub">${domain.remote_id ? 'Click a card to edit a record.' : 'Activate DNS before adding records.'}</div>
+				</div>
+				<div class="detail-actions">
+					${domain.remote_id ? '<button class="primary-btn" type="button" data-action="open-dns-record">' + icons.plus + ' Add Record</button>' : '<button class="primary-btn" type="button" data-action="activate-dns-zone" data-domain-id="' + attr(domainId) + '">Activate DNS Zone</button>'}
+					<button class="secondary-btn" type="button" data-action="refresh-domain-detail">Refresh</button>
+				</div>
+			</div>
+			${domain.remote_id ? renderStackRows(rows, 'No DNS records found.', { pageKey: 'domain-dns-' + domainId, label: 'records', perPage: 50 }) : renderEmpty('DNS zone is not active for this domain.')}
 		`;
 	}
 
 	function renderDomainManagement(domain, provider, details) {
+		const domainId = domain.domain_id || routeId('domains');
 		const nameservers = asArray(provider.nameservers).map(item => typeof item === 'object' ? firstDefined(item.value, item.name, JSON.stringify(item)) : item);
 		const contacts = provider.contacts || {};
 		const domainRows = [
@@ -5938,7 +7485,14 @@ window.__CAPTAINCORE_V2__ = {
 				</div>
 			`;
 		}).join('');
+		const authCode = state.revealedSecrets['domain-auth-code:' + domainId];
 		return `
+			<div class="detail-actions" style="justify-content:flex-start;margin-bottom:14px">
+				${domain.remote_id ? '<button class="danger-btn" type="button" data-action="delete-dns-zone" data-domain-id="' + attr(domainId) + '">Delete DNS Zone</button>' : '<button class="primary-btn" type="button" data-action="activate-dns-zone" data-domain-id="' + attr(domainId) + '">Activate DNS Zone</button>'}
+				${domain.provider_id ? '<button class="secondary-btn" type="button" data-action="fetch-domain-auth-code" data-domain-id="' + attr(domainId) + '">' + (authCode ? 'Refresh Auth Code' : 'Retrieve Auth Code') + '</button>' : ''}
+				<button class="danger-btn" type="button" data-action="delete-domain" data-domain-id="${attr(domainId)}">Delete Domain</button>
+			</div>
+			${authCode ? '<div class="alert info" style="margin-bottom:14px"><strong>Auth code:</strong> ' + esc(authCode) + '</div>' : ''}
 			<div class="section-title">Registration</div>
 			${renderDetailTable(['Field', 'Value'], domainRows, 'No registration data.')}
 			<div class="section-title">Nameservers</div>
@@ -5982,22 +7536,24 @@ window.__CAPTAINCORE_V2__ = {
 		if (!data) return renderEmpty('Account not found.');
 		const account = data.account || data || {};
 		const plan = account.plan || {};
-		const tabs = [
-			{ key: 'overview', label: 'Overview' },
-			{ key: 'users', label: 'Users' },
+			const tabs = [
+				{ key: 'overview', label: 'Overview' },
+				{ key: 'users', label: 'Users' },
 			{ key: 'sites', label: 'Sites' },
 			{ key: 'domains', label: 'Domains' },
 			{ key: 'plan', label: 'Plan' },
-			{ key: 'invoices', label: 'Invoices' },
-			{ key: 'timeline', label: 'Timeline' },
-		];
-		const active = tabs.some(tab => tab.key === state.detailTabs.account) ? state.detailTabs.account : 'overview';
-		const panels = {
-			overview: renderAccountOverview(account, data),
-			users: renderAccountUsers(data),
-			sites: renderAccountSites(data),
-			domains: renderAccountDomains(data),
-			plan: renderAccountPlan(account, data),
+				{ key: 'invoices', label: 'Invoices' },
+				{ key: 'timeline', label: 'Timeline' },
+			];
+			const active = tabs.some(tab => tab.key === state.detailTabs.account) ? state.detailTabs.account : 'overview';
+			const canInvite = accountCanInvite(data);
+			const canEdit = accountCanEditSettings(data);
+			const panels = {
+				overview: renderAccountOverview(account, data),
+				users: renderAccountUsers(data),
+				sites: renderAccountSites(data),
+				domains: renderAccountDomains(data),
+				plan: renderAccountPlan(account, data),
 			invoices: renderAccountInvoices(data),
 			timeline: renderAccountTimeline(data),
 		};
@@ -6005,16 +7561,21 @@ window.__CAPTAINCORE_V2__ = {
 			<span class="pill"><b>${formatNumber(asArray(data.sites).length)}</b> sites</span>
 			<span class="pill"><b>${formatNumber(asArray(data.domains).length)}</b> domains</span>
 			${plan.name ? '<span class="pill">' + esc(plan.name) + '</span>' : ''}
-		`;
-		return `
-			<div class="detail-shell">
-				<div class="detail-toolbar">
-					<button class="secondary-btn" type="button" data-route="/accounts">${icons.back} Accounts</button>
-					<div class="detail-actions"><button class="secondary-btn" type="button" data-action="refresh-account-detail">Refresh</button></div>
-				</div>
-				${renderPageHeader(account.name || 'Account', account.email || account.status || 'Account record', pills)}
-				${renderDetailTabs('account', tabs)}
-				<div class="detail-panel">${panels[active] || panels.overview}</div>
+			`;
+			return `
+				<div class="detail-shell">
+					<div class="detail-toolbar">
+						<button class="secondary-btn" type="button" data-route="/accounts">${icons.back} Accounts</button>
+						<div class="detail-actions">
+							${canEdit ? '<button class="secondary-btn" type="button" data-action="open-account-edit">Edit Account</button>' : ''}
+							${canInvite ? '<button class="primary-btn" type="button" data-action="open-account-invite">' + icons.plus + ' Invite User</button>' : ''}
+							${isAdministrator() ? '<button class="danger-btn" type="button" data-action="delete-account" data-account-id="' + attr(id) + '">Delete Account</button>' : ''}
+							<button class="secondary-btn" type="button" data-action="refresh-account-detail">Refresh</button>
+						</div>
+					</div>
+					${renderPageHeader(account.name || 'Account', account.email || account.status || 'Account record', pills)}
+					${renderDetailTabs('account', tabs)}
+					<div class="detail-panel">${panels[active] || panels.overview}</div>
 			</div>
 		`;
 	}
@@ -6038,33 +7599,88 @@ window.__CAPTAINCORE_V2__ = {
 	function renderAccountUsers(data) {
 		const users = asArray(data.users);
 		const invites = asArray(data.invites);
-		const userRows = users.map(user => [esc(user.name || user.login || '-'), esc(user.email || '-'), statusBadge(user.level || user.role || '-')]);
-		const inviteRows = invites.map(invite => [esc(invite.email || '-'), esc(formatDate(invite.created_at)), statusBadge(invite.status || 'Pending')]);
+		const account = data.account || {};
+		const ownerId = accountBillingUserId(account);
+		const canInvite = accountCanInvite(data);
+		const canManage = accountCanManageUsers(data);
+		const userRows = users.map(user => {
+			const userId = accountUserId(user);
+			const level = user.level || user.role || '';
+			const isOwner = ownerId && String(userId) === String(ownerId);
+			const aside = isOwner
+				? statusBadge('Owner')
+				: (canManage && userId ? `
+					<div class="row-button-group">
+						<select data-input="account-user-level" data-user-id="${attr(userId)}" aria-label="Access level for ${attr(user.name || user.login || user.email || 'user')}">${accessLevelOptions(level)}</select>
+						${level === 'full' ? '<button type="button" class="secondary-btn" data-action="transfer-account-owner" data-user-id="' + attr(userId) + '">Make Owner</button>' : ''}
+						<button type="button" class="danger-btn" data-action="remove-account-user" data-user-id="${attr(userId)}">Remove</button>
+					</div>
+				` : statusBadge(levelLabel(level)));
+			return {
+				title: esc(user.name || user.login || user.email || 'User'),
+				meta: esc([user.email, isOwner ? 'Owner' : levelLabel(level)].filter(Boolean).join(' - ')),
+				hint: canManage && !isOwner ? 'Change access or remove user' : '',
+				aside,
+			};
+		});
+		const inviteRows = invites.map(invite => ({
+			title: esc(invite.email || 'Pending invite'),
+			meta: esc(formatDate(invite.created_at)),
+			hint: invite.token ? 'Invite link is available in the legacy UI.' : '',
+			aside: '<div class="row-button-group">' + statusBadge(invite.status || 'Pending') + (invite.invite_id && canManage ? '<button type="button" class="danger-btn" data-action="delete-account-invite" data-invite-id="' + attr(invite.invite_id) + '">Delete</button>' : '') + '</div>',
+		}));
 		return `
-			<div class="section-title">Users</div>
-			${renderDetailTable(['Name', 'Email', 'Level'], userRows, 'No users.', { pageKey: 'account-users-' + routeId('accounts'), label: 'users' })}
+			<div class="site-section__head">
+				<div>
+					<div class="section-title" style="margin:0 0 4px">Users</div>
+					<div class="site-section__sub">Account access and pending invitations</div>
+				</div>
+				${canInvite ? '<div class="detail-actions"><button class="primary-btn" type="button" data-action="open-account-invite">' + icons.plus + ' Invite User</button></div>' : ''}
+			</div>
+			${renderStackRows(userRows, 'No users.', { pageKey: 'account-users-' + routeId('accounts'), label: 'users' })}
 			<div class="section-title">Pending Invites</div>
-			${renderDetailTable(['Email', 'Sent', 'Status'], inviteRows, 'No pending invites.', { pageKey: 'account-invites-' + routeId('accounts'), label: 'invites' })}
+			${renderStackRows(inviteRows, 'No pending invites.', { pageKey: 'account-invites-' + routeId('accounts'), label: 'invites' })}
 		`;
 	}
 
 	function renderAccountSites(data) {
-		const rows = asArray(data.sites).map(site => [
-			site.site_id ? '<a href="' + attr(routeUrl('/sites/' + site.site_id)) + '" data-route="/sites/' + attr(site.site_id) + '">' + esc(site.name || site.site || 'Site') + '</a>' : esc(site.name || site.site || 'Site'),
-			formatStorage(site.storage),
-			formatNumber(site.visits),
-			statusBadge(site.status || '-'),
-		]);
-		return renderDetailTable(['Site', 'Storage', 'Visits', 'Status'], rows, 'No sites for this account.', { pageKey: 'account-sites-' + routeId('accounts'), label: 'sites' });
+		const rows = asArray(data.sites).map(site => {
+			const siteId = site.site_id || site.id || '';
+			const meta = [
+				formatStorage(site.storage),
+				site.visits != null && site.visits !== '' ? formatNumber(site.visits) + ' visits' : '',
+				site.domain || site.home_url ? formatUrl(site.domain || site.home_url) : '',
+			].filter(value => value && value !== '-').join(' - ');
+			return {
+				title: esc(site.name || site.site || 'Site'),
+				meta: esc(meta || '-'),
+				hint: siteId ? 'Click card to manage site' : '',
+				aside: statusBadge(site.status || site.environment || '-'),
+				route: siteId ? '/sites/' + siteId : '',
+				ariaLabel: 'Open site ' + (site.name || site.site || ''),
+			};
+		});
+		return renderStackRows(rows, 'No sites for this account.', { pageKey: 'account-sites-' + routeId('accounts'), label: 'sites' });
 	}
 
 	function renderAccountDomains(data) {
-		const rows = asArray(data.domains).map(domain => [
-			domain.domain_id ? '<a href="' + attr(routeUrl('/domains/' + domain.domain_id)) + '" data-route="/domains/' + attr(domain.domain_id) + '">' + esc(domain.name || domain.domain || 'Domain') + '</a>' : esc(domain.name || domain.domain || 'Domain'),
-			esc(domain.expires ? formatDate(domain.expires) : '-'),
-			statusBadge(domain.status || (domain.remote_id ? 'DNS active' : '-')),
-		]);
-		return renderDetailTable(['Domain', 'Expires', 'Status'], rows, 'No domains for this account.', { pageKey: 'account-domains-' + routeId('accounts'), label: 'domains' });
+		const rows = asArray(data.domains).map(domain => {
+			const domainId = domain.domain_id || domain.id || '';
+			const meta = [
+				domain.expires ? 'Expires ' + formatDate(domain.expires) : '',
+				domain.provider_id ? 'Registered' : '',
+				domain.remote_id ? 'Managed DNS zone' : 'DNS zone not active',
+			].filter(Boolean).join(' - ');
+			return {
+				title: esc(domain.name || domain.domain || 'Domain'),
+				meta: esc(meta || '-'),
+				hint: domainId ? 'Click card to manage DNS' : '',
+				aside: statusBadge(domain.status || (domain.remote_id ? 'DNS active' : 'No DNS zone')),
+				route: domainId ? '/domains/' + domainId : '',
+				ariaLabel: 'Open domain ' + (domain.name || domain.domain || ''),
+			};
+		});
+		return renderStackRows(rows, 'No domains for this account.', { pageKey: 'account-domains-' + routeId('accounts'), label: 'domains' });
 	}
 
 	function renderAccountPlan(account, data) {
@@ -6114,9 +7730,12 @@ window.__CAPTAINCORE_V2__ = {
 	function renderDirectory(title, key) {
 		const rows = state[key] || [];
 		const sub = state.loading[key] ? 'Loading' : `${formatNumber(rows.length)} records`;
+		const addButton = key === 'domains'
+			? { action: 'open-new-domain', label: 'Add Domain' }
+			: (key === 'accounts' ? { action: 'open-new-account', label: 'Add Account', adminOnly: true } : null);
 		return `
 			${renderPageHeader(title, sub)}
-			${renderToolbar('Search ' + title.toLowerCase() + '...', false)}
+			${renderToolbar('Search ' + title.toLowerCase() + '...', addButton)}
 			${state.error[key] ? renderError(state.error[key], 'refresh-current') : ''}
 			${state.loading[key] ? renderLoading('Loading ' + title.toLowerCase()) : ''}
 			${!state.loading[key] && !state.error[key] ? renderDirectoryRows(rows, key) : ''}
@@ -6175,6 +7794,535 @@ window.__CAPTAINCORE_V2__ = {
 			};
 		});
 		return renderStackRows(cards, 'No records match the current view.', { pageKey, label: 'records', perPage: 50 });
+	}
+
+	function recordId(record, keys = ['id']) {
+		for (const key of keys) {
+			if (record && record[key] !== undefined && record[key] !== null && record[key] !== '') return record[key];
+		}
+		return '';
+	}
+
+	function findRecord(rows, id, keys = ['id']) {
+		return asArray(rows).find(row => String(recordId(row, keys)) === String(id));
+	}
+
+	function matchesSearch(row, fields = []) {
+		const query = normalizeText(state.search);
+		if (!query) return true;
+		const haystack = fields.length ? fields : [JSON.stringify(row || {})];
+		return haystack.some(field => normalizeText(field).includes(query));
+	}
+
+	function renderAdminToolbar(placeholder, actionLabel, action) {
+		return `
+			<div class="toolbar">
+				<div class="search-input">
+					${icons.search}
+					<input id="cc-v2-search" type="search" value="${attr(state.search)}" placeholder="${attr(placeholder)}" data-input="search">
+				</div>
+				${action ? '<button class="primary-btn" type="button" data-action="' + attr(action) + '">' + icons.plus + ' ' + esc(actionLabel || 'New') + '</button>' : ''}
+			</div>
+		`;
+	}
+
+	function renderAdminStatus(key, label) {
+		return `${state.error[key] ? renderError(state.error[key], 'refresh-current') : ''}${state.loading[key] ? renderLoading('Loading ' + label) : ''}`;
+	}
+
+	function adminCard(title, value, sub) {
+		return '<div class="detail-card"><div class="k">' + esc(title) + '</div><div class="v">' + esc(value == null || value === '' ? '-' : value) + '</div><div class="sub">' + esc(sub || '') + '</div></div>';
+	}
+
+	function renderMultiOptions(rows, selected, idKeys, labelFn) {
+		const values = new Set(asArray(selected).map(value => String(value)));
+		return asArray(rows).map(row => {
+			const value = recordId(row, idKeys);
+			const label = labelFn(row);
+			return '<option value="' + attr(value) + '"' + (values.has(String(value)) ? ' selected' : '') + '>' + esc(label) + '</option>';
+		}).join('');
+	}
+
+	function renderCookbook() {
+		const rows = asArray(state.recipes).filter(recipe => matchesSearch(recipe, [recipe.title, recipe.content]));
+		const cards = rows.map(recipe => {
+			const id = recordId(recipe, ['recipe_id', 'id']);
+			const meta = [
+				recipe.public == 1 || recipe.public === true ? 'Public' : 'Private',
+				recipe.author || recipe.created_by || '',
+			].filter(Boolean).join(' - ');
+			const actions = `
+				<div class="row-button-group">
+					<button class="secondary-btn" type="button" data-action="load-recipe-terminal" data-recipe-id="${attr(id)}">${icons.terminal} Load</button>
+					<button class="secondary-btn" type="button" data-action="open-recipe-form" data-recipe-id="${attr(id)}">Edit</button>
+					<button class="danger-btn" type="button" data-action="delete-recipe" data-recipe-id="${attr(id)}">Delete</button>
+				</div>
+			`;
+			return {
+				title: esc(recipe.title || 'Recipe'),
+				meta: esc(meta || 'Terminal recipe'),
+				hint: recipe.content ? esc(String(recipe.content).slice(0, 160)) : '',
+				aside: actions,
+			};
+		});
+		return `
+			${renderPageHeader('Cookbook', formatNumber(asArray(state.recipes).length) + ' recipes')}
+			${renderAdminToolbar('Search recipes...', 'New Recipe', 'open-recipe-form')}
+			${renderAdminStatus('recipes', 'recipes')}
+			${!state.loading.recipes && !state.error.recipes ? renderStackRows(cards, 'No recipes found.', { pageKey: 'admin-cookbook', label: 'recipes', perPage: 50 }) : ''}
+		`;
+	}
+
+	function renderProvidersConnect(embed = false) {
+		const rows = asArray(state.providers).filter(provider => matchesSearch(provider, [provider.name, provider.provider, provider.status]));
+		const cards = rows.map(provider => {
+			const id = recordId(provider, ['provider_id', 'id']);
+			const credentials = asArray(provider.credentials);
+			const actions = `
+				<div class="row-button-group">
+					<button class="secondary-btn" type="button" data-action="open-provider-import" data-provider-id="${attr(id)}">Import</button>
+					<button class="secondary-btn" type="button" data-action="open-provider-form" data-provider-id="${attr(id)}">Edit</button>
+					<button class="danger-btn" type="button" data-action="delete-provider" data-provider-id="${attr(id)}">Delete</button>
+				</div>
+			`;
+			return {
+				title: esc(provider.name || provider.provider || 'Provider'),
+				meta: esc([provider.provider, credentials.length ? credentials.length + ' credential fields' : 'No credentials'].filter(Boolean).join(' - ')),
+				hint: 'Connect external hosting providers and import sites.',
+				aside: '<div class="row-button-group">' + statusBadge(provider.status || (provider.connected ? 'Connected' : 'Configured')) + actions + '</div>',
+			};
+		});
+		const body = `
+			${renderAdminToolbar('Search providers...', 'Add Provider', 'open-provider-form')}
+			${renderAdminStatus('providers', 'providers')}
+			${!state.loading.providers && !state.error.providers ? renderStackRows(cards, 'No providers configured.', { pageKey: 'admin-providers', label: 'providers', perPage: 50 }) : ''}
+		`;
+		if (embed) return body;
+		return `${renderPageHeader('Providers', formatNumber(asArray(state.providers).length) + ' connections')}${body}`;
+	}
+
+	function renderDefaults(embed = false) {
+		const defaults = state.defaults || {};
+		const selectedRecipes = asArray(defaults.recipes || defaults.recipe_ids);
+		const usersJson = JSON.stringify(asArray(defaults.users), null, 2);
+		const body = `
+			<form class="admin-section admin-form" data-action="save-defaults">
+				<div class="admin-section__head">
+					<h2>Site Defaults</h2>
+					<button class="primary-btn" type="submit"${state.loading.defaultsSave ? ' disabled' : ''}>${state.loading.defaultsSave ? 'Saving' : 'Save Defaults'}</button>
+				</div>
+				${state.error.defaults ? '<div class="alert error">' + esc(state.error.defaults) + '</div>' : ''}
+				${state.loading.defaults ? renderLoading('Loading defaults') : ''}
+				<div class="admin-form-grid">
+					<div class="form-field"><label for="defaults-email">Default Email</label><input id="defaults-email" name="email" type="email" value="${attr(defaults.email || '')}" placeholder="admin@example.com"></div>
+					<div class="form-field"><label for="defaults-timezone">Timezone</label><input id="defaults-timezone" name="timezone" value="${attr(defaults.timezone || '')}" placeholder="America/New_York"></div>
+					<div class="form-field"><label for="defaults-recipes">Recipes</label><select id="defaults-recipes" name="recipes" multiple size="8">${renderMultiOptions(state.recipes, selectedRecipes, ['recipe_id', 'id'], recipe => recipe.title || 'Recipe')}</select></div>
+					<div class="form-field"><label for="defaults-users">Default Users JSON</label><textarea id="defaults-users" name="users" rows="8" spellcheck="false">${esc(usersJson)}</textarea></div>
+				</div>
+			</form>
+		`;
+		if (embed) return body;
+		return `${renderPageHeader('Defaults', 'Global settings applied to new sites')}${body}`;
+	}
+
+	function renderConfigurations() {
+		const config = Object.assign({}, CC.configurations || {}, state.configurationDetails || {});
+		const colors = Object.assign({}, CC.colors || {}, config.colors || {});
+		const tabs = [
+			{ key: 'branding', label: 'Branding' },
+			{ key: 'providers', label: 'Providers' },
+			{ key: 'defaults', label: 'Defaults' },
+		];
+		if (isAdministrator()) tabs.push({ key: 'billing', label: 'Billing' });
+		const active = tabs.some(tab => tab.key === state.detailTabs.configurations) ? state.detailTabs.configurations : 'branding';
+		const colorFields = ['primary', 'accent', 'success', 'warning', 'error', 'info'].map(key => `
+			<div class="form-field">
+				<label for="config-color-${attr(key)}">${esc(key)}</label>
+				<div style="display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px">
+					<input id="config-color-${attr(key)}" type="color" name="color_${attr(key)}" value="${attr(colors[key] || '#000000')}">
+					<input name="color_text_${attr(key)}" value="${attr(colors[key] || '')}" spellcheck="false">
+				</div>
+			</div>
+		`).join('');
+		const branding = `
+			<form class="admin-section admin-form" data-action="save-configurations">
+				<div class="admin-section__head">
+					<h2>Branding</h2>
+					<button class="primary-btn" type="submit"${state.loading.configurationsSave ? ' disabled' : ''}>${state.loading.configurationsSave ? 'Saving' : 'Save Configurations'}</button>
+				</div>
+				${renderAdminStatus('configurationDetails', 'configurations')}
+				<div class="admin-form-grid">
+					<div class="form-field"><label for="config-name">Name</label><input id="config-name" name="name" value="${attr(config.name || '')}"></div>
+					<div class="form-field"><label for="config-logo">Logo URL</label><input id="config-logo" name="logo" value="${attr(config.logo || '')}" placeholder="https://"></div>
+					<div class="form-field"><label for="config-logo-width">Logo Width</label><input id="config-logo-width" name="logo_width" type="number" min="1" value="${attr(config.logo_width || '')}"></div>
+					<label class="checkbox-line"><input type="checkbox" name="logo_only" value="1" ${config.logo_only ? 'checked' : ''}> Logo only</label>
+					<div class="form-field"><label for="config-dns-intro">DNS Introduction</label><textarea id="config-dns-intro" name="dns_introduction" rows="5">${esc(config.dns_introduction || '')}</textarea></div>
+					<div class="form-field"><label for="config-dns-nameservers">DNS Nameservers</label><textarea id="config-dns-nameservers" name="dns_nameservers" rows="5">${esc(config.dns_nameservers || '')}</textarea></div>
+				</div>
+				<div class="section-title">Theme Colors</div>
+				<div class="admin-form-grid">${colorFields}</div>
+			</form>
+		`;
+		const billing = `
+			<form class="admin-section admin-form" data-action="save-configurations">
+				<div class="admin-section__head">
+					<h2>Billing Configuration</h2>
+					<button class="primary-btn" type="submit"${state.loading.configurationsSave ? ' disabled' : ''}>${state.loading.configurationsSave ? 'Saving' : 'Save Billing Config'}</button>
+				</div>
+				<div class="admin-form-grid">
+					<div class="form-field"><label for="config-stripe-publishable">Stripe Publishable Key</label><input id="config-stripe-publishable" name="stripe_publishable_key" value="${attr(config.stripe_publishable_key || '')}" placeholder="pk_..."></div>
+					<div class="form-field"><label for="config-currency">Currency</label><input id="config-currency" name="currency" value="${attr(config.currency || 'usd')}"></div>
+				</div>
+			</form>
+		`;
+		const panels = { branding, providers: renderProvidersConnect(true), defaults: renderDefaults(true), billing };
+		return `
+			${renderPageHeader('Configurations', 'Branding, providers, defaults, and billing settings')}
+			${renderDetailTabs('configurations', tabs)}
+			<div class="detail-panel">${panels[active] || panels.branding}</div>
+		`;
+	}
+
+	function renderUsers() {
+		const rows = asArray(state.users).filter(user => matchesSearch(user, [user.name, user.display_name, user.username, user.user_login, user.login, user.email]));
+		const cards = rows.map(user => {
+			const id = userRecordId(user);
+			const name = userName(user);
+			const accountCount = asArray(user.account_ids).length;
+			return {
+				title: esc(name),
+				meta: esc([user.email, userLogin(user), formatUserRoles(user), accountCount ? accountCount + ' account' + (accountCount === 1 ? '' : 's') : ''].filter(Boolean).join(' - ')),
+				hint: 'Click card to view user details and account access.',
+				action: 'open-user-drawer',
+				dataset: { 'user-id': id },
+				ariaLabel: 'Open user ' + name,
+				aside: `
+					<div class="row-button-group">
+						<button class="secondary-btn" type="button" data-action="open-user-form" data-user-id="${attr(id)}">Edit</button>
+					</div>
+				`,
+			};
+		});
+		return `
+			${renderPageHeader('Users', formatNumber(asArray(state.users).length) + ' users')}
+			${renderAdminToolbar('Search users...', 'New User', 'open-user-form')}
+			${renderAdminStatus('users', 'users')}
+			${!state.loading.users && !state.error.users ? renderStackRows(cards, 'No users found.', { pageKey: 'admin-users', label: 'users', perPage: 50 }) : ''}
+		`;
+	}
+
+	function renderKeys() {
+		const rows = asArray(state.keys).filter(key => matchesSearch(key, [key.title, key.fingerprint, key.key]));
+		const cards = rows.map(key => {
+			const id = recordId(key, ['key_id', 'id']);
+			const actions = `
+				<div class="row-button-group">
+					${!key.primary ? '<button class="secondary-btn" type="button" data-action="set-primary-key" data-key-id="' + attr(id) + '">Set Primary</button>' : ''}
+					<button class="secondary-btn" type="button" data-action="open-key-form" data-key-id="${attr(id)}">Edit</button>
+					<button class="danger-btn" type="button" data-action="delete-key" data-key-id="${attr(id)}">Delete</button>
+				</div>
+			`;
+			return {
+				title: esc(key.title || 'SSH Key'),
+				meta: esc(key.fingerprint || key.key || 'No fingerprint'),
+				aside: '<div class="row-button-group">' + (key.primary ? statusBadge('Primary') : '') + actions + '</div>',
+			};
+		});
+		return `
+			${renderPageHeader('Keys', formatNumber(asArray(state.keys).length) + ' SSH keys')}
+			${renderAdminToolbar('Search keys...', 'Add Key', 'open-key-form')}
+			${renderAdminStatus('keys', 'keys')}
+			${!state.loading.keys && !state.error.keys ? renderStackRows(cards, 'No SSH keys found.', { pageKey: 'admin-keys', label: 'keys', perPage: 50 }) : ''}
+		`;
+	}
+
+	function renderHandbook() {
+		const rows = asArray(state.processes).filter(process => matchesSearch(process, [process.name, process.title, process.description, process.roles]));
+		const cards = rows.map(process => {
+			const id = recordId(process, ['process_id', 'id']);
+			return {
+				title: esc(process.name || process.title || 'Process'),
+				meta: esc([process.roles, process.time_estimate, [process.repeat_quantity, process.repeat_interval].filter(Boolean).join(' ')].filter(Boolean).join(' - ')),
+				hint: process.description ? esc(String(process.description).replace(/<[^>]+>/g, '').slice(0, 180)) : '',
+				aside: `
+					<div class="row-button-group">
+						<button class="secondary-btn" type="button" data-action="view-process" data-process-id="${attr(id)}">Open</button>
+						${isAdministrator() ? '<button class="secondary-btn" type="button" data-action="open-process-form" data-process-id="' + attr(id) + '">Edit</button>' : ''}
+					</div>
+				`,
+			};
+		});
+		return `
+			${renderPageHeader('Handbook', formatNumber(asArray(state.processes).length) + ' processes')}
+			${renderAdminToolbar('Search handbook...', isAdministrator() ? 'New Process' : '', isAdministrator() ? 'open-process-form' : '')}
+			${renderAdminStatus('processes', 'processes')}
+			${!state.loading.processes && !state.error.processes ? renderStackRows(cards, 'No handbook processes found.', { pageKey: 'admin-handbook', label: 'processes', perPage: 50 }) : ''}
+		`;
+	}
+
+	function renderReports() {
+		const rows = asArray(state.scheduledReports).filter(report => matchesSearch(report, [report.recipient, report.interval, report.account_name]));
+		const cards = rows.map(report => {
+			const id = recordId(report, ['scheduled_report_id', 'id']);
+			const siteIds = asArray(report.site_ids);
+			const meta = [
+				report.interval || 'scheduled',
+				report.account_id ? 'Account #' + report.account_id : '',
+				siteIds.length ? siteIds.length + ' sites' : '',
+			].filter(Boolean).join(' - ');
+			return {
+				title: esc(report.recipient || 'Scheduled report'),
+				meta: esc(meta || '-'),
+				aside: `
+					<div class="row-button-group">
+						<button class="secondary-btn" type="button" data-action="open-report-form" data-report-id="${attr(id)}">Edit</button>
+						<button class="danger-btn" type="button" data-action="delete-report" data-report-id="${attr(id)}">Delete</button>
+					</div>
+				`,
+			};
+		});
+		return `
+			${renderPageHeader('Reports', formatNumber(asArray(state.scheduledReports).length) + ' scheduled reports')}
+			${renderAdminToolbar('Search reports...', 'New Report', 'open-report-form')}
+			${renderAdminStatus('scheduledReports', 'scheduled reports')}
+			${!state.loading.scheduledReports && !state.error.scheduledReports ? renderStackRows(cards, 'No scheduled reports found.', { pageKey: 'admin-reports', label: 'reports', perPage: 50 }) : ''}
+		`;
+	}
+
+	function normalizeArchive(item) {
+		return {
+			name: item.name || item.Name || item.path || item.Path || 'Archive',
+			size: item.size || item.Size || '',
+			mod_time: item.mod_time || item.ModTime || item.modified || '',
+			path: item.path || item.Path || item.name || item.Name || '',
+		};
+	}
+
+	function renderArchives() {
+		const rows = asArray(state.archives).map(normalizeArchive).filter(item => matchesSearch(item, [item.name, item.path]));
+		const cards = rows.map(item => ({
+			title: esc(item.name),
+			meta: esc([formatStorage(item.size), formatDate(item.mod_time)].filter(value => value && value !== '-').join(' - ') || item.path || '-'),
+			hint: item.path ? esc(item.path) : '',
+			aside: '<button class="secondary-btn" type="button" data-action="share-archive" data-archive-path="' + attr(item.path) + '">Share Link</button>',
+		}));
+		return `
+			${renderPageHeader('Archives', formatNumber(asArray(state.archives).length) + ' stored archives')}
+			${renderAdminToolbar('Search archives...', 'Store Archive', 'open-archive-store')}
+			${renderAdminStatus('archives', 'archives')}
+			${!state.loading.archives && !state.error.archives ? renderStackRows(cards, 'No archives found.', { pageKey: 'admin-archives', label: 'archives', perPage: 50 }) : ''}
+		`;
+	}
+
+	function renderActivityLogs() {
+		const logs = asArray(state.activityLogs.items);
+		const rows = logs.map(log => ({
+			title: esc(log.description || log.entity_name || log.action || 'Activity'),
+			meta: esc([formatDate(log.created_at), log.user_name, log.entity_type ? String(log.entity_type).replace(/_/g, ' ') : '', log.entity_name].filter(Boolean).join(' - ')),
+			aside: statusBadge(log.action || '-'),
+		}));
+		const pages = Math.max(1, Math.ceil((state.activityLogs.total || logs.length) / state.activityLogs.perPage));
+		return `
+			${renderPageHeader('Activity Logs', formatNumber(state.activityLogs.total || logs.length) + ' entries')}
+			<form class="admin-section admin-form" data-action="apply-activity-filters">
+				<div class="admin-section__head">
+					<h2>Filters</h2>
+					<div class="row-button-group">
+						<button class="secondary-btn" type="button" data-action="clear-activity-filters">Clear</button>
+						<button class="primary-btn" type="submit">Apply</button>
+					</div>
+				</div>
+				<div class="admin-form-grid">
+					<div class="form-field"><label for="activity-action">Action</label><input id="activity-action" name="action_filter" value="${attr(state.activityLogs.filters.action)}" placeholder="created"></div>
+					<div class="form-field"><label for="activity-entity">Entity Type</label><input id="activity-entity" name="entity_type" value="${attr(state.activityLogs.filters.entity_type)}" placeholder="site"></div>
+					<div class="form-field"><label for="activity-from">From</label><input id="activity-from" type="date" name="date_from" value="${attr(state.activityLogs.filters.date_from)}"></div>
+					<div class="form-field"><label for="activity-to">To</label><input id="activity-to" type="date" name="date_to" value="${attr(state.activityLogs.filters.date_to)}"></div>
+				</div>
+			</form>
+			${renderAdminStatus('activityLogs', 'activity logs')}
+			${!state.loading.activityLogs && !state.error.activityLogs ? renderStackRows(rows, 'No activity logs found.', { pageKey: 'admin-activity', label: 'entries', perPage: 50 }) : ''}
+			${pages > 1 ? '<div class="pager" style="margin-top:14px"><button type="button" data-action="activity-page" data-page="' + attr(state.activityLogs.page - 1) + '"' + (state.activityLogs.page <= 1 ? ' disabled' : '') + '>Prev</button><button type="button" disabled>' + esc(state.activityLogs.page + ' / ' + pages) + '</button><button type="button" data-action="activity-page" data-page="' + attr(state.activityLogs.page + 1) + '"' + (state.activityLogs.page >= pages ? ' disabled' : '') + '>Next</button></div>' : ''}
+		`;
+	}
+
+	function renderSiteAudits() {
+		const rows = asArray(state.siteAudits).filter(audit => matchesSearch(audit, [audit.site_name, audit.environment, audit.report_type, audit.status, audit.summary]));
+		const cards = rows.map(audit => {
+			const id = recordId(audit, ['site_audit_id', 'id']);
+			const published = !!audit.report_path;
+			const loadingKey = 'site-audit-publish:' + id;
+			const publishing = !!state.actionLoading[loadingKey];
+			const reportUrl = published ? (audit.report_url || window.location.origin + '/reports/' + audit.report_path) : '';
+			const publishButton = published
+				? '<button class="secondary-btn" type="button" data-action="unpublish-site-audit" data-audit-id="' + attr(id) + '"' + (publishing ? ' disabled' : '') + '>' + (publishing ? 'Updating' : 'Unpublish') + '</button>'
+				: '<button class="secondary-btn" type="button" data-action="publish-site-audit" data-audit-id="' + attr(id) + '"' + (publishing ? ' disabled' : '') + '>' + (publishing ? 'Publishing' : 'Publish') + '</button>';
+			return {
+				title: esc(audit.site_name || audit.domain || 'Site Audit'),
+				meta: esc([audit.environment, audit.report_type, audit.status, formatDate(audit.created_at || audit.requested_at)].filter(Boolean).join(' - ')),
+				hint: audit.summary ? esc(String(audit.summary).slice(0, 180)) : '',
+				aside: `
+					<div class="row-button-group">
+						<button class="secondary-btn" type="button" data-action="open-site-audit" data-audit-id="${attr(id)}">Report</button>
+						${published ? '<button class="secondary-btn" type="button" data-action="copy-site-audit-link" data-url="' + attr(reportUrl) + '"' + (publishing ? ' disabled' : '') + '>Copy Link</button>' : ''}
+						${publishButton}
+						${audit.status === 'requested' || audit.status === 'pending' ? '<button class="danger-btn" type="button" data-action="cancel-site-audit" data-audit-id="' + attr(id) + '">Cancel</button>' : ''}
+					</div>
+				`,
+			};
+		});
+		return `
+			${renderPageHeader('Site Audits', formatNumber(asArray(state.siteAudits).length) + ' audit reports')}
+			${renderAdminToolbar('Search audits...', 'Request Audit', 'open-site-audit-request')}
+			${renderAdminStatus('siteAudits', 'site audits')}
+			${!state.loading.siteAudits && !state.error.siteAudits ? renderStackRows(cards, 'No site audits found.', { pageKey: 'admin-site-audits', label: 'audits', perPage: 50 }) : ''}
+		`;
+	}
+
+	function renderSecurity() {
+		const tab = state.security.tab || 'vulnerabilities';
+		const tabs = [
+			['vulnerabilities', 'Vulnerabilities'],
+			['patches', 'Patches'],
+			['coverage', 'Coverage'],
+		];
+		const threatRows = asArray(state.security.threats).filter(item => matchesSearch(item, [item.slug, item.name, item.title, item.version, item.severity]));
+		const patchRows = asArray(state.security.patches).filter(item => matchesSearch(item, [item.slug, item.name, item.version, item.status]));
+		const coverage = state.security.coverage || {};
+		const nav = '<nav class="detail-tabs" aria-label="Security sections">' + tabs.map(([key, label]) => '<button type="button" class="' + (tab === key ? 'active' : '') + '" data-action="security-tab" data-tab="' + attr(key) + '">' + esc(label) + '</button>').join('') + '</nav>';
+		const threats = renderStackRows(threatRows.map(item => ({
+			title: esc(item.name || item.title || item.slug || 'Threat'),
+			meta: esc([item.type, item.version, item.severity, item.source].filter(Boolean).join(' - ')),
+			hint: item.description ? esc(String(item.description).slice(0, 180)) : '',
+			aside: statusBadge(item.status || item.severity || '-'),
+		})), 'No active security threats.', { pageKey: 'admin-security-threats', label: 'threats', perPage: 50 });
+		const patches = renderStackRows(patchRows.map(item => ({
+			title: esc(item.name || item.slug || 'Patch'),
+			meta: esc([item.version, item.type, item.created_at ? formatDate(item.created_at) : ''].filter(Boolean).join(' - ')),
+			aside: statusBadge(item.status || 'Registered'),
+		})), 'No security patches registered.', { pageKey: 'admin-security-patches', label: 'patches', perPage: 50 });
+		const coverageCards = `
+			<div class="detail-grid">
+				${adminCard('Components', formatNumber(coverage.components || coverage.total_components || coverage.total || 0), 'Tracked across the fleet')}
+				${adminCard('Audited', formatNumber(coverage.audited || coverage.audited_components || 0), 'Known safe or reviewed')}
+				${adminCard('Unaudited', formatNumber(coverage.unaudited || coverage.pending || 0), 'Needs review')}
+				${adminCard('Coverage', coverage.coverage || coverage.percent || formatPercent(coverage.coverage_percent), 'Audit coverage')}
+			</div>
+			${coverage.summary ? '<div class="admin-section"><div class="timeline-markdown">' + renderTimelineMarkdown(coverage.summary) + '</div></div>' : ''}
+		`;
+		return `
+			${renderPageHeader('Security', 'Vulnerabilities, patches, and audit coverage')}
+			${renderAdminToolbar('Search security...', '', '')}
+			${nav}
+			${renderAdminStatus('securityThreatsPayload', 'security threats')}
+			${renderAdminStatus('securityPatchesPayload', 'security patches')}
+			${renderAdminStatus('securityCoveragePayload', 'security coverage')}
+			<div class="detail-panel">${tab === 'patches' ? patches : (tab === 'coverage' ? coverageCards : threats)}</div>
+		`;
+	}
+
+	function renderBilling() {
+		const billing = state.billingDetails || {};
+		const invoices = asArray(billing.invoices || billing.orders);
+		const methods = asArray(billing.payment_methods);
+		const subscriptions = asArray(state.subscriptions);
+		const invoiceRows = invoices.map(invoice => [
+			esc(invoice.order_id ? '#' + invoice.order_id : invoice.id || '-'),
+			esc(formatDate(invoice.date || invoice.created_at)),
+			statusBadge(invoice.status || '-'),
+			invoice.total ? formatMoney(invoice.total) : esc(invoice.total || '-'),
+		]);
+		const methodRows = methods.map(method => {
+			const token = method.token || method.id || '';
+			const label = method.method ? [method.method.brand, method.method.last4 ? 'ending ' + method.method.last4 : ''].filter(Boolean).join(' ') : (method.label || method.brand || 'Payment method');
+			return {
+				title: esc(label),
+				meta: esc([method.expires, method.type].filter(Boolean).join(' - ')),
+				aside: '<div class="row-button-group">' + (method.primary || method.default ? statusBadge('Primary') : '<button class="secondary-btn" type="button" data-action="set-primary-payment" data-token="' + attr(token) + '">Set Primary</button>') + '<button class="danger-btn" type="button" data-action="delete-payment" data-token="' + attr(token) + '">Delete</button></div>',
+			};
+		});
+		const subRows = subscriptions.map(subscription => ({
+			title: esc(subscription.name || subscription.account || subscription.subscription_id || 'Subscription'),
+			meta: esc([subscription.status, subscription.total || subscription.price, subscription.next_renewal || subscription.renewal].filter(Boolean).join(' - ')),
+			aside: statusBadge(subscription.status || '-'),
+			route: subscription.subscription_id || subscription.id ? '/billing/' + (subscription.subscription_id || subscription.id) : '',
+		}));
+		return `
+			${renderPageHeader('Billing', 'Invoices, plans, and payment methods')}
+			${renderAdminStatus('billingDetails', 'billing')}
+			${renderAdminStatus('subscriptions', 'subscriptions')}
+			<div class="admin-grid">
+				${adminCard('Invoices', formatNumber(invoices.length), 'Billing history')}
+				${adminCard('Payment Methods', formatNumber(methods.length), 'Saved cards and ACH')}
+				${adminCard('Subscriptions', formatNumber(subscriptions.length), 'Plans and renewals')}
+			</div>
+			<div class="admin-section">
+				<div class="admin-section__head"><h2>Invoices</h2></div>
+				${renderDetailTable(['Order', 'Date', 'Status', 'Total'], invoiceRows, 'No invoices found.', { pageKey: 'billing-invoices', label: 'invoices' })}
+			</div>
+			<div class="admin-section">
+				<div class="admin-section__head"><h2>Payment Methods</h2></div>
+				${renderStackRows(methodRows, 'No payment methods found.', { pageKey: 'billing-methods', label: 'methods' })}
+			</div>
+			<div class="admin-section">
+				<div class="admin-section__head"><h2>Subscriptions</h2></div>
+				${renderStackRows(subRows, 'No subscriptions found.', { pageKey: 'billing-subscriptions', label: 'subscriptions' })}
+			</div>
+		`;
+	}
+
+	function renderProfile() {
+		const form = state.profileForm;
+		const sessions = asArray(form.sessions);
+		const sessionRows = sessions.map(session => ({
+			title: esc(session.label || session.ip || session.browser || 'Session'),
+			meta: esc([session.location, session.device, session.last_seen ? formatDate(session.last_seen) : '', session.current ? 'Current session' : ''].filter(Boolean).join(' - ')),
+			aside: session.current ? statusBadge('Current') : '<button class="danger-btn" type="button" data-action="destroy-session" data-session-hash="' + attr(session.hash || '') + '">Sign Out</button>',
+		}));
+		return `
+			${renderPageHeader('Profile', CC.user?.login || 'Account settings')}
+			<form class="admin-section admin-form" data-action="save-profile">
+				<div class="admin-section__head">
+					<h2>Edit Profile</h2>
+					<button class="primary-btn" type="submit"${form.loading ? ' disabled' : ''}>${form.loading ? 'Saving' : 'Save Profile'}</button>
+				</div>
+				${renderErrorList(form.errors)}
+				${form.success ? '<div class="alert info">' + esc(form.success) + '</div>' : ''}
+				<div class="admin-form-grid">
+					<div class="form-field"><label for="profile-display-name">Display Name</label><input id="profile-display-name" name="display_name" value="${attr(form.display_name)}"></div>
+					<div class="form-field"><label for="profile-email">Email</label><input id="profile-email" name="email" type="email" value="${attr(form.email)}"></div>
+					<div class="form-field"><label for="profile-password">New Password</label><input id="profile-password" name="new_password" type="password" value="${attr(form.new_password)}" autocomplete="new-password"></div>
+				</div>
+			</form>
+			<div class="admin-section">
+				<div class="admin-section__head">
+					<h2>Sessions</h2>
+					<button class="secondary-btn" type="button" data-action="destroy-other-sessions">Sign Out Others</button>
+				</div>
+				${renderAdminStatus('profileSessionsPayload', 'sessions')}
+				${renderStackRows(sessionRows, 'No active sessions found.', { pageKey: 'profile-sessions', label: 'sessions' })}
+			</div>
+		`;
+	}
+
+	function renderInviteAcceptance() {
+		const invite = state.invite;
+		const details = invite.details || {};
+		return `
+			${renderPageHeader('Accept Invite', details.account_name || details.email || 'Pending invitation')}
+			<div class="admin-section admin-form">
+				${invite.loading ? renderLoading('Loading invite') : ''}
+				${invite.error ? '<div class="alert error">' + esc(invite.error) + '</div>' : ''}
+				${!invite.account || !invite.token ? '<div class="alert error">Invite account and token are required.</div>' : ''}
+				${details.account_name || details.email ? '<div class="detail-grid">' + adminCard('Account', details.account_name || invite.account, 'Invitation target') + adminCard('Email', details.email || CC.user?.email || '-', 'Invited address') + '</div>' : ''}
+				<form data-action="accept-invite" class="admin-form" style="margin-top:16px">
+					<div class="form-field"><label for="invite-password">Password</label><input id="invite-password" name="password" type="password" value="${attr(invite.password)}" autocomplete="new-password"></div>
+					<div style="display:flex;justify-content:flex-end;gap:8px">
+						<button class="secondary-btn" type="button" data-route="/accounts">Cancel</button>
+						<button class="primary-btn" type="submit"${invite.accepting || !invite.account || !invite.token ? ' disabled' : ''}>${invite.accepting ? 'Accepting' : 'Accept Invite'}</button>
+					</div>
+				</form>
+			</div>
+		`;
 	}
 
 	function renderLoading(label) {
@@ -6335,6 +8483,255 @@ window.__CAPTAINCORE_V2__ = {
 		return { site, env };
 	}
 
+	function userRecordId(user) {
+		return recordId(user, ['user_id', 'ID', 'id']);
+	}
+
+	function userName(user) {
+		return firstDefined(
+			user?.name,
+			user?.display_name,
+			[user?.first_name, user?.last_name].filter(Boolean).join(' '),
+			user?.username,
+			user?.user_login,
+			user?.login,
+			user?.email,
+			'User'
+		);
+	}
+
+	function userLogin(user) {
+		return firstDefined(user?.username, user?.user_login, user?.login, '');
+	}
+
+	function userDetailBucket(userId) {
+		const key = String(userId || '');
+		if (!state.userDetails[key]) {
+			state.userDetails[key] = {
+				details: null,
+				accountIds: [],
+				loaded: false,
+				loading: false,
+				error: '',
+			};
+		}
+		return state.userDetails[key];
+	}
+
+	function userAccountIds(user, bucket) {
+		const ids = asArray(bucket?.accountIds).length ? bucket.accountIds : asArray(firstDefined(user?.account_ids, user?.accounts));
+		return ids.map(item => {
+			if (item && typeof item === 'object') return recordId(item, ['account_id', 'id']);
+			return item;
+		}).map(id => String(id)).filter(Boolean);
+	}
+
+	function accountsForUser(user, bucket) {
+		const accountIds = userAccountIds(user, bucket);
+		const byId = new Map(state.accounts.map(account => [String(recordId(account, ['account_id', 'id'])), account]));
+		return accountIds.map(id => byId.get(String(id)) || { account_id: id, name: 'Account #' + id });
+	}
+
+	async function loadUserDrawerDetails(userId, force = false) {
+		if (!userId) return;
+		const bucket = userDetailBucket(userId);
+		if (bucket.loading || (bucket.loaded && !force)) return;
+		bucket.loading = true;
+		bucket.error = '';
+		renderDrawer();
+		try {
+			const [details, accountIds] = await Promise.all([
+				apiFetch('/wp-json/captaincore/v1/users/' + encodeURIComponent(userId)),
+				apiFetch('/wp-json/captaincore/v1/users/' + encodeURIComponent(userId) + '/accounts').catch(() => null),
+			]);
+			bucket.details = details || {};
+			bucket.accountIds = asArray(accountIds || details?.account_ids);
+			bucket.loaded = true;
+		} catch (error) {
+			bucket.error = error.message || 'Unable to load user details.';
+		} finally {
+			bucket.loading = false;
+			renderDrawer();
+		}
+	}
+
+	function openUserDrawer(userId) {
+		if (!userId) return;
+		state.drawer = { type: 'user', userId };
+		render();
+		loadUserDrawerDetails(userId);
+	}
+
+	function drawerTabs() {
+		return [
+			{ key: 'overview', label: 'Overview' },
+			{ key: 'backups', label: 'Backups' },
+			{ key: 'updates', label: 'Updates' },
+			{ key: 'logs', label: 'Logs' },
+		];
+	}
+
+	function updateTargetVersion(item) {
+		return String(firstDefined(
+			item?.update_version,
+			item?.latest_version,
+			item?.new_version,
+			item?.available_version,
+			item?.version_latest,
+			item?.latest,
+			''
+		)).trim();
+	}
+
+	function hasUpdateTarget(item) {
+		const target = updateTargetVersion(item);
+		const current = String(firstDefined(item?.version, item?.current_version, '')).trim();
+		if (!target || target === '-' || target.toLowerCase() === 'none') return false;
+		return !current || target !== current;
+	}
+
+	function renderDrawerOverview(site, env, status) {
+		return `
+			<div class="kv-grid">
+				<div class="kv"><div class="k">Visits</div><div class="v">${formatNumber(env.visits)}</div></div>
+				<div class="kv"><div class="k">Storage</div><div class="v">${formatStorage(env.storage)}</div></div>
+				<div class="kv"><div class="k">WordPress</div><div class="v">${esc(env.core || '-')}</div></div>
+				<div class="kv"><div class="k">PHP</div><div class="v">${esc(env.php_version || '-')}</div></div>
+			</div>
+			<div class="section-title">Status</div>
+			<div class="activity">
+				<div class="activity__row"><span class="dot ${status.dot}"></span><span>${esc(status.label)}</span><time>${esc(env.environment || '')}</time></div>
+				<div class="activity__row"><span class="dot"></span><span>${esc(formatUrl(env.home_url))}</span><time>URL</time></div>
+				<div class="activity__row"><span class="dot"></span><span>${formatNumber(env.subsite_count || 0)} subsites</span><time>Sites</time></div>
+			</div>
+		`;
+	}
+
+	function renderDrawerUpdates(site, env) {
+		const siteId = site.site_id || state.drawer?.siteId || routeId('sites');
+		const route = siteId ? '/sites/' + siteId + '/addons' : '';
+		const coreUpdate = asObject(env.core_update);
+		const coreTarget = String(firstDefined(
+			coreUpdate.version,
+			coreUpdate.update_version,
+			coreUpdate.latest_version,
+			env.core_update_version,
+			env.core_latest_version,
+			env.wp_latest_version,
+			env.latest_core,
+			''
+		)).trim();
+		const rows = [];
+		if (coreTarget && coreTarget !== '-' && coreTarget !== String(env.core || '').trim()) {
+			rows.push({
+				title: esc('WordPress Core'),
+				meta: esc(['Current ' + (env.core || '-'), 'Available ' + coreTarget].join(' - ')),
+				aside: statusBadge('Core'),
+				route,
+				ariaLabel: 'Manage WordPress core update',
+			});
+		}
+		asArray(env.plugins).filter(hasUpdateTarget).forEach(plugin => {
+			const target = updateTargetVersion(plugin);
+			const current = firstDefined(plugin.version, plugin.current_version, '-');
+			rows.push({
+				title: esc(plugin.title || plugin.name || 'Plugin'),
+				meta: esc(['Current ' + current, 'Available ' + target, plugin.name || ''].filter(Boolean).join(' - ')),
+				aside: statusBadge('Plugin'),
+				route,
+				ariaLabel: 'Manage plugin update',
+			});
+		});
+		asArray(env.themes).filter(hasUpdateTarget).forEach(theme => {
+			const target = updateTargetVersion(theme);
+			const current = firstDefined(theme.version, theme.current_version, '-');
+			rows.push({
+				title: esc(theme.title || theme.name || 'Theme'),
+				meta: esc(['Current ' + current, 'Available ' + target, theme.name || ''].filter(Boolean).join(' - ')),
+				aside: statusBadge('Theme'),
+				route,
+				ariaLabel: 'Manage theme update',
+			});
+		});
+		const reportedCount = Number(env.updates || 0) || (Number(env.plugin_updates || 0) + Number(env.theme_updates || 0));
+		const summary = rows.length ? formatNumber(rows.length) + ' pending update' + (rows.length === 1 ? '' : 's') : (reportedCount ? formatNumber(reportedCount) + ' updates reported' : 'No pending updates');
+		return `
+			<div class="feature-bar">
+				<div class="summary__sub">${esc(summary)} for ${esc(env.environment || 'environment')}</div>
+				${route ? '<a class="secondary-btn" href="' + attr(routeUrl(route)) + '" data-route="' + attr(route) + '">' + icons.plug + ' Manage Addons</a>' : ''}
+			</div>
+			${rows.length ? renderStackRows(rows, 'No pending updates detected.', { pageKey: 'drawer-updates-' + siteFeatureKey(siteId, env), label: 'updates' }) : renderEmpty(reportedCount ? 'Updates are reported, but component details are not available in this view.' : 'No pending updates detected.')}
+		`;
+	}
+
+	function renderDrawerBody(site, env, status) {
+		const active = state.drawerTab || 'overview';
+		const details = Object.assign({}, state.siteDetails[site.site_id]?.details || {});
+		if (active === 'backups') {
+			ensureSiteFeature('backups', site.site_id, env);
+			return renderSiteBackups(site, env);
+		}
+		if (active === 'updates') return renderDrawerUpdates(site, env);
+		if (active === 'logs') {
+			ensureSiteFeature('logs', site.site_id, env);
+			return renderSiteLogs(details, env, site);
+		}
+		return renderDrawerOverview(site, env, status);
+	}
+
+	function renderUserDrawer() {
+		const userId = state.drawer?.userId || '';
+		const bucket = userDetailBucket(userId);
+		const listUser = findRecord(state.users, userId, ['user_id', 'ID', 'id']) || {};
+		const user = Object.assign({}, listUser, bucket.details || {});
+		const name = userName(user);
+		const login = userLogin(user);
+		const email = firstDefined(user.email, user.user_email, '');
+		const created = firstDefined(user.created_at, user.user_registered, user.registered, '');
+		const roles = formatUserRoles(user);
+		const accounts = accountsForUser(user, bucket);
+		const accountRows = accounts.map(account => {
+			const accountId = recordId(account, ['account_id', 'id']);
+			const accountName = account.name || account.email || ('Account #' + accountId);
+			const meta = [account.status, account.email, accountId ? 'ID ' + accountId : ''].filter(Boolean).join(' - ');
+			return {
+				title: esc(accountName),
+				meta: esc(meta || 'Account access'),
+				aside: statusBadge(account.level || account.access_level || account.status || 'Access'),
+				route: accountId ? '/accounts/' + accountId : '',
+				ariaLabel: 'Open account ' + accountName,
+			};
+		});
+		drawerRegion.innerHTML = `
+			<div class="drawer__head">
+				<div class="drawer__preview user-drawer__avatar">${esc(initials(name))}</div>
+				<div>
+					<h2>${esc(name)}</h2>
+					<div class="summary__sub">${esc([login, email].filter(Boolean).join(' - ') || 'User')}</div>
+				</div>
+				<button class="drawer__close" type="button" data-action="close-drawer" aria-label="Close">${icons.close}</button>
+			</div>
+			<div class="drawer__body">
+				<div class="kv-grid">
+					<div class="kv"><div class="k">Full Name</div><div class="v">${esc(name)}</div></div>
+					<div class="kv"><div class="k">Email</div><div class="v">${esc(email || '-')}</div></div>
+					<div class="kv"><div class="k">Username</div><div class="v">${esc(login || '-')}</div></div>
+					<div class="kv"><div class="k">Created</div><div class="v">${esc(formatDate(created))}</div></div>
+					<div class="kv"><div class="k">Role</div><div class="v">${esc(roles || '-')}</div></div>
+					<div class="kv"><div class="k">User ID</div><div class="v">${esc(userId || '-')}</div></div>
+				</div>
+				${bucket.loading ? renderLoading('Loading user details') : ''}
+				${bucket.error ? '<div class="error-state"><div>' + esc(bucket.error) + '</div><button class="secondary-btn" type="button" data-action="refresh-user-drawer" data-user-id="' + attr(userId) + '">Retry</button></div>' : ''}
+				<div class="section-title">Account Access</div>
+				${!bucket.loading && !bucket.error ? renderStackRows(accountRows, bucket.loaded ? 'No account access assigned.' : 'Account access has not been loaded yet.', { pageKey: 'drawer-user-accounts-' + userId, label: 'accounts', perPage: 20 }) : ''}
+			</div>
+			<div class="drawer__cta">
+				<button class="primary-btn" type="button" data-action="open-user-form" data-user-id="${attr(userId)}">Edit User</button>
+				<button class="secondary-btn" type="button" data-action="refresh-user-drawer" data-user-id="${attr(userId)}">${bucket.loaded ? 'Refresh' : 'Load'} Details</button>
+			</div>
+		`;
+	}
+
 	function renderDrawer() {
 		const open = !!state.drawer;
 		drawerBackdrop.classList.toggle('open', open);
@@ -6344,10 +8741,17 @@ window.__CAPTAINCORE_V2__ = {
 			drawerRegion.innerHTML = '';
 			return;
 		}
+		if (state.drawer.type === 'user') {
+			renderUserDrawer();
+			return;
+		}
 		const { site, env } = findSiteAndEnv(state.drawer.siteId, state.drawer.envId);
 		if (!site || !env) return;
 		const shot = screenshotUrl(site, env, 800);
 		const status = environmentStatus(env);
+		const tabs = drawerTabs();
+		const active = tabs.some(tab => tab.key === state.drawerTab) ? state.drawerTab : 'overview';
+		state.drawerTab = active;
 		drawerRegion.innerHTML = `
 			<div class="drawer__head">
 				${shot ? '<img class="drawer__preview" src="' + attr(shot) + '" alt="">' : '<div class="drawer__preview"></div>'}
@@ -6358,24 +8762,10 @@ window.__CAPTAINCORE_V2__ = {
 				<button class="drawer__close" type="button" data-action="close-drawer" aria-label="Close">${icons.close}</button>
 			</div>
 			<nav class="drawer__tabs">
-				<button class="active" type="button">Overview</button>
-				<button type="button">Backups</button>
-				<button type="button">Updates</button>
-				<button type="button">Logs</button>
+				${tabs.map(tab => '<button class="' + (tab.key === active ? 'active' : '') + '" type="button" data-action="drawer-tab" data-tab="' + attr(tab.key) + '">' + esc(tab.label) + '</button>').join('')}
 			</nav>
 			<div class="drawer__body">
-				<div class="kv-grid">
-					<div class="kv"><div class="k">Visits</div><div class="v">${formatNumber(env.visits)}</div></div>
-					<div class="kv"><div class="k">Storage</div><div class="v">${formatStorage(env.storage)}</div></div>
-					<div class="kv"><div class="k">WordPress</div><div class="v">${esc(env.core || '-')}</div></div>
-					<div class="kv"><div class="k">PHP</div><div class="v">${esc(env.php_version || '-')}</div></div>
-				</div>
-				<div class="section-title">Status</div>
-				<div class="activity">
-					<div class="activity__row"><span class="dot ${status.dot}"></span><span>${esc(status.label)}</span><time>${esc(env.environment || '')}</time></div>
-					<div class="activity__row"><span class="dot"></span><span>${esc(formatUrl(env.home_url))}</span><time>URL</time></div>
-					<div class="activity__row"><span class="dot"></span><span>${formatNumber(env.subsite_count || 0)} subsites</span><time>Sites</time></div>
-				</div>
+				${renderDrawerBody(site, env, status)}
 			</div>
 			<div class="drawer__cta">
 				<a class="primary-btn" href="${attr(routeUrl('/sites/' + site.site_id))}" data-route="/sites/${attr(site.site_id)}">Manage</a>
@@ -6758,29 +9148,396 @@ window.__CAPTAINCORE_V2__ = {
 			`;
 			return;
 		}
-		if (state.modal === 'new-site') {
+		if (state.modal === 'dns-record') {
+			const form = state.domainRecordForm;
+			const title = form.mode === 'edit' ? 'Edit DNS Record' : 'Add DNS Record';
+			const typeOptions = ['A', 'AAAA', 'ANAME', 'CNAME', 'MX', 'SRV', 'TXT', 'SPF', 'HTTP'];
 			modalRegion.innerHTML = `
-				<form class="modal-card" data-action="create-site">
+				<form class="modal-card" data-action="save-dns-record">
 					<div class="modal-head">
-						<h2>New Site</h2>
+						<div>
+							<h2>${title}</h2>
+							<div class="summary__sub">${esc(dnsValueHelp(form.type))}</div>
+						</div>
 						<button class="icon-btn" type="button" data-action="close-modal" aria-label="Close">${icons.close}</button>
 					</div>
 					<div class="form-grid">
-						${state.newSite.errors ? '<div class="alert error">' + esc(state.newSite.errors) + '</div>' : ''}
-						<div class="form-field"><label for="new-site-name">Name</label><input id="new-site-name" name="name" value="${attr(state.newSite.name)}" required></div>
-						<div class="form-field"><label for="new-site-domain">Domain</label><input id="new-site-domain" name="domain" value="${attr(state.newSite.domain)}"></div>
-						<div class="form-field"><label for="new-site-slug">Site Slug</label><input id="new-site-slug" name="site" value="${attr(state.newSite.site)}"></div>
-						<div class="form-field"><label for="new-site-address">Server Address</label><input id="new-site-address" name="address" value="${attr(state.newSite.address)}"></div>
-						<div class="form-field"><label for="new-site-username">Username</label><input id="new-site-username" name="username" value="${attr(state.newSite.username)}"></div>
-						<div class="form-field"><label for="new-site-password">Password</label><input id="new-site-password" type="password" name="password" value="${attr(state.newSite.password)}"></div>
-						<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+						${form.error ? '<div class="alert error">' + esc(form.error) + '</div>' : ''}
+						<div class="form-field"><label for="dns-record-type">Type</label><select id="dns-record-type" name="type">${typeOptions.map(type => '<option value="' + attr(type) + '"' + (type === form.type ? ' selected' : '') + '>' + esc(type) + '</option>').join('')}</select></div>
+						<div class="form-field"><label for="dns-record-name">Name</label><input id="dns-record-name" name="name" value="${attr(form.name)}" placeholder="@"></div>
+						<div class="form-field"><label for="dns-record-value">Value</label><textarea id="dns-record-value" name="value" rows="5" spellcheck="false" required>${esc(form.value)}</textarea></div>
+						<div class="form-field"><label for="dns-record-ttl">TTL</label><input id="dns-record-ttl" name="ttl" type="number" min="60" step="1" value="${attr(form.ttl || 3600)}"></div>
+						<div style="display:flex;justify-content:flex-end;gap:8px">
 							<button class="secondary-btn" type="button" data-action="close-modal">Cancel</button>
-							<button class="primary-btn" type="submit">${state.newSite.loading ? 'Creating' : 'Create Site'}</button>
+							<button class="primary-btn" type="submit"${form.loading ? ' disabled' : ''}>${form.loading ? 'Saving' : 'Save Record'}</button>
 						</div>
 					</div>
 				</form>
 			`;
+			return;
 		}
+		if (state.modal === 'account-edit') {
+			const form = state.accountForm;
+			const id = form.accountId || routeId('accounts');
+			const data = state.accountDetails[id] || {};
+			const users = asArray(data.users);
+			modalRegion.innerHTML = `
+				<form class="modal-card" data-action="save-account">
+					<div class="modal-head">
+						<h2>Edit Account</h2>
+						<button class="icon-btn" type="button" data-action="close-modal" aria-label="Close">${icons.close}</button>
+					</div>
+					<div class="form-grid">
+						${form.error ? '<div class="alert error">' + esc(form.error) + '</div>' : ''}
+						<div class="form-field"><label for="account-name">Name</label><input id="account-name" name="name" value="${attr(form.name)}" required></div>
+						<div class="form-field"><label for="account-billing-user">Billing User</label><select id="account-billing-user" name="billing_user_id"><option value="">No billing user</option>${users.map(user => '<option value="' + attr(user.user_id || user.id) + '"' + (String(form.billing_user_id || '') === String(user.user_id || user.id || '') ? ' selected' : '') + '>' + esc([user.name || user.login, user.email].filter(Boolean).join(' - ')) + '</option>').join('')}</select></div>
+						<div style="display:flex;justify-content:flex-end;gap:8px">
+							<button class="secondary-btn" type="button" data-action="close-modal">Cancel</button>
+							<button class="primary-btn" type="submit"${form.loading ? ' disabled' : ''}>${form.loading ? 'Saving' : 'Save Account'}</button>
+						</div>
+					</div>
+				</form>
+			`;
+			return;
+		}
+		if (state.modal === 'account-invite') {
+			const form = state.accountInviteForm;
+			const levels = [
+				['full', 'Full access'],
+				['sites-only', 'Sites only'],
+				['domains-only', 'Domains only'],
+			];
+			modalRegion.innerHTML = `
+				<form class="modal-card" data-action="send-account-invite">
+					<div class="modal-head">
+						<h2>Invite User</h2>
+						<button class="icon-btn" type="button" data-action="close-modal" aria-label="Close">${icons.close}</button>
+					</div>
+					<div class="form-grid">
+						${form.error ? '<div class="alert error">' + esc(form.error) + '</div>' : ''}
+						<div class="form-field"><label for="account-invite-email">Email</label><input id="account-invite-email" name="email" type="email" value="${attr(form.email)}" required></div>
+						<div class="form-field"><label for="account-invite-level">Access Level</label><select id="account-invite-level" name="level">${levels.map(([value, label]) => '<option value="' + attr(value) + '"' + (value === form.level ? ' selected' : '') + '>' + esc(label) + '</option>').join('')}</select></div>
+						<div style="display:flex;justify-content:flex-end;gap:8px">
+							<button class="secondary-btn" type="button" data-action="close-modal">Cancel</button>
+							<button class="primary-btn" type="submit"${form.loading ? ' disabled' : ''}>${form.loading ? 'Sending' : 'Send Invite'}</button>
+						</div>
+					</div>
+				</form>
+			`;
+			return;
+		}
+		if (state.modal === 'recipe-form') {
+			const form = state.recipeForm;
+			modalRegion.innerHTML = `
+				<form class="modal-card" data-action="save-recipe">
+					<div class="modal-head">
+						<h2>${form.mode === 'edit' ? 'Edit Recipe' : 'New Recipe'}</h2>
+						<button class="icon-btn" type="button" data-action="close-modal" aria-label="Close">${icons.close}</button>
+					</div>
+					<div class="form-grid">
+						${form.error ? '<div class="alert error">' + esc(form.error) + '</div>' : ''}
+						<div class="form-field"><label for="recipe-title">Title</label><input id="recipe-title" name="title" value="${attr(form.title)}" required></div>
+						<div class="form-field"><label for="recipe-content">Content</label><textarea id="recipe-content" name="content" rows="12" spellcheck="false" required>${esc(form.content)}</textarea></div>
+						<label class="checkbox-line"><input type="checkbox" name="public" value="1" ${form.public ? 'checked' : ''}> Public recipe</label>
+						<div style="display:flex;justify-content:flex-end;gap:8px">
+							<button class="secondary-btn" type="button" data-action="close-modal">Cancel</button>
+							<button class="primary-btn" type="submit"${form.loading ? ' disabled' : ''}>${form.loading ? 'Saving' : 'Save Recipe'}</button>
+						</div>
+					</div>
+				</form>
+			`;
+			return;
+		}
+		if (state.modal === 'provider-form') {
+			const form = state.providerForm;
+			const providerOptions = ['', 'kinsta', 'gridpane', 'rocketdotnet', 'wpengine', 'cloudways', 'envato', 'other'];
+			modalRegion.innerHTML = `
+				<form class="modal-card" data-action="save-provider">
+					<div class="modal-head">
+						<h2>${form.mode === 'edit' ? 'Edit Provider' : 'Add Provider'}</h2>
+						<button class="icon-btn" type="button" data-action="close-modal" aria-label="Close">${icons.close}</button>
+					</div>
+					<div class="form-grid">
+						${form.error ? '<div class="alert error">' + esc(form.error) + '</div>' : ''}
+						<div class="form-field"><label for="provider-name">Name</label><input id="provider-name" name="name" value="${attr(form.name)}" required></div>
+						<div class="form-field"><label for="provider-type">Provider Type</label><select id="provider-type" name="provider">${providerOptions.map(value => '<option value="' + attr(value) + '"' + (value === form.provider ? ' selected' : '') + '>' + esc(value || 'Select provider') + '</option>').join('')}</select></div>
+						<div class="form-field"><label for="provider-credentials">Credentials JSON</label><textarea id="provider-credentials" name="credentials" rows="8" spellcheck="false">${esc(form.credentials)}</textarea></div>
+						<div style="display:flex;justify-content:flex-end;gap:8px">
+							<button class="secondary-btn" type="button" data-action="close-modal">Cancel</button>
+							<button class="primary-btn" type="submit"${form.loading ? ' disabled' : ''}>${form.loading ? 'Saving' : 'Save Provider'}</button>
+						</div>
+					</div>
+				</form>
+			`;
+			return;
+		}
+		if (state.modal === 'provider-import') {
+			const form = state.providerImport;
+			const selected = form.selected || new Set();
+			const accountOptions = state.accounts.map(account => '<option value="' + attr(account.account_id || account.id) + '"' + (String(form.accountId || '') === String(account.account_id || account.id || '') ? ' selected' : '') + '>' + esc(account.name || account.email || account.account_id || 'Account') + '</option>').join('');
+			const remoteRows = asArray(form.remoteSites).map((site, index) => {
+				const key = String(site.id || site.site_id || site.name || site.domain || index);
+				return {
+					html: '<label class="checkbox-line"><input type="checkbox" data-action="toggle-remote-site" data-remote-index="' + attr(index) + '" ' + (selected.has(key) ? 'checked' : '') + '> <span><strong>' + esc(site.name || site.domain || key) + '</strong><small>' + esc([site.domain, site.url, site.environment].filter(Boolean).join(' - ')) + '</small></span></label>',
+					aside: '',
+				};
+			});
+			modalRegion.innerHTML = `
+				<div class="modal-card" role="dialog" aria-modal="true" aria-label="Import provider sites">
+					<div class="modal-head">
+						<div>
+							<h2>Import Sites</h2>
+							<div class="summary__sub">${formatNumber(selected.size)} selected</div>
+						</div>
+						<button class="icon-btn" type="button" data-action="close-modal" aria-label="Close">${icons.close}</button>
+					</div>
+					<div class="form-grid">
+						${form.error ? '<div class="alert error">' + esc(form.error) + '</div>' : ''}
+						<div class="form-field"><label for="provider-import-account">Account</label><select id="provider-import-account" data-input="provider-import-account"><option value="">Select account</option>${accountOptions}</select></div>
+						${form.loading ? renderLoading('Loading remote sites') : renderStackRows(remoteRows, 'No remote sites found.', { pageKey: 'provider-import-sites', label: 'sites', perPage: 100 })}
+						<div style="display:flex;justify-content:flex-end;gap:8px">
+							<button class="secondary-btn" type="button" data-action="close-modal">Cancel</button>
+							<button class="primary-btn" type="button" data-action="import-provider-sites"${form.importing || !selected.size ? ' disabled' : ''}>${form.importing ? 'Importing' : 'Import Selected'}</button>
+						</div>
+					</div>
+				</div>
+			`;
+			return;
+		}
+		if (state.modal === 'key-form') {
+			const form = state.keyForm;
+			modalRegion.innerHTML = `
+				<form class="modal-card" data-action="save-key">
+					<div class="modal-head">
+						<h2>${form.mode === 'edit' ? 'Edit SSH Key' : 'Add SSH Key'}</h2>
+						<button class="icon-btn" type="button" data-action="close-modal" aria-label="Close">${icons.close}</button>
+					</div>
+					<div class="form-grid">
+						${form.error ? '<div class="alert error">' + esc(form.error) + '</div>' : ''}
+						<div class="form-field"><label for="key-title">Title</label><input id="key-title" name="title" value="${attr(form.title)}" required></div>
+						<div class="form-field"><label for="key-value">Public Key</label><textarea id="key-value" name="key" rows="8" spellcheck="false">${esc(form.key)}</textarea></div>
+						<div style="display:flex;justify-content:flex-end;gap:8px">
+							<button class="secondary-btn" type="button" data-action="close-modal">Cancel</button>
+							<button class="primary-btn" type="submit"${form.loading ? ' disabled' : ''}>${form.loading ? 'Saving' : 'Save Key'}</button>
+						</div>
+					</div>
+				</form>
+			`;
+			return;
+		}
+		if (state.modal === 'user-form') {
+			const form = state.userForm;
+			const selectedAccounts = asArray(form.account_ids);
+			modalRegion.innerHTML = `
+				<form class="modal-card" data-action="save-user">
+					<div class="modal-head">
+						<h2>${form.mode === 'edit' ? 'Edit User' : 'New User'}</h2>
+						<button class="icon-btn" type="button" data-action="close-modal" aria-label="Close">${icons.close}</button>
+					</div>
+					<div class="form-grid">
+						${renderErrorList(form.errors)}
+						<div class="form-field"><label for="user-first-name">First Name</label><input id="user-first-name" name="first_name" value="${attr(form.first_name)}"></div>
+						<div class="form-field"><label for="user-last-name">Last Name</label><input id="user-last-name" name="last_name" value="${attr(form.last_name)}"></div>
+						<div class="form-field"><label for="user-email">Email</label><input id="user-email" name="email" type="email" value="${attr(form.email)}" required></div>
+						<div class="form-field"><label for="user-login">Username</label><input id="user-login" name="login" value="${attr(form.login)}" ${form.mode === 'edit' ? 'readonly' : ''}></div>
+						<div class="form-field"><label for="user-accounts">Accounts</label><select id="user-accounts" name="account_ids" multiple size="8">${renderMultiOptions(state.accounts, selectedAccounts, ['account_id', 'id'], account => account.name || account.email || account.account_id || 'Account')}</select></div>
+						<div style="display:flex;justify-content:flex-end;gap:8px">
+							<button class="secondary-btn" type="button" data-action="close-modal">Cancel</button>
+							<button class="primary-btn" type="submit"${form.loading ? ' disabled' : ''}>${form.loading ? 'Saving' : 'Save User'}</button>
+						</div>
+					</div>
+				</form>
+			`;
+			return;
+		}
+		if (state.modal === 'process-form') {
+			const form = state.processForm;
+			const intervals = ['as-needed', 'daily', 'weekly', 'monthly', 'yearly'];
+			modalRegion.innerHTML = `
+				<form class="modal-card" data-action="save-process">
+					<div class="modal-head">
+						<h2>${form.mode === 'edit' ? 'Edit Process' : 'New Process'}</h2>
+						<button class="icon-btn" type="button" data-action="close-modal" aria-label="Close">${icons.close}</button>
+					</div>
+					<div class="form-grid">
+						${form.error ? '<div class="alert error">' + esc(form.error) + '</div>' : ''}
+						<div class="form-field"><label for="process-name">Name</label><input id="process-name" name="name" value="${attr(form.name)}" required></div>
+						<div class="form-field"><label for="process-time">Time Estimate</label><input id="process-time" name="time_estimate" value="${attr(form.time_estimate)}"></div>
+						<div class="form-field"><label for="process-roles">Roles</label><input id="process-roles" name="roles" value="${attr(form.roles)}"></div>
+						<div class="form-field"><label for="process-interval">Repeat Interval</label><select id="process-interval" name="repeat_interval">${intervals.map(value => '<option value="' + attr(value) + '"' + (value === form.repeat_interval ? ' selected' : '') + '>' + esc(value) + '</option>').join('')}</select></div>
+						<div class="form-field"><label for="process-repeat">Repeat Quantity</label><input id="process-repeat" name="repeat_quantity" value="${attr(form.repeat_quantity)}"></div>
+						<div class="form-field"><label for="process-description">Description</label><textarea id="process-description" name="description" rows="12">${esc(form.description)}</textarea></div>
+						<div style="display:flex;justify-content:flex-end;gap:8px">
+							<button class="secondary-btn" type="button" data-action="close-modal">Cancel</button>
+							<button class="primary-btn" type="submit"${form.loading ? ' disabled' : ''}>${form.loading ? 'Saving' : 'Save Process'}</button>
+						</div>
+					</div>
+				</form>
+			`;
+			return;
+		}
+		if (state.modal === 'process-view') {
+			const view = state.processView;
+			const process = view.process || {};
+			modalRegion.innerHTML = `
+				<div class="modal-card" role="dialog" aria-modal="true" aria-label="Handbook process">
+					<div class="modal-head">
+						<div>
+							<h2>${esc(process.name || process.title || 'Process')}</h2>
+							<div class="summary__sub">${esc([process.roles, process.time_estimate].filter(Boolean).join(' - '))}</div>
+						</div>
+						<button class="icon-btn" type="button" data-action="close-modal" aria-label="Close">${icons.close}</button>
+					</div>
+					${view.loading ? renderLoading('Loading process') : ''}
+					${view.error ? '<div class="alert error">' + esc(view.error) + '</div>' : ''}
+					${!view.loading ? '<div class="timeline-markdown">' + renderTimelineMarkdown(process.description || 'No description available.') + '</div>' : ''}
+					${isAdministrator() && process.process_id ? '<div style="display:flex;justify-content:flex-end;margin-top:16px"><button class="secondary-btn" type="button" data-action="open-process-form" data-process-id="' + attr(process.process_id) + '">Edit</button></div>' : ''}
+				</div>
+			`;
+			return;
+		}
+		if (state.modal === 'archive-store') {
+			const form = state.archiveStoreForm;
+			modalRegion.innerHTML = `
+				<form class="modal-card" data-action="store-archive">
+					<div class="modal-head">
+						<h2>Store Archive</h2>
+						<button class="icon-btn" type="button" data-action="close-modal" aria-label="Close">${icons.close}</button>
+					</div>
+					<div class="form-grid">
+						${form.error ? '<div class="alert error">' + esc(form.error) + '</div>' : ''}
+						<div class="form-field"><label for="archive-url">Zip URL</label><input id="archive-url" name="url" value="${attr(form.url)}" placeholder="https://example.com/site.zip" required></div>
+						<div style="display:flex;justify-content:flex-end;gap:8px">
+							<button class="secondary-btn" type="button" data-action="close-modal">Cancel</button>
+							<button class="primary-btn" type="submit"${form.loading ? ' disabled' : ''}>${form.loading ? 'Starting' : 'Store Archive'}</button>
+						</div>
+					</div>
+				</form>
+			`;
+			return;
+		}
+		if (state.modal === 'report-form') {
+			const form = state.reportForm;
+			const intervals = ['daily', 'weekly', 'monthly'];
+			const accountOptions = state.accounts.map(account => '<option value="' + attr(account.account_id || account.id) + '"' + (String(form.account_id || '') === String(account.account_id || account.id || '') ? ' selected' : '') + '>' + esc(account.name || account.email || account.account_id || 'Account') + '</option>').join('');
+			const selectedSites = String(form.site_ids || '').split(',').map(value => value.trim()).filter(Boolean);
+			modalRegion.innerHTML = `
+				<form class="modal-card" data-action="save-report">
+					<div class="modal-head">
+						<h2>${form.mode === 'edit' ? 'Edit Scheduled Report' : 'New Scheduled Report'}</h2>
+						<button class="icon-btn" type="button" data-action="close-modal" aria-label="Close">${icons.close}</button>
+					</div>
+					<div class="form-grid">
+						${form.error ? '<div class="alert error">' + esc(form.error) + '</div>' : ''}
+						<div class="form-field"><label for="report-recipient">Recipient</label><input id="report-recipient" name="recipient" type="email" value="${attr(form.recipient)}" required></div>
+						<div class="form-field"><label for="report-interval">Interval</label><select id="report-interval" name="interval">${intervals.map(value => '<option value="' + attr(value) + '"' + (value === form.interval ? ' selected' : '') + '>' + esc(value) + '</option>').join('')}</select></div>
+						<div class="form-field"><label for="report-account">Account</label><select id="report-account" name="account_id"><option value="">Specific sites</option>${accountOptions}</select></div>
+						<div class="form-field"><label for="report-sites">Sites</label><select id="report-sites" name="site_ids" multiple size="10">${renderMultiOptions(state.sites, selectedSites, ['site_id', 'id'], site => site.name || site.site || site.domain || site.site_id || 'Site')}</select></div>
+						<div style="display:flex;justify-content:flex-end;gap:8px">
+							<button class="secondary-btn" type="button" data-action="close-modal">Cancel</button>
+							<button class="primary-btn" type="submit"${form.loading ? ' disabled' : ''}>${form.loading ? 'Saving' : 'Save Report'}</button>
+						</div>
+					</div>
+				</form>
+			`;
+			return;
+		}
+		if (state.modal === 'site-audit-request') {
+			const form = state.siteAuditRequest;
+			const siteOptions = state.sites.map(site => '<option value="' + attr(site.site_id || site.id) + '"' + (String(form.site_id || '') === String(site.site_id || site.id || '') ? ' selected' : '') + '>' + esc(site.name || site.site || site.domain || site.site_id || 'Site') + '</option>').join('');
+			const envOptions = asArray(form.environments).map(env => '<option value="' + attr(env.environment_id || env.id) + '"' + (String(form.environment_id || '') === String(env.environment_id || env.id || '') ? ' selected' : '') + '>' + esc(env.environment || env.name || env.environment_id || 'Environment') + '</option>').join('');
+			modalRegion.innerHTML = `
+				<form class="modal-card" data-action="request-site-audit">
+					<div class="modal-head">
+						<h2>Request Site Audit</h2>
+						<button class="icon-btn" type="button" data-action="close-modal" aria-label="Close">${icons.close}</button>
+					</div>
+					<div class="form-grid">
+						${form.error ? '<div class="alert error">' + esc(form.error) + '</div>' : ''}
+						<div class="form-field"><label for="audit-site">Site</label><select id="audit-site" name="site_id" data-input="site-audit-site" required><option value="">Select site</option>${siteOptions}</select></div>
+						<div class="form-field"><label for="audit-env">Environment</label><select id="audit-env" name="environment_id" required ${form.loading ? 'disabled' : ''}><option value="">${form.loading ? 'Loading environments' : 'Select environment'}</option>${envOptions}</select></div>
+						<div class="form-field"><label for="audit-type">Report Type</label><select id="audit-type" name="report_type"><option value="security_audit" ${form.report_type === 'security_audit' ? 'selected' : ''}>Security Audit</option><option value="performance_audit" ${form.report_type === 'performance_audit' ? 'selected' : ''}>Performance Audit</option></select></div>
+						<div class="form-field"><label for="audit-notes">Notes</label><textarea id="audit-notes" name="notes" rows="5">${esc(form.notes)}</textarea></div>
+						<div style="display:flex;justify-content:flex-end;gap:8px">
+							<button class="secondary-btn" type="button" data-action="close-modal">Cancel</button>
+							<button class="primary-btn" type="submit"${form.submitting ? ' disabled' : ''}>${form.submitting ? 'Submitting' : 'Submit Request'}</button>
+						</div>
+					</div>
+				</form>
+			`;
+			return;
+		}
+		if (state.modal === 'new-domain') {
+			const form = state.newDomain;
+			const accountOptions = state.accounts.map(account => '<option value="' + attr(account.account_id || account.id) + '"' + (String(form.account_id || '') === String(account.account_id || account.id || '') ? ' selected' : '') + '>' + esc(account.name || account.email || account.account_id || 'Account') + '</option>').join('');
+			const siteOptions = state.sites.map(site => '<option value="' + attr(site.site_id || site.id) + '"' + (String(form.site_id || '') === String(site.site_id || site.id || '') ? ' selected' : '') + '>' + esc(site.name || site.site || site.domain || site.site_id || 'Site') + '</option>').join('');
+			modalRegion.innerHTML = `
+				<form class="modal-card" data-action="create-domain">
+					<div class="modal-head">
+						<h2>Add Domain</h2>
+						<button class="icon-btn" type="button" data-action="close-modal" aria-label="Close">${icons.close}</button>
+					</div>
+					<div class="form-grid">
+						${renderErrorList(form.errors)}
+						<div class="form-field"><label for="new-domain-name">Domain Name</label><input id="new-domain-name" name="name" value="${attr(form.name)}" placeholder="example.com" required></div>
+						${isAdministrator() ? `
+							<div class="form-field"><label for="new-domain-account">Account</label><select id="new-domain-account" name="account_id" required ${state.loading.accounts ? 'disabled' : ''}><option value="">${state.loading.accounts ? 'Loading accounts' : 'Select account'}</option>${accountOptions}</select></div>
+						` : `
+							<div class="form-field"><label for="new-domain-site">Website</label><select id="new-domain-site" name="site_id" required ${state.loading.sites ? 'disabled' : ''}><option value="">${state.loading.sites ? 'Loading sites' : 'Select website'}</option>${siteOptions}</select></div>
+						`}
+						<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="create_dns_zone" value="1" ${form.create_dns_zone ? 'checked' : ''}> Create DNS zone</label>
+						<div style="display:flex;justify-content:flex-end;gap:8px">
+							<button class="secondary-btn" type="button" data-action="close-modal">Cancel</button>
+							<button class="primary-btn" type="submit"${form.loading ? ' disabled' : ''}>${form.loading ? 'Adding' : 'Add Domain'}</button>
+						</div>
+					</div>
+				</form>
+			`;
+			return;
+		}
+			if (state.modal === 'new-account') {
+				const form = state.newAccount;
+				modalRegion.innerHTML = `
+					<form class="modal-card" data-action="create-account">
+						<div class="modal-head">
+							<h2>Add Account</h2>
+							<button class="icon-btn" type="button" data-action="close-modal" aria-label="Close">${icons.close}</button>
+						</div>
+						<div class="form-grid">
+							${form.error ? '<div class="alert error">' + esc(form.error) + '</div>' : ''}
+							<div class="form-field"><label for="new-account-name">Name</label><input id="new-account-name" name="name" value="${attr(form.name)}" required></div>
+							<div style="display:flex;justify-content:flex-end;gap:8px">
+								<button class="secondary-btn" type="button" data-action="close-modal">Cancel</button>
+								<button class="primary-btn" type="submit"${form.loading ? ' disabled' : ''}>${form.loading ? 'Adding' : 'Add Account'}</button>
+							</div>
+						</div>
+					</form>
+				`;
+				return;
+			}
+			if (state.modal === 'new-site') {
+				modalRegion.innerHTML = `
+					<form class="modal-card" data-action="create-site">
+						<div class="modal-head">
+							<h2>New Site</h2>
+							<button class="icon-btn" type="button" data-action="close-modal" aria-label="Close">${icons.close}</button>
+						</div>
+						<div class="form-grid">
+							${state.newSite.errors ? '<div class="alert error">' + esc(state.newSite.errors) + '</div>' : ''}
+							<div class="form-field"><label for="new-site-name">Name</label><input id="new-site-name" name="name" value="${attr(state.newSite.name)}" required></div>
+							<div class="form-field"><label for="new-site-domain">Domain</label><input id="new-site-domain" name="domain" value="${attr(state.newSite.domain)}"></div>
+							<div class="form-field"><label for="new-site-slug">Site Slug</label><input id="new-site-slug" name="site" value="${attr(state.newSite.site)}"></div>
+							<div class="form-field"><label for="new-site-address">Server Address</label><input id="new-site-address" name="address" value="${attr(state.newSite.address)}"></div>
+							<div class="form-field"><label for="new-site-username">Username</label><input id="new-site-username" name="username" value="${attr(state.newSite.username)}"></div>
+							<div class="form-field"><label for="new-site-password">Password</label><input id="new-site-password" type="password" name="password" value="${attr(state.newSite.password)}"></div>
+							<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+								<button class="secondary-btn" type="button" data-action="close-modal">Cancel</button>
+								<button class="primary-btn" type="submit">${state.newSite.loading ? 'Creating' : 'Create Site'}</button>
+							</div>
+						</div>
+					</form>
+				`;
+			}
 	}
 
 	function showToast(message) {
@@ -6790,9 +9547,79 @@ window.__CAPTAINCORE_V2__ = {
 		showToast.timer = setTimeout(() => toastRegion.classList.remove('visible'), 2600);
 	}
 
+	function renderPreservingScroll() {
+		const x = window.scrollX;
+		const y = window.scrollY;
+		render();
+		requestAnimationFrame(() => window.scrollTo(x, y));
+	}
+
 	function getFilterOptions(type) {
 		if (type === 'core') return CC.site_filters_core || [];
 		return (CC.site_filters || []).filter(f => f.type === type);
+	}
+
+	function filterEndpointNames() {
+		return selectedComponentFilters().map(item => item.name).filter(Boolean);
+	}
+
+	function encodeFilterNames(names) {
+		return names.map(name => encodeURIComponent(name).replace(/%2C/gi, ',')).join(',');
+	}
+
+	function normalizeSelectedFilter(item) {
+		return Object.assign({}, item, {
+			selected_versions: asArray(item.selected_versions),
+			selected_statuses: asArray(item.selected_statuses),
+		});
+	}
+
+	function selectedFilterPayload(items) {
+		return items.map(({ name, title, search, type }) => ({ name, title, search, type }));
+	}
+
+	function selectedVersionPayload() {
+		return selectedSecondaryFilters('version').map(({ name, slug, type, count }) => ({ name, slug, type, count }));
+	}
+
+	function selectedStatusPayload() {
+		return selectedSecondaryFilters('status').map(({ name, slug, type, count }) => ({ name, slug, type, count }));
+	}
+
+	async function loadSecondaryFilterOptions() {
+		const names = filterEndpointNames();
+		if (!names.length) {
+			state.siteFilterVersions = [];
+			state.siteFilterStatuses = [];
+			state.filterOptionsLoading = false;
+			state.filterOptionsError = '';
+			render();
+			return;
+		}
+		const requestKey = names.join('|');
+		state.filterOptionsLoading = true;
+		state.filterOptionsError = '';
+		render();
+		try {
+			const encoded = encodeFilterNames(names);
+			const [versions, statuses] = await Promise.all([
+				apiFetch('/wp-json/captaincore/v1/filters/' + encoded + '/versions/'),
+				apiFetch('/wp-json/captaincore/v1/filters/' + encoded + '/statuses/'),
+			]);
+			if (requestKey !== filterEndpointNames().join('|')) return;
+			state.siteFilterVersions = asArray(versions);
+			state.siteFilterStatuses = asArray(statuses);
+		} catch (error) {
+			if (requestKey !== filterEndpointNames().join('|')) return;
+			state.siteFilterVersions = [];
+			state.siteFilterStatuses = [];
+			state.filterOptionsError = error.message || 'Unable to load filter options.';
+		} finally {
+			if (requestKey === filterEndpointNames().join('|')) {
+				state.filterOptionsLoading = false;
+				render();
+			}
+		}
 	}
 
 	async function applyFilters() {
@@ -6802,26 +9629,31 @@ window.__CAPTAINCORE_V2__ = {
 			render();
 			return;
 		}
+		const requestId = ++state.filterRequestId;
 		try {
 			const payload = {
-				logic: 'and',
-				version_logic: 'and',
-				status_logic: 'and',
-				themes: state.selectedThemes.map(({ name, title, search, type }) => ({ name, title, search, type })),
-				plugins: state.selectedPlugins.map(({ name, title, search, type }) => ({ name, title, search, type })),
+				logic: state.filterLogic,
+				version_logic: state.filterVersionLogic,
+				status_logic: state.filterStatusLogic,
+				version_mode: state.filterVersionMode,
+				status_mode: state.filterStatusMode,
+				themes: selectedFilterPayload(state.selectedThemes),
+				plugins: selectedFilterPayload(state.selectedPlugins),
 				core: state.selectedCore.map(item => item.name),
-				versions: [],
-				statuses: [],
+				versions: selectedVersionPayload(),
+				statuses: selectedStatusPayload(),
 				backup_mode: null,
 			};
 			const data = await apiFetch('/wp-json/captaincore/v1/filters/sites', {
 				method: 'POST',
 				body: JSON.stringify(payload),
 			});
+			if (requestId !== state.filterRequestId) return;
 			const results = Array.isArray(data.results) ? data.results : [];
 			state.filteredSiteIds = new Set(results.map(item => item.site_id));
 			state.filteredEnvIds = new Set(results.map(item => item.environment_id));
 		} catch (error) {
+			if (requestId !== state.filterRequestId) return;
 			showToast('Filter request failed.');
 			state.filteredSiteIds = null;
 			state.filteredEnvIds = null;
@@ -6833,10 +9665,42 @@ window.__CAPTAINCORE_V2__ = {
 		const key = type === 'core' ? 'selectedCore' : (type === 'themes' ? 'selectedThemes' : 'selectedPlugins');
 		const idx = state[key].findIndex(existing => existing.name === item.name);
 		if (idx >= 0) state[key].splice(idx, 1);
-		else state[key].push(item);
+		else state[key].push(normalizeSelectedFilter(item));
+		state.page = 1;
+		state.pages = {};
+		loadSecondaryFilterOptions();
+		applyFilters();
+	}
+
+	function findSelectedComponentFilter(type, name) {
+		const list = type === 'themes' ? state.selectedThemes : state.selectedPlugins;
+		return list.find(item => item.name === name);
+	}
+
+	function toggleSecondaryFilterOption(kind, type, name, index) {
+		const filter = findSelectedComponentFilter(type, name);
+		if (!filter) return;
+		const options = kind === 'status' ? getStatusesForFilter(name) : getVersionsForFilter(name);
+		const option = options[Number(index)];
+		if (!option) return;
+		const key = kind === 'status' ? 'selected_statuses' : 'selected_versions';
+		filter[key] = asArray(filter[key]);
+		const idx = filter[key].findIndex(item => item.name === option.name && item.slug === option.slug && item.type === option.type);
+		if (idx >= 0) filter[key].splice(idx, 1);
+		else filter[key].push(option);
 		state.page = 1;
 		state.pages = {};
 		applyFilters();
+		render();
+	}
+
+	function setFilterOperator(field, value) {
+		if (!['and', 'or', 'include', 'exclude'].includes(value)) return;
+		state[field] = value;
+		state.page = 1;
+		state.pages = {};
+		applyFilters();
+		render();
 	}
 
 	function selectedRows() {
@@ -6949,7 +9813,434 @@ window.__CAPTAINCORE_V2__ = {
 		}
 	}
 
-	async function scheduleTerminalScript(form) {
+	function openNewDomain() {
+		state.newDomain = { name: '', account_id: '', site_id: '', create_dns_zone: true, loading: false, errors: [] };
+		state.modal = 'new-domain';
+		render();
+		if (isAdministrator()) loadCollection('accounts', '/wp-json/captaincore/v1/accounts/');
+		else loadCollection('sites', '/wp-json/captaincore/v1/sites');
+	}
+
+	async function createDomain(form) {
+		const name = form.name.value.trim();
+		const accountId = form.account_id ? form.account_id.value : '';
+		const siteId = form.site_id ? form.site_id.value : '';
+		const errors = [];
+		if (!name) errors.push("Domain can't be empty.");
+		if (isAdministrator() && !accountId) errors.push("Account can't be empty.");
+		if (!isAdministrator() && !siteId) errors.push('Website must be selected.');
+		if (errors.length) {
+			state.newDomain.errors = errors;
+			render();
+			return;
+		}
+		state.newDomain = {
+			name,
+			account_id: accountId,
+			site_id: siteId,
+			create_dns_zone: !!form.create_dns_zone?.checked,
+			loading: true,
+			errors: [],
+		};
+		render();
+		const payload = {
+			name,
+			create_dns_zone: state.newDomain.create_dns_zone,
+		};
+		if (isAdministrator()) payload.account_id = accountId;
+		else payload.site_id = siteId;
+		try {
+			const response = await apiFetch('/wp-json/captaincore/v1/domains', {
+				method: 'POST',
+				body: JSON.stringify(payload),
+			});
+			if (response?.errors) {
+				state.newDomain.loading = false;
+				state.newDomain.errors = response.errors;
+				render();
+				return;
+			}
+			state.modal = null;
+			state.newDomain = { name: '', account_id: '', site_id: '', create_dns_zone: true, loading: false, errors: [] };
+			state.fetched.domains = false;
+			await loadCollection('domains', '/wp-json/captaincore/v1/domains/', true);
+			showToast('Domain added.');
+		} catch (error) {
+			state.newDomain.loading = false;
+			state.newDomain.errors = normalizeErrors(error.payload?.details || error.payload || error.message || 'Unable to add domain.');
+			render();
+		}
+	}
+
+	function openNewAccount() {
+		state.newAccount = { name: '', loading: false, error: '' };
+		state.modal = 'new-account';
+		render();
+	}
+
+	async function createAccount(form) {
+		const name = form.name.value.trim();
+		if (!name) {
+			state.newAccount.error = 'Account name is required.';
+			render();
+			return;
+		}
+		state.newAccount = { name, loading: true, error: '' };
+		render();
+		try {
+			await apiFetch('/wp-json/captaincore/v1/accounts/', {
+				method: 'POST',
+				body: JSON.stringify({ name }),
+			});
+			state.modal = null;
+			state.newAccount = { name: '', loading: false, error: '' };
+			state.fetched.accounts = false;
+			await loadCollection('accounts', '/wp-json/captaincore/v1/accounts/', true);
+			showToast('Account added.');
+		} catch (error) {
+			state.newAccount.loading = false;
+			state.newAccount.error = error.message || 'Unable to add account.';
+			render();
+		}
+	}
+
+	function currentDomainDetail() {
+		const id = routeId('domains');
+		return state.domainDetails[id] || null;
+	}
+
+	function findDnsRecord(recordId) {
+		const data = currentDomainDetail();
+		return asArray(data?.records).find(record => String(dnsRecordId(record)) === String(recordId));
+	}
+
+	function openDnsRecordForm(recordId) {
+		const id = routeId('domains');
+		const record = recordId ? findDnsRecord(recordId) : null;
+		state.domainRecordForm = {
+			mode: record ? 'edit' : 'create',
+			domainId: id,
+			recordId: record ? dnsRecordId(record) : '',
+			type: record ? dnsRecordType(record) : 'A',
+			name: record ? dnsRecordName(record) : '',
+			value: record ? dnsRecordFormValue(record) : '',
+			ttl: String(record ? dnsRecordTtl(record) : 3600),
+			loading: false,
+			error: '',
+		};
+		state.modal = 'dns-record';
+		render();
+	}
+
+	async function saveDnsRecord(form) {
+		const recordForm = state.domainRecordForm;
+		const domainId = recordForm.domainId || routeId('domains');
+		const type = String(form.type.value || 'A').toUpperCase();
+		const valueText = form.value.value.trim();
+		if (!domainId || !valueText) {
+			state.domainRecordForm.error = 'Record value is required.';
+			render();
+			return;
+		}
+		state.domainRecordForm = Object.assign({}, recordForm, {
+			type,
+			name: form.name.value.trim(),
+			value: form.value.value,
+			ttl: form.ttl.value || '3600',
+			loading: true,
+			error: '',
+		});
+		render();
+		const payload = {
+			type,
+			name: state.domainRecordForm.name,
+			value: parseDnsRecordValue(type, valueText),
+			ttl: Number(state.domainRecordForm.ttl) || 3600,
+		};
+		const editing = recordForm.mode === 'edit' && recordForm.recordId;
+		const endpoint = '/wp-json/captaincore/v1/dns/' + encodeURIComponent(domainId) + '/records' + (editing ? '/' + encodeURIComponent(recordForm.recordId) : '');
+		try {
+			await apiFetch(endpoint, {
+				method: editing ? 'PUT' : 'POST',
+				body: JSON.stringify(payload),
+			});
+			state.modal = null;
+			state.domainRecordForm.loading = false;
+			await loadDomainDetail(domainId, true);
+			showToast(editing ? 'DNS record updated.' : 'DNS record added.');
+		} catch (error) {
+			state.domainRecordForm.error = error.message || 'Unable to save DNS record.';
+			state.domainRecordForm.loading = false;
+			render();
+		}
+	}
+
+	async function deleteDnsRecord(recordId) {
+		const domainId = routeId('domains');
+		const record = findDnsRecord(recordId);
+		if (!domainId || !recordId || !window.confirm('Delete DNS record ' + dnsRecordType(record) + ' ' + (dnsRecordName(record) || '@') + '?')) return;
+		const loadingKey = 'dns-delete:' + recordId;
+		state.actionLoading[loadingKey] = true;
+		render();
+		try {
+			await apiFetch('/wp-json/captaincore/v1/dns/' + encodeURIComponent(domainId) + '/records/' + encodeURIComponent(recordId), {
+				method: 'DELETE',
+			});
+			await loadDomainDetail(domainId, true);
+			showToast('DNS record deleted.');
+		} catch (error) {
+			showToast(error.message || 'Unable to delete DNS record.');
+		} finally {
+			state.actionLoading[loadingKey] = false;
+			render();
+		}
+	}
+
+	async function activateDnsZone(domainId) {
+		const id = domainId || routeId('domains');
+		if (!id) return;
+		const loadingKey = 'dns-zone-activate:' + id;
+		state.actionLoading[loadingKey] = true;
+		render();
+		try {
+			await apiFetch('/wp-json/captaincore/v1/domain/' + encodeURIComponent(id) + '/activate-dns-zone', { method: 'POST' });
+			await loadDomainDetail(id, true);
+			state.fetched.domains = false;
+			showToast('DNS zone activated.');
+		} catch (error) {
+			showToast(error.message || 'Unable to activate DNS zone.');
+		} finally {
+			state.actionLoading[loadingKey] = false;
+			render();
+		}
+	}
+
+	async function deleteDnsZone(domainId) {
+		const id = domainId || routeId('domains');
+		if (!id || !window.confirm('Delete this DNS zone? DNS records for the zone will be removed from the DNS provider.')) return;
+		const loadingKey = 'dns-zone-delete:' + id;
+		state.actionLoading[loadingKey] = true;
+		render();
+		try {
+			await apiFetch('/wp-json/captaincore/v1/domain/' + encodeURIComponent(id) + '/dns-zone', { method: 'DELETE' });
+			await loadDomainDetail(id, true);
+			state.fetched.domains = false;
+			showToast('DNS zone deleted.');
+		} catch (error) {
+			showToast(error.message || 'Unable to delete DNS zone.');
+		} finally {
+			state.actionLoading[loadingKey] = false;
+			render();
+		}
+	}
+
+	async function deleteDomain(domainId) {
+		const id = domainId || routeId('domains');
+		const data = state.domainDetails[id];
+		const name = data?.domain?.name || 'this domain';
+		if (!id || !window.confirm('Delete ' + name + '? This removes the domain and its DNS records.')) return;
+		try {
+			await apiFetch('/wp-json/captaincore/v1/domains/' + encodeURIComponent(id), { method: 'DELETE' });
+			delete state.domainDetails[id];
+			state.fetched.domains = false;
+			await loadCollection('domains', '/wp-json/captaincore/v1/domains/', true);
+			navTo('/domains');
+			showToast('Domain deleted.');
+		} catch (error) {
+			showToast(error.message || 'Unable to delete domain.');
+		}
+	}
+
+	async function fetchDomainAuthCode(domainId) {
+		const id = domainId || routeId('domains');
+		if (!id) return;
+		const loadingKey = 'domain-auth-code:' + id;
+		state.actionLoading[loadingKey] = true;
+		render();
+		try {
+			const payload = await apiFetch('/wp-json/captaincore/v1/domain/' + encodeURIComponent(id) + '/auth_code');
+			state.revealedSecrets[loadingKey] = typeof payload === 'string' ? payload : JSON.stringify(payload);
+		} catch (error) {
+			showToast(error.message || 'Unable to retrieve auth code.');
+		} finally {
+			state.actionLoading[loadingKey] = false;
+			render();
+		}
+	}
+
+	function openAccountEdit() {
+		const id = routeId('accounts');
+		const data = state.accountDetails[id] || {};
+		const account = data.account || data || {};
+		state.accountForm = {
+			accountId: id,
+			name: account.name || '',
+			billing_user_id: firstDefined(account.billing_user_id, account.plan?.billing_user_id, ''),
+			loading: false,
+			error: '',
+		};
+		state.modal = 'account-edit';
+		render();
+	}
+
+	async function saveAccount(form) {
+		const id = state.accountForm.accountId || routeId('accounts');
+		if (!id || !form.name.value.trim()) {
+			state.accountForm.error = 'Account name is required.';
+			render();
+			return;
+		}
+		state.accountForm = Object.assign({}, state.accountForm, {
+			name: form.name.value.trim(),
+			billing_user_id: form.billing_user_id.value,
+			loading: true,
+			error: '',
+		});
+		render();
+		try {
+			await apiFetch('/wp-json/captaincore/v1/accounts/' + encodeURIComponent(id), {
+				method: 'PUT',
+				body: JSON.stringify({
+					account: {
+						name: state.accountForm.name,
+						billing_user_id: state.accountForm.billing_user_id,
+					},
+				}),
+			});
+			state.modal = null;
+			state.accountForm.loading = false;
+			state.fetched.accounts = false;
+			await loadAccountDetail(id, true);
+			showToast('Account updated.');
+		} catch (error) {
+			state.accountForm.error = error.message || 'Unable to update account.';
+			state.accountForm.loading = false;
+			render();
+		}
+	}
+
+	function openAccountInvite() {
+		const id = routeId('accounts');
+		state.accountInviteForm = { accountId: id, email: '', level: 'full', loading: false, error: '' };
+		state.modal = 'account-invite';
+		render();
+	}
+
+	async function sendAccountInvite(form) {
+		const id = state.accountInviteForm.accountId || routeId('accounts');
+		const email = form.email.value.trim();
+		const level = form.level.value || 'full';
+		if (!id || !email) {
+			state.accountInviteForm.error = 'Email is required.';
+			render();
+			return;
+		}
+		state.accountInviteForm = { accountId: id, email, level, loading: true, error: '' };
+		render();
+		try {
+			await apiFetch('/wp-json/captaincore/v1/accounts/' + encodeURIComponent(id) + '/invites', {
+				method: 'POST',
+				body: JSON.stringify({ invite: email, level }),
+			});
+			state.modal = null;
+			state.accountInviteForm.loading = false;
+			await loadAccountDetail(id, true);
+			showToast('Invite sent.');
+		} catch (error) {
+			state.accountInviteForm.error = error.message || 'Unable to send invite.';
+			state.accountInviteForm.loading = false;
+			render();
+		}
+	}
+
+		async function deleteAccountInvite(inviteId) {
+			const id = routeId('accounts');
+			if (!id || !inviteId || !window.confirm('Delete this pending invite?')) return;
+			try {
+			await apiFetch('/wp-json/captaincore/v1/accounts/' + encodeURIComponent(id) + '/invites/' + encodeURIComponent(inviteId), {
+				method: 'DELETE',
+			});
+			await loadAccountDetail(id, true);
+			showToast('Invite deleted.');
+		} catch (error) {
+				showToast(error.message || 'Unable to delete invite.');
+			}
+		}
+
+		function currentAccountDetail() {
+			const id = routeId('accounts');
+			return state.accountDetails[id] || null;
+		}
+
+		function findAccountUser(userId) {
+			const data = currentAccountDetail();
+			return asArray(data?.users).find(user => String(accountUserId(user)) === String(userId));
+		}
+
+		async function updateAccountUserLevel(userId, level) {
+			const id = routeId('accounts');
+			if (!id || !userId || !level) return;
+			const loadingKey = 'account-user-level:' + userId;
+			state.actionLoading[loadingKey] = true;
+			render();
+			try {
+				await apiFetch('/wp-json/captaincore/v1/accounts/' + encodeURIComponent(id) + '/users/' + encodeURIComponent(userId) + '/level', {
+					method: 'PUT',
+					body: JSON.stringify({ level }),
+				});
+				await loadAccountDetail(id, true);
+				showToast(level === 'full-billing' ? 'Ownership transferred.' : 'Access level updated.');
+			} catch (error) {
+				showToast(error.message || 'Unable to update access level.');
+			} finally {
+				state.actionLoading[loadingKey] = false;
+				render();
+			}
+		}
+
+		function transferAccountOwner(userId) {
+			const user = findAccountUser(userId);
+			const label = [user?.name || user?.login, user?.email].filter(Boolean).join(' ') || 'this user';
+			if (!window.confirm('Transfer account ownership to ' + label + '?')) return;
+			updateAccountUserLevel(userId, 'full-billing');
+		}
+
+		async function removeAccountUser(userId) {
+			const id = routeId('accounts');
+			const user = findAccountUser(userId);
+			const label = [user?.name || user?.login, user?.email].filter(Boolean).join(' ') || 'this user';
+			if (!id || !userId || !window.confirm('Remove access for ' + label + '?')) return;
+			try {
+				await apiFetch('/wp-json/captaincore/v1/accounts/' + encodeURIComponent(id) + '/users/' + encodeURIComponent(userId), {
+					method: 'DELETE',
+				});
+				await loadAccountDetail(id, true);
+				state.fetched.accounts = false;
+				showToast('User access removed.');
+			} catch (error) {
+				showToast(error.message || 'Unable to remove user.');
+			}
+		}
+
+		async function deleteAccount(accountId) {
+			const id = accountId || routeId('accounts');
+			const data = state.accountDetails[id];
+			const account = data?.account || data || {};
+			const name = account.name || 'this account';
+			if (!id || !window.confirm('Delete account ' + name + '?')) return;
+			try {
+				await apiFetch('/wp-json/captaincore/v1/accounts/' + encodeURIComponent(id), { method: 'DELETE' });
+				delete state.accountDetails[id];
+				state.fetched.accounts = false;
+				await loadCollection('accounts', '/wp-json/captaincore/v1/accounts/', true);
+				navTo('/accounts');
+				showToast('Account deleted.');
+			} catch (error) {
+				showToast(error.message || 'Unable to delete account.');
+			}
+		}
+
+		async function scheduleTerminalScript(form) {
 		const code = state.terminal.command.trim();
 		const targets = state.terminal.selectedTargets;
 		if (!code || !targets.length) {
@@ -7023,6 +10314,824 @@ window.__CAPTAINCORE_V2__ = {
 		}
 	}
 
+	function selectedValues(select) {
+		return select ? Array.from(select.selectedOptions).map(option => option.value).filter(Boolean) : [];
+	}
+
+	function refreshKey(key, loader) {
+		state.fetched[key] = false;
+		return loader(true);
+	}
+
+	function openRecipeForm(recipeId = '') {
+		const recipe = recipeId ? findRecord(state.recipes, recipeId, ['recipe_id', 'id']) : null;
+		state.recipeForm = {
+			mode: recipe ? 'edit' : 'create',
+			recipeId: recipeId || '',
+			title: recipe?.title || '',
+			content: recipe?.content || '',
+			public: recipe ? !!Number(recipe.public) || recipe.public === true : true,
+			loading: false,
+			error: '',
+		};
+		state.modal = 'recipe-form';
+		render();
+	}
+
+	async function saveRecipe(form) {
+		const payload = {
+			title: form.title.value.trim(),
+			content: form.content.value,
+			public: form.public && form.public.checked ? 1 : 0,
+		};
+		if (!payload.title || !payload.content.trim()) {
+			state.recipeForm.error = 'Title and content are required.';
+			render();
+			return;
+		}
+		state.recipeForm.loading = true;
+		state.recipeForm.error = '';
+		render();
+		try {
+			const endpoint = state.recipeForm.mode === 'edit'
+				? '/wp-json/captaincore/v1/recipes/' + encodeURIComponent(state.recipeForm.recipeId)
+				: '/wp-json/captaincore/v1/recipes';
+			const data = await apiFetch(endpoint, {
+				method: state.recipeForm.mode === 'edit' ? 'PUT' : 'POST',
+				body: JSON.stringify(payload),
+			});
+			if (Array.isArray(data)) state.recipes = data;
+			else await refreshKey('recipes', force => loadCollection('recipes', '/wp-json/captaincore/v1/recipes', force));
+			state.modal = null;
+			showToast('Recipe saved.');
+		} catch (error) {
+			state.recipeForm.error = error.message || 'Unable to save recipe.';
+		} finally {
+			state.recipeForm.loading = false;
+			render();
+		}
+	}
+
+	async function deleteRecipe(recipeId) {
+		const recipe = findRecord(state.recipes, recipeId, ['recipe_id', 'id']);
+		if (!recipeId || !window.confirm('Delete recipe "' + (recipe?.title || recipeId) + '"?')) return;
+		try {
+			const data = await apiFetch('/wp-json/captaincore/v1/recipes/' + encodeURIComponent(recipeId), { method: 'DELETE' });
+			if (Array.isArray(data)) state.recipes = data;
+			else state.recipes = state.recipes.filter(item => String(recordId(item, ['recipe_id', 'id'])) !== String(recipeId));
+			showToast('Recipe deleted.');
+			render();
+		} catch (error) {
+			showToast(error.message || 'Unable to delete recipe.');
+		}
+	}
+
+	function loadRecipeTerminal(recipeId) {
+		const recipe = findRecord(state.recipes, recipeId, ['recipe_id', 'id']);
+		if (!recipe) return;
+		state.terminal.command = recipe.content || '';
+		state.terminal.open = true;
+		state.terminal.show = true;
+		render();
+	}
+
+	function providerCredentialsForForm(provider) {
+		const credentials = asArray(provider?.credentials);
+		return credentials.length ? JSON.stringify(credentials, null, 2) : '[\n  { "name": "", "value": "" }\n]';
+	}
+
+	function openProviderForm(providerId = '') {
+		const provider = providerId ? findRecord(state.providers, providerId, ['provider_id', 'id']) : null;
+		state.providerForm = {
+			mode: provider ? 'edit' : 'create',
+			providerId: providerId || '',
+			name: provider?.name || '',
+			provider: provider?.provider || '',
+			credentials: providerCredentialsForForm(provider),
+			loading: false,
+			error: '',
+		};
+		state.modal = 'provider-form';
+		render();
+	}
+
+	function parseProviderCredentials(value) {
+		const source = String(value || '').trim();
+		if (!source) return [];
+		const parsed = JSON.parse(source);
+		if (!Array.isArray(parsed)) throw new Error('Credentials must be a JSON array.');
+		return parsed.filter(item => item && item.name && item.value);
+	}
+
+	async function saveProvider(form) {
+		let credentials = [];
+		try {
+			credentials = parseProviderCredentials(form.credentials.value);
+		} catch (error) {
+			state.providerForm.error = error.message;
+			render();
+			return;
+		}
+		const payload = {
+			provider: {
+				name: form.name.value.trim(),
+				provider: form.provider.value,
+				credentials,
+			},
+		};
+		if (!payload.provider.name || !payload.provider.provider) {
+			state.providerForm.error = 'Name and provider type are required.';
+			render();
+			return;
+		}
+		state.providerForm.loading = true;
+		state.providerForm.error = '';
+		render();
+		try {
+			await apiFetch(state.providerForm.mode === 'edit' ? '/wp-json/captaincore/v1/providers/' + encodeURIComponent(state.providerForm.providerId) : '/wp-json/captaincore/v1/providers', {
+				method: state.providerForm.mode === 'edit' ? 'PUT' : 'POST',
+				body: JSON.stringify(payload),
+			});
+			state.modal = null;
+			await refreshKey('providers', force => loadCollection('providers', '/wp-json/captaincore/v1/providers', force));
+			showToast('Provider saved.');
+		} catch (error) {
+			state.providerForm.error = error.message || 'Unable to save provider.';
+		} finally {
+			state.providerForm.loading = false;
+			render();
+		}
+	}
+
+	async function deleteProvider(providerId) {
+		const provider = findRecord(state.providers, providerId, ['provider_id', 'id']);
+		if (!providerId || !window.confirm('Delete provider "' + (provider?.name || provider?.provider || providerId) + '"?')) return;
+		try {
+			await apiFetch('/wp-json/captaincore/v1/providers/' + encodeURIComponent(providerId), { method: 'DELETE' });
+			state.providers = state.providers.filter(item => String(recordId(item, ['provider_id', 'id'])) !== String(providerId));
+			state.fetched.providers = false;
+			showToast('Provider deleted.');
+			render();
+		} catch (error) {
+			showToast(error.message || 'Unable to delete provider.');
+		}
+	}
+
+	async function openProviderImport(providerId) {
+		const provider = findRecord(state.providers, providerId, ['provider_id', 'id']);
+		state.providerImport = { providerId, accountId: '', remoteSites: [], selected: new Set(), loading: true, importing: false, error: '' };
+		state.modal = 'provider-import';
+		render();
+		try {
+			const data = await apiFetch('/wp-json/captaincore/v1/providers/' + encodeURIComponent(providerId) + '/remote-sites');
+			state.providerImport.remoteSites = asArray(data);
+			if (!provider && !state.providerImport.remoteSites.length) state.providerImport.error = 'Provider not found or returned no remote sites.';
+		} catch (error) {
+			state.providerImport.error = error.message || 'Unable to load remote sites.';
+		} finally {
+			state.providerImport.loading = false;
+			render();
+		}
+	}
+
+	function remoteSiteKey(site, index) {
+		return String(site?.id || site?.site_id || site?.name || site?.domain || index);
+	}
+
+	function toggleRemoteSite(index) {
+		const site = state.providerImport.remoteSites[Number(index)];
+		if (!site) return;
+		const key = remoteSiteKey(site, index);
+		if (state.providerImport.selected.has(key)) state.providerImport.selected.delete(key);
+		else state.providerImport.selected.add(key);
+		render();
+	}
+
+	async function importProviderSites() {
+		const form = state.providerImport;
+		const selected = asArray(form.remoteSites).filter((site, index) => form.selected.has(remoteSiteKey(site, index)));
+		if (!form.providerId || !selected.length) return;
+		form.importing = true;
+		form.error = '';
+		render();
+		try {
+			await apiFetch('/wp-json/captaincore/v1/providers/' + encodeURIComponent(form.providerId) + '/import', {
+				method: 'POST',
+				body: JSON.stringify({ sites: selected, account_id: form.accountId }),
+			});
+			state.modal = null;
+			state.fetched.sites = false;
+			loadCollection('sites', '/wp-json/captaincore/v1/sites', true);
+			showToast('Import started.');
+		} catch (error) {
+			form.error = error.message || 'Unable to import sites.';
+		} finally {
+			form.importing = false;
+			render();
+		}
+	}
+
+	async function saveDefaults(form) {
+		let users = [];
+		try {
+			users = JSON.parse(form.users.value || '[]');
+			if (!Array.isArray(users)) throw new Error('Default users must be a JSON array.');
+		} catch (error) {
+			state.error.defaults = error.message;
+			render();
+			return;
+		}
+		const payload = {
+			email: form.email.value.trim(),
+			timezone: form.timezone.value.trim(),
+			recipes: selectedValues(form.recipes),
+			users,
+		};
+		state.loading.defaultsSave = true;
+		state.error.defaults = '';
+		render();
+		try {
+			state.defaults = await apiFetch('/wp-json/captaincore/v1/defaults/global', {
+				method: 'PUT',
+				body: JSON.stringify(payload),
+			});
+			state.fetched.defaults = true;
+			showToast('Defaults saved.');
+		} catch (error) {
+			state.error.defaults = error.message || 'Unable to save defaults.';
+		} finally {
+			state.loading.defaultsSave = false;
+			render();
+		}
+	}
+
+	async function saveConfigurations(form) {
+		const current = Object.assign({}, CC.configurations || {}, state.configurationDetails || {});
+		const colors = Object.assign({}, CC.colors || {}, current.colors || {});
+		if (form.name) {
+			['primary', 'accent', 'success', 'warning', 'error', 'info'].forEach(key => {
+				const textInput = form.elements['color_text_' + key];
+				const colorInput = form.elements['color_' + key];
+				colors[key] = (textInput && textInput.value) || (colorInput && colorInput.value) || colors[key] || '';
+			});
+			Object.assign(current, {
+				name: form.name.value.trim(),
+				logo: form.logo.value.trim(),
+				logo_width: form.logo_width.value,
+				logo_only: !!(form.logo_only && form.logo_only.checked),
+				dns_introduction: form.dns_introduction.value,
+				dns_nameservers: form.dns_nameservers.value,
+				colors,
+			});
+		}
+		if (form.stripe_publishable_key) {
+			current.stripe_publishable_key = form.stripe_publishable_key.value.trim();
+			current.currency = form.currency.value.trim() || 'usd';
+		}
+		state.loading.configurationsSave = true;
+		state.error.configurationDetails = '';
+		render();
+		try {
+			state.configurationDetails = await apiFetch('/wp-json/captaincore/v1/configurations/global', {
+				method: 'PUT',
+				body: JSON.stringify(current),
+			});
+			state.fetched.configurationDetails = true;
+			showToast('Configurations saved.');
+		} catch (error) {
+			state.error.configurationDetails = error.message || 'Unable to save configurations.';
+		} finally {
+			state.loading.configurationsSave = false;
+			render();
+		}
+	}
+
+	function openKeyForm(keyId = '') {
+		const key = keyId ? findRecord(state.keys, keyId, ['key_id', 'id']) : null;
+		state.keyForm = {
+			mode: key ? 'edit' : 'create',
+			keyId: keyId || '',
+			title: key?.title || '',
+			key: key?.key || '',
+			loading: false,
+			error: '',
+		};
+		state.modal = 'key-form';
+		render();
+	}
+
+	async function saveKey(form) {
+		const payload = { title: form.title.value.trim(), key: form.key.value.trim() };
+		if (!payload.title) {
+			state.keyForm.error = 'Title is required.';
+			render();
+			return;
+		}
+		state.keyForm.loading = true;
+		state.keyForm.error = '';
+		render();
+		try {
+			const data = await apiFetch(state.keyForm.mode === 'edit' ? '/wp-json/captaincore/v1/keys/' + encodeURIComponent(state.keyForm.keyId) : '/wp-json/captaincore/v1/keys', {
+				method: state.keyForm.mode === 'edit' ? 'PUT' : 'POST',
+				body: JSON.stringify(payload),
+			});
+			if (data && !Array.isArray(data)) {
+				const id = recordId(data, ['key_id', 'id']);
+				state.keys = state.keys.filter(item => String(recordId(item, ['key_id', 'id'])) !== String(id));
+				state.keys.push(data);
+			} else {
+				await refreshKey('keys', force => loadCollection('keys', '/wp-json/captaincore/v1/keys', force));
+			}
+			state.modal = null;
+			showToast('Key saved.');
+		} catch (error) {
+			state.keyForm.error = error.message || 'Unable to save key.';
+		} finally {
+			state.keyForm.loading = false;
+			render();
+		}
+	}
+
+	async function deleteKey(keyId) {
+		const key = findRecord(state.keys, keyId, ['key_id', 'id']);
+		if (!keyId || !window.confirm('Delete SSH key "' + (key?.title || keyId) + '"?')) return;
+		try {
+			await apiFetch('/wp-json/captaincore/v1/keys/' + encodeURIComponent(keyId), { method: 'DELETE' });
+			state.keys = state.keys.filter(item => String(recordId(item, ['key_id', 'id'])) !== String(keyId));
+			state.fetched.keys = false;
+			showToast('Key deleted.');
+			render();
+		} catch (error) {
+			showToast(error.message || 'Unable to delete key.');
+		}
+	}
+
+	async function setPrimaryKey(keyId) {
+		if (!keyId) return;
+		try {
+			await apiFetch('/wp-json/captaincore/v1/keys/' + encodeURIComponent(keyId) + '/primary', { method: 'PUT', body: JSON.stringify({}) });
+			await refreshKey('keys', force => loadCollection('keys', '/wp-json/captaincore/v1/keys', force));
+			showToast('Primary key updated.');
+		} catch (error) {
+			showToast(error.message || 'Unable to update primary key.');
+		}
+	}
+
+	async function openUserForm(userId = '') {
+		const user = userId ? findRecord(state.users, userId, ['user_id', 'ID', 'id']) : null;
+		state.userForm = {
+			mode: user ? 'edit' : 'create',
+			userId: userId || '',
+			first_name: user?.first_name || '',
+			last_name: user?.last_name || '',
+			email: user?.email || '',
+			login: userLogin(user),
+			account_ids: asArray(user?.account_ids),
+			loading: false,
+			errors: [],
+		};
+		state.modal = 'user-form';
+		render();
+		if (userId) {
+			try {
+				const details = await apiFetch('/wp-json/captaincore/v1/users/' + encodeURIComponent(userId));
+				state.userForm = Object.assign(state.userForm, {
+					first_name: details.first_name || state.userForm.first_name,
+					last_name: details.last_name || state.userForm.last_name,
+					email: details.email || state.userForm.email,
+					login: userLogin(details) || state.userForm.login,
+					account_ids: asArray(details.account_ids || state.userForm.account_ids),
+				});
+				render();
+			} catch (error) {}
+		}
+	}
+
+	async function saveUser(form) {
+		const payload = {
+			user_id: state.userForm.userId,
+			first_name: form.first_name.value.trim(),
+			last_name: form.last_name.value.trim(),
+			email: form.email.value.trim(),
+			login: form.login.value.trim(),
+			name: [form.first_name.value.trim(), form.last_name.value.trim()].filter(Boolean).join(' ') || form.login.value.trim() || form.email.value.trim(),
+			account_ids: selectedValues(form.account_ids),
+		};
+		state.userForm.loading = true;
+		state.userForm.errors = [];
+		render();
+		try {
+			const data = await apiFetch(state.userForm.mode === 'edit' ? '/wp-json/captaincore/v1/users/' + encodeURIComponent(state.userForm.userId) : '/wp-json/captaincore/v1/users', {
+				method: state.userForm.mode === 'edit' ? 'PUT' : 'POST',
+				body: JSON.stringify(payload),
+			});
+			if (data?.errors) {
+				state.userForm.errors = data.errors;
+				return;
+			}
+			state.modal = null;
+			await refreshKey('users', force => loadCollection('users', '/wp-json/captaincore/v1/users', force));
+			showToast('User saved.');
+		} catch (error) {
+			state.userForm.errors = [error.message || 'Unable to save user.'];
+		} finally {
+			state.userForm.loading = false;
+			render();
+		}
+	}
+
+	function openProcessForm(processId = '') {
+		const process = processId ? findRecord(state.processes, processId, ['process_id', 'id']) || state.processView.process : null;
+		state.processForm = {
+			mode: process ? 'edit' : 'create',
+			processId: processId || '',
+			name: process?.name || process?.title || '',
+			time_estimate: process?.time_estimate || '',
+			repeat_interval: process?.repeat_interval || 'as-needed',
+			repeat_quantity: process?.repeat_quantity || '',
+			roles: process?.roles || '',
+			description: process?.description || '',
+			loading: false,
+			error: '',
+		};
+		state.modal = 'process-form';
+		render();
+	}
+
+	async function viewProcess(processId) {
+		const process = findRecord(state.processes, processId, ['process_id', 'id']);
+		state.processView = { processId, process: process || null, loading: true, error: '' };
+		state.modal = 'process-view';
+		render();
+		try {
+			state.processView.process = await apiFetch('/wp-json/captaincore/v1/processes/' + encodeURIComponent(processId));
+		} catch (error) {
+			state.processView.error = error.message || 'Unable to load process.';
+		} finally {
+			state.processView.loading = false;
+			render();
+		}
+	}
+
+	async function saveProcess(form) {
+		const payload = {
+			name: form.name.value.trim(),
+			time_estimate: form.time_estimate.value.trim(),
+			repeat_interval: form.repeat_interval.value,
+			repeat_quantity: form.repeat_quantity.value.trim(),
+			roles: form.roles.value.trim(),
+			description: form.description.value,
+		};
+		if (!payload.name) {
+			state.processForm.error = 'Name is required.';
+			render();
+			return;
+		}
+		state.processForm.loading = true;
+		state.processForm.error = '';
+		render();
+		try {
+			await apiFetch(state.processForm.mode === 'edit' ? '/wp-json/captaincore/v1/processes/' + encodeURIComponent(state.processForm.processId) : '/wp-json/captaincore/v1/processes', {
+				method: state.processForm.mode === 'edit' ? 'PUT' : 'POST',
+				body: JSON.stringify(payload),
+			});
+			state.modal = null;
+			await refreshKey('processes', force => loadCollection('processes', '/wp-json/captaincore/v1/processes', force));
+			showToast('Process saved.');
+		} catch (error) {
+			state.processForm.error = error.message || 'Unable to save process.';
+		} finally {
+			state.processForm.loading = false;
+			render();
+		}
+	}
+
+	function openArchiveStore() {
+		state.archiveStoreForm = { url: '', loading: false, error: '' };
+		state.modal = 'archive-store';
+		render();
+	}
+
+	async function storeArchive(form) {
+		const url = form.url.value.trim();
+		state.archiveStoreForm.url = url;
+		state.archiveStoreForm.loading = true;
+		state.archiveStoreForm.error = '';
+		render();
+		try {
+			await apiFetch('/wp-json/captaincore/v1/archive/store', {
+				method: 'POST',
+				body: JSON.stringify({ url }),
+			});
+			state.modal = null;
+			showToast('Archive storage started.');
+		} catch (error) {
+			state.archiveStoreForm.error = error.message || 'Unable to store archive.';
+		} finally {
+			state.archiveStoreForm.loading = false;
+			render();
+		}
+	}
+
+	async function shareArchive(path) {
+		if (!path) return;
+		try {
+			const data = await apiFetch('/wp-json/captaincore/v1/archive/share', {
+				method: 'POST',
+				body: JSON.stringify({ file: path }),
+			});
+			const link = data?.link || data?.url || (typeof data === 'string' ? data : '');
+			if (link) copyValue(link);
+			showToast(link ? 'Archive link copied.' : 'Archive link created.');
+		} catch (error) {
+			showToast(error.message || 'Unable to create archive link.');
+		}
+	}
+
+	function openReportForm(reportId = '') {
+		const report = reportId ? findRecord(state.scheduledReports, reportId, ['scheduled_report_id', 'id']) : null;
+		state.reportForm = {
+			mode: report ? 'edit' : 'create',
+			reportId: reportId || '',
+			recipient: report?.recipient || '',
+			interval: report?.interval || 'monthly',
+			account_id: report?.account_id || '',
+			site_ids: asArray(report?.site_ids).join(','),
+			loading: false,
+			error: '',
+		};
+		state.modal = 'report-form';
+		render();
+	}
+
+	async function saveReport(form) {
+		const payload = {
+			recipient: form.recipient.value.trim(),
+			interval: form.interval.value,
+			account_id: form.account_id.value,
+			site_ids: selectedValues(form.site_ids),
+		};
+		if (payload.account_id) payload.site_ids = [];
+		if (!payload.recipient) {
+			state.reportForm.error = 'Recipient is required.';
+			render();
+			return;
+		}
+		state.reportForm.loading = true;
+		state.reportForm.error = '';
+		render();
+		try {
+			await apiFetch(state.reportForm.mode === 'edit' ? '/wp-json/captaincore/v1/scheduled-reports/' + encodeURIComponent(state.reportForm.reportId) : '/wp-json/captaincore/v1/scheduled-reports', {
+				method: state.reportForm.mode === 'edit' ? 'PUT' : 'POST',
+				body: JSON.stringify(payload),
+			});
+			state.modal = null;
+			await refreshKey('scheduledReports', force => loadCollection('scheduledReports', '/wp-json/captaincore/v1/scheduled-reports', force));
+			showToast('Report saved.');
+		} catch (error) {
+			state.reportForm.error = error.message || 'Unable to save report.';
+		} finally {
+			state.reportForm.loading = false;
+			render();
+		}
+	}
+
+	async function deleteReport(reportId) {
+		if (!reportId || !window.confirm('Delete this scheduled report?')) return;
+		try {
+			await apiFetch('/wp-json/captaincore/v1/scheduled-reports/' + encodeURIComponent(reportId), { method: 'DELETE' });
+			state.scheduledReports = state.scheduledReports.filter(item => String(recordId(item, ['scheduled_report_id', 'id'])) !== String(reportId));
+			state.fetched.scheduledReports = false;
+			showToast('Report deleted.');
+			render();
+		} catch (error) {
+			showToast(error.message || 'Unable to delete report.');
+		}
+	}
+
+	function openSiteAuditReport(auditId) {
+		if (!auditId) return;
+		safeOpen(window.location.origin + '/wp-json/captaincore/v1/site-audits/' + encodeURIComponent(auditId) + '/html?_wpnonce=' + encodeURIComponent(state.nonce));
+	}
+
+	async function publishSiteAudit(auditId, publish = true) {
+		if (!auditId) return;
+		const loadingKey = 'site-audit-publish:' + auditId;
+		if (state.actionLoading[loadingKey]) return;
+		const index = state.siteAudits.findIndex(audit => String(recordId(audit, ['site_audit_id', 'id'])) === String(auditId));
+		const original = index >= 0 ? Object.assign({}, state.siteAudits[index]) : null;
+		state.actionLoading[loadingKey] = true;
+		renderPreservingScroll();
+		try {
+			const data = await apiFetch('/wp-json/captaincore/v1/site-audits/' + encodeURIComponent(auditId) + '/publish', { method: publish ? 'POST' : 'DELETE', body: JSON.stringify({}) });
+			if (index >= 0) {
+				if (publish) {
+					state.siteAudits[index] = Object.assign({}, state.siteAudits[index], {
+						report_path: data?.report_path || state.siteAudits[index].report_path || '',
+						report_url: data?.report_url || state.siteAudits[index].report_url || '',
+					});
+				} else {
+					state.siteAudits[index] = Object.assign({}, state.siteAudits[index], {
+						report_path: null,
+						report_url: '',
+					});
+				}
+			}
+			showToast(publish ? 'Audit published.' : 'Audit unpublished.');
+		} catch (error) {
+			if (index >= 0 && original) state.siteAudits[index] = original;
+			showToast(error.message || 'Unable to update audit publishing.');
+		} finally {
+			state.actionLoading[loadingKey] = false;
+			renderPreservingScroll();
+		}
+	}
+
+	function openSiteAuditRequest() {
+		state.siteAuditRequest = { site_id: '', environment_id: '', report_type: 'security_audit', notes: '', environments: [], loading: false, submitting: false, error: '' };
+		state.modal = 'site-audit-request';
+		render();
+	}
+
+	async function loadAuditRequestEnvironments(siteId) {
+		state.siteAuditRequest.site_id = siteId;
+		state.siteAuditRequest.environment_id = '';
+		state.siteAuditRequest.environments = [];
+		if (!siteId) {
+			render();
+			return;
+		}
+		state.siteAuditRequest.loading = true;
+		state.siteAuditRequest.error = '';
+		render();
+		try {
+			const envs = await apiFetch('/wp-json/captaincore/v1/sites/' + encodeURIComponent(siteId) + '/environments');
+			state.siteAuditRequest.environments = asArray(envs);
+			const first = state.siteAuditRequest.environments[0];
+			state.siteAuditRequest.environment_id = first ? (first.environment_id || first.id || '') : '';
+		} catch (error) {
+			state.siteAuditRequest.error = error.message || 'Unable to load environments.';
+		} finally {
+			state.siteAuditRequest.loading = false;
+			render();
+		}
+	}
+
+	async function requestSiteAudit(form) {
+		const payload = {
+			site_id: form.site_id.value,
+			environment_id: form.environment_id.value,
+			report_type: form.report_type.value,
+			notes: form.notes.value,
+		};
+		if (!payload.site_id || !payload.environment_id) {
+			state.siteAuditRequest.error = 'Site and environment are required.';
+			render();
+			return;
+		}
+		state.siteAuditRequest = Object.assign(state.siteAuditRequest, payload, { submitting: true, error: '' });
+		render();
+		try {
+			await apiFetch('/wp-json/captaincore/v1/site-audits/request', {
+				method: 'POST',
+				body: JSON.stringify(payload),
+			});
+			state.modal = null;
+			await refreshKey('siteAudits', force => loadCollection('siteAudits', '/wp-json/captaincore/v1/site-audits', force));
+			showToast('Audit request submitted.');
+		} catch (error) {
+			state.siteAuditRequest.error = error.message || 'Unable to request audit.';
+		} finally {
+			state.siteAuditRequest.submitting = false;
+			render();
+		}
+	}
+
+	async function cancelSiteAudit(auditId) {
+		if (!auditId || !window.confirm('Cancel this audit request?')) return;
+		try {
+			await apiFetch('/wp-json/captaincore/v1/site-audits/' + encodeURIComponent(auditId) + '/cancel', { method: 'POST', body: JSON.stringify({}) });
+			await refreshKey('siteAudits', force => loadCollection('siteAudits', '/wp-json/captaincore/v1/site-audits', force));
+			showToast('Audit request cancelled.');
+		} catch (error) {
+			showToast(error.message || 'Unable to cancel audit.');
+		}
+	}
+
+	function applyActivityFilters(form) {
+		state.activityLogs.filters = {
+			action: form.action_filter.value.trim(),
+			entity_type: form.entity_type.value.trim(),
+			date_from: form.date_from.value,
+			date_to: form.date_to.value,
+		};
+		state.activityLogs.page = 1;
+		state.fetched.activityLogs = false;
+		loadActivityLogs(true);
+	}
+
+	function clearActivityFilters() {
+		state.activityLogs.filters = { action: '', entity_type: '', date_from: '', date_to: '' };
+		state.activityLogs.page = 1;
+		state.fetched.activityLogs = false;
+		loadActivityLogs(true);
+	}
+
+	async function setPrimaryPayment(token) {
+		if (!token) return;
+		try {
+			await apiFetch('/wp-json/captaincore/v1/billing/payment-methods/' + encodeURIComponent(token) + '/primary', { method: 'PUT', body: JSON.stringify({}) });
+			await loadResource('billingDetails', '/wp-json/captaincore/v1/billing', true, value => value || {});
+			showToast('Payment method updated.');
+		} catch (error) {
+			showToast(error.message || 'Unable to update payment method.');
+		}
+	}
+
+	async function deletePayment(token) {
+		if (!token || !window.confirm('Remove this payment method?')) return;
+		try {
+			await apiFetch('/wp-json/captaincore/v1/billing/payment-methods/' + encodeURIComponent(token), { method: 'DELETE' });
+			await loadResource('billingDetails', '/wp-json/captaincore/v1/billing', true, value => value || {});
+			showToast('Payment method removed.');
+		} catch (error) {
+			showToast(error.message || 'Unable to remove payment method.');
+		}
+	}
+
+	async function saveProfile(form) {
+		const payload = Object.assign({}, state.profileForm, {
+			display_name: form.display_name.value.trim(),
+			email: form.email.value.trim(),
+			new_password: form.new_password.value,
+		});
+		state.profileForm.loading = true;
+		state.profileForm.errors = [];
+		state.profileForm.success = '';
+		render();
+		try {
+			const data = await apiFetch('/wp-json/captaincore/v1/me/profile', {
+				method: 'PUT',
+				body: JSON.stringify(payload),
+			});
+			if (data?.errors) {
+				state.profileForm.errors = data.errors;
+			} else {
+				state.profileForm.display_name = data?.profile?.display_name || payload.display_name;
+				state.profileForm.email = data?.profile?.email || payload.email;
+				state.profileForm.new_password = '';
+				state.profileForm.success = 'Account updated.';
+				showToast('Profile saved.');
+			}
+		} catch (error) {
+			state.profileForm.errors = [error.message || 'Unable to save profile.'];
+		} finally {
+			state.profileForm.loading = false;
+			render();
+		}
+	}
+
+	async function destroySession(hash, allOthers = false) {
+		try {
+			const payload = allOthers ? { all_others: 1 } : { hash };
+			const data = await apiFetch('/wp-json/captaincore/v1/sessions', {
+				method: 'DELETE',
+				body: JSON.stringify(payload),
+			});
+			state.profileForm.sessions = asArray(data?.sessions);
+			state.fetched.profileSessionsPayload = false;
+			showToast('Session updated.');
+			render();
+		} catch (error) {
+			showToast(error.message || 'Unable to update sessions.');
+		}
+	}
+
+	async function acceptInvite(form) {
+		state.invite.password = form.password.value;
+		state.invite.accepting = true;
+		state.invite.error = '';
+		render();
+		try {
+			await apiFetch('/wp-json/captaincore/v1/invites/accept', {
+				method: 'POST',
+				body: JSON.stringify({
+					account: state.invite.account,
+					token: state.invite.token,
+					password: state.invite.password,
+				}),
+			});
+			state.fetched.accounts = false;
+			navTo('/accounts');
+			showToast('Invite accepted.');
+		} catch (error) {
+			state.invite.error = error.message || 'Unable to accept invite.';
+		} finally {
+			state.invite.accepting = false;
+			render();
+		}
+	}
+
 	document.addEventListener('click', function (event) {
 		const route = event.target.closest('[data-route]');
 		if (route) {
@@ -7060,6 +11169,9 @@ window.__CAPTAINCORE_V2__ = {
 			localStorage.setItem('captaincore-v2-view', state.viewMode);
 			render();
 		}
+		if (action === 'set-sort') {
+			setSort(actionEl.dataset.pageKey, actionEl.dataset.sortKey, actionEl.dataset.sortInitialDir || 'asc');
+		}
 		if (action === 'detail-tab') {
 			state.detailTabs[actionEl.dataset.detailType] = actionEl.dataset.tab;
 			render();
@@ -7093,10 +11205,40 @@ window.__CAPTAINCORE_V2__ = {
 			const options = getFilterOptions(type).filter(item => !state.filterSearch[type] || normalizeText(item.search || item.title || item.name).includes(normalizeText(state.filterSearch[type]))).slice(0, 80);
 			if (options[index]) toggleFilter(type, options[index]);
 		}
+		if (action === 'filter-logic') {
+			setFilterOperator('filterLogic', actionEl.dataset.value);
+		}
+		if (action === 'filter-version-mode') {
+			setFilterOperator('filterVersionMode', actionEl.dataset.value);
+		}
+		if (action === 'filter-version-logic') {
+			setFilterOperator('filterVersionLogic', actionEl.dataset.value);
+		}
+		if (action === 'filter-status-mode') {
+			setFilterOperator('filterStatusMode', actionEl.dataset.value);
+		}
+		if (action === 'filter-status-logic') {
+			setFilterOperator('filterStatusLogic', actionEl.dataset.value);
+		}
+		if (action === 'toggle-filter-version') {
+			toggleSecondaryFilterOption('version', actionEl.dataset.filterType, actionEl.dataset.filterName, actionEl.dataset.index);
+		}
+		if (action === 'toggle-filter-status') {
+			toggleSecondaryFilterOption('status', actionEl.dataset.filterType, actionEl.dataset.filterName, actionEl.dataset.index);
+		}
 		if (action === 'clear-filters') {
 			state.selectedCore = [];
 			state.selectedThemes = [];
 			state.selectedPlugins = [];
+			state.filterLogic = 'and';
+			state.filterVersionLogic = 'and';
+			state.filterStatusLogic = 'and';
+			state.filterVersionMode = 'include';
+			state.filterStatusMode = 'include';
+			state.siteFilterVersions = [];
+			state.siteFilterStatuses = [];
+			state.filterOptionsError = '';
+			state.filterRequestId++;
 			state.filteredSiteIds = null;
 			state.filteredEnvIds = null;
 			state.popover = '';
@@ -7124,7 +11266,18 @@ window.__CAPTAINCORE_V2__ = {
 		}
 		if (action === 'open-drawer') {
 			if (event.target.closest('.row-action') || event.target.matches('input')) return;
-			state.drawer = { siteId: actionEl.dataset.siteId, envId: actionEl.dataset.envId };
+			state.drawer = { type: 'site', siteId: actionEl.dataset.siteId, envId: actionEl.dataset.envId };
+			state.drawerTab = 'overview';
+			render();
+		}
+		if (action === 'open-user-drawer') {
+			openUserDrawer(actionEl.dataset.userId);
+		}
+		if (action === 'refresh-user-drawer') {
+			loadUserDrawerDetails(actionEl.dataset.userId || state.drawer?.userId, true);
+		}
+		if (action === 'drawer-tab') {
+			state.drawerTab = actionEl.dataset.tab || 'overview';
 			render();
 		}
 		if (action === 'close-drawer') {
@@ -7251,8 +11404,32 @@ window.__CAPTAINCORE_V2__ = {
 		if (action === 'backup-restore') {
 			runBackupAction('backup_restore', actionEl.dataset.backupId);
 		}
+		if (action === 'toggle-quicksave-detail') {
+			toggleQuicksaveDetail(actionEl.dataset.hash);
+		}
+		if (action === 'load-quicksave-detail') {
+			loadQuicksaveDetail(actionEl.dataset.hash);
+		}
+		if (action === 'toggle-update-log') {
+			toggleUpdateLog(actionEl.dataset.hashBefore, actionEl.dataset.hashAfter);
+		}
+		if (action === 'load-update-log-detail') {
+			loadUpdateLogDetail(actionEl.dataset.hashBefore, actionEl.dataset.hashAfter);
+		}
 		if (action === 'toggle-quicksave-files') {
 			toggleQuicksaveFiles(actionEl.dataset.hash);
+		}
+		if (action === 'load-quicksave-files') {
+			loadQuicksaveFiles(actionEl.dataset.hash, true);
+		}
+		if (action === 'toggle-component-files') {
+			toggleComponentFiles(actionEl.dataset.hash, actionEl.dataset.match, actionEl.dataset.detailKey);
+		}
+		if (action === 'load-component-files') {
+			loadComponentFiles(actionEl.dataset.hash, actionEl.dataset.match, actionEl.dataset.detailKey, true);
+		}
+		if (action === 'toggle-file-group') {
+			toggleFileGroup(actionEl.dataset.hash, actionEl.dataset.groupKey);
 		}
 		if (action === 'quicksave-diff') {
 			openQuicksaveDiff(actionEl.dataset.hash, actionEl.dataset.file);
@@ -7260,6 +11437,47 @@ window.__CAPTAINCORE_V2__ = {
 		if (action === 'quicksave-rollback') {
 			rollbackQuicksave(actionEl.dataset.hash);
 		}
+		if (action === 'open-dns-record') {
+			openDnsRecordForm(actionEl.dataset.recordId || '');
+		}
+		if (action === 'edit-dns-record') {
+			event.stopPropagation();
+			openDnsRecordForm(actionEl.dataset.recordId || '');
+		}
+		if (action === 'delete-dns-record') {
+			event.stopPropagation();
+			deleteDnsRecord(actionEl.dataset.recordId);
+		}
+		if (action === 'activate-dns-zone') {
+			activateDnsZone(actionEl.dataset.domainId);
+		}
+		if (action === 'delete-dns-zone') {
+			deleteDnsZone(actionEl.dataset.domainId);
+		}
+		if (action === 'delete-domain') {
+			deleteDomain(actionEl.dataset.domainId);
+		}
+			if (action === 'fetch-domain-auth-code') {
+				fetchDomainAuthCode(actionEl.dataset.domainId);
+			}
+			if (action === 'open-account-edit') {
+				openAccountEdit();
+			}
+			if (action === 'open-account-invite') {
+				openAccountInvite();
+			}
+			if (action === 'delete-account-invite') {
+				deleteAccountInvite(actionEl.dataset.inviteId);
+			}
+			if (action === 'transfer-account-owner') {
+				transferAccountOwner(actionEl.dataset.userId);
+			}
+			if (action === 'remove-account-user') {
+				removeAccountUser(actionEl.dataset.userId);
+			}
+			if (action === 'delete-account') {
+				deleteAccount(actionEl.dataset.accountId);
+			}
 		if (action === 'prev-page' && state.page > 1) {
 			state.page--;
 			render();
@@ -7325,20 +11543,70 @@ window.__CAPTAINCORE_V2__ = {
 			state.fetched = {};
 			loadForRoute();
 		}
-		if (action === 'clear-selection') {
-			state.selection.clear();
+		if (action === 'open-recipe-form') openRecipeForm(actionEl.dataset.recipeId || '');
+		if (action === 'delete-recipe') deleteRecipe(actionEl.dataset.recipeId);
+		if (action === 'load-recipe-terminal') loadRecipeTerminal(actionEl.dataset.recipeId);
+		if (action === 'open-provider-form') openProviderForm(actionEl.dataset.providerId || '');
+		if (action === 'delete-provider') deleteProvider(actionEl.dataset.providerId);
+		if (action === 'open-provider-import') openProviderImport(actionEl.dataset.providerId);
+		if (action === 'toggle-remote-site') {
+			event.stopPropagation();
+			toggleRemoteSite(actionEl.dataset.remoteIndex);
+		}
+		if (action === 'import-provider-sites') importProviderSites();
+		if (action === 'open-key-form') openKeyForm(actionEl.dataset.keyId || '');
+		if (action === 'delete-key') deleteKey(actionEl.dataset.keyId);
+		if (action === 'set-primary-key') setPrimaryKey(actionEl.dataset.keyId);
+		if (action === 'open-user-form') openUserForm(actionEl.dataset.userId || '');
+		if (action === 'open-process-form') openProcessForm(actionEl.dataset.processId || '');
+		if (action === 'view-process') viewProcess(actionEl.dataset.processId);
+		if (action === 'open-archive-store') openArchiveStore();
+		if (action === 'share-archive') shareArchive(actionEl.dataset.archivePath);
+		if (action === 'open-report-form') openReportForm(actionEl.dataset.reportId || '');
+		if (action === 'delete-report') deleteReport(actionEl.dataset.reportId);
+		if (action === 'open-site-audit') openSiteAuditReport(actionEl.dataset.auditId);
+		if (action === 'publish-site-audit') publishSiteAudit(actionEl.dataset.auditId, true);
+		if (action === 'unpublish-site-audit') publishSiteAudit(actionEl.dataset.auditId, false);
+		if (action === 'copy-site-audit-link') copyValue(actionEl.dataset.url);
+		if (action === 'cancel-site-audit') cancelSiteAudit(actionEl.dataset.auditId);
+		if (action === 'open-site-audit-request') openSiteAuditRequest();
+		if (action === 'security-tab') {
+			state.security.tab = actionEl.dataset.tab || 'vulnerabilities';
 			render();
 		}
-		if (action === 'bulk-terminal') {
-			const targets = selectedRows().map(({ site, env }) => normalizeTarget(site, env)).filter(Boolean);
-			openTerminal(targets);
+		if (action === 'activity-page') {
+			const page = Number(actionEl.dataset.page);
+			if (Number.isFinite(page) && page >= 1) {
+				state.activityLogs.page = page;
+				state.fetched.activityLogs = false;
+				loadActivityLogs(true);
+			}
 		}
-		if (action === 'bulk-open') selectedRows().forEach(({ env }) => safeOpen(env.home_url));
-		if (action === 'bulk-login') selectedRows().forEach(({ site, env }) => magicLogin(site.site_id, env.environment_id || env.environment));
-		if (action === 'open-new-site') {
-			state.modal = 'new-site';
-			render();
-		}
+		if (action === 'clear-activity-filters') clearActivityFilters();
+		if (action === 'set-primary-payment') setPrimaryPayment(actionEl.dataset.token);
+		if (action === 'delete-payment') deletePayment(actionEl.dataset.token);
+		if (action === 'destroy-session') destroySession(actionEl.dataset.sessionHash);
+		if (action === 'destroy-other-sessions') destroySession('', true);
+			if (action === 'clear-selection') {
+				state.selection.clear();
+				render();
+			}
+			if (action === 'bulk-terminal') {
+				const targets = selectedRows().map(({ site, env }) => normalizeTarget(site, env)).filter(Boolean);
+				openTerminal(targets);
+			}
+			if (action === 'bulk-open') selectedRows().forEach(({ env }) => safeOpen(env.home_url));
+			if (action === 'bulk-login') selectedRows().forEach(({ site, env }) => magicLogin(site.site_id, env.environment_id || env.environment));
+			if (action === 'open-new-site') {
+				state.modal = 'new-site';
+				render();
+			}
+			if (action === 'open-new-domain') {
+				openNewDomain();
+			}
+			if (action === 'open-new-account') {
+				openNewAccount();
+			}
 		if (action === 'close-modal') {
 			state.modal = null;
 			render();
@@ -7468,14 +11736,32 @@ window.__CAPTAINCORE_V2__ = {
 
 	document.addEventListener('submit', function (event) {
 		const form = event.target;
-		const action = form.dataset.action;
-		if (!action) return;
-		event.preventDefault();
-		if (action === 'sign-in') signIn(form);
-		if (action === 'create-site') createSite(form);
-		if (action === 'schedule-terminal-script') scheduleTerminalScript(form);
+			const action = form.dataset.action;
+			if (!action) return;
+			event.preventDefault();
+			if (action === 'sign-in') signIn(form);
+			if (action === 'create-site') createSite(form);
+			if (action === 'create-domain') createDomain(form);
+			if (action === 'create-account') createAccount(form);
+			if (action === 'schedule-terminal-script') scheduleTerminalScript(form);
 		if (action === 'save-terminal-recipe') saveTerminalRecipe(form);
 		if (action === 'save-capture-config') saveCaptureConfig(form);
+		if (action === 'save-dns-record') saveDnsRecord(form);
+		if (action === 'save-account') saveAccount(form);
+		if (action === 'send-account-invite') sendAccountInvite(form);
+		if (action === 'save-recipe') saveRecipe(form);
+		if (action === 'save-provider') saveProvider(form);
+		if (action === 'save-defaults') saveDefaults(form);
+		if (action === 'save-configurations') saveConfigurations(form);
+		if (action === 'save-key') saveKey(form);
+		if (action === 'save-user') saveUser(form);
+		if (action === 'save-process') saveProcess(form);
+		if (action === 'store-archive') storeArchive(form);
+		if (action === 'save-report') saveReport(form);
+		if (action === 'apply-activity-filters') applyActivityFilters(form);
+		if (action === 'request-site-audit') requestSiteAudit(form);
+		if (action === 'save-profile') saveProfile(form);
+		if (action === 'accept-invite') acceptInvite(form);
 	});
 
 	document.addEventListener('change', function (event) {
@@ -7498,13 +11784,23 @@ window.__CAPTAINCORE_V2__ = {
 			const { id, env } = currentSiteContext();
 			fetchSiteLogFile(id, env, input.value);
 		}
-		if (input.dataset.input === 'site-log-limit') {
-			const { id, env } = currentSiteContext();
-			const bucket = siteFeature(id, env || {});
-			bucket.logLimit = String(Math.max(10, Math.min(10000, Number(input.value) || 1000)));
-			if (bucket.selectedLog) fetchSiteLogFile(id, env, bucket.selectedLog);
-		}
-		if (input.dataset.input === 'capture-select') {
+			if (input.dataset.input === 'site-log-limit') {
+				const { id, env } = currentSiteContext();
+				const bucket = siteFeature(id, env || {});
+				bucket.logLimit = String(Math.max(10, Math.min(10000, Number(input.value) || 1000)));
+				if (bucket.selectedLog) fetchSiteLogFile(id, env, bucket.selectedLog);
+			}
+			if (input.dataset.input === 'account-user-level') {
+				updateAccountUserLevel(input.dataset.userId, input.value);
+			}
+			if (input.dataset.input === 'provider-import-account') {
+				state.providerImport.accountId = input.value;
+				render();
+			}
+			if (input.dataset.input === 'site-audit-site') {
+				loadAuditRequestEnvironments(input.value);
+			}
+			if (input.dataset.input === 'capture-select') {
 			state.captures.selectedCaptureId = input.value;
 			const capture = selectedCapture();
 			const pages = normalizedCapturePages(capture);
