@@ -26,7 +26,7 @@ class Site {
 
         // Fetch relating environments
         $environments = self::environments();
-        $upload_uri   = get_option( 'options_remote_upload_uri' );
+        $upload_uri   = rtrim( (string) get_option( 'options_remote_upload_uri' ), '/' );
         $details      = json_decode ( $site->details );
         $domain       = $site->name;
         $customer     = $site->account_id;
@@ -1048,13 +1048,13 @@ class Site {
             $created_at               = strtotime( $capture->created_at );
             $git_commit_short         = substr( $capture->git_commit, 0, 7 );
             $details                  = isset( $environment->details ) ? $environment->details : (object) [];
-            $details->screenshot_base = "{$created_at}_${git_commit_short}";
+            $details->screenshot_base = "{$created_at}_{$git_commit_short}";
             Environments::update( [ "screenshot" => true, "details" => json_encode( $details ) ], [ "environment_id" => $environment->environment_id ] );
 
             // Update sites if needed
             if ( $environment->environment == "Production" ) {
                 $details                  = json_decode( $site->details );
-                $details->screenshot_base = "{$created_at}_${git_commit_short}";
+                $details->screenshot_base = "{$created_at}_{$git_commit_short}";
                 Sites::update( [ "screenshot" => true, "details" => json_encode( $details ) ], [ "site_id" => $site->site_id ] );
             }
         }
@@ -1233,7 +1233,7 @@ class Site {
         // Fetch relating environments
         $site         = Sites::get( $this->site_id );
         $environments = Environments::fetch_environments( $this->site_id );
-        $upload_uri   = get_option( 'options_remote_upload_uri' );
+        $upload_uri   = rtrim( (string) get_option( 'options_remote_upload_uri' ), '/' );
        
         foreach ( $environments as $environment ) {
             $environment_name         = strtolower( $environment->environment );

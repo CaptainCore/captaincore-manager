@@ -19,10 +19,14 @@ class Users {
         $fetch_users = get_users();
         foreach( $fetch_users as $user ) {
             $record = [
-                "user_id"  => $user->ID,
-                "name"     => $user->display_name,
-                "email"    => $user->user_email,
-                "username" => $user->user_login,
+                "user_id"     => $user->ID,
+                "name"        => $user->display_name,
+                "first_name"  => $user->first_name,
+                "last_name"   => $user->last_name,
+                "email"       => $user->user_email,
+                "username"    => $user->user_login,
+                "roles"       => $user->roles,
+                "created_at"  => $user->user_registered,
             ];
             if ( class_exists( 'user_switching' ) ) {
                 $wp_user = new \WP_User( $user->ID );
@@ -65,6 +69,8 @@ class Users {
         $update_user = wp_update_user( [
             'ID'           => $user->user_id,
             'display_name' => $user->name,
+            'first_name'   => $user->first_name,
+            'last_name'    => $user->last_name,
             'user_email'   => $user->email,
         ] );
 
