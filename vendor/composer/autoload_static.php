@@ -294,6 +294,7 @@ class ComposerStaticInit9f7509cc1c55bc410ccf6f05510f2050
         'CaptainCore\\Providers\\Spaceship' => __DIR__ . '/../..' . '/app/Providers/Spaceship.php',
         'CaptainCore\\Quicksave' => __DIR__ . '/../..' . '/app/Quicksave.php',
         'CaptainCore\\Recipes' => __DIR__ . '/../..' . '/app/Recipes.php',
+        'CaptainCore\\RemoteCLI' => __DIR__ . '/../..' . '/app/RemoteCLI.php',
         'CaptainCore\\Remote\\Cloudflare' => __DIR__ . '/../..' . '/app/Remote/Cloudflare.php',
         'CaptainCore\\Remote\\Constellix' => __DIR__ . '/../..' . '/app/Remote/Constellix.php',
         'CaptainCore\\Remote\\Fathom' => __DIR__ . '/../..' . '/app/Remote/Fathom.php',
