@@ -92,6 +92,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command( 'captaincore dns', 'CaptainCore\DnsCLI' );
 	WP_CLI::add_command( 'captaincore mailgun', 'CaptainCore\MailgunCLI' );
 	WP_CLI::add_command( 'captaincore provider-sync', 'CaptainCore\ProviderSyncCLI' );
+	WP_CLI::add_command( 'captaincore remote', 'CaptainCore\RemoteCLI' );
 }
 
 /* -------------------------------------------------------------------------

@@ -173,6 +173,7 @@ return array(
     'CaptainCore\\Providers\\Spaceship' => $baseDir . '/app/Providers/Spaceship.php',
     'CaptainCore\\Quicksave' => $baseDir . '/app/Quicksave.php',
     'CaptainCore\\Recipes' => $baseDir . '/app/Recipes.php',
+    'CaptainCore\\RemoteCLI' => $baseDir . '/app/RemoteCLI.php',
     'CaptainCore\\Remote\\Cloudflare' => $baseDir . '/app/Remote/Cloudflare.php',
     'CaptainCore\\Remote\\Constellix' => $baseDir . '/app/Remote/Constellix.php',
     'CaptainCore\\Remote\\Fathom' => $baseDir . '/app/Remote/Fathom.php',
