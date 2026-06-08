@@ -245,7 +245,7 @@ class DB {
         if ( $environment != "all" ) {
             $environment_conditions = "AND {$table}.`environment` = '$environment'";
         }
-        $sql = "SELECT {$table}.themes, {$table}.plugins, {$table}.core, {$table}.details
+        $sql = "SELECT {$table}.themes, {$table}.plugins, {$table}.core, JSON_UNQUOTE(JSON_EXTRACT({$table}.details, '$.php_version')) AS php_version, {$table}.details
                 FROM {$table}
                 INNER JOIN {$wpdb->prefix}captaincore_sites ON {$table}.site_id = {$wpdb->prefix}captaincore_sites.site_id
                 WHERE {$wpdb->prefix}captaincore_sites.`status` = 'active' $environment_conditions";
@@ -260,7 +260,7 @@ class DB {
         if ( $environment != "all" ) {
             $environment_conditions = "AND {$table}.`environment` = '$environment'";
         }
-        $sql = "SELECT {$table}.themes, {$table}.plugins, {$table}.core
+        $sql = "SELECT {$table}.themes, {$table}.plugins, {$table}.core, JSON_UNQUOTE(JSON_EXTRACT({$table}.details, '$.php_version')) AS php_version
                 FROM {$table}
                 INNER JOIN {$wpdb->prefix}captaincore_sites ON {$table}.site_id = {$wpdb->prefix}captaincore_sites.site_id
                 WHERE {$wpdb->prefix}captaincore_sites.account_id = $account_id AND {$wpdb->prefix}captaincore_sites.`status` = 'active' $environment_conditions";
@@ -490,6 +490,7 @@ class DB {
         $version_filters = $filters->versions ?? [];
         $status_filters  = $filters->statuses ?? [];
         $core_filters    = $filters->core ?? [];
+        $php_filters     = $filters->php ?? [];
         
         $all_filter_clauses = [];
 
@@ -584,6 +585,16 @@ class DB {
                 $core_clauses[] = "{$environments_table}.core = '{$safe_version}'";
             }
             $where_clause .= " AND ( " . implode( " OR ", $core_clauses ) . " )";
+        }
+
+        // PHP Filter Logic — php_version lives inside the environments details JSON.
+        if ( ! empty( $php_filters ) ) {
+            $php_clauses = [];
+            foreach ( $php_filters as $version ) {
+                $safe_version = esc_sql( $version );
+                $php_clauses[] = "JSON_UNQUOTE(JSON_EXTRACT({$environments_table}.details, '$.php_version')) = '{$safe_version}'";
+            }
+            $where_clause .= " AND ( " . implode( " OR ", $php_clauses ) . " )";
         }
 
         // Return site_id and environment_id
