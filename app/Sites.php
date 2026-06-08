@@ -129,6 +129,7 @@ class Sites extends DB {
                     "environment"     => $env->environment,
                     "home_url"        => $env->home_url,
                     "core"            => $env->core,
+                    "php_version"     => empty( $env_details->php_version ) ? "" : $env_details->php_version,
                     "subsites"        => $env->subsite_count,
                     "storage"         => $env->storage,
                     "visits"          => $env->visits,
@@ -151,9 +152,59 @@ class Sites extends DB {
                 \WP_CLI::log( "Updated environment cache for {$site->name} (#{$site->site_id})" );
             }
         }
-    }
-	
-	public function list() {
+	    }
+
+	    private static function hydrate_environment_cache_fields( $sites ) {
+	        global $wpdb;
+
+	        $environment_ids = [];
+	        foreach ( $sites as $site ) {
+	            foreach ( (array) $site->environments as $env ) {
+	                $environment_id = isset( $env->environment_id ) ? absint( $env->environment_id ) : 0;
+	                if ( empty( $environment_id ) ) {
+	                    continue;
+	                }
+	                if ( empty( $env->php_version ) || ! isset( $env->subsites ) || ! isset( $env->subsite_count ) ) {
+	                    $environment_ids[ $environment_id ] = $environment_id;
+	                }
+	            }
+	        }
+
+	        if ( empty( $environment_ids ) ) {
+	            return $sites;
+	        }
+
+	        $environments_table = $wpdb->prefix . 'captaincore_environments';
+	        $placeholders       = implode( ',', array_fill( 0, count( $environment_ids ), '%d' ) );
+	        $sql                = $wpdb->prepare(
+	            "SELECT environment_id, subsite_count, JSON_UNQUOTE(JSON_EXTRACT(details, '$.php_version')) AS php_version FROM {$environments_table} WHERE environment_id IN ({$placeholders})",
+	            array_values( $environment_ids )
+	        );
+	        $environment_rows   = $wpdb->get_results( $sql, OBJECT_K );
+
+	        foreach ( $sites as $site ) {
+	            foreach ( (array) $site->environments as $env ) {
+	                $environment_id = isset( $env->environment_id ) ? absint( $env->environment_id ) : 0;
+	                if ( empty( $environment_id ) || empty( $environment_rows[ $environment_id ] ) ) {
+	                    continue;
+	                }
+	                $row = $environment_rows[ $environment_id ];
+	                if ( empty( $env->php_version ) && ! empty( $row->php_version ) ) {
+	                    $env->php_version = $row->php_version;
+	                }
+	                if ( ! isset( $env->subsites ) ) {
+	                    $env->subsites = $row->subsite_count;
+	                }
+	                if ( ! isset( $env->subsite_count ) ) {
+	                    $env->subsite_count = $row->subsite_count;
+	                }
+	            }
+	        }
+
+	        return $sites;
+	    }
+
+		public function list() {
         $sites        = [];
         foreach( $this->sites as $site_id ) {
             $site                    = self::get( $site_id );
@@ -182,6 +233,7 @@ class Sites extends DB {
                         "environment"     => "Production",
                         "home_url"        => $site->home_url,
                         "core"            => $site->core,
+                        "php_version"     => isset( $details->php_version ) ? $details->php_version : "",
                         "subsites"        => $site->subsites,
                         "storage"         => $site->storage,
                         "visits"          => $site->visits,
@@ -202,9 +254,10 @@ class Sites extends DB {
             unset( $site->site_usage );
             $sites[] = $site;
         }
-        usort($sites, function($a, $b) { return strcmp($a->name, $b->name); });
-        return $sites;
-    }
+	        $sites = self::hydrate_environment_cache_fields( $sites );
+	        usort($sites, function($a, $b) { return strcmp($a->name, $b->name); });
+	        return $sites;
+	    }
 
     public function fetch_sites_matching_filters( $filters = [] ) {
         $allowed_site_ids = $this->sites;
