@@ -170,6 +170,7 @@ class Sites extends DB {
             $site->subsites          = $details->subsites;
             $site->storage           = $details->storage;
             $site->visits            = $details->visits;
+            $site->labels            = ( isset( $details->labels ) && is_array( $details->labels ) ) ? $details->labels : [];
             $site->outdated          = false;
             $site->environments      = $details->environments ?? [];
 
