@@ -788,7 +788,10 @@ class SiteAudit {
 
                 case 'check-list':
                     $html .= "    <ul class=\"check-list\">\n";
-                    $items      = (array) ( $block->items ?? [] );
+                    $items      = array_map( function( $i ) {
+                        // Tolerate plain-string items (default to a passing check) as well as { icon, label } objects.
+                        return is_string( $i ) ? (object) [ 'label' => $i, 'icon' => 'pass' ] : $i;
+                    }, (array) ( $block->items ?? [] ) );
                     $icon_order = [ 'pass' => 0, 'warn' => 1, 'fail' => 2 ];
                     usort( $items, function( $a, $b ) use ( $icon_order ) {
                         return ( $icon_order[ $a->icon ?? 'pass' ] ?? 3 ) - ( $icon_order[ $b->icon ?? 'pass' ] ?? 3 );
